@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass post-RA-hazard-rec %s -o - | FileCheck -check-prefix=GCN %s
 
 # GCN-LABEL: name: valu_write_vgpr_sgemm_mfma_read
 # GCN:      V_MOV_B32
@@ -746,7 +746,7 @@ name:            smfma4x4_write_vgpr_dot_write
 body:             |
   bb.0:
     $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32_vgprcd_e64 $vgpr1, $vgpr0, $vgpr0_vgpr1_vgpr2_vgpr3, 0, 0, 0, implicit $mode, implicit $exec
-    $vgpr1 = V_DOT8_I32_I4 0, $vgpr4, 0, $vgpr4, 0, $vgpr4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr1 = V_DOT8_I32_I4 0, $vgpr4, 0, $vgpr4, 0, $vgpr4, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: smfma4x4_read_srcc_vgpr_valu_write
 # GCN:      V_MFMA
@@ -945,7 +945,7 @@ name:            dot_write_vgpr_different_dot_read_srcc
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
-    $vgpr1 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr4, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr1 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr4, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dot_write_vgpr_different_dot_write
 # GCN:      V_DOT
@@ -955,7 +955,7 @@ name:            dot_write_vgpr_different_dot_write
 body:             |
   bb.0:
     $vgpr4 = V_DOT4C_I32_I8_e32 $vgpr0, $vgpr1, $vgpr4, implicit $exec
-    $vgpr4 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    $vgpr4 = V_DOT8_I32_I4 0, $vgpr0, 0, $vgpr0, 0, $vgpr0, 0, 0, 0, implicit $mode, implicit $exec
 ...
 # GCN-LABEL: name: dot_write_vgpr_different_valu_read
 # GCN:      V_DOT

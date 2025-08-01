@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -run-pass=localstackalloc -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -passes=localstackalloc -o - %s | FileCheck %s
 
 --- |
   ; ModuleID = '<stdin>'
@@ -48,7 +49,7 @@ body:             |
     %2:gpr32 = COPY $w0
     %1:zpr = COPY $z1
     %0:zpr = COPY $z0
-    %5:ppr_3b = PTRUE_B 31
+    %5:ppr_3b = PTRUE_B 31, implicit $vg
     %6:gpr64sp = ADDXri %stack.0, 0, 0
     ST1B_IMM %1, %5, %6, 1 :: (store unknown-size, align 16)
     ST1B_IMM %0, %5, %stack.0, 0 :: (store unknown-size into %stack.0, align 16)

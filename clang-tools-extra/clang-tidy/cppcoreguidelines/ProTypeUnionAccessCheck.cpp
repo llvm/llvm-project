@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProTypeUnionAccessCheck.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
@@ -23,8 +22,11 @@ void ProTypeUnionAccessCheck::registerMatchers(MatchFinder *Finder) {
 
 void ProTypeUnionAccessCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Matched = Result.Nodes.getNodeAs<MemberExpr>("expr");
-  diag(Matched->getMemberLoc(),
-       "do not access members of unions; use (boost::)variant instead");
+  SourceLocation Loc = Matched->getMemberLoc();
+  if (Loc.isInvalid())
+    Loc = Matched->getBeginLoc();
+  diag(Loc, "do not access members of unions; consider using (boost::)variant "
+            "instead");
 }
 
 } // namespace clang::tidy::cppcoreguidelines

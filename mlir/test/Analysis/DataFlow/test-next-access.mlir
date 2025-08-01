@@ -63,7 +63,7 @@ func.func @branch(%arg0: memref<f32>, %arg1: f32, %arg2: i1) -> f32 {
   return %phi : f32
 }
 
-// CHECK-LABEL @dead_branch
+// CHECK-LABEL: @dead_branch
 func.func @dead_branch(%arg0: memref<f32>, %arg1: f32) -> f32 {
   // CHECK:      name = "store"
   // CHECK-SAME: next_access = ["unknown", ["load 2"]]
@@ -191,7 +191,7 @@ func.func @loop_cf(%arg0: memref<?xf32>, %arg1: f32, %arg2: index, %arg3: index,
   return %8 : f32
 }
 
-// CHECK-LABEL @conditional_cf
+// CHECK-LABEL: @conditional_cf
 func.func @conditional_cf(%arg0: i1, %arg1: memref<f32>) {
   // CHECK:      name = "pre"
   // CHECK-SAME: next_access = {{\[}}["then", "post"]]
@@ -572,6 +572,24 @@ func.func @call_opaque_callee(%arg0: memref<f32>) {
   // LC_AR-SAME: next_access = {{\[}}["call"]]
   memref.load %arg0[] {name = "pre"} : memref<f32>
   func.call @opaque_callee(%arg0) {name = "call"} : (memref<f32>) -> ()
+  memref.load %arg0[] {name = "post"} : memref<f32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @indirect_call
+func.func @indirect_call(%arg0: memref<f32>, %arg1: (memref<f32>) -> ()) {
+  // IP:         name = "pre"
+  // IP-SAME:    next_access = ["unknown"]
+  // IP_AR:      name = "pre"
+  // IP_AR-SAME: next_access = ["unknown"] 
+  // LOCAL:      name = "pre"
+  // LOCAL-SAME: next_access = ["unknown"]
+  // LC_AR:      name = "pre"
+  // LC_AR-SAME: next_access = {{\[}}["call"]]
+  memref.load %arg0[] {name = "pre"} : memref<f32>
+  func.call_indirect %arg1(%arg0) {name = "call"} : (memref<f32>) -> ()
   memref.load %arg0[] {name = "post"} : memref<f32>
   return
 }

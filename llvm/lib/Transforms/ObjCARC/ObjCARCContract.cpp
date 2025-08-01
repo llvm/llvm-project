@@ -31,6 +31,7 @@
 #include "ProvenanceAnalysis.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
@@ -39,9 +40,9 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/ObjCARC.h"
 
 using namespace llvm;
@@ -51,6 +52,11 @@ using namespace llvm::objcarc;
 
 STATISTIC(NumPeeps,       "Number of calls peephole-optimized");
 STATISTIC(NumStoreStrongs, "Number objc_storeStrong calls formed");
+
+static cl::opt<cl::boolOrDefault> UseObjCClaimRV(
+    "arc-contract-use-objc-claim-rv",
+    cl::desc(
+        "Enable generation of calls to objc_claimAutoreleasedReturnValue"));
 
 //===----------------------------------------------------------------------===//
 //                                Declarations
@@ -64,12 +70,18 @@ namespace {
 
 class ObjCARCContract {
   bool Changed;
-  bool CFGChanged;
+  bool CFGChanged = false;
   AAResults *AA;
   DominatorTree *DT;
   ProvenanceAnalysis PA;
   ARCRuntimeEntryPoints EP;
   BundledRetainClaimRVs *BundledInsts = nullptr;
+
+  /// A flag indicating whether this optimization pass should run.
+  bool Run;
+
+  /// Whether objc_claimAutoreleasedReturnValue is available.
+  bool HasClaimRV = false;
 
   /// The inline asm string to insert between calls and RetainRV calls to make
   /// the optimization work on targets which need it.
@@ -376,18 +388,10 @@ void ObjCARCContract::tryToContractReleaseIntoStoreStrong(
                    << "            Retain:  " << *Retain << "\n"
                    << "            Load:    " << *Load << "\n");
 
-  LLVMContext &C = Release->getContext();
-  Type *I8X = PointerType::getUnqual(Type::getInt8Ty(C));
-  Type *I8XX = PointerType::getUnqual(I8X);
-
-  Value *Args[] = { Load->getPointerOperand(), New };
-  if (Args[0]->getType() != I8XX)
-    Args[0] = new BitCastInst(Args[0], I8XX, "", Store);
-  if (Args[1]->getType() != I8X)
-    Args[1] = new BitCastInst(Args[1], I8X, "", Store);
+  Value *Args[] = {Load->getPointerOperand(), New};
   Function *Decl = EP.get(ARCRuntimeEntryPointKind::StoreStrong);
-  CallInst *StoreStrong =
-      objcarc::createCallInstWithColors(Decl, Args, "", Store, BlockColors);
+  CallInst *StoreStrong = objcarc::createCallInstWithColors(
+      Decl, Args, "", Store->getIterator(), BlockColors);
   StoreStrong->setDoesNotThrow();
   StoreStrong->setDebugLoc(Store->getDebugLoc());
 
@@ -472,7 +476,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
                          RVInstMarker->getString(),
                          /*Constraints=*/"", /*hasSideEffects=*/true);
 
-      objcarc::createCallInstWithColors(IA, std::nullopt, "", Inst,
+      objcarc::createCallInstWithColors(IA, {}, "", Inst->getIterator(),
                                         BlockColors);
     }
   decline_rv_optimization:
@@ -484,7 +488,7 @@ bool ObjCARCContract::tryToPeepholeInstruction(
     if (IsNullOrUndef(CI->getArgOperand(1))) {
       Value *Null = ConstantPointerNull::get(cast<PointerType>(CI->getType()));
       Changed = true;
-      new StoreInst(Null, CI->getArgOperand(0), CI);
+      new StoreInst(Null, CI->getArgOperand(0), CI->getIterator());
 
       LLVM_DEBUG(dbgs() << "OBJCARCContract: Old = " << *CI << "\n"
                         << "                 New = " << *Null << "\n");
@@ -522,12 +526,51 @@ bool ObjCARCContract::tryToPeepholeInstruction(
   }
 }
 
+/// Should we use objc_claimAutoreleasedReturnValue?
+static bool useClaimRuntimeCall(Module &M) {
+  // Let the flag override our OS-based default.
+  if (UseObjCClaimRV != cl::BOU_UNSET)
+    return UseObjCClaimRV == cl::BOU_TRUE;
+
+  Triple TT(M.getTargetTriple());
+
+  // On x86_64, claimARV doesn't make sense, as the marker isn't actually a nop
+  // there (it's needed by the calling convention).
+  if (!TT.isAArch64())
+    return false;
+
+  unsigned Major = TT.getOSMajorVersion();
+  switch (TT.getOS()) {
+  default:
+    return false;
+  case Triple::IOS:
+  case Triple::TvOS:
+    return Major >= 16;
+  case Triple::WatchOS:
+    return Major >= 9;
+  case Triple::BridgeOS:
+    return Major >= 7;
+  case Triple::MacOSX:
+    return Major >= 13;
+  case Triple::Darwin:
+    return Major >= 21;
+  }
+
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 //                              Top Level Driver
 //===----------------------------------------------------------------------===//
 
 bool ObjCARCContract::init(Module &M) {
+  Run = ModuleHasARC(M);
+  if (!Run)
+    return false;
+
   EP.init(&M);
+
+  HasClaimRV = useClaimRuntimeCall(M);
 
   // Initialize RVInstMarker.
   RVInstMarker = getRVInstMarker(M);
@@ -536,6 +579,9 @@ bool ObjCARCContract::init(Module &M) {
 }
 
 bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
+  if (!Run)
+    return false;
+
   if (!EnableARCOpts)
     return false;
 
@@ -543,7 +589,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
   AA = A;
   DT = D;
   PA.setAA(A);
-  BundledRetainClaimRVs BRV(/*ContractPass=*/true);
+  BundledRetainClaimRVs BRV(EP, /*ContractPass=*/true, HasClaimRV);
   BundledInsts = &BRV;
 
   std::pair<bool, bool> R = BundledInsts->insertAfterInvokes(F, DT);
@@ -575,7 +621,7 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
 
     if (auto *CI = dyn_cast<CallInst>(Inst))
       if (objcarc::hasAttachedCallOpBundle(CI)) {
-        BundledInsts->insertRVCallWithColors(&*I, CI, BlockColors);
+        BundledInsts->insertRVCallWithColors(I->getIterator(), CI, BlockColors);
         --I;
         Changed = true;
       }
@@ -625,14 +671,14 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
             // block with a catchswitch has no insertion point. Keep going up
             // the dominator tree until we find a non-catchswitch.
             BasicBlock *InsertBB = IncomingBB;
-            while (isa<CatchSwitchInst>(InsertBB->getFirstNonPHI())) {
+            while (isa<CatchSwitchInst>(InsertBB->getFirstNonPHIIt())) {
               InsertBB = DT->getNode(InsertBB)->getIDom()->getBlock();
             }
 
             assert(DT->dominates(Inst, &InsertBB->back()) &&
                    "Invalid insertion point for bitcast");
-            Replacement =
-                new BitCastInst(Replacement, UseTy, "", &InsertBB->back());
+            Replacement = new BitCastInst(Replacement, UseTy, "",
+                                          InsertBB->back().getIterator());
           }
 
           // While we're here, rewrite all edges for this PHI, rather
@@ -649,15 +695,15 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
             }
         } else {
           if (Replacement->getType() != UseTy)
-            Replacement = new BitCastInst(Replacement, UseTy, "",
-                                          cast<Instruction>(U.getUser()));
+            Replacement =
+                new BitCastInst(Replacement, UseTy, "",
+                                cast<Instruction>(U.getUser())->getIterator());
           U.set(Replacement);
         }
       }
     };
 
     Value *Arg = cast<CallInst>(Inst)->getArgOperand(0);
-    Value *OrigArg = Arg;
 
     // TODO: Change this to a do-while.
     for (;;) {
@@ -683,24 +729,6 @@ bool ObjCARCContract::run(Function &F, AAResults *A, DominatorTree *D) {
         }
         break;
       }
-    }
-
-    // Replace bitcast users of Arg that are dominated by Inst.
-    SmallVector<BitCastInst *, 2> BitCastUsers;
-
-    // Add all bitcast users of the function argument first.
-    for (User *U : OrigArg->users())
-      if (auto *BC = dyn_cast<BitCastInst>(U))
-        BitCastUsers.push_back(BC);
-
-    // Replace the bitcasts with the call return. Iterate until list is empty.
-    while (!BitCastUsers.empty()) {
-      auto *BC = BitCastUsers.pop_back_val();
-      for (User *U : BC->users())
-        if (auto *B = dyn_cast<BitCastInst>(U))
-          BitCastUsers.push_back(B);
-
-      ReplaceArgUses(BC);
     }
   }
 
@@ -729,6 +757,9 @@ INITIALIZE_PASS_END(ObjCARCContractLegacyPass, "objc-arc-contract",
 void ObjCARCContractLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addPreserved<AAResultsWrapperPass>();
+  AU.addPreserved<BasicAAWrapperPass>();
+  AU.addPreserved<DominatorTreeWrapperPass>();
 }
 
 Pass *llvm::createObjCARCContractPass() {

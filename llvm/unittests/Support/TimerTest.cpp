@@ -27,7 +27,12 @@ void SleepMS() {
   struct timespec Interval;
   Interval.tv_sec = 0;
   Interval.tv_nsec = 1000000;
+#if defined(__MVS__)
+  long Microseconds = (Interval.tv_nsec + 999) / 1000;
+  usleep(Microseconds);
+#else
   nanosleep(&Interval, nullptr);
+#endif
 #endif
 }
 
@@ -61,4 +66,20 @@ TEST(Timer, CheckIfTriggered) {
   EXPECT_FALSE(T1.hasTriggered());
 }
 
-} // end anon namespace
+TEST(Timer, TimerGroupTimerDestructed) {
+  testing::internal::CaptureStderr();
+
+  {
+    TimerGroup TG("tg", "desc");
+    {
+      Timer T1("T1", "T1", TG);
+      T1.startTimer();
+      T1.stopTimer();
+    }
+    EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
+    testing::internal::CaptureStderr();
+  }
+  EXPECT_FALSE(testing::internal::GetCapturedStderr().empty());
+}
+
+} // namespace

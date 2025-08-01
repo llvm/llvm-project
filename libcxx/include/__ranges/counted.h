@@ -12,6 +12,7 @@
 
 #include <__concepts/convertible_to.h>
 #include <__config>
+#include <__cstddef/size_t.h>
 #include <__iterator/concepts.h>
 #include <__iterator/counted_iterator.h>
 #include <__iterator/default_sentinel.h>
@@ -22,12 +23,14 @@
 #include <__type_traits/decay.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <span>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -48,9 +51,8 @@ struct __fn {
   }
 
   template <random_access_iterator _It>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  __go(_It __it, iter_difference_t<_It> __count) noexcept(noexcept(subrange(__it, __it + __count)))
-      -> decltype(subrange(__it, __it + __count)) {
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __go(_It __it, iter_difference_t<_It> __count) noexcept(
+      noexcept(subrange(__it, __it + __count))) -> decltype(subrange(__it, __it + __count)) {
     return subrange(__it, __it + __count);
   }
 
@@ -81,5 +83,7 @@ inline constexpr auto counted = __counted::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_COUNTED_H

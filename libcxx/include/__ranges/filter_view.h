@@ -44,6 +44,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 20
@@ -51,14 +54,14 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace ranges {
 template <input_range _View, indirect_unary_predicate<iterator_t<_View>> _Pred>
   requires view<_View> && is_object_v<_Pred>
-class filter_view : public view_interface<filter_view<_View, _Pred>> {
+class _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS filter_view : public view_interface<filter_view<_View, _Pred>> {
   _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
   _LIBCPP_NO_UNIQUE_ADDRESS __movable_box<_Pred> __pred_;
 
   // We cache the result of begin() to allow providing an amortized O(1) begin() whenever
   // the underlying range is at least a forward_range.
   static constexpr bool _UseCache = forward_range<_View>;
-  using _Cache                    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
+  using _Cache _LIBCPP_NODEBUG    = _If<_UseCache, __non_propagating_cache<iterator_t<_View>>, __empty_cache>;
   _LIBCPP_NO_UNIQUE_ADDRESS _Cache __cached_begin_ = _Cache();
 
   class __iterator;
@@ -83,7 +86,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr _Pred const& pred() const { return *__pred_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
-    _LIBCPP_ASSERT_UNCATEGORIZED(
+    // Note: this duplicates a check in `optional` but provides a better error message.
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __pred_.__has_value(), "Trying to call begin() on a filter_view that does not have a valid predicate.");
     if constexpr (_UseCache) {
       if (!__cached_begin_.__has_value()) {
@@ -111,7 +115,7 @@ struct __filter_iterator_category {};
 
 template <forward_range _View>
 struct __filter_iterator_category<_View> {
-  using _Cat = typename iterator_traits<iterator_t<_View>>::iterator_category;
+  using _Cat _LIBCPP_NODEBUG = typename iterator_traits<iterator_t<_View>>::iterator_category;
   using iterator_category =
       _If<derived_from<_Cat, bidirectional_iterator_tag>,
           bidirectional_iterator_tag,
@@ -235,7 +239,7 @@ struct __fn {
     requires constructible_from<decay_t<_Pred>, _Pred>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Pred&& __pred) const
       noexcept(is_nothrow_constructible_v<decay_t<_Pred>, _Pred>) {
-    return __range_adaptor_closure_t(std::__bind_back(*this, std::forward<_Pred>(__pred)));
+    return __pipeable(std::__bind_back(*this, std::forward<_Pred>(__pred)));
   }
 };
 } // namespace __filter
@@ -250,5 +254,7 @@ inline constexpr auto filter = __filter::__fn{};
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_FILTER_VIEW_H

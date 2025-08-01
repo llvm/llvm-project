@@ -82,11 +82,11 @@ cl::opt<std::string>
     InputFile("input", cl::init("/dev/null"),
               cl::desc("Filename to pipe in as stdin (default: /dev/null)"));
 
-cl::list<std::string>
+static cl::list<std::string>
     AdditionalSOs("additional-so", cl::desc("Additional shared objects to load "
                                             "into executing programs"));
 
-cl::list<std::string> AdditionalLinkerArgs(
+static cl::list<std::string> AdditionalLinkerArgs(
     "Xlinker", cl::desc("Additional arguments to pass to the linker"));
 
 cl::opt<std::string> CustomCompileCommand(
@@ -299,7 +299,7 @@ Expected<std::string> BugDriver::executeProgram(const Module &Program,
              << "!\n";
       exit(1);
     }
-    BitcodeFile = std::string(UniqueFilename.str());
+    BitcodeFile = std::string(UniqueFilename);
 
     if (writeProgramToFile(BitcodeFile, UniqueFD, Program)) {
       errs() << ToolName << ": Error emitting bitcode to file '" << BitcodeFile
@@ -324,7 +324,7 @@ Expected<std::string> BugDriver::executeProgram(const Module &Program,
            << "\n";
     exit(1);
   }
-  OutputFile = std::string(UniqueFile.str());
+  OutputFile = std::string(UniqueFile);
 
   // Figure out which shared objects to run, if any.
   std::vector<std::string> SharedObjs(AdditionalSOs);

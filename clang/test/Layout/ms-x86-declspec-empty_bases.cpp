@@ -1,7 +1,18 @@
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple i686-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s
-// RUN: %clang_cc1 -fno-rtti -emit-llvm-only -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
+// RUN: %clang_cc1 -fno-rtti -triple x86_64-pc-win32 -fms-extensions -fdump-record-layouts -fsyntax-only %s 2>/dev/null \
 // RUN:            | FileCheck %s
+// RUN: %clang_cc1 -fno-rtti -triple amdgcn-amd-amdhsa -fms-extensions \
+// RUN:    -target-cpu gfx1200 -aux-triple x86_64-pc-win32 -fcuda-is-device \
+// RUN:    -fdump-record-layouts -fsyntax-only -xhip %s 2>/dev/null \
+// RUN:    | FileCheck %s
+// RUN: %clang_cc1 -fno-rtti -triple spirv64-amd-amdhsa -fms-extensions \
+// RUN:    -aux-triple x86_64-pc-win32 -fcuda-is-device \
+// RUN:    -fdump-record-layouts -fsyntax-only -xhip %s 2>/dev/null \
+// RUN:    | FileCheck %s
+// RUN: %clang_cc1 -fno-rtti -triple nvptx64 -fms-extensions \
+// RUN:    -aux-triple x86_64-pc-win32 -fcuda-is-device -fdump-record-layouts \
+// RUN:    -fsyntax-only -xcuda %s 2>/dev/null | FileCheck %s
 
 namespace test1 {
 

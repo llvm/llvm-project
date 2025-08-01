@@ -50,19 +50,19 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     SmallVector<Value> initArgs;
     initArgs.push_back(forOp.getLowerBound());
     llvm::append_range(initArgs, forOp.getInitArgs());
-    auto whileOp = rewriter.create<WhileOp>(forOp.getLoc(), lcvTypes, initArgs,
-                                            forOp->getAttrs());
+    auto whileOp = WhileOp::create(rewriter, forOp.getLoc(), lcvTypes, initArgs,
+                                   forOp->getAttrs());
 
     // 'before' region contains the loop condition and forwarding of iteration
     // arguments to the 'after' region.
     auto *beforeBlock = rewriter.createBlock(
         &whileOp.getBefore(), whileOp.getBefore().begin(), lcvTypes, lcvLocs);
     rewriter.setInsertionPointToStart(whileOp.getBeforeBody());
-    auto cmpOp = rewriter.create<arith::CmpIOp>(
-        whileOp.getLoc(), arith::CmpIPredicate::slt,
+    auto cmpOp = arith::CmpIOp::create(
+        rewriter, whileOp.getLoc(), arith::CmpIPredicate::slt,
         beforeBlock->getArgument(0), forOp.getUpperBound());
-    rewriter.create<scf::ConditionOp>(whileOp.getLoc(), cmpOp.getResult(),
-                                      beforeBlock->getArguments());
+    scf::ConditionOp::create(rewriter, whileOp.getLoc(), cmpOp.getResult(),
+                             beforeBlock->getArguments());
 
     // Inline for-loop body into an executeRegion operation in the "after"
     // region. The return type of the execRegionOp does not contain the
@@ -72,8 +72,9 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
 
     // Add induction variable incrementation
     rewriter.setInsertionPointToEnd(afterBlock);
-    auto ivIncOp = rewriter.create<arith::AddIOp>(
-        whileOp.getLoc(), afterBlock->getArgument(0), forOp.getStep());
+    auto ivIncOp =
+        arith::AddIOp::create(rewriter, whileOp.getLoc(),
+                              afterBlock->getArgument(0), forOp.getStep());
 
     // Rewrite uses of the for-loop block arguments to the new while-loop
     // "after" arguments
@@ -83,14 +84,14 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
 
     // Inline for-loop body operations into 'after' region.
     for (auto &arg : llvm::make_early_inc_range(*forOp.getBody()))
-      arg.moveBefore(afterBlock, afterBlock->end());
+      rewriter.moveOpBefore(&arg, afterBlock, afterBlock->end());
 
     // Add incremented IV to yield operations
     for (auto yieldOp : afterBlock->getOps<scf::YieldOp>()) {
       SmallVector<Value> yieldOperands = yieldOp.getOperands();
       yieldOperands.insert(yieldOperands.begin(), ivIncOp.getResult());
-      rewriter.updateRootInPlace(
-          yieldOp, [&]() { yieldOp->setOperands(yieldOperands); });
+      rewriter.modifyOpInPlace(yieldOp,
+                               [&]() { yieldOp->setOperands(yieldOperands); });
     }
 
     // We cannot do a direct replacement of the forOp since the while op returns
@@ -112,7 +113,7 @@ struct ForToWhileLoop : public impl::SCFForToWhileLoopBase<ForToWhileLoop> {
     MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopLoweringPattern>(ctx);
-    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
+    (void)applyPatternsGreedily(parentOp, std::move(patterns));
   }
 };
 } // namespace

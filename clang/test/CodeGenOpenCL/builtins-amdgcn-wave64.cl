@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-feature +wavefrontsize64 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx900 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx900 -target-feature +wavefrontsize64 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -target-feature +wavefrontsize64 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -target-feature +wavefrontsize64 -S -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx900 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx900 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1010 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-unknown-unknown -target-cpu gfx1100 -target-feature +wavefrontsize64 -emit-llvm -o - %s | FileCheck -enable-var-scope %s
 
 typedef unsigned long ulong;
 
@@ -44,6 +44,6 @@ void test_read_exec_hi(global ulong* out) {
   *out = __builtin_amdgcn_read_exec_hi();
 }
 
-#if __AMDGCN_WAVEFRONT_SIZE != 64
+#if defined(__AMDGCN_WAVEFRONT_SIZE__) && __AMDGCN_WAVEFRONT_SIZE__ != 64
 #error Wrong wavesize detected
 #endif

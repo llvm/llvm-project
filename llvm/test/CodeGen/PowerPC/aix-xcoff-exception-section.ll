@@ -1,11 +1,11 @@
 ; Testing 32-bit and 64-bit exception section entries, no exception auxilliary
 ; entries should be produced as no debug information is specified.
-; RUN: llc -mtriple=powerpc-ibm-aix-xcoff -filetype=obj -o %t_32.o < %s
+; RUN: llc -mtriple=powerpc-ibm-aix-xcoff -mcpu=ppc -filetype=obj -o %t_32.o < %s
 ; RUN: llvm-readobj --exception-section %t_32.o | FileCheck %s --check-prefix=EXCEPT
 ; RUN: llvm-readobj --section-headers %t_32.o | FileCheck %s --check-prefix=READ
 ; RUN: llvm-readobj --syms %t_32.o | FileCheck %s --check-prefix=SYMS
 
-; RUN: llc -mtriple=powerpc64-unknown-aix -filetype=obj -o %t_64.o < %s
+; RUN: llc -mtriple=powerpc64-unknown-aix -mcpu=ppc -filetype=obj -o %t_64.o < %s
 ; RUN: llvm-readobj --exception-section %t_64.o | FileCheck %s --check-prefix=EXCEPT64
 ; RUN: llvm-readobj --section-headers %t_64.o | FileCheck %s --check-prefix=READ64
 ; RUN: llvm-readobj --syms %t_64.o | FileCheck %s --check-prefix=SYMS64
@@ -24,13 +24,13 @@ define dso_local void @test__trap_annotation(i32 %a) {
 }
 
 ; EXCEPT:       Exception section {
-; EXCEPT-NEXT:    Symbol: .sub_test (3)
+; EXCEPT-NEXT:    Symbol: .sub_test
 ; EXCEPT-NEXT:    LangID: 0
 ; EXCEPT-NEXT:    Reason: 0
 ; EXCEPT-NEXT:    Trap Instr Addr: 0x4
 ; EXCEPT-NEXT:    LangID: 1
 ; EXCEPT-NEXT:    Reason: 2
-; EXCEPT-NEXT:    Symbol: .test__trap_annotation (6)
+; EXCEPT-NEXT:    Symbol: .test__trap_annotation
 ; EXCEPT-NEXT:    LangID: 0
 ; EXCEPT-NEXT:    Reason: 0
 ; EXCEPT-NEXT:    Trap Instr Addr: 0x3C
@@ -75,7 +75,7 @@ define dso_local void @test__trap_annotation(i32 %a) {
 ; SYMS-NEXT:      }
 ; SYMS-NEXT:      CSECT Auxiliary Entry {
 ; SYMS-NEXT:        Index: [[#IND+2]]
-; SYMS-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS-NEXT:        ParameterHashIndex: 0x0
 ; SYMS-NEXT:        TypeChkSectNum: 0x0
 ; SYMS-NEXT:        SymbolAlignmentLog2: 0
@@ -102,7 +102,7 @@ define dso_local void @test__trap_annotation(i32 %a) {
 ; SYMS-NEXT:      }
 ; SYMS-NEXT:      CSECT Auxiliary Entry {
 ; SYMS-NEXT:        Index: [[#IND+5]]
-; SYMS-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS-NEXT:        ParameterHashIndex: 0x0
 ; SYMS-NEXT:        TypeChkSectNum: 0x0
 ; SYMS-NEXT:        SymbolAlignmentLog2: 0
@@ -114,13 +114,13 @@ define dso_local void @test__trap_annotation(i32 %a) {
 ; SYMS-NEXT:    }
 
 ; EXCEPT64:       Exception section {
-; EXCEPT64-NEXT:    Symbol: .sub_test (3)
+; EXCEPT64-NEXT:    Symbol: .sub_test
 ; EXCEPT64-NEXT:    LangID: 0
 ; EXCEPT64-NEXT:    Reason: 0
 ; EXCEPT64-NEXT:    Trap Instr Addr: 0x4
 ; EXCEPT64-NEXT:    LangID: 1
 ; EXCEPT64-NEXT:    Reason: 2
-; EXCEPT64-NEXT:    Symbol: .test__trap_annotation (6)
+; EXCEPT64-NEXT:    Symbol: .test__trap_annotation
 ; EXCEPT64-NEXT:    LangID: 0
 ; EXCEPT64-NEXT:    Reason: 0
 ; EXCEPT64-NEXT:    Trap Instr Addr: 0x3C
@@ -163,7 +163,7 @@ define dso_local void @test__trap_annotation(i32 %a) {
 ; SYMS64-NEXT:      }
 ; SYMS64-NEXT:      CSECT Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+2]]
-; SYMS64-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS64-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS64-NEXT:        ParameterHashIndex: 0x0
 ; SYMS64-NEXT:        TypeChkSectNum: 0x0
 ; SYMS64-NEXT:        SymbolAlignmentLog2: 0
@@ -189,7 +189,7 @@ define dso_local void @test__trap_annotation(i32 %a) {
 ; SYMS64-NEXT:      }
 ; SYMS64-NEXT:      CSECT Auxiliary Entry {
 ; SYMS64-NEXT:        Index: [[#IND+5]]
-; SYMS64-NEXT:        ContainingCsectSymbolIndex: 1
+; SYMS64-NEXT:        ContainingCsectSymbolIndex: [[#IND-2]]
 ; SYMS64-NEXT:        ParameterHashIndex: 0x0
 ; SYMS64-NEXT:        TypeChkSectNum: 0x0
 ; SYMS64-NEXT:        SymbolAlignmentLog2: 0

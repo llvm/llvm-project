@@ -14,7 +14,6 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/ADT/iterator_range.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -55,7 +54,8 @@ struct ModuleDependencyPPCallbacks : public PPCallbacks {
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
                           OptionalFileEntryRef File, StringRef SearchPath,
-                          StringRef RelativePath, const Module *Imported,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
                           SrcMgr::CharacteristicKind FileType) override {
     if (!File)
       return;
@@ -104,7 +104,7 @@ static bool isCaseSensitivePath(StringRef Path) {
   // already expects when sensitivity isn't setup.
   for (auto &C : Path)
     UpperDest.push_back(toUppercase(C));
-  if (!llvm::sys::fs::real_path(UpperDest, RealDest) && Path.equals(RealDest))
+  if (!llvm::sys::fs::real_path(UpperDest, RealDest) && Path == RealDest)
     return false;
   return true;
 }

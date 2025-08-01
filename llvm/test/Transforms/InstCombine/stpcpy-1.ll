@@ -16,7 +16,7 @@ declare ptr @stpcpy(ptr, ptr)
 define ptr @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) @a, ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([32 x i8], ptr @a, i32 0, i32 5)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @a, i32 5)
 ;
   %ret = call ptr @stpcpy(ptr @a, ptr @hello)
   ret ptr %ret
@@ -62,7 +62,7 @@ define ptr @test_no_simplify2(ptr %dst, ptr %src) {
 define ptr @test_no_incompatible_attr() {
 ; CHECK-LABEL: @test_no_incompatible_attr(
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) @a, ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
-; CHECK-NEXT:    ret ptr getelementptr inbounds ([32 x i8], ptr @a, i32 0, i32 5)
+; CHECK-NEXT:    ret ptr getelementptr inbounds nuw (i8, ptr @a, i32 5)
 ;
   %ret = call dereferenceable(1) ptr @stpcpy(ptr @a, ptr @hello)
   ret ptr %ret

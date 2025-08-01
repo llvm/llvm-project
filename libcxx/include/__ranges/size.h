@@ -13,6 +13,8 @@
 #include <__concepts/arithmetic.h>
 #include <__concepts/class_or_enum.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
+#include <__cstddef/size_t.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>
@@ -22,7 +24,6 @@
 #include <__type_traits/remove_cvref.h>
 #include <__utility/auto_cast.h>
 #include <__utility/declval.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -41,14 +42,13 @@ inline constexpr bool disable_sized_range = false;
 
 namespace ranges {
 namespace __size {
-void size(auto&)       = delete;
-void size(const auto&) = delete;
+void size() = delete;
 
 template <class _Tp>
 concept __size_enabled = !disable_sized_range<remove_cvref_t<_Tp>>;
 
 template <class _Tp>
-concept __member_size = __size_enabled<_Tp> && __workaround_52970<_Tp> && requires(_Tp&& __t) {
+concept __member_size = __size_enabled<_Tp> && requires(_Tp&& __t) {
   { _LIBCPP_AUTO_CAST(__t.size()) } -> __integer_like;
 };
 

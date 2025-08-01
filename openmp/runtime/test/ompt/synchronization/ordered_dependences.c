@@ -7,7 +7,7 @@
 int main() {
   int a[10][10];
 #pragma omp parallel num_threads(2)
-#pragma omp for ordered(2)
+#pragma omp for ordered(2) schedule(static)
   for (int i = 0; i < 2; i++)
     for (int j = 0; j < 2; j++) {
       a[i][j] = i + j + 1;
@@ -23,8 +23,8 @@ int main() {
 }
 // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
-// CHECK: {{^}}[[MASTER:[0-9]+]]: ompt_event_loop_begin:
-// CHECK-SAME: parallel_id={{[0-9]+}}, parent_task_id=[[ITASK:[0-9]+]],
+// CHECK: {{^}}[[MASTER:[0-9]+]]: ompt_event_loop_static_begin:
+// CHECK-SAME: parallel_id={{[0-9]+}}, task_id=[[ITASK:[0-9]+]],
 
 // CHECK: {{^}}[[MASTER]]: ompt_event_dependences: task_id=[[ITASK]],
 // CHECK-SAME: deps=[(0, ompt_dependence_type_source), (0,
@@ -38,8 +38,8 @@ int main() {
 // CHECK-SAME: deps=[(0, ompt_dependence_type_source), (1,
 // CHECK-SAME: ompt_dependence_type_source)], ndeps=2
 
-// CHECK: {{^}}[[WORKER:[0-9]+]]: ompt_event_loop_begin:
-// CHECK-SAME: parallel_id={{[0-9]+}}, parent_task_id=[[ITASK:[0-9]+]],
+// CHECK: {{^}}[[WORKER:[0-9]+]]: ompt_event_loop_static_begin:
+// CHECK-SAME: parallel_id={{[0-9]+}}, task_id=[[ITASK:[0-9]+]],
 
 // CHECK: {{^}}[[WORKER]]: ompt_event_dependences: task_id=[[ITASK]],
 // CHECK-SAME: deps=[(0, ompt_dependence_type_sink), (0,

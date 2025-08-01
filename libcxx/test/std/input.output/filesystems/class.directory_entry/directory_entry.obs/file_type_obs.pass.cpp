@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 
 // Starting in Android N (API 24), SELinux policy prevents the shell user from
@@ -171,8 +172,13 @@ static void test_with_ec_dne() {
     file_status st = status(p, status_ec);
     file_status sym_st = symlink_status(p, sym_status_ec);
     std::error_code ec = GetTestEC(2);
-    auto CheckEC = [&](std::error_code const& other_ec) {
-      bool res = ec == other_ec;
+    auto CheckEC                  = [&](std::error_code const& other_ec) {
+      // Note: we're comparing equality of the _canonicalized_ error_condition
+      // here (unlike in other tests where we expect exactly the same
+      // error_code). This is because directory_entry can construct its own
+      // generic_category error when a file doesn't exist, instead of passing
+      // through an underlying system_category error.
+      bool res = ec.default_error_condition() == other_ec.default_error_condition();
       ec = GetTestEC(2);
       return res;
     };

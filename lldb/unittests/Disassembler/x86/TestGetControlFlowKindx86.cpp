@@ -1,4 +1,4 @@
-//===-- TextX86GetControlFlowKind.cpp ------------------------------------------===//
+//===-- TestX86GetControlFlowKind.cpp -------------------------------------===//
 
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -124,9 +124,9 @@ TEST_F(TestGetControlFlowKindx86, TestX86_64Instruction) {
 
   DisassemblerSP disass_sp;
   Address start_addr(0x100);
-  disass_sp =
-      Disassembler::DisassembleBytes(arch, nullptr, nullptr, start_addr, &data,
-                                    sizeof (data), num_of_instructions, false);
+  disass_sp = Disassembler::DisassembleBytes(
+      arch, nullptr, nullptr, nullptr, nullptr, start_addr, &data, sizeof(data),
+      num_of_instructions, false);
 
   // If we failed to get a disassembler, we can assume it is because
   // the llvm we linked against was not built with the i386 target,
@@ -145,14 +145,19 @@ TEST_F(TestGetControlFlowKindx86, TestX86_64Instruction) {
     EXPECT_EQ(kind, result[i]);
 
     // Also, test the DisassemblerLLVMC::MCDisasmInstance methods.
-    if (kind == eInstructionControlFlowKindReturn)
+    if (kind == eInstructionControlFlowKindReturn) {
       EXPECT_FALSE(inst_sp->IsCall());
-    if (kind == eInstructionControlFlowKindCall)
+    }
+
+    if (kind == eInstructionControlFlowKindCall) {
       EXPECT_TRUE(inst_sp->IsCall());
+    }
+
     if (kind == eInstructionControlFlowKindCall ||
         kind == eInstructionControlFlowKindJump ||
         kind == eInstructionControlFlowKindCondJump ||
-        kind == eInstructionControlFlowKindReturn)
+        kind == eInstructionControlFlowKindReturn) {
       EXPECT_TRUE(inst_sp->DoesBranch());
+    }
   }
 }

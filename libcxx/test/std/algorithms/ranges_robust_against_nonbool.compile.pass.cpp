@@ -53,6 +53,10 @@ void f(Iterator it, Range in, Iterator out, std::size_t n, Value const& val, std
   in_pred(std::ranges::none_of, pred1);
   in_pred(std::ranges::find_if, pred1);
   in_pred(std::ranges::find_if_not, pred1);
+#if TEST_STD_VER >= 23
+  in_pred(std::ranges::find_last_if, pred1);
+  in_pred(std::ranges::find_last_if_not, pred1);
+#endif
   in_in_pred(std::ranges::find_first_of, pred2);
   in_pred(std::ranges::adjacent_find, pred2);
   in_in_pred(std::ranges::mismatch, pred2);

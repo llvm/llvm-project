@@ -223,10 +223,9 @@ define i64 @three_dimensional_middle(ptr %a, ptr %b, i64 %N, i64 %M, i64 %K) {
 ; CHECK-NEXT:    // Parent Loop BB3_1 Depth=1
 ; CHECK-NEXT:    // => This Loop Header: Depth=2
 ; CHECK-NEXT:    // Child Loop BB3_3 Depth 3
-; CHECK-NEXT:    lsl x12, x11, #3
+; CHECK-NEXT:    ldr x13, [x1, x11, lsl #3]
+; CHECK-NEXT:    ldr x12, [x10, x11, lsl #3]
 ; CHECK-NEXT:    mov x14, x4
-; CHECK-NEXT:    ldr x13, [x1, x12]
-; CHECK-NEXT:    ldr x12, [x10, x12]
 ; CHECK-NEXT:    ldr w13, [x13]
 ; CHECK-NEXT:  .LBB3_3: // %for.body8
 ; CHECK-NEXT:    // Parent Loop BB3_1 Depth=1
@@ -314,9 +313,8 @@ define void @one_dimensional_with_store(ptr %a, ptr %b, ptr %c, i32 %N) {
 ; CHECK-NEXT:    rev w9, w9
 ; CHECK-NEXT:    cmp w9, w10
 ; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    cset w10, lo
+; CHECK-NEXT:    csinv w9, w9, wzr, hs
 ; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    sub w9, w9, w10
 ; CHECK-NEXT:    strb w9, [x2], #1
 ; CHECK-NEXT:    b.ne .LBB4_1
 ; CHECK-NEXT:  // %bb.2: // %for.exit
@@ -496,6 +494,35 @@ for.body:                                         ; preds = %entry, %for.body
 
 for.exit:                                 ; preds = %for.body
   ret i64 %spec.select
+}
+
+@a = external local_unnamed_addr global i32, align 4
+
+; Make sure the load is not hoisted out of the loop across memory barriers.
+define i32 @load_between_memory_barriers() {
+; CHECK-LABEL: load_between_memory_barriers:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, :got:a
+; CHECK-NEXT:    ldr x8, [x8, :got_lo12:a]
+; CHECK-NEXT:  .LBB8_1: // %loop
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    //MEMBARRIER
+; CHECK-NEXT:    ldr w0, [x8]
+; CHECK-NEXT:    //MEMBARRIER
+; CHECK-NEXT:    cbz w0, .LBB8_1
+; CHECK-NEXT:  // %bb.2: // %exit
+; CHECK-NEXT:    ret
+  br label %loop
+
+loop:
+  fence syncscope("singlethread") acq_rel
+  %l = load i32, ptr @a, align 4
+  fence syncscope("singlethread") acq_rel
+  %c = icmp eq i32 %l, 0
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret i32 %l
 }
 
 declare i32 @bcmp(ptr, ptr, i64)

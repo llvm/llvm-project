@@ -2,6 +2,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
 package(default_visibility = ["//visibility:public"])
 
 licenses(["notice"])
@@ -52,9 +54,9 @@ cc_library(
     ) + [
     ],
     hdrs = [
-        "googletest/include/gtest/internal/gtest-port.h",
         "googletest/include/gtest/gtest.h",
         "googletest/include/gtest/gtest-spi.h",
+        "googletest/include/gtest/internal/gtest-port.h",
     ],
     copts = llvm_copts,
     defines = [

@@ -17,6 +17,7 @@ struct Program;
 class Messages;
 struct Name;
 class CharBlock;
+struct AssignmentStmt;
 struct ExecutionPartConstruct;
 struct ExecutableConstruct;
 struct ActionStmt;
@@ -38,9 +39,20 @@ public:
   void Enter(const parser::FunctionSubprogram &);
   void Enter(const parser::SeparateModuleSubprogram &);
   void Enter(const parser::CUFKernelDoConstruct &);
+  void Leave(const parser::CUFKernelDoConstruct &);
+  void Enter(const parser::AssignmentStmt &);
+  void Enter(const parser::OpenACCBlockConstruct &);
+  void Leave(const parser::OpenACCBlockConstruct &);
+  void Enter(const parser::OpenACCCombinedConstruct &);
+  void Leave(const parser::OpenACCCombinedConstruct &);
+  void Enter(const parser::OpenACCLoopConstruct &);
+  void Leave(const parser::OpenACCLoopConstruct &);
+  void Enter(const parser::DoConstruct &);
+  void Leave(const parser::DoConstruct &);
 
 private:
   SemanticsContext &context_;
+  int deviceConstructDepth_{0};
 };
 
 bool CanonicalizeCUDA(parser::Program &);

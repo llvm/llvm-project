@@ -41,7 +41,7 @@
 ; ASM:         xorl    %edi, %edi
 ; ASM:         xorl    %esi, %esi
 ; ASM: [[oy_ox_start:\.Ltmp[0-9]+]]:
-; ASM:         .p2align        4, 0x90
+; ASM:         .p2align        4
 ; ASM: .LBB0_3:                                # %for.body
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 0 32] $edi
 ; ASM:        #DEBUG_VALUE: loop_csr:o <- [DW_OP_LLVM_fragment 32 32] $esi

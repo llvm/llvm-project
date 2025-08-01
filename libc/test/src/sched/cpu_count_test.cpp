@@ -7,13 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_getcpucount.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 
-#include <sched.h>
-#include <sys/syscall.h>
+#include "hdr/sched_macros.h"
+#include "hdr/types/cpu_set_t.h"
+#include "hdr/types/pid_t.h"
 
 TEST(LlvmLibcSchedCpuCountTest, SmokeTest) {
   cpu_set_t mask;

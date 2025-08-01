@@ -50,12 +50,29 @@ typedef __bf16 __m256bh __attribute__((__vector_size__(32), __aligned__(32)));
 #endif
 
 /* Define the default attributes for the functions in this file. */
+#if defined(__EVEX512__) && !defined(__AVX10_1_512__)
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
                  __min_vector_width__(256)))
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avx,no-evex512"), \
                  __min_vector_width__(128)))
+#else
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx"),            \
+                 __min_vector_width__(256)))
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("avx"),            \
+                 __min_vector_width__(128)))
+#endif
+
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS constexpr
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#else
+#define __DEFAULT_FN_ATTRS_CONSTEXPR __DEFAULT_FN_ATTRS128
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS
+#endif
 
 /* Arithmetic */
 /// Adds two 256-bit vectors of [4 x double].
@@ -207,6 +224,8 @@ _mm256_div_ps(__m256 __a, __m256 __b)
 /// Compares two 256-bit vectors of [4 x double] and returns the greater
 ///    of each pair of values.
 ///
+///    If either value in a comparison is NaN, returns the value from \a __b.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMAXPD </c> instruction.
@@ -225,6 +244,8 @@ _mm256_max_pd(__m256d __a, __m256d __b)
 
 /// Compares two 256-bit vectors of [8 x float] and returns the greater
 ///    of each pair of values.
+///
+///    If either value in a comparison is NaN, returns the value from \a __b.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -245,6 +266,8 @@ _mm256_max_ps(__m256 __a, __m256 __b)
 /// Compares two 256-bit vectors of [4 x double] and returns the lesser
 ///    of each pair of values.
 ///
+///    If either value in a comparison is NaN, returns the value from \a __b.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VMINPD </c> instruction.
@@ -263,6 +286,8 @@ _mm256_min_pd(__m256d __a, __m256d __b)
 
 /// Compares two 256-bit vectors of [8 x float] and returns the lesser
 ///    of each pair of values.
+///
+///    If either value in a comparison is NaN, returns the value from \a __b.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -832,6 +857,7 @@ _mm256_permutevar_pd(__m256d __a, __m256i __c)
 
 /// Copies the values stored in a 128-bit vector of [4 x float] as
 ///    specified by the 128-bit integer vector operand.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VPERMILPS </c> instruction.
@@ -1574,14 +1600,6 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
                                      (__v4df)(__m256d)(b), (int)(mask)))
 
 /* Compare */
-#define _CMP_EQ_OQ    0x00 /* Equal (ordered, non-signaling)  */
-#define _CMP_LT_OS    0x01 /* Less-than (ordered, signaling)  */
-#define _CMP_LE_OS    0x02 /* Less-than-or-equal (ordered, signaling)  */
-#define _CMP_UNORD_Q  0x03 /* Unordered (non-signaling)  */
-#define _CMP_NEQ_UQ   0x04 /* Not-equal (unordered, non-signaling)  */
-#define _CMP_NLT_US   0x05 /* Not-less-than (unordered, signaling)  */
-#define _CMP_NLE_US   0x06 /* Not-less-than-or-equal (unordered, signaling)  */
-#define _CMP_ORD_Q    0x07 /* Ordered (non-signaling)   */
 #define _CMP_EQ_UQ    0x08 /* Equal (unordered, non-signaling)  */
 #define _CMP_NGE_US   0x09 /* Not-greater-than-or-equal (unordered, signaling)  */
 #define _CMP_NGT_US   0x0a /* Not-greater-than (unordered, signaling)  */
@@ -1607,13 +1625,14 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 #define _CMP_GT_OQ    0x1e /* Greater-than (ordered, non-signaling)  */
 #define _CMP_TRUE_US  0x1f /* True (unordered, signaling)  */
 
+/* Below intrinsic defined in emmintrin.h can be used for AVX */
 /// Compares each of the corresponding double-precision values of two
 ///    128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    Returns a [2 x double] vector consisting of two doubles corresponding to
-///    the two comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1663,17 +1682,16 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
-#define _mm_cmp_pd(a, b, c) \
-  ((__m128d)__builtin_ia32_cmppd((__v2df)(__m128d)(a), \
-                                 (__v2df)(__m128d)(b), (c)))
+/// \fn __m128d _mm_cmp_pd(__m128d a, __m128d b, const int c)
 
+/* Below intrinsic defined in xmmintrin.h can be used for AVX */
 /// Compares each of the corresponding values of two 128-bit vectors of
 ///    [4 x float], using the operation specified by the immediate integer
 ///    operand.
 ///
-///    Returns a [4 x float] vector consisting of four floats corresponding to
-///    the four comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1723,17 +1741,15 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-#define _mm_cmp_ps(a, b, c) \
-  ((__m128)__builtin_ia32_cmpps((__v4sf)(__m128)(a), \
-                                (__v4sf)(__m128)(b), (c)))
+/// \fn __m128 _mm_cmp_ps(__m128 a, __m128 b, const int c)
 
 /// Compares each of the corresponding double-precision values of two
 ///    256-bit vectors of [4 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    Returns a [4 x double] vector consisting of four doubles corresponding to
-///    the four comparison results: zero if the comparison is false, and all 1's
-///    if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1791,9 +1807,9 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    [8 x float], using the operation specified by the immediate integer
 ///    operand.
 ///
-///    Returns a [8 x float] vector consisting of eight floats corresponding to
-///    the eight comparison results: zero if the comparison is false, and all
-///    1's if the comparison is true.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1847,12 +1863,14 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
   ((__m256)__builtin_ia32_cmpps256((__v8sf)(__m256)(a), \
                                    (__v8sf)(__m256)(b), (c)))
 
+/* Below intrinsic defined in emmintrin.h can be used for AVX */
 /// Compares each of the corresponding scalar double-precision values of
 ///    two 128-bit vectors of [2 x double], using the operation specified by the
 ///    immediate integer operand.
 ///
-///    If the result is true, all 64 bits of the destination vector are set;
-///    otherwise they are cleared.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFFFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1902,16 +1920,16 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [2 x double] containing the comparison results.
-#define _mm_cmp_sd(a, b, c) \
-  ((__m128d)__builtin_ia32_cmpsd((__v2df)(__m128d)(a), \
-                                 (__v2df)(__m128d)(b), (c)))
+/// \fn __m128d _mm_cmp_sd(__m128d a, __m128d b, const int c)
 
+/* Below intrinsic defined in xmmintrin.h can be used for AVX */
 /// Compares each of the corresponding scalar values of two 128-bit
 ///    vectors of [4 x float], using the operation specified by the immediate
 ///    integer operand.
 ///
-///    If the result is true, all 32 bits of the destination vector are set;
-///    otherwise they are cleared.
+///    Each comparison returns 0x0 for false, 0xFFFFFFFF for true.
+///    If either value in a comparison is NaN, comparisons that are ordered
+///    return false, and comparisons that are unordered return true.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -1961,9 +1979,7 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    0x1E: Greater-than (ordered, non-signaling) \n
 ///    0x1F: True (unordered, signaling)
 /// \returns A 128-bit vector of [4 x float] containing the comparison results.
-#define _mm_cmp_ss(a, b, c) \
-  ((__m128)__builtin_ia32_cmpss((__v4sf)(__m128)(a), \
-                                (__v4sf)(__m128)(b), (c)))
+/// \fn __m128 _mm_cmp_ss(__m128 a, __m128 b, const int c)
 
 /// Takes a [8 x i32] vector and returns the vector element value
 ///    indexed by the immediate constant operand.
@@ -2213,6 +2229,10 @@ _mm256_cvtpd_ps(__m256d __a)
 
 /// Converts a vector of [8 x float] into a vector of [8 x i32].
 ///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
+///
 /// \headerfile <x86intrin.h>
 ///
 /// This intrinsic corresponds to the <c> VCVTPS2DQ </c> instruction.
@@ -2242,9 +2262,13 @@ _mm256_cvtps_pd(__m128 __a)
   return (__m256d)__builtin_convertvector((__v4sf)__a, __v4df);
 }
 
-/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
-///    x i32], truncating the result by rounding towards zero when it is
-///    inexact.
+/// Converts a 256-bit vector of [4 x double] into four signed truncated
+///    (rounded toward zero) 32-bit integers returned in a 128-bit vector of
+///    [4 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2259,9 +2283,12 @@ _mm256_cvttpd_epi32(__m256d __a)
   return (__m128i)__builtin_ia32_cvttpd2dq256((__v4df) __a);
 }
 
-/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of [4
-///    x i32]. When a conversion is inexact, the value returned is rounded
-///    according to the rounding control bits in the MXCSR register.
+/// Converts a 256-bit vector of [4 x double] into a 128-bit vector of
+///    [4 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -2276,8 +2303,12 @@ _mm256_cvtpd_epi32(__m256d __a)
   return (__m128i)__builtin_ia32_cvtpd2dq256((__v4df) __a);
 }
 
-/// Converts a vector of [8 x float] into a vector of [8 x i32],
-///    truncating the result by rounding towards zero when it is inexact.
+/// Converts a vector of [8 x float] into eight signed truncated (rounded
+///    toward zero) 32-bit integers returned in a vector of [8 x i32].
+///
+///    If a converted value does not fit in a 32-bit integer, raises a
+///    floating-point invalid exception. If the exception is masked, returns
+///    the most negative integer.
 ///
 /// \headerfile <x86intrin.h>
 ///
@@ -3675,7 +3706,7 @@ _mm256_undefined_si256(void)
 ///    A double-precision floating-point value used to initialize bits [63:0]
 ///    of the result.
 /// \returns An initialized 256-bit floating-point vector of [4 x double].
-static __inline __m256d __DEFAULT_FN_ATTRS
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set_pd(double __a, double __b, double __c, double __d)
 {
   return __extension__ (__m256d){ __d, __c, __b, __a };
@@ -3714,7 +3745,7 @@ _mm256_set_pd(double __a, double __b, double __c, double __d)
 ///    A single-precision floating-point value used to initialize bits [31:0]
 ///    of the result.
 /// \returns An initialized 256-bit floating-point vector of [8 x float].
-static __inline __m256 __DEFAULT_FN_ATTRS
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set_ps(float __a, float __b, float __c, float __d,
               float __e, float __f, float __g, float __h)
 {
@@ -3941,7 +3972,7 @@ _mm256_set_epi64x(long long __a, long long __b, long long __c, long long __d)
 ///    A double-precision floating-point value used to initialize bits [255:192]
 ///    of the result.
 /// \returns An initialized 256-bit floating-point vector of [4 x double].
-static __inline __m256d __DEFAULT_FN_ATTRS
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_setr_pd(double __a, double __b, double __c, double __d)
 {
   return _mm256_set_pd(__d, __c, __b, __a);
@@ -3981,7 +4012,7 @@ _mm256_setr_pd(double __a, double __b, double __c, double __d)
 ///    A single-precision floating-point value used to initialize bits [255:224]
 ///    of the result.
 /// \returns An initialized 256-bit floating-point vector of [8 x float].
-static __inline __m256 __DEFAULT_FN_ATTRS
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_setr_ps(float __a, float __b, float __c, float __d,
                float __e, float __f, float __g, float __h)
 {
@@ -4198,7 +4229,7 @@ _mm256_setr_epi64x(long long __a, long long __b, long long __c, long long __d)
 ///    A double-precision floating-point value used to initialize each vector
 ///    element of the result.
 /// \returns An initialized 256-bit floating-point vector of [4 x double].
-static __inline __m256d __DEFAULT_FN_ATTRS
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set1_pd(double __w)
 {
   return _mm256_set_pd(__w, __w, __w, __w);
@@ -4217,7 +4248,7 @@ _mm256_set1_pd(double __w)
 ///    A single-precision floating-point value used to initialize each vector
 ///    element of the result.
 /// \returns An initialized 256-bit floating-point vector of [8 x float].
-static __inline __m256 __DEFAULT_FN_ATTRS
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_set1_ps(float __w)
 {
   return _mm256_set_ps(__w, __w, __w, __w, __w, __w, __w, __w);
@@ -4308,10 +4339,8 @@ _mm256_set1_epi64x(long long __q)
 /// This intrinsic corresponds to the <c> VXORPS </c> instruction.
 ///
 /// \returns A 256-bit vector of [4 x double] with all elements set to zero.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_setzero_pd(void)
-{
-  return __extension__ (__m256d){ 0.0, 0.0, 0.0, 0.0 };
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_setzero_pd(void) {
+  return __extension__(__m256d){0.0, 0.0, 0.0, 0.0};
 }
 
 /// Constructs a 256-bit floating-point vector of [8 x float] with all
@@ -4322,9 +4351,7 @@ _mm256_setzero_pd(void)
 /// This intrinsic corresponds to the <c> VXORPS </c> instruction.
 ///
 /// \returns A 256-bit vector of [8 x float] with all elements set to zero.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_setzero_ps(void)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_setzero_ps(void) {
   return __extension__ (__m256){ 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f };
 }
 
@@ -4335,9 +4362,8 @@ _mm256_setzero_ps(void)
 /// This intrinsic corresponds to the <c> VXORPS </c> instruction.
 ///
 /// \returns A 256-bit integer vector initialized to zero.
-static __inline __m256i __DEFAULT_FN_ATTRS
-_mm256_setzero_si256(void)
-{
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_setzero_si256(void) {
   return __extension__ (__m256i)(__v4di){ 0, 0, 0, 0 };
 }
 
@@ -5107,6 +5133,8 @@ _mm256_storeu2_m128i(__m128i_u *__addr_hi, __m128i_u *__addr_lo, __m256i __a)
 }
 
 #undef __DEFAULT_FN_ATTRS
+#undef __DEFAULT_FN_ATTRS_CONSTEXPR
 #undef __DEFAULT_FN_ATTRS128
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
 
 #endif /* __AVXINTRIN_H */

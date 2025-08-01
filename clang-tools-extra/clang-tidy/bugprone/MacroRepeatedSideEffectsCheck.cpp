@@ -12,6 +12,7 @@
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include <stack>
 
 namespace clang::tidy::bugprone {
 
@@ -152,8 +153,7 @@ unsigned MacroRepeatedPPCallbacks::countArgumentExpansions(
     // Count argument.
     if (TII == Arg) {
       Current++;
-      if (Current > Max)
-        Max = Current;
+      Max = std::max(Max, Current);
     }
   }
   return Max;

@@ -103,7 +103,7 @@ lsp::extractSourceDocComment(llvm::SourceMgr &sourceMgr, SMLoc loc) {
       break;
 
     // Extract the document string from the comment.
-    commentLines.push_back(line->drop_while([](char c) { return c == '/'; }));
+    commentLines.push_back(line->ltrim('/'));
   }
 
   if (commentLines.empty())

@@ -10,11 +10,9 @@ func.func @genbool_1d() -> vector<8xi1> {
 }
 
 // CHECK-LABEL: func @genbool_2d
-// CHECK: %[[C1:.*]] = arith.constant dense<[true, true, false, false]> : vector<4xi1>
-// CHECK: %[[C2:.*]] = arith.constant dense<false> : vector<4x4xi1>
-// CHECK: %[[T0:.*]] = vector.insert %[[C1]], %[[C2]] [0] : vector<4xi1> into vector<4x4xi1>
-// CHECK: %[[T1:.*]] = vector.insert %[[C1]], %[[T0]] [1] : vector<4xi1> into vector<4x4xi1>
-// CHECK: return %[[T1]] : vector<4x4xi1>
+// CHECK: %[[C0:.*]] = arith.constant
+// CHECK-SAME{LITERAL}: dense<[[true, true, false, false], [true, true, false, false], [false, false, false, false], [false, false, false, false]]> : vector<4x4xi1>
+// CHECK: return %[[C0]] : vector<4x4xi1>
 
 func.func @genbool_2d() -> vector<4x4xi1> {
   %v = vector.constant_mask [2, 2] : vector<4x4xi1>
@@ -22,12 +20,9 @@ func.func @genbool_2d() -> vector<4x4xi1> {
 }
 
 // CHECK-LABEL: func @genbool_3d
-// CHECK: %[[C1:.*]] = arith.constant dense<[true, true, true, false]> : vector<4xi1>
-// CHECK: %[[C2:.*]] = arith.constant dense<false> : vector<3x4xi1>
-// CHECK: %[[C3:.*]] = arith.constant dense<false> : vector<2x3x4xi1>
-// CHECK: %[[T0:.*]] = vector.insert %[[C1]], %[[C2]] [0] : vector<4xi1> into vector<3x4xi1>
-// CHECK: %[[T1:.*]] = vector.insert %[[T0]], %[[C3]] [0] : vector<3x4xi1> into vector<2x3x4xi1>
-// CHECK: return %[[T1]] : vector<2x3x4xi1>
+// CHECK: %[[C0:.*]] = arith.constant
+// CHECK-SAME{LITERAL}: dense<[[[true, true, true, false], [false, false, false, false], [false, false, false, false]], [[false, false, false, false], [false, false, false, false], [false, false, false, false]]]> : vector<2x3x4xi1>
+// CHECK: return %[[C0]] : vector<2x3x4xi1>
 
 func.func @genbool_3d() -> vector<2x3x4xi1> {
   %v = vector.constant_mask [1, 1, 3] : vector<2x3x4xi1>
@@ -47,10 +42,10 @@ func.func @genbool_var_1d(%arg0: index) -> vector<3xi1> {
 // CHECK-LABEL: func @genbool_var_2d(
 // CHECK-SAME: %[[A:.*0]]: index,
 // CHECK-SAME: %[[B:.*1]]: index)
-// CHECK:      %[[C1:.*]] = arith.constant dense<false> : vector<3xi1>
-// CHECK:      %[[C2:.*]] = arith.constant dense<false> : vector<2x3xi1>
-// CHECK:      %[[c0:.*]] = arith.constant 0 : index
-// CHECK:      %[[c1:.*]] = arith.constant 1 : index
+// CHECK-DAG:  %[[C1:.*]] = arith.constant dense<false> : vector<3xi1>
+// CHECK-DAG:  %[[C2:.*]] = arith.constant dense<false> : vector<2x3xi1>
+// CHECK-DAG:  %[[c0:.*]] = arith.constant 0 : index
+// CHECK-DAG:  %[[c1:.*]] = arith.constant 1 : index
 // CHECK:      %[[T0:.*]] = vector.create_mask %[[B]] : vector<3xi1>
 // CHECK:      %[[T1:.*]] = arith.cmpi sgt, %[[A]], %[[c0]] : index
 // CHECK:      %[[T2:.*]] = arith.select %[[T1]], %[[T0]], %[[C1]] : vector<3xi1>

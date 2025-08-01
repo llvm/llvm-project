@@ -108,10 +108,16 @@ private:
 
   LogicalResult processConstantOp(spirv::ConstantOp op);
 
+  LogicalResult processConstantCompositeReplicateOp(
+      spirv::EXTConstantCompositeReplicateOp op);
+
   LogicalResult processSpecConstantOp(spirv::SpecConstantOp op);
 
   LogicalResult
   processSpecConstantCompositeOp(spirv::SpecConstantCompositeOp op);
+
+  LogicalResult processSpecConstantCompositeReplicateOp(
+      spirv::EXTSpecConstantCompositeReplicateOp op);
 
   LogicalResult
   processSpecConstantOperationOp(spirv::SpecConstantOperationOp op);
@@ -127,6 +133,7 @@ private:
 
   /// Processes a SPIR-V function op.
   LogicalResult processFuncOp(spirv::FuncOp op);
+  LogicalResult processFuncParameter(spirv::FuncOp op);
 
   LogicalResult processVariableOp(spirv::VariableOp op);
 
@@ -134,6 +141,8 @@ private:
   LogicalResult processGlobalVariableOp(spirv::GlobalVariableOp varOp);
 
   /// Process attributes that translate to decorations on the result <id>
+  LogicalResult processDecorationAttr(Location loc, uint32_t resultID,
+                                      Decoration decoration, Attribute attr);
   LogicalResult processDecoration(Location loc, uint32_t resultID,
                                   NamedAttribute attr);
 
@@ -188,6 +197,11 @@ private:
     return constIDMap.lookup(value);
   }
 
+  uint32_t getConstantCompositeReplicateID(
+      std::pair<Attribute, Type> valueTypePair) const {
+    return constCompositeReplicateIDMap.lookup(valueTypePair);
+  }
+
   /// Main dispatch method for processing a constant with the given `constType`
   /// and `valueAttr`. `constType` is needed here because we can interpret the
   /// `valueAttr` as a different type than the type of `valueAttr` itself; for
@@ -226,6 +240,12 @@ private:
 
   uint32_t prepareConstantFp(Location loc, FloatAttr floatAttr,
                              bool isSpec = false);
+
+  /// Prepares `spirv.EXTConstantCompositeReplicateOp` serialization. This
+  /// method emits OpConstantCompositeReplicateEXT and returns the result <id>
+  /// associated with it.
+  uint32_t prepareConstantCompositeReplicate(Location loc, Type resultType,
+                                             Attribute valueAttr);
 
   //===--------------------------------------------------------------------===//
   // Control flow
@@ -385,6 +405,9 @@ private:
 
   /// Map from constant values to their <id>s.
   DenseMap<Attribute, uint32_t> constIDMap;
+
+  /// Map from a replicated composite constant's value and type to their <id>s.
+  DenseMap<std::pair<Attribute, Type>, uint32_t> constCompositeReplicateIDMap;
 
   /// Map from specialization constant names to their <id>s.
   llvm::StringMap<uint32_t> specConstIDMap;

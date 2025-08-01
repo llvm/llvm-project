@@ -1,4 +1,4 @@
-; DISABLED: llc < %s -march=mipsel -mips-fix-global-base-reg=false | FileCheck %s 
+; DISABLED: llc < %s -mtriple=mipsel -mips-fix-global-base-reg=false | FileCheck %s 
 ; RUN: false
 ; XFAIL: *
 

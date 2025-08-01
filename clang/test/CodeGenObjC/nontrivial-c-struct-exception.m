@@ -39,10 +39,10 @@ void testStrongException(void) {
 // CHECK: define{{.*}} void @testWeakException()
 // CHECK: %[[AGG_TMP:.*]] = alloca %[[STRUCT_WEAK]], align 8
 // CHECK: %[[AGG_TMP1:.*]] = alloca %[[STRUCT_WEAK]], align 8
-// CHECK: call void @genWeak(ptr sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP]])
-// CHECK: invoke void @genWeak(ptr sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP1]])
+// CHECK: call void @genWeak(ptr dead_on_unwind writable sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP]])
+// CHECK: invoke void @genWeak(ptr dead_on_unwind writable sret(%[[STRUCT_WEAK]]) align 8 %[[AGG_TMP1]])
 
-// CHECK: call void @calleeWeak(ptr noundef %[[AGG_TMP]], ptr noundef %[[AGG_TMP1]])
+// CHECK: call void @calleeWeak(ptr dead_on_return noundef %[[AGG_TMP]], ptr dead_on_return noundef %[[AGG_TMP1]])
 // CHECK: ret void
 
 // CHECK: landingpad { ptr, i32 }

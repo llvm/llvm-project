@@ -1,0 +1,44 @@
+! RUN: %flang_fc1 -fdebug-dump-symbols %s | FileCheck %s
+
+! Test CUDA Fortran intrinsic can pass semantic
+
+attributes(global) subroutine devsub()
+  implicit none
+  integer :: ret
+
+  ! 3.6.4. Synchronization Functions
+  call syncthreads()
+  call syncwarp(1)
+  call threadfence()
+  call threadfence_block()
+  call threadfence_system()
+  ret = syncthreads_and(1)
+  ret = syncthreads_count(1)
+  ret = syncthreads_or(1)
+end
+
+! CHECK-LABEL: Subprogram scope: devsub
+! CHECK: syncthreads (Subroutine): Use from syncthreads in cudadevice
+! CHECK: syncthreads_and (Function): Use from syncthreads_and in cudadevice
+! CHECK: syncthreads_count (Function): Use from syncthreads_count in cudadevice
+! CHECK: syncthreads_or (Function): Use from syncthreads_or in cudadevice
+! CHECK: syncwarp (Subroutine): Use from syncwarp in cudadevice
+! CHECK: threadfence (Subroutine): Use from threadfence in cudadevice
+! CHECK: threadfence_block (Subroutine): Use from threadfence_block in cudadevice
+! CHECK: threadfence_system (Subroutine): Use from threadfence_system in cudadevice
+
+subroutine host()
+  real(4) :: af
+  real(8) :: ad
+  integer(4) :: ai
+  integer(8) :: al
+  call syncthreads()
+  ai = atomicadd(ai, 1_4)
+  al = atomicadd(al, 1_8)
+  af = atomicadd(af, 1.0_4)
+  ad = atomicadd(ad, 1.0_8)
+end subroutine
+
+! CHECK-LABEL: Subprogram scope: host
+! CHECK: atomicadd, EXTERNAL: HostAssoc{{$}}
+! CHECK: syncthreads, EXTERNAL: HostAssoc{{$}}

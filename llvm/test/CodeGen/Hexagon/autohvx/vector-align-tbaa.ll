@@ -13,12 +13,12 @@ define <64 x i16> @f0(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: @f0(
 ; CHECK-NEXT:  b0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr i16, ptr [[TMP0]], i32 64
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
 ; CHECK-NEXT:    [[ITP:%.*]] = inttoptr i32 [[AND]] to ptr
 ; CHECK-NEXT:    [[PTI1:%.*]] = ptrtoint ptr [[V1]] to i32
-; CHECK-NEXT:    [[ALD15:%.*]] = load <32 x i32>, ptr [[ITP]], align 128, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[ALD14:%.*]] = load <32 x i32>, ptr [[ITP]], align 128, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ITP]], i32 128
 ; CHECK-NEXT:    [[ALD2:%.*]] = load <128 x i8>, ptr [[GEP]], align 128, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
@@ -26,12 +26,12 @@ define <64 x i16> @f0(ptr %a0, i32 %a1) #0 {
 ; CHECK-NEXT:    [[ISZ:%.*]] = icmp ne i32 [[AND4]], 0
 ; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vL32b.pred.ai.128B(i1 [[ISZ]], ptr [[GEP3]], i32 0), !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[CST5:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP7:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CST5]], <32 x i32> [[ALD15]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST13:%.*]] = bitcast <32 x i32> [[CUP7]] to <64 x i16>
-; CHECK-NEXT:    [[CST10:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CUP]], <32 x i32> [[CST10]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST14:%.*]] = bitcast <32 x i32> [[CUP11]] to <64 x i16>
-; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST13]], [[CST14]]
+; CHECK-NEXT:    [[CUP7:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CST5]], <32 x i32> [[ALD14]], i32 [[PTI1]])
+; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP7]] to <64 x i16>
+; CHECK-NEXT:    [[CST9:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
+; CHECK-NEXT:    [[CUP10:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CUP]], <32 x i32> [[CST9]], i32 [[PTI1]])
+; CHECK-NEXT:    [[CST13:%.*]] = bitcast <32 x i32> [[CUP10]] to <64 x i16>
+; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST12]], [[CST13]]
 ; CHECK-NEXT:    ret <64 x i16> [[V8]]
 ;
 b0:
@@ -51,12 +51,12 @@ define <64 x i16> @f1(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  b0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr i16, ptr [[TMP0]], i32 64
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
 ; CHECK-NEXT:    [[ITP:%.*]] = inttoptr i32 [[AND]] to ptr
 ; CHECK-NEXT:    [[PTI1:%.*]] = ptrtoint ptr [[V1]] to i32
-; CHECK-NEXT:    [[ALD15:%.*]] = load <32 x i32>, ptr [[ITP]], align 128, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[ALD14:%.*]] = load <32 x i32>, ptr [[ITP]], align 128, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ITP]], i32 128
 ; CHECK-NEXT:    [[ALD2:%.*]] = load <128 x i8>, ptr [[GEP]], align 128
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
@@ -64,12 +64,12 @@ define <64 x i16> @f1(ptr %a0, i32 %a1) #0 {
 ; CHECK-NEXT:    [[ISZ:%.*]] = icmp ne i32 [[AND4]], 0
 ; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vL32b.pred.ai.128B(i1 [[ISZ]], ptr [[GEP3]], i32 0)
 ; CHECK-NEXT:    [[CST5:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP7:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CST5]], <32 x i32> [[ALD15]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST13:%.*]] = bitcast <32 x i32> [[CUP7]] to <64 x i16>
-; CHECK-NEXT:    [[CST10:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CUP]], <32 x i32> [[CST10]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST14:%.*]] = bitcast <32 x i32> [[CUP11]] to <64 x i16>
-; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST13]], [[CST14]]
+; CHECK-NEXT:    [[CUP7:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CST5]], <32 x i32> [[ALD14]], i32 [[PTI1]])
+; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP7]] to <64 x i16>
+; CHECK-NEXT:    [[CST9:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
+; CHECK-NEXT:    [[CUP10:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CUP]], <32 x i32> [[CST9]], i32 [[PTI1]])
+; CHECK-NEXT:    [[CST13:%.*]] = bitcast <32 x i32> [[CUP10]] to <64 x i16>
+; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST12]], [[CST13]]
 ; CHECK-NEXT:    ret <64 x i16> [[V8]]
 ;
 b0:
@@ -89,12 +89,12 @@ define <64 x i16> @f2(ptr %a0, i32 %a1) #0 {
 ; CHECK-LABEL: @f2(
 ; CHECK-NEXT:  b0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr i16, ptr [[TMP0]], i32 64
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
 ; CHECK-NEXT:    [[ITP:%.*]] = inttoptr i32 [[AND]] to ptr
 ; CHECK-NEXT:    [[PTI1:%.*]] = ptrtoint ptr [[V1]] to i32
-; CHECK-NEXT:    [[ALD15:%.*]] = load <32 x i32>, ptr [[ITP]], align 128, !tbaa [[TBAA0]]
+; CHECK-NEXT:    [[ALD14:%.*]] = load <32 x i32>, ptr [[ITP]], align 128, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[ITP]], i32 128
 ; CHECK-NEXT:    [[ALD2:%.*]] = load <128 x i8>, ptr [[GEP]], align 128
 ; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[ITP]], i32 256
@@ -102,12 +102,12 @@ define <64 x i16> @f2(ptr %a0, i32 %a1) #0 {
 ; CHECK-NEXT:    [[ISZ:%.*]] = icmp ne i32 [[AND4]], 0
 ; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vL32b.pred.ai.128B(i1 [[ISZ]], ptr [[GEP3]], i32 0), !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    [[CST5:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP7:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CST5]], <32 x i32> [[ALD15]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST13:%.*]] = bitcast <32 x i32> [[CUP7]] to <64 x i16>
-; CHECK-NEXT:    [[CST10:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
-; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CUP]], <32 x i32> [[CST10]], i32 [[PTI1]])
-; CHECK-NEXT:    [[CST14:%.*]] = bitcast <32 x i32> [[CUP11]] to <64 x i16>
-; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST13]], [[CST14]]
+; CHECK-NEXT:    [[CUP7:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CST5]], <32 x i32> [[ALD14]], i32 [[PTI1]])
+; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP7]] to <64 x i16>
+; CHECK-NEXT:    [[CST9:%.*]] = bitcast <128 x i8> [[ALD2]] to <32 x i32>
+; CHECK-NEXT:    [[CUP10:%.*]] = call <32 x i32> @llvm.hexagon.V6.valignb.128B(<32 x i32> [[CUP]], <32 x i32> [[CST9]], i32 [[PTI1]])
+; CHECK-NEXT:    [[CST13:%.*]] = bitcast <32 x i32> [[CUP10]] to <64 x i16>
+; CHECK-NEXT:    [[V8:%.*]] = add <64 x i16> [[CST12]], [[CST13]]
 ; CHECK-NEXT:    ret <64 x i16> [[V8]]
 ;
 b0:
@@ -127,7 +127,7 @@ define void @f3(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  b0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr i16, ptr [[TMP0]], i32 64
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
 ; CHECK-NEXT:    [[ITP:%.*]] = inttoptr i32 [[AND]] to ptr
@@ -135,18 +135,18 @@ define void @f3(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[CST3:%.*]] = bitcast <64 x i16> [[A2:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST3]], <32 x i32> undef, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST4:%.*]] = bitcast <32 x i32> [[CUP]] to <128 x i8>
-; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> zeroinitializer, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> zeroinitializer, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST6:%.*]] = bitcast <32 x i32> [[CUP5]] to <128 x i8>
 ; CHECK-NEXT:    [[CST7:%.*]] = bitcast <64 x i16> [[A3:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CST8:%.*]] = bitcast <64 x i16> [[A2]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP9:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST7]], <32 x i32> [[CST8]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST10:%.*]] = bitcast <32 x i32> [[CUP9]] to <128 x i8>
-; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP11]] to <128 x i8>
 ; CHECK-NEXT:    [[CST13:%.*]] = bitcast <64 x i16> [[A3]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP14:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> undef, <32 x i32> [[CST13]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST15:%.*]] = bitcast <32 x i32> [[CUP14]] to <128 x i8>
-; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST17:%.*]] = bitcast <32 x i32> [[CUP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TRN:%.*]] = trunc <128 x i8> [[CST6]] to <128 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr [[ITP]], i32 128, <128 x i1> [[TRN]]), !tbaa [[TBAA5:![0-9]+]]
@@ -180,7 +180,7 @@ define void @f4(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-LABEL: @f4(
 ; CHECK-NEXT:  b0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr i16, ptr [[TMP0]], i32 64
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
 ; CHECK-NEXT:    [[ITP:%.*]] = inttoptr i32 [[AND]] to ptr
@@ -188,18 +188,18 @@ define void @f4(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[CST3:%.*]] = bitcast <64 x i16> [[A2:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST3]], <32 x i32> undef, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST4:%.*]] = bitcast <32 x i32> [[CUP]] to <128 x i8>
-; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> zeroinitializer, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> zeroinitializer, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST6:%.*]] = bitcast <32 x i32> [[CUP5]] to <128 x i8>
 ; CHECK-NEXT:    [[CST7:%.*]] = bitcast <64 x i16> [[A3:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CST8:%.*]] = bitcast <64 x i16> [[A2]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP9:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST7]], <32 x i32> [[CST8]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST10:%.*]] = bitcast <32 x i32> [[CUP9]] to <128 x i8>
-; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP11]] to <128 x i8>
 ; CHECK-NEXT:    [[CST13:%.*]] = bitcast <64 x i16> [[A3]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP14:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> undef, <32 x i32> [[CST13]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST15:%.*]] = bitcast <32 x i32> [[CUP14]] to <128 x i8>
-; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST17:%.*]] = bitcast <32 x i32> [[CUP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TRN:%.*]] = trunc <128 x i8> [[CST6]] to <128 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr [[ITP]], i32 128, <128 x i1> [[TRN]])
@@ -233,7 +233,7 @@ define void @f5(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-LABEL: @f5(
 ; CHECK-NEXT:  b0:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[A0:%.*]], i32 [[A1:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = getelementptr i16, ptr [[TMP0]], i32 64
+; CHECK-NEXT:    [[V1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 128
 ; CHECK-NEXT:    [[PTI:%.*]] = ptrtoint ptr [[V1]] to i32
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[PTI]], -128
 ; CHECK-NEXT:    [[ITP:%.*]] = inttoptr i32 [[AND]] to ptr
@@ -241,18 +241,18 @@ define void @f5(ptr %a0, i32 %a1, <64 x i16> %a2, <64 x i16> %a3) #0 {
 ; CHECK-NEXT:    [[CST3:%.*]] = bitcast <64 x i16> [[A2:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST3]], <32 x i32> undef, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST4:%.*]] = bitcast <32 x i32> [[CUP]] to <128 x i8>
-; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> zeroinitializer, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP5:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> zeroinitializer, i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST6:%.*]] = bitcast <32 x i32> [[CUP5]] to <128 x i8>
 ; CHECK-NEXT:    [[CST7:%.*]] = bitcast <64 x i16> [[A3:%.*]] to <32 x i32>
 ; CHECK-NEXT:    [[CST8:%.*]] = bitcast <64 x i16> [[A2]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP9:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> [[CST7]], <32 x i32> [[CST8]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST10:%.*]] = bitcast <32 x i32> [[CUP9]] to <128 x i8>
-; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP11:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> splat (i32 -1), <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST12:%.*]] = bitcast <32 x i32> [[CUP11]] to <128 x i8>
 ; CHECK-NEXT:    [[CST13:%.*]] = bitcast <64 x i16> [[A3]] to <32 x i32>
 ; CHECK-NEXT:    [[CUP14:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> undef, <32 x i32> [[CST13]], i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST15:%.*]] = bitcast <32 x i32> [[CUP14]] to <128 x i8>
-; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, i32 [[PTI1]])
+; CHECK-NEXT:    [[CUP16:%.*]] = call <32 x i32> @llvm.hexagon.V6.vlalignb.128B(<32 x i32> zeroinitializer, <32 x i32> splat (i32 -1), i32 [[PTI1]])
 ; CHECK-NEXT:    [[CST17:%.*]] = bitcast <32 x i32> [[CUP16]] to <128 x i8>
 ; CHECK-NEXT:    [[TRN:%.*]] = trunc <128 x i8> [[CST6]] to <128 x i1>
 ; CHECK-NEXT:    call void @llvm.masked.store.v128i8.p0(<128 x i8> [[CST4]], ptr [[ITP]], i32 128, <128 x i1> [[TRN]]), !tbaa [[TBAA5]]

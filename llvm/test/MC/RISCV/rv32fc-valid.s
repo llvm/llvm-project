@@ -1,25 +1,22 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+c,+f -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+c,+f -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c,+f < %s \
 # RUN:     | llvm-objdump --mattr=+c,+f --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+zcf,+f -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+zcf,+f -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zcf,+f < %s \
 # RUN:     | llvm-objdump --mattr=+zcf,+f --no-print-imm-hex -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 #
 # RUN: not llvm-mc -triple riscv32 -mattr=+c \
-# RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
-# RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT-F %s
-# RUN: not llvm-mc -triple riscv32 -mattr=+zcf \
-# RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
+# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT-F %s
 # RUN: not llvm-mc -triple riscv32 \
-# RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
+# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-EXT-FC %s
 # RUN: not llvm-mc -triple riscv64 -mattr=+c,+f \
-# RUN:     -riscv-no-aliases -show-encoding < %s 2>&1 \
+# RUN:     -M no-aliases -show-encoding < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-RV32 %s
 
 # FIXME: error messages for rv64fc are misleading

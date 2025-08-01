@@ -14,7 +14,7 @@ foo
 40
 6000
 
-bar.cc:bar
+bar.cc;bar
 # Func Hash:
 2222
 # Num Counters:

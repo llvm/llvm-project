@@ -36,7 +36,7 @@ const char * f(S s)
 // CHECK: call void @llvm.lifetime.start.p0(i64 16, ptr [[T3]])
 // CHECK: [[T5:%.*]] = call noundef ptr @_ZN1TC1E1S(ptr {{[^,]*}} [[T3]], [2 x i32] %{{.*}})
 //
-// CHECK: call void @_ZNK1T6concatERKS_(ptr sret(%class.T) align 4 [[T1]], ptr {{[^,]*}} [[T2]], ptr noundef nonnull align 4 dereferenceable(16) [[T3]])
+// CHECK: call void @_ZNK1T6concatERKS_(ptr dead_on_unwind writable sret(%class.T) align 4 [[T1]], ptr {{[^,]*}} [[T2]], ptr noundef nonnull align 4 dereferenceable(16) [[T3]])
 // CHECK: [[T6:%.*]] = call noundef ptr @_ZNK1T3strEv(ptr {{[^,]*}} [[T1]])
 //
 // CHECK: call void @llvm.lifetime.end.p0(

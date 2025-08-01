@@ -8,73 +8,73 @@
 //===----------------------------------------------------------------------===//
 
 export {
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-  using ::mbstate_t;
-  using ::size_t;
-  using ::wint_t;
+#if _LIBCPP_HAS_WIDE_CHARACTERS
+  using ::mbstate_t _LIBCPP_USING_IF_EXISTS;
+  using ::size_t _LIBCPP_USING_IF_EXISTS;
+  using ::wint_t _LIBCPP_USING_IF_EXISTS;
 
-  using ::tm;
+  using ::tm _LIBCPP_USING_IF_EXISTS;
 
-  using ::btowc;
-  using ::fgetwc;
-  using ::fgetws;
-  using ::fputwc;
-  using ::fputws;
-  using ::fwide;
-  using ::fwprintf;
-  using ::fwscanf;
-  using ::getwc;
-  using ::getwchar;
-  using ::putwc;
-  using ::putwchar;
-  using ::swprintf;
-  using ::swscanf;
-  using ::ungetwc;
-  using ::vfwprintf;
-  using ::vfwscanf;
-  using ::vswprintf;
-  using ::vswscanf;
-  using ::vwprintf;
-  using ::vwscanf;
-  using ::wcscat;
-  using ::wcschr;
-  using ::wcscmp;
-  using ::wcscoll;
-  using ::wcscpy;
-  using ::wcscspn;
-  using ::wcsftime;
-  using ::wcslen;
-  using ::wcsncat;
-  using ::wcsncmp;
-  using ::wcsncpy;
-  using ::wcspbrk;
-  using ::wcsrchr;
-  using ::wcsspn;
-  using ::wcsstr;
-  using ::wcstod;
-  using ::wcstof;
-  using ::wcstok;
-  using ::wcstol;
-  using ::wcstold;
-  using ::wcstoll;
-  using ::wcstoul;
-  using ::wcstoull;
-  using ::wcsxfrm;
-  using ::wctob;
-  using ::wmemchr;
-  using ::wmemcmp;
-  using ::wmemcpy;
-  using ::wmemmove;
-  using ::wmemset;
-  using ::wprintf;
-  using ::wscanf;
+  using ::btowc _LIBCPP_USING_IF_EXISTS;
+  using ::fgetwc _LIBCPP_USING_IF_EXISTS;
+  using ::fgetws _LIBCPP_USING_IF_EXISTS;
+  using ::fputwc _LIBCPP_USING_IF_EXISTS;
+  using ::fputws _LIBCPP_USING_IF_EXISTS;
+  using ::fwide _LIBCPP_USING_IF_EXISTS;
+  using ::fwprintf _LIBCPP_USING_IF_EXISTS;
+  using ::fwscanf _LIBCPP_USING_IF_EXISTS;
+  using ::getwc _LIBCPP_USING_IF_EXISTS;
+  using ::getwchar _LIBCPP_USING_IF_EXISTS;
+  using ::putwc _LIBCPP_USING_IF_EXISTS;
+  using ::putwchar _LIBCPP_USING_IF_EXISTS;
+  using ::swprintf _LIBCPP_USING_IF_EXISTS;
+  using ::swscanf _LIBCPP_USING_IF_EXISTS;
+  using ::ungetwc _LIBCPP_USING_IF_EXISTS;
+  using ::vfwprintf _LIBCPP_USING_IF_EXISTS;
+  using ::vfwscanf _LIBCPP_USING_IF_EXISTS;
+  using ::vswprintf _LIBCPP_USING_IF_EXISTS;
+  using ::vswscanf _LIBCPP_USING_IF_EXISTS;
+  using ::vwprintf _LIBCPP_USING_IF_EXISTS;
+  using ::vwscanf _LIBCPP_USING_IF_EXISTS;
+  using ::wcscat _LIBCPP_USING_IF_EXISTS;
+  using ::wcschr _LIBCPP_USING_IF_EXISTS;
+  using ::wcscmp _LIBCPP_USING_IF_EXISTS;
+  using ::wcscoll _LIBCPP_USING_IF_EXISTS;
+  using ::wcscpy _LIBCPP_USING_IF_EXISTS;
+  using ::wcscspn _LIBCPP_USING_IF_EXISTS;
+  using ::wcsftime _LIBCPP_USING_IF_EXISTS;
+  using ::wcslen _LIBCPP_USING_IF_EXISTS;
+  using ::wcsncat _LIBCPP_USING_IF_EXISTS;
+  using ::wcsncmp _LIBCPP_USING_IF_EXISTS;
+  using ::wcsncpy _LIBCPP_USING_IF_EXISTS;
+  using ::wcspbrk _LIBCPP_USING_IF_EXISTS;
+  using ::wcsrchr _LIBCPP_USING_IF_EXISTS;
+  using ::wcsspn _LIBCPP_USING_IF_EXISTS;
+  using ::wcsstr _LIBCPP_USING_IF_EXISTS;
+  using ::wcstod _LIBCPP_USING_IF_EXISTS;
+  using ::wcstof _LIBCPP_USING_IF_EXISTS;
+  using ::wcstok _LIBCPP_USING_IF_EXISTS;
+  using ::wcstol _LIBCPP_USING_IF_EXISTS;
+  using ::wcstold _LIBCPP_USING_IF_EXISTS;
+  using ::wcstoll _LIBCPP_USING_IF_EXISTS;
+  using ::wcstoul _LIBCPP_USING_IF_EXISTS;
+  using ::wcstoull _LIBCPP_USING_IF_EXISTS;
+  using ::wcsxfrm _LIBCPP_USING_IF_EXISTS;
+  using ::wctob _LIBCPP_USING_IF_EXISTS;
+  using ::wmemchr _LIBCPP_USING_IF_EXISTS;
+  using ::wmemcmp _LIBCPP_USING_IF_EXISTS;
+  using ::wmemcpy _LIBCPP_USING_IF_EXISTS;
+  using ::wmemmove _LIBCPP_USING_IF_EXISTS;
+  using ::wmemset _LIBCPP_USING_IF_EXISTS;
+  using ::wprintf _LIBCPP_USING_IF_EXISTS;
+  using ::wscanf _LIBCPP_USING_IF_EXISTS;
 
   // [c.mb.wcs], multibyte / wide string and character conversion functions
-  using ::mbrlen;
-  using ::mbrtowc;
-  using ::mbsinit;
-  using ::mbsrtowcs;
-  using ::wcrtomb;
-  using ::wcsrtombs;
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+  using ::mbrlen _LIBCPP_USING_IF_EXISTS;
+  using ::mbrtowc _LIBCPP_USING_IF_EXISTS;
+  using ::mbsinit _LIBCPP_USING_IF_EXISTS;
+  using ::mbsrtowcs _LIBCPP_USING_IF_EXISTS;
+  using ::wcrtomb _LIBCPP_USING_IF_EXISTS;
+  using ::wcsrtombs _LIBCPP_USING_IF_EXISTS;
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 } // export

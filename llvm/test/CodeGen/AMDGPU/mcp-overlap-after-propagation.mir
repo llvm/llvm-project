@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx1010 %s -o - -run-pass machine-cp -verify-machineinstrs | FileCheck %s
-# RUN: llc -march=amdgcn -mcpu=gfx1100 %s -o - -run-pass machine-cp -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 %s -o - -run-pass machine-cp -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 %s -o - -run-pass machine-cp -verify-machineinstrs | FileCheck %s
 #
 # The MachineCopyPropagation bug being tested propagates s[60:67] into the copy
 # into s[56:63], and then uses s[60:67] in the following

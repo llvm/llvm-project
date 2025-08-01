@@ -14,10 +14,10 @@ module m
  !DEF: /m/op2 POINTER, PUBLIC ObjectEntity REAL(4)
  !DEF: /m/null INTRINSIC, PUBLIC, PURE (Function) ProcEntity
  real, pointer :: op2 => null()
- !DEF: /m/op3 POINTER, PUBLIC (InDataStmt) ObjectEntity REAL(4)
+ !DEF: /m/op3 POINTER, PUBLIC ObjectEntity REAL(4)
  !DEF: /m/x PUBLIC, TARGET ObjectEntity REAL(4)
  real, pointer :: op3 => x
- !DEF: /m/op4 POINTER, PUBLIC (InDataStmt) ObjectEntity REAL(4)
+ !DEF: /m/op4 POINTER, PUBLIC ObjectEntity REAL(4)
  !DEF: /m/y PUBLIC, TARGET ObjectEntity REAL(4)
  real, pointer :: op4 => y(1)
  !REF: /m/iface
@@ -43,6 +43,9 @@ module m
  !DEF: /m/pp6 EXTERNAL, POINTER, PUBLIC (Subroutine) ProcEntity
  !DEF: /m/modproc1 PUBLIC (Subroutine) Subprogram
  procedure(iface), pointer :: pp6 => modproc1
+ !DEF: /m/xx PUBLIC, TARGET ObjectEntity REAL(4)
+ !DEF: /m/yy PUBLIC, TARGET ObjectEntity REAL(4)
+ real, target :: xx, yy(2)
  !DEF: /m/t1 PUBLIC DerivedType
  type :: t1
   !DEF: /m/t1/opc1 POINTER ObjectEntity REAL(4)
@@ -50,12 +53,12 @@ module m
   !DEF: /m/t1/opc2 POINTER ObjectEntity REAL(4)
   !REF: /m/null
   real, pointer :: opc2 => null()
-  !DEF: /m/t1/opc3 POINTER (InDataStmt) ObjectEntity REAL(4)
-  !REF: /m/x
-  real, pointer :: opc3 => x
-  !DEF: /m/t1/opc4 POINTER (InDataStmt) ObjectEntity REAL(4)
-  !REF: /m/y
-  real, pointer :: opc4 => y(1)
+  !DEF: /m/t1/opc3 POINTER ObjectEntity REAL(4)
+  !REF: /m/xx
+  real, pointer :: opc3 => xx
+  !DEF: /m/t1/opc4 POINTER ObjectEntity REAL(4)
+  !REF: /m/yy
+  real, pointer :: opc4 => yy(1)
   !REF: /m/iface
   !DEF: /m/t1/ppc1 NOPASS, POINTER (Subroutine) ProcEntity
   procedure(iface), nopass, pointer :: ppc1
@@ -100,13 +103,13 @@ module m
   !DEF: /m/pdt1/opc2 POINTER ObjectEntity REAL(4)
   !REF: /m/null
   real, pointer :: opc2 => null()
-  !DEF: /m/pdt1/opc3 POINTER (InDataStmt) ObjectEntity REAL(4)
-  !REF: /m/x
-  real, pointer :: opc3 => x
-  !DEF: /m/pdt1/opc4 POINTER (InDataStmt) ObjectEntity REAL(4)
-  !REF: /m/y
+  !DEF: /m/pdt1/opc3 POINTER ObjectEntity REAL(4)
+  !REF: /m/xx
+  real, pointer :: opc3 => xx
+  !DEF: /m/pdt1/opc4 POINTER ObjectEntity REAL(4)
+  !REF: /m/yy
   !REF: /m/pdt1/k
-  real, pointer :: opc4 => y(k)
+  real, pointer :: opc4 => yy(k)
   !REF: /m/iface
   !DEF: /m/pdt1/ppc1 NOPASS, POINTER (Subroutine) ProcEntity
   procedure(iface), nopass, pointer :: ppc1
@@ -160,10 +163,10 @@ module m
   subroutine ext2
   end subroutine
  end interface
- !DEF: /m/op10 POINTER, PUBLIC(InDataStmt) ObjectEntity REAL(4)
+ !DEF: /m/op10 POINTER, PUBLIC ObjectEntity REAL(4)
  !REF: /m/x
  real, pointer :: op10 => x
- !DEF: /m/op11 POINTER, PUBLIC(InDataStmt) ObjectEntity REAL(4)
+ !DEF: /m/op11 POINTER, PUBLIC ObjectEntity REAL(4)
  !REF: /m/y
  real, pointer :: op11 => y(1)
  !REF: /m/iface
@@ -176,10 +179,10 @@ module m
  procedure(iface), pointer :: pp11 => ext2
  !DEF: /m/t2 PUBLIC DerivedType
  type :: t2
-  !DEF: /m/t2/opc10 POINTER (InDataStmt) ObjectEntity REAL(4)
+  !DEF: /m/t2/opc10 POINTER ObjectEntity REAL(4)
   !REF: /m/x
   real, pointer :: opc10 => x
-  !DEF: /m/t2/opc11 POINTER (InDataStmt) ObjectEntity REAL(4)
+  !DEF: /m/t2/opc11 POINTER ObjectEntity REAL(4)
   !REF: /m/y
   real, pointer :: opc11 => y(1)
   !REF: /m/iface
@@ -203,10 +206,10 @@ module m
  type :: pdt2(k)
   !REF: /m/pdt2/k
   integer, kind :: k
-  !DEF: /m/pdt2/opc10 POINTER (InDataStmt) ObjectEntity REAL(4)
+  !DEF: /m/pdt2/opc10 POINTER ObjectEntity REAL(4)
   !REF: /m/x
   real, pointer :: opc10 => x
-  !DEF: /m/pdt2/opc11 POINTER (InDataStmt) ObjectEntity REAL(4)
+  !DEF: /m/pdt2/opc11 POINTER ObjectEntity REAL(4)
   !REF: /m/y
   !REF: /m/pdt2/k
   real, pointer :: opc11 => y(k)
@@ -246,15 +249,15 @@ end subroutine
 !DEF: /ext3 (Subroutine) Subprogram
 subroutine ext3
 end subroutine
-!DEF: /main MainProgram
-program main
+!DEF: /MAIN MainProgram
+program MAIN
  !REF: /m
  use :: m
- !DEF: /main/pdt1 Use
- !DEF: /main/pdt1y ObjectEntity TYPE(pdt1(k=2_4))
+ !DEF: /MAIN/pdt1 Use
+ !DEF: /MAIN/pdt1y ObjectEntity TYPE(pdt1(k=2_4))
  type(pdt1(2)) :: pdt1y
- !DEF: /main/pdt2 Use
- !DEF: /main/pdt2y ObjectEntity TYPE(pdt2(k=2_4))
+ !DEF: /MAIN/pdt2 Use
+ !DEF: /MAIN/pdt2y ObjectEntity TYPE(pdt2(k=2_4))
  type(pdt2(2)) :: pdt2y
  print *, "compiled"
 end program

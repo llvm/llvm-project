@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 < %s | FileCheck %s
 ; Optimize fneg to togglebit in V5.
 
 define float @foo(float %x) nounwind {

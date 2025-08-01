@@ -1,0 +1,21 @@
+## Test the `--file-headers` option of llvm-objdump for XCOFF object files.
+# RUN: yaml2obj %s -o %t1
+# RUN: llvm-objdump --file-headers %t1 |\
+# RUN:   FileCheck %s --check-prefix=CHECK32 --match-full-lines
+# RUN: yaml2obj %s -DMAGIC=0x1F7 -o %t2
+# RUN: llvm-objdump --file-headers %t2 |\
+# RUN:   FileCheck %s --check-prefix=CHECK64 --match-full-lines
+
+# CHECK32:      {{.*}}file format aixcoff-rs6000 
+# CHECK32-NEXT: architecture: powerpc
+# CHECK32-NEXT: start address: 0x00001111
+
+# CHECK64:      {{.*}}file format aix5coff64-rs6000
+# CHECK64-NEXT: architecture: powerpc64
+# CHECK64-NEXT: start address: 0x0000000000001111
+
+--- !XCOFF
+FileHeader:
+  MagicNumber: [[MAGIC=0x1DF]]
+AuxiliaryHeader:
+  EntryPointAddr:        0x1111

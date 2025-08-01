@@ -9,7 +9,7 @@ config.name = "Builtins"
 config.test_source_root = os.path.dirname(__file__)
 
 # Test suffixes.
-config.suffixes = [".c", ".cpp", ".m", ".mm"]
+config.suffixes = [".c", ".cpp", ".m", ".mm", ".test"]
 extra_flags = ["-Wall"]
 if config.compiler_id == "GNU":
     # detect incorrect declarations of libgcc functions
@@ -21,7 +21,7 @@ config.substitutions.append(
     ("%clang ", " " + config.clang + " " + " ".join(extra_flags) + " ")
 )
 
-if config.host_os == "Darwin":
+if config.target_os == "Darwin":
     config.substitutions.append(
         ("%macos_version_major", str(config.darwin_osx_version[0]))
     )

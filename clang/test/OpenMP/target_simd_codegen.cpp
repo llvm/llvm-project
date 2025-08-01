@@ -71,9 +71,9 @@
 // CHECK-DAG: [[KMP_TASK_T]] = type { ptr, ptr, i32, %{{[^,]+}}, %{{[^,]+}} }
 // CHECK-DAG: [[TT:%.+]] = type { i64, i8 }
 // CHECK-DAG: [[S1:%.+]] = type { double }
-// CHECK-DAG: [[ENTTY:%.+]] = type { ptr, ptr, i[[SZ:32|64]], i32, i32 }
+// CHECK-DAG: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 
-// TCHECK: [[ENTTY:%.+]] = type { ptr, ptr, i{{32|64}}, i32, i32 }
+// TCHECK: [[ENTTY:%.+]] = type { i64, i16, i16, i32, ptr, ptr, i64, i64, ptr }
 
 // We have 8 target regions, but only 7 that actually will generate offloading
 // code, only 6 will have mapped arguments, and only 4 have all-constant map
@@ -110,10 +110,6 @@
 // TCHECK: @{{.+}} = weak constant [[ENTTY]]
 // TCHECK-NOT: @{{.+}} = weak constant [[ENTTY]]
 
-// Check target registration is registered as a Ctor.
-// CHECK: appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @.omp_offloading.requires_reg, ptr null }]
-
-
 template<typename tx, typename ty>
 struct TT{
   tx X;
@@ -140,7 +136,7 @@ int foo(int n) {
   for (int i = 3; i < 32; i += 5) {
   }
 
-  // CHECK:       call void [[HVT1:@.+]](i[[SZ]] {{[^,]+}}, {{[^)]+}})
+  // CHECK:       call void [[HVT1:@.+]](i[[SZ:32|64]] {{[^,]+}}, {{[^)]+}})
   long long k = get_val();
   #pragma omp target simd if(target: 0) linear(k : 3)
   for (int i = 10; i > 1; i--) {

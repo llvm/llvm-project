@@ -1,0 +1,21 @@
+# RUN: llc -mtriple=hexagon -run-pass=hexagon-bit-simplify -o - %s | FileCheck %s
+
+# This test checks if the HexagonBitSimplify pass correctly replaces a
+# S2_storerh_io with a S2_storerf_io that stores the upper halfword
+# of a high subregister using appropriate subregister boundaries.
+
+# CHECK: S2_storerf_io %0, 28, %{{[0-9]+}}.isub_hi
+# CHECK-NOT: S2_storerf_io %0, 28, %{{[0-9]+}}.isub_lo
+
+---
+name: test_store
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $r0
+    %0:intregs = COPY $r0
+    %1:doubleregs = IMPLICIT_DEF
+    %2:doubleregs = IMPLICIT_DEF
+    %3:doubleregs = S2_shuffoh %2, %1
+    S2_storerh_io %0, 28, %3.isub_hi
+...

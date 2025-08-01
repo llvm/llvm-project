@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/sys/prctl/prctl.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
-#include <errno.h>
 #include <sys/prctl.h>
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcSysPrctlTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcSysPrctlTest, GetSetName) {
+TEST_F(LlvmLibcSysPrctlTest, GetSetName) {
   char name[17];
   unsigned long name_addr = 0;
   ASSERT_THAT(LIBC_NAMESPACE::prctl(PR_GET_NAME, name_addr, 0, 0, 0),
@@ -31,12 +31,12 @@ TEST(LlvmLibcSysPrctlTest, GetSetName) {
   ASSERT_STREQ(name, "libc-test");
 }
 
-TEST(LlvmLibcSysPrctlTest, GetTHPDisable) {
+TEST_F(LlvmLibcSysPrctlTest, GetTHPDisable) {
   // Manually check errno since the return value logic here is not
   // covered in ErrnoSetterMatcher.
-  libc_errno = 0;
+  // Note that PR_GET_THP_DISABLE is not supported by QEMU.
   int ret = LIBC_NAMESPACE::prctl(PR_GET_THP_DISABLE, 0, 0, 0, 0);
-  ASSERT_EQ(libc_errno, 0);
+  ASSERT_ERRNO_SUCCESS();
   // PR_GET_THP_DISABLE return (as the function result) the current
   // setting of the "THP disable" flag for the calling thread, which
   // is either 1, if the flag is set; or 0, if it is not.

@@ -123,6 +123,10 @@ const Name &GetFirstName(const Variable &x) {
       x.u);
 }
 
+const Name &GetFirstName(const EntityDecl &x) {
+  return std::get<ObjectName>(x.t);
+}
+
 const CoindexedNamedObject *GetCoindexedNamedObject(const DataRef &base) {
   return common::visit(
       common::visitors{
@@ -170,4 +174,9 @@ const CoindexedNamedObject *GetCoindexedNamedObject(
       },
       allocateObject.u);
 }
+
+bool CheckForSingleVariableOnRHS(const AssignmentStmt &assignmentStmt) {
+  return Unwrap<Designator>(std::get<Expr>(assignmentStmt.t)) != nullptr;
+}
+
 } // namespace Fortran::parser

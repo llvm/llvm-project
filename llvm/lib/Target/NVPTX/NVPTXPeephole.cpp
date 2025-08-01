@@ -22,7 +22,7 @@
 //
 // It will transform the following pattern
 //    %0 = LEA_ADDRi64 %VRFrame64, 4
-//    %1 = cvta_to_local_yes_64 %0
+//    %1 = cvta_to_local_64 %0
 //
 // into
 //    %1 = LEA_ADDRi64 %VRFrameLocal64, 4
@@ -44,17 +44,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "nvptx-peephole"
 
-namespace llvm {
-void initializeNVPTXPeepholePass(PassRegistry &);
-}
-
 namespace {
 struct NVPTXPeephole : public MachineFunctionPass {
  public:
   static char ID;
-  NVPTXPeephole() : MachineFunctionPass(ID) {
-    initializeNVPTXPeepholePass(*PassRegistry::getPassRegistry());
-  }
+  NVPTXPeephole() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -76,8 +70,8 @@ static bool isCVTAToLocalCombinationCandidate(MachineInstr &Root) {
   auto &MBB = *Root.getParent();
   auto &MF = *MBB.getParent();
   // Check current instruction is cvta.to.local
-  if (Root.getOpcode() != NVPTX::cvta_to_local_yes_64 &&
-      Root.getOpcode() != NVPTX::cvta_to_local_yes)
+  if (Root.getOpcode() != NVPTX::cvta_to_local_64 &&
+      Root.getOpcode() != NVPTX::cvta_to_local)
     return false;
 
   auto &Op = Root.getOperand(1);

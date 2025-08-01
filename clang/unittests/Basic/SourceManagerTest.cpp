@@ -20,6 +20,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "gtest/gtest.h"
 #include <cstddef>
@@ -39,18 +40,16 @@ namespace {
 class SourceManagerTest : public ::testing::Test {
 protected:
   SourceManagerTest()
-    : FileMgr(FileMgrOpts),
-      DiagID(new DiagnosticIDs()),
-      Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
-      SourceMgr(Diags, FileMgr),
-      TargetOpts(new TargetOptions) {
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
+        SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
@@ -134,13 +133,12 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnit) {
   FileID mainFileID = SourceMgr.createFileID(std::move(Buf));
   SourceMgr.setMainFileID(mainFileID);
 
+  HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup =*/nullptr, /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
 
@@ -184,13 +182,12 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithTokenSplit) {
   SourceMgr.setMainFileID(
       SourceMgr.createFileID(llvm::MemoryBuffer::getMemBuffer(main)));
 
+  HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
   llvm::SmallString<8> Scratch;
@@ -453,6 +450,64 @@ TEST_F(SourceManagerTest, loadedSLocEntryIsInTheSameTranslationUnit) {
 
 #if defined(LLVM_ON_UNIX)
 
+// A single SourceManager instance is sometimes reused across multiple
+// compilations. This test makes sure we're resetting caches built for tracking
+// include locations that are based on FileIDs, to make sure we don't report
+// wrong include locations when FileIDs coincide between two different runs.
+TEST_F(SourceManagerTest, ResetsIncludeLocMap) {
+  auto ParseFile = [&] {
+    TrivialModuleLoader ModLoader;
+    HeaderSearchOptions HSOpts;
+    PreprocessorOptions PPOpts;
+    HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
+    Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                    /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
+    PP.Initialize(*Target);
+    PP.EnterMainSourceFile();
+    PP.LexTokensUntilEOF();
+    EXPECT_FALSE(Diags.hasErrorOccurred());
+  };
+
+  auto Buf = llvm::MemoryBuffer::getMemBuffer("");
+  FileEntryRef HeaderFile =
+      FileMgr.getVirtualFileRef("/foo.h", Buf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(HeaderFile, std::move(Buf));
+
+  Buf = llvm::MemoryBuffer::getMemBuffer(R"cpp(#include "/foo.h")cpp");
+  FileEntryRef BarFile =
+      FileMgr.getVirtualFileRef("/bar.h", Buf->getBufferSize(), 0);
+  SourceMgr.overrideFileContents(BarFile, std::move(Buf));
+  SourceMgr.createFileID(BarFile, {}, clang::SrcMgr::C_User);
+
+  Buf = llvm::MemoryBuffer::getMemBuffer(R"cpp(#include "/foo.h")cpp");
+  FileID MFID = SourceMgr.createFileID(std::move(Buf));
+  SourceMgr.setMainFileID(MFID);
+
+  ParseFile();
+  auto FooFID = SourceMgr.getOrCreateFileID(HeaderFile, clang::SrcMgr::C_User);
+  auto IncFID = SourceMgr.getDecomposedIncludedLoc(FooFID).first;
+  EXPECT_EQ(IncFID, MFID);
+
+  // Clean up source-manager state before we start next parse.
+  SourceMgr.clearIDTables();
+
+  // Set up a new main file.
+  Buf = llvm::MemoryBuffer::getMemBuffer(R"cpp(
+  // silly comment 42
+  #include "/bar.h")cpp");
+  MFID = SourceMgr.createFileID(std::move(Buf));
+  SourceMgr.setMainFileID(MFID);
+
+  ParseFile();
+  // Make sure foo.h got the same file-id in both runs.
+  EXPECT_EQ(FooFID,
+            SourceMgr.getOrCreateFileID(HeaderFile, clang::SrcMgr::C_User));
+  auto BarFID = SourceMgr.getOrCreateFileID(BarFile, clang::SrcMgr::C_User);
+  IncFID = SourceMgr.getDecomposedIncludedLoc(FooFID).first;
+  // Check that includer is bar.h during this run.
+  EXPECT_EQ(IncFID, BarFID);
+}
+
 TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
   const char *header =
     "#define FM(x,y) x\n";
@@ -477,19 +532,18 @@ TEST_F(SourceManagerTest, getMacroArgExpandedLocation) {
       "/test-header.h", HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
+  HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
 
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   // Ensure we can get expanded locations in presence of implicit includes.
   // These are different than normal includes since predefines buffer doesn't
   // have a valid insertion location.
   PP.setPredefines("#include \"/implicit-header.h\"");
-  FileMgr.getVirtualFile("/implicit-header.h", 0, 0);
+  FileMgr.getVirtualFileRef("/implicit-header.h", 0, 0);
   PP.Initialize(*Target);
   PP.EnterMainSourceFile();
 
@@ -530,6 +584,7 @@ struct MacroAction {
 
   SourceLocation Loc;
   std::string Name;
+  LLVM_PREFERRED_TYPE(Kind)
   unsigned MAKind : 3;
 
   MacroAction(SourceLocation Loc, StringRef Name, unsigned K)
@@ -595,13 +650,12 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithMacroInInclude) {
       "/test-header.h", HeaderBuf->getBufferSize(), 0);
   SourceMgr.overrideFileContents(headerFile, std::move(HeaderBuf));
 
+  HeaderSearchOptions HSOpts;
+  PreprocessorOptions PPOpts;
   TrivialModuleLoader ModLoader;
-  HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
-                          Diags, LangOpts, &*Target);
-  Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
-                  /*IILookup =*/nullptr,
-                  /*OwnsHeaderSearch =*/false);
+  HeaderSearch HeaderInfo(HSOpts, SourceMgr, Diags, LangOpts, &*Target);
+  Preprocessor PP(PPOpts, Diags, LangOpts, SourceMgr, HeaderInfo, ModLoader,
+                  /*IILookup=*/nullptr, /*OwnsHeaderSearch=*/false);
   PP.Initialize(*Target);
 
   std::vector<MacroAction> Macros;

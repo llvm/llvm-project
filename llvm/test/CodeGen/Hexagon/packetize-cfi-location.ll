@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 target triple = "hexagon"
 %type.0 = type { i32, ptr, i32, i32, i32 }

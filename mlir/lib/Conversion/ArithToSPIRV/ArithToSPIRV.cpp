@@ -17,6 +17,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -26,7 +27,7 @@
 #include <memory>
 
 namespace mlir {
-#define GEN_PASS_DEF_CONVERTARITHTOSPIRV
+#define GEN_PASS_DEF_CONVERTARITHTOSPIRVPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -98,6 +99,17 @@ static FloatAttr convertFloatAttr(FloatAttr srcAttr, FloatType dstType,
   return builder.getF32FloatAttr(dstVal.convertToFloat());
 }
 
+// Get in IntegerAttr from FloatAttr while preserving the bits.
+// Useful for converting float constants to integer constants while preserving
+// the bits.
+static IntegerAttr
+getIntegerAttrFromFloatAttr(FloatAttr floatAttr, Type dstType,
+                            ConversionPatternRewriter &rewriter) {
+  APFloat floatVal = floatAttr.getValue();
+  APInt intVal = floatVal.bitcastToAPInt();
+  return rewriter.getIntegerAttr(dstType, intVal);
+}
+
 /// Returns true if the given `type` is a boolean scalar or vector type.
 static bool isBoolScalarOrVector(Type type) {
   assert(type && "Not a valid type");
@@ -116,12 +128,12 @@ static Value getScalarOrVectorConstInt(Type type, uint64_t value,
   if (auto vectorType = dyn_cast<VectorType>(type)) {
     Attribute element = IntegerAttr::get(vectorType.getElementType(), value);
     auto attr = SplatElementsAttr::get(vectorType, element);
-    return builder.create<spirv::ConstantOp>(loc, vectorType, attr);
+    return spirv::ConstantOp::create(builder, loc, vectorType, attr);
   }
 
   if (auto intType = dyn_cast<IntegerType>(type))
-    return builder.create<spirv::ConstantOp>(
-        loc, type, builder.getIntegerAttr(type, value));
+    return spirv::ConstantOp::create(builder, loc, type,
+                                     builder.getIntegerAttr(type, value));
 
   return nullptr;
 }
@@ -158,7 +170,60 @@ getTypeConversionFailure(ConversionPatternRewriter &rewriter, Operation *op) {
   return getTypeConversionFailure(rewriter, op, op->getResultTypes().front());
 }
 
+// TODO: Move to some common place?
+static std::string getDecorationString(spirv::Decoration decor) {
+  return llvm::convertToSnakeFromCamelCase(stringifyDecoration(decor));
+}
+
 namespace {
+
+/// Converts elementwise unary, binary and ternary arith operations to SPIR-V
+/// operations. Op can potentially support overflow flags.
+template <typename Op, typename SPIRVOp>
+struct ElementwiseArithOpPattern final : OpConversionPattern<Op> {
+  using OpConversionPattern<Op>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(Op op, typename Op::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    assert(adaptor.getOperands().size() <= 3);
+    auto converter = this->template getTypeConverter<SPIRVTypeConverter>();
+    Type dstType = converter->convertType(op.getType());
+    if (!dstType) {
+      return rewriter.notifyMatchFailure(
+          op->getLoc(),
+          llvm::formatv("failed to convert type {0} for SPIR-V", op.getType()));
+    }
+
+    if (SPIRVOp::template hasTrait<OpTrait::spirv::UnsignedOp>() &&
+        !getElementTypeOrSelf(op.getType()).isIndex() &&
+        dstType != op.getType()) {
+      return op.emitError("bitwidth emulation is not implemented yet on "
+                          "unsigned op pattern version");
+    }
+
+    auto overflowFlags = arith::IntegerOverflowFlags::none;
+    if (auto overflowIface =
+            dyn_cast<arith::ArithIntegerOverflowFlagsInterface>(*op)) {
+      if (converter->getTargetEnv().allows(
+              spirv::Extension::SPV_KHR_no_integer_wrap_decoration))
+        overflowFlags = overflowIface.getOverflowAttr().getValue();
+    }
+
+    auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
+        op, dstType, adaptor.getOperands());
+
+    if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nsw))
+      newOp->setAttr(getDecorationString(spirv::Decoration::NoSignedWrap),
+                     rewriter.getUnitAttr());
+
+    if (bitEnumContainsAny(overflowFlags, arith::IntegerOverflowFlags::nuw))
+      newOp->setAttr(getDecorationString(spirv::Decoration::NoUnsignedWrap),
+                     rewriter.getUnitAttr());
+
+    return success();
+  }
+};
 
 //===----------------------------------------------------------------------===//
 // ConstantOp
@@ -176,16 +241,41 @@ struct ConstantCompositeOpPattern final
     if (!srcType || srcType.getNumElements() == 1)
       return failure();
 
-    // arith.constant should only have vector or tenor types.
-    assert((isa<VectorType, RankedTensorType>(srcType)));
+    // arith.constant should only have vector or tensor types. This is a MLIR
+    // wide problem at the moment.
+    if (!isa<VectorType, RankedTensorType>(srcType))
+      return rewriter.notifyMatchFailure(constOp, "unsupported ShapedType");
 
     Type dstType = getTypeConverter()->convertType(srcType);
     if (!dstType)
       return failure();
 
-    auto dstElementsAttr = dyn_cast<DenseElementsAttr>(constOp.getValue());
-    if (!dstElementsAttr)
-      return failure();
+    // Import the resource into the IR to make use of the special handling of
+    // element types later on.
+    mlir::DenseElementsAttr dstElementsAttr;
+    if (auto denseElementsAttr =
+            dyn_cast<DenseElementsAttr>(constOp.getValue())) {
+      dstElementsAttr = denseElementsAttr;
+    } else if (auto resourceAttr =
+                   dyn_cast<DenseResourceElementsAttr>(constOp.getValue())) {
+
+      AsmResourceBlob *blob = resourceAttr.getRawHandle().getBlob();
+      if (!blob)
+        return constOp->emitError("could not find resource blob");
+
+      ArrayRef<char> ptr = blob->getData();
+
+      // Check that the buffer meets the requirements to get converted to a
+      // DenseElementsAttr
+      bool detectedSplat = false;
+      if (!DenseElementsAttr::isValidRawBuffer(srcType, ptr, detectedSplat))
+        return constOp->emitError("resource is not a valid buffer");
+
+      dstElementsAttr =
+          DenseElementsAttr::getFromRawBuffer(resourceAttr.getType(), ptr);
+    } else {
+      return constOp->emitError("unsupported elements attribute");
+    }
 
     ShapedType dstAttrType = dstElementsAttr.getType();
 
@@ -217,8 +307,18 @@ struct ConstantCompositeOpPattern final
       SmallVector<Attribute, 8> elements;
       if (isa<FloatType>(srcElemType)) {
         for (FloatAttr srcAttr : dstElementsAttr.getValues<FloatAttr>()) {
-          FloatAttr dstAttr =
-              convertFloatAttr(srcAttr, cast<FloatType>(dstElemType), rewriter);
+          Attribute dstAttr = nullptr;
+          // Handle 8-bit float conversion to 8-bit integer.
+          auto *typeConverter = getTypeConverter<SPIRVTypeConverter>();
+          if (typeConverter->getOptions().emulateUnsupportedFloatTypes &&
+              srcElemType.getIntOrFloatBitWidth() == 8 &&
+              isa<IntegerType>(dstElemType)) {
+            dstAttr =
+                getIntegerAttrFromFloatAttr(srcAttr, dstElemType, rewriter);
+          } else {
+            dstAttr = convertFloatAttr(srcAttr, cast<FloatType>(dstElemType),
+                                       rewriter);
+          }
           if (!dstAttr)
             return failure();
           elements.push_back(dstAttr);
@@ -282,11 +382,19 @@ struct ConstantScalarOpPattern final
     // Floating-point types.
     if (isa<FloatType>(srcType)) {
       auto srcAttr = cast<FloatAttr>(cstAttr);
-      auto dstAttr = srcAttr;
+      Attribute dstAttr = srcAttr;
 
       // Floating-point types not supported in the target environment are all
       // converted to float type.
-      if (srcType != dstType) {
+      auto *typeConverter = getTypeConverter<SPIRVTypeConverter>();
+      if (typeConverter->getOptions().emulateUnsupportedFloatTypes &&
+          srcType.getIntOrFloatBitWidth() == 8 && isa<IntegerType>(dstType) &&
+          dstType.getIntOrFloatBitWidth() == 8) {
+        // If the source is an 8-bit float, convert it to a 8-bit integer.
+        dstAttr = getIntegerAttrFromFloatAttr(srcAttr, dstType, rewriter);
+        if (!dstAttr)
+          return failure();
+      } else if (srcType != dstType) {
         dstAttr = convertFloatAttr(srcAttr, cast<FloatType>(dstType), rewriter);
         if (!dstAttr)
           return failure();
@@ -339,18 +447,19 @@ static Value emulateSignedRemainder(Location loc, Value lhs, Value rhs,
   Type type = lhs.getType();
 
   // Calculate the remainder with spirv.UMod.
-  Value lhsAbs = builder.create<SignedAbsOp>(loc, type, lhs);
-  Value rhsAbs = builder.create<SignedAbsOp>(loc, type, rhs);
-  Value abs = builder.create<spirv::UModOp>(loc, lhsAbs, rhsAbs);
+  Value lhsAbs = SignedAbsOp::create(builder, loc, type, lhs);
+  Value rhsAbs = SignedAbsOp::create(builder, loc, type, rhs);
+  Value abs = spirv::UModOp::create(builder, loc, lhsAbs, rhsAbs);
 
   // Fix the sign.
   Value isPositive;
   if (lhs == signOperand)
-    isPositive = builder.create<spirv::IEqualOp>(loc, lhs, lhsAbs);
+    isPositive = spirv::IEqualOp::create(builder, loc, lhs, lhsAbs);
   else
-    isPositive = builder.create<spirv::IEqualOp>(loc, rhs, rhsAbs);
-  Value absNegate = builder.create<spirv::SNegateOp>(loc, type, abs);
-  return builder.create<spirv::SelectOp>(loc, type, isPositive, abs, absNegate);
+    isPositive = spirv::IEqualOp::create(builder, loc, rhs, rhsAbs);
+  Value absNegate = spirv::SNegateOp::create(builder, loc, type, abs);
+  return spirv::SelectOp::create(builder, loc, type, isPositive, abs,
+                                 absNegate);
 }
 
 /// Converts arith.remsi to GLSL SPIR-V ops.
@@ -522,13 +631,13 @@ struct ExtSII1Pattern final : public OpConversionPattern<arith::ExtSIOp> {
     Value allOnes;
     if (auto intTy = dyn_cast<IntegerType>(dstType)) {
       unsigned componentBitwidth = intTy.getWidth();
-      allOnes = rewriter.create<spirv::ConstantOp>(
-          loc, intTy,
+      allOnes = spirv::ConstantOp::create(
+          rewriter, loc, intTy,
           rewriter.getIntegerAttr(intTy, APInt::getAllOnes(componentBitwidth)));
     } else if (auto vectorTy = dyn_cast<VectorType>(dstType)) {
       unsigned componentBitwidth = vectorTy.getElementTypeBitWidth();
-      allOnes = rewriter.create<spirv::ConstantOp>(
-          loc, vectorTy,
+      allOnes = spirv::ConstantOp::create(
+          rewriter, loc, vectorTy,
           SplatElementsAttr::get(vectorTy,
                                  APInt::getAllOnes(componentBitwidth)));
     } else {
@@ -574,8 +683,8 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
       // First shift left to sequeeze out all leading bits beyond the original
       // bitwidth. Here we need to use the original source and result type's
       // bitwidth.
-      auto shiftLOp = rewriter.create<spirv::ShiftLeftLogicalOp>(
-          op.getLoc(), dstType, adaptor.getIn(), shiftSize);
+      auto shiftLOp = spirv::ShiftLeftLogicalOp::create(
+          rewriter, op.getLoc(), dstType, adaptor.getIn(), shiftSize);
 
       // Then we perform arithmetic right shift to make sure we have the right
       // sign bits for negative values.
@@ -678,9 +787,9 @@ struct TruncII1Pattern final : public OpConversionPattern<arith::TruncIOp> {
     auto srcType = adaptor.getOperands().front().getType();
     // Check if (x & 1) == 1.
     Value mask = spirv::ConstantOp::getOne(srcType, loc, rewriter);
-    Value maskedSrc = rewriter.create<spirv::BitwiseAndOp>(
-        loc, srcType, adaptor.getOperands()[0], mask);
-    Value isOne = rewriter.create<spirv::IEqualOp>(loc, maskedSrc, mask);
+    Value maskedSrc = spirv::BitwiseAndOp::create(
+        rewriter, loc, srcType, adaptor.getOperands()[0], mask);
+    Value isOne = spirv::IEqualOp::create(rewriter, loc, maskedSrc, mask);
 
     Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
     Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
@@ -728,6 +837,25 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
 // TypeCastingOp
 //===----------------------------------------------------------------------===//
 
+static std::optional<spirv::FPRoundingMode>
+convertArithRoundingModeToSPIRV(arith::RoundingMode roundingMode) {
+  switch (roundingMode) {
+  case arith::RoundingMode::downward:
+    return spirv::FPRoundingMode::RTN;
+  case arith::RoundingMode::to_nearest_even:
+    return spirv::FPRoundingMode::RTE;
+  case arith::RoundingMode::toward_zero:
+    return spirv::FPRoundingMode::RTZ;
+  case arith::RoundingMode::upward:
+    return spirv::FPRoundingMode::RTP;
+  case arith::RoundingMode::to_nearest_away:
+    // SPIR-V FPRoundingMode decoration has no ties-away-from-zero mode
+    // (as of SPIR-V 1.6)
+    return std::nullopt;
+  }
+  llvm_unreachable("Unhandled rounding mode");
+}
+
 /// Converts type-casting standard operations to SPIR-V operations.
 template <typename Op, typename SPIRVOp>
 struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
@@ -736,8 +864,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    assert(adaptor.getOperands().size() == 1);
-    Type srcType = adaptor.getOperands().front().getType();
+    Type srcType = llvm::getSingleElement(adaptor.getOperands()).getType();
     Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
@@ -750,8 +877,28 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
       // Then we can just erase this operation by forwarding its operand.
       rewriter.replaceOp(op, adaptor.getOperands().front());
     } else {
-      rewriter.template replaceOpWithNewOp<SPIRVOp>(op, dstType,
-                                                    adaptor.getOperands());
+      // Compute new rounding mode (if any).
+      std::optional<spirv::FPRoundingMode> rm = std::nullopt;
+      if (auto roundingModeOp =
+              dyn_cast<arith::ArithRoundingModeInterface>(*op)) {
+        if (arith::RoundingModeAttr roundingMode =
+                roundingModeOp.getRoundingModeAttr()) {
+          if (!(rm =
+                    convertArithRoundingModeToSPIRV(roundingMode.getValue()))) {
+            return rewriter.notifyMatchFailure(
+                op->getLoc(),
+                llvm::formatv("unsupported rounding mode '{0}'", roundingMode));
+          }
+        }
+      }
+      // Create replacement op and attach rounding mode attribute (if any).
+      auto newOp = rewriter.template replaceOpWithNewOp<SPIRVOp>(
+          op, dstType, adaptor.getOperands());
+      if (rm) {
+        newOp->setAttr(
+            getDecorationString(spirv::Decoration::FPRoundingMode),
+            spirv::FPRoundingModeAttr::get(rewriter.getContext(), *rm));
+      }
     }
     return success();
   }
@@ -797,9 +944,9 @@ public:
       if (auto vectorType = dyn_cast<VectorType>(dstType))
         type = VectorType::get(vectorType.getShape(), type);
       Value extLhs =
-          rewriter.create<arith::ExtUIOp>(op.getLoc(), type, adaptor.getLhs());
+          arith::ExtUIOp::create(rewriter, op.getLoc(), type, adaptor.getLhs());
       Value extRhs =
-          rewriter.create<arith::ExtUIOp>(op.getLoc(), type, adaptor.getRhs());
+          arith::ExtUIOp::create(rewriter, op.getLoc(), type, adaptor.getRhs());
 
       rewriter.replaceOpWithNewOp<arith::CmpIOp>(op, op.getPredicate(), extLhs,
                                                  extRhs);
@@ -939,10 +1086,9 @@ public:
       return failure();
 
     Location loc = op.getLoc();
-    auto *converter = getTypeConverter<SPIRVTypeConverter>();
 
     Value replace;
-    if (converter->getOptions().enableFastMathMode) {
+    if (bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
       if (op.getPredicate() == arith::CmpFPredicate::ORD) {
         // Ordered comparsion checks if neither operand is NaN.
         replace = spirv::ConstantOp::getOne(op.getType(), loc, rewriter);
@@ -951,12 +1097,12 @@ public:
         replace = spirv::ConstantOp::getZero(op.getType(), loc, rewriter);
       }
     } else {
-      Value lhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.getLhs());
-      Value rhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.getRhs());
+      Value lhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getLhs());
+      Value rhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getRhs());
 
-      replace = rewriter.create<spirv::LogicalOrOp>(loc, lhsIsNan, rhsIsNan);
+      replace = spirv::LogicalOrOp::create(rewriter, loc, lhsIsNan, rhsIsNan);
       if (op.getPredicate() == arith::CmpFPredicate::ORD)
-        replace = rewriter.create<spirv::LogicalNotOp>(loc, replace);
+        replace = spirv::LogicalNotOp::create(rewriter, loc, replace);
     }
 
     rewriter.replaceOp(op, replace);
@@ -978,17 +1124,17 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Type dstElemTy = adaptor.getLhs().getType();
     Location loc = op->getLoc();
-    Value result = rewriter.create<spirv::IAddCarryOp>(loc, adaptor.getLhs(),
-                                                       adaptor.getRhs());
+    Value result = spirv::IAddCarryOp::create(rewriter, loc, adaptor.getLhs(),
+                                              adaptor.getRhs());
 
-    Value sumResult = rewriter.create<spirv::CompositeExtractOp>(
-        loc, result, llvm::ArrayRef(0));
-    Value carryValue = rewriter.create<spirv::CompositeExtractOp>(
-        loc, result, llvm::ArrayRef(1));
+    Value sumResult = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                        llvm::ArrayRef(0));
+    Value carryValue = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                         llvm::ArrayRef(1));
 
     // Convert the carry value to boolean.
     Value one = spirv::ConstantOp::getOne(dstElemTy, loc, rewriter);
-    Value carryResult = rewriter.create<spirv::IEqualOp>(loc, carryValue, one);
+    Value carryResult = spirv::IEqualOp::create(rewriter, loc, carryValue, one);
 
     rewriter.replaceOp(op, {sumResult, carryResult});
     return success();
@@ -1009,12 +1155,12 @@ public:
                   ConversionPatternRewriter &rewriter) const override {
     Location loc = op->getLoc();
     Value result =
-        rewriter.create<SPIRVMulOp>(loc, adaptor.getLhs(), adaptor.getRhs());
+        SPIRVMulOp::create(rewriter, loc, adaptor.getLhs(), adaptor.getRhs());
 
-    Value low = rewriter.create<spirv::CompositeExtractOp>(loc, result,
-                                                           llvm::ArrayRef(0));
-    Value high = rewriter.create<spirv::CompositeExtractOp>(loc, result,
-                                                            llvm::ArrayRef(1));
+    Value low = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                  llvm::ArrayRef(0));
+    Value high = spirv::CompositeExtractOp::create(rewriter, loc, result,
+                                                   llvm::ArrayRef(1));
 
     rewriter.replaceOp(op, {low, high});
     return success();
@@ -1067,20 +1213,20 @@ public:
 
     Location loc = op.getLoc();
     Value spirvOp =
-        rewriter.create<SPIRVOp>(loc, dstType, adaptor.getOperands());
+        SPIRVOp::create(rewriter, loc, dstType, adaptor.getOperands());
 
-    if (converter->getOptions().enableFastMathMode) {
+    if (bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
       rewriter.replaceOp(op, spirvOp);
       return success();
     }
 
-    Value lhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.getLhs());
-    Value rhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.getRhs());
+    Value lhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getLhs());
+    Value rhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getRhs());
 
-    Value select1 = rewriter.create<spirv::SelectOp>(loc, dstType, lhsIsNan,
-                                                     adaptor.getLhs(), spirvOp);
-    Value select2 = rewriter.create<spirv::SelectOp>(loc, dstType, rhsIsNan,
-                                                     adaptor.getRhs(), select1);
+    Value select1 = spirv::SelectOp::create(rewriter, loc, dstType, lhsIsNan,
+                                            adaptor.getLhs(), spirvOp);
+    Value select2 = spirv::SelectOp::create(rewriter, loc, dstType, rhsIsNan,
+                                            adaptor.getRhs(), select1);
 
     rewriter.replaceOp(op, select2);
     return success();
@@ -1121,21 +1267,21 @@ public:
 
     Location loc = op.getLoc();
     Value spirvOp =
-        rewriter.create<SPIRVOp>(loc, dstType, adaptor.getOperands());
+        SPIRVOp::create(rewriter, loc, dstType, adaptor.getOperands());
 
     if (!shouldInsertNanGuards<SPIRVOp>() ||
-        converter->getOptions().enableFastMathMode) {
+        bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
       rewriter.replaceOp(op, spirvOp);
       return success();
     }
 
-    Value lhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.getLhs());
-    Value rhsIsNan = rewriter.create<spirv::IsNanOp>(loc, adaptor.getRhs());
+    Value lhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getLhs());
+    Value rhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getRhs());
 
-    Value select1 = rewriter.create<spirv::SelectOp>(loc, dstType, lhsIsNan,
-                                                     adaptor.getRhs(), spirvOp);
-    Value select2 = rewriter.create<spirv::SelectOp>(loc, dstType, rhsIsNan,
-                                                     adaptor.getLhs(), select1);
+    Value select1 = spirv::SelectOp::create(rewriter, loc, dstType, lhsIsNan,
+                                            adaptor.getRhs(), spirvOp);
+    Value select2 = spirv::SelectOp::create(rewriter, loc, dstType, rhsIsNan,
+                                            adaptor.getLhs(), select1);
 
     rewriter.replaceOp(op, select2);
     return success();
@@ -1149,14 +1295,14 @@ public:
 //===----------------------------------------------------------------------===//
 
 void mlir::arith::populateArithToSPIRVPatterns(
-    SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
     ConstantCompositeOpPattern,
     ConstantScalarOpPattern,
-    spirv::ElementwiseOpPattern<arith::AddIOp, spirv::IAddOp>,
-    spirv::ElementwiseOpPattern<arith::SubIOp, spirv::ISubOp>,
-    spirv::ElementwiseOpPattern<arith::MulIOp, spirv::IMulOp>,
+    ElementwiseArithOpPattern<arith::AddIOp, spirv::IAddOp>,
+    ElementwiseArithOpPattern<arith::SubIOp, spirv::ISubOp>,
+    ElementwiseArithOpPattern<arith::MulIOp, spirv::IMulOp>,
     spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
     spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
     spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
@@ -1164,7 +1310,7 @@ void mlir::arith::populateArithToSPIRVPatterns(
     BitwiseOpPattern<arith::AndIOp, spirv::LogicalAndOp, spirv::BitwiseAndOp>,
     BitwiseOpPattern<arith::OrIOp, spirv::LogicalOrOp, spirv::BitwiseOrOp>,
     XOrIOpLogicalPattern, XOrIOpBooleanPattern,
-    spirv::ElementwiseOpPattern<arith::ShLIOp, spirv::ShiftLeftLogicalOp>,
+    ElementwiseArithOpPattern<arith::ShLIOp, spirv::ShiftLeftLogicalOp>,
     spirv::ElementwiseOpPattern<arith::ShRUIOp, spirv::ShiftRightLogicalOp>,
     spirv::ElementwiseOpPattern<arith::ShRSIOp, spirv::ShiftRightArithmeticOp>,
     spirv::ElementwiseOpPattern<arith::NegFOp, spirv::FNegateOp>,
@@ -1224,7 +1370,9 @@ void mlir::arith::populateArithToSPIRVPatterns(
 
 namespace {
 struct ConvertArithToSPIRVPass
-    : public impl::ConvertArithToSPIRVBase<ConvertArithToSPIRVPass> {
+    : public impl::ConvertArithToSPIRVPassBase<ConvertArithToSPIRVPass> {
+  using Base::Base;
+
   void runOnOperation() override {
     Operation *op = getOperation();
     spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnvOrDefault(op);
@@ -1233,7 +1381,7 @@ struct ConvertArithToSPIRVPass
 
     SPIRVConversionOptions options;
     options.emulateLT32BitScalarTypes = this->emulateLT32BitScalarTypes;
-    options.enableFastMathMode = this->enableFastMath;
+    options.emulateUnsupportedFloatTypes = this->emulateUnsupportedFloatTypes;
     SPIRVTypeConverter typeConverter(targetAttr, options);
 
     // Use UnrealizedConversionCast as the bridge so that we don't need to pull
@@ -1251,7 +1399,3 @@ struct ConvertArithToSPIRVPass
   }
 };
 } // namespace
-
-std::unique_ptr<OperationPass<>> mlir::arith::createConvertArithToSPIRVPass() {
-  return std::make_unique<ConvertArithToSPIRVPass>();
-}

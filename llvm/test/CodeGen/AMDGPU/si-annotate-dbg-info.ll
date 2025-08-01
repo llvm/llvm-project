@@ -5,26 +5,25 @@ define amdgpu_ps i32 @if_else(i32 %0) !dbg !5 {
 ; OPT-LABEL: define amdgpu_ps i32 @if_else(
 ; OPT-SAME: i32 [[TMP0:%.*]]) !dbg [[DBG5:![0-9]+]] {
 ; OPT-NEXT:    [[C:%.*]] = icmp ne i32 [[TMP0]], 0, !dbg [[DBG13:![0-9]+]]
-; OPT-NEXT:    tail call void @llvm.dbg.value(metadata i1 [[C]], metadata [[META9:![0-9]+]], metadata !DIExpression()), !dbg [[DBG13]]
+; OPT-NEXT:      #dbg_value(i1 [[C]], [[META9:![0-9]+]], !DIExpression(), [[DBG13]])
 ; OPT-NEXT:    [[TMP2:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[C]]), !dbg [[DBG14:![0-9]+]]
 ; OPT-NEXT:    [[TMP3:%.*]] = extractvalue { i1, i64 } [[TMP2]], 0, !dbg [[DBG14]]
 ; OPT-NEXT:    [[TMP4:%.*]] = extractvalue { i1, i64 } [[TMP2]], 1, !dbg [[DBG14]]
 ; OPT-NEXT:    br i1 [[TMP3]], label [[FALSE:%.*]], label [[FLOW:%.*]], !dbg [[DBG14]]
 ; OPT:       Flow:
-; OPT-NEXT:    [[TMP5:%.*]] = phi i32 [ 33, [[FALSE]] ], [ undef, [[TMP1:%.*]] ]
-; OPT-NEXT:    [[TMP6:%.*]] = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 [[TMP4]]), !dbg [[DBG14]]
-; OPT-NEXT:    [[TMP7:%.*]] = extractvalue { i1, i64 } [[TMP6]], 0, !dbg [[DBG14]]
-; OPT-NEXT:    [[TMP8:%.*]] = extractvalue { i1, i64 } [[TMP6]], 1, !dbg [[DBG14]]
-; OPT-NEXT:    br i1 [[TMP7]], label [[TRUE:%.*]], label [[EXIT:%.*]], !dbg [[DBG14]]
+; OPT-NEXT:    [[TMP5:%.*]] = call { i1, i64 } @llvm.amdgcn.else.i64.i64(i64 [[TMP4]])
+; OPT-NEXT:    [[TMP6:%.*]] = extractvalue { i1, i64 } [[TMP5]], 0
+; OPT-NEXT:    [[TMP8:%.*]] = extractvalue { i1, i64 } [[TMP5]], 1
+; OPT-NEXT:    br i1 [[TMP6]], label [[TRUE:%.*]], label [[EXIT:%.*]]
 ; OPT:       true:
 ; OPT-NEXT:    br label [[EXIT]], !dbg [[DBG15:![0-9]+]]
 ; OPT:       false:
 ; OPT-NEXT:    br label [[FLOW]], !dbg [[DBG16:![0-9]+]]
 ; OPT:       exit:
-; OPT-NEXT:    [[RET:%.*]] = phi i32 [ [[TMP5]], [[FLOW]] ], [ 42, [[TRUE]] ], !dbg [[DBG17:![0-9]+]]
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]]), !dbg [[DBG18:![0-9]+]]
-; OPT-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[RET]], metadata [[META11:![0-9]+]], metadata !DIExpression()), !dbg [[DBG17]]
-; OPT-NEXT:    ret i32 [[RET]], !dbg [[DBG18]]
+; OPT-NEXT:    [[RET:%.*]] = phi i32 [ 33, [[FLOW]] ], [ 42, [[TRUE]] ], !dbg [[DBG17:![0-9]+]]
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP8]])
+; OPT-NEXT:      #dbg_value(i32 [[RET]], [[META11:![0-9]+]], !DIExpression(), [[DBG17]])
+; OPT-NEXT:    ret i32 [[RET]], !dbg [[DBG18:![0-9]+]]
 ;
   %c = icmp eq i32 %0, 0, !dbg !13
   tail call void @llvm.dbg.value(metadata i1 %c, metadata !9, metadata !DIExpression()), !dbg !13
@@ -50,27 +49,27 @@ define amdgpu_ps void @loop_if_break(i32 %n) !dbg !19 {
 ; OPT:       loop:
 ; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP5:%.*]], [[FLOW:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; OPT-NEXT:    [[I:%.*]] = phi i32 [ [[N]], [[ENTRY]] ], [ [[TMP3:%.*]], [[FLOW]] ], !dbg [[DBG25:![0-9]+]]
-; OPT-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[I]], metadata [[META21:![0-9]+]], metadata !DIExpression()), !dbg [[DBG25]]
+; OPT-NEXT:      #dbg_value(i32 [[I]], [[META21:![0-9]+]], !DIExpression(), [[DBG25]])
 ; OPT-NEXT:    [[C:%.*]] = icmp ugt i32 [[I]], 0, !dbg [[DBG26:![0-9]+]]
-; OPT-NEXT:    tail call void @llvm.dbg.value(metadata i1 [[C]], metadata [[META22:![0-9]+]], metadata !DIExpression()), !dbg [[DBG26]]
+; OPT-NEXT:      #dbg_value(i1 [[C]], [[META22:![0-9]+]], !DIExpression(), [[DBG26]])
 ; OPT-NEXT:    [[TMP0:%.*]] = call { i1, i64 } @llvm.amdgcn.if.i64(i1 [[C]]), !dbg [[DBG27:![0-9]+]]
 ; OPT-NEXT:    [[TMP1:%.*]] = extractvalue { i1, i64 } [[TMP0]], 0, !dbg [[DBG27]]
 ; OPT-NEXT:    [[TMP2:%.*]] = extractvalue { i1, i64 } [[TMP0]], 1, !dbg [[DBG27]]
 ; OPT-NEXT:    br i1 [[TMP1]], label [[LOOP_BODY:%.*]], label [[FLOW]], !dbg [[DBG27]]
 ; OPT:       loop_body:
 ; OPT-NEXT:    [[I_NEXT:%.*]] = sub i32 [[I]], 1, !dbg [[DBG28:![0-9]+]]
-; OPT-NEXT:    tail call void @llvm.dbg.value(metadata i32 [[I_NEXT]], metadata [[META23:![0-9]+]], metadata !DIExpression()), !dbg [[DBG28]]
+; OPT-NEXT:      #dbg_value(i32 [[I_NEXT]], [[META23:![0-9]+]], !DIExpression(), [[DBG28]])
 ; OPT-NEXT:    br label [[FLOW]], !dbg [[DBG29:![0-9]+]]
 ; OPT:       Flow:
-; OPT-NEXT:    [[TMP3]] = phi i32 [ [[I_NEXT]], [[LOOP_BODY]] ], [ undef, [[LOOP]] ]
+; OPT-NEXT:    [[TMP3]] = phi i32 [ [[I_NEXT]], [[LOOP_BODY]] ], [ poison, [[LOOP]] ]
 ; OPT-NEXT:    [[TMP4:%.*]] = phi i1 [ false, [[LOOP_BODY]] ], [ true, [[LOOP]] ]
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]]), !dbg [[DBG27]]
-; OPT-NEXT:    [[TMP5]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN]]), !dbg [[DBG27]]
-; OPT-NEXT:    [[TMP6:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP5]]), !dbg [[DBG27]]
-; OPT-NEXT:    br i1 [[TMP6]], label [[EXIT:%.*]], label [[LOOP]], !dbg [[DBG27]]
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
+; OPT-NEXT:    [[TMP5]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN]])
+; OPT-NEXT:    [[TMP6:%.*]] = call i1 @llvm.amdgcn.loop.i64(i64 [[TMP5]])
+; OPT-NEXT:    br i1 [[TMP6]], label [[EXIT:%.*]], label [[LOOP]]
 ; OPT:       exit:
-; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP5]]), !dbg [[DBG30:![0-9]+]]
-; OPT-NEXT:    ret void, !dbg [[DBG30]]
+; OPT-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP5]])
+; OPT-NEXT:    ret void, !dbg [[DBG30:![0-9]+]]
 ;
 entry:
   br label %loop, !dbg !24
@@ -133,7 +132,7 @@ attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memo
 !30 = !DILocation(line: 13, column: 1, scope: !19)
 ;.
 ; OPT: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: [[META1:![0-9]+]], producer: "debugify", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
-; OPT: [[META1]] = !DIFile(filename: "../../../test/CodeGen/AMDGPU/si-annotate-dbg-info.ll", directory: {{.*}})
+; OPT: [[META1]] = !DIFile(filename: "{{.*}}si-annotate-dbg-info.ll", directory: {{.*}})
 ; OPT: [[DBG5]] = distinct !DISubprogram(name: "if_else", linkageName: "if_else", scope: null, file: [[META1]], line: 1, type: [[META6:![0-9]+]], scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: [[META0]], retainedNodes: [[META8:![0-9]+]])
 ; OPT: [[META6]] = !DISubroutineType(types: [[META7:![0-9]+]])
 ; OPT: [[META7]] = !{}

@@ -1,4 +1,4 @@
-! RUN: bbc -hlfir=false %s -o - | FileCheck %s
+! RUN: bbc -hlfir=false -fwrapv %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func @_QPss1()
 subroutine ss1
@@ -43,15 +43,15 @@ end
 
 ! CHECK-LABEL: func @_QPss2(
 ! CHECK-SAME:               %arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:   %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
-! CHECK:   %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
-! CHECK:   %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
-! CHECK:   %[[C_27_i32:[-0-9a-z_]+]] = arith.constant 27 : i32
-! CHECK:   %[[C_m1_i32:[-0-9a-z_]+]] = arith.constant -1 : i32
-! CHECK:   %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
-! CHECK:   %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
-! CHECK:   %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
-! CHECK:   %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
+! CHECK-DAG: %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
+! CHECK-DAG: %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
+! CHECK-DAG: %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
+! CHECK-DAG: %[[C_27_i32:[-0-9a-z_]+]] = arith.constant 27 : i32
+! CHECK-DAG: %[[C_6_i32:[-0-9a-z_]+]] = arith.constant 6 : i32
+! CHECK-DAG: %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
+! CHECK-DAG: %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
+! CHECK-DAG: %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
+! CHECK-DAG: %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
 ! CHECK:   %[[V_0:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_1:[0-9]+]] = fir.convert %[[V_0:[0-9]+]] : (i32) -> index
 ! CHECK:   %[[V_2:[0-9]+]] = arith.cmpi sgt, %[[V_1]], %[[C_0]] : index
@@ -118,11 +118,11 @@ end
 ! CHECK:   cf.br ^bb9(%[[V_42]], %[[V_46:[0-9]+]] : index, index)
 ! CHECK: ^bb11:  // pred: ^bb9
 ! CHECK:   fir.freemem %[[V_18:[0-9]+]] : !fir.heap<!fir.array<?xf32>>
-! CHECK:   %[[V_49:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput(%[[C_m1_i32]], %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:   %[[V_49:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput(%[[C_6_i32]], %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[V_50:[0-9]+]] = fir.slice %[[C_1]], %[[C_2]], %[[C_1]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:   %[[V_51:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_50]]] : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<2xf32>>
 ! CHECK:   %[[V_52:[0-9]+]] = fir.convert %[[V_51:[0-9]+]] : (!fir.box<!fir.array<2xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_53:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_49]], %[[V_52]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_53:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_49]], %[[V_52]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:   %[[V_54:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_55:[0-9]+]] = arith.subi %[[V_54]], %[[C_1_i32]] : i32
 ! CHECK:   %[[V_56:[0-9]+]] = fir.convert %[[V_55:[0-9]+]] : (i32) -> index
@@ -130,22 +130,22 @@ end
 ! CHECK:   %[[V_58:[0-9]+]] = fir.slice %[[V_56]], %[[V_57]], %[[C_1]] : (index, index, index) -> !fir.slice<1>
 ! CHECK:   %[[V_59:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_58]]] : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:   %[[V_60:[0-9]+]] = fir.convert %[[V_59:[0-9]+]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_61:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_49]], %[[V_60]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
-! CHECK:   %[[V_62:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_49]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:   %[[V_61:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_49]], %[[V_60]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_62:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_49]]) fastmath<contract> {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:   return
 ! CHECK:   }
 
 ! CHECK-LABEL: func @_QPss3(
 ! CHECK-SAME:               %arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:   %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
-! CHECK:   %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
-! CHECK:   %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
-! CHECK:   %[[C_34_i32:[-0-9a-z_]+]] = arith.constant 34 : i32
-! CHECK:   %[[C_m1_i32:[-0-9a-z_]+]] = arith.constant -1 : i32
-! CHECK:   %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
-! CHECK:   %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
-! CHECK:   %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
-! CHECK:   %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
+! CHECK-DAG: %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
+! CHECK-DAG: %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
+! CHECK-DAG: %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
+! CHECK-DAG: %[[C_34_i32:[-0-9a-z_]+]] = arith.constant 34 : i32
+! CHECK-DAG: %[[C_6_i32:[-0-9a-z_]+]] = arith.constant 6 : i32
+! CHECK-DAG: %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
+! CHECK-DAG: %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
+! CHECK-DAG: %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
+! CHECK-DAG: %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
 ! CHECK:   %[[V_0:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_1:[0-9]+]] = fir.convert %[[V_0:[0-9]+]] : (i32) -> index
 ! CHECK:   %[[V_2:[0-9]+]] = arith.cmpi sgt, %[[V_1]], %[[C_0]] : index
@@ -244,11 +244,11 @@ end
 ! CHECK:   cf.br ^bb15(%[[V_69]], %[[V_70:[0-9]+]] : index, index)
 ! CHECK: ^bb19:  // pred: ^bb15
 ! CHECK:   fir.freemem %[[V_24:[0-9]+]] : !fir.heap<!fir.array<2x?xf32>>
-! CHECK:   %[[V_73:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput(%[[C_m1_i32]], %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:   %[[V_73:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput(%[[C_6_i32]], %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[V_74:[0-9]+]] = fir.slice %[[C_1]], %[[C_2]], %[[C_1]], %[[C_1]], %[[C_2]], %[[C_1]] : (index, index, index, index, index, index) -> !fir.slice<2>
 ! CHECK:   %[[V_75:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_74]]] : (!fir.ref<!fir.array<2x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x2xf32>>
 ! CHECK:   %[[V_76:[0-9]+]] = fir.convert %[[V_75:[0-9]+]] : (!fir.box<!fir.array<?x2xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_77:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_76]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_77:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_76]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:   %[[V_78:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_79:[0-9]+]] = arith.subi %[[V_78]], %[[C_1_i32]] : i32
 ! CHECK:   %[[V_80:[0-9]+]] = fir.convert %[[V_79:[0-9]+]] : (i32) -> index
@@ -256,22 +256,22 @@ end
 ! CHECK:   %[[V_82:[0-9]+]] = fir.slice %[[C_1]], %[[C_2]], %[[C_1]], %[[V_80]], %[[V_81]], %[[C_1]] : (index, index, index, index, index, index) -> !fir.slice<2>
 ! CHECK:   %[[V_83:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_82]]] : (!fir.ref<!fir.array<2x?xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK:   %[[V_84:[0-9]+]] = fir.convert %[[V_83:[0-9]+]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_85:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_84]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
-! CHECK:   %[[V_86:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_73]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:   %[[V_85:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_84]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_86:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_73]]) fastmath<contract> {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:   return
 ! CHECK:   }
 
 ! CHECK-LABEL: func @_QPss4(
 ! CHECK-SAME:               %arg0: !fir.ref<i32> {fir.bindc_name = "n"}) {
-! CHECK:   %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
-! CHECK:   %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
-! CHECK:   %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
-! CHECK:   %[[C_41_i32:[-0-9a-z_]+]] = arith.constant 41 : i32
-! CHECK:   %[[C_m1_i32:[-0-9a-z_]+]] = arith.constant -1 : i32
-! CHECK:   %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
-! CHECK:   %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
-! CHECK:   %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
-! CHECK:   %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
+! CHECK-DAG: %[[C_2:[-0-9a-z_]+]] = arith.constant 2 : index
+! CHECK-DAG: %[[C_m1:[-0-9a-z_]+]] = arith.constant -1 : index
+! CHECK-DAG: %[[C_1:[-0-9a-z_]+]] = arith.constant 1 : index
+! CHECK-DAG: %[[C_41_i32:[-0-9a-z_]+]] = arith.constant 41 : i32
+! CHECK-DAG: %[[C_6_i32:[-0-9a-z_]+]] = arith.constant 6 : i32
+! CHECK-DAG: %[[C_st:[-0-9a-z_]+]] = arith.constant 7.000000e+00 : f32
+! CHECK-DAG: %[[C_1_i32:[-0-9a-z_]+]] = arith.constant 1 : i32
+! CHECK-DAG: %[[C_st_0:[-0-9a-z_]+]] = arith.constant -2.000000e+00 : f32
+! CHECK-DAG: %[[C_0:[-0-9a-z_]+]] = arith.constant 0 : index
 ! CHECK:   %[[V_0:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_1:[0-9]+]] = fir.convert %[[V_0:[0-9]+]] : (i32) -> index
 ! CHECK:   %[[V_2:[0-9]+]] = arith.cmpi sgt, %[[V_1]], %[[C_0]] : index
@@ -370,11 +370,11 @@ end
 ! CHECK:   cf.br ^bb15(%[[V_69]], %[[V_70:[0-9]+]] : index, index)
 ! CHECK: ^bb19:  // pred: ^bb15
 ! CHECK:   fir.freemem %[[V_24:[0-9]+]] : !fir.heap<!fir.array<?x2xf32>>
-! CHECK:   %[[V_73:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput(%[[C_m1_i32]], %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
+! CHECK:   %[[V_73:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput(%[[C_6_i32]], %{{.*}}, %{{.*}}) {{.*}}: (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:   %[[V_74:[0-9]+]] = fir.slice %[[C_1]], %[[C_2]], %[[C_1]], %[[C_1]], %[[C_2]], %[[C_1]] : (index, index, index, index, index, index) -> !fir.slice<2>
 ! CHECK:   %[[V_75:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_74]]] : (!fir.ref<!fir.array<?x2xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<2x?xf32>>
 ! CHECK:   %[[V_76:[0-9]+]] = fir.convert %[[V_75:[0-9]+]] : (!fir.box<!fir.array<2x?xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_77:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_76]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_77:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_76]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
 ! CHECK:   %[[V_78:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
 ! CHECK:   %[[V_79:[0-9]+]] = arith.subi %[[V_78]], %[[C_1_i32]] : i32
 ! CHECK:   %[[V_80:[0-9]+]] = fir.convert %[[V_79:[0-9]+]] : (i32) -> index
@@ -382,8 +382,8 @@ end
 ! CHECK:   %[[V_82:[0-9]+]] = fir.slice %[[V_80]], %[[V_81]], %[[C_1]], %[[C_1]], %[[C_2]], %[[C_1]] : (index, index, index, index, index, index) -> !fir.slice<2>
 ! CHECK:   %[[V_83:[0-9]+]] = fir.embox %[[V_4]](%[[V_5]]) [%[[V_82]]] : (!fir.ref<!fir.array<?x2xf32>>, !fir.shape<2>, !fir.slice<2>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK:   %[[V_84:[0-9]+]] = fir.convert %[[V_83:[0-9]+]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
-! CHECK:   %[[V_85:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_84]]) fastmath<contract> : (!fir.ref<i8>, !fir.box<none>) -> i1
-! CHECK:   %[[V_86:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_73]]) fastmath<contract> : (!fir.ref<i8>) -> i32
+! CHECK:   %[[V_85:[0-9]+]] = fir.call @_FortranAioOutputDescriptor(%[[V_73]], %[[V_84]]) fastmath<contract> {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[V_86:[0-9]+]] = fir.call @_FortranAioEndIoStatement(%[[V_73]]) fastmath<contract> {{.*}}: (!fir.ref<i8>) -> i32
 ! CHECK:   return
 ! CHECK:   }
 
@@ -404,7 +404,7 @@ subroutine tt1
   ! CHECK-NEXT: fir.call @_FortranAioEndIoStatement
   print*, [(r([7.0]),i=1,3)]
 contains
-  ! CHECK-LABEL: func @_QFtt1Pr
+  ! CHECK-LABEL: func private @_QFtt1Pr
   function r(x)
     real x(:)
     r = x(1)

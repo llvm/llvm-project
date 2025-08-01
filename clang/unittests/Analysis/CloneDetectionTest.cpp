@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/CloneDetection.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
 
@@ -15,15 +15,14 @@ namespace clang {
 namespace analysis {
 namespace {
 
-class CloneDetectionVisitor
-    : public RecursiveASTVisitor<CloneDetectionVisitor> {
+class CloneDetectionVisitor : public DynamicRecursiveASTVisitor {
 
   CloneDetector &Detector;
 
 public:
   explicit CloneDetectionVisitor(CloneDetector &D) : Detector(D) {}
 
-  bool VisitFunctionDecl(FunctionDecl *D) {
+  bool VisitFunctionDecl(FunctionDecl *D) override {
     Detector.analyzeCodeBody(D);
     return true;
   }

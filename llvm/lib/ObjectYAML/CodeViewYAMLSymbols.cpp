@@ -308,7 +308,6 @@ void UnknownSymbolRecord::map(yaml::IO &io) {
     std::string Str;
     raw_string_ostream OS(Str);
     Binary.writeAsBinary(OS);
-    OS.flush();
     Data.assign(Str.begin(), Str.end());
   }
 }
@@ -467,7 +466,6 @@ template <> void SymbolRecordImpl<LabelSym>::map(IO &IO) {
   IO.mapOptional("Offset", Symbol.CodeOffset, 0U);
   IO.mapOptional("Segment", Symbol.Segment, uint16_t(0));
   IO.mapRequired("Flags", Symbol.Flags);
-  IO.mapRequired("Flags", Symbol.Flags);
   IO.mapRequired("DisplayName", Symbol.Name);
 }
 
@@ -605,6 +603,11 @@ template <> void SymbolRecordImpl<JumpTableSym>::map(IO &IO) {
   IO.mapRequired("BranchSegment", Symbol.BranchSegment);
   IO.mapRequired("TableSegment", Symbol.TableSegment);
   IO.mapRequired("EntriesCount", Symbol.EntriesCount);
+}
+
+template <> void SymbolRecordImpl<HotPatchFuncSym>::map(IO &IO) {
+  IO.mapRequired("Function", Symbol.Function);
+  IO.mapRequired("Name", Symbol.Name);
 }
 
 } // end namespace detail

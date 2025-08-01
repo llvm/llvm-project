@@ -1,8 +1,8 @@
 # Using a trick to run register-coalescer twice, that way
 # liveintervals should be preserved while running the machine verifier.
 #
-# RUN: not --crash llc -o - %s -march=hexagon -hexagon-subreg-liveness=false -run-pass register-coalescer -verify-machineinstrs -run-pass register-coalescer 2>&1 | FileCheck -check-prefix=CHECK-NOSUB %s
-# RUN: not --crash llc -o - %s -march=hexagon -hexagon-subreg-liveness=true -run-pass register-coalescer -verify-machineinstrs -run-pass register-coalescer 2>&1 | FileCheck -check-prefix=CHECK-SUB %s
+# RUN: not --crash llc -o - %s -mtriple=hexagon -enable-subreg-liveness=false -run-pass register-coalescer -verify-machineinstrs -run-pass register-coalescer 2>&1 | FileCheck -check-prefix=CHECK-NOSUB %s
+# RUN: not --crash llc -o - %s -mtriple=hexagon -enable-subreg-liveness=true -run-pass register-coalescer -verify-machineinstrs -run-pass register-coalescer 2>&1 | FileCheck -check-prefix=CHECK-SUB %s
 
 ---
 name: test_pass

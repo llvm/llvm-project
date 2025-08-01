@@ -10,6 +10,7 @@
 #include "Annotations.h"
 #include "Config.h"
 #include "Hover.h"
+#include "Protocol.h"
 #include "TestFS.h"
 #include "TestIndex.h"
 #include "TestTU.h"
@@ -965,6 +966,19 @@ class Foo final {})cpp";
          // Bindings are in theory public members of an anonymous struct.
          HI.AccessSpecifier = "public";
        }},
+      {// Don't crash on invalid decl with invalid init expr.
+       R"cpp(
+          Unknown [[^abc]] = invalid;
+          // error-ok
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "abc";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.NamespaceScope = "";
+         HI.Definition = "int abc";
+         HI.Type = "int";
+         HI.AccessSpecifier = "public";
+       }},
       {// Extra info for function call.
        R"cpp(
           void fun(int arg_a, int &arg_b) {};
@@ -1312,7 +1326,7 @@ class Foo final {})cpp";
          HI.LocalScope = "";
          HI.Kind = index::SymbolKind::TypeAlias;
          HI.Definition = "template <typename T> using AA = A<T>";
-         HI.Type = {"A<T>", "type-parameter-0-0"}; // FIXME: should be 'T'
+         HI.Type = {"A<T>", "T"};
          HI.TemplateParameters = {
              {{"typename"}, std::string("T"), std::nullopt}};
        }},
@@ -1983,10 +1997,14 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition =
                 R"cpp(#define MACRO                                                                  \
-  { return 0; }
+  {                                                                            \
+    return 0;                                                                  \
+  }
 
 // Expands to
-{ return 0; })cpp";
+{
+  return 0;
+})cpp";
           }},
       {
           R"cpp(// Forward class declaration
@@ -2267,7 +2285,7 @@ TEST(Hover, All) {
             namespace std
             {
               template<class _E>
-              class initializer_list {};
+              class initializer_list { const _E *a, *b; };
             }
             void foo() {
               ^[[auto]] i = {1,2};
@@ -2777,7 +2795,7 @@ TEST(Hover, All) {
           })cpp",
           [](HoverInfo &HI) {
             HI.Name = "expression";
-            HI.Type = "unsigned long";
+            HI.Type = {"__size_t", "unsigned long"};
             HI.Value = "1";
           }},
       {
@@ -2787,7 +2805,7 @@ TEST(Hover, All) {
           })cpp",
           [](HoverInfo &HI) {
             HI.Name = "expression";
-            HI.Type = "unsigned long";
+            HI.Type = {"__size_t", "unsigned long"};
             HI.Value = "1";
           }},
       {
@@ -3074,7 +3092,7 @@ TEST(Hover, All) {
             HI.NamespaceScope = "";
             HI.Definition =
                 "bool operator==(const Foo &) const noexcept = default";
-            HI.Documentation = "Foo spaceship";
+            HI.Documentation = "";
           }},
   };
 
@@ -3108,7 +3126,7 @@ TEST(Hover, All) {
     Expected.SymRange = T.range();
     Case.ExpectedBuilder(Expected);
 
-    SCOPED_TRACE(H->present().asPlainText());
+    SCOPED_TRACE(H->present(MarkupKind::PlainText));
     EXPECT_EQ(H->NamespaceScope, Expected.NamespaceScope);
     EXPECT_EQ(H->LocalScope, Expected.LocalScope);
     EXPECT_EQ(H->Name, Expected.Name);
@@ -3200,7 +3218,7 @@ TEST(Hover, Providers) {
     ASSERT_TRUE(H);
     HoverInfo Expected;
     Case.ExpectedBuilder(Expected);
-    SCOPED_TRACE(H->present().asMarkdown());
+    SCOPED_TRACE(H->present(MarkupKind::Markdown));
     EXPECT_EQ(H->Provider, Expected.Provider);
   }
 }
@@ -3216,11 +3234,11 @@ TEST(Hover, ParseProviderInfo) {
   struct Case {
     HoverInfo HI;
     llvm::StringRef ExpectedMarkdown;
-  } Cases[] = {{HIFoo, "### `foo`  \nprovided by `\"foo.h\"`"},
-               {HIFooBar, "### `foo`  \nprovided by `<bar.h>`"}};
+  } Cases[] = {{HIFoo, "### `foo`\n\nprovided by `\"foo.h\"`"},
+               {HIFooBar, "### `foo`\n\nprovided by `<bar.h>`"}};
 
   for (const auto &Case : Cases)
-    EXPECT_EQ(Case.HI.present().asMarkdown(), Case.ExpectedMarkdown);
+    EXPECT_EQ(Case.HI.present(MarkupKind::Markdown), Case.ExpectedMarkdown);
 }
 
 TEST(Hover, UsedSymbols) {
@@ -3270,7 +3288,7 @@ TEST(Hover, UsedSymbols) {
     ASSERT_TRUE(H);
     HoverInfo Expected;
     Case.ExpectedBuilder(Expected);
-    SCOPED_TRACE(H->present().asMarkdown());
+    SCOPED_TRACE(H->present(MarkupKind::Markdown));
     EXPECT_EQ(H->UsedSymbolNames, Expected.UsedSymbolNames);
   }
 }
@@ -3424,6 +3442,7 @@ TEST(Hover, Present) {
           R"(class foo
 
 Size: 10 bytes
+
 documentation
 
 template <typename T, typename C = bool> class Foo {})",
@@ -3448,8 +3467,8 @@ template <typename T, typename C = bool> class Foo {})",
           },
           "function foo\n"
           "\n"
-          "→ ret_type (aka can_ret_type)\n"
-          "Parameters:\n"
+          "→ ret_type (aka can_ret_type)\n\n"
+          "Parameters:\n\n"
           "- \n"
           "- type (aka can_type)\n"
           "- type foo (aka can_type)\n"
@@ -3474,8 +3493,11 @@ template <typename T, typename C = bool> class Foo {})",
           R"(field foo
 
 Type: type (aka can_type)
+
 Value = value
+
 Offset: 12 bytes
+
 Size: 4 bytes (+4 bytes padding), alignment 4 bytes
 
 // In test::Bar
@@ -3497,8 +3519,11 @@ def)",
           R"(field foo
 
 Type: type (aka can_type)
+
 Value = value
+
 Offset: 4 bytes and 3 bits
+
 Size: 25 bits (+4 bits padding), alignment 8 bytes
 
 // In test::Bar
@@ -3556,6 +3581,7 @@ protected: size_t method())",
           R"(constructor cls
 
 Parameters:
+
 - int a
 - int b = 5
 
@@ -3592,7 +3618,9 @@ private: union foo {})",
           R"(variable foo
 
 Type: int
+
 Value = 3
+
 Passed as arg_a
 
 // In test::Bar
@@ -3627,7 +3655,9 @@ Passed by value)",
           R"(variable foo
 
 Type: int
+
 Value = 3
+
 Passed by reference as arg_a
 
 // In test::Bar
@@ -3650,7 +3680,9 @@ int foo = 3)",
           R"(variable foo
 
 Type: int
+
 Value = 3
+
 Passed as arg_a (converted to alias_int)
 
 // In test::Bar
@@ -3688,7 +3720,9 @@ int foo = 3)",
           R"(variable foo
 
 Type: int
+
 Value = 3
+
 Passed by const reference as arg_a (converted to int)
 
 // In test::Bar
@@ -3724,71 +3758,126 @@ provides Foo, Bar, Baz, Foobar, Qux and 1 more)"}};
     Config Cfg;
     Cfg.Hover.ShowAKA = true;
     WithContextValue WithCfg(Config::Key, std::move(Cfg));
-    EXPECT_EQ(HI.present().asPlainText(), C.ExpectedRender);
+    EXPECT_EQ(HI.present(MarkupKind::PlainText), C.ExpectedRender);
   }
 }
 
 TEST(Hover, ParseDocumentation) {
   struct Case {
     llvm::StringRef Documentation;
+    llvm::StringRef ExpectedRenderEscapedMarkdown;
     llvm::StringRef ExpectedRenderMarkdown;
     llvm::StringRef ExpectedRenderPlainText;
   } Cases[] = {{
                    " \n foo\nbar",
-                   "foo bar",
+                   "foo\nbar",
+                   "foo\nbar",
                    "foo bar",
                },
                {
                    "foo\nbar \n  ",
-                   "foo bar",
+                   "foo\nbar",
+                   "foo\nbar",
                    "foo bar",
                },
                {
                    "foo  \nbar",
-                   "foo bar",
-                   "foo bar",
+                   "foo  \nbar",
+                   "foo  \nbar",
+                   "foo\nbar",
                },
                {
                    "foo    \nbar",
-                   "foo bar",
-                   "foo bar",
+                   "foo    \nbar",
+                   "foo    \nbar",
+                   "foo\nbar",
                },
                {
                    "foo\n\n\nbar",
-                   "foo  \nbar",
-                   "foo\nbar",
+                   "foo\n\nbar",
+                   "foo\n\nbar",
+                   "foo\n\nbar",
                },
                {
                    "foo\n\n\n\tbar",
-                   "foo  \nbar",
-                   "foo\nbar",
+                   "foo\n\n\tbar",
+                   "foo\n\n\tbar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n    bar",
+                   "foo\n\n    bar",
+                   "foo\n\n    bar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n   bar",
+                   "foo\n\n   bar",
+                   "foo\n\n   bar",
+                   "foo\n\nbar",
                },
                {
                    "foo\n\n\n bar",
-                   "foo  \nbar",
-                   "foo\nbar",
+                   "foo\n\n bar",
+                   "foo\n\n bar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n\nbar",
+                   "foo\n\nbar",
+                   "foo\n\nbar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n\n\tbar",
+                   "foo\n\n\tbar",
+                   "foo\n\n\tbar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n\n    bar",
+                   "foo\n\n    bar",
+                   "foo\n\n    bar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n\n   bar",
+                   "foo\n\n   bar",
+                   "foo\n\n   bar",
+                   "foo\n\nbar",
+               },
+               {
+                   "foo\n\n\n\n bar",
+                   "foo\n\n bar",
+                   "foo\n\n bar",
+                   "foo\n\nbar",
                },
                {
                    "foo.\nbar",
-                   "foo.  \nbar",
+                   "foo.\nbar",
+                   "foo.\nbar",
                    "foo.\nbar",
                },
                {
                    "foo. \nbar",
-                   "foo.  \nbar",
+                   "foo. \nbar",
+                   "foo. \nbar",
                    "foo.\nbar",
                },
                {
                    "foo\n*bar",
-                   "foo  \n\\*bar",
+                   "foo\n\\*bar",
+                   "foo\n*bar",
                    "foo\n*bar",
                },
                {
                    "foo\nbar",
-                   "foo bar",
+                   "foo\nbar",
+                   "foo\nbar",
                    "foo bar",
                },
                {
+                   "Tests primality of `p`.",
                    "Tests primality of `p`.",
                    "Tests primality of `p`.",
                    "Tests primality of `p`.",
@@ -3797,10 +3886,12 @@ TEST(Hover, ParseDocumentation) {
                    "'`' should not occur in `Code`",
                    "'\\`' should not occur in `Code`",
                    "'`' should not occur in `Code`",
+                   "'`' should not occur in `Code`",
                },
                {
                    "`not\nparsed`",
-                   "\\`not parsed\\`",
+                   "\\`not\nparsed\\`",
+                   "`not\nparsed`",
                    "`not parsed`",
                }};
 
@@ -3808,6 +3899,7 @@ TEST(Hover, ParseDocumentation) {
     markup::Document Output;
     parseDocumentation(C.Documentation, Output);
 
+    EXPECT_EQ(Output.asEscapedMarkdown(), C.ExpectedRenderEscapedMarkdown);
     EXPECT_EQ(Output.asMarkdown(), C.ExpectedRenderMarkdown);
     EXPECT_EQ(Output.asPlainText(), C.ExpectedRenderPlainText);
   }
@@ -3820,7 +3912,7 @@ TEST(Hover, PresentHeadings) {
   HI.Kind = index::SymbolKind::Variable;
   HI.Name = "foo";
 
-  EXPECT_EQ(HI.present().asMarkdown(), "### variable `foo`");
+  EXPECT_EQ(HI.present(MarkupKind::Markdown), "### variable `foo`");
 }
 
 // This is a separate test as rulers behave differently in markdown vs
@@ -3833,23 +3925,23 @@ TEST(Hover, PresentRulers) {
   HI.Definition = "def";
 
   llvm::StringRef ExpectedMarkdown = //
-      "### variable `foo`  \n"
+      "### variable `foo`\n"
       "\n"
       "---\n"
-      "Value = `val`  \n"
+      "Value = `val`\n"
       "\n"
       "---\n"
       "```cpp\n"
       "def\n"
       "```";
-  EXPECT_EQ(HI.present().asMarkdown(), ExpectedMarkdown);
+  EXPECT_EQ(HI.present(MarkupKind::Markdown), ExpectedMarkdown);
 
   llvm::StringRef ExpectedPlaintext = R"pt(variable foo
 
 Value = val
 
 def)pt";
-  EXPECT_EQ(HI.present().asPlainText(), ExpectedPlaintext);
+  EXPECT_EQ(HI.present(MarkupKind::PlainText), ExpectedPlaintext);
 }
 
 TEST(Hover, SpaceshipTemplateNoCrash) {
@@ -3877,7 +3969,7 @@ TEST(Hover, SpaceshipTemplateNoCrash) {
   TU.ExtraArgs.push_back("-std=c++20");
   auto AST = TU.build();
   auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
-  EXPECT_EQ(HI->Documentation, "Foo bar baz");
+  EXPECT_EQ(HI->Documentation, "");
 }
 
 TEST(Hover, ForwardStructNoCrash) {

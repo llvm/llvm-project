@@ -262,7 +262,8 @@ class index(TensorExpression):
 class FunctionKind(Enum):
     UNARY = 0
     BINARY = 1
-    TYPE = 2
+    TERNARY = 2
+    TYPE = 3
 
 
 class UnaryFnType:
@@ -291,6 +292,13 @@ class UnaryFn:
     ceil = UnaryFnType("ceil")
     floor = UnaryFnType("floor")
     negf = UnaryFnType("negf")
+    reciprocal = UnaryFnType("reciprocal")
+    round = UnaryFnType("round")
+    sqrt = UnaryFnType("sqrt")
+    rsqrt = UnaryFnType("rsqrt")
+    square = UnaryFnType("square")
+    tanh = UnaryFnType("tanh")
+    erf = UnaryFnType("erf")
 
 
 class BinaryFnType:
@@ -318,7 +326,7 @@ class BinaryFn:
 
     Examples:
     - max -> `arith.MaxSIOp`
-    - max_unsinged -> `arith.MaxUIOp`
+    - max_unsigned -> `arith.MaxUIOp`
     """
 
     add = BinaryFnType("add")
@@ -330,6 +338,34 @@ class BinaryFn:
     min_signed = BinaryFnType("min_signed")
     max_unsigned = BinaryFnType("max_unsigned")
     min_unsigned = BinaryFnType("min_unsigned")
+    powf = BinaryFnType("powf")
+
+
+class TernaryFnType:
+    """Ternary function.
+
+    A ternary function takes three tensor expressions and returns the
+    function evaluation result.
+    """
+
+    def __init__(self, fn_name: str):
+        self.fn_name = fn_name
+
+    def __call__(
+        self, arg0: TensorExpression, arg1: TensorExpression, arg2: TensorExpression
+    ) -> "TensorFn":
+        return TensorFn(
+            FunctionKind.TERNARY, self.fn_name, None, None, [arg0, arg1, arg2]
+        )
+
+    def __repr__(self):
+        return f"{self.fn_name}"
+
+
+class TernaryFn:
+    """Ternary function namespace."""
+
+    select = TernaryFnType("select")
 
 
 class TypeFnType:
@@ -430,7 +466,8 @@ class OperandKind(Enum):
     INDEX_ATTR = 3
     UNARY_FN_ATTR = 4
     BINARY_FN_ATTR = 5
-    TYPE_FN_ATTR = 6
+    TERNARY_FN_ATTR = 6
+    TYPE_FN_ATTR = 7
 
 
 class OperandDef:
@@ -482,6 +519,7 @@ class OperandDef:
             self.kind == OperandKind.INDEX_ATTR
             or self.kind == OperandKind.UNARY_FN_ATTR
             or self.kind == OperandKind.BINARY_FN_ATTR
+            or self.kind == OperandKind.TERNARY_FN_ATTR
             or self.kind == OperandKind.TYPE_FN_ATTR
         )
 
@@ -658,6 +696,33 @@ class BinaryFnAttrDef:
 
     def __call__(self, arg0: TensorExpression, arg1: TensorExpression) -> TensorFn:
         return TensorFn(FunctionKind.BINARY, None, self.operand_def, None, [arg0, arg1])
+
+    def __getitem__(self, reduce_dims: Tuple[DimDef]) -> ReduceFnUse:
+        return ReduceFnUse(None, self, *reduce_dims)
+
+
+class TernaryFnAttrDef:
+    """Ternary function attribute definition.
+
+    Ternary function attributes provide a way to make the arithmetic computation
+    parametrizable. Every attribute specifies a default Ternary function
+    that may be overwritten at operation instantiation time.
+    """
+
+    def __init__(self, default: "TernaryFnType"):
+        if not isinstance(default, TernaryFnType):
+            raise ValueError(
+                f"TernaryFnAttrDef requires default of type TernaryFnType "
+                f"but got {default}"
+            )
+        self.operand_def = OperandDef(
+            OperandKind.TERNARY_FN_ATTR, default_fn=default.fn_name
+        )
+
+    def __call__(self, arg0: TensorExpression, arg1: TensorExpression) -> TensorFn:
+        return TensorFn(
+            FunctionKind.TERNARY, None, self.operand_def, None, [arg0, arg1]
+        )
 
     def __getitem__(self, reduce_dims: Tuple[DimDef]) -> ReduceFnUse:
         return ReduceFnUse(None, self, *reduce_dims)

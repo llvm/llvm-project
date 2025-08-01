@@ -19,34 +19,26 @@ namespace llvm {
 class WebAssemblyTargetStreamer;
 
 class LLVM_LIBRARY_VISIBILITY WebAssemblyAsmPrinter final : public AsmPrinter {
+public:
+  static char ID;
+
+private:
   const WebAssemblySubtarget *Subtarget;
   const MachineRegisterInfo *MRI;
   WebAssemblyFunctionInfo *MFI;
-  // TODO: Do the uniquing of Signatures here instead of ObjectFileWriter?
-  std::vector<std::unique_ptr<wasm::WasmSignature>> Signatures;
-  std::vector<std::unique_ptr<std::string>> Names;
   bool signaturesEmitted = false;
-
-  StringRef storeName(StringRef Name) {
-    std::unique_ptr<std::string> N = std::make_unique<std::string>(Name);
-    Names.push_back(std::move(N));
-    return *Names.back();
-  }
 
 public:
   explicit WebAssemblyAsmPrinter(TargetMachine &TM,
                                  std::unique_ptr<MCStreamer> Streamer)
-      : AsmPrinter(TM, std::move(Streamer)), Subtarget(nullptr), MRI(nullptr),
-        MFI(nullptr) {}
+      : AsmPrinter(TM, std::move(Streamer), ID), Subtarget(nullptr),
+        MRI(nullptr), MFI(nullptr) {}
 
   StringRef getPassName() const override {
     return "WebAssembly Assembly Printer";
   }
 
   const WebAssemblySubtarget &getSubtarget() const { return *Subtarget; }
-  void addSignature(std::unique_ptr<wasm::WasmSignature> &&Sig) {
-    Signatures.push_back(std::move(Sig));
-  }
 
   //===------------------------------------------------------------------===//
   // MachineFunctionPass Implementation.
@@ -81,7 +73,7 @@ public:
   MVT getRegType(unsigned RegNo) const;
   std::string regToString(const MachineOperand &MO);
   WebAssemblyTargetStreamer *getTargetStreamer();
-  MCSymbolWasm *getMCSymbolForFunction(const Function *F, bool EnableEmEH,
+  MCSymbolWasm *getMCSymbolForFunction(const Function *F,
                                        wasm::WasmSignature *Sig,
                                        bool &InvokeDetected);
   MCSymbol *getOrCreateWasmSymbol(StringRef Name);

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass none -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn -run-pass none -o - %s | FileCheck %s
 ...
 ---
 

@@ -8,8 +8,6 @@
 
 // <string>
 
-// This test demonstrates the smaller allocation sizes when the alignment
-// requirements of std::string are dropped from 16 to 8.
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -17,14 +15,8 @@
 
 #include "test_macros.h"
 
-// alignment of the string heap buffer is hardcoded to either 16 or 8
-
-const std::size_t alignment =
-#ifdef _LIBCPP_ABI_STRING_8_BYTE_ALIGNMENT
-    8;
-#else
-    16;
-#endif
+// alignment of the string heap buffer is hardcoded to 8
+const std::size_t alignment = 8;
 
 int main(int, char**) {
   std::string input_string;

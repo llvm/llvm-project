@@ -39,12 +39,12 @@ produce a readable version of the outputs.
 
 Each detailed phase produces either correct output or fatal errors.
 
-# Analysis
+## Analysis
 
 This high level phase validates that the program is correct and creates all of
 the information needed for lowering.
 
-## Prescan and Preprocess
+### Prescan and Preprocess
 
 See [Preprocessing.md](Preprocessing.md).
 
@@ -65,11 +65,11 @@ See [Preprocessing.md](Preprocessing.md).
 **Entry point:** `parser::Parsing::Prescan`
 
 **Commands:** 
- - `flang-new -fc1 -E src.f90` dumps the cooked character stream
- - `flang-new -fc1 -fdebug-dump-provenance src.f90` dumps provenance
+ - `flang -fc1 -E src.f90` dumps the cooked character stream
+ - `flang -fc1 -fdebug-dump-provenance src.f90` dumps provenance
    information
 
-## Parsing
+### Parsing
 
 **Input:** Cooked character stream
 
@@ -80,12 +80,12 @@ representing a syntactically correct program, rooted at the program unit.  See:
 **Entry point:** `parser::Parsing::Parse`
 
 **Commands:**
-  - `flang-new -fc1 -fdebug-dump-parse-tree-no-sema src.f90` dumps the parse tree
-  - `flang-new -fc1 -fdebug-unparse src.f90` converts the parse tree to normalized Fortran
-  - `flang-new -fc1 -fdebug-dump-parsing-log src.f90` runs an instrumented parse and dumps the log
-  - `flang-new -fc1 -fdebug-measure-parse-tree src.f90` measures the parse tree
+  - `flang -fc1 -fdebug-dump-parse-tree-no-sema src.f90` dumps the parse tree
+  - `flang -fc1 -fdebug-unparse src.f90` converts the parse tree to normalized Fortran
+  - `flang -fc1 -fdebug-dump-parsing-log src.f90` runs an instrumented parse and dumps the log
+  - `flang -fc1 -fdebug-measure-parse-tree src.f90` measures the parse tree
 
-## Semantic processing
+### Semantic processing
 
 **Input:** the parse tree, the cooked character stream, and provenance
 information
@@ -121,16 +121,16 @@ In the course of semantic analysis, the compiler:
 At the end of semantic processing, all validation of the user's program is complete.  This is the last detailed phase of analysis processing.
 
 **Commands:**
-  - `flang-new -fc1 -fdebug-dump-parse-tree src.f90` dumps the parse tree after semantic analysis
-  - `flang-new -fc1 -fdebug-dump-symbols src.f90` dumps the symbol table
-  - `flang-new -fc1 -fdebug-dump-all src.f90` dumps both the parse tree and the symbol table
+  - `flang -fc1 -fdebug-dump-parse-tree src.f90` dumps the parse tree after semantic analysis
+  - `flang -fc1 -fdebug-dump-symbols src.f90` dumps the symbol table
+  - `flang -fc1 -fdebug-dump-all src.f90` dumps both the parse tree and the symbol table
 
-# Lowering
+## Lowering
 
 Lowering takes the parse tree and symbol table produced by analysis and
 produces LLVM IR.
 
-## Create the lowering bridge
+### Create the lowering bridge
 
 **Inputs:** 
   - the parse tree
@@ -148,7 +148,7 @@ The lowering bridge is a container that holds all of the information needed for 
 
 **Entry point:** lower::LoweringBridge::create
 
-## Initial lowering
+### Initial lowering
 
 **Input:** the lowering bridge
 
@@ -163,10 +163,10 @@ contain a list of evaluations.  All of these contain pointers back into the
 parse tree.  The compiler walks the PFT generating FIR.
 
 **Commands:**
-  - `flang-new -fc1 -fdebug-dump-pft src.f90` dumps the pre-FIR tree
-  - `flang-new -fc1 -emit-mlir src.f90` dumps the FIR to the files src.mlir
+  - `flang -fc1 -fdebug-dump-pft src.f90` dumps the pre-FIR tree
+  - `flang -fc1 -emit-mlir src.f90` dumps the FIR to the files src.mlir
 
-## Transformation passes
+### Transformation passes
 
 **Input:** initial version of the FIR code
 
@@ -180,10 +180,10 @@ perform various optimizations and transformations.  The final pass creates an
 LLVM IR representation of the program.
 
 **Commands:**
-  - `flang-new -mmlir --mlir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
-  - `flang-new -fc1 -emit-llvm src.f90` dumps the LLVM IR to src.ll
+  - `flang -mmlir --mlir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
+  - `flang -fc1 -emit-llvm src.f90` dumps the LLVM IR to src.ll
 
-# Object code generation and linking
+## Object code generation and linking
 
 After the LLVM IR is created, the flang driver invokes LLVM's existing
 infrastructure to generate object code and invoke a linker to create the

@@ -45,7 +45,7 @@ class TestMultipleBinaryCorefile(TestBase):
         if self.TraceOn():
             print("loading corefile %s" % self.corefile)
         process = target.LoadCore(self.corefile)
-        self.assertEqual(process.IsValid(), True)
+        self.assertTrue(process.IsValid())
         if self.TraceOn():
             print("image list after loading corefile:")
             self.runCmd("image list")
@@ -107,7 +107,7 @@ class TestMultipleBinaryCorefile(TestBase):
             )
         )
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
         dwarfdump_cmd_output = subprocess.check_output(
             ('/usr/bin/dwarfdump --uuid "%s"' % self.libtwo_exe), shell=True
         ).decode("utf-8")

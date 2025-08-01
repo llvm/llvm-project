@@ -1,6 +1,6 @@
 ; RUN: opt -passes=called-value-propagation -S < %s | FileCheck %s
 
-target triple = "aarch64-unknown-linux-gnueabi"
+target triple = "aarch64"
 
 
 ; This test checks that we propagate the functions through arguments and attach

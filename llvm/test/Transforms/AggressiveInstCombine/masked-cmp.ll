@@ -18,7 +18,7 @@ define i32 @anyset_two_bit_mask(i32 %x) {
 
 define <2 x i32> @anyset_two_bit_mask_uniform(<2 x i32> %x) {
 ; CHECK-LABEL: @anyset_two_bit_mask_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 9, i32 9>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 9)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
@@ -48,7 +48,7 @@ define i32 @anyset_four_bit_mask(i32 %x) {
 
 define <2 x i32> @anyset_four_bit_mask_uniform(<2 x i32> %x) {
 ; CHECK-LABEL: @anyset_four_bit_mask_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 297, i32 297>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 297)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
@@ -83,7 +83,7 @@ define i32 @anyset_three_bit_mask_all_shifted_bits(i32 %x) {
 
 define <2 x i32> @anyset_three_bit_mask_all_shifted_bits_uniform(<2 x i32> %x) {
 ; CHECK-LABEL: @anyset_three_bit_mask_all_shifted_bits_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 296, i32 296>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 296)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
@@ -114,8 +114,8 @@ define i32 @allset_two_bit_mask(i32 %x) {
 
 define <2 x i32> @allset_two_bit_mask_uniform(<2 x i32> %x) {
 ; CHECK-LABEL: @allset_two_bit_mask_uniform(
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 129, i32 129>
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 129, i32 129>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 129)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], splat (i32 129)
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
 ;

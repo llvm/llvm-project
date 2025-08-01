@@ -14,6 +14,7 @@
 #ifndef LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 #define LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <string>
 
@@ -24,40 +25,54 @@ enum class EmitDwarfUnwindType;
 
 namespace mc {
 
-bool getRelaxAll();
-std::optional<bool> getExplicitRelaxAll();
+LLVM_ABI bool getRelaxAll();
+LLVM_ABI std::optional<bool> getExplicitRelaxAll();
 
-bool getIncrementalLinkerCompatible();
+LLVM_ABI bool getIncrementalLinkerCompatible();
 
-int getDwarfVersion();
+LLVM_ABI bool getFDPIC();
 
-bool getDwarf64();
+LLVM_ABI int getDwarfVersion();
 
-EmitDwarfUnwindType getEmitDwarfUnwind();
+LLVM_ABI bool getDwarf64();
 
-bool getEmitCompactUnwindNonCanonical();
+LLVM_ABI EmitDwarfUnwindType getEmitDwarfUnwind();
 
-bool getShowMCInst();
+LLVM_ABI bool getEmitCompactUnwindNonCanonical();
 
-bool getFatalWarnings();
+LLVM_ABI bool getEmitSFrameUnwind();
 
-bool getNoWarn();
+LLVM_ABI bool getShowMCInst();
 
-bool getNoDeprecatedWarn();
+LLVM_ABI bool getFatalWarnings();
 
-bool getNoTypeCheck();
+LLVM_ABI bool getNoWarn();
 
-std::string getABIName();
+LLVM_ABI bool getNoDeprecatedWarn();
 
-std::string getAsSecureLogFile();
+LLVM_ABI bool getNoTypeCheck();
+
+LLVM_ABI bool getSaveTempLabels();
+
+LLVM_ABI bool getCrel();
+
+LLVM_ABI bool getImplicitMapSyms();
+
+LLVM_ABI bool getX86RelaxRelocations();
+
+LLVM_ABI bool getX86Sse2Avx();
+
+LLVM_ABI std::string getABIName();
+
+LLVM_ABI std::string getAsSecureLogFile();
 
 /// Create this object with static storage to register mc-related command
 /// line options.
 struct RegisterMCTargetOptionsFlags {
-  RegisterMCTargetOptionsFlags();
+  LLVM_ABI RegisterMCTargetOptionsFlags();
 };
 
-MCTargetOptions InitMCTargetOptionsFromFlags();
+LLVM_ABI MCTargetOptions InitMCTargetOptionsFromFlags();
 
 } // namespace mc
 

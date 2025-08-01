@@ -7,7 +7,7 @@
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-define void @foo() {
+define void @foo(i1 %arg) {
 entry:
   br label %for
 
@@ -17,7 +17,7 @@ for:
   store i32 %next, ptr undef, align 4
   %add = add i64 %0, 9223372036854775807
   %inc = add nsw i32 %next, 1
-  br i1 undef, label %exit, label %for
+  br i1 %arg, label %exit, label %for
 
 exit:
   store i64 %add, ptr undef

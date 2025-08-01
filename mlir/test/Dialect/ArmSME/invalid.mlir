@@ -45,37 +45,54 @@ func.func @arm_sme_get_tile__bad_shape(%tile_id : i8) -> vector<[4]x[16]xi8> {
 }
 
 //===----------------------------------------------------------------------===//
-// arm_sme.move_vector_to_tile_slice
+// arm_sme.insert_tile_slice
 //===----------------------------------------------------------------------===//
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_i8__bad_vector_type(%vector : vector<[8]xi8>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) -> vector<[16]x[16]xi8> {
+func.func @arm_sme_insert_tile_slice_i8__bad_vector_length(%vector : vector<[8]xi8>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) -> vector<[16]x[16]xi8> {
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{op failed to verify that type of 'vector' matches type of 'tile' slice}}
-  %0 = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[8]xi8> into vector<[16]x[16]xi8>
+  %0 = arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[8]xi8> into vector<[16]x[16]xi8>
   return %0 : vector<[16]x[16]xi8>
 }
 
 // -----
 
-func.func @arm_sme_move_vector_to_tile_slice_f32__bad_vector_type(%vector : vector<[8]xf32>, %tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[4]x[4]xf32> {
+func.func @arm_sme_insert_tile_slice_f32__bad_vector_length(%vector : vector<[8]xf32>, %tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[4]x[4]xf32> {
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{op failed to verify that type of 'vector' matches type of 'tile' slice}}
-  %0 = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[8]xf32> into vector<[4]x[4]xf32>
+  %0 = arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[8]xf32> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+func.func @arm_sme_insert_tile_slice__bad_element_type(%vector : vector<[4]xf64>, %tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[4]x[4]xf32> {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{op failed to verify that type of 'vector' matches type of 'tile' slice}}
+  %0 = arm_sme.insert_tile_slice %vector, %tile[%tile_slice_index] : vector<[4]xf64> into vector<[4]x[4]xf32>
   return %0 : vector<[4]x[4]xf32>
 }
 
 //===----------------------------------------------------------------------===//
-// arm_sme.move_tile_slice_to_vector
+// arm_sme.extract_tile_slice
 //===----------------------------------------------------------------------===//
 
 // -----
 
-func.func @arm_sme_move_tile_slice_to_vector__bad_result_type(%tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[2]xf64> {
+func.func @arm_sme_extract_tile_slice__bad_result_length(%tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[2]xf32> {
   // expected-error@+1 {{op failed to verify that type of 'result' matches type of 'tile' slice}}
-  %0 = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[2]xf64> from vector<[4]x[4]xf32>
-  return %0 : vector<[2]xf64>
+  %0 = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[2]xf32> from vector<[4]x[4]xf32>
+  return %0 : vector<[2]xf32>
+}
+
+// -----
+
+func.func @arm_sme_extract_tile_slice__bad_result_element_type(%tile : vector<[4]x[4]xf32>, %tile_slice_index : index) -> vector<[4]xf64> {
+  // expected-error@+1 {{op failed to verify that type of 'result' matches type of 'tile' slice}}
+  %0 = arm_sme.extract_tile_slice %tile[%tile_slice_index] : vector<[4]xf64> from vector<[4]x[4]xf32>
+  return %0 : vector<[4]xf64>
 }
 
 //===----------------------------------------------------------------------===//
@@ -111,6 +128,24 @@ func.func @arm_sme_tile_load__pad_but_no_mask(%src : memref<?x?xf64>, %pad : f64
   return
 }
 
+// -----
+
+func.func @arm_sme_tile_load__bad_memref_rank(%src : memref<?xf64>, %pad : f64) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{op operand #0 must be 2D memref of any type values, but got 'memref<?xf64>'}}
+  %tile = arm_sme.tile_load %src[%c0], %pad, : memref<?xf64>, vector<[2]x[2]xf64>
+  return
+}
+
+// -----
+
+func.func @arm_sme_tile_load__bad_element_type(%src : memref<?x?xi32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{failed to verify that all of {result, base} have same element type}}
+  %tile = arm_sme.tile_load %src[%c0, %c0] : memref<?x?xi32>, vector<[16]x[16]xi8>
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // arm_sme.load_tile_slice
 //===----------------------------------------------------------------------===//
@@ -121,6 +156,15 @@ func.func @arm_sme_load_tile_slice__bad_mask_type(%src : memref<?x?xi8>, %mask :
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{op failed to verify that `mask` has i1 element type and the shape is a slice of `result`}}
   %tile_update = arm_sme.load_tile_slice %src[%c0], %mask, %tile, %tile_slice_index : memref<?x?xi8>, vector<[2]xi1>, vector<[16]x[16]xi8>
+  return
+}
+
+// -----
+
+func.func @arm_sme_load_tile_slice__bad_element_type(%src : memref<?x?xi32>, %mask : vector<[16]xi1>, %tile : vector<[16]x[16]xi8>, %tile_slice_index : index) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{op failed to verify that all of {tile, base} have same element type}}
+  %tile_update = arm_sme.load_tile_slice %src[%c0], %mask, %tile, %tile_slice_index : memref<?x?xi32>, vector<[16]xi1>, vector<[16]x[16]xi8>
   return
 }
 
@@ -138,6 +182,24 @@ func.func @arm_sme_tile_store__bad_mask_type(%tile : vector<[16]x[16]xi8>, %mask
   return
 }
 
+// -----
+
+func.func @arm_sme_tile_store__bad_memref_rank(%tile : vector<[16]x[16]xi8>, %dest : memref<?xi8>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{op operand #1 must be 2D memref of any type values, but got 'memref<?xi8>'}}
+  arm_sme.tile_store %tile, %dest[%c0] : memref<?xi8>, vector<[16]x[16]xi8>
+  return
+}
+
+// -----
+
+func.func @arm_sme_tile_store__bad_element_type(%tile : vector<[16]x[16]xi8>, %dest : memref<?x?xi32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{op failed to verify that all of {valueToStore, base} have same element type}}
+  arm_sme.tile_store %tile, %dest[%c0, %c0] : memref<?x?xi32>, vector<[16]x[16]xi8>
+  return
+}
+
 //===----------------------------------------------------------------------===//
 // arm_sme.store_tile_slice
 //===----------------------------------------------------------------------===//
@@ -149,6 +211,15 @@ func.func @arm_sme_store_tile_slice__bad_mask_type(%tile : vector<[16]x[16]xi8>,
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{op failed to verify that `mask` has i1 element type and the shape is a slice of `tile`}}
   arm_sme.store_tile_slice %tile, %tile_slice_index, %mask, %dest[%c0] : memref<?x?xi8>, vector<[8]xi1>, vector<[16]x[16]xi8>
+  return
+}
+
+// -----
+
+func.func @arm_sme_store_tile_slice__bad_element_type(%tile : vector<[16]x[16]xi8>, %tile_slice_index : index, %mask : vector<[16]xi1>, %dest : memref<?x?xi32>) -> () {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{op failed to verify that all of {tile, base} have same element type}}
+  arm_sme.store_tile_slice %tile, %tile_slice_index, %mask, %dest[%c0, %c0] : memref<?x?xi32>, vector<[16]xi1>, vector<[16]x[16]xi8>
   return
 }
 
@@ -172,4 +243,70 @@ func.func @arm_sme_outerproduct__bad_vector_type(%vecA: vector<[4]xf32>, %vecB: 
   // expected-error@+1 {{op failed to verify that all of {lhs, rhs} have same type}}
   %0 = arm_sme.outerproduct %vecA, %vecB : vector<[4]xf32>, vector<[8]xf32>
   return %0 : vector<[4]x[4]xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// arm_sme.fmopa_2way
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_fmopa_2way__bad_rhs_vector_type(%vecA: vector<[8]xf16>, %vecB: vector<[4]xf32>) -> vector<[4]x[4]xf32>
+{
+  // expected-error@+1 {{op failed to verify that all of {lhs, rhs} have same type}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB : vector<[8]xf16>, vector<[4]xf32> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+func.func @arm_sme_fmopa_2way__bad_lhs_mask_type(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>, %maskA : vector<[4]xi1>, %maskB : vector<[8]xi1>) -> vector<[4]x[4]xf32>
+{
+  // expected-note@-2 {{prior use here}}
+  // expected-error@+1 {{use of value '%maskA' expects different type than prior uses: 'vector<[8]xi1>' vs 'vector<[4]xi1>}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB masks(%maskA, %maskB) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+func.func @arm_sme_fmopa_2way__bad_rhs_mask_type(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>, %maskA : vector<[8]xi1>, %maskB : vector<[4]xi1>) -> vector<[4]x[4]xf32>
+{
+  // expected-note@-2 {{prior use here}}
+  // expected-error@+1 {{use of value '%maskB' expects different type than prior uses: 'vector<[8]xi1>' vs 'vector<[4]xi1>}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB masks(%maskA, %maskB) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+func.func @arm_sme_fmopa_2way__no_rhs_mask(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>, %maskA : vector<[8]xi1>) -> vector<[4]x[4]xf32>
+{
+  // expected-error@+1 {{op failed to verify that both `lhsMask` and `rhsMask` should be provided or neither}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB masks(%maskA,) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+// -----
+
+func.func @arm_sme_fmopa_2way__bad_acc_type(%vecA: vector<[8]xf16>, %vecB: vector<[8]xf16>) -> vector<[4]x[4]xf32>
+{
+  %acc = arm_sme.zero : vector<[2]x[2]xi64>
+  // expected-note@-1 {{prior use here}}
+  // expected-error@+1 {{use of value '%acc' expects different type than prior uses: 'vector<[4]x[4]xf32>' vs 'vector<[2]x[2]xi64>'}}
+  %0 = arm_sme.fmopa_2way %vecA, %vecB masks(%maskA, %maskB) acc(%acc) : vector<[8]xf16>, vector<[8]xf16> into vector<[4]x[4]xf32>
+  return %0 : vector<[4]x[4]xf32>
+}
+
+//===----------------------------------------------------------------------===//
+// arm_sme.smopa_4way
+//===----------------------------------------------------------------------===//
+
+// -----
+
+func.func @arm_sme_smopa_4way__bad_tile_type(%vecA: vector<[8]xi16>, %vecB: vector<[8]xi16>) -> vector<[4]x[4]xi32>
+{
+  // expected-error@+1 {{op failed to verify that tile element size equals input element size * 4}}
+  %0 = arm_sme.smopa_4way %vecA, %vecB : vector<[8]xi16>, vector<[8]xi16> into vector<[4]x[4]xi32>
+  return %0 : vector<[4]x[4]xi32>
 }

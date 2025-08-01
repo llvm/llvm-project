@@ -112,10 +112,9 @@ body:             |
     ; CHECK-LABEL: name: const_i192
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -214772364921
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 -1
     ; CHECK-NEXT: $x10 = COPY [[C]](s64)
     ; CHECK-NEXT: $x11 = COPY [[C1]](s64)
-    ; CHECK-NEXT: $x12 = COPY [[C2]](s64)
+    ; CHECK-NEXT: $x12 = COPY [[C1]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11, implicit $x12
     %0:_(s192) = G_CONSTANT i192 -214772364921
     %1:_(s64), %2:_(s64), %3:_(s64) = G_UNMERGE_VALUES %0(s192)
@@ -143,12 +142,11 @@ name:            const_add_i32
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: const_add_i32
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -64769
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -64769
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[ADD]], 32
+    ; CHECK-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s32) = G_CONSTANT i32 -64769
     %1:_(s64) = COPY $x10
@@ -164,12 +162,10 @@ name:            const_add_i8
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: const_add_i8
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
-    ; CHECK-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s64) = G_ADD [[COPY]], [[C]]
+    ; CHECK-NEXT: $x10 = COPY [[ADD]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s8) = G_CONSTANT i8 1
     %1:_(s64) = COPY $x10
@@ -177,6 +173,22 @@ body:             |
     %3:_(s8) = G_ADD %2, %0
     %4:_(s64) = G_ANYEXT %3(s8)
     $x10 = COPY %4(s64)
+    PseudoRET implicit $x10
+
+...
+
+...
+---
+name:            constant_pool_i64
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: constant_pool_i64
+    ; CHECK: [[CONSTANT_POOL:%[0-9]+]]:_(p0) = G_CONSTANT_POOL %const.0
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[CONSTANT_POOL]](p0) :: (load (s64) from constant-pool)
+    ; CHECK-NEXT: $x10 = COPY [[LOAD]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = G_CONSTANT i64 -1085102592571150096
+    $x10 = COPY %0(s64)
     PseudoRET implicit $x10
 
 ...

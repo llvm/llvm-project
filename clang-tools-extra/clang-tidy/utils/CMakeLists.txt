@@ -3,10 +3,12 @@ set(LLVM_LINK_COMPONENTS
   Support
   )
 
-add_clang_library(clangTidyUtils
+add_clang_library(clangTidyUtils STATIC
   Aliasing.cpp
   ASTUtils.cpp
+  BracesAroundStatement.cpp
   DeclRefExprUtils.cpp
+  DesignatedInitializers.cpp
   ExceptionAnalyzer.cpp
   ExceptionSpecAnalyzer.cpp
   ExprSequence.cpp
@@ -23,6 +25,7 @@ add_clang_library(clangTidyUtils
   RenamerClangTidyCheck.cpp
   TransformerClangTidyCheck.cpp
   TypeTraits.cpp
+  UseRangesCheck.cpp
   UsingInserter.cpp
 
   LINK_LIBS

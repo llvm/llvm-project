@@ -12,13 +12,14 @@
 // failures when back-deploying.
 // XFAIL: availability-verbose_abort-missing
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
+#include <__verbose_abort>
 #include <cstdlib>
 
-void std::__libcpp_verbose_abort(char const*, ...) {
-  std::exit(EXIT_SUCCESS);
-}
+void std::__libcpp_verbose_abort(char const*, ...) _NOEXCEPT { std::exit(EXIT_SUCCESS); }
 
 int main(int, char**) {
-  _LIBCPP_ASSERT(false, "message");
+  std::__libcpp_verbose_abort("%s", "message");
   return EXIT_FAILURE;
 }

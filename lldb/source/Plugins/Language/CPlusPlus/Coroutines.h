@@ -9,10 +9,10 @@
 #ifndef LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_COROUTINES_H
 #define LLDB_SOURCE_PLUGINS_LANGUAGE_CPLUSPLUS_COROUTINES_H
 
-#include "lldb/Core/ValueObject.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
 
 namespace lldb_private {
 
@@ -34,20 +34,16 @@ public:
 
   ~StdlibCoroutineHandleSyntheticFrontEnd() override;
 
-  size_t CalculateNumChildren() override;
+  llvm::Expected<uint32_t> CalculateNumChildren() override;
 
-  lldb::ValueObjectSP GetChildAtIndex(size_t idx) override;
+  lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
 
 private:
-  lldb::ValueObjectSP m_resume_ptr_sp;
-  lldb::ValueObjectSP m_destroy_ptr_sp;
-  lldb::ValueObjectSP m_promise_ptr_sp;
+  std::vector<lldb::ValueObjectSP> m_children;
 };
 
 SyntheticChildrenFrontEnd *

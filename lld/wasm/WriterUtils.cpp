@@ -35,6 +35,10 @@ std::string toString(ValType type) {
     return "funcref";
   case ValType::EXTERNREF:
     return "externref";
+  case ValType::EXNREF:
+    return "exnref";
+  case ValType::OTHERREF:
+    return "otherref";
   }
   llvm_unreachable("Invalid wasm::ValType");
 }
@@ -51,7 +55,7 @@ std::string toString(const WasmSignature &sig) {
     s += "void";
   else
     s += toString(sig.Returns[0]);
-  return std::string(s.str());
+  return std::string(s);
 }
 
 std::string toString(const WasmGlobalType &type) {
@@ -65,11 +69,12 @@ static std::string toString(const llvm::wasm::WasmLimits &limits) {
   ret += "; min=" + std::to_string(limits.Minimum);
   if (limits.Flags & WASM_LIMITS_FLAG_HAS_MAX)
     ret += "; max=" + std::to_string(limits.Maximum);
+  if (limits.Flags & WASM_LIMITS_FLAG_HAS_PAGE_SIZE)
+    ret += "; pagesize=" + std::to_string(limits.PageSize);
   return ret;
 }
 
 std::string toString(const WasmTableType &type) {
-  SmallString<128> ret("");
   return "type=" + toString(static_cast<ValType>(type.ElemType)) +
          "; limits=[" + toString(type.Limits) + "]";
 }
@@ -196,6 +201,8 @@ void writeLimits(raw_ostream &os, const WasmLimits &limits) {
   writeUleb128(os, limits.Minimum, "limits min");
   if (limits.Flags & WASM_LIMITS_FLAG_HAS_MAX)
     writeUleb128(os, limits.Maximum, "limits max");
+  if (limits.Flags & WASM_LIMITS_FLAG_HAS_PAGE_SIZE)
+    writeUleb128(os, llvm::Log2_64(limits.PageSize), "page size");
 }
 
 void writeGlobalType(raw_ostream &os, const WasmGlobalType &type) {

@@ -12,7 +12,7 @@ define i32 @novect(ptr %p) {
 ; CHECK-NOT:       Invalidating analysis: BranchProbabilityAnalysis on novect
 ; CHECK-NOT:       Invalidating analysis: BlockFrequencyAnalysis on novect
 ; CHECK:           Invalidating analysis: DemandedBitsAnalysis on novect
-; CHECK:           Invalidating analysis: LoopAccessAnalysis on novect
+; CHECK-NOT:       Invalidating analysis: LoopAccessAnalysis on novect
 ; CHECK:           Running pass: JumpThreadingPass on novect
 
 ; CHECK:           entry:

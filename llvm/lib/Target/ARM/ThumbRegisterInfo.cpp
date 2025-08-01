@@ -15,20 +15,18 @@
 #include "ARMBaseInstrInfo.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
-#include "MCTargetDesc/ARMAddressingModes.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -107,7 +105,7 @@ void ThumbRegisterInfo::emitLoadConstPool(
   MachineFunction &MF = *MBB.getParent();
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   if (STI.isThumb1Only()) {
-    assert((isARMLowRegister(DestReg) || DestReg.isVirtual()) &&
+    assert((DestReg.isVirtual() || isARMLowRegister(DestReg)) &&
            "Thumb1 does not have ldr to high register");
     return emitThumb1LoadConstPool(MBB, MBBI, dl, DestReg, SubIdx, Val, Pred,
                                    PredReg, MIFlags);
@@ -141,7 +139,7 @@ static void emitThumbRegPlusImmInReg(
     return;
   }
 
-  bool isHigh = !isARMLowRegister(DestReg) ||
+  bool isHigh = DestReg.isVirtual() || !isARMLowRegister(DestReg) ||
                 (BaseReg != 0 && !isARMLowRegister(BaseReg));
   bool isSub = false;
   // Subtract doesn't have high register version. Load the negative value
@@ -155,7 +153,7 @@ static void emitThumbRegPlusImmInReg(
   Register LdReg = DestReg;
   if (DestReg == ARM::SP)
     assert(BaseReg == ARM::SP && "Unexpected!");
-  if (!isARMLowRegister(DestReg) && !DestReg.isVirtual())
+  if (!DestReg.isVirtual() && !isARMLowRegister(DestReg))
     LdReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
 
   if (NumBytes <= 255 && NumBytes >= 0 && CanChangeCC) {

@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__availability>
 #include <__config>
-#ifndef _LIBCPP_HAS_NO_FILESYSTEM
+#if _LIBCPP_HAS_FILESYSTEM
 #  include <fstream>
 #endif
 #include <ostream>
@@ -17,7 +16,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-_LIBCPP_AVAILABILITY_PRINT _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os) {
+_LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(ostream& __os) {
   // dynamic_cast requires RTTI, this only affects users whose vendor builds
   // the dylib with RTTI disabled. It does not affect users who build with RTTI
   // disabled but use a dylib where the RTTI is enabled.
@@ -25,16 +24,16 @@ _LIBCPP_AVAILABILITY_PRINT _LIBCPP_EXPORTED_FROM_ABI FILE* __get_ostream_file(os
   // Returning a nullptr means the stream is not considered a terminal and the
   // special terminal handling is not done. The terminal handling is mainly of
   // importance on Windows.
-#ifndef _LIBCPP_HAS_NO_RTTI
+#if _LIBCPP_HAS_RTTI
   auto* __rdbuf = __os.rdbuf();
-#  ifndef _LIBCPP_HAS_NO_FILESYSTEM
+#  if _LIBCPP_HAS_FILESYSTEM
   if (auto* __buffer = dynamic_cast<filebuf*>(__rdbuf))
     return __buffer->__file_;
 #  endif
 
   if (auto* __buffer = dynamic_cast<__stdoutbuf<char>*>(__rdbuf))
     return __buffer->__file_;
-#endif // _LIBCPP_HAS_NO_RTTI
+#endif // _LIBCPP_HAS_RTTI
 
   return nullptr;
 }

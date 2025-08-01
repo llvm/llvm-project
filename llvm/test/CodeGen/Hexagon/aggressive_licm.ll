@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -disable-block-placement=0 -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -disable-block-placement=0 -O2 < %s | FileCheck %s
 ; CHECK: [[Reg:r[0-9]+]] = {{lsr\(r[0-9]+,#16\)|extractu\(r[0-9]+,#16,#16\)}}
 ; CHECK-NOT: [[Reg]] = #0
 ; CHECK: align

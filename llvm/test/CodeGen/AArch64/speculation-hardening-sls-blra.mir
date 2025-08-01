@@ -1,0 +1,210 @@
+# RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
+# RUN:     -start-before aarch64-sls-hardening -o - %s \
+# RUN:     -asm-verbose=0 \
+# RUN: | FileCheck %s \
+# RUN:     --implicit-check-not=__llvm_slsblr_thunk_aa_x5_x8 \
+# RUN:     --implicit-check-not=__llvm_slsblr_thunk_ab_x5_x8 \
+# RUN:     --implicit-check-not=__llvm_slsblr_thunk_aaz_x5 \
+# RUN:     --implicit-check-not=__llvm_slsblr_thunk_abz_x5
+
+# Pointer Authentication extension introduces more branch-with-link-to-register
+# instructions for the BLR SLS hardening to handle, namely BLRAA, BLRAB, BLRAAZ
+# and BLRABZ. Unlike the non-authenticating BLR instruction, BLRAA and BLRAB
+# accept two register operands (almost 900 combinations for each instruction).
+# For that reason, it is not practical to create all possible thunks.
+
+# Check that the BLR SLS hardening transforms BLRA* instructions into
+# unconditional BL calls to the correct thunk functions.
+# Check that only relevant thunk functions are generated.
+--- |
+  define void @test_instructions() #0 {
+  entry:
+    ret void
+  }
+
+  define void @test_no_redef() #0 {
+  entry:
+    ret void
+  }
+
+  define void @test_regs() #0 {
+  entry:
+    ret void
+  }
+
+  attributes #0 = { "target-features"="+pauth,+harden-sls-blr" }
+...
+
+# Test that all BLRA* instructions are handled.
+---
+name:            test_instructions
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $lr, $x0, $x1, $x2, $x3
+
+    BLRAA $x0, $x1, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAB $x1, $x2, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAAZ $x2, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRABZ $x3, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    RET undef $lr
+...
+
+# Test that the same thunk function is not created twice.
+---
+name:            test_no_redef
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $lr, $x0, $x1, $x2, $x3, $x4
+
+    ; thunk used by @test_instructions
+    BLRAB $x1, $x2, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+
+    ; thunk used by this function twice
+    BLRAB $x3, $x4, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAB $x3, $x4, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+
+    RET undef $lr
+...
+
+# Test that all xN registers (except x16, x17, x30 and xzr) are handled.
+---
+name:            test_regs
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $lr, $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7, $x8, $x9, $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $x18, $x19, $x20, $x21, $x22, $x23, $x24, $x25, $x26, $x27, $x28, $fp
+
+    BLRAA $x0, $x1, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x2, $x3, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x4, $x5, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x6, $x7, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x8, $x9, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x10, $x11, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x12, $x13, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x14, $x15, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    ; skipping x16 and x17
+    BLRAA $x18, $x19, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x20, $x21, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x22, $x23, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x24, $x25, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x26, $x27, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    BLRAA $x28, $fp, implicit-def $lr, implicit $sp, implicit-def $sp, implicit-def $w0
+    RET undef $lr
+...
+
+# CHECK-LABEL: test_instructions:
+# CHECK-NEXT:    .cfi_startproc
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x0_x1
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_ab_x1_x2
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aaz_x2
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_abz_x3
+# CHECK-NEXT:    ret
+
+# CHECK-LABEL: test_no_redef:
+# CHECK-NEXT:    .cfi_startproc
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_ab_x1_x2
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_ab_x3_x4
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_ab_x3_x4
+# CHECK-NEXT:    ret
+
+# CHECK-LABEL: test_regs:
+# CHECK-NEXT:    .cfi_startproc
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x0_x1
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x2_x3
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x4_x5
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x6_x7
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x8_x9
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x10_x11
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x12_x13
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x14_x15
+# skipping x16 and x17
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x18_x19
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x20_x21
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x22_x23
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x24_x25
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x26_x27
+# CHECK-NEXT:    bl      __llvm_slsblr_thunk_aa_x28_x29
+# CHECK-NEXT:    ret
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x0_x1:
+# CHECK-NEXT:    mov     x16, x0
+# CHECK-NEXT:    braa    x16, x1
+# CHECK-NEXT:    dsb     sy
+# CHECK-NEXT:    isb
+
+# CHECK-LABEL: __llvm_slsblr_thunk_ab_x1_x2:
+# CHECK-NEXT:    mov     x16, x1
+# CHECK-NEXT:    brab    x16, x2
+# CHECK-NEXT:    dsb     sy
+# CHECK-NEXT:    isb
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aaz_x2:
+# CHECK-NEXT:    mov     x16, x2
+# CHECK-NEXT:    braaz   x16
+# CHECK-NEXT:    dsb     sy
+# CHECK-NEXT:    isb
+
+# CHECK-LABEL: __llvm_slsblr_thunk_abz_x3:
+# CHECK-NEXT:    mov     x16, x3
+# CHECK-NEXT:    brabz   x16
+# CHECK-NEXT:    dsb     sy
+# CHECK-NEXT:    isb
+
+# The instruction *operands* should correspond to the thunk function *name*
+# (check that the name is parsed correctly when populating the thunk).
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x2_x3:
+# CHECK-NEXT:    mov     x16, x2
+# CHECK:         braa    x16, x3
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x4_x5:
+# CHECK-NEXT:    mov     x16, x4
+# CHECK:         braa    x16, x5
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x6_x7:
+# CHECK-NEXT:    mov     x16, x6
+# CHECK:         braa    x16, x7
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x8_x9:
+# CHECK-NEXT:    mov     x16, x8
+# CHECK:         braa    x16, x9
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x10_x11:
+# CHECK-NEXT:    mov     x16, x10
+# CHECK:         braa    x16, x11
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x12_x13:
+# CHECK-NEXT:    mov     x16, x12
+# CHECK:         braa    x16, x13
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x14_x15:
+# CHECK-NEXT:    mov     x16, x14
+# CHECK:         braa    x16, x15
+
+# skipping x16 and x17
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x18_x19:
+# CHECK-NEXT:    mov     x16, x18
+# CHECK:         braa    x16, x19
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x20_x21:
+# CHECK-NEXT:    mov     x16, x20
+# CHECK:         braa    x16, x21
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x22_x23:
+# CHECK-NEXT:    mov     x16, x22
+# CHECK:         braa    x16, x23
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x24_x25:
+# CHECK-NEXT:    mov     x16, x24
+# CHECK:         braa    x16, x25
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x26_x27:
+# CHECK-NEXT:    mov     x16, x26
+# CHECK:         braa    x16, x27
+
+# CHECK-LABEL: __llvm_slsblr_thunk_aa_x28_x29:
+# CHECK-NEXT:    mov     x16, x28
+# CHECK:         braa    x16, x29

@@ -62,7 +62,7 @@ define <16 x i8> @testv16i1_sext_v16i8(ptr %p, ptr %q) {
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm0
 ; AVX512VL-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -74,7 +74,7 @@ define <16 x i8> @testv16i1_sext_v16i8(ptr %p, ptr %q) {
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -109,7 +109,7 @@ define <16 x i16> @testv16i1_sext_v16i16(ptr %p, ptr %q) {
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm0
 ; AVX512VL-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512VL-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;
@@ -120,7 +120,7 @@ define <16 x i16> @testv16i1_sext_v16i16(ptr %p, ptr %q) {
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512F-NEXT:    retq
   %in = load <8 x i32>, ptr %p
@@ -194,7 +194,7 @@ define <16 x i8> @testv16i1_zext_v16i8(ptr %p, ptr %q) {
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm0
 ; AVX512VL-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512VL-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpbroadcastd {{.*#+}} zmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512VL-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -206,7 +206,7 @@ define <16 x i8> @testv16i1_zext_v16i8(ptr %p, ptr %q) {
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512F-NEXT:    vpbroadcastd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} zmm0 {%k1} {z} = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
 ; AVX512F-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
@@ -242,7 +242,7 @@ define <16 x i16> @testv16i1_zext_v16i16(ptr %p, ptr %q) {
 ; AVX512VL-NEXT:    vmovdqa (%rsi), %ymm0
 ; AVX512VL-NEXT:    vptestnmd %ymm0, %ymm0, %k1
 ; AVX512VL-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512VL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512VL-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512VL-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512VL-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
@@ -254,7 +254,7 @@ define <16 x i16> @testv16i1_zext_v16i16(ptr %p, ptr %q) {
 ; AVX512F-NEXT:    vmovdqa (%rsi), %ymm0
 ; AVX512F-NEXT:    vptestnmd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
-; AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
 ; AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
 ; AVX512F-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq

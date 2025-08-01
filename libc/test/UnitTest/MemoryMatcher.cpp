@@ -8,11 +8,15 @@
 
 #include "MemoryMatcher.h"
 
+#include "src/__support/ctype_utils.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
+
+#if LIBC_TEST_HAS_MATCHERS()
 
 using LIBC_NAMESPACE::testing::tlog;
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 namespace testing {
 
 template <typename T>
@@ -37,7 +41,8 @@ bool MemoryMatcher::match(MemoryView actualValue) {
 
 static void display(char C) {
   const auto print = [](unsigned char I) {
-    tlog << static_cast<char>(I < 10 ? '0' + I : 'A' + I - 10);
+    tlog << static_cast<char>(LIBC_NAMESPACE::internal::toupper(
+        LIBC_NAMESPACE::internal::int_to_b36_char(I)));
   };
   print(static_cast<unsigned char>(C) / 16);
   print(static_cast<unsigned char>(C) & 15);
@@ -75,4 +80,6 @@ void MemoryMatcher::explainError() {
 }
 
 } // namespace testing
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TEST_HAS_MATCHERS()

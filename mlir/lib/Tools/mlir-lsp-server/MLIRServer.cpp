@@ -15,6 +15,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Support/ToolUtilities.h"
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
 #include "llvm/ADT/StringExtras.h"
@@ -916,7 +917,7 @@ void MLIRDocument::getCodeActionForDiagnostic(
   edit.range = lsp::Range(lsp::Position(pos.line, 0));
 
   // Use the indent of the current line for the expected-* diagnostic.
-  size_t indent = line.find_first_not_of(" ");
+  size_t indent = line.find_first_not_of(' ');
   if (indent == StringRef::npos)
     indent = line.size();
 
@@ -996,7 +997,7 @@ namespace {
 class MLIRTextFile {
 public:
   MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
-               int64_t version, DialectRegistry &registry,
+               int64_t version, lsp::DialectRegistryFn registry_fn,
                std::vector<lsp::Diagnostic> &diagnostics);
 
   /// Return the current version of this text file.
@@ -1045,18 +1046,15 @@ private:
 } // namespace
 
 MLIRTextFile::MLIRTextFile(const lsp::URIForFile &uri, StringRef fileContents,
-                           int64_t version, DialectRegistry &registry,
+                           int64_t version, lsp::DialectRegistryFn registry_fn,
                            std::vector<lsp::Diagnostic> &diagnostics)
-    : context(registry, MLIRContext::Threading::DISABLED),
+    : context(registry_fn(uri), MLIRContext::Threading::DISABLED),
       contents(fileContents.str()), version(version) {
   context.allowUnregisteredDialects();
 
   // Split the file into separate MLIR documents.
-  // TODO: Find a way to share the split file marker with other tools. We don't
-  // want to use `splitAndProcessBuffer` here, but we do want to make sure this
-  // marker doesn't go out of sync.
   SmallVector<StringRef, 8> subContents;
-  StringRef(contents).split(subContents, "// -----");
+  StringRef(contents).split(subContents, kDefaultSplitMarker);
   chunks.emplace_back(std::make_unique<MLIRTextFileChunk>(
       context, /*lineOffset=*/0, uri, subContents.front(), diagnostics));
 
@@ -1265,11 +1263,11 @@ MLIRTextFileChunk &MLIRTextFile::getChunkFor(lsp::Position &pos) {
 //===----------------------------------------------------------------------===//
 
 struct lsp::MLIRServer::Impl {
-  Impl(DialectRegistry &registry) : registry(registry) {}
+  Impl(lsp::DialectRegistryFn registry_fn) : registry_fn(registry_fn) {}
 
-  /// The registry containing dialects that can be recognized in parsed .mlir
-  /// files.
-  DialectRegistry &registry;
+  /// The registry factory for containing dialects that can be recognized in
+  /// parsed .mlir files.
+  lsp::DialectRegistryFn registry_fn;
 
   /// The files held by the server, mapped by their URI file name.
   llvm::StringMap<std::unique_ptr<MLIRTextFile>> files;
@@ -1279,15 +1277,15 @@ struct lsp::MLIRServer::Impl {
 // MLIRServer
 //===----------------------------------------------------------------------===//
 
-lsp::MLIRServer::MLIRServer(DialectRegistry &registry)
-    : impl(std::make_unique<Impl>(registry)) {}
+lsp::MLIRServer::MLIRServer(lsp::DialectRegistryFn registry_fn)
+    : impl(std::make_unique<Impl>(registry_fn)) {}
 lsp::MLIRServer::~MLIRServer() = default;
 
 void lsp::MLIRServer::addOrUpdateDocument(
     const URIForFile &uri, StringRef contents, int64_t version,
     std::vector<Diagnostic> &diagnostics) {
   impl->files[uri.file()] = std::make_unique<MLIRTextFile>(
-      uri, contents, version, impl->registry, diagnostics);
+      uri, contents, version, impl->registry_fn, diagnostics);
 }
 
 std::optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
@@ -1350,7 +1348,7 @@ void lsp::MLIRServer::getCodeActions(const URIForFile &uri, const Range &pos,
 
 llvm::Expected<lsp::MLIRConvertBytecodeResult>
 lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
-  MLIRContext tempContext(impl->registry);
+  MLIRContext tempContext(impl->registry_fn(uri));
   tempContext.allowUnregisteredDialects();
 
   // Collect any errors during parsing.

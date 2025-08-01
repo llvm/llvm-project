@@ -10,7 +10,6 @@
 #define MLIR_SUPPORT_STORAGEUNIQUER_H
 
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
@@ -98,9 +97,9 @@ public:
     template <typename T>
     ArrayRef<T> copyInto(ArrayRef<T> elements) {
       if (elements.empty())
-        return std::nullopt;
+        return {};
       auto result = allocator.Allocate<T>(elements.size());
-      std::uninitialized_copy(elements.begin(), elements.end(), result);
+      llvm::uninitialized_copy(elements, result);
       return ArrayRef<T>(result, elements.size());
     }
 
@@ -111,7 +110,7 @@ public:
         return StringRef();
 
       char *result = allocator.Allocate<char>(str.size() + 1);
-      std::uninitialized_copy(str.begin(), str.end(), result);
+      llvm::uninitialized_copy(str, result);
       result[str.size()] = 0;
       return StringRef(result, str.size());
     }

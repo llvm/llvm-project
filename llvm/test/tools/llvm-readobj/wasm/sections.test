@@ -6,27 +6,27 @@
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Type: TYPE (0x1)
 # CHECK-NEXT:     Size: 17
-# CHECK-NEXT:     Offset: 8
+# CHECK-NEXT:     Offset: 14
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Type: IMPORT (0x2)
 # CHECK-NEXT:     Size: 93
-# CHECK-NEXT:     Offset: 31
+# CHECK-NEXT:     Offset: 37
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Type: FUNCTION (0x3)
 # CHECK-NEXT:     Size: 3
-# CHECK-NEXT:     Offset: 130
+# CHECK-NEXT:     Offset: 136
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Type: CODE (0xA)
 # CHECK-NEXT:     Size: 36
-# CHECK-NEXT:     Offset: 139
+# CHECK-NEXT:     Offset: 145
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Type: DATA (0xB)
 # CHECK-NEXT:     Size: 19
-# CHECK-NEXT:     Offset: 181
+# CHECK-NEXT:     Offset: 187
 # CHECK-NEXT:     Segments [
 # CHECK-NEXT:       Segment {
 # CHECK-NEXT:         Name: .rodata..L.str
@@ -38,13 +38,13 @@
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Type: CUSTOM (0x0)
 # CHECK-NEXT:     Size: 89
-# CHECK-NEXT:     Offset: 206
+# CHECK-NEXT:     Offset: 212
 # CHECK-NEXT:     Name: linking
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Type: CUSTOM (0x0)
 # CHECK-NEXT:     Size: 15
-# CHECK-NEXT:     Offset: 309
+# CHECK-NEXT:     Offset: 315
 # CHECK-NEXT:     Name: reloc.CODE
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]

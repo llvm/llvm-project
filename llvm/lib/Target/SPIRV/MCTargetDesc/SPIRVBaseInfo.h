@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/VersionTuple.h"
 #include <string>
 
 namespace llvm {
@@ -55,6 +56,11 @@ namespace MemoryModel {
 #define GET_MemoryModel_DECL
 #include "SPIRVGenTables.inc"
 } // namespace MemoryModel
+
+namespace MatrixMultiplyAccumulateOperands {
+#define GET_MatrixMultiplyAccumulateOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace MatrixMultiplyAccumulateOperands
 
 namespace ExecutionMode {
 #define GET_ExecutionMode_DECL
@@ -196,15 +202,40 @@ namespace GLSLExtInst {
 #include "SPIRVGenTables.inc"
 } // namespace GLSLExtInst
 
+namespace NonSemanticExtInst {
+#define GET_NonSemanticExtInst_DECL
+#include "SPIRVGenTables.inc"
+} // namespace NonSemanticExtInst
+
 namespace Opcode {
 #define GET_Opcode_DECL
 #include "SPIRVGenTables.inc"
 } // namespace Opcode
 
+namespace CooperativeMatrixLayout {
+#define GET_CooperativeMatrixLayout_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixLayout
+
+namespace CooperativeMatrixOperands {
+#define GET_CooperativeMatrixOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace CooperativeMatrixOperands
+
+namespace SpecConstantOpOperands {
+#define GET_SpecConstantOpOperands_DECL
+#include "SPIRVGenTables.inc"
+} // namespace SpecConstantOpOperands
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
   uint32_t Number;
+};
+
+enum InstFlags {
+  // It is a half type
+  INST_PRINTER_WIDTH16 = 1
 };
 } // namespace SPIRV
 
@@ -214,10 +245,10 @@ using ExtensionList = SmallVector<SPIRV::Extension::Extension, 8>;
 std::string
 getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
                            int32_t Value);
-uint32_t
+VersionTuple
 getSymbolicOperandMinVersion(SPIRV::OperandCategory::OperandCategory Category,
                              uint32_t Value);
-uint32_t
+VersionTuple
 getSymbolicOperandMaxVersion(SPIRV::OperandCategory::OperandCategory Category,
                              uint32_t Value);
 CapabilityList

@@ -1,7 +1,7 @@
 ; Test the bitcast operation for big-endian and little-endian.
 
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck -check-prefix=BIGENDIAN %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck -check-prefix=LITENDIAN %s
+; RUN: llc -mtriple=mips-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck -check-prefix=BIGENDIAN %s
+; RUN: llc -mtriple=mipsel-elf -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck -check-prefix=LITENDIAN %s
 
 define void @v16i8_to_v16i8(ptr %src, ptr %dst) nounwind {
 entry:

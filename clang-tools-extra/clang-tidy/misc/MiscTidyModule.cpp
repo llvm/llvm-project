@@ -31,6 +31,7 @@
 #include "UnusedParametersCheck.h"
 #include "UnusedUsingDeclsCheck.h"
 #include "UseAnonymousNamespaceCheck.h"
+#include "UseInternalLinkageCheck.h"
 
 namespace clang::tidy {
 namespace misc {
@@ -78,6 +79,8 @@ public:
         "misc-unused-using-decls");
     CheckFactories.registerCheck<UseAnonymousNamespaceCheck>(
         "misc-use-anonymous-namespace");
+    CheckFactories.registerCheck<UseInternalLinkageCheck>(
+        "misc-use-internal-linkage");
   }
 };
 
@@ -89,6 +92,6 @@ static ClangTidyModuleRegistry::Add<misc::MiscModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the MiscModule.
-volatile int MiscModuleAnchorSource = 0;
+volatile int MiscModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

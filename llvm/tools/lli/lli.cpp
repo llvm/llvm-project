@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ExecutionUtils.h"
 #include "ForwardingMemoryManager.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -25,15 +24,18 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/ObjectCache.h"
+#include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
+#include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
@@ -49,6 +51,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/Format.h"
@@ -62,10 +65,10 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Instrumentation.h"
 #include <cerrno>
 #include <optional>
 
@@ -254,43 +257,37 @@ namespace {
     NoDump,
     DumpFuncsToStdOut,
     DumpModsToStdOut,
-    DumpModsToDisk
+    DumpModsToDisk,
+    DumpDebugDescriptor,
+    DumpDebugObjects,
   };
 
   cl::opt<DumpKind> OrcDumpKind(
       "orc-lazy-debug", cl::desc("Debug dumping for the orc-lazy JIT."),
       cl::init(DumpKind::NoDump),
-      cl::values(clEnumValN(DumpKind::NoDump, "no-dump",
-                            "Don't dump anything."),
-                 clEnumValN(DumpKind::DumpFuncsToStdOut, "funcs-to-stdout",
-                            "Dump function names to stdout."),
-                 clEnumValN(DumpKind::DumpModsToStdOut, "mods-to-stdout",
-                            "Dump modules to stdout."),
-                 clEnumValN(DumpKind::DumpModsToDisk, "mods-to-disk",
-                            "Dump modules to the current "
-                            "working directory. (WARNING: "
-                            "will overwrite existing files).")),
-      cl::Hidden);
-
-  cl::list<BuiltinFunctionKind> GenerateBuiltinFunctions(
-      "generate",
-      cl::desc("Provide built-in functions for access by JITed code "
-               "(jit-kind=orc-lazy only)"),
-      cl::values(clEnumValN(BuiltinFunctionKind::DumpDebugDescriptor,
-                            "__dump_jit_debug_descriptor",
-                            "Dump __jit_debug_descriptor contents to stdout"),
-                 clEnumValN(BuiltinFunctionKind::DumpDebugObjects,
-                            "__dump_jit_debug_objects",
-                            "Dump __jit_debug_descriptor in-memory debug "
-                            "objects as tool output")),
+      cl::values(
+          clEnumValN(DumpKind::NoDump, "no-dump", "Don't dump anything."),
+          clEnumValN(DumpKind::DumpFuncsToStdOut, "funcs-to-stdout",
+                     "Dump function names to stdout."),
+          clEnumValN(DumpKind::DumpModsToStdOut, "mods-to-stdout",
+                     "Dump modules to stdout."),
+          clEnumValN(DumpKind::DumpModsToDisk, "mods-to-disk",
+                     "Dump modules to the current "
+                     "working directory. (WARNING: "
+                     "will overwrite existing files)."),
+          clEnumValN(DumpKind::DumpDebugDescriptor, "jit-debug-descriptor",
+                     "Dump __jit_debug_descriptor contents to stdout"),
+          clEnumValN(DumpKind::DumpDebugObjects, "jit-debug-objects",
+                     "Dump __jit_debug_descriptor in-memory debug "
+                     "objects as tool output")),
       cl::Hidden);
 
   ExitOnError ExitOnErr;
 }
 
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
+  errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction
          << (void *)&llvm_orc_registerJITLoaderGDBWrapper
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
@@ -352,13 +349,11 @@ public:
 private:
   std::string CacheDir;
 
-  bool getCacheFilename(const std::string &ModID, std::string &CacheName) {
-    std::string Prefix("file:");
-    size_t PrefixLength = Prefix.length();
-    if (ModID.substr(0, PrefixLength) != Prefix)
+  bool getCacheFilename(StringRef ModID, std::string &CacheName) {
+    if (!ModID.consume_front("file:"))
       return false;
 
-    std::string CacheSubdir = ModID.substr(PrefixLength);
+    std::string CacheSubdir = std::string(ModID);
     // Transform "X:\foo" => "/X\foo" for convenience on Windows.
     if (is_style_windows(llvm::sys::path::Style::native) &&
         isalpha(CacheSubdir[0]) && CacheSubdir[1] == ':') {
@@ -379,13 +374,12 @@ private:
 // currently handle external linking) we add a secondary module which defines
 // an empty '__main' function.
 static void addCygMingExtraModule(ExecutionEngine &EE, LLVMContext &Context,
-                                  StringRef TargetTripleStr) {
+                                  const Triple &TargetTriple) {
   IRBuilder<> Builder(Context);
-  Triple TargetTriple(TargetTripleStr);
 
   // Create a new module.
   std::unique_ptr<Module> M = std::make_unique<Module>("CygMingHelper", Context);
-  M->setTargetTriple(TargetTripleStr);
+  M->setTargetTriple(TargetTriple);
 
   // Create an empty function named "__main".
   Type *ReturnTy;
@@ -498,7 +492,7 @@ int main(int argc, char **argv, char * const *envp) {
 
   // If we are supposed to override the target triple, do so now.
   if (!TargetTriple.empty())
-    Mod->setTargetTriple(Triple::normalize(TargetTriple));
+    Mod->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
 
   // Enable MCJIT if desired.
   RTDyldMemoryManager *RTDyldMM = nullptr;
@@ -594,7 +588,7 @@ int main(int argc, char **argv, char * const *envp) {
 
   // If the target is Cygwin/MingW and we are generating remote code, we
   // need an extra module to help out with linking.
-  if (RemoteMCJIT && Triple(Mod->getTargetTriple()).isOSCygMing()) {
+  if (RemoteMCJIT && Mod->getTargetTriple().isOSCygMing()) {
     addCygMingExtraModule(*EE, Context, Mod->getTargetTriple());
   }
 
@@ -756,9 +750,41 @@ int main(int argc, char **argv, char * const *envp) {
   return Result;
 }
 
-static std::function<void(Module &)> createDebugDumper() {
+// JITLink debug support plugins put information about JITed code in this GDB
+// JIT Interface global from OrcTargetProcess.
+extern "C" LLVM_ABI struct jit_descriptor __jit_debug_descriptor;
+
+static struct jit_code_entry *
+findNextDebugDescriptorEntry(struct jit_code_entry *Latest) {
+  if (Latest == nullptr)
+    return __jit_debug_descriptor.first_entry;
+  if (Latest->next_entry)
+    return Latest->next_entry;
+  return nullptr;
+}
+
+static ToolOutputFile &claimToolOutput() {
+  static std::unique_ptr<ToolOutputFile> ToolOutput = nullptr;
+  if (ToolOutput) {
+    WithColor::error(errs(), "lli")
+        << "Can not claim stdout for tool output twice\n";
+    exit(1);
+  }
+  std::error_code EC;
+  ToolOutput = std::make_unique<ToolOutputFile>("-", EC, sys::fs::OF_None);
+  if (EC) {
+    WithColor::error(errs(), "lli")
+        << "Failed to create tool output file: " << EC.message() << "\n";
+    exit(1);
+  }
+  return *ToolOutput;
+}
+
+static std::function<void(Module &)> createIRDebugDumper() {
   switch (OrcDumpKind) {
   case DumpKind::NoDump:
+  case DumpKind::DumpDebugDescriptor:
+  case DumpKind::DumpDebugObjects:
     return [](Module &M) {};
 
   case DumpKind::DumpFuncsToStdOut:
@@ -800,6 +826,43 @@ static std::function<void(Module &)> createDebugDumper() {
   llvm_unreachable("Unknown DumpKind");
 }
 
+static std::function<void(MemoryBuffer &)> createObjDebugDumper() {
+  switch (OrcDumpKind) {
+  case DumpKind::NoDump:
+  case DumpKind::DumpFuncsToStdOut:
+  case DumpKind::DumpModsToStdOut:
+  case DumpKind::DumpModsToDisk:
+    return [](MemoryBuffer &) {};
+
+  case DumpKind::DumpDebugDescriptor: {
+    // Dump the empty descriptor at startup once
+    fprintf(stderr, "jit_debug_descriptor 0x%016" PRIx64 "\n",
+            pointerToJITTargetAddress(__jit_debug_descriptor.first_entry));
+    return [](MemoryBuffer &) {
+      // Dump new entries as they appear
+      static struct jit_code_entry *Latest = nullptr;
+      while (auto *NewEntry = findNextDebugDescriptorEntry(Latest)) {
+        fprintf(stderr, "jit_debug_descriptor 0x%016" PRIx64 "\n",
+                pointerToJITTargetAddress(NewEntry));
+        Latest = NewEntry;
+      }
+    };
+  }
+
+  case DumpKind::DumpDebugObjects: {
+    return [](MemoryBuffer &Obj) {
+      static struct jit_code_entry *Latest = nullptr;
+      static ToolOutputFile &ToolOutput = claimToolOutput();
+      while (auto *NewEntry = findNextDebugDescriptorEntry(Latest)) {
+        ToolOutput.os().write(NewEntry->symfile_addr, NewEntry->symfile_size);
+        Latest = NewEntry;
+      }
+    };
+  }
+  }
+  llvm_unreachable("Unknown DumpKind");
+}
+
 Error loadDylibs() {
   for (const auto &Dylib : Dylibs) {
     std::string ErrMsg;
@@ -815,7 +878,8 @@ static void exitOnLazyCallThroughFailure() { exit(1); }
 Expected<orc::ThreadSafeModule>
 loadModule(StringRef Path, orc::ThreadSafeContext TSCtx) {
   SMDiagnostic Err;
-  auto M = parseIRFile(Path, Err, *TSCtx.getContext());
+  auto M = TSCtx.withContextDo(
+      [&](LLVMContext *Ctx) { return parseIRFile(Path, Err, *Ctx); });
   if (!M) {
     std::string ErrMsg;
     {
@@ -869,7 +933,7 @@ int runOrcJIT(const char *ProgName) {
   std::optional<DataLayout> DL;
   MainModule.withModuleDo([&](Module &M) {
       if (!M.getTargetTriple().empty())
-        TT = Triple(M.getTargetTriple());
+        TT = M.getTargetTriple();
       if (!M.getDataLayout().isDefault())
         DL = M.getDataLayout();
     });
@@ -965,13 +1029,11 @@ int runOrcJIT(const char *ProgName) {
     EPC = ExitOnErr(orc::SelfExecutorProcessControl::Create(
         std::make_shared<orc::SymbolStringPool>()));
 
-    Builder.setObjectLinkingLayerCreator([&EPC, &P](orc::ExecutionSession &ES,
-                                                    const Triple &TT) {
-      auto L = std::make_unique<orc::ObjectLinkingLayer>(ES, EPC->getMemMgr());
-      if (P != LLJITPlatform::ExecutorNative)
-        L->addPlugin(std::make_unique<orc::EHFrameRegistrationPlugin>(
-            ES, ExitOnErr(orc::EPCEHFrameRegistrar::Create(ES))));
-      return L;
+    Builder.getJITTargetMachineBuilder()
+        ->setRelocationModel(Reloc::PIC_)
+        .setCodeModel(CodeModel::Small);
+    Builder.setObjectLinkingLayerCreator([&](orc::ExecutionSession &ES) {
+      return std::make_unique<orc::ObjectLinkingLayer>(ES);
     });
   }
 
@@ -996,10 +1058,9 @@ int runOrcJIT(const char *ProgName) {
   }
 
   if (PerModuleLazy)
-    J->setPartitionFunction(orc::CompileOnDemandLayer::compileWholeModule);
+    J->setPartitionFunction(orc::IRPartitionLayer::compileWholeModule);
 
-  auto Dump = createDebugDumper();
-
+  auto IRDump = createIRDebugDumper();
   J->getIRTransformLayer().setTransform(
       [&](orc::ThreadSafeModule TSM,
           const orc::MaterializationResponsibility &R) {
@@ -1008,18 +1069,18 @@ int runOrcJIT(const char *ProgName) {
             dbgs() << "Bad module: " << &M << "\n";
             exit(1);
           }
-          Dump(M);
+          IRDump(M);
         });
         return TSM;
       });
 
-  if (GenerateBuiltinFunctions.size() > 0) {
-    // Add LLI builtins.
-    orc::MangleAndInterner Mangle(J->getExecutionSession(), J->getDataLayout());
-    J->getMainJITDylib().addGenerator(
-        std::make_unique<LLIBuiltinFunctionGenerator>(GenerateBuiltinFunctions,
-                                                      Mangle));
-  }
+  auto ObjDump = createObjDebugDumper();
+  J->getObjTransformLayer().setTransform(
+      [&](std::unique_ptr<MemoryBuffer> Obj)
+          -> Expected<std::unique_ptr<MemoryBuffer>> {
+        ObjDump(*Obj);
+        return std::move(Obj);
+      });
 
   // If this is a Mingw or Cygwin executor then we need to alias __main to
   // orc_rt_int_void_return_0.

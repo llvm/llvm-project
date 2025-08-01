@@ -1,7 +1,7 @@
 ! Test storage_size with characters
 ! RUN: bbc -emit-hlfir %s -o - | FileCheck %s
 
-! check-label: func.func @_QPtest_storage_size
+! CHECK-LABEL: func.func @_QPtest_storage_size
 subroutine test_storage_size(n)
   interface
     function return_char(l)

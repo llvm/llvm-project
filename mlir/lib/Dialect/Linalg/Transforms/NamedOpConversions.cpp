@@ -21,7 +21,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_LINALGNAMEDOPCONVERSION
+#define GEN_PASS_DEF_LINALGNAMEDOPCONVERSIONPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -39,7 +39,7 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
   Location loc = operation->getLoc();
   auto linalgOp = dyn_cast<LinalgOp>(operation);
   // Exit out on the memref version of this operation.
-  if (!linalgOp || !linalgOp.hasTensorSemantics())
+  if (!linalgOp || !linalgOp.hasPureTensorSemantics())
     return failure();
 
   auto result = operation->getResult(0);
@@ -59,8 +59,8 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
   auto newKernelTy = RankedTensorType::get(
       {kernelTy.getDimSize(0), kernelTy.getDimSize(1), kernelTy.getDimSize(2)},
       kernelTy.getElementType());
-  auto collapsedKernel = rewriter.create<tensor::CollapseShapeOp>(
-      loc, newKernelTy, kernel, collapsedKernelDims);
+  auto collapsedKernel = tensor::CollapseShapeOp::create(
+      rewriter, loc, newKernelTy, kernel, collapsedKernelDims);
 
   // Collapse init dims.
   SmallVector<ReassociationIndices, 4> collapsedInitDims = {
@@ -70,22 +70,23 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
       RankedTensorType::get({initTy.getDimSize(0), initTy.getDimSize(1),
                              initTy.getDimSize(2), initTy.getDimSize(3)},
                             initTy.getElementType());
-  auto collapsedInit = rewriter.create<tensor::CollapseShapeOp>(
-      loc, newInitTy, init, collapsedInitDims);
+  auto collapsedInit = tensor::CollapseShapeOp::create(rewriter, loc, newInitTy,
+                                                       init, collapsedInitDims);
 
   SmallVector<NamedAttribute> preservedAttrs;
   Operation *newConv =
       TypeSwitch<Operation *, Operation *>(operation)
           .Case<DepthwiseConv2DNhwcHwcmOp>([&](auto op) {
             preservedAttrs = getPrunedAttributeList(op);
-            return rewriter.create<DepthwiseConv2DNhwcHwcOp>(
-                loc, newInitTy, ValueRange{input, collapsedKernel},
+            return DepthwiseConv2DNhwcHwcOp::create(
+                rewriter, loc, newInitTy, ValueRange{input, collapsedKernel},
                 ValueRange{collapsedInit}, stride, dilation);
           })
           .Case<DepthwiseConv2DNhwcHwcmQOp>([&](auto op) {
             preservedAttrs = getPrunedAttributeList(op);
-            return rewriter.create<DepthwiseConv2DNhwcHwcQOp>(
-                loc, newInitTy, ValueRange{input, collapsedKernel, iZp, kZp},
+            return DepthwiseConv2DNhwcHwcQOp::create(
+                rewriter, loc, newInitTy,
+                ValueRange{input, collapsedKernel, iZp, kZp},
                 ValueRange{collapsedInit}, stride, dilation);
           })
           .Default([](Operation *op) { return nullptr; });
@@ -143,15 +144,16 @@ struct SimplifyDepthwiseConvQOp
 };
 
 struct LinalgNamedOpConversionPass
-    : public impl::LinalgNamedOpConversionBase<LinalgNamedOpConversionPass> {
-  LinalgNamedOpConversionPass() = default;
-  LinalgNamedOpConversionPass(const LinalgNamedOpConversionPass &) = default;
+    : public impl::LinalgNamedOpConversionPassBase<
+          LinalgNamedOpConversionPass> {
+  using impl::LinalgNamedOpConversionPassBase<
+      LinalgNamedOpConversionPass>::LinalgNamedOpConversionPassBase;
 
   void runOnOperation() override {
     Operation *op = getOperation();
     RewritePatternSet patterns(op->getContext());
     populateLinalgNamedOpConversionPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+    if (failed(applyPatternsGreedily(op, std::move(patterns))))
       return signalPassFailure();
   }
 };
@@ -161,8 +163,4 @@ void mlir::linalg::populateLinalgNamedOpConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<SimplifyDepthwiseConvOp, SimplifyDepthwiseConvQOp>(
       patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createLinalgNamedOpConversionPass() {
-  return std::make_unique<LinalgNamedOpConversionPass>();
 }

@@ -20,19 +20,20 @@ public:
     Update();
   }
 
-  size_t GetIndexOfChildWithName(ConstString name) override {
-    return m_container_sp ? m_container_sp->GetIndexOfChildWithName(name)
-                          : UINT32_MAX;
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+    if (m_container_sp)
+      return m_container_sp->GetIndexOfChildWithName(name);
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
-  bool MightHaveChildren() override { return true; }
-  bool Update() override;
+  lldb::ChildCacheState Update() override;
 
-  size_t CalculateNumChildren() override {
+  llvm::Expected<uint32_t> CalculateNumChildren() override {
     return m_container_sp ? m_container_sp->GetNumChildren() : 0;
   }
 
-  ValueObjectSP GetChildAtIndex(size_t idx) override {
+  ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     return m_container_sp ? m_container_sp->GetChildAtIndex(idx)
                           : nullptr;
   }
@@ -47,13 +48,13 @@ private:
 };
 } // namespace
 
-bool QueueFrontEnd::Update() {
+lldb::ChildCacheState QueueFrontEnd::Update() {
   m_container_sp = nullptr;
   ValueObjectSP c_sp = m_backend.GetChildMemberWithName("c");
   if (!c_sp)
-    return false;
+    return lldb::ChildCacheState::eRefetch;
   m_container_sp = c_sp->GetSyntheticValue().get();
-  return false;
+  return lldb::ChildCacheState::eRefetch;
 }
 
 SyntheticChildrenFrontEnd *

@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "StaticAssertCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <optional>
 #include <string>
 
@@ -39,19 +38,23 @@ void StaticAssertCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(
           hasAnyOperatorName("&&", "=="),
           hasEitherOperand(ignoringImpCasts(stringLiteral().bind("assertMSG"))),
-          anyOf(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast)),
-                anything()))
+          optionally(binaryOperator(hasEitherOperand(IsAlwaysFalseWithCast))))
           .bind("assertExprRoot"),
       IsAlwaysFalse);
   auto NonConstexprFunctionCall =
       callExpr(hasDeclaration(functionDecl(unless(isConstexpr()))));
+  auto NonConstexprVariableReference =
+      declRefExpr(to(varDecl(unless(isConstexpr()))),
+                  unless(hasAncestor(expr(matchers::hasUnevaluatedContext()))),
+                  unless(hasAncestor(typeLoc())));
+
+  auto NonConstexprCode =
+      expr(anyOf(NonConstexprFunctionCall, NonConstexprVariableReference));
   auto AssertCondition =
-      expr(
-          anyOf(expr(ignoringParenCasts(anyOf(
-                    AssertExprRoot, unaryOperator(hasUnaryOperand(
-                                        ignoringParenCasts(AssertExprRoot)))))),
-                anything()),
-          unless(findAll(NonConstexprFunctionCall)))
+      expr(optionally(expr(ignoringParenCasts(anyOf(
+               AssertExprRoot, unaryOperator(hasUnaryOperand(
+                                   ignoringParenCasts(AssertExprRoot))))))),
+           unless(NonConstexprCode), unless(hasDescendant(NonConstexprCode)))
           .bind("condition");
   auto Condition =
       anyOf(ignoringParenImpCasts(callExpr(

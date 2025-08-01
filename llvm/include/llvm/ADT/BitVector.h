@@ -42,7 +42,7 @@ template <typename BitVectorT> class const_set_bits_iterator_impl {
 
 public:
   using iterator_category = std::forward_iterator_tag;
-  using difference_type   = void;
+  using difference_type   = std::ptrdiff_t;
   using value_type        = int;
   using pointer           = value_type*;
   using reference         = value_type&;
@@ -795,9 +795,7 @@ private:
     set_unused_bits(false);
   }
 
-  void init_words(bool t) {
-    std::fill(Bits.begin(), Bits.end(), 0 - (BitWord)t);
-  }
+  void init_words(bool t) { llvm::fill(Bits, 0 - (BitWord)t); }
 
   template<bool AddBits, bool InvertMask>
   void applyMask(const uint32_t *Mask, unsigned MaskWords) {

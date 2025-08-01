@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/ObjectYAML/YAML.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
 #include <optional>
@@ -115,7 +116,32 @@ struct Unit {
   llvm::dwarf::UnitType Type; // Added in DWARF 5
   std::optional<uint64_t> AbbrevTableID;
   std::optional<yaml::Hex64> AbbrOffset;
+  yaml::Hex64 TypeSignatureOrDwoID; // For type or split units
+  yaml::Hex64 TypeOffset;           // For type units
+
   std::vector<Entry> Entries;
+};
+
+struct IdxForm {
+  dwarf::Index Idx;
+  dwarf::Form Form;
+};
+
+struct DebugNameAbbreviation {
+  yaml::Hex64 Code;
+  dwarf::Tag Tag;
+  std::vector<IdxForm> Indices;
+};
+
+struct DebugNameEntry {
+  yaml::Hex32 NameStrp;
+  yaml::Hex64 Code;
+  std::vector<yaml::Hex64> Values;
+};
+
+struct DebugNamesSection {
+  std::vector<DebugNameAbbreviation> Abbrevs;
+  std::vector<DebugNameEntry> Entries;
 };
 
 struct File {
@@ -223,22 +249,23 @@ struct Data {
   std::optional<PubSection> GNUPubNames;
   std::optional<PubSection> GNUPubTypes;
 
-  std::vector<Unit> CompileUnits;
+  std::vector<Unit> Units;
 
   std::vector<LineTable> DebugLines;
   std::optional<std::vector<ListTable<RnglistEntry>>> DebugRnglists;
   std::optional<std::vector<ListTable<LoclistEntry>>> DebugLoclists;
+  std::optional<DebugNamesSection> DebugNames;
 
-  bool isEmpty() const;
+  LLVM_ABI bool isEmpty() const;
 
-  SetVector<StringRef> getNonEmptySectionNames() const;
+  LLVM_ABI SetVector<StringRef> getNonEmptySectionNames() const;
 
   struct AbbrevTableInfo {
     uint64_t Index;
     uint64_t Offset;
   };
-  Expected<AbbrevTableInfo> getAbbrevTableInfoByID(uint64_t ID) const;
-  StringRef getAbbrevTableContentByIndex(uint64_t Index) const;
+  LLVM_ABI Expected<AbbrevTableInfo> getAbbrevTableInfoByID(uint64_t ID) const;
+  LLVM_ABI StringRef getAbbrevTableContentByIndex(uint64_t Index) const;
 
 private:
   mutable std::unordered_map<uint64_t, AbbrevTableInfo> AbbrevTableInfoMap;
@@ -276,80 +303,98 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(
     llvm::DWARFYAML::ListEntries<DWARFYAML::LoclistEntry>)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::LoclistEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::DWARFOperation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::DebugNameEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::DebugNameAbbreviation)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::DWARFYAML::IdxForm)
 
 namespace llvm {
 namespace yaml {
 
 template <> struct MappingTraits<DWARFYAML::Data> {
-  static void mapping(IO &IO, DWARFYAML::Data &DWARF);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::Data &DWARF);
 };
 
 template <> struct MappingTraits<DWARFYAML::AbbrevTable> {
-  static void mapping(IO &IO, DWARFYAML::AbbrevTable &AbbrevTable);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::AbbrevTable &AbbrevTable);
 };
 
 template <> struct MappingTraits<DWARFYAML::Abbrev> {
-  static void mapping(IO &IO, DWARFYAML::Abbrev &Abbrev);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::Abbrev &Abbrev);
 };
 
 template <> struct MappingTraits<DWARFYAML::AttributeAbbrev> {
-  static void mapping(IO &IO, DWARFYAML::AttributeAbbrev &AttAbbrev);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::AttributeAbbrev &AttAbbrev);
 };
 
 template <> struct MappingTraits<DWARFYAML::ARangeDescriptor> {
-  static void mapping(IO &IO, DWARFYAML::ARangeDescriptor &Descriptor);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::ARangeDescriptor &Descriptor);
 };
 
 template <> struct MappingTraits<DWARFYAML::ARange> {
-  static void mapping(IO &IO, DWARFYAML::ARange &ARange);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::ARange &ARange);
 };
 
 template <> struct MappingTraits<DWARFYAML::RangeEntry> {
-  static void mapping(IO &IO, DWARFYAML::RangeEntry &Entry);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::RangeEntry &Entry);
 };
 
 template <> struct MappingTraits<DWARFYAML::Ranges> {
-  static void mapping(IO &IO, DWARFYAML::Ranges &Ranges);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::Ranges &Ranges);
 };
 
 template <> struct MappingTraits<DWARFYAML::PubEntry> {
-  static void mapping(IO &IO, DWARFYAML::PubEntry &Entry);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::PubEntry &Entry);
 };
 
 template <> struct MappingTraits<DWARFYAML::PubSection> {
-  static void mapping(IO &IO, DWARFYAML::PubSection &Section);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::PubSection &Section);
 };
 
 template <> struct MappingTraits<DWARFYAML::Unit> {
-  static void mapping(IO &IO, DWARFYAML::Unit &Unit);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::Unit &Unit);
+};
+
+template <> struct MappingTraits<DWARFYAML::DebugNamesSection> {
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::DebugNamesSection &);
+};
+template <> struct MappingTraits<DWARFYAML::DebugNameEntry> {
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::DebugNameEntry &);
+};
+template <> struct MappingTraits<DWARFYAML::DebugNameAbbreviation> {
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::DebugNameAbbreviation &);
+};
+template <> struct MappingTraits<DWARFYAML::IdxForm> {
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::IdxForm &);
 };
 
 template <> struct MappingTraits<DWARFYAML::Entry> {
-  static void mapping(IO &IO, DWARFYAML::Entry &Entry);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::Entry &Entry);
 };
 
 template <> struct MappingTraits<DWARFYAML::FormValue> {
-  static void mapping(IO &IO, DWARFYAML::FormValue &FormValue);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::FormValue &FormValue);
 };
 
 template <> struct MappingTraits<DWARFYAML::File> {
-  static void mapping(IO &IO, DWARFYAML::File &File);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::File &File);
 };
 
 template <> struct MappingTraits<DWARFYAML::LineTableOpcode> {
-  static void mapping(IO &IO, DWARFYAML::LineTableOpcode &LineTableOpcode);
+  LLVM_ABI static void mapping(IO &IO,
+                               DWARFYAML::LineTableOpcode &LineTableOpcode);
 };
 
 template <> struct MappingTraits<DWARFYAML::LineTable> {
-  static void mapping(IO &IO, DWARFYAML::LineTable &LineTable);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::LineTable &LineTable);
 };
 
 template <> struct MappingTraits<DWARFYAML::SegAddrPair> {
-  static void mapping(IO &IO, DWARFYAML::SegAddrPair &SegAddrPair);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::SegAddrPair &SegAddrPair);
 };
 
 template <> struct MappingTraits<DWARFYAML::DWARFOperation> {
-  static void mapping(IO &IO, DWARFYAML::DWARFOperation &DWARFOperation);
+  LLVM_ABI static void mapping(IO &IO,
+                               DWARFYAML::DWARFOperation &DWARFOperation);
 };
 
 template <typename EntryType>
@@ -365,19 +410,20 @@ struct MappingTraits<DWARFYAML::ListEntries<EntryType>> {
 };
 
 template <> struct MappingTraits<DWARFYAML::RnglistEntry> {
-  static void mapping(IO &IO, DWARFYAML::RnglistEntry &RnglistEntry);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::RnglistEntry &RnglistEntry);
 };
 
 template <> struct MappingTraits<DWARFYAML::LoclistEntry> {
-  static void mapping(IO &IO, DWARFYAML::LoclistEntry &LoclistEntry);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::LoclistEntry &LoclistEntry);
 };
 
 template <> struct MappingTraits<DWARFYAML::AddrTableEntry> {
-  static void mapping(IO &IO, DWARFYAML::AddrTableEntry &AddrTable);
+  LLVM_ABI static void mapping(IO &IO, DWARFYAML::AddrTableEntry &AddrTable);
 };
 
 template <> struct MappingTraits<DWARFYAML::StringOffsetsTable> {
-  static void mapping(IO &IO, DWARFYAML::StringOffsetsTable &StrOffsetsTable);
+  LLVM_ABI static void mapping(IO &IO,
+                               DWARFYAML::StringOffsetsTable &StrOffsetsTable);
 };
 
 template <> struct ScalarEnumerationTraits<dwarf::DwarfFormat> {
@@ -437,6 +483,16 @@ template <> struct ScalarEnumerationTraits<dwarf::Form> {
   }
 };
 
+#define HANDLE_DW_IDX(unused, name)                                            \
+  io.enumCase(value, "DW_IDX_" #name, dwarf::DW_IDX_##name);
+
+template <> struct ScalarEnumerationTraits<dwarf::Index> {
+  static void enumeration(IO &io, dwarf::Index &value) {
+#include "llvm/BinaryFormat/Dwarf.def"
+    io.enumFallback<Hex16>(value);
+  }
+};
+
 #define HANDLE_DW_UT(unused, name)                                             \
   io.enumCase(value, "DW_UT_" #name, dwarf::DW_UT_##name);
 
@@ -473,7 +529,7 @@ template <> struct ScalarEnumerationTraits<dwarf::LoclistEntries> {
   }
 };
 
-#define HANDLE_DW_OP(id, name, version, vendor)                                \
+#define HANDLE_DW_OP(id, name, operands, arity, version, vendor)               \
   io.enumCase(value, "DW_OP_" #name, dwarf::DW_OP_##name);
 
 template <> struct ScalarEnumerationTraits<dwarf::LocationAtom> {

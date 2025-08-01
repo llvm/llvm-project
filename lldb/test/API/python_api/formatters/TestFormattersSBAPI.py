@@ -143,6 +143,19 @@ class SBFormattersAPITestCase(TestBase):
         self.dbg.GetCategory("JASSynth").SetEnabled(True)
         self.expect("frame variable foo", matching=True, substrs=["X = 1"])
 
+        self.dbg.GetCategory("CCCSynth2").SetEnabled(True)
+        self.expect(
+            "frame variable ccc",
+            matching=True,
+            substrs=[
+                "CCC object with leading synthetic value (int) b = 222",
+                "a = 111",
+                "b = 222",
+                "c = 333",
+            ],
+        )
+        self.dbg.GetCategory("CCCSynth2").SetEnabled(False)
+
         self.dbg.GetCategory("CCCSynth").SetEnabled(True)
         self.expect(
             "frame variable ccc",
@@ -152,6 +165,15 @@ class SBFormattersAPITestCase(TestBase):
                 "a = 111",
                 "b = 222",
                 "c = 333",
+            ],
+        )
+
+        self.dbg.GetCategory("BarIntSynth").SetEnabled(True)
+        self.expect(
+            "frame variable bar_int",
+            matching=True,
+            substrs=[
+                "(int) bar_int = 20 bar_int synthetic: No value",
             ],
         )
 
@@ -192,7 +214,7 @@ class SBFormattersAPITestCase(TestBase):
         )
         self.assertTrue(foo_var.IsValid(), "could not find foo")
 
-        self.assertFalse(foo_var.GetNumChildren() == 2, "still seeing synthetic value")
+        self.assertNotEqual(foo_var.GetNumChildren(), 2, "still seeing synthetic value")
 
         filter = lldb.SBTypeFilter(0)
         filter.AppendExpressionPath("A")
@@ -457,9 +479,8 @@ class SBFormattersAPITestCase(TestBase):
             "frame variable e2", substrs=["I am an empty Empty2 {}"], matching=False
         )
 
-        self.assertTrue(
-            self.dbg.GetCategory(lldb.eLanguageTypeObjC) is not None,
-            "ObjC category is None",
+        self.assertIsNotNone(
+            self.dbg.GetCategory(lldb.eLanguageTypeObjC), "ObjC category is None"
         )
 
     def test_force_synth_off(self):
@@ -518,8 +539,8 @@ class SBFormattersAPITestCase(TestBase):
         int_vector = frame.FindVariable("int_vector")
         if self.TraceOn():
             print(int_vector)
-        self.assertFalse(
-            int_vector.GetNumChildren() == 0, '"physical" vector is not empty'
+        self.assertNotEqual(
+            int_vector.GetNumChildren(), 0, '"physical" vector is not empty'
         )
 
         self.runCmd("settings set target.enable-synthetic-value true")

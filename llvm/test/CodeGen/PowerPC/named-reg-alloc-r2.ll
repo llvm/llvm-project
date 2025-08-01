@@ -3,11 +3,9 @@
 
 define i32 @get_reg() nounwind {
 entry:
-; FIXME: Include an allocatable-specific error message
-; CHECK-NOTPPC32: Invalid register name global variable
+; CHECK-NOTPPC32: Trying to reserve an invalid register "r2".
         %reg = call i32 @llvm.read_register.i32(metadata !0)
   ret i32 %reg
-
 ; CHECK-LABEL: @get_reg
 ; CHECK: mr 3, 2
 }

@@ -11,7 +11,7 @@ The core idea is to track more information about source assignments in order
 and preserve enough information to be able to defer decisions about whether to
 use non-memory locations (register, constant) or memory locations until after
 middle end optimisations have run. This is in opposition to using
-`llvm.dbg.declare` and `llvm.dbg.value`, which is to make the decision for most
+`#dbg_declare` and `#dbg_value`, which is to make the decision for most
 variables early on, which can result in suboptimal variable locations that may
 be either incorrect or incomplete.
 
@@ -20,25 +20,26 @@ LLVM pass writers, and minimal disruption to LLVM in general.
 
 ## Status and usage
 
-**Status**: Experimental work in progress. Enabling is strongly advised against
-except for development and testing.
+**Status**: Enabled by default in Clang but disabled under some circumstances
+(which can be overridden with the `forced` option, see below). `opt` will not
+run the pass unless asked (`-passes=declare-to-assign`).
 
-**Enable in Clang**: `-Xclang -fexperimental-assignment-tracking`
+**Flag**:
+`-Xclang -fexperimental-assignment-tracking=<disabled|enabled|forced>`
 
-That causes Clang to get LLVM to run the pass `declare-to-assign`. The pass
-converts conventional debug intrinsics to assignment tracking metadata and sets
+When enabled Clang gets LLVM to run the pass `declare-to-assign`. The pass
+converts conventional debug records to assignment tracking metadata and sets
 the module flag `debug-info-assignment-tracking` to the value `i1 true`. To
 check whether assignment tracking is enabled for a module call
 `isAssignmentTrackingEnabled(const Module &M)` (from `llvm/IR/DebugInfo.h`).
 
 ## Design and implementation
 
-### Assignment markers: `llvm.dbg.assign`
+### Assignment markers: `#dbg_assign`
 
-`llvm.dbg.value`, a conventional debug intrinsic, marks out a position in the
+`#dbg_value`, a conventional debug record, marks out a position in the
 IR where a variable takes a particular value. Similarly, Assignment Tracking
-marks out the position of assignments with a new intrinsic called
-`llvm.dbg.assign`.
+marks out the position of assignments with a record called `#dbg_assign`.
 
 In order to know where in IR it is appropriate to use a memory location for a
 variable, each assignment marker must in some way refer to the store, if any
@@ -48,24 +49,23 @@ important benefit of referring to the store is that we can then build a two-way
 mapping of stores<->markers that can be used to find markers that need to be
 updated when stores are modified.
 
-An `llvm.dbg.assign` marker that is not linked to any instruction signals that
+An `#dbg_assign` marker that is not linked to any instruction signals that
 the store that performed the assignment has been optimised out, and therefore
 the memory location will not be valid for at least some part of the program.
 
-Here's the `llvm.dbg.assign` signature. Each parameter is wrapped in
-`MetadataAsValue`, and `Value *` type parameters are first wrapped in
-`ValueAsMetadata`:
+Here's the `#dbg_assign` signature. `Value *` type parameters are first wrapped
+in `ValueAsMetadata`:
 
 ```
-void @llvm.dbg.assign(Value *Value,
-                      DIExpression *ValueExpression,
-                      DILocalVariable *Variable,
-                      DIAssignID *ID,
-                      Value *Address,
-                      DIExpression *AddressExpression)
+  #dbg_assign(Value *Value,
+              DIExpression *ValueExpression,
+              DILocalVariable *Variable,
+              DIAssignID *ID,
+              Value *Address,
+              DIExpression *AddressExpression)
 ```
 
-The first three parameters look and behave like an `llvm.dbg.value`. `ID` is a
+The first three parameters look and behave like an `#dbg_value`. `ID` is a
 reference to a store (see next section). `Address` is the destination address
 of the store and it is modified by `AddressExpression`. An empty/undef/poison
 address means the address component has been killed (the memory address is no
@@ -73,18 +73,13 @@ longer a valid location). LLVM currently encodes variable fragment information
 in `DIExpression`s, so as an implementation quirk the `FragmentInfo` for
 `Variable` is contained within `ValueExpression` only.
 
-The formal LLVM-IR signature is:
-```
-void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
-```
-
 ### Instruction link: `DIAssignID`
 
 `DIAssignID` metadata is the mechanism that is currently used to encode the
 store<->marker link. The metadata node has no operands and all instances are
 `distinct`; equality is checked for by comparing addresses.
 
-`llvm.dbg.assign` intrinsics use a `DIAssignID` metadata node instance as an
+`#dbg_assign` records use a `DIAssignID` metadata node instance as an
 operand. This way it refers to any store-like instruction that has the same
 `DIAssignID` attachment. E.g. For this test.cpp,
 
@@ -95,16 +90,16 @@ int fun(int a) {
 ```
 compiled without optimisations:
 ```
-$ clang++ test.cpp -o test.ll -emit-llvm -S -g -O0 -Xclang -fexperimental-assignment-tracking
+$ clang++ test.cpp -o test.ll -emit-llvm -S -g -O0 -Xclang -fexperimental-assignment-tracking=enabled
 ```
 we get:
 ```
 define dso_local noundef i32 @_Z3funi(i32 noundef %a) #0 !dbg !8 {
 entry:
   %a.addr = alloca i32, align 4, !DIAssignID !13
-  call void @llvm.dbg.assign(metadata i1 undef, metadata !14, metadata !DIExpression(), metadata !13, metadata i32* %a.addr, metadata !DIExpression()), !dbg !15
+    #dbg_assign(i1 undef, !14, !DIExpression(), !13, i32* %a.addr, !DIExpression(), !15)
   store i32 %a, i32* %a.addr, align 4, !DIAssignID !16
-  call void @llvm.dbg.assign(metadata i32 %a, metadata !14, metadata !DIExpression(), metadata !16, metadata i32* %a.addr, metadata !DIExpression()), !dbg !15
+    #dbg_assign(i32 %a, !14, !DIExpression(), !16, i32* %a.addr, !DIExpression(), !15)
   %0 = load i32, i32* %a.addr, align 4, !dbg !17
   ret i32 %0, !dbg !18
 }
@@ -116,16 +111,16 @@ entry:
 !16 = distinct !DIAssignID()
 ```
 
-The first `llvm.dbg.assign` refers to the `alloca` through `!DIAssignID !13`,
+The first `#dbg_assign` refers to the `alloca` through `!DIAssignID !13`,
 and the second refers to the `store` through `!DIAssignID !16`.
 
 ### Store-like instructions
 
-In the absence of a linked `llvm.dbg.assign`, a store to an address that is
+In the absence of a linked `#dbg_assign`, a store to an address that is
 known to be the backing storage for a variable is considered to represent an
 assignment to that variable.
 
-This gives us a safe fall-back in cases where `llvm.dbg.assign` intrinsics have
+This gives us a safe fall-back in cases where `#dbg_assign` records have
 been deleted, the `DIAssignID` attachment on the store has been dropped, or the
 optimiser has made a once-indirect store (not tracked with Assignment Tracking)
 direct.
@@ -139,61 +134,61 @@ direct.
 instruction. In this case, the assignment is considered to take place in
 multiple positions in the program.
 
-**Moving** a non-debug instruction: nothing new to do. Instructions linked to an
-`llvm.dbg.assign` have their initial IR position marked by the position of the
-`llvm.dbg.assign`.
+**Moving** a non-debug instruction: nothing new to do. Instructions linked to a
+`#dbg_assign` have their initial IR position marked by the position of the
+`#dbg_assign`.
 
 **Deleting** a non-debug instruction: nothing new to do. Simple DSE does not
 require any change; it’s safe to delete an instruction with a `DIAssignID`
-attachment. An `llvm.dbg.assign` that uses a `DIAssignID` that is not attached
+attachment. A `#dbg_assign` that uses a `DIAssignID` that is not attached
 to any instruction indicates that the memory location isn’t valid.
 
 **Merging** stores: In many cases no change is required as `DIAssignID`
 attachments are automatically merged if `combineMetadata` is called. One way or
 another, the `DIAssignID` attachments must be merged such that new store
-becomes linked to all the `llvm.dbg.assign` intrinsics that the merged stores
+becomes linked to all the `#dbg_assign` records that the merged stores
 were linked to. This can be achieved simply by calling a helper function
 `Instruction::mergeDIAssignID`.
 
-**Inlining** stores: As stores are inlined we generate `llvm.dbg.assign`
-intrinsics and `DIAssignID` attachments as if the stores represent source
+**Inlining** stores: As stores are inlined we generate `#dbg_assign`
+records and `DIAssignID` attachments as if the stores represent source
 assignments, just like the in frontend. This isn’t perfect, as stores may have
 been moved, modified or deleted before inlining, but it does at least keep the
 information about the variable correct within the non-inlined scope.
 
-**Splitting** stores: SROA and passes that split stores treat `llvm.dbg.assign`
-intrinsics similarly to `llvm.dbg.declare` intrinsics. Clone the
-`llvm.dbg.assign` intrinsics linked to the store, update the FragmentInfo in
-the `ValueExpression`, and give the split stores (and cloned intrinsics) new
+**Splitting** stores: SROA and passes that split stores treat `#dbg_assign`
+records similarly to `#dbg_declare` records. Clone the
+`#dbg_assign` records linked to the store, update the FragmentInfo in
+the `ValueExpression`, and give the split stores (and cloned records) new
 `DIAssignID` attachments each. In other words, treat the split stores as
 separate assignments. For partial DSE (e.g. shortening a memset), we do the
-same except that `llvm.dbg.assign` for the dead fragment gets an `Undef`
+same except that `#dbg_assign` for the dead fragment gets an `Undef`
 `Address`.
 
-**Promoting** allocas and store/loads: `llvm.dbg.assign` intrinsics implicitly
+**Promoting** allocas and store/loads: `#dbg_assign` records implicitly
 describe joined values in memory locations at CFG joins, but this is not
 necessarily the case after promoting (or partially promoting) the
 variable. Passes that promote variables are responsible for inserting
-`llvm.dbg.assign` intrinsics after the resultant PHIs generated during
-promotion. `mem2reg` already has to do this (with `llvm.dbg.value`) for
-`llvm.dbg.declare`s. Where a store has no linked intrinsic, the store is
+`#dbg_assign` records after the resultant PHIs generated during
+promotion. `mem2reg` already has to do this (with `#dbg_value`) for
+`#dbg_declare`s. Where a store has no linked record, the store is
 assumed to represent an assignment for variables stored at the destination
 address.
 
-#### Debug intrinsic updates
+#### Debug record updates
 
-**Moving** a debug intrinsic: avoid moving `llvm.dbg.assign` intrinsics where
+**Moving** a debug record: avoid moving `#dbg_assign` records where
 possible, as they represent a source-level assignment, whose position in the
 program should not be affected by optimization passes.
 
-**Deleting** a debug intrinsic: Nothing new to do. Just like for conventional
-debug intrinsics, unless it is unreachable, it’s almost always incorrect to
-delete a `llvm.dbg.assign` intrinsic.
+**Deleting** a debug record: Nothing new to do. Just like for conventional
+debug records, unless it is unreachable, it’s almost always incorrect to
+delete a `#dbg_assign` record.
 
-### Lowering `llvm.dbg.assign` to MIR
+### Lowering `#dbg_assign` to MIR
 
-To begin with only SelectionDAG ISel will be supported. `llvm.dbg.assign`
-intrinsics are lowered to MIR `DBG_INSTR_REF` instructions. Before this happens
+To begin with only SelectionDAG ISel will be supported. `#dbg_assign`
+records are lowered to MIR `DBG_INSTR_REF` instructions. Before this happens
 we need to decide where it is appropriate to use memory locations and where we
 must use a non-memory location (or no location) for each variable. In order to
 make those decisions we run a standard fixed-point dataflow analysis that makes
@@ -201,8 +196,7 @@ the choice at each instruction, iteratively joining the results for each block.
 
 ### TODO list
 
-As this is an experimental work in progress so there are some items we still need
-to tackle:
+Outstanding improvements:
 
 * As mentioned in test llvm/test/DebugInfo/assignment-tracking/X86/diamond-3.ll,
   the analysis should treat escaping calls like untagged stores.
@@ -214,9 +208,9 @@ to tackle:
   clang/test/CodeGen/assignment-tracking/assignment-tracking.cpp for examples.
 
 * `trackAssignments` doesn't yet work for variables that have their
-  `llvm.dbg.declare` location modified by a `DIExpression`, e.g. when the
+  `#dbg_declare` location modified by a `DIExpression`, e.g. when the
   address of the variable is itself stored in an `alloca` with the
-  `llvm.dbg.declare` using `DIExpression(DW_OP_deref)`. See `indirectReturn` in
+  `#dbg_declare` using `DIExpression(DW_OP_deref)`. See `indirectReturn` in
   llvm/test/DebugInfo/Generic/assignment-tracking/track-assignments.ll and in
   clang/test/CodeGen/assignment-tracking/assignment-tracking.cpp for an
   example.
@@ -225,13 +219,18 @@ to tackle:
   memory location is available without using a `DIAssignID`. This is because
   the storage address is not computed by an instruction (it's an argument
   value) and therefore we have nowhere to put the metadata attachment. To solve
-  this we probably need another marker intrinsic to denote "the variable's
-  stack home is X address" - similar to `llvm.dbg.declare` except that it needs
-  to compose with `llvm.dbg.assign` intrinsics such that the stack home address
-  is only selected as a location for the variable when the `llvm.dbg.assign`
-  intrinsics agree it should be.
+  this we probably need another marker record to denote "the variable's
+  stack home is X address" - similar to `#dbg_declare` except that it needs
+  to compose with `#dbg_assign` records such that the stack home address
+  is only selected as a location for the variable when the `#dbg_assign`
+  records agree it should be.
 
-* Given the above (a special "the stack home is X" intrinsic), and the fact
+* Given the above (a special "the stack home is X" record), and the fact
   that we can only track assignments with fixed offsets and sizes, I think we
   can probably get rid of the address and address-expression part, since it
   will always be computable with the info we have.
+
+* Assignment tracking is disabled by default for LTO and thinLTO builds, and
+  if LLDB debugger tuning has been specified. We should remove these
+  restrictions. See EmitAssemblyHelper::RunOptimizationPipeline in
+  clang/lib/CodeGen/BackendUtil.cpp.

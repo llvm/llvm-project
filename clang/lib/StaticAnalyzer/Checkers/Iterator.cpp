@@ -181,8 +181,7 @@ const ContainerData *getContainerData(ProgramStateRef State,
   return State->get<ContainerMap>(Cont);
 }
 
-const IteratorPosition *getIteratorPosition(ProgramStateRef State,
-                                            const SVal &Val) {
+const IteratorPosition *getIteratorPosition(ProgramStateRef State, SVal Val) {
   if (auto Reg = Val.getAsRegion()) {
     Reg = Reg->getMostDerivedObjectRegion();
     return State->get<IteratorRegionMap>(Reg);
@@ -194,7 +193,7 @@ const IteratorPosition *getIteratorPosition(ProgramStateRef State,
   return nullptr;
 }
 
-ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
+ProgramStateRef setIteratorPosition(ProgramStateRef State, SVal Val,
                                     const IteratorPosition &Pos) {
   if (auto Reg = Val.getAsRegion()) {
     Reg = Reg->getMostDerivedObjectRegion();
@@ -207,23 +206,23 @@ ProgramStateRef setIteratorPosition(ProgramStateRef State, const SVal &Val,
   return nullptr;
 }
 
-ProgramStateRef createIteratorPosition(ProgramStateRef State, const SVal &Val,
-                                       const MemRegion *Cont, const Stmt* S,
+ProgramStateRef createIteratorPosition(ProgramStateRef State, SVal Val,
+                                       const MemRegion *Cont,
+                                       ConstCFGElementRef Elem,
                                        const LocationContext *LCtx,
                                        unsigned blockCount) {
   auto &StateMgr = State->getStateManager();
   auto &SymMgr = StateMgr.getSymbolManager();
   auto &ACtx = StateMgr.getContext();
 
-  auto Sym = SymMgr.conjureSymbol(S, LCtx, ACtx.LongTy, blockCount);
+  auto *Sym = SymMgr.conjureSymbol(Elem, LCtx, ACtx.LongTy, blockCount);
   State = assumeNoOverflow(State, Sym, 4);
   return setIteratorPosition(State, Val,
                              IteratorPosition::getPosition(Cont, Sym));
 }
 
-ProgramStateRef advancePosition(ProgramStateRef State, const SVal &Iter,
-                                OverloadedOperatorKind Op,
-                                const SVal &Distance) {
+ProgramStateRef advancePosition(ProgramStateRef State, SVal Iter,
+                                OverloadedOperatorKind Op, SVal Distance) {
   const auto *Pos = getIteratorPosition(State, Iter);
   if (!Pos)
     return nullptr;
@@ -243,7 +242,7 @@ ProgramStateRef advancePosition(ProgramStateRef State, const SVal &Iter,
   // For concrete integers we can calculate the new position
   nonloc::ConcreteInt IntDist = *IntDistOp;
 
-  if (IntDist.getValue().isNegative()) {
+  if (IntDist.getValue()->isNegative()) {
     IntDist = nonloc::ConcreteInt(BVF.getValue(-IntDist.getValue()));
     BinOp = (BinOp == BO_Add) ? BO_Sub : BO_Add;
   }
@@ -274,9 +273,9 @@ ProgramStateRef assumeNoOverflow(ProgramStateRef State, SymbolRef Sym,
   ProgramStateRef NewState = State;
 
   llvm::APSInt Max = AT.getMaxValue() / AT.getValue(Scale);
-  SVal IsCappedFromAbove =
-      SVB.evalBinOpNN(State, BO_LE, nonloc::SymbolVal(Sym),
-                      nonloc::ConcreteInt(Max), SVB.getConditionType());
+  SVal IsCappedFromAbove = SVB.evalBinOpNN(
+      State, BO_LE, nonloc::SymbolVal(Sym),
+      nonloc::ConcreteInt(BV.getValue(Max)), SVB.getConditionType());
   if (auto DV = IsCappedFromAbove.getAs<DefinedSVal>()) {
     NewState = NewState->assume(*DV, true);
     if (!NewState)
@@ -284,9 +283,9 @@ ProgramStateRef assumeNoOverflow(ProgramStateRef State, SymbolRef Sym,
   }
 
   llvm::APSInt Min = -Max;
-  SVal IsCappedFromBelow =
-      SVB.evalBinOpNN(State, BO_GE, nonloc::SymbolVal(Sym),
-                      nonloc::ConcreteInt(Min), SVB.getConditionType());
+  SVal IsCappedFromBelow = SVB.evalBinOpNN(
+      State, BO_GE, nonloc::SymbolVal(Sym),
+      nonloc::ConcreteInt(BV.getValue(Min)), SVB.getConditionType());
   if (auto DV = IsCappedFromBelow.getAs<DefinedSVal>()) {
     NewState = NewState->assume(*DV, true);
     if (!NewState)

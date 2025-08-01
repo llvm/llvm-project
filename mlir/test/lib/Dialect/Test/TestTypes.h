@@ -18,6 +18,7 @@
 #include <tuple>
 
 #include "TestTraits.h"
+#include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -31,11 +32,11 @@ class TestAttrWithFormatAttr;
 /// FieldInfo represents a field in the StructType data type. It is used as a
 /// parameter in TestTypeDefs.td.
 struct FieldInfo {
-  ::llvm::StringRef name;
-  ::mlir::Type type;
+  llvm::StringRef name;
+  mlir::Type type;
 
   // Custom allocation called from generated constructor code
-  FieldInfo allocateInto(::mlir::TypeStorageAllocator &alloc) const {
+  FieldInfo allocateInto(mlir::TypeStorageAllocator &alloc) const {
     return FieldInfo{alloc.copyInto(name), type};
   }
 };
@@ -108,7 +109,7 @@ struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
         TestRecursiveTypeStorage(allocator.copyInto(key));
   }
 
-  ::mlir::LogicalResult mutate(::mlir::TypeStorageAllocator &allocator,
+  ::llvm::LogicalResult mutate(::mlir::TypeStorageAllocator &allocator,
                                ::mlir::Type newBody) {
     // Cannot set a different body than before.
     if (body && body != newBody)
@@ -140,7 +141,7 @@ public:
   }
 
   /// Body getter and setter.
-  ::mlir::LogicalResult setBody(Type body) { return Base::mutate(body); }
+  ::llvm::LogicalResult setBody(Type body) { return Base::mutate(body); }
   ::mlir::Type getBody() const { return getImpl()->body; }
 
   /// Name/key getter.

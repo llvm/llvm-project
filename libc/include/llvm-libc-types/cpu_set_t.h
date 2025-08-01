@@ -6,8 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_CPU_SET_T_H
-#define __LLVM_LIBC_TYPES_CPU_SET_T_H
+#ifndef LLVM_LIBC_TYPES_CPU_SET_T_H
+#define LLVM_LIBC_TYPES_CPU_SET_T_H
+
+#define __CPU_SETSIZE 1024
+#define __NCPUBITS (8 * sizeof(unsigned long))
 
 typedef struct {
   // If a processor with more than 1024 CPUs is to be supported in future,
@@ -15,4 +18,4 @@ typedef struct {
   unsigned long __mask[128 / sizeof(unsigned long)];
 } cpu_set_t;
 
-#endif // __LLVM_LIBC_TYPES_CPU_SET_T_H
+#endif // LLVM_LIBC_TYPES_CPU_SET_T_H

@@ -75,9 +75,6 @@ public:
   /// address space.
   bool NVPTXUseShortPointers = false;
 
-  /// \brief If enabled, allow AMDGPU unsafe floating point atomics.
-  bool AllowAMDGPUUnsafeFPAtomics = false;
-
   /// \brief Code object version for AMDGPU.
   llvm::CodeObjectVersionKind CodeObjectVersion =
       llvm::CodeObjectVersionKind::COV_None;

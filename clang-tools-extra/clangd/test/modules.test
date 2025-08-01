@@ -1,0 +1,83 @@
+# A smoke test to check the modules can work basically.
+#
+# Windows have different escaping modes.
+# FIXME: We should add one for windows.
+# UNSUPPORTED: system-windows
+#
+# RUN: rm -fr %t
+# RUN: mkdir -p %t
+# RUN: split-file %s %t
+#
+# RUN: sed -e "s|DIR|%/t|g" %t/compile_commands.json.tmpl > %t/compile_commands.json.tmp
+# RUN: sed -e "s|CLANG_CC|%clang|g" %t/compile_commands.json.tmp > %t/compile_commands.json
+# RUN: sed -e "s|DIR|%/t|g" %t/definition.jsonrpc.tmpl > %t/definition.jsonrpc
+#
+# RUN: clangd -experimental-modules-support -lit-test < %t/definition.jsonrpc \
+# RUN:      | FileCheck -strict-whitespace %t/definition.jsonrpc
+
+#--- A.cppm
+export module A;
+export void printA() {}
+
+#--- Use.cpp
+import A;
+void foo() {
+    print
+}
+
+#--- compile_commands.json.tmpl
+[
+    {
+      "directory": "DIR",
+      "command": "CLANG_CC -fprebuilt-module-path=DIR -std=c++20 -o DIR/main.cpp.o -c DIR/Use.cpp",
+      "file": "DIR/Use.cpp"
+    },
+    {
+      "directory": "DIR",
+      "command": "CLANG_CC -std=c++20 DIR/A.cppm --precompile -o DIR/A.pcm",
+      "file": "DIR/A.cppm"
+    }
+]
+
+#--- definition.jsonrpc.tmpl
+{
+  "jsonrpc": "2.0",
+  "id": 0,
+  "method": "initialize",
+  "params": {
+    "processId": 123,
+    "rootPath": "clangd",
+    "capabilities": {
+      "textDocument": {
+        "completion": {
+          "completionItem": {
+            "snippetSupport": true
+          }
+        }
+      }
+    },
+    "trace": "off"
+  }
+}
+---
+{
+  "jsonrpc": "2.0",
+  "method": "textDocument/didOpen",
+  "params": {
+    "textDocument": {
+      "uri": "file://DIR/Use.cpp",
+      "languageId": "cpp",
+      "version": 1,
+      "text": "import A;\nvoid foo() {\n    print\n}\n"
+    }
+  }
+}
+
+# CHECK: "message"{{.*}}printA{{.*}}(fix available)
+
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/completion","params":{"textDocument":{"uri":"file://DIR/Use.cpp"},"context":{"triggerKind":1},"position":{"line":2,"character":6}}}
+---
+{"jsonrpc":"2.0","id":2,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}

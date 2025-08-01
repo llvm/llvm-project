@@ -1,4 +1,4 @@
-//===--- Interpreter.h - Incremental Compiation and Execution---*- C++ -*-===//
+//===------------ Value.cpp - Definition of interpreter value -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,14 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Interpreter/Value.h"
+#include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
 #include "clang/Interpreter/Interpreter.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_os_ostream.h"
 #include <cassert>
-#include <cstdint>
 #include <utility>
 
 using namespace clang;
@@ -61,7 +59,7 @@ public:
   void Release() {
     assert(RefCnt > 0 && "Can't release if reference count is already zero");
     if (--RefCnt == 0) {
-      // We hace a non-trivial dtor.
+      // We have a non-trivial dtor.
       if (Dtor && IsAlive()) {
         assert(Elements && "We at least should have 1 element in Value");
         size_t Stride = AllocSize / Elements;
@@ -97,6 +95,8 @@ private:
 };
 } // namespace
 
+namespace clang {
+
 static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
   if (Ctx.hasSameType(QT, Ctx.VoidTy))
     return Value::K_Void;
@@ -120,8 +120,9 @@ static Value::Kind ConvertQualTypeToKind(const ASTContext &Ctx, QualType QT) {
   }
 }
 
-Value::Value(Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
-  setKind(ConvertQualTypeToKind(getASTContext(), getType()));
+Value::Value(const Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
+  const ASTContext &C = getASTContext();
+  setKind(ConvertQualTypeToKind(C, getType()));
   if (ValueKind == K_PtrOrObj) {
     QualType Canon = getType().getCanonicalType();
     if ((Canon->isPointerType() || Canon->isObjectType() ||
@@ -130,7 +131,7 @@ Value::Value(Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
          Canon->isMemberPointerType())) {
       IsManuallyAlloc = true;
       // Compile dtor function.
-      Interpreter &Interp = getInterpreter();
+      const Interpreter &Interp = getInterpreter();
       void *DtorF = nullptr;
       size_t ElementsSize = 1;
       QualType DtorTy = getType();
@@ -231,14 +232,13 @@ void *Value::getPtr() const {
   return Data.m_Ptr;
 }
 
-QualType Value::getType() const {
-  return QualType::getFromOpaquePtr(OpaqueType);
+void Value::setRawBits(void *Ptr, unsigned NBits /*= sizeof(Storage)*/) {
+  assert(NBits <= sizeof(Storage) && "Greater than the total size");
+  memcpy(/*dest=*/Data.m_RawBits, /*src=*/Ptr, /*nbytes=*/NBits / 8);
 }
 
-Interpreter &Value::getInterpreter() {
-  assert(Interp != nullptr &&
-         "Can't get interpreter from a default constructed value");
-  return *Interp;
+QualType Value::getType() const {
+  return QualType::getFromOpaquePtr(OpaqueType);
 }
 
 const Interpreter &Value::getInterpreter() const {
@@ -247,8 +247,6 @@ const Interpreter &Value::getInterpreter() const {
   return *Interp;
 }
 
-ASTContext &Value::getASTContext() { return getInterpreter().getASTContext(); }
-
 const ASTContext &Value::getASTContext() const {
   return getInterpreter().getASTContext();
 }
@@ -256,12 +254,32 @@ const ASTContext &Value::getASTContext() const {
 void Value::dump() const { print(llvm::outs()); }
 
 void Value::printType(llvm::raw_ostream &Out) const {
-  Out << "Not implement yet.\n";
+  Out << Interp->ValueTypeToString(*this);
 }
+
 void Value::printData(llvm::raw_ostream &Out) const {
-  Out << "Not implement yet.\n";
+  Out << Interp->ValueDataToString(*this);
 }
+// FIXME: We do not support the multiple inheritance case where one of the base
+// classes has a pretty-printer and the other does not.
 void Value::print(llvm::raw_ostream &Out) const {
   assert(OpaqueType != nullptr && "Can't print default Value");
-  Out << "Not implement yet.\n";
+
+  // Don't even try to print a void or an invalid type, it doesn't make sense.
+  if (getType()->isVoidType() || !isValid())
+    return;
+
+  // We need to get all the results together then print it, since `printType` is
+  // much faster than `printData`.
+  std::string Str;
+  llvm::raw_string_ostream SS(Str);
+
+  SS << "(";
+  printType(SS);
+  SS << ") ";
+  printData(SS);
+  SS << "\n";
+  Out << Str;
 }
+
+} // namespace clang

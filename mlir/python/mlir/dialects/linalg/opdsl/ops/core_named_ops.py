@@ -22,21 +22,6 @@ def copy(
 
 
 @linalg_structured_op
-def elemwise_unary(
-    I=TensorDef(T1),
-    O=TensorDef(U, output=True),
-    fun=UnaryFnAttrDef(default=UnaryFn.exp),
-    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
-):
-    """Applies the unary function fun elementwise.
-
-    Numeric casting is performed on the input operand, promoting it to the same
-    data type as the accumulator/output.
-    """
-    O[None] = fun(cast(U, I[None]))
-
-
-@linalg_structured_op
 def exp(
     I=TensorDef(T1),
     O=TensorDef(T1, output=True),
@@ -96,7 +81,7 @@ def floor(
     O[None] = UnaryFn.floor(I[None])
 
 
-@linalg_structured_op
+@linalg_structured_op(op_class_name="NegFOp")
 def negf(
     I=TensorDef(T1),
     O=TensorDef(T1, output=True),
@@ -108,20 +93,88 @@ def negf(
     O[None] = UnaryFn.negf(I[None])
 
 
-@linalg_structured_op
-def elemwise_binary(
-    lhs=TensorDef(T1),
-    rhs=TensorDef(T2),
-    O=TensorDef(U, output=True),
-    fun=BinaryFnAttrDef(default=BinaryFn.add),
-    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
+@linalg_structured_op(op_class_name="ReciprocalOp")
+def reciprocal(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
 ):
-    """Applies the binary function fun elementwise.
+    """Applies reciprocal(x) elementwise.
 
-    Numeric casting is performed on the input operand, promoting it to the same
-    data type as the accumulator/output.
+    No numeric casting is performed on the input operand.
     """
-    O[None] = fun(cast(U, lhs[None]), cast(U, rhs[None]))
+    O[None] = UnaryFn.reciprocal(I[None])
+
+
+@linalg_structured_op
+def round(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies round(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.round(I[None])
+
+
+@linalg_structured_op
+def sqrt(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies sqrt(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.sqrt(I[None])
+
+
+@linalg_structured_op
+def rsqrt(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies rsqrt(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.rsqrt(I[None])
+
+
+@linalg_structured_op
+def square(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies square(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.square(I[None])
+
+
+@linalg_structured_op
+def tanh(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies tanh(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.tanh(I[None])
+
+
+@linalg_structured_op
+def erf(
+    I=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Applies erf(x) elementwise.
+
+    No numeric casting is performed on the input operand.
+    """
+    O[None] = UnaryFn.erf(I[None])
 
 
 @linalg_structured_op
@@ -233,45 +286,70 @@ def max(
 
     This means reduction/broadcast/element cast semantics is explicit. Further
     passes can take that into account when lowering this code. For example,
-    a `linalg.broadcast` + `linalg.div` sequence can be lowered to a
+    a `linalg.broadcast` + `linalg.max` sequence can be lowered to a
     `linalg.generic` with different affine maps for the two operands.
     """
     O[None] = BinaryFn.max_signed(lhs[None], rhs[None])
 
 
 @linalg_structured_op
-def matmul(
-    A=TensorDef(T1, S.M, S.K),
-    B=TensorDef(T2, S.K, S.N),
-    C=TensorDef(U, S.M, S.N, output=True),
-    cast=TypeFnAttrDef(default=TypeFn.cast_signed),
+def min(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
 ):
-    """Performs a matrix multiplication of two 2D inputs.
+    """Takes the min (signed) between two inputs, elementwise.
 
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.min` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
     """
-    domain(D.m, D.n, D.k)
-    implements(ContractionOpInterface)
-    C[D.m, D.n] += cast(U, A[D.m, D.k]) * cast(U, B[D.k, D.n])
+    O[None] = BinaryFn.min_signed(lhs[None], rhs[None])
+
+
+@linalg_structured_op(op_class_name="PowFOp")
+def powf(
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
+):
+    """Takes the powf(lhs, rhs) between two inputs, elementwise. For powf(arg, 2) use `linalg.square`.
+
+    Only applies to floating point values.
+
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.powf` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
+    """
+    O[None] = BinaryFn.powf(lhs[None], rhs[None])
 
 
 @linalg_structured_op
-def matmul_unsigned(
-    A=TensorDef(T1, S.M, S.K),
-    B=TensorDef(T2, S.K, S.N),
-    C=TensorDef(U, S.M, S.N, output=True),
+def select(
+    cond=TensorDef(U),
+    lhs=TensorDef(T1),
+    rhs=TensorDef(T1),
+    O=TensorDef(T1, output=True),
 ):
-    """Performs an unsigned matrix multiplication of two 2D inputs.
+    """Chooses one value based on a binary condition supplied as its first operand.
 
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
+    The shapes and element types must be identical. The appropriate casts,
+    broadcasts and reductions should be done previously to calling this op.
+
+    This means reduction/broadcast/element cast semantics is explicit. Further
+    passes can take that into account when lowering this code. For example,
+    a `linalg.broadcast` + `linalg.select` sequence can be lowered to a
+    `linalg.generic` with different affine maps for the two operands.
     """
-    domain(D.m, D.n, D.k)
-    implements(ContractionOpInterface)
-    C[D.m, D.n] += TypeFn.cast_unsigned(U, A[D.m, D.k]) * TypeFn.cast_unsigned(
-        U, B[D.k, D.n]
-    )
+    O[None] = TernaryFn.select(cond[None], lhs[None], rhs[None])
 
 
 @linalg_structured_op
@@ -376,24 +454,6 @@ def batch_mmt4d(
 
 
 @linalg_structured_op
-def batch_matmul(
-    A=TensorDef(T1, Batch, S.M, S.K),
-    B=TensorDef(T2, Batch, S.K, S.N),
-    C=TensorDef(U, Batch, S.M, S.N, output=True),
-):
-    """Performs a batched matrix multiplication of two 3D inputs.
-
-    Numeric casting is performed on the operands to the inner multiply, promoting
-    them to the same data type as the accumulator/output.
-    """
-    domain(D.b, D.m, D.n, D.k)
-    implements(ContractionOpInterface)
-    C[D.b, D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
-        U, B[D.b, D.k, D.n]
-    )
-
-
-@linalg_structured_op
 def batch_matmul_transpose_a(
     A=TensorDef(T1, Batch, S.K, S.M),
     B=TensorDef(T2, Batch, S.K, S.N),
@@ -466,8 +526,8 @@ def batch_reduce_matmul(
     """
     domain(D.b, D.m, D.n, D.k)
     implements(ContractionOpInterface)
-    C[D.m, D.n] += TypeFn.cast_signed(
-        U, A[D.b, D.m, D.k] * TypeFn.cast_signed(U, B[D.b, D.k, D.n])
+    C[D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k]) * TypeFn.cast_signed(
+        U, B[D.b, D.k, D.n]
     )
 
 
@@ -751,6 +811,35 @@ def conv_2d_nhwc_fhwc_q(
 
 
 @linalg_structured_op
+def conv_2d_nchw_fchw_q(
+    I=TensorDef(T1, S.N, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW),
+    K=TensorDef(T2, S.F, S.C, S.KH, S.KW),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.F, S.OH, S.OW, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D convolution with zero point offsets.
+
+    Layout:
+      * Input: NCHW.
+      * Kernel: FCHW.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output. This includes the zero
+    point offsets common to quantized operations.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.f, D.oh, D.ow, D.c, D.kh, D.kw)
+    O[D.n, D.f, D.oh, D.ow] += (
+        TypeFn.cast_signed(
+            U, I[D.n, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW]
+        )
+        - TypeFn.cast_signed(U, IZp)
+    ) * (TypeFn.cast_signed(U, K[D.f, D.c, D.kh, D.kw]) - TypeFn.cast_signed(U, KZp))
+
+@linalg_structured_op
 def conv_2d_nchw_fchw(
     I=TensorDef(T1, S.N, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW),
     K=TensorDef(T2, S.F, S.C, S.KH, S.KW),
@@ -824,6 +913,102 @@ def conv_2d_ngchw_gfchw(
     O[D.n, D.g, D.fg, D.oh, D.ow] += TypeFn.cast_signed(
         U, I[D.n, D.g, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW]
     ) * TypeFn.cast_signed(U, K[D.g, D.fg, D.c, D.kh, D.kw])
+
+
+@linalg_structured_op
+def conv_2d_nhwgc_gfhwc(
+    I=TensorDef(
+        T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.G, S.C
+    ),
+    K=TensorDef(T2, S.G, S.FG, S.KH, S.KW, S.C),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.G, S.FG, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D grouped convolution.
+
+    Layout:
+      * Input: NHWGC.
+      * Kernel: GFHWC.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.oh, D.ow, D.g, D.fg, D.kh, D.kw, D.c)
+    O[D.n, D.oh, D.ow, D.g, D.fg] += TypeFn.cast_signed(
+        U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.g, D.c]
+    ) * TypeFn.cast_signed(U, K[D.g, D.fg, D.kh, D.kw, D.c])
+
+
+@linalg_structured_op
+def conv_2d_nhwgc_gfhwc_q(
+    I=TensorDef(
+        T1, S.N, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW, S.G, S.C
+    ),
+    K=TensorDef(T2, S.G, S.FG, S.KH, S.KW, S.C),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.OH, S.OW, S.G, S.FG, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D grouped convolution with zero point offsets.
+
+    Layout:
+      * Input: NHWGC.
+      * Kernel: GFHWC.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output. This includes the zero
+    point offsets common to quantized operations.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.oh, D.ow, D.g, D.fg, D.kh, D.kw, D.c)
+    O[D.n, D.oh, D.ow, D.g, D.fg] += (
+        TypeFn.cast_signed(
+            U, I[D.n, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW, D.g, D.c]
+        )
+        - TypeFn.cast_signed(U, IZp)
+    ) * (
+        TypeFn.cast_signed(U, K[D.g, D.fg, D.kh, D.kw, D.c])
+        - TypeFn.cast_signed(U, KZp)
+    )
+
+
+@linalg_structured_op
+def conv_2d_ngchw_gfchw_q(
+    I=TensorDef(
+        T1, S.N, S.G, S.C, S.OH * S.SH + S.KH * S.DH, S.OW * S.SW + S.KW * S.DW
+    ),
+    K=TensorDef(T2, S.G, S.FG, S.C, S.KH, S.KW),
+    IZp=ScalarDef(I32),
+    KZp=ScalarDef(I32),
+    O=TensorDef(U, S.N, S.G, S.FG, S.OH, S.OW, output=True),
+    strides=IndexAttrDef(S.SH, S.SW, default=[1, 1]),
+    dilations=IndexAttrDef(S.DH, S.DW, default=[1, 1]),
+):
+    """Performs 2-D grouped convolution with zero-point offsets.
+
+    Layout:
+      * Input: NGCHW.
+      * Kernel: GFCHW.
+
+    Numeric casting is performed on the operands to the inner multiply, promoting
+    them to the same data type as the accumulator/output. This includes the zero
+    point offsets common to quantized operations.
+    """
+    implements(ConvolutionOpInterface)
+    domain(D.n, D.g, D.fg, D.oh, D.ow, D.c, D.kh, D.kw)
+    O[D.n, D.g, D.fg, D.oh, D.ow] += (
+        TypeFn.cast_signed(
+            U, I[D.n, D.g, D.c, D.oh * S.SH + D.kh * S.DH, D.ow * S.SW + D.kw * S.DW]
+        )
+        - TypeFn.cast_signed(U, IZp)
+    ) * (
+        TypeFn.cast_signed(U, K[D.g, D.fg, D.c, D.kh, D.kw])
+        - TypeFn.cast_signed(U, KZp)
+    )
 
 
 @linalg_structured_op
@@ -924,7 +1109,7 @@ def conv_3d_ncdhw_fcdhw(
     them to the same data type as the accumulator/output.
     """
     implements(ConvolutionOpInterface)
-    domain(D.n, D.od, D.oh, D.ow, D.f, D.kd, D.kh, D.kw, D.c)
+    domain(D.n, D.f, D.od, D.oh, D.ow, D.c, D.kd, D.kh, D.kw)
     O[D.n, D.f, D.od, D.oh, D.ow] += TypeFn.cast_signed(
         U,
         I[

@@ -27,14 +27,15 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __partition_point {
-
-struct __fn {
+struct __partition_point {
   // TODO(ranges): delegate to the classic algorithm.
   template <class _Iter, class _Sent, class _Proj, class _Pred>
   _LIBCPP_HIDE_FROM_ABI constexpr static _Iter
@@ -74,15 +75,15 @@ struct __fn {
   }
 };
 
-} // namespace __partition_point
-
 inline namespace __cpo {
-inline constexpr auto partition_point = __partition_point::__fn{};
+inline constexpr auto partition_point = __partition_point{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_PARTITION_POINT_H

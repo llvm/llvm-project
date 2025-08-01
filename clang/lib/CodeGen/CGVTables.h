@@ -38,10 +38,10 @@ class CodeGenVTables {
   typedef VTableLayout::AddressPointsMapTy VTableAddressPointsMapTy;
 
   typedef std::pair<const CXXRecordDecl *, BaseSubobject> BaseSubobjectPairTy;
-  typedef llvm::DenseMap<BaseSubobjectPairTy, uint64_t> SubVTTIndiciesMapTy;
+  typedef llvm::DenseMap<BaseSubobjectPairTy, uint64_t> SubVTTIndicesMapTy;
 
-  /// SubVTTIndicies - Contains indices into the various sub-VTTs.
-  SubVTTIndiciesMapTy SubVTTIndicies;
+  /// SubVTTIndices - Contains indices into the various sub-VTTs.
+  SubVTTIndicesMapTy SubVTTIndices;
 
   typedef llvm::DenseMap<BaseSubobjectPairTy, uint64_t>
     SecondaryVirtualPointerIndicesMapTy;
@@ -74,10 +74,6 @@ class CodeGenVTables {
                             unsigned vtableAddressPoint,
                             bool vtableHasLocalLinkage,
                             bool isCompleteDtor) const;
-
-  bool useRelativeLayout() const;
-
-  llvm::Type *getVTableComponentType() const;
 
 public:
   /// Add vtable components for the given vtable layout to the given
@@ -151,6 +147,12 @@ public:
 
   /// Specify a global should not be instrumented with hwasan.
   void RemoveHwasanMetadata(llvm::GlobalValue *GV) const;
+
+  /// Return the type used as components for a vtable.
+  llvm::Type *getVTableComponentType() const;
+
+  /// Return true if the relative vtable layout is used.
+  bool useRelativeLayout() const;
 };
 
 } // end namespace CodeGen

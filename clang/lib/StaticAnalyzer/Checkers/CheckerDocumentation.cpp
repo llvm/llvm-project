@@ -16,7 +16,6 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 
 using namespace clang;
 using namespace ento;
@@ -33,30 +32,37 @@ namespace ento {
 /// checking.
 ///
 /// \sa CheckerContext
-class CheckerDocumentation : public Checker< check::PreStmt<ReturnStmt>,
-                                       check::PostStmt<DeclStmt>,
-                                       check::PreObjCMessage,
-                                       check::PostObjCMessage,
-                                       check::ObjCMessageNil,
-                                       check::PreCall,
-                                       check::PostCall,
-                                       check::BranchCondition,
-                                       check::NewAllocator,
-                                       check::Location,
-                                       check::Bind,
-                                       check::DeadSymbols,
-                                       check::BeginFunction,
-                                       check::EndFunction,
-                                       check::EndAnalysis,
-                                       check::EndOfTranslationUnit,
-                                       eval::Call,
-                                       eval::Assume,
-                                       check::LiveSymbols,
-                                       check::RegionChanges,
-                                       check::PointerEscape,
-                                       check::ConstPointerEscape,
-                                       check::Event<ImplicitNullDerefEvent>,
-                                       check::ASTDecl<FunctionDecl> > {
+class CheckerDocumentation
+    : public Checker<
+          // clang-format off
+          check::ASTCodeBody,
+          check::ASTDecl<FunctionDecl>,
+          check::BeginFunction,
+          check::Bind,
+          check::BlockEntrance,
+          check::BranchCondition,
+          check::ConstPointerEscape,
+          check::DeadSymbols,
+          check::EndAnalysis,
+          check::EndFunction,
+          check::EndOfTranslationUnit,
+          check::Event<ImplicitNullDerefEvent>,
+          check::LiveSymbols,
+          check::Location,
+          check::NewAllocator,
+          check::ObjCMessageNil,
+          check::PointerEscape,
+          check::PostCall,
+          check::PostObjCMessage,
+          check::PostStmt<DeclStmt>,
+          check::PreCall,
+          check::PreObjCMessage,
+          check::PreStmt<ReturnStmt>,
+          check::RegionChanges,
+          eval::Assume,
+          eval::Call
+          // clang-format on
+          > {
 public:
   /// Pre-visit the Statement.
   ///
@@ -123,7 +129,20 @@ public:
   /// check::PostCall
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const {}
 
-  /// Pre-visit of the condition statement of a branch (such as IfStmt).
+  /// Pre-visit of the condition statement of a branch.
+  /// For example:
+  ///  - logical operators (&&, ||)
+  ///  - if, do, while, for, ranged-for statements
+  ///  - ternary operators (?:), gnu conditionals, gnu choose expressions
+  /// Interestingly, switch statements don't seem to trigger BranchCondition.
+  ///
+  /// check::BlockEntrance is a similar callback, which is strictly more
+  /// generic. Prefer check::BranchCondition to check::BlockEntrance if
+  /// pre-visiting conditional statements is enough for the checker.
+  /// Note that check::BlockEntrance is also invoked for leaving basic blocks
+  /// while entering the next.
+  ///
+  /// check::BranchCondition
   void checkBranchCondition(const Stmt *Condition, CheckerContext &Ctx) const {}
 
   /// Post-visit the C++ operator new's allocation call.
@@ -137,10 +156,7 @@ public:
   /// (2) and (3). Post-call for the allocator is called after step (1).
   /// Pre-statement for the new-expression is called on step (4) when the value
   /// of the expression is evaluated.
-  /// \param NE     The C++ new-expression that triggered the allocation.
-  /// \param Target The allocated region, casted to the class type.
-  void checkNewAllocator(const CXXNewExpr *NE, SVal Target,
-                         CheckerContext &) const {}
+  void checkNewAllocator(const CXXAllocatorCall &, CheckerContext &) const {}
 
   /// Called on a load from and a store to a location.
   ///
@@ -162,6 +178,29 @@ public:
   ///
   /// check::Bind
   void checkBind(SVal Loc, SVal Val, const Stmt *S, CheckerContext &) const {}
+
+  /// Called after a CFG edge is taken within a function.
+  ///
+  /// This callback can be used to obtain information about potential branching
+  /// points or any other constructs that involve traversing a CFG edge.
+  ///
+  /// check::BranchCondition is a similar callback, which is only invoked for
+  /// pre-visiting the condition statement of a branch. Prefer that callback if
+  /// possible.
+  ///
+  /// \remark There is no CFG edge from the caller to a callee, consequently
+  /// this callback is not invoked for "inlining" a function call.
+  /// \remark Once a function call is inlined, we will start from the imaginary
+  /// "entry" basic block of that CFG. This callback will be invoked for
+  /// entering the real first basic block of the "inlined" function body from
+  /// that "entry" basic block.
+  /// \remark This callback is also invoked for entering the imaginary "exit"
+  /// basic block of the CFG when returning from a function.
+  ///
+  /// \param E The ProgramPoint that describes the transition.
+  ///
+  /// check::BlockEntrance
+  void checkBlockEntrance(const BlockEntrance &E, CheckerContext &) const {}
 
   /// Called whenever a symbol becomes dead.
   ///
@@ -226,7 +265,7 @@ public:
   /// first one wins.
   ///
   /// eval::Call
-  bool evalCall(const CallExpr *CE, CheckerContext &C) const { return true; }
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const { return true; }
 
   /// Handles assumptions on symbolic values.
   ///
@@ -324,10 +363,25 @@ public:
   void checkASTDecl(const FunctionDecl *D,
                     AnalysisManager &Mgr,
                     BugReporter &BR) const {}
+
+  /// Check every declaration that has a statement body in the AST.
+  ///
+  /// As AST traversal callback, which should only be used when the checker is
+  /// not path sensitive. It will be called for every Declaration in the AST.
+  void checkASTCodeBody(const Decl *D, AnalysisManager &Mgr,
+                        BugReporter &BR) const {}
 };
 
 void CheckerDocumentation::checkPostStmt(const DeclStmt *DS,
                                          CheckerContext &C) const {
+}
+
+void registerCheckerDocumentationChecker(CheckerManager &Mgr) {
+  Mgr.registerChecker<CheckerDocumentation>();
+}
+
+bool shouldRegisterCheckerDocumentationChecker(const CheckerManager &) {
+  return false;
 }
 
 } // end namespace ento

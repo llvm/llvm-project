@@ -368,7 +368,7 @@ GraphRenderer::TimeStat::getString(GraphRenderer::StatType T) const {
                             static_cast<int>(GraphRenderer::StatType::MIN)];
     break;
   }
-  return S.str();
+  return St;
 }
 
 // Returns the quotient between the property T of this and another TimeStat as

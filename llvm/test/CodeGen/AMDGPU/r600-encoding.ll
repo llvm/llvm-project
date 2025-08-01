@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=r600 -show-mc-encoding -mcpu=redwood | FileCheck --check-prefix=EG %s
-; RUN: llc < %s -march=r600 -show-mc-encoding -mcpu=rs880 | FileCheck --check-prefix=R600 %s
+; RUN: llc < %s -mtriple=r600 -show-mc-encoding -mcpu=redwood | FileCheck --check-prefix=EG %s
+; RUN: llc < %s -mtriple=r600 -show-mc-encoding -mcpu=rs880 | FileCheck --check-prefix=R600 %s
 
 ; The earliest R600 GPUs have a slightly different encoding than the rest of
 ; the VLIW4/5 GPUs.
@@ -15,7 +15,7 @@ entry:
   %r0 = extractelement <4 x float> %reg0, i32 0
   %r1 = extractelement <4 x float> %reg0, i32 1
   %r2 = fmul float %r0, %r1
-  %vec = insertelement <4 x float> undef, float %r2, i32 0
+  %vec = insertelement <4 x float> poison, float %r2, i32 0
   call void @llvm.r600.store.swizzle(<4 x float> %vec, i32 0, i32 0)
   ret void
 }

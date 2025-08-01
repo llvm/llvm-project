@@ -100,32 +100,31 @@ private:
 };
 
 const SmallVector<ValistChecker::VAListAccepter, 15>
-    ValistChecker::VAListAccepters = {{{{"vfprintf"}, 3}, 2},
-                                      {{{"vfscanf"}, 3}, 2},
-                                      {{{"vprintf"}, 2}, 1},
-                                      {{{"vscanf"}, 2}, 1},
-                                      {{{"vsnprintf"}, 4}, 3},
-                                      {{{"vsprintf"}, 3}, 2},
-                                      {{{"vsscanf"}, 3}, 2},
-                                      {{{"vfwprintf"}, 3}, 2},
-                                      {{{"vfwscanf"}, 3}, 2},
-                                      {{{"vwprintf"}, 2}, 1},
-                                      {{{"vwscanf"}, 2}, 1},
-                                      {{{"vswprintf"}, 4}, 3},
+    ValistChecker::VAListAccepters = {{{CDM::CLibrary, {"vfprintf"}, 3}, 2},
+                                      {{CDM::CLibrary, {"vfscanf"}, 3}, 2},
+                                      {{CDM::CLibrary, {"vprintf"}, 2}, 1},
+                                      {{CDM::CLibrary, {"vscanf"}, 2}, 1},
+                                      {{CDM::CLibrary, {"vsnprintf"}, 4}, 3},
+                                      {{CDM::CLibrary, {"vsprintf"}, 3}, 2},
+                                      {{CDM::CLibrary, {"vsscanf"}, 3}, 2},
+                                      {{CDM::CLibrary, {"vfwprintf"}, 3}, 2},
+                                      {{CDM::CLibrary, {"vfwscanf"}, 3}, 2},
+                                      {{CDM::CLibrary, {"vwprintf"}, 2}, 1},
+                                      {{CDM::CLibrary, {"vwscanf"}, 2}, 1},
+                                      {{CDM::CLibrary, {"vswprintf"}, 4}, 3},
                                       // vswprintf is the wide version of
                                       // vsnprintf, vsprintf has no wide version
-                                      {{{"vswscanf"}, 3}, 2}};
+                                      {{CDM::CLibrary, {"vswscanf"}, 3}, 2}};
 
-const CallDescription ValistChecker::VaStart({"__builtin_va_start"}, /*Args=*/2,
+const CallDescription ValistChecker::VaStart(CDM::CLibrary,
+                                             {"__builtin_va_start"}, /*Args=*/2,
                                              /*Params=*/1),
-    ValistChecker::VaCopy({"__builtin_va_copy"}, 2),
-    ValistChecker::VaEnd({"__builtin_va_end"}, 1);
+    ValistChecker::VaCopy(CDM::CLibrary, {"__builtin_va_copy"}, 2),
+    ValistChecker::VaEnd(CDM::CLibrary, {"__builtin_va_end"}, 1);
 } // end anonymous namespace
 
 void ValistChecker::checkPreCall(const CallEvent &Call,
                                  CheckerContext &C) const {
-  if (!Call.isGlobalCFunction())
-    return;
   if (VaStart.matches(Call))
     checkVAListStartCall(Call, C, false);
   else if (VaCopy.matches(Call))
@@ -273,12 +272,12 @@ void ValistChecker::reportLeakedVALists(const RegionVector &LeakedVALists,
     if (!BT_leakedvalist) {
       // FIXME: maybe creating a new check name for this type of bug is a better
       // solution.
-      BT_leakedvalist.reset(
-          new BugType(CheckNames[CK_Unterminated].getName().empty()
-                          ? CheckNames[CK_Uninitialized]
-                          : CheckNames[CK_Unterminated],
-                      "Leaked va_list", categories::MemoryError,
-                      /*SuppressOnSink=*/true));
+      BT_leakedvalist.reset(new BugType(
+          static_cast<StringRef>(CheckNames[CK_Unterminated]).empty()
+              ? CheckNames[CK_Uninitialized]
+              : CheckNames[CK_Unterminated],
+          "Leaked va_list", categories::MemoryError,
+          /*SuppressOnSink=*/true));
     }
 
     const ExplodedNode *StartNode = getStartCallSite(N, Reg);

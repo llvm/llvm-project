@@ -11,7 +11,6 @@
 #include "MachOObject.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/Object/MachO.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SHA256.h"
@@ -113,7 +112,7 @@ size_t MachOWriter::totalSize() const {
     for (const std::unique_ptr<Section> &S : LC.Sections) {
       if (!S->hasValidOffset()) {
         assert((S->Offset == 0) && "Skipped section's offset must be zero");
-        assert((S->isVirtualSection() || S->Size == 0) &&
+        assert((S->isBssSection() || S->Size == 0) &&
                "Non-zero-fill sections with zero offset must have zero size");
         continue;
       }
@@ -126,7 +125,7 @@ size_t MachOWriter::totalSize() const {
     }
 
   if (!Ends.empty())
-    return *std::max_element(Ends.begin(), Ends.end());
+    return *llvm::max_element(Ends);
 
   // Otherwise, we have only Mach header and load commands.
   return headerSize() + loadCommandsSize();
@@ -241,7 +240,7 @@ void MachOWriter::writeSections() {
     for (const std::unique_ptr<Section> &Sec : LC.Sections) {
       if (!Sec->hasValidOffset()) {
         assert((Sec->Offset == 0) && "Skipped section's offset must be zero");
-        assert((Sec->isVirtualSection() || Sec->Size == 0) &&
+        assert((Sec->isBssSection() || Sec->Size == 0) &&
                "Non-zero-fill sections with zero offset must have zero size");
         continue;
       }

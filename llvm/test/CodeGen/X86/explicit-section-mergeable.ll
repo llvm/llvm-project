@@ -139,9 +139,9 @@
 !4 = !{ptr @implicit_rodata_cst4}
 
 ;; Test implicit section assignment for globals in distinct comdat groups.
-; CHECK: .section .rodata.cst4,"aGM",@progbits,4,f,comdat,unique,[[#U+7]]
+; CHECK: .section .rodata.cst4,"aMG",@progbits,4,f,comdat,unique,[[#U+7]]
 ; CHECK: implicit_rodata_cst4_comdat:
-; CHECK: .section .rodata.cst8,"aGM",@progbits,8,g,comdat,unique,[[#U+8]]
+; CHECK: .section .rodata.cst8,"aMG",@progbits,8,g,comdat,unique,[[#U+8]]
 ; CHECK: implicit_rodata_cst8_comdat:
 
 ;; Check that globals in distinct comdat groups that are explicitly assigned
@@ -153,11 +153,11 @@
 ;; are incorrect.
 ; CHECK: .section .explicit_comdat_distinct,"aM",@progbits,4,unique,[[#U+9]]
 ; CHECK: explicit_comdat_distinct_supply_uid:
-; CHECK: .section .explicit_comdat_distinct,"aGM",@progbits,4,f,comdat,unique,[[#U+10]]
+; CHECK: .section .explicit_comdat_distinct,"aMG",@progbits,4,f,comdat,unique,[[#U+10]]
 ; CHECK: explicit_comdat_distinct1:
-; CHECK: .section .explicit_comdat_distinct,"aGM",@progbits,4,g,comdat,unique,[[#U+10]]
+; CHECK: .section .explicit_comdat_distinct,"aMG",@progbits,4,g,comdat,unique,[[#U+10]]
 ; CHECK: explicit_comdat_distinct2:
-; CHECK: .section .explicit_comdat_distinct,"aGM",@progbits,8,h,comdat,unique,[[#U+11]]
+; CHECK: .section .explicit_comdat_distinct,"aMG",@progbits,8,h,comdat,unique,[[#U+11]]
 ; CHECK: explicit_comdat_distinct3:
 
 $f = comdat any
@@ -173,9 +173,9 @@ $h = comdat any
 @explicit_comdat_distinct3 = unnamed_addr constant [2 x i32] [i32 1, i32 1], section ".explicit_comdat_distinct", comdat($h)
 
 ;; Test implicit section assignment for globals in the same comdat group.
-; CHECK: .section .rodata.cst4,"aGM",@progbits,4,i,comdat,unique,[[#U+12]]
+; CHECK: .section .rodata.cst4,"aMG",@progbits,4,i,comdat,unique,[[#U+12]]
 ; CHECK: implicit_rodata_cst4_same_comdat:
-; CHECK: .section .rodata.cst8,"aGM",@progbits,8,i,comdat,unique,[[#U+13]]
+; CHECK: .section .rodata.cst8,"aMG",@progbits,8,i,comdat,unique,[[#U+13]]
 ; CHECK: implicit_rodata_cst8_same_comdat:
 
 ;; Check that globals in the same comdat group that are explicitly assigned
@@ -187,10 +187,10 @@ $h = comdat any
 ;; are incorrect.
 ; CHECK: .section .explicit_comdat_same,"aM",@progbits,4,unique,[[#U+14]]
 ; CHECK: explicit_comdat_same_supply_uid:
-; CHECK: .section .explicit_comdat_same,"aGM",@progbits,4,i,comdat,unique,[[#U+15]]
+; CHECK: .section .explicit_comdat_same,"aMG",@progbits,4,i,comdat,unique,[[#U+15]]
 ; CHECK: explicit_comdat_same1:
 ; CHECK: explicit_comdat_same2:
-; CHECK: .section .explicit_comdat_same,"aGM",@progbits,8,i,comdat,unique,[[#U+16]]
+; CHECK: .section .explicit_comdat_same,"aMG",@progbits,8,i,comdat,unique,[[#U+16]]
 ; CHECK: explicit_comdat_same3:
 
 $i = comdat any

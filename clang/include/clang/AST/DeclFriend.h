@@ -52,7 +52,7 @@ class ASTContext;
 class FriendDecl final
     : public Decl,
       private llvm::TrailingObjects<FriendDecl, TemplateParameterList *> {
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   using FriendUnion = llvm::PointerUnion<NamedDecl *, TypeSourceInfo *>;
@@ -70,6 +70,9 @@ private:
   // Location of the 'friend' specifier.
   SourceLocation FriendLoc;
 
+  // Location of the '...', if present.
+  SourceLocation EllipsisLoc;
+
   /// True if this 'friend' declaration is unsupported.  Eventually we
   /// will support every possible friend declaration, but for now we
   /// silently ignore some and set this flag to authorize all access.
@@ -82,12 +85,12 @@ private:
   unsigned NumTPLists : 31;
 
   FriendDecl(DeclContext *DC, SourceLocation L, FriendUnion Friend,
-             SourceLocation FriendL,
+             SourceLocation FriendL, SourceLocation EllipsisLoc,
              ArrayRef<TemplateParameterList *> FriendTypeTPLists)
       : Decl(Decl::Friend, DC, L), Friend(Friend), FriendLoc(FriendL),
-        UnsupportedFriend(false), NumTPLists(FriendTypeTPLists.size()) {
-    for (unsigned i = 0; i < NumTPLists; ++i)
-      getTrailingObjects<TemplateParameterList *>()[i] = FriendTypeTPLists[i];
+        EllipsisLoc(EllipsisLoc), UnsupportedFriend(false),
+        NumTPLists(FriendTypeTPLists.size()) {
+    llvm::copy(FriendTypeTPLists, getTrailingObjects());
   }
 
   FriendDecl(EmptyShell Empty, unsigned NumFriendTypeTPLists)
@@ -110,9 +113,9 @@ public:
 
   static FriendDecl *
   Create(ASTContext &C, DeclContext *DC, SourceLocation L, FriendUnion Friend_,
-         SourceLocation FriendL,
-         ArrayRef<TemplateParameterList *> FriendTypeTPLists = std::nullopt);
-  static FriendDecl *CreateDeserialized(ASTContext &C, unsigned ID,
+         SourceLocation FriendL, SourceLocation EllipsisLoc = {},
+         ArrayRef<TemplateParameterList *> FriendTypeTPLists = {});
+  static FriendDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                         unsigned FriendTypeNumTPLists);
 
   /// If this friend declaration names an (untemplated but possibly
@@ -128,8 +131,7 @@ public:
   }
 
   TemplateParameterList *getFriendTypeTemplateParameterList(unsigned N) const {
-    assert(N < NumTPLists);
-    return getTrailingObjects<TemplateParameterList *>()[N];
+    return getTrailingObjects(NumTPLists)[N];
   }
 
   /// If this friend declaration doesn't name a type, return the inner
@@ -143,8 +145,23 @@ public:
     return FriendLoc;
   }
 
+  /// Retrieves the location of the '...', if present.
+  SourceLocation getEllipsisLoc() const { return EllipsisLoc; }
+
   /// Retrieves the source range for the friend declaration.
   SourceRange getSourceRange() const override LLVM_READONLY {
+    if (TypeSourceInfo *TInfo = getFriendType()) {
+      SourceLocation StartL = (NumTPLists == 0)
+                                  ? getFriendLoc()
+                                  : getTrailingObjects()[0]->getTemplateLoc();
+      SourceLocation EndL = isPackExpansion() ? getEllipsisLoc()
+                                              : TInfo->getTypeLoc().getEndLoc();
+      return SourceRange(StartL, EndL);
+    }
+
+    if (isPackExpansion())
+      return SourceRange(getFriendLoc(), getEllipsisLoc());
+
     if (NamedDecl *ND = getFriendDecl()) {
       if (const auto *FD = dyn_cast<FunctionDecl>(ND))
         return FD->getSourceRange();
@@ -158,15 +175,8 @@ public:
       }
       return SourceRange(getFriendLoc(), ND->getEndLoc());
     }
-    else if (TypeSourceInfo *TInfo = getFriendType()) {
-      SourceLocation StartL =
-          (NumTPLists == 0) ? getFriendLoc()
-                            : getTrailingObjects<TemplateParameterList *>()[0]
-                                  ->getTemplateLoc();
-      return SourceRange(StartL, TInfo->getTypeLoc().getEndLoc());
-    }
-    else
-      return SourceRange(getFriendLoc(), getLocation());
+
+    return SourceRange(getFriendLoc(), getLocation());
   }
 
   /// Determines if this friend kind is unsupported.
@@ -176,6 +186,8 @@ public:
   void setUnsupportedFriend(bool Unsupported) {
     UnsupportedFriend = Unsupported;
   }
+
+  bool isPackExpansion() const { return EllipsisLoc.isValid(); }
 
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

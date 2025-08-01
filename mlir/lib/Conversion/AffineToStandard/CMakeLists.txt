@@ -7,17 +7,15 @@ add_mlir_conversion_library(MLIRAffineToStandard
   DEPENDS
   MLIRConversionPassIncGen
 
-  LINK_COMPONENTS
-  Core
-
   LINK_LIBS PUBLIC
   MLIRAffineDialect
+  MLIRAffineTransforms
   MLIRAffineUtils
   MLIRArithDialect
   MLIRIR
   MLIRMemRefDialect
-  MLIRSCFDialect
   MLIRPass
+  MLIRSCFDialect
   MLIRTransforms
   MLIRVectorDialect
   )

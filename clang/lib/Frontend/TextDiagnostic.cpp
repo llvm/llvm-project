@@ -12,12 +12,11 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/SmallString.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Locale.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <optional>
@@ -40,6 +39,14 @@ static const enum raw_ostream::Colors fatalColor = raw_ostream::RED;
 // Used for changing only the bold attribute.
 static const enum raw_ostream::Colors savedColor =
   raw_ostream::SAVEDCOLOR;
+
+// Magenta is taken for 'warning'. Red is already 'error' and 'cyan'
+// is already taken for 'note'. Green is already used to underline
+// source ranges. White and black are bad because of the usual
+// terminal backgrounds. Which leaves us only with TWO options.
+static constexpr raw_ostream::Colors CommentColor = raw_ostream::YELLOW;
+static constexpr raw_ostream::Colors LiteralColor = raw_ostream::GREEN;
+static constexpr raw_ostream::Colors KeywordColor = raw_ostream::BLUE;
 
 /// Add highlights to differences in template strings.
 static void applyTemplateHighlighting(raw_ostream &OS, StringRef Str,
@@ -136,7 +143,7 @@ printableTextForNextCharacter(StringRef SourceLine, size_t *I,
     (void)Res;
     assert(Res == llvm::conversionOK);
     assert(OriginalBegin < Begin);
-    assert((Begin - OriginalBegin) == CharSize);
+    assert(unsigned(Begin - OriginalBegin) == CharSize);
 
     (*I) += (Begin - OriginalBegin);
 
@@ -644,10 +651,10 @@ static bool printWordWrapped(raw_ostream &OS, StringRef Str, unsigned Columns,
   return Wrapped;
 }
 
-TextDiagnostic::TextDiagnostic(raw_ostream &OS,
-                               const LangOptions &LangOpts,
-                               DiagnosticOptions *DiagOpts)
-  : DiagnosticRenderer(LangOpts, DiagOpts), OS(OS) {}
+TextDiagnostic::TextDiagnostic(raw_ostream &OS, const LangOptions &LangOpts,
+                               DiagnosticOptions &DiagOpts,
+                               const Preprocessor *PP)
+    : DiagnosticRenderer(LangOpts, DiagOpts), OS(OS), PP(PP) {}
 
 TextDiagnostic::~TextDiagnostic() {}
 
@@ -661,15 +668,15 @@ void TextDiagnostic::emitDiagnosticMessage(
   if (Loc.isValid())
     emitDiagnosticLoc(Loc, PLoc, Level, Ranges);
 
-  if (DiagOpts->ShowColors)
+  if (DiagOpts.ShowColors)
     OS.resetColor();
 
-  if (DiagOpts->ShowLevel)
-    printDiagnosticLevel(OS, Level, DiagOpts->ShowColors);
+  if (DiagOpts.ShowLevel)
+    printDiagnosticLevel(OS, Level, DiagOpts.ShowColors);
   printDiagnosticMessage(OS,
                          /*IsSupplemental*/ Level == DiagnosticsEngine::Note,
                          Message, OS.tell() - StartOfLocationInfo,
-                         DiagOpts->MessageLength, DiagOpts->ShowColors);
+                         DiagOpts.MessageLength, DiagOpts.ShowColors);
 }
 
 /*static*/ void
@@ -734,7 +741,7 @@ void TextDiagnostic::emitFilename(StringRef Filename, const SourceManager &SM) {
 #ifdef _WIN32
   SmallString<4096> TmpFilename;
 #endif
-  if (DiagOpts->AbsolutePath) {
+  if (DiagOpts.AbsolutePath) {
     auto File = SM.getFileManager().getOptionalFileRef(Filename);
     if (File) {
       // We want to print a simplified absolute path, i. e. without "dots".
@@ -787,27 +794,27 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
   }
   unsigned LineNo = PLoc.getLine();
 
-  if (!DiagOpts->ShowLocation)
+  if (!DiagOpts.ShowLocation)
     return;
 
-  if (DiagOpts->ShowColors)
+  if (DiagOpts.ShowColors)
     OS.changeColor(savedColor, true);
 
   emitFilename(PLoc.getFilename(), Loc.getManager());
-  switch (DiagOpts->getFormat()) {
+  switch (DiagOpts.getFormat()) {
   case DiagnosticOptions::SARIF:
   case DiagnosticOptions::Clang:
-    if (DiagOpts->ShowLine)
+    if (DiagOpts.ShowLine)
       OS << ':' << LineNo;
     break;
   case DiagnosticOptions::MSVC:  OS << '('  << LineNo; break;
   case DiagnosticOptions::Vi:    OS << " +" << LineNo; break;
   }
 
-  if (DiagOpts->ShowColumn)
+  if (DiagOpts.ShowColumn)
     // Compute the column number.
     if (unsigned ColNo = PLoc.getColumn()) {
-      if (DiagOpts->getFormat() == DiagnosticOptions::MSVC) {
+      if (DiagOpts.getFormat() == DiagnosticOptions::MSVC) {
         OS << ',';
         // Visual Studio 2010 or earlier expects column number to be off by one
         if (LangOpts.MSCompatibilityVersion &&
@@ -817,7 +824,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
         OS << ':';
       OS << ColNo;
     }
-  switch (DiagOpts->getFormat()) {
+  switch (DiagOpts.getFormat()) {
   case DiagnosticOptions::SARIF:
   case DiagnosticOptions::Clang:
   case DiagnosticOptions::Vi:    OS << ':';    break;
@@ -832,7 +839,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
     break;
   }
 
-  if (DiagOpts->ShowSourceRanges && !Ranges.empty()) {
+  if (DiagOpts.ShowSourceRanges && !Ranges.empty()) {
     FileID CaretFileID = Loc.getExpansionLoc().getFileID();
     bool PrintedRange = false;
     const SourceManager &SM = Loc.getManager();
@@ -872,7 +879,7 @@ void TextDiagnostic::emitDiagnosticLoc(FullSourceLoc Loc, PresumedLoc PLoc,
 }
 
 void TextDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
-  if (DiagOpts->ShowLocation && PLoc.isValid()) {
+  if (DiagOpts.ShowLocation && PLoc.isValid()) {
     OS << "In file included from ";
     emitFilename(PLoc.getFilename(), Loc.getManager());
     OS << ':' << PLoc.getLine() << ":\n";
@@ -882,7 +889,7 @@ void TextDiagnostic::emitIncludeLocation(FullSourceLoc Loc, PresumedLoc PLoc) {
 
 void TextDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
                                         StringRef ModuleName) {
-  if (DiagOpts->ShowLocation && PLoc.isValid())
+  if (DiagOpts.ShowLocation && PLoc.isValid())
     OS << "In module '" << ModuleName << "' imported from "
        << PLoc.getFilename() << ':' << PLoc.getLine() << ":\n";
   else
@@ -892,7 +899,7 @@ void TextDiagnostic::emitImportLocation(FullSourceLoc Loc, PresumedLoc PLoc,
 void TextDiagnostic::emitBuildingModuleLocation(FullSourceLoc Loc,
                                                 PresumedLoc PLoc,
                                                 StringRef ModuleName) {
-  if (DiagOpts->ShowLocation && PLoc.isValid())
+  if (DiagOpts.ShowLocation && PLoc.isValid())
     OS << "While building module '" << ModuleName << "' imported from "
       << PLoc.getFilename() << ':' << PLoc.getLine() << ":\n";
   else
@@ -989,14 +996,13 @@ static void highlightRange(const LineRange &R, const SourceColumnMap &Map,
   std::fill(CaretLine.begin() + StartColNo, CaretLine.begin() + EndColNo, '~');
 }
 
-static std::string buildFixItInsertionLine(FileID FID,
-                                           unsigned LineNo,
+static std::string buildFixItInsertionLine(FileID FID, unsigned LineNo,
                                            const SourceColumnMap &map,
                                            ArrayRef<FixItHint> Hints,
                                            const SourceManager &SM,
-                                           const DiagnosticOptions *DiagOpts) {
+                                           const DiagnosticOptions &DiagOpts) {
   std::string FixItInsertionLine;
-  if (Hints.empty() || !DiagOpts->ShowFixits)
+  if (Hints.empty() || !DiagOpts.ShowFixits)
     return FixItInsertionLine;
   unsigned PrevHintEndCol = 0;
 
@@ -1006,7 +1012,7 @@ static std::string buildFixItInsertionLine(FileID FID,
 
     // We have an insertion hint. Determine whether the inserted
     // code contains no newlines and is on the same line as the caret.
-    std::pair<FileID, unsigned> HintLocInfo =
+    FileIDAndOffset HintLocInfo =
         SM.getDecomposedExpansionLoc(H.RemoveRange.getBegin());
     if (FID == HintLocInfo.first &&
         LineNo == SM.getLineNumber(HintLocInfo.first, HintLocInfo.second) &&
@@ -1048,7 +1054,7 @@ static std::string buildFixItInsertionLine(FileID FID,
     }
   }
 
-  expandTabs(FixItInsertionLine, DiagOpts->TabStop);
+  expandTabs(FixItInsertionLine, DiagOpts.TabStop);
 
   return FixItInsertionLine;
 }
@@ -1112,6 +1118,162 @@ prepareAndFilterRanges(const SmallVectorImpl<CharSourceRange> &Ranges,
   return LineRanges;
 }
 
+/// Creates syntax highlighting information in form of StyleRanges.
+///
+/// The returned unique ptr has always exactly size
+/// (\p EndLineNumber - \p StartLineNumber + 1). Each SmallVector in there
+/// corresponds to syntax highlighting information in one line. In each line,
+/// the StyleRanges are non-overlapping and sorted from start to end of the
+/// line.
+static std::unique_ptr<llvm::SmallVector<TextDiagnostic::StyleRange>[]>
+highlightLines(StringRef FileData, unsigned StartLineNumber,
+               unsigned EndLineNumber, const Preprocessor *PP,
+               const LangOptions &LangOpts, bool ShowColors, FileID FID,
+               const SourceManager &SM) {
+  assert(StartLineNumber <= EndLineNumber);
+  auto SnippetRanges =
+      std::make_unique<SmallVector<TextDiagnostic::StyleRange>[]>(
+          EndLineNumber - StartLineNumber + 1);
+
+  if (!PP || !ShowColors)
+    return SnippetRanges;
+
+  // Might cause emission of another diagnostic.
+  if (PP->getIdentifierTable().getExternalIdentifierLookup())
+    return SnippetRanges;
+
+  auto Buff = llvm::MemoryBuffer::getMemBuffer(FileData);
+  Lexer L{FID, *Buff, SM, LangOpts};
+  L.SetKeepWhitespaceMode(true);
+
+  const char *FirstLineStart =
+      FileData.data() +
+      SM.getDecomposedLoc(SM.translateLineCol(FID, StartLineNumber, 1)).second;
+  if (const char *CheckPoint = PP->getCheckPoint(FID, FirstLineStart)) {
+    assert(CheckPoint >= Buff->getBufferStart() &&
+           CheckPoint <= Buff->getBufferEnd());
+    assert(CheckPoint <= FirstLineStart);
+    size_t Offset = CheckPoint - Buff->getBufferStart();
+    L.seek(Offset, /*IsAtStartOfLine=*/false);
+  }
+
+  // Classify the given token and append it to the given vector.
+  auto appendStyle =
+      [PP, &LangOpts](SmallVector<TextDiagnostic::StyleRange> &Vec,
+                      const Token &T, unsigned Start, unsigned Length) -> void {
+    if (T.is(tok::raw_identifier)) {
+      StringRef RawIdent = T.getRawIdentifier();
+      // Special case true/false/nullptr/... literals, since they will otherwise
+      // be treated as keywords.
+      // FIXME: It would be good to have a programmatic way of getting this
+      // list.
+      if (llvm::StringSwitch<bool>(RawIdent)
+              .Case("true", true)
+              .Case("false", true)
+              .Case("nullptr", true)
+              .Case("__func__", true)
+              .Case("__objc_yes__", true)
+              .Case("__objc_no__", true)
+              .Case("__null", true)
+              .Case("__FUNCDNAME__", true)
+              .Case("__FUNCSIG__", true)
+              .Case("__FUNCTION__", true)
+              .Case("__FUNCSIG__", true)
+              .Default(false)) {
+        Vec.emplace_back(Start, Start + Length, LiteralColor);
+      } else {
+        const IdentifierInfo *II = PP->getIdentifierInfo(RawIdent);
+        assert(II);
+        if (II->isKeyword(LangOpts))
+          Vec.emplace_back(Start, Start + Length, KeywordColor);
+      }
+    } else if (tok::isLiteral(T.getKind())) {
+      Vec.emplace_back(Start, Start + Length, LiteralColor);
+    } else {
+      assert(T.is(tok::comment));
+      Vec.emplace_back(Start, Start + Length, CommentColor);
+    }
+  };
+
+  bool Stop = false;
+  while (!Stop) {
+    Token T;
+    Stop = L.LexFromRawLexer(T);
+    if (T.is(tok::unknown))
+      continue;
+
+    // We are only interested in identifiers, literals and comments.
+    if (!T.is(tok::raw_identifier) && !T.is(tok::comment) &&
+        !tok::isLiteral(T.getKind()))
+      continue;
+
+    bool Invalid = false;
+    unsigned TokenEndLine = SM.getSpellingLineNumber(T.getEndLoc(), &Invalid);
+    if (Invalid || TokenEndLine < StartLineNumber)
+      continue;
+
+    assert(TokenEndLine >= StartLineNumber);
+
+    unsigned TokenStartLine =
+        SM.getSpellingLineNumber(T.getLocation(), &Invalid);
+    if (Invalid)
+      continue;
+    // If this happens, we're done.
+    if (TokenStartLine > EndLineNumber)
+      break;
+
+    unsigned StartCol =
+        SM.getSpellingColumnNumber(T.getLocation(), &Invalid) - 1;
+    if (Invalid)
+      continue;
+
+    // Simple tokens.
+    if (TokenStartLine == TokenEndLine) {
+      SmallVector<TextDiagnostic::StyleRange> &LineRanges =
+          SnippetRanges[TokenStartLine - StartLineNumber];
+      appendStyle(LineRanges, T, StartCol, T.getLength());
+      continue;
+    }
+    assert((TokenEndLine - TokenStartLine) >= 1);
+
+    // For tokens that span multiple lines (think multiline comments), we
+    // divide them into multiple StyleRanges.
+    unsigned EndCol = SM.getSpellingColumnNumber(T.getEndLoc(), &Invalid) - 1;
+    if (Invalid)
+      continue;
+
+    std::string Spelling = Lexer::getSpelling(T, SM, LangOpts);
+
+    unsigned L = TokenStartLine;
+    unsigned LineLength = 0;
+    for (unsigned I = 0; I <= Spelling.size(); ++I) {
+      // This line is done.
+      if (I == Spelling.size() || isVerticalWhitespace(Spelling[I])) {
+        if (L >= StartLineNumber) {
+          SmallVector<TextDiagnostic::StyleRange> &LineRanges =
+              SnippetRanges[L - StartLineNumber];
+
+          if (L == TokenStartLine) // First line
+            appendStyle(LineRanges, T, StartCol, LineLength);
+          else if (L == TokenEndLine) // Last line
+            appendStyle(LineRanges, T, 0, EndCol);
+          else
+            appendStyle(LineRanges, T, 0, LineLength);
+        }
+
+        ++L;
+        if (L > EndLineNumber)
+          break;
+        LineLength = 0;
+        continue;
+      }
+      ++LineLength;
+    }
+  }
+
+  return SnippetRanges;
+}
+
 /// Emit a code snippet and caret line.
 ///
 /// This routine emits a single line's code snippet and caret line..
@@ -1131,7 +1293,7 @@ void TextDiagnostic::emitSnippetAndCaret(
   // was part of a different warning or error diagnostic, or if the
   // diagnostic has ranges.  We don't want to emit the same caret
   // multiple times if one loc has multiple diagnostics.
-  if (!DiagOpts->ShowCarets)
+  if (!DiagOpts.ShowCarets)
     return;
   if (Loc == LastLoc && Ranges.empty() && Hints.empty() &&
       (LastLevel != DiagnosticsEngine::Note || Level == LastLevel))
@@ -1157,7 +1319,7 @@ void TextDiagnostic::emitSnippetAndCaret(
     return;
 
   // Find the set of lines to include.
-  const unsigned MaxLines = DiagOpts->SnippetLineLimit;
+  const unsigned MaxLines = DiagOpts.SnippetLineLimit;
   std::pair<unsigned, unsigned> Lines = {CaretLineNo, CaretLineNo};
   unsigned DisplayLineNo = Loc.getPresumedLoc().getLine();
   for (const auto &I : Ranges) {
@@ -1173,13 +1335,19 @@ void TextDiagnostic::emitSnippetAndCaret(
   // Where [number] is MaxLineNoDisplayWidth columns
   // and the full thing is therefore MaxLineNoDisplayWidth + 4 columns.
   unsigned MaxLineNoDisplayWidth =
-      DiagOpts->ShowLineNumbers
+      DiagOpts.ShowLineNumbers
           ? std::max(4u, getNumDisplayWidth(DisplayLineNo + MaxLines))
           : 0;
   auto indentForLineNumbers = [&] {
     if (MaxLineNoDisplayWidth > 0)
       OS.indent(MaxLineNoDisplayWidth + 2) << "| ";
   };
+
+  // Prepare source highlighting information for the lines we're about to
+  // emit, starting from the first line.
+  std::unique_ptr<SmallVector<StyleRange>[]> SourceStyles =
+      highlightLines(BufData, Lines.first, Lines.second, PP, LangOpts,
+                     DiagOpts.ShowColors, FID, SM);
 
   SmallVector<LineRange> LineRanges =
       prepareAndFilterRanges(Ranges, SM, Lines, FID, LangOpts);
@@ -1211,7 +1379,7 @@ void TextDiagnostic::emitSnippetAndCaret(
       SourceLine.pop_back();
 
     // Build the byte to column map.
-    const SourceColumnMap sourceColMap(SourceLine, DiagOpts->TabStop);
+    const SourceColumnMap sourceColMap(SourceLine, DiagOpts.TabStop);
 
     std::string CaretLine;
     // Highlight all of the characters covered by Ranges with ~ characters.
@@ -1227,12 +1395,12 @@ void TextDiagnostic::emitSnippetAndCaret(
       CaretLine[Col] = '^';
     }
 
-    std::string FixItInsertionLine = buildFixItInsertionLine(
-        FID, LineNo, sourceColMap, Hints, SM, DiagOpts.get());
+    std::string FixItInsertionLine =
+        buildFixItInsertionLine(FID, LineNo, sourceColMap, Hints, SM, DiagOpts);
 
     // If the source line is too long for our terminal, select only the
     // "interesting" source region within that line.
-    unsigned Columns = DiagOpts->MessageLength;
+    unsigned Columns = DiagOpts.MessageLength;
     if (Columns)
       selectInterestingSourceRegion(SourceLine, CaretLine, FixItInsertionLine,
                                     Columns, sourceColMap);
@@ -1241,32 +1409,33 @@ void TextDiagnostic::emitSnippetAndCaret(
     // to produce easily machine parsable output.  Add a space before the
     // source line and the caret to make it trivial to tell the main diagnostic
     // line from what the user is intended to see.
-    if (DiagOpts->ShowSourceRanges && !SourceLine.empty()) {
+    if (DiagOpts.ShowSourceRanges && !SourceLine.empty()) {
       SourceLine = ' ' + SourceLine;
       CaretLine = ' ' + CaretLine;
     }
 
     // Emit what we have computed.
-    emitSnippet(SourceLine, MaxLineNoDisplayWidth, DisplayLineNo);
+    emitSnippet(SourceLine, MaxLineNoDisplayWidth, LineNo, DisplayLineNo,
+                SourceStyles[LineNo - Lines.first]);
 
     if (!CaretLine.empty()) {
       indentForLineNumbers();
-      if (DiagOpts->ShowColors)
+      if (DiagOpts.ShowColors)
         OS.changeColor(caretColor, true);
       OS << CaretLine << '\n';
-      if (DiagOpts->ShowColors)
+      if (DiagOpts.ShowColors)
         OS.resetColor();
     }
 
     if (!FixItInsertionLine.empty()) {
       indentForLineNumbers();
-      if (DiagOpts->ShowColors)
+      if (DiagOpts.ShowColors)
         // Print fixit line in color
         OS.changeColor(fixitColor, false);
-      if (DiagOpts->ShowSourceRanges)
+      if (DiagOpts.ShowSourceRanges)
         OS << ' ';
       OS << FixItInsertionLine << '\n';
-      if (DiagOpts->ShowColors)
+      if (DiagOpts.ShowColors)
         OS.resetColor();
     }
   }
@@ -1277,35 +1446,56 @@ void TextDiagnostic::emitSnippetAndCaret(
 
 void TextDiagnostic::emitSnippet(StringRef SourceLine,
                                  unsigned MaxLineNoDisplayWidth,
-                                 unsigned LineNo) {
+                                 unsigned LineNo, unsigned DisplayLineNo,
+                                 ArrayRef<StyleRange> Styles) {
   // Emit line number.
   if (MaxLineNoDisplayWidth > 0) {
-    unsigned LineNoDisplayWidth = getNumDisplayWidth(LineNo);
+    unsigned LineNoDisplayWidth = getNumDisplayWidth(DisplayLineNo);
     OS.indent(MaxLineNoDisplayWidth - LineNoDisplayWidth + 1)
-        << LineNo << " | ";
+        << DisplayLineNo << " | ";
   }
 
   // Print the source line one character at a time.
   bool PrintReversed = false;
+  std::optional<llvm::raw_ostream::Colors> CurrentColor;
   size_t I = 0;
   while (I < SourceLine.size()) {
     auto [Str, WasPrintable] =
-        printableTextForNextCharacter(SourceLine, &I, DiagOpts->TabStop);
+        printableTextForNextCharacter(SourceLine, &I, DiagOpts.TabStop);
 
     // Toggle inverted colors on or off for this character.
-    if (DiagOpts->ShowColors) {
+    if (DiagOpts.ShowColors) {
       if (WasPrintable == PrintReversed) {
         PrintReversed = !PrintReversed;
         if (PrintReversed)
           OS.reverseColor();
-        else
+        else {
           OS.resetColor();
+          CurrentColor = std::nullopt;
+        }
+      }
+
+      // Apply syntax highlighting information.
+      const auto *CharStyle = llvm::find_if(Styles, [I](const StyleRange &R) {
+        return (R.Start < I && R.End >= I);
+      });
+
+      if (CharStyle != Styles.end()) {
+        if (!CurrentColor ||
+            (CurrentColor && *CurrentColor != CharStyle->Color)) {
+          OS.changeColor(CharStyle->Color, false);
+          CurrentColor = CharStyle->Color;
+        }
+      } else if (CurrentColor) {
+        OS.resetColor();
+        CurrentColor = std::nullopt;
       }
     }
+
     OS << Str;
   }
 
-  if (DiagOpts->ShowColors)
+  if (DiagOpts.ShowColors)
     OS.resetColor();
 
   OS << '\n';
@@ -1313,7 +1503,7 @@ void TextDiagnostic::emitSnippet(StringRef SourceLine,
 
 void TextDiagnostic::emitParseableFixits(ArrayRef<FixItHint> Hints,
                                          const SourceManager &SM) {
-  if (!DiagOpts->ShowParseableFixits)
+  if (!DiagOpts.ShowParseableFixits)
     return;
 
   // We follow FixItRewriter's example in not (yet) handling
@@ -1328,8 +1518,8 @@ void TextDiagnostic::emitParseableFixits(ArrayRef<FixItHint> Hints,
     SourceLocation BLoc = H.RemoveRange.getBegin();
     SourceLocation ELoc = H.RemoveRange.getEnd();
 
-    std::pair<FileID, unsigned> BInfo = SM.getDecomposedLoc(BLoc);
-    std::pair<FileID, unsigned> EInfo = SM.getDecomposedLoc(ELoc);
+    FileIDAndOffset BInfo = SM.getDecomposedLoc(BLoc);
+    FileIDAndOffset EInfo = SM.getDecomposedLoc(ELoc);
 
     // Adjust for token ranges.
     if (H.RemoveRange.isTokenRange())

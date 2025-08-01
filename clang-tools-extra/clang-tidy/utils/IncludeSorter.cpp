@@ -19,9 +19,8 @@ namespace {
 
 StringRef removeFirstSuffix(StringRef Str, ArrayRef<const char *> Suffixes) {
   for (StringRef Suffix : Suffixes) {
-    if (Str.ends_with(Suffix)) {
-      return Str.substr(0, Str.size() - Suffix.size());
-    }
+    if (Str.consume_back(Suffix))
+      return Str;
   }
   return Str;
 }
@@ -49,8 +48,7 @@ StringRef makeCanonicalName(StringRef Str, IncludeSorter::IncludeStyle Style) {
     if (StartIndex == StringRef::npos) {
       StartIndex = 0;
     }
-    return Canonical.substr(
-        0, Canonical.find_first_of('+', StartIndex));
+    return Canonical.substr(0, Canonical.find_first_of('+', StartIndex));
   }
   return removeFirstSuffix(
       removeFirstSuffix(Str, {".cc", ".cpp", ".c", ".h", ".hpp"}),
@@ -88,8 +86,7 @@ determineIncludeKind(StringRef CanonicalFile, StringRef IncludeFile,
     if (FileCopy.consume_front(Parts.first) &&
         FileCopy.consume_back(Parts.second)) {
       // Determine the kind of this inclusion.
-      if (FileCopy.equals("/internal/") ||
-          FileCopy.equals("/proto/")) {
+      if (FileCopy == "/internal/" || FileCopy == "/proto/") {
         return IncludeSorter::IK_MainTUInclude;
       }
     }
@@ -108,7 +105,7 @@ int compareHeaders(StringRef LHS, StringRef RHS,
                    IncludeSorter::IncludeStyle Style) {
   if (Style == IncludeSorter::IncludeStyle::IS_Google_ObjC) {
     const std::pair<const char *, const char *> &Mismatch =
-        std::mismatch(LHS.begin(), LHS.end(), RHS.begin());
+        std::mismatch(LHS.begin(), LHS.end(), RHS.begin(), RHS.end());
     if ((Mismatch.first != LHS.end()) && (Mismatch.second != RHS.end())) {
       if ((*Mismatch.first == '.') && (*Mismatch.second == '+')) {
         return -1;

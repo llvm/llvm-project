@@ -7,8 +7,8 @@
 @a = common local_unnamed_addr global i32 0, align 4
 
 ;.
-; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = common local_unnamed_addr global i32 0, align 4
-; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = common local_unnamed_addr global i32 0, align 4
+; CHECK: @b = common local_unnamed_addr global i32 0, align 4
+; CHECK: @a = common local_unnamed_addr global i32 0, align 4
 ;.
 define i32 @fn2() local_unnamed_addr {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
@@ -17,7 +17,7 @@ define i32 @fn2() local_unnamed_addr {
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr @b, align 4
 ; TUNIT-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; TUNIT-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; TUNIT-NEXT:    call fastcc void @fn1(ptr nocapture nofree readonly align 4 [[TMP3]]) #[[ATTR1:[0-9]+]]
+; TUNIT-NEXT:    call fastcc void @fn1(ptr nofree readonly align 4 captures(none) [[TMP3]]) #[[ATTR1:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 undef
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn
@@ -26,7 +26,7 @@ define i32 @fn2() local_unnamed_addr {
 ; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr @b, align 4
 ; CGSCC-NEXT:    [[TMP2:%.*]] = sext i32 [[TMP1]] to i64
 ; CGSCC-NEXT:    [[TMP3:%.*]] = inttoptr i64 [[TMP2]] to ptr
-; CGSCC-NEXT:    call fastcc void @fn1(ptr nocapture nofree nonnull readonly align 4 [[TMP3]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    call fastcc void @fn1(ptr nofree nonnull readonly align 4 captures(none) [[TMP3]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 undef
 ;
   %1 = load i32, ptr @b, align 4
@@ -39,7 +39,7 @@ define i32 @fn2() local_unnamed_addr {
 define internal fastcc void @fn1(ptr nocapture readonly) unnamed_addr {
 ; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@fn1
-; TUNIT-SAME: (ptr nocapture nofree nonnull readonly align 4 [[TMP0:%.*]]) unnamed_addr #[[ATTR0]] {
+; TUNIT-SAME: (ptr nofree nonnull readonly align 4 captures(none) [[TMP0:%.*]]) unnamed_addr #[[ATTR0]] {
 ; TUNIT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 -1
 ; TUNIT-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 ; TUNIT-NEXT:    store i32 [[TMP3]], ptr @a, align 4
@@ -47,7 +47,7 @@ define internal fastcc void @fn1(ptr nocapture readonly) unnamed_addr {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@fn1
-; CGSCC-SAME: (ptr nocapture nofree nonnull readonly align 4 [[TMP0:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] {
+; CGSCC-SAME: (ptr nofree nonnull readonly align 4 captures(none) [[TMP0:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 -1
 ; CGSCC-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CGSCC-NEXT:    store i32 [[TMP3]], ptr @a, align 4

@@ -4,7 +4,7 @@
 declare void @private_za_callee()
 
 ; Ensure that we don't use tail call optimization when a lazy-save is required.
-define void @disable_tailcallopt() "aarch64_pstate_za_shared" nounwind {
+define void @disable_tailcallopt() "aarch64_inout_za" nounwind {
 ; CHECK-LABEL: disable_tailcallopt:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -14,12 +14,12 @@ define void @disable_tailcallopt() "aarch64_pstate_za_shared" nounwind {
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    sub x10, x29, #16
-; CHECK-NEXT:    stur wzr, [x29, #-4]
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-NEXT:    stur x9, [x29, #-16]
+; CHECK-NEXT:    sub x9, x29, #16
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
+; CHECK-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x10
+; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    bl private_za_callee
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0
@@ -37,7 +37,7 @@ define void @disable_tailcallopt() "aarch64_pstate_za_shared" nounwind {
 }
 
 ; Ensure we set up and restore the lazy save correctly for instructions which are lowered to lib calls
-define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_pstate_za_shared" nounwind {
+define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_inout_za" nounwind {
 ; CHECK-LABEL: f128_call_za:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
@@ -47,12 +47,12 @@ define fp128 @f128_call_za(fp128 %a, fp128 %b) "aarch64_pstate_za_shared" nounwi
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    msub x9, x8, x8, x9
 ; CHECK-NEXT:    mov sp, x9
-; CHECK-NEXT:    sub x10, x29, #16
-; CHECK-NEXT:    stur wzr, [x29, #-4]
-; CHECK-NEXT:    sturh wzr, [x29, #-6]
 ; CHECK-NEXT:    stur x9, [x29, #-16]
+; CHECK-NEXT:    sub x9, x29, #16
+; CHECK-NEXT:    sturh wzr, [x29, #-6]
+; CHECK-NEXT:    stur wzr, [x29, #-4]
 ; CHECK-NEXT:    sturh w8, [x29, #-8]
-; CHECK-NEXT:    msr TPIDR2_EL0, x10
+; CHECK-NEXT:    msr TPIDR2_EL0, x9
 ; CHECK-NEXT:    bl __addtf3
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    mrs x8, TPIDR2_EL0

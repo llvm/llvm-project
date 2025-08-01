@@ -27,19 +27,16 @@ define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ;
 ; RV64I-LABEL: func:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    addiw a2, a1, -1
-; RV64I-NEXT:    bge a0, a2, .LBB0_3
+; RV64I-NEXT:    add a2, a0, a1
+; RV64I-NEXT:    addw a0, a0, a1
+; RV64I-NEXT:    beq a0, a2, .LBB0_2
 ; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    bge a1, a0, .LBB0_4
+; RV64I-NEXT:    srli a0, a0, 31
+; RV64I-NEXT:    li a1, 1
+; RV64I-NEXT:    slli a1, a1, 31
+; RV64I-NEXT:    xor a2, a0, a1
 ; RV64I-NEXT:  .LBB0_2:
-; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB0_3:
-; RV64I-NEXT:    mv a0, a2
-; RV64I-NEXT:    blt a1, a2, .LBB0_2
-; RV64I-NEXT:  .LBB0_4:
-; RV64I-NEXT:    lui a0, 524288
+; RV64I-NEXT:    sext.w a0, a2
 ; RV64I-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func:
@@ -61,12 +58,12 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32I-NEXT:    mv a1, a0
 ; RV32I-NEXT:    add a5, a4, a3
 ; RV32I-NEXT:    add a0, a0, a2
+; RV32I-NEXT:    xor a3, a4, a3
 ; RV32I-NEXT:    sltu a1, a0, a1
 ; RV32I-NEXT:    add a1, a5, a1
-; RV32I-NEXT:    xor a2, a4, a1
-; RV32I-NEXT:    xor a3, a4, a3
-; RV32I-NEXT:    not a3, a3
-; RV32I-NEXT:    and a2, a3, a2
+; RV32I-NEXT:    xor a4, a4, a1
+; RV32I-NEXT:    not a2, a3
+; RV32I-NEXT:    and a2, a2, a4
 ; RV32I-NEXT:    bgez a2, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    srai a0, a1, 31
@@ -136,7 +133,7 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    lui a1, 8
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    bge a0, a1, .LBB2_3
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    lui a1, 1048568
@@ -165,7 +162,7 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 ; RV64IZbb:       # %bb.0:
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 8
-; RV64IZbb-NEXT:    addiw a1, a1, -1
+; RV64IZbb-NEXT:    addi a1, a1, -1
 ; RV64IZbb-NEXT:    min a0, a0, a1
 ; RV64IZbb-NEXT:    lui a1, 1048568
 ; RV64IZbb-NEXT:    max a0, a0, a1

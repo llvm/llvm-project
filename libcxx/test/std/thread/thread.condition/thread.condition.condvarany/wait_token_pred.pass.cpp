@@ -8,7 +8,6 @@
 //
 // UNSUPPORTED: no-threads
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-experimental-stop_token
 // XFAIL: availability-synchronization_library-missing
 
 // <condition_variable>
@@ -18,6 +17,7 @@
 // template<class Lock, class Predicate>
 //   bool wait(Lock& lock, stop_token stoken, Predicate pred);
 
+#include <atomic>
 #include <cassert>
 #include <concepts>
 #include <condition_variable>
@@ -63,7 +63,7 @@ void test() {
     bool flag   = false;
     auto thread = support::make_test_thread([&]() {
       std::this_thread::sleep_for(std::chrono::milliseconds(2));
-      Lock lock2{mutex};
+      std::unique_lock<Mutex> lock2{mutex};
       flag = true;
       cv.notify_all();
     });
@@ -102,6 +102,56 @@ void test() {
     });
     assert(!r);
     done = true;
+    thread.join();
+
+    assert(lock.owns_lock());
+  }
+
+  // #76807 Hangs in std::condition_variable_any when used with std::stop_token
+  {
+    class MyThread {
+    public:
+      MyThread() {
+        thread_ = support::make_test_jthread([this](std::stop_token st) {
+          while (!st.stop_requested()) {
+            std::unique_lock lock{m_};
+            cv_.wait(lock, st, [] { return false; });
+          }
+        });
+      }
+
+    private:
+      std::mutex m_;
+      std::condition_variable_any cv_;
+      std::jthread thread_;
+    };
+
+    [[maybe_unused]] MyThread my_thread;
+  }
+
+  // request_stop potentially in-between check and wait
+  {
+    std::stop_source ss;
+    std::condition_variable_any cv;
+    Mutex mutex;
+    Lock lock{mutex};
+
+    std::atomic_bool pred_started        = false;
+    std::atomic_bool request_stop_called = false;
+    auto thread                          = support::make_test_thread([&]() {
+      pred_started.wait(false);
+      ss.request_stop();
+      request_stop_called.store(true);
+      request_stop_called.notify_all();
+    });
+
+    std::same_as<bool> auto r = cv.wait(lock, ss.get_token(), [&]() {
+      pred_started.store(true);
+      pred_started.notify_all();
+      request_stop_called.wait(false);
+      return false;
+    });
+    assert(!r);
     thread.join();
 
     assert(lock.owns_lock());

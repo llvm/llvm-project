@@ -12,16 +12,10 @@
 
 #include "AVRInstrInfo.h"
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "AVR.h"
@@ -41,8 +35,9 @@ AVRInstrInfo::AVRInstrInfo(AVRSubtarget &STI)
 
 void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc) const {
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
+                               bool RenamableDest, bool RenamableSrc) const {
   const AVRRegisterInfo &TRI = *STI.getRegisterInfo();
   unsigned Opc;
 
@@ -91,7 +86,7 @@ void AVRInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 }
 
-unsigned AVRInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+Register AVRInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
   switch (MI.getOpcode()) {
   case AVR::LDDRdPtrQ:
@@ -110,7 +105,7 @@ unsigned AVRInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return 0;
 }
 
-unsigned AVRInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+Register AVRInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   switch (MI.getOpcode()) {
   case AVR::STDPtrQRr:
@@ -132,7 +127,8 @@ unsigned AVRInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 void AVRInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   AVRMachineFunctionInfo *AFI = MF.getInfo<AVRMachineFunctionInfo>();
 
@@ -166,7 +162,8 @@ void AVRInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         Register DestReg, int FrameIndex,
                                         const TargetRegisterClass *RC,
                                         const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+                                        Register VReg,
+                                        MachineInstr::MIFlag Flags) const {
   MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 

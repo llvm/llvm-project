@@ -27,3 +27,7 @@ void *getCFAuditedToNone_DUMP(void);
 - (id)getOwnedToUnowned __attribute__((__ns_returns_retained__));
 - (id)getUnownedToOwned __attribute__((__ns_returns_not_retained__));
 @end
+
+typedef enum {
+  kConstantInAnonEnum
+} AnonEnumWithTypedefName;

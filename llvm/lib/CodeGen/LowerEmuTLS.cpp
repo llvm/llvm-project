@@ -139,10 +139,8 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   IntegerType *WordType = DL.getIntPtrType(C);
   PointerType *InitPtrType = PointerType::getUnqual(C);
   Type *ElementTypes[4] = {WordType, WordType, VoidPtrType, InitPtrType};
-  ArrayRef<Type*> ElementTypeArray(ElementTypes, 4);
-  StructType *EmuTlsVarType = StructType::create(ElementTypeArray);
-  EmuTlsVar = cast<GlobalVariable>(
-      M.getOrInsertGlobal(EmuTlsVarName, EmuTlsVarType));
+  StructType *EmuTlsVarType = StructType::create(ElementTypes);
+  EmuTlsVar = M.getOrInsertGlobal(EmuTlsVarName, EmuTlsVarType);
   copyLinkageVisibility(M, GV, EmuTlsVar);
 
   // Define "__emutls_t.*" and "__emutls_v.*" only if GV is defined.
@@ -156,8 +154,7 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
   GlobalVariable *EmuTlsTmplVar = nullptr;
   if (InitValue) {
     std::string EmuTlsTmplName = ("__emutls_t." + GV->getName()).str();
-    EmuTlsTmplVar = dyn_cast_or_null<GlobalVariable>(
-        M.getOrInsertGlobal(EmuTlsTmplName, GVType));
+    EmuTlsTmplVar = M.getOrInsertGlobal(EmuTlsTmplName, GVType);
     assert(EmuTlsTmplVar && "Failed to create emualted TLS initializer");
     EmuTlsTmplVar->setConstant(true);
     EmuTlsTmplVar->setInitializer(const_cast<Constant*>(InitValue));
@@ -170,9 +167,7 @@ bool addEmuTlsVar(Module &M, const GlobalVariable *GV) {
       ConstantInt::get(WordType, DL.getTypeStoreSize(GVType)),
       ConstantInt::get(WordType, GVAlignment.value()), NullPtr,
       EmuTlsTmplVar ? EmuTlsTmplVar : NullPtr};
-  ArrayRef<Constant*> ElementValueArray(ElementValues, 4);
-  EmuTlsVar->setInitializer(
-      ConstantStruct::get(EmuTlsVarType, ElementValueArray));
+  EmuTlsVar->setInitializer(ConstantStruct::get(EmuTlsVarType, ElementValues));
   Align MaxAlignment =
       std::max(DL.getABITypeAlign(WordType), DL.getABITypeAlign(VoidPtrType));
   EmuTlsVar->setAlignment(MaxAlignment);

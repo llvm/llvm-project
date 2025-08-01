@@ -1,10 +1,12 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=51
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
 program main
+   use iso_c_binding
 
   real(8) :: arrayA(256), arrayB(256)
   integer :: N
+  type(c_ptr) :: cptr
 
   arrayA = 1.414
   arrayB = 3.14
@@ -42,7 +44,6 @@ program main
   enddo
   !$omp end target
 
-  !ERROR: The argument TOFROM:SCALAR must be specified on the DEFAULTMAP clause
   !$omp target defaultmap(tofrom)
   do i = 1, N
      a = 3.14
@@ -122,7 +123,7 @@ program main
   enddo
   !$omp end target
 
-  !ERROR: Only the TO, FROM, TOFROM, ALLOC map types are permitted for MAP clauses on the TARGET directive
+  !ERROR: Only the ALLOC, FROM, TO, TOFROM map types are permitted for MAP clauses on the TARGET directive
   !$omp target map(delete:a)
   do i = 1, N
      a = 3.14
@@ -135,7 +136,15 @@ program main
   enddo
   !$omp end target data
 
-  !ERROR: At least one of MAP clause must appear on the TARGET DATA directive
+  !$omp target data device(0) use_device_addr(cptr)
+   cptr = c_null_ptr
+  !$omp end target data
+
+  !$omp target data device(0) use_device_addr(cptr)
+   cptr = c_null_ptr
+  !$omp end target data
+
+  !ERROR: At least one of MAP, USE_DEVICE_ADDR, USE_DEVICE_PTR clause must appear on the TARGET DATA directive
   !$omp target data device(0)
   do i = 1, N
      a = 3.14
@@ -151,7 +160,7 @@ program main
   !ERROR: At most one IF clause can appear on the TARGET ENTER DATA directive
   !$omp target enter data map(to:a) if(.true.) if(.false.)
 
-  !ERROR: Only the TO, ALLOC map types are permitted for MAP clauses on the TARGET ENTER DATA directive
+  !ERROR: Only the ALLOC, TO, TOFROM map types are permitted for MAP clauses on the TARGET ENTER DATA directive
   !$omp target enter data map(from:a)
 
   !$omp target exit data map(delete:a)
@@ -159,7 +168,7 @@ program main
   !ERROR: At most one DEVICE clause can appear on the TARGET EXIT DATA directive
   !$omp target exit data map(from:a) device(0) device(1)
 
-  !ERROR: Only the FROM, RELEASE, DELETE map types are permitted for MAP clauses on the TARGET EXIT DATA directive
+  !ERROR: Only the DELETE, FROM, RELEASE, TOFROM map types are permitted for MAP clauses on the TARGET EXIT DATA directive
   !$omp target exit data map(to:a)
 
   !$omp target update if(.true.) device(1) to(a) from(b) depend(inout:c) nowait

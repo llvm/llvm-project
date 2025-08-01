@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/mprotect.h"
 #include "src/sys/mman/munmap.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -18,13 +18,13 @@
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LlvmLibcMProtectTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
-TEST(LlvmLibcMProtectTest, NoError) {
+TEST_F(LlvmLibcMProtectTest, NoError) {
   size_t alloc_size = 128;
-  libc_errno = 0;
   void *addr = LIBC_NAMESPACE::mmap(nullptr, alloc_size, PROT_READ,
                                     MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  EXPECT_EQ(0, libc_errno);
+  ASSERT_ERRNO_SUCCESS();
   EXPECT_NE(addr, MAP_FAILED);
 
   int *array = reinterpret_cast<int *>(addr);
@@ -47,7 +47,7 @@ TEST(LlvmLibcMProtectTest, NoError) {
 // This test is disabled currently due to flakeyness. It will be re-enabled once
 // it is less flakey.
 /*
-TEST(LlvmLibcMProtectTest, Error_InvalidWrite) {
+TEST_F(LlvmLibcMProtectTest, Error_InvalidWrite) {
   // attempting to write to a read-only protected part of memory should cause a
   // segfault.
   EXPECT_DEATH(

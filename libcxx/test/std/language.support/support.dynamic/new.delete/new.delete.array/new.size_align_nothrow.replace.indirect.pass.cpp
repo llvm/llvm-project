@@ -11,6 +11,10 @@
 // Test that we can replace the operator by replacing `operator new[](std::size_t, std::align_val_t)`
 // (the throwing version).
 
+// This doesn't work when the shared library was built with exceptions disabled, because
+// we can't implement the non-throwing new from the throwing new in that case.
+// XFAIL: no-exceptions
+
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: sanitizer-new-delete
 
@@ -18,7 +22,7 @@
 
 // Libc++ when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
-// UNSUPPORTED: target={{.+}}-zos{{.*}}
+// XFAIL: target={{.+}}-zos{{.*}}
 
 #include <new>
 #include <cstddef>
@@ -51,18 +55,19 @@ int main(int, char**) {
     // Test with an overaligned type
     {
         new_called = delete_called = 0;
-        OverAligned* x = new (std::nothrow) OverAligned[3];
+        OverAligned* dummy_data_block = new (std::nothrow) OverAligned[3];
+        OverAligned* x                = DoNotOptimize(dummy_data_block);
         ASSERT_WITH_OPERATOR_NEW_FALLBACKS(static_cast<void*>(x) == DummyData);
         ASSERT_WITH_OPERATOR_NEW_FALLBACKS(new_called == 1);
 
-        delete[] x;
+        delete[] dummy_data_block;
         ASSERT_WITH_OPERATOR_NEW_FALLBACKS(delete_called == 1);
     }
 
     // Test with a type that is right on the verge of being overaligned
     {
         new_called = delete_called = 0;
-        MaxAligned* x = new (std::nothrow) MaxAligned[3];
+        MaxAligned* x = DoNotOptimize(new (std::nothrow) MaxAligned[3]);
         assert(x != nullptr);
         assert(new_called == 0);
 
@@ -73,7 +78,7 @@ int main(int, char**) {
     // Test with a type that is clearly not overaligned
     {
         new_called = delete_called = 0;
-        int* x = new (std::nothrow) int[3];
+        int* x = DoNotOptimize(new (std::nothrow) int[3]);
         assert(x != nullptr);
         assert(new_called == 0);
 

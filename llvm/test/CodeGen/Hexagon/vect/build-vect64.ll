@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that the value produced is 0x0706050403020100.
 ; CHECK: r1:0 = CONST64(#506097522914230528)

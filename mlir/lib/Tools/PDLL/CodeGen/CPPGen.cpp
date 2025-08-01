@@ -13,12 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/PDLL/CodeGen/CPPGen.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/ODS/Operation.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -216,7 +214,7 @@ void CodeGen::generateConstraintOrRewrite(const ast::CallableDecl *decl,
   // TODO: This will need to change if we allow Constraints to return values as
   // well.
   if (isConstraint) {
-    os << "::mlir::LogicalResult";
+    os << "::llvm::LogicalResult";
   } else {
     // Otherwise, generate a type based on the results of the callable.
     // If the callable has explicit results, use those to build the result.

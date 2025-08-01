@@ -176,7 +176,7 @@ define i64 @fptosi_f16toi64(half %x) #0 {
 ;
 ; X86-LABEL: fptosi_f16toi64:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvttph2qq %xmm0, %xmm0
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    vpextrd $1, %xmm0, %edx
@@ -347,7 +347,7 @@ define i64 @fptoui_f16toi64(half %x) #0 {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
 ; SSE2-NEXT:    callq __extendhfsf2@PLT
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
 ; SSE2-NEXT:    comiss %xmm2, %xmm0
 ; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    jb .LBB9_2
@@ -369,7 +369,7 @@ define i64 @fptoui_f16toi64(half %x) #0 {
 ; F16C-NEXT:    movzwl %ax, %eax
 ; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; F16C-NEXT:    vmovss {{.*#+}} xmm1 = [9.22337203E+18,0.0E+0,0.0E+0,0.0E+0]
 ; F16C-NEXT:    vcomiss %xmm1, %xmm0
 ; F16C-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; F16C-NEXT:    jb .LBB9_2
@@ -395,7 +395,7 @@ define i64 @fptoui_f16toi64(half %x) #0 {
 ;
 ; X86-LABEL: fptoui_f16toi64:
 ; X86:       # %bb.0:
-; X86-NEXT:    vmovsh {{[0-9]+}}(%esp), %xmm0
+; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
 ; X86-NEXT:    vcvttph2uqq %xmm0, %xmm0
 ; X86-NEXT:    vmovd %xmm0, %eax
 ; X86-NEXT:    vpextrd $1, %xmm0, %edx

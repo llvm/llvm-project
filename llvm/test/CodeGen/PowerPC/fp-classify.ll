@@ -7,13 +7,13 @@
 define zeroext i1 @abs_isinff(float %x) {
 ; P8-LABEL: abs_isinff:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; P8-NEXT:    xsabsdp 0, 1
-; P8-NEXT:    li 4, 1
-; P8-NEXT:    lfs 1, .LCPI0_0@toc@l(3)
-; P8-NEXT:    li 3, 0
-; P8-NEXT:    fcmpu 0, 0, 1
-; P8-NEXT:    iseleq 3, 4, 3
+; P8-NEXT:    xscvdpspn 0, 1
+; P8-NEXT:    lis 4, 32640
+; P8-NEXT:    mffprwz 3, 0
+; P8-NEXT:    clrlwi 3, 3, 1
+; P8-NEXT:    xor 3, 3, 4
+; P8-NEXT:    cntlzw 3, 3
+; P8-NEXT:    srwi 3, 3, 5
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinff:
@@ -32,13 +32,13 @@ entry:
 define zeroext i1 @abs_isinf(double %x) {
 ; P8-LABEL: abs_isinf:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
-; P8-NEXT:    xsabsdp 0, 1
-; P8-NEXT:    li 4, 1
-; P8-NEXT:    lfs 1, .LCPI1_0@toc@l(3)
-; P8-NEXT:    li 3, 0
-; P8-NEXT:    fcmpu 0, 0, 1
-; P8-NEXT:    iseleq 3, 4, 3
+; P8-NEXT:    mffprd 3, 1
+; P8-NEXT:    li 4, 2047
+; P8-NEXT:    rldic 4, 4, 52, 1
+; P8-NEXT:    clrldi 3, 3, 1
+; P8-NEXT:    xor 3, 3, 4
+; P8-NEXT:    cntlzd 3, 3
+; P8-NEXT:    rldicl 3, 3, 58, 63
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinf:
@@ -57,30 +57,18 @@ entry:
 define zeroext i1 @abs_isinfq(fp128 %x) {
 ; P8-LABEL: abs_isinfq:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    mflr 0
-; P8-NEXT:    stdu 1, -48(1)
-; P8-NEXT:    std 0, 64(1)
-; P8-NEXT:    .cfi_def_cfa_offset 48
-; P8-NEXT:    .cfi_offset lr, 16
 ; P8-NEXT:    xxswapd 0, 34
-; P8-NEXT:    addi 3, 1, 32
+; P8-NEXT:    addi 3, 1, -16
+; P8-NEXT:    li 5, 32767
 ; P8-NEXT:    stxvd2x 0, 0, 3
-; P8-NEXT:    lbz 4, 47(1)
-; P8-NEXT:    clrlwi 4, 4, 25
-; P8-NEXT:    stb 4, 47(1)
-; P8-NEXT:    lxvd2x 0, 0, 3
-; P8-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
-; P8-NEXT:    addi 3, 3, .LCPI2_0@toc@l
-; P8-NEXT:    xxswapd 34, 0
-; P8-NEXT:    lxvd2x 0, 0, 3
-; P8-NEXT:    xxswapd 35, 0
-; P8-NEXT:    bl __eqkf2
-; P8-NEXT:    nop
-; P8-NEXT:    cntlzw 3, 3
-; P8-NEXT:    srwi 3, 3, 5
-; P8-NEXT:    addi 1, 1, 48
-; P8-NEXT:    ld 0, 16(1)
-; P8-NEXT:    mtlr 0
+; P8-NEXT:    rldic 5, 5, 48, 1
+; P8-NEXT:    ld 4, -8(1)
+; P8-NEXT:    ld 3, -16(1)
+; P8-NEXT:    clrldi 4, 4, 1
+; P8-NEXT:    xor 4, 4, 5
+; P8-NEXT:    or 3, 3, 4
+; P8-NEXT:    cntlzd 3, 3
+; P8-NEXT:    rldicl 3, 3, 58, 63
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinfq:
@@ -99,12 +87,13 @@ entry:
 define zeroext i1 @abs_isinfornanf(float %x) {
 ; P8-LABEL: abs_isinfornanf:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    addis 3, 2, .LCPI3_0@toc@ha
-; P8-NEXT:    xsabsdp 0, 1
-; P8-NEXT:    lfs 1, .LCPI3_0@toc@l(3)
-; P8-NEXT:    li 3, 1
-; P8-NEXT:    fcmpu 0, 0, 1
-; P8-NEXT:    isellt 3, 0, 3
+; P8-NEXT:    xscvdpspn 0, 1
+; P8-NEXT:    lis 4, 32639
+; P8-NEXT:    ori 4, 4, 65535
+; P8-NEXT:    mffprwz 3, 0
+; P8-NEXT:    clrlwi 3, 3, 1
+; P8-NEXT:    sub 3, 4, 3
+; P8-NEXT:    rldicl 3, 3, 1, 63
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinfornanf:
@@ -123,12 +112,15 @@ entry:
 define zeroext i1 @abs_isinfornan(double %x) {
 ; P8-LABEL: abs_isinfornan:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; P8-NEXT:    xsabsdp 0, 1
-; P8-NEXT:    lfs 1, .LCPI4_0@toc@l(3)
-; P8-NEXT:    li 3, 1
-; P8-NEXT:    fcmpu 0, 0, 1
-; P8-NEXT:    isellt 3, 0, 3
+; P8-NEXT:    mffprd 3, 1
+; P8-NEXT:    li 4, -33
+; P8-NEXT:    rldicl 4, 4, 47, 1
+; P8-NEXT:    sradi 5, 4, 63
+; P8-NEXT:    clrldi 3, 3, 1
+; P8-NEXT:    rldicl 6, 3, 1, 63
+; P8-NEXT:    subc 3, 4, 3
+; P8-NEXT:    adde 3, 6, 5
+; P8-NEXT:    xori 3, 3, 1
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinfornan:
@@ -147,53 +139,18 @@ entry:
 define zeroext i1 @abs_isinfornanq(fp128 %x) {
 ; P8-LABEL: abs_isinfornanq:
 ; P8:       # %bb.0: # %entry
-; P8-NEXT:    mflr 0
-; P8-NEXT:    stdu 1, -112(1)
-; P8-NEXT:    std 0, 128(1)
-; P8-NEXT:    .cfi_def_cfa_offset 112
-; P8-NEXT:    .cfi_offset lr, 16
-; P8-NEXT:    .cfi_offset r30, -16
-; P8-NEXT:    .cfi_offset v30, -48
-; P8-NEXT:    .cfi_offset v31, -32
-; P8-NEXT:    li 3, 64
 ; P8-NEXT:    xxswapd 0, 34
-; P8-NEXT:    std 30, 96(1) # 8-byte Folded Spill
-; P8-NEXT:    stvx 30, 1, 3 # 16-byte Folded Spill
-; P8-NEXT:    li 3, 80
-; P8-NEXT:    stvx 31, 1, 3 # 16-byte Folded Spill
-; P8-NEXT:    addi 3, 1, 48
+; P8-NEXT:    addi 3, 1, -16
+; P8-NEXT:    li 4, -3
 ; P8-NEXT:    stxvd2x 0, 0, 3
-; P8-NEXT:    lbz 4, 63(1)
-; P8-NEXT:    clrlwi 4, 4, 25
-; P8-NEXT:    stb 4, 63(1)
-; P8-NEXT:    lxvd2x 0, 0, 3
-; P8-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
-; P8-NEXT:    addi 3, 3, .LCPI5_0@toc@l
-; P8-NEXT:    xxswapd 63, 0
-; P8-NEXT:    lxvd2x 0, 0, 3
-; P8-NEXT:    vmr 2, 31
-; P8-NEXT:    xxswapd 62, 0
-; P8-NEXT:    vmr 3, 30
-; P8-NEXT:    bl __eqkf2
-; P8-NEXT:    nop
-; P8-NEXT:    cntlzw 3, 3
-; P8-NEXT:    vmr 2, 31
-; P8-NEXT:    vmr 3, 30
-; P8-NEXT:    srwi 30, 3, 5
-; P8-NEXT:    bl __unordkf2
-; P8-NEXT:    nop
-; P8-NEXT:    cntlzw 3, 3
-; P8-NEXT:    li 4, 80
-; P8-NEXT:    lvx 31, 1, 4 # 16-byte Folded Reload
-; P8-NEXT:    li 4, 64
-; P8-NEXT:    srwi 3, 3, 5
-; P8-NEXT:    lvx 30, 1, 4 # 16-byte Folded Reload
+; P8-NEXT:    rldicl 4, 4, 47, 1
+; P8-NEXT:    ld 3, -8(1)
+; P8-NEXT:    sradi 5, 4, 63
+; P8-NEXT:    clrldi 3, 3, 1
+; P8-NEXT:    rldicl 6, 3, 1, 63
+; P8-NEXT:    subc 3, 4, 3
+; P8-NEXT:    adde 3, 6, 5
 ; P8-NEXT:    xori 3, 3, 1
-; P8-NEXT:    or 3, 3, 30
-; P8-NEXT:    ld 30, 96(1) # 8-byte Folded Reload
-; P8-NEXT:    addi 1, 1, 112
-; P8-NEXT:    ld 0, 16(1)
-; P8-NEXT:    mtlr 0
 ; P8-NEXT:    blr
 ;
 ; P9-LABEL: abs_isinfornanq:

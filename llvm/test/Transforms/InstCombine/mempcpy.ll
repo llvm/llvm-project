@@ -34,7 +34,7 @@ define ptr @memcpy_small_const_n(ptr %d, ptr nocapture readonly %s) {
 ; CHECK-LABEL: @memcpy_small_const_n(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[S:%.*]], align 1
 ; CHECK-NEXT:    store i64 [[TMP1]], ptr [[D:%.*]], align 1
-; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i8, ptr [[D]], i64 8
+; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 8
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %r = tail call ptr @mempcpy(ptr %d, ptr %s, i64 8)
@@ -44,7 +44,7 @@ define ptr @memcpy_small_const_n(ptr %d, ptr nocapture readonly %s) {
 define ptr @memcpy_big_const_n(ptr %d, ptr nocapture readonly %s) {
 ; CHECK-LABEL: @memcpy_big_const_n(
 ; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(1024) [[D:%.*]], ptr noundef nonnull align 1 dereferenceable(1024) [[S:%.*]], i64 1024, i1 false)
-; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds i8, ptr [[D]], i64 1024
+; CHECK-NEXT:    [[R:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 1024
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %r = tail call ptr @mempcpy(ptr %d, ptr %s, i64 1024)
@@ -55,7 +55,7 @@ define ptr @memcpy_big_const_n(ptr %d, ptr nocapture readonly %s) {
 
 define i32 @PR48810() {
 ; CHECK-LABEL: @PR48810(
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 undef, ptr align 4294967296 null, i64 undef, i1 false)
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret i32 undef
 ;
   %r = call dereferenceable(1) ptr @mempcpy(ptr undef, ptr null, i64 undef)

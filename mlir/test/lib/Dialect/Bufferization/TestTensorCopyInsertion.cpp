@@ -44,9 +44,15 @@ struct TestTensorCopyInsertionPass
     bufferization::OneShotBufferizationOptions options;
     options.allowReturnAllocsFromLoops = allowReturnAllocsFromLoops;
     options.bufferizeFunctionBoundaries = bufferizeFunctionBoundaries;
-    if (mustInferMemorySpace)
-      options.defaultMemorySpace = std::nullopt;
-    if (failed(bufferization::insertTensorCopies(getOperation(), options)))
+    if (mustInferMemorySpace) {
+      options.defaultMemorySpaceFn =
+          [](TensorType t) -> std::optional<Attribute> { return std::nullopt; };
+    }
+
+    bufferization::BufferizationState bufferizationState;
+
+    if (failed(bufferization::insertTensorCopies(getOperation(), options,
+                                                 bufferizationState)))
       signalPassFailure();
   }
 

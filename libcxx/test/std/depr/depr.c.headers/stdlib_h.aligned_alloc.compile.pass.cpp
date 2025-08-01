@@ -13,7 +13,7 @@
 
 // ::aligned_alloc is provided by the C library, but it's marked as unavailable
 // until macOS 10.15
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// XFAIL: target={{.+}}-apple-macosx10.{{(13|14)(.0)?}}
 
 // ::aligned_alloc is not implemented on Windows
 // XFAIL: target={{.+}}-windows-{{.+}}

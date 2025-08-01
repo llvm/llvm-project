@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @d = external global ptr, align 8
 
 ; Function Attrs: norecurse noreturn nounwind uwtable
-define void @fn1(i32 %p1, i32 %p2, i64 %p3) {
+define void @fn1(i32 %p1, i32 %p2, i64 %p3, i1 %arg) {
 entry:
   %tmp = load ptr, ptr @d, align 8
   %tmp1 = load ptr, ptr @a, align 8
@@ -54,10 +54,10 @@ for.cond4.preheader:                              ; preds = %for.body, %for.cond
   br i1 %cmp528, label %for.inc14, label %for.body6.preheader
 
 for.body6.preheader:                              ; preds = %for.cond4.preheader
-  br i1 undef, label %for.body6, label %min.iters.checked
+  br i1 %arg, label %for.body6, label %min.iters.checked
 
 min.iters.checked:                                ; preds = %for.body6.preheader
-  br i1 undef, label %for.body6, label %vector.memcheck
+  br i1 %arg, label %for.body6, label %vector.memcheck
 
 vector.memcheck:                                  ; preds = %min.iters.checked
   %bound1 = icmp ule ptr undef, %scevgep41
@@ -85,10 +85,10 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %tmp16 = getelementptr inbounds i32, ptr %tmp1, i64 %offset.idx.1
   store <4 x i32> %wide.load.1, ptr %tmp16, align 4
   %index.next.3 = add i64 %index, 32
-  br i1 undef, label %middle.block, label %vector.body
+  br i1 %arg, label %middle.block, label %vector.body
 
 middle.block:                                     ; preds = %vector.body, %vector.body.preheader.split
-  br i1 undef, label %for.inc14, label %for.body6
+  br i1 %arg, label %for.inc14, label %for.body6
 
 for.body.preheader:                               ; preds = %for.cond
   br label %for.body
@@ -98,7 +98,7 @@ for.body:                                         ; preds = %for.body, %for.body
   %add = add nsw i32 %k.127, 1
   %tmp18 = load i32, ptr undef, align 4
   store i32 %tmp18, ptr @b, align 4
-  br i1 undef, label %for.body, label %for.cond4.preheader
+  br i1 %arg, label %for.body, label %for.cond4.preheader
 
 for.body6:                                        ; preds = %for.body6, %middle.block, %vector.memcheck, %min.iters.checked, %for.body6.preheader
   %indvars.iv32 = phi i64 [ undef, %for.body6 ], [ %tmp12, %vector.memcheck ], [ %tmp12, %min.iters.checked ], [ %tmp12, %for.body6.preheader ], [ undef, %middle.block ]

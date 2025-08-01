@@ -12,15 +12,12 @@
 
 #include "mlir/Dialect/IRDL/IRDLVerifiers.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
-#include "mlir/Support/LogicalResult.h"
-#include "llvm/Support/FormatVariadic.h"
 
 using namespace mlir;
 using namespace mlir::irdl;
@@ -41,12 +38,11 @@ ConstraintVerifier::verify(function_ref<InFlightDiagnostic()> emitError,
   if (assigned[variable].has_value()) {
     if (attr == assigned[variable].value()) {
       return success();
-    } else {
-      if (emitError)
-        return emitError() << "expected '" << assigned[variable].value()
-                           << "' but got '" << attr << "'";
-      return failure();
     }
+    if (emitError)
+      return emitError() << "expected '" << assigned[variable].value()
+                         << "' but got '" << attr << "'";
+    return failure();
   }
 
   // Otherwise, check the constraint and assign the attribute to the variable.
@@ -66,6 +62,39 @@ LogicalResult IsConstraint::verify(function_ref<InFlightDiagnostic()> emitError,
   if (emitError)
     return emitError() << "expected '" << expectedAttribute << "' but got '"
                        << attr << "'";
+  return failure();
+}
+
+LogicalResult
+BaseAttrConstraint::verify(function_ref<InFlightDiagnostic()> emitError,
+                           Attribute attr, ConstraintVerifier &context) const {
+  if (attr.getTypeID() == baseTypeID)
+    return success();
+
+  if (emitError)
+    return emitError() << "expected base attribute '" << baseName
+                       << "' but got '" << attr.getAbstractAttribute().getName()
+                       << "'";
+  return failure();
+}
+
+LogicalResult
+BaseTypeConstraint::verify(function_ref<InFlightDiagnostic()> emitError,
+                           Attribute attr, ConstraintVerifier &context) const {
+  auto typeAttr = dyn_cast<TypeAttr>(attr);
+  if (!typeAttr) {
+    if (emitError)
+      return emitError() << "expected type, got attribute '" << attr;
+    return failure();
+  }
+
+  Type type = typeAttr.getValue();
+  if (type.getTypeID() == baseTypeID)
+    return success();
+
+  if (emitError)
+    return emitError() << "expected base type '" << baseName << "' but got '"
+                       << type.getAbstractType().getName() << "'";
   return failure();
 }
 

@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_MATH_COPYSIGNF128_H
 #define LLVM_LIBC_SRC_MATH_COPYSIGNF128_H
 
-#include "src/__support/macros/properties/float.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 float128 copysignf128(float128 x, float128 y);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_MATH_COPYSIGN_H
+#endif // LLVM_LIBC_SRC_MATH_COPYSIGNF128_H

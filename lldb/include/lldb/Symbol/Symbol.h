@@ -13,6 +13,7 @@
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Symbol/SymbolContextScope.h"
+#include "lldb/Utility/Stream.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Support/JSON.h"
@@ -174,8 +175,9 @@ public:
 
   void SetFlags(uint32_t flags) { m_flags = flags; }
 
-  void GetDescription(Stream *s, lldb::DescriptionLevel level, Target *target,
-                      llvm::StringRef pattern = "") const;
+  void GetDescription(
+      Stream *s, lldb::DescriptionLevel level, Target *target,
+      std::optional<Stream::HighlightSettings> settings = std::nullopt) const;
 
   bool IsSynthetic() const { return m_is_synthetic; }
 
@@ -256,7 +258,7 @@ public:
   bool ContainsFileAddress(lldb::addr_t file_addr) const;
 
   static llvm::StringRef GetSyntheticSymbolPrefix() {
-    return "___lldb_unnamed_symbol";
+    return "___lldb_unnamed_symbol_";
   }
 
   /// Decode a serialized version of this object from data.

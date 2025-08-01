@@ -1,20 +1,17 @@
 ; RUN: llc < %s -mtriple=aarch64-windows | FileCheck %s
 
-define dso_local i32 @func(ptr %g, i32 %a) {
+define dso_local i32 @func(ptr %g, i32 %a) "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" {
 entry:
   tail call void %g() #2
   ret i32 %a
 }
 
-define dso_local i32 @func2(ptr %g, i32 %a) "target-features"="+v8.3a" {
+define dso_local i32 @func2(ptr %g, i32 %a) "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" "target-features"="+v8.3a" {
 entry:
   tail call void %g() #2
   ret i32 %a
 }
 
-!llvm.module.flags = !{!0}
-
-!0 = !{i32 8, !"sign-return-address", i32 1}
 
 ; CHECK-LABEL: func:
 ; CHECK-NEXT: .seh_proc func

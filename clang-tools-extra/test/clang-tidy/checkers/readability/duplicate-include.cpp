@@ -70,3 +70,18 @@ int r;
 // CHECK-FIXES:      {{^int q;$}}
 // CHECK-FIXES-NEXT: {{^#include <sys/types.h>$}}
 // CHECK-FIXES-NEXT: {{^int r;$}}
+
+namespace Issue_87303 {
+#define RESET_INCLUDE_CACHE
+// Expect no warnings
+
+#define MACRO_FILENAME "duplicate-include.h"
+#include MACRO_FILENAME
+#include "duplicate-include.h"
+
+#define MACRO_FILENAME_2 <duplicate-include2.h>
+#include <duplicate-include2.h>
+#include MACRO_FILENAME_2
+
+#undef RESET_INCLUDE_CACHE
+} // Issue_87303

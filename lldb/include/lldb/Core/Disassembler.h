@@ -409,35 +409,37 @@ public:
   // flavor string gets set wrong. Instead, if you get a flavor string you
   // don't understand, use the default.  Folks who care to check can use the
   // FlavorValidForArchSpec method on the disassembler they got back.
-  static lldb::DisassemblerSP
-  FindPlugin(const ArchSpec &arch, const char *flavor, const char *plugin_name);
+  static lldb::DisassemblerSP FindPlugin(const ArchSpec &arch,
+                                         const char *flavor, const char *cpu,
+                                         const char *features,
+                                         const char *plugin_name);
 
   // This version will use the value in the Target settings if flavor is NULL;
-  static lldb::DisassemblerSP FindPluginForTarget(const Target &target,
-                                                  const ArchSpec &arch,
-                                                  const char *flavor,
-                                                  const char *plugin_name);
+  static lldb::DisassemblerSP
+  FindPluginForTarget(const Target &target, const ArchSpec &arch,
+                      const char *flavor, const char *cpu, const char *features,
+                      const char *plugin_name);
 
   struct Limit {
     enum { Bytes, Instructions } kind;
     lldb::addr_t value;
   };
 
-  static lldb::DisassemblerSP DisassembleRange(const ArchSpec &arch,
-                                               const char *plugin_name,
-                                               const char *flavor,
-                                               Target &target,
-                                               const AddressRange &disasm_range,
-                                               bool force_live_memory = false);
+  static lldb::DisassemblerSP
+  DisassembleRange(const ArchSpec &arch, const char *plugin_name,
+                   const char *flavor, const char *cpu, const char *features,
+                   Target &target, llvm::ArrayRef<AddressRange> disasm_ranges,
+                   bool force_live_memory = false);
 
   static lldb::DisassemblerSP
   DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
-                   const char *flavor, const Address &start, const void *bytes,
-                   size_t length, uint32_t max_num_instructions,
-                   bool data_from_file);
+                   const char *flavor, const char *cpu, const char *features,
+                   const Address &start, const void *bytes, size_t length,
+                   uint32_t max_num_instructions, bool data_from_file);
 
   static bool Disassemble(Debugger &debugger, const ArchSpec &arch,
                           const char *plugin_name, const char *flavor,
+                          const char *cpu, const char *features,
                           const ExecutionContext &exe_ctx, const Address &start,
                           Limit limit, bool mixed_source_and_assembly,
                           uint32_t num_mixed_context_lines, uint32_t options,
@@ -458,7 +460,11 @@ public:
 
   size_t ParseInstructions(Target &target, Address address, Limit limit,
                            Stream *error_strm_ptr,
-                           bool force_live_memory = false);
+                           bool force_live_memory = false) {
+    m_instruction_list.Clear();
+    return AppendInstructions(target, address, limit, error_strm_ptr,
+                              force_live_memory);
+  }
 
   virtual size_t DecodeInstructions(const Address &base_addr,
                                     const DataExtractor &data,
@@ -478,6 +484,9 @@ public:
                                       const char *flavor) = 0;
 
 protected:
+  size_t AppendInstructions(Target &target, Address address, Limit limit,
+                            Stream *error_strm_ptr, bool force_live_memory);
+
   // SourceLine and SourceLinesToDisplay structures are only used in the mixed
   // source and assembly display methods internal to this class.
 
@@ -538,7 +547,7 @@ protected:
   ElideMixedSourceAndDisassemblyLine(const ExecutionContext &exe_ctx,
                                      const SymbolContext &sc, LineEntry &line) {
     SourceLine sl;
-    sl.file = line.file;
+    sl.file = line.GetFile();
     sl.line = line.line;
     sl.column = line.column;
     return ElideMixedSourceAndDisassemblyLine(exe_ctx, sc, sl);
@@ -547,7 +556,6 @@ protected:
   // Classes that inherit from Disassembler can see and modify these
   ArchSpec m_arch;
   InstructionList m_instruction_list;
-  lldb::addr_t m_base_addr;
   std::string m_flavor;
 
 private:

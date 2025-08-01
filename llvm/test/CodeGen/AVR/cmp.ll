@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 ; RUN: llc < %s -mtriple=avr -mcpu=attiny10 | FileCheck --check-prefix=TINY %s
 
 declare void @f1(i8)

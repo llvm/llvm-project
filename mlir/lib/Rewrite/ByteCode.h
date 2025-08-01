@@ -16,6 +16,8 @@
 
 #include "mlir/IR/PatternMatch.h"
 
+#if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+
 namespace mlir {
 namespace pdl_interp {
 class RecordMatchOp;
@@ -223,5 +225,39 @@ private:
 
 } // namespace detail
 } // namespace mlir
+
+#else
+
+namespace mlir::detail {
+
+class PDLByteCodeMutableState {
+public:
+  void cleanupAfterMatchAndRewrite() {}
+  void updatePatternBenefit(unsigned patternIndex, PatternBenefit benefit) {}
+};
+
+class PDLByteCodePattern : public Pattern {};
+
+class PDLByteCode {
+public:
+  struct MatchResult {
+    const PDLByteCodePattern *pattern = nullptr;
+    PatternBenefit benefit;
+  };
+
+  void initializeMutableState(PDLByteCodeMutableState &state) const {}
+  void match(Operation *op, PatternRewriter &rewriter,
+             SmallVectorImpl<MatchResult> &matches,
+             PDLByteCodeMutableState &state) const {}
+  LogicalResult rewrite(PatternRewriter &rewriter, const MatchResult &match,
+                        PDLByteCodeMutableState &state) const {
+    return failure();
+  }
+  ArrayRef<PDLByteCodePattern> getPatterns() const { return {}; }
+};
+
+} // namespace mlir::detail
+
+#endif // MLIR_ENABLE_PDL_IN_PATTERNMATCH
 
 #endif // MLIR_REWRITE_BYTECODE_H_

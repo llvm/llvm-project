@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __LLVM_LIBC_TYPES_PTHREAD_T_H__
-#define __LLVM_LIBC_TYPES_PTHREAD_T_H__
+#ifndef LLVM_LIBC_TYPES_PTHREAD_T_H
+#define LLVM_LIBC_TYPES_PTHREAD_T_H
 
-#include <llvm-libc-types/__thread_type.h>
+#include "__thread_type.h"
 
 typedef __thread_type pthread_t;
 
-#endif // __LLVM_LIBC_TYPES_PTHREAD_T_H__
+#endif // LLVM_LIBC_TYPES_PTHREAD_T_H

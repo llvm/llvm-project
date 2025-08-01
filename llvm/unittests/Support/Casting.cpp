@@ -24,13 +24,11 @@ template <typename T> IllegalCast *cast(...) { return nullptr; }
 //
 struct bar {
   bar() {}
+  bar(const bar &) = delete;
   struct foo *baz();
   struct foo *caz();
   struct foo *daz();
   struct foo *naz();
-
-private:
-  bar(const bar &);
 };
 struct foo {
   foo(const bar &) {}
@@ -280,6 +278,21 @@ TEST(CastingTest, dyn_cast_if_present) {
   // FallibleCastTraits, which default-constructs a T4, which has no value.
   T4 t4 = dyn_cast_if_present<T4>(t3);
   EXPECT_FALSE(t4.hasValue);
+}
+
+TEST(CastingTest, isa_check_predicates) {
+  auto IsaFoo = IsaPred<foo>;
+  EXPECT_TRUE(IsaFoo(B1));
+  EXPECT_TRUE(IsaFoo(B2));
+  EXPECT_TRUE(IsaFoo(B3));
+  EXPECT_TRUE(IsaPred<foo>(B4));
+  EXPECT_TRUE((IsaPred<foo, bar>(B4)));
+
+  auto IsaAndPresentFoo = IsaAndPresentPred<foo>;
+  EXPECT_TRUE(IsaAndPresentFoo(B2));
+  EXPECT_TRUE(IsaAndPresentFoo(B4));
+  EXPECT_FALSE(IsaAndPresentPred<foo>(fub()));
+  EXPECT_FALSE((IsaAndPresentPred<foo, bar>(fub())));
 }
 
 std::unique_ptr<derived> newd() { return std::make_unique<derived>(); }

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+// REQUIRES: can-create-symlinks
 // UNSUPPORTED: c++03, c++11, c++14
 
 // <filesystem>
@@ -43,7 +44,7 @@ static void test_basic() {
     file_status es = e.status(eec);
     assert(ps.type() == es.type());
     assert(ps.permissions() == es.permissions());
-    assert(pec == eec);
+    assert(pec.default_error_condition() == eec.default_error_condition());
   }
   for (const auto& p : TestCases) {
     const directory_entry e(p);

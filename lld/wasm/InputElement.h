@@ -24,7 +24,7 @@ namespace wasm {
 class InputElement {
 protected:
   InputElement(StringRef name, ObjFile *f)
-      : file(f), live(!config->gcSections), name(name) {}
+      : file(f), live(!ctx.arg.gcSections), name(name) {}
 
 public:
   StringRef getName() const { return name; }
@@ -65,7 +65,7 @@ public:
   const WasmInitExpr &getInitExpr() const { return initExpr; }
 
   void setPointerValue(uint64_t value) {
-    initExpr = intConst(value, config->is64.value_or(false));
+    initExpr = intConst(value, ctx.arg.is64.value_or(false));
   }
 
 private:
@@ -76,7 +76,9 @@ private:
 class InputTag : public InputElement {
 public:
   InputTag(const WasmSignature &s, const WasmTag &t, ObjFile *f)
-      : InputElement(t.SymbolName, f), signature(s) {}
+      : InputElement(t.SymbolName, f), signature(s) {
+    assert(s.Kind == WasmSignature::Tag);
+  }
 
   const WasmSignature &signature;
 };

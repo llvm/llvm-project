@@ -12,7 +12,7 @@
 # RUN: echo '    symbols:' >> %t2.map
 # RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
 # RUN: echo '...' >> %t2.map
-# RUN: dsymutil --linker llvm -y %t2.map --num-threads 1 -f -o %t1.out 2>&1 \
+# RUN: dsymutil --linker parallel -y %t2.map --num-threads 1 -f -o %t1.out 2>&1 \
 # RUN:   | FileCheck --check-prefix ERROR %s
 # RUN: llvm-dwarfdump -a %t1.out | FileCheck %s
 

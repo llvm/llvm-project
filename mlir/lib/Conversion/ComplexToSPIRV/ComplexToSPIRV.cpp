@@ -12,11 +12,9 @@
 
 #include "mlir/Conversion/ComplexToSPIRV/ComplexToSPIRV.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "complex-to-spirv-pattern"
 
@@ -102,8 +100,8 @@ struct ImOpPattern final : OpConversionPattern<complex::ImOp> {
 // Pattern population
 //===----------------------------------------------------------------------===//
 
-void mlir::populateComplexToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
-                                          RewritePatternSet &patterns) {
+void mlir::populateComplexToSPIRVPatterns(
+    const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
   patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern>(

@@ -825,7 +825,8 @@ def : InstRW<[P10W_F2_4C, P10W_DISP_ANY, P10F2_Read, P10F2_Read, P10F2_Read],
 def : InstRW<[P10W_F2_4C, P10W_DISP_EVEN, P10W_DISP_ANY, P10F2_Read],
       (instrs
     SRADI_rec,
-    SRAWI_rec
+    SRAWI_rec,
+    SRAWI8_rec
 )>;
 
 // Single crack instructions
@@ -833,7 +834,8 @@ def : InstRW<[P10W_F2_4C, P10W_DISP_EVEN, P10W_DISP_ANY, P10F2_Read],
 def : InstRW<[P10W_F2_4C, P10W_DISP_EVEN, P10W_DISP_ANY, P10F2_Read, P10F2_Read],
       (instrs
     SRAD_rec,
-    SRAW_rec
+    SRAW_rec,
+    SRAW8_rec
 )>;
 
 // 2-way crack instructions
@@ -881,7 +883,7 @@ def : InstRW<[P10W_FX_3C, P10W_DISP_ANY],
 // 3 Cycles ALU operations, 1 input operands
 def : InstRW<[P10W_FX_3C, P10W_DISP_ANY, P10FX_Read],
       (instrs
-    ADDI, ADDI8, ADDIdtprelL32, ADDItlsldLADDR32, ADDItocL, LI, LI8,
+    ADDI, ADDI8, ADDIdtprelL32, ADDItlsldLADDR32, ADDItocL, ADDItocL8, LI, LI8,
     ADDIC, ADDIC8,
     ADDIS, ADDIS8, ADDISdtprelHA32, ADDIStocHA, ADDIStocHA8, LIS, LIS8,
     ADDME, ADDME8,
@@ -926,7 +928,7 @@ def : InstRW<[P10W_FX_3C, P10W_DISP_ANY, P10FX_Read],
     SETNBC, SETNBC8,
     SETNBCR, SETNBCR8,
     SRADI, SRADI_32,
-    SRAWI,
+    SRAWI, SRAWI8,
     SUBFIC, SUBFIC8,
     SUBFME, SUBFME8,
     SUBFME8O, SUBFMEO,
@@ -1008,7 +1010,7 @@ def : InstRW<[P10W_FX_3C, P10W_DISP_ANY, P10FX_Read, P10FX_Read],
     SLD,
     SLW, SLW8,
     SRAD,
-    SRAW,
+    SRAW, SRAW8,
     SRD,
     SRW, SRW8,
     SUBF, SUBF8,

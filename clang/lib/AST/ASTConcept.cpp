@@ -13,32 +13,27 @@
 
 #include "clang/AST/ASTConcept.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/PrettyPrinter.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace clang;
 
-namespace {
-void CreatUnsatisfiedConstraintRecord(
-    const ASTContext &C, const UnsatisfiedConstraintRecord &Detail,
-    UnsatisfiedConstraintRecord *TrailingObject) {
-  if (Detail.second.is<Expr *>())
-    new (TrailingObject) UnsatisfiedConstraintRecord{
-        Detail.first,
-        UnsatisfiedConstraintRecord::second_type(Detail.second.get<Expr *>())};
+static void
+CreateUnsatisfiedConstraintRecord(const ASTContext &C,
+                                  const UnsatisfiedConstraintRecord &Detail,
+                                  UnsatisfiedConstraintRecord *TrailingObject) {
+  if (auto *E = dyn_cast<Expr *>(Detail))
+    new (TrailingObject) UnsatisfiedConstraintRecord(E);
   else {
     auto &SubstitutionDiagnostic =
-        *Detail.second.get<std::pair<SourceLocation, StringRef> *>();
-    unsigned MessageSize = SubstitutionDiagnostic.second.size();
-    char *Mem = new (C) char[MessageSize];
-    memcpy(Mem, SubstitutionDiagnostic.second.data(), MessageSize);
+        *cast<std::pair<SourceLocation, StringRef> *>(Detail);
+    StringRef Message = C.backupStr(SubstitutionDiagnostic.second);
     auto *NewSubstDiag = new (C) std::pair<SourceLocation, StringRef>(
-        SubstitutionDiagnostic.first, StringRef(Mem, MessageSize));
-    new (TrailingObject) UnsatisfiedConstraintRecord{
-        Detail.first, UnsatisfiedConstraintRecord::second_type(NewSubstDiag)};
+        SubstitutionDiagnostic.first, Message);
+    new (TrailingObject) UnsatisfiedConstraintRecord(NewSubstDiag);
   }
 }
-} // namespace
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(
     const ASTContext &C, const ConstraintSatisfaction &Satisfaction)
@@ -46,9 +41,8 @@ ASTConstraintSatisfaction::ASTConstraintSatisfaction(
       IsSatisfied{Satisfaction.IsSatisfied}, ContainsErrors{
                                                  Satisfaction.ContainsErrors} {
   for (unsigned I = 0; I < NumRecords; ++I)
-    CreatUnsatisfiedConstraintRecord(
-        C, Satisfaction.Details[I],
-        getTrailingObjects<UnsatisfiedConstraintRecord>() + I);
+    CreateUnsatisfiedConstraintRecord(C, Satisfaction.Details[I],
+                                      getTrailingObjects() + I);
 }
 
 ASTConstraintSatisfaction::ASTConstraintSatisfaction(
@@ -57,9 +51,8 @@ ASTConstraintSatisfaction::ASTConstraintSatisfaction(
       IsSatisfied{Satisfaction.IsSatisfied},
       ContainsErrors{Satisfaction.ContainsErrors} {
   for (unsigned I = 0; I < NumRecords; ++I)
-    CreatUnsatisfiedConstraintRecord(
-        C, *(Satisfaction.begin() + I),
-        getTrailingObjects<UnsatisfiedConstraintRecord>() + I);
+    CreateUnsatisfiedConstraintRecord(C, *(Satisfaction.begin() + I),
+                                      getTrailingObjects() + I);
 }
 
 ASTConstraintSatisfaction *
@@ -106,9 +99,74 @@ void ConceptReference::print(llvm::raw_ostream &OS,
   ConceptName.printName(OS, Policy);
   if (hasExplicitTemplateArgs()) {
     OS << "<";
+    llvm::ListSeparator Sep(", ");
     // FIXME: Find corresponding parameter for argument
-    for (auto &ArgLoc : ArgsAsWritten->arguments())
+    for (auto &ArgLoc : ArgsAsWritten->arguments()) {
+      OS << Sep;
       ArgLoc.getArgument().print(Policy, OS, /*IncludeType*/ false);
+    }
     OS << ">";
   }
 }
+
+concepts::ExprRequirement::ExprRequirement(
+    Expr *E, bool IsSimple, SourceLocation NoexceptLoc,
+    ReturnTypeRequirement Req, SatisfactionStatus Status,
+    ConceptSpecializationExpr *SubstitutedConstraintExpr)
+    : Requirement(IsSimple ? RK_Simple : RK_Compound, Status == SS_Dependent,
+                  Status == SS_Dependent &&
+                      (E->containsUnexpandedParameterPack() ||
+                       Req.containsUnexpandedParameterPack()),
+                  Status == SS_Satisfied),
+      Value(E), NoexceptLoc(NoexceptLoc), TypeReq(Req),
+      SubstitutedConstraintExpr(SubstitutedConstraintExpr), Status(Status) {
+  assert((!IsSimple || (Req.isEmpty() && NoexceptLoc.isInvalid())) &&
+         "Simple requirement must not have a return type requirement or a "
+         "noexcept specification");
+  assert((Status > SS_TypeRequirementSubstitutionFailure &&
+          Req.isTypeConstraint()) == (SubstitutedConstraintExpr != nullptr));
+}
+
+concepts::ExprRequirement::ExprRequirement(
+    SubstitutionDiagnostic *ExprSubstDiag, bool IsSimple,
+    SourceLocation NoexceptLoc, ReturnTypeRequirement Req)
+    : Requirement(IsSimple ? RK_Simple : RK_Compound, Req.isDependent(),
+                  Req.containsUnexpandedParameterPack(), /*IsSatisfied=*/false),
+      Value(ExprSubstDiag), NoexceptLoc(NoexceptLoc), TypeReq(Req),
+      Status(SS_ExprSubstitutionFailure) {
+  assert((!IsSimple || (Req.isEmpty() && NoexceptLoc.isInvalid())) &&
+         "Simple requirement must not have a return type requirement or a "
+         "noexcept specification");
+}
+
+concepts::ExprRequirement::ReturnTypeRequirement::ReturnTypeRequirement(
+    TemplateParameterList *TPL)
+    : TypeConstraintInfo(TPL, false) {
+  assert(TPL->size() == 1);
+  const TypeConstraint *TC =
+      cast<TemplateTypeParmDecl>(TPL->getParam(0))->getTypeConstraint();
+  assert(TC &&
+         "TPL must have a template type parameter with a type constraint");
+  auto *Constraint =
+      cast<ConceptSpecializationExpr>(TC->getImmediatelyDeclaredConstraint());
+  bool Dependent =
+      Constraint->getTemplateArgsAsWritten() &&
+      TemplateSpecializationType::anyInstantiationDependentTemplateArguments(
+          Constraint->getTemplateArgsAsWritten()->arguments().drop_front(1));
+  TypeConstraintInfo.setInt(Dependent ? true : false);
+}
+
+concepts::ExprRequirement::ReturnTypeRequirement::ReturnTypeRequirement(
+    TemplateParameterList *TPL, bool IsDependent)
+    : TypeConstraintInfo(TPL, IsDependent) {}
+
+concepts::TypeRequirement::TypeRequirement(TypeSourceInfo *T)
+    : Requirement(RK_Type, T->getType()->isInstantiationDependentType(),
+                  T->getType()->containsUnexpandedParameterPack(),
+                  // We reach this ctor with either dependent types (in which
+                  // IsSatisfied doesn't matter) or with non-dependent type in
+                  // which the existence of the type indicates satisfaction.
+                  /*IsSatisfied=*/true),
+      Value(T),
+      Status(T->getType()->isInstantiationDependentType() ? SS_Dependent
+                                                          : SS_Satisfied) {}

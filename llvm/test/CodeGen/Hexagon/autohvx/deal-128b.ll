@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check the individual vdeal shuffles for all 128 controls.
 ; Note: for shuffles with a single 2x2 transpose, vshuff is generated instead

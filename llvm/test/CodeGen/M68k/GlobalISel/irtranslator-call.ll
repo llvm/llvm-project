@@ -57,8 +57,8 @@ define i8 @test_ret_i8() nounwind {
   ret i8 %1
 }
 
-declare void @sret_callee(%struct.A* sret(%struct.A))
-define void @test_sret(%struct.A* sret(%struct.A) %0) nounwind {
+declare void @sret_callee(ptr sret(%struct.A))
+define void @test_sret(ptr sret(%struct.A) %0) nounwind {
   ; CHECK-LABEL: name: test_sret
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -71,7 +71,7 @@ define void @test_sret(%struct.A* sret(%struct.A) %0) nounwind {
   ; CHECK-NEXT:   CALLb @sret_callee, csr_std, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $sp, implicit-def $ccr, implicit $sp
   ; CHECK-NEXT:   RTS
-  call void @sret_callee(%struct.A* sret(%struct.A) %0)
+  call void @sret_callee(ptr sret(%struct.A) %0)
   ret void
 }
 
@@ -105,17 +105,17 @@ define void @test_arg_i32_i16_i8() nounwind {
 }
 
 declare void @arg_struct_callee(%struct.A)
-define void @test_arg_struct(%struct.A *%0) nounwind {
+define void @test_arg_struct(ptr %0) nounwind {
   ; CHECK-LABEL: name: test_arg_struct
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 8)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p0) :: (load (s8) from %ir.0, align 2)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C]](s32)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s16) = G_LOAD [[PTR_ADD]](p0) :: (load (s16) from %ir.0 + 2)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C1]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C1]](s32)
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir.0 + 4, align 2)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 12, 0, implicit-def $sp, implicit-def $ccr, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
@@ -135,38 +135,38 @@ define void @test_arg_struct(%struct.A *%0) nounwind {
   ; CHECK-NEXT:   CALLb @arg_struct_callee, csr_std, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 12, 0, implicit-def $sp, implicit-def $ccr, implicit $sp
   ; CHECK-NEXT:   RTS
-  %2 = load %struct.A, %struct.A* %0
+  %2 = load %struct.A, ptr %0
   call void @arg_struct_callee(%struct.A %2)
   ret void
 }
 
 declare void @arg_array_callee([8 x i8])
-define void @test_arg_array([8 x i8] *%0) nounwind {
+define void @test_arg_array(ptr %0) nounwind {
   ; CHECK-LABEL: name: test_arg_array
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (load (p0) from %fixed-stack.0, align 8)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p0) :: (load (s8) from %ir.0)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C]](s32)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD]](p0) :: (load (s8) from %ir.0 + 1)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C1]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C1]](s32)
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD1]](p0) :: (load (s8) from %ir.0 + 2)
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C2]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C2]](s32)
   ; CHECK-NEXT:   [[LOAD4:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD2]](p0) :: (load (s8) from %ir.0 + 3)
   ; CHECK-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C3]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C3]](s32)
   ; CHECK-NEXT:   [[LOAD5:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD3]](p0) :: (load (s8) from %ir.0 + 4)
   ; CHECK-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C4]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD4:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C4]](s32)
   ; CHECK-NEXT:   [[LOAD6:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD4]](p0) :: (load (s8) from %ir.0 + 5)
   ; CHECK-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 6
-  ; CHECK-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C5]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD5:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C5]](s32)
   ; CHECK-NEXT:   [[LOAD7:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD5]](p0) :: (load (s8) from %ir.0 + 6)
   ; CHECK-NEXT:   [[C6:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
-  ; CHECK-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = G_PTR_ADD [[LOAD]], [[C6]](s32)
+  ; CHECK-NEXT:   [[PTR_ADD6:%[0-9]+]]:_(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C6]](s32)
   ; CHECK-NEXT:   [[LOAD8:%[0-9]+]]:_(s8) = G_LOAD [[PTR_ADD6]](p0) :: (load (s8) from %ir.0 + 7)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 32, 0, implicit-def $sp, implicit-def $ccr, implicit $sp
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $sp
@@ -212,13 +212,13 @@ define void @test_arg_array([8 x i8] *%0) nounwind {
   ; CHECK-NEXT:   CALLb @arg_array_callee, csr_std, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 32, 0, implicit-def $sp, implicit-def $ccr, implicit $sp
   ; CHECK-NEXT:   RTS
-  %2 = load [8 x i8], [8 x i8]* %0
+  %2 = load [8 x i8], ptr %0
   call void @arg_array_callee([8 x i8] %2)
   ret void
 }
 
-declare void @arg_pass_struct_by_ptr_callee(%struct.A*)
-define void @test_arg_pass_struct_by_ptr(%struct.A *%0) nounwind {
+declare void @arg_pass_struct_by_ptr_callee(ptr)
+define void @test_arg_pass_struct_by_ptr(ptr %0) nounwind {
   ; CHECK-LABEL: name: test_arg_pass_struct_by_ptr
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -231,12 +231,12 @@ define void @test_arg_pass_struct_by_ptr(%struct.A *%0) nounwind {
   ; CHECK-NEXT:   CALLb @arg_pass_struct_by_ptr_callee, csr_std, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 4, 0, implicit-def $sp, implicit-def $ccr, implicit $sp
   ; CHECK-NEXT:   RTS
-  call void @arg_pass_struct_by_ptr_callee(%struct.A *%0)
+  call void @arg_pass_struct_by_ptr_callee(ptr %0)
   ret void
 }
 
-declare void @arg_pass_integer_byval_callee(i32* byval(i32), i16* byval(i16), i8* byval(i8))
-define void @test_arg_pass_integer_byval(i32 *%0, i16 *%1, i8 *%2) nounwind {
+declare void @arg_pass_integer_byval_callee(ptr byval(i32), ptr byval(i16), ptr byval(i8))
+define void @test_arg_pass_integer_byval(ptr %0, ptr %1, ptr %2) nounwind {
   ; CHECK-LABEL: name: test_arg_pass_integer_byval
   ; CHECK: bb.1 (%ir-block.3):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
@@ -264,12 +264,12 @@ define void @test_arg_pass_integer_byval(i32 *%0, i16 *%1, i8 *%2) nounwind {
   ; CHECK-NEXT:   CALLb @arg_pass_integer_byval_callee, csr_std, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 12, 0, implicit-def $sp, implicit-def $ccr, implicit $sp
   ; CHECK-NEXT:   RTS
-  call void @arg_pass_integer_byval_callee(i32* byval(i32) %0, i16* byval(i16) %1, i8* byval(i8) %2)
+  call void @arg_pass_integer_byval_callee(ptr byval(i32) %0, ptr byval(i16) %1, ptr byval(i8) %2)
   ret void
 }
 
-declare void @arg_pass_struct_byval_callee(%struct.A* byval(%struct.A))
-define void @test_arg_pass_struct_byval(%struct.A *%0) nounwind {
+declare void @arg_pass_struct_byval_callee(ptr byval(%struct.A))
+define void @test_arg_pass_struct_byval(ptr %0) nounwind {
   ; CHECK-LABEL: name: test_arg_pass_struct_byval
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -283,12 +283,12 @@ define void @test_arg_pass_struct_byval(%struct.A *%0) nounwind {
   ; CHECK-NEXT:   CALLb @arg_pass_struct_byval_callee, csr_std, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 8, 0, implicit-def $sp, implicit-def $ccr, implicit $sp
   ; CHECK-NEXT:   RTS
-  call void @arg_pass_struct_byval_callee(%struct.A* byval(%struct.A) %0)
+  call void @arg_pass_struct_byval_callee(ptr byval(%struct.A) %0)
   ret void
 }
 
-declare void @arg_pass_array_byval_callee([32 x i8]* byval([32 x i8]))
-define void @test_arg_pass_array_byval([32 x i8] *%0) nounwind {
+declare void @arg_pass_array_byval_callee(ptr byval([32 x i8]))
+define void @test_arg_pass_array_byval(ptr %0) nounwind {
   ; CHECK-LABEL: name: test_arg_pass_array_byval
   ; CHECK: bb.1 (%ir-block.1):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -302,11 +302,11 @@ define void @test_arg_pass_array_byval([32 x i8] *%0) nounwind {
   ; CHECK-NEXT:   CALLb @arg_pass_array_byval_callee, csr_std, implicit $sp
   ; CHECK-NEXT:   ADJCALLSTACKUP 32, 0, implicit-def $sp, implicit-def $ccr, implicit $sp
   ; CHECK-NEXT:   RTS
-  call void @arg_pass_array_byval_callee([32 x i8]* byval([32 x i8]) %0)
+  call void @arg_pass_array_byval_callee(ptr byval([32 x i8]) %0)
   ret void
 }
 
-define void @test_indirect_call(void() *%fptr) nounwind {
+define void @test_indirect_call(ptr %fptr) nounwind {
   ; CHECK-LABEL: name: test_indirect_call
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0

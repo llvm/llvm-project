@@ -55,12 +55,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
   Total number of trace items: 28
 
   Memory usage:
-    Raw trace size: 4 KiB
-    Total approximate memory usage (excluding raw trace): 0.25 KiB
-    Average memory usage per item (excluding raw trace): 9.00 bytes
-
-  Timing for this thread:
-    Decoding instructions: """,
+    Raw trace size: 4 KiB""",
                 """
 
   Events:
@@ -69,7 +64,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
       hardware disabled tracing: 4
       trace synchronization point: 1""",
             ],
-            patterns=["Decoding instructions: \d.\d\ds"],
+            patterns=[r"Decoding instructions: \d.\d\ds"],
         )
 
     def testDumpRawTraceSizeJSON(self):
@@ -86,13 +81,7 @@ class TestTraceDumpInfo(TraceIntelPTTestCaseBase):
   "traceTechnology": "intel-pt",
   "threadStats": {
     "tid": 3842849,
-    "traceItemsCount": 28,
-    "memoryUsage": {
-      "totalInBytes": "252",
-      "avgPerItemInBytes": 9
-    },
-    "timingInSeconds": {
-      "Decoding instructions": 0""",
+    "traceItemsCount": 28,""",
                 """
     },
     "events": {

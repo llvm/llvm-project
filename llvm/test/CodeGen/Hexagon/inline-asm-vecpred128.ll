@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; Make sure we can handle the 'q' constraint in the 128-byte mode.

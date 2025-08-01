@@ -22,11 +22,8 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/Markup.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
-#include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Demangle/Demangle.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -611,12 +608,9 @@ std::optional<std::string> MarkupFilter::parseMode(StringRef Str) const {
 
   // Pop off each of r/R, w/W, and x/X from the front, in that order.
   StringRef Remainder = Str;
-  if (!Remainder.empty() && tolower(Remainder.front()) == 'r')
-    Remainder = Remainder.drop_front();
-  if (!Remainder.empty() && tolower(Remainder.front()) == 'w')
-    Remainder = Remainder.drop_front();
-  if (!Remainder.empty() && tolower(Remainder.front()) == 'x')
-    Remainder = Remainder.drop_front();
+  Remainder.consume_front_insensitive("r");
+  Remainder.consume_front_insensitive("w");
+  Remainder.consume_front_insensitive("x");
 
   // If anything remains, then the string wasn't a mode.
   if (!Remainder.empty()) {

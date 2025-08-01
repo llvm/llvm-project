@@ -13,6 +13,7 @@
 
 #include "llvm-c/lto.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/CodeGen/CommandFlags.h"
@@ -88,6 +89,8 @@ struct LTOToolDiagnosticHandler : public DiagnosticHandler {
   }
 };
 
+static SmallVector<const char *> RuntimeLibcallSymbols;
+
 // Initialize the configured targets if they have not been initialized.
 static void lto_initialize() {
   if (!initialized) {
@@ -108,6 +111,7 @@ static void lto_initialize() {
     LTOContext = &Context;
     LTOContext->setDiagnosticHandler(
         std::make_unique<LTOToolDiagnosticHandler>(), true);
+    RuntimeLibcallSymbols = lto::LTO::getRuntimeLibcallSymbols(Triple());
     initialized = true;
   }
 }
@@ -298,11 +302,11 @@ lto_module_t lto_module_create_in_codegen_context(const void *mem,
 void lto_module_dispose(lto_module_t mod) { delete unwrap(mod); }
 
 const char* lto_module_get_target_triple(lto_module_t mod) {
-  return unwrap(mod)->getTargetTriple().c_str();
+  return unwrap(mod)->getTargetTriple().str().c_str();
 }
 
 void lto_module_set_target_triple(lto_module_t mod, const char *triple) {
-  return unwrap(mod)->setTargetTriple(StringRef(triple));
+  return unwrap(mod)->setTargetTriple(Triple(StringRef(triple)));
 }
 
 unsigned int lto_module_get_num_symbols(lto_module_t mod) {
@@ -316,6 +320,15 @@ const char* lto_module_get_symbol_name(lto_module_t mod, unsigned int index) {
 lto_symbol_attributes lto_module_get_symbol_attribute(lto_module_t mod,
                                                       unsigned int index) {
   return unwrap(mod)->getSymbolAttributes(index);
+}
+
+unsigned int lto_module_get_num_asm_undef_symbols(lto_module_t mod) {
+  return unwrap(mod)->getAsmUndefSymbolCount();
+}
+
+const char *lto_module_get_asm_undef_symbol_name(lto_module_t mod,
+                                                 unsigned int index) {
+  return unwrap(mod)->getAsmUndefSymbolName(index).data();
 }
 
 const char* lto_module_get_linkeropts(lto_module_t mod) {
@@ -471,8 +484,7 @@ void lto_set_debug_options(const char *const *options, int number) {
   // Need to put each suboption in a null-terminated string before passing to
   // parseCommandLineOptions().
   std::vector<std::string> Options;
-  for (int i = 0; i < number; ++i)
-    Options.push_back(options[i]);
+  llvm::append_range(Options, ArrayRef(options, number));
 
   llvm::parseCommandLineOptions(Options);
   optionParsingState = OptParsingState::Early;
@@ -493,9 +505,7 @@ void lto_codegen_debug_options_array(lto_code_gen_t cg,
                                      const char *const *options, int number) {
   assert(optionParsingState != OptParsingState::Early &&
          "early option processing already happened");
-  SmallVector<StringRef, 4> Options;
-  for (int i = 0; i < number; ++i)
-    Options.push_back(options[i]);
+  SmallVector<StringRef, 4> Options(ArrayRef(options, number));
   unwrap(cg)->setCodeGenDebugOptions(ArrayRef(Options));
 }
 
@@ -691,7 +701,6 @@ extern const char *lto_input_get_dependent_library(lto_input_t input,
 }
 
 extern const char *const *lto_runtime_lib_symbols_list(size_t *size) {
-  auto symbols = lto::LTO::getRuntimeLibcallSymbols();
-  *size = symbols.size();
-  return symbols.data();
+  *size = RuntimeLibcallSymbols.size();
+  return RuntimeLibcallSymbols.data();
 }

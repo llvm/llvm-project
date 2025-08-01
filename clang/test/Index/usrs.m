@@ -182,7 +182,7 @@ int test_multi_declaration(void) {
 // CHECK-source: usrs.m:3:40: ParmDecl=y:3:40 (Definition) Extent=[3:36 - 3:41]
 // CHECK-source: usrs.m:3:43: CompoundStmt= Extent=[3:43 - 3:60]
 // CHECK-source: usrs.m:3:45: ReturnStmt= Extent=[3:45 - 3:57]
-// CHECK-source: usrs.m:3:52: BinaryOperator= Extent=[3:52 - 3:57]
+// CHECK-source: usrs.m:3:52: BinaryOperator=+ Extent=[3:52 - 3:57]
 // CHECK-source: usrs.m:3:52: DeclRefExpr=x:3:33 Extent=[3:52 - 3:53]
 // CHECK-source: usrs.m:3:56: DeclRefExpr=y:3:40 Extent=[3:56 - 3:57]
 // CHECK-source: usrs.m:5:1: EnumDecl=enum (unnamed at {{.*}}):5:1 (Definition) Extent=[5:1 - 8:2]

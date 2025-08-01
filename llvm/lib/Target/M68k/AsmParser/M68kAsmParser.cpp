@@ -8,10 +8,11 @@
 
 #include "M68kInstrInfo.h"
 #include "M68kRegisterInfo.h"
+#include "MCTargetDesc/M68kMCAsmInfo.h"
 #include "TargetInfo/M68kTargetInfo.h"
 
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/MC/MCStreamer.h"
@@ -69,9 +70,9 @@ public:
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
-  bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+  bool parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
-  bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
+  bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
@@ -144,7 +145,7 @@ public:
   SMLoc getStartLoc() const override { return Start; }
   SMLoc getEndLoc() const override { return End; }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   bool isMem() const override { return false; }
   bool isMemOp() const { return Kind == KindTy::MemOp; }
@@ -157,7 +158,7 @@ public:
   bool isDReg() const;
   bool isFPDReg() const;
   bool isFPCReg() const;
-  unsigned getReg() const override;
+  MCRegister getReg() const override;
   void addRegOperands(MCInst &Inst, unsigned N) const;
 
   static std::unique_ptr<M68kOperand> createMemOp(M68kMemOp MemOp, SMLoc Start,
@@ -258,6 +259,7 @@ static inline unsigned getRegisterIndex(unsigned Register) {
   // We don't care about the indices of these registers.
   case M68k::PC:
   case M68k::CCR:
+  case M68k::SR:
   case M68k::FPC:
   case M68k::FPS:
   case M68k::FPIAR:
@@ -312,7 +314,7 @@ bool M68kOperand::isReg() const {
   return Kind == KindTy::MemOp && MemOp.Op == M68kMemOp::Kind::Reg;
 }
 
-unsigned M68kOperand::getReg() const {
+MCRegister M68kOperand::getReg() const {
   assert(isReg());
   return MemOp.OuterReg;
 }
@@ -636,9 +638,12 @@ bool M68kAsmParser::parseRegisterName(MCRegister &RegNo, SMLoc Loc,
                                       StringRef RegisterName) {
   auto RegisterNameLower = RegisterName.lower();
 
-  // CCR register
+  // CCR and SR register
   if (RegisterNameLower == "ccr") {
     RegNo = M68k::CCR;
+    return true;
+  } else if (RegisterNameLower == "sr") {
+    RegNo = M68k::SR;
     return true;
   }
 
@@ -959,7 +964,7 @@ void M68kAsmParser::eatComma() {
   }
 }
 
-bool M68kAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
+bool M68kAsmParser::parseInstruction(ParseInstructionInfo &Info, StringRef Name,
                                      SMLoc NameLoc, OperandVector &Operands) {
   SMLoc Start = getLexer().getLoc();
   Operands.push_back(M68kOperand::createToken(Name, Start, Start));
@@ -1024,7 +1029,7 @@ bool M68kAsmParser::emit(MCInst &Inst, SMLoc const &Loc,
   return false;
 }
 
-bool M68kAsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
+bool M68kAsmParser::matchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
                                             OperandVector &Operands,
                                             MCStreamer &Out,
                                             uint64_t &ErrorInfo,
@@ -1047,7 +1052,7 @@ bool M68kAsmParser::MatchAndEmitInstruction(SMLoc Loc, unsigned &Opcode,
   }
 }
 
-void M68kOperand::print(raw_ostream &OS) const {
+void M68kOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   switch (Kind) {
   case KindTy::Invalid:
     OS << "invalid";

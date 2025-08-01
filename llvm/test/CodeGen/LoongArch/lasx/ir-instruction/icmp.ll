@@ -19,9 +19,9 @@ define void @v32i8_icmp_eq_imm(ptr %res, ptr %a0) nounwind {
 define void @v32i8_icmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v32i8_icmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvseq.b $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvseq.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %a0
@@ -49,9 +49,9 @@ define void @v16i16_icmp_eq_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i16_icmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i16_icmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvseq.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvseq.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %a0
@@ -79,9 +79,9 @@ define void @v8i32_icmp_eq_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i32_icmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i32_icmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvseq.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvseq.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %a0
@@ -109,9 +109,9 @@ define void @v4i64_icmp_eq_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i64_icmp_eq(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i64_icmp_eq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvseq.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvseq.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %a0
@@ -140,9 +140,9 @@ define void @v32i8_icmp_sle_imm(ptr %res, ptr %a0) nounwind {
 define void @v32i8_icmp_sle(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v32i8_icmp_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsle.b $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsle.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %a0
@@ -170,9 +170,9 @@ define void @v16i16_icmp_sle_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i16_icmp_sle(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i16_icmp_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsle.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsle.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %a0
@@ -200,9 +200,9 @@ define void @v8i32_icmp_sle_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i32_icmp_sle(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i32_icmp_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsle.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsle.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %a0
@@ -230,9 +230,9 @@ define void @v4i64_icmp_sle_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i64_icmp_sle(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i64_icmp_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsle.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsle.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %a0
@@ -261,9 +261,9 @@ define void @v32i8_icmp_ule_imm(ptr %res, ptr %a0) nounwind {
 define void @v32i8_icmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v32i8_icmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsle.bu $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsle.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %a0
@@ -291,9 +291,9 @@ define void @v16i16_icmp_ule_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i16_icmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i16_icmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsle.hu $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsle.hu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %a0
@@ -321,9 +321,9 @@ define void @v8i32_icmp_ule_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i32_icmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i32_icmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsle.wu $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsle.wu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %a0
@@ -351,9 +351,9 @@ define void @v4i64_icmp_ule_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i64_icmp_ule(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i64_icmp_ule:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvsle.du $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvsle.du $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %a0
@@ -382,9 +382,9 @@ define void @v32i8_icmp_slt_imm(ptr %res, ptr %a0) nounwind {
 define void @v32i8_icmp_slt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v32i8_icmp_slt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvslt.b $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvslt.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %a0
@@ -412,9 +412,9 @@ define void @v16i16_icmp_slt_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i16_icmp_slt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i16_icmp_slt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvslt.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvslt.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %a0
@@ -442,9 +442,9 @@ define void @v8i32_icmp_slt_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i32_icmp_slt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i32_icmp_slt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvslt.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvslt.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %a0
@@ -472,9 +472,9 @@ define void @v4i64_icmp_slt_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i64_icmp_slt(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i64_icmp_slt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvslt.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvslt.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %a0
@@ -503,9 +503,9 @@ define void @v32i8_icmp_ult_imm(ptr %res, ptr %a0) nounwind {
 define void @v32i8_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v32i8_icmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvslt.bu $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvslt.bu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <32 x i8>, ptr %a0
@@ -533,9 +533,9 @@ define void @v16i16_icmp_ult_imm(ptr %res, ptr %a0) nounwind {
 define void @v16i16_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i16_icmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvslt.hu $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvslt.hu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <16 x i16>, ptr %a0
@@ -563,9 +563,9 @@ define void @v8i32_icmp_ult_imm(ptr %res, ptr %a0) nounwind {
 define void @v8i32_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i32_icmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvslt.wu $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvslt.wu $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <8 x i32>, ptr %a0
@@ -593,9 +593,9 @@ define void @v4i64_icmp_ult_imm(ptr %res, ptr %a0) nounwind {
 define void @v4i64_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i64_icmp_ult:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvslt.du $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvslt.du $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
   %v0 = load <4 x i64>, ptr %a0
@@ -610,9 +610,9 @@ define void @v4i64_icmp_ult(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v32i8_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v32i8_icmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvseq.b $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvseq.b $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvxori.b $xr0, $xr0, 255
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
@@ -627,9 +627,9 @@ define void @v32i8_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v16i16_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v16i16_icmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvseq.h $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvseq.h $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvrepli.b $xr1, -1
 ; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -645,9 +645,9 @@ define void @v16i16_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v8i32_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v8i32_icmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvseq.w $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvseq.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvrepli.b $xr1, -1
 ; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -663,9 +663,9 @@ define void @v8i32_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 define void @v4i64_icmp_ne(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK-LABEL: v4i64_icmp_ne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvseq.d $xr0, $xr1, $xr0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvseq.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvrepli.b $xr1, -1
 ; CHECK-NEXT:    xvxor.v $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0

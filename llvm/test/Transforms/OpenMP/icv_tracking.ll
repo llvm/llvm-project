@@ -34,12 +34,14 @@ define i32 @ok_use_assume(i32 %0) {
 ; CHECK-SAME: (i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    call void @use(i32 [[TMP0]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @use(i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @use(i32 [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    call void @no_openmp_use(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    ret i32 [[TMP2]]
 ;
   call void @use(i32 %0) "no_openmp"
   call void @use(i32 %0) "no_openmp_routines"
+  call void @use(i32 %0) "no_openmp_constructs"
   call void @no_openmp_use(i32 %0)
   %2 = add nsw i32 %0, 1
   ret i32 %2
@@ -505,13 +507,13 @@ define void @test4_invoke(i1 %0) personality ptr @__gxx_personality_v0 {
 ; CHECK-SAME: (i1 [[TMP0:%.*]]) personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    call void @known_unique_icv(i1 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = invoke i32 @maybe_throw(i1 zeroext [[TMP0]])
-; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[EXC:%.*]]
+; CHECK-NEXT:            to label [[CONT:%.*]] unwind label [[EXC:%.*]]
 ; CHECK:       cont:
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i1 [[TMP0]], false
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP5:%.*]], label [[TMP4:%.*]]
 ; CHECK:       exc:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
+; CHECK-NEXT:            filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
 ; CHECK-NEXT:    [[VAL:%.*]] = call i32 @icv_free_use(i32 10)

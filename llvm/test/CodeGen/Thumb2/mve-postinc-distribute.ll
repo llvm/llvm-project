@@ -3,7 +3,7 @@
 
 ; Check some loop postinc's for properly distributed post-incs
 
-define i32 @vaddv(i32* nocapture readonly %data, i32 %N) {
+define i32 @vaddv(ptr nocapture readonly %data, i32 %N) {
 ; CHECK-LABEL: vaddv:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -35,25 +35,25 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
   ret i32 %x.0.lcssa
 
 for.body:                                         ; preds = %entry, %for.body
-  %data.addr.014 = phi i32* [ %add.ptr1, %for.body ], [ %data, %entry ]
+  %data.addr.014 = phi ptr [ %add.ptr1, %for.body ], [ %data, %entry ]
   %i.013 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
   %x.012 = phi i32 [ %7, %for.body ], [ 0, %entry ]
-  %0 = bitcast i32* %data.addr.014 to <4 x i32>*
-  %1 = load <4 x i32>, <4 x i32>* %0, align 4
+  %0 = bitcast ptr %data.addr.014 to ptr
+  %1 = load <4 x i32>, ptr %0, align 4
   %2 = tail call i32 @llvm.arm.mve.addv.v4i32(<4 x i32> %1, i32 0)
   %3 = add i32 %2, %x.012
-  %add.ptr = getelementptr inbounds i32, i32* %data.addr.014, i32 4
-  %4 = bitcast i32* %add.ptr to <4 x i32>*
-  %5 = load <4 x i32>, <4 x i32>* %4, align 4
+  %add.ptr = getelementptr inbounds i32, ptr %data.addr.014, i32 4
+  %4 = bitcast ptr %add.ptr to ptr
+  %5 = load <4 x i32>, ptr %4, align 4
   %6 = tail call i32 @llvm.arm.mve.addv.v4i32(<4 x i32> %5, i32 0)
   %7 = add i32 %3, %6
-  %add.ptr1 = getelementptr inbounds i32, i32* %data.addr.014, i32 8
+  %add.ptr1 = getelementptr inbounds i32, ptr %data.addr.014, i32 8
   %inc = add nuw nsw i32 %i.013, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.cond.cleanup, label %for.body
 }
 
-define void @arm_cmplx_dot_prod_q15(i16* nocapture readonly %pSrcA, i16* nocapture readonly %pSrcB, i32 %numSamples, i32* nocapture %realResult, i32* nocapture %imagResult) {
+define void @arm_cmplx_dot_prod_q15(ptr nocapture readonly %pSrcA, ptr nocapture readonly %pSrcB, i32 %numSamples, ptr nocapture %realResult, ptr nocapture %imagResult) {
 ; CHECK-LABEL: arm_cmplx_dot_prod_q15:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
@@ -100,8 +100,8 @@ define void @arm_cmplx_dot_prod_q15(i16* nocapture readonly %pSrcA, i16* nocaptu
 ; CHECK-NEXT:    ldr.w r8, [sp, #36]
 ; CHECK-NEXT:    mov r6, r12
 ; CHECK-NEXT:    mov r5, r7
-; CHECK-NEXT:    and r2, r2, #3
 ; CHECK-NEXT:    lsrl r6, r5, #6
+; CHECK-NEXT:    and r2, r2, #3
 ; CHECK-NEXT:    wls lr, r2, .LBB1_7
 ; CHECK-NEXT:  .LBB1_5: @ %while.body11
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
@@ -129,42 +129,42 @@ entry:
   %mul = shl i32 %numSamples, 1
   %sub = add i32 %mul, -8
   %shr = lshr i32 %sub, 3
-  %vecSrcB.0.in102 = bitcast i16* %pSrcB to <8 x i16>*
-  %vecSrcB.0103 = load <8 x i16>, <8 x i16>* %vecSrcB.0.in102, align 2
-  %vecSrcA.0.in104 = bitcast i16* %pSrcA to <8 x i16>*
-  %vecSrcA.0105 = load <8 x i16>, <8 x i16>* %vecSrcA.0.in104, align 2
+  %vecSrcB.0.in102 = bitcast ptr %pSrcB to ptr
+  %vecSrcB.0103 = load <8 x i16>, ptr %vecSrcB.0.in102, align 2
+  %vecSrcA.0.in104 = bitcast ptr %pSrcA to ptr
+  %vecSrcA.0105 = load <8 x i16>, ptr %vecSrcA.0.in104, align 2
   %cmp106 = icmp eq i32 %shr, 0
   br i1 %cmp106, label %while.end, label %while.body.preheader
 
 while.body.preheader:                             ; preds = %entry
   %0 = shl i32 %shr, 4
-  %scevgep = getelementptr i16, i16* %pSrcA, i32 %0
+  %scevgep = getelementptr i16, ptr %pSrcA, i32 %0
   br label %while.body
 
 while.body:                                       ; preds = %while.body.preheader, %while.body
   %vecSrcA.0115 = phi <8 x i16> [ %vecSrcA.0, %while.body ], [ %vecSrcA.0105, %while.body.preheader ]
   %vecSrcB.0114 = phi <8 x i16> [ %vecSrcB.0, %while.body ], [ %vecSrcB.0103, %while.body.preheader ]
-  %vecSrcB.0.in.in113 = phi i16* [ %add.ptr3, %while.body ], [ %pSrcB, %while.body.preheader ]
-  %vecSrcA.0.in.in112 = phi i16* [ %add.ptr2, %while.body ], [ %pSrcA, %while.body.preheader ]
+  %vecSrcB.0.in.in113 = phi ptr [ %add.ptr3, %while.body ], [ %pSrcB, %while.body.preheader ]
+  %vecSrcA.0.in.in112 = phi ptr [ %add.ptr2, %while.body ], [ %pSrcA, %while.body.preheader ]
   %accImag.0.off32111 = phi i32 [ %15, %while.body ], [ 0, %while.body.preheader ]
   %accImag.0.off0110 = phi i32 [ %16, %while.body ], [ 0, %while.body.preheader ]
   %accReal.0.off32109 = phi i32 [ %12, %while.body ], [ 0, %while.body.preheader ]
   %accReal.0.off0108 = phi i32 [ %13, %while.body ], [ 0, %while.body.preheader ]
   %blkCnt.0107 = phi i32 [ %dec, %while.body ], [ %shr, %while.body.preheader ]
-  %pSrcB.addr.0 = getelementptr inbounds i16, i16* %vecSrcB.0.in.in113, i32 8
-  %pSrcA.addr.0 = getelementptr inbounds i16, i16* %vecSrcA.0.in.in112, i32 8
+  %pSrcB.addr.0 = getelementptr inbounds i16, ptr %vecSrcB.0.in.in113, i32 8
+  %pSrcA.addr.0 = getelementptr inbounds i16, ptr %vecSrcA.0.in.in112, i32 8
   %1 = tail call { i32, i32 } @llvm.arm.mve.vmlldava.v8i16(i32 0, i32 1, i32 0, i32 %accReal.0.off0108, i32 %accReal.0.off32109, <8 x i16> %vecSrcA.0115, <8 x i16> %vecSrcB.0114)
   %2 = extractvalue { i32, i32 } %1, 1
   %3 = extractvalue { i32, i32 } %1, 0
-  %4 = bitcast i16* %pSrcA.addr.0 to <8 x i16>*
-  %5 = load <8 x i16>, <8 x i16>* %4, align 2
-  %add.ptr2 = getelementptr inbounds i16, i16* %vecSrcA.0.in.in112, i32 16
+  %4 = bitcast ptr %pSrcA.addr.0 to ptr
+  %5 = load <8 x i16>, ptr %4, align 2
+  %add.ptr2 = getelementptr inbounds i16, ptr %vecSrcA.0.in.in112, i32 16
   %6 = tail call { i32, i32 } @llvm.arm.mve.vmlldava.v8i16(i32 0, i32 0, i32 1, i32 %accImag.0.off0110, i32 %accImag.0.off32111, <8 x i16> %vecSrcA.0115, <8 x i16> %vecSrcB.0114)
   %7 = extractvalue { i32, i32 } %6, 1
   %8 = extractvalue { i32, i32 } %6, 0
-  %9 = bitcast i16* %pSrcB.addr.0 to <8 x i16>*
-  %10 = load <8 x i16>, <8 x i16>* %9, align 2
-  %add.ptr3 = getelementptr inbounds i16, i16* %vecSrcB.0.in.in113, i32 16
+  %9 = bitcast ptr %pSrcB.addr.0 to ptr
+  %10 = load <8 x i16>, ptr %9, align 2
+  %add.ptr3 = getelementptr inbounds i16, ptr %vecSrcB.0.in.in113, i32 16
   %11 = tail call { i32, i32 } @llvm.arm.mve.vmlldava.v8i16(i32 0, i32 1, i32 0, i32 %3, i32 %2, <8 x i16> %5, <8 x i16> %10)
   %12 = extractvalue { i32, i32 } %11, 1
   %13 = extractvalue { i32, i32 } %11, 0
@@ -172,15 +172,15 @@ while.body:                                       ; preds = %while.body.preheade
   %15 = extractvalue { i32, i32 } %14, 1
   %16 = extractvalue { i32, i32 } %14, 0
   %dec = add nsw i32 %blkCnt.0107, -1
-  %vecSrcB.0.in = bitcast i16* %add.ptr3 to <8 x i16>*
-  %vecSrcB.0 = load <8 x i16>, <8 x i16>* %vecSrcB.0.in, align 2
-  %vecSrcA.0.in = bitcast i16* %add.ptr2 to <8 x i16>*
-  %vecSrcA.0 = load <8 x i16>, <8 x i16>* %vecSrcA.0.in, align 2
+  %vecSrcB.0.in = bitcast ptr %add.ptr3 to ptr
+  %vecSrcB.0 = load <8 x i16>, ptr %vecSrcB.0.in, align 2
+  %vecSrcA.0.in = bitcast ptr %add.ptr2 to ptr
+  %vecSrcA.0 = load <8 x i16>, ptr %vecSrcA.0.in, align 2
   %cmp = icmp eq i32 %dec, 0
   br i1 %cmp, label %while.cond.while.end_crit_edge, label %while.body
 
 while.cond.while.end_crit_edge:                   ; preds = %while.body
-  %scevgep136 = getelementptr i16, i16* %pSrcB, i32 %0
+  %scevgep136 = getelementptr i16, ptr %pSrcB, i32 %0
   br label %while.end
 
 while.end:                                        ; preds = %while.cond.while.end_crit_edge, %entry
@@ -188,8 +188,8 @@ while.end:                                        ; preds = %while.cond.while.en
   %accReal.0.off32.lcssa = phi i32 [ %12, %while.cond.while.end_crit_edge ], [ 0, %entry ]
   %accImag.0.off0.lcssa = phi i32 [ %16, %while.cond.while.end_crit_edge ], [ 0, %entry ]
   %accImag.0.off32.lcssa = phi i32 [ %15, %while.cond.while.end_crit_edge ], [ 0, %entry ]
-  %vecSrcA.0.in.in.lcssa = phi i16* [ %scevgep, %while.cond.while.end_crit_edge ], [ %pSrcA, %entry ]
-  %vecSrcB.0.in.in.lcssa = phi i16* [ %scevgep136, %while.cond.while.end_crit_edge ], [ %pSrcB, %entry ]
+  %vecSrcA.0.in.in.lcssa = phi ptr [ %scevgep, %while.cond.while.end_crit_edge ], [ %pSrcA, %entry ]
+  %vecSrcB.0.in.in.lcssa = phi ptr [ %scevgep136, %while.cond.while.end_crit_edge ], [ %pSrcB, %entry ]
   %vecSrcB.0.lcssa = phi <8 x i16> [ %vecSrcB.0, %while.cond.while.end_crit_edge ], [ %vecSrcB.0103, %entry ]
   %vecSrcA.0.lcssa = phi <8 x i16> [ %vecSrcA.0, %while.cond.while.end_crit_edge ], [ %vecSrcA.0105, %entry ]
   %17 = tail call { i32, i32 } @llvm.arm.mve.vmlldava.v8i16(i32 0, i32 1, i32 0, i32 %accReal.0.off0.lcssa, i32 %accReal.0.off32.lcssa, <8 x i16> %vecSrcA.0.lcssa, <8 x i16> %vecSrcB.0.lcssa)
@@ -215,19 +215,19 @@ while.end:                                        ; preds = %while.cond.while.en
   br i1 %cmp1095, label %while.end34, label %while.body11
 
 while.body11:                                     ; preds = %while.end, %while.body11
-  %pSrcA.addr.1100 = phi i16* [ %incdec.ptr12, %while.body11 ], [ %vecSrcA.0.in.in.lcssa, %while.end ]
-  %pSrcB.addr.199 = phi i16* [ %incdec.ptr14, %while.body11 ], [ %vecSrcB.0.in.in.lcssa, %while.end ]
+  %pSrcA.addr.1100 = phi ptr [ %incdec.ptr12, %while.body11 ], [ %vecSrcA.0.in.in.lcssa, %while.end ]
+  %pSrcB.addr.199 = phi ptr [ %incdec.ptr14, %while.body11 ], [ %vecSrcB.0.in.in.lcssa, %while.end ]
   %accImag.198 = phi i64 [ %add32, %while.body11 ], [ %30, %while.end ]
   %accReal.197 = phi i64 [ %sub27, %while.body11 ], [ %23, %while.end ]
   %blkCnt.196 = phi i32 [ %dec33, %while.body11 ], [ %shr8, %while.end ]
-  %incdec.ptr = getelementptr inbounds i16, i16* %pSrcA.addr.1100, i32 1
-  %31 = load i16, i16* %pSrcA.addr.1100, align 2
-  %incdec.ptr12 = getelementptr inbounds i16, i16* %pSrcA.addr.1100, i32 2
-  %32 = load i16, i16* %incdec.ptr, align 2
-  %incdec.ptr13 = getelementptr inbounds i16, i16* %pSrcB.addr.199, i32 1
-  %33 = load i16, i16* %pSrcB.addr.199, align 2
-  %incdec.ptr14 = getelementptr inbounds i16, i16* %pSrcB.addr.199, i32 2
-  %34 = load i16, i16* %incdec.ptr13, align 2
+  %incdec.ptr = getelementptr inbounds i16, ptr %pSrcA.addr.1100, i32 1
+  %31 = load i16, ptr %pSrcA.addr.1100, align 2
+  %incdec.ptr12 = getelementptr inbounds i16, ptr %pSrcA.addr.1100, i32 2
+  %32 = load i16, ptr %incdec.ptr, align 2
+  %incdec.ptr13 = getelementptr inbounds i16, ptr %pSrcB.addr.199, i32 1
+  %33 = load i16, ptr %pSrcB.addr.199, align 2
+  %incdec.ptr14 = getelementptr inbounds i16, ptr %pSrcB.addr.199, i32 2
+  %34 = load i16, ptr %incdec.ptr13, align 2
   %conv = sext i16 %31 to i32
   %conv15 = sext i16 %33 to i32
   %mul16 = mul nsw i32 %conv15, %conv
@@ -258,13 +258,13 @@ while.end34.loopexit:                             ; preds = %while.body11
 while.end34:                                      ; preds = %while.end34.loopexit, %while.end
   %accReal.1.lcssa.off6 = phi i32 [ %extract.t, %while.end ], [ %extract.t128, %while.end34.loopexit ]
   %accImag.1.lcssa.off6 = phi i32 [ %extract.t130, %while.end ], [ %extract.t132, %while.end34.loopexit ]
-  store i32 %accReal.1.lcssa.off6, i32* %realResult, align 4
-  store i32 %accImag.1.lcssa.off6, i32* %imagResult, align 4
+  store i32 %accReal.1.lcssa.off6, ptr %realResult, align 4
+  store i32 %accImag.1.lcssa.off6, ptr %imagResult, align 4
   ret void
 }
 
 
-define void @fma8(float* noalias nocapture readonly %A, float* noalias nocapture readonly %B, float* noalias nocapture %C, i32 %n) {
+define void @fma8(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %n) {
 ; CHECK-LABEL: fma8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, lr}
@@ -335,18 +335,18 @@ vector.ph:                                        ; preds = %for.body.preheader
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds float, float* %A, i32 %index
-  %1 = bitcast float* %0 to <8 x float>*
-  %wide.load = load <8 x float>, <8 x float>* %1, align 4
-  %2 = getelementptr inbounds float, float* %B, i32 %index
-  %3 = bitcast float* %2 to <8 x float>*
-  %wide.load10 = load <8 x float>, <8 x float>* %3, align 4
+  %0 = getelementptr inbounds float, ptr %A, i32 %index
+  %1 = bitcast ptr %0 to ptr
+  %wide.load = load <8 x float>, ptr %1, align 4
+  %2 = getelementptr inbounds float, ptr %B, i32 %index
+  %3 = bitcast ptr %2 to ptr
+  %wide.load10 = load <8 x float>, ptr %3, align 4
   %4 = fmul fast <8 x float> %wide.load10, %wide.load
-  %5 = getelementptr inbounds float, float* %C, i32 %index
-  %6 = bitcast float* %5 to <8 x float>*
-  %wide.load11 = load <8 x float>, <8 x float>* %6, align 4
+  %5 = getelementptr inbounds float, ptr %C, i32 %index
+  %6 = bitcast ptr %5 to ptr
+  %wide.load11 = load <8 x float>, ptr %6, align 4
   %7 = fadd fast <8 x float> %wide.load11, %4
-  store <8 x float> %7, <8 x float>* %6, align 4
+  store <8 x float> %7, ptr %6, align 4
   %index.next = add i32 %index, 8
   %8 = icmp eq i32 %index.next, %n.vec
   br i1 %8, label %middle.block, label %vector.body
@@ -360,15 +360,15 @@ for.cond.cleanup:                                 ; preds = %for.body, %middle.b
 
 for.body:                                         ; preds = %for.body.preheader12, %for.body
   %i.09 = phi i32 [ %inc, %for.body ], [ %i.09.ph, %for.body.preheader12 ]
-  %arrayidx = getelementptr inbounds float, float* %A, i32 %i.09
-  %9 = load float, float* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds float, float* %B, i32 %i.09
-  %10 = load float, float* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.09
+  %9 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %B, i32 %i.09
+  %10 = load float, ptr %arrayidx1, align 4
   %mul = fmul fast float %10, %9
-  %arrayidx2 = getelementptr inbounds float, float* %C, i32 %i.09
-  %11 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %C, i32 %i.09
+  %11 = load float, ptr %arrayidx2, align 4
   %add = fadd fast float %11, %mul
-  store float %add, float* %arrayidx2, align 4
+  store float %add, ptr %arrayidx2, align 4
   %inc = add nuw nsw i32 %i.09, 1
   %exitcond = icmp eq i32 %inc, %n
   br i1 %exitcond, label %for.cond.cleanup, label %for.body

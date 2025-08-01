@@ -17,9 +17,12 @@ using namespace lldb_private;
 
 static void NotifyChange(const BreakpointSP &bp, BreakpointEventType event) {
   Target &target = bp->GetTarget();
-  if (target.EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
+  if (target.EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged)) {
+    auto event_data_sp =
+        std::make_shared<Breakpoint::BreakpointEventData>(event, bp);
     target.BroadcastEvent(Target::eBroadcastBitBreakpointChanged,
-                          new Breakpoint::BreakpointEventData(event, bp));
+                          event_data_sp);
+  }
 }
 
 BreakpointList::BreakpointList(bool is_internal)
@@ -44,9 +47,9 @@ break_id_t BreakpointList::Add(BreakpointSP &bp_sp, bool notify) {
 bool BreakpointList::Remove(break_id_t break_id, bool notify) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
 
-  auto it = std::find_if(
-      m_breakpoints.begin(), m_breakpoints.end(),
-      [&](const BreakpointSP &bp) { return bp->GetID() == break_id; });
+  auto it = llvm::find_if(m_breakpoints, [&](const BreakpointSP &bp) {
+    return bp->GetID() == break_id;
+  });
 
   if (it == m_breakpoints.end())
     return false;
@@ -106,16 +109,16 @@ void BreakpointList::RemoveAllowed(bool notify) {
 
 BreakpointList::bp_collection::iterator
 BreakpointList::GetBreakpointIDIterator(break_id_t break_id) {
-  return std::find_if(
-      m_breakpoints.begin(), m_breakpoints.end(),
-      [&](const BreakpointSP &bp) { return bp->GetID() == break_id; });
+  return llvm::find_if(m_breakpoints, [&](const BreakpointSP &bp) {
+    return bp->GetID() == break_id;
+  });
 }
 
 BreakpointList::bp_collection::const_iterator
 BreakpointList::GetBreakpointIDConstIterator(break_id_t break_id) const {
-  return std::find_if(
-      m_breakpoints.begin(), m_breakpoints.end(),
-      [&](const BreakpointSP &bp) { return bp->GetID() == break_id; });
+  return llvm::find_if(m_breakpoints, [&](const BreakpointSP &bp) {
+    return bp->GetID() == break_id;
+  });
 }
 
 BreakpointSP BreakpointList::FindBreakpointByID(break_id_t break_id) const {

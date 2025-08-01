@@ -23,14 +23,16 @@ void AvoidCStyleCastsCheck::registerMatchers(
           // Filter out (EnumType)IntegerLiteral construct, which is generated
           // for non-type template arguments of enum types.
           // FIXME: Remove this once this is fixed in the AST.
-          unless(hasParent(substNonTypeTemplateParmExpr())),
-          // Avoid matches in template instantiations.
-          unless(isInTemplateInstantiation()))
+          unless(hasParent(substNonTypeTemplateParmExpr())))
           .bind("cast"),
       this);
+
   Finder->addMatcher(
-      cxxFunctionalCastExpr(unless(hasDescendant(cxxConstructExpr())),
-                            unless(hasDescendant(initListExpr())))
+      cxxFunctionalCastExpr(
+          hasDestinationType(hasCanonicalType(anyOf(
+              builtinType(), references(qualType()), pointsTo(qualType())))),
+          unless(
+              hasSourceExpression(anyOf(cxxConstructExpr(), initListExpr()))))
           .bind("cast"),
       this);
 }
@@ -118,8 +120,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       IsFunction(SourceTypeAsWritten) && IsFunction(DestTypeAsWritten);
 
   const bool ConstructorCast = !CastExpr->getTypeAsWritten().hasQualifiers() &&
-      DestTypeAsWritten->isRecordType() &&
-      !DestTypeAsWritten->isElaboratedTypeSpecifier();
+                               DestTypeAsWritten->isRecordType() &&
+                               !DestTypeAsWritten->isElaboratedTypeSpecifier();
 
   if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast) {
     // Function pointer/reference casts may be needed to resolve ambiguities in

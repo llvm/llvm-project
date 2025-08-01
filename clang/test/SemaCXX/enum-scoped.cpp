@@ -35,7 +35,7 @@ int a1[Val2];
 int a2[E1::Val1];
 
 #if __cplusplus >= 201703L
-// expected-error@-3 {{type 'E1' is not implicitly convertible to 'unsigned long'}}
+// expected-error@-3 {{type 'E1' is not implicitly convertible to '__size_t' (aka 'unsigned long')}}
 #else
 // expected-error@-5 {{size of array has non-integer type}}
 #endif
@@ -44,7 +44,7 @@ int* p1 = new int[Val2];
 int* p2 = new int[E1::Val1];
 
 #if __cplusplus >= 201703L
-// expected-error@-3 {{converting 'E1' to incompatible type 'unsigned long'}}
+// expected-error@-3 {{converting 'E1' to incompatible type '__size_t'}}
 #else
 // expected-error@-5 {{array size expression must have integral or unscoped enumeration type, not 'E1'}}
 #endif
@@ -53,6 +53,7 @@ enum class E4 {
   e1 = -2147483648, // ok
   e2 = 2147483647, // ok
   e3 = 2147483648 // expected-error{{enumerator value evaluates to 2147483648, which cannot be narrowed to type 'int'}}
+                  // expected-warning@-1{{changes value}}
 };
 
 enum class E5 {
@@ -146,7 +147,9 @@ namespace test5 {
 namespace test6 {
   enum A : unsigned;
   struct A::a; // expected-error {{incomplete type 'test6::A' named in nested name specifier}}
+               // expected-error@-1{{forward declaration of struct cannot have a nested name specifier}}
   enum A::b; // expected-error {{incomplete type 'test6::A' named in nested name specifier}}
+             // expected-error@-1{{forward declaration of enum cannot have a nested name specifier}}
   int A::c; // expected-error {{incomplete type 'test6::A' named in nested name specifier}}
   void A::d(); // expected-error {{incomplete type 'test6::A' named in nested name specifier}}
   void test() {
@@ -172,11 +175,21 @@ namespace N2764 {
 
   struct S {
     friend enum class E; // expected-error {{reference to enumeration must use 'enum' not 'enum class'}}
+                         // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                         // expected-note@-2 {{remove 'enum class' to befriend an enum}}
     friend enum class F; // expected-error {{reference to enumeration must use 'enum' not 'enum class'}}
+                         // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                         // expected-note@-2 {{remove 'enum class' to befriend an enum}}
 
     friend enum G {}; // expected-error {{forward reference}} expected-error {{cannot define a type in a friend declaration}}
+                      // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                      // expected-note@-2 {{remove 'enum' to befriend an enum}}
     friend enum class H {}; // expected-error {{forward reference}} expected-error {{cannot define a type in a friend declaration}}
+                            // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                            // expected-note@-2 {{remove 'enum' to befriend an enum}}
     friend enum I : int {}; // expected-error {{forward reference}} expected-error {{cannot define a type in a friend declaration}}
+                            // expected-warning@-1 {{elaborated enum specifier cannot be declared as a friend}}
+                            // expected-note@-2 {{remove 'enum' to befriend an enum}}
 
     enum A : int;
     A a;
@@ -335,4 +348,19 @@ enum class A;
 enum class B;
 A a;
 B b{a}; // expected-error {{cannot initialize}}
+}
+
+namespace GH147736 {
+template <typename Ty>
+struct S {
+  enum OhBoy : Ty { // expected-error 2 {{'_Atomic' qualifier ignored; operations involving the enumeration type will be non-atomic}}
+    Unimportant
+  } e;
+};
+
+// Okay, was previously rejected. The underlying type is int.
+S<_Atomic(int)> s; // expected-warning {{'_Atomic' is a C11 extension}}
+                   // expected-note@-1 {{in instantiation of template class 'GH147736::S<_Atomic(int)>' requested here}}
+static_assert(__is_same(__underlying_type(S<_Atomic(long long)>::OhBoy), long long), ""); // expected-warning {{'_Atomic' is a C11 extension}}
+                                                                                          // expected-note@-1 {{in instantiation of template class 'GH147736::S<_Atomic(long long)>' requested here}}
 }

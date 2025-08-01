@@ -16,7 +16,7 @@ define ptr @get_external_x() nounwind {
 ; RV32-NEXT:  .Lpcrel_hi0:
 ; RV32-NEXT:    auipc a0, %got_pcrel_hi(__emutls_v.external_x)
 ; RV32-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi0)(a0)
-; RV32-NEXT:    call __emutls_get_address@plt
+; RV32-NEXT:    call __emutls_get_address
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -28,7 +28,7 @@ define ptr @get_external_x() nounwind {
 ; RV64-NEXT:  .Lpcrel_hi0:
 ; RV64-NEXT:    auipc a0, %got_pcrel_hi(__emutls_v.external_x)
 ; RV64-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi0)(a0)
-; RV64-NEXT:    call __emutls_get_address@plt
+; RV64-NEXT:    call __emutls_get_address
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
@@ -44,7 +44,7 @@ define ptr @get_y() nounwind {
 ; RV32-NEXT:  .Lpcrel_hi1:
 ; RV32-NEXT:    auipc a0, %got_pcrel_hi(__emutls_v.y)
 ; RV32-NEXT:    lw a0, %pcrel_lo(.Lpcrel_hi1)(a0)
-; RV32-NEXT:    call __emutls_get_address@plt
+; RV32-NEXT:    call __emutls_get_address
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -56,7 +56,7 @@ define ptr @get_y() nounwind {
 ; RV64-NEXT:  .Lpcrel_hi1:
 ; RV64-NEXT:    auipc a0, %got_pcrel_hi(__emutls_v.y)
 ; RV64-NEXT:    ld a0, %pcrel_lo(.Lpcrel_hi1)(a0)
-; RV64-NEXT:    call __emutls_get_address@plt
+; RV64-NEXT:    call __emutls_get_address
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
@@ -72,7 +72,7 @@ define ptr @get_internal_z() nounwind {
 ; RV32-NEXT:  .Lpcrel_hi2:
 ; RV32-NEXT:    auipc a0, %pcrel_hi(__emutls_v.internal_z)
 ; RV32-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi2)
-; RV32-NEXT:    call __emutls_get_address@plt
+; RV32-NEXT:    call __emutls_get_address
 ; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -84,7 +84,7 @@ define ptr @get_internal_z() nounwind {
 ; RV64-NEXT:  .Lpcrel_hi2:
 ; RV64-NEXT:    auipc a0, %pcrel_hi(__emutls_v.internal_z)
 ; RV64-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi2)
-; RV64-NEXT:    call __emutls_get_address@plt
+; RV64-NEXT:    call __emutls_get_address
 ; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret

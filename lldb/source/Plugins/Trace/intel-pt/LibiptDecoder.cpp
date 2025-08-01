@@ -572,7 +572,7 @@ Error lldb_private::trace_intel_pt::DecodeSingleTraceForThread(
     Expected<PSBBlockDecoder> decoder = PSBBlockDecoder::Create(
         trace_intel_pt, block, buffer.slice(block.psb_offset, block.size),
         *decoded_thread.GetThread()->GetProcess(),
-        i + 1 < blocks->size() ? blocks->at(i + 1).starting_ip : None,
+        i + 1 < blocks->size() ? blocks->at(i + 1).starting_ip : std::nullopt,
         decoded_thread, std::nullopt);
     if (!decoder)
       return decoder.takeError();
@@ -640,7 +640,7 @@ Error lldb_private::trace_intel_pt::DecodeSystemWideTraceForThread(
           *decoded_thread.GetThread()->GetProcess(),
           j + 1 < execution.psb_blocks.size()
               ? execution.psb_blocks[j + 1].starting_ip
-              : None,
+              : std::nullopt,
           decoded_thread, execution.thread_execution.GetEndTSC());
       if (!decoder)
         return decoder.takeError();

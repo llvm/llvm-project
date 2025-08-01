@@ -168,8 +168,8 @@ void MacroPPCallbacks::FileChanged(SourceLocation Loc, FileChangeReason Reason,
 void MacroPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
     bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
-    SrcMgr::CharacteristicKind FileType) {
+    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
+    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
 
   // Record the line location of the current included file.
   LastHashLoc = HashLoc;
@@ -185,7 +185,7 @@ void MacroPPCallbacks::MacroDefined(const Token &MacroNameTok,
   writeMacroDefinition(*Id, *MD->getMacroInfo(), PP, Name, Value);
   Gen->getCGDebugInfo()->CreateMacro(getCurrentScope(),
                                      llvm::dwarf::DW_MACINFO_define, location,
-                                     Name.str(), Value.str());
+                                     NameBuffer, ValueBuffer);
 }
 
 void MacroPPCallbacks::MacroUndefined(const Token &MacroNameTok,

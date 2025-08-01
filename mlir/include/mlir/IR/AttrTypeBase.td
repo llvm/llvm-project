@@ -56,6 +56,9 @@ class ParamNativeTypeTrait<string prop, string params>
 class GenInternalTypeTrait<string prop> : GenInternalTrait<prop, "Type">;
 class PredTypeTrait<string descr, Pred pred> : PredTrait<descr, pred>;
 
+// Trait required to be added to any type which is mutable.
+def MutableType : NativeTypeTrait<"IsMutable">;
+
 //===----------------------------------------------------------------------===//
 // Builders
 //===----------------------------------------------------------------------===//
@@ -246,6 +249,9 @@ class AttrOrTypeDef<string valueType, string name, list<Trait> defTraits,
   // generated code is placed inside the class's C++ namespace. `$cppClass` is
   // replaced by the class name.
   code extraClassDefinition = [{}];
+
+  // Generate a default 'getAlias' method for OpAsm{Type,Attr}Interface.
+  bit genMnemonicAlias = 0;
 }
 
 // Define a new attribute, named `name`, belonging to `dialect` that inherits
@@ -256,7 +262,7 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
       AttrOrTypeDef<"Attr", name, traits, baseCppClass> {
   // The name of the C++ Attribute class.
   string cppClassName = name # "Attr";
-  let storageType = dialect.cppNamespace # "::" # name # "Attr";
+  let storageType = dialect.cppNamespace # "::" # cppClassName;
 
   // The underlying C++ value type
   let returnType = dialect.cppNamespace # "::" # cppClassName;
@@ -275,13 +281,17 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   //
   // For example, `$_self.getValue().getSExtValue()` for `IntegerAttr val` will
   // expand to `getAttrOfType<IntegerAttr>("val").getValue().getSExtValue()`.
-  let convertFromStorage = "::llvm::cast<" # dialect.cppNamespace #
-                                 "::" # cppClassName # ">($_self)";
+  let convertFromStorage = "::llvm::cast<" # cppType # ">($_self)";
 
   // The predicate for when this def is used as a constraint.
-  let predicate = CPred<"::llvm::isa<" # dialect.cppNamespace #
-                                 "::" # cppClassName # ">($_self)">;
+  let predicate = CPred<"::llvm::isa<" # cppType # ">($_self)">;
 }
+
+// Provide a LocationAttrDef for dialects to provide their own locations
+// that subclass LocationAttr.
+class LocationAttrDef<Dialect dialect, string name, list<Trait> traits = []>
+    : AttrDef<dialect, name, traits # [NativeAttrTrait<"IsLocation">],
+              "::mlir::LocationAttr">;
 
 // Define a new type, named `name`, belonging to `dialect` that inherits from
 // the given C++ base class.
@@ -289,6 +299,9 @@ class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
               string baseCppClass = "::mlir::Type">
     : DialectType<dialect, CPred<"">, /*descr*/"", name # "Type">,
       AttrOrTypeDef<"Type", name, traits, baseCppClass> {
+  // The name of the C++ Type class.
+  string cppClassName = name # "Type";
+
   // Make it possible to use such type as parameters for other types.
   string cppType = dialect.cppNamespace # "::" # cppClassName;
 
@@ -297,12 +310,11 @@ class TypeDef<Dialect dialect, string name, list<Trait> traits = [],
 
   // A constant builder provided when the type has no parameters.
   let builderCall = !if(!empty(parameters),
-                           "$_builder.getType<" # dialect.cppNamespace #
-                               "::" # cppClassName # ">()",
+                           "$_builder.getType<" # cppType # ">()",
                            "");
+
   // The predicate for when this def is used as a constraint.
-  let predicate = CPred<"::llvm::isa<" # dialect.cppNamespace #
-                                 "::" # cppClassName # ">($_self)">;
+  let predicate = CPred<"::llvm::isa<" # cppType # ">($_self)">;
 }
 
 //===----------------------------------------------------------------------===//
@@ -372,6 +384,14 @@ class StringRefParameter<string desc = "", string value = ""> :
   let printer = [{$_printer.printString($_self);}];
   let cppStorageType = "std::string";
   let defaultValue = value;
+}
+
+// For APInts, which require comparison supporting different bitwidths. The
+// default APInt comparison operator asserts when the bitwidths differ, so
+// a custom implementation is necessary.
+class APIntParameter<string desc> :
+    AttrOrTypeParameter<"::llvm::APInt", desc> {
+  let comparator = "$_lhs.getBitWidth() == $_rhs.getBitWidth() && $_lhs == $_rhs";
 }
 
 // For APFloats, which require comparison.

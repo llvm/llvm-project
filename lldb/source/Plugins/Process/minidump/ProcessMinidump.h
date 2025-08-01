@@ -53,11 +53,12 @@ public:
 
   Status DoLoadCore() override;
 
-  DynamicLoader *GetDynamicLoader() override { return nullptr; }
+  DynamicLoader *GetDynamicLoader() override;
+
+  // Returns AUXV structure found in the core file
+  lldb_private::DataExtractor GetAuxvData() override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
-
-  SystemRuntime *GetSystemRuntime() override { return nullptr; }
 
   Status DoDestroy() override;
 
@@ -75,16 +76,14 @@ public:
 
   ArchSpec GetArchitecture();
 
-  Status GetMemoryRegions(
-      lldb_private::MemoryRegionInfos &region_list) override;
+  Status
+  GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list) override;
 
   bool GetProcessInfo(ProcessInstanceInfo &info) override;
 
   Status WillResume() override {
-    Status error;
-    error.SetErrorStringWithFormatv(
+    return Status::FromErrorStringWithFormatv(
         "error: {0} does not support resuming processes", GetPluginName());
-    return error;
   }
 
   std::optional<MinidumpParser> m_minidump_parser;
@@ -107,15 +106,16 @@ protected:
   JITLoaderList &GetJITLoaders() override;
 
 private:
-  FileSpec m_core_file;
   lldb::DataBufferSP m_core_data;
   llvm::ArrayRef<minidump::Thread> m_thread_list;
-  const minidump::ExceptionStream *m_active_exception;
+  std::unordered_map<uint32_t, const minidump::ExceptionStream>
+      m_exceptions_by_tid;
   lldb::CommandObjectSP m_command_sp;
   bool m_is_wow64;
   std::optional<MemoryRegionInfos> m_memory_regions;
 
   void BuildMemoryRegions();
+  bool IsLLDBMinidump();
 };
 
 } // namespace minidump

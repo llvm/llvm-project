@@ -1,9 +1,6 @@
-// REQUIRES: x86-registered-target
-// REQUIRES: amdgpu-registered-target
-
 // RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   --emit-static-lib -nogpulib \
+// RUN:   --no-offload-new-driver --emit-static-lib -nogpulib \
 // RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
@@ -51,6 +48,7 @@
 // CHECK-NOT: ".*opt"
 // CHECK-NOT: ".*llc"
 // CHECK: [[LLD: ".*lld.*"]] {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
+// CHECK-SAME: "--lto-partitions={{[0-9]+}}"
 // CHECK-SAME: "-plugin-opt=mcpu=gfx803"
 // CHECK-SAME: "-o" "[[IMG_DEV1:.*out]]" [[A_BC1]] [[B_BC1]]
 
@@ -79,6 +77,7 @@
 // CHECK-NOT: ".*opt"
 // CHECK-NOT: ".*llc"
 // CHECK: [[LLD]] {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
+// CHECK-SAME: "--lto-partitions={{[0-9]+}}"
 // CHECK-SAME: "-plugin-opt=mcpu=gfx900"
 // CHECK-SAME: "--whole-archive"
 // CHECK-SAME: "-o" "[[IMG_DEV2:.*out]]" [[A_BC2]] [[B_BC2]]
@@ -89,6 +88,6 @@
 // CHECK-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"
 // CHECK-SAME: "-input=[[IMG_DEV1]]" "-input=[[IMG_DEV2]]" "-output=[[BUNDLE:.*hipfb]]"
 
-// CHECK: [[MC:".*llvm-mc.*"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin" "--filetype=obj"
+// CHECK: [[MC:".*clang.*"]] "-o" [[OBJBUNDLE:".*o"]] "{{.*}}.mcin"
 
 // CHECK: [[AR:".*llvm-ar.*"]] "rcsD" "{{.*}}.out" [[A_OBJ_HOST]] [[B_OBJ_HOST]] [[OBJBUNDLE]]

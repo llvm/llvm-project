@@ -14,8 +14,8 @@
 
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 #include "AVR.h"
 #include "AVRMachineFunctionInfo.h"
@@ -49,9 +49,9 @@ AVRTargetMachine::AVRTargetMachine(const Target &T, const Triple &TT,
                                    std::optional<Reloc::Model> RM,
                                    std::optional<CodeModel::Model> CM,
                                    CodeGenOptLevel OL, bool JIT)
-    : LLVMTargetMachine(T, AVRDataLayout, TT, getCPU(CPU), FS, Options,
-                        getEffectiveRelocModel(RM),
-                        getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(T, AVRDataLayout, TT, getCPU(CPU), FS, Options,
+                               getEffectiveRelocModel(RM),
+                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
       SubTarget(TT, std::string(getCPU(CPU)), std::string(FS), *this) {
   this->TLOF = std::make_unique<AVRTargetObjectFile>();
   initAsmInfo();
@@ -88,14 +88,15 @@ void AVRPassConfig::addIRPasses() {
   TargetPassConfig::addIRPasses();
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRTarget() {
   // Register the target.
   RegisterTargetMachine<AVRTargetMachine> X(getTheAVRTarget());
 
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeAVRAsmPrinterPass(PR);
   initializeAVRExpandPseudoPass(PR);
   initializeAVRShiftExpandPass(PR);
-  initializeAVRDAGToDAGISelPass(PR);
+  initializeAVRDAGToDAGISelLegacyPass(PR);
 }
 
 const AVRSubtarget *AVRTargetMachine::getSubtargetImpl() const {
@@ -126,9 +127,7 @@ bool AVRPassConfig::addInstSelector() {
   return false;
 }
 
-void AVRPassConfig::addPreSched2() {
-  addPass(createAVRExpandPseudoPass());
-}
+void AVRPassConfig::addPreSched2() { addPass(createAVRExpandPseudoPass()); }
 
 void AVRPassConfig::addPreEmitPass() {
   // Must run branch selection immediately preceding the asm printer.

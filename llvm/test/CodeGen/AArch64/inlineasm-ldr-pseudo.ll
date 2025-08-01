@@ -16,7 +16,7 @@ entry:
 ; CHECK:        58000040                                         ldr    x0, 0x10
 ; CHECK:        d65f03c0                                         ret
 ; Make sure the constant pool entry comes after the return
-; CHECK-LABEL:        <$d.1>:
+; CHECK-LABEL:        <$d>:
 define i32 @bar() nounwind {
 entry:
   %0 = tail call i32 asm sideeffect "ldr $0,=0x10001", "=r"() nounwind

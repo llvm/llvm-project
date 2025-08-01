@@ -203,7 +203,7 @@ define i1 @class_inf_or_fcmp_issubnormal(half %x) {
 define <2 x i1> @class_finite_or_fcmp_issubnormal_vector(<2 x half> %x) {
 ; CHECK-LABEL: @class_finite_or_fcmp_issubnormal_vector(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x half> @llvm.fabs.v2f16(<2 x half> [[X:%.*]])
-; CHECK-NEXT:    [[OR:%.*]] = fcmp one <2 x half> [[TMP1]], <half 0xH7C00, half 0xH7C00>
+; CHECK-NEXT:    [[OR:%.*]] = fcmp one <2 x half> [[TMP1]], splat (half 0xH7C00)
 ; CHECK-NEXT:    ret <2 x i1> [[OR]]
 ;
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)

@@ -25,13 +25,15 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 #if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
-namespace __is_permutation {
-struct __fn {
+struct __is_permutation {
   template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class _Proj1, class _Proj2, class _Pred>
   _LIBCPP_HIDE_FROM_ABI constexpr static bool __is_permutation_func_impl(
       _Iter1 __first1,
@@ -53,7 +55,7 @@ struct __fn {
       class _Proj1                                                                              = identity,
       class _Proj2                                                                              = identity,
       indirect_equivalence_relation<projected<_Iter1, _Proj1>, projected<_Iter2, _Proj2>> _Pred = ranges::equal_to>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
       _Iter1 __first1,
       _Sent1 __last1,
       _Iter2 __first2,
@@ -71,7 +73,7 @@ struct __fn {
             class _Proj2                                                                = identity,
             indirect_equivalence_relation<projected<iterator_t<_Range1>, _Proj1>,
                                           projected<iterator_t<_Range2>, _Proj2>> _Pred = ranges::equal_to>
-  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(
       _Range1&& __range1, _Range2&& __range2, _Pred __pred = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
     if constexpr (sized_range<_Range1> && sized_range<_Range2>) {
       if (ranges::distance(__range1) != ranges::distance(__range2))
@@ -88,15 +90,16 @@ struct __fn {
         __proj2);
   }
 };
-} // namespace __is_permutation
 
 inline namespace __cpo {
-inline constexpr auto is_permutation = __is_permutation::__fn{};
+inline constexpr auto is_permutation = __is_permutation{};
 } // namespace __cpo
 } // namespace ranges
 
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 20
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_RANGES_IS_PERMUTATION_H

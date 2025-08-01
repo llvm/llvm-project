@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 class SBValuePersistTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     def test(self):
         """Test SBValue::Persist"""
         self.build()
@@ -57,7 +56,7 @@ class SBValuePersistTestCase(TestBase):
 
         self.assertEqual(fooPersist.GetValueAsUnsigned(0), 10, "fooPersist != 10")
         self.assertEqual(barPersist.GetPointeeData().sint32[0], 4, "barPersist != 4")
-        self.assertEquals(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
+        self.assertEqual(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
 
         self.runCmd("continue")
 
@@ -67,6 +66,6 @@ class SBValuePersistTestCase(TestBase):
 
         self.assertEqual(fooPersist.GetValueAsUnsigned(0), 10, "fooPersist != 10")
         self.assertEqual(barPersist.GetPointeeData().sint32[0], 4, "barPersist != 4")
-        self.assertEquals(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
+        self.assertEqual(bazPersist.GetSummary(), '"85"', "bazPersist != 85")
 
         self.expect("expr *(%s)" % (barPersist.GetName()), substrs=["= 4"])

@@ -45,6 +45,7 @@ StringRef ARM::getArchSynonym(StringRef Arch) {
       .Case("v9.3a", "v9.3-a")
       .Case("v9.4a", "v9.4-a")
       .Case("v9.5a", "v9.5-a")
+      .Case("v9.6a", "v9.6-a")
       .Case("v8m.base", "v8-m.base")
       .Case("v8m.main", "v8-m.main")
       .Case("v8.1m.main", "v8.1-m.main")
@@ -81,9 +82,9 @@ StringRef ARM::getCanonicalArchName(StringRef Arch) {
   // Ex. "armebv7", move past the "eb".
   if (offset != StringRef::npos && A.substr(offset, 2) == "eb")
     offset += 2;
-  // Or, if it ends with eb ("armv7eb"), chop it off.
-  else if (A.ends_with("eb"))
-    A = A.substr(0, A.size() - 2);
+  else
+    // Or, if it ends with eb ("armv7eb"), chop it off.
+    A.consume_back("eb");
   // Trim the head
   if (offset != StringRef::npos)
     A = A.substr(offset);
@@ -134,19 +135,21 @@ ARM::EndianKind ARM::parseArchEndian(StringRef Arch) {
 }
 
 // Parse a branch protection specification, which has the form
-//   standard | none | [bti,pac-ret[+b-key,+leaf]*]
+//   standard | none | [bti,pac-ret[+b-key,+leaf,+pc]*]
 // Returns true on success, with individual elements of the specification
 // returned in `PBP`. Returns false in error, with `Err` containing
 // an erroneous part of the spec.
 bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
-                                StringRef &Err) {
-  PBP = {"none", "a_key", false};
+                                StringRef &Err, bool EnablePAuthLR) {
+  PBP = {"none", "a_key", false, false, false};
   if (Spec == "none")
     return true; // defaults are ok
 
   if (Spec == "standard") {
     PBP.Scope = "non-leaf";
     PBP.BranchTargetEnforcement = true;
+    PBP.GuardedControlStack = true;
+    PBP.BranchProtectionPAuthLR = EnablePAuthLR;
     return true;
   }
 
@@ -166,9 +169,15 @@ bool ARM::parseBranchProtection(StringRef Spec, ParsedBranchProtection &PBP,
           PBP.Scope = "all";
         else if (PACOpt == "b-key")
           PBP.Key = "b_key";
+        else if (PACOpt == "pc")
+          PBP.BranchProtectionPAuthLR = true;
         else
           break;
       }
+      continue;
+    }
+    if (Opt == "gcs") {
+      PBP.GuardedControlStack = true;
       continue;
     }
     if (Opt == "")

@@ -22,9 +22,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Mangle.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/AST/StmtCXX.h"
 #include "clang/Basic/CodeGenOptions.h"
-#include "llvm/ADT/StringExtras.h"
 using namespace clang;
 using namespace CodeGen;
 
@@ -38,6 +36,11 @@ bool CodeGenModule::TryEmitBaseDestructorAsAlias(const CXXDestructorDecl *D) {
   // Producing an alias to a base class ctor/dtor can degrade debug quality
   // as the debugger cannot tell them apart.
   if (getCodeGenOpts().OptimizationLevel == 0)
+    return true;
+
+  // Disable this optimization for ARM64EC.  FIXME: This probably should work,
+  // but getting the symbol table correct is complicated.
+  if (getTarget().getTriple().isWindowsArm64EC())
     return true;
 
   // If sanitizing memory to check for use-after-dtor, do not emit as
@@ -258,7 +261,16 @@ static CGCallee BuildAppleKextVirtualCall(CodeGenFunction &CGF,
     CGF.Builder.CreateConstInBoundsGEP1_64(Ty, VTable, VTableIndex, "vfnkxt");
   llvm::Value *VFunc = CGF.Builder.CreateAlignedLoad(
       Ty, VFuncPtr, llvm::Align(CGF.PointerAlignInBytes));
-  CGCallee Callee(GD, VFunc);
+
+  CGPointerAuthInfo PointerAuth;
+  if (auto &Schema =
+          CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers) {
+    GlobalDecl OrigMD =
+        CGM.getItaniumVTableContext().findOriginalMethod(GD.getCanonicalDecl());
+    PointerAuth = CGF.EmitPointerAuthInfo(Schema, VFuncPtr, OrigMD, QualType());
+  }
+
+  CGCallee Callee(GD, VFunc, PointerAuth);
   return Callee;
 }
 

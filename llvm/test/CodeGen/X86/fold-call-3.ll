@@ -22,7 +22,7 @@ define void @_Z25RawPointerPerformanceTestPvRN5clang6ActionE(ptr %Val, ptr %Acti
 ; CHECK-NEXT:    movq %rsi, %rbx
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    xorl %ebp, %ebp
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_2: ## %bb
 ; CHECK-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq (%rbx), %rcx
@@ -52,7 +52,7 @@ define void @_Z25RawPointerPerformanceTestPvRN5clang6ActionE(ptr %Val, ptr %Acti
 ; pre-RA-NEXT:    movq %rsi, %rbx
 ; pre-RA-NEXT:    movq %rdi, %rax
 ; pre-RA-NEXT:    xorl %ebp, %ebp
-; pre-RA-NEXT:    .p2align 4, 0x90
+; pre-RA-NEXT:    .p2align 4
 ; pre-RA-NEXT:  LBB0_2: ## %bb
 ; pre-RA-NEXT:    ## =>This Inner Loop Header: Depth=1
 ; pre-RA-NEXT:    movq (%rbx), %rcx

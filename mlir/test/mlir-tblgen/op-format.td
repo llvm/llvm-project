@@ -4,7 +4,6 @@ include "mlir/IR/OpBase.td"
 
 def TestDialect : Dialect {
   let name = "test";
-  let usePropertiesForAttributes = 0;
 }
 class TestFormat_Op<string fmt, list<Trait> traits = []>
     : Op<TestDialect, "format_op", traits> {
@@ -17,6 +16,7 @@ class TestFormat_Op<string fmt, list<Trait> traits = []>
 
 //===----------------------------------------------------------------------===//
 // custom
+//===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: CustomStringLiteralA::parse
 // CHECK: parseFoo({{.*}}, parser.getBuilder().getI1Type())
@@ -42,6 +42,14 @@ def CustomStringLiteralC : TestFormat_Op<[{
   custom<Foo>("$_builder.getStringAttr(\"foo\")") attr-dict
 }]>;
 
+// CHECK-LABEL: CustomStringLiteralD::parse
+// CHECK: parseFoo({{.*}}, result)
+// CHECK-LABEL: CustomStringLiteralD::print
+// CHECK: printFoo({{.*}}, getProperties())
+def CustomStringLiteralD : TestFormat_Op<[{
+  custom<Foo>(prop-dict) attr-dict
+}]>;
+
 //===----------------------------------------------------------------------===//
 // Optional Groups
 //===----------------------------------------------------------------------===//
@@ -62,10 +70,10 @@ def OptionalGroupA : TestFormat_Op<[{
 // CHECK-LABEL: OptionalGroupB::parse
 // CHECK: if (::mlir::succeeded(parser.parseOptionalKeyword("foo")))
 // CHECK-NEXT: else
-// CHECK-NEXT: result.addAttribute("a", parser.getBuilder().getUnitAttr())
+// CHECK-NEXT: result.getOrAddProperties<OptionalGroupB::Properties>().a = parser.getBuilder().getUnitAttr()
 // CHECK: parser.parseKeyword("bar")
 // CHECK-LABEL: OptionalGroupB::print
-// CHECK: if (!getAAttr())
+// CHECK: if (!(getAAttr() && getAAttr() != ((false) ? ::mlir::OpBuilder((*this)->getContext()).getUnitAttr() : nullptr)))
 // CHECK-NEXT: odsPrinter << ' ' << "foo"
 // CHECK-NEXT: else
 // CHECK-NEXT: odsPrinter << ' ' << "bar"
@@ -76,7 +84,7 @@ def OptionalGroupB : TestFormat_Op<[{
 // Optional group anchored on a default-valued attribute:
 // CHECK-LABEL: OptionalGroupC::parse
 
-//       CHECK: if (getAAttr() && getAAttr() != ::mlir::OpBuilder((*this)->getContext()).getStringAttr("default")) {
+//       CHECK: if (getAAttr() != ::mlir::OpBuilder((*this)->getContext()).getStringAttr("default")) {
 //  CHECK-NEXT:   odsPrinter << ' ';
 //  CHECK-NEXT:   odsPrinter.printAttributeWithoutType(getAAttr());
 //  CHECK-NEXT: }
@@ -85,14 +93,14 @@ def OptionalGroupC : TestFormat_Op<[{
 }]>, Arguments<(ins DefaultValuedStrAttr<StrAttr, "default">:$a)>;
 
 // CHECK-LABEL: OptionalGroupD::parse
-// CHECK: if (auto result = [&]() -> ::mlir::OptionalParseResult {
+// CHECK: if (auto optResult = [&]() -> ::mlir::OptionalParseResult {
 // CHECK:   auto odsResult = parseCustom(parser, aOperand, bOperand);
-// CHECK:   if (!odsResult) return {};
+// CHECK:   if (!odsResult.has_value()) return {};
 // CHECK:   if (::mlir::failed(*odsResult)) return ::mlir::failure();
 // CHECK:   return ::mlir::success();
-// CHECK: }(); result.has_value() && ::mlir::failed(*result)) {
+// CHECK: }(); optResult.has_value() && ::mlir::failed(*optResult)) {
 // CHECK:   return ::mlir::failure();
-// CHECK: } else if (result.has_value()) {
+// CHECK: } else if (optResult.has_value()) {
 
 // CHECK-LABEL: OptionalGroupD::print
 // CHECK-NEXT: if (((getA()) || (getB()))) {
@@ -101,3 +109,23 @@ def OptionalGroupC : TestFormat_Op<[{
 def OptionalGroupD : TestFormat_Op<[{
   (custom<Custom>($a, $b)^)? attr-dict
 }], [AttrSizedOperandSegments]>, Arguments<(ins Optional<I64>:$a, Optional<I64>:$b)>;
+
+// CHECK-LABEL: RegionRef::parse
+// CHECK:   auto odsResult = parseCustom(parser, *bodyRegion);
+// CHECK-LABEL: RegionRef::print
+// CHECK:   printCustom(_odsPrinter, *this, getBody());
+def RegionRef : TestFormat_Op<[{
+  $body custom<Custom>(ref($body)) attr-dict
+}]> {
+  let regions = (region AnyRegion:$body);
+}
+
+// CHECK-LABEL: SuccessorRef::parse
+// CHECK:   auto odsResult = parseCustom(parser, successorSuccessor);
+// CHECK-LABEL: SuccessorRef::print
+// CHECK:   printCustom(_odsPrinter, *this, getSuccessor());
+def SuccessorRef : TestFormat_Op<[{
+  $successor custom<Custom>(ref($successor)) attr-dict
+}]> {
+  let successors = (successor AnySuccessor:$successor);
+}

@@ -9,14 +9,14 @@
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 namespace LLVM {
-#define GEN_PASS_DEF_LLVMLEGALIZEFOREXPORT
+#define GEN_PASS_DEF_LLVMLEGALIZEFOREXPORTPASS
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
 } // namespace LLVM
 } // namespace mlir
@@ -58,8 +58,8 @@ static void ensureDistinctSuccessors(Block &bb) {
       terminator->setSuccessor(dummyBlock, position);
       for (BlockArgument arg : successor.first->getArguments())
         dummyBlock->addArgument(arg.getType(), arg.getLoc());
-      builder.create<LLVM::BrOp>(terminator->getLoc(),
-                                 dummyBlock->getArguments(), successor.first);
+      LLVM::BrOp::create(builder, terminator->getLoc(),
+                         dummyBlock->getArguments(), successor.first);
     }
   }
 }
@@ -76,13 +76,10 @@ void mlir::LLVM::ensureDistinctSuccessors(Operation *op) {
 
 namespace {
 struct LegalizeForExportPass
-    : public LLVM::impl::LLVMLegalizeForExportBase<LegalizeForExportPass> {
+    : public LLVM::impl::LLVMLegalizeForExportPassBase<LegalizeForExportPass> {
   void runOnOperation() override {
     LLVM::ensureDistinctSuccessors(getOperation());
+    LLVM::legalizeDIExpressionsRecursively(getOperation());
   }
 };
 } // namespace
-
-std::unique_ptr<Pass> LLVM::createLegalizeForExportPass() {
-  return std::make_unique<LegalizeForExportPass>();
-}

@@ -3,6 +3,7 @@
 # documentation in ../ClangFormatStyleOptions.rst automatically.
 # Run from the directory in which this file is located to update the docs.
 
+import argparse
 import inspect
 import os
 import re
@@ -20,7 +21,7 @@ DOC_FILE = os.path.join(CLANG_DIR, "docs/ClangFormatStyleOptions.rst")
 PLURALS_FILE = os.path.join(os.path.dirname(__file__), "plurals.txt")
 
 plurals: Set[str] = set()
-with open(PLURALS_FILE, "a+") as f:
+with open(PLURALS_FILE) as f:
     f.seek(0)
     plurals = set(f.read().splitlines())
 
@@ -129,6 +130,7 @@ class Option(object):
             s += indent(
                 "\n\nNested configuration flags:\n\n%s\n" % self.nested_struct, 2
             )
+            s = s.replace("<option-name>", self.name)
         return s
 
 
@@ -308,6 +310,7 @@ class OptionsReader:
         enum = None
         nested_struct = None
         version = None
+        deprecated = False
 
         for line in self.header:
             self.lineno += 1
@@ -327,6 +330,8 @@ class OptionsReader:
                     match = re.match(r"/// \\version\s*(?P<version>[0-9.]+)*", line)
                     if match:
                         version = match.group("version")
+                elif line.startswith("/// @deprecated"):
+                    deprecated = True
                 elif line.startswith("///"):
                     comment += self.__clean_comment_line(line)
                 elif line.startswith("enum"):
@@ -345,6 +350,9 @@ class OptionsReader:
                     field_type, field_name = re.match(
                         r"([<>:\w(,\s)]+)\s+(\w+);", line
                     ).groups()
+                    if deprecated:
+                        field_type = "deprecated"
+                        deprecated = False
 
                     if not version:
                         self.__warning(f"missing version for {field_name}", line)
@@ -403,8 +411,8 @@ class OptionsReader:
                     state = State.InStruct
                     enums[enum.name] = enum
                 else:
-                    # Enum member without documentation. Must be documented where the enum
-                    # is used.
+                    # Enum member without documentation. Must be documented
+                    # where the enum is used.
                     pass
             elif state == State.InNestedEnum:
                 if line.startswith("///"):
@@ -456,6 +464,7 @@ class OptionsReader:
                 "std::vector<IncludeCategory>",
                 "std::vector<RawStringFormat>",
                 "std::optional<unsigned>",
+                "deprecated",
             ]:
                 if option.type in enums:
                     option.enum = enums[option.type]
@@ -466,6 +475,10 @@ class OptionsReader:
         return options
 
 
+p = argparse.ArgumentParser()
+p.add_argument("-o", "--output", help="path of output file")
+args = p.parse_args()
+
 with open(FORMAT_STYLE_FILE) as f:
     opts = OptionsReader(f).read_options()
 with open(INCLUDE_STYLE_FILE) as f:
@@ -474,10 +487,12 @@ with open(INCLUDE_STYLE_FILE) as f:
 opts = sorted(opts, key=lambda x: x.name)
 options_text = "\n\n".join(map(str, opts))
 
-with open(DOC_FILE) as f:
+with open(DOC_FILE, encoding="utf-8") as f:
     contents = f.read()
 
 contents = substitute(contents, "FORMAT_STYLE_OPTIONS", options_text)
 
-with open(DOC_FILE, "wb") as output:
-    output.write(contents.encode())
+with open(
+    args.output if args.output else DOC_FILE, "w", newline="", encoding="utf-8"
+) as f:
+    f.write(contents)

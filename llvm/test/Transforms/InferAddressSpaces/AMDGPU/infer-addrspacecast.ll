@@ -29,25 +29,25 @@ define void @addrspacecast_different_pointee_type(ptr addrspace(3) %ptr) {
 
 ; CHECK-LABEL: @addrspacecast_to_memory(
 ; CHECK: %gep0 = getelementptr i32, ptr addrspace(3) %ptr, i64 9
-; CHECK-NEXT: store volatile ptr addrspace(3) %gep0, ptr addrspace(1) undef
+; CHECK-NEXT: store volatile ptr addrspace(3) %gep0, ptr addrspace(1) poison
 ; CHECK-NEXT: ret void
 define void @addrspacecast_to_memory(ptr addrspace(3) %ptr) {
   %asc0 = addrspacecast ptr addrspace(3) %ptr to ptr
   %gep0 = getelementptr i32, ptr %asc0, i64 9
   %asc1 = addrspacecast ptr %gep0 to ptr addrspace(3)
-  store volatile ptr addrspace(3) %asc1, ptr addrspace(1) undef
+  store volatile ptr addrspace(3) %asc1, ptr addrspace(1) poison
   ret void
 }
 
 ; CHECK-LABEL: @multiuse_addrspacecast_gep_addrspacecast(
 ; CHECK: %asc0 = addrspacecast ptr addrspace(3) %ptr to ptr
-; CHECK-NEXT: store volatile ptr %asc0, ptr addrspace(1) undef
+; CHECK-NEXT: store volatile ptr %asc0, ptr addrspace(1) poison
 ; CHECK-NEXT: %gep0 = getelementptr i32, ptr addrspace(3) %ptr, i64 9
 ; CHECK-NEXT: store i32 8, ptr addrspace(3) %gep0, align 8
 ; CHECK-NEXT: ret void
 define void @multiuse_addrspacecast_gep_addrspacecast(ptr addrspace(3) %ptr) {
   %asc0 = addrspacecast ptr addrspace(3) %ptr to ptr
-  store volatile ptr %asc0, ptr addrspace(1) undef
+  store volatile ptr %asc0, ptr addrspace(1) poison
   %gep0 = getelementptr i32, ptr %asc0, i64 9
   %asc1 = addrspacecast ptr %gep0 to ptr addrspace(3)
   store i32 8, ptr addrspace(3) %asc1, align 8

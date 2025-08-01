@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only %s -ast-dump | FileCheck %s
+// RUN: %clang_cc1 %s -ast-dump | FileCheck %s
 
 int(&&intu_rvref)[] {1,2,3,4};
 // CHECK: VarDecl 0x[[GLOB_ADDR:[0-9a-f]+]] {{.*}} intu_rvref 'int (&&)[4]' listinit

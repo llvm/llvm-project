@@ -188,12 +188,11 @@ void BlockFrequencyInfo::calculate(const Function &F,
     BFI.reset(new ImplType);
   BFI->calculate(F, BPI, LI);
   if (ViewBlockFreqPropagationDAG != GVDT_None &&
-      (ViewBlockFreqFuncName.empty() ||
-       F.getName().equals(ViewBlockFreqFuncName))) {
+      (ViewBlockFreqFuncName.empty() || F.getName() == ViewBlockFreqFuncName)) {
     view();
   }
   if (PrintBFI &&
-      (PrintBFIFuncName.empty() || F.getName().equals(PrintBFIFuncName))) {
+      (PrintBFIFuncName.empty() || F.getName() == PrintBFIFuncName)) {
     print(dbgs());
   }
 }
@@ -284,7 +283,7 @@ void BlockFrequencyInfo::verifyMatch(BlockFrequencyInfo &Other) const {
 Printable llvm::printBlockFreq(const BlockFrequencyInfo &BFI,
                                BlockFrequency Freq) {
   return Printable([&BFI, Freq](raw_ostream &OS) {
-    printBlockFreqImpl(OS, BFI.getEntryFreq(), Freq);
+    printRelativeBlockFreq(OS, BFI.getEntryFreq(), Freq);
   });
 }
 
@@ -303,9 +302,7 @@ INITIALIZE_PASS_END(BlockFrequencyInfoWrapperPass, "block-freq",
 char BlockFrequencyInfoWrapperPass::ID = 0;
 
 BlockFrequencyInfoWrapperPass::BlockFrequencyInfoWrapperPass()
-    : FunctionPass(ID) {
-  initializeBlockFrequencyInfoWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+    : FunctionPass(ID) {}
 
 BlockFrequencyInfoWrapperPass::~BlockFrequencyInfoWrapperPass() = default;
 

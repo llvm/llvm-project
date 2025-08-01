@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 
 @a = external dso_local constant [0 x i32], section ".cp.rodata"
 @b = external dso_local global [0 x i32]

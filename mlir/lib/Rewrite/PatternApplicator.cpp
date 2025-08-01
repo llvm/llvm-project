@@ -15,6 +15,10 @@
 #include "ByteCode.h"
 #include "llvm/Support/Debug.h"
 
+#ifndef NDEBUG
+#include "llvm/ADT/ScopeExit.h"
+#endif
+
 #define DEBUG_TYPE "pattern-application"
 
 using namespace mlir;
@@ -40,7 +44,11 @@ static void logImpossibleToMatch(const Pattern &pattern) {
 
 /// Log IR after pattern application.
 static Operation *getDumpRootOp(Operation *op) {
-  return op->getParentWithTrait<mlir::OpTrait::IsIsolatedFromAbove>();
+  Operation *isolatedParent =
+      op->getParentWithTrait<mlir::OpTrait::IsIsolatedFromAbove>();
+  if (isolatedParent)
+    return isolatedParent;
+  return op;
 }
 static void logSucessfulPatternApplication(Operation *op) {
   llvm::dbgs() << "// *** IR Dump After Pattern Application ***\n";
@@ -99,7 +107,7 @@ void PatternApplicator::applyCostModel(CostModel model) {
 
     // Sort patterns with highest benefit first, and remove those that are
     // impossible to match.
-    std::stable_sort(list.begin(), list.end(), cmp);
+    llvm::stable_sort(list, cmp);
     while (!list.empty() && benefits[list.back()].isImpossibleToMatch()) {
       LLVM_DEBUG(logImpossibleToMatch(*list.back()));
       list.pop_back();
@@ -152,7 +160,6 @@ LogicalResult PatternApplicator::matchAndRewrite(
     // Find the next pattern with the highest benefit.
     const Pattern *bestPattern = nullptr;
     unsigned *bestPatternIt = &opIt;
-    const PDLByteCode::MatchResult *pdlMatch = nullptr;
 
     /// Operation specific patterns.
     if (opIt < opE)
@@ -164,6 +171,8 @@ LogicalResult PatternApplicator::matchAndRewrite(
       bestPatternIt = &anyIt;
       bestPattern = anyOpPatterns[anyIt];
     }
+
+    const PDLByteCode::MatchResult *pdlMatch = nullptr;
     /// PDL patterns.
     if (pdlIt < pdlE && (!bestPattern || bestPattern->getBenefit() <
                                              pdlMatches[pdlIt].benefit)) {
@@ -171,6 +180,7 @@ LogicalResult PatternApplicator::matchAndRewrite(
       pdlMatch = &pdlMatches[pdlIt];
       bestPattern = pdlMatch->pattern;
     }
+
     if (!bestPattern)
       break;
 
@@ -200,11 +210,19 @@ LogicalResult PatternApplicator::matchAndRewrite(
           } else {
             LLVM_DEBUG(llvm::dbgs() << "Trying to match \""
                                     << bestPattern->getDebugName() << "\"\n");
-
             const auto *pattern =
                 static_cast<const RewritePattern *>(bestPattern);
-            result = pattern->matchAndRewrite(op, rewriter);
 
+#ifndef NDEBUG
+            OpBuilder::Listener *oldListener = rewriter.getListener();
+            auto loggingListener =
+                std::make_unique<RewriterBase::PatternLoggingListener>(
+                    oldListener, pattern->getDebugName());
+            rewriter.setListener(loggingListener.get());
+            auto resetListenerCallback = llvm::make_scope_exit(
+                [&] { rewriter.setListener(oldListener); });
+#endif
+            result = pattern->matchAndRewrite(op, rewriter);
             LLVM_DEBUG(llvm::dbgs()
                        << "\"" << bestPattern->getDebugName() << "\" result "
                        << succeeded(result) << "\n");

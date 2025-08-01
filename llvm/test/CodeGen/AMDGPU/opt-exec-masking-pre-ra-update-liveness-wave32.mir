@@ -19,13 +19,13 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (s128), align 8, addrspace 1)
-  ; CHECK-NEXT:   undef %2.sub1:sgpr_128 = S_MOV_B32 -1
-  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, undef %2.sub0, implicit-def dead $scc
-  ; CHECK-NEXT:   %2.sub1:sgpr_128 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_128 = S_MOV_B32 -1
+  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, undef [[S_MOV_B32_]].sub0, implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sgpr_128 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   S_NOP 0, implicit %2.sub1
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]].sub1
   bb.0:
     liveins: $sgpr0_sgpr1
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -52,9 +52,9 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (s128), align 8, addrspace 1)
-  ; CHECK-NEXT:   undef %2.sub0:sreg_64_xexec = S_MOV_B32 -1
-  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, %2.sub0, implicit-def dead $scc
-  ; CHECK-NEXT:   dead %2.sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64_xexec = S_MOV_B32 -1
+  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, [[S_MOV_B32_]].sub0, implicit-def dead $scc
+  ; CHECK-NEXT:   dead [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -83,13 +83,13 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (s128), align 8, addrspace 1)
-  ; CHECK-NEXT:   undef %2.sub0:sreg_64_xexec = S_MOV_B32 -1
-  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, %2.sub0, implicit-def dead $scc
-  ; CHECK-NEXT:   %2.sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64_xexec = S_MOV_B32 -1
+  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, [[S_MOV_B32_]].sub0, implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   S_NOP 0, implicit %2.sub1
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]].sub1
   bb.0:
     liveins: $sgpr0_sgpr1
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -116,13 +116,13 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (s128), align 8, addrspace 1)
-  ; CHECK-NEXT:   undef %2.sub0:sreg_64_xexec = S_MOV_B32 -1
-  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, %2.sub0, implicit-def dead $scc
-  ; CHECK-NEXT:   %2.sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64_xexec = S_MOV_B32 -1
+  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, [[S_MOV_B32_]].sub0, implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   S_NOP 0, implicit %2
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]]
   bb.0:
     liveins: $sgpr0_sgpr1
     %0:sgpr_64 = COPY $sgpr0_sgpr1
@@ -149,13 +149,13 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
   ; CHECK-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]], 0, 0 :: (load (s128), align 8, addrspace 1)
-  ; CHECK-NEXT:   undef %2.sub0:sreg_64_xexec = S_MOV_B32 -1
-  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, %2.sub0, implicit-def dead $scc
-  ; CHECK-NEXT:   %2.sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sreg_64_xexec = S_MOV_B32 -1
+  ; CHECK-NEXT:   $vcc_lo = S_ANDN2_B32 $exec_lo, [[S_MOV_B32_]].sub0, implicit-def dead $scc
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]].sub1:sreg_64_xexec = COPY [[S_LOAD_DWORDX4_IMM]].sub0
   ; CHECK-NEXT:   S_CBRANCH_VCCNZ %bb.1, implicit $vcc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   S_NOP 0, implicit %2.sub0
+  ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_]].sub0
   bb.0:
     liveins: $sgpr0_sgpr1
     %0:sgpr_64 = COPY $sgpr0_sgpr1

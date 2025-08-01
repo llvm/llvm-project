@@ -40,6 +40,8 @@ public:
 
   llvm::Expected<clangd::Symbol> fromProtobuf(const Symbol &Message);
   llvm::Expected<clangd::Ref> fromProtobuf(const Ref &Message);
+  llvm::Expected<clangd::ContainedRefsResult>
+  fromProtobuf(const ContainedRef &Message);
   llvm::Expected<std::pair<clangd::SymbolID, clangd::Symbol>>
   fromProtobuf(const Relation &Message);
 
@@ -48,6 +50,8 @@ public:
   llvm::Expected<clangd::FuzzyFindRequest>
   fromProtobuf(const FuzzyFindRequest *Message);
   llvm::Expected<clangd::RefsRequest> fromProtobuf(const RefsRequest *Message);
+  llvm::Expected<clangd::ContainedRefsRequest>
+  fromProtobuf(const ContainedRefsRequest *Message);
   llvm::Expected<clangd::RelationsRequest>
   fromProtobuf(const RelationsRequest *Message);
 
@@ -58,10 +62,13 @@ public:
   LookupRequest toProtobuf(const clangd::LookupRequest &From);
   FuzzyFindRequest toProtobuf(const clangd::FuzzyFindRequest &From);
   RefsRequest toProtobuf(const clangd::RefsRequest &From);
+  ContainedRefsRequest toProtobuf(const clangd::ContainedRefsRequest &From);
   RelationsRequest toProtobuf(const clangd::RelationsRequest &From);
 
   llvm::Expected<Symbol> toProtobuf(const clangd::Symbol &From);
   llvm::Expected<Ref> toProtobuf(const clangd::Ref &From);
+  llvm::Expected<ContainedRef>
+  toProtobuf(const clangd::ContainedRefsResult &From);
   llvm::Expected<Relation> toProtobuf(const clangd::SymbolID &Subject,
                                       const clangd::Symbol &Object);
 

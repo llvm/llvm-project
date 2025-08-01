@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__assert>
+#include <__system_error/throw_system_error.h>
 #include <__thread/id.h>
 #include <__utility/exception_guard.h>
 #include <limits>
@@ -28,7 +29,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 void mutex::lock() {
   int ec = __libcpp_mutex_lock(&__m_);
   if (ec)
-    __throw_system_error(ec, "mutex lock failed");
+    std::__throw_system_error(ec, "mutex lock failed");
 }
 
 bool mutex::try_lock() noexcept { return __libcpp_mutex_trylock(&__m_); }
@@ -36,7 +37,8 @@ bool mutex::try_lock() noexcept { return __libcpp_mutex_trylock(&__m_); }
 void mutex::unlock() noexcept {
   int ec = __libcpp_mutex_unlock(&__m_);
   (void)ec;
-  _LIBCPP_ASSERT_UNCATEGORIZED(ec == 0, "call to mutex::unlock failed");
+  _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(
+      ec == 0, "call to mutex::unlock failed. A possible reason is that the mutex wasn't locked");
 }
 
 // recursive_mutex
@@ -44,25 +46,26 @@ void mutex::unlock() noexcept {
 recursive_mutex::recursive_mutex() {
   int ec = __libcpp_recursive_mutex_init(&__m_);
   if (ec)
-    __throw_system_error(ec, "recursive_mutex constructor failed");
+    std::__throw_system_error(ec, "recursive_mutex constructor failed");
 }
 
 recursive_mutex::~recursive_mutex() {
   int e = __libcpp_recursive_mutex_destroy(&__m_);
   (void)e;
-  _LIBCPP_ASSERT_UNCATEGORIZED(e == 0, "call to ~recursive_mutex() failed");
+  _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(e == 0, "call to ~recursive_mutex() failed");
 }
 
 void recursive_mutex::lock() {
   int ec = __libcpp_recursive_mutex_lock(&__m_);
   if (ec)
-    __throw_system_error(ec, "recursive_mutex lock failed");
+    std::__throw_system_error(ec, "recursive_mutex lock failed");
 }
 
 void recursive_mutex::unlock() noexcept {
   int e = __libcpp_recursive_mutex_unlock(&__m_);
   (void)e;
-  _LIBCPP_ASSERT_UNCATEGORIZED(e == 0, "call to recursive_mutex::unlock() failed");
+  _LIBCPP_ASSERT_VALID_EXTERNAL_API_CALL(
+      e == 0, "call to recursive_mutex::unlock() failed. A possible reason is that the mutex wasn't locked");
 }
 
 bool recursive_mutex::try_lock() noexcept { return __libcpp_recursive_mutex_trylock(&__m_); }
@@ -106,7 +109,7 @@ void recursive_timed_mutex::lock() {
   unique_lock<mutex> lk(__m_);
   if (id == __id_) {
     if (__count_ == numeric_limits<size_t>::max())
-      __throw_system_error(EAGAIN, "recursive_timed_mutex lock limit reached");
+      std::__throw_system_error(EAGAIN, "recursive_timed_mutex lock limit reached");
     ++__count_;
     return;
   }

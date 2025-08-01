@@ -108,9 +108,7 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    .pad #12
 ; CHECK-NEXT:    sub sp, #12
 ; CHECK-NEXT:    cmp r3, #1
-; CHECK-NEXT:    strd r0, r1, [sp] @ 8-byte Folded Spill
-; CHECK-NEXT:    mov r1, r3
-; CHECK-NEXT:    str r3, [sp, #8] @ 4-byte Spill
+; CHECK-NEXT:    stm.w sp, {r0, r1, r3} @ 12-byte Folded Spill
 ; CHECK-NEXT:    blt .LBB4_12
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.lr.ph
 ; CHECK-NEXT:    ldr r1, [sp, #48]
@@ -182,9 +180,9 @@ define void @correlate(ptr nocapture noundef readonly %ID, ptr nocapture noundef
 ; CHECK-NEXT:    @ in Loop: Header=BB4_4 Depth=1
 ; CHECK-NEXT:    ldr r1, [sp] @ 4-byte Reload
 ; CHECK-NEXT:    add.w r2, r9, r10
-; CHECK-NEXT:    sub.w r5, r8, r9
 ; CHECK-NEXT:    add.w r7, r1, r9, lsl #1
 ; CHECK-NEXT:    add.w r2, r1, r2, lsl #1
+; CHECK-NEXT:    sub.w r5, r8, r9
 ; CHECK-NEXT:    dlstp.32 lr, r5
 ; CHECK-NEXT:  .LBB4_11: @ %vec.epilog.vector.body
 ; CHECK-NEXT:    @ Parent Loop BB4_4 Depth=1

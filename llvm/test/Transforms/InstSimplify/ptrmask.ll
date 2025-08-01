@@ -40,7 +40,8 @@ define <2 x ptr addrspace(1) > @ptrmask_simplify_poison_and_zero_i32_vec_fail(<2
 define <2 x ptr> @ptrmask_simplify_undef_and_ones_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_undef_and_ones_vec
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    ret <2 x ptr> [[P]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 undef, i64 -1>)
+; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %r = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 undef, i64 -1>)
   ret <2 x ptr> %r
@@ -169,7 +170,7 @@ define ptr @ptrmask_simplify_aligned_unused(ptr align 64 %p) {
 define <2 x ptr> @ptrmask_simplify_aligned_unused_vec(<2 x ptr> align 128 %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_aligned_unused_vec
 ; CHECK-SAME: (<2 x ptr> align 128 [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -64>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> splat (i64 -64))
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %r = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -64>)
@@ -211,8 +212,8 @@ define ptr @ptrmask_simplify_known_unused(ptr %p) {
 define <2 x ptr> @ptrmask_simplify_known_unused_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_known_unused_vec
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -64>)
-; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 32, i64 32>
+; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> splat (i64 -64))
+; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> splat (i64 32)
 ; CHECK-NEXT:    ret <2 x ptr> [[PGEP]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -64>)
@@ -224,8 +225,8 @@ define <2 x ptr> @ptrmask_simplify_known_unused_vec(<2 x ptr> %p) {
 define <2 x ptr> @ptrmask_simplify_known_unused_vec2(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_known_unused_vec2
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -64>)
-; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 32, i64 32>
+; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> splat (i64 -64))
+; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> splat (i64 32)
 ; CHECK-NEXT:    ret <2 x ptr> [[PGEP]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -64>)
@@ -238,7 +239,7 @@ define <2 x ptr> @ptrmask_simplify_known_unused_vec3(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_known_unused_vec3
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
 ; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -128>)
-; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 32, i64 32>
+; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> splat (i64 32)
 ; CHECK-NEXT:    ret <2 x ptr> [[PGEP]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -128>)
@@ -265,7 +266,7 @@ define <2 x ptr> @ptrmask_simplify_known_unused_vec_fail(<2 x ptr> %p) {
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
 ; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -128>)
 ; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 16, i64 64>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP]], <2 x i64> <i64 -32, i64 -32>)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP]], <2 x i64> splat (i64 -32))
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -128>)
@@ -277,8 +278,8 @@ define <2 x ptr> @ptrmask_simplify_known_unused_vec_fail(<2 x ptr> %p) {
 define <2 x ptr> @ptrmask_simplify_known_unused_vec_fail2(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_known_unused_vec_fail2
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -64>)
-; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 32, i64 32>
+; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> splat (i64 -64))
+; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> splat (i64 32)
 ; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP]], <2 x i64> <i64 -32, i64 -64>)
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
@@ -292,8 +293,8 @@ define <2 x ptr> @ptrmask_simplify_known_unused_vec_fail3(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_simplify_known_unused_vec_fail3
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
 ; CHECK-NEXT:    [[PM0:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -64, i64 -16>)
-; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> <i64 32, i64 32>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP]], <2 x i64> <i64 -32, i64 -32>)
+; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, <2 x ptr> [[PM0]], <2 x i64> splat (i64 32)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[PGEP]], <2 x i64> splat (i64 -32))
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %pm0 = call <2 x ptr> @llvm.ptrmask.v2p1.v2i64(<2 x ptr> %p, <2 x i64> <i64 -64, i64 -16>)

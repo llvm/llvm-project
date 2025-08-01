@@ -66,7 +66,7 @@
 ; SPLIT-NEXT:               DW_AT_language    (DW_LANG_C99)
 ; SPLIT-NEXT:               DW_AT_name        ("test.c")
 ; SPLIT-NEXT:               DW_AT_GNU_dwo_name        ("{{.*}}dwarfdump.ll.tmp.dwo")
-; SPLIT-NEXT:               DW_AT_GNU_dwo_id  (0xad3151f12153fa17)
+; SPLIT-NEXT:               DW_AT_GNU_dwo_id  ({{.*}})
 
 ; SPLIT:      0x00000019:   DW_TAG_variable
 ; SPLIT-NEXT:                 DW_AT_name      ("foo")

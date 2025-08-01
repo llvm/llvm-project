@@ -20,39 +20,10 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Pass/Pass.h"
-#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 
 namespace {
-
-static vector::CombiningKind
-convertReductionKind(gpu::AllReduceOperation mode) {
-  switch (mode) {
-#define MAP_CASE(X)                                                            \
-  case gpu::AllReduceOperation::X:                                             \
-    return vector::CombiningKind::X
-
-    MAP_CASE(ADD);
-    MAP_CASE(MUL);
-    MAP_CASE(MINUI);
-    MAP_CASE(MINSI);
-    MAP_CASE(MINNUMF);
-    MAP_CASE(MAXSI);
-    MAP_CASE(MAXUI);
-    MAP_CASE(MAXNUMF);
-    MAP_CASE(AND);
-    MAP_CASE(OR);
-    MAP_CASE(XOR);
-    MAP_CASE(MINIMUMF);
-    MAP_CASE(MAXIMUMF);
-
-#undef MAP_CASE
-  }
-
-  llvm_unreachable("Vector and GPU reduction kinds should match 1:1");
-}
 
 struct GpuAllReduceRewriter {
   using AccumulatorFactory = std::function<Value(Value, Value)>;
@@ -110,11 +81,11 @@ struct GpuAllReduceRewriter {
 
     // Compute lane id (invocation id withing the subgroup).
     Value subgroupMask =
-        create<arith::ConstantIntOp>(kSubgroupSize - 1, int32Type);
+        create<arith::ConstantIntOp>(int32Type, kSubgroupSize - 1);
     Value laneId = create<arith::AndIOp>(invocationIdx, subgroupMask);
     Value isFirstLane =
         create<arith::CmpIOp>(arith::CmpIPredicate::eq, laneId,
-                              create<arith::ConstantIntOp>(0, int32Type));
+                              create<arith::ConstantIntOp>(int32Type, 0));
 
     Value numThreadsWithSmallerSubgroupId =
         create<arith::SubIOp>(invocationIdx, laneId);
@@ -174,7 +145,7 @@ private:
   // Shortcut to create an op from rewriter using loc as the first argument.
   template <typename T, typename... Args>
   T create(Args... args) {
-    return rewriter.create<T>(loc, std::forward<Args>(args)...);
+    return T::create(rewriter, loc, std::forward<Args>(args)...);
   }
 
   // Creates dimension op of type T, with the result casted to int32.
@@ -309,7 +280,7 @@ private:
   /// The first lane returns the result, all others return values are undefined.
   Value createSubgroupReduce(Value activeWidth, Value laneId, Value operand,
                              AccumulatorFactory &accumFactory) {
-    Value subgroupSize = create<arith::ConstantIntOp>(kSubgroupSize, int32Type);
+    Value subgroupSize = create<arith::ConstantIntOp>(int32Type, kSubgroupSize);
     Value isPartialSubgroup = create<arith::CmpIOp>(arith::CmpIPredicate::slt,
                                                     activeWidth, subgroupSize);
     std::array<Type, 2> shuffleType = {valueType, rewriter.getI1Type()};
@@ -323,7 +294,7 @@ private:
           // lane is within the active range. The accumulated value is available
           // in the first lane.
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
-            Value offset = create<arith::ConstantIntOp>(i, int32Type);
+            Value offset = create<arith::ConstantIntOp>(int32Type, i);
             auto shuffleOp = create<gpu::ShuffleOp>(
                 shuffleType, value, offset, activeWidth, gpu::ShuffleMode::XOR);
             // Skip the accumulation if the shuffle op read from a lane outside
@@ -345,7 +316,7 @@ private:
         [&] {
           Value value = operand;
           for (int i = 1; i < kSubgroupSize; i <<= 1) {
-            Value offset = create<arith::ConstantIntOp>(i, int32Type);
+            Value offset = create<arith::ConstantIntOp>(int32Type, i);
             auto shuffleOp =
                 create<gpu::ShuffleOp>(shuffleType, value, offset, subgroupSize,
                                        gpu::ShuffleMode::XOR);
@@ -358,7 +329,7 @@ private:
 
   /// Returns value divided by the subgroup size (i.e. 32).
   Value getDivideBySubgroupSize(Value value) {
-    Value subgroupSize = create<arith::ConstantIntOp>(kSubgroupSize, int32Type);
+    Value subgroupSize = create<arith::ConstantIntOp>(int32Type, kSubgroupSize);
     return create<arith::DivSIOp>(int32Type, value, subgroupSize);
   }
 

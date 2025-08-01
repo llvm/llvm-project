@@ -2,7 +2,6 @@
 Test some SBValue APIs.
 """
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -66,7 +65,7 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(val_value.IsValid(), "Got the SBValue for val")
         actual_value = val_value.GetValueAsSigned(error, 0)
         self.assertSuccess(error, "Got a value from val")
-        self.assertEquals(actual_value, 100, "Got the right value from val")
+        self.assertEqual(actual_value, 100, "Got the right value from val")
 
         result = val_value.SetValueFromCString("12345")
         self.assertTrue(result, "Setting val returned True.")
@@ -83,13 +82,13 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(mine_second_value.IsValid(), "Got second_val from mine")
         actual_value = mine_second_value.GetValueAsUnsigned(error, 0)
         self.assertTrue(error.Success(), "Got an unsigned value for second_val")
-        self.assertEquals(actual_value, 5555)
+        self.assertEqual(actual_value, 5555)
 
         result = mine_second_value.SetValueFromCString("98765")
         self.assertTrue(result, "Success setting mine.second_value.")
         actual_value = mine_second_value.GetValueAsSigned(error, 0)
         self.assertTrue(error.Success(), "Got a changed value from mine.second_val")
-        self.assertEquals(
+        self.assertEqual(
             actual_value, 98765, "Got the right changed value from mine.second_val"
         )
 
@@ -101,14 +100,38 @@ class ChangeValueAPITestCase(TestBase):
         self.assertTrue(ptr_second_value.IsValid(), "Got second_val from ptr")
         actual_value = ptr_second_value.GetValueAsUnsigned(error, 0)
         self.assertTrue(error.Success(), "Got an unsigned value for ptr->second_val")
-        self.assertEquals(actual_value, 6666)
+        self.assertEqual(actual_value, 6666)
 
         result = ptr_second_value.SetValueFromCString("98765")
         self.assertTrue(result, "Success setting ptr->second_value.")
         actual_value = ptr_second_value.GetValueAsSigned(error, 0)
         self.assertTrue(error.Success(), "Got a changed value from ptr->second_val")
-        self.assertEquals(
+        self.assertEqual(
             actual_value, 98765, "Got the right changed value from ptr->second_val"
+        )
+
+        ptr_fourth_value = ptr_value.GetChildMemberWithName("fourth_val")
+        self.assertTrue(ptr_fourth_value.IsValid(), "Got fourth_val from ptr")
+        fourth_actual_value = ptr_fourth_value.GetValueAsUnsigned(error, 1)
+        self.assertTrue(error.Success(), "Got an unsigned value for ptr->fourth_val")
+        self.assertEqual(fourth_actual_value, 0)
+
+        result = ptr_fourth_value.SetValueFromCString("true")
+        self.assertTrue(result, "Success setting ptr->fourth_val.")
+        fourth_actual_value = ptr_fourth_value.GetValueAsSigned(error, 0)
+        self.assertTrue(error.Success(), "Got a changed value from ptr->fourth_val")
+        self.assertEqual(
+            fourth_actual_value, 1, "Got the right changed value from ptr->fourth_val"
+        )
+
+        result = ptr_fourth_value.SetValueFromCString("NO")
+        self.assertFalse(result, "Failed setting ptr->fourth_val.")
+        fourth_actual_value = ptr_fourth_value.GetValueAsSigned(error, 0)
+        self.assertTrue(error.Success(), "Got the original value from ptr->fourth_val")
+        self.assertEqual(
+            fourth_actual_value,
+            1,
+            "Got the original changed value from ptr->fourth_val",
         )
 
         # gcc may set multiple locations for breakpoint
@@ -125,10 +148,10 @@ class ChangeValueAPITestCase(TestBase):
         )
 
         expected_value = (
-            "Val - 12345 Mine - 55, 98765, 55555555. Ptr - 66, 98765, 66666666"
+            "Val - 12345 Mine - 55, 98765, 55555555, 0. Ptr - 66, 98765, 66666666, 1"
         )
         stdout = process.GetSTDOUT(1000)
-        self.assertTrue(expected_value in stdout, "STDOUT showed changed values.")
+        self.assertIn(expected_value, stdout, "STDOUT showed changed values.")
 
         # Finally, change the stack pointer to 0, and we should not make it to
         # our end breakpoint.
@@ -150,8 +173,8 @@ class ChangeValueAPITestCase(TestBase):
 
         self.assertState(process.GetState(), lldb.eStateStopped)
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread is None,
+        self.assertIsNone(
+            thread,
             "We should not have managed to hit our second breakpoint with sp == 1",
         )
 

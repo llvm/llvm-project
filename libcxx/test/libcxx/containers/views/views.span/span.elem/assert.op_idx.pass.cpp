@@ -15,7 +15,7 @@
 
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: availability-verbose_abort-missing
+// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
 
 #include <array>
 #include <span>
@@ -23,17 +23,17 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    {
-        std::array<int, 3> array{0, 1, 2};
-        std::span<int> const s(array.data(), array.size());
-        TEST_LIBCPP_ASSERT_FAILURE(s[3], "span<T>::operator[](index): index out of range");
-    }
+  {
+    std::array<int, 3> array{0, 1, 2};
+    std::span<int> const s(array.data(), array.size());
+    TEST_LIBCPP_ASSERT_FAILURE(s[3], "span<T>::operator[](index): index out of range");
+  }
 
-    {
-        std::array<int, 3> array{0, 1, 2};
-        std::span<int, 3> const s(array.data(), array.size());
-        TEST_LIBCPP_ASSERT_FAILURE(s[3], "span<T, N>::operator[](index): index out of range");
-    }
+  {
+    std::array<int, 3> array{0, 1, 2};
+    std::span<int, 3> const s(array.data(), array.size());
+    TEST_LIBCPP_ASSERT_FAILURE(s[3], "span<T, N>::operator[](index): index out of range");
+  }
 
-    return 0;
+  return 0;
 }

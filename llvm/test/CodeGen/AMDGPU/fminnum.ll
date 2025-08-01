@@ -1,5 +1,5 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}test_fmin_f32_ieee_mode_on:
 ; GCN: v_mul_f32_e64 [[QUIET0:v[0-9]+]], 1.0, s{{[0-9]+}}
@@ -150,7 +150,7 @@ define amdgpu_kernel void @constant_fold_fmin_f32_p0_p0(ptr addrspace(1) %out) #
 
 ; GCN-LABEL: {{^}}constant_fold_fmin_f32_p0_n0:
 ; GCN-NOT: v_min_f32_e32
-; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0
+; GCN: v_bfrev_b32_e32 [[REG:v[0-9]+]], 1{{$}}
 ; GCN: buffer_store_dword [[REG]]
 define amdgpu_kernel void @constant_fold_fmin_f32_p0_n0(ptr addrspace(1) %out) #0 {
   %val = call float @llvm.minnum.f32(float 0.0, float -0.0)

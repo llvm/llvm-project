@@ -1,7 +1,11 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV: OpDecorate %[[#Id:]] BuiltIn GlobalLinearId
-; CHECK-SPIRV: %[[#Id:]] = OpVariable %[[#]]
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; CHECK: OpDecorate %[[#Id:]] BuiltIn GlobalLinearId
+; CHECK: %[[#Id:]] = OpVariable %[[#]]
 
 @__spirv_BuiltInGlobalLinearId = external addrspace(1) global i32
 

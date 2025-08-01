@@ -104,14 +104,14 @@ static bool isSuitableForBSS(const GlobalVariable *GV) {
 static bool IsNullTerminatedString(const Constant *C) {
   // First check: is we have constant array terminated with zero
   if (const ConstantDataSequential *CDS = dyn_cast<ConstantDataSequential>(C)) {
-    unsigned NumElts = CDS->getNumElements();
+    uint64_t NumElts = CDS->getNumElements();
     assert(NumElts != 0 && "Can't have an empty CDS");
 
     if (CDS->getElementAsInteger(NumElts-1) != 0)
       return false; // Not null terminated.
 
     // Verify that the null doesn't occur anywhere else in the string.
-    for (unsigned i = 0; i != NumElts-1; ++i)
+    for (uint64_t i = 0; i != NumElts - 1; ++i)
       if (CDS->getElementAsInteger(i) == 0)
         return false;
     return true;
@@ -129,7 +129,7 @@ MCSymbol *TargetLoweringObjectFile::getSymbolWithGlobalValueBase(
   assert(!Suffix.empty());
 
   SmallString<60> NameStr;
-  NameStr += GV->getParent()->getDataLayout().getPrivateGlobalPrefix();
+  NameStr += GV->getDataLayout().getPrivateGlobalPrefix();
   TM.getNameWithPrefix(NameStr, GV, *Mang);
   NameStr.append(Suffix.begin(), Suffix.end());
   return getContext().getOrCreateSymbol(NameStr);
@@ -141,10 +141,9 @@ MCSymbol *TargetLoweringObjectFile::getCFIPersonalitySymbol(
   return TM.getSymbol(GV);
 }
 
-void TargetLoweringObjectFile::emitPersonalityValue(MCStreamer &Streamer,
-                                                    const DataLayout &,
-                                                    const MCSymbol *Sym) const {
-}
+void TargetLoweringObjectFile::emitPersonalityValue(
+    MCStreamer &Streamer, const DataLayout &, const MCSymbol *Sym,
+    const MachineModuleInfo *MMI) const {}
 
 void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
                                                      Module &M) const {
@@ -187,9 +186,37 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
                          ->getValue()
                          ->getUniqueInteger()
                          .getZExtValue();
-    Streamer.emitCGProfileEntry(
-        MCSymbolRefExpr::create(From, MCSymbolRefExpr::VK_None, C),
-        MCSymbolRefExpr::create(To, MCSymbolRefExpr::VK_None, C), Count);
+    Streamer.emitCGProfileEntry(MCSymbolRefExpr::create(From, C),
+                                MCSymbolRefExpr::create(To, C), Count);
+  }
+}
+
+void TargetLoweringObjectFile::emitPseudoProbeDescMetadata(MCStreamer &Streamer,
+                                                           Module &M) const {
+  NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName);
+  if (!FuncInfo)
+    return;
+
+  // Emit a descriptor for every function including functions that have an
+  // available external linkage. We may not want this for imported functions
+  // that has code in another thinLTO module but we don't have a good way to
+  // tell them apart from inline functions defined in header files. Therefore
+  // we put each descriptor in a separate comdat section and rely on the
+  // linker to deduplicate.
+  auto &C = getContext();
+  for (const auto *Operand : FuncInfo->operands()) {
+    const auto *MD = cast<MDNode>(Operand);
+    auto *GUID = mdconst::extract<ConstantInt>(MD->getOperand(0));
+    auto *Hash = mdconst::extract<ConstantInt>(MD->getOperand(1));
+    auto *Name = cast<MDString>(MD->getOperand(2));
+    auto *S = C.getObjectFileInfo()->getPseudoProbeDescSection(
+        TM->getFunctionSections() ? Name->getString() : StringRef());
+
+    Streamer.switchSection(S);
+    Streamer.emitInt64(GUID->getZExtValue());
+    Streamer.emitInt64(Hash->getZExtValue());
+    Streamer.emitULEB128IntValue(Name->getString().size());
+    Streamer.emitBytes(Name->getString());
   }
 }
 
@@ -284,7 +311,7 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalObject *GO,
       // a section for this size, use it, otherwise use the arbitrary sized
       // mergable section.
       switch (
-          GVar->getParent()->getDataLayout().getTypeAllocSize(C->getType())) {
+          GVar->getDataLayout().getTypeAllocSize(C->getType())) {
       case 4:  return SectionKind::getMergeableConst4();
       case 8:  return SectionKind::getMergeableConst8();
       case 16: return SectionKind::getMergeableConst16();
@@ -334,11 +361,6 @@ MCSection *TargetLoweringObjectFile::SectionForGlobal(
     }
   }
 
-  if (auto *F = dyn_cast<Function>(GO)) {
-    if (F->hasFnAttribute("implicit-section-name"))
-      return getExplicitSectionGlobal(GO, Kind, TM);
-  }
-
   // Use default section depending on the 'type' of global
   return SelectSectionForGlobal(GO, Kind, TM);
 }
@@ -354,8 +376,14 @@ TargetLoweringObjectFile::SectionForGlobal(const GlobalObject *GO,
 
 MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
     const Function &F, const TargetMachine &TM) const {
+  return getSectionForJumpTable(F, TM, /*JTE=*/nullptr);
+}
+
+MCSection *TargetLoweringObjectFile::getSectionForJumpTable(
+    const Function &F, const TargetMachine &TM,
+    const MachineJumpTableEntry *JTE) const {
   Align Alignment(1);
-  return getSectionForConstant(F.getParent()->getDataLayout(),
+  return getSectionForConstant(F.getDataLayout(),
                                SectionKind::getReadOnly(), /*C=*/nullptr,
                                Alignment);
 }
@@ -384,6 +412,18 @@ MCSection *TargetLoweringObjectFile::getSectionForConstant(
     return ReadOnlySection;
 
   return DataSection;
+}
+
+MCSection *TargetLoweringObjectFile::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    StringRef SectionPrefix) const {
+  // Fallback to `getSectionForConstant` without `SectionPrefix` parameter if it
+  // is empty.
+  if (SectionPrefix.empty())
+    return getSectionForConstant(DL, Kind, C, Alignment);
+  report_fatal_error(
+      "TargetLoweringObjectFile::getSectionForConstant that "
+      "accepts SectionPrefix is not implemented for the object file format");
 }
 
 MCSection *TargetLoweringObjectFile::getSectionForMachineBasicBlock(

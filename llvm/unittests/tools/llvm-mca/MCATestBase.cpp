@@ -14,7 +14,7 @@ using namespace mca;
 
 const Target *MCATestBase::getLLVMTarget() const {
   std::string Error;
-  return TargetRegistry::lookupTarget(TheTriple.getTriple(), Error);
+  return TargetRegistry::lookupTarget(TheTriple, Error);
 }
 
 mca::PipelineOptions MCATestBase::getDefaultPipelineOptions() {
@@ -66,7 +66,7 @@ Error MCATestBase::runBaselineMCA(json::Object &Result, ArrayRef<MCInst> Insts,
 
   // Default InstrumentManager
   auto IM = std::make_unique<mca::InstrumentManager>(*STI, *MCII);
-  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM);
+  mca::InstrBuilder IB(*STI, *MCII, *MRI, MCIA.get(), *IM, /*CallLatency=*/100);
 
   const SmallVector<mca::Instrument *> Instruments;
   SmallVector<std::unique_ptr<mca::Instruction>> LoweredInsts;

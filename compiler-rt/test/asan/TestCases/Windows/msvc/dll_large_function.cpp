@@ -3,8 +3,7 @@
 // from the DLL.  We simulate the large function with
 // -mllvm -asan-instrumentation-with-call-threshold=0.
 // RUN: %clang_cl_asan %s -c -Fo%t.obj -mllvm -asan-instrumentation-with-call-threshold=0
-// RUN: lld-link /nologo /DLL /OUT:%t.dll %t.obj %asan_dll_thunk
-// REQUIRES: asan-static-runtime
+// RUN: lld-link /nologo /DLL /OUT:%t.dll %t.obj  %asan_lib %asan_thunk
 // REQUIRES: lld-available
 
 void f(long* foo, long* bar) {

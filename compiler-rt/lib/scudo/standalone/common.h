@@ -28,7 +28,11 @@ template <class Dest, class Source> inline Dest bit_cast(const Source &S) {
   return D;
 }
 
-inline constexpr bool isPowerOfTwo(uptr X) { return (X & (X - 1)) == 0; }
+inline constexpr bool isPowerOfTwo(uptr X) {
+  if (X == 0)
+    return false;
+  return (X & (X - 1)) == 0;
+}
 
 inline constexpr uptr roundUp(uptr X, uptr Boundary) {
   DCHECK(isPowerOfTwo(Boundary));
@@ -129,17 +133,39 @@ inline void computePercentage(uptr Numerator, uptr Denominator, uptr *Integral,
 
 // Platform specific functions.
 
+#if defined(SCUDO_PAGE_SIZE)
+
+inline constexpr uptr getPageSizeCached() { return SCUDO_PAGE_SIZE; }
+
+inline constexpr uptr getPageSizeSlow() { return getPageSizeCached(); }
+
+inline constexpr uptr getPageSizeLogCached() {
+  return static_cast<uptr>(__builtin_ctzl(SCUDO_PAGE_SIZE));
+}
+
+#else
+
 extern uptr PageSizeCached;
+extern uptr PageSizeLogCached;
+
 uptr getPageSizeSlow();
+
 inline uptr getPageSizeCached() {
-#if SCUDO_ANDROID && defined(PAGE_SIZE)
-  // Most Android builds have a build-time constant page size.
-  return PAGE_SIZE;
-#endif
   if (LIKELY(PageSizeCached))
     return PageSizeCached;
   return getPageSizeSlow();
 }
+
+inline uptr getPageSizeLogCached() {
+  if (LIKELY(PageSizeLogCached))
+    return PageSizeLogCached;
+  // PageSizeLogCached and PageSizeCached are both set in getPageSizeSlow()
+  getPageSizeSlow();
+  DCHECK_NE(PageSizeLogCached, 0);
+  return PageSizeLogCached;
+}
+
+#endif
 
 // Returns 0 if the number of CPUs could not be determined.
 u32 getNumberOfCPUs();

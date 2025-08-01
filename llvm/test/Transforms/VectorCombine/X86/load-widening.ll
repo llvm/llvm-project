@@ -79,7 +79,7 @@ define <3 x float> @vec_with_3elts_underaligned(ptr align 8 dereferenceable(16) 
 
 ; We don't know we can load 128 bits, but since it's aligned, we still can do wide load.
 ; FIXME: this should still get widened.
-define <3 x float> @vec_with_3elts_underdereferenceable(<3 x float>* align 16 dereferenceable(12) %p) {
+define <3 x float> @vec_with_3elts_underdereferenceable(ptr align 16 dereferenceable(12) %p) {
 ; CHECK-LABEL: @vec_with_3elts_underdereferenceable(
 ; CHECK-NEXT:    [[R:%.*]] = load <3 x float>, ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <3 x float> [[R]]
@@ -380,5 +380,85 @@ define <4 x i32> @load_v2i32_v4i32_addrspacecast(ptr addrspace(5) align 16 deref
   %asc = addrspacecast ptr addrspace(5) %p to ptr addrspace(42)
   %l = load <2 x i32>, ptr addrspace(42) %asc, align 4
   %s = shufflevector <2 x i32> %l, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  ret <4 x i32> %s
+}
+
+; Negative-negative tests with msan, which should be OK with widening.
+
+define <4 x float> @load_v1f32_v4f32_msan(ptr dereferenceable(16) %p) sanitize_memory  {
+; CHECK-LABEL: @load_v1f32_v4f32_msan(
+; CHECK-NEXT:    [[S:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <1 x float>, ptr %p, align 16
+  %s = shufflevector <1 x float> %l, <1 x float> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  ret <4 x float> %s
+}
+
+; Negative tests with sanitizers.
+
+define <4 x float> @load_v1f32_v4f32_asan(ptr dereferenceable(16) %p) sanitize_address  {
+; CHECK-LABEL: @load_v1f32_v4f32_asan(
+; CHECK-NEXT:    [[L:%.*]] = load <1 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <1 x float> [[L]], <1 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <1 x float>, ptr %p, align 16
+  %s = shufflevector <1 x float> %l, <1 x float> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  ret <4 x float> %s
+}
+
+define <4 x float> @load_v2f32_v4f32_hwasan(ptr align 16 dereferenceable(16) %p) sanitize_hwaddress {
+; CHECK-LABEL: @load_v2f32_v4f32_hwasan(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x float> [[L]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <2 x float>, ptr %p, align 1
+  %s = shufflevector <2 x float> %l, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  ret <4 x float> %s
+}
+
+define <4 x float> @load_v3f32_v4f32_tsan(ptr dereferenceable(16) %p) sanitize_thread  {
+; CHECK-LABEL: @load_v3f32_v4f32_tsan(
+; CHECK-NEXT:    [[L:%.*]] = load <3 x float>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x float> [[L]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[S]]
+;
+  %l = load <3 x float>, ptr %p, align 1
+  %s = shufflevector <3 x float> %l, <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+  ret <4 x float> %s
+}
+
+define <8 x float> @load_v2f32_v8f32_hwasan(ptr dereferenceable(32) %p) sanitize_hwaddress {
+; CHECK-LABEL: @load_v2f32_v8f32_hwasan(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x float> [[L]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <8 x float> [[S]]
+;
+  %l = load <2 x float>, ptr %p, align 1
+  %s = shufflevector <2 x float> %l, <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x float> %s
+}
+
+define <4 x i32> @load_v2i32_v4i32_asan(ptr dereferenceable(16) %p) sanitize_address {
+; CHECK-LABEL: @load_v2i32_v4i32_asan(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[L]], <2 x i32> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %l = load <2 x i32>, ptr %p, align 1
+  %s = shufflevector <2 x i32> %l, <2 x i32> poison, <4 x i32> <i32 0, i32 undef, i32 undef, i32 undef>
+  ret <4 x i32> %s
+}
+
+define <4 x i32> @load_v2i32_v4i32_non_canonical_mask_commute_hwasan(ptr dereferenceable(16) %p) sanitize_hwaddress {
+; CHECK-LABEL: @load_v2i32_v4i32_non_canonical_mask_commute_hwasan(
+; CHECK-NEXT:    [[L:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> poison, <2 x i32> [[L]], <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x i32> [[S]]
+;
+  %l = load <2 x i32>, ptr %p, align 1
+  %s = shufflevector <2 x i32> poison, <2 x i32> %l, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   ret <4 x i32> %s
 }

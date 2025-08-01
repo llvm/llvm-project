@@ -1,12 +1,12 @@
-# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -mtriple=x86_64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 
 --- |
 
-  define void @memory_alignment(<8 x float>* %vec) {
+  define void @memory_alignment(ptr %vec) {
   entry:
-    %v = load <8 x float>, <8 x float>* %vec
+    %v = load <8 x float>, ptr %vec
     %v2 = insertelement <8 x float> %v, float 0.0, i32 4
-    store <8 x float> %v2, <8 x float>* %vec
+    store <8 x float> %v2, ptr %vec
     ret void
   }
 

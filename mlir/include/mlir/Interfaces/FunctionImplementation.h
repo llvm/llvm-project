@@ -33,19 +33,6 @@ private:
   bool variadic;
 };
 
-/// Adds argument and result attributes, provided as `argAttrs` and
-/// `resultAttrs` arguments, to the list of operation attributes in `result`.
-/// Internally, argument and result attributes are stored as dict attributes
-/// with special names given by getResultAttrName, getArgumentAttrName.
-void addArgAndResultAttrs(Builder &builder, OperationState &result,
-                          ArrayRef<DictionaryAttr> argAttrs,
-                          ArrayRef<DictionaryAttr> resultAttrs,
-                          StringAttr argAttrsName, StringAttr resAttrsName);
-void addArgAndResultAttrs(Builder &builder, OperationState &result,
-                          ArrayRef<OpAsmParser::Argument> args,
-                          ArrayRef<DictionaryAttr> resultAttrs,
-                          StringAttr argAttrsName, StringAttr resAttrsName);
-
 /// Callback type for `parseFunctionOp`, the callback should produce the
 /// type that will be associated with a function-like operation from lists of
 /// function arguments and results, VariadicFlag indicates whether the function
@@ -58,11 +45,11 @@ using FuncTypeBuilder = function_ref<Type(
 /// indicates whether functions with variadic arguments are supported. The
 /// trailing arguments are populated by this function with names, types,
 /// attributes and locations of the arguments and those of the results.
-ParseResult
-parseFunctionSignature(OpAsmParser &parser, bool allowVariadic,
-                       SmallVectorImpl<OpAsmParser::Argument> &arguments,
-                       bool &isVariadic, SmallVectorImpl<Type> &resultTypes,
-                       SmallVectorImpl<DictionaryAttr> &resultAttrs);
+ParseResult parseFunctionSignatureWithArguments(
+    OpAsmParser &parser, bool allowVariadic,
+    SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
+    SmallVectorImpl<Type> &resultTypes,
+    SmallVectorImpl<DictionaryAttr> &resultAttrs);
 
 /// Parser implementation for function-like operations.  Uses
 /// `funcTypeBuilder` to construct the custom function type given lists of
@@ -84,9 +71,14 @@ void printFunctionOp(OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
 
 /// Prints the signature of the function-like operation `op`. Assumes `op` has
 /// is a FunctionOpInterface and has passed verification.
-void printFunctionSignature(OpAsmPrinter &p, FunctionOpInterface op,
-                            ArrayRef<Type> argTypes, bool isVariadic,
-                            ArrayRef<Type> resultTypes);
+inline void printFunctionSignature(OpAsmPrinter &p, FunctionOpInterface op,
+                                   ArrayRef<Type> argTypes, bool isVariadic,
+                                   ArrayRef<Type> resultTypes) {
+  call_interface_impl::printFunctionSignature(
+      p, argTypes, op.getArgAttrsAttr(), isVariadic, resultTypes,
+      op.getResAttrsAttr(), &op->getRegion(0),
+      /*printEmptyResult=*/false);
+}
 
 /// Prints the list of function prefixed with the "attributes" keyword. The
 /// attributes with names listed in "elided" as well as those used by the

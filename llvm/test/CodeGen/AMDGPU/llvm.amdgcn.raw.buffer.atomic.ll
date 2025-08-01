@@ -1,5 +1,5 @@
-;RUN: llc < %s -march=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs | FileCheck %s
-;RUN: llc < %s -march=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None -verify-machineinstrs | FileCheck %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=verde -amdgpu-atomic-optimizer-strategy=None | FileCheck %s
+;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -amdgpu-atomic-optimizer-strategy=None | FileCheck %s
 
 ;CHECK-LABEL: {{^}}test1:
 ;CHECK-NOT: s_waitcnt
@@ -103,7 +103,7 @@ main_body:
 ;CHECK: buffer_atomic_add v0,
 define amdgpu_ps float @test4() {
 main_body:
-  %v = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 1, <4 x i32> undef, i32 4, i32 0, i32 0)
+  %v = call i32 @llvm.amdgcn.raw.buffer.atomic.add.i32(i32 1, <4 x i32> poison, i32 4, i32 0, i32 0)
   %v.float = bitcast i32 %v to float
   ret float %v.float
 }

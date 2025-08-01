@@ -1,7 +1,7 @@
-# RUN: llc -march=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,SI,SICI,SIVI
-# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,CI,SICI
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,VI,SIVI
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,GFX9
+# RUN: llc -mtriple=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,SI,SICI,SIVI
+# RUN: llc -mtriple=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,CI,SICI
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,VI,SIVI
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,GFX9
 
 --- |
   define amdgpu_kernel void @smrd_imm(ptr addrspace(4) %const0) { ret void }
@@ -45,9 +45,7 @@ regBankSelected: true
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 262144, 0
 
 # Max immediate for CI
-# SIVI: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 4294967292
-# SIVI: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 3
-# SIVI: [[K:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
+# SIVI: [[K:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 17179869180
 # SIVI-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
 # SIVI-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
 # SIVI-DAG: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
@@ -59,9 +57,7 @@ regBankSelected: true
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 4294967295, 0
 
 # Immediate overflow for CI
-# GCN: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-# GCN: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 4
-# GCN: [[K:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
+# GCN: [[K:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 17179869184
 # GCN-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
 # GCN-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
 # GCN-DAG: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]
@@ -77,9 +73,7 @@ regBankSelected: true
 # CI: S_LOAD_DWORD_IMM_ci [[PTR]], 1073741823, 0
 
 # Overflow 32-bit byte offset
-# SIVI: [[K_LO:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-# SIVI: [[K_HI:%[0-9]+]]:sreg_32 = S_MOV_B32 1
-# SIVI: [[K:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[K_LO]], %subreg.sub0, [[K_HI]], %subreg.sub1
+# SIVI: [[K:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 4294967296
 # SIVI-DAG: [[K_SUB0:%[0-9]+]]:sreg_32 = COPY [[K]].sub0
 # SIVI-DAG: [[PTR_LO:%[0-9]+]]:sreg_32 = COPY [[PTR]].sub0
 # SIVI-DAG: [[ADD_PTR_LO:%[0-9]+]]:sreg_32 = S_ADD_U32 [[PTR_LO]], [[K_SUB0]]

@@ -83,7 +83,7 @@ WebAssembly-specific options:
 .. option:: --unresolved-symbols=<method>
 
   This is a more full featured version of ``--allow-undefined``.
-  The semanatics of the different methods are as follows:
+  The semantics of the different methods are as follows:
 
   report-all:
 
@@ -134,6 +134,10 @@ WebAssembly-specific options:
 .. option:: --max-memory=<value>
 
   Maximum size of the linear memory. Default: unlimited.
+
+.. option:: --no-growable-memory
+
+  Set maximum size of the linear memory to its initial size, disallowing memory growth.
 
 By default the function table is neither imported nor exported, but defined
 for internal use only.

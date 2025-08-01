@@ -1,5 +1,5 @@
-; RUN: llc -march=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
-; RUN: llc -march=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfel -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
+; RUN: llc -mtriple=bpfeb -filetype=asm -o - %s | FileCheck -check-prefixes=CHECK %s
 
 ; Source code:
 ;   struct t {
@@ -16,7 +16,7 @@
 
 ; Function Attrs: norecurse nounwind
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !21 {
-  %1 = load volatile i32, ptr getelementptr inbounds ({ i32, i32, [10 x i8] }, ptr @sv, i64 0, i32 0), align 4, !dbg !24, !tbaa !25
+  %1 = load volatile i32, ptr @sv, align 4, !dbg !24, !tbaa !25
   ret i32 %1, !dbg !29
 }
 

@@ -7,7 +7,12 @@ subroutine bozchecks
   integer :: f, realpart = B"0101", img = B"1111", resint
   logical :: resbit
   complex :: rescmplx
+  character :: reschar
   real :: dbl, e
+  type :: dt
+    integer :: n
+  end type
+  type(dt) :: resdt
   interface
     subroutine explicit(n, x, c)
       integer :: n
@@ -51,7 +56,7 @@ subroutine bozchecks
   res = CMPLX (realpart, img, 4)
   res = CMPLX (B"0101", B"1111", 4)
 
-  !WARNING: underflow on REAL(8) to REAL(4) conversion
+  !WARNING: underflow on REAL(8) to REAL(4) conversion [-Wfolding-exception]
   dbl = DBLE(B"1111")
   dbl = DBLE(realpart)
 
@@ -97,6 +102,17 @@ subroutine bozchecks
   res = KIND(z'feedface')
 
   res = REAL(B"1101")
+
+  resint = z'ff' ! ok
+  res = z'3f800000' ! ok
+  !ERROR: Right-hand side of this assignment may not be BOZ
+  rescmplx = z'123'
+  !ERROR: Right-hand side of this assignment may not be BOZ
+  resbit = z'123'
+  !ERROR: Right-hand side of this assignment may not be BOZ
+  reschar = z'123'
+  !ERROR: Right-hand side of this assignment may not be BOZ
+  resdt = z'123'
 
   !Ok
   call explicit(z'deadbeef', o'666', 'a')

@@ -104,8 +104,9 @@ TEST(Decl, AsmLabelAttr) {
     MC->mangleName(DeclG, OS_G);
   }
 
-  ASSERT_TRUE(0 == MangleF.compare("\x01" "foo"));
-  ASSERT_TRUE(0 == MangleG.compare("goo"));
+  ASSERT_EQ(MangleF, "\x01"
+                     "foo");
+  ASSERT_EQ(MangleG, "goo");
 }
 
 TEST(Decl, MangleDependentSizedArray) {
@@ -138,8 +139,8 @@ TEST(Decl, MangleDependentSizedArray) {
   MC->mangleCanonicalTypeName(DeclA->getType(), OS_A);
   MC->mangleCanonicalTypeName(DeclB->getType(), OS_B);
 
-  ASSERT_TRUE(0 == MangleA.compare("_ZTSA_i"));
-  ASSERT_TRUE(0 == MangleB.compare("_ZTSAT0__T_"));
+  ASSERT_EQ(MangleA, "_ZTSA_i");
+  ASSERT_EQ(MangleB, "_ZTSAT0__T_");
 }
 
 TEST(Decl, ConceptDecl) {
@@ -429,7 +430,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator new"),
             Ctx));
   ASSERT_TRUE(SizedOperatorNew->getOwningModule());
-  EXPECT_TRUE(SizedOperatorNew->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(SizedOperatorNew->isFromExplicitGlobalModule());
 
   // void* operator new(std::size_t, std::align_val_t);
   auto *SizedAlignedOperatorNew = selectFirst<FunctionDecl>(
@@ -441,7 +442,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator new"),
             Ctx));
   ASSERT_TRUE(SizedAlignedOperatorNew->getOwningModule());
-  EXPECT_TRUE(SizedAlignedOperatorNew->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(SizedAlignedOperatorNew->isFromExplicitGlobalModule());
 
   // void* operator new[](std::size_t);
   auto *SizedArrayOperatorNew = selectFirst<FunctionDecl>(
@@ -451,7 +452,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator new[]"),
             Ctx));
   ASSERT_TRUE(SizedArrayOperatorNew->getOwningModule());
-  EXPECT_TRUE(SizedArrayOperatorNew->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(SizedArrayOperatorNew->isFromExplicitGlobalModule());
 
   // void* operator new[](std::size_t, std::align_val_t);
   auto *SizedAlignedArrayOperatorNew = selectFirst<FunctionDecl>(
@@ -464,7 +465,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
             Ctx));
   ASSERT_TRUE(SizedAlignedArrayOperatorNew->getOwningModule());
   EXPECT_TRUE(
-      SizedAlignedArrayOperatorNew->getOwningModule()->isGlobalModule());
+      SizedAlignedArrayOperatorNew->isFromExplicitGlobalModule());
 
   // void operator delete(void*) noexcept;
   auto *Delete = selectFirst<FunctionDecl>(
@@ -475,7 +476,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator delete"),
             Ctx));
   ASSERT_TRUE(Delete->getOwningModule());
-  EXPECT_TRUE(Delete->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(Delete->isFromExplicitGlobalModule());
 
   // void operator delete(void*, std::align_val_t) noexcept;
   auto *AlignedDelete = selectFirst<FunctionDecl>(
@@ -487,7 +488,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator delete"),
             Ctx));
   ASSERT_TRUE(AlignedDelete->getOwningModule());
-  EXPECT_TRUE(AlignedDelete->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(AlignedDelete->isFromExplicitGlobalModule());
 
   // Sized deallocation is not enabled by default. So we skip it here.
 
@@ -500,7 +501,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator delete[]"),
             Ctx));
   ASSERT_TRUE(ArrayDelete->getOwningModule());
-  EXPECT_TRUE(ArrayDelete->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(ArrayDelete->isFromExplicitGlobalModule());
 
   // void operator delete[](void*, std::align_val_t) noexcept;
   auto *AlignedArrayDelete = selectFirst<FunctionDecl>(
@@ -512,7 +513,7 @@ TEST(Decl, ImplicitlyDeclaredAllocationFunctionsInModules) {
                 .bind("operator delete[]"),
             Ctx));
   ASSERT_TRUE(AlignedArrayDelete->getOwningModule());
-  EXPECT_TRUE(AlignedArrayDelete->getOwningModule()->isGlobalModule());
+  EXPECT_TRUE(AlignedArrayDelete->isFromExplicitGlobalModule());
 }
 
 TEST(Decl, TemplateArgumentDefaulted) {
@@ -544,4 +545,35 @@ TEST(Decl, TemplateArgumentDefaulted) {
   EXPECT_FALSE(ArgList.get(1).getIsDefaulted());
   EXPECT_TRUE(ArgList.get(2).getIsDefaulted());
   EXPECT_TRUE(ArgList.get(3).getIsDefaulted());
+}
+
+TEST(Decl, CXXDestructorDeclsShouldHaveWellFormedNameInfoRanges) {
+  // GH71161
+  llvm::Annotations Code(R"cpp(
+template <typename T> struct Resource {
+  ~Resource(); // 1
+};
+template <typename T>
+Resource<T>::~Resource() {} // 2,3
+
+void instantiate_template() {
+  Resource<int> x;
+}
+)cpp");
+
+  auto AST = tooling::buildASTFromCode(Code.code());
+  ASTContext &Ctx = AST->getASTContext();
+
+  const auto &SM = Ctx.getSourceManager();
+  auto GetNameInfoRange = [&SM](const BoundNodes &Match) {
+    const auto *D = Match.getNodeAs<CXXDestructorDecl>("dtor");
+    return D->getNameInfo().getSourceRange().printToString(SM);
+  };
+
+  auto Matches = match(findAll(cxxDestructorDecl().bind("dtor")),
+                       *Ctx.getTranslationUnitDecl(), Ctx);
+  ASSERT_EQ(Matches.size(), 3U);
+  EXPECT_EQ(GetNameInfoRange(Matches[0]), "<input.cc:3:3, col:4>");
+  EXPECT_EQ(GetNameInfoRange(Matches[1]), "<input.cc:6:14, col:15>");
+  EXPECT_EQ(GetNameInfoRange(Matches[2]), "<input.cc:6:14, col:15>");
 }

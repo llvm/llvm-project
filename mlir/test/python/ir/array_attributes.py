@@ -31,6 +31,7 @@ def testGetDenseElementsUnsupported():
             # CHECK: unimplemented array format conversion from format:
             print(e)
 
+
 # CHECK-LABEL: TEST: testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided
 @run
 def testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided():
@@ -41,8 +42,9 @@ def testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided():
         # realistic example would be a NumPy extension type like the bfloat16
         # type from the ml_dtypes package, which isn't a dependency of this
         # test.
-        attr = DenseElementsAttr.get(array.view(np.datetime64),
-                                     type=IntegerType.get_signless(64))
+        attr = DenseElementsAttr.get(
+            array.view(np.datetime64), type=IntegerType.get_signless(64)
+        )
         # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xi64>
         print(attr)
         # CHECK: {{\[}}[1 2 3]
@@ -51,8 +53,90 @@ def testGetDenseElementsUnSupportedTypeOkIfExplicitTypeProvided():
 
 
 ################################################################################
+# Tests of the list of attributes .get() factory method
+################################################################################
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromList
+@run
+def testGetDenseElementsFromList():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F64Type.get(), 2.0)]
+        attr = DenseElementsAttr.get(attrs)
+
+        # CHECK: dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
+        print(attr)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListWithExplicitType
+@run
+def testGetDenseElementsFromListWithExplicitType():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F64Type.get(), 2.0)]
+        shaped_type = ShapedType(Type.parse("tensor<2xf64>"))
+        attr = DenseElementsAttr.get(attrs, shaped_type)
+
+        # CHECK: dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf64>
+        print(attr)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListEmptyList
+@run
+def testGetDenseElementsFromListEmptyList():
+    with Context(), Location.unknown():
+        attrs = []
+
+        try:
+            attr = DenseElementsAttr.get(attrs)
+        except ValueError as e:
+            # CHECK: Attributes list must be non-empty
+            print(e)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListNonAttributeType
+@run
+def testGetDenseElementsFromListNonAttributeType():
+    with Context(), Location.unknown():
+        attrs = [1.0]
+
+        try:
+            attr = DenseElementsAttr.get(attrs)
+        except RuntimeError as e:
+            # CHECK: Invalid attribute when attempting to create an ArrayAttribute
+            print(e)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListMismatchedType
+@run
+def testGetDenseElementsFromListMismatchedType():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F64Type.get(), 2.0)]
+        shaped_type = ShapedType(Type.parse("tensor<2xf32>"))
+
+        try:
+            attr = DenseElementsAttr.get(attrs, shaped_type)
+        except ValueError as e:
+            # CHECK: All attributes must be of the same type and match the type parameter
+            print(e)
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsFromListMixedTypes
+@run
+def testGetDenseElementsFromListMixedTypes():
+    with Context(), Location.unknown():
+        attrs = [FloatAttr.get(F64Type.get(), 1.0), FloatAttr.get(F32Type.get(), 2.0)]
+
+        try:
+            attr = DenseElementsAttr.get(attrs)
+        except ValueError as e:
+            # CHECK: All attributes must be of the same type and match the type parameter
+            print(e)
+
+
+################################################################################
 # Splats.
 ################################################################################
+
 
 # CHECK-LABEL: TEST: testGetDenseElementsSplatInt
 @run
@@ -205,6 +289,7 @@ def testGetDenseElementsBoolSplat():
 
 ### float and double arrays.
 
+
 # CHECK-LABEL: TEST: testGetDenseElementsF16
 @run
 def testGetDenseElementsF16():
@@ -241,6 +326,78 @@ def testGetDenseElementsF64():
         print(attr)
         # CHECK: {{\[}}[1.1 2.2 3.3]
         # CHECK: {{\[}}4.4 5.5 6.6]]
+        print(np.array(attr))
+
+
+### 1 bit/boolean integer arrays
+# CHECK-LABEL: TEST: testGetDenseElementsI1Signless
+@run
+def testGetDenseElementsI1Signless():
+    with Context():
+        array = np.array([True], dtype=np.bool_)
+        attr = DenseElementsAttr.get(array)
+        # CHECK: dense<true> : tensor<1xi1>
+        print(attr)
+        # CHECK{LITERAL}: [ True]
+        print(np.array(attr))
+
+        array = np.array([[True, False, True], [True, True, False]], dtype=np.bool_)
+        attr = DenseElementsAttr.get(array)
+        # CHECK{LITERAL}: dense<[[true, false, true], [true, true, false]]> : tensor<2x3xi1>
+        print(attr)
+        # CHECK{LITERAL}: [[ True False True]
+        # CHECK{LITERAL}:  [ True True False]]
+        print(np.array(attr))
+
+        array = np.array(
+            [[True, True, False, False], [True, False, True, False]], dtype=np.bool_
+        )
+        attr = DenseElementsAttr.get(array)
+        # CHECK{LITERAL}: dense<[[true, true, false, false], [true, false, true, false]]> : tensor<2x4xi1>
+        print(attr)
+        # CHECK{LITERAL}: [[ True True False False]
+        # CHECK{LITERAL}:  [ True False True False]]
+        print(np.array(attr))
+
+        array = np.array(
+            [
+                [True, True, False, False],
+                [True, False, True, False],
+                [False, False, False, False],
+                [True, True, True, True],
+                [True, False, False, True],
+            ],
+            dtype=np.bool_,
+        )
+        attr = DenseElementsAttr.get(array)
+        # CHECK{LITERAL}: dense<[[true, true, false, false], [true, false, true, false], [false, false, false, false], [true, true, true, true], [true, false, false, true]]> : tensor<5x4xi1>
+        print(attr)
+        # CHECK{LITERAL}: [[ True True False False]
+        # CHECK{LITERAL}:  [ True False True False]
+        # CHECK{LITERAL}:  [False False False False]
+        # CHECK{LITERAL}:  [ True True True True]
+        # CHECK{LITERAL}:  [ True False False True]]
+        print(np.array(attr))
+
+        array = np.array(
+            [
+                [True, True, False, False, True, True, False, False, False],
+                [False, False, False, True, False, True, True, False, True],
+            ],
+            dtype=np.bool_,
+        )
+        attr = DenseElementsAttr.get(array)
+        # CHECK{LITERAL}: dense<[[true, true, false, false, true, true, false, false, false], [false, false, false, true, false, true, true, false, true]]> : tensor<2x9xi1>
+        print(attr)
+        # CHECK{LITERAL}: [[ True True False False True True False False False]
+        # CHECK{LITERAL}:  [False False False True False True True False True]]
+        print(np.array(attr))
+
+        array = np.array([], dtype=np.bool_)
+        attr = DenseElementsAttr.get(array)
+        # CHECK: dense<> : tensor<0xi1>
+        print(attr)
+        # CHECK{LITERAL}: []
         print(np.array(attr))
 
 
@@ -418,6 +575,10 @@ def testGetDenseElementsIndex():
         print(arr)
         # CHECK: True
         print(arr.dtype == np.int64)
+        array = np.array([1, 2, 3], dtype=np.int64)
+        attr = DenseIntElementsAttr.get(array, type=VectorType.get([3], idx_type))
+        # CHECK: [1, 2, 3]
+        print(list(DenseIntElementsAttr(attr)))
 
 
 # CHECK-LABEL: TEST: testGetDenseResourceElementsAttr
@@ -459,3 +620,18 @@ def testGetDenseResourceElementsAttr():
     # CHECK: BACKING MEMORY DELETED
     # CHECK: EXIT FUNCTION
     print("EXIT FUNCTION")
+
+
+# CHECK-LABEL: TEST: testDanglingResource
+print("TEST: testDanglingResource")
+# see https://github.com/llvm/llvm-project/pull/149414, https://github.com/llvm/llvm-project/pull/150137, https://github.com/llvm/llvm-project/pull/150561
+# This error occurs only when there is an alive context with a DenseResourceElementsAttr
+# in the end of the program, so we put it here without an encapsulating function.
+ctx = Context()
+
+with ctx, Location.unknown():
+    DenseResourceElementsAttr.get_from_buffer(
+        memoryview(np.array([1, 2, 3])),
+        "some_resource",
+        RankedTensorType.get((3,), IntegerType.get_signed(32)),
+    )

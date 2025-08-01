@@ -4,6 +4,35 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck %s --check-prefixes=AVX,AVX1
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx2 | FileCheck %s --check-prefixes=AVX,AVX2
 
+; PR66101 - Fold select (sext m), (add X, C), X --> (add X, (and C, (sext m))))
+define <4 x i32> @masked_select_const(<4 x i32> %a, <4 x i32> %x, <4 x i32> %y) {
+; SSE-LABEL: masked_select_const:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm1
+; SSE-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    paddd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: masked_select_const:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
+; AVX1-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: masked_select_const:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [4294967272,4294967272,4294967272,4294967272]
+; AVX2-NEXT:    vpcmpgtd %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+  %sub.i = add <4 x i32> %a, <i32 -24, i32 -24, i32 -24, i32 -24>
+  %cmp.i = icmp sgt <4 x i32> %x, %y
+  %sel = select <4 x i1> %cmp.i, <4 x i32> %sub.i, <4 x i32> %a
+  ret <4 x i32> %sel
+}
+
 ; Verify that we don't emit packed vector shifts instructions if the
 ; condition used by the vector select is a vector of constants.
 
@@ -40,26 +69,21 @@ define <4 x float> @test2(<4 x float> %a, <4 x float> %b) {
 ;
 ; AVX-LABEL: test2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
   %1 = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x float> %a, <4 x float> %b
   ret <4 x float> %1
 }
 
 define <4 x float> @test3(<4 x float> %a, <4 x float> %b) {
-; SSE2-LABEL: test3:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test3:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: test3:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test3:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    retq
   %1 = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x float> %a, <4 x float> %b
   ret <4 x float> %1
@@ -123,15 +147,10 @@ define <8 x i16> @test7(<8 x i16> %a, <8 x i16> %b) {
 }
 
 define <8 x i16> @test8(<8 x i16> %a, <8 x i16> %b) {
-; SSE2-LABEL: test8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test8:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: test8:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test8:
 ; AVX:       # %bb.0:
@@ -272,72 +291,52 @@ define <8 x i16> @test17(<8 x i16> %a, <8 x i16> %b) {
 }
 
 define <4 x float> @test18(<4 x float> %a, <4 x float> %b) {
-; SSE2-LABEL: test18:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test18:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: test18:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test18:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    retq
   %1 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x float> %a, <4 x float> %b
   ret <4 x float> %1
 }
 
 define <4 x i32> @test19(<4 x i32> %a, <4 x i32> %b) {
-; SSE2-LABEL: test19:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test19:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: test19:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test19:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; AVX-NEXT:    retq
   %1 = select <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x i32> %a, <4 x i32> %b
   ret <4 x i32> %1
 }
 
 define <2 x double> @test20(<2 x double> %a, <2 x double> %b) {
-; SSE2-LABEL: test20:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test20:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: test20:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test20:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; AVX-NEXT:    retq
   %1 = select <2 x i1> <i1 false, i1 true>, <2 x double> %a, <2 x double> %b
   ret <2 x double> %1
 }
 
 define <2 x i64> @test21(<2 x i64> %a, <2 x i64> %b) {
-; SSE2-LABEL: test21:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: test21:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
-; SSE41-NEXT:    retq
+; SSE-LABEL: test21:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test21:
 ; AVX:       # %bb.0:
@@ -361,7 +360,7 @@ define <4 x float> @test22(<4 x float> %a, <4 x float> %b) {
 ;
 ; AVX-LABEL: test22:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %1 = select <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x float> %a, <4 x float> %b
   ret <4 x float> %1
@@ -381,7 +380,7 @@ define <4 x i32> @test23(<4 x i32> %a, <4 x i32> %b) {
 ;
 ; AVX-LABEL: test23:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
   %1 = select <4 x i1> <i1 true, i1 false, i1 false, i1 false>, <4 x i32> %a, <4 x i32> %b
   ret <4 x i32> %1
@@ -400,7 +399,7 @@ define <2 x double> @test24(<2 x double> %a, <2 x double> %b) {
 ;
 ; AVX-LABEL: test24:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; AVX-NEXT:    retq
   %1 = select <2 x i1> <i1 true, i1 false>, <2 x double> %a, <2 x double> %b
   ret <2 x double> %1
@@ -686,21 +685,33 @@ define <2 x i32> @simplify_select(i32 %x, <2 x i1> %z) {
 ; Test to make sure we don't try to insert a new setcc to swap the operands
 ; of select with all zeros LHS if the setcc has additional users.
 define void @vselect_allzeros_LHS_multiple_use_setcc(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, ptr %p1, ptr %p2) {
-; SSE-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
-; SSE-NEXT:    pand %xmm3, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE-NEXT:    movdqa %xmm0, %xmm3
-; SSE-NEXT:    pandn %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    movdqa %xmm3, (%rdi)
-; SSE-NEXT:    movdqa %xmm0, (%rsi)
-; SSE-NEXT:    retq
+; SSE2-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,2,4,8]
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    pandn %xmm1, %xmm3
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    movdqa %xmm3, (%rdi)
+; SSE2-NEXT:    movdqa %xmm0, (%rsi)
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
+; SSE41-NEXT:    pand %xmm3, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm3, %xmm0
+; SSE41-NEXT:    movdqa %xmm0, %xmm3
+; SSE41-NEXT:    pandn %xmm1, %xmm3
+; SSE41-NEXT:    pand %xmm2, %xmm0
+; SSE41-NEXT:    movdqa %xmm3, (%rdi)
+; SSE41-NEXT:    movdqa %xmm0, (%rsi)
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: vselect_allzeros_LHS_multiple_use_setcc:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqa {{.*#+}} xmm3 = [1,2,4,8]
+; AVX-NEXT:    vpmovsxbd {{.*#+}} xmm3 = [1,2,4,8]
 ; AVX-NEXT:    vpand %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vpandn %xmm1, %xmm0, %xmm1
@@ -729,14 +740,24 @@ define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
 ; SSE-NEXT:    shll $15, %eax
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: vselect_any_extend_vector_inreg_crash:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    andl $1, %eax
-; AVX-NEXT:    shll $15, %eax
-; AVX-NEXT:    retq
+; AVX1-LABEL: vselect_any_extend_vector_inreg_crash:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vpcmpeqb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, %eax
+; AVX1-NEXT:    andl $1, %eax
+; AVX1-NEXT:    shll $15, %eax
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: vselect_any_extend_vector_inreg_crash:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [49,49,49,49]
+; AVX2-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, %eax
+; AVX2-NEXT:    andl $1, %eax
+; AVX2-NEXT:    shll $15, %eax
+; AVX2-NEXT:    retq
 0:
   %1 = load <8 x i8>, ptr %x
   %2 = icmp eq <8 x i8> %1, <i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49>
@@ -745,3 +766,29 @@ define i64 @vselect_any_extend_vector_inreg_crash(ptr %x) {
   ret i64 %4
 }
 
+; Tests the scalarizeBinOp code in DAGCombiner
+define void @scalarize_binop(<1 x i1> %a) {
+; SSE-LABEL: scalarize_binop:
+; SSE:       # %bb.0: # %bb0
+; SSE-NEXT:    .p2align 4
+; SSE-NEXT:  .LBB35_1: # %bb1
+; SSE-NEXT:    # =>This Inner Loop Header: Depth=1
+; SSE-NEXT:    jmp .LBB35_1
+;
+; AVX-LABEL: scalarize_binop:
+; AVX:       # %bb.0: # %bb0
+; AVX-NEXT:    .p2align 4
+; AVX-NEXT:  .LBB35_1: # %bb1
+; AVX-NEXT:    # =>This Inner Loop Header: Depth=1
+; AVX-NEXT:    jmp .LBB35_1
+bb0:
+  br label %bb1
+
+bb1:
+  %b = select <1 x i1> %a, <1 x i1> zeroinitializer, <1 x i1> splat (i1 true)
+  br label %bb2
+
+bb2:
+  %c = extractelement <1 x i1> %b, i32 0
+  br label %bb1
+}

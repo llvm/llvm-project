@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop -polly-import-jscop-postfix=transformed -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-import-jscop,polly-codegen' -polly-import-jscop-postfix=transformed -S < %s | FileCheck %s
 ;
 ; The isl scheduler isolates %cond.false into two instances.
 ; A partial write access in one of the instances was never executed,
@@ -49,10 +49,10 @@ if.then.i.i1141.loopexit:                         ; preds = %cond.end
 
 ; CHECK-LABEL: polly.stmt.cond.false:
 ; CHECK:         %polly.access..pn{{[0-9]*}} = getelementptr i32, ptr %.pn, i64 %polly.indvar
-; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_, ptr %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !0, !noalias !3
+; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_, ptr %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !2, !noalias !5
 ; CHECK:         br label %polly.merge
 
 ; CHECK-LABEL: polly.stmt.cond.false{{[0-9]*}}:
 ; CHECK:         %polly.access..pn{{[0-9]*}} = getelementptr i32, ptr %.pn, i64 0
-; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_{{[0-9]*}}, ptr %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !0, !noalias !3
+; CHECK:         store i32 %cond.in.sroa.speculate.load.cond.false_p_scalar_{{[0-9]*}}, ptr %polly.access..pn{{[0-9]*}}, align 4, !alias.scope !2, !noalias !5
 ; CHECK:         br label %polly.stmt.cond.end{{[0-9]*}}

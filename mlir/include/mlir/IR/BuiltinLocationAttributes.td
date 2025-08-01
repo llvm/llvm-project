@@ -18,7 +18,7 @@ include "mlir/IR/BuiltinDialect.td"
 
 // Base class for Builtin dialect location attributes.
 class Builtin_LocationAttr<string name, list<Trait> traits = []>
-    : AttrDef<Builtin_Dialect, name, traits, "::mlir::LocationAttr"> {
+    : LocationAttrDef<Builtin_Dialect, name, traits> {
   let cppClassName = name;
   let mnemonic = ?;
 }
@@ -60,46 +60,98 @@ def CallSiteLoc : Builtin_LocationAttr<"CallSiteLoc"> {
 }
 
 //===----------------------------------------------------------------------===//
-// FileLineColLoc
+// FileLineColRange
 //===----------------------------------------------------------------------===//
 
-def FileLineColLoc : Builtin_LocationAttr<"FileLineColLoc"> {
-  let summary = "A file:line:column source location";
+def FileLineColRange : Builtin_LocationAttr<"FileLineColRange"> {
+  let summary = "A file:line:column source location range";
   let description = [{
     Syntax:
 
     ```
     filelinecol-location ::= string-literal `:` integer-literal `:`
                              integer-literal
+                             (`to` (integer-literal ?) `:` integer-literal ?)
     ```
 
-    An instance of this location represents a tuple of file, line number, and
-    column number. This is similar to the type of location that you get from
-    most source languages.
+    An instance of this location represents a tuple of file, start and end line
+    number, and start and end column number. It allows for the following
+    configurations:
+
+    *   A single file line location: `file:line`;
+    *   A single file line col location: `file:line:column`;
+    *   A single line range: `file:line:column to :column`;
+    *   A single file range: `file:line:column to line:column`;
 
     Example:
 
     ```mlir
-    loc("mysource.cc":10:8)
+    loc("mysource.cc":10:8 to 12:18)
     ```
   }];
-  let parameters = (ins "StringAttr":$filename, "unsigned":$line,
-                        "unsigned":$column);
+
+  let parameters = (ins "StringAttr":$filename,
+    "unsigned":$start_line, "unsigned":$start_column,
+    "unsigned":$end_line, "unsigned":$end_column);
   let builders = [
+    AttrBuilderWithInferredContext<(ins "StringAttr":$filename), [{
+      return $_get(filename.getContext(), filename, ArrayRef<unsigned>{});
+    }]>,
+    AttrBuilderWithInferredContext<(ins "StringAttr":$filename,
+                                        "unsigned":$line), [{
+      return $_get(filename.getContext(), filename,
+                   ArrayRef<unsigned>{line});
+    }]>,
     AttrBuilderWithInferredContext<(ins "StringAttr":$filename,
                                         "unsigned":$line,
                                         "unsigned":$column), [{
-      return $_get(filename.getContext(), filename, line, column);
+      return $_get(filename.getContext(), filename,
+                   ArrayRef<unsigned>{line, column});
     }]>,
-    AttrBuilder<(ins "StringRef":$filename, "unsigned":$line,
-                     "unsigned":$column), [{
+    AttrBuilder<(ins "::llvm::StringRef":$filename,
+                     "unsigned":$start_line,
+                     "unsigned":$start_column), [{
       return $_get($_ctxt,
-                   StringAttr::get($_ctxt, filename.empty() ? "-" : filename),
-                   line, column);
-    }]>
+        StringAttr::get($_ctxt, filename.empty() ? "-" : filename),
+        ArrayRef<unsigned>{start_line, start_column});
+    }]>,
+    AttrBuilderWithInferredContext<(ins "::mlir::StringAttr":$filename,
+                                        "unsigned":$line,
+                                        "unsigned":$start_column,
+                                        "unsigned":$end_column), [{
+      return $_get(filename.getContext(), filename,
+                   ArrayRef<unsigned>{line, start_column, end_column});
+    }]>,
+    AttrBuilderWithInferredContext<(ins "::mlir::StringAttr":$filename,
+                                        "unsigned":$start_line,
+                                        "unsigned":$start_column,
+                                        "unsigned":$end_line,
+                                        "unsigned":$end_column), [{
+      return $_get(filename.getContext(), filename,
+        ArrayRef<unsigned>{start_line, start_column, end_column, end_line});
+    }]>,
+    AttrBuilder<(ins "::llvm::StringRef":$filename,
+                     "unsigned":$start_line,
+                     "unsigned":$start_column,
+                     "unsigned":$end_line,
+                     "unsigned":$end_column), [{
+      return $_get($_ctxt,
+        StringAttr::get($_ctxt, filename.empty() ? "-" : filename),
+        ArrayRef<unsigned>{start_line, start_column, end_column, end_line});
+    }]>,
   ];
+
+  let extraClassDeclaration = [{
+    ::mlir::StringAttr getFilename() const;
+    unsigned getStartLine() const;
+    unsigned getStartColumn() const;
+    unsigned getEndColumn() const;
+    unsigned getEndLine() const;
+  }];
   let skipDefaultBuilders = 1;
-  let attrName = "builtin.file_line_loc";
+  let genAccessors = 0;
+  let genStorageClass = 0;
+  let attrName = "builtin.file_line_range";
 }
 
 //===----------------------------------------------------------------------===//
@@ -228,7 +280,8 @@ def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc"> {
     template <typename T> static T getUnderlyingLocation(Location location) {
       assert(isa<T>(location));
       return reinterpret_cast<T>(
-          location.cast<mlir::OpaqueLoc>().getUnderlyingLocation());
+          mlir::cast<mlir::OpaqueLoc>(static_cast<LocationAttr>(location))
+              .getUnderlyingLocation());
     }
 
     /// Returns a pointer to some data structure that opaque location stores.
@@ -237,15 +290,17 @@ def OpaqueLoc : Builtin_LocationAttr<"OpaqueLoc"> {
     template <typename T>
     static T getUnderlyingLocationOrNull(Location location) {
       return isa<T>(location)
-                 ? reinterpret_cast<T>(
-                       location.cast<mlir::OpaqueLoc>().getUnderlyingLocation())
-                 : T(nullptr);
+                ? reinterpret_cast<T>(mlir::cast<mlir::OpaqueLoc>(
+                                          static_cast<LocationAttr>(location))
+                                          .getUnderlyingLocation())
+                : T(nullptr);
     }
 
     /// Checks whether provided location is opaque location and contains a
     /// pointer to an object of particular type.
     template <typename T> static bool isa(Location location) {
-      auto opaque_loc = location.dyn_cast<OpaqueLoc>();
+      auto opaque_loc =
+          mlir::dyn_cast<OpaqueLoc>(static_cast<LocationAttr>(location));
       return opaque_loc && opaque_loc.getUnderlyingTypeID() == TypeID::get<T>();
     }
   }];

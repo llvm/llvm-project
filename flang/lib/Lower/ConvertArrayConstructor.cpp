@@ -137,9 +137,9 @@ public:
                              mlir::Value stride) {
     if constexpr (!hasLoops)
       fir::emitFatalError(loc, "array constructor lowering is inconsistent");
-    auto loop = builder.create<fir::DoLoopOp>(loc, lower, upper, stride,
-                                              /*unordered=*/false,
-                                              /*finalCount=*/false);
+    auto loop = fir::DoLoopOp::create(builder, loc, lower, upper, stride,
+                                      /*unordered=*/false,
+                                      /*finalCount=*/false);
     builder.setInsertionPointToStart(loop.getBody());
     return loop.getInductionVar();
   }
@@ -194,8 +194,7 @@ public:
                       fir::SequenceType declaredType, mlir::Value extent,
                       llvm::ArrayRef<mlir::Value> lengths)
       : StrategyBase{stmtCtx, symMap}, shape{builder.genShape(loc, {extent})},
-        lengthParams{lengths.begin(), lengths.end()},
-        exprType{getExprType(declaredType)} {}
+        lengthParams{lengths}, exprType{getExprType(declaredType)} {}
 
   static hlfir::ExprType getExprType(fir::SequenceType declaredType) {
     // Note: 7.8 point 4: the dynamic type of an array constructor is its static
@@ -214,15 +213,15 @@ public:
     assert(!elementalOp && "expected only one implied-do");
     mlir::Value one =
         builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-    elementalOp = builder.create<hlfir::ElementalOp>(
-        loc, exprType, shape,
-        /*mold=*/nullptr, lengthParams, /*isUnordered=*/true);
+    elementalOp = hlfir::ElementalOp::create(builder, loc, exprType, shape,
+                                             /*mold=*/nullptr, lengthParams,
+                                             /*isUnordered=*/true);
     builder.setInsertionPointToStart(elementalOp.getBody());
     // implied-do-index = lower+((i-1)*stride)
-    mlir::Value diff = builder.create<mlir::arith::SubIOp>(
-        loc, elementalOp.getIndices()[0], one);
-    mlir::Value mul = builder.create<mlir::arith::MulIOp>(loc, diff, stride);
-    mlir::Value add = builder.create<mlir::arith::AddIOp>(loc, lower, mul);
+    mlir::Value diff = mlir::arith::SubIOp::create(
+        builder, loc, elementalOp.getIndices()[0], one);
+    mlir::Value mul = mlir::arith::MulIOp::create(builder, loc, diff, stride);
+    mlir::Value add = mlir::arith::AddIOp::create(builder, loc, lower, mul);
     return add;
   }
 
@@ -261,7 +260,7 @@ public:
     if (destroyOp)
       destroyOp->erase();
 
-    builder.create<hlfir::YieldElementOp>(loc, elementResult);
+    hlfir::YieldElementOp::create(builder, loc, elementResult);
   }
 
   // Override the default, because the context scope must be popped in
@@ -316,9 +315,9 @@ public:
       mlir::Value tempStorage = builder.createHeapTemporary(
           loc, declaredType, tempName, extents, lengths);
       mlir::Value shape = builder.genShape(loc, extents);
-      declare = builder.create<hlfir::DeclareOp>(
-          loc, tempStorage, tempName, shape, lengths,
-          fir::FortranVariableFlagsAttr{});
+      declare = hlfir::DeclareOp::create(
+          builder, loc, tempStorage, tempName, shape, lengths,
+          /*dummy_scope=*/nullptr, fir::FortranVariableFlagsAttr{});
       initialBoxValue =
           builder.createBox(loc, boxType, declare->getOriginalBase(), shape,
                             /*slice=*/mlir::Value{}, lengths, /*tdesc=*/{});
@@ -331,12 +330,11 @@ public:
       // Prepare the initial state of the allocatable descriptor with a
       // deallocated status and all the available knowledge about the extent
       // and length parameters.
-      llvm::SmallVector<mlir::Value> emboxLengths(lengths.begin(),
-                                                  lengths.end());
+      llvm::SmallVector<mlir::Value> emboxLengths(lengths);
       if (!extent)
         extent = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
       if (missingLengthParameters) {
-        if (declaredType.getEleTy().isa<fir::CharacterType>())
+        if (mlir::isa<fir::CharacterType>(declaredType.getEleTy()))
           emboxLengths.push_back(builder.createIntegerConstant(
               loc, builder.getCharacterLengthType(), 0));
         else
@@ -349,7 +347,7 @@ public:
                                           /*slice=*/mlir::Value{}, emboxLengths,
                                           /*tdesc=*/{});
     }
-    builder.create<fir::StoreOp>(loc, initialBoxValue, allocatableTemp);
+    fir::StoreOp::create(builder, loc, initialBoxValue, allocatableTemp);
     arrayConstructorVector = fir::runtime::genInitArrayConstructorVector(
         loc, builder, allocatableTemp,
         builder.createBool(loc, missingLengthParameters));
@@ -357,7 +355,7 @@ public:
 
   bool useSimplePushRuntime(hlfir::Entity value) {
     return value.isScalar() &&
-           !arrayConstructorElementType.isa<fir::CharacterType>() &&
+           !mlir::isa<fir::CharacterType>(arrayConstructorElementType) &&
            !fir::isRecordWithAllocatableMember(arrayConstructorElementType) &&
            !fir::isRecordWithTypeParameters(arrayConstructorElementType);
   }
@@ -370,8 +368,8 @@ public:
       auto [addrExv, cleanUp] = hlfir::convertToAddress(
           loc, builder, value, arrayConstructorElementType);
       mlir::Value addr = fir::getBase(addrExv);
-      if (addr.getType().isa<fir::BaseBoxType>())
-        addr = builder.create<fir::BoxAddrOp>(loc, addr);
+      if (mlir::isa<fir::BaseBoxType>(addr.getType()))
+        addr = fir::BoxAddrOp::create(builder, loc, addr);
       fir::runtime::genPushArrayConstructorSimpleScalar(
           loc, builder, arrayConstructorVector, addr);
       if (cleanUp)
@@ -391,9 +389,9 @@ public:
   mlir::Value startImpliedDo(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lower, mlir::Value upper,
                              mlir::Value stride) {
-    auto loop = builder.create<fir::DoLoopOp>(loc, lower, upper, stride,
-                                              /*unordered=*/false,
-                                              /*finalCount=*/false);
+    auto loop = fir::DoLoopOp::create(builder, loc, lower, upper, stride,
+                                      /*unordered=*/false,
+                                      /*finalCount=*/false);
     builder.setInsertionPointToStart(loop.getBody());
     return loop.getInductionVar();
   }
@@ -411,7 +409,7 @@ public:
     else
       temp = hlfir::derefPointersAndAllocatables(
           loc, builder, hlfir::Entity{allocatableTemp});
-    auto hlfirExpr = builder.create<hlfir::AsExprOp>(loc, temp, mustFree);
+    auto hlfirExpr = hlfir::AsExprOp::create(builder, loc, temp, mustFree);
     return hlfir::Entity{hlfirExpr};
   }
 
@@ -438,7 +436,7 @@ public:
 
   void pushValue(mlir::Location loc, fir::FirOpBuilder &builder,
                  hlfir::Entity value) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](auto &impl) { return impl.pushValue(loc, builder, value); },
         implVariant);
   }
@@ -446,7 +444,7 @@ public:
   mlir::Value startImpliedDo(mlir::Location loc, fir::FirOpBuilder &builder,
                              mlir::Value lower, mlir::Value upper,
                              mlir::Value stride) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](auto &impl) {
           return impl.startImpliedDo(loc, builder, lower, upper, stride);
         },
@@ -455,13 +453,13 @@ public:
 
   hlfir::Entity finishArrayCtorLowering(mlir::Location loc,
                                         fir::FirOpBuilder &builder) {
-    return std::visit(
+    return Fortran::common::visit(
         [&](auto &impl) { return impl.finishArrayCtorLowering(loc, builder); },
         implVariant);
   }
 
   void startImpliedDoScope(llvm::StringRef doName, mlir::Value indexValue) {
-    std::visit(
+    Fortran::common::visit(
         [&](auto &impl) {
           return impl.startImpliedDoScope(doName, indexValue);
         },
@@ -469,8 +467,8 @@ public:
   }
 
   void endImpliedDoScope() {
-    std::visit([&](auto &impl) { return impl.endImpliedDoScope(); },
-               implVariant);
+    Fortran::common::visit([&](auto &impl) { return impl.endImpliedDoScope(); },
+                           implVariant);
   }
 
 private:
@@ -564,7 +562,7 @@ struct LengthAndTypeCollector<Character<Kind>> {
 /// lowering an ac-value and must be delayed?
 static bool missingLengthParameters(mlir::Type elementType,
                                     llvm::ArrayRef<mlir::Value> lengths) {
-  return (elementType.isa<fir::CharacterType>() ||
+  return (mlir::isa<fir::CharacterType>(elementType) ||
           fir::isRecordWithTypeParameters(elementType)) &&
          lengths.empty();
 }
@@ -612,16 +610,17 @@ ArrayCtorAnalysis::ArrayCtorAnalysis(
         arrayValueListStack.pop_back_val();
     for (const Fortran::evaluate::ArrayConstructorValue<T> &acValue :
          *currentArrayValueList)
-      std::visit(Fortran::common::visitors{
-                     [&](const Fortran::evaluate::ImpliedDo<T> &impledDo) {
-                       arrayValueListStack.push_back(&impledDo.values());
-                       localNumberOfImpliedDo++;
-                     },
-                     [&](const Fortran::evaluate::Expr<T> &expr) {
-                       localNumberOfExpr++;
-                       anyArrayExpr = anyArrayExpr || expr.Rank() > 0;
-                     }},
-                 acValue.u);
+      Fortran::common::visit(
+          Fortran::common::visitors{
+              [&](const Fortran::evaluate::ImpliedDo<T> &impledDo) {
+                arrayValueListStack.push_back(&impledDo.values());
+                localNumberOfImpliedDo++;
+              },
+              [&](const Fortran::evaluate::Expr<T> &expr) {
+                localNumberOfExpr++;
+                anyArrayExpr = anyArrayExpr || expr.Rank() > 0;
+              }},
+          acValue.u);
     anyImpliedDo = anyImpliedDo || localNumberOfImpliedDo > 0;
 
     if (localNumberOfImpliedDo == 0) {
@@ -702,7 +701,8 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
   // Based on what was gathered and the result of the analysis, select and
   // instantiate the right lowering strategy for the array constructor.
   if (!extent || needToEvaluateOneExprToGetLengthParameters ||
-      analysis.anyArrayExpr || declaredType.getEleTy().isa<fir::RecordType>())
+      analysis.anyArrayExpr ||
+      mlir::isa<fir::RecordType>(declaredType.getEleTy()))
     return RuntimeTempStrategy(
         loc, builder, stmtCtx, symMap, declaredType,
         extent ? std::optional<mlir::Value>(extent) : std::nullopt, lengths,
@@ -764,7 +764,7 @@ static void genAcValue(mlir::Location loc,
                                    impliedDoIndexValue);
 
   for (const auto &acValue : impledDo.values())
-    std::visit(
+    Fortran::common::visit(
         [&](const auto &x) {
           genAcValue(loc, converter, x, symMap, stmtCtx, arrayBuilder);
         },
@@ -786,7 +786,7 @@ hlfir::EntityWithAttributes Fortran::lower::ArrayConstructorBuilder<T>::gen(
       loc, converter, arrayCtorExpr, symMap, stmtCtx);
   // Run the array lowering strategy through the ac-values.
   for (const auto &acValue : arrayCtorExpr)
-    std::visit(
+    Fortran::common::visit(
         [&](const auto &x) {
           genAcValue(loc, converter, x, symMap, stmtCtx, arrayBuilder);
         },

@@ -17,7 +17,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/different_from.h>
 #include <__config>
-#include <__fwd/get.h>
+#include <__cstddef/size_t.h>
 #include <__fwd/subrange.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
@@ -29,18 +29,18 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
-#include <__tuple/pair_like.h>
 #include <__tuple/tuple_element.h>
+#include <__tuple/tuple_like_no_subrange.h>
 #include <__tuple/tuple_size.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
+#include <__type_traits/integral_constant.h>
 #include <__type_traits/is_pointer.h>
 #include <__type_traits/is_reference.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_const.h>
 #include <__type_traits/remove_pointer.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -65,14 +65,14 @@ concept __convertible_to_non_slicing =
 
 template <class _Pair, class _Iter, class _Sent>
 concept __pair_like_convertible_from =
-    !range<_Pair> && __pair_like<_Pair> && constructible_from<_Pair, _Iter, _Sent> &&
+    !range<_Pair> && __pair_like_no_subrange<_Pair> && constructible_from<_Pair, _Iter, _Sent> &&
     __convertible_to_non_slicing<_Iter, tuple_element_t<0, _Pair>> && convertible_to<_Sent, tuple_element_t<1, _Pair>>;
 
 template <input_or_output_iterator _Iter,
           sentinel_for<_Iter> _Sent = _Iter,
           subrange_kind _Kind       = sized_sentinel_for<_Sent, _Iter> ? subrange_kind::sized : subrange_kind::unsized>
   requires(_Kind == subrange_kind::sized || !sized_sentinel_for<_Sent, _Iter>)
-class _LIBCPP_TEMPLATE_VIS subrange : public view_interface<subrange<_Iter, _Sent, _Kind>> {
+class subrange : public view_interface<subrange<_Iter, _Sent, _Kind>> {
 public:
   // Note: this is an internal implementation detail that is public only for internal usage.
   static constexpr bool _StoreSize = (_Kind == subrange_kind::sized && !sized_sentinel_for<_Sent, _Iter>);
@@ -82,7 +82,7 @@ private:
   struct _Empty {
     _LIBCPP_HIDE_FROM_ABI constexpr _Empty(auto) noexcept {}
   };
-  using _Size = conditional_t<_StoreSize, make_unsigned_t<iter_difference_t<_Iter>>, _Empty>;
+  using _Size _LIBCPP_NODEBUG = conditional_t<_StoreSize, make_unsigned_t<iter_difference_t<_Iter>>, _Empty>;
   _LIBCPP_NO_UNIQUE_ADDRESS _Iter __begin_ = _Iter();
   _LIBCPP_NO_UNIQUE_ADDRESS _Sent __end_   = _Sent();
   _LIBCPP_NO_UNIQUE_ADDRESS _Size __size_  = 0;
@@ -126,8 +126,7 @@ public:
                requires(_Kind == subrange_kind::sized)
       : subrange(ranges::begin(__range), ranges::end(__range), __n) {}
 
-  template <__different_from<subrange> _Pair>
-    requires __pair_like_convertible_from<_Pair, const _Iter&, const _Sent&>
+  template <__pair_like_convertible_from<const _Iter&, const _Sent&> _Pair>
   _LIBCPP_HIDE_FROM_ABI constexpr operator _Pair() const {
     return _Pair(__begin_, __end_);
   }
@@ -202,12 +201,11 @@ template <input_or_output_iterator _Iter, sentinel_for<_Iter> _Sent>
 subrange(_Iter, _Sent, make_unsigned_t<iter_difference_t<_Iter>>) -> subrange<_Iter, _Sent, subrange_kind::sized>;
 
 template <borrowed_range _Range>
-subrange(_Range&&)
-    -> subrange<iterator_t<_Range>,
-                sentinel_t<_Range>,
-                (sized_range<_Range> || sized_sentinel_for<sentinel_t<_Range>, iterator_t<_Range>>)
-                    ? subrange_kind::sized
-                    : subrange_kind::unsized>;
+subrange(_Range&&) -> subrange<iterator_t<_Range>,
+                               sentinel_t<_Range>,
+                               (sized_range<_Range> || sized_sentinel_for<sentinel_t<_Range>, iterator_t<_Range>>)
+                                   ? subrange_kind::sized
+                                   : subrange_kind::unsized>;
 
 template <borrowed_range _Range>
 subrange(_Range&&, make_unsigned_t<range_difference_t<_Range>>)
@@ -249,22 +247,22 @@ struct tuple_size<ranges::subrange<_Ip, _Sp, _Kp>> : integral_constant<size_t, 2
 
 template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
 struct tuple_element<0, ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Ip;
+  using type _LIBCPP_NODEBUG = _Ip;
 };
 
 template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
 struct tuple_element<1, ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Sp;
+  using type _LIBCPP_NODEBUG = _Sp;
 };
 
 template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
 struct tuple_element<0, const ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Ip;
+  using type _LIBCPP_NODEBUG = _Ip;
 };
 
 template <class _Ip, class _Sp, ranges::subrange_kind _Kp>
 struct tuple_element<1, const ranges::subrange<_Ip, _Sp, _Kp>> {
-  using type = _Sp;
+  using type _LIBCPP_NODEBUG = _Sp;
 };
 
 #endif // _LIBCPP_STD_VER >= 20

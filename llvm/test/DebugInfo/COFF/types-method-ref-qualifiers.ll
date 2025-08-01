@@ -1,6 +1,7 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
 ; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 
+
 ; C++ source to regenerate:
 ; struct A {
 ;   int NoRefQual();

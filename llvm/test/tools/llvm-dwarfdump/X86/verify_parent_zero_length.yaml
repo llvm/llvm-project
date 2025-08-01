@@ -19,7 +19,7 @@
 #                 DW_AT_high_pc   (0x0000000000000000)
 #
 # 0x00000033:     DW_TAG_lexical_block
-#                   DW_AT_low_pc  (0x0000000000001000)
+#                   DW_AT_low_pc  (0x0000000000001001)
 #                   DW_AT_high_pc (0x0000000000002000)
 #
 # 0x00000044:     DW_TAG_lexical_block
@@ -30,7 +30,7 @@
 # 0x00000056:   NULL
 
 
-# RUN: yaml2obj %s | not llvm-dwarfdump --verify - | FileCheck %s --implicit-check-not=error:
+# RUN: yaml2obj %s | not llvm-dwarfdump --error-display=details --verify - | FileCheck %s --implicit-check-not=error:
 
 # CHECK: Verifying -:	file format Mach-O 64-bit x86-64
 # CHECK: Verifying .debug_abbrev...
@@ -47,7 +47,7 @@
 
 # CHECK: error: DIEs have overlapping address ranges:
 # CHECK: 0x00000044: DW_TAG_lexical_block
-# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001000)
+# CHECK:               DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001001)
 # CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
 
 # CHECK: 0x00000033: DW_TAG_lexical_block
@@ -61,7 +61,7 @@
 # CHECK:               DW_AT_high_pc	[DW_FORM_addr] (0x0000000000000000)
 
 # CHECK: 0x00000044:   DW_TAG_lexical_block
-# CHECK:                 DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001000)
+# CHECK:                 DW_AT_low_pc	[DW_FORM_addr] (0x0000000000001001)
 # CHECK:                 DW_AT_high_pc	[DW_FORM_addr] (0x0000000000002000)
 
 
@@ -229,7 +229,7 @@ DWARF:
             - Value:           0x0000000000002000
         - AbbrCode:        0x00000003
           Values:
-            - Value:           0x0000000000001000
+            - Value:           0x0000000000001001
             - Value:           0x0000000000002000
         - AbbrCode:        0x00000000
         - AbbrCode:        0x00000000
