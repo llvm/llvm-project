@@ -2783,11 +2783,11 @@ TEST(DocumentLinks, All) {
       #/*comments*/include /*comments*/ $foo[["foo.h"]] //more comments
       int end_of_preamble = 0;
       #include $bar[[<bar.h>]]
-      #include $AA[[GET_HEADER(AA)]] // Some comment !
+      #include $AA[[GET_HEADER]](AA) // Some comment !
       # /* What about */ \
       include /* multiple line */ \
-      $BB[[GET_HEADER( /* statements ? */ \
-      BB /* >>>> Hey ! Dont go further ! this ')' is the last token of the file ! >>>>*/ )]]
+      $BB[[GET_HEADER]]( /* statements ? */ \
+      BB /* :) */ )
     )cpp");
 
   TestTU TU;

@@ -890,24 +890,15 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
       FileRange = FileTok->range(SM).toCharRange(SM);
     } else {
       // FileTok is the first Token of a macro spelling
-      // We can use the AST to get the macro expansion from the spelling
-      // starting at FileTok and use the expansion to get all the spelled Tokens
-      // that expanded to it
 
-      auto OptExpansion = AST.getTokens().expansionStartingAt(FileTok);
-      if (OptExpansion && !OptExpansion->Spelled.empty()) {
-        // If an expansion was found and has an non-empty spelling, return the
-        // range from the start of the first Token to the end of the last Token
-        const auto &LastTok = OptExpansion->Spelled.back();
+      // Report the range of the first token (as it should be the macro
+      // identifier)
+      // We could use the AST to find the last spelled token of the macro and
+      // report a range spanning the full macro expression, but it would require
+      // using token-buffers that are deemed too unstable and crash-prone
+      // due to optimizations in cland
 
-        FileRange = FileTok->range(SM).toCharRange(SM);
-        const auto EndRange = LastTok.range(SM).toCharRange(SM);
-        FileRange.setEnd(EndRange.getEnd());
-      } else {
-        // We failed to find a macro expansion from the spelling
-        // fallback to FileTok->range
-        FileRange = FileTok->range(SM).toCharRange(SM);
-      }
+      FileRange = FileTok->range(SM).toCharRange(SM);
     }
 
     Result.push_back(
