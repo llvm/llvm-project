@@ -21,7 +21,6 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 class QualType;
@@ -254,12 +253,8 @@ protected:
   /// If the function does not exist yet, it is compiled.
   const Function *getFunction(const FunctionDecl *FD);
 
-  std::optional<PrimType> classify(const Expr *E) const {
-    return Ctx.classify(E);
-  }
-  std::optional<PrimType> classify(QualType Ty) const {
-    return Ctx.classify(Ty);
-  }
+  OptPrimType classify(const Expr *E) const { return Ctx.classify(E); }
+  OptPrimType classify(QualType Ty) const { return Ctx.classify(Ty); }
 
   /// Classifies a known primitive type.
   PrimType classifyPrim(QualType Ty) const {
@@ -306,7 +301,7 @@ protected:
   bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *ArrayFiller,
                      const Expr *E);
   bool visitArrayElemInit(unsigned ElemIndex, const Expr *Init,
-                          std::optional<PrimType> InitT);
+                          OptPrimType InitT);
   bool visitCallArgs(ArrayRef<const Expr *> Args, const FunctionDecl *FuncDecl,
                      bool Activate);
 
@@ -405,6 +400,8 @@ private:
   bool checkLiteralType(const Expr *E);
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
+  bool refersToUnion(const Expr *E);
+
 protected:
   /// Variable to storage mapping.
   llvm::DenseMap<const ValueDecl *, Scope::Local> Locals;
@@ -435,7 +432,7 @@ protected:
   bool InitStackActive = false;
 
   /// Type of the expression returned by the function.
-  std::optional<PrimType> ReturnType;
+  OptPrimType ReturnType;
 
   /// Switch case mapping.
   CaseMap CaseLabels;

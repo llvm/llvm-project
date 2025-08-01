@@ -1110,10 +1110,16 @@ public:
   // 2 - if there is a process, then read from memory
   // 3 - if there is no process, then read from the file cache
   //
+  // If did_read_live_memory is provided, will indicate if the read was from
+  // live memory, or from file contents. A caller which needs to treat these two
+  // sources differently should use this argument to disambiguate where the data
+  // was read from.
+  //
   // The method is virtual for mocking in the unit tests.
   virtual size_t ReadMemory(const Address &addr, void *dst, size_t dst_len,
                             Status &error, bool force_live_memory = false,
-                            lldb::addr_t *load_addr_ptr = nullptr);
+                            lldb::addr_t *load_addr_ptr = nullptr,
+                            bool *did_read_live_memory = nullptr);
 
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
                                Status &error, bool force_live_memory = false);

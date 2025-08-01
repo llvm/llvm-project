@@ -585,6 +585,8 @@ uint32_t MachineInstr::copyFlagsFromInstruction(const Instruction &I) {
       MIFlags |= MachineInstr::MIFlag::NoUSWrap;
     if (GEP->hasNoUnsignedWrap())
       MIFlags |= MachineInstr::MIFlag::NoUWrap;
+    if (GEP->isInBounds())
+      MIFlags |= MachineInstr::MIFlag::InBounds;
   }
 
   // Copy the nonneg flag.
@@ -1860,8 +1862,12 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << "nneg ";
   if (getFlag(MachineInstr::Disjoint))
     OS << "disjoint ";
+  if (getFlag(MachineInstr::NoUSWrap))
+    OS << "nusw ";
   if (getFlag(MachineInstr::SameSign))
     OS << "samesign ";
+  if (getFlag(MachineInstr::InBounds))
+    OS << "inbounds ";
 
   // Print the opcode name.
   if (TII)
