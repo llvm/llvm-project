@@ -4069,6 +4069,22 @@ let Predicates = [HasSVE2_or_SME] in {
   let AddedComplexity = 2 in {
     def : Pat<(nxv16i8 (AArch64ext nxv16i8:$zn1, nxv16i8:$zn2, (i32 imm0_255:$imm))),
               (EXT_ZZI_B (REG_SEQUENCE ZPR2, $zn1, zsub0, $zn2, zsub1), imm0_255:$imm)>;
+
+    foreach VT = [nxv16i8] in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_255 i32:$index)))),
+                (EXT_ZZI_B  (REG_SEQUENCE ZPR2, $Z1, zsub0, $Z2, zsub1), imm0_255:$index)>;
+
+    foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_127 i32:$index)))),
+                (EXT_ZZI_B  (REG_SEQUENCE ZPR2, $Z1, zsub0, $Z2, zsub1), imm0_255:$index)>;
+
+    foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_63 i32:$index)))),
+                (EXT_ZZI_B  (REG_SEQUENCE ZPR2, $Z1, zsub0, $Z2, zsub1), imm0_255:$index)>;
+
+    foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in
+      def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_31 i32:$index)))),
+                (EXT_ZZI_B  (REG_SEQUENCE ZPR2, $Z1, zsub0, $Z2, zsub1), imm0_255:$index)>;
   }
 } // End HasSVE2_or_SME
 
