@@ -592,10 +592,13 @@ bool GCNMaxILPSchedStrategy::tryCandidate(SchedCandidate &Cand,
   // This is a best effort to set things up for a post-RA pass. Optimizations
   // like generating loads of multiple registers should ideally be done within
   // the scheduler pass by combining the loads during DAG postprocessing.
-  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
-  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
-  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
-                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
 
@@ -666,10 +669,13 @@ bool GCNMaxMemoryClauseSchedStrategy::tryCandidate(SchedCandidate &Cand,
 
   // MaxMemoryClause-specific: We prioritize clustered instructions as we would
   // get more benefit from clausing these memory instructions.
-  const ClusterInfo *CandCluster = Cand.AtTop ? TopCluster : BotCluster;
-  const ClusterInfo *TryCandCluster = TryCand.AtTop ? TopCluster : BotCluster;
-  if (tryGreater(TryCandCluster && TryCandCluster->contains(TryCand.SU),
-                 CandCluster && CandCluster->contains(Cand.SU), TryCand, Cand,
+  unsigned CandZoneCluster = Cand.AtTop ? TopClusterID : BotClusterID;
+  unsigned TryCandZoneCluster = TryCand.AtTop ? TopClusterID : BotClusterID;
+  bool CandIsClusterSucc =
+      isTheSameCluster(CandZoneCluster, Cand.SU->ParentClusterIdx);
+  bool TryCandIsClusterSucc =
+      isTheSameCluster(TryCandZoneCluster, TryCand.SU->ParentClusterIdx);
+  if (tryGreater(TryCandIsClusterSucc, CandIsClusterSucc, TryCand, Cand,
                  Cluster))
     return TryCand.Reason != NoCand;
 
