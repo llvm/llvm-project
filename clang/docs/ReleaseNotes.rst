@@ -247,6 +247,8 @@ New features
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+- Fixed a crash in the static analyzer that when the expression in an 
+  ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 
 Improvements
 ^^^^^^^^^^^^
