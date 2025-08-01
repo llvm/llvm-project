@@ -102,6 +102,12 @@ private:
   // The maximum size of a cold allocation context, from the profile summary.
   uint64_t MaxColdSize;
 
+  // Tracks whether we have built the Trie from existing MD_memprof metadata. We
+  // apply different heuristics for determining whether to discard non-cold
+  // contexts when rebuilding as we have lost information available during the
+  // original profile match.
+  bool BuiltFromExistingMetadata = false;
+
   void deleteTrieNode(CallStackTrieNode *Node) {
     if (!Node)
       return;

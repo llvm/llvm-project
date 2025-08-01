@@ -1,5 +1,5 @@
-;RUN: llc < %s -mtriple=amdgcn-pal -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
-;RUN: llc < %s -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
+;RUN: llc < %s -mtriple=amdgcn-pal -mcpu=gfx1010 | FileCheck %s --check-prefixes=CHECK
+;RUN: llc < %s -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 | FileCheck %s --check-prefixes=CHECK
 
 ; ;CHECK-LABEL: {{^}}_amdgpu_ps_1_arg:
 ; ;CHECK: NumVgprs: 4

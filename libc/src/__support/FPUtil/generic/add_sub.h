@@ -153,8 +153,10 @@ add_or_sub(InType x, InType y) {
 
     result_mant <<= GUARD_BITS_LEN;
   } else {
-    InStorageType max_mant = max_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
-    InStorageType min_mant = min_bits.get_explicit_mantissa() << GUARD_BITS_LEN;
+    InStorageType max_mant = static_cast<InStorageType>(
+        max_bits.get_explicit_mantissa() << GUARD_BITS_LEN);
+    InStorageType min_mant = static_cast<InStorageType>(
+        min_bits.get_explicit_mantissa() << GUARD_BITS_LEN);
 
     int alignment = (max_bits.get_biased_exponent() - max_bits.is_normal()) -
                     (min_bits.get_biased_exponent() - min_bits.is_normal());
@@ -172,7 +174,8 @@ add_or_sub(InType x, InType y) {
           (static_cast<InStorageType>(
               min_mant << (InFPBits::STORAGE_LEN - alignment))) != 0;
 
-    InStorageType min_mant_sticky(static_cast<int>(aligned_min_mant_sticky));
+    InStorageType min_mant_sticky =
+        static_cast<InStorageType>(static_cast<int>(aligned_min_mant_sticky));
 
     if (is_effectively_add)
       result_mant = max_mant + (aligned_min_mant | min_mant_sticky);

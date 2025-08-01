@@ -333,8 +333,7 @@ public:
   /// Initialize available analysis information.
   void initializeAnalysisInfo() {
     AvailableAnalysis.clear();
-    for (auto &IA : InheritedAnalysis)
-      IA = nullptr;
+    llvm::fill(InheritedAnalysis, nullptr);
   }
 
   // Return true if P preserves high level analysis used by other

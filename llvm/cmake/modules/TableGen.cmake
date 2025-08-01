@@ -4,10 +4,6 @@
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 include(LLVMDistributionSupport)
 
-# Clear out any pre-existing compile_commands file before processing. This
-# allows for generating a clean compile_commands on each configure.
-file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)
-
 function(tablegen project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
 
@@ -250,3 +246,11 @@ macro(add_tablegen target project)
     set_property(GLOBAL APPEND PROPERTY ${export_upper}_EXPORTS ${target})
   endif()
 endmacro()
+
+# Make sure 'tablegen_compile_commands.yml' is only deleted once the very
+# first time this file is included.
+include_guard(GLOBAL)
+
+# Clear out any pre-existing compile_commands file before processing. This
+# allows for generating a clean compile_commands on each configure.
+file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)

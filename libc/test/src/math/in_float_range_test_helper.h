@@ -5,7 +5,7 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_IN_FLOAT_RANGE_TEST_HELPER_H
 #define LLVM_LIBC_TEST_SRC_MATH_IN_FLOAT_RANGE_TEST_HELPER_H
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 #define CHECK_DATA(start, stop, mfp_op, f, f_check, count, prec)               \
   {                                                                            \

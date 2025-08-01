@@ -6,23 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains Offload API definitions related to the kernel handle
+// This file contains Offload API definitions related to launching kernels
 //
 //===----------------------------------------------------------------------===//
-
-def : Function {
-    let name = "olGetKernel";
-    let desc = "Get a kernel from the function identified by `KernelName` in the given program.";
-    let details = [
-        "The kernel handle returned is owned by the device so does not need to be destroyed."
-    ];
-    let params = [
-        Param<"ol_program_handle_t", "Program", "handle of the program", PARAM_IN>,
-        Param<"const char*", "KernelName", "name of the kernel entry point in the program", PARAM_IN>,
-        Param<"ol_kernel_handle_t*", "Kernel", "output pointer for the fetched kernel", PARAM_OUT>
-    ];
-    let returns = [];
-}
 
 def : Struct {
     let name = "ol_kernel_launch_size_args_t";
@@ -45,15 +31,14 @@ def : Function {
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN_OPTIONAL>,
         Param<"ol_device_handle_t", "Device", "handle of the device to execute on", PARAM_IN>,
-        Param<"ol_kernel_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
+        Param<"ol_symbol_handle_t", "Kernel", "handle of the kernel", PARAM_IN>,
         Param<"const void*", "ArgumentsData", "pointer to the kernel argument struct", PARAM_IN_OPTIONAL>,
         Param<"size_t", "ArgumentsSize", "size of the kernel argument struct", PARAM_IN>,
         Param<"const ol_kernel_launch_size_args_t*", "LaunchSizeArgs", "pointer to the struct containing launch size parameters", PARAM_IN>,
-        Param<"ol_event_handle_t*", "EventOut", "optional recorded event for the enqueued operation", PARAM_OUT_OPTIONAL>
     ];
     let returns = [
-        Return<"OL_ERRC_INVALID_ARGUMENT", ["`Queue == NULL && EventOut != NULL`"]>,
         Return<"OL_ERRC_INVALID_ARGUMENT", ["`ArgumentsSize > 0 && ArgumentsData == NULL`"]>,
         Return<"OL_ERRC_INVALID_DEVICE", ["If Queue is non-null but does not belong to Device"]>,
+        Return<"OL_ERRC_SYMBOL_KIND", ["The provided symbol is not a kernel"]>,
     ];
 }

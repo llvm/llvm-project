@@ -15,7 +15,6 @@
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/SHA1.h"
 #include <numeric>
 #include <optional>

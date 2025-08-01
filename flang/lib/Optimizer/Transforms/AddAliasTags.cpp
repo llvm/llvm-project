@@ -48,12 +48,21 @@ static llvm::cl::opt<bool>
                       llvm::cl::Hidden,
                       llvm::cl::desc("Add TBAA tags to local allocations."));
 
+// Engineering option to triage TBAA tags attachment for accesses
+// of allocatable entities.
+static llvm::cl::opt<unsigned> localAllocsThreshold(
+    "local-alloc-tbaa-threshold", llvm::cl::init(0), llvm::cl::ReallyHidden,
+    llvm::cl::desc("If present, stops generating TBAA tags for accesses of "
+                   "local allocations after N accesses in a module"));
+
 namespace {
 
 /// Shared state per-module
 class PassState {
 public:
-  PassState(mlir::DominanceInfo &domInfo) : domInfo(domInfo) {}
+  PassState(mlir::DominanceInfo &domInfo,
+            std::optional<unsigned> localAllocsThreshold)
+      : domInfo(domInfo), localAllocsThreshold(localAllocsThreshold) {}
   /// memoised call to fir::AliasAnalysis::getSource
   inline const fir::AliasAnalysis::Source &getSource(mlir::Value value) {
     if (!analysisCache.contains(value))
@@ -79,6 +88,15 @@ public:
   // For the given fir.declare returns the outermost fir.dummy_scope
   // in the current function.
   fir::DummyScopeOp getOutermostScope(fir::DeclareOp declareOp) const;
+  // Returns true, if the given type of a memref of a FirAliasTagOpInterface
+  // operation is a descriptor or contains a descriptor
+  // (e.g. !fir.ref<!fir.type<Derived{f:!fir.box<!fir.heap<f32>>}>>).
+  bool typeReferencesDescriptor(mlir::Type type);
+
+  // Returns true if we can attach a TBAA tag to an access of an allocatable
+  // entities. It checks if localAllocsThreshold allows the next tag
+  // attachment.
+  bool attachLocalAllocTag();
 
 private:
   mlir::DominanceInfo &domInfo;
@@ -95,6 +113,12 @@ private:
   // to the dominance information.
   llvm::DenseMap<mlir::func::FuncOp, llvm::SmallVector<fir::DummyScopeOp, 16>>
       sortedScopeOperations;
+
+  // Local pass cache for derived types that contain descriptor
+  // member(s), to avoid the cost of isRecordWithDescriptorMember().
+  llvm::DenseSet<mlir::Type> typesContainingDescriptors;
+
+  std::optional<unsigned> localAllocsThreshold;
 };
 
 // Process fir.dummy_scope operations in the given func:
@@ -143,6 +167,35 @@ fir::DummyScopeOp PassState::getOutermostScope(fir::DeclareOp declareOp) const {
   if (!scopeOps.empty())
     return scopeOps[0];
   return nullptr;
+}
+
+bool PassState::typeReferencesDescriptor(mlir::Type type) {
+  type = fir::unwrapAllRefAndSeqType(type);
+  if (mlir::isa<fir::BaseBoxType>(type))
+    return true;
+
+  if (mlir::isa<fir::RecordType>(type)) {
+    if (typesContainingDescriptors.contains(type))
+      return true;
+    if (fir::isRecordWithDescriptorMember(type)) {
+      typesContainingDescriptors.insert(type);
+      return true;
+    }
+  }
+  return false;
+}
+
+bool PassState::attachLocalAllocTag() {
+  if (!localAllocsThreshold)
+    return true;
+  if (*localAllocsThreshold == 0) {
+    LLVM_DEBUG(llvm::dbgs().indent(2)
+               << "WARN: not assigning TBAA tag for an allocated entity access "
+                  "due to the threshold\n");
+    return false;
+  }
+  --*localAllocsThreshold;
+  return true;
 }
 
 class AddAliasTagsPass : public fir::impl::AddAliasTagsBase<AddAliasTagsPass> {
@@ -200,11 +253,17 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
          "load and store only access one address");
   mlir::Value memref = accessedOperands.front();
 
-  // skip boxes. These get an "any descriptor access" tag in TBAABuilder
-  // (CodeGen). I didn't see any speedup from giving each box a separate TBAA
-  // type.
-  if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(memref.getType())))
+  // Skip boxes and derived types that contain descriptors.
+  // The box accesses get an "any descriptor access" tag in TBAABuilder
+  // (CodeGen). The derived types accesses get "any access" tag
+  // (because they access both the data and the descriptor(s)).
+  // Note that it would be incorrect to attach any "data" access
+  // tag to the derived type accesses here, because the tags
+  // attached to the descriptor accesses in CodeGen will make
+  // them non-conflicting with any descriptor accesses.
+  if (state.typeReferencesDescriptor(memref.getType()))
     return;
+
   LLVM_DEBUG(llvm::dbgs() << "Analysing " << op << "\n");
 
   const fir::AliasAnalysis::Source &source = state.getSource(memref);
@@ -305,16 +364,16 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: unknown defining op for SourceKind::Allocate " << *op
                  << "\n");
-    } else if (source.isPointer()) {
+    } else if (source.isPointer() && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "Found reference to allocation at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-    } else if (name) {
+    } else if (name && state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2) << "Found reference to allocation "
                                         << name << " at " << *op << "\n");
       tag = state.getFuncTreeWithScope(func, scopeOp)
                 .allocatedDataTree.getTag(*name);
-    } else {
+    } else if (state.attachLocalAllocTag()) {
       LLVM_DEBUG(llvm::dbgs().indent(2)
                  << "WARN: couldn't find a name for allocation " << *op
                  << "\n");
@@ -342,7 +401,9 @@ void AddAliasTagsPass::runOnOperation() {
   // thinks the pass operates on), then the real work of the pass is done in
   // runOnAliasInterface
   auto &domInfo = getAnalysis<mlir::DominanceInfo>();
-  PassState state(domInfo);
+  PassState state(domInfo, localAllocsThreshold.getPosition()
+                               ? std::optional<unsigned>(localAllocsThreshold)
+                               : std::nullopt);
 
   mlir::ModuleOp mod = getOperation();
   mod.walk(

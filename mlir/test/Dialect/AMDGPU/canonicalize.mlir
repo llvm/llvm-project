@@ -130,3 +130,32 @@ func.func @dead_atomic_add(%arg0: memref<4xf32>, %arg1: f32) {
   amdgpu.raw_buffer_atomic_fadd {boundsCheck = true} %arg1 -> %arg0[%c4_i32] : f32 -> memref<4xf32>, i32
   func.return
 }
+
+// -----
+
+// CHECK-LABEL: func @fold_gather_to_lds_of_cast
+func.func @fold_gather_to_lds_of_cast(%global: memref<128x72xf32, 1>, %lds: memref<64x64xf32, 3>) {
+// CHECK-SAME: %[[GLOBAL:[A-Za-z0-9]+]]: memref<128x72xf32, 1>
+  %c0 = arith.constant 0 : index
+  %0 = memref.cast %global : memref<128x72xf32, 1> to memref<?x?xf32, 1>
+  // CHECK: amdgpu.gather_to_lds %[[GLOBAL]]
+  // CHECK-SAME: : f32, memref<128x72xf32, 1>
+  amdgpu.gather_to_lds %0[%c0, %c0], %lds[%c0, %c0]
+    : f32, memref<?x?xf32, 1>, memref<64x64xf32, 3>
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_gather_to_lds_of_cast_dest
+func.func @fold_gather_to_lds_of_cast_dest(%global: memref<128x72xf32, 1>, %lds: memref<64x64xf32, 3>) {
+// CHECK-SAME: %[[GLOBAL:[A-Za-z0-9]+]]: memref<128x72xf32, 1>
+// CHECK-SAME: %[[LDS:[A-Za-z0-9]+]]: memref<64x64xf32, 3>
+  %c0 = arith.constant 0 : index
+  %0 = memref.cast %lds : memref<64x64xf32, 3> to memref<?x?xf32, 3>
+  // CHECK: amdgpu.gather_to_lds %[[GLOBAL]][{{.*}}], %[[LDS]]
+  // CHECK-SAME: : f32, memref<128x72xf32, 1>, memref<64x64xf32, 3>
+  amdgpu.gather_to_lds %global[%c0, %c0], %0[%c0, %c0]
+    : f32, memref<128x72xf32, 1>, memref<?x?xf32, 3>
+  func.return
+}

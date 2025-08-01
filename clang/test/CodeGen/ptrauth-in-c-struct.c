@@ -115,7 +115,7 @@ void test_move_assignment_SA(SA *p) {
   *p = getSA();
 }
 
-// CHECK: define void @test_parameter_SA(ptr noundef %{{.*}})
+// CHECK: define void @test_parameter_SA(ptr dead_on_return noundef %{{.*}})
 // CHECK-NOT: call
 // CHECK: ret void
 
@@ -128,7 +128,7 @@ void test_parameter_SA(SA a) {
 // CHECK: store ptr %[[A]], ptr %[[A_ADDR]], align 8
 // CHECK: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]], align 8
 // CHECK: call void @__copy_constructor_8_8_t0w4_pa1_50_8(ptr %[[AGG_TMP]], ptr %[[V0]])
-// CHECK: call void @calleeSA(ptr noundef %[[AGG_TMP]])
+// CHECK: call void @calleeSA(ptr dead_on_return noundef %[[AGG_TMP]])
 // CHECK-NOT: call
 // CHECK: ret void
 

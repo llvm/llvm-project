@@ -15,6 +15,7 @@
 #include "MCTargetDesc/X86TargetStreamer.h"
 #include "TargetInfo/X86TargetInfo.h"
 #include "X86Operand.h"
+#include "llvm-c/Visibility.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1041,8 +1042,8 @@ private:
       }
       PrevState = CurrState;
     }
-    void onRParen() {
-      PrevState = State;
+    bool onRParen(StringRef &ErrMsg) {
+      IntelExprState CurrState = State;
       switch (State) {
       default:
         State = IES_ERROR;
@@ -1053,9 +1054,27 @@ private:
       case IES_RBRAC:
       case IES_RPAREN:
         State = IES_RPAREN;
+        // In the case of a multiply, onRegister has already set IndexReg
+        // directly, with appropriate scale.
+        // Otherwise if we just saw a register it has only been stored in
+        // TmpReg, so we need to store it into the state machine.
+        if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
+          // If we already have a BaseReg, then assume this is the IndexReg with
+          // no explicit scale.
+          if (!BaseReg) {
+            BaseReg = TmpReg;
+          } else {
+            if (IndexReg)
+              return regsUseUpError(ErrMsg);
+            IndexReg = TmpReg;
+            Scale = 0;
+          }
+        }
         IC.pushOperator(IC_RPAREN);
         break;
       }
+      PrevState = CurrState;
+      return false;
     }
     bool onOffset(const MCExpr *Val, SMLoc OffsetLoc, StringRef ID,
                   const InlineAsmIdentifierInfo &IDInfo,
@@ -2171,7 +2190,11 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       }
       break;
     case AsmToken::LParen:  SM.onLParen(); break;
-    case AsmToken::RParen:  SM.onRParen(); break;
+    case AsmToken::RParen:
+      if (SM.onRParen(ErrMsg)) {
+        return Error(Tok.getLoc(), ErrMsg);
+      }
+      break;
     }
     if (SM.hadError())
       return Error(Tok.getLoc(), "unknown token in expression");
@@ -4780,7 +4803,7 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
     getStreamer().initSections(false, getSTI());
     Section = getStreamer().getCurrentSectionOnly();
   }
-  if (Section->useCodeAlign())
+  if (getContext().getAsmInfo()->useCodeAlign(*Section))
     getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
   else
     getStreamer().emitValueToAlignment(Align(2), 0, 1, 0);

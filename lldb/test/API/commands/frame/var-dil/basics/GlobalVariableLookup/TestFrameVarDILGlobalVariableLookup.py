@@ -18,6 +18,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
+    @skipIf(macos_version=["<", "15.0"], archs=["arm64", "arm64e"])
     def test_frame_var(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

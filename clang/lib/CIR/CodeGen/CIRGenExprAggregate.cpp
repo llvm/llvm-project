@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
 #include "clang/AST/Expr.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include <cstdint>
 
@@ -356,10 +357,119 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
     emitArrayInit(dest.getAddress(), arrayTy, e->getType(), e, args,
                   arrayFiller);
     return;
+  } else if (e->getType()->isVariableArrayType()) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "visitCXXParenListOrInitListExpr variable array type");
+    return;
   }
 
-  cgf.cgm.errorNYI(
-      "visitCXXParenListOrInitListExpr Record or VariableSizeArray type");
+  if (e->getType()->isArrayType()) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "visitCXXParenListOrInitListExpr array type");
+    return;
+  }
+
+  assert(e->getType()->isRecordType() && "Only support structs/unions here!");
+
+  // Do struct initialization; this code just sets each individual member
+  // to the approprate value.  This makes bitfield support automatic;
+  // the disadvantage is that the generated code is more difficult for
+  // the optimizer, especially with bitfields.
+  unsigned numInitElements = args.size();
+  RecordDecl *record = e->getType()->castAs<RecordType>()->getDecl();
+
+  // We'll need to enter cleanup scopes in case any of the element
+  // initializers throws an exception.
+  assert(!cir::MissingFeatures::requiresCleanups());
+
+  unsigned curInitIndex = 0;
+
+  // Emit initialization of base classes.
+  if (auto *cxxrd = dyn_cast<CXXRecordDecl>(record)) {
+    assert(numInitElements >= cxxrd->getNumBases() &&
+           "missing initializer for base class");
+    if (cxxrd->getNumBases() > 0) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "visitCXXParenListOrInitListExpr base class init");
+      return;
+    }
+  }
+
+  LValue destLV = cgf.makeAddrLValue(dest.getAddress(), e->getType());
+
+  if (record->isUnion()) {
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "visitCXXParenListOrInitListExpr union type");
+    return;
+  }
+
+  // Here we iterate over the fields; this makes it simpler to both
+  // default-initialize fields and skip over unnamed fields.
+  for (const FieldDecl *field : record->fields()) {
+    // We're done once we hit the flexible array member.
+    if (field->getType()->isIncompleteArrayType())
+      break;
+
+    // Always skip anonymous bitfields.
+    if (field->isUnnamedBitField())
+      continue;
+
+    // We're done if we reach the end of the explicit initializers, we
+    // have a zeroed object, and the rest of the fields are
+    // zero-initializable.
+    if (curInitIndex == numInitElements && dest.isZeroed() &&
+        cgf.getTypes().isZeroInitializable(e->getType()))
+      break;
+    LValue lv =
+        cgf.emitLValueForFieldInitialization(destLV, field, field->getName());
+    // We never generate write-barriers for initialized fields.
+    assert(!cir::MissingFeatures::setNonGC());
+
+    if (curInitIndex < numInitElements) {
+      // Store the initializer into the field.
+      CIRGenFunction::SourceLocRAIIObject loc{
+          cgf, cgf.getLoc(record->getSourceRange())};
+      emitInitializationToLValue(args[curInitIndex++], lv);
+    } else {
+      // We're out of initializers; default-initialize to null
+      emitNullInitializationToLValue(cgf.getLoc(e->getSourceRange()), lv);
+    }
+
+    // Push a destructor if necessary.
+    // FIXME: if we have an array of structures, all explicitly
+    // initialized, we can end up pushing a linear number of cleanups.
+    if (field->getType().isDestructedType()) {
+      cgf.cgm.errorNYI(e->getSourceRange(),
+                       "visitCXXParenListOrInitListExpr destructor");
+      return;
+    }
+
+    // From classic codegen, maybe not useful for CIR:
+    // If the GEP didn't get used because of a dead zero init or something
+    // else, clean it up for -O0 builds and general tidiness.
+  }
+}
+
+// TODO(cir): This could be shared with classic codegen.
+AggValueSlot::Overlap_t CIRGenFunction::getOverlapForBaseInit(
+    const CXXRecordDecl *rd, const CXXRecordDecl *baseRD, bool isVirtual) {
+  // If the most-derived object is a field declared with [[no_unique_address]],
+  // the tail padding of any virtual base could be reused for other subobjects
+  // of that field's class.
+  if (isVirtual)
+    return AggValueSlot::MayOverlap;
+
+  // If the base class is laid out entirely within the nvsize of the derived
+  // class, its tail padding cannot yet be initialized, so we can issue
+  // stores at the full width of the base class.
+  const ASTRecordLayout &layout = getContext().getASTRecordLayout(rd);
+  if (layout.getBaseClassOffset(baseRD) +
+          getContext().getASTRecordLayout(baseRD).getSize() <=
+      layout.getNonVirtualSize())
+    return AggValueSlot::DoesNotOverlap;
+
+  // The tail padding may contain values we need to preserve.
+  return AggValueSlot::MayOverlap;
 }
 
 void CIRGenFunction::emitAggExpr(const Expr *e, AggValueSlot slot) {

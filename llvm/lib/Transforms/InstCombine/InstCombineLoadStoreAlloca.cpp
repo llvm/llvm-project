@@ -12,7 +12,6 @@
 
 #include "InstCombineInternal.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -277,6 +276,15 @@ bool PointerReplacer::collectUsers() {
           Worklist.emplace_back(I);
   };
 
+  auto TryPushInstOperand = [&](Instruction *InstOp) {
+    if (!UsersToReplace.contains(InstOp)) {
+      if (!ValuesToRevisit.insert(InstOp))
+        return false;
+      Worklist.emplace_back(InstOp);
+    }
+    return true;
+  };
+
   PushUsersToWorklist(&Root);
   while (!Worklist.empty()) {
     Instruction *Inst = Worklist.pop_back_val();
@@ -309,12 +317,8 @@ bool PointerReplacer::collectUsers() {
       // incoming values.
       Worklist.emplace_back(PHI);
       for (unsigned Idx = 0; Idx < PHI->getNumIncomingValues(); ++Idx) {
-        auto *IncomingValue = cast<Instruction>(PHI->getIncomingValue(Idx));
-        if (UsersToReplace.contains(IncomingValue))
-          continue;
-        if (!ValuesToRevisit.insert(IncomingValue))
+        if (!TryPushInstOperand(cast<Instruction>(PHI->getIncomingValue(Idx))))
           return false;
-        Worklist.emplace_back(IncomingValue);
       }
     } else if (auto *SI = dyn_cast<SelectInst>(Inst)) {
       auto *TrueInst = dyn_cast<Instruction>(SI->getTrueValue());
@@ -322,8 +326,17 @@ bool PointerReplacer::collectUsers() {
       if (!TrueInst || !FalseInst)
         return false;
 
-      UsersToReplace.insert(SI);
-      PushUsersToWorklist(SI);
+      if (isAvailable(TrueInst) && isAvailable(FalseInst)) {
+        UsersToReplace.insert(SI);
+        PushUsersToWorklist(SI);
+        continue;
+      }
+
+      // Push select back onto the stack, followed by unavailable true/false
+      // value.
+      Worklist.emplace_back(SI);
+      if (!TryPushInstOperand(TrueInst) || !TryPushInstOperand(FalseInst))
+        return false;
     } else if (auto *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
       UsersToReplace.insert(GEP);
       PushUsersToWorklist(GEP);
@@ -1489,8 +1502,7 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
   // This is a non-terminator unreachable marker. Don't remove it.
   if (isa<UndefValue>(Ptr)) {
     // Remove guaranteed-to-transfer instructions before the marker.
-    if (removeInstructionsBeforeUnreachable(SI))
-      return &SI;
+    removeInstructionsBeforeUnreachable(SI);
 
     // Remove all instructions after the marker and handle dead blocks this
     // implies.

@@ -290,10 +290,10 @@ body:             |
     ; CHECK: liveins: $x2, $x10, $v8, $v13, $v4m4, $v16m4
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x0 = PseudoVSETVLI $x10, 66 /* e8, m4, ta, mu */, implicit-def $vl, implicit-def $vtype
-    ; CHECK-NEXT: early-clobber $v4m4 = PseudoVQMACCUS_2x8x2_M4 renamable $v4m4, killed renamable $v13, killed renamable $v16m4, $noreg, 3 /* e8 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber $v4m4 = PseudoSF_VQMACCUS_2x8x2_M4 renamable $v4m4, killed renamable $v13, killed renamable $v16m4, $noreg, 3 /* e8 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v16m4 = PseudoVMV_V_V_M4 undef $v16m4, $v4m4, $noreg, 3 /* e8 */, 0 /* tu, mu */, implicit $vl, implicit $vtype
     $x0 = PseudoVSETVLI  $x10, 66, implicit-def $vl, implicit-def $vtype
-    early-clobber $v4m4 = PseudoVQMACCUS_2x8x2_M4 renamable $v4m4, killed renamable $v13, killed renamable $v16m4, $noreg, 3, 1, implicit $vl, implicit $vtype
+    early-clobber $v4m4 = PseudoSF_VQMACCUS_2x8x2_M4 renamable $v4m4, killed renamable $v13, killed renamable $v16m4, $noreg, 3, 1, implicit $vl, implicit $vtype
     $v16m4 = COPY renamable $v4m4
 ...
 ---
@@ -306,10 +306,10 @@ body:             |
     ; CHECK: liveins: $x2, $x10, $v8, $v13, $v4m4, $v16m2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x0 = PseudoVSETVLI $x10, 65 /* e8, m2, ta, mu */, implicit-def $vl, implicit-def $vtype
-    ; CHECK-NEXT: early-clobber $v4m4 = PseudoVQMACCUS_4x8x4_M2 renamable $v4m4, killed renamable $v13, killed renamable $v16m2, $noreg, 3 /* e8 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
+    ; CHECK-NEXT: early-clobber $v4m4 = PseudoSF_VQMACCUS_4x8x4_M2 renamable $v4m4, killed renamable $v13, killed renamable $v16m2, $noreg, 3 /* e8 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
     ; CHECK-NEXT: $v16m4 = VMV4R_V $v4m4, implicit $vtype
     $x0 = PseudoVSETVLI  $x10, 65, implicit-def $vl, implicit-def $vtype
-    early-clobber $v4m4 = PseudoVQMACCUS_4x8x4_M2 renamable $v4m4, killed renamable $v13, killed renamable $v16m2, $noreg, 3, 1, implicit $vl, implicit $vtype
+    early-clobber $v4m4 = PseudoSF_VQMACCUS_4x8x4_M2 renamable $v4m4, killed renamable $v13, killed renamable $v16m2, $noreg, 3, 1, implicit $vl, implicit $vtype
     $v16m4 = COPY renamable $v4m4
 ...
 ---

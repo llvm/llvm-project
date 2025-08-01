@@ -20,7 +20,7 @@
 ]
 
 //
-// Test the lowering of `vector.contract` using the `LowerContractionToSVEI8MMPattern`
+// Test the lowering of `vector.contract` using the `LowerContractionToSVEBFMMLAPattern`
 //
 // The operation that the `vector.contract` in this test performs is matrix
 // multiplication with accumulate
@@ -42,7 +42,7 @@
 // registers in the layout expected by FEAT_I8MM instructions.
 // Such a `vector.contract` is representative of the code we aim to generate
 // by scalable vectorisation of `linalg.mmt4d`.
-// See mlir/lib/Dialect/ArmSVE/Transforms/LowerContractionToSVEI8MMPattern.cpp
+// See mlir/lib/Dialect/ArmSVE/Transforms/LowerContractToSVEPatterns.cpp
 // for more information and rationale about these shapes.
 //
 // In this specific test we use M == 4 and N == 4
@@ -116,7 +116,7 @@ func.func private @prepareRHSTestData(%in: vector<4x8xi8>) -> memref<?xi8> {
 
 // CHECK-IR-LABEL: llvm.func @test_smmla
 // CHECK-IR-COUNT-4: arm_sve.intr.smmla
-func.func @test_smmla() {
+func.func @test_smmla() attributes {no_inline} {
 
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
@@ -130,10 +130,6 @@ func.func @test_smmla() {
 
   %acc_mem = func.call @prepareAccTestData(%acc_cst) : (vector<4x4xi32>) -> memref<4x?xi32>
   %acc = vector.transfer_read %acc_mem[%c0, %c0], %c0_i32 {in_bounds = [true, true]} : memref<4x?xi32>, vector<4x[4]xi32>
-
-  // FIXME: Workaround for a crash, see https://github.com/llvm/llvm-project/issues/143670
-  %acc_cast = memref.cast %acc_mem : memref<4x?xi32> to memref<*xi32>
-  call @printMemrefI32(%acc_cast) : (memref<*xi32>) -> ()
 
   // LHS test data
   %lhs_cst = arith.constant dense<[[-35, -27, -36, -31,  23, -34,  -8, -33],
@@ -186,7 +182,7 @@ func.func @test_smmla() {
 
 // CHECK-IR-LABEL: llvm.func @test_ummla
 // CHECK-IR-COUNT-4: arm_sve.intr.ummla
-func.func @test_ummla() {
+func.func @test_ummla() attributes {no_inline} {
 
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
@@ -253,7 +249,7 @@ func.func @test_ummla() {
 
 // CHECK-IR-LABEL: llvm.func @test_usmmla
 // CHECK-IR-COUNT-4: arm_sve.intr.usmmla
-func.func @test_usmmla() {
+func.func @test_usmmla() attributes {no_inline} {
 
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32
@@ -316,12 +312,12 @@ func.func @test_usmmla() {
 
 // Test the operation where LHS is interpreted as signed and RHS is interpreted
 // as unsigned. In this test we ultimately emit end execute the `usmmla`
-// instruction with reversed operands, see `LowerContractionToSVEI8MMPattern.cpp`
+// instruction with reversed operands, see `LowerContractToSVEPatterns.cpp`
 // for more details.
 
 // CHECK-IR-LABEL: llvm.func @test_summla
 // CHECK-IR-COUNT-4: arm_sve.intr.usmmla
-func.func @test_summla() {
+func.func @test_summla() attributes {no_inline} {
 
   %c0 = arith.constant 0 : index
   %c0_i32 = arith.constant 0 : i32

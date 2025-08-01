@@ -52,7 +52,7 @@ void InterpState::cleanup() {
   // As a last resort, make sure all pointers still pointing to a dead block
   // don't point to it anymore.
   for (DeadBlock *DB = DeadBlocks; DB; DB = DB->Next) {
-    for (Pointer *P = DB->B.Pointers; P; P = P->Next) {
+    for (Pointer *P = DB->B.Pointers; P; P = P->asBlockPointer().Next) {
       P->PointeeStorage.BS.Pointee = nullptr;
     }
   }

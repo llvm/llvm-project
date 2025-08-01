@@ -330,7 +330,6 @@ enum OperandType : unsigned {
   OPERAND_UIMM32,
   OPERAND_UIMM48,
   OPERAND_UIMM64,
-  OPERAND_ZERO,
   OPERAND_THREE,
   OPERAND_FOUR,
   OPERAND_SIMM5,
@@ -339,7 +338,6 @@ enum OperandType : unsigned {
   OPERAND_SIMM6,
   OPERAND_SIMM6_NONZERO,
   OPERAND_SIMM10,
-  OPERAND_SIMM10_UNSIGNED,
   OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM11,
   OPERAND_SIMM12,
@@ -494,6 +492,17 @@ inline static bool isValidRoundingMode(unsigned Mode) {
   }
 }
 } // namespace RISCVVXRndMode
+
+namespace RISCVExceptFlags {
+enum ExceptionFlag {
+  NX = 0x01, // Inexact
+  UF = 0x02, // Underflow
+  OF = 0x04, // Overflow
+  DZ = 0x08, // Divide by zero
+  NV = 0x10, // Invalid operation
+  ALL = 0x1F // Mask for all accrued exception flags
+};
+}
 
 //===----------------------------------------------------------------------===//
 // Floating-point Immediates
@@ -749,6 +758,14 @@ struct VLX_VSXPseudo {
   uint16_t Pseudo;
 };
 
+struct NDSVLNPseudo {
+  uint16_t Masked : 1;
+  uint16_t Unsigned : 1;
+  uint16_t Log2SEW : 3;
+  uint16_t LMUL : 3;
+  uint16_t Pseudo;
+};
+
 #define GET_RISCVVSSEGTable_DECL
 #define GET_RISCVVLSEGTable_DECL
 #define GET_RISCVVLXSEGTable_DECL
@@ -757,6 +774,7 @@ struct VLX_VSXPseudo {
 #define GET_RISCVVSETable_DECL
 #define GET_RISCVVLXTable_DECL
 #define GET_RISCVVSXTable_DECL
+#define GET_RISCVNDSVLNTable_DECL
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCV
 

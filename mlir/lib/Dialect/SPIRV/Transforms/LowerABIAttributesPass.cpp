@@ -22,7 +22,6 @@
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/SetVector.h"
 
 namespace mlir {
 namespace spirv {
@@ -59,7 +58,17 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
         spirv::PointerType::get(spirv::StructType::get(varType), *storageClass);
   }
   auto varPtrType = cast<spirv::PointerType>(varType);
-  auto varPointeeType = cast<spirv::StructType>(varPtrType.getPointeeType());
+  Type pointeeType = varPtrType.getPointeeType();
+
+  // Images are an opaque type and so we can just return a pointer to an image.
+  // Note that currently only sampled images are supported in the SPIR-V
+  // lowering.
+  if (isa<spirv::SampledImageType>(pointeeType))
+    return spirv::GlobalVariableOp::create(builder, funcOp.getLoc(), varType,
+                                           varName, abiInfo.getDescriptorSet(),
+                                           abiInfo.getBinding());
+
+  auto varPointeeType = cast<spirv::StructType>(pointeeType);
 
   // Set the offset information.
   varPointeeType =
@@ -71,9 +80,9 @@ createGlobalVarForEntryPointArgument(OpBuilder &builder, spirv::FuncOp funcOp,
   varType =
       spirv::PointerType::get(varPointeeType, varPtrType.getStorageClass());
 
-  return builder.create<spirv::GlobalVariableOp>(
-      funcOp.getLoc(), varType, varName, abiInfo.getDescriptorSet(),
-      abiInfo.getBinding());
+  return spirv::GlobalVariableOp::create(builder, funcOp.getLoc(), varType,
+                                         varName, abiInfo.getDescriptorSet(),
+                                         abiInfo.getBinding());
 }
 
 /// Gets the global variables that need to be specified as interface variable
@@ -147,17 +156,17 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     return funcOp.emitRemark("lower entry point failure: could not select "
                              "execution model based on 'spirv.target_env'");
 
-  builder.create<spirv::EntryPointOp>(funcOp.getLoc(), *executionModel, funcOp,
-                                      interfaceVars);
+  spirv::EntryPointOp::create(builder, funcOp.getLoc(), *executionModel, funcOp,
+                              interfaceVars);
 
   // Specifies the spirv.ExecutionModeOp.
   if (DenseI32ArrayAttr workgroupSizeAttr = entryPointAttr.getWorkgroupSize()) {
     std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::LocalSize);
     if (!caps || targetEnv.allows(*caps)) {
-      builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
-                                             spirv::ExecutionMode::LocalSize,
-                                             workgroupSizeAttr.asArrayRef());
+      spirv::ExecutionModeOp::create(builder, funcOp.getLoc(), funcOp,
+                                     spirv::ExecutionMode::LocalSize,
+                                     workgroupSizeAttr.asArrayRef());
       // Erase workgroup size.
       entryPointAttr = spirv::EntryPointABIAttr::get(
           entryPointAttr.getContext(), DenseI32ArrayAttr(),
@@ -168,9 +177,9 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::SubgroupSize);
     if (!caps || targetEnv.allows(*caps)) {
-      builder.create<spirv::ExecutionModeOp>(funcOp.getLoc(), funcOp,
-                                             spirv::ExecutionMode::SubgroupSize,
-                                             *subgroupSize);
+      spirv::ExecutionModeOp::create(builder, funcOp.getLoc(), funcOp,
+                                     spirv::ExecutionMode::SubgroupSize,
+                                     *subgroupSize);
       // Erase subgroup size.
       entryPointAttr = spirv::EntryPointABIAttr::get(
           entryPointAttr.getContext(), entryPointAttr.getWorkgroupSize(),
@@ -181,8 +190,8 @@ static LogicalResult lowerEntryPointABIAttr(spirv::FuncOp funcOp,
     std::optional<ArrayRef<spirv::Capability>> caps =
         spirv::getCapabilities(spirv::ExecutionMode::SignedZeroInfNanPreserve);
     if (!caps || targetEnv.allows(*caps)) {
-      builder.create<spirv::ExecutionModeOp>(
-          funcOp.getLoc(), funcOp,
+      spirv::ExecutionModeOp::create(
+          builder, funcOp.getLoc(), funcOp,
           spirv::ExecutionMode::SignedZeroInfNanPreserve, *targetWidth);
       // Erase target width.
       entryPointAttr = spirv::EntryPointABIAttr::get(
@@ -260,7 +269,7 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
 
     // Insert spirv::AddressOf and spirv::AccessChain operations.
     Value replacement =
-        rewriter.create<spirv::AddressOfOp>(funcOp.getLoc(), var);
+        spirv::AddressOfOp::create(rewriter, funcOp.getLoc(), var);
     // Check if the arg is a scalar or vector type. In that case, the value
     // needs to be loaded into registers.
     // TODO: This is loading value of the scalar into registers
@@ -270,9 +279,9 @@ LogicalResult ProcessInterfaceVarABI::matchAndRewrite(
     if (cast<spirv::SPIRVType>(argType.value()).isScalarOrVector()) {
       auto zero =
           spirv::ConstantOp::getZero(indexType, funcOp.getLoc(), rewriter);
-      auto loadPtr = rewriter.create<spirv::AccessChainOp>(
-          funcOp.getLoc(), replacement, zero.getConstant());
-      replacement = rewriter.create<spirv::LoadOp>(funcOp.getLoc(), loadPtr);
+      auto loadPtr = spirv::AccessChainOp::create(
+          rewriter, funcOp.getLoc(), replacement, zero.getConstant());
+      replacement = spirv::LoadOp::create(rewriter, funcOp.getLoc(), loadPtr);
     }
     signatureConverter.remapInput(argType.index(), replacement);
   }
@@ -309,7 +318,7 @@ void LowerABIAttributesPass::runOnOperation() {
                                             ValueRange inputs, Location loc) {
     if (inputs.size() != 1 || !isa<spirv::PointerType>(inputs[0].getType()))
       return Value();
-    return builder.create<spirv::BitcastOp>(loc, type, inputs[0]).getResult();
+    return spirv::BitcastOp::create(builder, loc, type, inputs[0]).getResult();
   });
 
   RewritePatternSet patterns(context);

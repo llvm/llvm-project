@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/LogicalResult.h"
+#include <variant>
 
 using namespace mlir;
 using namespace acc;
@@ -293,22 +294,15 @@ static LogicalResult checkVarAndVarType(Op op) {
   if (!op.getVar())
     return op.emitError("must have var operand");
 
-  if (mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
-      mlir::isa<mlir::acc::MappableType>(op.getVar().getType())) {
-    // TODO: If a type implements both interfaces (mappable and pointer-like),
-    // it is unclear which semantics to apply without additional info which
-    // would need captured in the data operation. For now restrict this case
-    // unless a compelling reason to support disambiguating between the two.
-    return op.emitError("var must be mappable or pointer-like (not both)");
-  }
-
+  // A variable must have a type that is either pointer-like or mappable.
   if (!mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
       !mlir::isa<mlir::acc::MappableType>(op.getVar().getType()))
     return op.emitError("var must be mappable or pointer-like");
 
-  if (mlir::isa<mlir::acc::MappableType>(op.getVar().getType()) &&
-      op.getVarType() != op.getVar().getType())
-    return op.emitError("varType must match when var is mappable");
+  // When it is a pointer-like type, the varType must capture the target type.
+  if (mlir::isa<mlir::acc::PointerLikeType>(op.getVar().getType()) &&
+      op.getVarType() == op.getVar().getType())
+    return op.emitError("varType must capture the element type of var");
 
   return success();
 }
@@ -865,7 +859,7 @@ struct RemoveConstantIfCondition : public OpRewritePattern<OpTy> {
 /// using the operands of the block terminator to replace operation results.
 static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
                                 Region &region, ValueRange blockArgs = {}) {
-  assert(llvm::hasSingleElement(region) && "expected single-region block");
+  assert(region.hasOneBlock() && "expected single-block region");
   Block *block = &region.front();
   Operation *terminator = block->getTerminator();
   ValueRange results = terminator->getOperands();
@@ -2963,6 +2957,23 @@ bool acc::LoopOp::hasDefaultGangWorkerVector() {
          getGangValue(GangArgType::Dim) || getGangValue(GangArgType::Static);
 }
 
+acc::LoopParMode
+acc::LoopOp::getDefaultOrDeviceTypeParallelism(DeviceType deviceType) {
+  if (hasSeq(deviceType))
+    return LoopParMode::loop_seq;
+  if (hasAuto(deviceType))
+    return LoopParMode::loop_auto;
+  if (hasIndependent(deviceType))
+    return LoopParMode::loop_independent;
+  if (hasSeq())
+    return LoopParMode::loop_seq;
+  if (hasAuto())
+    return LoopParMode::loop_auto;
+  assert(hasIndependent() &&
+         "loop must have default auto, seq, or independent");
+  return LoopParMode::loop_independent;
+}
+
 void acc::LoopOp::addGangOperands(
     MLIRContext *context, llvm::ArrayRef<DeviceType> effectiveDeviceTypes,
     llvm::ArrayRef<GangArgType> argTypes, mlir::ValueRange values) {
@@ -3468,40 +3479,88 @@ LogicalResult acc::RoutineOp::verify() {
   return success();
 }
 
-static ParseResult parseBindName(OpAsmParser &parser, mlir::ArrayAttr &bindName,
-                                 mlir::ArrayAttr &deviceTypes) {
-  llvm::SmallVector<mlir::Attribute> bindNameAttrs;
-  llvm::SmallVector<mlir::Attribute> deviceTypeAttrs;
+static ParseResult parseBindName(OpAsmParser &parser,
+                                 mlir::ArrayAttr &bindIdName,
+                                 mlir::ArrayAttr &bindStrName,
+                                 mlir::ArrayAttr &deviceIdTypes,
+                                 mlir::ArrayAttr &deviceStrTypes) {
+  llvm::SmallVector<mlir::Attribute> bindIdNameAttrs;
+  llvm::SmallVector<mlir::Attribute> bindStrNameAttrs;
+  llvm::SmallVector<mlir::Attribute> deviceIdTypeAttrs;
+  llvm::SmallVector<mlir::Attribute> deviceStrTypeAttrs;
 
   if (failed(parser.parseCommaSeparatedList([&]() {
-        if (parser.parseAttribute(bindNameAttrs.emplace_back()))
+        mlir::Attribute newAttr;
+        bool isSymbolRefAttr;
+        auto parseResult = parser.parseAttribute(newAttr);
+        if (auto symbolRefAttr = dyn_cast<mlir::SymbolRefAttr>(newAttr)) {
+          bindIdNameAttrs.push_back(symbolRefAttr);
+          isSymbolRefAttr = true;
+        } else if (auto stringAttr = dyn_cast<mlir::StringAttr>(newAttr)) {
+          bindStrNameAttrs.push_back(stringAttr);
+          isSymbolRefAttr = false;
+        }
+        if (parseResult)
           return failure();
         if (failed(parser.parseOptionalLSquare())) {
-          deviceTypeAttrs.push_back(mlir::acc::DeviceTypeAttr::get(
-              parser.getContext(), mlir::acc::DeviceType::None));
+          if (isSymbolRefAttr) {
+            deviceIdTypeAttrs.push_back(mlir::acc::DeviceTypeAttr::get(
+                parser.getContext(), mlir::acc::DeviceType::None));
+          } else {
+            deviceStrTypeAttrs.push_back(mlir::acc::DeviceTypeAttr::get(
+                parser.getContext(), mlir::acc::DeviceType::None));
+          }
         } else {
-          if (parser.parseAttribute(deviceTypeAttrs.emplace_back()) ||
-              parser.parseRSquare())
-            return failure();
+          if (isSymbolRefAttr) {
+            if (parser.parseAttribute(deviceIdTypeAttrs.emplace_back()) ||
+                parser.parseRSquare())
+              return failure();
+          } else {
+            if (parser.parseAttribute(deviceStrTypeAttrs.emplace_back()) ||
+                parser.parseRSquare())
+              return failure();
+          }
         }
         return success();
       })))
     return failure();
 
-  bindName = ArrayAttr::get(parser.getContext(), bindNameAttrs);
-  deviceTypes = ArrayAttr::get(parser.getContext(), deviceTypeAttrs);
+  bindIdName = ArrayAttr::get(parser.getContext(), bindIdNameAttrs);
+  bindStrName = ArrayAttr::get(parser.getContext(), bindStrNameAttrs);
+  deviceIdTypes = ArrayAttr::get(parser.getContext(), deviceIdTypeAttrs);
+  deviceStrTypes = ArrayAttr::get(parser.getContext(), deviceStrTypeAttrs);
 
   return success();
 }
 
 static void printBindName(mlir::OpAsmPrinter &p, mlir::Operation *op,
-                          std::optional<mlir::ArrayAttr> bindName,
-                          std::optional<mlir::ArrayAttr> deviceTypes) {
-  llvm::interleaveComma(llvm::zip(*bindName, *deviceTypes), p,
-                        [&](const auto &pair) {
-                          p << std::get<0>(pair);
-                          printSingleDeviceType(p, std::get<1>(pair));
-                        });
+                          std::optional<mlir::ArrayAttr> bindIdName,
+                          std::optional<mlir::ArrayAttr> bindStrName,
+                          std::optional<mlir::ArrayAttr> deviceIdTypes,
+                          std::optional<mlir::ArrayAttr> deviceStrTypes) {
+  // Create combined vectors for all bind names and device types
+  llvm::SmallVector<mlir::Attribute> allBindNames;
+  llvm::SmallVector<mlir::Attribute> allDeviceTypes;
+
+  // Append bindIdName and deviceIdTypes
+  if (hasDeviceTypeValues(deviceIdTypes)) {
+    allBindNames.append(bindIdName->begin(), bindIdName->end());
+    allDeviceTypes.append(deviceIdTypes->begin(), deviceIdTypes->end());
+  }
+
+  // Append bindStrName and deviceStrTypes
+  if (hasDeviceTypeValues(deviceStrTypes)) {
+    allBindNames.append(bindStrName->begin(), bindStrName->end());
+    allDeviceTypes.append(deviceStrTypes->begin(), deviceStrTypes->end());
+  }
+
+  // Print the combined sequence
+  if (!allBindNames.empty())
+    llvm::interleaveComma(llvm::zip(allBindNames, allDeviceTypes), p,
+                          [&](const auto &pair) {
+                            p << std::get<0>(pair);
+                            printSingleDeviceType(p, std::get<1>(pair));
+                          });
 }
 
 static ParseResult parseRoutineGangClause(OpAsmParser &parser,
@@ -3661,19 +3720,32 @@ bool RoutineOp::hasSeq(mlir::acc::DeviceType deviceType) {
   return hasDeviceType(getSeq(), deviceType);
 }
 
-std::optional<llvm::StringRef> RoutineOp::getBindNameValue() {
+std::optional<std::variant<mlir::SymbolRefAttr, mlir::StringAttr>>
+RoutineOp::getBindNameValue() {
   return getBindNameValue(mlir::acc::DeviceType::None);
 }
 
-std::optional<llvm::StringRef>
+std::optional<std::variant<mlir::SymbolRefAttr, mlir::StringAttr>>
 RoutineOp::getBindNameValue(mlir::acc::DeviceType deviceType) {
-  if (!hasDeviceTypeValues(getBindNameDeviceType()))
+  if (!hasDeviceTypeValues(getBindIdNameDeviceType()) &&
+      !hasDeviceTypeValues(getBindStrNameDeviceType())) {
     return std::nullopt;
-  if (auto pos = findSegment(*getBindNameDeviceType(), deviceType)) {
-    auto attr = (*getBindName())[*pos];
-    auto stringAttr = dyn_cast<mlir::StringAttr>(attr);
-    return stringAttr.getValue();
   }
+
+  if (auto pos = findSegment(*getBindIdNameDeviceType(), deviceType)) {
+    auto attr = (*getBindIdName())[*pos];
+    auto symbolRefAttr = dyn_cast<mlir::SymbolRefAttr>(attr);
+    assert(symbolRefAttr && "expected SymbolRef");
+    return symbolRefAttr;
+  }
+
+  if (auto pos = findSegment(*getBindStrNameDeviceType(), deviceType)) {
+    auto attr = (*getBindStrName())[*pos];
+    auto stringAttr = dyn_cast<mlir::StringAttr>(attr);
+    assert(stringAttr && "expected String");
+    return stringAttr;
+  }
+
   return std::nullopt;
 }
 

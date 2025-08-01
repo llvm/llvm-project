@@ -1191,9 +1191,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::roundeven, MVT::f64, 9},
     {Intrinsic::rint, MVT::f32, 7},
     {Intrinsic::rint, MVT::f64, 7},
-    {Intrinsic::lrint, MVT::i32, 1},
-    {Intrinsic::lrint, MVT::i64, 1},
-    {Intrinsic::llrint, MVT::i64, 1},
     {Intrinsic::nearbyint, MVT::f32, 9},
     {Intrinsic::nearbyint, MVT::f64, 9},
     {Intrinsic::bswap, MVT::i16, 3},
@@ -1244,17 +1241,6 @@ static const CostTblEntry VectorIntrinsicCostTable[]{
     {Intrinsic::vp_cttz, MVT::i64, 25},
 };
 
-static unsigned getISDForVPIntrinsicID(Intrinsic::ID ID) {
-  switch (ID) {
-#define HELPER_MAP_VPID_TO_VPSD(VPID, VPSD)                                    \
-  case Intrinsic::VPID:                                                        \
-    return ISD::VPSD;
-#include "llvm/IR/VPIntrinsics.def"
-#undef HELPER_MAP_VPID_TO_VPSD
-  }
-  return ISD::DELETED_NODE;
-}
-
 InstructionCost
 RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                     TTI::TargetCostKind CostKind) const {
@@ -1262,11 +1248,48 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   switch (ICA.getID()) {
   case Intrinsic::lrint:
   case Intrinsic::llrint:
-    // We can't currently lower half or bfloat vector lrint/llrint.
-    if (auto *VecTy = dyn_cast<VectorType>(ICA.getArgTypes()[0]);
-        VecTy && VecTy->getElementType()->is16bitFPTy())
-      return InstructionCost::getInvalid();
-    [[fallthrough]];
+  case Intrinsic::lround:
+  case Intrinsic::llround: {
+    auto LT = getTypeLegalizationCost(RetTy);
+    Type *SrcTy = ICA.getArgTypes().front();
+    auto SrcLT = getTypeLegalizationCost(SrcTy);
+    if (ST->hasVInstructions() && LT.second.isVector()) {
+      SmallVector<unsigned, 2> Ops;
+      unsigned SrcEltSz = DL.getTypeSizeInBits(SrcTy->getScalarType());
+      unsigned DstEltSz = DL.getTypeSizeInBits(RetTy->getScalarType());
+      if (LT.second.getVectorElementType() == MVT::bf16) {
+        if (!ST->hasVInstructionsBF16Minimal())
+          return InstructionCost::getInvalid();
+        if (DstEltSz == 32)
+          Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFCVT_X_F_V};
+        else
+          Ops = {RISCV::VFWCVTBF16_F_F_V, RISCV::VFWCVT_X_F_V};
+      } else if (LT.second.getVectorElementType() == MVT::f16 &&
+                 !ST->hasVInstructionsF16()) {
+        if (!ST->hasVInstructionsF16Minimal())
+          return InstructionCost::getInvalid();
+        if (DstEltSz == 32)
+          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFCVT_X_F_V};
+        else
+          Ops = {RISCV::VFWCVT_F_F_V, RISCV::VFWCVT_X_F_V};
+
+      } else if (SrcEltSz > DstEltSz) {
+        Ops = {RISCV::VFNCVT_X_F_W};
+      } else if (SrcEltSz < DstEltSz) {
+        Ops = {RISCV::VFWCVT_X_F_V};
+      } else {
+        Ops = {RISCV::VFCVT_X_F_V};
+      }
+
+      // We need to use the source LMUL in the case of a narrowing op, and the
+      // destination LMUL otherwise.
+      if (SrcEltSz > DstEltSz)
+        return SrcLT.first *
+               getRISCVInstructionCost(Ops, SrcLT.second, CostKind);
+      return LT.first * getRISCVInstructionCost(Ops, LT.second, CostKind);
+    }
+    break;
+  }
   case Intrinsic::ceil:
   case Intrinsic::floor:
   case Intrinsic::trunc:
@@ -1482,47 +1505,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     return Cost;
   }
-  case Intrinsic::vp_rint: {
-    // RISC-V target uses at least 5 instructions to lower rounding intrinsics.
-    unsigned Cost = 5;
-    auto LT = getTypeLegalizationCost(RetTy);
-    if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
-      return Cost * LT.first;
-    break;
-  }
-  case Intrinsic::vp_nearbyint: {
-    // More one read and one write for fflags than vp_rint.
-    unsigned Cost = 7;
-    auto LT = getTypeLegalizationCost(RetTy);
-    if (TLI->isOperationCustom(ISD::VP_FRINT, LT.second))
-      return Cost * LT.first;
-    break;
-  }
-  case Intrinsic::vp_ceil:
-  case Intrinsic::vp_floor:
-  case Intrinsic::vp_round:
-  case Intrinsic::vp_roundeven:
-  case Intrinsic::vp_roundtozero: {
-    // Rounding with static rounding mode needs two more instructions to
-    // swap/write FRM than vp_rint.
-    unsigned Cost = 7;
-    auto LT = getTypeLegalizationCost(RetTy);
-    unsigned VPISD = getISDForVPIntrinsicID(ICA.getID());
-    if (TLI->isOperationCustom(VPISD, LT.second))
-      return Cost * LT.first;
-    break;
-  }
-  case Intrinsic::vp_select: {
-    Intrinsic::ID IID = ICA.getID();
-    std::optional<unsigned> FOp = VPIntrinsic::getFunctionalOpcodeForVP(IID);
-    assert(FOp.has_value());
-    return getCmpSelInstrCost(*FOp, ICA.getReturnType(), ICA.getArgTypes()[0],
-                              CmpInst::BAD_ICMP_PREDICATE, CostKind);
-  }
-  case Intrinsic::vp_merge:
-    return getCmpSelInstrCost(Instruction::Select, ICA.getReturnType(),
-                              ICA.getArgTypes()[0], CmpInst::BAD_ICMP_PREDICATE,
-                              CostKind);
   case Intrinsic::experimental_vp_splat: {
     auto LT = getTypeLegalizationCost(RetTy);
     // TODO: Lower i1 experimental_vp_splat
@@ -1540,6 +1522,34 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     return getShuffleCost(TTI::SK_Splice, cast<VectorType>(ICA.getReturnType()),
                           cast<VectorType>(ICA.getArgTypes()[0]), {}, CostKind,
                           0, cast<VectorType>(ICA.getReturnType()));
+  }
+  case Intrinsic::fptoui_sat:
+  case Intrinsic::fptosi_sat: {
+    InstructionCost Cost = 0;
+    bool IsSigned = ICA.getID() == Intrinsic::fptosi_sat;
+    Type *SrcTy = ICA.getArgTypes()[0];
+
+    auto SrcLT = getTypeLegalizationCost(SrcTy);
+    auto DstLT = getTypeLegalizationCost(RetTy);
+    if (!SrcTy->isVectorTy())
+      break;
+
+    if (!SrcLT.first.isValid() || !DstLT.first.isValid())
+      return InstructionCost::getInvalid();
+
+    Cost +=
+        getCastInstrCost(IsSigned ? Instruction::FPToSI : Instruction::FPToUI,
+                         RetTy, SrcTy, TTI::CastContextHint::None, CostKind);
+
+    // Handle NaN.
+    // vmfne v0, v8, v8         # If v8[i] is NaN set v0[i] to 1.
+    // vmerge.vim v8, v8, 0, v0 # Convert NaN to 0.
+    Type *CondTy = RetTy->getWithNewBitWidth(1);
+    Cost += getCmpSelInstrCost(BinaryOperator::FCmp, SrcTy, CondTy,
+                               CmpInst::FCMP_UNO, CostKind);
+    Cost += getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
+                               CmpInst::FCMP_UNO, CostKind);
+    return Cost;
   }
   }
 
@@ -2617,18 +2627,17 @@ void RISCVTTIImpl::getUnrollingPreferences(
   if (L->getNumBlocks() > 4)
     return;
 
-  // Don't unroll vectorized loops, including the remainder loop
-  if (getBooleanLoopAttribute(L, "llvm.loop.isvectorized"))
-    return;
-
   // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining.
+  // inlining. Don't unroll auto-vectorized loops either, though do allow
+  // unrolling of the scalar remainder.
+  bool IsVectorized = getBooleanLoopAttribute(L, "llvm.loop.isvectorized");
   InstructionCost Cost = 0;
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
-      // Initial setting - Don't unroll loops containing vectorized
-      // instructions.
-      if (I.getType()->isVectorTy())
+      // Both auto-vectorized loops and the scalar remainder have the
+      // isvectorized attribute, so differentiate between them by the presence
+      // of vector instructions.
+      if (IsVectorized && I.getType()->isVectorTy())
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {

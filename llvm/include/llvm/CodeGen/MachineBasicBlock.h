@@ -25,6 +25,7 @@
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/UniqueBBID.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -97,13 +98,6 @@ template <> struct DenseMapInfo<MBBSectionID> {
   static bool isEqual(const MBBSectionID &LHS, const MBBSectionID &RHS) {
     return LHS == RHS;
   }
-};
-
-// This structure represents the information for a basic block pertaining to
-// the basic block sections profile.
-struct UniqueBBID {
-  unsigned BaseID;
-  unsigned CloneID;
 };
 
 template <> struct ilist_traits<MachineInstr> {
@@ -329,10 +323,11 @@ public:
   const MachineFunction *getParent() const { return xParent; }
   MachineFunction *getParent() { return xParent; }
 
-  /// Returns true if the original IR terminator is an `indirectbr`. This
-  /// typically corresponds to a `goto` in C, rather than jump tables.
-  bool terminatorIsComputedGoto() const {
-    return back().isIndirectBranch() &&
+  /// Returns true if the original IR terminator is an `indirectbr` with
+  /// successor blocks. This typically corresponds to a `goto` in C, rather than
+  /// jump tables.
+  bool terminatorIsComputedGotoWithSuccessors() const {
+    return back().isIndirectBranch() && !succ_empty() &&
            llvm::all_of(successors(), [](const MachineBasicBlock *Succ) {
              return Succ->isIRBlockAddressTaken();
            });

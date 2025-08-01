@@ -33,6 +33,24 @@ func.func @inotequal_vector(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> vecto
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.IsFinite
+//===----------------------------------------------------------------------===//
+
+func.func @isfinite_scalar(%arg0: f32) -> i1 {
+  // CHECK: spirv.IsFinite {{.*}} : f32
+  %0 = spirv.IsFinite %arg0 : f32
+  return %0 : i1
+}
+
+func.func @isfinite_vector(%arg0: vector<2xf32>) -> vector<2xi1> {
+  // CHECK: spirv.IsFinite {{.*}} : vector<2xf32>
+  %0 = spirv.IsFinite %arg0 : vector<2xf32>
+  return %0 : vector<2xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.IsInf
 //===----------------------------------------------------------------------===//
 

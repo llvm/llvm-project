@@ -379,3 +379,8 @@ if(LLVM_WITH_Z3)
     ${Z3_INCLUDE_DIR}
     )
 endif()
+
+target_include_directories(LLVMSupport
+  PRIVATE
+  ${LLVM_THIRD_PARTY_DIR}/siphash/include
+)

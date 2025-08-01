@@ -607,6 +607,39 @@ define <vscale x 32 x bfloat> @insert_nxv32bf16_undef_nxv1bf16_26(<vscale x 1 x 
   ret <vscale x 32 x bfloat> %v
 }
 
+define <vscale x 8 x i32> @insert_splat_to_undef() {
+; CHECK-LABEL: insert_splat_to_undef:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    ret
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> splat (i32 1), i64 0)
+  ret <vscale x 8 x i32> %v
+}
+
+define <vscale x 8 x i32> @insert_splat_to_splat() {
+; CHECK-LABEL: insert_splat_to_splat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 1
+; CHECK-NEXT:    ret
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 1), i64 0)
+  ret <vscale x 8 x i32> %v
+}
+
+define <vscale x 8 x i32> @insert_splat_to_splat2() {
+; CHECK-LABEL: insert_splat_to_splat2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v12, 1
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    ret
+  %v = call <vscale x 8 x i32> @llvm.vector.insert.nxv4i32.nxv8i32(<vscale x 8 x i32> splat (i32 0), <vscale x 4 x i32> splat (i32 1), i64 0)
+  ret <vscale x 8 x i32> %v
+}
+
 attributes #0 = { vscale_range(2,1024) }
 
 declare <vscale x 4 x i1> @llvm.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1>, <vscale x 1 x i1>, i64)

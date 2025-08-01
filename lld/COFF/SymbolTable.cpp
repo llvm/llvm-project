@@ -452,7 +452,7 @@ void SymbolTable::reportUnresolvable() {
   reportProblemSymbols(undefs, /*localImports=*/nullptr, true);
 }
 
-void SymbolTable::resolveRemainingUndefines() {
+void SymbolTable::resolveRemainingUndefines(std::vector<Undefined *> &aliases) {
   llvm::TimeTraceScope timeScope("Resolve remaining undefined symbols");
   SmallPtrSet<Symbol *, 8> undefs;
   DenseMap<Symbol *, Symbol *> localImports;
@@ -468,8 +468,10 @@ void SymbolTable::resolveRemainingUndefines() {
     StringRef name = undef->getName();
 
     // A weak alias may have been resolved, so check for that.
-    if (undef->resolveWeakAlias())
+    if (undef->getWeakAlias()) {
+      aliases.push_back(undef);
       continue;
+    }
 
     // If we can resolve a symbol by removing __imp_ prefix, do that.
     // This odd rule is for compatibility with MSVC linker.
@@ -620,10 +622,10 @@ void SymbolTable::initializeECThunks() {
     return;
 
   for (auto it : entryThunks) {
-    auto *to = dyn_cast<Defined>(it.second);
+    Defined *to = it.second->getDefined();
     if (!to)
       continue;
-    auto *from = dyn_cast<DefinedRegular>(it.first);
+    auto *from = dyn_cast_or_null<DefinedRegular>(it.first->getDefined());
     // We need to be able to add padding to the function and fill it with an
     // offset to its entry thunks. To ensure that padding the function is
     // feasible, functions are required to be COMDAT symbols with no offset.
@@ -642,7 +644,8 @@ void SymbolTable::initializeECThunks() {
     Symbol *sym = exitThunks.lookup(file->thunkSym);
     if (!sym)
       sym = exitThunks.lookup(file->impECSym);
-    file->impchkThunk->exitThunk = dyn_cast_or_null<Defined>(sym);
+    if (sym)
+      file->impchkThunk->exitThunk = sym->getDefined();
   }
 
   // On ARM64EC, the __imp_ symbol references the auxiliary IAT, while the
@@ -657,6 +660,35 @@ void SymbolTable::initializeECThunks() {
         sym = impSym->file->impSym;
     }
   });
+}
+
+void SymbolTable::initializeSameAddressThunks() {
+  for (auto iter : ctx.config.sameAddresses) {
+    auto sym = dyn_cast_or_null<DefinedRegular>(iter.first->getDefined());
+    if (!sym || !sym->isLive())
+      continue;
+    auto nativeSym =
+        dyn_cast_or_null<DefinedRegular>(iter.second->getDefined());
+    if (!nativeSym || !nativeSym->isLive())
+      continue;
+    Defined *entryThunk = sym->getChunk()->getEntryThunk();
+    if (!entryThunk)
+      continue;
+
+    // Replace symbols with symbols referencing the thunk. Store the original
+    // symbol as equivalent DefinedSynthetic instances for use in the thunk
+    // itself.
+    auto symClone = make<DefinedSynthetic>(sym->getName(), sym->getChunk(),
+                                           sym->getValue());
+    auto nativeSymClone = make<DefinedSynthetic>(
+        nativeSym->getName(), nativeSym->getChunk(), nativeSym->getValue());
+    SameAddressThunkARM64EC *thunk =
+        make<SameAddressThunkARM64EC>(nativeSymClone, symClone, entryThunk);
+    sameAddressThunks.push_back(thunk);
+
+    replaceSymbol<DefinedSynthetic>(sym, sym->getName(), thunk);
+    replaceSymbol<DefinedSynthetic>(nativeSym, nativeSym->getName(), thunk);
+  }
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *f,
@@ -1342,6 +1374,43 @@ void SymbolTable::parseAlternateName(StringRef s) {
   if (it != alternateNames.end() && it->second != to)
     Fatal(ctx) << "/alternatename: conflicts: " << s;
   alternateNames.insert(it, std::make_pair(from, to));
+}
+
+void SymbolTable::resolveAlternateNames() {
+  // Add weak aliases. Weak aliases is a mechanism to give remaining
+  // undefined symbols final chance to be resolved successfully.
+  for (auto pair : alternateNames) {
+    StringRef from = pair.first;
+    StringRef to = pair.second;
+    Symbol *sym = find(from);
+    if (!sym)
+      continue;
+    if (auto *u = dyn_cast<Undefined>(sym)) {
+      if (u->weakAlias) {
+        // On ARM64EC, anti-dependency aliases are treated as undefined
+        // symbols unless a demangled symbol aliases a defined one, which
+        // is part of the implementation.
+        if (!isEC() || !u->isAntiDep)
+          continue;
+        if (!isa<Undefined>(u->weakAlias) &&
+            !isArm64ECMangledFunctionName(u->getName()))
+          continue;
+      }
+
+      // Check if the destination symbol is defined. If not, skip it.
+      // It may still be resolved later if more input files are added.
+      // Also skip anti-dependency targets, as they can't be chained anyway.
+      Symbol *toSym = find(to);
+      if (!toSym)
+        continue;
+      auto toUndef = dyn_cast<Undefined>(toSym);
+      if (toUndef && (!toUndef->weakAlias || toUndef->isAntiDep))
+        continue;
+      if (toSym->isLazy())
+        forceLazy(toSym);
+      u->setWeakAlias(toSym);
+    }
+  }
 }
 
 // Parses /aligncomm option argument.
