@@ -648,6 +648,10 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+#define GET_BUILTIN_LOWERING_CLASSES_DECLARE
+#include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
+#undef GET_BUILTIN_LOWERING_CLASSES_DECLARE
+
 } // namespace direct
 } // namespace cir
 

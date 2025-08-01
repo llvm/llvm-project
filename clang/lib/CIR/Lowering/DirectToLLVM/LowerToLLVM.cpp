@@ -2243,6 +2243,10 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecSplatOpLowering,
                CIRToLLVMVecTernaryOpLowering,
                CIRToLLVMUnreachableOpLowering
+               CIRToLLVMVecTernaryOpLowering,
+#define GET_BUILTIN_LOWERING_LIST
+#include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
+#undef GET_BUILTIN_LOWERING_LIST
       // clang-format on
       >(converter, patterns.getContext());
 
@@ -2825,6 +2829,10 @@ mlir::LogicalResult CIRToLLVMGetBitfieldOpLowering::matchAndRewrite(
   rewriter.replaceOp(op, newOp);
   return mlir::success();
 }
+
+#define GET_BUILTIN_LOWERING_CLASSES_DEF
+#include "clang/CIR/Dialect/IR/CIRBuiltinsLowering.inc"
+#undef GET_BUILTIN_LOWERING_CLASSES_DEF
 
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
   return std::make_unique<ConvertCIRToLLVMPass>();

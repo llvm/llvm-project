@@ -3295,4 +3295,22 @@ def CIR_ExpectOp : CIR_Op<"expect", [
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Floating Point Ops
+//===----------------------------------------------------------------------===//
+
+class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
+{
+  let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src);
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+  let summary = "libc builtin equivalent ignoring "
+                "floating point exceptions and errno";
+  let assemblyFormat = "$src `:` type($src) attr-dict";
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp">;
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
