@@ -17,7 +17,8 @@
 ; ASM-NEXT:           .word   3221225472
 ; ASM-NEXT:           .word   4
 ; ASM-NEXT:           .word   2
-; ASM64-NEXT:         .word   0
+; ASM32-NEXT:         .p2align        2, 0x0
+; ASM64-NEXT:         .p2align        3, 0x0
 
 define i32 @f() "hw-shadow-stack" {
 entry:

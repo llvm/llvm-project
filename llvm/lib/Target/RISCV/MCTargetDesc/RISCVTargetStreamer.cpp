@@ -81,7 +81,6 @@ void RISCVTargetStreamer::emitNoteGnuPropertySection(
   assert(Ctx.getObjectFileType() == MCContext::Environment::IsELF);
   MCSection *const NoteSection =
       Ctx.getELFSection(".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
-  NoteSection->setAlignment(NoteAlign);
   OutStreamer.pushSection();
   OutStreamer.switchSection(NoteSection);
 
@@ -98,8 +97,7 @@ void RISCVTargetStreamer::emitNoteGnuPropertySection(
   OutStreamer.emitIntValue(ELF::GNU_PROPERTY_RISCV_FEATURE_1_AND, 4); // pr_type
   OutStreamer.emitIntValue(4, 4);              // pr_datasz
   OutStreamer.emitIntValue(Feature1And, 4);    // pr_data
-  if (Triple.isArch64Bit())
-    OutStreamer.emitIntValue(0, 4);            // pr_padding
+  OutStreamer.emitValueToAlignment(NoteAlign); // pr_padding
 
   OutStreamer.popSection();
 }
