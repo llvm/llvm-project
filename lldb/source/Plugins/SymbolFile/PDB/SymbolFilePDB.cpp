@@ -72,28 +72,28 @@ char SymbolFilePDB::ID;
 
 namespace {
 
-enum UseNativePDBReader {
-  eUseNativePDBReaderDefault,
-  eUseNativePDBReaderOn,
-  eUseNativePDBReaderOff,
+enum PDBReader {
+  ePDBReaderDefault,
+  ePDBReaderDIA,
+  ePDBReaderNative,
 };
 
-constexpr OptionEnumValueElement g_native_pdb_reader_enums[] = {
+constexpr OptionEnumValueElement g_pdb_reader_enums[] = {
     {
-        eUseNativePDBReaderDefault,
+        ePDBReaderDefault,
         "default",
         "Use DIA PDB reader unless LLDB_USE_NATIVE_PDB_READER environment "
         "variable is set",
     },
     {
-        eUseNativePDBReaderOn,
-        "on",
-        "Use native PDB reader",
+        ePDBReaderDIA,
+        "dia",
+        "Use DIA PDB reader",
     },
     {
-        eUseNativePDBReaderOff,
-        "off",
-        "Use DIA PDB reader",
+        ePDBReaderNative,
+        "native",
+        "Use native PDB reader",
     },
 };
 
@@ -136,15 +136,15 @@ public:
 
   bool UseNativeReader() const {
 #if LLVM_ENABLE_DIA_SDK && defined(_WIN32)
-    auto value = GetPropertyAtIndexAs<UseNativePDBReader>(
-        ePropertyUseNativeReader, eUseNativePDBReaderDefault);
+    auto value =
+        GetPropertyAtIndexAs<PDBReader>(ePropertyReader, ePDBReaderDefault);
     switch (value) {
-    case eUseNativePDBReaderOn:
+    case ePDBReaderNative:
       return true;
-    case eUseNativePDBReaderOff:
+    case ePDBReaderDIA:
       return false;
     default:
-    case eUseNativePDBReaderDefault:
+    case ePDBReaderDefault:
       return ShouldUseNativeReaderByDefault();
     }
 #else
