@@ -29,9 +29,9 @@ RUN: mkdir %t/out && cd %t/out
 ## received JSON, pretty-prints the JSON and the supplied arguments, and then
 ## exits with an error. This allows FileCheck directives to verify the
 ## distributor inputs.
-RUN: echo '%t/t1.a %t/lib/t2.a ../t3.a \
-RUN:   --thinlto-distributor="%python" \
-RUN:   --thinlto-distributor-arg="%llvm_src_root/utils/dtlto/validate.py"' > rsp
+RUN: echo "%t/t1.a %t/lib/t2.a ../t3.a \
+RUN:   --thinlto-distributor=\"%python\" \
+RUN:   --thinlto-distributor-arg=\"%llvm_src_root/utils/dtlto/validate.py\"" > rsp
 
 ## Link thin archives using -u/--undefined.
 RUN: not ld.lld @rsp -u t1 -u t2 -u t3 2>&1 | FileCheck %s
