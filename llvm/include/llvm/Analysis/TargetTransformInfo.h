@@ -638,8 +638,6 @@ public:
     /// Fall back to the generic logic to determine whether multi-exit unrolling
     /// is profitable if set to false.
     bool RuntimeUnrollMultiExit;
-
-    DenseMap<PHINode *, RecurrenceDescriptor> ParallelizeReductions;
   };
 
   /// Get target-customized preferences for the generic loop unrolling
