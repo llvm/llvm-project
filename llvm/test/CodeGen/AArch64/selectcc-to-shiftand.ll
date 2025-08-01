@@ -92,8 +92,8 @@ define i32 @pos_sel_constants(i32 %a) {
 ; CHECK-GI-LABEL: pos_sel_constants:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #5 // =0x5
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w8, wzr, ge
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    csel w0, w8, wzr, gt
 ; CHECK-GI-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 5, i32 0
@@ -111,8 +111,8 @@ define i32 @pos_sel_special_constant(i32 %a) {
 ;
 ; CHECK-GI-LABEL: pos_sel_special_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    cset w8, ge
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    cset w8, gt
 ; CHECK-GI-NEXT:    lsl w0, w8, #9
 ; CHECK-GI-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
@@ -130,8 +130,8 @@ define i32 @pos_sel_variable_and_zero(i32 %a, i32 %b) {
 ;
 ; CHECK-GI-LABEL: pos_sel_variable_and_zero:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w1, wzr, ge
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    csel w0, w1, wzr, gt
 ; CHECK-GI-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 %b, i32 0
