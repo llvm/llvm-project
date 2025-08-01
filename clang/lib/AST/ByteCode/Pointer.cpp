@@ -42,7 +42,7 @@ Pointer::Pointer(Block *Pointee, unsigned Base, uint64_t Offset)
     : Offset(Offset), StorageKind(Storage::Block) {
   assert((Base == RootPtrMark || Base % alignof(void *) == 0) && "wrong base");
 
-  PointeeStorage.BS = {Pointee, Base};
+  PointeeStorage.BS = {Pointee, Base, nullptr, nullptr};
 
   if (Pointee)
     Pointee->addPointer(this);
@@ -89,7 +89,6 @@ Pointer &Pointer::operator=(const Pointer &P) {
 
   if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
-    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
@@ -127,7 +126,6 @@ Pointer &Pointer::operator=(Pointer &&P) {
 
   if (P.isBlockPointer()) {
     PointeeStorage.BS = P.PointeeStorage.BS;
-    PointeeStorage.BS.Pointee = P.PointeeStorage.BS.Pointee;
 
     if (PointeeStorage.BS.Pointee)
       PointeeStorage.BS.Pointee->addPointer(this);
@@ -493,6 +491,19 @@ void Pointer::initialize() const {
   assert(PointeeStorage.BS.Base != 0 &&
          "Only composite fields can be initialised");
   getInlineDesc()->IsInitialized = true;
+}
+
+void Pointer::initializeAllElements() const {
+  assert(getFieldDesc()->isPrimitiveArray());
+  assert(isArrayRoot());
+
+  InitMapPtr &IM = getInitMap();
+  if (!IM) {
+    IM = std::make_pair(true, nullptr);
+  } else {
+    IM->first = true;
+    IM->second.reset();
+  }
 }
 
 void Pointer::activate() const {

@@ -28,7 +28,6 @@
 // CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
-// CHECK-NEXT: core.StackAddrEscapeBase
 // CHECK-NEXT: core.StackAddressEscape
 // CHECK-NEXT: core.UndefinedBinaryOperatorResult
 // CHECK-NEXT: core.VLASize

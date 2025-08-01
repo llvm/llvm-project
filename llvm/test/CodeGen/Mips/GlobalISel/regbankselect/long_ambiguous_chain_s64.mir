@@ -507,7 +507,7 @@ body:             |
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT:   [[LOAD3:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY3]](p0) :: (load (s32) from %ir.a, align 8)
   ; MIPS32-NEXT:   [[C4:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[COPY3]], [[C4]](s32)
+  ; MIPS32-NEXT:   [[PTR_ADD:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[COPY3]], [[C4]](s32)
   ; MIPS32-NEXT:   [[LOAD4:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD]](p0) :: (load (s32) from %ir.a + 4, basealign 8)
   ; MIPS32-NEXT:   G_BR %bb.6
   ; MIPS32-NEXT: {{  $}}
@@ -516,7 +516,7 @@ body:             |
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT:   [[LOAD5:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.b, align 8)
   ; MIPS32-NEXT:   [[C5:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD1:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[LOAD]], [[C5]](s32)
+  ; MIPS32-NEXT:   [[PTR_ADD1:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C5]](s32)
   ; MIPS32-NEXT:   [[LOAD6:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD1]](p0) :: (load (s32) from %ir.b + 4, basealign 8)
   ; MIPS32-NEXT:   G_BR %bb.6
   ; MIPS32-NEXT: {{  $}}
@@ -525,7 +525,7 @@ body:             |
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT:   [[LOAD7:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD1]](p0) :: (load (s32) from %ir.c, align 8)
   ; MIPS32-NEXT:   [[C6:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD2:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[LOAD1]], [[C6]](s32)
+  ; MIPS32-NEXT:   [[PTR_ADD2:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[LOAD1]], [[C6]](s32)
   ; MIPS32-NEXT:   [[LOAD8:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD2]](p0) :: (load (s32) from %ir.c + 4, basealign 8)
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.6.b.PHI.1:
@@ -542,7 +542,7 @@ body:             |
   ; MIPS32-NEXT: bb.7.b.PHI.1.end:
   ; MIPS32-NEXT:   G_STORE [[PHI]](s32), [[LOAD2]](p0) :: (store (s32) into %ir.result, align 8)
   ; MIPS32-NEXT:   [[C8:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD3:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[LOAD2]], [[C8]](s32)
+  ; MIPS32-NEXT:   [[PTR_ADD3:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[LOAD2]], [[C8]](s32)
   ; MIPS32-NEXT:   G_STORE [[PHI1]](s32), [[PTR_ADD3]](p0) :: (store (s32) into %ir.result + 4, basealign 8)
   ; MIPS32-NEXT:   RetRA
   ; MIPS32-NEXT: {{  $}}
@@ -560,7 +560,7 @@ body:             |
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT:   [[LOAD9:%[0-9]+]]:gprb(s32) = G_LOAD [[COPY3]](p0) :: (load (s32) from %ir.a, align 8)
   ; MIPS32-NEXT:   [[C10:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD4:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[COPY3]], [[C10]](s32)
+  ; MIPS32-NEXT:   [[PTR_ADD4:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[COPY3]], [[C10]](s32)
   ; MIPS32-NEXT:   [[LOAD10:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD4]](p0) :: (load (s32) from %ir.a + 4, basealign 8)
   ; MIPS32-NEXT:   G_BR %bb.11
   ; MIPS32-NEXT: {{  $}}
@@ -569,7 +569,7 @@ body:             |
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT:   [[LOAD11:%[0-9]+]]:gprb(s32) = G_LOAD [[LOAD]](p0) :: (load (s32) from %ir.b, align 8)
   ; MIPS32-NEXT:   [[C11:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD5:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[LOAD]], [[C11]](s32)
+  ; MIPS32-NEXT:   [[PTR_ADD5:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[LOAD]], [[C11]](s32)
   ; MIPS32-NEXT:   [[LOAD12:%[0-9]+]]:gprb(s32) = G_LOAD [[PTR_ADD5]](p0) :: (load (s32) from %ir.b + 4, basealign 8)
   ; MIPS32-NEXT: {{  $}}
   ; MIPS32-NEXT: bb.11.b.PHI.2:
@@ -585,7 +585,7 @@ body:             |
   ; MIPS32-NEXT: bb.12.b.PHI.2.end:
   ; MIPS32-NEXT:   G_STORE [[PHI2]](s32), [[LOAD2]](p0) :: (store (s32) into %ir.result, align 8)
   ; MIPS32-NEXT:   [[C13:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD6:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[LOAD2]], [[C13]](s32)
+  ; MIPS32-NEXT:   [[PTR_ADD6:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[LOAD2]], [[C13]](s32)
   ; MIPS32-NEXT:   G_STORE [[PHI3]](s32), [[PTR_ADD6]](p0) :: (store (s32) into %ir.result + 4, basealign 8)
   ; MIPS32-NEXT:   RetRA
   ; MIPS32-NEXT: {{  $}}
@@ -605,11 +605,11 @@ body:             |
   ; MIPS32-NEXT:   [[SELECT3:%[0-9]+]]:gprb(s32) = G_SELECT [[AND7]](s32), [[SELECT1]], [[PHI5]]
   ; MIPS32-NEXT:   G_STORE [[SELECT2]](s32), [[LOAD2]](p0) :: (store (s32) into %ir.result, align 8)
   ; MIPS32-NEXT:   [[C15:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD7:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[LOAD2]], [[C15]](s32)
+  ; MIPS32-NEXT:   [[PTR_ADD7:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[LOAD2]], [[C15]](s32)
   ; MIPS32-NEXT:   G_STORE [[SELECT3]](s32), [[PTR_ADD7]](p0) :: (store (s32) into %ir.result + 4, basealign 8)
   ; MIPS32-NEXT:   G_STORE [[PHI4]](s32), [[LOAD2]](p0) :: (store (s32) into %ir.result, align 8)
   ; MIPS32-NEXT:   [[C16:%[0-9]+]]:gprb(s32) = G_CONSTANT i32 4
-  ; MIPS32-NEXT:   [[PTR_ADD8:%[0-9]+]]:gprb(p0) = nuw G_PTR_ADD [[LOAD2]], [[C16]](s32)
+  ; MIPS32-NEXT:   [[PTR_ADD8:%[0-9]+]]:gprb(p0) = nuw inbounds G_PTR_ADD [[LOAD2]], [[C16]](s32)
   ; MIPS32-NEXT:   G_STORE [[PHI5]](s32), [[PTR_ADD8]](p0) :: (store (s32) into %ir.result + 4, basealign 8)
   ; MIPS32-NEXT:   RetRA
   bb.1.entry:

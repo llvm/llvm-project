@@ -41,6 +41,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangUtil.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfoEntry.h"
+#include "Plugins/SymbolFile/DWARF/SymbolFileWasm.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -73,6 +74,7 @@
 #include "ManualDWARFIndex.h"
 #include "SymbolFileDWARFDebugMap.h"
 #include "SymbolFileDWARFDwo.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
@@ -327,6 +329,9 @@ llvm::StringRef SymbolFileDWARF::GetPluginDescriptionStatic() {
 }
 
 SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFileSP objfile_sp) {
+  if (objfile_sp->GetArchitecture().GetTriple().isWasm())
+    return new SymbolFileWasm(std::move(objfile_sp),
+                              /*dwo_section_list*/ nullptr);
   return new SymbolFileDWARF(std::move(objfile_sp),
                              /*dwo_section_list*/ nullptr);
 }
@@ -2471,6 +2476,55 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   return false;
 }
 
+llvm::Expected<SymbolContext>
+SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+
+  DWARFDIE die = GetDIE(label.symbol_id);
+  if (!die.IsValid())
+    return llvm::createStringError(
+        llvm::formatv("invalid DIE ID in {0}", label));
+
+  // Label was created using a declaration DIE. Need to fetch the definition
+  // to resolve the function call.
+  if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0)) {
+    Module::LookupInfo info(ConstString(label.lookup_name),
+                            lldb::eFunctionNameTypeFull,
+                            lldb::eLanguageTypeUnknown);
+
+    m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
+      if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+        return IterationAction::Continue;
+
+      // We don't check whether the specification DIE for this function
+      // corresponds to the declaration DIE because the declaration might be in
+      // a type-unit but the definition in the compile-unit (and it's
+      // specifcation would point to the declaration in the compile-unit). We
+      // rely on the mangled name within the module to be enough to find us the
+      // unique definition.
+      die = entry;
+      return IterationAction::Stop;
+    });
+
+    if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
+      return llvm::createStringError(
+          llvm::formatv("failed to find definition DIE for {0}", label));
+  }
+
+  SymbolContextList sc_list;
+  if (!ResolveFunction(die, /*include_inlines=*/false, sc_list))
+    return llvm::createStringError(
+        llvm::formatv("failed to resolve function for {0}", label));
+
+  if (sc_list.IsEmpty())
+    return llvm::createStringError(
+        llvm::formatv("failed to find function for {0}", label));
+
+  assert(sc_list.GetSize() == 1);
+
+  return sc_list[0];
+}
+
 bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
                                        const DWARFDIE &die,
                                        bool only_root_namespaces) {
@@ -2535,7 +2589,7 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
   m_index->GetFunctions(lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
-    return true;
+    return IterationAction::Continue;
   });
   // With -gsimple-template-names, a templated type's DW_AT_name will not
   // contain the template parameters. Try again stripping '<' and anything
@@ -2552,7 +2606,7 @@ void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
                             [&](DWARFDIE die) {
                               if (resolved_dies.insert(die.GetDIE()).second)
                                 ResolveFunction(die, include_inlines, sc_list);
-                              return true;
+                              return IterationAction::Continue;
                             });
     }
   }
@@ -2588,7 +2642,7 @@ void SymbolFileDWARF::FindFunctions(const RegularExpression &regex,
   m_index->GetFunctions(regex, [&](DWARFDIE die) {
     if (resolved_dies.insert(die.GetDIE()).second)
       ResolveFunction(die, include_inlines, sc_list);
-    return true;
+    return IterationAction::Continue;
   });
 }
 
