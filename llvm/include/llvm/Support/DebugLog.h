@@ -19,28 +19,63 @@
 namespace llvm {
 #ifndef NDEBUG
 
-// Output with given inputs and trailing newline. E.g.,
+// LDBG() is a macro that can be used as a raw_ostream for debugging.
+// It will stream the output to the dbgs() stream, with a prefix of the
+// debug type and the file and line number. A trailing newline is added to the
+// output automatically. If the streamed content contains a newline, the prefix
+// is added to each beginning of a new line. Nothing is printed if the debug
+// output is not enabled or the debug type does not match.
+//
+// E.g.,
 //   LDBG() << "Bitset contains: " << Bitset;
-// is equivalent to
-//   LLVM_DEBUG(dbgs() << DEBUG_TYPE << " [" << __FILE__ << ":" << __LINE__
-//              << "] " << "Bitset contains: " << Bitset << "\n");
-#define LDBG() DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), DEBUG_TYPE)
+// is somehow equivalent to
+//   LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] " << __FILE__ << ":" <<
+//   __LINE__ << " "
+//              << "Bitset contains: " << Bitset << "\n");
+//
+// An optional `level` argument can be provided to control the verbosity of the
+// output. The default level is 1, and is in increasing level of verbosity.
+//
+// The `level` argument can be a literal integer, or a macro that evaluates to
+// an integer.
+//
+#define LDBG(...) _GET_LDBG_MACRO(__VA_ARGS__)(__VA_ARGS__)
 
-#define DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, TYPE, FILE)                 \
-  for (bool _c = (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)); _c;  \
-       _c = false)                                                             \
+// Helper macros to choose the correct macro based on the number of arguments.
+#define LDBG_FUNC_CHOOSER(_f1, _f2, ...) _f2
+#define LDBG_FUNC_RECOMPOSER(argsWithParentheses)                              \
+  LDBG_FUNC_CHOOSER argsWithParentheses
+#define LDBG_CHOOSE_FROM_ARG_COUNT(...)                                        \
+  LDBG_FUNC_RECOMPOSER((__VA_ARGS__, LDBG_LOG_LEVEL, ))
+#define LDBG_NO_ARG_EXPANDER() , LDBG_LOG_LEVEL_1
+#define _GET_LDBG_MACRO(...)                                                   \
+  LDBG_CHOOSE_FROM_ARG_COUNT(LDBG_NO_ARG_EXPANDER __VA_ARGS__())
+
+// Dispatch macros to support the `level` argument or none (default to 1)
+#define LDBG_LOG_LEVEL(LEVEL)                                                  \
+  DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), LEVEL, DEBUG_TYPE)
+#define LDBG_LOG_LEVEL_1() LDBG_LOG_LEVEL(1)
+
+#define DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(STREAM, LEVEL, TYPE, FILE,     \
+                                                LINE)                          \
+  for (bool _c =                                                               \
+           (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE, LEVEL));     \
+       _c; _c = false)                                                         \
   ::llvm::impl::raw_ldbg_ostream{                                              \
-      ::llvm::impl::computePrefix(TYPE, FILE, __LINE__), (STREAM)}             \
+      ::llvm::impl::computePrefix(TYPE, FILE, LINE, LEVEL), (STREAM)}          \
       .asLvalue()
+
+#define DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE, FILE)          \
+  DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(STREAM, LEVEL, TYPE, FILE, __LINE__)
 // When __SHORT_FILE__ is not defined, the File is the full path,
 // otherwise __SHORT_FILE__ is defined in CMake to provide the file name
 // without the path prefix.
 #if defined(__SHORT_FILE__)
-#define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, TYPE)                            \
-  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, TYPE, __SHORT_FILE__)
+#define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, LEVEL, TYPE)                     \
+  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE, __SHORT_FILE__)
 #else
-#define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, TYPE)                            \
-  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, TYPE,                             \
+#define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, LEVEL, TYPE)                     \
+  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE,                      \
                                      ::llvm::impl::getShortFileName(__FILE__))
 #endif
 
@@ -119,11 +154,11 @@ getShortFileName(const char *path) {
 /// "[DebugType] File:Line "
 /// Where the File is the file name without the path prefix.
 static LLVM_ATTRIBUTE_UNUSED std::string
-computePrefix(const char *DebugType, const char *File, int Line) {
+computePrefix(const char *DebugType, const char *File, int Line, int Level) {
   std::string Prefix;
   raw_string_ostream OsPrefix(Prefix);
   if (DebugType)
-    OsPrefix << "[" << DebugType << "] ";
+    OsPrefix << "[" << DebugType << ":" << Level << "] ";
   OsPrefix << File << ":" << Line << " ";
   return OsPrefix.str();
 }
@@ -131,7 +166,7 @@ computePrefix(const char *DebugType, const char *File, int Line) {
 #else
 // As others in Debug, When compiling without assertions, the -debug-* options
 // and all inputs too LDBG() are ignored.
-#define LDBG()                                                                 \
+#define LDBG(...)                                                              \
   for (bool _c = false; _c; _c = false)                                        \
   ::llvm::nulls()
 #endif
