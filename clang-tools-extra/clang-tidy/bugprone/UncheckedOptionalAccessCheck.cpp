@@ -49,6 +49,8 @@ void UncheckedOptionalAccessCheck::check(
   const auto *FuncDecl = Result.Nodes.getNodeAs<FunctionDecl>(FuncID);
   if (FuncDecl->isTemplated())
     return;
+  CFG::BuildOptions Opts;
+  Opts.ExtendedNoReturnAnalysis = true;
 
   UncheckedOptionalAccessDiagnoser Diagnoser(ModelOptions);
   // FIXME: Allow user to set the (defaulted) SAT iterations max for
@@ -56,7 +58,9 @@ void UncheckedOptionalAccessCheck::check(
   if (llvm::Expected<llvm::SmallVector<UncheckedOptionalAccessDiagnostic>>
           Diags = dataflow::diagnoseFunction<UncheckedOptionalAccessModel,
                                              UncheckedOptionalAccessDiagnostic>(
-              *FuncDecl, *Result.Context, Diagnoser))
+              *FuncDecl, *Result.Context, Diagnoser,
+              dataflow::kDefaultMaxSATIterations,
+              dataflow::kDefaultMaxBlockVisits, Opts))
     for (const UncheckedOptionalAccessDiagnostic &Diag : *Diags) {
       diag(Diag.Range.getBegin(), "unchecked access to optional value")
           << Diag.Range;

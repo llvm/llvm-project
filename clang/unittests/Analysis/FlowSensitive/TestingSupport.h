@@ -175,6 +175,11 @@ template <typename AnalysisT> struct AnalysisInputs {
     return std::move(*this);
   }
 
+  AnalysisInputs<AnalysisT> &&withCfgBuildOptions(CFG::BuildOptions opts) && {
+    CfgBuildOptions = std::move(opts);
+    return std::move(*this);
+  }
+
   /// Required. Input code that is analyzed.
   llvm::StringRef Code;
   /// Required. All functions that match this matcher are analyzed.
@@ -201,6 +206,8 @@ template <typename AnalysisT> struct AnalysisInputs {
   std::function<std::unique_ptr<Solver>()> SolverFactory = [] {
     return std::make_unique<WatchedLiteralsSolver>();
   };
+  /// CFG build options
+  CFG::BuildOptions CfgBuildOptions = {};
 };
 
 /// Returns assertions based on annotations that are present after statements in
@@ -288,7 +295,7 @@ checkDataflow(AnalysisInputs<AnalysisT> AI,
           llvm::errc::invalid_argument, "Could not find the target function.");
 
     // Build the control flow graph for the target function.
-    auto MaybeACFG = AdornedCFG::build(*Target);
+    auto MaybeACFG = AdornedCFG::build(*Target, AI.CfgBuildOptions);
     if (!MaybeACFG)
       return MaybeACFG.takeError();
     auto &ACFG = *MaybeACFG;
