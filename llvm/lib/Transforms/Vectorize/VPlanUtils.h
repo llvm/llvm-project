@@ -40,18 +40,37 @@ const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
 /// Returns true if \p VPV is a single scalar, either because it produces the
 /// same value for all lanes or only has its first lane used.
 inline bool isSingleScalar(const VPValue *VPV) {
-  auto PreservesUniformity = [](unsigned Opcode) -> bool {
-    if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
+  // A variant of ValueTracking's isNotCrossLaneOperation that checks that the
+  // operation is uniform across lanes.
+  auto PreservesUniformity = [](auto *V) {
+    Intrinsic::ID ID;
+    if (const auto *R = dyn_cast<VPWidenIntrinsicRecipe>(V))
+      ID = R->getVectorIntrinsicID();
+    if (const auto *R = dyn_cast<VPWidenCallRecipe>(V))
+      ID = R->getCalledScalarFunction()->getIntrinsicID();
+    if (const auto *R = dyn_cast<VPReplicateRecipe>(V))
+      if (const auto *CI = dyn_cast<CallInst>(R->getUnderlyingInstr()))
+        if (const auto *F = CI->getCalledFunction())
+          ID = F->getIntrinsicID();
+    if (isTriviallyVectorizable(ID))
       return true;
-    switch (Opcode) {
-    case Instruction::GetElementPtr:
-    case Instruction::ICmp:
-    case Instruction::FCmp:
-    case VPInstruction::Broadcast:
-    case VPInstruction::PtrAdd:
-      return true;
-    default:
+
+    switch (V->getOpcode()) {
+    case Instruction::Call:
+    case Instruction::Invoke:
+    case Instruction::BitCast:
+    case Instruction::ShuffleVector:
+    case Instruction::InsertElement:
+    case Instruction::ExtractElement:
+    case VPInstruction::BuildVector:
+    case VPInstruction::BuildStructVector:
+    case VPInstruction::ExtractLane:
+    case VPInstruction::FirstActiveLane:
+    case VPInstruction::ExtractLastElement:
+    case VPInstruction::ExtractPenultimateElement:
       return false;
+    default:
+      return true;
     }
   };
 
@@ -66,19 +85,19 @@ inline bool isSingleScalar(const VPValue *VPV) {
     // lanes.
     if (RegionOfR && RegionOfR->isReplicator())
       return false;
-    return Rep->isSingleScalar() || (PreservesUniformity(Rep->getOpcode()) &&
+    return Rep->isSingleScalar() || (PreservesUniformity(Rep) &&
                                      all_of(Rep->operands(), isSingleScalar));
   }
   if (isa<VPWidenGEPRecipe, VPDerivedIVRecipe, VPBlendRecipe,
           VPWidenSelectRecipe>(VPV))
     return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
-    return PreservesUniformity(WidenR->getOpcode()) &&
+    return PreservesUniformity(WidenR) &&
            all_of(WidenR->operands(), isSingleScalar);
   }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
     return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           (PreservesUniformity(VPI->getOpcode()) &&
+           (PreservesUniformity(VPI) &&
             all_of(VPI->operands(), isSingleScalar));
 
   // VPExpandSCEVRecipes must be placed in the entry and are alway uniform.
