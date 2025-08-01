@@ -4910,7 +4910,6 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
         any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
                [](VPRecipeBase &R) {
                  auto *RedR = dyn_cast<VPReductionPHIRecipe>(&R);
-
                  return RedR && (RecurrenceDescriptor::isAnyOfRecurrenceKind(
                                      RedR->getRecurrenceKind()) ||
                                  RecurrenceDescriptor::isFindIVRecurrenceKind(
@@ -10156,9 +10155,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   GeneratedRTChecks Checks(PSE, DT, LI, TTI, F->getDataLayout(), CM.CostKind);
   if (LVP.hasPlanWithVF(VF.Width)) {
-    VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(),
-                          CM, CM.CostKind);
-
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, VF.Cost);
 
@@ -10182,6 +10178,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(),
+                          CM, CM.CostKind);
     if (!ForceVectorization &&
         !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx,
                                      LVP.getPlanFor(VF.Width), SEL,
