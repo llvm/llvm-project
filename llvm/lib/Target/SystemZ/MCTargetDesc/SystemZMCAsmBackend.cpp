@@ -165,7 +165,7 @@ void SystemZMCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   unsigned BitSize = getFixupKindInfo(Kind).TargetSize;
   unsigned Size = (BitSize + 7) / 8;
 
-  assert(Offset + Size <= Data.size() && "Invalid fixup offset!");
+  assert(Offset + Size <= F.getSize() && "Invalid fixup offset!");
 
   // Big-endian insertion of Size bytes.
   Value = extractBitsForFixup(Kind, Value, Fixup, getContext());

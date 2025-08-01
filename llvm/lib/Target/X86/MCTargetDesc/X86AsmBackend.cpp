@@ -690,7 +690,7 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return;
   unsigned Size = getFixupKindSize(Kind);
 
-  assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + Size <= F.getSize() && "Invalid fixup offset!");
 
   int64_t SignedValue = static_cast<int64_t>(Value);
   if (IsResolved && Fixup.isPCRel()) {
