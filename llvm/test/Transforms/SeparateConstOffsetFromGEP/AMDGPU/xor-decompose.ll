@@ -336,6 +336,52 @@ entry:
   ret void
 }
 
+; Verify that BinOp-XOR-GEP usage chains with non disjoint xor works as
+; intended.
+define amdgpu_kernel void @test6a(i1 %0, ptr addrspace(3) %1) {
+; CHECK-LABEL: define amdgpu_kernel void @test6a(
+; CHECK-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 288
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 512
+; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
+; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <8 x half> [[TMP8]], [[TMP9]]
+; CHECK-NEXT:    store <8 x half> [[TMP10]], ptr addrspace(3) [[TMP1]], align 16
+; CHECK-NEXT:    ret void
+;
+; GVN-LABEL: define amdgpu_kernel void @test6a(
+; GVN-SAME: i1 [[TMP0:%.*]], ptr addrspace(3) [[TMP1:%.*]]) {
+; GVN-NEXT:  [[ENTRY:.*:]]
+; GVN-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
+; GVN-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
+; GVN-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; GVN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 288
+; GVN-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
+; GVN-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 512
+; GVN-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
+; GVN-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
+; GVN-NEXT:    [[TMP10:%.*]] = fadd <8 x half> [[TMP8]], [[TMP9]]
+; GVN-NEXT:    store <8 x half> [[TMP10]], ptr addrspace(3) [[TMP1]], align 16
+; GVN-NEXT:    ret void
+;
+entry:
+  %2 = select i1 %0, i32 0, i32 288
+  %3 = xor i32 %2, 32
+  %4 = add i32 %2, 256
+  %5 = xor i32 %4, 288
+  %6 = getelementptr half, ptr addrspace(3) %1, i32 %3
+  %7 = getelementptr half, ptr addrspace(3) %1, i32 %5
+  %8 = load <8 x half>, ptr addrspace(3) %6, align 16
+  %9 = load <8 x half>, ptr addrspace(3) %7, align 16
+  %10 = fadd <8 x half> %8, %9
+  store <8 x half> %10, ptr addrspace(3) %1, align 16
+  ret void
+}
 
 ; Ensure disjoint constants exceeding addressing mode limits (e.g., 32768) are
 ; not extracted
