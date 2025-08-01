@@ -12,7 +12,7 @@ Introduction
 ============
 
 This document is a reference manual for the Machine IR (MIR) serialization
-format. MIR is a human readable serialization format that is used to represent
+format. MIR is a human-readable serialization format that is used to represent
 LLVM's :ref:`machine specific intermediate representation
 <machine code representation>`.
 
@@ -221,7 +221,7 @@ Machine Instructions Format Reference
 =====================================
 
 The machine basic blocks and their instructions are represented using a custom,
-human readable serialization language. This language is used in the
+human-readable serialization language. This language is used in the
 `YAML block literal string`_ that corresponds to the machine function's body.
 
 A source string that uses this language contains a list of machine basic
