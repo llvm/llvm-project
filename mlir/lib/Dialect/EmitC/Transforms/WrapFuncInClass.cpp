@@ -64,7 +64,7 @@ public:
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
 
-      auto fieldop = rewriter.create<emitc::FieldOp>(
+      FieldOp fieldop = rewriter.create<emitc::FieldOp>(
           funcOp->getLoc(), fieldName, typeAttr, nullptr);
 
       if (argAttrs && idx < argAttrs->size()) {
