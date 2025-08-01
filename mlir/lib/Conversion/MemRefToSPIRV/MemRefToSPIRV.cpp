@@ -22,6 +22,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Visitors.h"
 #include <cassert>
+#include <limits>
 #include <optional>
 
 #define DEBUG_TYPE "memref-to-spirv-pattern"
@@ -467,6 +468,11 @@ struct MemoryRequirements {
 static FailureOr<MemoryRequirements>
 calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
                             uint64_t preferredAlignment) {
+
+  if (std::numeric_limits<uint32_t>::max() < preferredAlignment) {
+    return failure();
+  }
+
   MLIRContext *ctx = accessedPtr.getContext();
 
   auto memoryAccess = spirv::MemoryAccess::None;
