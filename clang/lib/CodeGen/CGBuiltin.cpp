@@ -1148,7 +1148,8 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   assert(E->getCastKind() == CK_LValueToRValue &&
          "must be an LValue to RValue cast");
 
-  const MemberExpr *ME = dyn_cast<MemberExpr>(E->getSubExpr());
+  const MemberExpr *ME =
+      dyn_cast<MemberExpr>(E->getSubExpr()->IgnoreParenNoopCasts(getContext()));
   if (!ME)
     return nullptr;
 
@@ -4105,6 +4106,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Result = Builder.CreateBinaryIntrinsic(Intrinsic::minimum, Op0, Op1,
                                                   nullptr, "elt.minimum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_maximumnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(
+        Intrinsic::maximumnum, Op0, Op1, nullptr, "elt.maximumnum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_minimumnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(
+        Intrinsic::minimumnum, Op0, Op1, nullptr, "elt.minimumnum");
     return RValue::get(Result);
   }
 
