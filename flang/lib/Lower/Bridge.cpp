@@ -6773,9 +6773,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
 }
 
 Fortran::lower::LoweringBridge::~LoweringBridge() {
-  if (diagHandlerID) {
+  if (diagHandlerID)
     context.getDiagEngine().eraseHandler(*diagHandlerID);
-  }
 }
 
 void Fortran::lower::genCleanUpInRegionIfAny(
