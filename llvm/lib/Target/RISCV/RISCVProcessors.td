@@ -595,8 +595,7 @@ def VENTANA_VEYRON_V1 : RISCVProcessorModel<"veyron-v1",
                                               TuneZExtHFusion,
                                               TuneZExtWFusion,
                                               TuneShiftedZExtWFusion,
-                                              TuneLDADDFusion,
-                                              TuneADDLWFusion,
+                                              TuneADDLoadFusion,
                                               TuneAUIPCLoadFusion,
                                               TuneLUILoadFusion]> {
   let MVendorID = 0x61f;

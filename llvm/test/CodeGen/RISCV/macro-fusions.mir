@@ -1,9 +1,9 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
-# RUN:   -mattr=+lui-addi-fusion,+auipc-addi-fusion,+auipc-addiw-fusion,+zexth-fusion,+zextw-fusion,+shifted-zextw-fusion,+ld-add-fusion \
-# RUN:   -mattr=+add-load-fusion,+add-lw-fusion,+auipc-load-fusion,+lui-load-fusion,+addi-load-fusion \
-# RUN:   -mattr=+zba,+adduw-load-fusion,+shxadd-load-fusion,+shxadduw-load-fusion \
+# RUN:   -mattr=+lui-addi-fusion,+auipc-addi-fusion,+zexth-fusion,+zextw-fusion,+shifted-zextw-fusion,+ld-add-fusion \
+# RUN:   -mattr=+add-load-fusion,+auipc-load-fusion,+lui-load-fusion,+addi-load-fusion \
+# RUN:   -mattr=+zba,+shxadd-load-fusion \
 # RUN:   | FileCheck %s
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
@@ -38,23 +38,6 @@ body:             |
     %2:gpr = AUIPC 1
     %3:gpr = XORI %1, 2
     %4:gpr = ADDI %2, 3
-    $x10 = COPY %3
-    $x11 = COPY %4
-    PseudoRET
-...
-
-# CHECK: auipc_addiw
-# CHECK: Macro fuse: {{.*}}AUIPC - ADDIW
----
-name: auipc_addiw
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    liveins: $x10
-    %1:gpr = COPY $x10
-    %2:gpr = AUIPC 1
-    %3:gpr = XORI %1, 2
-    %4:gpr = ADDIW %2, 3
     $x10 = COPY %3
     $x11 = COPY %4
     PseudoRET
