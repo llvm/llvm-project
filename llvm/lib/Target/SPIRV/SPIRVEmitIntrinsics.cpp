@@ -641,6 +641,7 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
     } else if (StructType *ST = dyn_cast<StructType>(CurType)) {
       uint32_t StructSize = DL.getTypeSizeInBits(ST) / 8;
       assert(Offset < StructSize);
+      (void)StructSize;
       const auto &STL = DL.getStructLayout(ST);
       unsigned Element = STL->getElementContainingOffset(Offset);
       Offset -= STL->getElementOffset(Element);
