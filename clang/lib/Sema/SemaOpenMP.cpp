@@ -16478,8 +16478,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPMessageClause(Expr *ME,
   }
 
   // Convert array type to pointer type if needed.
-  if (Type->isArrayType())
-    ME = SemaRef.DefaultFunctionArrayConversion(ME).get();
+  ME = SemaRef.DefaultFunctionArrayLvalueConversion(ME).get();
 
   return new (getASTContext())
       OMPMessageClause(ME, StartLoc, LParenLoc, EndLoc);
