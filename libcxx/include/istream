@@ -295,7 +295,7 @@ public:
 
   basic_istream& ignore(streamsize __n = 1, int_type __dlm = traits_type::eof());
   template <class _Tp = char_type, __enable_if_t<is_same<_Tp, char>::value, int> = 0>
-  inline _LIBCPP_HIDE_FROM_ABI_AFTER_V1 basic_istream& ignore(streamsize __n, char_type __delim) {
+  _LIBCPP_HIDE_FROM_ABI basic_istream& ignore(streamsize __n, char_type __delim) {
     return ignore(__n, traits_type::to_int_type(__delim));
   }
   int_type peek();
