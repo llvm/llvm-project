@@ -11,6 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/LLVMIR/XeVMDialect.h"
 #include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
@@ -403,4 +405,19 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
                                                          target);
     (void)mlir::applyPartialConversion(op, target, std::move(patterns));
   }
+}
+
+std::optional<std::string> xegpu::getXeGPUChipStr(Operation *op) {
+  auto gpuModuleOp = op->getParentOfType<mlir::gpu::GPUModuleOp>();
+  if (gpuModuleOp) {
+    auto targetAttrs = gpuModuleOp.getTargets();
+    if (targetAttrs) {
+      for (auto &attr : *targetAttrs) {
+        auto xevmAttr = llvm::dyn_cast<mlir::xevm::XeVMTargetAttr>(attr);
+        if (xevmAttr)
+          return xevmAttr.getChip().str();
+      }
+    }
+  }
+  return std::nullopt;
 }

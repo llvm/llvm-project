@@ -123,7 +123,7 @@ isValidGatherScatterBufferParams(Type maskTy, VectorType valueTy,
 
   // a valid shape for SIMT case
   if (valueTy.getRank() == 1) {
-    if (valueTy.getNumElements() != chunkSize)
+    if (valueTy.getNumElements() % chunkSize != 0)
       return emitError() << "value elements must match chunk size " << chunkSize
                          << " for SIMT code.";
     return success();
@@ -674,7 +674,7 @@ LogicalResult PrefetchOp::verify() {
   auto tdescTy = getTensorDescType();
 
   if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
+    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!tdescTy && getRankOf(getSource()) > 1)
     return emitOpError(
@@ -755,7 +755,7 @@ LogicalResult StoreScatterOp::verify() {
   auto valueTy = getValueType();
 
   if (tdescTy && !tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
+    return emitOpError("Expects a scattered TensorDesc.");
 
   if (!tdescTy && getRankOf(getDest()) > 1)
     return emitOpError(
