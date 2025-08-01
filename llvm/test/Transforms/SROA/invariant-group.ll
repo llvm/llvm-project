@@ -157,23 +157,23 @@ define void @partial_promotion_of_alloca() {
 
 define void @launder_in_loop() {
 ; CHECK-LABEL: @launder_in_loop(
-; CHECK-NEXT:    br label %[[HEADER:.*]]
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    br i1 true, label [[BODY:%.*]], label [[EXIT:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[STRUCT:%.*]] = call [[T:%.*]] @[[MAKE_T:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]]()
+; CHECK-NEXT:    [[STRUCT_FCA_0_EXTRACT:%.*]] = extractvalue [[T]] [[STRUCT]], 0
+; CHECK-NEXT:    [[STRUCT_FCA_1_EXTRACT:%.*]] = extractvalue [[T]] [[STRUCT]], 1
+; CHECK-NEXT:    br label [[HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
 ;
   %struct_ptr = alloca %t, i64 1, align 4
   br label %header
 
-; CHECK:       [[HEADER]]:
-; CHECK-NEXT:    br i1 true, label %[[BODY:.*]], label %[[EXIT:.*]]
-;
 header:
   br i1 true, label %body, label %exit
 
-; CHECK:       [[BODY]]:
-; CHECK-NEXT:    [[STRUCT:%.*]] = call %t @make_t()
-; CHECK-NEXT:    [[FIRST:%.*]] = extractvalue %t [[STRUCT]], 0
-; CHECK-NEXT:    [[SECOND:%.*]] = extractvalue %t [[STRUCT]], 1
-; CHECK-NEXT:    br label %[[HEADER]]
-;
 body:                                                ; preds = %6
   %struct_ptr_fresh = call ptr @llvm.launder.invariant.group.p0(ptr %struct_ptr)
   %struct = call %t @make_t()
@@ -184,9 +184,6 @@ body:                                                ; preds = %6
   %second = load i32, ptr %second_ptr, align 4
   br label %header
 
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    ret void
-;
 exit:
   ret void
 }
