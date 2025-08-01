@@ -102,8 +102,9 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
   // If i8 type and constant non-zero value.
   if ((Src.getValueType() == MVT::i8) && !IsZeroVal)
     // Replicate byte to word by multiplication with 0x01010101.
-    SrcValueReplicated = DAG.getNode(ISD::MUL, dl, MVT::i32, SrcValueReplicated,
-                                     DAG.getConstant(0x01010101ul, dl, MVT::i32));
+    SrcValueReplicated =
+        DAG.getNode(ISD::MUL, dl, MVT::i32, SrcValueReplicated,
+                    DAG.getConstant(0x01010101ul, dl, MVT::i32));
 
   // We limit a QC_SETWMI to 16 words or less to improve interruptibility.
   // So for 1-16 words we use a single QC_SETWMI:
@@ -127,7 +128,7 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
   // QC_SETWMI R2, R0, N, 124
   //
   // For 48 words or more, call the target independent memset
-  if ( NumberOfWords >= 48)
+  if (NumberOfWords >= 48)
     return SDValue();
 
   if (NumberOfWords <= 16) {
