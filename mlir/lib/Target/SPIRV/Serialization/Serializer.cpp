@@ -1187,6 +1187,21 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
   return resultID;
 }
 
+// Returns type of attribute. In case of a TypedAttr this will simply return
+// the type. But for an ArrayAttr which is untyped and can be multidimensional
+// it creates the ArrayType recursively.
+static Type getValueType(Attribute attr) {
+  if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
+    return typedAttr.getType();
+  }
+
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    return spirv::ArrayType::get(getValueType(arrayAttr[0]), arrayAttr.size());
+  }
+
+  return nullptr;
+}
+
 uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
                                                        Type resultType,
                                                        Attribute valueAttr) {
@@ -1200,18 +1215,9 @@ uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
     return 0;
   }
 
-  Type valueType;
-  if (auto typedAttr = dyn_cast<TypedAttr>(valueAttr)) {
-    valueType = typedAttr.getType();
-  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
-    auto typedElemAttr = dyn_cast<TypedAttr>(arrayAttr[0]);
-    if (!typedElemAttr)
-      return 0;
-    valueType =
-        spirv::ArrayType::get(typedElemAttr.getType(), arrayAttr.size());
-  } else {
+  Type valueType = getValueType(valueAttr);
+  if (!valueAttr)
     return 0;
-  }
 
   auto compositeType = dyn_cast<CompositeType>(resultType);
   if (!compositeType)
