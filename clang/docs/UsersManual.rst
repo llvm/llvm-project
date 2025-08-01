@@ -39,7 +39,8 @@ specific section:
    C99 (+TC1, TC2, TC3), C11, C17, C23, and C2y.
 -  :ref:`Objective-C Language <objc>`: ObjC 1, ObjC 2, ObjC 2.1, plus
    variants depending on base language.
--  :ref:`C++ Language <cxx>`
+-  :ref:`C++ Language <cxx>`: C++98, C++03, C++11, C++14, C++17, C++20, C++23,
+   and C++2c.
 -  :ref:`Objective C++ Language <objcxx>`
 -  :ref:`OpenCL Kernel Language <opencl>`: OpenCL C 1.0, 1.1, 1.2, 2.0, 3.0,
    and C++ for OpenCL 1.0 and 2021.
