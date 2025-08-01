@@ -3469,6 +3469,12 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
 // --- Common definitions
 
+#define INHERITED_WRAPPER_CLASS_BOILERPLATE(classname, basename) \
+  BOILERPLATE(classname); \
+  using basename::basename; \
+  classname(basename &&base) : basename(std::move(base)) {} \
+  using WrapperTrait = std::true_type
+
 struct OmpClause;
 struct OmpDirectiveSpecification;
 
@@ -3476,6 +3482,7 @@ struct OmpDirectiveName {
   // No boilerplates: this class should be copyable, movable, etc.
   constexpr OmpDirectiveName() = default;
   constexpr OmpDirectiveName(const OmpDirectiveName &) = default;
+  constexpr OmpDirectiveName(llvm::omp::Directive x) : v(x) {}
   // Construct from an already parsed text. Use Verbatim for this because
   // Verbatim's source corresponds to an actual source location.
   // This allows "construct<OmpDirectiveName>(Verbatim("<name>"))".
@@ -3769,6 +3776,16 @@ struct OmpAlwaysModifier {
   WRAPPER_CLASS_BOILERPLATE(OmpAlwaysModifier, Value);
 };
 
+// Ref: [6.0:289-290]
+//
+// automap-modifier ->
+//    automap                                       // since 6.0
+//
+struct OmpAutomapModifier {
+  ENUM_CLASS(Value, Automap);
+  WRAPPER_CLASS_BOILERPLATE(OmpAutomapModifier, Value);
+};
+
 // Ref: [5.2:252-254]
 //
 // chunk-modifier ->
@@ -3848,7 +3865,10 @@ struct OmpDeviceModifier {
 // [*] The IF clause is allowed on CANCEL in OpenMP 4.5, but only without
 // the directive-name-modifier. For the sake of uniformity CANCEL can be
 // considered a valid value in 4.5 as well.
-using OmpDirectiveNameModifier = OmpDirectiveName;
+struct OmpDirectiveNameModifier : public OmpDirectiveName {
+  INHERITED_WRAPPER_CLASS_BOILERPLATE(
+      OmpDirectiveNameModifier, OmpDirectiveName);
+};
 
 // Ref: [5.1:205-209], [5.2:166-168]
 //
@@ -4350,6 +4370,17 @@ struct OmpDeviceTypeClause {
   WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, DeviceTypeDescription);
 };
 
+// Ref: [5.2:158-159], [6.0:289-290]
+//
+// enter-clause ->
+//    ENTER(locator-list) |
+//    ENTER(automap-modifier: locator-list) |         // since 6.0
+struct OmpEnterClause {
+  TUPLE_CLASS_BOILERPLATE(OmpEnterClause);
+  MODIFIER_BOILERPLATE(OmpAutomapModifier);
+  std::tuple<MODIFIERS(), OmpObjectList> t;
+};
+
 // OMP 5.2 15.8.3 extended-atomic, fail-clause ->
 //    FAIL(memory-order)
 struct OmpFailClause {
@@ -4808,18 +4839,17 @@ struct OmpEndSectionsDirective {
 //    structured-block]
 // ...
 struct OpenMPSectionConstruct {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPSectionConstruct, Block);
+  TUPLE_CLASS_BOILERPLATE(OpenMPSectionConstruct);
+  std::tuple<std::optional<OmpDirectiveSpecification>, Block> t;
   CharBlock source;
 };
 
-// `OmpSectionBlocks` is a list of section constructs. The parser guarentees
-// that the `OpenMPConstruct` here always encapsulates an
-// `OpenMPSectionConstruct` and not any other OpenMP construct.
-WRAPPER_CLASS(OmpSectionBlocks, std::list<OpenMPConstruct>);
-
 struct OpenMPSectionsConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPSectionsConstruct);
-  std::tuple<OmpBeginSectionsDirective, OmpSectionBlocks,
+  CharBlock source;
+  // Each of the OpenMPConstructs in the list below contains an
+  // OpenMPSectionConstruct. This is guaranteed by the parser.
+  std::tuple<OmpBeginSectionsDirective, std::list<OpenMPConstruct>,
       OmpEndSectionsDirective>
       t;
 };
