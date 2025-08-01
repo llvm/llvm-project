@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "src/__support/CPP/atomic.h"
 #include "hdr/stdint_proxy.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
@@ -69,23 +69,14 @@ static LIBC_NAMESPACE::cpp::Atomic<size_t> used = 0;
 
 extern "C" {
 
+// For simple test purposes.
 void *malloc(size_t s) {
   constexpr size_t MAX_ALIGNMENT = alignof(long double);
-  if (s > MEMORY_SIZE)
-    return nullptr; // Not enough memory.
-  size_t offset = s % MAX_ALIGNMENT;
-  s = offset == 0
-          ? s
-          : s + MAX_ALIGNMENT - offset; // Align the size to the max alignment.
-  for (;;) {
-    size_t current_used = used.load();
-    if (current_used + s > MEMORY_SIZE)
-      return nullptr; // Not enough memory.
-
-    // Try to reserve the memory.
-    if (used.compare_exchange_strong(current_used, current_used + s))
-      return &memory[current_used];
-  }
+  s += (-s) & (MAX_ALIGNMENT - 1); // Align to max alignment.
+  auto res = used.fetch_add(s);
+  if (res + s > MEMORY_SIZE)
+    return nullptr; // Out of memory.
+  return &memory[res];
 }
 
 void free(void *) {}
