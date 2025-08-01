@@ -719,9 +719,9 @@ wrapDeviceImages(ArrayRef<std::unique_ptr<MemoryBuffer>> Buffers,
       return std::move(Err);
     break;
   case OFK_SYCL: {
-    offloading::sycl::SYCLWrappingOptions WrappingOptions;
-    if (Error Err = offloading::sycl::wrapSYCLBinaries(M, BuffersToWrap,
-                                                       WrappingOptions))
+    offloading::SYCLWrappingOptions WrappingOptions;
+    if (Error Err =
+            offloading::wrapSYCLBinaries(M, BuffersToWrap, WrappingOptions))
       return Err;
     break;
   }
