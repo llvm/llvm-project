@@ -262,6 +262,9 @@ bool GCNPreRAOptimizationsImpl::isUnpackingSupportedInstr(MachineInstr &MI) cons
 
 uint16_t GCNPreRAOptimizationsImpl::mapToUnpackedOpcode(MachineInstr &I) {
   unsigned Opcode = I.getOpcode();
+  // use 64 bit encoding to allow use of VOP3 instructions.
+  // VOP3 instructions allow VOP3P source modifiers to be translated to VOP3
+  // e32 instructions are VOP2 and don't allow source modifiers
   switch (Opcode) {
     case AMDGPU::V_PK_ADD_F32:
       return AMDGPU::V_ADD_F32_e64;
