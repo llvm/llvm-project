@@ -20,6 +20,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -60,6 +61,12 @@ Type *ABITypeMapper::convertType(const abi::Type *ABIType) {
   case abi::TypeKind::Void:
     Result = Type::getVoidTy(Context);
     break;
+  case abi::TypeKind::Complex:
+    Result = convertComplexType(cast<abi::ComplexType>(ABIType));
+    break;
+  case abi::TypeKind::MemberPointer:
+    Result = convertMemberPointerType(cast<abi::MemberPointerType>(ABIType));
+    break;
   }
 
   if (Result)
@@ -97,8 +104,10 @@ Type *ABITypeMapper::convertVectorType(const abi::VectorType *VT) {
 }
 
 Type *ABITypeMapper::convertStructType(const abi::StructType *ST) {
-  return createStructFromFields(*ST->getFields(), ST->getNumFields(),
-                                ST->getSizeInBits(), ST->getAlignment(), false);
+  ArrayRef<abi::FieldInfo> FieldsArray(ST->getFields(), ST->getNumFields());
+  return createStructFromFields(FieldsArray, ST->getNumFields(),
+                                ST->getSizeInBits(), ST->getAlignment(), false,
+                                ST->isCoercedStruct());
 }
 
 Type *ABITypeMapper::convertUnionType(const abi::UnionType *UT) {
@@ -106,10 +115,51 @@ Type *ABITypeMapper::convertUnionType(const abi::UnionType *UT) {
                                 UT->getSizeInBits(), UT->getAlignment(), true);
 }
 
-StructType *
-ABITypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
-                                      uint32_t NumFields, TypeSize Size,
-                                      Align Alignment, bool IsUnion) {
+Type *ABITypeMapper::convertComplexType(const abi::ComplexType *CT) {
+  // Complex types are represented as structs with two elements: {real, imag}
+  Type *ElementType = convertType(CT->getElementType());
+  if (!ElementType)
+    return nullptr;
+  //   // Check if the element type is a float type and is 16 bits (half
+  //   precision)
+  // if (ElementType->isFloatingPointTy() &&
+  // ElementType->getPrimitiveSizeInBits() == 2 /* bytes */ * 8) {
+  //   // Return <2 x half> vector type for complex half
+  //   return VectorType::get(ElementType, ElementCount::getFixed(2));
+  // }
+
+  SmallVector<Type *, 2> Fields = {ElementType, ElementType};
+  return StructType::get(Context, Fields, /*isPacked=*/false);
+}
+
+Type *
+ABITypeMapper::convertMemberPointerType(const abi::MemberPointerType *MPT) {
+
+  if (MPT->isFunctionPointer()) {
+    if (MPT->has64BitPointers()) {
+      // {i64, i64} for function pointer + adjustment
+      Type *I64 = IntegerType::get(Context, 64);
+      SmallVector<Type *, 2> Fields = {I64, I64};
+      return StructType::get(Context, Fields, /*isPacked=*/false);
+    } else {
+      // {i32, i32} for 32-bit systems
+      Type *I32 = IntegerType::get(Context, 32);
+      SmallVector<Type *, 2> Fields = {I32, I32};
+      return StructType::get(Context, Fields, /*isPacked=*/false);
+    }
+  } else {
+    // Data member pointer - single offset value
+    if (MPT->has64BitPointers()) {
+      return IntegerType::get(Context, 64);
+    } else {
+      return IntegerType::get(Context, 32);
+    }
+  }
+}
+
+StructType *ABITypeMapper::createStructFromFields(
+    ArrayRef<abi::FieldInfo> Fields, uint32_t NumFields, TypeSize Size,
+    Align Alignment, bool IsUnion, bool IsCoercedStr) {
   SmallVector<Type *, 16> FieldTypes;
 
   if (IsUnion) {
@@ -156,7 +206,7 @@ ABITypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
     uint64_t CurrentOffset = 0;
 
     for (const auto &Field : Fields) {
-      if (Field.OffsetInBits > CurrentOffset) {
+      if (!IsCoercedStr && Field.OffsetInBits > CurrentOffset) {
         uint64_t PaddingBits = Field.OffsetInBits - CurrentOffset;
         if (PaddingBits % 8 == 0 && PaddingBits >= 8) {
           Type *ByteType = IntegerType::get(Context, 8);
@@ -190,16 +240,18 @@ ABITypeMapper::createStructFromFields(ArrayRef<abi::FieldInfo> Fields,
       }
     }
 
-    uint64_t TotalSizeBits = Size.getFixedValue();
-    if (CurrentOffset < TotalSizeBits) {
-      uint64_t PaddingBits = TotalSizeBits - CurrentOffset;
-      if (PaddingBits % 8 == 0 && PaddingBits >= 8) {
-        Type *ByteType = IntegerType::get(Context, 8);
-        Type *PaddingType = ArrayType::get(ByteType, PaddingBits / 8);
-        FieldTypes.push_back(PaddingType);
-      } else if (PaddingBits > 0) {
-        Type *PaddingType = IntegerType::get(Context, PaddingBits);
-        FieldTypes.push_back(PaddingType);
+    if (!IsCoercedStr) {
+      uint64_t TotalSizeBits = Size.getFixedValue();
+      if (CurrentOffset < TotalSizeBits) {
+        uint64_t PaddingBits = TotalSizeBits - CurrentOffset;
+        if (PaddingBits % 8 == 0 && PaddingBits >= 8) {
+          Type *ByteType = IntegerType::get(Context, 8);
+          Type *PaddingType = ArrayType::get(ByteType, PaddingBits / 8);
+          FieldTypes.push_back(PaddingType);
+        } else if (PaddingBits > 0) {
+          Type *PaddingType = IntegerType::get(Context, PaddingBits);
+          FieldTypes.push_back(PaddingType);
+        }
       }
     }
   }
