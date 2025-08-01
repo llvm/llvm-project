@@ -361,7 +361,7 @@ public:
   }
 
   /// setDiagnostics - Replace the current diagnostics engine.
-  void setDiagnostics(DiagnosticsEngine *Value);
+  void setDiagnostics(llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Value);
 
   DiagnosticConsumer &getDiagnosticClient() const {
     assert(Diagnostics && Diagnostics->getClient() &&
