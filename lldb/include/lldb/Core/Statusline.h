@@ -9,6 +9,8 @@
 #ifndef LLDB_CORE_STATUSLINE_H
 #define LLDB_CORE_STATUSLINE_H
 
+#include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/ExecutionContext.h"
 #include "lldb/lldb-forward.h"
 #include <cstdint>
 #include <string>
@@ -25,9 +27,9 @@ public:
   /// Hide the statusline and extend the scroll window.
   void Disable();
 
-  /// Redraw the statusline. If update is false, this will redraw the last
-  /// string.
-  void Redraw(bool update = true);
+  /// Redraw the statusline. If both exe_ctx and sym_ctx are NULL, this redraws
+  /// the last string.
+  void Redraw(const ExecutionContext *exe_ctx, const SymbolContext *sym_ctx);
 
   /// Inform the statusline that the terminal dimensions have changed.
   void TerminalSizeChanged();
@@ -46,7 +48,8 @@ private:
   void UpdateScrollWindow(ScrollWindowMode mode);
 
   Debugger &m_debugger;
-  std::string m_last_str;
+  ExecutionContext m_exe_ctx;
+  SymbolContext m_symbol_ctx;
   uint64_t m_terminal_width = 0;
   uint64_t m_terminal_height = 0;
 };
