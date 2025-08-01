@@ -13,7 +13,7 @@
 ; CHECK: %[[#FOR_BODY]] = OpLabel
 ; CHECK: %[[#FOR_BODY137_LR_PH]] = OpLabel
 
-define spir_kernel void @test(ptr addrspace(1) %arg) {
+define spir_kernel void @test(ptr addrspace(1) %arg, i1 %cond) {
 entry:
   br label %for.body
 
@@ -21,5 +21,5 @@ for.body137.lr.ph:                                ; preds = %for.body
   ret void
 
 for.body:                                         ; preds = %for.body, %entry
-  br i1 undef, label %for.body, label %for.body137.lr.ph
+  br i1 %cond, label %for.body, label %for.body137.lr.ph
 }
