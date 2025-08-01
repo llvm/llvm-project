@@ -2726,9 +2726,10 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
           DAG.getMachineFunction().getFunction(), PtrVT))
     return SDValue();
 
-  if (N0.getOpcode() == ISD::PTRADD && N1.getOpcode() == ISD::Constant) {
+  if (N0.getOpcode() == ISD::PTRADD && isa<ConstantSDNode>(N1)) {
     // Fold (ptradd (ptradd GA, v), c) -> (ptradd (ptradd GA, c) v) with
     // global address GA and constant c, such that c can be folded into GA.
+    // TODO: Support constant vector splats.
     SDValue GAValue = N0.getOperand(0);
     if (const GlobalAddressSDNode *GA =
             dyn_cast<GlobalAddressSDNode>(GAValue)) {
