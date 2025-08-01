@@ -27,17 +27,14 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   TargetParser
   )
 
-if(NOT WIN32)
-  add_dependencies(ClangReplInterpreterTests
-    llvm-jitlink-executor
-  )
-endif()
-
 if(TARGET compiler-rt)
   list(APPEND CLANG_REPL_TEST_SOURCES
-    OOPJITInterpreterTest.cpp
+    InterpreterTestOOP.cpp
   )
-  add_dependencies(ClangReplInterpreterTests compiler-rt)
+  add_dependencies(ClangReplInterpreterTests 
+    llvm-jitlink-executor 
+    compiler-rt
+  )
   message(STATUS "Compiler-RT found, enabling OOP JIT tests")
   set(CLANG_HAS_COMPILER_RT TRUE)
 else()
