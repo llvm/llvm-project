@@ -106,25 +106,14 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
   return true;
 }
 
-/// Scope managing label targets.
-template <class Emitter> class LabelScope {
-public:
-  virtual ~LabelScope() {}
-
-protected:
-  LabelScope(Compiler<Emitter> *Ctx) : Ctx(Ctx) {}
-  /// Compiler instance.
-  Compiler<Emitter> *Ctx;
-};
-
 /// Sets the context for break/continue statements.
-template <class Emitter> class LoopScope final : public LabelScope<Emitter> {
+template <class Emitter> class LoopScope final {
 public:
   using LabelTy = typename Compiler<Emitter>::LabelTy;
   using OptLabelTy = typename Compiler<Emitter>::OptLabelTy;
 
   LoopScope(Compiler<Emitter> *Ctx, LabelTy BreakLabel, LabelTy ContinueLabel)
-      : LabelScope<Emitter>(Ctx), OldBreakLabel(Ctx->BreakLabel),
+      : Ctx(Ctx), OldBreakLabel(Ctx->BreakLabel),
         OldContinueLabel(Ctx->ContinueLabel),
         OldBreakVarScope(Ctx->BreakVarScope),
         OldContinueVarScope(Ctx->ContinueVarScope) {
@@ -142,6 +131,7 @@ public:
   }
 
 private:
+  Compiler<Emitter> *Ctx;
   OptLabelTy OldBreakLabel;
   OptLabelTy OldContinueLabel;
   VariableScope<Emitter> *OldBreakVarScope;
@@ -149,7 +139,7 @@ private:
 };
 
 // Sets the context for a switch scope, mapping labels.
-template <class Emitter> class SwitchScope final : public LabelScope<Emitter> {
+template <class Emitter> class SwitchScope final {
 public:
   using LabelTy = typename Compiler<Emitter>::LabelTy;
   using OptLabelTy = typename Compiler<Emitter>::OptLabelTy;
@@ -157,7 +147,7 @@ public:
 
   SwitchScope(Compiler<Emitter> *Ctx, CaseMap &&CaseLabels, LabelTy BreakLabel,
               OptLabelTy DefaultLabel)
-      : LabelScope<Emitter>(Ctx), OldBreakLabel(Ctx->BreakLabel),
+      : Ctx(Ctx), OldBreakLabel(Ctx->BreakLabel),
         OldDefaultLabel(this->Ctx->DefaultLabel),
         OldCaseLabels(std::move(this->Ctx->CaseLabels)),
         OldLabelVarScope(Ctx->BreakVarScope) {
@@ -175,6 +165,7 @@ public:
   }
 
 private:
+  Compiler<Emitter> *Ctx;
   OptLabelTy OldBreakLabel;
   OptLabelTy OldDefaultLabel;
   CaseMap OldCaseLabels;
@@ -457,13 +448,17 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     assert(isPtrType(*FromT));
     assert(isPtrType(*ToT));
     if (FromT == ToT) {
-      if (CE->getType()->isVoidPointerType())
+      if (CE->getType()->isVoidPointerType() &&
+          !SubExprTy->isFunctionPointerType()) {
         return this->delegate(SubExpr);
+      }
 
       if (!this->visit(SubExpr))
         return false;
-      if (CE->getType()->isFunctionPointerType())
-        return true;
+      if (CE->getType()->isFunctionPointerType() ||
+          SubExprTy->isFunctionPointerType()) {
+        return this->emitFnPtrCast(CE);
+      }
       if (FromT == PT_Ptr)
         return this->emitPtrPtrCast(SubExprTy->isVoidPointerType(), CE);
       return true;
@@ -1762,6 +1757,9 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->delegate(Inits[0]);
+
+    if (!R)
+      return false;
 
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T,

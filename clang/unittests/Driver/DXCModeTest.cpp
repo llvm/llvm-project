@@ -57,8 +57,8 @@ static void validateTargetProfile(
 TEST(DxcModeTest, TargetProfileValidation) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
@@ -107,8 +107,8 @@ TEST(DxcModeTest, TargetProfileValidation) {
 TEST(DxcModeTest, ValidatorVersionValidation) {
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
 
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
@@ -210,8 +210,8 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
 }
 
 TEST(DxcModeTest, DefaultEntry) {
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
 
   InMemoryFileSystem->addFile("foo.hlsl", 0,
                               llvm::MemoryBuffer::getMemBuffer("\n"));
