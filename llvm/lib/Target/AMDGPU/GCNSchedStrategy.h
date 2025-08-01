@@ -16,6 +16,9 @@
 #include "GCNRegPressure.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 
@@ -28,11 +31,12 @@ class GCNSchedStage;
 
 enum class GCNSchedStageID : unsigned {
   OccInitialSchedule = 0,
-  UnclusteredHighRPReschedule = 1,
-  ClusteredLowOccupancyReschedule = 2,
-  PreRARematerialize = 3,
-  ILPInitialSchedule = 4,
-  MemoryClauseInitialSchedule = 5
+  RewriteSchedule = 1,
+  UnclusteredHighRPReschedule = 2,
+  ClusteredLowOccupancyReschedule = 3,
+  PreRARematerialize = 4,
+  ILPInitialSchedule = 5,
+  MemoryClauseInitialSchedule = 6
 };
 
 #ifndef NDEBUG
@@ -224,6 +228,7 @@ using RegionBoundaries =
 class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   friend class GCNSchedStage;
   friend class OccInitialScheduleStage;
+  friend class RewriteScheduleStage;
   friend class UnclusteredHighRPStage;
   friend class ClusteredLowOccStage;
   friend class PreRARematStage;
@@ -249,6 +254,11 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // Record regions with excess register pressure over the physical register
   // limit. Register pressure in these regions usually will result in spilling.
   BitVector RegionsWithExcessRP;
+
+  // Record regions with excess archvgpr register pressure over the physical
+  // register limit. Register pressure in these regions usually will result in
+  // spilling.
+  BitVector RegionsWithExcessArchVGPR;
 
   // Regions that has the same occupancy as the latest MinOccupancy
   BitVector RegionsWithMinOcc;
@@ -398,6 +408,25 @@ public:
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
   OccInitialScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
+      : GCNSchedStage(StageID, DAG) {}
+};
+
+class RewriteScheduleStage : public GCNSchedStage {
+private:
+  const TargetRegisterClass *
+  recomputeRegClassExceptRewritable(Register Reg,
+                                    const TargetRegisterClass *OldRC,
+                                    const TargetRegisterClass *NewRC) const;
+
+  bool isRewriteCandidate(MachineInstr *MI) const;
+
+  MachineBranchProbabilityInfo MBPI;
+  MachineBlockFrequencyInfo MBFI;
+
+public:
+  bool initGCNSchedStage() override;
+
+  RewriteScheduleStage(GCNSchedStageID StageID, GCNScheduleDAGMILive &DAG)
       : GCNSchedStage(StageID, DAG) {}
 };
 

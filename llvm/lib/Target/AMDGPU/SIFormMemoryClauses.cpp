@@ -197,9 +197,7 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // pointer becomes dead and could otherwise be reused for destination.
   RPT.advanceToNext();
   GCNRegPressure MaxPressure = RPT.moveMaxPressure();
-  unsigned Occupancy = MaxPressure.getOccupancy(
-      *ST,
-      MI.getMF()->getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
+  unsigned Occupancy = MaxPressure.getOccupancy(*MI.getMF());
 
   // Don't push over half the register budget. We don't want to introduce
   // spilling just to form a soft clause.
@@ -211,7 +209,10 @@ bool SIFormMemoryClausesImpl::checkPressure(const MachineInstr &MI,
   // tracking does not account for the alignment requirements for SGPRs, or the
   // fragmentation of registers the allocator will need to satisfy.
   if (Occupancy >= MFI->getMinAllowedOccupancy() &&
-      MaxPressure.getVGPRNum(ST->hasGFX90AInsts()) <= MaxVGPRs / 2 &&
+      MaxPressure.getVGPRNum(
+          ST->hasGFX90AInsts(),
+          ST->getMaxNumVectorRegs(MI.getMF()->getFunction()).first) <=
+          MaxVGPRs / 2 &&
       MaxPressure.getSGPRNum() <= MaxSGPRs / 2) {
     LastRecordedOccupancy = Occupancy;
     return true;
