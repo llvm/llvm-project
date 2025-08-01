@@ -1,5 +1,5 @@
 ; RUN: llc -O0 -mtriple=spirv-unknown-vulkan %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan-compute %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
 
 ; CHECK-SPIRV: %[[#short:]] = OpTypeInt 32
 ; CHECK-SPIRV: %[[#short2:]] = OpTypeVector %[[#short]] 2
