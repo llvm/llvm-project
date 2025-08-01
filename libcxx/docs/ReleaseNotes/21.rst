@@ -96,10 +96,6 @@ Improvements and New Features
   production but should not be used outside of this scenario. Please refer to the :ref:`Hardening documentation
   <hardening>` for details.
 
-- The ``std::{fill, fill_n}`` and ``std::ranges::{fill, fill_n}`` algorithms have been optimized for segmented iterators,
-  resulting in a performance improvement of at least 10x for ``std::deque<int>`` iterators and
-  ``std::join_view<std::vector<std::vector<int>>>`` iterators.
-
 Deprecations and Removals
 -------------------------
 
