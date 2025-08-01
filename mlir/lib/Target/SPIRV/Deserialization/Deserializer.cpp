@@ -1792,11 +1792,9 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   Attribute attr;
   if (resultType.isIntOrFloat() || isa<VectorType>(resultType)) {
     attr = opBuilder.getZeroAttr(resultType);
-  } else if (isa<TensorArmType>(resultType)) {
-    auto shapedType = cast<ShapedType>(resultType);
-    auto element = opBuilder.getZeroAttr(shapedType.getElementType());
-    if (element)
-      attr = DenseElementsAttr::get(shapedType, element);
+  } else if (auto tensorType = dyn_cast<TensorArmType>(resultType)) {
+    if (auto element = opBuilder.getZeroAttr(tensorType.getElementType()))
+      attr = DenseElementsAttr::get(tensorType, element);
   }
 
   if (attr) {

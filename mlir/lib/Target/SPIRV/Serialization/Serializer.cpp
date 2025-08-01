@@ -69,7 +69,7 @@ static Block *getPhiIncomingBlock(Block *block) {
   return block;
 }
 
-static bool isNull(Attribute attr) {
+static bool isZeroValue(Attribute attr) {
   if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
     return floatAttr.getValue().isZero();
   }
@@ -79,8 +79,11 @@ static bool isNull(Attribute attr) {
   if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
     return intAttr.getValue().isZero();
   }
+  if (auto splatElemAttr = dyn_cast<SplatElementsAttr>(attr)) {
+    return isZeroValue(splatElemAttr.getSplatValue<Attribute>());
+  }
   if (auto denseElemAttr = dyn_cast<DenseElementsAttr>(attr)) {
-    return all_of(denseElemAttr.getValues<Attribute>(), isNull);
+    return all_of(denseElemAttr.getValues<Attribute>(), isZeroValue);
   }
   return false;
 }
@@ -975,7 +978,7 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
       return 0;
     }
   } else if (isa<spirv::TensorArmType>(constType)) {
-    if (isNull(valueAttr)) {
+    if (isZeroValue(valueAttr)) {
       encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
                             {typeID, resultID});
       return resultID;
@@ -1223,7 +1226,7 @@ uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
   }
 
   uint32_t resultID = getNextID();
-  if (dyn_cast<spirv::TensorArmType>(resultType) && isNull(valueAttr)) {
+  if (dyn_cast<spirv::TensorArmType>(resultType) && isZeroValue(valueAttr)) {
     encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
                           {typeID, resultID});
   } else {
