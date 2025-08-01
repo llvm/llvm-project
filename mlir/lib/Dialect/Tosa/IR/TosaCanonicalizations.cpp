@@ -454,12 +454,12 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
 
     if (isa<FloatType>(inputElementType)) {
       // Unlike integer types, floating point types can represent infinity.
-      auto minClamp =
+      const auto minClamp =
           llvm::cast<mlir::FloatAttr>(op.getMinValAttr()).getValue();
-      auto maxClamp =
+      const auto maxClamp =
           llvm::cast<mlir::FloatAttr>(op.getMaxValAttr()).getValue();
-      bool isMin = minClamp.isNegInfinity();
-      bool isMax = maxClamp.isInfinity();
+      const bool isMin = minClamp.isNegInfinity();
+      const bool isMax = maxClamp.isInfinity();
 
       if (isMin && isMax) {
         rewriter.replaceOp(op, input);
@@ -471,16 +471,16 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
     // i1 types are boolean in TOSA
     const bool isBoolean = inputElementType.isInteger(1);
     if (inputElementType.isUnsignedInteger() || isBoolean) {
-      int64_t minClamp = llvm::cast<mlir::IntegerAttr>(op.getMinValAttr())
-                             .getValue()
-                             .getZExtValue();
-      int64_t maxClamp = llvm::cast<mlir::IntegerAttr>(op.getMaxValAttr())
-                             .getValue()
-                             .getZExtValue();
+      const int64_t minClamp = llvm::cast<mlir::IntegerAttr>(op.getMinValAttr())
+                                   .getValue()
+                                   .getZExtValue();
+      const int64_t maxClamp = llvm::cast<mlir::IntegerAttr>(op.getMaxValAttr())
+                                   .getValue()
+                                   .getZExtValue();
 
-      unsigned bitWidth = inputElementType.getIntOrFloatBitWidth();
-      int64_t intMin = APInt::getMinValue(bitWidth).getZExtValue();
-      int64_t intMax = APInt::getMaxValue(bitWidth).getZExtValue();
+      const unsigned bitWidth = inputElementType.getIntOrFloatBitWidth();
+      const int64_t intMin = APInt::getMinValue(bitWidth).getZExtValue();
+      const int64_t intMax = APInt::getMaxValue(bitWidth).getZExtValue();
 
       if (minClamp <= intMin && maxClamp >= intMax) {
         rewriter.replaceOp(op, input);
@@ -490,14 +490,14 @@ struct ClampIsNoOp : public OpRewritePattern<tosa::ClampOp> {
     }
 
     if (llvm::isa<IntegerType>(inputElementType)) {
-      int64_t minClamp =
+      const int64_t minClamp =
           llvm::cast<mlir::IntegerAttr>(op.getMinValAttr()).getInt();
-      int64_t maxClamp =
+      const int64_t maxClamp =
           llvm::cast<mlir::IntegerAttr>(op.getMaxValAttr()).getInt();
 
-      unsigned bitWidth = inputElementType.getIntOrFloatBitWidth();
-      int64_t intMin = APInt::getSignedMinValue(bitWidth).getSExtValue();
-      int64_t intMax = APInt::getSignedMaxValue(bitWidth).getSExtValue();
+      const unsigned bitWidth = inputElementType.getIntOrFloatBitWidth();
+      const int64_t intMin = APInt::getSignedMinValue(bitWidth).getSExtValue();
+      const int64_t intMax = APInt::getSignedMaxValue(bitWidth).getSExtValue();
 
       if (minClamp <= intMin && maxClamp >= intMax) {
         rewriter.replaceOp(op, input);
