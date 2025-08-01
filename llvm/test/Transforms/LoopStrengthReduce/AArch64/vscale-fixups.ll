@@ -383,14 +383,14 @@ define void @vscale_squared_offset(ptr %alloc) #0 {
 ; COMMON-LABEL: vscale_squared_offset:
 ; COMMON:       // %bb.0: // %entry
 ; COMMON-NEXT:    rdvl x9, #1
+; COMMON-NEXT:    rdvl x10, #4
 ; COMMON-NEXT:    fmov z0.s, #4.00000000
-; COMMON-NEXT:    mov x8, xzr
 ; COMMON-NEXT:    lsr x9, x9, #4
 ; COMMON-NEXT:    fmov z1.s, #8.00000000
-; COMMON-NEXT:    cntw x10
+; COMMON-NEXT:    mov x8, xzr
 ; COMMON-NEXT:    ptrue p0.s, vl1
-; COMMON-NEXT:    umull x9, w9, w9
-; COMMON-NEXT:    lsl x9, x9, #6
+; COMMON-NEXT:    umull x9, w9, w10
+; COMMON-NEXT:    cntw x10
 ; COMMON-NEXT:    cmp x8, x10
 ; COMMON-NEXT:    b.ge .LBB6_2
 ; COMMON-NEXT:  .LBB6_1: // %for.body
