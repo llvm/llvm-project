@@ -276,12 +276,15 @@ void ProcedureRef::DetermineCopyInOut() {
   if (!procInfo) {
     return;
   }
-  // TODO: at this point have dummy arguments as procInfo->dummyArguments
-  // and have actual arguments via arguments_
-
-  // TODO: implicitly declared procedure may not have any information about
-  // its dummy args. Handle this case.
-
+  if (!procInfo->HasExplicitInterface()) {
+    for (auto &actual : arguments_) {
+      if (!actual) {
+        continue;
+      }
+      DetermineCopyInOutArgument(*procInfo, *actual);
+    }
+    return;
+  }
   // Don't change anything about actual or dummy arguments, except for
   // computing copy-in/copy-out information. If detect something wrong with
   // the arguments, stop processing and let semantic analysis generate the
@@ -308,7 +311,13 @@ void ProcedureRef::DetermineCopyInOut() {
       }
       else {
         processedKeywords.insert(actualName);
-
+        if (auto it = std::find_if(procInfo->dummyArguments.begin(),
+            procInfo->dummyArguments.end(),
+            [&](const characteristics::DummyArgument &dummy) {
+              return dummy.name == actualName;
+            }); it != procInfo->dummyArguments.end()) {
+          DetermineCopyInOutArgument(*procInfo, *actual, *it);
+        }
       }
     }
     else if (seenKeyword) {
@@ -318,6 +327,8 @@ void ProcedureRef::DetermineCopyInOut() {
     }
     else {
       // Positional argument processing
+      DetermineCopyInOutArgument(*procInfo, *actual,
+          procInfo->dummyArguments[index]);
     }
 
     ++index;
