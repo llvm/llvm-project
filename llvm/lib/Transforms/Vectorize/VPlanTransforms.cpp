@@ -1413,7 +1413,7 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
 static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
                                       ElementCount BestVF, unsigned BestUF,
                                       ScalarEvolution &SE) {
-  if (match(Cond, m_Binary<Instruction::Or>(m_VPValue(), m_VPValue())))
+  if (match(Cond, m_BinaryOr(m_VPValue(), m_VPValue())))
     return any_of(Cond->getDefiningRecipe()->operands(), [&Plan, BestVF, BestUF,
                                                           &SE](VPValue *C) {
       return isConditionTrueViaVFAndUF(C, Plan, BestVF, BestUF, SE);
