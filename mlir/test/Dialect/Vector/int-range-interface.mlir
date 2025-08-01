@@ -108,3 +108,11 @@ func.func @test_vector_extsi() -> vector<2xi32> {
   %2 = test.reflect_bounds %1 : vector<2xi32>
   func.return %2 : vector<2xi32>
 }
+
+// CHECK-LABEL: func @vector_step
+// CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index}
+func.func @vector_step() -> vector<8xindex> {
+  %0 = vector.step : vector<8xindex>
+  %1 = test.reflect_bounds %0 : vector<8xindex>
+  func.return %1 : vector<8xindex>
+}

@@ -60,6 +60,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -665,10 +666,9 @@ void TypeSystemClang::CreateASTContext() {
   m_file_manager_up = std::make_unique<clang::FileManager>(
       file_system_options, FileSystem::Instance().GetVirtualFileSystem());
 
-  llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_id_sp(new DiagnosticIDs());
   m_diagnostic_options_up = std::make_unique<DiagnosticOptions>();
-  m_diagnostics_engine_up =
-      std::make_unique<DiagnosticsEngine>(diag_id_sp, *m_diagnostic_options_up);
+  m_diagnostics_engine_up = std::make_unique<DiagnosticsEngine>(
+      DiagnosticIDs::create(), *m_diagnostic_options_up);
 
   m_source_manager_up = std::make_unique<clang::SourceManager>(
       *m_diagnostics_engine_up, *m_file_manager_up);
@@ -796,6 +796,8 @@ TypeSystemClang::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
       return GetType(ast.LongDoubleTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.HalfTy))
       return GetType(ast.HalfTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, ast.Float128Ty))
+      return GetType(ast.Float128Ty);
     break;
 
   case eEncodingVector:
@@ -957,6 +959,13 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     if (type_name == "long double" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleTy))
       return GetType(ast.LongDoubleTy);
+    // As Rust currently uses `TypeSystemClang`, match `f128` here as well so it
+    // doesn't get misinterpreted as `long double` on targets where they are
+    // the same size but different formats.
+    if ((type_name == "__float128" || type_name == "_Float128" ||
+         type_name == "f128") &&
+        QualTypeMatchesBitSize(bit_size, ast, ast.Float128Ty))
+      return GetType(ast.Float128Ty);
     // Fall back to not requiring a name match
     if (QualTypeMatchesBitSize(bit_size, ast, ast.FloatTy))
       return GetType(ast.FloatTy);
@@ -966,6 +975,8 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
       return GetType(ast.LongDoubleTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.HalfTy))
       return GetType(ast.HalfTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, ast.Float128Ty))
+      return GetType(ast.Float128Ty);
     break;
 
   case DW_ATE_signed:
@@ -2055,6 +2066,8 @@ TypeSystemClang::GetOpaqueCompilerType(clang::ASTContext *ast,
     return ast->DoubleTy.getAsOpaquePtr();
   case eBasicTypeLongDouble:
     return ast->LongDoubleTy.getAsOpaquePtr();
+  case eBasicTypeFloat128:
+    return ast->Float128Ty.getAsOpaquePtr();
   case eBasicTypeFloatComplex:
     return ast->getComplexType(ast->FloatTy).getAsOpaquePtr();
   case eBasicTypeDoubleComplex:
@@ -4743,19 +4756,24 @@ CompilerType TypeSystemClang::CreateGenericFunctionPrototype() {
 // Exploring the type
 
 const llvm::fltSemantics &
-TypeSystemClang::GetFloatTypeSemantics(size_t byte_size) {
+TypeSystemClang::GetFloatTypeSemantics(size_t byte_size, lldb::Format format) {
   clang::ASTContext &ast = getASTContext();
   const size_t bit_size = byte_size * 8;
   if (bit_size == ast.getTypeSize(ast.FloatTy))
     return ast.getFloatTypeSemantics(ast.FloatTy);
   else if (bit_size == ast.getTypeSize(ast.DoubleTy))
     return ast.getFloatTypeSemantics(ast.DoubleTy);
+  else if (format == eFormatFloat128 &&
+           bit_size == ast.getTypeSize(ast.Float128Ty))
+    return ast.getFloatTypeSemantics(ast.Float128Ty);
   else if (bit_size == ast.getTypeSize(ast.LongDoubleTy) ||
            bit_size == llvm::APFloat::semanticsSizeInBits(
                            ast.getFloatTypeSemantics(ast.LongDoubleTy)))
     return ast.getFloatTypeSemantics(ast.LongDoubleTy);
   else if (bit_size == ast.getTypeSize(ast.HalfTy))
     return ast.getFloatTypeSemantics(ast.HalfTy);
+  else if (bit_size == ast.getTypeSize(ast.Float128Ty))
+    return ast.getFloatTypeSemantics(ast.Float128Ty);
   return llvm::APFloatBase::Bogus();
 }
 
@@ -5233,6 +5251,8 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:
       return lldb::eFormatFloat;
+    case clang::BuiltinType::Float128:
+      return lldb::eFormatFloat128;
     default:
       return lldb::eFormatHex;
     }
@@ -5530,6 +5550,8 @@ TypeSystemClang::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
         return eBasicTypeDouble;
       case clang::BuiltinType::LongDouble:
         return eBasicTypeLongDouble;
+      case clang::BuiltinType::Float128:
+        return eBasicTypeFloat128;
 
       case clang::BuiltinType::NullPtr:
         return eBasicTypeNullPtr;
@@ -6091,6 +6113,7 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
     case clang::BuiltinType::Float:
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:
+    case clang::BuiltinType::Float128:
     case clang::BuiltinType::Dependent:
     case clang::BuiltinType::Overload:
     case clang::BuiltinType::ObjCId:
@@ -8734,6 +8757,7 @@ bool TypeSystemClang::DumpTypeValue(
         case eFormatHex:
         case eFormatHexUppercase:
         case eFormatFloat:
+        case eFormatFloat128:
         case eFormatOctal:
         case eFormatOSType:
         case eFormatUnsigned:
@@ -9044,6 +9068,21 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
   return ConstString();
 }
 
+static ConstString
+ExtractMangledNameFromFunctionCallLabel(llvm::StringRef label) {
+  auto label_or_err = FunctionCallLabel::fromString(label);
+  if (!label_or_err) {
+    llvm::consumeError(label_or_err.takeError());
+    return {};
+  }
+
+  llvm::StringRef mangled = label_or_err->lookup_name;
+  if (Mangled::IsMangledName(mangled))
+    return ConstString(mangled);
+
+  return {};
+}
+
 ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
   clang::NamedDecl *nd = llvm::dyn_cast_or_null<clang::NamedDecl>(
       static_cast<clang::Decl *>(opaque_decl));
@@ -9054,6 +9093,13 @@ ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
   clang::MangleContext *mc = getMangleContext();
   if (!mc || !mc->shouldMangleCXXName(nd))
     return {};
+
+  // We have an LLDB FunctionCallLabel instead of an ordinary mangled name.
+  // Extract the mangled name out of this label.
+  if (const auto *label = nd->getAttr<AsmLabelAttr>())
+    if (ConstString mangled =
+            ExtractMangledNameFromFunctionCallLabel(label->getLabel()))
+      return mangled;
 
   llvm::SmallVector<char, 1024> buf;
   llvm::raw_svector_ostream llvm_ostrm(buf);

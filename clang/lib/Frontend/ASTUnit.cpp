@@ -1204,7 +1204,7 @@ bool ASTUnit::Parse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
 
   // Set up diagnostics, capturing any diagnostics that would
   // otherwise be dropped.
-  Clang->setDiagnostics(&getDiagnostics());
+  Clang->setDiagnostics(getDiagnosticsPtr());
 
   // Create the target instance.
   if (!Clang->createTarget())
@@ -1424,7 +1424,7 @@ ASTUnit::getMainBufferWithPrecompiledPreamble(
       PreambleInvocationIn.getFrontendOpts().SkipFunctionBodies = true;
 
     llvm::ErrorOr<PrecompiledPreamble> NewPreamble = PrecompiledPreamble::Build(
-        PreambleInvocationIn, MainFileBuffer.get(), Bounds, *Diagnostics, VFS,
+        PreambleInvocationIn, MainFileBuffer.get(), Bounds, Diagnostics, VFS,
         PCHContainerOps, StorePreamblesInMemory, PreambleStoragePath,
         Callbacks);
 
@@ -1624,7 +1624,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
 
   // Set up diagnostics, capturing any diagnostics that would
   // otherwise be dropped.
-  Clang->setDiagnostics(&AST->getDiagnostics());
+  Clang->setDiagnostics(AST->getDiagnosticsPtr());
 
   // Create the target instance.
   if (!Clang->createTarget())
@@ -2209,8 +2209,9 @@ void ASTUnit::CodeComplete(
     bool IncludeCodePatterns, bool IncludeBriefComments,
     CodeCompleteConsumer &Consumer,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    DiagnosticsEngine &Diag, LangOptions &LangOpts, SourceManager &SourceMgr,
-    FileManager &FileMgr, SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
+    llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diag, LangOptions &LangOpts,
+    SourceManager &SourceMgr, FileManager &FileMgr,
+    SmallVectorImpl<StoredDiagnostic> &StoredDiagnostics,
     SmallVectorImpl<const llvm::MemoryBuffer *> &OwnedBuffers,
     std::unique_ptr<SyntaxOnlyAction> Act) {
   if (!Invocation)
@@ -2259,11 +2260,11 @@ void ASTUnit::CodeComplete(
       std::string(Clang->getFrontendOpts().Inputs[0].getFile());
 
   // Set up diagnostics, capturing any diagnostics produced.
-  Clang->setDiagnostics(&Diag);
+  Clang->setDiagnostics(Diag);
   CaptureDroppedDiagnostics Capture(CaptureDiagsKind::All,
                                     Clang->getDiagnostics(),
                                     &StoredDiagnostics, nullptr);
-  ProcessWarningOptions(Diag, Inv.getDiagnosticOpts(),
+  ProcessWarningOptions(*Diag, Inv.getDiagnosticOpts(),
                         FileMgr.getVirtualFileSystem());
 
   // Create the target instance.

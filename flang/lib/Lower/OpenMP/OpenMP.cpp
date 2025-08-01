@@ -407,16 +407,9 @@ static void processHostEvalClauses(lower::AbstractConverter &converter,
     common::visit(
         common::visitors{
             [&](const parser::OpenMPBlockConstruct &ompConstruct) {
-              const auto &beginDirective =
-                  std::get<parser::OmpBeginBlockDirective>(ompConstruct.t);
-              beginClauseList =
-                  &std::get<parser::OmpClauseList>(beginDirective.t);
-              if (auto &endDirective =
-                      std::get<std::optional<parser::OmpEndBlockDirective>>(
-                          ompConstruct.t)) {
-                endClauseList =
-                    &std::get<parser::OmpClauseList>(endDirective->t);
-              }
+              beginClauseList = &ompConstruct.BeginDir().Clauses();
+              if (auto &endSpec = ompConstruct.EndDir())
+                endClauseList = &endSpec->Clauses();
             },
             [&](const parser::OpenMPLoopConstruct &ompConstruct) {
               const auto &beginDirective =
@@ -3148,11 +3141,16 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
-  // TODO: Support delayed privatization.
-  DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
-                           /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, symTable);
-  dsp.processStep1();
+  DataSharingProcessor distributeItemDSP(
+      converter, semaCtx, distributeItem->clauses, eval,
+      /*shouldCollectPreDeterminedSymbols=*/false,
+      /*useDelayedPrivatization=*/true, symTable);
+  distributeItemDSP.processStep1(&distributeClauseOps);
+
+  DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
+                                   /*shouldCollectPreDeterminedSymbols=*/true,
+                                   /*useDelayedPrivatization=*/true, symTable);
+  simdItemDSP.processStep1(&simdClauseOps);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
@@ -3163,13 +3161,15 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
 
   // Operation creation.
   EntryBlockArgs distributeArgs;
-  // TODO: Add private syms and vars.
+  distributeArgs.priv.syms = distributeItemDSP.getDelayedPrivSymbols();
+  distributeArgs.priv.vars = distributeClauseOps.privateVars;
   auto distributeOp = genWrapperOp<mlir::omp::DistributeOp>(
       converter, loc, distributeClauseOps, distributeArgs);
   distributeOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
+  simdArgs.priv.syms = simdItemDSP.getDelayedPrivSymbols();
+  simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
@@ -3179,7 +3179,7 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, simdItem,
                 loopNestClauseOps, iv,
                 {{distributeOp, distributeArgs}, {simdOp, simdArgs}},
-                llvm::omp::Directive::OMPD_distribute_simd, dsp);
+                llvm::omp::Directive::OMPD_distribute_simd, simdItemDSP);
   return distributeOp;
 }
 
@@ -3203,11 +3203,16 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   genSimdClauses(converter, semaCtx, simdItem->clauses, loc, simdClauseOps,
                  simdReductionSyms);
 
-  // TODO: Support delayed privatization.
-  DataSharingProcessor dsp(converter, semaCtx, simdItem->clauses, eval,
-                           /*shouldCollectPreDeterminedSymbols=*/true,
-                           /*useDelayedPrivatization=*/false, symTable);
-  dsp.processStep1();
+  DataSharingProcessor wsloopItemDSP(
+      converter, semaCtx, doItem->clauses, eval,
+      /*shouldCollectPreDeterminedSymbols=*/false,
+      /*useDelayedPrivatization=*/true, symTable);
+  wsloopItemDSP.processStep1(&wsloopClauseOps);
+
+  DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
+                                   /*shouldCollectPreDeterminedSymbols=*/true,
+                                   /*useDelayedPrivatization=*/true, symTable);
+  simdItemDSP.processStep1(&simdClauseOps);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
@@ -3218,7 +3223,8 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
 
   // Operation creation.
   EntryBlockArgs wsloopArgs;
-  // TODO: Add private syms and vars.
+  wsloopArgs.priv.syms = wsloopItemDSP.getDelayedPrivSymbols();
+  wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
   wsloopArgs.reduction.syms = wsloopReductionSyms;
   wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
   auto wsloopOp = genWrapperOp<mlir::omp::WsloopOp>(
@@ -3226,7 +3232,8 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   wsloopOp.setComposite(/*val=*/true);
 
   EntryBlockArgs simdArgs;
-  // TODO: Add private syms and vars.
+  simdArgs.priv.syms = simdItemDSP.getDelayedPrivSymbols();
+  simdArgs.priv.vars = simdClauseOps.privateVars;
   simdArgs.reduction.syms = simdReductionSyms;
   simdArgs.reduction.vars = simdClauseOps.reductionVars;
   auto simdOp =
@@ -3236,7 +3243,7 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
   genLoopNestOp(converter, symTable, semaCtx, eval, loc, queue, simdItem,
                 loopNestClauseOps, iv,
                 {{wsloopOp, wsloopArgs}, {simdOp, simdArgs}},
-                llvm::omp::Directive::OMPD_do_simd, dsp);
+                llvm::omp::Directive::OMPD_do_simd, simdItemDSP);
   return wsloopOp;
 }
 
@@ -3719,25 +3726,16 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPBlockConstruct &blockConstruct) {
-  const auto &beginBlockDirective =
-      std::get<parser::OmpBeginBlockDirective>(blockConstruct.t);
-  mlir::Location currentLocation =
-      converter.genLocation(beginBlockDirective.source);
-  const auto origDirective =
-      std::get<parser::OmpBlockDirective>(beginBlockDirective.t).v;
-  List<Clause> clauses = makeClauses(
-      std::get<parser::OmpClauseList>(beginBlockDirective.t), semaCtx);
+  const parser::OmpDirectiveSpecification &beginSpec =
+      blockConstruct.BeginDir();
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
+  if (auto &endSpec = blockConstruct.EndDir())
+    clauses.append(makeClauses(endSpec->Clauses(), semaCtx));
 
-  if (const auto &endBlockDirective =
-          std::get<std::optional<parser::OmpEndBlockDirective>>(
-              blockConstruct.t)) {
-    clauses.append(makeClauses(
-        std::get<parser::OmpClauseList>(endBlockDirective->t), semaCtx));
-  }
-
-  assert(llvm::omp::blockConstructSet.test(origDirective) &&
+  llvm::omp::Directive directive = beginSpec.DirId();
+  assert(llvm::omp::blockConstructSet.test(directive) &&
          "Expected block construct");
-  (void)origDirective;
+  mlir::Location currentLocation = converter.genLocation(beginSpec.source);
 
   for (const Clause &clause : clauses) {
     mlir::Location clauseLocation = converter.genLocation(clause.source);
@@ -3780,13 +3778,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     }
   }
 
-  llvm::omp::Directive directive =
-      std::get<parser::OmpBlockDirective>(beginBlockDirective.t).v;
-  const parser::CharBlock &source =
-      std::get<parser::OmpBlockDirective>(beginBlockDirective.t).source;
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                          eval, source, directive, clauses)};
+                          eval, beginSpec.source, directive, clauses)};
   genOMPDispatch(converter, symTable, semaCtx, eval, currentLocation, queue,
                  queue.begin());
 }
@@ -4074,8 +4068,7 @@ bool Fortran::lower::isOpenMPTargetConstruct(
     const parser::OpenMPConstruct &omp) {
   llvm::omp::Directive dir = llvm::omp::Directive::OMPD_unknown;
   if (const auto *block = std::get_if<parser::OpenMPBlockConstruct>(&omp.u)) {
-    const auto &begin = std::get<parser::OmpBeginBlockDirective>(block->t);
-    dir = std::get<parser::OmpBlockDirective>(begin.t).v;
+    dir = block->BeginDir().DirId();
   } else if (const auto *loop =
                  std::get_if<parser::OpenMPLoopConstruct>(&omp.u)) {
     const auto &begin = std::get<parser::OmpBeginLoopDirective>(loop->t);
