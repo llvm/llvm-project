@@ -512,6 +512,25 @@ TEST_F(LifetimeAnalysisTest, PointersAndExpirationInACycle) {
   EXPECT_THAT(LoansTo({"temp"}), AreExpiredAt("after_loop"));
 }
 
+TEST_F(LifetimeAnalysisTest, InfiniteLoopPrunesEdges) {
+  SetupTest(R"(
+    void target(MyObj out) {
+      MyObj *p = &out;
+      POINT(before_loop);
+
+      for (;;) {
+        POINT(begin);
+        MyObj in;
+        p = &in;
+        POINT(end);
+      }
+    }
+  )");
+  EXPECT_THAT(Origin("p"), HasLoansTo({"out"}, "before_loop"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"in", "out"}, "begin"));
+  EXPECT_THAT(Origin("p"), HasLoansTo({"in"}, "end"));
+}
+
 TEST_F(LifetimeAnalysisTest, NestedScopes) {
   SetupTest(R"(
     void target() {
