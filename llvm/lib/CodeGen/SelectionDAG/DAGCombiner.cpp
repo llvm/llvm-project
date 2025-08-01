@@ -15263,23 +15263,31 @@ SDValue DAGCombiner::visitAssertExt(SDNode *N) {
     }
   }
 
-  // If we have (AssertZext (and (AssertSext X, iX), M), iY) and Y is smaller
-  // than X, and the And doesn't change the lower iX bits, we can move the
-  // AssertZext in front of the And and drop the AssertSext.
   if (Opcode == ISD::AssertZext && N0.getOpcode() == ISD::AND &&
-      N0.hasOneUse() && N0.getOperand(0).getOpcode() == ISD::AssertSext &&
       isa<ConstantSDNode>(N0.getOperand(1))) {
-    SDValue BigA = N0.getOperand(0);
-    EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
     const APInt &Mask = N0.getConstantOperandAPInt(1);
-    if (AssertVT.bitsLT(BigA_AssertVT) &&
-        Mask.countr_one() >= BigA_AssertVT.getScalarSizeInBits()) {
-      SDLoc DL(N);
-      SDValue NewAssert =
-          DAG.getNode(Opcode, DL, N->getValueType(0), BigA.getOperand(0), N1);
-      return DAG.getNode(ISD::AND, DL, N->getValueType(0), NewAssert,
-                         N0.getOperand(1));
+
+    // If we have (AssertZext (and (AssertSext X, iX), M), iY) and Y is smaller
+    // than X, and the And doesn't change the lower iX bits, we can move the
+    // AssertZext in front of the And and drop the AssertSext.
+    if (N0.getOperand(0).getOpcode() == ISD::AssertSext && N0.hasOneUse()) {
+      SDValue BigA = N0.getOperand(0);
+      EVT BigA_AssertVT = cast<VTSDNode>(BigA.getOperand(1))->getVT();
+      if (AssertVT.bitsLT(BigA_AssertVT) &&
+          Mask.countr_one() >= BigA_AssertVT.getScalarSizeInBits()) {
+        SDLoc DL(N);
+        SDValue NewAssert =
+            DAG.getNode(Opcode, DL, N->getValueType(0), BigA.getOperand(0), N1);
+        return DAG.getNode(ISD::AND, DL, N->getValueType(0), NewAssert,
+                           N0.getOperand(1));
+      }
     }
+
+    // Remove AssertZext entirely if the mask guarantees the assertion cannot
+    // fail.
+    // TODO: Use KB countMinLeadingZeros to handle non-constant masks?
+    if (Mask.isIntN(AssertVT.getScalarSizeInBits()))
+      return N0;
   }
 
   return SDValue();
@@ -28974,13 +28982,100 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   return SDValue();
 }
 
+static SDValue matchMergedBFX(SDValue Root, SelectionDAG &DAG,
+                              const TargetLowering &TLI) {
+  // Match a pattern such as:
+  //  (X | (X >> C0) | (X >> C1) | ...) & Mask
+  // This extracts contiguous parts of X and ORs them together before comparing.
+  // We can optimize this so that we directly check (X & SomeMask) instead,
+  // eliminating the shifts.
+
+  EVT VT = Root.getValueType();
+
+  // TODO: Support vectors?
+  if (!VT.isScalarInteger() || Root.getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue N0 = Root.getOperand(0);
+  SDValue N1 = Root.getOperand(1);
+
+  if (N0.getOpcode() != ISD::OR || !isa<ConstantSDNode>(N1))
+    return SDValue();
+
+  APInt RootMask = cast<ConstantSDNode>(N1)->getAsAPIntVal();
+
+  SDValue Src;
+  const auto IsSrc = [&](SDValue V) {
+    if (!Src) {
+      Src = V;
+      return true;
+    }
+
+    return Src == V;
+  };
+
+  SmallVector<SDValue> Worklist = {N0};
+  APInt PartsMask(VT.getSizeInBits(), 0);
+  while (!Worklist.empty()) {
+    SDValue V = Worklist.pop_back_val();
+    if (!V.hasOneUse() && (Src && Src != V))
+      return SDValue();
+
+    if (V.getOpcode() == ISD::OR) {
+      Worklist.push_back(V.getOperand(0));
+      Worklist.push_back(V.getOperand(1));
+      continue;
+    }
+
+    if (V.getOpcode() == ISD::SRL) {
+      SDValue ShiftSrc = V.getOperand(0);
+      SDValue ShiftAmt = V.getOperand(1);
+
+      if (!IsSrc(ShiftSrc) || !isa<ConstantSDNode>(ShiftAmt))
+        return SDValue();
+
+      auto ShiftAmtVal = cast<ConstantSDNode>(ShiftAmt)->getAsZExtVal();
+      if (ShiftAmtVal > RootMask.getBitWidth())
+        return SDValue();
+
+      PartsMask |= (RootMask << ShiftAmtVal);
+      continue;
+    }
+
+    if (IsSrc(V)) {
+      PartsMask |= RootMask;
+      continue;
+    }
+
+    return SDValue();
+  }
+
+  if (!Src)
+    return SDValue();
+
+  SDLoc DL(Root);
+  return DAG.getNode(ISD::AND, DL, VT,
+                     {Src, DAG.getConstant(PartsMask, DL, VT)});
+}
+
 /// This is a stub for TargetLowering::SimplifySetCC.
 SDValue DAGCombiner::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                                    ISD::CondCode Cond, const SDLoc &DL,
                                    bool foldBooleans) {
   TargetLowering::DAGCombinerInfo
     DagCombineInfo(DAG, Level, false, this);
-  return TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL);
+  if (SDValue C =
+          TLI.SimplifySetCC(VT, N0, N1, Cond, foldBooleans, DagCombineInfo, DL))
+    return C;
+
+  if (ISD::isIntEqualitySetCC(Cond) && N0.getOpcode() == ISD::AND &&
+      isNullConstant(N1)) {
+
+    if (SDValue Res = matchMergedBFX(N0, DAG, TLI))
+      return DAG.getSetCC(DL, VT, Res, N1, Cond);
+  }
+
+  return SDValue();
 }
 
 /// Given an ISD::SDIV node expressing a divide by constant, return

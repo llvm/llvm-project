@@ -83,6 +83,10 @@ public:
   /// specification.
   void convertTargetTriple();
 
+  /// Converts the module level asm of the LLVM module to an MLIR module
+  /// level asm specification.
+  void convertModuleLevelAsm();
+
   /// Stores the mapping between an LLVM value and its MLIR counterpart.
   void mapValue(llvm::Value *llvm, Value mlir) { mapValue(llvm) = mlir; }
 
