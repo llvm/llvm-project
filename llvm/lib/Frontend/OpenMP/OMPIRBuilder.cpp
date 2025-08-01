@@ -7957,8 +7957,12 @@ static Expected<Function *> createOutlinedFunction(
     // preceding mapped arguments that refer to the same global that may be
     // seperate segments. To prevent this, we defer global processing until all
     // other processing has been performed.
+<<<<<<< HEAD
     if (llvm::isa<llvm::GlobalValue, llvm::GlobalObject, llvm::GlobalVariable>(
             removeASCastIfPresent(Input))) {
+=======
+    if (llvm::isa<llvm::GlobalValue, llvm::GlobalObject, llvm::GlobalVariable>(removeASCastIfPresent(Input))) {
+>>>>>>> 1d1536f712a6 ([Flang][OpenMP] Additional global address space modifications for device)
       DeferredReplacement.push_back(std::make_pair(Input, InputCopy));
       continue;
     }
