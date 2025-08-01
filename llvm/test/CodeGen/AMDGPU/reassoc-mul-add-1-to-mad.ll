@@ -4130,6 +4130,12 @@ define amdgpu_kernel void @compute_mad(ptr addrspace(4) %i18, ptr addrspace(4) %
 ; GFX1250-NEXT:    v_mad_u32 v2, v3, v2, v3
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v2, off
 ; GFX1250-NEXT:    s_endpgm
+
+
+
+
+
+
 bb:
   %i = tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
   %i2 = add i32 %arg1, 1

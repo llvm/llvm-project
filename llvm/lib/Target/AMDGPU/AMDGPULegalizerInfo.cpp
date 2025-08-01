@@ -2315,8 +2315,8 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
         LLT::scalar(32), commonAlignment(Align(64), Offset));
 
     // Pointer address
-    B.buildPtrAdd(LoadAddr, KernargPtrReg,
-                  B.buildConstant(LLT::scalar(64), Offset).getReg(0));
+    B.buildObjectPtrOffset(LoadAddr, KernargPtrReg,
+                           B.buildConstant(LLT::scalar(64), Offset).getReg(0));
     // Load address
     return B.buildLoad(S32, LoadAddr, *MMO).getReg(0);
   }
@@ -2337,8 +2337,9 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
           MachineMemOperand::MOInvariant,
       LLT::scalar(32), commonAlignment(Align(64), StructOffset));
 
-  B.buildPtrAdd(LoadAddr, QueuePtr,
-                B.buildConstant(LLT::scalar(64), StructOffset).getReg(0));
+  B.buildObjectPtrOffset(
+      LoadAddr, QueuePtr,
+      B.buildConstant(LLT::scalar(64), StructOffset).getReg(0));
   return B.buildLoad(S32, LoadAddr, *MMO).getReg(0);
 }
 
@@ -3396,7 +3397,7 @@ static bool allowApproxFunc(const MachineFunction &MF, unsigned Flags) {
   if (Flags & MachineInstr::FmAfn)
     return true;
   const auto &Options = MF.getTarget().Options;
-  return Options.UnsafeFPMath || Options.ApproxFuncFPMath;
+  return Options.ApproxFuncFPMath;
 }
 
 static bool needsDenormHandlingF32(const MachineFunction &MF, Register Src,
@@ -3502,7 +3503,7 @@ bool AMDGPULegalizerInfo::legalizeFlogCommon(MachineInstr &MI,
       static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
 
   if (Ty == F16 || MI.getFlag(MachineInstr::FmAfn) ||
-      TM.Options.ApproxFuncFPMath || TM.Options.UnsafeFPMath) {
+      TM.Options.ApproxFuncFPMath) {
     if (Ty == F16 && !ST.has16BitInsts()) {
       Register LogVal = MRI.createGenericVirtualRegister(F32);
       auto PromoteSrc = B.buildFPExt(F32, X);
@@ -4707,8 +4708,7 @@ Register AMDGPULegalizerInfo::getKernargParameterPtr(MachineIRBuilder &B,
     llvm_unreachable("failed to find kernarg segment ptr");
 
   auto COffset = B.buildConstant(LLT::scalar(64), Offset);
-  // TODO: Should get nuw
-  return B.buildPtrAdd(PtrTy, KernArgReg, COffset).getReg(0);
+  return B.buildObjectPtrOffset(PtrTy, KernArgReg, COffset).getReg(0);
 }
 
 /// Legalize a value that's loaded from kernel arguments. This is only used by
@@ -5067,9 +5067,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
   uint16_t Flags = MI.getFlags();
   LLT ResTy = MRI.getType(Res);
 
-  const MachineFunction &MF = B.getMF();
-  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn) ||
-                            MF.getTarget().Options.UnsafeFPMath;
+  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
 
   if (const auto *CLHS = getConstantFPVRegVal(LHS, MRI)) {
     if (!AllowInaccurateRcp && ResTy != LLT::scalar(16))
@@ -5129,9 +5127,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   uint16_t Flags = MI.getFlags();
   LLT ResTy = MRI.getType(Res);
 
-  const MachineFunction &MF = B.getMF();
-  bool AllowInaccurateRcp = MF.getTarget().Options.UnsafeFPMath ||
-                            MI.getFlag(MachineInstr::FmAfn);
+  bool AllowInaccurateRcp = MI.getFlag(MachineInstr::FmAfn);
 
   if (!AllowInaccurateRcp)
     return false;
@@ -5883,8 +5879,8 @@ bool AMDGPULegalizerInfo::getImplicitArgPtr(Register DstReg,
                       AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR))
     return false;
 
-  // FIXME: This should be nuw
-  B.buildPtrAdd(DstReg, KernargPtrReg, B.buildConstant(IdxTy, Offset).getReg(0));
+  B.buildObjectPtrOffset(DstReg, KernargPtrReg,
+                         B.buildConstant(IdxTy, Offset).getReg(0));
   return true;
 }
 
@@ -7244,8 +7240,8 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
     // Pointer address
     Register LoadAddr = MRI.createGenericVirtualRegister(
         LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
-    B.buildPtrAdd(LoadAddr, KernargPtrReg,
-                  B.buildConstant(LLT::scalar(64), Offset).getReg(0));
+    B.buildObjectPtrOffset(LoadAddr, KernargPtrReg,
+                           B.buildConstant(LLT::scalar(64), Offset).getReg(0));
     // Load address
     Register Temp = B.buildLoad(S64, LoadAddr, *MMO).getReg(0);
     B.buildCopy(SGPR01, Temp);

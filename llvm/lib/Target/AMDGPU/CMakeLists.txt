@@ -201,6 +201,7 @@ add_llvm_target(AMDGPUCodeGen
   Instrumentation
   MC
   MIRParser
+  ObjCARC
   Passes
   Scalar
   SelectionDAG

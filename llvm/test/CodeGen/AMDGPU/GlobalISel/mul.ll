@@ -2939,6 +2939,18 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX1250-NEXT:    v_mad_u32 v7, v7, v8, v1
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, v14
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
+
+
+
+
+
+
+
+
+
+
+
+
   %result = mul i256 %num, %den
   ret i256 %result
 }

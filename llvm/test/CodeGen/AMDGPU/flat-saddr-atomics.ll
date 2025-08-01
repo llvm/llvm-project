@@ -546,6 +546,12 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset,
 ; GFX1250-GISEL-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc_lo
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 v0, v[4:5], off scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_endpgm
+
+
+
+
+
+
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %unused = atomicrmw xchg ptr %gep0, i64 %data syncscope("agent") seq_cst
@@ -630,6 +636,12 @@ define amdgpu_ps void @flat_xchg_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %v
 ; GFX1250-GISEL-NEXT:    v_cndmask_b32_e32 v0, -1, v0, vcc_lo
 ; GFX1250-GISEL-NEXT:    scratch_store_b64 v0, v[4:5], off scope:SCOPE_SE
 ; GFX1250-GISEL-NEXT:    s_endpgm
+
+
+
+
+
+
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr %gep0, i64 -128

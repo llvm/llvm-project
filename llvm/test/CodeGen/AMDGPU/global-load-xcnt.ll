@@ -234,6 +234,12 @@ define i32 @test_v64i32_load_store(ptr addrspace(1) %ptr, i32 %idx, ptr addrspac
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x10
 ; GCN-GISEL-NEXT:    v_mov_b32_e32 v0, v16
 ; GCN-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+
+
+
+
+
+
   %vec = load <64 x i32>, ptr addrspace(1) %ptr
   store <64 x i32> %vec, ptr addrspace(1) %out, align 4
   %elt = extractelement <64 x i32> %vec, i32 6
@@ -386,6 +392,12 @@ define i64 @test_v16i64_load_store(ptr addrspace(1) %ptr_a, ptr addrspace(1) %pt
 ; GCN-GISEL-NEXT:    s_wait_xcnt 0x9
 ; GCN-GISEL-NEXT:    v_dual_mov_b32 v0, v12 :: v_dual_mov_b32 v1, v13
 ; GCN-GISEL-NEXT:    s_set_pc_i64 s[30:31]
+
+
+
+
+
+
   %a = load <16 x i64>, ptr addrspace(1) %ptr_a, align 4
   %in_a = insertelement <16 x i64> %a, i64 100, i32 5
   store <16 x i64> %in_a, ptr addrspace(1) null

@@ -1210,6 +1210,16 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
+  // On architectures that support direct loads to LDS, emit an unknown waitcnt
+  // at workgroup-scoped release operations that specify the LDS address space.
+  // SIInsertWaitcnts will later replace this with a vmcnt().
+  if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
+      Scope == SIAtomicScope::WORKGROUP &&
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+    Changed = true;
+  }
+
   if (Pos == Position::AFTER)
     --MI;
 
@@ -2118,6 +2128,16 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
+  // On architectures that support direct loads to LDS, emit an unknown waitcnt
+  // at workgroup-scoped release operations that specify the LDS address space.
+  // SIInsertWaitcnts will later replace this with a vmcnt().
+  if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
+      Scope == SIAtomicScope::WORKGROUP &&
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+    Changed = true;
+  }
+
   if (VSCnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
@@ -2774,6 +2794,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
   assert(!MI->mayLoad() && MI->mayStore());
 
   bool Changed = false;
+  // FIXME: Necessary hack because iterator can lose track of the store.
   MachineInstr &StoreMI = *MI;
 
   if (MOI.isAtomic()) {
@@ -2807,6 +2828,8 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::STORE, MOI.isVolatile(),
       MOI.isNonTemporal());
 
+  // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
+  // instruction field, do not confuse it with atomic scope.
   Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/false);
   return Changed;
 }

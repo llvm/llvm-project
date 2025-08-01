@@ -1667,6 +1667,13 @@ let SubtargetPredicate = HasWaitXcnt in {
   def S_WAIT_XCNT_soft : SOPP_Pseudo<"s_soft_wait_xcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
+// Represents the point at which a wave must wait for all outstanding direct loads to LDS.
+// Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
+
+def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
+   let hasSideEffects = 0;
+}
+
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
 def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16"> {

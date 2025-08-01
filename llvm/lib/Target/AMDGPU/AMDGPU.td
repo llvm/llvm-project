@@ -289,7 +289,7 @@ def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
 def FeatureCUStores : SubtargetFeature<"cu-stores",
   "HasCUStores",
   "true",
-  "Whether SCOPE_CU stores can be used on GFX1250+."
+  "Whether SCOPE_CU stores can be used on GFX12.5"
 >;
 
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",

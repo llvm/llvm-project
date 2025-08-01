@@ -5301,9 +5301,9 @@ The fields used by CP for code objects before V3 also match those specified in
                                                      and must be 0,
      >454    1 bit   ENABLE_SGPR_PRIVATE_SEGMENT
                      _SIZE
-     456:455 2 bits                                  Reserved, must be 0.
-     457     1 bit   USES_CU_STORES                  GFX1250+: Whether the ``cu-stores`` target attribute is enabled.
+     455     1 bit   USES_CU_STORES                  GFX12.5: Whether the ``cu-stores`` target attribute is enabled.
                                                      If 0, then all stores are ``SCOPE_SE`` or higher.
+     457:456 2 bits                                  Reserved, must be 0.
      458     1 bit   ENABLE_WAVEFRONT_SIZE32         GFX6-GFX9
                                                        Reserved, must be 0.
                                                      GFX10-GFX11
@@ -18608,7 +18608,7 @@ terminated by an ``.end_amdhsa_kernel`` directive.
                                                                                   GFX942)
      ``.amdhsa_user_sgpr_private_segment_size``               0                   GFX6-GFX12   Controls ENABLE_SGPR_PRIVATE_SEGMENT_SIZE in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
-     ``.amdhsa_uses_cu_stores``                               0                   GFX1250+     Controls USES_CU_STORES in
+     ``.amdhsa_uses_cu_stores``                               0                   GFX12.5      Controls USES_CU_STORES in
                                                                                                :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
      ``.amdhsa_wavefront_size32``                             Target              GFX10-GFX12  Controls ENABLE_WAVEFRONT_SIZE32 in
                                                               Feature                          :ref:`amdgpu-amdhsa-kernel-descriptor-v3-table`.
