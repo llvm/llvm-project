@@ -3,7 +3,7 @@
 
 define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; X86-LABEL: mulodi_test:
-; X86:       # %bb.0: # %overflow.entry
+; X86:       # %bb.0: # %start
 ; X86-NEXT:    pushl %ebp
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %ebx
@@ -12,89 +12,32 @@ define { i64, i8 } @mulodi_test(i64 %l, i64 %r) unnamed_addr #0 {
 ; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 20
-; X86-NEXT:    pushl %eax
-; X86-NEXT:    .cfi_def_cfa_offset 24
 ; X86-NEXT:    .cfi_offset %esi, -20
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    testl %edi, %edi
-; X86-NEXT:    je .LBB0_4
-; X86-NEXT:  # %bb.1: # %overflow.lhs
-; X86-NEXT:    testl %ebx, %ebx
-; X86-NEXT:    je .LBB0_2
-; X86-NEXT:  # %bb.6: # %overflow
-; X86-NEXT:    setne %al
-; X86-NEXT:    testl %edi, %edi
+; X86-NEXT:    testl %esi, %esi
+; X86-NEXT:    setne %dl
+; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setne %cl
-; X86-NEXT:    andb %al, %cl
-; X86-NEXT:    movl %edi, %eax
-; X86-NEXT:    mull %ebp
+; X86-NEXT:    andb %dl, %cl
+; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    seto %ch
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    mull %esi
 ; X86-NEXT:    seto %bl
-; X86-NEXT:    orb %ch, %bl
-; X86-NEXT:    orb %cl, %bl
-; X86-NEXT:    leal (%edi,%eax), %ecx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ebp
-; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    setb %cl
-; X86-NEXT:    orb %bl, %cl
-; X86-NEXT:    jmp .LBB0_7
-; X86-NEXT:  .LBB0_4: # %overflow.no.lhs
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    mull %ebp
-; X86-NEXT:    testl %ebx, %ebx
-; X86-NEXT:    je .LBB0_5
-; X86-NEXT:  # %bb.3: # %overflow.no.lhs.only
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    imull %edi, %ebp
-; X86-NEXT:    addl %edx, %ebp
-; X86-NEXT:    imull %ebx, %edi
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    mull %ebx
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    addl %ebp, %edx
-; X86-NEXT:    adcl %edi, %esi
-; X86-NEXT:    setne %cl
-; X86-NEXT:    jmp .LBB0_7
-; X86-NEXT:  .LBB0_2: # %overflow.no.rhs.only
+; X86-NEXT:    seto %ch
+; X86-NEXT:    orb %bl, %ch
+; X86-NEXT:    orb %cl, %ch
+; X86-NEXT:    leal (%edi,%eax), %esi
 ; X86-NEXT:    movl %ebp, %eax
-; X86-NEXT:    mull %esi
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    imull %ebx, %esi
-; X86-NEXT:    addl %edx, %esi
-; X86-NEXT:    imull %edi, %ebx
-; X86-NEXT:    movl %ebp, %eax
-; X86-NEXT:    mull %edi
-; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    movl (%esp), %eax # 4-byte Reload
+; X86-NEXT:    mull {{[0-9]+}}(%esp)
 ; X86-NEXT:    addl %esi, %edx
-; X86-NEXT:    adcl %ebx, %ecx
-; X86-NEXT:    setne %cl
-; X86-NEXT:    jmp .LBB0_7
-; X86-NEXT:  .LBB0_5: # %overflow.no
-; X86-NEXT:    imull %ebx, %esi
-; X86-NEXT:    addl %edx, %esi
-; X86-NEXT:    imull %ebp, %edi
-; X86-NEXT:    addl %esi, %edi
-; X86-NEXT:    xorl %ecx, %ecx
-; X86-NEXT:    movl %edi, %edx
-; X86-NEXT:  .LBB0_7: # %overflow.res
-; X86-NEXT:    andb $1, %cl
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X86-NEXT:    addl $4, %esp
-; X86-NEXT:    .cfi_def_cfa_offset 20
+; X86-NEXT:    setb %cl
+; X86-NEXT:    orb %ch, %cl
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 16
 ; X86-NEXT:    popl %edi
