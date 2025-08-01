@@ -117,7 +117,7 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL:       vector.body:
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP0]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL:%.*]] = sub i32 1024, [[EVL_BASED_IV]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL:%.*]] = phi i32 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
@@ -139,6 +139,7 @@ define void @masked_strided_factor2(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP13]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> [[TMP12]], <vscale x 16 x ptr> align 1 [[TMP14]], <vscale x 16 x i1> [[TMP2]], i32 [[TMP1]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[EVL_BASED_IV]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_EVL_NEXT]], 1024
 ; PREDICATED_DATA-WITH-EVL-NEXT:    br i1 [[TMP15]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -325,7 +326,7 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL:       vector.body:
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[EVL_BASED_IV:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i32> [ [[TMP0]], [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
-; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL:%.*]] = sub i32 1024, [[EVL_BASED_IV]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL:%.*]] = phi i32 [ 1024, [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 16, i1 true)
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[TMP1]], i64 0
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT1]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
@@ -363,6 +364,7 @@ define void @masked_strided_factor4(ptr noalias nocapture readonly %p, ptr noali
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP26:%.*]] = getelementptr inbounds i8, ptr [[Q]], <vscale x 16 x i64> [[TMP25]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    call void @llvm.vp.scatter.nxv16i8.nxv16p0(<vscale x 16 x i8> [[TMP18]], <vscale x 16 x ptr> align 1 [[TMP26]], <vscale x 16 x i1> [[TMP2]], i32 [[TMP1]])
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i32 [[TMP1]], [[EVL_BASED_IV]]
+; PREDICATED_DATA-WITH-EVL-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP1]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i32> [[VEC_IND]], [[BROADCAST_SPLAT2]]
 ; PREDICATED_DATA-WITH-EVL-NEXT:    [[TMP27:%.*]] = icmp eq i32 [[INDEX_EVL_NEXT]], 1024
 ; PREDICATED_DATA-WITH-EVL-NEXT:    br i1 [[TMP27]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

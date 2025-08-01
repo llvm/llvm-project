@@ -85,7 +85,7 @@ void M68kAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     Asm->getWriter().recordRelocation(F, Fixup, Target, Value);
 
   unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
-  assert(Fixup.getOffset() + Size <= Data.size() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + Size <= F.getSize() && "Invalid fixup offset!");
   // Check that uppper bits are either all zeros or all ones.
   // Specifically ignore overflow/underflow as long as the leakage is
   // limited to the lower bits. This is to remain compatible with

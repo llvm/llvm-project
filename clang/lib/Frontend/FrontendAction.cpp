@@ -9,6 +9,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -39,6 +40,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -87,12 +89,25 @@ public:
       // reducing the granularity and making the output less useful.
       return;
     }
-    if (auto *DC = D->getDeclContext(); !DC || !DC->isFileContext()) {
+    auto *DC = D->getLexicalDeclContext();
+    if (!DC || !DC->isFileContext()) {
       // We choose to work at namespace level to reduce complexity and the
       // number of cases we care about.
       return;
     }
+
     PendingDecls.push_back(D);
+    if (auto *NS = dyn_cast<NamespaceDecl>(DC)) {
+      // Add any namespaces we have not seen before.
+      // Note that we filter out namespaces from DeclRead as it includes too
+      // all redeclarations and we only want the ones that had other used
+      // declarations.
+      while (NS && ProcessedNamespaces.insert(NS).second) {
+        PendingDecls.push_back(NS);
+
+        NS = dyn_cast<NamespaceDecl>(NS->getLexicalParent());
+      }
+    }
   }
 
   struct Position {
@@ -141,23 +156,25 @@ public:
       OptionalFileEntryRef Ref;
     };
     llvm::DenseMap<const FileEntry *, FileData> FileToRanges;
+
     for (const Decl *D : PendingDecls) {
-      CharSourceRange R = SM.getExpansionRange(D->getSourceRange());
-      if (!R.isValid())
-        continue;
+      for (CharSourceRange R : getRangesToMark(D)) {
+        if (!R.isValid())
+          continue;
 
-      auto *F = SM.getFileEntryForID(SM.getFileID(R.getBegin()));
-      if (F != SM.getFileEntryForID(SM.getFileID(R.getEnd()))) {
-        // Such cases are rare and difficult to handle.
-        continue;
+        auto *F = SM.getFileEntryForID(SM.getFileID(R.getBegin()));
+        if (F != SM.getFileEntryForID(SM.getFileID(R.getEnd()))) {
+          // Such cases are rare and difficult to handle.
+          continue;
+        }
+
+        auto &Data = FileToRanges[F];
+        if (!Data.Ref)
+          Data.Ref = SM.getFileEntryRefForID(SM.getFileID(R.getBegin()));
+        Data.FromTo.push_back(
+            {Position::GetBeginSpelling(SM, R),
+             Position::GetEndSpelling(SM, R, D->getLangOpts())});
       }
-
-      auto &Data = FileToRanges[F];
-      if (!Data.Ref)
-        Data.Ref = SM.getFileEntryRefForID(SM.getFileID(R.getBegin()));
-      Data.FromTo.push_back(
-          {Position::GetBeginSpelling(SM, R),
-           Position::GetEndSpelling(SM, R, D->getLangOpts())});
     }
 
     // To simplify output, merge consecutive and intersecting ranges.
@@ -188,9 +205,48 @@ public:
 
 private:
   std::vector<const Decl *> PendingDecls;
+  llvm::SmallPtrSet<const NamespaceDecl *, 0> ProcessedNamespaces;
   bool IsCollectingDecls = true;
   const SourceManager &SM;
   std::unique_ptr<llvm::raw_ostream> OS;
+
+  llvm::SmallVector<CharSourceRange, 2> getRangesToMark(const Decl *D) {
+    auto *NS = dyn_cast<NamespaceDecl>(D);
+    if (!NS)
+      return {SM.getExpansionRange(D->getSourceRange())};
+
+    SourceLocation LBraceLoc;
+    if (NS->isAnonymousNamespace()) {
+      LBraceLoc = NS->getLocation();
+    } else {
+      // Start with the location of the identifier.
+      SourceLocation TokenBeforeLBrace = NS->getLocation();
+      if (NS->hasAttrs()) {
+        for (auto *A : NS->getAttrs()) {
+          // But attributes may go after it.
+          if (SM.isBeforeInTranslationUnit(TokenBeforeLBrace,
+                                           A->getRange().getEnd())) {
+            // Give up, the attributes are often coming from macros and we
+            // cannot skip them reliably.
+            return {};
+          }
+        }
+      }
+      auto &LangOpts = D->getLangOpts();
+      // Now skip one token, the next should be the lbrace.
+      Token Tok;
+      if (Lexer::getRawToken(TokenBeforeLBrace, Tok, SM, LangOpts, true) ||
+          Lexer::getRawToken(Tok.getEndLoc(), Tok, SM, LangOpts, true) ||
+          Tok.getKind() != tok::l_brace) {
+        // On error or if we did not find the token we expected, avoid marking
+        // everything inside the namespace as used.
+        return {};
+      }
+      LBraceLoc = Tok.getLocation();
+    }
+    return {SM.getExpansionRange(SourceRange(NS->getBeginLoc(), LBraceLoc)),
+            SM.getExpansionRange(NS->getRBraceLoc())};
+  }
 
   void printJson(llvm::ArrayRef<RequiredRanges> Result) {
     *OS << "{\n";
@@ -226,6 +282,8 @@ private:
     }
     *OS << "  ]\n";
     *OS << "}\n";
+
+    OS->flush();
   }
 };
 

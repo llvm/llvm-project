@@ -24,7 +24,8 @@ using namespace clang;
 using namespace clang::CIRGen;
 
 CIRGenFunction::AutoVarEmission
-CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
+CIRGenFunction::emitAutoVarAlloca(const VarDecl &d,
+                                  mlir::OpBuilder::InsertPoint ip) {
   QualType ty = d.getType();
   if (ty.getAddressSpace() != LangAS::Default)
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
@@ -50,7 +51,8 @@ CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   // A normal fixed sized variable becomes an alloca in the entry block,
   mlir::Type allocaTy = convertTypeForMem(ty);
   // Create the temp alloca and declare variable using it.
-  address = createTempAlloca(allocaTy, alignment, loc, d.getName());
+  address = createTempAlloca(allocaTy, alignment, loc, d.getName(),
+                             /*arraySize=*/nullptr, /*alloca=*/nullptr, ip);
   declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
 
   emission.Addr = address;
@@ -651,6 +653,27 @@ void CIRGenFunction::emitNullabilityCheck(LValue lhs, mlir::Value rhs,
   assert(!cir::MissingFeatures::sanitizers());
 }
 
+namespace {
+struct DestroyObject final : EHScopeStack::Cleanup {
+  DestroyObject(Address addr, QualType type,
+                CIRGenFunction::Destroyer *destroyer)
+      : addr(addr), type(type), destroyer(destroyer) {}
+
+  Address addr;
+  QualType type;
+  CIRGenFunction::Destroyer *destroyer;
+
+  void emit(CIRGenFunction &cgf) override {
+    cgf.emitDestroy(addr, type, destroyer);
+  }
+};
+} // namespace
+
+void CIRGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
+                                 QualType type, Destroyer *destroyer) {
+  pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type, destroyer);
+}
+
 /// Destroys all the elements of the given array, beginning from last to first.
 /// The array cannot be zero-length.
 ///
@@ -737,22 +760,6 @@ CIRGenFunction::getDestroyer(QualType::DestructionKind kind) {
   }
   llvm_unreachable("Unknown DestructionKind");
 }
-
-namespace {
-struct DestroyObject final : EHScopeStack::Cleanup {
-  DestroyObject(Address addr, QualType type,
-                CIRGenFunction::Destroyer *destroyer)
-      : addr(addr), type(type), destroyer(destroyer) {}
-
-  Address addr;
-  QualType type;
-  CIRGenFunction::Destroyer *destroyer;
-
-  void emit(CIRGenFunction &cgf) override {
-    cgf.emitDestroy(addr, type, destroyer);
-  }
-};
-} // namespace
 
 /// Enter a destroy cleanup for the given local variable.
 void CIRGenFunction::emitAutoVarTypeCleanup(
