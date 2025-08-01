@@ -107,6 +107,8 @@ lldb_path = llvm_config.use_llvm_tool("lldb", search_env="LLDB")
 if lldb_path is not None:
     config.available_features.add("lldb")
 
+if llvm_config.use_llvm_tool("llvm-ar"):
+    config.available_features.add("llvm-ar")
 
 def configure_dexter_substitutions():
     """Configure substitutions for host platform and return list of dependencies"""
