@@ -74,8 +74,10 @@ void *malloc(size_t s) {
   constexpr size_t MAX_ALIGNMENT = alignof(long double);
   if (s > MEMORY_SIZE)
     return nullptr; // Not enough memory.
-  s = s + MAX_ALIGNMENT -
-      (s % MAX_ALIGNMENT); // Align the size to the max alignment.
+  size_t offset = s % MAX_ALIGNMENT;
+  s = offset == 0
+          ? s
+          : s + MAX_ALIGNMENT - offset; // Align the size to the max alignment.
   for (;;) {
     size_t current_used = used.load();
     if (current_used + s > MEMORY_SIZE)
