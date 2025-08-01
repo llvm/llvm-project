@@ -1,4 +1,6 @@
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -DORIG_ATTR_SYN -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -fpatchable-function-entry-offset=3 -DORIG_ATTR_SYN -o - %s | FileCheck %s --check-prefixes=CHECK,OFFSET
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -fpatchable-function-entry-offset=3 -o - %s | FileCheck %s --check-prefixes=CHECK,OFFSET
 
 // Note that the interleving of functions, which normally would be in sequence,
@@ -8,7 +10,11 @@
 #error Missing kcfi?
 #endif
 
+#ifdef ORIG_ATTR_SYN
+#define __cfi_salt __attribute__((cfi_salt("pepper")))
+#else
 #define __cfi_salt [[clang::cfi_salt("pepper")]]
+#endif
 
 typedef int (*fn_t)(void);
 typedef int (* __cfi_salt fn_salt_t)(void);
@@ -55,7 +61,8 @@ int f7_typedef_salt(struct cfi_struct *ptr);
 // CHECK:         call{{.*}} i32
 // CHECK-NOT:     "kcfi"
 // CHECK-SAME:    ()
-int __call(fn_t f) __attribute__((__no_sanitize__("kcfi"))) {
+__attribute__((__no_sanitize__("kcfi")))
+int __call(fn_t f) {
   return f();
 }
 
