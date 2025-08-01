@@ -1175,9 +1175,8 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
                << " cannot be used against ifunc symbol '" << &sym << "'";
           printLocation(diag, *sec, sym, offset);
         } else {
-          part.relaDyn->addReloc({ctx.target->iRelativeRel, sec, offset,
-                                  DynamicReloc::AddendOnlyWithTargetVA, sym,
-                                  addend, R_ABS});
+          part.relaDyn->addReloc({ctx.target->iRelativeRel, sec, offset, false,
+                                  sym, addend, R_ABS});
           return;
         }
       }
