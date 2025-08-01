@@ -241,6 +241,8 @@ Static Analyzer
 ---------------
 - The Clang Static Analyzer now handles parenthesized initialization.
   (#GH148875)
+- ``__datasizeof`` (C++) and ``_Countof`` (C) no longer cause a failed assertion
+  when given an operand of VLA type. (#GH151711)
 
 New features
 ^^^^^^^^^^^^
