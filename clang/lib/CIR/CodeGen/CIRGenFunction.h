@@ -858,7 +858,8 @@ public:
 
   Address emitArrayToPointerDecay(const Expr *array);
 
-  AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
+  AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
+                                    mlir::OpBuilder::InsertPoint ip = {});
 
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack
@@ -1377,6 +1378,7 @@ public:
     mlir::Location beginLoc;
     mlir::Value varValue;
     std::string name;
+    QualType baseType;
     llvm::SmallVector<mlir::Value> bounds;
   };
   // Gets the collection of info required to lower and OpenACC clause or cache
