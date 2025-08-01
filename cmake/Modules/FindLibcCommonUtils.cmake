@@ -12,6 +12,10 @@ if(NOT TARGET llvm-libc-common-utilities)
     add_library(llvm-libc-common-utilities INTERFACE)
     # TODO: Reorganize the libc shared section so that it can be included without
     # adding the root "libc" directory to the include path.
+    include(${libc_path}/cmake/modules/LLVMLibCCompileOptionRules.cmake)
+    _get_compile_options_from_config(libc_common_options)
+    target_compile_options(llvm-libc-common-utilities INTERFACE ${libc_common_options})
+
     target_include_directories(llvm-libc-common-utilities INTERFACE ${libc_path})
     target_compile_definitions(llvm-libc-common-utilities INTERFACE LIBC_NAMESPACE=__llvm_libc_common_utils)
     target_compile_features(llvm-libc-common-utilities INTERFACE cxx_std_17)
