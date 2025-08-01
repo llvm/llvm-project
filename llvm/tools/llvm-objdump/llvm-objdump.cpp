@@ -301,6 +301,7 @@ static uint64_t AdjustVMA;
 static bool AllHeaders;
 static std::string ArchName;
 bool objdump::ArchiveHeaders;
+static bool CallGraphInfo;
 bool objdump::Demangle;
 bool objdump::Disassemble;
 bool objdump::DisassembleAll;
@@ -347,6 +348,38 @@ bool objdump::UnwindInfo;
 static bool Wide;
 std::string objdump::Prefix;
 uint32_t objdump::PrefixStrip;
+
+// Enumeration of function kinds, and their mapping to function kind values
+// from call graph section (.callgraph).
+// Must stay in sync with enum from llvm/include/llvm/CodeGen/AsmPrinter.h.
+enum class FunctionKind : uint64_t {
+  // Function cannot be target to indirect calls.
+  NOT_INDIRECT_TARGET = 0,
+  // Function may be target to indirect calls but its type id is unknown.
+  INDIRECT_TARGET_UNKNOWN_TID = 1,
+  // Function may be target to indirect calls and its type id is known.
+  INDIRECT_TARGET_KNOWN_TID = 2,
+
+  // Available in the binary but not listed in the call graph section.
+  NOT_LISTED = 3,
+};
+
+struct FunctionInfo {
+  std::string Name;
+  FunctionKind Kind;
+  struct DirectCallSite {
+    uint64_t CallSite;
+    uint64_t Callee;
+    DirectCallSite(uint64_t CallSite, uint64_t Callee)
+        : CallSite(CallSite), Callee(Callee) {}
+  };
+  SmallVector<DirectCallSite> DirectCallSites;
+  SmallVector<uint64_t> IndirectCallSites;
+};
+// Map function entry pc to function info.
+MapVector<uint64_t, FunctionInfo> FuncInfo;
+// Set of all indirect call sites.
+DenseSet<uint64_t> IndirectCallSites;
 
 DebugFormat objdump::DbgVariables = DFDisabled;
 DebugFormat objdump::DbgInlinedFunctions = DFDisabled;
@@ -1939,7 +1972,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   }
 
   for (const SectionRef &Section : ToolSectionFilter(Obj)) {
-    if (FilterSections.empty() && !DisassembleAll &&
+    if (((FilterSections.empty() && !DisassembleAll) || CallGraphInfo) &&
         (!Section.isText() || Section.isVirtual()))
       continue;
 
@@ -2129,6 +2162,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       if (!PrintedSection) {
         PrintedSection = true;
         OS << "\nDisassembly of section ";
+        // llvm::report_fatal_error("NO PRINTING BUSINESS FOR
+        // MEeeeeeeeeeeeeeeeeee");
         if (!SegmentName.empty())
           OS << SegmentName << ",";
         OS << SectionName << ":\n";
@@ -2174,6 +2209,14 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // would describe the same data twice.
       for (size_t SHI = 0; SHI < SymbolsHere.size(); ++SHI) {
         SymbolInfoTy Symbol = SymbolsHere[SHI];
+
+        if (CallGraphInfo && Symbol.Type == ELF::STT_FUNC) {
+          auto FuncPc = Symbol.Addr;
+          auto FuncName = Symbol.Name.str();
+          FuncInfo[FuncPc].Name = FuncName;
+          // Initalize to be later updated while parsing the call graph section.
+          FuncInfo[FuncPc].Kind = FunctionKind::NOT_LISTED;
+        }
 
         Expected<bool> RespondedOrErr = DT->DisAsm->onSymbolStart(
             Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start);
@@ -2373,6 +2416,59 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
           LEP.update({ThisAddr, Section.getIndex()},
                      {ThisAddr + Size, Section.getIndex()},
                      Index + Size != End);
+
+          if (CallGraphInfo) {
+            auto MIA = DT->InstrAnalysis.get();
+            if (Disassembled && MIA->isCall(Inst)) {
+              // Call site address is the address of the instruction just
+              // next to the call instruction. This is the return address
+              // as it appears on the stack trace.
+              uint64_t CallSitePc = SectionAddr + Index + Size;
+              uint64_t CallerPc = SectionAddr + Start + VMAAdjustment;
+              // Check the operands to decide whether this is an direct or
+              // indirect call.
+              // Assumption: a call instruction with at least one register
+              // operand is an indirect call. Otherwise, it is a direct call
+              // with exactly one immediate operand.
+              bool HasRegOperand = false;
+              unsigned int ImmOperandCount = 0;
+              for (unsigned int I = 0; I < Inst.getNumOperands(); I++) {
+                const auto &Operand = Inst.getOperand(I);
+                if (Operand.isReg()) {
+                  HasRegOperand = true;
+                } else if (Operand.isImm()) {
+                  ImmOperandCount++;
+                }
+              }
+              // Check if the assumption holds true.
+              assert(HasRegOperand ||
+                     (!HasRegOperand && ImmOperandCount == 1) &&
+                         "Call instruction is expected to have at least one "
+                         "register operand (i.e., indirect call) or exactly "
+                         "one immediate operand (i.e., direct call).");
+              if (HasRegOperand) {
+                // Indirect call.
+                IndirectCallSites.insert(CallSitePc);
+                FuncInfo[CallerPc].IndirectCallSites.push_back(CallSitePc);
+              } else {
+                // Direct call.
+                uint64_t CalleePc;
+                bool Res = MIA->evaluateBranch(Inst, SectionAddr + Index, Size,
+                                               CalleePc);
+                assert(Res && "Failed to evaluate direct call target address.");
+                FuncInfo[CallerPc].DirectCallSites.emplace_back(CallSitePc,
+                                                                CalleePc);
+              }
+
+              if (FuncInfo[CallerPc].Name.empty()) {
+                for (size_t Index = 0; Index < SymbolsHere.size(); ++Index) {
+                  if (SymbolsHere[Index].Addr == CallerPc) {
+                    FuncInfo[CallerPc].Name = SymNamesHere[Index];
+                  }
+                }
+              }
+            }
+          }
 
           DT->InstPrinter->setCommentStream(CommentStream);
 
@@ -3131,6 +3227,214 @@ void Dumper::printSymbol(const SymbolRef &Symbol,
   outs() << ' ' << SymName << '\n';
 }
 
+static void printCallGraphInfo(ObjectFile *Obj) {
+  // Get function info through disassembly. Suppress disassembler outputs to
+  // console.
+  disassembleObject(Obj, /*InlineRelocs=*/false, nulls());
+
+  // Get the .callgraph section.
+  StringRef CallGraphSectionName(".callgraph");
+  std::optional<object::SectionRef> CallGraphSection;
+  for (auto Sec : ToolSectionFilter(*Obj)) {
+    StringRef Name;
+    if (Expected<StringRef> NameOrErr = Sec.getName())
+      Name = *NameOrErr;
+    else
+      consumeError(NameOrErr.takeError());
+
+    if (Name == CallGraphSectionName) {
+      CallGraphSection = Sec;
+      break;
+    }
+  }
+  if (!CallGraphSection)
+    reportWarning("there is no .callgraph section", Obj->getFileName());
+
+  // Map type id to indirect call sites.
+  MapVector<uint64_t, SmallVector<uint64_t>> TypeIdToIndirCallSites;
+  // Map type id to indirect targets.
+  MapVector<uint64_t, SmallVector<uint64_t>> TypeIdToIndirTargets;
+  // Instructions that are not indirect calls but have a type id are ignored.
+  uint64_t IgnoredICallIdCount = 0;
+  // Number of valid indirect calls with type ids.
+  uint64_t ICallWithTypeIdCount = 0;
+  if (CallGraphSection) {
+    StringRef CGSecContents = unwrapOrError(
+        CallGraphSection.value().getContents(), Obj->getFileName());
+    // TODO: some entries are written in pointer size. are they always 64-bit?
+    if (CGSecContents.size() % sizeof(uint64_t))
+      reportError(Obj->getFileName(), "Malformed .callgraph section.");
+
+    size_t Size = CGSecContents.size() / sizeof(uint64_t);
+    auto *It = reinterpret_cast<const uint64_t *>(CGSecContents.data());
+    const auto *const End = It + Size;
+
+    auto CGHasNext = [&]() { return It < End; };
+    auto CGNext = [&]() -> uint64_t {
+      if (!CGHasNext())
+        reportError(Obj->getFileName(), "Malformed .callgraph section.");
+      return *It++;
+    };
+
+    // Parse the content
+    while (CGHasNext()) {
+      // Format version number.
+      uint64_t FormatVersionNumber = CGNext();
+      if (FormatVersionNumber != 0)
+        reportError(Obj->getFileName(),
+                    "Unknown format version in .callgraph section.");
+
+      // Function entry pc.
+      uint64_t FuncEntryPc = CGNext();
+      if (!FuncInfo.count(FuncEntryPc))
+        reportError(Obj->getFileName(),
+                    "Invalid function entry pc in .callgraph section.");
+
+      // Function kind.
+      uint64_t Kind = CGNext();
+      switch (Kind) {
+      case 0: // not an indirect target
+        FuncInfo[FuncEntryPc].Kind = FunctionKind::NOT_INDIRECT_TARGET;
+        break;
+      case 1: // indirect target with unknown type id
+        FuncInfo[FuncEntryPc].Kind = FunctionKind::INDIRECT_TARGET_UNKNOWN_TID;
+        break;
+      case 2: // indirect target with known type id
+        FuncInfo[FuncEntryPc].Kind = FunctionKind::INDIRECT_TARGET_KNOWN_TID;
+        TypeIdToIndirTargets[CGNext()].push_back(FuncEntryPc);
+        break;
+      default:
+        reportError(Obj->getFileName(),
+                    "Unknown function kind in .callgraph section.");
+      }
+
+      // Read call sites.
+      uint64_t CallSiteCount = CGNext();
+      for (unsigned long I = 0; I < CallSiteCount; I++) {
+        uint64_t TypeId = CGNext();
+        uint64_t CallSitePc = CGNext();
+        if (IndirectCallSites.count(CallSitePc)) {
+          TypeIdToIndirCallSites[TypeId].push_back(CallSitePc);
+          ICallWithTypeIdCount++;
+        } else {
+          // FIXME: .callgraph may have type ids for calls that are lowered to
+          // jump, which is why ignoring indirect call type ids are expected.
+          // However, actual indirect call site references stored as relocation
+          // entries here may also be discarded.
+          IgnoredICallIdCount++;
+        }
+      }
+    }
+
+    // Print any required warnings regarding the callgraph section.
+    if (IgnoredICallIdCount)
+      reportWarning("callgraph section has type ids for " +
+                        std::to_string(IgnoredICallIdCount) + " instructions " +
+                        "which are not indirect calls",
+                    Obj->getFileName());
+
+    if (auto ICallWithoutTypeIdCount =
+            IndirectCallSites.size() - ICallWithTypeIdCount)
+      reportWarning("callgraph section does not have type ids for " +
+                        std::to_string(ICallWithoutTypeIdCount) +
+                        " indirect calls",
+                    Obj->getFileName());
+
+    uint64_t NotListedCount = 0;
+    uint64_t UnknownCount = 0;
+
+    llvm::sort(FuncInfo,
+               [](const auto &A, const auto &B) { return A.first < B.first; });
+
+    for (const auto &El : FuncInfo) {
+      NotListedCount += El.second.Kind == FunctionKind::NOT_LISTED;
+      UnknownCount +=
+          El.second.Kind == FunctionKind::INDIRECT_TARGET_UNKNOWN_TID;
+    }
+    if (NotListedCount)
+      reportWarning("callgraph section does not have information for " +
+                        std::to_string(NotListedCount) + " functions",
+                    Obj->getFileName());
+    if (UnknownCount)
+      reportWarning("callgraph section has unknown type id for " +
+                        std::to_string(UnknownCount) + " indirect targets",
+                    Obj->getFileName());
+
+    // Print indirect targets
+    outs() << "\nINDIRECT TARGET TYPES (TYPEID [FUNC_ADDR,])";
+
+    // Print indirect targets with unknown type.
+    // For completeness, functions for which the call graph section does not
+    // provide information are included.
+    if (NotListedCount || UnknownCount) {
+      outs() << "\nUNKNOWN";
+      for (const auto &El : FuncInfo) {
+        uint64_t FuncEntryPc = El.first;
+        FunctionKind FuncKind = El.second.Kind;
+        if (FuncKind == FunctionKind::NOT_LISTED ||
+            FuncKind == FunctionKind::INDIRECT_TARGET_UNKNOWN_TID)
+          outs() << " " << format("%lx", FuncEntryPc);
+      }
+    }
+
+    // Print indirect targets to type id mapping.
+    for (const auto &El : TypeIdToIndirTargets) {
+      uint64_t TypeId = El.first;
+      outs() << "\n" << format("%lx", TypeId);
+      for (uint64_t IndirTargetPc : El.second)
+        outs() << " " << format("%lx", IndirTargetPc);
+    }
+
+    // Print indirect calls to type id mapping. Any indirect call without a
+    // type id can be deduced by comparing this list to indirect call sites
+    // list.
+    outs() << "\n\nINDIRECT CALL TYPES (TYPEID [CALL_SITE_ADDR,])";
+    for (const auto &El : TypeIdToIndirCallSites) {
+      uint64_t TypeId = El.first;
+      outs() << "\n" << format("%lx", TypeId);
+      for (uint64_t IndirCallSitePc : El.second)
+        outs() << " " << format("%lx", IndirCallSitePc);
+    }
+  }
+
+  // Print function entry to indirect call site addresses mapping from disasm.
+  outs() << "\n\nINDIRECT CALL SITES (CALLER_ADDR [CALL_SITE_ADDR,])";
+  for (const auto &El : FuncInfo) {
+    auto CallerPc = El.first;
+    auto FuncIndirCallSites = El.second.IndirectCallSites;
+    if (!FuncIndirCallSites.empty()) {
+      outs() << "\n" << format("%lx", CallerPc);
+      for (auto IndirCallSitePc : FuncIndirCallSites)
+        outs() << " " << format("%lx", IndirCallSitePc);
+    }
+  }
+
+  // Print function entry to direct call site and target function entry
+  // addresses mapping from disasm.
+  outs()
+      << "\n\nDIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])";
+  for (const auto &El : FuncInfo) {
+    auto CallerPc = El.first;
+    auto FuncDirCallSites = El.second.DirectCallSites;
+    if (!FuncDirCallSites.empty()) {
+      outs() << "\n" << format("%lx", CallerPc);
+      for (const FunctionInfo::DirectCallSite &DCS : FuncDirCallSites) {
+        outs() << " " << format("%lx", DCS.CallSite) << " "
+               << format("%lx", DCS.Callee);
+      }
+    }
+  }
+
+  // Print function entry pc to function name mapping.
+  outs() << "\n\nFUNCTIONS (FUNC_ENTRY_ADDR, SYM_NAME)";
+  for (const auto &El : FuncInfo) {
+    uint64_t EntryPc = El.first;
+    const auto &Name = El.second.Name;
+    outs() << "\n" << format("%lx", EntryPc) << " " << Name;
+  }
+  outs() << "\n";
+}
+
 static void printUnwindInfo(const ObjectFile *O) {
   outs() << "Unwind info:\n\n";
 
@@ -3405,6 +3709,8 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
     printRawClangAST(O);
   if (FaultMapSection)
     printFaultMaps(O);
+  if (CallGraphInfo)
+    printCallGraphInfo(O);
   if (Offloading)
     dumpOffloadBinary(*O, StringRef(ArchName));
 }
@@ -3571,6 +3877,7 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
   AllHeaders = InputArgs.hasArg(OBJDUMP_all_headers);
   ArchName = InputArgs.getLastArgValue(OBJDUMP_arch_name_EQ).str();
   ArchiveHeaders = InputArgs.hasArg(OBJDUMP_archive_headers);
+  CallGraphInfo = InputArgs.hasArg(OBJDUMP_call_graph_info);
   Demangle = InputArgs.hasArg(OBJDUMP_demangle);
   Disassemble = InputArgs.hasArg(OBJDUMP_disassemble);
   DisassembleAll = InputArgs.hasArg(OBJDUMP_disassemble_all);
@@ -3812,6 +4119,7 @@ int llvm_objdump_main(int argc, char **argv, const llvm::ToolContext &) {
       !DynamicRelocations && !FileHeaders && !PrivateHeaders && !RawClangAST &&
       !Relocations && !SectionHeaders && !SectionContents && !SymbolTable &&
       !DynamicSymbolTable && !UnwindInfo && !FaultMapSection && !Offloading &&
+      !CallGraphInfo &&
       !(MachOOpt &&
         (Bind || DataInCode || ChainedFixups || DyldInfo || DylibId ||
          DylibsUsed || ExportsTrie || FirstPrivateHeader ||

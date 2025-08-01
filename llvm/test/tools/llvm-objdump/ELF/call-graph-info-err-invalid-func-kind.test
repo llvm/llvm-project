@@ -1,0 +1,20 @@
+## Tests that --call-graph-info fails if .callgraph section has invalid
+## function kind value.
+
+# RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
+# RUN: not llvm-objdump --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t --check-prefix=ERR
+
+# CHECK: [[FILE]]: file format elf64-x86-64
+# ERR: llvm-objdump: error: '[[FILE]]': Unknown function kind in .callgraph section.
+
+.text
+.globl _Z3foov
+.type _Z3foov,@function
+_Z3foov:
+ callq _Z3foov@PLT
+
+.section	.callgraph,"o",@progbits,.text
+.quad	0   #< Format version number.
+.quad 0   #< Function entry address.
+.quad 3   #< Invalid function kind: must be one of 0, 1, 2.
+.text
