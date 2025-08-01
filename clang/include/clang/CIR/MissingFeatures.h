@@ -217,6 +217,7 @@ struct MissingFeatures {
   static bool intrinsics() { return false; }
   static bool isMemcpyEquivalentSpecialMember() { return false; }
   static bool isTrivialCtorOrDtor() { return false; }
+  static bool lambdaCaptures() { return false; }
   static bool lambdaFieldToName() { return false; }
   static bool loopInfoStack() { return false; }
   static bool lowerAggregateLoadStore() { return false; }
