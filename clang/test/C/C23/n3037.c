@@ -439,3 +439,39 @@ void GH150594(void) {
   enum E5 : foo { e5 }; // both-note {{previous declaration is here}}
   enum E5 : int { e5 }; // both-error {{enumeration redeclared with different underlying type 'int' (was 'foo' (aka 'short'))}}
 }
+
+// Test that enumerations are compatible with their underlying type, but still
+// diagnose when "same type" is required rather than merely "compatible type".
+enum E1 : int { e1 }; // Fixed underlying type
+enum E2 { e2 };       // Unfixed underlying type, defaults to int or unsigned int
+
+struct GH149965_1 { int h; };
+// This typeof trick is used to get the underlying type of the enumeration in a
+// platform agnostic way.
+struct GH149965_2 { __typeof__(+(enum E2){}) h; };
+void gh149965(void) {
+  extern struct GH149965_1 x1; // c17-note {{previous declaration is here}}
+  extern struct GH149965_2 x2; // c17-note {{previous declaration is here}}
+
+  // Both the structure and the variable declarations are fine because only a
+  // compatible type is required, not the same type, because the structures are
+  // declared in different scopes.
+  struct GH149965_1 { enum E1 h; };
+  struct GH149965_2 { enum E2 h; };
+
+  extern struct GH149965_1 x1; // c17-error {{redeclaration of 'x1'}}
+  extern struct GH149965_2 x2; // c17-error {{redeclaration of 'x2'}}
+
+  // However, in the same scope, the same type is required, not just compatible
+  // types.
+  // FIXME: this should be an error in both C17 and C23 mode.
+  struct GH149965_3 { int h; };     // c17-note {{previous definition is here}}
+  struct GH149965_3 { enum E1 h; }; // c17-error {{redefinition of 'GH149965_3'}}
+
+  // For Clang, the composite type after declaration merging is the enumeration
+  // type rather than an integer type.
+  enum E1 *eptr;
+  [[maybe_unused]] __typeof__(x1.h) *ptr = eptr;
+  enum E2 *eptr2;
+  [[maybe_unused]] __typeof__(x2.h) *ptr2 = eptr2;
+}
