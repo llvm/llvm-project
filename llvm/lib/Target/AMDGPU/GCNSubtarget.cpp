@@ -359,9 +359,7 @@ void GCNSubtarget::overridePostRASchedPolicy(MachineSchedPolicy &Policy,
     Policy.OnlyBottomUp = false;
   } else {
     DiagnosticInfoOptimizationFailure Diag(
-        F, F.getSubprogram(),
-        Twine("invalid value for postRa direction attribute: '") +
-            PostRADirectionStr);
+        F, F.getSubprogram(), "invalid value for postRA direction attribute");
     F.getContext().diagnose(Diag);
   }
 

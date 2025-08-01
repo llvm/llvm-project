@@ -22,7 +22,7 @@ define float @postra-sched-bidirectional(float %input) nounwind #2 {
 }
 
 ; CHECK: Post-MI-sched direction (postra-sched-warning): topdown
-; WARNING: invalid value for postRa direction attribute
+; WARNING: invalid value for postRA direction attribute
 define float @postra-sched-warning(float %input) nounwind #3 {
   %x = fsub float %input, 1.000000e+00
   ret float %x
