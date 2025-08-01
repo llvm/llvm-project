@@ -5436,12 +5436,10 @@ bool LSRInstance::SortLSRUses() {
 
     // If there are too many forlmulae then LSRUses w/ less formulae
     // go first to save compilation time
-    if (LExpensive != RExpensive) {
+    if (LExpensive != RExpensive)
       return RExpensive;
-    }
-    if (LExpensive) {
+    if (LExpensive)
       return L->Formulae.size() < R->Formulae.size();
-    }
 
     // LSRUses w/ many registers and formulae go first to avoid too big
     // reduction of considered solutions count
