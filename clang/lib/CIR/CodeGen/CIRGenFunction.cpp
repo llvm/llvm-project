@@ -800,6 +800,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::ImplicitCastExprClass:
     return emitCastLValue(cast<CastExpr>(e));
+  case Expr::MaterializeTemporaryExprClass:
+    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
   }
 }
 
@@ -808,6 +810,10 @@ static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
   llvm::raw_svector_ostream out(buffer);
   out << name << cnt;
   return std::string(out.str());
+}
+
+std::string CIRGenFunction::getCounterRefTmpAsString() {
+  return getVersionedTmpName("ref.tmp", counterRefTmp++);
 }
 
 std::string CIRGenFunction::getCounterAggTmpAsString() {

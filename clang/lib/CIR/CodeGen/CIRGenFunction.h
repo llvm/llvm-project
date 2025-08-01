@@ -325,7 +325,9 @@ public:
   };
 
   /// Hold counters for incrementally naming temporaries
+  unsigned counterRefTmp = 0;
   unsigned counterAggTmp = 0;
+  std::string getCounterRefTmpAsString();
   std::string getCounterAggTmpAsString();
 
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
@@ -604,6 +606,19 @@ public:
   void popCleanupBlocks(size_t oldCleanupStackDepth);
   void popCleanupBlock();
 
+  /// Push a cleanup to be run at the end of the current full-expression.  Safe
+  /// against the possibility that we're currently inside a
+  /// conditionally-evaluated expression.
+  template <class T, class... As>
+  void pushFullExprCleanup(CleanupKind kind, As... a) {
+    // If we're not in a conditional branch, or if none of the
+    // arguments requires saving, then use the unconditional cleanup.
+    if (!isInConditionalBranch())
+      return ehStack.pushCleanup<T>(kind, a...);
+
+    cgm.errorNYI("pushFullExprCleanup in conditional branch");
+  }
+
   /// Enters a new scope for capturing cleanups, all of which
   /// will be executed once the scope is exited.
   class RunCleanupsScope {
@@ -619,6 +634,7 @@ public:
   protected:
     CIRGenFunction &cgf;
 
+  public:
     /// Enter a new cleanup scope.
     explicit RunCleanupsScope(CIRGenFunction &cgf)
         : performCleanup(true), cgf(cgf) {
@@ -800,6 +816,9 @@ public:
   typedef void Destroyer(CIRGenFunction &cgf, Address addr, QualType ty);
 
   static Destroyer destroyCXXObject;
+
+  void pushDestroy(CleanupKind kind, Address addr, QualType type,
+                   Destroyer *destroyer);
 
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
@@ -1138,6 +1157,8 @@ public:
   LValue emitLValueForFieldInitialization(LValue base,
                                           const clang::FieldDecl *field,
                                           llvm::StringRef fieldName);
+
+  LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
 
   LValue emitMemberExpr(const MemberExpr *e);
 

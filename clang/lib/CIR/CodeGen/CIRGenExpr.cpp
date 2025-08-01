@@ -1105,6 +1105,151 @@ void CIRGenFunction::emitAnyExprToMem(const Expr *e, Address location,
   llvm_unreachable("bad evaluation kind");
 }
 
+static Address createReferenceTemporary(CIRGenFunction &cgf,
+                                        const MaterializeTemporaryExpr *m,
+                                        const Expr *inner) {
+  // TODO(cir): cgf.getTargetHooks();
+  switch (m->getStorageDuration()) {
+  case SD_FullExpression:
+  case SD_Automatic: {
+    QualType ty = inner->getType();
+
+    assert(!cir::MissingFeatures::mergeAllConstants());
+
+    // The temporary memory should be created in the same scope as the extending
+    // declaration of the temporary materialization expression.
+    cir::AllocaOp extDeclAlloca;
+    if (const ValueDecl *extDecl = m->getExtendingDecl()) {
+      auto extDeclAddrIter = cgf.localDeclMap.find(extDecl);
+      if (extDeclAddrIter != cgf.localDeclMap.end())
+        extDeclAlloca = extDeclAddrIter->second.getDefiningOp<cir::AllocaOp>();
+    }
+    mlir::OpBuilder::InsertPoint ip;
+    if (extDeclAlloca)
+      ip = {extDeclAlloca->getBlock(), extDeclAlloca->getIterator()};
+    return cgf.createMemTemp(ty, cgf.getLoc(m->getSourceRange()),
+                             cgf.getCounterRefTmpAsString(), /*alloca=*/nullptr,
+                             ip);
+  }
+  case SD_Thread:
+  case SD_Static: {
+    cgf.cgm.errorNYI(
+        m->getSourceRange(),
+        "createReferenceTemporary: static/thread storage duration");
+    return Address::invalid();
+  }
+
+  case SD_Dynamic:
+    llvm_unreachable("temporary can't have dynamic storage duration");
+  }
+  llvm_unreachable("unknown storage duration");
+}
+
+static void pushTemporaryCleanup(CIRGenFunction &cgf,
+                                 const MaterializeTemporaryExpr *m,
+                                 const Expr *e, Address referenceTemporary) {
+  // Objective-C++ ARC:
+  //   If we are binding a reference to a temporary that has ownership, we
+  //   need to perform retain/release operations on the temporary.
+  //
+  // FIXME(ogcg): This should be looking at e, not m.
+  if (m->getType().getObjCLifetime()) {
+    cgf.cgm.errorNYI(e->getSourceRange(), "pushTemporaryCleanup: ObjCLifetime");
+    return;
+  }
+
+  CXXDestructorDecl *referenceTemporaryDtor = nullptr;
+  if (const clang::RecordType *rt = e->getType()
+                                        ->getBaseElementTypeUnsafe()
+                                        ->getAs<clang::RecordType>()) {
+    // Get the destructor for the reference temporary.
+    auto *classDecl = cast<CXXRecordDecl>(rt->getDecl());
+    if (!classDecl->hasTrivialDestructor())
+      referenceTemporaryDtor = classDecl->getDestructor();
+  }
+
+  if (!referenceTemporaryDtor)
+    return;
+
+  // Call the destructor for the temporary.
+  switch (m->getStorageDuration()) {
+  case SD_Static:
+  case SD_Thread:
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "pushTemporaryCleanup: static/thread storage duration");
+    return;
+
+  case SD_FullExpression:
+    cgf.pushDestroy(NormalAndEHCleanup, referenceTemporary, e->getType(),
+                    CIRGenFunction::destroyCXXObject);
+    break;
+
+  case SD_Automatic:
+    cgf.cgm.errorNYI(e->getSourceRange(),
+                     "pushTemporaryCleanup: automatic storage duration");
+    break;
+
+  case SD_Dynamic:
+    llvm_unreachable("temporary cannot have dynamic storage duration");
+  }
+}
+
+LValue CIRGenFunction::emitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *m) {
+  const Expr *e = m->getSubExpr();
+
+  assert((!m->getExtendingDecl() || !isa<VarDecl>(m->getExtendingDecl()) ||
+          !cast<VarDecl>(m->getExtendingDecl())->isARCPseudoStrong()) &&
+         "Reference should never be pseudo-strong!");
+
+  // FIXME: ideally this would use emitAnyExprToMem, however, we cannot do so
+  // as that will cause the lifetime adjustment to be lost for ARC
+  auto ownership = m->getType().getObjCLifetime();
+  if (ownership != Qualifiers::OCL_None &&
+      ownership != Qualifiers::OCL_ExplicitNone) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitMaterializeTemporaryExpr: ObjCLifetime");
+    return {};
+  }
+
+  SmallVector<const Expr *, 2> commaLHSs;
+  SmallVector<SubobjectAdjustment, 2> adjustments;
+  e = e->skipRValueSubobjectAdjustments(commaLHSs, adjustments);
+
+  for (const Expr *ignored : commaLHSs)
+    emitIgnoredExpr(ignored);
+
+  if (isa<OpaqueValueExpr>(e)) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitMaterializeTemporaryExpr: OpaqueValueExpr");
+    return {};
+  }
+
+  // Create and initialize the reference temporary.
+  Address object = createReferenceTemporary(*this, m, e);
+
+  if (auto var = object.getPointer().getDefiningOp<cir::GlobalOp>()) {
+    // TODO(cir): add something akin to stripPointerCasts() to ptr above
+    cgm.errorNYI(e->getSourceRange(), "emitMaterializeTemporaryExpr: GlobalOp");
+    return {};
+  } else {
+    assert(!cir::MissingFeatures::emitLifetimeMarkers());
+    emitAnyExprToMem(e, object, Qualifiers(), /*isInitializer=*/true);
+  }
+  pushTemporaryCleanup(*this, m, e, object);
+
+  // Perform derived-to-base casts and/or field accesses, to get from the
+  // temporary object we created (and, potentially, for which we extended
+  // the lifetime) to the subobject we're binding the reference to.
+  if (!adjustments.empty()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 "emitMaterializeTemporaryExpr: Adjustments");
+    return {};
+  }
+
+  return makeAddrLValue(object, m->getType(), AlignmentSource::Decl);
+}
+
 LValue CIRGenFunction::emitCompoundLiteralLValue(const CompoundLiteralExpr *e) {
   if (e->isFileScope()) {
     cgm.errorNYI(e->getSourceRange(), "emitCompoundLiteralLValue: FileScope");
