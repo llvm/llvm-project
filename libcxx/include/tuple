@@ -448,33 +448,28 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __swallow(_Tp&&...) _NO
 template <class _Indx, class... _Tp>
 struct __tuple_impl;
 
+struct __forward_args {};
+struct __value_init {};
+
 template <size_t... _Indx, class... _Tp>
 struct _LIBCPP_DECLSPEC_EMPTY_BASES
     __tuple_impl<__index_sequence<_Indx...>, _Tp...> : public __tuple_leaf<_Indx, _Tp>... {
   _LIBCPP_HIDE_FROM_ABI constexpr __tuple_impl() noexcept(
       __all<is_nothrow_default_constructible<_Tp>::value...>::value) {}
 
-  template <size_t... _Uf, class... _Tf, size_t... _Ul, class... _Tl, class... _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_impl(
-      __index_sequence<_Uf...>,
-      __tuple_types<_Tf...>,
-      __index_sequence<_Ul...>,
-      __tuple_types<_Tl...>,
-      _Up&&... __u) noexcept(__all<is_nothrow_constructible<_Tf, _Up>::value...>::value &&
-                             __all<is_nothrow_default_constructible<_Tl>::value...>::value)
-      : __tuple_leaf<_Uf, _Tf>(std::forward<_Up>(__u))..., __tuple_leaf<_Ul, _Tl>()... {}
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_impl(__forward_args, _Args&&... __args)
+      : __tuple_leaf<_Indx, _Tp>(std::forward<_Args>(__args))... {}
 
-  template <class _Alloc, size_t... _Uf, class... _Tf, size_t... _Ul, class... _Tl, class... _Up>
+  template <class _Alloc>
+  _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_impl(allocator_arg_t, const _Alloc& __alloc, __value_init)
+      : __tuple_leaf<_Indx, _Tp>(__uses_alloc_ctor<_Tp, _Alloc>(), __alloc)... {}
+
+  template <class _Alloc, class... _Args>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __tuple_impl(
-      allocator_arg_t,
-      const _Alloc& __a,
-      __index_sequence<_Uf...>,
-      __tuple_types<_Tf...>,
-      __index_sequence<_Ul...>,
-      __tuple_types<_Tl...>,
-      _Up&&... __u)
-      : __tuple_leaf<_Uf, _Tf>(__uses_alloc_ctor<_Tf, _Alloc, _Up>(), __a, std::forward<_Up>(__u))...,
-        __tuple_leaf<_Ul, _Tl>(__uses_alloc_ctor<_Tl, _Alloc>(), __a)... {}
+      allocator_arg_t, const _Alloc& __alloc, __forward_args, _Args&&... __args)
+      : __tuple_leaf<_Indx, _Tp>(__uses_alloc_ctor<_Tp, _Alloc, _Args>(), __alloc, std::forward<_Args>(__args))... {}
 
   template <class _Tuple, __enable_if_t<__tuple_constructible<_Tuple, tuple<_Tp...> >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __tuple_impl(_Tuple&& __t) noexcept(
@@ -559,12 +554,7 @@ public:
             __enable_if_t< _And< _IsDefault<_Tp>... >::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(_Not<_Lazy<_And, _IsImpDefault<_Tp>...> >::value)
       tuple(allocator_arg_t, _Alloc const& __a)
-      : __base_(allocator_arg_t(),
-                __a,
-                __index_sequence<>(),
-                __tuple_types<>(),
-                __make_index_sequence<sizeof...(_Tp)>(),
-                __tuple_types<_Tp...>()) {}
+      : __base_(allocator_arg_t(), __a, __value_init{}) {}
 
   // tuple(const T&...) constructors (including allocator_arg_t variants)
   template <template <class...> class _And = _And,
@@ -572,11 +562,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_Lazy<_And, is_convertible<const _Tp&, _Tp>...> >::value)
       tuple(const _Tp&... __t) noexcept(_And<is_nothrow_copy_constructible<_Tp>...>::value)
-      : __base_(__make_index_sequence<sizeof...(_Tp)>(),
-                __tuple_types<_Tp...>(),
-                __index_sequence<>(),
-                __tuple_types<>(),
-                __t...) {}
+      : __base_(__forward_args{}, __t...) {}
 
   template <class _Alloc,
             template <class...> class _And = _And,
@@ -584,13 +570,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI
   _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(_Not<_Lazy<_And, is_convertible<const _Tp&, _Tp>...> >::value)
       tuple(allocator_arg_t, const _Alloc& __a, const _Tp&... __t)
-      : __base_(allocator_arg_t(),
-                __a,
-                __make_index_sequence<sizeof...(_Tp)>(),
-                __tuple_types<_Tp...>(),
-                __index_sequence<>(),
-                __tuple_types<>(),
-                __t...) {}
+      : __base_(allocator_arg_t(), __a, __forward_args{}, __t...) {}
 
   // tuple(U&& ...) constructors (including allocator_arg_t variants)
   template <class... _Up>
@@ -609,11 +589,7 @@ public:
                            int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit(_Not<_Lazy<_And, is_convertible<_Up, _Tp>...> >::value)
       tuple(_Up&&... __u) noexcept(_And<is_nothrow_constructible<_Tp, _Up>...>::value)
-      : __base_(__make_index_sequence<sizeof...(_Up)>(),
-                __tuple_types<_Tp...>(),
-                __index_sequence<>(),
-                __tuple_types<>(),
-                std::forward<_Up>(__u)...) {}
+      : __base_(__forward_args{}, std::forward<_Up>(__u)...) {}
 
   template <class _Alloc,
             class... _Up,
@@ -621,13 +597,7 @@ public:
                            int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit(_Not<_Lazy<_And, is_convertible<_Up, _Tp>...> >::value)
       tuple(allocator_arg_t, const _Alloc& __a, _Up&&... __u)
-      : __base_(allocator_arg_t(),
-                __a,
-                __make_index_sequence<sizeof...(_Up)>(),
-                __tuple_types<_Tp...>(),
-                __index_sequence<>(),
-                __tuple_types<>(),
-                std::forward<_Up>(__u)...) {}
+      : __base_(allocator_arg_t(), __a, __forward_args{}, std::forward<_Up>(__u)...) {}
 
   // Copy and move constructors (including the allocator_arg_t variants)
   tuple(const tuple&) = default;
