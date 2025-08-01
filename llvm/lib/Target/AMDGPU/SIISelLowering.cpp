@@ -16825,56 +16825,51 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
       return std::pair(0U, RC);
   }
 
-  if (Constraint.starts_with("{") && Constraint.ends_with("}")) {
-    StringRef RegName(Constraint.data() + 1, Constraint.size() - 2);
-    if (RegName.consume_front("v")) {
+  auto [Kind, Idx, NumRegs] = AMDGPU::parseAsmConstraintPhysReg(Constraint);
+  if (Kind != '\0') {
+    if (Kind == 'v') {
       RC = &AMDGPU::VGPR_32RegClass;
-    } else if (RegName.consume_front("s")) {
+    } else if (Kind == 's') {
       RC = &AMDGPU::SGPR_32RegClass;
-    } else if (RegName.consume_front("a")) {
+    } else if (Kind == 'a') {
       RC = &AMDGPU::AGPR_32RegClass;
     }
 
     if (RC) {
-      uint32_t Idx;
-      if (RegName.consume_front("[")) {
-        uint32_t End;
-        bool Failed = RegName.consumeInteger(10, Idx);
-        Failed |= !RegName.consume_front(":");
-        Failed |= RegName.consumeInteger(10, End);
-        Failed |= !RegName.consume_back("]");
-        if (!Failed) {
-          uint32_t Width = (End - Idx + 1) * 32;
-          // Prohibit constraints for register ranges with a width that does not
-          // match the required type.
-          if (VT.SimpleTy != MVT::Other && Width != VT.getSizeInBits())
-            return std::pair(0U, nullptr);
-          MCRegister Reg = RC->getRegister(Idx);
-          if (SIRegisterInfo::isVGPRClass(RC))
-            RC = TRI->getVGPRClassForBitWidth(Width);
-          else if (SIRegisterInfo::isSGPRClass(RC))
-            RC = TRI->getSGPRClassForBitWidth(Width);
-          else if (SIRegisterInfo::isAGPRClass(RC))
-            RC = TRI->getAGPRClassForBitWidth(Width);
-          if (RC) {
-            Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
-            if (!Reg) {
-              // The register class does not contain the requested register,
-              // e.g., because it is an SGPR pair that would violate alignment
-              // requirements.
-              return std::pair(0U, nullptr);
-            }
-            return std::pair(Reg, RC);
-          }
-        }
-      } else {
-        // Check for lossy scalar/vector conversions.
-        if (VT.isVector() && VT.getSizeInBits() != 32)
+      if (NumRegs > 1) {
+        if (Idx >= RC->getNumRegs() || Idx + NumRegs - 1 > RC->getNumRegs())
           return std::pair(0U, nullptr);
-        bool Failed = RegName.getAsInteger(10, Idx);
-        if (!Failed && Idx < RC->getNumRegs())
-          return std::pair(RC->getRegister(Idx), RC);
+
+        uint32_t Width = NumRegs * 32;
+        // Prohibit constraints for register ranges with a width that does not
+        // match the required type.
+        if (VT.SimpleTy != MVT::Other && Width != VT.getSizeInBits())
+          return std::pair(0U, nullptr);
+
+        MCRegister Reg = RC->getRegister(Idx);
+        if (SIRegisterInfo::isVGPRClass(RC))
+          RC = TRI->getVGPRClassForBitWidth(Width);
+        else if (SIRegisterInfo::isSGPRClass(RC))
+          RC = TRI->getSGPRClassForBitWidth(Width);
+        else if (SIRegisterInfo::isAGPRClass(RC))
+          RC = TRI->getAGPRClassForBitWidth(Width);
+        if (RC) {
+          Reg = TRI->getMatchingSuperReg(Reg, AMDGPU::sub0, RC);
+          if (!Reg) {
+            // The register class does not contain the requested register,
+            // e.g., because it is an SGPR pair that would violate alignment
+            // requirements.
+            return std::pair(0U, nullptr);
+          }
+          return std::pair(Reg, RC);
+        }
       }
+
+      // Check for lossy scalar/vector conversions.
+      if (VT.isVector() && VT.getSizeInBits() != 32)
+        return std::pair(0U, nullptr);
+      if (Idx < RC->getNumRegs())
+        return std::pair(RC->getRegister(Idx), RC);
     }
   }
 
