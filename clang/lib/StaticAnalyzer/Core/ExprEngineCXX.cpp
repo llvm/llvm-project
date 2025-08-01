@@ -1227,7 +1227,7 @@ void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
 
   for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
     for (ExplodedNode *N : CheckerPreStmt) {
-      Visit(Attr->getAssumption(), N, EvalSet);
+      Visit(Attr->getAssumption()->IgnoreParens(), N, EvalSet);
     }
   }
 
