@@ -216,8 +216,7 @@ void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
 void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
                              mlir::Location loc, CharUnits alignment,
                              bool isParam) {
-  const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
-  assert(namedVar && "Needs a named decl");
+  assert(isa<NamedDecl>(var) && "Needs a named decl");
   assert(!cir::MissingFeatures::cgfSymbolTable());
 
   auto allocaOp = cast<cir::AllocaOp>(addrVal.getDefiningOp());
@@ -801,6 +800,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::ImplicitCastExprClass:
     return emitCastLValue(cast<CastExpr>(e));
+  case Expr::MaterializeTemporaryExprClass:
+    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
   }
 }
 
@@ -809,6 +810,10 @@ static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
   llvm::raw_svector_ostream out(buffer);
   out << name << cnt;
   return std::string(out.str());
+}
+
+std::string CIRGenFunction::getCounterRefTmpAsString() {
+  return getVersionedTmpName("ref.tmp", counterRefTmp++);
 }
 
 std::string CIRGenFunction::getCounterAggTmpAsString() {
@@ -943,6 +948,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
       cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType");
+      break;
 
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)

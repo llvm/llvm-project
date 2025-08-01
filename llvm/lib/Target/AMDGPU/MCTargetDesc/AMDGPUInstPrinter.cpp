@@ -540,6 +540,8 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
         printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    break;
   default:
     llvm_unreachable("bad operand type");
   }
@@ -770,6 +772,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
+    case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
@@ -1788,6 +1791,16 @@ void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
     O << formatDec(Imm);
   else
     O << formatHex(static_cast<uint64_t>(Imm));
+}
+
+void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
+                                      const MCSubtargetInfo &STI,
+                                      raw_ostream &O) {
+  uint8_t Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " scale_sel:" << formatDec(Imm);
 }
 
 #include "AMDGPUGenAsmWriter.inc"

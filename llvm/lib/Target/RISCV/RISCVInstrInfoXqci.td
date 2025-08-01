@@ -1120,27 +1120,11 @@ let Predicates = [HasVendorXqcisync, IsRV32] in {
   def QC_C_SYNCWF : QCIRVInst16CBSYNC<0b100, "qc.c.syncwf">;
   def QC_C_SYNCWL : QCIRVInst16CBSYNC<0b101, "qc.c.syncwl">;
 
-  let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in
-  def QC_C_DELAY : RVInst16CI<0b000, 0b10, (outs),
-                              (ins uimm5nonzero:$imm),
-                              "qc.c.delay", "$imm"> {
-    let Inst{12} = 0;
-    let Inst{11-7} = 0;
-    let Inst{6-2} = imm{4-0};
-  }
+  // qc.c.delay implemented as an alias, below
 } // Predicates = [HasVendorXqcisync, IsRV32]
 
 let Predicates = [HasVendorXqcisim, IsRV32] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
-  def QC_PSYSCALLI : RVInstI<0b010, OPC_OP_IMM, (outs), (ins uimm10:$imm10),
-                             "qc.psyscalli", "$imm10"> {
-    bits<10> imm10;
-
-    let rs1 = 0;
-    let rd = 0;
-    let imm12 = {0b00, imm10};
-  }
-
   def QC_PPUTCI : RVInstI<0b010, OPC_OP_IMM, (outs), (ins uimm8:$imm8),
                           "qc.pputci", "$imm8"> {
     bits<8> imm8;
@@ -1150,18 +1134,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 1 in {
     let imm12 = {0b0100, imm8};
   }
 
-  def QC_PCOREDUMP : QCISim_NONE<0b0110, "qc.pcoredump">;
-  def QC_PPREGS : QCISim_NONE<0b0111, "qc.ppregs">;
-  def QC_PPREG : QCISim_RS1<0b1000, "qc.ppreg">;
-  def QC_PPUTC : QCISim_RS1<0b1001, "qc.pputc">;
-  def QC_PPUTS : QCISim_RS1<0b1010, "qc.pputs">;
-  def QC_PEXIT : QCISim_RS1<0b1011, "qc.pexit">;
-  def QC_PSYSCALL : QCISim_RS1<0b1100, "qc.psyscall">;
-
-  def QC_C_PTRACE : RVInst16CI<0b000, 0b10, (outs), (ins), "qc.c.ptrace", ""> {
-    let rd = 0;
-    let imm = 0;
-  }
+  // The other instructions are all implemented as aliases, below
 } // mayLoad = 0, mayStore = 0, hasSideEffects = 1
 } // Predicates = [HasVendorXqcisim, IsRV32]
 
@@ -1217,6 +1190,27 @@ let EmitPriority = 0 in {
                    (QC_E_SW GPR:$rs2, GPR:$rs1, 0)>;
 } // EmitPriority = 0
 } // Predicates = [HasVendorXqcilo, IsRV32]
+
+let Predicates = [HasVendorXqcisim, IsRV32] in {
+let EmitPriority = 1 in {
+  def : InstAlias<"qc.c.ptrace", (C_SLLI X0, 0)>;
+
+  def : InstAlias<"qc.psyscalli $imm", (SLTI X0, X0, uimm10:$imm)>;
+  def : InstAlias<"qc.pcoredump", (SLTI X0, X0, 1536)>;
+  def : InstAlias<"qc.ppregs", (SLTI X0, X0, 1792)>;
+  def : InstAlias<"qc.ppreg $rs1", (SLTI X0, GPR:$rs1, -2048)>;
+  def : InstAlias<"qc.pputc $rs1", (SLTI X0, GPR:$rs1, -1792)>;
+  def : InstAlias<"qc.pputs $rs1", (SLTI X0, GPR:$rs1, -1536)>;
+  def : InstAlias<"qc.pexit $rs1", (SLTI X0, GPR:$rs1, -1280)>;
+  def : InstAlias<"qc.psyscall $rs1", (SLTI X0, GPR:$rs1, -1024)>;
+} // EmitPriority = 1
+} // Predicates = [HasVendorXqcisim, IsRV32]
+
+let Predicates = [HasVendorXqcisync, IsRV32] in {
+let EmitPriority = 1 in {
+  def : InstAlias<"qc.c.delay $imm", (C_SLLI X0, uimm5nonzero:$imm)>;
+}
+} // Predicates = [HasVendorXqcisync, IsRV32]
 
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions
