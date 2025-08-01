@@ -899,7 +899,6 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         continue;
 
       Value *InVal = PN->removeIncomingValue(LatchBlock, false);
-
       // If this value was defined in the loop, take the value defined by the
       // last iteration of the loop.
       if (Instruction *InValI = dyn_cast<Instruction>(InVal)) {
