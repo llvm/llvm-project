@@ -897,20 +897,18 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
       Res.Zero.setBit(1);
     }
 
-    // If input bit[0] is set, then output bit[2] is guaranteed to be zero.
-    if (BitWidth > 2 && LHS.One[0])
-      Res.Zero.setBit(2);
+    // If X has TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.
+    unsigned TZ = (~LHS.Zero).countr_zero();
+    unsigned TwoTZP1 = 2 * TZ + 1;
+    if (TwoTZP1 < BitWidth)
+      Res.Zero.setBit(TwoTZP1);
 
-    // If input bit[0] is clear, then output bit[3] is guaranteed to be zero.
-    if (BitWidth > 3 && LHS.Zero[0])
-      Res.Zero.setBit(3);
-
-    // If input % 4 == 2, then output bit[3] and bit[4] are guarantted to be
+    // If X has exactly TZ trailing zeros, then bit (2 * TZ + 2) must also be
     // zero.
-    if (BitWidth > 3 && LHS.Zero[0] && LHS.One[1]) {
-      Res.Zero.setBit(3);
-      if (BitWidth > 4)
-        Res.Zero.setBit(4);
+    if (TZ < BitWidth && LHS.One[TZ]) {
+      unsigned TwoTZP2 = TwoTZP1 + 1;
+      if (TwoTZP2 < BitWidth)
+        Res.Zero.setBit(TwoTZP2);
     }
   }
 
