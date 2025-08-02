@@ -950,7 +950,7 @@ static_assert((Derived*)(Base*)pb1 == (Derived*)pok2, "");
 
 // Core issue 903: we do not perform constant evaluation when checking for a
 // null pointer in C++11. Just check for an integer literal with value 0.
-constexpr Base *nullB = 42 - 6 * 7; // expected-error {{cannot initialize a variable of type 'Base *const' with an rvalue of type 'int'}}
+constexpr Base *nullB = 42 - 6 * 7; // expected-error {{cannot initialize a constant of type 'Base *' with an rvalue of type 'int'}}
 constexpr Base *nullB1 = 0;
 static_assert((Bottom*)nullB == 0, "");
 static_assert((Derived*)nullB1 == 0, "");
