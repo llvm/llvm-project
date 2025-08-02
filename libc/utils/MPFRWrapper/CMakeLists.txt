@@ -32,6 +32,7 @@ if(LIBC_TESTS_CAN_USE_MPFR)
   add_library(libcMPFRWrapper STATIC
     MPFRUtils.cpp
     MPFRUtils.h
+    libc.src.__support.FPUtil.bfloat16
   )
   _get_common_test_compile_options(compile_options "" "")
   # mpfr/gmp headers do not work with -ffreestanding flag.

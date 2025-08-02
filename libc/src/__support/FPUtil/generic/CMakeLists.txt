@@ -61,6 +61,7 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
@@ -77,6 +78,7 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.basic_operations
