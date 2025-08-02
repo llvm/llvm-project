@@ -39,8 +39,6 @@
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 
-#include <set>
-
 using namespace llvm;
 
 /// Threshold to leave statically sized memory intrinsic calls. Calls of known
@@ -476,8 +474,8 @@ enum class PointerEncoding {
 bool expandProtectedFieldPtr(Function &Intr) {
   Module &M = *Intr.getParent();
 
-  std::set<GlobalValue *> DSsToDeactivate;
-  std::set<Instruction *> LoadsStores;
+  SmallPtrSet<GlobalValue *, 2> DSsToDeactivate;
+  SmallPtrSet<Instruction *, 2> LoadsStores;
 
   Type *Int8Ty = Type::getInt8Ty(M.getContext());
   Type *Int64Ty = Type::getInt64Ty(M.getContext());
@@ -520,84 +518,46 @@ bool expandProtectedFieldPtr(Function &Intr) {
   for (User *U : Intr.users()) {
     auto *Call = cast<CallInst>(U);
     auto *DS = GetDeactivationSymbol(Call);
-    std::set<PHINode *> VisitedPhis;
 
-    std::function<void(Instruction *)> FindLoadsStores;
-    FindLoadsStores = [&](Instruction *I) {
-      for (Use &U : I->uses()) {
-        if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
-          if (isa<PointerType>(LI->getType())) {
-            LoadsStores.insert(LI);
-            continue;
-          }
-        }
-        if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
-          if (U.getOperandNo() == 1 &&
-              isa<PointerType>(SI->getValueOperand()->getType())) {
-            LoadsStores.insert(SI);
-            continue;
-          }
-        }
-        if (auto *P = dyn_cast<PHINode>(U.getUser())) {
-          if (VisitedPhis.insert(P).second)
-            FindLoadsStores(P);
+    for (Use &U : Call->uses()) {
+      if (auto *LI = dyn_cast<LoadInst>(U.getUser())) {
+        if (isa<PointerType>(LI->getType())) {
+          LoadsStores.insert(LI);
           continue;
         }
-        // Comparisons against null cannot be used to recover the original
-        // pointer so we allow them.
-        if (auto *CI = dyn_cast<ICmpInst>(U.getUser())) {
-          if (auto *Op = dyn_cast<Constant>(CI->getOperand(0)))
-            if (Op->isNullValue())
-              continue;
-          if (auto *Op = dyn_cast<Constant>(CI->getOperand(1)))
-            if (Op->isNullValue())
-              continue;
-        }
-        if (DS)
-          DSsToDeactivate.insert(DS);
       }
-    };
-
-    FindLoadsStores(Call);
+      if (auto *SI = dyn_cast<StoreInst>(U.getUser())) {
+        if (U.getOperandNo() == 1 &&
+            isa<PointerType>(SI->getValueOperand()->getType())) {
+          LoadsStores.insert(SI);
+          continue;
+        }
+      }
+      // Comparisons against null cannot be used to recover the original
+      // pointer so we allow them.
+      if (auto *CI = dyn_cast<ICmpInst>(U.getUser())) {
+        if (auto *Op = dyn_cast<Constant>(CI->getOperand(0)))
+          if (Op->isNullValue())
+            continue;
+        if (auto *Op = dyn_cast<Constant>(CI->getOperand(1)))
+          if (Op->isNullValue())
+            continue;
+      }
+      if (DS)
+        DSsToDeactivate.insert(DS);
+    }
   }
 
   for (Instruction *I : LoadsStores) {
-    std::set<Value *> Pointers;
-    std::set<Value *> Discs;
-    std::set<GlobalValue *> DSs;
-    std::set<PHINode *> VisitedPhis;
-    bool UseHWEncoding = false;
+    auto *PointerOperand = isa<StoreInst>(I)
+                               ? cast<StoreInst>(I)->getPointerOperand()
+                               : cast<LoadInst>(I)->getPointerOperand();
+    auto *Call = cast<CallInst>(PointerOperand);
 
-    std::function<void(Value *)> FindFields;
-    FindFields = [&](Value *V) {
-      if (auto *Call = dyn_cast<CallInst>(V)) {
-        if (Call->getCalledOperand() == &Intr) {
-          Pointers.insert(Call->getArgOperand(0));
-          Discs.insert(Call->getArgOperand(1));
-          if (cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue())
-            UseHWEncoding = true;
-          DSs.insert(GetDeactivationSymbol(Call));
-          return;
-        }
-      }
-      if (auto *P = dyn_cast<PHINode>(V)) {
-        if (VisitedPhis.insert(P).second)
-          for (Value *V : P->incoming_values())
-            FindFields(V);
-        return;
-      }
-      Pointers.insert(nullptr);
-    };
-    FindFields(isa<StoreInst>(I) ? cast<StoreInst>(I)->getPointerOperand()
-                                 : cast<LoadInst>(I)->getPointerOperand());
-    if (Pointers.size() != 1 || Discs.size() != 1 || DSs.size() != 1) {
-      for (GlobalValue *DS : DSs)
-        if (DS)
-          DSsToDeactivate.insert(DS);
-      continue;
-    }
+    auto *Disc = Call->getArgOperand(1);
+    bool UseHWEncoding = cast<ConstantInt>(Call->getArgOperand(2))->getZExtValue();
 
-    GlobalValue *DS = *DSs.begin();
+    GlobalValue *DS = GetDeactivationSymbol(Call);
     OperandBundleDef DSBundle("deactivation-symbol", DS);
 
     if (auto *LI = dyn_cast<LoadInst>(I)) {
@@ -605,26 +565,28 @@ bool expandProtectedFieldPtr(Function &Intr) {
       auto *LIInt = cast<Instruction>(B.CreatePtrToInt(LI, B.getInt64Ty()));
       Value *Auth;
       if (UseHWEncoding) {
-        Auth = CreateAuth(B, LIInt, *Discs.begin(), DSBundle);
+        Auth = CreateAuth(B, LIInt, Disc, DSBundle);
       } else {
-        Auth = B.CreateAdd(LIInt, *Discs.begin());
+        Auth = B.CreateAdd(LIInt, Disc);
         Auth = B.CreateIntrinsic(
             Auth->getType(), Intrinsic::fshr,
             {Auth, Auth, ConstantInt::get(Auth->getType(), 16)});
       }
       LI->replaceAllUsesWith(B.CreateIntToPtr(Auth, B.getPtrTy()));
       LIInt->setOperand(0, LI);
-    } else if (auto *SI = dyn_cast<StoreInst>(I)) {
+    } else {
+      auto *SI = cast<StoreInst>(I);
       IRBuilder<> B(SI);
       auto *SIValInt =
           B.CreatePtrToInt(SI->getValueOperand(), B.getInt64Ty());
       Value *Sign;
       if (UseHWEncoding) {
-        Sign = CreateSign(B, SIValInt, *Discs.begin(), DSBundle);
+        Sign = CreateSign(B, SIValInt, Disc, DSBundle);
       } else {
         Sign = B.CreateIntrinsic(
             SIValInt->getType(), Intrinsic::fshl,
             {SIValInt, SIValInt, ConstantInt::get(SIValInt->getType(), 16)});
+        Sign = B.CreateSub(Sign, Disc);
       }
       SI->setOperand(0, B.CreateIntToPtr(Sign, B.getPtrTy()));
     }
