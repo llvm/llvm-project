@@ -305,14 +305,18 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // We need to erase the highest countTrailingZeros(ElementSize) bits of Idx.
   unsigned ElementSize =
       DL.getTypeAllocSize(Init->getType()->getArrayElementType());
+  bool NeedsMask = !GEP->isInBounds() && llvm::countr_zero(ElementSize) != 0;
   auto MaskIdx = [&](Value *Idx) {
-    if (!GEP->isInBounds() && llvm::countr_zero(ElementSize) != 0) {
+    if (NeedsMask) {
       Value *Mask = Constant::getAllOnesValue(Idx->getType());
       Mask = Builder.CreateLShr(Mask, llvm::countr_zero(ElementSize));
       Idx = Builder.CreateAnd(Idx, Mask);
     }
     return Idx;
   };
+
+  if (!LI->hasOneUse() && NeedsMask)
+    return nullptr;
 
   // If the comparison is only true for one or two elements, emit direct
   // comparisons.
@@ -327,6 +331,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     // True for one element -> 'i == 47'.
     if (SecondTrueElement == Undefined)
       return new ICmpInst(ICmpInst::ICMP_EQ, Idx, FirstTrueIdx);
+
+    if (!LI->hasOneUse())
+      return nullptr;
 
     // True for two elements -> 'i == 47 | i == 72'.
     Value *C1 = Builder.CreateICmpEQ(Idx, FirstTrueIdx);
@@ -349,6 +356,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     if (SecondFalseElement == Undefined)
       return new ICmpInst(ICmpInst::ICMP_NE, Idx, FirstFalseIdx);
 
+    if (!LI->hasOneUse())
+      return nullptr;
+
     // False for two elements -> 'i != 47 & i != 72'.
     Value *C1 = Builder.CreateICmpNE(Idx, FirstFalseIdx);
     Value *SecondFalseIdx =
@@ -365,6 +375,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
     // Generate (i-FirstTrue) <u (TrueRangeEnd-FirstTrue+1).
     if (FirstTrueElement) {
+      if (!LI->hasOneUse())
+        return nullptr;
+
       Value *Offs = ConstantInt::get(Idx->getType(), -FirstTrueElement);
       Idx = Builder.CreateAdd(Idx, Offs);
     }
@@ -380,6 +393,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     Idx = MaskIdx(Idx);
     // Generate (i-FirstFalse) >u (FalseRangeEnd-FirstFalse).
     if (FirstFalseElement) {
+      if (!LI->hasOneUse())
+        return nullptr;
+
       Value *Offs = ConstantInt::get(Idx->getType(), -FirstFalseElement);
       Idx = Builder.CreateAdd(Idx, Offs);
     }
@@ -388,6 +404,9 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
         ConstantInt::get(Idx->getType(), FalseRangeEnd - FirstFalseElement);
     return new ICmpInst(ICmpInst::ICMP_UGT, Idx, End);
   }
+
+  if (!LI->hasOneUse())
+    return nullptr;
 
   // If a magic bitvector captures the entire comparison state
   // of this load, replace it with computation that does:
@@ -1952,13 +1971,14 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   // Try to optimize things like "A[i] & 42 == 0" to index computations.
   Value *X = And->getOperand(0);
   Value *Y = And->getOperand(1);
-  if (auto *C2 = dyn_cast<ConstantInt>(Y))
-    if (auto *LI = dyn_cast<LoadInst>(X))
-      if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0)))
-        if (auto *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0)))
-          if (Instruction *Res =
-                  foldCmpLoadFromIndexedGlobal(LI, GEP, GV, Cmp, C2))
-            return Res;
+  if (And->hasOneUse())
+    if (auto *C2 = dyn_cast<ConstantInt>(Y))
+      if (auto *LI = dyn_cast<LoadInst>(X))
+        if (auto *GEP = dyn_cast<GetElementPtrInst>(LI->getOperand(0)))
+          if (auto *GV = dyn_cast<GlobalVariable>(GEP->getOperand(0)))
+            if (Instruction *Res =
+                    foldCmpLoadFromIndexedGlobal(LI, GEP, GV, Cmp, C2))
+              return Res;
 
   if (!Cmp.isEquality())
     return nullptr;
