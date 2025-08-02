@@ -58,17 +58,18 @@ public:
 
     auto argAttrs = funcOp.getArgAttrs();
     for (auto [idx, val] : llvm::enumerate(funcOp.getArguments())) {
-      StringAttr fieldName;
-      Attribute argAttr = nullptr;
-
-      fieldName = rewriter.getStringAttr("fieldName" + std::to_string(idx));
-      if (argAttrs && idx < argAttrs->size())
-        argAttr = (*argAttrs)[idx];
+      StringAttr fieldName =
+          rewriter.getStringAttr("fieldName" + std::to_string(idx));
 
       TypeAttr typeAttr = TypeAttr::get(val.getType());
       fields.push_back({fieldName, typeAttr});
-      emitc::FieldOp::create(rewriter, funcOp.getLoc(), fieldName, typeAttr,
-                             argAttr);
+
+      FieldOp fieldop = rewriter.create<emitc::FieldOp>(
+          funcOp->getLoc(), fieldName, typeAttr, nullptr);
+
+      if (argAttrs && idx < argAttrs->size()) {
+        fieldop->setDiscardableAttrs(funcOp.getArgAttrDict(idx));
+      }
     }
 
     rewriter.setInsertionPointToEnd(&newClassOp.getBody().front());

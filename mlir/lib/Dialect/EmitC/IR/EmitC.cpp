@@ -1398,6 +1398,45 @@ void FileOp::build(OpBuilder &builder, OperationState &state, StringRef id) {
 //===----------------------------------------------------------------------===//
 // FieldOp
 //===----------------------------------------------------------------------===//
+static void printEmitCFieldOpTypeAndInitialValue(OpAsmPrinter &p, FieldOp op,
+                                                 TypeAttr type,
+                                                 Attribute initialValue) {
+  p << type;
+  if (initialValue) {
+    p << " = ";
+    p.printAttributeWithoutType(initialValue);
+  }
+}
+
+static Type getInitializerTypeForField(Type type) {
+  if (auto array = llvm::dyn_cast<ArrayType>(type))
+    return RankedTensorType::get(array.getShape(), array.getElementType());
+  return type;
+}
+
+static ParseResult
+parseEmitCFieldOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
+                                     Attribute &initialValue) {
+  Type type;
+  if (parser.parseType(type))
+    return failure();
+
+  typeAttr = TypeAttr::get(type);
+
+  if (parser.parseOptionalEqual())
+    return success();
+
+  if (parser.parseAttribute(initialValue, getInitializerTypeForField(type)))
+    return failure();
+
+  if (!llvm::isa<ElementsAttr, IntegerAttr, FloatAttr, emitc::OpaqueAttr>(
+          initialValue))
+    return parser.emitError(parser.getNameLoc())
+           << "initial value should be a integer, float, elements or opaque "
+              "attribute";
+  return success();
+}
+
 LogicalResult FieldOp::verify() {
   if (!isSupportedEmitCType(getType()))
     return emitOpError("expected valid emitc type");
@@ -1409,9 +1448,6 @@ LogicalResult FieldOp::verify() {
   StringAttr symName = getSymNameAttr();
   if (!symName || symName.getValue().empty())
     return emitOpError("field must have a non-empty symbol name");
-
-  if (!getAttrs())
-    return success();
 
   return success();
 }

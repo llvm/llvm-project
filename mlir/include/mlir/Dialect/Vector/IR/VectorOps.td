@@ -2780,6 +2780,10 @@ def Vector_SplatOp : Vector_Op<"splat", [
   let assemblyFormat = "$input attr-dict `:` type($aggregate)";
 
   let hasFolder = 1;
+
+  // vector.splat is deprecated, and vector.broadcast should be used instead.
+  // Canonicalize vector.splat to vector.broadcast.
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

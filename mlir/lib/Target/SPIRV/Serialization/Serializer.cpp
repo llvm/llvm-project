@@ -69,6 +69,25 @@ static Block *getPhiIncomingBlock(Block *block) {
   return block;
 }
 
+static bool isZeroValue(Attribute attr) {
+  if (auto floatAttr = dyn_cast<FloatAttr>(attr)) {
+    return floatAttr.getValue().isZero();
+  }
+  if (auto boolAttr = dyn_cast<BoolAttr>(attr)) {
+    return !boolAttr.getValue();
+  }
+  if (auto intAttr = dyn_cast<IntegerAttr>(attr)) {
+    return intAttr.getValue().isZero();
+  }
+  if (auto splatElemAttr = dyn_cast<SplatElementsAttr>(attr)) {
+    return isZeroValue(splatElemAttr.getSplatValue<Attribute>());
+  }
+  if (auto denseElemAttr = dyn_cast<DenseElementsAttr>(attr)) {
+    return all_of(denseElemAttr.getValues<Attribute>(), isZeroValue);
+  }
+  return false;
+}
+
 namespace mlir {
 namespace spirv {
 
@@ -959,6 +978,11 @@ Serializer::prepareDenseElementsConstant(Location loc, Type constType,
       return 0;
     }
   } else if (isa<spirv::TensorArmType>(constType)) {
+    if (isZeroValue(valueAttr)) {
+      encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                            {typeID, resultID});
+      return resultID;
+    }
     numberOfConstituents = shapedType.getNumElements();
     operands.reserve(numberOfConstituents + 2);
     for (int i = 0; i < numberOfConstituents; ++i) {
@@ -1163,6 +1187,21 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
   return resultID;
 }
 
+// Returns type of attribute. In case of a TypedAttr this will simply return
+// the type. But for an ArrayAttr which is untyped and can be multidimensional
+// it creates the ArrayType recursively.
+static Type getValueType(Attribute attr) {
+  if (auto typedAttr = dyn_cast<TypedAttr>(attr)) {
+    return typedAttr.getType();
+  }
+
+  if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
+    return spirv::ArrayType::get(getValueType(arrayAttr[0]), arrayAttr.size());
+  }
+
+  return nullptr;
+}
+
 uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
                                                        Type resultType,
                                                        Attribute valueAttr) {
@@ -1176,18 +1215,9 @@ uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
     return 0;
   }
 
-  Type valueType;
-  if (auto typedAttr = dyn_cast<TypedAttr>(valueAttr)) {
-    valueType = typedAttr.getType();
-  } else if (auto arrayAttr = dyn_cast<ArrayAttr>(valueAttr)) {
-    auto typedElemAttr = dyn_cast<TypedAttr>(arrayAttr[0]);
-    if (!typedElemAttr)
-      return 0;
-    valueType =
-        spirv::ArrayType::get(typedElemAttr.getType(), arrayAttr.size());
-  } else {
+  Type valueType = getValueType(valueAttr);
+  if (!valueAttr)
     return 0;
-  }
 
   auto compositeType = dyn_cast<CompositeType>(resultType);
   if (!compositeType)
@@ -1202,11 +1232,14 @@ uint32_t Serializer::prepareConstantCompositeReplicate(Location loc,
   }
 
   uint32_t resultID = getNextID();
-  uint32_t operands[] = {typeID, resultID, constandID};
-
-  encodeInstructionInto(typesGlobalValues,
-                        spirv::Opcode::OpConstantCompositeReplicateEXT,
-                        operands);
+  if (dyn_cast<spirv::TensorArmType>(resultType) && isZeroValue(valueAttr)) {
+    encodeInstructionInto(typesGlobalValues, spirv::Opcode::OpConstantNull,
+                          {typeID, resultID});
+  } else {
+    encodeInstructionInto(typesGlobalValues,
+                          spirv::Opcode::OpConstantCompositeReplicateEXT,
+                          {typeID, resultID, constandID});
+  }
 
   constCompositeReplicateIDMap[valueTypePair] = resultID;
   return resultID;

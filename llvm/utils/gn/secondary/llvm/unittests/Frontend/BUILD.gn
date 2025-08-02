@@ -24,5 +24,6 @@ unittest("LLVMFrontendTests") {
     "OpenMPDirectiveNameTest.cpp",
     "OpenMPIRBuilderTest.cpp",
     "OpenMPParsingTest.cpp",
+    "PropertySetRegistryTest.cpp",
   ]
 }
