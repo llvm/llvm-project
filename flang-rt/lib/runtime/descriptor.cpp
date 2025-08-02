@@ -100,6 +100,15 @@ RT_API_ATTRS void Descriptor::Establish(const typeInfo::DerivedType &dt,
   new (Addendum()) DescriptorAddendum{&dt};
 }
 
+RT_API_ATTRS void Descriptor::UncheckedScalarEstablish(
+    const typeInfo::DerivedType &dt, void *p) {
+  auto elementBytes{static_cast<std::size_t>(dt.sizeInBytes())};
+  ISO::EstablishDescriptor(
+      &raw_, p, CFI_attribute_other, CFI_type_struct, elementBytes, 0, nullptr);
+  SetHasAddendum();
+  new (Addendum()) DescriptorAddendum{&dt};
+}
+
 RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(TypeCode t,
     std::size_t elementBytes, void *p, int rank, const SubscriptValue *extent,
     ISO::CFI_attribute_t attribute, bool addendum,
