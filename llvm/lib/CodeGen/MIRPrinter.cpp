@@ -553,7 +553,7 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
   }
 
   // Sort call info by position of call instructions.
-  llvm::sort(YMF.CallSitesInfo.begin(), YMF.CallSitesInfo.end(),
+  llvm::sort(YMF.CallSitesInfo,
              [](yaml::CallSiteInfo A, yaml::CallSiteInfo B) {
                return std::tie(A.CallLocation.BlockNum, A.CallLocation.Offset) <
                       std::tie(B.CallLocation.BlockNum, B.CallLocation.Offset);
