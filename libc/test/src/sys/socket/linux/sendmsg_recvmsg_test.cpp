@@ -66,6 +66,8 @@ TEST_F(LlvmLibcSendMsgRecvMsgTest, SucceedsWithSocketPair) {
   ASSERT_THAT(LIBC_NAMESPACE::recvmsg(sockpair[1], &recv_message, 0),
               Succeeds(static_cast<ssize_t>(MESSAGE_LEN)));
 
+  ASSERT_EQ(recv_message.msg_iov->iov_base, reinterpret_cast<void *>(buffer));
+
   ASSERT_STREQ(buffer, TEST_MESSAGE);
 
   // close both ends of the socket
