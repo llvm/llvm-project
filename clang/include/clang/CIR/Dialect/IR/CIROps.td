@@ -3304,13 +3304,19 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
 {
   let arguments = (ins CIR_AnyFloatOrVecOfFloatType:$src);
   let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
-  let summary = "libc builtin equivalent ignoring "
-                "floating point exceptions and errno";
+
   let assemblyFormat = "$src `:` type($src) attr-dict";
 
   let llvmOp = llvmOpName;
 }
 
-def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp">;
+def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
+  let summary = "Computes the floating-point absolute value";
+  let description = [{
+    `cir.fabs` computes the absolute value of a floating-point operand
+    and returns a result of the same type, ignoring floating-point
+    exceptions. It does not set `errno`.
+  }];
+}
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

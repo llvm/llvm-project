@@ -81,7 +81,7 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   assert(!cir::MissingFeatures::fpConstraints());
 
   auto call =
-      cgf.getBuilder().create<Operation>(arg.getLoc(), arg.getType(), arg);
+      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
   return RValue::get(call->getResult(0));
 }
 
