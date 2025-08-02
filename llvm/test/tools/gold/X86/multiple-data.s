@@ -9,6 +9,9 @@
 # RUN:     --section-ordering-file=%t_order_lto.txt
 # RUN: llvm-readelf -s %t.exe | FileCheck %s
 
+# --section-ordering-file is not supported by ld.bfd, use gold instead.
+# REQUIRES: gold_plugin
+
 # CHECK-DAG:      00000000004010fc     4 OBJECT  GLOBAL DEFAULT    2 dipsy
 # CHECK-DAG:      00000000004010f8     4 OBJECT  GLOBAL DEFAULT    2 tin
 # CHECK-DAG:      0000000000401100     4 OBJECT  GLOBAL DEFAULT    2 pat
