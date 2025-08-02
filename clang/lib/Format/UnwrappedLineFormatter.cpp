@@ -257,6 +257,12 @@ private:
       return tryMergeSimpleBlock(I, E, Limit);
     }
 
+    if (TheLine->Last->is(TT_FunctionLBrace) &&
+        TheLine->First == TheLine->Last &&
+        Style.AllowShortFunctionBodiesOnASingleLine) {
+      return tryMergeSimpleBlock(I, E, Limit);
+    }
+
     const auto *PreviousLine = I != AnnotatedLines.begin() ? I[-1] : nullptr;
     // Handle empty record blocks where the brace has already been wrapped.
     if (PreviousLine && TheLine->Last->is(tok::l_brace) &&
@@ -532,6 +538,20 @@ private:
       }
       return MergedLines;
     }
+
+    // Previously, UnwrappedLineParser would move the left brace to a new line
+    // when AllowShortFunctionBodiesOnASingleLine is enabled. However, if the
+    // function body cannot fit on a single line, and Style.BraceWrapping.AfterFunction
+    // is false, we should merge the function name and the left brace back onto
+    // the same line
+    if (NextLine.First->is(TT_FunctionLBrace) &&
+        Style.AllowShortFunctionBodiesOnASingleLine &&
+        !Style.BraceWrapping.AfterFunction) {
+      unsigned MergedLines = 0;
+      MergedLines = tryMergeSimpleBlock(I + 1, E, Limit);
+      return MergedLines > 0 ? 0 : 1;
+    }
+
     auto IsElseLine = [&TheLine]() -> bool {
       const FormatToken *First = TheLine->First;
       if (First->is(tok::kw_else))
