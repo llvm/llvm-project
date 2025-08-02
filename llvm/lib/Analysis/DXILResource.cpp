@@ -29,20 +29,6 @@
 using namespace llvm;
 using namespace dxil;
 
-static StringRef getResourceClassName(ResourceClass RC) {
-  switch (RC) {
-  case ResourceClass::SRV:
-    return "SRV";
-  case ResourceClass::UAV:
-    return "UAV";
-  case ResourceClass::CBuffer:
-    return "CBuffer";
-  case ResourceClass::Sampler:
-    return "Sampler";
-  }
-  llvm_unreachable("Unhandled ResourceClass");
-}
-
 static StringRef getResourceKindName(ResourceKind RK) {
   switch (RK) {
   case ResourceKind::Texture1D:
