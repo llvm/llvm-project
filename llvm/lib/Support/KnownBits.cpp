@@ -888,11 +888,30 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   Res.Zero |= (~BottomKnown).getLoBits(ResultBitsKnown);
   Res.One = BottomKnown.getLoBits(ResultBitsKnown);
 
-  // If we're self-multiplying then bit[1] is guaranteed to be zero.
-  if (NoUndefSelfMultiply && BitWidth > 1) {
-    assert(Res.One[1] == 0 &&
-           "Self-multiplication failed Quadratic Reciprocity!");
-    Res.Zero.setBit(1);
+  // Self multiplying
+  if (NoUndefSelfMultiply) {
+    // bit[1] is guaranteed to be zero.
+    if (BitWidth > 1) {
+      assert(Res.One[1] == 0 &&
+             "Self-multiplication failed Quadratic Reciprocity!");
+      Res.Zero.setBit(1);
+    }
+
+    // If input bit[0] is set, then output bit[2] is guaranteed to be zero.
+    if (BitWidth > 2 && LHS.One[0])
+      Res.Zero.setBit(2);
+
+    // If input bit[0] is clear, then output bit[3] is guaranteed to be zero.
+    if (BitWidth > 3 && LHS.Zero[0])
+      Res.Zero.setBit(3);
+
+    // If input % 4 == 2, then output bit[3] and bit[4] are guarantted to be
+    // zero.
+    if (BitWidth > 3 && LHS.Zero[0] && LHS.One[1]) {
+      Res.Zero.setBit(3);
+      if (BitWidth > 4)
+        Res.Zero.setBit(4);
+    }
   }
 
   return Res;
