@@ -1,6 +1,6 @@
 ## Check that we can reorder test runs.
 
-# RUN: cp %{inputs}/reorder/lit_test_times %{inputs}/reorder/.lit_test_times.txt
+# RUN: cat %{inputs}/reorder/lit_test_times > %{inputs}/reorder/.lit_test_times.txt
 # RUN: not %{lit-no-order-opt} %{inputs}/reorder > %t.out
 # RUN: FileCheck --check-prefix=TIMES < %{inputs}/reorder/.lit_test_times.txt %s
 # RUN: FileCheck < %t.out %s
