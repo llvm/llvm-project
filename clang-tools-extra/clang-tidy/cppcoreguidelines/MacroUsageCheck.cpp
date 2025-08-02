@@ -83,6 +83,20 @@ void MacroUsageCheck::warnMacro(const MacroDirective *MD, StringRef MacroName) {
   const MacroInfo *Info = MD->getMacroInfo();
   StringRef Message;
 
+  for (const auto &T : MD->getMacroInfo()->tokens()) {
+    if (T.is(tok::hash)) {
+      return;
+    }
+    if (T.is(tok::identifier)) {
+      StringRef IdentName = T.getIdentifierInfo()->getName();
+      if (IdentName == "__FILE__") {
+        return;
+      } else if (IdentName == "__LINE__") {
+        return;
+      }
+    }
+  }
+
   if (llvm::all_of(Info->tokens(), std::mem_fn(&Token::isLiteral)))
     Message = "macro '%0' used to declare a constant; consider using a "
               "'constexpr' constant";
