@@ -36,30 +36,12 @@ bool isWidenableBranch(const User *U);
 /// widenable conditional branch to deopt block.
 bool isGuardAsWidenableBranch(const User *U);
 
-/// If U is widenable branch looking like:
-///   %cond = ...
-///   %wc = call i1 @llvm.experimental.widenable.condition()
-///   %branch_cond = and i1 %cond, %wc
-///   br i1 %branch_cond, label %if_true_bb, label %if_false_bb ; <--- U
-/// The function returns true, and the values %cond and %wc and blocks
-/// %if_true_bb, if_false_bb are returned in
-/// the parameters (Condition, WidenableCondition, IfTrueBB and IfFalseFF)
-/// respectively. If \p U does not match this pattern, return false.
-bool parseWidenableBranch(const User *U, Value *&Condition,
-                          Value *&WidenableCondition, BasicBlock *&IfTrueBB,
-                          BasicBlock *&IfFalseBB);
-
-/// Analogous to the above, but return the Uses so that they can be
-/// modified. Unlike previous version, Condition is optional and may be null.
-bool parseWidenableBranch(User *U, Use *&Cond, Use *&WC, BasicBlock *&IfTrueBB,
-                          BasicBlock *&IfFalseBB);
-
 // The guard condition is expected to be in form of:
 //   cond1 && cond2 && cond3 ...
 // or in case of widenable branch:
 //   cond1 && cond2 && cond3 && widenable_contidion ...
 // Method collects the list of checks, but skips widenable_condition.
-void parseWidenableGuard(const User *U, llvm::SmallVectorImpl<Value *> &Checks);
+void parseWidenableGuard(const User *U, SmallVectorImpl<Value *> &Checks);
 
 // Returns widenable_condition if it exists in the expression tree rooting from
 // \p U and has only one use.
