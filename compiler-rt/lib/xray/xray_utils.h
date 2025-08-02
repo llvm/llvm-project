@@ -38,6 +38,8 @@ public:
  // Write a character range into a log.
  void WriteAll(const char *Begin, const char *End);
 
+ void WritePadding(int NumBytes);
+
  void Flush();
 
  // Returns a new log instance initialized using the flag-provided values.
