@@ -405,12 +405,25 @@ HIPAMDToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs,
     // Add instrument lib.
     auto InstLib =
         DriverArgs.getLastArgValue(options::OPT_gpu_instrument_lib_EQ);
-    if (InstLib.empty())
-      return BCLibs;
-    if (llvm::sys::fs::exists(InstLib))
-      BCLibs.emplace_back(InstLib);
-    else
-      getDriver().Diag(diag::err_drv_no_such_file) << InstLib;
+    if (!InstLib.empty()) {
+      if (llvm::sys::fs::exists(InstLib))
+        BCLibs.emplace_back(InstLib);
+      else
+        getDriver().Diag(diag::err_drv_no_such_file) << InstLib;
+    }
+  }
+
+  // Add the LLVM libc bitcode if it is available. This is added after the
+  // normal HIP libraries so it should not conflict with its definitions.
+  if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
+                          false)) {
+    if (std::optional<std::string> StdlibPath = getStdlibPath()) {
+      for (StringRef Library : {"libc.bc", "libm.bc"}) {
+        SmallString<128> Path(*StdlibPath);
+        llvm::sys::path::append(Path, Library);
+        BCLibs.emplace_back(Path);
+      }
+    }
   }
 
   return BCLibs;
