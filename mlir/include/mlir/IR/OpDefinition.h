@@ -22,6 +22,7 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/ODSSupport.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/PointerLikeTypeTraits.h"
 
 #include <optional>
@@ -2150,6 +2151,46 @@ struct DenseMapInfo<T,
   }
   static bool isEqual(T lhs, T rhs) { return lhs == rhs; }
 };
+
+/// The reason why these conditions are not directly used in specialized
+/// parameters is that some compilers do not support short circuits between
+/// several conditions.
+template <typename T, bool = is_incomplete_v<T>>
+struct is_complete_and_derive_from_state {
+  constexpr static bool value = std::is_base_of_v<mlir::OpState, T>;
+};
+
+template <typename T>
+struct is_complete_and_derive_from_state<T, true> {
+  constexpr static bool value = false;
+};
+
+/// Add support for llvm style casts.
+/// We provide a cast between To and From if To and From is mlir::OpState or
+/// derives from it. To avoid some pre declared types matching here, we have
+/// added a condition for whether there is a complete type defintion.
+template <typename To, typename From>
+struct CastInfo<To, From,
+                std::enable_if_t<is_complete_and_derive_from_state<To>::value &&
+                                     is_complete_and_derive_from_state<
+                                         std::remove_const_t<From>>::value,
+                                 void>>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+
+  static inline bool isPossible(From &val) {
+    if constexpr (std::is_same_v<To, From>)
+      return true;
+    else
+      return isa<To>(
+          const_cast<std::remove_const_t<From> &>(val).getOperation());
+  }
+
+  static inline To doCast(From &val) {
+    return To(const_cast<std::remove_const_t<From> &>(val).getOperation());
+  }
+};
+
 } // namespace llvm
 
 #endif
