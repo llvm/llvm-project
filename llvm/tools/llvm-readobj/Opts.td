@@ -82,6 +82,9 @@ def codeview_ghash : FF<"codeview-ghash", "Enable global hashing for CodeView ty
 def codeview_merged_types : FF<"codeview-merged-types", "Display the merged CodeView type stream">, Group<grp_coff>;
 def codeview_subsection_bytes : FF<"codeview-subsection-bytes", "Dump raw contents of codeview debug sections and records">, Group<grp_coff>;
 def coff_basereloc : FF<"coff-basereloc", "Display .reloc section">, Group<grp_coff>;
+def coff_pseudoreloc
+    : FF<"coff-pseudoreloc", "Display runtime pseudo-relocations">,
+      Group<grp_coff>;
 def coff_debug_directory : FF<"coff-debug-directory", "Display debug directory">, Group<grp_coff>;
 def coff_directives : FF<"coff-directives", "Display .drectve section">, Group<grp_coff>;
 def coff_exports : FF<"coff-exports", "Display export table">, Group<grp_coff>;

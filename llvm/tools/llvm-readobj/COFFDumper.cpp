@@ -95,6 +95,7 @@ public:
   void printCOFFExports() override;
   void printCOFFDirectives() override;
   void printCOFFBaseReloc() override;
+  void printCOFFPseudoReloc() override;
   void printCOFFDebugDirectory() override;
   void printCOFFTLSDirectory() override;
   void printCOFFResources() override;
@@ -1997,6 +1998,114 @@ void COFFDumper::printCOFFBaseReloc() {
     DictScope Import(W, "Entry");
     W.printString("Type", getBaseRelocTypeName(Type));
     W.printHex("Address", RVA);
+  }
+}
+
+void COFFDumper::printCOFFPseudoReloc() {
+  const StringRef RelocBeginName = Obj->getArch() == Triple::x86
+                                       ? "___RUNTIME_PSEUDO_RELOC_LIST__"
+                                       : "__RUNTIME_PSEUDO_RELOC_LIST__";
+  const StringRef RelocEndName = Obj->getArch() == Triple::x86
+                                     ? "___RUNTIME_PSEUDO_RELOC_LIST_END__"
+                                     : "__RUNTIME_PSEUDO_RELOC_LIST_END__";
+
+  COFFSymbolRef RelocBegin, RelocEnd;
+  auto Count = Obj->getNumberOfSymbols();
+  if (Count == 0) {
+    W.startLine() << "The symbol table has been stripped\n";
+    return;
+  }
+  for (auto i = 0u;
+       i < Count && (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()); ++i) {
+    auto Sym = Obj->getSymbol(i);
+    if (Sym.takeError())
+      continue;
+    auto Name = Obj->getSymbolName(*Sym);
+    if (Name.takeError())
+      continue;
+    if (*Name == RelocBeginName) {
+      if (Sym->getSectionNumber() > 0)
+        RelocBegin = *Sym;
+    } else if (*Name == RelocEndName) {
+      if (Sym->getSectionNumber() > 0)
+        RelocEnd = *Sym;
+    }
+  }
+  if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
+    W.startLine()
+        << "The symbols for runtime pseudo-relocation are not found\n";
+    return;
+  }
+
+  ArrayRef<uint8_t> Data;
+  auto Section = Obj->getSection(RelocBegin.getSectionNumber());
+  if (auto E = Section.takeError()) {
+    reportError(std::move(E), Obj->getFileName());
+    return;
+  }
+  if (auto E = Obj->getSectionContents(*Section, Data)) {
+    reportError(std::move(E), Obj->getFileName());
+    return;
+  }
+  ArrayRef<uint8_t> RawRelocs =
+      Data.take_front(RelocEnd.getValue()).drop_front(RelocBegin.getValue());
+  struct alignas(4) PseudoRelocationHeader {
+    uint32_t Zero1;
+    uint32_t Zero2;
+    uint32_t Signature;
+  };
+  static const PseudoRelocationHeader HeaderV2 = {0, 0, 1};
+  if (RawRelocs.size() < sizeof(HeaderV2) ||
+      (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0)) {
+    reportWarning(
+        createStringError("Invalid runtime pseudo-relocation records"),
+        Obj->getFileName());
+    return;
+  }
+  struct alignas(4) PseudoRelocationRecord {
+    uint32_t Symbol;
+    uint32_t Target;
+    uint32_t BitSize;
+  };
+  ArrayRef<PseudoRelocationRecord> RelocRecords(
+      reinterpret_cast<const PseudoRelocationRecord *>(
+          RawRelocs.data() + sizeof(PseudoRelocationHeader)),
+      (RawRelocs.size() - sizeof(PseudoRelocationHeader)) /
+          sizeof(PseudoRelocationRecord));
+
+  // Cache of symbol searched at least once in IAT
+  DenseMap<uint32_t, StringRef> ImportedSymbols;
+
+  ListScope D(W, "PseudoReloc");
+  for (const auto &Reloc : RelocRecords) {
+    DictScope Entry(W, "Entry");
+    W.printHex("Symbol", Reloc.Symbol);
+
+    // find and print the pointed symbol from IAT
+    [&]() {
+      for (auto D : Obj->import_directories()) {
+        uint32_t RVA;
+        if (auto E = D.getImportAddressTableRVA(RVA))
+          reportError(std::move(E), Obj->getFileName());
+        if (Reloc.Symbol < RVA)
+          continue;
+        for (auto S : D.imported_symbols()) {
+          if (RVA == Reloc.Symbol) {
+            if (auto E = S.getSymbolName(ImportedSymbols[RVA]))
+              reportError(std::move(E), Obj->getFileName());
+            return;
+          }
+          RVA += Obj->is64() ? 8 : 4;
+        }
+      }
+    }();
+    if (auto Ite = ImportedSymbols.find(Reloc.Symbol);
+        Ite != ImportedSymbols.end()) {
+      W.printString("SymbolName", Ite->second);
+    }
+
+    W.printHex("Target", Reloc.Target);
+    W.printNumber("BitWidth", Reloc.BitSize);
   }
 }
 
