@@ -2,6 +2,7 @@ set(LLVM_LINK_COMPONENTS
   Analysis
   Core
   FrontendHLSL
+  FrontendOffloading
   FrontendOpenACC
   FrontendOpenMP
   Passes
