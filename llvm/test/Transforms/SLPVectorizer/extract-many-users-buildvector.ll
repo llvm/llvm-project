@@ -7,28 +7,31 @@ define i1 @test(float %0, double %1) {
 ; X86-SAME: (float [[TMP0:%.*]], double [[TMP1:%.*]]) {
 ; X86-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float poison>, float [[TMP0]], i32 3
 ; X86-NEXT:    [[TMP4:%.*]] = fpext <4 x float> [[TMP3]] to <4 x double>
-; X86-NEXT:    [[TMP5:%.*]] = insertelement <6 x double> <double poison, double poison, double poison, double poison, double poison, double 0.000000e+00>, double [[TMP1]], i32 4
-; X86-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> poison, <6 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP7:%.*]] = shufflevector <6 x double> [[TMP5]], <6 x double> [[TMP6]], <6 x i32> <i32 6, i32 7, i32 8, i32 9, i32 4, i32 5>
-; X86-NEXT:    [[TMP8:%.*]] = fmul <6 x double> zeroinitializer, [[TMP7]]
-; X86-NEXT:    [[TMP9:%.*]] = shufflevector <6 x double> [[TMP7]], <6 x double> [[TMP8]], <4 x i32> <i32 poison, i32 4, i32 11, i32 11>
-; X86-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP9]], <4 x double> <double 0.000000e+00, double poison, double poison, double poison>, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
-; X86-NEXT:    [[TMP11:%.*]] = shufflevector <6 x double> [[TMP7]], <6 x double> poison, <4 x i32> <i32 2, i32 0, i32 1, i32 poison>
-; X86-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP11]], <4 x double> <double poison, double poison, double poison, double 0.000000e+00>, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; X86-NEXT:    [[TMP13:%.*]] = fmul <4 x double> [[TMP10]], [[TMP12]]
-; X86-NEXT:    [[TMP14:%.*]] = shufflevector <4 x double> [[TMP13]], <4 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP15:%.*]] = shufflevector <8 x double> <double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00>, <8 x double> [[TMP14]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; X86-NEXT:    [[TMP16:%.*]] = shufflevector <6 x double> [[TMP8]], <6 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 poison, i32 poison>
-; X86-NEXT:    [[TMP17:%.*]] = shufflevector <8 x double> <double poison, double poison, double poison, double poison, double poison, double poison, double 0.000000e+00, double 0.000000e+00>, <8 x double> [[TMP16]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 6, i32 7>
-; X86-NEXT:    [[TMP18:%.*]] = fsub <8 x double> [[TMP15]], [[TMP17]]
-; X86-NEXT:    [[TMP19:%.*]] = fmul <8 x double> [[TMP15]], [[TMP17]]
-; X86-NEXT:    [[TMP20:%.*]] = shufflevector <8 x double> [[TMP18]], <8 x double> [[TMP19]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 13, i32 14, i32 15>
-; X86-NEXT:    [[TMP21:%.*]] = fptrunc <8 x double> [[TMP20]] to <8 x float>
-; X86-NEXT:    [[TMP22:%.*]] = fmul <8 x float> [[TMP21]], zeroinitializer
-; X86-NEXT:    [[TMP23:%.*]] = fcmp oeq <8 x float> [[TMP22]], zeroinitializer
-; X86-NEXT:    [[TMP24:%.*]] = freeze <8 x i1> [[TMP23]]
-; X86-NEXT:    [[TMP25:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP24]])
-; X86-NEXT:    ret i1 [[TMP25]]
+; X86-NEXT:    [[TMP5:%.*]] = fmul double 0.000000e+00, 0.000000e+00
+; X86-NEXT:    [[TMP6:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double poison, double poison>, double [[TMP1]], i32 1
+; X86-NEXT:    [[TMP7:%.*]] = insertelement <4 x double> [[TMP6]], double [[TMP5]], i32 2
+; X86-NEXT:    [[TMP8:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
+; X86-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> <double poison, double poison, double poison, double 0.000000e+00>, <4 x i32> <i32 2, i32 0, i32 1, i32 7>
+; X86-NEXT:    [[TMP10:%.*]] = fmul <4 x double> [[TMP8]], [[TMP9]]
+; X86-NEXT:    [[TMP11:%.*]] = insertelement <5 x double> poison, double [[TMP1]], i32 4
+; X86-NEXT:    [[TMP12:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison>
+; X86-NEXT:    [[TMP13:%.*]] = shufflevector <5 x double> [[TMP11]], <5 x double> [[TMP12]], <5 x i32> <i32 5, i32 6, i32 7, i32 8, i32 4>
+; X86-NEXT:    [[TMP14:%.*]] = fmul <5 x double> zeroinitializer, [[TMP13]]
+; X86-NEXT:    [[TMP15:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> poison, <5 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison>
+; X86-NEXT:    [[TMP16:%.*]] = shufflevector <5 x double> <double poison, double poison, double poison, double poison, double 0.000000e+00>, <5 x double> [[TMP15]], <5 x i32> <i32 5, i32 6, i32 7, i32 8, i32 4>
+; X86-NEXT:    [[TMP17:%.*]] = fsub <5 x double> [[TMP16]], [[TMP14]]
+; X86-NEXT:    [[TMP18:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> poison, <3 x i32> <i32 2, i32 poison, i32 poison>
+; X86-NEXT:    [[TMP19:%.*]] = shufflevector <3 x double> [[TMP18]], <3 x double> <double poison, double 0.000000e+00, double 0.000000e+00>, <3 x i32> <i32 0, i32 4, i32 5>
+; X86-NEXT:    [[TMP20:%.*]] = fmul <3 x double> zeroinitializer, [[TMP19]]
+; X86-NEXT:    [[TMP21:%.*]] = shufflevector <5 x double> [[TMP17]], <5 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 poison, i32 poison, i32 poison>
+; X86-NEXT:    [[TMP22:%.*]] = shufflevector <3 x double> [[TMP20]], <3 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; X86-NEXT:    [[TMP23:%.*]] = shufflevector <8 x double> [[TMP21]], <8 x double> [[TMP22]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 8, i32 9, i32 10>
+; X86-NEXT:    [[TMP24:%.*]] = fptrunc <8 x double> [[TMP23]] to <8 x float>
+; X86-NEXT:    [[TMP25:%.*]] = fmul <8 x float> [[TMP24]], zeroinitializer
+; X86-NEXT:    [[TMP26:%.*]] = fcmp oeq <8 x float> [[TMP25]], zeroinitializer
+; X86-NEXT:    [[TMP27:%.*]] = freeze <8 x i1> [[TMP26]]
+; X86-NEXT:    [[TMP28:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP27]])
+; X86-NEXT:    ret i1 [[TMP28]]
 ;
 ; AARCH64-LABEL: define i1 @test
 ; AARCH64-SAME: (float [[TMP0:%.*]], double [[TMP1:%.*]]) {
