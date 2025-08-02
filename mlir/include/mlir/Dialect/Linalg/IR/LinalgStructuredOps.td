@@ -31,6 +31,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
        DeclareOpInterfaceMethods<ConditionallySpeculatable>,
        RecursiveMemoryEffects,
+       LocalEffectsOpInterface,
        DestinationStyleOpInterface,
        LinalgStructuredInterface,
        ReifyRankedShapedTypeOpInterface], props)> {
