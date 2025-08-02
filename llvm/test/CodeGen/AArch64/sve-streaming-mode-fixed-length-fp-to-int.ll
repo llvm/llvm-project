@@ -323,11 +323,11 @@ define void @fcvtzu_v16f16_v16i32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uunpklo z2.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    fcvtzu z2.s, p0/m, z2.h
 ; CHECK-NEXT:    fcvtzu z3.s, p0/m, z3.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    fcvtzu z0.s, p0/m, z0.h
 ; CHECK-NEXT:    fcvtzu z1.s, p0/m, z1.h
 ; CHECK-NEXT:    stp q2, q0, [x1, #32]
@@ -606,7 +606,7 @@ define void @fcvtzu_v16f16_v16i64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov z4.h, z1.h[3]
 ; CHECK-NEXT:    mov z7.h, z1.h[2]
 ; CHECK-NEXT:    mov z17.h, z0.h[1]
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    fcvtzu z3.d, p0/m, z3.h
 ; CHECK-NEXT:    fcvtzu z5.d, p0/m, z5.h
 ; CHECK-NEXT:    fcvtzu z6.d, p0/m, z6.h
@@ -1109,11 +1109,11 @@ define void @fcvtzu_v8f32_v8i64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z3.d, z1.s
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    fcvtzu z2.d, p0/m, z2.s
 ; CHECK-NEXT:    fcvtzu z3.d, p0/m, z3.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    fcvtzu z0.d, p0/m, z0.s
 ; CHECK-NEXT:    fcvtzu z1.d, p0/m, z1.s
 ; CHECK-NEXT:    stp q2, q0, [x1, #32]
@@ -2018,11 +2018,11 @@ define void @fcvtzs_v16f16_v16i32(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uunpklo z2.s, z0.h
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    fcvtzs z2.s, p0/m, z2.h
 ; CHECK-NEXT:    fcvtzs z3.s, p0/m, z3.h
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    fcvtzs z0.s, p0/m, z0.h
 ; CHECK-NEXT:    fcvtzs z1.s, p0/m, z1.h
 ; CHECK-NEXT:    stp q2, q0, [x1, #32]
@@ -2302,7 +2302,7 @@ define void @fcvtzs_v16f16_v16i64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    mov z4.h, z1.h[3]
 ; CHECK-NEXT:    mov z7.h, z1.h[2]
 ; CHECK-NEXT:    mov z17.h, z0.h[1]
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.h
 ; CHECK-NEXT:    fcvtzs z5.d, p0/m, z5.h
 ; CHECK-NEXT:    fcvtzs z6.d, p0/m, z6.h
@@ -2805,11 +2805,11 @@ define void @fcvtzs_v8f32_v8i64(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uunpklo z2.d, z0.s
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z3.d, z1.s
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    fcvtzs z2.d, p0/m, z2.s
 ; CHECK-NEXT:    fcvtzs z3.d, p0/m, z3.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    fcvtzs z0.d, p0/m, z0.s
 ; CHECK-NEXT:    fcvtzs z1.d, p0/m, z1.s
 ; CHECK-NEXT:    stp q2, q0, [x1, #32]

@@ -63,7 +63,7 @@ define <8 x i8> @sdiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -129,24 +129,24 @@ define <16 x i8> @sdiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; CHECK-NEXT:    sunpklo z2.h, z1.b
 ; CHECK-NEXT:    sunpklo z3.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z4.s, z2.h
 ; CHECK-NEXT:    sunpklo z5.s, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z1.h, z1.b
-; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sunpklo z2.s, z2.h
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
+; CHECK-NEXT:    sunpklo z0.h, z0.b
 ; CHECK-NEXT:    sdivr z4.s, p0/m, z4.s, z5.s
 ; CHECK-NEXT:    sunpklo z5.s, z0.h
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    sunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
+; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sdivr z3.s, p0/m, z3.s, z5.s
 ; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
 ; CHECK-NEXT:    uzp1 z5.h, z2.h, z2.h
@@ -246,45 +246,45 @@ define void @sdiv_v32i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr q2, [x0, #16]
 ; CHECK-NEXT:    sunpklo z1.h, z3.b
 ; CHECK-NEXT:    sunpklo z4.h, z2.b
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
 ; CHECK-NEXT:    sunpklo z7.h, z6.b
-; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
-; CHECK-NEXT:    sunpklo z3.h, z3.b
 ; CHECK-NEXT:    sunpklo z0.s, z1.h
 ; CHECK-NEXT:    sunpklo z5.s, z4.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
 ; CHECK-NEXT:    sunpklo z17.s, z7.h
-; CHECK-NEXT:    ext z7.b, z7.b, z7.b, #8
-; CHECK-NEXT:    sunpklo z6.h, z6.b
+; CHECK-NEXT:    sdivr z0.s, p0/m, z0.s, z5.s
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
+; CHECK-NEXT:    ext z4.b, z4.b, z0.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #8
+; CHECK-NEXT:    ext z7.b, z7.b, z0.b, #8
+; CHECK-NEXT:    ext z6.b, z6.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z4.s, z4.h
+; CHECK-NEXT:    sunpklo z3.h, z3.b
 ; CHECK-NEXT:    sunpklo z7.s, z7.h
-; CHECK-NEXT:    sdivr z0.s, p0/m, z0.s, z5.s
+; CHECK-NEXT:    sunpklo z6.h, z6.b
 ; CHECK-NEXT:    sdivr z1.s, p0/m, z1.s, z4.s
 ; CHECK-NEXT:    sunpklo z4.h, z2.b
 ; CHECK-NEXT:    sunpklo z2.s, z3.h
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z5.s, z4.h
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
+; CHECK-NEXT:    ext z4.b, z4.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
 ; CHECK-NEXT:    sunpklo z4.s, z4.h
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z5.s
 ; CHECK-NEXT:    ldr q5, [x0]
 ; CHECK-NEXT:    sunpklo z16.h, z5.b
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    ext z5.b, z5.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z5.h, z5.b
 ; CHECK-NEXT:    sunpklo z18.s, z16.h
-; CHECK-NEXT:    ext z16.b, z16.b, z16.b, #8
+; CHECK-NEXT:    ext z16.b, z16.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z16.s, z16.h
 ; CHECK-NEXT:    sdivr z17.s, p0/m, z17.s, z18.s
 ; CHECK-NEXT:    sunpklo z18.s, z5.h
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    ext z5.b, z5.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z5.s, z5.h
 ; CHECK-NEXT:    sdivr z7.s, p0/m, z7.s, z16.s
 ; CHECK-NEXT:    sunpklo z16.s, z6.h
-; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
+; CHECK-NEXT:    ext z6.b, z6.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z6.s, z6.h
 ; CHECK-NEXT:    uzp1 z20.h, z17.h, z17.h
 ; CHECK-NEXT:    sdivr z16.s, p0/m, z16.s, z18.s
@@ -539,7 +539,7 @@ define <8 x i16> @sdiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
 ; CHECK-NEXT:    sunpklo z0.s, z0.h
@@ -604,17 +604,17 @@ define void @sdiv_v16i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    sunpklo z2.s, z1.h
 ; CHECK-NEXT:    sunpklo z3.s, z0.h
 ; CHECK-NEXT:    sunpklo z5.s, z4.h
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z4.b, z4.b, z0.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    sdivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    ldr q3, [x0]
 ; CHECK-NEXT:    sunpklo z4.s, z4.h
 ; CHECK-NEXT:    sunpklo z1.s, z1.h
-; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sunpklo z6.s, z3.h
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z3.s, z3.h
+; CHECK-NEXT:    sunpklo z0.s, z0.h
 ; CHECK-NEXT:    sdivr z5.s, p0/m, z5.s, z6.s
 ; CHECK-NEXT:    sdiv z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    uzp1 z4.h, z5.h, z5.h
@@ -977,7 +977,7 @@ define <8 x i8> @udiv_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -1043,24 +1043,24 @@ define <16 x i8> @udiv_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; CHECK-NEXT:    uunpklo z2.h, z1.b
 ; CHECK-NEXT:    uunpklo z3.h, z0.b
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z4.s, z2.h
 ; CHECK-NEXT:    uunpklo z5.s, z3.h
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z1.h, z1.b
-; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    uunpklo z2.s, z2.h
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    uunpklo z0.h, z0.b
 ; CHECK-NEXT:    udivr z4.s, p0/m, z4.s, z5.s
 ; CHECK-NEXT:    uunpklo z5.s, z0.h
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    uunpklo z3.s, z1.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    udivr z3.s, p0/m, z3.s, z5.s
 ; CHECK-NEXT:    uzp1 z4.h, z4.h, z4.h
 ; CHECK-NEXT:    uzp1 z5.h, z2.h, z2.h
@@ -1160,45 +1160,45 @@ define void @udiv_v32i8(ptr %a, ptr %b) {
 ; CHECK-NEXT:    ldr q2, [x0, #16]
 ; CHECK-NEXT:    uunpklo z1.h, z3.b
 ; CHECK-NEXT:    uunpklo z4.h, z2.b
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
-; CHECK-NEXT:    ext z2.b, z2.b, z2.b, #8
 ; CHECK-NEXT:    uunpklo z7.h, z6.b
-; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
-; CHECK-NEXT:    uunpklo z3.h, z3.b
 ; CHECK-NEXT:    uunpklo z0.s, z1.h
 ; CHECK-NEXT:    uunpklo z5.s, z4.h
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
 ; CHECK-NEXT:    uunpklo z17.s, z7.h
-; CHECK-NEXT:    ext z7.b, z7.b, z7.b, #8
-; CHECK-NEXT:    uunpklo z6.h, z6.b
+; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z5.s
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
+; CHECK-NEXT:    ext z4.b, z4.b, z0.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #8
+; CHECK-NEXT:    ext z7.b, z7.b, z0.b, #8
+; CHECK-NEXT:    ext z6.b, z6.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z4.s, z4.h
+; CHECK-NEXT:    uunpklo z3.h, z3.b
 ; CHECK-NEXT:    uunpklo z7.s, z7.h
-; CHECK-NEXT:    udivr z0.s, p0/m, z0.s, z5.s
+; CHECK-NEXT:    uunpklo z6.h, z6.b
 ; CHECK-NEXT:    udivr z1.s, p0/m, z1.s, z4.s
 ; CHECK-NEXT:    uunpklo z4.h, z2.b
 ; CHECK-NEXT:    uunpklo z2.s, z3.h
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z5.s, z4.h
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
+; CHECK-NEXT:    ext z4.b, z4.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
 ; CHECK-NEXT:    uunpklo z4.s, z4.h
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z5.s
 ; CHECK-NEXT:    ldr q5, [x0]
 ; CHECK-NEXT:    uunpklo z16.h, z5.b
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    ext z5.b, z5.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z5.h, z5.b
 ; CHECK-NEXT:    uunpklo z18.s, z16.h
-; CHECK-NEXT:    ext z16.b, z16.b, z16.b, #8
+; CHECK-NEXT:    ext z16.b, z16.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z16.s, z16.h
 ; CHECK-NEXT:    udivr z17.s, p0/m, z17.s, z18.s
 ; CHECK-NEXT:    uunpklo z18.s, z5.h
-; CHECK-NEXT:    ext z5.b, z5.b, z5.b, #8
+; CHECK-NEXT:    ext z5.b, z5.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z5.s, z5.h
 ; CHECK-NEXT:    udivr z7.s, p0/m, z7.s, z16.s
 ; CHECK-NEXT:    uunpklo z16.s, z6.h
-; CHECK-NEXT:    ext z6.b, z6.b, z6.b, #8
+; CHECK-NEXT:    ext z6.b, z6.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z6.s, z6.h
 ; CHECK-NEXT:    uzp1 z20.h, z17.h, z17.h
 ; CHECK-NEXT:    udivr z16.s, p0/m, z16.s, z18.s
@@ -1453,7 +1453,7 @@ define <8 x i16> @udiv_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
@@ -1518,17 +1518,17 @@ define void @udiv_v16i16(ptr %a, ptr %b) {
 ; CHECK-NEXT:    uunpklo z2.s, z1.h
 ; CHECK-NEXT:    uunpklo z3.s, z0.h
 ; CHECK-NEXT:    uunpklo z5.s, z4.h
-; CHECK-NEXT:    ext z4.b, z4.b, z4.b, #8
-; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #8
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    ext z4.b, z4.b, z0.b, #8
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    udivr z2.s, p0/m, z2.s, z3.s
 ; CHECK-NEXT:    ldr q3, [x0]
 ; CHECK-NEXT:    uunpklo z4.s, z4.h
 ; CHECK-NEXT:    uunpklo z1.s, z1.h
-; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    uunpklo z6.s, z3.h
-; CHECK-NEXT:    ext z3.b, z3.b, z3.b, #8
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z3.s, z3.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
 ; CHECK-NEXT:    udivr z5.s, p0/m, z5.s, z6.s
 ; CHECK-NEXT:    udiv z3.s, p0/m, z3.s, z4.s
 ; CHECK-NEXT:    uzp1 z4.h, z5.h, z5.h
