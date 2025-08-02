@@ -104,9 +104,9 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; ARM-NEXT:    mov r5, r4
 ; ARM-NEXT:  .LBB1_2:
 ; ARM-NEXT:    ands r2, r5
-; ARM-NEXT:    cmp r1, #0
+; ARM-NEXT:    cmp r1, #1
 ; ARM-NEXT:    mov r5, r0
-; ARM-NEXT:    bgt .LBB1_4
+; ARM-NEXT:    bge .LBB1_4
 ; ARM-NEXT:  @ %bb.3:
 ; ARM-NEXT:    mov r5, r4
 ; ARM-NEXT:  .LBB1_4:
