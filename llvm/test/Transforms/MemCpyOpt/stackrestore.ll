@@ -16,12 +16,11 @@ target triple = "i686-unknown-windows-msvc19.14.26433"
 
 define i32 @test_norestore(i32 %n) {
 ; CHECK-LABEL: @test_norestore(
-; CHECK-NEXT:    [[TMPMEM:%.*]] = alloca [10 x i8], align 4
-; CHECK-NEXT:    [[P:%.*]] = alloca i8, i32 [[N:%.*]], align 4
+; CHECK-NEXT:    [[N:%.*]] = call i32 @llvm.umax.i32(i32 [[N1:%.*]], i32 10)
+; CHECK-NEXT:    [[P:%.*]] = alloca i8, i32 [[N]], align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[P]], ptr align 1 @str, i32 9, i1 false)
 ; CHECK-NEXT:    [[P10:%.*]] = getelementptr inbounds i8, ptr [[P]], i32 9
 ; CHECK-NEXT:    store i8 0, ptr [[P10]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[TMPMEM]], ptr [[P]], i32 10, i1 false)
 ; CHECK-NEXT:    call void @external()
 ; CHECK-NEXT:    [[HEAP:%.*]] = call ptr @malloc(i32 9)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[HEAP]], ptr align 1 @str, i32 9, i1 false)
