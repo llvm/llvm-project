@@ -182,10 +182,19 @@ static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
   ObtainCurrentStack(thr, pc, &stack);
   if (IsFiredSuppression(ctx, ReportTypeSignalUnsafe, stack))
     return;
-  ThreadRegistryLock l(&ctx->thread_registry);
-  ScopedReport rep(ReportTypeSignalUnsafe);
-  rep.AddStack(stack, true);
-  OutputReport(thr, rep);
+  ScopedReport *_rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  // Take a new scope as Apple platforms require the below locks released
+  // before symbolizing in order to avoid a deadlock
+  {
+    ThreadRegistryLock l(&ctx->thread_registry);
+    new (_rep) ScopedReport(ReportTypeSignalUnsafe);
+    ScopedReport &rep = *_rep;
+    rep.AddStack(stack, true);
+  }  // Close this scope to release the locks
+
+  OutputReport(thr, *_rep);
+  // Need to manually destroy this because we used placement new to allocate
+  _rep->~ScopedReport();
 }
 
 
