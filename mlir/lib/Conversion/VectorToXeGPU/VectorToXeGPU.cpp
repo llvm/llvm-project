@@ -69,11 +69,6 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   if (!srcTy)
     return rewriter.notifyMatchFailure(xferOp, "Expects memref source");
 
-  // Perform common data transfer checks.
-  VectorType vecTy = xferOp.getVectorType();
-  if (failed(storeLoadPreconditions(rewriter, xferOp, vecTy)))
-    return failure();
-
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
   int64_t offset;
@@ -81,6 +76,7 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
     return rewriter.notifyMatchFailure(
         xferOp, "Buffer must be contiguous in the innermost dimension");
 
+  VectorType vecTy = xferOp.getVectorType();
   unsigned vecRank = vecTy.getRank();
   if (xferOp.hasOutOfBoundsDim() && vecRank < 2)
     return rewriter.notifyMatchFailure(
@@ -156,6 +152,93 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
   return ndDesc;
 }
 
+static void adjustStridesForPermutation(Operation *op,
+                                        PatternRewriter &rewriter,
+                                        MemRefType memrefType,
+                                        AffineMap permMap, VectorType vecType,
+                                        SmallVectorImpl<Value> &strides) {
+  unsigned vecRank;
+  unsigned memrefRank = memrefType.getRank();
+
+  if (!permMap.isMinorIdentity()) {
+    vecRank = vecType.getRank();
+    // Only adjust the last vecRank strides according to the permutation
+    ArrayRef<Value> relevantStrides =
+        ArrayRef<Value>(strides).take_back(vecRank);
+    SmallVector<Value> adjustedStrides(vecRank);
+    // For each output dimension in the permutation map, find which input dim it
+    // refers to, and assign the corresponding stride.
+    for (unsigned outIdx = 0; outIdx < vecRank; ++outIdx) {
+      AffineExpr expr = permMap.getResult(outIdx);
+      auto dimExpr = dyn_cast<AffineDimExpr>(expr);
+      if (!dimExpr) {
+        rewriter.notifyMatchFailure(op, "Unsupported permutation expr");
+        return;
+      }
+      unsigned pos = dimExpr.getPosition();
+      // Map permutation to the relevant strides (innermost dims)
+      if (pos < memrefRank - vecRank) {
+        rewriter.notifyMatchFailure(op, "Permutation out of bounds");
+        return;
+      }
+      // The stride for output dimension outIdx is the stride of input dimension
+      // pos
+      adjustedStrides[outIdx] = relevantStrides[pos - (memrefRank - vecRank)];
+    }
+    // Replace the last vecRank strides with the adjusted ones
+    for (unsigned i = 0; i < vecRank; ++i)
+      strides[memrefRank - vecRank + i] = adjustedStrides[i];
+  }
+}
+
+SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
+                                  PatternRewriter &rewriter) {
+  SmallVector<Value> strides;
+  Value baseMemref = xferOp.getBase();
+  AffineMap permMap = xferOp.getPermutationMap();
+  VectorType vectorType = xferOp.getVectorType();
+  MemRefType memrefType = llvm::cast<MemRefType>(baseMemref.getType());
+
+  Location loc = xferOp.getLoc();
+  if (memrefType.hasStaticShape()) {
+    int64_t offset;
+    SmallVector<int64_t> intStrides;
+    if (failed(memrefType.getStridesAndOffset(intStrides, offset))) {
+      rewriter.notifyMatchFailure(xferOp, "Failed to get memref strides");
+      return {};
+    }
+    // Wrap static strides as MLIR values
+    for (int64_t s : intStrides)
+      strides.push_back(rewriter.create<arith::ConstantIndexOp>(loc, s));
+  } else {
+    // For dynamic shape memref, use memref.extract_strided_metadata to get
+    // stride values
+    unsigned rank = memrefType.getRank();
+    Type indexType = rewriter.getIndexType();
+
+    // Result types: [base_memref, offset, stride0, stride1, ..., strideN-1,
+    // size0, size1, ..., sizeN-1]
+    SmallVector<Type> resultTypes;
+    resultTypes.push_back(MemRefType::get(
+        {}, memrefType.getElementType())); // base memref (unranked)
+    resultTypes.push_back(indexType);      // offset
+    for (unsigned i = 0; i < rank; ++i) {
+      resultTypes.push_back(indexType); // strides
+    }
+    for (unsigned i = 0; i < rank; ++i) {
+      resultTypes.push_back(indexType); // sizes
+    }
+
+    auto meta = rewriter.create<memref::ExtractStridedMetadataOp>(
+        loc, resultTypes, baseMemref);
+    strides.append(meta.getStrides().begin(), meta.getStrides().end());
+  }
+  // Adjust strides according to the permutation map (e.g., for transpose)
+  adjustStridesForPermutation(xferOp, rewriter, memrefType, permMap, vectorType,
+                              strides);
+  return strides;
+}
+
 // This function lowers vector.transfer_read to XeGPU load operation.
   // Example:
   //   %0 = vector.transfer_read %expand_shape[%block_id_y, %c0, %c0, %c0, %c0], 
@@ -191,11 +274,13 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
 //                           vector<4x2x6x32xindex> -> vector<4x2x6x32xbf16>
 
 // Compute localOffsets for load_gather and store_scatter
-static Value computeGatherOffsets(vector::TransferReadOp readOp,
+static Value computeGatherOffsets(VectorTransferOpInterface xferOp,
                                   PatternRewriter &rewriter,
-                                  ArrayRef<int64_t> strides,
-                                  VectorType vectorType) {
-  Location loc = readOp.getLoc();
+                                  ArrayRef<Value> strides) {
+  Location loc = xferOp.getLoc();
+  VectorType vectorType = xferOp.getVectorType();
+  SmallVector<Value> indices(xferOp.getIndices().begin(),
+                             xferOp.getIndices().end());
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
 
   // Step 1: Create vector.step operations for each dimension
@@ -212,12 +297,11 @@ static Value computeGatherOffsets(vector::TransferReadOp readOp,
   SmallVector<Value> strideMultiplied;
   for (size_t i = 0; i < vectorRank; ++i) {
     size_t memrefDim = memrefRank - vectorRank + i;
-    int64_t stride = strides[memrefDim];
-    Value strideConstant = rewriter.create<arith::ConstantIndexOp>(loc, stride);
+    Value strideValue = strides[memrefDim];
     auto mulType = llvm::cast<VectorType>(stepVectors[i].getType());
     auto mulOp = rewriter.create<arith::MulIOp>(
         loc, stepVectors[i],
-        rewriter.create<vector::SplatOp>(loc, strideConstant, mulType));
+        rewriter.create<vector::BroadcastOp>(loc, mulType, strideValue));
     strideMultiplied.push_back(mulOp);
   }
 
@@ -251,31 +335,33 @@ static Value computeGatherOffsets(vector::TransferReadOp readOp,
 
   // Step 6: Compute base offset from transfer read indices
   Value baseOffset = nullptr;
-  auto indices = readOp.getIndices();
   if (!indices.empty()) {
     baseOffset = rewriter.create<arith::ConstantIndexOp>(loc, 0);
     for (size_t i = 0; i < indices.size(); ++i) {
-      Value strideVal =
-          rewriter.create<arith::ConstantIndexOp>(loc, strides[i]);
+      Value strideVal = strides[i];
       Value offsetContrib =
           rewriter.create<arith::MulIOp>(loc, indices[i], strideVal);
       baseOffset =
           rewriter.create<arith::AddIOp>(loc, baseOffset, offsetContrib);
     }
     // Broadcast base offset to match vector shape
-    Value splatBase =
-        rewriter.create<vector::SplatOp>(loc, baseOffset, fullIndexVectorType);
-    localOffsets = rewriter.create<arith::AddIOp>(loc, splatBase, localOffsets);
+    Value bcastBase = rewriter.create<vector::BroadcastOp>(
+        loc, fullIndexVectorType, baseOffset);
+    localOffsets = rewriter.create<arith::AddIOp>(loc, bcastBase, localOffsets);
   }
-
   return localOffsets;
 }
 
 // Collapse memref shape to 1D
-static Value collapseMemrefTo1D(vector::TransferReadOp readOp,
-                                PatternRewriter &rewriter,
-                                MemRefType memrefType, Type elementType) {
-  Location loc = readOp.getLoc();
+static Value collapseMemrefTo1D(VectorTransferOpInterface xferOp,
+                                PatternRewriter &rewriter) {
+  Location loc = xferOp.getLoc();
+
+  Value baseMemref = xferOp.getBase();
+  MemRefType memrefType = llvm::cast<MemRefType>(baseMemref.getType());
+  Type elementType = memrefType.getElementType();
+
+  // Compute the total number of elements in the memref
   int64_t totalElements = 1;
   bool hasDynamicDim = false;
   for (int64_t dim : memrefType.getShape()) {
@@ -301,7 +387,7 @@ static Value collapseMemrefTo1D(vector::TransferReadOp readOp,
   reassociation.push_back(allDims);
 
   auto collapseOp = rewriter.create<memref::CollapseShapeOp>(
-      loc, flatMemrefType, readOp.getBase(), reassociation);
+      loc, flatMemrefType, baseMemref, reassociation);
   return collapseOp;
 }
 
@@ -343,37 +429,6 @@ static LogicalResult createStoreScatter(vector::TransferWriteOp writeOp,
   return success();
 }
 
-static void adjustStridesForPermutation(vector::TransferReadOp readOp,
-                                        PatternRewriter &rewriter,
-                                        MemRefType memrefType,
-                                        SmallVectorImpl<int64_t> &strides) {
-  AffineMap permMap = readOp.getPermutationMap();
-  if (!permMap.isMinorIdentity()) {
-    SmallVector<int64_t> adjustedStrides;
-    unsigned vecRank = readOp.getVectorType().getRank();
-    unsigned memrefRank = memrefType.getRank();
-    // Only adjust the last vecRank strides according to the permutation
-    ArrayRef<int64_t> relevantStrides = ArrayRef<int64_t>(strides).take_back(vecRank);
-    for (AffineExpr expr : permMap.getResults().take_back(vecRank)) {
-      auto dimExpr = dyn_cast<AffineDimExpr>(expr);
-      if (!dimExpr) {
-        rewriter.notifyMatchFailure(readOp, "Unsupported permutation expr");
-        return;
-      }
-      unsigned pos = dimExpr.getPosition();
-      // Map permutation to the relevant strides (innermost dims)
-      if (pos < memrefRank - vecRank) {
-        rewriter.notifyMatchFailure(readOp, "Permutation out of bounds");
-        return;
-      }
-      adjustedStrides.push_back(relevantStrides[pos - (memrefRank - vecRank)]);
-    }
-    // Replace the last vecRank strides with the adjusted ones
-    for (unsigned i = 0; i < vecRank; ++i)
-      strides[memrefRank - vecRank + i] = adjustedStrides[i];
-  }
-}
-
 LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
                                         PatternRewriter &rewriter) {
 
@@ -384,20 +439,12 @@ LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
   VectorType vectorType = readOp.getVectorType();
   Type elementType = vectorType.getElementType();
 
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(memrefType.getStridesAndOffset(strides, offset)))
-    return rewriter.notifyMatchFailure(readOp, "Failed to get memref strides");
+  SmallVector<Value> strides = computeStrides(readOp, rewriter);
 
-  // Adjust strides according to the permutation map (e.g., for transpose)
-  adjustStridesForPermutation(readOp, rewriter, memrefType, strides);
+  Value localOffsets = computeGatherOffsets(readOp, rewriter, strides);
 
-  Value localOffsets =
-      computeGatherOffsets(readOp, rewriter, strides, vectorType);
+  Value flatMemref = collapseMemrefTo1D(readOp, rewriter);
 
-  Value flatMemref =
-      collapseMemrefTo1D(readOp, rewriter, memrefType, elementType);
-  
   return createLoadGather(readOp, rewriter, flatMemref, localOffsets,
                           vectorType);
 }
@@ -409,25 +456,21 @@ LogicalResult lowerTransferWriteToStoreOp(vector::TransferWriteOp writeOp,
   if (!memrefType)
     return rewriter.notifyMatchFailure(writeOp, "Expected memref source");
 
+  Value baseMemref = writeOp.getBase();
+  AffineMap permMap = writeOp.getPermutationMap();
   VectorType vectorType = writeOp.getVectorType();
   Type elementType = vectorType.getElementType();
+  SmallVector<Value> indices(writeOp.getIndices().begin(),
+                             writeOp.getIndices().end());
 
-  SmallVector<int64_t> strides;
-  int64_t offset;
-  if (failed(memrefType.getStridesAndOffset(strides, offset)))
-    return rewriter.notifyMatchFailure(writeOp, "Failed to get memref strides");
+  SmallVector<Value> strides = computeStrides(writeOp, rewriter);
 
-  // Compute localOffsets for store_scatter
-  Value localOffsets =
-      computeGatherOffsets(cast<vector::TransferReadOp>(writeOp.getOperation()),
-                           rewriter, strides, vectorType);
+  Value localOffsets = computeGatherOffsets(writeOp, rewriter, strides);
 
-  Value flatMemref =
-      collapseMemrefTo1D(cast<vector::TransferReadOp>(writeOp.getOperation()),
-                         rewriter, memrefType, elementType);
+  Value flatMemref = collapseMemrefTo1D(writeOp, rewriter);
 
-  return createStoreScatter(writeOp, rewriter, flatMemref, localOffsets,
-                            writeOp.getVector(), vectorType);
+  return createStoreScatter(writeOp, rewriter, writeOp.getVector(), flatMemref,
+                            localOffsets, vectorType);
 }
 
 static LogicalResult
@@ -436,8 +479,9 @@ extraCheckForScatteredLoadStore(vector::TransferReadOp readOp,
   // 1. it must be inbound access by checking in_bounds attributes, like
   // {in_bounds = [false, true]}
   if (readOp.hasOutOfBoundsDim())
-    return rewriter.notifyMatchFailure(
-        readOp, "Out-of-bounds access is not supported for this chip");
+    return rewriter.notifyMatchFailure(readOp,
+                                       "Out-of-bounds access is not supported "
+                                       "for scatter load/store lowering");
   // 2. if the memref has static shape, its lower rank must exactly match with
   // vector shape.
   if (auto memrefType = dyn_cast<MemRefType>(readOp.getShapedType())) {
@@ -479,6 +523,11 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
       return lowerTransferReadToLoadOp(readOp, rewriter);
     }
 
+    // Perform common data transfer checks.
+    VectorType vecTy = readOp.getVectorType();
+    if (failed(storeLoadPreconditions(rewriter, readOp, vecTy)))
+      return failure();
+
     bool isOutOfBounds = readOp.hasOutOfBoundsDim();
     if (isOutOfBounds && !isZeroConstant(readOp.getPadding()))
       return rewriter.notifyMatchFailure(
@@ -487,7 +536,6 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     AffineMap readMap = readOp.getPermutationMap();
     bool isTransposeLoad = !readMap.isMinorIdentity();
 
-    VectorType vecTy = readOp.getVectorType();
     Type elementType = vecTy.getElementType();
     unsigned minTransposeBitWidth = 32;
     if (isTransposeLoad &&
@@ -540,12 +588,15 @@ struct TransferWriteLowering
       // calling another function that lower TransferWriteOp to regular StoreOp
       return lowerTransferWriteToStoreOp(writeOp, rewriter);
     }
+    // Perform common data transfer checks.
+    VectorType vecTy = writeOp.getVectorType();
+    if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy)))
+      return failure();
 
     AffineMap map = writeOp.getPermutationMap();
     if (!map.isMinorIdentity())
       return rewriter.notifyMatchFailure(writeOp, "Expects identity map");
 
-    VectorType vecTy = writeOp.getVectorType();
     auto descType = xegpu::TensorDescType::get(
         vecTy.getShape(), vecTy.getElementType(),
         /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
