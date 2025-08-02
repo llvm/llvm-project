@@ -516,4 +516,36 @@ def CIR_BitfieldInfoAttr : CIR_Attr<"BitfieldInfo", "bitfield_info"> {
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// AddressPointAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_AddressPointAttr : CIR_Attr<"AddressPoint", "address_point"> {
+  let summary = "Address point attribute";
+
+  let description = [{
+    Attribute specifying the address point within a C++ virtual table (vtable).
+
+    The `index` (vtable index) parameter identifies which vtable to use within a
+    vtable group, while the `offset` (address point index) specifies the offset
+    within that vtable where the address begins.
+
+    Example:
+    ```mlir
+    cir.global linkonce_odr @_ZTV1B = ...
+    ...
+    %3 = cir.vtable.address_point(@_ZTV1B,
+                                  address_point = <index = 0, offset = 2>)
+                                 : !cir.vptr
+    ```
+  }];
+
+  let parameters = (ins "int32_t":$index,
+                        "int32_t":$offset);
+
+  let assemblyFormat = [{
+    `<` struct($index, $offset) `>`
+  }];
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD
