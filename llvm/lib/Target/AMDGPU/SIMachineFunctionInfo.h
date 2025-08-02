@@ -465,6 +465,9 @@ private:
   unsigned NumUserSGPRs = 0;
   unsigned NumSystemSGPRs = 0;
 
+  unsigned NumWaveDispatchSGPRs = 0;
+  unsigned NumWaveDispatchVGPRs = 0;
+
   bool HasSpilledSGPRs = false;
   bool HasSpilledVGPRs = false;
   bool HasNonSpillStackObjects = false;
@@ -990,6 +993,14 @@ public:
   unsigned getNumKernargPreloadedSGPRs() const {
     return UserSGPRInfo.getNumKernargPreloadSGPRs();
   }
+
+  unsigned getNumWaveDispatchSGPRs() const { return NumWaveDispatchSGPRs; }
+
+  void setNumWaveDispatchSGPRs(unsigned Count) { NumWaveDispatchSGPRs = Count; }
+
+  unsigned getNumWaveDispatchVGPRs() const { return NumWaveDispatchVGPRs; }
+
+  void setNumWaveDispatchVGPRs(unsigned Count) { NumWaveDispatchVGPRs = Count; }
 
   Register getPrivateSegmentWaveByteOffsetSystemSGPR() const {
     return ArgInfo.PrivateSegmentWaveByteOffset.getRegister();
