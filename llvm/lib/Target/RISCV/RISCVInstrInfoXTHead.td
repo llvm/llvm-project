@@ -476,10 +476,10 @@ def TH_FSURD : THStoreIndexed<FPR64, 0b01110, "th.fsurd">,
 } // DecoderNamespace = "XTHead"
 
 let Predicates = [HasVendorXTHeadVdot] in {
-defm THVdotVMAQA      : THVdotVMAQA<"th.vmaqa",     0b100000>;
-defm THVdotVMAQAU     : THVdotVMAQA<"th.vmaqau",    0b100010>;
-defm THVdotVMAQASU    : THVdotVMAQA<"th.vmaqasu",   0b100100>;
-defm THVdotVMAQAUS    : THVdotVMAQA_VX<"th.vmaqaus",0b100110>;
+defm TH_VMAQA      : THVdotVMAQA<"th.vmaqa",     0b100000>;
+defm TH_VMAQAU     : THVdotVMAQA<"th.vmaqau",    0b100010>;
+defm TH_VMAQASU    : THVdotVMAQA<"th.vmaqasu",   0b100100>;
+defm TH_VMAQAUS    : THVdotVMAQA_VX<"th.vmaqaus",0b100110>;
 }
 
 // Associate LMUL with tablegen records of register classes.
@@ -590,12 +590,12 @@ let Predicates = [HasVendorXTHeadBb, IsRV64] in {
 def : PatGprImm<riscv_rorw, TH_SRRIW, uimm5>;
 def : Pat<(riscv_rolw GPR:$rs1, uimm5:$rs2),
           (TH_SRRIW GPR:$rs1, (ImmSubFrom32 uimm5:$rs2))>;
-def : Pat<(sra (bswap i64:$rs1), (i64 32)),
-          (TH_REVW i64:$rs1)>;
-def : Pat<(binop_allwusers<srl> (bswap i64:$rs1), (i64 32)),
-          (TH_REVW i64:$rs1)>;
-def : Pat<(riscv_clzw i64:$rs1),
-          (TH_FF0 (i64 (SLLI (i64 (XORI i64:$rs1, -1)), 32)))>;
+def : Pat<(i64 (sra (bswap GPR:$rs1), (i64 32))),
+          (TH_REVW GPR:$rs1)>;
+def : Pat<(binop_allwusers<srl> (bswap GPR:$rs1), (i64 32)),
+          (TH_REVW GPR:$rs1)>;
+def : Pat<(riscv_clzw GPR:$rs1),
+          (TH_FF0 (i64 (SLLI (i64 (XORI GPR:$rs1, -1)), 32)))>;
 } // Predicates = [HasVendorXTHeadBb, IsRV64]
 
 let Predicates = [HasVendorXTHeadBs] in {
@@ -660,19 +660,21 @@ def : Pat<(i32 (sub GPR:$rd, (mul (sexti16 (i32 GPR:$rs1)),
           (TH_MULSH GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 } // Predicates = [HasVendorXTHeadMac, IsRV32]
 
-defm PseudoTHVdotVMAQA      : VPseudoVMAQA_VV_VX;
-defm PseudoTHVdotVMAQAU     : VPseudoVMAQA_VV_VX;
-defm PseudoTHVdotVMAQASU    : VPseudoVMAQA_VV_VX;
-defm PseudoTHVdotVMAQAUS    : VPseudoVMAQA_VX;
+let Predicates = [HasVendorXTHeadVdot] in {
+defm PseudoTH_VMAQA      : VPseudoVMAQA_VV_VX;
+defm PseudoTH_VMAQAU     : VPseudoVMAQA_VV_VX;
+defm PseudoTH_VMAQASU    : VPseudoVMAQA_VV_VX;
+defm PseudoTH_VMAQAUS    : VPseudoVMAQA_VX;
+}
 
 let Predicates = [HasVendorXTHeadVdot] in {
-defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTHVdotVMAQA",
+defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqa",  "PseudoTH_VMAQA",
                               AllQuadWidenableInt8NoVLMulVectors>;
-defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqau", "PseudoTHVdotVMAQAU",
+defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqau", "PseudoTH_VMAQAU",
                               AllQuadWidenableInt8NoVLMulVectors>;
-defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqasu","PseudoTHVdotVMAQASU",
+defm : VPatTernaryVMAQA_VV_VX<"int_riscv_th_vmaqasu","PseudoTH_VMAQASU",
                               AllQuadWidenableInt8NoVLMulVectors>;
-defm : VPatTernaryVMAQA_VX<"int_riscv_th_vmaqaus",   "PseudoTHVdotVMAQAUS",
+defm : VPatTernaryVMAQA_VX<"int_riscv_th_vmaqaus",   "PseudoTH_VMAQAUS",
                            AllQuadWidenableInt8NoVLMulVectors>;
 }
 
@@ -695,11 +697,13 @@ def uimm2_4 : Operand<XLenVT>, ImmLeaf<XLenVT, [{
 }], uimm2_4_XFORM>;
 
 let Predicates = [HasVendorXTHeadMemPair, IsRV64] in {
-def : Pat<(th_lwud i64:$rs1, uimm2_3:$uimm2_3), (TH_LWUD i64:$rs1, uimm2_3:$uimm2_3, 3)>;
-def : Pat<(th_ldd i64:$rs1, uimm2_4:$uimm2_4), (TH_LDD i64:$rs1, uimm2_4:$uimm2_4, 4)>;
+def : Pat<(th_lwud GPR:$rs1, (i64 uimm2_3:$uimm2_3)),
+          (TH_LWUD GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
+def : Pat<(th_ldd GPR:$rs1, (i64 uimm2_4:$uimm2_4)),
+          (TH_LDD GPR:$rs1, uimm2_4:$uimm2_4, 4)>;
 
-def : Pat<(th_sdd i64:$rd1, i64:$rd2, i64:$rs1, uimm2_4:$uimm2_4),
-          (TH_SDD i64:$rd1, i64:$rd2, i64:$rs1, uimm2_4:$uimm2_4, 4)>;
+def : Pat<(th_sdd (i64 GPR:$rd1), GPR:$rd2, GPR:$rs1, uimm2_4:$uimm2_4),
+          (TH_SDD GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_4:$uimm2_4, 4)>;
 }
 
 let Predicates = [HasVendorXTHeadMemPair] in {
@@ -741,32 +745,30 @@ def TH_SYNC_I      : THCacheInst_void<0b11010, "th.sync.i">;
 def TH_SYNC_IS     : THCacheInst_void<0b11011, "th.sync.is">;
 }
 
-def AddrRegRegScale : ComplexPattern<iPTR, 3, "SelectAddrRegRegScale<3>">;
-def AddrRegZextRegScale
-    : ComplexPattern<i64, 3, "SelectAddrRegZextRegScale<3, 32>",
-                     [], [], 10>;
+def AddrRegRegScale3 : AddrRegRegScale<3>;
+def AddrRegZextRegScale3 : AddrRegZextRegScale<3>;
 
 multiclass LdIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = XLenVT> {
-def : Pat<(vt (LoadOp (AddrRegRegScale (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2))),
+def : Pat<(vt (LoadOp (AddrRegRegScale3 (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass LdZextIdxPat<PatFrag LoadOp, RVInst Inst, ValueType vt = i64> {
-def : Pat<(vt (LoadOp (AddrRegZextRegScale (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2))),
+def : Pat<(vt (LoadOp (AddrRegZextRegScale3 (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2))),
           (Inst GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass StIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                     ValueType vt = XLenVT> {
 def : Pat<(StoreOp (vt StTy:$rd),
-            (AddrRegRegScale (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2)),
+            (AddrRegRegScale3 (XLenVT GPR:$rs1), (XLenVT GPR:$rs2), uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 
 multiclass StZextIdxPat<PatFrag StoreOp, RVInst Inst, RegisterClass StTy,
                         ValueType vt = i64> {
 def : Pat<(StoreOp (vt StTy:$rd),
-            (AddrRegZextRegScale (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2)),
+            (AddrRegZextRegScale3 (i64 GPR:$rs1), (i64 GPR:$rs2), uimm2:$uimm2)),
           (Inst StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
 }
 

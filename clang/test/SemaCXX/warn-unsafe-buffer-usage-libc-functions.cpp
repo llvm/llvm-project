@@ -47,10 +47,23 @@ namespace std {
     T *c_str();
     T *data();
     unsigned size_bytes();
+    unsigned size();
   };
 
   typedef basic_string<char> string;
   typedef basic_string<wchar_t> wstring;
+
+  template<typename T>
+  struct basic_string_view {
+    T *c_str() const noexcept;
+    T *data()  const noexcept;
+    unsigned size();
+    const T* begin() const noexcept;
+    const T* end() const noexcept;
+  };
+
+  typedef basic_string_view<char> string_view;
+  typedef basic_string_view<wchar_t> wstring_view;
 
   // C function under std:
   void memcpy();
@@ -125,10 +138,36 @@ void safe_examples(std::string s1, int *p) {
   fprintf((FILE*)0, s1.c_str(), __PRETTY_FUNCTION__, *p, "hello", s1.c_str());        // no warn
 
   char a[10];
+  char c = 'c';
 
   snprintf(a, sizeof a, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());         // no warn
   snprintf(a, sizeof(decltype(a)), "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());          // no warn
   snprintf(a, 10, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                // no warn
+  snprintf(&c, 1, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());                // no warn
+  snprintf(nullptr, 0, "%s%d%s%p%s", __PRETTY_FUNCTION__, *p, "hello", s1.c_str());           // no warn
+}
+
+void test_sarg_precision(std::string Str, std::string_view Sv, std::wstring_view WSv,
+			 std::span<char> SpC, std::span<int> SpI) {
+  printf("%.*s");
+  printf("%.*s", (int)Str.size(), Str.data());
+  printf("%.*s", (int)Str.size_bytes(), Str.data());
+  printf("%.*s", (int)Sv.size(), Sv.data());
+  printf("%.*s", (int)SpC.size(), SpC.data());
+  printf("%.*s", SpC.size(), SpC.data());
+  printf("%.*ls", WSv.size(), WSv.data());
+  printf("%.*s", SpC.data());  // no warn because `SpC.data()` is passed to the precision while the actually string pointer is not given
+
+  printf("%.*s", SpI.size(), SpI.data()); // expected-warning {{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  printf("%.*s", SpI.size(), SpC.data()); // expected-warning {{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  printf("%.*s", WSv.size(), WSv.data()); // expected-warning {{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+
+  char a[10];
+  int  b[10];
+
+  printf("%.10s", a);
+  printf("%.11s", a); // expected-warning {{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
+  printf("%.10s", b); // expected-warning {{function 'printf' is unsafe}} expected-note{{string argument is not guaranteed to be null-terminated}}
 }
 
 

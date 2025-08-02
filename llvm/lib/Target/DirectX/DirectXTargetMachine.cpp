@@ -107,10 +107,10 @@ public:
     addPass(createDXILIntrinsicExpansionLegacyPass());
     addPass(createDXILCBufferAccessLegacyPass());
     addPass(createDXILDataScalarizationLegacyPass());
-    addPass(createDXILFlattenArraysLegacyPass());
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
     addPass(createScalarizerPass(DxilScalarOptions));
+    addPass(createDXILFlattenArraysLegacyPass());
     addPass(createDXILForwardHandleAccessesLegacyPass());
     addPass(createDXILLegalizeLegacyPass());
     addPass(createDXILResourceImplicitBindingLegacyPass());

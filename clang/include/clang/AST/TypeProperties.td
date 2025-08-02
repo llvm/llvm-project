@@ -317,6 +317,9 @@ let Class = FunctionProtoType in {
   def : Property<"trailingReturn", Bool> {
     let Read = [{ node->hasTrailingReturn() }];
   }
+  def : Property<"cfiUncheckedCallee", Bool> {
+    let Read = [{ node->hasCFIUncheckedCallee() }];
+  }
   def : Property<"methodQualifiers", Qualifiers> {
     let Read = [{ node->getMethodQuals() }];
   }
@@ -332,7 +335,7 @@ let Class = FunctionProtoType in {
   def : Property<"extParameterInfo", Array<ExtParameterInfo>> {
     let Read = [{ node->hasExtParameterInfos()
                     ? node->getExtParameterInfos()
-                    : llvm::ArrayRef<FunctionProtoType::ExtParameterInfo>() }];
+                    : ArrayRef<FunctionProtoType::ExtParameterInfo>() }];
   }
   def : Property<"AArch64SMEAttributes", UInt32> {
     let Read = [{ node->getAArch64SMEAttributes() }];
@@ -353,6 +356,7 @@ let Class = FunctionProtoType in {
     epi.ExtInfo = extInfo;
     epi.Variadic = variadic;
     epi.HasTrailingReturn = trailingReturn;
+    epi.CFIUncheckedCallee = cfiUncheckedCallee;
     epi.TypeQuals = methodQualifiers;
     epi.RefQualifier = refQualifier;
     epi.ExceptionSpec = exceptionSpecifier;
@@ -749,7 +753,7 @@ let Class = TemplateSpecializationType in {
   }
 
   def : Creator<[{
-    return ctx.getTemplateSpecializationType(templateName, args, std::nullopt, UnderlyingType);
+    return ctx.getTemplateSpecializationType(templateName, args, {}, UnderlyingType);
   }]>;
 }
 
@@ -1022,5 +1026,14 @@ let Class = DependentBitIntType in {
   }
   def : Creator<[{
     return ctx.getDependentBitIntType(isUnsigned, numBitsExpr);
+  }]>;
+}
+
+let Class = PredefinedSugarType in {
+  def : Property<"kind", UInt32> {
+    let Read = [{ static_cast<uint32_t>(node->getKind()) }];
+  }
+  def : Creator<[{
+    return ctx.getPredefinedSugarType(static_cast<PredefinedSugarType::Kind>(kind));
   }]>;
 }

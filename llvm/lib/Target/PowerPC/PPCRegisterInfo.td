@@ -1133,6 +1133,6 @@ def PPCRegDMRpRCAsmOperand : AsmOperandClass {
   let PredicateMethod = "isDMRpRegNumber";
 }
 
-def dmrprc : RegisterOperand<DMRpRC> {
+def dmrp : RegisterOperand<DMRpRC> {
   let ParserMatchClass = PPCRegDMRpRCAsmOperand;
 }

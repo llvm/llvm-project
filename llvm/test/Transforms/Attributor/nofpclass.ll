@@ -1474,7 +1474,7 @@ define float @returned_extractelement_index_oob(<4 x float> nofpclass(nan) %vec)
 
 define float @returned_extractelement_scalable(<vscale x 4 x float> nofpclass(nan) %vec) {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define float @returned_extractelement_scalable
+; CHECK-LABEL: define nofpclass(nan) float @returned_extractelement_scalable
 ; CHECK-SAME: (<vscale x 4 x float> nofpclass(nan) [[VEC:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <vscale x 4 x float> [[VEC]], i32 0
 ; CHECK-NEXT:    ret float [[EXTRACT]]
@@ -2665,7 +2665,7 @@ define [4 x float] @constant_aggregate_zero() {
 
 define <vscale x 4 x float> @scalable_splat_pnorm() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define <vscale x 4 x float> @scalable_splat_pnorm
+; CHECK-LABEL: define noundef <vscale x 4 x float> @scalable_splat_pnorm
 ; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    ret <vscale x 4 x float> splat (float 1.000000e+00)
 ;

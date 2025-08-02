@@ -362,6 +362,12 @@
 // RUN: %clang_cl -c -### /std:c11 -- %s 2>&1 | FileCheck -check-prefix CHECK-C11 %s
 // CHECK-C11: -std=c11
 
+// RUN: %clang_cl -c -### /std:c17 -- %s 2>&1 | FileCheck -check-prefix CHECK-C17 %s
+// CHECK-C17: -std=c17
+
+// RUN: %clang_cl -c -### /std:clatest -- %s 2>&1 | FileCheck -check-prefix CHECK-CLATEST %s
+// CHECK-CLATEST: -std=c23
+
 // For some warning ids, we can map from MSVC warning to Clang warning.
 // RUN: %clang_cl -wd4005 -wd4100 -wd4910 -wd4996 -wd12345678 -### -- %s 2>&1 | FileCheck -check-prefix=Wno %s
 // Wno: "-cc1"
@@ -821,7 +827,11 @@
 // ARM64EC_OVERRIDE: warning: /arm64EC has been overridden by specified target: x86_64-pc-windows-msvc; option ignored
 
 // RUN: %clang_cl /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWIND
-// EPILOGUNWIND: -fwinx64-eh-unwindv2
+// EPILOGUNWIND: -fwinx64-eh-unwindv2=best-effort
+
+// RUN: %clang_cl /d2epilogunwindrequirev2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
+// RUN: %clang_cl /d2epilogunwindrequirev2 /d2epilogunwind /c -### -- %s 2>&1 | FileCheck %s --check-prefix=EPILOGUNWINDREQUIREV2
+// EPILOGUNWINDREQUIREV2: -fwinx64-eh-unwindv2=require
 
 // RUN: %clang_cl /funcoverride:override_me1 /funcoverride:override_me2 /c -### -- %s 2>&1 | FileCheck %s --check-prefix=FUNCOVERRIDE
 // FUNCOVERRIDE: -loader-replaceable-function=override_me1

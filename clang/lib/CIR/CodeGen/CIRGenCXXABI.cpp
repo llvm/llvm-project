@@ -33,13 +33,31 @@ void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,
                                 &cgm.getASTContext().Idents.get("this"),
                                 md->getThisType(), ImplicitParamKind::CXXThis);
   params.push_back(thisDecl);
-
-  // Classic codegen save thisDecl in CodeGenFunction::CXXABIThisDecl, but it
-  // doesn't seem to be needed in CIRGen.
-  assert(!cir::MissingFeatures::cxxabiThisDecl());
+  cgf.cxxabiThisDecl = thisDecl;
 
   // Classic codegen computes the alignment of thisDecl and saves it in
-  // CodeGenFunction::CXXABIThisAlignment, but it doesn't seem to be needed in
-  // CIRGen.
+  // CodeGenFunction::CXXABIThisAlignment, but it is only used in emitTypeCheck
+  // in CodeGenFunction::StartFunction().
   assert(!cir::MissingFeatures::cxxabiThisAlignment());
+}
+
+cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
+    GVALinkage linkage, const CXXDestructorDecl *dtor, CXXDtorType dt) const {
+  // Delegate back to cgm by default.
+  return cgm.getCIRLinkageForDeclarator(dtor, linkage,
+                                        /*isConstantVariable=*/false);
+}
+
+mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
+  ImplicitParamDecl *vd = getThisDecl(cgf);
+  Address addr = cgf.getAddrOfLocalVar(vd);
+  return cgf.getBuilder().create<cir::LoadOp>(
+      cgf.getLoc(vd->getLocation()), addr.getElementType(), addr.getPointer());
+}
+
+void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
+                                      mlir::Value thisPtr) {
+  /// Initialize the 'this' slot.
+  assert(getThisDecl(cgf) && "no 'this' variable for function");
+  cgf.cxxabiThisValue = thisPtr;
 }

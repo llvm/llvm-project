@@ -12,22 +12,19 @@ int aaaa;
 // OGCG: @aaaa = global i32 0
 
 [[gnu::selectany]] int dddd;
-// CIR: cir.global weak_odr @dddd
-// LLVM: @dddd = weak_odr global i32 0
-// This actually should be here, but we aren't emitting it yet so I want the
-// test to reflect that.
-// LLVM-NOT: comdat
+// CIR: cir.global weak_odr comdat @dddd
+// LLVM: @dddd = weak_odr global i32 0, comdat
 // OGCG: @dddd = weak_odr global i32 0, comdat
 
 static int bbbb;
-// CIR: cir.global "private" internal @_ZL4bbbb
+// CIR: cir.global "private" internal dso_local @_ZL4bbbb
 // LLVM: @_ZL4bbbb = internal global i32 0
 // OGCG: @_ZL4bbbb = internal global i32 0
 
 inline int cccc;
-// CIR: cir.global linkonce_odr @cccc
-// LLVM: @cccc = linkonce_odr global i32 0
-// OGCG: @cccc = linkonce_odr global i32 0
+// CIR: cir.global linkonce_odr comdat @cccc
+// LLVM: @cccc = linkonce_odr global i32 0, comdat
+// OGCG: @cccc = linkonce_odr global i32 0, comdat
 
 // Force the global variables to be emitted
 void reference_vars() {

@@ -2449,12 +2449,7 @@ CoverageMappingModuleGen::CoverageMappingModuleGen(
     : CGM(CGM), SourceInfo(SourceInfo) {}
 
 std::string CoverageMappingModuleGen::getCurrentDirname() {
-  if (!CGM.getCodeGenOpts().CoverageCompilationDir.empty())
-    return CGM.getCodeGenOpts().CoverageCompilationDir;
-
-  SmallString<256> CWD;
-  llvm::sys::fs::current_path(CWD);
-  return CWD.str().str();
+  return CGM.getCodeGenOpts().CoverageCompilationDir;
 }
 
 std::string CoverageMappingModuleGen::normalizeFilename(StringRef Filename) {
@@ -2622,8 +2617,9 @@ void CoverageMappingModuleGen::emit() {
   CGM.addUsedGlobal(CovData);
   // Create the deferred function records array
   if (!FunctionNames.empty()) {
-    auto NamesArrTy = llvm::ArrayType::get(llvm::PointerType::getUnqual(Ctx),
-                                           FunctionNames.size());
+    auto AddrSpace = FunctionNames.front()->getType()->getPointerAddressSpace();
+    auto NamesArrTy = llvm::ArrayType::get(
+        llvm::PointerType::get(Ctx, AddrSpace), FunctionNames.size());
     auto NamesArrVal = llvm::ConstantArray::get(NamesArrTy, FunctionNames);
     // This variable will *NOT* be emitted to the object file. It is used
     // to pass the list of names referenced to codegen.

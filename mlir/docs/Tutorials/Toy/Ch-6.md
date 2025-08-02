@@ -47,7 +47,7 @@ static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
   // Insert the printf function into the body of the parent module.
   PatternRewriter::InsertionGuard insertGuard(rewriter);
   rewriter.setInsertionPointToStart(module.getBody());
-  rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), "printf", llvmFnType);
+  LLVM::LLVMFuncOp::create(rewriter, module.getLoc(), "printf", llvmFnType);
   return SymbolRefAttr::get("printf", context);
 }
 ```

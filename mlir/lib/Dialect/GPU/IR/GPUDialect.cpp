@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -104,6 +105,67 @@ int64_t GPUThreadMappingAttr::getRelativeIndex() const {
   return isLinearMapping()
              ? getMappingId() - static_cast<int64_t>(MappingId::LinearDim0)
              : getMappingId();
+}
+
+int64_t GPULaneMappingAttr::getMappingId() const {
+  return static_cast<int64_t>(getLane());
+}
+
+bool GPULaneMappingAttr::isLinearMapping() const {
+  return getMappingId() >= static_cast<int64_t>(MappingId::LinearDim0);
+}
+
+int64_t GPULaneMappingAttr::getRelativeIndex() const {
+  return isLinearMapping()
+             ? getMappingId() - static_cast<int64_t>(MappingId::LinearDim0)
+             : getMappingId();
+}
+
+int64_t GPUMappingMaskAttr::getMaxNumPhysicalIds() const { return 64; }
+
+///                 8       4       0
+/// Example mask  : 0 0 0 1 1 0 1 0 0
+///
+/// Active physical (resp. logical) is  2 (0), 4 (1) and 5 (2).
+/// Logical id for e.g. 5 (2) constructs filter (1 << 5 - 1).
+///
+/// Example mask  : 0 0 0 1 1 0 1 0 0
+/// Example filter: 0 0 0 0 1 1 1 1 1
+/// Intersection  : 0 0 0 0 1 0 1 0 0
+/// PopCnt        : 2
+Value GPUMappingMaskAttr::createLogicalLinearMappingId(
+    OpBuilder &b, Value physicalLinearMappingId) const {
+  Location loc = physicalLinearMappingId.getLoc();
+  Value mask =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(getMask()));
+  Value one = arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(1));
+  Value filter = arith::ShLIOp::create(b, loc, one, physicalLinearMappingId);
+  filter = arith::SubIOp::create(b, loc, filter, one);
+  Value filteredId = arith::AndIOp::create(b, loc, mask, filter);
+  return math::CtPopOp::create(b, loc, filteredId);
+}
+
+///                 8       4       0
+/// Example mask  : 0 0 0 1 1 0 1 0 0
+///
+/// Active physical (resp. logical) is  2 (0), 4 (1) and 5 (2).
+/// Logical id for e.g. 5 (2) constructs filter (1 << 5).
+///
+/// Example mask  : 0 0 0 1 1 0 1 0 0
+/// Example filter: 0 0 0 1 0 0 0 0 0
+/// Intersection  : 0 0 0 1 0 0 0 0 0
+/// Cmp           : 1
+Value GPUMappingMaskAttr::createIsActiveIdPredicate(
+    OpBuilder &b, Value physicalLinearMappingId) const {
+  Location loc = physicalLinearMappingId.getLoc();
+  Value mask =
+      arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(getMask()));
+  Value one = arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(1));
+  Value filter = arith::ShLIOp::create(b, loc, one, physicalLinearMappingId);
+  Value filtered = arith::AndIOp::create(b, loc, mask, filter);
+  Value zero = arith::ConstantOp::create(b, loc, b.getI64IntegerAttr(0));
+  return arith::CmpIOp::create(b, loc, arith::CmpIPredicate::ne, filtered,
+                               zero);
 }
 
 int64_t GPUMemorySpaceMappingAttr::getMappingId() const {
@@ -1078,7 +1140,7 @@ struct FoldLaunchArguments : public OpRewritePattern<LaunchOp> {
         OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(&op.getBody().front());
         zero =
-            rewriter.create<arith::ConstantIndexOp>(op.getLoc(), /*value=*/0);
+            arith::ConstantIndexOp::create(rewriter, op.getLoc(), /*value=*/0);
       }
       rewriter.replaceAllUsesWith(id, zero);
       simplified = true;
@@ -1147,8 +1209,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   prop.kernel = kernelSymbol;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
-  for (auto &sz : prop.operandSegmentSizes)
-    sz = 1;
+  llvm::fill(prop.operandSegmentSizes, 1);
   prop.operandSegmentSizes[0] = asyncDependencies.size();
   if (!clusterSize.has_value()) {
     prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
@@ -1196,8 +1257,7 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   prop.kernel = kernel;
   size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
   // Initialize the segment sizes to 1.
-  for (auto &sz : prop.operandSegmentSizes)
-    sz = 1;
+  llvm::fill(prop.operandSegmentSizes, 1);
   prop.operandSegmentSizes[0] = 0;
   if (!clusterSize.has_value()) {
     prop.operandSegmentSizes[segmentSizesLen - 4] = 0;
@@ -1324,11 +1384,26 @@ static void printLaunchFuncOperands(OpAsmPrinter &printer, Operation *,
 void ShuffleOp::build(OpBuilder &builder, OperationState &result, Value value,
                       int32_t offset, int32_t width, ShuffleMode mode) {
   build(builder, result, value,
-        builder.create<arith::ConstantOp>(result.location,
-                                          builder.getI32IntegerAttr(offset)),
-        builder.create<arith::ConstantOp>(result.location,
-                                          builder.getI32IntegerAttr(width)),
+        arith::ConstantOp::create(builder, result.location,
+                                  builder.getI32IntegerAttr(offset)),
+        arith::ConstantOp::create(builder, result.location,
+                                  builder.getI32IntegerAttr(width)),
         mode);
+}
+
+//===----------------------------------------------------------------------===//
+// RotateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult RotateOp::verify() {
+  uint32_t offset = getOffset();
+  uint32_t width = getWidth();
+
+  if (offset >= width) {
+    return emitOpError() << "offset must be in the range [0, " << width << ")";
+  }
+
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2302,7 +2377,7 @@ void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,
                                  TypeRange resultTypes, Value laneId,
                                  int64_t warpSize) {
   build(builder, result, resultTypes, laneId, warpSize,
-        /*operands=*/std::nullopt, /*argTypes=*/std::nullopt);
+        /*operands=*/{}, /*argTypes=*/{});
 }
 
 void WarpExecuteOnLane0Op::build(OpBuilder &builder, OperationState &result,

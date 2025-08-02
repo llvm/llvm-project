@@ -26,7 +26,7 @@ module {
 // CHECK: !s8i = !cir.int<s, 8>
 // CHECK: #true = #cir.bool<true> : !cir.bool
 // CHECK: module {
-// CHECK:   cir.func @binary_assign() {
+// CHECK:   cir.func{{.*}} @binary_assign() {
 // CHECK:     %0 = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b"] {alignment = 1 : i64}
 // CHECK:     %1 = cir.alloca !s8i, !cir.ptr<!s8i>, ["c"] {alignment = 1 : i64}
 // CHECK:     %2 = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["f"] {alignment = 4 : i64}

@@ -60,6 +60,18 @@ llvm.func @arm_sve_usmmla(%arg0: vector<[16]xi8>,
   llvm.return %0 : vector<[4]xi32>
 }
 
+// CHECK-LABEL: define <vscale x 4 x float> @arm_sve_bfmmla
+llvm.func @arm_sve_bfmmla(%arg0: vector<[8]xbf16>,
+                          %arg1: vector<[8]xbf16>,
+                          %arg2: vector<[4]xf32>)
+                          -> vector<[4]xf32> {
+  // CHECK: call <vscale x 4 x float> @llvm.aarch64.sve.bfmmla(<vscale x 4 x float>
+  %0 = "arm_sve.intr.bfmmla"(%arg2, %arg0, %arg1) :
+    (vector<[4]xf32>, vector<[8]xbf16>, vector<[8]xbf16>)
+        -> vector<[4]xf32>
+  llvm.return %0 : vector<[4]xf32>
+}
+
 // CHECK-LABEL: define <vscale x 4 x i32> @arm_sve_arithi
 llvm.func @arm_sve_arithi(%arg0: vector<[4]xi32>,
                           %arg1: vector<[4]xi32>,

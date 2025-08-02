@@ -340,6 +340,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"acos", {{"x", SameFloating}}, SameFloating},
     {"acosd", {{"x", SameFloating}}, SameFloating},
     {"acosh", {{"x", SameFloating}}, SameFloating},
+    {"acospi", {{"x", SameFloating}}, SameFloating},
     {"adjustl", {{"string", SameChar}}, SameChar},
     {"adjustr", {{"string", SameChar}}, SameChar},
     {"aimag", {{"z", SameComplex}}, SameReal},
@@ -358,6 +359,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"asin", {{"x", SameFloating}}, SameFloating},
     {"asind", {{"x", SameFloating}}, SameFloating},
     {"asinh", {{"x", SameFloating}}, SameFloating},
+    {"asinpi", {{"x", SameFloating}}, SameFloating},
     {"associated",
         {{"pointer", AnyPointer, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::In, {ArgFlag::canBeNullPointer}},
@@ -428,6 +430,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"conjg", {{"z", SameComplex}}, SameComplex},
     {"cos", {{"x", SameFloating}}, SameFloating},
     {"cosd", {{"x", SameFloating}}, SameFloating},
+    {"cospi", {{"x", SameFloating}}, SameFloating},
     {"cosh", {{"x", SameFloating}}, SameFloating},
     {"coshape", {{"coarray", AnyData, Rank::coarray}, SizeDefaultKIND}, KINDInt,
         Rank::vector, IntrinsicClass::inquiryFunction},
@@ -956,6 +959,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"sin", {{"x", SameFloating}}, SameFloating},
     {"sind", {{"x", SameFloating}}, SameFloating},
     {"sinh", {{"x", SameFloating}}, SameFloating},
+    {"sinpi", {{"x", SameFloating}}, SameFloating},
     {"size",
         {{"array", AnyData, Rank::arrayOrAssumedRank},
             OptionalDIM, // unless array is assumed-size
@@ -987,6 +991,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"tan", {{"x", SameFloating}}, SameFloating},
     {"tand", {{"x", SameFloating}}, SameFloating},
     {"tanh", {{"x", SameFloating}}, SameFloating},
+    {"tanpi", {{"x", SameFloating}}, SameFloating},
     {"team_number", {OptionalTEAM}, DefaultInt, Rank::scalar,
         IntrinsicClass::transformationalFunction},
     {"this_image",
@@ -1015,6 +1020,15 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"mold", SameType, Rank::anyOrAssumedRank},
             {"size", AnyInt, Rank::scalar}},
         SameType, Rank::vector, IntrinsicClass::transformationalFunction},
+    // TRANSFER(BOZ, MOLD=integer or real scalar) extension
+    {"transfer",
+        {{"source", AnyNumeric, Rank::elementalOrBOZ},
+            {"mold", SameInt, Rank::scalar}},
+        SameInt, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"transfer",
+        {{"source", AnyNumeric, Rank::elementalOrBOZ},
+            {"mold", SameReal, Rank::scalar}},
+        SameReal, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"transpose", {{"matrix", SameType, Rank::matrix}}, SameType, Rank::matrix,
         IntrinsicClass::transformationalFunction},
     {"trim", {{"string", SameCharNoLen, Rank::scalar}}, SameCharNoLen,
@@ -3063,10 +3077,11 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
     ActualArguments &arguments, FoldingContext &context) const {
   characteristics::Procedure::Attrs attrs;
   attrs.set(characteristics::Procedure::Attr::Subroutine);
-  static const char *const keywords[]{"cptr", "fptr", "shape", nullptr};
+  static const char *const keywords[]{
+      "cptr", "fptr", "shape", "lower", nullptr};
   characteristics::DummyArguments dummies;
-  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 1)) {
-    CHECK(arguments.size() == 3);
+  if (CheckAndRearrangeArguments(arguments, context.messages(), keywords, 2)) {
+    CHECK(arguments.size() == 4);
     if (const auto *expr{arguments[0].value().UnwrapExpr()}) {
       // General semantic checks will catch an actual argument that's not
       // scalar.
@@ -3159,11 +3174,30 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
           }
         }
       }
+      if (arguments[3] && fptrRank == 0) {
+        context.messages().Say(arguments[3]->sourceLocation(),
+            "LOWER= argument to C_F_POINTER() may not appear when FPTR= is scalar"_err_en_US);
+      } else if (arguments[3]) {
+        if (const auto *argExpr{arguments[3].value().UnwrapExpr()}) {
+          if (argExpr->Rank() > 1) {
+            context.messages().Say(arguments[3]->sourceLocation(),
+                "LOWER= argument to C_F_POINTER() must be a rank-one array."_err_en_US);
+          } else if (argExpr->Rank() == 1) {
+            if (auto constShape{GetConstantShape(context, *argExpr)}) {
+              if (constShape->At(ConstantSubscripts{1}).ToInt64() != fptrRank) {
+                context.messages().Say(arguments[3]->sourceLocation(),
+                    "LOWER= argument to C_F_POINTER() must have size equal to the rank of FPTR="_err_en_US);
+              }
+            }
+          }
+        }
+      }
     }
   }
   if (dummies.size() == 2) {
+    // Handle SHAPE
     DynamicType shapeType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
-    if (arguments[2]) {
+    if (arguments.size() >= 3 && arguments[2]) {
       if (auto type{arguments[2]->GetType()}) {
         if (type->category() == TypeCategory::Integer) {
           shapeType = *type;
@@ -3175,6 +3209,22 @@ IntrinsicProcTable::Implementation::HandleC_F_Pointer(
     shape.intent = common::Intent::In;
     shape.attrs.set(characteristics::DummyDataObject::Attr::Optional);
     dummies.emplace_back("shape"s, std::move(shape));
+
+    // Handle LOWER
+    DynamicType lowerType{TypeCategory::Integer, defaults_.sizeIntegerKind()};
+    if (arguments.size() >= 4 && arguments[3]) {
+      if (auto type{arguments[3]->GetType()}) {
+        if (type->category() == TypeCategory::Integer) {
+          lowerType = *type;
+        }
+      }
+    }
+    characteristics::DummyDataObject lower{
+        characteristics::TypeAndShape{lowerType, 1}};
+    lower.intent = common::Intent::In;
+    lower.attrs.set(characteristics::DummyDataObject::Attr::Optional);
+    dummies.emplace_back("lower"s, std::move(lower));
+
     return SpecificCall{
         SpecificIntrinsic{"__builtin_c_f_pointer"s,
             characteristics::Procedure{std::move(dummies), attrs}},
