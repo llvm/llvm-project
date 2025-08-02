@@ -119,7 +119,7 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
 
   if (const auto *memExpr = dyn_cast<MemberExpr>(curVarExpr))
     return {exprLoc, emitMemberExpr(memExpr).getPointer(), exprString,
-            std::move(bounds)};
+            curVarExpr->getType(), std::move(bounds)};
 
   // Sema has made sure that only 4 types of things can get here, array
   // subscript, array section, member expr, or DRE to a var decl (or the
@@ -127,5 +127,5 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
   // right.
   const auto *dre = cast<DeclRefExpr>(curVarExpr);
   return {exprLoc, emitDeclRefLValue(dre).getPointer(), exprString,
-          std::move(bounds)};
+          curVarExpr->getType(), std::move(bounds)};
 }

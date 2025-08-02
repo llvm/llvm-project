@@ -40,7 +40,7 @@ class MultiplexExternalSemaSource : public ExternalSemaSource {
   static char ID;
 
 private:
-  SmallVector<ExternalSemaSource *, 2> Sources;
+  SmallVector<llvm::IntrusiveRefCntPtr<ExternalSemaSource>, 2> Sources;
 
 public:
   /// Constructs a new multiplexing external sema source and appends the
@@ -49,15 +49,14 @@ public:
   ///\param[in] S1 - A non-null (old) ExternalSemaSource.
   ///\param[in] S2 - A non-null (new) ExternalSemaSource.
   ///
-  MultiplexExternalSemaSource(ExternalSemaSource *S1, ExternalSemaSource *S2);
-
-  ~MultiplexExternalSemaSource() override;
+  MultiplexExternalSemaSource(llvm::IntrusiveRefCntPtr<ExternalSemaSource> S1,
+                              llvm::IntrusiveRefCntPtr<ExternalSemaSource> S2);
 
   /// Appends new source to the source list.
   ///
   ///\param[in] Source - An ExternalSemaSource.
   ///
-  void AddSource(ExternalSemaSource *Source);
+  void AddSource(llvm::IntrusiveRefCntPtr<ExternalSemaSource> Source);
 
   //===--------------------------------------------------------------------===//
   // ExternalASTSource.

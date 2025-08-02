@@ -534,10 +534,8 @@ public:
   NODE(parser, OmpAtClause)
   NODE_ENUM(OmpAtClause, ActionTime)
   NODE_ENUM(OmpSeverityClause, Severity)
-  NODE(parser, OmpBeginBlockDirective)
   NODE(parser, OmpBeginLoopDirective)
   NODE(parser, OmpBeginSectionsDirective)
-  NODE(parser, OmpBlockDirective)
   static std::string GetNodeName(const llvm::omp::Directive &x) {
     return llvm::Twine("llvm::omp::Directive = ",
         llvm::omp::getOpenMPDirectiveName(x, llvm::omp::FallbackVersion))
@@ -586,7 +584,6 @@ public:
   NODE(parser, OmpDetachClause)
   NODE(parser, OmpDoacrossClause)
   NODE(parser, OmpDestroyClause)
-  NODE(parser, OmpEndBlockDirective)
   NODE(parser, OmpEndCriticalDirective)
   NODE(parser, OmpEndLoopDirective)
   NODE(parser, OmpEndSectionsDirective)
@@ -708,6 +705,8 @@ public:
   NODE(parser, OpenMPDeclarativeAssumes)
   NODE(parser, OmpAssumeDirective)
   NODE(parser, OmpEndAssumeDirective)
+  NODE(parser, OmpBeginDirective)
+  NODE(parser, OmpEndDirective)
   NODE(parser, OpenMPAtomicConstruct)
   NODE(parser, OpenMPBlockConstruct)
   NODE(parser, OpenMPCancelConstruct)

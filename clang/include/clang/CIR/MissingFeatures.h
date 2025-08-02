@@ -223,6 +223,7 @@ struct MissingFeatures {
   static bool lowerAggregateLoadStore() { return false; }
   static bool lowerModeOptLevel() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
+  static bool mergeAllConstants() { return false; }
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }

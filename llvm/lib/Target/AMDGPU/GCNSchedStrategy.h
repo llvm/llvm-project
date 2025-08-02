@@ -250,9 +250,6 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // limit. Register pressure in these regions usually will result in spilling.
   BitVector RegionsWithExcessRP;
 
-  // Regions that has the same occupancy as the latest MinOccupancy
-  BitVector RegionsWithMinOcc;
-
   // Regions that have IGLP instructions (SCHED_GROUP_BARRIER or IGLP_OPT).
   BitVector RegionsWithIGLPInstrs;
 

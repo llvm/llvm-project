@@ -919,11 +919,11 @@ the `Command Guide <CommandGuide/index.html>`_.
 
 ``llvm-as``
 
-  The assembler transforms the human readable LLVM assembly to LLVM bitcode.
+  The assembler transforms the human-readable LLVM assembly to LLVM bitcode.
 
 ``llvm-dis``
 
-  The disassembler transforms the LLVM bitcode to human readable LLVM assembly.
+  The disassembler transforms the LLVM bitcode to human-readable LLVM assembly.
 
 ``llvm-link``
 

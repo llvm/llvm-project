@@ -131,9 +131,23 @@ Extensions
 
 The SPIR-V backend supports a variety of `extensions <https://github.com/KhronosGroup/SPIRV-Registry/tree/main/extensions>`_
 that enable or enhance features beyond the core SPIR-V specification.
-These extensions can be enabled using the ``-spirv-extensions`` option
-followed by the name of the extension(s) you wish to enable. Below is a
-list of supported SPIR-V extensions, sorted alphabetically by their extension names:
+The enabled extensions can be controlled using the ``-spirv-ext`` option followed by a list of
+extensions to enable or disable, each prefixed with ``+`` or ``-``, respectively.
+
+To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
+
+``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
+
+To enable all extensions, use the following option:
+``-spirv-ext=all``
+
+To enable all KHR extensions, use the following option:
+``-spirv-ext=khr``
+
+To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
+``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
+
+Below is a list of supported SPIR-V extensions, sorted alphabetically by their extension names:
 
 .. list-table:: Supported SPIR-V Extensions
    :widths: 50 150
@@ -219,16 +233,6 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds support for 4-bit integer type, and allow this type to be used in cooperative matrices.
    * - ``SPV_KHR_float_controls2``
      - Adds ability to specify the floating-point environment in shaders. It can be used on whole modules and individual instructions.
-
-To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
-
-``-spirv-ext=+SPV_EXT_shader_atomic_float_add,+SPV_INTEL_arbitrary_precision_integers``
-
-To enable all extensions, use the following option:
-``-spirv-ext=all``
-
-To enable all extensions except specified, specify ``all`` followed by a list of disallowed extensions. For example:
-``-spirv-ext=all,-SPV_INTEL_arbitrary_precision_integers``
 
 SPIR-V representation in LLVM IR
 ================================

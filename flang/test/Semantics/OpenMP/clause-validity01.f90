@@ -163,8 +163,7 @@ use omp_lib
   !$omp parallel
   do i = 1, N
   enddo
-  !ERROR: Unmatched END TARGET directive
-  !$omp end target
+  !$omp end parallel
 
   ! OMP 5.0 - 2.6 Restriction point 1
   outofparallel: do k =1, 10

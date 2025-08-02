@@ -14947,3 +14947,147 @@ define <vscale x 16 x double> @vector_interleave_nxv16f64_nxv2f64(<vscale x 2 x 
   %res = call <vscale x 16 x double> @llvm.vector.interleave8.nxv16f64(<vscale x 2 x double> %v0, <vscale x 2 x double> %v1, <vscale x 2 x double> %v2, <vscale x 2 x double> %v3, <vscale x 2 x double> %v4, <vscale x 2 x double> %v5, <vscale x 2 x double> %v6, <vscale x 2 x double> %v7)
   ret <vscale x 16 x double> %res
 }
+
+define <vscale x 4 x i16> @interleave2_same_const_splat_nxv4i16() {
+; CHECK-LABEL: interleave2_same_const_splat_nxv4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 3
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: interleave2_same_const_splat_nxv4i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVBB-NEXT:    vmv.v.i v8, 3
+; ZVBB-NEXT:    ret
+  %retval = call <vscale x 4 x i16> @llvm.vector.interleave2.nxv4i16(<vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3))
+  ret <vscale x 4 x i16> %retval
+}
+
+define <vscale x 4 x i16> @interleave2_diff_const_splat_nxv4i16() {
+; V-LABEL: interleave2_diff_const_splat_nxv4i16:
+; V:       # %bb.0:
+; V-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; V-NEXT:    vmv.v.i v9, 3
+; V-NEXT:    li a0, 4
+; V-NEXT:    vmv.v.i v10, -1
+; V-NEXT:    vwaddu.vx v8, v9, a0
+; V-NEXT:    vwmaccu.vx v8, a0, v10
+; V-NEXT:    csrr a0, vlenb
+; V-NEXT:    srli a0, a0, 2
+; V-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; V-NEXT:    vslidedown.vx v9, v8, a0
+; V-NEXT:    vslideup.vx v8, v9, a0
+; V-NEXT:    ret
+;
+; ZVBB-LABEL: interleave2_diff_const_splat_nxv4i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; ZVBB-NEXT:    vmv.v.i v8, 4
+; ZVBB-NEXT:    li a0, 3
+; ZVBB-NEXT:    vwsll.vi v9, v8, 16
+; ZVBB-NEXT:    vwaddu.wx v8, v9, a0
+; ZVBB-NEXT:    csrr a0, vlenb
+; ZVBB-NEXT:    srli a0, a0, 2
+; ZVBB-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVBB-NEXT:    vslidedown.vx v9, v8, a0
+; ZVBB-NEXT:    vslideup.vx v8, v9, a0
+; ZVBB-NEXT:    ret
+;
+; ZIP-LABEL: interleave2_diff_const_splat_nxv4i16:
+; ZIP:       # %bb.0:
+; ZIP-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
+; ZIP-NEXT:    vmv.v.i v9, 4
+; ZIP-NEXT:    vmv.v.i v10, 3
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    ri.vzip2b.vv v11, v10, v9
+; ZIP-NEXT:    ri.vzip2a.vv v8, v10, v9
+; ZIP-NEXT:    srli a0, a0, 2
+; ZIP-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZIP-NEXT:    vslideup.vx v8, v11, a0
+; ZIP-NEXT:    ret
+  %retval = call <vscale x 4 x i16> @llvm.vector.interleave2.v4i16(<vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 4))
+  ret <vscale x 4 x i16> %retval
+}
+
+define <vscale x 4 x i16> @interleave2_same_nonconst_splat_nxv4i16(i16 %a) {
+; CHECK-LABEL: interleave2_same_nonconst_splat_nxv4i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: interleave2_same_nonconst_splat_nxv4i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZVBB-NEXT:    vmv.v.x v8, a0
+; ZVBB-NEXT:    ret
+  %ins = insertelement <vscale x 2 x i16> poison, i16 %a, i32 0
+  %splat = shufflevector <vscale x 2 x i16> %ins, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %retval = call <vscale x 4 x i16> @llvm.vector.interleave2.nxv4i16(<vscale x 2 x i16> %splat, <vscale x 2 x i16> %splat)
+  ret <vscale x 4 x i16> %retval
+}
+
+define <vscale x 4 x i16> @interleave2_diff_nonconst_splat_nxv4i16(i16 %a, i16 %b) {
+; V-LABEL: interleave2_diff_nonconst_splat_nxv4i16:
+; V:       # %bb.0:
+; V-NEXT:    vsetvli a2, zero, e16, mf2, ta, ma
+; V-NEXT:    vmv.v.x v9, a0
+; V-NEXT:    vmv.v.i v10, -1
+; V-NEXT:    csrr a0, vlenb
+; V-NEXT:    vwaddu.vx v8, v9, a1
+; V-NEXT:    vwmaccu.vx v8, a1, v10
+; V-NEXT:    srli a0, a0, 2
+; V-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; V-NEXT:    vslidedown.vx v9, v8, a0
+; V-NEXT:    vslideup.vx v8, v9, a0
+; V-NEXT:    ret
+;
+; ZVBB-LABEL: interleave2_diff_nonconst_splat_nxv4i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetvli a2, zero, e16, mf2, ta, ma
+; ZVBB-NEXT:    vmv.v.x v8, a1
+; ZVBB-NEXT:    csrr a1, vlenb
+; ZVBB-NEXT:    vwsll.vi v9, v8, 16
+; ZVBB-NEXT:    vwaddu.wx v8, v9, a0
+; ZVBB-NEXT:    srli a1, a1, 2
+; ZVBB-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; ZVBB-NEXT:    vslidedown.vx v9, v8, a1
+; ZVBB-NEXT:    vslideup.vx v8, v9, a1
+; ZVBB-NEXT:    ret
+;
+; ZIP-LABEL: interleave2_diff_nonconst_splat_nxv4i16:
+; ZIP:       # %bb.0:
+; ZIP-NEXT:    vsetvli a2, zero, e16, mf2, ta, ma
+; ZIP-NEXT:    vmv.v.x v9, a0
+; ZIP-NEXT:    vmv.v.x v10, a1
+; ZIP-NEXT:    csrr a0, vlenb
+; ZIP-NEXT:    ri.vzip2b.vv v11, v9, v10
+; ZIP-NEXT:    ri.vzip2a.vv v8, v9, v10
+; ZIP-NEXT:    srli a0, a0, 2
+; ZIP-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
+; ZIP-NEXT:    vslideup.vx v8, v11, a0
+; ZIP-NEXT:    ret
+  %ins1 = insertelement <vscale x 2 x i16> poison, i16 %a, i32 0
+  %splat1 = shufflevector <vscale x 2 x i16> %ins1, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %ins2 = insertelement <vscale x 2 x i16> poison, i16 %b, i32 0
+  %splat2 = shufflevector <vscale x 2 x i16> %ins2, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %retval = call <vscale x 4 x i16> @llvm.vector.interleave2.nxv4i16(<vscale x 2 x i16> %splat1, <vscale x 2 x i16> %splat2)
+  ret <vscale x 4 x i16> %retval
+}
+
+define <vscale x 8 x i16> @interleave4_same_const_splat_nxv8i16() {
+; CHECK-LABEL: interleave4_same_const_splat_nxv8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 3
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: interleave4_same_const_splat_nxv8i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
+; ZVBB-NEXT:    vmv.v.i v8, 3
+; ZVBB-NEXT:    ret
+  %retval = call <vscale x 8 x i16> @llvm.vector.interleave4.nxv8i16(<vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3))
+  ret <vscale x 8 x i16> %retval
+}

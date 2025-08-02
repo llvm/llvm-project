@@ -267,7 +267,7 @@ define <vscale x 32 x i16> @interleave4_nxv8i16(<vscale x 8 x i16> %vec0, <vscal
 ; SME2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; SME2-NEXT:    zip { z0.h - z3.h }, { z0.h - z3.h }
 ; SME2-NEXT:    ret
-  %retval = call <vscale x 32 x i16> @llvm.vector.interleave4.nxv8i16(<vscale x 8 x i16> %vec0, <vscale x 8 x i16> %vec1, <vscale x 8 x i16> %vec2, <vscale x 8 x i16> %vec3)
+  %retval = call <vscale x 32 x i16> @llvm.vector.interleave4.nxv32i16(<vscale x 8 x i16> %vec0, <vscale x 8 x i16> %vec1, <vscale x 8 x i16> %vec2, <vscale x 8 x i16> %vec3)
   ret <vscale x 32 x i16> %retval
 }
 
@@ -540,30 +540,81 @@ define <vscale x 4 x i32> @interleave2_nxv2i32(<vscale x 2 x i32> %vec0, <vscale
   ret <vscale x 4 x i32> %retval
 }
 
-; Float declarations
-declare <vscale x 4 x half> @llvm.vector.interleave2.nxv4f16(<vscale x 2 x half>, <vscale x 2 x half>)
-declare <vscale x 8 x half> @llvm.vector.interleave2.nxv8f16(<vscale x 4 x half>, <vscale x 4 x half>)
-declare <vscale x 16 x half> @llvm.vector.interleave2.nxv16f16(<vscale x 8 x half>, <vscale x 8 x half>)
-declare <vscale x 4 x float> @llvm.vector.interleave2.nxv4f32(<vscale x 2 x float>, <vscale x 2 x float>)
-declare <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float>, <vscale x 4 x float>)
-declare <vscale x 4 x double> @llvm.vector.interleave2.nxv4f64(<vscale x 2 x double>, <vscale x 2 x double>)
+define <vscale x 4 x i16> @interleave2_same_const_splat_nxv4i16() {
+; CHECK-LABEL: interleave2_same_const_splat_nxv4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, #3 // =0x3
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 4 x i16> @llvm.vector.interleave2.nxv4i16(<vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3))
+  ret <vscale x 4 x i16> %retval
+}
 
-; Integer declarations
-declare <vscale x 32 x i8> @llvm.vector.interleave2.nxv32i8(<vscale x 16 x i8>, <vscale x 16 x i8>)
-declare <vscale x 16 x i16> @llvm.vector.interleave2.nxv16i16(<vscale x 8 x i16>, <vscale x 8 x i16>)
-declare <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32>, <vscale x 4 x i32>)
-declare <vscale x 4 x i64> @llvm.vector.interleave2.nxv4i64(<vscale x 2 x i64>, <vscale x 2 x i64>)
+define <vscale x 4 x i16> @interleave2_diff_const_splat_nxv4i16() {
+; SVE-LABEL: interleave2_diff_const_splat_nxv4i16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    mov z0.d, #4 // =0x4
+; SVE-NEXT:    mov z1.d, #3 // =0x3
+; SVE-NEXT:    zip2 z2.d, z1.d, z0.d
+; SVE-NEXT:    zip1 z0.d, z1.d, z0.d
+; SVE-NEXT:    uzp1 z0.s, z0.s, z2.s
+; SVE-NEXT:    ret
+;
+; SME2-LABEL: interleave2_diff_const_splat_nxv4i16:
+; SME2:       // %bb.0:
+; SME2-NEXT:    mov z0.d, #4 // =0x4
+; SME2-NEXT:    mov z1.d, #3 // =0x3
+; SME2-NEXT:    zip { z0.d, z1.d }, z1.d, z0.d
+; SME2-NEXT:    uzp1 z0.s, z0.s, z1.s
+; SME2-NEXT:    ret
+  %retval = call <vscale x 4 x i16> @llvm.vector.interleave2.v4i16(<vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 4))
+  ret <vscale x 4 x i16> %retval
+}
 
-; Predicated
-declare <vscale x 32 x i1> @llvm.vector.interleave2.nxv32i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.vector.interleave2.nxv16i1(<vscale x 8 x i1>, <vscale x 8 x i1>)
-declare <vscale x 8 x i1> @llvm.vector.interleave2.nxv8i1(<vscale x 4 x i1>, <vscale x 4 x i1>)
-declare <vscale x 4 x i1> @llvm.vector.interleave2.nxv4i1(<vscale x 2 x i1>, <vscale x 2 x i1>)
+define <vscale x 4 x i16> @interleave2_same_nonconst_splat_nxv4i16(i16 %a) {
+; CHECK-LABEL: interleave2_same_nonconst_splat_nxv4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.s, w0
+; CHECK-NEXT:    ret
+  %ins = insertelement <vscale x 2 x i16> poison, i16 %a, i32 0
+  %splat = shufflevector <vscale x 2 x i16> %ins, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %retval = call <vscale x 4 x i16> @llvm.vector.interleave2.nxv4i16(<vscale x 2 x i16> %splat, <vscale x 2 x i16> %splat)
+  ret <vscale x 4 x i16> %retval
+}
 
-; Illegal type size
-declare <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32>, <vscale x 8 x i32>)
-declare <vscale x 8 x i64> @llvm.vector.interleave2.nxv8i64(<vscale x 4 x i64>, <vscale x 4 x i64>)
+define <vscale x 4 x i16> @interleave2_diff_nonconst_splat_nxv4i16(i16 %a, i16 %b) {
+; SVE-LABEL: interleave2_diff_nonconst_splat_nxv4i16:
+; SVE:       // %bb.0:
+; SVE-NEXT:    // kill: def $w1 killed $w1 def $x1
+; SVE-NEXT:    // kill: def $w0 killed $w0 def $x0
+; SVE-NEXT:    mov z0.d, x0
+; SVE-NEXT:    mov z1.d, x1
+; SVE-NEXT:    zip2 z2.d, z0.d, z1.d
+; SVE-NEXT:    zip1 z0.d, z0.d, z1.d
+; SVE-NEXT:    uzp1 z0.s, z0.s, z2.s
+; SVE-NEXT:    ret
+;
+; SME2-LABEL: interleave2_diff_nonconst_splat_nxv4i16:
+; SME2:       // %bb.0:
+; SME2-NEXT:    // kill: def $w1 killed $w1 def $x1
+; SME2-NEXT:    // kill: def $w0 killed $w0 def $x0
+; SME2-NEXT:    mov z0.d, x0
+; SME2-NEXT:    mov z1.d, x1
+; SME2-NEXT:    zip { z0.d, z1.d }, z0.d, z1.d
+; SME2-NEXT:    uzp1 z0.s, z0.s, z1.s
+; SME2-NEXT:    ret
+  %ins1 = insertelement <vscale x 2 x i16> poison, i16 %a, i32 0
+  %splat1 = shufflevector <vscale x 2 x i16> %ins1, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %ins2 = insertelement <vscale x 2 x i16> poison, i16 %b, i32 0
+  %splat2 = shufflevector <vscale x 2 x i16> %ins2, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %retval = call <vscale x 4 x i16> @llvm.vector.interleave2.nxv4i16(<vscale x 2 x i16> %splat1, <vscale x 2 x i16> %splat2)
+  ret <vscale x 4 x i16> %retval
+}
 
-declare <vscale x 16 x i8> @llvm.vector.interleave2.nxv16i8(<vscale x 8 x i8>, <vscale x 8 x i8>)
-declare <vscale x 8 x i16> @llvm.vector.interleave2.nxv8i16(<vscale x 4 x i16>, <vscale x 4 x i16>)
-declare <vscale x 4 x i32> @llvm.vector.interleave2.nxv4i32(<vscale x 2 x i32>, <vscale x 2 x i32>)
+define <vscale x 8 x i16> @interleave4_same_const_splat_nxv8i16() {
+; CHECK-LABEL: interleave4_same_const_splat_nxv8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.h, #3 // =0x3
+; CHECK-NEXT:    ret
+  %retval = call <vscale x 8 x i16> @llvm.vector.interleave4.nxv8i16(<vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3), <vscale x 2 x i16> splat(i16 3))
+  ret <vscale x 8 x i16> %retval
+}

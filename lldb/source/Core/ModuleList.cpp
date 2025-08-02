@@ -584,6 +584,20 @@ ModuleSP ModuleList::FindModule(const UUID &uuid) const {
   return module_sp;
 }
 
+ModuleSP ModuleList::FindModule(lldb::user_id_t uid) const {
+  ModuleSP module_sp;
+  ForEach([&](const ModuleSP &m) {
+    if (m->GetID() == uid) {
+      module_sp = m;
+      return IterationAction::Stop;
+    }
+
+    return IterationAction::Continue;
+  });
+
+  return module_sp;
+}
+
 void ModuleList::FindTypes(Module *search_first, const TypeQuery &query,
                            TypeResults &results) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);

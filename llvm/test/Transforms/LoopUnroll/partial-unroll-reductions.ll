@@ -444,3 +444,158 @@ loop:
 exit:
   ret i64 %rdx.next
 }
+
+define void @reduction_with_intermediate_store(ptr %src, ptr %sum) {
+; CHECK-LABEL: define void @reduction_with_intermediate_store(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[SUM:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[SUM_PROMOTED:%.*]] = load i32, ptr [[SUM]], align 4
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[SUM_PROMOTED]], %[[ENTRY]] ], [ [[RED_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[RED_NEXT:%.*]] = add nsw i32 [[RED]], [[L]]
+; CHECK-NEXT:    store i32 [[RED_NEXT]], ptr [[SUM]], align 4
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_SRC_1]], align 4
+; CHECK-NEXT:    [[RED_NEXT_1:%.*]] = add nsw i32 [[RED_NEXT]], [[L_1]]
+; CHECK-NEXT:    store i32 [[RED_NEXT_1]], ptr [[SUM]], align 4
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 4
+; CHECK-NEXT:    [[RED_NEXT_2:%.*]] = add nsw i32 [[RED_NEXT_1]], [[L_2]]
+; CHECK-NEXT:    store i32 [[RED_NEXT_2]], ptr [[SUM]], align 4
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
+; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 4
+; CHECK-NEXT:    [[RED_NEXT_3]] = add nsw i32 [[RED_NEXT_2]], [[L_3]]
+; CHECK-NEXT:    store i32 [[RED_NEXT_3]], ptr [[SUM]], align 4
+; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[EC_3:%.*]] = icmp eq i64 [[IV_NEXT_3]], 10000
+; CHECK-NEXT:    br i1 [[EC_3]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sum.promoted = load i32, ptr %sum, align 4
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %red = phi i32 [ %sum.promoted, %entry ], [ %red.next, %loop ]
+  %gep.src = getelementptr inbounds nuw i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep.src, align 4
+  %red.next = add nsw i32 %red, %l
+  store i32 %red.next, ptr %sum, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 10000
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+declare i32 @foo()
+
+; Loop with a call cannot be handled by LoopVectorize, introducing additional
+; accumulators when unrolling increases throughput.
+define i32 @test_add_with_call(i64 %n, i32 %start) {
+; CHECK-LABEL: define i32 @test_add_with_call(
+; CHECK-SAME: i64 [[N:%.*]], i32 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[L:%.*]] = call i32 @foo()
+; CHECK-NEXT:    [[RDX_NEXT:%.*]] = add i32 [[RDX]], [[L]]
+; CHECK-NEXT:    [[L_1:%.*]] = call i32 @foo()
+; CHECK-NEXT:    [[RDX_2:%.*]] = add i32 [[RDX_NEXT]], [[L_1]]
+; CHECK-NEXT:    [[L_2:%.*]] = call i32 @foo()
+; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = add i32 [[RDX_2]], [[L_2]]
+; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[L_3:%.*]] = call i32 @foo()
+; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_NEXT_2]], [[L_3]]
+; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
+; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[BIN_RDX2:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[BIN_RDX2]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ %start, %entry ], [ %rdx.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %l = call i32 @foo()
+  %rdx.next = add i32 %rdx, %l
+  %ec = icmp ne i64 %iv.next, 1000
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret i32 %rdx.next
+}
+
+; Loop with backward dependence cannot be handled LoopVectorize, introducing additional
+; accumulators when unrolling increases throughput.
+define i32 @test_add_with_backward_dep(ptr %p, i64 %n, i32 %start) {
+; CHECK-LABEL: define i32 @test_add_with_backward_dep(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[N:%.*]], i32 [[START:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[START]], %[[ENTRY]] ], [ [[RDX_NEXT_3:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP_1]], align 4
+; CHECK-NEXT:    [[RDX_NEXT:%.*]] = add i32 [[RDX]], [[L]]
+; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
+; CHECK-NEXT:    [[GEP_11:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT]]
+; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_11]], align 4
+; CHECK-NEXT:    [[GEP_1_1:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP_1_1]], align 4
+; CHECK-NEXT:    [[RDX_2:%.*]] = add i32 [[RDX_NEXT]], [[L_1]]
+; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_1]]
+; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_2]], align 4
+; CHECK-NEXT:    [[GEP_1_2:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP_1_2]], align 4
+; CHECK-NEXT:    [[RDX_NEXT_2:%.*]] = add i32 [[RDX_2]], [[L_2]]
+; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
+; CHECK-NEXT:    [[GEP_3:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_2]]
+; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_3]], align 4
+; CHECK-NEXT:    [[GEP_1_3:%.*]] = getelementptr inbounds nuw i32, ptr [[P]], i64 [[IV_NEXT_3]]
+; CHECK-NEXT:    store i32 0, ptr [[GEP_1_3]], align 4
+; CHECK-NEXT:    [[RDX_NEXT_3]] = add i32 [[RDX_NEXT_2]], [[L_3]]
+; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
+; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[BIN_RDX3:%.*]] = phi i32 [ [[RDX_NEXT_3]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[BIN_RDX3]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %rdx = phi i32 [ %start, %entry ], [ %rdx.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  %gep = getelementptr inbounds nuw i32, ptr %p, i64 %iv
+  %l = load i32, ptr %gep
+  %gep.1 = getelementptr inbounds nuw i32, ptr %p, i64 %iv.next
+  store i32 0, ptr %gep.1
+  %rdx.next = add i32 %rdx, %l
+  %ec = icmp ne i64 %iv.next, 1000
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret i32 %rdx.next
+}

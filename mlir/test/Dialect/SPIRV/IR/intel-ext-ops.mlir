@@ -21,7 +21,7 @@ spirv.func @f32_to_bf16_vec(%arg0 : vector<2xf32>) "None" {
 // -----
 
 spirv.func @f32_to_bf16_unsupported(%arg0 : f64) "None" {
-  // expected-error @+1 {{operand #0 must be Float32 or vector of Float32 values of length 2/3/4/8/16, but got}}
+  // expected-error @+1 {{operand #0 must be Float32 or fixed-length vector of Float32 values of length 2/3/4/8/16, but got}}
   %0 = spirv.INTEL.ConvertFToBF16 %arg0 : f64 to i16
   spirv.Return
 }
@@ -29,7 +29,7 @@ spirv.func @f32_to_bf16_unsupported(%arg0 : f64) "None" {
 // -----
 
 spirv.func @f32_to_bf16_vec_unsupported(%arg0 : vector<2xf32>) "None" {
-  // expected-error @+1 {{operand and result must have same number of elements}}
+  // expected-error @+1 {{op requires the same shape for all operands and results}}
   %0 = spirv.INTEL.ConvertFToBF16 %arg0 : vector<2xf32> to vector<4xi16>
   spirv.Return
 }
@@ -57,7 +57,7 @@ spirv.func @bf16_to_f32_vec(%arg0 : vector<2xi16>) "None" {
 // -----
 
 spirv.func @bf16_to_f32_unsupported(%arg0 : i16) "None" {
-  // expected-error @+1 {{result #0 must be Float32 or vector of Float32 values of length 2/3/4/8/16, but got}}
+  // expected-error @+1 {{result #0 must be Float32 or fixed-length vector of Float32 values of length 2/3/4/8/16, but got}}
   %0 = spirv.INTEL.ConvertBF16ToF %arg0 : i16 to f16
   spirv.Return
 }
@@ -65,8 +65,44 @@ spirv.func @bf16_to_f32_unsupported(%arg0 : i16) "None" {
 // -----
 
 spirv.func @bf16_to_f32_vec_unsupported(%arg0 : vector<2xi16>) "None" {
-  // expected-error @+1 {{operand and result must have same number of elements}}
+  // expected-error @+1 {{op requires the same shape for all operands and results}}
   %0 = spirv.INTEL.ConvertBF16ToF %arg0 : vector<2xi16> to vector<3xf32>
+  spirv.Return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.RoundFToTF32
+//===----------------------------------------------------------------------===//
+
+spirv.func @f32_to_tf32(%arg0 : f32) "None" {
+  // CHECK: {{%.*}} = spirv.INTEL.RoundFToTF32 {{%.*}} : f32 to f32
+  %0 = spirv.INTEL.RoundFToTF32 %arg0 : f32 to f32
+  spirv.Return
+}
+
+// -----
+
+spirv.func @f32_to_tf32_vec(%arg0 : vector<2xf32>) "None" {
+  // CHECK: {{%.*}} = spirv.INTEL.RoundFToTF32 {{%.*}} : vector<2xf32> to vector<2xf32>
+  %0 = spirv.INTEL.RoundFToTF32 %arg0 : vector<2xf32> to vector<2xf32>
+  spirv.Return
+}
+
+// -----
+
+spirv.func @f32_to_tf32_unsupported(%arg0 : f64) "None" {
+  // expected-error @+1 {{op operand #0 must be Float32 or fixed-length vector of Float32 values of length 2/3/4/8/16, but got 'f64'}}
+  %0 = spirv.INTEL.RoundFToTF32 %arg0 : f64 to f32
+  spirv.Return
+}
+
+// -----
+
+spirv.func @f32_to_tf32_vec_unsupported(%arg0 : vector<2xf32>) "None" {
+  // expected-error @+1 {{op requires the same shape for all operands and results}}
+  %0 = spirv.INTEL.RoundFToTF32 %arg0 : vector<2xf32> to vector<4xf32>
   spirv.Return
 }
 

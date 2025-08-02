@@ -29,13 +29,13 @@ subroutine omp_in_reduction_taskgroup()
 end subroutine omp_in_reduction_taskgroup
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE-NEXT: OmpBeginBlockDirective
-!PARSE-TREE-NEXT: OmpBlockDirective -> llvm::omp::Directive = taskgroup
+!PARSE-TREE-NEXT: OmpBeginDirective
+!PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskgroup
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> TaskReduction -> OmpTaskReductionClause
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE-NEXT: OmpBeginBlockDirective
-!PARSE-TREE-NEXT: OmpBlockDirective -> llvm::omp::Directive = task
+!PARSE-TREE-NEXT: OmpBeginDirective
+!PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> InReduction -> OmpInReductionClause
 !PARSE-TREE-NEXT: OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Add
 !PARSE-TREE-NEXT: OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'z'
@@ -66,8 +66,8 @@ subroutine omp_in_reduction_parallel()
 end subroutine omp_in_reduction_parallel
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPBlockConstruct
-!PARSE-TREE-NEXT: OmpBeginBlockDirective
-!PARSE-TREE-NEXT: OmpBlockDirective -> llvm::omp::Directive = parallel
+!PARSE-TREE-NEXT: OmpBeginDirective
+!PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct

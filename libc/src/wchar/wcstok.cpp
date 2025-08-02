@@ -27,17 +27,22 @@ LLVM_LIBC_FUNCTION(wchar_t *, wcstok,
   wchar_t *tok_start = str;
   while (*tok_start != L'\0' && internal::wcschr(delims, *tok_start))
     ++tok_start;
+  if (*tok_start == L'\0') {
+    *context = nullptr;
+    return nullptr;
+  }
 
   wchar_t *tok_end = tok_start;
   while (*tok_end != L'\0' && !internal::wcschr(delims, *tok_end))
     ++tok_end;
 
-  if (*tok_end != L'\0') {
+  if (*tok_end == L'\0') {
+    *context = nullptr;
+  } else {
     *tok_end = L'\0';
-    ++tok_end;
+    *context = tok_end + 1;
   }
-  *context = tok_end;
-  return *tok_start == L'\0' ? nullptr : tok_start;
+  return tok_start;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
