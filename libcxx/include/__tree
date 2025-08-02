@@ -898,10 +898,6 @@ public:
     return __value_comp_;
   }
 
-public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __root() const _NOEXCEPT {
-    return static_cast<__node_pointer>(__end_node()->__left_);
-  }
 
 private:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const __node_allocator& __node_alloc() const _NOEXCEPT {
