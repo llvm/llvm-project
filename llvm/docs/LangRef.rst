@@ -31200,14 +31200,14 @@ third argument is 1). When loading from the pointer, the inverse operation
 is done on the loaded pointer after it is loaded. Specifically, when the
 third argument is 1, the pointer is signed (using pointer authentication
 instructions or emulated PAC if not supported by the hardware) using
-the struct address before being stored, and authenticated after being
+the discriminator before being stored, and authenticated after being
 loaded. Note that it is currently unsupported to have the third argument
 be 1 on targets other than AArch64. When the third argument is 0, it is
 rotated left by 16 bits and the discriminator is subtracted before being
 stored, and the discriminator is added and the pointer is rotated right
 by 16 bits after being loaded.
 
-If the pointer is used otherwise than for loading or storing (e.g. its
+If the pointer is used other than for loading or storing (e.g. its
 address escapes), that will disable all blending operations using
 the deactivation symbol specified in the intrinsic's operand bundle.
 The deactivation symbol operand bundle is copied onto any sign and auth
