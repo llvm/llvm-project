@@ -3455,6 +3455,7 @@ void ExpressionAnalyzer::Analyze(const parser::CallStmt &callStmt) {
                 HasAlternateReturns(callee->arguments)},
             ProcedureRef::Deleter);
         DEREF(callStmt.typedCall.get()).set_chevrons(std::move(*chevrons));
+        DEREF(callStmt.typedCall.get()).DetermineCopyInOut();
         return;
       }
     }
