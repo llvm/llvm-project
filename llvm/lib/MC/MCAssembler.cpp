@@ -777,6 +777,14 @@ bool MCAssembler::relaxInstruction(MCFragment &F) {
   getEmitter().encodeInstruction(Relaxed, Data, Fixups, *F.getSubtargetInfo());
   F.setVarContents(Data);
   F.setVarFixups(Fixups);
+
+  for (const auto &Fixup : Fixups) {
+    if (!Fixup.isLinkerRelaxable())
+      continue;
+    F.setLinkerRelaxable();
+    F.getParent()->setLinkerRelaxable();
+  }
+
   return true;
 }
 
