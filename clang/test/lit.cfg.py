@@ -264,6 +264,13 @@ if config.has_plugins and config.llvm_plugin_ext:
 if config.clang_default_pie_on_linux:
     config.available_features.add("default-pie-on-linux")
 
+# Run end-to-end tests if the reference pass-plugin exists in LLVM
+plugin_name = f"{config.llvm_plugin_prefix}ReferencePlugin{config.llvm_plugin_ext}"
+plugin_shlib = os.path.join(config.llvm_shlib_dir, plugin_name)
+if os.path.exists(plugin_shlib):
+    config.available_features.add("pass-plugins")
+    config.substitutions.append(("%pass_plugin_reference", plugin_shlib))
+
 # Set available features we allow tests to conditionalize on.
 #
 if config.clang_default_cxx_stdlib != "":
