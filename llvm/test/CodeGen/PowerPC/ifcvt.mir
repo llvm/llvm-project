@@ -32,10 +32,10 @@ body:             |
     liveins: $r3, $r4, $r5
   
     renamable $r6 = RLWINM renamable $r4, 3, 0, 28
-    renamable $r4 = ADDIC killed renamable $r4, 1, implicit-def $carry
+    renamable $r4 = ADDIC killed renamable $r4, 1, implicit-def $xer
     renamable $r5 = ADD4 killed renamable $r5, killed renamable $r6
     renamable $r6 = ADD4 killed renamable $r6, renamable $r6
-    renamable $r3 = ADDZE killed renamable $r3, implicit-def dead $carry, implicit $carry
+    renamable $r3 = ADDZE killed renamable $r3, implicit-def dead $xer, implicit $xer
     BDZ %bb.5, implicit-def $ctr, implicit $ctr
   
   bb.4:
