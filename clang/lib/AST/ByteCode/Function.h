@@ -37,6 +37,7 @@ class Scope final {
 public:
   /// Information about a local's storage.
   struct Local {
+    OptPrimType PrimT;
     /// Offset of the local in frame.
     unsigned Offset;
     /// Descriptor of the local.

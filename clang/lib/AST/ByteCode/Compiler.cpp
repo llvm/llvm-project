@@ -200,6 +200,25 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (SubExpr->getType().isVolatileQualified())
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, CE);
 
+    // Try to load the value directly. This is purely a performance
+    // optimization.
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
+      const ValueDecl *D = DRE->getDecl();
+      bool IsReference = D->getType()->isReferenceType();
+
+      if (!IsReference) {
+        if (auto It = Locals.find(D); It != Locals.end()) {
+          OptPrimType PrimT = It->second.PrimT;
+          unsigned Offset = It->second.Offset;
+          if (PrimT)
+            return this->emitGetLocal(*PrimT, Offset, CE);
+        } else if (auto GlobalIndex = P.getGlobal(D)) {
+          if (OptPrimType T = classify(CE))
+            return this->emitGetGlobal(*T, *GlobalIndex, CE);
+        }
+      }
+    }
+
     OptPrimType SubExprT = classify(SubExpr->getType());
     // Prepare storage for the result.
     if (!Initializing && !SubExprT) {

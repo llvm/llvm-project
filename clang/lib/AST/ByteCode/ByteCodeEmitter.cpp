@@ -93,10 +93,11 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
 }
 
 Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
+  OptPrimType PrimT = D->isPrimitive() ? D->getPrimType() : OptPrimType();
   NextLocalOffset += sizeof(Block);
   unsigned Location = NextLocalOffset;
   NextLocalOffset += align(D->getAllocSize());
-  return {Location, D};
+  return {PrimT, Location, D};
 }
 
 void ByteCodeEmitter::emitLabel(LabelTy Label) {

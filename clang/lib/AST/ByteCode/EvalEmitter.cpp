@@ -124,9 +124,10 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   Desc.IsInitialized = false;
 
   // Register the local.
+  OptPrimType PrimT = D->isPrimitive() ? D->getPrimType() : OptPrimType();
   unsigned Off = Locals.size();
   Locals.push_back(std::move(Memory));
-  return {Off, D};
+  return {PrimT, Off, D};
 }
 
 bool EvalEmitter::jumpTrue(const LabelTy &Label) {
