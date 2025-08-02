@@ -914,13 +914,6 @@ private:
     return __begin_node_;
   }
 
-
-public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_compare& value_comp() _NOEXCEPT { return __value_comp_; }
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const value_compare& value_comp() const _NOEXCEPT {
-    return __value_comp_;
-  }
-
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __root() const _NOEXCEPT {
     return std::__static_fancy_pointer_cast<__node_pointer>(__end_node()->__left_);
