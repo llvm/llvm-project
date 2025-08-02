@@ -378,10 +378,11 @@ m_Broadcast(const Op0_t &Op0) {
   return m_VPInstruction<VPInstruction::Broadcast>(Op0);
 }
 
-template <typename Op0_t, typename Op1_t>
-inline BinaryVPInstruction_match<Op0_t, Op1_t, VPInstruction::ActiveLaneMask>
-m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1) {
-  return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1);
+template <typename Op0_t, typename Op1_t, typename Op2_t>
+inline TernaryVPInstruction_match<Op0_t, Op1_t, Op2_t,
+                                  VPInstruction::ActiveLaneMask>
+m_ActiveLaneMask(const Op0_t &Op0, const Op1_t &Op1, const Op2_t &Op2) {
+  return m_VPInstruction<VPInstruction::ActiveLaneMask>(Op0, Op1, Op2);
 }
 
 template <typename Op0_t, typename Op1_t>
