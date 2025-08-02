@@ -32,7 +32,7 @@ class __force_nonstandard_layout_base2 : __force_nonstandard_layout_base1 {};
 class __force_nonstandard_layout : __force_nonstandard_layout_base1, __force_nonstandard_layout_base2 {};
 _LIBCPP_DIAGNOSTIC_POP
 
-#if __has_feature(pointer_field_protection)
+#if __has_extension(pointer_field_protection)
 #  define _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT : __force_nonstandard_layout
 #else
 #  define _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT

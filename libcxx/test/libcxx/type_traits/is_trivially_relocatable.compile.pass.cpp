@@ -28,7 +28,7 @@
 #  include <locale>
 #endif
 
-#if __has_feature(pointer_field_protection)
+#if __has_extension(pointer_field_protection)
 constexpr bool pfp_disabled = false;
 #else
 constexpr bool pfp_disabled = true;
