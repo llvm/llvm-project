@@ -606,7 +606,7 @@ static Value tryFoldCastChain(cir::CastOp op) {
     if (!isIntOrBoolCast(op))
       break;
     head = op;
-    op = dyn_cast_or_null<cir::CastOp>(head.getSrc().getDefiningOp());
+    op = head.getSrc().getDefiningOp<cir::CastOp>();
   }
 
   if (head == tail)
@@ -1802,7 +1802,7 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
   }
 
   if (isBoolNot(*this))
-    if (auto previous = dyn_cast_or_null<UnaryOp>(getInput().getDefiningOp()))
+    if (auto previous = getInput().getDefiningOp<cir::UnaryOp>())
       if (isBoolNot(previous))
         return previous.getInput();
 
@@ -2184,8 +2184,7 @@ LogicalResult cir::ComplexRealOp::verify() {
 }
 
 OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
-  if (auto complexCreateOp =
-          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+  if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(0);
 
   auto complex =
@@ -2206,8 +2205,7 @@ LogicalResult cir::ComplexImagOp::verify() {
 }
 
 OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
-  if (auto complexCreateOp =
-          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+  if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(1);
 
   auto complex =
