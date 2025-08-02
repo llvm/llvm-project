@@ -753,3 +753,32 @@ entry:
   store i16 %or, ptr %p
   ret i16 %and1
 }
+
+define i32 @test1_known_not_zero(i32 %a) {
+; CHECK-LABEL: test1_known_not_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #12288 // =0x3000
+; CHECK-NEXT:    and w9, w0, #0xfffffffe
+; CHECK-NEXT:    movk w8, #7, lsl #16
+; CHECK-NEXT:    and w9, w9, #0xfff00fff
+; CHECK-NEXT:    orr w0, w9, w8
+; CHECK-NEXT:    ret
+  %and1 = and i32 %a, -1044482
+  %or = or disjoint i32 %and1, 471040
+  ret i32 %or
+}
+
+define i32 @hole_test(i32 %a) {
+; CHECK-LABEL: hole_test:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mul w9, w0, w0
+; CHECK-NEXT:    mov w8, #65533 // =0xfffd
+; CHECK-NEXT:    movk w8, #65525, lsl #16
+; CHECK-NEXT:    orr w9, w9, #0xff0000
+; CHECK-NEXT:    and w0, w9, w8
+; CHECK-NEXT:    ret
+  %2 = mul i32 %a, %a
+  %3 = and i32 %2, -4128771
+  %4 = or i32 %3, 16056320
+  ret i32 %4
+}
