@@ -125,6 +125,12 @@
       "doc": "Force the size of time_t to 64 bits, even on platforms where compatibility considerations would otherwise make it 32-bit."
     }
   },
+  "malloc": {
+    "LIBC_CONF_GPU_MALLOC_DISABLE_SLAB_RECLAIMING": {
+      "value": false,
+      "doc": "The malloc implementation will return unused slabs to system memory."
+    }
+  },
   "general": {
     "LIBC_ADD_NULL_CHECKS": {
       "value": true,
