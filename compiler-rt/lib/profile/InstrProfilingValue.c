@@ -83,7 +83,13 @@ __llvm_profile_iterate_data(const __llvm_profile_data *Data) {
 /* This method is only used in value profiler mock testing.  */
 COMPILER_RT_VISIBILITY void *
 __llvm_get_function_addr(const __llvm_profile_data *Data) {
-  return Data->FunctionPointer;
+  void *FP = Data->FunctionPointer;
+#if __has_feature(ptrauth_calls)
+  // This is only used for tests where we compare against what happens to be
+  // signed pointers.
+  FP = ptrauth_sign_unauthenticated(FP, VALID_CODE_KEY, 0);
+#endif
+  return FP;
 }
 
 /* Allocate an array that holds the pointers to the linked lists of
