@@ -15,10 +15,16 @@
 #ifndef MLIR_DIALECT_COMMONFOLDERS_H
 #define MLIR_DIALECT_COMMONFOLDERS_H
 
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/Types.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+
+#include <cassert>
+#include <cstddef>
 #include <optional>
 
 namespace mlir {
@@ -30,11 +36,13 @@ class PoisonAttr;
 /// Uses `resultType` for the type of the returned attribute.
 /// Optional PoisonAttr template argument allows to specify 'poison' attribute
 /// which will be directly propagated to result.
-template <class AttrElementT,
+template <class AttrElementT, //
           class ElementValueT = typename AttrElementT::ValueType,
           class PoisonAttr = ub::PoisonAttr,
+          class ResultAttrElementT = AttrElementT,
+          class ResultElementValueT = typename ResultAttrElementT::ValueType,
           class CalculationT = function_ref<
-              std::optional<ElementValueT>(ElementValueT, ElementValueT)>>
+              std::optional<ResultElementValueT>(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
                                        Type resultType,
                                        CalculationT &&calculate) {
@@ -65,7 +73,7 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
     if (!calRes)
       return {};
 
-    return AttrElementT::get(resultType, *calRes);
+    return ResultAttrElementT::get(resultType, *calRes);
   }
 
   if (isa<SplatElementsAttr>(operands[0]) &&
@@ -99,7 +107,7 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
       return {};
     auto lhsIt = *maybeLhsIt;
     auto rhsIt = *maybeRhsIt;
-    SmallVector<ElementValueT, 4> elementResults;
+    SmallVector<ResultElementValueT, 4> elementResults;
     elementResults.reserve(lhs.getNumElements());
     for (size_t i = 0, e = lhs.getNumElements(); i < e; ++i, ++lhsIt, ++rhsIt) {
       auto elementResult = calculate(*lhsIt, *rhsIt);
@@ -119,11 +127,13 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
 /// attribute.
 /// Optional PoisonAttr template argument allows to specify 'poison' attribute
 /// which will be directly propagated to result.
-template <class AttrElementT,
+template <class AttrElementT, //
           class ElementValueT = typename AttrElementT::ValueType,
           class PoisonAttr = ub::PoisonAttr,
+          class ResultAttrElementT = AttrElementT,
+          class ResultElementValueT = typename ResultAttrElementT::ValueType,
           class CalculationT = function_ref<
-              std::optional<ElementValueT>(ElementValueT, ElementValueT)>>
+              std::optional<ResultElementValueT>(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
                                        CalculationT &&calculate) {
   assert(operands.size() == 2 && "binary op takes two operands");
@@ -153,36 +163,41 @@ Attribute constFoldBinaryOpConditional(ArrayRef<Attribute> operands,
     return {};
 
   return constFoldBinaryOpConditional<AttrElementT, ElementValueT, PoisonAttr,
+                                      ResultAttrElementT, ResultElementValueT,
                                       CalculationT>(
       operands, lhsType, std::forward<CalculationT>(calculate));
 }
 
 template <class AttrElementT,
           class ElementValueT = typename AttrElementT::ValueType,
-          class PoisonAttr = void,
+          class PoisonAttr = void, //
+          class ResultAttrElementT = AttrElementT,
+          class ResultElementValueT = typename ResultAttrElementT::ValueType,
           class CalculationT =
-              function_ref<ElementValueT(ElementValueT, ElementValueT)>>
+              function_ref<ResultElementValueT(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOp(ArrayRef<Attribute> operands, Type resultType,
                             CalculationT &&calculate) {
-  return constFoldBinaryOpConditional<AttrElementT, ElementValueT, PoisonAttr>(
+  return constFoldBinaryOpConditional<AttrElementT, ElementValueT, PoisonAttr,
+                                      ResultAttrElementT>(
       operands, resultType,
-      [&](ElementValueT a, ElementValueT b) -> std::optional<ElementValueT> {
-        return calculate(a, b);
-      });
+      [&](ElementValueT a, ElementValueT b)
+          -> std::optional<ResultElementValueT> { return calculate(a, b); });
 }
 
-template <class AttrElementT,
+template <class AttrElementT, //
           class ElementValueT = typename AttrElementT::ValueType,
           class PoisonAttr = ub::PoisonAttr,
+          class ResultAttrElementT = AttrElementT,
+          class ResultElementValueT = typename ResultAttrElementT::ValueType,
           class CalculationT =
-              function_ref<ElementValueT(ElementValueT, ElementValueT)>>
+              function_ref<ResultElementValueT(ElementValueT, ElementValueT)>>
 Attribute constFoldBinaryOp(ArrayRef<Attribute> operands,
                             CalculationT &&calculate) {
-  return constFoldBinaryOpConditional<AttrElementT, ElementValueT, PoisonAttr>(
+  return constFoldBinaryOpConditional<AttrElementT, ElementValueT, PoisonAttr,
+                                      ResultAttrElementT>(
       operands,
-      [&](ElementValueT a, ElementValueT b) -> std::optional<ElementValueT> {
-        return calculate(a, b);
-      });
+      [&](ElementValueT a, ElementValueT b)
+          -> std::optional<ResultElementValueT> { return calculate(a, b); });
 }
 
 /// Performs constant folding `calculate` with element-wise behavior on the one
