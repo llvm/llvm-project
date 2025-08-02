@@ -22,6 +22,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/MemProfCommon.h"
@@ -74,6 +75,10 @@ static cl::opt<bool> ClMemProfAttachCalleeGuids(
 static cl::opt<unsigned> MinMatchedColdBytePercent(
     "memprof-matching-cold-threshold", cl::init(100), cl::Hidden,
     cl::desc("Min percent of cold bytes matched to hint allocation cold"));
+
+static cl::opt<bool> AnnotationStaticDataPrefix(
+    "annotate-static-data-prefix", cl::init(false), cl::Hidden,
+    cl::desc("If true, annotate the static data section prefix"));
 
 // Matching statistics
 STATISTIC(NumOfMemProfMissing, "Number of functions without memory profile.");
@@ -748,6 +753,35 @@ PreservedAnalyses MemProfUsePass::run(Module &M, ModuleAnalysisManager &AM) {
         errs() << " " << StackId;
       errs() << "\n";
     }
+  }
+
+  memprof::DataAccessProfData *DataAccessProf =
+      MemProfReader->getDataAccessProfileData();
+
+  if (!AnnotationStaticDataPrefix || !DataAccessProf) {
+    return PreservedAnalyses::none();
+  }
+
+  for (GlobalVariable &GVar : M.globals()) {
+    if (GVar.isDeclarationForLinker())
+      continue;
+    StringRef Name = GVar.getName();
+    // FIXME: Evaluate string hashing options (preferably `stable_hash_name`
+    // from llvm/ADT/StableHashing.h) for string literals and annotate string
+    // hotness prefixes.
+    if (Name.starts_with(".str"))
+      continue;
+
+    // DataAccessProfRecord's look-up methods will canonicalize the variable
+    // name before looking up methods, so optimizer doesn't need to do it.
+    std::optional<DataAccessProfRecord> Record =
+        DataAccessProf->getProfileRecord(Name);
+    // For now regard a global variable as hot if it has non-zero sampled count.
+    if (Record && Record->AccessCount > 0)
+      GVar.setSectionPrefix("hot");
+
+    if (DataAccessProf->isKnownColdSymbol(Name))
+      GVar.setSectionPrefix("unlikely");
   }
 
   return PreservedAnalyses::none();
