@@ -12,8 +12,8 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GFX9-FLUSH,GFX9-FLUSH-MAD %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx900 -denormal-fp-math-f32=ieee -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GFX9-DENORM,GFX9-DENORM-FASTFMA-MAD %s
 
-; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GFX9-FMAC,GFX9-FLUSH %s
-; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx906 -denormal-fp-math-f32=ieee -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GFX9-FMAC,GFX9-DENORM %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GFX9-FLUSH,GFX9-FLUSH-FMAC %s
+; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx906 -denormal-fp-math-f32=ieee -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GFX9-DENORM,GFX9-DENORM-FASTFMA-FMAC %s
 
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx1030 -denormal-fp-math-f32=preserve-sign -mattr=+mad-mac-f32-insts -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX10-FLUSH %s
 ; RUN: llc -amdgpu-scalarize-global-loads=false -mcpu=gfx1030 -denormal-fp-math-f32=ieee -mattr=+mad-mac-f32-insts -fp-contract=on < %s | FileCheck -enable-var-scope -check-prefixes=GFX10,GFX10-DENORM %s
@@ -140,18 +140,31 @@ define amdgpu_kernel void @fmuladd_f32(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v0, v1, s[8:9]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_endpgm
 ;
-; GFX9-FMAC-LABEL: fmuladd_f32:
-; GFX9-FMAC:       ; %bb.0:
-; GFX9-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-FMAC-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v1, v0, s[10:11]
-; GFX9-FMAC-NEXT:    global_load_dword v2, v0, s[12:13]
-; GFX9-FMAC-NEXT:    global_load_dword v3, v0, s[14:15]
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX9-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
-; GFX9-FMAC-NEXT:    s_endpgm
+; GFX9-FLUSH-FMAC-LABEL: fmuladd_f32:
+; GFX9-FLUSH-FMAC:       ; %bb.0:
+; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
+; GFX9-FLUSH-FMAC-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[10:11]
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[12:13]
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
+;
+; GFX9-DENORM-FASTFMA-FMAC-LABEL: fmuladd_f32:
+; GFX9-DENORM-FASTFMA-FMAC:       ; %bb.0:
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v0, s[10:11]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v0, s[12:13]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v3, v0, s[14:15]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmuladd_f32:
 ; GFX10:       ; %bb.0:
@@ -489,20 +502,35 @@ define amdgpu_kernel void @fmul_fadd_contract_f32(ptr addrspace(1) %out, ptr add
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v0, v1, s[8:9]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_endpgm
 ;
-; GFX9-FMAC-LABEL: fmul_fadd_contract_f32:
-; GFX9-FMAC:       ; %bb.0:
-; GFX9-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-FMAC-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v1, v0, s[10:11] glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v2, v0, s[12:13] glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v3, v0, s[14:15] glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
-; GFX9-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
-; GFX9-FMAC-NEXT:    s_endpgm
+; GFX9-FLUSH-FMAC-LABEL: fmul_fadd_contract_f32:
+; GFX9-FLUSH-FMAC:       ; %bb.0:
+; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
+; GFX9-FLUSH-FMAC-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[10:11] glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[12:13] glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v3, v0, s[14:15] glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
+;
+; GFX9-DENORM-FASTFMA-FMAC-LABEL: fmul_fadd_contract_f32:
+; GFX9-DENORM-FASTFMA-FMAC:       ; %bb.0:
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v0, s[10:11] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v0, s[12:13] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v3, v0, s[14:15] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_fmac_f32_e32 v3, v1, v2
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v0, v3, s[8:9]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmul_fadd_contract_f32:
 ; GFX10:       ; %bb.0:
@@ -603,18 +631,31 @@ define amdgpu_kernel void @fmuladd_2.0_a_b_f32(ptr addrspace(1) %out, ptr addrsp
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_endpgm
 ;
-; GFX9-FMAC-LABEL: fmuladd_2.0_a_b_f32:
-; GFX9-FMAC:       ; %bb.0:
-; GFX9-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    v_fmac_f32_e32 v2, 2.0, v1
-; GFX9-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX9-FMAC-NEXT:    s_endpgm
+; GFX9-FLUSH-FMAC-LABEL: fmuladd_2.0_a_b_f32:
+; GFX9-FLUSH-FMAC:       ; %bb.0:
+; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-FLUSH-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    v_fmac_f32_e32 v2, 2.0, v1
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
+;
+; GFX9-DENORM-FASTFMA-FMAC-LABEL: fmuladd_2.0_a_b_f32:
+; GFX9-DENORM-FASTFMA-FMAC:       ; %bb.0:
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_fmac_f32_e32 v2, 2.0, v1
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmuladd_2.0_a_b_f32:
 ; GFX10:       ; %bb.0:
@@ -717,18 +758,31 @@ define amdgpu_kernel void @fmuladd_a_2.0_b_f32(ptr addrspace(1) %out, ptr addrsp
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_endpgm
 ;
-; GFX9-FMAC-LABEL: fmuladd_a_2.0_b_f32:
-; GFX9-FMAC:       ; %bb.0:
-; GFX9-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    v_fmac_f32_e32 v2, 2.0, v1
-; GFX9-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX9-FMAC-NEXT:    s_endpgm
+; GFX9-FLUSH-FMAC-LABEL: fmuladd_a_2.0_b_f32:
+; GFX9-FLUSH-FMAC:       ; %bb.0:
+; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-FLUSH-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    v_fmac_f32_e32 v2, 2.0, v1
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
+;
+; GFX9-DENORM-FASTFMA-FMAC-LABEL: fmuladd_a_2.0_b_f32:
+; GFX9-DENORM-FASTFMA-FMAC:       ; %bb.0:
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_fmac_f32_e32 v2, 2.0, v1
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmuladd_a_2.0_b_f32:
 ; GFX10:       ; %bb.0:
@@ -1099,18 +1153,31 @@ define amdgpu_kernel void @fmuladd_neg_2.0_a_b_f32(ptr addrspace(1) %out, ptr ad
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_endpgm
 ;
-; GFX9-FMAC-LABEL: fmuladd_neg_2.0_a_b_f32:
-; GFX9-FMAC:       ; %bb.0:
-; GFX9-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    v_fmac_f32_e32 v2, -2.0, v1
-; GFX9-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX9-FMAC-NEXT:    s_endpgm
+; GFX9-FLUSH-FMAC-LABEL: fmuladd_neg_2.0_a_b_f32:
+; GFX9-FLUSH-FMAC:       ; %bb.0:
+; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-FLUSH-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    v_fmac_f32_e32 v2, -2.0, v1
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
+;
+; GFX9-DENORM-FASTFMA-FMAC-LABEL: fmuladd_neg_2.0_a_b_f32:
+; GFX9-DENORM-FASTFMA-FMAC:       ; %bb.0:
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_fmac_f32_e32 v2, -2.0, v1
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmuladd_neg_2.0_a_b_f32:
 ; GFX10:       ; %bb.0:
@@ -1213,18 +1280,31 @@ define amdgpu_kernel void @fmuladd_neg_2.0_neg_a_b_f32(ptr addrspace(1) %out, pt
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_endpgm
 ;
-; GFX9-FMAC-LABEL: fmuladd_neg_2.0_neg_a_b_f32:
-; GFX9-FMAC:       ; %bb.0:
-; GFX9-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    v_fmac_f32_e32 v2, 2.0, v1
-; GFX9-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX9-FMAC-NEXT:    s_endpgm
+; GFX9-FLUSH-FMAC-LABEL: fmuladd_neg_2.0_neg_a_b_f32:
+; GFX9-FLUSH-FMAC:       ; %bb.0:
+; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-FLUSH-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    v_fmac_f32_e32 v2, 2.0, v1
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
+;
+; GFX9-DENORM-FASTFMA-FMAC-LABEL: fmuladd_neg_2.0_neg_a_b_f32:
+; GFX9-DENORM-FASTFMA-FMAC:       ; %bb.0:
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_fmac_f32_e32 v2, 2.0, v1
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmuladd_neg_2.0_neg_a_b_f32:
 ; GFX10:       ; %bb.0:
@@ -1329,18 +1409,31 @@ define amdgpu_kernel void @fmuladd_2.0_neg_a_b_f32(ptr addrspace(1) %out, ptr ad
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-DENORM-FASTFMA-MAD-NEXT:    s_endpgm
 ;
-; GFX9-FMAC-LABEL: fmuladd_2.0_neg_a_b_f32:
-; GFX9-FMAC:       ; %bb.0:
-; GFX9-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    v_fmac_f32_e32 v2, -2.0, v1
-; GFX9-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
-; GFX9-FMAC-NEXT:    s_endpgm
+; GFX9-FLUSH-FMAC-LABEL: fmuladd_2.0_neg_a_b_f32:
+; GFX9-FLUSH-FMAC:       ; %bb.0:
+; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-FLUSH-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    v_fmac_f32_e32 v2, -2.0, v1
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
+;
+; GFX9-DENORM-FASTFMA-FMAC-LABEL: fmuladd_2.0_neg_a_b_f32:
+; GFX9-DENORM-FASTFMA-FMAC:       ; %bb.0:
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    v_fmac_f32_e32 v2, -2.0, v1
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    global_store_dword v0, v2, s[0:1]
+; GFX9-DENORM-FASTFMA-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmuladd_2.0_neg_a_b_f32:
 ; GFX10:       ; %bb.0:
@@ -1445,18 +1538,18 @@ define amdgpu_kernel void @fmuladd_2.0_a_neg_b_f32(ptr addrspace(1) %out, ptr ad
 ; GFX9-DENORM-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-DENORM-NEXT:    s_endpgm
 ;
-; GFX9-FMAC-LABEL: fmuladd_2.0_a_neg_b_f32:
-; GFX9-FMAC:       ; %bb.0:
-; GFX9-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; GFX9-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
-; GFX9-FMAC-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-FMAC-NEXT:    v_fma_f32 v1, v1, 2.0, -v2
-; GFX9-FMAC-NEXT:    global_store_dword v0, v1, s[0:1]
-; GFX9-FMAC-NEXT:    s_endpgm
+; GFX9-FLUSH-FMAC-LABEL: fmuladd_2.0_a_neg_b_f32:
+; GFX9-FLUSH-FMAC:       ; %bb.0:
+; GFX9-FLUSH-FMAC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-FLUSH-FMAC-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v1, v0, s[0:1] glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    global_load_dword v2, v0, s[0:1] offset:4 glc
+; GFX9-FLUSH-FMAC-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-FLUSH-FMAC-NEXT:    v_fma_f32 v1, v1, 2.0, -v2
+; GFX9-FLUSH-FMAC-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-FLUSH-FMAC-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fmuladd_2.0_a_neg_b_f32:
 ; GFX10:       ; %bb.0:
@@ -2728,6 +2821,3 @@ define amdgpu_kernel void @fsub_fadd_a_a_c_f32(ptr addrspace(1) %out, ptr addrsp
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GFX9-DENORM-FASTFMA-FMAC: {{.*}}
-; GFX9-FLUSH-FMAC: {{.*}}
