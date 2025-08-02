@@ -1043,6 +1043,11 @@ static bool isSupportedInstr(const MachineInstr &MI) {
   case RISCV::VMSOF_M:
   case RISCV::VIOTA_M:
   case RISCV::VID_V:
+  // Vector Permutation Instructions
+  // Integer Scalar Move Instructions
+  // Floating-Point Scalar Move Instructions
+  case RISCV::VMV_S_X:
+  case RISCV::VFMV_S_F:
   // Vector Slide Instructions
   case RISCV::VSLIDEUP_VX:
   case RISCV::VSLIDEUP_VI:

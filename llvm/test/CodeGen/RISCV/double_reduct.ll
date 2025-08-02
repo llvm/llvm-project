@@ -106,7 +106,7 @@ define i16 @add_ext_i16(<16 x i8> %a, <16 x i8> %b) {
 define i16 @add_ext_v32i16(<32 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: add_ext_v32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m1, ta, ma
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vmv.s.x v11, zero
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vwredsumu.vs v10, v10, v11
