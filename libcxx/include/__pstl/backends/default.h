@@ -19,6 +19,7 @@
 #include <__functional/operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/next.h>
 #include <__pstl/backend_fwd.h>
 #include <__pstl/dispatch.h>
 #include <__utility/empty.h>
@@ -90,6 +91,7 @@ namespace __pstl {
 // - copy
 // - copy_n
 // - rotate_copy
+// - adjacent_difference
 //
 
 //////////////////////////////////////////////////////////////
@@ -494,6 +496,23 @@ struct __rotate_copy<__default_backend_tag, _ExecutionPolicy> {
     if (__result_mid == nullopt)
       return nullopt;
     return _Copy()(__policy, std::move(__first), std::move(__middle), *std::move(__result_mid));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __adjacent_difference<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _BinaryOp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  operator()(_Policy&& __policy,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _ForwardOutIterator __out_it,
+             _BinaryOp __bin_op) const noexcept {
+    if (__first == __last)
+      return __out_it;
+
+    using _TransformBinary = __dispatch<__transform_binary, __current_configuration, _ExecutionPolicy>;
+    return _TransformBinary()(__policy, std::next(__first), __last, __first, __out_it, __bin_op);
   }
 };
 
