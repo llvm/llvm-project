@@ -5188,6 +5188,83 @@ struct AADereferenceableCallSiteReturned final
 // ------------------------ Align Argument Attribute ------------------------
 
 namespace {
+
+static std::optional<Align> getKnownAlignForIntrinsic(Attributor &A,
+                                                      AAAlign &QueryingAA,
+                                                      const IntrinsicInst *II) {
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::ptrmask: {
+    const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
+        QueryingAA, IRPosition::value(*(II->getOperand(1))), DepClassTy::NONE);
+    const auto *AlignAA = A.getAAFor<AAAlign>(
+        QueryingAA, IRPosition::value(*(II)), DepClassTy::NONE);
+    if (ConstVals && ConstVals->isValidState()) {
+      if (ConstVals->isAtFixpoint()) {
+        const DataLayout &DL = A.getDataLayout();
+        unsigned Size =
+            DL.getPointerTypeSizeInBits(II->getOperand(0)->getType());
+        uint64_t TrailingZeros = Size - 1;
+        for (const APInt &It : ConstVals->getAssumedSet())
+          if (It.countTrailingZeros() < TrailingZeros)
+            TrailingZeros = It.countTrailingZeros();
+
+        APInt Mask = APInt(Size, 1).shl(TrailingZeros);
+        APInt PtrAlign = APInt(Size, 1).shl(Log2(AlignAA->getKnownAlign()));
+        if (Mask.uge(PtrAlign))
+          return Align(1);
+
+        return AlignAA->getKnownAlign();
+      }
+    } else if (AlignAA) {
+      return AlignAA->getKnownAlign();
+    }
+    break;
+  }
+  default:
+    break;
+  }
+  return std::nullopt;
+}
+
+static std::optional<Align>
+getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
+                            const IntrinsicInst *II) {
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::ptrmask: {
+    const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
+        QueryingAA, IRPosition::value(*(II->getOperand(1))),
+        DepClassTy::REQUIRED);
+    const auto *AlignAA =
+        A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II->getOperand(0))),
+                            DepClassTy::REQUIRED);
+    Align Alignment;
+    bool NeedRet = false;
+    if (ConstVals && ConstVals->isValidState()) {
+      const DataLayout &DL = A.getDataLayout();
+      unsigned Size = DL.getPointerTypeSizeInBits(II->getOperand(0)->getType());
+      unsigned TrailingZeros = Size - 1;
+      for (const APInt &It : ConstVals->getAssumedSet())
+        if (It.countTrailingZeros() < TrailingZeros)
+          TrailingZeros = It.countTrailingZeros();
+      Alignment = Align(1 << TrailingZeros);
+      NeedRet = true;
+    }
+    if (AlignAA && AlignAA->isValidState()) {
+      NeedRet = true;
+      if (Alignment < AlignAA->getAssumedAlign())
+        Alignment = AlignAA->getAssumedAlign();
+    }
+
+    if (NeedRet)
+      return Align(Alignment);
+    return QueryingAA.getAssumedAlign();
+  }
+  default:
+    break;
+  }
+  return std::nullopt;
+}
+
 static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
                                     Value &AssociatedValue, const Use *U,
                                     const Instruction *I, bool &TrackUse) {
@@ -5202,6 +5279,11 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
     if (GEP->hasAllConstantIndices())
       TrackUse = true;
     return 0;
+  }
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+    std::optional<Align> Align = getKnownAlignForIntrinsic(A, QueryingAA, II);
+    if (Align.has_value())
+      return Align.value().value();
   }
 
   MaybeAlign MA;
@@ -5502,6 +5584,19 @@ struct AAAlignCallSiteReturned final
   AAAlignCallSiteReturned(const IRPosition &IRP, Attributor &A)
       : Base(IRP, A) {}
 
+  ChangeStatus updateImpl(Attributor &A) override {
+    Instruction *I = getIRPosition().getCtxI();
+    if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
+      std::optional<Align> Align = getAssumedAlignForIntrinsic(A, *this, II);
+      if (Align.has_value()) {
+        uint64_t OldAssumed = getAssumed();
+        takeAssumedMinimum(Align.value().value());
+        return OldAssumed == getAssumed() ? ChangeStatus::UNCHANGED
+                                          : ChangeStatus::CHANGED;
+      }
+    }
+    return Base::updateImpl(A);
+  };
   /// See AbstractAttribute::trackStatistics()
   void trackStatistics() const override { STATS_DECLTRACK_CS_ATTR(align); }
 };
