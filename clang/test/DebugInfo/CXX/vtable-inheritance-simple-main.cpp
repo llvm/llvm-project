@@ -1,5 +1,3 @@
-// REQUIRES: target={{x86_64.*-linux.*}}
-
 // Simple inheritance case:
 // For CBase and CDerived we check:
 // - Generation of their vtables (including attributes).
