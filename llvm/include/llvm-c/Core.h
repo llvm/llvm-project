@@ -2395,6 +2395,7 @@ LLVM_C_ABI LLVMValueRef LLVMConstString(const char *Str, unsigned Length,
 /**
  * Returns true if the specified constant is an array of i8.
  *
+ * @pre LLVMIsAConstantDataSequential(c) != 0
  * @see ConstantDataSequential::getAsString()
  */
 LLVM_C_ABI LLVMBool LLVMIsConstantString(LLVMValueRef c);
