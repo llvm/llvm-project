@@ -89,6 +89,8 @@ public:
 
   void applyCanonicalizeZextShiftAmt(MachineInstr &MI, MachineInstr &Ext) const;
 
+  bool lowerUniformBFX(MachineInstr &MI) const;
+
 private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
@@ -390,6 +392,55 @@ void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
   MRI.setRegBank(Mask.getReg(0), RB);
   MRI.setRegBank(And.getReg(0), RB);
   MI.eraseFromParent();
+}
+
+bool AMDGPURegBankCombinerImpl::lowerUniformBFX(MachineInstr &MI) const {
+  assert(MI.getOpcode() == TargetOpcode::G_UBFX ||
+         MI.getOpcode() == TargetOpcode::G_SBFX);
+  const bool Signed = (MI.getOpcode() == TargetOpcode::G_SBFX);
+
+  Register DstReg = MI.getOperand(0).getReg();
+  const RegisterBank *RB = RBI.getRegBank(DstReg, MRI, TRI);
+  assert(RB && "No RB?");
+  if (RB->getID() != AMDGPU::SGPRRegBankID)
+    return false;
+
+  Register SrcReg = MI.getOperand(1).getReg();
+  Register OffsetReg = MI.getOperand(2).getReg();
+  Register WidthReg = MI.getOperand(3).getReg();
+
+  const LLT S32 = LLT::scalar(32);
+  LLT Ty = MRI.getType(DstReg);
+
+  const unsigned Opc = Ty == S32
+                           ? (Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32)
+                           : (Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64);
+
+  // Pack the offset and width of a BFE into
+  // the format expected by the S_BFE_I32 / S_BFE_U32. In the second
+  // source, bits [5:0] contain the offset and bits [22:16] the width.
+  // The 64 bit variants use bits [6:0]
+  //
+  // If the value takes more than 5/6 bits, the G_U/SBFX is ill-formed.
+  // Thus, we do not clamp the values. We assume they are in range,
+  // and if they aren't, it is UB anyway.
+
+  // Zeros out the low bits, so don't bother clamping the input value.
+  auto ShiftAmt = B.buildConstant(S32, 16);
+  auto ShiftWidth = B.buildShl(S32, WidthReg, ShiftAmt);
+
+  auto MergedInputs = B.buildOr(S32, OffsetReg, ShiftWidth);
+
+  MRI.setRegBank(ShiftAmt.getReg(0), *RB);
+  MRI.setRegBank(ShiftWidth.getReg(0), *RB);
+  MRI.setRegBank(MergedInputs.getReg(0), *RB);
+
+  auto MIB = B.buildInstr(Opc, {DstReg}, {SrcReg, MergedInputs});
+  if (!constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI))
+    llvm_unreachable("failed to constrain BFE");
+
+  MI.eraseFromParent();
+  return true;
 }
 
 SIModeRegisterDefaults AMDGPURegBankCombinerImpl::getMode() const {
