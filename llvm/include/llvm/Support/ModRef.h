@@ -56,6 +56,11 @@ enum class ModRefInfo : uint8_t {
 /// Debug print ModRefInfo.
 LLVM_ABI raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 
+enum class InaccessibleTargetMemLocation {
+  AARCH64_FPMR = 3,
+  AARCH64_ZA = 4,
+};
+
 /// The locations at which a function might access memory.
 enum class IRMemLocation {
   /// Access to memory via argument pointers.
@@ -65,7 +70,7 @@ enum class IRMemLocation {
   /// Errno memory.
   ErrnoMem = 2,
   /// Any other memory.
-  Other = 3,
+  Other = 5,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
@@ -152,6 +157,40 @@ public:
     return MemoryEffectsBase(Location::Other, MR);
   }
 
+  /// Create MemoryEffectsBase that can only read inaccessible memory.
+  static MemoryEffectsBase
+  inaccessibleReadMemOnly(Location Loc = Location::InaccessibleMem) {
+    return MemoryEffectsBase(Loc, ModRefInfo::Ref);
+  }
+
+  /// Create MemoryEffectsBase that can only write inaccessible memory.
+  static MemoryEffectsBase
+  inaccessibleWriteMemOnly(Location Loc = Location::InaccessibleMem) {
+    return MemoryEffectsBase(Loc, ModRefInfo::Mod);
+  }
+
+  /// Checks if only target-specific memory locations are set.
+  /// Ignores standard locations like ArgMem or InaccessibleMem.
+  /// Needed because `Data` may be non-zero by default unless explicitly
+  /// cleared.
+  bool onlyAccessTargetMemoryLocation() {
+    MemoryEffectsBase ME = *this;
+    for (unsigned I = static_cast<int>(LocationEnum::ErrnoMem);
+         I < static_cast<int>(LocationEnum::Last); I++)
+      ME = ME.getWithoutLoc(static_cast<IRMemLocation>(I));
+    return ME.doesNotAccessMemory();
+  }
+
+  /// Create MemoryEffectsBase that can only access Target Memory Locations
+  static MemoryEffectsBase
+  setTargetMemLocationModRef(ModRefInfo MR = ModRefInfo::NoModRef) {
+    MemoryEffectsBase FRMB = none();
+    for (unsigned I = static_cast<int>(LocationEnum::ErrnoMem);
+         I < static_cast<int>(LocationEnum::Last); I++)
+      FRMB.setModRef(static_cast<Location>(I), MR);
+    return FRMB;
+  }
+
   /// Create MemoryEffectsBase that can only access inaccessible or argument
   /// memory.
   static MemoryEffectsBase
@@ -176,6 +215,11 @@ public:
   /// attribute).
   static MemoryEffectsBase createFromIntValue(uint32_t Data) {
     return MemoryEffectsBase(Data);
+  }
+
+  bool isTargetMemLoc(IRMemLocation Loc) {
+    return static_cast<unsigned>(Loc) >
+           static_cast<unsigned>(Location::ErrnoMem);
   }
 
   /// Convert MemoryEffectsBase into an encoded integer value (used by memory
