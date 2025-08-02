@@ -329,19 +329,14 @@ define i8 @test_early_exit_max_vector_tc_eq_16(ptr dereferenceable(17) %A) nosyn
 ; VF8UF2:       [[VECTOR_PH]]:
 ; VF8UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF8UF2:       [[VECTOR_BODY]]:
-; VF8UF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF8UF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
-; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i32 8
-; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
+; VF8UF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[A]], i32 8
+; VF8UF2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[A]], align 1
 ; VF8UF2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i8>, ptr [[TMP1]], align 1
 ; VF8UF2-NEXT:    [[TMP2:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer
 ; VF8UF2-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD1]], zeroinitializer
-; VF8UF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF8UF2-NEXT:    [[TMP4:%.*]] = or <8 x i1> [[TMP2]], [[TMP3]]
 ; VF8UF2-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP4]])
-; VF8UF2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; VF8UF2-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
-; VF8UF2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF8UF2-NEXT:    br label %[[MIDDLE_SPLIT:.*]]
 ; VF8UF2:       [[MIDDLE_SPLIT]]:
 ; VF8UF2-NEXT:    br i1 [[TMP5]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF8UF2:       [[MIDDLE_BLOCK]]:
@@ -360,7 +355,7 @@ define i8 @test_early_exit_max_vector_tc_eq_16(ptr dereferenceable(17) %A) nosyn
 ; VF8UF2:       [[LOOP_LATCH]]:
 ; VF8UF2-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; VF8UF2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 17
-; VF8UF2-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; VF8UF2-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF8UF2:       [[EXIT]]:
 ; VF8UF2-NEXT:    [[RES:%.*]] = phi i8 [ 0, %[[LOOP_HEADER]] ], [ 1, %[[LOOP_LATCH]] ], [ 0, %[[VECTOR_EARLY_EXIT]] ]
 ; VF8UF2-NEXT:    ret i8 [[RES]]
@@ -372,15 +367,10 @@ define i8 @test_early_exit_max_vector_tc_eq_16(ptr dereferenceable(17) %A) nosyn
 ; VF16UF1:       [[VECTOR_PH]]:
 ; VF16UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF16UF1:       [[VECTOR_BODY]]:
-; VF16UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF16UF1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[INDEX]]
-; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1
+; VF16UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[A]], align 1
 ; VF16UF1-NEXT:    [[TMP1:%.*]] = icmp eq <16 x i8> [[WIDE_LOAD]], zeroinitializer
-; VF16UF1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; VF16UF1-NEXT:    [[TMP2:%.*]] = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> [[TMP1]])
-; VF16UF1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 16
-; VF16UF1-NEXT:    [[TMP4:%.*]] = or i1 [[TMP2]], [[TMP3]]
-; VF16UF1-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_SPLIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF16UF1-NEXT:    br label %[[MIDDLE_SPLIT:.*]]
 ; VF16UF1:       [[MIDDLE_SPLIT]]:
 ; VF16UF1-NEXT:    br i1 [[TMP2]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF16UF1:       [[MIDDLE_BLOCK]]:
@@ -399,7 +389,7 @@ define i8 @test_early_exit_max_vector_tc_eq_16(ptr dereferenceable(17) %A) nosyn
 ; VF16UF1:       [[LOOP_LATCH]]:
 ; VF16UF1-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
 ; VF16UF1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 17
-; VF16UF1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; VF16UF1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF16UF1:       [[EXIT]]:
 ; VF16UF1-NEXT:    [[RES:%.*]] = phi i8 [ 0, %[[LOOP_HEADER]] ], [ 1, %[[LOOP_LATCH]] ], [ 0, %[[VECTOR_EARLY_EXIT]] ]
 ; VF16UF1-NEXT:    ret i8 [[RES]]
