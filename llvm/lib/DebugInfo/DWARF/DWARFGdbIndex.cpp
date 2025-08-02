@@ -17,6 +17,7 @@
 #include <cinttypes>
 #include <cstdint>
 #include <set>
+#include <unordered_map>
 #include <utility>
 
 using namespace llvm;
@@ -60,6 +61,24 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
                ", filled slots:",
                SymbolTableOffset, (uint64_t)SymbolTable.size())
      << '\n';
+
+  std::unordered_map<uint32_t, decltype(ConstantPoolVectors)::const_iterator>
+      CuVectorMap{};
+  CuVectorMap.reserve(ConstantPoolVectors.size());
+  const auto FindCuVector =
+      [&CuVectorMap, notFound = ConstantPoolVectors.end()](uint32_t vecOffset) {
+        const auto it = CuVectorMap.find(vecOffset);
+        if (it != CuVectorMap.end()) {
+          return it->second;
+        }
+
+        return notFound;
+      };
+  for (auto it = ConstantPoolVectors.begin(); it != ConstantPoolVectors.end();
+       ++it) {
+    CuVectorMap.emplace(it->first, it);
+  }
+
   uint32_t I = -1;
   for (const SymTableEntry &E : SymbolTable) {
     ++I;
@@ -72,11 +91,7 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
     StringRef Name = ConstantPoolStrings.substr(
         ConstantPoolOffset - StringPoolOffset + E.NameOffset);
 
-    auto CuVector = llvm::find_if(
-        ConstantPoolVectors,
-        [&](const std::pair<uint32_t, SmallVector<uint32_t, 0>> &V) {
-          return V.first == E.VecOffset;
-        });
+    auto CuVector = FindCuVector(E.VecOffset);
     assert(CuVector != ConstantPoolVectors.end() && "Invalid symbol table");
     uint32_t CuVectorId = CuVector - ConstantPoolVectors.begin();
     OS << format("      String name: %s, CU vector index: %d\n", Name.data(),
