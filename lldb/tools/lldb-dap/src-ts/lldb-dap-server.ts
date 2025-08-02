@@ -39,8 +39,10 @@ export class LLDBDapServer implements vscode.Disposable {
       const process = child_process.spawn(dapPath, dapArgs, options);
       process.on("error", (error) => {
         reject(error);
-        this.serverProcess = undefined;
-        this.serverInfo = undefined;
+        if (this.serverProcess === process) {
+          this.serverProcess = undefined;
+          this.serverInfo = undefined;
+        }
       });
       process.on("exit", (code, signal) => {
         let errorMessage = "Server process exited early";
@@ -50,8 +52,10 @@ export class LLDBDapServer implements vscode.Disposable {
           errorMessage += ` due to signal ${signal}`;
         }
         reject(new Error(errorMessage));
-        this.serverProcess = undefined;
-        this.serverInfo = undefined;
+        if (this.serverProcess === process) {
+          this.serverProcess = undefined;
+          this.serverInfo = undefined;
+        }
       });
       process.stdout.setEncoding("utf8").on("data", (data) => {
         const connection = /connection:\/\/\[([^\]]+)\]:(\d+)/.exec(
