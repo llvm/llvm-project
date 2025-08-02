@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/synchronization/barrier.h>
-#include <clc/opencl/synchronization/utils.h>
-#include <clc/synchronization/clc_barrier.h>
+#include <clc/mem_fence/clc_mem_fence.h>
 
-_CLC_DEF _CLC_OVERLOAD void barrier(cl_mem_fence_flags flags) {
-  Scope scope = getCLCScope(memory_scope_device);
-  MemorySemantics semantics = getCLCMemorySemantics(flags);
-  __clc_barrier(scope, semantics);
+_CLC_OVERLOAD _CLC_DEF void __clc_mem_fence(Scope scope,
+                                            MemorySemantics semantics) {
+  if (semantics & (CrossWorkgroupMemory | WorkgroupMemory))
+    __nvvm_membar_cta();
 }
