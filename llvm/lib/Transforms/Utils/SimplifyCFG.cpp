@@ -2134,7 +2134,7 @@ static bool replacingOperandWithVariableIsCheap(const Instruction *I,
   return !isa<IntrinsicInst>(I);
 }
 
-bool llvm::shouldFoldLoadStoreWithPointerOperandThroughPhi(const Value *Ptr) {
+bool llvm::shouldFoldOperandThroughPhi(const Value *Ptr) {
   // swifterror pointers can only be used by a load or store; sinking a load
   // or store would require introducing a select for the pointer operand,
   // which isn't allowed for swifterror pointers.
