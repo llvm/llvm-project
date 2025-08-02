@@ -609,6 +609,7 @@ public:
 
   void VisitDeclStmt(const DeclStmt *S);
   void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitCallExpr(const CallExpr *CE);
 };
 
 } // namespace
@@ -650,6 +651,43 @@ void VarMapBuilder::VisitBinaryOperator(const BinaryOperator *BO) {
         // FIXME -- handle compound assignment operators
         Ctx = VMap->clearDefinition(VDec, Ctx);
       VMap->saveContext(BO, Ctx);
+    }
+  }
+}
+
+// Invalidates local variable definitions if variable escaped.
+void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
+  const FunctionDecl *FD = CE->getDirectCallee();
+  if (!FD)
+    return;
+
+  for (unsigned Idx = 0; Idx < CE->getNumArgs(); ++Idx) {
+    if (Idx >= FD->getNumParams())
+      break;
+
+    const Expr *Arg = CE->getArg(Idx)->IgnoreParenImpCasts();
+    const ParmVarDecl *PVD = FD->getParamDecl(Idx);
+    QualType ParamType = PVD->getType();
+
+    // Potential reassignment if passed by non-const reference / pointer.
+    const ValueDecl *VDec = nullptr;
+    if (ParamType->isReferenceType() &&
+        !ParamType->getPointeeType().isConstQualified()) {
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(Arg))
+        VDec = DRE->getDecl();
+    } else if (ParamType->isPointerType() &&
+               !ParamType->getPointeeType().isConstQualified()) {
+      if (const auto *UO = dyn_cast<UnaryOperator>(Arg);
+          UO && UO->getOpcode() == UO_AddrOf) {
+        const Expr *SE = UO->getSubExpr()->IgnoreParenImpCasts();
+        if (const auto *DRE = dyn_cast<DeclRefExpr>(SE))
+          VDec = DRE->getDecl();
+      }
+    }
+
+    if (VDec && Ctx.lookup(VDec)) {
+      Ctx = VMap->clearDefinition(VDec, Ctx);
+      VMap->saveContext(CE, Ctx);
     }
   }
 }
@@ -1141,11 +1179,10 @@ public:
 
   void warnIfMutexNotHeld(const FactSet &FSet, const NamedDecl *D,
                           const Expr *Exp, AccessKind AK, Expr *MutexExp,
-                          ProtectedOperationKind POK, til::LiteralPtr *Self,
+                          ProtectedOperationKind POK, til::SExpr *Self,
                           SourceLocation Loc);
   void warnIfMutexHeld(const FactSet &FSet, const NamedDecl *D, const Expr *Exp,
-                       Expr *MutexExp, til::LiteralPtr *Self,
-                       SourceLocation Loc);
+                       Expr *MutexExp, til::SExpr *Self, SourceLocation Loc);
 
   void checkAccess(const FactSet &FSet, const Expr *Exp, AccessKind AK,
                    ProtectedOperationKind POK);
@@ -1599,7 +1636,7 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   }
 
   void handleCall(const Expr *Exp, const NamedDecl *D,
-                  til::LiteralPtr *Self = nullptr,
+                  til::SExpr *Self = nullptr,
                   SourceLocation Loc = SourceLocation());
   void examineArguments(const FunctionDecl *FD,
                         CallExpr::const_arg_iterator ArgBegin,
@@ -1611,7 +1648,14 @@ public:
                const FactSet &FunctionExitFSet)
       : ConstStmtVisitor<BuildLockset>(), Analyzer(Anlzr), FSet(Info.EntrySet),
         FunctionExitFSet(FunctionExitFSet), LVarCtx(Info.EntryContext),
-        CtxIndex(Info.EntryIndex) {}
+        CtxIndex(Info.EntryIndex) {
+    Analyzer->SxBuilder.setLookupLocalVarExpr([this](const NamedDecl *D) {
+      auto Ctx = LVarCtx;
+      return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
+    });
+  }
+
+  ~BuildLockset() { Analyzer->SxBuilder.setLookupLocalVarExpr(nullptr); }
 
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -1629,7 +1673,7 @@ public:
 /// of at least the passed in AccessKind.
 void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
     const FactSet &FSet, const NamedDecl *D, const Expr *Exp, AccessKind AK,
-    Expr *MutexExp, ProtectedOperationKind POK, til::LiteralPtr *Self,
+    Expr *MutexExp, ProtectedOperationKind POK, til::SExpr *Self,
     SourceLocation Loc) {
   LockKind LK = getLockKindFromAccessKind(AK);
   CapabilityExpr Cp = SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
@@ -1688,8 +1732,7 @@ void ThreadSafetyAnalyzer::warnIfMutexNotHeld(
 /// Warn if the LSet contains the given lock.
 void ThreadSafetyAnalyzer::warnIfMutexHeld(const FactSet &FSet,
                                            const NamedDecl *D, const Expr *Exp,
-                                           Expr *MutexExp,
-                                           til::LiteralPtr *Self,
+                                           Expr *MutexExp, til::SExpr *Self,
                                            SourceLocation Loc) {
   CapabilityExpr Cp = SxBuilder.translateAttrExpr(MutexExp, D, Exp, Self);
   if (Cp.isInvalid()) {
@@ -1857,7 +1900,7 @@ void ThreadSafetyAnalyzer::checkPtAccess(const FactSet &FSet, const Expr *Exp,
 ///              of an implicitly called cleanup function.
 /// \param Loc   If \p Exp = nullptr, the location.
 void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
-                              til::LiteralPtr *Self, SourceLocation Loc) {
+                              til::SExpr *Self, SourceLocation Loc) {
   CapExprSet ExclusiveLocksToAdd, SharedLocksToAdd;
   CapExprSet ExclusiveLocksToRemove, SharedLocksToRemove, GenericLocksToRemove;
   CapExprSet ScopedReqsAndExcludes;
@@ -1869,7 +1912,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     const auto *TagT = Exp->getType()->getAs<TagType>();
     if (D->hasAttrs() && TagT && Exp->isPRValue()) {
       til::LiteralPtr *Placeholder =
-          Analyzer->SxBuilder.createVariable(nullptr);
+          Analyzer->SxBuilder.createThisPlaceholder();
       [[maybe_unused]] auto inserted =
           Analyzer->ConstructedObjects.insert({Exp, Placeholder});
       assert(inserted.second && "Are we visiting the same expression again?");
@@ -2158,6 +2201,9 @@ void BuildLockset::examineArguments(const FunctionDecl *FD,
 }
 
 void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
+  // adjust the context
+  LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, Exp, LVarCtx);
+
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(Exp)) {
     const auto *ME = dyn_cast<MemberExpr>(CE->getCallee());
     // ME can be null when calling a method pointer
@@ -2545,7 +2591,8 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
       }
       if (UnderlyingLocks.empty())
         continue;
-      CapabilityExpr Cp(SxBuilder.createVariable(Param), StringRef(),
+      CapabilityExpr Cp(SxBuilder.translateVariable(Param, nullptr),
+                        StringRef(),
                         /*Neg=*/false, /*Reentrant=*/false);
       auto ScopedEntry = std::make_unique<ScopedLockableFactEntry>(
           Cp, Param->getLocation(), FactEntry::Declared);
@@ -2662,17 +2709,19 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
           if (!DD->hasAttrs())
             break;
 
-          LocksetBuilder.handleCall(nullptr, DD,
-                                    SxBuilder.createVariable(AD.getVarDecl()),
-                                    AD.getTriggerStmt()->getEndLoc());
+          LocksetBuilder.handleCall(
+              nullptr, DD,
+              SxBuilder.translateVariable(AD.getVarDecl(), nullptr),
+              AD.getTriggerStmt()->getEndLoc());
           break;
         }
 
         case CFGElement::CleanupFunction: {
           const CFGCleanupFunction &CF = BI.castAs<CFGCleanupFunction>();
-          LocksetBuilder.handleCall(/*Exp=*/nullptr, CF.getFunctionDecl(),
-                                    SxBuilder.createVariable(CF.getVarDecl()),
-                                    CF.getVarDecl()->getLocation());
+          LocksetBuilder.handleCall(
+              /*Exp=*/nullptr, CF.getFunctionDecl(),
+              SxBuilder.translateVariable(CF.getVarDecl(), nullptr),
+              CF.getVarDecl()->getLocation());
           break;
         }
 
