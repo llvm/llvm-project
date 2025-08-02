@@ -494,7 +494,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.DeferDescriptorMapping =
       args.hasFlag(clang::driver::options::OPT_fdefer_desc_map,
-                   clang::driver::options::OPT_fno_defer_desc_map, false);
+                   clang::driver::options::OPT_fno_defer_desc_map, true);
 
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::driver::options::OPT_complex_range_EQ)) {
