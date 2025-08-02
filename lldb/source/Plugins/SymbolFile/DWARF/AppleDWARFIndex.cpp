@@ -149,8 +149,9 @@ void AppleDWARFIndex::GetGlobalVariables(
   if (!m_apple_names_up)
     return;
 
+  auto adataped_cb = IterationActionAdaptor(callback);
   DIERefCallbackImpl converted_cb =
-      DIERefCallback(IterationActionAdaptor(callback), regex.GetText());
+      DIERefCallback(adataped_cb, regex.GetText());
 
   for (const auto &entry : m_apple_names_up->entries())
     if (std::optional<llvm::StringRef> name = entry.readName();
@@ -171,8 +172,9 @@ void AppleDWARFIndex::GetGlobalVariables(
     return val.has_value() && *val >= lower_bound && *val < upper_bound;
   };
 
+  auto adataped_cb = IterationActionAdaptor(callback);
   DIERefCallbackImpl converted_cb =
-      DIERefCallback(IterationActionAdaptor(callback));
+      DIERefCallback(adataped_cb);
   for (auto entry : m_apple_names_up->entries()) {
     if (is_in_range(entry.BaseEntry.getDIESectionOffset()))
       if (!converted_cb(entry.BaseEntry))
