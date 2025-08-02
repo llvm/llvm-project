@@ -124,7 +124,7 @@ LogWriter *LogWriter::Open() XRAY_NEVER_INSTRUMENT {
   Report("XRay: " FORMAT_DUMPFILE "\n", ProfileSinkName, VmoName);
 
   LogWriter *LW = reinterpret_cast<LogWriter *>(InternalAlloc(sizeof(LogWriter)));
-  new (LW) LogWriter(Vmo);
+  new (LW) LogWriter(Vmo, VmoName);
   return LW;
 }
 
@@ -154,6 +154,8 @@ void LogWriter::WriteAll(const char *Begin, const char *End) XRAY_NEVER_INSTRUME
     Begin += Written;
   }
 }
+
+const char *LogWriter::GetFilename() XRAY_NEVER_INSTRUMENT { return Filename; }
 
 void LogWriter::Flush() XRAY_NEVER_INSTRUMENT {
   fsync(Fd);
@@ -187,7 +189,7 @@ LogWriter *LogWriter::Open() XRAY_NEVER_INSTRUMENT {
     Report("XRay: Log file in '%s'\n", TmpFilename);
 
   LogWriter *LW = allocate<LogWriter>();
-  new (LW) LogWriter(Fd);
+  new (LW) LogWriter(Fd, TmpFilename);
   return LW;
 }
 
