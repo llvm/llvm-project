@@ -10,7 +10,6 @@
 #ifndef _LIBCPP___TREE
 #define _LIBCPP___TREE
 
-#include "__memory/pointer_traits.h"
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
@@ -1899,13 +1898,10 @@ pair<typename __tree<_Tp, _Compare, _Allocator>::iterator, bool>
       'std::__tree_node_base<min_pointer<void>>'
     */
 
+    // TODO: collapse into one branch
     if (__libcpp_is_constant_evaluated()) {
-      typename __tree<_Tp, _Compare, _Allocator>::__node_holder::pointer cast =
-          static_cast< __tree<_Tp, _Compare, _Allocator>::__node_holder::pointer>(__h.get());
-      __node_base_pointer base = // static_cast<__node_base_pointer>(cast);
-          std::__static_fancy_pointer_cast<__node_base_pointer>(cast);
-
-      __insert_node_at(__parent, __child, base);
+      __insert_node_at(__parent, __child, 
+      std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
     } else {
       __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
     }
