@@ -79,7 +79,7 @@ public:
   }
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  char *Data, uint64_t Value, bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup,
                             uint64_t Value) const override;
@@ -420,7 +420,7 @@ static bool shouldForceRelocation(const MCFixup &Fixup) {
 }
 
 void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                   const MCValue &Target, char *Data,
+                                   const MCValue &Target, uint8_t *Data,
                                    uint64_t Value, bool IsResolved) {
   if (shouldForceRelocation(Fixup))
     IsResolved = false;

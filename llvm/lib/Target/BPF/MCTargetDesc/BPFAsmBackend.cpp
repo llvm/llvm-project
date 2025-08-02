@@ -27,7 +27,7 @@ public:
   ~BPFAsmBackend() override = default;
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  char *Data, uint64_t Value, bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -65,7 +65,7 @@ bool BPFAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 }
 
 void BPFAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target, char *Data,
+                               const MCValue &Target, uint8_t *Data,
                                uint64_t Value, bool IsResolved) {
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
   if (Fixup.getKind() == FK_SecRel_8) {

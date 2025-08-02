@@ -53,7 +53,7 @@ public:
                               .Default(false)) {}
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
-                  char *Data, uint64_t Value, bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
@@ -77,7 +77,7 @@ public:
 } // end anonymous namespace
 
 void M68kAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                const MCValue &Target, char *Data,
+                                const MCValue &Target, uint8_t *Data,
                                 uint64_t Value, bool IsResolved) {
   if (!IsResolved)
     Asm->getWriter().recordRelocation(F, Fixup, Target, Value);

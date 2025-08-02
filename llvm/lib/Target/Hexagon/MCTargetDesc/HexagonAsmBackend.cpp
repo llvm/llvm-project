@@ -402,7 +402,7 @@ public:
   }
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
-                  char *Data, uint64_t FixupValue, bool IsResolved) override;
+                  uint8_t *Data, uint64_t FixupValue, bool IsResolved) override;
 
   bool isInstRelaxable(MCInst const &HMI) const {
     const MCInstrDesc &MCID = HexagonMCInstrInfo::getDesc(*MCII, HMI);
@@ -648,7 +648,7 @@ public:
 } // namespace
 
 void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                   const MCValue &Target, char *InstAddr,
+                                   const MCValue &Target, uint8_t *InstAddr,
                                    uint64_t FixupValue, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup))
     IsResolved = false;

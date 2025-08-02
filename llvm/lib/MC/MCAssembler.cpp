@@ -141,7 +141,7 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
 
 bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
                                 MCValue &Target, uint64_t &Value,
-                                bool RecordReloc, char *Data) const {
+                                bool RecordReloc, uint8_t *Data) const {
   if (RecordReloc)
     ++stats::Fixups;
 
@@ -706,9 +706,10 @@ void MCAssembler::layout() {
         MCValue Target;
         assert(mc::isRelocRelocation(Fixup.getKind()) ||
                Fixup.getOffset() <= F.getFixedSize());
+        auto *Data =
+            reinterpret_cast<uint8_t *>(Contents.data() + Fixup.getOffset());
         evaluateFixup(F, Fixup, Target, FixedValue,
-                      /*RecordReloc=*/true,
-                      Contents.data() + Fixup.getOffset());
+                      /*RecordReloc=*/true, Data);
       }
       // In the variable part, fixup offsets are relative to the fixed part's
       // start.
@@ -718,8 +719,8 @@ void MCAssembler::layout() {
         assert(mc::isRelocRelocation(Fixup.getKind()) ||
                (Fixup.getOffset() >= F.getFixedSize() &&
                 Fixup.getOffset() <= F.getSize()));
-        char *Data =
-            F.getVarContents().data() + (Fixup.getOffset() - F.getFixedSize());
+        auto *Data = reinterpret_cast<uint8_t *>(
+            F.getVarContents().data() + (Fixup.getOffset() - F.getFixedSize()));
         evaluateFixup(F, Fixup, Target, FixedValue,
                       /*RecordReloc=*/true, Data);
       }

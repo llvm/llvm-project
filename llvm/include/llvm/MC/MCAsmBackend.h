@@ -122,7 +122,7 @@ public:
   // to the first byte of the fixup offset, which may be at the content's end if
   // the fixup is zero-sized.
   virtual void applyFixup(const MCFragment &, const MCFixup &,
-                          const MCValue &Target, char *Data, uint64_t Value,
+                          const MCValue &Target, uint8_t *Data, uint64_t Value,
                           bool IsResolved) = 0;
 
   /// @}

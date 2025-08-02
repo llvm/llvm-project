@@ -131,7 +131,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
   }
 }
 
-static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, char *Data,
+static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, uint8_t *Data,
                         uint64_t Value) {
   unsigned I;
   for (I = 0; Value; ++I, Value >>= 7)
@@ -141,7 +141,7 @@ static void fixupLeb128(MCContext &Ctx, const MCFixup &Fixup, char *Data,
 }
 
 void LoongArchAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                     const MCValue &Target, char *Data,
+                                     const MCValue &Target, uint8_t *Data,
                                      uint64_t Value, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;

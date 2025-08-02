@@ -48,7 +48,7 @@ public:
       : MCAsmBackend(llvm::endianness::big), OSType(OST) {}
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  char *Data, uint64_t Value, bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -71,7 +71,7 @@ bool LanaiAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 }
 
 void LanaiAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                                 const MCValue &Target, char *Data,
+                                 const MCValue &Target, uint8_t *Data,
                                  uint64_t Value, bool IsResolved) {
   if (!IsResolved)
     Asm->getWriter().recordRelocation(F, Fixup, Target, Value);

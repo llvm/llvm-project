@@ -1108,7 +1108,7 @@ std::optional<bool> ARMAsmBackend::evaluateFixup(const MCFragment &F,
 }
 
 void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target, char *Data,
+                               const MCValue &Target, uint8_t *Data,
                                uint64_t Value, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;

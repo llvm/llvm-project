@@ -39,7 +39,7 @@ public:
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  char *Data, uint64_t Value, bool) override;
+                  uint8_t *Data, uint64_t Value, bool) override;
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override;
@@ -80,7 +80,7 @@ bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 
 void WebAssemblyAsmBackend::applyFixup(const MCFragment &F,
                                        const MCFixup &Fixup,
-                                       const MCValue &Target, char *Data,
+                                       const MCValue &Target, uint8_t *Data,
                                        uint64_t Value, bool IsResolved) {
   if (!IsResolved)
     Asm->getWriter().recordRelocation(F, Fixup, Target, Value);

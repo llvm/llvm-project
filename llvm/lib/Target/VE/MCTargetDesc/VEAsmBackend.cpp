@@ -111,8 +111,8 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &, char *,
-                  uint64_t Value, bool IsResolved) override;
+  void applyFixup(const MCFragment &, const MCFixup &, const MCValue &,
+                  uint8_t *, uint64_t Value, bool IsResolved) override;
 
   bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override {
@@ -151,8 +151,8 @@ public:
 } // end anonymous namespace
 
 void VEAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                              const MCValue &Target, char *Data, uint64_t Value,
-                              bool IsResolved) {
+                              const MCValue &Target, uint8_t *Data,
+                              uint64_t Value, bool IsResolved) {
   switch (Fixup.getKind()) {
   case VE::fixup_ve_tls_gd_hi32:
   case VE::fixup_ve_tls_gd_lo32:
