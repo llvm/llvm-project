@@ -95,6 +95,7 @@ llvm::offloading::readPropertiesFromJSON(MemoryBufferRef Buf) {
       auto [It, Inserted] =
           PropSet.try_emplace(PropName.str(), std::move(*Prop));
       assert(Inserted && "Property already exists in PropertySet");
+      (void)Inserted;
     }
   }
   return Res;
