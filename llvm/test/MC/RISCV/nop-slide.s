@@ -16,5 +16,5 @@ auipc a0, 0
 
 # CHECK: 0000000000000000 <.text>:
 # CHECK-NEXT: 0: 0000      	<unknown>
-# CHECK-NEXT: 2: 0000      	<unknown>
+# CHECK-NEXT: 2: 0001      	<unknown>
 # CHECK-NEXT: 4: 00000517  	auipc	a0, 0x0

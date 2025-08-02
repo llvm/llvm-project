@@ -32,6 +32,11 @@ static cl::opt<bool> ULEB128Reloc(
     "riscv-uleb128-reloc", cl::init(true), cl::Hidden,
     cl::desc("Emit R_RISCV_SET_ULEB128/E_RISCV_SUB_ULEB128 if appropriate"));
 
+static cl::opt<bool>
+    AlignRvc("riscv-align-rvc", cl::init(true), cl::Hidden,
+             cl::desc("When generating R_RISCV_ALIGN, insert $alignment-2 "
+                      "bytes of NOPs even in norvc code"));
+
 RISCVAsmBackend::RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI,
                                  bool Is64Bit, const MCTargetOptions &Options)
     : MCAsmBackend(llvm::endianness::little), STI(STI), OSABI(OSABI),
@@ -319,7 +324,8 @@ bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
 
   // Use default handling unless the alignment is larger than the nop size.
   const MCSubtargetInfo *STI = F.getSubtargetInfo();
-  unsigned MinNopLen = STI->hasFeature(RISCV::FeatureStdExtZca) ? 2 : 4;
+  unsigned MinNopLen =
+      AlignRvc || STI->hasFeature(RISCV::FeatureStdExtZca) ? 2 : 4;
   if (F.getAlignment() <= MinNopLen)
     return false;
 
@@ -490,8 +496,9 @@ bool RISCVAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   }
 
   if (Count % 4 == 2) {
-    // The canonical nop with Zca is c.nop.
-    OS.write(STI->hasFeature(RISCV::FeatureStdExtZca) ? "\x01\0" : "\0\0", 2);
+    // The canonical nop with Zca is c.nop. For .balign 4, we generate a 2-byte
+    // c.nop even in a norvc region.
+    OS.write("\x01\0", 2);
     Count -= 2;
   }
 
@@ -908,7 +915,7 @@ void RISCVAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   unsigned Offset = Fixup.getOffset();
   unsigned NumBytes = alignTo(Info.TargetSize + Info.TargetOffset, 8) / 8;
 
-  assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  assert(Offset + NumBytes <= F.getSize() && "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.

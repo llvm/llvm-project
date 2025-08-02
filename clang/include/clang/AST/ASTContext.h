@@ -1335,6 +1335,12 @@ public:
     return ExternalSource.get();
   }
 
+  /// Retrieve a pointer to the external AST source associated
+  /// with this AST context, if any. Returns as an IntrusiveRefCntPtr.
+  IntrusiveRefCntPtr<ExternalASTSource> getExternalSourcePtr() const {
+    return ExternalSource;
+  }
+
   /// Attach an AST mutation listener to the AST context.
   ///
   /// The AST mutation listener provides the ability to track modifications to
@@ -1818,7 +1824,7 @@ public:
         NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
       } else {
         NumNegativeBits =
-            std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
+            std::max(NumNegativeBits, InitVal.getSignificantBits());
       }
 
       MembersRepresentableByInt &= isRepresentableIntegerValue(InitVal, IntTy);

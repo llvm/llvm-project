@@ -19,11 +19,11 @@
 # RELAX-NEXT:   Relocation section '.rela.eh_frame' at offset {{.*}} contains 7 entries:
 # RELAX:         Offset     Info    Type                Sym. Value  Symbol's Name + Addend
 # RELAX-NEXT:   0000001c  00000139 R_RISCV_32_PCREL       00000000   .L0  + 0
-# RELAX-NEXT:   00000020  00000d23 R_RISCV_ADD32          0001017a   .L0  + 0
+# RELAX-NEXT:   00000020  00000d23 R_RISCV_ADD32          0001017c   .L0  + 0
 # RELAX-NEXT:   00000020  00000127 R_RISCV_SUB32          00000000   .L0  + 0
 # RELAX-NEXT:   00000026  00000536 R_RISCV_SET8           00000068   .L0  + 0
 # RELAX-NEXT:   00000026  00000125 R_RISCV_SUB8           00000000   .L0  + 0
-# RELAX-NEXT:   00000035  00000c35 R_RISCV_SET6           00010176   .L0  + 0
+# RELAX-NEXT:   00000035  00000c35 R_RISCV_SET6           00010178   .L0  + 0
 # RELAX-NEXT:   00000035  00000a34 R_RISCV_SUB6           0001016e   .L0  + 0
 # CHECK-EMPTY:
 # NORELAX:      Symbol table '.symtab' contains 14 entries:
@@ -33,8 +33,8 @@
 # RELAX-NEXT:        1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
 # RELAX:             3: 00000008     0 NOTYPE  LOCAL  DEFAULT     2 .L0{{$}}
 # RELAX:            10: 0001016e     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
-# RELAX:            12: 00010176     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
-# RELAX:            13: 0001017a     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# RELAX:            12: 00010178     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
+# RELAX:            13: 0001017c     0 NOTYPE  LOCAL  DEFAULT     2 .L0 {{$}}
 
 # CHECK-DWARFDUMP: DW_CFA_advance_loc1: 104
 # CHECK-DWARFDUMP-NEXT: DW_CFA_def_cfa_offset: +8

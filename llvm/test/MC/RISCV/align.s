@@ -60,7 +60,7 @@ test:
 	bne     zero, a0, .LBB0_2
 	mv	a0, zero
 	.p2align 3
-# RELAX-RELOC: R_RISCV_ALIGN - 0x4
+# RELAX-RELOC: R_RISCV_ALIGN - 0x6
 # RELAX-INST:  addi    zero, zero, 0
 # C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x6
 # C-OR-ZCA-EXT-RELAX-INST:  c.nop
@@ -69,7 +69,7 @@ test:
 	add	a0, a0, a1
 	.align 4
 .LBB0_2:
-# RELAX-RELOC: R_RISCV_ALIGN - 0xC
+# RELAX-RELOC: R_RISCV_ALIGN - 0xE
 # RELAX-INST:  addi    zero, zero, 0
 # RELAX-INST:  addi    zero, zero, 0
 # RELAX-INST:  addi    zero, zero, 0
@@ -85,7 +85,7 @@ test:
 	.p2align 3
 .constant_pool:
 .long	3126770193
-# RELAX-RELOC: R_RISCV_ALIGN - 0x4
+# RELAX-RELOC: R_RISCV_ALIGN - 0x6
 # RELAX-INST:  addi    zero, zero, 0
 # NORELAX-INST: addi    zero, zero, 0
 # C-OR-ZCA-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x6
@@ -154,8 +154,8 @@ data2:
 # RELAX-RELOC-NEXT:    0x0  R_RISCV_CALL_PLT foo 0x0
 # RELAX-RELOC-NEXT:    0x0  R_RISCV_RELAX - 0x0
 # RELAX-RELOC-NEXT:    0xC  R_RISCV_BRANCH .Ltmp[[#]] 0x0
-# RELAX-RELOC-NEXT:    0x10 R_RISCV_ALIGN - 0x4
-# RELAX-RELOC-NEXT:    0x14 R_RISCV_BRANCH .Ltmp[[#]] 0x0
+# RELAX-RELOC-NEXT:    0x10 R_RISCV_ALIGN - 0x6
+# RELAX-RELOC-NEXT:    0x16 R_RISCV_BRANCH .Ltmp[[#]] 0x0
 # RELAX-RELOC-NEXT: }
 # C-OR-ZCA-EXT-NORELAX-RELOC: .rela.text3a
 # C-OR-ZCA-EXT-RELAX-RELOC: .rela.text3a
