@@ -28,6 +28,7 @@
 #include "math/atan2f128.h"
 #include "math/atanf.h"
 #include "math/atanf16.h"
+#include "math/atanhf.h"
 #include "math/erff.h"
 #include "math/exp.h"
 #include "math/exp10.h"

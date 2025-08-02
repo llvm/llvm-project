@@ -2374,6 +2374,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_atanhf",
+    hdrs = ["src/__support/math/atanhf.h"],
+    deps = [
+        ":__support_math_acoshf_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -2998,13 +3010,7 @@ libc_math_function(
 libc_math_function(
     name = "atanhf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_nearest_integer",
-        ":__support_fputil_polyeval",
-        ":__support_macros_optimization",
-        ":common_constants",
-        ":explogxf",
+        ":__support_math_atanhf",
     ],
 )
 
