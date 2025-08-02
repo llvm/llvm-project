@@ -870,6 +870,42 @@ ASTContext::insertCanonicalTemplateTemplateParmDeclInternal(
   return CanonTTP;
 }
 
+/// For the purposes of overflow pattern exclusion, does this match the
+/// while(i--) pattern?
+static bool matchesPostDecrInWhile(const UnaryOperator *UO, ASTContext &Ctx) {
+  if (UO->getOpcode() != UO_PostDec)
+    return false;
+
+  if (!UO->getType()->isUnsignedIntegerType())
+    return false;
+
+  // -fsanitize-undefined-ignore-overflow-pattern=unsigned-post-decr-while
+  if (!Ctx.getLangOpts().isOverflowPatternExcluded(
+          LangOptions::OverflowPatternExclusionKind::PostDecrInWhile))
+    return false;
+
+  // all Parents (usually just one) must be a WhileStmt
+  return llvm::all_of(
+      Ctx.getParentMapContext().getParents(*UO),
+      [](const DynTypedNode &P) { return P.get<WhileStmt>() != nullptr; });
+}
+
+bool ASTContext::isUnaryOverflowPatternExcluded(const UnaryOperator *UO) {
+  // -fsanitize-undefined-ignore-overflow-pattern=negated-unsigned-const
+  // ... like -1UL;
+  if (UO->getOpcode() == UO_Minus &&
+      getLangOpts().isOverflowPatternExcluded(
+          LangOptions::OverflowPatternExclusionKind::NegUnsignedConst) &&
+      UO->isIntegerConstantExpr(*this)) {
+    return true;
+  }
+
+  if (matchesPostDecrInWhile(UO, *this))
+    return true;
+
+  return false;
+}
+
 /// Check if a type can have its sanitizer instrumentation elided based on its
 /// presence within an ignorelist.
 bool ASTContext::isTypeIgnoredBySanitizer(const SanitizerMask &Mask,
@@ -2554,6 +2590,10 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     return getTypeInfo(
         cast<BTFTagAttributedType>(T)->getWrappedType().getTypePtr());
 
+  case Type::OverflowBehavior:
+    return getTypeInfo(
+        cast<OverflowBehaviorType>(T)->getUnderlyingType().getTypePtr());
+
   case Type::HLSLAttributedResource:
     return getTypeInfo(
         cast<HLSLAttributedResourceType>(T)->getWrappedType().getTypePtr());
@@ -3592,6 +3632,9 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case Type::HLSLInlineSpirv:
     llvm_unreachable("should never get here");
     break;
+  case Type::OverflowBehavior:
+    llvm_unreachable("should never get here");
+    break;
   case Type::DeducedTemplateSpecialization:
   case Type::Auto:
 #define NON_CANONICAL_TYPE(Class, Base) case Type::Class:
@@ -3735,6 +3778,12 @@ ASTContext::adjustType(QualType Orig,
     const auto *BTFT = dyn_cast<BTFTagAttributedType>(Orig);
     return getBTFTagAttributedType(BTFT->getAttr(),
                                    adjustType(BTFT->getWrappedType(), Adjust));
+  }
+
+  case Type::OverflowBehavior: {
+    const auto *OB = dyn_cast<OverflowBehaviorType>(Orig);
+    return getOverflowBehaviorType(OB->getBehaviorKind(),
+                                   adjustType(OB->getUnderlyingType(), Adjust));
   }
 
   case Type::Elaborated: {
@@ -4312,6 +4361,7 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::ArrayParameter:
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
     llvm_unreachable("type should never be variably-modified");
 
   // These types can be variably-modified but should never need to
@@ -5577,6 +5627,51 @@ QualType ASTContext::getBTFTagAttributedType(const BTFTypeTagAttr *BTFAttr,
   Types.push_back(Ty);
   BTFTagAttributedTypes.InsertNode(Ty, InsertPos);
 
+  return QualType(Ty, 0);
+}
+
+QualType ASTContext::getOverflowBehaviorType(const OverflowBehaviorAttr *Attr,
+                                             QualType Underlying) const {
+  IdentifierInfo *II = Attr->getBehaviorKind();
+  StringRef IdentName = II->getName();
+  OverflowBehaviorType::OverflowBehaviorKind Kind;
+  if (IdentName == "wrap") {
+    Kind = OverflowBehaviorType::OverflowBehaviorKind::Wrap;
+  } else if (IdentName == "no_wrap") {
+    Kind = OverflowBehaviorType::OverflowBehaviorKind::NoWrap;
+  } else {
+    return Underlying;
+  }
+
+  return getOverflowBehaviorType(Kind, Underlying);
+}
+
+QualType ASTContext::getOverflowBehaviorType(
+    OverflowBehaviorType::OverflowBehaviorKind Kind,
+    QualType Underlying) const {
+  llvm::FoldingSetNodeID ID;
+  OverflowBehaviorType::Profile(ID, Underlying, Kind);
+  void *InsertPos = nullptr;
+
+  if (OverflowBehaviorType *OBT =
+          OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos)) {
+    return QualType(OBT, 0);
+  }
+
+  QualType Canonical;
+  if (!Underlying.isCanonical()) {
+    Canonical = getOverflowBehaviorType(Kind, getCanonicalType(Underlying));
+    OverflowBehaviorType *NewOBT =
+        OverflowBehaviorTypes.FindNodeOrInsertPos(ID, InsertPos);
+    assert(!NewOBT && "Shouldn't be in the map!");
+    (void)NewOBT;
+  }
+
+  OverflowBehaviorType *Ty = new (*this, alignof(OverflowBehaviorType))
+      OverflowBehaviorType(Canonical, Underlying, Kind);
+
+  Types.push_back(Ty);
+  OverflowBehaviorTypes.InsertNode(Ty, InsertPos);
   return QualType(Ty, 0);
 }
 
@@ -8110,6 +8205,9 @@ unsigned ASTContext::getIntegerRank(const Type *T) const {
   if (const auto *EIT = dyn_cast<BitIntType>(T))
     return 0 + (EIT->getNumBits() << 3);
 
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(T))
+    return getIntegerRank(OBT->getUnderlyingType().getTypePtr());
+
   switch (cast<BuiltinType>(T)->getKind()) {
   default: llvm_unreachable("getIntegerRank(): not a built-in integer");
   case BuiltinType::Bool:
@@ -9587,6 +9685,7 @@ void ASTContext::getObjCEncodingForTypeImpl(QualType T, std::string &S,
 
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
     llvm_unreachable("unexpected type");
 
   case Type::ArrayParameter:
@@ -11586,6 +11685,48 @@ QualType ASTContext::mergeTagDefinitions(QualType LHS, QualType RHS) {
   return Ctx.IsEquivalent(LHS, RHS) ? LHS : QualType{};
 }
 
+std::optional<QualType> ASTContext::tryMergeOverflowBehaviorTypes(
+    QualType LHS, QualType RHS, bool OfBlockPointer, bool Unqualified,
+    bool BlockReturnType, bool IsConditionalOperator) {
+  const auto *LHSOBT = LHS->getAs<OverflowBehaviorType>();
+  const auto *RHSOBT = RHS->getAs<OverflowBehaviorType>();
+
+  if (!LHSOBT && !RHSOBT)
+    return std::nullopt;
+
+  if (LHSOBT) {
+    if (RHSOBT) {
+      // Both are OverflowBehaviorTypes.
+      if (LHSOBT->getBehaviorKind() != RHSOBT->getBehaviorKind())
+        return QualType(); // Incompatible if behaviors differ.
+
+      QualType MergedUnderlying = mergeTypes(
+          LHSOBT->getUnderlyingType(), RHSOBT->getUnderlyingType(),
+          OfBlockPointer, Unqualified, BlockReturnType, IsConditionalOperator);
+
+      if (MergedUnderlying.isNull())
+        return QualType();
+
+      // If the merged underlying type is the same as one of the original
+      // underlying types, we can return the original OBT to preserve typedefs.
+      if (getCanonicalType(MergedUnderlying) ==
+          getCanonicalType(LHSOBT->getUnderlyingType()))
+        return LHS;
+      if (getCanonicalType(MergedUnderlying) ==
+          getCanonicalType(RHSOBT->getUnderlyingType()))
+        return RHS;
+
+      return getOverflowBehaviorType(LHSOBT->getBehaviorKind(),
+                                     MergedUnderlying);
+    }
+    return mergeTypes(LHSOBT->getUnderlyingType(), RHS, OfBlockPointer,
+                      Unqualified, BlockReturnType, IsConditionalOperator);
+  }
+
+  return mergeTypes(LHS, RHSOBT->getUnderlyingType(), OfBlockPointer,
+                    Unqualified, BlockReturnType, IsConditionalOperator);
+}
+
 QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                                 bool Unqualified, bool BlockReturnType,
                                 bool IsConditionalOperator) {
@@ -11605,6 +11746,11 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
                       OfBlockPointer, Unqualified, BlockReturnType);
   if (LHSRefTy || RHSRefTy)
     return {};
+
+  if (std::optional<QualType> MergedOBT =
+          tryMergeOverflowBehaviorTypes(LHS, RHS, OfBlockPointer, Unqualified,
+                                        BlockReturnType, IsConditionalOperator))
+    return *MergedOBT;
 
   if (Unqualified) {
     LHS = LHS.getUnqualifiedType();
@@ -11728,6 +11874,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
   case Type::VariableArray:
   case Type::FunctionProto:
   case Type::ExtVector:
+  case Type::OverflowBehavior:
     llvm_unreachable("Types are eliminated above");
 
   case Type::Pointer:
@@ -14242,6 +14389,12 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
         getCommonTypeKeyword(NX, NY),
         getCommonQualifier(Ctx, NX, NY, /*IsSame=*/true), NX->getIdentifier());
   }
+  case Type::OverflowBehavior: {
+    // FIXME: Should we consider both types?
+    const auto *NX = cast<OverflowBehaviorType>(X);
+    return Ctx.getOverflowBehaviorType(NX->getBehaviorKind(),
+                                       NX->getUnderlyingType());
+  }
   case Type::DependentTemplateSpecialization: {
     const auto *TX = cast<DependentTemplateSpecializationType>(X),
                *TY = cast<DependentTemplateSpecializationType>(Y);
@@ -14330,6 +14483,7 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
     CANONICAL_TYPE(ObjCInterface)
     CANONICAL_TYPE(ObjCObject)
     CANONICAL_TYPE(ObjCObjectPointer)
+    CANONICAL_TYPE(OverflowBehavior)
     CANONICAL_TYPE(Pipe)
     CANONICAL_TYPE(Pointer)
     CANONICAL_TYPE(Record)

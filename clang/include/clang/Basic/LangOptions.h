@@ -112,6 +112,25 @@ public:
     SOB_Trapping
   };
 
+  // Used by __attribute__((overflow_behavior())) to describe overflow behavior
+  // on a per-type basis.
+  enum OverflowBehaviorKind {
+    // Default C standard behavior (type dependent).
+    OB_Unset,
+
+    // __attribute__((overflow_behavior("wrap")))
+    OB_Wrap,
+
+    // __attribute__((overflow_behavior("no_wrap")))
+    OB_NoWrap,
+
+    // Signed types defined as wrapping via -fwrapv can still be instrumented
+    // by sanitizers (PR82432). This field is needed to disambiguate canonical
+    // wrapping type behaviors from -fwrapv behaviors.
+    // -fwrapv
+    OB_FWrapv
+  };
+
   // FIXME: Unify with TUKind.
   enum CompilingModuleKind {
     /// Not compiling a module interface at all.

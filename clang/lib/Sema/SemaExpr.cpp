@@ -1409,6 +1409,36 @@ static QualType handleComplexIntConversion(Sema &S, ExprResult &LHS,
   return ComplexType;
 }
 
+static QualType handleOverflowBehaviorTypeConversion(Sema &S, ExprResult &LHS,
+                                                     ExprResult &RHS,
+                                                     bool IsCompAssign) {
+  QualType LHSType = LHS.get()->getType().getUnqualifiedType();
+  QualType RHSType = RHS.get()->getType().getUnqualifiedType();
+
+  const OverflowBehaviorType *LhsOBT = LHSType->getAs<OverflowBehaviorType>();
+  const OverflowBehaviorType *RhsOBT = RHSType->getAs<OverflowBehaviorType>();
+
+  assert(LHSType->isIntegerType() && RHSType->isIntegerType() &&
+         "Non-integer type conversion not supported for OverflowBehaviorTypes");
+
+  if (LhsOBT && RhsOBT) {
+    if (LhsOBT->getBehaviorKind() == RhsOBT->getBehaviorKind())
+      return handleIntegerConversion<doIntegralCast, doIntegralCast>(
+          S, LHS, RHS, LHSType, RHSType, IsCompAssign);
+  }
+
+  // NoWrap has precedence over Wrap; eagerly cast Wrap types to NoWrap types
+  if ((LhsOBT && !RhsOBT) || (LhsOBT && RhsOBT && !RhsOBT->isNoWrapKind())) {
+    RHS = doIntegralCast(S, RHS.get(), LHSType);
+    return LHSType;
+  }
+
+  if (!IsCompAssign)
+    LHS = doIntegralCast(S, LHS.get(), RHSType);
+
+  return RHSType;
+}
+
 /// Return the rank of a given fixed point or integer type. The value itself
 /// doesn't matter, but the values must be increasing with proper increasing
 /// rank as described in N1169 4.1.1.
@@ -1662,8 +1692,9 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     LHSType = AtomicLHS->getValueType();
 
   // If both types are identical, no conversion is needed.
-  if (Context.hasSameType(LHSType, RHSType))
+  if (Context.hasSameType(LHSType, RHSType)) {
     return Context.getCommonSugaredType(LHSType, RHSType);
+  }
 
   // If either side is a non-arithmetic type (e.g. a pointer), we are done.
   // The caller can deal with this (e.g. pointer + int).
@@ -1708,6 +1739,11 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
 
   if (LHSType->isFixedPointType() || RHSType->isFixedPointType())
     return handleFixedPointConversion(*this, LHSType, RHSType);
+
+  if (LHSType->isOverflowBehaviorType() || RHSType->isOverflowBehaviorType()) {
+    return handleOverflowBehaviorTypeConversion(
+        *this, LHS, RHS, ACK == ArithConvKind::CompAssign);
+  }
 
   // Finally, we have two differing integer types.
   return handleIntegerConversion<doIntegralCast, doIntegralCast>(
@@ -1914,16 +1950,33 @@ ExprResult Sema::CreateGenericSelectionExpr(
   for (unsigned i = 0; i < NumAssocs; ++i) {
     if (!Types[i])
       DefaultIndex = i;
-    else if (ControllingExpr &&
-             Context.typesAreCompatible(
-                 ControllingExpr->getType().getCanonicalType(),
-                 Types[i]->getType()))
-      CompatIndices.push_back(i);
-    else if (ControllingType &&
-             Context.typesAreCompatible(
-                 ControllingType->getType().getCanonicalType(),
-                 Types[i]->getType()))
-      CompatIndices.push_back(i);
+    else {
+      bool Compatible;
+      QualType ControllingQT =
+          ControllingExpr ? ControllingExpr->getType().getCanonicalType()
+                          : ControllingType->getType().getCanonicalType();
+      QualType AssocQT = Types[i]->getType();
+
+      const auto *ControllingOBT = ControllingQT->getAs<OverflowBehaviorType>();
+      const auto *AssocOBT =
+          AssocQT.getCanonicalType()->getAs<OverflowBehaviorType>();
+
+      if (ControllingOBT || AssocOBT) {
+        if (ControllingOBT && AssocOBT) {
+          if (ControllingOBT->getBehaviorKind() == AssocOBT->getBehaviorKind())
+            Compatible =
+                Context.typesAreCompatible(ControllingOBT->getUnderlyingType(),
+                                           AssocOBT->getUnderlyingType());
+          else
+            Compatible = false;
+        } else
+          Compatible = false;
+      } else
+        Compatible = Context.typesAreCompatible(ControllingQT, AssocQT);
+
+      if (Compatible)
+        CompatIndices.push_back(i);
+    }
   }
 
   auto GetControllingRangeAndType = [](Expr *ControllingExpr,
@@ -4535,6 +4588,7 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
     case Type::UnaryTransform:
     case Type::Attributed:
     case Type::BTFTagAttributed:
+    case Type::OverflowBehavior:
     case Type::HLSLAttributedResource:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
@@ -9081,6 +9135,12 @@ static AssignConvertType checkPointerTypesForAssignment(Sema &S,
   // C99 6.5.16.1p1 (constraint 3): both operands are pointers to qualified or
   // unqualified versions of compatible types, ...
   QualType ltrans = QualType(lhptee, 0), rtrans = QualType(rhptee, 0);
+
+  if (ltrans->isOverflowBehaviorType() || rtrans->isOverflowBehaviorType()) {
+    if (!S.Context.hasSameType(ltrans, rtrans))
+      return AssignConvertType::IncompatiblePointer;
+  }
+
   if (!S.Context.typesAreCompatible(ltrans, rtrans)) {
     // Check if the pointee types are compatible ignoring the sign.
     // We explicitly check for char so that we catch "char" vs
@@ -14217,6 +14277,8 @@ static QualType CheckIncrementDecrementOperand(Sema &S, Expr *Op,
     // C99 6.5.2.4p2, 6.5.6p2
     if (!checkArithmeticOpPointerOperand(S, OpLoc, Op))
       return QualType();
+  } else if (ResType->isOverflowBehaviorType()) {
+    // OK!
   } else if (ResType->isObjCObjectPointerType()) {
     // On modern runtimes, ObjC pointer arithmetic is forbidden.
     // Otherwise, we just need a complete type.
