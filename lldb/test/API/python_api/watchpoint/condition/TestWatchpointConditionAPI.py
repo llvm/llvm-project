@@ -6,6 +6,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchpointConditionAPITestCase(TestBase):
@@ -25,7 +26,14 @@ class WatchpointConditionAPITestCase(TestBase):
         self.exe_name = self.testMethodName
         self.d = {"CXX_SOURCES": self.source, "EXE": self.exe_name}
 
-    def test_watchpoint_cond_api(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hw_watchpoint_cond_api(self):
+        self.do_watchpoint_cond_api(WatchpointType.MODIFY, lldb.eWatchpointModeHardware)
+
+    def test_sw_watchpoint_cond_api(self):
+        self.do_watchpoint_cond_api(WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+
+    def do_watchpoint_cond_api(self, wp_type, wp_mode):
         """Test watchpoint condition API."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
@@ -53,7 +61,7 @@ class WatchpointConditionAPITestCase(TestBase):
         # Watch 'global' for write.
         value = frame0.FindValue("global", lldb.eValueTypeVariableGlobal)
         error = lldb.SBError()
-        watchpoint = value.Watch(True, False, True, error)
+        watchpoint = set_watchpoint_at_value(value, wp_type, wp_mode, error)
         self.assertTrue(
             value and watchpoint, "Successfully found the variable and set a watchpoint"
         )
