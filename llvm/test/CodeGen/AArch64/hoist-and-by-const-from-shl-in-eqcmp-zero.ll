@@ -326,12 +326,7 @@ define i1 @scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: scalar_i8_signbit_eq_with_nonzero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-128 // =0xffffff80
-; CHECK-NEXT:    lsl w8, w8, w1
-; CHECK-NEXT:    and w8, w8, w0
-; CHECK-NEXT:    and w8, w8, #0x80
-; CHECK-NEXT:    cmp w8, #1
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    mov w0, wzr
 ; CHECK-NEXT:    ret
   %t0 = shl i8 128, %y
   %t1 = and i8 %t0, %x

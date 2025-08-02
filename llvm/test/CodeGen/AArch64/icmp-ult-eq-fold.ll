@@ -95,9 +95,7 @@ define i1 @lt64_u64(i64 %0) {
 define i1 @lt8_u16_and_5(i8 %0) {
 ; CHECK-LABEL: lt8_u16_and_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
   %2 = and i8 %0, 5
   %3 = icmp ult i8 %2, 16
@@ -118,9 +116,7 @@ define i1 @lt8_u16_and_19(i8 %0) {
 define i1 @lt32_u16_and_7(i32 %0) {
 ; CHECK-LABEL: lt32_u16_and_7:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
   %2 = and i32 %0, 7
   %3 = icmp ult i32 %2, 16
@@ -141,9 +137,7 @@ define i1 @lt32_u16_and_21(i32 %0) {
 define i1 @lt64_u16_and_9(i64 %0) {
 ; CHECK-LABEL: lt64_u16_and_9:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    mov w0, #1 // =0x1
 ; CHECK-NEXT:    ret
   %2 = and i64 %0, 9
   %3 = icmp ult i64 %2, 16

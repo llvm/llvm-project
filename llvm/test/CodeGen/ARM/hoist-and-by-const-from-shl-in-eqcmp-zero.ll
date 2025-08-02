@@ -1067,23 +1067,10 @@ define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
 ; ARM-NEXT:    mov r0, #0
 ; ARM-NEXT:    bx lr
 ;
-; THUMB6-LABEL: scalar_i8_signbit_eq_with_nonzero:
-; THUMB6:       @ %bb.0:
-; THUMB6-NEXT:    uxtb r1, r1
-; THUMB6-NEXT:    movs r2, #127
-; THUMB6-NEXT:    mvns r2, r2
-; THUMB6-NEXT:    lsls r2, r1
-; THUMB6-NEXT:    ands r2, r0
-; THUMB6-NEXT:    uxtb r0, r2
-; THUMB6-NEXT:    subs r1, r0, #1
-; THUMB6-NEXT:    rsbs r0, r1, #0
-; THUMB6-NEXT:    adcs r0, r1
-; THUMB6-NEXT:    bx lr
-;
-; THUMB78-LABEL: scalar_i8_signbit_eq_with_nonzero:
-; THUMB78:       @ %bb.0:
-; THUMB78-NEXT:    movs r0, #0
-; THUMB78-NEXT:    bx lr
+; THUMB-LABEL: scalar_i8_signbit_eq_with_nonzero:
+; THUMB:       @ %bb.0:
+; THUMB-NEXT:    movs r0, #0
+; THUMB-NEXT:    bx lr
   %t0 = shl i8 128, %y
   %t1 = and i8 %t0, %x
   %res = icmp eq i8 %t1, 1 ; should be comparing with 0

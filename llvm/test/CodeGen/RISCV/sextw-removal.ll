@@ -422,7 +422,7 @@ define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    call foo
 ; CHECK-NEXT:    ori a0, a0, -256
-; CHECK-NEXT:    bnez a0, .LBB7_1
+; CHECK-NEXT:    j .LBB7_1
 ; CHECK-NEXT:  # %bb.2: # %bb7
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
@@ -438,7 +438,7 @@ define void @test8(i32 signext %arg, i32 signext %arg1) nounwind {
 ; NOREMOVAL-NEXT:    sext.w a0, a0
 ; NOREMOVAL-NEXT:    call foo
 ; NOREMOVAL-NEXT:    ori a0, a0, -256
-; NOREMOVAL-NEXT:    bnez a0, .LBB7_1
+; NOREMOVAL-NEXT:    j .LBB7_1
 ; NOREMOVAL-NEXT:  # %bb.2: # %bb7
 ; NOREMOVAL-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; NOREMOVAL-NEXT:    addi sp, sp, 16
