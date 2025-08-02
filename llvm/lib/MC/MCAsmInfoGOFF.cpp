@@ -19,8 +19,6 @@
 
 using namespace llvm;
 
-void MCAsmInfoGOFF::anchor() {}
-
 MCAsmInfoGOFF::MCAsmInfoGOFF() {
   Data64bitsDirective = "\t.quad\t";
   HasDotTypeDotSizeDirective = false;
@@ -117,41 +115,44 @@ static void emitXATTR(raw_ostream &OS, StringRef Name,
   OS << '\n';
 }
 
-void MCSectionGOFF::printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                                         raw_ostream &OS,
-                                         uint32_t Subsection) const {
-  switch (SymbolType) {
+void MCAsmInfoGOFF::printSwitchToSection(const MCSection &Section,
+                                         uint32_t Subsection, const Triple &T,
+                                         raw_ostream &OS) const {
+  auto &Sec =
+      const_cast<MCSectionGOFF &>(static_cast<const MCSectionGOFF &>(Section));
+  switch (Sec.SymbolType) {
   case GOFF::ESD_ST_SectionDefinition: {
-    OS << Name << " CSECT\n";
-    Emitted = true;
+    OS << Sec.getName() << " CSECT\n";
+    Sec.Emitted = true;
     break;
   }
   case GOFF::ESD_ST_ElementDefinition: {
-    getParent()->printSwitchToSection(MAI, T, OS, Subsection);
-    if (!Emitted) {
-      emitCATTR(OS, Name, EDAttributes.Rmode, EDAttributes.Alignment,
-                EDAttributes.LoadBehavior, GOFF::ESD_EXE_Unspecified,
-                EDAttributes.IsReadOnly, 0, EDAttributes.FillByteValue,
-                StringRef());
-      Emitted = true;
+    printSwitchToSection(*Sec.getParent(), Subsection, T, OS);
+    if (!Sec.Emitted) {
+      emitCATTR(OS, Sec.getName(), Sec.EDAttributes.Rmode,
+                Sec.EDAttributes.Alignment, Sec.EDAttributes.LoadBehavior,
+                GOFF::ESD_EXE_Unspecified, Sec.EDAttributes.IsReadOnly, 0,
+                Sec.EDAttributes.FillByteValue, StringRef());
+      Sec.Emitted = true;
     } else
-      OS << Name << " CATTR\n";
+      OS << Sec.getName() << " CATTR\n";
     break;
   }
   case GOFF::ESD_ST_PartReference: {
-    MCSectionGOFF *ED = getParent();
-    ED->getParent()->printSwitchToSection(MAI, T, OS, Subsection);
-    if (!Emitted) {
+    MCSectionGOFF *ED = Sec.getParent();
+    printSwitchToSection(*ED->getParent(), Subsection, T, OS);
+    if (!Sec.Emitted) {
       emitCATTR(OS, ED->getName(), ED->getEDAttributes().Rmode,
                 ED->EDAttributes.Alignment, ED->EDAttributes.LoadBehavior,
-                PRAttributes.Executable, ED->EDAttributes.IsReadOnly,
-                PRAttributes.SortKey, ED->EDAttributes.FillByteValue, Name);
-      emitXATTR(OS, Name, PRAttributes.Linkage, PRAttributes.Executable,
-                PRAttributes.BindingScope);
+                Sec.PRAttributes.Executable, ED->EDAttributes.IsReadOnly,
+                Sec.PRAttributes.SortKey, ED->EDAttributes.FillByteValue,
+                Sec.getName());
+      emitXATTR(OS, Sec.getName(), Sec.PRAttributes.Linkage,
+                Sec.PRAttributes.Executable, Sec.PRAttributes.BindingScope);
       ED->Emitted = true;
-      Emitted = true;
+      Sec.Emitted = true;
     } else
-      OS << ED->getName() << " CATTR PART(" << Name << ")\n";
+      OS << ED->getName() << " CATTR PART(" << Sec.getName() << ")\n";
     break;
   }
   default:

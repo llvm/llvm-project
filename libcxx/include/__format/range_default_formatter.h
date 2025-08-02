@@ -18,6 +18,7 @@
 #include <__chrono/statically_widen.h>
 #include <__config>
 #include <__format/concepts.h>
+#include <__format/fmt_pair_like.h>
 #include <__format/formatter.h>
 #include <__format/range_format.h>
 #include <__format/range_formatter.h>
