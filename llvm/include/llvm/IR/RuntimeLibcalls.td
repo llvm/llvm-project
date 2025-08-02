@@ -1122,6 +1122,11 @@ defvar LibmHasExp10F80 = LibcallImpls<(add exp10l_f80), hasExp10>;
 defvar LibmHasExp10F128 = LibcallImpls<(add exp10l_f128), hasExp10>;
 defvar LibmHasExp10PPCF128 = LibcallImpls<(add exp10l_ppcf128), hasExp10>;
 
+defvar DefaultLibmExp10 = [
+  LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F128
+];
+
+
 defvar WindowsMathRemovals = [
   ldexpf, ldexp_f80, ldexp_f128, ldexp_ppcf128,
   frexpf, frexp_f80, frexp_f128, frexp_ppcf128
@@ -1143,7 +1148,6 @@ defvar LibmHasLdexpF80 = LibcallImpls<(add ldexp_f80), isNotOSWindowsOrIsCygwinM
 
 defvar LibmHasFrexpF128 = LibcallImpls<(add frexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
-
 
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
@@ -1221,7 +1225,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       LibmHasExp10F32, LibmHasExp10F64, LibmHasExp10F128)
+       DefaultLibmExp10)
 >;
 
 // Prepend a # to every name
@@ -1492,7 +1496,7 @@ def ARMSystemLibrary
            AEABIDivRemCalls,
            DarwinSinCosStret, DarwinExp10,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-           LibmHasExp10F32, LibmHasExp10F64,  LibmHasExp10F128,
+           DefaultLibmExp10,
 
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
