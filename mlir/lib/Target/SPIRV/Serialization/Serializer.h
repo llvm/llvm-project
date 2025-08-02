@@ -278,6 +278,8 @@ private:
 
   LogicalResult processLoopOp(spirv::LoopOp loopOp);
 
+  LogicalResult processBreakOp(spirv::BreakOp breakOp);
+
   LogicalResult processBranchConditionalOp(spirv::BranchConditionalOp);
 
   LogicalResult processBranchOp(spirv::BranchOp branchOp);
