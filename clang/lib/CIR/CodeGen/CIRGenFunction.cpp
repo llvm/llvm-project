@@ -383,6 +383,7 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
         !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
 
     if (shouldEmitUnreachable) {
+      assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
         builder.create<cir::TrapOp>(localScope->endLoc);
       else
