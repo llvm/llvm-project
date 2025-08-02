@@ -117,6 +117,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -7435,7 +7436,17 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
       if (auto *SI = dyn_cast<StoreInst>(I))
         return !SI->isSimple();
 
-      return I->mayThrow() || I->mayWriteToMemory();
+      if (I->mayThrow())
+        return true;
+
+      // Check if the function accesses inaccessible memory.
+      if (auto *CI = dyn_cast<CallInst>(I)) {
+        auto ME = CI->getMemoryEffects();
+        if (!isModSet(ME.getModRef(IRMemLocation::InaccessibleMem)))
+          return false;
+      }
+
+      return I->mayWriteToMemory();
     };
 
     LoopProperties LP = {/* HasNoAbnormalExits */ true,
