@@ -327,13 +327,15 @@ bool RISCVAsmBackend::relaxAlign(MCFragment &F, unsigned &Size) {
 
 bool RISCVAsmBackend::relaxDwarfLineAddr(MCFragment &F,
                                          bool &WasRelaxed) const {
-  MCContext &C = getContext();
-
   int64_t LineDelta = F.getDwarfLineDelta();
   const MCExpr &AddrDelta = F.getDwarfAddrDelta();
   size_t OldSize = F.getVarSize();
 
   int64_t Value;
+  // If the label difference can be resolved, use the default handling, which
+  // utilizes a shorter special opcode.
+  if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
+    return false;
   [[maybe_unused]] bool IsAbsolute =
       AddrDelta.evaluateKnownAbsolute(Value, *Asm);
   assert(IsAbsolute && "CFA with invalid expression");
@@ -352,12 +354,10 @@ bool RISCVAsmBackend::relaxDwarfLineAddr(MCFragment &F,
   // value is therefore 65535.  Set a conservative upper bound for relaxation.
   unsigned PCBytes;
   if (Value > 60000) {
-    unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
-    assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
-    PCBytes = PtrSize;
-    OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PtrSize + 1)
+    PCBytes = getContext().getAsmInfo()->getCodePointerSize();
+    OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PCBytes + 1)
        << uint8_t(dwarf::DW_LNE_set_address);
-    OS.write_zeros(PtrSize);
+    OS.write_zeros(PCBytes);
   } else {
     PCBytes = 2;
     OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
