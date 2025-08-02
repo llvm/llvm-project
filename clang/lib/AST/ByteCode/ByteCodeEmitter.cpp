@@ -135,8 +135,8 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
 /// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
-static void emit(Program &P, llvm::SmallVector<std::byte> &Code, const T &Val,
-                 bool &Success) {
+static void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+                 const T &Val, bool &Success) {
   size_t ValPos = Code.size();
   size_t Size;
 
@@ -166,7 +166,7 @@ static void emit(Program &P, llvm::SmallVector<std::byte> &Code, const T &Val,
 /// Emits a serializable value. These usually (potentially) contain
 /// heap-allocated memory and aren't trivially copyable.
 template <typename T>
-static void emitSerialized(llvm::SmallVector<std::byte> &Code, const T &Val,
+static void emitSerialized(llvm::SmallVectorImpl<std::byte> &Code, const T &Val,
                            bool &Success) {
   size_t ValPos = Code.size();
   size_t Size = align(Val.bytesToSerialize());
@@ -185,26 +185,26 @@ static void emitSerialized(llvm::SmallVector<std::byte> &Code, const T &Val,
 }
 
 template <>
-void emit(Program &P, llvm::SmallVector<std::byte> &Code, const Floating &Val,
-          bool &Success) {
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+          const Floating &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <>
-void emit(Program &P, llvm::SmallVector<std::byte> &Code,
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
           const IntegralAP<false> &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <>
-void emit(Program &P, llvm::SmallVector<std::byte> &Code,
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
           const IntegralAP<true> &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
 template <>
-void emit(Program &P, llvm::SmallVector<std::byte> &Code, const FixedPoint &Val,
-          bool &Success) {
+void emit(Program &P, llvm::SmallVectorImpl<std::byte> &Code,
+          const FixedPoint &Val, bool &Success) {
   emitSerialized(Code, Val, Success);
 }
 
