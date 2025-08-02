@@ -19,23 +19,21 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_64LE:  .LBB0_6: # %vector.body
 ; POWERPC_64LE-NEXT:    #
 ; POWERPC_64LE-NEXT:    lxv [[R1:[0-9]+]], -64(4)
-; POWERPC_64LE-NEXT:    vcmpequh [[R2:[0-9]+]], [[R2]], [[R3:[0-9]+]]
-; POWERPC_64LE-NEXT:    xxlnor [[R1]], [[R1]], [[R1]]
-; POWERPC_64LE-NEXT:    vmrghh [[R4:[0-9]+]], [[R2]], [[R2]]
-; POWERPC_64LE-NEXT:    vmrglh [[R2]], [[R2]], [[R2]]
-; POWERPC_64LE-NEXT:    xxland [[R5:[0-9]+]], [[R5]], [[R6:[0-9]+]]
-; POWERPC_64LE-NEXT:    xxland [[R1]], [[R1]], [[R6]]
-; POWERPC_64LE-NEXT:    vadduwm [[R7:[0-9]+]], [[R7]], [[R4]]
+; POWERPC_64LE-NEXT:    vcmpgtuh [[R2:[0-9]+]], [[R2]], [[R3:[0-9]+]]
+; POWERPC_64LE-NEXT:    vmrglh [[R4:[0-9]+]], [[R2]], [[R2]]
+; POWERPC_64LE-NEXT:    vmrghh [[R2]], [[R2]], [[R2]]
+; POWERPC_64LE-NEXT:    xxland [[R1]], [[R1]], [[R5:[0-9]+]]
+; POWERPC_64LE-NEXT:    xxland [[R6:[0-9]+]], [[R6]], [[R5]]
+; POWERPC_64LE-NEXT:    vadduwm [[R7:[0-9]+]], [[R7]], [[R2]]
 ; POWERPC_64LE:  .LBB0_10: # %vec.epilog.vector.body
 ; POWERPC_64LE-NEXT:    #
 ; POWERPC_64LE-NEXT:    lxv [[R8:[0-9]+]], 0(4)
 ; POWERPC_64LE-NEXT:    addi 4, 4, 16
-; POWERPC_64LE-NEXT:    vcmpequh [[R9:[0-9]+]], [[R9]], [[R10:[0-9]+]]
-; POWERPC_64LE-NEXT:    xxlnor [[R8]], [[R8]], [[R8]]
+; POWERPC_64LE-NEXT:    vcmpgtuh [[R9:[0-9]+]], [[R9]], [[R10:[0-9]+]]
 ; POWERPC_64LE-NEXT:    vmrglh [[R11:[0-9]+]], [[R9]], [[R9]]
 ; POWERPC_64LE-NEXT:    vmrghh [[R9]], [[R9]], [[R9]]
-; POWERPC_64LE-NEXT:    xxland [[R12:[0-9]+]], [[R12]], [[R6]]
-; POWERPC_64LE-NEXT:    xxland [[R8]], [[R8]], [[R6]]
+; POWERPC_64LE-NEXT:    xxland [[R12:[0-9]+]], [[R12]], [[R5]]
+; POWERPC_64LE-NEXT:    xxland [[R8]], [[R8]], [[R5]]
 ; POWERPC_64LE-NEXT:    vadduwm [[R7]], [[R7]], [[R9]]
 ; POWERPC_64LE-NEXT:    vadduwm [[R3]], [[R3]], [[R11]]
 ; POWERPC_64LE-NEXT:    bdnz .LBB0_10
@@ -45,19 +43,17 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_64:  L..BB0_6: # %vector.body
 ; POWERPC_64-NEXT:    #
 ; POWERPC_64-NEXT:    lxv [[R1:[0-9]+]], -64(4)
-; POWERPC_64-NEXT:    vcmpequh [[R2:[0-9]+]], [[R2]], [[R3:[0-9]+]]
-; POWERPC_64-NEXT:    xxlnor [[R1]], [[R1]], [[R1]]
-; POWERPC_64-NEXT:    vmrglh [[R4:[0-9]+]], [[R2]], [[R2]]
-; POWERPC_64-NEXT:    vmrghh [[R2]], [[R2]], [[R2]]
+; POWERPC_64-NEXT:    vcmpgtuh [[R2:[0-9]+]], [[R18:[0-9]+]], [[R3:[0-9]+]]
+; POWERPC_64-NEXT:    vmrghh [[R4:[0-9]+]], [[R2]], [[R2]]
+; POWERPC_64-NEXT:    vmrglh [[R2]], [[R2]], [[R2]]
 ; POWERPC_64-NEXT:    xxland [[R5:[0-9]+]], [[R5]], [[R6:[0-9]+]]
 ; POWERPC_64-NEXT:    xxland [[R1]], [[R1]], [[R6]]
-; POWERPC_64-NEXT:    vadduwm [[R7:[0-9]+]], [[R7]], [[R4]]
+; POWERPC_64-NEXT:    vadduwm [[R7:[0-9]+]], [[R7]], [[R2]]
 ; POWERPC_64:  L..BB0_10: # %vec.epilog.vector.body
 ; POWERPC_64-NEXT:    #
 ; POWERPC_64-NEXT:    lxv [[R8:[0-9]+]], 0(4)
 ; POWERPC_64-NEXT:    addi 4, 4, 16
-; POWERPC_64-NEXT:    vcmpequh [[R9:[0-9]+]], [[R9]], [[R10:[0-9]+]]
-; POWERPC_64-NEXT:    xxlnor [[R8]], [[R8]], [[R8]]
+; POWERPC_64-NEXT:    vcmpgtuh [[R9:[0-9]+]], [[R19:[0-9]+]], [[R10:[0-9]+]]
 ; POWERPC_64-NEXT:    vmrghh [[R11:[0-9]+]], [[R9]], [[R9]]
 ; POWERPC_64-NEXT:    vmrglh [[R9]], [[R9]], [[R9]]
 ; POWERPC_64-NEXT:    xxland [[R12:[0-9]+]], [[R12]], [[R6]]
@@ -70,28 +66,26 @@ define i32 @test_Greater_than(ptr %colauths, i32 signext %ncols) {
 ; POWERPC_32-LABEL: test_Greater_than:
 ; POWERPC_32:  L..BB0_7: # %vector.body
 ; POWERPC_32-NEXT:    #
-; POWERPC_32-NEXT:    lxv [[R1:[0-9]+]], 0(10)
-; POWERPC_32-NEXT:    addic [[R13:[0-9]+]], [[R13]], 64
-; POWERPC_32-NEXT:    addze [[R14:[0-9]+]], [[R14]]
-; POWERPC_32-NEXT:    xor [[R15:[0-9]+]], [[R13]], [[R16:[0-9]+]]
-; POWERPC_32-NEXT:    or. [[R15]], [[R15]], [[R14]]
-; POWERPC_32-NEXT:    vcmpequh [[R2:[0-9]+]], [[R2]], [[R3:[0-9]+]]
-; POWERPC_32-NEXT:    xxlnor [[R1]], [[R1]], [[R1]]
+; POWERPC_32-NEXT:    lxv [[R1:[0-9]+]], 0([[R13:[0-9]+]])
+; POWERPC_32-NEXT:    addic [[R14:[0-9]+]], [[R14]], 64
+; POWERPC_32-NEXT:    addze [[R7:[0-9]+]], [[R7]]
+; POWERPC_32-NEXT:    xor [[R15:[0-9]+]], [[R14]], [[R16:[0-9]+]]
+; POWERPC_32-NEXT:    or. [[R15]], [[R15]], [[R7]]
+; POWERPC_32-NEXT:    vcmpgtuh [[R2:[0-9]+]], [[R2]], [[R3:[0-9]+]]
 ; POWERPC_32-NEXT:    vmrglh [[R4:[0-9]+]], [[R2]], [[R2]]
 ; POWERPC_32-NEXT:    vmrghh [[R2]], [[R2]], [[R2]]
 ; POWERPC_32-NEXT:    xxland [[R5:[0-9]+]], [[R5]], [[R6:[0-9]+]]
 ; POWERPC_32-NEXT:    xxland [[R1]], [[R1]], [[R6]]
-; POWERPC_32-NEXT:    vadduwm [[R7:[0-9]+]], [[R7]], [[R4]]
+; POWERPC_32-NEXT:    vadduwm [[R7]], [[R7]], [[R4]]
 ; POWERPC_32:  L..BB0_11: # %vec.epilog.vector.body
 ; POWERPC_32-NEXT:    #
-; POWERPC_32-NEXT:    slwi [[R14]], [[R13]], 1
-; POWERPC_32-NEXT:    addic [[R13]], [[R13]], 8
+; POWERPC_32-NEXT:    slwi [[R7]], [[R14]], 1
+; POWERPC_32-NEXT:    addic [[R14]], [[R14]], 8
 ; POWERPC_32-NEXT:    addze [[R17:[0-9]+]], [[R17]]
-; POWERPC_32-NEXT:    lxvx [[R8:[0-9]+]], [[R18:[0-9]+]], [[R14]]
-; POWERPC_32-NEXT:    xor [[R14]], [[R13]], [[R16]]
-; POWERPC_32-NEXT:    or. [[R14]], [[R14]], [[R17]]
-; POWERPC_32-NEXT:    vcmpequh [[R9:[0-9]+]], [[R9]], [[R3]]
-; POWERPC_32-NEXT:    xxlnor [[R8]], [[R8]], [[R8]]
+; POWERPC_32-NEXT:    lxvx [[R8:[0-9]+]], [[R18:[0-9]+]], [[R7]]
+; POWERPC_32-NEXT:    xor [[R7]], [[R14]], [[R16]]
+; POWERPC_32-NEXT:    or. [[R7]], [[R7]], [[R17]]
+; POWERPC_32-NEXT:    vcmpgtuh [[R9:[0-9]+]], [[R9]], [[R3]]
 ; POWERPC_32-NEXT:    vmrghh [[R11:[0-9]+]], [[R9]], [[R9]]
 ; POWERPC_32-NEXT:    vmrglh [[R9]], [[R9]], [[R9]]
 ; POWERPC_32-NEXT:    xxland [[R12:[0-9]+]], [[R12]], [[R6]]
