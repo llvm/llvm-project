@@ -22,6 +22,7 @@
 #include "CGOpenCLRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CGOpenMPRuntimeGPU.h"
+#include "CGVTables.h"
 #include "CodeGenFunction.h"
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
@@ -405,7 +406,8 @@ CodeGenModule::CodeGenModule(ASTContext &C,
     : Context(C), LangOpts(C.getLangOpts()), FS(FS), HeaderSearchOpts(HSO),
       PreprocessorOpts(PPO), CodeGenOpts(CGO), TheModule(M), Diags(diags),
       Target(C.getTargetInfo()), ABI(createCXXABI(*this)),
-      VMContext(M.getContext()), VTables(*this), StackHandler(diags),
+      VMContext(M.getContext()),
+      VTables(std::make_unique<CodeGenVTables>(*this)), StackHandler(diags),
       SanitizerMD(new SanitizerMetadata(*this)),
       AtomicOpts(Target.getAtomicOpts()) {
 
@@ -3507,7 +3509,7 @@ void CodeGenModule::EmitVTablesOpportunistically() {
     assert(getVTables().isVTableExternal(RD) &&
            "This queue should only contain external vtables");
     if (getCXXABI().canSpeculativelyEmitVTable(RD))
-      VTables.GenerateClassData(RD);
+      VTables->GenerateClassData(RD);
   }
   OpportunisticVTables.clear();
 }
