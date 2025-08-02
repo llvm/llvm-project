@@ -560,13 +560,17 @@ bool ItaniumPartialDemangler::hasFunctionQualifiers() const {
 }
 
 bool ItaniumPartialDemangler::isCtorOrDtor() const {
+  return getCtorOrDtorVariant().has_value();
+}
+
+std::optional<int> ItaniumPartialDemangler::getCtorOrDtorVariant() const {
   const Node *N = static_cast<const Node *>(RootNode);
   while (N) {
     switch (N->getKind()) {
     default:
-      return false;
+      return std::nullopt;
     case Node::KCtorDtorName:
-      return true;
+      return static_cast<const CtorDtorName *>(N)->getVariant();
 
     case Node::KAbiTagAttr:
       N = static_cast<const AbiTagAttr *>(N)->Base;
@@ -588,7 +592,7 @@ bool ItaniumPartialDemangler::isCtorOrDtor() const {
       break;
     }
   }
-  return false;
+  return std::nullopt;
 }
 
 bool ItaniumPartialDemangler::isFunction() const {

@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolFileDWARF.h"
+#include "clang/Basic/ABI.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
@@ -78,6 +80,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -2482,6 +2485,56 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   return false;
 }
 
+static uint8_t ClangToItaniumCtorKind(clang::CXXCtorType kind) {
+  switch (kind) {
+  case clang::CXXCtorType::Ctor_Complete:
+    return 1;
+  case clang::CXXCtorType::Ctor_Base:
+    return 2;
+  case clang::CXXCtorType::Ctor_CopyingClosure:
+  case clang::CXXCtorType::Ctor_DefaultClosure:
+  case clang::CXXCtorType::Ctor_Comdat:
+    llvm_unreachable("Unexpected constructor kind.");
+  }
+}
+
+static uint8_t ClangToItaniumDtorKind(clang::CXXDtorType kind) {
+  switch (kind) {
+  case clang::CXXDtorType::Dtor_Deleting:
+    return 0;
+  case clang::CXXDtorType::Dtor_Complete:
+    return 1;
+  case clang::CXXDtorType::Dtor_Base:
+    return 2;
+  case clang::CXXDtorType::Dtor_Comdat:
+    llvm_unreachable("Unexpected destructor kind.");
+  }
+}
+
+static std::optional<uint8_t>
+GetItaniumCtorDtorVariant(llvm::StringRef discriminator) {
+  const bool is_ctor = discriminator.consume_front("C");
+  if (!is_ctor && !discriminator.consume_front("D"))
+    return std::nullopt;
+
+  uint64_t structor_kind;
+  if (!llvm::to_integer(discriminator, structor_kind))
+    return std::nullopt;
+
+  if (is_ctor) {
+    if (structor_kind > clang::CXXCtorType::Ctor_DefaultClosure)
+      return std::nullopt;
+
+    return ClangToItaniumCtorKind(
+        static_cast<clang::CXXCtorType>(structor_kind));
+  }
+
+  if (structor_kind > clang::CXXDtorType::Dtor_Deleting)
+    return std::nullopt;
+
+  return ClangToItaniumDtorKind(static_cast<clang::CXXDtorType>(structor_kind));
+}
+
 llvm::Expected<SymbolContext>
 SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
@@ -2494,21 +2547,49 @@ SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
   // Label was created using a declaration DIE. Need to fetch the definition
   // to resolve the function call.
   if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0)) {
+    // eFunctionNameTypeFull for mangled name lookup.
+    // eFunctionNameTypeMethod is required for structor lookups (since we look
+    // those up by DW_AT_name).
     Module::LookupInfo info(ConstString(label.lookup_name),
-                            lldb::eFunctionNameTypeFull,
+                            lldb::eFunctionNameTypeFull |
+                                lldb::eFunctionNameTypeMethod,
                             lldb::eLanguageTypeUnknown);
 
     m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
       if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
         return IterationAction::Continue;
 
-      // We don't check whether the specification DIE for this function
-      // corresponds to the declaration DIE because the declaration might be in
-      // a type-unit but the definition in the compile-unit (and it's
-      // specifcation would point to the declaration in the compile-unit). We
-      // rely on the mangled name within the module to be enough to find us the
-      // unique definition.
+      // TODO: this specification check doesn't work if declaration DIE was in a
+      // type-unit (we should only encode DIEs from .debug_info).
+      auto spec = entry.GetAttributeValueAsReferenceDIE(DW_AT_specification);
+      if (!spec)
+        return IterationAction::Continue;
+
+      if (spec != die)
+        return IterationAction::Continue;
+
+      // We're not picking a specific structor variant DIE, so we're done here.
+      if (label.discriminator.empty()) {
+        die = entry;
+        return IterationAction::Continue;
+      }
+
+      const char *mangled =
+          entry.GetMangledName(/*substitute_name_allowed=*/false);
+      if (!mangled)
+        return IterationAction::Continue;
+
+      llvm::ItaniumPartialDemangler D;
+      if (D.partialDemangle(mangled))
+        return IterationAction::Continue;
+
+      // TODO: account for constructor alias (only an issue on Linux)
+      if (D.getCtorOrDtorVariant() !=
+          GetItaniumCtorDtorVariant(label.discriminator).value_or(-1))
+        return IterationAction::Continue;
+
       die = entry;
+
       return IterationAction::Stop;
     });
 

@@ -127,6 +127,9 @@ struct ItaniumPartialDemangler {
   /// If this symbol describes a constructor or destructor.
   DEMANGLE_ABI bool isCtorOrDtor() const;
 
+  /// If this symbol describes a constructor or destructor.
+  std::optional<int> getCtorOrDtorVariant() const;
+
   /// If this symbol describes a function.
   DEMANGLE_ABI bool isFunction() const;
 

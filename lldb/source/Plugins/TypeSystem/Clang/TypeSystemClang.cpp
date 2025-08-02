@@ -10,6 +10,7 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/Basic/ABI.h"
 #include "clang/Frontend/ASTConsumers.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/FormatAdapters.h"
@@ -2183,8 +2184,7 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   // This is done separately for member functions in
   // AddMethodToCXXRecordType.
   if (!asm_label.empty())
-    func_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(ast, asm_label,
-                                                           /*literal=*/true));
+    func_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(ast, asm_label));
 
   SetOwningModule(func_decl, owning_module);
   decl_ctx->addDecl(func_decl);
@@ -7823,8 +7823,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_method_decl->addAttr(clang::UsedAttr::CreateImplicit(getASTContext()));
 
   if (!asm_label.empty())
-    cxx_method_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
-        getASTContext(), asm_label, /*literal=*/true));
+    cxx_method_decl->addAttr(
+        clang::AsmLabelAttr::CreateImplicit(getASTContext(), asm_label));
 
   // Parameters on member function declarations in DWARF generally don't
   // have names, so we omit them when creating the ParmVarDecls.
