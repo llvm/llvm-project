@@ -262,3 +262,243 @@ loop:
 exit:
   ret void
 }
+
+; The type-size of the source is different from that of the sink,
+; and the dependence distance is 10.
+; TODO: Relax the HasSameSize check; the strided accesses are
+; independent, as determined by both the source size and the sink size.
+; This test should report no dependencies.
+define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
+; CHECK-LABEL: 'different_type_sizes_strided_accesses_independent'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
+; CHECK-NEXT:            store i8 1, ptr %gep.10.iv, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %gep.10 = getelementptr nuw i8, ptr %dst, i64 10
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.iv = getelementptr i8, ptr %dst, i64 %iv
+  store i16 0, ptr %gep.iv
+  %gep.10.iv = getelementptr i8, ptr %gep.10, i64 %iv
+  store i8 1, ptr %gep.10.iv
+  %iv.next = add i64 %iv, 8
+  %ec = icmp eq i64 %iv.next, 64
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Variant of the above, where the source size forbids strided access
+; independence.
+; TODO: Relax the HasSameSize check; this test should report a backward
+; loop-carried dependence.
+define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
+; CHECK-LABEL: 'different_type_sizes_strided_accesses_dependent'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            store i64 0, ptr %gep.iv, align 4 ->
+; CHECK-NEXT:            store i8 1, ptr %gep.10.iv, align 1
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %gep.10 = getelementptr nuw i8, ptr %dst, i64 10
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.iv = getelementptr i8, ptr %dst, i64 %iv
+  store i64 0, ptr %gep.iv
+  %gep.10.iv = getelementptr i8, ptr %gep.10, i64 %iv
+  store i8 1, ptr %gep.10.iv
+  %iv.next = add i64 %iv, 8
+  %ec = icmp eq i64 %iv.next, 64
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Source type-size differs from that of the sink, but when
+; determining backward dependence, only the source size
+; is relevant.
+; TODO: Relax the HasSameSize check; this test should report
+; BackwardVectorizable.
+define void @different_type_sizes_source_size_backwardvectorizible(ptr %dst) {
+; CHECK-LABEL: 'different_type_sizes_source_size_backwardvectorizible'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Unknown:
+; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
+; CHECK-NEXT:            store i32 1, ptr %gep.10.iv, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %gep.10 = getelementptr nuw i8, ptr %dst, i64 10
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.iv = getelementptr i8, ptr %dst, i64 %iv
+  store i16 0, ptr %gep.iv
+  %gep.10.iv = getelementptr i8, ptr %gep.10, i64 %iv
+  store i32 1, ptr %gep.10.iv
+  %iv.next = add i64 %iv, 8
+  %ec = icmp eq i64 %iv.next, 64
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Source type-size differs from that of the sink, and when
+; determining forward dependence, the source size can
+; prevent forwarding.
+define void @different_type_sizes_forward(ptr %dst) {
+; CHECK-LABEL: 'different_type_sizes_forward'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            store i32 0, ptr %gep.10.iv, align 4 ->
+; CHECK-NEXT:            store i16 1, ptr %gep.iv, align 2
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %gep.10 = getelementptr nuw i8, ptr %dst, i64 10
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.10.iv = getelementptr i8, ptr %gep.10, i64 %iv
+  store i32 0, ptr %gep.10.iv
+  %gep.iv = getelementptr i8, ptr %dst, i64 %iv
+  store i16 1, ptr %gep.iv
+  %iv.next = add i64 %iv, 8
+  %ec = icmp eq i64 %iv.next, 64
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same as the above, but here, the store size should not prevent
+; ld->st forwarding.
+; TODO: Relax the HasSameSize check; this test should report a
+; forward dependence.
+define void @different_type_sizes_store_size_cannot_prevent_forwarding(ptr %A, ptr noalias %B) {
+; CHECK-LABEL: 'different_type_sizes_store_size_cannot_prevent_forwarding'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        ForwardButPreventsForwarding:
+; CHECK-NEXT:            store i32 0, ptr %gep.A, align 4 ->
+; CHECK-NEXT:            %l = load i16, ptr %gep.A.1, align 2
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %A.1 = getelementptr i32, ptr %A, i64 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1022, %entry ], [ %iv.next, %loop ]
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 0, ptr %gep.A
+  %gep.A.1 = getelementptr i32, ptr %A.1, i64 %iv
+  %l = load i16, ptr %gep.A.1
+  store i16 %l, ptr %B
+  %iv.next = add nsw i64 %iv, -1
+  %cmp = icmp eq i64 %iv, 0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same as the above, but here, the load size prevents
+; ld->st forwarding.
+define void @different_type_sizes_load_size_prevents_forwarding(ptr %A, ptr noalias %B) {
+; CHECK-LABEL: 'different_type_sizes_load_size_prevents_forwarding'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Forward loop carried data dependence that prevents store-to-load forwarding.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        ForwardButPreventsForwarding:
+; CHECK-NEXT:            store i16 0, ptr %gep.A, align 2 ->
+; CHECK-NEXT:            %l = load i32, ptr %gep.A.1, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %A.1 = getelementptr i32, ptr %A, i64 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1022, %entry ], [ %iv.next, %loop ]
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i16 0, ptr %gep.A
+  %gep.A.1 = getelementptr i32, ptr %A.1, i64 %iv
+  %l = load i32, ptr %gep.A.1
+  store i32 %l, ptr %B
+  %iv.next = add nsw i64 %iv, -1
+  %cmp = icmp eq i64 %iv, 0
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
