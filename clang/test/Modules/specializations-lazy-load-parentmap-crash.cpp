@@ -1,5 +1,3 @@
-// REQUIRES: staticanalyzer
-//
 // RUN: rm -rf %t
 // RUN: mkdir -p %t
 // RUN: split-file --leading-lines %s %t
