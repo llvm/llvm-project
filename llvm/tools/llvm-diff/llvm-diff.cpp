@@ -17,11 +17,13 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/IRNormalizer.h"
 #include <string>
 #include <utility>
 
@@ -68,6 +70,10 @@ static cl::list<std::string> GlobalsToCompare(cl::Positional,
                                               cl::desc("<globals to compare>"),
                                               cl::cat(DiffCategory));
 
+static cl::opt<bool> EnableIRNormalizer("enable-ir-normalizer", cl::Optional,
+					cl::desc("Call IRNormalizer before diff"),
+					cl::cat(DiffCategory));
+
 int main(int argc, char **argv) {
   cl::HideUnrelatedOptions({&DiffCategory, &getColorCategory()});
   cl::ParseCommandLineOptions(argc, argv);
@@ -78,6 +84,26 @@ int main(int argc, char **argv) {
   std::unique_ptr<Module> LModule = readModule(Context, LeftFilename);
   std::unique_ptr<Module> RModule = readModule(Context, RightFilename);
   if (!LModule || !RModule) return 1;
+
+  if (EnableIRNormalizer) {
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+
+    PassBuilder PB;
+
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+    ModulePassManager PM;
+    PM.addPass(createModuleToFunctionPassAdaptor(IRNormalizerPass()));
+    PM.run(*LModule, MAM);
+    PM.run(*RModule, MAM);
+  }
 
   DiffConsumer Consumer;
   DifferenceEngine Engine(Consumer);
