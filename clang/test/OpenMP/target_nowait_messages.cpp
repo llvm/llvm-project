@@ -6,13 +6,13 @@ void foo() {
 }
 
 int main(int argc, char **argv) {
-  #pragma omp target nowait( // expected-warning {{extra tokens at the end of '#pragma omp target' are ignored}}
+  #pragma omp target nowait(// expected-error {{expected expression}} //  expected-error {{expected ')'}} // expected-note {{to match this '('}}
   foo();
   #pragma omp target nowait (argc)) // expected-warning {{extra tokens at the end of '#pragma omp target' are ignored}}
   foo();
   #pragma omp target nowait device (-10u)
   foo();
-  #pragma omp target nowait (3.14) device (-10u) // expected-warning {{extra tokens at the end of '#pragma omp target' are ignored}}
+  #pragma omp target nowait (3.14) device (-10u) // expected-error {{arguments of OpenMP clause 'nowait' with bitwise operators cannot be of floating type}}
   foo();
 
   return 0;
