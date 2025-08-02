@@ -3843,29 +3843,15 @@ void OpEmitter::genTypeInterfaceMethods() {
   fctx.addSubst("_ctxt", "context");
   body << "  ::mlir::Builder odsBuilder(context);\n";
 
-  // Preprocessing stage to verify all accesses to operands are valid.
-  int maxAccessedIndex = -1;
-  for (int i = 0, e = op.getNumResults(); i != e; ++i) {
-    const InferredResultType &infer = op.getInferredResultType(i);
-    if (!infer.isArg())
-      continue;
-    Operator::OperandOrAttribute arg =
-        op.getArgToOperandOrAttribute(infer.getIndex());
-    if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
-      maxAccessedIndex =
-          std::max(maxAccessedIndex, arg.operandOrAttributeIndex());
-    }
-  }
-  if (maxAccessedIndex != -1) {
-    body << "  if (operands.size() <= " << Twine(maxAccessedIndex) << ")\n";
-    body << "    return ::mlir::failure();\n";
-  }
+  // Emit an adaptor to access right ranges for ods operands.
+  body << "  " << op.getCppClassName()
+       << "::Adaptor adaptor(operands, attributes, properties, regions);\n";
 
-  // Process the type inference graph in topological order, starting from types
-  // that are always fully-inferred: operands and results with constructible
-  // types. The type inference graph here will always be a DAG, so this gives
-  // us the correct order for generating the types. -1 is a placeholder to
-  // indicate the type for a result has not been generated.
+  // Process the type inference graph in topological order, starting from
+  // types that are always fully-inferred: operands and results with
+  // constructible types. The type inference graph here will always be a
+  // DAG, so this gives us the correct order for generating the types. -1 is
+  // a placeholder to indicate the type for a result has not been generated.
   SmallVector<int> constructedIndices(op.getNumResults(), -1);
   int inferredTypeIdx = 0;
   for (int numResults = op.getNumResults(); inferredTypeIdx != numResults;) {
@@ -3880,10 +3866,11 @@ void OpEmitter::genTypeInterfaceMethods() {
         Operator::OperandOrAttribute arg =
             op.getArgToOperandOrAttribute(infer.getIndex());
         if (arg.kind() == Operator::OperandOrAttribute::Kind::Operand) {
-          typeStr = ("operands[" + Twine(arg.operandOrAttributeIndex()) +
-                     "].getType()")
-                        .str();
-
+          std::string getter =
+              "adaptor." +
+              op.getGetterName(
+                  op.getOperand(arg.operandOrAttributeIndex()).name);
+          typeStr = (getter + "().getType()");
           // If this is an attribute, index into the attribute dictionary.
         } else {
           auto *attr =
