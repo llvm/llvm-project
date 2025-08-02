@@ -61,10 +61,17 @@ static constexpr llvm::StringRef DisallowedMethods[] = {
     // problematic because it returns a pointer to an "opaque" structure
     // (thread_t) that is not `void *`, so special casing it is more effort than
     // it's worth.
+
+    // NOTE: Some methods here have different name mangling between Darwin and
+    // Linux platforms, the respective name manglings for each platform are
+    // written here as necessary.
     "_ZN4lldb8SBHostOS10ThreadJoinEP17_opaque_pthread_tPPvPNS_7SBErrorE",
+    "_ZN4lldb8SBHostOS10ThreadJoinEmPPvPNS_7SBErrorE",
     "_ZN4lldb8SBHostOS12ThreadCancelEP17_opaque_pthread_tPNS_7SBErrorE",
+    "_ZN4lldb8SBHostOS12ThreadCancelEmPNS_7SBErrorE",
     "_ZN4lldb8SBHostOS12ThreadCreateEPKcPFPvS3_ES3_PNS_7SBErrorE",
     "_ZN4lldb8SBHostOS12ThreadDetachEP17_opaque_pthread_tPNS_7SBErrorE",
+    "_ZN4lldb8SBHostOS12ThreadDetachEmPNS_7SBErrorE",
     "_ZN4lldb8SBHostOS13ThreadCreatedEPKc",
 };
 
