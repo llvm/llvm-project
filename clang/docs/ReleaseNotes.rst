@@ -104,6 +104,8 @@ New Compiler Flags
 ------------------
 - New option ``-fno-sanitize-annotate-debug-info-traps`` added to disable emitting trap reasons into the debug info when compiling with trapping UBSan (e.g. ``-fsanitize-trap=undefined``).
 
+- New Options ``-fpartial-inlining`` and ``-fno-partial-inlining`` added to adapt with GCC. 
+
 Deprecated Compiler Flags
 -------------------------
 
