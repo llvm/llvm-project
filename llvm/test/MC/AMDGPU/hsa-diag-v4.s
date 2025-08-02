@@ -1,7 +1,7 @@
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,GFX8,PREGFX10,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX10,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1100 -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX11,AMDHSA
-// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX12,AMDHSA
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,GFX8,PREGFX10,AMDHSA,NONGFX90A
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1010 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX10,AMDHSA,NONGFX90A
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1100 -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX11,AMDHSA,NONGFX90A
+// RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx1200 -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,GFX10PLUS,GFX12,AMDHSA,NONGFX90A
 // RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd- -mcpu=gfx810 -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GCN,NONAMDHSA
 // RUN: not llvm-mc --amdhsa-code-object-version=4 -triple amdgcn-amd-amdhsa -mcpu=gfx90a -mattr=+xnack -show-encoding %s 2>&1 >/dev/null | FileCheck %s --check-prefixes=ALL,GFX90A,PREGFX10,AMDHSA
 
@@ -77,7 +77,7 @@
 .end_amdhsa_kernel
 
 // ALL-LABEL: warning: test_amdhsa_accum_offset
-// NONGFX9A: error: directive requires gfx90a+
+// NONGFX90A: error: directive requires gfx90a+
 // GFX90A: error: .amdhsa_next_free_vgpr directive is required
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_accum_offset"
@@ -86,7 +86,6 @@
 .end_amdhsa_kernel
 
 // ALL-LABEL: warning: test_amdhsa_accum_offset_missing
-// NONGFX9A: error: directive requires gfx90a+
 // GFX90A: error: .amdhsa_accum_offset directive is required
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_accum_offset_missing"
@@ -96,7 +95,7 @@
 .end_amdhsa_kernel
 
 // ALL-LABEL: warning: test_amdhsa_accum_offset_invalid0
-// NONGFX9A: error: directive requires gfx90a+
+// NONGFX90A: error: directive requires gfx90a+
 // GFX90A: error: accum_offset should be in range [4..256] in increments of 4
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_accum_offset_invalid0"
@@ -107,7 +106,7 @@
 .end_amdhsa_kernel
 
 // ALL-LABEL: warning: test_amdhsa_accum_offset_invalid5
-// NONGFX9A: error: directive requires gfx90a+
+// NONGFX90A: error: directive requires gfx90a+
 // GFX90A: error: accum_offset should be in range [4..256] in increments of 4
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_accum_offset_invalid5"
@@ -118,7 +117,7 @@
 .end_amdhsa_kernel
 
 // ALL-LABEL: warning: test_amdhsa_accum_offset_invalid257
-// NONGFX9A: error: directive requires gfx90a+
+// NONGFX90A: error: directive requires gfx90a+
 // GFX90A: error: accum_offset should be in range [4..256] in increments of 4
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_accum_offset_invalid257"
@@ -129,7 +128,7 @@
 .end_amdhsa_kernel
 
 // ALL-LABEL: warning: test_amdhsa_accum_offset_invalid8
-// NONGFX9A: error: directive requires gfx90a+
+// NONGFX90A: error: directive requires gfx90a+
 // GFX90A: error: accum_offset exceeds total VGPR allocation
 // NONAMDHSA: error: unknown directive
 .warning "test_amdhsa_accum_offset_invalid8"
