@@ -23,14 +23,14 @@ gpu.func @load_1D_vector(%source: memref<8x16x32xf32>, %offset: index) -> vector
 // CHECK-SAME:  LOAD_GATHER: %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:  LOAD_GATHER: %[[OFFSET:.+]]: index
 // CHECK:       LOAD_GATHER: %[[CST:.+]] = arith.constant dense<true> : vector<8xi1>
-// CHECK:       LOAD_GATHER: %[[C32:.+]] = arith.constant 32 : index
 // CHECK:       LOAD_GATHER: %[[C512:.+]] = arith.constant 512 : index
+// CHECK:       LOAD_GATHER: %[[C32:.+]] = arith.constant 32 : index
 // CHECK:       LOAD_GATHER: %[[STEP:.+]] = vector.step : vector<8xindex>
 // CHECK:       LOAD_GATHER: %[[MUL1:.+]] = arith.muli %[[OFFSET]], %[[C512]] : index
 // CHECK:       LOAD_GATHER: %[[MUL2:.+]] = arith.muli %[[OFFSET]], %[[C32]] : index
 // CHECK:       LOAD_GATHER: %[[ADD1:.+]] = arith.addi %[[MUL1]], %[[MUL2]] : index
 // CHECK:       LOAD_GATHER: %[[ADD2:.+]] = arith.addi %[[ADD1]], %[[OFFSET]] : index
-// CHECK:       LOAD_GATHER: %[[SPLAT:.+]] = vector.splat %[[ADD2]] : vector<8xindex>
+// CHECK:       LOAD_GATHER: %[[SPLAT:.+]] = vector.broadcast %[[ADD2]] :  index to vector<8xindex>
 // CHECK:       LOAD_GATHER: %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[STEP]] : vector<8xindex>
 // CHECK:       LOAD_GATHER: %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<8x16x32xf32> into memref<4096xf32>
 // CHECK:       LOAD_GATHER: %[[VEC:.+]] = xegpu.load %[[COLLAPSE]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : memref<4096xf32>, vector<8xindex>, vector<8xi1> -> vector<8xf32>
@@ -62,9 +62,9 @@ gpu.func @load_2D_vector(%source: memref<8x16x32xf32>,
 // CHECK-SAME:  LOAD_GATHER: %[[SRC:.+]]: memref<8x16x32xf32>,
 // CHECK-SAME:  LOAD_GATHER: %[[OFFSET:.+]]: index
 // CHECK:       LOAD_GATHER: %[[CST:.+]] = arith.constant dense<true> : vector<8x16xi1>
-// CHECK:       LOAD_GATHER: %[[C32:.+]] = arith.constant 32 : index
-// CHECK:       LOAD_GATHER: %[[C512:.+]] = arith.constant 512 : index
 // CHECK:       LOAD_GATHER: %[[CST_0:.+]] = arith.constant dense<32> : vector<8xindex>
+// CHECK:       LOAD_GATHER: %[[C512:.+]] = arith.constant 512 : index
+// CHECK:       LOAD_GATHER: %[[C32:.+]] = arith.constant 32 : index
 // CHECK:       LOAD_GATHER: %[[STEP0:.+]] = vector.step : vector<8xindex>
 // CHECK:       LOAD_GATHER: %[[STEP1:.+]] = vector.step : vector<16xindex>
 // CHECK:       LOAD_GATHER: %[[MUL:.+]] = arith.muli %[[STEP0]], %[[CST_0]] : vector<8xindex>
@@ -77,12 +77,13 @@ gpu.func @load_2D_vector(%source: memref<8x16x32xf32>,
 // CHECK:       LOAD_GATHER: %[[MUL2:.+]] = arith.muli %[[OFFSET]], %[[C32]] : index
 // CHECK:       LOAD_GATHER: %[[ADD1:.+]] = arith.addi %[[MUL1]], %[[MUL2]] : index
 // CHECK:       LOAD_GATHER: %[[ADD2:.+]] = arith.addi %[[ADD1]], %[[OFFSET]] : index
-// CHECK:       LOAD_GATHER: %[[SPLAT:.+]] = vector.splat %[[ADD2]] : vector<8x16xindex>
+// CHECK:       LOAD_GATHER: %[[SPLAT:.+]] = vector.broadcast %[[ADD2]] : index to vector<8x16xindex>
 // CHECK:       LOAD_GATHER: %[[IDX:.+]] = arith.addi %[[SPLAT]], %[[ADD_VEC]] : vector<8x16xindex>
 // CHECK:       LOAD_GATHER: %[[COLLAPSE:.+]] = memref.collapse_shape %[[SRC]] {{\[}}[0, 1, 2]{{\]}} : memref<8x16x32xf32> into memref<4096xf32>
 // CHECK:       LOAD_GATHER: %[[VEC:.+]] = xegpu.load %[[COLLAPSE]]{{\[}}%[[IDX]]{{\]}}, %[[CST]] : memref<4096xf32>, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf32>
 // CHECK:       LOAD_GATHER: return %[[VEC]]
 }
+
 
 // -----
 gpu.module @xevm_module {
@@ -94,34 +95,58 @@ gpu.func @load_zero_pad_out_of_bounds(%source: memref<32x64xf32>,
   gpu.return %0 : vector<8x16xf32>
 }
 
-// CHECK-LABEL: @load_zero_pad_out_of_bounds(
-// CHECK-SAME:  %[[SRC:.+]]: memref<32x64xf32>,
-// CHECK-SAME:  %[[OFFSET:.+]]: index
-// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
-// CHECK-SAME:    memref<32x64xf32> -> !xegpu.tensor_desc<8x16xf32>
-// CHECK:       %[[VEC:.+]] = xegpu.load_nd %[[DESC]]{{.*}}-> vector<8x16xf32>
-// CHECK:       return %[[VEC]]
+// CHECK-LABEL: LOAD_ND: @load_zero_pad_out_of_bounds(
+// CHECK-SAME:  LOAD_ND: %[[SRC:.+]]: memref<32x64xf32>,
+// CHECK-SAME:  LOAD_ND: %[[OFFSET:.+]]: index
+// CHECK:       LOAD_ND: %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
+// CHECK-SAME:  LOAD_ND:   memref<32x64xf32> -> !xegpu.tensor_desc<8x16xf32>
+// CHECK:       LOAD_ND: %[[VEC:.+]] = xegpu.load_nd %[[DESC]]{{.*}}-> vector<8x16xf32>
+// CHECK:       LOAD_ND: return %[[VEC]]
+
+// CHECK-LABEL: LOAD_GATHER: @load_zero_pad_out_of_bounds(
+// CHECK:       LOAD_GATHER: vector.transfer_read
+
 }
+
 
 // -----
 gpu.module @xevm_module {
 gpu.func @load_transposed(%source: memref<32x64xf32>,
-    %offset: index) -> vector<8x16xf32> {
+    %i: index, %j: index) -> vector<8x16xf32> {
   %c0 = arith.constant 0.0 : f32
-  %0 = vector.transfer_read %source[%offset, %offset], %c0
+  %0 = vector.transfer_read %source[%i, %j], %c0
     {permutation_map = affine_map<(d0, d1) -> (d1, d0)>,
     in_bounds = [true, true]} : memref<32x64xf32>, vector<8x16xf32>
   gpu.return %0 : vector<8x16xf32>
 }
 
-// CHECK-LABEL: @load_transposed(
-// CHECK-SAME:  %[[SRC:.+]]: memref<32x64xf32>,
-// CHECK-SAME:  %[[OFFSET:.+]]: index
-// CHECK:       %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET]], %[[OFFSET]]]
-// CHECK-SAME:    memref<32x64xf32> -> !xegpu.tensor_desc<16x8xf32
-// CHECK:       %[[VEC:.+]] = xegpu.load_nd %[[DESC]] <{transpose = array<i64: 1, 0>}>
-// CHECK-SAME:    -> vector<8x16xf32>
-// CHECK:       return %[[VEC]]
+// CHECK-LABEL: LOAD_ND: @load_transposed(%[[SRC:.+]]: memref<32x64xf32>, %[[OFFSET1:.+]]: index, %[[OFFSET2:.+]]: index
+// CHECK:       LOAD_ND: %[[DESC:.+]] = xegpu.create_nd_tdesc %[[SRC]][%[[OFFSET1]], %[[OFFSET2]]]
+// CHECK-SAME:  LOAD_ND:   memref<32x64xf32> -> !xegpu.tensor_desc<16x8xf32
+// CHECK:       LOAD_ND: %[[VEC:.+]] = xegpu.load_nd %[[DESC]] <{transpose = array<i64: 1, 0>}>
+// CHECK-SAME:  LOAD_ND:   -> vector<8x16xf32>
+// CHECK:       LOAD_ND: return %[[VEC]]
+
+
+// CHECK-LABEL: LOAD_GATHER: @load_transposed(
+// CHECK:       LOAD_GATHER: %[[CST:.*]] = arith.constant dense<true> : vector<8x16xi1>
+// CHECK:       LOAD_GATHER: %[[CST_0:.*]] = arith.constant dense<64> : vector<16xindex>
+// CHECK:       LOAD_GATHER: %[[C64:.*]] = arith.constant 64 : index
+// CHECK:       LOAD_GATHER: %[[STEP0:.*]] = vector.step : vector<8xindex>
+// CHECK:       LOAD_GATHER: %[[STEP1:.*]] = vector.step : vector<16xindex>
+// CHECK:       LOAD_GATHER: %[[MUL1:.*]] = arith.muli %[[STEP1]], %[[CST_0]] : vector<16xindex>
+// CHECK:       LOAD_GATHER: %[[SHAPE0:.*]] = vector.shape_cast %[[STEP0]] : vector<8xindex> to vector<8x1xindex>
+// CHECK:       LOAD_GATHER: %[[SHAPE1:.*]] = vector.shape_cast %[[MUL1]] : vector<16xindex> to vector<1x16xindex>
+// CHECK:       LOAD_GATHER: %[[BCAST0:.*]] = vector.broadcast %[[SHAPE0]] : vector<8x1xindex> to vector<8x16xindex>
+// CHECK:       LOAD_GATHER: %[[BCAST1:.*]] = vector.broadcast %[[SHAPE1]] : vector<1x16xindex> to vector<8x16xindex>
+// CHECK:       LOAD_GATHER: %[[ADD1:.*]] = arith.addi %[[BCAST0]], %[[BCAST1]] : vector<8x16xindex>
+// CHECK:       LOAD_GATHER: %[[MUL2:.*]] = arith.muli %arg2, %[[C64]] : index
+// CHECK:       LOAD_GATHER: %[[ADD2:.*]] = arith.addi %arg1, %[[MUL2]] : index
+// CHECK:       LOAD_GATHER: %[[BCAST2:.*]] = vector.broadcast %[[ADD2]] : index to vector<8x16xindex>
+// CHECK:       LOAD_GATHER: %[[ADD3:.*]] = arith.addi %[[BCAST2]], %[[ADD1]] : vector<8x16xindex>
+// CHECK:       LOAD_GATHER: %[[COLLAPSE:.*]] = memref.collapse_shape %arg0 {{\[\[}}0, 1{{\]\]}} : memref<32x64xf32> into memref<2048xf32>
+// CHECK:       LOAD_GATHER: %[[LOAD:.*]] = xegpu.load %[[COLLAPSE]][%[[ADD3]]], %[[CST]] : memref<2048xf32>, vector<8x16xindex>, vector<8x16xi1> -> vector<8x16xf32>
+// CHECK:       LOAD_GATHER: gpu.return %[[LOAD]] : vector<8x16xf32>
 }
 
 // -----
@@ -278,8 +303,11 @@ gpu.func @no_load_out_of_bounds_non_zero_pad(%source: memref<32x64xf32>,
   gpu.return %0, %1 : vector<8x16xf32>, vector<8x16xf32>
 }
 
-// CHECK-LABEL:   @no_load_out_of_bounds_non_zero_pad(
-// CHECK-COUNT-2: vector.transfer_read
+// CHECK-LABEL:   LOAD_ND: @no_load_out_of_bounds_non_zero_pad(
+// CHECK-COUNT-2: LOAD_ND: vector.transfer_read
+
+// CHECK-LABEL:   LOAD_GATHER: @no_load_out_of_bounds_non_zero_pad(
+// CHECK-COUNT-2: LOAD_GATHER: vector.transfer_read
 }
 
 // -----
@@ -292,9 +320,13 @@ gpu.func @no_load_out_of_bounds_1D_vector(%source: memref<8x16x32xf32>,
   gpu.return %0 : vector<8xf32>
 }
 
-// CHECK-LABEL: @no_load_out_of_bounds_1D_vector(
-// CHECK:       vector.transfer_read
+// CHECK-LABEL: LOAD_ND: @no_load_out_of_bounds_1D_vector(
+// CHECK:       LOAD_ND: vector.transfer_read
+
+// CHECK-LABEL: LOAD_GATHER: @no_load_out_of_bounds_1D_vector(
+// CHECK:       LOAD_GATHER: vector.transfer_read
 }
+
 // -----
 gpu.module @xevm_module {
 gpu.func @no_load_masked(%source : memref<4xf32>,
@@ -306,8 +338,11 @@ gpu.func @no_load_masked(%source : memref<4xf32>,
   gpu.return %0 : vector<4xf32>
 }
 
-// CHECK-LABEL: @no_load_masked(
-// CHECK:       vector.transfer_read
+// CHECK-LABEL: LOAD_ND: @no_load_masked(
+// CHECK:       LOAD_ND: vector.transfer_read
+
+// CHECK-LABEL: LOAD_GATHER: @no_load_masked(
+// CHECK:       LOAD_GATHER: vector.transfer_read
 }
 
 // -----
@@ -320,8 +355,11 @@ gpu.func @no_load_tensor(%source: tensor<32x64xf32>,
   gpu.return %0 : vector<8x16xf32>
 }
 
-// CHECK-LABEL: @no_load_tensor(
-// CHECK:       vector.transfer_read
+// CHECK-LABEL: LOAD_ND: @no_load_tensor(
+// CHECK:       LOAD_ND: vector.transfer_read
+
+// CHECK-LABEL: LOAD_GATHER: @no_load_tensor(
+// CHECK:       LOAD_GATHER: vector.transfer_read
 }
 
 // -----
@@ -334,8 +372,11 @@ gpu.func @no_load_high_dim_vector(%source: memref<16x32x64xf32>,
   gpu.return %0 : vector<8x16x32xf32>
 }
 
-// CHECK-LABEL: @no_load_high_dim_vector(
-// CHECK:       vector.transfer_read
+// CHECK-LABEL: LOAD_ND: @no_load_high_dim_vector(
+// CHECK:       LOAD_ND: vector.transfer_read
+
+// CHECK-LABEL: LOAD_GATHER: @no_load_high_dim_vector(
+// CHECK:       LOAD_GATHER: vector.transfer_read
 }
 
 // -----
@@ -349,9 +390,13 @@ gpu.func @no_load_non_unit_inner_stride(
   gpu.return %0 : vector<8xf32>
 }
 
-// CHECK-LABEL: @no_load_non_unit_inner_stride(
-// CHECK:       vector.transfer_read
+// CHECK-LABEL: LOAD_ND: @no_load_non_unit_inner_stride(
+// CHECK:       LOAD_ND: vector.transfer_read
+
+// CHECK-LABEL: LOAD_GATHER: @no_load_non_unit_inner_stride(
+// CHECK:       LOAD_GATHER: vector.transfer_read
 }
+
 
 // -----
 gpu.module @xevm_module {
@@ -364,8 +409,11 @@ gpu.func @no_load_unsupported_map(%source: memref<16x32x64xf32>,
   gpu.return %0 : vector<8x16xf32>
 }
 
-// CHECK-LABEL: @no_load_unsupported_map(
-// CHECK:       vector.transfer_read
+// CHECK-LABEL: LOAD_ND: @no_load_unsupported_map(
+// CHECK:       LOAD_ND: vector.transfer_read
+
+// CHECK-LABEL: LOAD_GATHER: @no_load_unsupported_map(
+// CHECK:       LOAD_GATHER: vector.transfer_read
 }
 
 // -----
@@ -379,7 +427,9 @@ gpu.func @no_load_transpose_unsupported_data_type(%source: memref<32x64xf16>,
   gpu.return %0 : vector<8x16xf16>
 }
 
-// CHECK-LABEL: @no_load_transpose_unsupported_data_type(
-// CHECK:       vector.transfer_read
-}
+// CHECK-LABEL: LOAD_ND: @no_load_transpose_unsupported_data_type(
+// CHECK:       LOAD_ND: vector.transfer_read
 
+// CHECK-LABEL: LOAD_GATHER: @no_load_transpose_unsupported_data_type(
+// CHECK:       LOAD_GATHER: vector.transfer_read
+}
