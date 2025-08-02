@@ -559,6 +559,7 @@ PreservedAnalyses CodeGenPreparePass::run(Function &F,
 }
 
 bool CodeGenPrepare::run(Function &F, FunctionAnalysisManager &AM) {
+  assert(TM && "TargetMachine is required for CodeGenPrepare");
   DL = &F.getDataLayout();
   SubtargetInfo = TM->getSubtargetImpl(F);
   TLI = SubtargetInfo->getTargetLowering();
@@ -589,16 +590,16 @@ bool CodeGenPrepare::_run(Function &F) {
     // counts based hotness overwrite the cold attribute.
     // This is a conservative behabvior.
     if (F.hasFnAttribute(Attribute::Hot) ||
-        PSI->isFunctionHotInCallGraph(&F, *BFI))
+        (PSI && PSI->isFunctionHotInCallGraph(&F, *BFI)))
       F.setSectionPrefix("hot");
     // If PSI shows this function is not hot, we will placed the function
     // into unlikely section if (1) PSI shows this is a cold function, or
     // (2) the function has a attribute of cold.
-    else if (PSI->isFunctionColdInCallGraph(&F, *BFI) ||
+    else if ((PSI && PSI->isFunctionColdInCallGraph(&F, *BFI)) ||
              F.hasFnAttribute(Attribute::Cold))
       F.setSectionPrefix("unlikely");
-    else if (ProfileUnknownInSpecialSection && PSI->hasPartialSampleProfile() &&
-             PSI->isFunctionHotnessUnknown(F))
+    else if (ProfileUnknownInSpecialSection && PSI &&
+             PSI->hasPartialSampleProfile() && PSI->isFunctionHotnessUnknown(F))
       F.setSectionPrefix("unknown");
   }
 
