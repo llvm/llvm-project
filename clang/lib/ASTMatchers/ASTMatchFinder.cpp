@@ -1336,6 +1336,44 @@ private:
     return false;
   }
 
+  template <typename T> static SourceLocation getNodeLocation(const T &Node) {
+    return Node.getBeginLoc();
+  }
+
+  static SourceLocation getNodeLocation(const QualType &Node) { return {}; }
+
+  static SourceLocation getNodeLocation(const NestedNameSpecifier &Node) {
+    return {};
+  }
+
+  static SourceLocation getNodeLocation(const CXXCtorInitializer &Node) {
+    return Node.getSourceLocation();
+  }
+
+  static SourceLocation getNodeLocation(const TemplateArgumentLoc &Node) {
+    return Node.getLocation();
+  }
+
+  static SourceLocation getNodeLocation(const Attr &Node) {
+    return Node.getLocation();
+  }
+
+  bool isInSystemHeader(const SourceLocation &Loc) {
+    const SourceManager &SM = getASTContext().getSourceManager();
+    return SM.isInSystemHeader(Loc);
+  }
+
+  template <typename T> bool shouldSkipNode(const T &Node) {
+    if constexpr (std::is_pointer_v<T>)
+      return (Node == nullptr) || shouldSkipNode(*Node);
+    else {
+      if (Options.IgnoreSystemHeaders &&
+          isInSystemHeader(getNodeLocation(Node)))
+        return true;
+      return false;
+    }
+  }
+
   /// Bucket to record map.
   ///
   /// Used to get the appropriate bucket for each matcher.
@@ -1465,9 +1503,8 @@ bool MatchASTVisitor::objcClassIsDerivedFrom(
 }
 
 bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
-  if (!DeclNode) {
+  if (shouldSkipNode(DeclNode))
     return true;
-  }
 
   bool ScopedTraversal =
       TraversingASTNodeNotSpelledInSource || DeclNode->isImplicit();
@@ -1495,9 +1532,9 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
 }
 
 bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
-  if (!StmtNode) {
+  if (shouldSkipNode(StmtNode))
     return true;
-  }
+
   bool ScopedTraversal = TraversingASTNodeNotSpelledInSource ||
                          TraversingASTChildrenNotSpelledInSource;
 
@@ -1507,11 +1544,17 @@ bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
 }
 
 bool MatchASTVisitor::TraverseType(QualType TypeNode) {
+  if (shouldSkipNode(TypeNode))
+    return true;
+
   match(TypeNode);
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseType(TypeNode);
 }
 
 bool MatchASTVisitor::TraverseTypeLoc(TypeLoc TypeLocNode) {
+  if (shouldSkipNode(TypeLocNode))
+    return true;
+
   // The RecursiveASTVisitor only visits types if they're not within TypeLocs.
   // We still want to find those types via matchers, so we match them here. Note
   // that the TypeLocs are structurally a shadow-hierarchy to the expressed
@@ -1523,6 +1566,9 @@ bool MatchASTVisitor::TraverseTypeLoc(TypeLoc TypeLocNode) {
 }
 
 bool MatchASTVisitor::TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
+  if (shouldSkipNode(NNS))
+    return true;
+
   match(*NNS);
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseNestedNameSpecifier(NNS);
 }
@@ -1530,6 +1576,9 @@ bool MatchASTVisitor::TraverseNestedNameSpecifier(NestedNameSpecifier *NNS) {
 bool MatchASTVisitor::TraverseNestedNameSpecifierLoc(
     NestedNameSpecifierLoc NNS) {
   if (!NNS)
+    return true;
+
+  if (shouldSkipNode(NNS))
     return true;
 
   match(NNS);
@@ -1544,7 +1593,7 @@ bool MatchASTVisitor::TraverseNestedNameSpecifierLoc(
 
 bool MatchASTVisitor::TraverseConstructorInitializer(
     CXXCtorInitializer *CtorInit) {
-  if (!CtorInit)
+  if (shouldSkipNode(CtorInit))
     return true;
 
   bool ScopedTraversal = TraversingASTNodeNotSpelledInSource ||
@@ -1562,11 +1611,17 @@ bool MatchASTVisitor::TraverseConstructorInitializer(
 }
 
 bool MatchASTVisitor::TraverseTemplateArgumentLoc(TemplateArgumentLoc Loc) {
+  if (shouldSkipNode(Loc))
+    return true;
+
   match(Loc);
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseTemplateArgumentLoc(Loc);
 }
 
 bool MatchASTVisitor::TraverseAttr(Attr *AttrNode) {
+  if (shouldSkipNode(AttrNode))
+    return true;
+
   match(*AttrNode);
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseAttr(AttrNode);
 }
