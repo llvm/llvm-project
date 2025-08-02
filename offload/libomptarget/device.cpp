@@ -191,6 +191,10 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                                   DstPtr, Size, AsyncInfo);
 }
 
+int32_t DeviceTy::dataFence(AsyncInfoTy &AsyncInfo) {
+  return RTL->data_fence(RTLDeviceID, AsyncInfo);
+}
+
 int32_t DeviceTy::notifyDataMapped(void *HstPtr, int64_t Size) {
   DP("Notifying about new mapping: HstPtr=" DPxMOD ", Size=%" PRId64 "\n",
      DPxPTR(HstPtr), Size);
