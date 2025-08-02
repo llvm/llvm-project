@@ -6417,8 +6417,10 @@ bool CodeGenPrepare::optimizeUMulWithOverflow(Instruction *I) {
   unsigned VTHalfBitWidth = VTBitWidth / 2;
   auto *LegalTy = IntegerType::getIntNTy(I->getContext(), VTHalfBitWidth);
 
-  // Skip the optimizaiton if the type with HalfBitWidth is not legal for the target.
-  if (TLI->getTypeAction(I->getContext(), TLI->getValueType(*DL, LegalTy)) != TargetLowering::TypeLegal)
+  // Skip the optimizaiton if the type with HalfBitWidth is not legal for the
+  // target.
+  if (TLI->getTypeAction(I->getContext(), TLI->getValueType(*DL, LegalTy)) !=
+      TargetLowering::TypeLegal)
     return false;
 
   I->getParent()->setName("overflow.res");
@@ -6449,9 +6451,9 @@ bool CodeGenPrepare::optimizeUMulWithOverflow(Instruction *I) {
   auto *HiLHS = Builder.CreateTrunc(ShrHiLHS, LegalTy, "hi.lhs.trunc");
 
   auto *CmpLHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiLHS,
-                                       ConstantInt::getNullValue(LegalTy));
+                                   ConstantInt::getNullValue(LegalTy));
   auto *CmpRHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiRHS,
-                                         ConstantInt::getNullValue(LegalTy));
+                                   ConstantInt::getNullValue(LegalTy));
   auto *Or = Builder.CreateOr(CmpLHS, CmpRHS, "or.lhs.rhs");
   Builder.CreateCondBr(Or, OverflowBB, NoOverflowBB);
   OverflowoEntryBB->getTerminator()->eraseFromParent();
@@ -6462,14 +6464,14 @@ bool CodeGenPrepare::optimizeUMulWithOverflow(Instruction *I) {
   auto *ExtLoLHS = Builder.CreateZExt(LoLHS, Ty, "lo.lhs.ext");
   auto *ExtLoRHS = Builder.CreateZExt(LoRHS, Ty, "lo.rhs.ext");
   auto *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.no.overflow");
-  StructType *STy = StructType::get(I->getContext(),
-                        {Ty, IntegerType::getInt1Ty(I->getContext())});
+  StructType *STy = StructType::get(
+      I->getContext(), {Ty, IntegerType::getInt1Ty(I->getContext())});
   Value *StructValNoOverflow = PoisonValue::get(STy);
   StructValNoOverflow =
-  Builder.CreateInsertValue(StructValNoOverflow, Mul, {0});
+      Builder.CreateInsertValue(StructValNoOverflow, Mul, {0});
   StructValNoOverflow = Builder.CreateInsertValue(
       StructValNoOverflow, ConstantInt::getFalse(I->getContext()), {1});
-      Builder.CreateBr(OverflowResBB);
+  Builder.CreateBr(OverflowResBB);
 
   //------------------------------------------------------------------------------
   // BB overflow.res:
@@ -6514,8 +6516,10 @@ bool CodeGenPrepare::optimizeSMulWithOverflow(Instruction *I) {
   unsigned VTHalfBitWidth = VTBitWidth / 2;
   auto *LegalTy = IntegerType::getIntNTy(I->getContext(), VTHalfBitWidth);
 
-  // Skip the optimizaiton if the type with HalfBitWidth is not legal for the target.
-  if (TLI->getTypeAction(I->getContext(), TLI->getValueType(*DL, LegalTy)) != TargetLowering::TypeLegal)
+  // Skip the optimizaiton if the type with HalfBitWidth is not legal for the
+  // target.
+  if (TLI->getTypeAction(I->getContext(), TLI->getValueType(*DL, LegalTy)) !=
+      TargetLowering::TypeLegal)
     return false;
 
   I->getParent()->setName("overflow.res");
@@ -6540,13 +6544,13 @@ bool CodeGenPrepare::optimizeSMulWithOverflow(Instruction *I) {
   IRBuilder<> Builder(OverflowoEntryBB->getTerminator());
   auto *LoRHS = Builder.CreateTrunc(RHS, LegalTy, "lo.rhs");
   auto *SignLoRHS =
-  Builder.CreateAShr(LoRHS, VTHalfBitWidth - 1, "sign.lo.rhs");
+      Builder.CreateAShr(LoRHS, VTHalfBitWidth - 1, "sign.lo.rhs");
   auto *HiRHS = Builder.CreateLShr(RHS, VTHalfBitWidth, "rhs.lsr");
   HiRHS = Builder.CreateTrunc(HiRHS, LegalTy, "hi.rhs");
 
   auto *LoLHS = Builder.CreateTrunc(LHS, LegalTy, "lo.lhs");
   auto *SignLoLHS =
-  Builder.CreateAShr(LoLHS, VTHalfBitWidth - 1, "sign.lo.lhs");
+      Builder.CreateAShr(LoLHS, VTHalfBitWidth - 1, "sign.lo.lhs");
   auto *HiLHS = Builder.CreateLShr(LHS, VTHalfBitWidth, "lhs.lsr");
   HiLHS = Builder.CreateTrunc(HiLHS, LegalTy, "hi.lhs");
 
@@ -6562,14 +6566,14 @@ bool CodeGenPrepare::optimizeSMulWithOverflow(Instruction *I) {
   auto *ExtLoLHS = Builder.CreateSExt(LoLHS, Ty, "lo.lhs.ext");
   auto *ExtLoRHS = Builder.CreateSExt(LoRHS, Ty, "lo.rhs.ext");
   auto *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.no.overflow");
-  StructType * STy = StructType::get(I->getContext(),
-                        {Ty, IntegerType::getInt1Ty(I->getContext())});
+  StructType *STy = StructType::get(
+      I->getContext(), {Ty, IntegerType::getInt1Ty(I->getContext())});
   Value *StructValNoOverflow = PoisonValue::get(STy);
   StructValNoOverflow =
-  Builder.CreateInsertValue(StructValNoOverflow, Mul, {0});
+      Builder.CreateInsertValue(StructValNoOverflow, Mul, {0});
   StructValNoOverflow = Builder.CreateInsertValue(
       StructValNoOverflow, ConstantInt::getFalse(I->getContext()), {1});
-      Builder.CreateBr(OverflowResBB);
+  Builder.CreateBr(OverflowResBB);
 
   //------------------------------------------------------------------------------
   // BB overflow.res:
