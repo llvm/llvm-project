@@ -13,6 +13,7 @@ add_clang_library(clangFormat
   MacroExpander.cpp
   MatchFilePath.cpp
   NamespaceEndCommentsFixer.cpp
+  NumericLiteralCaseFixer.cpp
   ObjCPropertyAttributeOrderFixer.cpp
   QualifierAlignmentFixer.cpp
   SortJavaScriptImports.cpp
