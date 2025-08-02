@@ -4261,6 +4261,12 @@ private:
     enqueueUsers(SI);
     return false;
   }
+
+  bool visitIntrinsicInst(IntrinsicInst &II) {
+    if (II.isLaunderOrStripInvariantGroup())
+      enqueueUsers(II);
+    return false;
+  }
 };
 
 } // end anonymous namespace

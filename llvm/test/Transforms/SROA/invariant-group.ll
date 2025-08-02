@@ -155,6 +155,41 @@ define void @partial_promotion_of_alloca() {
   ret void
 }
 
+define void @launder_in_loop() {
+; CHECK-LABEL: @launder_in_loop(
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    br i1 true, label [[BODY:%.*]], label [[EXIT:%.*]]
+; CHECK:       body:
+; CHECK-NEXT:    [[STRUCT:%.*]] = call [[T:%.*]] @[[MAKE_T:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]]()
+; CHECK-NEXT:    [[STRUCT_FCA_0_EXTRACT:%.*]] = extractvalue [[T]] [[STRUCT]], 0
+; CHECK-NEXT:    [[STRUCT_FCA_1_EXTRACT:%.*]] = extractvalue [[T]] [[STRUCT]], 1
+; CHECK-NEXT:    br label [[HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+  %struct_ptr = alloca %t, i64 1, align 4
+  br label %header
+
+header:
+  br i1 true, label %body, label %exit
+
+body:                                                ; preds = %6
+  %struct_ptr_fresh = call ptr @llvm.launder.invariant.group.p0(ptr %struct_ptr)
+  %struct = call %t @make_t()
+  store %t %struct, ptr %struct_ptr_fresh, align 4, !invariant.group !0
+  %first_ptr = getelementptr %t, ptr %struct_ptr_fresh, i32 0, i32 0
+  %first = load i32, ptr %first_ptr, align 4
+  %second_ptr = getelementptr %t, ptr %struct_ptr_fresh, i32 0, i32 1
+  %second = load i32, ptr %second_ptr, align 4
+  br label %header
+
+exit:
+  ret void
+}
+
+declare %t @make_t()
+
 declare void @use(ptr)
 
 !0 = !{}
