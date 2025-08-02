@@ -1,0 +1,75 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// REQUIRES: std-at-least-c++26
+
+// <optional>
+
+// constexpr iterator optional::end() noexcept;
+// constexpr const_iterator optional::end() noexcept;
+
+#include <cassert>
+#include <iterator>
+#include <ranges>
+#include <optional>
+
+template <typename T>
+constexpr bool test() {
+  std::optional<T> disengaged{std::nullopt};
+  const std::optional<T> disengaged2{std::nullopt};
+
+  { // end() is marked noexcept
+    static_assert(noexcept(disengaged.end()));
+    static_assert(noexcept(disengaged2.end()));
+  }
+
+  { // end() == begin() and end() == end() if the optional is disengaged
+    auto it  = disengaged.end();
+    auto it2 = disengaged2.end();
+
+    assert(it == disengaged.begin());
+    assert(disengaged.begin() == it);
+    assert(it == disengaged.end());
+
+    assert(it2 == disengaged2.begin());
+    assert(disengaged2.begin() == it2);
+    assert(it2 == disengaged2.end());
+  }
+
+  std::optional<T> engaged{T{}};
+  const std::optional<T> engaged2{T{}};
+
+  { // end() != begin() if the optional is engaged
+    auto it  = engaged.end();
+    auto it2 = engaged2.end();
+
+    assert(it != engaged.begin());
+    assert(engaged.begin() != it);
+
+    assert(it2 != engaged2.begin());
+    assert(engaged2.begin() != it2);
+  }
+
+  return true;
+}
+
+constexpr bool tests() {
+  assert(test<int>());
+  assert(test<char>());
+  assert(test<const int>());
+  assert(test<const char>());
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(tests());
+  static_assert(tests());
+
+  return 0;
+}
