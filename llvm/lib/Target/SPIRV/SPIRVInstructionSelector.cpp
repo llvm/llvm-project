@@ -1011,7 +1011,8 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                      .addDef(ResVReg)
                      .addUse(GR.getSPIRVTypeID(ResType))
                      .addImm(static_cast<uint32_t>(Set))
-                     .addImm(Opcode);
+                     .addImm(Opcode)
+                     .setMIFlags(I.getFlags());
       const unsigned NumOps = I.getNumOperands();
       unsigned Index = 1;
       if (Index < NumOps &&
@@ -2463,6 +2464,7 @@ bool SPIRVInstructionSelector::selectCmp(Register ResVReg,
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(Cmp0)
       .addUse(Cmp1)
+      .setMIFlags(I.getFlags())
       .constrainAllUses(TII, TRI, RBI);
 }
 
