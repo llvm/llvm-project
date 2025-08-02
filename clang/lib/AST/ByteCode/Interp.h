@@ -1465,14 +1465,8 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.P.getPtrGlobal(I);
-  if (!CheckConstant(S, OpPC, Ptr.getFieldDesc()))
-    return false;
-  if (Ptr.isExtern())
-    return false;
 
-  // If a global variable is uninitialized, that means the initializer we've
-  // compiled for it wasn't a constant expression. Diagnose that.
-  if (!CheckGlobalInitialized(S, OpPC, Ptr))
+  if (!CheckLoad(S, OpPC, Ptr))
     return false;
 
   S.Stk.push<T>(Ptr.deref<T>());
