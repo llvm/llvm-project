@@ -7,6 +7,14 @@ if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
                       " is not 'Clang ${req_ver}'.")
 endif()
 
+if(OFFLOAD_ENABLE_EMISSARY_APIS)
+  set(emissary_sources
+    src/Emissary.cpp
+    src/EmissaryFortrt.cpp
+    src/EmissaryPrint.cpp
+  )
+endif()
+
 set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Allocator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Configuration.cpp
@@ -23,6 +31,12 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Tasking.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/DeviceUtils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Workshare.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/ExtraMapping.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Xteamr.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Memory.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/Xteams.cpp
+  ${emissary_sources}
+
 )
 
 list(APPEND compile_options -flto)
