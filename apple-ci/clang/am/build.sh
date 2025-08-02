@@ -4,6 +4,13 @@ set -eu
 SRC_DIR=$PWD/llvm-project
 BUILD_DIR=$PWD/build
 
+if [[ -e llvm/CMakeLists.txt && -e clang && -e compiler-rt ]]; then
+    # Looks like we are already in the llvm-project directory.
+    # Adjust the source and build directory location variables accordingly.
+    SRC_DIR=$PWD
+    BUILD_DIR=$PWD/../build
+fi
+
 for arg; do
   case $arg in
     --src=*) SRC_DIR="${arg##*=}"; shift ;;
