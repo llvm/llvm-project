@@ -109,7 +109,7 @@ static constexpr float LOG_F_FLOAT[128] = {
 // x should be positive, normal finite value
 // TODO: Simplify range reduction and polynomial degree for float16.
 //       See issue #137190.
-LIBC_INLINE static constexpr float log_eval_f(float x) {
+LIBC_INLINE static float log_eval_f(float x) {
   // For x = 2^ex * (1 + mx), logf(x) = ex * logf(2) + logf(1 + mx).
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
