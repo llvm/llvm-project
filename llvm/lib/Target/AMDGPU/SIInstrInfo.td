@@ -1774,6 +1774,7 @@ class getVALUDstForVT<ValueType VT, bit IsTrue16 = 0, bit IsVOP3Encoding = 0> {
                               !eq(VT.Size, 256) : VOPDstOperand<VReg_256>,
                               !eq(VT.Size, 192) : VOPDstOperand<VReg_192>,
                               !eq(VT.Size, 128) : VOPDstOperand<VReg_128>,
+                              !eq(VT.Size, 96)   : VOPDstOperand<VReg_96>,
                               !eq(VT.Size, 64)  : VOPDstOperand<VReg_64>,
                               !eq(VT.Size, 32)  : VOPDstOperand<VGPR_32>,
                               !eq(VT.Size, 16)  : op16,
@@ -1924,6 +1925,7 @@ class getVOP3DPPSrcForVT<ValueType VT, bit IsFake16 = 1> {
         !eq(VT, v2f16)  : VCSrc_v2f16,
         !eq(VT, v2bf16) : VCSrc_v2bf16,
         !eq(VT, f32)    : VCSrc_f32,
+        !eq(VT, v2i32)  : VCSrc_v2b32,
         1               : VCSrc_b32);
 }
 

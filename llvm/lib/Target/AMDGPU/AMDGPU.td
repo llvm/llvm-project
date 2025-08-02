@@ -1160,6 +1160,12 @@ def FeatureTanhInsts : SubtargetFeature<"tanh-insts",
   "Has v_tanh_f32/f16 instructions"
 >;
 
+def FeatureTensorCvtLutInsts : SubtargetFeature<"tensor-cvt-lut-insts",
+  "HasTensorCvtLutInsts",
+  "true",
+  "Has v_perm_pk16* instructions"
+>;
+
 def FeatureTransposeLoadF4F6Insts : SubtargetFeature<"transpose-load-f4f6-insts",
   "HasTransposeLoadF4F6Insts",
   "true",
@@ -2030,6 +2036,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDPPSrc1SGPR,
    FeatureBitOp3Insts,
    FeatureTanhInsts,
+   FeatureTensorCvtLutInsts,
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
@@ -2784,6 +2791,9 @@ def HasBitOp3Insts : Predicate<"Subtarget->hasBitOp3Insts()">,
 
 def HasTanhInsts : Predicate<"Subtarget->hasTanhInsts()">,
   AssemblerPredicate<(all_of FeatureTanhInsts)>;
+
+def HasTensorCvtLutInsts : Predicate<"Subtarget->hasTensorCvtLutInsts()">,
+  AssemblerPredicate<(all_of FeatureTensorCvtLutInsts)>;
 
 def HasTransposeLoadF4F6Insts : Predicate<"Subtarget->hasTransposeLoadF4F6Insts()">,
   AssemblerPredicate<(all_of FeatureTransposeLoadF4F6Insts)>;

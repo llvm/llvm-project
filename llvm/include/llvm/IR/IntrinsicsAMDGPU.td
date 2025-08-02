@@ -3705,6 +3705,18 @@ def int_amdgcn_permlane_idx_gen : ClangBuiltin<"__builtin_amdgcn_permlane_idx_ge
             [llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+def int_amdgcn_perm_pk16_b4_u4 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b4_u4">,
+  DefaultAttrsIntrinsic<[llvm_v2i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_v2i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk16_b6_u4 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b6_u4">,
+  DefaultAttrsIntrinsic<[llvm_v3i32_ty], [llvm_i32_ty, llvm_i64_ty, llvm_v2i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
+def int_amdgcn_perm_pk16_b8_u4 : ClangBuiltin<"__builtin_amdgcn_perm_pk16_b8_u4">,
+  DefaultAttrsIntrinsic<[llvm_v4i32_ty], [llvm_i64_ty, llvm_i64_ty, llvm_v2i32_ty],
+                        [IntrNoMem, IntrSpeculatable]>;
+
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
 // should emit calls to these.

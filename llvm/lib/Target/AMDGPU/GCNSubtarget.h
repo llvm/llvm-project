@@ -236,6 +236,7 @@ protected:
   bool Has64BitLiterals = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
+  bool HasTensorCvtLutInsts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
@@ -1410,6 +1411,8 @@ public:
   bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
+
+  bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
