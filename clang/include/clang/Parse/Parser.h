@@ -1091,6 +1091,8 @@ private:
                                  unsigned ArgumentIndex) override;
   void CodeCompleteIncludedFile(llvm::StringRef Dir, bool IsAngled) override;
   void CodeCompleteNaturalLanguage() override;
+  void CodeCompleteModuleImport(SourceLocation ImportLoc,
+                                ModuleIdPath Path) override;
 
   ///@}
 
