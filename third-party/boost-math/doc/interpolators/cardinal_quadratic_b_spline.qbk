@@ -1,0 +1,56 @@
+[/
+Copyright (c) 2019 Nick Thompson
+Use, modification and distribution are subject to the
+Boost Software License, Version 1.0. (See accompanying file
+LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
+]
+
+[section:cardinal_quadratic_b Cardinal Quadratic B-spline interpolation]
+
+[heading Synopsis]
+``
+  #include <boost/math/interpolators/cardinal_quadratic_b_spline.hpp>
+``
+
+    namespace boost{ namespace math{ namespace interpolators {
+
+    template <class Real>
+    class cardinal_quadratic_b_spline
+    {
+    public:
+        // If you don't know the value of the derivative at the endpoints, leave them as NaNs and the routine will estimate them.
+        // y[0] = y(a), y[n - 1] = y(b), step_size = (b - a)/(n -1).
+        cardinal_quadratic_b_spline(const Real* const y,
+                                    size_t n,
+                                    Real t0 /* initial time, left endpoint */,
+                                    Real h  /*spacing, stepsize*/,
+                                    Real left_endpoint_derivative = std::numeric_limits<Real>::quiet_NaN(),
+                                    Real right_endpoint_derivative = std::numeric_limits<Real>::quiet_NaN())
+
+        cardinal_quadratic_b_spline(std::vector<Real> const & y,
+                                    Real t0 /* initial time, left endpoint */,
+                                    Real h  /*spacing, stepsize*/,
+                                    Real left_endpoint_derivative = std::numeric_limits<Real>::quiet_NaN(),
+                                    Real right_endpoint_derivative = std::numeric_limits<Real>::quiet_NaN())
+
+        Real operator()(Real t) const;
+
+        Real prime(Real t) const;
+    };
+    }}}
+
+[heading Cardinal Quadratic B-Spline Interpolation]
+
+The cardinal quadratic B-spline interpolator is very nearly the same as the cubic B-spline interpolator,
+with the modification that the basis functions are constructed by convolving a box function with itself twice,
+rather than three times as is done with the cubic B-spline.
+
+Since the basis functions are less smooth than the cubic B-spline,
+you will nearly always wish to use the cubic B-spline interpolator rather than this.
+However, this interpolator is occasionally useful for approximating functions of reduced smoothness,
+as hence finds use internally in the Boost.Math library.
+
+It is reasonable to test this interpolator against the cubic b-spline interpolator when you are approximating functions 
+which are two or three times continuously differentiable, but not three or four times differentiable.
+
+[endsect] [/section:cardinal_quadratic_b]

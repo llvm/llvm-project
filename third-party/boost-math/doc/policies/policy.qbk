@@ -1,0 +1,897 @@
+
+[mathpart policy Policies: Controlling Precision, Error Handling etc]
+
+[section:pol_overview Policy Overview]
+[policy_overview]
+[endsect] [/section:pol_overview Policy Overview]
+
+[include policy_tutorial.qbk]
+
+[section:pol_ref Policy Reference]
+
+[section:error_handling_policies Error Handling Policies]
+
+There are two orthogonal aspects to error handling:
+
+* What to do (if anything) with the error.
+* What kind of error is being raised.
+
+[h4 Available Actions When an Error is Raised]
+
+What to do with the error is encapsulated by an enumerated type:
+
+   namespace boost { namespace math { namespace policies {
+   
+   enum error_policy_type
+   {
+      throw_on_error = 0, // throw an exception.
+      errno_on_error = 1, // set ::errno & return 0, NaN, infinity or best guess.
+      ignore_error = 2, // return 0, NaN, infinity or best guess.
+      user_error = 3  // call a user-defined error handler.
+   };
+
+   }}} // namespaces
+   
+The various enumerated values have the following meanings:
+
+[h5 throw_on_error]
+
+Will throw one of the following exceptions, depending upon the
+ type of the error:
+    [table
+       [[Error Type][Exception]]
+       [[Domain Error][std::domain_error]]
+       [[Pole Error][std::domain_error]]
+       [[Overflow Error][std::overflow_error]]
+       [[Underflow Error][std::underflow_error]]
+       [[Denorm Error][std::underflow_error]]
+       [[Evaluation Error][boost::math::evaluation_error]]
+       [[Indeterminate Result Error][std::domain_error]]
+    ]
+
+[h5 errno_on_error]
+
+Will set global __errno `::errno` to one of the following values depending 
+upon the error type (often EDOM = 33 and ERANGE = 34),
+and then return the same value as if the error
+had been ignored:
+ [table
+    [[Error Type][errno value]]
+    [[Domain Error][EDOM]]
+    [[Pole Error][EDOM]]
+    [[Overflow Error][ERANGE]]
+    [[Underflow Error][ERANGE]]
+    [[Denorm Error][ERANGE]]
+    [[Evaluation Error][EDOM]]
+    [[Indeterminate Result Error][EDOM]]
+ ]
+
+[h5 ignore_error]
+
+Will return one of the values below depending on the error type (`::errno` is NOT changed)::
+ [table
+    [[Error Type][Returned Value]]
+    [[Domain Error][std::numeric_limits<T>::quiet_NaN()]]
+    [[Pole Error][std::numeric_limits<T>::quiet_NaN()]]
+    [[Overflow Error][std::numeric_limits<T>::infinity()]]
+    [[Underflow Error][0]]
+    [[Denorm Error][The denormalised value.]]
+    [[Evaluation Error][The best guess (perhaps NaN) as to the result: which
+          may be significantly in error.]]
+    [[Indeterminate Result Error][Depends on the function where the error occurred]]
+ ]
+
+[h5 user_error]
+
+Will call a user defined error handler: these are forward declared
+in boost/math/policies/error_handling.hpp, but the actual definitions
+must be provided by the user:
+
+   namespace boost{ namespace math{ namespace policies{
+
+   template <class T>
+   T user_domain_error(const char* function, const char* message, const T& val);
+
+   template <class T>
+   T user_pole_error(const char* function, const char* message, const T& val);
+
+   template <class T>
+   T user_overflow_error(const char* function, const char* message, const T& val);
+
+   template <class T>
+   T user_underflow_error(const char* function, const char* message, const T& val);
+
+   template <class T>
+   T user_denorm_error(const char* function, const char* message, const T& val);
+
+   template <class T>
+   T user_rounding_error(const char* function, const char* message, const T& val);
+
+   template <class T, class TargetType>
+   TargetType user_rounding_error(const char* function, const char* message, const T& val, const TargetType& t);
+
+   template <class T>
+   T user_indeterminate_result_error(const char* function, const char* message, const T& val);
+
+   }}} // namespaces
+
+Note that the strings ['function] and ['message] may contain "%1%" format specifiers
+designed to be used in conjunction with Boost.Format.  
+If these strings are to be presented to the program's end-user then 
+the "%1%" format specifier
+should be replaced with the name of type T in the ['function] string, and 
+if there is a %1% specifier in the ['message] string then it 
+should be replaced with the value of ['val].
+
+There is more information on user-defined error handlers in
+the [link math_toolkit.pol_tutorial.user_def_err_pol 
+tutorial here].
+
+[h4 Kinds of Error Raised]                  
+
+There are six kinds of error reported by this library,
+which are summarised in the following table:
+
+[table
+[[Error Type]
+   [Policy Class]
+      [Description]]
+[[Domain Error]
+   [boost::math::policies::domain_error<['action]>]
+      [Raised when more or more arguments are outside the 
+      defined range of the function.
+
+      Defaults to `boost::math::policies::domain_error<throw_on_error>`
+
+      When the action is set to ['throw_on_error] 
+      then throws `std::domain_error`]]
+[[Pole Error]
+   [boost::math::policies::pole_error<['action]>]
+      [Raised when more or more arguments would cause the function
+      to be evaluated at a pole.
+
+      Defaults to `boost::math::policies::pole_error<throw_on_error>`
+
+      When the action is ['throw_on_error] then
+      throw a `std::domain_error`]]
+[[Overflow Error]
+   [boost::math::policies::overflow_error<['action]>]
+      [Raised when the result of the function is outside
+      the representable range of the floating point type used.
+
+      Defaults to `boost::math::policies::overflow_error<throw_on_error>`.
+
+      When the action is ['throw_on_error] then throws a `std::overflow_error`.]]
+[[Underflow Error]
+   [boost::math::policies::underflow_error<['action]>]
+      [Raised when the result of the function is too small
+      to be represented in the floating point type used.
+
+      Defaults to `boost::math::policies::underflow_error<ignore_error>`
+
+      When the specified action is ['throw_on_error] then
+      throws a `std::underflow_error`]]
+[[Denorm Error]
+   [boost::math::policies::denorm_error<['action]>]
+      [Raised when the result of the function is a
+      denormalised value.
+
+      Defaults to `boost::math::policies::denorm_error<ignore_error>`
+
+      When the action is ['throw_on_error] then throws a `std::underflow_error`]]
+[[Rounding Error]
+   [boost::math::policies::rounding_error<['action]>]
+      [Raised When one of the rounding functions __round, __trunc or __modf is
+      called with an argument that has no integer representation, or
+      is too large to be represented in the result type
+
+      Defaults to `boost::math::policies::rounding_error<throw_on_error>`
+
+      When the action is ['throw_on_error] then throws `boost::math::rounding_error`]]
+[[Evaluation Error]
+   [boost::math::policies::evaluation_error<['action]>]
+      [Raised when the result of the function is well defined and
+      finite, but we were unable to compute it.  Typically
+      this occurs when an iterative method fails to converge.
+      Of course ideally this error should never be raised: feel free
+      to report it as a bug if it is!
+
+      Defaults to `boost::math::policies::evaluation_error<throw_on_error>`
+
+      When the action is ['throw_on_error] then throws `boost::math::evaluation_error`]]
+[[Indeterminate Result Error]
+   [boost::math::policies::indeterminate_result_error<['action]>]
+      [Raised when the result of a function is not defined for the values that
+      were passed to it.
+
+      Defaults to `boost::math::policies::indeterminate_result_error<ignore_error>`
+
+      When the action is ['throw_on_error] then throws `std::domain_error`]]
+]
+
+[h4 Examples]
+
+Suppose we want a call to `tgamma` to behave in a C-compatible way and set global
+`::errno` rather than throw an exception, we can achieve this at the call site
+using:
+
+[import ../../example/policy_ref_snip1.cpp]
+
+[policy_ref_snip1]
+   
+Suppose we want a statistical distribution to return infinities,
+rather than throw exceptions, then we can use:
+
+[import ../../example/policy_ref_snip2.cpp]
+
+[policy_ref_snip2]
+
+[endsect] [/section:error_handling_policies Error Handling Policies]
+
+[section:internal_promotion Internal Floating-point Promotion Policies]
+
+Normally when evaluating a function at say `float` precision, maximal
+accuracy is assured by conducting the calculation at `double` precision
+internally, and then rounding the result.  There are two policies that
+control whether internal promotion to a higher precision floating-point type takes place, or not:
+
+[table
+[[Policy][Meaning]]
+[[`boost::math::policies::promote_float<B>`]
+   [Indicates whether `float` arguments should be promoted to `double`
+   precision internally: defaults to `boost::math::policies::promote_float<true>`]]
+[[`boost::math::policies::promote_double<B>`]
+   [Indicates whether `double` arguments should be promoted to `long double`
+   precision internally: defaults to `boost::math::policies::promote_double<true>`]]
+]
+
+[h4 Examples]
+
+Suppose we want `tgamma` to be evaluated without internal promotion to
+`long double`, then we could use:
+
+[import ../../example/policy_ref_snip3.cpp]
+[policy_ref_snip3]
+   
+Alternatively, suppose we want a distribution to perform calculations
+without promoting `float` to `double`, then we could use:
+
+[import ../../example/policy_ref_snip4.cpp]
+[policy_ref_snip4]
+   
+[endsect] [/section:internal_promotion Internal Promotion Policies]
+
+[section:assert_undefined Mathematically Undefined Function Policies]
+
+There are some functions that are generic
+(they are present for all the statistical distributions supported)
+but which may be mathematically undefined for certain distributions, but defined for others.
+
+For example, the Cauchy distribution does not have a meaningful mean,
+so what should
+
+   mean(cauchy<>());
+   
+return, and should such an expression even compile at all?
+
+The default behaviour is for all such functions to not compile at all
+ - in fact they will raise a 
+[@http://www.boost.org/libs/static_assert/index.html static assertion]
+ - but by changing the policy
+we can have them return the result of a domain error instead
+(which may well throw an exception, depending on the error handling policy). 
+
+This behaviour is controlled by the `assert_undefined<>` policy:
+
+   namespace boost{ namespace math{ namespace policies {
+
+   template <bool b>
+   class assert_undefined;
+
+   }}} //namespaces
+
+For example:
+
+   #include <boost/math/distributions/cauchy.hpp>
+   
+   using namespace boost::math::policies;
+   using namespace boost::math;
+   
+   // This will not compile, cauchy has no mean!
+   double m1 = mean(cauchy()); 
+   
+   // This will compile, but raises a domain error!
+   double m2 = mean(cauchy_distribution<double, policy<assert_undefined<false> > >());
+
+`policy<assert_undefined<false>` behaviour can also be obtained by defining the macro
+
+  #define BOOST_MATH_ASSERT_UNDEFINED_POLICY false
+  
+at the head of the file - see __policy_macros. 
+ 
+[endsect] [/section:assert_undefined Mathematically Undefined Function Policies]
+
+[section:discrete_quant_ref Discrete Quantile Policies]
+
+If a statistical distribution is ['discrete] then the random variable
+can only have integer values - this leaves us with a problem when calculating
+quantiles - we can either ignore the discreteness of the distribution and return
+a real value, or we can round to an integer.  As it happens, computing integer
+values can be substantially faster than calculating a real value, so there are
+definite advantages to returning an integer, but we do then need to decide
+how best to round the result.  The `discrete_quantile` policy defines how
+discrete quantiles work, and how integer results are rounded:
+
+   enum discrete_quantile_policy_type
+   {
+      real,
+      integer_round_outwards, // default
+      integer_round_inwards,
+      integer_round_down,
+      integer_round_up,
+      integer_round_nearest
+   };
+   
+   template <discrete_quantile_policy_type>
+   struct discrete_quantile;
+   
+The values that `discrete_quantile` can take have the following meanings:
+
+[h5 real]
+
+Ignores the discreteness of the distribution, and returns a real-valued 
+result.  For example:
+
+[import ../../example/policy_ref_snip5.cpp]
+[policy_ref_snip5]
+   
+Results in `x = 27.3898` and `y = 68.1584`.
+
+[h5 integer_round_outwards]
+
+This is the default policy: an integer value is returned so that:
+
+* Lower quantiles (where the probability is less than 0.5) are rounded
+down.
+* Upper quantiles (where the probability is greater than 0.5) are rounded up.
+
+This is normally the safest rounding policy, since it ensures that both
+one and two sided intervals are guaranteed to have ['at least] 
+the requested coverage.  For example:
+
+[import ../../example/policy_ref_snip6.cpp]
+[policy_ref_snip6]
+   
+Results in `x = 27` (rounded down from 27.3898) and `y = 69` (rounded up from 68.1584).
+
+The variables x and y are now defined so that:
+
+   cdf(negative_binomial(20), x) <= 0.05
+   cdf(negative_binomial(20), y) >= 0.95
+   
+In other words we guarantee ['at least 90% coverage in the central region overall], 
+and also ['no more than 5% coverage in each tail].
+
+[h5 integer_round_inwards]
+
+This is the opposite of ['integer_round_outwards]: an integer value is returned so that:
+
+* Lower quantiles (where the probability is less than 0.5) are rounded
+['up].
+* Upper quantiles (where the probability is greater than 0.5) are rounded ['down].
+
+For example:
+
+[import ../../example/policy_ref_snip7.cpp]
+
+[policy_ref_snip7]
+   
+Results in `x = 28` (rounded up from 27.3898) and `y = 68` (rounded down from 68.1584).
+
+The variables x and y are now defined so that:
+
+   cdf(negative_binomial(20), x) >= 0.05
+   cdf(negative_binomial(20), y) <= 0.95
+   
+In other words we guarantee ['at no more than 90% coverage in the central region overall], 
+and also ['at least 5% coverage in each tail].
+
+[h5 integer_round_down]
+
+Always rounds down to an integer value, no matter whether it's an upper 
+or a lower quantile.
+
+[h5 integer_round_up]
+
+Always rounds up to an integer value, no matter whether it's an upper 
+or a lower quantile.
+
+[h5 integer_round_nearest]
+
+Always rounds to the nearest integer value, no matter whether it's an upper 
+or a lower quantile.  This will produce the requested coverage
+['in the average case], but for any specific example may results in
+either significantly more or less coverage than the requested amount.
+For example:
+
+For example:
+
+[import ../../example/policy_ref_snip8.cpp]
+
+[policy_ref_snip8]
+
+Results in `x = 27` (rounded from 27.3898) and `y = 68` (rounded from 68.1584).
+
+[endsect] [/section:discrete_quant_ref Discrete Quantile Policies]
+
+[section:precision_pol Precision Policies]
+
+There are two equivalent policies that effect the ['working precision]
+used to calculate results, these policies both default to 0 - meaning
+calculate to the maximum precision available in the type being used
+ - but can be set to other values to cause lower levels of precision 
+to be used. One might want to trade precision for evaluation speed.
+
+   namespace boost{ namespace math{ namespace policies{
+   
+   template <int N>
+   digits10;
+   
+   template <int N>
+   digits2;
+   
+   }}} // namespaces
+   
+As you would expect, ['digits10] specifies the number of decimal digits
+to use, and ['digits2] the number of binary digits.  Internally, whichever
+is used, the precision is always converted to ['binary digits].
+
+These policies are specified at compile-time, because many of the special
+functions use compile-time-dispatch to select which approximation to use
+based on the precision requested and the numeric type being used.
+
+For example we could calculate `tgamma` to approximately 5 decimal digits using:
+
+[import ../../example/policy_ref_snip9.cpp]
+
+[policy_ref_snip9]
+   
+Or again using helper function `make_policy`:
+
+[import ../../example/policy_ref_snip10.cpp]
+
+[policy_ref_snip10]
+
+And for a quantile of a distribution to approximately 25-bit precision:
+
+[import ../../example/policy_ref_snip11.cpp]
+
+[policy_ref_snip11]
+
+[endsect] [/section:precision_pol Precision Policies]
+
+[section:iteration_pol Iteration Limits Policies]
+
+There are two policies that effect the iterative algorithms
+used to implement the special functions in this library:
+
+   template <unsigned long limit = BOOST_MATH_MAX_SERIES_ITERATION_POLICY>
+   class max_series_iterations;
+   
+   template <unsigned long limit = BOOST_MATH_MAX_ROOT_ITERATION_POLICY>
+   class max_root_iterations;
+
+The class `max_series_iterations` determines the maximum number of
+iterations permitted in a series evaluation, before the special
+function gives up and returns the result of __evaluation_error.
+
+The class `max_root_iterations` determines the maximum number
+of iterations permitted in a root-finding algorithm before the special
+function gives up and returns the result of __evaluation_error.
+
+[endsect] [/section:iteration_pol Iteration Limits Policies]
+
+[section:policy_defaults Using Macros to Change the Policy Defaults]
+
+You can use the various macros below to change any (or all) of the policies.
+
+You can make a local change by placing a macro definition *before*
+a function or distribution #include.
+
+[caution There is a danger of One-Definition-Rule violations if you 
+add ad-hoc macros to more than one source files: these must be set the same in *every 
+translation unit*.]
+
+[caution If you place it after the #include it will have no effect,
+(and it will affect only any other following #includes).
+This is probably not what you intend!]
+
+If you want to alter the defaults for any or all of 
+the policies for *all* functions and distributions, installation-wide,
+then you can do so by defining various macros in
+[@../../../../boost/math/tools/user.hpp boost/math/tools/user.hpp].
+
+[h5 BOOST_MATH_DOMAIN_ERROR_POLICY]
+
+Defines what happens when a domain error occurs, if not defined then
+defaults to `throw_on_error`, but can be set to any of the enumerated
+actions for error handing: `throw_on_error`, `errno_on_error`, 
+`ignore_error` or `user_error`.
+
+[h5 BOOST_MATH_POLE_ERROR_POLICY]
+
+Defines what happens when a pole error occurs, if not defined then
+defaults to `throw_on_error`, but can be set to any of the enumerated
+actions for error handing: `throw_on_error`, `errno_on_error`, 
+`ignore_error` or `user_error`.
+
+[h5 BOOST_MATH_OVERFLOW_ERROR_POLICY]
+
+Defines what happens when an overflow error occurs, if not defined then
+defaults to `throw_on_error`, but can be set to any of the enumerated
+actions for error handing: `throw_on_error`, `errno_on_error`, 
+`ignore_error` or `user_error`.
+
+[h5 BOOST_MATH_ROUNDING_ERROR_POLICY]
+
+Defines what happens when a rounding error occurs, if not defined then
+defaults to `throw_on_error`, but can be set to any of the enumerated
+actions for error handing: `throw_on_error`, `errno_on_error`, 
+`ignore_error` or `user_error`.
+
+[h5 BOOST_MATH_EVALUATION_ERROR_POLICY]
+
+Defines what happens when an internal evaluation error occurs, if not defined then
+defaults to `throw_on_error`, but can be set to any of the enumerated
+actions for error handing: `throw_on_error`, `errno_on_error`, 
+`ignore_error` or `user_error`.
+
+[h5 BOOST_MATH_UNDERFLOW_ERROR_POLICY]
+
+Defines what happens when an overflow error occurs, if not defined then
+defaults to `ignore_error`, but can be set to any of the enumerated
+actions for error handing: `throw_on_error`, `errno_on_error`, 
+`ignore_error` or `user_error`.
+
+[h5 BOOST_MATH_DENORM_ERROR_POLICY]
+
+Defines what happens when a denormalisation error occurs, if not defined then
+defaults to `ignore_error`, but can be set to any of the enumerated
+actions for error handing: `throw_on_error`, `errno_on_error`, 
+`ignore_error` or `user_error`.
+
+[h5 BOOST_MATH_INDETERMINATE_RESULT_ERROR_POLICY]
+
+Defines what happens when the result is indeterminate, but where there
+is none the less a convention for the result.  If not defined then
+defaults to `ignore_error`, but can be set to any of the enumerated
+actions for error handing: `throw_on_error`, `errno_on_error`, 
+`ignore_error` or `user_error`.
+
+[h5 BOOST_MATH_DIGITS10_POLICY]
+
+Defines how many decimal digits to use in internal computations: 
+defaults to `0` - meaning use all available digits - but can be set
+to some other decimal value.  Since setting this is likely to have
+a substantial impact on accuracy, it's not generally recommended
+that you change this from the default.
+
+[h5 BOOST_MATH_PROMOTE_FLOAT_POLICY]
+
+Determines whether `float` types get promoted to `double`
+internally to ensure maximum precision in the result, defaults
+to `true`, but can be set to `false` to turn promotion of
+`float`'s off.
+
+[h5 BOOST_MATH_PROMOTE_DOUBLE_POLICY]
+
+Determines whether `double` types get promoted to `long double`
+internally to ensure maximum precision in the result, defaults
+to `true`, but can be set to `false` to turn promotion of
+`double`'s off.
+
+[h5 BOOST_MATH_DISCRETE_QUANTILE_POLICY]
+
+Determines how discrete quantiles return their results: either
+as an integer, or as a real value, can be set to one of the
+enumerated values: `real`, `integer_round_outwards`, `integer_round_inwards`,
+`integer_round_down`, `integer_round_up`, `integer_round_nearest`.  Defaults to
+`integer_round_outwards`.
+
+[h5 BOOST_MATH_ASSERT_UNDEFINED_POLICY]
+
+Determines whether functions that are mathematically undefined
+for a specific distribution compile or raise a static (i.e. compile-time)
+assertion.  Defaults to `true`: meaning that any mathematically
+undefined function will not compile.  When set to `false` then the function
+will compile but return the result of a domain error: this can be useful
+for some generic code, that needs to work with all distributions and determine
+at runtime whether or not a particular property is well defined.
+
+[h5 BOOST_MATH_MAX_SERIES_ITERATION_POLICY]
+
+Determines how many series iterations a special function is permitted
+to perform before it gives up and returns an __evaluation_error:
+Defaults to 1000000.
+   
+[h5 BOOST_MATH_MAX_ROOT_ITERATION_POLICY]
+
+Determines how many root-finding iterations a special function is permitted
+to perform before it gives up and returns an __evaluation_error:
+Defaults to 200.
+
+[h5 Example]
+
+Suppose we want overflow errors to set `::errno` and return an infinity,
+discrete quantiles to return a real-valued result (rather than round to
+integer), and for mathematically undefined functions to compile, but return
+a domain error. Then we could add the following to boost/math/tools/user.hpp:
+
+   #define BOOST_MATH_OVERFLOW_ERROR_POLICY errno_on_error
+   #define BOOST_MATH_DISCRETE_QUANTILE_POLICY real
+   #define BOOST_MATH_ASSERT_UNDEFINED_POLICY false
+   
+or we could place these definitions *before*
+
+   #include <boost/math/distributions/normal.hpp>
+     using boost::math::normal_distribution;
+
+in a source .cpp file.
+
+[endsect] [/section:policy_defaults Changing the Policy Defaults]
+
+[section:namespace_pol Setting Polices at Namespace Scope]
+
+Sometimes what you really want to do is bring all the special functions,
+or all the distributions into a specific namespace-scope, along with
+a specific policy to use with them.  There are two macros defined to
+assist with that:
+
+   BOOST_MATH_DECLARE_SPECIAL_FUNCTIONS(Policy)
+
+and:
+
+   BOOST_MATH_DECLARE_DISTRIBUTIONS(Type, Policy)
+   
+You can use either of these macros after including any special function
+or distribution header.  For example:
+
+[import ../../example/policy_ref_snip12.cpp]
+
+[policy_ref_snip12]
+
+In this example, using BOOST_MATH_DECLARE_SPECIAL_FUNCTIONS results in
+a set of thin inline forwarding functions being defined:
+
+   template <class T>
+   inline T tgamma(T a){ return ::boost::math::tgamma(a, mypolicy()); }
+   
+   template <class T>
+   inline T lgamma(T a) ( return ::boost::math::lgamma(a, mypolicy()); }
+   
+and so on.  Note that while a forwarding function is defined for all the special
+functions, however, unless you include the specific header for the special
+function you use (or boost/math/special_functions.hpp to include everything), 
+you will get linker errors from functions that are forward declared, but not
+defined.
+
+We can do the same thing with the distributions, but this time we need to
+specify the floating-point type to use:
+
+[import ../../example/policy_ref_snip13.cpp]
+
+[policy_ref_snip13]
+   
+In this example the result of BOOST_MATH_DECLARE_DISTRIBUTIONS is to
+declare a typedef for each distribution like this:
+
+   typedef boost::math::cauchy_distribution<double, my_policy> cauchy;
+   tyepdef boost::math::gamma_distribution<double, my_policy> gamma;
+   
+and so on.  The name given to each typedef is the name of the distribution
+with the "_distribution" suffix removed.
+
+[endsect] [/section Changing the Policy Defaults]
+
+[section:pol_ref_ref Policy Class Reference]
+
+There's very little to say here, the `policy` class is just a rag-bag
+compile-time container for a collection of policies:
+
+```#include <boost/math/policies/policy.hpp>```
+
+
+   namespace boost{
+   namespace math{
+   namespace policies
+   
+   template <class A1 = default_policy, 
+             class A2 = default_policy, 
+             class A3 = default_policy,
+             class A4 = default_policy,
+             class A5 = default_policy,
+             class A6 = default_policy,
+             class A7 = default_policy,
+             class A8 = default_policy,
+             class A9 = default_policy,
+             class A10 = default_policy,
+             class A11 = default_policy,
+             class A12 = default_policy,
+             class A13 = default_policy>
+   struct policy
+   {
+   public:
+      typedef ``['computed-from-template-arguments]`` domain_error_type;
+      typedef ``['computed-from-template-arguments]`` pole_error_type;
+      typedef ``['computed-from-template-arguments]`` overflow_error_type;
+      typedef ``['computed-from-template-arguments]`` underflow_error_type;
+      typedef ``['computed-from-template-arguments]`` denorm_error_type;
+      typedef ``['computed-from-template-arguments]`` rounding_error_type;
+      typedef ``['computed-from-template-arguments]`` evaluation_error_type;
+      typedef ``['computed-from-template-arguments]`` indeterminate_result_error_type;
+      typedef ``['computed-from-template-arguments]`` precision_type;
+      typedef ``['computed-from-template-arguments]`` promote_float_type;
+      typedef ``['computed-from-template-arguments]`` promote_double_type;
+      typedef ``['computed-from-template-arguments]`` discrete_quantile_type;
+      typedef ``['computed-from-template-arguments]`` assert_undefined_type;
+   };
+
+   template <...argument list...>
+   typename normalise<policy<>, A1>::type make_policy(...argument list..);
+
+   template <class Policy, 
+             class A1 = default_policy, 
+             class A2 = default_policy, 
+             class A3 = default_policy,
+             class A4 = default_policy,
+             class A5 = default_policy,
+             class A6 = default_policy,
+             class A7 = default_policy,
+             class A8 = default_policy,
+             class A9 = default_policy,
+             class A10 = default_policy,
+             class A11 = default_policy,
+             class A12 = default_policy,
+             class A13 = default_policy>
+   struct normalise
+   {
+      typedef ``computed-from-template-arguments`` type;
+   };
+
+The member typedefs of class `policy` are intended for internal use
+but are documented briefly here for the sake of completeness.
+
+   policy<...>::domain_error_type
+   
+Specifies how domain errors are handled, will be an instance of
+`boost::math::policies::domain_error<>` with the template argument to
+`domain_error` one of the `error_policy_type` enumerated values.
+
+   policy<...>::pole_error_type
+   
+Specifies how pole-errors are handled, will be an instance of
+`boost::math::policies::pole_error<>` with the template argument to
+`pole_error` one of the `error_policy_type` enumerated values.
+
+   policy<...>::overflow_error_type
+   
+Specifies how overflow errors are handled, will be an instance of
+`boost::math::policies::overflow_error<>` with the template argument to
+`overflow_error` one of the `error_policy_type` enumerated values.
+
+   policy<...>::underflow_error_type
+   
+Specifies how underflow errors are handled, will be an instance of
+`boost::math::policies::underflow_error<>` with the template argument to
+`underflow_error` one of the `error_policy_type` enumerated values.
+
+   policy<...>::denorm_error_type
+   
+Specifies how denorm errors are handled, will be an instance of
+`boost::math::policies::denorm_error<>` with the template argument to
+`denorm_error` one of the `error_policy_type` enumerated values.
+
+   policy<...>::rounding_error_type
+   
+Specifies how rounding errors are handled, will be an instance of
+`boost::math::policies::rounding_error<>` with the template argument to
+`rounding_error` one of the `error_policy_type` enumerated values.
+
+   policy<...>::evaluation_error_type
+   
+Specifies how evaluation errors are handled, will be an instance of
+`boost::math::policies::evaluation_error<>` with the template argument to
+`evaluation_error` one of the `error_policy_type` enumerated values.
+
+   policy<...>::indeterminate_error_type
+
+Specifies how indeterminate result errors are handled, will be an instance of
+`boost::math::policies::indeterminate_result_error<>` with the template argument
+to `indeterminate_result_error` one of the `error_policy_type` enumerated
+values.
+
+   policy<...>::precision_type
+   
+Specifies the internal precision to use in binary digits (uses zero
+to represent whatever the default precision is).  Will be an instance
+of `boost::math::policies::digits2<N>` which in turn inherits from 
+`boost::std::integral_constant<int, N>`.
+
+   policy<...>::promote_float_type
+   
+Specifies whether or not to promote `float` arguments to `double` precision
+internally.  Will be an instance of `boost::math::policies::promote_float<B>`
+which in turn inherits from `std::integral_constant<bool, B>`.
+
+   policy<...>::promote_double_type
+   
+Specifies whether or not to promote `double` arguments to `long double` precision
+internally.  Will be an instance of `boost::math::policies::promote_float<B>`
+which in turn inherits from `std::integral_constant<bool, B>`.
+
+   policy<...>::discrete_quantile_type
+   
+Specifies how discrete quantiles are evaluated, will be an instance
+of `boost::math::policies::discrete_quantile<>` instantiated with one of
+the `discrete_quantile_policy_type` enumerated type.
+
+   policy<...>::assert_undefined_type
+   
+Specifies whether mathematically-undefined properties are
+asserted as compile-time errors, or treated as runtime errors
+instead.  Will be an instance of `boost::math::policies::assert_undefined<B>`
+which in turn inherits from `std::integral_constant<bool, B>`.
+
+
+   template <...argument list...>
+   typename normalise<policy<>, A1>::type make_policy(...argument list..);
+
+`make_policy` is a helper function that converts a list of policies into
+a normalised `policy` class.
+
+   template <class Policy, 
+             class A1 = default_policy, 
+             class A2 = default_policy, 
+             class A3 = default_policy,
+             class A4 = default_policy,
+             class A5 = default_policy,
+             class A6 = default_policy,
+             class A7 = default_policy,
+             class A8 = default_policy,
+             class A9 = default_policy,
+             class A10 = default_policy,
+             class A11 = default_policy,
+             class A12 = default_policy,
+             class A13 = default_policy>
+   struct normalise
+   {
+      typedef ``computed-from-template-arguments`` type;
+   };
+   
+The `normalise` class template converts one instantiation of the
+`policy` class into a normalised form.  This is used internally
+to reduce code bloat: so that instantiating a special function
+on `policy<A,B>` or `policy<B,A>` actually both generate the same
+code internally.  
+
+Further more, `normalise` can be used to combine
+a policy with one or more policies: for example many of the
+special functions will use this to set policies which they don't
+make use of to their default values, before forwarding to the actual
+implementation.  In this way code bloat is reduced, since the
+actual implementation depends only on the policy types that they
+actually use.
+
+[endsect] [/section:pol_ref_ref Policy Class Reference]
+
+[endsect] [/section:pol_ref Policy Reference]
+[endmathpart] [/section:policy Policies]
+
+[/ policy.qbk
+  Copyright 2007, 2010 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
+

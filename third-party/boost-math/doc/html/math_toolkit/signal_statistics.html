@@ -1,0 +1,334 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Signal Statistics</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../statistics.html" title="Chapter 6. Statistics">
+<link rel="prev" href="bivariate_statistics.html" title="Bivariate Statistics">
+<link rel="next" href="anderson_darling.html" title="The Anderson-Darling Test">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bivariate_statistics.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../statistics.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="anderson_darling.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.signal_statistics"></a><a class="link" href="signal_statistics.html" title="Signal Statistics">Signal Statistics</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.signal_statistics.h0"></a>
+      <span class="phrase"><a name="math_toolkit.signal_statistics.synopsis"></a></span><a class="link" href="signal_statistics.html#math_toolkit.signal_statistics.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">statistics</span><span class="special">/</span><span class="identifier">signal_statistics</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span> <span class="special">{</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Container</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">absolute_gini_coefficient</span><span class="special">(</span><span class="identifier">Container</span> <span class="special">&amp;</span> <span class="identifier">c</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">ForwardIterator</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">absolute_gini_coefficient</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">first</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">last</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Container</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">sample_absolute_gini_coefficient</span><span class="special">(</span><span class="identifier">Container</span> <span class="special">&amp;</span> <span class="identifier">c</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">ForwardIterator</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">sample_absolute_gini_coefficient</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">first</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">last</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Container</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">hoyer_sparsity</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">c</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">ForwardIterator</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">hoyer_sparsity</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">first</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">last</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Container</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">oracle_snr</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">signal</span><span class="special">,</span> <span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">noisy_signal</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Container</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">oracle_snr_db</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">signal</span><span class="special">,</span> <span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">noisy_signal</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">ForwardIterator</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">m2m4_snr_estimator</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">first</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">last</span><span class="special">,</span> <span class="keyword">decltype</span><span class="special">(*</span><span class="identifier">first</span><span class="special">)</span> <span class="identifier">estimated_signal_kurtosis</span><span class="special">=</span><span class="number">1</span><span class="special">,</span> <span class="keyword">decltype</span><span class="special">(*</span><span class="identifier">first</span><span class="special">)</span> <span class="identifier">estimated_noise_kurtosis</span><span class="special">=</span><span class="number">3</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Container</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">m2m4_snr_estimator</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">noisy_signal</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span> <span class="identifier">estimated_signal_kurtosis</span><span class="special">=</span><span class="number">1</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span> <span class="identifier">estimate_noise_kurtosis</span><span class="special">=</span><span class="number">3</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">ForwardIterator</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">m2m4_snr_estimator_db</span><span class="special">(</span><span class="identifier">ForwardIterator</span> <span class="identifier">first</span><span class="special">,</span> <span class="identifier">ForwardIterator</span> <span class="identifier">last</span><span class="special">,</span> <span class="keyword">decltype</span><span class="special">(*</span><span class="identifier">first</span><span class="special">)</span> <span class="identifier">estimated_signal_kurtosis</span><span class="special">=</span><span class="number">1</span><span class="special">,</span> <span class="keyword">decltype</span><span class="special">(*</span><span class="identifier">first</span><span class="special">)</span> <span class="identifier">estimated_noise_kurtosis</span><span class="special">=</span><span class="number">3</span><span class="special">);</span>
+
+    <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Container</span><span class="special">&gt;</span>
+    <span class="keyword">auto</span> <span class="identifier">m2m4_snr_estimator_db</span><span class="special">(</span><span class="identifier">Container</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">noisy_signal</span><span class="special">,</span><span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span> <span class="identifier">estimated_signal_kurtosis</span><span class="special">=</span><span class="number">1</span><span class="special">,</span> <span class="keyword">typename</span> <span class="identifier">Container</span><span class="special">::</span><span class="identifier">value_type</span> <span class="identifier">estimate_noise_kurtosis</span><span class="special">=</span><span class="number">3</span><span class="special">);</span>
+
+<span class="special">}</span>
+</pre>
+<h4>
+<a name="math_toolkit.signal_statistics.h1"></a>
+      <span class="phrase"><a name="math_toolkit.signal_statistics.description"></a></span><a class="link" href="signal_statistics.html#math_toolkit.signal_statistics.description">Description</a>
+    </h4>
+<p>
+      The file <code class="computeroutput"><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">statistics</span><span class="special">/</span><span class="identifier">signal_statistics</span><span class="special">.</span><span class="identifier">hpp</span></code> is a
+      set of facilities for computing quantities commonly used in signal analysis.
+    </p>
+<p>
+      Our examples use <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span></code> to
+      hold the data, but this not required. In general, you can store your data in
+      an Eigen array, and Armadillo vector, <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">array</span></code>,
+      and for many of the routines, a <code class="computeroutput"><span class="identifier">std</span><span class="special">::</span><span class="identifier">forward_list</span></code>.
+      These routines are usable in float, double, long double, and Boost.Multiprecision
+      precision, as well as their complex extensions whenever the computation is
+      well-defined.
+    </p>
+<h4>
+<a name="math_toolkit.signal_statistics.h2"></a>
+      <span class="phrase"><a name="math_toolkit.signal_statistics.absolute_gini_coefficient"></a></span><a class="link" href="signal_statistics.html#math_toolkit.signal_statistics.absolute_gini_coefficient">Absolute
+      Gini Coefficient</a>
+    </h4>
+<p>
+      The Gini coefficient, first used to measure wealth inequality, is also one
+      of the best measures of the sparsity of an expansion in a basis. A sparse expansion
+      has most of its norm concentrated in just a few coefficients, making the connection
+      with wealth inequality obvious. See <a href="https://arxiv.org/pdf/0811.4706.pdf" target="_top">Hurley
+      and Rickard</a> for details. However, for measuring sparsity, the phase
+      of the numbers is irrelevant, so we provide the <code class="computeroutput"><span class="identifier">absolute_gini_coefficient</span></code>:
+    </p>
+<pre class="programlisting"><span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">sample_absolute_gini_coefficient</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">absolute_gini_coefficient</span><span class="special">;</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">complex</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;&gt;</span> <span class="identifier">v</span><span class="special">{{</span><span class="number">0</span><span class="special">,</span><span class="number">1</span><span class="special">},</span> <span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">0</span><span class="special">},</span> <span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">0</span><span class="special">},</span> <span class="special">{</span><span class="number">0</span><span class="special">,</span><span class="number">0</span><span class="special">}};</span>
+<span class="keyword">double</span> <span class="identifier">abs_gini</span> <span class="special">=</span> <span class="identifier">sample_absolute_gini_coefficient</span><span class="special">(</span><span class="identifier">v</span><span class="special">);</span>
+<span class="comment">// now abs_gini = 1; maximally unequal</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">std</span><span class="special">::</span><span class="identifier">complex</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;&gt;</span> <span class="identifier">w</span><span class="special">{{</span><span class="number">0</span><span class="special">,</span><span class="number">1</span><span class="special">},</span> <span class="special">{</span><span class="number">1</span><span class="special">,</span><span class="number">0</span><span class="special">},</span> <span class="special">{</span><span class="number">0</span><span class="special">,-</span><span class="number">1</span><span class="special">},</span> <span class="special">{-</span><span class="number">1</span><span class="special">,</span><span class="number">0</span><span class="special">}};</span>
+<span class="identifier">abs_gini</span> <span class="special">=</span> <span class="identifier">absolute_gini_coefficient</span><span class="special">(</span><span class="identifier">w</span><span class="special">);</span>
+<span class="comment">// now abs_gini = 0; every element of the vector has equal magnitude</span>
+
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">u</span><span class="special">{-</span><span class="number">1</span><span class="special">,</span> <span class="number">1</span><span class="special">,</span> <span class="special">-</span><span class="number">1</span><span class="special">};</span>
+<span class="identifier">abs_gini</span> <span class="special">=</span> <span class="identifier">absolute_gini_coefficient</span><span class="special">(</span><span class="identifier">u</span><span class="special">);</span>
+<span class="comment">// now abs_gini = 0</span>
+<span class="comment">// Alternative call useful for computing over subset of the input:</span>
+<span class="identifier">abs_gini</span> <span class="special">=</span> <span class="identifier">absolute_gini_coefficient</span><span class="special">(</span><span class="identifier">u</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">u</span><span class="special">.</span><span class="identifier">begin</span><span class="special">()</span> <span class="special">+</span> <span class="number">1</span><span class="special">);</span>
+</pre>
+<p>
+      The sample Gini coefficient returns unity for a vector which has only one nonzero
+      coefficient. The population Gini coefficient of a vector with one non-zero
+      element is dependent on the length of the input.
+    </p>
+<p>
+      The sample Gini coefficient lacks one desirable property of the population
+      Gini coefficient, namely that "cloning" a vector has the same Gini
+      coefficient; though cloning holds to very high accuracy with the sample Gini
+      coefficient and can easily be recovered by a rescaling.
+    </p>
+<p>
+      If sorting the input data is too much expense for a sparsity measure (is it
+      going to be perfect anyway?), consider calculating the Hoyer sparsity instead.
+    </p>
+<h4>
+<a name="math_toolkit.signal_statistics.h3"></a>
+      <span class="phrase"><a name="math_toolkit.signal_statistics.hoyer_sparsity"></a></span><a class="link" href="signal_statistics.html#math_toolkit.signal_statistics.hoyer_sparsity">Hoyer
+      Sparsity</a>
+    </h4>
+<p>
+      The Hoyer sparsity measures a normalized ratio of the ℓ<sup>1</sup> and ℓ<sup>2</sup> norms.
+      As the name suggests, it is used to measure the sparsity of an expansion in
+      some basis.
+    </p>
+<p>
+      The Hoyer sparsity computes (√<span class="emphasis"><em>N</em></span> - ℓ<sup>1</sup>(v)/ℓ<sup>2</sup>(v))/(√N
+      -1). For details, see <a href="http://www.jmlr.org/papers/volume5/hoyer04a/hoyer04a.pdf" target="_top">Hoyer</a>
+      as well as <a href="https://arxiv.org/pdf/0811.4706.pdf" target="_top">Hurley and Rickard</a>.
+    </p>
+<p>
+      A few special cases will serve to clarify the intended use: If <span class="emphasis"><em>v</em></span>
+      has only one nonzero coefficient, the Hoyer sparsity attains its maxima of
+      1. If the coefficients of <span class="emphasis"><em>v</em></span> all have the same magnitude,
+      then the Hoyer sparsity attains its minima of zero. If the elements of <span class="emphasis"><em>v</em></span>
+      are uniformly distributed on an interval [0, <span class="emphasis"><em>b</em></span>], then
+      the Hoyer sparsity is approximately 0.133.
+    </p>
+<p>
+      Usage:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">{</span><span class="number">1</span><span class="special">,</span><span class="number">0</span><span class="special">,</span><span class="number">0</span><span class="special">};</span>
+<span class="identifier">Real</span> <span class="identifier">hs</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">hoyer_sparsity</span><span class="special">(</span><span class="identifier">v</span><span class="special">);</span>
+<span class="comment">// hs = 1</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="identifier">Real</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">{</span><span class="number">1</span><span class="special">,-</span><span class="number">1</span><span class="special">,</span><span class="number">1</span><span class="special">};</span>
+<span class="identifier">Real</span> <span class="identifier">hs</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">hoyer_sparsity</span><span class="special">(</span><span class="identifier">v</span><span class="special">.</span><span class="identifier">begin</span><span class="special">(),</span> <span class="identifier">v</span><span class="special">.</span><span class="identifier">end</span><span class="special">());</span>
+<span class="comment">// hs = 0</span>
+</pre>
+<p>
+      The container must be forward iterable and the contents are not modified. Accepts
+      real, complex, and integer inputs. If the input is an integral type, the output
+      is a double precision float.
+    </p>
+<h4>
+<a name="math_toolkit.signal_statistics.h4"></a>
+      <span class="phrase"><a name="math_toolkit.signal_statistics.oracle_signal_to_noise_ratio"></a></span><a class="link" href="signal_statistics.html#math_toolkit.signal_statistics.oracle_signal_to_noise_ratio">Oracle
+      Signal-to-noise ratio</a>
+    </h4>
+<p>
+      The function <code class="computeroutput"><span class="identifier">oracle_snr</span></code> computes
+      the ratio ‖ <span class="emphasis"><em>s</em></span> ‖<sub>2</sub><sup>2</sup> / ‖ <span class="emphasis"><em>s</em></span>
+      - <span class="emphasis"><em>x</em></span> ‖<sub>2</sub><sup>2</sup>, where <span class="emphasis"><em>s</em></span> is signal
+      and <span class="emphasis"><em>x</em></span> is a noisy signal. The function <code class="computeroutput"><span class="identifier">oracle_snr_db</span></code>
+      computes 10<code class="computeroutput"><span class="identifier">log</span></code><sub>10</sub>(‖
+      <span class="emphasis"><em>s</em></span> ‖<sup>2</sup> / ‖ <span class="emphasis"><em>s</em></span> - <span class="emphasis"><em>x</em></span>
+      ‖<sup>2</sup>). The functions are so named because in general, one does not know
+      how to decompose a real signal <span class="emphasis"><em>x</em></span> into <span class="emphasis"><em>s</em></span>
+      + <span class="emphasis"><em>w</em></span> and as such <span class="emphasis"><em>s</em></span> is regarded as
+      oracle information. Hence this function is mainly useful for unit testing other
+      SNR estimators.
+    </p>
+<p>
+      Usage:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">signal</span><span class="special">(</span><span class="number">500</span><span class="special">,</span> <span class="number">3.2</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">noisy_signal</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+<span class="comment">// fill 'noisy_signal' signal + noise</span>
+<span class="keyword">double</span> <span class="identifier">snr_db</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">oracle_snr_db</span><span class="special">(</span><span class="identifier">signal</span><span class="special">,</span> <span class="identifier">noisy_signal</span><span class="special">);</span>
+<span class="keyword">double</span> <span class="identifier">snr</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">oracle_snr</span><span class="special">(</span><span class="identifier">signal</span><span class="special">,</span> <span class="identifier">noisy_signal</span><span class="special">);</span>
+</pre>
+<p>
+      The input can be real, complex, or integral. Integral inputs produce double
+      precision floating point outputs. The input data is not modified and must satisfy
+      the requirements of a <code class="computeroutput"><span class="identifier">RandomAccessContainer</span></code>.
+    </p>
+<h4>
+<a name="math_toolkit.signal_statistics.h5"></a>
+      <span class="phrase"><a name="math_toolkit.signal_statistics.m_sub_2_m_sub_4_snr_estimation"></a></span><a class="link" href="signal_statistics.html#math_toolkit.signal_statistics.m_sub_2_m_sub_4_snr_estimation"><span class="emphasis"><em>M</em></span><sub>2</sub><span class="emphasis"><em>M</em></span><sub>4</sub> SNR
+      Estimation</a>
+    </h4>
+<p>
+      Estimates the SNR of a noisy signal via the <span class="emphasis"><em>M</em></span><sub>2</sub><span class="emphasis"><em>M</em></span><sub>4</sub> method.
+      See <a href="https://doi.org/10.1109/26.871393" target="_top">Pauluzzi and N.C. Beaulieu</a>
+      and <a href="https://doi.org/10.1109/ISIT.1994.394869" target="_top">Matzner and Englberger</a>
+      for details.
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">noisy_signal</span><span class="special">(</span><span class="number">512</span><span class="special">);</span>
+<span class="comment">// fill noisy_signal with data contaminated by Gaussian white noise:</span>
+<span class="keyword">double</span> <span class="identifier">est_snr_db</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">m2m4_snr_estimator_db</span><span class="special">(</span><span class="identifier">noisy_signal</span><span class="special">);</span>
+</pre>
+<p>
+      The <span class="emphasis"><em>M</em></span><sub>2</sub><span class="emphasis"><em>M</em></span><sub>4</sub> SNR estimator is an "in-service"
+      estimator, meaning that the estimate is made using the noisy, data-bearing
+      signal, and does not require a background estimate. This estimator has been
+      found to be work best between roughly -3 and 15db, tending to overestimate
+      the noise below -3db, and underestimate the noise above 15db. See <a href="https://www.mdpi.com/2078-2489/8/3/75/pdf" target="_top">Xue
+      et al</a> for details.
+    </p>
+<p>
+      The <span class="emphasis"><em>M</em></span><sub>2</sub><span class="emphasis"><em>M</em></span><sub>4</sub> SNR estimator, by default,
+      assumes that the kurtosis of the signal is 1 and the kurtosis of the noise
+      is 3, the latter corresponding to Gaussian noise. These parameters, however,
+      can be overridden:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">noisy_signal</span><span class="special">(</span><span class="number">512</span><span class="special">);</span>
+<span class="comment">// fill noisy_signal with the data:</span>
+<span class="keyword">double</span> <span class="identifier">signal_kurtosis</span> <span class="special">=</span> <span class="number">1.5</span><span class="special">;</span>
+<span class="comment">// Noise is assumed to follow Laplace distribution, which has kurtosis of 6:</span>
+<span class="keyword">double</span> <span class="identifier">noise_kurtosis</span> <span class="special">=</span> <span class="number">6</span><span class="special">;</span>
+<span class="keyword">double</span> <span class="identifier">est_snr</span> <span class="special">=</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">statistics</span><span class="special">::</span><span class="identifier">m2m4_snr_estimator_db</span><span class="special">(</span><span class="identifier">noisy_signal</span><span class="special">,</span> <span class="identifier">signal_kurtosis</span><span class="special">,</span> <span class="identifier">noise_kurtosis</span><span class="special">);</span>
+</pre>
+<p>
+      Now, technically the method is a "blind SNR estimator", meaning that
+      the no <span class="emphasis"><em>a-priori</em></span> information about the signal is required
+      to use the method. However, the performance of the method is <span class="emphasis"><em>vastly</em></span>
+      better if you can come up with a better estimate of the signal and noise kurtosis.
+      How can we do this? Suppose we know that the SNR is much greater than 1. Then
+      we can estimate the signal kurtosis simply by using the noisy signal kurtosis.
+      If the SNR is much less than one, this method breaks down as the noisy signal
+      kurtosis will tend to the noise kurtosis-though in this limit we have an excellent
+      estimator of the noise kurtosis! In addition, if you have a model of what your
+      signal should look like, you can precompute the signal kurtosis. For example,
+      sinusoids have a kurtosis of 1.5. See <a href="http://www.jcomputers.us/vol8/jcp0808-21.pdf" target="_top">here</a>
+      for a study which uses estimates of this sort to improve the performance of
+      the <span class="emphasis"><em>M</em></span><sub>2</sub><span class="emphasis"><em>M</em></span><sub>4</sub> estimator.
+    </p>
+<p>
+      <span class="emphasis"><em>Nota bene</em></span>: The traditional definition of SNR is <span class="emphasis"><em>not</em></span>
+      mean invariant. By this we mean that if a constant is added to every sample
+      of a signal, the SNR is changed. For example, adding DC bias to a signal changes
+      its SNR. For most use cases, this is really not what you intend; for example
+      a signal consisting of zeros plus Gaussian noise has an SNR of zero, whereas
+      a signal with a constant DC bias and random Gaussian noise might have a very
+      large SNR.
+    </p>
+<p>
+      The <span class="emphasis"><em>M</em></span><sub>2</sub><span class="emphasis"><em>M</em></span><sub>4</sub> SNR estimator is computed
+      from mean-invariant quantities, and hence it should really be compared to the
+      mean-invariant SNR.
+    </p>
+<p>
+      <span class="emphasis"><em>Nota bene</em></span>: This computation requires the solution of a
+      system of quadratic equations involving the noise kurtosis, the signal kurtosis,
+      and the second and fourth moments of the data. There is no guarantee that a
+      solution of this system exists for all value of these parameters, in fact nonexistence
+      can easily be demonstrated for certain data. If there is no solution to the
+      system, then failure is communicated by returning NaNs. This happens distressingly
+      often; if a user is aware of any blind SNR estimators which do not suffer from
+      this drawback, please open a github ticket and let us know.
+    </p>
+<p>
+      The author has not managed to fully characterize the conditions under which
+      a real solution with <span class="emphasis"><em>S &gt; 0</em></span> and <span class="emphasis"><em>N &gt;0</em></span>
+      exists. However, a very intuitive example demonstrates why nonexistence can
+      occur. Suppose the signal and noise kurtosis are equal. Then the method has
+      no way to distinguish between the signal and the noise, and the solution is
+      non-unique.
+    </p>
+<h4>
+<a name="math_toolkit.signal_statistics.h6"></a>
+      <span class="phrase"><a name="math_toolkit.signal_statistics.references"></a></span><a class="link" href="signal_statistics.html#math_toolkit.signal_statistics.references">References</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Mallat, Stephane. <span class="emphasis"><em>A wavelet tour of signal processing: the sparse
+          way.</em></span> Academic press, 2008.
+        </li>
+<li class="listitem">
+          Hurley, Niall, and Scott Rickard. <span class="emphasis"><em>Comparing measures of sparsity.</em></span>
+          IEEE Transactions on Information Theory 55.10 (2009): 4723-4741.
+        </li>
+<li class="listitem">
+          Jensen, Arne, and Anders la Cour-Harbo. <span class="emphasis"><em>Ripples in mathematics:
+          the discrete wavelet transform.</em></span> Springer Science &amp; Business
+          Media, 2001.
+        </li>
+<li class="listitem">
+          D. R. Pauluzzi and N. C. Beaulieu, <span class="emphasis"><em>A comparison of SNR estimation
+          techniques for the AWGN channel,</em></span> IEEE Trans. Communications,
+          Vol. 48, No. 10, pp. 1681-1691, 2000.
+        </li>
+<li class="listitem">
+          Hoyer, Patrik O. <span class="emphasis"><em>Non-negative matrix factorization with sparseness
+          constraints.</em></span>, Journal of machine learning research 5.Nov (2004):
+          1457-1469.
+        </li>
+</ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="bivariate_statistics.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../statistics.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="anderson_darling.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

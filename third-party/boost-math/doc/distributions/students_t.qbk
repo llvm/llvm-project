@@ -1,0 +1,189 @@
+[section:students_t_dist Students t Distribution]
+
+``#include <boost/math/distributions/students_t.hpp>``
+
+   namespace boost{ namespace math{
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class students_t_distribution;
+
+   typedef students_t_distribution<> students_t;
+
+   template <class RealType, class ``__Policy``>
+   class students_t_distribution
+   {
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+
+      // Constructor:
+      BOOST_MATH_GPU_ENABLED students_t_distribution(const RealType& v);
+
+      // Accessor:
+      BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom()const;
+
+      // degrees of freedom estimation:
+      BOOST_MATH_GPU_ENABLED static RealType find_degrees_of_freedom(
+         RealType difference_from_mean,
+         RealType alpha,
+         RealType beta,
+         RealType sd,
+         RealType hint = 100);
+   };
+
+   }} // namespaces
+
+Student's t-distribution is a statistical distribution published by William Gosset in 1908.
+His employer, Guinness Breweries, required him to publish under a
+pseudonym (possibly to hide that they were using statistics to improve beer quality),
+so he chose "Student".
+
+Given N independent measurements, let
+
+[equation students_t_dist]
+
+where /M/ is the population mean, [mu] is the sample mean, and /s/ is the sample variance.
+
+[@https://en.wikipedia.org/wiki/Student%27s_t-distribution Student's t-distribution]
+is defined as the distribution of the random
+variable t which is  - very loosely - the "best" that we can do while not
+knowing the true standard deviation of the sample.  It has the PDF:
+
+[equation students_t_ref1]
+
+The Student's t-distribution takes a single parameter: the number of
+degrees of freedom of the sample. When the degrees of freedom is
+/one/ then this distribution is the same as the Cauchy-distribution.
+As the number of degrees of freedom tends towards infinity, then this
+distribution approaches the normal-distribution.  The following graph
+illustrates how the PDF varies with the degrees of freedom [nu]:
+
+[graph students_t_pdf]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED students_t_distribution(const RealType& v);
+
+Constructs a Student's t-distribution with /v/ degrees of freedom.
+
+Requires /v/ > 0, including infinity (if RealType permits),
+otherwise calls __domain_error.  Note that
+non-integral degrees of freedom are supported,
+and are meaningful under certain circumstances.
+
+   BOOST_MATH_GPU_ENABLED RealType degrees_of_freedom()const;
+
+returns the number of degrees of freedom of this distribution.
+
+   BOOST_MATH_GPU_ENABLED static RealType find_degrees_of_freedom(
+      RealType difference_from_mean,
+      RealType alpha,
+      RealType beta,
+      RealType sd,
+      RealType hint = 100);
+
+returns the number of degrees of freedom required to observe a significant
+result in the Student's t test when the mean differs from the "true"
+mean by /difference_from_mean/.
+
+[variablelist
+[[difference_from_mean][The difference between the true mean and the sample mean
+                        that we wish to show is significant.]]
+[[alpha][The maximum acceptable probability of rejecting the null hypothesis
+        when it is in fact true.]]
+[[beta][The maximum acceptable probability of failing to reject the null hypothesis
+        when it is in fact false.]]
+[[sd][The sample standard deviation.]]
+[[hint][A hint for the location to start looking for the result, a good choice for this
+      would be the sample size of a previous borderline Student's t test.]]
+]
+
+[note
+Remember that for a two-sided test, you must divide alpha by two
+before calling this function.]
+
+For more information on this function see the
+[@http://www.itl.nist.gov/div898/handbook/prc/section2/prc222.htm
+NIST Engineering Statistics Handbook].
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[-[infin], +[infin]\].
+
+[h4 Examples]
+
+Various [link math_toolkit.stat_tut.weg.st_eg worked examples] are available illustrating the use of the Student's t
+distribution.
+
+[h4 Accuracy]
+
+The normal distribution is implemented in terms of the
+[link math_toolkit.sf_beta.ibeta_function incomplete beta function]
+and [link math_toolkit.sf_beta.ibeta_inv_function its inverses],
+refer to accuracy data on those functions for more information.
+
+[h4 Implementation]
+
+In the following table /v/ is the degrees of freedom of the distribution,
+/t/ is the random variate, /p/ is the probability and /q = 1-p/.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: [role serif_italic pdf = (v \/ (v + t[super 2]))[super (1+v)\/2 ] / (sqrt(v) * __beta(v\/2, 0.5))] ]]
+[[cdf][Using the relations:
+
+[role serif_italic p = 1 - z /iff t > 0/]
+
+[role serif_italic p = z     /otherwise/]
+
+where z is given by:
+
+__ibeta(v \/ 2, 0.5, v \/ (v + t[super 2])) \/ 2 ['iff v < 2t[super 2]]
+
+__ibetac(0.5, v \/ 2, t[super 2 ] / (v + t[super 2]) \/ 2   /otherwise/]]
+[[cdf complement][Using the relation: q = cdf(-t) ]]
+[[quantile][Using the relation: [role serif_italic t = sign(p - 0.5) * sqrt(v * y \/ x)]
+
+where:
+
+[role serif_italic x = __ibeta_inv(v \/ 2, 0.5, 2 * min(p, q)) ]
+
+[role serif_italic y = 1 - x]
+
+The quantities /x/ and /y/ are both returned by __ibeta_inv
+without the subtraction implied above.]]
+[[quantile from the complement][Using the relation: t = -quantile(q)]]
+[[mode][0]]
+[[mean][0]]
+[[variance][if (v > 2) v \/ (v - 2) else NaN]]
+[[skewness][if (v > 3) 0 else NaN ]]
+[[kurtosis][if (v > 4) 3 * (v - 2) \/ (v - 4) else NaN]]
+[[kurtosis excess][if (v > 4) 6 \/ (df - 4) else NaN]]
+]
+
+If the moment index /k/ is less than /v/, then the moment is undefined.
+Evaluating the moment will throw a __domain_error unless ignored by a policy,
+when it will return `std::numeric_limits<>::quiet_NaN();`
+
+[h5:implementation Implementation]
+
+(By popular demand, we now support infinite argument and random deviate.
+But we have not implemented the return of infinity
+as suggested by [@http://en.wikipedia.org/wiki/Student%27s_t-distribution Wikipedia Student's t],
+instead throwing a domain error or return NaN.
+See also [@https://svn.boost.org/trac/boost/ticket/7177].)
+
+[endsect] [/section:students_t_dist Students t]
+
+[/ students_t.qbk
+  Copyright 2006, 2012, 2017 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

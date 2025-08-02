@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN" "http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd" [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head><title>airy_zero_1</title>
+<!-- MathML created with MathCast Equation Editor version 0.92 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mi>f</mi>
+    <mfenced>
+      <mrow>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <msup>
+      <mi>z</mi>
+      <mrow>
+        <mfrac>
+          <mn>2</mn>
+          <mn>3</mn>
+        </mfrac>
+      </mrow>
+    </msup>
+    <mfenced>
+      <mrow>
+        <mn>1</mn>
+        <mo>+</mo>
+        <mfrac>
+          <mn>5</mn>
+          <mrow>
+            <mn>48</mn>
+            <msup>
+              <mi>z</mi>
+              <mn>2</mn>
+            </msup>
+          </mrow>
+        </mfrac>
+        <mo>&#x2212;</mo>
+        <mfrac>
+          <mn>5</mn>
+          <mrow>
+            <mn>36</mn>
+            <msup>
+              <mi>z</mi>
+              <mn>4</mn>
+            </msup>
+          </mrow>
+        </mfrac>
+        <mo>+</mo>
+        <mfrac>
+          <mn>77125</mn>
+          <mrow>
+            <mn>82944</mn>
+            <msup>
+              <mi>z</mi>
+              <mn>6</mn>
+            </msup>
+          </mrow>
+        </mfrac>
+        <mo>&#x2212;</mo>
+        <mfrac>
+          <mn>108056875</mn>
+          <mrow>
+            <mn>6967296</mn>
+            <msup>
+              <mi>z</mi>
+              <mn>8</mn>
+            </msup>
+          </mrow>
+        </mfrac>
+        <mo>+</mo>
+        <mfrac>
+          <mn>162375596875</mn>
+          <mrow>
+            <mn>334430208</mn>
+            <msup>
+              <mi>z</mi>
+              <mrow>
+                <mn>10</mn>
+              </mrow>
+            </msup>
+          </mrow>
+        </mfrac>
+      </mrow>
+    </mfenced>
+  </mrow>
+</math></body>
+</html>
