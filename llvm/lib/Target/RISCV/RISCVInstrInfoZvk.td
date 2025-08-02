@@ -1130,13 +1130,13 @@ let Predicates = [HasStdExtZvkned] in {
 
 let Predicates = [HasStdExtZvknha] in {
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32IntegerVectors>;
-  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CH", I32IntegerVectors>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CL", I32IntegerVectors>;
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32IntegerVectors, isSEWAware=true>;
 } // Predicates = [HasStdExtZvknha]
 
 let Predicates = [HasStdExtZvknhb] in {
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ch", "PseudoVSHA2CH", I32I64IntegerVectors>;
-  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CH", I32I64IntegerVectors>;
+  defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2cl", "PseudoVSHA2CL", I32I64IntegerVectors>;
   defm : VPatBinaryV_VV_NoMask<"int_riscv_vsha2ms", "PseudoVSHA2MS", I32I64IntegerVectors, isSEWAware=true>;
 } // Predicates = [HasStdExtZvknhb]
 
