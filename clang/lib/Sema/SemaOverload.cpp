@@ -751,8 +751,16 @@ clang::MakeDeductionFailureInfo(ASTContext &Context,
     break;
 
   case TemplateDeductionResult::Incomplete:
+    Result.Data = Info.Param.getOpaqueValue();
+    break;
   case TemplateDeductionResult::InvalidExplicitArguments:
     Result.Data = Info.Param.getOpaqueValue();
+    if (Info.hasSFINAEDiagnostic()) {
+      PartialDiagnosticAt *Diag = new (Result.Diagnostic) PartialDiagnosticAt(
+          SourceLocation(), PartialDiagnostic::NullDiagnostic());
+      Info.takeSFINAEDiagnostic(*Diag);
+      Result.HasDiagnostic = true;
+    }
     break;
 
   case TemplateDeductionResult::DeducedMismatch:
@@ -824,7 +832,6 @@ void DeductionFailureInfo::Destroy() {
   case TemplateDeductionResult::Incomplete:
   case TemplateDeductionResult::TooManyArguments:
   case TemplateDeductionResult::TooFewArguments:
-  case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::CUDATargetMismatch:
   case TemplateDeductionResult::NonDependentConversionFailure:
     break;
@@ -839,6 +846,7 @@ void DeductionFailureInfo::Destroy() {
     Data = nullptr;
     break;
 
+  case TemplateDeductionResult::InvalidExplicitArguments:
   case TemplateDeductionResult::SubstitutionFailure:
     // FIXME: Destroy the template argument list?
     Data = nullptr;
@@ -12262,6 +12270,16 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
              diag::note_ovl_candidate_explicit_arg_mismatch_unnamed)
           << (index + 1);
     }
+
+    // FIXME: Attach this diagnostic to the parent error.
+    if (PartialDiagnosticAt *PDiag = DeductionFailure.getSFINAEDiagnostic()) {
+      unsigned DiagID =
+          S.getDiagnostics().getCustomDiagID(DiagnosticsEngine::Note, "%0");
+      SmallString<128> DiagContent;
+      PDiag->second.EmitToString(S.getDiagnostics(), DiagContent);
+      S.Diag(Templated->getLocation(), DiagID) << DiagContent;
+    }
+
     MaybeEmitInheritedConstructorNote(S, Found);
     return;
 
