@@ -44,7 +44,7 @@ define void @_start() {
 ; NOPIC:        - Type:            GLOBAL
 
 ; NOPIC-EXPORT-ALL:   - Type:            EXPORT
-; NOPIC-EXPORT-ALL-NEXT Exports:
+; NOPIC-EXPORT-ALL-NEXT: Exports:
 ; NOPIC-EXPORT-ALL:       - Name:            __cpp_exception
 ; NOPIC-EXPORT-ALL:         Kind:            TAG
 ; NOPIC-EXPORT-ALL:         Index:           0
