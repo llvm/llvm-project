@@ -299,9 +299,9 @@ static char getSymbolNMTypeChar(IRObjectFile &Obj, basic_symbol_iterator I);
 // and when printing Mach-O symbols in hex it produces the same output as
 // darwin's nm(1) -x format.
 static void darwinPrintSymbol(SymbolicFile &Obj, const NMSymbol &S,
-                              char *SymbolAddrStr, const char *printBlanks,
-                              const char *printDashes,
-                              const char *printFormat) {
+                              char *SymbolAddrStr, const char *PrintBlanks,
+                              const char *PrintDashes,
+                              const char *PrintFormat) {
   MachO::mach_header H;
   MachO::mach_header_64 H_64;
   uint32_t Filetype = MachO::MH_OBJECT;
@@ -377,12 +377,12 @@ static void darwinPrintSymbol(SymbolicFile &Obj, const NMSymbol &S,
 
   // If we are printing Mach-O symbols in hex do that and return.
   if (FormatMachOasHex) {
-    outs() << format(printFormat, NValue) << ' '
+    outs() << format(PrintFormat, NValue) << ' '
            << format("%02x %02x %04x %08x", NType, NSect, NDesc, NStrx) << ' '
            << S.Name;
     if ((NType & MachO::N_TYPE) == MachO::N_INDR) {
       outs() << " (indirect for ";
-      outs() << format(printFormat, NValue) << ' ';
+      outs() << format(PrintFormat, NValue) << ' ';
       StringRef IndirectName;
       if (S.Sym.getRawDataRefImpl().p) {
         if (MachO->getIndirectName(S.Sym.getRawDataRefImpl(), IndirectName))
@@ -398,9 +398,9 @@ static void darwinPrintSymbol(SymbolicFile &Obj, const NMSymbol &S,
 
   if (PrintAddress) {
     if ((NType & MachO::N_TYPE) == MachO::N_INDR)
-      strcpy(SymbolAddrStr, printBlanks);
+      strcpy(SymbolAddrStr, PrintBlanks);
     if (Obj.isIR() && (NType & MachO::N_TYPE) == MachO::N_TYPE)
-      strcpy(SymbolAddrStr, printDashes);
+      strcpy(SymbolAddrStr, PrintDashes);
     outs() << SymbolAddrStr << ' ';
   }
 
@@ -609,8 +609,8 @@ static void darwinPrintStab(MachOObjectFile *MachO, const NMSymbol &S) {
   }
 
   outs() << format(" %02x %04x ", NSect, NDesc);
-  if (const char *stabString = getDarwinStabString(NType))
-    outs() << format("%5.5s", stabString);
+  if (const char *StabString = getDarwinStabString(NType))
+    outs() << format("%5.5s", StabString);
   else
     outs() << format("   %02x", NType);
 }
@@ -727,7 +727,7 @@ static void printLineNumbers(symbolize::LLVMSymbolizer &Symbolizer,
 }
 
 static void printSymbolList(SymbolicFile &Obj,
-                            std::vector<NMSymbol> &SymbolList, bool printName,
+                            std::vector<NMSymbol> &SymbolList, bool PrintName,
                             StringRef ArchiveName, StringRef ArchitectureName) {
   std::optional<symbolize::LLVMSymbolizer> Symbolizer;
   if (LineNumbers)
@@ -736,7 +736,7 @@ static void printSymbolList(SymbolicFile &Obj,
   if (!PrintFileName) {
     if ((OutputFormat == bsd || OutputFormat == posix ||
          OutputFormat == just_symbols) &&
-        MultipleFiles && printName) {
+        MultipleFiles && PrintName) {
       outs() << '\n' << CurrentFilename << ":\n";
     } else if (OutputFormat == sysv) {
       outs() << "\n\nSymbols from " << CurrentFilename << ":\n\n";
@@ -749,32 +749,32 @@ static void printSymbolList(SymbolicFile &Obj,
     }
   }
 
-  const char *printBlanks, *printDashes, *printFormat;
+  const char *PrintBlanks, *PrintDashes, *PrintFormat;
   if (Obj.is64Bit()) {
-    printBlanks = "                ";
-    printDashes = "----------------";
+    PrintBlanks = "                ";
+    PrintDashes = "----------------";
     switch (AddressRadix) {
     case Radix::o:
-      printFormat = OutputFormat == posix ? "%" PRIo64 : "%016" PRIo64;
+      PrintFormat = OutputFormat == posix ? "%" PRIo64 : "%016" PRIo64;
       break;
     case Radix::x:
-      printFormat = OutputFormat == posix ? "%" PRIx64 : "%016" PRIx64;
+      PrintFormat = OutputFormat == posix ? "%" PRIx64 : "%016" PRIx64;
       break;
     default:
-      printFormat = OutputFormat == posix ? "%" PRId64 : "%016" PRId64;
+      PrintFormat = OutputFormat == posix ? "%" PRId64 : "%016" PRId64;
     }
   } else {
-    printBlanks = "        ";
-    printDashes = "--------";
+    PrintBlanks = "        ";
+    PrintDashes = "--------";
     switch (AddressRadix) {
     case Radix::o:
-      printFormat = OutputFormat == posix ? "%" PRIo64 : "%08" PRIo64;
+      PrintFormat = OutputFormat == posix ? "%" PRIo64 : "%08" PRIo64;
       break;
     case Radix::x:
-      printFormat = OutputFormat == posix ? "%" PRIx64 : "%08" PRIx64;
+      PrintFormat = OutputFormat == posix ? "%" PRIx64 : "%08" PRIx64;
       break;
     default:
-      printFormat = OutputFormat == posix ? "%" PRId64 : "%08" PRId64;
+      PrintFormat = OutputFormat == posix ? "%" PRId64 : "%08" PRId64;
     }
   }
 
@@ -801,25 +801,25 @@ static void printSymbolList(SymbolicFile &Obj,
     // If the format is SysV or the symbol isn't defined, then print spaces.
     if (OutputFormat == sysv || !symbolIsDefined(S)) {
       if (OutputFormat == posix) {
-        format(printFormat, S.Address)
+        format(PrintFormat, S.Address)
             .print(SymbolAddrStr, sizeof(SymbolAddrStr));
-        format(printFormat, S.Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
+        format(PrintFormat, S.Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
       } else {
-        strcpy(SymbolAddrStr, printBlanks);
-        strcpy(SymbolSizeStr, printBlanks);
+        strcpy(SymbolAddrStr, PrintBlanks);
+        strcpy(SymbolSizeStr, PrintBlanks);
       }
     }
 
     if (symbolIsDefined(S)) {
       // Otherwise, print the symbol address and size.
       if (Obj.isIR())
-        strcpy(SymbolAddrStr, printDashes);
+        strcpy(SymbolAddrStr, PrintDashes);
       else if (MachO && S.TypeChar == 'I')
-        strcpy(SymbolAddrStr, printBlanks);
+        strcpy(SymbolAddrStr, PrintBlanks);
       else
-        format(printFormat, S.Address)
+        format(PrintFormat, S.Address)
             .print(SymbolAddrStr, sizeof(SymbolAddrStr));
-      format(printFormat, S.Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
+      format(PrintFormat, S.Size).print(SymbolSizeStr, sizeof(SymbolSizeStr));
     }
 
     // If OutputFormat is darwin or we are printing Mach-O symbols in hex and
@@ -828,8 +828,8 @@ static void printSymbolList(SymbolicFile &Obj,
     // printing Mach-O symbols in hex and not a Mach-O object fall back to
     // OutputFormat bsd (see below).
     if ((OutputFormat == darwin || FormatMachOasHex) && (MachO || Obj.isIR())) {
-      darwinPrintSymbol(Obj, S, SymbolAddrStr, printBlanks, printDashes,
-                        printFormat);
+      darwinPrintSymbol(Obj, S, SymbolAddrStr, PrintBlanks, PrintDashes,
+                        PrintFormat);
     } else if (OutputFormat == posix) {
       outs() << Name << " " << S.TypeChar << " " << SymbolAddrStr << " "
              << (MachO ? "0" : SymbolSizeStr);
@@ -1263,17 +1263,17 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     unsigned ExportsAdded = 0;
     Error Err = Error::success();
     for (const llvm::object::ExportEntry &Entry : MachO.exports(Err)) {
-      bool found = false;
+      bool Found = false;
       bool ReExport = false;
       if (!DyldInfoOnly) {
         for (const NMSymbol &S : SymbolList)
           if (S.Address == Entry.address() + BaseSegmentAddress &&
               S.Name == Entry.name()) {
-            found = true;
+            Found = true;
             break;
           }
       }
-      if (!found) {
+      if (!Found) {
         NMSymbol S = {};
         S.Address = Entry.address() + BaseSegmentAddress;
         S.Size = 0;
@@ -1421,16 +1421,16 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     Error BErr = Error::success();
     StringRef LastSymbolName = StringRef();
     for (const llvm::object::MachOBindEntry &Entry : MachO.bindTable(BErr)) {
-      bool found = false;
+      bool Found = false;
       if (LastSymbolName == Entry.symbolName())
-        found = true;
+        Found = true;
       else if (!DyldInfoOnly) {
-        for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
+        for (unsigned J = 0; J < SymbolList.size() && !Found; ++J) {
           if (SymbolList[J].Name == Entry.symbolName())
-            found = true;
+            Found = true;
         }
       }
-      if (!found) {
+      if (!Found) {
         LastSymbolName = Entry.symbolName();
         NMSymbol B = {};
         B.Address = 0;
@@ -1475,19 +1475,19 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     LastSymbolName = StringRef();
     for (const llvm::object::MachOBindEntry &Entry :
          MachO.lazyBindTable(LErr)) {
-      bool found = false;
+      bool Found = false;
       if (LastSymbolName == Entry.symbolName())
-        found = true;
+        Found = true;
       else {
         // Here we must check to see it this symbol is already in the
         // SymbolList as it might have already have been added above via a
         // non-lazy (bind) entry.
-        for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
+        for (unsigned J = 0; J < SymbolList.size() && !Found; ++J) {
           if (SymbolList[J].Name == Entry.symbolName())
-            found = true;
+            Found = true;
         }
       }
-      if (!found) {
+      if (!Found) {
         LastSymbolName = Entry.symbolName();
         NMSymbol L = {};
         L.Name = Entry.symbolName().str();
@@ -1535,20 +1535,20 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     LastSymbolName = StringRef();
     for (const llvm::object::MachOBindEntry &Entry :
          MachO.weakBindTable(WErr)) {
-      bool found = false;
+      bool Found = false;
       unsigned J = 0;
       if (LastSymbolName == Entry.symbolName() ||
           Entry.flags() & MachO::BIND_SYMBOL_FLAGS_NON_WEAK_DEFINITION) {
-        found = true;
+        Found = true;
       } else {
-        for (J = 0; J < SymbolList.size() && !found; ++J) {
+        for (J = 0; J < SymbolList.size() && !Found; ++J) {
           if (SymbolList[J].Name == Entry.symbolName()) {
-            found = true;
+            Found = true;
             break;
           }
         }
       }
-      if (!found) {
+      if (!Found) {
         LastSymbolName = Entry.symbolName();
         NMSymbol W = {};
         W.Name = Entry.symbolName().str();
@@ -1616,14 +1616,14 @@ static void dumpSymbolsFromDLInfoMachO(MachOObjectFile &MachO,
     // See if these addresses are already in the symbol table.
     unsigned FunctionStartsAdded = 0;
     for (uint64_t f = 0; f < FoundFns.size(); f++) {
-      bool found = false;
-      for (unsigned J = 0; J < SymbolList.size() && !found; ++J) {
+      bool Found = false;
+      for (unsigned J = 0; J < SymbolList.size() && !Found; ++J) {
         if (SymbolList[J].Address == FoundFns[f] + BaseSegmentAddress)
-          found = true;
+          Found = true;
       }
       // See this address is not already in the symbol table fake up an
       // nlist for it.
-      if (!found) {
+      if (!Found) {
         NMSymbol F = {};
         F.Name = "<redacted function X>";
         F.Address = FoundFns[f] + BaseSegmentAddress;
@@ -2044,9 +2044,9 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, StringRef Filename) {
   return true;
 }
 
-static void printArchiveMap(iterator_range<Archive::symbol_iterator> &map,
+static void printArchiveMap(iterator_range<Archive::symbol_iterator> &Map,
                             StringRef Filename) {
-  for (auto I : map) {
+  for (auto I : Map) {
     Expected<Archive::Child> C = I.getMember();
     if (!C) {
       error(C.takeError(), Filename);
@@ -2244,7 +2244,7 @@ static void dumpMachOUniversalBinaryArchAll(MachOUniversalBinary *UB,
                                             std::vector<NMSymbol> &SymbolList,
                                             StringRef Filename,
                                             LLVMContext *ContextPtr) {
-  bool moreThanOneArch = UB->getNumberOfObjects() > 1;
+  bool MoreThanOneArch = UB->getNumberOfObjects() > 1;
   for (const MachOUniversalBinary::ObjectForArch &O : UB->objects()) {
     Expected<std::unique_ptr<ObjectFile>> ObjOrErr = O.getAsObjectFile();
     std::string ArchiveName;
@@ -2253,13 +2253,13 @@ static void dumpMachOUniversalBinaryArchAll(MachOUniversalBinary *UB,
     ArchitectureName.clear();
     if (ObjOrErr) {
       ObjectFile &Obj = *ObjOrErr.get();
-      if (isa<MachOObjectFile>(Obj) && moreThanOneArch)
+      if (isa<MachOObjectFile>(Obj) && MoreThanOneArch)
         ArchitectureName = O.getArchFlagName();
       dumpSymbolNamesFromObject(Obj, SymbolList, /*PrintSymbolObject=*/false,
                                 !PrintFileName, ArchiveName, ArchitectureName);
     } else if (auto E = isNotObjectErrorInvalidFileType(ObjOrErr.takeError())) {
       error(std::move(E), Filename,
-            moreThanOneArch ? StringRef(O.getArchFlagName()) : StringRef());
+            MoreThanOneArch ? StringRef(O.getArchFlagName()) : StringRef());
       continue;
     } else if (Expected<std::unique_ptr<Archive>> AOrErr = O.getAsArchive()) {
       std::unique_ptr<Archive> &A = *AOrErr;
@@ -2270,12 +2270,12 @@ static void dumpMachOUniversalBinaryArchAll(MachOUniversalBinary *UB,
         if (!ChildOrErr) {
           if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
             error(std::move(E), Filename, C,
-                  moreThanOneArch ? StringRef(ArchitectureName) : StringRef());
+                  MoreThanOneArch ? StringRef(ArchitectureName) : StringRef());
           continue;
         }
         if (SymbolicFile *F = dyn_cast<SymbolicFile>(&*ChildOrErr.get())) {
           ArchiveName = std::string(A->getFileName());
-          if (isa<MachOObjectFile>(F) && moreThanOneArch)
+          if (isa<MachOObjectFile>(F) && MoreThanOneArch)
             ArchitectureName = O.getArchFlagName();
           dumpSymbolNamesFromObject(*F, SymbolList, /*PrintSymbolObject=*/false,
                                     !PrintFileName, ArchiveName,
