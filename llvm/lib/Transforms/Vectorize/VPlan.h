@@ -1019,6 +1019,7 @@ public:
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
     ExtractLane,
+    VScale,
 
   };
 
@@ -1167,6 +1168,7 @@ public:
     switch (VPI->getOpcode()) {
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
+    case VPInstruction::VScale:
       return true;
     default:
       return false;
@@ -3967,9 +3969,6 @@ public:
     Entry = VPBB;
     VPBB->setPlan(this);
   }
-
-  /// Prepare the plan for execution, setting up the required live-in values.
-  void prepareToExecute(VPTransformState &State);
 
   /// Generate the IR code for this VPlan.
   void execute(VPTransformState *State);

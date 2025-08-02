@@ -3339,6 +3339,50 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   VectorTC.replaceAllUsesWith(Res);
 }
 
+void VPlanTransforms::materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
+                                            ElementCount VFEC) {
+  VPBuilder Builder(VectorPH, VectorPH->begin());
+  auto *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+  VPValue &VF = Plan.getVF();
+  VPValue &VFxUF = Plan.getVFxUF();
+  if (VF.getNumUsers()) {
+    VPValue *RuntimeVF =
+        Plan.getOrAddLiveIn(ConstantInt::get(TCTy, VFEC.getKnownMinValue()));
+    if (VFEC.isScalable())
+      RuntimeVF = Builder.createNaryOp(
+          Instruction::Mul,
+          {Builder.createNaryOp(VPInstruction::VScale, {}, TCTy), RuntimeVF},
+          VPIRFlags::WrapFlagsTy(true, false));
+    if (any_of(VF.users(), [&VF](VPUser *U) { return !U->usesScalars(&VF); })) {
+      auto *BC = Builder.createNaryOp(VPInstruction::Broadcast, {RuntimeVF});
+      VF.replaceUsesWithIf(
+          BC, [&VF](VPUser &U, unsigned) { return !U.usesScalars(&VF); });
+    }
+    VF.replaceAllUsesWith(RuntimeVF);
+
+    VPValue *UF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getUF()));
+    auto *MulByUF = Plan.getUF() == 1 ? RuntimeVF
+                                      : Builder.createNaryOp(Instruction::Mul,
+                                                             {RuntimeVF, UF});
+    VFxUF.replaceAllUsesWith(MulByUF);
+    return;
+  }
+
+  unsigned VFMulUF = VFEC.getKnownMinValue() * Plan.getUF();
+  VPValue *RuntimeVFxUF = Plan.getOrAddLiveIn(ConstantInt::get(TCTy, VFMulUF));
+  if (VFEC.isScalable()) {
+    RuntimeVFxUF =
+        VFMulUF == 1
+            ? RuntimeVFxUF
+            : Builder.createNaryOp(
+                  Instruction::Mul,
+                  {Builder.createNaryOp(VPInstruction::VScale, {}, TCTy),
+                   RuntimeVFxUF},
+                  VPIRFlags::WrapFlagsTy(true, false));
+  }
+  VFxUF.replaceAllUsesWith(RuntimeVFxUF);
+}
+
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
 /// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
 /// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding

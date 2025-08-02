@@ -276,6 +276,10 @@ struct VPlanTransforms {
   static void materializeBackedgeTakenCount(VPlan &Plan,
                                             VPBasicBlock *VectorPH);
 
+  /// Materialize VF and VFxUF to be computed explicitly using VPInstructions.
+  static void materializeVFAndVFxUF(VPlan &Plan, VPBasicBlock *VectorPH,
+                                    ElementCount VF);
+
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
   /// elements, if all transformed interleave groups access the full vector
