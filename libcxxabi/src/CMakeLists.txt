@@ -3,7 +3,6 @@ set(LIBCXXABI_SOURCES
   # C++ABI files
   cxa_aux_runtime.cpp
   cxa_default_handlers.cpp
-  cxa_demangle.cpp
   cxa_exception_storage.cpp
   cxa_guard.cpp
   cxa_handlers.cpp
@@ -18,6 +17,12 @@ set(LIBCXXABI_SOURCES
   fallback_malloc.cpp
   private_typeinfo.cpp
 )
+
+if (LIBCXXABI_ENABLE_DEMANGLER)
+  list(APPEND LIBCXXABI_SOURCES
+    cxa_demangle.cpp
+  )
+endif()
 
 if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
   list(APPEND LIBCXXABI_SOURCES
