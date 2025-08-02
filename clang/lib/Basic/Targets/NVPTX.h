@@ -207,6 +207,10 @@ public:
   bool hasBFloat16Type() const override { return true; }
 
   OffloadArch getGPU() const { return GPU; }
+
+  std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
+    return std::make_pair(128, 128);
+  }
 };
 } // namespace targets
 } // namespace clang
