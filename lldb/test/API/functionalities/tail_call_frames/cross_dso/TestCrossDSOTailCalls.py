@@ -11,7 +11,6 @@ class TestCrossDSOTailCalls(TestBase):
     @skipIf(compiler="clang", compiler_version=["<", "10.0"])
     @skipIf(dwarf_version=["<", "4"])
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr26265")
-    @expectedFailureAll(archs=["arm$", "arm64", "aarch64"], bugnumber="llvm.org/PR44561")
     def test_cross_dso_tail_calls(self):
         self.build()
         exe = self.getBuildArtifact("a.out")
