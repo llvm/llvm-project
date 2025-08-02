@@ -23,6 +23,8 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
     passmanager.py
     rewrite.py
     dialects/_ods_common.py
+    source_info_util.py
+    traceback_util.py
 
     # The main _mlir module has submodules: include stubs from each.
     _mlir_libs/_mlir/__init__.pyi
@@ -486,6 +488,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     IRTypes.cpp
     Pass.cpp
     Rewrite.cpp
+    Traceback.cpp
 
     # Headers must be included explicitly so they are installed.
     Globals.h
@@ -493,6 +496,7 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
     Pass.h
     NanobindUtils.h
     Rewrite.h
+    Traceback.h
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
