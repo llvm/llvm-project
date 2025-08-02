@@ -44,63 +44,49 @@ test()
     test(T(100), T(0), std::complex<T>(100, 0));
 }
 
-void test_edges()
-{
-    const unsigned N = sizeof(testcases) / sizeof(testcases[0]);
-    for (unsigned i = 0; i < N; ++i)
-    {
-        double r = real(testcases[i]);
-        double theta = imag(testcases[i]);
-        std::complex<double> z = std::polar(r, theta);
-        switch (classify(r))
-        {
-        case zero:
-            if (std::signbit(r) || classify(theta) == inf || classify(theta) == NaN)
-            {
-                int c = classify(z);
-                assert(c == NaN || c == non_zero_nan);
-            }
-            else
-            {
-                assert(z == std::complex<double>());
-            }
-            break;
-        case non_zero:
-            if (std::signbit(r) || classify(theta) == inf || classify(theta) == NaN)
-            {
-                int c = classify(z);
-                assert(c == NaN || c == non_zero_nan);
-            }
-            else
-            {
-                is_about(std::abs(z), r);
-            }
-            break;
-        case inf:
-            if (r < 0)
-            {
-                int c = classify(z);
-                assert(c == NaN || c == non_zero_nan);
-            }
-            else
-            {
-                assert(classify(z) == inf);
-                if (classify(theta) != NaN && classify(theta) != inf)
-                {
-                    assert(classify(real(z)) != NaN);
-                    assert(classify(imag(z)) != NaN);
-                }
-            }
-            break;
-        case NaN:
-        case non_zero_nan:
-            {
-                int c = classify(z);
-                assert(c == NaN || c == non_zero_nan);
-            }
-            break;
+template <class T>
+void test_edges() {
+  const unsigned N = sizeof(testcases<T>) / sizeof(testcases<T>[0]);
+  for (unsigned i = 0; i < N; ++i) {
+    T r               = real(testcases<T>[i]);
+    T theta           = imag(testcases<T>[i]);
+    std::complex<T> z = std::polar(r, theta);
+    switch (classify(r)) {
+    case zero:
+      if (std::signbit(r) || classify(theta) == inf || classify(theta) == NaN) {
+        int c = classify(z);
+        assert(c == NaN || c == non_zero_nan);
+      } else {
+        assert(z == std::complex<T>());
+      }
+      break;
+    case non_zero:
+      if (std::signbit(r) || classify(theta) == inf || classify(theta) == NaN) {
+        int c = classify(z);
+        assert(c == NaN || c == non_zero_nan);
+      } else {
+        is_about(std::abs(z), r);
+      }
+      break;
+    case inf:
+      if (r < 0) {
+        int c = classify(z);
+        assert(c == NaN || c == non_zero_nan);
+      } else {
+        assert(classify(z) == inf);
+        if (classify(theta) != NaN && classify(theta) != inf) {
+          assert(classify(real(z)) != NaN);
+          assert(classify(imag(z)) != NaN);
         }
+      }
+      break;
+    case NaN:
+    case non_zero_nan: {
+      int c = classify(z);
+      assert(c == NaN || c == non_zero_nan);
+    } break;
     }
+  }
 }
 
 int main(int, char**)
@@ -108,7 +94,9 @@ int main(int, char**)
     test<float>();
     test<double>();
     test<long double>();
-    test_edges();
+    test_edges<float>();
+    test_edges<double>();
+    test_edges<long double>();
 
-  return 0;
+    return 0;
 }
