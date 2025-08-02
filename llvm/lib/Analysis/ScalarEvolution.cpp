@@ -10762,6 +10762,63 @@ bool ScalarEvolution::SimplifyICmpOperands(CmpPredicate &Pred, const SCEV *&LHS,
   if (Depth >= 3)
     return false;
 
+  if (isa<SCEVMulExpr>(LHS) && isa<SCEVMulExpr>(RHS)) {
+    const SCEVMulExpr *LMul = cast<SCEVMulExpr>(LHS);
+    const SCEVMulExpr *RMul = cast<SCEVMulExpr>(RHS);
+
+    auto FindCommonFactor =
+        [&](const SCEVMulExpr *LHS, const SCEVMulExpr *RHS,
+            bool (ScalarEvolution::*Predicate)(
+                const SCEV *)) -> std::optional<std::pair<int, int>> {
+      for (int i = 0, e = LHS->getNumOperands(); i != e; ++i)
+        for (int j = 0, e = RHS->getNumOperands(); j != e; ++j)
+          if (LHS->getOperand(i) == RHS->getOperand(j) &&
+              (this->*Predicate)(LHS->getOperand(i)))
+            return std::make_pair(i, j);
+
+      return std::nullopt;
+    };
+
+    // (X * Z) uicmp (Z * Y) ==> X uicmp Y
+    //     when neither multiply wraps and Z is non-zero.
+    if (ICmpInst::isUnsigned(Pred)) {
+      if (LMul->hasNoUnsignedWrap() && RMul->hasNoUnsignedWrap()) {
+        if (auto Indices = FindCommonFactor(LMul, RMul,
+                                            &ScalarEvolution::isKnownNonZero)) {
+          SmallVector<const SCEV *, 2> LHSOps;
+          append_range(LHSOps, LHS->operands().take_front(Indices->first));
+          append_range(LHSOps, LHS->operands().drop_front(Indices->first + 1));
+          LHS = getMulExpr(LHSOps);
+
+          SmallVector<const SCEV *, 2> RHSOps;
+          append_range(RHSOps, RHS->operands().take_front(Indices->second));
+          append_range(RHSOps, RHS->operands().drop_front(Indices->second + 1));
+          RHS = getMulExpr(RHSOps);
+
+          Changed = true;
+        }
+      }
+    }
+    // (X * Z) sicmp (Z * Y) ==> X sicmp Y
+    //     when neither multiply wraps and Z is positive.
+    else if (LMul->hasNoSignedWrap() && RMul->hasNoSignedWrap()) {
+      if (auto Indices =
+              FindCommonFactor(LMul, RMul, &ScalarEvolution::isKnownPositive)) {
+        SmallVector<const SCEV *, 2> LHSOps;
+        append_range(LHSOps, LHS->operands().take_front(Indices->first));
+        append_range(LHSOps, LHS->operands().drop_front(Indices->first + 1));
+        LHS = getMulExpr(LHSOps);
+
+        SmallVector<const SCEV *, 2> RHSOps;
+        append_range(RHSOps, RHS->operands().take_front(Indices->second));
+        append_range(RHSOps, RHS->operands().drop_front(Indices->second + 1));
+        RHS = getMulExpr(RHSOps);
+
+        Changed = true;
+      }
+    }
+  }
+
   // Canonicalize a constant to the right side.
   if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(LHS)) {
     // Check for both operands constant.
