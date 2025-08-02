@@ -501,11 +501,7 @@ void CIRRecordLowering::accumulateFields() {
                                   fieldEnd = recordDecl->field_end();
        field != fieldEnd;) {
     if (field->isBitField()) {
-      RecordDecl::field_iterator start = field;
-      // Iterate to gather the list of bitfields.
-      for (++field; field != fieldEnd && field->isBitField(); ++field)
-        ;
-      field = accumulateBitFields(start, field);
+      field = accumulateBitFields(field, fieldEnd);
       assert((field == fieldEnd || !field->isBitField()) &&
              "Failed to accumulate all the bitfields");
     } else if (!field->isZeroSize(astContext)) {
