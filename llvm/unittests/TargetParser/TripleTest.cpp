@@ -758,6 +758,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("riscv64-meta-unknown-mtia");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::Meta, T.getVendor());
+  EXPECT_EQ(Triple::UnknownOS, T.getOS());
+  EXPECT_EQ(Triple::MTIA, T.getEnvironment());
+
   T = Triple("riscv64-unknown-linux");
   EXPECT_EQ(Triple::riscv64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());

@@ -238,9 +238,9 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::FoldingSet<ElaboratedType> ElaboratedTypes{
       GeneralTypesLog2InitSize};
   mutable llvm::FoldingSet<DependentNameType> DependentNameTypes;
-  mutable llvm::ContextualFoldingSet<DependentTemplateSpecializationType,
-                                     ASTContext&>
-    DependentTemplateSpecializationTypes;
+  mutable llvm::DenseMap<llvm::FoldingSetNodeID,
+                         DependentTemplateSpecializationType *>
+      DependentTemplateSpecializationTypes;
   mutable llvm::FoldingSet<PackExpansionType> PackExpansionTypes;
   mutable llvm::FoldingSet<ObjCObjectTypeImpl> ObjCObjectTypes;
   mutable llvm::FoldingSet<ObjCObjectPointerType> ObjCObjectPointerTypes;
@@ -1335,6 +1335,12 @@ public:
     return ExternalSource.get();
   }
 
+  /// Retrieve a pointer to the external AST source associated
+  /// with this AST context, if any. Returns as an IntrusiveRefCntPtr.
+  IntrusiveRefCntPtr<ExternalASTSource> getExternalSourcePtr() const {
+    return ExternalSource;
+  }
+
   /// Attach an AST mutation listener to the AST context.
   ///
   /// The AST mutation listener provides the ability to track modifications to
@@ -1818,7 +1824,7 @@ public:
         NumPositiveBits = std::max({NumPositiveBits, ActiveBits, 1u});
       } else {
         NumNegativeBits =
-            std::max(NumNegativeBits, (unsigned)InitVal.getSignificantBits());
+            std::max(NumNegativeBits, InitVal.getSignificantBits());
       }
 
       MembersRepresentableByInt &= isRepresentableIntegerValue(InitVal, IntTy);

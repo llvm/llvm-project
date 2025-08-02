@@ -314,6 +314,7 @@ private:
   uint32_t dataDirOffset64;
 
   OutputSection *textSec;
+  OutputSection *wowthkSec;
   OutputSection *hexpthkSec;
   OutputSection *bssSec;
   OutputSection *rdataSec;
@@ -1076,8 +1077,10 @@ void Writer::createSections() {
 
   // Try to match the section order used by link.exe.
   textSec = createSection(".text", code | r | x);
-  if (isArm64EC(ctx.config.machine))
+  if (isArm64EC(ctx.config.machine)) {
+    wowthkSec = createSection(".wowthk", code | r | x);
     hexpthkSec = createSection(".hexpthk", code | r | x);
+  }
   bssSec = createSection(".bss", bss | r | w);
   rdataSec = createSection(".rdata", data | r);
   buildidSec = createSection(".buildid", data | r);
@@ -1128,6 +1131,9 @@ void Writer::createSections() {
 
   if (hasIdata)
     locateImportTables();
+
+  for (auto thunk : ctx.symtab.sameAddressThunks)
+    wowthkSec->addChunk(thunk);
 
   // Then create an OutputSection for each section.
   // '$' and all following characters in input section names are
@@ -2310,6 +2316,14 @@ void Writer::createECChunks() {
       ctx.symtab.findUnderscore("__arm64x_redirection_metadata");
   replaceSymbol<DefinedSynthetic>(entryPointsSym, entryPointsSym->getName(),
                                   entryPoints);
+
+  for (auto thunk : ctx.symtab.sameAddressThunks) {
+    // Relocation values are set later in setECSymbols.
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           thunk);
+    ctx.dynamicRelocs->add(IMAGE_DVRT_ARM64X_FIXUP_TYPE_VALUE, sizeof(uint32_t),
+                           Arm64XRelocVal(thunk, sizeof(uint32_t)));
+  }
 }
 
 // MinGW specific. Gather all relocations that are imported from a DLL even
@@ -2519,6 +2533,9 @@ void Writer::setECSymbols() {
           chpeSym->getRVA() + offsetof(chpe_metadata, ExtraRFETableSize),
           pdata.last->getRVA() + pdata.last->getSize() - pdata.first->getRVA());
   }
+
+  for (SameAddressThunkARM64EC *thunk : ctx.symtab.sameAddressThunks)
+    thunk->setDynamicRelocs(ctx);
 }
 
 // Write section contents to a mmap'ed file.
@@ -2544,7 +2561,15 @@ void Writer::writeSections() {
     }
 
     parallelForEach(sec->chunks, [&](Chunk *c) {
-      c->writeTo(secBuf + c->getRVA() - sec->getRVA());
+      uint8_t *buf = secBuf + c->getRVA() - sec->getRVA();
+      c->writeTo(buf);
+
+      // Write the offset to EC entry thunk preceding section contents. The low
+      // bit is always set, so it's effectively an offset from the last byte of
+      // the offset.
+      if (Defined *entryThunk = c->getEntryThunk())
+        write32le(buf - sizeof(uint32_t),
+                  entryThunk->getRVA() - c->getRVA() + 1);
     });
   }
 }

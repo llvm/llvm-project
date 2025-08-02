@@ -163,6 +163,11 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LaterIndices.push_back(IdxVal);
   }
 
+  Value *Idx = GEP->getOperand(2);
+  // If the index type is non-canonical, wait for it to be canonicalized.
+  if (Idx->getType() != DL.getIndexType(GEP->getType()))
+    return nullptr;
+
   enum { Overdefined = -3, Undefined = -2 };
 
   // Variables for our state machines.
@@ -290,17 +295,6 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
 
   // Now that we've scanned the entire array, emit our new comparison(s).  We
   // order the state machines in complexity of the generated code.
-  Value *Idx = GEP->getOperand(2);
-
-  // If the index is larger than the pointer offset size of the target, truncate
-  // the index down like the GEP would do implicitly.  We don't have to do this
-  // for an inbounds GEP because the index can't be out of range.
-  if (!GEP->isInBounds()) {
-    Type *PtrIdxTy = DL.getIndexType(GEP->getType());
-    unsigned OffsetSize = PtrIdxTy->getIntegerBitWidth();
-    if (Idx->getType()->getPrimitiveSizeInBits().getFixedValue() > OffsetSize)
-      Idx = Builder.CreateTrunc(Idx, PtrIdxTy);
-  }
 
   // If inbounds keyword is not present, Idx * ElementSize can overflow.
   // Let's assume that ElementSize is 2 and the wanted value is at offset 0.
@@ -712,7 +706,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
   };
 
   CommonPointerBase Base = CommonPointerBase::compute(GEPLHS, RHS);
-  if (Base.Ptr == RHS && CanFold(Base.LHSNW)) {
+  if (Base.Ptr == RHS && CanFold(Base.LHSNW) && !Base.isExpensive()) {
     // ((gep Ptr, OFFSET) cmp Ptr)   ---> (OFFSET cmp 0).
     Type *IdxTy = DL.getIndexType(GEPLHS->getType());
     Value *Offset =
@@ -755,8 +749,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
 
     // If the base pointers are different, but the indices are the same, just
     // compare the base pointer.
-    Value *PtrBase = GEPLHS->getOperand(0);
-    if (PtrBase != GEPRHS->getOperand(0)) {
+    if (GEPLHS->getOperand(0) != GEPRHS->getOperand(0)) {
       bool IndicesTheSame =
           GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
           GEPLHS->getPointerOperand()->getType() ==
@@ -782,7 +775,7 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       if (GEPLHS->isInBounds() && GEPRHS->isInBounds() &&
           (GEPLHS->hasAllConstantIndices() || GEPLHS->hasOneUse()) &&
           (GEPRHS->hasAllConstantIndices() || GEPRHS->hasOneUse()) &&
-          PtrBase->stripPointerCasts() ==
+          GEPLHS->getOperand(0)->stripPointerCasts() ==
               GEPRHS->getOperand(0)->stripPointerCasts() &&
           !GEPLHS->getType()->isVectorTy()) {
         Value *LOffset = EmitGEPOffset(GEPLHS);
@@ -805,14 +798,10 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
                                         LOffset, ROffset);
         return replaceInstUsesWith(I, Cmp);
       }
-
-      // Otherwise, the base pointers are different and the indices are
-      // different. Try convert this to an indexed compare by looking through
-      // PHIs/casts.
-      return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
     }
 
-    if (GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
+    if (GEPLHS->getOperand(0) == GEPRHS->getOperand(0) &&
+        GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
         GEPLHS->getSourceElementType() == GEPRHS->getSourceElementType()) {
       // If the GEPs only differ by one index, compare it.
       unsigned NumDifferences = 0; // Keep track of # differences.
@@ -849,11 +838,14 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       }
     }
 
-    if (CanFold(NW)) {
+    if (Base.Ptr && CanFold(Base.LHSNW & Base.RHSNW) && !Base.isExpensive()) {
       // ((gep Ptr, OFFSET1) cmp (gep Ptr, OFFSET2)  --->  (OFFSET1 cmp OFFSET2)
-      Value *L = EmitGEPOffset(GEPLHS, /*RewriteGEP=*/true);
-      Value *R = EmitGEPOffset(GEPRHS, /*RewriteGEP=*/true);
-      return NewICmp(NW, L, R);
+      Type *IdxTy = DL.getIndexType(GEPLHS->getType());
+      Value *L =
+          EmitGEPOffsets(Base.LHSGEPs, Base.LHSNW, IdxTy, /*RewriteGEP=*/true);
+      Value *R =
+          EmitGEPOffsets(Base.RHSGEPs, Base.RHSNW, IdxTy, /*RewriteGEP=*/true);
+      return NewICmp(Base.LHSNW & Base.RHSNW, L, R);
     }
   }
 

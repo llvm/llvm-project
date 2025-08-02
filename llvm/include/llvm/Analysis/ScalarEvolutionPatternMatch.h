@@ -91,6 +91,10 @@ inline bind_ty<const SCEVUnknown> m_SCEVUnknown(const SCEVUnknown *&V) {
   return V;
 }
 
+inline bind_ty<const SCEVAddExpr> m_scev_Add(const SCEVAddExpr *&V) {
+  return V;
+}
+
 /// Match a specified const SCEV *.
 struct specificscev_ty {
   const SCEV *Expr;
@@ -158,6 +162,12 @@ template <typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVZeroExtendExpr, Op0_t>
 m_scev_ZExt(const Op0_t &Op0) {
   return m_scev_Unary<SCEVZeroExtendExpr>(Op0);
+}
+
+template <typename Op0_t>
+inline SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>
+m_scev_PtrToInt(const Op0_t &Op0) {
+  return SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>(Op0);
 }
 
 /// Match a binary SCEV.

@@ -1463,10 +1463,8 @@ void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
   }
 
   // Update pre-existing debug value uses.
-  SmallVector<DbgValueInst *, 4> DbgValues;
   SmallVector<DbgVariableRecord *, 4> DbgVariableRecords;
-  llvm::findDbgValues(DbgValues, I, &DbgVariableRecords);
-  assert(DbgValues.empty());
+  llvm::findDbgValues(I, DbgVariableRecords);
 
   for (DbgVariableRecord *DbgVal : DbgVariableRecords) {
     SmallVector<uint64_t, 1> Ops = {dwarf::DW_OP_not};
@@ -1996,6 +1994,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
       }
       Clone = InsertNewInstBefore(Clone, OpBB->getTerminator()->getIterator());
       Clones.insert({OpBB, Clone});
+      // We may have speculated the instruction.
+      Clone->dropUBImplyingAttrsAndMetadata();
     }
 
     NewPhiValues[OpIndex] = Clone;
@@ -2011,12 +2011,17 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN,
     NewPN->addIncoming(NewPhiValues[i], PN->getIncomingBlock(i));
 
   if (IdenticalUsers) {
-    for (User *U : make_early_inc_range(PN->users())) {
+    // Collect and deduplicate users up-front to avoid iterator invalidation.
+    SmallSetVector<Instruction *, 4> ToReplace;
+    for (User *U : PN->users()) {
       Instruction *User = cast<Instruction>(U);
       if (User == &I)
         continue;
-      replaceInstUsesWith(*User, NewPN);
-      eraseInstFromFunction(*User);
+      ToReplace.insert(User);
+    }
+    for (Instruction *I : ToReplace) {
+      replaceInstUsesWith(*I, NewPN);
+      eraseInstFromFunction(*I);
     }
     OneUse = true;
   }
@@ -2654,9 +2659,18 @@ static Instruction *canonicalizeGEPOfConstGEPI8(GetElementPtrInst &GEP,
   APInt NewOffset = TypeSize * *C2 + *C1;
   if (NewOffset.isZero() ||
       (Src->hasOneUse() && GEP.getOperand(1)->hasOneUse())) {
+    GEPNoWrapFlags Flags = GEPNoWrapFlags::none();
+    if (GEP.hasNoUnsignedWrap() &&
+        cast<GEPOperator>(Src)->hasNoUnsignedWrap() &&
+        match(GEP.getOperand(1), m_NUWAddLike(m_Value(), m_Value()))) {
+      Flags |= GEPNoWrapFlags::noUnsignedWrap();
+      if (GEP.isInBounds() && cast<GEPOperator>(Src)->isInBounds())
+        Flags |= GEPNoWrapFlags::inBounds();
+    }
+
     Value *GEPConst =
-        IC.Builder.CreatePtrAdd(Base, IC.Builder.getInt(NewOffset));
-    return GetElementPtrInst::Create(BaseType, GEPConst, VarIndex);
+        IC.Builder.CreatePtrAdd(Base, IC.Builder.getInt(NewOffset), "", Flags);
+    return GetElementPtrInst::Create(BaseType, GEPConst, VarIndex, Flags);
   }
 
   return nullptr;
@@ -2778,6 +2792,12 @@ Instruction *InstCombinerImpl::visitGEPOfGEP(GetElementPtrInst &GEP,
     Indices.append(Src->op_begin()+1, Src->op_end());
     Indices.append(GEP.idx_begin()+1, GEP.idx_end());
   }
+
+  // Don't create GEPs with more than one variable index.
+  unsigned NumVarIndices =
+      count_if(Indices, [](Value *Idx) { return !isa<Constant>(Idx); });
+  if (NumVarIndices > 1)
+    return nullptr;
 
   if (!Indices.empty())
     return replaceInstUsesWith(
@@ -3178,7 +3198,16 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // If we are using a wider index than needed for this platform, shrink
       // it to what we need.  If narrower, sign-extend it to what we need.
       // This explicit cast can make subsequent optimizations more obvious.
-      *I = Builder.CreateIntCast(*I, NewIndexType, true);
+      if (IndexTy->getScalarSizeInBits() <
+          NewIndexType->getScalarSizeInBits()) {
+        if (GEP.hasNoUnsignedWrap() && GEP.hasNoUnsignedSignedWrap())
+          *I = Builder.CreateZExt(*I, NewIndexType, "", /*IsNonNeg=*/true);
+        else
+          *I = Builder.CreateSExt(*I, NewIndexType);
+      } else {
+        *I = Builder.CreateTrunc(*I, NewIndexType, "", GEP.hasNoUnsignedWrap(),
+                                 GEP.hasNoUnsignedSignedWrap());
+      }
       MadeChange = true;
     }
   }
@@ -3199,6 +3228,14 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *NewGEP =
         Builder.CreatePtrAdd(PtrOp, Offset, "", GEP.getNoWrapFlags());
     return replaceInstUsesWith(GEP, NewGEP);
+  }
+
+  // Strip trailing zero indices.
+  auto *LastIdx = dyn_cast<Constant>(Indices.back());
+  if (LastIdx && LastIdx->isNullValue() && !LastIdx->getType()->isVectorTy()) {
+    return replaceInstUsesWith(
+        GEP, Builder.CreateGEP(GEP.getSourceElementType(), PtrOp,
+                               drop_end(Indices), "", GEP.getNoWrapFlags()));
   }
 
   // Scalarize vector operands; prefer splat-of-gep.as canonical form.
@@ -3225,6 +3262,30 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       Res = Builder.CreateVectorSplat(EC, Res);
     }
     return replaceInstUsesWith(GEP, Res);
+  }
+
+  bool SeenVarIndex = false;
+  for (auto [IdxNum, Idx] : enumerate(Indices)) {
+    if (isa<Constant>(Idx))
+      continue;
+
+    if (!SeenVarIndex) {
+      SeenVarIndex = true;
+      continue;
+    }
+
+    // GEP has multiple variable indices: Split it.
+    ArrayRef<Value *> FrontIndices = ArrayRef(Indices).take_front(IdxNum);
+    Value *FrontGEP =
+        Builder.CreateGEP(GEPEltType, PtrOp, FrontIndices,
+                          GEP.getName() + ".split", GEP.getNoWrapFlags());
+
+    SmallVector<Value *> BackIndices;
+    BackIndices.push_back(Constant::getNullValue(NewScalarIndexTy));
+    append_range(BackIndices, drop_begin(Indices, IdxNum));
+    return GetElementPtrInst::Create(
+        GetElementPtrInst::getIndexedType(GEPEltType, FrontIndices), FrontGEP,
+        BackIndices, GEP.getNoWrapFlags());
   }
 
   // Check to see if the inputs to the PHI node are getelementptr instructions.
@@ -3611,12 +3672,10 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
 
   // If we are removing an alloca with a dbg.declare, insert dbg.value calls
   // before each store.
-  SmallVector<DbgVariableIntrinsic *, 8> DVIs;
   SmallVector<DbgVariableRecord *, 8> DVRs;
   std::unique_ptr<DIBuilder> DIB;
   if (isa<AllocaInst>(MI)) {
-    findDbgUsers(DVIs, &MI, &DVRs);
-    assert(DVIs.empty());
+    findDbgUsers(&MI, DVRs);
     DIB.reset(new DIBuilder(*MI.getModule(), /*AllowUnresolved=*/false));
   }
 
@@ -3738,9 +3797,6 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
     //
     // FIXME: the Assignment Tracking project has now likely made this
     // redundant (and it's sometimes harmful).
-    for (auto *DVI : DVIs)
-      if (DVI->isAddressOfVariable() || DVI->getExpression()->startsWithDeref())
-        DVI->eraseFromParent();
     for (auto *DVR : DVRs)
       if (DVR->isAddressOfVariable() || DVR->getExpression()->startsWithDeref())
         DVR->eraseFromParent();
@@ -5292,10 +5348,8 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   // maximise the range variables have location for. If we cannot salvage, then
   // mark the location undef: we know it was supposed to receive a new location
   // here, but that computation has been sunk.
-  SmallVector<DbgVariableIntrinsic *, 2> DbgUsers;
   SmallVector<DbgVariableRecord *, 2> DbgVariableRecords;
-  findDbgUsers(DbgUsers, I, &DbgVariableRecords);
-  assert(DbgUsers.empty());
+  findDbgUsers(I, DbgVariableRecords);
   if (!DbgVariableRecords.empty())
     tryToSinkInstructionDbgVariableRecords(I, InsertPos, SrcBlock, DestBlock,
                                            DbgVariableRecords);
@@ -5422,7 +5476,7 @@ void InstCombinerImpl::tryToSinkInstructionDbgVariableRecords(
   if (DVRClones.empty())
     return;
 
-  salvageDebugInfoForDbgValues(*I, {}, DbgVariableRecordsToSalvage);
+  salvageDebugInfoForDbgValues(*I, DbgVariableRecordsToSalvage);
 
   // The clones are in reverse order of original appearance. Assert that the
   // head bit is set on the iterator as we _should_ have received it via
