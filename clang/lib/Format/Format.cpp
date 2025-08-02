@@ -383,16 +383,6 @@ struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
   }
 };
 
-template <> struct MappingTraits<FormatStyle::NumericLiteralCaseStyle> {
-  static void mapping(IO &IO, FormatStyle::NumericLiteralCaseStyle &Base) {
-    IO.mapOptional("PrefixCase", Base.PrefixCase);
-    IO.mapOptional("HexDigitCase", Base.HexDigitCase);
-    IO.mapOptional("FloatExponentSeparatorCase",
-                   Base.FloatExponentSeparatorCase);
-    IO.mapOptional("SuffixCase", Base.SuffixCase);
-  }
-};
-
 template <> struct MappingTraits<FormatStyle::IntegerLiteralSeparatorStyle> {
   static void mapping(IO &IO, FormatStyle::IntegerLiteralSeparatorStyle &Base) {
     IO.mapOptional("Binary", Base.Binary);
@@ -480,6 +470,26 @@ struct ScalarEnumerationTraits<FormatStyle::NamespaceIndentationKind> {
     IO.enumCase(Value, "None", FormatStyle::NI_None);
     IO.enumCase(Value, "Inner", FormatStyle::NI_Inner);
     IO.enumCase(Value, "All", FormatStyle::NI_All);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::NumericLiteralComponentStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::NumericLiteralComponentStyle &Value) {
+    IO.enumCase(Value, "Leave",  FormatStyle::NLCS_Leave);
+    IO.enumCase(Value, "Always", FormatStyle::NLCS_Always);
+    IO.enumCase(Value, "Never",  FormatStyle::NLCS_Never);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::NumericLiteralCaseStyle> {
+  static void mapping(IO &IO, FormatStyle::NumericLiteralCaseStyle &Base) {
+    IO.mapOptional("UpperCaseFloatExponentSeparatorCase",
+                   Base.UpperCaseFloatExponentSeparator);
+    IO.mapOptional("UpperCaseHexDigit", Base.UpperCaseHexDigit);
+    IO.mapOptional("UpperCasePrefix", Base.UpperCasePrefix);
+    IO.mapOptional("UpperCaseSuffix", Base.UpperCaseSuffix);
   }
 };
 
@@ -1104,7 +1114,6 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("InsertBraces", Style.InsertBraces);
     IO.mapOptional("InsertNewlineAtEOF", Style.InsertNewlineAtEOF);
     IO.mapOptional("InsertTrailingCommas", Style.InsertTrailingCommas);
-    IO.mapOptional("NumericLiteralCase", Style.NumericLiteralCase);
     IO.mapOptional("IntegerLiteralSeparator", Style.IntegerLiteralSeparator);
     IO.mapOptional("JavaImportGroups", Style.JavaImportGroups);
     IO.mapOptional("JavaScriptQuotes", Style.JavaScriptQuotes);
@@ -1122,6 +1131,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
     IO.mapOptional("NamespaceIndentation", Style.NamespaceIndentation);
     IO.mapOptional("NamespaceMacros", Style.NamespaceMacros);
+    IO.mapOptional("NumericLiteralCase", Style.NumericLiteralCase);
     IO.mapOptional("ObjCBinPackProtocolList", Style.ObjCBinPackProtocolList);
     IO.mapOptional("ObjCBlockIndentWidth", Style.ObjCBlockIndentWidth);
     IO.mapOptional("ObjCBreakBeforeNestedBlockParam",
@@ -1630,9 +1640,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.InsertBraces = false;
   LLVMStyle.InsertNewlineAtEOF = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
-  LLVMStyle.NumericLiteralCase = {/*PrefixCase=*/0, /*HexDigitCase=*/0,
-                                  /*FloatExponentSeparatorCase=*/0,
-                                  /*SuffixCase=*/0};
   LLVMStyle.IntegerLiteralSeparator = {
       /*Binary=*/0,  /*BinaryMinDigits=*/0,
       /*Decimal=*/0, /*DecimalMinDigits=*/0,
@@ -1650,6 +1657,11 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
   LLVMStyle.MaxEmptyLinesToKeep = 1;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
+  LLVMStyle.NumericLiteralCase = {
+      /*UpperCaseFloatExponentSeparator=*/FormatStyle::NLCS_Leave,
+      /*UpperCaseHexDigit=*/FormatStyle::NLCS_Leave,
+      /*UpperCasePrefix=*/FormatStyle::NLCS_Leave,
+      /*UpperCaseSuffix=*/FormatStyle::NLCS_Leave};
   LLVMStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCBreakBeforeNestedBlockParam = true;
@@ -3887,9 +3899,11 @@ reformat(const FormatStyle &Style, StringRef Code,
     return IntegerLiteralSeparatorFixer().process(Env, Expanded);
   });
 
-  Passes.emplace_back([&](const Environment &Env) {
-    return NumericLiteralCaseFixer().process(Env, Expanded);
-  });
+  if (NumericLiteralCaseFixer::isActive(Style)) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return NumericLiteralCaseFixer().process(Env, Expanded);
+    });
+  }
 
   if (Style.isCpp()) {
     if (Style.QualifierAlignment != FormatStyle::QAS_Leave)
@@ -4002,8 +4016,8 @@ reformat(const FormatStyle &Style, StringRef Code,
 
   if (Style.QualifierAlignment != FormatStyle::QAS_Leave) {
     // Don't make replacements that replace nothing. QualifierAlignment can
-    // produce them if one of its early passes changes e.g. `const volatile` to
-    // `volatile const` and then a later pass changes it back again.
+    // produce them if one of its early passes changes e.g. `const volatile`
+    // to `volatile const` and then a later pass changes it back again.
     tooling::Replacements NonNoOpFixes;
     for (const tooling::Replacement &Fix : Fixes) {
       StringRef OriginalCode = Code.substr(Fix.getOffset(), Fix.getLength());

@@ -4555,6 +4555,7 @@ the configuration (without a prefix: ``Auto``).
     So inserting a trailing comma counteracts bin-packing.
 
 
+
 .. _IntegerLiteralSeparator:
 
 **IntegerLiteralSeparator** (``IntegerLiteralSeparatorStyle``) :versionbadge:`clang-format 16` :ref:`¶ <IntegerLiteralSeparator>`
@@ -5077,74 +5078,109 @@ the configuration (without a prefix: ``Auto``).
 
 .. _NumericLiteralCase:
 
-**NumericLiteralCase** (``NumericLiteralCaseStyle``) :versionbadge:`clang-format 21` :ref:`¶ <NumericLiteralCase>`
-  Controls character case in numeric literals.
-
-  Possible values for each nexted configuration flag:
-
-  * ``0`` (Default) Do not modify characters.
-
-  * ``-1`` Convert characters to lower case.
-
-  * ``1`` Convert characters to upper case.
-
-  .. code-block:: yaml
-
-    # Example of usage:
-    NumericLiteralCaseStyle:
-      PrefixCase: -1
-      HexDigitCase: 1
-      FloatExponentSeparatorCase: 0
-      SuffixCase: -1
-
-  .. code-block:: c++
-
-    // Lower case prefix, upper case hexadecimal digits, lower case suffix
-    unsigned int 0xDEAFBEEFull;
+**NumericLiteralCase** (``NumericLiteralCaseStyle``) :versionbadge:`clang-format 22` :ref:`¶ <NumericLiteralCase>`
+  Capitalization style for numeric literal constants.
 
   Nested configuration flags:
 
-  * ``int PrefixCase`` Control numeric constant prefix case.
+  Character case format for different components of a numeric literal.
 
-   .. code-block:: c++
+  * ``NumericLiteralComponentStyle UpperCaseFloatExponentSeparator``
+    Format floating point exponent separator character case.
 
-      // PrefixCase: 1
-      int a = 0B101 | 0XF0;
-      // PrefixCase: -1
-      int a = 0b101 | 0xF0;
-      // PrefixCase: 0
-      int c = 0b101 | 0XF0;
+    .. code-block:: text
 
-  * ``int HexDigitCase`` Control hexadecimal digit case.
+      /* UpperCaseFloatExponentSeparator = Leave */
+      float a = 6.02e23 + 1.0E10;
+      /* UpperCaseFloatExponentSeparator = Always */
+      float a = 6.02E23 + 1.0E10;
+      /* UpperCaseFloatExponentSeparator = Never */
+      float a = 6.02e23 + 1.0e10;
 
-    .. code-block:: c++
+    Possible values:
 
-      // HexDigitCase: 1
-      int a = 0xBEAD;
-      // PrefixCase: -1
-      int b = 0xbead;
-      // PrefixCase: 0
-      int c = 0xBeAd;
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
 
-  * ``int FloatExponentSeparatorCase`` Control exponent separator case.
+    * ``NLCS_Always`` (in configuration: ``Always``)
+      Always format this component with upper case characters.
 
-    .. code-block:: c++
+    * ``NLCS_Never`` (in configuration: ``Never``)
+      Never format this component with upper case characters.
 
-      // FloatExponentSeparatorCase: 1
-      float a = 6.02E+23;
-      // FloatExponentSeparatorCase: -1
-      float b = 6.02e+23;
 
-  * ``int SuffixCase`` Control suffix case.
+  * ``NumericLiteralComponentStyle UpperCaseHexDigit``
+    Format hexadecimal digit case.
 
-    .. code-block:: c++
+    .. code-block:: text
 
-      // SuffixCase: 1
-      unsigned long long a = 1ULL;
-      // SuffixCase: -1
-      unsigned long long a = 1ull;
-      // SuffixCase: 0
-      unsigned long long c = 1uLL;
+      /* UpperCaseHexDigit = Leave */
+      a = 0xaBcDeF;
+      /* UpperCaseHexDigit = Always */
+      a = 0xABCDEF;
+      /* UpperCaseHexDigit = Never */
+      a = 0xabcdef;
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Always`` (in configuration: ``Always``)
+      Always format this component with upper case characters.
+
+    * ``NLCS_Never`` (in configuration: ``Never``)
+      Never format this component with upper case characters.
+
+
+  * ``NumericLiteralComponentStyle UpperCasePrefix``
+    Format integer prefix case.
+
+    .. code-block:: text
+
+       /* UpperCasePrefix = Leave */
+       a = 0XF0 | 0b1;
+       /* UpperCasePrefix = Always */
+       a = 0XF0 | 0B1;
+       /* UpperCasePrefix = Never */
+       a = 0xF0 | 0b1;
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Always`` (in configuration: ``Always``)
+      Always format this component with upper case characters.
+
+    * ``NLCS_Never`` (in configuration: ``Never``)
+      Never format this component with upper case characters.
+
+
+  * ``NumericLiteralComponentStyle UpperCaseSuffix``
+    Format suffix case. This option excludes case-specific reserved
+    suffixes, such as ``min`` in C++.
+
+    .. code-block:: text
+
+      /* UpperCaseSuffix = Leave */
+      a = 1uLL;
+      /* UpperCaseSuffix = Always */
+      a = 1ULL;
+      /* UpperCaseSuffix = Never */
+      a = 1ull;
+
+    Possible values:
+
+    * ``NLCS_Leave`` (in configuration: ``Leave``)
+      Leave this component of the literal as is.
+
+    * ``NLCS_Always`` (in configuration: ``Always``)
+      Always format this component with upper case characters.
+
+    * ``NLCS_Never`` (in configuration: ``Never``)
+      Never format this component with upper case characters.
+
 
 
 .. _ObjCBinPackProtocolList:
