@@ -297,8 +297,7 @@ macro(get_test_cc_for_arch arch cc_out cflags_out)
   if (NOT ${ARGC} EQUAL 3)
     message(FATAL_ERROR "got too many args. expected 3, got ${ARGC} (namely: ${ARGV})")
   endif()
-  if(ANDROID OR (NOT APPLE AND ${arch} MATCHES "arm|aarch64|riscv32|riscv64"))
-    # This is only true if we are cross-compiling.
+  if(CMAKE_CROSSCOMPILING)
     # Build all tests with host compiler and use host tools.
     set(${cc_out} ${COMPILER_RT_TEST_COMPILER})
     set(${cflags_out} ${COMPILER_RT_TEST_COMPILER_CFLAGS})
