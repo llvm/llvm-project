@@ -62,7 +62,7 @@ void ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl,
                   (Func->hasThisPointer() && !Func->isThisPointerExplicit());
   for (auto ParamOffset : llvm::drop_begin(Func->ParamOffsets, Drop)) {
     const ParmVarDecl *PD = FuncDecl->parameters()[ParamIndex];
-    std::optional<PrimType> T = Ctx.classify(PD->getType());
+    OptPrimType T = Ctx.classify(PD->getType());
     this->Params.insert({PD, {ParamOffset, T != std::nullopt}});
     ++ParamIndex;
   }
