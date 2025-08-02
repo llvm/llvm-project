@@ -46,6 +46,7 @@ class WebAssemblySubtarget final : public WebAssemblyGenSubtargetInfo {
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
+  bool HasGC = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
