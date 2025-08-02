@@ -173,8 +173,7 @@ void AppleDWARFIndex::GetGlobalVariables(
   };
 
   auto adataped_cb = IterationActionAdaptor(callback);
-  DIERefCallbackImpl converted_cb =
-      DIERefCallback(adataped_cb);
+  DIERefCallbackImpl converted_cb = DIERefCallback(adataped_cb);
   for (auto entry : m_apple_names_up->entries()) {
     if (is_in_range(entry.BaseEntry.getDIESectionOffset()))
       if (!converted_cb(entry.BaseEntry))
