@@ -28,7 +28,7 @@
 #define LIBC_INLINE_ASM __asm__ __volatile__
 #define LIBC_UNUSED __attribute__((unused))
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
+#if LIBC_THREAD_MODE == LIBC_THREAD_MODE_SINGLE
 #define LIBC_THREAD_LOCAL
 #else
 #define LIBC_THREAD_LOCAL thread_local
