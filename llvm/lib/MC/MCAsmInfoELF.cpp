@@ -35,6 +35,13 @@ MCSection *MCAsmInfoELF::getNonexecutableStackSection(MCContext &Ctx) const {
   return Ctx.getELFSection(".note.GNU-stack", ELF::SHT_PROGBITS, 0);
 }
 
+MCSection *MCAsmInfoELF::getExecutableStackSection(MCContext &Ctx) const {
+  MCSectionELF *section =
+      static_cast<MCSectionELF *>(getNonexecutableStackSection(Ctx));
+  section->setFlags(section->getFlags() | ELF::SHF_EXECINSTR);
+  return section;
+}
+
 bool MCAsmInfoELF::useCodeAlign(const MCSection &Sec) const {
   return static_cast<const MCSectionELF &>(Sec).getFlags() & ELF::SHF_EXECINSTR;
 }
