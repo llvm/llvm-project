@@ -74,6 +74,15 @@ void skipComments(Lexer &Lex, Token &Tok) {
       return;
 }
 
+bool checkAndConsumeModuleDecl(const SourceManager &SM, Lexer &Lex,
+                               Token &Tok) {
+  bool Matched = Tok.is(tok::raw_identifier) &&
+                 Tok.getRawIdentifier() == "module" &&
+                 !Lex.LexFromRawLexer(Tok) && Tok.is(tok::semi) &&
+                 !Lex.LexFromRawLexer(Tok);
+  return Matched;
+}
+
 // Returns the offset after header guard directives and any comments
 // before/after header guards (e.g. #ifndef/#define pair, #pragma once). If no
 // header guard is present in the code, this will return the offset after
@@ -95,7 +104,17 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
               return std::max(InitialOffset, Consume(SM, Lex, Tok));
             });
       };
-  return std::max(
+
+  auto ModuleDecl = ConsumeHeaderGuardAndComment(
+      [](const SourceManager &SM, Lexer &Lex, Token Tok) -> unsigned {
+        if (checkAndConsumeModuleDecl(SM, Lex, Tok)) {
+          skipComments(Lex, Tok);
+          return SM.getFileOffset(Tok.getLocation());
+        }
+        return 0;
+      });
+
+  auto HeaderAndPPOffset = std::max(
       // #ifndef/#define
       ConsumeHeaderGuardAndComment(
           [](const SourceManager &SM, Lexer &Lex, Token Tok) -> unsigned {
@@ -115,6 +134,7 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
               return SM.getFileOffset(Tok.getLocation());
             return 0;
           }));
+  return std::max(HeaderAndPPOffset, ModuleDecl);
 }
 
 // Check if a sequence of tokens is like
