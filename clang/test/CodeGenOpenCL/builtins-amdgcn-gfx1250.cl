@@ -787,6 +787,36 @@ void test_cvt_scale_pk(global half8 *outh8, global bfloat8 *outy8, uint2 src2,
 // CHECK-NEXT:    [[TMP34:%.*]] = call i32 @llvm.amdgcn.cvt.scalef32.pk8.fp4.bf16(<8 x bfloat> [[TMP32]], float [[TMP33]])
 // CHECK-NEXT:    [[TMP35:%.*]] = load ptr addrspace(1), ptr [[OUT1_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    store i32 [[TMP34]], ptr addrspace(1) [[TMP35]], align 4
+// CHECK-NEXT:    [[TMP36:%.*]] = load <16 x bfloat>, ptr [[SRCBF16_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP37:%.*]] = load float, ptr [[SCALE_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP38:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.bf6.bf16(<16 x bfloat> [[TMP36]], float [[TMP37]])
+// CHECK-NEXT:    [[TMP39:%.*]] = load ptr addrspace(1), ptr [[OUT3_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP38]], ptr addrspace(1) [[TMP39]], align 16
+// CHECK-NEXT:    [[TMP40:%.*]] = load <16 x half>, ptr [[SRCH16_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP41:%.*]] = load float, ptr [[SCALE_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP42:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.bf6.f16(<16 x half> [[TMP40]], float [[TMP41]])
+// CHECK-NEXT:    [[TMP43:%.*]] = load ptr addrspace(1), ptr [[OUT3_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP42]], ptr addrspace(1) [[TMP43]], align 16
+// CHECK-NEXT:    [[TMP44:%.*]] = load <16 x bfloat>, ptr [[SRCBF16_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP45:%.*]] = load float, ptr [[SCALE_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP46:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.bf16(<16 x bfloat> [[TMP44]], float [[TMP45]])
+// CHECK-NEXT:    [[TMP47:%.*]] = load ptr addrspace(1), ptr [[OUT3_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP46]], ptr addrspace(1) [[TMP47]], align 16
+// CHECK-NEXT:    [[TMP48:%.*]] = load <16 x half>, ptr [[SRCH16_ADDR_ASCAST]], align 32
+// CHECK-NEXT:    [[TMP49:%.*]] = load float, ptr [[SCALE_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP50:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.f16(<16 x half> [[TMP48]], float [[TMP49]])
+// CHECK-NEXT:    [[TMP51:%.*]] = load ptr addrspace(1), ptr [[OUT3_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP50]], ptr addrspace(1) [[TMP51]], align 16
+// CHECK-NEXT:    [[TMP52:%.*]] = load <16 x float>, ptr [[SRCF16_ADDR_ASCAST]], align 64
+// CHECK-NEXT:    [[TMP53:%.*]] = load float, ptr [[SCALE_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP54:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.bf6.f32(<16 x float> [[TMP52]], float [[TMP53]])
+// CHECK-NEXT:    [[TMP55:%.*]] = load ptr addrspace(1), ptr [[OUT3_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP54]], ptr addrspace(1) [[TMP55]], align 16
+// CHECK-NEXT:    [[TMP56:%.*]] = load <16 x float>, ptr [[SRCF16_ADDR_ASCAST]], align 64
+// CHECK-NEXT:    [[TMP57:%.*]] = load float, ptr [[SCALE_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP58:%.*]] = call <3 x i32> @llvm.amdgcn.cvt.scalef32.pk16.fp6.f32(<16 x float> [[TMP56]], float [[TMP57]])
+// CHECK-NEXT:    [[TMP59:%.*]] = load ptr addrspace(1), ptr [[OUT3_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP58]], ptr addrspace(1) [[TMP59]], align 16
 // CHECK-NEXT:    ret void
 //
 void test_cvt_scalef32_pk(global uint2 *out2, bfloat8 srcbf8, half8 srch8, float8 srcf8,
@@ -802,6 +832,12 @@ void test_cvt_scalef32_pk(global uint2 *out2, bfloat8 srcbf8, half8 srch8, float
   *out1 = __builtin_amdgcn_cvt_scalef32_pk8_fp4_f32(srcf8, scale);
   *out1 = __builtin_amdgcn_cvt_scalef32_pk8_fp4_f16(srch8, scale);
   *out1 = __builtin_amdgcn_cvt_scalef32_pk8_fp4_bf16(srcbf8, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_bf6_bf16(srcbf16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_bf6_f16(srch16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_fp6_bf16(srcbf16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_fp6_f16(srch16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_bf6_f32(srcf16, scale);
+  *out3 = __builtin_amdgcn_cvt_scalef32_pk16_fp6_f32(srcf16, scale);
 }
 
 // CHECK-LABEL: @test_cvt_scalef32_sr_pk(
