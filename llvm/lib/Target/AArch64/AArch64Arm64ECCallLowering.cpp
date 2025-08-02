@@ -727,9 +727,6 @@ AArch64Arm64ECCallLowering::buildPatchableThunk(GlobalAlias *UnmangledAlias,
 
 // Lower an indirect call with inline code.
 void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
-  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
-         "Only applicable for Windows targets");
-
   IRBuilder<> B(CB);
   Value *CalledOperand = CB->getCalledOperand();
 
@@ -873,7 +870,7 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
         (!F.hasLocalLinkage() || F.hasAddressTaken()) &&
         F.getCallingConv() != CallingConv::ARM64EC_Thunk_Native &&
         F.getCallingConv() != CallingConv::ARM64EC_Thunk_X64) {
-      if (!F.hasComdat())
+      if (!F.hasComdat() && !F.isDeclarationForLinker())
         F.setComdat(Mod.getOrInsertComdat(F.getName()));
       ThunkMapping.push_back(
           {&F, buildEntryThunk(&F), Arm64ECThunkType::Entry});
