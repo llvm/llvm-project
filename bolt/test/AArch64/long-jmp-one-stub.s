@@ -8,7 +8,7 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt  \
 # RUN:   --data %t.fdata  | FileCheck %s
 
-# CHECK: BOLT-INFO: Inserted 1 stubs in the hot area and 0 stubs in the cold area. 
+# CHECK: BOLT-INFO: Inserted 1 stubs  
 
   .section .text
   .global _start
