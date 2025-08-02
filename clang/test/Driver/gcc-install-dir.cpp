@@ -2,6 +2,7 @@
 
 /// Test native GCC installation on Arch Linux i686.
 // RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/archlinux_i686_tree -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform \
 // RUN:   --gcc-install-dir=%S/Inputs/archlinux_i686_tree/usr/lib/gcc/i686-pc-linux-gnu/11.1.0 2>&1 | FileCheck %s --check-prefix=ARCH_I686
 // ARCH_I686:      "-internal-isystem"
@@ -14,6 +15,7 @@
 
 /// Test native GCC installation on Debian amd64. --gcc-install-dir= may end with /.
 // RUN: %clangxx %s -### --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform --unwindlib=platform \
 // RUN:   --gcc-install-dir=%S/Inputs/debian_multiarch_tree/usr/lib/gcc/x86_64-linux-gnu/10/ 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64
 // DEBIAN_X86_64:      "-internal-isystem"
@@ -28,6 +30,7 @@
 
 /// Test -m32.
 // RUN: %clangxx %s -### --target=x86_64-unknown-linux-gnu -m32 --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform --unwindlib=platform \
 // RUN:   --gcc-install-dir=%S/Inputs/debian_multiarch_tree/usr/lib/gcc/x86_64-linux-gnu/10/ 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32
 // DEBIAN_X86_64_M32:      "-internal-isystem"

@@ -1,7 +1,7 @@
-// RUN: %clangxx %s -### -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs_multilib --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=X64-STDCPLUS
-// RUN: %clangxx %s -### -stdlib=libc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs_multilib --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=X64-LIBCPLUS
-// RUN: %clangxx %s -m32 -### -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs_multilib --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=X32-STDCPLUS
-// RUN: %clangxx %s -m32 -### -stdlib=libc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs_multilib --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=X32-LIBCPLUS
+// RUN: %clangxx %s -### -no-canonical-prefixes -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs_multilib --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=X64-STDCPLUS
+// RUN: %clangxx %s -### -no-canonical-prefixes -stdlib=libc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs_multilib --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=X64-LIBCPLUS
+// RUN: %clangxx %s -m32 -### -no-canonical-prefixes -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs_multilib --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=X32-STDCPLUS
+// RUN: %clangxx %s -m32 -### -no-canonical-prefixes -stdlib=libc++ --gcc-toolchain=%S/Inputs/gcc_version_parsing_rt_libs_multilib --target=x86_64-redhat-linux 2>&1 | FileCheck %s -check-prefix=X32-LIBCPLUS
 
 int main() {}
 

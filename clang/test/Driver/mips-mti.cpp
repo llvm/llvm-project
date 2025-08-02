@@ -2,6 +2,7 @@
 
 // -EB -mhard-float -mabi=32
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -31,6 +32,7 @@
 
 // -EB -mhard-float -mabi=n32
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -60,6 +62,7 @@
 
 // -EB -mhard-float -mabi=64
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips64-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -89,6 +92,7 @@
 
 // -EL -mhard-float -mabi=32
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -118,6 +122,7 @@
 
 // -EL -mhard-float -mabi=n32
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -147,6 +152,7 @@
 
 // -EL -mhard-float -mabi=64
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips64-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -176,6 +182,7 @@
 
 // -EB -msoft-float
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -205,6 +212,7 @@
 
 // -EL -msoft-float
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -234,6 +242,7 @@
 
 // -EB -mhard-float -muclibc
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -263,6 +272,7 @@
 
 // -EL -mhard-float -muclibc
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -292,6 +302,7 @@
 
 // -EB -mhard-float -mnan=2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -321,6 +332,7 @@
 
 // -EL -mhard-float -mnan=2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -350,6 +362,7 @@
 
 // -EB -mhard-float -muclibc -mnan=2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -379,6 +392,7 @@
 
 // -EL -mhard-float -muclibc -mnan=2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -408,6 +422,7 @@
 
 // -EL -msoft-float -mmicromips
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \
@@ -437,6 +452,7 @@
 
 // -EL -mhard-float -mmicromips -mnan=2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:        -no-canonical-prefixes \
 // RUN:        --target=mips-mti-linux-gnu \
 // RUN:        --gcc-toolchain=%S/Inputs/mips_mti_tree \
 // RUN:        --sysroot="" \

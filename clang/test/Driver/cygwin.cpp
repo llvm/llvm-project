@@ -1,4 +1,5 @@
 // RUN: %clang -### %s --target=i686-pc-windows-cygnus --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK %s
 // CHECK:      "-cc1"
@@ -31,6 +32,7 @@
 // CHECK-SHARED-SAME: "-shared"
 
 // RUN: %clang -### -o %t %s 2>&1 -no-integrated-as -fuse-ld=ld \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_cross_cygwin_tree/usr \
 // RUN:     --target=i686-pc-cygwin \
 // RUN:   | FileCheck --check-prefix=CHECK-CROSS %s
@@ -38,6 +40,7 @@
 // CHECK-CROSS: "{{.*}}/Inputs/basic_cross_cygwin_tree/usr/lib/gcc/i686-pc-msys/10/../../../../i686-pc-msys/bin{{(/|\\\\)}}as" "--32"
 
 // RUN: %clang -### %s --target=x86_64-pc-windows-cygnus --sysroot=%S/Inputs/basic_cygwin_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK-64 %s
 // CHECK-64:      "-cc1"

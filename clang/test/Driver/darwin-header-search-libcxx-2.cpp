@@ -50,7 +50,7 @@
 // RUN:   | FileCheck -DTOOLCHAIN=%t/install \
 // RUN:               -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
 // RUN:               --check-prefix=CHECK-TOOLCHAIN-INCLUDE-CXX-V1 %s
-// CHECK-TOOLCHAIN-INCLUDE-CXX-V1: "-internal-isystem" "[[TOOLCHAIN]]/bin/../include/c++/v1"
+// CHECK-TOOLCHAIN-INCLUDE-CXX-V1: "-internal-isystem" "[[TOOLCHAIN]]/include/c++/v1"
 // CHECK-TOOLCHAIN-INCLUDE-CXX-V1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
 // Headers in (2) and nowhere else -> (2) is used
@@ -61,4 +61,4 @@
 // RUN:   | FileCheck -DTOOLCHAIN=%t/install \
 // RUN:               -DSYSROOT=%S/Inputs/basic_darwin_sdk_no_libcxx \
 // RUN:               --check-prefix=CHECK-TOOLCHAIN-NO-SYSROOT %s
-// CHECK-TOOLCHAIN-NO-SYSROOT: "-internal-isystem" "[[TOOLCHAIN]]/bin/../include/c++/v1"
+// CHECK-TOOLCHAIN-NO-SYSROOT: "-internal-isystem" "[[TOOLCHAIN]]/include/c++/v1"

@@ -3,6 +3,7 @@
 /// Without --rtlib=libgcc the driver may pick clang_rt.crtbegin.o if
 /// -DCLANG_DEFAULT_RTLIB=compiler-rt.
 // RUN: %clangxx %s -### --target=x86_64-linux-gnu --sysroot= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --gcc-toolchain=%S/Inputs/ubuntu_14.04_multiarch_tree/usr -stdlib=libstdc++ --rtlib=libgcc --unwindlib=libgcc -no-pie 2>&1 | \
 // RUN:   FileCheck %s
 //

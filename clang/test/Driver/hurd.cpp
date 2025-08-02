@@ -1,6 +1,7 @@
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -### %s --target=i686-pc-hurd-gnu --sysroot=%S/Inputs/basic_hurd_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK %s
 // CHECK:      "-cc1"
 // CHECK-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -28,6 +29,7 @@
 // CHECK-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=i686-pc-hurd-gnu --sysroot=%S/Inputs/basic_hurd_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-STATIC %s
 // CHECK-STATIC:      "-cc1"
 // CHECK-STATIC-SAME: "-static-define"
@@ -80,6 +82,7 @@
 // CHECK-CROSS: "-L{{.*}}/Inputs/basic_cross_hurd_tree/usr/lib/gcc/i686-gnu/10/../../../../i686-gnu/lib"
 
 // RUN: %clang -### %s --target=x86_64-pc-hurd-gnu --sysroot=%S/Inputs/basic_hurd_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform 2>&1 | FileCheck --check-prefix=CHECK-64 %s
 // CHECK-64:      "-cc1"
 // CHECK-64-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
@@ -107,6 +110,7 @@
 // CHECK-64-SAME: {{^}} "-L[[SYSROOT]]/usr/lib"
 
 // RUN: %clang -### %s --target=x86_64-pc-hurd-gnu --sysroot=%S/Inputs/basic_hurd_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --stdlib=platform -static 2>&1 | FileCheck --check-prefix=CHECK-64-STATIC %s
 // CHECK-64-STATIC:      "-cc1"
 // CHECK-64-STATIC-SAME: "-static-define"

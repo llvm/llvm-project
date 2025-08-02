@@ -2,6 +2,7 @@
 
 // Test interaction with -fuse-ld=lld
 // RUN: %clang -### %s -fuse-ld=lld -B%S/Inputs/lld \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=aarch64-none-elf --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_aarch64_gcc_tree \
 // RUN:   --sysroot=%S/Inputs/basic_aarch64_gcc_tree/aarch64-none-elf 2>&1 \
@@ -20,6 +21,7 @@
 // LLD-AARCH64-BAREMETAL: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=aarch64-none-elf --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_aarch64_gcc_tree \
 // RUN:   --sysroot=%S/Inputs/basic_aarch64_gcc_tree/aarch64-none-elf 2>&1 \
@@ -39,6 +41,7 @@
 // C-AARCH64-BAREMETAL: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=aarch64-none-elf --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_aarch64_gcc_tree \
 // RUN:   --sysroot=  2>&1 \
@@ -56,6 +59,7 @@
 // C-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=aarch64-none-elf -stdlib=libstdc++ --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_aarch64_gcc_tree \
 // RUN:   --sysroot=%S/Inputs/basic_aarch64_gcc_tree/aarch64-none-elf 2>&1 \
@@ -76,6 +80,7 @@
 // CXX-AARCH64-BAREMETAL: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=aarch64-none-elf -stdlib=libstdc++ --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_aarch64_gcc_tree \
 // RUN:   --sysroot=  2>&1 \
@@ -95,6 +100,7 @@
 // CXX-AARCH64-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=aarch64-none-elf -stdlib=libc++ --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_aarch64_gcc_tree \
 // RUN:   --sysroot=%S/Inputs/basic_aarch64_gcc_tree/aarch64-none-elf 2>&1 \
@@ -114,6 +120,7 @@
 // CXX-AARCH64-BAREMETAL-LIBCXX: "{{.*}}/Inputs/basic_aarch64_gcc_tree/lib/gcc/aarch64-none-elf/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=aarch64-none-elf -stdlib=libc++ --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_aarch64_gcc_tree \
 // RUN:   --sysroot=  2>&1 \

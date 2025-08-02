@@ -79,6 +79,7 @@
 // c++ when musl is selected
 // -----------------------------------------------------------------------------
 // RUN: %clangxx -### --target=hexagon-unknown-linux-musl \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   --sysroot=%S/Inputs/basic_linux_libcxx_tree \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK006 %s
@@ -87,6 +88,7 @@
 // c++ when musl is selected
 // -----------------------------------------------------------------------------
 // RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -stdlib=libc++ \
 // RUN:   -mcpu=hexagonv60 %s 2>&1 | FileCheck -check-prefix=CHECK007 %s
@@ -95,6 +97,7 @@
 // internal-isystem for linux with and without musl
 // -----------------------------------------------------------------------------
 // RUN: %clang -### --target=hexagon-unknown-linux-musl \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK008 %s
 // CHECK008:   InstalledDir: [[INSTALLED_DIR:.+]]
@@ -103,6 +106,7 @@
 // CHECK008-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
 
 // RUN: %clang -### --target=hexagon-unknown-linux \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -resource-dir=%S/Inputs/resource_dir %s 2>&1 | FileCheck -check-prefix=CHECK009 %s
 // CHECK009:   InstalledDir: [[INSTALLED_DIR:.+]]

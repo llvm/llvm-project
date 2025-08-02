@@ -1388,19 +1388,40 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
   return *cxxStdlibType;
 }
 
+static void ResolveAndAddSystemIncludePath(const ArgList &DriverArgs,
+                                           ArgStringList &CC1Args,
+                                           const Twine &Path) {
+  bool Canonicalize =
+      DriverArgs.hasFlag(options::OPT_canonical_prefixes,
+                         options::OPT_no_canonical_prefixes, true);
+
+  if (!Canonicalize) {
+    CC1Args.push_back(DriverArgs.MakeArgString(Path));
+    return;
+  }
+
+  // We canonicalise system include paths that were added automatically
+  // since those can end up quite long otherwise.
+  SmallString<256> Canonical, PathStorage;
+  StringRef SimplifiedPath = Path.toStringRef(PathStorage);
+  if (!sys::fs::real_path(SimplifiedPath, Canonical))
+    SimplifiedPath = Canonical;
+  CC1Args.push_back(DriverArgs.MakeArgString(SimplifiedPath));
+}
+
 /// Utility function to add a system framework directory to CC1 arguments.
 void ToolChain::addSystemFrameworkInclude(const llvm::opt::ArgList &DriverArgs,
                                           llvm::opt::ArgStringList &CC1Args,
                                           const Twine &Path) {
   CC1Args.push_back("-internal-iframework");
-  CC1Args.push_back(DriverArgs.MakeArgString(Path));
+  ResolveAndAddSystemIncludePath(DriverArgs, CC1Args, Path);
 }
 
 /// Utility function to add a system include directory to CC1 arguments.
 void ToolChain::addSystemInclude(const ArgList &DriverArgs,
                                  ArgStringList &CC1Args, const Twine &Path) {
   CC1Args.push_back("-internal-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(Path));
+  ResolveAndAddSystemIncludePath(DriverArgs, CC1Args, Path);
 }
 
 /// Utility function to add a system include directory with extern "C"
@@ -1415,7 +1436,7 @@ void ToolChain::addExternCSystemInclude(const ArgList &DriverArgs,
                                         ArgStringList &CC1Args,
                                         const Twine &Path) {
   CC1Args.push_back("-internal-externc-isystem");
-  CC1Args.push_back(DriverArgs.MakeArgString(Path));
+  ResolveAndAddSystemIncludePath(DriverArgs, CC1Args, Path);
 }
 
 void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
@@ -1429,20 +1450,16 @@ void ToolChain::addExternCSystemIncludeIfExists(const ArgList &DriverArgs,
 void ToolChain::addSystemFrameworkIncludes(const ArgList &DriverArgs,
                                            ArgStringList &CC1Args,
                                            ArrayRef<StringRef> Paths) {
-  for (const auto &Path : Paths) {
-    CC1Args.push_back("-internal-iframework");
-    CC1Args.push_back(DriverArgs.MakeArgString(Path));
-  }
+  for (const auto &Path : Paths)
+    addSystemFrameworkInclude(DriverArgs, CC1Args, Path);
 }
 
 /// Utility function to add a list of system include directories to CC1.
 void ToolChain::addSystemIncludes(const ArgList &DriverArgs,
                                   ArgStringList &CC1Args,
                                   ArrayRef<StringRef> Paths) {
-  for (const auto &Path : Paths) {
-    CC1Args.push_back("-internal-isystem");
-    CC1Args.push_back(DriverArgs.MakeArgString(Path));
-  }
+  for (const auto &Path : Paths)
+    addSystemInclude(DriverArgs, CC1Args, Path);
 }
 
 std::string ToolChain::concat(StringRef Path, const Twine &A, const Twine &B,

@@ -46,6 +46,7 @@
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
@@ -62,6 +63,7 @@
 // CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
@@ -200,6 +202,7 @@
 // C-RV32-RTLIB-COMPILERRT-ILP32: "{{.*}}clang_rt.crtend.o"
 
 // RUN: %clang -### %s --target=riscv32 \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree --sysroot= \
 // RUN:   -resource-dir=%s/Inputs/resource_dir 2>&1 \
 // RUN:   | FileCheck -check-prefix=RESOURCE-INC %s
@@ -207,6 +210,7 @@
 // RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv32_tree{{.*}}riscv32-unknown-linux-gnu/include"
 
 // RUN: %clang -### %s --target=riscv32 \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree --sysroot= \
 // RUN:   -resource-dir=%s/Inputs/resource_dir -nobuiltininc 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO-RESOURCE-INC %s

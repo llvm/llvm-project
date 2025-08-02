@@ -2,6 +2,7 @@
 
 /// Test native GCC installation on Arch Linux i686.
 // RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/archlinux_i686_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=ARCH_I686
 // ARCH_I686:      "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -24,6 +25,7 @@
 
 /// Test native x86-64 in the tree.
 // RUN: %clang -### %s --target=x86_64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64
 // DEBIAN_X86_64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -53,6 +55,7 @@
 
 /// Test -m32.
 // RUN: %clang -### %s --target=x86_64-linux-gnu -m32 --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32
 // DEBIAN_X86_64_M32:      "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -77,6 +80,7 @@
 
 /// Test native GCC installation on Debian i386.
 // RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/debian_i386_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686
 // DEBIAN_I686:      "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -102,6 +106,7 @@
 
 /// Test -m64 on Debian i386.
 // RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/debian_i386_tree -m64 \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686_M64
 // DEBIAN_I686_M64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -128,6 +133,7 @@
 
 /// Test a cross compiler.
 // RUN: %clang -### %s --target=aarch64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_AARCH64
 // DEBIAN_AARCH64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -154,6 +160,7 @@
 /// Test native x86-64 with -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=on.
 /// FIXME -internal-isystem .*bin/../include/x86_64-linux-gnu/c++/v1 and -L[[PREFIX]]/bin/../lib/x86_64-linux-gnu are missing.
 // RUN: %clang -### %s --target=x86_64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/debian_per_target_tree/usr/lib/llvm-14/bin -resource-dir=%S/Inputs/debian_per_target_tree/usr/lib/llvm-14/lib/clang/14.0.0 \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_PER_TARGET
 // DEBIAN_X86_64_PER_TARGET:      "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -181,6 +188,7 @@
 /// Test -m32.
 /// FIXME -internal-isystem .*bin/../include/i386-linux-gnu/c++/v1 and -L[[PREFIX]]/bin/../lib/i386-linux-gnu are missing.
 // RUN: %clang -### %s --target=x86_64-linux-gnu -m32 --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/debian_per_target_tree/usr/lib/llvm-14/bin -resource-dir=%S/Inputs/debian_per_target_tree/usr/lib/llvm-14/lib/clang/14.0.0 \
 // RUN:   --stdlib=libc++ --rtlib=compiler-rt 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32_PER_TARGET
 // DEBIAN_X86_64_M32_PER_TARGET:      "-resource-dir" "[[RESOURCE:[^"]+]]"
@@ -213,6 +221,7 @@
 
 /// -r suppresses -dynamic-linker, default -l, and crt*.o like -nostdlib.
 // RUN: %clang -### %s --target=x86_64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
 // RUN:   --stdlib=platform --rtlib=platform -r 2>&1 | FileCheck %s --check-prefix=RELOCATABLE
 // RELOCATABLE-NOT:  "-dynamic-linker"

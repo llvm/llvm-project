@@ -2,6 +2,7 @@
 //
 // = Big-endian, mips32, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-32 %s
@@ -29,6 +30,7 @@
 //
 // = Big-endian, mips32, hard float, fp64
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF64-32 %s
@@ -56,6 +58,7 @@
 //
 // = Big-endian, mips32, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-32 %s
@@ -83,6 +86,7 @@
 //
 // = Big-endian, mips16 / mips32, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-16 %s
@@ -110,6 +114,7 @@
 //
 // = Big-endian, mips16 / mips32, hard float, fp64
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF64-16 %s
@@ -137,6 +142,7 @@
 //
 // = Big-endian, mips16 / mips32, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-16 %s
@@ -164,6 +170,7 @@
 //
 // = Big-endian, mips32 / mips16, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN-16 %s
@@ -191,6 +198,7 @@
 //
 // = Big-endian, mips32 / mips16, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mips16 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-16 %s
@@ -218,6 +226,7 @@
 //
 // = Big-endian, mips32, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN-32 %s
@@ -245,6 +254,7 @@
 //
 // = Big-endian, mips32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-32 %s
@@ -272,6 +282,7 @@
 //
 // = Big-endian, mips32r2, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-32R2 %s
@@ -299,6 +310,7 @@
 //
 // = Big-endian, mips32r2, hard float, uclibc
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mhard-float -muclibc -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-UC-HF-32R2 %s
@@ -326,6 +338,7 @@
 //
 // = Big-endian, mips32r2, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF64-32R2 %s
@@ -353,6 +366,7 @@
 //
 // = Big-endian, mips32r2, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-32R2 %s
@@ -380,6 +394,7 @@
 //
 // = Big-endian, mips32r2, soft float, uclibc
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -msoft-float -muclibc -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-UC-SF-32R2 %s
@@ -407,6 +422,7 @@
 //
 // = Big-endian, mips32r2 / mips16, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-16R2 %s
@@ -434,6 +450,7 @@
 //
 // = Big-endian, mips32r2 / mips16, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF64-16R2 %s
@@ -461,6 +478,7 @@
 //
 // = Big-endian, mips32r2 / mips16, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-16R2 %s
@@ -488,6 +506,7 @@
 //
 // = Big-endian, mips32r2 / mips16, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN-16R2 %s
@@ -515,6 +534,7 @@
 //
 // = Big-endian, mips32r2 / mips16, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mips16 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-16R2 %s
@@ -542,6 +562,7 @@
 //
 // = Big-endian, mips32r2, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN-32R2 %s
@@ -569,6 +590,7 @@
 //
 // = Big-endian, mips32r2, nan2008, uclibc
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mnan=2008 -muclibc -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-UC-NAN-32R2 %s
@@ -596,6 +618,7 @@
 //
 // = Big-endian, mips32r2, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r2 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-32R2 %s
@@ -623,6 +646,7 @@
 //
 // = Big-endian, default (mips32r2), fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-32R2-DEF %s
@@ -650,6 +674,7 @@
 //
 // = Big-endian, micromips, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-MM %s
@@ -677,6 +702,7 @@
 //
 // = Big-endian, micromips, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF64-MM %s
@@ -704,6 +730,7 @@
 //
 // = Big-endian, micromips, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-MM %s
@@ -731,6 +758,7 @@
 //
 // = Big-endian, micromips, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN-MM %s
@@ -758,6 +786,7 @@
 //
 // = Big-endian, micromips, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mmicromips -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-MM %s
@@ -785,6 +814,7 @@
 //
 // = Big-endian, mips64, ABI n32, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-64-N32 %s
@@ -812,6 +842,7 @@
 //
 // = Big-endian, mips64, ABI n32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF64-64-N32 %s
@@ -839,6 +870,7 @@
 //
 // = Big-endian, mips64, ABI n32, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-64-N32 %s
@@ -866,6 +898,7 @@
 //
 // = Big-endian, mips64, ABI n32, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN-64-N32 %s
@@ -893,6 +926,7 @@
 //
 // = Big-endian, mips64, ABI n32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=n32 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-64-N32 %s
@@ -920,6 +954,7 @@
 //
 // = Big-endian, mips64, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-64-64 %s
@@ -947,6 +982,7 @@
 //
 // = Big-endian, mips64, ABI 64, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF64-64-64 %s
@@ -974,6 +1010,7 @@
 //
 // = Big-endian, mips64, ABI 64, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-64-64 %s
@@ -1001,6 +1038,7 @@
 //
 // = Big-endian, mips64, ABI 64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN-64-64 %s
@@ -1028,6 +1066,7 @@
 //
 // = Big-endian, mips64, ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64 -mabi=64 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-64-64 %s
@@ -1055,6 +1094,7 @@
 //
 // = Big-endian, mips64r2, ABI n32, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-64R2-N32 %s
@@ -1082,6 +1122,7 @@
 //
 // = Big-endian, mips64r2, ABI n32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF64-64R2-N32 %s
@@ -1109,6 +1150,7 @@
 //
 // = Big-endian, mips64r2, ABI n32, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-64R2-N32 %s
@@ -1136,6 +1178,7 @@
 //
 // = Big-endian, mips64r2, ABI n32, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN-64R2-N32 %s
@@ -1163,6 +1206,7 @@
 //
 // = Big-endian, mips64r2, ABI n32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=n32 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-64R2-N32 %s
@@ -1190,6 +1234,7 @@
 //
 // = Big-endian, mips64r2, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-64R2-64 %s
@@ -1217,6 +1262,7 @@
 //
 // = Big-endian, mips64r2, ABI 64, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF64-64R2-64 %s
@@ -1244,6 +1290,7 @@
 //
 // = Big-endian, mips64r2, ABI 64, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-SF-64R2-64 %s
@@ -1271,6 +1318,7 @@
 //
 // = Big-endian, mips64r2, ABI 64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN-64R2-64 %s
@@ -1298,6 +1346,7 @@
 //
 // = Big-endian, mips64r2, ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r2 -mabi=64 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-64R2-64 %s
@@ -1325,6 +1374,7 @@
 //
 // = Big-endian, default (mips64r2), ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mabi=64 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-NAN64-64R2-64-DEF %s
@@ -1352,6 +1402,7 @@
 //
 // = Little-endian, mips32, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-32 %s
@@ -1379,6 +1430,7 @@
 //
 // = Little-endian, mips32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF64-32 %s
@@ -1406,6 +1458,7 @@
 //
 // = Little-endian, mips32, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-32 %s
@@ -1433,6 +1486,7 @@
 //
 // = Little-endian, mips32 / mips16, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-16 %s
@@ -1460,6 +1514,7 @@
 //
 // = Little-endian, mips32 / mips16, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF64-16 %s
@@ -1487,6 +1542,7 @@
 //
 // = Little-endian, mips32 / mips16, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-16 %s
@@ -1514,6 +1570,7 @@
 //
 // = Little-endian, mips32 / mips16, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN-16 %s
@@ -1541,6 +1598,7 @@
 //
 // = Little-endian, mips32 / mips16, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mips16 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-16 %s
@@ -1568,6 +1626,7 @@
 //
 // = Little-endian, mips32, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN-32 %s
@@ -1595,6 +1654,7 @@
 //
 // = Little-endian, mips32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-32 %s
@@ -1622,6 +1682,7 @@
 //
 // = Little-endian, mips32r2, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-32R2 %s
@@ -1649,6 +1710,7 @@
 //
 // = Little-endian, mips32r2, hard float, uclibc
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mhard-float -muclibc -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-UC-HF-32R2 %s
@@ -1676,6 +1738,7 @@
 //
 // = Little-endian, mips32r2, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF64-32R2 %s
@@ -1703,6 +1766,7 @@
 //
 // = Little-endian, mips32r2, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-32R2 %s
@@ -1730,6 +1794,7 @@
 //
 // = Little-endian, mips32r2, soft float, uclibc
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -msoft-float -muclibc -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-UC-SF-32R2 %s
@@ -1757,6 +1822,7 @@
 //
 // = Little-endian, mips32r2 / mips16, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-16R2 %s
@@ -1784,6 +1850,7 @@
 //
 // = Little-endian, mips32r2 / mips16, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF64-16R2 %s
@@ -1811,6 +1878,7 @@
 //
 // = Little-endian, mips32r2 / mips16, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-16R2 %s
@@ -1838,6 +1906,7 @@
 //
 // = Little-endian, mips32r2 / mips16, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN-16R2 %s
@@ -1865,6 +1934,7 @@
 //
 // = Little-endian, mips32r2 / mips16, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mips16 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-16R2 %s
@@ -1892,6 +1962,7 @@
 //
 // = Little-endian, mips32r2, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN-32R2 %s
@@ -1919,6 +1990,7 @@
 //
 // = Little-endian, mips32r2, nan2008, uclibc
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mnan=2008 -muclibc -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-UC-NAN-32R2 %s
@@ -1946,6 +2018,7 @@
 //
 // = Little-endian, mips32r2, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mips32r2 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-32R2 %s
@@ -1973,6 +2046,7 @@
 //
 // = Little-endian, default (mips32r2), fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-32R2-DEF %s
@@ -2000,6 +2074,7 @@
 //
 // = Little-endian, micromips, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-MM %s
@@ -2027,6 +2102,7 @@
 //
 // = Little-endian, micromips, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF64-MM %s
@@ -2054,6 +2130,7 @@
 //
 // = Little-endian, micromips, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-MM %s
@@ -2081,6 +2158,7 @@
 //
 // = Little-endian, micromips, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN-MM %s
@@ -2108,6 +2186,7 @@
 //
 // = Little-endian, micromips, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mipsel-mti-linux-gnu -mmicromips -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-MM %s
@@ -2135,6 +2214,7 @@
 //
 // = Little-endian, mips64, ABI n32, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-64-N32 %s
@@ -2162,6 +2242,7 @@
 //
 // = Little-endian, mips64, ABI n32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF64-64-N32 %s
@@ -2189,6 +2270,7 @@
 //
 // = Little-endian, mips64, ABI n32, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-64-N32 %s
@@ -2216,6 +2298,7 @@
 //
 // = Little-endian, mips64, ABI n32, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN-64-N32 %s
@@ -2243,6 +2326,7 @@
 //
 // = Little-endian, mips64, ABI n32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=n32 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-64-N32 %s
@@ -2270,6 +2354,7 @@
 //
 // = Little-endian, mips64, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-64-64 %s
@@ -2297,6 +2382,7 @@
 //
 // = Little-endian, mips64, ABI 64, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF64-64-64 %s
@@ -2324,6 +2410,7 @@
 //
 // = Little-endian, mips64, ABI 64, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-64-64 %s
@@ -2351,6 +2438,7 @@
 //
 // = Little-endian, mips64, ABI 64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN-64-64 %s
@@ -2378,6 +2466,7 @@
 //
 // = Little-endian, mips64, ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64 -mabi=64 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-64-64 %s
@@ -2405,6 +2494,7 @@
 //
 // = Little-endian, mips64r2, ABI n32, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-64R2-N32 %s
@@ -2432,6 +2522,7 @@
 //
 // = Little-endian, mips64r2, ABI n32, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF64-64R2-N32 %s
@@ -2459,6 +2550,7 @@
 //
 // = Little-endian, mips64r2, ABI n32, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-64R2-N32 %s
@@ -2486,6 +2578,7 @@
 //
 // = Little-endian, mips64r2, ABI n32, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN-64R2-N32 %s
@@ -2513,6 +2606,7 @@
 //
 // = Little-endian, mips64r2, ABI n32, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=n32 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-64R2-N32 %s
@@ -2540,6 +2634,7 @@
 //
 // = Little-endian, mips64r2, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF-64R2-64 %s
@@ -2567,6 +2662,7 @@
 //
 // = Little-endian, mips64r2, ABI 64, fp64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -mfp64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-HF64-64R2-64 %s
@@ -2594,6 +2690,7 @@
 //
 // = Little-endian, mips64r2, ABI 64, soft float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -msoft-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-SF-64R2-64 %s
@@ -2621,6 +2718,7 @@
 //
 // = Little-endian, mips64r2, ABI 64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN-64R2-64 %s
@@ -2648,6 +2746,7 @@
 //
 // = Little-endian, mips64r2, ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mips64r2 -mabi=64 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-64R2-64 %s
@@ -2675,6 +2774,7 @@
 //
 // = Little-endian, default (mips64r2), ABI 64, fp64, nan2008
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64el-mti-linux-gnu -mabi=64 -mfp64 -mnan=2008 -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-EL-NAN64-64R2-64-DEF %s
@@ -2704,6 +2804,7 @@
 //
 // = Big-endian, mips32r3, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r3 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-32R3 %s
@@ -2731,6 +2832,7 @@
 //
 // = Big-endian, mips32r5, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips-mti-linux-gnu -mips32r5 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-32R5 %s
@@ -2758,6 +2860,7 @@
 //
 // = Big-endian, mips64r3, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r3 -mabi=64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-64R3-64 %s
@@ -2785,6 +2888,7 @@
 //
 // = Big-endian, mips64r5, ABI 64, hard float
 // RUN: %clang -### %s 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=mips64-mti-linux-gnu -mips64r5 -mabi=64 -mhard-float -no-pie \
 // RUN:     -stdlib=libstdc++ --gcc-toolchain=%S/Inputs/mips_fsf_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-BE-HF-64R5-64 %s

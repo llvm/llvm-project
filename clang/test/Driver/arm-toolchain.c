@@ -1,6 +1,7 @@
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -### %s -fuse-ld=lld -B%S/Inputs/lld \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=armv6m-none-eabi --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_arm_gcc_tree \
 // RUN:   --sysroot=%S/Inputs/basic_arm_gcc_tree/armv6m-none-eabi 2>&1 \
@@ -19,6 +20,7 @@
 // LLD-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=armv6m-none-eabi --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_arm_gcc_tree \
 // RUN:   --sysroot=%S/Inputs/basic_arm_gcc_tree/armv6m-none-eabi 2>&1 \
@@ -38,6 +40,7 @@
 // C-ARM-BAREMETAL: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=armv6m-none-eabi --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_arm_gcc_tree \
 // RUN:   --sysroot=  2>&1 \
@@ -55,6 +58,7 @@
 // C-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=armv6m-none-eabi -stdlib=libstdc++ --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_arm_gcc_tree \
 // RUN:   --sysroot=%S/Inputs/basic_arm_gcc_tree/armv6m-none-eabi 2>&1 \
@@ -77,6 +81,7 @@
 
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=armv6m-none-eabi -stdlib=libstdc++ --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_arm_gcc_tree \
 // RUN:   --sysroot=  2>&1 \
@@ -96,6 +101,7 @@
 // CXX-ARM-BAREMETAL-NOSYSROOT: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=armv6m-none-eabi -stdlib=libc++ --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_arm_gcc_tree \
 // RUN:   --sysroot=%S/Inputs/basic_arm_gcc_tree/armv6m-none-eabi 2>&1 \
@@ -115,6 +121,7 @@
 // CXX-ARM-BAREMETAL-LIBCXX: "{{.*}}/Inputs/basic_arm_gcc_tree/lib/gcc/armv6m-none-eabi/8.2.1/crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
+// RUN:   -no-canonical-prefixes \
 // RUN:   --target=armv6m-none-eabi -stdlib=libc++ --rtlib=libgcc --unwindlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_arm_gcc_tree \
 // RUN:   --sysroot=  2>&1 \

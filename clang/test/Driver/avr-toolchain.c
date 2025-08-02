@@ -1,7 +1,7 @@
 // UNSUPPORTED: system-windows
 // A basic clang -cc1 command-line.
 
-// RUN: %clang -### %s --target=avr --sysroot=%S/Inputs/basic_avr_tree -resource-dir=%S/Inputs/resource_dir 2>&1 | FileCheck --check-prefix=CHECK1 %s
+// RUN: %clang -### %s -no-canonical-prefixes --target=avr --sysroot=%S/Inputs/basic_avr_tree -resource-dir=%S/Inputs/resource_dir 2>&1 | FileCheck --check-prefix=CHECK1 %s
 // CHECK1: "-cc1" "-triple" "avr"
 // CHECK1-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK1-SAME: "-isysroot" "[[SYSROOT:[^"]+/basic_avr_tree]]"
@@ -12,13 +12,13 @@
 // CHECK1-SAME: "-o" "a.out"
 // CHECK1-SAME: {{^}} "--gc-sections"
 
-// RUN: %clang -### %s --target=avr --sysroot=%S/Inputs/basic_avr_tree_2/opt/local -S 2>&1 | FileCheck --check-prefix=CHECK2 %s
+// RUN: %clang -### %s -no-canonical-prefixes --target=avr --sysroot=%S/Inputs/basic_avr_tree_2/opt/local -S 2>&1 | FileCheck --check-prefix=CHECK2 %s
 // CHECK2: "-cc1" "-triple" "avr"
 // CHECK2-SAME: "-isysroot" "[[SYSROOT:[^"]+/basic_avr_tree_2/opt/local]]"
 // CHECK2-SAME: "-internal-isystem"
 // CHECK2-SAME: {{^}} "[[SYSROOT]]/lib/gcc/avr/10.3.0/../../../../avr/include"
 
-// RUN: %clang -### %s --target=avr --sysroot=%S/Inputs/basic_avr_tree_2 -S 2>&1 | FileCheck --check-prefix=CHECK3 %s
+// RUN: %clang -### %s -no-canonical-prefixes --target=avr --sysroot=%S/Inputs/basic_avr_tree_2 -S 2>&1 | FileCheck --check-prefix=CHECK3 %s
 // CHECK3: "-cc1" "-triple" "avr"
 // CHECK3-SAME: "-isysroot" "[[SYSROOT:[^"]+/basic_avr_tree_2]]"
 // CHECK3-SAME: "-internal-isystem"
@@ -32,8 +32,8 @@
 // CHECK4-NOT: "-fno-use-init-array"
 // CHECK4-NOT: "-fno-use-cxa-atexit"
 
-// RUN: %clang -### %s --target=avr --sysroot=%S/Inputs/basic_avr_tree 2>&1 -nostdinc | FileCheck --check-prefix=NOSTDINC %s
-// RUN: %clang -### %s --target=avr --sysroot=%S/Inputs/basic_avr_tree 2>&1 -nostdlibinc | FileCheck --check-prefix=NOSTDINC %s
+// RUN: %clang -### %s -no-canonical-prefixes --target=avr --sysroot=%S/Inputs/basic_avr_tree 2>&1 -nostdinc | FileCheck --check-prefix=NOSTDINC %s
+// RUN: %clang -### %s -no-canonical-prefixes --target=avr --sysroot=%S/Inputs/basic_avr_tree 2>&1 -nostdlibinc | FileCheck --check-prefix=NOSTDINC %s
 // NOSTDINC-NOT: "-internal-isystem" {{".*avr/include"}}
 
 // RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s 2>&1 | FileCheck --check-prefix=NOWARN %s

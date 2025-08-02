@@ -12,6 +12,7 @@
 /// Checking include-path
 
 // RUN: %clangxx -### --target=ve-unknown-linux-gnu \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree %s -fuse-ld=ld \
 // RUN:     -ccc-install-dir %S/Inputs/basic_ve_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
@@ -28,6 +29,7 @@
 // DEFINC-SAME: "-rpath" "[[SYSROOT]]/bin/../lib/ve-unknown-linux-gnu"
 
 // RUN: %clangxx -### --target=ve-unknown-linux-gnu \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree %s \
 // RUN:     -ccc-install-dir %S/Inputs/basic_ve_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
@@ -41,6 +43,7 @@
 // NOSTDLIBINC-NOT: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
 // RUN: %clangxx -### --target=ve-unknown-linux-gnu \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree %s \
 // RUN:     -ccc-install-dir %S/Inputs/basic_ve_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
@@ -55,6 +58,7 @@
 // NOBUILTININC-SAME: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
 // RUN: %clangxx -### --target=ve-unknown-linux-gnu \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree %s \
 // RUN:     -ccc-install-dir %S/Inputs/basic_ve_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
@@ -69,6 +73,7 @@
 // NOSTDINC-NOT: "-internal-isystem" "[[SYSROOT]]/opt/nec/ve/include"
 
 // RUN: %clangxx -### --target=ve-unknown-linux-gnu \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree %s \
 // RUN:     -ccc-install-dir %S/Inputs/basic_ve_tree/bin \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \
@@ -86,6 +91,7 @@
 /// Checking environment variable NCC_CPLUS_INCLUDE_PATH
 
 // RUN: env NCC_CPLUS_INCLUDE_PATH=/test/test %clangxx -### \
+// RUN:     -no-canonical-prefixes \
 // RUN:     --target=ve-unknown-linux-gnu %s \
 // RUN:     --sysroot %S/Inputs/basic_ve_tree \
 // RUN:     -resource-dir=%S/Inputs/basic_ve_tree/resource_dir \

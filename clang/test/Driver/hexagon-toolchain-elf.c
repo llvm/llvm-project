@@ -3,10 +3,12 @@
 // -----------------------------------------------------------------------------
 
 // RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK000 %s
 // CHECK000: "-cc1" {{.*}} "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/include"
 
 // RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin %s 2>&1 | FileCheck -check-prefix=CHECK001 %s
 // CHECK001: "-cc1" {{.*}} "-internal-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/include/c++"
 // CHECK001:   "-internal-externc-isystem" "{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/include"
@@ -28,6 +30,7 @@
 // CHECK111-NOT: "-internal-externc-isystem"
 
 // RUN: %clangxx -### --target=hexagon-unknown-elf \
+// RUN:   -no-canonical-prefixes \
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -nostdinc++ %s 2>&1 | FileCheck -check-prefix=CHECK112 %s
 // CHECK112: "-cc1"

@@ -5,6 +5,7 @@
 // CHECK-STATIC-LIB: {{.*}}llvm-ar{{.*}}" "rcsD"
 
 // RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     -T semihosted.lds \
 // RUN:     -L some/directory/user/asked/for \
 // RUN:     --sysroot=%S/Inputs/baremetal_arm \
@@ -33,6 +34,7 @@
 // CHECK-V6M-LIBINC-NOT: "-internal-isystem"
 
 // RUN: %clang %s -### --target=armv6m-none-eabi -o %t.out 2>&1 \
+// RUN:     -no-canonical-prefixes \
 // RUN:     -ccc-install-dir %S/Inputs/basic_baremetal_tree/bin \
 // RUN:   | FileCheck --check-prefix=CHECK-V6M-TREE %s
 // CHECK-V6M-TREE:      InstalledDir: [[INSTALLED_DIR:.+]]
