@@ -11,13 +11,16 @@
 #endif
 
 #ifdef ORIG_ATTR_SYN
-#define __cfi_salt __attribute__((cfi_salt("pepper")))
+#define __cfi_salt       __attribute__((cfi_salt("pepper")))
+#define __cfi_salt_empty __attribute__((cfi_salt("")))
 #else
-#define __cfi_salt [[clang::cfi_salt("pepper")]]
+#define __cfi_salt       [[clang::cfi_salt("pepper")]]
+#define __cfi_salt_empty [[clang::cfi_salt("")]]
 #endif
 
 typedef int (*fn_t)(void);
 typedef int (* __cfi_salt fn_salt_t)(void);
+typedef int (* __cfi_salt_empty fn_salt_empty_t)(void);
 
 typedef unsigned int (*ufn_t)(void);
 typedef unsigned int (* __cfi_salt ufn_salt_t)(void);
@@ -49,9 +52,13 @@ static int f5_salt(void) __cfi_salt;
 extern int f6(void);
 extern int f6_salt(void) __cfi_salt;
 
+int f8(void);
+int f8_salt_empty(void) __cfi_salt_empty;
+
 struct cfi_struct {
   fn_t __cfi_salt fptr;
   fn_salt_t td_fptr;
+  fn_salt_empty_t td_empty_fptr;
 };
 
 int f7_salt(struct cfi_struct *ptr);
@@ -75,6 +82,7 @@ int __call(fn_t f) {
 int call(fn_t f) { return f(); }
 int call_salt(fn_t __cfi_salt f) { return f(); }
 int call_salt_ty(fn_salt_t f) { return f(); }
+int call_salt_empty_ty(fn_salt_empty_t f) { return f(); }
 
 // CHECK-LABEL: @ucall
 // CHECK:         call{{.*}} i32 %{{.}}(){{.*}} [ "kcfi"(i32 [[#%d,LOW_SODIUM_UHASH:]]) ]
@@ -113,7 +121,10 @@ int test1(struct cfi_struct *ptr) {
          f6_salt() +
 
          f7_salt(ptr) +
-         f7_typedef_salt(ptr);
+         f7_typedef_salt(ptr) +
+
+         f8() +
+         f8_salt_empty();
 }
 
 // CHECK-LABEL: define dso_local{{.*}} i32 @f1(){{.*}} !kcfi_type
@@ -159,6 +170,13 @@ static int f5_salt(void) __cfi_salt { return 2; }
 // CHECK:         call{{.*}} i32 %{{.*}}() [ "kcfi"(i32 [[#SALTY_HASH]]) ]
 int f7_salt(struct cfi_struct *ptr) { return ptr->fptr(); }
 int f7_typedef_salt(struct cfi_struct *ptr) { return ptr->td_fptr(); }
+
+// CHECK-LABEL: define dso_local{{.*}} i32 @f8(){{.*}} !kcfi_type
+// CHECK-SAME:  ![[#LOW_SODIUM_TYPE:]]
+// CHECK-LABEL: define dso_local{{.*}} i32 @f8_salt_empty(){{.*}} !kcfi_type
+// CHECK-SAME:  ![[#LOW_SODIUM_TYPE:]]
+int f8(void) { return 0; }
+int f8_salt_empty(void) __cfi_salt_empty { return 0; }
 
 // CHECK:  ![[#]] = !{i32 4, !"kcfi", i32 1}
 // OFFSET: ![[#]] = !{i32 4, !"kcfi-offset", i32 3}
