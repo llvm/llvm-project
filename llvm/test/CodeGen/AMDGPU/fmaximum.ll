@@ -173,8 +173,8 @@ define amdgpu_ps <3 x half> @test_fmaximum_v3f16_vv(<3 x half> %a, <3 x half> %b
 ;
 ; GFX12-GISEL-TRUE16-LABEL: test_fmaximum_v3f16_vv:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
-; GFX12-GISEL-TRUE16-NEXT:    v_maximum_f16 v1.l, v1.l, v3.l
 ; GFX12-GISEL-TRUE16-NEXT:    v_pk_maximum_f16 v0, v0, v2
+; GFX12-GISEL-TRUE16-NEXT:    v_maximum_f16 v1.l, v1.l, v3.l
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: test_fmaximum_v3f16_vv:
