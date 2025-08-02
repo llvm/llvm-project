@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___UTILITY_CMP_H
 #define _LIBCPP___UTILITY_CMP_H
 
+#include "__assert"
 #include <__config>
 #include <__type_traits/integer_traits.h>
 #include <__type_traits/is_signed.h>
@@ -28,7 +29,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Up>
 _LIBCPP_HIDE_FROM_ABI constexpr bool cmp_equal(_Tp __t, _Up __u) noexcept {
-  if constexpr (is_signed_v<_Tp> == is_signed_v<_Up>)
+  if constexpr (sizeof(_Tp) < sizeof(int) && sizeof(_Up) < sizeof(int))
+    return static_cast<int>(__t) == static_cast<int>(__u);
+  else if constexpr (sizeof(_Tp) < sizeof(long long) && sizeof(_Up) < sizeof(long long))
+    return static_cast<long long>(__t) == static_cast<long long>(__u);
+  else if constexpr (is_signed_v<_Tp> == is_signed_v<_Up>)
     return __t == __u;
   else if constexpr (is_signed_v<_Tp>)
     return __t < 0 ? false : make_unsigned_t<_Tp>(__t) == __u;
@@ -43,7 +48,11 @@ _LIBCPP_HIDE_FROM_ABI constexpr bool cmp_not_equal(_Tp __t, _Up __u) noexcept {
 
 template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Up>
 _LIBCPP_HIDE_FROM_ABI constexpr bool cmp_less(_Tp __t, _Up __u) noexcept {
-  if constexpr (is_signed_v<_Tp> == is_signed_v<_Up>)
+  if constexpr (sizeof(_Tp) < sizeof(int) && sizeof(_Up) < sizeof(int))
+    return static_cast<int>(__t) < static_cast<int>(__u);
+  else if constexpr (sizeof(_Tp) < sizeof(long long) && sizeof(_Up) < sizeof(long long))
+    return static_cast<long long>(__t) < static_cast<long long>(__u);
+  else if constexpr (is_signed_v<_Tp> == is_signed_v<_Up>)
     return __t < __u;
   else if constexpr (is_signed_v<_Tp>)
     return __t < 0 ? true : make_unsigned_t<_Tp>(__t) < __u;
