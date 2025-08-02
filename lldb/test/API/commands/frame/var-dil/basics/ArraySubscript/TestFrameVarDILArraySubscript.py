@@ -69,17 +69,19 @@ class TestFrameVarDILArraySubscript(TestBase):
             substrs=["expected 'r_square', got: <'.'"],
         )
 
-        # Base should be a "pointer to T" and index should be of an integral type.
-        self.expect(
-            "frame var 'idx_1[0]'",
-            error=True,
-            substrs=["subscripted value is not an array or pointer"],
-        )
+
+        # Test accessing bits in scalar types.
+        self.expect_var_path("idx_1[0]", value="1")
+        self.expect_var_path("idx_1[1]", value="0")
+
+        # Bit acess not valid for a reference.
         self.expect(
             "frame var 'idx_1_ref[0]'",
             error=True,
-            substrs=["subscripted value is not an array or pointer"],
+            substrs=["bitfield range 0-0 is not valid"],
         )
+
+        # Base should be a "pointer to T" and index should be of an integral type.
         self.expect(
             "frame var 'int_arr[int_ptr]'",
             error=True,
