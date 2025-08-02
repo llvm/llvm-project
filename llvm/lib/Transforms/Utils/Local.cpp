@@ -3846,7 +3846,7 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   if (Op->getType()->isMetadataTy())
     return false;
 
-  if (!shouldFoldLoadStoreWithPointerOperandThroughPhi(Op))
+  if (!shouldFoldOperandThroughPhi(Op))
     return false;
 
   // Cannot replace alloca argument with phi/select.
