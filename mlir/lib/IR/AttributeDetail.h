@@ -35,8 +35,9 @@ inline size_t getDenseElementBitWidth(Type eltType) {
   // Align the width for complex to 8 to make storage and interpretation easier.
   if (ComplexType comp = llvm::dyn_cast<ComplexType>(eltType))
     return llvm::alignTo<8>(getDenseElementBitWidth(comp.getElementType())) * 2;
-  if (eltType.isIndex())
-    return IndexType::kInternalStorageBitWidth;
+  if (auto intLikeType = dyn_cast<IntegerLikeTypeInterface>(eltType))
+    return intLikeType.getStorageBitWidth();
+
   return eltType.getIntOrFloatBitWidth();
 }
 
