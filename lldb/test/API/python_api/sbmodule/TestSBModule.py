@@ -18,6 +18,26 @@ class SBModuleAPICase(TestBase):
         if self.background_pid:
             os.kill(self.background_pid, signal.SIGKILL)
 
+    def test_getname(self):
+        """Test the SBModule::GetName() method"""
+        self.build()
+        target, _, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("main.c")
+        )
+
+        self.assertGreater(target.GetNumModules(), 0)
+        for i in range(target.GetNumModules()):
+            module = target.GetModuleAtIndex(i)
+            file_spec = module.GetFileSpec()
+            name = module.GetName()
+            if file_spec.IsValid() and file_spec.exists:
+#If file is valid and file exist, expect GetName() to be None
+                self.assertIsNone(name, f"Expected None for module with valid file {file_spec.GetFilename()}, got {name!r}")
+            else:
+#If no valid file, expect GetName() to be a non - empty string
+                self.assertIsInstance(name, str)
+                self.assertTrue(name, "Expected a non-empty name for module without a valid file")
+        
     @skipUnlessDarwin
     @skipIfRemote
     def test_module_is_file_backed(self):
