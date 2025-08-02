@@ -15893,9 +15893,7 @@ ExprResult Sema::BuiltinMatrixTranspose(CallExpr *TheCall,
 // Get and verify the matrix dimensions.
 static std::optional<unsigned>
 getAndVerifyMatrixDimension(Expr *Expr, StringRef Name, Sema &S) {
-  SourceLocation ErrorPos;
-  std::optional<llvm::APSInt> Value =
-      Expr->getIntegerConstantExpr(S.Context, &ErrorPos);
+  std::optional<llvm::APSInt> Value = Expr->getIntegerConstantExpr(S.Context);
   if (!Value) {
     S.Diag(Expr->getBeginLoc(), diag::err_builtin_matrix_scalar_unsigned_arg)
         << Name;

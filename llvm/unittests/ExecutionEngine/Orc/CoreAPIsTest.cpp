@@ -1575,7 +1575,7 @@ TEST_F(CoreAPIsStandardTest, TestLookupWithThreadedMaterialization) {
   EXPECT_EQ(FooLookupResult.getFlags(), FooSym.getFlags())
       << "lookup returned incorrect flags";
 
-  std::unique_lock Lock(WorkThreadsMutex);
+  std::unique_lock<std::mutex> Lock(WorkThreadsMutex);
   // This works because every child thread that is allowed to use WorkThreads
   // must either be in WorkThreads or its parent must be in WorkThreads.
   while (!WorkThreads.empty()) {
