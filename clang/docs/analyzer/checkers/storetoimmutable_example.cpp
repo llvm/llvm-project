@@ -11,7 +11,7 @@ void immutable_violation_examples() {
   const int local_const = 42;
   *(int *)&local_const = 43; // warn: Trying to write to immutable memory
 
-  // NOTE: The following works in C++, but not in C, as the analyzer treats
+  // NOTE: The following is reported in C++, but not in C, as the analyzer treats
   // string literals as non-const char arrays in C mode.
   char *ptr_to_str_literal = (char *)"hello";
   ptr_to_str_literal[0] = 'H'; // warn: Trying to write to immutable memory
