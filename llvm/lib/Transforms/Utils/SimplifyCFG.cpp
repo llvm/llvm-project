@@ -2134,6 +2134,22 @@ static bool replacingOperandWithVariableIsCheap(const Instruction *I,
   return !isa<IntrinsicInst>(I);
 }
 
+bool llvm::shouldFoldOperandThroughPhi(const Value *Ptr) {
+  // swifterror pointers can only be used by a load or store; sinking a load
+  // or store would require introducing a select for the pointer operand,
+  // which isn't allowed for swifterror pointers.
+  if (Ptr->isSwiftError())
+    return false;
+
+  // Protected pointer field loads/stores should be paired with the intrinsic
+  // to avoid unnecessary address escapes.
+  if (auto *II = dyn_cast<IntrinsicInst>(Ptr))
+    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
+      return false;
+
+  return true;
+}
+
 // All instructions in Insts belong to different blocks that all unconditionally
 // branch to a common successor. Analyze each instruction and return true if it
 // would be possible to sink them into their successor, creating one common
