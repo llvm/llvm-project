@@ -2232,16 +2232,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// Get the stream of the asynchronous info structure or get a new one.
   Error getStream(AsyncInfoWrapperTy &AsyncInfoWrapper,
                   AMDGPUStreamTy *&Stream) {
-    // Get the stream (if any) from the async info.
-    Stream = AsyncInfoWrapper.getQueueAs<AMDGPUStreamTy *>();
-    if (!Stream) {
-      // There was no stream; get an idle one.
-      if (auto Err = AMDGPUStreamManager.getResource(Stream))
-        return Err;
-
-      // Modify the async info's stream.
-      AsyncInfoWrapper.setQueueAs<AMDGPUStreamTy *>(Stream);
-    }
+    auto WrapperStream =
+        AsyncInfoWrapper.getOrInitQueue<AMDGPUStreamTy *>(AMDGPUStreamManager);
+    if (!WrapperStream)
+      return WrapperStream.takeError();
+    Stream = *WrapperStream;
     return Plugin::success();
   }
 
@@ -2296,7 +2291,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Synchronize current thread with the pending operations on the async info.
-  Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
+  Error synchronizeImpl(__tgt_async_info &AsyncInfo,
+                        bool ReleaseQueue) override {
     AMDGPUStreamTy *Stream =
         reinterpret_cast<AMDGPUStreamTy *>(AsyncInfo.Queue);
     assert(Stream && "Invalid stream");
@@ -2307,8 +2303,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
     // own tasks.
-    AsyncInfo.Queue = nullptr;
-    return AMDGPUStreamManager.returnResource(Stream);
+    if (ReleaseQueue) {
+      AsyncInfo.Queue = nullptr;
+      return AMDGPUStreamManager.returnResource(Stream);
+    }
+    return Plugin::success();
   }
 
   /// Query for the completion of the pending operations on the async info.
