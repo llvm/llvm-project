@@ -613,6 +613,7 @@ namespace {
     SDValue foldLogicOfSetCCs(bool IsAnd, SDValue N0, SDValue N1,
                               const SDLoc &DL);
     SDValue foldSubToUSubSat(EVT DstVT, SDNode *N, const SDLoc &DL);
+    SDValue foldAbdToNarrowType(EVT VT, SDNode *N, const SDLoc &DL);
     SDValue foldABSToABD(SDNode *N, const SDLoc &DL);
     SDValue foldSelectToABD(SDValue LHS, SDValue RHS, SDValue True,
                             SDValue False, ISD::CondCode CC, const SDLoc &DL);
@@ -3927,6 +3928,47 @@ SDValue DAGCombiner::foldSubToUSubSat(EVT DstVT, SDNode *N, const SDLoc &DL) {
     if (MinRHS.getOpcode() == ISD::ZERO_EXTEND && MinRHS.getOperand(0) == Op0)
       return getTruncatedUSUBSAT(DstVT, MinLHS.getValueType(), MinRHS, MinLHS,
                                  DAG, DL);
+  }
+
+  return SDValue();
+}
+
+// trunc (ABDU/S A, B)) → ABDU/S (trunc A), (trunc B)
+SDValue DAGCombiner::foldAbdToNarrowType(EVT VT, SDNode *N, const SDLoc &DL) {
+  SDValue Op = N->getOperand(0);
+
+  unsigned Opcode = Op.getOpcode();
+  if (Opcode != ISD::ABDU && Opcode != ISD::ABDS)
+    return SDValue();
+
+  SDValue Operand0 = Op.getOperand(0);
+  SDValue Operand1 = Op.getOperand(1);
+
+  // Early exit if either operand is zero.
+  if (ISD::isBuildVectorAllZeros(Operand0.getNode()) ||
+      ISD::isBuildVectorAllZeros(Operand1.getNode()))
+    return SDValue();
+
+  EVT SrcVT = Op.getValueType();
+  EVT TruncVT = N->getValueType(0);
+  unsigned NumSrcBits = SrcVT.getScalarSizeInBits();
+  unsigned NumTruncBits = TruncVT.getScalarSizeInBits();
+  unsigned NeededBits = NumSrcBits - NumTruncBits;
+
+  bool CanFold = false;
+
+  if (Opcode == ISD::ABDU) {
+    KnownBits Known = DAG.computeKnownBits(Op);
+    CanFold = Known.countMinLeadingZeros() >= NeededBits;
+  } else {
+    unsigned SignBits = DAG.ComputeNumSignBits(Op);
+    CanFold = SignBits >= NeededBits;
+  }
+
+  if (CanFold) {
+    SDValue NewOp0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Operand0);
+    SDValue NewOp1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Operand1);
+    return DAG.getNode(Opcode, DL, TruncVT, NewOp0, NewOp1);
   }
 
   return SDValue();
@@ -16293,6 +16335,10 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
 
   if (SDValue NewVSel = matchVSelectOpSizesWithSetCC(N))
     return NewVSel;
+
+  // fold trunc (ABDU/S A, B)) → ABDU/S (trunc A), (trunc B)
+  if (SDValue V = foldAbdToNarrowType(VT, N, SDLoc(N)))
+    return V;
 
   // Narrow a suitable binary operation with a non-opaque constant operand by
   // moving it ahead of the truncate. This is limited to pre-legalization
