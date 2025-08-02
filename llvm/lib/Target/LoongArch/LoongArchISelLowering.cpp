@@ -5191,6 +5191,57 @@ static SDValue performBR_CCCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue performSELECT_CCCombine(SDNode *N, SelectionDAG &DAG,
+                                       TargetLowering::DAGCombinerInfo &DCI,
+                                       const LoongArchSubtarget &Subtarget) {
+  // Transform
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  SDValue CC = N->getOperand(2);
+  ISD::CondCode CCVal = cast<CondCodeSDNode>(CC)->get();
+  SDValue TrueV = N->getOperand(3);
+  SDValue FalseV = N->getOperand(4);
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // If the True and False values are the same, we don't need a select_cc.
+  if (TrueV == FalseV)
+    return TrueV;
+
+  // (select (x < 0), y, z)  -> x >> (GRLEN - 1) & (y - z) + z
+  // (select (x >= 0), y, z) -> x >> (GRLEN - 1) & (z - y) + y
+  if (isa<ConstantSDNode>(TrueV) && isa<ConstantSDNode>(FalseV) &&
+      isNullConstant(RHS) &&
+      (CCVal == ISD::CondCode::SETLT || CCVal == ISD::CondCode::SETGE)) {
+    if (CCVal == ISD::CondCode::SETGE)
+      std::swap(TrueV, FalseV);
+
+    int64_t TrueSImm = cast<ConstantSDNode>(TrueV)->getSExtValue();
+    int64_t FalseSImm = cast<ConstantSDNode>(FalseV)->getSExtValue();
+    // Only handle simm12, if it is not in this range, it can be considered as
+    // register.
+    if (isInt<12>(TrueSImm) && isInt<12>(FalseSImm) &&
+        isInt<12>(TrueSImm - FalseSImm)) {
+      SDValue SRA =
+          DAG.getNode(ISD::SRA, DL, VT, LHS,
+                      DAG.getConstant(Subtarget.getGRLen() - 1, DL, VT));
+      SDValue AND =
+          DAG.getNode(ISD::AND, DL, VT, SRA,
+                      DAG.getSignedConstant(TrueSImm - FalseSImm, DL, VT));
+      return DAG.getNode(ISD::ADD, DL, VT, AND, FalseV);
+    }
+
+    if (CCVal == ISD::CondCode::SETGE)
+      std::swap(TrueV, FalseV);
+  }
+
+  if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
+    return DAG.getNode(LoongArchISD::SELECT_CC, DL, N->getValueType(0),
+                       {LHS, RHS, CC, TrueV, FalseV});
+
+  return SDValue();
+}
+
 template <unsigned N>
 static SDValue legalizeIntrinsicImmArg(SDNode *Node, unsigned ImmOp,
                                        SelectionDAG &DAG,
@@ -5885,6 +5936,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performBITREV_WCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::BR_CC:
     return performBR_CCCombine(N, DAG, DCI, Subtarget);
+  case LoongArchISD::SELECT_CC:
+    return performSELECT_CCCombine(N, DAG, DCI, Subtarget);
   case ISD::INTRINSIC_WO_CHAIN:
     return performINTRINSIC_WO_CHAINCombine(N, DAG, DCI, Subtarget);
   case LoongArchISD::MOVGR2FR_W_LA64:
