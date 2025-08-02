@@ -462,6 +462,27 @@ TEST(DWARFExpression, DW_OP_piece) {
       llvm::HasValue(GetScalar(16, 0xff00, true)));
 }
 
+TEST(DWARFExpression, DW_OP_piece_host_address) {
+  static const uint8_t expr_data[] = {DW_OP_lit2, DW_OP_stack_value,
+                                      DW_OP_piece, 40};
+  llvm::ArrayRef<uint8_t> expr(expr_data, sizeof(expr_data));
+  DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle, 4);
+
+  // This tests if ap_int is extended to the right width.
+  // expect 40*8 = 320 bits size.
+  llvm::Expected<Value> result =
+      DWARFExpression::Evaluate(nullptr, nullptr, nullptr, extractor, nullptr,
+                                lldb::eRegisterKindDWARF, nullptr, nullptr);
+  ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+  ASSERT_EQ(result->GetValueType(), Value::ValueType::HostAddress);
+  ASSERT_EQ(result->GetBuffer().GetByteSize(), 40ul);
+  const uint8_t *data = result->GetBuffer().GetBytes();
+  ASSERT_EQ(data[0], 2);
+  for (int i = 1; i < 40; i++) {
+    ASSERT_EQ(data[i], 0);
+  }
+}
+
 TEST(DWARFExpression, DW_OP_implicit_value) {
   unsigned char bytes = 4;
 
