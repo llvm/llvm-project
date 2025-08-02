@@ -642,12 +642,6 @@ void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
                                                  OptimizationLevel Level) {
     LPM.addPass(LoopIdiomVectorizePass(LoopIdiomVectorizeStyle::Predicated));
   });
-
-  PB.registerVectorizerEndEPCallback(
-      [](FunctionPassManager &FPM, OptimizationLevel Level) {
-        if (Level.isOptimizingForSpeed())
-          FPM.addPass(createFunctionToLoopPassAdaptor(EVLIndVarSimplifyPass()));
-      });
 }
 
 yaml::MachineFunctionInfo *
