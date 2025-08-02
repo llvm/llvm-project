@@ -80,12 +80,12 @@ exit:
 ; CHECK-DEFAULT: str{{.*}}, #-4]
 ; CHECK-DEFAULT: sub{{.*}}, #8
 
-; CHECK-COMPLEX: ldr{{.*}} lsl #2]
-; CHECK-COMPLEX: ldr{{.*}} lsl #2]
-; CHECK-COMPLEX: str{{.*}} lsl #2]
-; CHECK-COMPLEX: ldr{{.*}} lsl #2]
-; CHECK-COMPLEX: ldr{{.*}} lsl #2]
-; CHECK-COMPLEX: str{{.*}} lsl #2]
+; CHECK-COMPLEX: ldr{{.*}} [[MEM:\[r[0-9]+\]]]
+; CHECK-COMPLEX: ldr{{.*}} [[MEM:\[r[0-9]+\]]]
+; CHECK-COMPLEX: str{{.*}} [[MEM:\[r[0-9]+\]]]
+; CHECK-COMPLEX: ldr{{.*}} #-4]
+; CHECK-COMPLEX: ldr{{.*}} #-4]
+; CHECK-COMPLEX: str{{.*}} #-4]
 
 ; DISABLED-NOT: ldr{{.*}}]!
 ; DISABLED-NOT: str{{.*}}]!

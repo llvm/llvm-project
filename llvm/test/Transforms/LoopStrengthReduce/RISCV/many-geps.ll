@@ -20,17 +20,17 @@ define i32 @main() {
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[CALL]], align 4
 ; CHECK-NEXT:    ret i32 0
 ; CHECK:       [[BB2]]:
-; CHECK-NEXT:    [[LSR_IV30:%.*]] = phi i64 [ [[LSR_IV_NEXT31:%.*]], %[[BB2]] ], [ 8, [[BB:%.*]] ]
-; CHECK-NEXT:    [[LSR_IV27:%.*]] = phi i64 [ [[LSR_IV_NEXT28:%.*]], %[[BB2]] ], [ 12, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV24:%.*]] = phi i64 [ [[LSR_IV_NEXT25:%.*]], %[[BB2]] ], [ 16, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV21:%.*]] = phi i64 [ [[LSR_IV_NEXT22:%.*]], %[[BB2]] ], [ 20, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV18:%.*]] = phi i64 [ [[LSR_IV_NEXT19:%.*]], %[[BB2]] ], [ 24, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV15:%.*]] = phi i64 [ [[LSR_IV_NEXT16:%.*]], %[[BB2]] ], [ 28, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV12:%.*]] = phi i64 [ [[LSR_IV_NEXT13:%.*]], %[[BB2]] ], [ 32, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi i64 [ [[LSR_IV_NEXT10:%.*]], %[[BB2]] ], [ 36, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV4:%.*]] = phi i64 [ [[LSR_IV_NEXT5:%.*]], %[[BB2]] ], [ 40, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], %[[BB2]] ], [ 48, [[BB]] ]
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[BB2]] ], [ 72, [[BB]] ]
+; CHECK-NEXT:    [[LSR_IV30:%.*]] = phi i64 [ [[LSR_IV_NEXT31:%.*]], %[[BB2]] ], [ 8, [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[LSR_IV27:%.*]] = phi i64 [ [[LSR_IV_NEXT28:%.*]], %[[BB2]] ], [ 12, [[TMP0]] ]
+; CHECK-NEXT:    [[LSR_IV24:%.*]] = phi i64 [ [[LSR_IV_NEXT25:%.*]], %[[BB2]] ], [ 16, [[TMP0]] ]
+; CHECK-NEXT:    [[LSR_IV21:%.*]] = phi i64 [ [[LSR_IV_NEXT22:%.*]], %[[BB2]] ], [ 20, [[TMP0]] ]
+; CHECK-NEXT:    [[LSR_IV18:%.*]] = phi i64 [ [[LSR_IV_NEXT19:%.*]], %[[BB2]] ], [ 24, [[TMP0]] ]
+; CHECK-NEXT:    [[LSR_IV15:%.*]] = phi i64 [ [[LSR_IV_NEXT16:%.*]], %[[BB2]] ], [ 28, [[TMP0]] ]
+; CHECK-NEXT:    [[LSR_IV12:%.*]] = phi i64 [ [[LSR_IV_NEXT13:%.*]], %[[BB2]] ], [ 32, [[TMP0]] ]
+; CHECK-NEXT:    [[LSR_IV9:%.*]] = phi i64 [ [[LSR_IV_NEXT10:%.*]], %[[BB2]] ], [ 36, [[TMP0]] ]
+; CHECK-NEXT:    [[LSR_IV4:%.*]] = phi i64 [ [[LSR_IV_NEXT5:%.*]], %[[BB2]] ], [ 48, [[TMP0]] ]
+; CHECK-NEXT:    [[LSR_IV1:%.*]] = phi i64 [ [[LSR_IV_NEXT2:%.*]], %[[BB2]] ], [ 72, [[TMP0]] ]
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], %[[BB2]] ], [ 40, [[TMP0]] ]
 ; CHECK-NEXT:    [[SCEVGEP32:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV30]]
 ; CHECK-NEXT:    store i32 0, ptr [[SCEVGEP32]], align 8
 ; CHECK-NEXT:    [[SCEVGEP29:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV27]]
@@ -47,13 +47,13 @@ define i32 @main() {
 ; CHECK-NEXT:    store i32 0, ptr [[SCEVGEP14]], align 8
 ; CHECK-NEXT:    [[SCEVGEP11:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV9]]
 ; CHECK-NEXT:    store i32 0, ptr [[SCEVGEP11]], align 4
-; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV4]]
+; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV]]
 ; CHECK-NEXT:    store i64 0, ptr [[SCEVGEP6]], align 8
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV1]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV4]]
 ; CHECK-NEXT:    store i32 0, ptr [[SCEVGEP3]], align 8
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV1]]
 ; CHECK-NEXT:    store i32 0, ptr [[SCEVGEP]], align 8
-; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV4]]
+; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[CALL]], i64 [[LSR_IV]]
 ; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[SCEVGEP7]], i64 40
 ; CHECK-NEXT:    store i64 0, ptr [[SCEVGEP8]], align 8
 ; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i64 [[LSR_IV]], 88

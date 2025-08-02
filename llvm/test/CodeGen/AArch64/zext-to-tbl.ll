@@ -1665,15 +1665,15 @@ define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(ptr %src, ptr %dst)
 ; CHECK-NEXT:    ldr q0, [x8, lCPI17_0@PAGEOFF]
 ; CHECK-NEXT:  Lloh21:
 ; CHECK-NEXT:    ldr q1, [x9, lCPI17_1@PAGEOFF]
-; CHECK-NEXT:    add x8, x1, #64
-; CHECK-NEXT:    add x9, x0, #8
+; CHECK-NEXT:    add x8, x0, #8
+; CHECK-NEXT:    add x9, x1, #64
 ; CHECK-NEXT:  LBB17_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp d2, d3, [x9, #-8]
+; CHECK-NEXT:    ldp d2, d3, [x8, #-8]
 ; CHECK-NEXT:    subs x10, x10, #16
-; CHECK-NEXT:    ldp q7, q5, [x8, #-32]
-; CHECK-NEXT:    add x9, x9, #16
-; CHECK-NEXT:    ldp q17, q6, [x8, #-64]
+; CHECK-NEXT:    ldp q7, q5, [x9, #-32]
+; CHECK-NEXT:    add x8, x8, #16
+; CHECK-NEXT:    ldp q17, q6, [x9, #-64]
 ; CHECK-NEXT:    tbl.16b v4, { v2 }, v1
 ; CHECK-NEXT:    tbl.16b v2, { v2 }, v0
 ; CHECK-NEXT:    tbl.16b v16, { v3 }, v1
@@ -1681,17 +1681,17 @@ define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(ptr %src, ptr %dst)
 ; CHECK-NEXT:    uaddw2.2d v5, v5, v4
 ; CHECK-NEXT:    uaddw2.2d v6, v6, v2
 ; CHECK-NEXT:    uaddw.2d v4, v7, v4
-; CHECK-NEXT:    ldp q18, q7, [x8, #32]
+; CHECK-NEXT:    ldp q18, q7, [x9, #32]
 ; CHECK-NEXT:    uaddw.2d v2, v17, v2
-; CHECK-NEXT:    stp q4, q5, [x8, #-32]
+; CHECK-NEXT:    stp q4, q5, [x9, #-32]
 ; CHECK-NEXT:    uaddw2.2d v5, v7, v16
-; CHECK-NEXT:    stp q2, q6, [x8, #-64]
+; CHECK-NEXT:    stp q2, q6, [x9, #-64]
 ; CHECK-NEXT:    uaddw.2d v16, v18, v16
-; CHECK-NEXT:    ldp q7, q6, [x8]
-; CHECK-NEXT:    stp q16, q5, [x8, #32]
+; CHECK-NEXT:    ldp q7, q6, [x9]
+; CHECK-NEXT:    stp q16, q5, [x9, #32]
 ; CHECK-NEXT:    uaddw2.2d v4, v6, v3
 ; CHECK-NEXT:    uaddw.2d v2, v7, v3
-; CHECK-NEXT:    stp q2, q4, [x8], #128
+; CHECK-NEXT:    stp q2, q4, [x9], #128
 ; CHECK-NEXT:    b.ne LBB17_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
@@ -1707,31 +1707,31 @@ define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(ptr %src, ptr %dst)
 ; CHECK-BE-NEXT:    adrp x9, .LCPI17_1
 ; CHECK-BE-NEXT:    add x9, x9, :lo12:.LCPI17_1
 ; CHECK-BE-NEXT:    ld1 { v1.16b }, [x9]
-; CHECK-BE-NEXT:    add x9, x1, #64
-; CHECK-BE-NEXT:    add x10, x0, #8
+; CHECK-BE-NEXT:    add x9, x0, #8
+; CHECK-BE-NEXT:    add x10, x1, #64
 ; CHECK-BE-NEXT:  .LBB17_1: // %loop
 ; CHECK-BE-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-BE-NEXT:    ld1 { v2.8b }, [x10]
-; CHECK-BE-NEXT:    sub x11, x10, #8
-; CHECK-BE-NEXT:    add x15, x9, #32
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x9]
+; CHECK-BE-NEXT:    sub x11, x9, #8
+; CHECK-BE-NEXT:    add x15, x10, #32
 ; CHECK-BE-NEXT:    ld1 { v3.8b }, [x11]
 ; CHECK-BE-NEXT:    ld1 { v16.2d }, [x15]
-; CHECK-BE-NEXT:    sub x11, x9, #64
-; CHECK-BE-NEXT:    sub x12, x9, #32
-; CHECK-BE-NEXT:    ld1 { v6.2d }, [x9]
+; CHECK-BE-NEXT:    sub x11, x10, #64
+; CHECK-BE-NEXT:    sub x12, x10, #32
+; CHECK-BE-NEXT:    ld1 { v6.2d }, [x10]
 ; CHECK-BE-NEXT:    ld1 { v21.2d }, [x11]
 ; CHECK-BE-NEXT:    tbl v4.16b, { v2.16b }, v1.16b
 ; CHECK-BE-NEXT:    tbl v2.16b, { v2.16b }, v0.16b
 ; CHECK-BE-NEXT:    ld1 { v19.2d }, [x12]
 ; CHECK-BE-NEXT:    tbl v5.16b, { v3.16b }, v1.16b
 ; CHECK-BE-NEXT:    tbl v3.16b, { v3.16b }, v0.16b
-; CHECK-BE-NEXT:    sub x13, x9, #16
-; CHECK-BE-NEXT:    sub x14, x9, #48
-; CHECK-BE-NEXT:    add x16, x9, #48
-; CHECK-BE-NEXT:    add x17, x9, #16
+; CHECK-BE-NEXT:    sub x13, x10, #16
+; CHECK-BE-NEXT:    sub x14, x10, #48
+; CHECK-BE-NEXT:    add x16, x10, #48
+; CHECK-BE-NEXT:    add x17, x10, #16
 ; CHECK-BE-NEXT:    ld1 { v22.2d }, [x13]
 ; CHECK-BE-NEXT:    subs x8, x8, #16
-; CHECK-BE-NEXT:    add x10, x10, #16
+; CHECK-BE-NEXT:    add x9, x9, #16
 ; CHECK-BE-NEXT:    rev32 v7.8b, v4.8b
 ; CHECK-BE-NEXT:    ext v4.16b, v4.16b, v4.16b, #8
 ; CHECK-BE-NEXT:    rev32 v17.8b, v2.8b
@@ -1752,8 +1752,8 @@ define void @zext_v8i8_to_v8i64_with_add_in_sequence_in_loop(ptr %src, ptr %dst)
 ; CHECK-BE-NEXT:    uaddw v3.2d, v21.2d, v3.2s
 ; CHECK-BE-NEXT:    st1 { v7.2d }, [x15]
 ; CHECK-BE-NEXT:    ld1 { v7.2d }, [x17]
-; CHECK-BE-NEXT:    st1 { v6.2d }, [x9]
-; CHECK-BE-NEXT:    add x9, x9, #128
+; CHECK-BE-NEXT:    st1 { v6.2d }, [x10]
+; CHECK-BE-NEXT:    add x10, x10, #128
 ; CHECK-BE-NEXT:    uaddw v4.2d, v16.2d, v4.2s
 ; CHECK-BE-NEXT:    st1 { v5.2d }, [x12]
 ; CHECK-BE-NEXT:    uaddw v5.2d, v22.2d, v17.2s
