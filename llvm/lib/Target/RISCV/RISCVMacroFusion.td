@@ -92,13 +92,15 @@ def TuneLDADDFusion
                    CheckImmOperand<2, 0>
                  ]>>;
 
+defvar Load = [LB, LH, LW, LD, LBU, LHU, LWU];
+
 // Fuse add(.uw) followed by a load (lb, lh, lw, ld, lbu, lhu, lwu):
 //   add(.uw) rd, rs1, rs2
 //   load rd, imm12(rd)
 def TuneADDLoadFusion
   : SimpleFusion<"add-load-fusion", "HasADDLoadFusion", "Enable ADD(.UW) + load macrofusion",
                  CheckOpcode<[ADD, ADD_UW]>,
-                 CheckOpcode<[LB, LH, LW, LD, LBU, LHU, LWU]>>;
+                 CheckOpcode<Load>>;
 
 // Fuse AUIPC followed by by a load (lb, lh, lw, ld, lbu, lhu, lwu)
 //   auipc rd, imm20
@@ -107,7 +109,7 @@ def TuneAUIPCLoadFusion
   : SimpleFusion<"auipc-load-fusion", "HasAUIPCLoadFusion",
                  "Enable AUIPC + load macrofusion",
                  CheckOpcode<[AUIPC]>,
-                 CheckOpcode<[LB, LH, LW, LD, LBU, LHU, LWU]>>;
+                 CheckOpcode<Load>>;
 
 // Fuse LUI followed by a load (lb, lh, lw, ld, lbu, lhu, lwu)
 //   lui rd, imm[31:12]
@@ -116,7 +118,7 @@ def TuneLUILoadFusion
   : SimpleFusion<"lui-load-fusion", "HasLUILoadFusion",
                  "Enable LUI + load macrofusion",
                  CheckOpcode<[LUI]>,
-                 CheckOpcode<[LB, LH, LW, LD, LBU, LHU, LWU]>>;
+                 CheckOpcode<Load>>;
 
 // Bitfield extract fusion: similar to TuneShiftedZExtWFusion
 // but without the immediate restriction
@@ -135,7 +137,7 @@ def TuneADDILoadFusion
   : SimpleFusion<"addi-load-fusion", "HasADDILoadFusion",
                  "Enable ADDI + load macrofusion",
                  CheckOpcode<[ADDI]>,
-                 CheckOpcode<[LB, LH, LW, LD, LBU, LHU, LWU]>>;
+                 CheckOpcode<Load>>;
 
 // Fuse shXadd(.uw) followed by a load (lb, lh, lw, ld, lbu, lhu, lwu)
 //   shXadd(.uw) rd, rs1, rs2
@@ -144,4 +146,4 @@ def TuneSHXADDLoadFusion
   : SimpleFusion<"shxadd-load-fusion", "HasSHXADDLoadFusion",
                  "Enable SH(1|2|3)ADD(.UW) + load macrofusion",
                  CheckOpcode<[SH1ADD, SH2ADD, SH3ADD, SH1ADD_UW, SH2ADD_UW, SH3ADD_UW]>,
-                 CheckOpcode<[LB, LH, LW, LD, LBU, LHU, LWU]>>;
+                 CheckOpcode<Load>>;
