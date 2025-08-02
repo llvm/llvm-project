@@ -1,4 +1,4 @@
-//===-- Baremetal Implementation of putchar -------------------------------===//
+//===-- Implementation of putchar for baremetal -----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/putchar.h"
+
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/macros/config.h"
