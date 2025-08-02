@@ -256,6 +256,10 @@ struct VPlanTransforms {
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE);
 
+  /// Add explicit Build[Struct]Vector recipes that combine scalar values
+  /// produced by VPReplicateRecipes to a single vector.
+  static void materializeBuildVectors(VPlan &Plan);
+
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
   /// elements, if all transformed interleave groups access the full vector
