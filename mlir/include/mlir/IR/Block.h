@@ -152,6 +152,10 @@ public:
   Operation &back() { return operations.back(); }
   Operation &front() { return operations.front(); }
 
+  /// Return if the iterator `a` is before `b`. Both iterators must point into
+  /// this block.
+  bool isBeforeInBlock(iterator a, iterator b);
+
   /// Returns 'op' if 'op' lies in this block, or otherwise finds the
   /// ancestor operation of 'op' that lies in this block. Returns nullptr if
   /// the latter fails.
