@@ -722,8 +722,7 @@ public:
          llvm::ArrayRef<MlirValue> operands,
          std::optional<nanobind::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
-         DefaultingPyLocation location, const nanobind::object &ip,
-         bool inferType);
+         PyLocation location, const nanobind::object &ip, bool inferType);
 
   /// Creates an OpView suitable for this operation.
   nanobind::object createOpView();
@@ -781,7 +780,7 @@ public:
                nanobind::list operandList,
                std::optional<nanobind::dict> attributes,
                std::optional<std::vector<PyBlock *>> successors,
-               std::optional<int> regions, DefaultingPyLocation location,
+               std::optional<int> regions, PyLocation location,
                const nanobind::object &maybeIp);
 
   /// Construct an instance of a class deriving from OpView, bypassing its
