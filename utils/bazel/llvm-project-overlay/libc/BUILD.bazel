@@ -2401,6 +2401,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_cbrt",
+    hdrs = ["src/__support/math/cbrt.h"],
+    deps = [
+        ":__support_fputil_double_double",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_dyadic_float",
+        ":__support_integer_literals",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_erff",
     hdrs = ["src/__support/math/erff.h"],
     deps = [
@@ -3069,9 +3081,7 @@ libc_math_function(name = "issignalingf16")
 libc_math_function(
     name = "cbrt",
     additional_deps = [
-        ":__support_fputil_double_double",
-        ":__support_fputil_polyeval",
-        ":__support_integer_literals",
+        ":__support_math_cbrt",
     ],
 )
 
