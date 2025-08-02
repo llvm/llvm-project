@@ -59,8 +59,18 @@ static cl::opt<bool, true>
 //
 
 bool Loop::isLoopInvariant(const Value *V) const {
-  if (const Instruction *I = dyn_cast<Instruction>(V))
-    return !contains(I);
+  if (const Instruction *I = dyn_cast<Instruction>(V)) {
+    // FIXME: this is semantically inconsistent. We're tracking a proper fix in
+    // issue #149604.
+    // If V is a pointer to stack object and F is a coroutine function, then V
+    // may not be loop invariant because the ramp function and resume function
+    // have different stack frames.
+    if (isa<AllocaInst>(I) &&
+        I->getParent()->getParent()->isPresplitCoroutine())
+      return false;
+    else
+      return !contains(I);
+  }
   return true; // All non-instructions are loop invariant
 }
 
