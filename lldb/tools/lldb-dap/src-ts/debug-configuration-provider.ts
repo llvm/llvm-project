@@ -71,7 +71,29 @@ const configurations: Record<string, DefaultConfig> = {
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
 {
-  constructor(private readonly server: LLDBDapServer) {}
+  constructor(private readonly server: LLDBDapServer) {
+    vscode.commands.registerCommand(
+      "lldb-dap.resolveDebugConfiguration",
+      (
+        folder: vscode.WorkspaceFolder | undefined,
+        debugConfiguration: vscode.DebugConfiguration,
+        token?: vscode.CancellationToken,
+      ) => this.resolveDebugConfiguration(folder, debugConfiguration, token),
+    );
+    vscode.commands.registerCommand(
+      "lldb-dap.resolveDebugConfigurationWithSubstitutedVariables",
+      (
+        folder: vscode.WorkspaceFolder | undefined,
+        debugConfiguration: vscode.DebugConfiguration,
+        token?: vscode.CancellationToken,
+      ) =>
+        this.resolveDebugConfigurationWithSubstitutedVariables(
+          folder,
+          debugConfiguration,
+          token,
+        ),
+    );
+  }
 
   async resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,

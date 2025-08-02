@@ -198,6 +198,16 @@ export async function createDebugAdapterExecutable(
 export class LLDBDapDescriptorFactory
   implements vscode.DebugAdapterDescriptorFactory
 {
+  constructor() {
+    vscode.commands.registerCommand(
+      "lldb-dap.createDebugAdapterDescriptor",
+      (
+        session: vscode.DebugSession,
+        executable: vscode.DebugAdapterExecutable | undefined,
+      ) => this.createDebugAdapterDescriptor(session, executable),
+    );
+  }
+
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,
     executable: vscode.DebugAdapterExecutable | undefined,
