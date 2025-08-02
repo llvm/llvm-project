@@ -18,6 +18,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMEMREFTOEMITC
@@ -27,6 +28,15 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
+
+emitc::IncludeOp addHeader(OpBuilder &builder, ModuleOp module,
+                           StringRef headerName) {
+  StringAttr includeAttr = builder.getStringAttr(headerName);
+  return builder.create<emitc::IncludeOp>(
+      module.getLoc(), includeAttr,
+      /*is_standard_include=*/builder.getUnitAttr());
+}
+
 struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   using Base::Base;
@@ -57,7 +67,8 @@ struct ConvertMemRefToEmitCPass
     mlir::ModuleOp module = getOperation();
     module.walk([&](mlir::emitc::CallOpaqueOp callOp) {
       if (callOp.getCallee() != alignedAllocFunctionName &&
-          callOp.getCallee() != mallocFunctionName) {
+          callOp.getCallee() != mallocFunctionName &&
+          callOp.getCallee() != memcpyFunctionName) {
         return mlir::WalkResult::advance();
       }
 
@@ -76,12 +87,14 @@ struct ConvertMemRefToEmitCPass
       }
 
       mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
-      StringAttr includeAttr =
-          builder.getStringAttr(options.lowerToCpp ? cppStandardLibraryHeader
-                                                   : cStandardLibraryHeader);
-      builder.create<mlir::emitc::IncludeOp>(
-          module.getLoc(), includeAttr,
-          /*is_standard_include=*/builder.getUnitAttr());
+      StringRef headerName;
+      if (callOp.getCallee() == memcpyFunctionName)
+        headerName = stringLibraryHeader;
+      else
+        headerName = options.lowerToCpp ? cppStandardLibraryHeader
+                                        : cStandardLibraryHeader;
+
+      addHeader(builder, module, headerName);
       return mlir::WalkResult::interrupt();
     });
   }

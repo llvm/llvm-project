@@ -97,6 +97,29 @@ Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
   return resultTy;
 }
 
+Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
+                                    ConversionPatternRewriter &rewriter) {
+  emitc::CallOpaqueOp elementSize = rewriter.create<emitc::CallOpaqueOp>(
+      loc, emitc::SizeTType::get(rewriter.getContext()),
+      rewriter.getStringAttr("sizeof"), ValueRange{},
+      ArrayAttr::get(rewriter.getContext(),
+                     {TypeAttr::get(memrefType.getElementType())}));
+
+  IndexType indexType = rewriter.getIndexType();
+  int64_t numElements = 1;
+  for (int64_t dimSize : memrefType.getShape()) {
+    numElements *= dimSize;
+  }
+  emitc::ConstantOp numElementsValue = rewriter.create<emitc::ConstantOp>(
+      loc, indexType, rewriter.getIndexAttr(numElements));
+
+  Type sizeTType = emitc::SizeTType::get(rewriter.getContext());
+  emitc::MulOp totalSizeBytes = rewriter.create<emitc::MulOp>(
+      loc, sizeTType, elementSize.getResult(0), numElementsValue);
+
+  return totalSizeBytes.getResult();
+}
+
 struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -155,6 +178,55 @@ struct ConvertAlloc final : public OpConversionPattern<memref::AllocOp> {
         loc, targetPointerType, allocCall.getResult(0));
 
     rewriter.replaceOp(allocOp, castOp);
+    return success();
+  }
+};
+
+struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::CopyOp copyOp, OpAdaptor operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = copyOp.getLoc();
+    MemRefType srcMemrefType =
+        dyn_cast<MemRefType>(copyOp.getSource().getType());
+    MemRefType targetMemrefType =
+        dyn_cast<MemRefType>(copyOp.getTarget().getType());
+
+    if (!isMemRefTypeLegalForEmitC(srcMemrefType) ||
+        !isMemRefTypeLegalForEmitC(targetMemrefType)) {
+      return rewriter.notifyMatchFailure(
+          loc, "incompatible memref type for EmitC conversion");
+    }
+
+    emitc::ConstantOp zeroIndex = rewriter.create<emitc::ConstantOp>(
+        loc, rewriter.getIndexType(), rewriter.getIndexAttr(0));
+    auto srcArrayValue =
+        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getSource());
+
+    emitc::SubscriptOp srcSubPtr = rewriter.create<emitc::SubscriptOp>(
+        loc, srcArrayValue, ValueRange{zeroIndex, zeroIndex});
+    emitc::ApplyOp srcPtr = rewriter.create<emitc::ApplyOp>(
+        loc, emitc::PointerType::get(srcMemrefType.getElementType()),
+        rewriter.getStringAttr("&"), srcSubPtr);
+
+    auto arrayValue =
+        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getTarget());
+    emitc::SubscriptOp targetSubPtr = rewriter.create<emitc::SubscriptOp>(
+        loc, arrayValue, ValueRange{zeroIndex, zeroIndex});
+    emitc::ApplyOp targetPtr = rewriter.create<emitc::ApplyOp>(
+        loc, emitc::PointerType::get(targetMemrefType.getElementType()),
+        rewriter.getStringAttr("&"), targetSubPtr);
+
+    emitc::CallOpaqueOp memCpyCall = rewriter.create<emitc::CallOpaqueOp>(
+        loc, TypeRange{}, "memcpy",
+        ValueRange{
+            targetPtr.getResult(), srcPtr.getResult(),
+            calculateMemrefTotalSizeBytes(loc, srcMemrefType, rewriter)});
+
+    rewriter.replaceOp(copyOp, memCpyCall.getResults());
+
     return success();
   }
 };
@@ -320,6 +392,7 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
 
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {
-  patterns.add<ConvertAlloca, ConvertAlloc, ConvertGlobal, ConvertGetGlobal,
-               ConvertLoad, ConvertStore>(converter, patterns.getContext());
+  patterns.add<ConvertAlloca, ConvertAlloc, ConvertCopy, ConvertGlobal,
+               ConvertGetGlobal, ConvertLoad, ConvertStore>(
+      converter, patterns.getContext());
 }
