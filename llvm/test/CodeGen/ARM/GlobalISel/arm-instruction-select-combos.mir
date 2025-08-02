@@ -447,7 +447,7 @@ body:             |
     ; CHECK-LABEL: name: test_vnmuls
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[VNMULS:%[0-9]+]]:spr = VNMULS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK: [[VNMULS:%[0-9]+]]:spr = nofpexcept VNMULS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
     ; CHECK: $s0 = COPY [[VNMULS]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
@@ -477,7 +477,7 @@ body:             |
     ; CHECK-LABEL: name: test_vnmuls_reassociate
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
-    ; CHECK: [[VNMULS:%[0-9]+]]:spr = VNMULS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK: [[VNMULS:%[0-9]+]]:spr = nofpexcept VNMULS [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
     ; CHECK: $s0 = COPY [[VNMULS]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
@@ -507,7 +507,7 @@ body:             |
     ; CHECK-LABEL: name: test_vnmuld
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
-    ; CHECK: [[VNMULD:%[0-9]+]]:dpr = VNMULD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK: [[VNMULD:%[0-9]+]]:dpr = nofpexcept VNMULD [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
     ; CHECK: $d0 = COPY [[VNMULD]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s64) = COPY $d0
@@ -539,7 +539,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
     ; CHECK: [[COPY2:%[0-9]+]]:spr = COPY $s2
-    ; CHECK: [[VFNMAS:%[0-9]+]]:spr = VFNMAS [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK: [[VFNMAS:%[0-9]+]]:spr = nofpexcept VFNMAS [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
     ; CHECK: $s0 = COPY [[VFNMAS]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
@@ -573,7 +573,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
     ; CHECK: [[COPY2:%[0-9]+]]:dpr = COPY $d2
-    ; CHECK: [[VFNMAD:%[0-9]+]]:dpr = VFNMAD [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK: [[VFNMAD:%[0-9]+]]:dpr = nofpexcept VFNMAD [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
     ; CHECK: $d0 = COPY [[VFNMAD]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s64) = COPY $d0
@@ -607,7 +607,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
     ; CHECK: [[COPY2:%[0-9]+]]:spr = COPY $s2
-    ; CHECK: [[VFMSS:%[0-9]+]]:spr = VFMSS [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK: [[VFMSS:%[0-9]+]]:spr = nofpexcept VFMSS [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
     ; CHECK: $s0 = COPY [[VFMSS]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
@@ -640,7 +640,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:dpr = COPY $d0
     ; CHECK: [[COPY1:%[0-9]+]]:dpr = COPY $d1
     ; CHECK: [[COPY2:%[0-9]+]]:dpr = COPY $d2
-    ; CHECK: [[VFMSD:%[0-9]+]]:dpr = VFMSD [[COPY2]], [[COPY1]], [[COPY]], 14 /* CC::al */, $noreg
+    ; CHECK: [[VFMSD:%[0-9]+]]:dpr = nofpexcept VFMSD [[COPY2]], [[COPY1]], [[COPY]], 14 /* CC::al */, $noreg, implicit $fpscr
     ; CHECK: $d0 = COPY [[VFMSD]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $d0
     %0(s64) = COPY $d0
@@ -673,7 +673,7 @@ body:             |
     ; CHECK: [[COPY:%[0-9]+]]:spr = COPY $s0
     ; CHECK: [[COPY1:%[0-9]+]]:spr = COPY $s1
     ; CHECK: [[COPY2:%[0-9]+]]:spr = COPY $s2
-    ; CHECK: [[VFNMSS:%[0-9]+]]:spr = VFNMSS [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg
+    ; CHECK: [[VFNMSS:%[0-9]+]]:spr = nofpexcept VFNMSS [[COPY2]], [[COPY]], [[COPY1]], 14 /* CC::al */, $noreg, implicit $fpscr
     ; CHECK: $s0 = COPY [[VFNMSS]]
     ; CHECK: BX_RET 14 /* CC::al */, $noreg, implicit $s0
     %0(s32) = COPY $s0
