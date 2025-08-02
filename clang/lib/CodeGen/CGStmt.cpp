@@ -776,7 +776,7 @@ void CodeGenFunction::EmitLabelStmt(const LabelStmt &S) {
   EmitLabel(S.getDecl());
 
   // IsEHa - emit eha.scope.begin if it's a side entry of a scope
-  if (getLangOpts().EHAsynch && S.isSideEntry())
+  if (getLangOpts().EHAsynch && getLangOpts().CXXExceptions && S.isSideEntry())
     EmitSehCppScopeBegin();
 
   EmitStmt(S.getSubStmt());
