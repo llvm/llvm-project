@@ -2217,7 +2217,7 @@ SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
 
   switch (getTypeAction(InVT)) {
   case TargetLowering::TypePromoteInteger: {
-    // TODO: Handle big endian
+    // TODO: Handle big endian & vector input type.
     if (OutVT.isVector() && !InVT.isVector() &&
         DAG.getDataLayout().isLittleEndian()) {
       EVT EltVT = OutVT.getVectorElementType();
