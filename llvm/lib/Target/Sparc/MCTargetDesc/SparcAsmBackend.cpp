@@ -260,7 +260,6 @@ void SparcAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   Value = adjustFixupValue(Fixup.getKind(), Value);
 
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
-  unsigned Offset = Fixup.getOffset();
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i != NumBytes; ++i) {

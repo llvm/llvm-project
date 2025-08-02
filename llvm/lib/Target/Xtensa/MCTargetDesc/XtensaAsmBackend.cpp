@@ -166,7 +166,6 @@ void XtensaAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   if (!Value)
     return; // Doesn't change encoding.
 
-  unsigned Offset = Fixup.getOffset();
   unsigned FullSize = getSize(Fixup.getKind());
 
   for (unsigned i = 0; i != FullSize; ++i) {

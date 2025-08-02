@@ -665,9 +665,9 @@ void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 
   // LLVM gives us an encoded value, we have to convert it back
   // to a real offset before we can use it.
-  uint32_t Offset = Fixup.getOffset();
   unsigned NumBytes = getFixupKindNumBytes(Kind);
-  assert(Offset + NumBytes <= F.getSize() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   Value = adjustFixupValue(Kind, FixupValue);
   if (!Value)
@@ -754,8 +754,8 @@ void HexagonAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
       uint32_t OldData = 0; for (unsigned i = 0; i < NumBytes; i++) OldData |=
                             (InstAddr[i] << (i * 8)) & (0xff << (i * 8));
       dbgs() << "\tBValue=0x"; dbgs().write_hex(Value) << ": AValue=0x";
-      dbgs().write_hex(FixupValue)
-      << ": Offset=" << Offset << ": Size=" << F.getSize() << ": OInst=0x";
+      dbgs().write_hex(FixupValue) << ": Offset=" << Fixup.getOffset()
+                                   << ": Size=" << F.getSize() << ": OInst=0x";
       dbgs().write_hex(OldData) << ": Reloc=0x"; dbgs().write_hex(Reloc););
 
   // For each byte of the fragment that the fixup touches, mask in the

@@ -83,7 +83,6 @@ void LanaiAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
 
   // Where in the object and where the number of bytes that need
   // fixing up
-  unsigned Offset = Fixup.getOffset();
   unsigned NumBytes = (getFixupKindInfo(Kind).TargetSize + 7) / 8;
   unsigned FullSize = 4;
 

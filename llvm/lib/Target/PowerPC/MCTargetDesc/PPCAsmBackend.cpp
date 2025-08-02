@@ -204,7 +204,6 @@ void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   if (!Value)
     return; // Doesn't change encoding.
 
-  unsigned Offset = Fixup.getOffset();
   unsigned NumBytes = getFixupKindNumBytes(Kind);
 
   // For each byte of the fragment that the fixup touches, mask in the bits
