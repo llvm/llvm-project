@@ -103,13 +103,48 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
     return ".text";
   }
 
-  for (StringRef v : {".data.rel.ro", ".data",       ".rodata",
-                      ".bss.rel.ro",  ".bss",        ".ldata",
-                      ".lrodata",     ".lbss",       ".gcc_except_table",
-                      ".init_array",  ".fini_array", ".tbss",
-                      ".tdata",       ".ARM.exidx",  ".ARM.extab",
-                      ".ctors",       ".dtors",      ".sbss",
-                      ".sdata",       ".srodata"})
+  // When zKeepDataSectionPrefix is true, keep .hot and .unlikely suffixes
+  // in data sections.
+  static constexpr StringRef dataSectionPrefixes[] = {
+      ".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss",
+  };
+
+  for (auto [index, v] : llvm::enumerate(dataSectionPrefixes)) {
+    StringRef secName = s->name;
+    if (!secName.consume_front(v))
+      continue;
+    if (!secName.empty() && secName[0] != '.') {
+      continue;
+    }
+
+    // The section name starts with 'v', and the remaining string is either
+    // empty or starts with a '.' character. If keep-data-section-prefix is
+    // false, map s to output section with name 'v'.
+    if (!ctx.arg.zKeepDataSectionPrefix)
+      return v;
+    // Preserve .hot or .unlikely suffixes in data sections with
+    // keep-data-section-prefix=true.
+    if (isSectionPrefix(".hot", secName))
+      return s->name.substr(0, v.size() + 4);
+    if (isSectionPrefix(".unlikely", secName))
+      return s->name.substr(0, v.size() + 9);
+    if (index == 2) {
+      // Place input .rodata.str<N>.hot. or .rodata.cst<N>.hot. into the
+      // .rodata.hot section.
+      if (s->name.ends_with(".hot."))
+        return ".rodata.hot";
+      // Place input .rodata.str<N>.hot. or .rodata.cst<N>.unlikely. into the
+      // .rodata.unlikely section.
+      if (s->name.ends_with(".unlikely."))
+        return ".rodata.unlikely";
+    }
+    return v;
+  }
+
+  for (StringRef v :
+       {".ldata", ".lrodata", ".lbss", ".gcc_except_table", ".init_array",
+        ".fini_array", ".tbss", ".tdata", ".ARM.exidx", ".ARM.extab", ".ctors",
+        ".dtors", ".sbss", ".sdata", ".srodata"})
     if (isSectionPrefix(v, s->name))
       return v;
 
