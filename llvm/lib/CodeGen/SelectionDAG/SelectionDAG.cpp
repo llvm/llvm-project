@@ -7521,6 +7521,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::SSUBSAT:
   case ISD::UADDSAT:
   case ISD::USUBSAT:
+  case ISD::CLMUL:
     assert(VT.isInteger() && "This operator does not apply to FP types!");
     assert(N1.getValueType() == N2.getValueType() &&
            N1.getValueType() == VT && "Binary operator types must match!");
