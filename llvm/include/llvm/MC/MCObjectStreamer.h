@@ -52,6 +52,10 @@ class MCObjectStreamer : public MCStreamer {
   DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
       pendingAssignments;
 
+  SmallVector<std::unique_ptr<uint8_t[]>, 0> FragStorage;
+  // Available bytes in the current block for trailing data or new fragments.
+  size_t FragSpace = 0;
+
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
@@ -84,11 +88,18 @@ public:
   // Add a fragment with a variable-size tail and start a new empty fragment.
   void insert(MCFragment *F);
 
+  uint8_t *getCurFragEnd() const {
+    return reinterpret_cast<uint8_t *>(CurFrag + 1) + CurFrag->getFixedSize();
+  }
+  MCFragment *allocFragSpace(size_t Headroom);
   // Add a new fragment to the current section without a variable-size tail.
   void newFragment();
 
+  void ensureHeadroom(size_t Headroom);
   void appendContents(ArrayRef<char> Contents);
-  void appendContents(size_t Num, char Elt);
+  void appendContents(size_t Num, uint8_t Elt);
+  // Add a fixup to the current fragment. Call ensureHeadroom beforehand to
+  // ensure the fixup and appended content apply to the same fragment.
   void addFixup(const MCExpr *Value, MCFixupKind Kind);
 
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
