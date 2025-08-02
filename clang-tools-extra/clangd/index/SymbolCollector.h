@@ -166,7 +166,8 @@ private:
   void processRelations(const NamedDecl &ND, const SymbolID &ID,
                         ArrayRef<index::SymbolRelation> Relations);
 
-  std::optional<SymbolLocation> getTokenLocation(SourceLocation TokLoc);
+  std::optional<SymbolDeclDefLocation> getSymbolLocation(
+      const std::variant<const Decl *, const MacroInfo *> &Symbol);
 
   std::optional<std::string> getIncludeHeader(const Symbol &S, FileID);
 
