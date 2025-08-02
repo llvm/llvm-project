@@ -570,12 +570,14 @@ bool IODEF(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         addendum && addendum->derivedType()) {
       const NonTbpDefinedIoTable *table{group.nonTbpDefinedIo};
       listInput->ResetForNextNamelistItem(/*inNamelistSequence=*/true);
-      if (!IONAME(InputDerivedType)(cookie, *useDescriptor, table)) {
+      if (!IONAME(InputDerivedType)(cookie, *useDescriptor, table) &&
+          io.GetIoErrorHandler().InError()) {
         return false;
       }
     } else {
       listInput->ResetForNextNamelistItem(useDescriptor->rank() > 0);
-      if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
+      if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor) &&
+          io.GetIoErrorHandler().InError()) {
         return false;
       }
     }
