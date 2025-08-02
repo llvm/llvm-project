@@ -29,6 +29,7 @@ struct support::adapt_operations<std::map<K, V>> {
 
 int main(int argc, char** argv) {
   support::associative_container_benchmarks<std::map<int, int>>("std::map<int, int>");
+  support::associative_container_benchmarks<std::map<std::string, int>>("std::map<std::string, int>");
 
   benchmark::Initialize(&argc, argv);
   benchmark::RunSpecifiedBenchmarks();
