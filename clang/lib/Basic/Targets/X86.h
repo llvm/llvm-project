@@ -406,6 +406,7 @@ public:
     case CC_X86RegCall:
     case CC_C:
     case CC_PreserveMost:
+    case CC_PreserveNone:
     case CC_Swift:
     case CC_X86Pascal:
     case CC_IntelOclBicc:
