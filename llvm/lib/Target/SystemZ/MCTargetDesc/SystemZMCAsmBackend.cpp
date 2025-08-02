@@ -159,7 +159,6 @@ void SystemZMCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   MCFixupKind Kind = Fixup.getKind();
   if (mc::isRelocation(Kind))
     return;
-  [[maybe_unused]] unsigned Offset = Fixup.getOffset();
   unsigned BitSize = getFixupKindInfo(Kind).TargetSize;
   unsigned Size = (BitSize + 7) / 8;
 
