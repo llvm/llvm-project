@@ -1,5 +1,6 @@
 // RUN: clang-tblgen -gen-cir-builtins-lowering -I%S %s -o - 2>&1 | \
 // RUN:    FileCheck --strict-whitespace %s
+// REQUIRES: clangir
 
 def ins;
 def outs;

@@ -410,3 +410,7 @@ if "system-aix" in config.available_features:
 # possibly be present in system and user configuration files, so disable
 # default configs for the test runs.
 config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
+
+# Check if clangir is enabled.
+if config.clang_enable_cir:
+    config.available_features.add("clangir")
