@@ -83,3 +83,11 @@ def : FMVExtension<"sve2-sha3", "SVE_SHA3">;
 def : FMVExtension<"sve2-sm4", "SVE_SM4">;
 def : FMVExtension<"wfxt", "WFXT">;
 def : FMVExtension<"cssc", "CSSC">;
+
+// Extensions which allow the user to override version priority.
+// 5-bits allow 32-1 priority levels (excluding all zeros).
+def : FMVExtension<"P0", "P0">;
+def : FMVExtension<"P1", "P1">;
+def : FMVExtension<"P2", "P2">;
+def : FMVExtension<"P3", "P3">;
+def : FMVExtension<"P4", "P4">;
