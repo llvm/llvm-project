@@ -23,20 +23,23 @@ struct CDerived : NSP::CBase {
   int three() override { return 33; }
 };
 
+void use(void *, ...);
+
 int main() {
   NSP::CBase Base;
   CDerived Derived;
+  use(&Base, &Derived);
 
   return 0;
 }
 
-// RUN: %clang --target=x86_64-linux -Xclang -disable-O0-optnone -Xclang -disable-llvm-passes -emit-llvm -S -g %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -debug-info-kind=limited -dwarf-version=5 -O1 %s -o - | FileCheck %s
 
 // CHECK: $_ZTVN3NSP5CBaseE = comdat any
 // CHECK: $_ZTV8CDerived = comdat any
 
-// CHECK: @_ZTVN3NSP5CBaseE = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
-// CHECK: @_ZTV8CDerived = linkonce_odr {{dso_local|hidden}} unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTVN3NSP5CBaseE = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[BASE_VTABLE_VAR:![0-9]*]]
+// CHECK: @_ZTV8CDerived = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
 
 // CHECK: [[BASE_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[BASE_VTABLE:![0-9]*]], expr: !DIExpression())
 // CHECK-NEXT: [[BASE_VTABLE]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTVN3NSP5CBaseE"
