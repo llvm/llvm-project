@@ -44,6 +44,7 @@ class LLVM_ABI MCSectionMachO final : public MCSection {
 
   MCSectionMachO(StringRef Segment, StringRef Section, unsigned TAA,
                  unsigned reserved2, SectionKind K, MCSymbol *Begin);
+
 public:
 
   StringRef getSegmentName() const {

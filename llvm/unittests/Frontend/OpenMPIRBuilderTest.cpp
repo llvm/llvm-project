@@ -7436,8 +7436,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
   // Checking the general structure of the IR generated is same as expected.
   Instruction *GeneratedStoreInst = TaskgroupCall->getNextNode();
   EXPECT_EQ(GeneratedStoreInst, InternalStoreInst);
-  Instruction *GeneratedLoad32 =
-      GeneratedStoreInst->getNextNode();
+  Instruction *GeneratedLoad32 = GeneratedStoreInst->getNextNode();
   EXPECT_EQ(GeneratedLoad32, InternalLoad32);
   Instruction *GeneratedLoad128 = GeneratedLoad32->getNextNode();
   EXPECT_EQ(GeneratedLoad128, InternalLoad128);

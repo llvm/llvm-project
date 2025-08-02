@@ -16693,9 +16693,8 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   } else {
     // Set the insertion point after the last instruction in the bundle. Set the
     // debug location to Front.
-    Builder.SetInsertPoint(
-        LastInst->getParent(),
-        LastInst->getNextNode()->getIterator());
+    Builder.SetInsertPoint(LastInst->getParent(),
+                           LastInst->getNextNode()->getIterator());
   }
   Builder.SetCurrentDebugLocation(Front->getDebugLoc());
 }
@@ -19369,7 +19368,7 @@ Value *BoUpSLP::vectorizeTree(
         continue;
       assert(
           (ExternallyUsedValues.count(Scalar) ||
-          ExternalUsesWithNonUsers.count(Scalar) ||
+           ExternalUsesWithNonUsers.count(Scalar) ||
            ExternalUsesAsOriginalScalar.contains(Scalar) ||
            any_of(
                Scalar->users(),

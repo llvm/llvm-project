@@ -941,11 +941,8 @@ void SDNode::print_details(raw_ostream &OS, const SelectionDAG *G) const {
       OS << " [TF=" << TF << ']';
   } else if (const AddrSpaceCastSDNode *ASC =
                dyn_cast<AddrSpaceCastSDNode>(this)) {
-    OS << '['
-       << ASC->getSrcAddressSpace()
-       << " -> "
-       << ASC->getDestAddressSpace()
-       << ']';
+    OS << '[' << ASC->getSrcAddressSpace() << " -> "
+       << ASC->getDestAddressSpace() << ']';
   } else if (const auto *AA = dyn_cast<AssertAlignSDNode>(this)) {
     OS << '<' << AA->getAlign().value() << '>';
   }

@@ -633,9 +633,8 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
 /// COPY_TO_REGCLASS is just a normal copy, except that the destination
 /// register is constrained to be in a particular register class.
 ///
-void
-InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
-                                     VRBaseMapType &VRBaseMap) {
+void InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
+                                          VRBaseMapType &VRBaseMap) {
   // Create the new VReg in the destination class and emit a copy.
   unsigned DstRCIdx = Node->getConstantOperandVal(1);
   const TargetRegisterClass *DstRC =

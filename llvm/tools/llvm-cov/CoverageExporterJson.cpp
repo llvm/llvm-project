@@ -112,8 +112,8 @@ json::Array renderMCDCRecord(const coverage::MCDCRecord &Record) {
   const llvm::coverage::CounterMappingRegion &CMR = Record.getDecisionRegion();
   const auto [TrueDecisions, FalseDecisions] = Record.getDecisions();
   return json::Array({CMR.LineStart, CMR.ColumnStart, CMR.LineEnd,
-                      CMR.ColumnEnd, TrueDecisions, FalseDecisions,
-                      CMR.FileID, CMR.ExpandedFileID, int64_t(CMR.Kind),
+                      CMR.ColumnEnd, TrueDecisions, FalseDecisions, CMR.FileID,
+                      CMR.ExpandedFileID, int64_t(CMR.Kind),
                       gatherConditions(Record)});
 }
 

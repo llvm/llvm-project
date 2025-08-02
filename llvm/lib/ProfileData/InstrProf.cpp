@@ -320,6 +320,8 @@ std::string getPGOFuncName(StringRef Name, GlobalValue::LinkageTypes Linkage,
     else
       NewName = NewName.insert(0, FileName.str() + ":");
   }
+
+  
   return NewName;
 }
 
@@ -555,7 +557,6 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addSymbolName(Name))
       return E;
-
     bool Inserted = true;
     std::tie(std::ignore, Inserted) = MD5VTableMap.try_emplace(
         GlobalValue::getGUIDAssumingExternalLinkage(Name), &VTable);
@@ -574,7 +575,7 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
 }
 
 Error readAndDecodeStrings(StringRef NameStrings,
-                           std::function<Error(StringRef)> NameCallback) {
+                           std::function<Error(StringRef)> NameCallback, StringRef ObjectFilename) {
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
@@ -609,7 +610,6 @@ Error readAndDecodeStrings(StringRef NameStrings,
     for (StringRef &Name : Names)
       if (Error E = NameCallback(Name))
         return E;
-
     while (P < EndP && *P == 0)
       P++;
   }
@@ -617,14 +617,17 @@ Error readAndDecodeStrings(StringRef NameStrings,
 }
 
 Error InstrProfSymtab::create(StringRef NameStrings) {
-  return readAndDecodeStrings(NameStrings,
-                              [&](StringRef S) { return addFuncName(S); });
+  StringRef ObjectFilename = getObjectFilename();
+  return readAndDecodeStrings(
+      NameStrings, [&](StringRef S) { return addFuncName(S); }, ObjectFilename);
 }
 
 Error InstrProfSymtab::create(StringRef FuncNameStrings,
                               StringRef VTableNameStrings) {
+  StringRef ObjectFilename = getObjectFilename();
   if (Error E = readAndDecodeStrings(
-          FuncNameStrings, [&](StringRef S) { return addFuncName(S); }))
+          FuncNameStrings, [&](StringRef S) { return addFuncName(S); },
+          ObjectFilename))
     return E;
 
   return readAndDecodeStrings(VTableNameStrings,

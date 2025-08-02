@@ -644,8 +644,8 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.load or masked.load with deinterleave"
-                      << " intrinsic " << *DI << " and factor = "
-                      << Factor << "\n");
+                      << " intrinsic " << *DI << " and factor = " << Factor
+                      << "\n");
   }
 
   // Try and match this with target specific intrinsics.
@@ -686,8 +686,8 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.store or masked.store with interleave"
-                      << " intrinsic " << *IntII << " and factor = "
-                      << Factor << "\n");
+                      << " intrinsic " << *IntII << " and factor = " << Factor
+                      << "\n");
   } else {
     if (!SI->isSimple())
       return false;

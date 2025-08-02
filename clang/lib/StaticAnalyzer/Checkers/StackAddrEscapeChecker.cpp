@@ -613,7 +613,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 }
 
 #define REGISTER_CHECKER(NAME)                                                 \
-  void ento::register##NAME##Checker(CheckerManager &Mgr) {                    \
+  void ento::register##NAME##Checker(CheckerManager & Mgr) {                   \
     Mgr.getChecker<StackAddrEscapeChecker>()->NAME.enable(Mgr);                \
   }                                                                            \
                                                                                \

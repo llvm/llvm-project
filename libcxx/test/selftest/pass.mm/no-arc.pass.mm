@@ -11,9 +11,7 @@
 // Make sure ARC is not enabled by default in these tests.
 
 #if __has_feature(objc_arc)
-#   error "arc should not be enabled by default"
+#  error "arc should not be enabled by default"
 #endif
 
-int main(int, char**) {
-    return 0;
-}
+int main(int, char**) { return 0; }

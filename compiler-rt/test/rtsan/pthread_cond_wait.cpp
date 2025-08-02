@@ -16,7 +16,6 @@
 int main() {
   std::cout << "Entry to main!" << std::endl;
 
-
   // TODO: This is disabled because it does cause a test failure
   /*
   std::mutex mut;

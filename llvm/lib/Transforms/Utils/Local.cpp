@@ -2351,8 +2351,8 @@ static bool rewriteDebugUsers(
         DomPoint.getParent()->insertDbgRecordAfter(DVR, &DomPoint);
         Changed = true;
 
-      // Users which otherwise aren't dominated by the replacement value must
-      // be salvaged or deleted.
+        // Users which otherwise aren't dominated by the replacement value must
+        // be salvaged or deleted.
       } else if (!DT.dominates(&DomPoint, MarkedInstr)) {
         UndefOrSalvageDVR.insert(DVR);
       }

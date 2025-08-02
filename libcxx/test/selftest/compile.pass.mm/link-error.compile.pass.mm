@@ -10,12 +10,13 @@
 
 // Make sure the test passes even if there's a link error, i.e. it isn't linked.
 
-@interface I;
+@interface I
+;
 @end
 
 extern void this_is_an_undefined_symbol();
 
 int main(int, char**) {
-    this_is_an_undefined_symbol();
-    return 0;
+  this_is_an_undefined_symbol();
+  return 0;
 }

@@ -59,50 +59,51 @@ namespace clang {
   class ValueDecl;
   class WarnUnusedResultAttr;
 
-/// A simple array of base specifiers.
-typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
+  /// A simple array of base specifiers.
+  typedef SmallVector<CXXBaseSpecifier *, 4> CXXCastPath;
 
-/// An adjustment to be made to the temporary created when emitting a
-/// reference binding, which accesses a particular subobject of that temporary.
-struct SubobjectAdjustment {
-  enum {
-    DerivedToBaseAdjustment,
-    FieldAdjustment,
-    MemberPointerAdjustment
-  } Kind;
+  /// An adjustment to be made to the temporary created when emitting a
+  /// reference binding, which accesses a particular subobject of that
+  /// temporary.
+  struct SubobjectAdjustment {
+    enum {
+      DerivedToBaseAdjustment,
+      FieldAdjustment,
+      MemberPointerAdjustment
+    } Kind;
 
-  struct DTB {
-    const CastExpr *BasePath;
-    const CXXRecordDecl *DerivedClass;
-  };
+    struct DTB {
+      const CastExpr *BasePath;
+      const CXXRecordDecl *DerivedClass;
+    };
 
-  struct P {
-    const MemberPointerType *MPT;
-    Expr *RHS;
-  };
+    struct P {
+      const MemberPointerType *MPT;
+      Expr *RHS;
+    };
 
-  union {
-    struct DTB DerivedToBase;
-    const FieldDecl *Field;
-    struct P Ptr;
-  };
+    union {
+      struct DTB DerivedToBase;
+      const FieldDecl *Field;
+      struct P Ptr;
+    };
 
-  SubobjectAdjustment(const CastExpr *BasePath,
-                      const CXXRecordDecl *DerivedClass)
-    : Kind(DerivedToBaseAdjustment) {
-    DerivedToBase.BasePath = BasePath;
-    DerivedToBase.DerivedClass = DerivedClass;
-  }
+    SubobjectAdjustment(const CastExpr *BasePath,
+                        const CXXRecordDecl *DerivedClass)
+        : Kind(DerivedToBaseAdjustment) {
+      DerivedToBase.BasePath = BasePath;
+      DerivedToBase.DerivedClass = DerivedClass;
+    }
 
-  SubobjectAdjustment(const FieldDecl *Field) : Kind(FieldAdjustment) {
-    this->Field = Field;
-  }
+    SubobjectAdjustment(const FieldDecl *Field) : Kind(FieldAdjustment) {
+      this->Field = Field;
+    }
 
-  SubobjectAdjustment(const MemberPointerType *MPT, Expr *RHS)
-    : Kind(MemberPointerAdjustment) {
-    this->Ptr.MPT = MPT;
-    this->Ptr.RHS = RHS;
-  }
+    SubobjectAdjustment(const MemberPointerType *MPT, Expr *RHS)
+        : Kind(MemberPointerAdjustment) {
+      this->Ptr.MPT = MPT;
+      this->Ptr.RHS = RHS;
+    }
 };
 
 /// This represents one expression.  Note that Expr's are subclasses of Stmt.

@@ -14,28 +14,25 @@
 #include "test_macros.h"
 
 #ifndef TEST_STD_VER
-#error TEST_STD_VER must be defined
+#  error TEST_STD_VER must be defined
 #endif
 
 #ifndef TEST_NOEXCEPT
-#error TEST_NOEXCEPT must be defined
+#  error TEST_NOEXCEPT must be defined
 #endif
 
 #ifndef LIBCPP_ASSERT
-#error LIBCPP_ASSERT must be defined
+#  error LIBCPP_ASSERT must be defined
 #endif
 
 #ifndef LIBCPP_STATIC_ASSERT
-#error LIBCPP_STATIC_ASSERT must be defined
+#  error LIBCPP_STATIC_ASSERT must be defined
 #endif
 
-void test_noexcept() TEST_NOEXCEPT
-{
-}
+void test_noexcept() TEST_NOEXCEPT {}
 
-int main(int, char**)
-{
-    test_noexcept();
+int main(int, char**) {
+  test_noexcept();
 
-    return 0;
+  return 0;
 }

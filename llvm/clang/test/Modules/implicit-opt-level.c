@@ -10,6 +10,7 @@ module M { header "M.h" }
 //--- tu.c
 #include "M.h"
 
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -O0 -fsyntax-only %t/tu.c
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -O1 -fsyntax-only %t/tu.c
-// RUN: find %t/cache -name "M-*.pcm" | count 2
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps
+// -fmodules-cache-path=%t/cache -O0 -fsyntax-only %t/tu.c RUN: %clang_cc1
+// -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/cache -O1
+// -fsyntax-only %t/tu.c RUN: find %t/cache -name "M-*.pcm" | count 2

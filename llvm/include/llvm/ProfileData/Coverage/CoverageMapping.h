@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
@@ -375,6 +376,7 @@ struct CountedRegion : public CounterMappingRegion {
   uint64_t FalseExecutionCount;
   bool TrueFolded;
   bool FalseFolded;
+  StringRef ObjectFilename;
 
   CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount)
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
@@ -385,6 +387,12 @@ struct CountedRegion : public CounterMappingRegion {
       : CounterMappingRegion(R), ExecutionCount(ExecutionCount),
         FalseExecutionCount(FalseExecutionCount), TrueFolded(false),
         FalseFolded(false) {}
+  
+  CountedRegion(const CounterMappingRegion &R, uint64_t ExecutionCount,
+          uint64_t FalseExecutionCount, StringRef ObjectFilename)
+: CounterMappingRegion(R), ExecutionCount(ExecutionCount),
+  FalseExecutionCount(FalseExecutionCount), TrueFolded(false),
+  FalseFolded(false), ObjectFilename(ObjectFilename) {}
 };
 
 /// MCDC Record grouping all information together.
@@ -731,12 +739,24 @@ struct FunctionRecord {
   std::vector<MCDCRecord> MCDCRecords;
   /// The number of times this function was executed.
   uint64_t ExecutionCount = 0;
+  /// The executable this function was compiled in
+  StringRef ObjectFilename;
 
-  FunctionRecord(StringRef Name, ArrayRef<StringRef> Filenames)
-      : Name(Name), Filenames(Filenames.begin(), Filenames.end()) {}
+  FunctionRecord(StringRef Name, ArrayRef<StringRef> Filenames, StringRef ObjectFilename = "")
+      : Name(Name), Filenames(Filenames.begin(), Filenames.end()), ObjectFilename(ObjectFilename) {}
 
   FunctionRecord(FunctionRecord &&FR) = default;
   FunctionRecord &operator=(FunctionRecord &&) = default;
+
+  FunctionRecord(const FunctionRecord &FR)
+    : Name(FR.Name),
+      Filenames(FR.Filenames),
+      CountedRegions(FR.CountedRegions),
+      CountedBranchRegions(FR.CountedBranchRegions),
+      MCDCRecords(FR.MCDCRecords),
+      ExecutionCount(FR.ExecutionCount),
+      ObjectFilename(FR.ObjectFilename) {}
+
 
   void pushMCDCRecord(MCDCRecord &&Record) {
     MCDCRecords.push_back(std::move(Record));
@@ -752,9 +772,10 @@ struct FunctionRecord {
       CountedBranchRegions.back().FalseFolded = Region.FalseCount.isZero();
       return;
     }
-    if (CountedRegions.empty())
+    if (CountedRegions.empty()){
       ExecutionCount = Count;
-    CountedRegions.emplace_back(Region, Count, FalseCount);
+    }
+    CountedRegions.emplace_back(Region, Count, FalseCount, ObjectFilename);
   }
 };
 
@@ -993,6 +1014,14 @@ class CoverageMapping {
   std::vector<FunctionRecord> Functions;
   DenseMap<size_t, SmallVector<unsigned, 0>> FilenameHash2RecordIndices;
   std::vector<std::pair<std::string, uint64_t>> FuncHashMismatches;
+  StringRef Arch;
+  DenseMap<std::pair<size_t, hash_code>, unsigned> RecordIndices;
+  uint64_t DebugCount = 0;
+  std::vector<FunctionRecord> AllFunctionRegions;
+  StringRef ObjectFilename;
+
+
+  std::map<std::pair<std::string, std::string>, std::vector<uint64_t>> AggregatedCounts;
 
   std::optional<bool> SingleByteCoverage;
 
@@ -1000,10 +1029,16 @@ class CoverageMapping {
 
   // Load coverage records from readers.
   static Error loadFromReaders(
-      ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
-      std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-          &ProfileReader,
-      CoverageMapping &Coverage);
+    ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
+    std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+        &ProfileReader,
+    CoverageMapping &Coverage, StringRef Arch, StringRef ObjectFilename = "", bool ShowArchExecutables = false, bool MergeBinaryCoverage = false);
+  
+  static Error loadFromReaders(
+    ArrayRef<std::unique_ptr<CoverageMappingReader>> CoverageReaders,
+    std::optional<std::reference_wrapper<IndexedInstrProfReader>>
+        &ProfileReader,
+    CoverageMapping &Coverage);
 
   // Load coverage records from file.
   static Error
@@ -1011,13 +1046,18 @@ class CoverageMapping {
                std::optional<std::reference_wrapper<IndexedInstrProfReader>>
                    &ProfileReader,
                CoverageMapping &Coverage, bool &DataFound,
-               SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr);
+               SmallVectorImpl<object::BuildID> *FoundBinaryIDs = nullptr, StringRef ObjectFilename = "", 
+                bool ShowArchExecutables = false, bool MergeBinaryCoverage = false);
 
   /// Add a function record corresponding to \p Record.
   Error loadFunctionRecord(
       const CoverageMappingRecord &Record,
       const std::optional<std::reference_wrapper<IndexedInstrProfReader>>
-          &ProfileReader);
+          &ProfileReader, StringRef ObjectFilename = "", bool ShowArchExecutables = false, bool MergeBinaryCoverage = false);
+  
+  Error loadFunctionRecord(const CoverageMappingRecord &Record, 
+    const std::optional<std::reference_wrapper<IndexedInstrProfReader>> &ProfileReader, 
+    const std::string &Arch, StringRef ObjectFilename = "");
 
   /// Look up the indices for function records which are at least partially
   /// defined in the specified file. This is guaranteed to return a superset of
@@ -1027,6 +1067,19 @@ class CoverageMapping {
   getImpreciseRecordIndicesForFilename(StringRef Filename) const;
 
 public:
+
+  const StringRef &getArchitecture() const { return Arch; }
+
+  void setArchitecture(StringRef NewArch){
+    Arch = StringRef(NewArch);
+  }
+
+  void setObjectFilename(StringRef ObjectFilename){
+    this->ObjectFilename = StringRef(ObjectFilename);
+  }
+
+  const StringRef &getObjectFilename() const { return this->ObjectFilename; }
+
   CoverageMapping(const CoverageMapping &) = delete;
   CoverageMapping &operator=(const CoverageMapping &) = delete;
 
@@ -1044,7 +1097,7 @@ public:
        std::optional<StringRef> ProfileFilename, vfs::FileSystem &FS,
        ArrayRef<StringRef> Arches = {}, StringRef CompilationDir = "",
        const object::BuildIDFetcher *BIDFetcher = nullptr,
-       bool CheckBinaryIDs = false);
+       bool CheckBinaryIDs = false, bool ShowArchExecutables = false, bool MergeBinaryCoverage = false);
 
   /// The number of functions that couldn't have their profiles mapped.
   ///
@@ -1069,7 +1122,7 @@ public:
   /// The given filename must be the name as recorded in the coverage
   /// information. That is, only names returned from getUniqueSourceFiles will
   /// yield a result.
-  LLVM_ABI CoverageData getCoverageForFile(StringRef Filename) const;
+  LLVM_ABI CoverageData getCoverageForFile(StringRef Filename, bool ShowArchExecutables = false, bool MergeBinaryCoverage = false) const;
 
   /// Get the coverage for a particular function.
   LLVM_ABI CoverageData
@@ -1234,8 +1287,9 @@ uint64_t getFuncNameRef(const FuncRecordTy *Record) {
 /// a hash.
 template <class FuncRecordTy, llvm::endianness Endian>
 Error getFuncNameViaRef(const FuncRecordTy *Record,
-                        InstrProfSymtab &ProfileNames, StringRef &FuncName) {
+                        InstrProfSymtab &ProfileNames, StringRef &FuncName, StringRef ObjectFilename = "") {
   uint64_t NameRef = getFuncNameRef<FuncRecordTy, Endian>(Record);
+  ProfileNames.setObjectFilename(ObjectFilename);
   FuncName = ProfileNames.getFuncOrVarName(NameRef);
   return Error::success();
 }
@@ -1285,7 +1339,7 @@ struct CovMapFunctionRecordV1 {
 
   /// Return the PGO name of the function.
   template <llvm::endianness Endian>
-  Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName) const {
+  Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName, StringRef Arch = "") const {
     IntPtrT NameRef = getFuncNameRef<Endian>();
     uint32_t NameS = support::endian::byte_swap<uint32_t, Endian>(NameSize);
     FuncName = ProfileNames.getFuncName(NameRef, NameS);
@@ -1334,7 +1388,7 @@ struct CovMapFunctionRecordV2 {
   }
 
   template <llvm::endianness Endian>
-  Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName) const {
+  Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName, StringRef Arch = "") const {
     return accessors::getFuncNameViaRef<ThisT, Endian>(this, ProfileNames,
                                                        FuncName);
   }
@@ -1378,9 +1432,9 @@ struct CovMapFunctionRecordV3 {
   }
 
   template <llvm::endianness Endian>
-  Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName) const {
+  Error getFuncName(InstrProfSymtab &ProfileNames, StringRef &FuncName, StringRef ObjectFilename = "") const {
     return accessors::getFuncNameViaRef<ThisT, Endian>(this, ProfileNames,
-                                                       FuncName);
+                                                       FuncName, ObjectFilename);
   }
 
   /// Get the filename set reference.

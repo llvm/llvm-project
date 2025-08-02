@@ -24,19 +24,18 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    typedef std::codecvt_utf8<wchar_t> Codecvt;
-    typedef std::wstring_convert<Codecvt> Myconv;
-    // create a converter and perform some conversions to generate some
-    // interesting state.
-    Myconv myconv;
-    myconv.from_bytes("\xEF\xBF\xBD");
-    const auto old_converted = myconv.converted();
-    assert(myconv.converted() == 3);
-    // move construct a new converter and make sure the state is the same.
-    Myconv myconv2(std::move(myconv));
-    assert(myconv2.converted() == old_converted);
+int main(int, char**) {
+  typedef std::codecvt_utf8<wchar_t> Codecvt;
+  typedef std::wstring_convert<Codecvt> Myconv;
+  // create a converter and perform some conversions to generate some
+  // interesting state.
+  Myconv myconv;
+  myconv.from_bytes("\xEF\xBF\xBD");
+  const auto old_converted = myconv.converted();
+  assert(myconv.converted() == 3);
+  // move construct a new converter and make sure the state is the same.
+  Myconv myconv2(std::move(myconv));
+  assert(myconv2.converted() == old_converted);
 
   return 0;
 }

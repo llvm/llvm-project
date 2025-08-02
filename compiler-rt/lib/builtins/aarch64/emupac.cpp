@@ -117,7 +117,7 @@ extern "C" [[gnu::flatten]] uint64_t __emupac_pacda_impl(uint64_t ptr,
   }
   uint64_t hash;
   siphash<1, 3>(reinterpret_cast<uint8_t *>(&ptr), 8, emu_da_key,
-                *reinterpret_cast<uint8_t (*)[8]>(&hash));
+                *reinterpret_cast<uint8_t(*)[8]>(&hash));
   return (ptr & ~pac_mask) | (hash & pac_mask);
 }
 
@@ -141,7 +141,7 @@ extern "C" [[gnu::flatten]] uint64_t __emupac_autda_impl(uint64_t ptr,
       (ptr & ttbr1_mask) ? (ptr | pac_mask) : (ptr & ~pac_mask);
   uint64_t hash;
   siphash<1, 3>(reinterpret_cast<uint8_t *>(&ptr_without_pac), 8, emu_da_key,
-                *reinterpret_cast<uint8_t (*)[8]>(&hash));
+                *reinterpret_cast<uint8_t(*)[8]>(&hash));
   if (((ptr & ~pac_mask) | (hash & pac_mask)) != ptr) {
     __builtin_trap();
   }

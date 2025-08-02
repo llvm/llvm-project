@@ -302,7 +302,7 @@ static bool IsCFError(QualType T, IdentifierInfo *II) {
 // two are coming from the checker family `NSOrCFErrorDerefChecker` while the
 // other two (the `ADDITIONAL_PART`s) are small standalone checkers.
 #define REGISTER_CHECKER(NAME, ADDITIONAL_PART)                                \
-  void ento::register##NAME##Checker(CheckerManager &Mgr) {                    \
+  void ento::register##NAME##Checker(CheckerManager & Mgr) {                   \
     Mgr.getChecker<NSOrCFErrorDerefChecker>()->NAME.enable(Mgr);               \
     Mgr.registerChecker<ADDITIONAL_PART>();                                    \
   }                                                                            \

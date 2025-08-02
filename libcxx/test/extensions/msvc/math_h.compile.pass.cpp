@@ -16,11 +16,11 @@
 //
 
 #ifdef _MSC_VER
-#   include <math.h>
-#   define _USE_MATH_DEFINES
-#   include <math.h>
+#  include <math.h>
+#  define _USE_MATH_DEFINES
+#  include <math.h>
 
-#   ifndef M_PI
-#       error M_PI not defined
-#   endif
+#  ifndef M_PI
+#    error M_PI not defined
+#  endif
 #endif

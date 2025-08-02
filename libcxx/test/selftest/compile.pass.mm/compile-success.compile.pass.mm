@@ -10,7 +10,8 @@
 
 // Make sure the test passes if it succeeds to compile
 
-@interface I;
+@interface I
+;
 @end
 
 int main(int, char**) { return 0; }

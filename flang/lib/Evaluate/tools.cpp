@@ -2294,7 +2294,7 @@ bool IsSaved(const Symbol &original) {
     return true;
   } else if (scope.hasSAVE()) {
     return true; // bare SAVE statement
-  } else if (const Symbol *block{FindCommonBlockContaining(symbol)};
+  } else if (const Symbol * block{FindCommonBlockContaining(symbol)};
       block && block->attrs().test(Attr::SAVE)) {
     return true; // in COMMON with SAVE
   } else {

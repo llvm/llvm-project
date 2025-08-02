@@ -575,9 +575,10 @@ namespace clang {
     ExpectedDecl VisitVarTemplateDecl(VarTemplateDecl *D);
     ExpectedDecl VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D);
     ExpectedDecl VisitFunctionTemplateDecl(FunctionTemplateDecl *D);
-    ExpectedDecl VisitConceptDecl(ConceptDecl* D);
-    ExpectedDecl VisitRequiresExprBodyDecl(RequiresExprBodyDecl* E);
-    ExpectedDecl VisitImplicitConceptSpecializationDecl(ImplicitConceptSpecializationDecl* D);
+    ExpectedDecl VisitConceptDecl(ConceptDecl *D);
+    ExpectedDecl VisitRequiresExprBodyDecl(RequiresExprBodyDecl *E);
+    ExpectedDecl VisitImplicitConceptSpecializationDecl(
+        ImplicitConceptSpecializationDecl *D);
 
     // Importing statements
     ExpectedStmt VisitStmt(Stmt *S);
@@ -694,8 +695,8 @@ namespace clang {
     ExpectedStmt VisitTypeTraitExpr(TypeTraitExpr *E);
     ExpectedStmt VisitCXXTypeidExpr(CXXTypeidExpr *E);
     ExpectedStmt VisitCXXFoldExpr(CXXFoldExpr *E);
-    ExpectedStmt VisitRequiresExpr(RequiresExpr* E);
-    ExpectedStmt VisitConceptSpecializationExpr(ConceptSpecializationExpr* E);
+    ExpectedStmt VisitRequiresExpr(RequiresExpr *E);
+    ExpectedStmt VisitConceptSpecializationExpr(ConceptSpecializationExpr *E);
 
     // Helper for chaining together multiple imports. If an error is detected,
     // subsequent imports will return default constructed nodes, so that failure

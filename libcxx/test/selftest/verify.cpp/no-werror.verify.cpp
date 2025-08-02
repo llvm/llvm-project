@@ -11,5 +11,5 @@
 // ADDITIONAL_COMPILE_FLAGS: -Wunused-variable
 
 void f() {
-    int foo; // expected-warning {{unused variable}}
+  int foo; // expected-warning {{unused variable}}
 }

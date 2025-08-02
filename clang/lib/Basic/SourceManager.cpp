@@ -849,10 +849,9 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
       // Remember it.  We have good locality across FileID lookups.
       LastFileIDLookup = Res;
       LastLookupStartOffset = LocalLocOffsetTable[GreaterIndex];
-      LastLookupEndOffset =
-          GreaterIndex + 1 >= LocalLocOffsetTable.size()
-              ? NextLocalOffset
-              : LocalLocOffsetTable[GreaterIndex + 1];
+      LastLookupEndOffset = GreaterIndex + 1 >= LocalLocOffsetTable.size()
+                                ? NextLocalOffset
+                                : LocalLocOffsetTable[GreaterIndex + 1];
       NumLinearScans += NumProbes + 1;
       return Res;
     }

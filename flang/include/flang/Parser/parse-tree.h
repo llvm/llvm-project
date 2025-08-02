@@ -3471,14 +3471,14 @@ WRAPPER_CLASS(PauseStmt, std::optional<StopCode>);
 
 #define INHERITED_TUPLE_CLASS_BOILERPLATE(classname, basename) \
   using basename::basename; \
-  classname(basename &&b) : basename(std::move(b)) {} \
+  classname(basename && b) : basename(std::move(b)) {} \
   using TupleTrait = std::true_type; \
   BOILERPLATE(classname)
 
 #define INHERITED_WRAPPER_CLASS_BOILERPLATE(classname, basename) \
   BOILERPLATE(classname); \
   using basename::basename; \
-  classname(basename &&base) : basename(std::move(base)) {} \
+  classname(basename && base) : basename(std::move(base)) {} \
   using WrapperTrait = std::true_type
 
 struct OmpClause;

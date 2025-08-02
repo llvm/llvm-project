@@ -288,10 +288,10 @@ dispatch_mach_t dispatch_mach_create(const char *label, dispatch_queue_t queue,
 #define GET_ASAN_BLOCK(work) \
   void (^asan_block)(void);  \
   int parent_tid = GetCurrentTidOrInvalid(); \
-  asan_block = ^(void) { \
-    GET_STACK_TRACE_THREAD; \
-    asan_register_worker_thread(parent_tid, &stack); \
-    work(); \
+  asan_block = ^(void) {                   \
+        GET_STACK_TRACE_THREAD;                          \
+        asan_register_worker_thread(parent_tid, &stack); \
+        work(); \
   }
 
 INTERCEPTOR(void, dispatch_async,

@@ -422,11 +422,11 @@ typedef void __sanitizer_FILE;
 extern int shmctl_ipc_stat;
 
 // This simplifies generic code
-#define struct_shminfo_sz -1
-#define struct_shm_info_sz -1
-#define shmctl_shm_stat -1
-#define shmctl_ipc_info -1
-#define shmctl_shm_info -1
+#  define struct_shminfo_sz -1
+#  define struct_shm_info_sz -1
+#  define shmctl_shm_stat -1
+#  define shmctl_ipc_info -1
+#  define shmctl_shm_info -1
 
 extern unsigned struct_utmpx_sz;
 

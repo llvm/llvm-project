@@ -137,8 +137,8 @@ class SValTest : public testing::TestWithParam<TestClangConfig> {};
     void test(ExprEngine &Engine, const ASTContext &Context) const override;   \
   };                                                                           \
                                                                                \
-  void add##NAME##SValCollector(AnalysisASTConsumer &AnalysisConsumer,         \
-                                AnalyzerOptions &AnOpts) {                     \
+  void add##NAME##SValCollector(AnalysisASTConsumer & AnalysisConsumer,        \
+                                AnalyzerOptions & AnOpts) {                    \
     AnOpts.CheckersAndPackages = {{"test." #NAME "SValColl", true}};           \
     AnalysisConsumer.AddCheckerRegistrationFn([](CheckerRegistry &Registry) {  \
       Registry.addChecker<NAME##SValCollector>("test." #NAME "SValColl",       \
@@ -150,7 +150,7 @@ class SValTest : public testing::TestWithParam<TestClangConfig> {};
     EXPECT_TRUE(runCheckerOnCodeWithArgs<add##NAME##SValCollector>(            \
         CODE, GetParam().getCommandLineArgs()));                               \
   }                                                                            \
-  void NAME##SValCollector::test(ExprEngine &Engine,                           \
+  void NAME##SValCollector::test(ExprEngine & Engine,                          \
                                  const ASTContext &Context) const
 
 //===----------------------------------------------------------------------===//

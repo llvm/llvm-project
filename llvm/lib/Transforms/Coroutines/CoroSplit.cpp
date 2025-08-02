@@ -619,8 +619,7 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
 }
 
 /// Returns all debug records in F.
-static SmallVector<DbgVariableRecord *>
-collectDbgVariableRecords(Function &F) {
+static SmallVector<DbgVariableRecord *> collectDbgVariableRecords(Function &F) {
   SmallVector<DbgVariableRecord *> DbgVariableRecords;
   for (auto &I : instructions(F)) {
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))

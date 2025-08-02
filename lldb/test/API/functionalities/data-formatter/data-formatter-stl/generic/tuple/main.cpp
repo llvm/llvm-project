@@ -7,5 +7,5 @@ int main() {
   std::tuple<std::string> string_elt{"foobar"};
   std::tuple<int, long, std::string> three_elts{1, 47l, "foo"};
   auto *foo = &empty; // needed with MSVC STL to keep the variable
-  return 0; // break here
+  return 0;           // break here
 }

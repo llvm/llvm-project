@@ -482,56 +482,54 @@ func::FuncOp mlir::bufferization::buildDeallocationLibraryFunction(
 
         // Build the first for loop that computes aliasing with retained
         // memrefs.
-        Value
-            noRetainAlias =
-                scf::ForOp::create(
-                    builder, loc, c0, toRetainSize, c1, trueValue,
-                    [&](OpBuilder &builder, Location loc, Value i,
-                        ValueRange iterArgs) {
-                      Value retainValue = memref::LoadOp::create(
-                          builder, loc, toRetainMemref, i);
-                      Value doesAlias = arith::CmpIOp::create(
-                          builder, loc, arith::CmpIPredicate::eq, retainValue,
-                          toDealloc);
-                      scf::IfOp::create(
-                          builder, loc, doesAlias,
-                          [&](OpBuilder &builder, Location loc) {
-                            Value retainCondValue = memref::LoadOp::create(
-                                builder, loc, retainCondsMemref, i);
-                            Value aggregatedRetainCond = arith::OrIOp::create(
-                                builder, loc, retainCondValue, cond);
-                            memref::StoreOp::create(builder, loc,
-                                                    aggregatedRetainCond,
-                                                    retainCondsMemref, i);
-                            scf::YieldOp::create(builder, loc);
-                          });
-                      Value doesntAlias = arith::CmpIOp::create(
-                          builder, loc, arith::CmpIPredicate::ne, retainValue,
-                          toDealloc);
-                      Value yieldValue = arith::AndIOp::create(
-                          builder, loc, iterArgs[0], doesntAlias);
-                      scf::YieldOp::create(builder, loc, yieldValue);
-                    })
-                    .getResult(0);
+        Value noRetainAlias =
+            scf::ForOp::create(
+                builder, loc, c0, toRetainSize, c1, trueValue,
+                [&](OpBuilder &builder, Location loc, Value i,
+                    ValueRange iterArgs) {
+                  Value retainValue =
+                      memref::LoadOp::create(builder, loc, toRetainMemref, i);
+                  Value doesAlias = arith::CmpIOp::create(
+                      builder, loc, arith::CmpIPredicate::eq, retainValue,
+                      toDealloc);
+                  scf::IfOp::create(
+                      builder, loc, doesAlias,
+                      [&](OpBuilder &builder, Location loc) {
+                        Value retainCondValue = memref::LoadOp::create(
+                            builder, loc, retainCondsMemref, i);
+                        Value aggregatedRetainCond = arith::OrIOp::create(
+                            builder, loc, retainCondValue, cond);
+                        memref::StoreOp::create(builder, loc,
+                                                aggregatedRetainCond,
+                                                retainCondsMemref, i);
+                        scf::YieldOp::create(builder, loc);
+                      });
+                  Value doesntAlias = arith::CmpIOp::create(
+                      builder, loc, arith::CmpIPredicate::ne, retainValue,
+                      toDealloc);
+                  Value yieldValue = arith::AndIOp::create(
+                      builder, loc, iterArgs[0], doesntAlias);
+                  scf::YieldOp::create(builder, loc, yieldValue);
+                })
+                .getResult(0);
 
         // Build the second for loop that adds aliasing with previously
         // deallocated memrefs.
-        Value
-            noAlias =
-                scf::ForOp::create(
-                    builder, loc, c0, outerIter, c1, noRetainAlias,
-                    [&](OpBuilder &builder, Location loc, Value i,
-                        ValueRange iterArgs) {
-                      Value prevDeallocValue = memref::LoadOp::create(
-                          builder, loc, toDeallocMemref, i);
-                      Value doesntAlias = arith::CmpIOp::create(
-                          builder, loc, arith::CmpIPredicate::ne,
-                          prevDeallocValue, toDealloc);
-                      Value yieldValue = arith::AndIOp::create(
-                          builder, loc, iterArgs[0], doesntAlias);
-                      scf::YieldOp::create(builder, loc, yieldValue);
-                    })
-                    .getResult(0);
+        Value noAlias =
+            scf::ForOp::create(builder, loc, c0, outerIter, c1, noRetainAlias,
+                               [&](OpBuilder &builder, Location loc, Value i,
+                                   ValueRange iterArgs) {
+                                 Value prevDeallocValue =
+                                     memref::LoadOp::create(builder, loc,
+                                                            toDeallocMemref, i);
+                                 Value doesntAlias = arith::CmpIOp::create(
+                                     builder, loc, arith::CmpIPredicate::ne,
+                                     prevDeallocValue, toDealloc);
+                                 Value yieldValue = arith::AndIOp::create(
+                                     builder, loc, iterArgs[0], doesntAlias);
+                                 scf::YieldOp::create(builder, loc, yieldValue);
+                               })
+                .getResult(0);
 
         Value shouldDealoc = arith::AndIOp::create(builder, loc, noAlias, cond);
         memref::StoreOp::create(builder, loc, shouldDealoc, deallocCondsMemref,

@@ -78,8 +78,10 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
   switch (Kind) {
   default:
     llvm_unreachable("invalid fixup kind!");
-  case FK_Data_1: return 0;
-  case FK_Data_2: return 1;
+  case FK_Data_1:
+    return 0;
+  case FK_Data_2:
+    return 1;
     // FIXME: Remove these!!!
   case X86::reloc_riprel_4byte:
   case X86::reloc_riprel_4byte_relax:

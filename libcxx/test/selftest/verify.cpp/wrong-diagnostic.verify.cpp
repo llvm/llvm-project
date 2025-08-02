@@ -10,5 +10,5 @@
 
 // Make sure the test DOES NOT pass if the expected diagnostic is wrong.
 
-struct Foo { };
+struct Foo {};
 typedef Foo::x x; // expected-error{{this is not found in the errors}}

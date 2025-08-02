@@ -4912,7 +4912,8 @@ std::optional<ProcedureRef> ArgumentAnalyzer::GetDefinedAssignmentProc(
     for (std::size_t i{0}; (!proc || isProcElemental) && i < actuals_.size();
         ++i) {
       const Symbol *generic{nullptr};
-      if (const Symbol *binding{FindBoundOp(oprName, i, generic,
+      if (const Symbol *
+          binding{FindBoundOp(oprName, i, generic,
               /*isSubroutine=*/true, /*isAmbiguous=*/&isAmbiguous)}) {
         // ignore inaccessible type-bound ASSIGNMENT(=) generic
         if (!CheckAccessibleSymbol(scope, DEREF(generic))) {

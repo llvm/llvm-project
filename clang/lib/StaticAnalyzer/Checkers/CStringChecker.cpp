@@ -2839,7 +2839,7 @@ bool ento::shouldRegisterCStringModeling(const CheckerManager &) {
 }
 
 #define REGISTER_CHECKER(NAME)                                                 \
-  void ento::registerCString##NAME(CheckerManager &Mgr) {                      \
+  void ento::registerCString##NAME(CheckerManager & Mgr) {                     \
     Mgr.getChecker<CStringChecker>()->NAME.enable(Mgr);                        \
   }                                                                            \
                                                                                \

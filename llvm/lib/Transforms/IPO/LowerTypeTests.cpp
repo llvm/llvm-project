@@ -1138,9 +1138,9 @@ void LowerTypeTestsModule::importFunction(Function *F,
     FDecl->setVisibility(Visibility);
     Visibility = GlobalValue::HiddenVisibility;
 
-    // Update aliases pointing to this function to also include the ".cfi" suffix,
-    // We expect the jump table entry to either point to the real function or an
-    // alias. Redirect all other users to the jump table entry.
+    // Update aliases pointing to this function to also include the ".cfi"
+    // suffix, We expect the jump table entry to either point to the real
+    // function or an alias. Redirect all other users to the jump table entry.
     for (auto &U : F->uses()) {
       if (auto *A = dyn_cast<GlobalAlias>(U.getUser())) {
         std::string AliasName = A->getName().str() + ".cfi";

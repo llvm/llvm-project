@@ -547,7 +547,6 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
 
     break;
   }
-
   }
 
   assert(OS.tell() - Start == FragmentSize &&

@@ -667,10 +667,9 @@ static constexpr FeatureBitset XTHeadGroup = {
     RISCV::FeatureVendorXTHeadVdot};
 
 static constexpr FeatureBitset XAndesGroup = {
-    RISCV::FeatureVendorXAndesPerf, RISCV::FeatureVendorXAndesBFHCvt,
-    RISCV::FeatureVendorXAndesVBFHCvt,
-    RISCV::FeatureVendorXAndesVSIntLoad, RISCV::FeatureVendorXAndesVPackFPH,
-    RISCV::FeatureVendorXAndesVDot};
+    RISCV::FeatureVendorXAndesPerf,     RISCV::FeatureVendorXAndesBFHCvt,
+    RISCV::FeatureVendorXAndesVBFHCvt,  RISCV::FeatureVendorXAndesVSIntLoad,
+    RISCV::FeatureVendorXAndesVPackFPH, RISCV::FeatureVendorXAndesVDot};
 
 static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions

@@ -10,8 +10,7 @@
 
 #include <random>
 
-void test()
-{
+void test() {
   {
     std::binomial_distribution<bool> baddist; //expected-error@*:* {{IntType must be a supported integer type}}
     std::binomial_distribution<int> okdist;

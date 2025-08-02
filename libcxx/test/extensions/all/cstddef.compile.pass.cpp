@@ -15,7 +15,7 @@
 #include "test_macros.h"
 
 using PtrdiffT = ::ptrdiff_t;
-using SizeT = ::size_t;
+using SizeT    = ::size_t;
 #if TEST_STD_VER >= 11
 using MaxAlignT = ::max_align_t;
 #endif

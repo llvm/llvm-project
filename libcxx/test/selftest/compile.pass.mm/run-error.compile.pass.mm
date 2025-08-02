@@ -10,9 +10,8 @@
 
 // Make sure the test passes even if there's a runtime error, i.e. it isn't run.
 
-@interface I;
+@interface I
+;
 @end
 
-int main(int, char**) {
-    return 1;
-}
+int main(int, char**) { return 1; }

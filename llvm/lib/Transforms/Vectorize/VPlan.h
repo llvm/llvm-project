@@ -4204,9 +4204,9 @@ public:
     return VPB;
   }
 
-  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks set
-  /// to nullptr. The returned block is owned by the VPlan and deleted once the
-  /// VPlan is destroyed.
+  /// Create a new loop VPRegionBlock with \p Name and entry and exiting blocks
+  /// set to nullptr. The returned block is owned by the VPlan and deleted once
+  /// the VPlan is destroyed.
   VPRegionBlock *createVPRegionBlock(const std::string &Name = "") {
     auto *VPB = new VPRegionBlock(Name);
     CreatedBlocks.push_back(VPB);

@@ -18,6 +18,6 @@
 // RUN: %{run}
 
 int main(int, char**) {
-    int foo;
-    return 0;
+  int foo;
+  return 0;
 }

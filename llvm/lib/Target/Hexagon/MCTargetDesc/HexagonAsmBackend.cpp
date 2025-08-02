@@ -199,125 +199,125 @@ public:
   }
 
   bool shouldForceRelocation(const MCFixup &Fixup) {
-    switch(Fixup.getKind()) {
-      default:
-        llvm_unreachable("Unknown Fixup Kind!");
+    switch (Fixup.getKind()) {
+    default:
+      llvm_unreachable("Unknown Fixup Kind!");
 
-      case fixup_Hexagon_LO16:
-      case fixup_Hexagon_HI16:
-      case fixup_Hexagon_16:
-      case fixup_Hexagon_8:
-      case fixup_Hexagon_GPREL16_0:
-      case fixup_Hexagon_GPREL16_1:
-      case fixup_Hexagon_GPREL16_2:
-      case fixup_Hexagon_GPREL16_3:
-      case fixup_Hexagon_HL16:
-      case fixup_Hexagon_32_6_X:
-      case fixup_Hexagon_16_X:
-      case fixup_Hexagon_12_X:
-      case fixup_Hexagon_11_X:
-      case fixup_Hexagon_10_X:
-      case fixup_Hexagon_9_X:
-      case fixup_Hexagon_8_X:
-      case fixup_Hexagon_7_X:
-      case fixup_Hexagon_6_X:
-      case fixup_Hexagon_COPY:
-      case fixup_Hexagon_GLOB_DAT:
-      case fixup_Hexagon_JMP_SLOT:
-      case fixup_Hexagon_RELATIVE:
-      case fixup_Hexagon_PLT_B22_PCREL:
-      case fixup_Hexagon_GOTREL_LO16:
-      case fixup_Hexagon_GOTREL_HI16:
-      case fixup_Hexagon_GOTREL_32:
-      case fixup_Hexagon_GOT_LO16:
-      case fixup_Hexagon_GOT_HI16:
-      case fixup_Hexagon_GOT_32:
-      case fixup_Hexagon_GOT_16:
-      case fixup_Hexagon_DTPMOD_32:
-      case fixup_Hexagon_DTPREL_LO16:
-      case fixup_Hexagon_DTPREL_HI16:
-      case fixup_Hexagon_DTPREL_32:
-      case fixup_Hexagon_DTPREL_16:
-      case fixup_Hexagon_GD_PLT_B22_PCREL:
-      case fixup_Hexagon_LD_PLT_B22_PCREL:
-      case fixup_Hexagon_GD_GOT_LO16:
-      case fixup_Hexagon_GD_GOT_HI16:
-      case fixup_Hexagon_GD_GOT_32:
-      case fixup_Hexagon_GD_GOT_16:
-      case fixup_Hexagon_LD_GOT_LO16:
-      case fixup_Hexagon_LD_GOT_HI16:
-      case fixup_Hexagon_LD_GOT_32:
-      case fixup_Hexagon_LD_GOT_16:
-      case fixup_Hexagon_IE_LO16:
-      case fixup_Hexagon_IE_HI16:
-      case fixup_Hexagon_IE_32:
-      case fixup_Hexagon_IE_16:
-      case fixup_Hexagon_IE_GOT_LO16:
-      case fixup_Hexagon_IE_GOT_HI16:
-      case fixup_Hexagon_IE_GOT_32:
-      case fixup_Hexagon_IE_GOT_16:
-      case fixup_Hexagon_TPREL_LO16:
-      case fixup_Hexagon_TPREL_HI16:
-      case fixup_Hexagon_TPREL_32:
-      case fixup_Hexagon_TPREL_16:
-      case fixup_Hexagon_GOTREL_32_6_X:
-      case fixup_Hexagon_GOTREL_16_X:
-      case fixup_Hexagon_GOTREL_11_X:
-      case fixup_Hexagon_GOT_32_6_X:
-      case fixup_Hexagon_GOT_16_X:
-      case fixup_Hexagon_GOT_11_X:
-      case fixup_Hexagon_DTPREL_32_6_X:
-      case fixup_Hexagon_DTPREL_16_X:
-      case fixup_Hexagon_DTPREL_11_X:
-      case fixup_Hexagon_GD_GOT_32_6_X:
-      case fixup_Hexagon_GD_GOT_16_X:
-      case fixup_Hexagon_GD_GOT_11_X:
-      case fixup_Hexagon_LD_GOT_32_6_X:
-      case fixup_Hexagon_LD_GOT_16_X:
-      case fixup_Hexagon_LD_GOT_11_X:
-      case fixup_Hexagon_IE_32_6_X:
-      case fixup_Hexagon_IE_16_X:
-      case fixup_Hexagon_IE_GOT_32_6_X:
-      case fixup_Hexagon_IE_GOT_16_X:
-      case fixup_Hexagon_IE_GOT_11_X:
-      case fixup_Hexagon_TPREL_32_6_X:
-      case fixup_Hexagon_TPREL_16_X:
-      case fixup_Hexagon_TPREL_11_X:
-      case fixup_Hexagon_32_PCREL:
-      case fixup_Hexagon_6_PCREL_X:
-      case fixup_Hexagon_23_REG:
-      case fixup_Hexagon_27_REG:
-      case fixup_Hexagon_GD_PLT_B22_PCREL_X:
-      case fixup_Hexagon_GD_PLT_B32_PCREL_X:
-      case fixup_Hexagon_LD_PLT_B22_PCREL_X:
-      case fixup_Hexagon_LD_PLT_B32_PCREL_X:
-        // These relocations should always have a relocation recorded
+    case fixup_Hexagon_LO16:
+    case fixup_Hexagon_HI16:
+    case fixup_Hexagon_16:
+    case fixup_Hexagon_8:
+    case fixup_Hexagon_GPREL16_0:
+    case fixup_Hexagon_GPREL16_1:
+    case fixup_Hexagon_GPREL16_2:
+    case fixup_Hexagon_GPREL16_3:
+    case fixup_Hexagon_HL16:
+    case fixup_Hexagon_32_6_X:
+    case fixup_Hexagon_16_X:
+    case fixup_Hexagon_12_X:
+    case fixup_Hexagon_11_X:
+    case fixup_Hexagon_10_X:
+    case fixup_Hexagon_9_X:
+    case fixup_Hexagon_8_X:
+    case fixup_Hexagon_7_X:
+    case fixup_Hexagon_6_X:
+    case fixup_Hexagon_COPY:
+    case fixup_Hexagon_GLOB_DAT:
+    case fixup_Hexagon_JMP_SLOT:
+    case fixup_Hexagon_RELATIVE:
+    case fixup_Hexagon_PLT_B22_PCREL:
+    case fixup_Hexagon_GOTREL_LO16:
+    case fixup_Hexagon_GOTREL_HI16:
+    case fixup_Hexagon_GOTREL_32:
+    case fixup_Hexagon_GOT_LO16:
+    case fixup_Hexagon_GOT_HI16:
+    case fixup_Hexagon_GOT_32:
+    case fixup_Hexagon_GOT_16:
+    case fixup_Hexagon_DTPMOD_32:
+    case fixup_Hexagon_DTPREL_LO16:
+    case fixup_Hexagon_DTPREL_HI16:
+    case fixup_Hexagon_DTPREL_32:
+    case fixup_Hexagon_DTPREL_16:
+    case fixup_Hexagon_GD_PLT_B22_PCREL:
+    case fixup_Hexagon_LD_PLT_B22_PCREL:
+    case fixup_Hexagon_GD_GOT_LO16:
+    case fixup_Hexagon_GD_GOT_HI16:
+    case fixup_Hexagon_GD_GOT_32:
+    case fixup_Hexagon_GD_GOT_16:
+    case fixup_Hexagon_LD_GOT_LO16:
+    case fixup_Hexagon_LD_GOT_HI16:
+    case fixup_Hexagon_LD_GOT_32:
+    case fixup_Hexagon_LD_GOT_16:
+    case fixup_Hexagon_IE_LO16:
+    case fixup_Hexagon_IE_HI16:
+    case fixup_Hexagon_IE_32:
+    case fixup_Hexagon_IE_16:
+    case fixup_Hexagon_IE_GOT_LO16:
+    case fixup_Hexagon_IE_GOT_HI16:
+    case fixup_Hexagon_IE_GOT_32:
+    case fixup_Hexagon_IE_GOT_16:
+    case fixup_Hexagon_TPREL_LO16:
+    case fixup_Hexagon_TPREL_HI16:
+    case fixup_Hexagon_TPREL_32:
+    case fixup_Hexagon_TPREL_16:
+    case fixup_Hexagon_GOTREL_32_6_X:
+    case fixup_Hexagon_GOTREL_16_X:
+    case fixup_Hexagon_GOTREL_11_X:
+    case fixup_Hexagon_GOT_32_6_X:
+    case fixup_Hexagon_GOT_16_X:
+    case fixup_Hexagon_GOT_11_X:
+    case fixup_Hexagon_DTPREL_32_6_X:
+    case fixup_Hexagon_DTPREL_16_X:
+    case fixup_Hexagon_DTPREL_11_X:
+    case fixup_Hexagon_GD_GOT_32_6_X:
+    case fixup_Hexagon_GD_GOT_16_X:
+    case fixup_Hexagon_GD_GOT_11_X:
+    case fixup_Hexagon_LD_GOT_32_6_X:
+    case fixup_Hexagon_LD_GOT_16_X:
+    case fixup_Hexagon_LD_GOT_11_X:
+    case fixup_Hexagon_IE_32_6_X:
+    case fixup_Hexagon_IE_16_X:
+    case fixup_Hexagon_IE_GOT_32_6_X:
+    case fixup_Hexagon_IE_GOT_16_X:
+    case fixup_Hexagon_IE_GOT_11_X:
+    case fixup_Hexagon_TPREL_32_6_X:
+    case fixup_Hexagon_TPREL_16_X:
+    case fixup_Hexagon_TPREL_11_X:
+    case fixup_Hexagon_32_PCREL:
+    case fixup_Hexagon_6_PCREL_X:
+    case fixup_Hexagon_23_REG:
+    case fixup_Hexagon_27_REG:
+    case fixup_Hexagon_GD_PLT_B22_PCREL_X:
+    case fixup_Hexagon_GD_PLT_B32_PCREL_X:
+    case fixup_Hexagon_LD_PLT_B22_PCREL_X:
+    case fixup_Hexagon_LD_PLT_B32_PCREL_X:
+      // These relocations should always have a relocation recorded
+      return true;
+
+    case fixup_Hexagon_B22_PCREL:
+      // IsResolved = false;
+      break;
+
+    case fixup_Hexagon_B13_PCREL:
+    case fixup_Hexagon_B13_PCREL_X:
+    case fixup_Hexagon_B32_PCREL_X:
+    case fixup_Hexagon_B22_PCREL_X:
+    case fixup_Hexagon_B15_PCREL:
+    case fixup_Hexagon_B15_PCREL_X:
+    case fixup_Hexagon_B9_PCREL:
+    case fixup_Hexagon_B9_PCREL_X:
+    case fixup_Hexagon_B7_PCREL:
+    case fixup_Hexagon_B7_PCREL_X:
+      if (DisableFixup)
         return true;
+      break;
 
-      case fixup_Hexagon_B22_PCREL:
-        //IsResolved = false;
-        break;
-
-      case fixup_Hexagon_B13_PCREL:
-      case fixup_Hexagon_B13_PCREL_X:
-      case fixup_Hexagon_B32_PCREL_X:
-      case fixup_Hexagon_B22_PCREL_X:
-      case fixup_Hexagon_B15_PCREL:
-      case fixup_Hexagon_B15_PCREL_X:
-      case fixup_Hexagon_B9_PCREL:
-      case fixup_Hexagon_B9_PCREL_X:
-      case fixup_Hexagon_B7_PCREL:
-      case fixup_Hexagon_B7_PCREL_X:
-        if (DisableFixup)
-          return true;
-        break;
-
-      case FK_Data_1:
-      case FK_Data_2:
-      case FK_Data_4:
-      case fixup_Hexagon_32:
-        // Leave these relocations alone as they are used for EH.
-        return false;
+    case FK_Data_1:
+    case FK_Data_2:
+    case FK_Data_4:
+    case fixup_Hexagon_32:
+      // Leave these relocations alone as they are used for EH.
+      return false;
     }
     return false;
   }

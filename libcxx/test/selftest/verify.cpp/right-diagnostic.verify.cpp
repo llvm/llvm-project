@@ -8,5 +8,5 @@
 
 // Make sure the test passes if the expected diagnostic is correct.
 
-struct Foo { };
+struct Foo {};
 typedef Foo::x x; // expected-error{{no type named 'x' in 'Foo'}}

@@ -2158,8 +2158,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
 
   // Compute pac discriminator
   assert(isUInt<16>(PACDisc));
-  Register PACDiscReg =
-      emitPtrauthDiscriminator(PACDisc, PACAddrDisc, Scratch);
+  Register PACDiscReg = emitPtrauthDiscriminator(PACDisc, PACAddrDisc, Scratch);
   bool PACZero = PACDiscReg == AArch64::XZR;
   unsigned PACOpc = getPACOpcodeForKey(*PACKey, PACZero);
 

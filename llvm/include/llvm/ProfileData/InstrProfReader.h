@@ -106,7 +106,7 @@ public:
   /// Read a single record.
   virtual Error readNextRecord(NamedInstrProfRecord &Record) = 0;
 
-  /// Read a list of binary ids.
+  /// Read a list of biny ids.
   virtual Error readBinaryIds(std::vector<llvm::object::BuildID> &BinaryIds) {
     return success();
   }
@@ -162,6 +162,9 @@ public:
   LLVM_ABI void accumulateCounts(CountSumOrPercent &Sum, bool IsCS);
 
 protected:
+  // Storing ObjectFilename Information as a string
+  std::string ObjectFilename;
+
   std::unique_ptr<InstrProfSymtab> Symtab;
   /// A list of temporal profile traces.
   SmallVector<TemporalProfTraceTy> TemporalProfTraces;
@@ -210,7 +213,7 @@ public:
       const object::BuildIDFetcher *BIDFetcher = nullptr,
       const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
           InstrProfCorrelator::ProfCorrelatorKind::NONE,
-      std::function<void(Error)> Warn = nullptr);
+      std::function<void(Error)> Warn = nullptr, StringRef ObjectFilename = "");
 
   LLVM_ABI static Expected<std::unique_ptr<InstrProfReader>> create(
       std::unique_ptr<MemoryBuffer> Buffer,
@@ -218,8 +221,11 @@ public:
       const object::BuildIDFetcher *BIDFetcher = nullptr,
       const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind =
           InstrProfCorrelator::ProfCorrelatorKind::NONE,
-      std::function<void(Error)> Warn = nullptr);
+      std::function<void(Error)> Warn = nullptr, StringRef ObjectFilename = "");
+  
+  StringRef getObjectFilename() {return ObjectFilename;}
 
+  void setObjectFilename(StringRef ObjectFilename) {this->ObjectFilename = ObjectFilename;}
   /// \param Weight for raw profiles use this as the temporal profile trace
   ///               weight
   /// \returns a list of temporal profile traces.
@@ -868,6 +874,10 @@ public:
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(const Twine &Path, vfs::FileSystem &FS,
          const Twine &RemappingPath = "");
+
+  static Expected<std::unique_ptr<IndexedInstrProfReader>>
+  create(const Twine &Path, vfs::FileSystem &FS,
+        const std::string &ObjectFilename, const Twine &RemappingPath = "");
 
   static Expected<std::unique_ptr<IndexedInstrProfReader>>
   create(std::unique_ptr<MemoryBuffer> Buffer,

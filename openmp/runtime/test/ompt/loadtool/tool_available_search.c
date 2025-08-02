@@ -1,10 +1,12 @@
 // RUN: mkdir -p %t.tool_dir
 // RUN: %clang %flags -shared -fPIC %s -o %t.tool_dir/first_tool.so
-// RUN: %clang %flags -DTOOL -DSECOND_TOOL -shared -fPIC %s -o %t.tool_dir/second_tool.so
-// RUN: %clang %flags -DTOOL -DTHIRD_TOOL -shared -fPIC %s -o %t.tool_dir/third_tool.so
-// RUN: %libomp-compile -DCODE
-// RUN: env OMP_TOOL_LIBRARIES=%t.tool_dir/non_existing_file.so:%t.tool_dir/first_tool.so:%t.tool_dir/second_tool.so:%t.tool_dir/third_tool.so \
-// RUN: OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | FileCheck %s -DPARENTPATH=%t.tool_dir
+// RUN: %clang %flags -DTOOL -DSECOND_TOOL -shared -fPIC %s -o
+// %t.tool_dir/second_tool.so RUN: %clang %flags -DTOOL -DTHIRD_TOOL -shared
+// -fPIC %s -o %t.tool_dir/third_tool.so RUN: %libomp-compile -DCODE
+// RUN: env
+// OMP_TOOL_LIBRARIES=%t.tool_dir/non_existing_file.so:%t.tool_dir/first_tool.so:%t.tool_dir/second_tool.so:%t.tool_dir/third_tool.so
+// \ RUN: OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | FileCheck %s
+// -DPARENTPATH=%t.tool_dir
 
 // REQUIRES: ompt
 // XFAIL: darwin
@@ -27,16 +29,15 @@
 // CHECK-SAME: [[PARENTPATH]]/second_tool.so
 // CHECK-SAME: [[PARENTPATH]]/third_tool.so
 // CHECK-NEXT: Opening [[PARENTPATH]]/non_existing_file.so... Failed:
-// CHECK-SAME: [[PARENTPATH]]/non_existing_file.so: {{cannot open shared object file|open failed}}:
-// CHECK-SAME: No such file or directory
-// CHECK-NEXT: Opening [[PARENTPATH]]/first_tool.so... Success.
-// CHECK-NEXT: Searching for ompt_start_tool in
-// CHECK-SAME: [[PARENTPATH]]/first_tool.so... Failed:
-// CHECK-SAME: {{.*/first_tool.so: undefined symbol: ompt_start_tool|ld.so.1: .*: ompt_start_tool: can't find symbol}}
-// CHECK-NEXT: Opening [[PARENTPATH]]/second_tool.so... Success.
-// CHECK-NEXT: Searching for ompt_start_tool in
-// CHECK-SAME: [[PARENTPATH]]/second_tool.so... 0: Do not initialize tool
-// CHECK-NEXT: Found but not using the OMPT interface.
+// CHECK-SAME: [[PARENTPATH]]/non_existing_file.so: {{cannot open shared object
+// file|open failed}}: CHECK-SAME: No such file or directory CHECK-NEXT: Opening
+// [[PARENTPATH]]/first_tool.so... Success. CHECK-NEXT: Searching for
+// ompt_start_tool in CHECK-SAME: [[PARENTPATH]]/first_tool.so... Failed:
+// CHECK-SAME: {{.*/first_tool.so: undefined symbol: ompt_start_tool|ld.so.1:
+// .*: ompt_start_tool: can't find symbol}} CHECK-NEXT: Opening
+// [[PARENTPATH]]/second_tool.so... Success. CHECK-NEXT: Searching for
+// ompt_start_tool in CHECK-SAME: [[PARENTPATH]]/second_tool.so... 0: Do not
+// initialize tool CHECK-NEXT: Found but not using the OMPT interface.
 // CHECK-NEXT: Continuing search...
 // CHECK-NEXT: Opening [[PARENTPATH]]/third_tool.so... Success.
 // CHECK-NEXT: Searching for ompt_start_tool in
@@ -54,23 +55,20 @@
 // CHECK-DAG: {{^}}0: control_tool()=-1
 // CHECK: {{^}}0: Tool finalized
 
-
 #ifdef CODE
 #include "stdio.h"
 #include "omp.h"
 #include "omp-tools.h"
 
-int main()
-{
-  #pragma omp parallel num_threads(2)
+int main() {
+#pragma omp parallel num_threads(2)
   {
-    #pragma omp master
+#pragma omp master
     {
       int result = omp_control_tool(omp_control_tool_start, 0, NULL);
       printf("0: control_tool()=%d\n", result);
     }
   }
-
 
   return 0;
 }
@@ -84,10 +82,8 @@ int main()
 
 #ifdef SECOND_TOOL
 // The second tool has an implementation of ompt_start_tool that returns NULL
-ompt_start_tool_result_t* ompt_start_tool(
-  unsigned int omp_version,
-  const char *runtime_version)
-{
+ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
+                                          const char *runtime_version) {
   printf("0: Do not initialize tool\n");
   return NULL;
 }
@@ -95,33 +91,28 @@ ompt_start_tool_result_t* ompt_start_tool(
 // The third tool has an implementation of ompt_start_tool that returns a
 // pointer to a valid instance of ompt_start_tool_result_t
 
-static void
-on_ompt_callback_thread_begin(
-  ompt_thread_t thread_type,
-  ompt_data_t *thread_data)
-{
+static void on_ompt_callback_thread_begin(ompt_thread_t thread_type,
+                                          ompt_data_t *thread_data) {
   printf("0: ompt_event_thread_begin\n");
 }
 
 int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
                     ompt_data_t *tool_data) {
-  ompt_set_callback_t ompt_set_callback = (ompt_set_callback_t) lookup("ompt_set_callback");
-  ompt_set_callback(ompt_callback_thread_begin, (ompt_callback_t)on_ompt_callback_thread_begin);
+  ompt_set_callback_t ompt_set_callback =
+      (ompt_set_callback_t)lookup("ompt_set_callback");
+  ompt_set_callback(ompt_callback_thread_begin,
+                    (ompt_callback_t)on_ompt_callback_thread_begin);
   printf("0: Tool initialized\n");
   return 1;
 }
 
-void ompt_finalize(ompt_data_t *tool_data)
-{
-  printf("0: Tool finalized\n");
-}
+void ompt_finalize(ompt_data_t *tool_data) { printf("0: Tool finalized\n"); }
 
-ompt_start_tool_result_t* ompt_start_tool(
-  unsigned int omp_version,
-  const char *runtime_version)
-{
+ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
+                                          const char *runtime_version) {
   printf("0: Do initialize tool\n");
-  static ompt_start_tool_result_t ompt_start_tool_result = {&ompt_initialize,&ompt_finalize, 0};
+  static ompt_start_tool_result_t ompt_start_tool_result = {&ompt_initialize,
+                                                            &ompt_finalize, 0};
   return &ompt_start_tool_result;
 }
 #endif

@@ -40,6 +40,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <list>
 #include <memory>
@@ -368,7 +369,8 @@ LLVM_ABI bool needsComdatForCounter(const GlobalObject &GV, const Module &M);
 /// InstrProf.h:getInstrProfNameSeparator). This method decodes the string and
 /// calls `NameCallback` for each substring.
 LLVM_ABI Error readAndDecodeStrings(
-    StringRef NameStrings, std::function<Error(StringRef)> NameCallback);
+    StringRef NameStrings, std::function<Error(StringRef)> NameCallback, StringRef ObjectFilename = "");
+
 
 /// An enum describing the attributes of an instrumented profile.
 enum class InstrProfKind {
@@ -512,7 +514,14 @@ public:
   // FIXME: Unify this with `FunctionSamples::getCanonicalFnName`.
   LLVM_ABI static StringRef getCanonicalName(StringRef PGOName);
 
+  StringRef getObjectFilename() {return ObjectFilename;}
+  void setObjectFilename(StringRef ObjectFilename) {this->ObjectFilename = ObjectFilename;}
+  StringRef getArchitecture() {return Architecture;}
+  void setArchitecture(StringRef Architecture) {this->Architecture = Architecture;}
+
 private:
+  StringRef ObjectFilename;
+  StringRef Architecture;
   using AddrIntervalMap =
       IntervalMap<uint64_t, uint64_t, 4, IntervalMapHalfOpenInfo<uint64_t>>;
   StringRef Data;
@@ -544,7 +553,6 @@ private:
   // This map is only populated and used by raw instr profile reader.
   AddrIntervalMap VTableAddrMap;
   bool Sorted = false;
-
   static StringRef getExternalSymbol() { return "** External Symbol **"; }
 
   // Add the function into the symbol table, by creating the following
@@ -635,10 +643,19 @@ public:
 
     // Insert into NameTab so that MD5NameMap (a vector that will be sorted)
     // won't have duplicated entries in the first place.
+
+    uint64_t HashValue = IndexedInstrProf::ComputeHash(SymbolName);
+    std::string HashStr(std::to_string(HashValue));
+    // if ObjectFilename is not empty from the --object-aware-hashing flag, add
+    // ObjectFilename to hash context
+    if(!ObjectFilename.empty()){
+      std::string CombinedStr = HashStr + ":" + ObjectFilename.str();
+      StringRef HashRef = CombinedStr;
+      HashValue = IndexedInstrProf::ComputeHash(HashRef);
+    }
     auto Ins = NameTab.insert(SymbolName);
     if (Ins.second) {
-      MD5NameMap.push_back(std::make_pair(
-          IndexedInstrProf::ComputeHash(SymbolName), Ins.first->getKey()));
+      MD5NameMap.push_back(std::make_pair(HashValue, Ins.first->getKey()));
       Sorted = false;
     }
     return Error::success();
@@ -767,9 +784,14 @@ StringRef InstrProfSymtab::getFuncOrVarNameIfDefined(uint64_t MD5Hash) {
 
 StringRef InstrProfSymtab::getFuncOrVarName(uint64_t MD5Hash) {
   finalizeSymtab();
-  auto Result = llvm::lower_bound(MD5NameMap, MD5Hash,
-                                  [](const std::pair<uint64_t, StringRef> &LHS,
-                                     uint64_t RHS) { return LHS.first < RHS; });
+  std::string TempMD5HashStr = std::to_string(MD5Hash);
+  if(!ObjectFilename.empty()){
+    std::string CombinedHashStr = TempMD5HashStr + ":" + ObjectFilename.str();
+    llvm::StringRef CombinedHashRef(CombinedHashStr);
+    MD5Hash = IndexedInstrProf::ComputeHash(CombinedHashRef);
+  }
+  auto Result = llvm::lower_bound(MD5NameMap, MD5Hash, [](const std::pair<uint64_t, StringRef> &LHS, uint64_t RHS) { return LHS.first < RHS; });
+
   if (Result != MD5NameMap.end() && Result->first == MD5Hash)
     return Result->second;
   return StringRef();
@@ -1047,6 +1069,7 @@ private:
 struct NamedInstrProfRecord : InstrProfRecord {
   StringRef Name;
   uint64_t Hash;
+  StringRef Filename;
 
   // We reserve this bit as the flag for context sensitive profile record.
   static const int CS_FLAG_IN_FUNC_HASH = 60;

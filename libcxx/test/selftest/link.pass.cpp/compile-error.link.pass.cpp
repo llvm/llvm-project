@@ -10,7 +10,7 @@
 
 // Make sure the test DOES NOT pass if it fails at compile-time.
 
-struct Foo { };
+struct Foo {};
 typedef Foo::x x;
 
 int main(int, char**) { return 0; }

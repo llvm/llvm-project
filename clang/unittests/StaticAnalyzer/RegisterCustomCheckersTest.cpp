@@ -128,14 +128,14 @@ void addCheckerRegistrationOrderPrinter(CheckerRegistry &Registry) {
     void checkPreStmt(const DeclStmt *DS, CheckerContext &C) const {}          \
   };                                                                           \
                                                                                \
-  void register##CHECKER_NAME(CheckerManager &mgr) {                           \
+  void register##CHECKER_NAME(CheckerManager & mgr) {                          \
     mgr.registerChecker<CHECKER_NAME>();                                       \
   }                                                                            \
                                                                                \
   bool shouldRegister##CHECKER_NAME(const CheckerManager &mgr) {               \
     return true;                                                               \
   }                                                                            \
-  void add##CHECKER_NAME(CheckerRegistry &Registry) {                          \
+  void add##CHECKER_NAME(CheckerRegistry & Registry) {                         \
     Registry.addChecker(register##CHECKER_NAME, shouldRegister##CHECKER_NAME,  \
                         "test." #CHECKER_NAME, "Description");                 \
   }
