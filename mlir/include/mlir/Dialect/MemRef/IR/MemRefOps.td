@@ -1351,7 +1351,11 @@ def MemRef_PrefetchOp : MemRef_Op<"prefetch"> {
     instruction cache.
   }];
 
-  let arguments = (ins AnyMemRef:$memref, Variadic<Index>:$indices,
+  // The memref argument is labeled with a MemWrite side effect to enforce a
+  // relative ordering of the prefetch and other memory operations targeting
+  // that memory stream.
+  let arguments = (ins Arg<AnyMemRef, "prefetch address", [MemWrite]> :$memref,
+                       Variadic<Index>:$indices,
                        BoolAttr:$isWrite,
                        ConfinedAttr<I32Attr, [IntMinValue<0>,
                                           IntMaxValue<3>]>:$localityHint,
