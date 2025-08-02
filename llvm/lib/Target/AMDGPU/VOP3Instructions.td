@@ -1726,6 +1726,12 @@ multiclass VOP3CvtScaleSelInst<string OpName, VOPProfile P, SDPatternOperator no
    }
 }
 
+let HasExtVOP3DPP = 0, HasModifiers = 0 in {
+def VOP3_V2I32_I32_I32_V2I32 : VOP3_Profile<VOPProfile<[v2i32, i32, i32, v2i32]>>;
+def VOP3_V3I32_I32_I64_V2I32 : VOP3_Profile<VOPProfile<[v3i32, i32, i64, v2i32]>>;
+def VOP3_V4I32_I64_I64_V2I32 : VOP3_Profile<VOPProfile<[v4i32, i64, i64, v2i32]>>;
+}
+
 let Src0RC64 = VSrc_NoInline_v2f16 in {
 def VOP3_CVT_PK_F8_F16_Profile : VOP3_Profile<VOP_I16_V2F16>;
 def VOP3_CVT_PK_F8_F16_True16_Profile : VOP3_Profile_True16<VOP3_CVT_PK_F8_F16_Profile>;
@@ -1813,6 +1819,12 @@ let SubtargetPredicate = isGFX1250Plus in {
     def : Cvt_SR_F8_ByteSel_Pat<int_amdgcn_cvt_sr_bf8_f16, V_CVT_SR_BF8_F16_fake16_e64, f16>;
   }
 } // End SubtargetPredicate = isGFX1250Plus
+
+let SubtargetPredicate = HasTensorCvtLutInsts in {
+  defm V_PERM_PK16_B4_U4 : VOP3Inst<"v_perm_pk16_b4_u4", VOP3_V2I32_I32_I32_V2I32, int_amdgcn_perm_pk16_b4_u4>;
+  defm V_PERM_PK16_B6_U4 : VOP3Inst<"v_perm_pk16_b6_u4", VOP3_V3I32_I32_I64_V2I32, int_amdgcn_perm_pk16_b6_u4>;
+  defm V_PERM_PK16_B8_U4 : VOP3Inst<"v_perm_pk16_b8_u4", VOP3_V4I32_I64_I64_V2I32, int_amdgcn_perm_pk16_b8_u4>;
+} // End SubtargetPredicate = HasTensorCvtLutInsts
 
 class Cvt_Scale_Sr_F32ToBF16F16_Pat<SDPatternOperator node, VOP3_Pseudo inst, ValueType DstTy> : GCNPat<
     (DstTy (node DstTy:$vdst_in, f32:$src0, i32:$src1, timm:$word_sel)),
@@ -2212,6 +2224,9 @@ let AssemblerPredicate = isGFX11Plus in {
 }
 
 // These instructions differ from GFX12 variant by supporting DPP:
+defm V_PERM_PK16_B4_U4               : VOP3Only_Real_Base_gfx1250<0x23f>;
+defm V_PERM_PK16_B6_U4               : VOP3Only_Real_Base_gfx1250<0x242>;
+defm V_PERM_PK16_B8_U4               : VOP3Only_Real_Base_gfx1250<0x243>;
 defm V_LSHL_ADD_U64                  : VOP3Only_Realtriple_gfx1250<0x252>;
 defm V_ASHR_PK_I8_I32                : VOP3Only_Realtriple_gfx1250<0x290>;
 defm V_ASHR_PK_U8_I32                : VOP3Only_Realtriple_gfx1250<0x291>;

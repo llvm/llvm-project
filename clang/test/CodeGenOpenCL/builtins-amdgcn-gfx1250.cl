@@ -1070,6 +1070,61 @@ void test_permlane_idx_gen(global uint* out, uint src0, uint src1) {
   *out = __builtin_amdgcn_permlane_idx_gen(src0, src1);
 }
 
+// CHECK-LABEL: @test_perm_pk(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[A32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[A64_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[B32_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[B64_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-NEXT:    [[C_ADDR:%.*]] = alloca <2 x i32>, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT2_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT3_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[OUT4_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[A32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A32_ADDR]] to ptr
+// CHECK-NEXT:    [[A64_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[A64_ADDR]] to ptr
+// CHECK-NEXT:    [[B32_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B32_ADDR]] to ptr
+// CHECK-NEXT:    [[B64_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B64_ADDR]] to ptr
+// CHECK-NEXT:    [[C_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[C_ADDR]] to ptr
+// CHECK-NEXT:    [[OUT2_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT2_ADDR]] to ptr
+// CHECK-NEXT:    [[OUT3_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT3_ADDR]] to ptr
+// CHECK-NEXT:    [[OUT4_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[OUT4_ADDR]] to ptr
+// CHECK-NEXT:    store i32 [[A32:%.*]], ptr [[A32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[A64:%.*]], ptr [[A64_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[B32:%.*]], ptr [[B32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store i32 [[B64:%.*]], ptr [[B64_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    store <2 x i32> [[C:%.*]], ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[OUT2:%.*]], ptr [[OUT2_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[OUT3:%.*]], ptr [[OUT3_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store ptr [[OUT4:%.*]], ptr [[OUT4_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.amdgcn.perm.pk16.b4.u4(i32 [[TMP0]], i32 [[TMP1]], <2 x i32> [[TMP2]])
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[OUT2_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[TMP4]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A32_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[B64_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[TMP6]] to i64
+// CHECK-NEXT:    [[TMP7:%.*]] = load <2 x i32>, ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP8:%.*]] = call <3 x i32> @llvm.amdgcn.perm.pk16.b6.u4(i32 [[TMP5]], i64 [[CONV]], <2 x i32> [[TMP7]])
+// CHECK-NEXT:    [[TMP9:%.*]] = load ptr, ptr [[OUT3_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <3 x i32> [[TMP8]], ptr [[TMP9]], align 16
+// CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[A64_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[TMP10]] to i64
+// CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[B64_ADDR_ASCAST]], align 4
+// CHECK-NEXT:    [[CONV2:%.*]] = zext i32 [[TMP11]] to i64
+// CHECK-NEXT:    [[TMP12:%.*]] = load <2 x i32>, ptr [[C_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP13:%.*]] = call <4 x i32> @llvm.amdgcn.perm.pk16.b8.u4(i64 [[CONV1]], i64 [[CONV2]], <2 x i32> [[TMP12]])
+// CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[OUT4_ADDR_ASCAST]], align 8
+// CHECK-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP14]], align 16
+// CHECK-NEXT:    ret void
+//
+void test_perm_pk(uint a32, uint a64, uint b32, uint b64, uint2 c, uint2 *out2, uint3 *out3, uint4 *out4) {
+  *out2 = __builtin_amdgcn_perm_pk16_b4_u4(a32, b32, c);
+  *out3 = __builtin_amdgcn_perm_pk16_b6_u4(a32, b64, c);
+  *out4 = __builtin_amdgcn_perm_pk16_b8_u4(a64, b64, c);
+}
+
 // CHECK-LABEL: @test_prefetch(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[FPTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
