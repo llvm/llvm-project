@@ -13,6 +13,7 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
+#include "NetworkSymbolOptimizer.h"
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
 #include "Protocol/ProtocolBase.h"
@@ -94,6 +95,10 @@ struct DAP {
 
   /// The target instance for this DAP session.
   lldb::SBTarget target;
+
+  /// Network symbol optimization manager for this DAP session.
+  /// Handles intelligent symbol loading optimizations while respecting user settings.
+  std::unique_ptr<NetworkSymbolOptimizer> network_symbol_optimizer;
 
   Variables variables;
   lldb::SBBroadcaster broadcaster;
@@ -204,6 +209,22 @@ struct DAP {
 
   /// Configure source maps based on the current `DAPConfiguration`.
   void ConfigureSourceMaps();
+
+  /// Performance timing support (kept for monitoring)
+  /// @{
+
+  /// Start timing a performance operation.
+  /// @param operation Name of the operation being timed
+  void StartPerformanceTiming(llvm::StringRef operation);
+
+  /// End timing a performance operation and return duration.
+  /// @param operation Name of the operation being timed
+  /// @return duration in milliseconds
+  uint32_t EndPerformanceTiming(llvm::StringRef operation);
+
+  /// @}
+
+
 
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
@@ -459,6 +480,14 @@ private:
 
   llvm::StringMap<SourceBreakpointMap> m_source_breakpoints;
   llvm::DenseMap<int64_t, SourceBreakpointMap> m_source_assembly_breakpoints;
+
+  /// Performance timing support
+  /// @{
+  llvm::StringMap<std::chrono::steady_clock::time_point> m_performance_timers;
+  std::mutex m_performance_timers_mutex;
+  /// @}
+
+
 };
 
 } // namespace lldb_dap

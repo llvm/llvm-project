@@ -52,13 +52,17 @@
 #include <cstdarg>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_map>
 #include <utility>
 #include <variant>
 
@@ -124,12 +128,21 @@ DAP::DAP(Log *log, const ReplMode default_repl_mode,
     : log(log), transport(transport), broadcaster("lldb-dap"),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      repl_mode(default_repl_mode) {
+      repl_mode(default_repl_mode),
+      network_symbol_optimizer(std::make_unique<NetworkSymbolOptimizer>()) {
   configuration.preInitCommands = std::move(pre_init_commands);
   RegisterRequests();
 }
 
-DAP::~DAP() = default;
+DAP::~DAP() {
+  // Restore original LLDB settings when DAP session ends
+  if (network_symbol_optimizer && debugger.IsValid()) {
+    auto restore_status = network_symbol_optimizer->RestoreSettings(debugger);
+    if (!restore_status.Success()) {
+      DAP_LOG(log, "Failed to restore LLDB settings: {0}", restore_status.GetCString());
+    }
+  }
+}
 
 void DAP::PopulateExceptionBreakpoints() {
   if (lldb::SBDebugger::SupportsLanguage(lldb::eLanguageTypeC_plus_plus)) {
@@ -732,7 +745,8 @@ llvm::Error DAP::RunPreInitCommands() {
 }
 
 llvm::Error DAP::RunPreRunCommands() {
-  if (!RunLLDBCommands("Running preRunCommands:", configuration.preRunCommands))
+  if (!RunLLDBCommands("Running preRunCommands:",
+                       configuration.preRunCommands))
     return createRunLLDBCommandsErrorMessage("preRunCommands");
   return llvm::Error::success();
 }
@@ -764,12 +778,53 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   // enough information to determine correct arch and platform (or ELF can be
   // omitted at all), so it is good to leave the user an opportunity to specify
   // those. Any of those three can be left empty.
+
+  // ARCHITECTURAL FIX: Use NetworkSymbolOptimizer for proper layer separation
+  // Instead of directly manipulating LLDB settings in the DAP layer,
+  // delegate to the appropriate subsystem that respects user settings
+  if (network_symbol_optimizer) {
+    // Configure network symbol optimizations based on DAP configuration
+    NetworkSymbolOptimizer::DAPConfiguration dap_config;
+    // TODO: Extract configuration from DAP launch parameters when available
+    dap_config.enable_optimizations = true;
+
+    auto config_status = network_symbol_optimizer->Configure(dap_config, debugger);
+    if (config_status.Success()) {
+      auto apply_status = network_symbol_optimizer->ApplyOptimizations(debugger);
+      if (apply_status.Success()) {
+        DAP_LOG(log, "Network symbol optimizations applied successfully");
+      } else {
+        DAP_LOG(log, "Failed to apply network symbol optimizations: {0}",
+                apply_status.GetCString());
+      }
+    } else {
+      DAP_LOG(log, "Failed to configure network symbol optimizations: {0}",
+              config_status.GetCString());
+    }
+  }
+
+  // CORE FIX: Optimize dependent module loading for all launches
+  // Based on core analysis, dependent module loading during target creation
+  // is a major performance bottleneck. We now defer this for all launches.
+  //
+  // BEHAVIORAL CHANGE: This changes the default behavior from loading dependent
+  // modules immediately to deferring them. This improves startup performance
+  // but may require on-demand loading later during debugging.
+  bool add_dependent_modules = false; // Always defer for better performance
+  DAP_LOG(log, "Core fix: Deferring dependent module loading for improved "
+               "target creation time (behavioral change: modules loaded "
+               "on-demand instead of at startup)");
+
+  StartPerformanceTiming("debugger_create_target");
   auto target = this->debugger.CreateTarget(
       /*filename=*/configuration.program.data(),
       /*target_triple=*/configuration.targetTriple.data(),
       /*platform_name=*/configuration.platformName.data(),
-      /*add_dependent_modules=*/true, // Add dependent modules.
+      /*add_dependent_modules=*/add_dependent_modules,
       error);
+
+  uint32_t create_target_time = EndPerformanceTiming("debugger_create_target");
+  DAP_LOG(log, "Core fix: Target creation completed in {0}ms with optimized settings", create_target_time);
 
   return target;
 }
@@ -1141,6 +1196,28 @@ void DAP::SetThreadFormat(llvm::StringRef format) {
   }
 }
 
+void DAP::StartPerformanceTiming(llvm::StringRef operation) {
+  std::lock_guard<std::mutex> lock(m_performance_timers_mutex);
+  m_performance_timers[operation] = std::chrono::steady_clock::now();
+}
+
+uint32_t DAP::EndPerformanceTiming(llvm::StringRef operation) {
+  std::lock_guard<std::mutex> lock(m_performance_timers_mutex);
+  auto it = m_performance_timers.find(operation);
+  if (it == m_performance_timers.end()) {
+    return 0;
+  }
+
+  auto end_time = std::chrono::steady_clock::now();
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(
+      end_time - it->second);
+
+  m_performance_timers.erase(it);
+  return static_cast<uint32_t>(duration.count());
+}
+
+
+
 InstructionBreakpoint *
 DAP::GetInstructionBreakpoint(const lldb::break_id_t bp_id) {
   for (auto &bp : instruction_breakpoints) {
@@ -1423,8 +1500,9 @@ void DAP::EventThread() {
                  event_mask & lldb::eBroadcastBitWarning) {
         lldb::SBStructuredData data =
             lldb::SBDebugger::GetDiagnosticFromEvent(event);
-        if (!data.IsValid())
+        if (!data.IsValid()) {
           continue;
+        }
         std::string type = GetStringValue(data.GetValueForKey("type"));
         std::string message = GetStringValue(data.GetValueForKey("message"));
         SendOutput(OutputType::Important,

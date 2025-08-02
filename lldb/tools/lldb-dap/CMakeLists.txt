@@ -19,6 +19,7 @@ add_lldb_library(lldbDAP
   InstructionBreakpoint.cpp
   JSONUtils.cpp
   LLDBUtils.cpp
+  NetworkSymbolOptimizer.cpp
   OutputRedirector.cpp
   ProgressEvent.cpp
   ProtocolUtils.cpp
