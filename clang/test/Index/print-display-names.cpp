@@ -11,12 +11,14 @@ template<typename T>
 void g(ClassTmpl<T, T>);
 
 template<> void g<int>(ClassTmpl<int, int>);
+extern template void g<char>(ClassTmpl<char, char>);
 
 // RUN: c-index-test -test-load-source all-display %s | FileCheck %s --check-prefix=DISPLAY_NAME
 // DISPLAY_NAME: print-display-names.cpp:2:7: ClassTemplate=ClassTmpl<T, typename>:2:7
 // DISPLAY_NAME: print-display-names.cpp:6:16: ClassDecl=ClassTmpl<Integer, Integer>:6:16 (Definition)
 // DISPLAY_NAME: print-display-names.cpp:8:6: FunctionDecl=f(ClassTmpl<float, Integer>):8:6
 // DISPLAY_NAME: print-display-names.cpp:11:6: FunctionTemplate=g(ClassTmpl<T, T>):11:6
+// DISPLAY_NAME: print-display-names.cpp:11:6: FunctionDecl=g<>(ClassTmpl<char, char>):11:6 [Specialization of g:11:6] [Template arg 0: kind: 1, type: char] Extent=[11:1 - 11:24]
 // DISPLAY_NAME: print-display-names.cpp:13:17: FunctionDecl=g<>(ClassTmpl<int, int>):13:17 [Specialization of g:11:6]
 
 // RUN: env CINDEXTEST_PRINTINGPOLICY_TERSEOUTPUT=1 c-index-test -test-load-source all-pretty %s | FileCheck %s --check-prefix=PRETTY
@@ -27,5 +29,6 @@ template<> void g<int>(ClassTmpl<int, int>);
 // PRETTY: print-display-names.cpp:8:34: ParmDecl=ClassTmpl<float, Integer> p:8:34 (Definition) Extent=[8:8 - 8:35]
 // PRETTY: print-display-names.cpp:11:6: FunctionTemplate=template <typename T> void g(ClassTmpl<T, T>):11:6 Extent=[10:1 - 11:24]
 // PRETTY: print-display-names.cpp:11:23: ParmDecl=ClassTmpl<T, T>:11:23 (Definition) Extent=[11:8 - 11:23]
+// PRETTY: print-display-names.cpp:11:6: FunctionDecl=template<> void g<char>(ClassTmpl<char, char>):11:6 [Specialization of g:11:6] [Template arg 0: kind: 1, type: char] Extent=[11:1 - 11:24]
 // PRETTY: print-display-names.cpp:13:17: FunctionDecl=template<> void g<int>(ClassTmpl<int, int>):13:17 [Specialization of g:11:6] [Template arg 0: kind: 1, type: int] Extent=[13:1 - 13:44]
 // PRETTY: print-display-names.cpp:13:43: ParmDecl=ClassTmpl<int, int>:13:43 (Definition) Extent=[13:24 - 13:43]
