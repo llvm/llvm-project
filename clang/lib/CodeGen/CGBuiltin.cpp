@@ -4511,6 +4511,19 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitArgCheck(TCK_Load, Src, E->getArg(1), 1);
     auto *I = Builder.CreateMemMove(Dest, Src, SizeVal, false);
     addInstToNewSourceAtom(I, nullptr);
+    if (BuiltinIDIfNoAsmLabel == Builtin::BI__builtin_trivially_relocate) {
+      std::vector<PFPField> PFPFields;
+      getContext().findPFPFields(E->getArg(0)->getType()->getPointeeType(),
+                                 CharUnits::Zero(), PFPFields, true);
+      for (auto &Field : PFPFields) {
+        if (getContext().arePFPFieldsTriviallyRelocatable(
+                Field.field->getParent()))
+          continue;
+        auto DestFieldPtr = EmitAddressOfPFPField(Dest, Field);
+        auto SrcFieldPtr = EmitAddressOfPFPField(Src, Field);
+        Builder.CreateStore(Builder.CreateLoad(SrcFieldPtr), DestFieldPtr);
+      }
+    }
     return RValue::get(Dest, *this);
   }
   case Builtin::BImemset:
