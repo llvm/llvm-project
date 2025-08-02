@@ -6482,8 +6482,8 @@ SDValue TargetLowering::buildSDIVPow2WithCMov(
   Created.push_back(CMov.getNode());
 
   // Divide by pow2.
-  SDValue SRA =
-      DAG.getNode(ISD::SRA, DL, VT, CMov, DAG.getConstant(Lg2, DL, VT));
+  SDValue SRA = DAG.getNode(ISD::SRA, DL, VT, CMov,
+                            DAG.getShiftAmountConstant(Lg2, VT, DL));
 
   // If we're dividing by a positive value, we're done.  Otherwise, we must
   // negate the result.
@@ -9471,7 +9471,7 @@ SDValue TargetLowering::CTTZTableLookup(SDNode *Node, SelectionDAG &DAG,
       ISD::SRL, DL, VT,
       DAG.getNode(ISD::MUL, DL, VT, DAG.getNode(ISD::AND, DL, VT, Op, Neg),
                   DAG.getConstant(DeBruijn, DL, VT)),
-      DAG.getConstant(ShiftAmt, DL, VT));
+      DAG.getShiftAmountConstant(ShiftAmt, VT, DL));
   Lookup = DAG.getSExtOrTrunc(Lookup, DL, getPointerTy(TD));
 
   SmallVector<uint8_t> Table(BitWidth, 0);

@@ -11,7 +11,7 @@ struct S {
 };
 
 void f1(struct S);
-void f2() {
+void f2(void) {
   struct S s;
   f1(s);
 }
@@ -28,8 +28,8 @@ void f2() {
 // OGCG:         %[[S:.+]] = load i64, ptr %{{.+}}, align 4
 // OGCG-NEXT:    call void @f1(i64 %[[S]])
 
-struct S f3();
-void f4() {
+struct S f3(void);
+void f4(void) {
   struct S s = f3();
 }
 
@@ -38,11 +38,11 @@ void f4() {
 // CIR-NEXT:    cir.store align(4) %[[S]], %{{.+}} : !rec_S, !cir.ptr<!rec_S>
 
 // LLVM-LABEL: define{{.*}} void @f4() {
-// LLVM:         %[[S:.+]] = call %struct.S (...) @f3()
+// LLVM:         %[[S:.+]] = call %struct.S @f3()
 // LLVM-NEXT:    store %struct.S %[[S]], ptr %{{.+}}, align 4
 
 // OGCG-LABEL: define{{.*}} void @f4() #0 {
-// OGCG:         %[[S:.+]] = call i64 (...) @f3()
+// OGCG:         %[[S:.+]] = call i64 @f3()
 // OGCG-NEXT:    store i64 %[[S]], ptr %{{.+}}, align 4
 
 struct Big {
@@ -50,9 +50,9 @@ struct Big {
 };
 
 void f5(struct Big);
-struct Big f6();
+struct Big f6(void);
 
-void f7() {
+void f7(void) {
   struct Big b;
   f5(b);
 }
@@ -69,7 +69,7 @@ void f7() {
 // OGCG:         %[[B:.+]] = alloca %struct.Big, align 8
 // OGCG-NEXT:    call void @f5(ptr noundef byval(%struct.Big) align 8 %[[B]])
 
-void f8() {
+void f8(void) {
   struct Big b = f6();
 }
 
@@ -78,14 +78,14 @@ void f8() {
 // CIR:         cir.store align(4) %[[B]], %{{.+}} : !rec_Big, !cir.ptr<!rec_Big>
 
 // LLVM-LABEL: define{{.*}} void @f8() {
-// LLVM:        %[[B:.+]] = call %struct.Big (...) @f6()
+// LLVM:        %[[B:.+]] = call %struct.Big @f6()
 // LLVM-NEXT:   store %struct.Big %[[B]], ptr %{{.+}}, align 4
 
 // OGCG-LABEL: define{{.*}} void @f8() #0 {
 // OGCG:         %[[B:.+]] = alloca %struct.Big, align 4
-// OGCG-NEXT:    call void (ptr, ...) @f6(ptr dead_on_unwind writable sret(%struct.Big) align 4 %[[B]])
+// OGCG-NEXT:    call void @f6(ptr dead_on_unwind writable sret(%struct.Big) align 4 %[[B]])
 
-void f9() {
+void f9(void) {
   f1(f3());
 }
 
@@ -98,14 +98,14 @@ void f9() {
 
 // LLVM-LABEL: define{{.*}} void @f9() {
 // LLVM:         %[[SLOT:.+]] = alloca %struct.S, i64 1, align 4
-// LLVM-NEXT:    %[[RET:.+]] = call %struct.S (...) @f3()
+// LLVM-NEXT:    %[[RET:.+]] = call %struct.S @f3()
 // LLVM-NEXT:    store %struct.S %[[RET]], ptr %[[SLOT]], align 4
 // LLVM-NEXT:    %[[ARG:.+]] = load %struct.S, ptr %[[SLOT]], align 4
 // LLVM-NEXT:    call void @f1(%struct.S %[[ARG]])
 
 // OGCG-LABEL: define{{.*}} void @f9() #0 {
 // OGCG:         %[[SLOT:.+]] = alloca %struct.S, align 4
-// OGCG-NEXT:    %[[RET:.+]] = call i64 (...) @f3()
+// OGCG-NEXT:    %[[RET:.+]] = call i64 @f3()
 // OGCG-NEXT:    store i64 %[[RET]], ptr %[[SLOT]], align 4
 // OGCG-NEXT:    %[[ARG:.+]] = load i64, ptr %[[SLOT]], align 4
 // OGCG-NEXT:    call void @f1(i64 %[[ARG]])

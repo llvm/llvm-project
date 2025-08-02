@@ -927,7 +927,7 @@ public:
   ///
   ///\param[in] E - A non-null external sema source.
   ///
-  void addExternalSource(ExternalSemaSource *E);
+  void addExternalSource(IntrusiveRefCntPtr<ExternalSemaSource> E);
 
   /// Print out statistics about the semantic analysis.
   void PrintStats() const;
@@ -9944,6 +9944,20 @@ private:
   void PopImplicitGlobalModuleFragment();
 
   VisibleModuleSet VisibleModules;
+
+  /// Whether we had imported any named modules.
+  bool HadImportedNamedModules = false;
+  /// The set of instantiations we need to check if they references TU-local
+  /// entity from TUs. This only makes sense if we imported any named modules.
+  llvm::SmallVector<std::pair<FunctionDecl *, SourceLocation>>
+      PendingCheckReferenceForTULocal;
+  /// Implement [basic.link]p18, which requires that we can't use TU-local
+  /// entities from other TUs (ignoring header units).
+  void checkReferenceToTULocalFromOtherTU(FunctionDecl *FD,
+                                          SourceLocation PointOfInstantiation);
+  /// Implement [basic.link]p17, which diagnose for non TU local exposure in
+  /// module interface or module partition.
+  void checkExposure(const TranslationUnitDecl *TU);
 
   ///@}
 
