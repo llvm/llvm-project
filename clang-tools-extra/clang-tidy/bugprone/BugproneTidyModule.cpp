@@ -73,6 +73,7 @@
 #include "StringIntegerAssignmentCheck.h"
 #include "StringLiteralWithEmbeddedNulCheck.h"
 #include "StringviewNullptrCheck.h"
+#include "SuspiciousCopyInRangeLoopCheck.h"
 #include "SuspiciousEnumUsageCheck.h"
 #include "SuspiciousIncludeCheck.h"
 #include "SuspiciousMemoryComparisonCheck.h"
@@ -153,6 +154,8 @@ public:
         "bugprone-incorrect-enable-if");
     CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
         "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<SuspiciousCopyInRangeLoopCheck>(
+        "bugprone-suspicious-copy-in-range-loop");
     CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
         "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
