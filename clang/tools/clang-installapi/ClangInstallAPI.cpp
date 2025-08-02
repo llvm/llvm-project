@@ -89,8 +89,9 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
   auto InMemoryFileSystem =
       llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   OverlayFileSystem->pushOverlay(InMemoryFileSystem);
-  IntrusiveRefCntPtr<clang::FileManager> FM(
-      new FileManager(clang::FileSystemOptions(), OverlayFileSystem));
+  IntrusiveRefCntPtr<clang::FileManager> FM =
+      llvm::makeIntrusiveRefCnt<FileManager>(clang::FileSystemOptions(),
+                                             OverlayFileSystem);
 
   // Capture all options and diagnose any errors.
   Options Opts(*Diag, FM.get(), Args, ProgName);
@@ -113,7 +114,7 @@ static bool run(ArrayRef<const char *> Args, const char *ProgName) {
 
   // Set up compilation.
   std::unique_ptr<CompilerInstance> CI(new CompilerInstance());
-  CI->setFileManager(FM.get());
+  CI->setFileManager(FM);
   CI->createDiagnostics(FM->getVirtualFileSystem());
   if (!CI->hasDiagnostics())
     return EXIT_FAILURE;
