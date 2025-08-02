@@ -43,7 +43,11 @@ class EmitC_UnaryOp<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // If operand is fundamental type, the operation is pure.
+      if (isFundamentalType(getOperand().getType())) {
+        return false;
+      }
+      return true;
     }
   }];
 }
@@ -57,7 +61,18 @@ class EmitC_BinaryOp<string mnemonic, list<Trait> traits = []> :
 
   let extraClassDeclaration = [{
     bool hasSideEffects() {
-      return false;
+      // If both operands are fundamental types, the operation is pure.
+      if (isFundamentalType(getOperand(0).getType()) 
+          && isFundamentalType(getOperand(1).getType())) {
+        return false;
+      }
+      // Pointer arithmetic operations is pure.
+      if (isa<emitc::PointerType>(getOperand(0).getType()) 
+          && (isFundamentalType(getOperand(1).getType()) ||
+              isa<emitc::PointerType>(getOperand(1).getType()))) {
+        return false;
+      }
+      return true;
     }
   }];
 }
