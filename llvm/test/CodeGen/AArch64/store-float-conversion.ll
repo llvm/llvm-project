@@ -27,6 +27,20 @@ entry:
   ret void
 }
 
+define ptr @f32_to_s8_inc(float %f, ptr %dst) {
+; CHECK-LABEL: f32_to_s8_inc:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    st1 { v0.b }[0], [x0], #1
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi float %f to i32
+  %trunc = trunc i32 %conv to i8
+  %next = getelementptr i8, ptr %dst, i64 1
+  store i8 %trunc, ptr %dst
+  ret ptr %next
+}
+
 define void @f32_to_u16(float %f, ptr %dst) {
 ; CHECK-LABEL: f32_to_u16:
 ; CHECK:       // %bb.0: // %entry
@@ -53,6 +67,20 @@ entry:
   ret void
 }
 
+define ptr @f32_to_s16_inc(float %f, ptr %dst) {
+; CHECK-LABEL: f32_to_s16_inc:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    st1 { v0.h }[0], [x0], #2
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi float %f to i32
+  %trunc = trunc i32 %conv to i16
+  %next = getelementptr i16, ptr %dst, i64 1
+  store i16 %trunc, ptr %dst
+  ret ptr %next
+}
+
 define void @f32_to_u32(float %f, ptr %dst) {
 ; CHECK-LABEL: f32_to_u32:
 ; CHECK:       // %bb.0: // %entry
@@ -75,6 +103,19 @@ entry:
   %conv = fptosi float %f to i32
   store i32 %conv, ptr %dst
   ret void
+}
+
+define ptr @f32_to_s32_inc(float %f, ptr %dst) {
+; CHECK-LABEL: f32_to_s32_inc:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs s0, s0
+; CHECK-NEXT:    st1 { v0.s }[0], [x0], #4
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi float %f to i32
+  %next = getelementptr i32, ptr %dst, i64 1
+  store i32 %conv, ptr %dst
+  ret ptr %next
 }
 
 define void @f32_to_s64(float %f, ptr %dst) {
@@ -113,6 +154,93 @@ entry:
   %conv = fptosi double %d to i64
   store i64 %conv, ptr %dst
   ret void
+}
+
+define ptr @f64_to_s64_inc(double %d, ptr %dst) {
+; CHECK-LABEL: f64_to_s64_inc:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    st1 { v0.d }[0], [x0], #8
+; CHECK-NEXT:    ret
+entry:
+  %conv = fptosi double %d to i64
+  %next = getelementptr i64, ptr %dst, i64 1
+  store i64 %conv, ptr %dst
+  ret ptr %next
+}
+
+define void @f64_to_u8(double %d, ptr %dst) {
+; CHECK-LABEL: f64_to_u8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    ret
+  %conv = fptoui double %d to i64
+  %trunc = trunc i64 %conv to i8
+  store i8 %trunc, ptr %dst
+  ret void
+}
+
+define void @f64_to_s8(double %d, ptr %dst) {
+; CHECK-LABEL: f64_to_s8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    str b0, [x0]
+; CHECK-NEXT:    ret
+  %conv = fptosi double %d to i64
+  %trunc = trunc i64 %conv to i8
+  store i8 %trunc, ptr %dst
+  ret void
+}
+
+define ptr @f64_to_s8_inc(double %d, ptr %dst) {
+; CHECK-LABEL: f64_to_s8_inc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    st1 { v0.b }[0], [x0], #1
+; CHECK-NEXT:    ret
+  %conv = fptosi double %d to i64
+  %trunc = trunc i64 %conv to i8
+  store i8 %trunc, ptr %dst
+  %next = getelementptr i8, ptr %dst, i64 1
+  ret ptr %next
+}
+
+define void @f64_to_u16(double %d, ptr %dst) {
+; CHECK-LABEL: f64_to_u16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzu d0, d0
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    ret
+  %conv = fptoui double %d to i64
+  %trunc = trunc i64 %conv to i16
+  store i16 %trunc, ptr %dst
+  ret void
+}
+
+define void @f64_to_s16(double %d, ptr %dst) {
+; CHECK-LABEL: f64_to_s16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    ret
+  %conv = fptosi double %d to i64
+  %trunc = trunc i64 %conv to i16
+  store i16 %trunc, ptr %dst
+  ret void
+}
+
+define ptr @f64_to_s16_inc(double %d, ptr %dst) {
+; CHECK-LABEL: f64_to_s16_inc:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fcvtzs d0, d0
+; CHECK-NEXT:    st1 { v0.h }[0], [x0], #2
+; CHECK-NEXT:    ret
+  %conv = fptosi double %d to i64
+  %trunc = trunc i64 %conv to i16
+  %next = getelementptr i16, ptr %dst, i64 1
+  store i16 %trunc, ptr %dst
+  ret ptr %next
 }
 
 define i32 @f32_to_i32_multiple_uses(float %f, ptr %dst) {
