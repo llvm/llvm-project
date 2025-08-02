@@ -3100,54 +3100,6 @@ struct FormatStyle {
   /// \version 11
   TrailingCommaStyle InsertTrailingCommas;
 
-  /// Character case format for different components of a numeric literal.
-  ///
-  /// For all options, ``0`` leave the case unchanged, ``-1``
-  /// uses lower case and, ``1`` uses upper case.
-  ///
-  struct NumericLiteralCaseStyle {
-    /// Format numeric constant prefixes.
-    /// \code{.text}
-    ///   /* -1: lower case */ b = 0x01;
-    ///   /*  0: don't care */
-    ///   /*  1: upper case */ b = 0X01;
-    /// \endcode
-    int8_t PrefixCase;
-    /// Format hexadecimal digit case.
-    /// \code{.text}
-    ///   /* -1: lower case */ b = 0xabcdef;
-    ///   /*  0: don't care */
-    ///   /*  1: upper case */ b = 0xABCDEF;
-    /// \endcode
-    int8_t HexDigitCase;
-    /// Format exponent separator character case in floating point literals.
-    /// \code{.text}
-    ///   /* -1: lower case */ b = 6.02e23;
-    ///   /*  0: don't care */
-    ///   /*  1: upper case */ b = 6.02E23;
-    /// \endcode
-    int8_t FloatExponentSeparatorCase;
-    /// Format suffix case. This option excludes case-specific reserved
-    /// suffixes, such as ``min`` in C++.
-    /// \code{.text}
-    ///   /* -1: lower case */ b = 10u;
-    ///   /*  0: don't care */
-    ///   /*  1: upper case */ b = 10U;
-    /// \endcode
-    int8_t SuffixCase;
-
-    bool operator==(const NumericLiteralCaseStyle &R) const {
-      return PrefixCase == R.PrefixCase && HexDigitCase == R.HexDigitCase &&
-             FloatExponentSeparatorCase == R.FloatExponentSeparatorCase &&
-             SuffixCase == R.SuffixCase;
-    }
-  };
-
-  /// Format numeric literals for languages that support flexible character case
-  /// in numeric literal constants.
-  /// \version 22
-  NumericLiteralCaseStyle NumericLiteralCase;
-
   /// Separator format of integer literals of different bases.
   ///
   /// If negative, remove separators. If  ``0``, leave the literal as is. If
@@ -3605,6 +3557,76 @@ struct FormatStyle {
   /// For example: TESTSUITE
   /// \version 9
   std::vector<std::string> NamespaceMacros;
+
+  /// Control over each component in a numeric literal.
+  enum NumericLiteralComponentStyle : int8_t {
+    /// Leave this component of the literal as is.
+    NLCS_Leave,
+    /// Always format this component with upper case characters.
+    NLCS_Always,
+    /// Never format this component with upper case characters.
+    NLCS_Never,
+  };
+
+  /// Character case format for different components of a numeric literal.
+  struct NumericLiteralCaseStyle {
+    /// Format floating point exponent separator character case.
+    /// \code{.text}
+    ///   /* UpperCaseFloatExponentSeparator = Leave */
+    ///   float a = 6.02e23 + 1.0E10;
+    ///   /* UpperCaseFloatExponentSeparator = Always */
+    ///   float a = 6.02E23 + 1.0E10;
+    ///   /* UpperCaseFloatExponentSeparator = Never */
+    ///   float a = 6.02e23 + 1.0e10;
+    /// \endcode
+    NumericLiteralComponentStyle UpperCaseFloatExponentSeparator;
+    /// Format hexadecimal digit case.
+    /// \code{.text}
+    ///   /* UpperCaseHexDigit = Leave */
+    ///   a = 0xaBcDeF;
+    ///   /* UpperCaseHexDigit = Always */
+    ///   a = 0xABCDEF;
+    ///   /* UpperCaseHexDigit = Never */
+    ///   a = 0xabcdef;
+    /// \endcode
+    NumericLiteralComponentStyle UpperCaseHexDigit;
+    /// Format integer prefix case.
+    /// \code{.text}
+    ///    /* UpperCasePrefix = Leave */
+    ///    a = 0XF0 | 0b1;
+    ///    /* UpperCasePrefix = Always */
+    ///    a = 0XF0 | 0B1;
+    ///    /* UpperCasePrefix = Never */
+    ///    a = 0xF0 | 0b1;
+    /// \endcode
+    NumericLiteralComponentStyle UpperCasePrefix;
+    /// Format suffix case. This option excludes case-specific reserved
+    /// suffixes, such as ``min`` in C++.
+    /// \code{.text}
+    ///   /* UpperCaseSuffix = Leave */
+    ///   a = 1uLL;
+    ///   /* UpperCaseSuffix = Always */
+    ///   a = 1ULL;
+    ///   /* UpperCaseSuffix = Never */
+    ///   a = 1ull;
+    /// \endcode
+    NumericLiteralComponentStyle UpperCaseSuffix;
+
+    bool operator==(const NumericLiteralCaseStyle &R) const {
+      return UpperCaseFloatExponentSeparator ==
+                 R.UpperCaseFloatExponentSeparator &&
+             UpperCaseHexDigit == R.UpperCaseHexDigit &&
+             UpperCasePrefix == R.UpperCasePrefix &&
+             UpperCaseSuffix == R.UpperCaseSuffix;
+    }
+    bool operator!=(const NumericLiteralCaseStyle &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Capitalization style for numeric literal constants.
+  /// \version 22
+  NumericLiteralCaseStyle NumericLiteralCase;
 
   /// Controls bin-packing Objective-C protocol conformance list
   /// items into as few lines as possible when they go over ``ColumnLimit``.
@@ -5472,7 +5494,6 @@ struct FormatStyle {
            IndentWrappedFunctionNames == R.IndentWrappedFunctionNames &&
            InsertBraces == R.InsertBraces &&
            InsertNewlineAtEOF == R.InsertNewlineAtEOF &&
-           NumericLiteralCase == R.NumericLiteralCase &&
            IntegerLiteralSeparator == R.IntegerLiteralSeparator &&
            JavaImportGroups == R.JavaImportGroups &&
            JavaScriptQuotes == R.JavaScriptQuotes &&
@@ -5487,6 +5508,7 @@ struct FormatStyle {
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
+           NumericLiteralCase == R.NumericLiteralCase &&
            ObjCBinPackProtocolList == R.ObjCBinPackProtocolList &&
            ObjCBlockIndentWidth == R.ObjCBlockIndentWidth &&
            ObjCBreakBeforeNestedBlockParam ==

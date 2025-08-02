@@ -47,7 +47,7 @@ public:
 
   /// @brief Reformats the numeric constant if needed.
   /// Calling this method invalidates the object's state.
-  /// @return std::nullopt if no reformatting is required. std::option<>
+  /// @return std::nullopt if no reformatting is required. std::optional<>
   /// containing the reformatted string otherwise.
   std::optional<std::string> formatIfNeeded() &&;
 
@@ -76,10 +76,11 @@ static char noOpTransform(char C) { return C; }
 
 static CharTransformFn getTransform(int8_t config_value) {
   switch (config_value) {
-  case -1:
-    return llvm::toLower;
-  case 1:
+  case FormatStyle::NLCS_Always:
     return llvm::toUpper;
+  case FormatStyle::NLCS_Never:
+    return llvm::toLower;
+  case FormatStyle::NLCS_Leave:
   default:
     return noOpTransform;
   }
@@ -88,21 +89,24 @@ static CharTransformFn getTransform(int8_t config_value) {
 /// @brief Test if Suffix matches a C++ literal reserved by the library.
 /// Matches against all suffixes reserved in the C++23 standard
 static bool matchesReservedSuffix(StringRef Suffix) {
-  static const std::set<StringRef> ReservedSuffixes = {
-      "h", "min", "s", "ms", "us", "ns", "il", "i", "if", "d", "y",
-  };
+  static const std::array<StringRef, 11> SortedReservedSuffixes = {
+      "d", "h", "i", "if", "il", "min", "ms", "ns", "s", "us", "y"};
 
-  return ReservedSuffixes.find(Suffix) != ReservedSuffixes.end();
+  auto entry = std::lower_bound(SortedReservedSuffixes.cbegin(),
+                                SortedReservedSuffixes.cend(), Suffix);
+  if (entry == SortedReservedSuffixes.cend())
+    return false;
+  return *entry == Suffix;
 }
 
 FormatParameters::FormatParameters(
     FormatStyle::LanguageKind Language,
     const FormatStyle::NumericLiteralCaseStyle &CaseStyle)
-    : Prefix(getTransform(CaseStyle.PrefixCase)),
-      HexDigit(getTransform(CaseStyle.HexDigitCase)),
+    : Prefix(getTransform(CaseStyle.UpperCasePrefix)),
+      HexDigit(getTransform(CaseStyle.UpperCaseHexDigit)),
       FloatExponentSeparator(
-          getTransform(CaseStyle.FloatExponentSeparatorCase)),
-      Suffix(getTransform(CaseStyle.SuffixCase)) {
+          getTransform(CaseStyle.UpperCaseFloatExponentSeparator)),
+      Suffix(getTransform(CaseStyle.UpperCaseSuffix)) {
   switch (Language) {
   case FormatStyle::LK_CSharp:
   case FormatStyle::LK_Java:
@@ -129,34 +133,35 @@ QuickNumericalConstantParser::QuickNumericalConstantParser(
 
 void QuickNumericalConstantParser::parse() {
   auto Cur = Formatted.begin();
-  auto End = Formatted.cend();
+  const auto End = Formatted.end();
 
   bool IsHex = false;
   bool IsFloat = false;
 
   // Find the range that contains the prefix.
   PrefixBegin = Cur;
-  if (*Cur != '0') {
-  } else {
+  if (Cur != End && *Cur == '0') {
     ++Cur;
-    const char C = *Cur;
-    switch (C) {
-    case 'x':
-    case 'X':
-      IsHex = true;
-      ++Cur;
-      break;
-    case 'b':
-    case 'B':
-      ++Cur;
-      break;
-    case 'o':
-    case 'O':
-      // Javascript uses 0o as octal prefix.
-      ++Cur;
-      break;
-    default:
-      break;
+    if (Cur != End) {
+      const char C = *Cur;
+      switch (C) {
+      case 'x':
+      case 'X':
+        IsHex = true;
+        ++Cur;
+        break;
+      case 'b':
+      case 'B':
+        ++Cur;
+        break;
+      case 'o':
+      case 'O':
+        // Javascript uses 0o as octal prefix.
+        ++Cur;
+        break;
+      default:
+        break;
+      }
     }
   }
   PrefixEnd = Cur;
@@ -164,87 +169,59 @@ void QuickNumericalConstantParser::parse() {
   // Find the range that contains hex digits.
   HexDigitBegin = Cur;
   if (IsHex) {
-    while (Cur != End) {
-      const char C = *Cur;
-      if (llvm::isHexDigit(C)) {
-      } else if (C == Transforms.Separator) {
-      } else if (C == '.') {
+    Cur = std::find_if_not(Cur, End, [this, &IsFloat](char C) {
+      if (C == '.') {
         IsFloat = true;
-      } else {
-        break;
+        return true;
       }
-      ++Cur;
-    }
+      return C == Transforms.Separator || llvm::isHexDigit(C);
+    });
   }
   HexDigitEnd = Cur;
-  if (Cur == End)
-    return;
 
   // Find the range that contains a floating point exponent separator.
   // Hex digits have already been scanned through the decimal point.
   // Decimal/octal/binary literals must fast forward through the decimal first.
   if (!IsHex) {
-    while (Cur != End) {
-      const char C = *Cur;
-      if (llvm::isDigit(C)) {
-      } else if (C == Transforms.Separator) {
-      } else if (C == '.') {
+    Cur = std::find_if_not(Cur, End, [this, &IsFloat](char C) {
+      if (C == '.') {
         IsFloat = true;
-      } else {
-        break;
+        return true;
       }
-      ++Cur;
-    }
+      return C == Transforms.Separator || llvm::isDigit(C);
+    });
   }
-
-  const char LSep = IsHex ? 'p' : 'e';
-  const char USep = IsHex ? 'P' : 'E';
   // The next character of a floating point literal will either be the
   // separator, or the start of a suffix.
   FloatExponentSeparatorBegin = Cur;
   if (IsFloat) {
-    const char C = *Cur;
-    if ((C == LSep) || (C == USep))
-      ++Cur;
+    const char LSep = IsHex ? 'p' : 'e';
+    const char USep = IsHex ? 'P' : 'E';
+    Cur = std::find_if_not(
+        Cur, End, [LSep, USep](char C) { return C == LSep || C == USep; });
   }
   FloatExponentSeparatorEnd = Cur;
-  if (Cur == End)
-    return;
 
   // Fast forward through the exponent part of a floating point literal.
   if (!IsFloat) {
   } else if (FloatExponentSeparatorBegin == FloatExponentSeparatorEnd) {
   } else {
-    while (Cur != End) {
-      const char C = *Cur;
-      if (llvm::isDigit(C)) {
-      } else if (C == '+') {
-      } else if (C == '-') {
-      } else {
-        break;
-      }
-      ++Cur;
-    }
+    Cur = std::find_if_not(Cur, End, [](char C) {
+      return llvm::isDigit(C) || C == '+' || C == '-';
+    });
   }
-  if (Cur == End)
-    return;
 
   // Find the range containing a suffix if any.
   SuffixBegin = Cur;
   size_t const SuffixLen = End - Cur;
   StringRef suffix(&(*SuffixBegin), SuffixLen);
   if (!matchesReservedSuffix(suffix)) {
-    while (Cur != End) {
-      const char C = *Cur;
-      if (C == '_') {
-        // In C++, it is idiomatic, but NOT standard to define user-defined
-        // literals with a leading '_'. Omit user defined literals from
-        // transformation.
-        break;
-      } else {
-      }
-      ++Cur;
-    }
+    Cur = std::find_if_not(Cur, End, [](char C) {
+      // In C++, it is idiomatic, but NOT standard to define user-defined
+      // literals with a leading '_'. Omit user defined literals from
+      // transformation.
+      return C != '_';
+    });
   }
   SuffixEnd = Cur;
 }
@@ -254,23 +231,23 @@ void QuickNumericalConstantParser::applyFormatting() {
   auto Start = Formatted.cbegin();
   auto End = Formatted.cend();
 
-  assert((Start <= PrefixBegin) && (End >= PrefixBegin) &&
+  assert(Start <= PrefixBegin && End >= PrefixBegin &&
          "PrefixBegin is out of bounds");
-  assert((Start <= PrefixEnd) && (End >= PrefixEnd) &&
+  assert(Start <= PrefixEnd && End >= PrefixEnd &&
          "PrefixEnd is out of bounds");
-  assert((Start <= HexDigitBegin) && (End >= HexDigitBegin) &&
+  assert(Start <= HexDigitBegin && End >= HexDigitBegin &&
          "HexDigitBegin is out of bounds");
-  assert((Start <= HexDigitEnd) && (End >= HexDigitEnd) &&
+  assert(Start <= HexDigitEnd && End >= HexDigitEnd &&
          "HexDigitEnd is out of bounds");
-  assert((Start <= FloatExponentSeparatorBegin) &&
-         (End >= FloatExponentSeparatorBegin) &&
+  assert(Start <= FloatExponentSeparatorBegin &&
+         End >= FloatExponentSeparatorBegin &&
          "FloatExponentSeparatorBegin is out of bounds");
-  assert((Start <= FloatExponentSeparatorEnd) &&
-         (End >= FloatExponentSeparatorEnd) &&
+  assert(Start <= FloatExponentSeparatorEnd &&
+         End >= FloatExponentSeparatorEnd &&
          "FloatExponentSeparatorEnd is out of bounds");
-  assert((Start <= SuffixBegin) && (End >= SuffixBegin) &&
+  assert(Start <= SuffixBegin && End >= SuffixBegin &&
          "SuffixBegin is out of bounds");
-  assert((Start <= SuffixEnd) && (End >= SuffixEnd) &&
+  assert(Start <= SuffixEnd && End >= SuffixEnd &&
          "SuffixEnd is out of bounds");
 
   std::transform(PrefixBegin, PrefixEnd, PrefixBegin, Transforms.Prefix);
@@ -294,26 +271,8 @@ std::optional<std::string> QuickNumericalConstantParser::formatIfNeeded() && {
 std::pair<tooling::Replacements, unsigned>
 NumericLiteralCaseFixer::process(const Environment &Env,
                                  const FormatStyle &Style) {
-  switch (Style.Language) {
-  case FormatStyle::LK_C:
-  case FormatStyle::LK_Cpp:
-  case FormatStyle::LK_ObjC:
-  case FormatStyle::LK_CSharp:
-  case FormatStyle::LK_Java:
-  case FormatStyle::LK_JavaScript:
-    break;
-  default:
-    return {};
-  }
 
   const auto &CaseStyle = Style.NumericLiteralCase;
-
-  const FormatStyle::NumericLiteralCaseStyle no_case_style{};
-  const bool SkipCaseFormatting = CaseStyle == no_case_style;
-
-  if (SkipCaseFormatting)
-    return {};
-
   const FormatParameters Transforms{Style.Language, CaseStyle};
 
   const auto &SourceMgr = Env.getSourceManager();
@@ -330,6 +289,8 @@ NumericLiteralCaseFixer::process(const Environment &Env,
 
   while (!Lex.LexFromRawLexer(Tok)) {
     // Skip tokens that are too small to contain a formattable literal.
+    // Size=2 is the smallest possible literal that could contain formattable
+    // components, for example "1u".
     auto Length = Tok.getLength();
     if (Length < 2)
       continue;
@@ -364,5 +325,23 @@ NumericLiteralCaseFixer::process(const Environment &Env,
   return {Result, 0};
 }
 
+bool NumericLiteralCaseFixer::isActive(const FormatStyle &Style) {
+
+  switch (Style.Language) {
+  case FormatStyle::LK_C:
+  case FormatStyle::LK_Cpp:
+  case FormatStyle::LK_ObjC:
+  case FormatStyle::LK_CSharp:
+  case FormatStyle::LK_Java:
+  case FormatStyle::LK_JavaScript:
+    break;
+  default:
+    return false;
+  }
+
+  const FormatStyle::NumericLiteralCaseStyle LeaveAllCasesUntouched{};
+
+  return Style.NumericLiteralCase != LeaveAllCasesUntouched;
+}
 } // namespace format
 } // namespace clang

@@ -24,6 +24,9 @@ class NumericLiteralCaseFixer {
 public:
   std::pair<tooling::Replacements, unsigned> process(const Environment &Env,
                                                      const FormatStyle &Style);
+
+  /// Return true if this pass should be added to the formatting run.
+  static bool isActive(const FormatStyle &Style);
 };
 
 } // end namespace format
