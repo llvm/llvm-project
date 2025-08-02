@@ -273,15 +273,14 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
 
   int64_t LineDelta = F.getDwarfLineDelta();
   const MCExpr &AddrDelta = F.getDwarfAddrDelta();
-  SmallVector<MCFixup, 1> Fixups;
   size_t OldSize = F.getVarSize();
 
   int64_t Value;
   if (AddrDelta.evaluateAsAbsolute(Value, *Asm))
     return false;
-  bool IsAbsolute = AddrDelta.evaluateKnownAbsolute(Value, *Asm);
-  assert(IsAbsolute && "CFA with invalid expression");
-  (void)IsAbsolute;
+  [[maybe_unused]] bool IsAbsolute =
+      AddrDelta.evaluateKnownAbsolute(Value, *Asm);
+  assert(IsAbsolute);
 
   SmallVector<char> Data;
   raw_svector_ostream OS(Data);
@@ -292,33 +291,23 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
     encodeSLEB128(LineDelta, OS);
   }
 
-  unsigned Offset;
-  std::pair<MCFixupKind, MCFixupKind> FK;
-
   // According to the DWARF specification, the `DW_LNS_fixed_advance_pc` opcode
   // takes a single unsigned half (unencoded) operand. The maximum encodable
   // value is therefore 65535.  Set a conservative upper bound for relaxation.
+  unsigned PCBytes;
   if (Value > 60000) {
     unsigned PtrSize = C.getAsmInfo()->getCodePointerSize();
-
-    OS << uint8_t(dwarf::DW_LNS_extended_op);
-    encodeULEB128(PtrSize + 1, OS);
-
-    OS << uint8_t(dwarf::DW_LNE_set_address);
-    Offset = OS.tell();
     assert((PtrSize == 4 || PtrSize == 8) && "Unexpected pointer size");
-    FK = getRelocPairForSize(PtrSize == 4 ? 32 : 64);
+    PCBytes = PtrSize;
+    OS << uint8_t(dwarf::DW_LNS_extended_op) << uint8_t(PtrSize + 1)
+       << uint8_t(dwarf::DW_LNE_set_address);
     OS.write_zeros(PtrSize);
   } else {
+    PCBytes = 2;
     OS << uint8_t(dwarf::DW_LNS_fixed_advance_pc);
-    Offset = OS.tell();
-    FK = getRelocPairForSize(16);
     support::endian::write<uint16_t>(OS, 0, llvm::endianness::little);
   }
-
-  const MCBinaryExpr &MBE = cast<MCBinaryExpr>(AddrDelta);
-  Fixups.push_back(MCFixup::create(Offset, MBE.getLHS(), std::get<0>(FK)));
-  Fixups.push_back(MCFixup::create(Offset, MBE.getRHS(), std::get<1>(FK)));
+  auto Offset = OS.tell() - PCBytes;
 
   if (LineDelta == INT64_MAX) {
     OS << uint8_t(dwarf::DW_LNS_extended_op);
@@ -329,7 +318,8 @@ bool LoongArchAsmBackend::relaxDwarfLineAddr(MCFragment &F,
   }
 
   F.setVarContents(Data);
-  F.setVarFixups(Fixups);
+  F.setVarFixups({MCFixup::create(Offset, &AddrDelta,
+                                  MCFixup::getDataKindForSize(PCBytes))});
   WasRelaxed = OldSize != Data.size();
   return true;
 }
