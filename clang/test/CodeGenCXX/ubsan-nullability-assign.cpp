@@ -19,17 +19,17 @@ void f1(int *p) {
 
   // CHECK: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
+  // CHECK: call void @__ubsan_handle_null_pointer_use_with_nullability{{.*}} !nosanitize
   // CHECK: store
   u.s1.p = p;
 
   // CHECK: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}} !nosanitize
+  // CHECK: call void @__ubsan_handle_null_pointer_use_with_nullability{{.*}} !nosanitize
   // CHECK: store
   u.s2.s1.p = p;
 
-  // CHECK-NOT: __ubsan_handle_type_mismatch
+  // CHECK-NOT: __ubsan_handle_null_pointer_use_with_nullability
   // CHECK-NOT: store
   // CHECK: ret void
 }

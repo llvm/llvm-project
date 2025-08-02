@@ -24,6 +24,6 @@ int load_from_extern_array(int I) {
   // CHECK-NEXT: [[AND:%.*]] = and i64 [[PTRTOINT]], 3, !nosanitize
   // CHECK-NEXT: [[ICMP:%.*]] = icmp eq i64 [[AND]], 0, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]]
-  // CHECK: call void @__ubsan_handle_type_mismatch
+  // CHECK: call void @__ubsan_handle_misaligned_pointer_use_abort
   return array_S[I].I;
 }

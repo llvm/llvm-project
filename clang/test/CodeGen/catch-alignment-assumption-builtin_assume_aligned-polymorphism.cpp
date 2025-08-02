@@ -24,10 +24,10 @@ void *f(C *c) {
   // CHECK-SANITIZE-NEXT:                 %[[PTRTOINT:.*]] = ptrtoint ptr %[[C_RELOAD]] to i64, !nosanitize
   // CHECK-SANITIZE-NEXT:                 %[[MASKEDPTR:.*]] = and i64 %[[PTRTOINT]], 3, !nosanitize
   // CHECK-SANITIZE-NEXT:                 %[[MASKCOND:.*]] = icmp eq i64 %[[MASKEDPTR]], 0, !nosanitize
-  // CHECK-SANITIZE-NEXT:                 br i1 %[[MASKCOND]], label %[[CONT:[^,]+]], label %[[HANDLER_TYPE_MISMATCH:[^,]+]]
-  // CHECK-SANITIZE:                    [[HANDLER_TYPE_MISMATCH]]:
-  // CHECK-SANITIZE-NORECOVER-NEXT:       call void @__ubsan_handle_type_mismatch_v1_abort(
-  // CHECK-SANITIZE-RECOVER-NEXT:         call void @__ubsan_handle_type_mismatch_v1(
+  // CHECK-SANITIZE-NEXT:                 br i1 %[[MASKCOND]], label %[[CONT:[^,]+]], label %[[HANDLER_TYPE_MISALIGNED_POINTER_USE:[^,]+]]
+  // CHECK-SANITIZE:                    [[HANDLER_TYPE_MISALIGNED_POINTER_USE]]:
+  // CHECK-SANITIZE-NORECOVER-NEXT:       call void @__ubsan_handle_misaligned_pointer_use_abort(
+  // CHECK-SANITIZE-RECOVER-NEXT:         call void @__ubsan_handle_misaligned_pointer_use(
   // CHECK-SANITIZE-TRAP-NEXT:            call void @llvm.ubsantrap(
   // CHECK-SANITIZE-UNREACHABLE-NEXT:     unreachable, !nosanitize
   // CHECK-SANITIZE:                    [[CONT]]:

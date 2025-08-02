@@ -38,6 +38,48 @@ struct TypeMismatchData {
 /// type.
 RECOVERABLE(type_mismatch_v1, TypeMismatchData *Data, ValueHandle Pointer)
 
+struct NullPointerUseData {
+  SourceLocation Loc;
+  const TypeDescriptor &Type;
+  unsigned char TypeCheckKind;
+};
+
+/// \brief Handle a runtime type check failure, caused by a null pointer usage.
+RECOVERABLE(null_pointer_use, NullPointerUseData *Data, ValueHandle Pointer)
+
+struct NullPointerUseWithNullabilityData {
+  SourceLocation Loc;
+  const TypeDescriptor &Type;
+  unsigned char TypeCheckKind;
+};
+
+/// \brief Handle a runtime type check failure, caused by assigning null to a
+/// lvalue which is annotated with _Nonnull.
+RECOVERABLE(null_pointer_use_with_nullability,
+            NullPointerUseWithNullabilityData *Data, ValueHandle Pointer)
+
+struct MisalignedPointerUseData {
+  SourceLocation Loc;
+  const TypeDescriptor &Type;
+  unsigned char LogAlignment;
+  unsigned char TypeCheckKind;
+};
+
+/// \brief Handle a runtime type check failure, caused by a misaligned pointer.
+RECOVERABLE(misaligned_pointer_use, MisalignedPointerUseData *Data,
+            ValueHandle Pointer)
+
+struct InsufficientObjectSizeData {
+  SourceLocation Loc;
+  const TypeDescriptor &Type;
+  unsigned char TypeCheckKind;
+};
+
+/// \brief Handle a runtime type check failure, caused by a pointer to
+/// insufficient storage for the type.
+RECOVERABLE(insufficient_object_size, InsufficientObjectSizeData *Data,
+            ValueHandle Pointer)
+
 struct AlignmentAssumptionData {
   SourceLocation Loc;
   SourceLocation AssumptionLoc;

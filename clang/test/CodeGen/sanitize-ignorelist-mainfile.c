@@ -46,7 +46,7 @@ int foo(void *x) {
 // IGNORE-NOT:  @___asan_gen_
 
 // CHECK-LABEL: define {{.*}}@load(
-// SANITIZE:       call void @__ubsan_handle_type_mismatch_v1_abort(
+// SANITIZE:       call void @__ubsan_handle_misaligned_pointer_use_abort(
 // SANITIZE:       call void @__asan_report_load4(
-// IGNORE-NOT:    call void @__ubsan_handle_type_mismatch_v1_abort(
+// IGNORE-NOT:    call void @__ubsan_handle_misaligned_pointer_use_abort(
 // IGNORE-NOT:    call void @__asan_report_load4(

@@ -24,5 +24,5 @@ void foo(void) {
 
   // PARTIAL:      br i1 %[[CHECK0]], {{.*}} !nosanitize
 
-  // PARTIAL:      call void @__ubsan_handle_type_mismatch_v1(
+  // PARTIAL:      call void @__ubsan_handle_insufficient_object_size(
 }

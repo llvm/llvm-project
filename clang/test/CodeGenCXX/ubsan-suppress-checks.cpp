@@ -24,7 +24,7 @@ void use_us16_aligned_array_elements() {
   use_array(Arr);
 
   // CHECK-NOT: br i1 true
-  // ALIGN-NOT: call void @__ubsan_handle_type_mismatch
+  // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
   // CHECK: ret void
 }
 
@@ -35,10 +35,12 @@ struct A {
   void do_nothing() {
     // ALIGN: %[[THISINT1:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT1]], 3, !nosanitize
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
     // NULL: icmp ne ptr %[[THIS1:[a-z0-9]+]], null, !nosanitize
     // NULL: ptrtoint ptr %[[THIS1]] to i64, !nosanitize
-    // CHECK: call void @__ubsan_handle_type_mismatch
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // NULL: call void @__ubsan_handle_null_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     // CHECK: ret void
   }
 
@@ -46,24 +48,28 @@ struct A {
   // LAMBDA-LABEL: define linkonce_odr void @_ZN1A22do_nothing_with_lambdaEv
   void do_nothing_with_lambda() {
     // LAMBDA: icmp ne ptr %[[THIS2:[a-z0-9]+]], null, !nosanitize
+    // LAMBDA: call void @__ubsan_handle_null_pointer_use
     // LAMBDA: %[[THISINT2:[0-9]+]] = ptrtoint ptr %[[THIS2]] to i64, !nosanitize
     // LAMBDA: and i64 %[[THISINT2]], 3, !nosanitize
-    // LAMBDA: call void @__ubsan_handle_type_mismatch
+    // LAMBDA: call void @__ubsan_handle_misaligned_pointer_use
 
     auto f = [&] {
       foo = 0;
     };
     f();
 
-    // LAMBDA-NOT: call void @__ubsan_handle_type_mismatch
+    // LAMBDA-NOT: call void @__ubsan_handle_null_pointer_use
+    // LAMBDA-NOT: call void @__ubsan_handle_misaligned_pointer_use
     // LAMBDA: ret void
   }
 
 // Check the IR for the lambda:
 //
 // LAMBDA-LABEL: define linkonce_odr void @_ZZN1A22do_nothing_with_lambdaEvENKUlvE_clEv
-// LAMBDA: call void @__ubsan_handle_type_mismatch
-// LAMBDA-NOT: call void @__ubsan_handle_type_mismatch
+// LAMBDA: call void @__ubsan_handle_null_pointer_use
+// LAMBDA: call void @__ubsan_handle_misaligned_pointer_use
+// LAMBDA-NOT: call void @__ubsan_handle_null_pointer_use
+// LAMBDA-NOT: call void @__ubsan_handle_misaligned_pointer_use
 // LAMBDA: ret void
 #endif
 
@@ -71,10 +77,12 @@ struct A {
   int load_member() {
     // ALIGN: %[[THISINT3:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT3]], 3, !nosanitize
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
     // NULL: icmp ne ptr %[[THIS3:[a-z0-9]+]], null, !nosanitize
     // NULL: ptrtoint ptr %[[THIS3]] to i64, !nosanitize
-    // CHECK: call void @__ubsan_handle_type_mismatch
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // NULL: call void @__ubsan_handle_null_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     return foo;
     // CHECK: ret i32
   }
@@ -83,10 +91,12 @@ struct A {
   int call_method() {
     // ALIGN: %[[THISINT4:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT4]], 3, !nosanitize
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
     // NULL: icmp ne ptr %[[THIS4:[a-z0-9]+]], null, !nosanitize
     // NULL: ptrtoint ptr %[[THIS4]] to i64, !nosanitize
-    // CHECK: call void @__ubsan_handle_type_mismatch
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // NULL: call void @__ubsan_handle_null_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     return load_member();
     // CHECK: ret i32
   }
@@ -95,10 +105,12 @@ struct A {
   void assign_member_1() {
     // ALIGN: %[[THISINT5:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT5]], 3, !nosanitize
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
     // NULL: icmp ne ptr %[[THIS5:[a-z0-9]+]], null, !nosanitize
     // NULL: ptrtoint ptr %[[THIS5]] to i64, !nosanitize
-    // CHECK: call void @__ubsan_handle_type_mismatch
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // NULL: call void @__ubsan_handle_null_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     foo = 0;
     // CHECK: ret void
   }
@@ -107,10 +119,12 @@ struct A {
   void assign_member_2() {
     // ALIGN: %[[THISINT6:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT6]], 3, !nosanitize
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
     // NULL: icmp ne ptr %[[THIS6:[a-z0-9]+]], null, !nosanitize
     // NULL: ptrtoint ptr %[[THIS6]] to i64, !nosanitize
-    // CHECK: call void @__ubsan_handle_type_mismatch
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // NULL: call void @__ubsan_handle_null_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     (__extension__ (this))->foo = 0;
     // CHECK: ret void
   }
@@ -119,10 +133,12 @@ struct A {
   void assign_member_3() const {
     // ALIGN: %[[THISINT7:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT7]], 3, !nosanitize
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
     // NULL: icmp ne ptr %[[THIS7:[a-z0-9]+]], null, !nosanitize
     // NULL: ptrtoint ptr %[[THIS7]] to i64, !nosanitize
-    // CHECK: call void @__ubsan_handle_type_mismatch
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // NULL: call void @__ubsan_handle_null_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     const_cast<A *>(this)->foo = 0;
     // CHECK: ret void
   }
@@ -131,15 +147,16 @@ struct A {
   static int call_through_reference(A &a) {
     // ALIGN: %[[OBJINT:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[OBJINT]], 3, !nosanitize
-    // ALIGN: call void @__ubsan_handle_type_mismatch
-    // NULL-NOT: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     return a.load_member();
     // CHECK: ret i32
   }
 
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1A20call_through_pointerEPS_
   static int call_through_pointer(A *a) {
-    // CHECK: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // NULL: call void @__ubsan_handle_null_pointer_use
     return a->load_member();
     // CHECK: ret i32
   }
@@ -151,12 +168,14 @@ struct B {
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1B11load_memberEPS_
   static int load_member(B *bp) {
     // Check &b before converting it to an A*.
-    // CHECK: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // NULL: call void @__ubsan_handle_null_pointer_use
     //
     // Check the result of the conversion before using it.
-    // NULL: call void @__ubsan_handle_type_mismatch
+    // NULL: call void @__ubsan_handle_null_pointer_use
     //
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     return static_cast<A *>(*bp)->load_member();
     // CHECK: ret i32
   }
@@ -175,15 +194,18 @@ struct Derived : public Base {
   int load_member_2() {
     // ALIGN: %[[THISINT8:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT8]], 7, !nosanitize
-    // ALIGN: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
     // NULL: icmp ne ptr %[[THIS8:[a-z0-9]+]], null, !nosanitize
     // NULL: ptrtoint ptr %[[THIS8]] to i64, !nosanitize
-    // CHECK: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // NULL: call void @__ubsan_handle_null_pointer_use
     //
     // Check the result of the cast before using it.
-    // CHECK: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // NULL: call void @__ubsan_handle_null_pointer_use
     //
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     return dynamic_cast<Base *>(this)->load_member_1();
     // CHECK: ret i32
   }
@@ -192,12 +214,14 @@ struct Derived : public Base {
   int load_member_3() {
     // ALIGN: %[[THISINT9:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT9]], 7, !nosanitize
-    // ALIGN: call void @__ubsan_handle_type_mismatch
-    // ALIGN: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
     // NULL: icmp ne ptr %[[THIS9:[a-z0-9]+]], null, !nosanitize
     // NULL: ptrtoint ptr %[[THIS9]] to i64, !nosanitize
-    // CHECK: call void @__ubsan_handle_type_mismatch
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
+    // NULL: call void @__ubsan_handle_null_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     return reinterpret_cast<Derived *>(static_cast<Base *>(this))->foo;
     // CHECK: ret i32
   }
@@ -206,11 +230,13 @@ struct Derived : public Base {
   int load_member_1() override {
     // ALIGN: %[[THISINT10:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT10]], 7, !nosanitize
-    // ALIGN: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
     // NULL: icmp ne ptr %[[THIS10:[a-z0-9]+]], null, !nosanitize
     // NULL: ptrtoint ptr %[[THIS10]] to i64, !nosanitize
-    // CHECK: call void @__ubsan_handle_type_mismatch
-    // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+    // ALIGN: call void @__ubsan_handle_misaligned_pointer_use
+    // ALIGN-NOT: call void @__ubsan_handle_misaligned_pointer_use
+    // NULL: call void @__ubsan_handle_null_pointer_use
+    // NULL-NOT: call void @__ubsan_handle_null_pointer_use
     return foo + bar;
     // CHECK: ret i32
   }
