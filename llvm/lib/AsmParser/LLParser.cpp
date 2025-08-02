@@ -6917,7 +6917,8 @@ bool LLParser::parseFunctionBody(Function &Fn, unsigned FunctionNumber,
                                  ArrayRef<unsigned> UnnamedArgNums) {
   if (Lex.getKind() != lltok::lbrace)
     return tokError("expected '{' in function body");
-  Lex.Lex();  // eat the {.
+  if (Lex.Lex() == lltok::Error) // eat the {.
+    return tokError("Invalid token");
 
   PerFunctionState PFS(*this, Fn, FunctionNumber, UnnamedArgNums);
 
