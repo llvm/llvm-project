@@ -2645,6 +2645,16 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::experimental_convergence_entry:
   case Intrinsic::experimental_convergence_loop:
     return translateConvergenceControlIntrinsic(CI, ID, MIRBuilder);
+  case Intrinsic::reloc_none: {
+    Metadata *MD = cast<MetadataAsValue>(CI.getArgOperand(0))->getMetadata();
+    StringRef SymbolName = cast<MDString>(MD)->getString();
+    auto *M = const_cast<Module *>(CI.getModule());
+    auto *RelocSymbol = cast<GlobalVariable>(
+        M->getOrInsertGlobal(SymbolName, StructType::create(M->getContext())));
+    MIRBuilder.buildInstr(TargetOpcode::RELOC_NONE)
+        .addGlobalAddress(RelocSymbol);
+    return true;
+  }
   }
   return false;
 }
