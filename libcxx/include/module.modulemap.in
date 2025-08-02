@@ -2377,6 +2377,9 @@ module std [system] {
   module undef_macros {
     textual header "__undef_macros"
   }
+  module force_nonstandard_layout {
+    header "__force_nonstandard_layout"
+  }
 
   // This module needs to appear after __tree to work around issues with modules in Objective-C++ mode.
   module coroutine {

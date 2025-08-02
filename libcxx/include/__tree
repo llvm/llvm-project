@@ -13,6 +13,7 @@
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
+#include <__force_nonstandard_layout>
 #include <__fwd/map.h>
 #include <__fwd/pair.h>
 #include <__fwd/set.h>
@@ -782,7 +783,7 @@ _LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Compare const&, _Tp const&, _Tp cons
 int __diagnose_non_const_comparator();
 
 template <class _Tp, class _Compare, class _Allocator>
-class __tree {
+class __tree _LIBCPP_MAYBE_FORCE_NONSTANDARD_LAYOUT {
 public:
   using value_type = __get_node_value_type_t<_Tp>;
   typedef _Compare value_compare;
