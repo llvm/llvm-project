@@ -278,10 +278,12 @@ public:
     // We can get our predecessor info by walking the pred_iterator list,
     // but it is relatively slow.  If we already have PHI nodes in this
     // block, walk one of them to get the predecessor list instead.
-    if (PHINode *SomePhi = dyn_cast<PHINode>(BB->begin()))
+    if (PHINode *SomePhi = dyn_cast<PHINode>(BB->begin())) {
       append_range(*Preds, SomePhi->blocks());
-    else
+    } else {
+      Preds->reserve(pred_size(BB));
       append_range(*Preds, predecessors(BB));
+    }
   }
 
   /// GetPoisonVal - Get a poison value of the same type as the value
