@@ -112,6 +112,10 @@ module std_core [system] {
       header "__type_traits/is_always_bitcastable.h"
       export std_core.type_traits.integral_constant
     }
+    module is_applicable {
+      header "__type_traits/is_applicable.h"
+      export std_core.type_traits.integral_constant
+    }
     module is_arithmetic {
       header "__type_traits/is_arithmetic.h"
       export std_core.type_traits.integral_constant
