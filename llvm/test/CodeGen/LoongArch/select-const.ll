@@ -301,3 +301,28 @@ define i32 @select_ne_10001_10002(i32 signext %a, i32 signext %b) {
   %2 = select i1 %1, i32 10001, i32 10002
   ret i32 %2
 }
+
+define i32 @select_slt_zero_constant1_constant2(i32 signext %x) {
+; LA32-LABEL: select_slt_zero_constant1_constant2:
+; LA32:       # %bb.0:
+; LA32-NEXT:    move $a1, $a0
+; LA32-NEXT:    ori $a0, $zero, 7
+; LA32-NEXT:    bltz $a1, .LBB16_2
+; LA32-NEXT:  # %bb.1:
+; LA32-NEXT:    addi.w $a0, $zero, -3
+; LA32-NEXT:  .LBB16_2:
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: select_slt_zero_constant1_constant2:
+; LA64:       # %bb.0:
+; LA64-NEXT:    slti $a0, $a0, 0
+; LA64-NEXT:    addi.w $a1, $zero, -3
+; LA64-NEXT:    masknez $a1, $a1, $a0
+; LA64-NEXT:    ori $a2, $zero, 7
+; LA64-NEXT:    maskeqz $a0, $a2, $a0
+; LA64-NEXT:    or $a0, $a0, $a1
+; LA64-NEXT:    ret
+  %cmp = icmp slt i32 %x, 0
+  %cond = select i1 %cmp, i32 7, i32 -3
+  ret i32 %cond
+}
