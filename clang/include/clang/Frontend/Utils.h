@@ -198,7 +198,7 @@ void AttachHeaderIncludeGen(Preprocessor &PP,
 /// memory, mainly for testing.
 IntrusiveRefCntPtr<ExternalSemaSource>
 createChainedIncludesSource(CompilerInstance &CI,
-                            IntrusiveRefCntPtr<ExternalSemaSource> &Reader);
+                            IntrusiveRefCntPtr<ASTReader> &OutReader);
 
 /// Optional inputs to createInvocation.
 struct CreateInvocationOptions {

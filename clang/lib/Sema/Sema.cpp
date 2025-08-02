@@ -773,18 +773,19 @@ ASTMutationListener *Sema::getASTMutationListener() const {
   return getASTConsumer().GetASTMutationListener();
 }
 
-void Sema::addExternalSource(ExternalSemaSource *E) {
+void Sema::addExternalSource(IntrusiveRefCntPtr<ExternalSemaSource> E) {
   assert(E && "Cannot use with NULL ptr");
 
   if (!ExternalSource) {
-    ExternalSource = E;
+    ExternalSource = std::move(E);
     return;
   }
 
-  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource))
-    Ex->AddSource(E);
+  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource.get()))
+    Ex->AddSource(std::move(E));
   else
-    ExternalSource = new MultiplexExternalSemaSource(ExternalSource.get(), E);
+    ExternalSource = llvm::makeIntrusiveRefCnt<MultiplexExternalSemaSource>(
+        ExternalSource, std::move(E));
 }
 
 void Sema::PrintStats() const {
