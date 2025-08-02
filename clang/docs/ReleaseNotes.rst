@@ -124,7 +124,7 @@ Improvements to Clang's diagnostics
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right 
-  parenthesis when diagnosing malformed fold expressions.
+  parenthesis when diagnosing malformed fold expressions. (#GH151787)
 
 Improvements to Clang's time-trace
 ----------------------------------
