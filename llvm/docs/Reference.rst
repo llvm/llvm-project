@@ -31,6 +31,7 @@ LLVM and API reference documentation.
    GwpAsan
    HowToSetUpLLVMStyleRTTI
    HowToUseAttributes
+   IncidentResponseGuide
    InAlloca
    InterfaceExportAnnotations
    LangRef
