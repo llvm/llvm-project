@@ -178,13 +178,14 @@ void DebugNamesDWARFIndex::MaybeLogLookupError(llvm::Error error,
 }
 
 void DebugNamesDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString basename,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(basename.GetStringRef())) {
     if (entry.tag() != DW_TAG_variable)
       continue;
 
-    if (!ProcessEntry(entry, callback))
+    if (!ProcessEntry(entry, IterationActionAdaptor(callback)))
       return;
   }
 
@@ -193,7 +194,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
 
 void DebugNamesDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   for (const DebugNames::NameIndex &ni: *m_debug_names_up) {
     for (DebugNames::NameTableEntry nte: ni) {
       Mangled mangled_name(nte.getString());
@@ -206,7 +207,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
         if (entry_or->tag() != DW_TAG_variable)
           continue;
 
-        if (!ProcessEntry(*entry_or, callback))
+        if (!ProcessEntry(*entry_or, IterationActionAdaptor(callback)))
           return;
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
@@ -217,7 +218,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
 }
 
 void DebugNamesDWARFIndex::GetGlobalVariables(
-    DWARFUnit &cu, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    DWARFUnit &cu, llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   uint64_t cu_offset = cu.GetOffset();
   bool found_entry_for_cu = false;
   for (const DebugNames::NameIndex &ni : *m_debug_names_up) {
@@ -242,7 +243,7 @@ void DebugNamesDWARFIndex::GetGlobalVariables(
           continue;
 
         found_entry_for_cu = true;
-        if (!ProcessEntry(*entry_or, callback))
+        if (!ProcessEntry(*entry_or, IterationActionAdaptor(callback)))
           return;
       }
       MaybeLogLookupError(entry_or.takeError(), ni, nte.getString());
@@ -482,13 +483,14 @@ void DebugNamesDWARFIndex::GetTypes(
 }
 
 void DebugNamesDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
     llvm::dwarf::Tag entry_tag = entry.tag();
     if (entry_tag == DW_TAG_namespace ||
         entry_tag == DW_TAG_imported_declaration) {
-      if (!ProcessEntry(entry, callback))
+      if (!ProcessEntry(entry, IterationActionAdaptor(callback)))
         return;
     }
   }
@@ -566,7 +568,7 @@ void DebugNamesDWARFIndex::GetTypesWithQuery(
 
 void DebugNamesDWARFIndex::GetNamespacesWithParents(
     ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   std::vector<lldb_private::CompilerContext> parent_contexts =
       parent_decl_ctx.GetCompilerContext();
   llvm::SmallVector<CompilerContext> parent_named_contexts;
@@ -582,21 +584,22 @@ void DebugNamesDWARFIndex::GetNamespacesWithParents(
           getParentChain(entry);
       if (!parent_chain) {
         // Fallback: use the base class implementation.
-        if (!ProcessEntry(entry, [&](DWARFDIE die) {
-              return ProcessNamespaceDieMatchParents(parent_decl_ctx, die,
-                                                     callback);
-            }))
+        if (!ProcessEntry(entry, IterationActionAdaptor([&](DWARFDIE die) {
+                            return ProcessNamespaceDieMatchParents(
+                                parent_decl_ctx, die, callback);
+                          })))
           return;
         continue;
       }
 
       if (WithinParentChain(parent_named_contexts, *parent_chain)) {
-        if (!ProcessEntry(entry, [&](DWARFDIE die) {
-              // After .debug_names filtering still sending to base class for
-              // further filtering before calling the callback.
-              return ProcessNamespaceDieMatchParents(parent_decl_ctx, die,
-                                                     callback);
-            }))
+        if (!ProcessEntry(entry, IterationActionAdaptor([&](DWARFDIE die) {
+                            // After .debug_names filtering still sending to
+                            // base class for further filtering before calling
+                            // the callback.
+                            return ProcessNamespaceDieMatchParents(
+                                parent_decl_ctx, die, callback);
+                          })))
           // If the callback returns false, we're done.
           return;
       }
