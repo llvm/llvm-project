@@ -5,6 +5,7 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   InterpreterExtensionsTest.cpp
   CodeCompletionTest.cpp
 
+  PARTIAL_SOURCES_INTENDED
   EXPORT_SYMBOLS
 
   CLANG_LIBS
@@ -25,6 +26,20 @@ add_distinct_clang_unittest(ClangReplInterpreterTests
   Support
   TargetParser
   )
+
+if(TARGET compiler-rt)
+  list(APPEND CLANG_REPL_TEST_SOURCES
+    OutOfProcessInterpreterTests.cpp
+  )
+  add_dependencies(ClangReplInterpreterTests 
+    llvm-jitlink-executor 
+    compiler-rt
+  )
+  message(STATUS "Compiler-RT found, enabling OOP JIT tests")
+  set(CLANG_HAS_COMPILER_RT TRUE)
+else()
+  set(CLANG_HAS_COMPILER_RT FALSE)
+endif()
 
 # Exceptions on Windows are not yet supported.
 if(NOT WIN32)
