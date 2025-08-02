@@ -12,6 +12,13 @@ export class LLDBDapServer implements vscode.Disposable {
   private serverProcess?: child_process.ChildProcessWithoutNullStreams;
   private serverInfo?: Promise<{ host: string; port: number }>;
 
+  constructor() {
+    vscode.commands.registerCommand(
+      "lldb-dap.getServerProcess",
+      () => this.serverProcess,
+    );
+  }
+
   /**
    * Starts the server with the provided options. The server will be restarted or reused as
    * necessary.
