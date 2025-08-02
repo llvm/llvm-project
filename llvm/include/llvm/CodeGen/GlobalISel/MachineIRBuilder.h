@@ -1457,6 +1457,16 @@ public:
     return buildExtractVectorElement(Res, Val, buildConstant(IdxTy, Idx));
   }
 
+  MachineInstrBuilder buildInsertVectorElementConstant(const DstOp &Res,
+                                                        const SrcOp &Val,
+                                                        const SrcOp &Elt,
+                                                        const int Idx) {
+    auto TLI = getMF().getSubtarget().getTargetLowering();
+    unsigned VecIdxWidth = TLI->getVectorIdxTy(getDataLayout()).getSizeInBits();
+    return buildInsertVectorElement(
+        Res, Val, Elt, buildConstant(LLT::scalar(VecIdxWidth), Idx));
+  }
+
   /// Build and insert \p Res = G_EXTRACT_VECTOR_ELT \p Val, \p Idx
   ///
   /// \pre setBasicBlock or setMI must have been called.
