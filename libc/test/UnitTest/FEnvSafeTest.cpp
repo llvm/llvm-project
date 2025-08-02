@@ -45,7 +45,7 @@ void FEnvSafeTest::expect_fenv_eq(const fenv_t &before_fenv,
   EXPECT_EQ(before_state.ControlWord, after_state.ControlWord);
   EXPECT_EQ(before_state.StatusWord, after_state.StatusWord);
 
-#elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
+#elif defined(LIBC_TARGET_ARCH_IS_X86_64) && !defined(__APPLE__)
   using LIBC_NAMESPACE::fputil::internal::FPState;
   const FPState &before_state = reinterpret_cast<const FPState &>(before_fenv);
   const FPState &after_state = reinterpret_cast<const FPState &>(after_fenv);
