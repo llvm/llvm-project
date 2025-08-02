@@ -6976,7 +6976,8 @@ TEST_P(LLDBLookupTest, ImporterShouldFindInTransparentContext) {
   // Set up DeclContextBits.HasLazyExternalLexicalLookups to true.
   ToTU->setMustBuildLookupTable();
   struct TestExternalASTSource : ExternalASTSource {};
-  ToTU->getASTContext().setExternalSource(new TestExternalASTSource());
+  ToTU->getASTContext().setExternalSource(
+      llvm::makeIntrusiveRefCnt<TestExternalASTSource>());
 
   Decl *FromTU = getTuDecl(
       R"(
@@ -8154,8 +8155,8 @@ TEST_P(ImportWithExternalSource, CompleteRecordBeforeImporting) {
 
   // Create and add the test ExternalASTSource.
   std::vector<clang::TagDecl *> CompletedTags;
-  IntrusiveRefCntPtr<ExternalASTSource> source =
-      new SourceWithCompletedTagList(CompletedTags);
+  auto source =
+      llvm::makeIntrusiveRefCnt<SourceWithCompletedTagList>(CompletedTags);
   clang::ASTContext &Context = FromTU->getASTContext();
   Context.setExternalSource(std::move(source));
 

@@ -446,7 +446,7 @@ public:
   }
 
   /// Replace the current file manager and virtual file system.
-  void setFileManager(FileManager *Value);
+  void setFileManager(IntrusiveRefCntPtr<FileManager> Value);
 
   /// @}
   /// @name Source Manager
@@ -471,7 +471,7 @@ public:
   }
 
   /// setSourceManager - Replace the current source manager.
-  void setSourceManager(SourceManager *Value);
+  void setSourceManager(llvm::IntrusiveRefCntPtr<SourceManager> Value);
 
   /// @}
   /// @name Preprocessor
@@ -516,7 +516,7 @@ public:
   }
 
   /// setASTContext - Replace the current AST context.
-  void setASTContext(ASTContext *Value);
+  void setASTContext(llvm::IntrusiveRefCntPtr<ASTContext> Value);
 
   /// Replace the current Sema; the compiler instance takes ownership
   /// of S.
