@@ -136,19 +136,22 @@ void AppleDWARFIndex::SearchFor(const llvm::AppleAcceleratorTable &table,
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString basename,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
-  SearchFor(*m_apple_names_up, basename, callback);
+  SearchFor(*m_apple_names_up, basename, IterationActionAdaptor(callback));
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
-  DIERefCallbackImpl converted_cb = DIERefCallback(callback, regex.GetText());
+  auto adataped_cb = IterationActionAdaptor(callback);
+  DIERefCallbackImpl converted_cb =
+      DIERefCallback(adataped_cb, regex.GetText());
 
   for (const auto &entry : m_apple_names_up->entries())
     if (std::optional<llvm::StringRef> name = entry.readName();
@@ -158,7 +161,7 @@ void AppleDWARFIndex::GetGlobalVariables(
 }
 
 void AppleDWARFIndex::GetGlobalVariables(
-    DWARFUnit &cu, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    DWARFUnit &cu, llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_names_up)
     return;
 
@@ -169,7 +172,8 @@ void AppleDWARFIndex::GetGlobalVariables(
     return val.has_value() && *val >= lower_bound && *val < upper_bound;
   };
 
-  DIERefCallbackImpl converted_cb = DIERefCallback(callback);
+  auto adataped_cb = IterationActionAdaptor(callback);
+  DIERefCallbackImpl converted_cb = DIERefCallback(adataped_cb);
   for (auto entry : m_apple_names_up->entries()) {
     if (is_in_range(entry.BaseEntry.getDIESectionOffset()))
       if (!converted_cb(entry.BaseEntry))
@@ -267,10 +271,11 @@ void AppleDWARFIndex::GetTypes(
 }
 
 void AppleDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_namespaces_up)
     return;
-  SearchFor(*m_apple_namespaces_up, name, callback);
+  SearchFor(*m_apple_namespaces_up, name, IterationActionAdaptor(callback));
 }
 
 void AppleDWARFIndex::GetFunctions(
@@ -298,7 +303,7 @@ void AppleDWARFIndex::GetFunctions(
 void AppleDWARFIndex::GetFunctions(
     const RegularExpression &regex,
     llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
-  return GetGlobalVariables(regex, IterationActionAdaptor(callback));
+  return GetGlobalVariables(regex, callback);
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {
