@@ -215,6 +215,11 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
         } else if (auto GlobalIndex = P.getGlobal(D)) {
           if (OptPrimType T = classify(CE))
             return this->emitGetGlobal(*T, *GlobalIndex, CE);
+        } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+          if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+            if (OptPrimType T = classify(CE))
+              return this->emitGetParam(*T, It->second.Offset, CE);
+          }
         }
       }
     }
