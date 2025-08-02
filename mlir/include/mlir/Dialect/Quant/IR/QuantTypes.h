@@ -147,7 +147,7 @@ public:
   ///   i8 -> !quant.uniform<i8:f32, 1.0>
   ///   tensor<4xi8> -> tensor<4x!quant.uniform<i8:f32, 1.0}>>
   ///   vector<4xi8> -> vector<4x!quant.uniform<i8:f32, 1.0>>
-  //.   It is assumed above that this type's quantization is `<i8:f32, 1.0>`.
+  ///   It is assumed above that this type's quantization is `<i8:f32, 1.0>`.
   Type castFromStorageType(Type candidateType);
 
   /// Casts from a type based on a QuantizedType to a corresponding type based
