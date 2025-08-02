@@ -81,7 +81,7 @@ void testSubs(const CharT* s) {
   testCases<CharT, &std::basic_string_view<CharT>::substr>(s);
 #if TEST_STD_VER >= 26
   testCases<CharT, &std::basic_string_view<CharT>::subview>(s);
-#endif // TEST_STD_VER >= 26
+#endif
 }
 
 void test() {

@@ -14,6 +14,7 @@
 
 #include <cassert>
 #include <string>
+#include <utility>
 
 #include "constexpr_char_traits.h"
 #include "make_string.h"
@@ -29,28 +30,67 @@ constexpr void test() {
 
   { // With a default position and a character length.
     std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview();
+
     assert(sv == CS("Hello cruel world!"));
+    // Also check if subview() is a const-qualified.
+    assert(std::as_const(s).subview() == CS("Hello cruel world!"));
   }
 
   { // With a explict position and a character length.
     std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(6, 5);
+
     assert(sv == CS("cruel"));
   }
 
   { // From the beginning of the string with a explicit character length.
     std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(0, 5);
+
     assert(sv == CS("Hello"));
   }
 
   { // To the end of string with the default character length.
     std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(12);
+
     assert(sv == CS("world!"));
   }
 
   { // From the beginning to the end of the string with explicit values.
     std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(0, s.size());
+
     assert(sv == CS("Hello cruel world!"));
   }
+
+  // Test if exceptions are thrown correctly.
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  if (!std::is_constant_evaluated()) {
+    { // With a position that is out of range.
+      try {
+        s.subview(s.size() + 1);
+        assert(false && "Expected std::out_of_range exception");
+      } catch (const std::out_of_range&) {
+        // Expected exception
+      }
+    }
+
+    { // With a position that is out of range and a 0 character length.
+      try {
+        s.subview(s.size() + 1, 0);
+        assert(false && "Expected std::out_of_range exception");
+      } catch (const std::out_of_range&) {
+        // Expected exception
+      }
+    }
+
+    { // With a position that is out of range and a some character length.
+      try {
+        s.subview(s.size() + 1, 1);
+        assert(false && "Expected std::out_of_range exception");
+      } catch (const std::out_of_range&) {
+        // Expected exception
+      }
+    }
+  }
+#endif
 }
 
 template <typename CharT>
