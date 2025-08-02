@@ -2903,8 +2903,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // in BuildTemplateIdExpr().
     // The single lookup result must be a variable template declaration.
     if (Id.getKind() == UnqualifiedIdKind::IK_TemplateId && Id.TemplateId &&
-        Id.TemplateId->Kind == TNK_Var_template) {
-      assert(R.getAsSingle<VarTemplateDecl>() &&
+        (Id.TemplateId->Kind == TNK_Var_template ||
+         Id.TemplateId->Kind == TNK_Concept_template)) {
+      assert(R.getAsSingle<TemplateDecl>() &&
              "There should only be one declaration found.");
     }
 
