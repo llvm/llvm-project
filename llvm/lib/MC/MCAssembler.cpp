@@ -59,7 +59,8 @@ STATISTIC(EmittedFillFragments,
           "Number of emitted assembler fragments - fill");
 STATISTIC(EmittedNopsFragments, "Number of emitted assembler fragments - nops");
 STATISTIC(EmittedOrgFragments, "Number of emitted assembler fragments - org");
-STATISTIC(evaluateFixup, "Number of evaluated fixups");
+STATISTIC(Fixups, "Number of fixups");
+STATISTIC(FixupEvalForRelax, "Number of fixup evaluations for relaxation");
 STATISTIC(ObjectBytes, "Number of emitted object file bytes");
 STATISTIC(RelaxationSteps, "Number of assembler layout and relaxation steps");
 STATISTIC(RelaxedInstructions, "Number of relaxed instructions");
@@ -142,7 +143,8 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
                                 MCValue &Target, uint64_t &Value,
                                 bool RecordReloc,
                                 MutableArrayRef<char> Contents) const {
-  ++stats::evaluateFixup;
+  if (RecordReloc)
+    ++stats::Fixups;
 
   // FIXME: This code has some duplication with recordRelocation. We should
   // probably merge the two into a single callback that tries to evaluate a
@@ -735,7 +737,7 @@ void MCAssembler::Finish() {
 
 bool MCAssembler::fixupNeedsRelaxation(const MCFragment &F,
                                        const MCFixup &Fixup) const {
-  assert(getBackendPtr() && "Expected assembler backend");
+  ++stats::FixupEvalForRelax;
   MCValue Target;
   uint64_t Value;
   bool Resolved = evaluateFixup(F, const_cast<MCFixup &>(Fixup), Target, Value,
