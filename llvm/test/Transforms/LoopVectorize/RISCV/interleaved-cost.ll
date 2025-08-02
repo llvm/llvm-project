@@ -1,12 +1,14 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,-optimized-nf2-segment-load-store -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NO-OPT
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF2
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf3-segment-load-store -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF3
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf4-segment-load-store -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF4
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf5-segment-load-store -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF5
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf6-segment-load-store -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF6
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf7-segment-load-store -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF7
-; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf8-segment-load-store -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF8
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,-optimized-nf2-segment-load-store -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NO-OPT
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF2
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf3-segment-load-store -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF3
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf4-segment-load-store -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF4
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf5-segment-load-store -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF5
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf6-segment-load-store -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF6
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf7-segment-load-store -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF7
+; RUN: opt -passes=loop-vectorize -mtriple=riscv64 -mattr=+v,+optimized-nf8-segment-load-store -prefer-predicate-over-epilogue=scalar-epilogue -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s --check-prefix=OPT-NF8
+
+; TODO: Remove -prefer-predicate-over-epilogue=scalar-epilogue when interleaved accesses with mask gaps are supported.
 
 %i8.2 = type {i8, i8}
 define void @i8_factor_2(ptr %data, i64 %n) {
