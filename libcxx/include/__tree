@@ -887,9 +887,6 @@ public:
     return __node_alloc_;
   }
 
-private:
-  _LIBCPP_HIDE_FROM_ABI const __node_allocator& __node_alloc() const _NOEXCEPT { return __node_alloc_; }
-
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 allocator_type __alloc() const _NOEXCEPT {
     return allocator_type(__node_alloc());
@@ -917,16 +914,8 @@ private:
     return __begin_node_;
   }
 
-public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 allocator_type __alloc() const _NOEXCEPT {
-    return allocator_type(__node_alloc());
-  }
-
-private:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 size_type& size() _NOEXCEPT { return __size_; }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const size_type& size() const _NOEXCEPT { return __size_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 value_compare& value_comp() _NOEXCEPT { return __value_comp_; }
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 const value_compare& value_comp() const _NOEXCEPT {
     return __value_comp_;
