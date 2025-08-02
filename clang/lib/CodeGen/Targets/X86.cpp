@@ -7,9 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "ABIInfoImpl.h"
+#include "CodeGenModule.h"
 #include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "llvm/ABI/ABIInfo.h"
+#include "llvm/ABI/Types.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -2044,7 +2048,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
 
     // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
     // than eight eightbytes, ..., it has class MEMORY.
-    if (Size > 512)
+    if (Size > 128)
       return;
 
     // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
@@ -2951,6 +2955,17 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   unsigned FreeSSERegs = IsRegCall ? 16 : 8;
   unsigned NeededInt = 0, NeededSSE = 0, MaxVectorWidth = 0;
 
+  llvm::abi::ABICompatInfo CompatInfo;
+  CompatInfo.Flags.ClassifyIntegerMMXAsSSE = classifyIntegerMMXAsSSE();
+  CompatInfo.Flags.HonorsRevision98 = honorsRevision0_98();
+  CompatInfo.Flags.PassInt128VectorsInMem = passInt128VectorsInMem();
+  CompatInfo.Flags.ReturnCXXRecordGreaterThan128InMem =
+      returnCXXRecordGreaterThan128InMem();
+  auto avxABILvl = static_cast<llvm::abi::X86AVXABILevel>(AVXLevel);
+  auto newTargetInfo = llvm::abi::createX8664TargetCodeGenInfo(
+      CGT.getTypeBuilder(), CGT.getTarget().getTriple(), avxABILvl,
+      Has64BitPointers, CompatInfo);
+
   if (!::classifyReturnType(getCXXABI(), FI, *this)) {
     if (IsRegCall && FI.getReturnType()->getTypePtr()->isRecordType() &&
         !FI.getReturnType()->getTypePtr()->isUnionType()) {
@@ -2970,8 +2985,15 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
       // Complex Long Double Type is passed in Memory when Regcall
       // calling convention is used.
       FI.getReturnInfo() = getIndirectReturnResult(FI.getReturnType());
-    else
-      FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+    else {
+      // FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
+      const llvm::abi::Type *mappedTy =
+          CGT.getMapper().convertType(FI.getReturnType());
+      llvm::abi::ABIArgInfo newRetInfo =
+          newTargetInfo->getABIInfo().classifyReturnType(mappedTy);
+      FI.getReturnInfo() =
+          CGT.convertABIArgInfo(newRetInfo, FI.getReturnType());
+    }
   }
 
   // If the return value is indirect, then the hidden argument is consuming one
