@@ -96,7 +96,8 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
                      DAG.getTargetConstant(SizeWords, dl, MVT::i32),
                      DAG.getTargetConstant(OffsetSetwmi, dl, MVT::i32)};
     MachineMemOperand *BaseMemOperand = MF.getMachineMemOperand(
-        DstPtrInfo, MachineMemOperand::MOStore, SizeWords * 4, Align(4));
+        DstPtrInfo.getWithOffset(OffsetSetwmi), MachineMemOperand::MOStore,
+        SizeWords * 4, Align(4));
     return DAG.getMemIntrinsicNode(RISCVISD::QC_SETWMI, dl,
                                    DAG.getVTList(MVT::Other), Ops, MVT::i32,
                                    BaseMemOperand);
