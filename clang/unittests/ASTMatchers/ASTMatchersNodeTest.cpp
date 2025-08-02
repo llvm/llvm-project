@@ -2779,6 +2779,32 @@ void x() {
   EXPECT_TRUE(notMatchesWithOpenMP(Source2, Matcher));
 }
 
+TEST(ASTMatchersTestOpenMP, OMPTargetUpdateDirective) {
+  auto Matcher = stmt(ompTargetUpdateDirective());
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+}
+
+TEST(ASTMatchersTestOpenMP, OMPFromClause) {
+  auto Matcher = ompTargetUpdateDirective(hasAnyClause(ompFromClause()));
+
+  StringRef Source0 = R"(
+    void foo() {
+      int arr[8];
+      #pragma omp target update from(arr[0:8:2])
+      ;
+    }
+  )";
+  EXPECT_TRUE(matchesWithOpenMP(Source0, Matcher));
+}
+
 TEST(ASTMatchersTestOpenMP, OMPDefaultClause) {
   auto Matcher = ompExecutableDirective(hasAnyClause(ompDefaultClause()));
 
