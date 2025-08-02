@@ -66,15 +66,16 @@ extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
 #endif
 
-#if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64)) && \
-    !SANITIZER_GO
-# define INIT_LONGJMP_XOR_KEY 1
-#else
-# define INIT_LONGJMP_XOR_KEY 0
-#endif
+#  if SANITIZER_LINUX &&                                                      \
+      (defined(__aarch64__) || defined(__loongarch_lp64)) && !SANITIZER_GO && \
+      !SANITIZER_ANDROID
+#    define INIT_LONGJMP_XOR_KEY 1
+#  else
+#    define INIT_LONGJMP_XOR_KEY 0
+#  endif
 
-#if INIT_LONGJMP_XOR_KEY
-#include "interception/interception.h"
+#  if INIT_LONGJMP_XOR_KEY
+#    include "interception/interception.h"
 // Must be declared outside of other namespaces.
 DECLARE_REAL(int, _setjmp, void *env)
 #endif
@@ -415,7 +416,7 @@ void InitializePlatform() {
   // is not compiled with -pie.
 #if !SANITIZER_GO
   {
-#    if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64))
+#    if INIT_LONGJMP_XOR_KEY
     // Initialize the xor key used in {sig}{set,long}jump.
     InitializeLongjmpXorKey();
 #    endif
@@ -484,10 +485,56 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
   return res;
 }
 
+#    if SANITIZER_NETBSD
+#      ifdef __x86_64__
+#        define LONG_JMP_SP_ENV_SLOT 6
+#      else
+#        error unsupported
+#      endif
+#    elif defined(__powerpc__)
+#      define LONG_JMP_SP_ENV_SLOT 0
+#    elif SANITIZER_FREEBSD
+#      ifdef __aarch64__
+#        define LONG_JMP_SP_ENV_SLOT 1
+#      else
+#        define LONG_JMP_SP_ENV_SLOT 2
+#      endif
+#    elif SANITIZER_LINUX && !SANITIZER_ANDROID
+#      ifdef __aarch64__
+#        define LONG_JMP_SP_ENV_SLOT 13
+#      elif defined(__loongarch__)
+#        define LONG_JMP_SP_ENV_SLOT 1
+#      elif defined(__mips64)
+#        define LONG_JMP_SP_ENV_SLOT 1
+#      elif SANITIZER_RISCV64
+#        define LONG_JMP_SP_ENV_SLOT 13
+#      elif defined(__s390x__)
+#        define LONG_JMP_SP_ENV_SLOT 9
+#      else
+#        define LONG_JMP_SP_ENV_SLOT 6
+#      endif
+#    elif SANITIZER_ANDROID
+// https://android.googlesource.com/platform/bionic/+/refs/heads/android16-release/libc/arch-arm64/bionic/setjmp.S
+// https://android.googlesource.com/platform/bionic/+/refs/heads/android16-release/libc/arch-x86_64/bionic/setjmp.S
+// https://android.googlesource.com/platform/bionic/+/refs/heads/android16-release/libc/arch-riscv64/bionic/setjmp.S
+#      if defined(__aarch64__) || SANITIZER_RISCV64
+#        define LONG_JMP_SP_ENV_SLOT 3
+#        define LONG_JMP_COOKIE_ENV_SLOT 0
+#      elif defined(__x86_64__)
+#        define LONG_JMP_SP_ENV_SLOT 6
+#        define LONG_JMP_COOKIE_ENV_SLOT 8
+#      else
+#        error unsupported
+#      endif
+#    endif
+
 // Reverse operation of libc stack pointer mangling
-static uptr UnmangleLongJmpSp(uptr mangled_sp) {
-#if defined(__x86_64__)
-# if SANITIZER_LINUX
+uptr ExtractLongJmpSp(uptr *env) {
+  uptr mangled_sp = env[LONG_JMP_SP_ENV_SLOT];
+#    if SANITIZER_ANDROID
+  return mangled_sp ^ (env[LONG_JMP_COOKIE_ENV_SLOT] & ~1ULL);
+#    elif defined(__x86_64__)
+#      if SANITIZER_LINUX
   // Reverse of:
   //   xor  %fs:0x30, %rsi
   //   rol  $0x11, %rsi
@@ -497,25 +544,25 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
       : "=r" (sp)
       : "0" (mangled_sp));
   return sp;
-# else
+#      else
   return mangled_sp;
-# endif
-#elif defined(__aarch64__)
-# if SANITIZER_LINUX
+#      endif
+#    elif defined(__aarch64__)
+#      if SANITIZER_LINUX
   return mangled_sp ^ longjmp_xor_key;
-# else
+#      else
   return mangled_sp;
-# endif
-#elif defined(__loongarch_lp64)
+#      endif
+#    elif defined(__loongarch_lp64)
   return mangled_sp ^ longjmp_xor_key;
-#elif defined(__powerpc64__)
+#    elif defined(__powerpc64__)
   // Reverse of:
   //   ld   r4, -28696(r13)
   //   xor  r4, r3, r4
   uptr xor_key;
   asm("ld  %0, -28696(%%r13)" : "=r" (xor_key));
   return mangled_sp ^ xor_key;
-#elif defined(__mips__)
+#    elif defined(__mips__)
   return mangled_sp;
 #    elif SANITIZER_RISCV64
   return mangled_sp;
@@ -528,42 +575,7 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #    endif
 }
 
-#if SANITIZER_NETBSD
-# ifdef __x86_64__
-#  define LONG_JMP_SP_ENV_SLOT 6
-# else
-#  error unsupported
-# endif
-#elif defined(__powerpc__)
-# define LONG_JMP_SP_ENV_SLOT 0
-#elif SANITIZER_FREEBSD
-# ifdef __aarch64__
-#  define LONG_JMP_SP_ENV_SLOT 1
-# else
-#  define LONG_JMP_SP_ENV_SLOT 2
-# endif
-#elif SANITIZER_LINUX
-# ifdef __aarch64__
-#  define LONG_JMP_SP_ENV_SLOT 13
-# elif defined(__loongarch__)
-#  define LONG_JMP_SP_ENV_SLOT 1
-# elif defined(__mips64)
-#  define LONG_JMP_SP_ENV_SLOT 1
-#      elif SANITIZER_RISCV64
-#        define LONG_JMP_SP_ENV_SLOT 13
-#      elif defined(__s390x__)
-#        define LONG_JMP_SP_ENV_SLOT 9
-#      else
-#        define LONG_JMP_SP_ENV_SLOT 6
-#      endif
-#endif
-
-uptr ExtractLongJmpSp(uptr *env) {
-  uptr mangled_sp = env[LONG_JMP_SP_ENV_SLOT];
-  return UnmangleLongJmpSp(mangled_sp);
-}
-
-#if INIT_LONGJMP_XOR_KEY
+#    if INIT_LONGJMP_XOR_KEY
 // GLIBC mangles the function pointers in jmp_buf (used in {set,long}*jmp
 // functions) by XORing them with a random key.  For AArch64 it is a global
 // variable rather than a TCB one (as for x86_64/powerpc).  We obtain the key by
@@ -575,17 +587,17 @@ static void InitializeLongjmpXorKey() {
 
   // 2. Retrieve vanilla/mangled SP.
   uptr sp;
-#ifdef __loongarch__
+#      ifdef __loongarch__
   asm("move  %0, $sp" : "=r" (sp));
-#else
+#      else
   asm("mov  %0, sp" : "=r" (sp));
-#endif
+#      endif
   uptr mangled_sp = ((uptr *)&env)[LONG_JMP_SP_ENV_SLOT];
 
   // 3. xor SPs to obtain key.
   longjmp_xor_key = mangled_sp ^ sp;
 }
-#endif
+#    endif
 
 extern "C" void __tsan_tls_initialization() {}
 
@@ -616,43 +628,51 @@ int call_pthread_cancel_with_cleanup(int (*fn)(void *arg),
   pthread_cleanup_pop(0);
   return res;
 }
-#endif  // !SANITIZER_GO
+#  endif  // !SANITIZER_GO
 
-#if !SANITIZER_GO
-void ReplaceSystemMalloc() { }
-#endif
+#  if !SANITIZER_GO
+void ReplaceSystemMalloc() {}
+#  endif
 
-#if !SANITIZER_GO
-#if SANITIZER_ANDROID
+#  if !SANITIZER_GO
+#    if SANITIZER_ANDROID
 // On Android, one thread can call intercepted functions after
 // DestroyThreadState(), so add a fake thread state for "dead" threads.
 static ThreadState *dead_thread_state = nullptr;
 
 ThreadState *cur_thread() {
-  ThreadState* thr = reinterpret_cast<ThreadState*>(*get_android_tls_ptr());
+  ThreadState *thr = reinterpret_cast<ThreadState *>(*get_android_tls_ptr());
   if (thr == nullptr) {
     __sanitizer_sigset_t emptyset;
     internal_sigfillset(&emptyset);
     __sanitizer_sigset_t oldset;
     CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &emptyset, &oldset));
-    thr = reinterpret_cast<ThreadState*>(*get_android_tls_ptr());
+    thr = reinterpret_cast<ThreadState *>(*get_android_tls_ptr());
     if (thr == nullptr) {
-      thr = reinterpret_cast<ThreadState*>(MmapOrDie(sizeof(ThreadState),
-                                                     "ThreadState"));
+      thr = reinterpret_cast<ThreadState *>(
+          MmapOrDie(sizeof(ThreadState), "ThreadState"));
       *get_android_tls_ptr() = reinterpret_cast<uptr>(thr);
       if (dead_thread_state == nullptr) {
-        dead_thread_state = reinterpret_cast<ThreadState*>(
+        dead_thread_state = reinterpret_cast<ThreadState *>(
             MmapOrDie(sizeof(ThreadState), "ThreadState"));
         dead_thread_state->fast_state.SetIgnoreBit();
         dead_thread_state->ignore_interceptors = 1;
         dead_thread_state->is_dead = true;
-        *const_cast<u32*>(&dead_thread_state->tid) = -1;
+        *const_cast<u32 *>(&dead_thread_state->tid) = -1;
         CHECK_EQ(0, internal_mprotect(dead_thread_state, sizeof(ThreadState),
                                       PROT_READ));
       }
     }
     CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &oldset, nullptr));
   }
+
+  // This is a temporary workaround.
+  // Somewhere wrote get_android_tls_ptr unexpected.
+  uptr addr = reinterpret_cast<uptr>(thr);
+  if (addr % 2 != 0) {
+    return reinterpret_cast<ThreadState *>(addr & ~1ULL);
+  }
+
   return thr;
 }
 
@@ -665,15 +685,15 @@ void cur_thread_finalize() {
   internal_sigfillset(&emptyset);
   __sanitizer_sigset_t oldset;
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &emptyset, &oldset));
-  ThreadState* thr = reinterpret_cast<ThreadState*>(*get_android_tls_ptr());
+  ThreadState *thr = reinterpret_cast<ThreadState *>(*get_android_tls_ptr());
   if (thr != dead_thread_state) {
     *get_android_tls_ptr() = reinterpret_cast<uptr>(dead_thread_state);
     UnmapOrDie(thr, sizeof(ThreadState));
   }
   CHECK_EQ(0, internal_sigprocmask(SIG_SETMASK, &oldset, nullptr));
 }
-#endif  // SANITIZER_ANDROID
-#endif  // if !SANITIZER_GO
+#    endif  // SANITIZER_ANDROID
+#  endif    // if !SANITIZER_GO
 
 }  // namespace __tsan
 
