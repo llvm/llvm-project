@@ -1835,13 +1835,8 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       APInt DemandedPtrs(APInt::getAllOnes(VWidth)),
           DemandedPassThrough(DemandedElts);
       if (auto *CMask = dyn_cast<Constant>(II->getOperand(2))) {
-        if (CMask->isNullValue())
-          DemandedPtrs.clearAllBits();
-        else if (CMask->isAllOnesValue())
-          DemandedPassThrough.clearAllBits();
-        else if (auto *CV = dyn_cast<ConstantVector>(CMask)) {
-          for (unsigned i = 0; i < VWidth; i++) {
-            Constant *CElt = CV->getAggregateElement(i);
+        for (unsigned i = 0; i < VWidth; i++) {
+          if (Constant *CElt = CMask->getAggregateElement(i)) {
             if (CElt->isNullValue())
               DemandedPtrs.clearBit(i);
             else if (CElt->isAllOnesValue())
