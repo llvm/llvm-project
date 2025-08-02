@@ -463,6 +463,7 @@ TEST(Document, Separators) {
 ```cpp
 test
 ```
+
 bar)md";
   EXPECT_EQ(D.asEscapedMarkdown(), ExpectedMarkdown);
   EXPECT_EQ(D.asMarkdown(), ExpectedMarkdown);
@@ -559,6 +560,7 @@ foo
   bar
   baz
 ```
+
 ```cpp
 foo
 ```)md";
