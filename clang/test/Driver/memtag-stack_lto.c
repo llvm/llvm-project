@@ -33,7 +33,7 @@
 // RUN: rm -f %t*
 
 // -O0: both are unsafe.
-// RUN: %clang -O0 --target=aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag-stack -mllvm -stack-safety-print %s -S -o - 2>&1 | FileCheck %s
+// RUN: %clang -O0 --target=aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag-stack -mllvm -stack-safety-print %s -S -o - 2>&1 | FileCheck %s -check-prefixes=CHECK-O0
 
 // No LTO: just one is safe.
 // RUN: %clang -O1 --target=aarch64-unknown-linux -march=armv8+memtag -fsanitize=memtag-stack -mllvm -stack-safety-print %s -S -o /dev/null 2>&1 | FileCheck %s -check-prefixes=SSI,XUNSAFE,YSAFE
@@ -87,6 +87,7 @@ int fn() {
   return x + y;
 }
 
-// CHECK-NOT: allocas uses:
+// CHECK-O0-NOT: allocas uses:
+// CHECK: allocas uses:
 
 #endif
