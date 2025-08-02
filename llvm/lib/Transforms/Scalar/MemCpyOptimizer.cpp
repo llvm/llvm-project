@@ -1533,6 +1533,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   }
 
   // Check that copy is full with static size.
+  // TODO: use coversInputFully instead here
   const DataLayout &DL = DestAlloca->getDataLayout();
   std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
   if (!SrcSize || Size != *SrcSize) {
@@ -1721,6 +1722,245 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   return true;
 }
 
+// This method checks if possible to lift an instruction to position P.
+// It will check that it could lift the instruction and its argument.
+// The method returns true if it would be successful.
+bool MemCpyOptPass::canMoveUp(Instruction *I, Instruction *P) {
+  if (I->getIterator() == std::next(P->getIterator()))
+    return true;
+  // TODO: check isGuaranteedToTransferExecutionToSuccessor on all instructions
+  // between I and P
+  SmallSet<const Instruction *, 20> Visited;
+  SmallVector<Instruction *, 8> Worklist;
+  Worklist.push_back(I);
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+    for (Value *Op : I->operands()) {
+      Instruction *U = dyn_cast<Instruction>(Op);
+      if (U && !DT->dominates(U, P)) { // (U dom P) is sufficient, but is it the
+                                       // necessary condition?
+        // Cannot hoist if this has visible side-effects or is a PHINode (which
+        // would require converting to a SelectInst in moveUp)
+        if (isa<PHINode>(U) || U->mayReadOrWriteMemory())
+          return false;
+        if (!Visited.insert(U).second)
+          continue;                  // Already examined this in another branch
+        assert(DT->dominates(P, U)); // Ensure that SSA is correct
+        Worklist.push_back(U);
+      }
+    }
+  }
+  return true;
+}
+
+// Unconditionally move I to P, including all operands
+void MemCpyOptPass::moveUp(Instruction *I, Instruction *P) {
+  if (I->getIterator() == std::next(P->getIterator()))
+    return;
+  // Compute a valid instruction order with DFS walk
+  SmallSet<const Instruction *, 20> Lifted;
+  SmallVector<Instruction *, 8> PreOrder;
+  SmallVector<Instruction *, 8> PostOrder;
+  PreOrder.push_back(I);
+  while (!PreOrder.empty()) {
+    Instruction *I = PreOrder.back();
+    if (Lifted.count(I))
+      continue;
+    for (Value *Op : I->operands()) {
+      Instruction *U = dyn_cast<Instruction>(Op);
+      if (U && !Lifted.count(U) && !DT->dominates(U, P)) {
+        assert(!isa<PHINode>(U));
+        PreOrder.push_back(U);
+      }
+    }
+    if (PreOrder.back() == I) {
+      // All ops scheduled, can now schedule this too
+      Lifted.insert(I);
+      PreOrder.pop_back();
+      PostOrder.push_back(I);
+    }
+  }
+
+  MemoryUseOrDef *MemInsertPoint = MSSA->getMemoryAccess(P);
+  assert(MemInsertPoint);
+
+  // Now move them
+  for (Instruction *I : PostOrder) {
+    LLVM_DEBUG(dbgs() << "Lifting " << *I << " after " << *P << "\n");
+    if (I->getIterator() == std::next(P->getIterator())) {
+      P = I;
+      continue;
+    }
+    I->moveAfter(P);
+    P = I;
+    if (MemoryUseOrDef *MA = MSSA->getMemoryAccess(I)) {
+      MSSAU->moveAfter(MA, MemInsertPoint);
+      MemInsertPoint = MA;
+    }
+  }
+}
+
+bool MemCpyOptPass::performStackHoistOptzn(MemCpyInst *M,
+                                           AllocaInst *DestAlloca,
+                                           TypeSize Size, BatchAAResults &BAA) {
+  LLVM_DEBUG(dbgs() << "Stack Hoist: Attempting to optimize:\n" << *M << "\n");
+
+  // TODO: this should be fine as long as there are only LoadInst and GEP, but
+  // we would need more effort to re-write the GEP addrspaces
+  if (DestAlloca->getType() != M->getSource()->getType())
+    return false;
+
+  // Check that copy is full with static size.
+  // TODO: use coversInputFully instead here
+  const DataLayout &DL = DestAlloca->getDataLayout();
+  std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
+  if (!DestSize || Size != *DestSize) {
+    LLVM_DEBUG(dbgs() << "Stack Hoist: Destination alloca size mismatch\n");
+    return false;
+  }
+
+  MemoryUseOrDef *MA = MSSA->getMemoryAccess(M);
+  if (!MA)
+    // Degenerate case: memcpy marked as not accessing memory.
+    return false;
+
+  // The source align must be larger than or equal the alloca's
+  // align. If not so, we check to see if we can force the source of the memcpy
+  // to the alignment we need. If we fail, we bail out.
+  // TODO: we don't have to bail out if we only have LoadInst or other
+  // intrinsics (e.g. memcpy) and can instead reduce the alignment of the use.
+  Align MAlign = M->getSourceAlign().valueOrOne();
+  Align AllocaAlign = DestAlloca->getAlign();
+  if (MAlign < AllocaAlign &&
+      getOrEnforceKnownAlignment(M->getSource(), AllocaAlign, DL, M, AC, DT) <
+          AllocaAlign)
+    return false;
+
+  // Check that dest is never captured, unescaped alloca.
+  MemoryLocation DestLoc(DestAlloca, LocationSize::precise(Size));
+  MemoryLocation SrcLoc = MemoryLocation::getForSource(M);
+  SmallVector<Instruction *, 4> LifetimeMarkers;
+  SmallVector<std::pair<Instruction *, bool>, 4> AAMetadataInstrs;
+
+  SmallVector<std::pair<Instruction *, bool>, 8> Worklist;
+  Worklist.push_back({DestAlloca, true});
+  unsigned MaxUsesToExplore = getDefaultMaxUsesToExploreForCaptureTracking();
+  Worklist.reserve(MaxUsesToExplore);
+  SmallSet<const Instruction *, 20> Visited;
+  while (!Worklist.empty()) {
+    Instruction *I;
+    bool mayMove;
+    std::tie(I, mayMove) = Worklist.pop_back_val();
+    for (const Use &U : I->uses()) {
+      auto *UI = cast<Instruction>(U.getUser());
+      // We don't care about the store itself.
+      if (UI == M)
+        continue;
+      if (UI->isLifetimeStartOrEnd()) {
+        LifetimeMarkers.push_back(UI);
+        continue;
+      }
+      if (Visited.size() >= MaxUsesToExplore) {
+        LLVM_DEBUG(
+            dbgs()
+            << "Stack Hoist: Exceeded max uses to see ModRef, bailing\n");
+        return false;
+      }
+      if (!Visited.insert(UI).second)
+        continue;
+      UseCaptureInfo CI(CaptureComponents::None, CaptureComponents::None);
+      for (const Use &U : UI->operands()) {
+        auto UCI = DetermineUseCaptureKind(U, DestAlloca);
+        CI.UseCC |= UCI.UseCC;
+        CI.ResultCC |= UCI.ResultCC;
+      }
+      if (capturesAnything(CI.UseCC))
+        return false;
+      if (!DT->dominates(UI, M)) {
+        if (UI->mayWriteToMemory()) {
+          ModRefInfo Res = BAA.getModRefInfo(UI, DestLoc);
+          if (isModSet(Res))
+            return false;
+          mayMove = false;
+        }
+        if (UI->mayReadFromMemory()) { // TODO: (U dom P) is sufficient, but is
+                                       // it the necessary condition?
+          ModRefInfo Res = BAA.getModRefInfo(UI, DestLoc);
+          if (isRefSet(Res)) {
+            if (!DT->dominates(M, UI))
+              // TODO: does writtenBetween care about dom, or just moveUp?
+              return false;
+            // If UI can modify SrcLoc, then we cannot alias it to DestLoc
+            ModRefInfo Res = BAA.getModRefInfo(UI, SrcLoc);
+            if (isModSet(Res))
+              return false;
+            bool moveUp = writtenBetween(MSSA, BAA, SrcLoc, MA,
+                                         MSSA->getMemoryAccess(UI));
+            if (moveUp) {
+              // It is safe to move this read up as long as the memory it reads
+              // doesn't change between UI and M (such as only reading DestLoc
+              // with a LoadInst, or argmemonly), and UI post-dominates M (so
+              // we are guaranteed to eventually execute UI)
+              if (!mayMove)
+                return false;
+              if (!isa<LoadInst>(UI))
+                return false;
+              if (!PDT->dominates(UI, M))
+                return false;
+            }
+            AAMetadataInstrs.push_back({UI, moveUp});
+          }
+        }
+      }
+      if (capturesAnything(CI.ResultCC)) {
+        if (mayMove)
+          // If this instruction may capture something other than UI (such as a
+          // SelectInst) or have other side-effects (such as a call), then we
+          // should not try to move this instruction, or instructions that use
+          // this. (canMoveUp will later check this for the other operands too)
+          mayMove = isa<GEPOperator>(UI);
+        Worklist.push_back({UI, mayMove});
+      }
+    }
+  }
+
+  // Nothing useful to to (the alloca is dead anyways and later passes will
+  // likely remove it) Exit early now to minimize spurious test changes
+  // TODO: delete in a later PR
+  if (AAMetadataInstrs.empty())
+    return false;
+
+  // Check that all instructions we need to move will be able to move
+  // Otherwise it may not be worthwhile to move any of them.
+  for (auto &I : AAMetadataInstrs) {
+    if (I.second && !canMoveUp(I.first, M))
+      return false;
+  }
+
+  // Remove all lifetime markers before RAUW since they no longer apply.
+  for (Instruction *I : LifetimeMarkers)
+    eraseInstruction(I);
+
+  // As this transformation can cause memory accesses that didn't previously
+  // alias to begin to alias one another, we remove !alias.scope, !noalias,
+  // !tbaa and !tbaa_struct metadata from any uses of either alloca.
+  // This is conservative, but more precision (replacing with the source tags
+  // from M) doesn't seem worthwhile right now.
+  for (auto &U : AAMetadataInstrs) {
+    Instruction *I = U.first;
+    I->setMetadata(LLVMContext::MD_alias_scope, nullptr);
+    I->setMetadata(LLVMContext::MD_noalias, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa, nullptr);
+    I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
+    if (U.second)
+      moveUp(I, M);
+  }
+  DestAlloca->replaceAllUsesWith(M->getSource());
+  eraseInstruction(DestAlloca);
+
+  return true;
+}
+
 static bool isZeroSize(Value *Size) {
   if (auto *I = dyn_cast<Instruction>(Size))
     if (auto *Res = simplifyInstruction(I, I->getDataLayout()))
@@ -1844,25 +2084,39 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
     }
   }
 
+  auto *DestAlloca = dyn_cast<AllocaInst>(M->getDest());
+  auto *SrcAlloca = dyn_cast<AllocaInst>(M->getSource());
+  // Remaining transforms are mainly only interesting if we can eliminate some
+  // stack data
+  if (!DestAlloca && !SrcAlloca)
+    return false;
+
+  ConstantInt *Len = dyn_cast<ConstantInt>(M->getLength());
   // If the transfer is from a stack slot to a stack slot, then we may be able
   // to perform the stack-move optimization. See the comments in
   // performStackMoveOptzn() for more details.
-  auto *DestAlloca = dyn_cast<AllocaInst>(M->getDest());
-  if (!DestAlloca)
-    return false;
-  auto *SrcAlloca = dyn_cast<AllocaInst>(M->getSource());
-  if (!SrcAlloca)
-    return false;
-  ConstantInt *Len = dyn_cast<ConstantInt>(M->getLength());
-  if (Len == nullptr)
-    return false;
-  if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
-                            TypeSize::getFixed(Len->getZExtValue()), BAA)) {
-    // Avoid invalidating the iterator.
-    BBI = M->getNextNode()->getIterator();
-    eraseInstruction(M);
-    ++NumMemCpyInstr;
-    return true;
+  if (DestAlloca && SrcAlloca && Len) {
+    if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca,
+                              TypeSize::getFixed(Len->getZExtValue()), BAA)) {
+      // Avoid invalidating the iterator.
+      BBI = M->getNextNode()->getIterator();
+      eraseInstruction(M);
+      ++NumMemCpyInstr;
+      return true;
+    }
+  }
+
+  if (DestAlloca && Len) {
+    // If the transfer is to a stack slot, see if we can hoist all the uses of
+    // the stack slot to here instead
+    if (performStackHoistOptzn(M, DestAlloca,
+                               TypeSize::getFixed(Len->getZExtValue()), BAA)) {
+      // Avoid invalidating the iterator.
+      BBI = M->getNextNode()->getIterator();
+      eraseInstruction(M);
+      ++NumMemCpyInstr;
+      return true;
+    }
   }
 
   return false;
