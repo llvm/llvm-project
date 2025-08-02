@@ -393,9 +393,9 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
 
   std::string PIDs;
   if (!SkipPID) {
-    StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
-                                  "-F",     "comm,pid", "-i",
-                                  PerfData};
+    StringRef ScriptMMapArgs[] = {PerfPath,    "script",   "--show-mmap-events",
+                                  "-F",        "comm,pid", "--dsos",
+                                  "NOT_EXIST", "-i",       PerfData};
     sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, std::nullopt, Redirects);
 
     // Collect the PIDs
