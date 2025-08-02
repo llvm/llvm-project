@@ -4249,6 +4249,32 @@ bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
 }
 
+bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
+  if (!isFLAT(MI) || isFLATGlobal(MI))
+    return false;
+
+  // If scratch is not initialized, we can never access it.
+  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
+    return false;
+
+  // SCRATCH instructions always access scratch.
+  if (isFLATScratch(MI))
+    return true;
+
+  // If there are no memory operands then conservatively assume the flat
+  // operation may access scratch.
+  if (MI.memoperands_empty())
+    return true;
+
+  // TODO (?): Does this need to be taught how to read noalias.addrspace ?
+
+  // See if any memory operand specifies an address space that involves scratch.
+  return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
+    unsigned AS = Memop->getAddrSpace();
+    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+  });
+}
+
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
   // Skip the full operand and register alias search modifiesRegister
   // does. There's only a handful of instructions that touch this, it's only an
@@ -4412,6 +4438,8 @@ bool SIInstrInfo::isInlineConstant(int64_t Imm, uint8_t OperandType) const {
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return AMDGPU::isInlinableLiteralV2BF16(Imm);
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    return false;
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16: {
     if (isInt<16>(Imm) || isUInt<16>(Imm)) {
@@ -6276,10 +6304,14 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
   };
 
   if (Opc == AMDGPU::V_PERMLANE16_B32_e64 ||
-      Opc == AMDGPU::V_PERMLANEX16_B32_e64) {
+      Opc == AMDGPU::V_PERMLANEX16_B32_e64 ||
+      Opc == AMDGPU::V_PERMLANE_BCAST_B32_e64 ||
+      Opc == AMDGPU::V_PERMLANE_UP_B32_e64 ||
+      Opc == AMDGPU::V_PERMLANE_DOWN_B32_e64 ||
+      Opc == AMDGPU::V_PERMLANE_XOR_B32_e64 ||
+      Opc == AMDGPU::V_PERMLANE_IDX_GEN_B32_e64) {
     // src1 and src2 must be scalar
     MachineOperand &Src1 = MI.getOperand(VOP3Idx[1]);
-    MachineOperand &Src2 = MI.getOperand(VOP3Idx[2]);
     const DebugLoc &DL = MI.getDebugLoc();
     if (Src1.isReg() && !RI.isSGPRClass(MRI.getRegClass(Src1.getReg()))) {
       Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
@@ -6287,11 +6319,14 @@ void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
         .add(Src1);
       Src1.ChangeToRegister(Reg, false);
     }
-    if (Src2.isReg() && !RI.isSGPRClass(MRI.getRegClass(Src2.getReg()))) {
-      Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-      BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
-        .add(Src2);
-      Src2.ChangeToRegister(Reg, false);
+    if (VOP3Idx[2] != -1) {
+      MachineOperand &Src2 = MI.getOperand(VOP3Idx[2]);
+      if (Src2.isReg() && !RI.isSGPRClass(MRI.getRegClass(Src2.getReg()))) {
+        Register Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+        BuildMI(*MI.getParent(), MI, DL, get(AMDGPU::V_READFIRSTLANE_B32), Reg)
+            .add(Src2);
+        Src2.ChangeToRegister(Reg, false);
+      }
     }
   }
 
@@ -9255,6 +9290,16 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   default:
     if (MI.isMetaInstruction())
       return 0;
+
+    // If D16 Pseudo inst, get correct MC code size
+    const auto *D16Info = AMDGPU::getT16D16Helper(Opc);
+    if (D16Info) {
+      // Assume d16_lo/hi inst are always in same size
+      unsigned LoInstOpcode = D16Info->LoOp;
+      const MCInstrDesc &Desc = getMCOpcodeFromPseudo(LoInstOpcode);
+      DescSize = Desc.getSize();
+    }
+
     return DescSize;
   }
 }

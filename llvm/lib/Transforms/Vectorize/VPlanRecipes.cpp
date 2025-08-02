@@ -427,6 +427,7 @@ unsigned VPUnrollPartAccessor<PartOpIdx>::getUnrollPart(const VPUser &U) const {
 }
 
 namespace llvm {
+template class VPUnrollPartAccessor<1>;
 template class VPUnrollPartAccessor<2>;
 template class VPUnrollPartAccessor<3>;
 }
@@ -2529,8 +2530,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
       NextInChain = createMinMaxOp(State.Builder, Kind, NewRed, PrevInChain);
     else
       NextInChain = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(Kind), NewRed,
-          PrevInChain);
+          (Instruction::BinaryOps)RecurrenceDescriptor::getOpcode(Kind),
+          PrevInChain, NewRed);
   }
   State.set(this, NextInChain, /*IsScalar*/ true);
 }
@@ -3390,12 +3391,7 @@ static Value *interleaveVectors(IRBuilderBase &Builder, ArrayRef<Value *> Vals,
   // must use intrinsics to interleave.
   if (VecTy->isScalableTy()) {
     assert(Factor <= 8 && "Unsupported interleave factor for scalable vectors");
-    VectorType *InterleaveTy =
-        VectorType::get(VecTy->getElementType(),
-                        VecTy->getElementCount().multiplyCoefficientBy(Factor));
-    return Builder.CreateIntrinsic(InterleaveTy,
-                                   getInterleaveIntrinsicID(Factor), Vals,
-                                   /*FMFSource=*/nullptr, Name);
+    return Builder.CreateVectorInterleave(Vals, Name);
   }
 
   // Fixed length. Start by concatenating all vectors into a wide vector.
@@ -3502,8 +3498,8 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
       assert(InterleaveFactor <= 8 &&
              "Unsupported deinterleave factor for scalable vectors");
       NewLoad = State.Builder.CreateIntrinsic(
-          getDeinterleaveIntrinsicID(InterleaveFactor), NewLoad->getType(),
-          NewLoad,
+          Intrinsic::getDeinterleaveIntrinsicID(InterleaveFactor),
+          NewLoad->getType(), NewLoad,
           /*FMFSource=*/nullptr, "strided.vec");
     }
 
@@ -3552,6 +3548,8 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   // Vectorize the interleaved store group.
   Value *MaskForGaps =
       createBitMaskForGaps(State.Builder, State.VF.getKnownMinValue(), *Group);
+  assert(((MaskForGaps != nullptr) == NeedsMaskForGaps) &&
+         "Mismatch between NeedsMaskForGaps and MaskForGaps");
   assert((!MaskForGaps || !State.VF.isScalable()) &&
          "masking gaps for scalable vectors is not yet supported.");
   ArrayRef<VPValue *> StoredValues = getStoredValues();

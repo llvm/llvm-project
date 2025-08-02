@@ -295,8 +295,7 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
       return;
 
     auto [OffendingDecl, A] = CE->getUnusedResultAttr(S.Context);
-    if (DiagnoseNoDiscard(S, OffendingDecl,
-                          cast_or_null<WarnUnusedResultAttr>(A), Loc, R1, R2,
+    if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
                           /*isCtor=*/false))
       return;
 
@@ -344,13 +343,11 @@ void DiagnoseUnused(Sema &S, const Expr *E, std::optional<unsigned> DiagID) {
       S.Diag(Loc, diag::err_arc_unused_init_message) << R1;
       return;
     }
-    const ObjCMethodDecl *MD = ME->getMethodDecl();
-    if (MD) {
-      if (DiagnoseNoDiscard(S, nullptr, MD->getAttr<WarnUnusedResultAttr>(),
-                            Loc, R1, R2,
-                            /*isCtor=*/false))
-        return;
-    }
+
+    auto [OffendingDecl, A] = ME->getUnusedResultAttr(S.Context);
+    if (DiagnoseNoDiscard(S, OffendingDecl, A, Loc, R1, R2,
+                          /*isCtor=*/false))
+      return;
   } else if (const PseudoObjectExpr *POE = dyn_cast<PseudoObjectExpr>(E)) {
     const Expr *Source = POE->getSyntacticForm();
     // Handle the actually selected call of an OpenMP specialized call.

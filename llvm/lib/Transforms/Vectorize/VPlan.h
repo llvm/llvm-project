@@ -1841,6 +1841,10 @@ public:
                                      getGEPNoWrapFlags(), getDebugLoc());
   }
 
+  /// Return true if this VPVectorPointerRecipe corresponds to part 0. Note that
+  /// this is only accurate after the VPlan has been unrolled.
+  bool isFirstPart() const { return getUnrollPart(*this) == 0; }
+
   /// Return the cost of this VPHeaderPHIRecipe.
   InstructionCost computeCost(ElementCount VF,
                               VPCostContext &Ctx) const override {
@@ -4060,6 +4064,10 @@ public:
 
   /// Returns VF * UF of the vector loop region.
   VPValue &getVFxUF() { return VFxUF; }
+
+  LLVMContext &getContext() const {
+    return getScalarHeader()->getIRBasicBlock()->getContext();
+  }
 
   void addVF(ElementCount VF) { VFs.insert(VF); }
 
