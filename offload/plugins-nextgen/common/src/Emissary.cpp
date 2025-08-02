@@ -16,7 +16,6 @@
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
 
-#include "../../../DeviceRTL/include/EmissaryIds.h"
 #include "Emissary.h"
 
 extern "C" emis_return_t Emissary(char *data) {

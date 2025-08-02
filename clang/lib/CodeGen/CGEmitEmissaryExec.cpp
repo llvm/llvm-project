@@ -13,7 +13,7 @@
 // 3. call to __llvm_omp_emissary_rpc function.
 //===----------------------------------------------------------------------===//
 
-#include "../../offload/DeviceRTL/include/EmissaryIds.h"
+#include "../../openmp/device/include/EmissaryIds.h"
 #include "CodeGenFunction.h"
 #include "clang/Basic/Builtins.h"
 #include "llvm/IR/DataLayout.h"

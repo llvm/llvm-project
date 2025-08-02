@@ -133,6 +133,14 @@ else()
   set(CMAKE_CXX_EXTENSIONS NO)
 endif()
 
+# Emit a warning for people who haven't updated their build.
+if(NOT "openmp" IN_LIST RUNTIMES_amdgcn-amd-amdhsa_LLVM_ENABLE_RUNTIMES AND
+   NOT "openmp" IN_LIST RUNTIMES_nvptx64-nvidia-cuda_LLVM_ENABLE_RUNTIMES)
+  message(WARNING "Building the offloading runtime with no device library. See "
+                  "https://openmp.llvm.org/SupportAndFAQ.html#q-how-to-build-an-openmp-gpu-offload-capable-compiler.html "
+                  "for more information.")
+endif()
+
 # Set the path of all resulting libraries to a unified location so that it can
 # be used for testing.
 set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -443,9 +451,9 @@ option(OFFLOAD_ENABLE_EMISSARY_APIS "Enable build of GPU Emissary APIs" ON)
 if(OFFLOAD_ENABLE_EMISSARY_APIS)
   # Header install location
   add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/DeviceRTL/include/EmissaryIds.h
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../openmp/device/include/EmissaryIds.h
     DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/DeviceRTL/include/EmissaryMPI.h
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../openmp/device/include/EmissaryMPI.h
     DESTINATION ${LIBOMP_HEADERS_INSTALL_PATH})
 endif()
 
@@ -453,9 +461,7 @@ add_subdirectory(tools/offload-tblgen)
 
 # Build offloading plugins and device RTLs if they are available.
 add_subdirectory(plugins-nextgen)
-
 add_subdirectory(tools)
-add_subdirectory(DeviceRTL)
 add_subdirectory(docs)
 
 # Build target agnostic offloading library.
