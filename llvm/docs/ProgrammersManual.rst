@@ -3857,7 +3857,7 @@ Important Subclasses of Constant
     is too large to fit in an ``int64_t``, an assertion will result.  For this
     reason, use of this method is discouraged.
 
-  * ``uint64_t getZExtValue() const``: Converts the underlying APInt value
+  * ``uint64_t getZExtValue() const``: Converts the underlying ``APInt`` value
     to a ``uint64_t`` via zero extension.  If the value (not the bit width) of the
     APInt is too large to fit in a ``uint64_t``, an assertion will result.  For this
     reason, use of this method is discouraged.
