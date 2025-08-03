@@ -545,10 +545,8 @@ static bool isDeadRecipe(VPRecipeBase &R) {
 }
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
-  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
-      Plan.getEntry());
-
-  for (VPBasicBlock *VPBB : reverse(VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))) {
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_post_order_deep(Plan.getEntry()))) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
@@ -1431,15 +1429,15 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
   // count is not conveniently available as SCEV so far, so we compare directly
   // against the original trip count. This is stricter than necessary, as we
   // will only return true if the trip count == vector trip count.
-  // TODO: Use SCEV for vector trip count once available, to cover cases where
-  // vector trip count == UF * VF, but original trip count != UF * VF.
-  const SCEV *TripCount =
-      vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
-  assert(!isa<SCEVCouldNotCompute>(TripCount) &&
+  const SCEV *VectorTripCount =
+      vputils::getSCEVExprForVPValue(&Plan.getVectorTripCount(), SE);
+  if (isa<SCEVCouldNotCompute>(VectorTripCount))
+    VectorTripCount = vputils::getSCEVExprForVPValue(Plan.getTripCount(), SE);
+  assert(!isa<SCEVCouldNotCompute>(VectorTripCount) &&
          "Trip count SCEV must be computable");
   ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
-  const SCEV *C = SE.getElementCount(TripCount->getType(), NumElements);
-  return SE.isKnownPredicate(CmpInst::ICMP_EQ, TripCount, C);
+  const SCEV *C = SE.getElementCount(VectorTripCount->getType(), NumElements);
+  return SE.isKnownPredicate(CmpInst::ICMP_EQ, VectorTripCount, C);
 }
 
 /// Try to simplify the branch condition of \p Plan. This may restrict the
