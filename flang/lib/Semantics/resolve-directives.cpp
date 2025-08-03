@@ -378,7 +378,7 @@ public:
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
 
-  void Post(const parser::OmpBeginBlockDirective &) {
+  void Post(const parser::OmpBeginDirective &x) {
     GetContext().withinConstruct = true;
   }
 
@@ -518,6 +518,9 @@ public:
 
   bool Pre(const parser::OpenMPDeclarativeAllocate &);
   void Post(const parser::OpenMPDeclarativeAllocate &) { PopContext(); }
+
+  bool Pre(const parser::OpenMPAtomicConstruct &);
+  void Post(const parser::OpenMPAtomicConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPDispatchConstruct &);
   void Post(const parser::OpenMPDispatchConstruct &) { PopContext(); }
@@ -1698,9 +1701,9 @@ static std::string ScopeSourcePos(const Fortran::semantics::Scope &scope);
 #endif
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
-  const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
-  const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-  switch (beginDir.v) {
+  const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
+  llvm::omp::Directive dirId{dirSpec.DirId()};
+  switch (dirId) {
   case llvm::omp::Directive::OMPD_masked:
   case llvm::omp::Directive::OMPD_parallel_masked:
   case llvm::omp::Directive::OMPD_master:
@@ -1718,15 +1721,15 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
   case llvm::omp::Directive::OMPD_parallel_workshare:
   case llvm::omp::Directive::OMPD_target_teams:
   case llvm::omp::Directive::OMPD_target_parallel:
-    PushContext(beginDir.source, beginDir.v);
+    PushContext(dirSpec.source, dirId);
     break;
   default:
     // TODO others
     break;
   }
-  if (beginDir.v == llvm::omp::Directive::OMPD_master ||
-      beginDir.v == llvm::omp::Directive::OMPD_parallel_master)
-    IssueNonConformanceWarning(beginDir.v, beginDir.source, 52);
+  if (dirId == llvm::omp::Directive::OMPD_master ||
+      dirId == llvm::omp::Directive::OMPD_parallel_master)
+    IssueNonConformanceWarning(dirId, dirSpec.source, 52);
   ClearDataSharingAttributeObjects();
   ClearPrivateDataSharingAttributeObjects();
   ClearAllocateNames();
@@ -1734,9 +1737,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPBlockConstruct &x) {
 }
 
 void OmpAttributeVisitor::Post(const parser::OpenMPBlockConstruct &x) {
-  const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
-  const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-  switch (beginDir.v) {
+  const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
+  llvm::omp::Directive dirId{dirSpec.DirId()};
+  switch (dirId) {
   case llvm::omp::Directive::OMPD_masked:
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_parallel_masked:
@@ -2185,6 +2188,11 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclarativeAllocate &x) {
   return false;
 }
 
+bool OmpAttributeVisitor::Pre(const parser::OpenMPAtomicConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_atomic);
+  return true;
+}
+
 bool OmpAttributeVisitor::Pre(const parser::OpenMPDispatchConstruct &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_dispatch);
   return true;
@@ -2202,7 +2210,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPExecutableAllocate &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
-  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+  const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   PushContext(x.source, dirSpec.DirId());
 
   for (const auto &clause : dirSpec.Clauses().v) {
@@ -2288,7 +2296,7 @@ void OmpAttributeVisitor::Post(const parser::OpenMPExecutableAllocate &x) {
 }
 
 void OmpAttributeVisitor::Post(const parser::OpenMPAllocatorsConstruct &x) {
-  auto &dirSpec{std::get<parser::OmpDirectiveSpecification>(x.t)};
+  const parser::OmpDirectiveSpecification &dirSpec{x.BeginDir()};
   auto &block{std::get<parser::Block>(x.t)};
 
   omp::SourcedActionStmt action{omp::GetActionStmt(block)};
