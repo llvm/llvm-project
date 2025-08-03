@@ -15,17 +15,31 @@
 #ifndef LLVM_CODEGEN_INTRINSICLOWERING_H
 #define LLVM_CODEGEN_INTRINSICLOWERING_H
 
+#include "llvm/ADT/ArrayRef.h"
+
 namespace llvm {
 class CallInst;
 class DataLayout;
+class Type;
+class Value;
 
 class IntrinsicLowering {
   const DataLayout &DL;
+  /// This controls if some intrinsics are lowered to calls to external
+  /// functions.
+  bool AllowLibraryFunctionCalls;
 
   bool Warned = false;
 
+  CallInst *ReplaceCallWith(const char *NewFn, CallInst *CI,
+                            ArrayRef<Value *> Args, Type *RetTy);
+  void ReplaceFPIntrinsicWithCall(CallInst *CI, const char *Fname,
+                                  const char *Dname, const char *LDname);
+
 public:
-  explicit IntrinsicLowering(const DataLayout &DL) : DL(DL) {}
+  explicit IntrinsicLowering(const DataLayout &DL,
+                             bool AllowLibraryFunctionCalls = true)
+      : DL(DL), AllowLibraryFunctionCalls(AllowLibraryFunctionCalls) {}
 
   /// Replace a call to the specified intrinsic function.
   /// If an intrinsic function must be implemented by the code generator
@@ -41,6 +55,6 @@ public:
   /// false if the call is not a simple integer bswap.
   static bool LowerToByteSwap(CallInst *CI);
 };
-}
+} // namespace llvm
 
 #endif
