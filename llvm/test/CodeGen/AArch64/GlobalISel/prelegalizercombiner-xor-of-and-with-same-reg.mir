@@ -12,13 +12,14 @@ body:             |
     ; (xor (and x, y), y) -> (and (not x), y)
     ; CHECK-LABEL: name: fold_scalar
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %y:_(s32) = COPY $w1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, [[C]]
-    ; CHECK: %xor:_(s32) = G_AND [[XOR]], %y
-    ; CHECK: $w0 = COPY %xor(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, [[C]]
+    ; CHECK-NEXT: %xor:_(s32) = G_AND [[XOR]], %y
+    ; CHECK-NEXT: $w0 = COPY %xor(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %and:_(s32) = G_AND %x, %y
@@ -36,14 +37,15 @@ body:             |
     ; Vector edition
     ; CHECK-LABEL: name: fold_vector
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: %x:_(<2 x s32>) = COPY $x0
-    ; CHECK: %y:_(<2 x s32>) = COPY $x1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-    ; CHECK: [[XOR:%[0-9]+]]:_(<2 x s32>) = G_XOR %x, [[BUILD_VECTOR]]
-    ; CHECK: %xor:_(<2 x s32>) = G_AND [[XOR]], %y
-    ; CHECK: $x0 = COPY %xor(<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(<2 x s32>) = COPY $x0
+    ; CHECK-NEXT: %y:_(<2 x s32>) = COPY $x1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(<2 x s32>) = G_XOR %x, [[BUILD_VECTOR]]
+    ; CHECK-NEXT: %xor:_(<2 x s32>) = G_AND [[XOR]], %y
+    ; CHECK-NEXT: $x0 = COPY %xor(<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %x:_(<2 x s32>) = COPY $x0
     %y:_(<2 x s32>) = COPY $x1
     %and:_(<2 x s32>) = G_AND %x, %y
@@ -61,13 +63,14 @@ body:             |
     ; (xor (and y, x), y) -> (and (not x), y)
     ; CHECK-LABEL: name: fold_commuted_and
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %y:_(s32) = COPY $w1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, [[C]]
-    ; CHECK: %xor:_(s32) = G_AND [[XOR]], %y
-    ; CHECK: $w0 = COPY %xor(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, [[C]]
+    ; CHECK-NEXT: %xor:_(s32) = G_AND [[XOR]], %y
+    ; CHECK-NEXT: $w0 = COPY %xor(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %and:_(s32) = G_AND %y, %x
@@ -85,13 +88,14 @@ body:             |
     ; (xor y, (and x, y)) -> (and (not x), y)
     ; CHECK-LABEL: name: fold_commuted_xor
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %y:_(s32) = COPY $w1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, [[C]]
-    ; CHECK: %xor:_(s32) = G_AND [[XOR]], %y
-    ; CHECK: $w0 = COPY %xor(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, [[C]]
+    ; CHECK-NEXT: %xor:_(s32) = G_AND [[XOR]], %y
+    ; CHECK-NEXT: $w0 = COPY %xor(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %and:_(s32) = G_AND %x, %y
@@ -109,13 +113,14 @@ body:             |
     ; (xor y, (and x, y)) -> (and (not x), y)
     ; CHECK-LABEL: name: fold_commuted_xor_and
     ; CHECK: liveins: $w0, $w1
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %y:_(s32) = COPY $w1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-    ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, [[C]]
-    ; CHECK: %xor:_(s32) = G_AND [[XOR]], %y
-    ; CHECK: $w0 = COPY %xor(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR %x, [[C]]
+    ; CHECK-NEXT: %xor:_(s32) = G_AND [[XOR]], %y
+    ; CHECK-NEXT: $w0 = COPY %xor(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %and:_(s32) = G_AND %y, %x
@@ -133,13 +138,14 @@ body:             |
     ; The G_AND does not share any registers with the G_XOR
     ; CHECK-LABEL: name: dont_fold_different_regs
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %y:_(s32) = COPY $w1
-    ; CHECK: %z:_(s32) = COPY $w2
-    ; CHECK: %and:_(s32) = G_AND %x, %z
-    ; CHECK: %xor:_(s32) = G_XOR %and, %y
-    ; CHECK: $w0 = COPY %xor(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %z:_(s32) = COPY $w2
+    ; CHECK-NEXT: %and:_(s32) = G_AND %x, %z
+    ; CHECK-NEXT: %xor:_(s32) = G_XOR %and, %y
+    ; CHECK-NEXT: $w0 = COPY %xor(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %z:_(s32) = COPY $w2
@@ -156,17 +162,17 @@ body:             |
   bb.0:
     liveins: $w0, $w1, $w2
     ; Don't fold when the G_AND is used outside the G_XOR.
-    ;
     ; CHECK-LABEL: name: dont_fold_more_than_one_use
     ; CHECK: liveins: $w0, $w1, $w2
-    ; CHECK: %x:_(s32) = COPY $w0
-    ; CHECK: %y:_(s32) = COPY $w1
-    ; CHECK: %z:_(s32) = COPY $w2
-    ; CHECK: %and:_(s32) = G_AND %x, %z
-    ; CHECK: %xor:_(s32) = G_XOR %and, %y
-    ; CHECK: %add:_(s32) = G_ADD %and, %xor
-    ; CHECK: $w0 = COPY %add(s32)
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s32) = COPY $w0
+    ; CHECK-NEXT: %y:_(s32) = COPY $w1
+    ; CHECK-NEXT: %z:_(s32) = COPY $w2
+    ; CHECK-NEXT: %and:_(s32) = G_AND %x, %z
+    ; CHECK-NEXT: %xor:_(s32) = G_XOR %and, %y
+    ; CHECK-NEXT: %add:_(s32) = G_ADD %and, %xor
+    ; CHECK-NEXT: $w0 = COPY %add(s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %x:_(s32) = COPY $w0
     %y:_(s32) = COPY $w1
     %z:_(s32) = COPY $w2

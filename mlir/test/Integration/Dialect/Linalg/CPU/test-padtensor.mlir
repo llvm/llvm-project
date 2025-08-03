@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-linalg-to-vector-patterns \
+// RUN: mlir-opt %s -transform-interpreter -test-transform-dialect-erase-schedule \
 // RUN: -one-shot-bufferize="bufferize-function-boundaries" \
 // RUN: -buffer-deallocation-pipeline -convert-bufferization-to-memref \
 // RUN: -convert-linalg-to-loops -convert-scf-to-cf -expand-strided-metadata \
@@ -6,6 +6,9 @@
 // RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
 // RUN: | FileCheck %s
+
+// TODO: Use TD for vectorization and remove `test-linalg-to-vector-patterns`
+// that's otherwise not required.
 
 
 func.func @main() {
@@ -29,6 +32,17 @@ func.func @main() {
   // CHECK-NEXT: [2,    3,    4,    2.3,    2.3]]]
 
   return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func_op = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.op<"func.func">
+
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.linalg.pad_vectorization
+    } : !transform.op<"func.func">
+    transform.yield
+  }
 }
 
 func.func private @printMemrefF32(%ptr : tensor<*xf32>)

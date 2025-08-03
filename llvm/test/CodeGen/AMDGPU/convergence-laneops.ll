@@ -1,5 +1,5 @@
 ; RUN: llc -stop-after=amdgpu-isel -mtriple=amdgcn-- -mcpu=gfx1100 -verify-machineinstrs -o - %s | FileCheck --check-prefixes=CHECK,ISEL %s
-; RUN: not --crash llc -mtriple=amdgcn--amdhsa -mcpu=1100 -verify-machineinstrs < %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
+; RUN: not --crash llc -mtriple=amdgcn--amdhsa -mcpu=gfx1100 -verify-machineinstrs < %s 2>&1 | FileCheck --check-prefix=CHECK-ERROR %s
 
 ; FIXME: Merge these tests with existing lane op tests (llvm.amdgcn.readlane.ll, llvm.amdgcn.writelane.ll ...) once the crash is fixed.
 

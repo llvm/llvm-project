@@ -1833,14 +1833,14 @@ void test_mm256_storeu_pd(double* A, __m256d B) {
 void test_mm256_storeu_ps(float* A, __m256 B) {
   // CHECK-LABEL: test_mm256_storeu_ps
   // CHECK: store <8 x float> %{{.*}}, ptr %{{.*}}, align 1{{$}}
-  // CHECk-NEXT: ret void
+  // CHECK-NEXT: ret void
   _mm256_storeu_ps(A, B);
 }
 
 void test_mm256_storeu_si256(__m256i* A, __m256i B) {
   // CHECK-LABEL: test_mm256_storeu_si256
   // CHECK: store <4 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
-  // CHECk-NEXT: ret void
+  // CHECK-NEXT: ret void
   _mm256_storeu_si256(A, B);
 }
 

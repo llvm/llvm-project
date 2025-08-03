@@ -36,7 +36,7 @@ template <class _Callable>
 _LIBCPP_HIDE_FROM_ABI void call_once(once_flag&, const _Callable&);
 
 struct _LIBCPP_TEMPLATE_VIS once_flag {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR once_flag() _NOEXCEPT : __state_(_Unset) {}
+  _LIBCPP_HIDE_FROM_ABI once_flag() _NOEXCEPT : __state_(_Unset) {}
   once_flag(const once_flag&)            = delete;
   once_flag& operator=(const once_flag&) = delete;
 

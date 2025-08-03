@@ -480,6 +480,39 @@ func.func @omp_simd_pretty_simdlen_safelen(%lb : index, %ub : index, %step : ind
 
 // -----
 
+func.func @omp_simd_bad_privatizer(%lb : index, %ub : index, %step : index) {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  // expected-error @below {{Cannot find privatizer '@not_defined'}}
+  omp.simd private(@not_defined %1 -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%arg2) : index = (%lb) to (%ub) inclusive step (%step) {
+      omp.yield
+    }
+  }
+}
+
+// -----
+
+omp.private {type = firstprivate} @_QFEp_firstprivate_i32 : i32 copy {
+^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+  %0 = llvm.load %arg0 : !llvm.ptr -> i32
+  llvm.store %0, %arg1 : i32, !llvm.ptr
+  omp.yield(%arg1 : !llvm.ptr)
+}
+func.func @omp_simd_firstprivate(%lb : index, %ub : index, %step : index) {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  // expected-error @below {{FIRSTPRIVATE cannot be used with SIMD}}
+  omp.simd private(@_QFEp_firstprivate_i32 %1 -> %arg0 : !llvm.ptr) {
+    omp.loop_nest (%arg2) : index = (%lb) to (%ub) inclusive step (%step) {
+      omp.yield
+    }
+  }
+  llvm.return
+}
+
+// -----
+
 // expected-error @below {{op expects alloc region to yield a value of the reduction type}}
 omp.declare_reduction @add_f32 : f32
 alloc {
@@ -2959,4 +2992,28 @@ llvm.func @invalid_mapper(%0 : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
+}
+
+// -----
+func.func @invalid_allocate_align_1(%arg0 : memref<i32>) -> () {
+  // expected-error @below {{failed to satisfy constraint: 64-bit signless integer attribute whose value is positive}}
+  omp.allocate_dir (%arg0 : memref<i32>) align(-1)
+
+  return
+}
+
+// -----
+func.func @invalid_allocate_align_2(%arg0 : memref<i32>) -> () {
+  // expected-error @below {{must be power of 2}}
+  omp.allocate_dir (%arg0 : memref<i32>) align(3)
+
+  return
+}
+
+// -----
+func.func @invalid_allocate_allocator(%arg0 : memref<i32>) -> () {
+  // expected-error @below {{invalid clause value}}
+  omp.allocate_dir (%arg0 : memref<i32>) allocator(omp_small_cap_mem_alloc)
+
+  return
 }

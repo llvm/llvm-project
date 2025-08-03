@@ -2,14 +2,6 @@
 ; RUN: llc -mtriple=x86_64-pc-linux -stackrealign -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=x86_64-pc-linux-gnux32 -stackrealign -verify-machineinstrs < %s | FileCheck -check-prefix=X32ABI %s
 
-; This should run with NaCl as well ( -mtriple=x86_64-pc-nacl ) but currently doesn't due to PR22655
-
-; Make sure the correct register gets set up as the base pointer
-; This should be rbx for x64 and 64-bit NaCl and ebx for x32
-; NACL-LABEL: base
-; NACL: subq $32, %rsp
-; NACL: movq %rsp, %rbx
-
 declare i32 @helper() nounwind
 define void @base() #0 {
 ; CHECK-LABEL: base:

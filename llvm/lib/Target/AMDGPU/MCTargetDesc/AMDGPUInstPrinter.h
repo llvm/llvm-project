@@ -42,6 +42,8 @@ private:
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printFP64ImmOperand(const MCInst *MI, unsigned OpNo,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printNamedBit(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                      StringRef BitName);
   void printOffset(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
@@ -130,6 +132,14 @@ private:
                          const MCSubtargetInfo &STI, raw_ostream &O);
   void printIndexKey16bit(const MCInst *MI, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
+  void printIndexKey32bit(const MCInst *MI, unsigned OpNo,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixFMT(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O, char AorB);
+  void printMatrixAFMT(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMatrixBFMT(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printInterpSlot(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
   void printInterpAttr(const MCInst *MI, unsigned OpNo,
@@ -163,6 +173,8 @@ private:
                      const MCSubtargetInfo &STI, raw_ostream &O,
                      StringRef Prefix, bool PrintInHex, bool AlwaysPrint);
 
+  void printScaleSel(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
   void printBitOp3(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
 

@@ -676,7 +676,6 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
     return;
   }
 
-  std::vector<uint64_t> OffsetsArray;
   auto writeExpression = [&](uint32_t Index) -> void {
     const DebugLocationEntry &Entry = LocList[Index];
     encodeULEB128(Entry.Expr.size(), LocBodyStream);

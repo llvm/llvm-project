@@ -116,10 +116,6 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
   const bool IsObjectFile =
       O.Header.FileType == MachO::HeaderFileType::MH_OBJECT;
   uint64_t Offset = IsObjectFile ? (HeaderSize + O.Header.SizeOfCmds) : 0;
-  // If we are emitting an encryptable binary, our load commands must have a
-  // separate (non-encrypted) page to themselves.
-  bool RequiresFirstSectionOutsideFirstPage =
-      O.EncryptionInfoCommandIndex.has_value();
   for (LoadCommand &LC : O.LoadCommands) {
     auto &MLC = LC.MachOLoadCommand;
     StringRef Segname;
@@ -173,10 +169,6 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
         if (!Sec->hasValidOffset()) {
           Sec->Offset = 0;
         } else {
-          if (RequiresFirstSectionOutsideFirstPage) {
-            SectOffset = alignToPowerOf2(SectOffset, PageSize);
-            RequiresFirstSectionOutsideFirstPage = false;
-          }
           Sec->Offset = SegOffset + SectOffset;
           Sec->Size = Sec->Content.size();
           SegFileSize = std::max(SegFileSize, SectOffset + Sec->Size);

@@ -42,7 +42,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 
@@ -998,9 +998,9 @@ bool PPCMIPeephole::simplifyCode() {
           // the transformation.
           bool IsWordAligned = false;
           if (SrcMI->getOperand(1).isGlobal()) {
-            const GlobalObject *GO =
-                dyn_cast<GlobalObject>(SrcMI->getOperand(1).getGlobal());
-            if (GO && GO->getAlign() && *GO->getAlign() >= 4 &&
+            const GlobalVariable *GV =
+                dyn_cast<GlobalVariable>(SrcMI->getOperand(1).getGlobal());
+            if (GV && GV->getAlign() && *GV->getAlign() >= 4 &&
                 (SrcMI->getOperand(1).getOffset() % 4 == 0))
               IsWordAligned = true;
           } else if (SrcMI->getOperand(1).isImm()) {

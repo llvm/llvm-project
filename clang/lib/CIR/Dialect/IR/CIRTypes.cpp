@@ -19,6 +19,16 @@
 #include "llvm/ADT/TypeSwitch.h"
 
 //===----------------------------------------------------------------------===//
+// CIR Helpers
+//===----------------------------------------------------------------------===//
+bool cir::isSized(mlir::Type ty) {
+  if (auto sizedTy = mlir::dyn_cast<cir::SizedTypeInterface>(ty))
+    return sizedTy.isSized();
+  assert(!cir::MissingFeatures::unsizedTypes());
+  return false;
+}
+
+//===----------------------------------------------------------------------===//
 // CIR Custom Parser/Printer Signatures
 //===----------------------------------------------------------------------===//
 
@@ -86,6 +96,8 @@ Type RecordType::parse(mlir::AsmParser &parser) {
   FailureOr<AsmParser::CyclicParseReset> cyclicParseGuard;
   const llvm::SMLoc loc = parser.getCurrentLocation();
   const mlir::Location eLoc = parser.getEncodedSourceLoc(loc);
+  bool packed = false;
+  bool padded = false;
   RecordKind kind;
   mlir::MLIRContext *context = parser.getContext();
 
@@ -98,6 +110,8 @@ Type RecordType::parse(mlir::AsmParser &parser) {
     kind = RecordKind::Struct;
   else if (parser.parseOptionalKeyword("union").succeeded())
     kind = RecordKind::Union;
+  else if (parser.parseOptionalKeyword("class").succeeded())
+    kind = RecordKind::Class;
   else {
     parser.emitError(loc, "unknown record type");
     return {};
@@ -126,6 +140,12 @@ Type RecordType::parse(mlir::AsmParser &parser) {
     }
   }
 
+  if (parser.parseOptionalKeyword("packed").succeeded())
+    packed = true;
+
+  if (parser.parseOptionalKeyword("padded").succeeded())
+    padded = true;
+
   // Parse record members or lack thereof.
   bool incomplete = true;
   llvm::SmallVector<mlir::Type> members;
@@ -147,8 +167,15 @@ Type RecordType::parse(mlir::AsmParser &parser) {
   mlir::Type type = {};
   if (name && incomplete) { // Identified & incomplete
     type = getChecked(eLoc, context, name, kind);
-  } else if (!incomplete) { // complete
-    parser.emitError(loc, "complete records are not yet supported");
+  } else if (!name && !incomplete) { // Anonymous & complete
+    type = getChecked(eLoc, context, membersRef, packed, padded, kind);
+  } else if (!incomplete) { // Identified & complete
+    type = getChecked(eLoc, context, membersRef, name, packed, padded, kind);
+    // If the record has a self-reference, its type already exists in a
+    // incomplete state. In this case, we must complete it.
+    if (mlir::cast<RecordType>(type).isIncomplete())
+      mlir::cast<RecordType>(type).complete(membersRef, packed, padded);
+    assert(!cir::MissingFeatures::astRecordDeclAttr());
   } else { // anonymous & incomplete
     parser.emitError(loc, "anonymous records must be complete");
     return {};
@@ -167,6 +194,9 @@ void RecordType::print(mlir::AsmPrinter &printer) const {
     break;
   case RecordKind::Union:
     printer << "union ";
+    break;
+  case RecordKind::Class:
+    printer << "class ";
     break;
   }
 
@@ -205,10 +235,8 @@ RecordType::verify(function_ref<mlir::InFlightDiagnostic()> emitError,
                    llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
                    bool incomplete, bool packed, bool padded,
                    RecordType::RecordKind kind) {
-  if (name && name.getValue().empty()) {
-    emitError() << "identified records cannot have an empty name";
-    return mlir::failure();
-  }
+  if (name && name.getValue().empty())
+    return emitError() << "identified records cannot have an empty name";
   return mlir::success();
 }
 
@@ -355,6 +383,12 @@ uint64_t RecordType::getElementOffset(const ::mlir::DataLayout &dataLayout,
     offset += dataLayout.getTypeSize(ty);
   }
 
+  // Account for padding, if necessary, for the alignment of the field whose
+  // offset we are calculating.
+  const llvm::Align tyAlign = llvm::Align(
+      getPacked() ? 1 : dataLayout.getTypeABIAlignment(members[idx]));
+  offset = llvm::alignTo(offset, tyAlign);
+
   return offset;
 }
 
@@ -421,12 +455,10 @@ uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
 mlir::LogicalResult
 IntType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                 unsigned width, bool isSigned) {
-  if (width < IntType::minBitwidth() || width > IntType::maxBitwidth()) {
-    emitError() << "IntType only supports widths from "
-                << IntType::minBitwidth() << " up to "
-                << IntType::maxBitwidth();
-    return mlir::failure();
-  }
+  if (width < IntType::minBitwidth() || width > IntType::maxBitwidth())
+    return emitError() << "IntType only supports widths from "
+                       << IntType::minBitwidth() << " up to "
+                       << IntType::maxBitwidth();
   return mlir::success();
 }
 
@@ -532,8 +564,7 @@ uint64_t FP128Type::getABIAlignment(const mlir::DataLayout &dataLayout,
 }
 
 const llvm::fltSemantics &LongDoubleType::getFloatSemantics() const {
-  return mlir::cast<cir::CIRFPTypeInterface>(getUnderlying())
-      .getFloatSemantics();
+  return mlir::cast<cir::FPTypeInterface>(getUnderlying()).getFloatSemantics();
 }
 
 llvm::TypeSize
@@ -551,17 +582,30 @@ LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
-// Floating-point and Float-point Vector type helpers
+// ComplexType Definitions
 //===----------------------------------------------------------------------===//
 
-bool cir::isFPOrFPVectorTy(mlir::Type t) {
-  assert(!cir::MissingFeatures::vectorType());
-  return isAnyFloatingPointType(t);
+llvm::TypeSize
+cir::ComplexType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                                    mlir::DataLayoutEntryListRef params) const {
+  // C17 6.2.5p13:
+  //   Each complex type has the same representation and alignment requirements
+  //   as an array type containing exactly two elements of the corresponding
+  //   real type.
+
+  return dataLayout.getTypeSizeInBits(getElementType()) * 2;
 }
 
-//===----------------------------------------------------------------------===//
-// FuncType Definitions
-//===----------------------------------------------------------------------===//
+uint64_t
+cir::ComplexType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                  mlir::DataLayoutEntryListRef params) const {
+  // C17 6.2.5p13:
+  //   Each complex type has the same representation and alignment requirements
+  //   as an array type containing exactly two elements of the corresponding
+  //   real type.
+
+  return dataLayout.getTypeABIAlignment(getElementType());
+}
 
 FuncType FuncType::clone(TypeRange inputs, TypeRange results) const {
   assert(results.size() == 1 && "expected exactly one result type");
@@ -631,10 +675,9 @@ mlir::LogicalResult
 FuncType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
                  llvm::ArrayRef<mlir::Type> argTypes, mlir::Type returnType,
                  bool isVarArg) {
-  if (returnType && mlir::isa<cir::VoidType>(returnType)) {
-    emitError() << "!cir.func cannot have an explicit 'void' return type";
-    return mlir::failure();
-  }
+  if (mlir::isa_and_nonnull<cir::VoidType>(returnType))
+    return emitError()
+           << "!cir.func cannot have an explicit 'void' return type";
   return mlir::success();
 }
 
@@ -652,6 +695,23 @@ uint64_t
 BoolType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
                           ::mlir::DataLayoutEntryListRef params) const {
   return 1;
+}
+
+//===----------------------------------------------------------------------===//
+//  VPtrType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+VPtrType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                            mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider size differences under different ABIs
+  return llvm::TypeSize::getFixed(64);
+}
+
+uint64_t VPtrType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                                   mlir::DataLayoutEntryListRef params) const {
+  // FIXME: consider alignment differences under different ABIs
+  return 8;
 }
 
 //===----------------------------------------------------------------------===//
@@ -692,17 +752,7 @@ mlir::LogicalResult cir::VectorType::verify(
     mlir::Type elementType, uint64_t size) {
   if (size == 0)
     return emitError() << "the number of vector elements must be non-zero";
-
-  // Check if it a valid FixedVectorType
-  if (mlir::isa<cir::PointerType, cir::FP128Type>(elementType))
-    return success();
-
-  // Check if it a valid VectorType
-  if (mlir::isa<cir::IntType>(elementType) ||
-      isAnyFloatingPointType(elementType))
-    return success();
-
-  return emitError() << "unsupported element type for CIR vector";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

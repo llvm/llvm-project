@@ -5164,6 +5164,29 @@ namespace A {
 A::X x;
 #endif
 
+namespace TemplateDecltypeOperator {
+
+#if defined(FIRST) || defined(SECOND)
+template <class T6>
+T6 func();
+#endif
+
+#if defined(SECOND)
+template <class UnrelatedT>
+using UnrelatedAlias = decltype(func<UnrelatedT>())();
+#endif
+
+#if defined(FIRST) || defined(SECOND)
+class A {
+  template <class T6>
+  operator decltype(func<T6>()) () {}
+};
+#else
+A a;
+#endif
+
+}
+
 // Keep macros contained to one file.
 #ifdef FIRST
 #undef FIRST

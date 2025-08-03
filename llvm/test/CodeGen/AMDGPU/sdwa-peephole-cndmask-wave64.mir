@@ -231,3 +231,41 @@ body:             |
     $vgpr0 = COPY %3
     SI_RETURN implicit $vgpr0
 ...
+
+# SDWA conversion of V_CNDMASK_B32 with V_BFE_I32 operand had to be
+# disabled.
+# FIXME sext modifier gets erroneously printed as neg modifier.
+
+...
+---
+name: issue138766_cndmask_with_sext
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    ; CHECK-LABEL: name: issue138766_cndmask_with_sext
+    ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 1, [[COPY]], implicit $exec
+    ; CHECK-NEXT: [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 killed [[V_AND_B32_e64_]], 1, implicit $exec
+    ; CHECK-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY2]], 0, 8, implicit $exec
+    ; CHECK-NEXT: $vcc = COPY killed [[V_CMP_EQ_U32_e64_]]
+    ; CHECK-NEXT: [[V_CNDMASK_B32_e32_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e32 0, killed [[V_BFE_I32_e64_]], implicit $vcc, implicit $exec
+    ; CHECK-NEXT: [[V_OR_B32_e64_:%[0-9]+]]:vgpr_32 = V_OR_B32_e64 killed [[V_CNDMASK_B32_e32_]], [[COPY1]], implicit $exec
+    ; CHECK-NEXT: $vgpr0 = COPY [[V_OR_B32_e64_]]
+    ; CHECK-NEXT: SI_RETURN implicit $vgpr0
+    %10:vgpr_32 = COPY $vgpr2
+    %9:vgpr_32 = COPY $vgpr1
+    %8:vgpr_32 = COPY $vgpr0
+    %11:vgpr_32 = V_AND_B32_e64 1, %10, implicit $exec
+    %12:sreg_64_xexec = V_CMP_EQ_U32_e64 killed %11, 1, implicit $exec
+    %14:vgpr_32 = V_BFE_I32_e64 %8, 0, 8, implicit $exec
+    %16:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, killed %14, killed %12, implicit $exec
+    %18:vgpr_32 = V_OR_B32_e64 killed %16, %9, implicit $exec
+    $vgpr0 = COPY %18
+    SI_RETURN implicit $vgpr0
+...

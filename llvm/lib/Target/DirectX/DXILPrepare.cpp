@@ -11,6 +11,7 @@
 /// Language (DXIL).
 //===----------------------------------------------------------------------===//
 
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
@@ -148,9 +149,49 @@ class DXILPrepareModule : public ModulePass {
                                      Type *Ty) {
     // Omit bitcasts if the incoming value matches the instruction type.
     auto It = PointerTypes.find(Operand);
-    if (It != PointerTypes.end())
-      if (cast<TypedPointerType>(It->second)->getElementType() == Ty)
+    if (It != PointerTypes.end()) {
+      auto *OpTy = cast<TypedPointerType>(It->second)->getElementType();
+      if (OpTy == Ty)
         return nullptr;
+    }
+
+    Type *ValTy = Operand->getType();
+    // Also omit the bitcast for matching global array types
+    if (auto *GlobalVar = dyn_cast<GlobalVariable>(Operand))
+      ValTy = GlobalVar->getValueType();
+
+    if (auto *AI = dyn_cast<AllocaInst>(Operand))
+      ValTy = AI->getAllocatedType();
+
+    if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+      Type *ElTy = ArrTy->getElementType();
+      if (ElTy == Ty)
+        return nullptr;
+    }
+
+    // finally, drill down GEP instructions until we get the array
+    // that is being accessed, and compare element types
+    if (ConstantExpr *GEPInstr = dyn_cast<ConstantExpr>(Operand)) {
+      while (GEPInstr->getOpcode() == Instruction::GetElementPtr) {
+        Value *OpArg = GEPInstr->getOperand(0);
+        if (ConstantExpr *NewGEPInstr = dyn_cast<ConstantExpr>(OpArg)) {
+          GEPInstr = NewGEPInstr;
+          continue;
+        }
+
+        if (auto *GlobalVar = dyn_cast<GlobalVariable>(OpArg))
+          ValTy = GlobalVar->getValueType();
+        if (auto *AI = dyn_cast<AllocaInst>(Operand))
+          ValTy = AI->getAllocatedType();
+        if (auto *ArrTy = dyn_cast<ArrayType>(ValTy)) {
+          Type *ElTy = ArrTy->getElementType();
+          if (ElTy == Ty)
+            return nullptr;
+        }
+        break;
+      }
+    }
+
     // Insert bitcasts where we are removing the instruction.
     Builder.SetInsertPoint(&Inst);
     // This code only gets hit in opaque-pointer mode, so the type of the
@@ -204,15 +245,6 @@ public:
 
           I.dropUnknownNonDebugMetadata(DXILCompatibleMDs);
 
-          if (I.getOpcode() == Instruction::FNeg) {
-            Builder.SetInsertPoint(&I);
-            Value *In = I.getOperand(0);
-            Value *Zero = ConstantFP::get(In->getType(), -0.0);
-            I.replaceAllUsesWith(Builder.CreateFSub(Zero, In));
-            I.eraseFromParent();
-            continue;
-          }
-
           // Emtting NoOp bitcast instructions allows the ValueEnumerator to be
           // unmodified as it reserves instruction IDs during contruction.
           if (auto LI = dyn_cast<LoadInst>(&I)) {
@@ -255,12 +287,21 @@ public:
     }
     // Remove flags not for DXIL.
     cleanModuleFlags(M);
+
+    // dx.rootsignatures will have been parsed from its metadata form as its
+    // binary form as part of the RootSignatureAnalysisWrapper, so safely
+    // remove it as it is not recognized in DXIL
+    if (NamedMDNode *RootSignature = M.getNamedMetadata("dx.rootsignatures"))
+      RootSignature->eraseFromParent();
+
     return true;
   }
 
   DXILPrepareModule() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
+    AU.addPreserved<RootSignatureAnalysisWrapper>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
     AU.addPreserved<DXILResourceWrapperPass>();
@@ -274,6 +315,7 @@ char DXILPrepareModule::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(DXILMetadataAnalysisWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(RootSignatureAnalysisWrapper)
 INITIALIZE_PASS_END(DXILPrepareModule, DEBUG_TYPE, "DXIL Prepare Module", false,
                     false)
 

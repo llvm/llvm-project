@@ -203,11 +203,8 @@ define i32 @load_before_store_escape_addr_only(i64 %i, i32 %b)  {
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 [[I:%.*]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[B:%.*]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
-; CHECK:       if.then:
-; CHECK-NEXT:    store i32 [[B]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    br label [[IF_END]]
-; CHECK:       if.end:
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[TMP0]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4

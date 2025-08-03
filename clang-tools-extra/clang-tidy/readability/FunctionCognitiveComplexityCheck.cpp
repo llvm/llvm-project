@@ -21,15 +21,12 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <array>
 #include <cassert>
 #include <optional>
 #include <stack>
 #include <tuple>
-#include <type_traits>
 #include <utility>
 
 using namespace clang::ast_matchers;

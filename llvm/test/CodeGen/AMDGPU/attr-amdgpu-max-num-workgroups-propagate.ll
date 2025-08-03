@@ -27,7 +27,7 @@ define internal void @callee_1_2_3() {
 
 define amdgpu_kernel void @kernel_1_2_3() #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_1_2_3(
-; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    call void @callee_1_2_3()
 ; CHECK-NEXT:    call void @extern_callee()
 ; CHECK-NEXT:    call void @dummy()
@@ -44,7 +44,7 @@ attributes #0 = {"amdgpu-max-num-workgroups"="1,2,3"}
 ; -> 100,10,99
 define internal void @callee_merge_100_8_32__16_10_99() {
 ; CHECK-LABEL: define internal void @callee_merge_100_8_32__16_10_99(
-; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
@@ -54,7 +54,7 @@ define internal void @callee_merge_100_8_32__16_10_99() {
 
 define amdgpu_kernel void @kernel_100_8_32() #1 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_100_8_32(
-; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    call void @callee_merge_100_8_32__16_10_99()
 ; CHECK-NEXT:    ret void
 ;
@@ -64,7 +64,7 @@ define amdgpu_kernel void @kernel_100_8_32() #1 {
 
 define amdgpu_cs void @amdgpu_cs_100_8_32() #1 {
 ; CHECK-LABEL: define amdgpu_cs void @amdgpu_cs_100_8_32(
-; CHECK-SAME: ) #[[ATTR4]] {
+; CHECK-SAME: ) #[[ATTR3]] {
 ; CHECK-NEXT:    call void @callee_merge_100_8_32__16_10_99()
 ; CHECK-NEXT:    ret void
 ;
@@ -76,7 +76,7 @@ attributes #1 = {"amdgpu-max-num-workgroups"="100,8,32"}
 
 define amdgpu_kernel void @kernel_16_10_99() #2 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_16_10_99(
-; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR4:[0-9]+]] {
 ; CHECK-NEXT:    call void @callee_merge_100_8_32__16_10_99()
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
@@ -110,7 +110,7 @@ define internal void @callee_x_worst_case() {
 
 define amdgpu_kernel void @kernel_x_maximum() #3 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_x_maximum(
-; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @merge_to_worst_case()
 ; CHECK-NEXT:    call void @callee_x_worst_case()
 ; CHECK-NEXT:    call void @dummy()
@@ -126,7 +126,7 @@ attributes #3 = {"amdgpu-max-num-workgroups"="4294967295,1,1"}
 
 define amdgpu_kernel void @kernel_y_maximum() #4 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_y_maximum(
-; CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR6:[0-9]+]] {
 ; CHECK-NEXT:    call void @merge_to_worst_case()
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
@@ -140,7 +140,7 @@ attributes #4 = {"amdgpu-max-num-workgroups"="1,4294967295,1"}
 
 define amdgpu_kernel void @kernel_z_maximum() #5 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_z_maximum(
-; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR7:[0-9]+]] {
 ; CHECK-NEXT:    call void @merge_to_worst_case()
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
@@ -155,7 +155,7 @@ attributes #5 = {"amdgpu-max-num-workgroups"="1,1,4294967295"}
 ; Make sure the attribute isn't lost from the callee.
 define internal void @annotated_callee_from_unannotated_kernel() #6 {
 ; CHECK-LABEL: define internal void @annotated_callee_from_unannotated_kernel(
-; CHECK-SAME: ) #[[ATTR9:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR8:[0-9]+]] {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
@@ -167,7 +167,7 @@ attributes #6 = {"amdgpu-max-num-workgroups"="42,99,123"}
 
 define amdgpu_kernel void @unannotated_kernel_calls_annotated_callee()  {
 ; CHECK-LABEL: define amdgpu_kernel void @unannotated_kernel_calls_annotated_callee(
-; CHECK-SAME: ) #[[ATTR10:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    call void @annotated_callee_from_unannotated_kernel()
 ; CHECK-NEXT:    ret void
 ;
@@ -178,7 +178,7 @@ define amdgpu_kernel void @unannotated_kernel_calls_annotated_callee()  {
 
 define internal void @annotated_callee_merge_caller() #7 {
 ; CHECK-LABEL: define internal void @annotated_callee_merge_caller(
-; CHECK-SAME: ) #[[ATTR11:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR9:[0-9]+]] {
 ; CHECK-NEXT:    call void @dummy()
 ; CHECK-NEXT:    ret void
 ;
@@ -190,7 +190,7 @@ attributes #7 = {"amdgpu-max-num-workgroups"="512,256,1024"}
 
 define amdgpu_kernel void @call_annotated_callee_merge_caller() #8 {
 ; CHECK-LABEL: define amdgpu_kernel void @call_annotated_callee_merge_caller(
-; CHECK-SAME: ) #[[ATTR12:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR10:[0-9]+]] {
 ; CHECK-NEXT:    call void @annotated_callee_merge_caller()
 ; CHECK-NEXT:    ret void
 ;
@@ -212,7 +212,7 @@ define internal void @called_by_explicit_worst_case() {
 
 define amdgpu_kernel void @kernel_explicit_worst_case() #9 {
 ; CHECK-LABEL: define amdgpu_kernel void @kernel_explicit_worst_case(
-; CHECK-SAME: ) #[[ATTR13:[0-9]+]] {
+; CHECK-SAME: ) #[[ATTR11:[0-9]+]] {
 ; CHECK-NEXT:    call void @called_by_explicit_worst_case()
 ; CHECK-NEXT:    ret void
 ;
@@ -223,18 +223,16 @@ define amdgpu_kernel void @kernel_explicit_worst_case() #9 {
 attributes #9 = {"amdgpu-max-num-workgroups"="4294967295,4294967295,4294967295"}
 
 ;.
-; CHECK: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-max-num-workgroups"="1,2,3" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR2]] = { "amdgpu-max-num-workgroups"="1,2,3" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR3]] = { "amdgpu-max-num-workgroups"="100,10,99" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR4]] = { "amdgpu-max-num-workgroups"="100,8,32" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR5]] = { "amdgpu-max-num-workgroups"="16,10,99" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR6]] = { "amdgpu-max-num-workgroups"="4294967295,1,1" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR7]] = { "amdgpu-max-num-workgroups"="1,4294967295,1" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR8]] = { "amdgpu-max-num-workgroups"="1,1,4294967295" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR9]] = { "amdgpu-max-num-workgroups"="42,99,123" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR10]] = { "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR11]] = { "amdgpu-max-num-workgroups"="256,128,1024" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR12]] = { "amdgpu-max-num-workgroups"="256,128,2048" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR13]] = { "amdgpu-max-num-workgroups"="4294967295,4294967295,4294967295" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-max-num-workgroups"="1,2,3" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR2]] = { "amdgpu-max-num-workgroups"="100,10,99" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-max-num-workgroups"="100,8,32" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR4]] = { "amdgpu-max-num-workgroups"="16,10,99" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR5]] = { "amdgpu-max-num-workgroups"="4294967295,1,1" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR6]] = { "amdgpu-max-num-workgroups"="1,4294967295,1" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR7]] = { "amdgpu-max-num-workgroups"="1,1,4294967295" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR8]] = { "amdgpu-max-num-workgroups"="42,99,123" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR9]] = { "amdgpu-max-num-workgroups"="256,128,1024" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR10]] = { "amdgpu-max-num-workgroups"="256,128,2048" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR11]] = { "amdgpu-max-num-workgroups"="4294967295,4294967295,4294967295" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
 ;.
