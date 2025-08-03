@@ -258,7 +258,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   switchSection(SXData);
   SXData->ensureMinAlignment(Align(4));
 
-  insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
+  newSpecialFragment<MCSymbolIdFragment>(Symbol);
   getAssembler().registerSymbol(*Symbol);
   CSymbol->setIsSafeSEH();
 
@@ -273,7 +273,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolIndex(MCSymbol const *Symbol) {
   MCSection *Sec = getCurrentSectionOnly();
   Sec->ensureMinAlignment(Align(4));
 
-  insert(getContext().allocFragment<MCSymbolIdFragment>(Symbol));
+  newSpecialFragment<MCSymbolIdFragment>(Symbol);
   getAssembler().registerSymbol(*Symbol);
 }
 

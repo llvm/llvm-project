@@ -153,15 +153,12 @@ void MCContext::reset() {
   SPIRVAllocator.DestroyAll();
   WasmSignatureAllocator.DestroyAll();
 
-  // ~CodeViewContext may destroy a MCFragment outside of sections and need to
-  // be reset before FragmentAllocator.
   CVContext.reset();
 
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
   Symbols.clear();
   Allocator.Reset();
-  FragmentAllocator.Reset();
   Instances.clear();
   CompilationDir.clear();
   MainFileName.clear();

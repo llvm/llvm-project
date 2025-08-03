@@ -434,11 +434,6 @@ public:
   /// Create and return a new MC instruction.
   LLVM_ABI MCInst *createMCInst();
 
-  template <typename F, typename... Args> F *allocFragment(Args &&...args) {
-    return new (FragmentAllocator.Allocate(sizeof(F), alignof(F)))
-        F(std::forward<Args>(args)...);
-  }
-
   /// \name Symbol Management
   /// @{
 
