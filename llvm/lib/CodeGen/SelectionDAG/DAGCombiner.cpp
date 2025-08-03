@@ -22545,7 +22545,6 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
                                        m_Specific(StoreOffset)),
                                 m_Value(OtherVec)))) {
     LoadPos = 1;
-    Mask = DAG.getNOT(Dl, Mask, Mask.getValueType());
   } else {
     return SDValue();
   }
@@ -22556,6 +22555,9 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
 
   if (!Store->getChain().reachesChainWithoutSideEffects(LoadCh))
     return SDValue();
+
+  if (LoadPos == 1)
+    Mask = DAG.getNOT(Dl, Mask, Mask.getValueType());
 
   return DAG.getMaskedStore(Store->getChain(), Dl, OtherVec, StorePtr,
                             StoreOffset, Mask, VT, Store->getMemOperand(),
