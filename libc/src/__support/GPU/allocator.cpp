@@ -20,6 +20,7 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/new.h"
+#include "src/__support/GPU/fixedstack.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
 #include "src/__support/threads/sleep.h"
@@ -38,6 +39,9 @@ constexpr static uint32_t MIN_ALIGNMENT = MIN_SIZE - 1;
 
 // The number of times to attempt claiming an in-progress slab allocation.
 constexpr static uint32_t MAX_TRIES = 1024;
+
+// The number of previously allocated slabs we will keep in memory.
+constexpr static uint32_t CACHED_SLABS = 8;
 
 static_assert(!(ARRAY_SIZE & (ARRAY_SIZE - 1)), "Must be a power of two");
 
@@ -185,20 +189,35 @@ struct Slab {
   struct alignas(MIN_SIZE) Header {
     uint32_t chunk_size;
     uint32_t global_index;
+    uint32_t cached_chunk_size;
   };
 
   // Initialize the slab with its chunk size and index in the global table for
   // use when freeing.
   Slab(uint32_t chunk_size, uint32_t global_index) {
     Header *header = reinterpret_cast<Header *>(memory);
+    header->cached_chunk_size = cpp::numeric_limits<uint32_t>::max();
     header->chunk_size = chunk_size;
     header->global_index = global_index;
+  }
+
+  // Reset the memory with a new index and chunk size, not thread safe.
+  Slab *reset(uint32_t chunk_size, uint32_t global_index) {
+    Header *header = reinterpret_cast<Header *>(memory);
+    header->cached_chunk_size = header->chunk_size;
+    header->chunk_size = chunk_size;
+    header->global_index = global_index;
+    return this;
   }
 
   // Set the necessary bitfield bytes to zero in parallel using many lanes. This
   // must be called before the bitfield can be accessed safely, memory is not
   // guaranteed to be zero initialized in the current implementation.
   void initialize(uint64_t uniform) {
+    // If this is a re-used slab the memory is already set to zero.
+    if (get_cached_chunk_size() <= get_chunk_size())
+      return;
+
     uint32_t size = (bitfield_bytes(get_chunk_size()) + sizeof(uint32_t) - 1) /
                     sizeof(uint32_t);
     impl::uniform_memset(get_bitfield(), 0, size, uniform);
@@ -234,6 +253,11 @@ struct Slab {
   // Get the location in the memory where we will store the chunk size.
   uint32_t get_chunk_size() const {
     return reinterpret_cast<const Header *>(memory)->chunk_size;
+  }
+
+  // Get the chunk size that was previously used.
+  uint32_t get_cached_chunk_size() const {
+    return reinterpret_cast<const Header *>(memory)->cached_chunk_size;
   }
 
   // Get the location in the memory where we will store the global index.
@@ -337,6 +361,9 @@ struct Slab {
   uint8_t memory[SLAB_SIZE];
 };
 
+// A global cache of previously allocated slabs for efficient reuse.
+static FixedStack<Slab *, CACHED_SLABS> slab_cache;
+
 /// A wait-free guard around a pointer resource to be created dynamically if
 /// space is available and freed once there are no more users.
 struct GuardPtr {
@@ -408,6 +435,11 @@ private:
             reinterpret_cast<Slab *>(cpp::numeric_limits<uintptr_t>::max()),
             cpp::MemoryOrder::RELAXED, cpp::MemoryOrder::RELAXED)) {
       count = cpp::numeric_limits<uint32_t>::max();
+
+      Slab *cached = nullptr;
+      if (slab_cache.pop(cached))
+        return cached->reset(cpp::forward<Args>(args)...);
+
       void *raw = impl::rpc_allocate(sizeof(Slab));
       if (!raw)
         return nullptr;
@@ -475,8 +507,10 @@ public:
     if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(mask)) &&
         ref.release(cpp::popcount(mask))) {
       Slab *p = ptr.load(cpp::MemoryOrder::RELAXED);
-      p->~Slab();
-      impl::rpc_free(p);
+      if (!slab_cache.push(p)) {
+        p->~Slab();
+        impl::rpc_free(p);
+      }
       cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
       ptr.store(nullptr, cpp::MemoryOrder::RELAXED);
     }
