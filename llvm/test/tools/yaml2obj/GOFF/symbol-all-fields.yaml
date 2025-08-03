@@ -1,0 +1,55 @@
+## This tests a symbol where all required and optional fields are set.
+# RUN: yaml2obj %s | od -v -An -tx1 | FileCheck --ignore-case %s
+
+## Verify that GOFF Header is correct.
+# CHECK: 03 f0 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+## Verify that the symbol is written correctly.
+# CHECK-NEXT: 03 00 00 01 00 00 00 01 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 01 a7 00 00 00 00 00 00 00
+
+## Verify GOFF Module end.
+# CHECK-NEXT: 03 40 00 00 00 00 00 00 00 00 00 03 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+# CHECK-NEXT: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+--- !GOFF
+FileHeader:
+  ArchitectureLevel: 1
+Records:
+  - Symbol:
+      Name:            'x'
+      Type:            ESD_ST_ElementDefinition
+      ID:              1
+      OwnerID:         0
+      Address:         0
+      Length:          0
+      ExtAttrID:       0
+      ExtAttrOffset:   0
+      NameSpace:       ESD_NS_NormalName
+      Flags:           []
+      FillByteValue:   0
+      PSectID:         0
+      Priority:        0
+      Signature:       0
+      Amode:           0
+      Rmode:           0
+      TextStyle:       0
+      BindingAlgorithm: 0
+      TaskingBehavior: 0
+      Executable:      0
+      LinkageType:     0
+      BindingStrength: 0
+      LoadingBehavior: 0
+      BindingScope:    0
+      Alignment:       0
+      BAFlags:         []
