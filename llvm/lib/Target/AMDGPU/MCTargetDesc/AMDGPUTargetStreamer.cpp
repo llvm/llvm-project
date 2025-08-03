@@ -872,14 +872,14 @@ void AMDGPUTargetELFStreamer::EmitAMDKernelCodeT(AMDGPUMCKernelCodeT &Header) {
 
 void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
                                                    unsigned Type) {
-  MCSymbolELF *Symbol = cast<MCSymbolELF>(
+  auto *Symbol = static_cast<MCSymbolELF *>(
       getStreamer().getContext().getOrCreateSymbol(SymbolName));
   Symbol->setType(Type);
 }
 
 void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
                                             Align Alignment) {
-  MCSymbolELF *SymbolELF = cast<MCSymbolELF>(Symbol);
+  auto *SymbolELF = static_cast<MCSymbolELF *>(Symbol);
   SymbolELF->setType(ELF::STT_OBJECT);
 
   if (!SymbolELF->isBindingSet())
@@ -974,9 +974,9 @@ void AMDGPUTargetELFStreamer::EmitAmdhsaKernelDescriptor(
   auto &Streamer = getStreamer();
   auto &Context = Streamer.getContext();
 
-  MCSymbolELF *KernelCodeSymbol = cast<MCSymbolELF>(
-      Context.getOrCreateSymbol(Twine(KernelName)));
-  MCSymbolELF *KernelDescriptorSymbol = cast<MCSymbolELF>(
+  auto *KernelCodeSymbol =
+      static_cast<MCSymbolELF *>(Context.getOrCreateSymbol(Twine(KernelName)));
+  auto *KernelDescriptorSymbol = static_cast<MCSymbolELF *>(
       Context.getOrCreateSymbol(Twine(KernelName) + Twine(".kd")));
 
   // Copy kernel descriptor symbol's binding, other and visibility from the

@@ -76,7 +76,7 @@ void MipsELFStreamer::createPendingLabelRelocs() {
   // FIXME: Also mark labels when in MIPS16 mode.
   if (ELFTargetStreamer->isMicroMipsEnabled()) {
     for (auto *L : Labels) {
-      auto *Label = cast<MCSymbolELF>(L);
+      auto *Label = static_cast<MCSymbolELF *>(L);
       getAssembler().registerSymbol(*Label);
       Label->setOther(ELF::STO_MIPS_MICROMIPS);
     }
