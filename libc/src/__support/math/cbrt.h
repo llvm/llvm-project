@@ -146,7 +146,6 @@ LIBC_INLINE static constexpr double get_error(const DoubleDouble &x_3,
 
 LIBC_INLINE static constexpr double cbrt(double x) {
   using DoubleDouble = fputil::DoubleDouble;
-  using Float128 = fputil::DyadicFloat<128>;
   using namespace cbrt_internal;
   using FPBits = fputil::FPBits<double>;
 
