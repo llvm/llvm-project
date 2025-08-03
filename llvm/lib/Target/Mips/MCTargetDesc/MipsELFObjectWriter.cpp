@@ -166,8 +166,8 @@ unsigned MipsELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case Mips::S_GOTTPREL:
   case Mips::S_TPREL_HI:
   case Mips::S_TPREL_LO:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
