@@ -335,6 +335,17 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
       return InsertNewInstWith(And, I->getIterator());
     }
 
+    // If all of the demanded bits on one side are known, and all of the set
+    // bits on that side are also known to not be set on the other side, turn
+    // this into an OR, as we know the bits will not affect the result. e.g (X &
+    // C1) ^ C2 --> (X & C1) | C2 iff(C1 & C2) == 0
+    if (DemandedMask.isSubsetOf(RHSKnown.Zero | RHSKnown.One) &&
+        (RHSKnown.One.isSubsetOf(LHSKnown.Zero))) {
+      Instruction *Or =
+          BinaryOperator::CreateOr(I->getOperand(0), I->getOperand(1));
+      return InsertNewInstWith(Or, I->getIterator());
+    }
+
     // If the RHS is a constant, see if we can change it. Don't alter a -1
     // constant because that's a canonical 'not' op, and that is better for
     // combining, SCEV, and codegen.
