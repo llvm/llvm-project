@@ -31,9 +31,11 @@ class DynamicDialect;
 class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
+class Operation;
 class RegisteredOperationName;
 class StorageUniquer;
 class IRUnit;
+class WeakOpRef;
 
 /// MLIRContext is the top-level object for a collection of MLIR operations. It
 /// holds immortal uniqued objects like types, and the tables used to unique
@@ -279,6 +281,9 @@ public:
     else
       actionFn();
   }
+
+  WeakOpRef acquireWeakOpRef(Operation *op);
+  void expireWeakRefs(Operation *op);
 
 private:
   /// Return true if the given dialect is currently loading.
