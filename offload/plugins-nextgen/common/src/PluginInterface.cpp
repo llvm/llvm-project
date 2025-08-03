@@ -815,8 +815,11 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 
   // Enable the memory manager if required.
   auto [ThresholdMM, EnableMM] = MemoryManagerTy::getSizeThresholdFromEnv();
-  if (EnableMM)
+  if (EnableMM) {
+    if (ThresholdMM == 0)
+      ThresholdMM = getMemoryManagerSizeThreshold();
     MemoryManager = new MemoryManagerTy(*this, ThresholdMM);
+  }
 
   return Plugin::success();
 }
