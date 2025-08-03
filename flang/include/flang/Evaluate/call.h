@@ -248,8 +248,7 @@ public:
   ProcedureRef(ProcedureDesignator &&p, ActualArguments &&a,
       bool hasAlternateReturns = false)
       : proc_{std::move(p)}, arguments_{std::move(a)},
-        hasAlternateReturns_{hasAlternateReturns} {
-  }
+        hasAlternateReturns_{hasAlternateReturns} {}
   ~ProcedureRef();
   static void Deleter(ProcedureRef *);
 
