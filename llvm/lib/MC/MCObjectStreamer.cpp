@@ -56,9 +56,9 @@ static_assert(FragBlockSize >= sizeof(MCFragment) + NewFragHeadroom);
 MCFragment *MCObjectStreamer::allocFragSpace(size_t Headroom) {
   auto Size = std::max(FragBlockSize, sizeof(MCFragment) + Headroom);
   FragSpace = Size - sizeof(MCFragment);
-  auto Chunk = std::unique_ptr<char[]>(new char[Size]);
-  auto *F = reinterpret_cast<MCFragment *>(Chunk.get());
-  FragStorage.push_back(std::move(Chunk));
+  auto Block = std::unique_ptr<uint8_t[]>(new uint8_t[Size]);
+  auto *F = reinterpret_cast<MCFragment *>(Block.get());
+  FragStorage.push_back(std::move(Block));
   return F;
 }
 
@@ -113,9 +113,9 @@ void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
   FragSpace -= Contents.size();
 }
 
-void MCObjectStreamer::appendContents(size_t Num, char Elt) {
+void MCObjectStreamer::appendContents(size_t Num, uint8_t Elt) {
   ensureHeadroom(Num);
-  MutableArrayRef<char> Data(getCurFragEnd(), Num);
+  MutableArrayRef<uint8_t> Data(getCurFragEnd(), Num);
   llvm::fill(Data, Elt);
   CurFrag->FixedSize += Num;
   FragSpace -= Num;

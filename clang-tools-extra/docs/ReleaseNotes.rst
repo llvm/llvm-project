@@ -105,8 +105,18 @@ Improvements to clang-tidy
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
 
+- Improved :program:`run-clang-tidy.py` by adding a new option
+  `enable-check-profile` to enable per-check timing profiles and print a
+  report based on all analyzed files.
+
 New checks
 ^^^^^^^^^^
+
+- New :doc:`bugprone-invalid-enum-default-initialization
+  <clang-tidy/checks/bugprone/invalid-enum-default-initialization>` check.
+
+  Detects default initialization (to 0) of variables with ``enum`` type where
+  the enum has no enumerator with value of 0.
 
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
@@ -123,6 +133,10 @@ Changes in existing checks
 - Improved :doc:`bugprone-infinite-loop
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
   variables introduced by structured bindings.
+
+- Improved :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
+  declarations in system headers.
 
 - Improved :doc:`bugprone-signed-char-misuse
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
@@ -153,6 +167,10 @@ Changes in existing checks
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
+
+- Improved :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check by ignoring
+  declarations in system headers.
 
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option

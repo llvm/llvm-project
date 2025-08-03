@@ -394,7 +394,7 @@ define i64 @negative_ptrtoint_sub_zext_ptrtoint(ptr %p, i32 %offset) {
 
 define i16 @test25_as1(ptr addrspace(1) %P, i64 %A) {
 ; CHECK-LABEL: @test25_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[A:%.*]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[A:%.*]] to i16
 ; CHECK-NEXT:    [[B_IDX:%.*]] = shl nsw i16 [[TMP1]], 1
 ; CHECK-NEXT:    [[GEPDIFF:%.*]] = add nsw i16 [[B_IDX]], -84
 ; CHECK-NEXT:    ret i16 [[GEPDIFF]]

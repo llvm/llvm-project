@@ -72,14 +72,10 @@ def InstD : InstBase {
 // CHECK:      {0, 1, 2, -1, -1, },
 // CHECK:      {-1, -1, -1, 0, 1, },
 // CHECK:    };
-// CHECK:    switch(Opcode) {
-// CHECK:    case MyNamespace::InstA:
-// CHECK:      return OperandMap[0][static_cast<unsigned>(Name)];
-// CHECK:    case MyNamespace::InstB:
-// CHECK:    case MyNamespace::InstC:
-// CHECK:      return OperandMap[1][static_cast<unsigned>(Name)];
-// CHECK:    default: return -1;
-// CHECK:    }
+// CHECK:    static constexpr uint8_t InstructionIndex[] = {
+// CHECK:      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+// CHECK:    };
+// CHECK:    return OperandMap[InstructionIndex[Opcode]][(unsigned)Name];
 // CHECK:  }
 // CHECK:  } // end namespace llvm::MyNamespace
 // CHECK:  #endif //GET_INSTRINFO_NAMED_OPS
