@@ -83,12 +83,11 @@ bool checkAndConsumeModuleDecl(const SourceManager &SM, Lexer &Lex,
   return Matched;
 }
 
-// If file does not use modules, returns the offset after header guard
-// directives and any comments before/after header guards (e.g.
-// `#ifndef/#define` pair, `#pragma once`). If no header guard is present in the
-// code, this will return the offset after skipping all comments from the start
-// of the code. If modules are in use, the offset will be in the global module
-// fragment.
+// Determines the minimum offset into the file where we want to insert header
+// includes. This will be put (when available):
+// - after `#pragma once`
+// - after header guards (`#ifdef` and `#define`)
+// - after opening global module (`module;`)
 unsigned getMinHeaderInsertionOffset(StringRef FileName, StringRef Code,
                                      const IncludeStyle &Style) {
   // \p Consume returns location after header guard or 0 if no header guard is
