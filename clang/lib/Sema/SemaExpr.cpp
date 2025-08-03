@@ -6523,8 +6523,7 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   // Diagnose uses of the C++20 "ADL-only template-id call" feature in earlier
   // language modes.
   if (const auto *ULE = dyn_cast<UnresolvedLookupExpr>(Fn);
-      ULE && ULE->hasExplicitTemplateArgs() &&
-      ULE->decls_begin() == ULE->decls_end()) {
+      ULE && ULE->hasExplicitTemplateArgs() && ULE->decls().empty()) {
     DiagCompat(Fn->getExprLoc(), diag_compat::adl_only_template_id)
         << ULE->getName();
   }
