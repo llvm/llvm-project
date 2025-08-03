@@ -8,6 +8,9 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "runtime-libcalls-info"
 
 using namespace llvm;
 using namespace RTLIB;
@@ -62,12 +65,6 @@ static void setARMLibcallNames(RuntimeLibcallsInfo &Info, const Triple &TT,
     Info.setLibcallImplCallingConv(Impl, CallingConv::ARM_AAPCS);
 }
 
-void RTLIB::RuntimeLibcallsInfo::initDefaultLibCallImpls() {
-  std::memcpy(LibcallImpls, DefaultLibcallImpls, sizeof(LibcallImpls));
-  static_assert(sizeof(LibcallImpls) == sizeof(DefaultLibcallImpls),
-                "libcall array size should match");
-}
-
 /// Set default libcall names. If a target wants to opt-out of a libcall it
 /// should be placed here.
 void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
@@ -75,10 +72,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
                                        FloatABI::ABIType FloatABI,
                                        EABI EABIVersion, StringRef ABIName) {
   setTargetRuntimeLibcallSets(TT, FloatABI);
-
-  // Early exit for targets that have fully ported to tablegen.
-  if (TT.isAMDGPU() || TT.isNVPTX() || TT.isWasm())
-    return;
 
   if (TT.isX86() || TT.isVE() || TT.isARM() || TT.isThumb()) {
     if (ExceptionModel == ExceptionHandling::SjLj)
@@ -92,11 +85,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     // FIXME: What about other targets?
     setLibcallImpl(RTLIB::FPEXT_F16_F32, RTLIB::__extendhfsf2);
     setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__truncsfhf2);
-
-    if (!darwinHasExp10(TT)) {
-      setLibcallImpl(RTLIB::EXP10_F32, RTLIB::Unsupported);
-      setLibcallImpl(RTLIB::EXP10_F64, RTLIB::Unsupported);
-    }
   }
 
   if (TT.isOSOpenBSD()) {
@@ -104,33 +92,9 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
     setLibcallImpl(RTLIB::STACK_SMASH_HANDLER, RTLIB::__stack_smash_handler);
   }
 
-  // Skip default manual processing for targets that have been mostly ported to
-  // tablegen for now. Eventually the rest of this should be deleted.
-  if (TT.isX86() || TT.isAArch64() || TT.isWasm() || TT.isPPC())
-    return;
-
   if (TT.isARM() || TT.isThumb()) {
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
     return;
-  }
-
-  if (hasSinCos(TT)) {
-    setLibcallImpl(RTLIB::SINCOS_F32, RTLIB::sincosf);
-    setLibcallImpl(RTLIB::SINCOS_F64, RTLIB::sincos);
-    setLibcallImpl(RTLIB::SINCOS_F128, RTLIB::sincos_f128);
-  }
-
-  setLibcallImpl(RTLIB::EXP10_F32, RTLIB::exp10f);
-  setLibcallImpl(RTLIB::EXP10_F64, RTLIB::exp10);
-  setLibcallImpl(RTLIB::EXP10_F128, RTLIB::exp10l_f128);
-
-  // These libcalls are only available in compiler-rt, not libgcc.
-  if (TT.isArch64Bit()) {
-    setLibcallImpl(RTLIB::SHL_I128, RTLIB::__ashlti3);
-    setLibcallImpl(RTLIB::SRL_I128, RTLIB::__lshrti3);
-    setLibcallImpl(RTLIB::SRA_I128, RTLIB::__ashrti3);
-    setLibcallImpl(RTLIB::MUL_I128, RTLIB::__multi3);
-    setLibcallImpl(RTLIB::MULO_I64, RTLIB::__mulodi4);
   }
 
   if (TT.getArch() == Triple::ArchType::msp430) {
