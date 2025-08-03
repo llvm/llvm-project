@@ -494,8 +494,7 @@ TEST(LlvmLibcFileTest, WriteNothing) {
   ASSERT_EQ(f_nbf->close(), 0);
 }
 
-TEST(LlvmLibcFileTest, WriteSplit)
-{
+TEST(LlvmLibcFileTest, WriteSplit) {
   constexpr size_t FILE_BUFFER_SIZE = 8;
   char file_buffer[FILE_BUFFER_SIZE];
   StringFile *f =
