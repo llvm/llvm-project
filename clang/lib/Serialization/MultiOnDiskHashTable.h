@@ -73,6 +73,51 @@ private:
   struct MergedTable {
     std::vector<file_type> Files;
     llvm::DenseMap<internal_key_type, data_type> Data;
+
+    struct UnreadDataInfo {
+      Info *InfoObj;
+      const unsigned char *start;
+      unsigned DataLen;
+    };
+
+    llvm::DenseMap<internal_key_type, llvm::SmallVector<UnreadDataInfo, 16>>
+        UnReadData;
+
+    std::vector<OnDiskTable *> MergedOnDiskTables;
+
+    void clear() {
+      for (OnDiskTable *ODT : MergedOnDiskTables)
+        delete ODT;
+
+      MergedOnDiskTables.clear();
+    }
+
+    void readAll() {
+      for (const auto &Iter : UnReadData) {
+        internal_key_type Key = Iter.first;
+        data_type_builder ValueBuilder(Data[Key]);
+
+        for (const UnreadDataInfo &I : Iter.second)
+          I.InfoObj->ReadDataInto(Key, I.start, I.DataLen, ValueBuilder);
+      }
+
+      UnReadData.clear();
+      clear();
+    }
+
+    data_type find(internal_key_type Key) {
+      auto UnreadIter = UnReadData.find(Key);
+      if (UnreadIter != UnReadData.end()) {
+        data_type_builder ValueBuilder(Data[Key]);
+        for (auto &I : UnreadIter->second)
+          I.InfoObj->ReadDataInto(Key, I.start, I.DataLen, ValueBuilder);
+        UnReadData.erase(UnreadIter);
+      }
+
+      return Data[Key];
+    }
+
+    ~MergedTable() { clear(); }
   };
 
   using Table = llvm::PointerUnion<OnDiskTable *, MergedTable *>;
@@ -157,13 +202,14 @@ private:
         // FIXME: Don't rely on the OnDiskHashTable format here.
         auto L = InfoObj.ReadKeyDataLength(LocalPtr);
         const internal_key_type &Key = InfoObj.ReadKey(LocalPtr, L.first);
-        data_type_builder ValueBuilder(Merged->Data[Key]);
-        InfoObj.ReadDataInto(Key, LocalPtr + L.first, L.second,
-                             ValueBuilder);
+        // Make sure Merged->Data contains every key.
+        (void)Merged->Data[Key];
+        Merged->UnReadData[Key].push_back(
+            {&InfoObj, LocalPtr + L.first, L.second});
       }
 
       Merged->Files.push_back(ODT->File);
-      delete ODT;
+      Merged->MergedOnDiskTables.push_back(ODT);
     }
 
     Tables.clear();
@@ -236,11 +282,8 @@ public:
     internal_key_type Key = Info::GetInternalKey(EKey);
     auto KeyHash = Info::ComputeHash(Key);
 
-    if (MergedTable *M = getMergedTable()) {
-      auto It = M->Data.find(Key);
-      if (It != M->Data.end())
-        Result = It->second;
-    }
+    if (MergedTable *M = getMergedTable())
+      Result = M->find(Key);
 
     data_type_builder ResultBuilder(Result);
 
@@ -265,6 +308,7 @@ public:
       removeOverriddenTables();
 
     if (MergedTable *M = getMergedTable()) {
+      M->readAll();
       for (auto &KV : M->Data)
         Info::MergeDataInto(KV.second, ResultBuilder);
     }
@@ -324,7 +368,7 @@ public:
         // Add all merged entries from Base to the generator.
         for (auto &KV : Merged->Data) {
           if (!Gen.contains(KV.first, Info))
-            Gen.insert(KV.first, Info.ImportData(KV.second), Info);
+            Gen.insert(KV.first, Info.ImportData(Merged->find(KV.first)), Info);
         }
       } else {
         Writer.write<uint32_t>(0);
