@@ -1,4 +1,4 @@
-//===-- Exhaustive test for bfloat16 addition -----------------------------===//
+//===-- Exhaustive tests for bfloat16 addition ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,9 +16,9 @@
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::fputil::BFloat16;
 
-static inline BFloat16 add_func(BFloat16 x, BFloat16 y) { return x + y; }
+static BFloat16 add_func(BFloat16 x, BFloat16 y) { return x + y; }
 
-struct Bfloat16Checker : public virtual LIBC_NAMESPACE::testing::Test {
+struct Bfloat16AdditionChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = BFloat16;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   using StorageType = typename FPBits::StorageType;
@@ -45,8 +45,8 @@ struct Bfloat16Checker : public virtual LIBC_NAMESPACE::testing::Test {
   }
 };
 
-using LlvmLibcBfloat16ExhaustiveTest =
-    LlvmLibcExhaustiveMathTest<Bfloat16Checker, 1 << 2>;
+using LlvmLibcBfloat16ExhaustiveAddtionTest =
+    LlvmLibcExhaustiveMathTest<Bfloat16AdditionChecker, 1 << 2>;
 
 // range: [0, inf]
 static constexpr uint16_t POS_START = 0x0000U;
@@ -56,10 +56,10 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xff80U;
 
-TEST_F(LlvmLibcBfloat16ExhaustiveTest, PositiveRange) {
+TEST_F(LlvmLibcBfloat16ExhaustiveAddtionTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP, POS_START, POS_STOP);
 }
 
-TEST_F(LlvmLibcBfloat16ExhaustiveTest, NegativeRange) {
+TEST_F(LlvmLibcBfloat16ExhaustiveAddtionTest, NegativeRange) {
   test_full_range_all_roundings(NEG_START, NEG_STOP, NEG_START, NEG_STOP);
 }
