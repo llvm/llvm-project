@@ -61,7 +61,6 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.dyadic_float
     libc.src.__support.FPUtil.fenv_impl
@@ -69,6 +68,7 @@ add_header_library(
     libc.src.__support.FPUtil.rounding_mode
     libc.src.__support.macros.attributes
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
