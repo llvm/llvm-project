@@ -3850,7 +3850,7 @@ Important Subclasses of Constant
   any width.
 
   * ``const APInt& getValue() const``: Returns the underlying
-    value of this constant, an APInt value.
+    value of this constant, an ``APInt`` value.
 
   * ``int64_t getSExtValue() const``: Converts the underlying APInt value to an
     ``int64_t`` via sign extension.  If the value (not the bit width) of the APInt
