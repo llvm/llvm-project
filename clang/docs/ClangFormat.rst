@@ -165,7 +165,8 @@ Vim Integration
 There is an integration for :program:`vim` which lets you run the
 :program:`clang-format` standalone tool on your current buffer, optionally
 selecting regions to reformat. The integration has the form of a `python`-file
-which can be found under `clang/tools/clang-format/clang-format.py`.
+which can be found under `clang/tools/clang-format/clang-format.py 
+<https://github.com/llvm/llvm-project/tree/main/clang/tools/clang-format>`_.
 
 This can be integrated by adding the following to your `.vimrc`:
 
@@ -199,7 +200,11 @@ your `.vimrc`:
 
   function! Formatonsave()
     let l:formatdiff = 1
-    pyf <path-to-this-file>/clang-format.py
+    if has('python')
+      pyf <path-to-this-file>/clang-format.py
+    elseif has('python3')
+      py3f <path-to-this-file>/clang-format.py    
+    endif
   endfunction
   autocmd BufWritePre *.h,*.cc,*.cpp call Formatonsave()
 
