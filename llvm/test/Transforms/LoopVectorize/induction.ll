@@ -5834,12 +5834,11 @@ define void @pr52460_first_order_recurrence_truncated_iv(ptr noalias %src, ptr %
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_TRUNC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[LV]], [[RECUR]]
@@ -5956,12 +5955,11 @@ define void @pr52460_first_order_recurrence_truncated_iv(ptr noalias %src, ptr %
 ; UNROLL-NO-IC-NEXT:    br label [[EXIT:%.*]]
 ; UNROLL-NO-IC:       scalar.ph:
 ; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
-; UNROLL-NO-IC-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; UNROLL-NO-IC-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL-NO-IC:       loop:
 ; UNROLL-NO-IC-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; UNROLL-NO-IC-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
+; UNROLL-NO-IC-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    [[RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_TRUNC:%.*]], [[LOOP]] ]
 ; UNROLL-NO-IC-NEXT:    [[LV:%.*]] = load i32, ptr [[SRC]], align 4
 ; UNROLL-NO-IC-NEXT:    [[MUL:%.*]] = mul nsw i32 [[LV]], [[RECUR]]
