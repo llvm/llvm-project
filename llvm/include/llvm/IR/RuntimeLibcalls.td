@@ -1610,7 +1610,9 @@ def HexagonSystemLibrary
     (add (sub DefaultLibcallImpls32,
     __adddf3, __divsf3, __udivsi3, __udivdi3,
     __umoddi3, __divdf3, __muldf3, __divsi3, __subdf3, sqrtf,
-    __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls)>;
+    __divdi3, __umodsi3, __moddi3, __modsi3), HexagonLibcalls,
+    LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+    exp10f, exp10, exp10l_f128)>;
 
 //===----------------------------------------------------------------------===//
 // Lanai Runtime Libcalls
@@ -1823,6 +1825,7 @@ defvar MSP430DefaultOptOut = [
 def MSP430SystemLibrary
     : SystemRuntimeLibrary<isMSP430,
     (add (sub DefaultRuntimeLibcallImpls, MSP430DefaultOptOut),
+      exp10f, exp10, exp10l_f128,
 
       // Floating point conversions - EABI Table 6
       __mspabi_cvtdf,
@@ -2168,8 +2171,12 @@ def __memcpy_4 : RuntimeLibcallImpl<MEMCPY_ALIGN_4>;
 
 def isXCore : RuntimeLibcallPredicate<"TT.getArch() == Triple::xcore">;
 def XCoreSystemLibrary
-    : SystemRuntimeLibrary<isXCore, (add DefaultRuntimeLibcallImpls,
-                                        __memcpy_4)>;
+    : SystemRuntimeLibrary<isXCore,
+    (add DefaultRuntimeLibcallImpls,
+         exp10f, exp10, exp10l_f128,
+         __memcpy_4,
+         LibcallImpls<(add LibmF128Libcalls, LibmF128FiniteLibcalls), isGNUEnvironment>
+)>;
 
 //===----------------------------------------------------------------------===//
 // ZOS Runtime Libcalls
@@ -2286,3 +2293,26 @@ def WasmSystemLibrary
            CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
            exp10f, exp10,
            emscripten_return_address)>;
+
+//===----------------------------------------------------------------------===//
+// Legacy Default Runtime Libcalls
+//===----------------------------------------------------------------------===//
+
+// TODO: Should make every target explicit.
+def isDefaultLibcallArch : RuntimeLibcallPredicate<[{
+  TT.isMIPS() || TT.isLoongArch() || TT.isVE() || TT.isBPF() ||
+  TT.getArch() == Triple::csky || TT.getArch() == Triple::arc ||
+  TT.getArch() == Triple::m68k ||  TT.getArch() == Triple::xtensa ||
+  (TT.isSystemZ() && !TT.isOSzOS())
+}]>;
+
+
+def isArch64Bit : RuntimeLibcallPredicate<[{TT.isArch64Bit()}]>;
+def LegacyDefaultSystemLibrary
+    : SystemRuntimeLibrary<isDefaultLibcallArch,
+      (add DefaultRuntimeLibcallImpls,
+         LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+         exp10f, exp10, exp10l_f128,
+         __powisf2, __powidf2, __powitf2_f128,
+         LibcallImpls<(add Int128RTLibcalls), isArch64Bit>
+)>;
