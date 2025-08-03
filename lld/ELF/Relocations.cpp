@@ -2160,6 +2160,7 @@ static int getHexagonPacketOffset(const InputSection &isec,
       return i * 4;
   }
 }
+
 static int64_t getPCBias(Ctx &ctx, const InputSection &isec,
                          const Relocation &rel) {
   if (ctx.arg.emachine == EM_ARM) {
