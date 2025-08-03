@@ -303,7 +303,7 @@ TEST(ScalarTest, GetValue) {
             ScalarGetValue(std::numeric_limits<unsigned long long>::max()));
 }
 
-TEST(ScalarTest, LongLongAssigmentOperator) {
+TEST(ScalarTest, LongLongAssignmentOperator) {
   Scalar ull;
   ull = std::numeric_limits<unsigned long long>::max();
   EXPECT_EQ(std::numeric_limits<unsigned long long>::max(), ull.ULongLong());
