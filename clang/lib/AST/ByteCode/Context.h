@@ -17,9 +17,9 @@
 #define LLVM_CLANG_AST_INTERP_CONTEXT_H
 
 #include "InterpStack.h"
+#include "clang/AST/ASTContext.h"
 
 namespace clang {
-class ASTContext;
 class LangOptions;
 class FunctionDecl;
 class VarDecl;
