@@ -205,8 +205,8 @@ def aggregate_profiles(profile_dir: str) -> Dict[str, float]:
     return aggregated
 
 
-def display_profile_data(aggregated_data: Dict[str, float]) -> None:
-    """Display aggregated profile data in the same format as clang-tidy"""
+def print_profile_data(aggregated_data: Dict[str, float]) -> None:
+    """Print aggregated checks profile data in the same format as clang-tidy"""
     if not aggregated_data:
         return
 
@@ -236,14 +236,17 @@ def display_profile_data(aggregated_data: Dict[str, float]) -> None:
         checkers.items(), key=lambda x: x[1]["user"] + x[1]["sys"], reverse=True
     )
 
-    print(
+    def print_stderr(*args, **kwargs) -> None:
+        print(*args, file=sys.stderr, **kwargs)
+
+    print_stderr(
         "===-------------------------------------------------------------------------==="
     )
-    print("                          clang-tidy checks profiling")
-    print(
+    print_stderr("                          clang-tidy checks profiling")
+    print_stderr(
         "===-------------------------------------------------------------------------==="
     )
-    print(
+    print_stderr(
         f"  Total Execution Time: {total_user + total_sys:.4f} seconds ({total_wall:.4f} wall clock)\n"
     )
 
@@ -261,7 +264,7 @@ def display_profile_data(aggregated_data: Dict[str, float]) -> None:
     combined_header = "--User+System--".center(combined_width + additional_width)
     wall_header = "---Wall Time---".center(wall_width + additional_width)
 
-    print(
+    print_stderr(
         f"   {user_header}   {sys_header}   {combined_header}   {wall_header}  --- Name ---"
     )
 
@@ -271,29 +274,28 @@ def display_profile_data(aggregated_data: Dict[str, float]) -> None:
         wall_time = data["wall"]
         combined_time = user_time + sys_time
 
-        user_pct = (user_time / total_user * 100) if total_user > 0 else 0
-        sys_pct = (sys_time / total_sys * 100) if total_sys > 0 else 0
-        combined_pct = (
+        user_percent = (user_time / total_user * 100) if total_user > 0 else 0
+        sys_percent = (sys_time / total_sys * 100) if total_sys > 0 else 0
+        combined_percent = (
             (combined_time / total_combined * 100) if total_combined > 0 else 0
         )
-        wall_pct = (wall_time / total_wall * 100) if total_wall > 0 else 0
+        wall_percent = (wall_time / total_wall * 100) if total_wall > 0 else 0
 
-        user_str = f"{user_time:{user_width}.4f} ({user_pct:5.1f}%)"
-        sys_str = f"{sys_time:{sys_width}.4f} ({sys_pct:5.1f}%)"
-        combined_str = f"{combined_time:{combined_width}.4f} ({combined_pct:5.1f}%)"
-        wall_str = f"{wall_time:{wall_width}.4f} ({wall_pct:5.1f}%)"
+        user_str = f"{user_time:{user_width}.4f} ({user_percent:5.1f}%)"
+        sys_str = f"{sys_time:{sys_width}.4f} ({sys_percent:5.1f}%)"
+        combined_str = f"{combined_time:{combined_width}.4f} ({combined_percent:5.1f}%)"
+        wall_str = f"{wall_time:{wall_width}.4f} ({wall_percent:5.1f}%)"
 
-        print(
+        print_stderr(
             f"   {user_str}   {sys_str}   {combined_str}   {wall_str}  {checker_name}"
         )
 
-    # Total line
     user_total_str = f"{total_user:{user_width}.4f} (100.0%)"
     sys_total_str = f"{total_sys:{sys_width}.4f} (100.0%)"
     combined_total_str = f"{total_combined:{combined_width}.4f} (100.0%)"
     wall_total_str = f"{total_wall:{wall_width}.4f} (100.0%)"
 
-    print(
+    print_stderr(
         f"   {user_total_str}   {sys_total_str}   {combined_total_str}   {wall_total_str}  Total"
     )
 
@@ -731,9 +733,11 @@ async def main() -> None:
         return
 
     if args.enable_check_profile and profile_dir:
+        # Ensure all clang-tidy stdout is flushed before printing profiling
+        sys.stdout.flush()
         aggregated_data = aggregate_profiles(profile_dir)
         if aggregated_data:
-            display_profile_data(aggregated_data)
+            print_profile_data(aggregated_data)
         else:
             print("No profiling data found.")
 
