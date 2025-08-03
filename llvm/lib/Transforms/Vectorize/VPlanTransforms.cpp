@@ -3176,6 +3176,21 @@ void VPlanTransforms::materializeVectorTripCount(
     Plan.getVectorTripCount().setUnderlyingValue(NewC->getValue());
 }
 
+void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
+                                                    VPBasicBlock *VectorPH) {
+  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
+  if (BTC->getNumUsers() == 0)
+    return;
+
+  VPBuilder Builder(VectorPH, VectorPH->begin());
+  auto *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+  auto *TCMO = Builder.createNaryOp(
+      Instruction::Sub,
+      {Plan.getTripCount(), Plan.getOrAddLiveIn(ConstantInt::get(TCTy, 1))},
+      DebugLoc::getCompilerGenerated(), "trip.count.minus.1");
+  BTC->replaceAllUsesWith(TCMO);
+}
+
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
 /// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
 /// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding
