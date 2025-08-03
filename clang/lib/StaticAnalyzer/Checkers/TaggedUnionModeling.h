@@ -9,14 +9,9 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_TAGGEDUNIONMODELING_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_TAGGEDUNIONMODELING_H
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "llvm/ADT/FoldingSet.h"
-#include <numeric>
 
 namespace clang::ento::tagged_union_modeling {
 
@@ -28,7 +23,10 @@ bool isCopyAssignmentCall(const CallEvent &Call);
 bool isMoveAssignmentCall(const CallEvent &Call);
 bool isMoveConstructorCall(const CallEvent &Call);
 bool isStdType(const Type *Type, const std::string &TypeName);
+bool isStdAny(const Type *Type);
 bool isStdVariant(const Type *Type);
+bool isVowel(char a);
+llvm::StringRef indefiniteArticleBasedOnVowel(char a);
 
 // When invalidating regions, we also have to follow that by invalidating the
 // corresponding custom data in the program state.

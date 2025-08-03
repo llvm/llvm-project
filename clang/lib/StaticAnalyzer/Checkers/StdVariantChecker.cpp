@@ -85,6 +85,28 @@ bool isStdVariant(const Type *Type) {
   return isStdType(Type, llvm::StringLiteral("variant"));
 }
 
+bool isStdAny(const Type *Type) {
+  return isStdType(Type, llvm::StringLiteral("any"));
+}
+
+bool isVowel(char a) {
+  switch (a) {
+  case 'a':
+  case 'e':
+  case 'i':
+  case 'o':
+  case 'u':
+    return true;
+  default:
+    return false;
+  }
+}
+
+llvm::StringRef indefiniteArticleBasedOnVowel(char a) {
+  if (isVowel(a))
+    return "an";
+  return "a";
+}
 } // end of namespace clang::ento::tagged_union_modeling
 
 static std::optional<ArrayRef<TemplateArgument>>
@@ -104,25 +126,6 @@ getNthTemplateTypeArgFromVariant(const Type *varType, unsigned i) {
     return {};
 
   return (*VariantTemplates)[i].getAsType();
-}
-
-static bool isVowel(char a) {
-  switch (a) {
-  case 'a':
-  case 'e':
-  case 'i':
-  case 'o':
-  case 'u':
-    return true;
-  default:
-    return false;
-  }
-}
-
-static llvm::StringRef indefiniteArticleBasedOnVowel(char a) {
-  if (isVowel(a))
-    return "an";
-  return "a";
 }
 
 class StdVariantChecker : public Checker<eval::Call, check::RegionChanges> {
@@ -184,9 +187,8 @@ public:
       } else if (IsVariantAssignmentOperatorCall) {
         const auto &AsMemberOpCall = cast<CXXMemberOperatorCall>(Call);
         ThisSVal = AsMemberOpCall.getCXXThisVal();
-      } else {
+      } else
         return false;
-      }
 
       handleConstructorAndAssignment<VariantHeldTypeMap>(Call, C, ThisSVal);
       return true;
@@ -240,7 +242,7 @@ private:
     if (FD->getTemplateSpecializationArgs()->size() < 1)
       return false;
 
-    const auto &TypeOut = FD->getTemplateSpecializationArgs()->asArray()[0];
+    const auto &TypeOut = FD->getTemplateSpecializationArgs()->get(0);
     // std::get's first template parameter can be the type we want to get
     // out of the std::variant or a natural number which is the position of
     // the requested type in the argument type list of the std::variant's
@@ -269,7 +271,7 @@ private:
     if (RetrievedCanonicalType == StoredCanonicalType)
       return true;
 
-    ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
+    ExplodedNode *ErrNode = C.generateErrorNode();
     if (!ErrNode)
       return false;
     llvm::SmallString<128> Str;
@@ -277,10 +279,10 @@ private:
     std::string StoredTypeName = StoredType->getAsString();
     std::string RetrievedTypeName = RetrievedType.getAsString();
     OS << "std::variant " << ArgMemRegion->getDescriptiveName() << " held "
-       << indefiniteArticleBasedOnVowel(StoredTypeName[0]) << " \'"
-       << StoredTypeName << "\', not "
-       << indefiniteArticleBasedOnVowel(RetrievedTypeName[0]) << " \'"
-       << RetrievedTypeName << "\'";
+       << indefiniteArticleBasedOnVowel(StoredTypeName[0]) << " '"
+       << StoredTypeName << "', not "
+       << indefiniteArticleBasedOnVowel(RetrievedTypeName[0]) << " '"
+       << RetrievedTypeName << "'";
     auto R = std::make_unique<PathSensitiveBugReport>(BadVariantType, OS.str(),
                                                       ErrNode);
     C.emitReport(std::move(R));
