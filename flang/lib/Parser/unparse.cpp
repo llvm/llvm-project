@@ -2513,87 +2513,39 @@ public:
     }
   }
   void Unparse(const OmpObjectList &x) { Walk(x.v, ","); }
-  void Unparse(const OmpBlockDirective &x) {
-    switch (x.v) {
-    case llvm::omp::Directive::OMPD_masked:
-      Word("MASKED");
-      break;
-    case llvm::omp::Directive::OMPD_master:
-      Word("MASTER");
-      break;
-    case llvm::omp::Directive::OMPD_ordered:
-      Word("ORDERED ");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_masked:
-      Word("PARALLEL MASKED");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_master:
-      Word("PARALLEL MASTER");
-      break;
-    case llvm::omp::Directive::OMPD_parallel_workshare:
-      Word("PARALLEL WORKSHARE ");
-      break;
-    case llvm::omp::Directive::OMPD_parallel:
-      Word("PARALLEL ");
-      break;
-    case llvm::omp::Directive::OMPD_scope:
-      Word("SCOPE ");
-      break;
-    case llvm::omp::Directive::OMPD_single:
-      Word("SINGLE ");
-      break;
-    case llvm::omp::Directive::OMPD_target_data:
-      Word("TARGET DATA ");
-      break;
-    case llvm::omp::Directive::OMPD_target_parallel:
-      Word("TARGET PARALLEL ");
-      break;
-    case llvm::omp::Directive::OMPD_target_teams:
-      Word("TARGET TEAMS ");
-      break;
-    case llvm::omp::Directive::OMPD_target:
-      Word("TARGET ");
-      break;
-    case llvm::omp::Directive::OMPD_taskgroup:
-      Word("TASKGROUP ");
-      break;
-    case llvm::omp::Directive::OMPD_task:
-      Word("TASK ");
-      break;
-    case llvm::omp::Directive::OMPD_teams:
-      Word("TEAMS ");
-      break;
-    case llvm::omp::Directive::OMPD_workshare:
-      Word("WORKSHARE ");
-      break;
-    default:
-      // Nothing to be done
-      break;
-    }
-  }
 
   void Unparse(const common::OmpMemoryOrderType &x) {
     Word(ToUpperCaseLetters(common::EnumToString(x)));
   }
 
-  template <typename Construct> void UnparseBlockConstruct(const Construct &x) {
+  void Unparse(const OmpBeginDirective &x) {
     BeginOpenMP();
     Word("!$OMP ");
-    Walk(std::get<OmpDirectiveSpecification>(x.t));
+    Walk(static_cast<const OmpDirectiveSpecification &>(x));
     Put("\n");
     EndOpenMP();
+  }
+
+  void Unparse(const OmpEndDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP END ");
+    Walk(static_cast<const OmpDirectiveSpecification &>(x));
+    Put("\n");
+    EndOpenMP();
+  }
+
+  void Unparse(const OmpBlockConstruct &x) {
+    Walk(std::get<OmpBeginDirective>(x.t));
     Walk(std::get<Block>(x.t), "");
-    if (auto &end{std::get<std::optional<OmpDirectiveSpecification>>(x.t)}) {
-      BeginOpenMP();
-      Word("!$OMP END ");
+    if (auto &end{std::get<std::optional<OmpEndDirective>>(x.t)}) {
       Walk(*end);
+    } else {
       Put("\n");
-      EndOpenMP();
     }
   }
 
   void Unparse(const OpenMPAtomicConstruct &x) { //
-    UnparseBlockConstruct(x);
+    Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
 
   void Unparse(const OpenMPExecutableAllocate &x) {
@@ -2624,7 +2576,7 @@ public:
     EndOpenMP();
   }
   void Unparse(const OpenMPAllocatorsConstruct &x) { //
-    UnparseBlockConstruct(x);
+    Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OmpAssumeDirective &x) {
     BeginOpenMP();
@@ -2764,7 +2716,7 @@ public:
     EndOpenMP();
   }
   void Unparse(const OpenMPDispatchConstruct &x) { //
-    UnparseBlockConstruct(x);
+    Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OpenMPRequiresConstruct &y) {
     BeginOpenMP();
@@ -2897,19 +2849,7 @@ public:
     EndOpenMP();
   }
   void Unparse(const OpenMPBlockConstruct &x) {
-    BeginOpenMP();
-    Word("!$OMP ");
-    Walk(std::get<OmpBeginBlockDirective>(x.t));
-    Put("\n");
-    EndOpenMP();
-    Walk(std::get<Block>(x.t), "");
-    if (auto &&end{std::get<std::optional<OmpEndBlockDirective>>(x.t)}) {
-      BeginOpenMP();
-      Word("!$OMP END ");
-      Walk(*end);
-      Put("\n");
-      EndOpenMP();
-    }
+    Unparse(static_cast<const OmpBlockConstruct &>(x));
   }
   void Unparse(const OpenMPLoopConstruct &x) {
     BeginOpenMP();
