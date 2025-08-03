@@ -58,6 +58,10 @@ TYPE("objective-c++",            ObjCXX,       PP_ObjCXX,       "mm",     phases
 TYPE("hlsl",                     HLSL,         PP_CXX,          "hlsl",   phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble)
 
 // C family input files to precompile.
+TYPE("cuda-header-cpp-output",   PP_CUDA_Header, INVALID,       "cuih",   phases::Precompile)
+TYPE("cuda-header",              CUDA_Header,  PP_CUDA_Header,  "cuh",    phases::Preprocess, phases::Precompile)
+TYPE("hip-header-cpp-output",    PP_HIP_Header, INVALID,        "hiphi",  phases::Precompile)
+TYPE("hip-header",               HIP_Header,   PP_HIP_Header,   "hiph",   phases::Preprocess, phases::Precompile)
 TYPE("c-header-cpp-output",      PP_CHeader,   INVALID,         "i",      phases::Precompile)
 TYPE("c-header",                 CHeader,      PP_CHeader,      "h",      phases::Preprocess, phases::Precompile)
 TYPE("cl-header",                CLHeader,     PP_CHeader,      "h",      phases::Preprocess, phases::Precompile)
