@@ -21,17 +21,17 @@ namespace mlir {
 #include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
 } // namespace mlir
 
+#define DEBUG_TYPE "parallel-for-to-nested-fors"
 using namespace mlir;
 
 FailureOr<scf::LoopNest>
 mlir::scf::parallelForToNestedFors(RewriterBase &rewriter,
                                    scf::ParallelOp parallelOp) {
 
-  if (!parallelOp.getResults().empty()) {
-    parallelOp->emitError("Currently scf.parallel to scf.for conversion "
-                          "doesn't support scf.parallel with results.");
-    return failure();
-  }
+  if (!parallelOp.getResults().empty())
+    return rewriter.notifyMatchFailure(
+        parallelOp, "Currently scf.parallel to scf.for conversion doesn't "
+                    "support scf.parallel with results.");
 
   rewriter.setInsertionPoint(parallelOp);
 
@@ -66,11 +66,17 @@ struct ParallelForToNestedFors final
     Operation *parentOp = getOperation();
     IRRewriter rewriter(parentOp->getContext());
 
-    parentOp->walk([&](scf::ParallelOp parallelOp) {
-      if (failed(scf::parallelForToNestedFors(rewriter, parallelOp))) {
-        return signalPassFailure();
-      }
-    });
+    parentOp->walk(
+        [&](scf::ParallelOp parallelOp) {
+          if (failed(scf::parallelForToNestedFors(rewriter, parallelOp))) {
+            LLVM_DEBUG(
+                llvm::dbgs()
+                << "Failed to convert scf.parallel to nested scf.for ops for:\n"
+                << parallelOp << "\n");
+            return WalkResult::advance();
+          }
+          return WalkResult::advance();
+        });
   }
 };
 } // namespace

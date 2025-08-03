@@ -67,7 +67,7 @@ func.func private @callee(%i: index, %j: index) -> i32
 
 func.func @two_iters_with_reduce(%lb1: index, %lb2: index, %ub1: index, %ub2: index, %step1: index, %step2: index) -> i32 {
   %c0 = arith.constant 0 : i32
-  // expected-error@+1 {{Currently scf.parallel to scf.for conversion doesn't support scf.parallel with results}}
+  // CHECK: scf.parallel
   %0 = scf.parallel (%i, %j) = (%lb1, %lb2) to (%ub1, %ub2) step (%step1, %step2) init (%c0) -> i32 {
     %curr = func.call @callee(%i, %j) : (index, index) -> i32
     scf.reduce(%curr : i32) {
