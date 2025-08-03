@@ -505,14 +505,16 @@ define <1 x i64> @bitcast_noshift_vector_wrong_type(<2 x float> %v1, <1 x i64> %
 ; (e.g., 4 elements) was checked instead of the full demanded vector width (8 elements),
 ; leading to incorrect known bits and removal of the `ashr` instruction.
 
+; Test that verifies correct handling of known bits when bitcasting from a smaller vector
+; to a larger one (e.g., <2 x i32> to <8 x i8>). Previously, only the subscale portion
+; (e.g., 4 elements) was checked instead of the full demanded vector width (8 elements),
+; leading to incorrect known bits and removal of the `ashr` instruction.
+
 define <8 x i8> @bitcast_knownbits_subscale_miscompile(i32 %x) {
 ; CHECK-LABEL: @bitcast_knownbits_subscale_miscompile(
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], -256
-; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast i32 [[MASKED]] to <4 x i8>
-; CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x i8> [[BITCAST]], i32 3
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8 [[EXTRACT]], -113
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <2 x i32> poison, i32 [[MASKED]], i32 0
+; CHECK-NEXT:    [[SETBITS:%.*]] = or i32 [[MASKED]], -16777216
+; CHECK-NEXT:    [[INSERT:%.*]] = insertelement <2 x i32> poison, i32 [[SETBITS]], i32 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <2 x i32> [[INSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = bitcast <2 x i32> [[SPLAT]] to <8 x i8>
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <8 x i8> [[VEC]], <8 x i8> zeroinitializer, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 0, i32 0, i32 0, i32 0>
@@ -520,11 +522,8 @@ define <8 x i8> @bitcast_knownbits_subscale_miscompile(i32 %x) {
 ; CHECK-NEXT:    ret <8 x i8> [[SHR]]
 ;
   %masked = and i32 %x, u0xFFFFFF00
-  %bitcast = bitcast i32 %masked to <4 x i8>
-  %extract = extractelement <4 x i8> %bitcast, i32 3
-  %cond = icmp eq i8 %extract, u0x8F
-  call void @llvm.assume(i1 %cond)
-  %insert = insertelement <2 x i32> poison, i32 %masked, i32 0
+  %setbits = or i32 %masked, u0xFF000000
+  %insert = insertelement <2 x i32> poison, i32 %setbits, i32 0
   %splat = shufflevector <2 x i32> %insert, <2 x i32> poison, <2 x i32> splat (i32 0)
   %vec = bitcast <2 x i32> %splat to <8 x i8>
   %shuf = shufflevector <8 x i8> %vec, <8 x i8> zeroinitializer, <8 x i32> <i32 7, i32 7, i32 7, i32 7, i32 0, i32 0, i32 0, i32 0>
