@@ -566,22 +566,60 @@ static void collectNonRecomputableDeps(Value &v, omp::TargetOp targetOp,
                                toRecompute);
 }
 
-static void reloadCacheAndRecompute(Location loc, RewriterBase &rewriter,
-                                    MLIRContext &ctx, IRMapping &mapping,
-                                    Operation *splitBefore, Block *targetBlock,
-                                    Block *newTargetBlock,
-                                    SmallVector<Value> &allocs,
-                                    SetVector<Operation *> &toRecompute) {
-  for (unsigned i = 0; i < targetBlock->getNumArguments(); i++) {
-    auto originalArg = targetBlock->getArgument(i);
+static void createBlockArgsAndMap(Location loc, RewriterBase &rewriter,
+                                  omp::TargetOp &targetOp, Block *targetBlock,
+                                  Block *newTargetBlock,
+                                  SmallVector<Value> &mapOperands,
+                                  SmallVector<Value> &allocs,
+                                  IRMapping &irMapping) {
+  // Map `map_operands` to block arguments.
+  unsigned originalMapVarsSize = targetOp.getMapVars().size();
+  for (unsigned i = 0; i < mapOperands.size(); ++i) {
+    Value originalValue;
+    BlockArgument newArg;
+    // Map the new arguments from the original block.
+    if (i < originalMapVarsSize) {
+      originalValue = targetBlock->getArgument(i);
+      newArg = newTargetBlock->addArgument(originalValue.getType(),
+                                           originalValue.getLoc());
+    }
+    // Map the new arguments from the `allocs`.
+    else {
+      originalValue = allocs[i - originalMapVarsSize];
+      newArg = newTargetBlock->addArgument(
+          getPtrTypeForOmp(originalValue.getType()), originalValue.getLoc());
+    }
+    irMapping.map(originalValue, newArg);
+  }
+  // Map `private_vars` to block arguments.
+  unsigned originalPrivateVarsSize = targetOp.getPrivateVars().size();
+  for (unsigned i = 0; i < originalPrivateVarsSize; ++i) {
+    auto originalArg = targetBlock->getArgument(originalMapVarsSize + i);
     auto newArg = newTargetBlock->addArgument(originalArg.getType(),
                                               originalArg.getLoc());
-    mapping.map(originalArg, newArg);
+    irMapping.map(originalArg, newArg);
   }
-  auto llvmPtrTy = LLVM::LLVMPointerType::get(&ctx);
-  for (auto original : allocs) {
-    Value newArg = newTargetBlock->addArgument(
-        getPtrTypeForOmp(original.getType()), original.getLoc());
+  return;
+}
+
+static void reloadCacheAndRecompute(
+    Location loc, RewriterBase &rewriter, Operation *splitBefore,
+    omp::TargetOp &targetOp, Block *targetBlock, Block *newTargetBlock,
+    SmallVector<Value> &mapOperands, SmallVector<Value> &allocs,
+    SetVector<Operation *> &toRecompute, IRMapping &irMapping) {
+  createBlockArgsAndMap(loc, rewriter, targetOp, targetBlock, newTargetBlock,
+                        mapOperands, allocs, irMapping);
+  // Handle the load operations for the allocs.
+  rewriter.setInsertionPointToStart(newTargetBlock);
+  auto llvmPtrTy = LLVM::LLVMPointerType::get(targetOp.getContext());
+
+  unsigned originalMapVarsSize = targetOp.getMapVars().size();
+  // Create Stores for allocs.
+  for (unsigned i = 0; i < allocs.size(); ++i) {
+    Value original = allocs[i];
+    // Get the new block argument for this specific allocated value.
+    Value newArg = newTargetBlock->getArgument(originalMapVarsSize + i);
+
     Value restored;
     if (isPtr(original.getType())) {
       restored = rewriter.create<LLVM::LoadOp>(loc, llvmPtrTy, newArg);
@@ -591,18 +629,18 @@ static void reloadCacheAndRecompute(Location loc, RewriterBase &rewriter,
     } else {
       restored = rewriter.create<fir::LoadOp>(loc, newArg);
     }
-    mapping.map(original, restored);
+    irMapping.map(original, restored);
   }
+
   for (auto it = targetBlock->begin(); it != splitBefore->getIterator(); it++) {
     if (toRecompute.contains(&*it))
-      rewriter.clone(*it, mapping);
+      rewriter.clone(*it, irMapping);
   }
 }
 
 static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
                              RewriterBase &rewriter) {
   auto targetOp = cast<omp::TargetOp>(splitBeforeOp->getParentOp());
-  MLIRContext &ctx = *targetOp.getContext();
   assert(targetOp);
   auto loc = targetOp.getLoc();
   auto *targetBlock = &targetOp.getRegion().front();
@@ -657,22 +695,29 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
   auto *preTargetBlock = rewriter.createBlock(
       &preTargetOp.getRegion(), preTargetOp.getRegion().begin(), {}, {});
   IRMapping preMapping;
-  for (unsigned i = 0; i < targetBlock->getNumArguments(); i++) {
-    auto originalArg = targetBlock->getArgument(i);
-    auto newArg = preTargetBlock->addArgument(originalArg.getType(),
-                                              originalArg.getLoc());
-    preMapping.map(originalArg, newArg);
-  }
-  for (auto it = targetBlock->begin(); it != splitBeforeOp->getIterator(); it++)
-    rewriter.clone(*it, preMapping);
 
+  createBlockArgsAndMap(loc, rewriter, targetOp, targetBlock, preTargetBlock,
+                        preMapOperands, allocs, preMapping);
+
+  // Handle the store operations for the allocs.
+  rewriter.setInsertionPointToStart(preTargetBlock);
   auto llvmPtrTy = LLVM::LLVMPointerType::get(targetOp.getContext());
 
-  for (auto original : allocs) {
-    Value toStore = preMapping.lookup(original);
-    auto newArg = preTargetBlock->addArgument(
-        getPtrTypeForOmp(original.getType()), original.getLoc());
-    if (isPtr(original.getType())) {
+  // Clone the original operations.
+  for (auto it = targetBlock->begin(); it != splitBeforeOp->getIterator();
+       it++) {
+    rewriter.clone(*it, preMapping);
+  }
+
+  unsigned originalMapVarsSize = targetOp.getMapVars().size();
+  // Create Stores for allocs.
+  for (unsigned i = 0; i < allocs.size(); ++i) {
+    Value originalResult = allocs[i];
+    Value toStore = preMapping.lookup(originalResult);
+    // Get the new block argument for this specific allocated value.
+    Value newArg = preTargetBlock->getArgument(originalMapVarsSize + i);
+
+    if (isPtr(originalResult.getType())) {
       if (!isa<LLVM::LLVMPointerType>(toStore.getType()))
         toStore = rewriter.create<fir::ConvertOp>(loc, llvmPtrTy, toStore);
       rewriter.create<LLVM::StoreOp>(loc, toStore, newArg);
@@ -701,9 +746,9 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
                            isolatedTargetOp.getRegion().begin(), {}, {});
 
   IRMapping isolatedMapping;
-  reloadCacheAndRecompute(loc, rewriter, ctx, isolatedMapping, splitBeforeOp,
-                          targetBlock, isolatedTargetBlock, allocs,
-                          toRecompute);
+  reloadCacheAndRecompute(loc, rewriter, splitBeforeOp, targetOp, targetBlock,
+                          isolatedTargetBlock, postMapOperands, allocs,
+                          toRecompute, isolatedMapping);
   rewriter.clone(*splitBeforeOp, isolatedMapping);
   rewriter.create<omp::TerminatorOp>(loc);
 
@@ -725,8 +770,9 @@ static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
     auto *postTargetBlock = rewriter.createBlock(
         &postTargetOp.getRegion(), postTargetOp.getRegion().begin(), {}, {});
     IRMapping postMapping;
-    reloadCacheAndRecompute(loc, rewriter, ctx, postMapping, splitBeforeOp,
-                            targetBlock, postTargetBlock, allocs, toRecompute);
+    reloadCacheAndRecompute(loc, rewriter, splitBeforeOp, targetOp, targetBlock,
+                            postTargetBlock, postMapOperands, allocs,
+                            toRecompute, postMapping);
 
     assert(splitBeforeOp->getNumResults() == 0 ||
            llvm::all_of(splitBeforeOp->getResults(),
@@ -755,15 +801,24 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
   Block *targetBlock = &targetOp.getRegion().front();
   assert(targetBlock == &targetOp.getRegion().back());
   IRMapping mapping;
-  for (auto map :
-       zip_equal(targetOp.getMapVars(), targetBlock->getArguments())) {
-    Value mapInfo = std::get<0>(map);
-    BlockArgument arg = std::get<1>(map);
+  for (unsigned i = 0; i < targetOp.getMapVars().size(); ++i) {
+    Value mapInfo = targetOp.getMapVars()[i];
+    BlockArgument arg = targetBlock->getArguments()[i];
     Operation *op = mapInfo.getDefiningOp();
     assert(op);
     auto mapInfoOp = cast<omp::MapInfoOp>(op);
+    // map the block argument to the host-side variable pointer
     mapping.map(arg, mapInfoOp.getVarPtr());
   }
+  unsigned mapSize = targetOp.getMapVars().size();
+  for (unsigned i = 0; i < targetOp.getPrivateVars().size(); ++i) {
+    Value privateVar = targetOp.getPrivateVars()[i];
+    // The mapping should link the device-side variable to the host-side one.
+    BlockArgument arg = targetBlock->getArguments()[mapSize + i];
+    // Map the device-side copy (`arg`) to the host-side value (`privateVar`).
+    mapping.map(arg, privateVar);
+  }
+
   rewriter.setInsertionPoint(targetOp);
   SmallVector<Operation *> opsToReplace;
   Value device = targetOp.getDevice();
@@ -813,6 +868,7 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
       // fir.declare changes its type when hoisting it out of omp.target to
       // omp.target_data Introduce a load, if original declareOp input is not of
       // reference type, but cloned delcareOp input is reference type.
+
       if (fir::DeclareOp clonedDeclareOp = dyn_cast<fir::DeclareOp>(clonedOp)) {
         auto originalDeclareOp = cast<fir::DeclareOp>(op);
         Type originalInType = originalDeclareOp.getMemref().getType();
@@ -833,6 +889,7 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
         opsToReplace.push_back(clonedOp);
     }
   }
+
   for (Operation *op : opsToReplace) {
     if (auto allocOp = dyn_cast<fir::AllocMemOp>(op)) {
       rewriter.setInsertionPoint(allocOp);
