@@ -331,10 +331,8 @@ define <3 x i32> @sign_3xi32(<3 x i32> %a) {
 ;
 ; CHECK-AVX512-LABEL: sign_3xi32:
 ; CHECK-AVX512:       # %bb.0:
-; CHECK-AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; CHECK-AVX512-NEXT:    vpcmpgtd %xmm1, %xmm0, %k1
-; CHECK-AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 {%k1} = [1,1,1,1]
-; CHECK-AVX512-NEXT:    vmovdqa %xmm1, %xmm0
+; CHECK-AVX512-NEXT:    vpsrad $31, %xmm0, %xmm0
+; CHECK-AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512-NEXT:    retq
   %c = icmp sgt <3 x i32> %a, <i32 -1, i32 -1, i32 -1>
   %res = select <3 x i1> %c, <3 x i32> <i32 1, i32 1, i32 1>, <3 x i32> <i32 -1, i32 -1, i32 -1>
@@ -747,41 +745,40 @@ define <4 x i65> @sign_4xi65(<4 x i65> %a) {
 ; CHECK-AVX512-NEXT:    movq %rdi, %rax
 ; CHECK-AVX512-NEXT:    andl $1, %edx
 ; CHECK-AVX512-NEXT:    negq %rdx
-; CHECK-AVX512-NEXT:    andl $1, %r8d
-; CHECK-AVX512-NEXT:    negq %r8
 ; CHECK-AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-AVX512-NEXT:    andl $1, %ecx
-; CHECK-AVX512-NEXT:    negq %rcx
-; CHECK-AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %rsi
-; CHECK-AVX512-NEXT:    andl $1, %esi
+; CHECK-AVX512-NEXT:    movq %rcx, %r9
+; CHECK-AVX512-NEXT:    negq %r9
+; CHECK-AVX512-NEXT:    andl $1, %r8d
+; CHECK-AVX512-NEXT:    negq %r8
+; CHECK-AVX512-NEXT:    movq {{[0-9]+}}(%rsp), %r11
+; CHECK-AVX512-NEXT:    andl $1, %r11d
+; CHECK-AVX512-NEXT:    movq %r11, %rsi
 ; CHECK-AVX512-NEXT:    negq %rsi
-; CHECK-AVX512-NEXT:    movl $1, %r9d
-; CHECK-AVX512-NEXT:    movq $-1, %r10
-; CHECK-AVX512-NEXT:    movq $-1, %rdi
-; CHECK-AVX512-NEXT:    cmovnsq %r9, %rdi
-; CHECK-AVX512-NEXT:    testq %rcx, %rcx
-; CHECK-AVX512-NEXT:    movq $-1, %r11
-; CHECK-AVX512-NEXT:    cmovnsq %r9, %r11
-; CHECK-AVX512-NEXT:    testq %r8, %r8
-; CHECK-AVX512-NEXT:    movq $-1, %rbx
-; CHECK-AVX512-NEXT:    cmovnsq %r9, %rbx
-; CHECK-AVX512-NEXT:    testq %rdx, %rdx
-; CHECK-AVX512-NEXT:    cmovnsq %r9, %r10
-; CHECK-AVX512-NEXT:    shrq $63, %rsi
-; CHECK-AVX512-NEXT:    shrq $63, %rcx
-; CHECK-AVX512-NEXT:    shrq $63, %r8
-; CHECK-AVX512-NEXT:    movq %r10, (%rax)
-; CHECK-AVX512-NEXT:    shrdq $63, %rbx, %rdx
-; CHECK-AVX512-NEXT:    movq %rdx, 8(%rax)
-; CHECK-AVX512-NEXT:    shldq $1, %rbx, %r8
-; CHECK-AVX512-NEXT:    leaq (%r8,%r11,4), %rdx
-; CHECK-AVX512-NEXT:    movq %rdx, 16(%rax)
-; CHECK-AVX512-NEXT:    shrq $62, %r11
-; CHECK-AVX512-NEXT:    leaq (%r11,%rcx,4), %rcx
-; CHECK-AVX512-NEXT:    leaq (%rcx,%rdi,8), %rcx
-; CHECK-AVX512-NEXT:    movq %rcx, 24(%rax)
-; CHECK-AVX512-NEXT:    shrq $61, %rdi
-; CHECK-AVX512-NEXT:    leal (%rdi,%rsi,8), %ecx
+; CHECK-AVX512-NEXT:    movq %rsi, %rdi
+; CHECK-AVX512-NEXT:    shrq $63, %rdi
+; CHECK-AVX512-NEXT:    movq %r8, %r10
+; CHECK-AVX512-NEXT:    shrq $63, %r10
+; CHECK-AVX512-NEXT:    movq %r9, %rbx
+; CHECK-AVX512-NEXT:    shrq $63, %rbx
+; CHECK-AVX512-NEXT:    shldq $1, %r8, %r10
+; CHECK-AVX512-NEXT:    orq $1, %r8
+; CHECK-AVX512-NEXT:    shldq $1, %rdx, %r8
+; CHECK-AVX512-NEXT:    orq $1, %rdx
+; CHECK-AVX512-NEXT:    movq %rdx, (%rax)
+; CHECK-AVX512-NEXT:    movq %r8, 8(%rax)
+; CHECK-AVX512-NEXT:    shrq $62, %r9
+; CHECK-AVX512-NEXT:    leaq (%r9,%rbx,4), %rdx
+; CHECK-AVX512-NEXT:    shll $3, %r11d
+; CHECK-AVX512-NEXT:    subq %r11, %rdx
+; CHECK-AVX512-NEXT:    orq $8, %rdx
+; CHECK-AVX512-NEXT:    movq %rdx, 24(%rax)
+; CHECK-AVX512-NEXT:    shll $2, %ecx
+; CHECK-AVX512-NEXT:    subq %rcx, %r10
+; CHECK-AVX512-NEXT:    orq $4, %r10
+; CHECK-AVX512-NEXT:    movq %r10, 16(%rax)
+; CHECK-AVX512-NEXT:    shrq $61, %rsi
+; CHECK-AVX512-NEXT:    leal (%rsi,%rdi,8), %ecx
 ; CHECK-AVX512-NEXT:    movb %cl, 32(%rax)
 ; CHECK-AVX512-NEXT:    popq %rbx
 ; CHECK-AVX512-NEXT:    .cfi_def_cfa_offset 8

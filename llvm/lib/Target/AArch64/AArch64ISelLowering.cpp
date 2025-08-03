@@ -25887,38 +25887,7 @@ static SDValue performVSelectCombine(SDNode *N, SelectionDAG &DAG) {
     }
   }
 
-  // Check for sign pattern (VSELECT setgt, iN lhs, -1, 1, -1) and transform
-  // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
-  // supported types.
   SDValue SetCC = N->getOperand(0);
-  if (SetCC.getOpcode() == ISD::SETCC &&
-      SetCC.getOperand(2) == DAG.getCondCode(ISD::SETGT)) {
-    SDValue CmpLHS = SetCC.getOperand(0);
-    EVT VT = CmpLHS.getValueType();
-    SDNode *CmpRHS = SetCC.getOperand(1).getNode();
-    SDNode *SplatLHS = N->getOperand(1).getNode();
-    SDNode *SplatRHS = N->getOperand(2).getNode();
-    APInt SplatLHSVal;
-    if (CmpLHS.getValueType() == N->getOperand(1).getValueType() &&
-        VT.isSimple() &&
-        is_contained(ArrayRef({MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16,
-                               MVT::v2i32, MVT::v4i32, MVT::v2i64}),
-                     VT.getSimpleVT().SimpleTy) &&
-        ISD::isConstantSplatVector(SplatLHS, SplatLHSVal) &&
-        SplatLHSVal.isOne() && ISD::isConstantSplatVectorAllOnes(CmpRHS) &&
-        ISD::isConstantSplatVectorAllOnes(SplatRHS)) {
-      unsigned NumElts = VT.getVectorNumElements();
-      SmallVector<SDValue, 8> Ops(
-          NumElts, DAG.getConstant(VT.getScalarSizeInBits() - 1, SDLoc(N),
-                                   VT.getScalarType()));
-      SDValue Val = DAG.getBuildVector(VT, SDLoc(N), Ops);
-
-      auto Shift = DAG.getNode(ISD::SRA, SDLoc(N), VT, CmpLHS, Val);
-      auto Or = DAG.getNode(ISD::OR, SDLoc(N), VT, Shift, N->getOperand(1));
-      return Or;
-    }
-  }
-
   EVT CmpVT = N0.getOperand(0).getValueType();
   if (N0.getOpcode() != ISD::SETCC ||
       CCVT.getVectorElementCount() != ElementCount::getFixed(1) ||

@@ -13142,8 +13142,13 @@ static SDValue combineVSelectWithAllOnesOrZeros(SDValue Cond, SDValue TVal,
       ISD::isConstantSplatVector(TVal.getNode(), TValAPInt) &&
       TValAPInt.isOne() &&
       ISD::isConstantSplatVectorAllOnes(Cond.getOperand(1).getNode()) &&
-      ISD::isConstantSplatVectorAllOnes(FVal.getNode())) {
-    return SDValue();
+      ISD::isConstantSplatVectorAllOnes(FVal.getNode()) &&
+      !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
+    SDValue LHS = Cond.getOperand(0);
+    EVT ShiftVT = TLI.getShiftAmountTy(VT, DAG.getDataLayout());
+    SDValue ShiftC = DAG.getConstant(VT.getScalarSizeInBits() - 1, DL, ShiftVT);
+    SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, LHS, ShiftC);
+    return DAG.getNode(ISD::OR, DL, VT, Shift, TVal);
   }
 
   // To use the condition operand as a bitwise mask, it must have elements that
