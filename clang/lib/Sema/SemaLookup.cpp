@@ -3130,7 +3130,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
         CollectEnclosingNamespace(Result.Namespaces, BaseCtx);
 
         // Make sure we visit the bases of this base class.
-        if (BaseDecl->bases_begin() != BaseDecl->bases_end())
+        if (!BaseDecl->bases().empty())
           Bases.push_back(BaseDecl);
       }
     }
