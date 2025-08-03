@@ -308,7 +308,7 @@ public:
   }
 
   void emitAssignment(MCSymbol *S, const MCExpr *Value) override {
-    auto *Symbol = cast<MCSymbolELF>(S);
+    auto *Symbol = static_cast<MCSymbolELF *>(S);
 
     // When encoding an assignment to set symbol A to symbol B, also copy
     // the st_other bits encoding the local entry point offset.
@@ -335,7 +335,7 @@ private:
     auto *Ref = dyn_cast<const MCSymbolRefExpr>(S);
     if (!Ref)
       return false;
-    const auto &RhsSym = cast<MCSymbolELF>(Ref->getSymbol());
+    auto &RhsSym = static_cast<const MCSymbolELF &>(Ref->getSymbol());
     unsigned Other = D->getOther();
     Other &= ~ELF::STO_PPC64_LOCAL_MASK;
     Other |= RhsSym.getOther() & ELF::STO_PPC64_LOCAL_MASK;
