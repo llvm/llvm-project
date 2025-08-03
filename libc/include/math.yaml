@@ -283,6 +283,12 @@ functions:
     return_type: float
     arguments:
       - type: float
+  - name: cospif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: cospif16
     standards:
       - stdc
@@ -2453,6 +2459,12 @@ functions:
     arguments:
       - type: _Float16
     guard: LIBC_TYPES_HAS_FLOAT16
+  - name: sinpif
+    standards:
+      - stdc
+    return_type: float
+    arguments:
+      - type: float
   - name: sinpif16
     standards:
       - stdc
