@@ -2827,6 +2827,8 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
 static bool isWorthFoldingAdd(SDValue Add) {
   for (auto *User : Add->users()) {
     if (User->getOpcode() != ISD::LOAD && User->getOpcode() != ISD::STORE &&
+        User->getOpcode() != RISCVISD::LD_RV32 &&
+        User->getOpcode() != RISCVISD::SD_RV32 &&
         User->getOpcode() != ISD::ATOMIC_LOAD &&
         User->getOpcode() != ISD::ATOMIC_STORE)
       return false;
@@ -2840,6 +2842,9 @@ static bool isWorthFoldingAdd(SDValue Add) {
       return false;
     if (User->getOpcode() == ISD::ATOMIC_STORE &&
         cast<AtomicSDNode>(User)->getVal() == Add)
+      return false;
+    if (User->getOpcode() == RISCVISD::SD_RV32 &&
+        (User->getOperand(0) == Add || User->getOperand(1) == Add))
       return false;
     if (isStrongerThanMonotonic(cast<MemSDNode>(User)->getSuccessOrdering()))
       return false;
