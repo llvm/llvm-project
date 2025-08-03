@@ -9789,6 +9789,10 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                 match(
                     P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
                     m_SpecificInt(0)) &&
+                any_of(P.incoming_values(),
+                       [&EPI](Value *Inc) {
+                         return Inc == EPI.VectorTripCount;
+                       }) &&
                 all_of(P.incoming_values(), [&EPI](Value *Inc) {
                   return Inc == EPI.VectorTripCount ||
                          match(Inc, m_SpecificInt(0));

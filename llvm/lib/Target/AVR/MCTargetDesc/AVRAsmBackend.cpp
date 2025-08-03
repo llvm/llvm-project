@@ -368,9 +368,8 @@ AVRAsmBackend::createObjectTargetWriter() const {
 }
 
 void AVRAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
   // AVR sets the fixup value to bypass the assembly time overflow with a
   // relocation.
   if (IsResolved) {
@@ -397,14 +396,14 @@ void AVRAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // Shift the value into position.
   Value <<= Info.TargetOffset;
 
-  unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= F.getSize() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   for (unsigned i = 0; i < NumBytes; ++i) {
     uint8_t mask = (((Value >> (i * 8)) & 0xff));
-    Data[Offset + i] |= mask;
+    Data[i] |= mask;
   }
 }
 

@@ -29025,11 +29025,25 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
       ((N1C->isAllOnes() && CC == ISD::SETGT) ||
        (N1C->isZero() && CC == ISD::SETLT)) &&
       !TLI.shouldAvoidTransformToShift(VT, CmpOpVT.getScalarSizeInBits() - 1)) {
-    SDValue ASR = DAG.getNode(
-        ISD::SRA, DL, CmpOpVT, N0,
-        DAG.getConstant(CmpOpVT.getScalarSizeInBits() - 1, DL, CmpOpVT));
-    return DAG.getNode(ISD::XOR, DL, VT, DAG.getSExtOrTrunc(ASR, DL, VT),
+    SDValue ASHR =
+        DAG.getNode(ISD::SRA, DL, CmpOpVT, N0,
+                    DAG.getShiftAmountConstant(
+                        CmpOpVT.getScalarSizeInBits() - 1, CmpOpVT, DL));
+    return DAG.getNode(ISD::XOR, DL, VT, DAG.getSExtOrTrunc(ASHR, DL, VT),
                        DAG.getSExtOrTrunc(CC == ISD::SETLT ? N3 : N2, DL, VT));
+  }
+
+  // Fold sign pattern select_cc setgt X, -1, 1, -1 -> or (ashr X, BW-1), 1
+  if (CC == ISD::SETGT && N1C && N2C && N3C && N1C->isAllOnes() &&
+      N2C->isOne() && N3C->isAllOnes() &&
+      !TLI.shouldAvoidTransformToShift(CmpOpVT,
+                                       CmpOpVT.getScalarSizeInBits() - 1)) {
+    SDValue ASHR =
+        DAG.getNode(ISD::SRA, DL, CmpOpVT, N0,
+                    DAG.getShiftAmountConstant(
+                        CmpOpVT.getScalarSizeInBits() - 1, CmpOpVT, DL));
+    return DAG.getNode(ISD::OR, DL, VT, DAG.getSExtOrTrunc(ASHR, DL, VT),
+                       DAG.getConstant(1, DL, VT));
   }
 
   if (SDValue S = PerformMinMaxFpToSatCombine(N0, N1, N2, N3, CC, DAG))

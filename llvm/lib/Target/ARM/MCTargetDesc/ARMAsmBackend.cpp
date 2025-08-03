@@ -1108,9 +1108,8 @@ std::optional<bool> ARMAsmBackend::evaluateFixup(const MCFragment &F,
 }
 
 void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
   if (IsResolved && shouldForceRelocation(Fixup, Target))
     IsResolved = false;
   maybeAddReloc(F, Fixup, Target, Value, IsResolved);
@@ -1124,14 +1123,15 @@ void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
     return; // Doesn't change encoding.
   const unsigned NumBytes = getFixupKindNumBytes(Kind);
 
-  unsigned Offset = Fixup.getOffset();
-  assert(Offset + NumBytes <= F.getSize() && "Invalid fixup offset!");
+  assert(Fixup.getOffset() + NumBytes <= F.getSize() &&
+         "Invalid fixup offset!");
 
   // Used to point to big endian bytes.
   unsigned FullSizeBytes;
   if (Endian == llvm::endianness::big) {
     FullSizeBytes = getFixupKindContainerSizeBytes(Kind);
-    assert((Offset + FullSizeBytes) <= Data.size() && "Invalid fixup size!");
+    assert(Fixup.getOffset() + FullSizeBytes <= F.getSize() &&
+           "Invalid fixup size!");
     assert(NumBytes <= FullSizeBytes && "Invalid fixup size!");
   }
 
@@ -1141,7 +1141,7 @@ void ARMAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx =
         Endian == llvm::endianness::little ? i : (FullSizeBytes - 1 - i);
-    Data[Offset + Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
+    Data[Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
   }
 }
 
