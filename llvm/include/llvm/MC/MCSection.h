@@ -80,11 +80,13 @@ private:
 
   FragmentType Kind;
 
-protected:
+  //== Used by certain fragment types for better packing.
+
+  // The number of fixups for the optional variable-size tail must be small.
+  uint8_t VarFixupSize = 0;
+
   bool LinkerRelaxable : 1;
 
-  /// Used by certain fragment types for better packing.
-  ///
   /// FT_Data, FT_Relaxable
   bool HasInstructions : 1;
   /// FT_Relaxable, x86-specific
@@ -103,7 +105,6 @@ protected:
   uint32_t VarContentStart = 0;
   uint32_t VarContentEnd = 0;
   uint32_t VarFixupStart = 0;
-  uint32_t VarFixupEnd = 0;
 
   const MCSubtargetInfo *STI = nullptr;
 
@@ -643,11 +644,10 @@ inline ArrayRef<MCFixup> MCFragment::getFixups() const {
 
 inline MutableArrayRef<MCFixup> MCFragment::getVarFixups() {
   return MutableArrayRef(getParent()->FixupStorage)
-      .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
+      .slice(VarFixupStart, VarFixupSize);
 }
 inline ArrayRef<MCFixup> MCFragment::getVarFixups() const {
-  return ArrayRef(getParent()->FixupStorage)
-      .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
+  return ArrayRef(getParent()->FixupStorage).slice(VarFixupStart, VarFixupSize);
 }
 
 //== FT_Relaxable functions
