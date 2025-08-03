@@ -278,13 +278,12 @@ define { i128, i8 } @u128_checked_mul(i128 %x, i128 %y) {
 ; CHECK-NEXT:    cset w8, ne
 ; CHECK-NEXT:    adds x1, x11, x9
 ; CHECK-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-NEXT:    b .LBB17_3
+; CHECK-NEXT:    eor w2, w8, #0x1
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB17_2: // %overflow.no
 ; CHECK-NEXT:    umulh x1, x0, x2
 ; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:  .LBB17_3: // %overflow.res
-; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    bic w2, w9, w8
+; CHECK-NEXT:    eor w2, w8, #0x1
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0
@@ -314,13 +313,12 @@ define { i128, i8 } @u128_overflowing_mul(i128 %x, i128 %y) {
 ; CHECK-NEXT:    mul x0, x0, x2
 ; CHECK-NEXT:    cset w8, ne
 ; CHECK-NEXT:    adds x1, x11, x9
-; CHECK-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-NEXT:    and w2, w8, #0x1
+; CHECK-NEXT:    csinc w2, w8, wzr, lo
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB18_2: // %overflow.no
 ; CHECK-NEXT:    umulh x1, x0, x2
 ; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    and w2, w8, #0x1
+; CHECK-NEXT:    mov w2, wzr
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.umul.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0
@@ -356,7 +354,7 @@ define i128 @u128_saturating_mul(i128 %x, i128 %y) {
 ; CHECK-NEXT:    mov w10, wzr
 ; CHECK-NEXT:    mul x8, x0, x2
 ; CHECK-NEXT:  .LBB19_3: // %overflow.res
-; CHECK-NEXT:    tst w10, #0x1
+; CHECK-NEXT:    cmp w10, #0
 ; CHECK-NEXT:    csinv x0, x8, xzr, eq
 ; CHECK-NEXT:    csinv x1, x9, xzr, eq
 ; CHECK-NEXT:    ret
@@ -382,18 +380,12 @@ define i128 @i128_mul(i128 %x, i128 %y) {
 define { i128, i8 } @i128_checked_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_checked_mul:
 ; CHECK:       // %bb.0: // %overflow.entry
-; CHECK-NEXT:    cmp x1, x0, asr #63
-; CHECK-NEXT:    b.ne .LBB21_3
-; CHECK-NEXT:  // %bb.1: // %overflow.entry
-; CHECK-NEXT:    asr x8, x2, #63
-; CHECK-NEXT:    cmp x3, x8
-; CHECK-NEXT:    b.ne .LBB21_3
-; CHECK-NEXT:  // %bb.2: // %overflow.no
-; CHECK-NEXT:    smulh x1, x0, x2
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    b .LBB21_4
-; CHECK-NEXT:  .LBB21_3: // %overflow
+; CHECK-NEXT:    eor x8, x3, x2, asr #63
+; CHECK-NEXT:    eor x9, x1, x0, asr #63
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    b.ne .LBB21_2
+; CHECK-NEXT:  // %bb.1: // %overflow
 ; CHECK-NEXT:    asr x9, x1, #63
 ; CHECK-NEXT:    umulh x10, x0, x2
 ; CHECK-NEXT:    asr x13, x3, #63
@@ -421,9 +413,12 @@ define { i128, i8 } @i128_checked_mul(i128 %x, i128 %y) {
 ; CHECK-NEXT:    cmp x8, x10
 ; CHECK-NEXT:    ccmp x9, x10, #0, eq
 ; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:  .LBB21_4: // %overflow.res
-; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    bic w2, w9, w8
+; CHECK-NEXT:    eor w2, w8, #0x1
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB21_2: // %overflow.no
+; CHECK-NEXT:    smulh x1, x0, x2
+; CHECK-NEXT:    mul x0, x0, x2
+; CHECK-NEXT:    eor w2, wzr, #0x1
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0
@@ -438,18 +433,12 @@ define { i128, i8 } @i128_checked_mul(i128 %x, i128 %y) {
 define { i128, i8 } @i128_overflowing_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_overflowing_mul:
 ; CHECK:       // %bb.0: // %overflow.entry
-; CHECK-NEXT:    cmp x1, x0, asr #63
-; CHECK-NEXT:    b.ne .LBB22_3
-; CHECK-NEXT:  // %bb.1: // %overflow.entry
-; CHECK-NEXT:    asr x8, x2, #63
-; CHECK-NEXT:    cmp x3, x8
-; CHECK-NEXT:    b.ne .LBB22_3
-; CHECK-NEXT:  // %bb.2: // %overflow.no
-; CHECK-NEXT:    smulh x1, x0, x2
-; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    and w2, wzr, #0x1
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB22_3: // %overflow
+; CHECK-NEXT:    eor x8, x3, x2, asr #63
+; CHECK-NEXT:    eor x9, x1, x0, asr #63
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    b.ne .LBB22_2
+; CHECK-NEXT:  // %bb.1: // %overflow
 ; CHECK-NEXT:    asr x9, x1, #63
 ; CHECK-NEXT:    umulh x10, x0, x2
 ; CHECK-NEXT:    asr x13, x3, #63
@@ -476,8 +465,12 @@ define { i128, i8 } @i128_overflowing_mul(i128 %x, i128 %y) {
 ; CHECK-NEXT:    adc x9, x9, x11
 ; CHECK-NEXT:    cmp x8, x10
 ; CHECK-NEXT:    ccmp x9, x10, #0, eq
-; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    and w2, w8, #0x1
+; CHECK-NEXT:    cset w2, ne
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB22_2: // %overflow.no
+; CHECK-NEXT:    smulh x1, x0, x2
+; CHECK-NEXT:    mul x0, x0, x2
+; CHECK-NEXT:    mov w2, wzr
 ; CHECK-NEXT:    ret
   %1 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %x, i128 %y)
   %2 = extractvalue { i128, i1 } %1, 0
@@ -491,18 +484,12 @@ define { i128, i8 } @i128_overflowing_mul(i128 %x, i128 %y) {
 define i128 @i128_saturating_mul(i128 %x, i128 %y) {
 ; CHECK-LABEL: i128_saturating_mul:
 ; CHECK:       // %bb.0: // %overflow.entry
-; CHECK-NEXT:    cmp x1, x0, asr #63
-; CHECK-NEXT:    b.ne .LBB23_3
-; CHECK-NEXT:  // %bb.1: // %overflow.entry
-; CHECK-NEXT:    asr x8, x2, #63
-; CHECK-NEXT:    cmp x3, x8
-; CHECK-NEXT:    b.ne .LBB23_3
-; CHECK-NEXT:  // %bb.2: // %overflow.no
-; CHECK-NEXT:    smulh x8, x0, x2
-; CHECK-NEXT:    mov w10, wzr
-; CHECK-NEXT:    mul x9, x0, x2
-; CHECK-NEXT:    b .LBB23_4
-; CHECK-NEXT:  .LBB23_3: // %overflow
+; CHECK-NEXT:    eor x8, x3, x2, asr #63
+; CHECK-NEXT:    eor x9, x1, x0, asr #63
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    b.ne .LBB23_2
+; CHECK-NEXT:  // %bb.1: // %overflow
 ; CHECK-NEXT:    asr x9, x1, #63
 ; CHECK-NEXT:    umulh x10, x0, x2
 ; CHECK-NEXT:    asr x13, x3, #63
@@ -529,9 +516,14 @@ define i128 @i128_saturating_mul(i128 %x, i128 %y) {
 ; CHECK-NEXT:    cmp x11, x14
 ; CHECK-NEXT:    ccmp x10, x14, #0, eq
 ; CHECK-NEXT:    cset w10, ne
-; CHECK-NEXT:  .LBB23_4: // %overflow.res
+; CHECK-NEXT:    b .LBB23_3
+; CHECK-NEXT:  .LBB23_2: // %overflow.no
+; CHECK-NEXT:    smulh x8, x0, x2
+; CHECK-NEXT:    mov w10, wzr
+; CHECK-NEXT:    mul x9, x0, x2
+; CHECK-NEXT:  .LBB23_3: // %overflow.res
 ; CHECK-NEXT:    eor x11, x3, x1
-; CHECK-NEXT:    tst w10, #0x1
+; CHECK-NEXT:    cmp w10, #0
 ; CHECK-NEXT:    asr x11, x11, #63
 ; CHECK-NEXT:    eor x12, x11, #0x7fffffffffffffff
 ; CHECK-NEXT:    csinv x0, x9, x11, eq

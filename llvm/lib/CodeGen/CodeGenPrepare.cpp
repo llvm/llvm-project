@@ -6417,7 +6417,7 @@ bool CodeGenPrepare::optimizeUMulWithOverflow(Instruction *I) {
   unsigned VTHalfBitWidth = VTBitWidth / 2;
   auto *LegalTy = IntegerType::getIntNTy(I->getContext(), VTHalfBitWidth);
 
-  // Skip the optimizaiton if the type with HalfBitWidth is not legal for the
+  // Skip the optimization if the type with HalfBitWidth is not legal for the
   // target.
   if (TLI->getTypeAction(I->getContext(), TLI->getValueType(*DL, LegalTy)) !=
       TargetLowering::TypeLegal)
@@ -6464,31 +6464,39 @@ bool CodeGenPrepare::optimizeUMulWithOverflow(Instruction *I) {
   auto *ExtLoLHS = Builder.CreateZExt(LoLHS, Ty, "lo.lhs.ext");
   auto *ExtLoRHS = Builder.CreateZExt(LoRHS, Ty, "lo.rhs.ext");
   auto *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.no.overflow");
-  StructType *STy = StructType::get(
-      I->getContext(), {Ty, IntegerType::getInt1Ty(I->getContext())});
-  Value *StructValNoOverflow = PoisonValue::get(STy);
-  StructValNoOverflow =
-      Builder.CreateInsertValue(StructValNoOverflow, Mul, {0});
-  StructValNoOverflow = Builder.CreateInsertValue(
-      StructValNoOverflow, ConstantInt::getFalse(I->getContext()), {1});
   Builder.CreateBr(OverflowResBB);
 
   //------------------------------------------------------------------------------
   // BB overflow.res:
   Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
-  auto *PHINode = Builder.CreatePHI(STy, 2);
-  PHINode->addIncoming(StructValNoOverflow, NoOverflowBB);
+  auto *PHINode1 = Builder.CreatePHI(Ty, 2);
+  PHINode1->addIncoming(Mul, NoOverflowBB);
+  auto *PHINode2 =
+      Builder.CreatePHI(IntegerType::getInt1Ty(I->getContext()), 2);
+  PHINode2->addIncoming(ConstantInt::getFalse(I->getContext()), NoOverflowBB);
 
+  StructType *STy = StructType::get(
+      I->getContext(), {Ty, IntegerType::getInt1Ty(I->getContext())});
+  Value *StructValOverflowRes = PoisonValue::get(STy);
+  StructValOverflowRes =
+      Builder.CreateInsertValue(StructValOverflowRes, PHINode1, {0});
+  StructValOverflowRes =
+      Builder.CreateInsertValue(StructValOverflowRes, PHINode2, {1});
   // Before moving the mul.overflow intrinsic to the overflowBB, replace all its
-  // uses by PHINode.
-  I->replaceAllUsesWith(PHINode);
+  // uses by StructValOverflowRes.
+  I->replaceAllUsesWith(StructValOverflowRes);
+  I->removeFromParent();
 
   // BB overflow:
-  PHINode->addIncoming(I, OverflowBB);
-  I->removeFromParent();
   I->insertInto(OverflowBB, OverflowBB->end());
   Builder.SetInsertPoint(OverflowBB, OverflowBB->end());
+  auto *MulOverflow = Builder.CreateExtractValue(I, {0}, "mul.overflow");
+  auto *OverflowFlag = Builder.CreateExtractValue(I, {1}, "overflow.flag");
   Builder.CreateBr(OverflowResBB);
+
+  // Add The Extracted values to the PHINodes in the overflow.res block.
+  PHINode1->addIncoming(MulOverflow, OverflowBB);
+  PHINode2->addIncoming(OverflowFlag, OverflowBB);
 
   // return false to stop reprocessing the function.
   return false;
@@ -6516,7 +6524,7 @@ bool CodeGenPrepare::optimizeSMulWithOverflow(Instruction *I) {
   unsigned VTHalfBitWidth = VTBitWidth / 2;
   auto *LegalTy = IntegerType::getIntNTy(I->getContext(), VTHalfBitWidth);
 
-  // Skip the optimizaiton if the type with HalfBitWidth is not legal for the
+  // Skip the optimization if the type with HalfBitWidth is not legal for the
   // target.
   if (TLI->getTypeAction(I->getContext(), TLI->getValueType(*DL, LegalTy)) !=
       TargetLowering::TypeLegal)
@@ -6553,11 +6561,17 @@ bool CodeGenPrepare::optimizeSMulWithOverflow(Instruction *I) {
       Builder.CreateAShr(LoLHS, VTHalfBitWidth - 1, "sign.lo.lhs");
   auto *HiLHS = Builder.CreateLShr(LHS, VTHalfBitWidth, "lhs.lsr");
   HiLHS = Builder.CreateTrunc(HiLHS, LegalTy, "hi.lhs");
-
-  auto *CmpLHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiLHS, SignLoLHS);
-  auto *CmpRHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiRHS, SignLoRHS);
-  auto *Or = Builder.CreateOr(CmpLHS, CmpRHS, "or.lhs.rhs");
-  Builder.CreateCondBr(Or, OverflowBB, NoOverflowBB);
+  // xor(HiLHS, SignLoLHS) false -> no overflow
+  // xor(HiRHS, SignLoRHS) false -> no overflow
+  // if either of the above is true, then overflow.
+  // auto *CmpLHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiLHS, SignLoLHS);
+  auto *XorLHS = Builder.CreateXor(HiLHS, SignLoLHS);
+  auto *XorRHS = Builder.CreateXor(HiRHS, SignLoRHS);
+  // auto *CmpRHS = Builder.CreateCmp(ICmpInst::ICMP_NE, HiRHS, SignLoRHS);
+  auto *Or = Builder.CreateOr(XorLHS, XorRHS, "or.lhs.rhs");
+  auto *Cmp = Builder.CreateCmp(ICmpInst::ICMP_EQ, Or,
+                                ConstantInt::get(Or->getType(), 1));
+  Builder.CreateCondBr(Cmp, OverflowBB, NoOverflowBB);
   OverflowoEntryBB->getTerminator()->eraseFromParent();
 
   //------------------------------------------------------------------------------
@@ -6566,31 +6580,39 @@ bool CodeGenPrepare::optimizeSMulWithOverflow(Instruction *I) {
   auto *ExtLoLHS = Builder.CreateSExt(LoLHS, Ty, "lo.lhs.ext");
   auto *ExtLoRHS = Builder.CreateSExt(LoRHS, Ty, "lo.rhs.ext");
   auto *Mul = Builder.CreateMul(ExtLoLHS, ExtLoRHS, "mul.no.overflow");
-  StructType *STy = StructType::get(
-      I->getContext(), {Ty, IntegerType::getInt1Ty(I->getContext())});
-  Value *StructValNoOverflow = PoisonValue::get(STy);
-  StructValNoOverflow =
-      Builder.CreateInsertValue(StructValNoOverflow, Mul, {0});
-  StructValNoOverflow = Builder.CreateInsertValue(
-      StructValNoOverflow, ConstantInt::getFalse(I->getContext()), {1});
   Builder.CreateBr(OverflowResBB);
 
   //------------------------------------------------------------------------------
   // BB overflow.res:
   Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
-  auto *PHINode = Builder.CreatePHI(STy, 2);
-  PHINode->addIncoming(StructValNoOverflow, NoOverflowBB);
+  auto *PHINode1 = Builder.CreatePHI(Ty, 2);
+  PHINode1->addIncoming(Mul, NoOverflowBB);
+  auto *PHINode2 =
+      Builder.CreatePHI(IntegerType::getInt1Ty(I->getContext()), 2);
+  PHINode2->addIncoming(ConstantInt::getFalse(I->getContext()), NoOverflowBB);
 
+  StructType *STy = StructType::get(
+      I->getContext(), {Ty, IntegerType::getInt1Ty(I->getContext())});
+  Value *StructValOverflowRes = PoisonValue::get(STy);
+  StructValOverflowRes =
+      Builder.CreateInsertValue(StructValOverflowRes, PHINode1, {0});
+  StructValOverflowRes =
+      Builder.CreateInsertValue(StructValOverflowRes, PHINode2, {1});
   // Before moving the mul.overflow intrinsic to the overflowBB, replace all its
-  // uses by PHINode.
-  I->replaceAllUsesWith(PHINode);
+  // uses by StructValOverflowRes.
+  I->replaceAllUsesWith(StructValOverflowRes);
+  I->removeFromParent();
 
   // BB overflow:
-  PHINode->addIncoming(I, OverflowBB);
-  I->removeFromParent();
   I->insertInto(OverflowBB, OverflowBB->end());
   Builder.SetInsertPoint(OverflowBB, OverflowBB->end());
+  auto *MulOverflow = Builder.CreateExtractValue(I, {0}, "mul.overflow");
+  auto *OverflowFlag = Builder.CreateExtractValue(I, {1}, "overflow.flag");
   Builder.CreateBr(OverflowResBB);
+
+  // Add The Extracted values to the PHINodes in the overflow.res block.
+  PHINode1->addIncoming(MulOverflow, OverflowBB);
+  PHINode2->addIncoming(OverflowFlag, OverflowBB);
 
   // return false to stop reprocessing the function.
   return false;
