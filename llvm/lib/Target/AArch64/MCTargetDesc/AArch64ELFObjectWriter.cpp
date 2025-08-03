@@ -488,7 +488,8 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
   // this global needs to be tagged. In addition, the linker needs to know
   // whether to emit a special addend when relocating `end` symbols, and this
   // can only be determined by the attributes of the symbol itself.
-  if (Val.getAddSym() && cast<MCSymbolELF>(Val.getAddSym())->isMemtag())
+  if (Val.getAddSym() &&
+      static_cast<const MCSymbolELF *>(Val.getAddSym())->isMemtag())
     return true;
 
   if ((Val.getSpecifier() & AArch64::S_GOT) == AArch64::S_GOT)
