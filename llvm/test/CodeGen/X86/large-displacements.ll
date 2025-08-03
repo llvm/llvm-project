@@ -1,4 +1,4 @@
-; RUN: not llc < %s -mtriple=i686 -filetype=null 2>&1 | FileCheck %s -check-prefix=ERR-i686
+; RUN: not llc < %s -mtriple=i686 --verify-machineinstrs=0 -filetype=null 2>&1 | FileCheck %s -check-prefix=ERR-i686
 ; RUN: llc < %s -mtriple=x86_64 | FileCheck %s -check-prefix=x86_64
 
 ; Regression test for #121932, #113856, #106352, #69365, #25051 which are caused by
