@@ -2760,12 +2760,15 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
         auto CompilerTypeBasename =
             matching_type->GetForwardCompilerType().GetTypeName(true);
         if (CompilerTypeBasename != query.GetTypeBasename())
-          return true; // Keep iterating over index types, basename mismatch.
+          return IterationAction::Continue;
       }
       have_index_match = true;
       results.InsertUnique(matching_type->shared_from_this());
     }
-    return !results.Done(query); // Keep iterating if we aren't done.
+    if (!results.Done(query))
+      return IterationAction::Continue;
+
+    return IterationAction::Stop;
   });
 
   if (results.Done(query)) {
@@ -2801,7 +2804,10 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
         if (query.ContextMatches(qualified_context))
           if (Type *matching_type = ResolveType(die, true, true))
             results.InsertUnique(matching_type->shared_from_this());
-        return !results.Done(query); // Keep iterating if we aren't done.
+        if (!results.Done(query))
+          return IterationAction::Continue;
+
+        return IterationAction::Stop;
       });
       if (results.Done(query)) {
         if (log) {
@@ -3108,7 +3114,7 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
     // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
     if (type_system &&
         !type_system->SupportsLanguage(GetLanguage(*type_die.GetCU())))
-      return true;
+      return IterationAction::Continue;
 
     if (!die_matches(type_die)) {
       if (log) {
@@ -3119,7 +3125,7 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
             DW_TAG_value_to_name(tag), tag, name, type_die.GetOffset(),
             type_die.GetName());
       }
-      return true;
+      return IterationAction::Continue;
     }
 
     if (log) {
@@ -3133,7 +3139,7 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
     }
 
     result = type_die;
-    return false;
+    return IterationAction::Stop;
   });
   return result;
 }
