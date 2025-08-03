@@ -3805,7 +3805,7 @@ public:
                                      const Fortran::lower::SomeExpr &rhs) {
     mlir::Location loc = getLoc();
     if (rhs.Rank() > 0)
-      TODO(loc, "user-defined elemental assigment from expression with rank");
+      TODO(loc, "user-defined elemental assignment from expression with rank");
     // 1) Lower the rhs expression with array_fetch op(s).
     IterationSpace iters;
     iters.setElement(genarr(rhs)(iters));
