@@ -5316,6 +5316,11 @@ add_fp_unittest(
     AddTest.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.os
+    libc.src.__support.macros.properties.types
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
 )
 
 add_fp_unittest(
@@ -5328,6 +5333,8 @@ add_fp_unittest(
     DivTest.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
 )
 
 add_fp_unittest(
@@ -5339,7 +5346,10 @@ add_fp_unittest(
   HDRS
     MulTest.h
   DEPENDS
+    libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.bfloat16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
 )
 
 add_fp_unittest(
@@ -5352,6 +5362,11 @@ add_fp_unittest(
     SubTest.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.os
+    libc.src.__support.macros.properties.types
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
 )
 
 add_fp_unittest(
