@@ -1,6 +1,6 @@
 ; Check that we don't end up with duplicated array types in TypeMap.
 ; No FileCheck needed, we only want to check the absence of errors.
-; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o -
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o -
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#]] = OpTypeArray %[[#]] %[[#]]
