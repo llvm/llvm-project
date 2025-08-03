@@ -17,9 +17,9 @@
 
 #include "Descriptor.h"
 #include "Source.h"
-#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/raw_ostream.h"
 

@@ -13,6 +13,7 @@
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 
 using namespace clang;
 using namespace clang::interp;
