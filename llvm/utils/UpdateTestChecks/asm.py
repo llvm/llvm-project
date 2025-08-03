@@ -165,12 +165,10 @@ ASM_FUNCTION_AARCH64_DARWIN_RE = re.compile(
 )
 
 ASM_FUNCTION_ARM_DARWIN_RE = re.compile(
-    r"@[ \t]--[ \t]Begin[ \t]function[ \t](?P<func>[^ \t]+?)\n"
-    r"^[ \t]*\.globl[ \t]*_(?P=func)[ \t]*"
+    r"^[ \t]*\.globl[ \t]*_(?P<func>[^ \t]+)[ \t]*\@[ \t]*--[ \t]Begin[ \t]function[ \t](?P=func)\n"
     r"(?P<directives>.*?)"
-    r"^_(?P=func):\n[ \t]*"
-    r"(?P<body>.*?)"
-    r"^[ \t]*@[ \t]--[ \t]End[ \t]function",
+    r"^_(?P=func):.*?\n"
+    r"(?P<body>.*?)(?=^[ \t]*@[ \t]--[ \t]End[ \t]function)",
     flags=(re.M | re.S),
 )
 

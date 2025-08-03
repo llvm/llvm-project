@@ -270,6 +270,13 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMECallAttrs CallAttrs(*Caller, *Callee);
 
+  // Never inline a function explicitly marked as being streaming,
+  // into a non-streaming function. Assume it was marked as streaming
+  // for a reason.
+  if (CallAttrs.caller().hasNonStreamingInterfaceAndBody() &&
+      CallAttrs.callee().hasStreamingInterfaceOrBody())
+    return false;
+
   // When inlining, we should consider the body of the function, not the
   // interface.
   if (CallAttrs.callee().hasStreamingBody()) {
@@ -4905,14 +4912,17 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
-  // No need to unroll auto-vectorized loops
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
-    return;
-
   // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining.
+  // inlining. Don't unroll auto-vectorized loops either, though do allow
+  // unrolling of the scalar remainder.
+  bool IsVectorized = getBooleanLoopAttribute(L, "llvm.loop.isvectorized");
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
+      // Both auto-vectorized loops and the scalar remainder have the
+      // isvectorized attribute, so differentiate between them by the presence
+      // of vector instructions.
+      if (IsVectorized && I.getType()->isVectorTy())
+        return;
       if (isa<CallBase>(I)) {
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
           if (const Function *F = cast<CallBase>(I).getCalledFunction())
