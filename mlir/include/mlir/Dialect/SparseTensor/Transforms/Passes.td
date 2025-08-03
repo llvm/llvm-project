@@ -81,6 +81,23 @@ def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
          clEnumValN(mlir::ReinterpretMapScope::kExceptGeneric,
                     "except-generic",
                     "Run on operations expect linalg.generic (e.g., foreach)"))}]>,
+    Option<"loopOrderingStrategy", "loop-ordering-strategy", "mlir::sparse_tensor::LoopOrderingStrategy",
+       "mlir::sparse_tensor::LoopOrderingStrategy::kDefault",
+       "Set the loop ordering strategy for sparse tensor compilation", [{llvm::cl::values(
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDefault, "default",
+                    "Default: Prefer parallel loops to reduction loops."),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kMemoryAware, "memory-aware",
+                    "Memory-aware: Optimize for cache locality and memory access patterns."),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kDenseOuter, "dense-outer",
+                    "Dense-outer: Dense dimensions outer, sparse inner."),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kSparseOuter, "sparse-outer",
+                    "Sparse-outer: Sparse dimensions outer, dense inner."),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kSequentialFirst, "sequential-first",
+                    "Sequential-first: Sequential access patterns first."),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kParallelFirst, "parallel-first",
+                    "Parallel-first: Parallel loops first, then by density."),
+         clEnumValN(mlir::sparse_tensor::LoopOrderingStrategy::kAdaptive, "adaptive",
+                    "Adaptive: Automatically selects optimal strategy."))}]>,
   ];
 }
 
