@@ -11,10 +11,10 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/stringstream.h"
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/fpbits_str.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
-#include "src/__support/FPUtil/bfloat16.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace testing {
