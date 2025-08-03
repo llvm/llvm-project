@@ -446,7 +446,7 @@ Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
   // Use the symbol's index to track if it has been used as a section symbol.
   // Set to -1 to catch potential bugs if misused as a symbol index.
   if (Sym && Sym->getIndex() != -1u) {
-    R = cast<Symbol>(Sym);
+    R = static_cast<Symbol *>(Sym);
   } else {
     SymEntry.second.Used = true;
     R = new (&SymEntry, *this) Symbol(&SymEntry, /*isTemporary=*/false);
@@ -586,7 +586,7 @@ MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
 
   return createELFSectionImpl(
       I->getKey(), Type, Flags, EntrySize, Group, true, true,
-      cast<MCSymbolELF>(RelInfoSection->getBeginSymbol()));
+      static_cast<const MCSymbolELF *>(RelInfoSection->getBeginSymbol()));
 }
 
 MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,

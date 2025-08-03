@@ -409,8 +409,7 @@ static bool isIFunc(const MCSymbolELF *Symbol) {
 void ELFWriter::writeSymbol(SymbolTableWriter &Writer, uint32_t StringIndex,
                             ELFSymbolData &MSD) {
   auto &Symbol = static_cast<const MCSymbolELF &>(*MSD.Symbol);
-  const MCSymbolELF *Base =
-      cast_or_null<MCSymbolELF>(Asm.getBaseSymbol(Symbol));
+  auto *Base = static_cast<const MCSymbolELF *>(Asm.getBaseSymbol(Symbol));
 
   // This has to be in sync with when computeSymbolTable uses SHN_ABS or
   // SHN_COMMON.
@@ -1317,7 +1316,7 @@ void ELFObjectWriter::recordRelocation(const MCFragment &F,
   auto &Section = static_cast<const MCSectionELF &>(*F.getParent());
   MCContext &Ctx = getContext();
 
-  const auto *SymA = cast_or_null<MCSymbolELF>(Target.getAddSym());
+  auto *SymA = static_cast<const MCSymbolELF *>(Target.getAddSym());
   const MCSectionELF *SecA =
       (SymA && SymA->isInSection())
           ? static_cast<const MCSectionELF *>(&SymA->getSection())
