@@ -88,6 +88,8 @@ bool checkAndConsumeModuleDecl(const SourceManager &SM, Lexer &Lex,
 // - after `#pragma once`
 // - after header guards (`#ifdef` and `#define`)
 // - after opening global module (`module;`)
+// - after any comments at the start of the file or immediately following one of
+//   the above constructs
 unsigned getMinHeaderInsertionOffset(StringRef FileName, StringRef Code,
                                      const IncludeStyle &Style) {
   // \p Consume returns location after header guard or 0 if no header guard is
