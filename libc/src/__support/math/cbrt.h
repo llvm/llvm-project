@@ -294,6 +294,8 @@ LIBC_INLINE static constexpr double cbrt(double x) {
   if (LIBC_LIKELY(r2_upper == r2_lower))
     return update_exponent(r2_upper);
 
+  using Float128 = fputil::DyadicFloat<128>;
+
   // TODO: Investigate removing float128 and just list exceptional cases.
   // Apply another Newton iteration with ~126-bit accuracy.
   Float128 x2_f128 = fputil::quick_add(Float128(x2.hi), Float128(x2.lo));
