@@ -4847,21 +4847,6 @@ static bool shouldBeAdjustedToZero(SDValue LHS, APInt C, ISD::CondCode &CC) {
     return true;
   }
 
-  // On ARM, adds and subs set the V flags correctly, which means the optimizer
-  // can condense to a single adds/subs
-  switch (LHS.getOpcode()) {
-  case ISD::ADD:
-  case ISD::SUB:
-    break;
-  default:
-    return false;
-  }
-
-  if (C.isOne() && (CC == ISD::SETLT || CC == ISD::SETGE)) {
-    CC = (CC == ISD::SETLT) ? ISD::SETLE : ISD::SETGT;
-    return true;
-  }
-
   return false;
 }
 
