@@ -2151,9 +2151,8 @@ static int getHexagonPacketOffset(const InputSection &isec,
   for (unsigned i = 0;; i++) {
     if (i == 3 || rel.offset < (i + 1) * 4)
       return i * 4;
-    uint32_t instWord = 0;
-    memcpy(&instWord, data.data() + (rel.offset - (i + 1) * 4),
-           sizeof(instWord));
+    uint32_t instWord =
+        read32(isec.getCtx(), data.data() + (rel.offset - (i + 1) * 4));
     if (((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_PACKET) ||
         ((instWord & HEXAGON_MASK_END_PACKET) == HEXAGON_END_OF_DUPLEX))
       return i * 4;
