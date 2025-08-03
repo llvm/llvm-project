@@ -695,5 +695,7 @@ void CodeViewContext::encodeDefRange(const MCAssembler &Asm,
   }
 
   Frag.setVarContents(Contents);
+  assert(Fixups.size() < 256 && "Store fixups outside of MCFragment's VarFixup "
+                                "storage if the number ever exceeds 256");
   Frag.setVarFixups(Fixups);
 }

@@ -141,8 +141,7 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
 
 bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
                                 MCValue &Target, uint64_t &Value,
-                                bool RecordReloc,
-                                MutableArrayRef<char> Contents) const {
+                                bool RecordReloc, uint8_t *Data) const {
   if (RecordReloc)
     ++stats::Fixups;
 
@@ -187,7 +186,7 @@ bool MCAssembler::evaluateFixup(const MCFragment &F, MCFixup &Fixup,
 
   if (IsResolved && mc::isRelocRelocation(Fixup.getKind()))
     IsResolved = false;
-  getBackend().applyFixup(F, Fixup, Target, Contents, Value, IsResolved);
+  getBackend().applyFixup(F, Fixup, Target, Data, Value, IsResolved);
   return true;
 }
 
@@ -705,21 +704,25 @@ void MCAssembler::layout() {
       for (MCFixup &Fixup : F.getFixups()) {
         uint64_t FixedValue;
         MCValue Target;
+        assert(mc::isRelocRelocation(Fixup.getKind()) ||
+               Fixup.getOffset() <= F.getFixedSize());
+        auto *Data =
+            reinterpret_cast<uint8_t *>(Contents.data() + Fixup.getOffset());
         evaluateFixup(F, Fixup, Target, FixedValue,
-                      /*RecordReloc=*/true, Contents);
+                      /*RecordReloc=*/true, Data);
       }
-      if (F.getVarFixups().size()) {
-        // In the variable part, fixup offsets are relative to the fixed part's
-        // start. Extend the variable contents to the left to account for the
-        // fixed part size.
-        Contents = MutableArrayRef(F.getParent()->ContentStorage)
-                       .slice(F.VarContentStart - Contents.size(), F.getSize());
-        for (MCFixup &Fixup : F.getVarFixups()) {
-          uint64_t FixedValue;
-          MCValue Target;
-          evaluateFixup(F, Fixup, Target, FixedValue,
-                        /*RecordReloc=*/true, Contents);
-        }
+      // In the variable part, fixup offsets are relative to the fixed part's
+      // start.
+      for (MCFixup &Fixup : F.getVarFixups()) {
+        uint64_t FixedValue;
+        MCValue Target;
+        assert(mc::isRelocRelocation(Fixup.getKind()) ||
+               (Fixup.getOffset() >= F.getFixedSize() &&
+                Fixup.getOffset() <= F.getSize()));
+        auto *Data = reinterpret_cast<uint8_t *>(
+            F.getVarContents().data() + (Fixup.getOffset() - F.getFixedSize()));
+        evaluateFixup(F, Fixup, Target, FixedValue,
+                      /*RecordReloc=*/true, Data);
       }
     }
   }

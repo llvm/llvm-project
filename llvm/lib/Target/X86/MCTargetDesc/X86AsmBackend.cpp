@@ -174,8 +174,7 @@ public:
   std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &, MCValue &,
                                     uint64_t &) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
-                  MutableArrayRef<char> Data, uint64_t Value,
-                  bool IsResolved) override;
+                  uint8_t *Data, uint64_t Value, bool IsResolved) override;
 
   bool mayNeedRelaxation(unsigned Opcode, ArrayRef<MCOperand> Operands,
                          const MCSubtargetInfo &STI) const override;
@@ -676,9 +675,8 @@ std::optional<bool> X86AsmBackend::evaluateFixup(const MCFragment &,
 }
 
 void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &Target,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
+                               const MCValue &Target, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
   // Force relocation when there is a specifier. This might be too conservative
   // - GAS doesn't emit a relocation for call local@plt; local:.
   if (Target.getSpecifier())
@@ -710,7 +708,7 @@ void X86AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   }
 
   for (unsigned i = 0; i != Size; ++i)
-    Data[Fixup.getOffset() + i] = uint8_t(Value >> (i * 8));
+    Data[i] = uint8_t(Value >> (i * 8));
 }
 
 bool X86AsmBackend::mayNeedRelaxation(unsigned Opcode,

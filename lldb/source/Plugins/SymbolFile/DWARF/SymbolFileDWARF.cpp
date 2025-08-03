@@ -2349,11 +2349,11 @@ void SymbolFileDWARF::FindGlobalVariables(
     assert(sc.module_sp);
 
     if (die.Tag() != DW_TAG_variable && die.Tag() != DW_TAG_member)
-      return true;
+      return IterationAction::Continue;
 
     auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
     if (!dwarf_cu)
-      return true;
+      return IterationAction::Continue;
     sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
 
     if (parent_decl_ctx) {
@@ -2368,7 +2368,7 @@ void SymbolFileDWARF::FindGlobalVariables(
         if (!actual_parent_decl_ctx ||
             (actual_parent_decl_ctx != parent_decl_ctx &&
              !parent_decl_ctx.IsContainedInLookup(actual_parent_decl_ctx)))
-          return true;
+          return IterationAction::Continue;
       }
     }
 
@@ -2382,7 +2382,10 @@ void SymbolFileDWARF::FindGlobalVariables(
         variables.RemoveVariableAtIndex(pruned_idx);
     }
 
-    return variables.GetSize() - original_size < max_matches;
+    if (variables.GetSize() - original_size < max_matches)
+      return IterationAction::Continue;
+
+    return IterationAction::Stop;
   });
 
   // Return the number of variable that were appended to the list
@@ -2422,12 +2425,15 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
 
     DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
     if (!dwarf_cu)
-      return true;
+      return IterationAction::Continue;
     sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
 
     ParseAndAppendGlobalVariable(sc, die, variables);
 
-    return variables.GetSize() - original_size < max_matches;
+    if (variables.GetSize() - original_size < max_matches)
+      return IterationAction::Continue;
+
+    return IterationAction::Stop;
   });
 }
 
@@ -2847,14 +2853,17 @@ SymbolFileDWARF::FindNamespace(ConstString name,
 
   m_index->GetNamespacesWithParents(name, parent_decl_ctx, [&](DWARFDIE die) {
     if (!DIEInDeclContext(parent_decl_ctx, die, only_root_namespaces))
-      return true; // The containing decl contexts don't match
+      return IterationAction::Continue;
 
     DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetCU());
     if (!dwarf_ast)
-      return true;
+      return IterationAction::Continue;
 
     namespace_decl_ctx = dwarf_ast->GetDeclContextForUIDFromDWARF(die);
-    return !namespace_decl_ctx.IsValid();
+    if (namespace_decl_ctx.IsValid())
+      return IterationAction::Stop;
+
+    return IterationAction::Continue;
   });
 
   if (log && namespace_decl_ctx) {
@@ -3295,7 +3304,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
             variables->AddVariableIfUnique(var_sp);
             ++vars_added;
           }
-          return true;
+          return IterationAction::Continue;
         });
       }
       return vars_added;

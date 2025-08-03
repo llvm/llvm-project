@@ -117,14 +117,13 @@ public:
   void maybeAddReloc(const MCFragment &, const MCFixup &, const MCValue &,
                      uint64_t &Value, bool IsResolved);
 
-  /// Determine if a relocation is required. In addition,
-  /// Apply the \p Value for given \p Fixup into the provided data fragment, at
-  /// the offset specified by the fixup and following the fixup kind as
-  /// appropriate. Errors (such as an out of range fixup value) should be
-  /// reported via \p Ctx.
+  // Determine if a relocation is required. In addition, apply `Value` to the
+  // `Data` fragment at the specified fixup offset if applicable. `Data` points
+  // to the first byte of the fixup offset, which may be at the content's end if
+  // the fixup is zero-sized.
   virtual void applyFixup(const MCFragment &, const MCFixup &,
-                          const MCValue &Target, MutableArrayRef<char> Data,
-                          uint64_t Value, bool IsResolved) = 0;
+                          const MCValue &Target, uint8_t *Data, uint64_t Value,
+                          bool IsResolved) = 0;
 
   /// @}
 

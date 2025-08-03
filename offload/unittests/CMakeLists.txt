@@ -40,7 +40,7 @@ function(add_offload_test_device_code test_filename test_name)
         OUTPUT ${output_file}
         COMMAND ${CMAKE_C_COMPILER}
         --target=nvptx64-nvidia-cuda -march=${nvptx_arch}
-        -nogpulib --cuda-path=${CUDA_ROOT} -flto ${ARGN}
+        -nogpulib --cuda-path=${cuda_path} -flto ${ARGN}
         ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
       )

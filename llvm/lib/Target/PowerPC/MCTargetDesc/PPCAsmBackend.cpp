@@ -93,8 +93,8 @@ public:
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
   void applyFixup(const MCFragment &, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved) override;
+                  const MCValue &Target, uint8_t *Data, uint64_t Value,
+                  bool IsResolved) override;
 
   bool shouldForceRelocation(const MCFixup &Fixup, const MCValue &Target) {
     // If there is a @ specifier, unless it is optimized out (e.g. constant @l),
@@ -185,9 +185,8 @@ MCFixupKindInfo PPCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 }
 
 void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
-                               const MCValue &TargetVal,
-                               MutableArrayRef<char> Data, uint64_t Value,
-                               bool IsResolved) {
+                               const MCValue &TargetVal, uint8_t *Data,
+                               uint64_t Value, bool IsResolved) {
   // In PPC64 ELFv1, .quad .TOC.@tocbase in the .opd section is expected to
   // reference the null symbol.
   auto Target = TargetVal;
@@ -205,7 +204,6 @@ void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   if (!Value)
     return; // Doesn't change encoding.
 
-  unsigned Offset = Fixup.getOffset();
   unsigned NumBytes = getFixupKindNumBytes(Kind);
 
   // For each byte of the fragment that the fixup touches, mask in the bits
@@ -213,7 +211,7 @@ void PPCAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // bitfields above.
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx = Endian == llvm::endianness::little ? i : (NumBytes - 1 - i);
-    Data[Offset + i] |= uint8_t((Value >> (Idx * 8)) & 0xff);
+    Data[i] |= uint8_t((Value >> (Idx * 8)) & 0xff);
   }
 }
 

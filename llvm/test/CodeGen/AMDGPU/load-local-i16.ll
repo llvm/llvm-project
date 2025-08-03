@@ -151,19 +151,27 @@ define amdgpu_kernel void @local_load_v3i16(ptr addrspace(3) %out, ptr addrspace
 ;
 ; EG-LABEL: local_load_v3i16:
 ; EG:       ; %bb.0: ; %entry
-; EG-NEXT:    ALU 11, @2, KC0[CB0:0-32], KC1[]
-; EG-NEXT:     ADD_INT * T0.W, KC0[2].Z, literal.x,
-; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; EG-NEXT:     LDS_USHORT_READ_RET * OQAP, T0.W
-; EG-NEXT:     MOV T0.X, OQAP,
+; EG-NEXT:    ALU 19, @2, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:     MOV * T0.W, KC0[2].Z,
 ; EG-NEXT:     LDS_USHORT_READ_RET * OQAP, T0.W
 ; EG-NEXT:     MOV T0.Y, OQAP,
-; EG-NEXT:     MOV * T0.W, KC0[2].Y,
-; EG-NEXT:     LDS_WRITE * T0.W, T0.Y,
+; EG-NEXT:     ADD_INT * T0.W, KC0[2].Z, literal.x,
+; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
+; EG-NEXT:     LDS_USHORT_READ_RET * OQAP, T0.W
+; EG-NEXT:     MOV * T0.Z, OQAP,
+; EG-NEXT:     LSHL T0.Z, PV.Z, literal.x,
+; EG-NEXT:     AND_INT T0.W, T0.Y, literal.y,
+; EG-NEXT:     ADD_INT * T1.W, KC0[2].Z, literal.z,
+; EG-NEXT:    16(2.242078e-44), 65535(9.183409e-41)
+; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
+; EG-NEXT:     LDS_USHORT_READ_RET * OQAP, T1.W
+; EG-NEXT:     MOV T0.Y, OQAP,
+; EG-NEXT:     OR_INT T0.W, T0.Z, T0.W,
+; EG-NEXT:     MOV * T1.W, KC0[2].Y,
+; EG-NEXT:     LDS_WRITE * T1.W, T0.W,
 ; EG-NEXT:     ADD_INT * T0.W, KC0[2].Y, literal.x,
 ; EG-NEXT:    4(5.605194e-45), 0(0.000000e+00)
-; EG-NEXT:     LDS_SHORT_WRITE * T0.W, T0.X,
+; EG-NEXT:     LDS_SHORT_WRITE * T0.W, T0.Y,
 ; EG-NEXT:    RETURN
 entry:
   %ld = load <3 x i16>, ptr addrspace(3) %in
