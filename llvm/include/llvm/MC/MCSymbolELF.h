@@ -48,8 +48,6 @@ public:
   void setMemtag(bool Tagged);
   bool isMemtag() const;
 
-  static bool classof(const MCSymbol *S) { return S->isELF(); }
-
 private:
   void setIsBindingSet() const;
 };

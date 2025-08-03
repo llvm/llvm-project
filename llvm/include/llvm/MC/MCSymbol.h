@@ -281,8 +281,6 @@ public:
   /// Mark the symbol as undefined.
   void setUndefined() { Fragment = nullptr; }
 
-  bool isELF() const { return Kind == SymbolKindELF; }
-
   bool isCOFF() const { return Kind == SymbolKindCOFF; }
 
   bool isGOFF() const { return Kind == SymbolKindGOFF; }
