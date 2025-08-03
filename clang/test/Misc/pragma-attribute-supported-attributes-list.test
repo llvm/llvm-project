@@ -66,7 +66,7 @@
 // CHECK-NEXT: CoroLifetimeBound (SubjectMatchRule_record)
 // CHECK-NEXT: CoroOnlyDestroyWhenComplete (SubjectMatchRule_record)
 // CHECK-NEXT: CoroReturnType (SubjectMatchRule_record)
-// CHECK-NEXT: CoroWrapper (SubjectMatchRule_function)
+// CHECK-NEXT: CoroWrapper (SubjectMatchRule_function, SubjectMatchRule_record)
 // CHECK-NEXT: DLLExport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)
 // CHECK-NEXT: DLLImport (SubjectMatchRule_function, SubjectMatchRule_variable, SubjectMatchRule_record, SubjectMatchRule_objc_interface)
 // CHECK-NEXT: Destructor (SubjectMatchRule_function)
