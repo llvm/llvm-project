@@ -105,6 +105,10 @@ Improvements to clang-tidy
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
 
+- Improved :program:`run-clang-tidy.py` by adding a new option
+  `enable-check-profile` to enable per-check timing profiles and print a
+  report based on all analyzed files.
+
 New checks
 ^^^^^^^^^^
 
