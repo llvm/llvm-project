@@ -26,8 +26,7 @@ template<typename T> struct S {
 };
 S<F> s; // expected-note {{in instantiation of}}
 
-// FIXME: This is ill-formed.
 template<typename T> struct U {
-  void f(T);
+  void f(T); // expected-error {{pointer to function type 'void () const' cannot have 'const' qualifier}}
 };
-U<F> u;
+U<F> u; // expected-note {{in instantiation of}}

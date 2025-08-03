@@ -142,6 +142,9 @@ Bug Fixes in This Version
   the warning was silently lost because the operands differed only by an implicit
   cast chain. (#GH149967).
 
+- cv- and ref- qualified function types no longer silently produce invalid pointer to
+  qualified function types when they implicitly decay in some places. Fixes (#GH27059).
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
