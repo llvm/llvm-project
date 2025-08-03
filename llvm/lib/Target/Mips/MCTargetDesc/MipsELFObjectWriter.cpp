@@ -450,6 +450,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
            needsRelocateWithSymbol(V, (Type >> 8) & 0xff) ||
            needsRelocateWithSymbol(V, (Type >> 16) & 0xff);
 
+  auto *Sym = static_cast<const MCSymbolELF *>(V.getAddSym());
   switch (Type) {
   default:
     errs() << Type << "\n";
@@ -481,7 +482,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
     // FIXME: It should be safe to return false for the STO_MIPS_MICROMIPS but
     //        we neglect to handle the adjustment to the LSB of the addend that
     //        it causes in applyFixup() and similar.
-    if (cast<MCSymbolELF>(V.getAddSym())->getOther() & ELF::STO_MIPS_MICROMIPS)
+    if (Sym->getOther() & ELF::STO_MIPS_MICROMIPS)
       return true;
     return false;
 
@@ -492,7 +493,7 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCValue &V,
   case ELF::R_MIPS_16:
   case ELF::R_MIPS_32:
   case ELF::R_MIPS_GPREL32:
-    if (cast<MCSymbolELF>(V.getAddSym())->getOther() & ELF::STO_MIPS_MICROMIPS)
+    if (Sym->getOther() & ELF::STO_MIPS_MICROMIPS)
       return true;
     [[fallthrough]];
   case ELF::R_MIPS_26:
