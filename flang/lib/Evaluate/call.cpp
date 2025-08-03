@@ -312,10 +312,11 @@ void ProcedureRef::DetermineCopyInOut() {
       else {
         processedKeywords.insert(actualName);
         if (auto it = std::find_if(procInfo->dummyArguments.begin(),
-            procInfo->dummyArguments.end(),
-            [&](const characteristics::DummyArgument &dummy) {
-              return dummy.name == actualName;
-            }); it != procInfo->dummyArguments.end()) {
+                procInfo->dummyArguments.end(),
+                [&](const characteristics::DummyArgument &dummy) {
+                  return dummy.name == actualName;
+                });
+            it != procInfo->dummyArguments.end()) {
           DetermineCopyInOutArgument(*procInfo, *actual, *it);
         }
       }
@@ -327,8 +328,8 @@ void ProcedureRef::DetermineCopyInOut() {
     }
     else {
       // Positional argument processing
-      DetermineCopyInOutArgument(*procInfo, *actual,
-          procInfo->dummyArguments[index]);
+      DetermineCopyInOutArgument(
+          *procInfo, *actual, procInfo->dummyArguments[index]);
     }
 
     ++index;
