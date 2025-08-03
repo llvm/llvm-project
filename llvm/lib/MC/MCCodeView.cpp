@@ -436,12 +436,11 @@ void CodeViewContext::emitInlineLineTableForFunction(MCObjectStreamer &OS,
                                                      const MCSymbol *FnEndSym) {
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  auto *F = MCCtx->allocFragment<MCCVInlineLineTableFragment>(
+  OS.newSpecialFragment<MCCVInlineLineTableFragment>(
       PrimaryFunctionId, SourceFileId, SourceLineNum, FnStartSym, FnEndSym);
-  OS.insert(F);
 }
 
-MCFragment *CodeViewContext::emitDefRange(
+void CodeViewContext::emitDefRange(
     MCObjectStreamer &OS,
     ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
     StringRef FixedSizePortion) {
@@ -451,9 +450,7 @@ MCFragment *CodeViewContext::emitDefRange(
   auto &Saved = DefRangeStorage.emplace_back(Ranges.begin(), Ranges.end());
   // Create and insert a fragment into the current section that will be encoded
   // later.
-  auto *F = MCCtx->allocFragment<MCCVDefRangeFragment>(Saved, FixedSizePortion);
-  OS.insert(F);
-  return F;
+  OS.newSpecialFragment<MCCVDefRangeFragment>(Saved, FixedSizePortion);
 }
 
 static unsigned computeLabelDiff(const MCAssembler &Asm, const MCSymbol *Begin,
