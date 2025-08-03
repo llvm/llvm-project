@@ -10942,6 +10942,9 @@ SDValue AArch64TargetLowering::LowerMinMax(SDValue Op,
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   unsigned Opcode = Op.getOpcode();
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  EVT BoolVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
   ISD::CondCode CC;
   switch (Opcode) {
   default:
@@ -10977,8 +10980,31 @@ SDValue AArch64TargetLowering::LowerMinMax(SDValue Op,
     }
   }
 
-  SDValue Op0 = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
+    // umax(x,1) --> sub(x,cmpeq(x,0)) iff cmp result is allbits
+  if (Opcode == ISD::UMAX && llvm::isOneOrOneSplat(Op1, true) && BoolVT == VT &&
+      getBooleanContents(VT) == ZeroOrNegativeOneBooleanContent) {
+    Op0 = DAG.getFreeze(Op0);
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    return DAG.getNode(ISD::SUB, DL, VT, Op0,
+                       DAG.getSetCC(DL, VT, Op0, Zero, ISD::SETEQ));
+  }
+
+  // umin(x,y) -> sub(x,usubsat(x,y))
+  // TODO: Missing freeze(Op0)?
+  if (Opcode == ISD::UMIN && isOperationLegal(ISD::SUB, VT) &&
+      isOperationLegal(ISD::USUBSAT, VT)) {
+    return DAG.getNode(ISD::SUB, DL, VT, Op0,
+                       DAG.getNode(ISD::USUBSAT, DL, VT, Op0, Op1));
+  }
+
+  // umax(x,y) -> add(x,usubsat(y,x))
+  // TODO: Missing freeze(Op0)?
+  if (Opcode == ISD::UMAX && isOperationLegal(ISD::ADD, VT) &&
+      isOperationLegal(ISD::USUBSAT, VT)) {
+    return DAG.getNode(ISD::ADD, DL, VT, Op0,
+                       DAG.getNode(ISD::USUBSAT, DL, VT, Op1, Op0));
+  }
+
   SDValue Cond = DAG.getSetCC(DL, VT, Op0, Op1, CC);
   return DAG.getSelect(DL, VT, Cond, Op0, Op1);
 }

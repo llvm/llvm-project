@@ -1406,8 +1406,8 @@ define i64 @uminv_v2i64(<2 x i64> %a) {
 ; CHECK-SD-LABEL: uminv_v2i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    cmhi d2, d1, d0
-; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    uqsub d1, d0, d1
+; CHECK-SD-NEXT:    sub d0, d0, d1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1434,11 +1434,11 @@ define i64 @uminv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v2.d[1], x8
-; CHECK-SD-NEXT:    cmhi v1.2d, v2.2d, v0.2d
-; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v1.16b
+; CHECK-SD-NEXT:    uqsub v1.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    cmhi d2, d1, d0
-; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    uqsub d1, d0, d1
+; CHECK-SD-NEXT:    sub d0, d0, d1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1467,11 +1467,11 @@ entry:
 define i64 @uminv_v4i64(<4 x i64> %a) {
 ; CHECK-SD-LABEL: uminv_v4i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmhi v2.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    uqsub v1.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    cmhi d2, d1, d0
-; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    uqsub d1, d0, d1
+; CHECK-SD-NEXT:    sub d0, d0, d1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1762,8 +1762,8 @@ define i64 @umaxv_v2i64(<2 x i64> %a) {
 ; CHECK-SD-LABEL: umaxv_v2i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    cmhi d2, d0, d1
-; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    uqsub d1, d1, d0
+; CHECK-SD-NEXT:    add d0, d0, d1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1785,17 +1785,15 @@ define i64 @umaxv_v3i64(<3 x i64> %a) {
 ; CHECK-SD-LABEL: umaxv_v3i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    mov v3.16b, v2.16b
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    mov v3.d[1], xzr
-; CHECK-SD-NEXT:    cmhi v3.2d, v0.2d, v3.2d
-; CHECK-SD-NEXT:    ext v4.16b, v3.16b, v3.16b, #8
-; CHECK-SD-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-SD-NEXT:    and v1.8b, v1.8b, v4.8b
-; CHECK-SD-NEXT:    cmhi d2, d0, d1
-; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    mov v2.d[1], xzr
+; CHECK-SD-NEXT:    uqsub v1.2d, v2.2d, v0.2d
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    uqsub d1, d1, d0
+; CHECK-SD-NEXT:    add d0, d0, d1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
 ;
@@ -1823,11 +1821,11 @@ entry:
 define i64 @umaxv_v4i64(<4 x i64> %a) {
 ; CHECK-SD-LABEL: umaxv_v4i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    cmhi v2.2d, v0.2d, v1.2d
-; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    uqsub v1.2d, v1.2d, v0.2d
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-SD-NEXT:    cmhi d2, d0, d1
-; CHECK-SD-NEXT:    bif v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    uqsub d1, d1, d0
+; CHECK-SD-NEXT:    add d0, d0, d1
 ; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    ret
 ;
