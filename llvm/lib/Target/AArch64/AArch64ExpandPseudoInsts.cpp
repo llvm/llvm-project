@@ -1242,8 +1242,10 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
             .addReg(DstReg,
                     RegState::Define |
                         getRenamableRegState(MI.getOperand(0).isRenamable()))
-            .add(MI.getOperand(1))
-            .add(MI.getOperand(1));
+            .addReg(MI.getOperand(1).getReg(),
+                    getRenamableRegState(MI.getOperand(1).isRenamable()))
+            .addReg(MI.getOperand(1).getReg(),
+                    getRenamableRegState(MI.getOperand(1).isRenamable()));
         auto I2 =
             BuildMI(MBB, MBBI, MI.getDebugLoc(),
                     TII->get(Opcode == AArch64::BSPv8i8 ? AArch64::BSLv8i8
