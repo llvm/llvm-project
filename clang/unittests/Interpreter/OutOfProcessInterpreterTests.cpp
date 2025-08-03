@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifdef CLANG_HAS_COMPILER_RT
-
 #include "InterpreterTestFixture.h"
 
 #include "clang/AST/Decl.h"
@@ -47,7 +45,7 @@ llvm::ExitOnError ExitOnError;
 
 namespace {
 
-class InterpreterTest : public InterpreterTestBase {
+class InterpreterRemoteTest : public InterpreterTestBase {
   // TODO: Collect common variables and utility functions here
 };
 
@@ -144,7 +142,7 @@ static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
-TEST_F(InterpreterTest, SanityWithRemoteExecution) {
+TEST_F(InterpreterRemoteTest, SanityWithRemoteExecution) {
   if (!HostSupportsJIT())
     GTEST_SKIP();
 
@@ -160,5 +158,3 @@ TEST_F(InterpreterTest, SanityWithRemoteExecution) {
 }
 
 } // end anonymous namespace
-
-#endif // CLANG_HAS_COMPILER_RT

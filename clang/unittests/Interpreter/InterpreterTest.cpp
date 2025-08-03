@@ -34,8 +34,6 @@
 
 using namespace clang;
 
-llvm::ExitOnError ExitOnError;
-
 int Global = 42;
 // JIT reports symbol not found on Windows without the visibility attribute.
 REPL_EXTERNAL_VISIBILITY int getGlobal() { return Global; }
