@@ -83,13 +83,14 @@ bool checkAndConsumeModuleDecl(const SourceManager &SM, Lexer &Lex,
   return Matched;
 }
 
-// Returns the offset after header guard directives and any comments
-// before/after header guards (e.g. #ifndef/#define pair, #pragma once). If no
-// header guard is present in the code, this will return the offset after
-// skipping all comments from the start of the code.
-unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
-                                               StringRef Code,
-                                               const IncludeStyle &Style) {
+// If file does not use modules, returns the offset after header guard
+// directives and any comments before/after header guards (e.g.
+// `#ifndef/#define` pair, `#pragma once`). If no header guard is present in the
+// code, this will return the offset after skipping all comments from the start
+// of the code. If modules are in use, the offset will be in the global module
+// fragment.
+unsigned getMinHeaderInsertionOffset(StringRef FileName, StringRef Code,
+                                     const IncludeStyle &Style) {
   // \p Consume returns location after header guard or 0 if no header guard is
   // found.
   auto ConsumeHeaderGuardAndComment =
@@ -300,8 +301,7 @@ const llvm::Regex HeaderIncludes::IncludeRegex(IncludeRegexPattern);
 HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
                                const IncludeStyle &Style)
     : FileName(FileName), Code(Code), FirstIncludeOffset(-1),
-      MinInsertOffset(
-          getOffsetAfterHeaderGuardsAndComments(FileName, Code, Style)),
+      MinInsertOffset(getMinHeaderInsertionOffset(FileName, Code, Style)),
       MaxInsertOffset(MinInsertOffset +
                       getMaxHeaderInsertionOffset(
                           FileName, Code.drop_front(MinInsertOffset), Style)),
