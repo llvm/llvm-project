@@ -240,12 +240,12 @@ define i128 @test_umul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    cset w8, ne
 ; CHECK-NEXT:    adds x1, x11, x9
 ; CHECK-NEXT:    csinc w8, w8, wzr, lo
-; CHECK-NEXT:    tbnz w8, #0, .LBB4_3
+; CHECK-NEXT:    cbnz w8, .LBB4_3
 ; CHECK-NEXT:    b .LBB4_4
 ; CHECK-NEXT:  .LBB4_2: // %overflow.no
 ; CHECK-NEXT:    umulh x1, x0, x2
 ; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    tbz w8, #0, .LBB4_4
+; CHECK-NEXT:    cbz w8, .LBB4_4
 ; CHECK-NEXT:  .LBB4_3: // %if.then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -279,19 +279,12 @@ cleanup:
 define i128 @test_smul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-LABEL: test_smul_i128:
 ; CHECK:       // %bb.0: // %overflow.entry
-; CHECK-NEXT:    cmp x1, x0, asr #63
-; CHECK-NEXT:    b.ne .LBB5_3
-; CHECK-NEXT:  // %bb.1: // %overflow.entry
-; CHECK-NEXT:    asr x8, x2, #63
-; CHECK-NEXT:    cmp x3, x8
-; CHECK-NEXT:    b.ne .LBB5_3
-; CHECK-NEXT:  // %bb.2: // %overflow.no
-; CHECK-NEXT:    smulh x1, x0, x2
-; CHECK-NEXT:    mov w8, wzr
-; CHECK-NEXT:    mul x0, x0, x2
-; CHECK-NEXT:    tbnz w8, #0, .LBB5_4
-; CHECK-NEXT:    b .LBB5_5
-; CHECK-NEXT:  .LBB5_3: // %overflow
+; CHECK-NEXT:    eor x8, x3, x2, asr #63
+; CHECK-NEXT:    eor x9, x1, x0, asr #63
+; CHECK-NEXT:    orr x8, x9, x8
+; CHECK-NEXT:    cmp x8, #1
+; CHECK-NEXT:    b.ne .LBB5_2
+; CHECK-NEXT:  // %bb.1: // %overflow
 ; CHECK-NEXT:    asr x9, x1, #63
 ; CHECK-NEXT:    umulh x10, x0, x2
 ; CHECK-NEXT:    asr x13, x3, #63
@@ -319,8 +312,14 @@ define i128 @test_smul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    cmp x8, x10
 ; CHECK-NEXT:    ccmp x9, x10, #0, eq
 ; CHECK-NEXT:    cset w8, ne
-; CHECK-NEXT:    tbz w8, #0, .LBB5_5
-; CHECK-NEXT:  .LBB5_4: // %if.then
+; CHECK-NEXT:    cbnz w8, .LBB5_3
+; CHECK-NEXT:    b .LBB5_4
+; CHECK-NEXT:  .LBB5_2: // %overflow.no
+; CHECK-NEXT:    smulh x1, x0, x2
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    mul x0, x0, x2
+; CHECK-NEXT:    cbz w8, .LBB5_4
+; CHECK-NEXT:  .LBB5_3: // %if.then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
@@ -329,7 +328,7 @@ define i128 @test_smul_i128(i128 noundef %x, i128 noundef %y) {
 ; CHECK-NEXT:    sxtw x0, w0
 ; CHECK-NEXT:    asr x1, x0, #63
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB5_5: // %cleanup
+; CHECK-NEXT:  .LBB5_4: // %cleanup
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %x, i128 %y)
