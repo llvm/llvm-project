@@ -581,7 +581,7 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
     // mark them as live.
     for (const auto *B : *cfg) {
       if (!live[B->getBlockID()]) {
-        if (B->pred_begin() == B->pred_end()) {
+        if (B->preds().empty()) {
           const Stmt *Term = B->getTerminatorStmt();
           if (isa_and_nonnull<CXXTryStmt>(Term))
             // When not adding EH edges from calls, catch clauses
