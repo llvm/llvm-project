@@ -390,6 +390,8 @@ public:
   LLVM_ABI ~MCContext();
 
   Environment getObjectFileType() const { return Env; }
+  bool isELF() const { return Env == IsELF; }
+  bool isMachO() const { return Env == IsMachO; }
 
   const StringRef &getSwift5ReflectionSegmentName() const {
     return Swift5ReflectionSegmentName;
@@ -433,11 +435,6 @@ public:
 
   /// Create and return a new MC instruction.
   LLVM_ABI MCInst *createMCInst();
-
-  template <typename F, typename... Args> F *allocFragment(Args &&...args) {
-    return new (FragmentAllocator.Allocate(sizeof(F), alignof(F)))
-        F(std::forward<Args>(args)...);
-  }
 
   /// \name Symbol Management
   /// @{
