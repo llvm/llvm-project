@@ -4346,8 +4346,7 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lbz 7, uc@toc@l(3)
 ; CHECK-NEXT:    lbz 8, sc@toc@l(4)
 ; CHECK-NEXT:    lbarx 5, 0, 6
-; CHECK-NEXT:    clrlwi 9, 5, 24
-; CHECK-NEXT:    cmplw 9, 7
+; CHECK-NEXT:    cmplw 5, 7
 ; CHECK-NEXT:    bne 0, .LBB3_4
 ; CHECK-NEXT:  # %bb.1: # %cmpxchg.fencedstore276
 ; CHECK-NEXT:    sync
@@ -4359,8 +4358,7 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.3: # %cmpxchg.releasedload274
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 5, 0, 6
-; CHECK-NEXT:    clrlwi 9, 5, 24
-; CHECK-NEXT:    cmplw 9, 7
+; CHECK-NEXT:    cmplw 5, 7
 ; CHECK-NEXT:    beq 0, .LBB3_2
 ; CHECK-NEXT:  .LBB3_4: # %cmpxchg.nostore272
 ; CHECK-NEXT:    addi 7, 3, uc@toc@l
@@ -4368,8 +4366,7 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stb 5, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 9, uc@toc@l(3)
 ; CHECK-NEXT:    lbarx 8, 0, 7
-; CHECK-NEXT:    clrlwi 10, 8, 24
-; CHECK-NEXT:    cmplw 10, 9
+; CHECK-NEXT:    cmplw 8, 9
 ; CHECK-NEXT:    bne 0, .LBB3_8
 ; CHECK-NEXT:  # %bb.5: # %cmpxchg.fencedstore257
 ; CHECK-NEXT:    sync
@@ -4382,8 +4379,7 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.7: # %cmpxchg.releasedload255
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 8, 0, 7
-; CHECK-NEXT:    clrlwi 10, 8, 24
-; CHECK-NEXT:    cmplw 10, 9
+; CHECK-NEXT:    cmplw 8, 9
 ; CHECK-NEXT:    beq 0, .LBB3_6
 ; CHECK-NEXT:  .LBB3_8: # %cmpxchg.nostore253
 ; CHECK-NEXT:    addis 5, 2, ss@toc@ha
@@ -4393,8 +4389,7 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lbz 11, sc@toc@l(4)
 ; CHECK-NEXT:    addi 8, 5, ss@toc@l
 ; CHECK-NEXT:    lharx 9, 0, 8
-; CHECK-NEXT:    clrlwi 12, 9, 16
-; CHECK-NEXT:    cmplw 12, 10
+; CHECK-NEXT:    cmplw 9, 10
 ; CHECK-NEXT:    bne 0, .LBB3_12
 ; CHECK-NEXT:  # %bb.9: # %cmpxchg.fencedstore238
 ; CHECK-NEXT:    extsb 11, 11
@@ -4408,8 +4403,7 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.11: # %cmpxchg.releasedload236
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 9, 0, 8
-; CHECK-NEXT:    clrlwi 12, 9, 16
-; CHECK-NEXT:    cmplw 12, 10
+; CHECK-NEXT:    cmplw 9, 10
 ; CHECK-NEXT:    beq 0, .LBB3_10
 ; CHECK-NEXT:  .LBB3_12: # %cmpxchg.nostore234
 ; CHECK-NEXT:    lwsync
@@ -4419,8 +4413,7 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lbz 12, sc@toc@l(4)
 ; CHECK-NEXT:    addi 9, 5, us@toc@l
 ; CHECK-NEXT:    lharx 10, 0, 9
-; CHECK-NEXT:    clrlwi 0, 10, 16
-; CHECK-NEXT:    cmplw 0, 11
+; CHECK-NEXT:    cmplw 10, 11
 ; CHECK-NEXT:    bne 0, .LBB3_16
 ; CHECK-NEXT:  # %bb.13: # %cmpxchg.fencedstore219
 ; CHECK-NEXT:    extsb 12, 12
@@ -4434,8 +4427,7 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.15: # %cmpxchg.releasedload217
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 10, 0, 9
-; CHECK-NEXT:    clrlwi 0, 10, 16
-; CHECK-NEXT:    cmplw 0, 11
+; CHECK-NEXT:    cmplw 10, 11
 ; CHECK-NEXT:    beq 0, .LBB3_14
 ; CHECK-NEXT:  .LBB3_16: # %cmpxchg.nostore215
 ; CHECK-NEXT:    lwsync
@@ -4535,7 +4527,6 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lbz 30, uc@toc@l(3)
 ; CHECK-NEXT:    lbz 29, sc@toc@l(4)
 ; CHECK-NEXT:    lbarx 28, 0, 6
-; CHECK-NEXT:    clrlwi 28, 28, 24
 ; CHECK-NEXT:    cmplw 28, 30
 ; CHECK-NEXT:    bne 0, .LBB3_36
 ; CHECK-NEXT:  # %bb.33: # %cmpxchg.fencedstore124
@@ -4548,7 +4539,6 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.35: # %cmpxchg.releasedload122
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 28, 0, 6
-; CHECK-NEXT:    clrlwi 28, 28, 24
 ; CHECK-NEXT:    cmplw 28, 30
 ; CHECK-NEXT:    beq 0, .LBB3_34
 ; CHECK-NEXT:  .LBB3_36: # %cmpxchg.nostore120
@@ -4566,7 +4556,6 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
 ; CHECK-NEXT:    lbarx 29, 0, 7
-; CHECK-NEXT:    clrlwi 29, 29, 24
 ; CHECK-NEXT:    cmplw 29, 6
 ; CHECK-NEXT:    bne 0, .LBB3_42
 ; CHECK-NEXT:  # %bb.39: # %cmpxchg.fencedstore105
@@ -4579,7 +4568,6 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.41: # %cmpxchg.releasedload103
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 29, 0, 7
-; CHECK-NEXT:    clrlwi 29, 29, 24
 ; CHECK-NEXT:    cmplw 29, 6
 ; CHECK-NEXT:    beq 0, .LBB3_40
 ; CHECK-NEXT:  .LBB3_42: # %cmpxchg.nostore101
@@ -4597,7 +4585,6 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
 ; CHECK-NEXT:    lharx 30, 0, 8
-; CHECK-NEXT:    clrlwi 30, 30, 16
 ; CHECK-NEXT:    cmplw 30, 6
 ; CHECK-NEXT:    bne 0, .LBB3_48
 ; CHECK-NEXT:  # %bb.45: # %cmpxchg.fencedstore86
@@ -4612,7 +4599,6 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.47: # %cmpxchg.releasedload84
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 30, 0, 8
-; CHECK-NEXT:    clrlwi 30, 30, 16
 ; CHECK-NEXT:    cmplw 30, 6
 ; CHECK-NEXT:    beq 0, .LBB3_46
 ; CHECK-NEXT:  .LBB3_48: # %cmpxchg.nostore82
@@ -4630,7 +4616,6 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
 ; CHECK-NEXT:    lharx 8, 0, 9
-; CHECK-NEXT:    clrlwi 8, 8, 16
 ; CHECK-NEXT:    cmplw 8, 6
 ; CHECK-NEXT:    bne 0, .LBB3_54
 ; CHECK-NEXT:  # %bb.51: # %cmpxchg.fencedstore67
@@ -4645,7 +4630,6 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.53: # %cmpxchg.releasedload65
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 8, 0, 9
-; CHECK-NEXT:    clrlwi 8, 8, 16
 ; CHECK-NEXT:    cmplw 8, 6
 ; CHECK-NEXT:    beq 0, .LBB3_52
 ; CHECK-NEXT:  .LBB3_54: # %cmpxchg.nostore63

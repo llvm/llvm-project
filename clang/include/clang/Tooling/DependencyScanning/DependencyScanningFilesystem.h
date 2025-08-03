@@ -18,12 +18,11 @@
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
 #include <optional>
+#include <variant>
 
 namespace clang {
 namespace tooling {
 namespace dependencies {
-
-class DependencyScanningService;
 
 using DependencyDirectivesTy =
     SmallVector<dependency_directives_scan::Directive, 20>;
@@ -222,13 +221,34 @@ public:
   CacheShard &getShardForFilename(StringRef Filename) const;
   CacheShard &getShardForUID(llvm::sys::fs::UniqueID UID) const;
 
-  /// Visits all cached entries and re-stat an entry using FS if
-  /// it is negatively stat cached. If re-stat succeeds on a path,
-  /// the path is added to InvalidPaths, indicating that the cache
-  /// may have erroneously negatively cached it. The caller can then
-  /// use InvalidPaths to issue diagnostics.
-  std::vector<StringRef>
-  getInvalidNegativeStatCachedPaths(llvm::vfs::FileSystem &UnderlyingFS) const;
+  struct OutOfDateEntry {
+    // A null terminated string that contains a path.
+    const char *Path = nullptr;
+
+    struct NegativelyCachedInfo {};
+    struct SizeChangedInfo {
+      uint64_t CachedSize = 0;
+      uint64_t ActualSize = 0;
+    };
+
+    std::variant<NegativelyCachedInfo, SizeChangedInfo> Info;
+
+    OutOfDateEntry(const char *Path)
+        : Path(Path), Info(NegativelyCachedInfo{}) {}
+
+    OutOfDateEntry(const char *Path, uint64_t CachedSize, uint64_t ActualSize)
+        : Path(Path), Info(SizeChangedInfo{CachedSize, ActualSize}) {}
+  };
+
+  /// Visits all cached entries and re-stat an entry using UnderlyingFS to check
+  /// if the cache contains out-of-date entries. An entry can be out-of-date for
+  /// two reasons:
+  ///  1. The entry contains a stat error, indicating the file did not exist
+  ///     in the cache, but the file exists on the UnderlyingFS.
+  ///  2. The entry is associated with a file whose size is different from the
+  ///     size of the file on the same path on the UnderlyingFS.
+  std::vector<OutOfDateEntry>
+  getOutOfDateEntries(llvm::vfs::FileSystem &UnderlyingFS) const;
 
 private:
   std::unique_ptr<CacheShard[]> CacheShards;
@@ -351,7 +371,7 @@ public:
   static const char ID;
 
   DependencyScanningWorkerFilesystem(
-      DependencyScanningService &Service,
+      DependencyScanningFilesystemSharedCache &SharedCache,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override;
@@ -437,7 +457,10 @@ private:
   /// Returns entry associated with the unique ID in the shared cache or nullptr
   /// if none is found.
   const CachedFileSystemEntry *
-  findSharedEntryByUID(llvm::vfs::Status Stat) const;
+  findSharedEntryByUID(llvm::vfs::Status Stat) const {
+    return SharedCache.getShardForUID(Stat.getUniqueID())
+        .findEntryByUID(Stat.getUniqueID());
+  }
 
   /// Associates the given entry with the filename in the local cache and
   /// returns it.
@@ -451,14 +474,20 @@ private:
   /// some. Otherwise, constructs new one with the given error code, associates
   /// it with the filename and returns the result.
   const CachedFileSystemEntry &
-  getOrEmplaceSharedEntryForFilename(StringRef Filename, std::error_code EC);
+  getOrEmplaceSharedEntryForFilename(StringRef Filename, std::error_code EC) {
+    return SharedCache.getShardForFilename(Filename)
+        .getOrEmplaceEntryForFilename(Filename, EC);
+  }
 
   /// Returns entry associated with the filename in the shared cache if there is
   /// some. Otherwise, associates the given entry with the filename and returns
   /// it.
   const CachedFileSystemEntry &
   getOrInsertSharedEntryForFilename(StringRef Filename,
-                                    const CachedFileSystemEntry &Entry);
+                                    const CachedFileSystemEntry &Entry) {
+    return SharedCache.getShardForFilename(Filename)
+        .getOrInsertEntryForFilename(Filename, Entry);
+  }
 
   void printImpl(raw_ostream &OS, PrintType Type,
                  unsigned IndentLevel) const override {
@@ -471,9 +500,8 @@ private:
   /// VFS.
   bool shouldBypass(StringRef Path) const;
 
-  /// The service associated with this VFS.
-  DependencyScanningService &Service;
-
+  /// The global cache shared between worker threads.
+  DependencyScanningFilesystemSharedCache &SharedCache;
   /// The local cache is used by the worker thread to cache file system queries
   /// locally instead of querying the global cache every time.
   DependencyScanningFilesystemLocalCache LocalCache;

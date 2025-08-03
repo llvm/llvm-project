@@ -18,7 +18,6 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 using namespace mlir;
 
@@ -81,10 +80,6 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
     for (auto &&[opOffset, sourceOffset, sourceStride, opSize] :
          llvm::zip(op.getMixedOffsets(), sourceOp.getMixedOffsets(),
                    sourceOp.getMixedStrides(), op.getMixedSizes())) {
-      // We only support static sizes.
-      if (isa<Value>(opSize)) {
-        return failure();
-      }
       sizes.push_back(opSize);
       Attribute opOffsetAttr = llvm::dyn_cast_if_present<Attribute>(opOffset),
                 sourceOffsetAttr =
@@ -125,8 +120,8 @@ struct ComposeSubViewOpPattern : public OpRewritePattern<memref::SubViewOp> {
         }
 
         AffineMap map = AffineMap::get(0, affineApplyOperands.size(), expr);
-        Value result = rewriter.create<affine::AffineApplyOp>(
-            op.getLoc(), map, affineApplyOperands);
+        Value result = affine::AffineApplyOp::create(rewriter, op.getLoc(), map,
+                                                     affineApplyOperands);
         offsets.push_back(result);
       }
     }

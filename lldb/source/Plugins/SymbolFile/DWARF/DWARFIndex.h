@@ -16,6 +16,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Target/Statistics.h"
+#include "lldb/lldb-private-enumerations.h"
 
 namespace lldb_private::plugin {
 namespace dwarf {
@@ -32,17 +33,17 @@ public:
   /// Finds global variables with the given base name. Any additional filtering
   /// (e.g., to only retrieve variables from a given context) should be done by
   /// the consumer.
-  virtual void
-  GetGlobalVariables(ConstString basename,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+  virtual void GetGlobalVariables(
+      ConstString basename,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
 
-  virtual void
-  GetGlobalVariables(const RegularExpression &regex,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+  virtual void GetGlobalVariables(
+      const RegularExpression &regex,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
   /// \a cu must be the skeleton unit if possible, not GetNonSkeletonUnit().
-  virtual void
-  GetGlobalVariables(DWARFUnit &cu,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+  virtual void GetGlobalVariables(
+      DWARFUnit &cu,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
   virtual void
   GetObjCMethods(ConstString class_name,
                  llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
@@ -63,7 +64,7 @@ public:
                         llvm::function_ref<bool(DWARFDIE die)> callback);
   virtual void
   GetNamespaces(ConstString name,
-                llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+                llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
   /// Get type DIEs meeting requires of \a query.
   /// in its decl parent chain as subset.  A base implementation is provided,
   /// Specializations should override this if they are able to provide a faster
@@ -75,17 +76,16 @@ public:
   /// parent_decl_ctx in its decl parent chain.  A base implementation
   /// is provided. Specializations should override this if they are able to
   /// provide a faster implementation.
-  virtual void
-  GetNamespacesWithParents(ConstString name,
-                           const CompilerDeclContext &parent_decl_ctx,
-                           llvm::function_ref<bool(DWARFDIE die)> callback);
+  virtual void GetNamespacesWithParents(
+      ConstString name, const CompilerDeclContext &parent_decl_ctx,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback);
   virtual void
   GetFunctions(const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
                const CompilerDeclContext &parent_decl_ctx,
-               llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+               llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
   virtual void
   GetFunctions(const RegularExpression &regex,
-               llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+               llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
 
   virtual void Dump(Stream &s) = 0;
 
@@ -101,9 +101,10 @@ protected:
   /// the function given by "die" matches search criteria given by
   /// "parent_decl_ctx" and "name_type_mask", it calls the callback with the
   /// given die.
-  bool ProcessFunctionDIE(const Module::LookupInfo &lookup_info, DWARFDIE die,
-                          const CompilerDeclContext &parent_decl_ctx,
-                          llvm::function_ref<bool(DWARFDIE die)> callback);
+  IterationAction ProcessFunctionDIE(
+      const Module::LookupInfo &lookup_info, DWARFDIE die,
+      const CompilerDeclContext &parent_decl_ctx,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   class DIERefCallbackImpl {
   public:
@@ -137,9 +138,28 @@ protected:
   bool
   ProcessTypeDIEMatchQuery(TypeQuery &query, DWARFDIE die,
                            llvm::function_ref<bool(DWARFDIE die)> callback);
-  bool ProcessNamespaceDieMatchParents(
+  IterationAction ProcessNamespaceDieMatchParents(
       const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
-      llvm::function_ref<bool(DWARFDIE die)> callback);
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback);
+
+  /// Helper to convert callbacks that return an \c IterationAction
+  /// to a callback that returns a \c bool, where \c true indicates
+  /// we should continue iterating. This will be used to incrementally
+  /// migrate the callbacks to return an \c IterationAction.
+  ///
+  /// FIXME: remove once all callbacks in the DWARFIndex APIs return
+  /// IterationAction.
+  struct IterationActionAdaptor {
+    IterationActionAdaptor(
+        llvm::function_ref<IterationAction(DWARFDIE die)> callback)
+        : m_callback_ref(callback) {}
+
+    bool operator()(DWARFDIE die) {
+      return m_callback_ref(std::move(die)) == IterationAction::Continue;
+    }
+
+    llvm::function_ref<IterationAction(DWARFDIE die)> m_callback_ref;
+  };
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin

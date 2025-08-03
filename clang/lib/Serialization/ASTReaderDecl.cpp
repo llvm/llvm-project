@@ -1147,7 +1147,8 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     const SYCLKernelInfo *SKI = C.findSYCLKernelInfo(SKEPAttr->getKernelName());
     if (SKI) {
       if (!declaresSameEntity(FD, SKI->getKernelEntryPointDecl())) {
-        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict);
+        Reader.Diag(FD->getLocation(), diag::err_sycl_kernel_name_conflict)
+            << SKEPAttr;
         Reader.Diag(SKI->getKernelEntryPointDecl()->getLocation(),
                     diag::note_previous_declaration);
         SKEPAttr->setInvalidAttr();
@@ -1634,6 +1635,7 @@ RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
         VarDeclBits.getNextBits(/*Width*/ 3);
 
     VD->NonParmVarDeclBits.ObjCForDecl = VarDeclBits.getNextBit();
+    VD->NonParmVarDeclBits.IsCXXForRangeImplicitVar = VarDeclBits.getNextBit();
   }
 
   // If this variable has a deduced type, defer reading that type until we are
@@ -1698,6 +1700,8 @@ void ASTDeclReader::ReadVarDeclInit(VarDecl *VD) {
     Eval->HasConstantInitialization = (Val & 2) != 0;
     Eval->HasConstantDestruction = (Val & 4) != 0;
     Eval->WasEvaluated = (Val & 8) != 0;
+    Eval->HasSideEffects = (Val & 16) != 0;
+    Eval->CheckedForSideEffects = true;
     if (Eval->WasEvaluated) {
       Eval->Evaluated = Record.readAPValue();
       if (Eval->Evaluated.needsCleanup())
@@ -1886,7 +1890,7 @@ void ASTDeclReader::VisitNamespaceAliasDecl(NamespaceAliasDecl *D) {
   D->NamespaceLoc = readSourceLocation();
   D->IdentLoc = readSourceLocation();
   D->QualifierLoc = Record.readNestedNameSpecifierLoc();
-  D->Namespace = readDeclAs<NamedDecl>();
+  D->Namespace = readDeclAs<NamespaceBaseDecl>();
   mergeRedeclarable(D, Redecl);
 }
 
