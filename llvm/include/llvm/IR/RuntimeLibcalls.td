@@ -1245,7 +1245,7 @@ defset list<RuntimeLibcallImpl> WinArm64ECDefaultRuntimeLibcallImpls = {
 
 def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
-                           (add WinArm64ECDefaultRuntimeLibcallImpls, __stack_chk_fail)>;
+                           (add WinArm64ECDefaultRuntimeLibcallImpls)>;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Runtime Libcalls
