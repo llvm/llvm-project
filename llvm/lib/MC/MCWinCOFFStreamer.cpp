@@ -163,13 +163,13 @@ void MCWinCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 }
 
 void MCWinCOFFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
+  auto *Symbol = static_cast<MCSymbolCOFF *>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
 }
 
 bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,
                                             MCSymbolAttr Attribute) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
+  auto *Symbol = static_cast<MCSymbolCOFF *>(S);
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
@@ -199,11 +199,10 @@ void MCWinCOFFStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
 }
 
 void MCWinCOFFStreamer::beginCOFFSymbolDef(MCSymbol const *S) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
   if (CurSymbol)
     Error("starting a new symbol definition without completing the "
           "previous one");
-  CurSymbol = Symbol;
+  CurSymbol = static_cast<MCSymbolCOFF *>(const_cast<MCSymbol *>(S));
 }
 
 void MCWinCOFFStreamer::emitCOFFSymbolStorageClass(int StorageClass) {
@@ -219,7 +218,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolStorageClass(int StorageClass) {
   }
 
   getAssembler().registerSymbol(*CurSymbol);
-  cast<MCSymbolCOFF>(CurSymbol)->setClass((uint16_t)StorageClass);
+  static_cast<MCSymbolCOFF *>(CurSymbol)->setClass((uint16_t)StorageClass);
 }
 
 void MCWinCOFFStreamer::emitCOFFSymbolType(int Type) {
@@ -234,7 +233,7 @@ void MCWinCOFFStreamer::emitCOFFSymbolType(int Type) {
   }
 
   getAssembler().registerSymbol(*CurSymbol);
-  cast<MCSymbolCOFF>(CurSymbol)->setType((uint16_t)Type);
+  static_cast<const MCSymbolCOFF *>(CurSymbol)->setType((uint16_t)Type);
 }
 
 void MCWinCOFFStreamer::endCOFFSymbolDef() {
@@ -249,7 +248,7 @@ void MCWinCOFFStreamer::emitCOFFSafeSEH(MCSymbol const *Symbol) {
   if (getContext().getTargetTriple().getArch() != Triple::x86)
     return;
 
-  const MCSymbolCOFF *CSymbol = cast<MCSymbolCOFF>(Symbol);
+  auto *CSymbol = static_cast<const MCSymbolCOFF *>(Symbol);
   if (CSymbol->isSafeSEH())
     return;
 
@@ -340,7 +339,7 @@ void MCWinCOFFStreamer::emitCOFFSecOffset(MCSymbol const *Symbol) {
 
 void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                          Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
+  auto *Symbol = static_cast<MCSymbolCOFF *>(S);
 
   const Triple &T = getContext().getTargetTriple();
   if (T.isWindowsMSVCEnvironment()) {
@@ -372,7 +371,7 @@ void MCWinCOFFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
 
 void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                               Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolCOFF>(S);
+  auto *Symbol = static_cast<MCSymbolCOFF *>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
   pushSection();
@@ -387,7 +386,7 @@ void MCWinCOFFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
 // Hack: Used by llvm-ml to implement the alias directive.
 void MCWinCOFFStreamer::emitWeakReference(MCSymbol *AliasS,
                                           const MCSymbol *Symbol) {
-  auto *Alias = cast<MCSymbolCOFF>(AliasS);
+  auto *Alias = static_cast<MCSymbolCOFF *>(AliasS);
   emitSymbolAttribute(Alias, MCSA_Weak);
   Alias->setIsWeakExternal(true);
 
@@ -415,7 +414,7 @@ void MCWinCOFFStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
 void MCWinCOFFStreamer::finalizeCGProfileEntry(const MCSymbolRefExpr *&SRE) {
   const MCSymbol *S = &SRE->getSymbol();
   if (getAssembler().registerSymbol(*S))
-    cast<MCSymbolCOFF>(S)->setExternal(true);
+    static_cast<const MCSymbolCOFF *>(S)->setExternal(true);
 }
 
 void MCWinCOFFStreamer::finishImpl() {
