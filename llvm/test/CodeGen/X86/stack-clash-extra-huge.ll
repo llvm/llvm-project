@@ -16,13 +16,13 @@ define i32 @foo() local_unnamed_addr #0 {
 ; CHECK-X64-NEXT:    cmpq %r11, %rsp
 ; CHECK-X64-NEXT:    jne .LBB0_1
 ; CHECK-X64-NEXT:  # %bb.2:
-; CHECK-X64-NEXT:    subq $3976, %rsp # imm = 0xF88
+; CHECK-X64-NEXT:    subq $3992, %rsp # imm = 0xF98
 ; CHECK-X64-NEXT:    .cfi_def_cfa_register %rsp
-; CHECK-X64-NEXT:    .cfi_def_cfa_offset 4799999888
-; CHECK-X64-NEXT:    movl $1, 264(%rsp)
-; CHECK-X64-NEXT:    movl $1, 28664(%rsp)
-; CHECK-X64-NEXT:    movl -128(%rsp), %eax
-; CHECK-X64-NEXT:    movabsq $4799999880, %rcx # imm = 0x11E1A2F88
+; CHECK-X64-NEXT:    .cfi_def_cfa_offset 4799999904
+; CHECK-X64-NEXT:    movl $1, 280(%rsp)
+; CHECK-X64-NEXT:    movl $1, 28680(%rsp)
+; CHECK-X64-NEXT:    movl -112(%rsp), %eax
+; CHECK-X64-NEXT:    movabsq $4799999896, %rcx # imm = 0x11E1A2F98
 ; CHECK-X64-NEXT:    addq %rcx, %rsp
 ; CHECK-X64-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X64-NEXT:    retq
@@ -30,10 +30,10 @@ define i32 @foo() local_unnamed_addr #0 {
 ; CHECK-X86-LABEL: foo:
 ; CHECK-X86:       # %bb.0:
 ; CHECK-X86-NEXT:    ud2
-; CHECK-X86-NEXT:    .cfi_def_cfa_offset 4800000016
-; CHECK-X86-NEXT:    movl $1, 392(%esp)
-; CHECK-X86-NEXT:    movl $1, 28792(%esp)
-; CHECK-X86-NEXT:    movl (%esp), %eax
+; CHECK-X86-NEXT:    .cfi_def_cfa_offset 4800000032
+; CHECK-X86-NEXT:    movl $1, 408(%esp)
+; CHECK-X86-NEXT:    movl $1, 28808(%esp)
+; CHECK-X86-NEXT:    movl 16(%esp), %eax
 ; CHECK-X86-NEXT:    ud2
 ; CHECK-X86-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-X86-NEXT:    retl
@@ -41,10 +41,10 @@ define i32 @foo() local_unnamed_addr #0 {
 ; CHECK-X32-LABEL: foo:
 ; CHECK-X32:       # %bb.0:
 ; CHECK-X32-NEXT:    ud2
-; CHECK-X32-NEXT:    .cfi_def_cfa_offset 4799999888
-; CHECK-X32-NEXT:    movl $1, 264(%esp)
-; CHECK-X32-NEXT:    movl $1, 28664(%esp)
-; CHECK-X32-NEXT:    movl -128(%esp), %eax
+; CHECK-X32-NEXT:    .cfi_def_cfa_offset 4799999904
+; CHECK-X32-NEXT:    movl $1, 280(%esp)
+; CHECK-X32-NEXT:    movl $1, 28680(%esp)
+; CHECK-X32-NEXT:    movl -112(%esp), %eax
 ; CHECK-X32-NEXT:    ud2
 ; CHECK-X32-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-X32-NEXT:    retq
