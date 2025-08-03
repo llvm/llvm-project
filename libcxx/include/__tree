@@ -1349,7 +1349,7 @@ __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_from_tree(__tree
   __t->__size_                          = 0;
   // __cache->__left_ == nullptr
   if (__cache->__right_ != nullptr)
-    __cache = static_cast<__node_pointer>(__cache->__right_);
+    __cache = std::__static_fancy_pointer_cast<__node_pointer>(__cache->__right_);
   // __cache->__left_ == nullptr
   // __cache->__right_ == nullptr
   return __cache;
@@ -1364,16 +1364,16 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::__node
 __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_next(__node_pointer __cache) _NOEXCEPT {
   if (__cache->__parent_ == nullptr)
     return nullptr;
-  if (std::__tree_is_left_child(static_cast<__node_base_pointer>(__cache))) {
+  if (std::__tree_is_left_child(std::__static_fancy_pointer_cast<__node_base_pointer>(__cache))) {
     __cache->__parent_->__left_ = nullptr;
-    __cache                     = static_cast<__node_pointer>(__cache->__parent_);
+    __cache                     = std::__static_fancy_pointer_cast<__node_pointer>(__cache->__parent_);
     if (__cache->__right_ == nullptr)
       return __cache;
     return static_cast<__node_pointer>(std::__tree_leaf(__cache->__right_));
   }
   // __cache is right child
   __cache->__parent_unsafe()->__right_ = nullptr;
-  __cache                              = static_cast<__node_pointer>(__cache->__parent_);
+  __cache                              = std::__static_fancy_pointer_cast<__node_pointer>(__cache->__parent_);
   if (__cache->__left_ == nullptr)
     return __cache;
   return static_cast<__node_pointer>(std::__tree_leaf(__cache->__left_));
@@ -1637,7 +1637,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_leaf_high(__end_node_pointer& __parent
         if (__nd->__right_ != nullptr)
           __nd = static_cast<__node_pointer>(__nd->__right_);
         else {
-          __parent = static_cast<__end_node_pointer>(__nd);
+          __parent = std::__static_fancy_pointer_cast<__end_node_pointer>(__nd);
           return __nd->__right_;
         }
       }
@@ -1668,7 +1668,7 @@ __tree<_Tp, _Compare, _Allocator>::__find_leaf(
         return __parent->__left_;
       } else {
         __parent = static_cast<__end_node_pointer>(__prior.__ptr_);
-        return static_cast<__node_base_pointer>(__prior.__ptr_)->__right_;
+        return std::__static_fancy_pointer_cast<__node_base_pointer>(__prior.__ptr_)->__right_;
       }
     }
     // __v < *prev(__hint)
@@ -1976,7 +1976,7 @@ __tree<_Tp, _Compare, _Allocator>::__emplace_hint_multi(const_iterator __p, _Arg
   __node_holder __h = __construct_node(std::forward<_Args>(__args)...);
   __end_node_pointer __parent;
   __node_base_pointer& __child = __find_leaf(__p, __parent, __h->__value_);
-  __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__h.get()));
+  __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__h.get()));
   return iterator(static_cast<__node_pointer>(__h.release()));
 }
 
@@ -2001,7 +2001,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26 typename __tree<_Tp, _Compare, _Allocator>::iterat
 __tree<_Tp, _Compare, _Allocator>::__node_insert_multi(__node_pointer __nd) {
   __end_node_pointer __parent;
   __node_base_pointer& __child = __find_leaf_high(__parent, __nd->__value_);
-  __insert_node_at(__parent, __child, static_cast<__node_base_pointer>(__nd));
+  __insert_node_at(__parent, __child, std::__static_fancy_pointer_cast<__node_base_pointer>(__nd));
   return iterator(__nd);
 }
 
