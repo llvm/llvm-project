@@ -41,7 +41,7 @@
 //
 // ScheduleDAGInstrs *<Target>TargetMachine::
 // createMachineScheduler(MachineSchedContext *C) {
-//   ScheduleDAGMI *DAG = createGenericSchedLive(C);
+//   ScheduleDAGMI *DAG = createSchedLive(C);
 //   DAG->addMutation(new CustomDAGMutation(...));
 //   return DAG;
 // }
@@ -65,7 +65,7 @@
 //
 // void <SubTarget>Subtarget::
 // overrideSchedPolicy(MachineSchedPolicy &Policy,
-//                     unsigned NumRegionInstrs) const {
+//                     const SchedRegion &Region) const {
 //   Policy.<Flag> = true;
 // }
 //
@@ -218,6 +218,22 @@ struct MachineSchedPolicy {
   MachineSchedPolicy() = default;
 };
 
+/// A region of an MBB for scheduling.
+struct SchedRegion {
+  /// RegionBegin is the first instruction in the scheduling region, and
+  /// RegionEnd is either MBB->end() or the scheduling boundary after the
+  /// last instruction in the scheduling region. These iterators cannot refer
+  /// to instructions outside of the identified scheduling region because
+  /// those may be reordered before scheduling this region.
+  MachineBasicBlock::iterator RegionBegin;
+  MachineBasicBlock::iterator RegionEnd;
+  unsigned NumRegionInstrs;
+
+  SchedRegion(MachineBasicBlock::iterator B, MachineBasicBlock::iterator E,
+              unsigned N)
+      : RegionBegin(B), RegionEnd(E), NumRegionInstrs(N) {}
+};
+
 /// MachineSchedStrategy - Interface to the scheduling algorithm used by
 /// ScheduleDAGMI.
 ///
@@ -304,10 +320,6 @@ protected:
   /// The bottom of the unscheduled zone.
   MachineBasicBlock::iterator CurrentBottom;
 
-  /// Record the next node in a scheduled cluster.
-  const SUnit *NextClusterPred = nullptr;
-  const SUnit *NextClusterSucc = nullptr;
-
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   /// The number of instructions scheduled so far. Used to cut off the
   /// scheduler at the point determined by misched-cutoff.
@@ -367,10 +379,6 @@ public:
   /// Change the position of an instruction within the basic block and update
   /// live ranges and region boundary iterators.
   void moveInstruction(MachineInstr *MI, MachineBasicBlock::iterator InsertPos);
-
-  const SUnit *getNextClusterPred() const { return NextClusterPred; }
-
-  const SUnit *getNextClusterSucc() const { return NextClusterSucc; }
 
   void viewGraph(const Twine &Name, const Twine &Title) override;
   void viewGraph() override;
@@ -1295,6 +1303,9 @@ protected:
   SchedBoundary Top;
   SchedBoundary Bot;
 
+  unsigned TopClusterID;
+  unsigned BotClusterID;
+
   /// Candidate last picked from Top boundary.
   SchedCandidate TopCand;
   /// Candidate last picked from Bot boundary.
@@ -1334,6 +1345,9 @@ protected:
   SchedCandidate TopCand;
   /// Candidate last picked from Bot boundary.
   SchedCandidate BotCand;
+
+  unsigned TopClusterID;
+  unsigned BotClusterID;
 
 public:
   PostGenericScheduler(const MachineSchedContext *C)
@@ -1383,14 +1397,6 @@ protected:
   void pickNodeFromQueue(SchedBoundary &Zone, SchedCandidate &Cand);
 };
 
-/// Create the standard converging machine scheduler. This will be used as the
-/// default scheduler if the target does not set a default.
-/// Adds default DAG mutations.
-LLVM_ABI ScheduleDAGMILive *createGenericSchedLive(MachineSchedContext *C);
-
-/// Create a generic scheduler with no vreg liveness or DAG mutation passes.
-LLVM_ABI ScheduleDAGMI *createGenericSchedPostRA(MachineSchedContext *C);
-
 /// If ReorderWhileClustering is set to true, no attempt will be made to
 /// reduce reordering due to store clustering.
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
@@ -1408,6 +1414,41 @@ createStoreClusterDAGMutation(const TargetInstrInfo *TII,
 LLVM_ABI std::unique_ptr<ScheduleDAGMutation>
 createCopyConstrainDAGMutation(const TargetInstrInfo *TII,
                                const TargetRegisterInfo *TRI);
+
+/// Create the standard converging machine scheduler. This will be used as the
+/// default scheduler if the target does not set a default.
+/// Adds default DAG mutations.
+template <typename Strategy = GenericScheduler>
+ScheduleDAGMILive *createSchedLive(MachineSchedContext *C) {
+  ScheduleDAGMILive *DAG =
+      new ScheduleDAGMILive(C, std::make_unique<Strategy>(C));
+  // Register DAG post-processors.
+  //
+  // FIXME: extend the mutation API to allow earlier mutations to instantiate
+  // data and pass it to later mutations. Have a single mutation that gathers
+  // the interesting nodes in one pass.
+  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
+
+  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
+  // Add MacroFusion mutation if fusions are not empty.
+  const auto &MacroFusions = STI.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
+  return DAG;
+}
+
+/// Create a generic scheduler with no vreg liveness or DAG mutation passes.
+template <typename Strategy = PostGenericScheduler>
+ScheduleDAGMI *createSchedPostRA(MachineSchedContext *C) {
+  ScheduleDAGMI *DAG = new ScheduleDAGMI(C, std::make_unique<Strategy>(C),
+                                         /*RemoveKillFlags=*/true);
+  const TargetSubtargetInfo &STI = C->MF->getSubtarget();
+  // Add MacroFusion mutation if fusions are not empty.
+  const auto &MacroFusions = STI.getMacroFusions();
+  if (!MacroFusions.empty())
+    DAG->addMutation(createMacroFusionDAGMutation(MacroFusions));
+  return DAG;
+}
 
 class MachineSchedulerPass : public PassInfoMixin<MachineSchedulerPass> {
   // FIXME: Remove this member once RegisterClassInfo is queryable as an

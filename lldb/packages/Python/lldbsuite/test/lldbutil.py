@@ -7,6 +7,7 @@ They can also be useful for general purpose lldb scripting.
 # System modules
 import errno
 import io
+import json
 import os
 import re
 import sys
@@ -1704,3 +1705,89 @@ def packetlog_get_dylib_info(log):
                 expect_dylib_info_response = True
 
     return dylib_info
+
+
+# ========================
+# Utilities for simulators
+# ========================
+
+
+def get_latest_apple_simulator(platform_name, log=None):
+    # Run simctl to list all simulators
+    cmd = ["xcrun", "simctl", "list", "-j", "devices"]
+    cmd_str = " ".join(cmd)
+    if log:
+        log(cmd_str)
+    sim_devices_str = subprocess.check_output(cmd).decode("utf-8")
+    sim_devices = json.loads(sim_devices_str)["devices"]
+
+    # Find an available simulator for the requested platform
+    device_uuid = None
+    device_runtime = None
+    for simulator in sim_devices:
+        if isinstance(simulator, dict):
+            runtime = simulator["name"]
+            devices = simulator["devices"]
+        else:
+            runtime = simulator
+            devices = sim_devices[simulator]
+        if not platform_name in runtime.lower():
+            continue
+        for device in devices:
+            if "availability" in device and device["availability"] != "(available)":
+                continue
+            if "isAvailable" in device and not device["isAvailable"]:
+                continue
+            if device_runtime and runtime < device_runtime:
+                continue
+            device_uuid = device["udid"]
+            device_runtime = runtime
+            # Stop searching in this runtime
+            break
+
+    return device_uuid
+
+
+def launch_exe_in_apple_simulator(
+    device_uuid,
+    exe_path,
+    exe_args=[],
+    stderr_lines_to_read=0,
+    stderr_patterns=[],
+    log=None,
+):
+    exe_path = os.path.realpath(exe_path)
+    cmd = [
+        "xcrun",
+        "simctl",
+        "spawn",
+        "-s",
+        device_uuid,
+        exe_path,
+    ] + exe_args
+    if log:
+        log(" ".join(cmd))
+    sim_launcher = subprocess.Popen(cmd, stderr=subprocess.PIPE)
+
+    # Read stderr to try to find matches.
+    # Each pattern will return the value of group[1] of the first match in the stderr.
+    # Will read at most stderr_lines_to_read lines.
+    # Will early terminate when all matches have been found.
+    total_patterns = len(stderr_patterns)
+    matches_found = 0
+    matched_strings = [None] * total_patterns
+    for _ in range(0, stderr_lines_to_read):
+        stderr = sim_launcher.stderr.readline().decode("utf-8")
+        if not stderr:
+            continue
+        for i, pattern in enumerate(stderr_patterns):
+            if matched_strings[i] is not None:
+                continue
+            match = re.match(pattern, stderr)
+            if match:
+                matched_strings[i] = str(match.group(1))
+                matches_found += 1
+        if matches_found == total_patterns:
+            break
+
+    return exe_path, matched_strings

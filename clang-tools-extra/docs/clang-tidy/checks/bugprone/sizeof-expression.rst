@@ -316,3 +316,12 @@ Options
    When `true`, the check will warn on pointer arithmetic where the
    element count is obtained from a division with ``sizeof(...)``,
    e.g., ``Ptr + Bytes / sizeof(*T)``. Default is `true`.
+
+.. option:: WarnOnSizeOfInLoopTermination
+
+   When `true`, the check will warn about incorrect use of sizeof expression
+   in loop termination condition. The warning triggers if the ``sizeof``
+   expression appears to be incorrectly used to determine the number of
+   array/buffer elements.
+   e.g, ``long arr[10]; for(int i = 0; i < sizeof(arr); i++) { ... }``. Default
+   is `true`.

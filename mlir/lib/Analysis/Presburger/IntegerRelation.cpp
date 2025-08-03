@@ -25,16 +25,12 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <memory>
-#include <numeric>
 #include <optional>
-#include <sstream>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -2218,7 +2214,7 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constOtherLb = otherCst.getConstantBound(BoundType::LB, d);
       if (!constLb.has_value() || !constOtherLb.has_value())
         return failure();
-      std::fill(minLb.begin(), minLb.end(), 0);
+      llvm::fill(minLb, 0);
       minLb.back() = std::min(*constLb, *constOtherLb);
     }
 
@@ -2234,12 +2230,12 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       auto constOtherUb = otherCst.getConstantBound(BoundType::UB, d);
       if (!constUb.has_value() || !constOtherUb.has_value())
         return failure();
-      std::fill(maxUb.begin(), maxUb.end(), 0);
+      llvm::fill(maxUb, 0);
       maxUb.back() = std::max(*constUb, *constOtherUb);
     }
 
-    std::fill(newLb.begin(), newLb.end(), 0);
-    std::fill(newUb.begin(), newUb.end(), 0);
+    llvm::fill(newLb, 0);
+    llvm::fill(newUb, 0);
 
     // The divisor for lb, ub, otherLb, otherUb at this point is lbDivisor,
     // and so it's the divisor for newLb and newUb as well.
@@ -2484,6 +2480,44 @@ void IntegerRelation::applyDomain(const IntegerRelation &rel) {
 }
 
 void IntegerRelation::applyRange(const IntegerRelation &rel) { compose(rel); }
+
+IntegerRelation IntegerRelation::rangeProduct(const IntegerRelation &rel) {
+  /// R1: (i, j) -> k : f(i, j, k) = 0
+  /// R2: (i, j) -> l : g(i, j, l) = 0
+  /// R1.rangeProduct(R2): (i, j) -> (k, l) : f(i, j, k) = 0 and g(i, j, l) = 0
+  assert(getNumDomainVars() == rel.getNumDomainVars() &&
+         "Range product is only defined for relations with equal domains");
+
+  // explicit copy of `this`
+  IntegerRelation result = *this;
+  unsigned relRangeVarStart = rel.getVarKindOffset(VarKind::Range);
+  unsigned numThisRangeVars = getNumRangeVars();
+  unsigned numNewSymbolVars = result.getNumSymbolVars() - getNumSymbolVars();
+
+  result.appendVar(VarKind::Range, rel.getNumRangeVars());
+
+  // Copy each equality from `rel` and update the copy to account for range
+  // variables from `this`. The `rel` equality is a list of coefficients of the
+  // variables from `rel`, and so the range variables need to be shifted right
+  // by the number of `this` range variables and symbols.
+  for (unsigned i = 0; i < rel.getNumEqualities(); ++i) {
+    SmallVector<DynamicAPInt> copy =
+        SmallVector<DynamicAPInt>(rel.getEquality(i));
+    copy.insert(copy.begin() + relRangeVarStart,
+                numThisRangeVars + numNewSymbolVars, DynamicAPInt(0));
+    result.addEquality(copy);
+  }
+
+  for (unsigned i = 0; i < rel.getNumInequalities(); ++i) {
+    SmallVector<DynamicAPInt> copy =
+        SmallVector<DynamicAPInt>(rel.getInequality(i));
+    copy.insert(copy.begin() + relRangeVarStart,
+                numThisRangeVars + numNewSymbolVars, DynamicAPInt(0));
+    result.addInequality(copy);
+  }
+
+  return result;
+}
 
 void IntegerRelation::printSpace(raw_ostream &os) const {
   space.print(os);

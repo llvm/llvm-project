@@ -828,7 +828,7 @@ public:
   }
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
+    return {getProtocolLocArray(), getNumProtocols()};
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
@@ -1088,7 +1088,7 @@ public:
 
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
+    return {getProtocolLocArray(), getNumProtocols()};
   }
 
   bool hasBaseTypeAsWritten() const {
@@ -1545,7 +1545,7 @@ public:
   }
 
   ArrayRef<ParmVarDecl *> getParams() const {
-    return llvm::ArrayRef(getParmArray(), getNumParams());
+    return {getParmArray(), getNumParams()};
   }
 
   // ParmVarDecls* are stored after Info, one for each parameter.
@@ -2781,6 +2781,16 @@ public:
   SourceRange getSourceRange() const LLVM_READONLY {
     return SourceRange(Loc, Loc);
   }
+};
+
+struct PredefinedSugarTypeLocInfo {}; // Nothing.
+
+class PredefinedSugarTypeLoc final
+    : public ConcreteTypeLoc<UnqualTypeLoc, PredefinedSugarTypeLoc,
+                             PredefinedSugarType, PredefinedSugarTypeLocInfo> {
+public:
+  void initializeLocal(ASTContext &Context, SourceLocation loc) {}
+  SourceRange getLocalSourceRange() const { return {}; }
 };
 
 } // namespace clang

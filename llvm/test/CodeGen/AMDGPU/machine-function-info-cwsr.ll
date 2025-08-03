@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -mattr=+dynamic-vgpr -stop-after=prologepilog < %s | FileCheck -check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -stop-after=prologepilog < %s | FileCheck -check-prefix=CHECK %s
 
 ; Make sure we use a stack pointer and allocate 112 * 4 bytes at the beginning of the stack.
 
@@ -68,5 +68,5 @@ define void @default() #0 {
 
 declare amdgpu_gfx void @callee(i32) #0
 
-attributes #0 = { nounwind }
+attributes #0 = { nounwind "amdgpu-dynamic-vgpr-block-size" = "16" }
 
