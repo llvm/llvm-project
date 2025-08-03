@@ -319,7 +319,7 @@ void UseStdNumbersCheck::registerMatchers(MatchFinder *const Finder) {
 
   Finder->addMatcher(
       expr(
-          anyOfExhaustive(std::move(ConstantMatchers)),
+          anyOfExhaustive(ConstantMatchers),
           unless(hasParent(explicitCastExpr(hasDestinationType(isFloating())))),
           hasType(qualType(hasCanonicalTypeUnqualified(
               anyOf(qualType(asString("float")).bind("float"),
