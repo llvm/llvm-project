@@ -74,6 +74,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULowerKernelArguments.cpp
   AMDGPULowerKernelAttributes.cpp
   AMDGPULowerModuleLDSPass.cpp
+  AMDGPUPrepareAGPRAlloc.cpp
   AMDGPUSwLowerLDS.cpp
   AMDGPUMachineFunction.cpp
   AMDGPUMachineModuleInfo.cpp
@@ -101,6 +102,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPURemoveIncompatibleFunctions.cpp
   AMDGPUReserveWWMRegs.cpp
   AMDGPUResourceUsageAnalysis.cpp
+  AMDGPURewriteAGPRCopyMFMA.cpp
   AMDGPURewriteOutArguments.cpp
   AMDGPURewriteUndefForPHI.cpp
   AMDGPUSelectionDAGInfo.cpp
@@ -197,6 +199,7 @@ add_llvm_target(AMDGPUCodeGen
   Instrumentation
   MC
   MIRParser
+  ObjCARC
   Passes
   Scalar
   SelectionDAG

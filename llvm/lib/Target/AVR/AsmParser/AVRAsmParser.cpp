@@ -247,7 +247,7 @@ public:
   SMLoc getStartLoc() const override { return Start; }
   SMLoc getEndLoc() const override { return End; }
 
-  void print(raw_ostream &O) const override {
+  void print(raw_ostream &O, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_Token:
       O << "Token: \"" << getToken() << "\"";
@@ -256,12 +256,16 @@ public:
       O << "Register: " << getReg();
       break;
     case k_Immediate:
-      O << "Immediate: \"" << *getImm() << "\"";
+      O << "Immediate: \"";
+      MAI.printExpr(O, *getImm());
+      O << "\"";
       break;
     case k_Memri: {
       // only manually print the size for non-negative values,
       // as the sign is inserted automatically.
-      O << "Memri: \"" << getReg() << '+' << *getImm() << "\"";
+      O << "Memri: \"" << getReg() << '+';
+      MAI.printExpr(O, *getImm());
+      O << "\"";
       break;
     }
     }

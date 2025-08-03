@@ -69,7 +69,7 @@ SharedSocket::SharedSocket(const Socket *socket, Status &error) {
   m_fd = kInvalidFD;
 
   // Create a pipe to transfer WSAPROTOCOL_INFO to the child process.
-  error = m_socket_pipe.CreateNew(true);
+  error = m_socket_pipe.CreateNew();
   if (error.Fail())
     return;
 
@@ -234,6 +234,23 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
   return socket_up;
 }
 
+llvm::Expected<Socket::Pair>
+Socket::CreatePair(std::optional<SocketProtocol> protocol) {
+  constexpr SocketProtocol kBestProtocol =
+      LLDB_ENABLE_POSIX ? ProtocolUnixDomain : ProtocolTcp;
+  switch (protocol.value_or(kBestProtocol)) {
+  case ProtocolTcp:
+    return TCPSocket::CreatePair();
+#if LLDB_ENABLE_POSIX
+  case ProtocolUnixDomain:
+  case ProtocolUnixAbstract:
+    return DomainSocket::CreatePair();
+#endif
+  default:
+    return llvm::createStringError("Unsupported protocol");
+  }
+}
+
 llvm::Expected<std::unique_ptr<Socket>>
 Socket::TcpConnect(llvm::StringRef host_and_port) {
   Log *log = GetLog(LLDBLog::Connection);
@@ -296,8 +313,7 @@ Socket::DecodeHostAndPort(llvm::StringRef host_and_port) {
 }
 
 IOObject::WaitableHandle Socket::GetWaitableHandle() {
-  // TODO: On Windows, use WSAEventSelect
-  return m_socket;
+  return (IOObject::WaitableHandle)m_socket;
 }
 
 Status Socket::Read(void *buf, size_t &num_bytes) {

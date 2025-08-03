@@ -6,15 +6,10 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "x86_64-apple-darwin10.0.0"
 
 
-;.
-; CHECK: @.memset_pattern = private unnamed_addr constant [2 x double] [double 3.141590e+00, double 3.141590e+00], align 16
-; CHECK: @.memset_pattern.1 = private unnamed_addr constant [2 x double] [double 3.141590e+00, double 3.141590e+00], align 16
-; CHECK: @.memset_pattern.2 = private unnamed_addr constant [2 x double] [double 3.141590e+00, double 3.141590e+00], align 16
-;.
 define dso_local void @double_memset(ptr nocapture %p) {
 ; CHECK-LABEL: @double_memset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[P:%.*]], ptr @.memset_pattern, i64 128), !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.f64.i64(ptr align 1 [[P:%.*]], double 3.141590e+00, i64 16, i1 false), !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
@@ -44,7 +39,7 @@ for.body:
 define dso_local void @struct_memset(ptr nocapture %p) {
 ; CHECK-LABEL: @struct_memset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[P:%.*]], ptr @.memset_pattern.1, i64 128), !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.f64.i64(ptr align 1 [[P:%.*]], double 3.141590e+00, i64 16, i1 false), !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
@@ -73,8 +68,7 @@ for.body:
 define dso_local void @var_memset(ptr nocapture %p, i64 %len) {
 ; CHECK-LABEL: @var_memset(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[LEN:%.*]], 3
-; CHECK-NEXT:    call void @memset_pattern16(ptr [[P:%.*]], ptr @.memset_pattern.2, i64 [[TMP0]])
+; CHECK-NEXT:    call void @llvm.experimental.memset.pattern.p0.f64.i64(ptr align 1 [[P:%.*]], double 3.141590e+00, i64 [[TMP0:%.*]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
@@ -82,7 +76,7 @@ define dso_local void @var_memset(ptr nocapture %p, i64 %len) {
 ; CHECK-NEXT:    [[I_07:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[PTR1:%.*]] = getelementptr inbounds double, ptr [[P]], i64 [[I_07]]
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_07]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[LEN]]
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ;
 entry:
@@ -116,7 +110,7 @@ for.body:
 !21 = !{!22, !20, i64 0}
 !22 = !{!"B", !20, i64 0}
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: write) }
 ;.
 ; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"double", [[META2:![0-9]+]], i64 0}

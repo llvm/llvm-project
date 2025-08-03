@@ -2490,8 +2490,12 @@ static bool hoistMinMax(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   NewCond->takeName(&I);
   I.replaceAllUsesWith(NewCond);
   eraseInstruction(I, SafetyInfo, MSSAU);
-  eraseInstruction(*cast<Instruction>(Cond1), SafetyInfo, MSSAU);
-  eraseInstruction(*cast<Instruction>(Cond2), SafetyInfo, MSSAU);
+  Instruction &CondI1 = *cast<Instruction>(Cond1);
+  Instruction &CondI2 = *cast<Instruction>(Cond2);
+  salvageDebugInfo(CondI1);
+  salvageDebugInfo(CondI2);
+  eraseInstruction(CondI1, SafetyInfo, MSSAU);
+  eraseInstruction(CondI2, SafetyInfo, MSSAU);
   return true;
 }
 
@@ -2502,6 +2506,12 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
                      DominatorTree *DT) {
   auto *GEP = dyn_cast<GetElementPtrInst>(&I);
   if (!GEP)
+    return false;
+
+  // Do not try to hoist a constant GEP out of the loop via reassociation.
+  // Constant GEPs can often be folded into addressing modes, and reassociating
+  // them may inhibit CSE of a common base.
+  if (GEP->hasAllConstantIndices())
     return false;
 
   auto *Src = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());

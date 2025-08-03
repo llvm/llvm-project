@@ -10,6 +10,7 @@ attributes(global) subroutine devsub()
   integer(4) :: ai
   integer(8) :: al
   integer(8) :: time
+  integer :: smalltime
 
   call syncthreads()
   call syncwarp(1)
@@ -45,7 +46,9 @@ attributes(global) subroutine devsub()
   ai = atomicinc(ai, 1_4)
   ai = atomicdec(ai, 1_4)
 
+  smalltime = clock()
   time = clock64()
+  time = globalTimer()
 end
 
 ! CHECK-LABEL: func.func @_QPdevsub() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
@@ -82,7 +85,9 @@ end
 ! CHECK: %{{.*}} = llvm.atomicrmw uinc_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 ! CHECK: %{{.*}} = llvm.atomicrmw udec_wrap  %{{.*}}, %{{.*}} seq_cst : !llvm.ptr, i32
 
-! CHECK: fir.call @llvm.nvvm.read.ptx.sreg.clock64()
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock : i32
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.clock64 : i64
+! CHECK: %{{.*}} = nvvm.read.ptx.sreg.globaltimer : i64
 
 subroutine host1()
   integer, device :: a(32)

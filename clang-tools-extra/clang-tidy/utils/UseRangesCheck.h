@@ -81,7 +81,7 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) final;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
-  void storeOptions(ClangTidyOptions::OptionMap &Options) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override;
 
 private:

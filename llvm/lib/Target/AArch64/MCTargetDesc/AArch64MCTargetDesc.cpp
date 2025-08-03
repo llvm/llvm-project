@@ -349,14 +349,14 @@ static MCAsmInfo *createAArch64MCAsmInfo(const MCRegisterInfo &MRI,
   MCAsmInfo *MAI;
   if (TheTriple.isOSBinFormatMachO())
     MAI = new AArch64MCAsmInfoDarwin(TheTriple.getArch() == Triple::aarch64_32);
+  else if (TheTriple.isOSBinFormatELF())
+    MAI = new AArch64MCAsmInfoELF(TheTriple);
   else if (TheTriple.isWindowsMSVCEnvironment())
     MAI = new AArch64MCAsmInfoMicrosoftCOFF();
   else if (TheTriple.isOSBinFormatCOFF())
     MAI = new AArch64MCAsmInfoGNUCOFF();
-  else {
-    assert(TheTriple.isOSBinFormatELF() && "Invalid target");
-    MAI = new AArch64MCAsmInfoELF(TheTriple);
-  }
+  else
+    reportFatalUsageError("unsupported object format");
 
   // Initial state of the frame pointer is SP.
   unsigned Reg = MRI.getDwarfRegNum(AArch64::SP, true);

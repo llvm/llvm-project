@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -enable-early-exit-vectorization -force-vector-width=4 -disable-output 2>&1 | FileCheck %s
+; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output 2>&1 | FileCheck %s
 
 define i64 @loop_contains_store(ptr %dest) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store'

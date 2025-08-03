@@ -41,7 +41,7 @@ struct CIRRecordLowering final {
   // member type that ensures correct rounding.
   struct MemberInfo final {
     CharUnits offset;
-    enum class InfoKind { Field, Base } kind;
+    enum class InfoKind { VFPtr, Field, Base } kind;
     mlir::Type data;
     union {
       const FieldDecl *fieldDecl;
@@ -79,12 +79,22 @@ struct CIRRecordLowering final {
   /// Inserts padding everywhere it's needed.
   void insertPadding();
 
+  void computeVolatileBitfields();
   void accumulateBases(const CXXRecordDecl *cxxRecordDecl);
   void accumulateVPtrs();
   void accumulateFields();
   RecordDecl::field_iterator
   accumulateBitFields(RecordDecl::field_iterator field,
                       RecordDecl::field_iterator fieldEnd);
+
+  mlir::Type getVFPtrType();
+
+  bool isAAPCS() const {
+    return astContext.getTargetInfo().getABI().starts_with("aapcs");
+  }
+
+  /// Helper function to check if the target machine is BigEndian.
+  bool isBigEndian() const { return astContext.getTargetInfo().isBigEndian(); }
 
   CharUnits bitsToCharUnits(uint64_t bitOffset) {
     return astContext.toCharUnitsFromBits(bitOffset);
@@ -228,7 +238,8 @@ void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
   // out as packed bits within an integer-sized unit, we can imagine the bits
   // counting from the most-significant-bit instead of the
   // least-significant-bit.
-  assert(!cir::MissingFeatures::isBigEndian());
+  if (dataLayout.isBigEndian())
+    info.offset = info.storageSize - (info.offset + info.size);
 
   info.volatileStorageSize = 0;
   info.volatileOffset = 0;
@@ -238,7 +249,7 @@ void CIRRecordLowering::setBitFieldInfo(const FieldDecl *fd,
 void CIRRecordLowering::lower() {
   if (recordDecl->isUnion()) {
     lowerUnion();
-    assert(!cir::MissingFeatures::bitfields());
+    computeVolatileBitfields();
     return;
   }
 
@@ -252,7 +263,7 @@ void CIRRecordLowering::lower() {
     accumulateBases(cxxRecordDecl);
     if (members.empty()) {
       appendPaddingBytes(size);
-      assert(!cir::MissingFeatures::bitfields());
+      computeVolatileBitfields();
       return;
     }
     assert(!cir::MissingFeatures::recordLayoutVirtualBases());
@@ -270,6 +281,7 @@ void CIRRecordLowering::lower() {
 
   calculateZeroInit();
   fillOutputFields();
+  computeVolatileBitfields();
 }
 
 void CIRRecordLowering::fillOutputFields() {
@@ -431,9 +443,7 @@ CIRRecordLowering::accumulateBitFields(RecordDecl::field_iterator field,
           } else if (cirGenTypes.getCGModule()
                          .getCodeGenOpts()
                          .FineGrainedBitfieldAccesses) {
-            assert(!cir::MissingFeatures::nonFineGrainedBitfields());
-            cirGenTypes.getCGModule().errorNYI(field->getSourceRange(),
-                                               "NYI FineGrainedBitfield");
+            installBest = true;
           } else {
             // Otherwise, we're not installing. Update the bit size
             // of the current span to go all the way to limitOffset, which is
@@ -491,11 +501,7 @@ void CIRRecordLowering::accumulateFields() {
                                   fieldEnd = recordDecl->field_end();
        field != fieldEnd;) {
     if (field->isBitField()) {
-      RecordDecl::field_iterator start = field;
-      // Iterate to gather the list of bitfields.
-      for (++field; field != fieldEnd && field->isBitField(); ++field)
-        ;
-      field = accumulateBitFields(start, field);
+      field = accumulateBitFields(field, fieldEnd);
       assert((field == fieldEnd || !field->isBitField()) &&
              "Failed to accumulate all the bitfields");
     } else if (!field->isZeroSize(astContext)) {
@@ -607,14 +613,6 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
     }
   }
 
-  if (llvm::isa<CXXRecordDecl>(rd) && !rd->isUnion() &&
-      !rd->hasAttr<FinalAttr>()) {
-    if (lowering.astRecordLayout.getNonVirtualSize() !=
-        lowering.astRecordLayout.getSize()) {
-      cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: CXXRecordDecl");
-    }
-  }
-
   // Fill in the record *after* computing the base type.  Filling in the body
   // signifies that the type is no longer opaque and record layout is complete,
   // but we may need to recursively layout rd while laying D out as a base type.
@@ -639,12 +637,54 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
 
   // Dump the layout, if requested.
   if (getASTContext().getLangOpts().DumpRecordLayouts) {
-    cgm.errorNYI(rd->getSourceRange(), "computeRecordLayout: dump layout");
+    llvm::outs() << "\n*** Dumping CIRgen Record Layout\n";
+    llvm::outs() << "Record: ";
+    rd->dump(llvm::outs());
+    llvm::outs() << "\nLayout: ";
+    rl->print(llvm::outs());
   }
 
   // TODO: implement verification
   return rl;
 }
+
+void CIRGenRecordLayout::print(raw_ostream &os) const {
+  os << "<CIRecordLayout\n";
+  os << "   CIR Type:" << completeObjectType << "\n";
+  if (baseSubobjectType)
+    os << "   NonVirtualBaseCIRType:" << baseSubobjectType << "\n";
+  os << "   IsZeroInitializable:" << zeroInitializable << "\n";
+  os << "   BitFields:[\n";
+  std::vector<std::pair<unsigned, const CIRGenBitFieldInfo *>> bitInfo;
+  for (auto &[decl, info] : bitFields) {
+    const RecordDecl *rd = decl->getParent();
+    unsigned index = 0;
+    for (RecordDecl::field_iterator it = rd->field_begin(); *it != decl; ++it)
+      ++index;
+    bitInfo.push_back(std::make_pair(index, &info));
+  }
+  llvm::array_pod_sort(bitInfo.begin(), bitInfo.end());
+  for (std::pair<unsigned, const CIRGenBitFieldInfo *> &info : bitInfo) {
+    os.indent(4);
+    info.second->print(os);
+    os << "\n";
+  }
+  os << "   ]>\n";
+}
+
+void CIRGenBitFieldInfo::print(raw_ostream &os) const {
+  os << "<CIRBitFieldInfo" << " name:" << name << " offset:" << offset
+     << " size:" << size << " isSigned:" << isSigned
+     << " storageSize:" << storageSize
+     << " storageOffset:" << storageOffset.getQuantity()
+     << " volatileOffset:" << volatileOffset
+     << " volatileStorageSize:" << volatileStorageSize
+     << " volatileStorageOffset:" << volatileStorageOffset.getQuantity() << ">";
+}
+
+void CIRGenRecordLayout::dump() const { print(llvm::errs()); }
+
+void CIRGenBitFieldInfo::dump() const { print(llvm::errs()); }
 
 void CIRRecordLowering::lowerUnion() {
   CharUnits layoutSize = astRecordLayout.getSize();
@@ -655,11 +695,14 @@ void CIRRecordLowering::lowerUnion() {
   // locate the "most appropriate" storage type.
   for (const FieldDecl *field : recordDecl->fields()) {
     mlir::Type fieldType;
-    if (field->isBitField())
-      cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                         "bitfields in lowerUnion");
-    else
+    if (field->isBitField()) {
+      if (field->isZeroLengthBitField())
+        continue;
+      fieldType = getBitfieldStorageType(field->getBitWidthValue());
+      setBitFieldInfo(field, CharUnits::Zero(), fieldType);
+    } else {
       fieldType = getStorageType(field);
+    }
 
     // This maps a field to its index. For unions, the index is always 0.
     fieldIdxMap[field->getCanonicalDecl()] = 0;
@@ -711,6 +754,124 @@ void CIRRecordLowering::lowerUnion() {
     packed = true;
 }
 
+/// The AAPCS that defines that, when possible, bit-fields should
+/// be accessed using containers of the declared type width:
+/// When a volatile bit-field is read, and its container does not overlap with
+/// any non-bit-field member or any zero length bit-field member, its container
+/// must be read exactly once using the access width appropriate to the type of
+/// the container. When a volatile bit-field is written, and its container does
+/// not overlap with any non-bit-field member or any zero-length bit-field
+/// member, its container must be read exactly once and written exactly once
+/// using the access width appropriate to the type of the container. The two
+/// accesses are not atomic.
+///
+/// Enforcing the width restriction can be disabled using
+/// -fno-aapcs-bitfield-width.
+void CIRRecordLowering::computeVolatileBitfields() {
+  if (!isAAPCS() ||
+      !cirGenTypes.getCGModule().getCodeGenOpts().AAPCSBitfieldWidth)
+    return;
+
+  for (auto &[field, info] : bitFields) {
+    mlir::Type resLTy = cirGenTypes.convertTypeForMem(field->getType());
+
+    if (astContext.toBits(astRecordLayout.getAlignment()) <
+        getSizeInBits(resLTy).getQuantity())
+      continue;
+
+    // CIRRecordLowering::setBitFieldInfo() pre-adjusts the bit-field offsets
+    // for big-endian targets, but it assumes a container of width
+    // info.storageSize. Since AAPCS uses a different container size (width
+    // of the type), we first undo that calculation here and redo it once
+    // the bit-field offset within the new container is calculated.
+    const unsigned oldOffset =
+        isBigEndian() ? info.storageSize - (info.offset + info.size)
+                      : info.offset;
+    // Offset to the bit-field from the beginning of the struct.
+    const unsigned absoluteOffset =
+        astContext.toBits(info.storageOffset) + oldOffset;
+
+    // Container size is the width of the bit-field type.
+    const unsigned storageSize = getSizeInBits(resLTy).getQuantity();
+    // Nothing to do if the access uses the desired
+    // container width and is naturally aligned.
+    if (info.storageSize == storageSize && (oldOffset % storageSize == 0))
+      continue;
+
+    // Offset within the container.
+    unsigned offset = absoluteOffset & (storageSize - 1);
+    // Bail out if an aligned load of the container cannot cover the entire
+    // bit-field. This can happen for example, if the bit-field is part of a
+    // packed struct. AAPCS does not define access rules for such cases, we let
+    // clang to follow its own rules.
+    if (offset + info.size > storageSize)
+      continue;
+
+    // Re-adjust offsets for big-endian targets.
+    if (isBigEndian())
+      offset = storageSize - (offset + info.size);
+
+    const CharUnits storageOffset =
+        astContext.toCharUnitsFromBits(absoluteOffset & ~(storageSize - 1));
+    const CharUnits end = storageOffset +
+                          astContext.toCharUnitsFromBits(storageSize) -
+                          CharUnits::One();
+
+    const ASTRecordLayout &layout =
+        astContext.getASTRecordLayout(field->getParent());
+    // If we access outside memory outside the record, than bail out.
+    const CharUnits recordSize = layout.getSize();
+    if (end >= recordSize)
+      continue;
+
+    // Bail out if performing this load would access non-bit-fields members.
+    bool conflict = false;
+    for (const auto *f : recordDecl->fields()) {
+      // Allow sized bit-fields overlaps.
+      if (f->isBitField() && !f->isZeroLengthBitField())
+        continue;
+
+      const CharUnits fOffset = astContext.toCharUnitsFromBits(
+          layout.getFieldOffset(f->getFieldIndex()));
+
+      // As C11 defines, a zero sized bit-field defines a barrier, so
+      // fields after and before it should be race condition free.
+      // The AAPCS acknowledges it and imposes no restritions when the
+      // natural container overlaps a zero-length bit-field.
+      if (f->isZeroLengthBitField()) {
+        if (end > fOffset && storageOffset < fOffset) {
+          conflict = true;
+          break;
+        }
+      }
+
+      const CharUnits fEnd =
+          fOffset +
+          astContext.toCharUnitsFromBits(astContext.toBits(
+              getSizeInBits(cirGenTypes.convertTypeForMem(f->getType())))) -
+          CharUnits::One();
+      // If no overlap, continue.
+      if (end < fOffset || fEnd < storageOffset)
+        continue;
+
+      // The desired load overlaps a non-bit-field member, bail out.
+      conflict = true;
+      break;
+    }
+
+    if (conflict)
+      continue;
+    // Write the new bit-field access parameters.
+    // As the storage offset now is defined as the number of elements from the
+    // start of the structure, we should divide the Offset by the element size.
+    info.volatileStorageOffset =
+        storageOffset /
+        astContext.toCharUnitsFromBits(storageSize).getQuantity();
+    info.volatileStorageSize = storageSize;
+    info.volatileOffset = offset;
+  }
+}
+
 void CIRRecordLowering::accumulateBases(const CXXRecordDecl *cxxRecordDecl) {
   // If we've got a primary virtual base, we need to add it with the bases.
   if (astRecordLayout.isPrimaryBaseVirtual()) {
@@ -739,9 +900,14 @@ void CIRRecordLowering::accumulateBases(const CXXRecordDecl *cxxRecordDecl) {
 
 void CIRRecordLowering::accumulateVPtrs() {
   if (astRecordLayout.hasOwnVFPtr())
-    cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
-                                       "accumulateVPtrs: hasOwnVFPtr");
+    members.push_back(MemberInfo(CharUnits::Zero(), MemberInfo::InfoKind::VFPtr,
+                                 getVFPtrType()));
+
   if (astRecordLayout.hasOwnVBPtr())
     cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
                                        "accumulateVPtrs: hasOwnVBPtr");
+}
+
+mlir::Type CIRRecordLowering::getVFPtrType() {
+  return cir::VPtrType::get(builder.getContext());
 }
