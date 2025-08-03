@@ -24,7 +24,7 @@ def isNotOSMSVCRT : RuntimeLibcallPredicate<"!TT.isOSMSVCRT()">;
 def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
-
+def isAndroid : RuntimeLibcallPredicate<"TT.isAndroid()">;
 
 def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
@@ -1135,6 +1135,8 @@ defvar LibmHasLdexpF80 = LibcallImpls<(add ldexp_f80), isNotOSWindowsOrIsCygwinM
 defvar LibmHasFrexpF128 = LibcallImpls<(add frexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
 
+defvar LibcSafestackPointerAddress =
+    LibcallImpls<(add __safestack_pointer_address), isAndroid>;
 
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
@@ -1211,7 +1213,8 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret,
-       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128)
+       LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+       LibcSafestackPointerAddress)
 >;
 
 // Prepend a # to every name
@@ -1482,6 +1485,7 @@ def ARMSystemLibrary
            AEABIDivRemCalls,
            DarwinSinCosStret, DarwinExp10,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
+           LibcSafestackPointerAddress,
 
            // Use divmod compiler-rt calls for iOS 5.0 and later.
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
@@ -2125,7 +2129,8 @@ defvar X86CommonLibcalls =
        // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
        // hack for one test relying on it.
        __powitf2_f128,
-       LibcallImpls<(add MostPowI), isNotOSMSVCRT>
+       LibcallImpls<(add MostPowI), isNotOSMSVCRT>,
+       LibcSafestackPointerAddress
 );
 
 defvar Windows32DivRemMulCalls =

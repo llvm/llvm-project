@@ -1965,27 +1965,18 @@ TargetLoweringBase::getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
 
 Value *
 TargetLoweringBase::getSafeStackPointerLocation(IRBuilderBase &IRB) const {
-  // FIXME: Can this triple check be replaced with SAFESTACK_POINTER_ADDRESS
-  // being available?
-  if (!TM.getTargetTriple().isAndroid())
-    return getDefaultSafeStackPointerLocation(IRB, true);
-
-  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
-  auto *PtrTy = PointerType::getUnqual(M->getContext());
-
-  const char *SafestackPointerAddressName =
-      getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS);
-  if (!SafestackPointerAddressName) {
-    M->getContext().emitError(
-        "no libcall available for safestack pointer address");
-    return PoisonValue::get(PtrTy);
+  if (const char *SafestackPointerAddressName =
+          getLibcallName(RTLIB::SAFESTACK_POINTER_ADDRESS)) {
+    // Android provides a libc function to retrieve the address of the current
+    // thread's unsafe stack pointer.
+    Module *M = IRB.GetInsertBlock()->getParent()->getParent();
+    auto *PtrTy = PointerType::getUnqual(M->getContext());
+    FunctionCallee Fn =
+        M->getOrInsertFunction(SafestackPointerAddressName, PtrTy);
+    return IRB.CreateCall(Fn);
   }
 
-  // Android provides a libc function to retrieve the address of the current
-  // thread's unsafe stack pointer.
-  FunctionCallee Fn =
-      M->getOrInsertFunction(SafestackPointerAddressName, PtrTy);
-  return IRB.CreateCall(Fn);
+  return getDefaultSafeStackPointerLocation(IRB, true);
 }
 
 //===----------------------------------------------------------------------===//
