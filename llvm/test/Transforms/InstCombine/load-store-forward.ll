@@ -365,13 +365,10 @@ define i32 @load_after_memset_unknown(ptr %a, i8 %byte) {
   ret i32 %v
 }
 
-; TODO: Handle load at offset.
 define i32 @load_after_memset_0_offset(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_0_offset(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 0
 ;
   call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
   %gep = getelementptr i8, ptr %a, i64 4
@@ -382,9 +379,7 @@ define i32 @load_after_memset_0_offset(ptr %a) {
 define i32 @load_after_memset_1_offset(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_1_offset(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 4
-; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    ret i32 [[V]]
+; CHECK-NEXT:    ret i32 16843009
 ;
   call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
   %gep = getelementptr i8, ptr %a, i64 4
@@ -395,9 +390,7 @@ define i32 @load_after_memset_1_offset(ptr %a) {
 define i1 @load_after_memset_0_offset_i1(ptr %a) {
 ; CHECK-LABEL: @load_after_memset_0_offset_i1(
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 12
-; CHECK-NEXT:    [[V:%.*]] = load i1, ptr [[GEP]], align 1
-; CHECK-NEXT:    ret i1 [[V]]
+; CHECK-NEXT:    ret i1 false
 ;
   call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
   %gep = getelementptr i1, ptr %a, i64 12
