@@ -6,6 +6,7 @@
 
 define i32 @main() #0 {
 ; ERR-i686: error: <unknown>:0:0: 64-bit offset calculated but target is 32-bit
+; ERR-i686: warning: <unknown>:0:0: stack frame size (4294967324) exceeds limit (4294967295) in function 'main'
 ;
 ; x86_64-LABEL: main:
 ; x86_64:       # %bb.0: # %entry
@@ -44,6 +45,7 @@ entry:
 ; Same test as above but for an anonymous function.
 define i32 @0() #0 {
 ; ERR-i686: error: <unknown>:0:0: 64-bit offset calculated but target is 32-bit
+; ERR-i686: warning: <unknown>:0:0: stack frame size (4294967324) exceeds limit (4294967295) in function '@0'
 ;
 ; x86_64-LABEL: __unnamed_1:
 ; x86_64:       # %bb.0: # %entry
