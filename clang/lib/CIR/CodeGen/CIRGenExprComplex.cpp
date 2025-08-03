@@ -712,28 +712,8 @@ LValue ComplexExprEmitter::emitCompoundAssignLValue(
     QualType destTy = promotionTypeLHS.isNull() ? opInfo.ty : promotionTypeLHS;
     opInfo.lhs = emitComplexToComplexCast(lhsValue, lhsTy, destTy, exprLoc);
   } else {
-    mlir::Value lhsValue = cgf.emitLoadOfScalar(lhs, exprLoc);
-    // For floating point real operands we can directly pass the scalar form
-    // to the binary operator emission and potentially get more efficient code.
-    if (lhsTy->isRealFloatingType()) {
-      QualType promotedComplexElementTy;
-      if (!promotionTypeLHS.isNull()) {
-        promotedComplexElementTy =
-            cast<ComplexType>(promotionTypeLHS)->getElementType();
-        if (!cgf.getContext().hasSameUnqualifiedType(promotedComplexElementTy,
-                                                     promotionTypeLHS))
-          lhsValue = cgf.emitScalarConversion(
-              lhsValue, lhsTy, promotedComplexElementTy, exprLoc);
-      } else {
-        if (!cgf.getContext().hasSameUnqualifiedType(complexElementTy, lhsTy))
-          lhsValue = cgf.emitScalarConversion(lhsValue, lhsTy, complexElementTy,
-                                              exprLoc);
-      }
-      opInfo.lhs = createComplexFromReal(cgf.getBuilder(),
-                                         cgf.getLoc(e->getExprLoc()), lhsValue);
-    } else {
-      opInfo.lhs = emitScalarToComplexCast(lhsValue, lhsTy, opInfo.ty, exprLoc);
-    }
+    cgf.cgm.errorNYI("emitCompoundAssignLValue emitLoadOfScalar");
+    return {};
   }
 
   // Expand the binary operator.
