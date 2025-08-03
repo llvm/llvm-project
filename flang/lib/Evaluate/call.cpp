@@ -258,11 +258,10 @@ static void DetermineCopyInOutArgument(
 }
 
 static void DetermineCopyInOutArgument(
-    const characteristics::Procedure &procInfo,
-    ActualArgument &actual, characteristics::DummyArgument &dummy) {
+    const characteristics::Procedure &procInfo, ActualArgument &actual,
+    characteristics::DummyArgument &dummy) {
 
   // TODO: assert? procInfo.HasExplicitInterface()
-
 }
 
 void ProcedureRef::DetermineCopyInOut() {
@@ -308,8 +307,7 @@ void ProcedureRef::DetermineCopyInOut() {
         // Actual arguments with duplicate keywords. Semantic analysis will
         // deal with the error.
         return;
-      }
-      else {
+      } else {
         processedKeywords.insert(actualName);
         if (auto it = std::find_if(procInfo->dummyArguments.begin(),
                 procInfo->dummyArguments.end(),
@@ -320,13 +318,11 @@ void ProcedureRef::DetermineCopyInOut() {
           DetermineCopyInOutArgument(*procInfo, *actual, *it);
         }
       }
-    }
-    else if (seenKeyword) {
+    } else if (seenKeyword) {
       // Non-keyword actual argument after have seen at least one keyword
       // actual argument. Semantic analysis will deal with the error.
       return;
-    }
-    else {
+    } else {
       // Positional argument processing
       DetermineCopyInOutArgument(
           *procInfo, *actual, procInfo->dummyArguments[index]);
