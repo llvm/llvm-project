@@ -505,11 +505,6 @@ define <1 x i64> @bitcast_noshift_vector_wrong_type(<2 x float> %v1, <1 x i64> %
 ; (e.g., 4 elements) was checked instead of the full demanded vector width (8 elements),
 ; leading to incorrect known bits and removal of the `ashr` instruction.
 
-; Test that verifies correct handling of known bits when bitcasting from a smaller vector
-; to a larger one (e.g., <2 x i32> to <8 x i8>). Previously, only the subscale portion
-; (e.g., 4 elements) was checked instead of the full demanded vector width (8 elements),
-; leading to incorrect known bits and removal of the `ashr` instruction.
-
 define <8 x i8> @bitcast_knownbits_subscale_miscompile(i32 %x) {
 ; CHECK-LABEL: @bitcast_knownbits_subscale_miscompile(
 ; CHECK-NEXT:    [[MASKED:%.*]] = and i32 [[X:%.*]], -256
