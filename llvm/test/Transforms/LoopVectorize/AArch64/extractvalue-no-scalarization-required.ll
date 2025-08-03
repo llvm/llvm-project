@@ -30,12 +30,9 @@ define void @test1(ptr %dst, {i64, i64} %sv) {
 ; FORCED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[TMP0:%.*]] = extractvalue { i64, i64 } [[SV]], 0
-; FORCED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
-; FORCED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT]], <2 x i64> poison, <2 x i32> zeroinitializer
-; FORCED-NEXT:    [[TMP4:%.*]] = extractvalue { i64, i64 } [[SV]], 1
-; FORCED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i64 0
+; FORCED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
 ; FORCED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i64> [[BROADCAST_SPLATINSERT1]], <2 x i64> poison, <2 x i32> zeroinitializer
-; FORCED-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[BROADCAST_SPLAT]], [[BROADCAST_SPLAT2]]
+; FORCED-NEXT:    [[TMP1:%.*]] = add <2 x i64> [[BROADCAST_SPLAT2]], [[BROADCAST_SPLAT2]]
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -86,16 +83,13 @@ define void @test_getVectorCallCost(ptr %dst, {float, float} %sv) {
 ; FORCED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
 ; FORCED-NEXT:    [[TMP0:%.*]] = extractvalue { float, float } [[SV]], 0
-; FORCED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
-; FORCED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
-; FORCED-NEXT:    [[TMP4:%.*]] = extractvalue { float, float } [[SV]], 1
-; FORCED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x float> poison, float [[TMP4]], i64 0
+; FORCED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
 ; FORCED-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT1]], <2 x float> poison, <2 x i32> zeroinitializer
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:
 ; FORCED-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; FORCED-NEXT:    [[TMP1:%.*]] = getelementptr float, ptr [[DST]], i32 [[INDEX]]
-; FORCED-NEXT:    [[TMP2:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[BROADCAST_SPLAT]], <2 x float> [[BROADCAST_SPLAT2]])
+; FORCED-NEXT:    [[TMP2:%.*]] = call <2 x float> @llvm.pow.v2f32(<2 x float> [[BROADCAST_SPLAT2]], <2 x float> [[BROADCAST_SPLAT2]])
 ; FORCED-NEXT:    store <2 x float> [[TMP2]], ptr [[TMP1]], align 4
 ; FORCED-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; FORCED-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000

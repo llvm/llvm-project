@@ -77,14 +77,12 @@ define void @test2(ptr noalias %a, ptr noalias %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i32 2

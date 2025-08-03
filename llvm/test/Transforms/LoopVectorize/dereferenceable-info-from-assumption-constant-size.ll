@@ -114,9 +114,8 @@ define void @align_deref_assumption_in_header_constant_trip_count_loop_invariant
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sge <2 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[TMP5]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP6]], i32 [[TMP5]], i32 1
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP3]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
@@ -695,12 +694,10 @@ define void @deref_assumption_in_latch_constant_trip_count(ptr noalias noundef %
 ; CHECK:       [[PRED_LOAD_CONTINUE2]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = phi <2 x i32> [ [[TMP10]], %[[PRED_LOAD_CONTINUE]] ], [ [[TMP14]], %[[PRED_LOAD_IF1]] ]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP4]], <2 x i32> [[WIDE_LOAD]], <2 x i32> [[TMP15]]
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 0
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP28]], i64 4), "dereferenceable"(ptr [[TMP20]], i64 4) ]
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP20]], i64 4), "dereferenceable"(ptr [[TMP20]], i64 4) ]
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x ptr> [[TMP1]], i32 1
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP29]], i64 4), "dereferenceable"(ptr [[TMP19]], i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP19]], i64 4), "dereferenceable"(ptr [[TMP19]], i64 4) ]
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP30]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP0]], 2

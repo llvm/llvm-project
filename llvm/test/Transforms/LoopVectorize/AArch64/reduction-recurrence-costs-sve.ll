@@ -251,15 +251,13 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    br label %[[EXIT:.*]]
 ; PRED:       [[SCALAR_PH]]:
 ; PRED-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[SCALAR_RECUR_INIT8:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
-; PRED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
 ; PRED-NEXT:    [[TMP45:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP53:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[SCALAR_RECUR10:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT8]], %[[SCALAR_PH]] ], [ [[TMP45]], %[[LOOP]] ]
+; PRED-NEXT:    [[SCALAR_RECUR10:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP45]], %[[LOOP]] ]
 ; PRED-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[SUM_RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[SUM_RED:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[TMP52:%.*]] = add i64 [[Y]], 1
 ; PRED-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[SRC_1]], i64 [[TMP52]]
 ; PRED-NEXT:    [[TMP53]] = load i32, ptr [[GEP_1]], align 4

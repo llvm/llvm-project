@@ -10,6 +10,7 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 namespace llvm {
 class ScalarEvolution;
@@ -36,6 +37,22 @@ VPValue *getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
 /// Return the SCEV expression for \p V. Returns SCEVCouldNotCompute if no
 /// SCEV expression could be constructed.
 const SCEV *getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE);
+
+/// Get any instruction opcode data embedded in recipe \p R. Returns an optional
+/// pair, where the first element indicates whether it is an intrinsic ID.
+inline std::optional<std::pair<bool, unsigned>>
+getOpcode(const VPRecipeBase &R) {
+  return TypeSwitch<const VPRecipeBase *,
+                    std::optional<std::pair<bool, unsigned>>>(&R)
+      .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+            VPWidenSelectRecipe, VPHistogramRecipe, VPPartialReductionRecipe,
+            VPReplicateRecipe>(
+          [](auto *I) { return std::make_pair(false, I->getOpcode()); })
+      .Case<VPWidenIntrinsicRecipe>([](auto *I) {
+        return std::make_pair(true, I->getVectorIntrinsicID());
+      })
+      .Default([](auto *) { return std::nullopt; });
+}
 
 /// Returns true if \p VPV is a single scalar, either because it produces the
 /// same value for all lanes or only has its first lane used.

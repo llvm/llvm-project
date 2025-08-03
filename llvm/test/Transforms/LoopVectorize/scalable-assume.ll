@@ -96,7 +96,6 @@ define void @test2(ptr %a, ptr noalias %b) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 2
@@ -105,7 +104,6 @@ define void @test2(ptr %a, ptr noalias %b) {
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 2 x float>, ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <vscale x 2 x float> [[WIDE_LOAD3]], splat (float 1.000000e+00)
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = call i64 @llvm.vscale.i64()

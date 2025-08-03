@@ -903,13 +903,6 @@ define i64 @cost_assume(ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[TMP9]] = add <2 x i64> [[VEC_PHI3]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP10]] = add <2 x i64> [[VEC_PHI4]], splat (i64 1)
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP20:![0-9]+]]

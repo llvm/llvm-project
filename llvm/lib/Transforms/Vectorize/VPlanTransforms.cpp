@@ -1752,6 +1752,76 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
   }
 }
 
+/// Hash the underlying data of a VPSingleDefRecipe pointer, instead of hashing
+/// the pointer itself.
+namespace {
+struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
+  static bool isSentinel(const VPSingleDefRecipe *Def) {
+    return Def == getEmptyKey() || Def == getTombstoneKey();
+  }
+
+  static bool canHandle(const VPSingleDefRecipe *Def) {
+    return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
+               VPWidenSelectRecipe, VPHistogramRecipe, VPPartialReductionRecipe,
+               VPReplicateRecipe, VPWidenIntrinsicRecipe>(Def);
+  }
+
+  static unsigned getHashValue(const VPSingleDefRecipe *Def) {
+    return hash_combine(Def->getVPDefID(), vputils::getOpcode(*Def),
+                        vputils::isSingleScalar(Def),
+                        hash_combine_range(Def->operands()));
+  }
+
+  static bool isEqual(const VPSingleDefRecipe *L, const VPSingleDefRecipe *R) {
+    if (isSentinel(L) || isSentinel(R))
+      return L == R;
+    bool Result = L->getVPDefID() == R->getVPDefID() &&
+                  vputils::getOpcode(*L) == vputils::getOpcode(*R) &&
+                  vputils::isSingleScalar(L) == vputils::isSingleScalar(R) &&
+                  equal(L->operands(), R->operands());
+    assert(!Result || getHashValue(L) == getHashValue(R));
+    return Result;
+  }
+};
+} // end anonymous namespace
+
+/// Perform a common-subexpression-elimination of VPSingleDefRecipes on the \p
+/// Plan.
+void VPlanTransforms::cse(VPlan &Plan, Type &CanonicalIVTy) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  if (!LoopRegion)
+    return;
+  auto VPBBsOutsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(Plan.getEntry()));
+  auto VPBBsInsideLoopRegion = VPBlockUtils::blocksOnly<VPBasicBlock>(
+      vp_depth_first_shallow(LoopRegion->getEntry()));
+
+  // There is existing logic to sink instructions into replicate regions, and
+  // we'd be undoing that work if we went through replicate regions. Hence,
+  // don't CSE in replicate regions.
+  DenseMap<VPSingleDefRecipe *, VPSingleDefRecipe *, VPCSEDenseMapInfo> CSEMap;
+  VPTypeAnalysis TypeInfo(&CanonicalIVTy);
+  for (VPBasicBlock *VPBB :
+       concat<VPBasicBlock *>(VPBBsOutsideLoopRegion, VPBBsInsideLoopRegion)) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *Def = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!Def || !VPCSEDenseMapInfo::canHandle(Def))
+        continue;
+      if (VPSingleDefRecipe *V = CSEMap.lookup(Def)) {
+        if (TypeInfo.inferScalarType(Def) != TypeInfo.inferScalarType(V))
+          continue;
+        // Drop poison-generating flags when reusing a value.
+        if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
+          RFlags->dropPoisonGeneratingFlags();
+        Def->replaceAllUsesWith(V);
+        Def->eraseFromParent();
+        continue;
+      }
+      CSEMap[Def] = Def;
+    }
+  }
+}
+
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
 static void licm(VPlan &Plan) {
   VPBasicBlock *Preheader = Plan.getVectorPreheader();

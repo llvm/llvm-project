@@ -148,8 +148,8 @@ define void @widen_2ptrs_phi_unrolled(ptr noalias nocapture %dst, ptr noalias no
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[OFFSET_IDX4:%.*]] = shl i64 [[INDEX]], 2
-; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX4]]
+; CHECK-NEXT:    [[OFFSET_IDX1:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX1]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl nuw nsw i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 [[DOTIDX]]

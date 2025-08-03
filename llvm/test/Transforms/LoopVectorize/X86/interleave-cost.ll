@@ -18,18 +18,12 @@ define void @test_free_instructions_feeding_geps_for_interleave_groups(ptr noali
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP41:%.*]] = shl i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr float, ptr [[DST_1]], i64 [[TMP41]]
-; CHECK-NEXT:    [[TMP42:%.*]] = load float, ptr [[P_INVAR]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT27:%.*]] = insertelement <2 x float> poison, float [[TMP42]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT28:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT27]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP46:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLAT]], <2 x float> [[BROADCAST_SPLAT28]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP46:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLAT]], <2 x float> [[BROADCAST_SPLAT]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP47:%.*]] = shufflevector <4 x float> [[TMP46]], <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <8 x float> [[TMP47]], <8 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC]], ptr [[TMP44]], align 4
-; CHECK-NEXT:    [[TMP48:%.*]] = load float, ptr [[P_INVAR]], align 4
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT29:%.*]] = insertelement <2 x float> poison, float [[TMP48]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT30:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLATINSERT29]], <2 x float> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr float, ptr [[DST_2]], i64 [[TMP41]]
-; CHECK-NEXT:    [[BROADCAST_SPLAT36:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLAT30]], <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[BROADCAST_SPLAT36:%.*]] = shufflevector <2 x float> [[BROADCAST_SPLAT]], <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP51:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLAT36]], <4 x float> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[INTERLEAVED_VEC31:%.*]] = shufflevector <8 x float> [[TMP51]], <8 x float> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    store <8 x float> [[INTERLEAVED_VEC31]], ptr [[TMP49]], align 4

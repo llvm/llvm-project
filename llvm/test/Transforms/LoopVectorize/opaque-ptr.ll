@@ -47,10 +47,10 @@ define void @test_ptr_iv_no_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end) 
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P1_START]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[OFFSET_IDX10:%.*]] = mul i64 [[INDEX]], 4
-; CHECK-NEXT:    [[NEXT_GEP11:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[OFFSET_IDX10]]
+; CHECK-NEXT:    [[OFFSET_IDX8:%.*]] = mul i64 [[INDEX]], 4
+; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[OFFSET_IDX8]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[NEXT_GEP]], align 4, !alias.scope [[META0:![0-9]+]], !noalias [[META3:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <2 x float>, ptr [[NEXT_GEP11]], align 4, !alias.scope [[META3]]
+; CHECK-NEXT:    [[WIDE_LOAD12:%.*]] = load <2 x float>, ptr [[NEXT_GEP9]], align 4, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = fadd <2 x float> [[WIDE_LOAD]], [[WIDE_LOAD12]]
 ; CHECK-NEXT:    store <2 x float> [[TMP19]], ptr [[NEXT_GEP]], align 4, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
@@ -133,10 +133,10 @@ define void @test_ptr_iv_with_inbounds(ptr %p1.start, ptr %p2.start, ptr %p1.end
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P1_START]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[OFFSET_IDX8:%.*]] = mul i64 [[INDEX]], 4
-; CHECK-NEXT:    [[NEXT_GEP9:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[OFFSET_IDX8]]
+; CHECK-NEXT:    [[OFFSET_IDX6:%.*]] = mul i64 [[INDEX]], 4
+; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = getelementptr i8, ptr [[P2_START]], i64 [[OFFSET_IDX6]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[NEXT_GEP]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META12:![0-9]+]]
-; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x float>, ptr [[NEXT_GEP9]], align 4, !alias.scope [[META12]]
+; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <2 x float>, ptr [[NEXT_GEP7]], align 4, !alias.scope [[META12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x float> [[WIDE_LOAD]], [[WIDE_LOAD10]]
 ; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[NEXT_GEP]], align 4, !alias.scope [[META9]], !noalias [[META12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
