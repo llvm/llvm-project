@@ -202,7 +202,7 @@ def StringRefSummaryProvider(valobj, internal_dict):
         if length == 0:
             return '""'
 
-        data = valobj.GetChildAtIndex(0).GetPointeeData(item_count=length)
+        data = valobj.GetChildAtIndex(0).GetPointeeData(0, length)
         error = lldb.SBError()
         string = data.ReadRawData(error, 0, data.GetByteSize()).decode()
         if error.Fail():
