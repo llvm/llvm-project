@@ -2,8 +2,6 @@
 ; crashed after first phase of fix because the terminator cleanupret was not implemented on predecessor fixer at the time
 ; RUN: opt < %s -passes='coro-split' -S
 ; RUN: opt < %s -passes='default<Os>,coro-split' -S
-target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-pc-windows-msvc19.38.33135"
 
 ; Function Attrs: presplitcoroutine
 define i8 @"?resuming_on_new_thread@@YA?AUtask@@V?$unique_ptr@HU?$default_delete@H@std@@@std@@0@Z"(ptr %0) #0 personality ptr null {
@@ -46,33 +44,7 @@ define i8 @"?resuming_on_new_thread@@YA?AUtask@@V?$unique_ptr@HU?$default_delete
   cleanupret from %18 unwind to caller
 }
 
-; Function Attrs: nounwind memory(none)
-declare void @llvm.seh.scope.begin() #1
-
-; Function Attrs: nocallback nofree nosync nounwind willreturn memory(argmem: read)
-declare token @llvm.coro.id(i32, ptr readnone, ptr readonly captures(none), ptr) #2
-
-; Function Attrs: nounwind
-declare ptr @llvm.coro.begin(token, ptr writeonly) #3
-
-; Function Attrs: nomerge nounwind
-declare token @llvm.coro.save(ptr) #4
-
-; Function Attrs: nounwind
-declare i8 @llvm.coro.suspend(token, i1) #3
-
-; Function Attrs: nounwind willreturn memory(write)
-declare void @llvm.seh.try.begin() #5
-
-; Function Attrs: nounwind memory(none)
-declare void @llvm.seh.scope.end() #1
-
 attributes #0 = { presplitcoroutine }
-attributes #1 = { nounwind memory(none) }
-attributes #2 = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
-attributes #3 = { nounwind }
-attributes #4 = { nomerge nounwind }
-attributes #5 = { nounwind willreturn memory(write) }
 
 !llvm.module.flags = !{!0}
 
