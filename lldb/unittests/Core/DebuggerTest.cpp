@@ -46,7 +46,7 @@ TEST_F(DebuggerTest, TestSettings) {
 
   FormatEntity::Entry format("foo");
   EXPECT_TRUE(debugger_sp->SetStatuslineFormat(format));
-  EXPECT_EQ(debugger_sp->GetStatuslineFormat()->string, "foo");
+  EXPECT_EQ(debugger_sp->GetStatuslineFormat().string, "foo");
 
   Debugger::Destroy(debugger_sp);
 }

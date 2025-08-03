@@ -582,17 +582,11 @@ define double @fcvt_d_wu(i32 %a) nounwind {
 }
 
 define double @fcvt_d_wu_load(ptr %p) nounwind {
-; RV32IFD-LABEL: fcvt_d_wu_load:
-; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    lw a0, 0(a0)
-; RV32IFD-NEXT:    fcvt.d.wu fa0, a0
-; RV32IFD-NEXT:    ret
-;
-; RV64IFD-LABEL: fcvt_d_wu_load:
-; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    lwu a0, 0(a0)
-; RV64IFD-NEXT:    fcvt.d.wu fa0, a0
-; RV64IFD-NEXT:    ret
+; CHECKIFD-LABEL: fcvt_d_wu_load:
+; CHECKIFD:       # %bb.0:
+; CHECKIFD-NEXT:    lw a0, 0(a0)
+; CHECKIFD-NEXT:    fcvt.d.wu fa0, a0
+; CHECKIFD-NEXT:    ret
 ;
 ; RV32IZFINXZDINX-LABEL: fcvt_d_wu_load:
 ; RV32IZFINXZDINX:       # %bb.0:
@@ -602,7 +596,7 @@ define double @fcvt_d_wu_load(ptr %p) nounwind {
 ;
 ; RV64IZFINXZDINX-LABEL: fcvt_d_wu_load:
 ; RV64IZFINXZDINX:       # %bb.0:
-; RV64IZFINXZDINX-NEXT:    lwu a0, 0(a0)
+; RV64IZFINXZDINX-NEXT:    lw a0, 0(a0)
 ; RV64IZFINXZDINX-NEXT:    fcvt.d.wu a0, a0
 ; RV64IZFINXZDINX-NEXT:    ret
 ;
@@ -1937,7 +1931,7 @@ define zeroext i16 @fcvt_wu_s_sat_i16(double %a) nounwind {
 ; RV64I-NEXT:    mv a0, s2
 ; RV64I-NEXT:    call __gtdf2
 ; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    blez a0, .LBB28_2
 ; RV64I-NEXT:  # %bb.1: # %start
 ; RV64I-NEXT:    mv a0, a1

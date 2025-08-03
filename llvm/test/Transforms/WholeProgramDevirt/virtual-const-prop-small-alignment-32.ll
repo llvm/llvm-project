@@ -1,7 +1,9 @@
-; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility %s | FileCheck %s
-
 ;; This target uses 32-bit sized and aligned pointers.
-target datalayout = "e-p:32:32"
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility --data-layout="e-p:32:32-i64:64:64" %s | FileCheck %s
+
+;; The tests should be the exact same even with different preferred alignments since
+;; the ABI alignment is used.
+; RUN: opt -S -passes=wholeprogramdevirt -whole-program-visibility --data-layout="e-p:32:32-i64:64:128" %s | FileCheck %s
 
 ;; Constant propagation should be agnostic towards sections.
 ;; Also the new global should be in the original vtable's section.

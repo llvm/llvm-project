@@ -23,13 +23,19 @@
 #include <elf.h>
 #include <sys/uio.h>
 
+#if defined(__arm64__) || defined(__aarch64__)
+#include "NativeRegisterContextLinux_arm64dbreg.h"
+#include "lldb/Host/linux/Ptrace.h"
+#include <asm/ptrace.h>
+#endif
+
 #define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr))
 
 #ifndef PTRACE_GETVFPREGS
 #define PTRACE_GETVFPREGS 27
 #define PTRACE_SETVFPREGS 28
 #endif
-#ifndef PTRACE_GETHBPREGS
+#if defined(__arm__) && !defined(PTRACE_GETHBPREGS)
 #define PTRACE_GETHBPREGS 29
 #define PTRACE_SETHBPREGS 30
 #endif
@@ -342,7 +348,8 @@ NativeRegisterContextLinux_arm::SetHardwareBreakpoint(lldb::addr_t addr,
   m_hbr_regs[bp_index].control = control_value;
 
   // PTRACE call to set corresponding hardware breakpoint register.
-  error = WriteHardwareDebugRegs(eDREGTypeBREAK, bp_index);
+  error = WriteHardwareDebugRegs(NativeRegisterContextDBReg::eDREGTypeBREAK,
+                                 bp_index);
 
   if (error.Fail()) {
     m_hbr_regs[bp_index].address = 0;
@@ -375,7 +382,8 @@ bool NativeRegisterContextLinux_arm::ClearHardwareBreakpoint(uint32_t hw_idx) {
   m_hbr_regs[hw_idx].address = 0;
 
   // PTRACE call to clear corresponding hardware breakpoint register.
-  error = WriteHardwareDebugRegs(eDREGTypeBREAK, hw_idx);
+  error = WriteHardwareDebugRegs(NativeRegisterContextDBReg::eDREGTypeBREAK,
+                                 hw_idx);
 
   if (error.Fail()) {
     m_hbr_regs[hw_idx].control = tempControl;
@@ -435,7 +443,8 @@ Status NativeRegisterContextLinux_arm::ClearAllHardwareBreakpoints() {
       m_hbr_regs[i].address = 0;
 
       // Ptrace call to update hardware debug registers
-      error = WriteHardwareDebugRegs(eDREGTypeBREAK, i);
+      error =
+          WriteHardwareDebugRegs(NativeRegisterContextDBReg::eDREGTypeBREAK, i);
 
       if (error.Fail()) {
         m_hbr_regs[i].control = tempControl;
@@ -555,7 +564,8 @@ uint32_t NativeRegisterContextLinux_arm::SetHardwareWatchpoint(
   m_hwp_regs[wp_index].control = control_value;
 
   // PTRACE call to set corresponding watchpoint register.
-  error = WriteHardwareDebugRegs(eDREGTypeWATCH, wp_index);
+  error = WriteHardwareDebugRegs(NativeRegisterContextDBReg::eDREGTypeWATCH,
+                                 wp_index);
 
   if (error.Fail()) {
     m_hwp_regs[wp_index].address = 0;
@@ -590,7 +600,8 @@ bool NativeRegisterContextLinux_arm::ClearHardwareWatchpoint(
   m_hwp_regs[wp_index].address = 0;
 
   // Ptrace call to update hardware debug registers
-  error = WriteHardwareDebugRegs(eDREGTypeWATCH, wp_index);
+  error = WriteHardwareDebugRegs(NativeRegisterContextDBReg::eDREGTypeWATCH,
+                                 wp_index);
 
   if (error.Fail()) {
     m_hwp_regs[wp_index].control = tempControl;
@@ -623,7 +634,8 @@ Status NativeRegisterContextLinux_arm::ClearAllHardwareWatchpoints() {
       m_hwp_regs[i].address = 0;
 
       // Ptrace call to update hardware debug registers
-      error = WriteHardwareDebugRegs(eDREGTypeWATCH, i);
+      error =
+          WriteHardwareDebugRegs(NativeRegisterContextDBReg::eDREGTypeWATCH, i);
 
       if (error.Fail()) {
         m_hwp_regs[i].control = tempControl;
@@ -723,6 +735,7 @@ Status NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {
     return Status();
   }
 
+#ifdef __arm__
   unsigned int cap_val;
 
   error = NativeProcessLinux::PtraceWrapper(PTRACE_GETHBPREGS, m_thread.GetID(),
@@ -737,16 +750,21 @@ Status NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {
   m_refresh_hwdebug_info = false;
 
   return error;
+#else  // __aarch64__
+  return arm64::ReadHardwareDebugInfo(m_thread.GetID(), m_max_hwp_supported,
+                                      m_max_hbp_supported);
+#endif // ifdef __arm__
 }
 
-Status NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(int hwbType,
-                                                              int hwb_index) {
+Status NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(
+    NativeRegisterContextDBReg::DREGType hwbType, int hwb_index) {
   Status error;
 
+#ifdef __arm__
   lldb::addr_t *addr_buf;
   uint32_t *ctrl_buf;
 
-  if (hwbType == eDREGTypeWATCH) {
+  if (hwbType == NativeRegisterContextDBReg::eDREGTypeWATCH) {
     addr_buf = &m_hwp_regs[hwb_index].address;
     ctrl_buf = &m_hwp_regs[hwb_index].control;
 
@@ -781,6 +799,17 @@ Status NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(int hwbType,
   }
 
   return error;
+#else  // __aarch64__
+  uint32_t max_supported =
+      (hwbType == NativeRegisterContextDBReg::eDREGTypeWATCH)
+          ? m_max_hwp_supported
+          : m_max_hbp_supported;
+  auto &regs = (hwbType == NativeRegisterContextDBReg::eDREGTypeWATCH)
+                   ? m_hwp_regs
+                   : m_hbr_regs;
+  return arm64::WriteHardwareDebugRegs(hwbType, m_thread.GetID(), max_supported,
+                                       regs);
+#endif // ifdef __arm__
 }
 
 uint32_t NativeRegisterContextLinux_arm::CalculateFprOffset(

@@ -585,6 +585,18 @@ define void @test_round(ptr %p) {
   ret void
 }
 
+define void @test_roundeven(ptr %p) {
+; CHECK-LABEL: test_roundeven:
+; CHECK:         vldr.16 s0, [r0]
+; CHECK-NEXT:    vrintn.f16 s0, s0
+; CHECK-NEXT:    vstr.16 s0, [r0]
+; CHECK-NEXT:    bx lr
+  %a = load half, ptr %p, align 2
+  %r = call half @llvm.roundeven.f16(half %a)
+  store half %r, ptr %p
+  ret void
+}
+
 define void @test_fmuladd(ptr %p, ptr %q, ptr %r) {
 ; CHECK-LABEL: test_fmuladd:
 ; CHECK:         vldr.16 s0, [r1]
@@ -623,4 +635,5 @@ declare half @llvm.trunc.f16(half %a)
 declare half @llvm.rint.f16(half %a)
 declare half @llvm.nearbyint.f16(half %a)
 declare half @llvm.round.f16(half %a)
+declare half @llvm.roundeven.f16(half %a)
 declare half @llvm.fmuladd.f16(half %a, half %b, half %c)

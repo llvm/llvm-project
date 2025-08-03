@@ -19,7 +19,7 @@ namespace clang::tidy::llvm_libc {
 
 // Gets the outermost namespace of a DeclContext, right under the Translation
 // Unit.
-const DeclContext *getOutermostNamespace(const DeclContext *Decl) {
+static const DeclContext *getOutermostNamespace(const DeclContext *Decl) {
   const DeclContext *Parent = Decl->getParent();
   if (Parent->isTranslationUnit())
     return Decl;

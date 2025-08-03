@@ -37,6 +37,8 @@ void a() {
 
 // CHECK: store i8 {{.*}}, ptr %uninit{{.*}}, !dbg [[G5R1:!.*]], !annotation
     char uninit; // -ftrivial-auto-var-init=pattern
+
+// CHECK: ret{{.*}}, !dbg [[RET:!.*]]
 }
 
 // CHECK: [[G1R1]] = !DILocation({{.*}}, atomGroup: 1, atomRank: 1)
@@ -47,3 +49,4 @@ void a() {
 // CHECK: [[big_LINE]] = !DILocation(line: 33, scope: ![[#]])
 // CHECK: [[G4R1]] = !DILocation({{.*}}, atomGroup: 4, atomRank: 1)
 // CHECK: [[G5R1]] = !DILocation({{.*}}, atomGroup: 5, atomRank: 1)
+// CHECK: [[RET]] = !DILocation({{.*}}, atomGroup: 6, atomRank: 1)

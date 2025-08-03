@@ -7,14 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/Communication.h"
+#include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Pipe.h"
+#include "lldb/Host/Socket.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include "TestingSupport/Host/SocketTestUtilities.h"
-#include "TestingSupport/SubsystemRAII.h"
 
 #include <chrono>
 #include <thread>
@@ -31,15 +31,17 @@ private:
 };
 
 static void CommunicationReadTest(bool use_read_thread) {
-  std::unique_ptr<TCPSocket> a, b;
-  ASSERT_TRUE(CreateTCPConnectedSockets("localhost", &a, &b));
+  llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+  ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+  Socket &a = *pair->first;
 
   size_t num_bytes = 4;
-  ASSERT_THAT_ERROR(a->Write("test", num_bytes).ToError(), llvm::Succeeded());
+  ASSERT_THAT_ERROR(a.Write("test", num_bytes).ToError(), llvm::Succeeded());
   ASSERT_EQ(num_bytes, 4U);
 
   ThreadedCommunication comm("test");
-  comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(b.release()));
+  comm.SetConnection(
+      std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   comm.SetCloseOnEOF(true);
 
   if (use_read_thread) {
@@ -73,7 +75,7 @@ static void CommunicationReadTest(bool use_read_thread) {
   EXPECT_THAT_ERROR(error.ToError(), llvm::Failed());
 
   // This read should return EOF.
-  ASSERT_THAT_ERROR(a->Close().ToError(), llvm::Succeeded());
+  ASSERT_THAT_ERROR(a.Close().ToError(), llvm::Succeeded());
   error.Clear();
   EXPECT_EQ(
       comm.Read(buf, sizeof(buf), std::chrono::seconds(5), status, &error), 0U);
@@ -118,17 +120,19 @@ TEST_F(CommunicationTest, ReadThread) {
 }
 
 TEST_F(CommunicationTest, SynchronizeWhileClosing) {
-  std::unique_ptr<TCPSocket> a, b;
-  ASSERT_TRUE(CreateTCPConnectedSockets("localhost", &a, &b));
+  llvm::Expected<Socket::Pair> pair = Socket::CreatePair();
+  ASSERT_THAT_EXPECTED(pair, llvm::Succeeded());
+  Socket &a = *pair->first;
 
   ThreadedCommunication comm("test");
-  comm.SetConnection(std::make_unique<ConnectionFileDescriptor>(b.release()));
+  comm.SetConnection(
+      std::make_unique<ConnectionFileDescriptor>(std::move(pair->second)));
   comm.SetCloseOnEOF(true);
   ASSERT_TRUE(comm.StartReadThread());
 
   // Ensure that we can safely synchronize with the read thread while it is
   // closing the read end (in response to us closing the write end).
-  ASSERT_THAT_ERROR(a->Close().ToError(), llvm::Succeeded());
+  ASSERT_THAT_ERROR(a.Close().ToError(), llvm::Succeeded());
   comm.SynchronizeWithReadThread();
 
   ASSERT_TRUE(comm.StopReadThread());
@@ -137,8 +141,7 @@ TEST_F(CommunicationTest, SynchronizeWhileClosing) {
 #if LLDB_ENABLE_POSIX
 TEST_F(CommunicationTest, WriteAll) {
   Pipe pipe;
-  ASSERT_THAT_ERROR(pipe.CreateNew(/*child_process_inherit=*/false).ToError(),
-                    llvm::Succeeded());
+  ASSERT_THAT_ERROR(pipe.CreateNew().ToError(), llvm::Succeeded());
 
   // Make the write end non-blocking in order to easily reproduce a partial
   // write.

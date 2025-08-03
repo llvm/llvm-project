@@ -8,14 +8,14 @@
 // CHECK: %"n0::Foo" = type <{ float }>
 
 // CHECK: @A.cb = global target("dx.CBuffer", target("dx.Layout", %"n0::n1::__cblayout_A", 4, 0))
-// CHECK: @_ZN2n02n11aE = external addrspace(2) global float, align 4
+// CHECK: @_ZN2n02n11aE = external hidden addrspace(2) global float, align 4
 
 // CHECK: @B.cb = global target("dx.CBuffer", target("dx.Layout", %"n0::__cblayout_B", 4, 0))
-// CHECK: @_ZN2n01aE = external addrspace(2) global float, align 4
+// CHECK: @_ZN2n01aE = external hidden addrspace(2) global float, align 4
 
 // CHECK: @C.cb = global target("dx.CBuffer", target("dx.Layout", %"n0::n2::__cblayout_C", 20, 0, 16))
-// CHECK: @_ZN2n02n21aE = external addrspace(2) global float, align 4
-// CHECK: external addrspace(2) global target("dx.Layout", %"n0::Foo", 4, 0), align 1
+// CHECK: @_ZN2n02n21aE = external hidden addrspace(2) global float, align 4
+// CHECK: external hidden addrspace(2) global target("dx.Layout", %"n0::Foo", 4, 0), align 1
 
 namespace n0 {
   struct Foo {

@@ -653,9 +653,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (func_sig->isVolatileType())
       type_quals |= clang::Qualifiers::Volatile;
     auto cc = TranslateCallingConvention(func_sig->getCallingConvention());
-    CompilerType func_sig_ast_type =
-        m_ast.CreateFunctionType(return_ast_type, arg_list.data(),
-                                 arg_list.size(), is_variadic, type_quals, cc);
+    CompilerType func_sig_ast_type = m_ast.CreateFunctionType(
+        return_ast_type, arg_list, is_variadic, type_quals, cc);
 
     AddSourceInfoToDecl(type, decl);
     return m_ast.GetSymbolFile()->MakeType(
@@ -955,7 +954,8 @@ PDBASTParser::GetDeclForSymbol(const llvm::pdb::PDBSymbol &symbol) {
 
     auto decl = m_ast.CreateFunctionDeclaration(
         decl_context, OptionalClangModuleID(), name,
-        type->GetForwardCompilerType(), storage, func->hasInlineAttribute());
+        type->GetForwardCompilerType(), storage, func->hasInlineAttribute(),
+        /*asm_label=*/{});
 
     std::vector<clang::ParmVarDecl *> params;
     if (std::unique_ptr<PDBSymbolTypeFunctionSig> sig = func->getSignature()) {
@@ -1447,7 +1447,7 @@ PDBASTParser::AddRecordMethod(lldb_private::SymbolFile &symbol_file,
   // TODO: get mangled name for the method.
   return m_ast.AddMethodToCXXRecordType(
       record_type.GetOpaqueQualType(), name.c_str(),
-      /*mangled_name*/ nullptr, method_comp_type, access, method.isVirtual(),
+      /*asm_label=*/{}, method_comp_type, access, method.isVirtual(),
       method.isStatic(), method.hasInlineAttribute(),
       /*is_explicit*/ false, // FIXME: Need this field in CodeView.
       /*is_attr_used*/ false,

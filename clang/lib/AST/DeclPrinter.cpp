@@ -118,9 +118,9 @@ namespace {
 
     void printTemplateParameters(const TemplateParameterList *Params,
                                  bool OmitTemplateKW = false);
-    void printTemplateArguments(llvm::ArrayRef<TemplateArgument> Args,
+    void printTemplateArguments(ArrayRef<TemplateArgument> Args,
                                 const TemplateParameterList *Params);
-    void printTemplateArguments(llvm::ArrayRef<TemplateArgumentLoc> Args,
+    void printTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                                 const TemplateParameterList *Params);
     enum class AttrPosAsWritten { Default = 0, Left, Right };
     bool
@@ -1042,8 +1042,8 @@ void DeclPrinter::VisitParmVarDecl(ParmVarDecl *D) {
 
 void DeclPrinter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
   Out << "__asm (";
-  D->getAsmString()->printPretty(Out, nullptr, Policy, Indentation, "\n",
-                                 &Context);
+  D->getAsmStringExpr()->printPretty(Out, nullptr, Policy, Indentation, "\n",
+                                     &Context);
   Out << ")";
 }
 

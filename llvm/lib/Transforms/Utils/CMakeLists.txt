@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMTransformUtils
   CtorUtils.cpp
   CountVisits.cpp
   Debugify.cpp
+  DeclareRuntimeLibcalls.cpp
   DemoteRegToStack.cpp
   DXILUpgrade.cpp
   EntryExitInstrumenter.cpp
@@ -67,6 +68,7 @@ add_llvm_component_library(LLVMTransformUtils
   MoveAutoInit.cpp
   NameAnonGlobals.cpp
   PredicateInfo.cpp
+  ProfileVerify.cpp
   PromoteMemoryToRegister.cpp
   RelLookupTableConverter.cpp
   ScalarEvolutionExpander.cpp

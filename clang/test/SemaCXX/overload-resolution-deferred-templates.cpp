@@ -187,7 +187,7 @@ void f(int);
 void g(int n) { f(n); } // OK
 void h(short n) { f(n); }
 // expected-error@#GH62096-err {{static assertion failed due to requirement 'sizeof(short) == 0'}} \
-// expected-note@-1{{in instantiation of function template specialization}} \
+// expected-note@-1{{while substituting deduced template arguments}} \
 // expected-note@-1{{while checking constraint satisfaction for template}}
 // expected-note@#GH62096-note1{{in instantiation}}
 // expected-note@#GH62096-note1{{while substituting template arguments into constraint expression here}}
@@ -274,3 +274,31 @@ void f() {
 }
 
 #endif
+
+namespace GH147374 {
+
+struct String {};
+template <typename T> void operator+(T, String &&) = delete;
+
+struct Bar {
+    void operator+(String) const; // expected-note {{candidate function}}
+    friend void operator+(Bar, String) {};  // expected-note {{candidate function}}
+};
+
+struct Baz {
+    void operator+(String); // expected-note {{candidate function}}
+    friend void operator+(Baz, String) {}; // expected-note {{candidate function}}
+};
+
+void test() {
+    Bar a;
+    String b;
+    a + b;
+    //expected-error@-1 {{use of overloaded operator '+' is ambiguous (with operand types 'Bar' and 'String')}}
+
+    Baz z;
+    z + b;
+    //expected-error@-1 {{use of overloaded operator '+' is ambiguous (with operand types 'Baz' and 'String')}}
+}
+
+}
