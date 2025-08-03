@@ -392,6 +392,7 @@ public:
   Environment getObjectFileType() const { return Env; }
   bool isELF() const { return Env == IsELF; }
   bool isMachO() const { return Env == IsMachO; }
+  bool isXCOFF() const { return Env == IsXCOFF; }
 
   const StringRef &getSwift5ReflectionSegmentName() const {
     return Swift5ReflectionSegmentName;
