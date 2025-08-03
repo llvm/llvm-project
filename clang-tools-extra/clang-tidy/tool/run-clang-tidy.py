@@ -236,7 +236,7 @@ def print_profile_data(aggregated_data: Dict[str, float]) -> None:
         checkers.items(), key=lambda x: x[1]["user"] + x[1]["sys"], reverse=True
     )
 
-    def print_stderr(*args, **kwargs) -> None:
+    def print_stderr(*args: Any, **kwargs: Any) -> None:
         print(*args, file=sys.stderr, **kwargs)
 
     print_stderr(
