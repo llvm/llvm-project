@@ -138,7 +138,7 @@ facilities for lexical nor semantic analysis.
 
 I don't understand the ``GetElementPtr`` instruction. Help!
 -----------------------------------------------------------
-See `The Often Misunderstood GEP Instruction <GetElementPtr.html>`_.
+See `The Often Misunderstood GEP Instruction <GetElementPtr.rst>`_.
 
 
 Using the C and C++ Front Ends
