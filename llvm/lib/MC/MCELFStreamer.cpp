@@ -59,7 +59,7 @@ void MCELFStreamer::initSections(bool NoExecStack, const MCSubtargetInfo &STI) {
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   MCObjectStreamer::emitLabel(Symbol, Loc);
 
   const MCSectionELF &Section =
@@ -70,7 +70,7 @@ void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {
 
 void MCELFStreamer::emitLabelAtPos(MCSymbol *S, SMLoc Loc, MCFragment &F,
                                    uint64_t Offset) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   MCObjectStreamer::emitLabelAtPos(Symbol, Loc, F, Offset);
 
   const MCSectionELF &Section =
@@ -95,7 +95,7 @@ void MCELFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 }
 
 void MCELFStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Target) {
-  auto *A = cast<MCSymbolELF>(Alias);
+  auto *A = static_cast<MCSymbolELF *>(Alias);
   if (A->isDefined()) {
     getContext().reportError(getStartTokLoc(), "symbol '" + A->getName() +
                                                    "' is already defined");
@@ -126,7 +126,7 @@ static unsigned CombineSymbolTypes(unsigned T1, unsigned T2) {
 }
 
 bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
 
   // Adding a symbol attribute always introduces the symbol, note that an
   // important side effect of calling registerSymbol here is to register
@@ -247,7 +247,7 @@ bool MCELFStreamer::emitSymbolAttribute(MCSymbol *S, MCSymbolAttr Attribute) {
 
 void MCELFStreamer::emitCommonSymbol(MCSymbol *S, uint64_t Size,
                                      Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   getAssembler().registerSymbol(*Symbol);
 
   if (!Symbol->isBindingSet())
@@ -289,7 +289,7 @@ void MCELFStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
 
 void MCELFStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                           Align ByteAlignment) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   // FIXME: Should this be caught and done earlier?
   getAssembler().registerSymbol(*Symbol);
   Symbol->setBinding(ELF::STB_LOCAL);
