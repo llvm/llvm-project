@@ -306,13 +306,16 @@ MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
   auto Name = Sym.getNameEntryPtr();
   switch (getObjectFileType()) {
   case MCContext::IsCOFF:
-    NewSym = new (Name, *this) MCSymbolCOFF(cast<MCSymbolCOFF>(Sym));
+    NewSym =
+        new (Name, *this) MCSymbolCOFF(static_cast<const MCSymbolCOFF &>(Sym));
     break;
   case MCContext::IsELF:
-    NewSym = new (Name, *this) MCSymbolELF(cast<MCSymbolELF>(Sym));
+    NewSym =
+        new (Name, *this) MCSymbolELF(static_cast<const MCSymbolELF &>(Sym));
     break;
   case MCContext::IsMachO:
-    NewSym = new (Name, *this) MCSymbolMachO(cast<MCSymbolMachO>(Sym));
+    NewSym = new (Name, *this)
+        MCSymbolMachO(static_cast<const MCSymbolMachO &>(Sym));
     break;
   default:
     reportFatalUsageError(".set redefinition is not supported");
@@ -601,7 +604,7 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty())
-    GroupSym = cast<MCSymbolELF>(getOrCreateSymbol(Group));
+    GroupSym = static_cast<MCSymbolELF *>(getOrCreateSymbol(Group));
 
   return getELFSection(Section, Type, Flags, EntrySize, GroupSym, IsComdat,
                        UniqueID, LinkedToSym);
