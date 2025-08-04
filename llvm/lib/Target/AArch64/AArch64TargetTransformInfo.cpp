@@ -270,6 +270,13 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMECallAttrs CallAttrs(*Caller, *Callee);
 
+  // Never inline a function explicitly marked as being streaming,
+  // into a non-streaming function. Assume it was marked as streaming
+  // for a reason.
+  if (CallAttrs.caller().hasNonStreamingInterfaceAndBody() &&
+      CallAttrs.callee().hasStreamingInterfaceOrBody())
+    return false;
+
   // When inlining, we should consider the body of the function, not the
   // interface.
   if (CallAttrs.callee().hasStreamingBody()) {
@@ -3085,6 +3092,13 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return AdjustCost(
         BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 
+  // For the moment we do not have lowering for SVE1-only fptrunc f64->bf16 as
+  // we use fcvtx under SVE2. Give them invalid costs.
+  if (!ST->hasSVE2() && !ST->isStreamingSVEAvailable() &&
+      ISD == ISD::FP_ROUND && SrcTy.isScalableVector() &&
+      DstTy.getScalarType() == MVT::bf16 && SrcTy.getScalarType() == MVT::f64)
+    return InstructionCost::getInvalid();
+
   static const TypeConversionCostTblEntry BF16Tbl[] = {
       {ISD::FP_ROUND, MVT::bf16, MVT::f32, 1},     // bfcvt
       {ISD::FP_ROUND, MVT::bf16, MVT::f64, 1},     // bfcvt
@@ -3093,6 +3107,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_ROUND, MVT::v2bf16, MVT::v2f64, 2}, // bfcvtn+fcvtn
       {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f64, 3}, // fcvtn+fcvtl2+bfcvtn
       {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f64, 6}, // 2 * fcvtn+fcvtn2+bfcvtn
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f32, 1},  // bfcvt
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f32, 1},  // bfcvt
+      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f32, 3},  // bfcvt+bfcvt+uzp1
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f64, 2},  // fcvtx+bfcvt
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f64, 5},  // 2*fcvtx+2*bfcvt+uzp1
+      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f64, 11}, // 4*fcvt+4*bfcvt+3*uzp
   };
 
   if (ST->hasBF16())
@@ -3501,10 +3521,20 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f32, 1},
       {ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f32, 3},
 
+      // Truncate from nxvmf32 to nxvmbf16.
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f32, 8},
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f32, 8},
+      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f32, 17},
+
       // Truncate from nxvmf64 to nxvmf16.
       {ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f64, 1},
       {ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f64, 3},
       {ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f64, 7},
+
+      // Truncate from nxvmf64 to nxvmbf16.
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f64, 9},
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f64, 19},
+      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f64, 39},
 
       // Truncate from nxvmf64 to nxvmf32.
       {ISD::FP_ROUND, MVT::nxv2f32, MVT::nxv2f64, 1},
@@ -3516,10 +3546,20 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_EXTEND, MVT::nxv4f32, MVT::nxv4f16, 1},
       {ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8f16, 2},
 
+      // Extend from nxvmbf16 to nxvmf32.
+      {ISD::FP_EXTEND, MVT::nxv2f32, MVT::nxv2bf16, 1}, // lsl
+      {ISD::FP_EXTEND, MVT::nxv4f32, MVT::nxv4bf16, 1}, // lsl
+      {ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8bf16, 4}, // unpck+unpck+lsl+lsl
+
       // Extend from nxvmf16 to nxvmf64.
       {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f16, 1},
       {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f16, 2},
       {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f16, 4},
+
+      // Extend from nxvmbf16 to nxvmf64.
+      {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2bf16, 2},  // lsl+fcvt
+      {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4bf16, 6},  // 2*unpck+2*lsl+2*fcvt
+      {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8bf16, 14}, // 6*unpck+4*lsl+4*fcvt
 
       // Extend from nxvmf32 to nxvmf64.
       {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f32, 1},
@@ -4905,14 +4945,17 @@ void AArch64TTIImpl::getUnrollingPreferences(
   // Disable partial & runtime unrolling on -Os.
   UP.PartialOptSizeThreshold = 0;
 
-  // No need to unroll auto-vectorized loops
-  if (findStringMetadataForLoop(L, "llvm.loop.isvectorized"))
-    return;
-
   // Scan the loop: don't unroll loops with calls as this could prevent
-  // inlining.
+  // inlining. Don't unroll auto-vectorized loops either, though do allow
+  // unrolling of the scalar remainder.
+  bool IsVectorized = getBooleanLoopAttribute(L, "llvm.loop.isvectorized");
   for (auto *BB : L->getBlocks()) {
     for (auto &I : *BB) {
+      // Both auto-vectorized loops and the scalar remainder have the
+      // isvectorized attribute, so differentiate between them by the presence
+      // of vector instructions.
+      if (IsVectorized && I.getType()->isVectorTy())
+        return;
       if (isa<CallBase>(I)) {
         if (isa<CallInst>(I) || isa<InvokeInst>(I))
           if (const Function *F = cast<CallBase>(I).getCalledFunction())

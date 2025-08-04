@@ -16,7 +16,6 @@
 #include "clang/AST/APNumericStorage.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTVector.h"
-#include "clang/AST/Attr.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclAccessPair.h"
@@ -58,6 +57,7 @@ namespace clang {
   class StringLiteral;
   class TargetInfo;
   class ValueDecl;
+  class WarnUnusedResultAttr;
 
 /// A simple array of base specifiers.
 typedef SmallVector<CXXBaseSpecifier*, 4> CXXCastPath;
@@ -553,17 +553,13 @@ public:
       bool IgnoreTemplateOrMacroSubstitution = false) const;
 
   /// isIntegerConstantExpr - Return the value if this expression is a valid
-  /// integer constant expression.  If not a valid i-c-e, return std::nullopt
-  /// and fill in Loc (if specified) with the location of the invalid
-  /// expression.
+  /// integer constant expression.  If not a valid i-c-e, return std::nullopt.
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
   std::optional<llvm::APSInt>
-  getIntegerConstantExpr(const ASTContext &Ctx,
-                         SourceLocation *Loc = nullptr) const;
-  bool isIntegerConstantExpr(const ASTContext &Ctx,
-                             SourceLocation *Loc = nullptr) const;
+  getIntegerConstantExpr(const ASTContext &Ctx) const;
+  bool isIntegerConstantExpr(const ASTContext &Ctx) const;
 
   /// isCXX98IntegralConstantExpr - Return true if this expression is an
   /// integral constant expression in C++98. Can only be used in C++.
@@ -574,8 +570,8 @@ public:
   ///
   /// Note: This does not perform the implicit conversions required by C++11
   /// [expr.const]p5.
-  bool isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result = nullptr,
-                           SourceLocation *Loc = nullptr) const;
+  bool isCXX11ConstantExpr(const ASTContext &Ctx,
+                           APValue *Result = nullptr) const;
 
   /// isPotentialConstantExpr - Return true if this function's definition
   /// might be usable in a constant expression in C++11, if it were marked
