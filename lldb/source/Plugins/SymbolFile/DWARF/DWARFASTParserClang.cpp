@@ -251,9 +251,50 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
   return cv_quals;
 }
 
-static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
-  char const *name = die.GetMangledName(/*substitute_name_allowed*/ false);
+static const char *GetMangledOrStructorName(const DWARFDIE &die) {
+  const char *name = die.GetMangledName(/*substitute_name_allowed*/ false);
+  if (name)
+    return name;
+
+  name = die.GetName();
   if (!name)
+    return nullptr;
+
+  DWARFDIE parent = die.GetParent();
+  if (!parent.IsStructUnionOrClass())
+    return nullptr;
+
+  const char *parent_name = parent.GetName();
+  if (!parent_name)
+    return nullptr;
+
+  // Constructor.
+  if (::strcmp(parent_name, name) == 0)
+    return name;
+
+  // Destructor.
+  if (name[0] == '~' && ::strcmp(parent_name, name + 1) == 0)
+    return name;
+
+  return nullptr;
+}
+
+static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
+  char const *name = GetMangledOrStructorName(die);
+  if (!name)
+    return {};
+
+  auto *cu = die.GetCU();
+  if (!cu)
+    return {};
+
+  // FIXME: When resolving function call labels, we check that
+  // that the definition's DW_AT_specification points to the
+  // declaration that we encoded into the label here. But if the
+  // declaration came from a type-unit (and the definition from
+  // .debug_info), that check won't work. So for now, don't use
+  // function call labels for declaration DIEs from type-units.
+  if (cu->IsTypeUnit())
     return {};
 
   SymbolFileDWARF *dwarf = die.GetDWARF();
@@ -286,7 +327,9 @@ static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
   if (die_id == LLDB_INVALID_UID)
     return {};
 
-  return FunctionCallLabel{/*module_id=*/module_id,
+  // Note, discriminator is added by Clang during mangling.
+  return FunctionCallLabel{/*discriminator=*/{},
+                           /*module_id=*/module_id,
                            /*symbol_id=*/die_id,
                            /*.lookup_name=*/name}
       .toString();

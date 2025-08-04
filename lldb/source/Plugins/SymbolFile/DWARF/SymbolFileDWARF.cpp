@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolFileDWARF.h"
+#include "clang/Basic/ABI.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFAddressRange.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugLoc.h"
 #include "llvm/Support/Casting.h"
@@ -78,6 +80,7 @@
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -2483,28 +2486,132 @@ bool SymbolFileDWARF::ResolveFunction(const DWARFDIE &orig_die,
   return false;
 }
 
-DWARFDIE
-SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label) {
+static int ClangToItaniumCtorKind(clang::CXXCtorType kind) {
+  switch (kind) {
+  case clang::CXXCtorType::Ctor_Complete:
+    return 1;
+  case clang::CXXCtorType::Ctor_Base:
+    return 2;
+  case clang::CXXCtorType::Ctor_CopyingClosure:
+  case clang::CXXCtorType::Ctor_DefaultClosure:
+  case clang::CXXCtorType::Ctor_Comdat:
+    llvm_unreachable("Unexpected constructor kind.");
+  }
+}
+
+static int ClangToItaniumDtorKind(clang::CXXDtorType kind) {
+  switch (kind) {
+  case clang::CXXDtorType::Dtor_Deleting:
+    return 0;
+  case clang::CXXDtorType::Dtor_Complete:
+    return 1;
+  case clang::CXXDtorType::Dtor_Base:
+    return 2;
+  case clang::CXXDtorType::Dtor_Comdat:
+    llvm_unreachable("Unexpected destructor kind.");
+  }
+}
+
+static std::optional<int>
+GetItaniumCtorDtorVariant(llvm::StringRef discriminator) {
+  const bool is_ctor = discriminator.consume_front("C");
+  if (!is_ctor && !discriminator.consume_front("D"))
+    return std::nullopt;
+
+  uint64_t structor_kind;
+  if (!llvm::to_integer(discriminator, structor_kind))
+    return std::nullopt;
+
+  if (is_ctor) {
+    if (structor_kind > clang::CXXCtorType::Ctor_DefaultClosure)
+      return std::nullopt;
+
+    return ClangToItaniumCtorKind(
+        static_cast<clang::CXXCtorType>(structor_kind));
+  }
+
+  if (structor_kind > clang::CXXDtorType::Dtor_Comdat)
+    return std::nullopt;
+
+  return ClangToItaniumDtorKind(static_cast<clang::CXXDtorType>(structor_kind));
+}
+
+DWARFDIE SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
+                                                 const DWARFDIE &declaration) {
   DWARFDIE definition;
+  llvm::DenseMap<int, DWARFDIE> structor_variant_to_die;
+
+  // eFunctionNameTypeFull for mangled name lookup.
+  // eFunctionNameTypeMethod is required for structor lookups (since we look
+  // those up by DW_AT_name).
   Module::LookupInfo info(ConstString(label.lookup_name),
-                          lldb::eFunctionNameTypeFull,
+                          lldb::eFunctionNameTypeFull |
+                              lldb::eFunctionNameTypeMethod,
                           lldb::eLanguageTypeUnknown);
 
   m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
     if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
       return IterationAction::Continue;
 
-    // We don't check whether the specification DIE for this function
-    // corresponds to the declaration DIE because the declaration might be in
-    // a type-unit but the definition in the compile-unit (and it's
-    // specifcation would point to the declaration in the compile-unit). We
-    // rely on the mangled name within the module to be enough to find us the
-    // unique definition.
-    definition = entry;
-    return IterationAction::Stop;
+    auto spec = entry.GetAttributeValueAsReferenceDIE(DW_AT_specification);
+    if (!spec)
+      return IterationAction::Continue;
+
+    if (spec != declaration)
+      return IterationAction::Continue;
+
+    // We're not picking a specific structor variant DIE, so we're done here.
+    if (label.discriminator.empty()) {
+      definition = entry;
+      return IterationAction::Stop;
+    }
+
+    const char *mangled =
+        entry.GetMangledName(/*substitute_name_allowed=*/false);
+    if (!mangled)
+      return IterationAction::Continue;
+
+    llvm::ItaniumPartialDemangler D;
+    if (D.partialDemangle(mangled))
+      return IterationAction::Continue;
+
+    auto structor_variant = D.getCtorOrDtorVariant();
+    if (!structor_variant)
+      return IterationAction::Continue;
+
+    auto [_, inserted] = structor_variant_to_die.try_emplace(*structor_variant,
+                                                             std::move(entry));
+    assert(inserted);
+
+    // The compiler may choose to alias the constructor variants
+    // (notably this happens on Linux), so we might not have a definition
+    // DIE for some structor variants. Hence we iterate over all variants
+    // and pick the most appropriate one out of those.
+    return IterationAction::Continue;
   });
 
-  return definition;
+  if (definition.IsValid())
+    return definition;
+
+  auto label_variant = GetItaniumCtorDtorVariant(label.discriminator);
+  if (!label_variant)
+    return {};
+
+  auto it = structor_variant_to_die.find(*label_variant);
+
+  // Found the exact variant.
+  if (it != structor_variant_to_die.end())
+    return it->getSecond();
+
+  // We need a C1 constructor. If debug-info only contains a DIE for C2,
+  // assume C1 was aliased to C2.
+  if (!label.lookup_name.starts_with("~") && label_variant == 1) {
+    if (auto it = structor_variant_to_die.find(2);
+        it != structor_variant_to_die.end())
+      return it->getSecond();
+  }
+
+  return {};
 }
 
 llvm::Expected<SymbolContext>
@@ -2519,11 +2626,9 @@ SymbolFileDWARF::ResolveFunctionCallLabel(const FunctionCallLabel &label) {
   // Label was created using a declaration DIE. Need to fetch the definition
   // to resolve the function call.
   if (die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0)) {
-    auto definition = FindFunctionDefinition(label);
-    if (!definition)
+    die = FindFunctionDefinition(label, die);
+    if (!die.IsValid())
       return llvm::createStringError("failed to find definition DIE");
-
-    die = std::move(definition);
   }
 
   SymbolContextList sc_list;
