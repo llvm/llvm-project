@@ -5914,7 +5914,7 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
 
   const CXXRecordDecl *ClosureClass = MD->getParent();
   const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
-  assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+  assert(ClosureClass->captures().empty());
   const Function *Func = this->getFunction(LambdaCallOp);
   if (!Func)
     return false;
