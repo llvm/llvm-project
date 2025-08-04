@@ -338,7 +338,7 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
       return FAIL_SECNDS;
     }
   }
-  double diffStartingPoint = std::difftime(now, startingPoint);
+  double diffStartingPoint{std::difftime(now, startingPoint)};
   return static_cast<float>(diffStartingPoint) - *refTime;
 }
 
