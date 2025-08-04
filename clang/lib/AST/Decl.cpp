@@ -1249,6 +1249,9 @@ getExplicitVisibilityAux(const NamedDecl *ND,
                          bool IsMostRecent) {
   assert(!IsMostRecent || ND == ND->getMostRecentDecl());
 
+  if (isa<ConceptDecl>(ND))
+    return {};
+
   // Check the declaration itself first.
   if (std::optional<Visibility> V = getVisibilityOf(ND, kind))
     return V;
