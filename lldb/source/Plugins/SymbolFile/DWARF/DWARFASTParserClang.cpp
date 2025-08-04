@@ -37,6 +37,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/lldb-private-enumerations.h"
 
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclBase.h"
@@ -2223,7 +2224,7 @@ bool DWARFASTParserClang::CompleteRecordType(const DWARFDIE &die,
     if (class_name) {
       dwarf->GetObjCMethods(class_name, [&](DWARFDIE method_die) {
         method_die.ResolveType();
-        return true;
+        return IterationAction::Continue;
       });
 
       for (DelayedAddObjCClassProperty &property : delayed_properties)

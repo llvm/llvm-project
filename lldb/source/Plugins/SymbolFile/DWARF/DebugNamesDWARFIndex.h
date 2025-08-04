@@ -36,12 +36,12 @@ public:
   void GetGlobalVariables(
       DWARFUnit &cu,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
-  void
-  GetObjCMethods(ConstString class_name,
-                 llvm::function_ref<bool(DWARFDIE die)> callback) override {}
+  void GetObjCMethods(
+      ConstString class_name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override {}
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
 
   /// Uses DWARF5's IDX_parent fields, when available, to speed up this query.
   void GetFullyQualifiedType(
