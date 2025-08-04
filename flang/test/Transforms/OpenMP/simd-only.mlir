@@ -644,3 +644,31 @@ func.func @simd_nested_atomic(%arg0: i32, %arg1: !fir.ref<i32>, %arg2: !fir.ref<
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func.func @unroll(
+// CHECK-SAME: %[[ARG_0:.*]]: i32, %[[ARG_1:.*]]: !fir.ref<i32>
+func.func @unroll(%arg0: i32, %arg1: !fir.ref<i32>) {
+  %c1_i32 = arith.constant 1 : i32
+  // CHECK: %[[RANGE_i32:.*]] = arith.constant 16 : i32
+  %c16_i32 = arith.constant 16 : i32
+  // CHECK: %[[C1_IDX:.*]] = arith.constant 1 : index
+  // CHECK: %[[RANGE:.*]] = fir.convert %[[RANGE_i32]]
+  // CHECK-NOT: omp.new_cli
+  %canonloop_s0 = omp.new_cli
+  // CHECK-NOT: omp.canonical_loop
+  // CHECK: fir.do_loop %[[IVAR:.*]] = %[[C1_IDX]] to %[[RANGE]] step %[[C1_IDX]]
+  omp.canonical_loop(%canonloop_s0) %iv : i32 in range(%c16_i32) {
+    // CHECK: %[[IVAR_CVT:.*]] = fir.convert %[[IVAR]] : (index) -> i32
+    // CHECK-NOT: arith.addi
+    %3 = arith.addi %iv, %c1_i32 : i32
+    // CHECK: fir.store %[[IVAR_CVT]] to %[[ARG_1]]
+    fir.store %3 to %arg1 : !fir.ref<i32>
+    // CHECK-NOT: omp.terminator
+    omp.terminator
+  }
+  // CHECK-NOT: omp.unroll_heuristic
+  omp.unroll_heuristic(%canonloop_s0)
+  return
+}
