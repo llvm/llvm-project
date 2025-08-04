@@ -52,7 +52,7 @@ void MCXCOFFStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
 bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
-  auto *Symbol = cast<MCSymbolXCOFF>(Sym);
+  auto *Symbol = static_cast<MCSymbolXCOFF *>(Sym);
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
@@ -129,15 +129,14 @@ void MCXCOFFStreamer::emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) {
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
                                        Align ByteAlignment) {
+  auto *Sym = static_cast<MCSymbolXCOFF *>(Symbol);
   getAssembler().registerSymbol(*Symbol);
-  Symbol->setExternal(cast<MCSymbolXCOFF>(Symbol)->getStorageClass() !=
-                      XCOFF::C_HIDEXT);
+  Symbol->setExternal(Sym->getStorageClass() != XCOFF::C_HIDEXT);
   Symbol->setCommon(Size, ByteAlignment);
 
   // Default csect align is 4, but common symbols have explicit alignment values
   // and we should honor it.
-  cast<MCSymbolXCOFF>(Symbol)->getRepresentedCsect()->setAlignment(
-      ByteAlignment);
+  Sym->getRepresentedCsect()->setAlignment(ByteAlignment);
 
   // Emit the alignment and storage for the variable to the section.
   emitValueToAlignment(ByteAlignment);

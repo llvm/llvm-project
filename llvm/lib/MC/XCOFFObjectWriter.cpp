@@ -591,7 +591,7 @@ void XCOFFWriter::executePostLayoutBinding() {
     if (S.isTemporary())
       continue;
 
-    const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
+    auto *XSym = static_cast<const MCSymbolXCOFF *>(&S);
     const MCSectionXCOFF *ContainingCsect = getContainingCsect(XSym);
 
     if (ContainingCsect->isDwarfSect())
