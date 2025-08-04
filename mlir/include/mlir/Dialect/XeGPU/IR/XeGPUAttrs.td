@@ -429,7 +429,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
     std::optional<SmallVector<int64_t>> getEffectiveSgLayout() const {
       if (auto layout = getParent().getEffectiveSgLayout()) {
         ArrayRef<int64_t> dims = getDims().asArrayRef();
-        return XeGPUDialect::dropDims(llvm::ArrayRef<int64_t>(*layout), dims);
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*layout), dims);
       }
       return std::nullopt;
     }
@@ -437,7 +437,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
     std::optional<SmallVector<int64_t>> getEffectiveSgData() const {
       if (auto data = getParent().getEffectiveSgData()) {
         ArrayRef<int64_t> dims = getDims().asArrayRef();
-        return XeGPUDialect::dropDims(llvm::ArrayRef<int64_t>(*data), dims);
+        return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*data), dims);
       }
       return std::nullopt;
     }
@@ -450,7 +450,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
 
   }];
 
-  let assemblyFormat = "`<` $parent `,` `dims` `=` $dims `>`";
+  let assemblyFormat = "`<` qualified($parent) `,` `dims` `=` $dims `>`";
   let genVerifyDecl = 1;
 }
 

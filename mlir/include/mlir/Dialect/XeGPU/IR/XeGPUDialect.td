@@ -42,13 +42,13 @@ def XeGPU_Dialect : Dialect {
       /// and data factors provided by the LayoutAttr.
       static bool isEvenlyDistributable(llvm::ArrayRef<int64_t> shape, xegpu::LayoutAttr attr);
 
-      /// drops the data in the specified dimension, and return the rest. e.g.,
-      /// for data = [32, 64, 8], dropPositions = [0, 2], it will return [64]
+      /// drops/slices the shape in the specified dims, and return the rest. e.g.,
+      /// for shape = [32, 64, 8], dims = [0, 2], it will return [64]
       template<typename T, typename U>
-      static llvm::SmallVector<T> dropDims(llvm::ArrayRef<T> data, llvm::ArrayRef<U> dropPositions) {
+      static llvm::SmallVector<T> slice(llvm::ArrayRef<T> shape, llvm::ArrayRef<U> dims) {
         llvm::SmallVector<T> result;
-        for (auto [i, v]: llvm::enumerate(data)) {
-          if (!llvm::is_contained(dropPositions, i))
+        for (auto [i, v]: llvm::enumerate(shape)) {
+          if (!llvm::is_contained(dims, i))
             result.push_back(v);
         }
         return result;

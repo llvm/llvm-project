@@ -176,21 +176,21 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
                                    layout.dropSgLayoutAndData());
 
     SmallVector<Value> newCreateNdOps;
-    SmallVector<OpFoldResult> oldOffsets = op.getMixedOffsets();
+    SmallVector<OpFoldResult> wgTileOffsets = op.getMixedOffsets();
 
     for (auto tdescOffsets : *maybeTdescOffsets) {
-      SmallVector<OpFoldResult> newOffsets;
+      SmallVector<OpFoldResult> sgTileOffsets;
       size_t rank = tdescOffsets.size();
       for (size_t i = 0; i < rank; i++) {
-        size_t idx = oldOffsets.size() - rank + i;
+        size_t idx = wgTileOffsets.size() - rank + i;
         Value add = rewriter.createOrFold<index::AddOp>(
             loc, tdescOffsets[i],
-            getValueOrCreateConstantIndexOp(rewriter, loc, oldOffsets[idx]));
-        newOffsets.push_back(add);
+            getValueOrCreateConstantIndexOp(rewriter, loc, wgTileOffsets[idx]));
+        sgTileOffsets.push_back(add);
       }
 
       auto newOp = xegpu::CreateNdDescOp::create(
-          rewriter, loc, newTdescTy, op.getSource(), newOffsets,
+          rewriter, loc, newTdescTy, op.getSource(), sgTileOffsets,
           op.getMixedSizes(), op.getMixedStrides());
       newCreateNdOps.push_back(newOp);
     }

@@ -350,7 +350,7 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   // to the dims that are not sliced.
   ArrayRef<int64_t> dims = getDims().asArrayRef();
   SmallVector<Value> sgIds =
-      XeGPUDialect::dropDims(ArrayRef<Value>(*maybeIds), dims);
+      XeGPUDialect::slice(ArrayRef<Value>(*maybeIds), dims);
 
   // nd local offset, localOffset[i] = sgId[i] * sgShape[i]
   SmallVector<Value> localOffsets = llvm::map_to_vector(

@@ -13,6 +13,8 @@ add_mlir_dialect_library(MLIRXeGPUDialect
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
+  MLIRIndexDialect
+  MLIRAffineUtils
   MLIRArithUtils
   MLIRDialectUtils
   MLIRIR
