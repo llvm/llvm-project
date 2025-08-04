@@ -91,15 +91,15 @@ lldb::SBQueue SBThread::GetQueue() const {
   SBQueue sb_queue;
   QueueSP queue_sp;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return SBQueue();
 
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      queue_sp = exe_ctx.GetThreadPtr()->GetQueue();
-      if (queue_sp) {
-        sb_queue.SetQueue(queue_sp);
-      }
+    queue_sp = exe_ctx.GetThreadPtr()->GetQueue();
+    if (queue_sp) {
+      sb_queue.SetQueue(queue_sp);
     }
   }
 
@@ -114,14 +114,15 @@ SBThread::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return false;
 
   Target *target = exe_ctx.GetTargetPtr();
   Process *process = exe_ctx.GetProcessPtr();
   if (target && process) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&process->GetRunLock()))
-      return m_opaque_sp->GetThreadSP().get() != nullptr;
+    return m_opaque_sp->GetThreadSP().get() != nullptr;
   }
   // Without a valid target & process, this thread can't be valid.
   return false;
@@ -138,13 +139,13 @@ StopReason SBThread::GetStopReason() {
 
   StopReason reason = eStopReasonInvalid;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return reason;
 
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      return exe_ctx.GetThreadPtr()->GetStopReason();
-    }
+    return exe_ctx.GetThreadPtr()->GetStopReason();
   }
 
   return reason;
@@ -154,11 +155,10 @@ size_t SBThread::GetStopReasonDataCount() {
   LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (stop_locker.IsLocked()) {
+    if (exe_ctx.HasThreadScope()) {
       StopInfoSP stop_info_sp = exe_ctx.GetThreadPtr()->GetStopInfo();
       if (stop_info_sp) {
         StopReason reason = stop_info_sp->GetStopReason();
@@ -215,11 +215,10 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (stop_locker.IsLocked()) {
+    if (exe_ctx.HasThreadScope()) {
       Thread *thread = exe_ctx.GetThreadPtr();
       StopInfoSP stop_info_sp = thread->GetStopInfo();
       if (stop_info_sp) {
@@ -290,7 +289,10 @@ bool SBThread::GetStopReasonExtendedInfoAsJSON(lldb::SBStream &stream) {
   Stream &strm = stream.ref();
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return false;
 
   if (!exe_ctx.HasThreadScope())
     return false;
@@ -312,7 +314,10 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
   SBThreadCollection threads;
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return SBThreadCollection();
 
   if (!exe_ctx.HasThreadScope())
     return SBThreadCollection();
@@ -333,16 +338,15 @@ size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
   LLDB_INSTRUMENT_VA(this, dst, dst_len);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return 0;
 
   if (dst)
     *dst = 0;
 
   if (!exe_ctx.HasThreadScope())
-    return 0;
-
-  Process::StopLocker stop_locker;
-  if (!stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock()))
     return 0;
 
   std::string thread_stop_desc = exe_ctx.GetThreadPtr()->GetStopDescription();
@@ -362,15 +366,15 @@ SBValue SBThread::GetStopReturnValue() {
 
   ValueObjectSP return_valobj_sp;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return SBValue();
 
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      StopInfoSP stop_info_sp = exe_ctx.GetThreadPtr()->GetStopInfo();
-      if (stop_info_sp) {
-        return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp);
-      }
+    StopInfoSP stop_info_sp = exe_ctx.GetThreadPtr()->GetStopInfo();
+    if (stop_info_sp) {
+      return_valobj_sp = StopInfo::GetReturnValueObject(stop_info_sp);
     }
   }
 
@@ -403,32 +407,30 @@ const char *SBThread::GetName() const {
   LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return nullptr;
 
   if (!exe_ctx.HasThreadScope())
     return nullptr;
 
-  Process::StopLocker stop_locker;
-  if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock()))
-    return ConstString(exe_ctx.GetThreadPtr()->GetName()).GetCString();
-
-  return nullptr;
+  return ConstString(exe_ctx.GetThreadPtr()->GetName()).GetCString();
 }
 
 const char *SBThread::GetQueueName() const {
   LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return nullptr;
 
   if (!exe_ctx.HasThreadScope())
     return nullptr;
 
-  Process::StopLocker stop_locker;
-  if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock()))
-    return ConstString(exe_ctx.GetThreadPtr()->GetQueueName()).GetCString();
-
-  return nullptr;
+  return ConstString(exe_ctx.GetThreadPtr()->GetQueueName()).GetCString();
 }
 
 lldb::queue_id_t SBThread::GetQueueID() const {
@@ -436,13 +438,13 @@ lldb::queue_id_t SBThread::GetQueueID() const {
 
   queue_id_t id = LLDB_INVALID_QUEUE_ID;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return id;
 
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      id = exe_ctx.GetThreadPtr()->GetQueueID();
-    }
+    id = exe_ctx.GetThreadPtr()->GetQueueID();
   }
 
   return id;
@@ -453,11 +455,10 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
 
   bool success = false;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (stop_locker.IsLocked()) {
+    if (exe_ctx.HasThreadScope()) {
       Thread *thread = exe_ctx.GetThreadPtr();
       StructuredData::ObjectSP info_root_sp = thread->GetExtendedInfo();
       if (info_root_sp) {
@@ -495,7 +496,12 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
   return success;
 }
 
-static Status ResumeNewPlan(ExecutionContext &exe_ctx, ThreadPlan *new_plan) {
+static Status ResumeNewPlan(ExecutionContext &exe_ctx, ThreadPlan *new_plan,
+                            Process::StopLocker stop_lock) {
+  {
+    assert(stop_lock.IsLocked());
+    auto to_unlock = std::move(stop_lock);
+  }
   Process *process = exe_ctx.GetProcessPtr();
   if (!process)
     return Status::FromErrorString("No process in SBThread::ResumeNewPlan");
@@ -530,7 +536,10 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
   LLDB_INSTRUMENT_VA(this, stop_other_threads, error);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return;
 
   if (!exe_ctx.HasThreadScope()) {
     error = Status::FromErrorString("this SBThread object is invalid");
@@ -555,7 +564,7 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
           true, abort_other_plans, stop_other_threads, new_plan_status);
     }
   }
-  error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+  error = ResumeNewPlan(exe_ctx, new_plan_sp.get(), std::move(stop_locker));
 }
 
 void SBThread::StepInto(lldb::RunMode stop_other_threads) {
@@ -577,7 +586,10 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
   LLDB_INSTRUMENT_VA(this, target_name, end_line, error, stop_other_threads);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return;
 
   if (!exe_ctx.HasThreadScope()) {
     error = Status::FromErrorString("this SBThread object is invalid");
@@ -618,7 +630,7 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
   }
 
   if (new_plan_status.Success())
-    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get(), std::move(stop_locker));
   else
     error = Status::FromErrorString(new_plan_status.AsCString());
 }
@@ -634,7 +646,10 @@ void SBThread::StepOut(SBError &error) {
   LLDB_INSTRUMENT_VA(this, error);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return;
 
   if (!exe_ctx.HasThreadScope()) {
     error = Status::FromErrorString("this SBThread object is invalid");
@@ -653,7 +668,7 @@ void SBThread::StepOut(SBError &error) {
       eVoteNoOpinion, 0, new_plan_status, avoid_no_debug));
 
   if (new_plan_status.Success())
-    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get(), std::move(stop_locker));
   else
     error = Status::FromErrorString(new_plan_status.AsCString());
 }
@@ -669,7 +684,10 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
   LLDB_INSTRUMENT_VA(this, sb_frame, error);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return;
 
   if (!sb_frame.IsValid()) {
     error = Status::FromErrorString("passed invalid SBFrame object");
@@ -697,7 +715,7 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
       eVoteNoOpinion, frame_sp->GetFrameIndex(), new_plan_status));
 
   if (new_plan_status.Success())
-    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get(), std::move(stop_locker));
   else
     error = Status::FromErrorString(new_plan_status.AsCString());
 }
@@ -713,7 +731,10 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
   LLDB_INSTRUMENT_VA(this, step_over, error);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return;
 
   if (!exe_ctx.HasThreadScope()) {
     error = Status::FromErrorString("this SBThread object is invalid");
@@ -726,7 +747,7 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
       step_over, false, true, new_plan_status));
 
   if (new_plan_status.Success())
-    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get(), std::move(stop_locker));
   else
     error = Status::FromErrorString(new_plan_status.AsCString());
 }
@@ -742,7 +763,10 @@ void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
   LLDB_INSTRUMENT_VA(this, addr, error);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return;
 
   if (!exe_ctx.HasThreadScope()) {
     error = Status::FromErrorString("this SBThread object is invalid");
@@ -761,7 +785,7 @@ void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
       abort_other_plans, target_addr, stop_other_threads, new_plan_status));
 
   if (new_plan_status.Success())
-    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get(), std::move(stop_locker));
   else
     error = Status::FromErrorString(new_plan_status.AsCString());
 }
@@ -774,7 +798,10 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
   char path[PATH_MAX];
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return sb_error;
 
   StackFrameSP frame_sp(sb_frame.GetFrameSP());
 
@@ -875,7 +902,8 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
           frame_sp->GetFrameIndex(), new_plan_status));
 
       if (new_plan_status.Success())
-        sb_error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+        sb_error =
+            ResumeNewPlan(exe_ctx, new_plan_sp.get(), std::move(stop_locker));
       else
         sb_error = Status::FromErrorString(new_plan_status.AsCString());
     }
@@ -908,7 +936,10 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
   SBError error;
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return error;
 
   if (!exe_ctx.HasThreadScope()) {
     error = Status::FromErrorString("this SBThread object is invalid");
@@ -931,7 +962,7 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
     return error;
 
   if (new_plan_status.Success())
-    error = ResumeNewPlan(exe_ctx, new_plan_sp.get());
+    error = ResumeNewPlan(exe_ctx, new_plan_sp.get(), std::move(stop_locker));
   else
     error = Status::FromErrorString(new_plan_status.AsCString());
 
@@ -944,7 +975,10 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
   SBError sb_error;
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return sb_error;
 
   if (!exe_ctx.HasThreadScope()) {
     sb_error = Status::FromErrorString("this SBThread object is invalid");
@@ -964,7 +998,10 @@ SBError SBThread::ReturnFromFrame(SBFrame &frame, SBValue &return_value) {
   SBError sb_error;
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return sb_error;
 
   if (exe_ctx.HasThreadScope()) {
     Thread *thread = exe_ctx.GetThreadPtr();
@@ -981,7 +1018,10 @@ SBError SBThread::UnwindInnermostExpression() {
   SBError sb_error;
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return sb_error;
 
   if (exe_ctx.HasThreadScope()) {
     Thread *thread = exe_ctx.GetThreadPtr();
@@ -1004,17 +1044,17 @@ bool SBThread::Suspend(SBError &error) {
   LLDB_INSTRUMENT_VA(this, error);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked()) {
+    error = Status::FromErrorString("process is running");
+    return false;
+  }
 
   bool result = false;
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      exe_ctx.GetThreadPtr()->SetResumeState(eStateSuspended);
-      result = true;
-    } else {
-      error = Status::FromErrorString("process is running");
-    }
+    exe_ctx.GetThreadPtr()->SetResumeState(eStateSuspended);
+    result = true;
   } else
     error = Status::FromErrorString("this SBThread object is invalid");
   return result;
@@ -1031,18 +1071,18 @@ bool SBThread::Resume(SBError &error) {
   LLDB_INSTRUMENT_VA(this, error);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked()) {
+    error = Status::FromErrorString("process is running");
+    return false;
+  }
 
   bool result = false;
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      const bool override_suspend = true;
-      exe_ctx.GetThreadPtr()->SetResumeState(eStateRunning, override_suspend);
-      result = true;
-    } else {
-      error = Status::FromErrorString("process is running");
-    }
+    const bool override_suspend = true;
+    exe_ctx.GetThreadPtr()->SetResumeState(eStateRunning, override_suspend);
+    result = true;
   } else
     error = Status::FromErrorString("this SBThread object is invalid");
   return result;
@@ -1052,7 +1092,10 @@ bool SBThread::IsSuspended() {
   LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return false;
 
   if (exe_ctx.HasThreadScope())
     return exe_ctx.GetThreadPtr()->GetResumeState() == eStateSuspended;
@@ -1063,7 +1106,10 @@ bool SBThread::IsStopped() {
   LLDB_INSTRUMENT_VA(this);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return false;
 
   if (exe_ctx.HasThreadScope())
     return StateIsStoppedState(exe_ctx.GetThreadPtr()->GetState(), true);
@@ -1075,7 +1121,10 @@ SBProcess SBThread::GetProcess() {
 
   SBProcess sb_process;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return SBProcess();
 
   if (exe_ctx.HasThreadScope()) {
     // Have to go up to the target so we can get a shared pointer to our
@@ -1091,13 +1140,13 @@ uint32_t SBThread::GetNumFrames() {
 
   uint32_t num_frames = 0;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return 0;
 
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      num_frames = exe_ctx.GetThreadPtr()->GetStackFrameCount();
-    }
+    num_frames = exe_ctx.GetThreadPtr()->GetStackFrameCount();
   }
 
   return num_frames;
@@ -1109,14 +1158,14 @@ SBFrame SBThread::GetFrameAtIndex(uint32_t idx) {
   SBFrame sb_frame;
   StackFrameSP frame_sp;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return SBFrame();
 
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      frame_sp = exe_ctx.GetThreadPtr()->GetStackFrameAtIndex(idx);
-      sb_frame.SetFrameSP(frame_sp);
-    }
+    frame_sp = exe_ctx.GetThreadPtr()->GetStackFrameAtIndex(idx);
+    sb_frame.SetFrameSP(frame_sp);
   }
 
   return sb_frame;
@@ -1128,15 +1177,15 @@ lldb::SBFrame SBThread::GetSelectedFrame() {
   SBFrame sb_frame;
   StackFrameSP frame_sp;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return SBFrame();
 
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      frame_sp =
-          exe_ctx.GetThreadPtr()->GetSelectedFrame(SelectMostRelevantFrame);
-      sb_frame.SetFrameSP(frame_sp);
-    }
+    frame_sp =
+        exe_ctx.GetThreadPtr()->GetSelectedFrame(SelectMostRelevantFrame);
+    sb_frame.SetFrameSP(frame_sp);
   }
 
   return sb_frame;
@@ -1148,17 +1197,17 @@ lldb::SBFrame SBThread::SetSelectedFrame(uint32_t idx) {
   SBFrame sb_frame;
   StackFrameSP frame_sp;
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return SBFrame();
 
   if (exe_ctx.HasThreadScope()) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      Thread *thread = exe_ctx.GetThreadPtr();
-      frame_sp = thread->GetStackFrameAtIndex(idx);
-      if (frame_sp) {
-        thread->SetSelectedFrame(frame_sp.get());
-        sb_frame.SetFrameSP(frame_sp);
-      }
+    Thread *thread = exe_ctx.GetThreadPtr();
+    frame_sp = thread->GetStackFrameAtIndex(idx);
+    if (frame_sp) {
+      thread->SetSelectedFrame(frame_sp.get());
+      sb_frame.SetFrameSP(frame_sp);
     }
   }
 
@@ -1203,7 +1252,10 @@ bool SBThread::GetStatus(SBStream &status) const {
   Stream &strm = status.ref();
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return false;
 
   if (exe_ctx.HasThreadScope()) {
     exe_ctx.GetThreadPtr()->GetStatus(strm, 0, 1, 1, true,
@@ -1226,7 +1278,10 @@ bool SBThread::GetDescription(SBStream &description, bool stop_format) const {
   Stream &strm = description.ref();
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return false;
 
   if (exe_ctx.HasThreadScope()) {
     exe_ctx.GetThreadPtr()->DumpUsingSettingsFormat(
@@ -1248,7 +1303,10 @@ SBError SBThread::GetDescriptionWithFormat(const SBFormat &format,
   }
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+  Process::StopLocker stop_locker;
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  if (!stop_locker.IsLocked())
+    return error;
 
   if (exe_ctx.HasThreadScope()) {
     if (exe_ctx.GetThreadPtr()->DumpUsingFormat(
@@ -1268,11 +1326,10 @@ SBThread SBThread::GetExtendedBacktraceThread(const char *type) {
   LLDB_INSTRUMENT_VA(this, type);
 
   std::unique_lock<std::recursive_mutex> lock;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-  SBThread sb_origin_thread;
-
   Process::StopLocker stop_locker;
-  if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  SBThread sb_origin_thread;
+  if (stop_locker.IsLocked()) {
     if (exe_ctx.HasThreadScope()) {
       ThreadSP real_thread(exe_ctx.GetThreadSP());
       if (real_thread) {

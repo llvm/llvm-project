@@ -11,6 +11,7 @@
 
 #include <mutex>
 
+#include "lldb/Host/ProcessRunLock.h"
 #include "lldb/Target/StackID.h"
 #include "lldb/lldb-private.h"
 
@@ -318,11 +319,13 @@ public:
   // These two variants take in a locker, and grab the target, lock the API
   // mutex into locker, then fill in the rest of the shared pointers.
   ExecutionContext(const ExecutionContextRef &exe_ctx_ref,
-                   std::unique_lock<std::recursive_mutex> &locker)
-      : ExecutionContext(&exe_ctx_ref, locker) {}
+                   std::unique_lock<std::recursive_mutex> &locker,
+                   ProcessRunLock::ProcessRunLocker &stop_locker)
+      : ExecutionContext(&exe_ctx_ref, locker, stop_locker) {}
 
   ExecutionContext(const ExecutionContextRef *exe_ctx_ref,
-                   std::unique_lock<std::recursive_mutex> &locker);
+                   std::unique_lock<std::recursive_mutex> &locker,
+                   ProcessRunLock::ProcessRunLocker &stop_locker);
   // Create execution contexts from execution context scopes
   ExecutionContext(ExecutionContextScope *exe_scope);
   ExecutionContext(ExecutionContextScope &exe_scope);
