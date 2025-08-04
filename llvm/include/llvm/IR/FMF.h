@@ -13,6 +13,7 @@
 #ifndef LLVM_IR_FMF_H
 #define LLVM_IR_FMF_H
 
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -121,6 +122,9 @@ public:
     const unsigned ValueMask = NoNaNs | NoInfs | NoSignedZeros;
     return FastMathFlags(ValueMask & (LHS.Flags | RHS.Flags));
   }
+
+  // Hashing.
+  friend hash_code hash_value(const FastMathFlags &FMF);
 };
 
 inline FastMathFlags operator|(FastMathFlags LHS, FastMathFlags RHS) {
@@ -138,6 +142,9 @@ inline raw_ostream &operator<<(raw_ostream &O, FastMathFlags FMF) {
   return O;
 }
 
+inline hash_code hash_value(const FastMathFlags &FMF) {
+  return hash_value(FMF.Flags);
+}
 } // end namespace llvm
 
 #endif // LLVM_IR_FMF_H

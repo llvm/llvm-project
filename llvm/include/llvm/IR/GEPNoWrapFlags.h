@@ -13,6 +13,7 @@
 #ifndef LLVM_IR_GEPNOWRAPFLAGS_H
 #define LLVM_IR_GEPNOWRAPFLAGS_H
 
+#include "llvm/ADT/Hashing.h"
 #include <assert.h>
 
 namespace llvm {
@@ -101,8 +102,14 @@ public:
     Flags |= Other.Flags;
     return *this;
   }
+
+  // Hashing.
+  friend hash_code hash_value(const GEPNoWrapFlags &NW);
 };
 
+inline hash_code hash_value(const GEPNoWrapFlags &NW) {
+  return hash_value(NW.Flags);
+}
 } // end namespace llvm
 
 #endif // LLVM_IR_GEPNOWRAPFLAGS_H
