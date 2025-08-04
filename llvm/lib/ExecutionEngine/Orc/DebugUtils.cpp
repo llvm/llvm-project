@@ -248,6 +248,17 @@ raw_ostream &operator<<(raw_ostream &OS, const SymbolLookupSet &LookupSet) {
 }
 
 raw_ostream &operator<<(raw_ostream &OS,
+                        const NonOwningSymbolLookupSet::value_type &KV) {
+  return OS << "(" << KV.first << ", " << KV.second << ")";
+}
+
+raw_ostream &operator<<(raw_ostream &OS,
+                        const NonOwningSymbolLookupSet &LookupSet) {
+  return OS << printSequence(LookupSet, '{', '}',
+                             PrintAll<NonOwningSymbolLookupSet::value_type>());
+}
+
+raw_ostream &operator<<(raw_ostream &OS,
                         const JITDylibSearchOrder &SearchOrder) {
   OS << "[";
   if (!SearchOrder.empty()) {
