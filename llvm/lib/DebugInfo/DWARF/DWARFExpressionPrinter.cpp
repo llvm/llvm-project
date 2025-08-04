@@ -68,23 +68,24 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
 
   if (!DumpOpts.PrintRegisterOnly) {
     for (unsigned Operand = 0; Operand < Op->getDescription().Op.size();
-        ++Operand) {
+         ++Operand) {
       unsigned Size = Op->getDescription().Op[Operand];
       unsigned Signed = Size & DWARFExpression::Operation::SignBit;
 
       if (Size == DWARFExpression::Operation::SizeSubOpLEB) {
-        StringRef SubName =
-            SubOperationEncodingString(Op->getCode(), Op->getRawOperand(Operand));
+        StringRef SubName = SubOperationEncodingString(
+            Op->getCode(), Op->getRawOperand(Operand));
         assert(!SubName.empty() && "DW_OP SubOp has no name!");
         OS << " " << SubName;
       } else if (Size == DWARFExpression::Operation::BaseTypeRef && U) {
         // For DW_OP_convert the operand may be 0 to indicate that conversion to
-        // the generic type should be done. The same holds for DW_OP_reinterpret,
-        // which is currently not supported.
+        // the generic type should be done. The same holds for
+        // DW_OP_reinterpret, which is currently not supported.
         if (Op->getCode() == DW_OP_convert && Op->getRawOperand(Operand) == 0)
           OS << " 0x0";
         else
-          prettyPrintBaseTypeRef(U, OS, DumpOpts, Op->getRawOperands(), Operand);
+          prettyPrintBaseTypeRef(U, OS, DumpOpts, Op->getRawOperands(),
+                                 Operand);
       } else if (Size == DWARFExpression::Operation::WasmLocationArg) {
         assert(Operand == 1);
         switch (Op->getRawOperand(0)) {
@@ -102,12 +103,12 @@ static bool printOp(const DWARFExpression::Operation *Op, raw_ostream &OS,
         uint64_t Offset = Op->getRawOperand(Operand);
         for (unsigned i = 0; i < Op->getRawOperand(Operand - 1); ++i)
           OS << format(" 0x%02x",
-                      static_cast<uint8_t>(Expr->getData()[Offset++]));
+                       static_cast<uint8_t>(Expr->getData()[Offset++]));
       } else {
         if (Signed)
           OS << format(" %+" PRId64, (int64_t)Op->getRawOperand(Operand));
         else if (Op->getCode() != DW_OP_entry_value &&
-                Op->getCode() != DW_OP_GNU_entry_value)
+                 Op->getCode() != DW_OP_GNU_entry_value)
           OS << format(" 0x%" PRIx64, Op->getRawOperand(Operand));
       }
     }
