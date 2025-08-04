@@ -22,6 +22,19 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
+
+#if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+#include "src/string/memory_utils/x86_64/inline_strlen.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_STRLEN_WIDE_READ string_length_x86_64
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#include "src/string/memory_utils/aarch64/inline_strlen.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_STRLEN_WIDE_READ string_length_aarch64
+#else
+#define LIBC_SRC_STRING_MEMORY_UTILS_STRLEN_WIDE_READ string_length_wide_read
+#endif
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
@@ -90,7 +103,7 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
   // be aligned to a word boundary, so it's the size we use for reading the
   // string a block at a time.
   if constexpr (cpp::is_same_v<T, char>)
-    return string_length_wide_read<unsigned int>(src);
+    return LIBC_SRC_STRING_MEMORY_UTILS_STRLEN_WIDE_READ<unsigned int>(src);
 #endif
   size_t length;
   for (length = 0; *src; ++src, ++length)
