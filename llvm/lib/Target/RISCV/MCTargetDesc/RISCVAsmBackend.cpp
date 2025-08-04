@@ -743,7 +743,7 @@ std::optional<bool> RISCVAsmBackend::evaluateFixup(const MCFragment &,
   if (!AUIPCTarget.getAddSym())
     return false;
 
-  const MCSymbolELF &SA = cast<MCSymbolELF>(*AUIPCTarget.getAddSym());
+  auto &SA = static_cast<const MCSymbolELF &>(*AUIPCTarget.getAddSym());
   if (SA.isUndefined())
     return false;
 

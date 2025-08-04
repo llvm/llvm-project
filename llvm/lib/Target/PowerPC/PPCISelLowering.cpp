@@ -5540,8 +5540,8 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
   const auto getAIXFuncEntryPointSymbolSDNode = [&](const GlobalValue *GV) {
     const TargetMachine &TM = Subtarget.getTargetMachine();
     const TargetLoweringObjectFile *TLOF = TM.getObjFileLowering();
-    MCSymbolXCOFF *S =
-        cast<MCSymbolXCOFF>(TLOF->getFunctionEntryPointSymbol(GV, TM));
+    auto *S =
+        static_cast<MCSymbolXCOFF *>(TLOF->getFunctionEntryPointSymbol(GV, TM));
 
     MVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
     return DAG.getMCSymbol(S, PtrVT);

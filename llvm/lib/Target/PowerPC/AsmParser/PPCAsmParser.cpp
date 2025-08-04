@@ -1756,7 +1756,7 @@ bool PPCAsmParser::parseDirectiveLocalEntry(SMLoc L) {
   if (getParser().parseIdentifier(Name))
     return Error(L, "expected identifier in '.localentry' directive");
 
-  MCSymbolELF *Sym = cast<MCSymbolELF>(getContext().getOrCreateSymbol(Name));
+  auto *Sym = static_cast<MCSymbolELF *>(getContext().getOrCreateSymbol(Name));
   const MCExpr *Expr;
 
   if (parseToken(AsmToken::Comma) ||

@@ -7302,6 +7302,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
+
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::removeBranchOnConst(BestVPlan);
@@ -7317,6 +7318,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
   // Canonicalize EVL loops after regions are dissolved.
   VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
+  VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
+
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
@@ -7373,7 +7376,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 2. Copy and widen instructions from the old loop into the new loop.
   BestVPlan.prepareToExecute(
-      ILV.getTripCount(),
       ILV.getOrCreateVectorTripCount(ILV.LoopVectorPreHeader), State);
   replaceVPBBWithIRVPBB(VectorPH, State.CFG.PrevBB);
 

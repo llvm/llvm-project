@@ -671,13 +671,12 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     Intrinsic::ID RdxIntrinsicId =
         RedPhiR->getRecurrenceKind() == RecurKind::FMaxNum ? Intrinsic::maxnum
                                                            : Intrinsic::minnum;
-    assert((isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
-            cast<VPWidenIntrinsicRecipe>(MinMaxR)->getVectorIntrinsicID() ==
-                RdxIntrinsicId) ||
-           (RepR &&
-            cast<IntrinsicInst>(RepR->getUnderlyingInstr())->getIntrinsicID() ==
-                RdxIntrinsicId) &&
-               "Intrinsic did not match recurrence kind");
+    assert(((isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
+             cast<VPWidenIntrinsicRecipe>(MinMaxR)->getVectorIntrinsicID() ==
+                 RdxIntrinsicId) ||
+            (RepR && cast<IntrinsicInst>(RepR->getUnderlyingInstr())
+                             ->getIntrinsicID() == RdxIntrinsicId)) &&
+           "Intrinsic did not match recurrence kind");
 #endif
 
     if (MinMaxR->getOperand(0) == RedPhiR)

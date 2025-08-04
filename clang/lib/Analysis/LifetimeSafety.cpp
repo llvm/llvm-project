@@ -603,6 +603,8 @@ public:
       OutStates[B] = StateOut;
       Visited.set(B->getBlockID());
       for (const CFGBlock *AdjacentB : isForward() ? B->succs() : B->preds()) {
+        if (!AdjacentB)
+          continue;
         Lattice OldInState = getInState(AdjacentB);
         Lattice NewInState = D.join(OldInState, StateOut);
         // Enqueue the adjacent block if its in-state has changed or if we have

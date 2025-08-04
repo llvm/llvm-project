@@ -147,7 +147,7 @@ void MCMachOStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
 
 void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
                                           MCSymbol *EHSymbol) {
-  auto *Sym = cast<MCSymbolMachO>(Symbol);
+  auto *Sym = static_cast<const MCSymbolMachO *>(Symbol);
   getAssembler().registerSymbol(*Symbol);
   if (Symbol->isExternal())
     emitSymbolAttribute(EHSymbol, MCSA_Global);
@@ -160,7 +160,7 @@ void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
-  if (cast<MCSymbolMachO>(Symbol)->isSymbolLinkerVisible())
+  if (static_cast<MCSymbolMachO *>(Symbol)->isSymbolLinkerVisible())
     newFragment();
 
   MCObjectStreamer::emitLabel(Symbol, Loc);
@@ -172,7 +172,7 @@ void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   //
   // FIXME: Cleanup this code, these bits should be emitted based on semantic
   // properties, not on the order of definition, etc.
-  cast<MCSymbolMachO>(Symbol)->clearReferenceType();
+  static_cast<MCSymbolMachO *>(Symbol)->clearReferenceType();
 }
 
 void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -182,7 +182,7 @@ void MCMachOStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
     if (const auto *SymA = Res.getAddSym()) {
       if (!Res.getSubSym() &&
           (SymA->getName().empty() || Res.getConstant() != 0))
-        cast<MCSymbolMachO>(Symbol)->setAltEntry();
+        static_cast<MCSymbolMachO *>(Symbol)->setAltEntry();
     }
   }
   MCObjectStreamer::emitAssignment(Symbol, Value);
@@ -256,7 +256,7 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
 
 bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
                                           MCSymbolAttr Attribute) {
-  MCSymbolMachO *Symbol = cast<MCSymbolMachO>(Sym);
+  auto *Symbol = static_cast<MCSymbolMachO *>(Sym);
 
   // Indirect symbols are handled differently, to match how 'as' handles
   // them. This makes writing matching .o files easier.
@@ -367,7 +367,7 @@ bool MCMachOStreamer::emitSymbolAttribute(MCSymbol *Sym,
 void MCMachOStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   // Encode the 'desc' value into the lowest implementation defined bits.
   getAssembler().registerSymbol(*Symbol);
-  cast<MCSymbolMachO>(Symbol)->setDesc(DescValue);
+  static_cast<MCSymbolMachO *>(Symbol)->setDesc(DescValue);
 }
 
 void MCMachOStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
@@ -430,7 +430,7 @@ void MCMachOStreamer::finishImpl() {
   // defining symbols.
   DenseMap<const MCFragment *, const MCSymbol *> DefiningSymbolMap;
   for (const MCSymbol &Symbol : getAssembler().symbols()) {
-    auto &Sym = cast<MCSymbolMachO>(Symbol);
+    auto &Sym = static_cast<const MCSymbolMachO &>(Symbol);
     if (Sym.isSymbolLinkerVisible() && Sym.isInSection() && !Sym.isVariable() &&
         !Sym.isAltEntry()) {
       // An atom defining symbol should never be internal to a fragment.

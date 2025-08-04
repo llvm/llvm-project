@@ -68,7 +68,6 @@ define i1 @test1_noinbounds_as1(i32 %x) {
   %q = load i16, ptr addrspace(1) %p
   %r = icmp eq i16 %q, 0
   ret i1 %r
-
 }
 
 define i1 @test1_noinbounds_as2(i64 %x) {
@@ -81,7 +80,17 @@ define i1 @test1_noinbounds_as2(i64 %x) {
   %q = load i16, ptr addrspace(2) %p
   %r = icmp eq i16 %q, 0
   ret i1 %r
+}
 
+define i1 @test1_noarrayty(i32 %X) {
+; CHECK-LABEL: @test1_noarrayty(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 9
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds i16, ptr @G16, i32 %X
+  %Q = load i16, ptr %P
+  %R = icmp eq i16 %Q, 0
+  ret i1 %R
 }
 
 define i1 @test2(i32 %X) {
@@ -104,7 +113,17 @@ define i1 @test3(i32 %X) {
   %Q = load double, ptr %P
   %R = fcmp oeq double %Q, 1.0
   ret i1 %R
+}
 
+define i1 @test3_noarrayty(i32 %X) {
+; CHECK-LABEL: @test3_noarrayty(
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %P = getelementptr inbounds double, ptr @GD, i32 %X
+  %Q = load double, ptr %P
+  %R = fcmp oeq double %Q, 1.0
+  ret i1 %R
 }
 
 define i1 @test4(i32 %X) {
@@ -320,6 +339,17 @@ define i1 @test10_struct_arr_noinbounds_i64(i64 %x) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %p = getelementptr [4 x %Foo], ptr @GStructArr, i32 0, i64 %x, i32 2
+  %q = load i32, ptr %p
+  %r = icmp eq i32 %q, 9
+  ret i1 %r
+}
+
+define i1 @test10_struct_arr_noarrayty(i32 %x) {
+; CHECK-LABEL: @test10_struct_arr_noarrayty(
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %p = getelementptr inbounds %Foo, ptr @GStructArr, i32 %x, i32 2
   %q = load i32, ptr %p
   %r = icmp eq i32 %q, 9
   ret i1 %r

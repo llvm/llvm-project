@@ -270,11 +270,11 @@ Error MetadataParser::parseRootConstants(mcdxbc::RootSignatureDesc &RSD,
 Error MetadataParser::parseRootDescriptors(
     mcdxbc::RootSignatureDesc &RSD, MDNode *RootDescriptorNode,
     RootSignatureElementKind ElementKind) {
-  assert(ElementKind == RootSignatureElementKind::SRV ||
-         ElementKind == RootSignatureElementKind::UAV ||
-         ElementKind == RootSignatureElementKind::CBV &&
-             "parseRootDescriptors should only be called with RootDescriptor "
-             "element kind.");
+  assert((ElementKind == RootSignatureElementKind::SRV ||
+          ElementKind == RootSignatureElementKind::UAV ||
+          ElementKind == RootSignatureElementKind::CBV) &&
+         "parseRootDescriptors should only be called with RootDescriptor "
+         "element kind.");
   if (RootDescriptorNode->getNumOperands() != 5)
     return make_error<InvalidRSMetadataFormat>("Root Descriptor Element");
 

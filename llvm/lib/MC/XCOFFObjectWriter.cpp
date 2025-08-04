@@ -591,7 +591,7 @@ void XCOFFWriter::executePostLayoutBinding() {
     if (S.isTemporary())
       continue;
 
-    const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
+    auto *XSym = static_cast<const MCSymbolXCOFF *>(&S);
     const MCSectionXCOFF *ContainingCsect = getContainingCsect(XSym);
 
     if (ContainingCsect->isDwarfSect())
@@ -690,7 +690,8 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
   std::tie(Type, SignAndSize) = TargetObjectWriter->getRelocTypeAndSignSize(
       Target, Fixup, Fixup.isPCRel());
 
-  const MCSectionXCOFF *SymASec = getContainingCsect(cast<MCSymbolXCOFF>(SymA));
+  const MCSectionXCOFF *SymASec =
+      getContainingCsect(static_cast<const MCSymbolXCOFF *>(SymA));
   assert(SectionMap.contains(SymASec) &&
          "Expected containing csect to exist in map.");
 
@@ -773,13 +774,13 @@ void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
          "Expected containing csect to exist in map.");
   SectionMap[RelocationSec]->Relocations.push_back(Reloc);
 
-  const MCSymbol *const SymB = Target.getSubSym();
+  auto SymB = static_cast<const MCSymbolXCOFF *>(Target.getSubSym());
   if (!SymB)
     return;
   if (SymA == SymB)
     report_fatal_error("relocation for opposite term is not yet supported");
 
-  const MCSectionXCOFF *SymBSec = getContainingCsect(cast<MCSymbolXCOFF>(SymB));
+  const MCSectionXCOFF *SymBSec = getContainingCsect(SymB);
   assert(SectionMap.contains(SymBSec) &&
          "Expected containing csect to exist in map.");
   if (SymASec == SymBSec)

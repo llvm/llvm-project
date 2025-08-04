@@ -105,6 +105,10 @@ Improvements to clang-tidy
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
 
+- Improved :program:`run-clang-tidy.py` by adding a new option
+  `enable-check-profile` to enable per-check timing profiles and print a
+  report based on all analyzed files.
+
 New checks
 ^^^^^^^^^^
 
@@ -137,6 +141,12 @@ Changes in existing checks
 - Improved :doc:`bugprone-signed-char-misuse
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
   false positives on C23 enums with the fixed underlying type of signed char.
+
+- Improved :doc:`bugprone-tagged-union-member-count
+  <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
+  positive when enums or unions from system header files or the ``std``
+  namespace are treated as the tag or the data part of a user-defined
+  tagged union respectively.
 
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding

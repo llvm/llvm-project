@@ -610,7 +610,7 @@ public:
       std::vector<StringRef> ModulePaths;
       for (auto &[ModPath, _] : Index.modulePaths())
         ModulePaths.push_back(ModPath);
-      llvm::sort(ModulePaths.begin(), ModulePaths.end());
+      llvm::sort(ModulePaths);
       for (auto &ModPath : ModulePaths)
         Callback(*Index.modulePaths().find(ModPath));
     }

@@ -2215,7 +2215,7 @@ template <typename ELFT> void ELFDumper<ELFT>::parseDynamicTable() {
     const uint64_t FileSize = Obj.getBufSize();
     const uint64_t DerivedSize =
         (uint64_t)HashTable->nchain * DynSymRegion->EntSize;
-    const uint64_t Offset = (const uint8_t *)DynSymRegion->Addr - Obj.base();
+    const uint64_t Offset = DynSymRegion->Addr - Obj.base();
     if (DerivedSize > FileSize - Offset)
       reportUniqueWarning(
           "the size (0x" + Twine::utohexstr(DerivedSize) +

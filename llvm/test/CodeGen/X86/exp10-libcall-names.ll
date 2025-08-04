@@ -13,10 +13,7 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=GISEL-X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=GISEL-X64
 
-; RUN: not llc -mtriple=x86_64-apple-macos10.8 -filetype=null %s 2>&1 | FileCheck -check-prefix=ERR %s
-; Check exp10/exp10f is emitted as __exp10/__exp10f on assorted systems.
-
-; ERR: no libcall available for fexp10
+; Check exp10/exp10f is emitted as __exp10/__exp10f on assorted darwin systems.
 
 define float @test_exp10_f32(float %x) nounwind {
 ; LINUX-LABEL: test_exp10_f32:
@@ -77,44 +74,4 @@ define double @test_exp10_f64(double %x) nounwind {
 ; GISEL-X64-NEXT:    retq
   %ret = call double @llvm.exp10.f64(double %x)
   ret double %ret
-}
-
-define x86_fp80 @test_exp10_f80(x86_fp80 %x) nounwind {
-; LINUX-LABEL: test_exp10_f80:
-; LINUX:       # %bb.0:
-; LINUX-NEXT:    subq $24, %rsp
-; LINUX-NEXT:    fldt {{[0-9]+}}(%rsp)
-; LINUX-NEXT:    fstpt (%rsp)
-; LINUX-NEXT:    callq exp10l@PLT
-; LINUX-NEXT:    addq $24, %rsp
-; LINUX-NEXT:    retq
-;
-; APPLE-LABEL: test_exp10_f80:
-; APPLE:       ## %bb.0:
-; APPLE-NEXT:    subq $24, %rsp
-; APPLE-NEXT:    fldt {{[0-9]+}}(%rsp)
-; APPLE-NEXT:    fstpt (%rsp)
-; APPLE-NEXT:    callq _exp10l
-; APPLE-NEXT:    addq $24, %rsp
-; APPLE-NEXT:    retq
-;
-; GISEL-X86-LABEL: test_exp10_f80:
-; GISEL-X86:       # %bb.0:
-; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstpt (%esp)
-; GISEL-X86-NEXT:    calll exp10l
-; GISEL-X86-NEXT:    addl $12, %esp
-; GISEL-X86-NEXT:    retl
-;
-; GISEL-X64-LABEL: test_exp10_f80:
-; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    subq $24, %rsp
-; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
-; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq exp10l
-; GISEL-X64-NEXT:    addq $24, %rsp
-; GISEL-X64-NEXT:    retq
-  %ret = call x86_fp80 @llvm.exp10.f80(x86_fp80 %x)
-  ret x86_fp80 %ret
 }

@@ -285,9 +285,9 @@ struct NotCopyAssigned {
   NotCopyAssigned &operator=(const ExpensiveMovableType &);
 };
 
-void PositiveNoMoveForNonCopyAssigmentOperator(ExpensiveMovableType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:69: warning: the parameter 'E' is copied
-  // CHECK-FIXES: void PositiveNoMoveForNonCopyAssigmentOperator(const ExpensiveMovableType& E) {
+void PositiveNoMoveForNonCopyAssignmentOperator(ExpensiveMovableType E) {
+  // CHECK-MESSAGES: [[@LINE-1]]:70: warning: the parameter 'E' is copied
+  // CHECK-FIXES: void PositiveNoMoveForNonCopyAssignmentOperator(const ExpensiveMovableType& E) {
   NotCopyAssigned N;
   N = E;
 }

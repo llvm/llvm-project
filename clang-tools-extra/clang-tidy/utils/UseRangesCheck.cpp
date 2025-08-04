@@ -149,7 +149,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
     }
     Finder->addMatcher(
         callExpr(
-            callee(functionDecl(hasAnyName(std::move(Names)))
+            callee(functionDecl(hasAnyName(Names))
                        .bind((FuncDecl + Twine(Replacers.size() - 1).str()))),
             ast_matchers::internal::DynTypedMatcher::constructVariadic(
                 ast_matchers::internal::DynTypedMatcher::VO_AnyOf,

@@ -31,7 +31,7 @@ class MCSymbolCOFF : public MCSymbol {
 
 public:
   MCSymbolCOFF(const MCSymbolTableEntry *Name, bool isTemporary)
-      : MCSymbol(SymbolKindCOFF, Name, isTemporary) {}
+      : MCSymbol(Name, isTemporary) {}
 
   uint16_t getType() const {
     return Type;
@@ -65,8 +65,6 @@ public:
   void setIsSafeSEH() const {
     modifyFlags(SF_SafeSEH, SF_SafeSEH);
   }
-
-  static bool classof(const MCSymbol *S) { return S->isCOFF(); }
 };
 
 } // end namespace llvm
