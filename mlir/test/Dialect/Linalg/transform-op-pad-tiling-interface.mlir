@@ -4,6 +4,7 @@
 //           CHECK:   linalg.fill ins(%{{.*}} : f32) outs(%{{.*}} : tensor<8x25xf32>) -> tensor<8x25xf32>
 func.func @pad_fill(%value: f32, %output: tensor<24x25xf32>) -> tensor<24x25xf32>
 {
+  // %goo = ub.poison : f32
   %0 = linalg.fill ins(%value : f32) outs(%output : tensor<24x25xf32>) -> tensor<24x25xf32>
   func.return %0 : tensor<24x25xf32>
 }
@@ -18,7 +19,8 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     %fill_padded, %_ = transform.structured.pad_tiling_interface %fill_l1 to padding_sizes [8] {
-      padding_values=[0.0 : f32, 0.0 : f32]
+      // padding_values= [poison, 0.0 : f32]
+      padding_values= [0.0 : f32, 0.0 : f32]
     } : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
 
     transform.yield
