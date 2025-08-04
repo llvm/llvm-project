@@ -905,8 +905,12 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
     else
       return InstDesc(false, I);
   case Instruction::Add:
+    // Loops with a sub reduction followed by an add reduction will have the sub
+    // input negated. It needs to be recorded as RecurKind::Add for that to
+    // happen since the loop vectorizer considers the last found RecurKind for
+    // the reduction phi's kind.
     if (Prev.getRecKind() == RecurKind::Sub && Kind == RecurKind::Sub)
-      return InstDesc(I, Prev.getRecKind());
+      return InstDesc(I, RecurKind::Add);
     else if (Kind == RecurKind::Add)
       return InstDesc(I, Kind);
     else
@@ -1306,6 +1310,11 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     }
     // Recognize a call to the llvm.fmuladd intrinsic.
     if (isFMulAddIntrinsic(Cur))
+      return true;
+
+    if (Cur->getOpcode() == Instruction::Sub && getOpcode() == Instruction::Add)
+      return true;
+    if (Cur->getOpcode() == Instruction::Add && getOpcode() == Instruction::Sub)
       return true;
 
     return Cur->getOpcode() == getOpcode();
