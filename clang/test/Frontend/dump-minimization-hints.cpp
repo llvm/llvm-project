@@ -59,6 +59,36 @@
 // RANGE-NEXT:            "line": 23,
 // RANGE-NEXT:            "column": 2
 // RANGE-NEXT:          }
+// RANGE-NEXT:        },
+// RANGE-NEXT:        {
+// RANGE-NEXT:          "from": {
+// RANGE-NEXT:            "line": 31,
+// RANGE-NEXT:            "column": 1
+// RANGE-NEXT:          },
+// RANGE-NEXT:          "to": {
+// RANGE-NEXT:            "line": 31,
+// RANGE-NEXT:            "column": 27
+// RANGE-NEXT:          }
+// RANGE-NEXT:        },
+// RANGE-NEXT:        {
+// RANGE-NEXT:          "from": {
+// RANGE-NEXT:            "line": 32,
+// RANGE-NEXT:            "column": 3
+// RANGE-NEXT:          },
+// RANGE-NEXT:          "to": {
+// RANGE-NEXT:            "line": 32,
+// RANGE-NEXT:            "column": 12
+// RANGE-NEXT:          }
+// RANGE-NEXT:        },
+// RANGE-NEXT:        {
+// RANGE-NEXT:          "from": {
+// RANGE-NEXT:            "line": 34,
+// RANGE-NEXT:            "column": 1
+// RANGE-NEXT:          },
+// RANGE-NEXT:          "to": {
+// RANGE-NEXT:            "line": 34,
+// RANGE-NEXT:            "column": 2
+// RANGE-NEXT:          }
 // RANGE-NEXT:        }
 // RANGE-NEXT:      ]
 // RANGE-NEXT:    }
@@ -88,7 +118,7 @@ int multiply(int a, int b) {
     return a * b;
 }
 
-inline int unused_by_foo() {} // line 17
+inline void unused_by_foo() {} // line 17
 
 inline void recursively_used_by_foo() {} // line 19
 inline int used_by_foo() { // line 20
@@ -98,6 +128,20 @@ inline int used_by_foo() { // line 20
 
 struct UnusedByFoo {};
 
+namespace ns_unused_by_foo {
+  void x();
+}
+
+namespace ns_used_by_foo { // line 31
+  void x(); // line 32
+  void unused_y(); 
+} // line 34
+
+// Does not have any declarations that are used, so 
+// will not be marked as used.
+namespace ns_used_by_foo { 
+  void unused_z();
+}
 //--- foo.cpp
 #include "foo.h"
 int global_value = 5;
@@ -107,5 +151,6 @@ int main() {
   int doubled_value = multiply(current_value, 2);
   int final_result = doubled_value + global_value;
 
-  return used_by_foo();
+  used_by_foo();
+  ns_used_by_foo::x();
 }

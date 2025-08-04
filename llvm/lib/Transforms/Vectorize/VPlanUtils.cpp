@@ -73,8 +73,11 @@ bool vputils::isHeaderMask(const VPValue *V, VPlan &Plan) {
 }
 
 const SCEV *vputils::getSCEVExprForVPValue(VPValue *V, ScalarEvolution &SE) {
-  if (V->isLiveIn())
-    return SE.getSCEV(V->getLiveInIRValue());
+  if (V->isLiveIn()) {
+    if (Value *LiveIn = V->getLiveInIRValue())
+      return SE.getSCEV(LiveIn);
+    return SE.getCouldNotCompute();
+  }
 
   // TODO: Support constructing SCEVs for more recipes as needed.
   return TypeSwitch<const VPRecipeBase *, const SCEV *>(V->getDefiningRecipe())

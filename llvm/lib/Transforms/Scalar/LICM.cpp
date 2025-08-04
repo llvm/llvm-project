@@ -2508,6 +2508,12 @@ static bool hoistGEP(Instruction &I, Loop &L, ICFLoopSafetyInfo &SafetyInfo,
   if (!GEP)
     return false;
 
+  // Do not try to hoist a constant GEP out of the loop via reassociation.
+  // Constant GEPs can often be folded into addressing modes, and reassociating
+  // them may inhibit CSE of a common base.
+  if (GEP->hasAllConstantIndices())
+    return false;
+
   auto *Src = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
   if (!Src || !Src->hasOneUse() || !L.contains(Src))
     return false;

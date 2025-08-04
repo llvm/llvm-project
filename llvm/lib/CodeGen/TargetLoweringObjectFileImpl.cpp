@@ -402,8 +402,8 @@ void TargetLoweringObjectFileELF::emitPersonalityValue(
     const MachineModuleInfo *MMI) const {
   SmallString<64> NameData("DW.ref.");
   NameData += Sym->getName();
-  MCSymbolELF *Label =
-      cast<MCSymbolELF>(getContext().getOrCreateSymbol(NameData));
+  auto *Label =
+      static_cast<MCSymbolELF *>(getContext().getOrCreateSymbol(NameData));
   Streamer.emitSymbolAttribute(Label, MCSA_Hidden);
   Streamer.emitSymbolAttribute(Label, MCSA_Weak);
   unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_WRITE | ELF::SHF_GROUP;
@@ -581,7 +581,8 @@ static const MCSymbolELF *getLinkedToSymbol(const GlobalObject *GO,
 
   auto *VM = cast<ValueAsMetadata>(MD->getOperand(0).get());
   auto *OtherGV = dyn_cast<GlobalValue>(VM->getValue());
-  return OtherGV ? dyn_cast<MCSymbolELF>(TM.getSymbol(OtherGV)) : nullptr;
+  return OtherGV ? static_cast<const MCSymbolELF *>(TM.getSymbol(OtherGV))
+                 : nullptr;
 }
 
 static unsigned getEntrySizeForKind(SectionKind Kind) {
@@ -1011,7 +1012,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
       (getContext().getAsmInfo()->useIntegratedAssembler() &&
        getContext().getAsmInfo()->binutilsIsAtLeast(2, 36))) {
     Flags |= ELF::SHF_LINK_ORDER;
-    LinkedToSym = cast<MCSymbolELF>(&FnSym);
+    LinkedToSym = static_cast<const MCSymbolELF *>(&FnSym);
   }
 
   // Append the function name as the suffix like GCC, assuming

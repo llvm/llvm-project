@@ -1,26 +1,26 @@
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %T/non-optimized.cpp
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=true  %s -o %T/optimized.cpp
-// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common %s -o %T/default.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=false %s -o %t.non-optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common -optimize-match-table=true  %s -o %t.optimized.cpp
+// RUN: llvm-tblgen -gen-global-isel -I %p/../../../include -I %p/../Common %s -o %t.default.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R19C,R19O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R21C,R21O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R20C,R20O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R00C,R00O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01N -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01O -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01N -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R01C,R01O -input-file=%t.optimized.cpp
 
-// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02N,NOOPT -input-file=%T/non-optimized.cpp
-// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02O       -input-file=%T/optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02N,NOOPT -input-file=%t.non-optimized.cpp
+// RUN: FileCheck %s --check-prefixes=CHECK,R02C,R02O       -input-file=%t.optimized.cpp
 
-// RUN: diff %T/default.cpp %T/optimized.cpp
+// RUN: diff %t.default.cpp %t.optimized.cpp
 
 include "llvm/Target/Target.td"
 include "GlobalISelEmitterCommon.td"

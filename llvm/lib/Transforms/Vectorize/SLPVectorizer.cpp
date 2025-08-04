@@ -18887,8 +18887,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!UseIntrinsic) {
         VFShape Shape =
             VFShape::get(CI->getFunctionType(),
-                         ElementCount::getFixed(
-                             static_cast<unsigned>(VecTy->getNumElements())),
+                         ElementCount::getFixed(VecTy->getNumElements()),
                          false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {

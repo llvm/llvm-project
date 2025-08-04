@@ -15,6 +15,7 @@
 #include "InterpStack.h"
 #include "PrimType.h"
 #include "Program.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
 

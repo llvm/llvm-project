@@ -414,23 +414,27 @@ void ManualDWARFIndex::IndexUnitImpl(DWARFUnit &unit,
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    ConstString basename, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString basename,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
-  m_set.globals.Find(basename,
-                     DIERefCallback(callback, basename.GetStringRef()));
+  m_set.globals.Find(basename, DIERefCallback(IterationActionAdaptor(callback),
+                                              basename.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
-  m_set.globals.Find(regex, DIERefCallback(callback, regex.GetText()));
+  m_set.globals.Find(
+      regex, DIERefCallback(IterationActionAdaptor(callback), regex.GetText()));
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
-    DWARFUnit &unit, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    DWARFUnit &unit,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
-  m_set.globals.FindAllEntriesForUnit(unit, DIERefCallback(callback));
+  m_set.globals.FindAllEntriesForUnit(
+      unit, DIERefCallback(IterationActionAdaptor(callback)));
 }
 
 void ManualDWARFIndex::GetObjCMethods(
@@ -464,9 +468,11 @@ void ManualDWARFIndex::GetTypes(
 }
 
 void ManualDWARFIndex::GetNamespaces(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
-  m_set.namespaces.Find(name, DIERefCallback(callback, name.GetStringRef()));
+  m_set.namespaces.Find(name, DIERefCallback(IterationActionAdaptor(callback),
+                                             name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetFunctions(

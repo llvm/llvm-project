@@ -153,15 +153,12 @@ void MCContext::reset() {
   SPIRVAllocator.DestroyAll();
   WasmSignatureAllocator.DestroyAll();
 
-  // ~CodeViewContext may destroy a MCFragment outside of sections and need to
-  // be reset before FragmentAllocator.
   CVContext.reset();
 
   MCSubtargetAllocator.DestroyAll();
   InlineAsmUsedLabelNames.clear();
   Symbols.clear();
   Allocator.Reset();
-  FragmentAllocator.Reset();
   Instances.clear();
   CompilationDir.clear();
   MainFileName.clear();
@@ -309,13 +306,16 @@ MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
   auto Name = Sym.getNameEntryPtr();
   switch (getObjectFileType()) {
   case MCContext::IsCOFF:
-    NewSym = new (Name, *this) MCSymbolCOFF(cast<MCSymbolCOFF>(Sym));
+    NewSym =
+        new (Name, *this) MCSymbolCOFF(static_cast<const MCSymbolCOFF &>(Sym));
     break;
   case MCContext::IsELF:
-    NewSym = new (Name, *this) MCSymbolELF(cast<MCSymbolELF>(Sym));
+    NewSym =
+        new (Name, *this) MCSymbolELF(static_cast<const MCSymbolELF &>(Sym));
     break;
   case MCContext::IsMachO:
-    NewSym = new (Name, *this) MCSymbolMachO(cast<MCSymbolMachO>(Sym));
+    NewSym = new (Name, *this)
+        MCSymbolMachO(static_cast<const MCSymbolMachO &>(Sym));
     break;
   default:
     reportFatalUsageError(".set redefinition is not supported");
@@ -446,7 +446,7 @@ Symbol *MCContext::getOrCreateSectionSymbol(StringRef Section) {
   // Use the symbol's index to track if it has been used as a section symbol.
   // Set to -1 to catch potential bugs if misused as a symbol index.
   if (Sym && Sym->getIndex() != -1u) {
-    R = cast<Symbol>(Sym);
+    R = static_cast<Symbol *>(Sym);
   } else {
     SymEntry.second.Used = true;
     R = new (&SymEntry, *this) Symbol(&SymEntry, /*isTemporary=*/false);
@@ -586,7 +586,7 @@ MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
 
   return createELFSectionImpl(
       I->getKey(), Type, Flags, EntrySize, Group, true, true,
-      cast<MCSymbolELF>(RelInfoSection->getBeginSymbol()));
+      static_cast<const MCSymbolELF *>(RelInfoSection->getBeginSymbol()));
 }
 
 MCSectionELF *MCContext::getELFNamedSection(const Twine &Prefix,
@@ -604,7 +604,7 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                                        const MCSymbolELF *LinkedToSym) {
   MCSymbolELF *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty())
-    GroupSym = cast<MCSymbolELF>(getOrCreateSymbol(Group));
+    GroupSym = static_cast<MCSymbolELF *>(getOrCreateSymbol(Group));
 
   return getELFSection(Section, Type, Flags, EntrySize, GroupSym, IsComdat,
                        UniqueID, LinkedToSym);

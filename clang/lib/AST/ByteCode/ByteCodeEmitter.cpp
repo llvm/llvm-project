@@ -137,21 +137,21 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
 template <typename T>
 static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
                  bool &Success) {
+  size_t ValPos = Code.size();
   size_t Size;
 
   if constexpr (std::is_pointer_v<T>)
-    Size = sizeof(uint32_t);
+    Size = align(sizeof(uint32_t));
   else
-    Size = sizeof(T);
+    Size = align(sizeof(T));
 
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+  if (ValPos + Size > std::numeric_limits<unsigned>::max()) {
     Success = false;
     return;
   }
 
   // Access must be aligned!
-  size_t ValPos = align(Code.size());
-  Size = align(Size);
+  assert(aligned(ValPos));
   assert(aligned(ValPos + Size));
   Code.resize(ValPos + Size);
 
@@ -168,17 +168,16 @@ static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
 template <typename T>
 static void emitSerialized(std::vector<std::byte> &Code, const T &Val,
                            bool &Success) {
-  size_t Size = Val.bytesToSerialize();
+  size_t ValPos = Code.size();
+  size_t Size = align(Val.bytesToSerialize());
 
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
+  if (ValPos + Size > std::numeric_limits<unsigned>::max()) {
     Success = false;
     return;
   }
 
   // Access must be aligned!
-  assert(aligned(Code.size()));
-  size_t ValPos = Code.size();
-  Size = align(Size);
+  assert(aligned(ValPos));
   assert(aligned(ValPos + Size));
   Code.resize(ValPos + Size);
 

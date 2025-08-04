@@ -931,7 +931,7 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
 }
 
 void MipsTargetELFStreamer::emitLabel(MCSymbol *S) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   getStreamer().getAssembler().registerSymbol(*Symbol);
   uint8_t Type = Symbol->getType();
   if (Type != ELF::STT_FUNC)
@@ -1015,11 +1015,11 @@ void MipsTargetELFStreamer::finish() {
 }
 
 void MipsTargetELFStreamer::emitAssignment(MCSymbol *S, const MCExpr *Value) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   // If on rhs is micromips symbol then mark Symbol as microMips.
   if (Value->getKind() != MCExpr::SymbolRef)
     return;
-  const auto &RhsSym = cast<MCSymbolELF>(
+  auto &RhsSym = static_cast<const MCSymbolELF &>(
       static_cast<const MCSymbolRefExpr *>(Value)->getSymbol());
 
   if (!(RhsSym.getOther() & ELF::STO_MIPS_MICROMIPS))
@@ -1034,12 +1034,14 @@ MCELFStreamer &MipsTargetELFStreamer::getStreamer() {
 
 void MipsTargetELFStreamer::emitGPRel32Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(4);
   S.addFixup(Value, Mips::fixup_Mips_GPREL32);
   S.appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitGPRel64Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(8);
   // fixup_Mips_GPREL32 desginates R_MIPS_GPREL32+R_MIPS_64 on MIPS64.
   S.addFixup(Value, Mips::fixup_Mips_GPREL32);
   S.appendContents(8, 0);
@@ -1047,24 +1049,28 @@ void MipsTargetELFStreamer::emitGPRel64Value(const MCExpr *Value) {
 
 void MipsTargetELFStreamer::emitDTPRel32Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(4);
   S.addFixup(Value, Mips::fixup_Mips_DTPREL32);
   S.appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitDTPRel64Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(8);
   S.addFixup(Value, Mips::fixup_Mips_DTPREL64);
   S.appendContents(8, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel32Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(4);
   S.addFixup(Value, Mips::fixup_Mips_TPREL32);
   S.appendContents(4, 0);
 }
 
 void MipsTargetELFStreamer::emitTPRel64Value(const MCExpr *Value) {
   auto &S = getStreamer();
+  S.ensureHeadroom(8);
   S.addFixup(Value, Mips::fixup_Mips_TPREL64);
   S.appendContents(8, 0);
 }

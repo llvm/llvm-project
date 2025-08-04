@@ -180,6 +180,7 @@ public:
     ImmTyMatrixBFMT,
     ImmTyMatrixAReuse,
     ImmTyMatrixBReuse,
+    ImmTyScaleSel,
     ImmTyByteSel,
   };
 
@@ -1184,6 +1185,7 @@ public:
     case ImmTyMatrixBFMT: OS << "ImmTyMatrixBFMT"; break;
     case ImmTyMatrixAReuse: OS << "ImmTyMatrixAReuse"; break;
     case ImmTyMatrixBReuse: OS << "ImmTyMatrixBReuse"; break;
+    case ImmTyScaleSel: OS << "ScaleSel" ; break;
     case ImmTyByteSel: OS << "ByteSel" ; break;
     }
     // clang-format on
@@ -9365,6 +9367,10 @@ void AMDGPUAsmParser::cvtVOP3(MCInst &Inst, const OperandVector &Operands,
       Op.addRegOrImmOperands(Inst, 1);
     }
   }
+
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::scale_sel))
+    addOptionalImmOperand(Inst, Operands, OptionalIdx,
+                          AMDGPUOperand::ImmTyScaleSel);
 
   if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::clamp))
     addOptionalImmOperand(Inst, Operands, OptionalIdx,

@@ -6494,7 +6494,7 @@ struct AAAllocationInfo : public StateWrapper<BooleanState, AbstractAttribute> {
   }
 
   constexpr static const std::optional<TypeSize> HasNoAllocationSize =
-      std::optional<TypeSize>(TypeSize(-1, true));
+      std::make_optional<TypeSize>(-1, true);
 
   LLVM_ABI static const char ID;
 };

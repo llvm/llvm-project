@@ -1303,8 +1303,8 @@ protected:
   SchedBoundary Top;
   SchedBoundary Bot;
 
-  ClusterInfo *TopCluster;
-  ClusterInfo *BotCluster;
+  unsigned TopClusterID;
+  unsigned BotClusterID;
 
   /// Candidate last picked from Top boundary.
   SchedCandidate TopCand;
@@ -1346,8 +1346,8 @@ protected:
   /// Candidate last picked from Bot boundary.
   SchedCandidate BotCand;
 
-  ClusterInfo *TopCluster;
-  ClusterInfo *BotCluster;
+  unsigned TopClusterID;
+  unsigned BotClusterID;
 
 public:
   PostGenericScheduler(const MachineSchedContext *C)

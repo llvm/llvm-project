@@ -460,7 +460,8 @@ bool COFFMasmParser::parseDirectiveProc(StringRef Directive, SMLoc Loc) {
       nextLoc = getTok().getLoc();
     }
   }
-  MCSymbolCOFF *Sym = cast<MCSymbolCOFF>(getContext().getOrCreateSymbol(Label));
+  auto *Sym =
+      static_cast<MCSymbolCOFF *>(getContext().getOrCreateSymbol(Label));
 
   // Define symbol as simple external function
   Sym->setExternal(true);

@@ -164,7 +164,9 @@ function(get_libclc_device_info)
   list( GET TRIPLE 0 ARCH )
 
   # Some targets don't have a specific device architecture to target
-  if( ARG_DEVICE STREQUAL none OR ARCH STREQUAL spirv OR ARCH STREQUAL spirv64 )
+  if( ARG_DEVICE STREQUAL none
+      OR ((ARCH STREQUAL spirv OR ARCH STREQUAL spirv64)
+          AND NOT LIBCLC_USE_SPIRV_BACKEND) )
     set( cpu )
     set( arch_suffix "${ARG_TRIPLE}" )
   else()
@@ -182,7 +184,11 @@ function(get_libclc_device_info)
 
   # Some libclc targets are not real clang triples: return their canonical
   # triples.
-  if( ARCH STREQUAL spirv OR ARCH STREQUAL clspv )
+  if( ARCH STREQUAL spirv AND LIBCLC_USE_SPIRV_BACKEND )
+    set( ARG_TRIPLE "spirv32--" )
+  elseif( ARCH STREQUAL spirv64 AND LIBCLC_USE_SPIRV_BACKEND )
+    set( ARG_TRIPLE "spirv64--" )
+  elseif( ARCH STREQUAL spirv OR ARCH STREQUAL clspv )
     set( ARG_TRIPLE "spir--" )
   elseif( ARCH STREQUAL spirv64 OR ARCH STREQUAL clspv64 )
     set( ARG_TRIPLE "spir64--" )
@@ -363,10 +369,17 @@ function(add_libclc_builtin_set)
   if( ARG_ARCH STREQUAL spirv OR ARG_ARCH STREQUAL spirv64 )
     set( obj_suffix ${ARG_ARCH_SUFFIX}.spv )
     set( libclc_builtins_lib ${LIBCLC_OUTPUT_LIBRARY_DIR}/${obj_suffix} )
-    add_custom_command( OUTPUT ${libclc_builtins_lib}
-      COMMAND ${llvm-spirv_exe} ${spvflags} -o ${libclc_builtins_lib} ${builtins_link_lib}
-      DEPENDS ${llvm-spirv_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
-    )
+    if ( LIBCLC_USE_SPIRV_BACKEND )
+      add_custom_command( OUTPUT ${libclc_builtins_lib}
+        COMMAND ${clang_exe} --target=${ARG_TRIPLE} -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
+        DEPENDS ${clang_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
+      )
+    else()
+      add_custom_command( OUTPUT ${libclc_builtins_lib}
+        COMMAND ${llvm-spirv_exe} ${spvflags} -o ${libclc_builtins_lib} ${builtins_link_lib}
+        DEPENDS ${llvm-spirv_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
+      )
+    endif()
   else()
     # Non-SPIR-V targets add an extra step to optimize the bytecode
     set( builtins_opt_lib_tgt builtins.opt.${ARG_ARCH_SUFFIX} )

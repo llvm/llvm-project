@@ -19,6 +19,8 @@ TEST(LlvmLibcWCSTokReentrantTest, NoTokenFound) {
     // Another call to ensure that 'reserve' is not in a bad state.
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(empty, L"", &reserve), nullptr);
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L"", &reserve), nullptr);
+    // Subsequent searches still return nullptr.
+    ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L"", &reserve), nullptr);
   }
   { // Empty source and single character delimiter string.
     wchar_t empty[] = L"";
@@ -27,6 +29,8 @@ TEST(LlvmLibcWCSTokReentrantTest, NoTokenFound) {
     // Another call to ensure that 'reserve' is not in a bad state.
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(empty, L"_", &reserve), nullptr);
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L"_", &reserve), nullptr);
+    // Subsequent searches still return nullptr.
+    ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L"_", &reserve), nullptr);
   }
   { // Same character source and delimiter string.
     wchar_t single[] = L"_";
@@ -34,6 +38,8 @@ TEST(LlvmLibcWCSTokReentrantTest, NoTokenFound) {
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(single, L"_", &reserve), nullptr);
     // Another call to ensure that 'reserve' is not in a bad state.
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(single, L"_", &reserve), nullptr);
+    ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L"_", &reserve), nullptr);
+    // Subsequent searches still return nullptr.
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L"_", &reserve), nullptr);
   }
   { // Multiple character source and single character delimiter string.
@@ -50,6 +56,8 @@ TEST(LlvmLibcWCSTokReentrantTest, NoTokenFound) {
     ASSERT_TRUE(tok[1] == L',');
     ASSERT_TRUE(tok[2] == L'2');
     ASSERT_TRUE(tok[3] == L'\0');
+    ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L":", &reserve), nullptr);
+    // Subsequent searches still return nullptr.
     ASSERT_EQ(LIBC_NAMESPACE::wcstok(nullptr, L":", &reserve), nullptr);
   }
 }

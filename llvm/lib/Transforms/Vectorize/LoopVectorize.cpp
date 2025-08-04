@@ -1624,7 +1624,7 @@ private:
   /// presence of a cost for an instruction in the mapping indicates that the
   /// instruction will be scalarized when vectorizing with the associated
   /// vectorization factor. The entries are VF-ScalarCostTy pairs.
-  DenseMap<ElementCount, ScalarCostsTy> InstsToScalarize;
+  MapVector<ElementCount, ScalarCostsTy> InstsToScalarize;
 
   /// Holds the instructions known to be uniform after vectorization.
   /// The data is collected per VF.
@@ -7302,6 +7302,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
+
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::removeBranchOnConst(BestVPlan);
@@ -7317,6 +7318,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
   // Canonicalize EVL loops after regions are dissolved.
   VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
+  VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
+
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
@@ -7373,7 +7376,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 2. Copy and widen instructions from the old loop into the new loop.
   BestVPlan.prepareToExecute(
-      ILV.getTripCount(),
       ILV.getOrCreateVectorTripCount(ILV.LoopVectorPreHeader), State);
   replaceVPBBWithIRVPBB(VectorPH, State.CFG.PrevBB);
 
@@ -9788,6 +9790,10 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                 match(
                     P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
                     m_SpecificInt(0)) &&
+                any_of(P.incoming_values(),
+                       [&EPI](Value *Inc) {
+                         return Inc == EPI.VectorTripCount;
+                       }) &&
                 all_of(P.incoming_values(), [&EPI](Value *Inc) {
                   return Inc == EPI.VectorTripCount ||
                          match(Inc, m_SpecificInt(0));

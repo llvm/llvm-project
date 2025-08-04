@@ -1381,7 +1381,7 @@ void TosaValidation::runOnOperation() {
 
     // Some uses of TOSA rely on the constant operands of particular
     // operations.
-    if (strictOpSpecAlignment && failed(applyConstantOperandCheck(op)))
+    if (failed(applyConstantOperandCheck(op)))
       signalPassFailure();
 
     // do level checks

@@ -951,17 +951,7 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
-                             VPTransformState &State) {
-  Type *TCTy = TripCountV->getType();
-  // Check if the backedge taken count is needed, and if so build it.
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-    auto *TCMO = Builder.CreateSub(TripCountV, ConstantInt::get(TCTy, 1),
-                                   "trip.count.minus.1");
-    BackedgeTakenCount->setUnderlyingValue(TCMO);
-  }
-
+void VPlan::prepareToExecute(Value *VectorTripCountV, VPTransformState &State) {
   if (!VectorTripCount.getUnderlyingValue())
     VectorTripCount.setUnderlyingValue(VectorTripCountV);
   else
@@ -969,6 +959,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
            "VectorTripCount set earlier must much VectorTripCountV");
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  Type *TCTy = VectorTripCountV->getType();
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
   if (VF.getNumUsers()) {

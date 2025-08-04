@@ -1375,6 +1375,21 @@ void acc::ParallelOp::addWaitOperands(
   setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
 }
 
+void acc::ParallelOp::addPrivatization(MLIRContext *context,
+                                       mlir::acc::PrivateOp op,
+                                       mlir::acc::PrivateRecipeOp recipe) {
+  getPrivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getPrivatizationRecipesAttr())
+    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
+}
+
 static ParseResult parseNumGangs(
     mlir::OpAsmParser &parser,
     llvm::SmallVectorImpl<mlir::OpAsmParser::UnresolvedOperand> &operands,
@@ -2009,6 +2024,21 @@ void acc::SerialOp::addWaitOperands(
       std::max(effectiveDeviceTypes.size(), static_cast<size_t>(1)),
       mlir::BoolAttr::get(context, hasDevnum));
   setHasWaitDevnumAttr(mlir::ArrayAttr::get(context, hasDevnums));
+}
+
+void acc::SerialOp::addPrivatization(MLIRContext *context,
+                                     mlir::acc::PrivateOp op,
+                                     mlir::acc::PrivateRecipeOp recipe) {
+  getPrivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getPrivatizationRecipesAttr())
+    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 //===----------------------------------------------------------------------===//
@@ -3012,6 +3042,21 @@ void acc::LoopOp::addGangOperands(
 
     setGangOperandsArgTypeAttr(mlir::ArrayAttr::get(context, gangTypes));
   }
+}
+
+void acc::LoopOp::addPrivatization(MLIRContext *context,
+                                   mlir::acc::PrivateOp op,
+                                   mlir::acc::PrivateRecipeOp recipe) {
+  getPrivateOperandsMutable().append(op.getResult());
+
+  llvm::SmallVector<mlir::Attribute> recipes;
+
+  if (getPrivatizationRecipesAttr())
+    llvm::copy(getPrivatizationRecipesAttr(), std::back_inserter(recipes));
+
+  recipes.push_back(
+      mlir::SymbolRefAttr::get(context, recipe.getSymName().str()));
+  setPrivatizationRecipesAttr(mlir::ArrayAttr::get(context, recipes));
 }
 
 //===----------------------------------------------------------------------===//

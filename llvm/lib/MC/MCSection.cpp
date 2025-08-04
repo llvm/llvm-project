@@ -83,12 +83,14 @@ void MCFragment::appendFixups(ArrayRef<MCFixup> Fixups) {
 }
 
 void MCFragment::setVarFixups(ArrayRef<MCFixup> Fixups) {
+  assert(Fixups.size() < 256 &&
+         "variable-size tail cannot have more than 256 fixups");
   auto &S = getParent()->FixupStorage;
-  if (VarFixupStart + Fixups.size() > VarFixupEnd) {
+  if (Fixups.size() > VarFixupSize) {
     VarFixupStart = S.size();
     S.resize_for_overwrite(S.size() + Fixups.size());
   }
-  VarFixupEnd = VarFixupStart + Fixups.size();
+  VarFixupSize = Fixups.size();
   // Source fixup offsets are relative to the variable part's start. Add the
   // fixed part size to make them relative to the fixed part's start.
   std::transform(Fixups.begin(), Fixups.end(), S.begin() + VarFixupStart,

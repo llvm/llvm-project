@@ -46,6 +46,8 @@ public:
 private:
   void tlsdescToIe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
   void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) const;
+  bool tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
+                     const Relocation &rLo12, uint64_t secAddr) const;
 };
 } // end anonymous namespace
 
@@ -1155,6 +1157,78 @@ void LoongArch::tlsdescToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
+// Try GOT indirection to PC relative optimization.
+// From:
+//  * pcalau12i $a0, %got_pc_hi20(sym_got)
+//  * ld.w/d    $a0, $a0, %got_pc_lo12(sym_got)
+// To:
+//  * pcalau12i $a0, %pc_hi20(sym)
+//  * addi.w/d  $a0, $a0, %pc_lo12(sym)
+//
+// Note: Althouth the optimization has been performed, the GOT entries still
+// exists, similarly to AArch64. Eliminating the entries will increase code
+// complexity.
+bool LoongArch::tryGotToPCRel(uint8_t *loc, const Relocation &rHi20,
+                              const Relocation &rLo12, uint64_t secAddr) const {
+  // Check if the relocations apply to consecutive instructions.
+  if (rHi20.offset + 4 != rLo12.offset)
+    return false;
+
+  // Check if the relocations reference the same symbol and skip undefined,
+  // preemptible and STT_GNU_IFUNC symbols.
+  if (!rHi20.sym || rHi20.sym != rLo12.sym || !rHi20.sym->isDefined() ||
+      rHi20.sym->isPreemptible || rHi20.sym->isGnuIFunc())
+    return false;
+
+  // GOT references to absolute symbols can't be relaxed to use PCALAU12I/ADDI
+  // in position-independent code because these instructions produce a relative
+  // address.
+  if ((ctx.arg.isPic && !cast<Defined>(*rHi20.sym).section))
+    return false;
+
+  // Check if the addends of the both relocations are zero.
+  if (rHi20.addend != 0 || rLo12.addend != 0)
+    return false;
+
+  const uint32_t currInsn = read32le(loc);
+  const uint32_t nextInsn = read32le(loc + 4);
+  const uint32_t ldOpcode = ctx.arg.is64 ? LD_D : LD_W;
+  // Check if the first instruction is PCALAU12I and the second instruction is
+  // LD.
+  if ((currInsn & 0xfe000000) != PCALAU12I ||
+      (nextInsn & 0xffc00000) != ldOpcode)
+    return false;
+
+  // Check if use the same register.
+  if (getD5(currInsn) != getJ5(nextInsn) || getJ5(nextInsn) != getD5(nextInsn))
+    return false;
+
+  Symbol &sym = *rHi20.sym;
+  uint64_t symLocal = sym.getVA(ctx);
+  const int64_t displace = symLocal - getLoongArchPage(secAddr + rHi20.offset);
+  // Check if the symbol address is in
+  // [(PC & ~0xfff) - 2GiB - 0x800, (PC & ~0xfff) + 2GiB - 0x800).
+  const int64_t underflow = -0x80000000LL - 0x800;
+  const int64_t overflow = 0x80000000LL - 0x800;
+  if (!(displace >= underflow && displace < overflow))
+    return false;
+
+  Relocation newRHi20 = {RE_LOONGARCH_PAGE_PC, R_LARCH_PCALA_HI20, rHi20.offset,
+                         rHi20.addend, &sym};
+  Relocation newRLo12 = {R_ABS, R_LARCH_PCALA_LO12, rLo12.offset, rLo12.addend,
+                         &sym};
+  uint64_t pageDelta =
+      getLoongArchPageDelta(symLocal, secAddr + rHi20.offset, rHi20.type);
+  // pcalau12i $a0, %pc_hi20
+  write32le(loc, insn(PCALAU12I, getD5(currInsn), 0, 0));
+  relocate(loc, newRHi20, pageDelta);
+  // addi.w/d $a0, $a0, %pc_lo12
+  write32le(loc + 4, insn(ctx.arg.is64 ? ADDI_D : ADDI_W, getD5(nextInsn),
+                          getJ5(nextInsn), 0));
+  relocate(loc + 4, newRLo12, SignExtend64(symLocal, 64));
+  return true;
+}
+
 // During TLSDESC GD_TO_IE, the converted code sequence always includes an
 // instruction related to the Lo12 relocation (ld.[wd]). To obtain correct val
 // in `getRelocTargetVA`, expr of this instruction should be adjusted to
@@ -1172,6 +1246,30 @@ RelExpr LoongArch::adjustTlsExpr(RelType type, RelExpr expr) const {
   return expr;
 }
 
+static bool pairForGotRels(ArrayRef<Relocation> relocs) {
+  // Check if R_LARCH_GOT_PC_HI20 and R_LARCH_GOT_PC_LO12 always appear in
+  // pairs.
+  size_t i = 0;
+  const size_t size = relocs.size();
+  for (; i != size; ++i) {
+    if (relocs[i].type == R_LARCH_GOT_PC_HI20) {
+      if (i + 1 < size && relocs[i + 1].type == R_LARCH_GOT_PC_LO12) {
+        ++i;
+        continue;
+      }
+      if (relaxable(relocs, i) && i + 2 < size &&
+          relocs[i + 2].type == R_LARCH_GOT_PC_LO12) {
+        i += 2;
+        continue;
+      }
+      break;
+    } else if (relocs[i].type == R_LARCH_GOT_PC_LO12) {
+      break;
+    }
+  }
+  return i == size;
+}
+
 void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   const unsigned bits = ctx.arg.is64 ? 64 : 32;
   uint64_t secAddr = sec.getOutputSection()->addr;
@@ -1181,6 +1279,7 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     secAddr += ehIn->getParent()->outSecOff;
   bool isExtreme = false, isRelax = false;
   const MutableArrayRef<Relocation> relocs = sec.relocs();
+  const bool isPairForGotRels = pairForGotRels(relocs);
   for (size_t i = 0, size = relocs.size(); i != size; ++i) {
     Relocation &rel = relocs[i];
     uint8_t *loc = buf + rel.offset;
@@ -1264,6 +1363,24 @@ void LoongArch::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
         tlsdescToLe(loc, rel, val);
       }
       continue;
+    case RE_LOONGARCH_GOT_PAGE_PC:
+      // In LoongArch, we try GOT indirection to PC relative optimization in
+      // normal or medium code model, whether or not with R_LARCH_RELAX
+      // relocation. Moreover, if the original code sequence can be relaxed to a
+      // single instruction `pcaddi`, the first instruction will be removed and
+      // it will not reach here.
+      if (isPairForGotRels && rel.type == R_LARCH_GOT_PC_HI20) {
+        bool isRelax = relaxable(relocs, i);
+        const Relocation lo12Rel = isRelax ? relocs[i + 2] : relocs[i + 1];
+        if (lo12Rel.type == R_LARCH_GOT_PC_LO12 &&
+            tryGotToPCRel(loc, rel, lo12Rel, secAddr)) {
+          // isRelax: skip relocations R_LARCH_RELAX, R_LARCH_GOT_PC_LO12
+          // !isRelax: skip relocation R_LARCH_GOT_PC_LO12
+          i += isRelax ? 2 : 1;
+          continue;
+        }
+      }
+      break;
     default:
       break;
     }

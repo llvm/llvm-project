@@ -178,7 +178,7 @@ public:
   const char *GetTargetTriple();
 
   void SetExternalSource(
-      llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> &ast_source_up);
+      llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_sp);
 
   bool GetCompleteDecl(clang::Decl *decl) {
     return TypeSystemClang::GetCompleteDecl(&getASTContext(), decl);
@@ -823,7 +823,8 @@ public:
 
   // Exploring the type
 
-  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override;
+  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size,
+                                                  lldb::Format format) override;
 
   llvm::Expected<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
                                        ExecutionContextScope *exe_scope) {
