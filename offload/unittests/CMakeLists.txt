@@ -38,7 +38,7 @@ function(add_offload_test_device_code test_filename test_name)
       set(output_file "${CMAKE_CURRENT_BINARY_DIR}/${test_name}.nvptx64.bin")
       add_custom_command(
         OUTPUT ${output_file}
-        COMMAND ${CMAKE_C_COMPILER}
+        COMMAND ${CMAKE_CXX_COMPILER}
         --target=nvptx64-nvidia-cuda -march=${nvptx_arch}
         -nogpulib --cuda-path=${cuda_path} -flto ${ARGN}
         ${SRC_PATH} -o ${output_file}
@@ -62,7 +62,7 @@ function(add_offload_test_device_code test_filename test_name)
       set(output_file "${CMAKE_CURRENT_BINARY_DIR}/${test_name}.amdgpu.bin")
       add_custom_command(
         OUTPUT ${output_file}
-        COMMAND ${CMAKE_C_COMPILER}
+        COMMAND ${CMAKE_CXX_COMPILER}
         --target=amdgcn-amd-amdhsa -mcpu=${amdgpu_arch}
         -nogpulib -flto ${ARGN} ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
