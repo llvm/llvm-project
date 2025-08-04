@@ -504,7 +504,8 @@ void StopTheWorld(StopTheWorldCallback callback, void *argument) {
     internal_prctl(PR_SET_PTRACER, tracer_pid, 0, 0, 0);
     // Allow the tracer thread to start.
     tracer_thread_argument.mutex.Unlock();
-    // NOTE: errno is shared between this thread and the tracer thread.
+    // NOTE: errno is shared between this thread and the tracer thread
+    //       (clone was called without CLONE_SETTLS / newtls).
     // internal_waitpid() may call syscall() which can access/spoil errno,
     // so we can't call it now. Instead we for the tracer thread to finish using
     // the spin loop below. Man page for sched_yield() says "In the Linux
