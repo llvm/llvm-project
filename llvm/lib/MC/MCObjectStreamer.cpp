@@ -342,10 +342,12 @@ void MCObjectStreamer::emitInstructionImpl(const MCInst &Inst,
                                            const MCSubtargetInfo &STI) {
   MCStreamer::emitInstruction(Inst, STI);
 
+  MCSection *Sec = getCurrentSectionOnly();
+  Sec->setHasInstructions(true);
+
   // Now that a machine instruction has been assembled into this section, make
   // a line entry for any .loc directive that has been seen.
-  MCSection *Sec = getCurrentSectionOnly();
-  MCDwarfLineEntry::make(this, Sec);
+  MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
   // If this instruction doesn't need relaxation, just emit it as data.
   MCAssembler &Assembler = getAssembler();
