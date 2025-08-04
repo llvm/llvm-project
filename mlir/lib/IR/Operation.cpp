@@ -734,12 +734,6 @@ Operation *Operation::clone(IRMapping &mapper, CloneOptions options) {
   // Create the new operation.
   auto *newOp = create(getLoc(), getName(), getResultTypes(), operands, attrs,
                        getPropertiesStorage(), successors, getNumRegions());
-
-  // The builder overwrites the opaque properties with the attributes; hence,
-  // copy them after building the operation.
-  if (!isRegistered())
-    newOp->copyProperties(getPropertiesStorage());
-
   mapper.map(this, newOp);
 
   // Clone the regions.
