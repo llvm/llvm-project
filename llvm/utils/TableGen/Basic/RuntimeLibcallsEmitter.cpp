@@ -588,10 +588,12 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     PredicateSorter.insert(
         PredicateWithCC()); // No predicate or CC override first.
 
+    constexpr unsigned BitsPerStorageElt = sizeof(uintptr_t) * CHAR_BIT;
+
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
 
-    SmallVector<uint64_t, 32> BitsetValues(
-        divideCeil(RuntimeLibcallImplDefList.size(), 64));
+    SmallVector<uintptr_t, 32> BitsetValues(
+        divideCeil(RuntimeLibcallImplDefList.size(), BitsPerStorageElt));
 
     for (const Record *Elt : *Elements) {
       const RuntimeLibcallImpl *LibCallImpl = getRuntimeLibcallImpl(Elt);
@@ -602,8 +604,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       }
 
       size_t BitIdx = LibCallImpl->getEnumVal();
-      uint64_t BitmaskVal = uint64_t(1) << (BitIdx % 64);
-      size_t BitsetIdx = BitIdx / 64;
+      uintptr_t BitmaskVal = uintptr_t(1) << (BitIdx % BitsPerStorageElt);
+      size_t BitsetIdx = BitIdx / BitsPerStorageElt;
 
       auto It = Func2Preds.find(LibCallImpl);
       if (It == Func2Preds.end()) {
