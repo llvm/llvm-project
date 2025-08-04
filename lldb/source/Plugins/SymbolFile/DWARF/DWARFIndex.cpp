@@ -113,42 +113,43 @@ void DWARFIndex::ReportInvalidDIERef(DIERef ref, llvm::StringRef name) const {
 
 void DWARFIndex::GetFullyQualifiedType(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   GetTypes(context, [&](DWARFDIE die) {
     return GetFullyQualifiedTypeImpl(context, die, callback);
   });
 }
 
-bool DWARFIndex::GetFullyQualifiedTypeImpl(
+IterationAction DWARFIndex::GetFullyQualifiedTypeImpl(
     const DWARFDeclContext &context, DWARFDIE die,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   DWARFDeclContext dwarf_decl_ctx = die.GetDWARFDeclContext();
   if (dwarf_decl_ctx == context)
     return callback(die);
-  return true;
+  return IterationAction::Continue;
 }
 
 void DWARFIndex::GetTypesWithQuery(
-    TypeQuery &query, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    TypeQuery &query,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   GetTypes(query.GetTypeBasename(), [&](DWARFDIE die) {
     return ProcessTypeDIEMatchQuery(query, die, callback);
   });
 }
 
-bool DWARFIndex::ProcessTypeDIEMatchQuery(
+IterationAction DWARFIndex::ProcessTypeDIEMatchQuery(
     TypeQuery &query, DWARFDIE die,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   // Check the language, but only if we have a language filter.
   if (query.HasLanguage() &&
       !query.LanguageMatches(SymbolFileDWARF::GetLanguageFamily(*die.GetCU())))
-    return true; // Keep iterating over index types, language mismatch.
+    return IterationAction::Continue;
 
   // Since mangled names are unique, we only need to check if the names are
   // the same.
   if (query.GetSearchByMangledName()) {
     if (die.GetMangledName(/*substitute_name_allowed=*/false) !=
         query.GetTypeBasename().GetStringRef())
-      return true; // Keep iterating over index types, mangled name mismatch.
+      return IterationAction::Continue;
     return callback(die);
   }
 
@@ -159,7 +160,7 @@ bool DWARFIndex::ProcessTypeDIEMatchQuery(
     die_context = die.GetTypeLookupContext();
 
   if (!query.ContextMatches(die_context))
-    return true;
+    return IterationAction::Continue;
   return callback(die);
 }
 

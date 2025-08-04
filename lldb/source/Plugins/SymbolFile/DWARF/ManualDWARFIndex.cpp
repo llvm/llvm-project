@@ -455,18 +455,21 @@ void ManualDWARFIndex::GetCompleteObjCClass(
 }
 
 void ManualDWARFIndex::GetTypes(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
-  m_set.types.Find(name, DIERefCallback(callback, name.GetStringRef()));
+  m_set.types.Find(name, DIERefCallback(IterationActionAdaptor(callback),
+                                        name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetTypes(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   auto name = context[0].name;
-  m_set.types.Find(ConstString(name),
-                   DIERefCallback(callback, llvm::StringRef(name)));
+  m_set.types.Find(
+      ConstString(name),
+      DIERefCallback(IterationActionAdaptor(callback), llvm::StringRef(name)));
 }
 
 void ManualDWARFIndex::GetNamespaces(
