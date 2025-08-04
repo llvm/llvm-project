@@ -72,11 +72,10 @@ protected:
 
     Loop *L = LI->getLoopFor(LoopHeader);
     PredicatedScalarEvolution PSE(*SE, *L);
-    auto Plan = VPlanTransforms::buildPlainCFG(L, *LI);
-    VFRange R(ElementCount::getFixed(1), ElementCount::getFixed(2));
-    VPlanTransforms::addInitialSkeleton(*Plan, IntegerType::get(*Ctx, 64), {},
-                                        PSE, L);
+    auto Plan = VPlanTransforms::buildVPlan0(L, *LI, IntegerType::get(*Ctx, 64),
+                                             {}, PSE);
 
+    VFRange R(ElementCount::getFixed(1), ElementCount::getFixed(2));
     VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(*Plan, true, false,
                                                        false, R);
     VPlanTransforms::createLoopRegions(*Plan);

@@ -338,12 +338,6 @@ std::unique_ptr<VPlan> PlainCFGBuilder::buildPlainCFG() {
   return std::move(Plan);
 }
 
-std::unique_ptr<VPlan> VPlanTransforms::buildPlainCFG(Loop *TheLoop,
-                                                      LoopInfo &LI) {
-  PlainCFGBuilder Builder(TheLoop, &LI);
-  return Builder.buildPlainCFG();
-}
-
 /// Checks if \p HeaderVPB is a loop header block in the plain CFG; that is, it
 /// has exactly 2 predecessors (preheader and latch), where the block
 /// dominates the latch and the preheader dominates the block. If it is a
@@ -459,10 +453,8 @@ static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                        LatchDL);
 }
 
-void VPlanTransforms::addInitialSkeleton(VPlan &Plan, Type *InductionTy,
-                                         DebugLoc IVDL,
-                                         PredicatedScalarEvolution &PSE,
-                                         Loop *TheLoop) {
+static void addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
+                               PredicatedScalarEvolution &PSE, Loop *TheLoop) {
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
 
@@ -511,6 +503,15 @@ void VPlanTransforms::addInitialSkeleton(VPlan &Plan, Type *InductionTy,
   // check.
   VPBlockUtils::connectBlocks(Plan.getEntry(), ScalarPH);
   Plan.getEntry()->swapSuccessors();
+}
+
+std::unique_ptr<VPlan>
+VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
+                             DebugLoc IVDL, PredicatedScalarEvolution &PSE) {
+  PlainCFGBuilder Builder(TheLoop, &LI);
+  std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
+  addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
+  return VPlan0;
 }
 
 void VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(

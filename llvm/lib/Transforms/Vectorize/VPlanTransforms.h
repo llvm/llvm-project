@@ -54,18 +54,20 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
-  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan> buildPlainCFG(Loop *TheLoop,
-                                                                LoopInfo &LI);
-
-  /// Prepare the plan for vectorization. It will introduce a dedicated
-  /// VPBasicBlock for the vector pre-header, a VPBasicBlock as exit
-  /// block of the main vector loop (middle.block) and a VPBaiscBlock for the
-  /// scalar preheader. It also adds a canonical IV and its increment, using \p
+  /// Create a base VPlan0, serving as the common starting point for all later
+  /// candidates. It consists of an initial plain CFG loop with loop blocks from
+  /// \p TheLoop being directly translated to VPBasicBlocks with VPInstruction
+  /// corresponding to the input IR.
+  ///
+  /// The created loop is wrapped into an initial skeleton to facilitate
+  /// vectorization, consisting of a vector pre-header, a exit block for the
+  /// main vector loop (middle.block) and a new block as preheader of the scalar
+  /// loop (scalar.ph). It also adds a canonical IV and its increment, using \p
   /// InductionTy and \p IVDL, and creates a VPValue expression for the original
   /// trip count.
-  LLVM_ABI_FOR_TEST static void
-  addInitialSkeleton(VPlan &Plan, Type *InductionTy, DebugLoc IVDL,
-                     PredicatedScalarEvolution &PSE, Loop *TheLoop);
+  LLVM_ABI_FOR_TEST static std::unique_ptr<VPlan>
+  buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
+              PredicatedScalarEvolution &PSE);
 
   /// Update \p Plan to account for all early exits. If a check is needed to
   /// guard executing the scalar epilogue loop, it will be added to the middle

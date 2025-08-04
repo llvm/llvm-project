@@ -8403,16 +8403,11 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     LVer.prepareNoAliasMetadata();
   }
 
-  // Create initial VPlan skeleton, having a basic block for the pre-header
-  // which contains SCEV expansions that need to happen before the CFG is
-  // modified; a basic block for the vector pre-header, followed by a region for
-  // the vector loop, followed by the middle basic block, connecting to the
-  // scalar preheader and exit blcoks.
-  auto VPlan0 = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
-  VPlanTransforms::addInitialSkeleton(
-      *VPlan0, Legal->getWidestInductionType(),
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE,
-      OrigLoop);
+  // Create initial base VPlan0, to serve as common starting point for all
+  // candidates built later for specific VF ranges.
+  auto VPlan0 = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(),
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -8949,12 +8944,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   assert(!OrigLoop->isInnermost());
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
-  auto Plan = VPlanTransforms::buildPlainCFG(OrigLoop, *LI);
-
-  VPlanTransforms::addInitialSkeleton(
-      *Plan, Legal->getWidestInductionType(),
-      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE,
-      OrigLoop);
+  auto Plan = VPlanTransforms::buildVPlan0(
+      OrigLoop, *LI, Legal->getWidestInductionType(),
+      getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
   VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(
       *Plan, /*RequiresScalarEpilogue*/ true, /*TailFolded*/ false,
       /*HasUncountableExit*/ false, Range);
