@@ -791,7 +791,7 @@ def UMAX16x2 : I16x2<"max.u", umax>;
 def SMIN16x2 : I16x2<"min.s", smin>;
 def UMIN16x2 : I16x2<"min.u", umin>;
 
-let Predicates = [hasPTX<80>, hasSM<90>, hasOptEnabled] in {
+let Predicates = [hasPTX<80>, hasSM<90>] in {
 
   def MIN_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
                      "min.relu.s32",
