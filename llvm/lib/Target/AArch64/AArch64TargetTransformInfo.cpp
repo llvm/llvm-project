@@ -3093,8 +3093,9 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
         BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 
   // For the moment we do not have lowering for SVE1-only fptrunc f64->bf16 as
-  // we use fcvtx undef SVE2. Give them invalid costs.
-  if (!ST->hasSVE2() && ISD == ISD::FP_ROUND && SrcTy.isScalableVector() &&
+  // we use fcvtx under SVE2. Give them invalid costs.
+  if (!ST->hasSVE2() && !ST->isStreamingSVEAvailable() &&
+      ISD == ISD::FP_ROUND && SrcTy.isScalableVector() &&
       DstTy.getScalarType() == MVT::bf16 && SrcTy.getScalarType() == MVT::f64)
     return InstructionCost::getInvalid();
 
@@ -3106,11 +3107,11 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_ROUND, MVT::v2bf16, MVT::v2f64, 2}, // bfcvtn+fcvtn
       {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f64, 3}, // fcvtn+fcvtl2+bfcvtn
       {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f64, 6}, // 2 * fcvtn+fcvtn2+bfcvtn
-      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f32, 1}, // bfcvt
-      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f32, 1}, // bfcvt
-      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f32, 3}, // bfcvt+bfcvt+uzp1
-      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f64, 2}, // fcvtx+bfcvt
-      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f64, 5}, // fcvtx+bfcvt+bfcvt+uzp1
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f32, 1},  // bfcvt
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f32, 1},  // bfcvt
+      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f32, 3},  // bfcvt+bfcvt+uzp1
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f64, 2},  // fcvtx+bfcvt
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f64, 5},  // 2*fcvtx+2*bfcvt+uzp1
       {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f64, 11}, // 4*fcvt+4*bfcvt+3*uzp
   };
 
