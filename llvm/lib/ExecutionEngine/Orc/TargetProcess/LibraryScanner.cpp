@@ -871,6 +871,11 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
     return parseMachODeps(*macho);
   }
 
+  if (auto *coff = dyn_cast<object::COFFObjectFile>(Obj)) {
+    // TODO: COFF support
+    return LibraryDepsInfo();
+  }
+
   LLVM_DEBUG(dbgs() << "extractDeps: Unsupported binary format for file "
                     << filePath << "\n";);
   return createStringError(inconvertibleErrorCode(),
