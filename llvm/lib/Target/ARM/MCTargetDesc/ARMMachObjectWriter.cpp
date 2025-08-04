@@ -505,7 +505,7 @@ public:
     // Remember that the function is a thumb function. Fixup and relocation
     // values will need adjusted.
     getStreamer().getAssembler().setIsThumbFunc(Symbol);
-    cast<MCSymbolMachO>(Symbol)->setThumbFunc();
+    static_cast<MCSymbolMachO *>(Symbol)->setThumbFunc();
   }
 };
 } // namespace
