@@ -58,13 +58,13 @@ lldb::LanguageType SymbolFileOnDemand::ParseLanguage(CompileUnit &comp_unit) {
   return m_sym_file_impl->ParseLanguage(comp_unit);
 }
 
-XcodeSDK SymbolFileOnDemand::ParseXcodeSDK(CompileUnit &comp_unit) {
+XcodeSDKPath SymbolFileOnDemand::ParseXcodeSDK(CompileUnit &comp_unit) {
   if (!m_debug_info_enabled) {
     Log *log = GetLog();
     LLDB_LOG(log, "[{0}] {1} is skipped", GetSymbolFileName(), __FUNCTION__);
-    XcodeSDK defaultValue{};
+    XcodeSDKPath defaultValue{};
     if (log) {
-      XcodeSDK sdk = m_sym_file_impl->ParseXcodeSDK(comp_unit);
+      XcodeSDKPath sdk = m_sym_file_impl->ParseXcodeSDK(comp_unit);
       if (!(sdk == defaultValue))
         LLDB_LOG(log, "SDK {0} would return if hydrated.", sdk.GetString());
     }

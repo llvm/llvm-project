@@ -342,7 +342,7 @@ sdkSupportsBuiltinModules(lldb_private::Target &target) {
 
   // Use the SDK path from debug-info to find a local matching SDK directory.
   auto sdk_path_or_err =
-      HostInfo::GetSDKRoot(HostInfo::SDKOptions{std::move(sdk_or_err->first)});
+      HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk_or_err->first.TakeSDK()});
   if (!sdk_path_or_err)
     return sdk_path_or_err.takeError();
 

@@ -675,7 +675,7 @@ SymbolFileDWARFDebugMap::ParseLanguage(CompileUnit &comp_unit) {
   return eLanguageTypeUnknown;
 }
 
-XcodeSDK SymbolFileDWARFDebugMap::ParseXcodeSDK(CompileUnit &comp_unit) {
+XcodeSDKPath SymbolFileDWARFDebugMap::ParseXcodeSDK(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   SymbolFileDWARF *oso_dwarf = GetSymbolFile(comp_unit);
   if (oso_dwarf)
