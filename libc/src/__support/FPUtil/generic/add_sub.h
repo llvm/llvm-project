@@ -106,20 +106,24 @@ add_or_sub(InType x, InType y) {
       // rounding.
       volatile InType tmp = y;
       if constexpr (IsSub) {
-        if constexpr (cpp::is_same_v<OutType, BFloat16>) {
+        if constexpr (cpp::is_same_v<InType, bfloat16> &&
+                      cpp::is_same_v<OutType, bfloat16>) {
+          // TODO: check if this is correct
           tmp.bits ^= static_cast<uint16_t>(1000'0000'0000'0000u);
         } else {
           tmp = -tmp;
         }
       }
-      if constexpr (cpp::is_same_v<OutType, bfloat16>)
+      if constexpr (cpp::is_same_v<InType, bfloat16> &&
+                    cpp::is_same_v<OutType, bfloat16>)
         return bfloat16{tmp.bits};
       else
         return cast<OutType>(tmp);
     }
 
     if (y_bits.is_zero()) {
-      if constexpr (cpp::is_same_v<OutType, bfloat16>)
+      if constexpr (cpp::is_same_v<InType, bfloat16> &&
+                    cpp::is_same_v<OutType, bfloat16>)
         return bfloat16{x.bits};
       else
         return cast<OutType>(x);
