@@ -472,7 +472,7 @@ class VectorType;
                                         MachineMemOperand::Flags Flags,
                                         unsigned *Fast) const override;
 
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     bool isTruncateFree(Type *SrcTy, Type *DstTy) const override;
@@ -681,11 +681,12 @@ class VectorType;
 
     unsigned getMaxSupportedInterleaveFactor() const override;
 
-    bool lowerInterleavedLoad(LoadInst *LI,
+    bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                               ArrayRef<ShuffleVectorInst *> Shuffles,
                               ArrayRef<unsigned> Indices,
                               unsigned Factor) const override;
-    bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+    bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                               ShuffleVectorInst *SVI,
                                unsigned Factor) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override;

@@ -63,7 +63,7 @@ bool StackLifetime::isAliveAfter(const AllocaInst *AI,
 // markers has the same size and points to the alloca start.
 static const AllocaInst *findMatchingAlloca(const IntrinsicInst &II,
                                             const DataLayout &DL) {
-  const AllocaInst *AI = findAllocaForValue(II.getArgOperand(1), true);
+  const AllocaInst *AI = dyn_cast<AllocaInst>(II.getArgOperand(1));
   if (!AI)
     return nullptr;
 

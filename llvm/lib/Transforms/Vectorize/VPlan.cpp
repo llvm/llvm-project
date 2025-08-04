@@ -487,10 +487,16 @@ void VPBasicBlock::connectToPredecessors(VPTransformState &State) {
     } else {
       // Set each forward successor here when it is created, excluding
       // backedges. A backward successor is set when the branch is created.
+      // Branches to VPIRBasicBlocks must have the same successors in VPlan as
+      // in the original IR, except when the predecessor is the entry block.
+      // This enables including SCEV and memory runtime check blocks in VPlan.
+      // TODO: Remove exception by modeling the terminator of entry block using
+      // BranchOnCond.
       unsigned idx = PredVPSuccessors.front() == this ? 0 : 1;
       assert((TermBr && (!TermBr->getSuccessor(idx) ||
                          (isa<VPIRBasicBlock>(this) &&
-                          TermBr->getSuccessor(idx) == NewBB))) &&
+                          (TermBr->getSuccessor(idx) == NewBB ||
+                           PredVPBlock == getPlan()->getEntry())))) &&
              "Trying to reset an existing successor block.");
       TermBr->setSuccessor(idx, NewBB);
     }
@@ -945,20 +951,15 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
-                             VPTransformState &State) {
-  Type *TCTy = TripCountV->getType();
-  // Check if the backedge taken count is needed, and if so build it.
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-    auto *TCMO = Builder.CreateSub(TripCountV, ConstantInt::get(TCTy, 1),
-                                   "trip.count.minus.1");
-    BackedgeTakenCount->setUnderlyingValue(TCMO);
-  }
-
-  VectorTripCount.setUnderlyingValue(VectorTripCountV);
+void VPlan::prepareToExecute(Value *VectorTripCountV, VPTransformState &State) {
+  if (!VectorTripCount.getUnderlyingValue())
+    VectorTripCount.setUnderlyingValue(VectorTripCountV);
+  else
+    assert(VectorTripCount.getUnderlyingValue() == VectorTripCountV &&
+           "VectorTripCount set earlier must much VectorTripCountV");
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  Type *TCTy = VectorTripCountV->getType();
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
   if (VF.getNumUsers()) {

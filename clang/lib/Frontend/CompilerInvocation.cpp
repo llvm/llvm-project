@@ -593,11 +593,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   CodeGenOpts.CodeModel = TargetOpts.CodeModel;
   CodeGenOpts.LargeDataThreshold = TargetOpts.LargeDataThreshold;
 
-  if (LangOpts.getExceptionHandling() !=
-          LangOptions::ExceptionHandlingKind::None &&
+  if (CodeGenOpts.getExceptionHandling() !=
+          CodeGenOptions::ExceptionHandlingKind::None &&
       T.isWindowsMSVCEnvironment())
     Diags.Report(diag::err_fe_invalid_exception_model)
-        << static_cast<unsigned>(LangOpts.getExceptionHandling()) << T.str();
+        << static_cast<unsigned>(CodeGenOpts.getExceptionHandling()) << T.str();
 
   if (LangOpts.AppleKext && !LangOpts.CPlusPlus)
     Diags.Report(diag::warn_c_kext);
@@ -826,7 +826,7 @@ static bool RoundTrip(ParseFn Parse, GenerateFn Generate,
 
   // Setup a dummy DiagnosticsEngine.
   DiagnosticOptions DummyDiagOpts;
-  DiagnosticsEngine DummyDiags(new DiagnosticIDs(), DummyDiagOpts);
+  DiagnosticsEngine DummyDiags(DiagnosticIDs::create(), DummyDiagOpts);
   DummyDiags.setClient(new TextDiagnosticBuffer());
 
   // Run the first parse on the original arguments with the dummy invocation and
@@ -1541,6 +1541,25 @@ void CompilerInvocation::setDefaultPointerAuthOptions(
           Key::ASIA, LangOpts.PointerAuthInitFiniAddressDiscrimination,
           Discrimination::Constant, InitFiniPointerConstantDiscriminator);
     }
+
+    Opts.ObjCMethodListFunctionPointers =
+        PointerAuthSchema(Key::ASIA, true, Discrimination::None);
+    Opts.ObjCMethodListPointer =
+        PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                          MethodListPointerConstantDiscriminator);
+    if (LangOpts.PointerAuthObjcIsa) {
+      Opts.ObjCIsaPointers =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            IsaPointerConstantDiscriminator);
+      Opts.ObjCSuperPointers =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            SuperPointerConstantDiscriminator);
+    }
+
+    if (LangOpts.PointerAuthObjcClassROPointers)
+      Opts.ObjCClassROPointers =
+          PointerAuthSchema(Key::ASDA, true, Discrimination::Constant,
+                            ClassROConstantDiscriminator);
   }
   Opts.ReturnAddresses = LangOpts.PointerAuthReturns;
   Opts.AuthTraps = LangOpts.PointerAuthAuthTraps;
@@ -1994,8 +2013,8 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
             : llvm::codegenoptions::DebugTemplateNamesKind::Mangled);
   }
 
-  if (const Arg *A = Args.getLastArg(OPT_ftime_report, OPT_ftime_report_EQ,
-                                     OPT_ftime_report_json)) {
+  if (Args.hasArg(OPT_ftime_report, OPT_ftime_report_EQ, OPT_ftime_report_json,
+                  OPT_stats_file_timers)) {
     Opts.TimePasses = true;
 
     // -ftime-report= is only for new pass manager.
@@ -2007,7 +2026,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
         Opts.TimePassesPerRun = true;
       else
         Diags.Report(diag::err_drv_invalid_value)
-            << A->getAsString(Args) << A->getValue();
+            << EQ->getAsString(Args) << EQ->getValue();
     }
 
     if (Args.getLastArg(OPT_ftime_report_json))
@@ -2666,7 +2685,7 @@ bool clang::ParseDiagnosticArgs(DiagnosticOptions &Opts, ArgList &Args,
   std::optional<DiagnosticsEngine> IgnoringDiags;
   if (!Diags) {
     IgnoringDiagOpts.emplace();
-    IgnoringDiags.emplace(new DiagnosticIDs(), *IgnoringDiagOpts,
+    IgnoringDiags.emplace(DiagnosticIDs::create(), *IgnoringDiagOpts,
                           new IgnoringDiagConsumer());
     Diags = &*IgnoringDiags;
   }
@@ -3573,6 +3592,12 @@ static void GeneratePointerAuthArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fptrauth_elf_got);
   if (Opts.AArch64JumpTableHardening)
     GenerateArg(Consumer, OPT_faarch64_jump_table_hardening);
+  if (Opts.PointerAuthObjcIsa)
+    GenerateArg(Consumer, OPT_fptrauth_objc_isa);
+  if (Opts.PointerAuthObjcInterfaceSel)
+    GenerateArg(Consumer, OPT_fptrauth_objc_interface_sel);
+  if (Opts.PointerAuthObjcClassROPointers)
+    GenerateArg(Consumer, OPT_fptrauth_objc_class_ro);
 }
 
 static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
@@ -3596,6 +3621,15 @@ static void ParsePointerAuthArgs(LangOptions &Opts, ArgList &Args,
   Opts.PointerAuthELFGOT = Args.hasArg(OPT_fptrauth_elf_got);
   Opts.AArch64JumpTableHardening =
       Args.hasArg(OPT_faarch64_jump_table_hardening);
+
+  Opts.PointerAuthObjcIsa = Args.hasArg(OPT_fptrauth_objc_isa);
+  Opts.PointerAuthObjcClassROPointers = Args.hasArg(OPT_fptrauth_objc_class_ro);
+  Opts.PointerAuthObjcInterfaceSel =
+      Args.hasArg(OPT_fptrauth_objc_interface_sel);
+
+  if (Opts.PointerAuthObjcInterfaceSel)
+    Opts.PointerAuthObjcInterfaceSelKey =
+        static_cast<unsigned>(PointerAuthSchema::ARM8_3Key::ASDB);
 }
 
 /// Check if input file kind and language standard are compatible.
@@ -3679,23 +3713,6 @@ static StringRef GetInputKindName(InputKind IK) {
   llvm_unreachable("unknown input language");
 }
 
-static StringRef getExceptionHandlingName(unsigned EHK) {
-  switch (static_cast<LangOptions::ExceptionHandlingKind>(EHK)) {
-  case LangOptions::ExceptionHandlingKind::None:
-    return "none";
-  case LangOptions::ExceptionHandlingKind::DwarfCFI:
-    return "dwarf";
-  case LangOptions::ExceptionHandlingKind::SjLj:
-    return "sjlj";
-  case LangOptions::ExceptionHandlingKind::WinEH:
-    return "seh";
-  case LangOptions::ExceptionHandlingKind::Wasm:
-    return "wasm";
-  }
-
-  llvm_unreachable("covered switch");
-}
-
 void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
                                               ArgumentConsumer Consumer,
                                               const llvm::Triple &T,
@@ -3711,10 +3728,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
       GenerateArg(Consumer, OPT_pic_is_pie);
     for (StringRef Sanitizer : serializeSanitizerKinds(Opts.Sanitize))
       GenerateArg(Consumer, OPT_fsanitize_EQ, Sanitizer);
-    if (Opts.ExceptionHandling) {
-      GenerateArg(Consumer, OPT_exception_model,
-                  getExceptionHandlingName(Opts.ExceptionHandling));
-    }
 
     return;
   }
@@ -3900,12 +3913,8 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   if (Opts.OpenMPCUDAMode)
     GenerateArg(Consumer, OPT_fopenmp_cuda_mode);
 
-  if (Opts.OpenACC) {
+  if (Opts.OpenACC)
     GenerateArg(Consumer, OPT_fopenacc);
-    if (!Opts.OpenACCMacroOverride.empty())
-      GenerateArg(Consumer, OPT_openacc_macro_override,
-                  Opts.OpenACCMacroOverride);
-  }
 
   // The arguments used to set Optimize, OptimizeSize and NoInlineDefine are
   // generated from CodeGenOptions.
@@ -4022,24 +4031,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.PIE = Args.hasArg(OPT_pic_is_pie);
     parseSanitizerKinds("-fsanitize=", Args.getAllArgValues(OPT_fsanitize_EQ),
                         Diags, Opts.Sanitize);
-
-    if (const Arg *A = Args.getLastArg(options::OPT_exception_model)) {
-      std::optional<LangOptions::ExceptionHandlingKind> EMValue =
-          llvm::StringSwitch<std::optional<LangOptions::ExceptionHandlingKind>>(
-              A->getValue())
-              .Case("dwarf", LangOptions::ExceptionHandlingKind::DwarfCFI)
-              .Case("sjlj", LangOptions::ExceptionHandlingKind::SjLj)
-              .Case("seh", LangOptions::ExceptionHandlingKind::WinEH)
-              .Case("wasm", LangOptions::ExceptionHandlingKind::Wasm)
-              .Case("none", LangOptions::ExceptionHandlingKind::None)
-              .Default(std::nullopt);
-      if (EMValue) {
-        Opts.ExceptionHandling = static_cast<unsigned>(*EMValue);
-      } else {
-        Diags.Report(diag::err_drv_invalid_value)
-            << A->getAsString(Args) << A->getValue();
-      }
-    }
 
     return Diags.getNumErrors() == NumErrorsBefore;
   }
@@ -4429,28 +4420,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
                         Args.hasArg(options::OPT_fopenmp_cuda_mode);
 
   // OpenACC Configuration.
-  if (Args.hasArg(options::OPT_fopenacc)) {
+  if (Args.hasArg(options::OPT_fopenacc))
     Opts.OpenACC = true;
-
-    if (Arg *A = Args.getLastArg(options::OPT_openacc_macro_override))
-      Opts.OpenACCMacroOverride = A->getValue();
-  }
-
-  // FIXME: Eliminate this dependency.
-  unsigned Opt = getOptimizationLevel(Args, IK, Diags),
-       OptSize = getOptimizationLevelSize(Args);
-  Opts.Optimize = Opt != 0;
-  Opts.OptimizeSize = OptSize != 0;
-
-  // This is the __NO_INLINE__ define, which just depends on things like the
-  // optimization level and -fno-inline, not actually whether the backend has
-  // inlining enabled.
-  Opts.NoInlineDefine = !Opts.Optimize;
-  if (Arg *InlineArg = Args.getLastArg(
-          options::OPT_finline_functions, options::OPT_finline_hint_functions,
-          options::OPT_fno_inline_functions, options::OPT_fno_inline))
-    if (InlineArg->getOption().matches(options::OPT_fno_inline))
-      Opts.NoInlineDefine = true;
 
   if (Arg *A = Args.getLastArg(OPT_ffp_contract)) {
     StringRef Val = A->getValue();
@@ -5301,6 +5272,21 @@ std::string CompilerInvocation::getModuleHash() const {
       HBuilder.add(*Build);
   }
 
+  // Extend the signature with affecting codegen options.
+  {
+    using CK = CodeGenOptions::CompatibilityKind;
+#define CODEGENOPT(Name, Bits, Default, Compatibility)                         \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    HBuilder.add(CodeGenOpts->Name);
+#define ENUM_CODEGENOPT(Name, Type, Bits, Default, Compatibility)              \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
+    HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
+#define DEBUGOPT(Name, Bits, Default, Compatibility)
+#define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)
+#define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)
+#include "clang/Basic/CodeGenOptions.def"
+  }
+
   // When compiling with -gmodules, also hash -fdebug-prefix-map as it
   // affects the debug info in the PCM.
   if (getCodeGenOpts().DebugTypeExtRefs)
@@ -5311,13 +5297,13 @@ std::string CompilerInvocation::getModuleHash() const {
     // FIXME: Replace with C++20 `using enum CodeGenOptions::CompatibilityKind`.
     using CK = CodeGenOptions::CompatibilityKind;
 #define DEBUGOPT(Name, Bits, Default, Compatibility)                           \
-  if constexpr (CK::Compatibility == CK::Affecting)                            \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
     HBuilder.add(CodeGenOpts->Name);
 #define VALUE_DEBUGOPT(Name, Bits, Default, Compatibility)                     \
-  if constexpr (CK::Compatibility == CK::Affecting)                            \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
     HBuilder.add(CodeGenOpts->Name);
 #define ENUM_DEBUGOPT(Name, Type, Bits, Default, Compatibility)                \
-  if constexpr (CK::Compatibility == CK::Affecting)                            \
+  if constexpr (CK::Compatibility != CK::Benign)                               \
     HBuilder.add(static_cast<unsigned>(CodeGenOpts->get##Name()));
 #include "clang/Basic/DebugOptions.def"
   }

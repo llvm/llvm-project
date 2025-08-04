@@ -53,8 +53,6 @@ private:
 
   using FuncInfo = llvm::AMDGPULibFunc;
 
-  bool UnsafeFPMath = false;
-
   // -fuse-native.
   bool AllNative = false;
 
@@ -117,7 +115,6 @@ private:
                                             bool AllowStrictFP = false);
 
 protected:
-  bool isUnsafeMath(const FPMathOperator *FPOp) const;
   bool isUnsafeFiniteOnlyMath(const FPMathOperator *FPOp) const;
 
   bool canIncreasePrecisionOfConstantFold(const FPMathOperator *FPOp) const;
@@ -415,23 +412,17 @@ bool AMDGPULibCalls::parseFunctionName(const StringRef &FMangledName,
   return AMDGPULibFunc::parse(FMangledName, FInfo);
 }
 
-bool AMDGPULibCalls::isUnsafeMath(const FPMathOperator *FPOp) const {
-  return UnsafeFPMath || FPOp->isFast();
-}
-
 bool AMDGPULibCalls::isUnsafeFiniteOnlyMath(const FPMathOperator *FPOp) const {
-  return UnsafeFPMath ||
-         (FPOp->hasApproxFunc() && FPOp->hasNoNaNs() && FPOp->hasNoInfs());
+  return FPOp->hasApproxFunc() && FPOp->hasNoNaNs() && FPOp->hasNoInfs();
 }
 
 bool AMDGPULibCalls::canIncreasePrecisionOfConstantFold(
     const FPMathOperator *FPOp) const {
   // TODO: Refine to approxFunc or contract
-  return isUnsafeMath(FPOp);
+  return FPOp->isFast();
 }
 
 void AMDGPULibCalls::initFunction(Function &F, FunctionAnalysisManager &FAM) {
-  UnsafeFPMath = F.getFnAttribute("unsafe-fp-math").getValueAsBool();
   AC = &FAM.getResult<AssumptionAnalysis>(F);
   TLInfo = &FAM.getResult<TargetLibraryAnalysis>(F);
   DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
