@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// gcc 15 ICE on this test
+// UNSUPPORTED: gcc
 
 // <flat_map>
 
@@ -65,7 +67,7 @@ static_assert(!CanTryEmplace<NonTransparentMap, TransparentMapConstIter, NonConv
 static_assert(!CanTryEmplace<TransparentMap, TransparentMapConstIter, ConvertibleTransparent<int>, int>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, TransparentComparator, KeyContainer, ValueContainer>;
@@ -103,7 +105,7 @@ void test() {
     assert(r3.first->second.get() == 5); // value
 
     Moveable mv3(-1, 3.0);
-    std::same_as<R> decltype(auto) r4 = m.try_emplace(ConvertibleTransparent<int>{117}, std::move(mv2));
+    std::same_as<R> decltype(auto) r4 = m.try_emplace(ConvertibleTransparent<int>{117}, std::move(mv3));
     assert(m.size() == 13);
     assert(r4.second);                    // was inserted
     assert(mv2.moved());                  // was moved from
@@ -136,9 +138,14 @@ void test() {
   }
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<Moveable>>();
-  test<std::deque<int>, std::vector<Moveable>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque<int>, std::vector<Moveable>>();
+  }
   test<MinSequenceContainer<int>, MinSequenceContainer<Moveable>>();
   test<std::vector<int, min_allocator<int>>, std::vector<Moveable, min_allocator<Moveable>>>();
 
@@ -171,23 +178,34 @@ int main(int, char**) {
     auto it2 = m.try_emplace(m.begin(), "beta2", 2);
     assert(it2 == m.begin() + 2);
   }
-  {
-    auto try_emplace = [](auto& m, auto key_arg, auto value_arg) {
-      using M   = std::decay_t<decltype(m)>;
-      using Key = typename M::key_type;
-      m.try_emplace(ConvertibleTransparent<Key>{key_arg}, value_arg);
-    };
-    test_emplace_exception_guarantee(try_emplace);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    {
+      auto try_emplace = [](auto& m, auto key_arg, auto value_arg) {
+        using M   = std::decay_t<decltype(m)>;
+        using Key = typename M::key_type;
+        m.try_emplace(ConvertibleTransparent<Key>{key_arg}, value_arg);
+      };
+      test_emplace_exception_guarantee(try_emplace);
+    }
+
+    {
+      auto try_emplace_iter = [](auto& m, auto key_arg, auto value_arg) {
+        using M   = std::decay_t<decltype(m)>;
+        using Key = typename M::key_type;
+        m.try_emplace(m.begin(), ConvertibleTransparent<Key>{key_arg}, value_arg);
+      };
+      test_emplace_exception_guarantee(try_emplace_iter);
+    }
   }
 
-  {
-    auto try_emplace_iter = [](auto& m, auto key_arg, auto value_arg) {
-      using M   = std::decay_t<decltype(m)>;
-      using Key = typename M::key_type;
-      m.try_emplace(m.begin(), ConvertibleTransparent<Key>{key_arg}, value_arg);
-    };
-    test_emplace_exception_guarantee(try_emplace_iter);
-  }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

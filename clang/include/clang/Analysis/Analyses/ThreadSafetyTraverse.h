@@ -312,7 +312,9 @@ protected:
   Self *self() { return reinterpret_cast<Self *>(this); }
 
 public:
-  bool compareByCase(const SExpr *E1, const SExpr* E2) {
+  bool compare(const SExpr *E1, const SExpr *E2) {
+    if (E1->opcode() != E2->opcode())
+      return false;
     switch (E1->opcode()) {
 #define TIL_OPCODE_DEF(X)                                                     \
     case COP_##X:                                                             \
@@ -337,12 +339,6 @@ public:
   bool compareIntegers(unsigned i, unsigned j) { return i == j; }
   bool compareStrings (StringRef s, StringRef r) { return s == r; }
   bool comparePointers(const void* P, const void* Q) { return P == Q; }
-
-  bool compare(const SExpr *E1, const SExpr* E2) {
-    if (E1->opcode() != E2->opcode())
-      return false;
-    return compareByCase(E1, E2);
-  }
 
   // TODO -- handle alpha-renaming of variables
   void enterScope(const Variable *V1, const Variable *V2) {}
@@ -377,9 +373,7 @@ public:
     if (E1->opcode() == COP_Wildcard || E2->opcode() == COP_Wildcard)
       return true;
     // otherwise normal equality.
-    if (E1->opcode() != E2->opcode())
-      return false;
-    return compareByCase(E1, E2);
+    return Comparator::compare(E1, E2);
   }
 
   // TODO -- handle alpha-renaming of variables

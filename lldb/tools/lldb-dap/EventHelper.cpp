@@ -44,6 +44,11 @@ void SendTargetBasedCapabilities(DAP &dap) {
 
   protocol::CapabilitiesEventBody body;
 
+  const llvm::StringRef target_triple = dap.target.GetTriple();
+  if (target_triple.starts_with("x86"))
+    body.capabilities.supportedFeatures.insert(
+        protocol::eAdapterFeatureStepInTargetsRequest);
+
   // We only support restarting launch requests not attach requests.
   if (dap.last_launch_request)
     body.capabilities.supportedFeatures.insert(

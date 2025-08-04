@@ -406,7 +406,7 @@ void GDBRemoteCommunicationClient::GetRemoteQSupported() {
         m_supports_qXfer_memory_map_read = eLazyBoolYes;
       else if (x == "qXfer:siginfo:read+")
         m_supports_qXfer_siginfo_read = eLazyBoolYes;
-      else if (x == "qEcho")
+      else if (x == "qEcho+")
         m_supports_qEcho = eLazyBoolYes;
       else if (x == "QPassSignals+")
         m_supports_QPassSignals = eLazyBoolYes;
@@ -4358,7 +4358,9 @@ llvm::Expected<int> GDBRemoteCommunicationClient::KillProcess(lldb::pid_t pid) {
   StringExtractorGDBRemote response;
   GDBRemoteCommunication::ScopedTimeout(*this, seconds(3));
 
-  if (SendPacketAndWaitForResponse("k", response, GetPacketTimeout()) !=
+  // LLDB server typically sends no response for "k", so we shouldn't try
+  // to sync on timeout.
+  if (SendPacketAndWaitForResponse("k", response, GetPacketTimeout(), false) !=
       PacketResult::Success)
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "failed to send k packet");

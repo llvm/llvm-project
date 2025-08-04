@@ -140,6 +140,9 @@ module attributes {gpu.container_module} {
       // CHECK: gpu.shuffle idx %{{.*}}, %{{.*}}, %{{.*}} : f32
       %shfl3, %pred3 = gpu.shuffle idx %arg0, %offset, %width : f32
 
+      // CHECK: gpu.rotate %{{.*}}, 3, 16 : f32
+      %rotate, %pred4 = gpu.rotate %arg0, 3, 16 : f32
+
       "gpu.barrier"() : () -> ()
 
       "some_op"(%bIdX, %tIdX) : (index, index) -> ()

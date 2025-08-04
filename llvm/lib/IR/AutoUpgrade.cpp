@@ -719,6 +719,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
                              .StartsWith("vqaddu.", Intrinsic::uadd_sat)
                              .StartsWith("vqsubs.", Intrinsic::ssub_sat)
                              .StartsWith("vqsubu.", Intrinsic::usub_sat)
+                             .StartsWith("vrinta.", Intrinsic::round)
+                             .StartsWith("vrintn.", Intrinsic::roundeven)
+                             .StartsWith("vrintm.", Intrinsic::floor)
+                             .StartsWith("vrintp.", Intrinsic::ceil)
+                             .StartsWith("vrintx.", Intrinsic::rint)
+                             .StartsWith("vrintz.", Intrinsic::trunc)
                              .Default(Intrinsic::not_intrinsic);
       if (ID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID,
@@ -945,6 +951,53 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
   return false; // No other 'arm.*', 'aarch64.*'.
 }
 
+static Intrinsic::ID shouldUpgradeNVPTXTMAG2SIntrinsics(Function *F,
+                                                        StringRef Name) {
+  if (Name.consume_front("cp.async.bulk.tensor.g2s.")) {
+    Intrinsic::ID ID =
+        StringSwitch<Intrinsic::ID>(Name)
+            .Case("im2col.3d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d)
+            .Case("im2col.4d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d)
+            .Case("im2col.5d",
+                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d)
+            .Case("tile.1d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d)
+            .Case("tile.2d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d)
+            .Case("tile.3d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d)
+            .Case("tile.4d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d)
+            .Case("tile.5d", Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d)
+            .Default(Intrinsic::not_intrinsic);
+
+    if (ID == Intrinsic::not_intrinsic)
+      return ID;
+
+    // These intrinsics may need upgrade for two reasons:
+    // (1) When the address-space of the first argument is shared[AS=3]
+    //     (and we upgrade it to use shared_cluster address-space[AS=7])
+    if (F->getArg(0)->getType()->getPointerAddressSpace() ==
+        NVPTXAS::ADDRESS_SPACE_SHARED)
+      return ID;
+
+    // (2) When there are only two boolean flag arguments at the end:
+    //
+    // The last three parameters of the older version of these
+    // intrinsics are: arg1, arg2, .. i64 ch, i1 mc_flag, i1 ch_flag
+    //
+    // The newer version reads as:
+    // arg1, arg2, .. i64 ch, i1 mc_flag, i1 ch_flag, i32 cta_group_flag
+    //
+    // So, when the type of the [N-3]rd argument is "not i1", then
+    // it is the older version and we need to upgrade.
+    size_t FlagStartIndex = F->getFunctionType()->getNumParams() - 3;
+    Type *ArgType = F->getFunctionType()->getParamType(FlagStartIndex);
+    if (!ArgType->isIntegerTy(1))
+      return ID;
+  }
+
+  return Intrinsic::not_intrinsic;
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
                                                               StringRef Name) {
   if (Name.consume_front("mapa.shared.cluster"))
@@ -959,22 +1012,6 @@ static Intrinsic::ID shouldUpgradeNVPTXSharedClusterIntrinsic(Function *F,
                   Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster)
             .Case("shared.cta.to.cluster",
                   Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster)
-            .Case("tensor.g2s.im2col.3d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d)
-            .Case("tensor.g2s.im2col.4d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d)
-            .Case("tensor.g2s.im2col.5d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d)
-            .Case("tensor.g2s.tile.1d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_1d)
-            .Case("tensor.g2s.tile.2d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_2d)
-            .Case("tensor.g2s.tile.3d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d)
-            .Case("tensor.g2s.tile.4d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d)
-            .Case("tensor.g2s.tile.5d",
-                  Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d)
             .Default(Intrinsic::not_intrinsic);
 
     if (ID != Intrinsic::not_intrinsic)
@@ -1273,6 +1310,18 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       return true;
     }
     break;
+  case 'l':
+    if (Name.starts_with("lifetime.start") ||
+        Name.starts_with("lifetime.end")) {
+      // Unless remangling is required, do not upgrade the function declaration,
+      // but do upgrade the calls.
+      if (auto Result = llvm::Intrinsic::remangleIntrinsicFunction(F))
+        NewFn = *Result;
+      else
+        NewFn = F;
+      return true;
+    }
+    break;
   case 'm': {
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
@@ -1339,6 +1388,14 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         return true;
       }
 
+      // Upgrade TMA copy G2S Intrinsics
+      IID = shouldUpgradeNVPTXTMAG2SIntrinsics(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
+        return true;
+      }
+
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
       // not to an intrinsic alone.  We expand them in UpgradeIntrinsicCall.
       //
@@ -1393,6 +1450,7 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                      .Case("popc.ll", true)
                      .Case("h2f", true)
                      .Case("swap.lo.hi.b64", true)
+                     .Case("tanh.approx.f32", true)
                      .Default(false);
 
       if (Expand) {
@@ -1404,13 +1462,9 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     break;
   }
   case 'o':
-    // We only need to change the name to match the mangling including the
-    // address space.
     if (Name.starts_with("objectsize.")) {
       Type *Tys[2] = { F->getReturnType(), F->arg_begin()->getType() };
-      if (F->arg_size() == 2 || F->arg_size() == 3 ||
-          F->getName() !=
-              Intrinsic::getName(Intrinsic::objectsize, Tys, F->getParent())) {
+      if (F->arg_size() == 2 || F->arg_size() == 3) {
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(),
                                                   Intrinsic::objectsize, Tys);
@@ -1588,7 +1642,6 @@ bool llvm::UpgradeIntrinsicFunction(Function *F, Function *&NewFn,
   NewFn = nullptr;
   bool Upgraded =
       upgradeIntrinsicFunction1(F, NewFn, CanUpgradeDebugIntrinsicsToRecords);
-  assert(F != NewFn && "Intrinsic function upgraded to the same function");
 
   // Upgrade intrinsic attributes.  This does not change the function.
   if (NewFn)
@@ -2491,6 +2544,12 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
     MDNode *MD = MDNode::get(Builder.getContext(), {});
     LD->setMetadata(LLVMContext::MD_invariant_load, MD);
     return LD;
+  } else if (Name == "tanh.approx.f32") {
+    // nvvm.tanh.approx.f32 -> afn llvm.tanh.f32
+    FastMathFlags FMF;
+    FMF.setApproxFunc();
+    Rep = Builder.CreateUnaryIntrinsic(Intrinsic::tanh, CI->getArgOperand(0),
+                                       FMF);
   } else if (Name == "barrier0" || Name == "barrier.n" || Name == "bar.sync") {
     Value *Arg =
         Name.ends_with('0') ? Builder.getInt32(0) : CI->getArgOperand(0);
@@ -4490,7 +4549,6 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   Builder.SetInsertPoint(CI->getParent(), CI->getIterator());
 
   if (!NewFn) {
-    bool FallthroughToDefaultUpgrade = false;
     // Get the Function's name.
     StringRef Name = F->getName();
 
@@ -4518,32 +4576,21 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (IsAMDGCN) {
       Rep = upgradeAMDGCNIntrinsicCall(Name, CI, F, Builder);
     } else if (IsDbg) {
-      // We might have decided we don't want the new format after all between
-      // first requesting the upgrade and now; skip the conversion if that is
-      // the case, and check here to see if the intrinsic needs to be upgraded
-      // normally.
-      if (!CI->getModule()->IsNewDbgInfoFormat) {
-        bool NeedsUpgrade =
-            upgradeIntrinsicFunction1(CI->getCalledFunction(), NewFn, false);
-        if (!NeedsUpgrade)
-          return;
-        FallthroughToDefaultUpgrade = true;
-      } else {
-        upgradeDbgIntrinsicToDbgRecord(Name, CI);
-      }
+      upgradeDbgIntrinsicToDbgRecord(Name, CI);
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
 
-    if (!FallthroughToDefaultUpgrade) {
-      if (Rep)
-        CI->replaceAllUsesWith(Rep);
-      CI->eraseFromParent();
-      return;
-    }
+    if (Rep)
+      CI->replaceAllUsesWith(Rep);
+    CI->eraseFromParent();
+    return;
   }
 
   const auto &DefaultCase = [&]() -> void {
+    if (F == NewFn)
+      return;
+
     if (CI->getFunctionType() == NewFn->getFunctionType()) {
       // Handle generic mangling change.
       assert(
@@ -4846,7 +4893,18 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     return;
   }
   case Intrinsic::nvvm_cp_async_bulk_global_to_shared_cluster:
-  case Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster:
+  case Intrinsic::nvvm_cp_async_bulk_shared_cta_to_cluster: {
+    // Create a new call with the correct address space.
+    SmallVector<Value *, 4> Args(CI->args());
+    Args[0] = Builder.CreateAddrSpaceCast(
+        Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
+
+    NewCall = Builder.CreateCall(NewFn, Args);
+    NewCall->takeName(CI);
+    CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_3d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_4d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_im2col_5d:
@@ -4855,10 +4913,22 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_3d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_4d:
   case Intrinsic::nvvm_cp_async_bulk_tensor_g2s_tile_5d: {
-    // Create a new call with the correct address space.
-    SmallVector<Value *, 4> Args(CI->args());
-    Args[0] = Builder.CreateAddrSpaceCast(
-        Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
+    SmallVector<Value *, 16> Args(CI->args());
+
+    // Create AddrSpaceCast to shared_cluster if needed.
+    // This handles case (1) in shouldUpgradeNVPTXTMAG2SIntrinsics().
+    unsigned AS = CI->getArgOperand(0)->getType()->getPointerAddressSpace();
+    if (AS == NVPTXAS::ADDRESS_SPACE_SHARED)
+      Args[0] = Builder.CreateAddrSpaceCast(
+          Args[0], Builder.getPtrTy(NVPTXAS::ADDRESS_SPACE_SHARED_CLUSTER));
+
+    // Attach the flag argument for cta_group, with a
+    // default value of 0. This handles case (2) in
+    // shouldUpgradeNVPTXTMAG2SIntrinsics().
+    size_t NumArgs = CI->arg_size();
+    Value *FlagArg = CI->getArgOperand(NumArgs - 3);
+    if (!FlagArg->getType()->isIntegerTy(1))
+      Args.push_back(ConstantInt::get(Builder.getInt32Ty(), 0));
 
     NewCall = Builder.CreateCall(NewFn, Args);
     NewCall->takeName(CI);
@@ -5060,6 +5130,31 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       MTI->setSourceAlignment(Align->getMaybeAlignValue());
     break;
   }
+
+  case Intrinsic::lifetime_start:
+  case Intrinsic::lifetime_end: {
+    Value *Size = CI->getArgOperand(0);
+    Value *Ptr = CI->getArgOperand(1);
+    if (isa<AllocaInst>(Ptr)) {
+      DefaultCase();
+      return;
+    }
+
+    // Try to strip pointer casts, such that the lifetime works on an alloca.
+    Ptr = Ptr->stripPointerCasts();
+    if (isa<AllocaInst>(Ptr)) {
+      // Don't use NewFn, as we might have looked through an addrspacecast.
+      if (NewFn->getIntrinsicID() == Intrinsic::lifetime_start)
+        NewCall = Builder.CreateLifetimeStart(Ptr, cast<ConstantInt>(Size));
+      else
+        NewCall = Builder.CreateLifetimeEnd(Ptr, cast<ConstantInt>(Size));
+      break;
+    }
+
+    // Otherwise remove the lifetime marker.
+    CI->eraseFromParent();
+    return;
+  }
   }
   assert(NewCall && "Should have either set this variable or returned through "
                     "the default case");
@@ -5082,7 +5177,8 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    F->eraseFromParent();
+    if (F != NewFn)
+      F->eraseFromParent();
   }
 }
 

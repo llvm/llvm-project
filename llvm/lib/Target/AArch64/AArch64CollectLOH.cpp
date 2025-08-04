@@ -247,6 +247,17 @@ static bool supportLoadFromLiteral(const MachineInstr &MI) {
   }
 }
 
+/// Returns \p true if there are no non-debug instructions between \p First and
+/// \p Second
+static bool areInstructionsConsecutive(const MachineInstr *First,
+                                       const MachineInstr *Second) {
+  auto It = First->getIterator();
+  auto EndIt = First->getParent()->instr_end();
+  if (It == EndIt)
+    return false;
+  return next_nodbg(It, EndIt) == Second->getIterator();
+}
+
 /// Number of GPR registers tracked by mapRegToGPRIndex()
 static const unsigned N_GPR_REGS = 31;
 /// Map register number to index from 0-30.
@@ -415,7 +426,7 @@ static void handleADRP(const MachineInstr &MI, AArch64FunctionInfo &AFI,
         ++NumADRPToLDR;
       }
       break;
-    case MCLOH_AdrpAddLdr: {
+    case MCLOH_AdrpAddLdr:
       // There is a possibility that the linker may try to rewrite:
       // adrp x0, @sym@PAGE
       // add x1, x0, @sym@PAGEOFF
@@ -432,28 +443,24 @@ static void handleADRP(const MachineInstr &MI, AArch64FunctionInfo &AFI,
       // FIXME: Implement proper liveness tracking for all registers. For now,
       // don't emit the LOH if there are any instructions between the add and
       // the ldr.
-      MachineInstr *AddMI = const_cast<MachineInstr *>(Info.MI1);
-      const MachineInstr *LdrMI = Info.MI0;
-      auto AddIt = MachineBasicBlock::iterator(AddMI);
-      auto EndIt = AddMI->getParent()->end();
-      if (AddMI->getIterator() == EndIt || LdrMI != &*next_nodbg(AddIt, EndIt))
+      if (!areInstructionsConsecutive(Info.MI1, Info.MI0))
         break;
-
       LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpAddLdr:\n"
                         << '\t' << MI << '\t' << *Info.MI1 << '\t'
                         << *Info.MI0);
       AFI.addLOHDirective(MCLOH_AdrpAddLdr, {&MI, Info.MI1, Info.MI0});
       ++NumADDToLDR;
       break;
-    }
     case MCLOH_AdrpAddStr:
-      if (Info.MI1 != nullptr) {
-        LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpAddStr:\n"
-                          << '\t' << MI << '\t' << *Info.MI1 << '\t'
-                          << *Info.MI0);
-        AFI.addLOHDirective(MCLOH_AdrpAddStr, {&MI, Info.MI1, Info.MI0});
-        ++NumADDToSTR;
-      }
+      if (!Info.MI1)
+        break;
+      if (!areInstructionsConsecutive(Info.MI1, Info.MI0))
+        break;
+      LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpAddStr:\n"
+                        << '\t' << MI << '\t' << *Info.MI1 << '\t'
+                        << *Info.MI0);
+      AFI.addLOHDirective(MCLOH_AdrpAddStr, {&MI, Info.MI1, Info.MI0});
+      ++NumADDToSTR;
       break;
     case MCLOH_AdrpLdrGotLdr:
       LLVM_DEBUG(dbgs() << "Adding MCLOH_AdrpLdrGotLdr:\n"
