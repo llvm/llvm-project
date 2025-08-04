@@ -2142,23 +2142,28 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
   // StackTrace::GetNestInstructionPc(pc) is used because return address is
   // expected, OutputReport() will undo this.
   ObtainCurrentStack(thr, StackTrace::GetNextInstructionPc(pc), &stack);
-  ScopedReport *_rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  bool suppressed;
   // Take a new scope as Apple platforms require the below locks released
   // before symbolizing in order to avoid a deadlock
   {
     ThreadRegistryLock l(&ctx->thread_registry);
-    new (_rep) ScopedReport(ReportTypeErrnoInSignal);
-    ScopedReport &rep = *_rep;
-    rep.SetSigNum(sig);
-    if (!IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack)) {
-      rep.AddStack(stack, true);
-      OutputReport(thr, rep);
-    }
-  }  // Close this scope to release the locks
+    new (rep) ScopedReport(ReportTypeErrnoInSignal);
+    rep->SetSigNum(sig);
+    suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
+    if (suppressed)
+      rep->AddStack(stack, true);
+#if SANITIZER_APPLE
+  }  // Close this scope to release the locks before writing report
+#endif
+    if (suppressed)
+      OutputReport(thr, *rep);
 
-  OutputReport(thr, *_rep);
-  // Need to manually destroy this because we used placement new to allocate
-  _rep->~ScopedReport();
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
+#if !SANITIZER_APPLE
+  }
+#endif
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
