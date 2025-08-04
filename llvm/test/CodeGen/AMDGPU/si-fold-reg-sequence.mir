@@ -34,13 +34,11 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_through_copy
     ; CHECK: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
-    ; CHECK-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[DEF1]], 8, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
-    %15:sreg_32 = S_MOV_B32 0
-    %14:sreg_64 = REG_SEQUENCE %15:sreg_32, %subreg.sub0, %15:sreg_32, %subreg.sub1
-    %21:sreg_64 = IMPLICIT_DEF
-    %13:sreg_64_xexec = IMPLICIT_DEF
-    %32:vreg_64_align2 = COPY %14:sreg_64
-    %16:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, %13:sreg_64_xexec, 8, %32:vreg_64_align2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
+    ; CHECK-NEXT: [[V_PK_ADD_F32_:%[0-9]+]]:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, [[DEF]], 8, 0, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    %0:sreg_32 = S_MOV_B32 0
+    %1:sreg_64 = REG_SEQUENCE %0:sreg_32, %subreg.sub0, %0:sreg_32, %subreg.sub1
+    %2:sreg_64_xexec = IMPLICIT_DEF
+    %3:vreg_64_align2 = COPY %1:sreg_64
+    %4:vreg_64_align2 = nofpexcept V_PK_ADD_F32 8, %2:sreg_64_xexec, 8, %3:vreg_64_align2, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
 ...
