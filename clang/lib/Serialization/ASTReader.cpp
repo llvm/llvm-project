@@ -8317,6 +8317,9 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getCFConstantStringTagDecl();
     break;
 
+  case PREDEF_DECL_BUILTIN_MS_TYPE_INFO_TAG_ID:
+    return Context.getMSTypeInfoTagDecl();
+
 #define BuiltinTemplate(BTName)                                                \
   case PREDEF_DECL##BTName##_ID:                                               \
     if (Context.Decl##BTName)                                                  \
