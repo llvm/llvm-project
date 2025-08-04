@@ -3,6 +3,10 @@
 # RUN: not %{lit} -v %{inputs}/shtest-output-printing > %t.out
 # RUN: FileCheck --input-file %t.out --match-full-lines %s
 #
+# Check that -q doesn't override -v
+# RUN: not %{lit} -v -q %{inputs}/shtest-output-printing > %t.out
+# RUN: FileCheck --input-file %t.out --match-full-lines %s
+#
 # END.
 
 #       CHECK: -- Testing: {{.*}}
