@@ -31,6 +31,7 @@ extern int __unw_get_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t *);
 extern int __unw_set_reg(unw_cursor_t *, unw_regnum_t, unw_word_t);
 extern int __unw_set_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t);
 extern int __unw_resume(unw_cursor_t *);
+extern const char *__unw_strerror(int);
 
 #ifdef __arm__
 /* Save VFP registers in FSTMX format (instead of FSTMD). */
