@@ -11,6 +11,7 @@
 #ifndef LLVM_TRANSFORM_UTILS_SPLIT_MODULE_BY_CATEGORY_H
 #define LLVM_TRANSFORM_UTILS_SPLIT_MODULE_BY_CATEGORY_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 
 #include <memory>
@@ -54,7 +55,7 @@ class Function;
 ///
 /// FIXME: For now, the algorithm assumes no recursion in the input Module. This
 /// will be addressed in the near future.
-void splitModuleTransitiveFromEntryPoints(
+LLVM_ABI void splitModuleTransitiveFromEntryPoints(
     std::unique_ptr<Module> M,
     function_ref<std::optional<int>(const Function &F)> EntryPointCategorizer,
     function_ref<void(std::unique_ptr<Module> Part)> Callback);

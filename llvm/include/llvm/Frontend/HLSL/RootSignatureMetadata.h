@@ -14,6 +14,7 @@
 #ifndef LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 #define LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
@@ -49,7 +50,7 @@ public:
 
 class GenericRSMetadataError : public ErrorInfo<GenericRSMetadataError> {
 public:
-  static char ID;
+  LLVM_ABI static char ID;
   StringRef Message;
   MDNode *MD;
 
@@ -71,7 +72,7 @@ public:
 
 class InvalidRSMetadataFormat : public ErrorInfo<InvalidRSMetadataFormat> {
 public:
-  static char ID;
+  LLVM_ABI static char ID;
   StringRef ElementName;
 
   InvalidRSMetadataFormat(StringRef ElementName) : ElementName(ElementName) {}
@@ -87,7 +88,7 @@ public:
 
 class InvalidRSMetadataValue : public ErrorInfo<InvalidRSMetadataValue> {
 public:
-  static char ID;
+  LLVM_ABI static char ID;
   StringRef ParamName;
 
   InvalidRSMetadataValue(StringRef ParamName) : ParamName(ParamName) {}
