@@ -216,10 +216,13 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
         // a variable, most likely we will be unable to combine it.
         // Do not unroll too deep inner loops for local memory to give a chance
         // to unroll an outer loop for a more important reason.
-        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2 ||
-            (!isa<GlobalVariable>(GEP->getPointerOperand()) &&
-             !isa<Argument>(GEP->getPointerOperand())))
+        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2)
           continue;
+
+        const Value *V = getUnderlyingObject(GEP->getPointerOperand());
+        if (!isa<GlobalVariable>(V) && !isa<Argument>(V))
+          continue;
+
         LLVM_DEBUG(dbgs() << "Allow unroll runtime for loop:\n"
                           << *L << " due to LDS use.\n");
         UP.Runtime = UnrollRuntimeLocal;
@@ -594,7 +597,6 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
           // Estimate all types may be fused with contract/unsafe flags
           const TargetOptions &Options = TLI->getTargetMachine().Options;
           if (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-              Options.UnsafeFPMath ||
               (FAdd->hasAllowContract() && CxtI->hasAllowContract()))
             return TargetTransformInfo::TCC_Free;
         }
@@ -647,8 +649,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    if (SLT == MVT::f32 && ((CxtI && CxtI->hasApproxFunc()) ||
-                            TLI->getTargetMachine().Options.UnsafeFPMath)) {
+    if (SLT == MVT::f32 && (CxtI && CxtI->hasApproxFunc())) {
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul

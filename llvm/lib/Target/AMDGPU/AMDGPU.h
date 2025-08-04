@@ -153,6 +153,9 @@ private:
   const TargetMachine &TM;
 };
 
+void initializeAMDGPUPrepareAGPRAllocLegacyPass(PassRegistry &);
+extern char &AMDGPUPrepareAGPRAllocLegacyID;
+
 void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
 extern char &AMDGPUReserveWWMRegsLegacyID;
 
@@ -428,7 +431,7 @@ ModulePass *createAMDGPUPrintfRuntimeBinding();
 void initializeAMDGPUPrintfRuntimeBindingPass(PassRegistry&);
 extern char &AMDGPUPrintfRuntimeBindingID;
 
-void initializeAMDGPUResourceUsageAnalysisPass(PassRegistry &);
+void initializeAMDGPUResourceUsageAnalysisWrapperPassPass(PassRegistry &);
 extern char &AMDGPUResourceUsageAnalysisID;
 
 struct AMDGPUPrintfRuntimeBindingPass
@@ -537,6 +540,17 @@ extern char &GCNRewritePartialRegUsesID;
 
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
+
+class AMDGPURewriteAGPRCopyMFMAPass
+    : public PassInfoMixin<AMDGPURewriteAGPRCopyMFMAPass> {
+public:
+  AMDGPURewriteAGPRCopyMFMAPass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+void initializeAMDGPURewriteAGPRCopyMFMALegacyPass(PassRegistry &);
+extern char &AMDGPURewriteAGPRCopyMFMALegacyID;
 
 namespace AMDGPU {
 enum TargetIndex {

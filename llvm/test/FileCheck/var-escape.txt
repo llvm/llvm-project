@@ -14,9 +14,9 @@ VARS-NEXT: [[WINPATH]] [[NOT_ESCAPED]] [[ESCAPED]] [[#$NUMERIC + 0]]
 ; RUN:   -dump-input=never --strict-whitespace --check-prefix=VARS --input-file=%t.1 %s 2>&1 \
 ; RUN: | FileCheck %s
 
-CHECK: with "WINPATH" equal to "A:\\\\windows\\\\style\\\\path"
-CHECK: with "NOT_ESCAPED" equal to "shouldn't be escaped \\[a-Z\\]\\\\\\+\\$"
-CHECK: with "ESCAPED" equal to "\\\\ \014\013 needs\to \"be\" escaped\\\000"
+CHECK: with "WINPATH" equal to "A:\windows\style\path"
+CHECK: with "NOT_ESCAPED" equal to "shouldn't be escaped [a-Z]\+$"
+CHECK: with "ESCAPED" equal to "\\ \014\013 needs\to \"be\" escaped\000" (escaped value)
 CHECK: with "$NUMERIC + 0" equal to "DEADBEEF"
 
 ; Test escaping of the name of a numeric substitution, which might contain

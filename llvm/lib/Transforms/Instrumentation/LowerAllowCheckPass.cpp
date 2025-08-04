@@ -10,6 +10,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -71,10 +72,10 @@ static void emitRemark(IntrinsicInst *II, OptimizationRemarkEmitter &ORE,
   }
 }
 
-static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
+static bool lowerAllowChecks(Function &F, const BlockFrequencyInfo &BFI,
                              const ProfileSummaryInfo *PSI,
                              OptimizationRemarkEmitter &ORE,
-                             const std::vector<unsigned int> &cutoffs) {
+                             const LowerAllowCheckPass::Options &Opts) {
   SmallVector<std::pair<IntrinsicInst *, bool>, 16> ReplaceWithValue;
   std::unique_ptr<RandomNumberGenerator> Rng;
 
@@ -89,8 +90,10 @@ static bool removeUbsanTraps(Function &F, const BlockFrequencyInfo &BFI,
       return HotPercentileCutoff;
     else if (II->getIntrinsicID() == Intrinsic::allow_ubsan_check) {
       auto *Kind = cast<ConstantInt>(II->getArgOperand(0));
-      if (Kind->getZExtValue() < cutoffs.size())
-        return cutoffs[Kind->getZExtValue()];
+      if (Kind->getZExtValue() < Opts.cutoffs.size())
+        return Opts.cutoffs[Kind->getZExtValue()];
+    } else if (II->getIntrinsicID() == Intrinsic::allow_runtime_check) {
+      return Opts.runtime_check;
     }
 
     return 0;
@@ -157,7 +160,7 @@ PreservedAnalyses LowerAllowCheckPass::run(Function &F,
   OptimizationRemarkEmitter &ORE =
       AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-  return removeUbsanTraps(F, BFI, PSI, ORE, Opts.cutoffs)
+  return lowerAllowChecks(F, BFI, PSI, ORE, Opts)
              // We do not change the CFG, we only replace the intrinsics with
              // true or false.
              ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
@@ -182,16 +185,14 @@ void LowerAllowCheckPass::printPipeline(
   // correctness.
   // TODO: print shorter output by combining adjacent runs, etc.
   int i = 0;
-  bool printed = false;
+  ListSeparator LS(";");
   for (unsigned int cutoff : Opts.cutoffs) {
-    if (cutoff > 0) {
-      if (printed)
-        OS << ";";
-      OS << "cutoffs[" << i << "]=" << cutoff;
-      printed = true;
-    }
-
+    if (cutoff > 0)
+      OS << LS << "cutoffs[" << i << "]=" << cutoff;
     i++;
   }
+  if (Opts.runtime_check)
+    OS << LS << "runtime_check=" << Opts.runtime_check;
+
   OS << '>';
 }

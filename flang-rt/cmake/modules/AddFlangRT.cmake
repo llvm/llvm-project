@@ -204,6 +204,14 @@ function (add_flangrt_library name)
     endif ()
   endforeach ()
 
+ set(TARGET_FLAGS)
+  if(APPLE)
+    set(DARWIN_EMBEDDED_PLATFORMS)
+    set(DARWIN_osx_BUILTIN_MIN_VER 10.7)
+    set(DARWIN_osx_BUILTIN_MIN_VER_FLAG
+        -mmacosx-version-min=${DARWIN_osx_BUILTIN_MIN_VER})
+  endif()
+
   # Define how to compile and link the library.
   # Some conceptionally only apply to ${srctargets} or ${libtargets}, but we
   # apply them to ${alltargets}. In worst case, they are ignored by CMake.
@@ -242,6 +250,10 @@ function (add_flangrt_library name)
       target_compile_options(${tgtname} PRIVATE
           $<$<COMPILE_LANGUAGE:CXX>:-nogpulib -flto -fvisibility=hidden -Wno-unknown-cuda-version --cuda-feature=+ptx63>
         )
+    elseif (APPLE)
+      target_compile_options(${tgtname} PRIVATE
+          $<$<COMPILE_LANGUAGE:CXX>:${DARWIN_osx_BUILTIN_MIN_VER_FLAG}>
+        )
     endif ()
 
     # Also for CUDA source when compiling with FLANG_RT_EXPERIMENTAL_OFFLOAD_SUPPORT=CUDA
@@ -272,27 +284,6 @@ function (add_flangrt_library name)
     if (FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
       target_compile_options(${tgtname} PUBLIC -U_GLIBCXX_ASSERTIONS)
       target_compile_options(${tgtname} PUBLIC -U_LIBCPP_ENABLE_ASSERTIONS)
-    endif ()
-
-    # Flang/Clang (including clang-cl) -compiled programs targeting the MSVC ABI
-    # should only depend on msvcrt/ucrt. LLVM still emits libgcc/compiler-rt
-    # functions in some cases like 128-bit integer math (__udivti3, __modti3,
-    # __fixsfti, __floattidf, ...) that msvc does not support. We are injecting a
-    # dependency to Compiler-RT's builtin library where these are implemented.
-    if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-      if (FLANG_RT_BUILTINS_LIBRARY)
-        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:CXX,C>:-Xclang>" "$<$<COMPILE_LANGUAGE:CXX,C>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
-      endif ()
-    endif ()
-    if (MSVC AND CMAKE_Fortran_COMPILER_ID STREQUAL "LLVMFlang")
-      if (FLANG_RT_BUILTINS_LIBRARY)
-        target_compile_options(${tgtname} PRIVATE "$<$<COMPILE_LANGUAGE:Fortran>:-Xflang>" "$<$<COMPILE_LANGUAGE:Fortran>:--dependent-lib=${FLANG_RT_BUILTINS_LIBRARY}>")
-      else ()
-        message(WARNING "Did not find libclang_rt.builtins.lib.
-          LLVM may emit builtins that are not implemented in msvcrt/ucrt and
-          instead falls back to builtins from Compiler-RT. Linking with ${tgtname}
-          may result in a linker error.")
-      endif ()
     endif ()
 
     # Non-GTest unittests depend on LLVMSupport

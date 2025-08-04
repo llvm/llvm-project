@@ -32,12 +32,13 @@ ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
   for (; i < n && !char_conv.isFull(); ++i) {
     int err = char_conv.push(static_cast<char8_t>(s[i]));
     // Encoding error
-    if (err == -1)
-      return Error(EILSEQ);
+    if (err == EILSEQ)
+      return Error(err);
   }
   auto wc = char_conv.pop_utf32();
   if (wc.has_value()) {
-    *pwc = wc.value();
+    if (pwc != nullptr)
+      *pwc = wc.value();
     // null terminator -> return 0
     if (wc.value() == L'\0')
       return 0;

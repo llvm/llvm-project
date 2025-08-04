@@ -9,11 +9,10 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 define <2 x bfloat> @test_ret_const() #0 {
 ; CHECK-LABEL: test_ret_const(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-EMPTY:
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    mov.b32 %r1, 1073758080;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], 1073758080;
 ; CHECK-NEXT:    ret;
   ret <2 x bfloat> <bfloat 1.0, bfloat 2.0>
 }
@@ -209,13 +208,13 @@ define <2 x bfloat> @test_call(<2 x bfloat> %a, <2 x bfloat> %b) #0 {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b32 %r1, [test_call_param_0];
-; CHECK-NEXT:    ld.param.b32 %r2, [test_call_param_1];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 4 .b8 param0[4];
-; CHECK-NEXT:    st.param.b32 [param0], %r1;
 ; CHECK-NEXT:    .param .align 4 .b8 param1[4];
-; CHECK-NEXT:    st.param.b32 [param1], %r2;
 ; CHECK-NEXT:    .param .align 4 .b8 retval0[4];
+; CHECK-NEXT:    ld.param.b32 %r2, [test_call_param_1];
+; CHECK-NEXT:    st.param.b32 [param1], %r2;
+; CHECK-NEXT:    st.param.b32 [param0], %r1;
 ; CHECK-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
 ; CHECK-NEXT:    } // callseq 0

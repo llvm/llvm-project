@@ -28,8 +28,8 @@ define float @caller_md(float %a, float %b) {
 ; CHECK-NEXT:    ld.param.b32 %r2, [caller_md_param_1];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
-; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, %r2};
 ; CHECK-NEXT:    .param .b32 retval0;
+; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, %r2};
 ; CHECK-NEXT:    call.uni (retval0), callee_md, (param0);
 ; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
 ; CHECK-NEXT:    } // callseq 0
@@ -69,8 +69,8 @@ define float @caller(float %a, float %b) {
 ; CHECK-NEXT:    ld.param.b32 %r2, [caller_param_1];
 ; CHECK-NEXT:    { // callseq 1, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[8];
-; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, %r2};
 ; CHECK-NEXT:    .param .b32 retval0;
+; CHECK-NEXT:    st.param.v2.b32 [param0], {%r1, %r2};
 ; CHECK-NEXT:    call.uni (retval0), callee, (param0);
 ; CHECK-NEXT:    ld.param.b32 %r3, [retval0];
 ; CHECK-NEXT:    } // callseq 1
@@ -106,10 +106,10 @@ define alignstack(8) %struct.float2 @aligned_return(%struct.float2 %a ) {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b32 %r1, [aligned_return_param_0+4];
-; CHECK-NEXT:    ld.param.b32 %r2, [aligned_return_param_0];
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
-; CHECK-NEXT:    st.param.b32 [func_retval0+4], %r1;
+; CHECK-NEXT:    ld.param.b32 %r1, [aligned_return_param_0];
+; CHECK-NEXT:    ld.param.b32 %r2, [aligned_return_param_0+4];
+; CHECK-NEXT:    st.param.b32 [func_retval0+4], %r2;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
 ; CHECK-NEXT:    ret;
   ret %struct.float2 %a
 }

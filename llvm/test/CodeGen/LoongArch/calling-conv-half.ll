@@ -1252,8 +1252,8 @@ define i32 @caller_half_on_stack() nounwind {
 ;
 ; LA64F-LP64S-LABEL: caller_half_on_stack:
 ; LA64F-LP64S:       # %bb.0:
-; LA64F-LP64S-NEXT:    addi.d $sp, $sp, -80
-; LA64F-LP64S-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
+; LA64F-LP64S-NEXT:    addi.d $sp, $sp, -96
+; LA64F-LP64S-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
 ; LA64F-LP64S-NEXT:    lu12i.w $a0, -12
 ; LA64F-LP64S-NEXT:    ori $a1, $a0, 3200
 ; LA64F-LP64S-NEXT:    lu32i.d $a1, 0
@@ -1292,8 +1292,8 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64F-LP64S-NEXT:    st.w $t0, $sp, 0
 ; LA64F-LP64S-NEXT:    pcaddu18i $ra, %call36(callee_half_on_stack)
 ; LA64F-LP64S-NEXT:    jirl $ra, $ra, 0
-; LA64F-LP64S-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
-; LA64F-LP64S-NEXT:    addi.d $sp, $sp, 80
+; LA64F-LP64S-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; LA64F-LP64S-NEXT:    addi.d $sp, $sp, 96
 ; LA64F-LP64S-NEXT:    ret
 ;
 ; LA64F-LP64D-LABEL: caller_half_on_stack:
@@ -1336,8 +1336,8 @@ define i32 @caller_half_on_stack() nounwind {
 ;
 ; LA64D-LP64S-LABEL: caller_half_on_stack:
 ; LA64D-LP64S:       # %bb.0:
-; LA64D-LP64S-NEXT:    addi.d $sp, $sp, -80
-; LA64D-LP64S-NEXT:    st.d $ra, $sp, 72 # 8-byte Folded Spill
+; LA64D-LP64S-NEXT:    addi.d $sp, $sp, -96
+; LA64D-LP64S-NEXT:    st.d $ra, $sp, 88 # 8-byte Folded Spill
 ; LA64D-LP64S-NEXT:    lu12i.w $a0, -12
 ; LA64D-LP64S-NEXT:    ori $a1, $a0, 3200
 ; LA64D-LP64S-NEXT:    lu32i.d $a1, 0
@@ -1376,8 +1376,8 @@ define i32 @caller_half_on_stack() nounwind {
 ; LA64D-LP64S-NEXT:    st.w $t0, $sp, 0
 ; LA64D-LP64S-NEXT:    pcaddu18i $ra, %call36(callee_half_on_stack)
 ; LA64D-LP64S-NEXT:    jirl $ra, $ra, 0
-; LA64D-LP64S-NEXT:    ld.d $ra, $sp, 72 # 8-byte Folded Reload
-; LA64D-LP64S-NEXT:    addi.d $sp, $sp, 80
+; LA64D-LP64S-NEXT:    ld.d $ra, $sp, 88 # 8-byte Folded Reload
+; LA64D-LP64S-NEXT:    addi.d $sp, $sp, 96
 ; LA64D-LP64S-NEXT:    ret
 ;
 ; LA64D-LP64D-LABEL: caller_half_on_stack:
