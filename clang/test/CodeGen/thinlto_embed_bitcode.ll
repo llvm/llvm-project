@@ -34,7 +34,7 @@
 ; RUN: diff %t-redo.o %t.o
 
 ; CHECK-ELF:      .text   PROGBITS 0000000000000000 [[#%x,OFF:]] [[#%x,SIZE:]] 00 AX 0
-; CHECK-ELF-NEXT: .llvmbc PROGBITS 0000000000000000 [[#%x,OFF:]] [[#%x,SIZE:]] 00    0
+; CHECK-ELF-NEXT: .llvmbc PROGBITS 0000000000000000 [[#%x,OFF:]] [[#%x,SIZE:]] 00 E  0
 ; CHECK-ELF-CMD:  .llvmcmd
 ; CHECK-ELF-NO-CMD-NOT: .llvmcmd
 
