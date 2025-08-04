@@ -16,51 +16,9 @@ OptionalHeader:
   SizeOfStackCommit: 4096
   SizeOfHeapReserve: 1048576
   SizeOfHeapCommit: 4096
-  ExportTable:
-    RelativeVirtualAddress: 0
-    Size:            0
-  ImportTable:
-    RelativeVirtualAddress: 0
-    Size:            0
-  ResourceTable:
-    RelativeVirtualAddress: 0
-    Size:            0
-  ExceptionTable:
-    RelativeVirtualAddress: 0
-    Size:            0
-  CertificateTable:
-    RelativeVirtualAddress: 0
-    Size:            0
-  BaseRelocationTable:
-    RelativeVirtualAddress: 0
-    Size:            0
   Debug:
     RelativeVirtualAddress: 8192
     Size:            56
-  Architecture:
-    RelativeVirtualAddress: 0
-    Size:            0
-  GlobalPtr:
-    RelativeVirtualAddress: 0
-    Size:            0
-  TlsTable:
-    RelativeVirtualAddress: 0
-    Size:            0
-  LoadConfigTable:
-    RelativeVirtualAddress: 0
-    Size:            0
-  BoundImport:
-    RelativeVirtualAddress: 0
-    Size:            0
-  IAT:
-    RelativeVirtualAddress: 0
-    Size:            0
-  DelayImportDescriptor:
-    RelativeVirtualAddress: 0
-    Size:            0
-  ClrRuntimeHeader:
-    RelativeVirtualAddress: 0
-    Size:            0
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_DLL, IMAGE_FILE_LARGE_ADDRESS_AWARE ]
