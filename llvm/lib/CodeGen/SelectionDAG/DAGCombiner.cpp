@@ -2779,11 +2779,11 @@ SDValue DAGCombiner::visitPTRADD(SDNode *N) {
   // This should be done late, after legalization, so that it doesn't block
   // other ptradd combines that could enable more offset folding.
   if (LegalOperations && DAG.haveNoCommonBitsSet(N0, N1)) {
-    bool TransformCanBreakAddrMode = any_of(N->users(), [&](SDNode *User) {
+    bool TransformCannotBreakAddrMode = none_of(N->users(), [&](SDNode *User) {
       return canFoldInAddressingMode(N, User, DAG, TLI);
     });
 
-    if (!TransformCanBreakAddrMode)
+    if (TransformCannotBreakAddrMode)
       return DAG.getNode(ISD::OR, DL, PtrVT, N0, N1, SDNodeFlags::Disjoint);
   }
 
