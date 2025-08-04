@@ -476,7 +476,7 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
   return true;
 }
 
-// Return LaneBitmask value as unint64_t for PhysReg assigned to MO,
+// Return LaneBitmask value as uint64_t for PhysReg assigned to MO,
 // representing its live register units at its parent MI. In case of undef or
 // fully live MO, return 0u.
 uint64_t VirtRegRewriter::calcLiveRegUnitMask(const MachineOperand &MO,
