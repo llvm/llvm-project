@@ -89,7 +89,7 @@ add_or_sub(InType x, InType y) {
 
     if (y_bits.is_inf()) {
       if constexpr (IsSub)
-        OutFPBits::inf(y_bits.sign().negate()).get_val();
+        return OutFPBits::inf(y_bits.sign().negate()).get_val();
       else
         return OutFPBits::inf(y_bits.sign()).get_val();
     }
