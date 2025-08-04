@@ -14,6 +14,7 @@
 #ifndef MLIR_INTERFACES_CONTROLFLOWINTERFACES
 #define MLIR_INTERFACES_CONTROLFLOWINTERFACES
 
+include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
 //===----------------------------------------------------------------------===//
@@ -115,7 +116,8 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
 // RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
-def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
+def RegionBranchOpInterface
+    : OpInterface<"RegionBranchOpInterface", [LocalEffectsOpInterface]> {
   let description = [{
     This interface provides information for region operations that exhibit
     branching behavior between held regions. I.e., this interface allows for
