@@ -9132,11 +9132,17 @@ LowerBUILD_VECTORAsVariablePermute(SDValue V, const SDLoc &DL,
                                    SelectionDAG &DAG,
                                    const X86Subtarget &Subtarget) {
   SDValue SrcVec, IndicesVec;
+
+  auto PeekThroughFreeze = [](SDValue N) {
+    if (N->getOpcode() == ISD::FREEZE && N.hasOneUse())
+      return N->getOperand(0);
+    return N;
+  };
   // Check for a match of the permute source vector and permute index elements.
   // This is done by checking that the i-th build_vector operand is of the form:
   // (extract_elt SrcVec, (extract_elt IndicesVec, i)).
   for (unsigned Idx = 0, E = V.getNumOperands(); Idx != E; ++Idx) {
-    SDValue Op = V.getOperand(Idx);
+    SDValue Op = PeekThroughFreeze(V.getOperand(Idx));
     if (Op.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       return SDValue();
 
@@ -23486,11 +23492,20 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
   }
 
   // Try to shrink i64 compares if the input has enough zero bits.
-  // TODO: Add sign-bits equivalent for isX86CCSigned(X86CC)?
   if (CmpVT == MVT::i64 && !isX86CCSigned(X86CC) &&
       Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
       DAG.MaskedValueIsZero(Op1, APInt::getHighBitsSet(64, 32)) &&
       DAG.MaskedValueIsZero(Op0, APInt::getHighBitsSet(64, 32))) {
+    CmpVT = MVT::i32;
+    Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
+    Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
+  }
+
+  // Try to shrink all i64 compares if the inputs are representable as signed
+  // i32.
+  if (CmpVT == MVT::i64 &&
+      Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
+      DAG.ComputeNumSignBits(Op1) > 32 && DAG.ComputeNumSignBits(Op0) > 32) {
     CmpVT = MVT::i32;
     Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);

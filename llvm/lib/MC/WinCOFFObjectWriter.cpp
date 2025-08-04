@@ -382,7 +382,8 @@ void WinCOFFWriter::defineSymbol(const MCSymbol &MCSym) {
 
   COFFSymbol *Sym = GetOrCreateCOFFSymbol(&MCSym);
   COFFSymbol *Local = nullptr;
-  if (cast<MCSymbolCOFF>(MCSym).getWeakExternalCharacteristics()) {
+  if (static_cast<const MCSymbolCOFF &>(MCSym)
+          .getWeakExternalCharacteristics()) {
     Sym->Data.StorageClass = COFF::IMAGE_SYM_CLASS_WEAK_EXTERNAL;
     Sym->Section = nullptr;
 
@@ -406,7 +407,8 @@ void WinCOFFWriter::defineSymbol(const MCSymbol &MCSym) {
     Sym->Aux[0].AuxType = ATWeakExternal;
     Sym->Aux[0].Aux.WeakExternal.TagIndex = 0; // Filled in later
     Sym->Aux[0].Aux.WeakExternal.Characteristics =
-        cast<MCSymbolCOFF>(MCSym).getWeakExternalCharacteristics();
+        static_cast<const MCSymbolCOFF &>(MCSym)
+            .getWeakExternalCharacteristics();
   } else {
     if (!Base)
       Sym->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;
@@ -418,7 +420,7 @@ void WinCOFFWriter::defineSymbol(const MCSymbol &MCSym) {
   if (Local) {
     Local->Data.Value = getSymbolValue(MCSym, *Asm);
 
-    const MCSymbolCOFF &SymbolCOFF = cast<MCSymbolCOFF>(MCSym);
+    auto &SymbolCOFF = static_cast<const MCSymbolCOFF &>(MCSym);
     Local->Data.Type = SymbolCOFF.getType();
     Local->Data.StorageClass = SymbolCOFF.getClass();
 
@@ -821,7 +823,8 @@ void WinCOFFWriter::executePostLayoutBinding() {
     for (const MCSymbol &Symbol : Asm->symbols())
       // Define non-temporary or temporary static (private-linkage) symbols
       if (!Symbol.isTemporary() ||
-          cast<MCSymbolCOFF>(Symbol).getClass() == COFF::IMAGE_SYM_CLASS_STATIC)
+          static_cast<const MCSymbolCOFF &>(Symbol).getClass() ==
+              COFF::IMAGE_SYM_CLASS_STATIC)
         defineSymbol(Symbol);
 
   UseBigObj = Sections.size() > COFF::MaxNumberOfSections16;
@@ -1188,7 +1191,7 @@ bool WinCOFFObjectWriter::isSymbolRefDifferenceFullyResolvedImpl(
   // point to thunks, and the /GUARD:CF flag assumes that it can use relocations
   // to approximate the set of all address taken functions. LLD's implementation
   // of /GUARD:CF also relies on the existance of these relocations.
-  uint16_t Type = cast<MCSymbolCOFF>(SymA).getType();
+  uint16_t Type = static_cast<const MCSymbolCOFF &>(SymA).getType();
   if ((Type >> COFF::SCT_COMPLEX_TYPE_SHIFT) == COFF::IMAGE_SYM_DTYPE_FUNCTION)
     return false;
   return &SymA.getSection() == FB.getParent();
