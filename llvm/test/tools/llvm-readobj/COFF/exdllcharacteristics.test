@@ -1,8 +1,8 @@
 # To regenerate has-exdllcharacteristics.exe
 # $ echo int main() { return 0; } > has-exdllcharacteristics.c
 # $ cl has-exdllcharacteristics.c /link /entry:main /cetcompat /cetcompatstrict /cetdynamicapisinproc /cetipvalidationrelaxed /hotpatchcompatible /functionpadmin:6
-RUN: yaml2obj %p/Inputs/has-exdllcharacteristics.yaml > %t.obj
-RUN: llvm-readobj --coff-debug-directory %t.obj | FileCheck %s
+RUN: yaml2obj %p/Inputs/has-exdllcharacteristics.yaml > %t.exe
+RUN: llvm-readobj --coff-debug-directory %t.exe | FileCheck %s
 
 CHECK:  DebugEntry {
 CHECK:    Characteristics: 0x0
