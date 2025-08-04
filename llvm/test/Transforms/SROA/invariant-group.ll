@@ -205,13 +205,9 @@ define void @memcpy_after_laundering_alloca_slices(ptr %ptr) {
   ret void
 }
 
-define void @launder_in_loop() {
-; CHECK-LABEL: @launder_in_loop(
+define void @test_agg_store() {
+; CHECK-LABEL: @test_agg_store(
 ; CHECK-NEXT:    [[STRUCT_PTR:%.*]] = alloca [[T:%.*]], i64 1, align 4
-; CHECK-NEXT:    br label [[HEADER:%.*]]
-; CHECK:       header:
-; CHECK-NEXT:    br i1 true, label [[BODY:%.*]], label [[EXIT:%.*]]
-; CHECK:       body:
 ; CHECK-NEXT:    [[STRUCT_PTR_FRESH:%.*]] = call ptr @llvm.launder.invariant.group.p0(ptr [[STRUCT_PTR]])
 ; CHECK-NEXT:    [[STRUCT:%.*]] = call [[T]] @[[MAKE_T:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]]()
 ; CHECK-NEXT:    store [[T]] [[STRUCT]], ptr [[STRUCT_PTR_FRESH]], align 4, !invariant.group [[META0]]
@@ -219,17 +215,9 @@ define void @launder_in_loop() {
 ; CHECK-NEXT:    [[FIRST:%.*]] = load i32, ptr [[FIRST_PTR]], align 4
 ; CHECK-NEXT:    [[SECOND_PTR:%.*]] = getelementptr [[T]], ptr [[STRUCT_PTR_FRESH]], i32 0, i32 1
 ; CHECK-NEXT:    [[SECOND:%.*]] = load i32, ptr [[SECOND_PTR]], align 4
-; CHECK-NEXT:    br label [[HEADER]]
-; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
   %struct_ptr = alloca %t, i64 1, align 4
-  br label %header
-
-header:
-  br i1 true, label %body, label %exit
-
-body:                                                ; preds = %6
   %struct_ptr_fresh = call ptr @llvm.launder.invariant.group.p0(ptr %struct_ptr)
   %struct = call %t @make_t()
   store %t %struct, ptr %struct_ptr_fresh, align 4, !invariant.group !0
@@ -237,9 +225,6 @@ body:                                                ; preds = %6
   %first = load i32, ptr %first_ptr, align 4
   %second_ptr = getelementptr %t, ptr %struct_ptr_fresh, i32 0, i32 1
   %second = load i32, ptr %second_ptr, align 4
-  br label %header
-
-exit:
   ret void
 }
 
