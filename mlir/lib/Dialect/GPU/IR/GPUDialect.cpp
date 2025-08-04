@@ -866,6 +866,9 @@ LogicalResult LaunchOp::verify() {
   if (!(hasClusterSize()) &&
       (getClusterSizeX() || getClusterSizeY() || getClusterSizeZ()))
     return emitOpError() << "cluster size must be all present";
+
+  if (getOperation()->getParentOfType<LaunchOp>())
+    return emitOpError() << "not support nested launches";
   return success();
 }
 

@@ -35,6 +35,21 @@ func.func @launch_requires_gpu_return(%sz : index) {
 
 // -----
 
+func.func @nested_launches(%sz : index) {
+  gpu.launch blocks(%bx, %by, %bz) in (%sbx = %sz, %sby = %sz, %sbz = %sz)
+             threads(%tx, %ty, %tz) in (%stx = %sz, %sty = %sz, %stz = %sz) {
+    // @expected-error@+1 {{'gpu.launch' op not support nested launches}}
+    gpu.launch blocks(%bx1, %by1, %bz1) in (%sbx1 = %sz, %sby1 = %sz, %sbz1 = %sz)
+               threads(%tx1, %ty1, %tz1) in (%stx1 = %sz, %sty1 = %sz, %stz1 = %sz) {
+      gpu.terminator
+    }
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @launch_func_too_few_operands(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands}}
   "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz)
