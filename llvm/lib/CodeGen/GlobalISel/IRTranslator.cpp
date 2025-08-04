@@ -2090,7 +2090,7 @@ static unsigned getConstrainedOpcode(Intrinsic::ID ID) {
     return TargetOpcode::G_STRICT_FPTOUI;
   case Intrinsic::experimental_constrained_fpext:
     return TargetOpcode::G_STRICT_FPEXT;
-   case Intrinsic::experimental_constrained_fptrunc:
+  case Intrinsic::experimental_constrained_fptrunc:
     return TargetOpcode::G_STRICT_FPTRUNC;
   default:
     return 0;
