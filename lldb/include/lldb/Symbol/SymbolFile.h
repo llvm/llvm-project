@@ -332,12 +332,12 @@ public:
   /// Resolves the function corresponding to the specified LLDB function
   /// call \c label.
   ///
-  /// \param[in] label The FunctionCallLabel to be resolved.
+  /// \param[in,out] label The FunctionCallLabel to be resolved.
   ///
   /// \returns An llvm::Error if the specified \c label couldn't be resolved.
   ///          Returns the resolved function (as a SymbolContext) otherwise.
   virtual llvm::Expected<SymbolContext>
-  ResolveFunctionCallLabel(const FunctionCallLabel &label) {
+  ResolveFunctionCallLabel(FunctionCallLabel &label) {
     return llvm::createStringError("Not implemented");
   }
 
