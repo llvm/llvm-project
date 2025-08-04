@@ -341,7 +341,9 @@ lldb_private::process_linux::CreateContextSwitchTracePerfEvent(
   attr.size = sizeof(attr);
   attr.sample_type = PERF_SAMPLE_TID | PERF_SAMPLE_TIME;
   attr.type = PERF_TYPE_SOFTWARE;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 3, 0)
   attr.context_switch = 1;
+#endif
   attr.exclude_kernel = 1;
   attr.sample_id_all = 1;
   attr.exclude_hv = 1;
