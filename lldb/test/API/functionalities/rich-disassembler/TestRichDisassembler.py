@@ -6,10 +6,9 @@ class TestRichDisassembler(TestBase):
         """
         Tests disassembler output for d_original_example.c built with -O1.
         """
-        self.build(dictionary={
-            'C_SOURCES': 'd_original_example.c',
-            'CFLAGS_EXTRAS': '-g -O1'
-        })
+        self.build(
+            dictionary={'C_SOURCES': 'd_original_example.c', 'CFLAGS_EXTRAS': '-g -O1'}
+        )
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
         self.assertTrue(target)
@@ -31,13 +30,3 @@ class TestRichDisassembler(TestBase):
         # self.assertIn("DW_OP_reg", disasm)
         # self.assertIn("DW_OP_stack_value", disasm)
         self.assertNotIn("<decoding error>", disasm)
-
-
-    
-
-
-
-
-
-
-
