@@ -569,7 +569,7 @@ void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) {
   // must not be valid before this point. Replace the COPY with a KILL
   // instruction to maintain this information.
 
-  // Avoid COPY with an exact 3 operand, wiith third operand be Mask, as
+  // Avoid COPY with an exact 3 operand, with third operand be Mask, as
   // it same as a COPY with no additional liveness information.
   if (MI.getOperand(1).isUndef() || MI.getNumOperands() > 3 ||
       (MI.getNumOperands() == 3 && !MI.getOperand(2).isImm())) {
