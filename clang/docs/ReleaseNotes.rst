@@ -198,6 +198,9 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
+- Add support for `__attribute__((interrupt("rnmi")))` to be used with the `Smrnmi` extension.
+  With this the `Smrnmi` extension is fully supported.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

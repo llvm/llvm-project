@@ -22550,6 +22550,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     constexpr StringLiteral SupportedInterruptKinds[] = {
         "machine",
         "supervisor",
+        "rnmi",
         "qci-nest",
         "qci-nonest",
         "SiFive-CLIC-preemptible",
@@ -22567,6 +22568,8 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
       reportFatalUsageError(
           "'SiFive-CLIC-*' interrupt kinds require XSfmclic extension");
 
+    if (Kind == "rnmi" && !Subtarget.hasStdExtSmrnmi())
+      reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
     const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
     if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
       reportFatalUsageError("'SiFive-CLIC-preemptible' interrupt kinds cannot "
@@ -23212,7 +23215,11 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
     if (Kind == "supervisor")
       RetOpc = RISCVISD::SRET_GLUE;
-    else if (Kind == "qci-nest" || Kind == "qci-nonest") {
+    else if (Kind == "rnmi") {
+      assert(STI.hasFeature(RISCV::FeatureStdExtSmrnmi) &&
+             "Need Smrnmi extension for rnmi");
+      RetOpc = RISCVISD::MNRET_GLUE;
+    } else if (Kind == "qci-nest" || Kind == "qci-nonest") {
       assert(STI.hasFeature(RISCV::FeatureVendorXqciint) &&
              "Need Xqciint for qci-(no)nest");
       RetOpc = RISCVISD::QC_C_MILEAVERET_GLUE;

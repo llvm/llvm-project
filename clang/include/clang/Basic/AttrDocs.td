@@ -2905,9 +2905,12 @@ the backend to generate appropriate function entry/exit code so that it can be
 used directly as an interrupt service routine.
 
 Permissible values for this parameter are ``machine``, ``supervisor``,
-``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
+``rnmi``, ``qci-nest``, ``qci-nonest``, ``SiFive-CLIC-preemptible``, and
 ``SiFive-CLIC-stack-swap``. If there is no parameter, then it defaults to
 ``machine``.
+
+The ``rnmi`` value is used for resumable non-maskable interrupts. It requires the
+standard Smrnmi extension.
 
 The ``qci-nest`` and ``qci-nonest`` values require Qualcomm's Xqciint extension
 and are used for Machine-mode Interrupts and Machine-mode Non-maskable
