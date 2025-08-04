@@ -570,8 +570,7 @@ void VPlanTransforms::prepareForVectorization(
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
   if (!RequiresScalarEpilogueCheck)
-    Cmp = Plan.getOrAddLiveIn(
-        ConstantInt::getFalse(IntegerType::getInt1Ty(Plan.getContext())));
+    Cmp = Plan.getFalse();
   else if (TailFolded)
     Cmp = Plan.getOrAddLiveIn(
         ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));
@@ -769,13 +768,12 @@ bool VPlanTransforms::handleMaxMinNumAndOrderedFCmpSelectReductions(
     Intrinsic::ID RdxIntrinsicId =
         RedPhiR->getRecurrenceKind() == RecurKind::FMaxNum ? Intrinsic::maxnum
                                                            : Intrinsic::minnum;
-    assert((isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
-            cast<VPWidenIntrinsicRecipe>(MinMaxR)->getVectorIntrinsicID() ==
-                RdxIntrinsicId) ||
-           (RepR &&
-            cast<IntrinsicInst>(RepR->getUnderlyingInstr())->getIntrinsicID() ==
-                RdxIntrinsicId) &&
-               "Intrinsic did not match recurrence kind");
+    assert(((isa<VPWidenIntrinsicRecipe>(MinMaxR) &&
+             cast<VPWidenIntrinsicRecipe>(MinMaxR)->getVectorIntrinsicID() ==
+                 RdxIntrinsicId) ||
+            (RepR && cast<IntrinsicInst>(RepR->getUnderlyingInstr())
+                             ->getIntrinsicID() == RdxIntrinsicId)) &&
+           "Intrinsic did not match recurrence kind");
 #endif
 
     if (MinMaxR->getOperand(0) == RedPhiR)
