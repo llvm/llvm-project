@@ -344,6 +344,45 @@ exit:
   ret void
 }
 
+; Variant of the above, where the store size exceeds the dependence
+; distance.
+define void @different_type_sizes_strided_accesses_store_size_exceeds_depdist(ptr %dst) {
+; CHECK-LABEL: 'different_type_sizes_strided_accesses_store_size_exceeds_depdist'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
+; CHECK-NEXT:            store i128 1, ptr %gep.10.iv, align 4
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %gep.10 = getelementptr nuw i8, ptr %dst, i64 10
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %gep.iv = getelementptr i8, ptr %dst, i64 %iv
+  store i16 0, ptr %gep.iv
+  %gep.10.iv = getelementptr i8, ptr %gep.10, i64 %iv
+  store i128 1, ptr %gep.10.iv
+  %iv.next = add i64 %iv, 8
+  %ec = icmp eq i64 %iv.next, 64
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+
 ; Source type-size differs from that of the sink, but when
 ; determining backward dependence, only the source size
 ; is relevant.
