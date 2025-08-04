@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/command.h"
+#include "flang/Runtime/extensions.h"
 #include "flang-rt/runtime/descriptor.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/stat.h"
@@ -307,6 +308,12 @@ std::int32_t RTNAME(Hostnm)(
   }
 
   return status;
+}
+
+float RTNAME(Secnds)(float* refTime, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  RUNTIME_CHECK(terminator, refTime != nullptr);
+  return FORTRAN_PROCEDURE_NAME(secnds)(refTime);
 }
 
 std::int32_t RTNAME(PutEnv)(

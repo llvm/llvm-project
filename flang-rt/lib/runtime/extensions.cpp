@@ -303,6 +303,45 @@ void FORTRAN_PROCEDURE_NAME(qsort)(int *array, int *len, int *isize,
 // PERROR(STRING)
 void RTNAME(Perror)(const char *str) { perror(str); }
 
+// GNU extension function SECNDS(refTime)
+float FORTRAN_PROCEDURE_NAME(secnds)(float* refTime) {
+  constexpr float FAIL_SECNDS{1.0f};
+  if (!refTime) {
+    return FAIL_SECNDS;
+  }
+  std::time_t now{std::time(nullptr)};
+  if (now == std::time_t{-1}) {
+    return FAIL_SECNDS;
+  }
+  // In float result, we can only precisely store 2^24 seconds, which
+  // comes out to about 194 days. Thus, need to peek a starting point.
+  // Given the description of this function, midnight of the current
+  // day is the best starting point.
+  static time_t startingPoint{0};
+  if (!startingPoint) {
+    struct tm timeInfo;
+#ifdef _WIN32
+    if (localtime_s(&timeInfo, &now)) {
+      return FAIL_SECNDS;
+    }
+#else
+    if (!localtime_r(&now, &timeInfo)) {
+      return FAIL_SECNDS;
+    }
+#endif
+    // Back to midnight
+    timeInfo.tm_hour = 0;
+    timeInfo.tm_min = 0;
+    timeInfo.tm_sec = 0;
+    startingPoint = std::mktime(&timeInfo);
+    if (startingPoint == std::time_t(-1)) {
+      return FAIL_SECNDS;
+    }
+  }
+  double diffStartingPoint = std::difftime(now, startingPoint);
+  return static_cast<float>(diffStartingPoint) - *refTime;
+}
+
 // GNU extension function TIME()
 std::int64_t RTNAME(time)() { return time(nullptr); }
 
