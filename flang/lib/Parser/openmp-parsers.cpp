@@ -1758,8 +1758,8 @@ TYPE_PARSER(sourced(construct<OpenMPDeclareMapperConstruct>(
 TYPE_PARSER(construct<OmpReductionCombiner>(Parser<AssignmentStmt>{}) ||
     construct<OmpReductionCombiner>(Parser<FunctionReference>{}))
 
-TYPE_PARSER(construct<OpenMPCriticalConstruct>(OmpBlockConstructParser{
-    llvm::omp::Directive::OMPD_critical}))
+TYPE_PARSER(construct<OpenMPCriticalConstruct>(
+    OmpBlockConstructParser{llvm::omp::Directive::OMPD_critical}))
 
 // 2.11.3 Executable Allocate directive
 TYPE_PARSER(
