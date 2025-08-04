@@ -11168,6 +11168,7 @@ lowerFixedVectorSegStoreIntrinsics(unsigned IntNo, SDValue Op,
       Mask,
       VL,
       DAG.getTargetConstant(Log2_64(VT.getScalarSizeInBits()), DL, XLenVT)};
+  // Insert the stride operand.
   if (IsStrided)
     Ops.insert(std::next(Ops.begin(), 4),
                Op.getOperand(Op.getNumOperands() - 3));
