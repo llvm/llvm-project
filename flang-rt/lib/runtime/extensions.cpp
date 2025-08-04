@@ -314,7 +314,7 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
     return FAIL_SECNDS;
   }
   // In float result, we can only precisely store 2^24 seconds, which
-  // comes out to about 194 days. Thus, need to peek a starting point.
+  // comes out to about 194 days. Thus, need to pick a starting point.
   // Given the description of this function, midnight of the current
   // day is the best starting point.
   static time_t startingPoint{0};
