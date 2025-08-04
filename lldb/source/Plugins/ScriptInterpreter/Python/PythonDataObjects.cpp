@@ -1180,7 +1180,7 @@ public:
     }
     PythonBytes pybytes(PyRefType::Borrowed, pybuffer_obj->get());
     if (!pybytes)
-      return Status::FromErrorString("not a byte array");
+      return Status::FromError(llvm::make_error<PythonException>());
     llvm::ArrayRef<uint8_t> bytes = pybytes.GetBytes();
     memcpy(buf, bytes.begin(), bytes.size());
     num_bytes = bytes.size();
