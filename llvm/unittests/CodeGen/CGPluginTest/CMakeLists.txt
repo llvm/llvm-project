@@ -2,7 +2,9 @@ set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Support
   Core
+  MC
   Target
+  TargetParser
   CodeGen
   )
 

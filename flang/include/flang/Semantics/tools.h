@@ -199,6 +199,8 @@ bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
 
+bool IsDeviceAllocatable(const Symbol &symbol);
+
 inline bool IsCUDADeviceContext(const Scope *scope) {
   if (scope) {
     if (const Symbol * symbol{scope->symbol()}) {

@@ -1306,12 +1306,12 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
                       ? AutoTypeKeyword::DecltypeAuto
                       : AutoTypeKeyword::Auto;
 
-    ConceptDecl *TypeConstraintConcept = nullptr;
+    TemplateDecl *TypeConstraintConcept = nullptr;
     llvm::SmallVector<TemplateArgument, 8> TemplateArgs;
     if (DS.isConstrainedAuto()) {
       if (TemplateIdAnnotation *TemplateId = DS.getRepAsTemplateId()) {
         TypeConstraintConcept =
-            cast<ConceptDecl>(TemplateId->Template.get().getAsTemplateDecl());
+            cast<TemplateDecl>(TemplateId->Template.get().getAsTemplateDecl());
         TemplateArgumentListInfo TemplateArgsInfo;
         TemplateArgsInfo.setLAngleLoc(TemplateId->LAngleLoc);
         TemplateArgsInfo.setRAngleLoc(TemplateId->RAngleLoc);
@@ -3090,15 +3090,13 @@ InventTemplateParameter(TypeProcessingState &state, QualType T,
       if (!Invalid) {
         UsingShadowDecl *USD =
             TemplateId->Template.get().getAsUsingShadowDecl();
-        auto *CD =
-            cast<ConceptDecl>(TemplateId->Template.get().getAsTemplateDecl());
+        TemplateDecl *CD = TemplateId->Template.get().getAsTemplateDecl();
         S.AttachTypeConstraint(
             D.getDeclSpec().getTypeSpecScope().getWithLocInContext(S.Context),
             DeclarationNameInfo(DeclarationName(TemplateId->Name),
                                 TemplateId->TemplateNameLoc),
             CD,
-            /*FoundDecl=*/
-            USD ? cast<NamedDecl>(USD) : CD,
+            /*FoundDecl=*/USD ? cast<NamedDecl>(USD) : CD,
             TemplateId->LAngleLoc.isValid() ? &TemplateArgsInfo : nullptr,
             InventedTemplateParam, D.getEllipsisLoc());
       }
@@ -4727,7 +4725,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // Build the type anyway.
       }
       DeclaratorChunk::ArrayTypeInfo &ATI = DeclType.Arr;
-      Expr *ArraySize = static_cast<Expr*>(ATI.NumElts);
+      Expr *ArraySize = ATI.NumElts;
       ArraySizeModifier ASM;
 
       // Microsoft property fields can have multiple sizeless array chunks
@@ -4860,7 +4858,9 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
             S.Diag(First->getBeginLoc(),
                    diag::err_explicit_object_parameter_invalid)
                 << First->getSourceRange();
-
+          // Do let non-member function have explicit parameters
+          // to not break assumptions elsewhere in the code.
+          First->setExplicitObjectParameterLoc(SourceLocation());
           D.setInvalidType();
           AreDeclaratorChunksValid = false;
         }
@@ -6531,7 +6531,7 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       return;
     }
 
-    Expr *ASArgExpr = static_cast<Expr *>(Attr.getArgAsExpr(0));
+    Expr *ASArgExpr = Attr.getArgAsExpr(0);
     LangAS ASIdx;
     if (!BuildAddressSpaceIndex(S, ASIdx, ASArgExpr, Attr.getLoc())) {
       Attr.setInvalid();

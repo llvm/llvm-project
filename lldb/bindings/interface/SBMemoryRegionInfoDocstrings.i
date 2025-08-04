@@ -1,5 +1,10 @@
 %feature("docstring",
-"API clients can get information about memory regions in processes."
+"API clients can get information about memory regions in processes.
+
+For Python users, `len()` is overriden to output the size of the memory region in bytes.
+For Python users, `str()` is overriden with the results of the GetDescription function-
+        produces a formatted string that describes a memory range in the form: 
+        [Hex start - Hex End) with associated permissions (RWX)"
 ) lldb::SBMemoryRegionInfo;
 
 %feature("docstring", "
@@ -29,3 +34,11 @@
         Return the size of pages in this memory region.  0 will be returned
         if this information was unavailable."
 ) lldb::SBMemoryRegionInfo::GetPageSize();
+
+%feature("docstring", "
+        Takes an SBStream parameter to write output to,
+        formatted [Hex start - Hex End) with associated permissions (RWX).
+        If the function results false, no output will be written. 
+        If results true, the output will be written to the stream.
+        "
+) lldb::SBMemoryRegionInfo::GetDescription;

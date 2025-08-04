@@ -14,7 +14,6 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -25,7 +24,6 @@
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
@@ -33,8 +31,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -1732,8 +1730,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
     if (!mapOp.getDefiningOp())
       return emitError(op->getLoc(), "missing map operation");
 
-    if (auto mapInfoOp =
-            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
+    if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
       uint64_t mapTypeBits = mapInfoOp.getMapType();
 
       bool to = mapTypeToBitFlag(
@@ -3044,8 +3041,7 @@ mlir::omp ::decodeCli(Value cli) {
   if (!cli)
     return {{}, nullptr, nullptr};
 
-  MLIRContext *ctx = cli.getContext();
-  assert(cli.getType() == CanonicalLoopInfoType::get(ctx) &&
+  assert(cli.getType() == CanonicalLoopInfoType::get(cli.getContext()) &&
          "Unexpected type of cli");
 
   NewCliOp create = cast<NewCliOp>(cli.getDefiningOp());
@@ -3157,7 +3153,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               llvm_unreachable("heuristic unrolling does not generate a loop");
             })
             .Default([&](Operation *op) {
-              assert(!"TODO: Custom name for this operation");
+              assert(false && "TODO: Custom name for this operation");
               return "transformed";
             });
   }
@@ -3168,8 +3164,7 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
 LogicalResult NewCliOp::verify() {
   Value cli = getResult();
 
-  MLIRContext *ctx = cli.getContext();
-  assert(cli.getType() == CanonicalLoopInfoType::get(ctx) &&
+  assert(cli.getType() == CanonicalLoopInfoType::get(cli.getContext()) &&
          "Unexpected type of cli");
 
   // Check that the CLI is used in at most generator and one consumer
@@ -3863,6 +3858,20 @@ LogicalResult ScanOp::verify() {
   return emitError("SCAN directive needs to be enclosed within a parent "
                    "worksharing loop construct or SIMD construct with INSCAN "
                    "reduction modifier");
+}
+
+/// Verifies align clause in allocate directive
+
+LogicalResult AllocateDirOp::verify() {
+  std::optional<uint64_t> align = this->getAlign();
+
+  if (align.has_value()) {
+    if ((align.value() > 0) && !llvm::has_single_bit(align.value()))
+      return emitError() << "ALIGN value : " << align.value()
+                         << " must be power of 2";
+  }
+
+  return success();
 }
 
 #define GET_ATTRDEF_CLASSES

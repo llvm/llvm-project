@@ -291,6 +291,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
+      setOperationAction(ISD::EXTRACT_SUBVECTOR, VT, Legal);
     }
     for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v2i64}) {
       setOperationAction({ISD::ADD, ISD::SUB}, VT, Legal);
@@ -352,7 +353,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
       setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
-      setOperationAction(ISD::CONCAT_VECTORS, VT, Legal);
+      setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
+      setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
 
       setOperationAction(ISD::SETCC, VT, Legal);
       setOperationAction(ISD::VSELECT, VT, Legal);
@@ -499,6 +501,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG);
+  case ISD::CONCAT_VECTORS:
+    return lowerCONCAT_VECTORS(Op, DAG);
   case ISD::VECTOR_SHUFFLE:
     return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::BITREVERSE:
@@ -2381,23 +2385,6 @@ SDValue LoongArchTargetLowering::lowerBF16_TO_FP(SDValue Op,
   return Res;
 }
 
-static bool isConstantOrUndef(const SDValue Op) {
-  if (Op->isUndef())
-    return true;
-  if (isa<ConstantSDNode>(Op))
-    return true;
-  if (isa<ConstantFPSDNode>(Op))
-    return true;
-  return false;
-}
-
-static bool isConstantOrUndefBUILD_VECTOR(const BuildVectorSDNode *Op) {
-  for (unsigned i = 0; i < Op->getNumOperands(); ++i)
-    if (isConstantOrUndef(Op->getOperand(i)))
-      return true;
-  return false;
-}
-
 // Lower BUILD_VECTOR as broadcast load (if possible).
 // For example:
 //   %a = load i8, ptr %ptr
@@ -2447,10 +2434,14 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
                                                    SelectionDAG &DAG) const {
   BuildVectorSDNode *Node = cast<BuildVectorSDNode>(Op);
   EVT ResTy = Op->getValueType(0);
+  unsigned NumElts = ResTy.getVectorNumElements();
   SDLoc DL(Op);
   APInt SplatValue, SplatUndef;
   unsigned SplatBitSize;
   bool HasAnyUndefs;
+  bool IsConstant = false;
+  bool UseSameConstant = true;
+  SDValue ConstantValue;
   bool Is128Vec = ResTy.is128BitVector();
   bool Is256Vec = ResTy.is256BitVector();
 
@@ -2501,19 +2492,45 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
   if (DAG.isSplatValue(Op, /*AllowUndefs=*/false))
     return Op;
 
-  if (!isConstantOrUndefBUILD_VECTOR(Node)) {
+  for (unsigned i = 0; i < NumElts; ++i) {
+    SDValue Opi = Node->getOperand(i);
+    if (isIntOrFPConstant(Opi)) {
+      IsConstant = true;
+      if (!ConstantValue.getNode())
+        ConstantValue = Opi;
+      else if (ConstantValue != Opi)
+        UseSameConstant = false;
+    }
+  }
+
+  // If the type of BUILD_VECTOR is v2f64, custom legalizing it has no benefits.
+  if (IsConstant && UseSameConstant && ResTy != MVT::v2f64) {
+    SDValue Result = DAG.getSplatBuildVector(ResTy, DL, ConstantValue);
+    for (unsigned i = 0; i < NumElts; ++i) {
+      SDValue Opi = Node->getOperand(i);
+      if (!isIntOrFPConstant(Opi))
+        Result = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Result, Opi,
+                             DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+    }
+    return Result;
+  }
+
+  if (!IsConstant) {
     // Use INSERT_VECTOR_ELT operations rather than expand to stores.
     // The resulting code is the same length as the expansion, but it doesn't
     // use memory operations.
-    EVT ResTy = Node->getValueType(0);
-
     assert(ResTy.isVector());
 
-    unsigned NumElts = ResTy.getVectorNumElements();
+    SDValue Op0 = Node->getOperand(0);
     SDValue Vector = DAG.getUNDEF(ResTy);
-    for (unsigned i = 0; i < NumElts; ++i) {
-      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector,
-                           Node->getOperand(i),
+
+    if (!Op0.isUndef())
+      Vector = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, ResTy, Op0);
+    for (unsigned i = 1; i < NumElts; ++i) {
+      SDValue Opi = Node->getOperand(i);
+      if (Opi.isUndef())
+        continue;
+      Vector = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ResTy, Vector, Opi,
                            DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
     }
     return Vector;
@@ -2522,17 +2539,80 @@ SDValue LoongArchTargetLowering::lowerBUILD_VECTOR(SDValue Op,
   return SDValue();
 }
 
+SDValue LoongArchTargetLowering::lowerCONCAT_VECTORS(SDValue Op,
+                                                     SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MVT ResVT = Op.getSimpleValueType();
+  assert(ResVT.is256BitVector() && Op.getNumOperands() == 2);
+
+  unsigned NumOperands = Op.getNumOperands();
+  unsigned NumFreezeUndef = 0;
+  unsigned NumZero = 0;
+  unsigned NumNonZero = 0;
+  unsigned NonZeros = 0;
+  SmallSet<SDValue, 4> Undefs;
+  for (unsigned i = 0; i != NumOperands; ++i) {
+    SDValue SubVec = Op.getOperand(i);
+    if (SubVec.isUndef())
+      continue;
+    if (ISD::isFreezeUndef(SubVec.getNode())) {
+      // If the freeze(undef) has multiple uses then we must fold to zero.
+      if (SubVec.hasOneUse()) {
+        ++NumFreezeUndef;
+      } else {
+        ++NumZero;
+        Undefs.insert(SubVec);
+      }
+    } else if (ISD::isBuildVectorAllZeros(SubVec.getNode()))
+      ++NumZero;
+    else {
+      assert(i < sizeof(NonZeros) * CHAR_BIT); // Ensure the shift is in range.
+      NonZeros |= 1 << i;
+      ++NumNonZero;
+    }
+  }
+
+  // If we have more than 2 non-zeros, build each half separately.
+  if (NumNonZero > 2) {
+    MVT HalfVT = ResVT.getHalfNumVectorElementsVT();
+    ArrayRef<SDUse> Ops = Op->ops();
+    SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                             Ops.slice(0, NumOperands / 2));
+    SDValue Hi = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT,
+                             Ops.slice(NumOperands / 2));
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, ResVT, Lo, Hi);
+  }
+
+  // Otherwise, build it up through insert_subvectors.
+  SDValue Vec = NumZero ? DAG.getConstant(0, DL, ResVT)
+                        : (NumFreezeUndef ? DAG.getFreeze(DAG.getUNDEF(ResVT))
+                                          : DAG.getUNDEF(ResVT));
+
+  // Replace Undef operands with ZeroVector.
+  for (SDValue U : Undefs)
+    DAG.ReplaceAllUsesWith(U, DAG.getConstant(0, DL, U.getSimpleValueType()));
+
+  MVT SubVT = Op.getOperand(0).getSimpleValueType();
+  unsigned NumSubElems = SubVT.getVectorNumElements();
+  for (unsigned i = 0; i != NumOperands; ++i) {
+    if ((NonZeros & (1 << i)) == 0)
+      continue;
+
+    Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, ResVT, Vec, Op.getOperand(i),
+                      DAG.getVectorIdxConstant(i * NumSubElems, DL));
+  }
+
+  return Vec;
+}
+
 SDValue
 LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
                                                  SelectionDAG &DAG) const {
   EVT VecTy = Op->getOperand(0)->getValueType(0);
   SDValue Idx = Op->getOperand(1);
-  EVT EltTy = VecTy.getVectorElementType();
   unsigned NumElts = VecTy.getVectorNumElements();
 
-  if (isa<ConstantSDNode>(Idx) &&
-      (EltTy == MVT::i32 || EltTy == MVT::i64 || EltTy == MVT::f32 ||
-       EltTy == MVT::f64 || Idx->getAsZExtVal() < NumElts / 2))
+  if (isa<ConstantSDNode>(Idx) && Idx->getAsZExtVal() < NumElts)
     return Op;
 
   return SDValue();
@@ -2541,9 +2621,38 @@ LoongArchTargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
 SDValue
 LoongArchTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  if (isa<ConstantSDNode>(Op->getOperand(2)))
+  MVT VT = Op.getSimpleValueType();
+  MVT EltVT = VT.getVectorElementType();
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = EltVT.getScalarSizeInBits();
+  SDLoc DL(Op);
+  SDValue Op0 = Op.getOperand(0);
+  SDValue Op1 = Op.getOperand(1);
+  SDValue Op2 = Op.getOperand(2);
+
+  if (isa<ConstantSDNode>(Op2))
     return Op;
-  return SDValue();
+
+  MVT IdxTy = MVT::getIntegerVT(EltSizeInBits);
+  MVT IdxVTy = MVT::getVectorVT(IdxTy, NumElts);
+
+  if (!isTypeLegal(VT) || !isTypeLegal(IdxVTy))
+    return SDValue();
+
+  SDValue SplatElt = DAG.getSplatBuildVector(VT, DL, Op1);
+  SDValue SplatIdx = DAG.getSplatBuildVector(IdxVTy, DL, Op2);
+
+  SmallVector<SDValue, 32> RawIndices;
+  for (unsigned i = 0; i < NumElts; ++i)
+    RawIndices.push_back(DAG.getConstant(i, DL, Subtarget.getGRLenVT()));
+  SDValue Indices = DAG.getBuildVector(IdxVTy, DL, RawIndices);
+
+  // insert vec, elt, idx
+  // =>
+  // select (splatidx == {0,1,2...}) ? splatelt : vec
+  SDValue SelectCC =
+      DAG.getSetCC(DL, IdxVTy, SplatIdx, Indices, ISD::CondCode::SETEQ);
+  return DAG.getNode(ISD::VSELECT, DL, VT, SelectCC, SplatElt, Op0);
 }
 
 SDValue LoongArchTargetLowering::lowerATOMIC_FENCE(SDValue Op,
@@ -4493,6 +4602,80 @@ static SDValue signExtendBitcastSrcVector(SelectionDAG &DAG, EVT SExtVT,
   llvm_unreachable("Unexpected node type for vXi1 sign extension");
 }
 
+static SDValue
+performSETCC_BITCASTCombine(SDNode *N, SelectionDAG &DAG,
+                            TargetLowering::DAGCombinerInfo &DCI,
+                            const LoongArchSubtarget &Subtarget) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  if (Src.getOpcode() != ISD::SETCC || !Src.hasOneUse())
+    return SDValue();
+
+  bool UseLASX;
+  unsigned Opc = ISD::DELETED_NODE;
+  EVT CmpVT = Src.getOperand(0).getValueType();
+  EVT EltVT = CmpVT.getVectorElementType();
+
+  if (Subtarget.hasExtLSX() && CmpVT.getSizeInBits() == 128)
+    UseLASX = false;
+  else if (Subtarget.has32S() && Subtarget.hasExtLASX() &&
+           CmpVT.getSizeInBits() == 256)
+    UseLASX = true;
+  else
+    return SDValue();
+
+  SDValue SrcN1 = Src.getOperand(1);
+  switch (cast<CondCodeSDNode>(Src.getOperand(2))->get()) {
+  default:
+    break;
+  case ISD::SETEQ:
+    // x == 0 => not (vmsknez.b x)
+    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
+      Opc = UseLASX ? LoongArchISD::XVMSKEQZ : LoongArchISD::VMSKEQZ;
+    break;
+  case ISD::SETGT:
+    // x > -1 => vmskgez.b x
+    if (ISD::isBuildVectorAllOnes(SrcN1.getNode()) && EltVT == MVT::i8)
+      Opc = UseLASX ? LoongArchISD::XVMSKGEZ : LoongArchISD::VMSKGEZ;
+    break;
+  case ISD::SETGE:
+    // x >= 0 => vmskgez.b x
+    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
+      Opc = UseLASX ? LoongArchISD::XVMSKGEZ : LoongArchISD::VMSKGEZ;
+    break;
+  case ISD::SETLT:
+    // x < 0 => vmskltz.{b,h,w,d} x
+    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) &&
+        (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32 ||
+         EltVT == MVT::i64))
+      Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
+    break;
+  case ISD::SETLE:
+    // x <= -1 => vmskltz.{b,h,w,d} x
+    if (ISD::isBuildVectorAllOnes(SrcN1.getNode()) &&
+        (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32 ||
+         EltVT == MVT::i64))
+      Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
+    break;
+  case ISD::SETNE:
+    // x != 0 => vmsknez.b x
+    if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
+      Opc = UseLASX ? LoongArchISD::XVMSKNEZ : LoongArchISD::VMSKNEZ;
+    break;
+  }
+
+  if (Opc == ISD::DELETED_NODE)
+    return SDValue();
+
+  SDValue V = DAG.getNode(Opc, DL, MVT::i64, Src.getOperand(0));
+  EVT T = EVT::getIntegerVT(*DAG.getContext(), SrcVT.getVectorNumElements());
+  V = DAG.getZExtOrTrunc(V, DL, T);
+  return DAG.getBitcast(VT, V);
+}
+
 static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const LoongArchSubtarget &Subtarget) {
@@ -4507,110 +4690,63 @@ static SDValue performBITCASTCombine(SDNode *N, SelectionDAG &DAG,
   if (!SrcVT.isSimple() || SrcVT.getScalarType() != MVT::i1)
     return SDValue();
 
-  unsigned Opc = ISD::DELETED_NODE;
   // Combine SETCC and BITCAST into [X]VMSK{LT,GE,NE} when possible
-  if (Src.getOpcode() == ISD::SETCC && Src.hasOneUse()) {
-    bool UseLASX;
-    EVT CmpVT = Src.getOperand(0).getValueType();
-    EVT EltVT = CmpVT.getVectorElementType();
-
-    if (Subtarget.hasExtLSX() && CmpVT.getSizeInBits() <= 128)
-      UseLASX = false;
-    else if (Subtarget.has32S() && Subtarget.hasExtLASX() &&
-             CmpVT.getSizeInBits() <= 256)
-      UseLASX = true;
-    else
-      return SDValue();
-
-    SDValue SrcN1 = Src.getOperand(1);
-    switch (cast<CondCodeSDNode>(Src.getOperand(2))->get()) {
-    default:
-      break;
-    case ISD::SETEQ:
-      // x == 0 => not (vmsknez.b x)
-      if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
-        Opc = UseLASX ? LoongArchISD::XVMSKEQZ : LoongArchISD::VMSKEQZ;
-      break;
-    case ISD::SETGT:
-      // x > -1 => vmskgez.b x
-      if (ISD::isBuildVectorAllOnes(SrcN1.getNode()) && EltVT == MVT::i8)
-        Opc = UseLASX ? LoongArchISD::XVMSKGEZ : LoongArchISD::VMSKGEZ;
-      break;
-    case ISD::SETGE:
-      // x >= 0 => vmskgez.b x
-      if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
-        Opc = UseLASX ? LoongArchISD::XVMSKGEZ : LoongArchISD::VMSKGEZ;
-      break;
-    case ISD::SETLT:
-      // x < 0 => vmskltz.{b,h,w,d} x
-      if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) &&
-          (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32 ||
-           EltVT == MVT::i64))
-        Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
-      break;
-    case ISD::SETLE:
-      // x <= -1 => vmskltz.{b,h,w,d} x
-      if (ISD::isBuildVectorAllOnes(SrcN1.getNode()) &&
-          (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32 ||
-           EltVT == MVT::i64))
-        Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
-      break;
-    case ISD::SETNE:
-      // x != 0 => vmsknez.b x
-      if (ISD::isBuildVectorAllZeros(SrcN1.getNode()) && EltVT == MVT::i8)
-        Opc = UseLASX ? LoongArchISD::XVMSKNEZ : LoongArchISD::VMSKNEZ;
-      break;
-    }
-  }
+  SDValue Res = performSETCC_BITCASTCombine(N, DAG, DCI, Subtarget);
+  if (Res)
+    return Res;
 
   // Generate vXi1 using [X]VMSKLTZ
-  if (Opc == ISD::DELETED_NODE) {
-    MVT SExtVT;
-    bool UseLASX = false;
-    bool PropagateSExt = false;
-    switch (SrcVT.getSimpleVT().SimpleTy) {
-    default:
+  MVT SExtVT;
+  unsigned Opc;
+  bool UseLASX = false;
+  bool PropagateSExt = false;
+
+  if (Src.getOpcode() == ISD::SETCC && Src.hasOneUse()) {
+    EVT CmpVT = Src.getOperand(0).getValueType();
+    if (CmpVT.getSizeInBits() > 256)
       return SDValue();
-    case MVT::v2i1:
-      SExtVT = MVT::v2i64;
-      break;
-    case MVT::v4i1:
-      SExtVT = MVT::v4i32;
-      if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
-        SExtVT = MVT::v4i64;
-        UseLASX = true;
-        PropagateSExt = true;
-      }
-      break;
-    case MVT::v8i1:
-      SExtVT = MVT::v8i16;
-      if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
-        SExtVT = MVT::v8i32;
-        UseLASX = true;
-        PropagateSExt = true;
-      }
-      break;
-    case MVT::v16i1:
-      SExtVT = MVT::v16i8;
-      if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
-        SExtVT = MVT::v16i16;
-        UseLASX = true;
-        PropagateSExt = true;
-      }
-      break;
-    case MVT::v32i1:
-      SExtVT = MVT::v32i8;
-      UseLASX = true;
-      break;
-    };
-    if (UseLASX && !Subtarget.has32S() && !Subtarget.hasExtLASX())
-      return SDValue();
-    Src = PropagateSExt ? signExtendBitcastSrcVector(DAG, SExtVT, Src, DL)
-                        : DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
-    Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
-  } else {
-    Src = Src.getOperand(0);
   }
+
+  switch (SrcVT.getSimpleVT().SimpleTy) {
+  default:
+    return SDValue();
+  case MVT::v2i1:
+    SExtVT = MVT::v2i64;
+    break;
+  case MVT::v4i1:
+    SExtVT = MVT::v4i32;
+    if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
+      SExtVT = MVT::v4i64;
+      UseLASX = true;
+      PropagateSExt = true;
+    }
+    break;
+  case MVT::v8i1:
+    SExtVT = MVT::v8i16;
+    if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
+      SExtVT = MVT::v8i32;
+      UseLASX = true;
+      PropagateSExt = true;
+    }
+    break;
+  case MVT::v16i1:
+    SExtVT = MVT::v16i8;
+    if (Subtarget.hasExtLASX() && checkBitcastSrcVectorSize(Src, 256, 0)) {
+      SExtVT = MVT::v16i16;
+      UseLASX = true;
+      PropagateSExt = true;
+    }
+    break;
+  case MVT::v32i1:
+    SExtVT = MVT::v32i8;
+    UseLASX = true;
+    break;
+  };
+  if (UseLASX && !(Subtarget.has32S() && Subtarget.hasExtLASX()))
+    return SDValue();
+  Src = PropagateSExt ? signExtendBitcastSrcVector(DAG, SExtVT, Src, DL)
+                      : DAG.getNode(ISD::SIGN_EXTEND, DL, SExtVT, Src);
+  Opc = UseLASX ? LoongArchISD::XVMSKLTZ : LoongArchISD::VMSKLTZ;
 
   SDValue V = DAG.getNode(Opc, DL, MVT::i64, Src);
   EVT T = EVT::getIntegerVT(*DAG.getContext(), SrcVT.getVectorNumElements());
@@ -5933,10 +6069,9 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
   Register ScratchReg1 = XSrc;
   if (Idx >= HalfSize) {
     ScratchReg1 = MRI.createVirtualRegister(RC);
-    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_Q), ScratchReg1)
+    BuildMI(*BB, MI, DL, TII->get(LoongArch::XVPERMI_D), ScratchReg1)
         .addReg(XSrc)
-        .addReg(XSrc)
-        .addImm(1);
+        .addImm(14);
   }
 
   Register ScratchSubReg1 = MRI.createVirtualRegister(SubRC);
