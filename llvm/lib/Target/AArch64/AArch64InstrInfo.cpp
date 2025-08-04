@@ -5861,14 +5861,14 @@ void AArch64InstrInfo::decomposeStackOffsetForFrameOffsets(
   }
 }
 
-// Convenience function to create a DWARF expression for `Op` Value.
+// Convenience function to create a DWARF expression for `Operation` Value.
 // This helper emits compact sequences for common cases.
 static void appendConstantExpr(SmallVectorImpl<char> &Expr, int64_t Value,
-                               uint8_t Op) {
+                               uint8_t Operation) {
   // + -constant (<= 31)
-  if (Op == dwarf::DW_OP_plus && Value < 0 && -Value <= 31) {
+  if (Operation == dwarf::DW_OP_plus && Value < 0 && -Value <= 31) {
     Expr.push_back(dwarf::DW_OP_lit0 - Value);
-    Op = dwarf::DW_OP_minus;
+    Operation = dwarf::DW_OP_minus;
   } else if (Value >= 0 && Value <= 31) {
     // `Op` literal value 0 to 31
     Expr.push_back(dwarf::DW_OP_lit0 + Value);
@@ -5877,7 +5877,7 @@ static void appendConstantExpr(SmallVectorImpl<char> &Expr, int64_t Value,
     Expr.push_back(dwarf::DW_OP_consts);
     appendLEB128<LEB128Sign::Signed>(Expr, Value);
   }
-  return Expr.push_back(Op);
+  return Expr.push_back(Operation);
 }
 
 // Convenience function to create a DWARF expression for VG
