@@ -425,7 +425,7 @@ bool GCNRPTarget::isSaveBeneficial(Register Reg) const {
 bool GCNRPTarget::satisfied() const {
   if (RP.getSGPRNum() > MaxSGPRs || RP.getVGPRNum(false) > MaxVGPRs)
     return false;
-  if (UnifiedRF && RP.getVGPRNum(true) > MaxVGPRs)
+  if (UnifiedRF && RP.getVGPRNum(true) > MaxUnifiedVGPRs)
     return false;
   return true;
 }
