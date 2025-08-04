@@ -17,6 +17,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/Initialization.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/StringExtras.h"
@@ -2551,4 +2552,51 @@ SemaOpenACC::BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
 ExprResult
 SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
+}
+
+VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
+  // Strip off any array subscripts/array section exprs to get to the type of
+  // the variable.
+  while (isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
+    if (const auto *AS = dyn_cast<ArraySectionExpr>(VarExpr))
+      VarExpr = AS->getBase()->IgnoreParenImpCasts();
+    else if (const auto *Sub = dyn_cast<ArraySubscriptExpr>(VarExpr))
+      VarExpr = Sub->getBase()->IgnoreParenImpCasts();
+  }
+
+  // If for some reason the expression is invalid, or this is dependent, just
+  // fill in with nullptr.  We'll count on TreeTransform to make this if
+  // necessary.
+  if (!VarExpr || VarExpr->getType()->isDependentType())
+    return nullptr;
+
+  QualType VarTy =
+      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+
+  VarDecl *Recipe = VarDecl::Create(
+      getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+      VarExpr->getBeginLoc(),
+      &getASTContext().Idents.get("openacc.private.init"), VarTy,
+      getASTContext().getTrivialTypeSourceInfo(VarTy), SC_Auto);
+
+  ExprResult Init;
+
+  {
+    // Trap errors so we don't get weird ones here. If we can't init, we'll just
+    // swallow the errors.
+    Sema::TentativeAnalysisScope Trap{SemaRef};
+    InitializedEntity Entity = InitializedEntity::InitializeVariable(Recipe);
+    InitializationKind Kind =
+        InitializationKind::CreateDefault(Recipe->getLocation());
+
+    InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
+    Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
+  }
+
+  if (Init.get()) {
+    Recipe->setInit(Init.get());
+    Recipe->setInitStyle(VarDecl::CallInit);
+  }
+
+  return Recipe;
 }
