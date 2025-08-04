@@ -132,3 +132,35 @@ branch2:
 end:
   ret void
 }
+
+; ------------------------------------------------------------------------------
+; Test that we can propagate to/from negative offset GEPs
+; ------------------------------------------------------------------------------
+
+define void @prop_align_negative_offset(ptr %v) {
+; CHECK-LABEL: define void @prop_align_negative_offset(
+; CHECK-SAME: ptr [[V:%.*]]) {
+; CHECK-NEXT:    [[LOADALIGNED:%.*]] = load float, ptr [[V]], align 16
+; CHECK-NEXT:    [[GEPNEGATIVE:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 -16
+; CHECK-NEXT:    [[LOADUNALIGNED:%.*]] = load float, ptr [[GEPNEGATIVE]], align 16
+; CHECK-NEXT:    ret void
+;
+  %loadAligned= load float, ptr %v, align 16
+  %gepNegative = getelementptr inbounds nuw i8, ptr %v, i64 -16
+  %loadUnaligned = load float, ptr %gepNegative, align 4
+  ret void
+}
+
+define void @prop_align_negative_offset_2(ptr %v) {
+; CHECK-LABEL: define void @prop_align_negative_offset_2(
+; CHECK-SAME: ptr [[V:%.*]]) {
+; CHECK-NEXT:    [[GEPNEGATIVE:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 -16
+; CHECK-NEXT:    [[LOADALIGNED:%.*]] = load float, ptr [[GEPNEGATIVE]], align 16
+; CHECK-NEXT:    [[LOADUNALIGNED:%.*]] = load float, ptr [[V]], align 16
+; CHECK-NEXT:    ret void
+;
+  %gepNegative = getelementptr inbounds nuw i8, ptr %v, i64 -16
+  %loadAligned = load float, ptr %gepNegative, align 16
+  %loadUnaligned= load float, ptr %v, align 4
+  ret void
+}
