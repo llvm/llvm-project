@@ -7043,8 +7043,8 @@ void AMDGPUInstructionSelector::renderRoundMode(MachineInstrBuilder &MIB,
 }
 
 void AMDGPUInstructionSelector::renderVOP3PModsNeg(MachineInstrBuilder &MIB,
-                                                const MachineInstr &MI,
-                                                int OpIdx) const {
+                                                   const MachineInstr &MI,
+                                                   int OpIdx) const {
   unsigned Mods = SISrcMods::OP_SEL_1;
   if (MI.getOperand(OpIdx).getImm())
     Mods ^= SISrcMods::NEG;
@@ -7052,8 +7052,8 @@ void AMDGPUInstructionSelector::renderVOP3PModsNeg(MachineInstrBuilder &MIB,
 }
 
 void AMDGPUInstructionSelector::renderVOP3PModsNegs(MachineInstrBuilder &MIB,
-                                                const MachineInstr &MI,
-                                                int OpIdx) const {
+                                                    const MachineInstr &MI,
+                                                    int OpIdx) const {
   unsigned Mods = SISrcMods::OP_SEL_1;
   if (MI.getOperand(OpIdx).getImm())
     Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
@@ -7061,8 +7061,8 @@ void AMDGPUInstructionSelector::renderVOP3PModsNegs(MachineInstrBuilder &MIB,
 }
 
 void AMDGPUInstructionSelector::renderVOP3PModsNegAbs(MachineInstrBuilder &MIB,
-                                                const MachineInstr &MI,
-                                                int OpIdx) const {
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
   unsigned Val = MI.getOperand(OpIdx).getImm();
   unsigned Mods = SISrcMods::OP_SEL_1;
   if (Val == 1)

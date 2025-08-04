@@ -413,11 +413,11 @@ private:
                        int OpIdx) const;
 
   void renderVOP3PModsNeg(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                           int OpIdx) const;
+                          int OpIdx) const;
   void renderVOP3PModsNegs(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                            int OpIdx) const;
+                           int OpIdx) const;
   void renderVOP3PModsNegAbs(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                            int OpIdx) const;
+                             int OpIdx) const;
 
   void renderPrefetchLoc(MachineInstrBuilder &MIB, const MachineInstr &MI,
                          int OpIdx) const;
