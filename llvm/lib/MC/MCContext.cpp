@@ -817,7 +817,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind K,
                                          unsigned UniqueID) {
   MCSymbolWasm *GroupSym = nullptr;
   if (!Group.isTriviallyEmpty() && !Group.str().empty()) {
-    GroupSym = cast<MCSymbolWasm>(getOrCreateSymbol(Group));
+    GroupSym = static_cast<MCSymbolWasm *>(getOrCreateSymbol(Group));
     GroupSym->setComdat(true);
     if (K.isMetadata() && !GroupSym->getType().has_value()) {
       // Comdat group symbol associated with a custom section is a section
@@ -848,7 +848,7 @@ MCSectionWasm *MCContext::getWasmSection(const Twine &Section, SectionKind Kind,
   MCSymbol *Begin = createRenamableSymbol(CachedName, true, false);
   // Begin always has a different name than CachedName... see #48596.
   getSymbolTableEntry(Begin->getName()).second.Symbol = Begin;
-  cast<MCSymbolWasm>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
+  static_cast<MCSymbolWasm *>(Begin)->setType(wasm::WASM_SYMBOL_TYPE_SECTION);
 
   MCSectionWasm *Result = new (WasmAllocator.Allocate())
       MCSectionWasm(CachedName, Kind, Flags, GroupSym, UniqueID, Begin);
