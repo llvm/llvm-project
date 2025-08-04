@@ -390,6 +390,8 @@ public:
   LLVM_ABI ~MCContext();
 
   Environment getObjectFileType() const { return Env; }
+  bool isELF() const { return Env == IsELF; }
+  bool isMachO() const { return Env == IsMachO; }
 
   const StringRef &getSwift5ReflectionSegmentName() const {
     return Swift5ReflectionSegmentName;
