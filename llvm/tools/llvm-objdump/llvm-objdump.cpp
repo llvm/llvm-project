@@ -50,6 +50,7 @@
 #include "llvm/Object/BuildID.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
+#include "llvm/Object/DXContainer.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/FaultMapParser.h"
@@ -387,6 +388,8 @@ static Expected<std::unique_ptr<Dumper>> createDumper(const ObjectFile &Obj) {
     return createWasmDumper(*O);
   if (const auto *O = dyn_cast<XCOFFObjectFile>(&Obj))
     return createXCOFFDumper(*O);
+  if (const auto *O = dyn_cast<DXContainerObjectFile>(&Obj))
+    return createDXContainerDumper(*O);
 
   return createStringError(errc::invalid_argument,
                            "unsupported object file format");
@@ -2737,7 +2740,7 @@ void Dumper::printRelocations() {
   for (const SectionRef &Section : ToolSectionFilter(O, &Ndx)) {
     if (O.isELF() && (ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC))
       continue;
-    if (Section.relocation_begin() == Section.relocation_end())
+    if (Section.relocations().empty())
       continue;
     Expected<section_iterator> SecOrErr = Section.getRelocatedSection();
     if (!SecOrErr)
