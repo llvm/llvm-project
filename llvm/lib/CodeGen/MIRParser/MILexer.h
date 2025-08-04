@@ -122,6 +122,7 @@ struct MIToken {
     kw_constant_pool,
     kw_call_entry,
     kw_custom,
+    kw_lanemask,
     kw_liveout,
     kw_landing_pad,
     kw_inlineasm_br_indirect_target,
