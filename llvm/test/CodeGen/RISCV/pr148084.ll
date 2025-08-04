@@ -10,15 +10,14 @@ define fastcc void @search_tx_type() #0 {
 ; CHECK:       # %bb.0: # %._crit_edge.i
 ; CHECK-NEXT:  # %bb.1: # %bb
 ; CHECK-NEXT:    lbu a1, 0(zero)
-; CHECK-NEXT:    lw a0, 0(zero)
 ; CHECK-NEXT:    lh a2, 0(zero)
+; CHECK-NEXT:    lw a0, 0(zero)
 ; CHECK-NEXT:    seqz a1, a1
-; CHECK-NEXT:    srai a3, a0, 63
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a1, a1, a2
-; CHECK-NEXT:    andi a2, a1, 1
-; CHECK-NEXT:    addi a2, a2, -1
-; CHECK-NEXT:    or a3, a3, a0
+; CHECK-NEXT:    slli a2, a1, 63
+; CHECK-NEXT:    srai a2, a2, 63
+; CHECK-NEXT:    srai a3, a0, 63
 ; CHECK-NEXT:    or a2, a2, a3
 ; CHECK-NEXT:    bgez a2, .LBB0_3
 ; CHECK-NEXT:  # %bb.2:
@@ -36,14 +35,13 @@ define fastcc void @search_tx_type() #0 {
 ; CHECK-NEXT:  # %bb.6: # %bb
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB0_7: # %bb
-; CHECK-NEXT:    andi a5, a1, 8
-; CHECK-NEXT:    sext.w a4, a3
+; CHECK-NEXT:    andi a4, a1, 8
 ; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:    beqz a5, .LBB0_9
+; CHECK-NEXT:    beqz a4, .LBB0_9
 ; CHECK-NEXT:  # %bb.8: # %bb
 ; CHECK-NEXT:    mv a2, a0
 ; CHECK-NEXT:  .LBB0_9: # %bb
-; CHECK-NEXT:    blt a4, a0, .LBB0_11
+; CHECK-NEXT:    blt a3, a0, .LBB0_11
 ; CHECK-NEXT:  # %bb.10: # %bb
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB0_11: # %bb

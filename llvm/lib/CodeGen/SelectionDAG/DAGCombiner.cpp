@@ -28998,6 +28998,16 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
   if (SDValue V = foldSelectCCToShiftAnd(DL, N0, N1, N2, N3, CC))
     return V;
 
+  // fold select_cc seteq (and x, 1), 0, 0, -1 -> neg(and(x, 1))
+  if (CC == ISD::SETEQ && N0->getOpcode() == ISD::AND &&
+      N0->getValueType(0) == VT && isNullConstant(N1) &&
+      isAllOnesConstant(N2) && isOneConstant(N0->getOperand(1))) {
+    SDValue AndLHS = N0->getOperand(0);
+    SDValue Neg =
+        DAG.getNode(ISD::AND, DL, VT, AndLHS, DAG.getConstant(1, DL, VT));
+    return DAG.getNegative(Neg, DL, VT);
+  }
+
   // fold (select_cc seteq (and x, y), 0, 0, A) -> (and (sra (shl x)) A)
   // where y is has a single bit set.
   // A plaintext description would be, we can turn the SELECT_CC into an AND
