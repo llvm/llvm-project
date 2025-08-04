@@ -76,7 +76,7 @@ def riscv_sret_glue : RVSDNode<"SRET_GLUE", SDTNone,
 def riscv_mret_glue : RVSDNode<"MRET_GLUE", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mnret_glue : RVSDNode<"MNRET_GLUE", SDTNone,
-                               [SDNPHasChain, SDNPOptInGlue]>;
+                                [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mileaveret_glue : RVSDNode<"QC_C_MILEAVERET_GLUE", SDTNone,
                                      [SDNPHasChain, SDNPOptInGlue]>;
 

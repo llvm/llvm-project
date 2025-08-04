@@ -22569,9 +22569,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
           "'SiFive-CLIC-*' interrupt kinds require XSfmclic extension");
 
     if (Kind == "rnmi" && !Subtarget.hasStdExtSmrnmi())
-      reportFatalUsageError("Handling of resumable non-maskable interrupts "
-                            "handling requires Smrnmi extension");
-
+      reportFatalUsageError("'rnmi' interrupt kind requires Srnmi extension");
     const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
     if (Kind.starts_with("SiFive-CLIC-preemptible") && TFI->hasFP(MF))
       reportFatalUsageError("'SiFive-CLIC-preemptible' interrupt kinds cannot "
