@@ -1,9 +1,5 @@
 #include "benchmarks/gpu/LibcGpuBenchmark.h"
 
-#include "src/__support/CPP/array.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/CPP/functional.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "src/math/sin.h"
 #include "src/math/sinf.h"
 #include "src/stdlib/rand.h"
