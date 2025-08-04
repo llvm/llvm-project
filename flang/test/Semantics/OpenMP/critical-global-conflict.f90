@@ -7,9 +7,9 @@ subroutine f(x)
   implicit none
   integer :: x
 
-!ERROR: CRITICAL construct name 'f' conflicts with a previous declaration
-  !$omp critical(f)
+!ERROR: CRITICAL construct name 'g' conflicts with a previous declaration
+  !$omp critical(g)
   x = 0
-!ERROR: CRITICAL construct name 'f' conflicts with a previous declaration
-  !$omp end critical(f)
+!ERROR: CRITICAL construct name 'g' conflicts with a previous declaration
+  !$omp end critical(g)
 end
