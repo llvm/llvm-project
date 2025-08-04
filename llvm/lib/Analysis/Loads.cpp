@@ -833,6 +833,10 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
   if (!To->getType()->isPointerTy())
     return true;
 
+  // Do not perform replacements in lifetime intrinsic arguments.
+  if (isa<LifetimeIntrinsic>(U.getUser()))
+    return false;
+
   if (isPointerAlwaysReplaceable(&*U, To, DL))
     return true;
   return isPointerUseReplacable(U);
