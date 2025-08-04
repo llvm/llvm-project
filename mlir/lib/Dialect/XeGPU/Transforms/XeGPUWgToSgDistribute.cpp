@@ -658,7 +658,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
                   ConversionPatternRewriter &rewriter) const override {
     auto vecAttr = dyn_cast<DenseElementsAttr>(op.getValue());
     auto vecType = dyn_cast<VectorType>(op.getType());
-    if (!vecAttr || !vecType)
+    if (!vecAttr || !vecAttr.isSplat() || !vecType)
       return failure();
 
     xegpu::LayoutAttr layout = xegpu::getLayoutAttr(op.getResult());
@@ -672,11 +672,7 @@ struct WgToSgArithConstantOp : public OpConversionPattern<arith::ConstantOp> {
 
     // Current limitation: constant of vector with single value.
     // TODO: support more complex cases, e.g., vector with multiple values.
-    Attribute singleVal;
-    if (vecAttr.isSplat())
-      singleVal = vecAttr.getSplatValue<Attribute>();
-    else
-      return failure();
+    Attribute singleVal = vecAttr.getSplatValue<Attribute>();
 
     SmallVector<Value> newConsts;
     auto newType = VectorType::get(sgShape, vecType.getElementType());
