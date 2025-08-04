@@ -125,6 +125,14 @@ void GDBIndex::updateGdbIndexSection(
 
   using MapEntry = std::pair<uint32_t, CUInfo>;
   std::vector<MapEntry> CUVector(CUMap.begin(), CUMap.end());
+  // Remove the CUs we won't emit anyway.
+  CUVector.erase(std::remove_if(CUVector.begin(), CUVector.end(),
+                                [&OriginalOffsets](const MapEntry &It) {
+                                  // Skipping TU for DWARF5 when they are not
+                                  // included in CU list.
+                                  return OriginalOffsets.count(It.first) == 0;
+                                }),
+                 CUVector.end());
   // Need to sort since we write out all of TUs in .debug_info before CUs.
   std::sort(CUVector.begin(), CUVector.end(),
             [](const MapEntry &E1, const MapEntry &E2) -> bool {
@@ -139,22 +147,30 @@ void GDBIndex::updateGdbIndexSection(
     OriginalCUIndexToUpdatedCUIndexMap[OffsetToIndexMap.at(CUVector[I].first)] =
         I;
   }
-  const auto RemapCUIndex =
-      [&OriginalCUIndexToUpdatedCUIndexMap](uint32_t OriginalIndex) {
-        const auto it = OriginalCUIndexToUpdatedCUIndexMap.find(OriginalIndex);
-        if (it == OriginalCUIndexToUpdatedCUIndexMap.end()) {
-          errs() << "BOLT-ERROR: .gdb_index unknown CU index\n";
-          exit(1);
-        }
+  const auto RemapCUIndex = [&OriginalCUIndexToUpdatedCUIndexMap,
+                             CUVectorSize = CUVector.size(),
+                             TUVectorSize = getGDBIndexTUEntryVector().size()](
+                                uint32_t OriginalIndex) {
+    if (OriginalIndex >= CUVectorSize) {
+      if (OriginalIndex >= CUVectorSize + TUVectorSize) {
+        errs() << "BOLT-ERROR: .gdb_index unknown CU index\n";
+        exit(1);
+      }
+      // The index is into TU CU List, which we don't reorder, so return as is.
+      return OriginalIndex;
+    }
 
-        return it->second;
-      };
+    const auto It = OriginalCUIndexToUpdatedCUIndexMap.find(OriginalIndex);
+    if (It == OriginalCUIndexToUpdatedCUIndexMap.end()) {
+      errs() << "BOLT-ERROR: .gdb_index unknown CU index\n";
+      exit(1);
+    }
+
+    return It->second;
+  };
 
   // Writing out CU List <Offset, Size>
   for (auto &CUInfo : CUVector) {
-    // Skipping TU for DWARF5 when they are not included in CU list.
-    if (!OriginalOffsets.count(CUInfo.first))
-      continue;
     write64le(Buffer, CUInfo.second.Offset);
     // Length encoded in CU doesn't contain first 4 bytes that encode length.
     write64le(Buffer + 8, CUInfo.second.Length + 4);
