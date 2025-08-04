@@ -78,15 +78,6 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
       setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
   }
 
-  // A few names are different on particular architectures or environments.
-  if (TT.isOSDarwin()) {
-    // For f16/f32 conversions, Darwin uses the standard naming scheme,
-    // instead of the gnueabi-style __gnu_*_ieee.
-    // FIXME: What about other targets?
-    setLibcallImpl(RTLIB::FPEXT_F16_F32, RTLIB::__extendhfsf2);
-    setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__truncsfhf2);
-  }
-
   if (TT.isOSOpenBSD()) {
     setLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL, RTLIB::Unsupported);
     setLibcallImpl(RTLIB::STACK_SMASH_HANDLER, RTLIB::__stack_smash_handler);
