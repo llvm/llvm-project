@@ -22534,6 +22534,56 @@ SDValue DAGCombiner::visitATOMIC_STORE(SDNode *N) {
   return SDValue();
 }
 
+static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
+                                 const SDLoc &Dl) {
+  if (!Store->isSimple() || !ISD::isNormalStore(Store))
+    return SDValue();
+
+  SDValue StoredVal = Store->getValue();
+  SDValue StorePtr = Store->getBasePtr();
+  SDValue StoreOffset = Store->getOffset();
+  EVT VT = Store->getMemoryVT();
+  unsigned AddrSpace = Store->getAddressSpace();
+  Align Alignment = Store->getAlign();
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  if (!TLI.isOperationLegalOrCustom(ISD::MSTORE, VT) ||
+      !TLI.allowsMisalignedMemoryAccesses(VT, AddrSpace, Alignment))
+    return SDValue();
+
+  SDValue Mask, OtherVec, LoadCh;
+  unsigned LoadPos;
+  if (sd_match(StoredVal,
+               m_VSelect(m_Value(Mask), m_Value(OtherVec),
+                         m_Load(m_Value(LoadCh), m_Specific(StorePtr),
+                                m_Specific(StoreOffset))))) {
+    LoadPos = 2;
+  } else if (sd_match(StoredVal,
+                      m_VSelect(m_Value(Mask),
+                                m_Load(m_Value(LoadCh), m_Specific(StorePtr),
+                                       m_Specific(StoreOffset)),
+                                m_Value(OtherVec)))) {
+    LoadPos = 1;
+  } else {
+    return SDValue();
+  }
+
+  auto *Load = cast<LoadSDNode>(StoredVal.getOperand(LoadPos));
+  if (!Load->isSimple() || !ISD::isNormalLoad(Load) ||
+      Load->getAddressSpace() != AddrSpace)
+    return SDValue();
+
+  if (!Store->getChain().reachesChainWithoutSideEffects(LoadCh))
+    return SDValue();
+
+  if (LoadPos == 1)
+    Mask = DAG.getNOT(Dl, Mask, Mask.getValueType());
+
+  return DAG.getMaskedStore(Store->getChain(), Dl, OtherVec, StorePtr,
+                            StoreOffset, Mask, VT, Store->getMemOperand(),
+                            Store->getAddressingMode());
+}
+
 SDValue DAGCombiner::visitSTORE(SDNode *N) {
   StoreSDNode *ST  = cast<StoreSDNode>(N);
   SDValue Chain = ST->getChain();
@@ -22767,6 +22817,9 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
 
   if (SDValue NewSt = splitMergedValStore(ST))
     return NewSt;
+
+  if (SDValue MaskedStore = foldToMaskedStore(ST, DAG, SDLoc(N)))
+    return MaskedStore;
 
   return ReduceLoadOpStoreWidth(N);
 }
@@ -29025,11 +29078,25 @@ SDValue DAGCombiner::SimplifySelectCC(const SDLoc &DL, SDValue N0, SDValue N1,
       ((N1C->isAllOnes() && CC == ISD::SETGT) ||
        (N1C->isZero() && CC == ISD::SETLT)) &&
       !TLI.shouldAvoidTransformToShift(VT, CmpOpVT.getScalarSizeInBits() - 1)) {
-    SDValue ASR = DAG.getNode(
-        ISD::SRA, DL, CmpOpVT, N0,
-        DAG.getConstant(CmpOpVT.getScalarSizeInBits() - 1, DL, CmpOpVT));
-    return DAG.getNode(ISD::XOR, DL, VT, DAG.getSExtOrTrunc(ASR, DL, VT),
+    SDValue ASHR =
+        DAG.getNode(ISD::SRA, DL, CmpOpVT, N0,
+                    DAG.getShiftAmountConstant(
+                        CmpOpVT.getScalarSizeInBits() - 1, CmpOpVT, DL));
+    return DAG.getNode(ISD::XOR, DL, VT, DAG.getSExtOrTrunc(ASHR, DL, VT),
                        DAG.getSExtOrTrunc(CC == ISD::SETLT ? N3 : N2, DL, VT));
+  }
+
+  // Fold sign pattern select_cc setgt X, -1, 1, -1 -> or (ashr X, BW-1), 1
+  if (CC == ISD::SETGT && N1C && N2C && N3C && N1C->isAllOnes() &&
+      N2C->isOne() && N3C->isAllOnes() &&
+      !TLI.shouldAvoidTransformToShift(CmpOpVT,
+                                       CmpOpVT.getScalarSizeInBits() - 1)) {
+    SDValue ASHR =
+        DAG.getNode(ISD::SRA, DL, CmpOpVT, N0,
+                    DAG.getShiftAmountConstant(
+                        CmpOpVT.getScalarSizeInBits() - 1, CmpOpVT, DL));
+    return DAG.getNode(ISD::OR, DL, VT, DAG.getSExtOrTrunc(ASHR, DL, VT),
+                       DAG.getConstant(1, DL, VT));
   }
 
   if (SDValue S = PerformMinMaxFpToSatCombine(N0, N1, N2, N3, CC, DAG))

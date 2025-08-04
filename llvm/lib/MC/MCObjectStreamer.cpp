@@ -47,13 +47,13 @@ MCAssembler *MCObjectStreamer::getAssemblerPtr() {
 }
 
 void MCObjectStreamer::newFragment() {
-  addFragment(getContext().allocFragment<MCFragment>());
+  addFragment(allocFragment<MCFragment>());
 }
 
-void MCObjectStreamer::insert(MCFragment *F) {
-  assert(F->getKind() != MCFragment::FT_Data &&
-         "F should have a variable-size tail");
-  addFragment(F);
+void MCObjectStreamer::addSpecialFragment(MCFragment *Frag) {
+  assert(Frag->getKind() != MCFragment::FT_Data &&
+         "Frag should have a variable-size tail");
+  addFragment(Frag);
   newFragment();
 }
 
@@ -66,7 +66,7 @@ void MCObjectStreamer::appendContents(size_t Num, char Elt) {
 }
 
 void MCObjectStreamer::addFixup(const MCExpr *Value, MCFixupKind Kind) {
-  CurFrag->addFixup(MCFixup::create(CurFrag->getFixedSize(), Value, Kind));
+  CurFrag->addFixup(MCFixup::create(getCurFragSize(), Value, Kind));
 }
 
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
@@ -115,6 +115,7 @@ void MCObjectStreamer::reset() {
   }
   EmitEHFrame = true;
   EmitDebugFrame = false;
+  SpecialFragAllocator.Reset();
   MCStreamer::reset();
 }
 
@@ -267,7 +268,7 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // If the subsection number is not in the sorted Subsections list, create a
   // new fragment list.
   if (I == E || Subsections[I].first != Subsection) {
-    auto *F = getContext().allocFragment<MCFragment>();
+    auto *F = allocFragment<MCFragment>();
     F->setParent(Section);
     Subsections.insert(Subsections.begin() + I,
                        {Subsection, MCSection::FragList{F, F}});
@@ -570,7 +571,7 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
                                          unsigned char Value,
                                          SMLoc Loc) {
-  insert(getContext().allocFragment<MCOrgFragment>(*Offset, Value, Loc));
+  newSpecialFragment<MCOrgFragment>(*Offset, Value, Loc);
 }
 
 void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
@@ -602,8 +603,7 @@ void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
 void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                                 SMLoc Loc) {
   assert(getCurrentSectionOnly() && "need a section");
-  insert(
-      getContext().allocFragment<MCFillFragment>(FillValue, 1, NumBytes, Loc));
+  newSpecialFragment<MCFillFragment>(FillValue, 1, NumBytes, Loc);
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
@@ -630,15 +630,13 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
 
   // Otherwise emit as fragment.
   assert(getCurrentSectionOnly() && "need a section");
-  insert(
-      getContext().allocFragment<MCFillFragment>(Expr, Size, NumValues, Loc));
+  newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
 }
 
 void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
                                 SMLoc Loc, const MCSubtargetInfo &STI) {
   assert(getCurrentSectionOnly() && "need a section");
-  insert(getContext().allocFragment<MCNopsFragment>(
-      NumBytes, ControlledNopLength, Loc, STI));
+  newSpecialFragment<MCNopsFragment>(NumBytes, ControlledNopLength, Loc, STI);
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {

@@ -201,6 +201,28 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, CE);
 
     OptPrimType SubExprT = classify(SubExpr->getType());
+    // Try to load the value directly. This is purely a performance
+    // optimization.
+    if (SubExprT) {
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
+        const ValueDecl *D = DRE->getDecl();
+        bool IsReference = D->getType()->isReferenceType();
+
+        if (!IsReference) {
+          if (Context::shouldBeGloballyIndexed(D)) {
+            if (auto GlobalIndex = P.getGlobal(D))
+              return this->emitGetGlobal(*SubExprT, *GlobalIndex, CE);
+          } else if (auto It = Locals.find(D); It != Locals.end()) {
+            return this->emitGetLocal(*SubExprT, It->second.Offset, CE);
+          } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+            if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+              return this->emitGetParam(*SubExprT, It->second.Offset, CE);
+            }
+          }
+        }
+      }
+    }
+
     // Prepare storage for the result.
     if (!Initializing && !SubExprT) {
       std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
@@ -331,6 +353,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_FloatingToIntegral: {
+    if (!CE->getType()->isIntegralOrEnumerationType())
+      return false;
     if (!this->visit(SubExpr))
       return false;
     PrimType ToT = classifyPrim(CE);
@@ -1369,10 +1393,15 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   // BitAdd/BitOr/BitXor/Shl/Shr doesn't support bool type, we need perform the
   // integer promotion.
   bool NeedIntPromot = ElemT == PT_Bool && (E->isBitwiseOp() || E->isShiftOp());
-  QualType PromotTy =
-      Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
-  PrimType PromotT = classifyPrim(PromotTy);
-  PrimType OpT = NeedIntPromot ? PromotT : ElemT;
+  QualType PromotTy;
+  PrimType PromotT = PT_Bool;
+  PrimType OpT = ElemT;
+  if (NeedIntPromot) {
+    PromotTy =
+        Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
+    PromotT = classifyPrim(PromotTy);
+    OpT = PromotT;
+  }
 
   auto getElem = [=](unsigned Offset, PrimType ElemT, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
@@ -3850,10 +3879,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   assert(E->getType()->isVoidPointerType());
 
-  unsigned Offset =
-      allocateLocalPrimitive(E->getLabel(), PT_Ptr, /*IsConst=*/true);
-
-  return this->emitGetLocal(PT_Ptr, Offset, E);
+  return this->emitDummyPtr(E, E);
 }
 
 template <class Emitter>
