@@ -294,11 +294,9 @@ MCSymbol *MCContext::createSymbolImpl(const MCSymbolTableEntry *Name,
   case MCContext::IsDXContainer:
     break;
   case MCContext::IsSPIRV:
-    return new (Name, *this)
-        MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
+    return new (Name, *this) MCSymbol(Name, IsTemporary);
   }
-  return new (Name, *this)
-      MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
+  return new (Name, *this) MCSymbol(Name, IsTemporary);
 }
 
 MCSymbol *MCContext::cloneSymbol(MCSymbol &Sym) {
