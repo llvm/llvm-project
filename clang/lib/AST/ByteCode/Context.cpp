@@ -45,12 +45,12 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   Compiler<ByteCodeEmitter>(*this, *P).compileFunc(
       FD, const_cast<Function *>(Func));
 
-  ++EvalID;
-  // And run it.
-  if (!Run(Parent, Func))
+  if (!Func->isValid())
     return false;
 
-  return Func->isValid();
+  ++EvalID;
+  // And run it.
+  return Run(Parent, Func);
 }
 
 void Context::isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
