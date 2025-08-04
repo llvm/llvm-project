@@ -24,6 +24,8 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #ifdef LLVM_ON_UNIX
 #include <sys/stat.h>
@@ -36,7 +38,7 @@
 #undef LC_RPATH
 #endif // __APPLE__
 
-#define DEBUG_TYPE "orc"
+#define DEBUG_TYPE "orc-scanner"
 
 namespace llvm::orc {
 
@@ -61,6 +63,98 @@ T handleExpectedAndReturn(Expected<T> &&ValOrErr, T ReturnValue,
   if (!ValOrErr)
     return handleErrorAndReturn(ValOrErr.takeError(), ReturnValue, context);
   return *ValOrErr;
+}
+
+bool ObjectFileLoader::isArchitectureCompatible(const object::ObjectFile &Obj) {
+  Triple HostTriple(sys::getDefaultTargetTriple());
+  auto HostArch = HostTriple.getArch();
+  Triple ObjTriple = Obj.makeTriple();
+
+  return HostArch == ObjTriple.getArch();
+}
+
+Expected<object::OwningBinary<object::ObjectFile>>
+ObjectFileLoader::loadObjectFileWithOwnership(StringRef FilePath) {
+  LLVM_DEBUG(dbgs() << "ObjectFileLoader: Attempting to open file " << FilePath
+                    << "\n";);
+  auto BinOrErr = object::createBinary(FilePath);
+  if (!BinOrErr) {
+    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Failed to open file " << FilePath
+                      << "\n";);
+    return BinOrErr.takeError();
+  }
+
+  LLVM_DEBUG(dbgs() << "ObjectFileLoader: Successfully opened file " << FilePath
+                    << "\n";);
+
+  auto OwningBin = BinOrErr->takeBinary();
+  object::Binary *Bin = OwningBin.first.get();
+
+  if (Bin->isArchive()) {
+    LLVM_DEBUG(dbgs() << "ObjectFileLoader: File is an archive, not supported: "
+                      << FilePath << "\n";);
+    return createStringError(std::errc::invalid_argument,
+                             "Archive files are not supported: %s",
+                             FilePath.str().c_str());
+  }
+
+#if defined(__APPLE__)
+  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(Bin)) {
+    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Detected Mach-O universal binary: "
+                      << FilePath << "\n";);
+    for (auto ObjForArch : UB->objects()) {
+      auto ObjOrErr = ObjForArch.getAsObjectFile();
+      if (!ObjOrErr) {
+        LLVM_DEBUG(
+            dbgs()
+                << "ObjectFileLoader: Skipping invalid architecture slice\n";);
+
+        consumeError(ObjOrErr.takeError());
+        continue;
+      }
+
+      std::unique_ptr<object::ObjectFile> Obj = std::move(ObjOrErr.get());
+      if (isArchitectureCompatible(*Obj)) {
+        LLVM_DEBUG(
+            dbgs() << "ObjectFileLoader: Found compatible object slice\n";);
+
+        return object::OwningBinary<object::ObjectFile>(
+            std::move(Obj), std::move(OwningBin.second));
+
+      } else {
+        LLVM_DEBUG(dbgs() << "ObjectFileLoader: Incompatible architecture "
+                             "slice skipped\n";);
+      }
+    }
+    LLVM_DEBUG(dbgs() << "ObjectFileLoader: No compatible slices found in "
+                         "universal binary\n";);
+    return createStringError(inconvertibleErrorCode(),
+                             "No compatible object found in fat binary: %s",
+                             FilePath.str().c_str());
+  }
+#endif
+
+  auto ObjOrErr =
+      object::ObjectFile::createObjectFile(Bin->getMemoryBufferRef());
+  if (!ObjOrErr) {
+    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Failed to create object file\n";);
+    return ObjOrErr.takeError();
+  }
+  LLVM_DEBUG(dbgs() << "ObjectFileLoader: Detected object file\n";);
+
+  std::unique_ptr<object::ObjectFile> Obj = std::move(*ObjOrErr);
+  if (!isArchitectureCompatible(*Obj)) {
+    LLVM_DEBUG(dbgs() << "ObjectFileLoader: Incompatible architecture: "
+                      << FilePath << "\n";);
+    return createStringError(inconvertibleErrorCode(),
+                             "Incompatible object file: %s",
+                             FilePath.str().c_str());
+  }
+
+  LLVM_DEBUG(dbgs() << "ObjectFileLoader: Object file is compatible\n";);
+
+  return object::OwningBinary<object::ObjectFile>(std::move(Obj),
+                                                  std::move(OwningBin.second));
 }
 
 template <class ELFT>
@@ -117,47 +211,19 @@ bool DylibPathValidator::isSharedLibrary(StringRef Path) {
     return false;
   }
 
-  auto BinOrErr = object::createBinary(Path);
-  if (!BinOrErr) {
-    LLVM_DEBUG(dbgs() << "Failed to open or parse binary at path: " << Path
-                      << "\n";);
-    // Could not open or parse the binary
-    handleError(BinOrErr.takeError());
+  ObjectFileLoader ObjLoader(Path);
+
+  auto ObjOrErr = ObjLoader.getObjectFile();
+
+  if (!ObjOrErr) {
+    consumeError(ObjOrErr.takeError());
     return false;
   }
 
-  object::Binary *Bin = BinOrErr.get().getBinary();
+  object::ObjectFile &Obj = ObjOrErr.get();
 
-  if (Bin->isArchive()) {
-    LLVM_DEBUG(dbgs() << "Binary is archive : " << Path << "\n";);
-    return false;
-  }
-
-  // Handle fat/universal binaries on macOS
-  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(Bin)) {
-    LLVM_DEBUG(dbgs() << "Universal binary detected.\n");
-
-    for (auto ObjForArch : UB->objects()) {
-      auto ObjOrErr = ObjForArch.getAsObjectFile();
-      if (!ObjOrErr) {
-        LLVM_DEBUG(dbgs() << "Failed to extract object for arch.\n");
-        handleError(ObjOrErr.takeError());
-        continue;
-      }
-
-      object::ObjectFile *Obj = ObjOrErr->get();
-      if (isSharedLibraryObject(*Obj)) {
-        LLVM_DEBUG(dbgs() << "Shared library found in universal binary.\n");
-        return true;
-      }
-    }
-    LLVM_DEBUG(
-        dbgs() << "No shared library slice found in universal binary.\n");
-    return false;
-  }
-
-  if (auto *Obj = dyn_cast<object::ObjectFile>(Bin))
-    return isSharedLibraryObject(*Obj);
+  if (isSharedLibraryObject(Obj))
+    return true;
 
   LLVM_DEBUG(dbgs() << "Path is not identified as a shared library: " << Path
                     << "\n";);
@@ -779,58 +845,32 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
   LLVM_DEBUG(dbgs() << "extractDeps: Attempting to open file " << filePath
                     << "\n";);
 
-  auto BinOrErr = object::createBinary(filePath);
-  if (!BinOrErr) {
+  ObjectFileLoader ObjLoader(filePath);
+  auto ObjOrErr = ObjLoader.getObjectFile();
+  if (!ObjOrErr) {
     LLVM_DEBUG(dbgs() << "extractDeps: Failed to open " << filePath << "\n";);
-    return handleErrorAndReturn(BinOrErr.takeError(),
+    return handleErrorAndReturn(ObjOrErr.takeError(),
                                 createStringError(std::errc::file_exists,
                                                   "Failed to open %s",
                                                   filePath.str().c_str()),
                                 "LibraryScanner::extractDeps");
   }
 
-  object::Binary *Bin = BinOrErr.get().getBinary();
+  object::ObjectFile *Obj = &ObjOrErr.get();
 
-  if (Bin->isArchive()) {
-    LLVM_DEBUG(dbgs() << "extractDeps: Binary is archive file " << filePath
-                      << "\n";);
-    return createStringError(std::errc::file_exists,
-                             "Binary is archive file %s",
-                             filePath.str().c_str());
+  if (auto *elfObj = dyn_cast<object::ELFObjectFileBase>(Obj)) {
+    LLVM_DEBUG(dbgs() << "extractDeps: File " << filePath
+                      << " is an ELF object\n";);
+
+    return parseELFDeps(*elfObj);
   }
 
-  // Handle fat/universal binaries on macOS
-  if (auto *UB = dyn_cast<object::MachOUniversalBinary>(Bin)) {
-    for (auto ObjForArch : UB->objects()) {
-      auto ObjOrErr = ObjForArch.getAsObjectFile();
-      if (!ObjOrErr) {
-        LLVM_DEBUG(dbgs() << "Failed to extract object for arch.\n");
-        handleError(ObjOrErr.takeError());
-        continue;
-      }
-
-      if (auto *macho = dyn_cast<object::MachOObjectFile>(ObjOrErr->get())) {
-        LLVM_DEBUG(dbgs() << "extractDeps: File " << filePath
-                          << " is a Mach-O object\n";);
-        return parseMachODeps(*macho);
-      }
-    }
-  } else if (Bin->isObject()) {
-    object::ObjectFile *Obj = dyn_cast<object::ObjectFile>(Bin);
-
-    if (auto *elfObj = dyn_cast<object::ELFObjectFileBase>(Obj)) {
-      LLVM_DEBUG(dbgs() << "extractDeps: File " << filePath
-                        << " is an ELF object\n";);
-
-      return parseELFDeps(*elfObj);
-    }
-
-    if (auto *macho = dyn_cast<object::MachOObjectFile>(Obj)) {
-      LLVM_DEBUG(dbgs() << "extractDeps: File " << filePath
-                        << " is a Mach-O object\n";);
-      return parseMachODeps(*macho);
-    }
+  if (auto *macho = dyn_cast<object::MachOObjectFile>(Obj)) {
+    LLVM_DEBUG(dbgs() << "extractDeps: File " << filePath
+                      << " is a Mach-O object\n";);
+    return parseMachODeps(*macho);
   }
+
   LLVM_DEBUG(dbgs() << "extractDeps: Unsupported binary format for file "
                     << filePath << "\n";);
   return createStringError(inconvertibleErrorCode(),
