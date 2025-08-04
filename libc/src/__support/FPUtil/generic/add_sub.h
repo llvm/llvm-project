@@ -105,30 +105,24 @@ add_or_sub(InType x, InType y) {
       // immediately back to InType before negating it, resulting in double
       // rounding.
       volatile InType tmp = y;
-      if constexpr (IsSub && !cpp::is_same_v<InType, bfloat16> &&
-                    !cpp::is_same_v<OutType, bfloat16>)
-        tmp = -tmp;
-      if constexpr (cpp::is_same_v<InType, bfloat16> &&
-                    cpp::is_same_v<OutType, bfloat16>) {
-        // TODO: this needs to be changed once we figure out how to deal with
-        // volatile negation.
-        if constexpr (IsSub) {
-          return bfloat16{tmp.bits ^ static_cast<uint16_t>(1u << 15)};
+      if constexpr (IsSub) {
+        if constexpr (cpp::is_same_v<OutType, BFloat16>) {
+          tmp.bits ^= static_cast<uint16_t>(1000'0000'0000'0000u);
         } else {
-          return bfloat16{tmp.bits};
+          tmp = -tmp;
         }
-      } else {
-        return cast<OutType>(tmp);
       }
+      if constexpr (cpp::is_same_v<OutType, bfloat16>)
+        return bfloat16{tmp.bits};
+      else
+        return cast<OutType>(tmp);
     }
 
     if (y_bits.is_zero()) {
-      if constexpr (cpp::is_same_v<InType, bfloat16> &&
-                    cpp::is_same_v<OutType, bfloat16>) {
+      if constexpr (cpp::is_same_v<OutType, bfloat16>)
         return bfloat16{x.bits};
-      } else {
+      else
         return cast<OutType>(x);
-      }
     }
   }
 
