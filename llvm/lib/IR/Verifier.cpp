@@ -6714,6 +6714,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "invalid vector type for format", &Call, Src0, Call.getArgOperand(0));
     Check(Src1Ty->getNumElements() >= getFormatNumRegs(FmtB),
           "invalid vector type for format", &Call, Src1, Call.getArgOperand(2));
+  }
+  case Intrinsic::amdgcn_kill:
+  case Intrinsic::amdgcn_wqm_demote: {
+    Check(Call.getCaller()->getCallingConv() == CallingConv::AMDGPU_PS,
+          "Intrinsic can only be used from functions with the amdgpu_ps"
+          " calling convention ",
+          &Call);
     break;
   }
   case Intrinsic::nvvm_setmaxnreg_inc_sync_aligned_u32:
