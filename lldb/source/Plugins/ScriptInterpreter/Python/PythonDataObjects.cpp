@@ -1473,10 +1473,8 @@ python::runStringMultiLine(const llvm::Twine &string,
   return Take<PythonObject>(result);
 }
 
-namespace lldb_private {
-namespace python {
-PyObject *RunString(const char *str, int start, PyObject *globals,
-                    PyObject *locals) {
+PyObject *lldb_private::python::RunString(const char *str, int start,
+                                          PyObject *globals, PyObject *locals) {
   const char *filename = "<string>";
 
   // Compile the string into a code object.
@@ -1493,7 +1491,7 @@ PyObject *RunString(const char *str, int start, PyObject *globals,
   return result;
 }
 
-int RunSimpleString(const char *str) {
+int lldb_private::python::RunSimpleString(const char *str) {
   PyObject *main_module = PyImport_AddModule("__main__");
   if (!main_module)
     return -1;
@@ -1508,7 +1506,4 @@ int RunSimpleString(const char *str) {
 
   return 0;
 }
-} // namespace python
-} // namespace lldb_private
-
 #endif
