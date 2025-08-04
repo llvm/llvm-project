@@ -37,7 +37,6 @@
 # OUTPUT-NEXT:   Class: ELFCLASS64
 # OUTPUT-NEXT:   Data:  ELFDATA2LSB
 # OUTPUT-NEXT:   Type:  ET_DYN
-# OUTPUT-NEXT:   Flags: [ ]
 # OUTPUT-NEXT: Sections:
 # OUTPUT-NEXT:   - Name: .foo.1
 # OUTPUT-NEXT:     Type: SHT_PROGBITS
@@ -126,7 +125,6 @@ DynamicSymbols:
 # OUTPUT2-NEXT:   Class: ELFCLASS64
 # OUTPUT2-NEXT:   Data:  ELFDATA2LSB
 # OUTPUT2-NEXT:   Type:  ET_DYN
-# OUTPUT2-NEXT:   Flags: [ ]
 # OUTPUT2-NEXT: Sections:
 # OUTPUT2-NEXT:   - Name: .foo.1
 # OUTPUT2-NEXT:     Type: SHT_PROGBITS

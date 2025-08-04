@@ -10,7 +10,6 @@
 # VALID-NEXT:   Class: ELFCLASS64
 # VALID-NEXT:   Data:  ELFDATA2LSB
 # VALID-NEXT:   Type:  ET_EXEC
-# VALID-NEXT:   Flags: [ ]
 # VALID-NEXT: Sections:
 # VALID-NEXT:   - Name: .llvm_bb_addr_map
 # VALID-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
@@ -123,7 +122,6 @@ Sections:
 # MULTI-NEXT:   Class: ELFCLASS64
 # MULTI-NEXT:   Data:  ELFDATA2LSB
 # MULTI-NEXT:   Type:  ET_EXEC
-# MULTI-NEXT:   Flags: [ ]
 # MULTI-NEXT: Sections:
 # MULTI-NEXT:   - Name: .llvm_bb_addr_map
 # MULTI-NEXT:     Type: SHT_LLVM_BB_ADDR_MAP
@@ -196,7 +194,6 @@ Sections:
 # INVALID-NEXT:        Class: ELFCLASS64
 # INVALID-NEXT:        Data:  ELFDATA2LSB
 # INVALID-NEXT:        Type:  ET_EXEC
-# INVALID-NEXT:        Flags: [ ]
 # INVALID-NEXT:      Sections:
 # INVALID-NEXT:        - Name:    .llvm_bb_addr_map
 # INVALID-NEXT:          Type:    SHT_LLVM_BB_ADDR_MAP
@@ -228,7 +225,6 @@ Sections:
 # MISSING-FEC-NEXT:        Class: ELFCLASS64
 # MISSING-FEC-NEXT:        Data:  ELFDATA2LSB
 # MISSING-FEC-NEXT:        Type:  ET_EXEC
-# MISSING-FEC-NEXT:        Flags: [ ]
 # MISSING-FEC-NEXT:      Sections:
 # MISSING-FEC-NEXT:        - Name:    .llvm_bb_addr_map
 # MISSING-FEC-NEXT:          Type:    SHT_LLVM_BB_ADDR_MAP

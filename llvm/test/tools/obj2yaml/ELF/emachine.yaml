@@ -11,7 +11,6 @@
 # CHECK-NEXT:   Data:    ELFDATA2MSB
 # CHECK-NEXT:   Type:    ET_REL
 # CHECK-NEXT:   Machine: [[MACHINE]]
-# CHECK-NEXT:   Flags:   [ ]
 
 --- !ELF
 FileHeader:
@@ -35,5 +34,4 @@ FileHeader:
 # DEFAULT-NEXT:   Class: ELFCLASS64
 # DEFAULT-NEXT:   Data:  ELFDATA2MSB
 # DEFAULT-NEXT:   Type:  ET_REL
-# DEFAULT-NEXT:   Flags: [ ]
 # DEFAULT-NEXT: ...

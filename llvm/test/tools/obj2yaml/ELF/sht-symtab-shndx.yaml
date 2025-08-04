@@ -10,7 +10,6 @@
 # CASE1-NEXT:   Class: ELFCLASS64
 # CASE1-NEXT:   Data:  ELFDATA2LSB
 # CASE1-NEXT:   Type:  ET_REL
-# CASE1-NEXT:   Flags: [ ]
 # CASE1-NEXT: Sections:
 # CASE1-NEXT:   - Name: bar
 # CASE1-NEXT:     Type: SHT_PROGBITS

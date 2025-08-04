@@ -9,7 +9,6 @@
 # NOSYMTAB-NEXT:    Class: ELFCLASS64
 # NOSYMTAB-NEXT:    Data:  ELFDATA2LSB
 # NOSYMTAB-NEXT:    Type:  ET_DYN
-# NOSYMTAB-NEXT:    Flags: [ ]
 # NOSYMTAB-NEXT: ...
 
 --- !ELF
@@ -29,7 +28,6 @@ FileHeader:
 # SYMTAB-NEXT:   Class: ELFCLASS64
 # SYMTAB-NEXT:   Data:  ELFDATA2LSB
 # SYMTAB-NEXT:   Type:  ET_DYN
-# SYMTAB-NEXT:   Flags: [ ]
 # SYMTAB-NEXT:  Symbols: []
 # SYMTAB-NEXT: ...
 

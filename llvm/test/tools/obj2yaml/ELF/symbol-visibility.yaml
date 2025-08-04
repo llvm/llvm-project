@@ -7,7 +7,6 @@
 # CHECK-NEXT:   Class: ELFCLASS64
 # CHECK-NEXT:   Data:  ELFDATA2LSB
 # CHECK-NEXT:   Type:  ET_REL
-# CHECK-NEXT:   Flags: [ ]
 # CHECK-NEXT: Symbols:
 # CHECK-NEXT:   - Name: default
 # CHECK-NEXT:   - Name: internal

@@ -9,7 +9,6 @@
 # CHECK-NEXT:   Data:  ELFDATA2LSB
 # CHECK-NEXT:   OSABI: ELFOSABI_GNU
 # CHECK-NEXT:   Type:  ET_REL
-# CHECK-NEXT:   Flags: [ ]
 # CHECK-NEXT: Symbols:
 # CHECK-NEXT:   - Name:    foo
 # CHECK-NEXT:     Type:    STT_OBJECT

@@ -8,7 +8,6 @@
 # CHECK-NEXT:   Class: ELFCLASS64
 # CHECK-NEXT:   Data:  ELFDATA2LSB
 # CHECK-NEXT:   Type:  ET_EXEC
-# CHECK-NEXT:   Flags:  [ ]
 # CHECK-NEXT:   Entry: 0x201000
 # CHECK-NEXT: Sections:
 # CHECK-NEXT:   - Name:         .gnu.version

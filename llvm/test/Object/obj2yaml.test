@@ -556,7 +556,6 @@
 # ELF-X86-64-NEXT:   OSABI:           ELFOSABI_GNU
 # ELF-X86-64-NEXT:   Type:            ET_REL
 # ELF-X86-64-NEXT:   Machine:         EM_X86_64
-# ELF-X86-64-NEXT:   Flags:           [ ]
 # ELF-X86-64-NEXT: Sections:
 # ELF-X86-64-NEXT:   - Name:            .text
 # ELF-X86-64-NEXT:     Type:            SHT_PROGBITS

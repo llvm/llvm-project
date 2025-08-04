@@ -18,7 +18,6 @@
 # PRESERVE-NEXT:   Class:  ELFCLASS64
 # PRESERVE-NEXT:   Data:   ELFDATA2LSB
 # PRESERVE-NEXT:   Type:   ET_REL
-# PRESERVE-NEXT:   Flags:  [ ]
 # PRESERVE-NEXT:   EShNum: 0x0
 # PRESERVE-NEXT: Sections:
 # PRESERVE-NEXT:   - Type: SHT_NULL
@@ -49,7 +48,6 @@ Sections:
 # NO-SECTIONS-NEXT:   Class:  ELFCLASS64
 # NO-SECTIONS-NEXT:   Data:   ELFDATA2LSB
 # NO-SECTIONS-NEXT:   Type:   ET_REL
-# NO-SECTIONS-NEXT:   Flags:  [ ]
 # NO-SECTIONS-NEXT:   EShNum: 0x0
 ## Note: yaml2obj will create the SHT_NULL section with sh_size = 0 implicitly.
 # NO-SECTIONS-NEXT: ...
@@ -66,5 +64,4 @@ Sections:
 # NO-HEADERS-NEXT:   Class: ELFCLASS64
 # NO-HEADERS-NEXT:   Data:  ELFDATA2LSB
 # NO-HEADERS-NEXT:   Type:  ET_REL
-# NO-HEADERS-NEXT:   Flags: [ ]
 # NO-HEADERS-NEXT: ...
