@@ -210,20 +210,14 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
             mlir::TypedValue<emitc::ArrayType> arrayValue,
             mlir::MemRefType memrefType,
             emitc::ConstantOp zeroIndex) -> emitc::ApplyOp {
-      // Get the rank of the array to create the correct number of zero indices.
       int64_t rank = arrayValue.getType().getRank();
       llvm::SmallVector<mlir::Value> indices;
       for (int i = 0; i < rank; ++i) {
         indices.push_back(zeroIndex);
       }
 
-      // Create a subscript operation to get the element at index [0, 0, ...,
-      // 0].
       emitc::SubscriptOp subPtr = rewriter.create<emitc::SubscriptOp>(
           loc, arrayValue, mlir::ValueRange(indices));
-
-      // Create an apply operation to take the address of the subscripted
-      // element.
       emitc::ApplyOp ptr = rewriter.create<emitc::ApplyOp>(
           loc, emitc::PointerType::get(memrefType.getElementType()),
           rewriter.getStringAttr("&"), subPtr);
@@ -231,7 +225,6 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
       return ptr;
     };
 
-    // Create a constant zero index.
     emitc::ConstantOp zeroIndex = rewriter.create<emitc::ConstantOp>(
         loc, rewriter.getIndexType(), rewriter.getIndexAttr(0));
 
