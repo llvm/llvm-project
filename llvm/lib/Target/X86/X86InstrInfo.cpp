@@ -3300,46 +3300,9 @@ unsigned X86::getNonNDVariant(unsigned Opc) {
 /// Return the inverse of the specified condition,
 /// e.g. turning COND_E to COND_NE.
 X86::CondCode X86::GetOppositeBranchCondition(X86::CondCode CC) {
-  switch (CC) {
-  default:
-    llvm_unreachable("Illegal condition code!");
-  case X86::COND_E:
-    return X86::COND_NE;
-  case X86::COND_NE:
-    return X86::COND_E;
-  case X86::COND_L:
-    return X86::COND_GE;
-  case X86::COND_LE:
-    return X86::COND_G;
-  case X86::COND_G:
-    return X86::COND_LE;
-  case X86::COND_GE:
-    return X86::COND_L;
-  case X86::COND_B:
-    return X86::COND_AE;
-  case X86::COND_BE:
-    return X86::COND_A;
-  case X86::COND_A:
-    return X86::COND_BE;
-  case X86::COND_AE:
-    return X86::COND_B;
-  case X86::COND_S:
-    return X86::COND_NS;
-  case X86::COND_NS:
-    return X86::COND_S;
-  case X86::COND_P:
-    return X86::COND_NP;
-  case X86::COND_NP:
-    return X86::COND_P;
-  case X86::COND_O:
-    return X86::COND_NO;
-  case X86::COND_NO:
-    return X86::COND_O;
-  case X86::COND_NE_OR_P:
-    return X86::COND_E_AND_NP;
-  case X86::COND_E_AND_NP:
-    return X86::COND_NE_OR_P;
-  }
+  // To reverse a condition it's necessary to only invert the low bit:
+  assert(CC != COND_INVALID && "COND_INVALID has no inverse!");
+  return static_cast<CondCode>(static_cast<unsigned>(CC) ^ 0x1);
 }
 
 /// Assuming the flags are set by MI(a,b), return the condition code if we
