@@ -29,7 +29,7 @@ Introduction
 ============
 
 The LLVM target-independent code generator is a framework that provides a suite
-of reusable components for translating the LLVM internal representation to the
+of reusable components for translating the LLVM intermediate representation (IR) to the
 machine code for a specified target---either in assembly form (suitable for a
 static compiler) or in binary machine code format (usable for a JIT
 compiler). The LLVM target-independent code generator consists of six main
