@@ -113,9 +113,8 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
     StringRef secName = s->name;
     if (!secName.consume_front(v))
       continue;
-    if (!secName.empty() && secName[0] != '.') {
+    if (!secName.empty() && secName[0] != '.')
       continue;
-    }
 
     // The section name starts with 'v', and the remaining string is either
     // empty or starts with a '.' character. If keep-data-section-prefix is
