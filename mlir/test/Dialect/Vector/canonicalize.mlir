@@ -2578,7 +2578,7 @@ func.func @fully_insert_vector_to_vector(%arg0 : vector<2x2xi64>, %arg1 : vector
 //       CHECK: %[[ELE2:.+]]:2 = vector.to_elements %[[ARG1]] : vector<2xi64>
 //       CHECK: %[[RES:.+]] = vector.from_elements %[[ELE1]]#0, %[[ELE1]]#1, %[[ELE2]]#0, %[[ARG2]] : vector<2x2xi64>
 //  CHECK-NEXT: return %[[RES]]
-func.func @fully_insert_to_vector_overlap(%arg0 : vector<2x2xi64>, %arg1 : vector<2xi64>, %arg2 : i64) -> vector<2x2xi64> {
+func.func @fully_insert_to_vector_overlap(%dest : vector<2x2xi64>, %src1 : vector<2xi64>, %src2 : i64) -> vector<2x2xi64> {
   %v0 = vector.insert %arg2, %arg0[0, 0] : i64 into vector<2x2xi64>
   %v1 = vector.insert %arg1, %v0[0] : vector<2xi64> into vector<2x2xi64>
   %v2 = vector.insert %arg1, %v1[1] : vector<2xi64> into vector<2x2xi64>
