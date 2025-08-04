@@ -1848,8 +1848,15 @@ private:
       for (Fortran::lower::ComponentReverseIterator compIterator(
                ctor.result().derivedTypeSpec());
            !compIterator.lookup(compSym.name());) {
-        const auto &parentType = compIterator.advanceToParentType();
-        llvm::StringRef parentName = toStringRef(parentType.name());
+        // Private parent components have mangled names. Get the name from the
+        // parent symbol.
+        const Fortran::semantics::Symbol *parentCompSym =
+            compIterator.getParentComponent();
+        assert(parentCompSym && "failed to get parent component symbol");
+        std::string parentName =
+            converter.getRecordTypeFieldName(*parentCompSym);
+        // Advance the iterator, but don't use its return value.
+        compIterator.advanceToParentType();
         auto baseRecTy = mlir::cast<fir::RecordType>(
             hlfir::getFortranElementType(currentParent.getType()));
         auto parentCompType = baseRecTy.getType(parentName);
