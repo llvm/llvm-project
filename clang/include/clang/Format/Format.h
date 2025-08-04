@@ -3562,63 +3562,61 @@ struct FormatStyle {
   enum NumericLiteralComponentStyle : int8_t {
     /// Leave this component of the literal as is.
     NLCS_Leave,
-    /// Always format this component with upper case characters.
-    NLCS_Always,
-    /// Never format this component with upper case characters.
-    NLCS_Never,
+    /// Format this component with upper case characters.
+    NLCS_Upper,
+    /// Format this component with lower case characters.
+    NLCS_Lower,
   };
 
-  /// Character case format for different components of a numeric literal.
+  /// Separate control for each numeric literal component.
   struct NumericLiteralCaseStyle {
-    /// Format floating point exponent separator character case.
-    /// \code{.text}
-    ///   /* UpperCaseFloatExponentSeparator = Leave */
+    /// Format floating point exponent separator letter case.
+    /// \code
+    ///   /* ExponentLetter = Leave */
     ///   float a = 6.02e23 + 1.0E10;
-    ///   /* UpperCaseFloatExponentSeparator = Always */
+    ///   /* ExponentLetter = Upper */
     ///   float a = 6.02E23 + 1.0E10;
-    ///   /* UpperCaseFloatExponentSeparator = Never */
+    ///   /* ExponentLetter = Lower */
     ///   float a = 6.02e23 + 1.0e10;
     /// \endcode
-    NumericLiteralComponentStyle UpperCaseFloatExponentSeparator;
+    NumericLiteralComponentStyle ExponentLetter;
     /// Format hexadecimal digit case.
-    /// \code{.text}
-    ///   /* UpperCaseHexDigit = Leave */
+    /// \code
+    ///   /* HexDigit = Leave */
     ///   a = 0xaBcDeF;
-    ///   /* UpperCaseHexDigit = Always */
+    ///   /* HexDigit = Upper */
     ///   a = 0xABCDEF;
-    ///   /* UpperCaseHexDigit = Never */
+    ///   /* HexDigit = Lower */
     ///   a = 0xabcdef;
     /// \endcode
-    NumericLiteralComponentStyle UpperCaseHexDigit;
+    NumericLiteralComponentStyle HexDigit;
     /// Format integer prefix case.
-    /// \code{.text}
-    ///    /* UpperCasePrefix = Leave */
+    /// \code
+    ///    /* Prefix = Leave */
     ///    a = 0XF0 | 0b1;
-    ///    /* UpperCasePrefix = Always */
+    ///    /* Prefix = Upper */
     ///    a = 0XF0 | 0B1;
-    ///    /* UpperCasePrefix = Never */
+    ///    /* Prefix = Lower */
     ///    a = 0xF0 | 0b1;
     /// \endcode
-    NumericLiteralComponentStyle UpperCasePrefix;
-    /// Format suffix case. This option excludes case-specific reserved
+    NumericLiteralComponentStyle Prefix;
+    /// Format suffix case. This option excludes case-sensitive reserved
     /// suffixes, such as ``min`` in C++.
-    /// \code{.text}
-    ///   /* UpperCaseSuffix = Leave */
+    /// \code
+    ///   /* Suffix = Leave */
     ///   a = 1uLL;
-    ///   /* UpperCaseSuffix = Always */
+    ///   /* Suffix = Upper */
     ///   a = 1ULL;
-    ///   /* UpperCaseSuffix = Never */
+    ///   /* Suffix = Lower */
     ///   a = 1ull;
     /// \endcode
-    NumericLiteralComponentStyle UpperCaseSuffix;
+    NumericLiteralComponentStyle Suffix;
 
     bool operator==(const NumericLiteralCaseStyle &R) const {
-      return UpperCaseFloatExponentSeparator ==
-                 R.UpperCaseFloatExponentSeparator &&
-             UpperCaseHexDigit == R.UpperCaseHexDigit &&
-             UpperCasePrefix == R.UpperCasePrefix &&
-             UpperCaseSuffix == R.UpperCaseSuffix;
+      return ExponentLetter == R.ExponentLetter && HexDigit == R.HexDigit &&
+             Prefix == R.Prefix && Suffix == R.Suffix;
     }
+
     bool operator!=(const NumericLiteralCaseStyle &R) const {
       return !(*this == R);
     }
