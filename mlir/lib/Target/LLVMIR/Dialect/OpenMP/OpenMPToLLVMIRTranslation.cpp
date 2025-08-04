@@ -3212,6 +3212,7 @@ static llvm::omp::Directive convertCancellationConstructType(
   case omp::ClauseCancellationConstructType::Taskgroup:
     return llvm::omp::Directive::OMPD_taskgroup;
   }
+  llvm_unreachable("Unhandled cancellation construct type");
 }
 
 static LogicalResult

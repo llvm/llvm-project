@@ -1,6 +1,8 @@
 #include <gpuintrin.h>
 #include <stdint.h>
 
+extern "C" {
+
 uint32_t global[64];
 
 [[gnu::constructor(202)]] void ctorc() {
@@ -23,3 +25,4 @@ __gpu_kernel void global_ctor(uint32_t *out) {
   out[__gpu_thread_id(0) + (__gpu_num_threads(0) * __gpu_block_id(0))] =
       global[__gpu_thread_id(0)];
 }
+} // extern "C"

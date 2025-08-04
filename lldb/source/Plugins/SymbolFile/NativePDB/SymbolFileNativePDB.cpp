@@ -1720,18 +1720,22 @@ void SymbolFileNativePDB::FindTypes(const lldb_private::TypeQuery &query,
 
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
-  std::vector<TypeIndex> matches =
-      m_index->tpi().findRecordsByName(query.GetTypeBasename().GetStringRef());
+  // We can't query for the full name because the type might reside
+  // in an anonymous namespace. Search for the basename in our map and check the
+  // matching types afterwards.
+  std::vector<uint32_t> matches;
+  m_type_base_names.GetValues(query.GetTypeBasename(), matches);
 
-  for (TypeIndex type_idx : matches) {
-    TypeSP type_sp = GetOrCreateType(type_idx);
-    if (!type_sp)
+  for (uint32_t match_idx : matches) {
+    std::vector context = GetContextForType(TypeIndex(match_idx));
+    if (context.empty())
       continue;
 
-    // We resolved a type. Get the fully qualified name to ensure it matches.
-    ConstString name = type_sp->GetQualifiedName();
-    TypeQuery type_match(name.GetStringRef(), TypeQueryOptions::e_exact_match);
-    if (query.ContextMatches(type_match.GetContextRef())) {
+    if (query.ContextMatches(context)) {
+      TypeSP type_sp = GetOrCreateType(TypeIndex(match_idx));
+      if (!type_sp)
+        continue;
+
       results.InsertUnique(type_sp);
       if (results.Done(query))
         return;
@@ -2201,10 +2205,14 @@ void SymbolFileNativePDB::BuildParentMap() {
     CVTagRecord tag = CVTagRecord::create(type);
 
     RecordIndices &indices = record_indices[tag.asTag().getUniqueName()];
-    if (tag.asTag().isForwardRef())
+    if (tag.asTag().isForwardRef()) {
       indices.forward = *ti;
-    else
+    } else {
       indices.full = *ti;
+
+      auto base_name = MSVCUndecoratedNameParser::DropScope(tag.name());
+      m_type_base_names.Append(ConstString(base_name), ti->getIndex());
+    }
 
     if (indices.full != TypeIndex::None() &&
         indices.forward != TypeIndex::None()) {
@@ -2260,6 +2268,10 @@ void SymbolFileNativePDB::BuildParentMap() {
     if (llvm::Error error = visitMemberRecordStream(field_list.Data, process))
       llvm::consumeError(std::move(error));
   }
+
+  // After calling Append(), the type-name map needs to be sorted again to be
+  // able to look up a type by its name.
+  m_type_base_names.Sort();
 
   // Now that we know the forward -> full mapping of all type indices, we can
   // re-write all the indices.  At the end of this process, we want a mapping
@@ -2352,4 +2364,53 @@ SymbolFileNativePDB::GetParentType(llvm::codeview::TypeIndex ti) {
   if (parent_iter == m_parent_types.end())
     return std::nullopt;
   return parent_iter->second;
+}
+
+std::vector<CompilerContext>
+SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
+  CVType type = m_index->tpi().getType(ti);
+  if (!IsTagRecord(type))
+    return {};
+
+  CVTagRecord tag = CVTagRecord::create(type);
+
+  std::optional<Type::ParsedName> parsed_name =
+      Type::GetTypeScopeAndBasename(tag.name());
+  if (!parsed_name)
+    return {{tag.contextKind(), ConstString(tag.name())}};
+
+  std::vector<CompilerContext> ctx;
+  // assume everything is a namespace at first
+  for (llvm::StringRef scope : parsed_name->scope) {
+    ctx.emplace_back(CompilerContextKind::Namespace, ConstString(scope));
+  }
+  // we know the kind of our own type
+  ctx.emplace_back(tag.contextKind(), ConstString(parsed_name->basename));
+
+  // try to find the kind of parents
+  for (auto &el : llvm::reverse(llvm::drop_end(ctx))) {
+    std::optional<TypeIndex> parent = GetParentType(ti);
+    if (!parent)
+      break;
+
+    ti = *parent;
+    type = m_index->tpi().getType(ti);
+    switch (type.kind()) {
+    case LF_CLASS:
+    case LF_STRUCTURE:
+    case LF_INTERFACE:
+      el.kind = CompilerContextKind::ClassOrStruct;
+      continue;
+    case LF_UNION:
+      el.kind = CompilerContextKind::Union;
+      continue;
+    case LF_ENUM:
+      el.kind = CompilerContextKind::Enum;
+      continue;
+    default:
+      break;
+    }
+    break;
+  }
+  return ctx;
 }
