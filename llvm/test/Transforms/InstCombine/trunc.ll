@@ -1218,3 +1218,145 @@ define i2 @neg_trunc_nsw_i2_non_zero(i8 %1) {
   %ret = trunc nsw i8 %1 to i2
   ret i2 %ret
 }
+
+define i1 @trunc_nuw_i1_dominating_icmp_ne_1(i8 %x) {
+; CHECK-LABEL: @trunc_nuw_i1_dominating_icmp_ne_1(
+; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    br i1 [[ICMP_NOT]], label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[RET1:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i1 true
+;
+  %icmp = icmp ne i8 %x, 1
+  br i1 %icmp, label %bb1, label %bb2
+bb1:
+  %ret1 = trunc nuw i8 %x to i1
+  ret i1 %ret1
+bb2:
+  %ret2 = trunc nuw i8 %x to i1
+  ret i1 %ret2
+}
+
+define i1 @trunc_nuw_i1_dominating_icmp_eq_1(i8 %x) {
+; CHECK-LABEL: @trunc_nuw_i1_dominating_icmp_eq_1(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    br i1 [[ICMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       bb2:
+; CHECK-NEXT:    [[RET2:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    ret i1 [[RET2]]
+;
+  %icmp = icmp eq i8 %x, 1
+  br i1 %icmp, label %bb1, label %bb2
+bb1:
+  %ret1 = trunc nuw i8 %x to i1
+  ret i1 %ret1
+bb2:
+  %ret2 = trunc nuw i8 %x to i1
+  ret i1 %ret2
+}
+
+define i1 @trunc_nuw_i1_dominating_icmp_ne_0(i8 %x) {
+; CHECK-LABEL: @trunc_nuw_i1_dominating_icmp_ne_0(
+; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[ICMP_NOT]], label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i1 false
+;
+  %icmp = icmp ne i8 %x, 0
+  br i1 %icmp, label %bb1, label %bb2
+bb1:
+  %ret1 = trunc nuw i8 %x to i1
+  ret i1 %ret1
+bb2:
+  %ret2 = trunc nuw i8 %x to i1
+  ret i1 %ret2
+}
+
+define i1 @trunc_nuw_i1_dominating_icmp_eq_0(i8 %x) {
+; CHECK-LABEL: @trunc_nuw_i1_dominating_icmp_eq_0(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[ICMP]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    ret i1 false
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i1 true
+;
+  %icmp = icmp eq i8 %x, 0
+  br i1 %icmp, label %bb1, label %bb2
+bb1:
+  %ret1 = trunc nuw i8 %x to i1
+  ret i1 %ret1
+bb2:
+  %ret2 = trunc nuw i8 %x to i1
+  ret i1 %ret2
+}
+
+define i1 @neg_trunc_i1_dominating_icmp_ne_1(i8 %x) {
+; CHECK-LABEL: @neg_trunc_i1_dominating_icmp_ne_1(
+; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    br i1 [[ICMP_NOT]], label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[RET1:%.*]] = trunc i8 [[X]] to i1
+; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i1 true
+;
+  %icmp = icmp ne i8 %x, 1
+  br i1 %icmp, label %bb1, label %bb2
+bb1:
+  %ret1 = trunc i8 %x to i1
+  ret i1 %ret1
+bb2:
+  %ret2 = trunc i8 %x to i1
+  ret i1 %ret2
+}
+
+define i2 @neg_trunc_nuw_i2_dominating_icmp_ne_1(i8 %x) {
+; CHECK-LABEL: @neg_trunc_nuw_i2_dominating_icmp_ne_1(
+; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    br i1 [[ICMP_NOT]], label [[BB2:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[RET1:%.*]] = trunc nuw i8 [[X]] to i2
+; CHECK-NEXT:    ret i2 [[RET1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i2 1
+;
+  %icmp = icmp ne i8 %x, 1
+  br i1 %icmp, label %bb1, label %bb2
+bb1:
+  %ret1 = trunc nuw i8 %x to i2
+  ret i2 %ret1
+bb2:
+  %ret2 = trunc nuw i8 %x to i2
+  ret i2 %ret2
+}
+
+define i1 @neg_trunc_nuw_i1_not_dominating_icmp_ne_1(i8 %x, i1 %y) {
+; CHECK-LABEL: @neg_trunc_nuw_i1_not_dominating_icmp_ne_1(
+; CHECK-NEXT:    br i1 [[Y:%.*]], label [[BB1:%.*]], label [[BB0:%.*]]
+; CHECK:       bb0:
+; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i8 [[X:%.*]], 1
+; CHECK-NEXT:    br i1 [[ICMP_NOT]], label [[BB2:%.*]], label [[BB1]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[RET1:%.*]] = trunc nuw i8 [[X]] to i1
+; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK:       bb2:
+; CHECK-NEXT:    ret i1 true
+;
+  br i1 %y, label %bb1, label %bb0
+bb0:
+  %icmp = icmp ne i8 %x, 1
+  br i1 %icmp, label %bb1, label %bb2
+bb1:
+  %ret1 = trunc nuw i8 %x to i1
+  ret i1 %ret1
+bb2:
+  %ret2 = trunc nuw i8 %x to i1
+  ret i1 %ret2
+}
