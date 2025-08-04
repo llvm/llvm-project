@@ -86,8 +86,8 @@ unsigned PPCELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case PPC::S_TPREL_HIGHEST:
   case PPC::S_TPREL_HIGHESTA:
   case PPC::S_TPREL_LO:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
