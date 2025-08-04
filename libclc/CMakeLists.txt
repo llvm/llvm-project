@@ -73,6 +73,9 @@ if( LIBCLC_STANDALONE_BUILD OR CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DI
       set( ${tool}_target )
     endforeach()
   endif()
+
+  # Setup the paths where libclc runtimes should be stored.
+  set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
 else()
   # In-tree configuration
   set( LIBCLC_STANDALONE_BUILD FALSE )
@@ -92,10 +95,14 @@ else()
     get_host_tool_path( llvm-link LLVM_LINK llvm-link_exe llvm-link_target )
     get_host_tool_path( opt OPT opt_exe opt_target )
   endif()
-endif()
 
-# Setup the paths where libclc runtimes should be stored.
-set( LIBCLC_OUTPUT_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR} )
+  # Setup the paths where libclc runtimes should be stored. By default, in an
+  # in-tree build we place the libraries in clang's resource driectory.
+  get_clang_resource_dir( LIBCLC_OUTPUT_DIR PREFIX ${LLVM_LIBRARY_OUTPUT_INTDIR}/.. )
+
+  # Note we do not adhere to LLVM_ENABLE_PER_TARGET_RUNTIME_DIR.
+  set( LIBCLC_OUTPUT_LIBRARY_DIR ${LIBCLC_OUTPUT_DIR}/lib/libclc )
+endif()
 
 if( EXISTS ${LIBCLC_CUSTOM_LLVM_TOOLS_BINARY_DIR} )
   message( WARNING "Using custom LLVM tools to build libclc: "
