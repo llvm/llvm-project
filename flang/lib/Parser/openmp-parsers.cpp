@@ -1845,7 +1845,8 @@ TYPE_PARSER( //
     MakeBlockConstruct(llvm::omp::Directive::OMPD_target_data) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_target_parallel) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_target_teams) ||
-    MakeBlockConstruct(llvm::omp::Directive::OMPD_target_teams_workdistribute) ||
+    MakeBlockConstruct(
+        llvm::omp::Directive::OMPD_target_teams_workdistribute) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_target) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_task) ||
     MakeBlockConstruct(llvm::omp::Directive::OMPD_taskgroup) ||
