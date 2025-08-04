@@ -1,0 +1,38 @@
+// RUN: cir-opt %s | FileCheck %s
+!s32i = !cir.int<s, 32>
+
+cir.func @s0() {
+  %1 = cir.const #cir.int<2> : !s32i
+  cir.switch (%1 : !s32i) {
+    cir.case (default, []) {
+      cir.return
+    }
+    cir.case (equal, [#cir.int<3> : !s32i]) {
+      cir.yield
+    }
+    cir.case (anyof, [#cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i]) {
+      cir.break
+    }
+    cir.case (equal, [#cir.int<5> : !s32i]) {
+      cir.yield
+    }
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.switch (%0 : !s32i) {
+// CHECK-NEXT: cir.case(default, [])  {
+// CHECK-NEXT:   cir.return
+// CHECK-NEXT: }
+// CHECK-NEXT: cir.case(equal, [#cir.int<3> : !s32i])  {
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: cir.case(anyof, [#cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i]) {
+// CHECK-NEXT:   cir.break
+// CHECK-NEXT: }
+// CHECK-NEXT: cir.case(equal, [#cir.int<5> : !s32i])  {
+// CHECK-NEXT:   cir.yield
+// CHECK-NEXT: }
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: }

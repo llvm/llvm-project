@@ -9,14 +9,13 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_LDEXPTEST_H
 
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/limits.h" // INT_MAX
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/NormalFloat.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <stdint.h>
 
 using LIBC_NAMESPACE::Sign;
 
@@ -50,7 +49,8 @@ public:
 
     if constexpr (sizeof(U) < sizeof(long) || sizeof(long) == sizeof(int))
       return;
-    long long_exp_array[4] = {LONG_MIN, INT_MIN - 1L, INT_MAX + 1L, LONG_MAX};
+    long long_exp_array[4] = {LONG_MIN, static_cast<long>(INT_MIN - 1LL),
+                              static_cast<long>(INT_MAX + 1LL), LONG_MAX};
     for (long exp : long_exp_array) {
       ASSERT_FP_EQ(zero, func(zero, exp));
       ASSERT_FP_EQ(neg_zero, func(neg_zero, exp));

@@ -7,21 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "UEFI.h"
-#include "CommonArgs.h"
-#include "Darwin.h"
-#include "clang/Basic/CharInfo.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -34,6 +27,24 @@ UEFI::UEFI(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
     : ToolChain(D, Triple, Args) {}
 
 Tool *UEFI::buildLinker() const { return new tools::uefi::Linker(*this); }
+
+void UEFI::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
+                                     ArgStringList &CC1Args) const {
+  if (DriverArgs.hasArg(options::OPT_nostdinc))
+    return;
+
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> Dir(getDriver().ResourceDir);
+    llvm::sys::path::append(Dir, "include");
+    addSystemInclude(DriverArgs, CC1Args, Dir.str());
+  }
+
+  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
+    return;
+
+  if (std::optional<std::string> Path = getStdlibIncludePath())
+    addSystemInclude(DriverArgs, CC1Args, *Path);
+}
 
 void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                        const InputInfo &Output,
@@ -62,9 +73,6 @@ void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // "Terminal Service Aware" flag is not needed for UEFI applications.
   CmdArgs.push_back("-tsaware:no");
 
-  // EFI_APPLICATION to be linked as DLL by default.
-  CmdArgs.push_back("-dll");
-
   if (Args.hasArg(options::OPT_g_Group, options::OPT__SLASH_Z7))
     CmdArgs.push_back("-debug");
 
@@ -75,8 +83,8 @@ void tools::uefi::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // This should ideally be handled by ToolChain::GetLinkerPath but we need
   // to special case some linker paths. In the case of lld, we need to
   // translate 'lld' into 'lld-link'.
-  StringRef Linker =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER);
+  StringRef Linker = Args.getLastArgValue(options::OPT_fuse_ld_EQ,
+                                          TC.getDriver().getPreferredLinker());
   if (Linker.empty() || Linker == "lld")
     Linker = "lld-link";
 

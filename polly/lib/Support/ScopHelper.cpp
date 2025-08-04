@@ -165,10 +165,10 @@ void polly::simplifyRegion(Region *R, DominatorTree *DT, LoopInfo *LI,
 // Split the block into two successive blocks.
 //
 // Like llvm::SplitBlock, but also preserves RegionInfo
-static BasicBlock *splitBlock(BasicBlock *Old, Instruction *SplitPt,
+static BasicBlock *splitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                               DominatorTree *DT, llvm::LoopInfo *LI,
                               RegionInfo *RI) {
-  assert(Old && SplitPt);
+  assert(Old);
 
   // Before:
   //
@@ -203,7 +203,7 @@ void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, DominatorTree *DT,
     ++I;
 
   // splitBlock updates DT, LI and RI.
-  splitBlock(EntryBlock, &*I, DT, LI, RI);
+  splitBlock(EntryBlock, I, DT, LI, RI);
 }
 
 void polly::splitEntryBlockForAlloca(BasicBlock *EntryBlock, Pass *P) {
@@ -261,8 +261,8 @@ struct ScopExpander final : SCEVVisitor<ScopExpander, const SCEV *> {
         VMap(VMap), LoopMap(LoopMap), RTCBB(RTCBB), GenSE(GenSE), GenFn(GenFn) {
   }
 
-  Value *expandCodeFor(const SCEV *E, Type *Ty, Instruction *IP) {
-    assert(isInGenRegion(IP) &&
+  Value *expandCodeFor(const SCEV *E, Type *Ty, BasicBlock::iterator IP) {
+    assert(isInGenRegion(&*IP) &&
            "ScopExpander assumes to be applied to generated code region");
     const SCEV *GenE = visit(E);
     return Expander.expandCodeFor(GenE, Ty, IP);
@@ -305,7 +305,7 @@ private:
   bool isInGenRegion(Instruction *Inst) { return !isInOrigRegion(Inst); }
 
   const SCEV *visitGenericInst(const SCEVUnknown *E, Instruction *Inst,
-                               Instruction *IP) {
+                               BasicBlock::iterator IP) {
     if (!Inst || isInGenRegion(Inst))
       return E;
 
@@ -315,7 +315,7 @@ private:
     auto *InstClone = Inst->clone();
     for (auto &Op : Inst->operands()) {
       assert(GenSE.isSCEVable(Op->getType()));
-      auto *OpSCEV = GenSE.getSCEV(Op);
+      const SCEV *OpSCEV = GenSE.getSCEV(Op);
       auto *OpClone = expandCodeFor(OpSCEV, Op->getType(), IP);
       InstClone->replaceUsesOfWith(Op, OpClone);
     }
@@ -330,7 +330,7 @@ private:
     // If a value mapping was given try if the underlying value is remapped.
     Value *NewVal = VMap ? VMap->lookup(E->getValue()) : nullptr;
     if (NewVal) {
-      auto *NewE = GenSE.getSCEV(NewVal);
+      const SCEV *NewE = GenSE.getSCEV(NewVal);
 
       // While the mapped value might be different the SCEV representation might
       // not be. To this end we will check before we go into recursion here.
@@ -341,19 +341,19 @@ private:
     }
 
     Instruction *Inst = dyn_cast<Instruction>(E->getValue());
-    Instruction *IP;
+    BasicBlock::iterator IP;
     if (Inst && isInGenRegion(Inst))
-      IP = Inst;
+      IP = Inst->getIterator();
     else if (R.getEntry()->getParent() != GenFn) {
       // RTCBB is in the original function, but we are generating for a
       // subfunction so we cannot emit to RTCBB. Usually, we land here only
       // because E->getValue() is not an instruction but a global or constant
       // which do not need to emit anything.
-      IP = GenFn->getEntryBlock().getTerminator();
+      IP = GenFn->getEntryBlock().getTerminator()->getIterator();
     } else if (Inst && RTCBB->getParent() == Inst->getFunction())
-      IP = RTCBB->getTerminator();
+      IP = RTCBB->getTerminator()->getIterator();
     else
-      IP = RTCBB->getParent()->getEntryBlock().getTerminator();
+      IP = RTCBB->getParent()->getEntryBlock().getTerminator()->getIterator();
 
     if (!Inst || (Inst->getOpcode() != Instruction::SRem &&
                   Inst->getOpcode() != Instruction::SDiv))
@@ -368,9 +368,8 @@ private:
     Value *LHS = expandCodeFor(LHSScev, E->getType(), IP);
     Value *RHS = expandCodeFor(RHSScev, E->getType(), IP);
 
-    Inst =
-        BinaryOperator::Create((Instruction::BinaryOps)Inst->getOpcode(), LHS,
-                               RHS, Inst->getName() + Name, IP->getIterator());
+    Inst = BinaryOperator::Create((Instruction::BinaryOps)Inst->getOpcode(),
+                                  LHS, RHS, Inst->getName() + Name, IP);
     return GenSE.getSCEV(Inst);
   }
 
@@ -456,7 +455,7 @@ private:
 
     // FIXME: This emits a SCEV for GenSE (since GenLRepl will refer to the
     // induction variable of a generated loop), so we should not use SCEVVisitor
-    // with it. Howver, it still contains references to the SCoP region.
+    // with it. However, it still contains references to the SCoP region.
     return visit(Evaluated);
   }
   ///}
@@ -465,7 +464,7 @@ private:
 Value *polly::expandCodeFor(Scop &S, llvm::ScalarEvolution &SE,
                             llvm::Function *GenFn, ScalarEvolution &GenSE,
                             const DataLayout &DL, const char *Name,
-                            const SCEV *E, Type *Ty, Instruction *IP,
+                            const SCEV *E, Type *Ty, BasicBlock::iterator IP,
                             ValueMapT *VMap, LoopToScevMapT *LoopMap,
                             BasicBlock *RTCBB) {
   ScopExpander Expander(S.getRegion(), SE, GenFn, GenSE, DL, Name, VMap,
@@ -602,9 +601,13 @@ bool polly::isHoistableLoad(LoadInst *LInst, Region &R, LoopInfo &LI,
     L = L->getParentLoop();
   }
 
+  if (!Ptr->hasUseList())
+    return true;
+
   for (auto *User : Ptr->users()) {
     auto *UserI = dyn_cast<Instruction>(User);
-    if (!UserI || !R.contains(UserI))
+    if (!UserI || UserI->getFunction() != LInst->getFunction() ||
+        !R.contains(UserI))
       continue;
     if (!UserI->mayWriteToMemory())
       continue;

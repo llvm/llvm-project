@@ -19,6 +19,7 @@ def Transform_Dialect : Dialect {
   let cppNamespace = "::mlir::transform";
 
   let hasOperationAttrVerify = 1;
+  let useDefaultAttributePrinterParser = 1;
   let extraClassDeclaration = [{
     /// Symbol name for the default entry point "named sequence".
     constexpr const static ::llvm::StringLiteral

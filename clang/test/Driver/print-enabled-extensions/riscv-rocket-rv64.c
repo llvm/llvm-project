@@ -4,10 +4,10 @@
 // Simple litmus test to check the frontend handling of this option is
 // enabled.
 
-// CHECK: Extensions enabled for the given RISC-V target 
+// CHECK: Extensions enabled for the given RISC-V target
 // CHECK-EMPTY:
-// CHECK-NEXT: Name                 Version   Description 
-// CHECK-NEXT:     i                    2.1       'I' (Base Integer Instruction Set) 
-// CHECK-NEXT:     zicsr                2.0       'zicsr' (CSRs) 
-// CHECK-NEXT:     zifencei             2.0       'Zifencei' (fence.i) 
+// CHECK-NEXT: Name                 Version   Description
+// CHECK-NEXT:     i                    2.1       'I' (Base Integer Instruction Set)
+// CHECK-NEXT:     zicsr                2.0       'Zicsr' (CSRs)
+// CHECK-NEXT:     zifencei             2.0       'Zifencei' (fence.i)
 // CHECK-EMPTY:

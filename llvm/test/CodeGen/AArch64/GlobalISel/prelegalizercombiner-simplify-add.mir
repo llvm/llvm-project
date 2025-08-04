@@ -32,11 +32,12 @@ body:             |
     ; Fold (A + (0-B)) -> A - B
     ; CHECK-LABEL: name: pat2
     ; CHECK: liveins: $x0, $x1
-    ; CHECK: %copy1:_(s64) = COPY $x0
-    ; CHECK: %copy2:_(s64) = COPY $x1
-    ; CHECK: %add:_(s64) = G_SUB %copy1, %copy2
-    ; CHECK: $x0 = COPY %add(s64)
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %copy2:_(s64) = COPY $x1
+    ; CHECK-NEXT: %add:_(s64) = G_SUB %copy1, %copy2
+    ; CHECK-NEXT: $x0 = COPY %add(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %copy1:_(s64) = COPY $x0
     %copy2:_(s64) = COPY $x1
     %zero:_(s64) = G_CONSTANT i64 0

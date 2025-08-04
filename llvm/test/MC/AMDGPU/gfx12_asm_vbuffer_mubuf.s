@@ -2636,16 +2636,16 @@ buffer_atomic_pk_add_bf16 v5, off, s[8:11], s3 offset:8388607 th:TH_ATOMIC_CASCA
 // GFX12: encoding: [0x03,0x80,0x16,0xc4,0x05,0x10,0xe8,0x00,0x00,0xff,0xff,0x7f]
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], 0 offset:8388607
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], -1 offset:8388607
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], 0.5 offset:8388607
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], -4.0 offset:8388607
-// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 buffer_atomic_pk_add_bf16 v5, off, s[8:11], s3 offset:8388607 glc
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction

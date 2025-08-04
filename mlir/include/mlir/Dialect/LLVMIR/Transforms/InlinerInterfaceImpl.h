@@ -23,6 +23,13 @@ namespace LLVM {
 void registerInlinerInterface(DialectRegistry &registry);
 
 } // namespace LLVM
+
+namespace NVVM {
+/// Register the `NVVMInlinerInterface` implementation of
+/// `DialectInlinerInterface` with the NVVM dialect.
+void registerInlinerInterface(DialectRegistry &registry);
+} // namespace NVVM
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_INLINERINTERFACEIMPL_H

@@ -6,12 +6,12 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_udivrem_64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[UDIV:%[0-9]+]]:_(s64) = G_UDIV [[COPY]], [[COPY1]]
-    ; CHECK: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[UDIV]], [[COPY1]]
-    ; CHECK: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[MUL]]
-    ; CHECK: $x0 = COPY [[UDIV]](s64)
-    ; CHECK: $x1 = COPY [[SUB]](s64)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[UDIV:%[0-9]+]]:_(s64) = G_UDIV [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s64) = G_MUL [[UDIV]], [[COPY1]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[MUL]]
+    ; CHECK-NEXT: $x0 = COPY [[UDIV]](s64)
+    ; CHECK-NEXT: $x1 = COPY [[SUB]](s64)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s64), %3:_(s64) = G_UDIVREM %0, %1
@@ -25,14 +25,14 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_sdivrem_32
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[TRUNC]], [[TRUNC1]]
-    ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[SDIV]], [[TRUNC1]]
-    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[MUL]]
-    ; CHECK: $w0 = COPY [[SDIV]](s32)
-    ; CHECK: $w1 = COPY [[SUB]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[SDIV]], [[TRUNC1]]
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[TRUNC]], [[MUL]]
+    ; CHECK-NEXT: $w0 = COPY [[SDIV]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[SUB]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s32) = G_TRUNC %0(s64)
@@ -48,18 +48,18 @@ body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: test_sdivrem_8
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
-    ; CHECK: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC]], 8
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
-    ; CHECK: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC1]], 8
-    ; CHECK: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[SEXT_INREG]], [[SEXT_INREG1]]
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[TRUNC1]](s32)
-    ; CHECK: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[SDIV]], [[COPY2]]
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[TRUNC]](s32)
-    ; CHECK: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY3]], [[MUL]]
-    ; CHECK: $w0 = COPY [[SDIV]](s32)
-    ; CHECK: $w1 = COPY [[SUB]](s32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC]], 8
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[TRUNC1]], 8
+    ; CHECK-NEXT: [[SDIV:%[0-9]+]]:_(s32) = G_SDIV [[SEXT_INREG]], [[SEXT_INREG1]]
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY [[TRUNC1]](s32)
+    ; CHECK-NEXT: [[MUL:%[0-9]+]]:_(s32) = G_MUL [[SDIV]], [[COPY2]]
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[TRUNC]](s32)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY3]], [[MUL]]
+    ; CHECK-NEXT: $w0 = COPY [[SDIV]](s32)
+    ; CHECK-NEXT: $w1 = COPY [[SUB]](s32)
     %0:_(s64) = COPY $x0
     %1:_(s64) = COPY $x1
     %2:_(s8) = G_TRUNC %0(s64)

@@ -210,7 +210,7 @@ void DeclInfo::fill() {
   IsInstanceMethod = false;
   IsClassMethod = false;
   IsVariadic = false;
-  ParamVars = std::nullopt;
+  ParamVars = {};
   TemplateParameters = nullptr;
 
   if (!CommentDecl) {
@@ -289,6 +289,13 @@ void DeclInfo::fill() {
     Kind = ClassKind;
     TemplateKind = TemplatePartialSpecialization;
     TemplateParameters = CTPSD->getTemplateParameters();
+    break;
+  }
+  case Decl::VarTemplatePartialSpecialization: {
+    const auto *VTPSD = cast<VarTemplatePartialSpecializationDecl>(CommentDecl);
+    Kind = VariableKind;
+    TemplateKind = TemplatePartialSpecialization;
+    TemplateParameters = VTPSD->getTemplateParameters();
     break;
   }
   case Decl::ClassTemplateSpecialization:

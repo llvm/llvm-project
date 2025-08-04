@@ -16,10 +16,13 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
 #include <vector>
 
+#include "sized_allocator.h"
 #include "test_macros.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 template <class Iter, class Container>
 TEST_CONSTEXPR_CXX20 void
@@ -45,53 +48,96 @@ struct Test {
   }
 };
 
-TEST_CONSTEXPR_CXX20 bool test() {
-  types::for_each(types::forward_iterator_list<char*>(), Test<char>());
-  types::for_each(types::forward_iterator_list<int*>(), Test<int>());
-  {   // test vector<bool>::iterator optimization
-    { // simple case
-      std::vector<bool> in(4, false);
-      std::vector<bool> expected(4, true);
-      std::fill(in.begin(), in.end(), true);
-      assert(in == expected);
-    }
-    { // partial byte in the front is not filled
-      std::vector<bool> in(8, false);
-      std::vector<bool> expected(8, true);
-      expected[0] = false;
-      expected[1] = false;
+TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
+  {   // Test cases validating leading/trailing bits unfilled remain unchanged
+    { // Leading bits are not filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      expected[0] = expected[1] = false;
       std::fill(in.begin() + 2, in.end(), true);
       assert(in == expected);
     }
-    { // partial byte in the back is not filled
-      std::vector<bool> in(8, false);
-      std::vector<bool> expected(8, true);
-      expected[6] = false;
-      expected[7] = false;
+    { // Trailing bits are not filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      expected[N - 1] = expected[N - 2] = false;
       std::fill(in.begin(), in.end() - 2, true);
       assert(in == expected);
     }
-    { // partial byte in the front and back is not filled
-      std::vector<bool> in(16, false);
-      std::vector<bool> expected(16, true);
-      expected[0]  = false;
-      expected[1]  = false;
-      expected[14] = false;
-      expected[15] = false;
-      std::fill(in.begin() + 2, in.end() - 2, true);
-      assert(in == expected);
-    }
-    { // only a few bits of a byte are set
-      std::vector<bool> in(8, false);
-      std::vector<bool> expected(8, true);
-      expected[0] = false;
-      expected[1] = false;
-      expected[6] = false;
-      expected[7] = false;
+    { // Leading and trailing bits are not filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      expected[0] = expected[1] = expected[N - 1] = expected[N - 2] = false;
       std::fill(in.begin() + 2, in.end() - 2, true);
       assert(in == expected);
     }
   }
+
+  {   // Test cases with full or partial bytes filled
+    { // Full bytes filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      std::fill(in.begin(), in.end(), true);
+      assert(in == expected);
+    }
+    { // Partial bytes with offset filled
+      std::vector<bool> in(N, false);
+      std::vector<bool> expected(N, true);
+      std::fill(in.begin() + 4, in.end() - 4, true);
+      std::fill(expected.begin(), expected.begin() + 4, false);
+      std::fill(expected.end() - 4, expected.end(), false);
+      assert(in == expected);
+    }
+  }
+
+  return true;
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::forward_iterator_list<char*>(), Test<char>());
+  types::for_each(types::forward_iterator_list<int*>(), Test<int>());
+
+  { // Test vector<bool>::iterator optimization
+    assert(test_vector_bool(8));
+    assert(test_vector_bool(19));
+    assert(test_vector_bool(32));
+    assert(test_vector_bool(49));
+    assert(test_vector_bool(64));
+    assert(test_vector_bool(199));
+    assert(test_vector_bool(256));
+
+    // Make sure std::fill behaves properly with std::vector<bool> iterators with custom size types.
+    // See https://github.com/llvm/llvm-project/pull/122410.
+    {
+      using Alloc = sized_allocator<bool, std::uint8_t, std::int8_t>;
+      std::vector<bool, Alloc> in(100, false, Alloc(1));
+      std::vector<bool, Alloc> expected(100, true, Alloc(1));
+      std::fill(in.begin(), in.end(), true);
+      assert(in == expected);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint16_t, std::int16_t>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      std::vector<bool, Alloc> expected(200, true, Alloc(1));
+      std::fill(in.begin(), in.end(), true);
+      assert(in == expected);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint32_t, std::int32_t>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      std::vector<bool, Alloc> expected(200, true, Alloc(1));
+      std::fill(in.begin(), in.end(), true);
+      assert(in == expected);
+    }
+    {
+      using Alloc = sized_allocator<bool, std::uint64_t, std::int64_t>;
+      std::vector<bool, Alloc> in(200, false, Alloc(1));
+      std::vector<bool, Alloc> expected(200, true, Alloc(1));
+      std::fill(in.begin(), in.end(), true);
+      assert(in == expected);
+    }
+  }
+
   return true;
 }
 

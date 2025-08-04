@@ -109,8 +109,10 @@ public:
 
   Scalar &ResolveValue(ExecutionContext *exe_ctx, Module *module = nullptr);
 
+  /// See comment on m_scalar to understand what GetScalar returns.
   const Scalar &GetScalar() const { return m_value; }
 
+  /// See comment on m_scalar to understand what GetScalar returns.
   Scalar &GetScalar() { return m_value; }
 
   size_t ResizeData(size_t len);
@@ -148,6 +150,32 @@ public:
   static ValueType GetValueTypeFromAddressType(AddressType address_type);
 
 protected:
+  /// Represents a value, which can be a scalar, a load address, a file address,
+  /// or a host address.
+  ///
+  /// The interpretation of `m_value` depends on `m_value_type`:
+  /// - Scalar: `m_value` contains the scalar value.
+  /// - Load Address: `m_value` contains the load address.
+  /// - File Address: `m_value` contains the file address.
+  /// - Host Address: `m_value` contains a pointer to the start of the buffer in
+  ///    host memory.
+  ///   Currently, this can point to either:
+  ///     - The `m_data_buffer` of this Value instance (e.g., in DWARF
+  ///     computations).
+  ///     - The `m_data` of a Value Object containing this Value.
+  // TODO: the GetScalar() API relies on knowledge not codified by the type
+  // system, making it hard to understand and easy to misuse.
+  // - Separate the scalar from the variable that contains the address (be it a
+  //   load, file or host address).
+  // - Rename GetScalar() to something more indicative to what the scalar is,
+  //   like GetScalarOrAddress() for example.
+  // - Split GetScalar() into two functions, GetScalar() and GetAddress(), which
+  //   verify (or assert) what m_value_type is to make sure users of the class are
+  //   querying the right thing.
+  // TODO: It's confusing to point to multiple possible buffers when the
+  // ValueType is a host address. Value should probably always own its buffer.
+  // Perhaps as a shared pointer with a copy on write system if the same buffer
+  // can be shared by multiple classes.
   Scalar m_value;
   CompilerType m_compiler_type;
   void *m_context = nullptr;

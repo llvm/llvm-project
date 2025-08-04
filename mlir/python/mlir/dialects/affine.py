@@ -156,3 +156,61 @@ def for_(
             yield iv, iter_args[0]
         else:
             yield iv
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
+class AffineIfOp(AffineIfOp):
+    """Specialization for the Affine if op class."""
+
+    def __init__(
+        self,
+        cond: IntegerSet,
+        results_: Optional[Type] = None,
+        *,
+        cond_operands: Optional[_VariadicResultValueT] = None,
+        has_else: bool = False,
+        loc=None,
+        ip=None,
+    ):
+        """Creates an Affine `if` operation.
+
+        - `cond` is the integer set used to determine which regions of code
+          will be executed.
+        - `results` are the list of types to be yielded by the operand.
+        - `cond_operands` is the list of arguments to substitute the
+          dimensions, then symbols in the `cond` integer set expression to
+          determine whether they are in the set.
+        - `has_else` determines whether the affine if operation has the else
+          branch.
+        """
+        if results_ is None:
+            results_ = []
+        if cond_operands is None:
+            cond_operands = []
+
+        if cond.n_inputs != len(cond_operands):
+            raise ValueError(
+                f"expected {cond.n_inputs} condition operands, got {len(cond_operands)}"
+            )
+
+        operands = []
+        operands.extend(cond_operands)
+        results = []
+        results.extend(results_)
+
+        super().__init__(results, cond_operands, cond)
+        self.regions[0].blocks.append(*[])
+        if has_else:
+            self.regions[1].blocks.append(*[])
+
+    @property
+    def then_block(self) -> Block:
+        """Returns the then block of the if operation."""
+        return self.regions[0].blocks[0]
+
+    @property
+    def else_block(self) -> Optional[Block]:
+        """Returns the else block of the if operation."""
+        if len(self.regions[1].blocks) == 0:
+            return None
+        return self.regions[1].blocks[0]

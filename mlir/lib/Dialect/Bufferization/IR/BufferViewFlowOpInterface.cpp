@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/IR/BufferViewFlowOpInterface.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 
 namespace mlir {
 namespace bufferization {

@@ -223,7 +223,7 @@ void DbgAssignIntrinsic::setAddress(Value *V) {
 void DbgAssignIntrinsic::setKillAddress() {
   if (isKillAddress())
     return;
-  setAddress(UndefValue::get(getAddress()->getType()));
+  setAddress(PoisonValue::get(getAddress()->getType()));
 }
 
 bool DbgAssignIntrinsic::isKillAddress() const {
@@ -239,13 +239,13 @@ void DbgAssignIntrinsic::setValue(Value *V) {
 ConstantInt *InstrProfCntrInstBase::getNumCounters() const {
   if (InstrProfValueProfileInst::classof(this))
     llvm_unreachable("InstrProfValueProfileInst does not have counters!");
-  return cast<ConstantInt>(const_cast<Value *>(getArgOperand(2)));
+  return cast<ConstantInt>(getArgOperand(2));
 }
 
 ConstantInt *InstrProfCntrInstBase::getIndex() const {
   if (InstrProfValueProfileInst::classof(this))
     llvm_unreachable("Please use InstrProfValueProfileInst::getIndex()");
-  return cast<ConstantInt>(const_cast<Value *>(getArgOperand(3)));
+  return cast<ConstantInt>(getArgOperand(3));
 }
 
 void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
@@ -255,7 +255,7 @@ void InstrProfCntrInstBase::setIndex(uint32_t Idx) {
 
 Value *InstrProfIncrementInst::getStep() const {
   if (InstrProfIncrementInstStep::classof(this)) {
-    return const_cast<Value *>(getArgOperand(4));
+    return getArgOperand(4);
   }
   const Module *M = getModule();
   LLVMContext &Context = M->getContext();
@@ -884,4 +884,32 @@ Value *GCRelocateInst::getDerivedPtr() const {
   if (auto Opt = GCInst->getOperandBundle(LLVMContext::OB_gc_live))
     return *(Opt->Inputs.begin() + getDerivedPtrIndex());
   return *(GCInst->arg_begin() + getDerivedPtrIndex());
+}
+
+ConvergenceControlInst *ConvergenceControlInst::CreateAnchor(BasicBlock &BB) {
+  Module *M = BB.getModule();
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M, llvm::Intrinsic::experimental_convergence_anchor);
+  auto *Call = CallInst::Create(Fn, "", BB.getFirstInsertionPt());
+  return cast<ConvergenceControlInst>(Call);
+}
+
+ConvergenceControlInst *ConvergenceControlInst::CreateEntry(BasicBlock &BB) {
+  Module *M = BB.getModule();
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M, llvm::Intrinsic::experimental_convergence_entry);
+  auto *Call = CallInst::Create(Fn, "", BB.getFirstInsertionPt());
+  return cast<ConvergenceControlInst>(Call);
+}
+
+ConvergenceControlInst *
+ConvergenceControlInst::CreateLoop(BasicBlock &BB,
+                                   ConvergenceControlInst *ParentToken) {
+  Module *M = BB.getModule();
+  Function *Fn = Intrinsic::getOrInsertDeclaration(
+      M, llvm::Intrinsic::experimental_convergence_loop);
+  llvm::Value *BundleArgs[] = {ParentToken};
+  llvm::OperandBundleDef OB("convergencectrl", BundleArgs);
+  auto *Call = CallInst::Create(Fn, {}, {OB}, "", BB.getFirstInsertionPt());
+  return cast<ConvergenceControlInst>(Call);
 }

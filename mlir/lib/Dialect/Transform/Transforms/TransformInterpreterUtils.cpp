@@ -18,11 +18,9 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
-#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/SourceMgr.h"
@@ -210,7 +208,7 @@ LogicalResult transform::applyTransformNamedSequence(
            << "expected one payload to be bound to the first argument, got "
            << bindings.at(0).size();
   }
-  auto *payloadRoot = bindings.at(0).front().dyn_cast<Operation *>();
+  auto *payloadRoot = dyn_cast<Operation *>(bindings.at(0).front());
   if (!payloadRoot) {
     return transformRoot->emitError() << "expected the object bound to the "
                                          "first argument to be an operation";

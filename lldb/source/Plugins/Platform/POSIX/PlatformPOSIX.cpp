@@ -12,7 +12,6 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/FunctionCaller.h"
 #include "lldb/Expression/UserExpression.h"
@@ -32,6 +31,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
@@ -536,12 +536,11 @@ Status PlatformPOSIX::EvaluateLibdlExpression(
                                          // don't do the work to trap them.
   expr_options.SetTimeout(process->GetUtilityExpressionTimeout());
 
-  Status expr_error;
-  ExpressionResults result =
-      UserExpression::Evaluate(exe_ctx, expr_options, expr_cstr, expr_prefix,
-                               result_valobj_sp, expr_error);
+  ExpressionResults result = UserExpression::Evaluate(
+      exe_ctx, expr_options, expr_cstr, expr_prefix, result_valobj_sp);
   if (result != eExpressionCompleted)
-    return expr_error;
+    return result_valobj_sp ? result_valobj_sp->GetError().Clone()
+                            : Status("unknown error");
 
   if (result_valobj_sp->GetError().Fail())
     return result_valobj_sp->GetError().Clone();

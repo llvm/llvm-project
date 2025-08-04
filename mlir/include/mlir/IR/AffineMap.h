@@ -613,7 +613,7 @@ AffineMap inverseAndBroadcastProjectedPermutation(AffineMap map);
 /// ```mlir
 ///     (i, j, k) -> (i, k, k, j, i, j)
 /// ```
-AffineMap concatAffineMaps(ArrayRef<AffineMap> maps);
+AffineMap concatAffineMaps(ArrayRef<AffineMap> maps, MLIRContext *context);
 
 /// Returns the map that results from projecting out the dimensions specified in
 /// `projectedDimensions`. The projected dimensions are set to 0.

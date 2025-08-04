@@ -130,9 +130,11 @@ def err_attribute_not_type_attr : Error<
   "%0%select{ attribute|}1 cannot be applied to types">;
 def err_enum_template : Error<"enumeration cannot be a template">;
 
-def warn_cxx20_compat_consteval : Warning<
-  "'consteval' specifier is incompatible with C++ standards before C++20">,
-  InGroup<CXX20Compat>, DefaultIgnore;
+def warn_cxx20_compat_consteval
+    : Warning<"'consteval' specifier is incompatible with C++ standards before "
+              "C++20">,
+      InGroup<CXXPre20Compat>,
+      DefaultIgnore;
 def warn_missing_type_specifier : Warning<
   "type specifier missing, defaults to 'int'">,
   InGroup<ImplicitInt>, DefaultIgnore;
@@ -179,6 +181,8 @@ def err_opencl_unknown_type_specifier : Error<
 
 def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
+def warn_unknown_attribute_ignored_suggestion : Warning<
+  "unknown attribute %0 ignored; did you mean '%1'?">, InGroup<UnknownAttributes>;
 def warn_attribute_ignored : Warning<"%0 attribute ignored">,
   InGroup<IgnoredAttributes>;
 def err_keyword_not_supported_on_target : Error<
@@ -364,9 +368,9 @@ def err_target_unsupported_abi_with_fpu : Error<
 
 def err_ppc_impossible_musttail: Error<
   "'musttail' attribute for this call is impossible because %select{"
-  "long calls can not be tail called on PPC|"
-  "indirect calls can not be tail called on PPC|"
-  "external calls can not be tail called on PPC}0"
+  "long calls cannot be tail called on PPC|"
+  "indirect calls cannot be tail called on PPC|"
+  "external calls cannot be tail called on PPC}0"
   >;
 def err_aix_musttail_unsupported: Error<
   "'musttail' attribute is not supported on AIX">;
@@ -389,27 +393,18 @@ def remark_sloc_usage : Remark<
   "source manager location address space usage:">,
   InGroup<DiagGroup<"sloc-usage">>, DefaultRemark, ShowInSystemHeader;
 def note_total_sloc_usage : Note<
-  "%0B in local locations, %1B in locations loaded from AST files, for a total "
-  "of %2B (%3%% of available space)">;
+  "%0B (%human0B) in local locations, %1B (%human1B) "
+  "in locations loaded from AST files, for a total of %2B (%human2B) "
+  "(%3%% of available space)">;
 def note_file_sloc_usage : Note<
-  "file entered %0 time%s0 using %1B of space"
-  "%plural{0:|: plus %2B for macro expansions}2">;
+  "file entered %0 time%s0 using %1B (%human1B) of space"
+  "%plural{0:|: plus %2B (%human2B) for macro expansions}2">;
 def note_file_misc_sloc_usage : Note<
-  "%0 additional files entered using a total of %1B of space">;
+  "%0 additional files entered using a total of %1B (%human1B) of space">;
 
 // Modules
 def err_module_format_unhandled : Error<
   "no handler registered for module format '%0'">, DefaultFatal;
-
-// TransformActions
-// TODO: Use a custom category name to distinguish rewriter errors.
-def err_mt_message : Error<"[rewriter] %0">, SuppressInSystemHeader;
-def warn_mt_message : Warning<"[rewriter] %0">;
-def note_mt_message : Note<"[rewriter] %0">;
-
-// ARCMigrate
-def warn_arcmt_nsalloc_realloc : Warning<"[rewriter] call returns pointer to GC managed memory; it will become unmanaged in ARC">;
-def err_arcmt_nsinvocation_ownership : Error<"NSInvocation's %0 is not safe to be used with an object with ownership other than __unsafe_unretained">;
 
 // API notes
 def err_apinotes_message : Error<"%0">;

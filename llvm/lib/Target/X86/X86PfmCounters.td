@@ -189,13 +189,13 @@ def IceLakePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
   let UopsCounter = UopsIssuedPfmCounter;
   let IssueCounters = [
-    PfmIssueCounter<"ICXPort0",  "uops_dispatched_port:port_0">,
-    PfmIssueCounter<"ICXPort1",  "uops_dispatched_port:port_1">,
-    PfmIssueCounter<"ICXPort23", "uops_dispatched_port:port_2_3">,
-    PfmIssueCounter<"ICXPort49", "uops_dispatched_port:port_4_9">,
-    PfmIssueCounter<"ICXPort5",  "uops_dispatched_port:port_5">,
-    PfmIssueCounter<"ICXPort6",  "uops_dispatched_port:port_6">,
-    PfmIssueCounter<"ICXPort78", "uops_dispatched_port:port_7_8">
+    PfmIssueCounter<"ICXPort0",  "uops_dispatched:port_0">,
+    PfmIssueCounter<"ICXPort1",  "uops_dispatched:port_1">,
+    PfmIssueCounter<"ICXPort23", "uops_dispatched:port_2_3">,
+    PfmIssueCounter<"ICXPort49", "uops_dispatched:port_4_9">,
+    PfmIssueCounter<"ICXPort5",  "uops_dispatched:port_5">,
+    PfmIssueCounter<"ICXPort6",  "uops_dispatched:port_6">,
+    PfmIssueCounter<"ICXPort78", "uops_dispatched:port_7_8">
   ];
   let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
@@ -208,17 +208,53 @@ def AlderLakePfmCounters : ProcPfmCounters {
   let CycleCounter = UnhaltedCoreCyclesPfmCounter;
   let UopsCounter = UopsIssuedPfmCounter;
   let IssueCounters = [
-    PfmIssueCounter<"ADLPPort00", "uops_dispatched_port:port_0">,
-    PfmIssueCounter<"ADLPPort01", "uops_dispatched_port:port_1">,
-    PfmIssueCounter<"ADLPPort02_03_10", "uops_dispatched_port:port_2_3_10">,
-    PfmIssueCounter<"ADLPPort04_09", "uops_dispatched_port:port_4_9">,
-    PfmIssueCounter<"ADLPPort05_11", "uops_dispatched_port:port_5_11">,
-    PfmIssueCounter<"ADLPPort06", "uops_dispatched_port:port_6">,
-    PfmIssueCounter<"ADLPPort07_08", "uops_dispatched_port:port_7_8">
+    PfmIssueCounter<"ADLPPort00", "uops_dispatched:port_0">,
+    PfmIssueCounter<"ADLPPort01", "uops_dispatched:port_1">,
+    PfmIssueCounter<"ADLPPort02_03_10", "uops_dispatched:port_2_3_10">,
+    PfmIssueCounter<"ADLPPort04_09", "uops_dispatched:port_4_9">,
+    PfmIssueCounter<"ADLPPort05_11", "uops_dispatched:port_5_11">,
+    PfmIssueCounter<"ADLPPort06", "uops_dispatched:port_6">,
+    PfmIssueCounter<"ADLPPort07_08", "uops_dispatched:port_7_8">
   ];
   let ValidationCounters = DefaultIntelPfmValidationCounters;
 }
 def : PfmCountersBinding<"alderlake", AlderLakePfmCounters>;
+
+def SapphireRapidsPfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    PfmIssueCounter<"SPRPort00", "uops_dispatched:port_0">,
+    PfmIssueCounter<"SPRPort01", "uops_dispatched:port_1">,
+    PfmIssueCounter<"SPRPort02_03_10", "uops_dispatched:port_2_3_10">,
+    PfmIssueCounter<"SPRPort04_09", "uops_dispatched:port_4_9">,
+    PfmIssueCounter<"SPRPort05_11", "uops_dispatched:port_5_11">,
+    PfmIssueCounter<"SPRPort06", "uops_dispatched:port_6">,
+    PfmIssueCounter<"SPRPort07_08", "uops_dispatched:port_7_8">,
+  ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
+}
+def : PfmCountersBinding<"sapphirerapids", SapphireRapidsPfmCounters>;
+
+def LunarLakePfmCounters : ProcPfmCounters {
+  let CycleCounter = UnhaltedCoreCyclesPfmCounter;
+  let UopsCounter = UopsIssuedPfmCounter;
+  let IssueCounters = [
+    // Refer: https://perfmon-events.intel.com/ section Lunar Lake Hybrid Event
+    // ALU Dispatch - Any of ALUs with latency 1 cycle that is not jmp or Shift.
+    PfmIssueCounter<"LNLPVPort02_03", "uops_dispatched:alu">,
+    PfmIssueCounter<"LNLPPort00_01_02_03_04_05", "uops_dispatched:int_eu_all">,
+    PfmIssueCounter<"LNLPPort00_02_04", "uops_dispatched:jmp">,
+    PfmIssueCounter<"LNLPPort20_21_22", "uops_dispatched:load">,
+    PfmIssueCounter<"LNLPPort01_03_05", "uops_dispatched:shift">,
+    // Slow Dispatch - If uops latency > 1, counted as slow. TBD
+    // PfmIssueCounter<"LNLPPort01_03_05", "uops_dispatched:slow">,
+    PfmIssueCounter<"LNLPPort25_26_27", "uops_dispatched:sta">,
+    PfmIssueCounter<"LNLPPort10_11", "uops_dispatched:std">
+  ];
+  let ValidationCounters = DefaultIntelPfmValidationCounters;
+}
+def : PfmCountersBinding<"lunarlake", LunarLakePfmCounters>;
 
 // AMD X86 Counters.
 defvar DefaultAMDPfmValidationCounters = [

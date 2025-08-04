@@ -1,33 +1,53 @@
 // REQUIRES: nvptx-registered-target
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_70 -target-feature +ptx63 \
-// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX63_SM70 -check-prefix=LP64 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
-// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP32 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_80 -target-feature +ptx70 \
-// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX70_SM80 -check-prefix=LP64 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_60 -target-feature +ptx62 \
-// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP32 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_60 -target-feature +ptx62 \
-// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_61 -target-feature +ptx62 \
-// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=LP64 %s
 // RUN: %clang_cc1 -triple nvptx-unknown-unknown -target-cpu sm_53 -target-feature +ptx62 \
 // RUN:   -DERROR_CHECK -fcuda-is-device -S -o /dev/null -x cuda -verify %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
-// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 -check-prefix=LP32 %s
 // RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_86 -target-feature +ptx72 \
-// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX72_SM86 -check-prefix=LP64 %s
-// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_89 -target-feature +ptx81 \
-// RUN:            -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_89 -target-feature +ptx81 -DPTX=81\
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
 // RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX81_SM89 %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_90 -target-feature +ptx78 -DPTX=78 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX78_SM90 %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_100 -target-feature +ptx86 -DPTX=86 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM100 %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_100a -target-feature +ptx86 -DPTX=86 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM100a %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_101a -target-feature +ptx86 -DPTX=86 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM101a %s
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_120a -target-feature +ptx86 -DPTX=86 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM120a %s
+// ###  The last run to check with the highest SM and PTX version available
+// ###  to make sure target builtins are still accepted.
+// RUN: %clang_cc1 -ffp-contract=off -triple nvptx64-unknown-unknown -target-cpu sm_120a -target-feature +ptx87 -DPTX=87 \
+// RUN:            -disable-llvm-optzns -fcuda-is-device -emit-llvm -o - -x cuda %s \
+// RUN:   | FileCheck -check-prefix=CHECK -check-prefix=CHECK_PTX86_SM120a %s
 
 #define __device__ __attribute__((device))
 #define __global__ __attribute__((global))
@@ -56,6 +76,7 @@ __device__ bool reflect() {
 
   unsigned x = __nvvm_reflect("__CUDA_ARCH");
   return x >= 700;
+
 }
 
 __device__ int read_ntid() {
@@ -177,7 +198,7 @@ __device__ int read_pms() {
 
 __device__ void sync() {
 
-// CHECK: call void @llvm.nvvm.bar.sync(i32 0)
+// CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
 
   __nvvm_bar_sync(0);
 
@@ -202,7 +223,7 @@ __device__ void exit() {
 // NVVM intrinsics
 
 // The idea is not to test all intrinsics, just that Clang is recognizing the
-// builtins defined in BuiltinsNVPTX.def
+// builtins defined in BuiltinsNVPTX.td
 __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
 // CHECK: call float @llvm.nvvm.fmax.f
   float t1 = __nvvm_fmax_f(f1, f2);
@@ -224,13 +245,21 @@ __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
 // CHECK: call double @llvm.nvvm.rcp.rn.d
   double td4 = __nvvm_rcp_rn_d(d2);
 
+// CHECK: call float @llvm.nvvm.fabs.f32
+  float t6 = __nvvm_fabs_f(f1);
+// CHECK: call float @llvm.nvvm.fabs.ftz.f32
+  float t7 = __nvvm_fabs_ftz_f(f2);
+
+// CHECK: call double @llvm.fabs.f64
+  double td5 = __nvvm_fabs_d(d1);
+
 // CHECK: call void @llvm.nvvm.membar.cta()
   __nvvm_membar_cta();
 // CHECK: call void @llvm.nvvm.membar.gl()
   __nvvm_membar_gl();
 // CHECK: call void @llvm.nvvm.membar.sys()
   __nvvm_membar_sys();
-// CHECK: call void @llvm.nvvm.barrier0()
+// CHECK: call void @llvm.nvvm.barrier.cta.sync.aligned.all(i32 0)
   __syncthreads();
 }
 
@@ -328,10 +357,10 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
   // CHECK: atomicrmw fadd ptr {{.*}} seq_cst, align 4
   __nvvm_atom_add_gen_f(fp, f);
 
-  // CHECK: call i32 @llvm.nvvm.atomic.load.inc.32.p0
+  // CHECK: atomicrmw uinc_wrap ptr {{.*}} seq_cst, align 4
   __nvvm_atom_inc_gen_ui(uip, ui);
 
-  // CHECK: call i32 @llvm.nvvm.atomic.load.dec.32.p0
+  // CHECK: atomicrmw udec_wrap ptr {{.*}} seq_cst, align 4
   __nvvm_atom_dec_gen_ui(uip, ui);
 
 
@@ -598,33 +627,33 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df,
 
 // CHECK-LABEL: nvvm_ldg
 __device__ void nvvm_ldg(const void *p) {
-  // CHECK: call i8 @llvm.nvvm.ldg.global.i.i8.p0(ptr {{%[0-9]+}}, i32 1)
-  // CHECK: call i8 @llvm.nvvm.ldg.global.i.i8.p0(ptr {{%[0-9]+}}, i32 1)
-  // CHECK: call i8 @llvm.nvvm.ldg.global.i.i8.p0(ptr {{%[0-9]+}}, i32 1)
+  // CHECK: load i8, ptr addrspace(1) {{%[0-9]+}}, align 1, !invariant.load
+  // CHECK: load i8, ptr addrspace(1) {{%[0-9]+}}, align 1, !invariant.load
+  // CHECK: load i8, ptr addrspace(1) {{%[0-9]+}}, align 1, !invariant.load
   __nvvm_ldg_c((const char *)p);
   __nvvm_ldg_uc((const unsigned char *)p);
   __nvvm_ldg_sc((const signed char *)p);
 
-  // CHECK: call i16 @llvm.nvvm.ldg.global.i.i16.p0(ptr {{%[0-9]+}}, i32 2)
-  // CHECK: call i16 @llvm.nvvm.ldg.global.i.i16.p0(ptr {{%[0-9]+}}, i32 2)
+  // CHECK: load i16, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  // CHECK: load i16, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
   __nvvm_ldg_s((const short *)p);
   __nvvm_ldg_us((const unsigned short *)p);
 
-  // CHECK: call i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr {{%[0-9]+}}, i32 4)
-  // CHECK: call i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr {{%[0-9]+}}, i32 4)
+  // CHECK: load i32, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // CHECK: load i32, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
   __nvvm_ldg_i((const int *)p);
   __nvvm_ldg_ui((const unsigned int *)p);
 
-  // LP32: call i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr {{%[0-9]+}}, i32 4)
-  // LP32: call i32 @llvm.nvvm.ldg.global.i.i32.p0(ptr {{%[0-9]+}}, i32 4)
-  // LP64: call i64 @llvm.nvvm.ldg.global.i.i64.p0(ptr {{%[0-9]+}}, i32 8)
-  // LP64: call i64 @llvm.nvvm.ldg.global.i.i64.p0(ptr {{%[0-9]+}}, i32 8)
+  // LP32: load i32, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // LP32: load i32, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // LP64: load i64, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // LP64: load i64, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
   __nvvm_ldg_l((const long *)p);
   __nvvm_ldg_ul((const unsigned long *)p);
 
-  // CHECK: call float @llvm.nvvm.ldg.global.f.f32.p0(ptr {{%[0-9]+}}, i32 4)
+  // CHECK: load float, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
   __nvvm_ldg_f((const float *)p);
-  // CHECK: call double @llvm.nvvm.ldg.global.f.f64.p0(ptr {{%[0-9]+}}, i32 8)
+  // CHECK: load double, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
   __nvvm_ldg_d((const double *)p);
 
   // In practice, the pointers we pass to __ldg will be aligned as appropriate
@@ -636,9 +665,9 @@ __device__ void nvvm_ldg(const void *p) {
   // elements, its alignment is set to number of elements times the alignment of
   // its member: n*alignof(t)."
 
-  // CHECK: call <2 x i8> @llvm.nvvm.ldg.global.i.v2i8.p0(ptr {{%[0-9]+}}, i32 2)
-  // CHECK: call <2 x i8> @llvm.nvvm.ldg.global.i.v2i8.p0(ptr {{%[0-9]+}}, i32 2)
-  // CHECK: call <2 x i8> @llvm.nvvm.ldg.global.i.v2i8.p0(ptr {{%[0-9]+}}, i32 2)
+  // CHECK: load <2 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  // CHECK: load <2 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
+  // CHECK: load <2 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 2, !invariant.load
   typedef char char2 __attribute__((ext_vector_type(2)));
   typedef unsigned char uchar2 __attribute__((ext_vector_type(2)));
   typedef signed char schar2 __attribute__((ext_vector_type(2)));
@@ -646,9 +675,9 @@ __device__ void nvvm_ldg(const void *p) {
   __nvvm_ldg_uc2((const uchar2 *)p);
   __nvvm_ldg_sc2((const schar2 *)p);
 
-  // CHECK: call <4 x i8> @llvm.nvvm.ldg.global.i.v4i8.p0(ptr {{%[0-9]+}}, i32 4)
-  // CHECK: call <4 x i8> @llvm.nvvm.ldg.global.i.v4i8.p0(ptr {{%[0-9]+}}, i32 4)
-  // CHECK: call <4 x i8> @llvm.nvvm.ldg.global.i.v4i8.p0(ptr {{%[0-9]+}}, i32 4)
+  // CHECK: load <4 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // CHECK: load <4 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // CHECK: load <4 x i8>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
   typedef char char4 __attribute__((ext_vector_type(4)));
   typedef unsigned char uchar4 __attribute__((ext_vector_type(4)));
   typedef signed char schar4 __attribute__((ext_vector_type(4)));
@@ -656,59 +685,59 @@ __device__ void nvvm_ldg(const void *p) {
   __nvvm_ldg_uc4((const uchar4 *)p);
   __nvvm_ldg_sc4((const schar4 *)p);
 
-  // CHECK: call <2 x i16> @llvm.nvvm.ldg.global.i.v2i16.p0(ptr {{%[0-9]+}}, i32 4)
-  // CHECK: call <2 x i16> @llvm.nvvm.ldg.global.i.v2i16.p0(ptr {{%[0-9]+}}, i32 4)
+  // CHECK: load <2 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
+  // CHECK: load <2 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 4, !invariant.load
   typedef short short2 __attribute__((ext_vector_type(2)));
   typedef unsigned short ushort2 __attribute__((ext_vector_type(2)));
   __nvvm_ldg_s2((const short2 *)p);
   __nvvm_ldg_us2((const ushort2 *)p);
 
-  // CHECK: call <4 x i16> @llvm.nvvm.ldg.global.i.v4i16.p0(ptr {{%[0-9]+}}, i32 8)
-  // CHECK: call <4 x i16> @llvm.nvvm.ldg.global.i.v4i16.p0(ptr {{%[0-9]+}}, i32 8)
+  // CHECK: load <4 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // CHECK: load <4 x i16>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
   typedef short short4 __attribute__((ext_vector_type(4)));
   typedef unsigned short ushort4 __attribute__((ext_vector_type(4)));
   __nvvm_ldg_s4((const short4 *)p);
   __nvvm_ldg_us4((const ushort4 *)p);
 
-  // CHECK: call <2 x i32> @llvm.nvvm.ldg.global.i.v2i32.p0(ptr {{%[0-9]+}}, i32 8)
-  // CHECK: call <2 x i32> @llvm.nvvm.ldg.global.i.v2i32.p0(ptr {{%[0-9]+}}, i32 8)
+  // CHECK: load <2 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // CHECK: load <2 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
   typedef int int2 __attribute__((ext_vector_type(2)));
   typedef unsigned int uint2 __attribute__((ext_vector_type(2)));
   __nvvm_ldg_i2((const int2 *)p);
   __nvvm_ldg_ui2((const uint2 *)p);
 
-  // CHECK: call <4 x i32> @llvm.nvvm.ldg.global.i.v4i32.p0(ptr {{%[0-9]+}}, i32 16)
-  // CHECK: call <4 x i32> @llvm.nvvm.ldg.global.i.v4i32.p0(ptr {{%[0-9]+}}, i32 16)
+  // CHECK: load <4 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // CHECK: load <4 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
   typedef int int4 __attribute__((ext_vector_type(4)));
   typedef unsigned int uint4 __attribute__((ext_vector_type(4)));
   __nvvm_ldg_i4((const int4 *)p);
   __nvvm_ldg_ui4((const uint4 *)p);
 
-  // LP32: call <2 x i32> @llvm.nvvm.ldg.global.i.v2i32.p0(ptr {{%[0-9]+}}, i32 8)
-  // LP32: call <2 x i32> @llvm.nvvm.ldg.global.i.v2i32.p0(ptr {{%[0-9]+}}, i32 8)
-  // LP64: call <2 x i64> @llvm.nvvm.ldg.global.i.v2i64.p0(ptr {{%[0-9]+}}, i32 16)
-  // LP64: call <2 x i64> @llvm.nvvm.ldg.global.i.v2i64.p0(ptr {{%[0-9]+}}, i32 16)
+  // LP32: load <2 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // LP32: load <2 x i32>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
+  // LP64: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // LP64: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
   typedef long long2 __attribute__((ext_vector_type(2)));
   typedef unsigned long ulong2 __attribute__((ext_vector_type(2)));
   __nvvm_ldg_l2((const long2 *)p);
   __nvvm_ldg_ul2((const ulong2 *)p);
 
-  // CHECK: call <2 x i64> @llvm.nvvm.ldg.global.i.v2i64.p0(ptr {{%[0-9]+}}, i32 16)
-  // CHECK: call <2 x i64> @llvm.nvvm.ldg.global.i.v2i64.p0(ptr {{%[0-9]+}}, i32 16)
+  // CHECK: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
+  // CHECK: load <2 x i64>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
   typedef long long longlong2 __attribute__((ext_vector_type(2)));
   typedef unsigned long long ulonglong2 __attribute__((ext_vector_type(2)));
   __nvvm_ldg_ll2((const longlong2 *)p);
   __nvvm_ldg_ull2((const ulonglong2 *)p);
 
-  // CHECK: call <2 x float> @llvm.nvvm.ldg.global.f.v2f32.p0(ptr {{%[0-9]+}}, i32 8)
+  // CHECK: load <2 x float>, ptr addrspace(1) {{%[0-9]+}}, align 8, !invariant.load
   typedef float float2 __attribute__((ext_vector_type(2)));
   __nvvm_ldg_f2((const float2 *)p);
 
-  // CHECK: call <4 x float> @llvm.nvvm.ldg.global.f.v4f32.p0(ptr {{%[0-9]+}}, i32 16)
+  // CHECK: load <4 x float>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
   typedef float float4 __attribute__((ext_vector_type(4)));
   __nvvm_ldg_f4((const float4 *)p);
 
-  // CHECK: call <2 x double> @llvm.nvvm.ldg.global.f.v2f64.p0(ptr {{%[0-9]+}}, i32 16)
+  // CHECK: load <2 x double>, ptr addrspace(1) {{%[0-9]+}}, align 16, !invariant.load
   typedef double double2 __attribute__((ext_vector_type(2)));
   __nvvm_ldg_d2((const double2 *)p);
 }
@@ -854,6 +883,13 @@ __device__ void nvvm_vote(int pred) {
   // CHECK: ret void
 }
 
+// CHECK-LABEL: nvvm_pm_event_mask
+__device__ void nvvm_pm_event_mask() {
+  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 255)
+  __nvvm_pm_event_mask(255);
+  // CHECK: ret void
+}
+
 // CHECK-LABEL: nvvm_nanosleep
 __device__ void nvvm_nanosleep(int d) {
 #if __CUDA_ARCH__ >= 700
@@ -989,7 +1025,7 @@ __device__ void nvvm_cvt_sm80() {
 
 // CHECK-LABEL: nvvm_cvt_sm89
 __device__ void nvvm_cvt_sm89() {
-#if __CUDA_ARCH__ >= 890
+#if (PTX >= 81) && (__CUDA_ARCH__ >= 890)
   // CHECK_PTX81_SM89: call i16 @llvm.nvvm.ff.to.e4m3x2.rn(float 1.000000e+00, float 1.000000e+00)
   __nvvm_ff_to_e4m3x2_rn(1.0f, 1.0f);
   // CHECK_PTX81_SM89: call i16 @llvm.nvvm.ff.to.e4m3x2.rn.relu(float 1.000000e+00, float 1.000000e+00)
@@ -999,13 +1035,13 @@ __device__ void nvvm_cvt_sm89() {
   // CHECK_PTX81_SM89: call i16 @llvm.nvvm.ff.to.e5m2x2.rn.relu(float 1.000000e+00, float 1.000000e+00)
   __nvvm_ff_to_e5m2x2_rn_relu(1.0f, 1.0f);
 
-  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn(<2 x half> <half 0xH3C00, half 0xH3C00>)
+  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn(<2 x half> splat (half 0xH3C00))
   __nvvm_f16x2_to_e4m3x2_rn({1.0f16, 1.0f16});
-  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn.relu(<2 x half> <half 0xH3C00, half 0xH3C00>)
+  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e4m3x2.rn.relu(<2 x half> splat (half 0xH3C00))
   __nvvm_f16x2_to_e4m3x2_rn_relu({1.0f16, 1.0f16});
-  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn(<2 x half> <half 0xH3C00, half 0xH3C00>)
+  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn(<2 x half> splat (half 0xH3C00))
   __nvvm_f16x2_to_e5m2x2_rn({1.0f16, 1.0f16});
-  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn.relu(<2 x half> <half 0xH3C00, half 0xH3C00>)
+  // CHECK_PTX81_SM89: call i16 @llvm.nvvm.f16x2.to.e5m2x2.rn.relu(<2 x half> splat (half 0xH3C00))
   __nvvm_f16x2_to_e5m2x2_rn_relu({1.0f16, 1.0f16});
 
   // CHECK_PTX81_SM89: call <2 x half> @llvm.nvvm.e4m3x2.to.f16x2.rn(i16 18504)
@@ -1016,6 +1052,153 @@ __device__ void nvvm_cvt_sm89() {
   __nvvm_e5m2x2_to_f16x2_rn(0x4c4c);
   // CHECK_PTX81_SM89: call <2 x half> @llvm.nvvm.e5m2x2.to.f16x2.rn.relu(i16 19532)
   __nvvm_e5m2x2_to_f16x2_rn_relu(0x4c4c);
+
+  // CHECK_PTX81_SM89: call i32 @llvm.nvvm.f2tf32.rna.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rna_satfinite(1.0f);
+#endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_cvt_sm90
+__device__ void nvvm_cvt_sm90() {
+#if (PTX >= 78) && (__CUDA_ARCH__ >= 900)
+  // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rn(float 1.000000e+00)
+  __nvvm_f2tf32_rn(1.0f); 
+  // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rn.relu(float 1.000000e+00)
+  __nvvm_f2tf32_rn_relu(1.0f); 
+  // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rz(float 1.000000e+00)
+  __nvvm_f2tf32_rz(1.0f); 
+  // CHECK_PTX78_SM90: call i32 @llvm.nvvm.f2tf32.rz.relu(float 1.000000e+00)
+  __nvvm_f2tf32_rz_relu(1.0f); 
+#endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_cvt_sm100
+__device__ void nvvm_cvt_sm100() {
+#if (PTX >= 86) && (__CUDA_ARCH__ >= 1000)
+  // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rn.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rn_satfinite(1.0f); 
+  // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rn.relu.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rn_relu_satfinite(1.0f); 
+  // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rz.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rz_satfinite(1.0f); 
+  // CHECK_PTX86_SM100: call i32 @llvm.nvvm.f2tf32.rz.relu.satfinite(float 1.000000e+00)
+  __nvvm_f2tf32_rz_relu_satfinite(1.0f); 
+#endif
+  // CHECK: ret void
+}
+
+// CHECK-LABEL: nvvm_cvt_sm100a_sm101a_sm120a
+__device__ void nvvm_cvt_sm100a_sm101a_sm120a() {
+#if (PTX >= 86) && \
+    (__CUDA_ARCH_FEAT_SM100_ALL || __CUDA_ARCH_FEAT_SM101_ALL || \
+     __CUDA_ARCH_FEAT_SM120_ALL)
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e2m3x2_rn_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m3x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e2m3x2_rn_relu_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e3m2x2_rn_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e3m2x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e3m2x2_rn_relu_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn(i16 19532)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn(i16 19532)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn(i16 19532)
+  __nvvm_e2m3x2_to_f16x2_rn(0x4C4C);
+
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn.relu(i16 18504)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn.relu(i16 18504)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e2m3x2.to.f16x2.rn.relu(i16 18504)
+  __nvvm_e2m3x2_to_f16x2_rn_relu(0x4848);
+
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn(i16 18504)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn(i16 18504)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn(i16 18504)
+  __nvvm_e3m2x2_to_f16x2_rn(0x4848);
+
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn.relu(i16 19532)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn.relu(i16 19532)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e3m2x2.to.f16x2.rn.relu(i16 19532)
+  __nvvm_e3m2x2_to_f16x2_rn_relu(0x4C4C);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e2m1x2_rn_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.e2m1x2.rn.relu.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_e2m1x2_rn_relu_satfinite(1.0f, 1.0f);
+  
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn(i16 76)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn(i16 76)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn(i16 76)
+  __nvvm_e2m1x2_to_f16x2_rn(0x004C);
+  
+  // CHECK_PTX86_SM100a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn.relu(i16 76)
+  // CHECK_PTX86_SM101a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn.relu(i16 76)
+  // CHECK_PTX86_SM120a: call <2 x half> @llvm.nvvm.e2m1x2.to.f16x2.rn.relu(i16 76)
+  __nvvm_e2m1x2_to_f16x2_rn_relu(0x004C);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_ue8m0x2_rz(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rz.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_ue8m0x2_rz_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_ue8m0x2_rp(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp.satfinite(float 1.000000e+00, float 1.000000e+00)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.ff.to.ue8m0x2.rp.satfinite(float 1.000000e+00, float 1.000000e+00)
+  __nvvm_ff_to_ue8m0x2_rp_satfinite(1.0f, 1.0f);
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz(<2 x bfloat> splat (bfloat 0xR3DCD)
+  __nvvm_bf16x2_to_ue8m0x2_rz({(__bf16)0.1f, (__bf16)0.1f});
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rz.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  __nvvm_bf16x2_to_ue8m0x2_rz_satfinite({(__bf16)0.1f, (__bf16)0.1f});
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp(<2 x bfloat> splat (bfloat 0xR3DCD)
+  __nvvm_bf16x2_to_ue8m0x2_rp({(__bf16)0.1f, (__bf16)0.1f});
+
+  // CHECK_PTX86_SM100a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM101a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  // CHECK_PTX86_SM120a: call i16 @llvm.nvvm.bf16x2.to.ue8m0x2.rp.satfinite(<2 x bfloat> splat (bfloat 0xR3DCD)
+  __nvvm_bf16x2_to_ue8m0x2_rp_satfinite({(__bf16)0.1f, (__bf16)0.1f});
+
+  // CHECK_PTX86_SM100a: call <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 19532)
+  // CHECK_PTX86_SM101a: call <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 19532)
+  // CHECK_PTX86_SM120a: call <2 x bfloat> @llvm.nvvm.ue8m0x2.to.bf16x2(i16 19532)
+  __nvvm_ue8m0x2_to_bf16x2(0x4C4C);
+  
 #endif
   // CHECK: ret void
 }
@@ -1033,14 +1216,14 @@ __device__ void nvvm_cvt_sm89() {
 __device__ void nvvm_abs_neg_bf16_bf16x2_sm80() {
 #if __CUDA_ARCH__ >= 800
 
-  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.abs.bf16(bfloat 0xR3DCD)
+  // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.fabs.bf16(bfloat 0xR3DCD)
   __nvvm_abs_bf16(BF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.abs.bf16x2(<2 x bfloat> <bfloat 0xR3DCD, bfloat 0xR3DCD>)
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.fabs.v2bf16(<2 x bfloat> splat (bfloat 0xR3DCD))
   __nvvm_abs_bf16x2(BF16X2);
 
   // CHECK_PTX70_SM80: call bfloat @llvm.nvvm.neg.bf16(bfloat 0xR3DCD)
   __nvvm_neg_bf16(BF16);
-  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.neg.bf16x2(<2 x bfloat> <bfloat 0xR3DCD, bfloat 0xR3DCD>)
+  // CHECK_PTX70_SM80: call <2 x bfloat> @llvm.nvvm.neg.bf16x2(<2 x bfloat> splat (bfloat 0xR3DCD))
   __nvvm_neg_bf16x2(BF16X2);
 #endif
   // CHECK: ret void

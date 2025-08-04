@@ -76,7 +76,13 @@ public:
 
   // Init 'thunk' so that it be a direct jump to 'branchTarget'.
   virtual void initICFSafeThunkBody(InputSection *thunk,
-                                    InputSection *branchTarget) const {
+                                    Symbol *targetSym) const {
+    llvm_unreachable("target does not support ICF safe thunks");
+  }
+
+  // Given a thunk for which `initICFSafeThunkBody` was called, return the
+  // branchTarget it was initialized with.
+  virtual Symbol *getThunkBranchTarget(InputSection *thunk) const {
     llvm_unreachable("target does not support ICF safe thunks");
   }
 
@@ -117,8 +123,6 @@ public:
                                  uint8_t *loc) const {
     llvm_unreachable("Unsupported architecture for dtrace symbols");
   }
-
-  virtual void applyOptimizationHints(uint8_t *, const ObjFile &) const {};
 
   uint32_t magic;
   llvm::MachO::CPUType cpuType;

@@ -205,16 +205,6 @@ private:
   }
   void distributeIRToProfileLocationMap();
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
-  // This function implements the Myers diff algorithm used for stale profile
-  // matching. The algorithm provides a simple and efficient way to find the
-  // Longest Common Subsequence(LCS) or the Shortest Edit Script(SES) of two
-  // sequences. For more details, refer to the paper 'An O(ND) Difference
-  // Algorithm and Its Variations' by Eugene W. Myers.
-  // In the scenario of profile fuzzy matching, the two sequences are the IR
-  // callsite anchors and profile callsite anchors. The subsequence equivalent
-  // parts from the resulting SES are used to remap the IR locations to the
-  // profile locations. As the number of function callsite is usually not big,
-  // we currently just implements the basic greedy version(page 6 of the paper).
   LocToLocMap longestCommonSequence(const AnchorList &IRCallsiteAnchors,
                                     const AnchorList &ProfileCallsiteAnchors,
                                     bool MatchUnusedFunction);

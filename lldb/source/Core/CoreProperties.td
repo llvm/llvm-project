@@ -59,7 +59,7 @@ let Definition = "debugger" in {
     Desc<"The default disassembly format string to use when disassembling instruction sequences.">;
   def FrameFormat: Property<"frame-format", "FormatEntity">,
     Global,
-    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.yellow}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\\\\n">,
+    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.cyan}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${function.is-inlined} [inlined]}{${frame.is-artificial} [artificial]}\\\\n">,
     Desc<"The default frame format string to use when displaying stack frame information for threads.">;
   def NotiftVoid: Property<"notify-void", "Boolean">,
     Global,
@@ -91,11 +91,13 @@ let Definition = "debugger" in {
     Global,
     DefaultUnsignedValue<4>,
     Desc<"The number of disassembly lines to show when displaying a stopped context.">;
-  def StopDisassemblyDisplay: Property<"stop-disassembly-display", "Enum">,
-    Global,
-    DefaultEnumValue<"Debugger::eStopDisassemblyTypeNoDebugInfo">,
-    EnumValues<"OptionEnumValues(g_show_disassembly_enum_values)">,
-    Desc<"Control when to display disassembly when displaying a stopped context.">;
+  def StopDisassemblyDisplay
+      : Property<"stop-disassembly-display", "Enum">,
+        Global,
+        DefaultEnumValue<"eStopDisassemblyTypeNoDebugInfo">,
+        EnumValues<"OptionEnumValues(g_show_disassembly_enum_values)">,
+        Desc<"Control when to display disassembly when displaying a stopped "
+             "context.">;
   def StopDisassemblyMaxSize: Property<"stop-disassembly-max-size", "UInt64">,
     Global,
     DefaultUnsignedValue<32000>,
@@ -136,6 +138,10 @@ let Definition = "debugger" in {
     Global,
     DefaultUnsignedValue<80>,
     Desc<"The maximum number of columns to use for displaying text.">;
+  def TerminalHeight: Property<"term-height", "UInt64">,
+    Global,
+    DefaultUnsignedValue<24>,
+    Desc<"The number of rows used for displaying text.">;
   def ThreadFormat: Property<"thread-format", "FormatEntity">,
     Global,
     DefaultStringValue<"thread #${thread.index}: tid = ${thread.id%tid}{, ${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{, name = ${ansi.fg.green}'${thread.name}'${ansi.normal}}{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}{, activity = ${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}{, ${thread.info.trace_messages} messages}{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}{\\\\nReturn value: ${thread.return-value}}{\\\\nCompleted expression: ${thread.completed-expression}}\\\\n">,
@@ -168,6 +174,39 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying progress in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the progress message.">;
+  def ShowStatusline: Property<"show-statusline", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Whether to show a statusline at the bottom of the terminal (not supported on Windows).">;
+  def Separator : Property<"separator", "String">,
+                  Global,
+                  DefaultStringValue<"│ ">,
+                  Desc<"A separator used, e.g., in the status line.">;
+  def StatuslineFormat
+      : Property<"statusline-format", "FormatEntity">,
+        Global,
+        DefaultStringValue<
+            "${ansi.negative}{${target.file.basename}|no target}{ "
+            "${separator}${line.file.basename}:${line.number}:${line.column}}{ "
+            "${separator}${thread.stop-reason}}{ "
+            "${separator}{${progress.count} }${progress.message}}">,
+        Desc<"The default statusline format string.">;
+
+  def ShowDisabledAnsiPrefix
+      : Property<"disable-ansi-prefix", "String">,
+        Global,
+        DefaultStringValue<"${ansi.faint}">,
+        Desc<"If something has been disabled in a color-enabled terminal, use "
+             "the ANSI terminal code specified immediately before whatever has "
+             "been disabled.">;
+  def ShowDisabledAnsiSuffix
+      : Property<"disable-ansi-suffix", "String">,
+        Global,
+        DefaultStringValue<"${ansi.normal}">,
+        Desc<"When somehing has been disabled in a color-enabled terminal, use "
+             "the ANSI terminal code specified immediately after whatever has "
+             "been disabled.">;
+
   def UseSourceCache: Property<"use-source-cache", "Boolean">,
     Global,
     DefaultTrue,
@@ -194,7 +233,7 @@ let Definition = "debugger" in {
     Desc<"If true, LLDB will automatically escape non-printable and escape characters when formatting strings.">;
   def FrameFormatUnique: Property<"frame-format-unique", "FormatEntity">,
     Global,
-    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.yellow}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\\\\n">,
+    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.cyan}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${function.is-inlined} [inlined]}{${frame.is-artificial} [artificial]}\\\\n">,
     Desc<"The default frame format string to use when displaying stack frame information for threads from thread backtrace unique.">;
   def ShowAutosuggestion: Property<"show-autosuggestion", "Boolean">,
     Global,

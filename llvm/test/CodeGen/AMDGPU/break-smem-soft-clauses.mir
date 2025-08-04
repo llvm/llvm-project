@@ -1,6 +1,8 @@
 # RUN: llc -mtriple=amdgcn -mcpu=carrizo -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN,XNACK %s
 # RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-xnack -verify-machineinstrs -run-pass  post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN %s
 
+# RUN: llc -mtriple=amdgcn -mcpu=fiji -mattr=-xnack -passes post-RA-hazard-rec %s -o - | FileCheck -check-prefixes=GCN %s
+
 ---
 # Trivial clause at beginning of program
 name: trivial_smem_clause_load_smrd4_x1

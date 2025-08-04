@@ -98,12 +98,6 @@ void promoteSingleIterationLoops(func::FuncOp f);
 LogicalResult affineForOpBodySkew(AffineForOp forOp, ArrayRef<uint64_t> shifts,
                                   bool unrollPrologueEpilogue = false);
 
-/// Identify valid and profitable bands of loops to tile. This is currently just
-/// a temporary placeholder to test the mechanics of tiled code generation.
-/// Returns all maximal outermost perfect loop nests to tile.
-void getTileableBands(func::FuncOp f,
-                      std::vector<SmallVector<AffineForOp, 6>> *bands);
-
 /// Tiles the specified band of perfectly nested loops creating tile-space loops
 /// and intra-tile loops. A band is a contiguous set of loops. This utility
 /// doesn't check for the validity of tiling itself, but just performs it.
@@ -136,7 +130,7 @@ bool isValidLoopInterchangePermutation(ArrayRef<AffineForOp> loops,
 /// to inner. Returns the position in `inputNest` of the AffineForOp that
 /// becomes the new outermost loop of this nest. This method always succeeds,
 /// asserts out on invalid input / specifications.
-unsigned permuteLoops(MutableArrayRef<AffineForOp> inputNest,
+unsigned permuteLoops(ArrayRef<AffineForOp> inputNest,
                       ArrayRef<unsigned> permMap);
 
 // Sinks all sequential loops to the innermost levels (while preserving
@@ -301,6 +295,11 @@ separateFullTiles(MutableArrayRef<AffineForOp> nest,
 /// Walk an affine.for to find a band to coalesce.
 LogicalResult coalescePerfectlyNestedAffineLoops(AffineForOp op);
 
+/// Count the number of loops surrounding `operand` such that operand could be
+/// hoisted above.
+/// Stop counting at the first loop over which the operand cannot be hoisted.
+/// This counts any LoopLikeOpInterface, not just affine.for.
+int64_t numEnclosingInvariantLoops(OpOperand &operand);
 } // namespace affine
 } // namespace mlir
 

@@ -7,7 +7,7 @@
 subroutine do_simd_aligned(A)
   use iso_c_binding
   type(c_ptr) :: A
-  
+
   ! CHECK:      omp.wsloop
   ! CHECK-NOT:  aligned({{.*}})
   ! CHECK-SAME: {
@@ -45,3 +45,43 @@ subroutine do_simd_simdlen()
     end do
   !$omp end do simd
 end subroutine do_simd_simdlen
+
+! CHECK-LABEL: func.func @_QPdo_simd_reduction(
+subroutine do_simd_reduction()
+  integer :: sum
+  sum = 0
+  ! CHECK:      omp.wsloop
+  ! CHECK-SAME: reduction(@[[RED_SYM:.*]] %{{.*}} -> %[[RED_OUTER:.*]] : !fir.ref<i32>)
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-SAME: reduction(@[[RED_SYM]] %[[RED_OUTER]] -> %[[RED_INNER:.*]] : !fir.ref<i32>)
+  ! CHECK-NEXT: omp.loop_nest
+  ! CHECK:      %[[RED_DECL:.*]]:2 = hlfir.declare %[[RED_INNER]]
+  ! CHECK:      %[[RED:.*]] = fir.load %[[RED_DECL]]#0 : !fir.ref<i32>
+  ! CHECK:      %[[RESULT:.*]] = arith.addi %[[RED]], %{{.*}} : i32
+  ! CHECK:      hlfir.assign %[[RESULT]] to %[[RED_DECL]]#0 : i32, !fir.ref<i32>
+  ! CHECK-NEXT: omp.yield
+  !$omp do simd reduction(+:sum)
+    do index_ = 1, 10
+      sum = sum + 1
+    end do
+  !$omp end do simd
+end subroutine do_simd_reduction
+
+! CHECK-LABEL: func.func @_QPdo_simd_private(
+subroutine do_simd_private()
+  integer, allocatable :: tmp
+  ! CHECK:      omp.wsloop
+  ! CHECK-NEXT: omp.simd
+  ! CHECK-SAME: private(@[[PRIV_BOX_SYM:.*]] %{{.*}} -> %[[PRIV_BOX:.*]], @[[PRIV_IVAR_SYM:.*]] %{{.*}} -> %[[PRIV_IVAR:.*]] : !fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<i32>)
+  ! CHECK-NEXT: omp.loop_nest (%[[IVAR:.*]]) : i32
+  !$omp do simd private(tmp)
+  do i=1, 10
+  ! CHECK:      %[[PRIV_BOX_DECL:.*]]:2 = hlfir.declare %[[PRIV_BOX]]
+  ! CHECK:      %[[PRIV_IVAR_DECL:.*]]:2 = hlfir.declare %[[PRIV_IVAR]]
+  ! CHECK:      hlfir.assign %[[IVAR]] to %[[PRIV_IVAR_DECL]]#0
+  ! CHECK:      %[[PRIV_BOX_LOAD:.*]] = fir.load %[[PRIV_BOX_DECL]]
+  ! CHECK:      hlfir.assign %{{.*}} to %[[PRIV_BOX_DECL]]#0
+  ! CHECK:      omp.yield
+    tmp = tmp + 1
+  end do
+end subroutine do_simd_private

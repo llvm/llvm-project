@@ -414,6 +414,9 @@ struct PotentiallyFinal<T*> final { };
 template<>
 struct PotentiallyFinal<int> final { };
 
+struct FwdDeclFinal;
+using FwdDeclFinalAlias = FwdDeclFinal;
+struct FwdDeclFinal final {};
 
 
 
@@ -423,6 +426,8 @@ void is_final()
 	static_assert(__is_final(FinalClass));
 	static_assert(__is_final(PotentiallyFinal<float*>));
 	static_assert(__is_final(PotentiallyFinal<int>));
+        static_assert(__is_final(FwdDeclFinal));
+        static_assert(__is_final(FwdDeclFinalAlias));
 
 	static_assert(!__is_final(int));
 	static_assert(!__is_final(Union));
@@ -777,36 +782,6 @@ void is_unbounded_array(int n) {
 
   int t32[n];
   (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported in '__is_unbounded_array'}}
-}
-
-void is_referenceable() {
-  static_assert(__is_referenceable(int));
-  static_assert(__is_referenceable(const int));
-  static_assert(__is_referenceable(volatile int));
-  static_assert(__is_referenceable(const volatile int));
-  static_assert(__is_referenceable(int *));
-  static_assert(__is_referenceable(int &));
-  static_assert(__is_referenceable(int &&));
-  static_assert(__is_referenceable(int (*)()));
-  static_assert(__is_referenceable(int (&)()));
-  static_assert(__is_referenceable(int(&&)()));
-  static_assert(__is_referenceable(IntAr));
-  static_assert(__is_referenceable(IntArNB));
-  static_assert(__is_referenceable(decltype(nullptr)));
-  static_assert(__is_referenceable(Empty));
-  static_assert(__is_referenceable(Union));
-  static_assert(__is_referenceable(Derives));
-  static_assert(__is_referenceable(Enum));
-  static_assert(__is_referenceable(EnumClass));
-  static_assert(__is_referenceable(int Empty::*));
-  static_assert(__is_referenceable(int(Empty::*)()));
-  static_assert(__is_referenceable(AnIncompleteType));
-  static_assert(__is_referenceable(struct AnIncompleteType));
-
-  using function_type = void(int);
-  static_assert(__is_referenceable(function_type));
-
-  static_assert(!__is_referenceable(void));
 }
 
 template <typename T> void tmpl_func(T&) {}
@@ -2703,6 +2678,9 @@ struct FloatWrapper
   }
 };
 
+template<typename A, typename B, bool result = __is_convertible(A, B)>
+static constexpr bool is_convertible_sfinae() { return result; }
+
 void is_convertible()
 {
   static_assert(__is_convertible(IntWrapper, IntWrapper));
@@ -2727,6 +2705,10 @@ void is_convertible()
   static_assert(__is_convertible(FloatWrapper, const float&));
   static_assert(__is_convertible(float, FloatWrapper&&));
   static_assert(__is_convertible(float, const FloatWrapper&));
+
+  static_assert(!__is_convertible(AllPrivate, AllPrivate));
+  // Make sure we don't emit "calling a private constructor" in SFINAE context.
+  static_assert(!is_convertible_sfinae<AllPrivate, AllPrivate>());
 }
 
 void is_nothrow_convertible()
@@ -2851,6 +2833,9 @@ void is_trivial()
 }
 
 template<typename T> struct TriviallyConstructibleTemplate {};
+
+template<typename A, typename B, bool result = __is_assignable(A, B)>
+static constexpr bool is_assignable_sfinae() { return result; }
 
 void trivial_checks()
 {
@@ -3025,6 +3010,10 @@ void trivial_checks()
   static_assert(!__is_assignable(AnIncompleteType[1], AnIncompleteType[1])); // expected-error {{incomplete type}}
   static_assert(!__is_assignable(void, void));
   static_assert(!__is_assignable(const volatile void, const volatile void));
+
+  static_assert(!__is_assignable(AllPrivate, AllPrivate));
+  // Make sure we don't emit "'operator=' is a private member" in SFINAE context.
+  static_assert(!is_assignable_sfinae<AllPrivate, AllPrivate>());
 }
 
 void constructible_checks() {
@@ -3154,6 +3143,10 @@ void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int, long)));
 
   static_assert((__reference_binds_to_temporary(const int &, long)));
+
+  // Test that function references are never considered bound to temporaries.
+  static_assert(!__reference_binds_to_temporary(void(&)(), void()));
+  static_assert(!__reference_binds_to_temporary(void(&&)(), void()));
 }
 
 
@@ -3165,6 +3158,14 @@ struct ExplicitConversionRvalueRef {
 struct ExplicitConversionRef {
     operator int();
     explicit operator int&();
+};
+
+struct NonMovable {
+  NonMovable(NonMovable&&) = delete;
+};
+
+struct ConvertsFromNonMovable {
+  ConvertsFromNonMovable(NonMovable);
 };
 
 void reference_constructs_from_temporary_checks() {
@@ -3204,6 +3205,16 @@ void reference_constructs_from_temporary_checks() {
 
   static_assert(__reference_constructs_from_temporary(const int &, long));
 
+  // Test that function references are never considered bound to temporaries.
+  static_assert(!__reference_constructs_from_temporary(void(&&)(), void()));
+  static_assert(!__reference_constructs_from_temporary(void(&)(), void()));
+
+  // LWG3819: reference_meows_from_temporary should not use is_meowible
+  static_assert(__reference_constructs_from_temporary(ConvertsFromNonMovable&&, NonMovable) == __cplusplus >= 201703L);
+  // For scalar types, cv-qualifications are dropped first for prvalues.
+  static_assert(__reference_constructs_from_temporary(int&&, const int));
+  static_assert(__reference_constructs_from_temporary(int&&, volatile int));
+
   // Additional checks
   static_assert(__reference_constructs_from_temporary(POD const&, Derives));
   static_assert(__reference_constructs_from_temporary(int&&, int));
@@ -3220,6 +3231,9 @@ void reference_constructs_from_temporary_checks() {
 
 
 }
+
+template<typename A, typename B, bool result = __reference_converts_from_temporary(A, B)>
+static constexpr bool reference_converts_from_temporary_sfinae() { return result; }
 
 void reference_converts_from_temporary_checks() {
   static_assert(!__reference_converts_from_temporary(int &, int &));
@@ -3258,6 +3272,16 @@ void reference_converts_from_temporary_checks() {
 
   static_assert(__reference_converts_from_temporary(const int &, long));
 
+  // Test that function references are never considered bound to temporaries.
+  static_assert(!__reference_converts_from_temporary(void(&)(), void()));
+  static_assert(!__reference_converts_from_temporary(void(&&)(), void()));
+
+  // LWG3819: reference_meows_from_temporary should not use is_meowible
+  static_assert(__reference_converts_from_temporary(ConvertsFromNonMovable&&, NonMovable) == __cplusplus >= 201703L);
+  // For scalar types, cv-qualifications are dropped first for prvalues.
+  static_assert(__reference_converts_from_temporary(int&&, const int));
+  static_assert(__reference_converts_from_temporary(int&&, volatile int));
+
   // Additional checks
   static_assert(__reference_converts_from_temporary(POD const&, Derives));
   static_assert(__reference_converts_from_temporary(int&&, int));
@@ -3271,6 +3295,9 @@ void reference_converts_from_temporary_checks() {
   static_assert(__reference_converts_from_temporary(const int&, ExplicitConversionRef));
   static_assert(__reference_converts_from_temporary(int&&, ExplicitConversionRvalueRef));
 
+  static_assert(!__reference_converts_from_temporary(AllPrivate, AllPrivate));
+  // Make sure we don't emit "calling a private constructor" in SFINAE context.
+  static_assert(!reference_converts_from_temporary_sfinae<AllPrivate, AllPrivate>());
 }
 
 void array_rank() {
@@ -3412,6 +3439,16 @@ static_assert(!__has_unique_object_representations(decltype(nullptr)), "or nullp
 static_assert(!__has_unique_object_representations(float), "definitely not Floating Point");
 static_assert(!__has_unique_object_representations(double), "definitely not Floating Point");
 static_assert(!__has_unique_object_representations(long double), "definitely not Floating Point");
+
+
+static_assert(!__has_unique_object_representations(AnIncompleteType[]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType[][1]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType[1]));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
+static_assert(!__has_unique_object_representations(AnIncompleteType));
+//expected-error@-1 {{incomplete type 'AnIncompleteType' used in type trait expression}}
 
 struct NoPadding {
   int a;
@@ -4105,6 +4142,20 @@ struct NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2 {
 
 static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparableNonTriviallyEqualityComparableArrs2));
 
+struct NotTriviallyEqualityComparablePrivateComparison {
+  int i;
+
+private:
+  bool operator==(const NotTriviallyEqualityComparablePrivateComparison&) const = default;
+};
+static_assert(!__is_trivially_equality_comparable(NotTriviallyEqualityComparablePrivateComparison));
+
+template<typename T, bool result = __is_trivially_equality_comparable(T)>
+static constexpr bool is_trivially_equality_comparable_sfinae() { return result; }
+
+// Make sure we don't emit "'operator==' is a private member" in SFINAE context.
+static_assert(!is_trivially_equality_comparable_sfinae<NotTriviallyEqualityComparablePrivateComparison>());
+
 template<bool B>
 struct MaybeTriviallyEqualityComparable {
     int i;
@@ -4739,8 +4790,6 @@ struct CheckAbominableFunction<M S::*> {
     static_assert(__is_same(remove_cvref_t<M>, M));
     static_assert(__is_same(remove_pointer_t<M>, M));
     static_assert(__is_same(remove_reference_t<M>, M));
-
-    static_assert(!__is_referenceable(M));
   }
 };
 
@@ -5030,4 +5079,19 @@ void remove_all_extents() {
 
   using SomeArray = int[1][2];
   static_assert(__is_same(remove_all_extents_t<const SomeArray>, const int));
+}
+
+namespace GH121278 {
+// https://cplusplus.github.io/LWG/lwg-active.html#3929
+#if __cplusplus >= 202002L
+template <typename B, typename D>
+concept C = __is_base_of(B, D);
+// expected-error@-1 {{incomplete type 'GH121278::S' used in type trait expression}}
+// expected-note@-2 {{while substituting template arguments into constraint expression here}}
+
+struct T;
+struct S;
+bool b = C<T, S>;
+// expected-note@-1 {{while checking the satisfaction of concept 'C<GH121278::T, GH121278::S>' requested here}}
+#endif
 }

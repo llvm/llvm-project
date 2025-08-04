@@ -29,4 +29,5 @@ __m512d zmm_error(__m512d a) {
 // noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
 // noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
 // noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
+// noevex-warning@*:* {{invalid feature combination: +avx512bw +avx10.1-256; will be promoted to avx10.1-512}}
 #endif

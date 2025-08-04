@@ -15,7 +15,6 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -63,7 +62,7 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     for (Instruction &I : BB) {
       Changed |= tryToImproveAlign(
           DL, &I, [&](Value *PtrOp, Align OldAlign, Align PrefAlign) {
-            KnownBits Known = computeKnownBits(PtrOp, DL, 0, &AC, &I, &DT);
+            KnownBits Known = computeKnownBits(PtrOp, DL, &AC, &I, &DT);
             unsigned TrailZ = std::min(Known.countMinTrailingZeros(),
                                        +Value::MaxAlignmentExponent);
             return Align(1ull << std::min(Known.getBitWidth() - 1, TrailZ));

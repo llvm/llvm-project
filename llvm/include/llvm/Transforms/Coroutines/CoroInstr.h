@@ -27,6 +27,7 @@
 
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -170,7 +171,7 @@ public:
       Inst->eraseFromParent();
       return;
     }
-    Inst->moveBefore(getCoroBegin()->getNextNode());
+    Inst->moveBefore(std::next(getCoroBegin()->getIterator()));
   }
 
   // Info argument of coro.id is
@@ -217,8 +218,8 @@ public:
     return cast<Function>(getArgOperand(CoroutineArg)->stripPointerCasts());
   }
   void setCoroutineSelf() {
-    assert(isa<ConstantPointerNull>(getArgOperand(CoroutineArg)) &&
-           "Coroutine argument is already assigned");
+    if (!isa<ConstantPointerNull>(getArgOperand(CoroutineArg)))
+      assert(getCoroutine() == getFunction() && "Don't change coroutine.");
     setArgOperand(CoroutineArg, getFunction());
   }
 
@@ -237,7 +238,7 @@ class AnyCoroIdRetconInst : public AnyCoroIdInst {
   enum { SizeArg, AlignArg, StorageArg, PrototypeArg, AllocArg, DeallocArg };
 
 public:
-  void checkWellFormed() const;
+  LLVM_ABI void checkWellFormed() const;
 
   uint64_t getStorageSize() const {
     return cast<ConstantInt>(getArgOperand(SizeArg))->getZExtValue();
@@ -306,7 +307,7 @@ class CoroIdAsyncInst : public AnyCoroIdInst {
   enum { SizeArg, AlignArg, StorageArg, AsyncFuncPtrArg };
 
 public:
-  void checkWellFormed() const;
+  LLVM_ABI void checkWellFormed() const;
 
   /// The initial async function context size. The fields of which are reserved
   /// for use by the frontend. The frame will be allocated as a tail of this
@@ -568,7 +569,7 @@ public:
     MustTailCallFuncArg
   };
 
-  void checkWellFormed() const;
+  LLVM_ABI void checkWellFormed() const;
 
   unsigned getStorageArgumentIndex() const {
     auto *Arg = cast<ConstantInt>(getArgOperand(StorageArgNoArg));
@@ -722,7 +723,7 @@ class CoroAsyncEndInst : public AnyCoroEndInst {
   enum { FrameArg, UnwindArg, MustTailCallFuncArg };
 
 public:
-  void checkWellFormed() const;
+  LLVM_ABI void checkWellFormed() const;
 
   Function *getMustTailCallFunction() const {
     if (arg_size() < 3)

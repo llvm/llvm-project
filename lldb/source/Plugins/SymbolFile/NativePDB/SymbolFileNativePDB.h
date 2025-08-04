@@ -157,7 +157,7 @@ public:
 
   PdbIndex &GetIndex() { return *m_index; };
 
-  void DumpClangAST(Stream &s) override;
+  void DumpClangAST(Stream &s, llvm::StringRef filter) override;
 
   std::optional<llvm::codeview::TypeIndex>
   GetParentType(llvm::codeview::TypeIndex ti);
@@ -226,7 +226,7 @@ private:
   lldb::TypeSP GetOrCreateType(PdbTypeSymId type_id);
   lldb::TypeSP GetOrCreateType(llvm::codeview::TypeIndex ti);
   lldb::VariableSP GetOrCreateGlobalVariable(PdbGlobalSymId var_id);
-  Block &GetOrCreateBlock(PdbCompilandSymId block_id);
+  Block *GetOrCreateBlock(PdbCompilandSymId block_id);
   lldb::VariableSP GetOrCreateLocalVariable(PdbCompilandSymId scope_id,
                                             PdbCompilandSymId var_id,
                                             bool is_param);
@@ -234,7 +234,7 @@ private:
 
   lldb::FunctionSP CreateFunction(PdbCompilandSymId func_id,
                                   CompileUnit &comp_unit);
-  Block &CreateBlock(PdbCompilandSymId block_id);
+  Block *CreateBlock(PdbCompilandSymId block_id);
   lldb::VariableSP CreateLocalVariable(PdbCompilandSymId scope_id,
                                        PdbCompilandSymId var_id, bool is_param);
   lldb::TypeSP CreateTypedef(PdbGlobalSymId id);
@@ -258,6 +258,8 @@ private:
 
   void ParseInlineSite(PdbCompilandSymId inline_site_id, Address func_addr);
 
+  std::vector<CompilerContext> GetContextForType(llvm::codeview::TypeIndex ti);
+
   llvm::BumpPtrAllocator m_allocator;
 
   lldb::addr_t m_obj_load_address = 0;
@@ -278,6 +280,8 @@ private:
   llvm::DenseMap<lldb::user_id_t, std::shared_ptr<InlineSite>> m_inline_sites;
   llvm::DenseMap<llvm::codeview::TypeIndex, llvm::codeview::TypeIndex>
       m_parent_types;
+
+  lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
 };
 
 } // namespace npdb

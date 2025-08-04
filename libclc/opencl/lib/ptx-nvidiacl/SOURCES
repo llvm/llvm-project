@@ -1,0 +1,13 @@
+mem_fence/fence.cl
+synchronization/barrier.cl
+workitem/get_global_id.cl
+workitem/get_group_id.cl
+workitem/get_local_id.cl
+workitem/get_local_linear_id.cl
+workitem/get_local_size.cl
+workitem/get_max_sub_group_size.cl
+workitem/get_num_groups.cl
+workitem/get_num_sub_groups.cl
+workitem/get_sub_group_id.cl
+workitem/get_sub_group_local_id.cl
+workitem/get_sub_group_size.cl

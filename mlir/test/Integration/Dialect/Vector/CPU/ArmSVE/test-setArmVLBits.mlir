@@ -8,7 +8,7 @@
 
 // RUN: %{compile} | %{run} | FileCheck %s
 
-func.func @checkVScale() {
+func.func @checkVScale() attributes {no_inline} {
   %vscale = vector.vscale
   vector.print str "vscale = "
   vector.print %vscale : index

@@ -190,8 +190,7 @@ DumpValueObjectOptions OptionGroupValueObjectDisplay::GetAsDumpOptions(
     LanguageRuntimeDescriptionDisplayVerbosity lang_descr_verbosity,
     lldb::Format format, lldb::TypeSummaryImplSP summary_sp) {
   DumpValueObjectOptions options;
-  options.SetMaximumPointerDepth(
-      {DumpValueObjectOptions::PointerDepth::Mode::Always, ptr_depth});
+  options.SetMaximumPointerDepth(ptr_depth);
   if (use_objc)
     options.SetShowSummary(false);
   else

@@ -627,6 +627,18 @@ define i32 @thunk_extern_caller() fn_ret_thunk_extern {
   ret i32 %1
 }
 
+; Test that loader replaceable functions never get inlined.
+define i32 @loader_replaceable_callee(i32 %i) "loader-replaceable" {
+  ret i32 %i
+}
+
+define i32 @loader_replaceable_caller() {
+; CHECK: @loader_replaceable_caller() {
+; CHECK-NEXT: call i32 @loader_replaceable_callee()
+  %1 = call i32 @loader_replaceable_callee()
+  ret i32 %1
+}
+
 ; CHECK: attributes [[SLH]] = { speculative_load_hardening }
 ; CHECK: attributes [[FPMAD_FALSE]] = { "less-precise-fpmad"="false" }
 ; CHECK: attributes [[FPMAD_TRUE]] = { "less-precise-fpmad"="true" }

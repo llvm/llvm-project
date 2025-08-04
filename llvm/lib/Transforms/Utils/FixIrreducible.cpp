@@ -82,7 +82,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/FixIrreducible.h"
-#include "llvm/ADT/SCCIterator.h"
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -136,10 +135,9 @@ static void reconnectChildLoops(LoopInfo &LI, Loop *ParentLoop, Loop *NewLoop,
                                     : LI.getTopLevelLoopsVector();
   // Any candidate is a child iff its header is owned by the new loop. Move all
   // the children to a new vector.
-  auto FirstChild = std::partition(
-      CandidateLoops.begin(), CandidateLoops.end(), [&](Loop *L) {
-        return NewLoop == L || !NewLoop->contains(L->getHeader());
-      });
+  auto FirstChild = llvm::partition(CandidateLoops, [&](Loop *L) {
+    return NewLoop == L || !NewLoop->contains(L->getHeader());
+  });
   SmallVector<Loop *, 8> ChildLoops(FirstChild, CandidateLoops.end());
   CandidateLoops.erase(FirstChild, CandidateLoops.end());
 

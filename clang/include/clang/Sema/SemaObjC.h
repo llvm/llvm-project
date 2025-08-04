@@ -170,7 +170,7 @@ public:
   bool isSignedCharBool(QualType Ty);
 
   void adornBoolConversionDiagWithTernaryFixit(
-      Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder);
+      const Expr *SourceExpr, const Sema::SemaDiagnosticBuilder &Builder);
 
   /// Check an Objective-C dictionary literal being converted to the given
   /// target type.
@@ -307,11 +307,11 @@ public:
 
   DeclGroupPtrTy
   ActOnForwardProtocolDeclaration(SourceLocation AtProtoclLoc,
-                                  ArrayRef<IdentifierLocPair> IdentList,
+                                  ArrayRef<IdentifierLoc> IdentList,
                                   const ParsedAttributesView &attrList);
 
   void FindProtocolDeclaration(bool WarnOnDeclarations, bool ForObjCContainer,
-                               ArrayRef<IdentifierLocPair> ProtocolId,
+                               ArrayRef<IdentifierLoc> ProtocolId,
                                SmallVectorImpl<Decl *> &Protocols);
 
   void DiagnoseTypeArgsAndProtocols(IdentifierInfo *ProtocolId,
@@ -336,8 +336,8 @@ public:
                                         ObjCInterfaceDecl *ID);
 
   Decl *ActOnAtEnd(Scope *S, SourceRange AtEnd,
-                   ArrayRef<Decl *> allMethods = std::nullopt,
-                   ArrayRef<DeclGroupPtrTy> allTUVars = std::nullopt);
+                   ArrayRef<Decl *> allMethods = {},
+                   ArrayRef<DeclGroupPtrTy> allTUVars = {});
 
   struct ObjCArgInfo {
     IdentifierInfo *Name;
@@ -351,6 +351,10 @@ public:
     ParsedAttributesView ArgAttrs;
   };
 
+  ParmVarDecl *ActOnMethodParmDeclaration(Scope *S, ObjCArgInfo &ArgInfo,
+                                          int ParamIndex,
+                                          bool MethodDefinition);
+
   Decl *ActOnMethodDeclaration(
       Scope *S,
       SourceLocation BeginLoc, // location of the + or -.
@@ -359,7 +363,7 @@ public:
       ArrayRef<SourceLocation> SelectorLocs, Selector Sel,
       // optional arguments. The number of types/arguments is obtained
       // from the Sel.getNumArgs().
-      ObjCArgInfo *ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
+      ParmVarDecl **ArgInfo, DeclaratorChunk::ParamInfo *CParamInfo,
       unsigned CNumArgs, // c-style args
       const ParsedAttributesView &AttrList, tok::ObjCKeywordKind MethodImplKind,
       bool isVariadic, bool MethodDefinition);
@@ -808,7 +812,8 @@ public:
                                           CheckedConversionKind CCK,
                                           bool Diagnose = true,
                                           bool DiagnoseCFAudited = false,
-                                          BinaryOperatorKind Opc = BO_PtrMemD);
+                                          BinaryOperatorKind Opc = BO_PtrMemD,
+                                          bool IsReinterpretCast = false);
 
   Expr *stripARCUnbridgedCast(Expr *e);
   void diagnoseARCUnbridgedCast(Expr *e);

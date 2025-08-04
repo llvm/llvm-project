@@ -40,6 +40,7 @@ public:
   void handlePrebuiltModuleDependency(PrebuiltModuleDep PMD) override {}
   void handleModuleDependency(ModuleDeps MD) override {}
   void handleDirectModuleDependency(ModuleID ID) override {}
+  void handleVisibleModule(std::string ModuleName) override {}
   void handleContextHash(std::string Hash) override {}
 
   void printDependencies(std::string &S) {
@@ -118,7 +119,7 @@ llvm::Expected<P1689Rule> DependencyScanningTool::getP1689ModuleDependencyFile(
   class P1689ActionController : public DependencyActionController {
   public:
     // The lookupModuleOutput is for clang modules. P1689 format don't need it.
-    std::string lookupModuleOutput(const ModuleID &,
+    std::string lookupModuleOutput(const ModuleDeps &,
                                    ModuleOutputKind Kind) override {
       return "";
     }
@@ -142,17 +143,20 @@ llvm::Expected<TranslationUnitDeps>
 DependencyScanningTool::getTranslationUnitDependencies(
     const std::vector<std::string> &CommandLine, StringRef CWD,
     const llvm::DenseSet<ModuleID> &AlreadySeen,
-    LookupModuleOutputCallback LookupModuleOutput) {
+    LookupModuleOutputCallback LookupModuleOutput,
+    std::optional<llvm::MemoryBufferRef> TUBuffer) {
   FullDependencyConsumer Consumer(AlreadySeen);
   CallbackActionController Controller(LookupModuleOutput);
-  llvm::Error Result =
-      Worker.computeDependencies(CWD, CommandLine, Consumer, Controller);
+  llvm::Error Result = Worker.computeDependencies(CWD, CommandLine, Consumer,
+                                                  Controller, TUBuffer);
+
   if (Result)
     return std::move(Result);
   return Consumer.takeTranslationUnitDeps();
 }
 
-llvm::Expected<ModuleDepsGraph> DependencyScanningTool::getModuleDependencies(
+llvm::Expected<TranslationUnitDeps>
+DependencyScanningTool::getModuleDependencies(
     StringRef ModuleName, const std::vector<std::string> &CommandLine,
     StringRef CWD, const llvm::DenseSet<ModuleID> &AlreadySeen,
     LookupModuleOutputCallback LookupModuleOutput) {
@@ -162,15 +166,18 @@ llvm::Expected<ModuleDepsGraph> DependencyScanningTool::getModuleDependencies(
                                                   Controller, ModuleName);
   if (Result)
     return std::move(Result);
-  return Consumer.takeModuleGraphDeps();
+  return Consumer.takeTranslationUnitDeps();
 }
 
 TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
   TranslationUnitDeps TU;
 
   TU.ID.ContextHash = std::move(ContextHash);
+  TU.ID.ModuleName = std::move(ModuleName);
+  TU.NamedModuleDeps = std::move(NamedModuleDeps);
   TU.FileDeps = std::move(Dependencies);
   TU.PrebuiltModuleDeps = std::move(PrebuiltModuleDeps);
+  TU.VisibleModules = std::move(VisibleModules);
   TU.Commands = std::move(Commands);
 
   for (auto &&M : ClangModuleDeps) {
@@ -184,21 +191,6 @@ TranslationUnitDeps FullDependencyConsumer::takeTranslationUnitDeps() {
   TU.ClangModuleDeps = std::move(DirectModuleDeps);
 
   return TU;
-}
-
-ModuleDepsGraph FullDependencyConsumer::takeModuleGraphDeps() {
-  ModuleDepsGraph ModuleGraph;
-
-  for (auto &&M : ClangModuleDeps) {
-    auto &MD = M.second;
-    // TODO: Avoid handleModuleDependency even being called for modules
-    //   we've already seen.
-    if (AlreadySeen.count(M.first))
-      continue;
-    ModuleGraph.push_back(std::move(MD));
-  }
-
-  return ModuleGraph;
 }
 
 CallbackActionController::~CallbackActionController() {}

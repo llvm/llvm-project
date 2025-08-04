@@ -97,6 +97,26 @@ static cl::opt<bool>
                                 "specified with -thinlto-emit-indexes or "
                                 "-thinlto-distributed-indexes"));
 
+static cl::opt<std::string> DTLTODistributor(
+    "dtlto-distributor",
+    cl::desc("Distributor to use for ThinLTO backend compilations. Specifying "
+             "this enables DTLTO."));
+
+static cl::list<std::string> DTLTODistributorArgs(
+    "dtlto-distributor-arg", cl::CommaSeparated,
+    cl::desc("Arguments to pass to the DTLTO distributor process."),
+    cl::value_desc("arg"));
+
+static cl::opt<std::string> DTLTOCompiler(
+    "dtlto-compiler",
+    cl::desc("Compiler to use for DTLTO ThinLTO backend compilations."));
+
+static cl::list<std::string> DTLTOCompilerArgs(
+    "dtlto-compiler-arg", cl::CommaSeparated,
+    cl::desc("Arguments to pass to the remote compiler for backend "
+             "compilations."),
+    cl::value_desc("arg"));
+
 // Default to using all available threads in the system, but using only one
 // thread per core (no SMT).
 // Use -thinlto-threads=all to use hardware_concurrency() instead, which means
@@ -130,7 +150,7 @@ static cl::opt<bool> RemarksWithHotness(
     cl::desc("With PGO, include profile count in optimization remarks"),
     cl::Hidden);
 
-cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
+static cl::opt<std::optional<uint64_t>, false, remarks::HotnessThresholdParser>
     RemarksHotnessThreshold(
         "pass-remarks-hotness-threshold",
         cl::desc("Minimum profile count required for an "
@@ -187,14 +207,17 @@ static cl::opt<bool> EnableFreestanding(
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"),
     cl::Hidden);
 
-static cl::opt<bool> TryUseNewDbgInfoFormat(
-    "try-experimental-debuginfo-iterators",
-    cl::desc("Enable debuginfo iterator positions, if they're built in"),
-    cl::init(false), cl::Hidden);
+static cl::opt<bool> WholeProgramVisibilityEnabledInLTO(
+    "whole-program-visibility-enabled-in-lto",
+    cl::desc("Enable whole program visibility during LTO"), cl::Hidden);
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> LoadBitcodeIntoNewDbgInfoFormat;
-extern cl::opt<cl::boolOrDefault> PreserveInputDbgFormat;
+static cl::opt<bool> ValidateAllVtablesHaveTypeInfos(
+    "validate-all-vtables-have-type-infos",
+    cl::desc("Validate that all vtables have type infos in LTO"), cl::Hidden);
+
+static cl::opt<bool>
+    AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
+                            cl::desc("All vtables have type infos"));
 
 static void check(Error E, std::string Msg) {
   if (!E)
@@ -224,26 +247,12 @@ template <typename T> static T check(ErrorOr<T> E, std::string Msg) {
 }
 
 static int usage() {
-  errs() << "Available subcommands: dump-symtab run\n";
+  errs() << "Available subcommands: dump-symtab run print-guid\n";
   return 1;
 }
 
 static int run(int argc, char **argv) {
   cl::ParseCommandLineOptions(argc, argv, "Resolution-based LTO test harness");
-  // Load bitcode into the new debug info format by default.
-  if (LoadBitcodeIntoNewDbgInfoFormat == cl::boolOrDefault::BOU_UNSET)
-    LoadBitcodeIntoNewDbgInfoFormat = cl::boolOrDefault::BOU_TRUE;
-
-  // RemoveDIs debug-info transition: tests may request that we /try/ to use the
-  // new debug-info format.
-  if (TryUseNewDbgInfoFormat) {
-    // Turn the new debug-info format on.
-    UseNewDbgInfoFormat = true;
-  }
-  // Since llvm-lto2 collects multiple IR modules together, for simplicity's
-  // sake we disable the "PreserveInputDbgFormat" flag to enforce a single debug
-  // info format.
-  PreserveInputDbgFormat = cl::boolOrDefault::BOU_FALSE;
 
   // FIXME: Workaround PR30396 which means that a symbol can appear
   // more than once if it is defined in module-level assembly and
@@ -326,8 +335,7 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.Freestanding = EnableFreestanding;
-  for (auto &PluginFN : PassPlugins)
-    Conf.PassPlugins.push_back(PluginFN);
+  llvm::append_range(Conf.PassPlugins, PassPlugins);
   if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
     Conf.CGOptLevel = *Level;
   } else {
@@ -344,6 +352,21 @@ static int run(int argc, char **argv) {
   Conf.PTO.LoopVectorization = Conf.OptLevel > 1;
   Conf.PTO.SLPVectorization = Conf.OptLevel > 1;
 
+  if (WholeProgramVisibilityEnabledInLTO.getNumOccurrences() > 0)
+    Conf.HasWholeProgramVisibility = WholeProgramVisibilityEnabledInLTO;
+  if (ValidateAllVtablesHaveTypeInfos.getNumOccurrences() > 0)
+    Conf.ValidateAllVtablesHaveTypeInfos = ValidateAllVtablesHaveTypeInfos;
+  if (AllVtablesHaveTypeInfos.getNumOccurrences() > 0)
+    Conf.AllVtablesHaveTypeInfos = AllVtablesHaveTypeInfos;
+
+  if (ThinLTODistributedIndexes && !DTLTODistributor.empty())
+    llvm::errs() << "-thinlto-distributed-indexes cannot be specfied together "
+                    "with -dtlto-distributor\n";
+  auto DTLTODistributorArgsSV = llvm::to_vector<0>(llvm::map_range(
+      DTLTODistributorArgs, [](const std::string &S) { return StringRef(S); }));
+  auto DTLTOCompilerArgsSV = llvm::to_vector<0>(llvm::map_range(
+      DTLTOCompilerArgs, [](const std::string &S) { return StringRef(S); }));
+
   ThinBackend Backend;
   if (ThinLTODistributedIndexes)
     Backend = createWriteIndexesThinBackend(llvm::hardware_concurrency(Threads),
@@ -353,7 +376,13 @@ static int run(int argc, char **argv) {
                                             ThinLTOEmitImports,
                                             /*LinkedObjectsFile=*/nullptr,
                                             /*OnWrite=*/{});
-  else
+  else if (!DTLTODistributor.empty()) {
+    Backend = createOutOfProcessThinBackend(
+        llvm::heavyweight_hardware_concurrency(Threads),
+        /*OnWrite=*/{}, ThinLTOEmitIndexes, ThinLTOEmitImports, OutputFilename,
+        DTLTODistributor, DTLTODistributorArgsSV, DTLTOCompiler,
+        DTLTOCompilerArgsSV, SaveTemps);
+  } else
     Backend = createInProcessThinBackend(
         llvm::heavyweight_hardware_concurrency(Threads),
         /* OnWrite */ {}, ThinLTOEmitIndexes, ThinLTOEmitImports);
@@ -448,7 +477,9 @@ static int run(int argc, char **argv) {
 
   auto AddBuffer = [&](size_t Task, const Twine &ModuleName,
                        std::unique_ptr<MemoryBuffer> MB) {
-    *AddStream(Task, ModuleName)->OS << MB->getBuffer();
+    auto Stream = AddStream(Task, ModuleName);
+    *Stream->OS << MB->getBuffer();
+    check(Stream->commit(), "Failed to commit cache");
   };
 
   FileCache Cache;
@@ -579,5 +610,11 @@ int main(int argc, char **argv) {
     return dumpSymtab(argc - 1, argv + 1);
   if (Subcommand == "run")
     return run(argc - 1, argv + 1);
+  if (Subcommand == "print-guid" && argc > 2) {
+    // Note the name of the function we're calling: this won't return the right
+    // answer for internal linkage symbols.
+    outs() << GlobalValue::getGUIDAssumingExternalLinkage(argv[2]) << '\n';
+    return 0;
+  }
   return usage();
 }

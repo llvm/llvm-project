@@ -16,13 +16,14 @@
 // CHECK-NEXT: core.CallAndMessage
 // CHECK-NEXT: core.DivideZero
 // CHECK-NEXT: core.DynamicTypePropagation
+// CHECK-NEXT: core.FixedAddressDereference
 // CHECK-NEXT: core.NonNullParamChecker
 // CHECK-NEXT: core.NonnilStringConstants
 // CHECK-NEXT: core.NullDereference
-// CHECK-NEXT: core.StackAddrEscapeBase
 // CHECK-NEXT: core.StackAddressEscape
 // CHECK-NEXT: core.UndefinedBinaryOperatorResult
 // CHECK-NEXT: core.VLASize
+// CHECK-NEXT: core.builtin.AssumeModeling
 // CHECK-NEXT: core.builtin.BuiltinFunctions
 // CHECK-NEXT: core.builtin.NoReturnFunctions
 // CHECK-NEXT: core.uninitialized.ArraySubscript
@@ -31,7 +32,6 @@
 // CHECK-NEXT: core.uninitialized.CapturedBlockVariable
 // CHECK-NEXT: core.uninitialized.UndefReturn
 // CHECK-NEXT: deadcode.DeadStores
-// CHECK-NEXT: nullability.NullabilityBase
 // CHECK-NEXT: nullability.NullPassedToNonnull
 // CHECK-NEXT: nullability.NullReturnedFromNonnull
 // CHECK-NEXT: security.insecureAPI.SecuritySyntaxChecker
@@ -43,6 +43,7 @@
 // CHECK-NEXT: security.insecureAPI.vfork
 // CHECK-NEXT: unix.API
 // CHECK-NEXT: unix.BlockInCriticalSection
+// CHECK-NEXT: unix.Chroot
 // CHECK-NEXT: unix.cstring.CStringModeling
 // CHECK-NEXT: unix.DynamicMemoryModeling
 // CHECK-NEXT: unix.Errno
@@ -53,6 +54,7 @@
 // CHECK-NEXT: unix.StdCLibraryFunctions
 // CHECK-NEXT: unix.Vfork
 // CHECK-NEXT: unix.cstring.BadSizeArg
+// CHECK-NEXT: unix.cstring.NotNullTerminated
 // CHECK-NEXT: unix.cstring.NullArg
 
 int main() {

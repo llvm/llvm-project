@@ -24,7 +24,7 @@ Overview
 
 The module sources are stored in ``.cppm`` files. Modules need to be available
 as BMIs, which are ``.pcm`` files for Clang. BMIs are not portable, they depend
-on the compiler used and its compilation flags. Therefore there needs to be a
+on the compiler and the compilation flags used. Therefore there needs to be a
 way to distribute the ``.cppm`` files to the user and offer a way for them to
 build and use the ``.pcm`` files. It is expected this will be done by build
 systems in the future. To aid early adaptor and build system vendors libc++

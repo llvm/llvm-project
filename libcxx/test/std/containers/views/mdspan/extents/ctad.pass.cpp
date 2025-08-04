@@ -16,9 +16,9 @@
 // Remarks: The deduced type is dextents<size_t, sizeof...(Integrals)>.           // until C++26
 // Remarks: The deduced type is extents<size_t, maybe-static-ext<Integrals>...>.  // since C++26
 
-#include <mdspan>
 #include <cassert>
-#include <span> // dynamic_extent
+#include <cstddef>
+#include <mdspan>
 #include <type_traits>
 
 #include "../ConvertibleToIntegral.h"

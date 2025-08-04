@@ -59,7 +59,7 @@ void TestMathPolynomialApproximationPass::runOnOperation() {
   MathPolynomialApproximationOptions approxOptions;
   approxOptions.enableAvx2 = enableAvx2;
   populateMathPolynomialApproximationPatterns(patterns, approxOptions);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
 }
 
 namespace mlir {

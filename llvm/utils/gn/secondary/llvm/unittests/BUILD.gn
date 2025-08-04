@@ -10,6 +10,9 @@ group("unittests") {
     "Bitstream:BitstreamTests",
     "CGData:CodeGenDataTests",
     "CodeGen:CodeGenTests",
+
+    # FIXME: Figure out how to make pass.
+    # "CodeGen/CGPluginTest",
     "CodeGen/GlobalISel:GlobalISelTests",
     "DWARFLinkerParallel:DWARFLinkerParallelTests",
     "DebugInfo/BTF:DebugInfoBTFTests",
@@ -50,6 +53,7 @@ group("unittests") {
     "TableGen:TableGenTests",
     "Target:TargetMachineCTests",
     "TargetParser:TargetParserTests",
+    "Telemetry:TelemetryTests",
     "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",
     "TextAPI:TextAPITests",
@@ -101,7 +105,10 @@ group("unittests") {
     ]
   }
   if (llvm_build_RISCV) {
-    deps += [ "Target/RISCV:RISCVTests" ]
+    deps += [
+      "Target/RISCV:RISCVTests",
+      "tools/llvm-exegesis/RISCV:LLVMExegesisRISCVTests",
+    ]
   }
   if (llvm_build_SystemZ) {
     deps += [ "MC/SystemZ:SystemZAsmLexerTests" ]

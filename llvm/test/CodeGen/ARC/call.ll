@@ -1,4 +1,4 @@
-; RUN: llc -march=arc < %s | FileCheck %s
+; RUN: llc -mtriple=arc < %s | FileCheck %s
 
 
 declare i32 @goo1(i32) nounwind

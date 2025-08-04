@@ -18,8 +18,6 @@
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include <limits>
 
 using namespace llvm;
@@ -156,14 +154,13 @@ static bool isSupportedSectionKind(DWARFSectionKind Kind) {
   return Kind != DW_SECT_EXT_unknown;
 }
 
-namespace llvm {
 // Convert an internal section identifier into the index to use with
 // UnitIndexEntry::Contributions.
-unsigned getContributionIndex(DWARFSectionKind Kind, uint32_t IndexVersion) {
+static unsigned getContributionIndex(DWARFSectionKind Kind,
+                                     uint32_t IndexVersion) {
   assert(serializeSectionKind(Kind, IndexVersion) >= DW_SECT_INFO);
   return serializeSectionKind(Kind, IndexVersion) - DW_SECT_INFO;
 }
-} // namespace llvm
 
 // Convert a UnitIndexEntry::Contributions index to the corresponding on-disk
 // value of the section identifier.

@@ -24,6 +24,11 @@ set(LIBUNWIND_LIBCXX_PATH "${CMAKE_CURRENT_LIST_DIR}/../libcxx" CACHE PATH
 include(GNUInstallDirs)
 include(CheckSymbolExists)
 
+if (MSVC)
+  message(FATAL_ERROR "Libunwind doesn't build for MSVC targets, and that is almost certainly not what you want to do "
+                      "anyway since libunwind is tied to the Itanium C++ ABI, and MSVC targets must use the MS C++ ABI.")
+endif()
+
 #===============================================================================
 # Setup CMake Options
 #===============================================================================
@@ -140,6 +145,7 @@ if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   if(LIBUNWIND_LIBDIR_SUBDIR)
     string(APPEND LIBUNWIND_TARGET_SUBDIR /${LIBUNWIND_LIBDIR_SUBDIR})
   endif()
+  cmake_path(NORMAL_PATH LIBUNWIND_TARGET_SUBDIR)
   set(LIBUNWIND_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LIBUNWIND_TARGET_SUBDIR})
   set(LIBUNWIND_INSTALL_LIBRARY_DIR lib${LLVM_LIBDIR_SUFFIX}/${LIBUNWIND_TARGET_SUBDIR} CACHE STRING
       "Path where built libunwind libraries should be installed.")
@@ -175,6 +181,8 @@ include(HandleLibunwindFlags)
 
 # Configure compiler.
 include(config-ix)
+
+include(HandleLibC) # Setup the C library flags
 
 if (LIBUNWIND_USE_COMPILER_RT AND NOT LIBUNWIND_HAS_NODEFAULTLIBS_FLAG)
   list(APPEND LIBUNWIND_LINK_FLAGS "-rtlib=compiler-rt")

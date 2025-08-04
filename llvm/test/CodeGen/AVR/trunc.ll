@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr | FileCheck %s
 
 define i8 @trunc8_loreg(i16 %x, i16 %y) {
 ; CHECK-LABEL: trunc8_loreg:

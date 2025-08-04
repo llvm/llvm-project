@@ -72,7 +72,6 @@ ForceFastISel("arm-force-fast-isel",
 /// so that we can use initializer lists for subtarget initialization.
 ARMSubtarget &ARMSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                             StringRef FS) {
-  initializeEnvironment();
   initSubtargetFeatures(CPU, FS);
   return *this;
 }
@@ -137,19 +136,6 @@ bool ARMSubtarget::isXRaySupported() const {
   return hasV6Ops() && hasARMOps() && !isTargetWindows();
 }
 
-void ARMSubtarget::initializeEnvironment() {
-  // MCAsmInfo isn't always present (e.g. in opt) so we can't initialize this
-  // directly from it, but we can try to make sure they're consistent when both
-  // available.
-  UseSjLjEH = (isTargetDarwin() && !isTargetWatchABI() &&
-               Options.ExceptionModel == ExceptionHandling::None) ||
-              Options.ExceptionModel == ExceptionHandling::SjLj;
-  assert((!TM.getMCAsmInfo() ||
-          (TM.getMCAsmInfo()->getExceptionHandlingType() ==
-           ExceptionHandling::SjLj) == UseSjLjEH) &&
-         "inconsistent sjlj choice between CodeGen and MC");
-}
-
 void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (CPUString.empty()) {
     CPUString = "generic";
@@ -201,9 +187,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (isTargetWindows())
     NoARM = true;
 
-  if (isAAPCS_ABI())
+  if (TM.isAAPCS_ABI())
     stackAlignment = Align(8);
-  if (isTargetNaCl() || isAAPCS16_ABI())
+  if (TM.isAAPCS16_ABI())
     stackAlignment = Align(16);
 
   // FIXME: Completely disable sibcall for Thumb1 since ThumbRegisterInfo::
@@ -225,9 +211,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   // case.
 
   SupportsTailCall = !isThumb1Only() || hasV8MBaselineOps();
-
-  if (isTargetMachO() && isTargetIOS() && getTargetTriple().isOSVersionLT(5, 0))
-    SupportsTailCall = false;
 
   switch (IT) {
   case DefaultIT:
@@ -287,12 +270,15 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA78:
   case CortexA78AE:
   case CortexA78C:
+  case CortexA510:
   case CortexA710:
   case CortexR4:
   case CortexR5:
   case CortexR7:
   case CortexM3:
+  case CortexM55:
   case CortexM7:
+  case CortexM85:
   case CortexR52:
   case CortexR52plus:
   case CortexX1:
@@ -318,22 +304,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     PartialUpdateClearance = 12;
     break;
   }
-}
-
-bool ARMSubtarget::isTargetHardFloat() const { return TM.isTargetHardFloat(); }
-
-bool ARMSubtarget::isAPCS_ABI() const {
-  assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
-  return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_APCS;
-}
-bool ARMSubtarget::isAAPCS_ABI() const {
-  assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
-  return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS ||
-         TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-}
-bool ARMSubtarget::isAAPCS16_ABI() const {
-  assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
-  return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
 }
 
 bool ARMSubtarget::isROPI() const {
@@ -437,10 +407,9 @@ bool ARMSubtarget::useFastISel() const {
   if (!hasV6Ops())
     return false;
 
-  // Thumb2 support on iOS; ARM support on iOS, Linux and NaCl.
-  return TM.Options.EnableFastISel &&
-         ((isTargetMachO() && !isThumb1Only()) ||
-          (isTargetLinux() && !isThumb()) || (isTargetNaCl() && !isThumb()));
+  // Thumb2 support on iOS; ARM support on iOS and Linux.
+  return TM.Options.EnableFastISel && ((isTargetMachO() && !isThumb1Only()) ||
+                                       (isTargetLinux() && !isThumb()));
 }
 
 unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
@@ -475,7 +444,7 @@ unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
 }
 
 bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
-                                               unsigned PhysReg) const {
+                                               MCRegister PhysReg) const {
   // To minimize code size in Thumb2, we prefer the usage of low regs (lower
   // cost per use) so we can  use narrow encoding. By default, caller-saved
   // registers (e.g. lr, r12) are always  allocated first, regardless of
@@ -489,20 +458,17 @@ ARMSubtarget::PushPopSplitVariation
 ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const std::vector<CalleeSavedInfo> CSI =
-      MF.getFrameInfo().getCalleeSavedInfo();
 
-  // Returns SplitR7 if the frame setup must be split into two separate pushes
-  // of r0-r7,lr and another containing r8-r11 (+r12 if necessary). This is
-  // always required on Thumb1-only targets, as the push and pop instructions
-  // can't access the high registers. This is also required when R7 is the frame
-  // pointer and frame pointer elimiination is disabled, or branch signing is
-  // enabled and AAPCS is disabled.
-  if ((MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
-       !createAAPCSFrameChain()) ||
-      (getFramePointerReg() == ARM::R7 &&
-       MF.getTarget().Options.DisableFramePointerElim(MF)) ||
-      isThumb1Only())
+  // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
+  // cannot use high registers except for lr.
+  if (isThumb1Only())
+    return SplitR7;
+
+  // If R7 is the frame pointer, we must split at R7 to ensure that the
+  // previous frame pointer (R7) and return address (LR) are adjacent on the
+  // stack, to form a valid frame record.
+  if (getFramePointerReg() == ARM::R7 &&
+      MF.getTarget().Options.FramePointerIsReserved(MF))
     return SplitR7;
 
   // Returns SplitR11WindowsSEH when the stack pointer needs to be
@@ -514,5 +480,13 @@ ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
       F.needsUnwindTableEntry() &&
       (MFI.hasVarSizedObjects() || getRegisterInfo()->hasStackRealignment(MF)))
     return SplitR11WindowsSEH;
+
+  // Returns SplitR11AAPCSSignRA when the frame pointer is R11, requiring R11
+  // and LR to be adjacent on the stack, and branch signing is enabled,
+  // requiring R12 to be on the stack.
+  if (MF.getInfo<ARMFunctionInfo>()->shouldSignReturnAddress() &&
+      getFramePointerReg() == ARM::R11 &&
+      MF.getTarget().Options.FramePointerIsReserved(MF))
+    return SplitR11AAPCSSignRA;
   return NoSplit;
 }

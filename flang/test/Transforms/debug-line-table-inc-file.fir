@@ -3,7 +3,7 @@
 // REQUIRES: system-linux
 
 // Test for included functions that have a different debug location than the current file
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @_QPsinc() {
     return loc(#loc2)
   } loc(#loc1)

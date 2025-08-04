@@ -48,7 +48,8 @@ inline std::array<int64_t, N> makeStrides(ArrayRef<int64_t> shape) {
   std::array<int64_t, N> res;
   int64_t running = 1;
   for (int64_t idx = N - 1; idx >= 0; --idx) {
-    assert(shape[idx] && "size must be non-negative for all shape dimensions");
+    assert(shape[idx] >= 0 &&
+           "size must be non-negative for all shape dimensions");
     res[idx] = running;
     running *= shape[idx];
   }
@@ -67,8 +68,8 @@ makeStridedMemRefDescriptor(T *ptr, T *alignedPtr, ArrayRef<int64_t> shape,
   assert(shape.size() == N);
   assert(shapeAlloc.size() == N);
   StridedMemRefType<T, N> descriptor;
-  descriptor.basePtr = static_cast<T *>(ptr);
-  descriptor.data = static_cast<T *>(alignedPtr);
+  descriptor.basePtr = ptr;
+  descriptor.data = alignedPtr;
   descriptor.offset = 0;
   std::copy(shape.begin(), shape.end(), descriptor.sizes);
   auto strides = makeStrides<N>(shapeAlloc);
@@ -88,8 +89,8 @@ makeStridedMemRefDescriptor(T *ptr, T *alignedPtr, ArrayRef<int64_t> shape = {},
   assert(shape.size() == N);
   assert(shapeAlloc.size() == N);
   StridedMemRefType<T, 0> descriptor;
-  descriptor.basePtr = static_cast<T *>(ptr);
-  descriptor.data = static_cast<T *>(alignedPtr);
+  descriptor.basePtr = ptr;
+  descriptor.data = alignedPtr;
   descriptor.offset = 0;
   return descriptor;
 }

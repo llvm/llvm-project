@@ -152,7 +152,7 @@ first include path that would refer to the current file. ``#include_next`` is
 interpreted as if the current file had been found in that path.
 If this search finds a file named by a module map, the ``#include_next``
 directive is translated into an import, just like for a ``#include``
-directive.``
+directive.
 
 Module maps
 -----------
@@ -613,10 +613,10 @@ tls
   A specific target feature (e.g., ``sse4``, ``avx``, ``neon``) is available.
 
 *platform/os*
-  A os/platform variant (e.g. ``freebsd``, ``win32``, ``windows``, ``linux``, ``ios``, ``macos``, ``iossimulator``) is available.
+  An os/platform variant (e.g. ``freebsd``, ``win32``, ``windows``, ``linux``, ``ios``, ``macos``, ``iossimulator``) is available.
 
 *environment*
-  A environment variant (e.g. ``gnu``, ``gnueabi``, ``android``, ``msvc``) is available.
+  An environment variant (e.g. ``gnu``, ``gnueabi``, ``android``, ``msvc``) is available.
 
 **Example:** The ``std`` module can be extended to also include C++ and C++11 headers using a *requires-declaration*:
 

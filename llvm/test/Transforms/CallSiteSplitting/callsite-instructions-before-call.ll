@@ -140,13 +140,13 @@ End:                                           ; preds = %CallSite, %TBB
 
 ; In this test case, we need to insert a new PHI node in TailBB to combine
 ; the loads we moved to the predecessors.
-define void @test_add_new_phi(ptr %ptrarg, i32 %i) {
+define void @test_add_new_phi(ptr %ptrarg, i32 %i, i1 %arg) {
 Header:
   %tobool = icmp ne ptr %ptrarg, null
   br i1 %tobool, label %TBB, label %CallSite
 
 TBB:
-  br i1 undef, label %CallSite, label %End
+  br i1 %arg, label %CallSite, label %End
 
 CallSite:
   %arrayidx112 = getelementptr inbounds i32, ptr undef, i64 1

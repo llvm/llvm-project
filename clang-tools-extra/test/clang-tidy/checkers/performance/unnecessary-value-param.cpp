@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s performance-unnecessary-value-param %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy --match-partial-fixes %s performance-unnecessary-value-param %t -- -- -fno-delayed-template-parsing
 
 // CHECK-FIXES: #include <utility>
 
@@ -285,9 +285,9 @@ struct NotCopyAssigned {
   NotCopyAssigned &operator=(const ExpensiveMovableType &);
 };
 
-void PositiveNoMoveForNonCopyAssigmentOperator(ExpensiveMovableType E) {
-  // CHECK-MESSAGES: [[@LINE-1]]:69: warning: the parameter 'E' is copied
-  // CHECK-FIXES: void PositiveNoMoveForNonCopyAssigmentOperator(const ExpensiveMovableType& E) {
+void PositiveNoMoveForNonCopyAssignmentOperator(ExpensiveMovableType E) {
+  // CHECK-MESSAGES: [[@LINE-1]]:70: warning: the parameter 'E' is copied
+  // CHECK-FIXES: void PositiveNoMoveForNonCopyAssignmentOperator(const ExpensiveMovableType& E) {
   NotCopyAssigned N;
   N = E;
 }
@@ -332,11 +332,7 @@ void PositiveNonConstDeclaration(const ExpensiveToCopyType A) {
 
 void PositiveOnlyMessageAsReferencedInCompilationUnit(ExpensiveToCopyType A) {
   // CHECK-MESSAGES: [[@LINE-1]]:75: warning: the parameter 'A' is copied
-  // CHECK-FIXES: void PositiveOnlyMessageAsReferencedInCompilationUnit(ExpensiveToCopyType A) {
-}
-
-void ReferenceFunctionOutsideOfCallExpr() {
-  void (*ptr)(ExpensiveToCopyType) = &PositiveOnlyMessageAsReferencedInCompilationUnit;
+  // CHECK-FIXES: void PositiveOnlyMessageAsReferencedInCompilationUnit(const ExpensiveToCopyType& A) {
 }
 
 void PositiveMessageAndFixAsFunctionIsCalled(ExpensiveToCopyType A) {

@@ -12,12 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyInstPrinter.h"
+#include "MCTargetDesc/WebAssemblyMCAsmInfo.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
-#include "WebAssembly.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -26,7 +27,6 @@
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -38,8 +38,7 @@ WebAssemblyInstPrinter::WebAssemblyInstPrinter(const MCAsmInfo &MAI,
                                                const MCRegisterInfo &MRI)
     : MCInstPrinter(MAI, MII, MRI) {}
 
-void WebAssemblyInstPrinter::printRegName(raw_ostream &OS,
-                                          MCRegister Reg) const {
+void WebAssemblyInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) {
   assert(Reg.id() != WebAssembly::UnusedReg);
   // Note that there's an implicit local.get/local.set here!
   OS << "$" << Reg.id();
@@ -58,7 +57,7 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
     // operand isn't a symbol, then we have an MVP compilation unit, and the
     // table shouldn't appear in the output.
     OS << "\t";
-    OS << getMnemonic(MI).first;
+    OS << getMnemonic(*MI).first;
     OS << " ";
 
     assert(MI->getNumOperands() == 2);
@@ -342,11 +341,11 @@ void WebAssemblyInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     // as a signature here, such that the assembler can recover this
     // information.
     auto SRE = static_cast<const MCSymbolRefExpr *>(Op.getExpr());
-    if (SRE->getKind() == MCSymbolRefExpr::VK_WASM_TYPEINDEX) {
+    if (SRE->getSpecifier() == WebAssembly::S_TYPEINDEX) {
       auto &Sym = static_cast<const MCSymbolWasm &>(SRE->getSymbol());
       O << WebAssembly::signatureToString(Sym.getSignature());
     } else {
-      Op.getExpr()->print(O, &MAI);
+      MAI.printExpr(O, *Op.getExpr());
     }
   }
 }
@@ -381,7 +380,7 @@ void WebAssemblyInstPrinter::printWebAssemblySignatureOperand(const MCInst *MI,
       O << WebAssembly::anyTypeToString(Imm);
   } else {
     auto Expr = cast<MCSymbolRefExpr>(Op.getExpr());
-    auto *Sym = cast<MCSymbolWasm>(&Expr->getSymbol());
+    auto *Sym = static_cast<const MCSymbolWasm *>(&Expr->getSymbol());
     if (Sym->getSignature()) {
       O << WebAssembly::signatureToString(Sym->getSignature());
     } else {
@@ -399,10 +398,10 @@ void WebAssemblyInstPrinter::printCatchList(const MCInst *MI, unsigned OpNo,
 
   auto PrintTagOp = [&](const MCOperand &Op) {
     const MCSymbolRefExpr *TagExpr = nullptr;
-    const MCSymbolWasm *TagSym = nullptr;
+    const MCSymbol *TagSym = nullptr;
     if (Op.isExpr()) {
       TagExpr = cast<MCSymbolRefExpr>(Op.getExpr());
-      TagSym = cast<MCSymbolWasm>(&TagExpr->getSymbol());
+      TagSym = &TagExpr->getSymbol();
       O << TagSym->getName() << " ";
     } else {
       // When instructions are parsed from the disassembler, we have an

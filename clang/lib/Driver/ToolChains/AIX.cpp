@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AIX.h"
-#include "Arch/PPC.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
@@ -230,22 +229,38 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // '-bnocdtors' that '-Wl' might forward.
   CmdArgs.push_back("-bcdtors:all:0:s");
 
+  if (Args.hasArg(options::OPT_rpath)) {
+    for (const auto &bopt : Args.getAllArgValues(options::OPT_b))
+      // Check -b opts prefix for "libpath:" or exact match for "nolibpath"
+      if (!bopt.rfind("libpath:", 0) || bopt == "nolibpath")
+        D.Diag(diag::err_drv_cannot_mix_options) << "-rpath" << "-b" + bopt;
+
+    for (const auto &wlopt : Args.getAllArgValues(options::OPT_Wl_COMMA))
+      // Check -Wl, opts prefix for "-blibpath:" or exact match for
+      // "-bnolibpath"
+      if (!wlopt.rfind("-blibpath:", 0) || wlopt == "-bnolibpath")
+        D.Diag(diag::err_drv_cannot_mix_options) << "-rpath" << "-Wl," + wlopt;
+
+    for (const auto &xopt : Args.getAllArgValues(options::OPT_Xlinker))
+      // Check -Xlinker opts prefix for "-blibpath:" or exact match for
+      // "-bnolibpath"
+      if (!xopt.rfind("-blibpath:", 0) || xopt == "-bnolibpath")
+        D.Diag(diag::err_drv_cannot_mix_options)
+            << "-rpath" << "-Xlinker " + xopt;
+
+    std::string BlibPathStr = "";
+    for (const auto &dir : Args.getAllArgValues(options::OPT_rpath))
+      BlibPathStr += dir + ":";
+    BlibPathStr += "/usr/lib:/lib";
+    CmdArgs.push_back(Args.MakeArgString(Twine("-blibpath:") + BlibPathStr));
+  }
+
   // Specify linker input file(s).
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    // Find the first filename InputInfo object.
-    auto Input = llvm::find_if(
-        Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
-    if (Input == Inputs.end())
-      // For a very rare case, all of the inputs to the linker are
-      // InputArg. If that happens, just use the first InputInfo.
-      Input = Inputs.begin();
-
-    addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
+  if (D.isUsingLTO())
+    addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   if (Args.hasArg(options::OPT_shared) && !hasExportListLinkerOpts(CmdArgs)) {
 
@@ -332,8 +347,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     CmdArgs.push_back("-lm");
     CmdArgs.push_back("-lpthread");
   }

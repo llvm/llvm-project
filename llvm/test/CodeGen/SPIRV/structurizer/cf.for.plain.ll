@@ -37,28 +37,13 @@ for.cond:                                         ; preds = %for.inc, %entry
   ; CHECK: OpBranchConditional %[[#]] %[[#for_body:]] %[[#for_end]]
   br i1 %cmp, label %for.body, label %for.end
 
-for.body:                                         ; preds = %for.cond
-  %3 = load i32, ptr %i, align 4
-  store i32 %3, ptr %val, align 4
-  br label %for.inc
-  ; CHECK: %[[#for_body]] = OpLabel
-  ; CHECK:                 OpBranch %[[#for_inc]]
-
-for.inc:                                          ; preds = %for.body
-  %4 = load i32, ptr %i, align 4
-  %inc = add nsw i32 %4, 1
-  store i32 %inc, ptr %i, align 4
-  br label %for.cond
-  ; CHECK: %[[#for_inc]] = OpLabel
-  ; CHECK:                 OpBranch %[[#for_cond]]
-
 for.end:                                          ; preds = %for.cond
   br label %for.cond1
   ; CHECK: %[[#for_end]] = OpLabel
   ; CHECK:                 OpBranch %[[#for_cond1:]]
 
 for.cond1:                                        ; preds = %for.cond1, %for.end
-  %5 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %0) ]
+  %3 = call token @llvm.experimental.convergence.loop() [ "convergencectrl"(token %0) ]
   store i32 0, ptr %val, align 4
   br label %for.cond1
   ; CHECK: %[[#for_cond1]] = OpLabel
@@ -67,6 +52,23 @@ for.cond1:                                        ; preds = %for.cond1, %for.end
 
   ; CHECK: %[[#unreachable]] = OpLabel
   ; CHECK-NEXT:                OpUnreachable
+
+for.body:                                         ; preds = %for.cond
+  %4 = load i32, ptr %i, align 4
+  store i32 %4, ptr %val, align 4
+  br label %for.inc
+  ; CHECK: %[[#for_body]] = OpLabel
+  ; CHECK:                 OpBranch %[[#for_inc]]
+
+for.inc:                                          ; preds = %for.body
+  %5 = load i32, ptr %i, align 4
+  %inc = add nsw i32 %5, 1
+  store i32 %inc, ptr %i, align 4
+  br label %for.cond
+  ; CHECK: %[[#for_inc]] = OpLabel
+  ; CHECK:                 OpBranch %[[#for_cond]]
+
+
 }
 
 ; Function Attrs: convergent nocallback nofree nosync nounwind willreturn memory(none)

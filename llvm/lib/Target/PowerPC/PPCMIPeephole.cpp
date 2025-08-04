@@ -30,7 +30,6 @@
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
 #include "PPC.h"
-#include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
@@ -43,7 +42,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 
@@ -113,9 +112,7 @@ struct PPCMIPeephole : public MachineFunctionPass {
   MachineRegisterInfo *MRI;
   LiveVariables *LV;
 
-  PPCMIPeephole() : MachineFunctionPass(ID) {
-    initializePPCMIPeepholePass(*PassRegistry::getPassRegistry());
-  }
+  PPCMIPeephole() : MachineFunctionPass(ID) {}
 
 private:
   MachineDominatorTree *MDT;
@@ -188,12 +185,11 @@ public:
 
 #define addRegToUpdate(R) addRegToUpdateWithLine(R, __LINE__)
 void PPCMIPeephole::addRegToUpdateWithLine(Register Reg, int Line) {
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return;
   if (RegsToUpdate.insert(Reg).second)
-    LLVM_DEBUG(dbgs() << "Adding register: " << Register::virtReg2Index(Reg)
-                      << " on line " << Line
-                      << " for re-computation of kill flags\n");
+    LLVM_DEBUG(dbgs() << "Adding register: " << printReg(Reg) << " on line "
+                      << Line << " for re-computation of kill flags\n");
 }
 
 // Initialize class variables.
@@ -500,7 +496,6 @@ bool PPCMIPeephole::simplifyCode() {
           NumConvertedToImmediateForm++;
           SomethingChanged = true;
           Simplified = true;
-          continue;
         }
       }
     } while (SomethingChanged && FixedPointRegToImm);
@@ -1003,9 +998,9 @@ bool PPCMIPeephole::simplifyCode() {
           // the transformation.
           bool IsWordAligned = false;
           if (SrcMI->getOperand(1).isGlobal()) {
-            const GlobalObject *GO =
-                dyn_cast<GlobalObject>(SrcMI->getOperand(1).getGlobal());
-            if (GO && GO->getAlign() && *GO->getAlign() >= 4 &&
+            const GlobalVariable *GV =
+                dyn_cast<GlobalVariable>(SrcMI->getOperand(1).getGlobal());
+            if (GV && GV->getAlign() && *GV->getAlign() >= 4 &&
                 (SrcMI->getOperand(1).getOffset() % 4 == 0))
               IsWordAligned = true;
           } else if (SrcMI->getOperand(1).isImm()) {
@@ -1053,7 +1048,16 @@ bool PPCMIPeephole::simplifyCode() {
         } else if (MI.getOpcode() == PPC::EXTSW_32_64 &&
                    TII->isSignExtended(NarrowReg, MRI)) {
           // We can eliminate EXTSW if the input is known to be already
-          // sign-extended.
+          // sign-extended. However, we are not sure whether a spill will occur
+          // during register allocation. If there is no promotion, it will use
+          // 'stw' instead of 'std', and 'lwz' instead of 'ld' when spilling,
+          // since the register class is 32-bits. Consequently, the high 32-bit
+          // information will be lost. Therefore, all these instructions in the
+          // chain used to deduce sign extension to eliminate the 'extsw' will
+          // need to be promoted to 64-bit pseudo instructions when the 'extsw'
+          // is eliminated.
+          TII->promoteInstr32To64ForElimEXTSW(NarrowReg, MRI, 0, LV);
+
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
           Register TmpReg =
               MF->getRegInfo().createVirtualRegister(&PPC::G8RCRegClass);

@@ -47,6 +47,11 @@ static llvm::Expected<bool> *g_fcxx_modules_workaround [[maybe_unused]];
 
 // Include python for non windows machines
 #include <Python.h>
+
+// Provide a meaningful diagnostic error if someone tries to compile this file
+// with a version of Python we don't support.
+static_assert(PY_VERSION_HEX >= 0x03080000,
+              "LLDB requires at least Python 3.8");
 #endif
 
 #endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H

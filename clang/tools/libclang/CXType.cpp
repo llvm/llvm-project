@@ -19,6 +19,8 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/QualTypeNames.h"
+#include "clang/AST/RecordLayout.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -313,6 +315,36 @@ CXString clang_getTypeSpelling(CXType CT) {
   return cxstring::createDup(OS.str());
 }
 
+CXString clang_getTypePrettyPrinted(CXType CT, CXPrintingPolicy cxPolicy) {
+  QualType T = GetQualType(CT);
+  if (T.isNull())
+    return cxstring::createEmpty();
+
+  SmallString<64> Str;
+  llvm::raw_svector_ostream OS(Str);
+  PrintingPolicy *UserPolicy = static_cast<PrintingPolicy *>(cxPolicy);
+
+  T.print(OS, *UserPolicy);
+
+  return cxstring::createDup(OS.str());
+}
+
+CXString clang_getFullyQualifiedName(CXType CT, CXPrintingPolicy cxPolicy,
+                                     unsigned int WithGlobalNsPrefix) {
+  const QualType T = GetQualType(CT);
+  if (T.isNull())
+    return cxstring::createEmpty();
+  const CXTranslationUnit TU = GetTU(CT);
+  const ASTContext &Ctx = cxtu::getASTUnit(TU)->getASTContext();
+  const PrintingPolicy *UserPolicy = static_cast<PrintingPolicy *>(cxPolicy);
+  const bool WithGlobalNs = (WithGlobalNsPrefix != 0);
+
+  const std::string Str =
+      TypeName::getFullyQualifiedName(T, Ctx, *UserPolicy, WithGlobalNs);
+
+  return cxstring::createDup(Str);
+}
+
 CXType clang_getTypedefDeclUnderlyingType(CXCursor C) {
   using namespace cxcursor;
   CXTranslationUnit TU = cxcursor::getCursorTU(C);
@@ -381,7 +413,7 @@ int clang_getFieldDeclBitWidth(CXCursor C) {
 
     if (const FieldDecl *FD = dyn_cast_or_null<FieldDecl>(D)) {
       if (FD->isBitField() && !FD->getBitWidth()->isValueDependent())
-        return FD->getBitWidthValue(getCursorContext(C));
+        return FD->getBitWidthValue();
     }
   }
 
@@ -621,6 +653,7 @@ CXString clang_getTypeKindSpelling(enum CXTypeKind K) {
     TKIND(Attributed);
     TKIND(BTFTagAttributed);
     TKIND(HLSLAttributedResource);
+    TKIND(HLSLInlineSpirv);
     TKIND(BFloat16);
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) TKIND(Id);
 #include "clang/Basic/OpenCLImageTypes.def"
@@ -686,9 +719,21 @@ CXCallingConv clang_getFunctionTypeCallingConv(CXType X) {
       TCALLINGCONV(M68kRTD);
       TCALLINGCONV(PreserveNone);
       TCALLINGCONV(RISCVVectorCall);
+      TCALLINGCONV(RISCVVLSCall_32);
+      TCALLINGCONV(RISCVVLSCall_64);
+      TCALLINGCONV(RISCVVLSCall_128);
+      TCALLINGCONV(RISCVVLSCall_256);
+      TCALLINGCONV(RISCVVLSCall_512);
+      TCALLINGCONV(RISCVVLSCall_1024);
+      TCALLINGCONV(RISCVVLSCall_2048);
+      TCALLINGCONV(RISCVVLSCall_4096);
+      TCALLINGCONV(RISCVVLSCall_8192);
+      TCALLINGCONV(RISCVVLSCall_16384);
+      TCALLINGCONV(RISCVVLSCall_32768);
+      TCALLINGCONV(RISCVVLSCall_65536);
     case CC_SpirFunction: return CXCallingConv_Unexposed;
-    case CC_AMDGPUKernelCall: return CXCallingConv_Unexposed;
-    case CC_OpenCLKernel: return CXCallingConv_Unexposed;
+    case CC_DeviceKernel:
+      return CXCallingConv_Unexposed;
       break;
     }
 #undef TCALLINGCONV
@@ -939,12 +984,14 @@ long long clang_Type_getAlignOf(CXType T) {
 }
 
 CXType clang_Type_getClassType(CXType CT) {
+  ASTContext &Ctx = cxtu::getASTUnit(GetTU(CT))->getASTContext();
   QualType ET = QualType();
   QualType T = GetQualType(CT);
   const Type *TP = T.getTypePtrOrNull();
 
   if (TP && TP->getTypeClass() == Type::MemberPointer) {
-    ET = QualType(cast<MemberPointerType> (TP)->getClass(), 0);
+    ET = Ctx.getTypeDeclType(
+        cast<MemberPointerType>(TP)->getMostRecentCXXRecordDecl());
   }
   return MakeCXType(ET, GetTU(CT));
 }
@@ -1092,6 +1139,39 @@ long long clang_Cursor_getOffsetOfField(CXCursor C) {
       return Ctx.getFieldOffset(IFD);
   }
   return -1;
+}
+
+long long clang_getOffsetOfBase(CXCursor Parent, CXCursor Base) {
+  if (Base.kind != CXCursor_CXXBaseSpecifier)
+    return -1;
+
+  if (!clang_isDeclaration(Parent.kind))
+    return -1;
+
+  // we need to validate the parent type
+  CXType PT = clang_getCursorType(Parent);
+  long long Error = validateFieldParentType(Parent, PT);
+  if (Error < 0)
+    return Error;
+
+  const CXXRecordDecl *ParentRD =
+      dyn_cast<CXXRecordDecl>(cxcursor::getCursorDecl(Parent));
+  if (!ParentRD)
+    return -1;
+
+  ASTContext &Ctx = cxcursor::getCursorContext(Base);
+  const CXXBaseSpecifier *B = cxcursor::getCursorCXXBaseSpecifier(Base);
+  if (ParentRD->bases_begin() > B || ParentRD->bases_end() <= B)
+    return -1;
+
+  const CXXRecordDecl *BaseRD = B->getType()->getAsCXXRecordDecl();
+  if (!BaseRD)
+    return -1;
+
+  const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(ParentRD);
+  if (B->isVirtual())
+    return Ctx.toBits(Layout.getVBaseClassOffset(BaseRD));
+  return Ctx.toBits(Layout.getBaseClassOffset(BaseRD));
 }
 
 enum CXRefQualifierKind clang_Type_getCXXRefQualifier(CXType T) {

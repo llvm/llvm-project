@@ -30,7 +30,7 @@ define ptr @f1() nounwind {
 ; LA32PIC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32PIC-NEXT:    pcalau12i $a0, %gd_pc_hi20(unspecified)
 ; LA32PIC-NEXT:    addi.w $a0, $a0, %got_pc_lo12(unspecified)
-; LA32PIC-NEXT:    bl %plt(__tls_get_addr)
+; LA32PIC-NEXT:    bl __tls_get_addr
 ; LA32PIC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32PIC-NEXT:    addi.w $sp, $sp, 16
 ; LA32PIC-NEXT:    ret
@@ -41,7 +41,8 @@ define ptr @f1() nounwind {
 ; LA64PIC-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64PIC-NEXT:    pcalau12i $a0, %gd_pc_hi20(unspecified)
 ; LA64PIC-NEXT:    addi.d $a0, $a0, %got_pc_lo12(unspecified)
-; LA64PIC-NEXT:    bl %plt(__tls_get_addr)
+; LA64PIC-NEXT:    pcaddu18i $ra, %call36(__tls_get_addr)
+; LA64PIC-NEXT:    jirl $ra, $ra, 0
 ; LA64PIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64PIC-NEXT:    addi.d $sp, $sp, 16
 ; LA64PIC-NEXT:    ret
@@ -55,11 +56,11 @@ define ptr @f1() nounwind {
 ; LA64LARGEPIC-NEXT:    lu32i.d $a1, %got64_pc_lo20(unspecified)
 ; LA64LARGEPIC-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(unspecified)
 ; LA64LARGEPIC-NEXT:    add.d $a0, $a1, $a0
-; LA64LARGEPIC-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    add.d $ra, $ra, $a1
+; LA64LARGEPIC-NEXT:    pcalau12i $a1, %got_pc_hi20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %got_pc_lo12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu32i.d $ra, %got64_pc_lo20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %got64_pc_hi12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    ldx.d $ra, $ra, $a1
 ; LA64LARGEPIC-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGEPIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64LARGEPIC-NEXT:    addi.d $sp, $sp, 16
@@ -143,7 +144,7 @@ define ptr @f2() nounwind {
 ; LA32PIC-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32PIC-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
 ; LA32PIC-NEXT:    addi.w $a0, $a0, %got_pc_lo12(ld)
-; LA32PIC-NEXT:    bl %plt(__tls_get_addr)
+; LA32PIC-NEXT:    bl __tls_get_addr
 ; LA32PIC-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32PIC-NEXT:    addi.w $sp, $sp, 16
 ; LA32PIC-NEXT:    ret
@@ -154,7 +155,8 @@ define ptr @f2() nounwind {
 ; LA64PIC-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
 ; LA64PIC-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
 ; LA64PIC-NEXT:    addi.d $a0, $a0, %got_pc_lo12(ld)
-; LA64PIC-NEXT:    bl %plt(__tls_get_addr)
+; LA64PIC-NEXT:    pcaddu18i $ra, %call36(__tls_get_addr)
+; LA64PIC-NEXT:    jirl $ra, $ra, 0
 ; LA64PIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64PIC-NEXT:    addi.d $sp, $sp, 16
 ; LA64PIC-NEXT:    ret
@@ -168,11 +170,11 @@ define ptr @f2() nounwind {
 ; LA64LARGEPIC-NEXT:    lu32i.d $a1, %got64_pc_lo20(ld)
 ; LA64LARGEPIC-NEXT:    lu52i.d $a1, $a1, %got64_pc_hi12(ld)
 ; LA64LARGEPIC-NEXT:    add.d $a0, $a1, $a0
-; LA64LARGEPIC-NEXT:    pcalau12i $a1, %pc_hi20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %pc_lo12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu32i.d $ra, %pc64_lo20(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %pc64_hi12(__tls_get_addr)
-; LA64LARGEPIC-NEXT:    add.d $ra, $ra, $a1
+; LA64LARGEPIC-NEXT:    pcalau12i $a1, %got_pc_hi20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    addi.d $ra, $zero, %got_pc_lo12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu32i.d $ra, %got64_pc_lo20(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    lu52i.d $ra, $ra, %got64_pc_hi12(__tls_get_addr)
+; LA64LARGEPIC-NEXT:    ldx.d $ra, $ra, $a1
 ; LA64LARGEPIC-NEXT:    jirl $ra, $ra, 0
 ; LA64LARGEPIC-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64LARGEPIC-NEXT:    addi.d $sp, $sp, 16
@@ -330,16 +332,16 @@ entry:
 define ptr @f4() nounwind {
 ; LA32PIC-LABEL: f4:
 ; LA32PIC:       # %bb.0: # %entry
-; LA32PIC-NEXT:    lu12i.w $a0, %le_hi20(le)
-; LA32PIC-NEXT:    ori $a0, $a0, %le_lo12(le)
-; LA32PIC-NEXT:    add.w $a0, $a0, $tp
+; LA32PIC-NEXT:    lu12i.w $a0, %le_hi20_r(le)
+; LA32PIC-NEXT:    add.w $a0, $a0, $tp, %le_add_r(le)
+; LA32PIC-NEXT:    addi.w $a0, $a0, %le_lo12_r(le)
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64PIC-LABEL: f4:
 ; LA64PIC:       # %bb.0: # %entry
-; LA64PIC-NEXT:    lu12i.w $a0, %le_hi20(le)
-; LA64PIC-NEXT:    ori $a0, $a0, %le_lo12(le)
-; LA64PIC-NEXT:    add.d $a0, $a0, $tp
+; LA64PIC-NEXT:    lu12i.w $a0, %le_hi20_r(le)
+; LA64PIC-NEXT:    add.d $a0, $a0, $tp, %le_add_r(le)
+; LA64PIC-NEXT:    addi.d $a0, $a0, %le_lo12_r(le)
 ; LA64PIC-NEXT:    ret
 ;
 ; LA64LARGEPIC-LABEL: f4:
@@ -353,16 +355,16 @@ define ptr @f4() nounwind {
 ;
 ; LA32NOPIC-LABEL: f4:
 ; LA32NOPIC:       # %bb.0: # %entry
-; LA32NOPIC-NEXT:    lu12i.w $a0, %le_hi20(le)
-; LA32NOPIC-NEXT:    ori $a0, $a0, %le_lo12(le)
-; LA32NOPIC-NEXT:    add.w $a0, $a0, $tp
+; LA32NOPIC-NEXT:    lu12i.w $a0, %le_hi20_r(le)
+; LA32NOPIC-NEXT:    add.w $a0, $a0, $tp, %le_add_r(le)
+; LA32NOPIC-NEXT:    addi.w $a0, $a0, %le_lo12_r(le)
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: f4:
 ; LA64NOPIC:       # %bb.0: # %entry
-; LA64NOPIC-NEXT:    lu12i.w $a0, %le_hi20(le)
-; LA64NOPIC-NEXT:    ori $a0, $a0, %le_lo12(le)
-; LA64NOPIC-NEXT:    add.d $a0, $a0, $tp
+; LA64NOPIC-NEXT:    lu12i.w $a0, %le_hi20_r(le)
+; LA64NOPIC-NEXT:    add.d $a0, $a0, $tp, %le_add_r(le)
+; LA64NOPIC-NEXT:    addi.d $a0, $a0, %le_lo12_r(le)
 ; LA64NOPIC-NEXT:    ret
 ;
 ; LA64LARGENOPIC-LABEL: f4:
@@ -376,16 +378,16 @@ define ptr @f4() nounwind {
 ;
 ; LA32DESC-LABEL: f4:
 ; LA32DESC:       # %bb.0: # %entry
-; LA32DESC-NEXT:    lu12i.w $a0, %le_hi20(le)
-; LA32DESC-NEXT:    ori $a0, $a0, %le_lo12(le)
-; LA32DESC-NEXT:    add.w $a0, $a0, $tp
+; LA32DESC-NEXT:    lu12i.w $a0, %le_hi20_r(le)
+; LA32DESC-NEXT:    add.w $a0, $a0, $tp, %le_add_r(le)
+; LA32DESC-NEXT:    addi.w $a0, $a0, %le_lo12_r(le)
 ; LA32DESC-NEXT:    ret
 ;
 ; LA64DESC-LABEL: f4:
 ; LA64DESC:       # %bb.0: # %entry
-; LA64DESC-NEXT:    lu12i.w $a0, %le_hi20(le)
-; LA64DESC-NEXT:    ori $a0, $a0, %le_lo12(le)
-; LA64DESC-NEXT:    add.d $a0, $a0, $tp
+; LA64DESC-NEXT:    lu12i.w $a0, %le_hi20_r(le)
+; LA64DESC-NEXT:    add.d $a0, $a0, $tp, %le_add_r(le)
+; LA64DESC-NEXT:    addi.d $a0, $a0, %le_lo12_r(le)
 ; LA64DESC-NEXT:    ret
 ;
 ; DESC64-LABEL: f4:

@@ -32,7 +32,6 @@ class OMPChildren;
 class ASTRecordReader
     : public serialization::DataStreamBasicReader<ASTRecordReader> {
   using ModuleFile = serialization::ModuleFile;
-  using LocSeq = SourceLocationSequence;
 
   ASTReader *Reader;
   ModuleFile *F;
@@ -160,7 +159,7 @@ public:
   TypeSourceInfo *readTypeSourceInfo();
 
   /// Reads the location information for a type.
-  void readTypeLoc(TypeLoc TL, LocSeq *Seq = nullptr);
+  void readTypeLoc(TypeLoc TL);
 
   /// Map a local type ID within a given AST file to a global type ID.
   serialization::TypeID getGlobalTypeID(serialization::TypeID LocalID) const {
@@ -213,6 +212,8 @@ public:
   }
 
   TypeCoupledDeclRefInfo readTypeCoupledDeclRefInfo();
+
+  SpirvOperand readHLSLSpirvOperand();
 
   /// Read a declaration name, advancing Idx.
   // DeclarationName readDeclarationName(); (inherited)
@@ -278,17 +279,20 @@ public:
   /// Read an OpenACC clause, advancing Idx.
   OpenACCClause *readOpenACCClause();
 
-  /// Read a list of OpenACC clauses into the passed SmallVector.
+  /// Read a list of OpenACC clauses into the passed SmallVector, during
+  /// statement reading.
   void readOpenACCClauseList(MutableArrayRef<const OpenACCClause *> Clauses);
 
+  void readOpenACCRoutineDeclAttr(OpenACCRoutineDeclAttr *A);
+
   /// Read a source location, advancing Idx.
-  SourceLocation readSourceLocation(LocSeq *Seq = nullptr) {
-    return Reader->ReadSourceLocation(*F, Record, Idx, Seq);
+  SourceLocation readSourceLocation() {
+    return Reader->ReadSourceLocation(*F, Record, Idx);
   }
 
   /// Read a source range, advancing Idx.
-  SourceRange readSourceRange(LocSeq *Seq = nullptr) {
-    return Reader->ReadSourceRange(*F, Record, Idx, Seq);
+  SourceRange readSourceRange() {
+    return Reader->ReadSourceRange(*F, Record, Idx);
   }
 
   /// Read an arbitrary constant value, advancing Idx.
@@ -314,6 +318,10 @@ public:
   /// Read a 64-bit unsigned value; required to satisfy BasicReader.
   uint64_t readUInt64() {
     return readInt();
+  }
+
+  UnsignedOrNone readUnsignedOrNone() {
+    return UnsignedOrNone::fromInternalRepresentation(unsigned(readInt()));
   }
 
   /// Read a string, advancing Idx.

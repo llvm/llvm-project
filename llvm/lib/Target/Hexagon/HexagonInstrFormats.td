@@ -336,5 +336,4 @@ class InstDuplex<bits<4> iClass, string cstr = ""> : Instruction,
 //                         Instruction Classes Definitions -
 //===----------------------------------------------------------------------===//
 
-include "HexagonInstrFormatsV60.td"
 include "HexagonInstrFormatsV65.td"

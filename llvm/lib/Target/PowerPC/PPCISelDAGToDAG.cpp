@@ -193,8 +193,8 @@ namespace {
     }
 
     /// getSmallIPtrImm - Return a target constant of pointer type.
-    inline SDValue getSmallIPtrImm(uint64_t Imm, const SDLoc &dl) {
-      return CurDAG->getTargetConstant(
+    inline SDValue getSmallIPtrImm(int64_t Imm, const SDLoc &dl) {
+      return CurDAG->getSignedTargetConstant(
           Imm, dl, PPCLowering->getPointerTy(CurDAG->getDataLayout()));
     }
 
@@ -207,7 +207,7 @@ namespace {
     /// base register.  Return the virtual register that holds this value.
     SDNode *getGlobalBaseReg();
 
-    void selectFrameIndex(SDNode *SN, SDNode *N, uint64_t Offset = 0);
+    void selectFrameIndex(SDNode *SN, SDNode *N, int64_t Offset = 0);
 
     // Select - Convert the specified operand from a target-independent to a
     // target-specific node if it hasn't already been changed.
@@ -639,7 +639,7 @@ static bool isOpcWithIntImmediate(SDNode *N, unsigned Opc, unsigned& Imm) {
          && isInt32Immediate(N->getOperand(1).getNode(), Imm);
 }
 
-void PPCDAGToDAGISel::selectFrameIndex(SDNode *SN, SDNode *N, uint64_t Offset) {
+void PPCDAGToDAGISel::selectFrameIndex(SDNode *SN, SDNode *N, int64_t Offset) {
   SDLoc dl(SN);
   int FI = cast<FrameIndexSDNode>(N)->getIndex();
   SDValue TFI = CurDAG->getTargetFrameIndex(FI, N->getValueType(0));
@@ -750,7 +750,7 @@ static bool canOptimizeTLSDFormToXForm(SelectionDAG *CurDAG, SDValue Base) {
   // Base is expected to be an ADD_TLS node.
   if (Base.getOpcode() != PPCISD::ADD_TLS)
     return false;
-  for (auto *ADDTLSUse : Base.getNode()->uses()) {
+  for (auto *ADDTLSUse : Base.getNode()->users()) {
     // The optimization to convert the D-Form load/store into its X-Form
     // counterpart should only occur if the source value offset of the load/
     // store is 0. This also means that The offset should always be undefined.
@@ -954,22 +954,22 @@ static unsigned allUsesTruncate(SelectionDAG *CurDAG, SDNode *N) {
   // Cannot use range-based for loop here as we need the actual use (i.e. we
   // need the operand number corresponding to the use). A range-based for
   // will unbox the use and provide an SDNode*.
-  for (SDNode::use_iterator Use = N->use_begin(), UseEnd = N->use_end();
-       Use != UseEnd; ++Use) {
+  for (SDUse &Use : N->uses()) {
+    SDNode *User = Use.getUser();
     unsigned Opc =
-      Use->isMachineOpcode() ? Use->getMachineOpcode() : Use->getOpcode();
+        User->isMachineOpcode() ? User->getMachineOpcode() : User->getOpcode();
     switch (Opc) {
     default: return 0;
     case ISD::TRUNCATE:
-      if (Use->isMachineOpcode())
+      if (User->isMachineOpcode())
         return 0;
-      MaxTruncation =
-        std::max(MaxTruncation, (unsigned)Use->getValueType(0).getSizeInBits());
+      MaxTruncation = std::max(MaxTruncation,
+                               (unsigned)User->getValueType(0).getSizeInBits());
       continue;
     case ISD::STORE: {
-      if (Use->isMachineOpcode())
+      if (User->isMachineOpcode())
         return 0;
-      StoreSDNode *STN = cast<StoreSDNode>(*Use);
+      StoreSDNode *STN = cast<StoreSDNode>(User);
       unsigned MemVTSize = STN->getMemoryVT().getSizeInBits();
       if (MemVTSize == 64 || Use.getOperandNo() != 0)
         return 0;
@@ -2975,7 +2975,6 @@ SDNode *IntegerCompareEliminator::tryEXTEND(SDNode *N) {
   if (!WideRes)
     return nullptr;
 
-  SDLoc dl(N);
   bool Input32Bit = WideRes.getValueType() == MVT::i32;
   bool Output32Bit = N->getValueType(0) == MVT::i32;
 
@@ -3986,7 +3985,7 @@ static bool allUsesExtend(SDValue Compare, SelectionDAG *CurDAG) {
     return true;
   // We want the value in a GPR if it is being extended, used for a select, or
   // used in logical operations.
-  for (auto *CompareUse : Compare.getNode()->uses())
+  for (auto *CompareUse : Compare.getNode()->users())
     if (CompareUse->getOpcode() != ISD::SIGN_EXTEND &&
         CompareUse->getOpcode() != ISD::ZERO_EXTEND &&
         CompareUse->getOpcode() != ISD::SELECT &&
@@ -4962,6 +4961,21 @@ bool PPCDAGToDAGISel::tryAsSingleRLWINM(SDNode *N) {
   // If this is just a masked value where the input is not handled, and
   // is not a rotate-left (handled by a pattern in the .td file), emit rlwinm
   if (isRunOfOnes(Imm, MB, ME) && Val.getOpcode() != ISD::ROTL) {
+    // The result of LBARX/LHARX do not need to be cleared as the instructions
+    // implicitly clear the upper bits.
+    unsigned AlreadyCleared = 0;
+    if (Val.getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+      auto IntrinsicID = Val.getConstantOperandVal(1);
+      if (IntrinsicID == Intrinsic::ppc_lbarx)
+        AlreadyCleared = 24;
+      else if (IntrinsicID == Intrinsic::ppc_lharx)
+        AlreadyCleared = 16;
+      if (AlreadyCleared != 0 && AlreadyCleared == MB && ME == 31) {
+        ReplaceUses(SDValue(N, 0), N->getOperand(0));
+        return true;
+      }
+    }
+
     SDValue Ops[] = {Val, getI32Imm(0, dl), getI32Imm(MB, dl),
                      getI32Imm(ME, dl)};
     CurDAG->SelectNodeTo(N, PPC::RLWINM, MVT::i32, Ops);
@@ -5473,10 +5487,10 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     // generate secure plt code for TLS symbols.
     getGlobalBaseReg();
   } break;
-  case PPCISD::CALL: {
-    if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
-        !TM.isPositionIndependent() || !Subtarget->isSecurePlt() ||
-        !Subtarget->isTargetELF())
+  case PPCISD::CALL:
+  case PPCISD::CALL_RM: {
+    if (Subtarget->isPPC64() || !TM.isPositionIndependent() ||
+        !Subtarget->isSecurePlt() || !Subtarget->isTargetELF())
       break;
 
     SDValue Op = N->getOperand(1);
@@ -5489,8 +5503,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
       if (ES->getTargetFlags() == PPCII::MO_PLT)
         getGlobalBaseReg();
     }
-  }
-    break;
+  } break;
 
   case PPCISD::GlobalBaseReg:
     ReplaceNode(N, getGlobalBaseReg());
@@ -6176,7 +6189,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
 
-    EVT VT = isPPC64 ? MVT::i64 : MVT::i32;
+    EVT VT = Subtarget->getScalarIntVT();
     SDNode *Tmp = CurDAG->getMachineNode(
         isPPC64 ? PPC::ADDIStocHA8 : PPC::ADDIStocHA, dl, VT, TOCbase, GA);
 
@@ -6309,7 +6322,7 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     SDValue ZeroReg =
         CurDAG->getRegister(Subtarget->isPPC64() ? PPC::ZERO8 : PPC::ZERO,
-                            Subtarget->isPPC64() ? MVT::i64 : MVT::i32);
+                            Subtarget->getScalarIntVT());
     unsigned LIOpcode = Subtarget->isPPC64() ? PPC::LI8 : PPC::LI;
     // v16i8 LD_SPLAT addr
     // ======>
@@ -6605,12 +6618,12 @@ void PPCDAGToDAGISel::foldBoolExts(SDValue &Res, SDNode *&N) {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   SDValue Cond = N->getOperand(0);
-  SDValue ConstTrue =
-    CurDAG->getConstant(N->getOpcode() == ISD::SIGN_EXTEND ? -1 : 1, dl, VT);
+  SDValue ConstTrue = CurDAG->getSignedConstant(
+      N->getOpcode() == ISD::SIGN_EXTEND ? -1 : 1, dl, VT);
   SDValue ConstFalse = CurDAG->getConstant(0, dl, VT);
 
   do {
-    SDNode *User = *N->use_begin();
+    SDNode *User = *N->user_begin();
     if (User->getNumOperands() != 2)
       break;
 
@@ -6701,7 +6714,7 @@ void PPCDAGToDAGISel::PostprocessISelDAG() {
 // be folded with the isel so that we don't need to materialize a register
 // containing zero.
 bool PPCDAGToDAGISel::AllUsersSelectZero(SDNode *N) {
-  for (const SDNode *User : N->uses()) {
+  for (const SDNode *User : N->users()) {
     if (!User->isMachineOpcode())
       return false;
     if (User->getMachineOpcode() != PPC::SELECT_I4 &&
@@ -6731,7 +6744,7 @@ bool PPCDAGToDAGISel::AllUsersSelectZero(SDNode *N) {
 
 void PPCDAGToDAGISel::SwapAllSelectUsers(SDNode *N) {
   SmallVector<SDNode *, 4> ToReplace;
-  for (SDNode *User : N->uses()) {
+  for (SDNode *User : N->users()) {
     assert((User->getMachineOpcode() == PPC::SELECT_I4 ||
             User->getMachineOpcode() == PPC::SELECT_I8) &&
            "Must have all select users");
@@ -7237,7 +7250,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7254,7 +7267,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7270,7 +7283,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
       return false;
 
     ToPromote.insert(Op32.getNode());
-    ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+    ToPromote.insert_range(ToPromote1);
     return true;
   }
 
@@ -7288,10 +7301,10 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     if (Op1OK)
-      ToPromote.insert(ToPromote2.begin(), ToPromote2.end());
+      ToPromote.insert_range(ToPromote2);
 
     return true;
   }
@@ -7311,7 +7324,7 @@ static bool PeepholePPC64ZExtGather(SDValue Op32,
     ToPromote.insert(Op32.getNode());
 
     if (Op0OK)
-      ToPromote.insert(ToPromote1.begin(), ToPromote1.end());
+      ToPromote.insert_range(ToPromote1);
 
     return true;
   }
@@ -7382,7 +7395,7 @@ void PPCDAGToDAGISel::PeepholePPC64ZExt() {
     // (except for the original INSERT_SUBREG), then abort the transformation.
     bool OutsideUse = false;
     for (SDNode *PN : ToPromote) {
-      for (SDNode *UN : PN->uses()) {
+      for (SDNode *UN : PN->users()) {
         if (!ToPromote.count(UN) && UN != ISR.getNode()) {
           OutsideUse = true;
           break;
@@ -7564,7 +7577,7 @@ static void reduceVSXSwap(SDNode *N, SelectionDAG *DAG) {
     while (V->isMachineOpcode() &&
            V->getMachineOpcode() == TargetOpcode::COPY_TO_REGCLASS) {
       // All values in the chain should have single use.
-      if (V->use_empty() || !V->use_begin()->isOnlyUserOf(V.getNode()))
+      if (V->use_empty() || !V->user_begin()->isOnlyUserOf(V.getNode()))
         return SDValue();
       V = V->getOperand(0);
     }
@@ -7860,8 +7873,8 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         if (!isInt<16>(Offset))
           continue;
 
-        ImmOpnd = CurDAG->getTargetConstant(Offset, SDLoc(ImmOpnd),
-                                            ImmOpnd.getValueType());
+        ImmOpnd = CurDAG->getSignedTargetConstant(Offset, SDLoc(ImmOpnd),
+                                                  ImmOpnd.getValueType());
       } else if (Offset != 0) {
         // This optimization is performed for non-TOC-based local-[exec|dynamic]
         // accesses.

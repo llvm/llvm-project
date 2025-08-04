@@ -14,6 +14,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/TextDiagnostic.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
@@ -1282,28 +1283,43 @@ static raw_ostream &operator<<(raw_ostream &OS,
 class UncheckedOptionalAccessTest
     : public ::testing::TestWithParam<OptionalTypeIdentifier> {
 protected:
-  void ExpectDiagnosticsFor(std::string SourceCode) {
-    ExpectDiagnosticsFor(SourceCode, ast_matchers::hasName("target"));
-  }
-
-  void ExpectDiagnosticsForLambda(std::string SourceCode) {
-    ExpectDiagnosticsFor(
-        SourceCode, ast_matchers::hasDeclContext(
-                        ast_matchers::cxxRecordDecl(ast_matchers::isLambda())));
-  }
-
-  template <typename FuncDeclMatcher>
+  // Check that after running the analysis on SourceCode, it produces the
+  // expected diagnostics according to [[unsafe]] annotations.
+  // - No annotations => no diagnostics.
+  // - Given "// [[unsafe]]" annotations on a line, we expect a diagnostic on
+  //   that line.
+  // - Given "// [[unsafe:range_text]]" annotations on a line, we expect a
+  //   diagnostic on that line, and we expect the diagnostic Range (printed as
+  //   a string) to match the "range_text".
   void ExpectDiagnosticsFor(std::string SourceCode,
-                            FuncDeclMatcher FuncMatcher) {
-    // Run in C++17 and C++20 mode to cover differences in the AST between modes
-    // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
-    for (const char *CxxMode : {"-std=c++17", "-std=c++20"})
-      ExpectDiagnosticsFor(SourceCode, FuncMatcher, CxxMode);
+                            bool IgnoreSmartPointerDereference = true) {
+    ExpectDiagnosticsFor(SourceCode, ast_matchers::hasName("target"),
+                         IgnoreSmartPointerDereference);
+  }
+
+  void ExpectDiagnosticsForLambda(std::string SourceCode,
+                                  bool IgnoreSmartPointerDereference = true) {
+    ExpectDiagnosticsFor(
+        SourceCode,
+        ast_matchers::hasDeclContext(
+            ast_matchers::cxxRecordDecl(ast_matchers::isLambda())),
+        IgnoreSmartPointerDereference);
   }
 
   template <typename FuncDeclMatcher>
   void ExpectDiagnosticsFor(std::string SourceCode, FuncDeclMatcher FuncMatcher,
-                            const char *CxxMode) {
+                            bool IgnoreSmartPointerDereference = true) {
+    // Run in C++17 and C++20 mode to cover differences in the AST between modes
+    // (e.g. C++20 can contain `CXXRewrittenBinaryOperator`).
+    for (const char *CxxMode : {"-std=c++17", "-std=c++20"})
+      ExpectDiagnosticsFor(SourceCode, FuncMatcher, CxxMode,
+                           IgnoreSmartPointerDereference);
+  }
+
+  template <typename FuncDeclMatcher>
+  void ExpectDiagnosticsFor(std::string SourceCode, FuncDeclMatcher FuncMatcher,
+                            const char *CxxMode,
+                            bool IgnoreSmartPointerDereference) {
     ReplaceAllOccurrences(SourceCode, "$ns", GetParam().NamespaceName);
     ReplaceAllOccurrences(SourceCode, "$optional", GetParam().TypeName);
 
@@ -1328,9 +1344,8 @@ protected:
       template <typename T>
       T Make();
     )");
-    UncheckedOptionalAccessModelOptions Options{
-        /*IgnoreSmartPointerDereference=*/true};
-    std::vector<SourceLocation> Diagnostics;
+    UncheckedOptionalAccessModelOptions Options{IgnoreSmartPointerDereference};
+    std::vector<UncheckedOptionalAccessDiagnostic> Diagnostics;
     llvm::Error Error = checkDataflow<UncheckedOptionalAccessModel>(
         AnalysisInputs<UncheckedOptionalAccessModel>(
             SourceCode, std::move(FuncMatcher),
@@ -1358,22 +1373,33 @@ protected:
                                   &Annotations,
                               const AnalysisOutputs &AO) {
           llvm::DenseSet<unsigned> AnnotationLines;
-          for (const auto &[Line, _] : Annotations) {
+          llvm::DenseMap<unsigned, std::string> AnnotationRangesInLines;
+          for (const auto &[Line, AnnotationWithMaybeRange] : Annotations) {
             AnnotationLines.insert(Line);
+            auto it = AnnotationWithMaybeRange.find(':');
+            if (it != std::string::npos) {
+              AnnotationRangesInLines[Line] =
+                  AnnotationWithMaybeRange.substr(it + 1);
+            }
           }
           auto &SrcMgr = AO.ASTCtx.getSourceManager();
           llvm::DenseSet<unsigned> DiagnosticLines;
-          for (SourceLocation &Loc : Diagnostics) {
-            unsigned Line = SrcMgr.getPresumedLineNumber(Loc);
+          for (const UncheckedOptionalAccessDiagnostic &Diag : Diagnostics) {
+            unsigned Line = SrcMgr.getPresumedLineNumber(Diag.Range.getBegin());
             DiagnosticLines.insert(Line);
             if (!AnnotationLines.contains(Line)) {
-              IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(
-                  new DiagnosticOptions());
+              DiagnosticOptions DiagOpts;
               TextDiagnostic TD(llvm::errs(), AO.ASTCtx.getLangOpts(),
-                                DiagOpts.get());
-              TD.emitDiagnostic(
-                  FullSourceLoc(Loc, SrcMgr), DiagnosticsEngine::Error,
-                  "unexpected diagnostic", std::nullopt, std::nullopt);
+                                DiagOpts);
+              TD.emitDiagnostic(FullSourceLoc(Diag.Range.getBegin(), SrcMgr),
+                                DiagnosticsEngine::Error,
+                                "unexpected diagnostic", {Diag.Range}, {});
+            } else {
+              auto it = AnnotationRangesInLines.find(Line);
+              if (it != AnnotationRangesInLines.end()) {
+                EXPECT_EQ(Diag.Range.getAsRange().printToString(SrcMgr),
+                          it->second);
+              }
             }
           }
 
@@ -2167,7 +2193,7 @@ TEST_P(UncheckedOptionalAccessTest, OptionalReturnedFromFuntionCall) {
   )");
 }
 
-TEST_P(UncheckedOptionalAccessTest, OptionalFieldModified) {
+TEST_P(UncheckedOptionalAccessTest, NonConstMethodMayClearOptionalField) {
   ExpectDiagnosticsFor(
       R"(
     #include "unchecked_optional_access_test.h"
@@ -2182,6 +2208,27 @@ TEST_P(UncheckedOptionalAccessTest, OptionalFieldModified) {
         foo.opt.value();
         foo.clear();
         foo.opt.value();  // [[unsafe]]
+      }
+    }
+  )");
+}
+
+TEST_P(UncheckedOptionalAccessTest,
+       NonConstMethodMayNotClearConstOptionalField) {
+  ExpectDiagnosticsFor(
+      R"(
+    #include "unchecked_optional_access_test.h"
+
+    struct Foo {
+      const $ns::$optional<std::string> opt;
+      void clear();
+    };
+
+    void target(Foo& foo) {
+      if (foo.opt) {
+        foo.opt.value();
+        foo.clear();
+        foo.opt.value();
       }
     }
   )");
@@ -3700,6 +3747,98 @@ TEST_P(UncheckedOptionalAccessTest, ConstByValueAccessorWithModInBetween) {
   )cc");
 }
 
+TEST_P(UncheckedOptionalAccessTest, ConstPointerAccessor) {
+  ExpectDiagnosticsFor(R"cc(
+     #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct MyUniquePtr {
+      A* operator->() const;
+    };
+
+    void target(MyUniquePtr p) {
+      if (p->x) {
+        *p->x;
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstPointerAccessorWithModInBetween) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct MyUniquePtr {
+      A* operator->() const;
+      void reset(A*);
+    };
+
+    void target(MyUniquePtr p) {
+      if (p->x) {
+        p.reset(nullptr);
+        *p->x;  // [[unsafe]]
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
+}
+
+TEST_P(UncheckedOptionalAccessTest, SmartPointerAccessorMixed) {
+  ExpectDiagnosticsFor(R"cc(
+     #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    namespace absl {
+    template<typename T>
+    class StatusOr {
+      public:
+      bool ok() const;
+
+      const T& operator*() const&;
+      T& operator*() &;
+
+      const T* operator->() const;
+      T* operator->();
+
+      const T& value() const;
+      T& value();
+    };
+    }
+
+    void target(absl::StatusOr<A> &mut, const absl::StatusOr<A> &imm) {
+      if (!mut.ok() || !imm.ok())
+        return;
+
+      if (mut->x.has_value()) {
+        mut->x.value();
+        ((*mut).x).value();
+        (mut.value().x).value();
+
+        // check flagged after modifying
+        mut = imm;
+        mut->x.value();  // [[unsafe]]
+      }
+      if (imm->x.has_value()) {
+        imm->x.value();
+        ((*imm).x).value();
+        (imm.value().x).value();
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
+}
+
 TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessor) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"
@@ -3710,7 +3849,7 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessor) {
     };
 
     void target(A& a) {
-      std::optional<int> opt;
+      $ns::$optional<int> opt;
       if (a.isFoo()) {
         opt = 1;
       }
@@ -3732,13 +3871,260 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessorWithModInBetween) {
     };
 
     void target(A& a) {
-      std::optional<int> opt;
+      $ns::$optional<int> opt;
       if (a.isFoo()) {
         opt = 1;
       }
       a.clear();
       if (a.isFoo()) {
         opt.value();  // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObject) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A& getA() const { return a; }
+
+      A a;
+    };
+
+    void target(B& b) {
+      if (b.getA().get().has_value()) {
+        b.getA().get().value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(
+    UncheckedOptionalAccessTest,
+    ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithoutValueCheck) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A& getA() const { return a; }
+
+      A a;
+    };
+
+    void target(B& b) {
+      b.getA().get().value(); // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefToOptionalSavedAsTemporaryVariable) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A& getA() const { return a; }
+
+      A a;
+    };
+
+    void target(B& b) {
+      const auto& opt = b.getA().get();
+      if (opt.has_value()) {
+        opt.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefAccessorToOptionalViaAccessorToHoldingObjectByValue) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A copyA() const { return a; }
+
+      A a;
+    };
+
+    void target(B& b) {
+      if (b.copyA().get().has_value()) {
+        b.copyA().get().value(); // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefAccessorToOptionalViaNonConstRefAccessorToHoldingObject) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      A& getA() { return a; }
+
+      A a;
+    };
+
+    void target(B& b) {
+      if (b.getA().get().has_value()) {
+        b.getA().get().value(); // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(
+    UncheckedOptionalAccessTest,
+    ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithModAfterCheck) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A& getA() const { return a; }
+
+      A& getA() { return a; }
+
+      void clear() { a = A{}; }
+
+      A a;
+    };
+
+    void target(B& b) {
+      // changing field A via non-const getter after const getter check
+      if (b.getA().get().has_value()) {
+        b.getA() = A{};
+        b.getA().get().value(); // [[unsafe]]
+      }
+
+      // calling non-const method which might change field A
+      if (b.getA().get().has_value()) {
+        b.clear();
+        b.getA().get().value(); // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(
+    UncheckedOptionalAccessTest,
+    ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithAnotherConstCallAfterCheck) {
+  ExpectDiagnosticsFor(R"cc(
+      #include "unchecked_optional_access_test.h"
+
+      struct A {
+        const $ns::$optional<int>& get() const { return x; }
+
+        $ns::$optional<int> x;
+      };
+
+      struct B {
+        const A& getA() const { return a; }
+
+        void callWithoutChanges() const { 
+          // no-op 
+        }
+
+        A a;
+      };
+
+      void target(B& b) {  
+        if (b.getA().get().has_value()) {
+          b.callWithoutChanges(); // calling const method which cannot change A
+          b.getA().get().value();
+        }
+      }
+    )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstPointerRefAccessor) {
+  // A crash reproducer for https://github.com/llvm/llvm-project/issues/125589
+  // NOTE: we currently cache const ref accessors's locations.
+  // If we want to support const ref to pointers or bools, we should initialize
+  // their values.
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct PtrWrapper {
+      A*& getPtrRef() const;
+      void reset(A*);
+    };
+
+    void target(PtrWrapper p) {
+      if (p.getPtrRef()->x) {
+        *p.getPtrRef()->x;  // [[unsafe]]
+        p.reset(nullptr);
+        *p.getPtrRef()->x;  // [[unsafe]]
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
+}
+
+TEST_P(UncheckedOptionalAccessTest, DiagnosticsHaveRanges) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> fi;
+    };
+    struct B {
+      $ns::$optional<A> fa;
+    };
+
+    void target($ns::$optional<B> opt) {
+      opt.value();  // [[unsafe:<input.cc:12:7>]]
+      if (opt) {
+        opt  // [[unsafe:<input.cc:14:9, line:16:13>]]
+          ->
+            fa.value();
+        if (opt->fa) {
+          opt->fa->fi.value();  // [[unsafe:<input.cc:18:11, col:20>]]
+        }
       }
     }
   )cc");

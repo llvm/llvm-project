@@ -35,14 +35,9 @@ void __assert_fail_internal(const char *expr, const char *msg, const char *file,
       __assert_assume(expr);                                                   \
   }
 #define UNREACHABLE(msg)                                                       \
-  PRINT(msg);                                                                  \
+  printf(msg);                                                                 \
   __builtin_trap();                                                            \
   __builtin_unreachable();
-
-///}
-
-#define PRINTF(fmt, ...) (void)printf(fmt, ##__VA_ARGS__);
-#define PRINT(str) PRINTF("%s", str)
 
 ///}
 

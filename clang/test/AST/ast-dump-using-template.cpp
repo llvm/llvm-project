@@ -22,7 +22,7 @@ using A = S<T>;
 // CHECK-NEXT: `-ElaboratedType {{.*}} 'S<T>' sugar dependent
 // CHECK-NEXT:   `-TemplateSpecializationType {{.*}} 'S<T>' dependent
 // CHECK-NEXT:     |-name: 'S':'ns::S' qualified
-// CHECk-NEXT:     | |-UsingShadowDecl {{.+}} ClassTemplate {{.+}} 'S'
+// CHECK-NEXT:     | |-UsingShadowDecl {{.+}} ClassTemplate {{.+}} 'S'
 
 // TemplateName in TemplateArgument.
 template <template <typename> class T> class X {};
@@ -55,4 +55,4 @@ using D = decltype(DeducedTemplateSpecializationT2);
 // CHECK-NEXT:  `-ElaboratedType {{.*}} 'S2<int>' sugar
 // CHECK-NEXT:    `-DeducedTemplateSpecializationType {{.*}} 'S2<int>' sugar
 // CHECK-NEXT:      |-name: 'S2':'ns::S2' qualified
-//CHECk-NEXT:       | |-UsingShadowDecl {{.+}} ClassTemplate {{.+}} 'S2'
+// CHECK-NEXT:       | |-UsingShadowDecl {{.+}} ClassTemplate {{.+}} 'S2'

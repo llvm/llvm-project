@@ -27,8 +27,8 @@ define <2 x i2> @i2x2_splat(i1 %x) {
 
 ; CHECK-LABEL: not_a_vec:
 ; CHECK-NEXT: .functype not_a_vec (i64, i64) -> (v128){{$}}
-; CHECK-NEXT: i32.wrap_i64    $push[[L:[0-9]+]]=, $0
-; CHECK-NEXT: i32x4.splat     $push[[R:[0-9]+]]=, $pop[[L]]
+; CHECK-NEXT: i64x2.splat     $push[[L:[0-9]+]]=, $0
+; CHECK-NEXT: i8x16.shuffle   $push[[R:[0-9]+]]=, $pop[[L]], $2, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT: return $pop[[R]]
 define <4 x i32> @not_a_vec(i128 %x) {
   %a = bitcast i128 %x to <4 x i32>

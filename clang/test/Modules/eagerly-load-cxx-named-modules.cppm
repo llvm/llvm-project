@@ -22,4 +22,4 @@ import a;
 //--- user.cpp
 import a;
 
-// CHECK: the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules;consider to use '-fmodule-file=<module-name>=<BMI-path>' instead
+// CHECK: the form '-fmodule-file=<BMI-path>' is deprecated for standard C++ named modules; consider to use '-fmodule-file=<module-name>=<BMI-path>' instead

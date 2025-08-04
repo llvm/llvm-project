@@ -16,9 +16,7 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
-#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsBPF.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "bpf-gisel"
 

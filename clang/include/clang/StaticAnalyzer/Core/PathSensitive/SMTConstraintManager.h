@@ -16,6 +16,7 @@
 
 #include "clang/Basic/JsonSupport.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/RangedConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include <optional>
@@ -154,7 +155,7 @@ public:
         return nullptr;
 
       // This is the only solution, store it
-      return &BVF.getValue(Value);
+      return BVF.getValue(Value).get();
     }
 
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym)) {
@@ -167,16 +168,16 @@ public:
       const llvm::APSInt *Value;
       if (!(Value = getSymVal(State, CastSym)))
         return nullptr;
-      return &BVF.Convert(SC->getType(), *Value);
+      return BVF.Convert(SC->getType(), *Value).get();
     }
 
     if (const BinarySymExpr *BSE = dyn_cast<BinarySymExpr>(Sym)) {
       const llvm::APSInt *LHS, *RHS;
       if (const SymIntExpr *SIE = dyn_cast<SymIntExpr>(BSE)) {
         LHS = getSymVal(State, SIE->getLHS());
-        RHS = &SIE->getRHS();
+        RHS = SIE->getRHS().get();
       } else if (const IntSymExpr *ISE = dyn_cast<IntSymExpr>(BSE)) {
-        LHS = &ISE->getLHS();
+        LHS = ISE->getLHS().get();
         RHS = getSymVal(State, ISE->getRHS());
       } else if (const SymSymExpr *SSM = dyn_cast<SymSymExpr>(BSE)) {
         // Early termination to avoid expensive call
@@ -195,7 +196,9 @@ public:
       std::tie(ConvertedRHS, RTy) = SMTConv::fixAPSInt(Ctx, *RHS);
       SMTConv::doIntTypeConversion<llvm::APSInt, &SMTConv::castAPSInt>(
           Solver, Ctx, ConvertedLHS, LTy, ConvertedRHS, RTy);
-      return BVF.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);
+      std::optional<APSIntPtr> Res =
+          BVF.evalAPSInt(BSE->getOpcode(), ConvertedLHS, ConvertedRHS);
+      return Res ? Res.value().get() : nullptr;
     }
 
     llvm_unreachable("Unsupported expression to get symbol value!");
@@ -298,8 +301,10 @@ public:
     llvm_unreachable("Unsupported expression to reason about!");
   }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Dumps SMT formula
   LLVM_DUMP_METHOD void dump() const { Solver->dump(); }
+#endif
 
 protected:
   // Check whether a new model is satisfiable, and update the program state.
@@ -321,8 +326,6 @@ protected:
 
     // Construct the logical AND of all the constraints
     if (I != IE) {
-      std::vector<llvm::SMTExprRef> ASTs;
-
       llvm::SMTExprRef Constraint = I++->second;
       while (I != IE) {
         Constraint = Solver->mkAnd(Constraint, I++->second);
@@ -350,12 +353,7 @@ protected:
     addStateConstraints(NewState);
 
     std::optional<bool> res = Solver->check();
-    if (!res)
-      Cached[hash] = ConditionTruthVal();
-    else
-      Cached[hash] = ConditionTruthVal(*res);
-
-    return Cached[hash];
+    return Cached[hash] = res ? ConditionTruthVal(*res) : ConditionTruthVal();
   }
 
   // Cache the result of an SMT query (true, false, unknown). The key is the

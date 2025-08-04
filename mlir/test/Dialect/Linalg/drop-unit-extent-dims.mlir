@@ -25,10 +25,8 @@ func.func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %arg1 : f32, %shape: t
 //   CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
 //   CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1, d2) -> ()>
 //   CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-//   CHECK-DAG: #[[$MAP4:.*]] = affine_map<()[s0, s1] -> (s0 * s1)>
 // CHECK-LABEL: func @drop_one_trip_loops
 //       CHECK: %[[C2:.*]] = arith.constant 2 : index
-//       CHECK: %[[C1:.*]] = arith.constant 1 : index
 //       CHECK: %[[C0:.*]] = arith.constant 0 : index
 //       CHECK: tensor.collapse_shape %{{.*}} {{\[\[}}0, 1], [2]]
 //       CHECK: tensor.collapse_shape %{{.*}} {{\[\[}}0, 1], [2, 3], [4]]
@@ -36,11 +34,9 @@ func.func @drop_one_trip_loops(%arg0 : tensor<?x1x?xf32>, %arg1 : f32, %shape: t
 //  CHECK-SAME:   indexing_maps = [#[[$MAP1]], #[[$MAP2]], #[[$MAP3]]]
 //  CHECK-SAME:   iterator_types = ["parallel", "parallel", "parallel"]
 //       CHECK: %[[DIM:.*]] = tensor.dim %{{.*}}, %[[C0]]
-//       CHECK: %[[VAL_1:.*]] = affine.apply #[[$MAP4]]()[%[[DIM]], %[[C1]]]
 //       CHECK: %[[DIM_1:.*]] = tensor.dim %{{.*}}, %[[C2]]
-//       CHECK: %[[VAL_2:.*]] = affine.apply #[[$MAP4]]()[%[[DIM_1]], %[[C1]]]
 //       CHECK: %[[DIM_2:.*]] = tensor.dim %{{.*}}, %[[C2]]
-//       CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %{{.*}} {{\[\[}}0, 1], [2, 3], [4]] output_shape [%[[VAL_1]], 1, %[[VAL_2]], 1, %[[DIM_2]]] : tensor<?x?x?xf32> into tensor<?x1x?x1x?xf32>
+//       CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %{{.*}} {{\[\[}}0, 1], [2, 3], [4]] output_shape [%[[DIM]], 1, %[[DIM_1]], 1, %[[DIM_2]]] : tensor<?x?x?xf32> into tensor<?x1x?x1x?xf32>
 
 //   CHECK-SLICES-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (d0, d2)>
 //   CHECK-SLICES-DAG: #[[$MAP2:.*]] = affine_map<(d0, d1, d2) -> ()>
@@ -79,18 +75,15 @@ func.func @drop_one_trip_loops_all_ones(%arg0 : tensor<1x1x1xf32>, %arg1 : f32, 
 }
 //   CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> ()>
 //   CHECK-DAG: #[[$MAP2:.*]] = affine_map<(d0) -> (d0)>
-//   CHECK-DAG: #[[$MAP3:.*]] = affine_map<()[s0, s1, s2, s3, s4] -> ((((s0 * s1) * s2) * s3) * s4)>
 // CHECK-LABEL: func @drop_one_trip_loops_all_ones
 //       CHECK: %[[C2:.*]] = arith.constant 2 : index
-//       CHECK: %[[C1:.*]] = arith.constant 1 : index
 //       CHECK: tensor.collapse_shape %{{.*}} []
 //       CHECK: tensor.collapse_shape %{{.*}} {{\[}}[0, 1, 2, 3, 4]]
 //       CHECK: linalg.generic
 //  CHECK-SAME:   indexing_maps = [#[[$MAP1]], #[[$MAP1]], #[[$MAP2]]]
 //  CHECK-SAME:   iterator_types = ["parallel"]
 //       CHECK: %[[DIM:.*]] = tensor.dim %{{.*}}, %[[C2]] : tensor<1x1x?x1x1xf32>
-//       CHECK: %[[SZ:.*]] = affine.apply #[[$MAP3]]()[%[[C1]], %[[C1]], %[[DIM]], %[[C1]], %[[C1]]]
-//       CHECK: %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[\[}}0, 1, 2, 3, 4]] output_shape [1, 1, %[[SZ]], 1, 1] : tensor<?xf32> into tensor<1x1x?x1x1xf32>
+//       CHECK: %[[EXPAND:.*]] = tensor.expand_shape %{{.*}} {{\[\[}}0, 1, 2, 3, 4]] output_shape [1, 1, %[[DIM]], 1, 1] : tensor<?xf32> into tensor<1x1x?x1x1xf32>
 
 // -----
 
@@ -406,7 +399,6 @@ func.func @unit_dim_for_reduction(%arg0: tensor<1x?x1x?xf32>) -> tensor<1x?xf32>
 }
 //  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1) -> (d0, d1)>
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d0)>
-//  CHECK-DAG: #[[MAP3:.+]] = affine_map<()[s0, s1, s2] -> ((s0 * s1) * s2)>
 //      CHECK: func @unit_dim_for_reduction
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<1x?x1x?xf32>
 //      CHECK: %[[C1:.+]] = arith.constant 1 : index
@@ -422,8 +414,7 @@ func.func @unit_dim_for_reduction(%arg0: tensor<1x?x1x?xf32>) -> tensor<1x?xf32>
 // CHECK-SAME:     ins(%[[RESHAPE]] : tensor<?x?xf32>)
 // CHECK-SAME:     outs(%[[FILL]] : tensor<?xf32>)
 //      CHECK: %[[DIM_0:.*]] = tensor.dim %[[ARG0]], %[[C1]] : tensor<1x?x1x?xf32>
-//      CHECK: %[[VAL_3:.*]] = affine.apply #[[$MAP3]]()[%[[C1]], %[[DIM_0]], %[[C1]]]
-//      CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[GENERIC]] {{\[\[}}0, 1]] output_shape [1, %[[VAL_3]]] : tensor<?xf32> into tensor<1x?xf32>
+//      CHECK: %[[EXPANDED:.*]] = tensor.expand_shape %[[GENERIC]] {{\[\[}}0, 1]] output_shape [1, %[[DIM_0]]] : tensor<?xf32> into tensor<1x?xf32>
 //      CHECK: return %[[EXPANDED]] : tensor<1x?xf32>
 
 // -----
@@ -482,10 +473,8 @@ func.func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x
 }
 //  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0, d1) -> (d0, d1)>
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d0)>
-//  CHECK-DAG: #[[MAP3:.+]] = affine_map<()[s0, s1] -> (s0 * s1)>
 //      CHECK: func @unit_dim_for_reduction_inner
 // CHECK-SAME:   %[[ARG0:.+]]: tensor<?x1x?x1xf32>
-//      CHECK: %[[C1:.*]] = arith.constant 1 : index
 //      CHECK: %[[C0:.*]] = arith.constant 0 : index
 //      CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
 //      CHECK: %[[C2:.*]] = arith.constant 2 : index
@@ -499,8 +488,7 @@ func.func @unit_dim_for_reduction_inner(%arg0: tensor<?x1x?x1xf32>) -> tensor<?x
 // CHECK-SAME:     ins(%[[RESHAPE]] : tensor<?x?xf32>)
 // CHECK-SAME:     outs(%[[FILL]] : tensor<?xf32>)
 //      CHECK: %[[DIM_0:.+]] = tensor.dim %[[ARG0]], %[[C0]] : tensor<?x1x?x1xf32>
-//      CHECK: %[[VAL_3:.+]] = affine.apply #[[$MAP3]]()[%[[DIM_0]], %[[C1]]]
-//      CHECK: %[[RESULT_RESHAPE:.+]] = tensor.expand_shape %[[RESULT]] {{\[}}[0, 1]] output_shape [%[[VAL_3]], 1] : tensor<?xf32> into tensor<?x1xf32>
+//      CHECK: %[[RESULT_RESHAPE:.+]] = tensor.expand_shape %[[RESULT]] {{\[}}[0, 1]] output_shape [%[[DIM_0]], 1] : tensor<?xf32> into tensor<?x1xf32>
 //      CHECK: return %[[RESULT_RESHAPE]]
 
 // -----
@@ -1017,7 +1005,6 @@ func.func @drop_unit_pad_dynamic_dims(%arg0: tensor<1x?xf32>) -> tensor<1x?xf32>
   return %0 : tensor<1x?xf32>
 }
 
-// CHECK-DAG: #[[$MAP:.+]] = affine_map<()[s0, s1] -> (s0 * s1)>
 // CHECK-DAG: #[[$MAP1:.+]] = affine_map<()[s0] -> (s0 + 11)>
 // CHECK-LABEL: func @drop_unit_pad_dynamic_dims
 //       CHECK:   %[[C1:.*]] = arith.constant 1 : index
@@ -1027,8 +1014,7 @@ func.func @drop_unit_pad_dynamic_dims(%arg0: tensor<1x?xf32>) -> tensor<1x?xf32>
 //       CHECK:   %[[PADDED:.+]] = tensor.pad %[[COLLAPSE]] low[5] high[6]
 //       CHECK:   } : tensor<?xf32> to tensor<?xf32>
 //       CHECK:   %[[DIM:.+]] = tensor.dim %{{.*}}, %[[C1]] : tensor<1x?xf32>
-//       CHECK:   %[[VAL_0:.+]] = affine.apply #[[$MAP]]()[%[[C1]], %[[DIM]]]
-//       CHECK:   %[[VAL_1:.+]] = affine.apply #[[$MAP1]]()[%[[VAL_0]]]
+//       CHECK:   %[[VAL_1:.+]] = affine.apply #[[$MAP1]]()[%[[DIM]]]
 //       CHECK:   %[[EXPANDED:.+]] = tensor.expand_shape %[[PADDED]] {{\[\[}}0, 1]] output_shape [1, %[[VAL_1]]] : tensor<?xf32> into tensor<1x?xf32>
 
 // CHECK-SLICES: #[[$MAP:.+]] = affine_map<()[s0] -> (s0 + 11)>
@@ -1090,29 +1076,27 @@ func.func @drop_known_unit_constant_low_high(%arg0: tensor<1x383x128xf32>) -> te
 
 // -----
 
-// CHECK: #[[$MAP0:.+]] = affine_map<()[s0, s1] -> (s0 * s1)>
-// CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (0, d0)>
-// CHECK: #[[$MAP2:.+]] = affine_map<(d0) -> ()>
+func.func @drop_unit_dim_mixed_static_dynamic(%arg0: tensor<1x?xf32>) -> tensor<1x16xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %cst = arith.constant 0.000000e+00 : f32
+  %padded = tensor.pad %arg0 low[%c0, %c1] high[%c0, %c0] {
+  ^bb0(%arg1: index, %arg2: index):
+    tensor.yield %cst : f32
+  } : tensor<1x?xf32> to tensor<1x16xf32>
+  return %padded : tensor<1x16xf32>
+}
+// CHECK-LABEL: func @drop_unit_dim_mixed_static_dynamic
+//       CHECK:   %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+//       CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[ARGS:.*]] : tensor<1x?xf32> into tensor<?xf32>
+//       CHECK:   %[[PADDED:.*]] = tensor.pad %[[COLLAPSE]] low[1] high[0] {
+//       CHECK:   ^bb0(%[[IDX:.*]]: index):
+//       CHECK:     tensor.yield %[[CST]] : f32
+//       CHECK:   } : tensor<?xf32> to tensor<16xf32>
+//       CHECK:   %[[EXPANDED:.*]] = tensor.expand_shape %[[PADDED]] {{\[\[}}0, 1]] output_shape [1, 16] : tensor<16xf32> into tensor<1x16xf32>
+//       CHECK:   return %[[EXPANDED]] : tensor<1x16xf32>
 
-// CHECK-LABEL: func @drop_unit_dim_corresponding_to_dynamic_dim
-// CHECK-SAME:                    %[[ARG0:.*]]: tensor<1x?x?x1xf32>,
-// CHECK-SAME:                    %[[ARG1:.*]]: index) -> tensor<?x1x61x1xf32> {
-// CHECK:           %[[VAL_0:.*]] = arith.constant 0 : index
-// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_2:.*]] = arith.constant dense<1.000000e+00> : tensor<f32>
-// CHECK:           %[[VAL_3:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1], [2, 3]] : tensor<1x?x?x1xf32> into tensor<?x?xf32>
-// CHECK:           %[[VAL_4:.*]] = tensor.empty(%[[ARG1]]) : tensor<?x61xf32>
-// CHECK:           %[[VAL_5:.*]] = affine.apply #[[$MAP0]](){{\[}}%[[ARG1]], %[[VAL_1]]]
-// CHECK:           %[[VAL_6:.*]] = tensor.empty(%[[VAL_5]]) : tensor<?x61xf32>
-// CHECK:           %[[VAL_7:.*]] = linalg.generic {indexing_maps = [#[[$MAP1]], #[[$MAP2]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["parallel"]} ins(%[[VAL_3]], %[[VAL_2]], %[[VAL_4]] : tensor<?x?xf32>, tensor<f32>, tensor<?x61xf32>) outs(%[[VAL_6]] : tensor<?x61xf32>) {
-// CHECK:           ^bb0(%[[VAL_8:.*]]: f32, %[[VAL_9:.*]]: f32, %[[VAL_10:.*]]: f32, %[[VAL_11:.*]]: f32):
-// CHECK:             %[[VAL_12:.*]] = arith.mulf %[[VAL_8]], %[[VAL_9]] : f32
-// CHECK:             %[[VAL_13:.*]] = arith.addf %[[VAL_10]], %[[VAL_12]] : f32
-// CHECK:             linalg.yield %[[VAL_13]] : f32
-// CHECK:           } -> tensor<?x61xf32>
-// CHECK:           %[[VAL_14:.*]] = tensor.expand_shape %[[VAL_7]] {{\[\[}}0, 1], [2, 3]] output_shape {{\[}}%[[VAL_0]], 1, 61, 1] : tensor<?x61xf32> into tensor<?x1x61x1xf32>
-// CHECK:           return %[[VAL_14]] : tensor<?x1x61x1xf32>
-// CHECK:         }
+// -----
 
 #map = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d0, d1 + d4, d2 + d5, d6)>
 #map1 = affine_map<(d0, d1, d2, d3, d4, d5, d6) -> (d4, d5, d6, d3)>
@@ -1130,3 +1114,62 @@ module {
     return %1 : tensor<?x1x61x1xf32>
   }
 }
+// CHECK: #[[$MAP1:.+]] = affine_map<(d0) -> (0, d0)>
+// CHECK: #[[$MAP2:.+]] = affine_map<(d0) -> ()>
+
+// CHECK-LABEL: func @drop_unit_dim_corresponding_to_dynamic_dim
+// CHECK-SAME:                    %[[ARG0:.*]]: tensor<1x?x?x1xf32>,
+// CHECK-SAME:                    %[[ARG1:.*]]: index) -> tensor<?x1x61x1xf32> {
+// CHECK:           %[[VAL_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[VAL_2:.*]] = arith.constant dense<1.000000e+00> : tensor<f32>
+// CHECK:           %[[VAL_3:.*]] = tensor.collapse_shape %[[ARG0]] {{\[\[}}0, 1], [2, 3]] : tensor<1x?x?x1xf32> into tensor<?x?xf32>
+// CHECK:           %[[VAL_4:.*]] = tensor.empty(%[[ARG1]]) : tensor<?x61xf32>
+// CHECK:           %[[VAL_6:.*]] = tensor.empty(%[[ARG1]]) : tensor<?x61xf32>
+// CHECK:           %[[VAL_7:.*]] = linalg.generic {indexing_maps = [#[[$MAP1]], #[[$MAP2]], #[[$MAP1]], #[[$MAP1]]], iterator_types = ["parallel"]} ins(%[[VAL_3]], %[[VAL_2]], %[[VAL_4]] : tensor<?x?xf32>, tensor<f32>, tensor<?x61xf32>) outs(%[[VAL_6]] : tensor<?x61xf32>) {
+// CHECK:           ^bb0(%[[VAL_8:.*]]: f32, %[[VAL_9:.*]]: f32, %[[VAL_10:.*]]: f32, %[[VAL_11:.*]]: f32):
+// CHECK:             %[[VAL_12:.*]] = arith.mulf %[[VAL_8]], %[[VAL_9]] : f32
+// CHECK:             %[[VAL_13:.*]] = arith.addf %[[VAL_10]], %[[VAL_12]] : f32
+// CHECK:             linalg.yield %[[VAL_13]] : f32
+// CHECK:           } -> tensor<?x61xf32>
+// CHECK:           %[[VAL_14:.*]] = tensor.expand_shape %[[VAL_7]] {{\[\[}}0, 1], [2, 3]] output_shape {{\[}}%[[VAL_0]], 1, 61, 1] : tensor<?x61xf32> into tensor<?x1x61x1xf32>
+// CHECK:           return %[[VAL_14]] : tensor<?x1x61x1xf32>
+// CHECK:         }
+
+// -----
+
+func.func @no_fold_empty_tensor_dim_out_of_bounds(%arg0: tensor<1x?x10xf32>) -> tensor<1x?xf32> {
+  %cst = arith.constant 1.000000e+00 : f32
+  %cst7 = arith.constant 7 : index
+  %dim = tensor.dim %arg0, %cst7 : tensor<1x?x10xf32>
+  %0 = tensor.empty(%dim) : tensor<1x?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<1x?xf32>) -> tensor<1x?xf32>
+  return %1 : tensor<1x?xf32>
+}
+// CHECK-LABEL: func.func @no_fold_empty_tensor_dim_out_of_bounds
+//  CHECK-SAME:                 %[[ARG0:.*]]: tensor<1x?x10xf32>) -> tensor<1x?xf32> {
+//       CHECK:   %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+//       CHECK:   %[[C7:.*]] = arith.constant 7
+//       CHECK:   %[[DIM:.*]] = tensor.dim %[[ARG0]], %[[C7]] : tensor<1x?x10xf32>
+//       CHECK:   %[[VAL_0:.*]] = tensor.empty(%[[DIM]]) : tensor<1x?xf32>
+//       CHECK:   %[[VAL_1:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[VAL_0]] : tensor<1x?xf32>) -> tensor<1x?xf32>
+//       CHECK:   return %[[VAL_1]] : tensor<1x?xf32>
+//       CHECK: }
+
+// -----
+
+func.func @fold_empty_tensor_dim_op(%arg0: tensor<1x?x10xf32>) -> tensor<1x?xf32> {
+  %cst = arith.constant 1.000000e+00 : f32
+  %cst2 = index.constant 2
+  %dim10 = tensor.dim %arg0, %cst2 : tensor<1x?x10xf32>
+  %0 = tensor.empty(%dim10) : tensor<1x?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<1x?xf32>) -> tensor<1x?xf32>
+  return %1 : tensor<1x?xf32>
+}
+// CHECK-LABEL: func.func @fold_empty_tensor_dim_op
+//  CHECK-SAME:                 %[[ARG0:.*]]: tensor<1x?x10xf32>) -> tensor<1x?xf32> {
+//       CHECK:   %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+//       CHECK:   %[[VAL_0:.*]] = tensor.empty() : tensor<1x10xf32>
+//       CHECK:   %[[VAL_1:.*]] = tensor.cast %[[VAL_0]] : tensor<1x10xf32> to tensor<1x?xf32>
+//       CHECK:   %[[VAL_2:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[VAL_1]] : tensor<1x?xf32>) -> tensor<1x?xf32>
+//       CHECK:   return %[[VAL_2]] : tensor<1x?xf32>
+//       CHECK: }

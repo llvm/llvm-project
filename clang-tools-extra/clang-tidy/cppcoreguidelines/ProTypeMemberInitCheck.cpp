@@ -277,7 +277,7 @@ ProTypeMemberInitCheck::ProTypeMemberInitCheck(StringRef Name,
                                                ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreArrays(Options.get("IgnoreArrays", false)),
-      UseAssignment(Options.getLocalOrGlobal("UseAssignment", false)) {}
+      UseAssignment(Options.get("UseAssignment", false)) {}
 
 void ProTypeMemberInitCheck::registerMatchers(MatchFinder *Finder) {
   auto IsUserProvidedNonDelegatingConstructor =
@@ -373,8 +373,8 @@ static bool isEmpty(ASTContext &Context, const QualType &Type) {
   return isIncompleteOrZeroLengthArrayType(Context, Type);
 }
 
-static const char *getInitializer(QualType QT, bool UseAssignment) {
-  const char *DefaultInitializer = "{}";
+static llvm::StringLiteral getInitializer(QualType QT, bool UseAssignment) {
+  static constexpr llvm::StringLiteral DefaultInitializer = "{}";
   if (!UseAssignment)
     return DefaultInitializer;
 
@@ -433,21 +433,22 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   // Gather all fields (direct and indirect) that need to be initialized.
   SmallPtrSet<const FieldDecl *, 16> FieldsToInit;
   bool AnyMemberHasInitPerUnion = false;
-  forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
-                         AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
-    if (IgnoreArrays && F->getType()->isArrayType())
-      return;
-    if (F->hasInClassInitializer() && F->getParent()->isUnion()) {
-      AnyMemberHasInitPerUnion = true;
-      removeFieldInitialized(F, FieldsToInit);
-    }
-    if (!F->hasInClassInitializer() &&
-        utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
-                                                            Context) &&
-        !isEmpty(Context, F->getType()) && !F->isUnnamedBitField() &&
-        !AnyMemberHasInitPerUnion)
-      FieldsToInit.insert(F);
-  });
+  forEachFieldWithFilter(
+      ClassDecl, ClassDecl.fields(), AnyMemberHasInitPerUnion,
+      [&](const FieldDecl *F) {
+        if (IgnoreArrays && F->getType()->isArrayType())
+          return;
+        if (F->hasInClassInitializer() && F->getParent()->isUnion()) {
+          AnyMemberHasInitPerUnion = true;
+          removeFieldInitialized(F, FieldsToInit);
+        }
+        if (!F->hasInClassInitializer() &&
+            utils::type_traits::isTriviallyDefaultConstructible(F->getType(),
+                                                                Context) &&
+            !isEmpty(Context, F->getType()) && !F->isUnnamedBitField() &&
+            !AnyMemberHasInitPerUnion)
+          FieldsToInit.insert(F);
+      });
   if (FieldsToInit.empty())
     return;
 
@@ -500,17 +501,18 @@ void ProTypeMemberInitCheck::checkMissingMemberInitializer(
   AnyMemberHasInitPerUnion = false;
   forEachFieldWithFilter(ClassDecl, ClassDecl.fields(),
                          AnyMemberHasInitPerUnion, [&](const FieldDecl *F) {
-    if (!FieldsToInit.count(F))
-      return;
-    // Don't suggest fixes for enums because we don't know a good default.
-    // Don't suggest fixes for bitfields because in-class initialization is not
-    // possible until C++20.
-    if (F->getType()->isEnumeralType() ||
-        (!getLangOpts().CPlusPlus20 && F->isBitField()))
-      return;
-    FieldsToFix.insert(F);
-    AnyMemberHasInitPerUnion = true;
-  });
+                           if (!FieldsToInit.count(F))
+                             return;
+                           // Don't suggest fixes for enums because we don't
+                           // know a good default. Don't suggest fixes for
+                           // bitfields because in-class initialization is not
+                           // possible until C++20.
+                           if (F->getType()->isEnumeralType() ||
+                               (!getLangOpts().CPlusPlus20 && F->isBitField()))
+                             return;
+                           FieldsToFix.insert(F);
+                           AnyMemberHasInitPerUnion = true;
+                         });
   if (FieldsToFix.empty())
     return;
 

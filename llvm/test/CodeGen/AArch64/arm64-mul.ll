@@ -152,20 +152,12 @@ entry:
 
 ; Check the sext_inreg case.
 define i64 @t11(i64 %a) nounwind {
-; CHECK-SD-LABEL: t11:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #29594 // =0x739a
-; CHECK-SD-NEXT:    movk w8, #65499, lsl #16
-; CHECK-SD-NEXT:    smnegl x0, w0, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: t11:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sxtw x8, w0
-; CHECK-GI-NEXT:    mov x9, #-35942 // =0xffffffffffff739a
-; CHECK-GI-NEXT:    movk x9, #65499, lsl #16
-; CHECK-GI-NEXT:    mneg x0, x8, x9
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: t11:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #29594 // =0x739a
+; CHECK-NEXT:    movk w8, #65499, lsl #16
+; CHECK-NEXT:    smnegl x0, w0, w8
+; CHECK-NEXT:    ret
 entry:
   %tmp1 = trunc i64 %a to i32
   %tmp2 = sext i32 %tmp1 to i64
@@ -175,20 +167,12 @@ entry:
 }
 
 define i64 @t12(i64 %a, i64 %b) nounwind {
-; CHECK-SD-LABEL: t12:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov w8, #35118 // =0x892e
-; CHECK-SD-NEXT:    movk w8, #65008, lsl #16
-; CHECK-SD-NEXT:    smaddl x0, w0, w8, x1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: t12:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    sxtw x8, w0
-; CHECK-GI-NEXT:    mov x9, #-30418 // =0xffffffffffff892e
-; CHECK-GI-NEXT:    movk x9, #65008, lsl #16
-; CHECK-GI-NEXT:    madd x0, x8, x9, x1
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: t12:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #35118 // =0x892e
+; CHECK-NEXT:    movk w8, #65008, lsl #16
+; CHECK-NEXT:    smaddl x0, w0, w8, x1
+; CHECK-NEXT:    ret
 entry:
   %tmp1 = trunc i64 %a to i32
   %tmp2 = sext i32 %tmp1 to i64

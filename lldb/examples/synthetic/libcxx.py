@@ -694,6 +694,13 @@ class stddeque_SynthProvider:
         except:
             return -1
 
+    @staticmethod
+    def _subscript(ptr: lldb.SBValue, idx: int, name: str) -> lldb.SBValue:
+        """Access a pointer value as if it was an array. Returns ptr[idx]."""
+        deref_t = ptr.GetType().GetPointeeType()
+        offset = idx * deref_t.GetByteSize()
+        return ptr.CreateChildAtOffset(name, offset, deref_t)
+
     def get_child_at_index(self, index):
         logger = lldb.formatters.Logger.Logger()
         logger.write("Fetching child " + str(index))
@@ -703,11 +710,8 @@ class stddeque_SynthProvider:
             return None
         try:
             i, j = divmod(self.start + index, self.block_size)
-
-            return self.first.CreateValueFromExpression(
-                "[" + str(index) + "]",
-                "*(*(%s + %d) + %d)" % (self.map_begin.get_expr_path(), i, j),
-            )
+            val = stddeque_SynthProvider._subscript(self.map_begin, i, "")
+            return stddeque_SynthProvider._subscript(val, j, f"[{index}]")
         except:
             return None
 
@@ -764,9 +768,10 @@ class stddeque_SynthProvider:
                     map_.GetChildMemberWithName("__end_cap_")
                 )
             else:
-                map_endcap = map_.GetChildMemberWithName(
-                    "__end_cap_"
-                ).GetValueAsUnsigned(0)
+                map_endcap = map_.GetChildMemberWithName("__cap_")
+                if not map_endcap.IsValid():
+                    map_endcap = map_.GetChildMemberWithName("__end_cap_")
+                map_endcap = map_endcap.GetValueAsUnsigned(0)
 
             # check consistency
             if not map_first <= map_begin <= map_end <= map_endcap:

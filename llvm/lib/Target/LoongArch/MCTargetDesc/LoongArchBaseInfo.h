@@ -17,6 +17,7 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
@@ -54,8 +55,64 @@ enum {
   MO_DESC64_PC_LO,
   MO_DESC_LD,
   MO_DESC_CALL,
+  MO_LE_HI_R,
+  MO_LE_ADD_R,
+  MO_LE_LO_R,
   // TODO: Add more flags.
+
+  // Used to differentiate between target-specific "direct" flags and "bitmask"
+  // flags. A machine operand can only have one "direct" flag, but can have
+  // multiple "bitmask" flags.
+  MO_DIRECT_FLAG_MASK = 0x3f,
+
+  MO_RELAX = 0x40
 };
+
+// Given a MachineOperand that may carry out "bitmask" flags, such as MO_RELAX,
+// return LoongArch target-specific "direct" flags.
+static inline unsigned getDirectFlags(const MachineOperand &MO) {
+  return MO.getTargetFlags() & MO_DIRECT_FLAG_MASK;
+}
+
+// Add MO_RELAX "bitmask" flag when FeatureRelax is enabled.
+static inline unsigned encodeFlags(unsigned Flags, bool Relax) {
+  return Flags | (Relax ? MO_RELAX : 0);
+}
+
+// \returns true if the given MachineOperand has MO_RELAX "bitmask" flag.
+static inline bool hasRelaxFlag(const MachineOperand &MO) {
+  return MO.getTargetFlags() & MO_RELAX;
+}
+
+// Target-specific flags of LAInst.
+// All definitions must match LoongArchInstrFormats.td.
+enum {
+  // Whether the instruction's rd is normally required to differ from rj and
+  // rk, in the way the 3-register atomic memory operations behave
+  // (Section 2.2.7.1 and 2.2.7.2, LoongArch Reference Manual Volume 1 v1.10;
+  // while Section 2.2.7.3 lacked similar description for the AMCAS
+  // instructions, at least the INE exception is still signaled on Loongson
+  // 3A6000 when its rd == rj).
+  //
+  // Used for generating diagnostics for assembler input that violate the
+  // constraint. As described on the manual, the covered instructions require
+  // rd != rj && rd != rk to work as intended.
+  IsSubjectToAMORdConstraintShift = 0,
+  IsSubjectToAMORdConstraintMask = 1 << IsSubjectToAMORdConstraintShift,
+
+  // Whether the instruction belongs to the AMCAS family.
+  IsAMCASShift = IsSubjectToAMORdConstraintShift + 1,
+  IsAMCASMask = 1 << IsAMCASShift,
+};
+
+/// \returns true if this instruction's rd is normally required to differ
+/// from rj and rk, in the way 3-register atomic memory operations behave.
+static inline bool isSubjectToAMORdConstraint(uint64_t TSFlags) {
+  return TSFlags & IsSubjectToAMORdConstraintMask;
+}
+
+/// \returns true if this instruction belongs to the AMCAS family.
+static inline bool isAMCAS(uint64_t TSFlags) { return TSFlags & IsAMCASMask; }
 } // end namespace LoongArchII
 
 namespace LoongArchABI {

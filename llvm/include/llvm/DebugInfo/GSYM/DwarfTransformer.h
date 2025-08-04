@@ -12,6 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/GSYM/ExtractRanges.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -33,14 +34,17 @@ class OutputAggregator;
 /// allows this class to be unit tested.
 class DwarfTransformer {
 public:
-
   /// Create a DWARF transformer.
   ///
   /// \param D The DWARF to use when converting to GSYM.
   ///
   /// \param G The GSYM creator to populate with the function information
   /// from the debug info.
-  DwarfTransformer(DWARFContext &D, GsymCreator &G) : DICtx(D), Gsym(G) {}
+  ///
+  /// \param LDCS Flag to indicate whether we should load the call site
+  /// information from DWARF `DW_TAG_call_site` entries
+  DwarfTransformer(DWARFContext &D, GsymCreator &G, bool LDCS = false)
+      : DICtx(D), Gsym(G), LoadDwarfCallSites(LDCS) {}
 
   /// Extract the DWARF from the supplied object file and convert it into the
   /// Gsym format in the GsymCreator object that is passed in. Returns an
@@ -54,9 +58,9 @@ public:
   ///
   /// \returns An error indicating any fatal issues that happen when parsing
   /// the DWARF, or Error::success() if all goes well.
-  llvm::Error convert(uint32_t NumThreads, OutputAggregator &OS);
+  LLVM_ABI llvm::Error convert(uint32_t NumThreads, OutputAggregator &OS);
 
-  llvm::Error verify(StringRef GsymPath, OutputAggregator &OS);
+  LLVM_ABI llvm::Error verify(StringRef GsymPath, OutputAggregator &OS);
 
 private:
 
@@ -83,8 +87,16 @@ private:
   /// \param Die The DWARF debug info entry to parse.
   void handleDie(OutputAggregator &Strm, CUInfo &CUI, DWARFDie Die);
 
+  /// Parse call site information from DWARF
+  ///
+  /// \param CUI   The compile unit info for the current CU.
+  /// \param Die   The DWARFDie for the function.
+  /// \param FI    The FunctionInfo for the function being populated.
+  void parseCallSiteInfoFromDwarf(CUInfo &CUI, DWARFDie Die, FunctionInfo &FI);
+
   DWARFContext &DICtx;
   GsymCreator &Gsym;
+  bool LoadDwarfCallSites;
 
   friend class DwarfTransformerTest;
 };

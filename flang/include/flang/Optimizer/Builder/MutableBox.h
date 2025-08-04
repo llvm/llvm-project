@@ -14,7 +14,7 @@
 #define FORTRAN_OPTIMIZER_BUILDER_MUTABLEBOX_H
 
 #include "flang/Optimizer/Builder/BoxValue.h"
-#include "flang/Runtime/allocator-registry.h"
+#include "flang/Runtime/allocator-registry-consts.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
@@ -180,6 +180,18 @@ mlir::Value genIsNotAllocatedOrAssociatedTest(fir::FirOpBuilder &builder,
 /// Return address of the temporary storage.
 mlir::Value genNullBoxStorage(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Type boxTy);
+
+/// Generate an unallocated box of the given \p boxTy with the
+/// bounds, type parameters, and dynamic type set according to the
+/// parameters.
+/// \p shape may be null for scalars, and \p polymorphicMold may be null for
+/// statically typed entities. This box can then be directly passed to the
+/// runtime for allocation.
+mlir::Value getAndEstablishBoxStorage(fir::FirOpBuilder &builder,
+                                      mlir::Location loc,
+                                      fir::BaseBoxType boxTy, mlir::Value shape,
+                                      llvm::ArrayRef<mlir::Value> typeParams,
+                                      mlir::Value polymorphicMold);
 
 } // namespace fir::factory
 

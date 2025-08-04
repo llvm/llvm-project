@@ -40,6 +40,7 @@
 #ifndef LLVM_CODEGEN_MACHINEPIPELINER_H
 #define LLVM_CODEGEN_MACHINEPIPELINER_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/DFAPacketizer.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -114,10 +115,167 @@ private:
   bool useWindowScheduler(bool Changed);
 };
 
+/// Represents a dependence between two instruction.
+class SwingSchedulerDDGEdge {
+  SUnit *Dst = nullptr;
+  SDep Pred;
+  unsigned Distance = 0;
+  bool IsValidationOnly = false;
+
+public:
+  /// Creates an edge corresponding to an edge represented by \p PredOrSucc and
+  /// \p Dep in the original DAG. This pair has no information about the
+  /// direction of the edge, so we need to pass an additional argument \p
+  /// IsSucc.
+  SwingSchedulerDDGEdge(SUnit *PredOrSucc, const SDep &Dep, bool IsSucc,
+                        bool IsValidationOnly)
+      : Dst(PredOrSucc), Pred(Dep), Distance(0u),
+        IsValidationOnly(IsValidationOnly) {
+    SUnit *Src = Dep.getSUnit();
+
+    if (IsSucc) {
+      std::swap(Src, Dst);
+      Pred.setSUnit(Src);
+    }
+
+    // An anti-dependence to PHI means loop-carried dependence.
+    if (Pred.getKind() == SDep::Anti && Src->getInstr()->isPHI()) {
+      Distance = 1;
+      std::swap(Src, Dst);
+      auto Reg = Pred.getReg();
+      Pred = SDep(Src, SDep::Kind::Data, Reg);
+    }
+  }
+
+  /// Returns the SUnit from which the edge comes (source node).
+  SUnit *getSrc() const { return Pred.getSUnit(); }
+
+  /// Returns the SUnit to which the edge points (destination node).
+  SUnit *getDst() const { return Dst; }
+
+  /// Returns the latency value for the edge.
+  unsigned getLatency() const { return Pred.getLatency(); }
+
+  /// Sets the latency for the edge.
+  void setLatency(unsigned Latency) { Pred.setLatency(Latency); }
+
+  /// Returns the distance value for the edge.
+  unsigned getDistance() const { return Distance; }
+
+  /// Sets the distance value for the edge.
+  void setDistance(unsigned D) { Distance = D; }
+
+  /// Returns the register associated with the edge.
+  Register getReg() const { return Pred.getReg(); }
+
+  /// Returns true if the edge represents anti dependence.
+  bool isAntiDep() const { return Pred.getKind() == SDep::Kind::Anti; }
+
+  /// Returns true if the edge represents output dependence.
+  bool isOutputDep() const { return Pred.getKind() == SDep::Kind::Output; }
+
+  /// Returns true if the edge represents a dependence that is not data, anti or
+  /// output dependence.
+  bool isOrderDep() const { return Pred.getKind() == SDep::Kind::Order; }
+
+  /// Returns true if the edge represents unknown scheduling barrier.
+  bool isBarrier() const { return Pred.isBarrier(); }
+
+  /// Returns true if the edge represents an artificial dependence.
+  bool isArtificial() const { return Pred.isArtificial(); }
+
+  /// Tests if this is a Data dependence that is associated with a register.
+  bool isAssignedRegDep() const { return Pred.isAssignedRegDep(); }
+
+  /// Returns true for DDG nodes that we ignore when computing the cost
+  /// functions. We ignore the back-edge recurrence in order to avoid unbounded
+  /// recursion in the calculation of the ASAP, ALAP, etc functions.
+  bool ignoreDependence(bool IgnoreAnti) const;
+
+  /// Returns true if this edge is intended to be used only for validating the
+  /// schedule.
+  bool isValidationOnly() const { return IsValidationOnly; }
+};
+
+/// Represents loop-carried dependencies. Because SwingSchedulerDAG doesn't
+/// assume cycle dependencies as the name suggests, such dependencies must be
+/// handled separately. After DAG construction is finished, these dependencies
+/// are added to SwingSchedulerDDG.
+/// TODO: Also handle output-dependencies introduced by physical registers.
+struct LoopCarriedEdges {
+  using OrderDep = SmallSetVector<SUnit *, 8>;
+  using OrderDepsType = DenseMap<SUnit *, OrderDep>;
+
+  OrderDepsType OrderDeps;
+
+  const OrderDep *getOrderDepOrNull(SUnit *Key) const {
+    auto Ite = OrderDeps.find(Key);
+    if (Ite == OrderDeps.end())
+      return nullptr;
+    return &Ite->second;
+  }
+
+  /// Adds some edges to the original DAG that correspond to loop-carried
+  /// dependencies. Historically, loop-carried edges are represented by using
+  /// non-loop-carried edges in the original DAG. This function appends such
+  /// edges to preserve the previous behavior.
+  void modifySUnits(std::vector<SUnit> &SUnits, const TargetInstrInfo *TII);
+
+  void dump(SUnit *SU, const TargetRegisterInfo *TRI,
+            const MachineRegisterInfo *MRI) const;
+};
+
+/// This class provides APIs to retrieve edges from/to an SUnit node, with a
+/// particular focus on loop-carried dependencies. Since SUnit is not designed
+/// to represent such edges, handling them directly using its APIs has required
+/// non-trivial logic in the past. This class serves as a wrapper around SUnit,
+/// offering a simpler interface for managing these dependencies.
+class SwingSchedulerDDG {
+  using EdgesType = SmallVector<SwingSchedulerDDGEdge, 4>;
+
+  struct SwingSchedulerDDGEdges {
+    EdgesType Preds;
+    EdgesType Succs;
+  };
+
+  void initEdges(SUnit *SU);
+
+  SUnit *EntrySU;
+  SUnit *ExitSU;
+
+  std::vector<SwingSchedulerDDGEdges> EdgesVec;
+  SwingSchedulerDDGEdges EntrySUEdges;
+  SwingSchedulerDDGEdges ExitSUEdges;
+
+  /// Edges that are used only when validating the schedule. These edges are
+  /// not considered to drive the optimization heuristics.
+  SmallVector<SwingSchedulerDDGEdge, 8> ValidationOnlyEdges;
+
+  /// Adds a NON-validation-only edge to the DDG. Assumes to be called only by
+  /// the ctor.
+  void addEdge(const SUnit *SU, const SwingSchedulerDDGEdge &Edge);
+
+  SwingSchedulerDDGEdges &getEdges(const SUnit *SU);
+  const SwingSchedulerDDGEdges &getEdges(const SUnit *SU) const;
+
+public:
+  SwingSchedulerDDG(std::vector<SUnit> &SUnits, SUnit *EntrySU, SUnit *ExitSU,
+                    const LoopCarriedEdges &LCE);
+
+  const EdgesType &getInEdges(const SUnit *SU) const;
+
+  const EdgesType &getOutEdges(const SUnit *SU) const;
+
+  bool isValidSchedule(const SMSchedule &Schedule) const;
+};
+
 /// This class builds the dependence graph for the instructions in a loop,
 /// and attempts to schedule the instructions using the SMS algorithm.
 class SwingSchedulerDAG : public ScheduleDAGInstrs {
   MachinePipeliner &Pass;
+
+  std::unique_ptr<SwingSchedulerDDG> DDG;
+
   /// The minimum initiation interval between iterations for this schedule.
   unsigned MII = 0;
   /// The maximum initiation interval between iterations for this schedule.
@@ -130,7 +288,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
   unsigned II_setByPragma = 0;
   TargetInstrInfo::PipelinerLoopInfo *LoopPipelinerInfo = nullptr;
 
-  /// A toplogical ordering of the SUnits, which is needed for changing
+  /// A topological ordering of the SUnits, which is needed for changing
   /// dependences and iterating over the SUnits.
   ScheduleDAGTopologicalSort Topo;
 
@@ -155,7 +313,7 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
   using InstrMapTy = DenseMap<MachineInstr *, MachineInstr *>;
 
   /// Instructions to change when emitting the final schedule.
-  DenseMap<SUnit *, std::pair<unsigned, int64_t>> InstrChanges;
+  DenseMap<SUnit *, std::pair<Register, int64_t>> InstrChanges;
 
   /// We may create a new instruction, so remember it because it
   /// must be deleted when the pass is finished.
@@ -163,6 +321,13 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
 
   /// Ordered list of DAG postprocessing steps.
   std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
+
+  /// Used to compute single-iteration dependencies (i.e., buildSchedGraph).
+  AliasAnalysis *AA;
+
+  /// Used to compute loop-carried dependencies (i.e.,
+  /// addLoopCarriedDependences).
+  BatchAAResults BAA;
 
   /// Helper class to implement Johnson's circuit finding algorithm.
   class Circuits {
@@ -209,13 +374,14 @@ class SwingSchedulerDAG : public ScheduleDAGInstrs {
 public:
   SwingSchedulerDAG(MachinePipeliner &P, MachineLoop &L, LiveIntervals &lis,
                     const RegisterClassInfo &rci, unsigned II,
-                    TargetInstrInfo::PipelinerLoopInfo *PLI)
+                    TargetInstrInfo::PipelinerLoopInfo *PLI, AliasAnalysis *AA)
       : ScheduleDAGInstrs(*P.MF, P.MLI, false), Pass(P), Loop(L), LIS(lis),
         RegClassInfo(rci), II_setByPragma(II), LoopPipelinerInfo(PLI),
-        Topo(SUnits, &ExitSU) {
+        Topo(SUnits, &ExitSU), AA(AA), BAA(*AA) {
     P.MF->getSubtarget().getSMSMutations(Mutations);
     if (SwpEnableCopyToPhi)
       Mutations.push_back(std::make_unique<CopyToPhiMutation>());
+    BAA.enableCrossIterationMode();
   }
 
   void schedule() override;
@@ -252,27 +418,7 @@ public:
     return ScheduleInfo[Node->NodeNum].ZeroLatencyHeight;
   }
 
-  /// Return true if the dependence is a back-edge in the data dependence graph.
-  /// Since the DAG doesn't contain cycles, we represent a cycle in the graph
-  /// using an anti dependence from a Phi to an instruction.
-  bool isBackedge(SUnit *Source, const SDep &Dep) {
-    if (Dep.getKind() != SDep::Anti)
-      return false;
-    return Source->getInstr()->isPHI() || Dep.getSUnit()->getInstr()->isPHI();
-  }
-
-  bool isLoopCarriedDep(SUnit *Source, const SDep &Dep,
-                        bool isSucc = true) const;
-
-  /// The distance function, which indicates that operation V of iteration I
-  /// depends on operations U of iteration I-distance.
-  unsigned getDistance(SUnit *U, SUnit *V, const SDep &Dep) {
-    // Instructions that feed a Phi have a distance of 1. Computing larger
-    // values for arrays requires data dependence information.
-    if (V->getInstr()->isPHI() && Dep.getKind() == SDep::Anti)
-      return 1;
-    return 0;
-  }
+  bool isLoopCarriedDep(const SwingSchedulerDDGEdge &Edge) const;
 
   void applyInstrChange(MachineInstr *MI, SMSchedule &Schedule);
 
@@ -280,12 +426,12 @@ public:
 
   /// Return the new base register that was stored away for the changed
   /// instruction.
-  unsigned getInstrBaseReg(SUnit *SU) const {
-    DenseMap<SUnit *, std::pair<unsigned, int64_t>>::const_iterator It =
+  Register getInstrBaseReg(SUnit *SU) const {
+    DenseMap<SUnit *, std::pair<Register, int64_t>>::const_iterator It =
         InstrChanges.find(SU);
     if (It != InstrChanges.end())
       return It->second.first;
-    return 0;
+    return Register();
   }
 
   void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation) {
@@ -294,8 +440,13 @@ public:
 
   static bool classof(const ScheduleDAGInstrs *DAG) { return true; }
 
+  const SwingSchedulerDDG *getDDG() const { return DDG.get(); }
+
+  bool mayOverlapInLaterIter(const MachineInstr *BaseMI,
+                             const MachineInstr *OtherMI) const;
+
 private:
-  void addLoopCarriedDependences(AAResults *AA);
+  LoopCarriedEdges addLoopCarriedDependences();
   void updatePhiDependences();
   void changeDependences();
   unsigned calculateResMII();
@@ -313,10 +464,10 @@ private:
   void computeNodeOrder(NodeSetType &NodeSets);
   void checkValidNodeOrder(const NodeSetType &Circuits) const;
   bool schedulePipeline(SMSchedule &Schedule);
-  bool computeDelta(MachineInstr &MI, unsigned &Delta) const;
+  bool computeDelta(const MachineInstr &MI, int &Delta) const;
   MachineInstr *findDefInLoop(Register Reg);
   bool canUseLastOffsetValue(MachineInstr *MI, unsigned &BasePos,
-                             unsigned &OffsetPos, unsigned &NewBase,
+                             unsigned &OffsetPos, Register &NewBase,
                              int64_t &NewOffset);
   void postProcessDAG();
   /// Set the Minimum Initiation Interval for this schedule attempt.
@@ -357,6 +508,7 @@ public:
     //
     // Hold a map from each SUnit in the circle to the maximum distance from the
     // source node by only considering the nodes.
+    const SwingSchedulerDDG *DDG = DAG->getDDG();
     DenseMap<SUnit *, unsigned> SUnitToDistance;
     for (auto *Node : Nodes)
       SUnitToDistance[Node] = 0;
@@ -364,29 +516,31 @@ public:
     for (unsigned I = 1, E = Nodes.size(); I <= E; ++I) {
       SUnit *U = Nodes[I - 1];
       SUnit *V = Nodes[I % Nodes.size()];
-      for (const SDep &Succ : U->Succs) {
-        SUnit *SuccSUnit = Succ.getSUnit();
+      for (const SwingSchedulerDDGEdge &Succ : DDG->getOutEdges(U)) {
+        SUnit *SuccSUnit = Succ.getDst();
         if (V != SuccSUnit)
           continue;
-        if (SUnitToDistance[U] + Succ.getLatency() > SUnitToDistance[V]) {
-          SUnitToDistance[V] = SUnitToDistance[U] + Succ.getLatency();
-        }
+        unsigned &DU = SUnitToDistance[U];
+        unsigned &DV = SUnitToDistance[V];
+        if (DU + Succ.getLatency() > DV)
+          DV = DU + Succ.getLatency();
       }
     }
     // Handle a back-edge in loop carried dependencies
     SUnit *FirstNode = Nodes[0];
     SUnit *LastNode = Nodes[Nodes.size() - 1];
 
-    for (auto &PI : LastNode->Preds) {
+    for (auto &PI : DDG->getInEdges(LastNode)) {
       // If we have an order dep that is potentially loop carried then a
       // back-edge exists between the last node and the first node that isn't
       // modeled in the DAG. Handle it manually by adding 1 to the distance of
       // the last node.
-      if (PI.getSUnit() != FirstNode || PI.getKind() != SDep::Order ||
-          !DAG->isLoopCarriedDep(LastNode, PI, false))
+      if (PI.getSrc() != FirstNode || !PI.isOrderDep() ||
+          !DAG->isLoopCarriedDep(PI))
         continue;
-      SUnitToDistance[FirstNode] =
-          std::max(SUnitToDistance[FirstNode], SUnitToDistance[LastNode] + 1);
+      unsigned &First = SUnitToDistance[FirstNode];
+      unsigned Last = SUnitToDistance[LastNode];
+      First = std::max(First, Last + 1);
     }
 
     // The latency is the distance from the source node to itself.
@@ -627,11 +781,13 @@ public:
 
   /// Return the cycle of the earliest scheduled instruction in the dependence
   /// chain.
-  int earliestCycleInChain(const SDep &Dep);
+  int earliestCycleInChain(const SwingSchedulerDDGEdge &Dep,
+                           const SwingSchedulerDDG *DDG);
 
   /// Return the cycle of the latest scheduled instruction in the dependence
   /// chain.
-  int latestCycleInChain(const SDep &Dep);
+  int latestCycleInChain(const SwingSchedulerDDGEdge &Dep,
+                         const SwingSchedulerDDG *DDG);
 
   void computeStart(SUnit *SU, int *MaxEarlyStart, int *MinLateStart, int II,
                     SwingSchedulerDAG *DAG);
@@ -694,7 +850,7 @@ public:
                              MachineOperand &MO) const;
 
   bool onlyHasLoopCarriedOutputOrOrderPreds(SUnit *SU,
-                                            SwingSchedulerDAG *DAG) const;
+                                            const SwingSchedulerDDG *DDG) const;
   void print(raw_ostream &os) const;
   void dump() const;
 };

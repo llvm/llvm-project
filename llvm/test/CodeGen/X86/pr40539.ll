@@ -40,20 +40,19 @@ define zeroext i1 @_Z8test_cosv() {
 ; CHECK-NEXT:    subl $8, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 12
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = [8.70000004E-1,0.0E+0,0.0E+0,0.0E+0]
+; CHECK-NEXT:    movss {{.*#+}} xmm1 = [8.60000014E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    divss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; CHECK-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = [8.60000014E-1,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    flds {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    fcos
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    fstps (%esp)
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    cmpleps %xmm1, %xmm0
-; CHECK-NEXT:    cmpleps %xmm2, %xmm1
-; CHECK-NEXT:    andps %xmm0, %xmm1
-; CHECK-NEXT:    movd %xmm1, %eax
+; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    cmpless %xmm0, %xmm1
+; CHECK-NEXT:    cmpless {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; CHECK-NEXT:    andps %xmm1, %xmm0
+; CHECK-NEXT:    movd %xmm0, %eax
 ; CHECK-NEXT:    andb $1, %al
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    addl $8, %esp

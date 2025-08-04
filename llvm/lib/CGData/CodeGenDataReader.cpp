@@ -13,11 +13,18 @@
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CGData/OutlinedHashTreeRecord.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 #define DEBUG_TYPE "cg-data-reader"
 
 using namespace llvm;
+
+static cl::opt<bool> IndexedCodeGenDataReadFunctionMapNames(
+    "indexed-codegen-data-read-function-map-names", cl::init(true), cl::Hidden,
+    cl::desc("Read function map names in indexed CodeGenData. Can be "
+             "disabled to save memory and time for final consumption of the "
+             "indexed CodeGenData in production."));
 
 namespace llvm {
 
@@ -32,10 +39,40 @@ setupMemoryBuffer(const Twine &Filename, vfs::FileSystem &FS) {
 
 Error CodeGenDataReader::mergeFromObjectFile(
     const object::ObjectFile *Obj, OutlinedHashTreeRecord &GlobalOutlineRecord,
+    StableFunctionMapRecord &GlobalFunctionMapRecord,
     stable_hash *CombinedHash) {
   Triple TT = Obj->makeTriple();
-  auto CGOutLineName =
+  auto CGOutlineName =
       getCodeGenDataSectionName(CG_outline, TT.getObjectFormat(), false);
+  auto CGMergeName =
+      getCodeGenDataSectionName(CG_merge, TT.getObjectFormat(), false);
+
+  auto processSectionContents = [&](const StringRef &Name,
+                                    const StringRef &Contents) {
+    if (Name != CGOutlineName && Name != CGMergeName)
+      return;
+    if (CombinedHash)
+      *CombinedHash = stable_hash_combine(*CombinedHash, xxh3_64bits(Contents));
+    auto *Data = reinterpret_cast<const unsigned char *>(Contents.data());
+    auto *EndData = Data + Contents.size();
+    // In case dealing with an executable that has concatenated cgdata,
+    // we want to merge them into a single cgdata.
+    // Although it's not a typical workflow, we support this scenario
+    // by looping over all data in the sections.
+    if (Name == CGOutlineName) {
+      while (Data != EndData) {
+        OutlinedHashTreeRecord LocalOutlineRecord;
+        LocalOutlineRecord.deserialize(Data);
+        GlobalOutlineRecord.merge(LocalOutlineRecord);
+      }
+    } else if (Name == CGMergeName) {
+      while (Data != EndData) {
+        StableFunctionMapRecord LocalFunctionMapRecord;
+        LocalFunctionMapRecord.deserialize(Data);
+        GlobalFunctionMapRecord.merge(LocalFunctionMapRecord);
+      }
+    }
+  };
 
   for (auto &Section : Obj->sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
@@ -44,23 +81,7 @@ Error CodeGenDataReader::mergeFromObjectFile(
     Expected<StringRef> ContentsOrErr = Section.getContents();
     if (!ContentsOrErr)
       return ContentsOrErr.takeError();
-    auto *Data = reinterpret_cast<const unsigned char *>(ContentsOrErr->data());
-    auto *EndData = Data + ContentsOrErr->size();
-
-    if (*NameOrErr == CGOutLineName) {
-      if (CombinedHash)
-        *CombinedHash =
-            stable_hash_combine(*CombinedHash, xxh3_64bits(*ContentsOrErr));
-      // In case dealing with an executable that has concatenated cgdata,
-      // we want to merge them into a single cgdata.
-      // Although it's not a typical workflow, we support this scenario.
-      while (Data != EndData) {
-        OutlinedHashTreeRecord LocalOutlineRecord;
-        LocalOutlineRecord.deserialize(Data);
-        GlobalOutlineRecord.merge(LocalOutlineRecord);
-      }
-    }
-    // TODO: Add support for other cgdata sections.
+    processSectionContents(*NameOrErr, *ContentsOrErr);
   }
 
   return Error::success();
@@ -69,7 +90,8 @@ Error CodeGenDataReader::mergeFromObjectFile(
 Error IndexedCodeGenDataReader::read() {
   using namespace support;
 
-  // The smallest header with the version 1 is 24 bytes
+  // The smallest header with the version 1 is 24 bytes.
+  // Do not update this value even with the new version of the header.
   const unsigned MinHeaderSize = 24;
   if (DataBuffer->getBufferSize() < MinHeaderSize)
     return error(cgdata_error::bad_header);
@@ -86,6 +108,12 @@ Error IndexedCodeGenDataReader::read() {
     if (Ptr >= End)
       return error(cgdata_error::eof);
     HashTreeRecord.deserialize(Ptr);
+  }
+  if (hasStableFunctionMap()) {
+    const unsigned char *Ptr = Start + Header.StableFunctionMapOffset;
+    if (Ptr >= End)
+      return error(cgdata_error::eof);
+    FunctionMapRecord.deserialize(Ptr, IndexedCodeGenDataReadFunctionMapNames);
   }
 
   return success();
@@ -152,6 +180,8 @@ Error TextCodeGenDataReader::read() {
     StringRef Str = Line->drop_front().rtrim();
     if (Str.equals_insensitive("outlined_hash_tree"))
       DataKind |= CGDataKind::FunctionOutlinedHashTree;
+    else if (Str.equals_insensitive("stable_function_map"))
+      DataKind |= CGDataKind::StableFunctionMergingMap;
     else
       return error(cgdata_error::bad_header);
   }
@@ -170,8 +200,8 @@ Error TextCodeGenDataReader::read() {
   yaml::Input YOS(StringRef(Pos, Size));
   if (hasOutlinedHashTree())
     HashTreeRecord.deserializeYAML(YOS);
-
-  // TODO: Add more yaml cgdata in order
+  if (hasStableFunctionMap())
+    FunctionMapRecord.deserializeYAML(YOS);
 
   return Error::success();
 }

@@ -16,15 +16,11 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/ModuleImport.h"
 
-#include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/ModRef.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -90,6 +86,8 @@ static ArrayRef<unsigned> getSupportedMetadataImpl(llvm::LLVMContext &context) {
       llvm::LLVMContext::MD_loop,
       llvm::LLVMContext::MD_noalias,
       llvm::LLVMContext::MD_alias_scope,
+      llvm::LLVMContext::MD_dereferenceable,
+      llvm::LLVMContext::MD_dereferenceable_or_null,
       context.getMDKindID(vecTypeHintMDName),
       context.getMDKindID(workGroupSizeHintMDName),
       context.getMDKindID(reqdWorkGroupSizeMDName),
@@ -144,8 +142,15 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
-  if (auto iface = dyn_cast<BranchWeightOpInterface>(op)) {
-    iface.setBranchWeights(builder.getDenseI32ArrayAttr(branchWeights));
+  if (auto iface = dyn_cast<WeightedBranchOpInterface>(op)) {
+    // LLVM allows attaching a single weight to call instructions.
+    // This is used for carrying the execution count information
+    // in PGO modes. MLIR WeightedBranchOpInterface does not allow this,
+    // so we drop the metadata in this case.
+    // LLVM should probably use the VP form of MD_prof metadata
+    // for such cases.
+    if (op->getNumSuccessors() != 0)
+      iface.setWeights(branchWeights);
     return success();
   }
   return failure();
@@ -185,6 +190,25 @@ static LogicalResult setAccessGroupsAttr(const llvm::MDNode *node,
 
   iface.setAccessGroups(ArrayAttr::get(
       iface.getContext(), llvm::to_vector_of<Attribute>(*accessGroups)));
+  return success();
+}
+
+/// Converts the given dereferenceable metadata node to a dereferenceable
+/// attribute, and attaches it to the imported operation if the translation
+/// succeeds. Returns failure if the LLVM IR metadata node is ill-formed.
+static LogicalResult setDereferenceableAttr(const llvm::MDNode *node,
+                                            unsigned kindID, Operation *op,
+                                            LLVM::ModuleImport &moduleImport) {
+  auto dereferenceable =
+      moduleImport.translateDereferenceableAttr(node, kindID);
+  if (failed(dereferenceable))
+    return failure();
+
+  auto iface = dyn_cast<DereferenceableOpInterface>(op);
+  if (!iface)
+    return failure();
+
+  iface.setDereferenceable(*dereferenceable);
   return success();
 }
 
@@ -401,6 +425,13 @@ public:
       return setAliasScopesAttr(node, op, moduleImport);
     if (kind == llvm::LLVMContext::MD_noalias)
       return setNoaliasScopesAttr(node, op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_dereferenceable)
+      return setDereferenceableAttr(node, llvm::LLVMContext::MD_dereferenceable,
+                                    op, moduleImport);
+    if (kind == llvm::LLVMContext::MD_dereferenceable_or_null)
+      return setDereferenceableAttr(
+          node, llvm::LLVMContext::MD_dereferenceable_or_null, op,
+          moduleImport);
 
     llvm::LLVMContext &context = node->getContext();
     if (kind == context.getMDKindID(vecTypeHintMDName))

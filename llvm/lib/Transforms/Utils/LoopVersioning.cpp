@@ -26,6 +26,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -224,34 +225,43 @@ void LoopVersioning::annotateLoopWithNoAlias() {
   }
 }
 
-void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
-                                             const Instruction *OrigInst) {
+std::pair<MDNode *, MDNode *>
+LoopVersioning::getNoAliasMetadataFor(const Instruction *OrigInst) const {
   if (!AnnotateNoAlias)
-    return;
+    return {nullptr, nullptr};
 
   LLVMContext &Context = VersionedLoop->getHeader()->getContext();
   const Value *Ptr = isa<LoadInst>(OrigInst)
                          ? cast<LoadInst>(OrigInst)->getPointerOperand()
                          : cast<StoreInst>(OrigInst)->getPointerOperand();
 
+  MDNode *AliasScope = nullptr;
+  MDNode *NoAlias = nullptr;
   // Find the group for the pointer and then add the scope metadata.
   auto Group = PtrToGroup.find(Ptr);
   if (Group != PtrToGroup.end()) {
-    VersionedInst->setMetadata(
-        LLVMContext::MD_alias_scope,
-        MDNode::concatenate(
-            VersionedInst->getMetadata(LLVMContext::MD_alias_scope),
-            MDNode::get(Context, GroupToScope[Group->second])));
+    AliasScope = MDNode::concatenate(
+        OrigInst->getMetadata(LLVMContext::MD_alias_scope),
+        MDNode::get(Context, GroupToScope.lookup(Group->second)));
 
     // Add the no-alias metadata.
     auto NonAliasingScopeList = GroupToNonAliasingScopeList.find(Group->second);
     if (NonAliasingScopeList != GroupToNonAliasingScopeList.end())
-      VersionedInst->setMetadata(
-          LLVMContext::MD_noalias,
-          MDNode::concatenate(
-              VersionedInst->getMetadata(LLVMContext::MD_noalias),
-              NonAliasingScopeList->second));
+      NoAlias =
+          MDNode::concatenate(OrigInst->getMetadata(LLVMContext::MD_noalias),
+                              NonAliasingScopeList->second);
   }
+  return {AliasScope, NoAlias};
+}
+
+void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
+                                             const Instruction *OrigInst) {
+  const auto &[AliasScopeMD, NoAliasMD] = getNoAliasMetadataFor(OrigInst);
+  if (AliasScopeMD)
+    VersionedInst->setMetadata(LLVMContext::MD_alias_scope, AliasScopeMD);
+
+  if (NoAliasMD)
+    VersionedInst->setMetadata(LLVMContext::MD_noalias, NoAliasMD);
 }
 
 namespace {
@@ -278,6 +288,9 @@ bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
     if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getPredicate().isAlwaysTrue())) {
+      if (!L->isLCSSAForm(*DT))
+       formLCSSARecursively(*L, *DT, LI, SE);
+
       LoopVersioning LVer(LAI, LAI.getRuntimePointerChecking()->getChecks(), L,
                           LI, DT, SE);
       LVer.versionLoop();

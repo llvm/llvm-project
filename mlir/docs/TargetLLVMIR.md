@@ -646,7 +646,7 @@ Examples:
 
 ```mlir
 
-func.func @qux(%arg0: memref<?x?xf32>)
+func.func @qux(%arg0: memref<?x?xf32>) attributes {llvm.emit_c_interface}
 
 // Gets converted into the following
 // (using type alias for brevity):
@@ -683,8 +683,18 @@ llvm.func @qux(%arg0: !llvm.ptr, %arg1: !llvm.ptr,
 llvm.func @_mlir_ciface_qux(!llvm.ptr)
 ```
 
+
+```cpp
+// The C function implementation for the interface function.
+extern "C" {
+void _mlir_ciface_qux(MemRefDescriptor<float, 2> *input) {
+  // detailed impl
+}
+}
+```
+
 ```mlir
-func.func @foo(%arg0: memref<?x?xf32>) {
+func.func @foo(%arg0: memref<?x?xf32>) attributes {llvm.emit_c_interface} {
   return
 }
 
@@ -719,8 +729,15 @@ llvm.func @_mlir_ciface_foo(%arg0: !llvm.ptr) {
 }
 ```
 
+```cpp
+// The C function signature for the interface function.
+extern "C" {
+void _mlir_ciface_foo(MemRefDescriptor<float, 2> *input);
+}
+```
+
 ```mlir
-func.func @foo(%arg0: memref<?x?xf32>) -> memref<?x?xf32> {
+func.func @foo(%arg0: memref<?x?xf32>) -> memref<?x?xf32> attributes {llvm.emit_c_interface} {
   return %arg0 : memref<?x?xf32>
 }
 
@@ -744,6 +761,7 @@ llvm.func @foo(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: i64,
 }
 
 // Interface function callable from C.
+// NOTE: the returned memref becomes the first argument
 llvm.func @_mlir_ciface_foo(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
   %0 = llvm.load %arg1 : !llvm.ptr
   %1 = llvm.extractvalue %0[0] : !llvm.memref_2d
@@ -757,6 +775,14 @@ llvm.func @_mlir_ciface_foo(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
     : (!llvm.ptr, !llvm.ptr, i64, i64, i64, i64, i64) -> !llvm.memref_2d
   llvm.store %8, %arg0 : !llvm.memref_2d, !llvm.ptr
   llvm.return
+}
+```
+
+```cpp
+// The C function signature for the interface function.
+extern "C" {
+void _mlir_ciface_foo(MemRefDescriptor<float, 2> *output,
+                      MemRefDescriptor<float, 2> *input);
 }
 ```
 

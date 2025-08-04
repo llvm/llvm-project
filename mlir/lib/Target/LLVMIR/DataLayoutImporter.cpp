@@ -8,7 +8,6 @@
 
 #include "DataLayoutImporter.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -29,15 +28,15 @@ FloatType mlir::LLVM::detail::getFloatType(MLIRContext *context,
                                            unsigned width) {
   switch (width) {
   case 16:
-    return FloatType::getF16(context);
+    return Float16Type::get(context);
   case 32:
-    return FloatType::getF32(context);
+    return Float32Type::get(context);
   case 64:
-    return FloatType::getF64(context);
+    return Float64Type::get(context);
   case 80:
-    return FloatType::getF80(context);
+    return Float80Type::get(context);
   case 128:
-    return FloatType::getF128(context);
+    return Float128Type::get(context);
   default:
     return {};
   }
@@ -63,18 +62,23 @@ FailureOr<uint64_t> DataLayoutImporter::tryToParseInt(StringRef &token) const {
   return parameter;
 }
 
-FailureOr<SmallVector<uint64_t>>
-DataLayoutImporter::tryToParseIntList(StringRef token) const {
+template <class T>
+static FailureOr<SmallVector<T>> tryToParseIntListImpl(StringRef token) {
   SmallVector<StringRef> tokens;
   token.consume_front(":");
   token.split(tokens, ':');
 
   // Parse an integer list.
-  SmallVector<uint64_t> results(tokens.size());
+  SmallVector<T> results(tokens.size());
   for (auto [result, token] : llvm::zip(results, tokens))
     if (token.getAsInteger(/*Radix=*/10, result))
       return failure();
   return results;
+}
+
+FailureOr<SmallVector<uint64_t>>
+DataLayoutImporter::tryToParseIntList(StringRef token) const {
+  return tryToParseIntListImpl<uint64_t>(token);
 }
 
 FailureOr<DenseIntElementsAttr>
@@ -163,6 +167,21 @@ DataLayoutImporter::tryToEmplaceEndiannessEntry(StringRef endianness,
   return success();
 }
 
+LogicalResult DataLayoutImporter::tryToEmplaceManglingModeEntry(
+    StringRef token, llvm::StringLiteral manglingKey) {
+  auto key = StringAttr::get(context, manglingKey);
+  if (keyEntries.count(key))
+    return success();
+
+  token.consume_front(":");
+  if (token.empty())
+    return failure();
+
+  keyEntries.try_emplace(
+      key, DataLayoutEntryAttr::get(key, StringAttr::get(context, token)));
+  return success();
+}
+
 LogicalResult
 DataLayoutImporter::tryToEmplaceAddrSpaceEntry(StringRef token,
                                                llvm::StringLiteral spaceKey) {
@@ -203,6 +222,55 @@ DataLayoutImporter::tryToEmplaceStackAlignmentEntry(StringRef token) {
   OpBuilder builder(context);
   keyEntries.try_emplace(key, DataLayoutEntryAttr::get(
                                   key, builder.getI64IntegerAttr(*alignment)));
+  return success();
+}
+
+LogicalResult DataLayoutImporter::tryToEmplaceFunctionPointerAlignmentEntry(
+    StringRef fnPtrString, StringRef token) {
+  auto key = StringAttr::get(
+      context, DLTIDialect::kDataLayoutFunctionPointerAlignmentKey);
+  if (keyEntries.count(key))
+    return success();
+
+  // The data layout entry for "F<type><abi>". <abi> is the aligment value,
+  // preceded by one of the two possible <types>:
+  // "i": The alignment of function pointers is independent of the alignment of
+  //      functions, and is a multiple of <abi>.
+  // "n": The alignment of function pointers is a multiple of the explicit
+  //      alignment specified on the function, and is a multiple of <abi>.
+  bool functionDependent = false;
+  if (fnPtrString == "n")
+    functionDependent = true;
+  else if (fnPtrString != "i")
+    return failure();
+
+  FailureOr<uint64_t> alignment = tryToParseInt(token);
+  if (failed(alignment))
+    return failure();
+
+  keyEntries.try_emplace(
+      key, DataLayoutEntryAttr::get(
+               key, FunctionPointerAlignmentAttr::get(
+                        key.getContext(), *alignment, functionDependent)));
+  return success();
+}
+
+LogicalResult
+DataLayoutImporter::tryToEmplaceLegalIntWidthsEntry(StringRef token) {
+  auto key =
+      StringAttr::get(context, DLTIDialect::kDataLayoutLegalIntWidthsKey);
+  if (keyEntries.count(key))
+    return success();
+
+  FailureOr<SmallVector<int32_t>> intWidths =
+      tryToParseIntListImpl<int32_t>(token);
+  if (failed(intWidths) || intWidths->empty())
+    return failure();
+
+  OpBuilder builder(context);
+  keyEntries.try_emplace(
+      key,
+      DataLayoutEntryAttr::get(key, builder.getDenseI32ArrayAttr(*intWidths)));
   return success();
 }
 
@@ -251,6 +319,13 @@ void DataLayoutImporter::translateDataLayout(
     if (*prefix == "P") {
       if (failed(tryToEmplaceAddrSpaceEntry(
               token, DLTIDialect::kDataLayoutProgramMemorySpaceKey)))
+        return;
+      continue;
+    }
+    // Parse the mangling mode.
+    if (*prefix == "m") {
+      if (failed(tryToEmplaceManglingModeEntry(
+              token, DLTIDialect::kDataLayoutManglingModeKey)))
         return;
       continue;
     }
@@ -305,6 +380,20 @@ void DataLayoutImporter::translateDataLayout(
 
       auto type = LLVMPointerType::get(context, *space);
       if (failed(tryToEmplacePointerAlignmentEntry(type, token)))
+        return;
+      continue;
+    }
+    // Parse native integer widths specifications.
+    if (*prefix == "n") {
+      if (failed(tryToEmplaceLegalIntWidthsEntry(token)))
+        return;
+      continue;
+    }
+    // Parse function pointer alignment specifications.
+    // Note that prefix here is "Fn" or "Fi", not a single character.
+    if (prefix->starts_with("F")) {
+      StringRef nextPrefix = prefix->drop_front(1);
+      if (failed(tryToEmplaceFunctionPointerAlignmentEntry(nextPrefix, token)))
         return;
       continue;
     }
