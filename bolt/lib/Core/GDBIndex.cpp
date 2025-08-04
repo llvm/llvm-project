@@ -132,7 +132,7 @@ void GDBIndex::updateGdbIndexSection(
             });
   // Create the original CU index -> updated CU index mapping,
   // as the sort above could've changed the order and we have to update
-  // indexes correspondingly in address map and constant pool.
+  // indices correspondingly in address map and constant pool.
   std::unordered_map<uint32_t, uint32_t> OriginalCUIndexToUpdatedCUIndexMap;
   OriginalCUIndexToUpdatedCUIndexMap.reserve(CUVector.size());
   for (uint32_t I = 0; I < CUVector.size(); ++I) {
@@ -199,7 +199,7 @@ void GDBIndex::updateGdbIndexSection(
   // Copy over the rest of the original data.
   memcpy(Buffer, Data, TrailingSize);
 
-  // Fixup CU-indicies in constant pool.
+  // Fixup CU-indices in constant pool.
   const char *const OriginalConstantPoolData =
       GdbIndexContents.data() + ConstantPoolOffset;
   uint8_t *const UpdatedConstantPoolData =
