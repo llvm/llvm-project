@@ -50,18 +50,20 @@ public:
   virtual void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
-  virtual void GetTypes(ConstString name,
-                        llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
-  virtual void GetTypes(const DWARFDeclContext &context,
-                        llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+  virtual void
+  GetTypes(ConstString name,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
+  virtual void
+  GetTypes(const DWARFDeclContext &context,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
 
   /// Finds all DIEs whose fully qualified name matches `context`. A base
   /// implementation is provided, and it uses the entire CU to check the DIE
   /// parent hierarchy. Specializations should override this if they are able
   /// to provide a faster implementation.
-  virtual void
-  GetFullyQualifiedType(const DWARFDeclContext &context,
-                        llvm::function_ref<bool(DWARFDIE die)> callback);
+  virtual void GetFullyQualifiedType(
+      const DWARFDeclContext &context,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback);
   virtual void
   GetNamespaces(ConstString name,
                 llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
@@ -71,7 +73,7 @@ public:
   /// implementation.
   virtual void
   GetTypesWithQuery(TypeQuery &query,
-                    llvm::function_ref<bool(DWARFDIE die)> callback);
+                    llvm::function_ref<IterationAction(DWARFDIE die)> callback);
   /// Get namespace DIEs whose base name match \param name with \param
   /// parent_decl_ctx in its decl parent chain.  A base implementation
   /// is provided. Specializations should override this if they are able to
@@ -130,14 +132,14 @@ protected:
 
   /// Implementation of `GetFullyQualifiedType` to check a single entry,
   /// shareable with derived classes.
-  bool
-  GetFullyQualifiedTypeImpl(const DWARFDeclContext &context, DWARFDIE die,
-                            llvm::function_ref<bool(DWARFDIE die)> callback);
+  IterationAction GetFullyQualifiedTypeImpl(
+      const DWARFDeclContext &context, DWARFDIE die,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   /// Check if the type \a die can meet the requirements of \a query.
-  bool
-  ProcessTypeDIEMatchQuery(TypeQuery &query, DWARFDIE die,
-                           llvm::function_ref<bool(DWARFDIE die)> callback);
+  IterationAction ProcessTypeDIEMatchQuery(
+      TypeQuery &query, DWARFDIE die,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback);
   IterationAction ProcessNamespaceDieMatchParents(
       const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback);
