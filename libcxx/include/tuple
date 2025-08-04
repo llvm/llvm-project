@@ -106,6 +106,11 @@ public:
 
     void swap(tuple&) noexcept(AND(swap(declval<T&>(), declval<T&>())...));               // constexpr in C++20
     constexpr void swap(const tuple&) const noexcept(see-below);                          // C++23
+
+    template<tuple-like UTuple>
+        friend constexpr bool operator==(const tuple& t, const UTuple& u);                // C++23
+    template<tuple-like UTuple>
+        friend constexpr auto operator<=>(const tuple& t, const UTuple& u);               // C++23
 };
 
 
@@ -220,6 +225,7 @@ template <class... Types>
 #  include <__config>
 #  include <__cstddef/size_t.h>
 #  include <__fwd/array.h>
+#  include <__fwd/get.h>
 #  include <__fwd/pair.h>
 #  include <__fwd/tuple.h>
 #  include <__memory/allocator_arg_t.h>
@@ -229,6 +235,7 @@ template <class... Types>
 #  include <__tuple/make_tuple_types.h>
 #  include <__tuple/sfinae_helpers.h>
 #  include <__tuple/tuple_element.h>
+#  include <__tuple/tuple_like.h>
 #  include <__tuple/tuple_like_ext.h>
 #  include <__tuple/tuple_size.h>
 #  include <__tuple/tuple_types.h>
@@ -286,6 +293,68 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #  ifndef _LIBCPP_CXX03_LANG
+
+template <size_t _Ip, class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __tuple_compare_equal(const _Tp& __x, const _Up& __y) {
+  if constexpr (_Ip == 0)
+    return true;
+  else
+    return std::__tuple_compare_equal<_Ip - 1>(__x, __y) && std::get<_Ip - 1>(__x) == std::get<_Ip - 1>(__y);
+}
+
+#    if _LIBCPP_STD_VER >= 26
+template <class _Tp, class _Up, class _IndexSeq = make_index_sequence<tuple_size_v<_Tp>>>
+inline constexpr bool __can_tuple_compare_equal = false;
+
+// TODO(LLVM 22): Remove `tuple_size_v<_Tp> == tuple_size_v<_Up>` here once once LLVM-20 support ends
+// because the resolution of CWG2369 landed in LLVM-21.
+template <class _Tp, class _Up, size_t... _Is>
+  requires(tuple_size_v<_Tp> == tuple_size_v<_Up>)
+inline constexpr bool __can_tuple_compare_equal<_Tp, _Up, index_sequence<_Is...>> =
+    __all<requires(const tuple_element_t<_Is, _Tp>& __t, const tuple_element_t<_Is, _Up>& __u) {
+      { __t == __u } -> __boolean_testable;
+    }...>::value;
+#    endif // _LIBCPP_STD_VER >= 26
+
+#    if _LIBCPP_STD_VER >= 20
+template <class _Ret, class _Tp, class _Up, size_t... _Is>
+_LIBCPP_HIDE_FROM_ABI constexpr _Ret __tuple_compare_three_way(const _Tp& __x, const _Up& __y, index_sequence<_Is...>) {
+  _Ret __result = strong_ordering::equal;
+  static_cast<void>(
+      ((__result = std::__synth_three_way(std::get<_Is>(__x), std::get<_Is>(__y)), __result != 0) || ...));
+  return __result;
+}
+#    endif // _LIBCPP_STD_VER >= 20
+
+#    if _LIBCPP_STD_VER >= 23
+template <class>
+inline constexpr bool __is_tuple_v = false;
+
+template <class... _Tp>
+inline constexpr bool __is_tuple_v<tuple<_Tp...>> = true;
+
+template <class _Tp>
+concept __tuple_like_no_tuple = __tuple_like<_Tp> && !__is_tuple_v<_Tp>;
+
+template <class _Tp, class _Up, class _IndexSeq>
+struct __tuple_common_comparison_category_impl {};
+
+// TODO(LLVM 22): Remove `tuple_size_v<_Tp> == tuple_size_v<_Up>` here once once LLVM-20 support ends
+// because the resolution of CWG2369 landed in LLVM-21.
+template <class _Tp, class _Up, size_t... _Is>
+  requires(tuple_size_v<_Tp> == tuple_size_v<_Up>) && requires {
+    typename common_comparison_category_t<
+        __synth_three_way_result<tuple_element_t<_Is, _Tp>, tuple_element_t<_Is, _Up>>...>;
+  }
+struct __tuple_common_comparison_category_impl<_Tp, _Up, index_sequence<_Is...>> {
+  using type _LIBCPP_NODEBUG =
+      common_comparison_category_t<__synth_three_way_result<tuple_element_t<_Is, _Tp>, tuple_element_t<_Is, _Up>>...>;
+};
+
+template <__tuple_like _Tp, __tuple_like _Up>
+using __tuple_common_comparison_category _LIBCPP_NODEBUG =
+    __tuple_common_comparison_category_impl<_Tp, _Up, make_index_sequence<tuple_size_v<_Tp>>>::type;
+#    endif // _LIBCPP_STD_VER >= 23
 
 // __tuple_leaf
 
@@ -956,7 +1025,24 @@ public:
       noexcept(__all<is_nothrow_swappable_v<const _Tp&>...>::value) {
     __base_.swap(__t.__base_);
   }
-#    endif // _LIBCPP_STD_VER >= 23
+
+  template <__tuple_like_no_tuple _UTuple>
+#      if _LIBCPP_STD_VER >= 26
+    requires __can_tuple_compare_equal<tuple, _UTuple> && (sizeof...(_Tp) == tuple_size_v<_UTuple>)
+#      endif // _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const tuple& __x, const _UTuple& __y) {
+    static_assert(sizeof...(_Tp) == tuple_size_v<_UTuple>, "Can't compare tuple-like values of different sizes");
+    return std::__tuple_compare_equal<sizeof...(_Tp)>(__x, __y);
+  }
+
+  template <__tuple_like_no_tuple _UTuple>
+    requires(sizeof...(_Tp) == tuple_size_v<_UTuple>)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr __tuple_common_comparison_category<tuple, _UTuple>
+  operator<=>(const tuple& __x, const _UTuple& __y) {
+    return std::__tuple_compare_three_way<__tuple_common_comparison_category<tuple, _UTuple>>(
+        __x, __y, index_sequence_for<_Tp...>{});
+  }
+#    endif   // _LIBCPP_STD_VER >= 23
 };
 
 _LIBCPP_DIAGNOSTIC_PUSH
@@ -978,6 +1064,21 @@ public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(tuple&) _NOEXCEPT {}
 #    if _LIBCPP_STD_VER >= 23
   _LIBCPP_HIDE_FROM_ABI constexpr void swap(const tuple&) const noexcept {}
+
+  template <__tuple_like_no_tuple _UTuple>
+#      if _LIBCPP_STD_VER >= 26
+    requires(tuple_size_v<_UTuple> == 0)
+#      endif // _LIBCPP_STD_VER >= 26
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const tuple&, const _UTuple&) {
+    static_assert(tuple_size_v<_UTuple> == 0, "Can't compare tuple-like values of different sizes");
+    return true;
+  }
+
+  template <__tuple_like_no_tuple _UTuple>
+    requires(tuple_size_v<_UTuple> == 0)
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering operator<=>(const tuple&, const _UTuple&) {
+    return strong_ordering::equal;
+  }
 #    endif
 };
 _LIBCPP_DIAGNOSTIC_POP
@@ -1096,22 +1197,6 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 tuple<_Tp&&...> forwa
   return tuple<_Tp&&...>(std::forward<_Tp>(__t)...);
 }
 
-template <size_t _Ip>
-struct __tuple_equal {
-  template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp& __x, const _Up& __y) {
-    return __tuple_equal<_Ip - 1>()(__x, __y) && std::get<_Ip - 1>(__x) == std::get<_Ip - 1>(__y);
-  }
-};
-
-template <>
-struct __tuple_equal<0> {
-  template <class _Tp, class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool operator()(const _Tp&, const _Up&) {
-    return true;
-  }
-};
-
 template <class... _Tp, class... _Up>
 #    if _LIBCPP_STD_VER >= 26
   requires(__all<requires(const _Tp& __t, const _Up& __u) {
@@ -1121,27 +1206,19 @@ template <class... _Tp, class... _Up>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
 operator==(const tuple<_Tp...>& __x, const tuple<_Up...>& __y) {
   static_assert(sizeof...(_Tp) == sizeof...(_Up), "Can't compare tuples of different sizes");
-  return __tuple_equal<sizeof...(_Tp)>()(__x, __y);
+  return std::__tuple_compare_equal<sizeof...(_Tp)>(__x, __y);
 }
 
 #    if _LIBCPP_STD_VER >= 20
 
 // operator<=>
 
-template <class... _Tp, class... _Up, size_t... _Is>
-_LIBCPP_HIDE_FROM_ABI constexpr auto
-__tuple_compare_three_way(const tuple<_Tp...>& __x, const tuple<_Up...>& __y, index_sequence<_Is...>) {
-  common_comparison_category_t<__synth_three_way_result<_Tp, _Up>...> __result = strong_ordering::equal;
-  static_cast<void>(
-      ((__result = std::__synth_three_way(std::get<_Is>(__x), std::get<_Is>(__y)), __result != 0) || ...));
-  return __result;
-}
-
 template <class... _Tp, class... _Up>
   requires(sizeof...(_Tp) == sizeof...(_Up))
 _LIBCPP_HIDE_FROM_ABI constexpr common_comparison_category_t<__synth_three_way_result<_Tp, _Up>...>
 operator<=>(const tuple<_Tp...>& __x, const tuple<_Up...>& __y) {
-  return std::__tuple_compare_three_way(__x, __y, index_sequence_for<_Tp...>{});
+  return std::__tuple_compare_three_way<common_comparison_category_t<__synth_three_way_result<_Tp, _Up>...>>(
+      __x, __y, index_sequence_for<_Tp...>{});
 }
 
 #    else // _LIBCPP_STD_VER >= 20

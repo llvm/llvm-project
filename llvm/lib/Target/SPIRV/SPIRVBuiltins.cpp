@@ -148,6 +148,7 @@ struct ConvertBuiltin {
   bool IsSaturated;
   bool IsRounded;
   bool IsBfloat16;
+  bool IsTF32;
   FPRoundingMode::FPRoundingMode RoundingMode;
 };
 
@@ -230,6 +231,7 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
   // - "__spirv_SubgroupImageMediaBlockReadINTEL"
   // - "__spirv_SubgroupImageMediaBlockWriteINTEL"
   // - "__spirv_Convert"
+  // - "__spirv_Round"
   // - "__spirv_UConvert"
   // - "__spirv_SConvert"
   // - "__spirv_FConvert"
@@ -242,7 +244,7 @@ std::string lookupBuiltinNameHelper(StringRef DemangledCall,
       "SDotKHR|SUDotKHR|SDotAccSatKHR|UDotAccSatKHR|SUDotAccSatKHR|"
       "ReadClockKHR|SubgroupBlockReadINTEL|SubgroupImageBlockReadINTEL|"
       "SubgroupImageMediaBlockReadINTEL|SubgroupImageMediaBlockWriteINTEL|"
-      "Convert|"
+      "Convert|Round|"
       "UConvert|SConvert|FConvert|SatConvert)[^_]*)(_R[^_]*_?(\\w+)?.*)?");
   std::smatch Match;
   if (std::regex_match(BuiltinName, Match, SpvWithR) && Match.size() > 1) {
@@ -697,7 +699,8 @@ static bool buildAtomicStoreInst(const SPIRV::IncomingCall *Call,
                                  MachineIRBuilder &MIRBuilder,
                                  SPIRVGlobalRegistry *GR) {
   if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call, Register(0));
+    return buildOpFromWrapper(MIRBuilder, SPIRV::OpAtomicStore, Call,
+                              Register(0));
 
   Register ScopeRegister =
       buildConstantIntReg32(SPIRV::Scope::Device, MIRBuilder, GR);
@@ -2677,8 +2680,20 @@ static bool generateConvertInst(const StringRef DemangledCall,
       }
     } else if (GR->isScalarOrVectorOfType(Call->ReturnRegister,
                                           SPIRV::OpTypeFloat)) {
-      // Float -> Float
-      Opcode = SPIRV::OpFConvert;
+      if (Builtin->IsTF32) {
+        const auto *ST = static_cast<const SPIRVSubtarget *>(
+            &MIRBuilder.getMF().getSubtarget());
+        if (!ST->canUseExtension(
+                SPIRV::Extension::SPV_INTEL_tensor_float32_conversion))
+          NeedExtMsg = "SPV_INTEL_tensor_float32_conversion";
+        IsRightComponentsNumber =
+            GR->getScalarOrVectorComponentCount(Call->Arguments[0]) ==
+            GR->getScalarOrVectorComponentCount(Call->ReturnRegister);
+        Opcode = SPIRV::OpRoundFToTF32INTEL;
+      } else {
+        // Float -> Float
+        Opcode = SPIRV::OpFConvert;
+      }
     }
   }
 

@@ -641,6 +641,7 @@ bool SPIRVEmitIntrinsics::walkLogicalAccessChain(
     } else if (StructType *ST = dyn_cast<StructType>(CurType)) {
       uint32_t StructSize = DL.getTypeSizeInBits(ST) / 8;
       assert(Offset < StructSize);
+      (void)StructSize;
       const auto &STL = DL.getStructLayout(ST);
       unsigned Element = STL->getElementContainingOffset(Offset);
       Offset -= STL->getElementOffset(Element);
@@ -1455,6 +1456,24 @@ static void createSaturatedConversionDecoration(Instruction *I,
       MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
                            Int32Ty, SPIRV::Decoration::SaturatedConversion))});
   createDecorationIntrinsic(I, SaturatedConversionNode, B);
+}
+
+static void addSaturatedDecorationToIntrinsic(Instruction *I, IRBuilder<> &B) {
+  if (auto *CI = dyn_cast<CallInst>(I)) {
+    if (Function *Fu = CI->getCalledFunction()) {
+      if (Fu->isIntrinsic()) {
+        unsigned const int IntrinsicId = Fu->getIntrinsicID();
+        switch (IntrinsicId) {
+        case Intrinsic::fptosi_sat:
+        case Intrinsic::fptoui_sat:
+          createSaturatedConversionDecoration(I, B);
+          break;
+        default:
+          break;
+        }
+      }
+    }
+  }
 }
 
 Instruction *SPIRVEmitIntrinsics::visitCallInst(CallInst &Call) {
@@ -2639,6 +2658,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     if (isConvergenceIntrinsic(I))
       continue;
 
+    addSaturatedDecorationToIntrinsic(I, B);
     processInstrAfterVisit(I, B);
   }
 
