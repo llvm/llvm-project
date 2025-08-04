@@ -51,8 +51,8 @@ with the point-of-contact being the maintainers above. Named maintainers, if
 available, should be contacted first, as they're more active in those areas.
 
 #### Lowering Dialects
-* `llvm’ Dialect (egress)
-* ‘SPIR-V' Dialect ([@kuhar](https://github.com/kuhar), [@antiagainst](https://github.com/antiagainst))
+* ‘llvm’ Dialect (egress)
+* ‘SPIR-V’ Dialect ([@kuhar](https://github.com/kuhar), [@antiagainst](https://github.com/antiagainst))
 * ‘emitc’ Dialect ([@aniragil](https://github.com/aniragil), [@marbre](https://github.com/marbre))
 
 #### GPU Dialects
