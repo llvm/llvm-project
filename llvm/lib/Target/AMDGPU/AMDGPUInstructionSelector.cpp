@@ -7064,7 +7064,7 @@ void AMDGPUInstructionSelector::renderVOP3PModsNegAbs(MachineInstrBuilder &MIB,
                                                       const MachineInstr &MI,
                                                       int OpIdx) const {
   unsigned Val = MI.getOperand(OpIdx).getImm();
-  unsigned Mods = SISrcMods::OP_SEL_1; // default: none 
+  unsigned Mods = SISrcMods::OP_SEL_1; // default: none
   if (Val == 1) // neg
     Mods ^= SISrcMods::NEG;
   if (Val == 2) // abs
