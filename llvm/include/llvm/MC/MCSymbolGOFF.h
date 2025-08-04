@@ -47,8 +47,6 @@ public:
     AssociatedDataArea->RequiresNonZeroLength = true;
   }
   MCSectionGOFF *getADA() const { return ADA; }
-
-  static bool classof(const MCSymbol *S) { return S->isGOFF(); }
 };
 } // end namespace llvm
 
