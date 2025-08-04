@@ -1121,7 +1121,7 @@ bool ClauseProcessor::processInReduction(
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
                 inReductionSyms))
-          inReductionSyms.clear();
+          TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.
         llvm::copy(inReductionVars, std::back_inserter(result.inReductionVars));
@@ -1467,7 +1467,7 @@ bool ClauseProcessor::processReduction(
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 reductionVars, reduceVarByRef, reductionDeclSymbols,
                 reductionSyms))
-          reductionSyms.clear();
+          TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(reductionVars, std::back_inserter(result.reductionVars));
         llvm::copy(reduceVarByRef, std::back_inserter(result.reductionByref));
@@ -1494,7 +1494,7 @@ bool ClauseProcessor::processTaskReduction(
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 taskReductionVars, taskReduceVarByRef, taskReductionDeclSymbols,
                 taskReductionSyms))
-          taskReductionSyms.clear();
+          TODO(currentLocation, "Lowering unrecognised reduction type");
         // Copy local lists into the output.
         llvm::copy(taskReductionVars,
                    std::back_inserter(result.taskReductionVars));
