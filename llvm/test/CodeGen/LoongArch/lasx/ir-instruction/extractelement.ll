@@ -77,8 +77,7 @@ define void @extract_32xi8_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_32xi8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 2
+; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 2
 ; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
 ; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    andi $a0, $a2, 3
@@ -95,8 +94,7 @@ define void @extract_16xi16_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_16xi16_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 1
+; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 1
 ; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
 ; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    andi $a0, $a2, 1
@@ -113,8 +111,7 @@ define void @extract_8xi32_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_8xi32_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
+; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
 ; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvstelm.w $xr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
@@ -128,8 +125,7 @@ define void @extract_4xi64_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_4xi64_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
+; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
 ; CHECK-NEXT:    xvslli.w $xr1, $xr1, 1
 ; CHECK-NEXT:    xvperm.w $xr2, $xr0, $xr1
 ; CHECK-NEXT:    xvaddi.wu $xr1, $xr1, 1
@@ -147,8 +143,7 @@ define void @extract_8xfloat_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_8xfloat_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
+; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
 ; CHECK-NEXT:    xvperm.w $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvstelm.w $xr0, $a1, 0, 0
 ; CHECK-NEXT:    ret
@@ -162,8 +157,7 @@ define void @extract_4xdouble_idx(ptr %src, ptr %dst, i32 %idx) nounwind {
 ; CHECK-LABEL: extract_4xdouble_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    bstrpick.d $a0, $a2, 31, 0
-; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a0
+; CHECK-NEXT:    xvreplgr2vr.w $xr1, $a2
 ; CHECK-NEXT:    xvslli.w $xr1, $xr1, 1
 ; CHECK-NEXT:    xvperm.w $xr2, $xr0, $xr1
 ; CHECK-NEXT:    xvaddi.wu $xr1, $xr1, 1
