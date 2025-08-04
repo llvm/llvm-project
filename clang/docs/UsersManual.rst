@@ -35,11 +35,12 @@ which includes :ref:`C <c>`, :ref:`Objective-C <objc>`, :ref:`C++ <cxx>`, and
 language-specific information, please see the corresponding language
 specific section:
 
--  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, ISO C94 (C89+AMD1), ISO
-   C99 (+TC1, TC2, TC3).
+-  :ref:`C Language <c>`: K&R C, ANSI C89, ISO C90, C94 (C89+AMD1), C99 (+TC1,
+   TC2, TC3), C11, C17, C23, and C2y.
 -  :ref:`Objective-C Language <objc>`: ObjC 1, ObjC 2, ObjC 2.1, plus
    variants depending on base language.
--  :ref:`C++ Language <cxx>`
+-  :ref:`C++ Language <cxx>`: C++98, C++03, C++11, C++14, C++17, C++20, C++23,
+   and C++26.
 -  :ref:`Objective C++ Language <objcxx>`
 -  :ref:`OpenCL Kernel Language <opencl>`: OpenCL C 1.0, 1.1, 1.2, 2.0, 3.0,
    and C++ for OpenCL 1.0 and 2021.
@@ -60,29 +61,55 @@ features that depend on what CPU architecture or operating system is
 being compiled for. Please see the :ref:`Target-Specific Features and
 Limitations <target_features>` section for more details.
 
-The rest of the introduction introduces some basic :ref:`compiler
-terminology <terminology>` that is used throughout this manual and
-contains a basic :ref:`introduction to using Clang <basicusage>` as a
-command line compiler.
-
 .. _terminology:
 
 Terminology
 -----------
+* Lexer -- the part of the compiler responsible for converting source code into
+  abstract representations called tokens.
+* Preprocessor -- the part of the compiler responsible for in-place textual
+  replacement of source constructs. When the lexer is required to produce a
+  token, it will run the preprocessor while determining which token to produce.
+  In other words, when the lexer encounters something like `#include` or a macro
+  name, the preprocessor will be used to perform the inclusion or expand the
+  macro name into its replacement list, and return the resulting non-preprocessor
+  token.
+* Parser -- the part of the compiler responsible for determining syntactic
+  correctness of the source code. The parser will request tokens from the lexer
+  and after performing semantic analysis of the production, generates an
+  abstract representation of the source called an AST.
+* Sema -- the part of the compiler responsible for determining semantic
+  correctness of the source code. It is closely related to the parser and is
+  where many diagnostics are produced.
+* Diagnostic -- a message to the user about properties of the source code. For
+  example, errors or warnings and their associated notes.
+* Undefined behavior -- behavior for which the standard imposes no requirements
+  on how the code behaves. Generally speaking, undefined behavior is a bug in
+  the user's code. However, it can also be a place for the compiler to define
+  the behavior, called an extension.
+* Optimizer -- the part of the compiler responsible for transforming code to
+  have better performance characteristics without changing the semantics of how
+  the code behaves. Note, the optimizer assumes the code has no undefined
+  behavior, so if the code does contain undefined behavior, it will often behave
+  differently depending on which optimization level is enabled.
+* Frontend -- the Lexer, Preprocessor, Parser, Sema, and LLVM IR code generation
+  parts of the compiler.
+* Middle-end -- a term used for the of the subset of the backend that does
+  (typically not target specific) optimizations prior to assembly code
+  generation.
+* Backend -- the parts of the compiler which run after LLVM IR code generation,
+  such as the optimizer and generation of assembly code.
 
-Front end, parser, backend, preprocessor, undefined behavior,
-diagnostic, optimizer
+See the :doc:`InternalsManual` for more details about the internal construction
+of the compiler.
 
-.. _basicusage:
+Support
+-------
+Clang releases happen roughly `every six months <https://llvm.org/docs/HowToReleaseLLVM.html#annual-release-schedule>`_.
+Only the current public release is officially supported. Bug-fix releases for
+the current release will be produced on an as-needed basis, but bug fixes are
+not backported to releases older than the current one.
 
-Basic Usage
------------
-
-Intro to how to use a C compiler for newbies.
-
-compile + link compile then link debug info enabling optimizations
-picking a language to use, defaults to C17 by default. Autosenses based
-on extension. using a makefile
 
 Command Line Options
 ====================
@@ -3797,8 +3824,8 @@ This environment variable does not affect the options added by the config files.
 C Language Features
 ===================
 
-The support for standard C in clang is feature-complete except for the
-C99 floating-point pragmas.
+The support for standard C in Clang is mostly feature-complete, see the `C
+status page <https://clang.llvm.org/c_status.html>`_ for more details.
 
 Extensions supported by clang
 -----------------------------
@@ -3883,23 +3910,10 @@ GCC extensions not implemented yet
 ----------------------------------
 
 clang tries to be compatible with gcc as much as possible, but some gcc
-extensions are not implemented yet:
+extensions are not implemented:
 
 -  clang does not support decimal floating point types (``_Decimal32`` and
    friends) yet.
--  clang does not support nested functions; this is a complex feature
-   which is infrequently used, so it is unlikely to be implemented
-   anytime soon. In C++11 it can be emulated by assigning lambda
-   functions to local variables, e.g:
-
-   .. code-block:: cpp
-
-     auto const local_function = [&](int parameter) {
-       // Do something
-     };
-     ...
-     local_function(1);
-
 -  clang only supports global register variables when the register specified
    is non-allocatable (e.g. the stack pointer). Support for general global
    register variables is unlikely to be implemented soon because it requires
@@ -3914,18 +3928,13 @@ extensions are not implemented yet:
    that because clang pretends to be like GCC 4.2, and this extension
    was introduced in 4.3, the glibc headers will not try to use this
    extension with clang at the moment.
--  clang does not support the gcc extension for forward-declaring
-   function parameters; this has not shown up in any real-world code
-   yet, though, so it might never be implemented.
 
 This is not a complete list; if you find an unsupported extension
-missing from this list, please send an e-mail to cfe-dev. This list
-currently excludes C++; see :ref:`C++ Language Features <cxx>`. Also, this
-list does not include bugs in mostly-implemented features; please see
-the `bug
-tracker <https://bugs.llvm.org/buglist.cgi?quicksearch=product%3Aclang+component%3A-New%2BBugs%2CAST%2CBasic%2CDriver%2CHeaders%2CLLVM%2BCodeGen%2Cparser%2Cpreprocessor%2CSemantic%2BAnalyzer>`_
-for known existing bugs (FIXME: Is there a section for bug-reporting
-guidelines somewhere?).
+missing from this list, please file a `feature request <https://github.com/llvm/llvm-project/issues/>`_.
+This list currently excludes C++; see :ref:`C++ Language Features <cxx>`. Also,
+this list does not include bugs in mostly-implemented features; please see the
+`issues list <https://github.com/llvm/llvm-project/issues/>`_ for known existing
+bugs.
 
 Intentionally unsupported GCC extensions
 ----------------------------------------
@@ -3944,6 +3953,20 @@ Intentionally unsupported GCC extensions
    variable) will likely never be accepted by Clang.
 -  clang does not support ``__builtin_apply`` and friends; this extension
    is extremely obscure and difficult to implement reliably.
+-  clang does not support the gcc extension for forward-declaring
+   function parameters.
+-  clang does not support nested functions; this is a complex feature which is
+   infrequently used, so it is unlikely to be implemented. In C++11 it can be
+   emulated by assigning lambda functions to local variables, e.g:
+
+   .. code-block:: cpp
+
+     auto const local_function = [&](int parameter) {
+       // Do something
+     };
+     ...
+     local_function(1);
+
 
 .. _c_ms:
 
@@ -3983,7 +4006,7 @@ C++ Language Features
 
 clang fully implements all of standard C++98 except for exported
 templates (which were removed in C++11), all of standard C++11,
-C++14, and C++17, and most of C++20.
+C++14, and C++17, and most of C++20 and C++23.
 
 See the `C++ support in Clang <https://clang.llvm.org/cxx_status.html>`_ page
 for detailed information on C++ feature support across Clang versions.
