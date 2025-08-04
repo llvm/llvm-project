@@ -207,6 +207,9 @@ def GetCCompatibilitySymbols(symbol):
     }
     assert len(symbol.headers) == 1
     header = symbol.headers[0]
+    if header.endswith(".h>"):
+        symbol.namespace = None
+        return []
     if header not in c_compat_headers:
         return []
     if any(re.fullmatch(x, symbol.name) for x in exception_symbols):
@@ -255,25 +258,24 @@ def PrintSymbol(symbol):
         augmented_symbols = [
             cppreference_parser.Symbol(
                 symbol.name,
-                None if header.endswith(".h>") else symbol.namespace,
+                symbol.namespace,
                 [header],
             )
             for header in symbol.headers
         ]
 
     # Add C compatibility symbols
-    augmented_symbols.extend(
-        [csymbol for s in augmented_symbols for csymbol in GetCCompatibilitySymbols(s)]
-    )
+    for s in augmented_symbols:
+        for csymbol in GetCCompatibilitySymbols(s):
+            if csymbol not in augmented_symbols:
+                augmented_symbols.append(csymbol)
 
     # Add additional headers for IO symbols
-    augmented_symbols.extend(
-        [
-            cppreference_parser.Symbol(s.name, s.namespace, [header])
-            for s in augmented_symbols
-            for header in AdditionalHeadersForIOSymbols(s)
-        ]
-    )
+    for s in augmented_symbols:
+        for header in AdditionalHeadersForIOSymbols(s):
+            sym = cppreference_parser.Symbol(s.name, s.namespace, [header])
+            if sym not in augmented_symbols:
+                augmented_symbols.append(sym)
 
     for s in augmented_symbols:
         # SYMBOL(unqualified_name, namespace, header)

@@ -64,7 +64,7 @@ def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
     Returns a list of headers.
     """
     headers = []
-    all_headers = []
+    current_headers = []
 
     soup = BeautifulSoup(symbol_page_html, "html.parser")
     # Rows in table are like:
@@ -74,33 +74,39 @@ def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
     #   Defined in header <baz>      .t-dsc-header
     #   decl2                        .t-dcl
     for table in soup.select("table.t-dcl-begin, table.t-dsc-begin"):
-        current_headers = []
+        header_found = False
         was_decl = False
         for row in table.select("tr"):
             if _HasClass(row, "t-dcl", "t-dsc"):
                 was_decl = True
-                # Symbols are in the first cell.
-                found_symbols = row.find("td").stripped_strings
-                if not any(
-                    sym == symbol_name or sym == qual_name for sym in found_symbols
-                ):
-                    continue
-                headers.extend(current_headers)
+                # Break before "See also" section, to avoid false positives
+                if any(_HasClass(tag, "t-dsc-see-tt") for tag in row.find_all(True)):
+                    break
+                # Symbols are usually in the first cell, except alternative operators.
+                for col in row.select("td"):
+                    found_symbols = []
+                    for sym in col.stripped_strings:
+                        found_symbols.extend(re.findall(r"[A-Za-z_]\w*", sym))
+                    if any(
+                        sym == symbol_name or sym == qual_name for sym in found_symbols
+                    ):
+                        headers.extend(current_headers)
+                    if headers:
+                        break
             elif _HasClass(row, "t-dsc-header"):
-                # If we saw a decl since the last header, this is a new block of headers
-                # for a new block of decls.
-                if was_decl:
-                    current_headers = []
-                was_decl = False
                 # There are also .t-dsc-header for "defined in namespace".
                 if not "Defined in header " in row.text:
                     continue
+                # If we saw a decl since the last header, this is a new block of headers
+                # for a new block of decls.
+                if not header_found or was_decl:
+                    current_headers = []
+                header_found = True
+                was_decl = False
                 # The interesting header content (e.g. <cstdlib>) is wrapped in <code>.
                 for header_code in row.find_all("code"):
                     current_headers.append(header_code.text)
-                    all_headers.append(header_code.text)
-    # If the symbol was never named, consider all named headers.
-    return headers or all_headers
+    return headers
 
 
 def _ParseSymbolVariant(caption):
