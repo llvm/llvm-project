@@ -924,12 +924,12 @@ def VOP3PModsNegs : SDNodeXForm<timm, [{
 
 def VOP3PModsNegAbs : SDNodeXForm<timm, [{
   unsigned Val = N->getZExtValue();
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  if (Val == 1)
+  unsigned Mods = SISrcMods::OP_SEL_1; // default: none
+  if (Val == 1) // neg
     Mods ^= SISrcMods::NEG;
-  if (Val == 2)
+  if (Val == 2) // abs
     Mods ^= SISrcMods::ABS;
-  if (Val == 3)
+  if (Val == 3) // neg and abs
     Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
   return CurDAG->getTargetConstant(Mods, SDLoc(N), MVT::i32);
 }]>;
