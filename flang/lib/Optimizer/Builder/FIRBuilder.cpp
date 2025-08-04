@@ -324,8 +324,9 @@ mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
       getRegion().getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>();
   if (cudaAttr) {
     cuf::DataAttributeAttr attr = cuf::getDataAttribute(getContext(), cudaAttr);
-    return create<cuf::AllocOp>(loc, type, /*unique_name=*/llvm::StringRef{},
-                                name, attr, lenParams, shape, attrs);
+    return cuf::AllocOp::create(*this, loc, type,
+                                /*unique_name=*/llvm::StringRef{}, name, attr,
+                                lenParams, shape, attrs);
   } else {
     return create<fir::AllocaOp>(loc, type, /*unique_name=*/llvm::StringRef{},
                                  name, pinned, lenParams, shape, attrs);
