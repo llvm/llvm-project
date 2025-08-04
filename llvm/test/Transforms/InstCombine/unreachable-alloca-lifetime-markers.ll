@@ -40,3 +40,12 @@ bb2:
   %phi2 = phi ptr [ null, %entry ], [ %a, %bb1 ]
   br label %bb1
 }
+
+define void @lifetime_poison() {
+; CHECK-LABEL: define void @lifetime_poison() {
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.lifetime.start.p0(i64 4, ptr poison)
+  call void @llvm.lifetime.end.p0(i64 4, ptr poison)
+  ret void
+}
