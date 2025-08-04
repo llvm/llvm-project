@@ -46,23 +46,79 @@ MCAssembler *MCObjectStreamer::getAssemblerPtr() {
   return nullptr;
 }
 
+constexpr size_t FragBlockSize = 16384;
+// Ensure the new fragment can at least store a few bytes.
+constexpr size_t NewFragHeadroom = 8;
+
+static_assert(NewFragHeadroom >= alignof(MCFragment));
+static_assert(FragBlockSize >= sizeof(MCFragment) + NewFragHeadroom);
+
+MCFragment *MCObjectStreamer::allocFragSpace(size_t Headroom) {
+  auto Size = std::max(FragBlockSize, sizeof(MCFragment) + Headroom);
+  FragSpace = Size - sizeof(MCFragment);
+  auto Block = std::unique_ptr<uint8_t[]>(new uint8_t[Size]);
+  auto *F = reinterpret_cast<MCFragment *>(Block.get());
+  FragStorage.push_back(std::move(Block));
+  return F;
+}
+
 void MCObjectStreamer::newFragment() {
-  addFragment(allocFragment<MCFragment>());
+  MCFragment *F;
+  if (LLVM_LIKELY(sizeof(MCFragment) + NewFragHeadroom <= FragSpace)) {
+    auto End = reinterpret_cast<size_t>(getCurFragEnd());
+    F = reinterpret_cast<MCFragment *>(
+        alignToPowerOf2(End, alignof(MCFragment)));
+    FragSpace -= size_t(F) - End + sizeof(MCFragment);
+  } else {
+    F = allocFragSpace(0);
+  }
+  new (F) MCFragment();
+  addFragment(F);
+}
+
+void MCObjectStreamer::ensureHeadroom(size_t Headroom) {
+  if (Headroom <= FragSpace)
+    return;
+  auto *F = allocFragSpace(Headroom);
+  new (F) MCFragment();
+  addFragment(F);
 }
 
 void MCObjectStreamer::addSpecialFragment(MCFragment *Frag) {
   assert(Frag->getKind() != MCFragment::FT_Data &&
          "Frag should have a variable-size tail");
+  // Frag is not connected to FragSpace. Before modifying CurFrag with
+  // addFragment(Frag), allocate an empty fragment to maintain FragSpace
+  // connectivity, potentially reusing CurFrag's associated space.
+  MCFragment *F;
+  if (LLVM_LIKELY(sizeof(MCFragment) + NewFragHeadroom <= FragSpace)) {
+    auto End = reinterpret_cast<size_t>(getCurFragEnd());
+    F = reinterpret_cast<MCFragment *>(
+        alignToPowerOf2(End, alignof(MCFragment)));
+    FragSpace -= size_t(F) - End + sizeof(MCFragment);
+  } else {
+    F = allocFragSpace(0);
+  }
+  new (F) MCFragment();
+
   addFragment(Frag);
-  newFragment();
+  addFragment(F);
 }
 
 void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
-  CurFrag->appendContents(Contents);
+  ensureHeadroom(Contents.size());
+  assert(FragSpace >= Contents.size());
+  llvm::copy(Contents, getCurFragEnd());
+  CurFrag->FixedSize += Contents.size();
+  FragSpace -= Contents.size();
 }
 
-void MCObjectStreamer::appendContents(size_t Num, char Elt) {
-  CurFrag->appendContents(Num, Elt);
+void MCObjectStreamer::appendContents(size_t Num, uint8_t Elt) {
+  ensureHeadroom(Num);
+  MutableArrayRef<uint8_t> Data(getCurFragEnd(), Num);
+  llvm::fill(Data, Elt);
+  CurFrag->FixedSize += Num;
+  FragSpace -= Num;
 }
 
 void MCObjectStreamer::addFixup(const MCExpr *Value, MCFixupKind Kind) {
@@ -115,6 +171,8 @@ void MCObjectStreamer::reset() {
   }
   EmitEHFrame = true;
   EmitDebugFrame = false;
+  FragStorage.clear();
+  FragSpace = 0;
   SpecialFragAllocator.Reset();
   MCStreamer::reset();
 }
@@ -144,7 +202,6 @@ void MCObjectStreamer::emitCFISections(bool EH, bool Debug, bool SFrame) {
 void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                      SMLoc Loc) {
   MCStreamer::emitValueImpl(Value, Size, Loc);
-  MCFragment *DF = getCurrentFragment();
 
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
@@ -159,9 +216,9 @@ void MCObjectStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
     emitIntValue(AbsValue, Size);
     return;
   }
-  DF->addFixup(MCFixup::create(DF->getContents().size(), Value,
-                               MCFixup::getDataKindForSize(Size)));
-  DF->appendContents(Size, 0);
+  ensureHeadroom(Size);
+  addFixup(Value, MCFixup::getDataKindForSize(Size));
+  appendContents(Size, 0);
 }
 
 MCSymbol *MCObjectStreamer::emitCFILabel() {
@@ -195,7 +252,7 @@ void MCObjectStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // section.
   MCFragment *F = CurFrag;
   Symbol->setFragment(F);
-  Symbol->setOffset(F->getContents().size());
+  Symbol->setOffset(F->getFixedSize());
 
   emitPendingAssignments(Symbol);
 }
@@ -261,6 +318,21 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     F0 = CurFrag;
   }
 
+  // To maintain connectivity between CurFrag and FragSpace when CurFrag is
+  // modified, allocate an empty fragment and append it to the fragment list.
+  // (Subsections[I].second.Tail is not connected to FragSpace.)
+  MCFragment *F;
+  if (LLVM_LIKELY(sizeof(MCFragment) + NewFragHeadroom <= FragSpace)) {
+    auto End = reinterpret_cast<size_t>(getCurFragEnd());
+    F = reinterpret_cast<MCFragment *>(
+        alignToPowerOf2(End, alignof(MCFragment)));
+    FragSpace -= size_t(F) - End + sizeof(MCFragment);
+  } else {
+    F = allocFragSpace(0);
+  }
+  new (F) MCFragment();
+  F->setParent(Section);
+
   auto &Subsections = Section->Subsections;
   size_t I = 0, E = Subsections.size();
   while (I != E && Subsections[I].first < Subsection)
@@ -268,13 +340,16 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // If the subsection number is not in the sorted Subsections list, create a
   // new fragment list.
   if (I == E || Subsections[I].first != Subsection) {
-    auto *F = allocFragment<MCFragment>();
-    F->setParent(Section);
     Subsections.insert(Subsections.begin() + I,
                        {Subsection, MCSection::FragList{F, F}});
+    Section->CurFragList = &Subsections[I].second;
+    CurFrag = F;
+  } else {
+    Section->CurFragList = &Subsections[I].second;
+    CurFrag = Subsections[I].second.Tail;
+    // Ensure CurFrag is associated with FragSpace.
+    addFragment(F);
   }
-  Section->CurFragList = &Subsections[I].second;
-  CurFrag = Section->CurFragList->Tail;
 
   // Define the section symbol at subsection 0's initial fragment if required.
   if (!NewSec)
@@ -345,11 +420,15 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   MCFragment *F = getCurrentFragment();
 
   // Append the instruction to the data fragment.
-  size_t CodeOffset = F->getContents().size();
+  size_t CodeOffset = getCurFragSize();
+  SmallString<16> Content;
   SmallVector<MCFixup, 1> Fixups;
-  getAssembler().getEmitter().encodeInstruction(
-      Inst, F->getContentsForAppending(), Fixups, STI);
-  F->doneAppending();
+  getAssembler().getEmitter().encodeInstruction(Inst, Content, Fixups, STI);
+  appendContents(Content);
+  if (CurFrag != F) {
+    F = CurFrag;
+    CodeOffset = 0;
+  }
   F->setHasInstructions(STI);
 
   if (Fixups.empty())
