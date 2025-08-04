@@ -223,6 +223,25 @@ def GetCCompatibilitySymbols(symbol):
     return results
 
 
+def EnsurePreferredHeaderPlacement(symbol, preferred_header):
+    """Ensure the preferred header is the first in the list."""
+
+    if preferred_header is None or symbol.headers[0] == preferred_header:
+        return
+
+    if preferred_header not in symbol.headers:
+        sys.stderr.write(
+            "For symbol %s preferred header %s wasn't found, define symbol manually"
+            % (symbol.name, preferred_header)
+        )
+        symbol.headers = []
+        return
+
+    # Move the preferred header to the first position.
+    symbol.headers.remove(preferred_header)
+    symbol.headers.insert(0, preferred_header)
+
+
 def PrintSymbol(symbol):
     """Print SYMBOL entries for a given symbol, handling all header variations."""
 
@@ -312,7 +331,34 @@ def main():
     language = "C++" if args.symbols == "cpp" else " C "
     print(CODE_PREFIX % (language, args.symbols.upper(), cppreference_modified_date))
 
+    # For the below symbols, cppreference's header priority is incorrect
+    preferred_headers = (
+        {("NULL", None): "<stddef.h>"}
+        if args.symbols == "c"
+        else {
+            ("NULL", None): "<cstddef>",
+            ("begin", "std::"): "<iterator>",
+            ("cbegin", "std::"): "<iterator>",
+            ("cend", "std::"): "<iterator>",
+            ("crbegin", "std::"): "<iterator>",
+            ("crend", "std::"): "<iterator>",
+            ("data", "std::"): "<iterator>",
+            ("empty", "std::"): "<iterator>",
+            ("end", "std::"): "<iterator>",
+            ("rbegin", "std::"): "<iterator>",
+            ("rend", "std::"): "<iterator>",
+            ("size", "std::"): "<iterator>",
+            ("ssize", "std::"): "<iterator>",
+            ("hash", "std::"): "<functional>",
+            ("swap", "std::"): "<utility>",
+            ("tuple_size", "std::"): "<tuple>",
+        }
+    )
+
     for symbol in symbols:
+        EnsurePreferredHeaderPlacement(
+            symbol, preferred_headers.get((symbol.name, symbol.namespace))
+        )
         PrintSymbol(symbol)
 
 
