@@ -46,23 +46,11 @@ enum CondCodes { // Meaning (integer)          Meaning (floating-point)
 };
 
 inline static CondCodes getOppositeCondition(CondCodes CC) {
-  switch (CC) {
-  default: llvm_unreachable("Unknown condition code");
-  case EQ: return NE;
-  case NE: return EQ;
-  case HS: return LO;
-  case LO: return HS;
-  case MI: return PL;
-  case PL: return MI;
-  case VS: return VC;
-  case VC: return VS;
-  case HI: return LS;
-  case LS: return HI;
-  case GE: return LT;
-  case LT: return GE;
-  case GT: return LE;
-  case LE: return GT;
-  }
+  // To reverse a condition it's necessary to only invert the low bit:
+  // Note that unlike in AArch64, flipping the bottom bit for AL is not a valid
+  // predicate.
+  assert(CC != AL && "AL has no opposite condition");
+  return static_cast<CondCodes>(static_cast<unsigned>(CC) ^ 0x1);
 }
 
 /// getSwappedCondition - assume the flags are set by MI(a,b), return
