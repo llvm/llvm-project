@@ -33,7 +33,7 @@ class MCSymbolGOFF : public MCSymbol {
 
 public:
   MCSymbolGOFF(const MCSymbolTableEntry *Name, bool IsTemporary)
-      : MCSymbol(SymbolKindGOFF, Name, IsTemporary) {}
+      : MCSymbol(Name, IsTemporary) {}
 
   void setLDAttributes(GOFF::LDAttr Attr) {
     modifyFlags(SF_LD, SF_LD);

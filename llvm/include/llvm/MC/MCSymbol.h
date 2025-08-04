@@ -41,18 +41,6 @@ class raw_ostream;
 /// it is a reference to an external entity, it has a null section.
 class MCSymbol {
 protected:
-  /// The kind of the symbol.  If it is any value other than unset then this
-  /// class is actually one of the appropriate subclasses of MCSymbol.
-  enum SymbolKind {
-    SymbolKindUnset,
-    SymbolKindCOFF,
-    SymbolKindELF,
-    SymbolKindGOFF,
-    SymbolKindMachO,
-    SymbolKindWasm,
-    SymbolKindXCOFF,
-  };
-
   /// A symbol can contain an Offset, or Value, or be Common, but never more
   /// than one of these.
   enum Contents : uint8_t {
@@ -102,10 +90,6 @@ protected:
 
   /// This symbol is weak external.
   mutable unsigned IsWeakExternal : 1;
-
-  /// LLVM RTTI discriminator. This is actually a SymbolKind enumerator, but is
-  /// unsigned to avoid sign extension and achieve better bitpacking with MSVC.
-  unsigned Kind : 3;
 
   /// True if we have created a relocation that uses this symbol.
   mutable unsigned IsUsedInReloc : 1;
@@ -162,11 +146,11 @@ protected:
     uint64_t AlignmentPadding;
   };
 
-  MCSymbol(SymbolKind Kind, const MCSymbolTableEntry *Name, bool isTemporary)
+  MCSymbol(const MCSymbolTableEntry *Name, bool isTemporary)
       : IsTemporary(isTemporary), IsRedefinable(false), IsRegistered(false),
         IsExternal(false), IsPrivateExtern(false), IsWeakExternal(false),
-        Kind(Kind), IsUsedInReloc(false), IsResolving(0),
-        SymbolContents(SymContentsUnset), CommonAlignLog2(0), Flags(0) {
+        IsUsedInReloc(false), IsResolving(0), SymbolContents(SymContentsUnset),
+        CommonAlignLog2(0), Flags(0) {
     Offset = 0;
     HasName = !!Name;
     if (Name)
