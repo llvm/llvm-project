@@ -161,9 +161,9 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   if (const AsmLabelAttr *ALA = D->getAttr<AsmLabelAttr>()) {
     // If we have an asm name, then we use it as the mangling.
 
-    // If the label isn't literal, or if this is an alias for an LLVM intrinsic,
+    // If the label is an alias for an LLVM intrinsic,
     // do not add a "\01" prefix.
-    if (!ALA->getIsLiteralLabel() || ALA->getLabel().starts_with("llvm.")) {
+    if (ALA->getLabel().starts_with("llvm.")) {
       Out << ALA->getLabel();
       return;
     }
