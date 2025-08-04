@@ -11740,20 +11740,26 @@ class OpenACCClauseTransform final
   SemaOpenACC::OpenACCParsedClause &ParsedClause;
   OpenACCClause *NewClause = nullptr;
 
+  ExprResult VisitVar(Expr *VarRef) {
+    ExprResult Res = Self.TransformExpr(VarRef);
+
+    if (!Res.isUsable())
+      return Res;
+
+    Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getDirectiveKind(),
+                                            ParsedClause.getClauseKind(),
+                                            Res.get());
+
+    return Res;
+  }
+
   llvm::SmallVector<Expr *> VisitVarList(ArrayRef<Expr *> VarList) {
     llvm::SmallVector<Expr *> InstantiatedVarList;
     for (Expr *CurVar : VarList) {
-      ExprResult Res = Self.TransformExpr(CurVar);
+      ExprResult VarRef = VisitVar(CurVar);
 
-      if (!Res.isUsable())
-        continue;
-
-      Res = Self.getSema().OpenACC().ActOnVar(ParsedClause.getDirectiveKind(),
-                                              ParsedClause.getClauseKind(),
-                                              Res.get());
-
-      if (Res.isUsable())
-        InstantiatedVarList.push_back(Res.get());
+      if (VarRef.isUsable())
+        InstantiatedVarList.push_back(VarRef.get());
     }
 
     return InstantiatedVarList;
@@ -11880,12 +11886,31 @@ void OpenACCClauseTransform<Derived>::VisitNumGangsClause(
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitPrivateClause(
     const OpenACCPrivateClause &C) {
-  ParsedClause.setVarListDetails(VisitVarList(C.getVarList()),
+  llvm::SmallVector<Expr *> InstantiatedVarList;
+  llvm::SmallVector<VarDecl *> InitRecipes;
+
+  for (const auto [RefExpr, InitRecipe] :
+       llvm::zip(C.getVarList(), C.getInitRecipes())) {
+    ExprResult VarRef = VisitVar(RefExpr);
+
+    if (VarRef.isUsable()) {
+      InstantiatedVarList.push_back(VarRef.get());
+
+      // We only have to create a new one if it is dependent, and Sema won't
+      // make one of these unless the type is non-dependent.
+      if (InitRecipe)
+        InitRecipes.push_back(InitRecipe);
+      else
+        InitRecipes.push_back(
+            Self.getSema().OpenACC().CreateInitRecipe(VarRef.get()));
+    }
+  }
+  ParsedClause.setVarListDetails(InstantiatedVarList,
                                  OpenACCModifierKind::Invalid);
 
   NewClause = OpenACCPrivateClause::Create(
       Self.getSema().getASTContext(), ParsedClause.getBeginLoc(),
-      ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
+      ParsedClause.getLParenLoc(), ParsedClause.getVarList(), InitRecipes,
       ParsedClause.getEndLoc());
 }
 
