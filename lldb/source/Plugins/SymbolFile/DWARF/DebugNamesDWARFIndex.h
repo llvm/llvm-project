@@ -46,17 +46,19 @@ public:
   /// Uses DWARF5's IDX_parent fields, when available, to speed up this query.
   void GetFullyQualifiedType(
       const DWARFDeclContext &context,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(ConstString name,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
-  void GetTypes(const DWARFDeclContext &context,
-                llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(ConstString name,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
+  void
+  GetTypes(const DWARFDeclContext &context,
+           llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetNamespaces(
       ConstString name,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
-  void
-  GetTypesWithQuery(TypeQuery &query,
-                    llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetTypesWithQuery(
+      TypeQuery &query,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetNamespacesWithParents(
       ConstString name, const CompilerDeclContext &parent_decl_ctx,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
