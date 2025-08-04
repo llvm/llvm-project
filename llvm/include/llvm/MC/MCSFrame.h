@@ -1,4 +1,4 @@
-//===- MCSFrame.h - Machine Code SFrame support -----------------*- C++ -*-===//
+//===- MCSFrame.h - Machine Code SFrame support ---------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,9 +16,8 @@
 #ifndef LLVM_MC_MCSFRAME_H
 #define LLVM_MC_MCSFRAME_H
 
-#include <cstdint>
-
 #include "llvm/ADT/SmallVector.h"
+#include <cstdint>
 
 namespace llvm {
 
@@ -26,10 +25,10 @@ class MCObjectStreamer;
 
 class MCSFrameEmitter {
 public:
+  // Emit the sframe section.
   //
-  // Emits the sframe section.
-  //
-  static void Emit(MCObjectStreamer &streamer);
+  // \param Streamer - Emit into this stream.
+  static void Emit(MCObjectStreamer &Streamer);
 };
 
 } // end namespace llvm

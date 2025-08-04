@@ -51,7 +51,7 @@ protected:
   /// Compact unwind encoding indicating that we should emit only an EH frame.
   unsigned CompactUnwindDwarfEHFrameOnly = 0;
 
-  /// SFrame ABI architecture byte
+  /// SFrame ABI architecture byte.
   std::optional<sframe::ABI> SFrameABIArch = {};
 
   /// Section directive for standard text.

@@ -3,11 +3,11 @@
 // RUN: llvm-mc --assemble --filetype=obj --gsframe -triple x86_64 %s -o %t.o
 // RUN: llvm-readelf --sframe %t.o | FileCheck %s
 
-.cfi_sections .sframe
+	.cfi_sections .sframe
 	
 f1:
-        .cfi_startproc
-        nop
+	.cfi_startproc
+	nop
         .cfi_endproc
 
 // CHECK: SFrame section '.sframe' {
