@@ -905,6 +905,8 @@ void TargetLoweringBase::initActions() {
     setOperationAction(ISD::GET_FPENV, VT, Expand);
     setOperationAction(ISD::SET_FPENV, VT, Expand);
     setOperationAction(ISD::RESET_FPENV, VT, Expand);
+
+    setOperationAction(ISD::MSTORE, VT, Expand);
   }
 
   // Most targets ignore the @llvm.prefetch intrinsic.
