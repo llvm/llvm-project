@@ -19,8 +19,8 @@
 
 #include "AVR.h"
 #include "AVRMachineFunctionInfo.h"
-#include "AVRTargetTransformInfo.h"
 #include "AVRTargetObjectFile.h"
+#include "AVRTargetTransformInfo.h"
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
@@ -110,7 +110,8 @@ const AVRSubtarget *AVRTargetMachine::getSubtargetImpl(const Function &) const {
   return &SubTarget;
 }
 
-TargetTransformInfo AVRTargetMachine::getTargetTransformInfo(const Function &F) const {
+TargetTransformInfo
+AVRTargetMachine::getTargetTransformInfo(const Function &F) const {
   return TargetTransformInfo(std::make_unique<AVRTTIImpl>(this, F));
 }
 
