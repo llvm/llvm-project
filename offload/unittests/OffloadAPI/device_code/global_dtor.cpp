@@ -1,6 +1,8 @@
 #include <gpuintrin.h>
 #include <stdint.h>
 
+extern "C" {
+
 uint32_t global[64];
 
 [[gnu::destructor]] void dtor() {
@@ -11,3 +13,4 @@ uint32_t global[64];
 __gpu_kernel void global_dtor() {
   // no-op
 }
+} // extern "C"
