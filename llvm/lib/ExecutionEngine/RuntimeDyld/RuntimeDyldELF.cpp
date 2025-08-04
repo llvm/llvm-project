@@ -2822,7 +2822,7 @@ Error RuntimeDyldELF::finalizeLoad(const ObjectFile &Obj,
       // object's sections to GOTs.
       for (section_iterator SI = Obj.section_begin(), SE = Obj.section_end();
            SI != SE; ++SI) {
-        if (SI->relocation_begin() != SI->relocation_end()) {
+        if (!SI->relocations().empty()) {
           Expected<section_iterator> RelSecOrErr = SI->getRelocatedSection();
           if (!RelSecOrErr)
             return make_error<RuntimeDyldError>(
