@@ -93,6 +93,9 @@ namespace llvm {
   private:
     lltok::Kind LexToken();
 
+    // Return closes pointer after `Ptr` that is an end of a label.
+    // Returns nullptr if `Ptr` doesn't point into a label.
+    const char *getLabelTail(const char *Ptr);
     int getNextChar();
     const char *skipNChars(unsigned N);
     void advancePositionTo(const char *Ptr);
