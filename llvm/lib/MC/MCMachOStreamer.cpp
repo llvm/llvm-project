@@ -160,7 +160,7 @@ void MCMachOStreamer::emitEHSymAttributes(const MCSymbol *Symbol,
 void MCMachOStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   // We have to create a new fragment if this is an atom defining symbol,
   // fragments cannot span atoms.
-  if (cast<MCSymbolMachO>(Symbol)->isSymbolLinkerVisible())
+  if (static_cast<MCSymbolMachO *>(Symbol)->isSymbolLinkerVisible())
     newFragment();
 
   MCObjectStreamer::emitLabel(Symbol, Loc);

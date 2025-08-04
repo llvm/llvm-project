@@ -149,8 +149,6 @@ public:
 
     return Flags;
   }
-
-  static bool classof(const MCSymbol *S) { return S->isMachO(); }
 };
 }
 
