@@ -4517,7 +4517,7 @@ bool Parser::ParseCXX11AttributeArgs(
     bool HasInvalidArgument = false;
     while (Tok.isNot(tok::r_paren) && Tok.isNot(tok::eof)) {
       if (Tok.isOneOf(tok::hash, tok::hashhash)) {
-        Diag(Tok.getLocation(), diag::err_invalid_attribute_argument)
+        Diag(Tok.getLocation(), diag::ext_invalid_attribute_argument)
             << PP.getSpelling(Tok);
         HasInvalidArgument = true;
       }

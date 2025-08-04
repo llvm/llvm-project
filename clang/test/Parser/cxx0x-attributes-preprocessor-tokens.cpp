@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -E %s | FileCheck %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic-errors -verify %s
+// RUN: %clang_cc1 -pedantic-errors -E %s | FileCheck %s
 // RUN: %clang_cc1 -x c -fsyntax-only -verify=c %s
 // RUN: %clang_cc1 -x c -E %s | FileCheck %s
 
