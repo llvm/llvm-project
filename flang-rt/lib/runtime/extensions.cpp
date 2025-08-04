@@ -305,12 +305,14 @@ void RTNAME(Perror)(const char *str) { perror(str); }
 
 // GNU extension function SECNDS(refTime)
 float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
-  constexpr float FAIL_SECNDS{-1.0f};
+  constexpr float FAIL_SECNDS{-1.0f}; // Failure code for this function
+  // Failure code for time functions that return std::time_t
+  constexpr time_t FAIL_TIME{std::time_t{-1}};
   if (!refTime) {
     return FAIL_SECNDS;
   }
   std::time_t now{std::time(nullptr)};
-  if (now == std::time_t{-1}) {
+  if (now == FAIL_TIME) {
     return FAIL_SECNDS;
   }
   // In float result, we can only precisely store 2^24 seconds, which
@@ -334,7 +336,7 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
     timeInfo.tm_min = 0;
     timeInfo.tm_sec = 0;
     startingPoint = std::mktime(&timeInfo);
-    if (startingPoint == std::time_t(-1)) {
+    if (startingPoint == FAIL_TIME) {
       return FAIL_SECNDS;
     }
   }
