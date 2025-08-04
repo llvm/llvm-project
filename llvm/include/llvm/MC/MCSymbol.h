@@ -281,16 +281,6 @@ public:
   /// Mark the symbol as undefined.
   void setUndefined() { Fragment = nullptr; }
 
-  bool isCOFF() const { return Kind == SymbolKindCOFF; }
-
-  bool isGOFF() const { return Kind == SymbolKindGOFF; }
-
-  bool isMachO() const { return Kind == SymbolKindMachO; }
-
-  bool isWasm() const { return Kind == SymbolKindWasm; }
-
-  bool isXCOFF() const { return Kind == SymbolKindXCOFF; }
-
   /// @}
   /// \name Variable Symbols
   /// @{

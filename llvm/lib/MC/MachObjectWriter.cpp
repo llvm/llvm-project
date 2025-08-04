@@ -589,7 +589,7 @@ void MachObjectWriter::computeSymbolTable(
 
   // Build the string table.
   for (const MCSymbol &Symbol : Asm.symbols()) {
-    if (!cast<MCSymbolMachO>(Symbol).isSymbolLinkerVisible())
+    if (!static_cast<const MCSymbolMachO &>(Symbol).isSymbolLinkerVisible())
       continue;
 
     StringTable.add(Symbol.getName());
@@ -603,7 +603,7 @@ void MachObjectWriter::computeSymbolTable(
   // important for letting us diff .o files.
   for (const MCSymbol &Symbol : Asm.symbols()) {
     // Ignore non-linker visible symbols.
-    if (!cast<MCSymbolMachO>(Symbol).isSymbolLinkerVisible())
+    if (!static_cast<const MCSymbolMachO &>(Symbol).isSymbolLinkerVisible())
       continue;
 
     if (!Symbol.isExternal() && !Symbol.isUndefined())
@@ -629,7 +629,7 @@ void MachObjectWriter::computeSymbolTable(
   // Now add the data for local symbols.
   for (const MCSymbol &Symbol : Asm.symbols()) {
     // Ignore non-linker visible symbols.
-    if (!cast<MCSymbolMachO>(Symbol).isSymbolLinkerVisible())
+    if (!static_cast<const MCSymbolMachO &>(Symbol).isSymbolLinkerVisible())
       continue;
 
     if (Symbol.isExternal() || Symbol.isUndefined())
