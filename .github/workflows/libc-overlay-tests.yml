@@ -102,6 +102,7 @@ jobs:
         -DCMAKE_POLICY_DEFAULT_CMP0141=NEW
         -DCMAKE_MSVC_DEBUG_INFORMATION_FORMAT=Embedded
         -DLLVM_ENABLE_RUNTIMES=libc
+        -DLLVM_ENABLE_LLD=ON
         -G Ninja
         -S ${{ github.workspace }}/runtimes
 

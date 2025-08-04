@@ -118,6 +118,7 @@ jobs:
         -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
         -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \
         -DLLVM_LIBC_FULL_BUILD=ON \
+        -DLLVM_ENABLE_LLD=ON \
         -G Ninja \
         -S ${{ github.workspace }}/runtimes \
         $CMAKE_FLAGS
