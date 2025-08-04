@@ -1,6 +1,5 @@
 // RUN: tco -emit-final-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,CMPLX
 // RUN: tco -emit-final-mlir -enable-aa=false %s | FileCheck %s --check-prefixes=CHECK,NOAA,CMPLX
-// RUN: tco -emit-final-mlir -O0 -enable-aa %s | FileCheck %s --check-prefixes=CHECK,NOAA,CMPLX
 // RUN: tco -emit-final-mlir -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,AA,SIMPLE
 // RUN: tco -emit-final-mlir -enable-aa=false -simplify-mlir %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
 // RUN: tco -test-gen %s | FileCheck %s --check-prefixes=CHECK,NOAA,SIMPLE
@@ -38,10 +37,10 @@ func.func @_QPtest(%arg0: !fir.ref<i32> {fir.bindc_name = "num"}, %arg1: !fir.re
 }
 
 // CHECK-LABEL:   llvm.func @_QPtest(
-// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "num"{{[^}]*}}},
-// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "lb"{{[^}]*}}},
-// CHECK-SAME:      %[[ARG2:.*]]: !llvm.ptr {fir.bindc_name = "ub"{{[^}]*}}},
-// CHECK-SAME:      %[[ARG3:.*]]: !llvm.ptr {fir.bindc_name = "step"{{[^}]*}}}) {
+// CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "num", llvm.nocapture},
+// CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "lb", llvm.nocapture},
+// CHECK-SAME:      %[[ARG2:.*]]: !llvm.ptr {fir.bindc_name = "ub", llvm.nocapture},
+// CHECK-SAME:      %[[ARG3:.*]]: !llvm.ptr {fir.bindc_name = "step", llvm.nocapture}) {
 
 // CMPLX:           %[[VAL_0:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CMPLX:           %[[VAL_1:.*]] = llvm.alloca %[[VAL_0]] x i32 {bindc_name = "i"} : (i64) -> !llvm.ptr

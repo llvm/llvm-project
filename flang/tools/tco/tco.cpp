@@ -188,8 +188,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     MLIRToLLVMPassPipelineConfig config(*level);
     // TODO: config.StackArrays should be set here?
     config.EnableOpenMP = true;  // assume the input contains OpenMP
-    config.AliasAnalysis =
-        OptLevel > 0 && enableAliasAnalysis && !testGeneratorMode;
+    config.AliasAnalysis = enableAliasAnalysis && !testGeneratorMode;
     config.LoopVersioning = OptLevel > 2;
     if (codeGenLLVM) {
       // Run only CodeGen passes.
