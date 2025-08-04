@@ -81,7 +81,7 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
 
   uint64_t NumberOfBytesToWrite = ConstantSize->getZExtValue();
 
-  // Do this only if it is word aligned and we write multiple of 4 bytes.
+  // Do this only if it is word aligned and we write a multiple of 4 bytes.
   if (!(Alignment >= 4) || !((NumberOfBytesToWrite & 3) == 0))
     return SDValue();
 
@@ -89,6 +89,8 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
   SDValue SrcValueReplicated = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, Src);
   int NumberOfWords = NumberOfBytesToWrite / 4;
   MachineFunction &MF = DAG.getMachineFunction();
+  auto Volatile =
+      isVolatile ? MachineMemOperand::MOVolatile : MachineMemOperand::MONone;
 
   // Helper for constructing the QC_SETWMI instruction
   auto getSetwmiNode = [&](uint8_t SizeWords, uint8_t OffsetSetwmi) -> SDValue {
@@ -96,8 +98,8 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
                      DAG.getTargetConstant(SizeWords, dl, MVT::i32),
                      DAG.getTargetConstant(OffsetSetwmi, dl, MVT::i32)};
     MachineMemOperand *BaseMemOperand = MF.getMachineMemOperand(
-        DstPtrInfo.getWithOffset(OffsetSetwmi), MachineMemOperand::MOStore,
-        SizeWords * 4, Align(4));
+        DstPtrInfo.getWithOffset(OffsetSetwmi),
+        MachineMemOperand::MOStore | Volatile, SizeWords * 4, Align(4));
     return DAG.getMemIntrinsicNode(RISCVISD::QC_SETWMI, dl,
                                    DAG.getVTList(MVT::Other), Ops, MVT::i32,
                                    BaseMemOperand);
@@ -122,7 +124,7 @@ SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
   // QC_SETWMI reg1, N, 64(reg2)
   //
   // For 33-48 words, we would like to use (16, 16, n), but that means the last
-  // QC_SETWMI needs an offset of 128 which the instruction doesnt support.
+  // QC_SETWMI needs an offset of 128 which the instruction doesn't support.
   // So in this case we use a length of 15 for the second instruction and we do
   // the rest with the third instruction.
   // This means the maximum inlined number of words is 47 (for now):
