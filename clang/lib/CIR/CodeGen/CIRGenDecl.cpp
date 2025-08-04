@@ -77,7 +77,7 @@ bool CIRGenFunction::isTrivialInitializer(const Expr *init) {
 }
 
 void CIRGenFunction::emitAutoVarInit(
-    const CIRGenFunction::AutoVarEmission &emission) {
+    const CIRGenFunction::AutoVarEmission &emission, bool allocatedSeparately) {
   assert(emission.Variable && "emission was not valid!");
 
   // If this was emitted as a global constant, we're done.
@@ -159,9 +159,10 @@ void CIRGenFunction::emitAutoVarInit(
     mlir::Value val = lv.getAddress().getPointer();
     assert(val && "Should have an address");
     auto allocaOp = val.getDefiningOp<cir::AllocaOp>();
-    assert(allocaOp && "Address should come straight out of the alloca");
+    assert((allocatedSeparately || allocaOp) &&
+           "Address should come straight out of the alloca");
 
-    if (!allocaOp.use_empty())
+    if (allocaOp && !allocaOp.use_empty())
       allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
     return;
   }

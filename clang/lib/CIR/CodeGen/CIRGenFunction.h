@@ -487,6 +487,11 @@ public:
     /// address space for address space agnostic languages.
     Address getAllocatedAddress() const { return Addr; }
 
+    // Changes the stored address for the emission.  This function should only
+    // be used in extreme cases, and isn't required to model normal AST
+    // initialization/variables.
+    void setAllocatedAddress(Address A) { Addr = A; }
+
     /// Returns the address of the object within this declaration.
     /// Note that this does not chase the forwarding pointer for
     /// __block decls.
@@ -518,12 +523,19 @@ public:
     symbolTable.insert(vd, addr.getPointer());
   }
 
-  /// Removes a declaration from the address-relationship.  This is a function
-  /// that shouldn't need to be used except in cases where we're adding/removing
-  /// things that aren't part of the language-semantics AST.
-  void removeAddrOfLocalVar(const clang::VarDecl *vd) {
-    localDeclMap.erase(vd);
-  }
+  // A class to allow inserting things into the declaration map during some sort
+  // of alternative generation (used currently for the OpenACC recipe
+  // generation), then reverting changes after the fact.
+  class DeclMapRevertingRAII {
+    CIRGenFunction &cgf;
+    CIRGenFunction::DeclMapTy originalMap;
+
+  public:
+    DeclMapRevertingRAII(CIRGenFunction &cgf)
+        : cgf(cgf), originalMap(cgf.localDeclMap) {}
+
+    ~DeclMapRevertingRAII() { cgf.localDeclMap = std::move(originalMap); }
+  };
 
   bool shouldNullCheckClassCastValue(const CastExpr *ce);
 
@@ -961,7 +973,13 @@ public:
   void emitAutoVarDecl(const clang::VarDecl &d);
 
   void emitAutoVarCleanups(const AutoVarEmission &emission);
-  void emitAutoVarInit(const AutoVarEmission &emission);
+  /// Emit the initializer for an allocated variable.  If this call is not
+  /// associated with the call to emitAutoVarAlloca (as the address of the
+  /// emission is not directly an alloca), the allocatedSeparately parameter can
+  /// be used to suppress the assertions.  However, this should only be used in
+  /// extreme cases, as it doesn't properly reflect the language/AST.
+  void emitAutoVarInit(const AutoVarEmission &emission,
+                       bool allocatedSeparately = false);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               clang::QualType::DestructionKind dtorKind);
 
