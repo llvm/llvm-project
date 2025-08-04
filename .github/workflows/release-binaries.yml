@@ -90,6 +90,9 @@ jobs:
       run: |
         ./llvm/utils/release/./github-upload-release.py --token "$GITHUB_TOKEN" --user "$GITHUB_ACTOR" --user-token "$USER_TOKEN" check-permissions
 
+    - name: Check long paths
+      run: |
+        Get-ItemProperty -Path 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name 'LongPathsEnabled'
     - name: Collect Variables
       id: vars
       shell: bash
