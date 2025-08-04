@@ -176,10 +176,6 @@ private:
 
     void checkFor();
 
-    //  void checkRangeFor(); ?? ERICH
-    //  const ValueDecl *checkInit();
-    //  void checkCond(const ValueDecl *Init);
-    //  void checkInc(const ValueDecl *Init);
   public:
     // Checking for non-instantiation version of a Range-for.
     ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,

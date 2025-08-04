@@ -13531,7 +13531,8 @@ def err_acc_device_type_multiple_archs
 def warn_acc_var_referenced_lacks_op
     : Warning<"variable of type %0 referenced in OpenACC '%1' clause does not "
               "have a %enum_select<AccVarReferencedReason>{%DefCtor{default "
-              "constructor}|%Dtor{destructor}}2; reference has no effect">,
+              "constructor}|%CopyCtor{copy constructor}|%Dtor{destructor}}2; "
+              "reference has no effect">,
       InGroup<DiagGroup<"openacc-var-lacks-operation">>,
       DefaultError;
 
