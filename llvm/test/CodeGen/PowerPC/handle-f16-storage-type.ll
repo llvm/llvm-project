@@ -666,7 +666,6 @@ define <4 x float> @test_extend32_vec4(ptr %p) #0 {
 ; P8-NEXT:    bl __extendhfsf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    li r3, 80
-; P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; P8-NEXT:    xxmrghd vs0, vs61, vs1
 ; P8-NEXT:    xxmrghd vs1, vs63, vs62
 ; P8-NEXT:    ld r30, 96(r1) # 8-byte Folded Reload
