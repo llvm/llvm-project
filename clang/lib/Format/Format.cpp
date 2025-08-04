@@ -200,6 +200,7 @@ template <> struct MappingTraits<FormatStyle::BraceWrappingFlags> {
     IO.mapOptional("SplitEmptyFunction", Wrapping.SplitEmptyFunction);
     IO.mapOptional("SplitEmptyRecord", Wrapping.SplitEmptyRecord);
     IO.mapOptional("SplitEmptyNamespace", Wrapping.SplitEmptyNamespace);
+    IO.mapOptional("WrapEmptyRecord", Wrapping.WrapEmptyRecord);
   }
 };
 
@@ -229,6 +230,15 @@ struct ScalarEnumerationTraits<
     // For backward compatibility.
     IO.enumCase(Value, "false", FormatStyle::BWACS_Never);
     IO.enumCase(Value, "true", FormatStyle::BWACS_Always);
+  }
+};
+
+template <>
+struct ScalarEnumerationTraits<FormatStyle::BraceWrapEmptyRecordStyle> {
+  static void enumeration(IO &IO,
+                          FormatStyle::BraceWrapEmptyRecordStyle &Value) {
+    IO.enumCase(Value, "Default", FormatStyle::BWER_Default);
+    IO.enumCase(Value, "Never", FormatStyle::BWER_Never);
   }
 };
 
@@ -1392,7 +1402,8 @@ static void expandPresetsBraceWrapping(FormatStyle &Expanded) {
                             /*IndentBraces=*/false,
                             /*SplitEmptyFunction=*/true,
                             /*SplitEmptyRecord=*/true,
-                            /*SplitEmptyNamespace=*/true};
+                            /*SplitEmptyNamespace=*/true,
+                            /*WrapEmptyRecord=*/FormatStyle::BWER_Default};
   switch (Expanded.BreakBeforeBraces) {
   case FormatStyle::BS_Linux:
     Expanded.BraceWrapping.AfterClass = true;

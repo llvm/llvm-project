@@ -1355,6 +1355,32 @@ struct FormatStyle {
     BWACS_Always
   };
 
+  enum BraceWrapEmptyRecordStyle : int8_t {
+    /// Use default wrapping rules for records
+    /// (AfterClass,AfterStruct,AfterUnion)
+    /// \code
+    /// class foo
+    /// {
+    ///   int foo;
+    /// };
+    ///
+    /// class foo
+    /// {
+    /// };
+    /// \endcode
+    BWER_Default,
+    /// Override wrapping for empty records
+    /// \code
+    /// class foo
+    /// {
+    ///   int foo;
+    /// };
+    ///
+    /// class foo {};
+    /// \endcode
+    BWER_Never
+  };
+
   /// Precise control over the wrapping of braces.
   /// \code
   ///   # Should be declared this way:
@@ -1585,6 +1611,8 @@ struct FormatStyle {
     /// \endcode
     ///
     bool SplitEmptyNamespace;
+    /// Wrap empty record (``class``/``struct``/``union``).
+    BraceWrapEmptyRecordStyle WrapEmptyRecord;
   };
 
   /// Control of individual brace wrapping cases.
