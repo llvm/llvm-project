@@ -146,7 +146,6 @@ LIBC_INLINE static constexpr double get_error(const DoubleDouble &x_3,
 
 LIBC_INLINE static constexpr double cbrt(double x) {
   using DoubleDouble = fputil::DoubleDouble;
-  using Float128 = fputil::DyadicFloat<128>;
   using namespace cbrt_internal;
   using FPBits = fputil::FPBits<double>;
 
@@ -294,6 +293,8 @@ LIBC_INLINE static constexpr double cbrt(double x) {
   // Ziv's accuracy test.
   if (LIBC_LIKELY(r2_upper == r2_lower))
     return update_exponent(r2_upper);
+
+  using Float128 = fputil::DyadicFloat<128>;
 
   // TODO: Investigate removing float128 and just list exceptional cases.
   // Apply another Newton iteration with ~126-bit accuracy.
