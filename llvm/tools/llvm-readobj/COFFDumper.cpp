@@ -2050,11 +2050,13 @@ void COFFDumper::printCOFFPseudoReloc() {
   ArrayRef<uint8_t> RawRelocs =
       Data.take_front(RelocEnd.getValue()).drop_front(RelocBegin.getValue());
   struct alignas(4) PseudoRelocationHeader {
-    uint32_t Zero1;
-    uint32_t Zero2;
-    uint32_t Signature;
+    PseudoRelocationHeader(uint32_t Signature)
+        : Zero1(0), Zero2(0), Signature(Signature) {}
+    support::ulittle32_t Zero1;
+    support::ulittle32_t Zero2;
+    support::ulittle32_t Signature;
   };
-  static const PseudoRelocationHeader HeaderV2 = {0, 0, 1};
+  const PseudoRelocationHeader HeaderV2(1);
   if (RawRelocs.size() < sizeof(HeaderV2) ||
       (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0)) {
     reportWarning(
@@ -2063,9 +2065,9 @@ void COFFDumper::printCOFFPseudoReloc() {
     return;
   }
   struct alignas(4) PseudoRelocationRecord {
-    uint32_t Symbol;
-    uint32_t Target;
-    uint32_t BitSize;
+    support::ulittle32_t Symbol;
+    support::ulittle32_t Target;
+    support::ulittle32_t BitSize;
   };
   ArrayRef<PseudoRelocationRecord> RelocRecords(
       reinterpret_cast<const PseudoRelocationRecord *>(
