@@ -51,7 +51,7 @@ struct IncomingCall {
   IncomingCall(const std::string BuiltinName, const DemangledBuiltin *Builtin,
                const Register ReturnRegister, const SPIRVType *ReturnType,
                const SmallVectorImpl<Register> &Arguments)
-      : BuiltinName(BuiltinName), Builtin(Builtin),
+      : BuiltinName(std::move(BuiltinName)), Builtin(Builtin),
         ReturnRegister(ReturnRegister), ReturnType(ReturnType),
         Arguments(Arguments) {}
 
@@ -2619,6 +2619,7 @@ static bool generateConvertInst(const StringRef DemangledCall,
                               GR->getSPIRVTypeID(Call->ReturnType));
   }
 
+  assert(Builtin && "Conversion builtin not found.");
   if (Builtin->IsSaturated)
     buildOpDecorate(Call->ReturnRegister, MIRBuilder,
                     SPIRV::Decoration::SaturatedConversion, {});
@@ -3186,6 +3187,7 @@ static SPIRVType *getLayoutType(const TargetExtType *ExtensionType,
 namespace SPIRV {
 TargetExtType *parseBuiltinTypeNameToTargetExtType(std::string TypeName,
                                                    LLVMContext &Context) {
+  assert(!TypeName.empty() && "Empty builtin type name!");
   StringRef NameWithParameters = TypeName;
 
   // Pointers-to-opaque-structs representing OpenCL types are first translated

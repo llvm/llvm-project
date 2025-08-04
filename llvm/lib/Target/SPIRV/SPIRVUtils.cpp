@@ -463,8 +463,9 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+  bool Error = Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
       .getAsInteger(10, Len);
+  assert(!Error && "Failed to parse demangled name length");
   return Name.substr(Start, Len).str();
 }
 
@@ -756,7 +757,7 @@ bool getVacantFunctionName(Module &M, std::string &Name) {
   for (unsigned I = 0; I < MaxIters; ++I) {
     std::string OrdName = Name + Twine(I).str();
     if (!M.getFunction(OrdName)) {
-      Name = OrdName;
+      Name = std::move(OrdName);
       return true;
     }
   }

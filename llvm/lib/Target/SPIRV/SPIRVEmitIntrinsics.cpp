@@ -495,7 +495,7 @@ void SPIRVEmitIntrinsics::propagateElemTypeRec(
   std::unordered_set<Value *> Visited;
   DenseMap<Function *, CallInst *> Ptrcasts;
   propagateElemTypeRec(Op, PtrElemTy, CastElemTy, VisitedSubst, Visited,
-                       Ptrcasts);
+                       std::move(Ptrcasts));
 }
 
 void SPIRVEmitIntrinsics::propagateElemTypeRec(
@@ -893,9 +893,11 @@ Type *SPIRVEmitIntrinsics::deduceNestedTypeHelper(
     bool Change = false;
     for (unsigned i = 0; i < U->getNumOperands(); ++i) {
       Value *Op = U->getOperand(i);
-      Type *OpTy = Op->getType();
-      Type *Ty = OpTy;
+      Type *OpTy = nullptr;
+      Type *Ty = nullptr;
       if (Op) {
+        OpTy = Op->getType();
+        Ty = OpTy;
         if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
           if (Type *NestedTy =
                   deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
