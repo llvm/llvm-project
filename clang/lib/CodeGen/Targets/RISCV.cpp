@@ -8,6 +8,7 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/RecordLayout.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 
 using namespace clang;

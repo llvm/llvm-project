@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CGVTables.h"
 #include "CGCXXABI.h"
 #include "CGDebugInfo.h"
 #include "CodeGenFunction.h"
@@ -1191,7 +1192,7 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
 /// functions).  For weak vtables, CodeGen tracks when they are needed and
 /// emits them as-needed.
 void CodeGenModule::EmitVTable(CXXRecordDecl *theClass) {
-  VTables.GenerateClassData(theClass);
+  VTables->GenerateClassData(theClass);
 }
 
 void
@@ -1276,7 +1277,7 @@ void CodeGenModule::EmitDeferredVTables() {
 
   for (const CXXRecordDecl *RD : DeferredVTables)
     if (shouldEmitVTableAtEndOfTranslationUnit(*this, RD))
-      VTables.GenerateClassData(RD);
+      VTables->GenerateClassData(RD);
     else if (shouldOpportunisticallyEmitVTables())
       OpportunisticVTables.push_back(RD);
 
@@ -1417,4 +1418,16 @@ void CodeGenModule::EmitVTableTypeMetadata(const CXXRecordDecl *RD,
     if (TypeVis != llvm::GlobalObject::VCallVisibilityPublic)
       VTable->setVCallVisibilityMetadata(TypeVis);
   }
+}
+
+ItaniumVTableContext &CodeGenModule::getItaniumVTableContext() {
+  return VTables->getItaniumVTableContext();
+}
+
+const ItaniumVTableContext &CodeGenModule::getItaniumVTableContext() const {
+  return VTables->getItaniumVTableContext();
+}
+
+MicrosoftVTableContext &CodeGenModule::getMicrosoftVTableContext() {
+  return VTables->getMicrosoftVTableContext();
 }
