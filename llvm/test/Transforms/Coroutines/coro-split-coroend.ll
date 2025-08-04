@@ -28,13 +28,13 @@ entry:
 
 end:
   %InResume = call i1 @llvm.coro.end(ptr null, i1 false, token none)
-  br i1 %InResume, label %start, label %done
+  br i1 %InResume, label %resume, label %start
+
+resume:
+  call void @a()
+  br label %start
 
 start:
-  call void @a()
-  br label %done
-
-done:
   call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret ptr %hdl
 }
