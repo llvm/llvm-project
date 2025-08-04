@@ -4824,13 +4824,10 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
           continue;
         if (isa<LoadInst>(&I)) {
           LoadedValuesPlus.insert(&I);
-          // Included 1st users of loaded values
-          for (auto *U : I.users()) {
-            auto *Inst = cast<Instruction>(U);
-            if (!Inst)
-              continue;
-            LoadedValuesPlus.insert(U);
-          }
+          // Include in-loop 1st users of loaded values.
+          for (auto *U : I.users())
+            if (L->contains(cast<Instruction>(U)))
+              LoadedValuesPlus.insert(U);
         } else
           Stores.push_back(cast<StoreInst>(&I));
       }
