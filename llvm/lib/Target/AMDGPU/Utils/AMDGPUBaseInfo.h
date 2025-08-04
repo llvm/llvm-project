@@ -1066,8 +1066,7 @@ std::optional<SmallVector<unsigned>>
 getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
-/// Returns false if \p MD is null.
-bool hasValueInRange(const MDNode *MD, unsigned Val);
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///

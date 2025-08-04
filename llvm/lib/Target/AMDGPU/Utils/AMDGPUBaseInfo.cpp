@@ -1678,14 +1678,11 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size) {
   return Vals;
 }
 
-bool hasValueInRange(const MDNode *MD, unsigned Val) {
-  if (!MD)
-    return false;
-
-  assert((MD->getNumOperands() % 2 == 0) && "invalid number of operands!");
-  for (unsigned I = 0, E = MD->getNumOperands() / 2; I != E; ++I) {
-    auto *Low = mdconst::extract<ConstantInt>(MD->getOperand(2 * I + 0));
-    auto *High = mdconst::extract<ConstantInt>(MD->getOperand(2 * I + 1));
+bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
+  assert((MD.getNumOperands() % 2 == 0) && "invalid number of operands!");
+  for (unsigned I = 0, E = MD.getNumOperands() / 2; I != E; ++I) {
+    auto *Low = mdconst::extract<ConstantInt>(MD.getOperand(2 * I + 0));
+    auto *High = mdconst::extract<ConstantInt>(MD.getOperand(2 * I + 1));
     assert(Low->getValue().ult(High->getValue()) && "invalid range metadata!");
     if (Low->getValue().ule(Val) && High->getValue().ugt(Val))
       return true;

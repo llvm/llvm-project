@@ -17793,10 +17793,9 @@ atomicSupportedIfLegalIntType(const AtomicRMWInst *RMW) {
 
 /// Return if a flat address space atomicrmw can access private memory.
 static bool flatInstrMayAccessPrivate(const Instruction *I) {
-  const MDNode *NoaliasAddrSpaceMD =
-      I->getMetadata(LLVMContext::MD_noalias_addrspace);
-  return !AMDGPU::hasValueInRange(NoaliasAddrSpaceMD,
-                                  AMDGPUAS::PRIVATE_ADDRESS);
+  const MDNode *MD = I->getMetadata(LLVMContext::MD_noalias_addrspace);
+  return !(MD &&
+           AMDGPU::hasValueInRangeLikeMetadata(*MD, AMDGPUAS::PRIVATE_ADDRESS));
 }
 
 TargetLowering::AtomicExpansionKind
