@@ -165,7 +165,6 @@ LLLexer::LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &Err,
   CurPtr = CurBuf.begin();
 }
 
-/// getLabelTail - Return true if this pointer points to a valid end of a label.
 const char *LLLexer::getLabelTail(const char *Ptr) {
   while (Ptr != CurBuf.end()) {
     if (Ptr[0] == ':')
