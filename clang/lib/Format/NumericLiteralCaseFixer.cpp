@@ -25,7 +25,7 @@ using CharTransformFn = char (*)(char C);
 namespace {
 
 /// @brief Collection of std::transform predicates for each part of a numeric
-/// literal
+/// literal.
 struct FormatParameters {
   FormatParameters(FormatStyle::LanguageKind Language,
                    const FormatStyle::NumericLiteralCaseStyle &CaseStyle);
@@ -74,11 +74,12 @@ private:
 
 static char noOpTransform(char C) { return C; }
 
-static CharTransformFn getTransform(int8_t config_value) {
-  switch (config_value) {
-  case FormatStyle::NLCS_Always:
+static CharTransformFn
+getTransform(FormatStyle::NumericLiteralComponentStyle ConfigValue) {
+  switch (ConfigValue) {
+  case FormatStyle::NLCS_Upper:
     return llvm::toUpper;
-  case FormatStyle::NLCS_Never:
+  case FormatStyle::NLCS_Lower:
     return llvm::toLower;
   case FormatStyle::NLCS_Leave:
   default:
@@ -89,11 +90,15 @@ static CharTransformFn getTransform(int8_t config_value) {
 /// @brief Test if Suffix matches a C++ literal reserved by the library.
 /// Matches against all suffixes reserved in the C++23 standard
 static bool matchesReservedSuffix(StringRef Suffix) {
-  static const std::array<StringRef, 11> SortedReservedSuffixes = {
+  static constexpr std::array<StringRef, 11> SortedReservedSuffixes = {
       "d", "h", "i", "if", "il", "min", "ms", "ns", "s", "us", "y"};
 
-  auto entry = std::lower_bound(SortedReservedSuffixes.cbegin(),
-                                SortedReservedSuffixes.cend(), Suffix);
+  // This can be static_assert when we have access to constexpr is_sorted in
+  // C++ 20.
+  assert(llvm::is_sorted(SortedReservedSuffixes) &&
+         "Must be sorted as precondition for lower_bound().");
+
+  auto entry = llvm::lower_bound(SortedReservedSuffixes, Suffix);
   if (entry == SortedReservedSuffixes.cend())
     return false;
   return *entry == Suffix;
@@ -102,11 +107,10 @@ static bool matchesReservedSuffix(StringRef Suffix) {
 FormatParameters::FormatParameters(
     FormatStyle::LanguageKind Language,
     const FormatStyle::NumericLiteralCaseStyle &CaseStyle)
-    : Prefix(getTransform(CaseStyle.UpperCasePrefix)),
-      HexDigit(getTransform(CaseStyle.UpperCaseHexDigit)),
-      FloatExponentSeparator(
-          getTransform(CaseStyle.UpperCaseFloatExponentSeparator)),
-      Suffix(getTransform(CaseStyle.UpperCaseSuffix)) {
+    : Prefix(getTransform(CaseStyle.Prefix)),
+      HexDigit(getTransform(CaseStyle.HexDigit)),
+      FloatExponentSeparator(getTransform(CaseStyle.ExponentLetter)),
+      Suffix(getTransform(CaseStyle.Suffix)) {
   switch (Language) {
   case FormatStyle::LK_CSharp:
   case FormatStyle::LK_Java:
@@ -203,9 +207,7 @@ void QuickNumericalConstantParser::parse() {
   FloatExponentSeparatorEnd = Cur;
 
   // Fast forward through the exponent part of a floating point literal.
-  if (!IsFloat) {
-  } else if (FloatExponentSeparatorBegin == FloatExponentSeparatorEnd) {
-  } else {
+  if (IsFloat && FloatExponentSeparatorBegin != FloatExponentSeparatorEnd) {
     Cur = std::find_if_not(Cur, End, [](char C) {
       return llvm::isDigit(C) || C == '+' || C == '-';
     });
@@ -263,9 +265,10 @@ std::optional<std::string> QuickNumericalConstantParser::formatIfNeeded() && {
   parse();
   applyFormatting();
 
-  return (Formatted == IntegerLiteral)
-             ? std::nullopt
-             : std::make_optional<std::string>(std::move(Formatted));
+  if (Formatted == IntegerLiteral)
+    return std::nullopt;
+  else
+    return std::move(Formatted);
 }
 
 std::pair<tooling::Replacements, unsigned>

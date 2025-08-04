@@ -5083,18 +5083,18 @@ the configuration (without a prefix: ``Auto``).
 
   Nested configuration flags:
 
-  Character case format for different components of a numeric literal.
+  Separate control for each numeric literal component.
 
-  * ``NumericLiteralComponentStyle UpperCaseFloatExponentSeparator``
-    Format floating point exponent separator character case.
+  * ``NumericLiteralComponentStyle ExponentLetter``
+    Format floating point exponent separator letter case.
 
-    .. code-block:: text
+    .. code-block:: c++
 
-      /* UpperCaseFloatExponentSeparator = Leave */
+      /* ExponentLetter = Leave */
       float a = 6.02e23 + 1.0E10;
-      /* UpperCaseFloatExponentSeparator = Always */
+      /* ExponentLetter = Upper */
       float a = 6.02E23 + 1.0E10;
-      /* UpperCaseFloatExponentSeparator = Never */
+      /* ExponentLetter = Lower */
       float a = 6.02e23 + 1.0e10;
 
     Possible values:
@@ -5102,23 +5102,23 @@ the configuration (without a prefix: ``Auto``).
     * ``NLCS_Leave`` (in configuration: ``Leave``)
       Leave this component of the literal as is.
 
-    * ``NLCS_Always`` (in configuration: ``Always``)
-      Always format this component with upper case characters.
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with upper case characters.
 
-    * ``NLCS_Never`` (in configuration: ``Never``)
-      Never format this component with upper case characters.
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lower case characters.
 
 
-  * ``NumericLiteralComponentStyle UpperCaseHexDigit``
+  * ``NumericLiteralComponentStyle HexDigit``
     Format hexadecimal digit case.
 
-    .. code-block:: text
+    .. code-block:: c++
 
-      /* UpperCaseHexDigit = Leave */
+      /* HexDigit = Leave */
       a = 0xaBcDeF;
-      /* UpperCaseHexDigit = Always */
+      /* HexDigit = Upper */
       a = 0xABCDEF;
-      /* UpperCaseHexDigit = Never */
+      /* HexDigit = Lower */
       a = 0xabcdef;
 
     Possible values:
@@ -5126,23 +5126,23 @@ the configuration (without a prefix: ``Auto``).
     * ``NLCS_Leave`` (in configuration: ``Leave``)
       Leave this component of the literal as is.
 
-    * ``NLCS_Always`` (in configuration: ``Always``)
-      Always format this component with upper case characters.
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with upper case characters.
 
-    * ``NLCS_Never`` (in configuration: ``Never``)
-      Never format this component with upper case characters.
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lower case characters.
 
 
-  * ``NumericLiteralComponentStyle UpperCasePrefix``
+  * ``NumericLiteralComponentStyle Prefix``
     Format integer prefix case.
 
-    .. code-block:: text
+    .. code-block:: c++
 
-       /* UpperCasePrefix = Leave */
+       /* Prefix = Leave */
        a = 0XF0 | 0b1;
-       /* UpperCasePrefix = Always */
+       /* Prefix = Upper */
        a = 0XF0 | 0B1;
-       /* UpperCasePrefix = Never */
+       /* Prefix = Lower */
        a = 0xF0 | 0b1;
 
     Possible values:
@@ -5150,24 +5150,24 @@ the configuration (without a prefix: ``Auto``).
     * ``NLCS_Leave`` (in configuration: ``Leave``)
       Leave this component of the literal as is.
 
-    * ``NLCS_Always`` (in configuration: ``Always``)
-      Always format this component with upper case characters.
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with upper case characters.
 
-    * ``NLCS_Never`` (in configuration: ``Never``)
-      Never format this component with upper case characters.
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lower case characters.
 
 
-  * ``NumericLiteralComponentStyle UpperCaseSuffix``
-    Format suffix case. This option excludes case-specific reserved
+  * ``NumericLiteralComponentStyle Suffix``
+    Format suffix case. This option excludes case-sensitive reserved
     suffixes, such as ``min`` in C++.
 
-    .. code-block:: text
+    .. code-block:: c++
 
-      /* UpperCaseSuffix = Leave */
+      /* Suffix = Leave */
       a = 1uLL;
-      /* UpperCaseSuffix = Always */
+      /* Suffix = Upper */
       a = 1ULL;
-      /* UpperCaseSuffix = Never */
+      /* Suffix = Lower */
       a = 1ull;
 
     Possible values:
@@ -5175,11 +5175,11 @@ the configuration (without a prefix: ``Auto``).
     * ``NLCS_Leave`` (in configuration: ``Leave``)
       Leave this component of the literal as is.
 
-    * ``NLCS_Always`` (in configuration: ``Always``)
-      Always format this component with upper case characters.
+    * ``NLCS_Upper`` (in configuration: ``Upper``)
+      Format this component with upper case characters.
 
-    * ``NLCS_Never`` (in configuration: ``Never``)
-      Never format this component with upper case characters.
+    * ``NLCS_Lower`` (in configuration: ``Lower``)
+      Format this component with lower case characters.
 
 
 

@@ -20,12 +20,10 @@ class NumericLiteralCaseTest : public FormatTestBase {};
 TEST_F(NumericLiteralCaseTest, Prefix) {
   FormatStyle Style = getLLVMStyle();
   EXPECT_EQ(Style.Language, FormatStyle::LK_Cpp);
-  EXPECT_EQ(Style.NumericLiteralCase.UpperCasePrefix, FormatStyle::NLCS_Leave);
-  EXPECT_EQ(Style.NumericLiteralCase.UpperCaseHexDigit,
-            FormatStyle::NLCS_Leave);
-  EXPECT_EQ(Style.NumericLiteralCase.UpperCaseFloatExponentSeparator,
-            FormatStyle::NLCS_Leave);
-  EXPECT_EQ(Style.NumericLiteralCase.UpperCaseSuffix, FormatStyle::NLCS_Leave);
+  EXPECT_EQ(Style.NumericLiteralCase.Prefix, FormatStyle::NLCS_Leave);
+  EXPECT_EQ(Style.NumericLiteralCase.HexDigit, FormatStyle::NLCS_Leave);
+  EXPECT_EQ(Style.NumericLiteralCase.ExponentLetter, FormatStyle::NLCS_Leave);
+  EXPECT_EQ(Style.NumericLiteralCase.Suffix, FormatStyle::NLCS_Leave);
 
   const StringRef Bin0{"b = 0b0'10'010uL;"};
   const StringRef Bin1{"b = 0B010'010Ul;"};
@@ -36,7 +34,7 @@ TEST_F(NumericLiteralCaseTest, Prefix) {
   verifyFormat(Hex0, Style);
   verifyFormat(Hex1, Style);
 
-  Style.NumericLiteralCase.UpperCasePrefix = FormatStyle::NLCS_Always;
+  Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Upper;
   verifyFormat("b = 0B0'10'010uL;", Bin0, Style);
   verifyFormat(Bin1, Style);
   verifyFormat("b = 0Xdead'BEEFuL;", Hex0, Style);
@@ -44,7 +42,7 @@ TEST_F(NumericLiteralCaseTest, Prefix) {
   verifyFormat("i = 0XaBcD.a0Ebp123F;", Style);
   verifyFormat("j = 0XaBcD.a0EbP123f;", Style);
 
-  Style.NumericLiteralCase.UpperCasePrefix = FormatStyle::NLCS_Never;
+  Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Lower;
   verifyFormat(Bin0, Style);
   verifyFormat("b = 0b010'010Ul;", Bin1, Style);
   verifyFormat(Hex0, Style);
@@ -78,7 +76,7 @@ TEST_F(NumericLiteralCaseTest, HexDigit) {
   verifyFormat(I, Style);
   verifyFormat(J, Style);
 
-  Style.NumericLiteralCase.UpperCaseHexDigit = FormatStyle::NLCS_Always;
+  Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Upper;
   verifyFormat("a = 0xABC0'123FuL;", A, Style);
   verifyFormat("b = 0XABC0'123FUl;", B, Style);
   verifyFormat("c = 0xA'BC.0p12'3f32;", C, Style);
@@ -90,7 +88,7 @@ TEST_F(NumericLiteralCaseTest, HexDigit) {
   verifyFormat("i = 0x.0000ABCp12'3F128;", I, Style);
   verifyFormat("j = 0xAA1'FP12'3F128;", J, Style);
 
-  Style.NumericLiteralCase.UpperCaseHexDigit = FormatStyle::NLCS_Never;
+  Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Lower;
   verifyFormat("a = 0xabc0'123fuL;", A, Style);
   verifyFormat("b = 0Xabc0'123fUl;", B, Style);
   verifyFormat("c = 0xa'bc.0p12'3f32;", C, Style);
@@ -103,7 +101,7 @@ TEST_F(NumericLiteralCaseTest, HexDigit) {
   verifyFormat("j = 0xaa1'fP12'3F128;", J, Style);
 }
 
-TEST_F(NumericLiteralCaseTest, FloatExponentSeparator) {
+TEST_F(NumericLiteralCaseTest, ExponentLetter) {
   FormatStyle Style = getLLVMStyle();
 
   const StringRef A{"a = .0'01e-19f;"};
@@ -122,8 +120,7 @@ TEST_F(NumericLiteralCaseTest, FloatExponentSeparator) {
   verifyFormat(F, Style);
   verifyFormat(G, Style);
 
-  Style.NumericLiteralCase.UpperCaseFloatExponentSeparator =
-      FormatStyle::NLCS_Never;
+  Style.NumericLiteralCase.ExponentLetter = FormatStyle::NLCS_Lower;
   verifyFormat(A, Style);
   verifyFormat("b = .00'1e2F;", B, Style);
   verifyFormat(C, Style);
@@ -132,8 +129,7 @@ TEST_F(NumericLiteralCaseTest, FloatExponentSeparator) {
   verifyFormat("f = 0x.deEfp23;", F, Style);
   verifyFormat(G, Style);
 
-  Style.NumericLiteralCase.UpperCaseFloatExponentSeparator =
-      FormatStyle::NLCS_Always;
+  Style.NumericLiteralCase.ExponentLetter = FormatStyle::NLCS_Upper;
   verifyFormat("a = .0'01E-19f;", A, Style);
   verifyFormat(B, Style);
   verifyFormat("c = 10'2.E99;", C, Style);
@@ -143,7 +139,7 @@ TEST_F(NumericLiteralCaseTest, FloatExponentSeparator) {
   verifyFormat("g = 0xe0E1.P-1;", G, Style);
 }
 
-TEST_F(NumericLiteralCaseTest, IntegerLiteralSuffix) {
+TEST_F(NumericLiteralCaseTest, IntegerSuffix) {
   FormatStyle Style = getLLVMStyle();
 
   const StringRef A{"a = 102u;"};
@@ -164,7 +160,7 @@ TEST_F(NumericLiteralCaseTest, IntegerLiteralSuffix) {
   verifyFormat(G, Style);
   verifyFormat(H, Style);
 
-  Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Never;
+  Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Lower;
   verifyFormat(A, Style);
   verifyFormat("b = 0177u;", B, Style);
   verifyFormat("c = 0b101'111llu;", C, Style);
@@ -174,7 +170,7 @@ TEST_F(NumericLiteralCaseTest, IntegerLiteralSuffix) {
   verifyFormat("g = 0ull;", G, Style);
   verifyFormat("h = 10'233'213'0101ull;", H, Style);
 
-  Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Always;
+  Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Upper;
   verifyFormat("a = 102U;", A, Style);
   verifyFormat(B, Style);
   verifyFormat("c = 0b101'111LLU;", C, Style);
@@ -185,7 +181,7 @@ TEST_F(NumericLiteralCaseTest, IntegerLiteralSuffix) {
   verifyFormat("h = 10'233'213'0101ULL;", H, Style);
 }
 
-TEST_F(NumericLiteralCaseTest, FloatingPointLiteralSuffix) {
+TEST_F(NumericLiteralCaseTest, FloatingPointSuffix) {
   FormatStyle Style = getLLVMStyle();
   // Floating point literals without suffixes.
   std::vector<StringRef> FloatingPointStatements = {
@@ -212,15 +208,15 @@ TEST_F(NumericLiteralCaseTest, FloatingPointLiteralSuffix) {
       std::string UpperLine =
           std::string{Statement} + std::string{Suffix.Upper} + ";";
 
-      Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Leave;
+      Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Leave;
       verifyFormat(LowerLine, Style);
       verifyFormat(UpperLine, Style);
 
-      Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Never;
+      Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Lower;
       verifyFormat(LowerLine, Style);
       verifyFormat(LowerLine, UpperLine, Style);
 
-      Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Always;
+      Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Upper;
       verifyFormat(UpperLine, LowerLine, Style);
       verifyFormat(UpperLine, Style);
     }
@@ -229,11 +225,10 @@ TEST_F(NumericLiteralCaseTest, FloatingPointLiteralSuffix) {
 
 TEST_F(NumericLiteralCaseTest, CppStandardAndUserDefinedLiteralsAreUntouched) {
   FormatStyle Style = getLLVMStyle();
-  Style.NumericLiteralCase.UpperCasePrefix = FormatStyle::NLCS_Always;
-  Style.NumericLiteralCase.UpperCaseHexDigit = FormatStyle::NLCS_Always;
-  Style.NumericLiteralCase.UpperCaseFloatExponentSeparator =
-      FormatStyle::NLCS_Always;
-  Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Always;
+  Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Upper;
+  Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Upper;
+  Style.NumericLiteralCase.ExponentLetter = FormatStyle::NLCS_Upper;
+  Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Upper;
 
   // C++ user-defined suffixes begin with '_' or are reserved for the standard
   // library.
@@ -260,17 +255,16 @@ TEST_F(NumericLiteralCaseTest, CppStandardAndUserDefinedLiteralsAreUntouched) {
                              "u = 0XBEAD1_spacebar;\n"};
 
   verifyFormat(UDLiterals, Style);
-  Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Never;
+  Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Lower;
   verifyFormat(UDLiterals, Style);
 }
 
 TEST_F(NumericLiteralCaseTest, FixRanges) {
   FormatStyle Style = getLLVMStyle();
-  Style.NumericLiteralCase.UpperCasePrefix = FormatStyle::NLCS_Never;
-  Style.NumericLiteralCase.UpperCaseHexDigit = FormatStyle::NLCS_Never;
-  Style.NumericLiteralCase.UpperCaseFloatExponentSeparator =
-      FormatStyle::NLCS_Never;
-  Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Never;
+  Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Lower;
+  Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Lower;
+  Style.NumericLiteralCase.ExponentLetter = FormatStyle::NLCS_Lower;
+  Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Lower;
 
   const StringRef CodeBlock{"a = 0xFea3duLL;\n"
                             "b = 0X.aEbp-12f;\n"
@@ -313,11 +307,10 @@ TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
                             "h = 0B1_0;\n"};
   auto TestUnderscore = [&](auto Language) {
     Style.Language = Language;
-    Style.NumericLiteralCase.UpperCasePrefix = FormatStyle::NLCS_Never;
-    Style.NumericLiteralCase.UpperCaseHexDigit = FormatStyle::NLCS_Always;
-    Style.NumericLiteralCase.UpperCaseFloatExponentSeparator =
-        FormatStyle::NLCS_Never;
-    Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Always;
+    Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Lower;
+    Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Upper;
+    Style.NumericLiteralCase.ExponentLetter = FormatStyle::NLCS_Lower;
+    Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Upper;
     verifyFormat("a = 0xFEA_3DL;\n"
                  "b = 0123_345;\n"
                  "c = 0b11____00LU;\n"
@@ -328,11 +321,10 @@ TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
                  "h = 0b1_0;\n",
                  CodeBlock, Style);
 
-    Style.NumericLiteralCase.UpperCasePrefix = FormatStyle::NLCS_Always;
-    Style.NumericLiteralCase.UpperCaseHexDigit = FormatStyle::NLCS_Never;
-    Style.NumericLiteralCase.UpperCaseFloatExponentSeparator =
-        FormatStyle::NLCS_Always;
-    Style.NumericLiteralCase.UpperCaseSuffix = FormatStyle::NLCS_Never;
+    Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Upper;
+    Style.NumericLiteralCase.HexDigit = FormatStyle::NLCS_Lower;
+    Style.NumericLiteralCase.ExponentLetter = FormatStyle::NLCS_Upper;
+    Style.NumericLiteralCase.Suffix = FormatStyle::NLCS_Lower;
 
     verifyFormat("a = 0Xfea_3dl;\n"
                  "b = 0123_345;\n"
@@ -350,9 +342,9 @@ TEST_F(NumericLiteralCaseTest, UnderScoreSeparatorLanguages) {
   TestUnderscore(FormatStyle::LK_JavaScript);
 
   Style.Language = FormatStyle::LK_JavaScript;
-  Style.NumericLiteralCase.UpperCasePrefix = FormatStyle::NLCS_Always;
+  Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Upper;
   verifyFormat("o = 0O0_10_010;", "o = 0o0_10_010;", Style);
-  Style.NumericLiteralCase.UpperCasePrefix = FormatStyle::NLCS_Never;
+  Style.NumericLiteralCase.Prefix = FormatStyle::NLCS_Lower;
   verifyFormat("o = 0o0_10_010;", "o = 0O0_10_010;", Style);
 }
 

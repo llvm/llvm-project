@@ -477,19 +477,18 @@ template <>
 struct ScalarEnumerationTraits<FormatStyle::NumericLiteralComponentStyle> {
   static void enumeration(IO &IO,
                           FormatStyle::NumericLiteralComponentStyle &Value) {
-    IO.enumCase(Value, "Leave",  FormatStyle::NLCS_Leave);
-    IO.enumCase(Value, "Always", FormatStyle::NLCS_Always);
-    IO.enumCase(Value, "Never",  FormatStyle::NLCS_Never);
+    IO.enumCase(Value, "Leave", FormatStyle::NLCS_Leave);
+    IO.enumCase(Value, "Upper", FormatStyle::NLCS_Upper);
+    IO.enumCase(Value, "Lower", FormatStyle::NLCS_Lower);
   }
 };
 
 template <> struct MappingTraits<FormatStyle::NumericLiteralCaseStyle> {
   static void mapping(IO &IO, FormatStyle::NumericLiteralCaseStyle &Base) {
-    IO.mapOptional("UpperCaseFloatExponentSeparatorCase",
-                   Base.UpperCaseFloatExponentSeparator);
-    IO.mapOptional("UpperCaseHexDigit", Base.UpperCaseHexDigit);
-    IO.mapOptional("UpperCasePrefix", Base.UpperCasePrefix);
-    IO.mapOptional("UpperCaseSuffix", Base.UpperCaseSuffix);
+    IO.mapOptional("ExponentLetter", Base.ExponentLetter);
+    IO.mapOptional("HexDigit", Base.HexDigit);
+    IO.mapOptional("Prefix", Base.Prefix);
+    IO.mapOptional("Suffix", Base.Suffix);
   }
 };
 
@@ -1657,11 +1656,10 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
   LLVMStyle.MaxEmptyLinesToKeep = 1;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
-  LLVMStyle.NumericLiteralCase = {
-      /*UpperCaseFloatExponentSeparator=*/FormatStyle::NLCS_Leave,
-      /*UpperCaseHexDigit=*/FormatStyle::NLCS_Leave,
-      /*UpperCasePrefix=*/FormatStyle::NLCS_Leave,
-      /*UpperCaseSuffix=*/FormatStyle::NLCS_Leave};
+  LLVMStyle.NumericLiteralCase = {/*ExponentLetter=*/FormatStyle::NLCS_Leave,
+                                  /*HexDigit=*/FormatStyle::NLCS_Leave,
+                                  /*Prefix=*/FormatStyle::NLCS_Leave,
+                                  /*Suffix=*/FormatStyle::NLCS_Leave};
   LLVMStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCBreakBeforeNestedBlockParam = true;
