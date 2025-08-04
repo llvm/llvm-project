@@ -938,3 +938,29 @@ template<typename T> bool OperatorWithNoDirectCallee(T t) {
   ExpensiveToCopyType a2 = a1;
   return a1 == t;
 }
+
+bool CopiedFromConstRefParmVar(const Struct &crs, const Struct cs, Struct &rs, Struct s) {
+  const auto m1 = crs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the field of the variable 'crs' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = crs.Member;
+  const auto m2 = cs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm2' of the field of the variable 'cs' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m2 = cs.Member;
+  const auto m3 = rs.Member;
+  const auto m4 = s.Member;
+  return m1 == m2 || m3 == m4;
+}
+
+const Struct GlobalS;
+bool CopiedFromConstLocalVar() {
+  const Struct crs;
+  Struct s;
+  const auto m1 = crs.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the field of the variable 'crs' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = crs.Member;
+  const auto m2 = s.Member;
+  const auto m3 = GlobalS.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm3' of the field of the variable 'GlobalS' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m3 = GlobalS.Member;
+  return m1 == m2 || m2 == m3;
+}
