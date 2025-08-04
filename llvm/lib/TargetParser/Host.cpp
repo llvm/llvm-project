@@ -710,7 +710,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
                                                  const unsigned *Features,
                                                  unsigned *Type,
                                                  unsigned *Subtype) {
-  StringRef CPU;
+  const char *CPU = 0;
 
   switch (Family) {
   case 3:
@@ -752,7 +752,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
     case 0x1e: // Intel(R) Core(TM) i7 CPU         870  @ 2.93GHz.
                // As found in a Summer 2010 model iMac.
     case 0x1f:
-    case 0x2e:              // Nehalem EX
+    case 0x2e: // Nehalem EX
       CPU = "nehalem";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_NEHALEM;
@@ -773,7 +773,7 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::INTEL_COREI7_SANDYBRIDGE;
       break;
     case 0x3a:
-    case 0x3e:              // Ivy Bridge EP
+    case 0x3e: // Ivy Bridge EP
       CPU = "ivybridge";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_IVYBRIDGE;
@@ -800,12 +800,12 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       break;
 
     // Skylake:
-    case 0x4e:              // Skylake mobile
-    case 0x5e:              // Skylake desktop
-    case 0x8e:              // Kaby Lake mobile
-    case 0x9e:              // Kaby Lake desktop
-    case 0xa5:              // Comet Lake-H/S
-    case 0xa6:              // Comet Lake-U
+    case 0x4e: // Skylake mobile
+    case 0x5e: // Skylake desktop
+    case 0x8e: // Kaby Lake mobile
+    case 0x9e: // Kaby Lake desktop
+    case 0xa5: // Comet Lake-H/S
+    case 0xa6: // Comet Lake-U
       CPU = "skylake";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_SKYLAKE;
@@ -918,20 +918,6 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::INTEL_COREI7_PANTHERLAKE;
       break;
 
-    // Graniterapids:
-    case 0xad:
-      CPU = "graniterapids";
-      *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_GRANITERAPIDS;
-      break;
-
-    // Granite Rapids D:
-    case 0xae:
-      CPU = "graniterapids-d";
-      *Type = X86::INTEL_COREI7;
-      *Subtype = X86::INTEL_COREI7_GRANITERAPIDS_D;
-      break;
-
     // Icelake Xeon:
     case 0x6a:
     case 0x6c:
@@ -952,6 +938,20 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       CPU = "sapphirerapids";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_SAPPHIRERAPIDS;
+      break;
+
+    // Granite rapids:
+    case 0xad:
+      CPU = "graniterapids";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_GRANITERAPIDS;
+      break;
+
+    // Granite Rapids D:
+    case 0xae:
+      CPU = "graniterapids-d";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_GRANITERAPIDS_D;
       break;
 
     case 0x1c: // Most 45 nm Intel Atom processors
@@ -1014,52 +1014,82 @@ static StringRef getIntelProcessorTypeAndSubtype(unsigned Family,
       CPU = "knl";
       *Type = X86::INTEL_KNL;
       break;
+
     case 0x85:
       CPU = "knm";
       *Type = X86::INTEL_KNM;
       break;
 
     default: // Unknown family 6 CPU, try to guess.
-      // Don't both with Type/Subtype here, they aren't used by the caller.
-      // They're used above to keep the code in sync with compiler-rt.
       // TODO detect tigerlake host from model
       if (testFeature(X86::FEATURE_AVX512VP2INTERSECT)) {
         CPU = "tigerlake";
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_TIGERLAKE;
       } else if (testFeature(X86::FEATURE_AVX512VBMI2)) {
         CPU = "icelake-client";
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_ICELAKE_CLIENT;
       } else if (testFeature(X86::FEATURE_AVX512VBMI)) {
         CPU = "cannonlake";
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_CANNONLAKE;
       } else if (testFeature(X86::FEATURE_AVX512BF16)) {
         CPU = "cooperlake";
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_COOPERLAKE;
       } else if (testFeature(X86::FEATURE_AVX512VNNI)) {
         CPU = "cascadelake";
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_CASCADELAKE;
       } else if (testFeature(X86::FEATURE_AVX512VL)) {
         CPU = "skylake-avx512";
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_SKYLAKE_AVX512;
       } else if (testFeature(X86::FEATURE_CLFLUSHOPT)) {
-        if (testFeature(X86::FEATURE_SHA))
+        if (testFeature(X86::FEATURE_SHA)) {
           CPU = "goldmont";
-        else
+          *Type = X86::INTEL_GOLDMONT;
+        } else {
           CPU = "skylake";
+          *Type = X86::INTEL_COREI7;
+          *Subtype = X86::INTEL_COREI7_SKYLAKE;
+        }
       } else if (testFeature(X86::FEATURE_ADX)) {
         CPU = "broadwell";
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_BROADWELL;
       } else if (testFeature(X86::FEATURE_AVX2)) {
         CPU = "haswell";
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_HASWELL;
       } else if (testFeature(X86::FEATURE_AVX)) {
         CPU = "sandybridge";
+        *Type = X86::INTEL_COREI7;
+        *Subtype = X86::INTEL_COREI7_SANDYBRIDGE;
       } else if (testFeature(X86::FEATURE_SSE4_2)) {
-        if (testFeature(X86::FEATURE_MOVBE))
+        if (testFeature(X86::FEATURE_MOVBE)) {
           CPU = "silvermont";
-        else
+          *Type = X86::INTEL_SILVERMONT;
+        } else {
           CPU = "nehalem";
+          *Type = X86::INTEL_COREI7;
+          *Subtype = X86::INTEL_COREI7_NEHALEM;
+        }
       } else if (testFeature(X86::FEATURE_SSE4_1)) {
         CPU = "penryn";
+        *Type = X86::INTEL_CORE2;
       } else if (testFeature(X86::FEATURE_SSSE3)) {
-        if (testFeature(X86::FEATURE_MOVBE))
+        if (testFeature(X86::FEATURE_MOVBE)) {
           CPU = "bonnell";
-        else
+          *Type = X86::INTEL_BONNELL;
+        } else {
           CPU = "core2";
+          *Type = X86::INTEL_CORE2;
+        }
       } else if (testFeature(X86::FEATURE_64BIT)) {
         CPU = "core2";
+        *Type = X86::INTEL_CORE2;
       } else if (testFeature(X86::FEATURE_SSE3)) {
         CPU = "yonah";
       } else if (testFeature(X86::FEATURE_SSE2)) {
