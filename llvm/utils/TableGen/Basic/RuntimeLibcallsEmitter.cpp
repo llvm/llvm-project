@@ -588,7 +588,8 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     PredicateSorter.insert(
         PredicateWithCC()); // No predicate or CC override first.
 
-    constexpr unsigned BitsPerStorageElt = sizeof(uintptr_t) * CHAR_BIT;
+    constexpr unsigned BitsPerStorageElt =
+        LLVM_NATIVE_ARCH_SIZEOF_UINTPTR_T * CHAR_BIT;
 
     DenseMap<PredicateWithCC, LibcallsWithCC> Pred2Funcs;
 
@@ -604,7 +605,7 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
       }
 
       size_t BitIdx = LibCallImpl->getEnumVal();
-      uintptr_t BitmaskVal = uintptr_t(1) << (BitIdx % BitsPerStorageElt);
+      uint64_t BitmaskVal = uint64_t(1) << (BitIdx % BitsPerStorageElt);
       size_t BitsetIdx = BitIdx / BitsPerStorageElt;
 
       auto It = Func2Preds.find(LibCallImpl);

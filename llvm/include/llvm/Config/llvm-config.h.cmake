@@ -33,6 +33,9 @@
 /* LLVM architecture name for the native architecture, if available */
 #cmakedefine LLVM_NATIVE_ARCH ${LLVM_NATIVE_ARCH}
 
+/* sizeof(uintptr_t) name for the native architecture, if available */
+#cmakedefine LLVM_NATIVE_ARCH_SIZEOF_UINTPTR_T ${LLVM_NATIVE_ARCH_SIZEOF_UINTPTR_T}
+
 /* LLVM name for the native AsmParser init function, if available */
 #cmakedefine LLVM_NATIVE_ASMPARSER LLVMInitialize${LLVM_NATIVE_ARCH}AsmParser
 
