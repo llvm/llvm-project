@@ -329,7 +329,7 @@ void UnnecessaryCopyInitialization::check(
   if (OldVar == nullptr) {
     // `auto NewVar = functionCall();`
     handleCopyFromMethodReturn(Context, ObjectArg);
-  } else if (FD == nullptr){
+  } else if (FD == nullptr) {
     // `auto NewVar = OldVar;`
     handleCopyFromLocalVar(Context, *OldVar);
   } else {
