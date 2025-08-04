@@ -1004,9 +1004,9 @@ define i1 @not_cond(i1 %c) {
 ; CHECK-NEXT:    [[C_NOT:%.*]] = xor i1 [[C:%.*]], true
 ; CHECK-NEXT:    br i1 [[C_NOT]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %c.not = xor i1 %c, true
   br i1 %c.not, label %if, label %else
@@ -1026,7 +1026,7 @@ define i32 @not_cond_icmp(i32 %x) {
 ; CHECK:       if:
 ; CHECK-NEXT:    ret i32 [[X]]
 ; CHECK:       else:
-; CHECK-NEXT:    ret i32 [[X]]
+; CHECK-NEXT:    ret i32 42
 ;
   %cmp = icmp eq i32 %x, 42
   %cmp.not = xor i1 %cmp, true
@@ -1045,7 +1045,7 @@ define i1 @not_cond_logic1(i1 %c, i1 %d) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_NOT]], [[D:%.*]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -1068,7 +1068,7 @@ define i1 @not_cond_logic2(i1 %c, i1 %d) {
 ; CHECK:       if:
 ; CHECK-NEXT:    ret i1 [[C]]
 ; CHECK:       else:
-; CHECK-NEXT:    ret i1 [[C]]
+; CHECK-NEXT:    ret i1 true
 ;
   %c.not = xor i1 %c, true
   %or = or i1 %c.not, %d
