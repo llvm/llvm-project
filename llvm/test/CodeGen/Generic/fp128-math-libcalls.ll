@@ -95,16 +95,6 @@ start:
   ret fp128 %0
 }
 
-define fp128 @test_exp10(fp128 %a) {
-; CHECK-ALL-LABEL:  test_exp10:
-; CHECK-F128:       exp10f128
-; CHECK-USELD:      exp10l
-; CHECK-S390X:      exp10l
-start:
-  %0 = tail call fp128 @llvm.exp10.f128(fp128 %a)
-  ret fp128 %0
-}
-
 define fp128 @test_exp2(fp128 %a) {
 ; CHECK-ALL-LABEL:  test_exp2:
 ; CHECK-F128:       exp2f128
