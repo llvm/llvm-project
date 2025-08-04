@@ -379,7 +379,7 @@ public:
     std::shared_ptr<LibraryPathCache> cache;
     std::shared_ptr<PathResolver> resolver;
 
-    bool includeSys = false;
+    size_t scanBatchSize = 1;
 
     LibraryScanner::shouldScanFn shouldScan = [](StringRef) { return true; };
 
@@ -389,8 +389,6 @@ public:
     create(std::vector<std::string> basePaths,
            std::shared_ptr<LibraryPathCache> existingCache = nullptr,
            std::shared_ptr<PathResolver> existingResolver = nullptr,
-           //  std::shared_ptr<DylibPathResolver> existingDylibResolver =
-           //  nullptr,
            LibraryScanner::shouldScanFn customShouldScan = nullptr) {
       Setup setup;
       setup.basePaths = std::move(basePaths);
@@ -450,7 +448,7 @@ private:
   BloomFilterBuilder FB;
   LibraryManager m_libMgr;
   LibraryScanner::shouldScanFn m_shouldScan;
-  bool includeSys;
+  size_t scanBatchSize;
 };
 
 using SymbolEnumerator = LibraryResolver::SymbolEnumerator;

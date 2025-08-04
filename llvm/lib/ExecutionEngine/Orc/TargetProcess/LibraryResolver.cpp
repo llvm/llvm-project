@@ -27,7 +27,7 @@
 #include <mutex>
 #include <thread>
 
-#define DEBUG_TYPE "orc"
+#define DEBUG_TYPE "orc-resolver"
 
 namespace llvm::orc {
 
@@ -39,10 +39,10 @@ LibraryResolver::LibraryResolver(const LibraryResolver::Setup &setup)
       FB(setup.filterBuilder), m_libMgr(),
       m_shouldScan(setup.shouldScan ? setup.shouldScan
                                     : [](StringRef) { return true; }),
-      includeSys(setup.includeSys) {
+      scanBatchSize(setup.scanBatchSize) {
 
   if (m_scanH.getAllUnits().empty()) {
-    errs() << "Warning: No base paths provided for scanning.\n";
+    LLVM_DEBUG(dbgs() << "Warning: No base paths provided for scanning.\n");
   }
 }
 
@@ -95,14 +95,6 @@ static bool shouldIgnoreSymbol(const object::SymbolRef &Sym,
 
   uint32_t Flags = *FlagsOrErr;
 
-  if (Flags & object::BasicSymbolRef::SF_FormatSpecific ||
-      Flags & object::BasicSymbolRef::SF_Hidden)
-    return true;
-
-  if (!(Flags & object::BasicSymbolRef::SF_Global) &&
-      !(Flags & object::BasicSymbolRef::SF_Exported))
-    return true;
-
   using Filter = SymbolEnumerator::Filter;
   if ((IgnoreFlags & Filter::IgnoreUndefined) &&
       (Flags & object::SymbolRef::SF_Undefined))
@@ -122,7 +114,9 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
   if (Path.empty())
     return false;
 
-  auto ObjOrErr = object::ObjectFile::createObjectFile(Path);
+  ObjectFileLoader ObjLoader(Path);
+
+  auto ObjOrErr = ObjLoader.getObjectFile();
   if (!ObjOrErr) {
     handleAllErrors(ObjOrErr.takeError(), [&](const ErrorInfoBase &EIB) {
       errs() << "Error loading object: " << EIB.message() << "\n";
@@ -130,7 +124,7 @@ bool SymbolEnumerator::enumerateSymbols(StringRef Path, OnEachSymbolFn OnEach,
     return false;
   }
 
-  object::ObjectFile *Obj = ObjOrErr.get().getBinary();
+  object::ObjectFile *Obj = &ObjOrErr.get();
 
   auto processSymbolRange =
       [&](object::ObjectFile::symbol_iterator_range Range) -> EnumerateResult {
@@ -248,9 +242,11 @@ void LibraryResolver::resolveSymbolsInLibrary(LibraryInfo &lib,
                       << "\n";);
     lib.ensureFilterBuilt(FB,
                           {discoveredSymbols.begin(), discoveredSymbols.end()});
-    dbgs() << "discoveredSymbols : " << discoveredSymbols.size() << "\n";
-    for (const auto &sym : discoveredSymbols)
-      dbgs() << "discoveredSymbols : " << sym << "\n";
+    LLVM_DEBUG({
+      dbgs() << "discoveredSymbols : " << discoveredSymbols.size() << "\n";
+      for (const auto &sym : discoveredSymbols)
+        dbgs() << "discoveredSymbols : " << sym << "\n";
+    });
   }
 
   const auto &unresolved = unresolvedSymbols.getUnresolvedSymbols();
@@ -332,8 +328,9 @@ bool LibraryResolver::scanLibrariesIfNeeded(PathType PK) {
                     << " libraries\n";);
   if (!m_scanH.leftToScan(PK))
     return false;
+
   LibraryScanner Scanner(m_scanH, m_libMgr, m_shouldScan);
-  Scanner.scanNext(PK);
+  Scanner.scanNext(PK, scanBatchSize);
   return true;
 }
 

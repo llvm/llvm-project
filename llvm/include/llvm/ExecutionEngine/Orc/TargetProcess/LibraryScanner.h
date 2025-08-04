@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
 
 #include "llvm/Support/Allocator.h"
@@ -354,6 +355,40 @@ private:
   StringMap<std::shared_ptr<LibraryUnit>> m_units; // key: canonical path
   std::deque<std::string> m_unscannedUsr;
   std::deque<std::string> m_unscannedSys;
+};
+
+class ObjectFileLoader {
+public:
+  explicit ObjectFileLoader(StringRef Path) {
+    auto ObjOrErr = loadObjectFileWithOwnership(Path);
+    if (ObjOrErr)
+      Obj = std::move(*ObjOrErr);
+    else {
+      consumeError(std::move(Err));
+      Err = ObjOrErr.takeError();
+    }
+  }
+
+  ObjectFileLoader(const ObjectFileLoader &) = delete;
+  ObjectFileLoader &operator=(const ObjectFileLoader &) = delete;
+
+  ObjectFileLoader(ObjectFileLoader &&) = default;
+  ObjectFileLoader &operator=(ObjectFileLoader &&) = default;
+
+  Expected<object::ObjectFile &> getObjectFile() {
+    if (Err)
+      return std::move(Err);
+    return *Obj.getBinary();
+  }
+
+  static bool isArchitectureCompatible(const object::ObjectFile &Obj);
+
+private:
+  object::OwningBinary<object::ObjectFile> Obj;
+  Error Err = Error::success();
+
+  static Expected<object::OwningBinary<object::ObjectFile>>
+  loadObjectFileWithOwnership(StringRef FilePath);
 };
 
 class LibraryScanner {
