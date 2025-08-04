@@ -410,21 +410,37 @@ public:
   mlir::Value createSetBitfield(mlir::Location loc, mlir::Type resultType,
                                 Address dstAddr, mlir::Type storageType,
                                 mlir::Value src, const CIRGenBitFieldInfo &info,
-                                bool isLvalueVolatile) {
+                                bool isLvalueVolatile, bool useVolatile) {
+    unsigned offset = useVolatile ? info.volatileOffset : info.offset;
+
+    // If using AAPCS and the field is volatile, load with the size of the
+    // declared field
+    storageType =
+        useVolatile ? cir::IntType::get(storageType.getContext(),
+                                        info.volatileStorageSize, info.isSigned)
+                    : storageType;
     return create<cir::SetBitfieldOp>(
         loc, resultType, dstAddr.getPointer(), storageType, src, info.name,
-        info.size, info.offset, info.isSigned, isLvalueVolatile,
+        info.size, offset, info.isSigned, isLvalueVolatile,
         dstAddr.getAlignment().getAsAlign().value());
   }
 
   mlir::Value createGetBitfield(mlir::Location loc, mlir::Type resultType,
                                 Address addr, mlir::Type storageType,
                                 const CIRGenBitFieldInfo &info,
-                                bool isLvalueVolatile) {
-    return create<cir::GetBitfieldOp>(
-        loc, resultType, addr.getPointer(), storageType, info.name, info.size,
-        info.offset, info.isSigned, isLvalueVolatile,
-        addr.getAlignment().getAsAlign().value());
+                                bool isLvalueVolatile, bool useVolatile) {
+    unsigned offset = useVolatile ? info.volatileOffset : info.offset;
+
+    // If using AAPCS and the field is volatile, load with the size of the
+    // declared field
+    storageType =
+        useVolatile ? cir::IntType::get(storageType.getContext(),
+                                        info.volatileStorageSize, info.isSigned)
+                    : storageType;
+    return create<cir::GetBitfieldOp>(loc, resultType, addr.getPointer(),
+                                      storageType, info.name, info.size, offset,
+                                      info.isSigned, isLvalueVolatile,
+                                      addr.getAlignment().getAsAlign().value());
   }
 };
 
