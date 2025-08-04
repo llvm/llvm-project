@@ -102,13 +102,12 @@ static ze_device_handle_t getDevice(const uint32_t driverIdx = 0,
 }
 
 // Returns the default L0 context of the defult driver.
-static ze_context_handle_t getDefaultContext() {
+static ze_context_handle_t getContext(ze_driver_handle_t driver) {
   thread_local static ze_context_handle_t context;
   thread_local static bool isContextInitialised{false};
   if (isContextInitialised)
     return context;
   ze_context_desc_t ctxtDesc = {ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
-  auto driver = getDriver();
   L0_SAFE_CALL(zeContextCreate(driver, &ctxtDesc, &context));
   isContextInitialised = true;
   return context;
@@ -137,7 +136,7 @@ using UniqueZeContext =
 using UniqueZeCommandList =
     std::unique_ptr<std::remove_pointer<ze_command_list_handle_t>::type,
                     ZeCommandListDeleter>;
-struct L0RtContext {
+struct L0RTContextWrapper {
   ze_driver_handle_t driver{nullptr};
   ze_device_handle_t device{nullptr};
   UniqueZeContext context;
@@ -149,12 +148,12 @@ struct L0RtContext {
   UniqueZeCommandList immCmdListCopy;
   uint32_t copyEngineMaxMemoryFillPatternSize{-1u};
 
-  L0RtContext() = default;
-  L0RtContext(const uint32_t driverIdx = 0, const int32_t devIdx = 0)
+  L0RTContextWrapper() = default;
+  L0RTContextWrapper(const uint32_t driverIdx = 0, const int32_t devIdx = 0)
       : driver(getDriver(driverIdx)), device(getDevice(devIdx)) {
     // Create context
-    ze_context_handle_t defaultCtx = getDefaultContext();
-    context.reset(defaultCtx);
+    ze_context_handle_t ctx = getContext(driver);
+    context.reset(ctx);
 
     // Determine ordinals
     uint32_t computeEngineOrdinal = -1u, copyEngineOrdinal = -1u;
@@ -210,12 +209,12 @@ struct L0RtContext {
         context.get(), device, &cmdQueueDesc, &rawCmdListCompute));
     immCmdListCompute.reset(rawCmdListCompute);
   }
-  L0RtContext(const L0RtContext &) = delete;
-  L0RtContext &operator=(const L0RtContext &) = delete;
+  L0RTContextWrapper(const L0RTContextWrapper &) = delete;
+  L0RTContextWrapper &operator=(const L0RTContextWrapper &) = delete;
   // Allow move
-  L0RtContext(L0RtContext &&) noexcept = default;
-  L0RtContext &operator=(L0RtContext &&) noexcept = default;
-  ~L0RtContext() = default;
+  L0RTContextWrapper(L0RTContextWrapper &&) noexcept = default;
+  L0RTContextWrapper &operator=(L0RTContextWrapper &&) noexcept = default;
+  ~L0RTContextWrapper() = default;
 };
 
 struct ZeEventDeleter {
@@ -249,11 +248,15 @@ struct DynamicEventPool {
   std::vector<UniqueZeEvent> availableEvents;
   std::unordered_map<ze_event_handle_t, UniqueZeEvent> takenEvents;
 
+  // Limit the number of events to avoid running out of memory.
+  // The limit is set to 32K events, which should be sufficient for most use
+  // cases.
+  size_t maxEventsCount{32768}; // 32K events
   size_t currentEventsLimit{0};
   size_t currentEventsCnt{0};
-  L0RtContext *rtCtx;
+  L0RTContextWrapper *rtCtx;
 
-  DynamicEventPool(L0RtContext *rtCtx) : rtCtx(rtCtx) {
+  DynamicEventPool(L0RTContextWrapper *rtCtx) : rtCtx(rtCtx) {
     createNewPool(numEventsPerPool);
   }
 
@@ -291,6 +294,9 @@ struct DynamicEventPool {
       rawEvent = uniqueEvent.get();
       takenEvents[rawEvent] = std::move(uniqueEvent);
     } else {
+      if (currentEventsCnt >= maxEventsCount) {
+        throw std::runtime_error("DynamicEventPool: reached max events limit");
+      }
       if (currentEventsCnt == currentEventsLimit)
         createNewPool(numEventsPerPool);
 
@@ -322,8 +328,8 @@ struct DynamicEventPool {
   }
 };
 
-L0RtContext &getRtContext() {
-  thread_local static L0RtContext rtContext(0);
+L0RTContextWrapper &getRtContext() {
+  thread_local static L0RTContextWrapper rtContext(0);
   return rtContext;
 }
 
@@ -488,7 +494,7 @@ extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
 template <typename PATTERN_TYPE>
 void mgpuMemset(void *dst, PATTERN_TYPE value, size_t count,
                 StreamWrapper *stream) {
-  L0RtContext &rtContext = getRtContext();
+  L0RTContextWrapper &rtContext = getRtContext();
   auto listType =
       rtContext.copyEngineMaxMemoryFillPatternSize >= sizeof(PATTERN_TYPE)
           ? rtContext.immCmdListCopy.get()
@@ -561,7 +567,7 @@ extern "C" void mgpuSetDefaultDevice(int32_t devIdx) {
   catchAll([&]() {
     // For now, a user must ensure that streams and events complete
     // and are destroyed before switching a device.
-    getRtContext() = L0RtContext(devIdx);
+    getRtContext() = L0RTContextWrapper(devIdx);
     getDynamicEventPool() = DynamicEventPool(&getRtContext());
   });
 }
