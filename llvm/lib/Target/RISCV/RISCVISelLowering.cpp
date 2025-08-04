@@ -21478,11 +21478,10 @@ bool RISCVTargetLowering::canCreateUndefOrPoisonForTargetNode(
   // TODO: Add more target nodes.
   switch (Op.getOpcode()) {
   case RISCVISD::SELECT_CC:
-    // Integer select_cc cannot create poison.
-    // TODO: What are the FP poison semantics?
-    // TODO: This instruction blocks poison from the unselected operand, can
-    // we do anything with that?
-    return !Op.getValueType().isInteger();
+    // Integer comparisons cannot create poison.
+    assert(Op.getOperand(0).getValueType().isInteger() &&
+           "RISCVISD::SELECT_CC only compares integers");
+    return false;
   }
   return TargetLowering::canCreateUndefOrPoisonForTargetNode(
       Op, DemandedElts, DAG, PoisonOnly, ConsiderFlags, Depth);
