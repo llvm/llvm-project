@@ -383,13 +383,16 @@ class MCOrgFragment : public MCFragment {
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
+  uint64_t Size = 0;
+
 public:
   MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc)
       : MCFragment(FT_Org), Value(Value), Offset(&Offset), Loc(Loc) {}
 
   const MCExpr &getOffset() const { return *Offset; }
-
   uint8_t getValue() const { return Value; }
+  uint64_t getSize() const { return Size; }
+  void setSize(uint64_t Value) { Size = Value; }
 
   SMLoc getLoc() const { return Loc; }
 
