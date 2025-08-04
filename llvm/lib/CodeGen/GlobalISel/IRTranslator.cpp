@@ -1592,9 +1592,19 @@ bool IRTranslator::translateGetElementPtr(const User &U,
   Type *OffsetIRTy = DL->getIndexType(PtrIRTy);
   LLT OffsetTy = getLLTForType(*OffsetIRTy, *DL);
 
-  uint32_t Flags = 0;
+  uint32_t PtrAddFlags = 0;
+  // Each PtrAdd generated to implement the GEP inherits its nuw, nusw, inbounds
+  // flags.
   if (const Instruction *I = dyn_cast<Instruction>(&U))
-    Flags = MachineInstr::copyFlagsFromInstruction(*I);
+    PtrAddFlags = MachineInstr::copyFlagsFromInstruction(*I);
+
+  auto PtrAddFlagsWithConst = [&](int64_t Offset) {
+    // For nusw/inbounds GEP with an offset that is nonnegative when interpreted
+    // as signed, assume there is no unsigned overflow.
+    if (Offset >= 0 && (PtrAddFlags & MachineInstr::MIFlag::NoUSWrap))
+      return PtrAddFlags | MachineInstr::MIFlag::NoUWrap;
+    return PtrAddFlags;
+  };
 
   // Normalize Vector GEP - all scalar operands should be converted to the
   // splat vector.
@@ -1644,7 +1654,9 @@ bool IRTranslator::translateGetElementPtr(const User &U,
 
       if (Offset != 0) {
         auto OffsetMIB = MIRBuilder.buildConstant({OffsetTy}, Offset);
-        BaseReg = MIRBuilder.buildPtrAdd(PtrTy, BaseReg, OffsetMIB.getReg(0))
+        BaseReg = MIRBuilder
+                      .buildPtrAdd(PtrTy, BaseReg, OffsetMIB.getReg(0),
+                                   PtrAddFlagsWithConst(Offset))
                       .getReg(0);
         Offset = 0;
       }
@@ -1668,12 +1680,23 @@ bool IRTranslator::translateGetElementPtr(const User &U,
       if (ElementSize != 1) {
         auto ElementSizeMIB = MIRBuilder.buildConstant(
             getLLTForType(*OffsetIRTy, *DL), ElementSize);
-        GepOffsetReg =
-            MIRBuilder.buildMul(OffsetTy, IdxReg, ElementSizeMIB).getReg(0);
-      } else
-        GepOffsetReg = IdxReg;
 
-      BaseReg = MIRBuilder.buildPtrAdd(PtrTy, BaseReg, GepOffsetReg).getReg(0);
+        // The multiplication is NUW if the GEP is NUW and NSW if the GEP is
+        // NUSW.
+        uint32_t ScaleFlags = PtrAddFlags & MachineInstr::MIFlag::NoUWrap;
+        if (PtrAddFlags & MachineInstr::MIFlag::NoUSWrap)
+          ScaleFlags |= MachineInstr::MIFlag::NoSWrap;
+
+        GepOffsetReg =
+            MIRBuilder.buildMul(OffsetTy, IdxReg, ElementSizeMIB, ScaleFlags)
+                .getReg(0);
+      } else {
+        GepOffsetReg = IdxReg;
+      }
+
+      BaseReg =
+          MIRBuilder.buildPtrAdd(PtrTy, BaseReg, GepOffsetReg, PtrAddFlags)
+              .getReg(0);
     }
   }
 
@@ -1681,11 +1704,8 @@ bool IRTranslator::translateGetElementPtr(const User &U,
     auto OffsetMIB =
         MIRBuilder.buildConstant(OffsetTy, Offset);
 
-    if (Offset >= 0 && cast<GEPOperator>(U).isInBounds())
-      Flags |= MachineInstr::MIFlag::NoUWrap;
-
     MIRBuilder.buildPtrAdd(getOrCreateVReg(U), BaseReg, OffsetMIB.getReg(0),
-                           Flags);
+                           PtrAddFlagsWithConst(Offset));
     return true;
   }
 
