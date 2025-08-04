@@ -34,7 +34,39 @@ def DeviceInfo : Enum {
     TaggedEtor<"DRIVER_VERSION", "char[]", "Driver version">,
     TaggedEtor<"MAX_WORK_GROUP_SIZE", "uint32_t", "Maximum total work group size in work items">,
     TaggedEtor<"MAX_WORK_GROUP_SIZE_PER_DIMENSION", "ol_dimensions_t", "Maximum work group size in each dimension">,
+    TaggedEtor<"VENDOR_ID", "uint32_t", "A unique vendor device identifier assigned by PCI-SIG">,
+    TaggedEtor<"NUM_COMPUTE_UNITS", "uint32_t", "The number of parallel compute units available to the device">,
+    TaggedEtorTemplate<"%TEMPLATE%_FP_CONFIG", "ol_device_fp_capability_flags_t", "%TEMPLATE% precision floating point capability", ["Single","Half","Double"]>,
+    TaggedEtorTemplate<"PREFERRED_VECTOR_WIDTH_%TEMPLATE%", "uint32_t", "Preferred vector width for %TEMPLATE%", ["char","short","int","long","float","double","half"]>,
+    TaggedEtorTemplate<"NATIVE_VECTOR_WIDTH_%TEMPLATE%", "uint32_t", "Native vector width for %TEMPLATE%", ["char","short","int","long","float","double","half"]>,
+    TaggedEtor<"MAX_CLOCK_FREQUENCY", "uint32_t", "The maximum configured clock frequency of this device in MHz">,
+    TaggedEtor<"MEMORY_CLOCK_RATE", "uint32_t", "Memory clock frequency in MHz">,
+    TaggedEtor<"ADDRESS_BITS", "uint32_t", "Number of bits used to represent an address in device memory">,
+    TaggedEtor<"MAX_MEM_ALLOC_SIZE", "uint64_t", "The maximum size of memory object allocation in bytes">,
+    TaggedEtor<"GLOBAL_MEM_SIZE", "uint64_t", "The size of global device memory in bytes">,
   ];
+}
+
+def : Enum {
+  let name = "ol_device_fp_capability_flag_t";
+  let desc = "Device floating-point capability flags";
+  let is_bit_field = 1;
+  let etors =[
+    Etor<"CORRECTLY_ROUNDED_DIVIDE_SQRT", "Support correctly rounded divide and sqrt">,
+    Etor<"ROUND_TO_NEAREST", "Support round to nearest">,
+    Etor<"ROUND_TO_ZERO", "Support round to zero">,
+    Etor<"ROUND_TO_INF", "Support round to infinity">,
+    Etor<"INF_NAN", "Support INF to NAN">,
+    Etor<"DENORM", "Support denorm">,
+    Etor<"FMA", "Support fused multiply-add">,
+    Etor<"SOFT_FLOAT", "Basic floating point operations implemented in software">,
+  ];
+}
+
+def : Typedef {
+  let name = "ol_device_fp_capability_flags_t";
+  let desc = "Device floating-point capability flags";
+  let value = "uint32_t";
 }
 
 def : FptrTypedef {

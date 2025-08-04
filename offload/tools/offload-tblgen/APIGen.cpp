@@ -131,17 +131,28 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
   OS << formatv("/// @brief {0}\n", Enum.getDesc());
   OS << formatv("typedef enum {0} {{\n", Enum.getName());
 
-  uint32_t EtorVal = 0;
+  uint32_t EtorVal = Enum.isBitField();
   for (const auto &EnumVal : Enum.getValues()) {
-    if (Enum.isTyped()) {
-      OS << MakeComment(
-          formatv("[{0}] {1}", EnumVal.getTaggedType(), EnumVal.getDesc())
-              .str());
-    } else {
-      OS << MakeComment(EnumVal.getDesc());
+    for (size_t TemplateIndex{0};
+         TemplateIndex == 0 ||
+         TemplateIndex < EnumVal.getTemplateValues().size();
+         ++TemplateIndex) {
+      std::string Name{EnumVal.getTemplateName(TemplateIndex)};
+      std::string Desc{EnumVal.getTemplateDesc(TemplateIndex)};
+      if (Enum.isTyped()) {
+        OS << MakeComment(
+            formatv("[{0}] {1}", EnumVal.getTaggedType(), Desc).str());
+      } else {
+        OS << MakeComment(Desc);
+      }
+      OS << formatv(TAB_1 "{0}_{1} = {2},\n", Enum.getEnumValNamePrefix(), Name,
+                    EtorVal);
+      if (Enum.isBitField()) {
+        EtorVal <<= 1u;
+      } else {
+        ++EtorVal;
+      }
     }
-    OS << formatv(TAB_1 "{0}_{1} = {2},\n", Enum.getEnumValNamePrefix(),
-                  EnumVal.getName(), EtorVal++);
   }
 
   // Add last_element/force uint32 val
