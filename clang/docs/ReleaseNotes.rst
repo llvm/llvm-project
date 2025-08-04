@@ -45,6 +45,9 @@ C++ Specific Potentially Breaking Changes
   regressions if your build system supports two-phase compilation model but haven't support
   reduced BMI or it is a compiler bug or a bug in users code.
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
