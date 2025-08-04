@@ -22,6 +22,9 @@
 #include <mach/mach_vm.h>
 #include <mach/task_info.h>
 #include <memory>
+#if __has_include(<os/security_config.h>) // macOS 26.1
+#include <os/security_config.h>
+#endif
 #include <pwd.h>
 #include <string>
 #include <sys/stat.h>
@@ -3477,6 +3480,18 @@ static bool GetProcessNameFrom_vAttach(const char *&p,
   return return_val;
 }
 
+static bool supports_memory_tagging() {
+  const char *name = "hw.optional.arm.FEAT_MTE4";
+  uint32_t val;
+  size_t len = sizeof(val);
+  int ret = ::sysctlbyname(name, &val, &len, nullptr, 0);
+  if (ret != 0)
+    return false;
+
+  assert(len == sizeof(val));
+  return val;
+}
+
 rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
   uint32_t max_packet_size = 128 * 1024; // 128 KiB is a reasonable max packet
                                          // size--debugger can always use less
@@ -3506,6 +3521,9 @@ rnb_err_t RNBRemote::HandlePacket_qSupported(const char *p) {
 #if defined(__x86_64__)
   reply << "SupportedWatchpointTypes=x86_64;";
 #endif
+
+  if (supports_memory_tagging())
+    reply << "memory-tagging+;";
 
   return SendPacket(reply.str().c_str());
 }
