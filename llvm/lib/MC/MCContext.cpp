@@ -889,9 +889,9 @@ MCSectionXCOFF *MCContext::getXCOFFSection(
   MCSymbolXCOFF *QualName = nullptr;
   // Debug section don't have storage class attribute.
   if (IsDwarfSec)
-    QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(CachedName));
+    QualName = static_cast<MCSymbolXCOFF *>(getOrCreateSymbol(CachedName));
   else
-    QualName = cast<MCSymbolXCOFF>(getOrCreateSymbol(
+    QualName = static_cast<MCSymbolXCOFF *>(getOrCreateSymbol(
         CachedName + "[" +
         XCOFF::getMappingClassString(CsectProp->MappingClass) + "]"));
 
