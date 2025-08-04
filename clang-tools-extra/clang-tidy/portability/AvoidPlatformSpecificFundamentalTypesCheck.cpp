@@ -220,6 +220,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
 
   const auto *BT = QT->getAs<BuiltinType>();
 
+  assert(BT);
   if (BT->isFloatingPoint()) {
     const std::string Replacement = getFloatReplacement(BT, *Result.Context);
     if (!Replacement.empty()) {
@@ -237,16 +238,16 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
       }
     } else {
       diag(Loc, "avoid using platform-dependent floating point type '%0'; "
-                "consider using a typedef or fixed-width type instead")
+                "consider using a 'typedef' or fixed-width type instead")
           << TypeName;
     }
   } else if (isCharType(BT)) {
     diag(Loc, "avoid using platform-dependent character type '%0'; "
-              "consider using char8_t for text or std::byte for bytes")
+              "consider using 'char8_t' for text or 'std::byte' for bytes")
         << TypeName;
   } else {
     diag(Loc, "avoid using platform-dependent fundamental integer type '%0'; "
-              "consider using a typedef or fixed-width type instead")
+              "consider using a 'typedef' or fixed-width type instead")
         << TypeName;
   }
 }
