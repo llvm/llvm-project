@@ -502,8 +502,10 @@ public:
     SmallVector<int, 8> PtrToPartitions(N);
     for (unsigned I = 0; I < N; ++I) {
       Value *Ptr = RtPtrCheck->Pointers[I].PointerValue;
-      auto Instructions =
-          LAI.getInstructionsForAccess(Ptr, RtPtrCheck->Pointers[I].IsWritePtr);
+      auto Instructions = LAI.getInstructionsForAccess(Ptr, /* IsWrite */ true);
+      auto ReadInstructions =
+          LAI.getInstructionsForAccess(Ptr, /* IsWrite */ false);
+      Instructions.append(ReadInstructions.begin(), ReadInstructions.end());
 
       int &Partition = PtrToPartitions[I];
       // First set it to uninitialized.
@@ -521,21 +523,6 @@ public:
           Partition = -1;
       }
       assert(Partition != -2 && "Pointer not belonging to any partition");
-      // All the store context uses of our address were processed,
-      // Now make sure we don't have cross partition loads.
-      if (RtPtrCheck->Pointers[I].IsWritePtr) {
-        if (Ptr->hasOneUse() || Partition == -1)
-          continue;
-
-        for (User *U : Ptr->users())
-          if (auto *CurLoad = dyn_cast<LoadInst>(U))
-            if (L->contains(CurLoad->getParent()))
-              if (Partition != (int)this->InstToPartitionId[CurLoad]) {
-                // -1 means belonging to multiple partitions.
-                Partition = -1;
-                break;
-              }
-      }
     }
 
     return PtrToPartitions;
