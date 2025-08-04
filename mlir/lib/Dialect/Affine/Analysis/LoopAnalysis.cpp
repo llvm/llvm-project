@@ -60,8 +60,8 @@ public:
 
   void printEdges() {
     for (auto &en : edges) {
-      llvm::dbgs() << *en.first << " (" << en.first << ")"
-                   << " has " << en.second.size() << " edges:\n";
+      llvm::dbgs() << *en.first << " (" << en.first << ")" << " has "
+                   << en.second.size() << " edges:\n";
       for (auto *node : en.second) {
         llvm::dbgs() << '\t' << *node->op << '\n';
       }
@@ -72,7 +72,7 @@ private:
   /// A node of a directed graph between MLIR Operations to model various
   /// relationships. This is meant to be used internally.
   struct DGNode {
-    DGNode(Operation *op) : op(op) {};
+    DGNode(Operation *op) : op(op){};
     Operation *op;
 
     // Start and finish visit numbers are standard in DFS to implement things
@@ -310,7 +310,6 @@ uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
     } else {
       // Trip count is not a known constant; return its largest known divisor.
       thisGcd = map.getResult(i).getLargestKnownDivisor();
-      ;
     }
     if (gcd.has_value())
       gcd = std::gcd(*gcd, thisGcd);
