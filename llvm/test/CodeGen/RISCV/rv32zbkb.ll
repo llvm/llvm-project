@@ -333,10 +333,9 @@ define i32 @pack_lo_packh_hi_packh(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2, 
 ;
 ; RV32ZBKB-LABEL: pack_lo_packh_hi_packh:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    slli a3, a3, 24
 ; RV32ZBKB-NEXT:    packh a0, a0, a1
-; RV32ZBKB-NEXT:    pack a0, a0, a2
-; RV32ZBKB-NEXT:    or a0, a0, a3
+; RV32ZBKB-NEXT:    packh a1, a2, a3
+; RV32ZBKB-NEXT:    pack a0, a0, a1
 ; RV32ZBKB-NEXT:    ret
   %a = zext i8 %0 to i32
   %b = zext i8 %1 to i32
@@ -363,8 +362,7 @@ define i32 @pack_lo_zext_hi_packh(i16 zeroext %0, i8 zeroext %1, i8 zeroext %2) 
 ; RV32ZBKB-LABEL: pack_lo_zext_hi_packh:
 ; RV32ZBKB:       # %bb.0:
 ; RV32ZBKB-NEXT:    packh a1, a2, a2
-; RV32ZBKB-NEXT:    slli a1, a1, 16
-; RV32ZBKB-NEXT:    or a0, a1, a0
+; RV32ZBKB-NEXT:    pack a0, a0, a1
 ; RV32ZBKB-NEXT:    ret
   %a = zext i16 %0 to i32
   %b = zext i8 %1 to i32
