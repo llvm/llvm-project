@@ -1329,7 +1329,7 @@ public:
                 // If the copyable instructions comes after MainOp
                 // (non-schedulable, but used in the block) - cannot vectorize
                 // it, will possibly generate use before def.
-                (isVectorLikeInstWithConstOps(I) || !MainOp->comesBefore(I)));
+                !MainOp->comesBefore(I));
       };
 
       return IsNonSchedulableCopyableElement(V);
