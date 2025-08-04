@@ -78,10 +78,8 @@ void RuntimeLibcallsInfo::initLibcalls(const Triple &TT,
       setLibcallImpl(RTLIB::UNWIND_RESUME, RTLIB::_Unwind_SjLj_Resume);
   }
 
-  if (TT.isOSOpenBSD()) {
-    setLibcallImpl(RTLIB::STACKPROTECTOR_CHECK_FAIL, RTLIB::Unsupported);
+  if (TT.isOSOpenBSD())
     setLibcallImpl(RTLIB::STACK_SMASH_HANDLER, RTLIB::__stack_smash_handler);
-  }
 
   if (TT.isARM() || TT.isThumb()) {
     setARMLibcallNames(*this, TT, FloatABI, EABIVersion);
