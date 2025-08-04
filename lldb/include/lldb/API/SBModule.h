@@ -296,7 +296,9 @@ public:
   /// Remove any global modules which are no longer needed.
   static void GarbageCollectAllocatedModules();
 
-  /// Return the name of the module (m_object_name).
+  /// If this Module represents a specific object or part within a larger file,
+  /// returns the name of that object or part. Otherwise, returns
+  /// nullptr.
   const char *GetObjectName() const;
 
 private:
