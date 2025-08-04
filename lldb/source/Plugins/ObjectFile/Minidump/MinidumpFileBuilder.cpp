@@ -313,6 +313,16 @@ Status MinidumpFileBuilder::AddModuleList() {
   // array of module structures.
   DataBufferHeap helper_data;
 
+  // Struct to hold module information.
+  struct ValidModuleInfo {
+    ModuleSP module;
+    std::string module_name;
+    uint64_t module_size;
+  };
+
+  // Vector to store modules that pass validation.
+  std::vector<ValidModuleInfo> valid_modules;
+
   // Track the count of successfully processed modules and log errors.
   uint32_t successful_modules_count = 0;
   for (size_t i = 0; i < modules_count; ++i) {
@@ -329,9 +339,10 @@ Status MinidumpFileBuilder::AddModuleList() {
                         module_name.c_str(), E.message().c_str());
             }
           });
-    } else {
-      ++successful_modules_count;
+      continue;
     }
+    ++successful_modules_count;
+    valid_modules.push_back({mod, module_name, *maybe_mod_size});
   }
 
   size_t module_stream_size = sizeof(llvm::support::ulittle32_t) +
@@ -344,14 +355,10 @@ Status MinidumpFileBuilder::AddModuleList() {
   m_data.AppendData(&successful_modules_count,
                     sizeof(llvm::support::ulittle32_t));
 
-  for (size_t i = 0; i < modules_count; ++i) {
-    ModuleSP mod = modules.GetModuleAtIndex(i);
-    std::string module_name = mod->GetSpecificationDescription();
-    auto maybe_mod_size = getModuleFileSize(target, mod);
-    if (!maybe_mod_size)
-      continue;
-
-    uint64_t mod_size = std::move(*maybe_mod_size);
+  for (const auto &valid_module : valid_modules) {
+    ModuleSP mod = valid_module.module;
+    std::string module_name = valid_module.module_name;
+    uint64_t mod_size = valid_module.module_size;
 
     llvm::support::ulittle32_t signature =
         static_cast<llvm::support::ulittle32_t>(
