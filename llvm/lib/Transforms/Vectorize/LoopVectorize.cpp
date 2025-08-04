@@ -9997,16 +9997,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (!LVL.getSpeculativeLoads().empty()) {
-    if (!EnableSpeculativeLoads) {
-      reportVectorizationFailure("Auto-vectorization of loops with speculative "
-                                 "load is not enabled",
-                                 "SpeculativeLoadsDisabled", ORE, L);
-      return false;
-    }
-    // VPWidenFFLoadEVLRecipe is currently the only concrete recipe that generates
-    // speculative load intrinsics. Since it relies on the EVL transform,
-    // speculative loads are only supported when tail-folding with EVL is enabled.
+  if (EnableSpeculativeLoads) {
+    // VPWidenFFLoadEVLRecipe is currently the only concrete recipe that
+    // generates speculative load intrinsics. Since it relies on the EVL
+    // transform, speculative loads are only supported when tail-folding with
+    // EVL is enabled.
     if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL ||
         PreferPredicateOverEpilogue !=
             PreferPredicateTy::PredicateOrDontVectorize) {
@@ -10015,6 +10010,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                  "SpeculativeLoadsDisabled", ORE, L);
       return false;
     }
+  } else if (!LVL.getSpeculativeLoads().empty()) {
+    reportVectorizationFailure("Auto-vectorization of loops with speculative "
+                               "load is not enabled",
+                               "SpeculativeLoadsDisabled", ORE, L);
+    return false;
   }
 
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
