@@ -722,6 +722,11 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
                            PartVT.getVectorElementCount());
       SDValue Widened = widenVectorToPartType(DAG, Val, DL, WidenVT);
       Val = DAG.getAnyExtOrTrunc(Widened, DL, PartVT);
+    } else if (PartVT.isScalableVector() && ValueVT.isFixedLengthVector() &&
+               TLI.getRegClassFor(PartVT) ==
+                   TLI.getRegClassFor(ValueVT.getSimpleVT())) {
+      Val = DAG.getNode(ISD::INSERT_SUBVECTOR, DL, PartVT, DAG.getUNDEF(PartVT),
+                        Val, DAG.getVectorIdxConstant(0, DL));
     } else {
       // Don't extract an integer from a float vector. This can happen if the
       // FP type gets softened to integer and then promoted. The promotion
