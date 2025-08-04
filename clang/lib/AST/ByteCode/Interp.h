@@ -91,8 +91,9 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                       AccessKinds AK);
-/// Check if a global variable is initialized.
-bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+/// Checks a direct load of a primitive value from a global or local variable.
+bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if a value can be stored in a block.
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
@@ -1465,14 +1466,8 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.P.getPtrGlobal(I);
-  if (!CheckConstant(S, OpPC, Ptr.getFieldDesc()))
-    return false;
-  if (Ptr.isExtern())
-    return false;
 
-  // If a global variable is uninitialized, that means the initializer we've
-  // compiled for it wasn't a constant expression. Diagnose that.
-  if (!CheckGlobalInitialized(S, OpPC, Ptr))
+  if (!CheckGlobalLoad(S, OpPC, Ptr))
     return false;
 
   S.Stk.push<T>(Ptr.deref<T>());
