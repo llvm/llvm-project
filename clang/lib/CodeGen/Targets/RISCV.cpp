@@ -817,6 +817,9 @@ public:
       case RISCVInterruptAttr::supervisor:
         Kind = "supervisor";
         break;
+      case RISCVInterruptAttr::rnmi:
+        Kind = "rnmi";
+        break;
       case RISCVInterruptAttr::qcinest:
         Kind = "qci-nest";
         break;
