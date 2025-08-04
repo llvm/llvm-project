@@ -808,8 +808,8 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   MutexSet *mset[kMop] = {&thr->mset, mset1};
 
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
-  // Take a new scope as Swift symbolizer the below locks released before
-  // symbolizing in order to avoid a deadlock
+  // Take a new scope as Apple platforms require the below locks released
+  // before symbolizing in order to avoid a deadlock
   {
     // We need to lock the slot during RestoreStack because it protects
     // the slot journal.
