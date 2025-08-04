@@ -3103,9 +3103,9 @@ class VPLoadFFSDNode : public MemSDNode {
 public:
   friend class SelectionDAG;
 
-  VPLoadFFSDNode(unsigned Order, const DebugLoc &dl, SDVTList VTs, EVT MemVT,
+  VPLoadFFSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs, EVT MemVT,
                  MachineMemOperand *MMO)
-      : MemSDNode(ISD::VP_LOAD_FF, Order, dl, VTs, MemVT, MMO) {}
+      : MemSDNode(ISD::VP_LOAD_FF, Order, DL, VTs, MemVT, MMO) {}
 
   const SDValue &getBasePtr() const { return getOperand(1); }
   const SDValue &getMask() const { return getOperand(2); }

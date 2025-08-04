@@ -838,7 +838,7 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     break;
   }
   case ISD::VP_LOAD_FF: {
-    const VPLoadFFSDNode *LD = cast<VPLoadFFSDNode>(N);
+    const auto *LD = cast<VPLoadFFSDNode>(N);
     ID.AddInteger(LD->getMemoryVT().getRawBits());
     ID.AddInteger(LD->getRawSubclassData());
     ID.AddInteger(LD->getPointerInfo().getAddrSpace());
@@ -10442,7 +10442,7 @@ SDValue SelectionDAG::getMaskedHistogram(SDVTList VTs, EVT MemVT,
   return V;
 }
 
-SDValue SelectionDAG::getLoadFFVP(EVT VT, const SDLoc &dl, SDValue Chain,
+SDValue SelectionDAG::getLoadFFVP(EVT VT, const SDLoc &DL, SDValue Chain,
                                   SDValue Ptr, SDValue Mask, SDValue EVL,
                                   MachineMemOperand *MMO) {
   SDVTList VTs = getVTList(VT, EVL.getValueType(), MVT::Other);
@@ -10450,16 +10450,16 @@ SDValue SelectionDAG::getLoadFFVP(EVT VT, const SDLoc &dl, SDValue Chain,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::VP_LOAD_FF, VTs, Ops);
   ID.AddInteger(VT.getRawBits());
-  ID.AddInteger(getSyntheticNodeSubclassData<VPLoadFFSDNode>(dl.getIROrder(),
+  ID.AddInteger(getSyntheticNodeSubclassData<VPLoadFFSDNode>(DL.getIROrder(),
                                                              VTs, VT, MMO));
   ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
   ID.AddInteger(MMO->getFlags());
   void *IP = nullptr;
-  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
+  if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
     cast<VPLoadFFSDNode>(E)->refineAlignment(MMO);
     return SDValue(E, 0);
   }
-  auto *N = newSDNode<VPLoadFFSDNode>(dl.getIROrder(), dl.getDebugLoc(), VTs,
+  auto *N = newSDNode<VPLoadFFSDNode>(DL.getIROrder(), DL.getDebugLoc(), VTs,
                                       VT, MMO);
   createOperands(N, Ops);
 

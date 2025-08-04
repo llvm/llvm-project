@@ -8443,7 +8443,7 @@ void SelectionDAGBuilder::visitVPLoad(
 void SelectionDAGBuilder::visitVPLoadFF(
     const VPIntrinsic &VPIntrin, EVT VT, EVT EVLVT,
     const SmallVectorImpl<SDValue> &OpValues) {
-  assert(OpValues.size() == 3);
+  assert(OpValues.size() == 3 && "Unexpected number of operands");
   SDLoc DL = getCurSDLoc();
   Value *PtrOperand = VPIntrin.getArgOperand(0);
   MaybeAlign Alignment = VPIntrin.getPointerAlignment();

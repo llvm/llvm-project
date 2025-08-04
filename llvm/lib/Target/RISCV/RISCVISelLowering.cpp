@@ -12690,9 +12690,8 @@ SDValue RISCVTargetLowering::lowerMaskedLoad(SDValue Op,
 }
 
 SDValue RISCVTargetLowering::lowerLoadFF(SDValue Op, SelectionDAG &DAG) const {
-  assert(Op.getResNo() == 0);
   SDLoc DL(Op);
-  MVT VT = Op.getSimpleValueType();
+  MVT VT = Op->getSimpleValueType(0);
 
   const auto *VPLoadFF = cast<VPLoadFFSDNode>(Op);
   EVT MemVT = VPLoadFF->getMemoryVT();
