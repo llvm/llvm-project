@@ -45,7 +45,7 @@ struct Bfloat16DivChecker : public virtual LIBC_NAMESPACE::testing::Test {
   }
 };
 
-using LlvmLibcBfloat16ExhaustiveDivisionTest =
+using LlvmLibcBfloat16ExhaustiveDivTest =
     LlvmLibcExhaustiveMathTest<Bfloat16DivChecker, 1 << 2>;
 
 // range: [0, inf]
@@ -56,10 +56,10 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xff80U;
 
-TEST_F(LlvmLibcBfloat16ExhaustiveDivisionTest, PositiveRange) {
+TEST_F(LlvmLibcBfloat16ExhaustiveDivTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP, POS_START, POS_STOP);
 }
 
-TEST_F(LlvmLibcBfloat16ExhaustiveDivisionTest, NegativeRange) {
+TEST_F(LlvmLibcBfloat16ExhaustiveDivTest, NegativeRange) {
   test_full_range_all_roundings(NEG_START, NEG_STOP, NEG_START, NEG_STOP);
 }
