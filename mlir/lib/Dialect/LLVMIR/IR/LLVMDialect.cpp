@@ -3792,6 +3792,14 @@ void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
 
 void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
                             mlir::TypeRange resultTypes,
+                            mlir::StringAttr intrin, mlir::ValueRange args) {
+  build(builder, state, resultTypes, intrin, args, FastmathFlagsAttr{},
+        /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{}, /*arg_attrs=*/{},
+        /*res_attrs=*/{});
+}
+
+void CallIntrinsicOp::build(OpBuilder &builder, OperationState &state,
+                            mlir::TypeRange resultTypes,
                             mlir::StringAttr intrin, mlir::ValueRange args,
                             mlir::LLVM::FastmathFlagsAttr fastMathFlags) {
   build(builder, state, resultTypes, intrin, args, fastMathFlags,

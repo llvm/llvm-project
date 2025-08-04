@@ -2432,6 +2432,7 @@ def LLVM_CallIntrinsicOp
     OpBuilder<(ins "StringAttr":$intrin, "ValueRange":$args)>,
     OpBuilder<(ins "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>,
     OpBuilder<(ins "Type": $resultType, "StringAttr":$intrin, "ValueRange":$args)>,
+    OpBuilder<(ins "TypeRange": $resultTypes, "StringAttr":$intrin, "ValueRange":$args)>,
     OpBuilder<(ins "TypeRange": $resultTypes, "StringAttr":$intrin, "ValueRange":$args, "FastmathFlagsAttr":$fastMathFlags)>
   ];
 

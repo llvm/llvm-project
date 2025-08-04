@@ -43,7 +43,7 @@ LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
       builder, moduleImport.translateLoc(inst->getDebugLoc()),
       isa<LLVMVoidType>(resultType) ? TypeRange{} : TypeRange{resultType},
       StringAttr::get(builder.getContext(), intrinName),
-      ValueRange{mlirOperands}, FastmathFlagsAttr{});
+      ValueRange{mlirOperands});
 
   moduleImport.setFastmathFlagsAttr(inst, op);
   moduleImport.convertArgAndResultAttrs(inst, op);
