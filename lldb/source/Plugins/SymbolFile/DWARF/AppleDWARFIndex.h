@@ -10,6 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_APPLEDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
+#include "lldb/lldb-private-enumerations.h"
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 
 namespace lldb_private::plugin {
@@ -50,11 +51,12 @@ public:
   void GetGlobalVariables(
       DWARFUnit &cu,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
-  void GetObjCMethods(ConstString class_name,
-                      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+  void GetObjCMethods(
+      ConstString class_name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetCompleteObjCClass(
       ConstString class_name, bool must_be_implementation,
-      llvm::function_ref<bool(DWARFDIE die)> callback) override;
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) override;
   void GetTypes(ConstString name,
                 llvm::function_ref<bool(DWARFDIE die)> callback) override;
   void GetTypes(const DWARFDeclContext &context,
