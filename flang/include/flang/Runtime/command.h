@@ -67,7 +67,7 @@ std::int32_t RTNAME(Hostnm)(
 std::int32_t RTNAME(PutEnv)(
     const char *str, size_t str_length, const char *sourceFile, int line);
 
-float RTNAME(Secnds)(float* refTime, const char *sourceFile, int line);
+float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line);
 
 // Calls unlink()
 std::int32_t RTNAME(Unlink)(

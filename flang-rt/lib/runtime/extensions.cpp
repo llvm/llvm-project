@@ -304,7 +304,7 @@ void FORTRAN_PROCEDURE_NAME(qsort)(int *array, int *len, int *isize,
 void RTNAME(Perror)(const char *str) { perror(str); }
 
 // GNU extension function SECNDS(refTime)
-float FORTRAN_PROCEDURE_NAME(secnds)(float* refTime) {
+float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   constexpr float FAIL_SECNDS{1.0f};
   if (!refTime) {
     return FAIL_SECNDS;

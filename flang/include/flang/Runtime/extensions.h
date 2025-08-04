@@ -91,7 +91,7 @@ void RTNAME(Perror)(const char *str);
 int FORTRAN_PROCEDURE_NAME(mclock)();
 
 // GNU extension subroutine SECNDS(refTime)
-float FORTRAN_PROCEDURE_NAME(secnds)(float* refTime);
+float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime);
 
 } // extern "C"
 #endif // FORTRAN_RUNTIME_EXTENSIONS_H_
