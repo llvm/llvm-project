@@ -406,8 +406,8 @@ struct ScopedSetTracerPID {
 // This detects whether ptrace is blocked (e.g., by seccomp), by forking and
 // then attempting ptrace.
 // This separate check is necessary because StopTheWorld() creates a child
-// process with a shared virtual address space, and therefore cannot use
-// waitpid() due to the shared errno.
+// process with a shared virtual address space and shared TLS, and therefore
+// cannot use waitpid() due to the shared errno.
 static void TestPTrace() {
   // Heuristic: only check the first time this is called. This is not always
   // correct (e.g., user manually triggers leak detection, then updates
