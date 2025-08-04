@@ -348,7 +348,7 @@ define i8 @assume_ptr_eq_different_prov_matters(ptr %p, ptr %p2) {
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[P2]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
   %cmp = icmp eq ptr %p, %p2
