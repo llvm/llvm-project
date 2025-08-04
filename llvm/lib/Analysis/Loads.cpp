@@ -342,7 +342,7 @@ bool llvm::isDereferenceableAndAlignedInLoop(
             : SE.getConstantMaxBackedgeTakenCount(L);
   }
   const auto &[AccessStart, AccessEnd] = getStartAndEndForAccess(
-      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr);
+      L, PtrScev, LI->getType(), BECount, MaxBECount, &SE, nullptr, &DT, AC);
   if (isa<SCEVCouldNotCompute>(AccessStart) ||
       isa<SCEVCouldNotCompute>(AccessEnd))
     return false;
@@ -832,6 +832,10 @@ bool llvm::canReplacePointersInUseIfEqual(const Use &U, const Value *To,
   // Not a pointer, just return true.
   if (!To->getType()->isPointerTy())
     return true;
+
+  // Do not perform replacements in lifetime intrinsic arguments.
+  if (isa<LifetimeIntrinsic>(U.getUser()))
+    return false;
 
   if (isPointerAlwaysReplaceable(&*U, To, DL))
     return true;

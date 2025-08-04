@@ -191,9 +191,10 @@ static void getAArch64MultilibFlags(const Driver &D,
   for (const auto &ArchInfo : AArch64::ArchInfos)
     if (FeatureSet.contains(ArchInfo->ArchFeature))
       ArchName = ArchInfo->Name;
-  assert(!ArchName.empty() && "at least one architecture should be found");
-  MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
-  Result.push_back(llvm::join(MArch, "+"));
+  if (!ArchName.empty()) {
+    MArch.insert(MArch.begin(), ("-march=" + ArchName).str());
+    Result.push_back(llvm::join(MArch, "+"));
+  }
 
   const Arg *BranchProtectionArg =
       Args.getLastArgNoClaim(options::OPT_mbranch_protection_EQ);
@@ -215,6 +216,18 @@ static void getAArch64MultilibFlags(const Driver &D,
   const Arg *ABIArg = Args.getLastArgNoClaim(options::OPT_mabi_EQ);
   if (ABIArg) {
     Result.push_back(ABIArg->getAsString(Args));
+  }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_O_Group);
+      A && A->getOption().matches(options::OPT_O)) {
+    switch (A->getValue()[0]) {
+    case 's':
+      Result.push_back("-Os");
+      break;
+    case 'z':
+      Result.push_back("-Oz");
+      break;
+    }
   }
 
   processMultilibCustomFlags(Result, Args);
@@ -294,6 +307,19 @@ static void getARMMultilibFlags(const Driver &D, const llvm::Triple &Triple,
     if (Endian->getOption().matches(options::OPT_mbig_endian))
       Result.push_back(Endian->getAsString(Args));
   }
+
+  if (const Arg *A = Args.getLastArg(options::OPT_O_Group);
+      A && A->getOption().matches(options::OPT_O)) {
+    switch (A->getValue()[0]) {
+    case 's':
+      Result.push_back("-Os");
+      break;
+    case 'z':
+      Result.push_back("-Oz");
+      break;
+    }
+  }
+
   processMultilibCustomFlags(Result, Args);
 }
 
@@ -735,7 +761,7 @@ std::string ToolChain::buildCompilerRTBasename(const llvm::opt::ArgList &Args,
     break;
   case ToolChain::FT_Shared:
     if (TT.isOSWindows())
-      Suffix = TT.isWindowsGNUEnvironment() ? ".dll.a" : ".lib";
+      Suffix = TT.isOSCygMing() ? ".dll.a" : ".lib";
     else if (TT.isOSAIX())
       Suffix = ".a";
     else
@@ -1062,7 +1088,7 @@ std::string ToolChain::GetLinkerPath(bool *LinkerIsLLD) const {
   // Get -fuse-ld= first to prevent -Wunused-command-line-argument. -fuse-ld= is
   // considered as the linker flavor, e.g. "bfd", "gold", or "lld".
   const Arg* A = Args.getLastArg(options::OPT_fuse_ld_EQ);
-  StringRef UseLinker = A ? A->getValue() : CLANG_DEFAULT_LINKER;
+  StringRef UseLinker = A ? A->getValue() : getDriver().getPreferredLinker();
 
   // --ld-path= takes precedence over -fuse-ld= and specifies the executable
   // name. -B, COMPILER_PATH and PATH and consulted if the value does not
@@ -1606,7 +1632,8 @@ void ToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
                                    ArgStringList &CC1Args) const {}
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-ToolChain::getDeviceLibs(const ArgList &DriverArgs) const {
+ToolChain::getDeviceLibs(const ArgList &DriverArgs,
+                         const Action::OffloadKind DeviceOffloadingKind) const {
   return {};
 }
 

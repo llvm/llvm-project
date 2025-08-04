@@ -279,7 +279,8 @@ llvm::Expected<size_t> PipeWindows::Read(void *buf, size_t size,
     return Status(failure_error, eErrorTypeWin32).takeError();
 
   DWORD timeout_msec =
-      timeout ? ceil<std::chrono::milliseconds>(*timeout).count() : INFINITE;
+      timeout ? std::chrono::ceil<std::chrono::milliseconds>(*timeout).count()
+              : INFINITE;
   DWORD wait_result =
       ::WaitForSingleObject(m_read_overlapped.hEvent, timeout_msec);
   if (wait_result != WAIT_OBJECT_0) {
@@ -324,7 +325,8 @@ llvm::Expected<size_t> PipeWindows::Write(const void *buf, size_t size,
     return Status(failure_error, eErrorTypeWin32).takeError();
 
   DWORD timeout_msec =
-      timeout ? ceil<std::chrono::milliseconds>(*timeout).count() : INFINITE;
+      timeout ? std::chrono::ceil<std::chrono::milliseconds>(*timeout).count()
+              : INFINITE;
   DWORD wait_result =
       ::WaitForSingleObject(m_write_overlapped.hEvent, timeout_msec);
   if (wait_result != WAIT_OBJECT_0) {
