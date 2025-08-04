@@ -405,17 +405,20 @@ struct ScopedSetTracerPID {
 
 // This detects whether ptrace is blocked (e.g., by seccomp), by forking and
 // then attempting ptrace.
-// This separate check is necessary because StopTheWorld() creates a *thread*,
-// and therefore cannot use waitpid() due to the shared errno.
+// This separate check is necessary because StopTheWorld() creates a child
+// process with a shared virtual address space, and therefore cannot use
+// waitpid() due to the shared errno.
 static void TestPTrace() {
-  // Only check the first time this is called.
+  // Heuristic: only check the first time this is called. This is not always
+  // correct (e.g., user manually triggers leak detection, then updates
+  // seccomp, then leak detection is triggered again).
   static bool checked = false;
   if (checked)
     return;
   checked = true;
 
-  // fork() should be cheap because of copy-on-write. Besides, this is only
-  // called the first time.
+  // We hope that fork() is not too expensive, because of copy-on-write.
+  // Besides, this is only called the first time.
   int pid = internal_fork();
 
   if (pid < 0) {
