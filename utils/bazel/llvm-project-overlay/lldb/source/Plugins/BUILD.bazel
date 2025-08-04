@@ -152,6 +152,7 @@ cc_library(
         "//clang:lex",
         "//clang:sema",
         "//lldb:CoreHeaders",
+        "//lldb:ExpressionHeaders",
         "//lldb:Host",
         "//lldb:SymbolHeaders",
         "//lldb:TargetHeaders",
@@ -478,6 +479,22 @@ cc_library(
         "//llvm:TargetParser",
         "//llvm:config",
         "@llvm_zlib//:zlib",
+    ],
+)
+
+cc_library(
+    name = "PluginProcessWasm",
+    srcs = glob(["Process/wasm/*.cpp"]),
+    hdrs = glob(["Process/wasm/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessGDBRemote",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
+        "//llvm:Support",
     ],
 )
 

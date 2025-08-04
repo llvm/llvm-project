@@ -2630,7 +2630,8 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
 // existing information in the DWARF. The type is assumed to be 'void *'.
 void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
                                    const CXXRecordDecl *RD) {
-  if (!CGM.getTarget().getCXXABI().isItaniumFamily())
+  if (!CGM.getTarget().getCXXABI().isItaniumFamily() ||
+      CGM.getTarget().getTriple().isOSBinFormatCOFF())
     return;
   if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
     return;
@@ -4801,7 +4802,7 @@ void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
                                           const FunctionDecl *CalleeDecl) {
   if (!CallOrInvoke)
     return;
-  auto *Func = CallOrInvoke->getCalledFunction();
+  auto *Func = dyn_cast<llvm::Function>(CallOrInvoke->getCalledOperand());
   if (!Func)
     return;
   if (Func->getSubprogram())

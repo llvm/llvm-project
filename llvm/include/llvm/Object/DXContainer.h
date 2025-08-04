@@ -20,6 +20,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Object/Error.h"
+#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -499,6 +500,7 @@ public:
     } IteratorState;
 
     friend class DXContainer;
+    friend class DXContainerObjectFile;
 
     PartIterator(const DXContainer &C,
                  SmallVectorImpl<uint32_t>::const_iterator It)
@@ -582,6 +584,79 @@ public:
   const DirectX::Signature &getPatchConstantSignature() const {
     return PatchConstantSignature;
   }
+};
+
+class DXContainerObjectFile : public ObjectFile {
+private:
+  friend class ObjectFile;
+  DXContainer Container;
+
+  using PartData = DXContainer::PartIterator::PartData;
+  llvm::SmallVector<PartData> Parts;
+  using PartIterator = llvm::SmallVector<PartData>::iterator;
+
+  DXContainerObjectFile(DXContainer C)
+      : ObjectFile(ID_DXContainer, MemoryBufferRef(C.getData(), "")),
+        Container(C) {
+    for (auto &P : C)
+      Parts.push_back(P);
+  }
+
+public:
+  static bool classof(const Binary *v) { return v->isDXContainer(); }
+
+  Expected<StringRef> getSymbolName(DataRefImpl) const override;
+  Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
+  uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
+  uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
+
+  Expected<SymbolRef::Type> getSymbolType(DataRefImpl Symb) const override;
+  Expected<section_iterator> getSymbolSection(DataRefImpl Symb) const override;
+  void moveSectionNext(DataRefImpl &Sec) const override;
+  Expected<StringRef> getSectionName(DataRefImpl Sec) const override;
+  uint64_t getSectionAddress(DataRefImpl Sec) const override;
+  uint64_t getSectionIndex(DataRefImpl Sec) const override;
+  uint64_t getSectionSize(DataRefImpl Sec) const override;
+  Expected<ArrayRef<uint8_t>>
+  getSectionContents(DataRefImpl Sec) const override;
+
+  uint64_t getSectionAlignment(DataRefImpl Sec) const override;
+  bool isSectionCompressed(DataRefImpl Sec) const override;
+  bool isSectionText(DataRefImpl Sec) const override;
+  bool isSectionData(DataRefImpl Sec) const override;
+  bool isSectionBSS(DataRefImpl Sec) const override;
+  bool isSectionVirtual(DataRefImpl Sec) const override;
+
+  relocation_iterator section_rel_begin(DataRefImpl Sec) const override;
+  relocation_iterator section_rel_end(DataRefImpl Sec) const override;
+
+  void moveRelocationNext(DataRefImpl &Rel) const override;
+  uint64_t getRelocationOffset(DataRefImpl Rel) const override;
+  symbol_iterator getRelocationSymbol(DataRefImpl Rel) const override;
+  uint64_t getRelocationType(DataRefImpl Rel) const override;
+  void getRelocationTypeName(DataRefImpl Rel,
+                             SmallVectorImpl<char> &Result) const override;
+
+  section_iterator section_begin() const override;
+  section_iterator section_end() const override;
+
+  uint8_t getBytesInAddress() const override;
+  StringRef getFileFormatName() const override;
+  Triple::ArchType getArch() const override;
+  Expected<SubtargetFeatures> getFeatures() const override;
+
+  void moveSymbolNext(DataRefImpl &Symb) const override {}
+  Error printSymbolName(raw_ostream &OS, DataRefImpl Symb) const override;
+  Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
+  basic_symbol_iterator symbol_begin() const override {
+    return basic_symbol_iterator(SymbolRef());
+  }
+  basic_symbol_iterator symbol_end() const override {
+    return basic_symbol_iterator(SymbolRef());
+  }
+  bool is64Bit() const override { return false; }
+
+  bool isRelocatableObject() const override { return false; }
 };
 
 } // namespace object
