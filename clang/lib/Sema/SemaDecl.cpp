@@ -5255,8 +5255,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   if (getLangOpts().CPlusPlus &&
       DS.getStorageClassSpec() != DeclSpec::SCS_typedef)
     if (EnumDecl *Enum = dyn_cast_or_null<EnumDecl>(Tag))
-      if (Enum->enumerator_begin() == Enum->enumerator_end() &&
-          !Enum->getIdentifier() && !Enum->isInvalidDecl())
+      if (Enum->enumerators().empty() && !Enum->getIdentifier() &&
+          !Enum->isInvalidDecl())
         DeclaresAnything = false;
 
   if (!DS.isMissingDeclaratorOk()) {
@@ -14724,9 +14724,9 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
             type->isIntegralOrEnumerationType()) {
           // In C++98, in-class initialization for a static data member must
           // be an integer constant expression.
-          SourceLocation Loc;
-          if (!Init->isIntegerConstantExpr(Context, &Loc)) {
-            Diag(Loc, diag::ext_in_class_initializer_non_constant)
+          if (!Init->isIntegerConstantExpr(Context)) {
+            Diag(Init->getExprLoc(),
+                 diag::ext_in_class_initializer_non_constant)
                 << Init->getSourceRange();
           }
         }

@@ -13499,7 +13499,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
       return indicatePessimisticFixpoint();
 
     if (BinSize == 0) {
-      auto NewAllocationSize = std::optional<TypeSize>(TypeSize(0, false));
+      auto NewAllocationSize = std::make_optional<TypeSize>(0, false);
       if (!changeAllocationSize(NewAllocationSize))
         return ChangeStatus::UNCHANGED;
       return ChangeStatus::CHANGED;
@@ -13517,8 +13517,7 @@ struct AAAllocationInfoImpl : public AAAllocationInfo {
     if (SizeOfBin >= *AllocationSize)
       return indicatePessimisticFixpoint();
 
-    auto NewAllocationSize =
-        std::optional<TypeSize>(TypeSize(SizeOfBin * 8, false));
+    auto NewAllocationSize = std::make_optional<TypeSize>(SizeOfBin * 8, false);
 
     if (!changeAllocationSize(NewAllocationSize))
       return ChangeStatus::UNCHANGED;
