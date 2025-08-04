@@ -29,8 +29,8 @@ using namespace mlir;
 
 namespace {
 
-emitc::IncludeOp addHeader(OpBuilder &builder, ModuleOp module,
-                           StringRef headerName) {
+emitc::IncludeOp addStandardHeader(OpBuilder &builder, ModuleOp module,
+                                   StringRef headerName) {
   StringAttr includeAttr = builder.getStringAttr(headerName);
   return builder.create<emitc::IncludeOp>(
       module.getLoc(), includeAttr,
@@ -68,33 +68,32 @@ struct ConvertMemRefToEmitCPass
     module.walk([&](mlir::emitc::CallOpaqueOp callOp) {
       if (callOp.getCallee() != alignedAllocFunctionName &&
           callOp.getCallee() != mallocFunctionName &&
-          callOp.getCallee() != memcpyFunctionName) {
+          callOp.getCallee() != memcpyFunctionName)
         return mlir::WalkResult::advance();
-      }
 
       for (auto &op : *module.getBody()) {
         emitc::IncludeOp includeOp = llvm::dyn_cast<mlir::emitc::IncludeOp>(op);
-        if (!includeOp) {
+        if (!includeOp)
           continue;
-        }
+
         if (includeOp.getIsStandardInclude() &&
             ((options.lowerToCpp &&
               includeOp.getInclude() == cppStandardLibraryHeader) ||
              (!options.lowerToCpp &&
-              includeOp.getInclude() == cStandardLibraryHeader))) {
+              includeOp.getInclude() == cStandardLibraryHeader)))
           return mlir::WalkResult::interrupt();
-        }
       }
 
       mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
       StringRef headerName;
       if (callOp.getCallee() == memcpyFunctionName)
-        headerName = stringLibraryHeader;
+        headerName =
+            options.lowerToCpp ? cppStringLibraryHeader : cStringLibraryHeader;
       else
         headerName = options.lowerToCpp ? cppStandardLibraryHeader
                                         : cStandardLibraryHeader;
 
-      addHeader(builder, module, headerName);
+      addStandardHeader(builder, module, headerName);
       return mlir::WalkResult::interrupt();
     });
   }
