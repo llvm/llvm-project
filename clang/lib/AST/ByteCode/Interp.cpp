@@ -715,23 +715,6 @@ static bool CheckLifetime(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool CheckGlobalInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  if (Ptr.isInitialized())
-    return true;
-
-  assert(S.getLangOpts().CPlusPlus);
-  const auto *VD = cast<VarDecl>(Ptr.getDeclDesc()->asValueDecl());
-  if ((!VD->hasConstantInitialization() &&
-       VD->mightBeUsableInConstantExpressions(S.getASTContext())) ||
-      (S.getLangOpts().OpenCL && !S.getLangOpts().CPlusPlus11 &&
-       !VD->hasICEInitializer(S.getASTContext()))) {
-    const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << VD;
-    S.Note(VD->getLocation(), diag::note_declared_at);
-  }
-  return false;
-}
-
 static bool CheckWeak(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isWeak())
     return true;
@@ -743,6 +726,37 @@ static bool CheckWeak(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   S.Note(VD->getLocation(), diag::note_declared_at);
 
   return false;
+}
+
+// The list of checks here is just the one from CheckLoad, but with the
+// ones removed that are impossible on primitive global values.
+// For example, since those can't be members of structs, they also can't
+// be mutable.
+bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckExtern(S, OpPC, Ptr))
+    return false;
+  if (!CheckConstant(S, OpPC, Ptr))
+    return false;
+  if (!CheckDummy(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckTemporary(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckWeak(S, OpPC, Ptr))
+    return false;
+  if (!CheckVolatile(S, OpPC, Ptr, AK_Read))
+    return false;
+  return true;
+}
+
+// Similarly, for local loads.
+bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
+    return false;
+  if (!CheckVolatile(S, OpPC, Ptr, AK_Read))
+    return false;
+  return true;
 }
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,

@@ -289,3 +289,16 @@ namespace OverlappingStrings {
 
 
 }
+
+namespace NonConstLocal {
+  int a() {
+    const int t=t; // both-note {{declared here}}
+
+    switch(1) {
+      case t:; // both-note {{initializer of 't' is not a constant expression}} \
+               // both-error {{case value is not a constant expression}}
+    }
+  }
+}
+
+
