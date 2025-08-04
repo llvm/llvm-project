@@ -1224,8 +1224,7 @@ define i1 @trunc_nuw_i1_dominating_icmp_ne_1(i8 %x) {
 ; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i8 [[X:%.*]], 1
 ; CHECK-NEXT:    br i1 [[ICMP_NOT]], label [[BB2:%.*]], label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[RET1:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    ret i1 [[RET1]]
+; CHECK-NEXT:    ret i1 false
 ; CHECK:       bb2:
 ; CHECK-NEXT:    ret i1 true
 ;
@@ -1246,8 +1245,7 @@ define i1 @trunc_nuw_i1_dominating_icmp_eq_1(i8 %x) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[RET2:%.*]] = trunc nuw i8 [[X]] to i1
-; CHECK-NEXT:    ret i1 [[RET2]]
+; CHECK-NEXT:    ret i1 false
 ;
   %icmp = icmp eq i8 %x, 1
   br i1 %icmp, label %bb1, label %bb2

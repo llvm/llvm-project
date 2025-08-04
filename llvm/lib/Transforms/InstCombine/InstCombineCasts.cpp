@@ -951,6 +951,38 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
     }
   }
 
+  // Fold Trunc nuw i1 With Dominating ICmp
+  if (DestWidth == 1 && Trunc.hasNoUnsignedWrap()) {
+    auto HandleDomCond = [&](ICmpInst::Predicate DomPred,
+                             const APInt *DomC) -> Instruction * {
+      ConstantRange DominatingCR =
+          ConstantRange::makeExactICmpRegion(DomPred, *DomC);
+      if (!DominatingCR.contains(APInt(SrcWidth, 1)))
+        return replaceInstUsesWith(Trunc, Builder.getFalse());
+      return nullptr;
+    };
+
+    for (BranchInst *BI : DC.conditionsFor(Src)) {
+      CmpPredicate DomPred;
+      const APInt *DomC;
+      if (!match(BI->getCondition(),
+                 m_ICmp(DomPred, m_Specific(Src), m_APInt(DomC))))
+        continue;
+
+      BasicBlockEdge Edge0(BI->getParent(), BI->getSuccessor(0));
+      if (DT.dominates(Edge0, Trunc.getParent())) {
+        if (auto *V = HandleDomCond(DomPred, DomC))
+          return V;
+      } else {
+        BasicBlockEdge Edge1(BI->getParent(), BI->getSuccessor(1));
+        if (DT.dominates(Edge1, Trunc.getParent()))
+          if (auto *V =
+                  HandleDomCond(CmpInst::getInversePredicate(DomPred), DomC))
+            return V;
+      }
+    }
+  }
+
   if (DestWidth == 1 &&
       (Trunc.hasNoUnsignedWrap() || Trunc.hasNoSignedWrap()) &&
       isKnownNonZero(Src, SQ.getWithInstruction(&Trunc)))
