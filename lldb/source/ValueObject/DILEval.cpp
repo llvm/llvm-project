@@ -21,6 +21,73 @@
 
 namespace lldb_private::dil {
 
+static CompilerType GetBasicTypeFromCU(std::shared_ptr<StackFrame> ctx,
+                                       lldb::BasicType basic_type) {
+  SymbolContext symbol_context =
+      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
+  auto language = symbol_context.comp_unit->GetLanguage();
+
+  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
+  auto type_system =
+      symbol_context.module_sp->GetTypeSystemForLanguage(language);
+
+  if (type_system)
+    if (auto compiler_type = type_system.get()->GetBasicTypeFromAST(basic_type))
+      return compiler_type;
+
+  return CompilerType();
+}
+
+static CompilerType GetIntCompilerTypeForSize(uint32_t size, bool is_signed,
+                                              lldb::TypeSystemSP type_system,
+                                              std::shared_ptr<StackFrame> ctx) {
+  lldb::BasicType promote_types[] = {
+      // lldb::eBasicTypeChar,     lldb::eBasicTypeUnsignedChar,
+      // lldb::eBasicTypeShort,    lldb::eBasicTypeUnsignedShort,
+      lldb::eBasicTypeInt,      lldb::eBasicTypeUnsignedInt,
+      lldb::eBasicTypeLong,     lldb::eBasicTypeUnsignedLong,
+      lldb::eBasicTypeLongLong, lldb::eBasicTypeUnsignedLongLong,
+  };
+  for (auto &basic_type : promote_types) {
+    uint64_t byte_size = 0;
+    CompilerType type = GetBasicType(type_system, basic_type);
+    if (auto temp = type.GetByteSize(ctx.get()))
+      byte_size = *temp;
+    if (size < byte_size ||
+        (size == byte_size &&
+         is_signed == (bool)(type.GetTypeInfo() & lldb::eTypeIsSigned))) {
+      return type;
+    }
+  }
+
+  llvm_unreachable("size could not fit into long long");
+  return CompilerType();
+}
+
+static llvm::Expected<Scalar>
+GetScalarFromValueObject(lldb::ValueObjectSP valobj,
+                         std::shared_ptr<StackFrame> ctx) {
+  auto type = valobj->GetCompilerType();
+  Scalar scalar;
+  bool resolved = valobj->ResolveValue(scalar);
+  if (resolved) {
+    if (scalar.GetType() == scalar.e_int) {
+      auto apsint = scalar.GetAPSInt();
+      auto type_bitsize = type.GetBitSize(ctx.get());
+      if (type_bitsize) {
+        llvm::APSInt adjusted;
+        if (type.IsSigned())
+          adjusted = apsint.sextOrTrunc(*type_bitsize);
+        else
+          adjusted = apsint.zextOrTrunc(*type_bitsize);
+        return Scalar(adjusted);
+      }
+    } else
+      return scalar;
+  }
+  return Scalar();
+}
+
 static lldb::VariableSP DILFindVariable(ConstString name,
                                         VariableList &variable_list) {
   lldb::VariableSP exact_match;
@@ -175,21 +242,21 @@ Interpreter::Visit(const IdentifierNode *node) {
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const UnaryOpNode *node) {
   Status error;
-  auto rhs_or_err = Evaluate(node->GetOperand());
-  if (!rhs_or_err)
-    return rhs_or_err;
+  auto op_or_err = Evaluate(node->GetOperand());
+  if (!op_or_err)
+    return op_or_err;
 
-  lldb::ValueObjectSP rhs = *rhs_or_err;
+  lldb::ValueObjectSP operand = *op_or_err;
 
   switch (node->GetKind()) {
   case UnaryOpKind::Deref: {
-    lldb::ValueObjectSP dynamic_rhs = rhs->GetDynamicValue(m_use_dynamic);
-    if (dynamic_rhs)
-      rhs = dynamic_rhs;
+    lldb::ValueObjectSP dynamic_op = operand->GetDynamicValue(m_use_dynamic);
+    if (dynamic_op)
+      operand = dynamic_op;
 
-    lldb::ValueObjectSP child_sp = rhs->Dereference(error);
+    lldb::ValueObjectSP child_sp = operand->Dereference(error);
     if (!child_sp && m_use_synthetic) {
-      if (lldb::ValueObjectSP synth_obj_sp = rhs->GetSyntheticValue()) {
+      if (lldb::ValueObjectSP synth_obj_sp = operand->GetSyntheticValue()) {
         error.Clear();
         child_sp = synth_obj_sp->Dereference(error);
       }
@@ -202,18 +269,78 @@ Interpreter::Visit(const UnaryOpNode *node) {
   }
   case UnaryOpKind::AddrOf: {
     Status error;
-    lldb::ValueObjectSP value = rhs->AddressOf(error);
+    lldb::ValueObjectSP value = operand->AddressOf(error);
     if (error.Fail())
       return llvm::make_error<DILDiagnosticError>(m_expr, error.AsCString(),
                                                   node->GetLocation());
 
     return value;
   }
-  }
+  case UnaryOpKind::Minus: {
+    auto operand_type = operand->GetCompilerType();
+    if (!operand_type.IsScalarType()) {
+      std::string errMsg =
+          llvm::formatv("invalid argument type '{0}' to unary expression",
+                        operand_type.GetTypeName());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                  node->GetLocation());
+    }
+    auto scalar = GetScalarFromValueObject(operand, m_exe_ctx_scope);
+    if (!scalar)
+      break;
 
-  // Unsupported/invalid operation.
-  return llvm::make_error<DILDiagnosticError>(
-      m_expr, "invalid ast: unexpected binary operator", node->GetLocation());
+    bool negated = scalar->UnaryNegate();
+    if (scalar->GetType() == Scalar::e_int) {
+      auto promo_type = GetIntCompilerTypeForSize(
+          scalar->GetByteSize(), scalar->IsSigned(),
+          operand_type.GetTypeSystem().GetSharedPointer(), m_exe_ctx_scope);
+      auto type_bitsize = promo_type.GetBitSize(m_exe_ctx_scope.get());
+
+      if (type_bitsize && negated) {
+        scalar->IntegralPromote(*type_bitsize, promo_type.IsSigned());
+        return ValueObject::CreateValueObjectFromScalar(m_target, *scalar,
+                                                        promo_type, "result");
+      }
+    } else
+      return ValueObject::CreateValueObjectFromScalar(m_target, *scalar,
+                                                      operand_type, "result");
+    break;
+  }
+  case UnaryOpKind::Plus: {
+    auto operand_type = operand->GetCompilerType();
+    // Unary plus is allowed for pointers.
+    if (operand_type.IsPointerType())
+      return operand;
+    if (!operand_type.IsScalarType()) {
+      std::string errMsg =
+          llvm::formatv("invalid argument type '{0}' to unary expression",
+                        operand_type.GetTypeName());
+      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                                                  node->GetLocation());
+    }
+    auto scalar = GetScalarFromValueObject(operand, m_exe_ctx_scope);
+    if (!scalar)
+      break;
+
+    if (scalar->GetType() == Scalar::e_int) {
+      auto promo_type = GetIntCompilerTypeForSize(
+          scalar->GetByteSize(), scalar->IsSigned(),
+          operand_type.GetTypeSystem().GetSharedPointer(), m_exe_ctx_scope);
+      auto type_bitsize = promo_type.GetBitSize(m_exe_ctx_scope.get());
+
+      if (type_bitsize) {
+        scalar->IntegralPromote(*type_bitsize, promo_type.IsSigned());
+        return ValueObject::CreateValueObjectFromScalar(m_target, *scalar,
+                                                        promo_type, "result");
+      }
+    } else
+      return ValueObject::CreateValueObjectFromScalar(m_target, *scalar,
+                                                      operand_type, "result");
+    break;
+  }
+  }
+  return llvm::make_error<DILDiagnosticError>(m_expr, "invalid unary operation",
+                                              node->GetLocation());
 }
 
 llvm::Expected<lldb::ValueObjectSP>
