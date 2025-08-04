@@ -707,25 +707,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     }
   }
 
-  // The half <-> float conversion functions are always soft-float on
-  // non-watchos platforms, but are needed for some targets which use a
-  // hard-float calling convention by default.
-  if (!TT.isWatchABI()) {
-    if (TM.isAAPCS_ABI()) {
-      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_AAPCS);
-      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_AAPCS);
-      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_AAPCS);
-      setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee, CallingConv::ARM_AAPCS);
-      setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee, CallingConv::ARM_AAPCS);
-    } else {
-      setLibcallImplCallingConv(RTLIB::__truncsfhf2, CallingConv::ARM_APCS);
-      setLibcallImplCallingConv(RTLIB::__truncdfhf2, CallingConv::ARM_APCS);
-      setLibcallImplCallingConv(RTLIB::__extendhfsf2, CallingConv::ARM_APCS);
-      setLibcallImplCallingConv(RTLIB::__gnu_h2f_ieee, CallingConv::ARM_APCS);
-      setLibcallImplCallingConv(RTLIB::__gnu_f2h_ieee, CallingConv::ARM_APCS);
-    }
-  }
-
   // In EABI, these functions have an __aeabi_ prefix, but in GNUEABI they have
   // a __gnu_ prefix (which is the default).
   if (TT.isTargetAEABI()) {
