@@ -131,10 +131,10 @@ public:
   void setLoc(Location loc);
 
   /// Return the Region in which this Value is defined.
-  Region *getParentRegion();
+  Region *getParentRegion() const;
 
   /// Return the Block in which this Value is defined.
-  Block *getParentBlock();
+  Block *getParentBlock() const;
 
   //===--------------------------------------------------------------------===//
   // UseLists
