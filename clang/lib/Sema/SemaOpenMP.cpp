@@ -22593,7 +22593,8 @@ ExprResult SemaOpenMP::ActOnOpenMPDeclareMapperDirectiveVarDecl(
 
 void SemaOpenMP::ActOnOpenMPIteratorVarDecl(VarDecl *VD) {
   if (DSAStack->getDeclareMapperVarRef()) {
-    SemaRef.Consumer.HandleTopLevelDecl(DeclGroupRef(VD));
+    if (!VD->isLocalVarDecl() && VD->getDeclContext()->isTranslationUnit())
+      SemaRef.Consumer.HandleTopLevelDecl(DeclGroupRef(VD));
     DSAStack->addIteratorVarDecl(VD);
   }
 }
