@@ -322,6 +322,7 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   assert(!cir::MissingFeatures::opTBAA());
 }
 
+// TODO: Replace this with a proper TargetInfo function call.
 /// Helper method to check if the underlying ABI is AAPCS
 static bool isAAPCS(const TargetInfo &targetInfo) {
   return targetInfo.getABI().starts_with("aapcs");
