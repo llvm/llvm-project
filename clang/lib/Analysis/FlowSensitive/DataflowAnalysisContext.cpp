@@ -208,6 +208,27 @@ bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
   return isUnsatisfiable(std::move(Constraints));
 }
 
+llvm::DenseSet<Atom> DataflowAnalysisContext::getTransitiveClosure(
+    const llvm::DenseSet<Atom> &Tokens) const {
+  llvm::DenseSet<Atom> VisitedTokens;
+  // Use a worklist algorithm, with `Remaining` holding the worklist.
+  std::vector<Atom> Remaining(Tokens.begin(), Tokens.end());
+
+  // For each token in `Remaining`, add its dependencies to the worklist.
+  while (!Remaining.empty()) {
+    auto Token = Remaining.back();
+    Remaining.pop_back();
+    if (!VisitedTokens.insert(Token).second)
+      continue;
+    if (auto DepsIt = FlowConditionDeps.find(Token);
+        DepsIt != FlowConditionDeps.end())
+      for (Atom A : DepsIt->second)
+        Remaining.push_back(A);
+  }
+
+  return VisitedTokens;
+}
+
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
     Atom Token, llvm::SetVector<const Formula *> &Constraints) {
   llvm::DenseSet<Atom> AddedTokens;
@@ -224,6 +245,8 @@ void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
 
     auto ConstraintsIt = FlowConditionConstraints.find(Token);
     if (ConstraintsIt == FlowConditionConstraints.end()) {
+      // The flow condition is unconstrained. Just add the atom directly, which
+      // is equivalent to asserting it is true.
       Constraints.insert(&arena().makeAtomRef(Token));
     } else {
       // Bind flow condition token via `iff` to its set of constraints:
