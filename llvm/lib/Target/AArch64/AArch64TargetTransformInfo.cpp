@@ -3092,6 +3092,13 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
     return AdjustCost(
         BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I));
 
+  // For the moment we do not have lowering for SVE1-only fptrunc f64->bf16 as
+  // we use fcvtx under SVE2. Give them invalid costs.
+  if (!ST->hasSVE2() && !ST->isStreamingSVEAvailable() &&
+      ISD == ISD::FP_ROUND && SrcTy.isScalableVector() &&
+      DstTy.getScalarType() == MVT::bf16 && SrcTy.getScalarType() == MVT::f64)
+    return InstructionCost::getInvalid();
+
   static const TypeConversionCostTblEntry BF16Tbl[] = {
       {ISD::FP_ROUND, MVT::bf16, MVT::f32, 1},     // bfcvt
       {ISD::FP_ROUND, MVT::bf16, MVT::f64, 1},     // bfcvt
@@ -3100,6 +3107,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_ROUND, MVT::v2bf16, MVT::v2f64, 2}, // bfcvtn+fcvtn
       {ISD::FP_ROUND, MVT::v4bf16, MVT::v4f64, 3}, // fcvtn+fcvtl2+bfcvtn
       {ISD::FP_ROUND, MVT::v8bf16, MVT::v8f64, 6}, // 2 * fcvtn+fcvtn2+bfcvtn
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f32, 1},  // bfcvt
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f32, 1},  // bfcvt
+      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f32, 3},  // bfcvt+bfcvt+uzp1
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f64, 2},  // fcvtx+bfcvt
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f64, 5},  // 2*fcvtx+2*bfcvt+uzp1
+      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f64, 11}, // 4*fcvt+4*bfcvt+3*uzp
   };
 
   if (ST->hasBF16())
@@ -3508,10 +3521,20 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f32, 1},
       {ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f32, 3},
 
+      // Truncate from nxvmf32 to nxvmbf16.
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f32, 8},
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f32, 8},
+      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f32, 17},
+
       // Truncate from nxvmf64 to nxvmf16.
       {ISD::FP_ROUND, MVT::nxv2f16, MVT::nxv2f64, 1},
       {ISD::FP_ROUND, MVT::nxv4f16, MVT::nxv4f64, 3},
       {ISD::FP_ROUND, MVT::nxv8f16, MVT::nxv8f64, 7},
+
+      // Truncate from nxvmf64 to nxvmbf16.
+      {ISD::FP_ROUND, MVT::nxv2bf16, MVT::nxv2f64, 9},
+      {ISD::FP_ROUND, MVT::nxv4bf16, MVT::nxv4f64, 19},
+      {ISD::FP_ROUND, MVT::nxv8bf16, MVT::nxv8f64, 39},
 
       // Truncate from nxvmf64 to nxvmf32.
       {ISD::FP_ROUND, MVT::nxv2f32, MVT::nxv2f64, 1},
@@ -3523,10 +3546,20 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_EXTEND, MVT::nxv4f32, MVT::nxv4f16, 1},
       {ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8f16, 2},
 
+      // Extend from nxvmbf16 to nxvmf32.
+      {ISD::FP_EXTEND, MVT::nxv2f32, MVT::nxv2bf16, 1}, // lsl
+      {ISD::FP_EXTEND, MVT::nxv4f32, MVT::nxv4bf16, 1}, // lsl
+      {ISD::FP_EXTEND, MVT::nxv8f32, MVT::nxv8bf16, 4}, // unpck+unpck+lsl+lsl
+
       // Extend from nxvmf16 to nxvmf64.
       {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f16, 1},
       {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4f16, 2},
       {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8f16, 4},
+
+      // Extend from nxvmbf16 to nxvmf64.
+      {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2bf16, 2},  // lsl+fcvt
+      {ISD::FP_EXTEND, MVT::nxv4f64, MVT::nxv4bf16, 6},  // 2*unpck+2*lsl+2*fcvt
+      {ISD::FP_EXTEND, MVT::nxv8f64, MVT::nxv8bf16, 14}, // 6*unpck+4*lsl+4*fcvt
 
       // Extend from nxvmf32 to nxvmf64.
       {ISD::FP_EXTEND, MVT::nxv2f64, MVT::nxv2f32, 1},
