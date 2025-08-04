@@ -2088,6 +2088,15 @@ llvm.func @useInlineAsm2(%arg0: !llvm.ptr, %arg1: i64, %arg2: !llvm.ptr, %arg3: 
 
 // -----
 
+module {
+  // CHECK: module asm ".global file_scope_asm_symbol"
+  // CHECK-NEXT: module asm "some_asm_label:"
+  llvm.module_asm ".global file_scope_asm_symbol"
+  llvm.module_asm "some_asm_label:"
+}
+
+// -----
+
 llvm.func @fastmathFlagsFunc(f32) -> f32
 
 // CHECK-LABEL: @fastmathFlags

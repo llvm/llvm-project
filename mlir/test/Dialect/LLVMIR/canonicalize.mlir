@@ -307,3 +307,11 @@ llvm.func @inline_asm_side_effects(%x : i32) {
   llvm.inline_asm has_side_effects "inline asm with side effects", "r" %x : (i32) -> ()
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: llvm.module_asm
+// CHECK-SAME: ".global some_symbol"
+// CHECK-NEXT: llvm.module_asm ".global another_symbol"
+llvm.module_asm ".global some_symbol"
+llvm.module_asm ".global another_symbol"

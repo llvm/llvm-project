@@ -2399,6 +2399,29 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", [DeclareOpInterfaceMethods<MemoryEf
   let hasVerifier = 1;
 }
 
+def LLVM_ModuleAsmOp : LLVM_Op<"module_asm"> {
+  let description = [{
+    The ModuleAsmOp mirrors the underlying LLVM "module asm" semantics, 
+    allowing target-specific assembly code to be embedded at module level.
+    
+    Module asm blocks are concatenated and emitted outside of any function,
+    corresponding to GCC's file scope inline assembly. The assembly string
+    must be parseable by LLVM's integrated assembler and can reference 
+    module-level symbols but not local variables.
+
+    Example:
+    ```
+    llvm.module_asm "my_function: ret"
+    llvm.module_asm ".globl my_symbol"
+    ```
+  }];
+  let arguments = (ins StrAttr:$asm_string);
+
+  let assemblyFormat = [{
+    attr-dict $asm_string
+   }];
+}
+
 //===--------------------------------------------------------------------===//
 // CallIntrinsicOp
 //===--------------------------------------------------------------------===//

@@ -505,6 +505,12 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
 
+  if (auto moduleAsmOp = dyn_cast<LLVM::ModuleAsmOp>(opInst)) {
+    moduleTranslation.getLLVMModule()->appendModuleInlineAsm(
+        moduleAsmOp.getAsmString());
+    return success();
+  }
+
   if (auto invOp = dyn_cast<LLVM::InvokeOp>(opInst)) {
     auto operands = moduleTranslation.lookupValues(invOp.getCalleeOperands());
     SmallVector<llvm::OperandBundleDef> opBundles =
