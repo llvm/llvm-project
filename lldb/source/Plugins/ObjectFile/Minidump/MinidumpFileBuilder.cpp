@@ -308,38 +308,49 @@ Status MinidumpFileBuilder::AddModuleList() {
   // the llvm::minidump::Module's structures into helper data
   size_t size_before = GetCurrentDataEndOffset();
 
-  // This is the size of the main part of the ModuleList stream.
-  // It consists of a module number and corresponding number of
-  // structs describing individual modules
-  size_t module_stream_size =
-      sizeof(llvm::support::ulittle32_t) + modules_count * minidump_module_size;
-
-  // Adding directory describing this stream.
-  error = AddDirectory(StreamType::ModuleList, module_stream_size);
-  if (error.Fail())
-    return error;
-
-  m_data.AppendData(&modules_count, sizeof(llvm::support::ulittle32_t));
-
   // Temporary storage for the helper data (of variable length)
   // as these cannot be dumped to m_data before dumping entire
   // array of module structures.
   DataBufferHeap helper_data;
 
+  // Track the count of successfully processed modules and log errors.
+  uint32_t successful_modules_count = 0;
   for (size_t i = 0; i < modules_count; ++i) {
     ModuleSP mod = modules.GetModuleAtIndex(i);
     std::string module_name = mod->GetSpecificationDescription();
     auto maybe_mod_size = getModuleFileSize(target, mod);
     if (!maybe_mod_size) {
       llvm::Error mod_size_err = maybe_mod_size.takeError();
-      llvm::handleAllErrors(std::move(mod_size_err),
-                            [&](const llvm::ErrorInfoBase &E) {
-                              error = Status::FromErrorStringWithFormat(
-                                  "Unable to get the size of module %s: %s.",
-                                  module_name.c_str(), E.message().c_str());
-                            });
-      return error;
+      Log *log = GetLog(LLDBLog::Object);
+      llvm::handleAllErrors(
+          std::move(mod_size_err), [&](const llvm::ErrorInfoBase &E) {
+            if (log) {
+              LLDB_LOG_ERROR(log, llvm::ErrorSuccess(),
+                             "Unable to get the size of module {}: {}",
+                             module_name, E.message());
+            }
+          });
+    } else {
+      ++successful_modules_count;
     }
+  }
+
+  size_t module_stream_size = sizeof(llvm::support::ulittle32_t) +
+                              successful_modules_count * minidump_module_size;
+
+  error = AddDirectory(StreamType::ModuleList, module_stream_size);
+  if (error.Fail())
+    return error;
+
+  m_data.AppendData(&successful_modules_count,
+                    sizeof(llvm::support::ulittle32_t));
+
+  for (size_t i = 0; i < modules_count; ++i) {
+    ModuleSP mod = modules.GetModuleAtIndex(i);
+    std::string module_name = mod->GetSpecificationDescription();
+    auto maybe_mod_size = getModuleFileSize(target, mod);
+    if (!maybe_mod_size)
+      continue;
 
     uint64_t mod_size = std::move(*maybe_mod_size);
 
@@ -367,8 +378,6 @@ Status MinidumpFileBuilder::AddModuleList() {
     ld.DataSize = static_cast<llvm::support::ulittle32_t>(0u);
     ld.RVA = static_cast<llvm::support::ulittle32_t>(0u);
 
-    // Setting up LocationDescriptor for uuid string. The global offset into
-    // minidump file is calculated.
     LocationDescriptor ld_cv;
     ld_cv.DataSize = static_cast<llvm::support::ulittle32_t>(
         sizeof(llvm::support::ulittle32_t) + uuid.size());
@@ -1055,7 +1064,7 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
     const offset_t offset_for_data = GetCurrentDataEndOffset();
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
-    const addr_t end = core_range.range.end();
+    const addr_t end = core_range.range.end(); 
 
     LLDB_LOGF(log,
               "AddMemoryList %zu/%zu reading memory for region "
