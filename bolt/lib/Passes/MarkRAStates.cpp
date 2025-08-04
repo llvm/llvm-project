@@ -57,6 +57,8 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
         BF.setIgnored();
         BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                   << BF.getPrintName() << "\n";
+        BC.outs()
+            << "BOLT-INFO: ptr sign/auth inst without .cfi_negate_ra_state\n";
         return;
       }
     }
@@ -78,6 +80,8 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
           // RA signing instructions should only follow unsigned RA state.
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                     << BF.getPrintName() << "\n";
+          BC.outs() << "BOLT-INFO: ptr signing inst encountered in Signed RA "
+                       "state.\n";
           BF.setIgnored();
           return;
         }
@@ -87,6 +91,8 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
           // RA authenticating instructions should only follow signed RA state.
           BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                     << BF.getPrintName() << "\n";
+          BC.outs() << "BOLT-INFO: ptr authenticating inst encountered in "
+                       "Unsigned RA state.\n";
           BF.setIgnored();
           return;
         }
