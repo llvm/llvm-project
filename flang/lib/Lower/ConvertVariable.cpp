@@ -1239,7 +1239,7 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
                 builder->getContext(), *sym);
-        builder->create<cuf::FreeOp>(loc, fir::getBase(exv), dataAttr);
+        cuf::FreeOp::create(*builder, loc, fir::getBase(exv), dataAttr);
       });
     }
   }

@@ -771,10 +771,11 @@ private:
 
     // Keep return type the same as a standard AllocatableAllocate call.
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
-    return builder
-        .create<cuf::AllocateOp>(
-            loc, retTy, box.getAddr(), errmsg, stream, pinned, source, cudaAttr,
-            errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+
+    return cuf::AllocateOp::create(
+               builder, loc, retTy, box.getAddr(), errmsg, stream, pinned,
+               source, cudaAttr,
+               errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
         .getResult();
   }
 
@@ -840,10 +841,9 @@ static mlir::Value genCudaDeallocate(fir::FirOpBuilder &builder,
 
   // Keep return type the same as a standard AllocatableAllocate call.
   mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
-  return builder
-      .create<cuf::DeallocateOp>(
-          loc, retTy, box.getAddr(), errmsg, cudaAttr,
-          errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
+  return cuf::DeallocateOp::create(
+             builder, loc, retTy, box.getAddr(), errmsg, cudaAttr,
+             errorManager.hasStatSpec() ? builder.getUnitAttr() : nullptr)
       .getResult();
 }
 
