@@ -24,6 +24,53 @@ define void @alloca_test() sanitize_type {
 ;
 entry:
   %x = alloca [10 x i8], align 1
-  call void @alloca_test_use([10 x i8]* %x)
+  call void @alloca_test_use(ptr %x)
+  ret void
+}
+
+define void @alloca_lifetime_test(i1 %c) sanitize_type {
+; CHECK-LABEL: @alloca_lifetime_test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[APP_MEM_MASK:%.*]] = load i64, ptr @__tysan_app_memory_mask, align 8
+; CHECK-NEXT:    [[SHADOW_BASE:%.*]] = load i64, ptr @__tysan_shadow_memory_address, align 8
+; CHECK-NEXT:    [[X:%.*]] = alloca [10 x i8], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], [[SHADOW_BASE]]
+; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP4]], i8 0, i64 80, i1 false)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[TMP5:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = and i64 [[TMP5]], [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 3
+; CHECK-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], [[SHADOW_BASE]]
+; CHECK-NEXT:    [[TMP9:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP9]], i8 0, i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 10, ptr [[X]])
+; CHECK-NEXT:    call void @alloca_test_use(ptr [[X]])
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = and i64 [[TMP10]], [[APP_MEM_MASK]]
+; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP11]], 3
+; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[TMP12]], [[SHADOW_BASE]]
+; CHECK-NEXT:    [[TMP14:%.*]] = inttoptr i64 [[TMP13]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP14]], i8 0, i64 80, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 10, ptr [[X]])
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = alloca [10 x i8], align 1
+  br label %loop
+
+loop:
+  call void @llvm.lifetime.start.p0(i64 10, ptr %x)
+  call void @alloca_test_use(ptr %x)
+  call void @llvm.lifetime.end.p0(i64 10, ptr %x)
+  br i1 %c, label %loop, label %exit
+
+exit:
   ret void
 }
