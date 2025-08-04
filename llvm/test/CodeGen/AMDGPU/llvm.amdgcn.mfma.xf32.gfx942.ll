@@ -56,6 +56,53 @@ bb:
   ret void
 }
 
+define amdgpu_kernel void @test_mfma_f32_16x16x8xf32_vgprcd(ptr addrspace(1) %arg) #1 {
+; GFX942-SDAG-LABEL: test_mfma_f32_16x16x8xf32_vgprcd:
+; GFX942-SDAG:       ; %bb.0: ; %bb
+; GFX942-SDAG-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v4, 1.0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v5, 2.0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v6, 0x40400000
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v7, 4.0
+; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v8, 0
+; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_mfma_f32_16x16x8_xf32 v[0:3], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
+; GFX942-SDAG-NEXT:    s_nop 6
+; GFX942-SDAG-NEXT:    global_store_dwordx4 v8, v[0:3], s[6:7]
+; GFX942-SDAG-NEXT:    s_endpgm
+;
+; GFX942-GISEL-LABEL: test_mfma_f32_16x16x8xf32_vgprcd:
+; GFX942-GISEL:       ; %bb.0: ; %bb
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_mov_b32 s4, 1.0
+; GFX942-GISEL-NEXT:    s_mov_b32 s5, 2.0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
+; GFX942-GISEL-NEXT:    s_mov_b32 s4, 0x40400000
+; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-GISEL-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
+; GFX942-GISEL-NEXT:    s_mov_b32 s5, 4.0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[4:5]
+; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_mfma_f32_16x16x8_xf32 v[0:3], v[4:5], v[6:7], v[0:3] cbsz:1 abid:2 blgp:3
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-GISEL-NEXT:    s_nop 5
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v4, v[0:3], s[6:7]
+; GFX942-GISEL-NEXT:    s_endpgm
+bb:
+  %in.1 = load <4 x float>, ptr addrspace(1) %arg
+  %mai.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x8.xf32(<2 x float> <float 1.0, float 2.0>, <2 x float> <float 3.0, float 4.0>, <4 x float> %in.1, i32 1, i32 2, i32 3)
+  store <4 x float> %mai.1, ptr addrspace(1) %arg
+  ret void
+}
+
 define amdgpu_kernel void @test_mfma_f32_32x32x4xf32(ptr addrspace(1) %arg) #0 {
 ; GFX942-SDAG-LABEL: test_mfma_f32_32x32x4xf32:
 ; GFX942-SDAG:       ; %bb.0: ; %bb
@@ -139,6 +186,75 @@ bb:
   ret void
 }
 
+define amdgpu_kernel void @test_mfma_f32_32x32x4xf32_vgprcd(ptr addrspace(1) %arg) #1 {
+; GFX942-SDAG-LABEL: test_mfma_f32_32x32x4xf32_vgprcd:
+; GFX942-SDAG:       ; %bb.0: ; %bb
+; GFX942-SDAG-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v16, 1.0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v17, 2.0
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v18, 0x40400000
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v19, 4.0
+; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-SDAG-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
+; GFX942-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[8:9], s[8:9]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[10:11], s[10:11]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[12:13], s[12:13]
+; GFX942-SDAG-NEXT:    v_mov_b64_e32 v[14:15], s[14:15]
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    v_mfma_f32_32x32x4_xf32 v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
+; GFX942-SDAG-NEXT:    v_mov_b32_e32 v16, 0
+; GFX942-SDAG-NEXT:    s_nop 7
+; GFX942-SDAG-NEXT:    s_nop 1
+; GFX942-SDAG-NEXT:    global_store_dwordx4 v16, v[12:15], s[16:17] offset:48
+; GFX942-SDAG-NEXT:    global_store_dwordx4 v16, v[8:11], s[16:17] offset:32
+; GFX942-SDAG-NEXT:    global_store_dwordx4 v16, v[4:7], s[16:17] offset:16
+; GFX942-SDAG-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
+; GFX942-SDAG-NEXT:    s_endpgm
+;
+; GFX942-GISEL-LABEL: test_mfma_f32_32x32x4xf32_vgprcd:
+; GFX942-GISEL:       ; %bb.0: ; %bb
+; GFX942-GISEL-NEXT:    s_load_dwordx2 s[16:17], s[4:5], 0x24
+; GFX942-GISEL-NEXT:    s_mov_b32 s18, 1.0
+; GFX942-GISEL-NEXT:    s_mov_b32 s19, 2.0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[16:17], s[18:19]
+; GFX942-GISEL-NEXT:    s_mov_b32 s18, 0x40400000
+; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-GISEL-NEXT:    s_load_dwordx16 s[0:15], s[16:17], 0x0
+; GFX942-GISEL-NEXT:    s_mov_b32 s19, 4.0
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[18:19], s[18:19]
+; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[4:5]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[6:7]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[8:9], s[8:9]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[10:11], s[10:11]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[12:13], s[12:13]
+; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[14:15], s[14:15]
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    v_mfma_f32_32x32x4_xf32 v[0:15], v[16:17], v[18:19], v[0:15] cbsz:1 abid:2 blgp:3
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v16, 0
+; GFX942-GISEL-NEXT:    s_nop 7
+; GFX942-GISEL-NEXT:    s_nop 1
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v16, v[0:3], s[16:17]
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v16, v[4:7], s[16:17] offset:16
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v16, v[8:11], s[16:17] offset:32
+; GFX942-GISEL-NEXT:    global_store_dwordx4 v16, v[12:15], s[16:17] offset:48
+; GFX942-GISEL-NEXT:    s_endpgm
+bb:
+  %in.1 = load <16 x float>, ptr addrspace(1) %arg
+  %mai.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x4.xf32(<2 x float> <float 1.0, float 2.0>, <2 x float> <float 3.0, float 4.0>, <16 x float> %in.1, i32 1, i32 2, i32 3)
+  store <16 x float> %mai.1, ptr addrspace(1) %arg
+  ret void
+}
+
 attributes #0 = { "amdgpu-flat-work-group-size"="1,256" }
+attributes #1 = { "amdgpu-flat-work-group-size"="512,512" "amdgpu-agpr-alloc"="0,0" }
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GFX942: {{.*}}

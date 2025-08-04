@@ -1,0 +1,22 @@
+# MLIR transform dialect standalone example.
+
+package(default_visibility = ["//visibility:public"])
+
+cc_binary(
+    name = "mlir-transform-opt",
+    srcs = ["mlir-transform-opt.cpp"],
+    deps = [
+        "//llvm:Support",
+        "//mlir:AllExtensions",
+        "//mlir:AllPassesAndDialects",
+        "//mlir:IR",
+        "//mlir:MlirOptLib",
+        "//mlir:Parser",
+        "//mlir:RegisterAllDialects",
+        "//mlir:RegisterAllExtensions",
+        "//mlir:RegisterAllPasses",
+        "//mlir:Support",
+        "//mlir:TransformDialect",
+        "//mlir:TransformDialectTransforms",
+    ],
+)
