@@ -15,7 +15,7 @@ __thread int var_static2 = 22;
 void *fn_static(void *param)
 {
 	var_static *= 2;
-  var_static2 *= 3;
+	var_static2 *= 3;
 	shared_check();
 	usleep(1); // thread breakpoint
 	for(;;)
