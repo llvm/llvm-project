@@ -332,7 +332,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_poison_shufflemask(ptr 
   ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
 }
 
-define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_skip_fields(ptr %ptr) {
+define {<4 x i32>, <4 x i32>} @vpload_factor3_skip_fields(ptr %ptr) {
   ; mask = 1111, skip the last field.
 ; CHECK-LABEL: vpload_factor3_skip_fields:
 ; CHECK:       # %bb.0:
@@ -344,13 +344,12 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_skip_fields(ptr %ptr) {
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 poison, i32 10>
   %v2 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
-  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
-  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
-  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
-  ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
+  %res0 = insertvalue {<4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  ret {<4 x i32>, <4 x i32>} %res1
 }
 
-define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_mask_skip_fields(ptr %ptr) {
+define {<4 x i32>, <4 x i32>} @vpload_factor3_mask_skip_fields(ptr %ptr) {
   ; mask = 0101, skip the last field.
 ; CHECK-LABEL: vpload_factor3_mask_skip_fields:
 ; CHECK:       # %bb.0:
@@ -363,10 +362,9 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor3_mask_skip_fields(ptr %p
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 poison, i32 10>
   %v2 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
-  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
-  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
-  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
-  ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
+  %res0 = insertvalue {<4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  ret {<4 x i32>, <4 x i32>} %res1
 }
 
 define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @vpload_factor4(ptr %ptr) {
@@ -2150,7 +2148,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_mask(ptr %ptr) {
   ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
 }
 
-define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_skip_field(ptr %ptr) {
+define {<4 x i32>, <4 x i32>} @maskedload_factor3_skip_field(ptr %ptr) {
 ; CHECK-LABEL: maskedload_factor3_skip_field:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 12
@@ -2162,13 +2160,12 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_skip_field(ptr %ptr
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
   %v2 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
-  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
-  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
-  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
-  ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
+  %res0 = insertvalue {<4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  ret {<4 x i32>, <4 x i32>} %res1
 }
 
-define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_mask_skip_field(ptr %ptr) {
+define {<4 x i32>, <4 x i32>} @maskedload_factor3_mask_skip_field(ptr %ptr) {
 ; CHECK-LABEL: maskedload_factor3_mask_skip_field:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
@@ -2181,10 +2178,9 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_mask_skip_field(ptr
   %v0 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>
   %v1 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 1, i32 4, i32 7, i32 10>
   %v2 = shufflevector <12 x i32> %interleaved.vec, <12 x i32> poison, <4 x i32> <i32 2, i32 5, i32 8, i32 11>
-  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
-  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
-  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
-  ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
+  %res0 = insertvalue {<4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  ret {<4 x i32>, <4 x i32>} %res1
 }
 
 ; We can only skip the last field for now.
@@ -2269,7 +2265,7 @@ define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor3_invalid_skip_field(
   ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
 }
 
-define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor5_skip_fields(ptr %ptr) {
+define {<4 x i32>, <4 x i32>, <4 x i32>} @maskedload_factor5_skip_fields(ptr %ptr) {
   ; mask = 1111, skip the last two fields.
 ; CHECK-LABEL: maskedload_factor5_skip_fields:
 ; CHECK:       # %bb.0:
@@ -2283,11 +2279,9 @@ define {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} @maskedload_facto
   %v2 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 2, i32 7, i32 12, i32 17>
   %v3 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 3, i32 8, i32 13, i32 18>
   %v4 = shufflevector <20 x i32> %interleaved.vec, <20 x i32> poison, <4 x i32> <i32 4, i32 9, i32 14, i32 19>
-  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
-  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
-  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
-  %res3 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res2, <4 x i32> %v3, 3
-  %res4 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res3, <4 x i32> %v4, 4
-  ret {<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>} %res4
+  %res0 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} undef, <4 x i32> %v0, 0
+  %res1 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res0, <4 x i32> %v1, 1
+  %res2 = insertvalue {<4 x i32>, <4 x i32>, <4 x i32>} %res1, <4 x i32> %v2, 2
+  ret {<4 x i32>, <4 x i32>, <4 x i32>} %res2
 }
 
