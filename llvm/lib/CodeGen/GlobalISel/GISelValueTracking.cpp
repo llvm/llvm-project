@@ -1892,6 +1892,38 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       FirstAnswer = std::min<uint64_t>(FirstAnswer + *C, TyBits);
     break;
   }
+  case TargetOpcode::G_SHL: {
+    Register Src1 = MI.getOperand(1).getReg();
+    Register Src2 = MI.getOperand(2).getReg();
+    if (std::optional<ConstantRange> ShAmtRange =
+            getValidShiftAmountRange(Src2, DemandedElts, Depth + 1)) {
+      uint64_t MaxShAmt = ShAmtRange->getUnsignedMax().getZExtValue();
+      uint64_t MinShAmt = ShAmtRange->getUnsignedMin().getZExtValue();
+
+      MachineInstr &ExtMI = *MRI.getVRegDef(Src1);
+      unsigned ExtOpc = ExtMI.getOpcode();
+
+      if (ExtOpc == TargetOpcode::G_SEXT || ExtOpc == TargetOpcode::G_ZEXT ||
+          ExtOpc == TargetOpcode::G_ANYEXT) {
+        LLT ExtTy = MRI.getType(Src1);
+        Register Extendee = ExtMI.getOperand(1).getReg();
+        LLT ExtendeeTy = MRI.getType(Extendee);
+        uint64_t SizeDiff =
+            ExtTy.getScalarSizeInBits() - ExtendeeTy.getScalarSizeInBits();
+
+        if (SizeDiff <= MinShAmt) {
+          unsigned Tmp =
+              SizeDiff + computeNumSignBits(Extendee, DemandedElts, Depth + 1);
+          if (MaxShAmt < Tmp)
+            return Tmp - MaxShAmt;
+        }
+      }
+      unsigned Tmp = computeNumSignBits(Src1, DemandedElts, Depth + 1);
+      if (MaxShAmt < Tmp)
+        return Tmp - MaxShAmt;
+    }
+    break;
+  }
   case TargetOpcode::G_TRUNC: {
     Register Src = MI.getOperand(1).getReg();
     LLT SrcTy = MRI.getType(Src);
@@ -2051,6 +2083,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   // Okay, we know that the sign bit in Mask is set.  Use CLO to determine
   // the number of identical bits in the top of the input value.
   Mask <<= Mask.getBitWidth() - TyBits;
+  LLVM_DEBUG(dbgs() << "Mask.countl_one(): " << Mask.countl_one() << "\n");
   return std::max(FirstAnswer, Mask.countl_one());
 }
 
