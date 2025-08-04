@@ -25,7 +25,7 @@
 
 ; CHECK-LABEL: polly.stmt.bb1{{[0-9]*}}:
 ; CHECK-NEXT:    %tmp.0.phiops.reload[[R1:[0-9]*]] = load float, ptr %tmp.0.phiops
-; CHECK-:        store float %tmp.0.phiops.reload[[R1]], ptr %tmp.0.s2a
+; CHECK:         store float %tmp.0.phiops.reload[[R1]], ptr %tmp.0.s2a
 
 ; CHECK-LABEL: polly.stmt.bb4:
 ; CHECK:         %tmp.0.s2a.reload[[R3:[0-9]*]] = load float, ptr %tmp.0.s2a
