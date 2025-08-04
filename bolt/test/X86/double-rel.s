@@ -5,7 +5,7 @@
 # REQUIRES: system-linux
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -o %t.exe -q --Tdata=0x80000
+# RUN: ld.lld %t.o -o %t.exe -q --image-base=0x70000 --Tdata=0x80000
 # RUN: llvm-bolt %t.exe --relocs -o %t.null --print-only=_start --print-disasm \
 # RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
 # RUN: llvm-objdump -d --print-imm-hex %t.exe \

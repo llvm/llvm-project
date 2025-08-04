@@ -5,8 +5,8 @@ declare i32 @sve_printf(ptr, <vscale x 4 x i32>, ...)
 
 @.str_1 = internal constant [6 x i8] c"boo!\0A\00"
 
-define void @foo(<vscale x 4 x i32> %x) uwtable {
-; CHECK-LABEL: foo:
+define void @foo_nontail(<vscale x 4 x i32> %x) uwtable {
+; CHECK-LABEL: foo_nontail:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -19,5 +19,15 @@ define void @foo(<vscale x 4 x i32> %x) uwtable {
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
   call i32 (ptr, <vscale x 4 x i32>, ...) @sve_printf(ptr @.str_1, <vscale x 4 x i32> %x)
+  ret void
+}
+
+define void @foo_tail(<vscale x 4 x i32> %x) uwtable {
+; CHECK-LABEL: foo_tail:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x0, .str_1
+; CHECK-NEXT:    add x0, x0, :lo12:.str_1
+; CHECK-NEXT:    b sve_printf
+  tail call i32 (ptr, <vscale x 4 x i32>, ...) @sve_printf(ptr @.str_1, <vscale x 4 x i32> %x)
   ret void
 }

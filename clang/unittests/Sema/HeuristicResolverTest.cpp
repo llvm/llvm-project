@@ -410,6 +410,40 @@ TEST(HeuristicResolver, MemberExpr_HangIssue126536) {
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
 }
 
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument) {
+  std::string Code = R"cpp(
+    struct Default {
+      void foo();
+    };
+    template <typename T = Default>
+    void bar(T t) {
+      t.foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "t.foo()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_Recursive) {
+  std::string Code = R"cpp(
+    struct Default {
+      void foo();
+    };
+    template <typename D = Default, typename T = D>
+    void bar(T t) {
+      t.foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "t.foo()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
 TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {
   std::string Code = R"cpp(
     template <typename T>
@@ -427,6 +461,23 @@ TEST(HeuristicResolver, DeclRefExpr_StaticMethod) {
       Code, &HeuristicResolver::resolveDeclRefExpr,
       dependentScopeDeclRefExpr(hasDependentName("bar")).bind("input"),
       cxxMethodDecl(hasName("bar")).bind("output"));
+}
+
+TEST(HeuristicResolver, DeclRefExpr_DefaultTemplateArgument) {
+  std::string Code = R"cpp(
+    struct Default {
+      static void foo();
+    };
+    template <typename T = Default>
+    void bar() {
+      T::foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "T::foo()".
+  expectResolution(
+      Code, &HeuristicResolver::resolveDeclRefExpr,
+      dependentScopeDeclRefExpr(hasDependentName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
 }
 
 TEST(HeuristicResolver, DeclRefExpr_StaticOverloads) {
@@ -713,6 +764,86 @@ TEST(HeuristicResolver, UsingValueDecl) {
   expectResolution(Code, &HeuristicResolver::resolveUsingValueDecl,
                    unresolvedUsingValueDecl(hasName("waldo")).bind("input"),
                    cxxMethodDecl(hasName("waldo")).bind("output"));
+}
+
+// `arg` is a ParamVarDecl*, `Expected` is a string
+MATCHER_P(ParamNameMatcher, Expected, "paramNameMatcher") {
+  EXPECT_TRUE(arg);
+  if (IdentifierInfo *Ident = arg->getDeclName().getAsIdentifierInfo()) {
+    return Ident->getName() == Expected;
+  }
+  return false;
+}
+
+// Helper function for testing HeuristicResolver::getProtoTypeLoc.
+// Takes a matcher that selects a callee expression bound to the ID "input",
+// calls getProtoTypeLoc() on it, and checks that the call found a
+// FunctionProtoTypeLoc encoding the given parameter names.
+template <typename InputMatcher, typename... ParameterNames>
+void expectParameterNames(ASTContext &Ctx, const InputMatcher &IM,
+                          ParameterNames... ExpectedParameterNames) {
+  auto InputMatches = match(IM, Ctx);
+  ASSERT_EQ(1u, InputMatches.size());
+  const auto *Input = InputMatches[0].template getNodeAs<Expr>("input");
+  ASSERT_TRUE(Input);
+
+  HeuristicResolver H(Ctx);
+  auto Loc = H.getFunctionProtoTypeLoc(Input);
+  ASSERT_TRUE(Loc);
+  EXPECT_THAT(Loc.getParams(),
+              ElementsAre(ParamNameMatcher(ExpectedParameterNames)...));
+}
+
+TEST(HeuristicResolver, ProtoTypeLoc) {
+  std::string Code = R"cpp(
+    void (*f1)(int param1);
+    void (__stdcall *f2)(int param2);
+    using f3_t = void(*)(int param3);
+    f3_t f3;
+    using f4_t = void(__stdcall *)(int param4);
+    f4_t f4;
+    struct S {
+      void (*f5)(int param5);
+      using f6_t = void(*)(int param6);
+      f6_t f6;
+    };
+    void bar() {
+      f1(42);
+      f2(42);
+      f3(42);
+      f4(42);
+      S s;
+      s.f5(42);
+      s.f6(42);
+    }
+  )cpp";
+  auto TU = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
+  auto &Ctx = TU->getASTContext();
+  auto checkFreeFunction = [&](llvm::StringRef FunctionName,
+                               llvm::StringRef ParamName) {
+    expectParameterNames(
+        Ctx,
+        callExpr(
+            callee(implicitCastExpr(hasSourceExpression(declRefExpr(
+                                        to(namedDecl(hasName(FunctionName))))))
+                       .bind("input"))),
+        ParamName);
+  };
+  checkFreeFunction("f1", "param1");
+  checkFreeFunction("f2", "param2");
+  checkFreeFunction("f3", "param3");
+  checkFreeFunction("f4", "param4");
+  auto checkMemberFunction = [&](llvm::StringRef MemberName,
+                                 llvm::StringRef ParamName) {
+    expectParameterNames(
+        Ctx,
+        callExpr(callee(implicitCastExpr(hasSourceExpression(memberExpr(
+                                             member(hasName(MemberName)))))
+                            .bind("input"))),
+        ParamName);
+  };
+  checkMemberFunction("f5", "param5");
+  checkMemberFunction("f6", "param6");
 }
 
 } // namespace

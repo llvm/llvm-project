@@ -33,12 +33,20 @@ class UnitMap;
 class ChildIo;
 class ExternalFileUnit;
 
+enum FseekWhence {
+  FseekSet = 0,
+  FseekCurrent = 1,
+  FseekEnd = 2,
+};
+
 RT_OFFLOAD_VAR_GROUP_BEGIN
 // Predefined file units.
 extern RT_VAR_ATTRS ExternalFileUnit *defaultInput; // unit 5
 extern RT_VAR_ATTRS ExternalFileUnit *defaultOutput; // unit 6
 extern RT_VAR_ATTRS ExternalFileUnit *errorOutput; // unit 0 extension
 RT_OFFLOAD_VAR_GROUP_END
+
+RT_OFFLOAD_API_GROUP_BEGIN
 
 #if defined(RT_USE_PSEUDO_FILE_UNIT)
 // A flavor of OpenFile class that pretends to be a terminal,
@@ -153,9 +161,6 @@ public:
     lock_.Take();
 #endif
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
-    if constexpr (!std::is_same_v<A, OpenStatementState>) {
-      state.mutableModes() = ConnectionState::modes;
-    }
     directAccessRecWasSet_ = false;
     io_.emplace(state);
     return *io_;
@@ -176,8 +181,9 @@ public:
   RT_API_ATTRS void Endfile(IoErrorHandler &);
   RT_API_ATTRS void Rewind(IoErrorHandler &);
   RT_API_ATTRS void EndIoStatement();
-  RT_API_ATTRS bool SetStreamPos(
-      std::int64_t, IoErrorHandler &); // one-based, for POS=
+  RT_API_ATTRS bool SetStreamPos(std::int64_t oneBasedPos, IoErrorHandler &);
+  RT_API_ATTRS bool Fseek(
+      std::int64_t zeroBasedPos, enum FseekWhence, IoErrorHandler &);
   RT_API_ATTRS bool SetDirectRec(
       std::int64_t, IoErrorHandler &); // one-based, for REC=
   RT_API_ATTRS std::int64_t InquirePos() const {
@@ -196,7 +202,8 @@ private:
   static RT_API_ATTRS UnitMap &CreateUnitMap();
   static RT_API_ATTRS UnitMap &GetUnitMap();
   RT_API_ATTRS const char *FrameNextInput(IoErrorHandler &, std::size_t);
-  RT_API_ATTRS void SetPosition(std::int64_t, IoErrorHandler &); // zero-based
+  RT_API_ATTRS void SetPosition(std::int64_t zeroBasedPos);
+  RT_API_ATTRS void Sought(std::int64_t zeroBasedPos);
   RT_API_ATTRS void BeginSequentialVariableUnformattedInputRecord(
       IoErrorHandler &);
   RT_API_ATTRS void BeginVariableFormattedInputRecord(IoErrorHandler &);
@@ -289,6 +296,8 @@ private:
       u_;
   Fortran::common::optional<IoStatementState> io_;
 };
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_UNIT_H_

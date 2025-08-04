@@ -88,10 +88,6 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcomiss:
   case X86::BI__builtin_ia32_vcomish:
   case X86::BI__builtin_ia32_vcvtph2ps512_mask:
-  case X86::BI__builtin_ia32_vcvttph2ibs256_mask:
-  case X86::BI__builtin_ia32_vcvttph2iubs256_mask:
-  case X86::BI__builtin_ia32_vcvttps2ibs256_mask:
-  case X86::BI__builtin_ia32_vcvttps2iubs256_mask:
   case X86::BI__builtin_ia32_vcvttph2ibs512_mask:
   case X86::BI__builtin_ia32_vcvttph2iubs512_mask:
   case X86::BI__builtin_ia32_vcvttps2ibs512_mask:
@@ -227,10 +223,6 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_vcvtph2uqq512_mask:
   case X86::BI__builtin_ia32_vcvtqq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
-  case X86::BI__builtin_ia32_vcvtph2ibs256_mask:
-  case X86::BI__builtin_ia32_vcvtph2iubs256_mask:
-  case X86::BI__builtin_ia32_vcvtps2ibs256_mask:
-  case X86::BI__builtin_ia32_vcvtps2iubs256_mask:
   case X86::BI__builtin_ia32_vcvtph2ibs512_mask:
   case X86::BI__builtin_ia32_vcvtph2iubs512_mask:
   case X86::BI__builtin_ia32_vcvtps2ibs512_mask:
@@ -962,6 +954,11 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
     l = 0;
     u = 15;
     break;
+  case X86::BI__builtin_ia32_prefetchi:
+    i = 1;
+    l = 2; // _MM_HINT_T1
+    u = 3; // _MM_HINT_T0
+    break;
   }
 
   // Note that we don't force a hard error on the range check here, allowing
@@ -1062,6 +1059,63 @@ void SemaX86::handleForceAlignArgPointerAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  X86ForceAlignArgPointerAttr(getASTContext(), AL));
+}
+
+bool SemaX86::checkTargetClonesAttr(
+    SmallVectorImpl<StringRef> &Params, SmallVectorImpl<SourceLocation> &Locs,
+    SmallVectorImpl<SmallString<64>> &NewParams) {
+  using namespace DiagAttrParams;
+
+  assert(Params.size() == Locs.size() &&
+         "Mismatch between number of string parameters and locations");
+
+  bool HasDefault = false;
+  bool HasComma = false;
+  for (unsigned I = 0, E = Params.size(); I < E; ++I) {
+    const StringRef Param = Params[I].trim();
+    const SourceLocation &Loc = Locs[I];
+
+    if (Param.empty() || Param.ends_with(','))
+      return Diag(Loc, diag::warn_unsupported_target_attribute)
+             << Unsupported << None << "" << TargetClones;
+
+    if (Param.contains(','))
+      HasComma = true;
+
+    StringRef LHS;
+    StringRef RHS = Param;
+    do {
+      std::tie(LHS, RHS) = RHS.split(',');
+      LHS = LHS.trim();
+      const SourceLocation &CurLoc =
+          Loc.getLocWithOffset(LHS.data() - Param.data());
+
+      if (LHS.starts_with("arch=")) {
+        if (!getASTContext().getTargetInfo().isValidCPUName(
+                LHS.drop_front(sizeof("arch=") - 1)))
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unsupported << CPU << LHS.drop_front(sizeof("arch=") - 1)
+                 << TargetClones;
+      } else if (LHS == "default")
+        HasDefault = true;
+      else if (!getASTContext().getTargetInfo().isValidFeatureName(LHS) ||
+               getASTContext().getTargetInfo().getFMVPriority(LHS) == 0)
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << LHS << TargetClones;
+
+      if (llvm::is_contained(NewParams, LHS))
+        Diag(CurLoc, diag::warn_target_clone_duplicate_options);
+      // Note: Add even if there are duplicates, since it changes name mangling.
+      NewParams.push_back(LHS);
+    } while (!RHS.empty());
+  }
+  if (HasComma && Params.size() > 1)
+    Diag(Locs[0], diag::warn_target_clone_mixed_values);
+
+  if (!HasDefault)
+    return Diag(Locs[0], diag::err_target_clone_must_have_default);
+
+  return false;
 }
 
 } // namespace clang

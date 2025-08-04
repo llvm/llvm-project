@@ -210,16 +210,6 @@ multiclass avx10_sat_cvt_rc<bits<8> Opc, string OpStr, X86SchedWriteWidths sched
                                 (MaskNode (SrcInfo.info512.VT SrcInfo.info512.RC:$src),
                                           (i32 timm:$rc)))>,
                              Sched<[sched.ZMM]>, EVEX, EVEX_RC, EVEX_B;
-  let Predicates = [HasAVX10_2], hasEVEX_U = 1 in {
-  defm Z256rrb : AVX512_maskable<Opc, MRMSrcReg, DestInfo.info256,
-                                (outs DestInfo.info256.RC:$dst),
-                                (ins SrcInfo.info256.RC:$src, AVX512RC:$rc),
-                                OpStr, "$rc, $src", "$src, $rc",
-                                (DestInfo.info256.VT
-                                  (MaskNode (SrcInfo.info256.VT SrcInfo.info256.RC:$src),
-                                            (i32 timm:$rc)))>,
-                               Sched<[sched.YMM]>, EVEX, EVEX_RC, EVEX_B;
-  }
 }
 
 // Conversion with SAE
@@ -234,15 +224,6 @@ multiclass avx10_sat_cvt_sae<bits<8> Opc, string OpStr, X86SchedWriteWidths sche
                              (DestInfo.info512.VT
                                (Node (SrcInfo.info512.VT SrcInfo.info512.RC:$src)))>,
                              Sched<[sched.ZMM]>, EVEX, EVEX_B;
-  let Predicates = [HasAVX10_2], hasEVEX_U = 1 in {
-  defm Z256rrb : AVX512_maskable<Opc, MRMSrcReg, DestInfo.info256,
-                                (outs DestInfo.info256.RC:$dst),
-                                (ins SrcInfo.info256.RC:$src),
-                                OpStr, "{sae}, $src", "$src, {sae}",
-                                (DestInfo.info256.VT
-                                  (Node (SrcInfo.info256.VT SrcInfo.info256.RC:$src)))>,
-                                Sched<[sched.YMM]>, EVEX, EVEX_B;
-  }
 }
 
 multiclass avx10_sat_cvt_base<bits<8> Opc, string OpStr, X86SchedWriteWidths sched,
@@ -1160,7 +1141,7 @@ defm VRSQRT  : avx10_fp14_bf16<0x4E, "vrsqrt", X86rsqrt14, SchedWriteFRsqrt>,
 defm VRCP    : avx10_fp14_bf16<0x4C, "vrcp", X86rcp14, SchedWriteFRcp>,
                                 T_MAP6, PS, EVEX_CD8<16, CD8VF>;
 defm VGETEXP : avx10_fp14_bf16<0x42, "vgetexp", X86fgetexp, SchedWriteFRnd>,
-                                T_MAP5, EVEX_CD8<16, CD8VF>;
+                                T_MAP6, PS, EVEX_CD8<16, CD8VF>;
 
 // VSCALEFBF16
 multiclass avx10_fp_scalef_bf16<bits<8> opc, string OpcodeStr,
@@ -1357,31 +1338,31 @@ multiclass avx10_com_ef_int<bits<8> Opc, X86VectorVTInfo _, SDNode OpNode,
 let Defs = [EFLAGS], Uses = [MXCSR], Predicates = [HasAVX10_2] in {
   defm VUCOMXSDZ  :  avx10_com_ef<0x2e, FR64X, f64, X86ucomi512,
                                   "vucomxsd", f64mem, loadf64, SSEPackedDouble>,
-                                  TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
+                                  TB, XD, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
   defm VUCOMXSHZ  :  avx10_com_ef<0x2e, FR16X, f16, X86ucomi512,
                                   "vucomxsh", f16mem, loadf16, SSEPackedSingle>,
-                                  T_MAP5, XD, EVEX_CD8<16, CD8VT1>;
+                                  T_MAP5, XS, EVEX_CD8<16, CD8VT1>;
   defm VUCOMXSSZ  :  avx10_com_ef<0x2e, FR32X, f32, X86ucomi512,
                                   "vucomxss", f32mem, loadf32, SSEPackedSingle>,
-                                  TB, XD, VEX_LIG, EVEX_CD8<32, CD8VT1>;
+                                  TB, XS, VEX_LIG, EVEX_CD8<32, CD8VT1>;
   defm VCOMXSDZ   :  avx10_com_ef_int<0x2f, v2f64x_info, X86comi512,
                                       "vcomxsd", SSEPackedDouble>,
-                                      TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
+                                      TB, XD, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
   defm VCOMXSHZ   :  avx10_com_ef_int<0x2f, v8f16x_info, X86comi512,
                                       "vcomxsh", SSEPackedSingle>,
-                                      T_MAP5, XD, EVEX_CD8<16, CD8VT1>;
+                                      T_MAP5, XS, EVEX_CD8<16, CD8VT1>;
   defm VCOMXSSZ   :  avx10_com_ef_int<0x2f, v4f32x_info, X86comi512,
                                       "vcomxss", SSEPackedSingle>,
-                                      TB, XD, VEX_LIG, EVEX_CD8<32, CD8VT1>;
+                                      TB, XS, VEX_LIG, EVEX_CD8<32, CD8VT1>;
   defm VUCOMXSDZ  :  avx10_com_ef_int<0x2e, v2f64x_info, X86ucomi512,
                                       "vucomxsd", SSEPackedDouble>,
-                                      TB, XS, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
+                                      TB, XD, VEX_LIG, REX_W, EVEX_CD8<64, CD8VT1>;
   defm VUCOMXSHZ  :  avx10_com_ef_int<0x2e, v8f16x_info, X86ucomi512,
                                       "vucomxsh", SSEPackedSingle>,
-                                      T_MAP5, XD, EVEX_CD8<16, CD8VT1>;
+                                      T_MAP5, XS, EVEX_CD8<16, CD8VT1>;
   defm VUCOMXSSZ  :  avx10_com_ef_int<0x2e, v4f32x_info, X86ucomi512,
                                       "vucomxss", SSEPackedSingle>,
-                                      TB, XD, VEX_LIG, EVEX_CD8<32, CD8VT1>;
+                                      TB, XS, VEX_LIG, EVEX_CD8<32, CD8VT1>;
 }
 
 //-------------------------------------------------

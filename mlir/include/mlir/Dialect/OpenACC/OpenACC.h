@@ -29,6 +29,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include <variant>
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsTypes.h.inc"
@@ -58,11 +59,10 @@
 #define ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS                                     \
   ACC_COMPUTE_CONSTRUCT_OPS, mlir::acc::LoopOp
 #define ACC_DATA_CONSTRUCT_STRUCTURED_OPS                                      \
-  mlir::acc::DataOp, mlir::acc::DeclareOp
+  mlir::acc::DataOp, mlir::acc::DeclareOp, mlir::acc::HostDataOp
 #define ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS                                    \
   mlir::acc::EnterDataOp, mlir::acc::ExitDataOp, mlir::acc::UpdateOp,          \
-      mlir::acc::HostDataOp, mlir::acc::DeclareEnterOp,                        \
-      mlir::acc::DeclareExitOp
+      mlir::acc::DeclareEnterOp, mlir::acc::DeclareExitOp
 #define ACC_DATA_CONSTRUCT_OPS                                                 \
   ACC_DATA_CONSTRUCT_STRUCTURED_OPS, ACC_DATA_CONSTRUCT_UNSTRUCTURED_OPS
 #define ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS                                     \
@@ -151,6 +151,12 @@ mlir::ValueRange getDataOperands(mlir::Operation *accOp);
 
 /// Used to get a mutable range iterating over the data operands.
 mlir::MutableOperandRange getMutableDataOperands(mlir::Operation *accOp);
+
+/// Used to obtain the enclosing compute construct operation that contains
+/// the provided `region`. Returns nullptr if no compute construct operation
+/// is found. The returns operation is one of types defined by
+///`ACC_COMPUTE_CONSTRUCT_OPS`.
+mlir::Operation *getEnclosingComputeOp(mlir::Region &region);
 
 /// Used to check whether the provided `type` implements the `PointerLikeType`
 /// interface.

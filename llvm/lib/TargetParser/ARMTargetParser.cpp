@@ -575,6 +575,23 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
   }
 }
 
+ARM::ARMABI ARM::computeTargetABI(const Triple &TT, StringRef CPU,
+                                  StringRef ABIName) {
+  if (ABIName.empty())
+    ABIName = ARM::computeDefaultTargetABI(TT, CPU);
+
+  if (ABIName == "aapcs16")
+    return ARM_ABI_AAPCS16;
+
+  if (ABIName.starts_with("aapcs"))
+    return ARM_ABI_AAPCS;
+
+  if (ABIName.starts_with("apcs"))
+    return ARM_ABI_APCS;
+
+  return ARM_ABI_UNKNOWN;
+}
+
 StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
   if (MArch.empty())
     MArch = Triple.getArchName();
@@ -631,7 +648,6 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     default:
       return "strongarm";
     }
-  case llvm::Triple::NaCl:
   case llvm::Triple::OpenBSD:
     return "cortex-a8";
   default:
@@ -657,6 +673,10 @@ void ARM::PrintSupportedExtensions(StringMap<StringRef> DescMap) {
     // Extensions without a feature cannot be used with -march.
     if (!Ext.Feature.empty()) {
       std::string Description = DescMap[Ext.Name].str();
+      // With SIMD, this links to the NEON feature, so the description should be
+      // taken from here, as SIMD does not exist in TableGen.
+      if (Ext.Name == "simd")
+        Description = DescMap["neon"].str();
       outs() << "    "
              << format(Description.empty() ? "%s\n" : "%-20s%s\n",
                        Ext.Name.str().c_str(), Description.c_str());

@@ -34,6 +34,9 @@ enum NodeType : unsigned {
   TAIL_MEDIUM,
   TAIL_LARGE,
 
+  // Select
+  SELECT_CC,
+
   // 32-bit shifts, directly matching the semantics of the named LoongArch
   // instructions.
   SLL_W,
@@ -56,6 +59,10 @@ enum NodeType : unsigned {
   MOVGR2FCSR,
 
   FTINT,
+
+  // Build and split F64 pair
+  BUILD_PAIR_F64,
+  SPLIT_PAIR_F64,
 
   // Bit counting operations
   CLZ_W,
@@ -147,7 +154,28 @@ enum NodeType : unsigned {
 
   // Floating point approximate reciprocal operation
   FRECIPE,
-  FRSQRTE
+  FRSQRTE,
+
+  // Vector logicial left / right shift by immediate
+  VSLLI,
+  VSRLI,
+
+  // Vector byte logicial left / right shift
+  VBSLL,
+  VBSRL,
+
+  // Scalar load broadcast to vector
+  VLDREPL,
+
+  // Vector mask set by condition
+  VMSKLTZ,
+  VMSKGEZ,
+  VMSKEQZ,
+  VMSKNEZ,
+  XVMSKLTZ,
+  XVMSKGEZ,
+  XVMSKEQZ,
+  XVMSKNEZ,
 
   // Intrinsic operations end =============================================
 };
@@ -271,7 +299,14 @@ public:
       unsigned *Fast = nullptr) const override;
 
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override {
-    return false;
+    if (!VT.isSimple())
+      return false;
+
+    // Not for i1 vectors
+    if (VT.getSimpleVT().getScalarType() == MVT::i1)
+      return false;
+
+    return isTypeLegal(VT.getSimpleVT());
   }
   bool shouldConsiderGEPOffsetSplit() const override { return true; }
   bool shouldSignExtendTypeInLibCall(Type *Ty, bool IsSigned) const override;
@@ -282,6 +317,12 @@ public:
 
   bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
   LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
+
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
@@ -335,9 +376,16 @@ private:
   SDValue lowerEXTRACT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINSERT_VECTOR_ELT(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSELECT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBF16_TO_FP(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
@@ -362,6 +410,28 @@ private:
       const SmallVectorImpl<CCValAssign> &ArgLocs) const;
 
   bool softPromoteHalfType() const override { return true; }
+
+  bool
+  splitValueIntoRegisterParts(SelectionDAG &DAG, const SDLoc &DL, SDValue Val,
+                              SDValue *Parts, unsigned NumParts, MVT PartVT,
+                              std::optional<CallingConv::ID> CC) const override;
+
+  SDValue
+  joinRegisterPartsIntoValue(SelectionDAG &DAG, const SDLoc &DL,
+                             const SDValue *Parts, unsigned NumParts,
+                             MVT PartVT, EVT ValueVT,
+                             std::optional<CallingConv::ID> CC) const override;
+
+  /// Return the register type for a given MVT, ensuring vectors are treated
+  /// as a series of gpr sized integers.
+  MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                    EVT VT) const override;
+
+  /// Return the number of registers for a given MVT, ensuring vectors are
+  /// treated as a series of gpr sized integers.
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                         CallingConv::ID CC,
+                                         EVT VT) const override;
 };
 
 } // end namespace llvm

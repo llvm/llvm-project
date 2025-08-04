@@ -35,6 +35,12 @@ void test_m(int *p) {
   asm volatile("" :: "m"(*(p+4)));
 }
 
+void test_q(void) {
+// CHECK-LABEL: define{{.*}} void @test_q()
+// CHECK: call void asm sideeffect "", "q"(i32 0)
+  asm volatile ("" :: "q"(0));
+}
+
 void test_I(void) {
 // CHECK-LABEL: define{{.*}} void @test_I()
 // CHECK: call void asm sideeffect "", "I"(i32 2047)

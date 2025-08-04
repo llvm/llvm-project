@@ -4,12 +4,24 @@
 
 #pragma float_control(except, on)
 
+// CHECK-LABEL: @test_isnan__Float16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[F_ADDR:%.*]] = alloca half, align 2
+// CHECK-NEXT:    store half [[F:%.*]], ptr [[F_ADDR]], align 2
+// CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[F_ADDR]], align 2
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f16(half [[TMP0]], i64 15) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    ret i32 [[TMP1]]
+//
+int test_isnan__Float16(_Float16 f) {
+  return __builtin_isnan(f);
+}
+
 // CHECK-LABEL: @test_isnan_float(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4
 // CHECK-NEXT:    store float [[F:%.*]], ptr [[F_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR]], align 4
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f32(float [[TMP0]], i64 15) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.s390.tdc.f32(float [[TMP0]], i64 15) #[[ATTR2]]
 // CHECK-NEXT:    ret i32 [[TMP1]]
 //
 int test_isnan_float(float f) {

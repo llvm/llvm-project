@@ -26,10 +26,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   std::sort(a, a + 4);
   std::sort(a, a + 4, std::less<A>());
   std::partition(a, a + 4, A::isEven);
-#if TEST_STD_VER < 26
-  if (!TEST_IS_CONSTANT_EVALUATED)
-#endif
-  {
+  if (TEST_STD_AT_LEAST_26_OR_RUNTIME_EVALUATED) {
     std::stable_sort(a, a + 4);
     std::stable_sort(a, a + 4, std::less<A>());
     std::stable_partition(a, a + 4, A::isEven);

@@ -748,7 +748,8 @@ class NestedNameSpecifierAVisitor : public TestVisitor {
 public:
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLoc) override {
     if (NNSLoc.getNestedNameSpecifier()) {
-      if (const NamespaceDecl* NS = NNSLoc.getNestedNameSpecifier()->getAsNamespace()) {
+      if (const auto *NS = dyn_cast_if_present<NamespaceDecl>(
+              NNSLoc.getNestedNameSpecifier()->getAsNamespace())) {
         if (NS->getName() == "a") {
           Replace = Replacement(*SM, &NNSLoc, "", Context->getLangOpts());
         }
@@ -1034,8 +1035,7 @@ static constexpr bool usesWindowsPaths() {
 
 TEST(DeduplicateByFileTest, PathsWithDots) {
   std::map<std::string, Replacements> FileToReplaces;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS(
-      new llvm::vfs::InMemoryFileSystem());
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager FileMgr(FileSystemOptions(), VFS);
   StringRef Path1 = usesWindowsPaths() ? "a\\b\\..\\.\\c.h" : "a/b/.././c.h";
   StringRef Path2 = usesWindowsPaths() ? "a\\c.h" : "a/c.h";
@@ -1050,8 +1050,7 @@ TEST(DeduplicateByFileTest, PathsWithDots) {
 
 TEST(DeduplicateByFileTest, PathWithDotSlash) {
   std::map<std::string, Replacements> FileToReplaces;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS(
-      new llvm::vfs::InMemoryFileSystem());
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager FileMgr(FileSystemOptions(), VFS);
   StringRef Path1 = usesWindowsPaths() ? ".\\a\\b\\c.h" : "./a/b/c.h";
   StringRef Path2 = usesWindowsPaths() ? "a\\b\\c.h" : "a/b/c.h";
@@ -1066,8 +1065,7 @@ TEST(DeduplicateByFileTest, PathWithDotSlash) {
 
 TEST(DeduplicateByFileTest, NonExistingFilePath) {
   std::map<std::string, Replacements> FileToReplaces;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> VFS(
-      new llvm::vfs::InMemoryFileSystem());
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager FileMgr(FileSystemOptions(), VFS);
   StringRef Path1 = usesWindowsPaths() ? ".\\a\\b\\c.h" : "./a/b/c.h";
   StringRef Path2 = usesWindowsPaths() ? "a\\b\\c.h" : "a/b/c.h";

@@ -19,10 +19,7 @@
 #include "Record.h"
 #include "Source.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include <map>
 #include <vector>
 
 namespace clang {
@@ -115,19 +112,30 @@ public:
   Record *getOrCreateRecord(const RecordDecl *RD);
 
   /// Creates a descriptor for a primitive type.
-  Descriptor *createDescriptor(const DeclTy &D, PrimType Type,
+  Descriptor *createDescriptor(const DeclTy &D, PrimType T,
+                               const Type *SourceTy = nullptr,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
-                               bool IsMutable = false) {
-    return allocateDescriptor(D, Type, MDSize, IsConst, IsTemporary, IsMutable);
+                               bool IsMutable = false,
+                               bool IsVolatile = false) {
+    return allocateDescriptor(D, SourceTy, T, MDSize, IsConst, IsTemporary,
+                              IsMutable, IsVolatile);
   }
 
   /// Creates a descriptor for a composite type.
   Descriptor *createDescriptor(const DeclTy &D, const Type *Ty,
                                Descriptor::MetadataSize MDSize = std::nullopt,
                                bool IsConst = false, bool IsTemporary = false,
-                               bool IsMutable = false,
+                               bool IsMutable = false, bool IsVolatile = false,
                                const Expr *Init = nullptr);
+
+  void *Allocate(size_t Size, unsigned Align = 8) const {
+    return Allocator.Allocate(Size, Align);
+  }
+  template <typename T> T *Allocate(size_t Num = 1) const {
+    return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
+  }
+  void Deallocate(void *Ptr) const {}
 
   /// Context to manage declaration lifetimes.
   class DeclScope {
@@ -201,7 +209,7 @@ private:
   };
 
   /// Allocator for globals.
-  PoolAllocTy Allocator;
+  mutable PoolAllocTy Allocator;
 
   /// Global objects.
   std::vector<Global *> Globals;
@@ -234,5 +242,19 @@ public:
 
 } // namespace interp
 } // namespace clang
+
+inline void *operator new(size_t Bytes, const clang::interp::Program &C,
+                          size_t Alignment = 8) {
+  return C.Allocate(Bytes, Alignment);
+}
+
+inline void operator delete(void *Ptr, const clang::interp::Program &C,
+                            size_t) {
+  C.Deallocate(Ptr);
+}
+inline void *operator new[](size_t Bytes, const clang::interp::Program &C,
+                            size_t Alignment = 8) {
+  return C.Allocate(Bytes, Alignment);
+}
 
 #endif

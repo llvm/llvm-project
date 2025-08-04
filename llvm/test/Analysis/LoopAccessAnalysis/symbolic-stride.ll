@@ -194,15 +194,15 @@ define void @single_stride_castexpr(i32 %offset, ptr %src, ptr %dst, i1 %cond) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP1:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP2:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv.3
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP1]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: ((4 * %iv.1) + %dst) High: (804 + (4 * %iv.1) + %dst))
 ; CHECK-NEXT:            Member: {((4 * %iv.1) + %dst),+,4}<%inner.loop>
-; CHECK-NEXT:        Group [[GRP2]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %src High: (804 + %src))
 ; CHECK-NEXT:            Member: {%src,+,4}<nuw><%inner.loop>
 ; CHECK-EMPTY:
@@ -256,15 +256,15 @@ define void @single_stride_castexpr_multiuse(i32 %offset, ptr %src, ptr %dst, i1
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP3:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.dst = getelementptr i32, ptr %dst, i64 %iv.2
-; CHECK-NEXT:        Against group ([[GRP4:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv.3
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP3]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: ((4 * %iv.1) + %dst) High: (804 + (4 * %iv.1) + (-4 * (zext i32 %offset to i64))<nsw> + %dst))
 ; CHECK-NEXT:            Member: {((4 * %iv.1) + %dst),+,4}<%inner.loop>
-; CHECK-NEXT:        Group [[GRP4]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (4 + %src) High: (808 + (-4 * (zext i32 %offset to i64))<nsw> + %src))
 ; CHECK-NEXT:            Member: {(4 + %src),+,4}<%inner.loop>
 ; CHECK-EMPTY:
@@ -461,15 +461,15 @@ define void @unknown_stride_equalto_tc(i32 %N, ptr %A, ptr %B, i32 %j)  {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP5:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        Against group ([[GRP6:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP5]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:        Group [[GRP6]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + %N) to i64) * (sext i32 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + %N) to i64) * (sext i32 %N to i64)) + %B))))
 ; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 %N to i64))<nsw>}<%loop>
 ; CHECK-EMPTY:
@@ -512,15 +512,15 @@ define void @unknown_stride_equalto_zext_tc(i16 zeroext %N, ptr %A, ptr %B, i32 
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP7:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        Against group ([[GRP8:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP7]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:        Group [[GRP8]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (zext i16 %N to i32))<nsw> to i64) * (zext i16 %N to i64)) + %B))))
 ; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (zext i16 %N to i64))<nuw><nsw>}<%loop>
 ; CHECK-EMPTY:
@@ -563,15 +563,15 @@ define void @unknown_stride_equalto_sext_tc(i16 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP9:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        Against group ([[GRP10:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP9]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:        Group [[GRP10]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (sext i16 %N to i32))<nsw> to i64) * (sext i16 %N to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (sext i16 %N to i32))<nsw> to i64) * (sext i16 %N to i64)) + %B))))
 ; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i16 %N to i64))<nsw>}<%loop>
 ; CHECK-EMPTY:
@@ -614,15 +614,15 @@ define void @unknown_stride_equalto_trunc_tc(i64 %N, ptr %A, ptr %B, i32 %j) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
-; CHECK-NEXT:        Comparing group ([[GRP11:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:        ptr %A
-; CHECK-NEXT:        Against group ([[GRP12:0x[0-9a-f]+]]):
+; CHECK-NEXT:        Against group GRP1:
 ; CHECK-NEXT:          %arrayidx = getelementptr inbounds i16, ptr %B, i32 %add
 ; CHECK-NEXT:      Grouped accesses:
-; CHECK-NEXT:        Group [[GRP11]]:
+; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (4 + %A))
 ; CHECK-NEXT:            Member: %A
-; CHECK-NEXT:        Group [[GRP12]]:
+; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: (((2 * (sext i32 %j to i64))<nsw> + %B) umin ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (trunc i64 %N to i32)) to i64) * (sext i32 (trunc i64 %N to i32) to i64)) + %B)) High: (2 + (((2 * (sext i32 %j to i64))<nsw> + %B) umax ((2 * (sext i32 %j to i64))<nsw> + (2 * (zext i32 (-1 + (trunc i64 %N to i32)) to i64) * (sext i32 (trunc i64 %N to i32) to i64)) + %B))))
 ; CHECK-NEXT:            Member: {((2 * (sext i32 %j to i64))<nsw> + %B),+,(2 * (sext i32 (trunc i64 %N to i32) to i64))<nsw>}<%loop>
 ; CHECK-EMPTY:

@@ -142,7 +142,7 @@ DebugRangesSectionWriter::DebugRangesSectionWriter() {
 
 void DebugRangesSectionWriter::initSection() {
   // Adds an empty range to the buffer.
-  writeAddressRanges(*RangesStream.get(), DebugAddressRangesVector{});
+  writeAddressRanges(*RangesStream, DebugAddressRangesVector{});
 }
 
 uint64_t DebugRangesSectionWriter::addRanges(
@@ -169,7 +169,7 @@ uint64_t DebugRangesSectionWriter::addRanges(DebugAddressRangesVector &Ranges) {
   // unique and correct offsets in patches.
   std::lock_guard<std::mutex> Lock(WriterMutex);
   const uint32_t EntryOffset = RangesBuffer->size();
-  writeAddressRanges(*RangesStream.get(), Ranges);
+  writeAddressRanges(*RangesStream, Ranges);
 
   return EntryOffset;
 }
@@ -321,8 +321,8 @@ void DebugRangeListsSectionWriter::finalizeSection() {
                            llvm::endianness::little);
 
   std::unique_ptr<DebugBufferVector> Header = getDWARF5Header(
-      {static_cast<uint32_t>(SizeOfArraySection + CUBodyBuffer.get()->size()),
-       5, 8, 0, static_cast<uint32_t>(RangeEntries.size())});
+      {static_cast<uint32_t>(SizeOfArraySection + CUBodyBuffer->size()), 5, 8,
+       0, static_cast<uint32_t>(RangeEntries.size())});
   *RangesStream << *Header;
   *RangesStream << *CUArrayBuffer;
   *RangesStream << *CUBodyBuffer;
@@ -676,7 +676,6 @@ static void writeDWARF5LocList(uint32_t &NumberOfEntries, DIEValue &AttrInfo,
     return;
   }
 
-  std::vector<uint64_t> OffsetsArray;
   auto writeExpression = [&](uint32_t Index) -> void {
     const DebugLocationEntry &Entry = LocList[Index];
     encodeULEB128(Entry.Expr.size(), LocBodyStream);
@@ -747,8 +746,8 @@ void DebugLoclistWriter::finalizeDWARF5(DIEBuilder &DIEBldr, DIE &Die) {
         llvm::endianness::little);
 
   std::unique_ptr<DebugBufferVector> Header = getDWARF5Header(
-      {static_cast<uint32_t>(SizeOfArraySection + LocBodyBuffer.get()->size()),
-       5, 8, 0, NumberOfEntries});
+      {static_cast<uint32_t>(SizeOfArraySection + LocBodyBuffer->size()), 5, 8,
+       0, NumberOfEntries});
   *LocStream << *Header;
   *LocStream << *LocArrayBuffer;
   *LocStream << *LocBodyBuffer;

@@ -489,9 +489,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs).set(
-          MachineFunctionProperties::Property::TracksLiveness);
+      return MachineFunctionProperties().setNoVRegs().setTracksLiveness();
     }
 
     StringRef getPassName() const override {
@@ -794,8 +792,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
       !RDA.hasLocalDefBefore(VCTP, VCTP->getOperand(1).getReg())) {
     if (auto *Def = RDA.getUniqueReachingMIDef(
             &Preheader->back(), VCTP->getOperand(1).getReg().asMCReg())) {
-      SmallPtrSet<MachineInstr*, 2> Ignore;
-      Ignore.insert_range(VCTPs);
+      SmallPtrSet<MachineInstr *, 2> Ignore(llvm::from_range, VCTPs);
       TryRemove(Def, RDA, ToRemove, Ignore);
     }
   }
@@ -1294,9 +1291,9 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
 
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   RDA = &getAnalysis<ReachingDefAnalysis>();
-  MF->getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
+  MF->getProperties().setTracksLiveness();
   MRI = &MF->getRegInfo();
-  TII = static_cast<const ARMBaseInstrInfo*>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   BBUtils = std::make_unique<ARMBasicBlockUtils>(*MF);
   BBUtils->computeAllBlockSizes();

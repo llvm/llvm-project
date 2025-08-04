@@ -156,9 +156,9 @@ define void @f10(double %extra) {
 ; CHECK-NEXT:    adb %f2, 0(%r1)
 ; CHECK-NEXT:    ldr %f3, %f0
 ; CHECK-NEXT:    adb %f3, 0(%r1)
-; CHECK-NEXT:    std %f1, 176(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f2, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f3, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f1, 176(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f2, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f3, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    ldr %f1, %f0
 ; CHECK-NEXT:    adb %f1, 0(%r1)
 ; CHECK-NEXT:    ldr %f2, %f0
@@ -263,14 +263,14 @@ define void @f11(i64 %mask) {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -240
 ; CHECK-NEXT:    .cfi_def_cfa_offset 400
-; CHECK-NEXT:    std %f8, 232(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 224(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f10, 216(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f11, 208(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f12, 200(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f13, 192(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f14, 184(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f15, 176(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 232(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 224(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f10, 216(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f11, 208(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f12, 200(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f13, 192(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f14, 184(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f15, 176(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
@@ -286,8 +286,8 @@ define void @f11(i64 %mask) {
 ; CHECK-NEXT:    ng %r3, 0(%r1)
 ; CHECK-NEXT:    lgr %r4, %r2
 ; CHECK-NEXT:    ng %r4, 0(%r1)
-; CHECK-NEXT:    stg %r0, 168(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    stg %r3, 160(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r0, 168(%r15) # 8-byte Spill
+; CHECK-NEXT:    stg %r3, 160(%r15) # 8-byte Spill
 ; CHECK-NEXT:    lgr %r0, %r2
 ; CHECK-NEXT:    ng %r0, 0(%r1)
 ; CHECK-NEXT:    ldgr %f10, %r4
@@ -329,14 +329,14 @@ define void @f11(i64 %mask) {
 ; CHECK-NEXT:    std %f1, 0(%r13)
 ; CHECK-NEXT:    jlh .LBB10_1
 ; CHECK-NEXT:  # %bb.2: # %exit
-; CHECK-NEXT:    ld %f8, 232(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 224(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f10, 216(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f11, 208(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f12, 200(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f13, 192(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f14, 184(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f15, 176(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 232(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 224(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f10, 216(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f11, 208(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f12, 200(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f13, 192(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f14, 184(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f15, 176(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r12, %r15, 336(%r15)
 ; CHECK-NEXT:    br %r14
 entry:
@@ -431,12 +431,12 @@ define void @f12() {
 ; CHECK-NEXT:    agr %r9, %r2
 ; CHECK-NEXT:    agr %r10, %r2
 ; CHECK-NEXT:    agr %r11, %r2
-; CHECK-NEXT:    lg %r0, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r0, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    agr %r0, %r2
-; CHECK-NEXT:    stg %r0, 160(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    lg %r0, 168(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    stg %r0, 160(%r15) # 8-byte Spill
+; CHECK-NEXT:    lg %r0, 168(%r15) # 8-byte Reload
 ; CHECK-NEXT:    agr %r0, %r2
-; CHECK-NEXT:    stg %r0, 168(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    stg %r0, 168(%r15) # 8-byte Spill
 ; CHECK-NEXT:    cgijlh %r2, 1, .LBB11_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    brasl %r14, foo@PLT
@@ -466,10 +466,10 @@ define void @f12() {
 ; CHECK-NEXT:    ldgr %f1, %r11
 ; CHECK-NEXT:    mdbr %f1, %f0
 ; CHECK-NEXT:    std %f1, 0(%r1)
-; CHECK-NEXT:    ld %f1, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f1, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    mdbr %f1, %f0
 ; CHECK-NEXT:    std %f1, 0(%r1)
-; CHECK-NEXT:    ld %f1, 168(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f1, 168(%r15) # 8-byte Reload
 ; CHECK-NEXT:    mdbr %f1, %f0
 ; CHECK-NEXT:    std %f1, 0(%r1)
 ; CHECK-NEXT:    brasl %r14, foo@PLT
@@ -554,14 +554,14 @@ define void @f13() {
 ; CHECK-NEXT:    .cfi_offset %r15, -40
 ; CHECK-NEXT:    aghi %r15, -240
 ; CHECK-NEXT:    .cfi_def_cfa_offset 400
-; CHECK-NEXT:    std %f8, 232(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f9, 224(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f10, 216(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f11, 208(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f12, 200(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f13, 192(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f14, 184(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f15, 176(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 232(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f9, 224(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f10, 216(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f11, 208(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f12, 200(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f13, 192(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f14, 184(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f15, 176(%r15) # 8-byte Spill
 ; CHECK-NEXT:    .cfi_offset %f8, -168
 ; CHECK-NEXT:    .cfi_offset %f9, -176
 ; CHECK-NEXT:    .cfi_offset %f10, -184
@@ -579,8 +579,8 @@ define void @f13() {
 ; CHECK-NEXT:    ldr %f12, %f8
 ; CHECK-NEXT:    ldr %f11, %f8
 ; CHECK-NEXT:    ldr %f10, %f8
-; CHECK-NEXT:    std %f8, 160(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f8, 160(%r15) # 8-byte Spill
+; CHECK-NEXT:    std %f8, 168(%r15) # 8-byte Spill
 ; CHECK-NEXT:  .LBB12_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    brasl %r14, bar@PLT
@@ -593,12 +593,12 @@ define void @f13() {
 ; CHECK-NEXT:    cdb %f0, 0(%r13)
 ; CHECK-NEXT:    mdbr %f11, %f0
 ; CHECK-NEXT:    mdbr %f10, %f0
-; CHECK-NEXT:    ld %f1, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f1, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    mdbr %f1, %f0
-; CHECK-NEXT:    std %f1, 160(%r15) # 8-byte Folded Spill
-; CHECK-NEXT:    ld %f1, 168(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    std %f1, 160(%r15) # 8-byte Spill
+; CHECK-NEXT:    ld %f1, 168(%r15) # 8-byte Reload
 ; CHECK-NEXT:    mdbr %f1, %f0
-; CHECK-NEXT:    std %f1, 168(%r15) # 8-byte Folded Spill
+; CHECK-NEXT:    std %f1, 168(%r15) # 8-byte Spill
 ; CHECK-NEXT:    jlh .LBB12_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    brasl %r14, foo@PLT
@@ -628,21 +628,21 @@ define void @f13() {
 ; CHECK-NEXT:    lgdr %r2, %f10
 ; CHECK-NEXT:    agr %r2, %r0
 ; CHECK-NEXT:    stg %r2, 0(%r1)
-; CHECK-NEXT:    lg %r2, 160(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r2, 160(%r15) # 8-byte Reload
 ; CHECK-NEXT:    agr %r2, %r0
 ; CHECK-NEXT:    stg %r2, 0(%r1)
-; CHECK-NEXT:    lg %r2, 168(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    lg %r2, 168(%r15) # 8-byte Reload
 ; CHECK-NEXT:    agr %r2, %r0
 ; CHECK-NEXT:    stg %r2, 0(%r1)
 ; CHECK-NEXT:    brasl %r14, foo@PLT
-; CHECK-NEXT:    ld %f8, 232(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f9, 224(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f10, 216(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f11, 208(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f12, 200(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f13, 192(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f14, 184(%r15) # 8-byte Folded Reload
-; CHECK-NEXT:    ld %f15, 176(%r15) # 8-byte Folded Reload
+; CHECK-NEXT:    ld %f8, 232(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f9, 224(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f10, 216(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f11, 208(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f12, 200(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f13, 192(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f14, 184(%r15) # 8-byte Reload
+; CHECK-NEXT:    ld %f15, 176(%r15) # 8-byte Reload
 ; CHECK-NEXT:    lmg %r13, %r15, 344(%r15)
 ; CHECK-NEXT:    br %r14
 entry:

@@ -4,10 +4,6 @@
 # Adds the name of the generated file to TABLEGEN_OUTPUT.
 include(LLVMDistributionSupport)
 
-# Clear out any pre-existing compile_commands file before processing. This
-# allows for generating a clean compile_commands on each configure.
-file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)
-
 function(tablegen project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
 
@@ -21,37 +17,44 @@ function(tablegen project ofn)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
   endif()
 
-  # Use depfile instead of globbing arbitrary *.td(s) for Ninja.
-  if(CMAKE_GENERATOR MATCHES "Ninja")
-    # Make output path relative to build.ninja, assuming located on
-    # ${CMAKE_BINARY_DIR}.
+  # Set the include directories
+  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
+  list(PREPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
+  list(PREPEND tblgen_includes ${CMAKE_CURRENT_SOURCE_DIR})
+  # Filter out any empty include items.
+  list(REMOVE_ITEM tblgen_includes "")
+
+  # Use depfile instead of globbing arbitrary *.td(s) for Ninja. We force
+  # CMake versions older than v3.30 on Windows to use the fallback behavior
+  # due to a depfile parsing bug on Windows paths in versions prior to 3.30.
+  # https://gitlab.kitware.com/cmake/cmake/-/issues/25943
+  # CMake versions older than v3.23 on other platforms use the fallback
+  # behavior as v3.22 and earlier fail to parse some depfiles that get
+  # generated, and this behavior was fixed in CMake commit
+  # e04a352cca523eba2ac0d60063a3799f5bb1c69e.
+  cmake_policy(GET CMP0116 cmp0116_state)
+  if(CMAKE_GENERATOR MATCHES "Ninja" AND cmp0116_state STREQUAL NEW
+     AND NOT (CMAKE_HOST_WIN32 AND CMAKE_VERSION VERSION_LESS 3.30)
+     AND NOT (CMAKE_VERSION VERSION_LESS 3.23))
     # CMake emits build targets as relative paths but Ninja doesn't identify
-    # absolute path (in *.d) as relative path (in build.ninja)
-    # Note that tblgen is executed on ${CMAKE_BINARY_DIR} as working directory.
-    file(RELATIVE_PATH ofn_rel
-      ${CMAKE_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${ofn})
+    # absolute path (in *.d) as relative path (in build.ninja). Post CMP0116,
+    # CMake handles this discrepancy for us, otherwise we use the fallback
+    # logic.
     set(additional_cmdline
-      -o ${ofn_rel}
-      -d ${ofn_rel}.d
-      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      DEPFILE ${CMAKE_CURRENT_BINARY_DIR}/${ofn}.d
+      -o ${ofn}
+      -d ${ofn}.d
+      DEPFILE ${ofn}.d
       )
-    set(local_tds)
     set(global_tds)
   else()
-    file(GLOB local_tds "*.td")
-    file(GLOB_RECURSE global_tds "${LLVM_MAIN_INCLUDE_DIR}/llvm/*.td")
+    set(include_td_dirs "${tblgen_includes}")
+    list(TRANSFORM include_td_dirs APPEND "/*.td")
+    file(GLOB global_tds ${include_td_dirs})
     set(additional_cmdline
       -o ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
       )
   endif()
 
-  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-  else()
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE
-      ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
-  endif()
   if (LLVM_ENABLE_DAGISEL_COV AND "-gen-dag-isel" IN_LIST ARGN)
     list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-coverage")
   endif()
@@ -68,7 +71,9 @@ function(tablegen project ofn)
   # char literals, instead. If we're cross-compiling, then conservatively assume
   # that the source might be consumed by MSVC.
   # [1] https://docs.microsoft.com/en-us/cpp/cpp/compiler-limits?view=vs-2017
-  if (MSVC AND project STREQUAL LLVM)
+  # Don't pass this flag to mlir-src-sharder, since it doesn't support the
+  # flag, and it doesn't need it.
+  if (MSVC AND NOT "${project}" STREQUAL "MLIR_SRC_SHARDER")
     list(APPEND LLVM_TABLEGEN_FLAGS "--long-string-literals=0")
   endif()
   if (CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -84,6 +89,25 @@ function(tablegen project ofn)
     list(APPEND LLVM_TABLEGEN_FLAGS "-no-warn-on-unused-template-args")
   endif()
 
+  # Build the absolute path for the current input file.
+  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
+  else()
+    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE
+      ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
+  endif()
+
+  # Append this file and its includes to the compile commands file.
+  # This file is used by the TableGen LSP Language Server (tblgen-lsp-server).
+  file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
+      "--- !FileInfo:\n"
+      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
+      "  includes: \"${tblgen_includes}\"\n"
+  )
+
+  # Prepend each include entry with -I for arguments.
+  list(TRANSFORM tblgen_includes PREPEND -I)
+
   # We need both _TABLEGEN_TARGET and _TABLEGEN_EXE in the  DEPENDS list
   # (both the target and the file) to have .inc files rebuilt on
   # a tablegen change, as cmake does not propagate file-level dependencies
@@ -93,35 +117,6 @@ function(tablegen project ofn)
   # dependency twice in the result file when
   # ("${${project}_TABLEGEN_TARGET}" STREQUAL "${${project}_TABLEGEN_EXE}")
   # but lets us having smaller and cleaner code here.
-  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
-  list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
-
-  # Get the current set of include paths for this td file.
-  cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
-  get_directory_property(tblgen_includes INCLUDE_DIRECTORIES)
-  list(APPEND tblgen_includes ${ARG_EXTRA_INCLUDES})
-  # Filter out any empty include items.
-  list(REMOVE_ITEM tblgen_includes "")
-
-  # Build the absolute path for the current input file.
-  if (IS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${LLVM_TARGET_DEFINITIONS})
-  else()
-    set(LLVM_TARGET_DEFINITIONS_ABSOLUTE ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
-  endif()
-
-  # Append this file and its includes to the compile commands file.
-  # This file is used by the TableGen LSP Language Server (tblgen-lsp-server).
-  file(APPEND ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml
-      "--- !FileInfo:\n"
-      "  filepath: \"${LLVM_TARGET_DEFINITIONS_ABSOLUTE}\"\n"
-      "  includes: \"${CMAKE_CURRENT_SOURCE_DIR};${tblgen_includes}\"\n"
-  )
-
-  # Filter out empty items before prepending each entry with -I
-  list(REMOVE_ITEM tblgen_includes "")
-  list(TRANSFORM tblgen_includes PREPEND -I)
-
   set(tablegen_exe ${${project}_TABLEGEN_EXE})
   set(tablegen_depends ${${project}_TABLEGEN_TARGET} ${tablegen_exe})
 
@@ -132,7 +127,7 @@ function(tablegen project ofn)
   endif()
 
   add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${ofn}
-    COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS} -I ${CMAKE_CURRENT_SOURCE_DIR}
+    COMMAND ${tablegen_exe} ${ARG_UNPARSED_ARGUMENTS}
     ${tblgen_includes}
     ${LLVM_TABLEGEN_FLAGS}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
@@ -142,7 +137,7 @@ function(tablegen project ofn)
     # directory and local_tds may not contain it, so we must
     # explicitly list it here:
     DEPENDS ${ARG_DEPENDS} ${tablegen_depends}
-      ${local_tds} ${global_tds}
+      ${global_tds}
     ${LLVM_TARGET_DEFINITIONS_ABSOLUTE}
     ${LLVM_TARGET_DEPENDS}
     ${LLVM_TABLEGEN_JOB_POOL}
@@ -251,3 +246,11 @@ macro(add_tablegen target project)
     set_property(GLOBAL APPEND PROPERTY ${export_upper}_EXPORTS ${target})
   endif()
 endmacro()
+
+# Make sure 'tablegen_compile_commands.yml' is only deleted once the very
+# first time this file is included.
+include_guard(GLOBAL)
+
+# Clear out any pre-existing compile_commands file before processing. This
+# allows for generating a clean compile_commands on each configure.
+file(REMOVE ${CMAKE_BINARY_DIR}/tablegen_compile_commands.yml)
