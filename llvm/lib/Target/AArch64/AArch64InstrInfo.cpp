@@ -5866,26 +5866,25 @@ void AArch64InstrInfo::decomposeStackOffsetForFrameOffsets(
 // DW_OP_plus`, this helper would create DW_OP_lit15 DW_OP_minus.
 static void appendConstantExpr(SmallVectorImpl<char> &Expr, int64_t Constant,
                                dwarf::LocationAtom Operation) {
-  // + -constant (<= 31)
   if (Operation == dwarf::DW_OP_plus && Constant < 0 && -Constant <= 31) {
+    // -Constant (1 to 31)
     Expr.push_back(dwarf::DW_OP_lit0 - Constant);
     Operation = dwarf::DW_OP_minus;
   } else if (Constant >= 0 && Constant <= 31) {
-    // `Op` literal value 0 to 31
+    // Literal value 0 to 31
     Expr.push_back(dwarf::DW_OP_lit0 + Constant);
   } else {
-    // `Op` constant
+    // Signed constant
     Expr.push_back(dwarf::DW_OP_consts);
     appendLEB128<LEB128Sign::Signed>(Expr, Constant);
   }
   return Expr.push_back(Operation);
 }
 
-// Convenience function to create a DWARF expression for VG
-static void appendReadVGRegExpr(SmallVectorImpl<char> &Expr,
-                                unsigned VGRegNum) {
+// Convenience function to create a DWARF expression for a register.
+static void appendReadRegExpr(SmallVectorImpl<char> &Expr, unsigned RegNum) {
   Expr.push_back(dwarf::DW_OP_bregx);
-  appendLEB128<LEB128Sign::Unsigned>(Expr, VGRegNum);
+  appendLEB128<LEB128Sign::Unsigned>(Expr, RegNum);
   Expr.push_back(0);
 }
 
@@ -5896,7 +5895,7 @@ static void appendOffsetComment(int NumBytes, llvm::raw_string_ostream &Comment,
   if (NumBytes) {
     Comment << (NumBytes < 0 ? " - " : " + ") << std::abs(NumBytes);
     if (!RegScale.empty())
-      Comment << " * " << RegScale;
+      Comment << ' ' << RegScale;
   }
 }
 
@@ -5923,13 +5922,13 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
   assert(DwarfReg >= 0 && DwarfReg <= 31 && "DwarfReg out of bounds (0..31)");
   // Reg + NumBytes
-  Expr.push_back((uint8_t)(dwarf::DW_OP_breg0 + DwarfReg));
+  Expr.push_back(dwarf::DW_OP_breg0 + DwarfReg);
   appendLEB128<LEB128Sign::Signed>(Expr, NumBytes);
   appendOffsetComment(NumBytes, Comment);
   if (NumVGScaledBytes) {
     // + VG * NumVGScaledBytes
-    appendOffsetComment(NumVGScaledBytes, Comment, "VG");
-    appendReadVGRegExpr(Expr, TRI.getDwarfRegNum(AArch64::VG, true));
+    appendOffsetComment(NumVGScaledBytes, Comment, "* VG");
+    appendReadRegExpr(Expr, TRI.getDwarfRegNum(AArch64::VG, true));
     appendConstantExpr(Expr, NumVGScaledBytes, dwarf::DW_OP_mul);
     Expr.push_back(dwarf::DW_OP_plus);
   }
@@ -5978,8 +5977,8 @@ MCCFIInstruction llvm::createCFAOffset(const TargetRegisterInfo &TRI,
   assert(NumVGScaledBytes && "Expected scalable offset");
   SmallString<64> OffsetExpr;
   // + VG * NumVGScaledBytes
-  appendOffsetComment(NumVGScaledBytes, Comment, "VG");
-  appendReadVGRegExpr(OffsetExpr, TRI.getDwarfRegNum(AArch64::VG, true));
+  appendOffsetComment(NumVGScaledBytes, Comment, "* VG");
+  appendReadRegExpr(OffsetExpr, TRI.getDwarfRegNum(AArch64::VG, true));
   appendConstantExpr(OffsetExpr, NumVGScaledBytes, dwarf::DW_OP_mul);
   OffsetExpr.push_back(dwarf::DW_OP_plus);
   if (NumBytes) {
