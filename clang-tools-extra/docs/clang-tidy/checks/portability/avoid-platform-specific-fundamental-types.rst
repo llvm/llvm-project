@@ -3,7 +3,7 @@
 portability-avoid-platform-specific-fundamental-types
 =====================================================
 
-Finds fundamental types (e.g. `int`, `float`) and recommends using typedefs 
+Finds fundamental types (e.g. ``int``, ``float``) and recommends using typedefs 
 or fixed-width types instead to improve portability across different platforms.
 
 This check detects fundamental types (``int``, ``short``, ``long``, ``float``, 
@@ -131,7 +131,7 @@ Options
    When `true` (default), the check will warn about fundamental integer types (``short``, ``int``, ``long``, ``long long`` and their ``signed`` and ``unsigned`` variants).
    When `false`, integer types are not flagged.
 
-   Example with ``WarnOnInts`` enabled (default):
+   Example with `WarnOnInts` enabled:
 
    .. code-block:: c++
 
@@ -207,7 +207,7 @@ Options
    When this option is enabled, the check will suggest using explicit signedness or typedefs
    to make the intent clear and ensure consistent behavior across platforms.
 
-   Example with ``WarnOnChars`` enabled:
+   Example with `WarnOnChars` enabled:
 
    .. code-block:: c++
 

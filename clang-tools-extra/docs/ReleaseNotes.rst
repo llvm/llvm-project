@@ -152,7 +152,7 @@ New checks
   <clang-tidy/checks/portability/avoid-platform-specific-fundamental-types>` 
   check.
 
-  Finds fundamental types (e.g. `int`, `float`) and recommends using typedefs 
+  Finds fundamental types (e.g. ``int``, ``float``) and recommends using typedefs 
   or fixed-width types instead to improve portability across different platforms.
 
 - New :doc:`portability-avoid-pragma-once
