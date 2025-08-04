@@ -1290,6 +1290,9 @@ public:
   // Implicitly-declared type 'struct _GUID'.
   mutable TagDecl *MSGuidTagDecl = nullptr;
 
+  // Implicitly-declared type 'struct type_info'.
+  mutable TagDecl *MSTypeInfoTagDecl = nullptr;
+
   /// Keep track of CUDA/HIP device-side variables ODR-used by host code.
   /// This does not include extern shared variables used by device host
   /// functions as addresses of shared variables are per warp, therefore
@@ -2386,6 +2389,15 @@ public:
   QualType getMSGuidType() const {
     assert(MSGuidTagDecl && "asked for GUID type but MS extensions disabled");
     return getTagDeclType(MSGuidTagDecl);
+  }
+
+  /// Retrieve the implicitly-predeclared 'struct type_info' declaration.
+  TagDecl *getMSTypeInfoTagDecl() const {
+    // Lazily create this type on demand - it's only needed for MS builds.
+    if (!MSTypeInfoTagDecl) {
+      MSTypeInfoTagDecl = buildImplicitRecord("type_info");
+    }
+    return MSTypeInfoTagDecl;
   }
 
   /// Return whether a declaration to a builtin is allowed to be

@@ -1059,22 +1059,13 @@ def AVRSignal : InheritableAttr, TargetSpecificAttr<TargetAVR> {
 def AsmLabel : InheritableAttr {
   let Spellings = [CustomKeyword<"asm">, CustomKeyword<"__asm__">];
   let Args = [
-    // Label specifies the mangled name for the decl.
-    StringArgument<"Label">,
-
-    // IsLiteralLabel specifies whether the label is literal (i.e. suppresses
-    // the global C symbol prefix) or not. If not, the mangle-suppression prefix
-    // ('\01') is omitted from the decl name at the LLVM IR level.
-    //
-    // Non-literal labels are used by some external AST sources like LLDB.
-    BoolArgument<"IsLiteralLabel", /*optional=*/0, /*fake=*/1>
-  ];
+      // Label specifies the mangled name for the decl.
+      StringArgument<"Label">, ];
   let SemaHandler = 0;
   let Documentation = [AsmLabelDocs];
-  let AdditionalMembers =
-[{
+  let AdditionalMembers = [{
 bool isEquivalent(AsmLabelAttr *Other) const {
-  return getLabel() == Other->getLabel() && getIsLiteralLabel() == Other->getIsLiteralLabel();
+  return getLabel() == Other->getLabel();
 }
 }];
 }
