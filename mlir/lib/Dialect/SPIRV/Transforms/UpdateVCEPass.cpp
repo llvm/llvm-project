@@ -99,7 +99,7 @@ static void addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
   SetVector<spirv::Capability> tmp;
   for (spirv::Capability cap : caps)
     tmp.insert_range(getRecursiveImpliedCapabilities(cap));
-  caps.insert_range(tmp);
+  caps.insert_range(std::move(tmp));
 }
 
 void UpdateVCEPass::runOnOperation() {
