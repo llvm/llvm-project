@@ -74,9 +74,7 @@ public:
     currStmt_ = x.source;
     return true;
   }
-  void Post(const parser::OmpCriticalDirective &) {
-    currStmt_ = std::nullopt;
-  }
+  void Post(const parser::OmpCriticalDirective &) { currStmt_ = std::nullopt; }
 
   bool Pre(const parser::OmpEndCriticalDirective &x) {
     currStmt_ = x.source;
@@ -91,17 +89,13 @@ public:
     currStmt_ = x.source;
     return true;
   }
-  void Post(const parser::OmpBeginDirective &) {
-    currStmt_ = std::nullopt;
-  }
+  void Post(const parser::OmpBeginDirective &) { currStmt_ = std::nullopt; }
 
   bool Pre(const parser::OmpEndDirective &x) {
     currStmt_ = x.source;
     return true;
   }
-  void Post(const parser::OmpEndDirective &) {
-    currStmt_ = std::nullopt;
-  }
+  void Post(const parser::OmpEndDirective &) { currStmt_ = std::nullopt; }
 
 private:
   std::optional<SourceName> currStmt_; // current statement we are processing
