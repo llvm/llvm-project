@@ -395,6 +395,25 @@ entry:
   ret i32 0
 }
 
+; Check that lifetimes on poison are ignored.
+define i32 @test_lifetime_poison(ptr %a) sanitize_hwaddress {
+entry:
+  ; CHECK-LABEL: @test_lifetime_poison
+  ; NOSAFETY: call {{.*}}__hwasan_generate_tag
+  ; NOSAFETY: call {{.*}}__hwasan_store
+  ; SAFETY-NOT: call {{.*}}__hwasan_generate_tag
+  ; SAFETY-NOT: call {{.*}}__hwasan_store
+  ; NOSTACK-NOT: call {{.*}}__hwasan_generate_tag
+  ; NOSTACK-NOT: call {{.*}}__hwasan_store
+  ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: safeAlloca{{[[:space:]]}}Function: test_lifetime_poison
+  ; SAFETY-REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: ignoreAccess{{[[:space:]]}}Function: test_lifetime_poison
+  %buf.sroa.0 = alloca i8, align 4
+  call void @llvm.lifetime.start.p0(i64 1, ptr poison)
+  store volatile i8 0, ptr %buf.sroa.0, align 4, !tbaa !8
+  call void @llvm.lifetime.end.p0(i64 1, ptr poison)
+  ret i32 0
+}
+
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
 declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
