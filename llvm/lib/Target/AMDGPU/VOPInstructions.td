@@ -35,12 +35,17 @@ class VOP <string opName> {
 
 // First 13 insts from VOPDY are also VOPDX. DOT2ACC_F32_BF16 is omitted
 defvar VOPDX_Max_Index = 12;
+defvar VOPD3X_Max_Index = 36;
 
-class VOPD_Component<bits<5> OpIn, string vOPDName> {
+class VOPD_Component<bits<6> OpIn, string vOPDName> {
   Instruction BaseVOP = !cast<Instruction>(NAME);
   string VOPDName = "v_dual_" # !substr(vOPDName, 2);
-  bits<5> VOPDOp = OpIn;
+  bits<6> VOPDOp = OpIn;
   bit CanBeVOPDX = !le(VOPDOp, VOPDX_Max_Index);
+  bit CanBeVOPD3X = !and(!le(VOPDOp, VOPD3X_Max_Index),
+                         !and(!ne(vOPDName, "v_bitop2_b32"),
+                              !and(!ne(vOPDName, "v_max_i32"),
+                                   !ne(vOPDName, "v_min_i32"))));
 }
 
 class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
@@ -326,10 +331,19 @@ class VOP3OpSel_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
 
 // Special case for v_permlane16_swap_b32/v_permlane32_swap_b32
 // op_sel[0]/op_sel[1] are treated as bound_ctrl and fi dpp operands.
-class VOP3OpSelIsDPP_gfx9 <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
+class VOP3OpSelIsDPP_base  {
   bits<1> fi;
   bits<1> bound_ctrl;
+}
 
+class VOP3OpSelIsDPP_gfx9 <bits<10> op, VOPProfile P> : VOP3OpSelIsDPP_base, VOP3e_vi <op, P> {
+  // OPSEL[0] specifies FI
+  let Inst{11} = fi;
+  // OPSEL[1] specifies BOUND_CTRL
+  let Inst{12} = bound_ctrl;
+}
+
+class VOP3OpSelIsDPP_gfx12 <bits<10> op, VOPProfile P> : VOP3OpSelIsDPP_base, VOP3e_gfx11_gfx12 <op, P> {
   // OPSEL[0] specifies FI
   let Inst{11} = fi;
   // OPSEL[1] specifies BOUND_CTRL
@@ -387,6 +401,26 @@ class VOP3Interp_vi <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
   let Inst{49-41} = src0;
 }
 
+class VOP3a_BITOP3_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
+  bits<8> bitop3;
+
+  let Inst{60-59} = bitop3{7-6};
+  let Inst{10-8}  = bitop3{5-3};
+  let Inst{63-61} = bitop3{2-0};
+
+  let Inst{11} = !if(p.HasOpSel, src0_modifiers{2}, 0);
+  let Inst{12} = !if(p.HasOpSel, src1_modifiers{2}, 0);
+  let Inst{13} = !if(p.HasOpSel, src2_modifiers{2}, 0);
+  let Inst{14} = !if(p.HasOpSel, src0_modifiers{3}, 0);
+}
+
+class VOP3a_ScaleSel_gfx1250<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
+  bits<3> scale_sel;
+
+  let Inst{13-11} = scale_sel;
+  let Inst{14} = 0;
+}
+
 class VOP3Interp_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {
   bits<6> attr;
   bits<2> attrchan;
@@ -427,7 +461,7 @@ class VOP3be <VOPProfile P> : Enc64 {
   let Inst{63}    = !if(P.HasSrc2Mods, src2_modifiers{0}, 0);
 }
 
-class VOP3Pe <VOPProfile P> : Enc64 {
+class VOP3Pe_Base {
   bits<8> vdst;
   bits<4> src0_modifiers;
   bits<9> src0;
@@ -438,7 +472,14 @@ class VOP3Pe <VOPProfile P> : Enc64 {
   bits<1> clamp;
   bits<2> index_key_8bit;
   bits<1> index_key_16bit;
+  bits<1> index_key_32bit;
+  bits<3> matrix_a_fmt;
+  bits<3> matrix_b_fmt;
+  bits<1> matrix_a_reuse;
+  bits<1> matrix_b_reuse;
+}
 
+class VOP3Pe <VOPProfile P> : Enc64, VOP3Pe_Base {
   let Inst{7-0} = !if(P.HasDst, vdst, 0);
   let Inst{8} = !if(P.HasSrc0Mods, src0_modifiers{1}, 0); // neg_hi src0
   let Inst{9} = !if(P.HasSrc1Mods, src1_modifiers{1}, 0); // neg_hi src1
@@ -446,9 +487,13 @@ class VOP3Pe <VOPProfile P> : Enc64 {
 
   let Inst{11} = !if(!and(P.HasSrc0, P.HasOpSel), src0_modifiers{2}, 0); // op_sel(0)
   let Inst{12} = !if(!and(P.HasSrc1, P.HasOpSel), src1_modifiers{2}, 0); // op_sel(1)
-  let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2}, 0); // op_sel(2)
+  let Inst{13} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{2},
+                     !if(P.HasMatrixReuse, matrix_a_reuse, 0));    // op_sel(2)
 
-  let Inst{14} = !if(!and(P.HasSrc2, P.HasOpSel), src2_modifiers{3}, !if(P.IsDOT, 1, ?)); // op_sel_hi(2)
+  let Inst{14} = !cond(!and(P.HasSrc2, P.HasOpSel) : src2_modifiers{3},
+                       P.IsDOT : 1,
+                       P.HasMatrixReuse : matrix_b_reuse,
+                       1: ?); // op_sel_hi(2)
 
   let Inst{15} = !if(P.HasClamp, clamp{0}, 0);
 
@@ -627,9 +672,9 @@ def SDWA {
 class VOP_SDWAe<VOPProfile P> : Enc64 {
   bits<8> src0;
   bits<3> src0_sel;
-  bits<2> src0_modifiers; // float: {abs,neg}, int {sext}
+  bits<5> src0_modifiers; // float: {abs,neg}, int {sext}
   bits<3> src1_sel;
-  bits<2> src1_modifiers;
+  bits<5> src1_modifiers;
   bits<3> dst_sel;
   bits<2> dst_unused;
   bits<1> clamp;
@@ -639,10 +684,10 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
   let Inst{44-43} = !if(P.EmitDstSel, dst_unused{1-0}, ?);
   let Inst{45}    = !if(P.HasSDWAClamp, clamp{0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
-  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
+  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{4}, 0);
   let Inst{53-52} = !if(P.HasSrc0FloatMods, src0_modifiers{1-0}, 0);
   let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, 0);
-  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
+  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{4}, 0);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
 }
 
@@ -663,18 +708,18 @@ class VOP_SDWAe<VOPProfile P> : Enc64 {
 class VOP_SDWA9e<VOPProfile P> : Enc64 {
   bits<9> src0; // {src0_sgpr{0}, src0{7-0}}
   bits<3> src0_sel;
-  bits<2> src0_modifiers; // float: {abs,neg}, int {sext}
+  bits<5> src0_modifiers; // float: {abs,neg}, int {sext}
   bits<3> src1_sel;
-  bits<2> src1_modifiers;
+  bits<5> src1_modifiers;
   bits<1> src1_sgpr;
 
   let Inst{39-32} = !if(P.HasSrc0, src0{7-0}, 0);
   let Inst{50-48} = !if(P.HasSrc0, src0_sel{2-0}, 0);
-  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{0}, 0);
+  let Inst{51}    = !if(P.HasSrc0IntMods, src0_modifiers{4}, 0);
   let Inst{53-52} = !if(P.HasSrc0FloatMods, src0_modifiers{1-0}, 0);
   let Inst{55}    = !if(P.HasSrc0, src0{8}, 0);
   let Inst{58-56} = !if(P.HasSrc1, src1_sel{2-0}, 0);
-  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{0}, 0);
+  let Inst{59}    = !if(P.HasSrc1IntMods, src1_modifiers{4}, 0);
   let Inst{61-60} = !if(P.HasSrc1FloatMods, src1_modifiers{1-0}, 0);
   let Inst{63}    = 0; // src1_sgpr - should be specified in subclass
 }
@@ -1481,6 +1526,7 @@ class VOP3_Profile_Base<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VO
   let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
   let HasFP8DstByteSel = P.HasFP8DstByteSel;
   let HasOMod = P.HasOMod;
+  let HasBitOp3 = P.HasBitOp3;
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1500,6 +1546,7 @@ class VOP3_Profile_True16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
   let HasFP8DstByteSel = P.HasFP8DstByteSel;
   let HasOMod = P.HasOMod;
+  let HasBitOp3 = P.HasBitOp3;
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1515,6 +1562,7 @@ class VOP3_Profile_Fake16<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : 
   let HasFP8SrcByteSel = P.HasFP8SrcByteSel;
   let HasFP8DstByteSel = P.HasFP8DstByteSel;
   let HasOMod = P.HasOMod;
+  let HasBitOp3 = P.HasBitOp3;
 
   let HasModifiers =
       !if (Features.IsMAI, 0,
@@ -1696,6 +1744,34 @@ class VOP3b_DPP8_Base<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
     : Base_VOP3_DPP8<op, ps, opName> {
   bits<7> sdst;
   let Inst{14 - 8} = sdst;
+}
+
+class VOP3_BITOP3_DPP16_Gen<bits<10> op, VOP_DPP_Pseudo p, GFXGen Gen, string asmName>
+    : VOP3_DPP16_Gen_t16<op, p, Gen, asmName> {
+  bits<8> bitop3;
+
+  let Inst{60-59} = bitop3{7-6};
+  let Inst{10-8}  = bitop3{5-3};
+  let Inst{63-61} = bitop3{2-0};
+
+  let Inst{11} = !if(p.Pfl.HasOpSel, src0_modifiers{2}, 0);
+  let Inst{12} = !if(p.Pfl.HasOpSel, src1_modifiers{2}, 0);
+  let Inst{13} = !if(p.Pfl.HasOpSel, src2_modifiers{2}, 0);
+  let Inst{14} = !if(p.Pfl.HasOpSel, src0_modifiers{3}, 0);
+}
+
+class VOP3_BITOP3_DPP8<bits<10> op, VOP_Pseudo p, string asmName>
+    : Base_VOP3_DPP8_t16<op, p, asmName> {
+  bits<8> bitop3;
+
+  let Inst{60-59} = bitop3{7-6};
+  let Inst{10-8}  = bitop3{5-3};
+  let Inst{63-61} = bitop3{2-0};
+
+  let Inst{11} = !if(p.Pfl.HasOpSel, src0_modifiers{2}, 0);
+  let Inst{12} = !if(p.Pfl.HasOpSel, src1_modifiers{2}, 0);
+  let Inst{13} = !if(p.Pfl.HasOpSel, src2_modifiers{2}, 0);
+  let Inst{14} = !if(p.Pfl.HasOpSel, src0_modifiers{3}, 0);
 }
 
 class VOP3b_DPP8_Base_t16<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
@@ -1918,6 +1994,53 @@ multiclass VOP3be_Realtriple<
 multiclass VOP3beOnly_Realtriple<GFXGen Gen, bits<10> op> :
   VOP3be_Realtriple<Gen, op, 1>;
 
+multiclass VOP3_BITOP3_Real_dpp_Base<GFXGen Gen, bits<10> op, string asmName> {
+  def _e64_dpp#Gen.Suffix :
+    VOP3_BITOP3_DPP16_Gen<op, !cast<VOP_DPP_Pseudo>(NAME#"_e64"#"_dpp"), Gen, asmName>;
+}
+
+multiclass VOP3_BITOP3_Real_dpp8_Base<GFXGen Gen, bits<10> op, string asmName> {
+  defvar ps = !cast<VOP3_Pseudo>(NAME#"_e64");
+  def _e64_dpp8#Gen.Suffix : VOP3_BITOP3_DPP8<op, ps, asmName> {
+    let DecoderNamespace =
+      Gen.DecoderNamespace #!if (ps.Pfl.IsRealTrue16, "", "_FAKE16");
+    let AssemblerPredicate = Gen.AssemblerPredicate;
+  }
+}
+
+multiclass VOP3_BITOP3_Real_Base<GFXGen Gen, bits<10> op, string asmName> {
+  defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+  let IsSingle = ps.Pfl.IsSingle, AsmString = asmName # ps.AsmOperands in {
+    def _e64#Gen.Suffix :
+      VOP3_Real_Gen<ps, Gen>,
+      VOP3a_BITOP3_gfx12<op, ps.Pfl>;
+  }
+}
+
+multiclass VOP3Only_ScaleSel_Real_gfx1250<bits<10> op> {
+  defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+  def _e64_gfx1250 :
+    VOP3_Real_Gen<ps, GFX1250Gen>,
+    VOP3a_ScaleSel_gfx1250<op, ps.Pfl>;
+}
+
+multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250<bits<10> op, string asmName, string opName = NAME,
+                                                       string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX12Not12_50Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12_not_gfx1250<bits<10> op, string asmName,
+                                                          string opName = NAME, string pseudo_mnemonic = ""> {
+  defm _t16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250<op, asmName, opName#"_t16", pseudo_mnemonic, 1>;
+  defm _fake16 : VOP3Only_Realtriple_t16_gfx11_gfx12_not_gfx1250<op, asmName, opName#"_fake16", pseudo_mnemonic, 1>;
+}
+
+multiclass VOP3_Realtriple_with_name_gfx11_gfx12_not_gfx1250<bits<10> op, string opName,
+                                                           string asmName, string pseudo_mnemonic = "",
+                                                           bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX11Gen, op, opName, asmName, pseudo_mnemonic, isSingle>,
+  VOP3_Realtriple_with_name<GFX12Not12_50Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
 //===----------------------------------------------------------------------===//
 // VOP3 GFX11
 //===----------------------------------------------------------------------===//
@@ -1979,6 +2102,15 @@ multiclass VOP3Only_Real_Base_gfx1250<bits<10> op> :
 multiclass VOP3Only_Realtriple_gfx1250<bits<10> op, bit isSingle = 0> :
   VOP3_Realtriple<GFX1250Gen, op, isSingle>;
 
+multiclass VOP3Only_Realtriple_with_name_gfx1250<bits<10> op, string opName,
+                                                 string asmName, string pseudo_mnemonic = "",
+                                                 bit isSingle = 0> :
+  VOP3_Realtriple_with_name<GFX1250Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
+
+multiclass VOP3Only_Realtriple_t16_gfx1250<bits<10> op, string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
+                                           string opName = NAME, string pseudo_mnemonic = "", bit isSingle = 0> :
+  VOP3Only_Realtriple_with_name_gfx1250<op, opName, asmName, pseudo_mnemonic, isSingle>;
+
 multiclass VOP3_Realtriple_t16_gfx12<bits<10> op, string asmName, string opName = NAME,
                                      string pseudo_mnemonic = "", bit isSingle = 0> :
   VOP3_Realtriple_with_name<GFX12Gen, op, opName, asmName, pseudo_mnemonic, isSingle>;
@@ -1997,6 +2129,13 @@ multiclass VOP3Only_Realtriple_t16_and_fake16_gfx12<bits<10> op, string asmName,
                                      string opName = NAME, string pseudo_mnemonic = ""> {
   defm _t16 : VOP3Only_Realtriple_t16_gfx12<op, asmName, opName#"_t16", pseudo_mnemonic>;
   defm _fake16 : VOP3Only_Realtriple_t16_gfx12<op, asmName, opName#"_fake16", pseudo_mnemonic>;
+}
+
+multiclass VOP3Only_Realtriple_t16_and_fake16_gfx1250<bits<10> op,
+                                                      string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic,
+                                                      string opName = NAME, string pseudo_mnemonic = ""> {
+  defm _t16 : VOP3Only_Realtriple_t16_gfx1250<op, asmName, opName#"_t16", pseudo_mnemonic>;
+  defm _fake16 : VOP3Only_Realtriple_t16_gfx1250<op, asmName, opName#"_fake16", pseudo_mnemonic>;
 }
 
 multiclass VOP3be_Real_with_name_gfx12<bits<10> op, string opName,
@@ -2020,6 +2159,16 @@ multiclass VOP3Only_Realtriple_with_name_gfx11_gfx12<bits<10> op, string opName,
                                                      string asmName> :
   VOP3Only_Realtriple_with_name<GFX11Gen, op, opName, asmName>,
   VOP3Only_Realtriple_with_name<GFX12Gen, op, opName, asmName>;
+
+multiclass VOP3_Real_BITOP3_gfx1250<bits<10> op, string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> :
+  VOP3_BITOP3_Real_Base<GFX1250Gen, op, asmName>,
+  VOP3_BITOP3_Real_dpp_Base<GFX1250Gen, op, asmName>,
+  VOP3_BITOP3_Real_dpp8_Base<GFX1250Gen, op, asmName>;
+
+multiclass VOP3_Real_BITOP3_t16_and_fake16_gfx1250<bits<10> op, string asmName = !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic> {
+  defm _t16 : VOP3_Real_BITOP3_gfx1250<op, asmName>;
+  defm _fake16: VOP3_Real_BITOP3_gfx1250<op, asmName>;
+}
 
 multiclass VOP3Dot_Realtriple_gfx11_gfx12<bits<10> op, string asmName, bit isSingle = 0,
                                           string opName = NAME> :

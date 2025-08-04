@@ -77,11 +77,20 @@ define i32 @divergent_vec_0_i16(i16 %a) {
 ; GFX906-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: divergent_vec_0_i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: divergent_vec_0_i16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: divergent_vec_0_i16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x i16> poison, i16 0, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 %a, i32 1
   %val = bitcast <2 x i16> %vec to i32
@@ -160,11 +169,20 @@ define i32 @divergent_vec_i16_0(i16 %a) {
 ; GFX906-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: divergent_vec_i16_0:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: divergent_vec_i16_0:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: divergent_vec_i16_0:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x i16> poison, i16 %a, i32 0
   %vec = insertelement <2 x i16> %tmp, i16 0, i32 1
   %val = bitcast <2 x i16> %vec to i32
@@ -243,11 +261,20 @@ define float @divergent_vec_f16_0(half %a) {
 ; GFX906-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX906-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: divergent_vec_f16_0:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: divergent_vec_f16_0:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.h, 0
+; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, v0.l
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: divergent_vec_f16_0:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %tmp = insertelement <2 x half> poison, half %a, i32 0
   %vec = insertelement <2 x half> %tmp, half 0.0, i32 1
   %val = bitcast <2 x half> %vec to float
