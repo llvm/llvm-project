@@ -466,9 +466,11 @@ static SectionKind getELFKindForNamedSection(StringRef Name, SectionKind K) {
       Name == getInstrProfSectionName(IPSK_covdata, Triple::ELF,
                                       /*AddSegmentInfo=*/false) ||
       Name == getInstrProfSectionName(IPSK_covname, Triple::ELF,
-                                      /*AddSegmentInfo=*/false) ||
-      Name == ".llvmbc" || Name == ".llvmcmd")
+                                      /*AddSegmentInfo=*/false))
     return SectionKind::getMetadata();
+
+  if (Name == ".llvmbc" || Name == ".llvmcmd")
+    return SectionKind::getExclude();
 
   if (!Name.starts_with(".")) return K;
 
@@ -1735,9 +1737,12 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
       Name == getInstrProfSectionName(IPSK_covdata, Triple::COFF,
                                       /*AddSegmentInfo=*/false) ||
       Name == getInstrProfSectionName(IPSK_covname, Triple::COFF,
-                                      /*AddSegmentInfo=*/false) ||
-      Name == ".llvmbc" || Name == ".llvmcmd")
+                                      /*AddSegmentInfo=*/false))
     Kind = SectionKind::getMetadata();
+
+  if (Name == ".llvmbc" || Name == ".llvmcmd")
+    Kind = SectionKind::getExclude();
+
   int Selection = 0;
   unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
   StringRef COMDATSymName = "";
