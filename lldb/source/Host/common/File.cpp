@@ -253,6 +253,9 @@ NativeFile::NativeFile() = default;
 NativeFile::NativeFile(FILE *fh, bool transfer_ownership)
     : m_stream(fh), m_own_stream(transfer_ownership) {
 #ifdef _WIN32
+  // In order to properly display non ASCII characters in Windows, we need to
+  // use Windows APIs to print to the console. This is only required if the
+  // stream outputs to a console.
   int fd = _fileno(fh);
   is_windows_console =
       ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
@@ -263,6 +266,9 @@ NativeFile::NativeFile(int fd, OpenOptions options, bool transfer_ownership)
     : m_descriptor(fd), m_own_descriptor(transfer_ownership),
       m_options(options) {
 #ifdef _WIN32
+  // In order to properly display non ASCII characters in Windows, we need to
+  // use Windows APIs to print to the console. This is only required if the
+  // file outputs to a console.
   is_windows_console =
       ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
 #endif
