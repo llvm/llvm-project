@@ -259,13 +259,14 @@ void test_set_insert_range_move_only() {
 }
 
 template <template <class...> class Container>
-void test_map_insert_range_move_only() {
+TEST_CONSTEXPR_CXX26 bool test_map_insert_range_move_only() {
   using Value = std::pair<const int, MoveOnly>;
   Value input[5];
   std::ranges::subrange in(std::move_iterator{input}, std::move_iterator{input + 5});
 
   Container<int, MoveOnly> c;
   c.insert_range(in);
+  return true;
 }
 
 // Exception safety.
