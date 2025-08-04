@@ -216,7 +216,7 @@ Options
    or typedefs to make the intent clear and ensure consistent behavior across
    platforms.
 
-   Example with `WarnOnChars` enabled:
+   Example with :option:`WarnOnChars` enabled:
 
    .. code-block:: c++
 
