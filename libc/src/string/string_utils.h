@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC_STRING_STRING_UTILS_H
 
 #include "hdr/limits_macros.h"
+#include "hdr/stdint_proxy.h" // uintptr_t
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/bitset.h"
 #include "src/__support/CPP/type_traits.h" // cpp::is_same_v
@@ -90,12 +91,11 @@ template <typename T> LIBC_INLINE size_t string_length(const T *src) {
   // string a block at a time.
   if constexpr (cpp::is_same_v<T, char>)
     return string_length_wide_read<unsigned int>(src);
-#else
+#endif
   size_t length;
   for (length = 0; *src; ++src, ++length)
     ;
   return length;
-#endif
 }
 
 template <typename Word>

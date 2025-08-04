@@ -199,7 +199,7 @@ define <7 x half> @fdiv_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v1.4s, v3.4h
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v2.4h, v2.4s
 ; CHECK-GI-NOFP16-NEXT:    fdiv v1.4s, v0.4s, v1.4s
-; CHECK-GI-NOFP16-NEXT:    mov h0, v2.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v2.h[0]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v2.h[1]
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[2], v2.h[2]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s

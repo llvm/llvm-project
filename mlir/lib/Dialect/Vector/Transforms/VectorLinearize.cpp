@@ -395,15 +395,32 @@ struct LinearizeVectorShuffle final
   }
 };
 
-/// This pattern converts the ExtractOp to a ShuffleOp that works on a
-/// linearized vector.
-/// Following,
-///   vector.extract %source [ position ]
-/// is converted to :
-///   %source_1d = vector.shape_cast %source
-///   %out_1d = vector.shuffle %source_1d, %source_1d [ shuffle_indices_1d ]
-///   %out_nd = vector.shape_cast %out_1d
-/// `shuffle_indices_1d` is computed using the position of the original extract.
+/// This pattern linearizes `vector.extract` operations. It generates a 1-D
+/// version of the `vector.extract` operation when extracting a scalar from a
+/// vector. It generates a 1-D `vector.shuffle` operation when extracting a
+/// subvector from a larger vector.
+///
+/// Example #1:
+///
+///     %0 = vector.extract %arg0[1]: vector<8x2xf32> from vector<2x8x2xf32>
+///
+///   is converted to:
+///
+///     %0 = vector.shape_cast %arg0 : vector<2x8x2xf32> to vector<32xf32>
+///     %1 = vector.shuffle %0, %0 [16, 17, 18, 19, 20, 21, 22, 23,
+///                                 24, 25, 26, 27, 28, 29, 30, 31] :
+///            vector<32xf32>, vector<32xf32>
+///     %2 = vector.shape_cast %1 : vector<16xf32> to vector<8x2xf32>
+///
+/// Example #2:
+///
+///     %0 = vector.extract %arg0[1, 2] : i32 from vector<2x4xi32>
+///
+///   is converted to:
+///
+///     %0 = vector.shape_cast %arg0 : vector<2x4xi32> to vector<8xi32>
+///     %1 = vector.extract %0[6] : i32 from vector<8xi32>
+///
 struct LinearizeVectorExtract final
     : public OpConversionPattern<vector::ExtractOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -413,10 +430,6 @@ struct LinearizeVectorExtract final
   LogicalResult
   matchAndRewrite(vector::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    // Skip if result is not a vector type
-    if (!isa<VectorType>(extractOp.getType()))
-      return rewriter.notifyMatchFailure(extractOp,
-                                         "scalar extract not supported");
     Type dstTy = getTypeConverter()->convertType(extractOp.getType());
     assert(dstTy && "expected 1-D vector type");
 
@@ -436,25 +449,56 @@ struct LinearizeVectorExtract final
       linearizedOffset += offsets[i] * size;
     }
 
+    Value srcVector = adaptor.getVector();
+    if (!isa<VectorType>(extractOp.getType())) {
+      // Scalar case: generate a 1-D extract.
+      Value result = rewriter.createOrFold<vector::ExtractOp>(
+          extractOp.getLoc(), srcVector, linearizedOffset);
+      rewriter.replaceOp(extractOp, result);
+      return success();
+    }
+
+    // Vector case: generate a shuffle.
+
     llvm::SmallVector<int64_t, 2> indices(size);
     std::iota(indices.begin(), indices.end(), linearizedOffset);
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        extractOp, dstTy, adaptor.getVector(), adaptor.getVector(), indices);
+    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(extractOp, dstTy, srcVector,
+                                                   srcVector, indices);
 
     return success();
   }
 };
 
-/// This pattern converts the InsertOp to a ShuffleOp that works on a
-/// linearized vector.
-/// Following,
-///   vector.insert %source %destination [ position ]
-/// is converted to :
-///   %source_1d = vector.shape_cast %source
-///   %destination_1d = vector.shape_cast %destination
-///   %out_1d = vector.shuffle %destination_1d, %source_1d [ shuffle_indices_1d
-///   ] %out_nd = vector.shape_cast %out_1d
-/// `shuffle_indices_1d` is computed using the position of the original insert.
+/// This pattern linearizes `vector.insert` operations. It generates a 1-D
+/// version of the `vector.insert` operation when inserting a scalar into a
+/// vector. It generates a 1-D `vector.shuffle` operation when inserting a
+/// vector into another vector.
+///
+/// Example #1:
+///
+///     %0 = vector.insert %source, %destination[0] :
+///       vector<2x4xf32> into vector<2x2x4xf32>
+///
+///   is converted to:
+///
+///     %0 = vector.shape_cast %source : vector<2x4xf32> to vector<8xf32>
+///     %1 = vector.shape_cast %destination :
+///            vector<2x2x4xf32> to vector<16xf32>
+///     %2 = vector.shuffle %1, %0 [16, 17, 18, 19, 20, 21, 22, 23
+///                                  8, 9, 10, 11, 12, 13, 14, 15] :
+///            vector<16xf32>, vector<8xf32>
+///     %3 = vector.shape_cast %2 : vector<16xf32> to vector<2x2x4xf32>
+///
+/// Example #2:
+///
+///     %0 = vector.insert %source, %destination[1, 2]: f32 into vector<2x4xf32>
+///
+///   is converted to:
+///
+///     %0 = vector.shape_cast %destination : vector<2x4xf32> to vector<8xf32>
+///     %1 = vector.insert %source, %0[6]: f32 into vector<8xf32>
+///     %2 = vector.shape_cast %1 : vector<8xf32> to vector<2x4xf32>
+///
 struct LinearizeVectorInsert final
     : public OpConversionPattern<vector::InsertOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -468,25 +512,19 @@ struct LinearizeVectorInsert final
         insertOp.getDestVectorType());
     assert(dstTy && "vector type destination expected.");
 
-    // dynamic position is not supported
+    // Dynamic position is not supported.
     if (insertOp.hasDynamicPosition())
       return rewriter.notifyMatchFailure(insertOp,
                                          "dynamic position is not supported.");
     auto srcTy = insertOp.getValueToStoreType();
     auto srcAsVec = dyn_cast<VectorType>(srcTy);
-    uint64_t srcSize = 0;
-    if (srcAsVec) {
-      srcSize = srcAsVec.getNumElements();
-    } else {
-      return rewriter.notifyMatchFailure(insertOp,
-                                         "scalars are not supported.");
-    }
+    uint64_t srcSize = srcAsVec ? srcAsVec.getNumElements() : 1;
 
     auto dstShape = insertOp.getDestVectorType().getShape();
     const auto dstSize = insertOp.getDestVectorType().getNumElements();
     auto dstSizeForOffsets = dstSize;
 
-    // compute linearized offset
+    // Compute linearized offset.
     int64_t linearizedOffset = 0;
     auto offsetsNd = insertOp.getStaticPosition();
     for (auto [dim, offset] : llvm::enumerate(offsetsNd)) {
@@ -494,22 +532,35 @@ struct LinearizeVectorInsert final
       linearizedOffset += offset * dstSizeForOffsets;
     }
 
+    Location loc = insertOp.getLoc();
+    Value valueToStore = adaptor.getValueToStore();
+
+    if (!isa<VectorType>(valueToStore.getType())) {
+      // Scalar case: generate a 1-D insert.
+      Value result = rewriter.createOrFold<vector::InsertOp>(
+          loc, valueToStore, adaptor.getDest(), linearizedOffset);
+      rewriter.replaceOp(insertOp, result);
+      return success();
+    }
+
+    // Vector case: generate a shuffle.
     llvm::SmallVector<int64_t, 2> indices(dstSize);
     auto *origValsUntil = indices.begin();
     std::advance(origValsUntil, linearizedOffset);
-    std::iota(indices.begin(), origValsUntil,
-              0); // original values that remain [0, offset)
+
+    // Original values that remain [0, offset).
+    std::iota(indices.begin(), origValsUntil, 0);
     auto *newValsUntil = origValsUntil;
     std::advance(newValsUntil, srcSize);
-    std::iota(origValsUntil, newValsUntil,
-              dstSize); // new values [offset, offset+srcNumElements)
-    std::iota(newValsUntil, indices.end(),
-              linearizedOffset + srcSize); // the rest of original values
-                                           // [offset+srcNumElements, end)
+    // New values [offset, offset+srcNumElements).
+    std::iota(origValsUntil, newValsUntil, dstSize);
+    // The rest of original values [offset+srcNumElements, end);
+    std::iota(newValsUntil, indices.end(), linearizedOffset + srcSize);
 
-    rewriter.replaceOpWithNewOp<vector::ShuffleOp>(
-        insertOp, dstTy, adaptor.getDest(), adaptor.getValueToStore(), indices);
+    Value result = rewriter.createOrFold<vector::ShuffleOp>(
+        loc, dstTy, adaptor.getDest(), valueToStore, indices);
 
+    rewriter.replaceOp(insertOp, result);
     return success();
   }
 };
@@ -607,7 +658,7 @@ struct LinearizeVectorCreateMask final
     // The result of the comparison is then multiplied with
     // the second operand of create_mask to get the 1D mask.
     auto firstOperand = adaptor.getOperands().front();
-    auto zero = rewriter.create<mlir::arith::ConstantIndexOp>(loc, 0);
+    auto zero = mlir::arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto isNonZero = rewriter.createOrFold<mlir::arith::CmpIOp>(
         loc, mlir::arith::CmpIPredicate::sgt, firstOperand, zero);
     auto isNonZeroIndex = rewriter.createOrFold<mlir::arith::IndexCastOp>(
@@ -617,8 +668,96 @@ struct LinearizeVectorCreateMask final
         loc, rewriter.getIndexType(), isNonZeroIndex, secondOperand);
 
     auto newMask =
-        rewriter.create<mlir::vector::CreateMaskOp>(loc, dstTy, maskSize);
+        mlir::vector::CreateMaskOp::create(rewriter, loc, dstTy, maskSize);
     rewriter.replaceOp(createMaskOp, newMask);
+    return success();
+  }
+};
+
+/// This pattern linearizes vector.load from vector<1x1x...xN> to vector<N>
+/// It currently supports linearization where all but the last dimension are 1
+/// The following,
+///   vector.load %arg0[%c0, %c0] : memref<1x4xf32>, vector<1x4xf32>
+/// is converted to:
+///   vector.load %arg0[%c0, %c0] : memref<1x4xf32>, vector<4xf32>
+///   vector.shape_cast %load_result : vector<4xf32> to vector<1x4xf32>
+/// For generic cases, the vector unroll pass should be used to unroll the load
+/// to vector<1x1x...xN> form and then linearized
+struct LinearizeVectorLoad final : public OpConversionPattern<vector::LoadOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeVectorLoad(const TypeConverter &typeConverter, MLIRContext *context,
+                      PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::LoadOp loadOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType vecTy = loadOp.getType();
+    if (!vecTy)
+      return rewriter.notifyMatchFailure(loadOp, "expected vector type");
+
+    auto shape = vecTy.getShape();
+    auto scalableDims = vecTy.getScalableDims();
+    // All but the last dim must be 1, and only the last dim may be scalable (if
+    // any).
+    if (!llvm::all_of(shape.drop_back(1), [](auto d) { return d == 1; }))
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "only vector<1x1x...xN> supported");
+
+    if (llvm::any_of(scalableDims.drop_back(1), [](bool s) { return s; }))
+      return rewriter.notifyMatchFailure(loadOp,
+                                         "only innermost dim may be scalable");
+
+    auto linearTy = typeConverter->convertType<VectorType>(vecTy);
+
+    auto newLoad =
+        vector::LoadOp::create(rewriter, loadOp.getLoc(), linearTy,
+                               adaptor.getBase(), adaptor.getIndices());
+    rewriter.replaceOp(loadOp, newLoad.getResult());
+    return success();
+  }
+};
+
+/// This pattern linearizes vector.store from vector<1x1x...xN> to vector<N>
+/// It currently supports linearization where all but the last dimension are 1
+/// The following,
+///   vector.store %arg0, %arg1[%c0, %c0]s
+///     : vector<1x4xf32>, memref<1x4xf32>
+/// is converted to:
+///   vector.shape_cast %arg0 : vector<1x4xf32> to vector<4xf32>
+///   vector.store %arg0, %arg1[%c0, %c0]
+///     : vector<4xf32>, memref<1x4xf32>
+/// For generic cases, the vector unroll pass should be used to unroll the store
+/// to vector<1x1x...xN> form and then linearized
+struct LinearizeVectorStore final
+    : public OpConversionPattern<vector::StoreOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LinearizeVectorStore(const TypeConverter &typeConverter, MLIRContext *context,
+                       PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::StoreOp storeOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    VectorType vecTy = storeOp.getValueToStore().getType();
+    if (!vecTy)
+      return rewriter.notifyMatchFailure(storeOp, "expected vector type");
+
+    auto shape = vecTy.getShape();
+    auto scalableDims = vecTy.getScalableDims();
+    // All but the last dim must be 1, and only the last dim may be scalable (if
+    // any).
+    if (!llvm::all_of(shape.drop_back(1), [](auto d) { return d == 1; }))
+      return rewriter.notifyMatchFailure(storeOp,
+                                         "only vector<1x1x...xN> supported");
+
+    if (llvm::any_of(scalableDims.drop_back(1), [](bool s) { return s; }))
+      return rewriter.notifyMatchFailure(storeOp,
+                                         "only innermost dim may be scalable");
+
+    rewriter.replaceOpWithNewOp<vector::StoreOp>(
+        storeOp, adaptor.getValueToStore(), adaptor.getBase(),
+        adaptor.getIndices());
     return success();
   }
 };
@@ -694,7 +833,7 @@ void mlir::vector::populateForVectorLinearize(TypeConverter &typeConverter,
     if (!isa<VectorType>(type) || !isa<VectorType>(value.getType()))
       return nullptr;
 
-    return builder.create<vector::ShapeCastOp>(loc, type, value);
+    return vector::ShapeCastOp::create(builder, loc, type, value);
   };
   typeConverter.addSourceMaterialization(materializeCast);
   typeConverter.addTargetMaterialization(materializeCast);
@@ -714,8 +853,8 @@ void mlir::vector::populateVectorLinearizeBasePatterns(
     RewritePatternSet &patterns) {
   patterns
       .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
-           LinearizeVectorSplat, LinearizeVectorCreateMask>(
-          typeConverter, patterns.getContext());
+           LinearizeVectorSplat, LinearizeVectorCreateMask, LinearizeVectorLoad,
+           LinearizeVectorStore>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(

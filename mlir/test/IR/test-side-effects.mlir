@@ -15,7 +15,7 @@ func.func @side_effect(%arg : index) {
     {effect="write", test_resource}
   ]} : () -> i32
   
-  // expected-remark@+1 {{found an instance of 'allocate' on a op result, on resource '<Test>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on op result 0, on resource '<Test>'}}
   %3 = "test.side_effect_op"() {effects = [
     {effect="allocate", on_result, test_resource}
   ]} : () -> i32
@@ -38,19 +38,19 @@ func.func @side_effect(%arg : index) {
     effect_parameter = affine_map<(i, j) -> (j, i)>
   } : () -> i32
 
-  // expected-remark@+1 {{found an instance of 'allocate' on a op operand, on resource '<Test>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on op operand 0, on resource '<Test>'}}
   %6 = test.side_effect_with_region_op (%arg) {
   ^bb0(%arg0 : index):
     test.region_yield %arg0 : index 
   } {effects = [ {effect="allocate", on_operand, test_resource} ]} : index -> index
 
-  // expected-remark@+1 {{found an instance of 'allocate' on a op result, on resource '<Test>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on op result 0, on resource '<Test>'}}
   %7 = test.side_effect_with_region_op (%arg) {
   ^bb0(%arg0 : index):
     test.region_yield %arg0 : index 
   } {effects = [ {effect="allocate", on_result, test_resource} ]} : index -> index
 
-  // expected-remark@+1 {{found an instance of 'allocate' on a block argument, on resource '<Test>'}}
+  // expected-remark@+1 {{found an instance of 'allocate' on block argument 0, on resource '<Test>'}}
   %8 = test.side_effect_with_region_op (%arg) {
   ^bb0(%arg0 : index):
     test.region_yield %arg0 : index 

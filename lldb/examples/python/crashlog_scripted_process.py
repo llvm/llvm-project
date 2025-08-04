@@ -123,11 +123,6 @@ class CrashLogScriptedProcess(ScriptedProcess):
 
 class CrashLogScriptedThread(ScriptedThread):
     def create_register_ctx(self):
-        if not self.has_crashed:
-            return dict.fromkeys(
-                [*map(lambda reg: reg["name"], self.register_info["registers"])], 0
-            )
-
         if not self.backing_thread or not len(self.backing_thread.registers):
             return dict.fromkeys(
                 [*map(lambda reg: reg["name"], self.register_info["registers"])], 0
@@ -135,8 +130,15 @@ class CrashLogScriptedThread(ScriptedThread):
 
         for reg in self.register_info["registers"]:
             reg_name = reg["name"]
+            reg_alt_name = None
+            if "alt-name" in reg:
+                reg_alt_name = reg["alt-name"]
             if reg_name in self.backing_thread.registers:
                 self.register_ctx[reg_name] = self.backing_thread.registers[reg_name]
+            elif reg_alt_name and reg_alt_name in self.backing_thread.registers:
+                self.register_ctx[reg_name] = self.backing_thread.registers[
+                    reg_alt_name
+                ]
             else:
                 self.register_ctx[reg_name] = 0
 

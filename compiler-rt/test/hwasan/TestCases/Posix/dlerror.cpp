@@ -1,6 +1,9 @@
 // Make sure dlerror is not classified as a leak even if we use dynamic TLS.
 // This is currently not implemented, so this test is XFAIL.
 
+// Android HWAsan does not support LSan.
+// UNSUPPORTED: android
+
 // RUN: %clangxx_hwasan -O0 %s -o %t && HWASAN_OPTIONS=detect_leaks=1 %run %t
 
 #include <assert.h>

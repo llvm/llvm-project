@@ -2856,7 +2856,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       if (!It->getSecond().IsReachingAlignedBarrierOnly)
         ForwardIsOk = false;
       break;
-    } while ((CurI = CurI->getNextNonDebugInstruction()));
+    } while ((CurI = CurI->getNextNode()));
 
     if (!CurI && !BEDMap.lookup(I.getParent()).IsReachingAlignedBarrierOnly)
       ForwardIsOk = false;
@@ -2875,7 +2875,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
       if (It->getSecond().IsReachedFromAlignedBarrierOnly)
         break;
       return false;
-    } while ((CurI = CurI->getPrevNonDebugInstruction()));
+    } while ((CurI = CurI->getPrevNode()));
 
     // Delayed decision on the forward pass to allow aligned barrier detection
     // in the backwards traversal.

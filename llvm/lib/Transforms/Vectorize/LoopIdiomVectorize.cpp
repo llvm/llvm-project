@@ -437,7 +437,7 @@ Value *LoopIdiomVectorize::createMaskedFindMismatch(
   Value *InitialPred = Builder.CreateIntrinsic(
       Intrinsic::get_active_lane_mask, {PredVTy, I64Type}, {ExtStart, ExtEnd});
 
-  Value *VecLen = Builder.CreateIntrinsic(Intrinsic::vscale, {I64Type}, {});
+  Value *VecLen = Builder.CreateVScale(I64Type);
   VecLen =
       Builder.CreateMul(VecLen, ConstantInt::get(I64Type, ByteCompareVF), "",
                         /*HasNUW=*/true, /*HasNSW=*/true);

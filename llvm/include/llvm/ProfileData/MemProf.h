@@ -23,6 +23,7 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/Support/BLAKE3.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/HashBuilder.h"
@@ -79,10 +80,10 @@ enum class Meta : uint64_t {
 using MemProfSchema = llvm::SmallVector<Meta, static_cast<int>(Meta::Size)>;
 
 // Returns the full schema currently in use.
-MemProfSchema getFullSchema();
+LLVM_ABI MemProfSchema getFullSchema();
 
 // Returns the schema consisting of the fields used for hot cold memory hinting.
-MemProfSchema getHotColdSchema();
+LLVM_ABI MemProfSchema getHotColdSchema();
 
 // Holds the actual MemInfoBlock data with all fields. Contents may be read or
 // written partially by providing an appropriate schema to the serialize and
@@ -396,8 +397,8 @@ struct IndexedAllocationInfo {
       : CSId(CSId), Info(MB) {}
 
   // Returns the size in bytes when this allocation info struct is serialized.
-  size_t serializedSize(const MemProfSchema &Schema,
-                        IndexedVersion Version) const;
+  LLVM_ABI size_t serializedSize(const MemProfSchema &Schema,
+                                 IndexedVersion Version) const;
 
   bool operator==(const IndexedAllocationInfo &Other) const {
     if (Other.Info != Info)
@@ -457,8 +458,8 @@ struct IndexedMemProfRecord {
     AllocSites.append(Other.AllocSites);
   }
 
-  size_t serializedSize(const MemProfSchema &Schema,
-                        IndexedVersion Version) const;
+  LLVM_ABI size_t serializedSize(const MemProfSchema &Schema,
+                                 IndexedVersion Version) const;
 
   bool operator==(const IndexedMemProfRecord &Other) const {
     if (Other.AllocSites != AllocSites)
@@ -471,26 +472,26 @@ struct IndexedMemProfRecord {
 
   // Serializes the memprof records in \p Records to the ostream \p OS based
   // on the schema provided in \p Schema.
-  void serialize(const MemProfSchema &Schema, raw_ostream &OS,
-                 IndexedVersion Version,
-                 llvm::DenseMap<CallStackId, LinearCallStackId>
-                     *MemProfCallStackIndexes = nullptr) const;
+  LLVM_ABI void serialize(const MemProfSchema &Schema, raw_ostream &OS,
+                          IndexedVersion Version,
+                          llvm::DenseMap<CallStackId, LinearCallStackId>
+                              *MemProfCallStackIndexes = nullptr) const;
 
   // Deserializes memprof records from the Buffer.
-  static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
-                                          const unsigned char *Buffer,
-                                          IndexedVersion Version);
+  LLVM_ABI static IndexedMemProfRecord deserialize(const MemProfSchema &Schema,
+                                                   const unsigned char *Buffer,
+                                                   IndexedVersion Version);
 
   // Convert IndexedMemProfRecord to MemProfRecord.  Callback is used to
   // translate CallStackId to call stacks with frames inline.
-  MemProfRecord toMemProfRecord(
+  LLVM_ABI MemProfRecord toMemProfRecord(
       llvm::function_ref<std::vector<Frame>(const CallStackId)> Callback) const;
 };
 
 // Returns the GUID for the function name after canonicalization. For
 // memprof, we remove any .llvm suffix added by LTO. MemProfRecords are
 // mapped to functions using this GUID.
-GlobalValue::GUID getGUID(const StringRef FunctionName);
+LLVM_ABI GlobalValue::GUID getGUID(const StringRef FunctionName);
 
 // Holds call site information with frame contents inline.
 struct CallSiteInfo {
@@ -551,7 +552,8 @@ struct MemProfRecord {
 // ids in the schema. Subsequent entries are integers which map to memprof::Meta
 // enum class entries. After successfully reading the schema, the pointer is one
 // byte past the schema contents.
-Expected<MemProfSchema> readMemProfSchema(const unsigned char *&Buffer);
+LLVM_ABI Expected<MemProfSchema>
+readMemProfSchema(const unsigned char *&Buffer);
 
 // Trait for reading IndexedMemProfRecord data from the on-disk hash table.
 class RecordLookupTrait {

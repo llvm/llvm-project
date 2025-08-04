@@ -565,6 +565,62 @@ Instruction *InstCombinerImpl::foldSelectIntoOp(SelectInst &SI, Value *TrueVal,
   return nullptr;
 }
 
+/// Try to fold a select to a min/max intrinsic. Many cases are already handled
+/// by matchDecomposedSelectPattern but here we handle the cases where more
+/// extensive modification of the IR is required.
+static Value *foldSelectICmpMinMax(const ICmpInst *Cmp, Value *TVal,
+                                   Value *FVal,
+                                   InstCombiner::BuilderTy &Builder,
+                                   const SimplifyQuery &SQ) {
+  const Value *CmpLHS = Cmp->getOperand(0);
+  const Value *CmpRHS = Cmp->getOperand(1);
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+
+  // (X > Y) ? X : (Y - 1) ==> MIN(X, Y - 1)
+  // (X < Y) ? X : (Y + 1) ==> MAX(X, Y + 1)
+  // This transformation is valid when overflow corresponding to the sign of
+  // the comparison is poison and we must drop the non-matching overflow flag.
+  if (CmpRHS == TVal) {
+    std::swap(CmpLHS, CmpRHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  }
+
+  // TODO: consider handling 'or disjoint' as well, though these would need to
+  // be converted to 'add' instructions.
+  if (!(CmpLHS == TVal && isa<Instruction>(FVal)))
+    return nullptr;
+
+  if (Pred == CmpInst::ICMP_SGT &&
+      match(FVal, m_NSWAdd(m_Specific(CmpRHS), m_One()))) {
+    cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smax, TVal, FVal);
+  }
+
+  if (Pred == CmpInst::ICMP_SLT &&
+      match(FVal, m_NSWAdd(m_Specific(CmpRHS), m_AllOnes()))) {
+    cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::smin, TVal, FVal);
+  }
+
+  if (Pred == CmpInst::ICMP_UGT &&
+      match(FVal, m_NUWAdd(m_Specific(CmpRHS), m_One()))) {
+    cast<Instruction>(FVal)->setHasNoSignedWrap(false);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umax, TVal, FVal);
+  }
+
+  // Note: We must use isKnownNonZero here because "sub nuw %x, 1" will be
+  // canonicalized to "add %x, -1" discarding the nuw flag.
+  if (Pred == CmpInst::ICMP_ULT &&
+      match(FVal, m_Add(m_Specific(CmpRHS), m_AllOnes())) &&
+      isKnownNonZero(CmpRHS, SQ)) {
+    cast<Instruction>(FVal)->setHasNoSignedWrap(false);
+    cast<Instruction>(FVal)->setHasNoUnsignedWrap(false);
+    return Builder.CreateBinaryIntrinsic(Intrinsic::umin, TVal, FVal);
+  }
+
+  return nullptr;
+}
+
 /// We want to turn:
 ///   (select (icmp eq (and X, Y), 0), (and (lshr X, Z), 1), 1)
 /// into:
@@ -822,7 +878,11 @@ static Instruction *foldSetClearBits(SelectInst &Sel,
 // is a vector consisting of 0 and undefs. If a constant compared with x
 // is a scalar undefined value or undefined vector then an expression
 // should be already folded into a constant.
-static Instruction *foldSelectZeroOrMul(SelectInst &SI, InstCombinerImpl &IC) {
+//
+// This also holds all operations such that Op(0) == 0
+// e.g. Shl, Umin, etc
+static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
+                                            InstCombinerImpl &IC) {
   auto *CondVal = SI.getCondition();
   auto *TrueVal = SI.getTrueValue();
   auto *FalseVal = SI.getFalseValue();
@@ -844,10 +904,23 @@ static Instruction *foldSelectZeroOrMul(SelectInst &SI, InstCombinerImpl &IC) {
   // non-zero elements that are masked by undef elements in the compare
   // constant.
   auto *TrueValC = dyn_cast<Constant>(TrueVal);
-  if (TrueValC == nullptr ||
-      !match(FalseVal, m_c_Mul(m_Specific(X), m_Value(Y))) ||
-      !isa<Instruction>(FalseVal))
+  if (TrueValC == nullptr || !isa<Instruction>(FalseVal))
     return nullptr;
+
+  bool FreezeY;
+  if (match(FalseVal, m_c_Mul(m_Specific(X), m_Value(Y))) ||
+      match(FalseVal, m_c_And(m_Specific(X), m_Value(Y))) ||
+      match(FalseVal, m_FShl(m_Specific(X), m_Specific(X), m_Value(Y))) ||
+      match(FalseVal, m_FShr(m_Specific(X), m_Specific(X), m_Value(Y))) ||
+      match(FalseVal,
+            m_c_Intrinsic<Intrinsic::umin>(m_Specific(X), m_Value(Y)))) {
+    FreezeY = true;
+  } else if (match(FalseVal, m_IDiv(m_Specific(X), m_Value(Y))) ||
+             match(FalseVal, m_IRem(m_Specific(X), m_Value(Y)))) {
+    FreezeY = false;
+  } else {
+    return nullptr;
+  }
 
   auto *ZeroC = cast<Constant>(cast<Instruction>(CondVal)->getOperand(1));
   auto *MergedC = Constant::mergeUndefsWith(TrueValC, ZeroC);
@@ -858,9 +931,15 @@ static Instruction *foldSelectZeroOrMul(SelectInst &SI, InstCombinerImpl &IC) {
     return nullptr;
 
   auto *FalseValI = cast<Instruction>(FalseVal);
-  auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
-                                     FalseValI->getIterator());
-  IC.replaceOperand(*FalseValI, FalseValI->getOperand(0) == Y ? 0 : 1, FrY);
+  if (FreezeY) {
+    auto *FrY = IC.InsertNewInstBefore(new FreezeInst(Y, Y->getName() + ".fr"),
+                                       FalseValI->getIterator());
+    IC.replaceOperand(*FalseValI,
+                      FalseValI->getOperand(0) == Y
+                          ? 0
+                          : (FalseValI->getOperand(1) == Y ? 1 : 2),
+                      FrY);
+  }
   return IC.replaceInstUsesWith(SI, FalseValI);
 }
 
@@ -1823,9 +1902,9 @@ static Instruction *foldSelectICmpEq(SelectInst &SI, ICmpInst *ICI,
 
 /// Fold `X Pred C1 ? X BOp C2 : C1 BOp C2` to `min/max(X, C1) BOp C2`.
 /// This allows for better canonicalization.
-static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
-                                           Value *FalseVal,
-                                           IRBuilderBase &Builder) {
+Value *InstCombinerImpl::foldSelectWithConstOpToBinOp(ICmpInst *Cmp,
+                                                      Value *TrueVal,
+                                                      Value *FalseVal) {
   Constant *C1, *C2, *C3;
   Value *X;
   CmpPredicate Predicate;
@@ -1889,11 +1968,29 @@ static Value *foldSelectWithConstOpToBinOp(ICmpInst *Cmp, Value *TrueVal,
     return nullptr;
   }
 
-  Intrinsic::ID IntrinsicID = getMinMaxIntrinsic(SPF);
-  Value *Intrinsic = Builder.CreateBinaryIntrinsic(IntrinsicID, X, RHS);
-  return IsIntrinsic ? Builder.CreateBinaryIntrinsic(Opcode, Intrinsic, C2)
-                     : Builder.CreateBinOp(Instruction::BinaryOps(Opcode),
-                                           Intrinsic, C2);
+  Intrinsic::ID MinMaxID = getMinMaxIntrinsic(SPF);
+  Value *MinMax = Builder.CreateBinaryIntrinsic(MinMaxID, X, RHS);
+  if (IsIntrinsic)
+    return Builder.CreateBinaryIntrinsic(Opcode, MinMax, C2);
+
+  const auto BinOpc = Instruction::BinaryOps(Opcode);
+  Value *BinOp = Builder.CreateBinOp(BinOpc, MinMax, C2);
+
+  // If we can attach no-wrap flags to the new instruction, do so if the
+  // old instruction had them and C1 BinOp C2 does not overflow.
+  if (Instruction *BinOpInst = dyn_cast<Instruction>(BinOp)) {
+    if (BinOpc == Instruction::Add || BinOpc == Instruction::Sub ||
+        BinOpc == Instruction::Mul) {
+      Instruction *OldBinOp = cast<BinaryOperator>(TrueVal);
+      if (OldBinOp->hasNoSignedWrap() &&
+          willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned=*/true))
+        BinOpInst->setHasNoSignedWrap();
+      if (OldBinOp->hasNoUnsignedWrap() &&
+          willNotOverflow(BinOpc, RHS, C2, *BinOpInst, /*IsSigned=*/false))
+        BinOpInst->setHasNoUnsignedWrap();
+    }
+  }
+  return BinOp;
 }
 
 /// Visit a SelectInst that has an ICmpInst as its first operand.
@@ -1940,6 +2037,9 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
     return &SI;
   }
 
+  if (Value *V = foldSelectICmpMinMax(ICI, TrueVal, FalseVal, Builder, SQ))
+    return replaceInstUsesWith(SI, V);
+
   if (Instruction *V =
           foldSelectICmpAndAnd(SI.getType(), ICI, TrueVal, FalseVal, Builder))
     return V;
@@ -1968,7 +2068,7 @@ Instruction *InstCombinerImpl::foldSelectInstWithICmp(SelectInst &SI,
   if (Value *V = foldAbsDiff(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
-  if (Value *V = foldSelectWithConstOpToBinOp(ICI, TrueVal, FalseVal, Builder))
+  if (Value *V = foldSelectWithConstOpToBinOp(ICI, TrueVal, FalseVal))
     return replaceInstUsesWith(SI, V);
 
   return Changed ? &SI : nullptr;
@@ -3572,6 +3672,28 @@ Instruction *InstCombinerImpl::foldSelectToCmp(SelectInst &SI) {
   if (!LHS->getType()->isIntOrIntVectorTy())
     return nullptr;
 
+  // If there is no -1, 0 or 1 at TV, then invert the select statement and try
+  // to canonicalize to one of the forms above
+  if (!isa<Constant>(TV)) {
+    if (!isa<Constant>(FV))
+      return nullptr;
+    Pred = ICmpInst::getInverseCmpPredicate(Pred);
+    std::swap(TV, FV);
+  }
+
+  if (ICmpInst::isNonStrictPredicate(Pred)) {
+    if (Constant *C = dyn_cast<Constant>(RHS)) {
+      auto FlippedPredAndConst =
+          getFlippedStrictnessPredicateAndConstant(Pred, C);
+      if (!FlippedPredAndConst)
+        return nullptr;
+      Pred = FlippedPredAndConst->first;
+      RHS = FlippedPredAndConst->second;
+    } else {
+      return nullptr;
+    }
+  }
+
   // Try to swap operands and the predicate. We need to be careful when doing
   // so because two of the patterns have opposite predicates, so use the
   // constant inside select to determine if swapping operands would be
@@ -4005,7 +4127,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     return Add;
   if (Instruction *Or = foldSetClearBits(SI, Builder))
     return Or;
-  if (Instruction *Mul = foldSelectZeroOrMul(SI, *this))
+  if (Instruction *Mul = foldSelectZeroOrFixedOp(SI, *this))
     return Mul;
 
   // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))

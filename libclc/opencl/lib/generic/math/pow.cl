@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_pow.h>
-#include <clc/opencl/clc.h>
+#include <clc/opencl/math/pow.h>
 
 #define FUNCTION pow
 #define __CLC_BODY <clc/shared/binary_def.inc>

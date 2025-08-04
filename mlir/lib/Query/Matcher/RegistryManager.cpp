@@ -64,7 +64,7 @@ std::vector<ArgKind> RegistryManager::getAcceptedCompletionTypes(
     unsigned argNumber = ctxEntry.second;
     std::vector<ArgKind> nextTypeSet;
 
-    if (argNumber < ctor->getNumArgs())
+    if (ctor->isVariadic() || argNumber < ctor->getNumArgs())
       ctor->getArgKinds(argNumber, nextTypeSet);
 
     typeSet.insert(nextTypeSet.begin(), nextTypeSet.end());
@@ -83,7 +83,7 @@ RegistryManager::getMatcherCompletions(llvm::ArrayRef<ArgKind> acceptedTypes,
     const internal::MatcherDescriptor &matcher = *m.getValue();
     llvm::StringRef name = m.getKey();
 
-    unsigned numArgs = matcher.getNumArgs();
+    unsigned numArgs = matcher.isVariadic() ? 1 : matcher.getNumArgs();
     std::vector<std::vector<ArgKind>> argKinds(numArgs);
 
     for (const ArgKind &kind : acceptedTypes) {
@@ -114,6 +114,9 @@ RegistryManager::getMatcherCompletions(llvm::ArrayRef<ArgKind> acceptedTypes,
         os << asArgString(argKind);
       }
     }
+
+    if (matcher.isVariadic())
+      os << ",...";
 
     os << ")";
     typedText += "(";

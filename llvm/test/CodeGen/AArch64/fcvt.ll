@@ -169,7 +169,7 @@ define <7 x half> @ceil_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v0.h[5]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
 ; CHECK-GI-NOFP16-NEXT:    frintp v2.4s, v2.4s
@@ -468,7 +468,7 @@ define <7 x half> @floor_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v0.h[5]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
 ; CHECK-GI-NOFP16-NEXT:    frintm v2.4s, v2.4s
@@ -767,7 +767,7 @@ define <7 x half> @nearbyint_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v0.h[5]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
 ; CHECK-GI-NOFP16-NEXT:    frinti v2.4s, v2.4s
@@ -1066,7 +1066,7 @@ define <7 x half> @roundeven_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v0.h[5]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
 ; CHECK-GI-NOFP16-NEXT:    frintn v2.4s, v2.4s
@@ -1365,7 +1365,7 @@ define <7 x half> @rint_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v0.h[5]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
 ; CHECK-GI-NOFP16-NEXT:    frintx v2.4s, v2.4s
@@ -1664,7 +1664,7 @@ define <7 x half> @round_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v0.h[5]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
 ; CHECK-GI-NOFP16-NEXT:    frinta v2.4s, v2.4s
@@ -1963,7 +1963,7 @@ define <7 x half> @trunc_v7f16(<7 x half> %a) {
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[1], v0.h[5]
 ; CHECK-GI-NOFP16-NEXT:    fcvtn v1.4h, v1.4s
 ; CHECK-GI-NOFP16-NEXT:    mov v2.h[2], v0.h[6]
-; CHECK-GI-NOFP16-NEXT:    mov h0, v1.h[0]
+; CHECK-GI-NOFP16-NEXT:    mov v0.h[0], v1.h[0]
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v2.4s, v2.4h
 ; CHECK-GI-NOFP16-NEXT:    mov v0.h[1], v1.h[1]
 ; CHECK-GI-NOFP16-NEXT:    frintz v2.4s, v2.4s

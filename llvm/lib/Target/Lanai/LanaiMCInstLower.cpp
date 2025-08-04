@@ -14,7 +14,7 @@
 #include "LanaiMCInstLower.h"
 
 #include "MCTargetDesc/LanaiBaseInfo.h"
-#include "MCTargetDesc/LanaiMCExpr.h"
+#include "MCTargetDesc/LanaiMCAsmInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -64,17 +64,16 @@ LanaiMCInstLower::GetConstantPoolIndexSymbol(const MachineOperand &MO) const {
 
 MCOperand LanaiMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
                                                MCSymbol *Sym) const {
-  LanaiMCExpr::Spec Kind;
-
+  Lanai::Specifier Kind;
   switch (MO.getTargetFlags()) {
   case LanaiII::MO_NO_FLAG:
-    Kind = LanaiMCExpr::VK_Lanai_None;
+    Kind = Lanai::S_None;
     break;
   case LanaiII::MO_ABS_HI:
-    Kind = LanaiMCExpr::VK_Lanai_ABS_HI;
+    Kind = Lanai::S_ABS_HI;
     break;
   case LanaiII::MO_ABS_LO:
-    Kind = LanaiMCExpr::VK_Lanai_ABS_LO;
+    Kind = Lanai::S_ABS_LO;
     break;
   default:
     llvm_unreachable("Unknown target flag on GV operand");
@@ -84,7 +83,7 @@ MCOperand LanaiMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   if (!MO.isJTI() && MO.getOffset())
     Expr = MCBinaryExpr::createAdd(
         Expr, MCConstantExpr::create(MO.getOffset(), Ctx), Ctx);
-  Expr = LanaiMCExpr::create(Kind, Expr, Ctx);
+  Expr = MCSpecifierExpr::create(Expr, Kind, Ctx);
   return MCOperand::createExpr(Expr);
 }
 
