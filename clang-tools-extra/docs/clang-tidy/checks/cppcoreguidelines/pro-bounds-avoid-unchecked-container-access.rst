@@ -54,8 +54,7 @@ Options
     The function to use in the `function` mode. For C++23 and beyond, the
     passed function must support the empty subscript operator, i.e., the case
     where ``a[]`` becomes ``f(a)``. :option:`FixFunctionEmptyArgs` can be
-    used to override the suggested function in that case. The default for
-    `FixFunction` is `gsl::at`. 
+    used to override the suggested function in that case. The default is `gsl::at`. 
 
 .. option:: FixFunctionEmptyArgs
 
