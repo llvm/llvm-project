@@ -257,7 +257,7 @@ struct VPlanTransforms {
                                      unsigned BestUF,
                                      PredicatedScalarEvolution &PSE);
 
-  // Materialize vector trip count computations to a set of VPInstructions.
+  /// Materialize vector trip count computations to a set of VPInstructions.
   static void materializeVectorTripCount(VPlan &Plan,
                                          VPBasicBlock *VectorPHVPBB,
                                          bool TailByMasking,
