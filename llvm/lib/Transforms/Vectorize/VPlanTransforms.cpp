@@ -1502,10 +1502,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   } else {
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
-    LLVMContext &Ctx = SE.getContext();
-    auto *BOC = new VPInstruction(
-        VPInstruction::BranchOnCond,
-        {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))}, Term->getDebugLoc());
+    auto *BOC = new VPInstruction(VPInstruction::BranchOnCond, {Plan.getTrue()},
+                                  Term->getDebugLoc());
     ExitingVPBB->appendRecipe(BOC);
   }
 
@@ -2171,7 +2169,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
-  VPValue *AllOneMask = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+  VPValue *AllOneMask = Plan.getTrue();
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 

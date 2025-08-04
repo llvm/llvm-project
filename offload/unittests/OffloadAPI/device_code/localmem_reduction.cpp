@@ -3,7 +3,7 @@
 
 extern __gpu_local uint32_t shared_mem[];
 
-__gpu_kernel void localmem_reduction(uint32_t *out) {
+extern "C" __gpu_kernel void localmem_reduction(uint32_t *out) {
   shared_mem[__gpu_thread_id(0)] = 2;
 
   __gpu_sync_threads();

@@ -220,8 +220,9 @@ public:
 
   CompileUnit *GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu);
 
-  virtual void GetObjCMethods(ConstString class_name,
-                              llvm::function_ref<bool(DWARFDIE die)> callback);
+  virtual void
+  GetObjCMethods(ConstString class_name,
+                 llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   DebugMacrosSP ParseDebugMacros(lldb::offset_t *offset);
 
