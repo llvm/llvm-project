@@ -3273,6 +3273,10 @@ public:
 /// When these conditions are met, the entire chain can be replaced with a
 /// single vector.from_elements operation.
 ///
+/// To keep this pattern simple, and avoid spending too much time on matching
+/// fragmented insert chains, this pattern only considers the last insert op in
+/// the chain.
+///
 /// Example transformation:
 ///   %poison = ub.poison : vector<2xi32>
 ///   %0 = vector.insert %c1, %poison[0] : i32 into vector<2xi32>
@@ -3288,9 +3292,7 @@ public:
     VectorType destTy = op.getDestVectorType();
     if (destTy.isScalable())
       return failure();
-    // This pattern has linear time complexity with respect to the length of the
-    // insert chain. So we only care about the last insert op which has the
-    // highest probability of success.
+    // Ensure this is the trailing vector.insert op in a chain of inserts.
     for (Operation *user : op.getResult().getUsers())
       if (auto insertOp = dyn_cast<InsertOp>(user))
         if (insertOp.getDest() == op.getResult())
@@ -3299,14 +3301,14 @@ public:
     InsertOp currentOp = op;
     SmallVector<InsertOp> chainInsertOps;
     while (currentOp) {
-      // Dynamic position is not supported.
+      // Check cond 1: Dynamic position is not supported.
       if (currentOp.hasDynamicPosition())
         return failure();
 
       chainInsertOps.push_back(currentOp);
       currentOp = currentOp.getDest().getDefiningOp<InsertOp>();
-      // Check that intermediate inserts have only one use to avoid an explosion
-      // of vectors.
+      // Check cond 3: Intermediate inserts have only one use to avoid an
+      // explosion of vectors.
       if (currentOp && !currentOp->hasOneUse())
         return failure();
     }
@@ -3355,7 +3357,7 @@ public:
         break;
     }
 
-    // Final check: all positions must be initialized
+    // Check cond 2: all positions must be initialized.
     if (initializedCount != vectorSize)
       return failure();
 
