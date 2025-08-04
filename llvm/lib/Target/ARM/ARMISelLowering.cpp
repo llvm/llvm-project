@@ -5233,14 +5233,14 @@ static SDValue LowerSELECTWithCmpZero(SDValue CmpVal, SDValue LHS, SDValue RHS,
     // SELECT (AND(X,1) == 0), Y, (SHL Y, Z) -> (SHL Y, (AND NEG(AND(X,1)), Z))
     // SELECT (AND(X,1) == 0), Y, (SRA Y, Z) -> (SRA Y, (AND NEG(AND(X,1)), Z))
     // SELECT (AND(X,1) == 0), Y, (SRL Y, Z) -> (SRL Y, (AND NEG(AND(X,1)), Z))
-    if (Subtarget.isThumb() && isIdentityPatternZero()) {
+    if (Subtarget.isThumb1Only() && isIdentityPatternZero()) {
       SDValue Mask = SplatLSB(Src1.getValueType());
       SDValue And = DAG.getNode(ISD::AND, DL, Src1.getValueType(), Mask,
                                 Src1);                        // Mask & z
       return DAG.getNode(RHS.getOpcode(), DL, VT, Src2, And); // y Op And
     }
     // SELECT (AND(X,1) == 0), (AND Y, Z), Y -> (AND Y, (OR NEG(AND(X, 1)), Z))
-    if (Subtarget.isThumb() && isIdentityPatternOnes()) {
+    if (Subtarget.isThumb1Only() && isIdentityPatternOnes()) {
       SDValue Mask = SplatLSB(VT);
       SDValue Or = DAG.getNode(ISD::OR, DL, VT, Mask, Src1); // Mask | z
       return DAG.getNode(LHS.getOpcode(), DL, VT, Src2, Or); // y Op Or
