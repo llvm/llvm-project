@@ -145,15 +145,15 @@ public:
     m_was_already_initialized = true;
     m_gil_state = PyGILState_Ensure();
     LLDB_LOGV(GetLog(LLDBLog::Script),
-              "Ensured PyGILState. Previous state = {0}locked\n",
-              m_gil_state == PyGILState_UNLOCKED ? "un" : "");
+              "Ensured PyGILState. Previous state = {0}",
+              m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
   }
 
   ~InitializePythonRAII() {
     if (m_was_already_initialized) {
-      Log *log = GetLog(LLDBLog::Script);
-      LLDB_LOGV(log, "Releasing PyGILState. Returning to state = {0}locked",
-                m_gil_state == PyGILState_UNLOCKED ? "un" : "");
+      LLDB_LOGV(GetLog(LLDBLog::Script),
+                "Releasing PyGILState. Returning to state = {0}",
+                m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
       PyGILState_Release(m_gil_state);
     } else {
       // We initialized the threads in this function, just unlock the GIL.
@@ -328,10 +328,9 @@ ScriptInterpreterPythonImpl::Locker::Locker(
 }
 
 bool ScriptInterpreterPythonImpl::Locker::DoAcquireLock() {
-  Log *log = GetLog(LLDBLog::Script);
   m_GILState = PyGILState_Ensure();
-  LLDB_LOGV(log, "Ensured PyGILState. Previous state = {0}locked",
-            m_GILState == PyGILState_UNLOCKED ? "un" : "");
+  LLDB_LOGV(GetLog(LLDBLog::Script), "Ensured PyGILState. Previous state = {0}",
+            m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
 
   // we need to save the thread state when we first start the command because
   // we might decide to interrupt it while some action is taking place outside
@@ -352,9 +351,9 @@ bool ScriptInterpreterPythonImpl::Locker::DoInitSession(uint16_t on_entry_flags,
 }
 
 bool ScriptInterpreterPythonImpl::Locker::DoFreeLock() {
-  Log *log = GetLog(LLDBLog::Script);
-  LLDB_LOGV(log, "Releasing PyGILState. Returning to state = {0}locked",
-            m_GILState == PyGILState_UNLOCKED ? "un" : "");
+  LLDB_LOGV(GetLog(LLDBLog::Script),
+            "Releasing PyGILState. Returning to state = {0}",
+            m_GILState == PyGILState_UNLOCKED ? "unlocked" : "locked");
   PyGILState_Release(m_GILState);
   m_python_interpreter->DecrementLockCount();
   return true;
