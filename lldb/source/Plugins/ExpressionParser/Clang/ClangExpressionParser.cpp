@@ -894,7 +894,7 @@ ClangExpressionParser::ClangExpressionParser(
   m_llvm_context = std::make_unique<LLVMContext>();
   m_code_generator.reset(CreateLLVMCodeGen(
       m_compiler->getDiagnostics(), module_name,
-      &m_compiler->getVirtualFileSystem(), m_compiler->getHeaderSearchOpts(),
+      m_compiler->getVirtualFileSystemPtr(), m_compiler->getHeaderSearchOpts(),
       m_compiler->getPreprocessorOpts(), m_compiler->getCodeGenOpts(),
       *m_llvm_context));
 }
@@ -1315,16 +1315,18 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     decl_map->InstallCodeGenerator(&m_compiler->getASTConsumer());
     decl_map->InstallDiagnosticManager(diagnostic_manager);
 
-    clang::ExternalASTSource *ast_source = decl_map->CreateProxy();
+    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source =
+        decl_map->CreateProxy();
 
-    auto *ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
+    auto ast_source_wrapper =
+        llvm::makeIntrusiveRefCnt<ExternalASTSourceWrapper>(ast_source);
 
     if (ast_context.getExternalSource()) {
-      auto *module_wrapper =
-          new ExternalASTSourceWrapper(ast_context.getExternalSource());
+      auto module_wrapper = llvm::makeIntrusiveRefCnt<ExternalASTSourceWrapper>(
+          ast_context.getExternalSourcePtr());
 
-      auto *multiplexer =
-          new SemaSourceWithPriorities(module_wrapper, ast_source_wrapper);
+      auto multiplexer = llvm::makeIntrusiveRefCnt<SemaSourceWithPriorities>(
+          module_wrapper, ast_source_wrapper);
 
       ast_context.setExternalSource(multiplexer);
     } else {

@@ -209,6 +209,18 @@ struct VPlanTransforms {
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 
+  /// Transform EVL loops to use variable-length stepping after region
+  /// dissolution.
+  ///
+  /// Once loop regions are replaced with explicit CFG, EVL loops can step with
+  /// variable vector lengths instead of fixed lengths. This transformation:
+  ///  * Makes EVL-Phi concrete.
+  //   * Removes CanonicalIV and increment.
+  ///  * Replaces fixed-length stepping (branch-on-cond CanonicalIVInc,
+  ///    VectorTripCount) with variable-length stepping (branch-on-cond
+  ///    EVLIVInc, TripCount).
+  static void canonicalizeEVLLoops(VPlan &Plan);
+
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
   /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
   static void convertToConcreteRecipes(VPlan &Plan, Type &CanonicalIVTy);
@@ -243,6 +255,11 @@ struct VPlanTransforms {
   static void materializeVectorTripCount(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE);
+
+  /// Materialize the backedge-taken count to be computed explicitly using
+  /// VPInstructions.
+  static void materializeBackedgeTakenCount(VPlan &Plan,
+                                            VPBasicBlock *VectorPH);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF

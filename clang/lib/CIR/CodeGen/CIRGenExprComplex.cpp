@@ -91,6 +91,14 @@ public:
   }
 
   mlir::Value VisitUnaryDeref(const Expr *e);
+
+  mlir::Value VisitUnaryPlus(const UnaryOperator *e);
+
+  mlir::Value VisitPlusMinus(const UnaryOperator *e, cir::UnaryOpKind kind,
+                             QualType promotionType);
+
+  mlir::Value VisitUnaryMinus(const UnaryOperator *e);
+
   mlir::Value VisitUnaryNot(const UnaryOperator *e);
 
   struct BinOpInfo {
@@ -110,6 +118,7 @@ public:
 
   mlir::Value emitBinAdd(const BinOpInfo &op);
   mlir::Value emitBinSub(const BinOpInfo &op);
+  mlir::Value emitBinMul(const BinOpInfo &op);
 
   QualType getPromotionType(QualType ty, bool isDivOpCode = false) {
     if (auto *complexTy = ty->getAs<ComplexType>()) {
@@ -142,16 +151,20 @@ public:
 
   HANDLEBINOP(Add)
   HANDLEBINOP(Sub)
+  HANDLEBINOP(Mul)
 #undef HANDLEBINOP
 };
 } // namespace
 
+#ifndef NDEBUG
+// Only used in asserts
 static const ComplexType *getComplexType(QualType type) {
   type = type.getCanonicalType();
   if (const ComplexType *comp = dyn_cast<ComplexType>(type))
     return comp;
   return cast<ComplexType>(cast<AtomicType>(type)->getValueType());
 }
+#endif // NDEBUG
 
 LValue ComplexExprEmitter::emitBinAssignLValue(const BinaryOperator *e,
                                                mlir::Value &value) {
@@ -280,6 +293,41 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
   }
 
   llvm_unreachable("unknown cast resulting in complex value");
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *e) {
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  mlir::Value result = VisitPlusMinus(e, cir::UnaryOpKind::Plus, promotionTy);
+  if (!promotionTy.isNull()) {
+    cgf.cgm.errorNYI("ComplexExprEmitter::VisitUnaryPlus emitUnPromotedValue");
+    return {};
+  }
+  return result;
+}
+
+mlir::Value ComplexExprEmitter::VisitPlusMinus(const UnaryOperator *e,
+                                               cir::UnaryOpKind kind,
+                                               QualType promotionType) {
+  assert(kind == cir::UnaryOpKind::Plus ||
+         kind == cir::UnaryOpKind::Minus &&
+             "Invalid UnaryOp kind for ComplexType Plus or Minus");
+
+  mlir::Value op;
+  if (!promotionType.isNull())
+    op = cgf.emitPromotedComplexExpr(e->getSubExpr(), promotionType);
+  else
+    op = Visit(e->getSubExpr());
+  return builder.createUnaryOp(cgf.getLoc(e->getExprLoc()), kind, op);
+}
+
+mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e) {
+  QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  mlir::Value result = VisitPlusMinus(e, cir::UnaryOpKind::Minus, promotionTy);
+  if (!promotionTy.isNull()) {
+    cgf.cgm.errorNYI("ComplexExprEmitter::VisitUnaryMinus emitUnPromotedValue");
+    return {};
+  }
+  return result;
 }
 
 mlir::Value ComplexExprEmitter::emitConstant(
@@ -534,13 +582,22 @@ mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,
     return emitBin##OP(emitBinOps(bo, promotionTy));
       HANDLE_BINOP(Add)
       HANDLE_BINOP(Sub)
+      HANDLE_BINOP(Mul)
 #undef HANDLE_BINOP
     default:
       break;
     }
-  } else if (isa<UnaryOperator>(e)) {
-    cgf.cgm.errorNYI("emitPromoted UnaryOperator");
-    return {};
+  } else if (const auto *unaryOp = dyn_cast<UnaryOperator>(e)) {
+    switch (unaryOp->getOpcode()) {
+    case UO_Minus:
+    case UO_Plus: {
+      auto kind = unaryOp->getOpcode() == UO_Plus ? cir::UnaryOpKind::Plus
+                                                  : cir::UnaryOpKind::Minus;
+      return VisitPlusMinus(unaryOp, kind, promotionTy);
+    }
+    default:
+      break;
+    }
   }
 
   mlir::Value result = Visit(const_cast<Expr *>(e));
@@ -583,6 +640,31 @@ mlir::Value ComplexExprEmitter::emitBinSub(const BinOpInfo &op) {
   assert(!cir::MissingFeatures::fastMathFlags());
   assert(!cir::MissingFeatures::cgFPOptionsRAII());
   return builder.create<cir::ComplexSubOp>(op.loc, op.lhs, op.rhs);
+}
+
+static cir::ComplexRangeKind
+getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
+  switch (range) {
+  case LangOptions::CX_Full:
+    return cir::ComplexRangeKind::Full;
+  case LangOptions::CX_Improved:
+    return cir::ComplexRangeKind::Improved;
+  case LangOptions::CX_Promoted:
+    return cir::ComplexRangeKind::Promoted;
+  case LangOptions::CX_Basic:
+    return cir::ComplexRangeKind::Basic;
+  case LangOptions::CX_None:
+    // The default value for ComplexRangeKind is Full is no option is selected
+    return cir::ComplexRangeKind::Full;
+  }
+}
+
+mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
+  assert(!cir::MissingFeatures::fastMathFlags());
+  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  cir::ComplexRangeKind rangeKind =
+      getComplexRangeAttr(op.fpFeatures.getComplexRange());
+  return builder.create<cir::ComplexMulOp>(op.loc, op.lhs, op.rhs, rangeKind);
 }
 
 LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {

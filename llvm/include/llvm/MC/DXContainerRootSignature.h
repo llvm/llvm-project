@@ -10,6 +10,7 @@
 #define LLVM_MC_DXCONTAINERROOTSIGNATURE_H
 
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 #include <limits>
 
@@ -113,9 +114,9 @@ struct RootSignatureDesc {
   mcdxbc::RootParametersContainer ParametersContainer;
   SmallVector<dxbc::RTS0::v1::StaticSampler> StaticSamplers;
 
-  void write(raw_ostream &OS) const;
+  LLVM_ABI void write(raw_ostream &OS) const;
 
-  size_t getSize() const;
+  LLVM_ABI size_t getSize() const;
 };
 } // namespace mcdxbc
 } // namespace llvm
