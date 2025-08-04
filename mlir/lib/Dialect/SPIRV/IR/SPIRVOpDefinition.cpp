@@ -31,6 +31,18 @@ static bool isNestedInFunctionOpInterface(Operation *op) {
   return isNestedInFunctionOpInterface(op->getParentOp());
 }
 
+/// Returns true if the given op is a GraphARM op or nested in a
+/// GraphARM op without a module-like op in the middle.
+static bool isNestedInGraphARMOpInterface(Operation *op) {
+  if (!op)
+    return false;
+  if (op->hasTrait<OpTrait::SymbolTable>())
+    return false;
+  if (isa<spirv::GraphARMOp>(op))
+    return true;
+  return isNestedInGraphARMOpInterface(op->getParentOp());
+}
+
 /// Returns true if the given op is an module-like op that maintains a symbol
 /// table.
 static bool isDirectInModuleLikeOp(Operation *op) {
