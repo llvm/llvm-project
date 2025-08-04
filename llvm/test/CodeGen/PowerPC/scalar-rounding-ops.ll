@@ -5,9 +5,6 @@
 ; RUN: llc -mcpu=pwr8 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
 ; RUN:   -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs < %s | \
 ; RUN:   FileCheck %s
-; RUN: llc -mcpu=pwr8 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr \
-; RUN:   -mtriple=powerpc64le-unknown-unknown -verify-machineinstrs < %s \
-; RUN:   --enable-unsafe-fp-math | FileCheck %s --check-prefix=FAST
 define dso_local i64 @test_lrint(double %d) local_unnamed_addr {
 ; BE-LABEL: test_lrint:
 ; BE:       # %bb.0: # %entry
@@ -501,6 +498,13 @@ entry:
   %0 = tail call float @llvm.nearbyint.f32(float %f)
   ret float %0
 }
+
+define dso_local float @test_nearbyintf_afn(float %f) local_unnamed_addr {
+entry:
+  %0 = tail call afn float @llvm.nearbyint.f32(float %f)
+  ret float %0
+}
+
 
 declare float @llvm.nearbyint.f32(float)
 
