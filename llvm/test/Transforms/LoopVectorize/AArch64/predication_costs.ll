@@ -135,8 +135,8 @@ for.end:
 ;
 ; CHECK: Scalarizing: %tmp3 = add nsw i32 %tmp2, %x
 ; CHECK: Scalarizing and predicating: %tmp4 = udiv i32 %tmp2, %tmp3
-; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp3 = add nsw i32 %tmp2, %x
 ; CHECK: Cost of 5 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp2, %tmp3
+; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp3 = add nsw i32 %tmp2, %x
 ;
 
 define i32 @predicated_udiv_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
@@ -181,8 +181,8 @@ for.end:
 ;
 ; CHECK: Scalarizing: %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Scalarizing and predicating: store i32 %tmp2, ptr %tmp0, align 4
-; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp2 = add nsw i32 %tmp1, %x
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp2, ptr %tmp0, align 4
+; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp2 = add nsw i32 %tmp1, %x
 ;
 define void @predicated_store_scalarized_operand(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:
@@ -233,8 +233,8 @@ for.end:
 ; CHECK:     Scalarizing and predicating: %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK:     Scalarizing: %tmp5 = sub i32 %tmp4, %x
 ; CHECK:     Scalarizing and predicating: store i32 %tmp5, ptr %tmp0, align 4
-; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp3 = sdiv i32 %tmp1, %tmp2
+; CHECK: Cost of 7 for VF 2: profitable to scalarize   %tmp4 = udiv i32 %tmp3, %tmp2
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp5, ptr %tmp0, align 4
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp5 = sub i32 %tmp4, %x
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%tmp2> = add ir<%tmp1>, ir<%x>
