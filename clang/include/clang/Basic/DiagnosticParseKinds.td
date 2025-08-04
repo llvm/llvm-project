@@ -931,6 +931,10 @@ def err_missing_dependent_template_keyword : Error<
 def warn_missing_dependent_template_keyword : ExtWarn<
   "use 'template' keyword to treat '%0' as a dependent template name">;
 
+def err_cxx26_template_template_params
+    : Error<"%select{variable template|concept}0 template parameter is a C++2c "
+            "extension">;
+
 def ext_extern_template : Extension<
   "extern templates are a C++11 extension">, InGroup<CXX11>;
 def warn_cxx98_compat_extern_template : Warning<

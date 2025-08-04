@@ -610,6 +610,10 @@ public:
                                  TemplateArgumentLoc &Output,
                                  bool Uneval = false);
 
+  TemplateArgument
+  TransformNamedTemplateTemplateArgument(CXXScopeSpec &SS, TemplateName Name,
+                                         SourceLocation NameLoc);
+
   /// Transform the given set of template arguments.
   ///
   /// By default, this operation transforms all of the template arguments
@@ -4843,6 +4847,15 @@ TreeTransform<Derived>::TransformTemplateName(CXXScopeSpec &SS,
   llvm_unreachable("overloaded function decl survived to here");
 }
 
+template <typename Derived>
+TemplateArgument TreeTransform<Derived>::TransformNamedTemplateTemplateArgument(
+    CXXScopeSpec &SS, TemplateName Name, SourceLocation NameLoc) {
+  TemplateName TN = getDerived().TransformTemplateName(SS, Name, NameLoc);
+  if (TN.isNull())
+    return TemplateArgument();
+  return TemplateArgument(TN);
+}
+
 template<typename Derived>
 void TreeTransform<Derived>::InventTemplateArgumentLoc(
                                          const TemplateArgument &Arg,
@@ -4927,13 +4940,13 @@ bool TreeTransform<Derived>::TransformTemplateArgument(
 
     CXXScopeSpec SS;
     SS.Adopt(QualifierLoc);
-    TemplateName Template = getDerived().TransformTemplateName(
-        SS, Arg.getAsTemplate(), Input.getTemplateNameLoc());
-    if (Template.isNull())
-      return true;
 
-    Output = TemplateArgumentLoc(SemaRef.Context, TemplateArgument(Template),
-                                 QualifierLoc, Input.getTemplateNameLoc());
+    TemplateArgument Out = getDerived().TransformNamedTemplateTemplateArgument(
+        SS, Arg.getAsTemplate(), Input.getTemplateNameLoc());
+    if (Out.isNull())
+      return true;
+    Output = TemplateArgumentLoc(SemaRef.Context, Out, QualifierLoc,
+                                 Input.getTemplateNameLoc());
     return false;
   }
 
@@ -5029,10 +5042,8 @@ template<typename InputIterator>
 bool TreeTransform<Derived>::TransformTemplateArguments(
     InputIterator First, InputIterator Last, TemplateArgumentListInfo &Outputs,
     bool Uneval) {
-  for (; First != Last; ++First) {
+  for (TemplateArgumentLoc In : llvm::make_range(First, Last)) {
     TemplateArgumentLoc Out;
-    TemplateArgumentLoc In = *First;
-
     if (In.getArgument().getKind() == TemplateArgument::Pack) {
       // Unpack argument packs, which we translate them into separate
       // arguments.
@@ -5042,11 +5053,10 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
       typedef TemplateArgumentLocInventIterator<Derived,
                                                 TemplateArgument::pack_iterator>
         PackLocIterator;
-      if (TransformTemplateArguments(PackLocIterator(*this,
-                                                 In.getArgument().pack_begin()),
-                                     PackLocIterator(*this,
-                                                   In.getArgument().pack_end()),
-                                     Outputs, Uneval))
+      if (TransformTemplateArguments(
+              PackLocIterator(*this, In.getArgument().pack_begin()),
+              PackLocIterator(*this, In.getArgument().pack_end()), Outputs,
+              Uneval))
         return true;
 
       continue;
