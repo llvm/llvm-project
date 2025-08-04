@@ -1302,6 +1302,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
     setSize(std::max(getSize(), Offset + Layout.getSize()));
 
   // Remember max struct/class alignment.
+  UnadjustedAlignment = std::max(UnadjustedAlignment, BaseAlign);
   UpdateAlignment(BaseAlign, UnpackedAlignTo, PreferredBaseAlign);
 
   return Offset;
@@ -1538,6 +1539,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   uint64_t StorageUnitSize = FieldInfo.Width;
   unsigned FieldAlign = FieldInfo.Align;
   bool AlignIsRequired = FieldInfo.isAlignRequired();
+  unsigned char PaddingInLastUnit = 0;
 
   // UnfilledBitsInLastUnit is the difference between the end of the
   // last allocated bitfield (i.e. the first bit offset available for
@@ -1610,6 +1612,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
       if (!LastBitfieldStorageUnitSize && !FieldSize)
         FieldAlign = 1;
 
+      PaddingInLastUnit = UnfilledBitsInLastUnit;
       UnfilledBitsInLastUnit = 0;
       LastBitfieldStorageUnitSize = 0;
     }
@@ -1706,7 +1709,7 @@ void ItaniumRecordLayoutBuilder::LayoutBitField(const FieldDecl *D) {
   // For purposes of diagnostics, we're going to simultaneously
   // compute the field offsets that we would have used if we weren't
   // adding any alignment padding or if the field weren't packed.
-  uint64_t UnpaddedFieldOffset = FieldOffset;
+  uint64_t UnpaddedFieldOffset = FieldOffset - PaddingInLastUnit;
   uint64_t UnpackedFieldOffset = FieldOffset;
 
   // Check if we need to add padding to fit the bitfield within an
@@ -1950,7 +1953,7 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
           // silently there. For other targets that have ms_struct enabled
           // (most probably via a pragma or attribute), trigger a diagnostic
           // that defaults to an error.
-          if (!Context.getTargetInfo().getTriple().isWindowsGNUEnvironment())
+          if (!Context.getTargetInfo().getTriple().isOSCygMing())
             Diag(D->getLocation(), diag::warn_npot_ms_struct);
         }
         if (TypeSize > FieldAlign &&
@@ -2453,15 +2456,6 @@ static bool mustSkipTailPadding(TargetCXXABI ABI, const CXXRecordDecl *RD) {
   }
 
   llvm_unreachable("bad tail-padding use kind");
-}
-
-static bool isMsLayout(const ASTContext &Context) {
-  // Check if it's CUDA device compilation; ensure layout consistency with host.
-  if (Context.getLangOpts().CUDA && Context.getLangOpts().CUDAIsDevice &&
-      Context.getAuxTargetInfo())
-    return Context.getAuxTargetInfo()->getCXXABI().isMicrosoft();
-
-  return Context.getTargetInfo().getCXXABI().isMicrosoft();
 }
 
 // This section contains an implementation of struct layout that is, up to the
@@ -3396,7 +3390,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
 
   const ASTRecordLayout *NewEntry = nullptr;
 
-  if (isMsLayout(*this)) {
+  if (getTargetInfo().hasMicrosoftRecordLayout()) {
     if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
       EmptySubobjectMap EmptySubobjects(*this, RD);
       MicrosoftRecordLayoutBuilder Builder(*this, &EmptySubobjects);
@@ -3459,6 +3453,13 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   }
 
   ASTRecordLayouts[D] = NewEntry;
+
+  constexpr uint64_t MaxStructSizeInBytes = 1ULL << 60;
+  CharUnits StructSize = NewEntry->getSize();
+  if (static_cast<uint64_t>(StructSize.getQuantity()) >= MaxStructSizeInBytes) {
+    getDiagnostics().Report(D->getLocation(), diag::err_struct_too_large)
+        << D->getName() << MaxStructSizeInBytes;
+  }
 
   if (getLangOpts().DumpRecordLayouts) {
     llvm::outs() << "\n*** Dumping AST Record Layout\n";
@@ -3646,7 +3647,8 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
     bool HasOwnVBPtr = Layout.hasOwnVBPtr();
 
     // Vtable pointer.
-    if (CXXRD->isDynamicClass() && !PrimaryBase && !isMsLayout(C)) {
+    if (CXXRD->isDynamicClass() && !PrimaryBase &&
+        !C.getTargetInfo().hasMicrosoftRecordLayout()) {
       PrintOffset(OS, Offset, IndentLevel);
       OS << '(' << *RD << " vtable pointer)\n";
     } else if (HasOwnVFPtr) {
@@ -3744,7 +3746,7 @@ static void DumpRecordLayout(raw_ostream &OS, const RecordDecl *RD,
 
   PrintIndentNoOffset(OS, IndentLevel - 1);
   OS << "[sizeof=" << Layout.getSize().getQuantity();
-  if (CXXRD && !isMsLayout(C))
+  if (CXXRD && !C.getTargetInfo().hasMicrosoftRecordLayout())
     OS << ", dsize=" << Layout.getDataSize().getQuantity();
   OS << ", align=" << Layout.getAlignment().getQuantity();
   if (C.getTargetInfo().defaultsToAIXPowerAlignment())
@@ -3783,7 +3785,7 @@ void ASTContext::DumpRecordLayout(const RecordDecl *RD, raw_ostream &OS,
   OS << "\nLayout: ";
   OS << "<ASTRecordLayout\n";
   OS << "  Size:" << toBits(Info.getSize()) << "\n";
-  if (!isMsLayout(*this))
+  if (!getTargetInfo().hasMicrosoftRecordLayout())
     OS << "  DataSize:" << toBits(Info.getDataSize()) << "\n";
   OS << "  Alignment:" << toBits(Info.getAlignment()) << "\n";
   if (Target->defaultsToAIXPowerAlignment())

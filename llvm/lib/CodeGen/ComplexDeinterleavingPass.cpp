@@ -1034,6 +1034,9 @@ ComplexDeinterleavingGraph::identifyPartialReduction(Value *R, Value *I) {
   if (!isa<VectorType>(R->getType()) || !isa<VectorType>(I->getType()))
     return nullptr;
 
+  if (!R->hasUseList() || !I->hasUseList())
+    return nullptr;
+
   auto CommonUser =
       findCommonBetweenCollections<Value *>(R->users(), I->users());
   if (!CommonUser)
@@ -1151,8 +1154,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
     SmallVector<PointerIntPair<Value *, 1, bool>> Worklist = {{Insn, true}};
     SmallPtrSet<Value *, 8> Visited;
     while (!Worklist.empty()) {
-      auto [V, IsPositive] = Worklist.back();
-      Worklist.pop_back();
+      auto [V, IsPositive] = Worklist.pop_back_val();
       if (!Visited.insert(V).second)
         continue;
 
@@ -1168,7 +1170,7 @@ ComplexDeinterleavingGraph::identifyReassocNodes(Instruction *Real,
       // the latter case, we will attempt to separately identify the complex
       // operation from here in order to create a shared
       // ComplexDeinterleavingCompositeNode.
-      if (I != Insn && I->getNumUses() > 1) {
+      if (I != Insn && I->hasNUsesOrMore(2)) {
         LLVM_DEBUG(dbgs() << "Found potential sub-expression: " << *I << "\n");
         Addends.emplace_back(I, IsPositive);
         continue;
@@ -1638,7 +1640,6 @@ bool ComplexDeinterleavingGraph::collectPotentialReductions(BasicBlock *B) {
   if (Br->getSuccessor(0) != B && Br->getSuccessor(1) != B)
     return false;
 
-  SmallVector<PHINode *> PHIs;
   for (auto &PHI : B->phis()) {
     if (PHI.getNumIncomingValues() != 2)
       continue;
@@ -1733,6 +1734,10 @@ void ComplexDeinterleavingGraph::identifyReductionNodes() {
     if (Processed[i] || Real->getNumOperands() < 2)
       continue;
 
+    // Can only combined integer reductions at the moment.
+    if (!ReductionInfo[Real].second->getType()->isIntegerTy())
+      continue;
+
     RealPHI = ReductionInfo[Real].first;
     ImagPHI = nullptr;
     PHIsFound = false;
@@ -1793,8 +1798,7 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // Extract all instructions that are used by all XCMLA/XCADD/ADD/SUB/NEG
   // chains
   while (!Worklist.empty()) {
-    auto *I = Worklist.back();
-    Worklist.pop_back();
+    auto *I = Worklist.pop_back_val();
 
     if (!AllInstructions.insert(I).second)
       continue;
@@ -1808,7 +1812,6 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   }
 
   // Find instructions that have users outside of chain
-  SmallVector<Instruction *, 2> OuterInstructions;
   for (auto *I : AllInstructions) {
     // Skip root nodes
     if (RootToNode.count(I))
@@ -1828,8 +1831,7 @@ bool ComplexDeinterleavingGraph::checkNodes() {
   // that somehow connect to those instructions.
   SmallPtrSet<Instruction *, 16> Visited;
   while (!Worklist.empty()) {
-    auto *I = Worklist.back();
-    Worklist.pop_back();
+    auto *I = Worklist.pop_back_val();
     if (!Visited.insert(I).second)
       continue;
 
@@ -2002,6 +2004,9 @@ ComplexDeinterleavingGraph::identifySplat(Value *R, Value *I) {
     // Fixed-width vector with constants
     if (isa<ConstantDataVector>(V))
       return true;
+
+    if (isa<ConstantInt>(V) || isa<ConstantFP>(V))
+      return isa<VectorType>(V->getType());
 
     VectorType *VTy;
     ArrayRef<int> Mask;
@@ -2181,19 +2186,16 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
     llvm_unreachable("Deinterleave node should already have ReplacementNode");
     break;
   case ComplexDeinterleavingOperation::Splat: {
-    auto *NewTy = VectorType::getDoubleElementsVectorType(
-        cast<VectorType>(Node->Real->getType()));
     auto *R = dyn_cast<Instruction>(Node->Real);
     auto *I = dyn_cast<Instruction>(Node->Imag);
     if (R && I) {
       // Splats that are not constant are interleaved where they are located
       Instruction *InsertPoint = (I->comesBefore(R) ? R : I)->getNextNode();
       IRBuilder<> IRB(InsertPoint);
-      ReplacementNode = IRB.CreateIntrinsic(Intrinsic::vector_interleave2,
-                                            NewTy, {Node->Real, Node->Imag});
+      ReplacementNode = IRB.CreateVectorInterleave({Node->Real, Node->Imag});
     } else {
-      ReplacementNode = Builder.CreateIntrinsic(
-          Intrinsic::vector_interleave2, NewTy, {Node->Real, Node->Imag});
+      ReplacementNode =
+          Builder.CreateVectorInterleave({Node->Real, Node->Imag});
     }
     break;
   }
@@ -2221,10 +2223,7 @@ Value *ComplexDeinterleavingGraph::replaceNode(IRBuilderBase &Builder,
     auto *MaskImag = cast<Instruction>(Node->Imag)->getOperand(0);
     auto *A = replaceNode(Builder, Node->Operands[0]);
     auto *B = replaceNode(Builder, Node->Operands[1]);
-    auto *NewMaskTy = VectorType::getDoubleElementsVectorType(
-        cast<VectorType>(MaskReal->getType()));
-    auto *NewMask = Builder.CreateIntrinsic(Intrinsic::vector_interleave2,
-                                            NewMaskTy, {MaskReal, MaskImag});
+    auto *NewMask = Builder.CreateVectorInterleave({MaskReal, MaskImag});
     ReplacementNode = Builder.CreateSelect(NewMask, A, B);
     break;
   }
@@ -2255,8 +2254,8 @@ void ComplexDeinterleavingGraph::processReductionSingle(
   }
 
   if (!NewInit)
-    NewInit = Builder.CreateIntrinsic(Intrinsic::vector_interleave2, NewVTy,
-                                      {Init, Constant::getNullValue(VTy)});
+    NewInit =
+        Builder.CreateVectorInterleave({Init, Constant::getNullValue(VTy)});
 
   NewPHI->addIncoming(NewInit, Incoming);
   NewPHI->addIncoming(OperationReplacement, BackEdge);
@@ -2276,16 +2275,12 @@ void ComplexDeinterleavingGraph::processReductionOperation(
   auto *OldPHIImag = ReductionInfo[Imag].first;
   auto *NewPHI = OldToNewPHI[OldPHIReal];
 
-  auto *VTy = cast<VectorType>(Real->getType());
-  auto *NewVTy = VectorType::getDoubleElementsVectorType(VTy);
-
   // We have to interleave initial origin values coming from IncomingBlock
   Value *InitReal = OldPHIReal->getIncomingValueForBlock(Incoming);
   Value *InitImag = OldPHIImag->getIncomingValueForBlock(Incoming);
 
   IRBuilder<> Builder(Incoming->getTerminator());
-  auto *NewInit = Builder.CreateIntrinsic(Intrinsic::vector_interleave2, NewVTy,
-                                          {InitReal, InitImag});
+  auto *NewInit = Builder.CreateVectorInterleave({InitReal, InitImag});
 
   NewPHI->addIncoming(NewInit, Incoming);
   NewPHI->addIncoming(OperationReplacement, BackEdge);

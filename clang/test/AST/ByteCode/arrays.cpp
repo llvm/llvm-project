@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -std=c++20 -verify=expected,both %s
-// RUN: %clang_cc1 -verify=ref,both %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both            %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=expected,both -std=c++20 %s
+// RUN: %clang_cc1 -verify=ref,both            %s
 // RUN: %clang_cc1 -verify=ref,both -std=c++20 %s
 
 constexpr int m = 3;
@@ -106,7 +106,8 @@ constexpr int k1 = &arr[1] - &arr[0];
 static_assert(k1 == 1, "");
 static_assert((&arr[0] - &arr[1]) == -1, "");
 
-constexpr int k2 = &arr2[1] - &arr[0]; // both-error {{must be initialized by a constant expression}}
+constexpr int k2 = &arr2[1] - &arr[0]; // both-error {{must be initialized by a constant expression}} \
+                                       // both-note {{arithmetic involving unrelated objects}}
 
 static_assert((arr + 0) == arr, "");
 static_assert(&arr[0] == arr, "");
@@ -735,6 +736,9 @@ namespace ZeroSizeTypes {
     return &arr[3] - &arr[0]; // both-note {{subtraction of pointers to type 'int[0]' of zero size}} \
                               // both-warning {{subtraction of pointers to type 'int[0]' of zero size has undefined behavior}}
   }
+
+  constexpr int z[0]{};
+  static_assert((z - z) == 0);
 }
 
 namespace InvalidIndex {
@@ -756,4 +760,22 @@ namespace PointerSubscript {
   static_assert(foo<int>() == 0);
   struct S{};
   static_assert((foo<S>(), true));
+}
+
+namespace OnePastEndDiag {
+
+  constexpr int a(const int *b) {
+    return *b; // both-note {{read of dereferenced one-past-the-end pointer}}
+  }
+  constexpr int foo[] = {1,2};
+  constexpr int k = a(foo + 2); // both-error {{must be initialized by a constant expression}} \
+                                // both-note {{in call to 'a(&foo[2])'}}
+}
+
+namespace DiscardedSubScriptExpr {
+  constexpr bool foo() { // both-error {{never produces a constant expression}}
+    int a[2] = {};
+    (void)a[3]; // both-note {{cannot refer to element 3 of array of 2 elements in a constant expression}}
+    return true;
+  }
 }

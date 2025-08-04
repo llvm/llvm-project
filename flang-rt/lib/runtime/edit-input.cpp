@@ -19,24 +19,21 @@
 namespace Fortran::runtime::io {
 RT_OFFLOAD_API_GROUP_BEGIN
 
-// Checks that a list-directed input value has been entirely consumed and
-// doesn't contain unparsed characters before the next value separator.
 static inline RT_API_ATTRS bool IsCharValueSeparator(
     const DataEdit &edit, char32_t ch) {
-  char32_t comma{
-      edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','}};
-  return ch == ' ' || ch == '\t' || ch == comma || ch == '/' ||
+  return ch == ' ' || ch == '\t' || ch == '/' ||
+      ch == edit.modes.GetSeparatorChar() ||
       (edit.IsNamelist() && (ch == '&' || ch == '$'));
 }
 
+// Checks that a list-directed input value has been entirely consumed and
+// doesn't contain unparsed characters before the next value separator.
 static RT_API_ATTRS bool CheckCompleteListDirectedField(
     IoStatementState &io, const DataEdit &edit) {
   if (edit.IsListDirected()) {
     std::size_t byteCount;
     if (auto ch{io.GetCurrentChar(byteCount)}) {
-      if (IsCharValueSeparator(edit, *ch)) {
-        return true;
-      } else {
+      if (!IsCharValueSeparator(edit, *ch)) {
         const auto &connection{io.GetConnectionState()};
         io.GetIoErrorHandler().SignalError(IostatBadListDirectedInputSeparator,
             "invalid character (0x%x) after list-directed input value, "
@@ -46,16 +43,9 @@ static RT_API_ATTRS bool CheckCompleteListDirectedField(
             static_cast<int>(connection.currentRecordNumber));
         return false;
       }
-    } else {
-      return true; // end of record: ok
     }
-  } else {
-    return true;
   }
-}
-
-static inline RT_API_ATTRS char32_t GetSeparatorChar(const DataEdit &edit) {
-  return edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','};
+  return true;
 }
 
 template <int LOG2_BASE>
@@ -74,7 +64,7 @@ static RT_API_ATTRS bool EditBOZInput(
   // Count significant digits after any leading white space & zeroes
   int digits{0};
   int significantBits{0};
-  const char32_t comma{GetSeparatorChar(edit)};
+  char32_t comma{edit.modes.GetSeparatorChar()};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -162,10 +152,6 @@ static RT_API_ATTRS bool EditBOZInput(
   return CheckCompleteListDirectedField(io, edit);
 }
 
-static inline RT_API_ATTRS char32_t GetRadixPointChar(const DataEdit &edit) {
-  return edit.modes.editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
-}
-
 // Prepares input from a field, and returns the sign, if any, else '\0'.
 static RT_API_ATTRS char ScanNumericPrefix(IoStatementState &io,
     const DataEdit &edit, Fortran::common::optional<char32_t> &next,
@@ -188,7 +174,11 @@ static RT_API_ATTRS char ScanNumericPrefix(IoStatementState &io,
 
 RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     void *n, int kind, bool isSigned) {
-  RUNTIME_CHECK(io.GetIoErrorHandler(), kind >= 1 && !(kind & (kind - 1)));
+  auto &handler{io.GetIoErrorHandler()};
+  RUNTIME_CHECK(handler, kind >= 1 && !(kind & (kind - 1)));
+  if (!n) {
+    handler.Crash("Null address for integer input item");
+  }
   switch (edit.descriptor) {
   case DataEdit::ListDirected:
     if (IsNamelistNameOrSlash(io)) {
@@ -207,7 +197,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
   case 'A': // legacy extension
     return EditCharacterInput(io, edit, reinterpret_cast<char *>(n), kind);
   default:
-    io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+    handler.SignalError(IostatErrorInFormat,
         "Data edit descriptor '%c' may not be used with an INTEGER data item",
         edit.descriptor);
     return false;
@@ -217,13 +207,13 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
   auto fastField{io.GetUpcomingFastAsciiField()};
   char sign{ScanNumericPrefix(io, edit, next, remaining, &fastField)};
   if (sign == '-' && !isSigned) {
-    io.GetIoErrorHandler().SignalError("Negative sign in UNSIGNED input field");
+    handler.SignalError("Negative sign in UNSIGNED input field");
     return false;
   }
   common::uint128_t value{0};
   bool any{!!sign};
   bool overflow{false};
-  const char32_t comma{GetSeparatorChar(edit)};
+  char32_t comma{edit.modes.GetSeparatorChar()};
   static constexpr auto maxu128{~common::uint128_t{0}};
   for (; next; next = io.NextInField(remaining, edit, &fastField)) {
     char32_t ch{*next};
@@ -240,7 +230,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     } else if (ch == comma) {
       break; // end non-list-directed field early
     } else {
-      if (edit.modes.inNamelist && ch == GetRadixPointChar(edit)) {
+      if (edit.modes.inNamelist && ch == edit.modes.GetRadixPointChar()) {
         // Ignore any fractional part that might appear in NAMELIST integer
         // input, like a few other Fortran compilers do.
         // TODO: also process exponents?  Some compilers do, but they obviously
@@ -254,8 +244,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
           break;
         }
       }
-      io.GetIoErrorHandler().SignalError(
-          "Bad character '%lc' in INTEGER input field", ch);
+      handler.SignalError("Bad character '%lc' in INTEGER input field", ch);
       return false;
     }
     static constexpr auto maxu128OverTen{maxu128 / 10};
@@ -268,7 +257,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     any = true;
   }
   if (!any && !remaining) {
-    io.GetIoErrorHandler().SignalError(
+    handler.SignalError(
         "Integer value absent from NAMELIST or list-directed input");
     return false;
   }
@@ -280,14 +269,14 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     overflow |= value >= maxForKind;
   }
   if (overflow) {
-    io.GetIoErrorHandler().SignalError(IostatIntegerInputOverflow,
+    handler.SignalError(IostatIntegerInputOverflow,
         "Decimal input overflows INTEGER(%d) variable", kind);
     return false;
   }
   if (sign == '-') {
     value = -value;
   }
-  if (any || !io.GetIoErrorHandler().InError()) {
+  if (any || !handler.InError()) {
     // The value is stored in the lower order bits on big endian platform.
     // For memcpy, shift the value to the highest order bits.
 #if USING_NATIVE_INT128_T
@@ -347,8 +336,8 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
   }
   bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
   int exponent{0};
-  if (!next || (!bzMode && *next == ' ') ||
-      (!(edit.modes.editingFlags & decimalComma) && *next == ',')) {
+  char32_t comma{edit.modes.GetSeparatorChar()};
+  if (!next || (!bzMode && *next == ' ') || *next == comma) {
     if (!edit.IsListDirected() && !io.GetConnectionState().IsAtEOF()) {
       // An empty/blank field means zero when not list-directed.
       // A fixed-width field containing only a sign is also zero;
@@ -358,7 +347,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
     }
     return {got, exponent, false};
   }
-  char32_t radixPointChar{GetRadixPointChar(edit)};
+  char32_t radixPointChar{edit.modes.GetRadixPointChar()};
   char32_t first{*next >= 'a' && *next <= 'z' ? *next + 'A' - 'a' : *next};
   bool isHexadecimal{false};
   if (first == 'N' || first == 'I') {
@@ -373,21 +362,37 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
         Put(*next);
       }
     }
-    if (next && *next == '(') { // NaN(...)
-      Put('(');
-      int depth{1};
-      while (true) {
-        next = io.NextInField(remaining, edit);
-        if (depth == 0) {
-          break;
-        } else if (!next) {
-          return {}; // error
-        } else if (*next == '(') {
-          ++depth;
-        } else if (*next == ')') {
-          --depth;
+    if (first == 'N' && (!next || *next == '(') &&
+        remaining.value_or(1) > 0) { // NaN(...)?
+      std::size_t byteCount{0};
+      if (!next) { // NextInField won't return '(' for list-directed
+        next = io.GetCurrentChar(byteCount);
+      }
+      if (next && *next == '(') {
+        int depth{1};
+        while (true) {
+          if (*next >= 'a' && *next <= 'z') {
+            *next = *next - 'a' + 'A';
+          }
+          Put(*next);
+          io.HandleRelativePosition(byteCount);
+          io.GotChar(byteCount);
+          if (remaining) {
+            *remaining -= byteCount;
+          }
+          if (depth == 0) {
+            break; // done
+          }
+          next = io.GetCurrentChar(byteCount);
+          if (!next || remaining.value_or(1) < 1) {
+            return {}; // error
+          } else if (*next == '(') {
+            ++depth;
+          } else if (*next == ')') {
+            --depth;
+          }
         }
-        Put(*next);
+        next = io.NextInField(remaining, edit);
       }
     }
   } else if (first == radixPointChar || (first >= '0' && first <= '9') ||
@@ -505,7 +510,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
     } else if (radixPointOffset) {
       exponent += *radixPointOffset;
     } else {
-      // When no redix point (or comma) appears in the value, the 'd'
+      // When no radix point (or comma) appears in the value, the 'd'
       // part of the edit descriptor must be interpreted as the number of
       // digits in the value to be interpreted as being to the *right* of
       // the assumed radix point (13.7.2.3.2)
@@ -515,13 +520,15 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
   // Consume the trailing ')' of a list-directed or NAMELIST complex
   // input value.
   if (edit.descriptor == DataEdit::ListDirectedImaginaryPart) {
-    if (next && (*next == ' ' || *next == '\t')) {
+    if (!next || *next == ' ' || *next == '\t') {
       io.SkipSpaces(remaining);
       next = io.NextInField(remaining, edit);
     }
-    if (!next) { // NextInField fails on separators like ')'
+    if (!next || *next == ')') { // NextInField fails on separators like ')'
       std::size_t byteCount{0};
-      next = io.GetCurrentChar(byteCount);
+      if (!next) {
+        next = io.GetCurrentChar(byteCount);
+      }
       if (next && *next == ')') {
         io.HandleRelativePosition(byteCount);
       }
@@ -530,7 +537,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
     while (next && (*next == ' ' || *next == '\t')) {
       next = io.NextInField(remaining, edit);
     }
-    if (next && (*next != ',' || (edit.modes.editingFlags & decimalComma))) {
+    if (next && *next != comma) {
       return {}; // error: unused nonblank character in fixed-width field
     }
   }
@@ -944,10 +951,12 @@ RT_API_ATTRS bool EditLogicalInput(
         "Bad character '%lc' in LOGICAL input field", *next);
     return false;
   }
-  if (remaining) { // ignore the rest of a fixed-width field
-    io.HandleRelativePosition(*remaining);
-  } else if (edit.descriptor == DataEdit::ListDirected) {
-    while (io.NextInField(remaining, edit)) { // discard rest of field
+  if (remaining || edit.descriptor == DataEdit::ListDirected) {
+    // Ignore the rest of the input field; stop after separator when
+    // not list-directed.
+    char32_t comma{edit.modes.GetSeparatorChar()};
+    while (next && *next != comma) {
+      next = io.NextInField(remaining, edit);
     }
   }
   return CheckCompleteListDirectedField(io, edit);
@@ -980,7 +989,7 @@ static RT_API_ATTRS bool EditDelimitedCharacterInput(
       }
     }
     if (length > 0) {
-      *x++ = *ch;
+      *x++ = static_cast<CHAR>(*ch);
       --length;
     }
   }
@@ -1003,31 +1012,11 @@ static RT_API_ATTRS bool EditListDirectedCharacterInput(
   // Undelimited list-directed character input: stop at a value separator
   // or the end of the current record.
   while (auto ch{io.GetCurrentChar(byteCount)}) {
-    bool isSep{false};
-    switch (*ch) {
-    case ' ':
-    case '\t':
-    case '/':
-      isSep = true;
-      break;
-    case '&':
-    case '$':
-      isSep = edit.IsNamelist();
-      break;
-    case ',':
-      isSep = !(edit.modes.editingFlags & decimalComma);
-      break;
-    case ';':
-      isSep = !!(edit.modes.editingFlags & decimalComma);
-      break;
-    default:
-      break;
-    }
-    if (isSep) {
+    if (IsCharValueSeparator(edit, *ch)) {
       break;
     }
     if (length > 0) {
-      *x++ = *ch;
+      *x++ = static_cast<CHAR>(*ch);
       --length;
     } else if (edit.IsNamelist()) {
       // GNU compatibility
@@ -1108,7 +1097,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
             (sizeof *x == 2 && *ucs > 0xffff)) {
           *x++ = '?';
         } else {
-          *x++ = *ucs;
+          *x++ = static_cast<CHAR>(*ucs);
         }
         --lengthChars;
       } else if (chunkBytes == 0) {
@@ -1127,7 +1116,7 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
             (sizeof *x == 2 && buffer > 0xffff)) {
           *x++ = '?';
         } else {
-          *x++ = buffer;
+          *x++ = static_cast<CHAR>(buffer);
         }
         --lengthChars;
       }

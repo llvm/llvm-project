@@ -20,14 +20,13 @@ add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
 
+  LINK_COMPONENTS
+    Option
+    Support
   LINK_LIBS
     liblldb
     lldbHost
     lldbUtility
-
-  LINK_COMPONENTS
-    Option
-    Support
   )
 
 add_dependencies(lldb

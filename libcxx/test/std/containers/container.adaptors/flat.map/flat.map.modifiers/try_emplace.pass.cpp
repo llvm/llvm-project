@@ -63,7 +63,7 @@ static_assert(!CanTryEmplace<Map, Iter, Emplaceable, const Emplaceable&>);
 static_assert(!CanTryEmplace<Map, Iter, Emplaceable, int>);
 
 template <class KeyContainer, class ValueContainer>
-void test_ck() {
+constexpr void test_ck() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
@@ -101,7 +101,7 @@ void test_ck() {
     assert(r3.first->second.get() == 5); // value
 
     Moveable mv3(-1, 3.0);
-    std::same_as<R> decltype(auto) r4 = m.try_emplace(117, std::move(mv2));
+    std::same_as<R> decltype(auto) r4 = m.try_emplace(117, std::move(mv3));
     assert(m.size() == 13);
     assert(r4.second);                    // was inserted
     assert(mv2.moved());                  // was moved from
@@ -135,7 +135,7 @@ void test_ck() {
 }
 
 template <class KeyContainer, class ValueContainer>
-void test_rk() {
+constexpr void test_rk() {
   using Key   = typename KeyContainer::value_type;
   using Value = typename ValueContainer::value_type;
   using M     = std::flat_map<Key, Value, std::less<Key>, KeyContainer, ValueContainer>;
@@ -193,54 +193,70 @@ void test_rk() {
   }
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test_ck<std::vector<int>, std::vector<Moveable>>();
-  test_ck<std::deque<int>, std::vector<Moveable>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test_ck<std::deque<int>, std::vector<Moveable>>();
+    test_rk<std::deque<Moveable>, std::vector<Moveable>>();
+  }
   test_ck<MinSequenceContainer<int>, MinSequenceContainer<Moveable>>();
   test_ck<std::vector<int, min_allocator<int>>, std::vector<Moveable, min_allocator<Moveable>>>();
 
   test_rk<std::vector<Moveable>, std::vector<Moveable>>();
-  test_rk<std::deque<Moveable>, std::vector<Moveable>>();
   test_rk<MinSequenceContainer<Moveable>, MinSequenceContainer<Moveable>>();
   test_rk<std::vector<Moveable, min_allocator<Moveable>>, std::vector<Moveable, min_allocator<Moveable>>>();
 
-  {
-    auto try_emplace_ck = [](auto& m, auto key_arg, auto value_arg) {
-      using M   = std::decay_t<decltype(m)>;
-      using Key = typename M::key_type;
-      const Key key{key_arg};
-      m.try_emplace(key, value_arg);
-    };
-    test_emplace_exception_guarantee(try_emplace_ck);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    {
+      auto try_emplace_ck = [](auto& m, auto key_arg, auto value_arg) {
+        using M   = std::decay_t<decltype(m)>;
+        using Key = typename M::key_type;
+        const Key key{key_arg};
+        m.try_emplace(key, value_arg);
+      };
+      test_emplace_exception_guarantee(try_emplace_ck);
+    }
+
+    {
+      auto try_emplace_rk = [](auto& m, auto key_arg, auto value_arg) {
+        using M   = std::decay_t<decltype(m)>;
+        using Key = typename M::key_type;
+        m.try_emplace(Key{key_arg}, value_arg);
+      };
+      test_emplace_exception_guarantee(try_emplace_rk);
+    }
+
+    {
+      auto try_emplace_iter_ck = [](auto& m, auto key_arg, auto value_arg) {
+        using M   = std::decay_t<decltype(m)>;
+        using Key = typename M::key_type;
+        const Key key{key_arg};
+        m.try_emplace(m.begin(), key, value_arg);
+      };
+      test_emplace_exception_guarantee(try_emplace_iter_ck);
+    }
+
+    {
+      auto try_emplace_iter_rk = [](auto& m, auto key_arg, auto value_arg) {
+        using M   = std::decay_t<decltype(m)>;
+        using Key = typename M::key_type;
+        m.try_emplace(m.begin(), Key{key_arg}, value_arg);
+      };
+      test_emplace_exception_guarantee(try_emplace_iter_rk);
+    }
   }
 
-  {
-    auto try_emplace_rk = [](auto& m, auto key_arg, auto value_arg) {
-      using M   = std::decay_t<decltype(m)>;
-      using Key = typename M::key_type;
-      m.try_emplace(Key{key_arg}, value_arg);
-    };
-    test_emplace_exception_guarantee(try_emplace_rk);
-  }
+  return true;
+}
 
-  {
-    auto try_emplace_iter_ck = [](auto& m, auto key_arg, auto value_arg) {
-      using M   = std::decay_t<decltype(m)>;
-      using Key = typename M::key_type;
-      const Key key{key_arg};
-      m.try_emplace(m.begin(), key, value_arg);
-    };
-    test_emplace_exception_guarantee(try_emplace_iter_ck);
-  }
-
-  {
-    auto try_emplace_iter_rk = [](auto& m, auto key_arg, auto value_arg) {
-      using M   = std::decay_t<decltype(m)>;
-      using Key = typename M::key_type;
-      m.try_emplace(m.begin(), Key{key_arg}, value_arg);
-    };
-    test_emplace_exception_guarantee(try_emplace_iter_rk);
-  }
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

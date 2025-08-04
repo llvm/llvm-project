@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/TargetParser/Triple.h"
@@ -58,7 +59,9 @@ protected:
   bool HasCvtPkF16F32Inst = false;
   bool HasF32ToF16BF16ConversionSRInsts = false;
   bool EnableRealTrue16Insts = false;
+  bool HasBF16TransInsts = false;
   bool HasBF16ConversionInsts = false;
+  bool HasBF16PackedInsts = false;
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -106,11 +109,7 @@ public:
   /// be converted to integer, violate subtarget's specifications, or are not
   /// compatible with minimum/maximum number of waves limited by flat work group
   /// size, register usage, and/or lds usage.
-  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const {
-    // Default/requested minimum/maximum flat work group sizes.
-    std::pair<unsigned, unsigned> FlatWorkGroupSizes = getFlatWorkGroupSizes(F);
-    return getWavesPerEU(F, FlatWorkGroupSizes);
-  }
+  std::pair<unsigned, unsigned> getWavesPerEU(const Function &F) const;
 
   /// Overload which uses the specified values for the flat work group sizes,
   /// rather than querying the function itself. \p FlatWorkGroupSizes Should
@@ -118,9 +117,23 @@ public:
   std::pair<unsigned, unsigned>
   getWavesPerEU(const Function &F,
                 std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
-  std::pair<unsigned, unsigned> getEffectiveWavesPerEU(
-      std::pair<unsigned, unsigned> WavesPerEU,
-      std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
+
+  /// Overload which uses the specified values for the flat workgroup sizes and
+  /// LDS space rather than querying the function itself. \p FlatWorkGroupSizes
+  /// should correspond to the function's value for getFlatWorkGroupSizes and \p
+  /// LDSBytes to the per-workgroup LDS allocation.
+  std::pair<unsigned, unsigned>
+  getWavesPerEU(std::pair<unsigned, unsigned> FlatWorkGroupSizes,
+                unsigned LDSBytes, const Function &F) const;
+
+  /// Returns the target minimum/maximum number of waves per EU. This is based
+  /// on the minimum/maximum number of \p RequestedWavesPerEU and further
+  /// limited by the maximum achievable occupancy derived from the range of \p
+  /// FlatWorkGroupSizes and number of \p LDSBytes per workgroup.
+  std::pair<unsigned, unsigned>
+  getEffectiveWavesPerEU(std::pair<unsigned, unsigned> RequestedWavesPerEU,
+                         std::pair<unsigned, unsigned> FlatWorkGroupSizes,
+                         unsigned LDSBytes) const;
 
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
@@ -133,7 +146,16 @@ public:
   /// This notably depends on the range of allowed flat group sizes for the
   /// function and hardware characteristics.
   std::pair<unsigned, unsigned>
-  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F) const;
+  getOccupancyWithWorkGroupSizes(uint32_t LDSBytes, const Function &F) const {
+    return getOccupancyWithWorkGroupSizes(LDSBytes, getFlatWorkGroupSizes(F));
+  }
+
+  /// Overload which uses the specified values for the flat work group sizes,
+  /// rather than querying the function itself. \p FlatWorkGroupSizes should
+  /// correspond to the function's value for getFlatWorkGroupSizes.
+  std::pair<unsigned, unsigned> getOccupancyWithWorkGroupSizes(
+      uint32_t LDSBytes,
+      std::pair<unsigned, unsigned> FlatWorkGroupSizes) const;
 
   /// Subtarget's minimum/maximum occupancy, in number of waves per EU, that can
   /// be achieved when the only function running on a CU is \p MF. This notably
@@ -182,9 +204,13 @@ public:
   // supported and the support for fake True16 instructions is removed.
   bool useRealTrue16Insts() const;
 
+  bool hasBF16TransInsts() const { return HasBF16TransInsts; }
+
   bool hasBF16ConversionInsts() const {
     return HasBF16ConversionInsts;
   }
+
+  bool hasBF16PackedInsts() const { return HasBF16PackedInsts; }
 
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
@@ -196,9 +222,13 @@ public:
 
   bool hasFP4ConversionScaleInsts() const { return HasFP4ConversionScaleInsts; }
 
-  bool hasFP6BF6ConversionScaleInsts() const { return HasFP6BF6ConversionScaleInsts; }
+  bool hasFP6BF6ConversionScaleInsts() const {
+    return HasFP6BF6ConversionScaleInsts;
+  }
 
-  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const { return HasF16BF16ToFP6BF6ConversionScaleInsts; }
+  bool hasF16BF16ToFP6BF6ConversionScaleInsts() const {
+    return HasF16BF16ToFP6BF6ConversionScaleInsts;
+  }
 
   bool hasCvtPkF16F32Inst() const { return HasCvtPkF16F32Inst; }
 

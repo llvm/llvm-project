@@ -5,7 +5,7 @@ void f(int x, int y) {
   [[assume(1)]];
   [[assume(1.0)]];
   [[assume(1 + 2 == 3)]];
-  [[assume(x ? 1 : 2)]];
+  [[assume(x ? 1 : 2)]]; // expected-warning {{converting the result of '?:' with integer constants to a boolean always evaluates to 'true'}}
   [[assume(x && y)]];
   [[assume(true)]] [[assume(true)]];
 

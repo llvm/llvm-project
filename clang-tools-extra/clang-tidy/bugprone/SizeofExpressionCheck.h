@@ -32,6 +32,7 @@ private:
   const bool WarnOnSizeOfPointerToAggregate;
   const bool WarnOnSizeOfPointer;
   const bool WarnOnOffsetDividedBySizeOf;
+  const bool WarnOnSizeOfInLoopTermination;
 };
 
 } // namespace clang::tidy::bugprone

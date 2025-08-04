@@ -206,3 +206,30 @@ define <vscale x 1 x i64> @undef_passthru(<vscale x 1 x i64> %passthru, <vscale 
   %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> undef, <vscale x 1 x i64> %a, iXLen %avl)
   ret <vscale x 1 x i64> %b
 }
+
+; Check that we can fold into vle64ff.v even if we need to move it past the
+; passthru and it's safe.
+define <vscale x 1 x i64> @vleff_move_past_passthru(ptr %p, ptr %q, iXLen %avl) {
+; CHECK-LABEL: vleff_move_past_passthru:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vl1re64.v v8, (a1)
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
+; CHECK-NEXT:    vle64ff.v v8, (a0)
+; CHECK-NEXT:    ret
+  %a = call { <vscale x 1 x i64>, iXLen } @llvm.riscv.vleff(<vscale x 1 x i64> poison, ptr %p, iXLen %avl)
+  %vec = extractvalue { <vscale x 1 x i64>, iXLen } %a, 0
+  %passthru = load <vscale x 1 x i64>, ptr %q
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %vec, iXLen %avl)
+  ret <vscale x 1 x i64> %b
+}
+
+define <vscale x 1 x i64> @vmerge(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 1 x i1> %m, iXLen %avl) {
+; CHECK-LABEL: vmerge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmerge.nxv1i64.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 1 x i1> %m, iXLen %avl)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %a, iXLen %avl)
+  ret <vscale x 1 x i64> %b
+}

@@ -548,7 +548,6 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
     }
     CGF.Builder.CreateStore(Cast, StoreGEPList[I].first);
   }
-  return;
 }
 
 // emit a flat cast where the RHS is an aggregate
@@ -1333,6 +1332,7 @@ static bool isBlockVarRef(const Expr *E) {
 }
 
 void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   // For an assignment to work, the value on the right has
   // to be compatible with the value on the left.
   assert(CGF.getContext().hasSameUnqualifiedType(E->getLHS()->getType(),
@@ -1814,7 +1814,6 @@ void AggExprEmitter::VisitCXXParenListOrInitListExpr(
 
   // We'll need to enter cleanup scopes in case any of the element
   // initializers throws an exception.
-  SmallVector<EHScopeStack::stable_iterator, 16> cleanups;
   CodeGenFunction::CleanupDeactivationScope DeactivateCleanups(CGF);
 
   unsigned curInitIndex = 0;
@@ -2395,7 +2394,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  auto Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
+  auto *Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
+  addInstToCurrentSourceAtom(Inst, nullptr);
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case

@@ -690,6 +690,26 @@ SmallVector<unsigned> TemplateParamsReferencedInTemplateArgumentList(
   SemaRef.MarkUsedTemplateParameters(
       DeducedArgs, TemplateParamsList->getDepth(), ReferencedTemplateParams);
 
+  auto MarkDefaultArgs = [&](auto *Param) {
+    if (!Param->hasDefaultArgument())
+      return;
+    SemaRef.MarkUsedTemplateParameters(
+        Param->getDefaultArgument().getArgument(),
+        TemplateParamsList->getDepth(), ReferencedTemplateParams);
+  };
+
+  for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
+    if (!ReferencedTemplateParams[Index])
+      continue;
+    auto *Param = TemplateParamsList->getParam(Index);
+    if (auto *TTPD = dyn_cast<TemplateTypeParmDecl>(Param))
+      MarkDefaultArgs(TTPD);
+    else if (auto *NTTPD = dyn_cast<NonTypeTemplateParmDecl>(Param))
+      MarkDefaultArgs(NTTPD);
+    else
+      MarkDefaultArgs(cast<TemplateTemplateParmDecl>(Param));
+  }
+
   SmallVector<unsigned> Results;
   for (unsigned Index = 0; Index < TemplateParamsList->size(); ++Index) {
     if (ReferencedTemplateParams[Index])
@@ -929,16 +949,18 @@ Expr *buildIsDeducibleConstraint(Sema &SemaRef,
     ReturnType = SemaRef.SubstType(
         ReturnType, Args, AliasTemplate->getLocation(),
         Context.DeclarationNames.getCXXDeductionGuideName(AliasTemplate));
-  };
+  }
 
   SmallVector<TypeSourceInfo *> IsDeducibleTypeTraitArgs = {
       Context.getTrivialTypeSourceInfo(
           Context.getDeducedTemplateSpecializationType(
               TemplateName(AliasTemplate), /*DeducedType=*/QualType(),
-              /*IsDependent=*/true)), // template specialization type whose
-                                      // arguments will be deduced.
+              /*IsDependent=*/true),
+          AliasTemplate->getLocation()), // template specialization type whose
+                                         // arguments will be deduced.
       Context.getTrivialTypeSourceInfo(
-          ReturnType), // type from which template arguments are deduced.
+          ReturnType, AliasTemplate->getLocation()), // type from which template
+                                                     // arguments are deduced.
   };
   return TypeTraitExpr::Create(
       Context, Context.getLogicalOperationType(), AliasTemplate->getLocation(),
@@ -959,7 +981,8 @@ getRHSTemplateDeclAndArgs(Sema &SemaRef, TypeAliasTemplateDecl *AliasTemplate) {
     //   template<typename T>
     //   using AliasFoo1 = Foo<T>; // a class/type alias template specialization
     Template = TST->getTemplateName().getAsTemplateDecl();
-    AliasRhsTemplateArgs = TST->template_arguments();
+    AliasRhsTemplateArgs =
+        TST->getAsNonAliasTemplateSpecializationType()->template_arguments();
   } else if (const auto *RT = RhsType->getAs<RecordType>()) {
     // Cases where template arguments in the RHS of the alias are not
     // dependent. e.g.
@@ -1003,6 +1026,24 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   auto [Template, AliasRhsTemplateArgs] =
       getRHSTemplateDeclAndArgs(SemaRef, AliasTemplate);
 
+  // We need both types desugared, before we continue to perform type deduction.
+  // The intent is to get the template argument list 'matched', e.g. in the
+  // following case:
+  //
+  //
+  //  template <class T>
+  //  struct A {};
+  //  template <class T>
+  //  using Foo = A<A<T>>;
+  //  template <class U = int>
+  //  using Bar = Foo<U>;
+  //
+  // In terms of Bar, we want U (which has the default argument) to appear in
+  // the synthesized deduction guide, but U would remain undeduced if we deduced
+  // A<A<T>> using Foo<U> directly.
+  //
+  // Instead, we need to canonicalize both against A, i.e. A<A<T>> and A<A<U>>,
+  // such that T can be deduced as U.
   auto RType = F->getTemplatedDecl()->getReturnType();
   // The (trailing) return type of the deduction guide.
   const TemplateSpecializationType *FReturnType =
@@ -1012,7 +1053,7 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
     FReturnType = InjectedCNT->getInjectedTST();
   else if (const auto *ET = RType->getAs<ElaboratedType>())
     // explicit deduction guide.
-    FReturnType = ET->getNamedType()->getAs<TemplateSpecializationType>();
+    FReturnType = ET->getNamedType()->getAsNonAliasTemplateSpecializationType();
   assert(FReturnType && "expected to see a return type");
   // Deduce template arguments of the deduction guide f from the RHS of
   // the alias.
@@ -1079,6 +1120,10 @@ BuildDeductionGuideForTypeAlias(Sema &SemaRef,
   // parameters, used for building `TemplateArgsForBuildingFPrime`.
   SmallVector<TemplateArgument, 16> TransformedDeducedAliasArgs(
       AliasTemplate->getTemplateParameters()->size());
+  // We might be already within a pack expansion, but rewriting template
+  // parameters is independent of that. (We may or may not expand new packs
+  // when rewriting. So clear the state)
+  Sema::ArgPackSubstIndexRAII PackSubstReset(SemaRef, std::nullopt);
 
   for (unsigned AliasTemplateParamIdx : DeducedAliasTemplateParams) {
     auto *TP =

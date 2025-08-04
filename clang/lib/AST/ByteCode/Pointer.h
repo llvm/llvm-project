@@ -39,6 +39,10 @@ struct BlockPointer {
   Block *Pointee;
   /// Start of the current subfield.
   unsigned Base;
+  /// Previous link in the pointer chain.
+  Pointer *Prev;
+  /// Next link in the pointer chain.
+  Pointer *Next;
 };
 
 struct IntPointer {
@@ -120,8 +124,8 @@ public:
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   ~Pointer();
 
-  void operator=(const Pointer &P);
-  void operator=(Pointer &&P);
+  Pointer &operator=(const Pointer &P);
+  Pointer &operator=(Pointer &&P);
 
   /// Equality operators are just for tests.
   bool operator==(const Pointer &P) const {
@@ -129,12 +133,17 @@ public:
       return false;
     if (isIntegralPointer())
       return P.asIntPointer().Value == asIntPointer().Value &&
-             Offset == P.Offset;
+             P.asIntPointer().Desc == asIntPointer().Desc && P.Offset == Offset;
+
+    if (isFunctionPointer())
+      return P.asFunctionPointer().getFunction() ==
+                 asFunctionPointer().getFunction() &&
+             P.Offset == Offset;
 
     assert(isBlockPointer());
     return P.asBlockPointer().Pointee == asBlockPointer().Pointee &&
            P.asBlockPointer().Base == asBlockPointer().Base &&
-           Offset == P.Offset;
+           P.Offset == Offset;
   }
 
   bool operator!=(const Pointer &P) const { return !(P == *this); }
@@ -487,7 +496,11 @@ public:
     return ElemDesc ? ElemDesc->ElemRecord : nullptr;
   }
   /// Returns the field information.
-  const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
+  const FieldDecl *getField() const {
+    if (const Descriptor *FD = getFieldDesc())
+      return FD->asFieldDecl();
+    return nullptr;
+  }
 
   /// Checks if the storage is extern.
   bool isExtern() const {
@@ -567,6 +580,18 @@ public:
       return true;
     return isRoot() ? getDeclDesc()->IsConst : getInlineDesc()->IsConst;
   }
+  bool isConstInMutable() const {
+    if (!isBlockPointer())
+      return false;
+    return isRoot() ? false : getInlineDesc()->IsConstInMutable;
+  }
+
+  /// Checks if an object or a subfield is volatile.
+  bool isVolatile() const {
+    if (!isBlockPointer())
+      return false;
+    return isRoot() ? getDeclDesc()->IsVolatile : getInlineDesc()->IsVolatile;
+  }
 
   /// Returns the declaration ID.
   std::optional<unsigned> getDeclID() const {
@@ -596,6 +621,13 @@ public:
   }
 
   const Block *block() const { return asBlockPointer().Pointee; }
+
+  /// If backed by actual data (i.e. a block pointer), return
+  /// an address to that data.
+  const std::byte *getRawAddress() const {
+    assert(isBlockPointer());
+    return asBlockPointer().Pointee->rawData() + Offset;
+  }
 
   /// Returns the index into an array.
   int64_t getIndex() const {
@@ -665,6 +697,25 @@ public:
     return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset);
   }
 
+  /// Dereferences the element at index \p I.
+  /// This is equivalent to atIndex(I).deref<T>().
+  template <typename T> T &elem(unsigned I) const {
+    assert(isLive() && "Invalid pointer");
+    assert(isBlockPointer());
+    assert(asBlockPointer().Pointee);
+    assert(isDereferencable());
+    assert(getFieldDesc()->isPrimitiveArray());
+
+    unsigned ElemByteOffset = I * getFieldDesc()->getElemSize();
+    if (isArrayRoot())
+      return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() +
+                                    asBlockPointer().Base + sizeof(InitMapPtr) +
+                                    ElemByteOffset);
+
+    return *reinterpret_cast<T *>(asBlockPointer().Pointee->rawData() + Offset +
+                                  ElemByteOffset);
+  }
+
   /// Whether this block can be read from at all. This is only true for
   /// block pointers that point to a valid location inside that block.
   bool isDereferencable() const {
@@ -678,6 +729,10 @@ public:
 
   /// Initializes a field.
   void initialize() const;
+  /// Initialize all elements of a primitive array at once. This can be
+  /// used in situations where we *know* we have initialized *all* elements
+  /// of a primtive array.
+  void initializeAllElements() const;
   /// Activats a field.
   void activate() const;
   /// Deactivates an entire strurcutre.
@@ -699,6 +754,14 @@ public:
     getInlineDesc()->LifeState = Lifetime::Ended;
   }
 
+  void startLifetime() const {
+    if (!isBlockPointer())
+      return;
+    if (asBlockPointer().Base < sizeof(InlineDescriptor))
+      return;
+    getInlineDesc()->LifeState = Lifetime::Started;
+  }
+
   /// Compare two pointers.
   ComparisonCategoryResult compare(const Pointer &Other) const {
     if (!hasSameBase(*this, Other))
@@ -706,7 +769,7 @@ public:
 
     if (Offset < Other.Offset)
       return ComparisonCategoryResult::Less;
-    else if (Offset > Other.Offset)
+    if (Offset > Other.Offset)
       return ComparisonCategoryResult::Greater;
 
     return ComparisonCategoryResult::Equal;
@@ -719,13 +782,20 @@ public:
   /// Checks if both given pointers point to the same block.
   static bool pointToSameBlock(const Pointer &A, const Pointer &B);
 
+  static std::optional<std::pair<Pointer, Pointer>>
+  computeSplitPoint(const Pointer &A, const Pointer &B);
+
   /// Whether this points to a block that's been created for a "literal lvalue",
   /// i.e. a non-MaterializeTemporaryExpr Expr.
   bool pointsToLiteral() const;
+  bool pointsToStringLiteral() const;
 
   /// Prints the pointer.
   void print(llvm::raw_ostream &OS) const;
 
+  /// Compute an integer that can be used to compare this pointer to
+  /// another one. This is usually NOT the same as the pointer offset
+  /// regarding the AST record layout.
   size_t computeOffsetForComparison() const;
 
 private:
@@ -766,18 +836,13 @@ private:
   /// Offset into the storage.
   uint64_t Offset = 0;
 
-  /// Previous link in the pointer chain.
-  Pointer *Prev = nullptr;
-  /// Next link in the pointer chain.
-  Pointer *Next = nullptr;
-
+  Storage StorageKind = Storage::Int;
   union {
-    BlockPointer BS;
     IntPointer Int;
+    BlockPointer BS;
     FunctionPointer Fn;
     TypeidPointer Typeid;
   } PointeeStorage;
-  Storage StorageKind = Storage::Int;
 };
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {

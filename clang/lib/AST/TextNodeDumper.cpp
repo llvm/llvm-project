@@ -24,6 +24,7 @@
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 
 #include <algorithm>
 #include <utility>
@@ -433,6 +434,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::Vector:
     case OpenACCClauseKind::VectorLength:
     case OpenACCClauseKind::Invalid:
+    case OpenACCClauseKind::Shortloop:
       // The condition expression will be printed as a part of the 'children',
       // but print 'clause' here so it is clear what is happening from the dump.
       OS << " clause";
@@ -500,10 +502,10 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
       llvm::interleaveComma(
           cast<OpenACCDeviceTypeClause>(C)->getArchitectures(), OS,
           [&](const DeviceTypeArgument &Arch) {
-            if (Arch.first == nullptr)
+            if (Arch.getIdentifierInfo() == nullptr)
               OS << "*";
             else
-              OS << Arch.first->getName();
+              OS << Arch.getIdentifierInfo()->getName();
           });
       OS << ")";
       break;
@@ -829,9 +831,24 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
 
     return;
   }
-  case APValue::MemberPointer:
-    OS << "MemberPointer <todo>";
+  case APValue::MemberPointer: {
+    OS << "MemberPointer ";
+    auto Path = Value.getMemberPointerPath();
+    for (const CXXRecordDecl *D : Path) {
+      {
+        ColorScope Color(OS, ShowColors, DeclNameColor);
+        OS << D->getDeclName();
+      }
+      OS << "::";
+    }
+
+    ColorScope Color(OS, ShowColors, DeclNameColor);
+    if (const ValueDecl *MemDecl = Value.getMemberPointerDecl())
+      OS << MemDecl->getDeclName();
+    else
+      OS << "null";
     return;
+  }
   case APValue::AddrLabelDiff:
     OS << "AddrLabelDiff <todo>";
     return;
@@ -1036,10 +1053,6 @@ void clang::TextNodeDumper::dumpNestedNameSpecifier(const NestedNameSpecifier *N
       OS << " "; // "Namespace" is printed as the decl kind.
       dumpBareDeclRef(NNS->getAsNamespace());
       break;
-    case NestedNameSpecifier::NamespaceAlias:
-      OS << " "; // "NamespaceAlias" is printed as the decl kind.
-      dumpBareDeclRef(NNS->getAsNamespaceAlias());
-      break;
     case NestedNameSpecifier::TypeSpec:
       OS << " TypeSpec";
       dumpType(QualType(NNS->getAsType(), 0));
@@ -1101,7 +1114,7 @@ const char *TextNodeDumper::getCommandName(unsigned CommandID) {
 }
 
 void TextNodeDumper::printFPOptions(FPOptionsOverride FPO) {
-#define OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                    \
+#define FP_OPTION(NAME, TYPE, WIDTH, PREVIOUS)                                 \
   if (FPO.has##NAME##Override())                                               \
     OS << " " #NAME "=" << FPO.get##NAME##Override();
 #include "clang/Basic/FPOptions.def"
@@ -3022,6 +3035,22 @@ void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
   else
     OS << " tbuffer";
   dumpName(D);
+}
+
+void TextNodeDumper::VisitHLSLRootSignatureDecl(
+    const HLSLRootSignatureDecl *D) {
+  dumpName(D);
+  OS << " version: ";
+  switch (D->getVersion()) {
+  case llvm::dxbc::RootSignatureVersion::V1_0:
+    OS << "1.0";
+    break;
+  case llvm::dxbc::RootSignatureVersion::V1_1:
+    OS << "1.1";
+    break;
+  }
+  OS << ", ";
+  llvm::hlsl::rootsig::dumpRootElements(OS, D->getRootElements());
 }
 
 void TextNodeDumper::VisitHLSLOutArgExpr(const HLSLOutArgExpr *E) {

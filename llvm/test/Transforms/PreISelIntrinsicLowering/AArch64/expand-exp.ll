@@ -7,7 +7,7 @@ define <vscale x 4 x float> @scalable_vec_exp(<vscale x 4 x float> %input) {
 ; CHECK-LABEL: define <vscale x 4 x float> @scalable_vec_exp(
 ; CHECK-SAME: <vscale x 4 x float> [[INPUT:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 4
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 4
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP9:%.*]], %[[BB3]] ]

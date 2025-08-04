@@ -29,7 +29,7 @@ define void @byval_caller(ptr nocapture align 64 %a, ptr %b) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A1:%.*]] = alloca float, align 128
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A1]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[A1]], ptr align 1 [[A]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 128 [[A1]], ptr align 128 [[A]], i64 4, i1 false)
 ; CHECK-NEXT:    [[LOAD_I:%.*]] = load float, ptr [[A1]], align 4
 ; CHECK-NEXT:    [[B_IDX_I:%.*]] = getelementptr inbounds float, ptr [[B]], i64 8
 ; CHECK-NEXT:    [[ADD_I:%.*]] = fadd float [[LOAD_I]], 2.000000e+00

@@ -91,7 +91,7 @@ struct Y {};
 struct Z : W,
   X, check_derived_from<Z, X>, // #cwg2310-X
   check_derived_from<Z, Y>, Y  // #cwg2310-Y
-{  
+{
   // FIXME: It was properly rejected before, but we're crashing since Clang 11 in C++11 and C++14 modes.
   //        See https://github.com/llvm/llvm-project/issues/59920
 #if __cplusplus >= 201703L
@@ -188,7 +188,7 @@ struct InitListCtor {
 
 std::initializer_list<InitListCtor> i;
 auto j = std::initializer_list<InitListCtor>{ i };
-// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const cwg2311::InitListCtor' invokes a deleted function}}
+// since-cxx17-error@-1 {{conversion function from 'std::initializer_list<InitListCtor>' to 'const InitListCtor' invokes a deleted function}}
 //   since-cxx17-note@#cwg2311-InitListCtor {{'InitListCtor' has been explicitly marked deleted here}}
 #endif
 } // namespace cwg2311
@@ -364,6 +364,35 @@ struct A {
 };
 #endif
 } // namespace cwg2363
+
+namespace cwg2369 { // cwg2369: partial
+#if __cplusplus >= 202002L
+template <class T> struct Z {
+  typedef typename T::x xx;
+};
+
+template <class T>
+concept C = requires { typename T::A; };
+template <C T> typename Z<T>::xx f(void *, T); // #1
+template <class T> void f(int, T);             // #2
+
+struct A {
+} a;
+
+struct ZZ {
+  template <class T, class = typename Z<T>::xx> operator T *();
+  operator int();
+};
+
+void foo() {
+  ZZ zz;
+  f(1, a); // OK, deduction fails for #1 because there is no conversion from int
+           // to void*
+  f(zz, 42); // OK, deduction fails for #1 because C<int> is not satisfied
+}
+
+#endif
+} // namespace cwg2369
 
 namespace cwg2370 { // cwg2370: no
 namespace N {

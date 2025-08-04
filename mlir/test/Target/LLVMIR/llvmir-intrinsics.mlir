@@ -242,7 +242,8 @@ llvm.func @nearbyint_test(%arg0 : f32, %arg1 : f64, %arg2 : vector<8xf32>, %arg3
 }
 
 // CHECK-LABEL: @lround_test
-llvm.func @lround_test(%arg0 : f32, %arg1 : f64) {
+llvm.func @lround_test(%arg0 : f32, %arg1 : f64,
+                       %arg2 : vector<2xf32>, %arg3 : vector<2xf64>) {
   // CHECK: call i32 @llvm.lround.i32.f32
   "llvm.intr.lround"(%arg0) : (f32) -> i32
   // CHECK: call i64 @llvm.lround.i64.f32
@@ -251,6 +252,14 @@ llvm.func @lround_test(%arg0 : f32, %arg1 : f64) {
   "llvm.intr.lround"(%arg1) : (f64) -> i32
   // CHECK: call i64 @llvm.lround.i64.f64
   "llvm.intr.lround"(%arg1) : (f64) -> i64
+  // CHECK: call <2 x i32> @llvm.lround.v2i32.v2f32
+  "llvm.intr.lround"(%arg2) : (vector<2xf32>) -> vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.lround.v2i32.v2f64
+  "llvm.intr.lround"(%arg3) : (vector<2xf64>) -> vector<2xi32>
+  // CHECK: call <2 x i64> @llvm.lround.v2i64.v2f32
+  "llvm.intr.lround"(%arg2) : (vector<2xf32>) -> vector<2xi64>
+  // CHECK: call <2 x i64> @llvm.lround.v2i64.v2f64
+  "llvm.intr.lround"(%arg3) : (vector<2xf64>) -> vector<2xi64>
   llvm.return
 }
 
@@ -264,7 +273,8 @@ llvm.func @llround_test(%arg0 : f32, %arg1 : f64) {
 }
 
 // CHECK-LABEL: @lrint_test
-llvm.func @lrint_test(%arg0 : f32, %arg1 : f64) {
+llvm.func @lrint_test(%arg0 : f32, %arg1 : f64,
+                      %arg2 : vector<2xf32>, %arg3 : vector<2xf64>) {
   // CHECK: call i32 @llvm.lrint.i32.f32
   "llvm.intr.lrint"(%arg0) : (f32) -> i32
   // CHECK: call i64 @llvm.lrint.i64.f32
@@ -273,15 +283,28 @@ llvm.func @lrint_test(%arg0 : f32, %arg1 : f64) {
   "llvm.intr.lrint"(%arg1) : (f64) -> i32
   // CHECK: call i64 @llvm.lrint.i64.f64
   "llvm.intr.lrint"(%arg1) : (f64) -> i64
+  // CHECK: call <2 x i32> @llvm.lrint.v2i32.v2f32
+  "llvm.intr.lrint"(%arg2) : (vector<2xf32>) -> vector<2xi32>
+  // CHECK: call <2 x i32> @llvm.lrint.v2i32.v2f64
+  "llvm.intr.lrint"(%arg3) : (vector<2xf64>) -> vector<2xi32>
+  // CHECK: call <2 x i64> @llvm.lrint.v2i64.v2f32
+  "llvm.intr.lrint"(%arg2) : (vector<2xf32>) -> vector<2xi64>
+  // CHECK: call <2 x i64> @llvm.lrint.v2i64.v2f64
+  "llvm.intr.lrint"(%arg3) : (vector<2xf64>) -> vector<2xi64>
   llvm.return
 }
 
 // CHECK-LABEL: @llrint_test
-llvm.func @llrint_test(%arg0 : f32, %arg1 : f64) {
+llvm.func @llrint_test(%arg0 : f32, %arg1 : f64,
+                       %arg2 : vector<2xf32>, %arg3 : vector<2xf64>) {
   // CHECK: call i64 @llvm.llrint.i64.f32
   "llvm.intr.llrint"(%arg0) : (f32) -> i64
   // CHECK: call i64 @llvm.llrint.i64.f64
   "llvm.intr.llrint"(%arg1) : (f64) -> i64
+  // CHECK: call <2 x i64> @llvm.llrint.v2i64.v2f32
+  "llvm.intr.llrint"(%arg2) : (vector<2xf32>) -> vector<2xi64>
+  // CHECK: call <2 x i64> @llvm.llrint.v2i64.v2f64
+  "llvm.intr.llrint"(%arg3) : (vector<2xf64>) -> vector<2xi64>
   llvm.return
 }
 
@@ -578,29 +601,33 @@ llvm.func @trap_intrinsics() {
 
 // CHECK-LABEL: @memcpy_test
 llvm.func @memcpy_test(%arg0: i32, %arg2: !llvm.ptr, %arg3: !llvm.ptr) {
-  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, i1 false
-  "llvm.intr.memcpy"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
-  // CHECK: call void @llvm.memcpy.inline.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 10, i1 true
-  "llvm.intr.memcpy.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 8 %{{.*}}, i32 %{{.*}}, i1 false
+  "llvm.intr.memcpy"(%arg2, %arg3, %arg0) <{arg_attrs = [{llvm.align = 4 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: call void @llvm.memcpy.inline.p0.p0.i32(ptr align 4 %{{.*}}, ptr %{{.*}}, i32 10, i1 true
+  "llvm.intr.memcpy.inline"(%arg2, %arg3) <{arg_attrs = [{llvm.align = 4 : i64}, {}], isVolatile = true, len = 10 : i32}> : (!llvm.ptr, !llvm.ptr) -> ()
   // CHECK: call void @llvm.memcpy.inline.p0.p0.i64(ptr %{{.*}}, ptr %{{.*}}, i64 10, i1 true
   "llvm.intr.memcpy.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i64}> : (!llvm.ptr, !llvm.ptr) -> ()
+
+  // Verify that trailing empty argument attribute dictionaries can be omitted.
+  // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 8 %{{.*}}, i32 %{{.*}}, i1 false
+  "llvm.intr.memcpy"(%arg2, %arg3, %arg0) <{arg_attrs = [{llvm.align = 4 : i64}, {llvm.align = 8 : i64}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   llvm.return
 }
 
 // CHECK-LABEL: @memmove_test
 llvm.func @memmove_test(%arg0: i32, %arg2: !llvm.ptr, %arg3: !llvm.ptr) {
-  // CHECK: call void @llvm.memmove.p0.p0.i32(ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, i1 false
-  "llvm.intr.memmove"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  // CHECK: call void @llvm.memmove.p0.p0.i32(ptr align 4 %{{.*}}, ptr align 8 %{{.*}}, i32 %{{.*}}, i1 false
+  "llvm.intr.memmove"(%arg2, %arg3, %arg0) <{arg_attrs = [{llvm.align = 4 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
   llvm.return
 }
 
 // CHECK-LABEL: @memset_test
 llvm.func @memset_test(%arg0: i32, %arg2: !llvm.ptr, %arg3: i8) {
   %i1 = llvm.mlir.constant(false) : i1
-  // CHECK: call void @llvm.memset.p0.i32(ptr %{{.*}}, i8 %{{.*}}, i32 %{{.*}}, i1 false
-  "llvm.intr.memset"(%arg2, %arg3, %arg0) <{isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
-  // CHECK: call void @llvm.memset.inline.p0.i32(ptr %{{.*}}, i8 %{{.*}}, i32 10, i1 true
-  "llvm.intr.memset.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i32}> : (!llvm.ptr, i8) -> ()
+  // CHECK: call void @llvm.memset.p0.i32(ptr align 8 %{{.*}}, i8 %{{.*}}, i32 %{{.*}}, i1 false
+  "llvm.intr.memset"(%arg2, %arg3, %arg0) <{arg_attrs = [{llvm.align = 8 : i64}, {}, {}], isVolatile = false}> : (!llvm.ptr, i8, i32) -> ()
+  // CHECK: call void @llvm.memset.inline.p0.i32(ptr align 8 %{{.*}}, i8 %{{.*}}, i32 10, i1 true
+  "llvm.intr.memset.inline"(%arg2, %arg3) <{arg_attrs = [{llvm.align = 8 : i64}, {}], isVolatile = true, len = 10 : i32}> : (!llvm.ptr, i8) -> ()
   // CHECK: call void @llvm.memset.inline.p0.i64(ptr %{{.*}}, i8 %{{.*}}, i64 10, i1 true
   "llvm.intr.memset.inline"(%arg2, %arg3) <{isVolatile = true, len = 10 : i64}> : (!llvm.ptr, i8) -> ()
   llvm.return
@@ -1073,11 +1100,13 @@ llvm.func @vector_deinterleave2(%vec1: vector<4xf64>, %vec2: vector<[8]xi32>) {
 }
 
 // CHECK-LABEL: @lifetime
-llvm.func @lifetime(%p: !llvm.ptr) {
+llvm.func @lifetime() {
+  %c = llvm.mlir.constant(16 : i64) : i64
+  %a = llvm.alloca %c x i8 : (i64) -> !llvm.ptr
   // CHECK: call void @llvm.lifetime.start
-  llvm.intr.lifetime.start 16, %p : !llvm.ptr
+  llvm.intr.lifetime.start 16, %a : !llvm.ptr
   // CHECK: call void @llvm.lifetime.end
-  llvm.intr.lifetime.end 16, %p : !llvm.ptr
+  llvm.intr.lifetime.end 16, %a : !llvm.ptr
   llvm.return
 }
 

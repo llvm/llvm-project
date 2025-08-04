@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 
 namespace clang {
+class FileManager;
 
 namespace tok {
 enum TokenKind : unsigned short;
@@ -46,11 +47,10 @@ struct Token {
 
   bool is(tok::TokenKind K) const { return Kind == K; }
   bool isNot(tok::TokenKind K) const { return Kind != K; }
-  bool isOneOf(tok::TokenKind K1, tok::TokenKind K2) const {
-    return is(K1) || is(K2);
-  }
-  template <typename... Ts> bool isOneOf(tok::TokenKind K1, Ts... Ks) const {
-    return is(K1) || isOneOf(Ks...);
+  template <typename... Ts> bool isOneOf(Ts... Ks) const {
+    static_assert(sizeof...(Ts) > 0,
+                  "requires at least one tok::TokenKind specified");
+    return (is(Ks) || ...);
   }
 };
 
@@ -135,6 +135,19 @@ void printDependencyDirectivesAsSource(
     ArrayRef<dependency_directives_scan::Directive> Directives,
     llvm::raw_ostream &OS);
 
+/// Functor that returns the dependency directives for a given file.
+class DependencyDirectivesGetter {
+public:
+  /// Clone the getter for a new \c FileManager instance.
+  virtual std::unique_ptr<DependencyDirectivesGetter>
+  cloneFor(FileManager &FileMgr) = 0;
+
+  /// Get the dependency directives for the given file.
+  virtual std::optional<ArrayRef<dependency_directives_scan::Directive>>
+  operator()(FileEntryRef File) = 0;
+
+  virtual ~DependencyDirectivesGetter() = default;
+};
 } // end namespace clang
 
 #endif // LLVM_CLANG_LEX_DEPENDENCYDIRECTIVESSCANNER_H

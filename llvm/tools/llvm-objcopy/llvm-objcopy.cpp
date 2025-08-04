@@ -7,37 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "ObjcopyOptions.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/BinaryFormat/ELF.h"
-#include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/COFF/COFFObjcopy.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ELF/ELFConfig.h"
 #include "llvm/ObjCopy/ELF/ELFObjcopy.h"
-#include "llvm/ObjCopy/MachO/MachOConfig.h"
 #include "llvm/ObjCopy/MachO/MachOObjcopy.h"
 #include "llvm/ObjCopy/ObjCopy.h"
-#include "llvm/ObjCopy/wasm/WasmConfig.h"
 #include "llvm/ObjCopy/wasm/WasmObjcopy.h"
 #include "llvm/Object/Archive.h"
-#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ELFTypes.h"
 #include "llvm/Object/Error.h"
-#include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
-#include "llvm/Object/Wasm.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
@@ -46,16 +35,13 @@
 #include "llvm/Support/Memory.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <memory>
-#include <system_error>
 #include <utility>
 
 using namespace llvm;

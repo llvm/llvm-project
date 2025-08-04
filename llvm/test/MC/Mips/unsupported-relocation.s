@@ -10,4 +10,4 @@ foo:
         .byte   x
 # CHECK: :[[@LINE-1]]:17: error: MIPS does not support one byte relocations
         .byte   x+1
-# CHECK: :[[@LINE-1]]:17: error: MIPS does not support one byte relocations
+# CHECK: :[[@LINE-1]]:18: error: MIPS does not support one byte relocations

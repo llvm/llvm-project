@@ -24,31 +24,16 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp&
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI const _Tp&
 min(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b, _Compare __comp) {
   return __comp(__b, __a) ? __b : __a;
 }
 
 template <class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Tp&
+_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI const _Tp&
 min(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b) {
   return std::min(__a, __b, __less<>());
 }
-
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Tp, class _Compare>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp
-min(initializer_list<_Tp> __t, _Compare __comp) {
-  return *std::__min_element<__comp_ref_type<_Compare> >(__t.begin(), __t.end(), __comp);
-}
-
-template <class _Tp>
-_LIBCPP_NODISCARD inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp min(initializer_list<_Tp> __t) {
-  return *std::min_element(__t.begin(), __t.end(), __less<>());
-}
-
-#endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
 

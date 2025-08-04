@@ -893,10 +893,35 @@ writeSignedDecimal (char *dst, int value)
   if (value < 0) {
     *dst++ = '-';
     dst = writeUnsignedDecimal(dst, -(unsigned) value);
-  } else
+  } else {
     dst = writeUnsignedDecimal(dst, value);
+  }
 
   return dst;
+}
+
+// Compute the ULP of the input using a definition from:
+// Jean-Michel Muller. On the definition of ulp(x). [Research Report] RR-5504,
+// LIP RR-2005-09, INRIA, LIP. 2005, pp.16. inria-00070503
+static APFloat harrisonUlp(const APFloat &X) {
+  const fltSemantics &Sem = X.getSemantics();
+  switch (X.getCategory()) {
+  case APFloat::fcNaN:
+    return APFloat::getQNaN(Sem);
+  case APFloat::fcInfinity:
+    return APFloat::getInf(Sem);
+  case APFloat::fcZero:
+    return APFloat::getSmallest(Sem);
+  case APFloat::fcNormal:
+    break;
+  }
+  if (X.isDenormal() || X.isSmallestNormalized())
+    return APFloat::getSmallest(Sem);
+  int Exp = ilogb(X);
+  if (X.getExactLog2() != INT_MIN)
+    Exp -= 1;
+  return scalbn(APFloat::getOne(Sem), Exp - (Sem.precision - 1),
+                APFloat::rmNearestTiesToEven);
 }
 
 namespace detail {
@@ -2814,8 +2839,8 @@ APFloat::opStatus IEEEFloat::convertToSignExtendedInteger(
   if (lost_fraction == lfExactlyZero) {
     *isExact = true;
     return opOK;
-  } else
-    return opInexact;
+  }
+  return opInexact;
 }
 
 /* Same as convertToSignExtendedInteger, except we provide
@@ -3262,9 +3287,8 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
     return true;
   }
 
-  bool IsNegative = str.front() == '-';
+  bool IsNegative = str.consume_front("-");
   if (IsNegative) {
-    str = str.drop_front();
     if (str.size() < MIN_NAME_SIZE)
       return false;
 
@@ -3275,16 +3299,13 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
   }
 
   // If we have a 's' (or 'S') prefix, then this is a Signaling NaN.
-  bool IsSignaling = str.front() == 's' || str.front() == 'S';
+  bool IsSignaling = str.consume_front_insensitive("s");
   if (IsSignaling) {
-    str = str.drop_front();
     if (str.size() < MIN_NAME_SIZE)
       return false;
   }
 
-  if (str.starts_with("nan") || str.starts_with("NaN")) {
-    str = str.drop_front(3);
-
+  if (str.consume_front("nan") || str.consume_front("NaN")) {
     // A NaN without payload.
     if (str.empty()) {
       makeNaN(IsSignaling, IsNegative);
@@ -3306,8 +3327,9 @@ bool IEEEFloat::convertFromStringSpecials(StringRef str) {
       if (str.size() > 1 && tolower(str[1]) == 'x') {
         str = str.drop_front(2);
         Radix = 16;
-      } else
+      } else {
         Radix = 8;
+      }
     }
 
     // Parse the payload and make the NaN.
@@ -4533,8 +4555,9 @@ void IEEEFloat::toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
           Str.append(FormatPrecision - 1, '0');
         append(Str, "e+00");
       }
-    } else
+    } else {
       Str.push_back('0');
+    }
     return;
 
   case fcNormal:
@@ -5307,12 +5330,110 @@ Expected<APFloat::opStatus> DoubleAPFloat::convertFromString(StringRef S,
   return Ret;
 }
 
+// The double-double lattice of values corresponds to numbers which obey:
+// - abs(lo) <= 1/2 * ulp(hi)
+// - roundTiesToEven(hi + lo) == hi
+//
+// nextUp must choose the smallest output > input that follows these rules.
+// nexDown must choose the largest output < input that follows these rules.
 APFloat::opStatus DoubleAPFloat::next(bool nextDown) {
   assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy, bitcastToAPInt());
-  auto Ret = Tmp.next(nextDown);
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
-  return Ret;
+  // nextDown(x) = -nextUp(-x)
+  if (nextDown) {
+    changeSign();
+    APFloat::opStatus Result = next(/*nextDown=*/false);
+    changeSign();
+    return Result;
+  }
+  switch (getCategory()) {
+  case fcInfinity:
+    // nextUp(+inf) = +inf
+    // nextUp(-inf) = -getLargest()
+    if (isNegative())
+      makeLargest(true);
+    return opOK;
+
+  case fcNaN:
+    // IEEE-754R 2008 6.2 Par 2: nextUp(sNaN) = qNaN. Set Invalid flag.
+    // IEEE-754R 2008 6.2: nextUp(qNaN) = qNaN. Must be identity so we do not
+    //                     change the payload.
+    if (getFirst().isSignaling()) {
+      // For consistency, propagate the sign of the sNaN to the qNaN.
+      makeNaN(false, isNegative(), nullptr);
+      return opInvalidOp;
+    }
+    return opOK;
+
+  case fcZero:
+    // nextUp(pm 0) = +getSmallest()
+    makeSmallest(false);
+    return opOK;
+
+  case fcNormal:
+    break;
+  }
+
+  const APFloat &HiOld = getFirst();
+  const APFloat &LoOld = getSecond();
+
+  APFloat NextLo = LoOld;
+  NextLo.next(/*nextDown=*/false);
+
+  // We want to admit values where:
+  // 1. abs(Lo) <= ulp(Hi)/2
+  // 2. Hi == RTNE(Hi + lo)
+  auto InLattice = [](const APFloat &Hi, const APFloat &Lo) {
+    return Hi + Lo == Hi;
+  };
+
+  // Check if (HiOld, nextUp(LoOld) is in the lattice.
+  if (InLattice(HiOld, NextLo)) {
+    // Yes, the result is (HiOld, nextUp(LoOld)).
+    Floats[1] = std::move(NextLo);
+
+    // TODO: Because we currently rely on semPPCDoubleDoubleLegacy, our maximum
+    // value is defined to have exactly 106 bits of precision. This limitation
+    // results in semPPCDoubleDouble being unable to reach its maximum canonical
+    // value.
+    DoubleAPFloat Largest{*Semantics, uninitialized};
+    Largest.makeLargest(/*Neg=*/false);
+    if (compare(Largest) == cmpGreaterThan)
+      makeInf(/*Neg=*/false);
+
+    return opOK;
+  }
+
+  // Now we need to handle the cases where (HiOld, nextUp(LoOld)) is not the
+  // correct result. We know the new hi component will be nextUp(HiOld) but our
+  // lattice rules make it a little ambiguous what the correct NextLo must be.
+  APFloat NextHi = HiOld;
+  NextHi.next(/*nextDown=*/false);
+
+  // nextUp(getLargest()) == INFINITY
+  if (NextHi.isInfinity()) {
+    makeInf(/*Neg=*/false);
+    return opOK;
+  }
+
+  // IEEE 754-2019 5.3.1:
+  // "If x is the negative number of least magnitude in x's format, nextUp(x) is
+  // -0."
+  if (NextHi.isZero()) {
+    makeZero(/*Neg=*/true);
+    return opOK;
+  }
+
+  // abs(NextLo) must be <= ulp(NextHi)/2. We want NextLo to be as close to
+  // negative infinity as possible.
+  NextLo = neg(scalbn(harrisonUlp(NextHi), -1, rmTowardZero));
+  if (!InLattice(NextHi, NextLo))
+    // RTNE may mean that Lo must be < ulp(NextHi) / 2 so we bump NextLo.
+    NextLo.next(/*nextDown=*/false);
+
+  Floats[0] = std::move(NextHi);
+  Floats[1] = std::move(NextLo);
+
+  return opOK;
 }
 
 APFloat::opStatus

@@ -34,6 +34,18 @@ define void @f3(ptr %ptr) {
   ret void
 }
 
+; Test nearbyint for f16.
+declare half @llvm.nearbyint.f16(half %f)
+define half @f4_half(half %f) {
+; CHECK-LABEL: f4_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, nearbyintf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.nearbyint.f16(half %f)
+  ret half %res
+}
+
 ; Test nearbyint for f32.
 declare float @llvm.nearbyint.f32(float %f)
 define float @f4(float %f) {
@@ -66,6 +78,18 @@ define void @f6(ptr %ptr) {
   ret void
 }
 
+; Test floor for f16.
+declare half @llvm.floor.f16(half %f)
+define half @f7_half(half %f) {
+; CHECK-LABEL: f7_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, floorf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.floor.f16(half %f)
+  ret half %res
+}
+
 ; Test floor for f32.
 declare float @llvm.floor.f32(float %f)
 define float @f7(float %f) {
@@ -96,6 +120,18 @@ define void @f9(ptr %ptr) {
   %res = call fp128 @llvm.floor.f128(fp128 %src)
   store fp128 %res, ptr %ptr
   ret void
+}
+
+; Test ceil for f16.
+declare half @llvm.ceil.f16(half %f)
+define half @f10_half(half %f) {
+; CHECK-LABEL: f10_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, ceilf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.ceil.f16(half %f)
+  ret half %res
 }
 
 ; Test ceil for f32.
@@ -160,6 +196,18 @@ define void @f15(ptr %ptr) {
   %res = call fp128 @llvm.trunc.f128(fp128 %src)
   store fp128 %res, ptr %ptr
   ret void
+}
+
+; Test round for f16.
+declare half @llvm.round.f16(half %f)
+define half @f16_half(half %f) {
+; CHECK-LABEL: f16_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, roundf@PLT
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %res = call half @llvm.round.f16(half %f)
+  ret half %res
 }
 
 ; Test round for f32.

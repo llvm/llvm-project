@@ -12021,6 +12021,7 @@ define amdgpu_kernel void @atomic_store_i64_offset(i64 %in, ptr %out) {
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -12059,6 +12060,7 @@ define amdgpu_kernel void @atomic_store_i64(i64 %in, ptr %out) {
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -12113,6 +12115,7 @@ define amdgpu_kernel void @atomic_store_i64_addr64_offset(i64 %in, ptr %out, i64
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -12165,6 +12168,7 @@ define amdgpu_kernel void @atomic_store_i64_addr64(i64 %in, ptr %out, i64 %index
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -13804,6 +13808,7 @@ define amdgpu_kernel void @atomic_store_f64_offset(double %in, ptr %out) {
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -13842,6 +13847,7 @@ define amdgpu_kernel void @atomic_store_f64(double %in, ptr %out) {
 ; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -13896,6 +13902,7 @@ define amdgpu_kernel void @atomic_store_f64_addr64_offset(double %in, ptr %out, 
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] offset:32 scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:
@@ -13948,6 +13955,7 @@ define amdgpu_kernel void @atomic_store_f64_addr64(double %in, ptr %out, i64 %in
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
+; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    flat_store_b64 v[2:3], v[0:1] scope:SCOPE_SYS
 ; GFX12-NEXT:    s_endpgm
 entry:

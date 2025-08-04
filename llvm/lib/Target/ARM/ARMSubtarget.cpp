@@ -72,7 +72,6 @@ ForceFastISel("arm-force-fast-isel",
 /// so that we can use initializer lists for subtarget initialization.
 ARMSubtarget &ARMSubtarget::initializeSubtargetDependencies(StringRef CPU,
                                                             StringRef FS) {
-  initializeEnvironment();
   initSubtargetFeatures(CPU, FS);
   return *this;
 }
@@ -137,19 +136,6 @@ bool ARMSubtarget::isXRaySupported() const {
   return hasV6Ops() && hasARMOps() && !isTargetWindows();
 }
 
-void ARMSubtarget::initializeEnvironment() {
-  // MCAsmInfo isn't always present (e.g. in opt) so we can't initialize this
-  // directly from it, but we can try to make sure they're consistent when both
-  // available.
-  UseSjLjEH = (isTargetDarwin() && !isTargetWatchABI() &&
-               Options.ExceptionModel == ExceptionHandling::None) ||
-              Options.ExceptionModel == ExceptionHandling::SjLj;
-  assert((!TM.getMCAsmInfo() ||
-          (TM.getMCAsmInfo()->getExceptionHandlingType() ==
-           ExceptionHandling::SjLj) == UseSjLjEH) &&
-         "inconsistent sjlj choice between CodeGen and MC");
-}
-
 void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (CPUString.empty()) {
     CPUString = "generic";
@@ -201,9 +187,9 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if (isTargetWindows())
     NoARM = true;
 
-  if (isAAPCS_ABI())
+  if (TM.isAAPCS_ABI())
     stackAlignment = Align(8);
-  if (isTargetNaCl() || isAAPCS16_ABI())
+  if (TM.isAAPCS16_ABI())
     stackAlignment = Align(16);
 
   // FIXME: Completely disable sibcall for Thumb1 since ThumbRegisterInfo::
@@ -320,22 +306,6 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   }
 }
 
-bool ARMSubtarget::isTargetHardFloat() const { return TM.isTargetHardFloat(); }
-
-bool ARMSubtarget::isAPCS_ABI() const {
-  assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
-  return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_APCS;
-}
-bool ARMSubtarget::isAAPCS_ABI() const {
-  assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
-  return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS ||
-         TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-}
-bool ARMSubtarget::isAAPCS16_ABI() const {
-  assert(TM.TargetABI != ARMBaseTargetMachine::ARM_ABI_UNKNOWN);
-  return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
-}
-
 bool ARMSubtarget::isROPI() const {
   return TM.getRelocationModel() == Reloc::ROPI ||
          TM.getRelocationModel() == Reloc::ROPI_RWPI;
@@ -437,10 +407,9 @@ bool ARMSubtarget::useFastISel() const {
   if (!hasV6Ops())
     return false;
 
-  // Thumb2 support on iOS; ARM support on iOS, Linux and NaCl.
-  return TM.Options.EnableFastISel &&
-         ((isTargetMachO() && !isThumb1Only()) ||
-          (isTargetLinux() && !isThumb()) || (isTargetNaCl() && !isThumb()));
+  // Thumb2 support on iOS; ARM support on iOS and Linux.
+  return TM.Options.EnableFastISel && ((isTargetMachO() && !isThumb1Only()) ||
+                                       (isTargetLinux() && !isThumb()));
 }
 
 unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
@@ -489,8 +458,6 @@ ARMSubtarget::PushPopSplitVariation
 ARMSubtarget::getPushPopSplitVariation(const MachineFunction &MF) const {
   const Function &F = MF.getFunction();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  const std::vector<CalleeSavedInfo> CSI =
-      MF.getFrameInfo().getCalleeSavedInfo();
 
   // Thumb1 always splits the pushes at R7, because the Thumb1 push instruction
   // cannot use high registers except for lr.

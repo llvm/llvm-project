@@ -423,7 +423,7 @@ void ModuloScheduleExpander::generateExistingPhis(
     // potentially define two values.
     unsigned MaxPhis = PrologStage + 2;
     if (!InKernel && (int)PrologStage <= LoopValStage)
-      MaxPhis = std::max((int)MaxPhis - (int)LoopValStage, 1);
+      MaxPhis = std::max((int)MaxPhis - LoopValStage, 1);
     unsigned NumPhis = std::min(NumStages, MaxPhis);
 
     Register NewReg;
@@ -887,7 +887,6 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
 
   // Start from the blocks connected to the kernel and work "out"
   // to the first prolog and the last epilog blocks.
-  SmallVector<MachineInstr *, 4> PrevInsts;
   unsigned MaxIter = PrologBBs.size() - 1;
   for (unsigned i = 0, j = MaxIter; i <= MaxIter; ++i, --j) {
     // Add branches to the prolog that go to the corresponding
@@ -1855,9 +1854,9 @@ void PeelingModuloScheduleExpander::peelPrologAndEpilogs() {
 
   // Create a list of all blocks in order.
   SmallVector<MachineBasicBlock *, 8> Blocks;
-  llvm::copy(PeeledFront, std::back_inserter(Blocks));
+  llvm::append_range(Blocks, PeeledFront);
   Blocks.push_back(BB);
-  llvm::copy(PeeledBack, std::back_inserter(Blocks));
+  llvm::append_range(Blocks, PeeledBack);
 
   // Iterate in reverse order over all instructions, remapping as we go.
   for (MachineBasicBlock *B : reverse(Blocks)) {
@@ -2590,7 +2589,6 @@ void ModuloScheduleExpanderMVE::generateKernel(
   SmallVector<ValueMapTy> PhiVRMap;
   PhiVRMap.resize(NumUnroll);
   DenseMap<MachineInstr *, std::pair<int, int>> NewMIMap;
-  DenseMap<MachineInstr *, MachineInstr *> MIMapLastStage0;
   for (int UnrollNum = 0; UnrollNum < NumUnroll; ++UnrollNum) {
     for (MachineInstr *MI : Schedule.getInstructions()) {
       if (MI->isPHI())

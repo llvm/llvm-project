@@ -12,7 +12,6 @@
 #include "SPIRV.h"
 #include "SPIRVStructurizerWrapper.h"
 #include "SPIRVSubtarget.h"
-#include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -26,12 +25,10 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
-#include <queue>
 #include <stack>
 #include <unordered_set>
 
@@ -509,9 +506,8 @@ class SPIRVStructurizer : public FunctionPass {
       }
 
       SwitchInst *Sw = ExitBuilder.CreateSwitch(Load, Dsts[0], Dsts.size() - 1);
-      for (auto It = Dsts.begin() + 1; It != Dsts.end(); ++It) {
-        Sw->addCase(DstToIndex[*It], *It);
-      }
+      for (BasicBlock *BB : drop_begin(Dsts))
+        Sw->addCase(DstToIndex[BB], BB);
       return NewExit;
     }
   };

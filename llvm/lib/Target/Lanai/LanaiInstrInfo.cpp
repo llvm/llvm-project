@@ -102,7 +102,8 @@ bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(
   const TargetRegisterInfo *TRI = &getRegisterInfo();
   const MachineOperand *BaseOpA = nullptr, *BaseOpB = nullptr;
   int64_t OffsetA = 0, OffsetB = 0;
-  LocationSize WidthA = 0, WidthB = 0;
+  LocationSize WidthA = LocationSize::precise(0),
+               WidthB = LocationSize::precise(0);
   if (getMemOperandWithOffsetWidth(MIa, BaseOpA, OffsetA, WidthA, TRI) &&
       getMemOperandWithOffsetWidth(MIb, BaseOpB, OffsetB, WidthB, TRI)) {
     if (BaseOpA->isIdenticalTo(*BaseOpB)) {
@@ -769,17 +770,17 @@ bool LanaiInstrInfo::getMemOperandWithOffsetWidth(
   case Lanai::LDW_RR:
   case Lanai::SW_RR:
   case Lanai::SW_RI:
-    Width = 4;
+    Width = LocationSize::precise(4);
     break;
   case Lanai::LDHs_RI:
   case Lanai::LDHz_RI:
   case Lanai::STH_RI:
-    Width = 2;
+    Width = LocationSize::precise(2);
     break;
   case Lanai::LDBs_RI:
   case Lanai::LDBz_RI:
   case Lanai::STB_RI:
-    Width = 1;
+    Width = LocationSize::precise(1);
     break;
   }
 

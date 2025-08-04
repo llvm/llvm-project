@@ -22,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
@@ -33,12 +32,10 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCParser/AsmCond.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -765,6 +762,19 @@ private:
   std::optional<std::string> evaluateBuiltinTextMacro(BuiltinSymbol Symbol,
                                                       SMLoc StartLoc);
 
+  // Generic (target and platform independent) directive parsing.
+  enum BuiltinFunction {
+    BI_NO_FUNCTION, // Placeholder
+    BI_CATSTR,
+  };
+
+  /// Maps builtin name --> BuiltinFunction enum, for builtins handled by this
+  /// class.
+  StringMap<BuiltinFunction> BuiltinFunctionMap;
+
+  bool evaluateBuiltinMacroFunction(BuiltinFunction Function, StringRef Name,
+                                    std::string &Res);
+
   // ".ascii", ".asciz", ".string"
   bool parseDirectiveAscii(StringRef IDVal, bool ZeroTerminated);
 
@@ -946,7 +956,7 @@ private:
   bool parseDirectiveEcho(SMLoc DirectiveLoc);
 
   void initializeDirectiveKindMap();
-  void initializeBuiltinSymbolMap();
+  void initializeBuiltinSymbolMaps();
 };
 
 } // end anonymous namespace
@@ -986,7 +996,7 @@ MasmParser::MasmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
 
   initializeDirectiveKindMap();
   PlatformParser->Initialize(*this);
-  initializeBuiltinSymbolMap();
+  initializeBuiltinSymbolMaps();
 
   NumOfMacroInstantiations = 0;
 }
@@ -1071,15 +1081,25 @@ bool MasmParser::expandMacros() {
   }
 
   std::optional<std::string> ExpandedValue;
-  auto BuiltinIt = BuiltinSymbolMap.find(IDLower);
-  if (BuiltinIt != BuiltinSymbolMap.end()) {
+
+  if (auto BuiltinIt = BuiltinSymbolMap.find(IDLower);
+      BuiltinIt != BuiltinSymbolMap.end()) {
     ExpandedValue =
         evaluateBuiltinTextMacro(BuiltinIt->getValue(), Tok.getLoc());
-  } else {
-    auto VarIt = Variables.find(IDLower);
-    if (VarIt != Variables.end() && VarIt->getValue().IsText) {
-      ExpandedValue = VarIt->getValue().TextValue;
+  } else if (auto BuiltinFuncIt = BuiltinFunctionMap.find(IDLower);
+             BuiltinFuncIt != BuiltinFunctionMap.end()) {
+    StringRef Name;
+    if (parseIdentifier(Name)) {
+      return true;
     }
+    std::string Res;
+    if (evaluateBuiltinMacroFunction(BuiltinFuncIt->getValue(), Name, Res)) {
+      return true;
+    }
+    ExpandedValue = Res;
+  } else if (auto VarIt = Variables.find(IDLower);
+             VarIt != Variables.end() && VarIt->getValue().IsText) {
+    ExpandedValue = VarIt->getValue().TextValue;
   }
 
   if (!ExpandedValue)
@@ -1466,12 +1486,12 @@ bool MasmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc,
     // If this is an absolute variable reference, substitute it now to preserve
     // semantics in the face of reassignment.
     if (Sym->isVariable()) {
-      auto V = Sym->getVariableValue(/*SetUsed=*/false);
+      auto V = Sym->getVariableValue();
       bool DoInline = isa<MCConstantExpr>(V);
       if (auto TV = dyn_cast<MCTargetExpr>(V))
         DoInline = TV->inlineAssignedExpr();
       if (DoInline) {
-        Res = Sym->getVariableValue(/*SetUsed=*/false);
+        Res = Sym->getVariableValue();
         return false;
       }
     }
@@ -2297,7 +2317,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
     for (unsigned i = 0; i != Info.ParsedOperands.size(); ++i) {
       if (i != 0)
         OS << ", ";
-      Info.ParsedOperands[i]->print(OS);
+      Info.ParsedOperands[i]->print(OS, MAI);
     }
     OS << "]";
 
@@ -2992,9 +3012,9 @@ bool MasmParser::parseDirectiveEquate(StringRef IDVal, StringRef Name,
   MCSymbol *Sym = getContext().getOrCreateSymbol(Var.Name);
 
   const MCConstantExpr *PrevValue =
-      Sym->isVariable() ? dyn_cast_or_null<MCConstantExpr>(
-                              Sym->getVariableValue(/*SetUsed=*/false))
-                        : nullptr;
+      Sym->isVariable()
+          ? dyn_cast_or_null<MCConstantExpr>(Sym->getVariableValue())
+          : nullptr;
   if (Var.IsText || !PrevValue || PrevValue->getValue() != Value) {
     switch (Var.Redefinable) {
     case Variable::NOT_REDEFINABLE:
@@ -3099,6 +3119,18 @@ bool MasmParser::parseTextItem(std::string &Data) {
           break;
         }
         Data = std::move(*BuiltinText);
+        ID = StringRef(Data);
+        Expanded = true;
+        continue;
+      }
+
+      // Try to resolve as a built-in macro function
+      auto BuiltinFuncIt = BuiltinFunctionMap.find(ID.lower());
+      if (BuiltinFuncIt != BuiltinFunctionMap.end()) {
+        Data.clear();
+        if (evaluateBuiltinMacroFunction(BuiltinFuncIt->getValue(), ID, Data)) {
+          return true;
+        }
         ID = StringRef(Data);
         Expanded = true;
         continue;
@@ -3647,9 +3679,8 @@ bool MasmParser::parseFieldInitializer(const FieldInfo &Field,
                           std::to_string(Initializers.size()));
   }
   // Default-initialize all remaining values.
-  Initializers.insert(Initializers.end(),
-                      Contents.Initializers.begin() + Initializers.size(),
-                      Contents.Initializers.end());
+  llvm::append_range(Initializers, llvm::drop_begin(Contents.Initializers,
+                                                    Initializers.size()));
 
   Initializer = FieldInitializer(std::move(Initializers), Contents.Structure);
   return false;
@@ -4197,8 +4228,7 @@ bool MasmParser::emitAlignTo(int64_t Alignment) {
     // Check whether we should use optimal code alignment for this align
     // directive.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
-    assert(Section && "must have section to emit alignment");
-    if (Section->useCodeAlign()) {
+    if (MAI.useCodeAlign(*Section)) {
       getStreamer().emitCodeAlignment(Align(Alignment),
                                       &getTargetParser().getSTI(),
                                       /*MaxBytesToEmit=*/0);
@@ -6111,7 +6141,7 @@ bool MasmParser::parseMSInlineAsm(
   return false;
 }
 
-void MasmParser::initializeBuiltinSymbolMap() {
+void MasmParser::initializeBuiltinSymbolMaps() {
   // Numeric built-ins (supported in all versions)
   BuiltinSymbolMap["@version"] = BI_VERSION;
   BuiltinSymbolMap["@line"] = BI_LINE;
@@ -6122,6 +6152,9 @@ void MasmParser::initializeBuiltinSymbolMap() {
   BuiltinSymbolMap["@filecur"] = BI_FILECUR;
   BuiltinSymbolMap["@filename"] = BI_FILENAME;
   BuiltinSymbolMap["@curseg"] = BI_CURSEG;
+
+  // Function built-ins (supported in all versions)
+  BuiltinFunctionMap["@catstr"] = BI_CATSTR;
 
   // Some built-ins exist only for MASM32 (32-bit x86)
   if (getContext().getSubtargetInfo()->getTargetTriple().getArch() ==
@@ -6194,6 +6227,48 @@ MasmParser::evaluateBuiltinTextMacro(BuiltinSymbol Symbol, SMLoc StartLoc) {
     return getStreamer().getCurrentSectionOnly()->getName().str();
   }
   llvm_unreachable("unhandled built-in symbol");
+}
+
+bool MasmParser::evaluateBuiltinMacroFunction(BuiltinFunction Function,
+                                              StringRef Name,
+                                              std::string &Res) {
+  if (parseToken(AsmToken::LParen, "invoking macro function '" + Name +
+                                       "' requires arguments in parentheses")) {
+    return true;
+  }
+
+  MCAsmMacroParameters P;
+  switch (Function) {
+  default:
+    return true;
+  case BI_CATSTR:
+    break;
+  }
+  MCAsmMacro M(Name, "", P, {}, true);
+
+  MCAsmMacroArguments A;
+  if (parseMacroArguments(&M, A, AsmToken::RParen) || parseRParen()) {
+    return true;
+  }
+
+  switch (Function) {
+  default:
+    llvm_unreachable("unhandled built-in function");
+  case BI_CATSTR: {
+    for (const MCAsmMacroArgument &Arg : A) {
+      for (const AsmToken &Tok : Arg) {
+        if (Tok.is(AsmToken::String)) {
+          Res.append(Tok.getStringContents());
+        } else {
+          Res.append(Tok.getString());
+        }
+      }
+    }
+    return false;
+  }
+  }
+  llvm_unreachable("unhandled built-in function");
+  return true;
 }
 
 /// Create an MCAsmParser instance.

@@ -2318,9 +2318,9 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   assert(0 <= Where && Where + Length <= DstLen);
 
   int P2Len = PowerOf2Ceil(SrcLen | DstLen);
-  auto *Undef = UndefValue::get(getByteTy());
-  Value *P2Src = vresize(Builder, Src, P2Len, Undef);
-  Value *P2Dst = vresize(Builder, Dst, P2Len, Undef);
+  auto *Poison = PoisonValue::get(getByteTy());
+  Value *P2Src = vresize(Builder, Src, P2Len, Poison);
+  Value *P2Dst = vresize(Builder, Dst, P2Len, Poison);
 
   SmallVector<int, 256> SMask(P2Len);
   for (int i = 0; i != P2Len; ++i) {
@@ -2331,7 +2331,7 @@ auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
   }
 
   Value *P2Insert = Builder.CreateShuffleVector(P2Dst, P2Src, SMask, "shf");
-  return vresize(Builder, P2Insert, DstLen, Undef);
+  return vresize(Builder, P2Insert, DstLen, Poison);
 }
 
 auto HexagonVectorCombine::vlalignb(IRBuilderBase &Builder, Value *Lo,
@@ -2829,13 +2829,13 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
 auto HexagonVectorCombine::getNumSignificantBits(const Value *V,
                                                  const Instruction *CtxI) const
     -> unsigned {
-  return ComputeMaxSignificantBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return ComputeMaxSignificantBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::getKnownBits(const Value *V,
                                         const Instruction *CtxI) const
     -> KnownBits {
-  return computeKnownBits(V, DL, /*Depth=*/0, &AC, CtxI, &DT);
+  return computeKnownBits(V, DL, &AC, CtxI, &DT);
 }
 
 auto HexagonVectorCombine::isSafeToClone(const Instruction &In) const -> bool {

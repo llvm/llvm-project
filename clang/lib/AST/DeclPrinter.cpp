@@ -118,9 +118,9 @@ namespace {
 
     void printTemplateParameters(const TemplateParameterList *Params,
                                  bool OmitTemplateKW = false);
-    void printTemplateArguments(llvm::ArrayRef<TemplateArgument> Args,
+    void printTemplateArguments(ArrayRef<TemplateArgument> Args,
                                 const TemplateParameterList *Params);
-    void printTemplateArguments(llvm::ArrayRef<TemplateArgumentLoc> Args,
+    void printTemplateArguments(ArrayRef<TemplateArgumentLoc> Args,
                                 const TemplateParameterList *Params);
     enum class AttrPosAsWritten { Default = 0, Left, Right };
     bool
@@ -1042,8 +1042,8 @@ void DeclPrinter::VisitParmVarDecl(ParmVarDecl *D) {
 
 void DeclPrinter::VisitFileScopeAsmDecl(FileScopeAsmDecl *D) {
   Out << "__asm (";
-  D->getAsmString()->printPretty(Out, nullptr, Policy, Indentation, "\n",
-                                 &Context);
+  D->getAsmStringExpr()->printPretty(Out, nullptr, Policy, Indentation, "\n",
+                                     &Context);
   Out << ")";
 }
 
@@ -1443,7 +1443,7 @@ void DeclPrinter::VisitObjCMethodDecl(ObjCMethodDecl *OMD) {
     lastPos = pos + 1;
   }
 
-  if (OMD->param_begin() == OMD->param_end())
+  if (OMD->parameters().empty())
     Out << name;
 
   if (OMD->isVariadic())
@@ -1480,8 +1480,7 @@ void DeclPrinter::VisitObjCImplementationDecl(ObjCImplementationDecl *OID) {
     }
     Indentation -= Policy.Indentation;
     Out << "}\n";
-  }
-  else if (SID || (OID->decls_begin() != OID->decls_end())) {
+  } else if (SID || !OID->decls().empty()) {
     Out << "\n";
     eolnOut = true;
   }
@@ -1540,8 +1539,7 @@ void DeclPrinter::VisitObjCInterfaceDecl(ObjCInterfaceDecl *OID) {
     }
     Indentation -= Policy.Indentation;
     Out << "}\n";
-  }
-  else if (SID || (OID->decls_begin() != OID->decls_end())) {
+  } else if (SID || !OID->decls().empty()) {
     Out << "\n";
     eolnOut = true;
   }
@@ -1827,7 +1825,7 @@ void DeclPrinter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
     Out << ")";
   }
   if (!D->clauselist_empty()) {
-    OMPClausePrinter Printer(Out, Policy);
+    OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().OpenMP);
     for (OMPClause *C : D->clauselists()) {
       Out << " ";
       Printer.Visit(C);
@@ -1838,7 +1836,7 @@ void DeclPrinter::VisitOMPAllocateDecl(OMPAllocateDecl *D) {
 void DeclPrinter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
   Out << "#pragma omp requires ";
   if (!D->clauselist_empty()) {
-    OMPClausePrinter Printer(Out, Policy);
+    OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().OpenMP);
     for (auto I = D->clauselist_begin(), E = D->clauselist_end(); I != E; ++I)
       Printer.Visit(*I);
   }
@@ -1891,7 +1889,7 @@ void DeclPrinter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
     Out << D->getVarName();
     Out << ")";
     if (!D->clauselist_empty()) {
-      OMPClausePrinter Printer(Out, Policy);
+      OMPClausePrinter Printer(Out, Policy, Context.getLangOpts().OpenMP);
       for (auto *C : D->clauselists()) {
         Out << " ";
         Printer.Visit(C);

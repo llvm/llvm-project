@@ -223,8 +223,6 @@ private:
   tryFitMultipleLinesInOne(LevelIndentTracker &IndentTracker,
                            ArrayRef<AnnotatedLine *>::const_iterator I,
                            ArrayRef<AnnotatedLine *>::const_iterator E) {
-    const unsigned Indent = IndentTracker.getIndent();
-
     // Can't join the last line with anything.
     if (I + 1 == E)
       return 0;
@@ -240,6 +238,7 @@ private:
       return 0;
     }
 
+    const auto Indent = IndentTracker.getIndent();
     if (Style.ColumnLimit > 0 && Indent > Style.ColumnLimit)
       return 0;
 
@@ -314,8 +313,8 @@ private:
           const AnnotatedLine *Line = nullptr;
           for (auto J = I - 1; J >= AnnotatedLines.begin(); --J) {
             assert(*J);
-            if ((*J)->InPPDirective || (*J)->isComment() ||
-                (*J)->Level > TheLine->Level) {
+            if (((*J)->InPPDirective && !(*J)->InMacroBody) ||
+                (*J)->isComment() || (*J)->Level > TheLine->Level) {
               continue;
             }
             if ((*J)->Level < TheLine->Level ||
@@ -424,43 +423,14 @@ private:
                  : 0;
     }
     // Try to merge a control statement block with left brace wrapped.
-    if (NextLine.First->is(tok::l_brace)) {
-      if ((TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
-                                   tok::kw_for, tok::kw_switch, tok::kw_try,
-                                   tok::kw_do, TT_ForEachMacro) ||
-           (TheLine->First->is(tok::r_brace) && TheLine->First->Next &&
-            TheLine->First->Next->isOneOf(tok::kw_else, tok::kw_catch))) &&
-          Style.BraceWrapping.AfterControlStatement ==
-              FormatStyle::BWACS_MultiLine) {
-        // If possible, merge the next line's wrapped left brace with the
-        // current line. Otherwise, leave it on the next line, as this is a
-        // multi-line control statement.
-        return (Style.ColumnLimit == 0 || TheLine->Level * Style.IndentWidth +
-                                                  TheLine->Last->TotalLength <=
-                                              Style.ColumnLimit)
-                   ? 1
-                   : 0;
-      }
-      if (TheLine->First->isOneOf(tok::kw_if, tok::kw_else, tok::kw_while,
-                                  tok::kw_for, TT_ForEachMacro)) {
-        return (Style.BraceWrapping.AfterControlStatement ==
-                FormatStyle::BWACS_Always)
-                   ? tryMergeSimpleBlock(I, E, Limit)
-                   : 0;
-      }
-      if (TheLine->First->isOneOf(tok::kw_else, tok::kw_catch) &&
-          Style.BraceWrapping.AfterControlStatement ==
-              FormatStyle::BWACS_MultiLine) {
-        // This case if different from the upper BWACS_MultiLine processing
-        // in that a preceding r_brace is not on the same line as else/catch
-        // most likely because of BeforeElse/BeforeCatch set to true.
-        // If the line length doesn't fit ColumnLimit, leave l_brace on the
-        // next line to respect the BWACS_MultiLine.
-        return (Style.ColumnLimit == 0 ||
-                TheLine->Last->TotalLength <= Style.ColumnLimit)
-                   ? 1
-                   : 0;
-      }
+    if (NextLine.First->is(TT_ControlStatementLBrace)) {
+      // If possible, merge the next line's wrapped left brace with the
+      // current line. Otherwise, leave it on the next line, as this is a
+      // multi-line control statement.
+      return Style.BraceWrapping.AfterControlStatement ==
+                     FormatStyle::BWACS_Always
+                 ? tryMergeSimpleBlock(I, E, Limit)
+                 : 0;
     }
     if (PreviousLine && TheLine->First->is(tok::l_brace)) {
       switch (PreviousLine->First->Tok.getKind()) {
@@ -936,7 +906,8 @@ private:
         // { <-- current Line
         //   baz();
         // }
-        if (Line.First == Line.Last && Line.First->isNot(TT_FunctionLBrace) &&
+        if (Line.First == Line.Last &&
+            Line.First->is(TT_ControlStatementLBrace) &&
             Style.BraceWrapping.AfterControlStatement ==
                 FormatStyle::BWACS_MultiLine) {
           return 0;
@@ -1014,8 +985,10 @@ private:
   void join(AnnotatedLine &A, const AnnotatedLine &B) {
     assert(!A.Last->Next);
     assert(!B.First->Previous);
-    if (B.Affected)
+    if (B.Affected || B.LeadingEmptyLinesAffected) {
+      assert(B.Affected || A.Last->Children.empty());
       A.Affected = true;
+    }
     A.Last->Next = B.First;
     B.First->Previous = A.Last;
     B.First->CanBreakBefore = true;
@@ -1116,7 +1089,7 @@ protected:
     const FormatToken *LBrace = State.NextToken->getPreviousNonComment();
     bool HasLBrace = LBrace && LBrace->is(tok::l_brace) && LBrace->is(BK_Block);
     FormatToken &Previous = *State.NextToken->Previous;
-    if (Previous.Children.size() == 0 || (!HasLBrace && !LBrace->MacroParent)) {
+    if (Previous.Children.empty() || (!HasLBrace && !LBrace->MacroParent)) {
       // The previous token does not open a block. Nothing to do. We don't
       // assert so that we can simply call this function for all tokens.
       return true;

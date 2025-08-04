@@ -140,7 +140,6 @@ public:
       return true;
     switch (Qual->getKind()) {
     case NestedNameSpecifier::Namespace:
-    case NestedNameSpecifier::NamespaceAlias:
     case NestedNameSpecifier::Global:
       return true;
     case NestedNameSpecifier::TypeSpec:
@@ -318,6 +317,11 @@ public:
             VTSD->getTemplateSpecializationKind()))
       report(VTSD->getLocation(),
              VTSD->getSpecializedTemplate()->getTemplatedDecl());
+    return true;
+  }
+
+  bool VisitCleanupAttr(CleanupAttr *attr) {
+    report(attr->getArgLoc(), attr->getFunctionDecl());
     return true;
   }
 
