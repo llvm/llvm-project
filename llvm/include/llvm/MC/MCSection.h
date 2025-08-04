@@ -93,10 +93,10 @@ private:
   bool AllowAutoPadding : 1;
 
   // Track content and fixups for the fixed-size part as fragments are
-  // appended to the section. The content is stored as trailing data of the
-  // MCFragment. The content remains immutable, except when modified by
-  // applyFixup.
-  uint32_t FixedSize = 0;
+  // appended to the section. The content remains immutable, except when
+  // modified by applyFixup.
+  uint32_t ContentStart = 0;
+  uint32_t ContentEnd = 0;
   uint32_t FixupStart = 0;
   uint32_t FixupEnd = 0;
 
@@ -189,6 +189,18 @@ public:
   //== Content-related functions manage parent's storage using ContentStart and
   // ContentSize.
 
+  // Get a SmallVector reference. The caller should call doneAppending to update
+  // `ContentEnd`.
+  SmallVectorImpl<char> &getContentsForAppending();
+  void doneAppending();
+  void appendContents(ArrayRef<char> Contents) {
+    getContentsForAppending().append(Contents.begin(), Contents.end());
+    doneAppending();
+  }
+  void appendContents(size_t Num, char Elt) {
+    getContentsForAppending().append(Num, Elt);
+    doneAppending();
+  }
   MutableArrayRef<char> getContents();
   ArrayRef<char> getContents() const;
 
@@ -197,10 +209,10 @@ public:
   MutableArrayRef<char> getVarContents();
   ArrayRef<char> getVarContents() const;
 
-  size_t getFixedSize() const { return FixedSize; }
+  size_t getFixedSize() const { return ContentEnd - ContentStart; }
   size_t getVarSize() const { return VarContentEnd - VarContentStart; }
   size_t getSize() const {
-    return FixedSize + (VarContentEnd - VarContentStart);
+    return ContentEnd - ContentStart + (VarContentEnd - VarContentStart);
   }
 
   //== Fixup-related functions manage parent's storage using FixupStart and
@@ -615,11 +627,28 @@ public:
   bool isBssSection() const { return IsBss; }
 };
 
+inline SmallVectorImpl<char> &MCFragment::getContentsForAppending() {
+  SmallVectorImpl<char> &S = getParent()->ContentStorage;
+  if (LLVM_UNLIKELY(ContentEnd != S.size())) {
+    // Move the elements to the end. Reserve space to avoid invalidating
+    // S.begin()+I for `append`.
+    auto Size = ContentEnd - ContentStart;
+    auto I = std::exchange(ContentStart, S.size());
+    S.reserve(S.size() + Size);
+    S.append(S.begin() + I, S.begin() + I + Size);
+  }
+  return S;
+}
+inline void MCFragment::doneAppending() {
+  ContentEnd = getParent()->ContentStorage.size();
+}
 inline MutableArrayRef<char> MCFragment::getContents() {
-  return {reinterpret_cast<char *>(this + 1), FixedSize};
+  return MutableArrayRef(getParent()->ContentStorage)
+      .slice(ContentStart, ContentEnd - ContentStart);
 }
 inline ArrayRef<char> MCFragment::getContents() const {
-  return {reinterpret_cast<const char *>(this + 1), FixedSize};
+  return ArrayRef(getParent()->ContentStorage)
+      .slice(ContentStart, ContentEnd - ContentStart);
 }
 
 inline MutableArrayRef<char> MCFragment::getVarContents() {
