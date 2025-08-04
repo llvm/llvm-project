@@ -15753,7 +15753,6 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
             type->isIntegralOrEnumerationType()) {
           // In C++98, in-class initialization for a static data member must
           // be an integer constant expression.
-          // SourceLocation Loc;
           if (!Init->isIntegerConstantExpr(Context)) {
             Diag(Init->getExprLoc(),
                  diag::ext_in_class_initializer_non_constant)
