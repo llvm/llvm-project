@@ -1619,20 +1619,6 @@ bool OmpAtomicConstructParser::recursing_{false};
 TYPE_PARSER(sourced( //
     construct<OpenMPAtomicConstruct>(OmpAtomicConstructParser{})))
 
-// 2.17.7 Atomic construct/2.17.8 Flush construct [OpenMP 5.0]
-//        memory-order-clause ->
-//                               acq_rel
-//                               acquire
-//                               relaxed
-//                               release
-//                               seq_cst
-TYPE_PARSER(sourced(construct<OmpMemoryOrderClause>(
-    sourced("ACQ_REL" >> construct<OmpClause>(construct<OmpClause::AcqRel>()) ||
-        "ACQUIRE" >> construct<OmpClause>(construct<OmpClause::Acquire>()) ||
-        "RELAXED" >> construct<OmpClause>(construct<OmpClause::Relaxed>()) ||
-        "RELEASE" >> construct<OmpClause>(construct<OmpClause::Release>()) ||
-        "SEQ_CST" >> construct<OmpClause>(construct<OmpClause::SeqCst>())))))
-
 static bool IsSimpleStandalone(const OmpDirectiveName &name) {
   switch (name.v) {
   case llvm::omp::Directive::OMPD_barrier:
