@@ -1,4 +1,5 @@
-//===- LowerWorkshare.cpp - special cases for bufferization -------===//
+//===- LowerWorkdistribute.cpp
+//-------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +8,16 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the lowering and optimisations of omp.workdistribute.
+//
+// Fortran array statements are lowered to fir as fir.do_loop unordered.
+// lower-workdistribute pass works mainly on identifying fir.do_loop unordered
+// that is nested in target{teams{workdistribute{fir.do_loop unordered}}} and
+// lowers it to target{teams{parallel{wsloop{loop_nest}}}}.
+// It hoists all the other ops outside target region.
+// Relaces heap allocation on target with omp.target_allocmem and
+// deallocation with omp.target_freemem from host. Also replaces
+// runtime function "Assign" with equivalent omp function. ex. @_FortranAAssign
+// on target, once hoisted outside target is replaced with @_FortranAAssign_omp.
 //
 //===----------------------------------------------------------------------===//
 
@@ -49,6 +60,8 @@ using namespace mlir;
 
 namespace {
 
+// The isRuntimeCall function is a utility designed to determine
+// if a given operation is a call to a Fortran-specific runtime function.
 static bool isRuntimeCall(Operation *op) {
   if (auto callOp = dyn_cast<fir::CallOp>(op)) {
     auto callee = callOp.getCallee();
@@ -61,8 +74,8 @@ static bool isRuntimeCall(Operation *op) {
   return false;
 }
 
-/// This is the single source of truth about whether we should parallelize an
-/// operation nested in an omp.execute region.
+// This is the single source of truth about whether we should parallelize an
+// operation nested in an omp.execute region.
 static bool shouldParallelize(Operation *op) {
   if (llvm::any_of(op->getResults(),
                    [](OpResult v) -> bool { return !v.use_empty(); }))
@@ -74,13 +87,16 @@ static bool shouldParallelize(Operation *op) {
       return false;
     return *unordered;
   }
-  if (isRuntimeCall(op)) {
+  if (isRuntimeCall(op) &&
+      (op->getName().getStringRef() == "_FortranAAssign")) {
     return true;
   }
-  // We cannot parallise anything else
+  // We cannot parallise anything else.
   return false;
 }
 
+// The getPerfectlyNested function is a generic utility for finding
+// a single, "perfectly nested" operation within a parent operation.
 template <typename T>
 static T getPerfectlyNested(Operation *op) {
   if (op->getNumRegions() != 1)
@@ -96,33 +112,37 @@ static T getPerfectlyNested(Operation *op) {
   return nullptr;
 }
 
-/// If B() and D() are parallelizable,
-///
-/// omp.teams {
-///   omp.workdistribute {
-///     A()
-///     B()
-///     C()
-///     D()
-///     E()
-///   }
-/// }
-///
-/// becomes
-///
-/// A()
-/// omp.teams {
-///   omp.workdistribute {
-///     B()
-///   }
-/// }
-/// C()
-/// omp.teams {
-///   omp.workdistribute {
-///     D()
-///   }
-/// }
-/// E()
+// FissionWorkdistribute method finds the parallelizable ops
+// within teams {workdistribute} region and moves them to their
+// own teams{workdistribute} region.
+//
+// If B() and D() are parallelizable,
+//
+// omp.teams {
+//   omp.workdistribute {
+//     A()
+//     B()
+//     C()
+//     D()
+//     E()
+//   }
+// }
+//
+// becomes
+//
+// A()
+// omp.teams {
+//   omp.workdistribute {
+//     B()
+//   }
+// }
+// C()
+// omp.teams {
+//   omp.workdistribute {
+//     D()
+//   }
+// }
+// E()
 
 static bool FissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
   OpBuilder rewriter(workdistribute);
@@ -215,29 +235,6 @@ static bool FissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
   return changed;
 }
 
-/// If fir.do_loop is present inside teams workdistribute
-///
-/// omp.teams {
-///   omp.workdistribute {
-///     fir.do_loop unoredered {
-///       ...
-///     }
-///   }
-/// }
-///
-/// Then, its lowered to
-///
-/// omp.teams {
-///   omp.parallel {
-///     omp.distribute {
-///     omp.wsloop {
-///       omp.loop_nest
-///         ...
-///       }
-///     }
-///   }
-/// }
-
 static void genParallelOp(Location loc, OpBuilder &rewriter, bool composite) {
   auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loc);
   parallelOp.setComposite(composite);
@@ -295,6 +292,33 @@ static void genWsLoopOp(mlir::OpBuilder &rewriter, fir::DoLoopOp doLoop,
   return;
 }
 
+// WorkdistributeDoLower method finds the fir.do_loop unoredered
+// nested in teams {workdistribute{fir.do_loop unoredered}} and
+// lowers it to teams {parallel { distribute {wsloop {loop_nest}}}}.
+//
+// If fir.do_loop is present inside teams workdistribute
+//
+// omp.teams {
+//   omp.workdistribute {
+//     fir.do_loop unoredered {
+//       ...
+//     }
+//   }
+// }
+//
+// Then, its lowered to
+//
+// omp.teams {
+//   omp.parallel {
+//     omp.distribute {
+//     omp.wsloop {
+//       omp.loop_nest
+//         ...
+//       }
+//     }
+//   }
+// }
+
 static bool WorkdistributeDoLower(omp::WorkdistributeOp workdistribute) {
   OpBuilder rewriter(workdistribute);
   auto doLoop = getPerfectlyNested<fir::DoLoopOp>(workdistribute);
@@ -312,20 +336,23 @@ static bool WorkdistributeDoLower(omp::WorkdistributeOp workdistribute) {
   return false;
 }
 
-/// If A() and B () are present inside teams workdistribute
-///
-/// omp.teams {
-///   omp.workdistribute {
-///     A()
-///     B()
-///   }
-/// }
-///
-/// Then, its lowered to
-///
-/// A()
-/// B()
-///
+// TeamsWorkdistributeToSingleOp method hoists all the ops inside
+// teams {workdistribute{}} before teams op.
+//
+// If A() and B () are present inside teams workdistribute
+//
+// omp.teams {
+//   omp.workdistribute {
+//     A()
+//     B()
+//   }
+// }
+//
+// Then, its lowered to
+//
+// A()
+// B()
+//
 
 static bool TeamsWorkdistributeToSingleOp(omp::TeamsOp teamsOp) {
   auto workdistributeOp = getPerfectlyNested<omp::WorkdistributeOp>(teamsOp);
@@ -358,11 +385,11 @@ struct SplitTargetResult {
   omp::TargetDataOp dataOp;
 };
 
-/// If multiple workdistribute are nested in a target regions, we will need to
-/// split the target region, but we want to preserve the data semantics of the
-/// original data region and avoid unnecessary data movement at each of the
-/// subkernels - we split the target region into a target_data{target}
-/// nest where only the outer one moves the data
+// If multiple workdistribute are nested in a target regions, we will need to
+// split the target region, but we want to preserve the data semantics of the
+// original data region and avoid unnecessary data movement at each of the
+// subkernels - we split the target region into a target_data{target}
+// nest where only the outer one moves the data
 std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp,
                                                  RewriterBase &rewriter) {
   auto loc = targetOp->getLoc();
@@ -438,6 +465,10 @@ std::optional<SplitTargetResult> splitTargetData(omp::TargetOp targetOp,
   return SplitTargetResult{cast<omp::TargetOp>(newTargetOp), targetDataOp};
 }
 
+// getNestedOpToIsolate function is designed to identify a specific teams
+// parallel op within the body of an omp::TargetOp that should be "isolated."
+// This returns a tuple of op, if its first op in targetBlock, or if the op is
+// last op in the tragte block.
 static std::optional<std::tuple<Operation *, bool, bool>>
 getNestedOpToIsolate(omp::TargetOp targetOp) {
   if (targetOp.getRegion().empty())
@@ -638,6 +669,15 @@ static void reloadCacheAndRecompute(
   }
 }
 
+// isolateOp method rewrites a omp.target_data { omp.target } in to
+// omp.target_data {
+//      // preTargetOp region contains ops before splitBeforeOp.
+//      omp.target {}
+//      // isolatedTargetOp region contains splitBeforeOp,
+//      omp.target {}
+//      // postTargetOp region contains ops after splitBeforeOp.
+//      omp.target {}
+// }
 static SplitResult isolateOp(Operation *splitBeforeOp, bool splitAfter,
                              RewriterBase &rewriter) {
   auto targetOp = cast<omp::TargetOp>(splitBeforeOp->getParentOp());
@@ -796,6 +836,10 @@ genI32Constant(mlir::Location loc, mlir::RewriterBase &rewriter, int value) {
 
 static Type getOmpDeviceType(MLIRContext *c) { return IntegerType::get(c, 32); }
 
+// moveToHost method clones all the ops from target region outside of it.
+// It hoists runtime functions and replaces them with omp vesions.
+// Also hoists and replaces fir.allocmem with omp.target_allocmem and
+// fir.freemem with omp.target_freemem
 static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
   OpBuilder::InsertionGuard guard(rewriter);
   Block *targetBlock = &targetOp.getRegion().front();
@@ -815,7 +859,7 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
     Value privateVar = targetOp.getPrivateVars()[i];
     // The mapping should link the device-side variable to the host-side one.
     BlockArgument arg = targetBlock->getArguments()[mapSize + i];
-    // Map the device-side copy (`arg`) to the host-side value (`privateVar`).
+    // Map the device-side copy (arg) to the host-side value (privateVar).
     mapping.map(arg, privateVar);
   }
 
@@ -868,7 +912,6 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
       // fir.declare changes its type when hoisting it out of omp.target to
       // omp.target_data Introduce a load, if original declareOp input is not of
       // reference type, but cloned delcareOp input is reference type.
-
       if (fir::DeclareOp clonedDeclareOp = dyn_cast<fir::DeclareOp>(clonedOp)) {
         auto originalDeclareOp = cast<fir::DeclareOp>(op);
         Type originalInType = originalDeclareOp.getMemref().getType();
@@ -890,6 +933,8 @@ static void moveToHost(omp::TargetOp targetOp, RewriterBase &rewriter) {
     }
   }
 
+  // Replace fir.allocmem with omp.target_allocmem,
+  // fir.freemem with omp.target_freemem.
   for (Operation *op : opsToReplace) {
     if (auto allocOp = dyn_cast<fir::AllocMemOp>(op)) {
       rewriter.setInsertionPoint(allocOp);
