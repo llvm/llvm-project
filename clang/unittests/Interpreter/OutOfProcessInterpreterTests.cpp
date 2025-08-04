@@ -51,15 +51,15 @@ class InterpreterRemoteTest : public InterpreterTestBase {
 
 using Args = std::vector<const char *>;
 
-void removeFilename(int count, llvm::SmallString<256> &Path) {
-  for (int i = 0; i < count; ++i)
+static void removePathComponent(unsigned N, llvm::SmallString<256> &Path) {
+  for (int i = 0; i < N; ++i)
     llvm::sys::path::remove_filename(Path);
 }
 
 static std::string getExecutorPath() {
   llvm::SmallString<256> ExecutorPath(llvm::sys::fs::getMainExecutable(
       nullptr, reinterpret_cast<void *>(&getExecutorPath)));
-  removeFilename(5, ExecutorPath);
+  removePathComponent(5, ExecutorPath);
   llvm::sys::path::append(ExecutorPath, "bin", "llvm-jitlink-executor");
   return ExecutorPath.str().str();
 }
@@ -67,7 +67,7 @@ static std::string getExecutorPath() {
 static std::string getOrcRuntimePath() {
   llvm::SmallString<256> RuntimePath(llvm::sys::fs::getMainExecutable(
       nullptr, reinterpret_cast<void *>(&getOrcRuntimePath)));
-  removeFilename(5, RuntimePath);
+  removePathComponent(5, RuntimePath);
   llvm::sys::path::append(RuntimePath, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
                           CLANG_VERSION_MAJOR_STRING, "lib");
 
