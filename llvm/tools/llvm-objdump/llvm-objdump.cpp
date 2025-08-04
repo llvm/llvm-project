@@ -2736,7 +2736,7 @@ void Dumper::printRelocations() {
   for (const SectionRef &Section : ToolSectionFilter(O, &Ndx)) {
     if (O.isELF() && (ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC))
       continue;
-    if (Section.relocation_begin() == Section.relocation_end())
+    if (Section.relocations().empty())
       continue;
     Expected<section_iterator> SecOrErr = Section.getRelocatedSection();
     if (!SecOrErr)
