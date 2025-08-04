@@ -110,6 +110,7 @@ struct SubobjectAdjustment {
 /// required.
 class Expr : public ValueStmt {
   QualType TR;
+  bool IsInsideCondition;
 
 public:
   Expr() = delete;
@@ -120,7 +121,7 @@ public:
 
 protected:
   Expr(StmtClass SC, QualType T, ExprValueKind VK, ExprObjectKind OK)
-      : ValueStmt(SC) {
+      : ValueStmt(SC), IsInsideCondition(false) {
     ExprBits.Dependent = 0;
     ExprBits.ValueKind = VK;
     ExprBits.ObjectKind = OK;
@@ -455,6 +456,12 @@ public:
     ExprObjectKind OK = getObjectKind();
     return (OK == OK_Ordinary || OK == OK_BitField);
   }
+
+  bool isInsideCondition() const { return IsInsideCondition; }
+
+  /// setValueKind - Mark this expression to be inside a condition.
+  /// necessary for `warn_assignment_bool_context` diagnostic
+  void setIsInsideCondition() { IsInsideCondition = true; }
 
   /// setValueKind - Set the value kind produced by this expression.
   void setValueKind(ExprValueKind Cat) { ExprBits.ValueKind = Cat; }
