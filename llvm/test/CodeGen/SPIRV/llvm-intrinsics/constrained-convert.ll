@@ -11,7 +11,6 @@
 ; CHECK-DAG: OpDecorate %[[#sf]] FPRoundingMode RTE
 ; CHECK-DAG: OpDecorate %[[#uf]] FPRoundingMode RTZ
 ; CHECK-DAG: OpDecorate %[[#ft]] FPRoundingMode RTP
-
 ; CHECK-NOT: OpDecorate %[[#fs]] FPRoundingMode
 ; CHECK-NOT: OpDecorate %[[#fu]] FPRoundingMode
 ; CHECK-NOT: OpDecorate %[[#fe]] FPRoundingMode
@@ -23,32 +22,20 @@
 ; CHECK: %[[#fe]] = OpFConvert
 ; CHECK: %[[#ft]] = OpFConvert
 
-; Function Attrs: norecurse nounwind strictfp
 define dso_local spir_kernel void @test(float %a, i32 %in, i32 %ui) {
 entry:
-  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %in, metadata !"round.tonearest", metadata !"fpexcept.strict") #2
-  %conv1 = tail call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %ui, metadata !"round.towardzero", metadata !"fpexcept.ignore") #2
-  %conv2 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %conv1, metadata !"fpexcept.ignore") #2
-  %conv3 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %conv1, metadata !"fpexcept.ignore") #2
-  %conv4 = tail call double @llvm.experimental.constrained.fpext.f64.f32(float %conv1, metadata !"fpexcept.ignore") #2
-  %conv5 = tail call float @llvm.experimental.constrained.fptrunc.f32.f64(double %conv4, metadata !"round.upward", metadata !"fpexcept.ignore") #2
+  %conv = tail call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %in, metadata !"round.tonearest", metadata !"fpexcept.strict") 
+  %conv1 = tail call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %ui, metadata !"round.towardzero", metadata !"fpexcept.ignore") 
+  %conv2 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f32(float %conv1, metadata !"fpexcept.ignore") 
+  %conv3 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %conv1, metadata !"fpexcept.ignore") 
+  %conv4 = tail call double @llvm.experimental.constrained.fpext.f64.f32(float %conv1, metadata !"fpexcept.ignore") 
+  %conv5 = tail call float @llvm.experimental.constrained.fptrunc.f32.f64(double %conv4, metadata !"round.upward", metadata !"fpexcept.ignore") 
   ret void
 }
 
-; Function Attrs: inaccessiblememonly nounwind willreturn
-declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata) #1
-
-; Function Attrs: inaccessiblememonly nounwind willreturn
-declare float @llvm.experimental.constrained.uitofp.f32.i32(i32, metadata, metadata) #1
-
-; Function Attrs: inaccessiblememonly nounwind willreturn
-declare i32 @llvm.experimental.constrained.fptosi.i32.f32(float, metadata) #1
-
-; Function Attrs: inaccessiblememonly nounwind willreturn
-declare i32 @llvm.experimental.constrained.fptoui.i32.f32(float, metadata) #1
-
-; Function Attrs: inaccessiblememonly nounwind willreturn
-declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata) #1
-
-; Function Attrs: inaccessiblememonly nounwind willreturn
-declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata) #1
+declare float @llvm.experimental.constrained.sitofp.f32.i32(i32, metadata, metadata) 
+declare float @llvm.experimental.constrained.uitofp.f32.i32(i32, metadata, metadata) 
+declare i32 @llvm.experimental.constrained.fptosi.i32.f32(float, metadata) 
+declare i32 @llvm.experimental.constrained.fptoui.i32.f32(float, metadata) 
+declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata) 
+declare float @llvm.experimental.constrained.fptrunc.f32.f64(double, metadata, metadata) 
