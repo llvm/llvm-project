@@ -14,6 +14,7 @@
 #define LLVM_CLANG_LIB_CODEGEN_CGDEBUGINFO_H
 
 #include "CGBuilder.h"
+#include "SanitizerHandler.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExternalASTSource.h"
@@ -157,7 +158,6 @@ class CGDebugInfo {
   /// This is a storage for names that are constructed on demand. For
   /// example, C++ destructors, C++ operators etc..
   llvm::BumpPtrAllocator DebugInfoNames;
-  StringRef CWDName;
 
   llvm::DenseMap<const char *, llvm::TrackingMDRef> DIFileCache;
   llvm::DenseMap<const FunctionDecl *, llvm::TrackingMDRef> SPCache;
@@ -210,6 +210,7 @@ private:
   llvm::DIType *CreateType(const FunctionType *Ty, llvm::DIFile *F);
   llvm::DIType *CreateType(const HLSLAttributedResourceType *Ty,
                            llvm::DIFile *F);
+  llvm::DIType *CreateType(const HLSLInlineSpirvType *Ty, llvm::DIFile *F);
   /// Get structure or union type.
   llvm::DIType *CreateType(const RecordType *Tyg);
 
@@ -261,9 +262,14 @@ private:
   /// to get a method type which includes \c this pointer.
   llvm::DISubroutineType *getOrCreateMethodType(const CXXMethodDecl *Method,
                                                 llvm::DIFile *F);
+
+  llvm::DISubroutineType *
+  getOrCreateMethodTypeForDestructor(const CXXMethodDecl *Method,
+                                     llvm::DIFile *F, QualType FNType);
+
   llvm::DISubroutineType *
   getOrCreateInstanceMethodType(QualType ThisPtr, const FunctionProtoType *Func,
-                                llvm::DIFile *Unit);
+                                llvm::DIFile *Unit, bool SkipFirst = false);
   llvm::DISubroutineType *
   getOrCreateFunctionType(const Decl *D, QualType FnType, llvm::DIFile *F);
   /// \return debug info descriptor for vtable.
@@ -668,6 +674,9 @@ public:
   void addInstToSpecificSourceAtom(llvm::Instruction *KeyInstruction,
                                    llvm::Value *Backup, uint64_t Atom);
 
+  /// Emit symbol for debugger that holds the pointer to the vtable.
+  void emitVTableSymbol(llvm::GlobalVariable *VTable, const CXXRecordDecl *RD);
+
 private:
   /// Amend \p I's DebugLoc with \p Group (its source atom group) and \p
   /// Rank (lower nonzero rank is higher precedence). Does nothing if \p I
@@ -892,20 +901,6 @@ private:
   }
 };
 
-/// A scoped helper to set the current source atom group for
-/// CGDebugInfo::addInstToCurrentSourceAtom. A source atom is a source construct
-/// that is "interesting" for debug stepping purposes. We use an atom group
-/// number to track the instruction(s) that implement the functionality for the
-/// atom, plus backup instructions/source locations.
-class ApplyAtomGroup {
-  uint64_t OriginalAtom = 0;
-  CGDebugInfo *DI = nullptr;
-
-public:
-  ApplyAtomGroup(CGDebugInfo *DI);
-  ~ApplyAtomGroup();
-};
-
 /// A scoped helper to set the current debug location to the specified
 /// location or preferred location of the specified Expr.
 class ApplyDebugLocation {
@@ -982,6 +977,17 @@ public:
   ApplyInlineDebugLocation(CodeGenFunction &CGF, GlobalDecl InlinedFn);
   /// Restore everything back to the original state.
   ~ApplyInlineDebugLocation();
+};
+
+class SanitizerDebugLocation {
+  CodeGenFunction *CGF;
+  ApplyDebugLocation Apply;
+
+public:
+  SanitizerDebugLocation(CodeGenFunction *CGF,
+                         ArrayRef<SanitizerKind::SanitizerOrdinal> Ordinals,
+                         SanitizerHandler Handler);
+  ~SanitizerDebugLocation();
 };
 
 } // namespace CodeGen

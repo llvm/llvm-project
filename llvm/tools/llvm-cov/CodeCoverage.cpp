@@ -29,6 +29,7 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -46,6 +47,7 @@
 #include <functional>
 #include <map>
 #include <optional>
+#include <string>
 #include <system_error>
 
 using namespace llvm;
@@ -114,7 +116,7 @@ private:
 
   /// Create the main source view of a particular source file.
   std::unique_ptr<SourceCoverageView>
-  createSourceFileView(StringRef SourceFile, const CoverageMapping &Coverage);
+  createSourceFileView(StringRef SourceFile, const CoverageMapping &Coverage, std::vector<StringRef> Arches, std::vector<StringRef> ObjectFilenames = {});
 
   /// Load the coverage mapping data. Return nullptr if an error occurred.
   std::unique_ptr<CoverageMapping> load();
@@ -129,9 +131,10 @@ private:
   /// If a demangler is available, demangle all symbol names.
   void demangleSymbols(const CoverageMapping &Coverage);
 
-  /// Write out a source file view to the filesystem.
   void writeSourceFileView(StringRef SourceFile, CoverageMapping *Coverage,
-                           CoveragePrinter *Printer, bool ShowFilenames);
+                            CoveragePrinter *Printer, bool ShowFilenames, 
+                            std::vector<StringRef> ObjectFilenames);
+
 
   typedef llvm::function_ref<int(int, const char **)> CommandLineParserType;
 
@@ -153,7 +156,7 @@ private:
   bool HadSourceFiles = false;
 
   /// The path to the indexed profile.
-  std::string PGOFilename;
+  std::optional<std::string> PGOFilename;
 
   /// A list of input source files.
   std::vector<std::string> SourceFiles;
@@ -297,8 +300,7 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
     error(EC.message(), SourceFile);
     return EC;
   }
-  LoadedSourceFiles.emplace_back(std::string(SourceFile),
-                                 std::move(Buffer.get()));
+  LoadedSourceFiles.emplace_back(std::string(SourceFile), std::move(Buffer.get()));
   return *LoadedSourceFiles.back().second;
 }
 
@@ -310,6 +312,7 @@ void CodeCoverageTool::attachExpansionSubViews(
   for (const auto &Expansion : Expansions) {
     auto ExpansionCoverage = Coverage.getCoverageForExpansion(Expansion);
     if (ExpansionCoverage.empty())
+    
       continue;
     auto SourceBuffer = getSourceFile(ExpansionCoverage.getFilename());
     if (!SourceBuffer)
@@ -391,11 +394,11 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
 
 std::unique_ptr<SourceCoverageView>
 CodeCoverageTool::createSourceFileView(StringRef SourceFile,
-                                       const CoverageMapping &Coverage) {
+                                       const CoverageMapping &Coverage, std::vector<StringRef> Arches, std::vector<StringRef>ObjectFilenames) {
   auto SourceBuffer = getSourceFile(SourceFile);
   if (!SourceBuffer)
     return nullptr;
-  auto FileCoverage = Coverage.getCoverageForFile(SourceFile);
+  auto FileCoverage = Coverage.getCoverageForFile(SourceFile, ViewOpts.ShowArchExecutables, ViewOpts.MergeBinaryCoverage);
   if (FileCoverage.empty())
     return nullptr;
 
@@ -403,7 +406,7 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   auto Expansions = FileCoverage.getExpansions();
   auto MCDCRecords = FileCoverage.getMCDCRecords();
   auto View = SourceCoverageView::create(SourceFile, SourceBuffer.get(),
-                                         ViewOpts, std::move(FileCoverage));
+                                         ViewOpts, std::move(FileCoverage), ObjectFilenames);
   attachExpansionSubViews(*View, Expansions, Coverage);
   attachBranchSubViews(*View, Branches);
   attachMCDCSubViews(*View, MCDCRecords);
@@ -455,14 +458,17 @@ static bool modifiedTimeGT(StringRef LHS, StringRef RHS) {
 }
 
 std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
-  for (StringRef ObjectFilename : ObjectFilenames)
-    if (modifiedTimeGT(ObjectFilename, PGOFilename))
-      warning("profile data may be out of date - object is newer",
-              ObjectFilename);
+  if (PGOFilename) {
+    for (StringRef ObjectFilename : ObjectFilenames)
+      if (modifiedTimeGT(ObjectFilename, PGOFilename.value()))
+        warning("profile data may be out of date - object is newer",
+                ObjectFilename);
+  }
   auto FS = vfs::getRealFileSystem();
   auto CoverageOrErr = CoverageMapping::load(
       ObjectFilenames, PGOFilename, *FS, CoverageArches,
-      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs);
+      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs, 
+      ViewOpts.ShowArchExecutables, ViewOpts.MergeBinaryCoverage);
   if (Error E = CoverageOrErr.takeError()) {
     error("failed to load coverage: " + toString(std::move(E)));
     return nullptr;
@@ -480,7 +486,6 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
                << '\n';
     }
   }
-
   remapPathNames(*Coverage);
 
   if (!SourceFiles.empty())
@@ -630,8 +635,9 @@ void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
 void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
                                            CoverageMapping *Coverage,
                                            CoveragePrinter *Printer,
-                                           bool ShowFilenames) {
-  auto View = createSourceFileView(SourceFile, *Coverage);
+                                           bool ShowFilenames, 
+                                           std::vector<StringRef> ObjectFilenames) {
+  auto View = createSourceFileView(SourceFile, *Coverage, CoverageArches, ObjectFilenames);
   if (!View) {
     warning("The file '" + SourceFile + "' isn't covered.");
     return;
@@ -646,7 +652,7 @@ void CodeCoverageTool::writeSourceFileView(StringRef SourceFile,
 
   View->print(*OS.get(), /*Wholefile=*/true,
               /*ShowSourceName=*/ShowFilenames,
-              /*ShowTitle=*/ViewOpts.hasOutputDirectory());
+              /*ShowTitle=*/ViewOpts.hasOutputDirectory(), ViewOpts.ShowArchExecutables);
   Printer->closeViewFile(std::move(OS));
 }
 
@@ -668,10 +674,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "dump-collected-paths", cl::Optional, cl::Hidden,
       cl::desc("Show the collected paths to source files"));
 
-  cl::opt<std::string, true> PGOFilename(
-      "instr-profile", cl::Required, cl::location(this->PGOFilename),
+  cl::opt<std::string> PGOFilename(
+      "instr-profile", cl::Optional,
       cl::desc(
           "File with the profile data obtained after an instrumented run"));
+
+  cl::opt<bool> EmptyProfile(
+      "empty-profile", cl::Optional,
+      cl::desc("Use a synthetic profile with no data to generate "
+               "baseline coverage"));
 
   cl::list<std::string> Arches(
       "arch", cl::desc("architectures of the coverage mapping binaries"));
@@ -793,6 +804,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::opt<bool> CheckBinaryIDs(
       "check-binary-ids", cl::desc("Fail if an object couldn't be found for a "
                                    "binary ID in the profile"));
+  cl::opt<bool> ShowArchExecutables(
+    "show-arch-executables",
+    cl::desc("Show coverage per architecture and the associated executable slice"),
+    cl::init(false));
+  
+  cl::opt<bool> MergeBinaryCoverage(
+    "merge-binary-coverage",
+    cl::desc("Enable merging of coverage profiles from binaries compiled for different architectures"),
+    cl::init(false));
 
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
@@ -804,6 +824,15 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
     }
     this->CheckBinaryIDs = CheckBinaryIDs;
+
+    if (!PGOFilename.empty() == EmptyProfile) {
+      error(
+          "exactly one of -instr-profile and -empty-profile must be specified");
+      return 1;
+    }
+    if (!PGOFilename.empty()) {
+      this->PGOFilename = std::make_optional(PGOFilename.getValue());
+    }
 
     if (!CovFilename.empty())
       ObjectFilenames.emplace_back(CovFilename);
@@ -950,6 +979,8 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.ExportSummaryOnly = SummaryOnly;
     ViewOpts.NumThreads = NumThreads;
     ViewOpts.CompilationDirectory = CompilationDirectory;
+    ViewOpts.ShowArchExecutables = ShowArchExecutables;
+    ViewOpts.MergeBinaryCoverage = MergeBinaryCoverage;
 
     return 0;
   };
@@ -1116,20 +1147,22 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
     }
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
-  }
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
 
-  if (ShowCreatedTime) {
-    auto ModifiedTime = Status.getLastModificationTime();
-    std::string ModifiedTimeStr = to_string(ModifiedTime);
-    size_t found = ModifiedTimeStr.rfind(':');
-    ViewOpts.CreatedTimeStr =
-        (found != std::string::npos)
-            ? "Created: " + ModifiedTimeStr.substr(0, found)
-            : "Created: " + ModifiedTimeStr;
+    if (ShowCreatedTime) {
+      auto ModifiedTime = Status.getLastModificationTime();
+      std::string ModifiedTimeStr = to_string(ModifiedTime);
+      size_t found = ModifiedTimeStr.rfind(':');
+      ViewOpts.CreatedTimeStr =
+          (found != std::string::npos)
+              ? "Created: " + ModifiedTimeStr.substr(0, found)
+              : "Created: " + ModifiedTimeStr;
+    }
   }
 
   auto Coverage = load();
@@ -1207,13 +1240,13 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
   if (!ViewOpts.hasOutputDirectory() || S.ThreadsRequested == 1) {
     for (const std::string &SourceFile : SourceFiles)
       writeSourceFileView(SourceFile, Coverage.get(), Printer.get(),
-                          ShowFilenames);
+                          ShowFilenames, ObjectFilenames);
   } else {
     // In -output-dir mode, it's safe to use multiple threads to print files.
     DefaultThreadPool Pool(S);
     for (const std::string &SourceFile : SourceFiles)
-      Pool.async(&CodeCoverageTool::writeSourceFileView, this, SourceFile,
-                 Coverage.get(), Printer.get(), ShowFilenames);
+      Pool.async(static_cast<void (CodeCoverageTool::*)(StringRef, CoverageMapping *, CoveragePrinter *, bool, std::vector<StringRef>)>(&CodeCoverageTool::writeSourceFileView), this, SourceFile,
+                 Coverage.get(), Printer.get(), ShowFilenames, ObjectFilenames);
     Pool.wait();
   }
 
@@ -1238,10 +1271,12 @@ int CodeCoverageTool::doReport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();
@@ -1303,10 +1338,12 @@ int CodeCoverageTool::doExport(int argc, const char **argv,
     return 1;
   }
 
-  sys::fs::file_status Status;
-  if (std::error_code EC = sys::fs::status(PGOFilename, Status)) {
-    error("could not read profile data!" + EC.message(), PGOFilename);
-    return 1;
+  if (PGOFilename) {
+    sys::fs::file_status Status;
+    if (std::error_code EC = sys::fs::status(PGOFilename.value(), Status)) {
+      error("could not read profile data!" + EC.message(), PGOFilename.value());
+      return 1;
+    }
   }
 
   auto Coverage = load();

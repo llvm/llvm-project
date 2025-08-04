@@ -16,11 +16,14 @@
 #include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/ObjectFile.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfReader.h"
+#include "llvm/ProfileData/MemProfSummaryBuilder.h"
 #include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProfReader.h"
@@ -29,6 +32,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
@@ -45,7 +49,6 @@
 #include <algorithm>
 #include <cmath>
 #include <optional>
-#include <queue>
 
 using namespace llvm;
 using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
@@ -195,6 +198,11 @@ static cl::opt<std::string> RemappingFile("remapping-file",
                                           cl::desc("Symbol remapping file"));
 static cl::alias RemappingFileA("r", cl::desc("Alias for --remapping-file"),
                                 cl::aliasopt(RemappingFile));
+static cl::list<std::string> ObjectAwareHashing("object-aware-hashing", 
+                                cl::desc("Includes the object file name when hashing function names "
+                                              "and control flow hashes, allowing functions from different "
+                                              "binaries to be distinguished"), 
+                                cl::sub(MergeSubcommand));
 static cl::opt<bool>
     UseMD5("use-md5", cl::init(false), cl::Hidden,
            cl::desc("Choose to use MD5 to represent string in name table (only "
@@ -651,9 +659,7 @@ struct WriterContext {
   std::mutex &ErrLock;
   SmallSet<instrprof_error, 4> &WriterErrorCodes;
 
-  WriterContext(bool IsSparse, std::mutex &ErrLock,
-                SmallSet<instrprof_error, 4> &WriterErrorCodes,
-                uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
+  WriterContext(bool IsSparse, std::mutex &ErrLock, SmallSet<instrprof_error, 4> &WriterErrorCodes, uint64_t ReservoirSize = 0, uint64_t MaxTraceLength = 0)
       : Writer(IsSparse, ReservoirSize, MaxTraceLength, DoWritePrevVersion,
                MemProfVersionRequested, MemProfFullSchema,
                MemprofGenerateRandomHotness, MemprofGenerateRandomHotnessSeed),
@@ -693,19 +699,27 @@ static void
 loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
           const InstrProfCorrelator *Correlator, const StringRef ProfiledBinary,
           WriterContext *WC, const object::BuildIDFetcher *BIDFetcher = nullptr,
-          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr) {
+          const ProfCorrelatorKind *BIDFetcherCorrelatorKind = nullptr, StringRef ObjectAwareHashing = "") {
   std::unique_lock<std::mutex> CtxGuard{WC->Lock};
 
   // Copy the filename, because llvm::ThreadPool copied the input "const
   // WeightedFile &" by value, making a reference to the filename within it
   // invalid outside of this packaged task.
   std::string Filename = Input.Filename;
+  std::string ExecutableName;
+  std::string ProfileFile = Input.Filename;
+  StringRef ObjectFilename = "";
+
+  StringRef FilenameRef = Filename;
+  if (!ObjectAwareHashing.empty()) {
+    ObjectFilename = ObjectAwareHashing.data();
+  }
 
   using ::llvm::memprof::RawMemProfReader;
-  if (RawMemProfReader::hasFormat(Input.Filename)) {
-    auto ReaderOrErr = RawMemProfReader::create(Input.Filename, ProfiledBinary);
+  if (RawMemProfReader::hasFormat(ProfileFile)) {
+    auto ReaderOrErr = RawMemProfReader::create(ProfileFile, ProfiledBinary);
     if (!ReaderOrErr) {
-      exitWithError(ReaderOrErr.takeError(), Input.Filename);
+      exitWithError(ReaderOrErr.takeError(), ProfileFile);
     }
     std::unique_ptr<RawMemProfReader> Reader = std::move(ReaderOrErr.get());
     // Check if the profile types can be merged, e.g. clang frontend profiles
@@ -756,6 +770,8 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
     auto MemProfData = Reader->takeMemProfData();
 
+    auto DataAccessProfData = Reader->takeDataAccessProfData();
+
     // Check for the empty input in case the YAML file is invalid.
     if (MemProfData.Records.empty()) {
       WC->Errors.emplace_back(
@@ -764,6 +780,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
     }
 
     WC->Writer.addMemProfData(std::move(MemProfData), MemProfError);
+    WC->Writer.addDataAccessProfData(std::move(DataAccessProfData));
     return;
   }
 
@@ -786,8 +803,9 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   const ProfCorrelatorKind CorrelatorKind = BIDFetcherCorrelatorKind
                                                 ? *BIDFetcherCorrelatorKind
                                                 : ProfCorrelatorKind::NONE;
-  auto ReaderOrErr = InstrProfReader::create(Input.Filename, *FS, Correlator,
-                                             BIDFetcher, CorrelatorKind, Warn);
+  auto ReaderOrErr =
+      InstrProfReader::create(ProfileFile, *FS, Correlator, BIDFetcher,
+                              CorrelatorKind, Warn, ObjectFilename);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -825,7 +843,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       bool firstTime = WC->WriterErrorCodes.insert(ErrCode).second;
       handleMergeWriterError(make_error<InstrProfError>(ErrCode, Msg),
                              Input.Filename, FuncName, firstTime);
-    });
+    }, ObjectFilename);
   }
 
   if (KeepVTableSymbols) {
@@ -1034,18 +1052,18 @@ static void mergeInstrProfile(const WeightedFileVector &Inputs,
         MaxTraceLength));
 
   if (NumThreads == 1) {
-    for (const auto &Input : Inputs)
-      loadInput(Input, Remapper, Correlator.get(), ProfiledBinary,
-                Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind);
+    for (int I = 0; I < int(Inputs.size()); ++I)
+      loadInput(Inputs[I], Remapper, Correlator.get(), ProfiledBinary,
+                Contexts[0].get(), BIDFetcher.get(), &BIDFetcherCorrelateKind, !ObjectAwareHashing.empty() ? ObjectAwareHashing[I] : "");
   } else {
     DefaultThreadPool Pool(hardware_concurrency(NumThreads));
 
     // Load the inputs in parallel (N/NumThreads serial steps).
     unsigned Ctx = 0;
-    for (const auto &Input : Inputs) {
-      Pool.async(loadInput, Input, Remapper, Correlator.get(), ProfiledBinary,
+    for (int I = 0; I < int(Inputs.size()); ++I) {
+      Pool.async(loadInput, Inputs[I], Remapper, Correlator.get(), ProfiledBinary,
                  Contexts[Ctx].get(), BIDFetcher.get(),
-                 &BIDFetcherCorrelateKind);
+                 &BIDFetcherCorrelateKind, !ObjectAwareHashing.empty() ? ObjectAwareHashing[I] : "");
       Ctx = (Ctx + 1) % NumThreads;
     }
     Pool.wait();
@@ -1700,7 +1718,10 @@ static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
   if (WeightStr.getAsInteger(10, Weight) || Weight < 1)
     exitWithError("input weight must be a positive integer");
 
-  return {std::string(FileName), Weight};
+  llvm::SmallString<128> ResolvedFileName;
+  llvm::sys::fs::expand_tilde(FileName, ResolvedFileName);
+
+  return {std::string(ResolvedFileName), Weight};
 }
 
 static void addWeightedInput(WeightedFileVector &WNI, const WeightedFile &WF) {
@@ -1760,8 +1781,9 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
 
 static int merge_main(StringRef ProgName) {
   WeightedFileVector WeightedInputs;
-  for (StringRef Filename : InputFilenames)
+  for (StringRef Filename : InputFilenames){
     addWeightedInput(WeightedInputs, {std::string(Filename), 1});
+  }
   for (StringRef WeightedFilename : WeightedInputFilenames)
     addWeightedInput(WeightedInputs, parseWeightedFile(WeightedFilename));
 
@@ -2841,9 +2863,8 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   auto FS = vfs::getRealFileSystem();
   auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
-  if (ShowDetailedSummary && Cutoffs.empty()) {
+  if (Cutoffs.empty() && (ShowDetailedSummary || ShowHotFuncList))
     Cutoffs = ProfileSummaryBuilder::DefaultCutoffs;
-  }
   InstrProfSummaryBuilder Builder(std::move(Cutoffs));
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
@@ -2855,15 +2876,7 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
   int NumVPKind = IPVK_Last - IPVK_First + 1;
   std::vector<ValueSitesStats> VPStats(NumVPKind);
 
-  auto MinCmp = [](const std::pair<std::string, uint64_t> &v1,
-                   const std::pair<std::string, uint64_t> &v2) {
-    return v1.second > v2.second;
-  };
-
-  std::priority_queue<std::pair<std::string, uint64_t>,
-                      std::vector<std::pair<std::string, uint64_t>>,
-                      decltype(MinCmp)>
-      HottestFuncs(MinCmp);
+  std::vector<std::pair<StringRef, uint64_t>> NameAndMaxCount;
 
   if (!TextFormat && OnlyListBelow) {
     OS << "The list of functions with the maximum counter less than "
@@ -2938,15 +2951,8 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
     } else if (OnlyListBelow)
       continue;
 
-    if (TopNFunctions) {
-      if (HottestFuncs.size() == TopNFunctions) {
-        if (HottestFuncs.top().second < FuncMax) {
-          HottestFuncs.pop();
-          HottestFuncs.emplace(std::make_pair(std::string(Func.Name), FuncMax));
-        }
-      } else
-        HottestFuncs.emplace(std::make_pair(std::string(Func.Name), FuncMax));
-    }
+    if (TopNFunctions || ShowHotFuncList)
+      NameAndMaxCount.emplace_back(Func.Name, FuncMax);
 
     if (Show) {
       if (!ShownFunctions)
@@ -3026,16 +3032,27 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
        << "): " << PS->getNumFunctions() - BelowCutoffFunctions << "\n";
   }
 
+  // Sort by MaxCount in decreasing order
+  llvm::stable_sort(NameAndMaxCount, [](const auto &L, const auto &R) {
+    return L.second > R.second;
+  });
   if (TopNFunctions) {
-    std::vector<std::pair<std::string, uint64_t>> SortedHottestFuncs;
-    while (!HottestFuncs.empty()) {
-      SortedHottestFuncs.emplace_back(HottestFuncs.top());
-      HottestFuncs.pop();
-    }
     OS << "Top " << TopNFunctions
        << " functions with the largest internal block counts: \n";
-    for (auto &hotfunc : llvm::reverse(SortedHottestFuncs))
-      OS << "  " << hotfunc.first << ", max count = " << hotfunc.second << "\n";
+    auto TopFuncs = ArrayRef(NameAndMaxCount).take_front(TopNFunctions);
+    for (auto [Name, MaxCount] : TopFuncs)
+      OS << "  " << Name << ", max count = " << MaxCount << "\n";
+  }
+
+  if (ShowHotFuncList) {
+    auto HotCountThreshold =
+        ProfileSummaryBuilder::getHotCountThreshold(PS->getDetailedSummary());
+    OS << "# Hot count threshold: " << HotCountThreshold << "\n";
+    for (auto [Name, MaxCount] : NameAndMaxCount) {
+      if (MaxCount < HotCountThreshold)
+        break;
+      OS << Name << "\n";
+    }
   }
 
   if (ShownFunctions && ShowIndirectCallTargets) {
@@ -3308,6 +3325,18 @@ static int showMemProfProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
 
   auto Reader = std::move(ReaderOrErr.get());
   memprof::AllMemProfData Data = Reader->getAllMemProfData();
+
+  // For v4 and above the summary is serialized in the indexed profile, and can
+  // be accessed from the reader. Earlier versions build the summary below.
+  // The summary is emitted as YAML comments at the start of the output.
+  if (auto *MemProfSum = Reader->getMemProfSummary()) {
+    MemProfSum->printSummaryYaml(OS);
+  } else {
+    memprof::MemProfSummaryBuilder MemProfSumBuilder;
+    for (auto &Pair : Data.HeapProfileRecords)
+      MemProfSumBuilder.addRecord(Pair.Record);
+    MemProfSumBuilder.getSummary()->printSummaryYaml(OS);
+  }
   // Construct yaml::Output with the maximum column width of 80 so that each
   // Frame fits in one line.
   yaml::Output Yout(OS, nullptr, 80);

@@ -22,14 +22,14 @@ LLVM_CLANG_C_EXTERN_C_BEGIN
 #ifndef CINDEX_NO_EXPORTS
   #define CINDEX_EXPORTS
 #endif
-#ifdef _WIN32
-  #ifdef CINDEX_EXPORTS
-    #ifdef _CINDEX_LIB_
-      #define CINDEX_LINKAGE __declspec(dllexport)
-    #else
-      #define CINDEX_LINKAGE __declspec(dllimport)
-    #endif
-  #endif
+#if defined(_WIN32) || defined(__CYGWIN__)
+#ifdef CINDEX_EXPORTS
+#ifdef _CINDEX_LIB_
+#define CINDEX_LINKAGE __declspec(dllexport)
+#else
+#define CINDEX_LINKAGE __declspec(dllimport)
+#endif
+#endif
 #elif defined(CINDEX_EXPORTS) && defined(__GNUC__)
   #define CINDEX_LINKAGE __attribute__((visibility("default")))
 #endif

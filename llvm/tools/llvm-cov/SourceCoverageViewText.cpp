@@ -14,9 +14,11 @@
 #include "CoverageReport.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Object/ObjectFile.h"
 #include <optional>
 
 using namespace llvm;
@@ -139,6 +141,38 @@ void SourceCoverageViewText::renderSourceName(raw_ostream &OS, bool WholeFile) {
                                                       << ":\n";
 }
 
+static Expected<std::string> getArchitectureFromExecutable(StringRef ExecutablePath){
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrError = MemoryBuffer::getFile(ExecutablePath);
+  if(!BufferOrError){
+    return createStringError(BufferOrError.getError(), "Failed to load input file");
+  }
+
+  Expected<std::unique_ptr<object::ObjectFile>> ObjectOrError = object::ObjectFile::createObjectFile(BufferOrError.get()->getMemBufferRef());
+  if(!ObjectOrError){
+    return ObjectOrError.takeError();
+  }
+
+  std::unique_ptr<llvm::object::ObjectFile> &Object = ObjectOrError.get();
+
+  StringRef ArchStr = Object->getArch() != Triple::UnknownArch ? Triple::getArchTypeName(Object->getArch()) : "unknown";
+
+  return ArchStr.str();
+}
+
+void SourceCoverageViewText::renderArchandObj(raw_ostream &OS, StringRef ObjectFilename) {
+  Expected<std::string> ArchOrErr = getArchitectureFromExecutable(ObjectFilename);
+    if (!ArchOrErr) {
+      // Handle the error
+      logAllUnhandledErrors(ArchOrErr.takeError(), llvm::errs(), "Error extracting architecture: ");
+      return;
+    }
+    // Use the value
+  StringRef Arch = *ArchOrErr;
+  getOptions().colored_ostream(OS, raw_ostream::CYAN) << "\t-" + Arch + "\n" + "\t-" + ObjectFilename
+                                                      << ":\n";
+}
+
+
 void SourceCoverageViewText::renderLinePrefix(raw_ostream &OS,
                                               unsigned ViewDepth) {
   for (unsigned I = 0; I < ViewDepth; ++I)
@@ -186,8 +220,8 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
     if (getOptions().Debug && Highlight)
       HighlightedRanges.push_back(std::make_pair(Col, End));
     Col = End;
-    if ((!S->IsGapRegion || (Highlight && *Highlight == raw_ostream::RED)) &&
-        S->HasCount && S->Count == 0)
+    if ((!S->IsGapRegion || Highlight == raw_ostream::RED) && S->HasCount &&
+        S->Count == 0)
       Highlight = raw_ostream::RED;
     else if (Col == ExpansionCol)
       Highlight = raw_ostream::CYAN;
@@ -218,11 +252,10 @@ void SourceCoverageViewText::renderLineCoverageColumn(
   }
   std::string C = formatBinaryCount(Line.getExecutionCount());
   OS.indent(LineCoverageColumnWidth - C.size());
-  colored_ostream(OS, raw_ostream::MAGENTA,
-                  Line.hasMultipleRegions() && getOptions().Colors)
-      << C;
+  colored_ostream(OS, raw_ostream::MAGENTA, Line.hasMultipleRegions() && getOptions().Colors) << C;
   OS << '|';
 }
+
 
 void SourceCoverageViewText::renderLineNumberColumn(raw_ostream &OS,
                                                     unsigned LineNo) {
@@ -389,7 +422,7 @@ void SourceCoverageViewText::renderMCDCView(raw_ostream &OS, MCDCView &MRV,
 
 void SourceCoverageViewText::renderInstantiationView(raw_ostream &OS,
                                                      InstantiationView &ISV,
-                                                     unsigned ViewDepth) {
+                                                     unsigned ViewDepth, StringRef ObjectFilename) {
   renderLinePrefix(OS, ViewDepth);
   OS << ' ';
   if (!ISV.View)
@@ -397,7 +430,7 @@ void SourceCoverageViewText::renderInstantiationView(raw_ostream &OS,
         << "Unexecuted instantiation: " << ISV.FunctionName << "\n";
   else
     ISV.View->print(OS, /*WholeFile=*/false, /*ShowSourceName=*/true,
-                    /*ShowTitle=*/false, ViewDepth);
+                    /*ShowTitle=*/false, ViewDepth, ObjectFilename);
 }
 
 void SourceCoverageViewText::renderTitle(raw_ostream &OS, StringRef Title) {

@@ -2,7 +2,7 @@
 Test lldb-dap setBreakpoints request
 """
 
-import dap_server
+from dap_server import Source
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -58,7 +58,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # Set breakpoints and verify that they got set correctly
         dap_breakpoint_ids = []
         response = self.dap_server.request_setBreakpoints(
-            main_source_path, [main_bp_line]
+            Source(main_source_path), [main_bp_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
@@ -70,7 +70,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
             )
 
         response = self.dap_server.request_setBreakpoints(
-            foo_source_path, [foo_bp1_line]
+            Source(foo_source_path), [foo_bp1_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]

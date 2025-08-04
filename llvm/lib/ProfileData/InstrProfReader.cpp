@@ -18,7 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProf.h"
-// #include "llvm/ProfileData/MemProf.h"
+#include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfRadixTree.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SymbolRemappingReader.h"
@@ -28,6 +28,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/ProfileData/InstrProfReader.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -158,20 +159,20 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     const InstrProfCorrelator *Correlator,
     const object::BuildIDFetcher *BIDFetcher,
     const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
-    std::function<void(Error)> Warn) {
+    std::function<void(Error)> Warn, StringRef ObjectFilename) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
   return InstrProfReader::create(std::move(BufferOrError.get()), Correlator,
-                                 BIDFetcher, BIDFetcherCorrelatorKind, Warn);
+                                 BIDFetcher, BIDFetcherCorrelatorKind, Warn, ObjectFilename);
 }
 
 Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     std::unique_ptr<MemoryBuffer> Buffer, const InstrProfCorrelator *Correlator,
     const object::BuildIDFetcher *BIDFetcher,
     const InstrProfCorrelator::ProfCorrelatorKind BIDFetcherCorrelatorKind,
-    std::function<void(Error)> Warn) {
+    std::function<void(Error)> Warn, StringRef ObjectFilename) {
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
@@ -193,15 +194,41 @@ Expected<std::unique_ptr<InstrProfReader>> InstrProfReader::create(
     return make_error<InstrProfError>(instrprof_error::unrecognized_format);
 
   // Initialize the reader and return the result.
+
+  // Pass the ObjectFilename to Result
+  if(Result){
+    Result->setObjectFilename(ObjectFilename);
+  }
   if (Error E = initializeReader(*Result))
     return std::move(E);
-
   return std::move(Result);
 }
 
 Expected<std::unique_ptr<IndexedInstrProfReader>>
 IndexedInstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
                                const Twine &RemappingPath) {
+  // Set up the buffer to read.
+  auto BufferOrError = setupMemoryBuffer(Path, FS);
+  if (Error E = BufferOrError.takeError())
+    return std::move(E);
+
+  // Set up the remapping buffer if requested.
+  std::unique_ptr<MemoryBuffer> RemappingBuffer;
+  std::string RemappingPathStr = RemappingPath.str();
+  if (!RemappingPathStr.empty()) {
+    auto RemappingBufferOrError = setupMemoryBuffer(RemappingPathStr, FS);
+    if (Error E = RemappingBufferOrError.takeError())
+      return std::move(E);
+    RemappingBuffer = std::move(RemappingBufferOrError.get());
+  }
+
+  return IndexedInstrProfReader::create(std::move(BufferOrError.get()),
+                                        std::move(RemappingBuffer));
+}
+
+Expected<std::unique_ptr<IndexedInstrProfReader>>
+IndexedInstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
+                               const std::string &ObjectFilename, const Twine &RemappingPath) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
@@ -508,8 +535,7 @@ bool RawInstrProfReader<IntPtrT>::hasFormat(const MemoryBuffer &DataBuffer) {
          llvm::byteswap(RawInstrProf::getMagic<IntPtrT>()) == Magic;
 }
 
-template <class IntPtrT>
-Error RawInstrProfReader<IntPtrT>::readHeader() {
+template <class IntPtrT> Error RawInstrProfReader<IntPtrT>::readHeader() {
   if (!hasFormat(*DataBuffer))
     return error(instrprof_error::bad_magic);
   if (DataBuffer->getBufferSize() < sizeof(RawInstrProf::Header))
@@ -550,6 +576,8 @@ Error RawInstrProfReader<IntPtrT>::readNextHeader(const char *CurrentPos) {
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
+  Symtab.setObjectFilename(ObjectFilename);
+  
   if (Error E = Symtab.create(StringRef(NamesStart, NamesEnd - NamesStart),
                               StringRef(VNamesStart, VNamesEnd - VNamesStart)))
     return error(std::move(E));
@@ -697,7 +725,7 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   ValueDataStart = reinterpret_cast<const uint8_t *>(Start + ValueDataOffset);
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = createSymtab(*NewSymtab))
+  if (Error E = createSymtab(*NewSymtab)) //IMPORTANT FUNCTION CALL
     return E;
 
   Symtab = std::move(NewSymtab);
@@ -1295,7 +1323,7 @@ Error IndexedInstrProfReader::readHeader() {
     // Writer first writes the length of compressed string, and then the actual
     // content.
     const char *VTableNamePtr = (const char *)Ptr;
-    if (VTableNamePtr > (const char *)DataBuffer->getBufferEnd())
+    if (VTableNamePtr > DataBuffer->getBufferEnd())
       return make_error<InstrProfError>(instrprof_error::truncated);
 
     VTableName = StringRef(VTableNamePtr, CompressedVTableNamesLen);
@@ -1369,7 +1397,7 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
   return *Symtab;
 }
 
-Expected<InstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
+Expected<NamedInstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
     StringRef FuncName, uint64_t FuncHash, StringRef DeprecatedFuncName,
     uint64_t *MismatchedFuncSum) {
   ArrayRef<NamedInstrProfRecord> Data;
@@ -1552,13 +1580,27 @@ memprof::AllMemProfData IndexedMemProfReader::getAllMemProfData() const {
     Pair.Record = std::move(*Record);
     AllMemProfData.HeapProfileRecords.push_back(std::move(Pair));
   }
+  // Populate the data access profiles for yaml output.
+  if (DataAccessProfileData != nullptr) {
+    for (const auto &[SymHandleRef, RecordRef] :
+         DataAccessProfileData->getRecords())
+      AllMemProfData.YamlifiedDataAccessProfiles.Records.push_back(
+          memprof::DataAccessProfRecord(SymHandleRef, RecordRef.AccessCount,
+                                        RecordRef.Locations));
+    for (StringRef ColdSymbol : DataAccessProfileData->getKnownColdSymbols())
+      AllMemProfData.YamlifiedDataAccessProfiles.KnownColdSymbols.push_back(
+          ColdSymbol.str());
+    for (uint64_t Hash : DataAccessProfileData->getKnownColdHashes())
+      AllMemProfData.YamlifiedDataAccessProfiles.KnownColdStrHashes.push_back(
+          Hash);
+  }
   return AllMemProfData;
 }
 
 Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
                                                 uint64_t FuncHash,
                                                 std::vector<uint64_t> &Counts) {
-  Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
+  auto Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 
@@ -1569,7 +1611,7 @@ Error IndexedInstrProfReader::getFunctionCounts(StringRef FuncName,
 Error IndexedInstrProfReader::getFunctionBitmap(StringRef FuncName,
                                                 uint64_t FuncHash,
                                                 BitVector &Bitmap) {
-  Expected<InstrProfRecord> Record = getInstrProfRecord(FuncName, FuncHash);
+  auto Record = getInstrProfRecord(FuncName, FuncHash);
   if (Error E = Record.takeError())
     return error(std::move(E));
 

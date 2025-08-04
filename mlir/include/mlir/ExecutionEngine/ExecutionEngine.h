@@ -157,8 +157,7 @@ public:
 
   /// Invokes the function with the given name passing it the list of opaque
   /// pointers to the actual arguments.
-  llvm::Error invokePacked(StringRef name,
-                           MutableArrayRef<void *> args = std::nullopt);
+  llvm::Error invokePacked(StringRef name, MutableArrayRef<void *> args = {});
 
   /// Trait that defines how a given type is passed to the JIT code. This
   /// defaults to passing the address but can be specialized.

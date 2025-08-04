@@ -55,7 +55,7 @@
 
 namespace lldb_dap {
 
-typedef llvm::DenseMap<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
+typedef std::map<std::pair<uint32_t, uint32_t>, SourceBreakpoint>
     SourceBreakpointMap;
 typedef llvm::StringMap<FunctionBreakpoint> FunctionBreakpointMap;
 typedef llvm::DenseMap<lldb::addr_t, InstructionBreakpoint>
@@ -97,10 +97,9 @@ struct DAP {
 
   Variables variables;
   lldb::SBBroadcaster broadcaster;
-  llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
-  std::optional<std::vector<ExceptionBreakpoint>> exception_breakpoints;
+  std::vector<ExceptionBreakpoint> exception_breakpoints;
   llvm::once_flag init_exception_breakpoints_flag;
 
   /// Map step in target id to list of function targets that user can choose.
@@ -153,7 +152,7 @@ struct DAP {
   llvm::DenseSet<ClientFeature> clientFeatures;
 
   /// The initial thread list upon attaching.
-  std::optional<llvm::json::Array> initial_thread_list;
+  std::vector<protocol::Thread> initial_thread_list;
 
   /// Keep track of all the modules our client knows about: either through the
   /// modules request or the module events.
@@ -161,6 +160,9 @@ struct DAP {
   std::mutex modules_mutex;
   llvm::StringSet<> modules;
   /// @}
+
+  /// Number of lines of assembly code to show when no debug info is available.
+  static constexpr uint32_t k_number_of_assembly_lines_for_nodebug = 32;
 
   /// Creates a new DAP sessions.
   ///
@@ -217,7 +219,9 @@ struct DAP {
   void __attribute__((format(printf, 3, 4)))
   SendFormattedOutput(OutputType o, const char *format, ...);
 
-  static int64_t GetNextSourceReference();
+  int32_t CreateSourceReference(lldb::addr_t address);
+
+  std::optional<lldb::addr_t> GetSourceReferenceAddress(int32_t reference);
 
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
@@ -249,6 +253,40 @@ struct DAP {
   /// \return the expression mode
   ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
                           bool partial_expression);
+
+  /// Create a `protocol::Source` object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] frame
+  ///     The frame to use when populating the "Source" object.
+  ///
+  /// \return
+  ///     A `protocol::Source` object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source> ResolveSource(const lldb::SBFrame &frame);
+
+  /// Create a "Source" JSON object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] address
+  ///     The address to use when populating out the "Source" object.
+  ///
+  /// \return
+  ///     An optional "Source" JSON object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source> ResolveSource(lldb::SBAddress address);
+
+  /// Create a "Source" JSON object as described in the debug adapter
+  /// definition.
+  ///
+  /// \param[in] address
+  ///     The address to use when populating out the "Source" object.
+  ///
+  /// \return
+  ///     An optional "Source" JSON object that follows the formal JSON
+  ///     definition outlined by Microsoft.
+  std::optional<protocol::Source>
+  ResolveAssemblySource(lldb::SBAddress address);
 
   /// \return
   ///   \b false if a fatal error was found while executing these commands,
@@ -318,7 +356,7 @@ struct DAP {
     });
   }
 
-  /// The set of capablities supported by this adapter.
+  /// The set of capabilities supported by this adapter.
   protocol::Capabilities GetCapabilities();
 
   /// Debuggee will continue from stopped state.
@@ -364,7 +402,28 @@ struct DAP {
   void StartEventThread();
   void StartProgressEventThread();
 
+  /// Sets the given protocol `breakpoints` in the given `source`, while
+  /// removing any existing breakpoints in the given source if they are not in
+  /// `breakpoint`.
+  ///
+  /// \param[in] source
+  ///   The relevant source of the breakpoints.
+  ///
+  /// \param[in] breakpoints
+  ///   The breakpoints to set.
+  ///
+  /// \return a vector of the breakpoints that were set.
+  std::vector<protocol::Breakpoint> SetSourceBreakpoints(
+      const protocol::Source &source,
+      const std::optional<std::vector<protocol::SourceBreakpoint>>
+          &breakpoints);
+
 private:
+  std::vector<protocol::Breakpoint> SetSourceBreakpoints(
+      const protocol::Source &source,
+      const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
+      SourceBreakpointMap &existing_breakpoints);
+
   /// Registration of request handler.
   /// @{
   void RegisterRequests();
@@ -383,6 +442,10 @@ private:
   std::thread progress_event_thread;
   /// @}
 
+  /// List of addresses mapped by sourceReference.
+  std::vector<lldb::addr_t> m_source_references;
+  std::mutex m_source_references_mutex;
+
   /// Queue for all incoming messages.
   std::deque<protocol::Message> m_queue;
   std::mutex m_queue_mutex;
@@ -393,6 +456,9 @@ private:
 
   std::mutex m_active_request_mutex;
   const protocol::Request *m_active_request;
+
+  llvm::StringMap<SourceBreakpointMap> m_source_breakpoints;
+  llvm::DenseMap<int64_t, SourceBreakpointMap> m_source_assembly_breakpoints;
 };
 
 } // namespace lldb_dap

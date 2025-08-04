@@ -24,11 +24,12 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   Interchange.cpp
   Loops.cpp
   TransposeMatmul.cpp
-  MeshShardingInterfaceImpl.cpp
+  ShardingInterfaceImpl.cpp
   NamedOpConversions.cpp
   BlockPackMatmul.cpp
   PackAndUnpackPatterns.cpp
   Padding.cpp
+  PadTilingInterface.cpp
   Promotion.cpp
   RuntimeOpVerification.cpp
   Specialize.cpp
@@ -67,7 +68,7 @@ add_mlir_dialect_library(MLIRLinalgTransforms
   MLIRIR
   MLIRMemRefDialect
   MLIRMemRefTransforms
-  MLIRMeshTransforms
+  MLIRShardTransforms
   MLIRLinalgDialect
   MLIRLinalgUtils
   MLIRSCFDialect

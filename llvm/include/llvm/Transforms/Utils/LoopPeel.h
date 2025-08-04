@@ -44,7 +44,8 @@ gatherPeelingPreferences(Loop *L, ScalarEvolution &SE,
 void computePeelCount(Loop *L, unsigned LoopSize,
                       TargetTransformInfo::PeelingPreferences &PP,
                       unsigned TripCount, DominatorTree &DT,
-                      ScalarEvolution &SE, AssumptionCache *AC = nullptr,
+                      ScalarEvolution &SE, const TargetTransformInfo &TTI,
+                      AssumptionCache *AC = nullptr,
                       unsigned Threshold = UINT_MAX);
 
 } // end namespace llvm

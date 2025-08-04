@@ -1263,7 +1263,7 @@ define i1 @pr134525() nounwind {
 ; RV64I-NEXT:    lui a0, %hi(ki_end+2145386496)
 ; RV64I-NEXT:    addi a0, a0, %lo(ki_end+2145386496)
 ; RV64I-NEXT:    lui a1, 32
-; RV64I-NEXT:    addiw a1, a1, 1
+; RV64I-NEXT:    addi a1, a1, 1
 ; RV64I-NEXT:    sltu a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
@@ -1275,7 +1275,7 @@ define i1 @pr134525() nounwind {
 ; RV64I-MEDIUM-NEXT:    addi a0, a0, %pcrel_lo(.Lpcrel_hi15)
 ; RV64I-MEDIUM-NEXT:    add a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    lui a1, 32
-; RV64I-MEDIUM-NEXT:    addiw a1, a1, 1
+; RV64I-MEDIUM-NEXT:    addi a1, a1, 1
 ; RV64I-MEDIUM-NEXT:    sltu a0, a0, a1
 ; RV64I-MEDIUM-NEXT:    ret
 ;
@@ -1287,7 +1287,7 @@ define i1 @pr134525() nounwind {
 ; RV64I-LARGE-NEXT:    lui a1, 523776
 ; RV64I-LARGE-NEXT:    add a0, a0, a1
 ; RV64I-LARGE-NEXT:    lui a1, 32
-; RV64I-LARGE-NEXT:    addiw a1, a1, 1
+; RV64I-LARGE-NEXT:    addi a1, a1, 1
 ; RV64I-LARGE-NEXT:    sltu a0, a0, a1
 ; RV64I-LARGE-NEXT:    ret
 entry:

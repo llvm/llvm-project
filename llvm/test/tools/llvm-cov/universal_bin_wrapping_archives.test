@@ -4,7 +4,7 @@ MachO universal binaries.
 ---
 Steps to re-generate these files on macOS:
 
-clang -fprofile-instr-generate -fcoverage-mapping -c obj1.c -o obj1_32.o -arch i386
+clang -fprofile-instr-generate -fcoverage-mapping -c obj1.c -o obj1_32.o -arch=i386
 clang -fprofile-instr-generate -fcoverage-mapping -c obj2.c -o obj2_32.o -arch i386
 clang -fprofile-instr-generate -fcoverage-mapping -c obj1.c -o obj1_64.o -arch x86_64
 clang -fprofile-instr-generate -fcoverage-mapping -c obj2.c -o obj2_64.o -arch x86_64

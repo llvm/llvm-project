@@ -95,8 +95,9 @@ public:
                                                 unsigned &NumIntermediates,
                                                 MVT &RegisterVT) const override;
 
-  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode,
-                                            EVT VT) const override;
+  bool shouldFoldSelectWithIdentityConstant(unsigned BinOpcode, EVT VT,
+                                            unsigned SelectOpcode, SDValue X,
+                                            SDValue Y) const override;
 
   /// Return true if the given shuffle mask can be codegen'd directly, or if it
   /// should be stack expanded.
@@ -152,6 +153,12 @@ public:
                                            const APInt &DemandedElts,
                                            const SelectionDAG &DAG,
                                            unsigned Depth) const override;
+
+  bool SimplifyDemandedBitsForTargetNode(SDValue Op, const APInt &DemandedBits,
+                                         const APInt &DemandedElts,
+                                         KnownBits &Known,
+                                         TargetLoweringOpt &TLO,
+                                         unsigned Depth) const override;
 
   bool canCreateUndefOrPoisonForTargetNode(SDValue Op,
                                            const APInt &DemandedElts,
@@ -324,7 +331,7 @@ public:
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
 
-  EVT getOptimalMemOpType(const MemOp &Op,
+  EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
 
   bool splitValueIntoRegisterParts(
@@ -355,6 +362,15 @@ public:
   // given scalable container type given known bounds on VLEN.
   static std::pair<unsigned, unsigned>
   computeVLMAXBounds(MVT ContainerVT, const RISCVSubtarget &Subtarget);
+
+  /// Given a vector (either fixed or scalable), return the scalable vector
+  /// corresponding to a vector register (i.e. an m1 register group).
+  static MVT getM1VT(MVT VT) {
+    unsigned EltSizeInBits = VT.getVectorElementType().getSizeInBits();
+    assert(EltSizeInBits <= RISCV::RVVBitsPerBlock && "Unexpected vector MVT");
+    return MVT::getScalableVectorVT(VT.getVectorElementType(),
+                                    RISCV::RVVBitsPerBlock / EltSizeInBits);
+  }
 
   static unsigned getRegClassIDForLMUL(RISCVVType::VLMUL LMul);
   static unsigned getSubregIndexByMVT(MVT VT, unsigned Index);
@@ -413,25 +429,21 @@ public:
 
   bool fallBackToDAGISel(const Instruction &Inst) const override;
 
-  bool lowerInterleavedLoad(LoadInst *LI,
+  bool lowerInterleavedLoad(Instruction *Load, Value *Mask,
                             ArrayRef<ShuffleVectorInst *> Shuffles,
                             ArrayRef<unsigned> Indices,
                             unsigned Factor) const override;
 
-  bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+  bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                             ShuffleVectorInst *SVI,
                              unsigned Factor) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(
-      LoadInst *LI, ArrayRef<Value *> DeinterleaveValues) const override;
+  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
+                                        IntrinsicInst *DI) const override;
 
   bool lowerInterleaveIntrinsicToStore(
-      StoreInst *SI, ArrayRef<Value *> InterleaveValues) const override;
-
-  bool lowerInterleavedVPLoad(VPIntrinsic *Load, Value *Mask,
-                              ArrayRef<Value *> DeinterleaveRes) const override;
-
-  bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
-                               ArrayRef<Value *> InterleaveOps) const override;
+      Instruction *Store, Value *Mask,
+      ArrayRef<Value *> InterleaveValues) const override;
 
   bool supportKCFIBundles() const override { return true; }
 
@@ -451,6 +463,12 @@ public:
                                             MachineBasicBlock *MBB) const;
 
   ArrayRef<MCPhysReg> getRoundingControlRegisters() const override;
+
+  /// Match a mask which "spreads" the leading elements of a vector evenly
+  /// across the result.  Factor is the spread amount, and Index is the
+  /// offset applied.
+  static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor,
+                           unsigned &Index);
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
@@ -537,6 +555,12 @@ private:
                                             unsigned ExtendOpc) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRESET_FPMODE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) const;
@@ -552,6 +576,10 @@ private:
 
   SDValue lowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerADJUST_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerPARTIAL_REDUCE_MLA(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue lowerXAndesBfHCvtBFloat16Load(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerXAndesBfHCvtBFloat16Store(SDValue Op, SelectionDAG &DAG) const;
 
   bool isEligibleForTailCallOptimization(
       CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,

@@ -268,6 +268,11 @@ def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)> {
   let DiagnosticString = "register must be a GPR excluding zero (x0)";
 }
 
+def GPRNoX2 : GPRRegisterClass<(sub GPR, X2)> {
+  let DiagnosticType = "InvalidRegClassGPRNoX2";
+  let DiagnosticString = "register must be a GPR excluding sp (x2)";
+}
+
 def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)> {
   let DiagnosticType = "InvalidRegClassGPRNoX0X2";
   let DiagnosticString = "register must be a GPR excluding zero (x0) and sp (x2)";
@@ -846,6 +851,7 @@ foreach m = LMULList in {
 
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
+def FCSR   : RISCVReg<0, "fcsr">;
 
 // Shadow Stack register
 def SSP    : RISCVReg<0, "ssp">;

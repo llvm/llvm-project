@@ -110,10 +110,9 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     uint64_t Size = getContext().getTypeSize(Ty);
     if (IsInt && Size > GRLen)
       return false;
-    // Can't be eligible if larger than the FP registers. Half precision isn't
-    // currently supported on LoongArch and the ABI hasn't been confirmed, so
-    // default to the integer ABI in that case.
-    if (IsFloat && (Size > FRLen || Size < 32))
+    // Can't be eligible if larger than the FP registers. Handling of half
+    // precision values has been specified in the ABI, so don't block those.
+    if (IsFloat && Size > FRLen)
       return false;
     // Can't be eligible if an integer type was already found (int+int pairs
     // are not eligible).

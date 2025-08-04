@@ -4,11 +4,11 @@
 
 declare void @llvm.nvvm.bar.warp.sync(i32)
 declare void @llvm.nvvm.barrier.cta.sync.aligned.all(i32)
-declare void @llvm.nvvm.barrier.cta.sync.aligned(i32, i32)
+declare void @llvm.nvvm.barrier.cta.sync.aligned.count(i32, i32)
 declare void @llvm.nvvm.barrier.cta.sync.all(i32)
-declare void @llvm.nvvm.barrier.cta.sync(i32, i32)
-declare void @llvm.nvvm.barrier.cta.arrive(i32, i32)
-declare void @llvm.nvvm.barrier.cta.arrive.aligned(i32, i32)
+declare void @llvm.nvvm.barrier.cta.sync.count(i32, i32)
+declare void @llvm.nvvm.barrier.cta.arrive.count(i32, i32)
+declare void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32, i32)
 
 define void @barrier_warp_sync(i32 %id) {
 ; CHECK-LABEL: barrier_warp_sync(
@@ -53,10 +53,10 @@ define void @barrier_cta_sync_aligned(i32 %id, i32 %cnt) {
 ; CHECK-NEXT:    bar.sync %r1, 64;
 ; CHECK-NEXT:    bar.sync 4, 64;
 ; CHECK-NEXT:    ret;
-  call void @llvm.nvvm.barrier.cta.sync.aligned(i32 %id, i32 %cnt)
-  call void @llvm.nvvm.barrier.cta.sync.aligned(i32 3, i32 %cnt)
-  call void @llvm.nvvm.barrier.cta.sync.aligned(i32 %id, i32 64)
-  call void @llvm.nvvm.barrier.cta.sync.aligned(i32 4, i32 64)
+  call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %id, i32 %cnt)
+  call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 3, i32 %cnt)
+  call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 %id, i32 64)
+  call void @llvm.nvvm.barrier.cta.sync.aligned.count(i32 4, i32 64)
   ret void
 }
 
@@ -73,10 +73,10 @@ define void @barrier_cta_arrive_aligned(i32 %id, i32 %cnt) {
 ; CHECK-NEXT:    bar.arrive %r1, 64;
 ; CHECK-NEXT:    bar.arrive 4, 64;
 ; CHECK-NEXT:    ret;
-  call void @llvm.nvvm.barrier.cta.arrive.aligned(i32 %id, i32 %cnt)
-  call void @llvm.nvvm.barrier.cta.arrive.aligned(i32 3, i32 %cnt)
-  call void @llvm.nvvm.barrier.cta.arrive.aligned(i32 %id, i32 64)
-  call void @llvm.nvvm.barrier.cta.arrive.aligned(i32 4, i32 64)
+  call void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 %id, i32 %cnt)
+  call void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 3, i32 %cnt)
+  call void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 %id, i32 64)
+  call void @llvm.nvvm.barrier.cta.arrive.aligned.count(i32 4, i32 64)
   ret void
 }
 
@@ -108,10 +108,10 @@ define void @barrier_cta_sync(i32 %id, i32 %cnt) {
 ; CHECK-NEXT:    barrier.sync %r1, 64;
 ; CHECK-NEXT:    barrier.sync 4, 64;
 ; CHECK-NEXT:    ret;
-  call void @llvm.nvvm.barrier.cta.sync(i32 %id, i32 %cnt)
-  call void @llvm.nvvm.barrier.cta.sync(i32 3, i32 %cnt)
-  call void @llvm.nvvm.barrier.cta.sync(i32 %id, i32 64)
-  call void @llvm.nvvm.barrier.cta.sync(i32 4, i32 64)
+  call void @llvm.nvvm.barrier.cta.sync.count(i32 %id, i32 %cnt)
+  call void @llvm.nvvm.barrier.cta.sync.count(i32 3, i32 %cnt)
+  call void @llvm.nvvm.barrier.cta.sync.count(i32 %id, i32 64)
+  call void @llvm.nvvm.barrier.cta.sync.count(i32 4, i32 64)
   ret void
 }
 
@@ -128,9 +128,9 @@ define void @barrier_cta_arrive(i32 %id, i32 %cnt) {
 ; CHECK-NEXT:    barrier.arrive %r1, 64;
 ; CHECK-NEXT:    barrier.arrive 4, 64;
 ; CHECK-NEXT:    ret;
-  call void @llvm.nvvm.barrier.cta.arrive(i32 %id, i32 %cnt)
-  call void @llvm.nvvm.barrier.cta.arrive(i32 3, i32 %cnt)
-  call void @llvm.nvvm.barrier.cta.arrive(i32 %id, i32 64)
-  call void @llvm.nvvm.barrier.cta.arrive(i32 4, i32 64)
+  call void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 %cnt)
+  call void @llvm.nvvm.barrier.cta.arrive.count(i32 3, i32 %cnt)
+  call void @llvm.nvvm.barrier.cta.arrive.count(i32 %id, i32 64)
+  call void @llvm.nvvm.barrier.cta.arrive.count(i32 4, i32 64)
   ret void
 }

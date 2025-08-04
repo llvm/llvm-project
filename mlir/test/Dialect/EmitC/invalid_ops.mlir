@@ -346,6 +346,28 @@ func.func @test_expression_multiple_results(%arg0: i32) -> i32 {
 
 // -----
 
+emitc.func @test_expression_no_defining_op(%a : i32) {
+  // expected-error @+1 {{'emitc.expression' op yielded value has no defining op}}
+  %res = emitc.expression : i32 {
+    emitc.yield %a : i32
+  }
+
+  return
+}
+
+// -----
+
+emitc.func @test_expression_op_outside_expression() {
+  %cond = literal "true" : i1
+  // expected-error @+1 {{'emitc.expression' op yielded value not defined within expression}}
+  %res = emitc.expression : i1 {
+    emitc.yield %cond : i1
+  }
+  return
+}
+
+// -----
+
 // expected-error @+1 {{'emitc.func' op requires zero or exactly one result, but has 2}}
 emitc.func @multiple_results(%0: i32) -> (i32, i32) {
   emitc.return %0 : i32

@@ -590,324 +590,346 @@ struct ARMVectorIntrinsicInfo {
       Intrinsic::LLVMIntrinsic, Intrinsic::AltLLVMIntrinsic, \
       TypeModifier }
 
-static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap [] = {
-  NEONMAP1(__a32_vcvt_bf16_f32, arm_neon_vcvtfp2bf, 0),
-  NEONMAP0(splat_lane_v),
-  NEONMAP0(splat_laneq_v),
-  NEONMAP0(splatq_lane_v),
-  NEONMAP0(splatq_laneq_v),
-  NEONMAP2(vabd_v, arm_neon_vabdu, arm_neon_vabds, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vabdq_v, arm_neon_vabdu, arm_neon_vabds, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vabs_v, arm_neon_vabs, 0),
-  NEONMAP1(vabsq_v, arm_neon_vabs, 0),
-  NEONMAP0(vadd_v),
-  NEONMAP0(vaddhn_v),
-  NEONMAP0(vaddq_v),
-  NEONMAP1(vaesdq_u8, arm_neon_aesd, 0),
-  NEONMAP1(vaeseq_u8, arm_neon_aese, 0),
-  NEONMAP1(vaesimcq_u8, arm_neon_aesimc, 0),
-  NEONMAP1(vaesmcq_u8, arm_neon_aesmc, 0),
-  NEONMAP1(vbfdot_f32, arm_neon_bfdot, 0),
-  NEONMAP1(vbfdotq_f32, arm_neon_bfdot, 0),
-  NEONMAP1(vbfmlalbq_f32, arm_neon_bfmlalb, 0),
-  NEONMAP1(vbfmlaltq_f32, arm_neon_bfmlalt, 0),
-  NEONMAP1(vbfmmlaq_f32, arm_neon_bfmmla, 0),
-  NEONMAP1(vbsl_v, arm_neon_vbsl, AddRetType),
-  NEONMAP1(vbslq_v, arm_neon_vbsl, AddRetType),
-  NEONMAP1(vcadd_rot270_f16, arm_neon_vcadd_rot270, Add1ArgType),
-  NEONMAP1(vcadd_rot270_f32, arm_neon_vcadd_rot270, Add1ArgType),
-  NEONMAP1(vcadd_rot90_f16, arm_neon_vcadd_rot90, Add1ArgType),
-  NEONMAP1(vcadd_rot90_f32, arm_neon_vcadd_rot90, Add1ArgType),
-  NEONMAP1(vcaddq_rot270_f16, arm_neon_vcadd_rot270, Add1ArgType),
-  NEONMAP1(vcaddq_rot270_f32, arm_neon_vcadd_rot270, Add1ArgType),
-  NEONMAP1(vcaddq_rot270_f64, arm_neon_vcadd_rot270, Add1ArgType),
-  NEONMAP1(vcaddq_rot90_f16, arm_neon_vcadd_rot90, Add1ArgType),
-  NEONMAP1(vcaddq_rot90_f32, arm_neon_vcadd_rot90, Add1ArgType),
-  NEONMAP1(vcaddq_rot90_f64, arm_neon_vcadd_rot90, Add1ArgType),
-  NEONMAP1(vcage_v, arm_neon_vacge, 0),
-  NEONMAP1(vcageq_v, arm_neon_vacge, 0),
-  NEONMAP1(vcagt_v, arm_neon_vacgt, 0),
-  NEONMAP1(vcagtq_v, arm_neon_vacgt, 0),
-  NEONMAP1(vcale_v, arm_neon_vacge, 0),
-  NEONMAP1(vcaleq_v, arm_neon_vacge, 0),
-  NEONMAP1(vcalt_v, arm_neon_vacgt, 0),
-  NEONMAP1(vcaltq_v, arm_neon_vacgt, 0),
-  NEONMAP0(vceqz_v),
-  NEONMAP0(vceqzq_v),
-  NEONMAP0(vcgez_v),
-  NEONMAP0(vcgezq_v),
-  NEONMAP0(vcgtz_v),
-  NEONMAP0(vcgtzq_v),
-  NEONMAP0(vclez_v),
-  NEONMAP0(vclezq_v),
-  NEONMAP1(vcls_v, arm_neon_vcls, Add1ArgType),
-  NEONMAP1(vclsq_v, arm_neon_vcls, Add1ArgType),
-  NEONMAP0(vcltz_v),
-  NEONMAP0(vcltzq_v),
-  NEONMAP1(vclz_v, ctlz, Add1ArgType),
-  NEONMAP1(vclzq_v, ctlz, Add1ArgType),
-  NEONMAP1(vcnt_v, ctpop, Add1ArgType),
-  NEONMAP1(vcntq_v, ctpop, Add1ArgType),
-  NEONMAP1(vcvt_f16_f32, arm_neon_vcvtfp2hf, 0),
-  NEONMAP0(vcvt_f16_s16),
-  NEONMAP0(vcvt_f16_u16),
-  NEONMAP1(vcvt_f32_f16, arm_neon_vcvthf2fp, 0),
-  NEONMAP0(vcvt_f32_v),
-  NEONMAP1(vcvt_n_f16_s16, arm_neon_vcvtfxs2fp, 0),
-  NEONMAP1(vcvt_n_f16_u16, arm_neon_vcvtfxu2fp, 0),
-  NEONMAP2(vcvt_n_f32_v, arm_neon_vcvtfxu2fp, arm_neon_vcvtfxs2fp, 0),
-  NEONMAP1(vcvt_n_s16_f16, arm_neon_vcvtfp2fxs, 0),
-  NEONMAP1(vcvt_n_s32_v, arm_neon_vcvtfp2fxs, 0),
-  NEONMAP1(vcvt_n_s64_v, arm_neon_vcvtfp2fxs, 0),
-  NEONMAP1(vcvt_n_u16_f16, arm_neon_vcvtfp2fxu, 0),
-  NEONMAP1(vcvt_n_u32_v, arm_neon_vcvtfp2fxu, 0),
-  NEONMAP1(vcvt_n_u64_v, arm_neon_vcvtfp2fxu, 0),
-  NEONMAP0(vcvt_s16_f16),
-  NEONMAP0(vcvt_s32_v),
-  NEONMAP0(vcvt_s64_v),
-  NEONMAP0(vcvt_u16_f16),
-  NEONMAP0(vcvt_u32_v),
-  NEONMAP0(vcvt_u64_v),
-  NEONMAP1(vcvta_s16_f16, arm_neon_vcvtas, 0),
-  NEONMAP1(vcvta_s32_v, arm_neon_vcvtas, 0),
-  NEONMAP1(vcvta_s64_v, arm_neon_vcvtas, 0),
-  NEONMAP1(vcvta_u16_f16, arm_neon_vcvtau, 0),
-  NEONMAP1(vcvta_u32_v, arm_neon_vcvtau, 0),
-  NEONMAP1(vcvta_u64_v, arm_neon_vcvtau, 0),
-  NEONMAP1(vcvtaq_s16_f16, arm_neon_vcvtas, 0),
-  NEONMAP1(vcvtaq_s32_v, arm_neon_vcvtas, 0),
-  NEONMAP1(vcvtaq_s64_v, arm_neon_vcvtas, 0),
-  NEONMAP1(vcvtaq_u16_f16, arm_neon_vcvtau, 0),
-  NEONMAP1(vcvtaq_u32_v, arm_neon_vcvtau, 0),
-  NEONMAP1(vcvtaq_u64_v, arm_neon_vcvtau, 0),
-  NEONMAP1(vcvth_bf16_f32, arm_neon_vcvtbfp2bf, 0),
-  NEONMAP1(vcvtm_s16_f16, arm_neon_vcvtms, 0),
-  NEONMAP1(vcvtm_s32_v, arm_neon_vcvtms, 0),
-  NEONMAP1(vcvtm_s64_v, arm_neon_vcvtms, 0),
-  NEONMAP1(vcvtm_u16_f16, arm_neon_vcvtmu, 0),
-  NEONMAP1(vcvtm_u32_v, arm_neon_vcvtmu, 0),
-  NEONMAP1(vcvtm_u64_v, arm_neon_vcvtmu, 0),
-  NEONMAP1(vcvtmq_s16_f16, arm_neon_vcvtms, 0),
-  NEONMAP1(vcvtmq_s32_v, arm_neon_vcvtms, 0),
-  NEONMAP1(vcvtmq_s64_v, arm_neon_vcvtms, 0),
-  NEONMAP1(vcvtmq_u16_f16, arm_neon_vcvtmu, 0),
-  NEONMAP1(vcvtmq_u32_v, arm_neon_vcvtmu, 0),
-  NEONMAP1(vcvtmq_u64_v, arm_neon_vcvtmu, 0),
-  NEONMAP1(vcvtn_s16_f16, arm_neon_vcvtns, 0),
-  NEONMAP1(vcvtn_s32_v, arm_neon_vcvtns, 0),
-  NEONMAP1(vcvtn_s64_v, arm_neon_vcvtns, 0),
-  NEONMAP1(vcvtn_u16_f16, arm_neon_vcvtnu, 0),
-  NEONMAP1(vcvtn_u32_v, arm_neon_vcvtnu, 0),
-  NEONMAP1(vcvtn_u64_v, arm_neon_vcvtnu, 0),
-  NEONMAP1(vcvtnq_s16_f16, arm_neon_vcvtns, 0),
-  NEONMAP1(vcvtnq_s32_v, arm_neon_vcvtns, 0),
-  NEONMAP1(vcvtnq_s64_v, arm_neon_vcvtns, 0),
-  NEONMAP1(vcvtnq_u16_f16, arm_neon_vcvtnu, 0),
-  NEONMAP1(vcvtnq_u32_v, arm_neon_vcvtnu, 0),
-  NEONMAP1(vcvtnq_u64_v, arm_neon_vcvtnu, 0),
-  NEONMAP1(vcvtp_s16_f16, arm_neon_vcvtps, 0),
-  NEONMAP1(vcvtp_s32_v, arm_neon_vcvtps, 0),
-  NEONMAP1(vcvtp_s64_v, arm_neon_vcvtps, 0),
-  NEONMAP1(vcvtp_u16_f16, arm_neon_vcvtpu, 0),
-  NEONMAP1(vcvtp_u32_v, arm_neon_vcvtpu, 0),
-  NEONMAP1(vcvtp_u64_v, arm_neon_vcvtpu, 0),
-  NEONMAP1(vcvtpq_s16_f16, arm_neon_vcvtps, 0),
-  NEONMAP1(vcvtpq_s32_v, arm_neon_vcvtps, 0),
-  NEONMAP1(vcvtpq_s64_v, arm_neon_vcvtps, 0),
-  NEONMAP1(vcvtpq_u16_f16, arm_neon_vcvtpu, 0),
-  NEONMAP1(vcvtpq_u32_v, arm_neon_vcvtpu, 0),
-  NEONMAP1(vcvtpq_u64_v, arm_neon_vcvtpu, 0),
-  NEONMAP0(vcvtq_f16_s16),
-  NEONMAP0(vcvtq_f16_u16),
-  NEONMAP0(vcvtq_f32_v),
-  NEONMAP1(vcvtq_n_f16_s16, arm_neon_vcvtfxs2fp, 0),
-  NEONMAP1(vcvtq_n_f16_u16, arm_neon_vcvtfxu2fp, 0),
-  NEONMAP2(vcvtq_n_f32_v, arm_neon_vcvtfxu2fp, arm_neon_vcvtfxs2fp, 0),
-  NEONMAP1(vcvtq_n_s16_f16, arm_neon_vcvtfp2fxs, 0),
-  NEONMAP1(vcvtq_n_s32_v, arm_neon_vcvtfp2fxs, 0),
-  NEONMAP1(vcvtq_n_s64_v, arm_neon_vcvtfp2fxs, 0),
-  NEONMAP1(vcvtq_n_u16_f16, arm_neon_vcvtfp2fxu, 0),
-  NEONMAP1(vcvtq_n_u32_v, arm_neon_vcvtfp2fxu, 0),
-  NEONMAP1(vcvtq_n_u64_v, arm_neon_vcvtfp2fxu, 0),
-  NEONMAP0(vcvtq_s16_f16),
-  NEONMAP0(vcvtq_s32_v),
-  NEONMAP0(vcvtq_s64_v),
-  NEONMAP0(vcvtq_u16_f16),
-  NEONMAP0(vcvtq_u32_v),
-  NEONMAP0(vcvtq_u64_v),
-  NEONMAP1(vdot_s32, arm_neon_sdot, 0),
-  NEONMAP1(vdot_u32, arm_neon_udot, 0),
-  NEONMAP1(vdotq_s32, arm_neon_sdot, 0),
-  NEONMAP1(vdotq_u32, arm_neon_udot, 0),
-  NEONMAP0(vext_v),
-  NEONMAP0(vextq_v),
-  NEONMAP0(vfma_v),
-  NEONMAP0(vfmaq_v),
-  NEONMAP2(vhadd_v, arm_neon_vhaddu, arm_neon_vhadds, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vhaddq_v, arm_neon_vhaddu, arm_neon_vhadds, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vhsub_v, arm_neon_vhsubu, arm_neon_vhsubs, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vhsubq_v, arm_neon_vhsubu, arm_neon_vhsubs, Add1ArgType | UnsignedAlts),
-  NEONMAP0(vld1_dup_v),
-  NEONMAP1(vld1_v, arm_neon_vld1, 0),
-  NEONMAP1(vld1_x2_v, arm_neon_vld1x2, 0),
-  NEONMAP1(vld1_x3_v, arm_neon_vld1x3, 0),
-  NEONMAP1(vld1_x4_v, arm_neon_vld1x4, 0),
-  NEONMAP0(vld1q_dup_v),
-  NEONMAP1(vld1q_v, arm_neon_vld1, 0),
-  NEONMAP1(vld1q_x2_v, arm_neon_vld1x2, 0),
-  NEONMAP1(vld1q_x3_v, arm_neon_vld1x3, 0),
-  NEONMAP1(vld1q_x4_v, arm_neon_vld1x4, 0),
-  NEONMAP1(vld2_dup_v, arm_neon_vld2dup, 0),
-  NEONMAP1(vld2_lane_v, arm_neon_vld2lane, 0),
-  NEONMAP1(vld2_v, arm_neon_vld2, 0),
-  NEONMAP1(vld2q_dup_v, arm_neon_vld2dup, 0),
-  NEONMAP1(vld2q_lane_v, arm_neon_vld2lane, 0),
-  NEONMAP1(vld2q_v, arm_neon_vld2, 0),
-  NEONMAP1(vld3_dup_v, arm_neon_vld3dup, 0),
-  NEONMAP1(vld3_lane_v, arm_neon_vld3lane, 0),
-  NEONMAP1(vld3_v, arm_neon_vld3, 0),
-  NEONMAP1(vld3q_dup_v, arm_neon_vld3dup, 0),
-  NEONMAP1(vld3q_lane_v, arm_neon_vld3lane, 0),
-  NEONMAP1(vld3q_v, arm_neon_vld3, 0),
-  NEONMAP1(vld4_dup_v, arm_neon_vld4dup, 0),
-  NEONMAP1(vld4_lane_v, arm_neon_vld4lane, 0),
-  NEONMAP1(vld4_v, arm_neon_vld4, 0),
-  NEONMAP1(vld4q_dup_v, arm_neon_vld4dup, 0),
-  NEONMAP1(vld4q_lane_v, arm_neon_vld4lane, 0),
-  NEONMAP1(vld4q_v, arm_neon_vld4, 0),
-  NEONMAP2(vmax_v, arm_neon_vmaxu, arm_neon_vmaxs, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vmaxnm_v, arm_neon_vmaxnm, Add1ArgType),
-  NEONMAP1(vmaxnmq_v, arm_neon_vmaxnm, Add1ArgType),
-  NEONMAP2(vmaxq_v, arm_neon_vmaxu, arm_neon_vmaxs, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vmin_v, arm_neon_vminu, arm_neon_vmins, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vminnm_v, arm_neon_vminnm, Add1ArgType),
-  NEONMAP1(vminnmq_v, arm_neon_vminnm, Add1ArgType),
-  NEONMAP2(vminq_v, arm_neon_vminu, arm_neon_vmins, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vmmlaq_s32, arm_neon_smmla, 0),
-  NEONMAP1(vmmlaq_u32, arm_neon_ummla, 0),
-  NEONMAP0(vmovl_v),
-  NEONMAP0(vmovn_v),
-  NEONMAP1(vmul_v, arm_neon_vmulp, Add1ArgType),
-  NEONMAP0(vmull_v),
-  NEONMAP1(vmulq_v, arm_neon_vmulp, Add1ArgType),
-  NEONMAP2(vpadal_v, arm_neon_vpadalu, arm_neon_vpadals, UnsignedAlts),
-  NEONMAP2(vpadalq_v, arm_neon_vpadalu, arm_neon_vpadals, UnsignedAlts),
-  NEONMAP1(vpadd_v, arm_neon_vpadd, Add1ArgType),
-  NEONMAP2(vpaddl_v, arm_neon_vpaddlu, arm_neon_vpaddls, UnsignedAlts),
-  NEONMAP2(vpaddlq_v, arm_neon_vpaddlu, arm_neon_vpaddls, UnsignedAlts),
-  NEONMAP1(vpaddq_v, arm_neon_vpadd, Add1ArgType),
-  NEONMAP2(vpmax_v, arm_neon_vpmaxu, arm_neon_vpmaxs, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vpmin_v, arm_neon_vpminu, arm_neon_vpmins, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vqabs_v, arm_neon_vqabs, Add1ArgType),
-  NEONMAP1(vqabsq_v, arm_neon_vqabs, Add1ArgType),
-  NEONMAP2(vqadd_v, uadd_sat, sadd_sat, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vqaddq_v, uadd_sat, sadd_sat, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vqdmlal_v, arm_neon_vqdmull, sadd_sat, 0),
-  NEONMAP2(vqdmlsl_v, arm_neon_vqdmull, ssub_sat, 0),
-  NEONMAP1(vqdmulh_v, arm_neon_vqdmulh, Add1ArgType),
-  NEONMAP1(vqdmulhq_v, arm_neon_vqdmulh, Add1ArgType),
-  NEONMAP1(vqdmull_v, arm_neon_vqdmull, Add1ArgType),
-  NEONMAP2(vqmovn_v, arm_neon_vqmovnu, arm_neon_vqmovns, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vqmovun_v, arm_neon_vqmovnsu, Add1ArgType),
-  NEONMAP1(vqneg_v, arm_neon_vqneg, Add1ArgType),
-  NEONMAP1(vqnegq_v, arm_neon_vqneg, Add1ArgType),
-  NEONMAP1(vqrdmlah_s16, arm_neon_vqrdmlah, Add1ArgType),
-  NEONMAP1(vqrdmlah_s32, arm_neon_vqrdmlah, Add1ArgType),
-  NEONMAP1(vqrdmlahq_s16, arm_neon_vqrdmlah, Add1ArgType),
-  NEONMAP1(vqrdmlahq_s32, arm_neon_vqrdmlah, Add1ArgType),
-  NEONMAP1(vqrdmlsh_s16, arm_neon_vqrdmlsh, Add1ArgType),
-  NEONMAP1(vqrdmlsh_s32, arm_neon_vqrdmlsh, Add1ArgType),
-  NEONMAP1(vqrdmlshq_s16, arm_neon_vqrdmlsh, Add1ArgType),
-  NEONMAP1(vqrdmlshq_s32, arm_neon_vqrdmlsh, Add1ArgType),
-  NEONMAP1(vqrdmulh_v, arm_neon_vqrdmulh, Add1ArgType),
-  NEONMAP1(vqrdmulhq_v, arm_neon_vqrdmulh, Add1ArgType),
-  NEONMAP2(vqrshl_v, arm_neon_vqrshiftu, arm_neon_vqrshifts, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vqrshlq_v, arm_neon_vqrshiftu, arm_neon_vqrshifts, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vqshl_n_v, arm_neon_vqshiftu, arm_neon_vqshifts, UnsignedAlts),
-  NEONMAP2(vqshl_v, arm_neon_vqshiftu, arm_neon_vqshifts, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vqshlq_n_v, arm_neon_vqshiftu, arm_neon_vqshifts, UnsignedAlts),
-  NEONMAP2(vqshlq_v, arm_neon_vqshiftu, arm_neon_vqshifts, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vqshlu_n_v, arm_neon_vqshiftsu, 0),
-  NEONMAP1(vqshluq_n_v, arm_neon_vqshiftsu, 0),
-  NEONMAP2(vqsub_v, usub_sat, ssub_sat, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vqsubq_v, usub_sat, ssub_sat, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vraddhn_v, arm_neon_vraddhn, Add1ArgType),
-  NEONMAP2(vrecpe_v, arm_neon_vrecpe, arm_neon_vrecpe, 0),
-  NEONMAP2(vrecpeq_v, arm_neon_vrecpe, arm_neon_vrecpe, 0),
-  NEONMAP1(vrecps_v, arm_neon_vrecps, Add1ArgType),
-  NEONMAP1(vrecpsq_v, arm_neon_vrecps, Add1ArgType),
-  NEONMAP2(vrhadd_v, arm_neon_vrhaddu, arm_neon_vrhadds, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vrhaddq_v, arm_neon_vrhaddu, arm_neon_vrhadds, Add1ArgType | UnsignedAlts),
-  NEONMAP1(vrnd_v, arm_neon_vrintz, Add1ArgType),
-  NEONMAP1(vrnda_v, arm_neon_vrinta, Add1ArgType),
-  NEONMAP1(vrndaq_v, arm_neon_vrinta, Add1ArgType),
-  NEONMAP0(vrndi_v),
-  NEONMAP0(vrndiq_v),
-  NEONMAP1(vrndm_v, arm_neon_vrintm, Add1ArgType),
-  NEONMAP1(vrndmq_v, arm_neon_vrintm, Add1ArgType),
-  NEONMAP1(vrndn_v, arm_neon_vrintn, Add1ArgType),
-  NEONMAP1(vrndnq_v, arm_neon_vrintn, Add1ArgType),
-  NEONMAP1(vrndp_v, arm_neon_vrintp, Add1ArgType),
-  NEONMAP1(vrndpq_v, arm_neon_vrintp, Add1ArgType),
-  NEONMAP1(vrndq_v, arm_neon_vrintz, Add1ArgType),
-  NEONMAP1(vrndx_v, arm_neon_vrintx, Add1ArgType),
-  NEONMAP1(vrndxq_v, arm_neon_vrintx, Add1ArgType),
-  NEONMAP2(vrshl_v, arm_neon_vrshiftu, arm_neon_vrshifts, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vrshlq_v, arm_neon_vrshiftu, arm_neon_vrshifts, Add1ArgType | UnsignedAlts),
-  NEONMAP2(vrshr_n_v, arm_neon_vrshiftu, arm_neon_vrshifts, UnsignedAlts),
-  NEONMAP2(vrshrq_n_v, arm_neon_vrshiftu, arm_neon_vrshifts, UnsignedAlts),
-  NEONMAP2(vrsqrte_v, arm_neon_vrsqrte, arm_neon_vrsqrte, 0),
-  NEONMAP2(vrsqrteq_v, arm_neon_vrsqrte, arm_neon_vrsqrte, 0),
-  NEONMAP1(vrsqrts_v, arm_neon_vrsqrts, Add1ArgType),
-  NEONMAP1(vrsqrtsq_v, arm_neon_vrsqrts, Add1ArgType),
-  NEONMAP1(vrsubhn_v, arm_neon_vrsubhn, Add1ArgType),
-  NEONMAP1(vsha1su0q_u32, arm_neon_sha1su0, 0),
-  NEONMAP1(vsha1su1q_u32, arm_neon_sha1su1, 0),
-  NEONMAP1(vsha256h2q_u32, arm_neon_sha256h2, 0),
-  NEONMAP1(vsha256hq_u32, arm_neon_sha256h, 0),
-  NEONMAP1(vsha256su0q_u32, arm_neon_sha256su0, 0),
-  NEONMAP1(vsha256su1q_u32, arm_neon_sha256su1, 0),
-  NEONMAP0(vshl_n_v),
-  NEONMAP2(vshl_v, arm_neon_vshiftu, arm_neon_vshifts, Add1ArgType | UnsignedAlts),
-  NEONMAP0(vshll_n_v),
-  NEONMAP0(vshlq_n_v),
-  NEONMAP2(vshlq_v, arm_neon_vshiftu, arm_neon_vshifts, Add1ArgType | UnsignedAlts),
-  NEONMAP0(vshr_n_v),
-  NEONMAP0(vshrn_n_v),
-  NEONMAP0(vshrq_n_v),
-  NEONMAP1(vst1_v, arm_neon_vst1, 0),
-  NEONMAP1(vst1_x2_v, arm_neon_vst1x2, 0),
-  NEONMAP1(vst1_x3_v, arm_neon_vst1x3, 0),
-  NEONMAP1(vst1_x4_v, arm_neon_vst1x4, 0),
-  NEONMAP1(vst1q_v, arm_neon_vst1, 0),
-  NEONMAP1(vst1q_x2_v, arm_neon_vst1x2, 0),
-  NEONMAP1(vst1q_x3_v, arm_neon_vst1x3, 0),
-  NEONMAP1(vst1q_x4_v, arm_neon_vst1x4, 0),
-  NEONMAP1(vst2_lane_v, arm_neon_vst2lane, 0),
-  NEONMAP1(vst2_v, arm_neon_vst2, 0),
-  NEONMAP1(vst2q_lane_v, arm_neon_vst2lane, 0),
-  NEONMAP1(vst2q_v, arm_neon_vst2, 0),
-  NEONMAP1(vst3_lane_v, arm_neon_vst3lane, 0),
-  NEONMAP1(vst3_v, arm_neon_vst3, 0),
-  NEONMAP1(vst3q_lane_v, arm_neon_vst3lane, 0),
-  NEONMAP1(vst3q_v, arm_neon_vst3, 0),
-  NEONMAP1(vst4_lane_v, arm_neon_vst4lane, 0),
-  NEONMAP1(vst4_v, arm_neon_vst4, 0),
-  NEONMAP1(vst4q_lane_v, arm_neon_vst4lane, 0),
-  NEONMAP1(vst4q_v, arm_neon_vst4, 0),
-  NEONMAP0(vsubhn_v),
-  NEONMAP0(vtrn_v),
-  NEONMAP0(vtrnq_v),
-  NEONMAP0(vtst_v),
-  NEONMAP0(vtstq_v),
-  NEONMAP1(vusdot_s32, arm_neon_usdot, 0),
-  NEONMAP1(vusdotq_s32, arm_neon_usdot, 0),
-  NEONMAP1(vusmmlaq_s32, arm_neon_usmmla, 0),
-  NEONMAP0(vuzp_v),
-  NEONMAP0(vuzpq_v),
-  NEONMAP0(vzip_v),
-  NEONMAP0(vzipq_v)
-};
+static const ARMVectorIntrinsicInfo ARMSIMDIntrinsicMap[] = {
+    NEONMAP1(__a32_vcvt_bf16_f32, arm_neon_vcvtfp2bf, 0),
+    NEONMAP0(splat_lane_v),
+    NEONMAP0(splat_laneq_v),
+    NEONMAP0(splatq_lane_v),
+    NEONMAP0(splatq_laneq_v),
+    NEONMAP2(vabd_v, arm_neon_vabdu, arm_neon_vabds,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vabdq_v, arm_neon_vabdu, arm_neon_vabds,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP1(vabs_v, arm_neon_vabs, 0),
+    NEONMAP1(vabsq_v, arm_neon_vabs, 0),
+    NEONMAP0(vadd_v),
+    NEONMAP0(vaddhn_v),
+    NEONMAP0(vaddq_v),
+    NEONMAP1(vaesdq_u8, arm_neon_aesd, 0),
+    NEONMAP1(vaeseq_u8, arm_neon_aese, 0),
+    NEONMAP1(vaesimcq_u8, arm_neon_aesimc, 0),
+    NEONMAP1(vaesmcq_u8, arm_neon_aesmc, 0),
+    NEONMAP1(vbfdot_f32, arm_neon_bfdot, 0),
+    NEONMAP1(vbfdotq_f32, arm_neon_bfdot, 0),
+    NEONMAP1(vbfmlalbq_f32, arm_neon_bfmlalb, 0),
+    NEONMAP1(vbfmlaltq_f32, arm_neon_bfmlalt, 0),
+    NEONMAP1(vbfmmlaq_f32, arm_neon_bfmmla, 0),
+    NEONMAP1(vbsl_v, arm_neon_vbsl, AddRetType),
+    NEONMAP1(vbslq_v, arm_neon_vbsl, AddRetType),
+    NEONMAP1(vcadd_rot270_f16, arm_neon_vcadd_rot270, Add1ArgType),
+    NEONMAP1(vcadd_rot270_f32, arm_neon_vcadd_rot270, Add1ArgType),
+    NEONMAP1(vcadd_rot90_f16, arm_neon_vcadd_rot90, Add1ArgType),
+    NEONMAP1(vcadd_rot90_f32, arm_neon_vcadd_rot90, Add1ArgType),
+    NEONMAP1(vcaddq_rot270_f16, arm_neon_vcadd_rot270, Add1ArgType),
+    NEONMAP1(vcaddq_rot270_f32, arm_neon_vcadd_rot270, Add1ArgType),
+    NEONMAP1(vcaddq_rot270_f64, arm_neon_vcadd_rot270, Add1ArgType),
+    NEONMAP1(vcaddq_rot90_f16, arm_neon_vcadd_rot90, Add1ArgType),
+    NEONMAP1(vcaddq_rot90_f32, arm_neon_vcadd_rot90, Add1ArgType),
+    NEONMAP1(vcaddq_rot90_f64, arm_neon_vcadd_rot90, Add1ArgType),
+    NEONMAP1(vcage_v, arm_neon_vacge, 0),
+    NEONMAP1(vcageq_v, arm_neon_vacge, 0),
+    NEONMAP1(vcagt_v, arm_neon_vacgt, 0),
+    NEONMAP1(vcagtq_v, arm_neon_vacgt, 0),
+    NEONMAP1(vcale_v, arm_neon_vacge, 0),
+    NEONMAP1(vcaleq_v, arm_neon_vacge, 0),
+    NEONMAP1(vcalt_v, arm_neon_vacgt, 0),
+    NEONMAP1(vcaltq_v, arm_neon_vacgt, 0),
+    NEONMAP0(vceqz_v),
+    NEONMAP0(vceqzq_v),
+    NEONMAP0(vcgez_v),
+    NEONMAP0(vcgezq_v),
+    NEONMAP0(vcgtz_v),
+    NEONMAP0(vcgtzq_v),
+    NEONMAP0(vclez_v),
+    NEONMAP0(vclezq_v),
+    NEONMAP1(vcls_v, arm_neon_vcls, Add1ArgType),
+    NEONMAP1(vclsq_v, arm_neon_vcls, Add1ArgType),
+    NEONMAP0(vcltz_v),
+    NEONMAP0(vcltzq_v),
+    NEONMAP1(vclz_v, ctlz, Add1ArgType),
+    NEONMAP1(vclzq_v, ctlz, Add1ArgType),
+    NEONMAP1(vcnt_v, ctpop, Add1ArgType),
+    NEONMAP1(vcntq_v, ctpop, Add1ArgType),
+    NEONMAP1(vcvt_f16_f32, arm_neon_vcvtfp2hf, 0),
+    NEONMAP0(vcvt_f16_s16),
+    NEONMAP0(vcvt_f16_u16),
+    NEONMAP1(vcvt_f32_f16, arm_neon_vcvthf2fp, 0),
+    NEONMAP0(vcvt_f32_v),
+    NEONMAP1(vcvt_n_f16_s16, arm_neon_vcvtfxs2fp, 0),
+    NEONMAP1(vcvt_n_f16_u16, arm_neon_vcvtfxu2fp, 0),
+    NEONMAP2(vcvt_n_f32_v, arm_neon_vcvtfxu2fp, arm_neon_vcvtfxs2fp, 0),
+    NEONMAP1(vcvt_n_s16_f16, arm_neon_vcvtfp2fxs, 0),
+    NEONMAP1(vcvt_n_s32_v, arm_neon_vcvtfp2fxs, 0),
+    NEONMAP1(vcvt_n_s64_v, arm_neon_vcvtfp2fxs, 0),
+    NEONMAP1(vcvt_n_u16_f16, arm_neon_vcvtfp2fxu, 0),
+    NEONMAP1(vcvt_n_u32_v, arm_neon_vcvtfp2fxu, 0),
+    NEONMAP1(vcvt_n_u64_v, arm_neon_vcvtfp2fxu, 0),
+    NEONMAP0(vcvt_s16_f16),
+    NEONMAP0(vcvt_s32_v),
+    NEONMAP0(vcvt_s64_v),
+    NEONMAP0(vcvt_u16_f16),
+    NEONMAP0(vcvt_u32_v),
+    NEONMAP0(vcvt_u64_v),
+    NEONMAP1(vcvta_s16_f16, arm_neon_vcvtas, 0),
+    NEONMAP1(vcvta_s32_v, arm_neon_vcvtas, 0),
+    NEONMAP1(vcvta_s64_v, arm_neon_vcvtas, 0),
+    NEONMAP1(vcvta_u16_f16, arm_neon_vcvtau, 0),
+    NEONMAP1(vcvta_u32_v, arm_neon_vcvtau, 0),
+    NEONMAP1(vcvta_u64_v, arm_neon_vcvtau, 0),
+    NEONMAP1(vcvtaq_s16_f16, arm_neon_vcvtas, 0),
+    NEONMAP1(vcvtaq_s32_v, arm_neon_vcvtas, 0),
+    NEONMAP1(vcvtaq_s64_v, arm_neon_vcvtas, 0),
+    NEONMAP1(vcvtaq_u16_f16, arm_neon_vcvtau, 0),
+    NEONMAP1(vcvtaq_u32_v, arm_neon_vcvtau, 0),
+    NEONMAP1(vcvtaq_u64_v, arm_neon_vcvtau, 0),
+    NEONMAP1(vcvth_bf16_f32, arm_neon_vcvtbfp2bf, 0),
+    NEONMAP1(vcvtm_s16_f16, arm_neon_vcvtms, 0),
+    NEONMAP1(vcvtm_s32_v, arm_neon_vcvtms, 0),
+    NEONMAP1(vcvtm_s64_v, arm_neon_vcvtms, 0),
+    NEONMAP1(vcvtm_u16_f16, arm_neon_vcvtmu, 0),
+    NEONMAP1(vcvtm_u32_v, arm_neon_vcvtmu, 0),
+    NEONMAP1(vcvtm_u64_v, arm_neon_vcvtmu, 0),
+    NEONMAP1(vcvtmq_s16_f16, arm_neon_vcvtms, 0),
+    NEONMAP1(vcvtmq_s32_v, arm_neon_vcvtms, 0),
+    NEONMAP1(vcvtmq_s64_v, arm_neon_vcvtms, 0),
+    NEONMAP1(vcvtmq_u16_f16, arm_neon_vcvtmu, 0),
+    NEONMAP1(vcvtmq_u32_v, arm_neon_vcvtmu, 0),
+    NEONMAP1(vcvtmq_u64_v, arm_neon_vcvtmu, 0),
+    NEONMAP1(vcvtn_s16_f16, arm_neon_vcvtns, 0),
+    NEONMAP1(vcvtn_s32_v, arm_neon_vcvtns, 0),
+    NEONMAP1(vcvtn_s64_v, arm_neon_vcvtns, 0),
+    NEONMAP1(vcvtn_u16_f16, arm_neon_vcvtnu, 0),
+    NEONMAP1(vcvtn_u32_v, arm_neon_vcvtnu, 0),
+    NEONMAP1(vcvtn_u64_v, arm_neon_vcvtnu, 0),
+    NEONMAP1(vcvtnq_s16_f16, arm_neon_vcvtns, 0),
+    NEONMAP1(vcvtnq_s32_v, arm_neon_vcvtns, 0),
+    NEONMAP1(vcvtnq_s64_v, arm_neon_vcvtns, 0),
+    NEONMAP1(vcvtnq_u16_f16, arm_neon_vcvtnu, 0),
+    NEONMAP1(vcvtnq_u32_v, arm_neon_vcvtnu, 0),
+    NEONMAP1(vcvtnq_u64_v, arm_neon_vcvtnu, 0),
+    NEONMAP1(vcvtp_s16_f16, arm_neon_vcvtps, 0),
+    NEONMAP1(vcvtp_s32_v, arm_neon_vcvtps, 0),
+    NEONMAP1(vcvtp_s64_v, arm_neon_vcvtps, 0),
+    NEONMAP1(vcvtp_u16_f16, arm_neon_vcvtpu, 0),
+    NEONMAP1(vcvtp_u32_v, arm_neon_vcvtpu, 0),
+    NEONMAP1(vcvtp_u64_v, arm_neon_vcvtpu, 0),
+    NEONMAP1(vcvtpq_s16_f16, arm_neon_vcvtps, 0),
+    NEONMAP1(vcvtpq_s32_v, arm_neon_vcvtps, 0),
+    NEONMAP1(vcvtpq_s64_v, arm_neon_vcvtps, 0),
+    NEONMAP1(vcvtpq_u16_f16, arm_neon_vcvtpu, 0),
+    NEONMAP1(vcvtpq_u32_v, arm_neon_vcvtpu, 0),
+    NEONMAP1(vcvtpq_u64_v, arm_neon_vcvtpu, 0),
+    NEONMAP0(vcvtq_f16_s16),
+    NEONMAP0(vcvtq_f16_u16),
+    NEONMAP0(vcvtq_f32_v),
+    NEONMAP1(vcvtq_n_f16_s16, arm_neon_vcvtfxs2fp, 0),
+    NEONMAP1(vcvtq_n_f16_u16, arm_neon_vcvtfxu2fp, 0),
+    NEONMAP2(vcvtq_n_f32_v, arm_neon_vcvtfxu2fp, arm_neon_vcvtfxs2fp, 0),
+    NEONMAP1(vcvtq_n_s16_f16, arm_neon_vcvtfp2fxs, 0),
+    NEONMAP1(vcvtq_n_s32_v, arm_neon_vcvtfp2fxs, 0),
+    NEONMAP1(vcvtq_n_s64_v, arm_neon_vcvtfp2fxs, 0),
+    NEONMAP1(vcvtq_n_u16_f16, arm_neon_vcvtfp2fxu, 0),
+    NEONMAP1(vcvtq_n_u32_v, arm_neon_vcvtfp2fxu, 0),
+    NEONMAP1(vcvtq_n_u64_v, arm_neon_vcvtfp2fxu, 0),
+    NEONMAP0(vcvtq_s16_f16),
+    NEONMAP0(vcvtq_s32_v),
+    NEONMAP0(vcvtq_s64_v),
+    NEONMAP0(vcvtq_u16_f16),
+    NEONMAP0(vcvtq_u32_v),
+    NEONMAP0(vcvtq_u64_v),
+    NEONMAP1(vdot_s32, arm_neon_sdot, 0),
+    NEONMAP1(vdot_u32, arm_neon_udot, 0),
+    NEONMAP1(vdotq_s32, arm_neon_sdot, 0),
+    NEONMAP1(vdotq_u32, arm_neon_udot, 0),
+    NEONMAP0(vext_v),
+    NEONMAP0(vextq_v),
+    NEONMAP0(vfma_v),
+    NEONMAP0(vfmaq_v),
+    NEONMAP2(vhadd_v, arm_neon_vhaddu, arm_neon_vhadds,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vhaddq_v, arm_neon_vhaddu, arm_neon_vhadds,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vhsub_v, arm_neon_vhsubu, arm_neon_vhsubs,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vhsubq_v, arm_neon_vhsubu, arm_neon_vhsubs,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP0(vld1_dup_v),
+    NEONMAP1(vld1_v, arm_neon_vld1, 0),
+    NEONMAP1(vld1_x2_v, arm_neon_vld1x2, 0),
+    NEONMAP1(vld1_x3_v, arm_neon_vld1x3, 0),
+    NEONMAP1(vld1_x4_v, arm_neon_vld1x4, 0),
+    NEONMAP0(vld1q_dup_v),
+    NEONMAP1(vld1q_v, arm_neon_vld1, 0),
+    NEONMAP1(vld1q_x2_v, arm_neon_vld1x2, 0),
+    NEONMAP1(vld1q_x3_v, arm_neon_vld1x3, 0),
+    NEONMAP1(vld1q_x4_v, arm_neon_vld1x4, 0),
+    NEONMAP1(vld2_dup_v, arm_neon_vld2dup, 0),
+    NEONMAP1(vld2_lane_v, arm_neon_vld2lane, 0),
+    NEONMAP1(vld2_v, arm_neon_vld2, 0),
+    NEONMAP1(vld2q_dup_v, arm_neon_vld2dup, 0),
+    NEONMAP1(vld2q_lane_v, arm_neon_vld2lane, 0),
+    NEONMAP1(vld2q_v, arm_neon_vld2, 0),
+    NEONMAP1(vld3_dup_v, arm_neon_vld3dup, 0),
+    NEONMAP1(vld3_lane_v, arm_neon_vld3lane, 0),
+    NEONMAP1(vld3_v, arm_neon_vld3, 0),
+    NEONMAP1(vld3q_dup_v, arm_neon_vld3dup, 0),
+    NEONMAP1(vld3q_lane_v, arm_neon_vld3lane, 0),
+    NEONMAP1(vld3q_v, arm_neon_vld3, 0),
+    NEONMAP1(vld4_dup_v, arm_neon_vld4dup, 0),
+    NEONMAP1(vld4_lane_v, arm_neon_vld4lane, 0),
+    NEONMAP1(vld4_v, arm_neon_vld4, 0),
+    NEONMAP1(vld4q_dup_v, arm_neon_vld4dup, 0),
+    NEONMAP1(vld4q_lane_v, arm_neon_vld4lane, 0),
+    NEONMAP1(vld4q_v, arm_neon_vld4, 0),
+    NEONMAP2(vmax_v, arm_neon_vmaxu, arm_neon_vmaxs,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP1(vmaxnm_v, arm_neon_vmaxnm, Add1ArgType),
+    NEONMAP1(vmaxnmq_v, arm_neon_vmaxnm, Add1ArgType),
+    NEONMAP2(vmaxq_v, arm_neon_vmaxu, arm_neon_vmaxs,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vmin_v, arm_neon_vminu, arm_neon_vmins,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP1(vminnm_v, arm_neon_vminnm, Add1ArgType),
+    NEONMAP1(vminnmq_v, arm_neon_vminnm, Add1ArgType),
+    NEONMAP2(vminq_v, arm_neon_vminu, arm_neon_vmins,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP1(vmmlaq_s32, arm_neon_smmla, 0),
+    NEONMAP1(vmmlaq_u32, arm_neon_ummla, 0),
+    NEONMAP0(vmovl_v),
+    NEONMAP0(vmovn_v),
+    NEONMAP1(vmul_v, arm_neon_vmulp, Add1ArgType),
+    NEONMAP0(vmull_v),
+    NEONMAP1(vmulq_v, arm_neon_vmulp, Add1ArgType),
+    NEONMAP2(vpadal_v, arm_neon_vpadalu, arm_neon_vpadals, UnsignedAlts),
+    NEONMAP2(vpadalq_v, arm_neon_vpadalu, arm_neon_vpadals, UnsignedAlts),
+    NEONMAP1(vpadd_v, arm_neon_vpadd, Add1ArgType),
+    NEONMAP2(vpaddl_v, arm_neon_vpaddlu, arm_neon_vpaddls, UnsignedAlts),
+    NEONMAP2(vpaddlq_v, arm_neon_vpaddlu, arm_neon_vpaddls, UnsignedAlts),
+    NEONMAP1(vpaddq_v, arm_neon_vpadd, Add1ArgType),
+    NEONMAP2(vpmax_v, arm_neon_vpmaxu, arm_neon_vpmaxs,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vpmin_v, arm_neon_vpminu, arm_neon_vpmins,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP1(vqabs_v, arm_neon_vqabs, Add1ArgType),
+    NEONMAP1(vqabsq_v, arm_neon_vqabs, Add1ArgType),
+    NEONMAP2(vqadd_v, uadd_sat, sadd_sat, Add1ArgType | UnsignedAlts),
+    NEONMAP2(vqaddq_v, uadd_sat, sadd_sat, Add1ArgType | UnsignedAlts),
+    NEONMAP2(vqdmlal_v, arm_neon_vqdmull, sadd_sat, 0),
+    NEONMAP2(vqdmlsl_v, arm_neon_vqdmull, ssub_sat, 0),
+    NEONMAP1(vqdmulh_v, arm_neon_vqdmulh, Add1ArgType),
+    NEONMAP1(vqdmulhq_v, arm_neon_vqdmulh, Add1ArgType),
+    NEONMAP1(vqdmull_v, arm_neon_vqdmull, Add1ArgType),
+    NEONMAP2(vqmovn_v, arm_neon_vqmovnu, arm_neon_vqmovns,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP1(vqmovun_v, arm_neon_vqmovnsu, Add1ArgType),
+    NEONMAP1(vqneg_v, arm_neon_vqneg, Add1ArgType),
+    NEONMAP1(vqnegq_v, arm_neon_vqneg, Add1ArgType),
+    NEONMAP1(vqrdmlah_s16, arm_neon_vqrdmlah, Add1ArgType),
+    NEONMAP1(vqrdmlah_s32, arm_neon_vqrdmlah, Add1ArgType),
+    NEONMAP1(vqrdmlahq_s16, arm_neon_vqrdmlah, Add1ArgType),
+    NEONMAP1(vqrdmlahq_s32, arm_neon_vqrdmlah, Add1ArgType),
+    NEONMAP1(vqrdmlsh_s16, arm_neon_vqrdmlsh, Add1ArgType),
+    NEONMAP1(vqrdmlsh_s32, arm_neon_vqrdmlsh, Add1ArgType),
+    NEONMAP1(vqrdmlshq_s16, arm_neon_vqrdmlsh, Add1ArgType),
+    NEONMAP1(vqrdmlshq_s32, arm_neon_vqrdmlsh, Add1ArgType),
+    NEONMAP1(vqrdmulh_v, arm_neon_vqrdmulh, Add1ArgType),
+    NEONMAP1(vqrdmulhq_v, arm_neon_vqrdmulh, Add1ArgType),
+    NEONMAP2(vqrshl_v, arm_neon_vqrshiftu, arm_neon_vqrshifts,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vqrshlq_v, arm_neon_vqrshiftu, arm_neon_vqrshifts,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vqshl_n_v, arm_neon_vqshiftu, arm_neon_vqshifts, UnsignedAlts),
+    NEONMAP2(vqshl_v, arm_neon_vqshiftu, arm_neon_vqshifts,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vqshlq_n_v, arm_neon_vqshiftu, arm_neon_vqshifts, UnsignedAlts),
+    NEONMAP2(vqshlq_v, arm_neon_vqshiftu, arm_neon_vqshifts,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP1(vqshlu_n_v, arm_neon_vqshiftsu, 0),
+    NEONMAP1(vqshluq_n_v, arm_neon_vqshiftsu, 0),
+    NEONMAP2(vqsub_v, usub_sat, ssub_sat, Add1ArgType | UnsignedAlts),
+    NEONMAP2(vqsubq_v, usub_sat, ssub_sat, Add1ArgType | UnsignedAlts),
+    NEONMAP1(vraddhn_v, arm_neon_vraddhn, Add1ArgType),
+    NEONMAP2(vrecpe_v, arm_neon_vrecpe, arm_neon_vrecpe, 0),
+    NEONMAP2(vrecpeq_v, arm_neon_vrecpe, arm_neon_vrecpe, 0),
+    NEONMAP1(vrecps_v, arm_neon_vrecps, Add1ArgType),
+    NEONMAP1(vrecpsq_v, arm_neon_vrecps, Add1ArgType),
+    NEONMAP2(vrhadd_v, arm_neon_vrhaddu, arm_neon_vrhadds,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vrhaddq_v, arm_neon_vrhaddu, arm_neon_vrhadds,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP1(vrnd_v, trunc, Add1ArgType),
+    NEONMAP1(vrnda_v, round, Add1ArgType),
+    NEONMAP1(vrndaq_v, round, Add1ArgType),
+    NEONMAP0(vrndi_v),
+    NEONMAP0(vrndiq_v),
+    NEONMAP1(vrndm_v, floor, Add1ArgType),
+    NEONMAP1(vrndmq_v, floor, Add1ArgType),
+    NEONMAP1(vrndn_v, roundeven, Add1ArgType),
+    NEONMAP1(vrndnq_v, roundeven, Add1ArgType),
+    NEONMAP1(vrndp_v, ceil, Add1ArgType),
+    NEONMAP1(vrndpq_v, ceil, Add1ArgType),
+    NEONMAP1(vrndq_v, trunc, Add1ArgType),
+    NEONMAP1(vrndx_v, rint, Add1ArgType),
+    NEONMAP1(vrndxq_v, rint, Add1ArgType),
+    NEONMAP2(vrshl_v, arm_neon_vrshiftu, arm_neon_vrshifts,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vrshlq_v, arm_neon_vrshiftu, arm_neon_vrshifts,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP2(vrshr_n_v, arm_neon_vrshiftu, arm_neon_vrshifts, UnsignedAlts),
+    NEONMAP2(vrshrq_n_v, arm_neon_vrshiftu, arm_neon_vrshifts, UnsignedAlts),
+    NEONMAP2(vrsqrte_v, arm_neon_vrsqrte, arm_neon_vrsqrte, 0),
+    NEONMAP2(vrsqrteq_v, arm_neon_vrsqrte, arm_neon_vrsqrte, 0),
+    NEONMAP1(vrsqrts_v, arm_neon_vrsqrts, Add1ArgType),
+    NEONMAP1(vrsqrtsq_v, arm_neon_vrsqrts, Add1ArgType),
+    NEONMAP1(vrsubhn_v, arm_neon_vrsubhn, Add1ArgType),
+    NEONMAP1(vsha1su0q_u32, arm_neon_sha1su0, 0),
+    NEONMAP1(vsha1su1q_u32, arm_neon_sha1su1, 0),
+    NEONMAP1(vsha256h2q_u32, arm_neon_sha256h2, 0),
+    NEONMAP1(vsha256hq_u32, arm_neon_sha256h, 0),
+    NEONMAP1(vsha256su0q_u32, arm_neon_sha256su0, 0),
+    NEONMAP1(vsha256su1q_u32, arm_neon_sha256su1, 0),
+    NEONMAP0(vshl_n_v),
+    NEONMAP2(vshl_v, arm_neon_vshiftu, arm_neon_vshifts,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP0(vshll_n_v),
+    NEONMAP0(vshlq_n_v),
+    NEONMAP2(vshlq_v, arm_neon_vshiftu, arm_neon_vshifts,
+             Add1ArgType | UnsignedAlts),
+    NEONMAP0(vshr_n_v),
+    NEONMAP0(vshrn_n_v),
+    NEONMAP0(vshrq_n_v),
+    NEONMAP1(vst1_v, arm_neon_vst1, 0),
+    NEONMAP1(vst1_x2_v, arm_neon_vst1x2, 0),
+    NEONMAP1(vst1_x3_v, arm_neon_vst1x3, 0),
+    NEONMAP1(vst1_x4_v, arm_neon_vst1x4, 0),
+    NEONMAP1(vst1q_v, arm_neon_vst1, 0),
+    NEONMAP1(vst1q_x2_v, arm_neon_vst1x2, 0),
+    NEONMAP1(vst1q_x3_v, arm_neon_vst1x3, 0),
+    NEONMAP1(vst1q_x4_v, arm_neon_vst1x4, 0),
+    NEONMAP1(vst2_lane_v, arm_neon_vst2lane, 0),
+    NEONMAP1(vst2_v, arm_neon_vst2, 0),
+    NEONMAP1(vst2q_lane_v, arm_neon_vst2lane, 0),
+    NEONMAP1(vst2q_v, arm_neon_vst2, 0),
+    NEONMAP1(vst3_lane_v, arm_neon_vst3lane, 0),
+    NEONMAP1(vst3_v, arm_neon_vst3, 0),
+    NEONMAP1(vst3q_lane_v, arm_neon_vst3lane, 0),
+    NEONMAP1(vst3q_v, arm_neon_vst3, 0),
+    NEONMAP1(vst4_lane_v, arm_neon_vst4lane, 0),
+    NEONMAP1(vst4_v, arm_neon_vst4, 0),
+    NEONMAP1(vst4q_lane_v, arm_neon_vst4lane, 0),
+    NEONMAP1(vst4q_v, arm_neon_vst4, 0),
+    NEONMAP0(vsubhn_v),
+    NEONMAP0(vtrn_v),
+    NEONMAP0(vtrnq_v),
+    NEONMAP0(vtst_v),
+    NEONMAP0(vtstq_v),
+    NEONMAP1(vusdot_s32, arm_neon_usdot, 0),
+    NEONMAP1(vusdotq_s32, arm_neon_usdot, 0),
+    NEONMAP1(vusmmlaq_s32, arm_neon_usmmla, 0),
+    NEONMAP0(vuzp_v),
+    NEONMAP0(vuzpq_v),
+    NEONMAP0(vzip_v),
+    NEONMAP0(vzipq_v)};
 
 static const ARMVectorIntrinsicInfo AArch64SIMDIntrinsicMap[] = {
   NEONMAP0(splat_lane_v),
@@ -3132,7 +3154,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   case NEON::BI__builtin_neon_vrndns_f32: {
     Value *Arg = EmitScalarExpr(E->getArg(0));
     llvm::Type *Tys[] = {Arg->getType()};
-    Function *F = CGM.getIntrinsic(Intrinsic::arm_neon_vrintn, Tys);
+    Function *F = CGM.getIntrinsic(Intrinsic::roundeven, Tys);
     return Builder.CreateCall(F, {Arg}, "vrndn"); }
 
   case NEON::BI__builtin_neon_vset_lane_i8:
@@ -4560,10 +4582,10 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       Ops.insert(&Ops[1], Builder.getInt32(/*SV_ALL*/ 31));
 
     // Predicates must match the main datatype.
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-      if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
+    for (Value *&Op : Ops)
+      if (auto PredTy = dyn_cast<llvm::VectorType>(Op->getType()))
         if (PredTy->getElementType()->isIntegerTy(1))
-          Ops[i] = EmitSVEPredicateCast(Ops[i], getSVEType(TypeFlags));
+          Op = EmitSVEPredicateCast(Op, getSVEType(TypeFlags));
 
     // Splat scalar operand to vector (intrinsics with _n infix)
     if (TypeFlags.hasSplatOperand()) {
@@ -4792,12 +4814,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svlen_u32:
   case SVE::BI__builtin_sve_svlen_u64: {
     SVETypeFlags TF(Builtin->TypeModifier);
-    auto VTy = cast<llvm::VectorType>(getSVEType(TF));
-    auto *NumEls =
-        llvm::ConstantInt::get(Ty, VTy->getElementCount().getKnownMinValue());
-
-    Function *F = CGM.getIntrinsic(Intrinsic::vscale, Ty);
-    return Builder.CreateMul(NumEls, Builder.CreateCall(F));
+    return Builder.CreateElementCount(Ty, getSVEType(TF)->getElementCount());
   }
 
   case SVE::BI__builtin_sve_svtbl2_u8:
@@ -4813,8 +4830,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svtbl2_f32:
   case SVE::BI__builtin_sve_svtbl2_f64: {
     SVETypeFlags TF(Builtin->TypeModifier);
-    auto VTy = cast<llvm::ScalableVectorType>(getSVEType(TF));
-    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_tbl2, VTy);
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_sve_tbl2, getSVEType(TF));
     return Builder.CreateCall(F, Ops);
   }
 
@@ -4928,24 +4944,11 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
   if (Builtin->LLVMIntrinsic == 0)
     return nullptr;
 
-  if (BuiltinID == SME::BI__builtin_sme___arm_in_streaming_mode) {
-    // If we already know the streaming mode, don't bother with the intrinsic
-    // and emit a constant instead
-    const auto *FD = cast<FunctionDecl>(CurFuncDecl);
-    if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
-      unsigned SMEAttrs = FPT->getAArch64SMEAttributes();
-      if (!(SMEAttrs & FunctionType::SME_PStateSMCompatibleMask)) {
-        bool IsStreaming = SMEAttrs & FunctionType::SME_PStateSMEnabledMask;
-        return ConstantInt::getBool(Builder.getContext(), IsStreaming);
-      }
-    }
-  }
-
   // Predicates must match the main datatype.
-  for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-    if (auto PredTy = dyn_cast<llvm::VectorType>(Ops[i]->getType()))
+  for (Value *&Op : Ops)
+    if (auto PredTy = dyn_cast<llvm::VectorType>(Op->getType()))
       if (PredTy->getElementType()->isIntegerTy(1))
-        Ops[i] = EmitSVEPredicateCast(Ops[i], getSVEType(TypeFlags));
+        Op = EmitSVEPredicateCast(Op, getSVEType(TypeFlags));
 
   Function *F =
       TypeFlags.isOverloadNone()
@@ -5477,19 +5480,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
-      BuiltinID == clang::AArch64::BI_WriteStatusReg) {
+      BuiltinID == clang::AArch64::BI_WriteStatusReg ||
+      BuiltinID == clang::AArch64::BI__sys) {
     LLVMContext &Context = CGM.getLLVMContext();
 
     unsigned SysReg =
       E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
 
     std::string SysRegStr;
-    llvm::raw_string_ostream(SysRegStr) <<
-                       ((1 << 1) | ((SysReg >> 14) & 1))  << ":" <<
-                       ((SysReg >> 11) & 7)               << ":" <<
-                       ((SysReg >> 7)  & 15)              << ":" <<
-                       ((SysReg >> 3)  & 15)              << ":" <<
-                       ( SysReg        & 7);
+    unsigned SysRegOp0 = (BuiltinID == clang::AArch64::BI_ReadStatusReg ||
+                          BuiltinID == clang::AArch64::BI_WriteStatusReg)
+                             ? ((1 << 1) | ((SysReg >> 14) & 1))
+                             : 1;
+    llvm::raw_string_ostream(SysRegStr)
+        << SysRegOp0 << ":" << ((SysReg >> 11) & 7) << ":"
+        << ((SysReg >> 7) & 15) << ":" << ((SysReg >> 3) & 15) << ":"
+        << (SysReg & 7);
 
     llvm::Metadata *Ops[] = { llvm::MDString::get(Context, SysRegStr) };
     llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
@@ -5506,8 +5512,13 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
     llvm::Function *F = CGM.getIntrinsic(Intrinsic::write_register, Types);
     llvm::Value *ArgValue = EmitScalarExpr(E->getArg(1));
-
-    return Builder.CreateCall(F, { Metadata, ArgValue });
+    llvm::Value *Result = Builder.CreateCall(F, {Metadata, ArgValue});
+    if (BuiltinID == clang::AArch64::BI__sys) {
+      // Return 0 for convenience, even though MSVC returns some other undefined
+      // value.
+      Result = ConstantInt::get(Builder.getInt32Ty(), 0);
+    }
+    return Result;
   }
 
   if (BuiltinID == clang::AArch64::BI_AddressOfReturnAddress) {
@@ -6505,12 +6516,38 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   case clang::AArch64::BI_InterlockedAdd:
-  case clang::AArch64::BI_InterlockedAdd64: {
+  case clang::AArch64::BI_InterlockedAdd_acq:
+  case clang::AArch64::BI_InterlockedAdd_rel:
+  case clang::AArch64::BI_InterlockedAdd_nf:
+  case clang::AArch64::BI_InterlockedAdd64:
+  case clang::AArch64::BI_InterlockedAdd64_acq:
+  case clang::AArch64::BI_InterlockedAdd64_rel:
+  case clang::AArch64::BI_InterlockedAdd64_nf: {
     Address DestAddr = CheckAtomicAlignment(*this, E);
     Value *Val = EmitScalarExpr(E->getArg(1));
+    llvm::AtomicOrdering Ordering;
+    switch (BuiltinID) {
+    case clang::AArch64::BI_InterlockedAdd:
+    case clang::AArch64::BI_InterlockedAdd64:
+      Ordering = llvm::AtomicOrdering::SequentiallyConsistent;
+      break;
+    case clang::AArch64::BI_InterlockedAdd_acq:
+    case clang::AArch64::BI_InterlockedAdd64_acq:
+      Ordering = llvm::AtomicOrdering::Acquire;
+      break;
+    case clang::AArch64::BI_InterlockedAdd_rel:
+    case clang::AArch64::BI_InterlockedAdd64_rel:
+      Ordering = llvm::AtomicOrdering::Release;
+      break;
+    case clang::AArch64::BI_InterlockedAdd_nf:
+    case clang::AArch64::BI_InterlockedAdd64_nf:
+      Ordering = llvm::AtomicOrdering::Monotonic;
+      break;
+    default:
+      llvm_unreachable("missing builtin ID in switch!");
+    }
     AtomicRMWInst *RMWI =
-        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val,
-                                llvm::AtomicOrdering::SequentiallyConsistent);
+        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val, Ordering);
     return Builder.CreateAdd(RMWI, Val);
   }
   }
@@ -8042,8 +8079,8 @@ BuildVector(ArrayRef<llvm::Value*> Ops) {
   // If this is a constant vector, create a ConstantVector.
   if (AllConstants) {
     SmallVector<llvm::Constant*, 16> CstOps;
-    for (unsigned i = 0, e = Ops.size(); i != e; ++i)
-      CstOps.push_back(cast<Constant>(Ops[i]));
+    for (llvm::Value *Op : Ops)
+      CstOps.push_back(cast<Constant>(Op));
     return llvm::ConstantVector::get(CstOps);
   }
 
@@ -8084,7 +8121,7 @@ Value *CodeGenFunction::EmitAArch64CpuSupports(const CallExpr *E) {
 
 llvm::Value *
 CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
-  uint64_t FeaturesMask = llvm::AArch64::getCpuSupportsMask(FeaturesStrs);
+  llvm::APInt FeaturesMask = llvm::AArch64::getCpuSupportsMask(FeaturesStrs);
   Value *Result = Builder.getTrue();
   if (FeaturesMask != 0) {
     // Get features from structure in runtime library
@@ -8100,7 +8137,7 @@ CodeGenFunction::EmitAArch64CpuSupports(ArrayRef<StringRef> FeaturesStrs) {
         {ConstantInt::get(Int32Ty, 0), ConstantInt::get(Int32Ty, 0)});
     Value *Features = Builder.CreateAlignedLoad(Int64Ty, CpuFeatures,
                                                 CharUnits::fromQuantity(8));
-    Value *Mask = Builder.getInt64(FeaturesMask);
+    Value *Mask = Builder.getInt(FeaturesMask.trunc(64));
     Value *Bitset = Builder.CreateAnd(Features, Mask);
     Value *Cmp = Builder.CreateICmpEQ(Bitset, Mask);
     Result = Builder.CreateAnd(Result, Cmp);

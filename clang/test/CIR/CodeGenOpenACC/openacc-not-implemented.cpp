@@ -3,15 +3,15 @@
 void HelloWorld(int *A, int *B, int *C, int N) {
 
 // expected-error@+2{{ClangIR code gen Not Yet Implemented: OpenACC Atomic Construct}}
-// expected-error@+1{{ClangIR code gen Not Yet Implemented: statement}}
+// expected-error@+1{{ClangIR code gen Not Yet Implemented: emitCompoundStmtWithoutScope: OpenACCAtomicConstruct}}
 #pragma acc atomic
   N = N + 1;
 
 // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenACC Declare Construct}}
 #pragma acc declare create(A)
 
-  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenACC Clause: private}}
-#pragma acc parallel loop private(A)
+  // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenACC Clause: firstprivate}}
+#pragma acc parallel loop firstprivate(A)
   for(int i = 0; i <5; ++i);
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenACC Clause: reduction}}
 #pragma acc parallel loop reduction(+:A)

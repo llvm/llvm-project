@@ -15,12 +15,16 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/Object/Binary.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
+#include "llvm/ProfileData/DataAccessProf.h"
 #include "llvm/ProfileData/IndexedMemProfData.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/Support/Compression.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -154,10 +158,10 @@ void InstrProfWriter::setValueProfDataEndianness(llvm::endianness Endianness) {
 void InstrProfWriter::setOutputSparse(bool Sparse) { this->Sparse = Sparse; }
 
 void InstrProfWriter::addRecord(NamedInstrProfRecord &&I, uint64_t Weight,
-                                function_ref<void(Error)> Warn) {
+                                function_ref<void(Error)> Warn, StringRef ObjectFilename) {
   auto Name = I.Name;
   auto Hash = I.Hash;
-  addRecord(Name, Hash, std::move(I), Weight, Warn);
+  addRecord(Name, Hash, std::move(I), Weight, Warn, ObjectFilename);
 }
 
 void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
@@ -193,9 +197,14 @@ void InstrProfWriter::overlapRecord(NamedInstrProfRecord &&Other,
 
 void InstrProfWriter::addRecord(StringRef Name, uint64_t Hash,
                                 InstrProfRecord &&I, uint64_t Weight,
-                                function_ref<void(Error)> Warn) {
+                                function_ref<void(Error)> Warn, StringRef ObjectFilename) {
   auto &ProfileDataMap = FunctionData[Name];
-
+  // add objectFilename to hash value if --object-aware-hashing is used
+  if(!ObjectFilename.empty()){
+    std::string HashStr = std::to_string(Hash) + ":" + ObjectFilename.str();
+    llvm::StringRef HashRef(HashStr);
+    Hash = IndexedInstrProf::ComputeHash(HashRef);
+  }
   auto [Where, NewFunc] = ProfileDataMap.try_emplace(Hash);
   InstrProfRecord &Dest = Where->second;
 
@@ -239,6 +248,7 @@ void InstrProfWriter::addMemProfRecord(
       Alloc.Info.setTotalLifetime(NewTL);
     }
   }
+  MemProfSumBuilder.addRecord(NewRecord);
   auto [Iter, Inserted] = MemProfData.Records.insert({Id, NewRecord});
   // If we inserted a new record then we are done.
   if (Inserted) {
@@ -307,17 +317,27 @@ bool InstrProfWriter::addMemProfData(memprof::IndexedMemProfData Incoming,
         return false;
 
   // Add one record at a time if randomization is requested.
-  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness)
+  if (MemProfData.Records.empty() && !MemprofGenerateRandomHotness) {
+    // Need to manually add each record to the builder, which is otherwise done
+    // in addMemProfRecord.
+    for (const auto &[GUID, Record] : Incoming.Records)
+      MemProfSumBuilder.addRecord(Record);
     MemProfData.Records = std::move(Incoming.Records);
-  else
+  } else {
     for (const auto &[GUID, Record] : Incoming.Records)
       addMemProfRecord(GUID, Record);
+  }
 
   return true;
 }
 
 void InstrProfWriter::addBinaryIds(ArrayRef<llvm::object::BuildID> BIs) {
   llvm::append_range(BinaryIds, BIs);
+}
+
+void InstrProfWriter::addDataAccessProfData(
+    std::unique_ptr<memprof::DataAccessProfData> DataAccessProfDataIn) {
+  DataAccessProfileData = std::move(DataAccessProfDataIn);
 }
 
 void InstrProfWriter::addTemporalProfileTrace(TemporalProfTraceTy Trace) {
@@ -605,8 +625,10 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   uint64_t MemProfSectionStart = 0;
   if (static_cast<bool>(ProfileKind & InstrProfKind::MemProf)) {
     MemProfSectionStart = OS.tell();
-    if (auto E = writeMemProf(OS, MemProfData, MemProfVersionRequested,
-                              MemProfFullSchema))
+
+    if (auto E = writeMemProf(
+            OS, MemProfData, MemProfVersionRequested, MemProfFullSchema,
+            std::move(DataAccessProfileData), MemProfSumBuilder.getSummary()))
       return E;
   }
 

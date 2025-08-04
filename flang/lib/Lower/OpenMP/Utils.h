@@ -9,7 +9,7 @@
 #ifndef FORTRAN_LOWER_OPENMPUTILS_H
 #define FORTRAN_LOWER_OPENMPUTILS_H
 
-#include "Clauses.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
@@ -17,8 +17,6 @@
 #include <cstdint>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
-extern llvm::cl::opt<bool> enableDelayedPrivatization;
-extern llvm::cl::opt<bool> enableDelayedPrivatizationStaging;
 
 namespace fir {
 class FirOpBuilder;
@@ -168,6 +166,7 @@ bool collectLoopRelatedInfo(
     lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
+
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

@@ -1,0 +1,81 @@
+diff --git a/llvm/include/llvm/ProfileData/InstrProf.h b/llvm/include/llvm/ProfileData/InstrProf.h
+index a786aadce6de..eeea25e25fe8 100644
+--- a/llvm/include/llvm/ProfileData/InstrProf.h
++++ b/llvm/include/llvm/ProfileData/InstrProf.h
+@@ -40,6 +40,7 @@
+ #include <cassert>
+ #include <cstddef>
+ #include <cstdint>
++#include <cstdio>
+ #include <cstring>
+ #include <list>
+ #include <memory>
+@@ -643,7 +644,10 @@ public:
+ 
+     // Insert into NameTab so that MD5NameMap (a vector that will be sorted)
+     // won't have duplicated entries in the first place.
+-    auto Ins = NameTab.insert(SymbolName);
++    uint64_t HashValue = IndexedInstrProf::ComputeHash(SymbolName);
++    printf("Hash Value for %.*s: %" PRIu64 "\n", static_cast<int>(SymbolName.size()), SymbolName.data(), HashValue);
++    auto Ins = NameTab.insert(FuncName);
++    printf("mapped value for %" PRIu64 " hash: %.*s\n", HashValue, static_cast<int>(Ins.first->getKey().size()), Ins.first->getKey().data());
+     if (Ins.second) {
+       MD5NameMap.push_back(std::make_pair(
+           IndexedInstrProf::ComputeHash(SymbolName), Ins.first->getKey()));
+diff --git a/llvm/include/llvm/ProfileData/InstrProfReader.h b/llvm/include/llvm/ProfileData/InstrProfReader.h
+index b92253a81502..7bd1bed6b74f 100644
+--- a/llvm/include/llvm/ProfileData/InstrProfReader.h
++++ b/llvm/include/llvm/ProfileData/InstrProfReader.h
+@@ -356,7 +356,8 @@ private:
+   uint64_t CountersDelta;
+   uint64_t BitmapDelta;
+   uint64_t NamesDelta;
+-  const RawInstrProf::ProfileData<IntPtrT> *Data;
++  const RawInstrProf::ProfileData<IntPtrT> *cccccbveifehbfkeciugkvlcugkcgbdhkkkvdtrfbgkn
++  Data;
+   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
+   const RawInstrProf::VTableProfileData<IntPtrT> *VTableBegin = nullptr;
+   const RawInstrProf::VTableProfileData<IntPtrT> *VTableEnd = nullptr;
+diff --git a/llvm/lib/ProfileData/InstrProf.cpp b/llvm/lib/ProfileData/InstrProf.cpp
+index 16d4877f3ccc..ea9e0ea2e129 100644
+--- a/llvm/lib/ProfileData/InstrProf.cpp
++++ b/llvm/lib/ProfileData/InstrProf.cpp
+@@ -555,7 +555,6 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
+   auto NameToGUIDMap = [&](StringRef Name) -> Error {
+     if (Error E = addSymbolName(Name))
+       return E;
+-
+     bool Inserted = true;
+     std::tie(std::ignore, Inserted) = MD5VTableMap.try_emplace(
+         GlobalValue::getGUIDAssumingExternalLinkage(Name), &VTable);
+@@ -607,10 +606,18 @@ Error readAndDecodeStrings(StringRef NameStrings,
+     SmallVector<StringRef, 0> Names;
+     StringRef ArchRef(Architecture); 
+     NameStrings.split(Names, getInstrProfNameSeparator());
+-    for (StringRef &Name : Names)
+-      if (Error E = NameCallback(Name.str()+ ":" + ArchRef.str()))
+-        return E;
+-
++    printf("=====================READER DATA====================");
++    for (StringRef &Name : Names){
++      std::string ConcHashString = Name.str() + ":" + ArchRef.str();
++      printf("The string %s will get hashed and mapped to %s\n", ConcHashString.c_str(), Name.str().c_str());
++      if(ArchRef.empty()){
++        if (Error E = NameCallback(Name))
++          return E;
++      }else{
++        if (Error E = NameCallback(Name.str() + ":" + ArchRef.str()))
++          return E;
++      }
++    }
+     while (P < EndP && *P == 0)
+       P++;
+   }
+@@ -653,7 +660,6 @@ Error readAndDecodeStrings(StringRef NameStrings,
+     for (StringRef &Name : Names)
+       if (Error E = NameCallback(Name))
+         return E;
+-
+     while (P < EndP && *P == 0)
+       P++;
+   }

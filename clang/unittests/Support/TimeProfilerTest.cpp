@@ -46,8 +46,7 @@ std::string teardownProfiler() {
 bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
                        llvm::StringMap<std::string> Headers = {}) {
 
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS(
-      new llvm::vfs::InMemoryFileSystem());
+  auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FS->addFile(File, 0, MemoryBuffer::getMemBuffer(Code));
   for (const auto &Header : Headers) {
     FS->addFile(Header.getKey(), 0,
@@ -58,9 +57,9 @@ bool compileFromString(StringRef Code, StringRef Standard, StringRef File,
 
   auto Invocation = std::make_shared<CompilerInvocation>();
   std::vector<const char *> Args = {Standard.data(), File.data()};
-  auto InvocationDiagOpts = llvm::makeIntrusiveRefCnt<DiagnosticOptions>();
+  DiagnosticOptions InvocationDiagOpts;
   auto InvocationDiags =
-      CompilerInstance::createDiagnostics(*FS, InvocationDiagOpts.get());
+      CompilerInstance::createDiagnostics(*FS, InvocationDiagOpts);
   CompilerInvocation::CreateFromArgs(*Invocation, Args, *InvocationDiags);
 
   CompilerInstance Compiler(std::move(Invocation));

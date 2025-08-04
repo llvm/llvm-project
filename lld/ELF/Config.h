@@ -136,8 +136,31 @@ enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 // For -z gcs=
 enum class GcsPolicy { Implicit, Never, Always };
 
+// For -z zicfilp=
+enum class ZicfilpPolicy { Implicit, Never, Unlabeled, FuncSig };
+
+// For -z zicfiss=
+enum class ZicfissPolicy { Implicit, Never, Always };
+
 // For some options that resemble -z bti-report={none,warning,error}
 enum class ReportPolicy { None, Warning, Error };
+
+// Describes the signing schema for a file using the PAuth ABI extension.
+// Two files are considered compatible when both `platform` and `version` match.
+// The pair (0, 0) is reserved to indicate incompatibility with the PAuth ABI.
+struct AArch64PauthAbiCoreInfo {
+  uint64_t platform;
+  uint64_t version;
+  // Returns true if the core info is not the reserved (0, 0) value.
+  bool isValid() const { return platform || version; }
+  static constexpr size_t size() { return sizeof(platform) + sizeof(version); }
+  bool operator==(const AArch64PauthAbiCoreInfo &other) const {
+    return platform == other.platform && version == other.version;
+  }
+  bool operator!=(const AArch64PauthAbiCoreInfo &other) const {
+    return !(*this == other);
+  }
+};
 
 struct SymbolVersion {
   llvm::StringRef name;
@@ -235,6 +258,9 @@ struct Config {
   ReportPolicy zGcsReport = ReportPolicy::None;
   ReportPolicy zGcsReportDynamic = ReportPolicy::None;
   ReportPolicy zExecuteOnlyReport = ReportPolicy::None;
+  ReportPolicy zZicfilpUnlabeledReport = ReportPolicy::None;
+  ReportPolicy zZicfilpFuncSigReport = ReportPolicy::None;
+  ReportPolicy zZicfissReport = ReportPolicy::None;
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
@@ -249,6 +275,10 @@ struct Config {
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
   llvm::SmallVector<llvm::StringRef, 0> symbolOrderingFile;
   llvm::SmallVector<llvm::StringRef, 0> thinLTOModulesToCompile;
+  llvm::StringRef dtltoDistributor;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoDistributorArgs;
+  llvm::StringRef dtltoCompiler;
+  llvm::SmallVector<llvm::StringRef, 0> dtltoCompilerArgs;
   llvm::SmallVector<llvm::StringRef, 0> undefined;
   llvm::SmallVector<SymbolVersion, 0> dynamicList;
   llvm::SmallVector<uint8_t, 0> buildIdVector;
@@ -276,6 +306,7 @@ struct Config {
   bool bpFunctionOrderForCompression = false;
   bool bpDataOrderForCompression = false;
   bool bpVerboseSectionOrderer = false;
+  bool branchToBranch = false;
   bool checkSections;
   bool checkDynamicRelocs;
   std::optional<llvm::DebugCompressionType> compressDebugSections;
@@ -365,6 +396,7 @@ struct Config {
   bool writeAddends;
   bool zCombreloc;
   bool zCopyreloc;
+  bool zDynamicUndefined;
   bool zForceBti;
   bool zForceIbt;
   bool zGlobal;
@@ -372,6 +404,7 @@ struct Config {
   bool zIfuncNoplt;
   bool zInitfirst;
   bool zInterpose;
+  bool zKeepDataSectionPrefix;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
   bool zNoBtCfi;
@@ -390,6 +423,8 @@ struct Config {
   bool zText;
   bool zRetpolineplt;
   bool zWxneeded;
+  ZicfilpPolicy zZicfilp;
+  ZicfissPolicy zZicfiss;
   DiscardPolicy discard;
   GnuStackKind zGnustack;
   ICFLevel icf;
@@ -534,6 +569,7 @@ struct UndefinedDiag {
 // a partition.
 struct InStruct {
   std::unique_ptr<InputSection> attributes;
+  std::unique_ptr<SyntheticSection> hexagonAttributes;
   std::unique_ptr<SyntheticSection> riscvAttributes;
   std::unique_ptr<BssSection> bss;
   std::unique_ptr<BssSection> bssRelRo;
@@ -666,6 +702,8 @@ struct Ctx : CommonLinkerContext {
   std::unique_ptr<llvm::TarWriter> tar;
   // InputFile for linker created symbols with no source location.
   InputFile *internalFile = nullptr;
+  // Dummy Undefined for relocations without a symbol.
+  Undefined *dummySym = nullptr;
   // True if symbols can be exported (isExported) or preemptible.
   bool hasDynsym = false;
   // True if SHT_LLVM_SYMPART is used.
@@ -695,7 +733,7 @@ struct Ctx : CommonLinkerContext {
 
   llvm::raw_fd_ostream openAuxiliaryFile(llvm::StringRef, std::error_code &);
 
-  ArrayRef<uint8_t> aarch64PauthAbiCoreInfo;
+  std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
 };
 
 // The first two elements of versionDefinitions represent VER_NDX_LOCAL and

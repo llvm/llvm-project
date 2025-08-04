@@ -14,6 +14,7 @@
 #define LLVM_TOOLS_LLVM_JITLINK_LLVM_JITLINK_H
 
 #include "llvm/ADT/StringSet.h"
+#include "llvm/ExecutionEngine/Orc/COFF.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/LazyObjectLinkingLayer.h"
