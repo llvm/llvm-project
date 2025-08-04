@@ -425,6 +425,8 @@ _mm_max_ps(__m128 __a, __m128 __b)
   return __builtin_ia32_maxps((__v4sf)__a, (__v4sf)__b);
 }
 
+#pragma float_control(push)
+#pragma float_control(precise, on)
 /// Performs a bitwise AND of two 128-bit vectors of [4 x float].
 ///
 /// \headerfile <x86intrin.h>
@@ -497,6 +499,7 @@ static __inline__ __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm_xor_ps(__m128 __a, __m128 __b) {
   return (__m128)((__v4su)__a ^ (__v4su)__b);
 }
+#pragma float_control(pop)
 
 /// Compares two 32-bit float values in the low-order bits of both
 ///    operands for equality.
