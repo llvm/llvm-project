@@ -378,6 +378,8 @@ Status MinidumpFileBuilder::AddModuleList() {
     ld.DataSize = static_cast<llvm::support::ulittle32_t>(0u);
     ld.RVA = static_cast<llvm::support::ulittle32_t>(0u);
 
+    // Setting up LocationDescriptor for uuid string. The global offset into
+    // minidump file is calculated.
     LocationDescriptor ld_cv;
     ld_cv.DataSize = static_cast<llvm::support::ulittle32_t>(
         sizeof(llvm::support::ulittle32_t) + uuid.size());
@@ -1064,7 +1066,7 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
     const offset_t offset_for_data = GetCurrentDataEndOffset();
     const addr_t addr = core_range.range.start();
     const addr_t size = core_range.range.size();
-    const addr_t end = core_range.range.end(); 
+    const addr_t end = core_range.range.end();
 
     LLDB_LOGF(log,
               "AddMemoryList %zu/%zu reading memory for region "
