@@ -49,6 +49,8 @@ public:
   static lldb_private::SymbolFile *
   CreateInstance(lldb::ObjectFileSP objfile_sp);
 
+  static bool UseNativePDB();
+
   // Constructors and Destructors
   SymbolFilePDB(lldb::ObjectFileSP objfile_sp);
 

@@ -282,6 +282,10 @@ bool EvalEmitter::emitGetLocal(uint32_t I, const SourceInfo &Info) {
   using T = typename PrimConv<OpType>::T;
 
   Block *B = getLocal(I);
+
+  if (!CheckLocalLoad(S, OpPC, Pointer(B)))
+    return false;
+
   S.Stk.push<T>(*reinterpret_cast<T *>(B->data()));
   return true;
 }
