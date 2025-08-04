@@ -33,6 +33,7 @@ class AVRTTIImpl final : public BasicTTIImplBase<AVRTTIImpl> {
 
   const AVRSubtarget *ST;
   const AVRTargetLowering *TLI;
+  const Function *currentF;
 
   const AVRSubtarget *getST() const { return ST; }
   const AVRTargetLowering *getTLI() const { return TLI; }
@@ -40,38 +41,26 @@ class AVRTTIImpl final : public BasicTTIImplBase<AVRTTIImpl> {
 public:
   explicit AVRTTIImpl(const AVRTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
-        TLI(ST->getTargetLowering()) {}
-
-#if 0 // TODO Examine if these options result in better code generation
-  /// Return the cost of materializing an immediate for a value operand of
-  /// a store instruction.
-  InstructionCost getStoreImmCost(Type *VecTy, TTI::OperandValueInfo OpInfo,
-                                  TTI::TargetCostKind CostKind) const;
-
-  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
-                                TTI::TargetCostKind CostKind) const override;
-  InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                    const APInt &Imm, Type *Ty,
-                                    TTI::TargetCostKind CostKind,
-                                    Instruction *Inst = nullptr) const override;
-  InstructionCost
-  getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                      Type *Ty, TTI::TargetCostKind CostKind) const override;
-
-  InstructionCost
-  getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
-                        TTI::TargetCostKind CostKind) const override;
-
-  InstructionCost getCmpSelInstrCost(
-      unsigned Opcode, Type *ValTy, Type *CondTy, CmpInst::Predicate VecPred,
-      TTI::TargetCostKind CostKind,
-      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
-      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      const Instruction *I = nullptr) const override;
-#endif
+        TLI(ST->getTargetLowering()), currentF(&F) {}
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
-                     const TargetTransformInfo::LSRCost &C2) const override {return C1.Insns < C2.Insns;}
+                     const TargetTransformInfo::LSRCost &C2) const override {
+    // Detect %incdec.ptr because loop-reduce loses them
+    for (const BasicBlock &BB : *currentF) {
+      if (BB.getName().find("while.body") != std::string::npos) {
+        for (const Instruction &I : BB) {
+          std::string str;
+          llvm::raw_string_ostream(str) << I;
+          if (str.find("%incdec.ptr") != std::string::npos)
+            return false;
+        }
+      }
+    }
+    if (C2.Insns == ~0u)
+      return true;
+    return 2 * C1.Insns + C1.AddRecCost + C1.SetupCost + C1.NumRegs <
+           2 * C2.Insns + C2.AddRecCost + C2.SetupCost + C2.NumRegs;
+  }
 };
 
 } // end namespace llvm
