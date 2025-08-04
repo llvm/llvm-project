@@ -387,6 +387,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
       Value *V = Worklist.pop_back_val();
       if (isa<GetElementPtrInst>(V)) {
         DeadInsts.push_back(cast<Instruction>(V));
+        auto R = V->users();
+        Worklist.reserve(Worklist.size() + std::distance(R.begin(), R.end()));
         append_range(Worklist, V->users());
         continue;
       }
