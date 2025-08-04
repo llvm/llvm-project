@@ -1244,12 +1244,12 @@ struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
   }
 
   static inline bool classof(const VPValue *V) {
-    auto *R = dyn_cast<VPInstruction>(V);
-    return R && R->getOpcode() == Instruction::PHI;
+    auto *VPI = dyn_cast<VPInstruction>(V);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
   }
 
-  static inline bool classof(const VPSingleDefRecipe *R) {
-    auto *VPI = dyn_cast<VPInstruction>(R);
+  static inline bool classof(const VPSingleDefRecipe *SDR) {
+    auto *VPI = dyn_cast<VPInstruction>(SDR);
     return VPI && VPI->getOpcode() == Instruction::PHI;
   }
 

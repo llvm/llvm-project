@@ -202,7 +202,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
     VPSingleDefRecipe *NewR;
     if (auto *Phi = dyn_cast<PHINode>(Inst)) {
-      // Phi node's operands may have not been visited at this point. We create
+      // Phi node's operands may not have been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
       NewR = VPIRBuilder.createScalarPhi({}, Phi->getDebugLoc(), "vec.phi");
