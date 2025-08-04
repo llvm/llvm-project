@@ -20,7 +20,7 @@ class MCSymbolELF : public MCSymbol {
 
 public:
   MCSymbolELF(const MCSymbolTableEntry *Name, bool isTemporary)
-      : MCSymbol(SymbolKindELF, Name, isTemporary) {}
+      : MCSymbol(Name, isTemporary) {}
   void setSize(const MCExpr *SS) { SymbolSize = SS; }
 
   const MCExpr *getSize() const { return SymbolSize; }

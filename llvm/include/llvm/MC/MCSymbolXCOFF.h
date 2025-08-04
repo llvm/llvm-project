@@ -23,7 +23,7 @@ class MCSymbolXCOFF : public MCSymbol {
 
 public:
   MCSymbolXCOFF(const MCSymbolTableEntry *Name, bool isTemporary)
-      : MCSymbol(SymbolKindXCOFF, Name, isTemporary) {}
+      : MCSymbol(Name, isTemporary) {}
 
   enum CodeModel : uint8_t { CM_Small, CM_Large };
 
