@@ -35,7 +35,7 @@ class MCSymbolWasm : public MCSymbol {
 
 public:
   MCSymbolWasm(const MCSymbolTableEntry *Name, bool isTemporary)
-      : MCSymbol(SymbolKindWasm, Name, isTemporary) {}
+      : MCSymbol(Name, isTemporary) {}
 
   const MCExpr *getSize() const { return SymbolSize; }
   void setSize(const MCExpr *SS) { SymbolSize = SS; }
