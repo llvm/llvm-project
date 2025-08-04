@@ -118,7 +118,9 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
             if (GV)
               break;
 
-            // Try to find available loaded value
+            // If loading from an unmodified stack copy of the global, reuse the
+            // global's value. Note: we are just repeating what we are doing for
+            // the load case for the alloca store pattern.
             BasicBlock::iterator BBI(Load);
             Value *Loaded = FindAvailableLoadedValue(Load, Load->getParent(),
                                                      BBI, 0, nullptr, nullptr);
