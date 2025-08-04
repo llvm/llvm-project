@@ -2111,6 +2111,12 @@ void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
       IdxLoc = OpNo;
     unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (IdxLoc * 4)) & 0xf;
     modifyVGPRNameUsingIndex(OpndStr, IdxReg);
+  } else if (isVNBR(Opc)) {
+    unsigned IdxReg = 0;
+    if (MIA)
+      IdxReg = getIdxFromMIA(OpNo, MII.get(Opc),
+                             *static_cast<const AMDGPUMCInstrAnalysis *>(MIA));
+    modifyVGPRNameUsingIndex(OpndStr, IdxReg);
   }
 
   O << OpndStr;
