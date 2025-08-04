@@ -25,25 +25,39 @@ namespace ento {
 namespace retaincountchecker {
 
 class RefCountBug : public BugType {
+  StringRef ReportMessage;
+
 public:
-  enum RefCountBugKind {
-    UseAfterRelease,
-    ReleaseNotOwned,
-    DeallocNotOwned,
-    FreeNotOwned,
-    OverAutorelease,
-    ReturnNotOwnedForOwned,
-    LeakWithinFunction,
-    LeakAtReturn,
-  };
-  RefCountBug(CheckerNameRef Checker, RefCountBugKind BT);
-  StringRef getDescription() const;
+  RefCountBug(const CheckerFrontend *CF, StringRef Desc, StringRef ReportMsg,
+              bool SuppressOnSink = false)
+      : BugType(CF, Desc, categories::MemoryRefCount, SuppressOnSink),
+        ReportMessage(ReportMsg) {}
+  StringRef getReportMessage() const { return ReportMessage; }
+};
 
-  RefCountBugKind getBugType() const { return BT; }
-
-private:
-  RefCountBugKind BT;
-  static StringRef bugTypeToName(RefCountBugKind BT);
+class RefCountFrontend : public CheckerFrontend {
+public:
+  const RefCountBug UseAfterRelease{
+      this, "Use-after-release",
+      "Reference-counted object is used after it is released"};
+  const RefCountBug ReleaseNotOwned{
+      this, "Bad release",
+      "Incorrect decrement of the reference count of an object that is not "
+      "owned at this point by the caller"};
+  const RefCountBug DeallocNotOwned{
+      this, "-dealloc sent to non-exclusively owned object",
+      "-dealloc sent to object that may be referenced elsewhere"};
+  const RefCountBug FreeNotOwned{
+      this, "freeing non-exclusively owned object",
+      "'free' called on an object that may be referenced elsewhere"};
+  const RefCountBug OverAutorelease{this, "Object autoreleased too many times",
+                                    "Object autoreleased too many times"};
+  const RefCountBug ReturnNotOwnedForOwned{
+      this, "Method should return an owned object",
+      "Object with a +0 retain count returned to caller where a +1 (owning) "
+      "retain count is expected"};
+  const RefCountBug LeakWithinFunction{this, "Leak", "", true};
+  const RefCountBug LeakAtReturn{this, "Leak of returned object", "", true};
 };
 
 class RefCountReport : public PathSensitiveBugReport {
@@ -53,8 +67,8 @@ protected:
 
 public:
   RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
-              ExplodedNode *n, SymbolRef sym,
-              bool isLeak=false);
+                 ExplodedNode *n, SymbolRef sym, bool isLeak = false,
+                 bool IsReleaseUnowned = false);
 
   RefCountReport(const RefCountBug &D, const LangOptions &LOpts,
               ExplodedNode *n, SymbolRef sym,
