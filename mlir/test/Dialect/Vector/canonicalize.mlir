@@ -2571,8 +2571,25 @@ func.func @fully_insert_vector_to_vector(%arg0 : vector<2x2xi64>, %arg1 : vector
 
 // -----
 
+// Test the case where multiple ops insert to overlapped indices.
+// CHECK-LABEL: func.func @fully_insert_to_vector_overlap(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<2x2xi64>, %[[ARG1:.+]]: vector<2xi64>, %[[ARG2:.+]]: i64)
+//       CHECK: %[[ELE1:.+]]:2 = vector.to_elements %[[ARG1]] : vector<2xi64>
+//       CHECK: %[[ELE2:.+]]:2 = vector.to_elements %[[ARG1]] : vector<2xi64>
+//       CHECK: %[[RES:.+]] = vector.from_elements %[[ELE1]]#0, %[[ELE1]]#1, %[[ELE2]]#0, %[[ARG2]] : vector<2x2xi64>
+//  CHECK-NEXT: return %[[RES]]
+func.func @fully_insert_to_vector_overlap(%arg0 : vector<2x2xi64>, %arg1 : vector<2xi64>, %arg2 : i64) -> vector<2x2xi64> {
+  %v0 = vector.insert %arg2, %arg0[0, 0] : i64 into vector<2x2xi64>
+  %v1 = vector.insert %arg1, %v0[0] : vector<2xi64> into vector<2x2xi64>
+  %v2 = vector.insert %arg1, %v1[1] : vector<2xi64> into vector<2x2xi64>
+  %v3 = vector.insert %arg2, %v2[1, 1] : i64 into vector<2x2xi64>
+  return %v3 : vector<2x2xi64>
+}
+
+// -----
+
 // Negative test for InsertChainFullyInitialized pattern when only some elements are overwritten.
-// CHECK-LABEL: func.func @partially_insert_vector_to_vector(
+// CHECK-LABEL: func.func @negative_partially_insert_vector_to_vector(
 //  CHECK-SAME: %[[ARG0:.+]]: vector<2x2xi64>, %[[ARG1:.+]]: vector<2xi64>, %[[ARG2:.+]]: i64)
 //       CHECK: %[[V0:.+]] = vector.insert %[[ARG1]], %[[ARG0]] [0] : vector<2xi64> into vector<2x2xi64>
 //       CHECK: %[[V1:.+]] = vector.insert %[[ARG2]], %[[V0]] [0, 0] : i64 into vector<2x2xi64>
@@ -2584,9 +2601,30 @@ func.func @negative_partially_insert_vector_to_vector(%arg0 : vector<2x2xi64>, %
 }
 
 // -----
+
+// Negative test when intermediate results have more than one user.
+// CHECK-LABEL: func.func @negative_intermediate_insert_multiple_users(
+//  CHECK-SAME: %[[ARG0:.+]]: vector<3xi64>, %[[ARG1:.+]]: i64, %[[ARG2:.+]]: i64, %[[ARG3:.+]]: i64, %[[ARG4:.+]]: i64)
+//       CHECK: %[[V0:.+]] = vector.insert %[[ARG1]], %[[ARG0]] [0] : i64 into vector<3xi64>
+//       CHECK: %[[V1:.+]] = vector.insert %[[ARG2]], %[[V0]] [1] : i64 into vector<3xi64>
+//       CHECK: %[[V2:.+]] = vector.insert %[[ARG3]], %[[V1]] [2] : i64 into vector<3xi64>
+//       CHECK: %[[V3:.+]] = vector.insert %[[ARG4]], %[[V1]] [2] : i64 into vector<3xi64>
+func.func @negative_intermediate_insert_multiple_users(%arg0 : vector<3xi64>, %arg1 : i64, %arg2 : i64, %arg3 : i64, %arg4 : i64) {
+  %v1 = vector.insert %arg1, %arg0[0] : i64 into vector<3xi64>
+  %v2 = vector.insert %arg2, %v1[1] : i64 into vector<3xi64>
+  %v3_0 = vector.insert %arg3, %v2[2] : i64 into vector<3xi64>
+  %v3_1 = vector.insert %arg4, %v2[2] : i64 into vector<3xi64>
+  vector.print %v3_0 : vector<3xi64>
+  vector.print %v3_1 : vector<3xi64>
+  return
+}
+
 // +---------------------------------------------------------------------------
 // End of  Tests For InsertChainFullyInitialized.
 // +---------------------------------------------------------------------------
+
+// -----
+
 // CHECK-LABEL: func.func @insert_2d_splat_constant
 //   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<0> : vector<2x3xi32>
 //   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[99, 0, 0\], \[0, 0, 0\]\]}}> : vector<2x3xi32>

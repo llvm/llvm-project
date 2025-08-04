@@ -3288,8 +3288,9 @@ public:
     VectorType destTy = op.getDestVectorType();
     if (destTy.isScalable())
       return failure();
-    // Check if the result is used as the dest operand of another vector.insert
-    // Only care about the last op in a chain of insertions.
+    // This pattern has linear time complexity with respect to the length of the
+    // insert chain. So we only care about the last insert op which has the
+    // highest probability of success.
     for (Operation *user : op.getResult().getUsers())
       if (auto insertOp = dyn_cast<InsertOp>(user))
         if (insertOp.getDest() == op.getResult())
@@ -3318,8 +3319,7 @@ public:
     SmallVector<Value> pendingInsertValues;
 
     for (auto insertOp : chainInsertOps) {
-      // The insert op folder will fold an insert at poison index into a
-      // ub.poison, which truncates the insert chain's backward traversal.
+      // This pattern can do nothing with poison index.
       if (is_contained(insertOp.getStaticPosition(), InsertOp::kPoisonIndex))
         return failure();
 
@@ -3339,9 +3339,9 @@ public:
 
       for (auto index : llvm::seq<int64_t>(insertBeginPosition,
                                            insertBeginPosition + insertSize)) {
-        if (initialized[index])
+        if (initializedDestIdxs[index])
           continue;
-        initialized[index] = true;
+        initializedDestIdxs[index] = true;
         ++initializedCount;
       }
 
@@ -3363,23 +3363,22 @@ public:
     for (auto [insertBeginPosition, insertSize, valueToStore] :
          llvm::reverse(llvm::zip(pendingInsertPos, pendingInsertSize,
                                  pendingInsertValues))) {
-      auto srcVectorType =
-              llvm::dyn_cast<VectorType>(valueToStore.getType()));
-              
-       if (!srcVectorType) {
-         elements[insertBeginPosition] = valueToStore;
-         continue;
-       }
-       
-        SmallVector<Type> elementToInsertTypes(insertSize,
-                                               srcVectorType.getElementType());
-        auto elementsToInsert = rewriter.create<vector::ToElementsOp>(
-            op.getLoc(), elementToInsertTypes, valueToStore);
-        // Get all elements from the vector in row-major order.
-        for (int64_t linearIdx = 0; linearIdx < insertSize; linearIdx++) {
-          elements[insertBeginPosition + linearIdx] =
-              elementsToInsert.getResult(linearIdx);
-        }
+      auto srcVectorType = llvm::dyn_cast<VectorType>(valueToStore.getType());
+
+      if (!srcVectorType) {
+        elements[insertBeginPosition] = valueToStore;
+        continue;
+      }
+
+      SmallVector<Type> elementToInsertTypes(insertSize,
+                                             srcVectorType.getElementType());
+      // Get all elements from the vector in row-major order.
+      auto elementsToInsert = rewriter.create<vector::ToElementsOp>(
+          op.getLoc(), elementToInsertTypes, valueToStore);
+      for (int64_t linearIdx = 0; linearIdx < insertSize; linearIdx++) {
+        elements[insertBeginPosition + linearIdx] =
+            elementsToInsert.getResult(linearIdx);
+      }
     }
 
     rewriter.replaceOpWithNewOp<vector::FromElementsOp>(op, destTy, elements);
