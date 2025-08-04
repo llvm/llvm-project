@@ -118,6 +118,11 @@ New checks
   Detects default initialization (to 0) of variables with ``enum`` type where
   the enum has no enumerator with value of 0.
 
+- New :doc:`cppcoreguidelines-avoid-bounds-errors
+  <clang-tidy/checks/cppcoreguidelines/avoid-bounds-errors>` check.
+
+  Flags the unsafe `operator[]` and replaces it with `at()`.
+
 - New :doc:`llvm-mlir-op-builder
   <clang-tidy/checks/llvm/use-new-mlir-op-builder>` check.
 
