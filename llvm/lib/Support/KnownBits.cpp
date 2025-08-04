@@ -890,13 +890,6 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
 
   // Self multiplying
   if (NoUndefSelfMultiply) {
-    // bit[1] is guaranteed to be zero.
-    if (BitWidth > 1) {
-      assert(Res.One[1] == 0 &&
-             "Self-multiplication failed Quadratic Reciprocity!");
-      Res.Zero.setBit(1);
-    }
-
     // If X has TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.
     unsigned TwoTZP1 = 2 * TrailZero0 + 1;
     if (TwoTZP1 < BitWidth)
