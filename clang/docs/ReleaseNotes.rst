@@ -126,6 +126,11 @@ Improvements to Clang's diagnostics
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right 
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
 
+- Added the ``-Wvla-potential-size-confusion`` diagnostic, which is grouped
+  under ``-Wvla`` to diagnose when a variably-modified type in a function
+  parameter list is using a variable from an outer scope as opposed to a
+  variable declared later in the parameter list.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
