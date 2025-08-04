@@ -5356,81 +5356,6 @@ static bool isLowerSaturate(const SDValue LHS, const SDValue RHS,
           ((K == RHS && K == TrueVal) || (K == LHS && K == FalseVal)));
 }
 
-// Check if two chained conditionals could be converted into SSAT or USAT.
-//
-// SSAT can replace a set of two conditional selectors that bound a number to an
-// interval of type [k, ~k] when k + 1 is a power of 2. Here are some examples:
-//
-//     x < -k ? -k : (x > k ? k : x)
-//     x < -k ? -k : (x < k ? x : k)
-//     x > -k ? (x > k ? k : x) : -k
-//     x < k ? (x < -k ? -k : x) : k
-//     etc.
-//
-// LLVM canonicalizes these to either a min(max()) or a max(min())
-// pattern. This function tries to match one of these and will return a SSAT
-// node if successful.
-//
-// USAT works similarily to SSAT but bounds on the interval [0, k] where k + 1
-// is a power of 2.
-static SDValue LowerSaturatingConditional(SDValue Op, SelectionDAG &DAG) {
-  EVT VT = Op.getValueType();
-  SDValue V1 = Op.getOperand(0);
-  SDValue K1 = Op.getOperand(1);
-  SDValue TrueVal1 = Op.getOperand(2);
-  SDValue FalseVal1 = Op.getOperand(3);
-  ISD::CondCode CC1 = cast<CondCodeSDNode>(Op.getOperand(4))->get();
-
-  const SDValue Op2 = isa<ConstantSDNode>(TrueVal1) ? FalseVal1 : TrueVal1;
-  if (Op2.getOpcode() != ISD::SELECT_CC)
-    return SDValue();
-
-  SDValue V2 = Op2.getOperand(0);
-  SDValue K2 = Op2.getOperand(1);
-  SDValue TrueVal2 = Op2.getOperand(2);
-  SDValue FalseVal2 = Op2.getOperand(3);
-  ISD::CondCode CC2 = cast<CondCodeSDNode>(Op2.getOperand(4))->get();
-
-  SDValue V1Tmp = V1;
-  SDValue V2Tmp = V2;
-
-  // Check that the registers and the constants match a max(min()) or min(max())
-  // pattern
-  if (V1Tmp != TrueVal1 || V2Tmp != TrueVal2 || K1 != FalseVal1 ||
-      K2 != FalseVal2 ||
-      !((isGTorGE(CC1) && isLTorLE(CC2)) || (isLTorLE(CC1) && isGTorGE(CC2))))
-    return SDValue();
-
-  // Check that the constant in the lower-bound check is
-  // the opposite of the constant in the upper-bound check
-  // in 1's complement.
-  if (!isa<ConstantSDNode>(K1) || !isa<ConstantSDNode>(K2))
-    return SDValue();
-
-  int64_t Val1 = cast<ConstantSDNode>(K1)->getSExtValue();
-  int64_t Val2 = cast<ConstantSDNode>(K2)->getSExtValue();
-  int64_t PosVal = std::max(Val1, Val2);
-  int64_t NegVal = std::min(Val1, Val2);
-
-  if (!((Val1 > Val2 && isLTorLE(CC1)) || (Val1 < Val2 && isLTorLE(CC2))) ||
-      !isPowerOf2_64(PosVal + 1))
-    return SDValue();
-
-  // Handle the difference between USAT (unsigned) and SSAT (signed)
-  // saturation
-  // At this point, PosVal is guaranteed to be positive
-  uint64_t K = PosVal;
-  SDLoc dl(Op);
-  if (Val1 == ~Val2)
-    return DAG.getNode(ARMISD::SSAT, dl, VT, V2Tmp,
-                       DAG.getConstant(llvm::countr_one(K), dl, VT));
-  if (NegVal == 0)
-    return DAG.getNode(ARMISD::USAT, dl, VT, V2Tmp,
-                       DAG.getConstant(llvm::countr_one(K), dl, VT));
-
-  return SDValue();
-}
-
 // Check if a condition of the type x < k ? k : x can be converted into a
 // bit operation instead of conditional moves.
 // Currently this is allowed given:
@@ -5486,11 +5411,6 @@ bool ARMTargetLowering::isUnsupportedFloatingType(EVT VT) const {
 SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
-
-  // Try to convert two saturating conditional selects into a single SSAT
-  if ((!Subtarget->isThumb() && Subtarget->hasV6Ops()) || Subtarget->isThumb2())
-    if (SDValue SatValue = LowerSaturatingConditional(Op, DAG))
-      return SatValue;
 
   // Try to convert expressions of the form x < k ? k : x (and similar forms)
   // into more efficient bit operations, which is possible when k is 0 or -1
