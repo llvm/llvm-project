@@ -814,8 +814,10 @@ initializeDeviceComponentAllocator(Fortran::lower::AbstractConverter &converter,
         baseTy = boxTy.getEleTy();
       baseTy = fir::unwrapRefType(baseTy);
 
-      if (mlir::isa<fir::SequenceType>(baseTy))
-        TODO(loc, "array of derived-type with device component");
+      if (mlir::isa<fir::SequenceType>(baseTy) &&
+          (fir::isAllocatableType(fir::getBase(exv).getType()) ||
+           fir::isPointerType(fir::getBase(exv).getType())))
+        return; // Allocator index need to be set after allocation.
 
       auto recTy =
           mlir::dyn_cast<fir::RecordType>(fir::unwrapSequenceType(baseTy));
