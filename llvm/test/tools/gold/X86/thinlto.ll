@@ -2,13 +2,13 @@
 ; bitcode without summary sections gracefully.
 ; RUN: llvm-as %s -o %t.o
 ; RUN: llvm-as %p/Inputs/thinlto.ll -o %t2.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \
 ; RUN:    -shared %t.o %t2.o -o %t3
-; RUN: not test -e %t3
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: not test -s %t3
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    -shared %t.o %t2.o -o %t4
@@ -19,7 +19,7 @@
 ; RUN: opt -module-summary %p/Inputs/thinlto.ll -o %t2.o
 
 ; Ensure gold generates an index and not a binary if requested.
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \
@@ -28,12 +28,12 @@
 ; RUN: llvm-bcanalyzer -dump %t2.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND2
 ; RUN: llvm-dis %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=DIS1
 ; RUN: llvm-dis %t2.o.thinlto.bc -o - | FileCheck %s --check-prefix=DIS2
-; RUN: not test -e %t3
+; RUN: not test -s %t3
 
 ; Ensure gold generates an index as well as a binary with save-temps in ThinLTO mode.
 ; First force single-threaded mode
 ; RUN: rm -f %t4*
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    --plugin-opt=thinlto \
@@ -45,7 +45,7 @@
 ; RUN: ls %t4.lto.o* | count 2
 
 ; Check with --no-map-whole-files
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    --plugin-opt=thinlto \
@@ -56,7 +56,7 @@
 ; RUN: llvm-nm %t4 | FileCheck %s --check-prefix=NM
 
 ; Next force multi-threaded mode
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=save-temps \
 ; RUN:    --plugin-opt=thinlto \
@@ -67,7 +67,7 @@
 
 ; Test --plugin-opt=obj-path to ensure unique object files generated.
 ; RUN: rm -f %t5.o %t5.o1
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=jobs=2 \
@@ -80,7 +80,7 @@
 
 ; Test to ensure that thinlto-index-only with obj-path creates the file.
 ; RUN: rm -f %t5.o %t5.o1
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=jobs=2 \
