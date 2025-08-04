@@ -3312,7 +3312,7 @@ public:
 
     int64_t vectorSize = destTy.getNumElements();
     int64_t initializedCount = 0;
-    SmallVector<bool> initialized(vectorSize, false);
+    SmallVector<bool> initializedDestIdxs(vectorSize, false);
     SmallVector<int64_t> pendingInsertPos;
     SmallVector<int64_t> pendingInsertSize;
     SmallVector<Value> pendingInsertValues;
@@ -3363,8 +3363,14 @@ public:
     for (auto [insertBeginPosition, insertSize, valueToStore] :
          llvm::reverse(llvm::zip(pendingInsertPos, pendingInsertSize,
                                  pendingInsertValues))) {
-      if (auto srcVectorType =
-              llvm::dyn_cast<VectorType>(valueToStore.getType())) {
+      auto srcVectorType =
+              llvm::dyn_cast<VectorType>(valueToStore.getType()));
+              
+       if (!srcVectorType) {
+         elements[insertBeginPosition] = valueToStore;
+         continue;
+       }
+       
         SmallVector<Type> elementToInsertTypes(insertSize,
                                                srcVectorType.getElementType());
         auto elementsToInsert = rewriter.create<vector::ToElementsOp>(
@@ -3374,9 +3380,6 @@ public:
           elements[insertBeginPosition + linearIdx] =
               elementsToInsert.getResult(linearIdx);
         }
-      } else {
-        elements[insertBeginPosition] = valueToStore;
-      }
     }
 
     rewriter.replaceOpWithNewOp<vector::FromElementsOp>(op, destTy, elements);

@@ -2539,7 +2539,9 @@ func.func @insert_2d_constant() -> (vector<2x3xi32>, vector<2x3xi32>, vector<2x3
 
 // -----
 
-// Test InsertChainFullyInitialized pattern with scalar insertions.
+// +---------------------------------------------------------------------------
+// Tests for InsertChainFullyInitialized .
+// +---------------------------------------------------------------------------
 // This pattern should fire when all vector elements are overwritten by vector.insert
 // at static positions, replacing the insert chain with vector.from_elements.
 // CHECK-LABEL: func.func @fully_insert_scalar_to_vector(
@@ -2575,14 +2577,16 @@ func.func @fully_insert_vector_to_vector(%arg0 : vector<2x2xi64>, %arg1 : vector
 //       CHECK: %[[V0:.+]] = vector.insert %[[ARG1]], %[[ARG0]] [0] : vector<2xi64> into vector<2x2xi64>
 //       CHECK: %[[V1:.+]] = vector.insert %[[ARG2]], %[[V0]] [0, 0] : i64 into vector<2x2xi64>
 //       CHECK: return %[[V1]]
-func.func @partially_insert_vector_to_vector(%arg0 : vector<2x2xi64>, %arg1 : vector<2xi64>, %arg2 : i64) -> vector<2x2xi64> {
+func.func @negative_partially_insert_vector_to_vector(%arg0 : vector<2x2xi64>, %arg1 : vector<2xi64>, %arg2 : i64) -> vector<2x2xi64> {
   %v1 = vector.insert %arg1, %arg0[0] : vector<2xi64> into vector<2x2xi64>
   %v2 = vector.insert %arg2, %v1[0, 0] : i64 into vector<2x2xi64>
   return %v2 : vector<2x2xi64>
 }
 
 // -----
-
+// +---------------------------------------------------------------------------
+// End of  Tests For InsertChainFullyInitialized.
+// +---------------------------------------------------------------------------
 // CHECK-LABEL: func.func @insert_2d_splat_constant
 //   CHECK-DAG: %[[ACST:.*]] = arith.constant dense<0> : vector<2x3xi32>
 //   CHECK-DAG: %[[BCST:.*]] = arith.constant dense<{{\[\[99, 0, 0\], \[0, 0, 0\]\]}}> : vector<2x3xi32>
