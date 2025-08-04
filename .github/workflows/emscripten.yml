@@ -1,0 +1,131 @@
+name: Emscripten
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.repository_owner == 'llvm'
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04-arm, macos-15, windows-2025]
+
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        fetch-depth: 0
+
+    - name: Setup emsdk
+      run: |
+          git clone --depth=1 https://github.com/emscripten-core/emsdk.git
+          cd emsdk
+          ./emsdk install latest
+
+    - name: Install deps on Windows
+      if: ${{ runner.os == 'windows' }}
+      run: |
+        choco install ninja
+
+    - name: Install deps on Linux
+      if: ${{ runner.os == 'Linux' }}
+      run: |
+        sudo apt-get install ninja-build
+
+    - name: Build Emscripten LLVM on Unix systems
+      if: ${{ runner.os != 'windows' }}
+      run: |
+        set -e
+        ./emsdk/emsdk activate latest
+        source ./emsdk/emsdk_env.sh
+        mkdir native_build
+        cd native_build
+        cmake -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD=host -DCMAKE_BUILD_TYPE=Release -G Ninja ../llvm/
+        cmake --build . --target llvm-tblgen clang-tblgen --parallel $(nproc --all)
+        export NATIVE_DIR=$PWD/bin/
+        cd ..
+        mkdir build
+        cd build
+        emcmake cmake -DCMAKE_BUILD_TYPE=Release \
+                      -DLLVM_HOST_TRIPLE=wasm32-unknown-emscripten \
+                      -DLLVM_ENABLE_ASSERTIONS=ON                        \
+                      -DLLVM_TARGETS_TO_BUILD="WebAssembly" \
+                      -DLLVM_ENABLE_LIBEDIT=OFF \
+                      -DLLVM_ENABLE_PROJECTS="clang;lld" \
+                      -DLLVM_ENABLE_ZSTD=OFF \
+                      -DLLVM_ENABLE_LIBXML2=OFF \
+                      -DCLANG_ENABLE_STATIC_ANALYZER=OFF \
+                      -DCLANG_ENABLE_ARCMT=OFF \
+                      -DCLANG_ENABLE_BOOTSTRAP=OFF \
+                      -DCMAKE_CXX_FLAGS="-Dwait4=__syscall_wait4" \
+                      -DLLVM_INCLUDE_BENCHMARKS=OFF                   \
+                      -DLLVM_INCLUDE_EXAMPLES=OFF                     \
+                      -DLLVM_INCLUDE_TESTS=OFF                        \
+                      -DLLVM_ENABLE_THREADS=OFF                       \
+                      -DLLVM_BUILD_TOOLS=OFF                          \
+                      -DLLVM_ENABLE_LIBPFM=OFF                        \
+                      -DCLANG_BUILD_TOOLS=OFF                         \
+                      -G Ninja                                         \
+                      -DLLVM_NATIVE_TOOL_DIR=$NATIVE_DIR 		\
+                      ../llvm
+        emmake ninja
+
+    - name: Build Emscripten LLVM on Windows systems
+      if: ${{ runner.os == 'windows' }}
+      run: |
+        function Error-On-Failure {
+          param (
+              [Parameter(Mandatory)]
+              [ScriptBlock]$Command
+          )
+
+         & $Command
+
+         if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+         }
+        }
+        .\emsdk\emsdk activate latest
+        mkdir native_build
+        cd native_build
+        cmake -DLLVM_ENABLE_PROJECTS=clang -DLLVM_TARGETS_TO_BUILD=host -DCMAKE_BUILD_TYPE=Release -G Ninja ../llvm/
+        cmake --build . --target llvm-tblgen clang-tblgen --parallel $(nproc --all)
+        $env:PWD_DIR= $PWD.Path
+        $env:NATIVE_DIR="$env:PWD_DIR/bin/"
+        cd ..
+        mkdir build
+        cd build
+        emcmake cmake -DCMAKE_BUILD_TYPE=Release `
+                      -DLLVM_HOST_TRIPLE=wasm32-unknown-emscripten `
+                      -DLLVM_ENABLE_ASSERTIONS=ON                        `
+                      -DLLVM_TARGETS_TO_BUILD="WebAssembly" `
+                      -DLLVM_ENABLE_LIBEDIT=OFF `
+                      -DLLVM_ENABLE_PROJECTS="clang;lld" `
+                      -DLLVM_ENABLE_ZSTD=OFF `
+                      -DLLVM_ENABLE_LIBXML2=OFF `
+                      -DCLANG_ENABLE_STATIC_ANALYZER=OFF `
+                      -DCLANG_ENABLE_ARCMT=OFF `
+                      -DCLANG_ENABLE_BOOTSTRAP=OFF `
+                      -DCMAKE_CXX_FLAGS="-Dwait4=__syscall_wait4" `
+                      -DLLVM_INCLUDE_BENCHMARKS=OFF                   `
+                      -DLLVM_INCLUDE_EXAMPLES=OFF                     `
+                      -DLLVM_INCLUDE_TESTS=OFF                        `
+                      -DLLVM_ENABLE_THREADS=OFF                       `
+                      -DLLVM_BUILD_TOOLS=OFF                          `
+                      -DLLVM_ENABLE_LIBPFM=OFF                        `
+                      -DCLANG_BUILD_TOOLS=OFF                         `
+                      -G Ninja `
+                      -DLLVM_NATIVE_TOOL_DIR="$env:NATIVE_DIR" 		          `
+                      ..\llvm
+        Error-On-Failure { emmake ninja }
