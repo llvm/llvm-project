@@ -38,6 +38,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TemplateKinds.h"
 #include "clang/Basic/TypeTraits.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -3257,7 +3258,49 @@ public:
   bool hasTemplateKeyword() const { return getTemplateKeywordLoc().isValid(); }
 
   /// Determines whether this expression had explicit template arguments.
-  bool hasExplicitTemplateArgs() const { return getLAngleLoc().isValid(); }
+  bool hasExplicitTemplateArgs() const {
+    if (!hasTemplateKWAndArgsInfo())
+      return false;
+    // FIXME: deduced function types can have "hidden" args and no <
+    // investigate that further, but ultimately maybe we want to model concepts
+    // reference with another kind of expression.
+    return (isConceptReference() || isVarDeclReference())
+               ? getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs
+               : getLAngleLoc().isValid();
+  }
+
+  bool isConceptReference() const {
+    return getNumDecls() == 1 && [&]() {
+      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
+              getTrailingResults()->getDecl()))
+        return TTP->templateParameterKind() == TNK_Concept_template;
+      if (isa<ConceptDecl>(getTrailingResults()->getDecl()))
+        return true;
+      return false;
+    }();
+  }
+
+  bool isVarDeclReference() const {
+    return getNumDecls() == 1 && [&]() {
+      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
+              getTrailingResults()->getDecl()))
+        return TTP->templateParameterKind() == TNK_Var_template;
+      if (isa<VarTemplateDecl>(getTrailingResults()->getDecl()))
+        return true;
+      return false;
+    }();
+  }
+
+  TemplateDecl *getTemplateDecl() const {
+    assert(getNumDecls() == 1);
+    return dyn_cast_or_null<TemplateDecl>(getTrailingResults()->getDecl());
+  }
+
+  TemplateTemplateParmDecl *getTemplateTemplateDecl() const {
+    assert(getNumDecls() == 1);
+    return dyn_cast_or_null<TemplateTemplateParmDecl>(
+        getTrailingResults()->getDecl());
+  }
 
   TemplateArgumentLoc const *getTemplateArgs() const {
     if (!hasExplicitTemplateArgs())
@@ -4658,7 +4701,7 @@ public:
   // sugared: it doesn't need to be resugared later.
   bool getFinal() const { return Final; }
 
-  NonTypeTemplateParmDecl *getParameter() const;
+  NamedDecl *getParameter() const;
 
   bool isReferenceParameter() const { return AssociatedDeclAndRef.getInt(); }
 
