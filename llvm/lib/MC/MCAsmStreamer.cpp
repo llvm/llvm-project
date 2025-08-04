@@ -897,14 +897,14 @@ void MCAsmStreamer::emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym,
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(CsectSym);
+  auto *XSym = static_cast<MCSymbolXCOFF *>(CsectSym);
   if (XSym->hasRename())
     emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
 }
 
 void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
     MCSymbol *Symbol, MCSymbolAttr Linkage, MCSymbolAttr Visibility) {
-
+  auto &Sym = static_cast<MCSymbolXCOFF &>(*Symbol);
   switch (Linkage) {
   case MCSA_Global:
     OS << MAI->getGlobalDirective();
@@ -944,9 +944,8 @@ void MCAsmStreamer::emitXCOFFSymbolLinkageWithVisibility(
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  if (cast<MCSymbolXCOFF>(Symbol)->hasRename())
-    emitXCOFFRenameDirective(Symbol,
-                             cast<MCSymbolXCOFF>(Symbol)->getSymbolTableName());
+  if (Sym.hasRename())
+    emitXCOFFRenameDirective(&Sym, Sym.getSymbolTableName());
 }
 
 void MCAsmStreamer::emitXCOFFRenameDirective(const MCSymbol *Name,
@@ -1070,9 +1069,11 @@ void MCAsmStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
 
   // Print symbol's rename (original name contains invalid character(s)) if
   // there is one.
-  MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(Symbol);
-  if (XSym && XSym->hasRename())
-    emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+  if (getContext().isXCOFF()) {
+    auto *XSym = static_cast<MCSymbolXCOFF *>(Symbol);
+    if (XSym && XSym->hasRename())
+      emitXCOFFRenameDirective(XSym, XSym->getSymbolTableName());
+  }
 }
 
 void MCAsmStreamer::emitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,

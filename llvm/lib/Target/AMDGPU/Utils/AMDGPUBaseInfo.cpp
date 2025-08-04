@@ -1548,6 +1548,42 @@ bool shouldEmitConstantsToTextSection(const Triple &TT) {
   return TT.getArch() == Triple::r600;
 }
 
+static bool isValidRegPrefix(char C) {
+  return C == 'v' || C == 's' || C == 'a';
+}
+
+std::tuple<char, unsigned, unsigned>
+parseAsmConstraintPhysReg(StringRef Constraint) {
+  StringRef RegName = Constraint;
+  if (!RegName.consume_front("{") || !RegName.consume_back("}"))
+    return {};
+
+  char Kind = RegName.front();
+  if (!isValidRegPrefix(Kind))
+    return {};
+
+  RegName = RegName.drop_front();
+  if (RegName.consume_front("[")) {
+    unsigned Idx, End;
+    bool Failed = RegName.consumeInteger(10, Idx);
+    Failed |= !RegName.consume_front(":");
+    Failed |= RegName.consumeInteger(10, End);
+    Failed |= !RegName.consume_back("]");
+    if (!Failed) {
+      unsigned NumRegs = End - Idx + 1;
+      if (NumRegs > 1)
+        return {Kind, Idx, NumRegs};
+    }
+  } else {
+    unsigned Idx;
+    bool Failed = RegName.getAsInteger(10, Idx);
+    if (!Failed)
+      return {Kind, Idx, 1};
+  }
+
+  return {};
+}
+
 std::pair<unsigned, unsigned>
 getIntegerPairAttribute(const Function &F, StringRef Name,
                         std::pair<unsigned, unsigned> Default,
@@ -2659,6 +2695,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -3023,6 +3060,8 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    return false;
   default:
     llvm_unreachable("bad packed operand type");
   }

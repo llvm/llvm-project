@@ -1590,7 +1590,7 @@ private:
   /// A type representing the costs for instructions if they were to be
   /// scalarized rather than vectorized. The entries are Instruction-Cost
   /// pairs.
-  using ScalarCostsTy = DenseMap<Instruction *, InstructionCost>;
+  using ScalarCostsTy = MapVector<Instruction *, InstructionCost>;
 
   /// A set containing all BasicBlocks that are known to present after
   /// vectorization as a predicated block.
@@ -1624,7 +1624,7 @@ private:
   /// presence of a cost for an instruction in the mapping indicates that the
   /// instruction will be scalarized when vectorizing with the associated
   /// vectorization factor. The entries are VF-ScalarCostTy pairs.
-  DenseMap<ElementCount, ScalarCostsTy> InstsToScalarize;
+  MapVector<ElementCount, ScalarCostsTy> InstsToScalarize;
 
   /// Holds the instructions known to be uniform after vectorization.
   /// The data is collected per VF.
@@ -3022,7 +3022,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
     // is correct.  The easiest form of the later is to require that all values
     // stored are the same.
     return !(Legal->isInvariant(getLoadStorePointerOperand(I)) &&
-             Legal->isInvariant(cast<StoreInst>(I)->getValueOperand()));
+             TheLoop->isLoopInvariant(cast<StoreInst>(I)->getValueOperand()));
   }
   case Instruction::UDiv:
   case Instruction::SDiv:
@@ -3150,7 +3150,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
       isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
       !isScalarEpilogueAllowed();
   bool StoreAccessWithGapsRequiresMasking =
-      isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor());
+      isa<StoreInst>(I) && !Group->isFull();
   if (!PredicatedAccessRequiresMasking &&
       !LoadAccessWithGapsRequiresEpilogMasking &&
       !StoreAccessWithGapsRequiresMasking)
@@ -4992,7 +4992,8 @@ void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
         if (!isScalarAfterVectorization(&I, VF) && !VF.isScalable() &&
             !useEmulatedMaskMemRefHack(&I, VF) &&
             computePredInstDiscount(&I, ScalarCosts, VF) >= 0) {
-          ScalarCostsVF.insert_range(ScalarCosts);
+          for (const auto &[I, IC] : ScalarCosts)
+            ScalarCostsVF.insert({I, IC});
           // Check if we decided to scalarize a call. If so, update the widening
           // decision of the call to CM_Scalarize with the computed scalar cost.
           for (const auto &[I, Cost] : ScalarCosts) {
@@ -5372,7 +5373,7 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   // Calculate the cost of the whole interleaved group.
   bool UseMaskForGaps =
       (Group->requiresScalarEpilogue() && !isScalarEpilogueAllowed()) ||
-      (isa<StoreInst>(I) && (Group->getNumMembers() < Group->getFactor()));
+      (isa<StoreInst>(I) && !Group->isFull());
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
       Group->getAlign(), AS, CostKind, Legal->isMaskRequired(I),
@@ -7302,6 +7303,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
+
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::removeBranchOnConst(BestVPlan);
@@ -7315,6 +7317,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
   VPlanTransforms::dissolveLoopRegions(BestVPlan);
+  // Canonicalize EVL loops after regions are dissolved.
+  VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
+  VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
+
   // Perform the actual loop transformation.
   VPTransformState State(&TTI, BestVF, LI, DT, ILV.AC, ILV.Builder, &BestVPlan,
                          OrigLoop->getParentLoop(),
@@ -7371,7 +7377,6 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
   // 2. Copy and widen instructions from the old loop into the new loop.
   BestVPlan.prepareToExecute(
-      ILV.getTripCount(),
       ILV.getOrCreateVectorTripCount(ILV.LoopVectorPreHeader), State);
   replaceVPBBWithIRVPBB(VectorPH, State.CFG.PrevBB);
 
@@ -9786,6 +9791,10 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                 match(
                     P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
                     m_SpecificInt(0)) &&
+                any_of(P.incoming_values(),
+                       [&EPI](Value *Inc) {
+                         return Inc == EPI.VectorTripCount;
+                       }) &&
                 all_of(P.incoming_values(), [&EPI](Value *Inc) {
                   return Inc == EPI.VectorTripCount ||
                          match(Inc, m_SpecificInt(0));
