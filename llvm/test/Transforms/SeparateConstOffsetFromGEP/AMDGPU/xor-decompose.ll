@@ -344,11 +344,11 @@ define amdgpu_kernel void @test6a(i1 %0, ptr addrspace(3) %1) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 288
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 512
-; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], 256
+; CHECK-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP4]], 288
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP6]], align 16
 ; CHECK-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <8 x half> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    store <8 x half> [[TMP10]], ptr addrspace(3) [[TMP1]], align 16
@@ -359,11 +359,11 @@ define amdgpu_kernel void @test6a(i1 %0, ptr addrspace(3) %1) {
 ; GVN-NEXT:  [[ENTRY:.*:]]
 ; GVN-NEXT:    [[TMP2:%.*]] = select i1 [[TMP0]], i32 0, i32 288
 ; GVN-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], 32
-; GVN-NEXT:    [[TMP4:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
-; GVN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP2]], 288
-; GVN-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
-; GVN-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr addrspace(3) [[TMP6]], i32 512
-; GVN-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP4]], align 16
+; GVN-NEXT:    [[TMP4:%.*]] = add i32 [[TMP2]], 256
+; GVN-NEXT:    [[TMP5:%.*]] = xor i32 [[TMP4]], 288
+; GVN-NEXT:    [[TMP6:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP3]]
+; GVN-NEXT:    [[TMP7:%.*]] = getelementptr half, ptr addrspace(3) [[TMP1]], i32 [[TMP5]]
+; GVN-NEXT:    [[TMP8:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP6]], align 16
 ; GVN-NEXT:    [[TMP9:%.*]] = load <8 x half>, ptr addrspace(3) [[TMP7]], align 16
 ; GVN-NEXT:    [[TMP10:%.*]] = fadd <8 x half> [[TMP8]], [[TMP9]]
 ; GVN-NEXT:    store <8 x half> [[TMP10]], ptr addrspace(3) [[TMP1]], align 16

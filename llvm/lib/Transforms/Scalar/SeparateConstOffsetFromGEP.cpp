@@ -1,4 +1,4 @@
-//===- SeparateConstOffsetFromGEP.cpp -------------------------------------===//
+//===- separateConstOffsetFromGEP.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -827,14 +827,6 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))))
     return APInt::getZero(BitWidth);
 
-  // Try to extract constant offset from the base operand recursively.
-  if (BinaryOperator *BO = dyn_cast<BinaryOperator>(BaseOperand)) {
-    APInt ConstantOffset = find(BO, /*SignExtended=*/false,
-                                /*ZeroExtended=*/false, /*NonNegative=*/false);
-    if (!ConstantOffset.isZero())
-      return ConstantOffset;
-  }
-
   // Compute known bits for the base operand.
   const SimplifyQuery SQ(DL);
   const KnownBits BaseKnownBits = computeKnownBits(BaseOperand, SQ);
@@ -846,6 +838,19 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   // Early exit if no disjoint bits found.
   if (DisjointBits.isZero())
     return APInt::getZero(BitWidth);
+
+  // Recursively extract constant offset from the base operand.
+  if (auto *BO = dyn_cast<BinaryOperator>(BaseOperand)) {
+    APInt ConstantOffset = find(BO, /*SignExtended=*/false,
+                                /*ZeroExtended=*/false, /*NonNegative=*/false);
+
+    // (A binop B xor C) is not always equivalent with (A xor C binop B).
+    // These cases, might already be optimized out by instruction combine.
+    if (!(ConstantOffset & DisjointBits).isZero())
+      return APInt::getZero(BitWidth);
+
+    return ConstantOffset;
+  }
 
   // Compute the remaining non-disjoint bits that stay in the XOR.
   const APInt NonDisjointBits = ConstantValue & ~DisjointBits;
