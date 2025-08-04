@@ -211,7 +211,7 @@ public:
       : PPCTargetStreamer(S), OS(OS) {}
 
   void emitTCEntry(const MCSymbol &S, PPCMCExpr::Specifier Kind) override {
-    if (const MCSymbolXCOFF *XSym = dyn_cast<MCSymbolXCOFF>(&S)) {
+    if (getContext().isXCOFF()) {
       MCSymbolXCOFF *TCSym =
           static_cast<const MCSectionXCOFF *>(Streamer.getCurrentSectionOnly())
               ->getQualNameSymbol();
@@ -225,10 +225,10 @@ public:
       if (Kind == PPC::S_AIX_TLSGD || Kind == PPC::S_AIX_TLSGDM ||
           Kind == PPC::S_AIX_TLSIE || Kind == PPC::S_AIX_TLSLE ||
           Kind == PPC::S_AIX_TLSLD || Kind == PPC::S_AIX_TLSML)
-        OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
+        OS << "\t.tc " << TCSym->getName() << "," << S.getName() << "@"
            << getContext().getAsmInfo()->getSpecifierName(Kind) << '\n';
       else
-        OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
+        OS << "\t.tc " << TCSym->getName() << "," << S.getName() << '\n';
 
       if (TCSym->hasRename())
         Streamer.emitXCOFFRenameDirective(TCSym, TCSym->getSymbolTableName());
