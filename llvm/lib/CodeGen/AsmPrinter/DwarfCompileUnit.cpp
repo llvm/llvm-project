@@ -508,7 +508,8 @@ void DwarfCompileUnit::addWasmRelocBaseGlobal(DIELoc *Loc, StringRef GlobalName,
   // don't want to depend on target specific headers in this code?
   const unsigned TI_GLOBAL_RELOC = 3;
   unsigned PointerSize = Asm->getDataLayout().getPointerSize();
-  auto *Sym = cast<MCSymbolWasm>(Asm->GetExternalSymbolSymbol(GlobalName));
+  auto *Sym =
+      static_cast<MCSymbolWasm *>(Asm->GetExternalSymbolSymbol(GlobalName));
   // FIXME: this repeats what WebAssemblyMCInstLower::
   // GetExternalSymbolSymbol does, since if there's no code that
   // refers to this symbol, we have to set it here.
