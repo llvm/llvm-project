@@ -17,19 +17,6 @@ using namespace clang::ast_matchers;
 
 namespace {
 
-static bool isCharType(const clang::BuiltinType *BT) {
-  using clang::BuiltinType;
-  switch (BT->getKind()) {
-  case BuiltinType::Char_S:
-  case BuiltinType::Char_U:
-  case BuiltinType::SChar:
-  case BuiltinType::UChar:
-    return true;
-  default:
-    return false;
-  }
-}
-
 AST_MATCHER(clang::QualType, isBuiltinInt) {
   const auto *BT = Node->getAs<clang::BuiltinType>();
   if (!BT)
@@ -55,25 +42,9 @@ AST_MATCHER(clang::QualType, isBuiltinFloat) {
   if (!BT)
     return false;
 
-  switch (BT->getKind()) {
-  case clang::BuiltinType::Half:
-  case clang::BuiltinType::BFloat16:
-  case clang::BuiltinType::Float:
-  case clang::BuiltinType::Double:
-  case clang::BuiltinType::LongDouble:
-    return true;
-  default:
-    return false;
-  }
+  return BT->isFloatingPoint();
 }
 
-AST_MATCHER(clang::QualType, isBuiltinChar) {
-  const auto *BT = Node->getAs<clang::BuiltinType>();
-  if (!BT)
-    return false;
-
-  return isCharType(BT);
-}
 } // namespace
 
 namespace clang::tidy::portability {
@@ -143,7 +114,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::registerMatchers(
       allOf(builtinType(),
             anyOf(WarnOnInts ? isBuiltinInt() : unless(anything()),
                   WarnOnFloats ? isBuiltinFloat() : unless(anything()),
-                  WarnOnChars ? isBuiltinChar() : unless(anything()))));
+                  WarnOnChars ? isAnyCharacter() : unless(anything()))));
 
   if (!WarnOnInts && !WarnOnFloats && !WarnOnChars)
     return;
@@ -241,7 +212,7 @@ void AvoidPlatformSpecificFundamentalTypesCheck::check(
                 "consider using a 'typedef' or fixed-width type instead")
           << TypeName;
     }
-  } else if (isCharType(BT)) {
+  } else if (QT->isAnyCharacterType()) {
     diag(Loc, "avoid using platform-dependent character type '%0'; "
               "consider using 'char8_t' for text or 'std::byte' for bytes")
         << TypeName;
