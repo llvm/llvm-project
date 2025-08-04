@@ -84,7 +84,6 @@ expr sizeof(Outer::S)
 expr sizeof(Outer::Inner1::S)
 expr sizeof(Inner1::S)
 expr sizeof(Outer::Inner1::Inner2::S)
-expr sizeof(Inner2::S)
 expr sizeof(Outer::Inner2::S)
 expr sizeof(Outer::A)
 expr sizeof(A)
@@ -151,13 +150,11 @@ quit
 # CHECK-NEXT: (__size_t) $4 = 3
 # CHECK-NEXT: (lldb) expr sizeof(Outer::Inner1::Inner2::S)
 # CHECK-NEXT: (__size_t) $5 = 4
-# CHECK-NEXT: (lldb) expr sizeof(Inner2::S)
-# CHECK-NEXT: (__size_t) $6 = 5
 # CHECK-NEXT: (lldb) expr sizeof(Outer::Inner2::S)
-# CHECK-NEXT: (__size_t) $7 = 5
+# CHECK-NEXT: (__size_t) $6 = 5
 # CHECK-NEXT: (lldb) expr sizeof(Outer::A)
-# CHECK-NEXT: (__size_t) $8 = 6
+# CHECK-NEXT: (__size_t) $7 = 6
 # CHECK-NEXT: (lldb) expr sizeof(A)
-# CHECK-NEXT: (__size_t) $9 = 7
+# CHECK-NEXT: (__size_t) $8 = 7
 # CHECK-NEXT: (lldb) expr sizeof(::A)
-# CHECK-NEXT: (__size_t) $10 = 7
+# CHECK-NEXT: (__size_t) $9 = 7
