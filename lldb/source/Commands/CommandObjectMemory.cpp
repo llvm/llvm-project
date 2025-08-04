@@ -156,6 +156,7 @@ public:
 
     case eFormatBinary:
     case eFormatFloat:
+    case eFormatFloat128:
     case eFormatOctal:
     case eFormatDecimal:
     case eFormatEnum:
@@ -1356,6 +1357,7 @@ protected:
       switch (m_format_options.GetFormat()) {
       case kNumFormats:
       case eFormatFloat: // TODO: add support for floats soon
+      case eFormatFloat128:
       case eFormatCharPrintable:
       case eFormatBytesWithASCII:
       case eFormatComplex:
