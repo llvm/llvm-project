@@ -1072,9 +1072,13 @@ InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
   // blocks, like the preheader or middle blocks.
   InstructionCost Cost = getVectorLoopRegion()->cost(VF, Ctx);
 
-  // If any instructions in the middle block are invalid return invalid.
-  // TODO: Remove once no VPlans with VF == vscale x 1 and first-order recurrences are created.
-  if (!getMiddleBlock()->cost(VF, Ctx).isValid())
+  // If any instructions in the skeleton outside loop regions are invalid return
+  // invalid.
+  if (any_of(VPBlockUtils::blocksOnly<VPBasicBlock>(
+                 vp_depth_first_shallow(getEntry())),
+             [&VF, &Ctx](VPBasicBlock *VPBB) {
+               return !VPBB->cost(VF, Ctx).isValid();
+             }))
     return InstructionCost::getInvalid();
 
   return Cost;
