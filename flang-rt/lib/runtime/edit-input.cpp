@@ -19,14 +19,10 @@
 namespace Fortran::runtime::io {
 RT_OFFLOAD_API_GROUP_BEGIN
 
-// Handle DC or DECIMAL='COMMA' and determine the active separator character
-static inline RT_API_ATTRS char32_t GetSeparatorChar(const DataEdit &edit) {
-  return edit.modes.editingFlags & decimalComma ? char32_t{';'} : char32_t{','};
-}
-
 static inline RT_API_ATTRS bool IsCharValueSeparator(
     const DataEdit &edit, char32_t ch) {
-  return ch == ' ' || ch == '\t' || ch == '/' || ch == GetSeparatorChar(edit) ||
+  return ch == ' ' || ch == '\t' || ch == '/' ||
+      ch == edit.modes.GetSeparatorChar() ||
       (edit.IsNamelist() && (ch == '&' || ch == '$'));
 }
 
@@ -68,7 +64,7 @@ static RT_API_ATTRS bool EditBOZInput(
   // Count significant digits after any leading white space & zeroes
   int digits{0};
   int significantBits{0};
-  const char32_t comma{GetSeparatorChar(edit)};
+  char32_t comma{edit.modes.GetSeparatorChar()};
   for (; next; next = io.NextInField(remaining, edit)) {
     char32_t ch{*next};
     if (ch == ' ' || ch == '\t') {
@@ -156,10 +152,6 @@ static RT_API_ATTRS bool EditBOZInput(
   return CheckCompleteListDirectedField(io, edit);
 }
 
-static inline RT_API_ATTRS char32_t GetRadixPointChar(const DataEdit &edit) {
-  return edit.modes.editingFlags & decimalComma ? char32_t{','} : char32_t{'.'};
-}
-
 // Prepares input from a field, and returns the sign, if any, else '\0'.
 static RT_API_ATTRS char ScanNumericPrefix(IoStatementState &io,
     const DataEdit &edit, Fortran::common::optional<char32_t> &next,
@@ -221,7 +213,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
   common::uint128_t value{0};
   bool any{!!sign};
   bool overflow{false};
-  const char32_t comma{GetSeparatorChar(edit)};
+  char32_t comma{edit.modes.GetSeparatorChar()};
   static constexpr auto maxu128{~common::uint128_t{0}};
   for (; next; next = io.NextInField(remaining, edit, &fastField)) {
     char32_t ch{*next};
@@ -238,7 +230,7 @@ RT_API_ATTRS bool EditIntegerInput(IoStatementState &io, const DataEdit &edit,
     } else if (ch == comma) {
       break; // end non-list-directed field early
     } else {
-      if (edit.modes.inNamelist && ch == GetRadixPointChar(edit)) {
+      if (edit.modes.inNamelist && ch == edit.modes.GetRadixPointChar()) {
         // Ignore any fractional part that might appear in NAMELIST integer
         // input, like a few other Fortran compilers do.
         // TODO: also process exponents?  Some compilers do, but they obviously
@@ -344,7 +336,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
   }
   bool bzMode{(edit.modes.editingFlags & blankZero) != 0};
   int exponent{0};
-  const char32_t comma{GetSeparatorChar(edit)};
+  char32_t comma{edit.modes.GetSeparatorChar()};
   if (!next || (!bzMode && *next == ' ') || *next == comma) {
     if (!edit.IsListDirected() && !io.GetConnectionState().IsAtEOF()) {
       // An empty/blank field means zero when not list-directed.
@@ -355,7 +347,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
     }
     return {got, exponent, false};
   }
-  char32_t radixPointChar{GetRadixPointChar(edit)};
+  char32_t radixPointChar{edit.modes.GetRadixPointChar()};
   char32_t first{*next >= 'a' && *next <= 'z' ? *next + 'A' - 'a' : *next};
   bool isHexadecimal{false};
   if (first == 'N' || first == 'I') {
@@ -518,7 +510,7 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
     } else if (radixPointOffset) {
       exponent += *radixPointOffset;
     } else {
-      // When no redix point (or comma) appears in the value, the 'd'
+      // When no radix point (or comma) appears in the value, the 'd'
       // part of the edit descriptor must be interpreted as the number of
       // digits in the value to be interpreted as being to the *right* of
       // the assumed radix point (13.7.2.3.2)
@@ -959,10 +951,12 @@ RT_API_ATTRS bool EditLogicalInput(
         "Bad character '%lc' in LOGICAL input field", *next);
     return false;
   }
-  if (remaining) { // ignore the rest of a fixed-width field
-    io.HandleRelativePosition(*remaining);
-  } else if (edit.descriptor == DataEdit::ListDirected) {
-    while (io.NextInField(remaining, edit)) { // discard rest of field
+  if (remaining || edit.descriptor == DataEdit::ListDirected) {
+    // Ignore the rest of the input field; stop after separator when
+    // not list-directed.
+    char32_t comma{edit.modes.GetSeparatorChar()};
+    while (next && *next != comma) {
+      next = io.NextInField(remaining, edit);
     }
   }
   return CheckCompleteListDirectedField(io, edit);

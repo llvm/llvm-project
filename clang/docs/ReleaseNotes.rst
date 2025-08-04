@@ -123,6 +123,8 @@ Improvements to Clang's diagnostics
   Moved the warning for a missing (though implied) attribute on a redeclaration into this group.
   Added a new warning in this group for the case where the attribute is missing/implicit on
   an override of a virtual method.
+- Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right 
+  parenthesis when diagnosing malformed fold expressions. (#GH151787)
 
 - Clang now diagnoses the use of ``#`` and ``##`` preprocessor tokens in
   attribute argument lists in C++ when ``-pedantic`` is enabled. The operators
@@ -140,6 +142,11 @@ Bug Fixes in This Version
 -------------------------
 - Fix a crash when marco name is empty in ``#pragma push_macro("")`` or
   ``#pragma pop_macro("")``. (#GH149762).
+- `-Wunreachable-code`` now diagnoses tautological or contradictory
+  comparisons such as ``x != 0 || x != 1.0`` and ``x == 0 && x == 1.0`` on
+  targets that treat ``_Float16``/``__fp16`` as native scalar types. Previously
+  the warning was silently lost because the operands differed only by an implicit
+  cast chain. (#GH149967).
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -197,6 +204,9 @@ LoongArch Support
 RISC-V Support
 ^^^^^^^^^^^^^^
 
+- Add support for `__attribute__((interrupt("rnmi")))` to be used with the `Smrnmi` extension.
+  With this the `Smrnmi` extension is fully supported.
+
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -242,12 +252,16 @@ Static Analyzer
 ---------------
 - The Clang Static Analyzer now handles parenthesized initialization.
   (#GH148875)
+- ``__datasizeof`` (C++) and ``_Countof`` (C) no longer cause a failed assertion
+  when given an operand of VLA type. (#GH151711)
 
 New features
 ^^^^^^^^^^^^
 
 Crash and bug fixes
 ^^^^^^^^^^^^^^^^^^^
+- Fixed a crash in the static analyzer that when the expression in an 
+  ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 
 Improvements
 ^^^^^^^^^^^^

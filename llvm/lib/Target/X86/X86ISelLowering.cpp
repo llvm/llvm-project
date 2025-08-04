@@ -23486,11 +23486,20 @@ static SDValue EmitCmp(SDValue Op0, SDValue Op1, X86::CondCode X86CC,
   }
 
   // Try to shrink i64 compares if the input has enough zero bits.
-  // TODO: Add sign-bits equivalent for isX86CCSigned(X86CC)?
   if (CmpVT == MVT::i64 && !isX86CCSigned(X86CC) &&
       Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
       DAG.MaskedValueIsZero(Op1, APInt::getHighBitsSet(64, 32)) &&
       DAG.MaskedValueIsZero(Op0, APInt::getHighBitsSet(64, 32))) {
+    CmpVT = MVT::i32;
+    Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
+    Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
+  }
+
+  // Try to shrink all i64 compares if the inputs are representable as signed
+  // i32.
+  if (CmpVT == MVT::i64 &&
+      Op0.hasOneUse() && // Hacky way to not break CSE opportunities with sub.
+      DAG.ComputeNumSignBits(Op1) > 32 && DAG.ComputeNumSignBits(Op0) > 32) {
     CmpVT = MVT::i32;
     Op0 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op0);
     Op1 = DAG.getNode(ISD::TRUNCATE, dl, CmpVT, Op1);
@@ -58071,12 +58080,24 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
     Ops[3] = Op1.getOperand(0);
     Ops[4] = Op1.getOperand(1);
   } else if (Op1.getOpcode() == ISD::AND && Sub.getValue(0).use_empty()) {
+    SDValue Src = Op1;
+    SDValue Op10 = Op1.getOperand(0);
+    if (Op10.getOpcode() == ISD::XOR && isAllOnesConstant(Op10.getOperand(1))) {
+      // res, flags2 = sub 0, (and (xor X, -1), Y)
+      // cload/cstore ..., cond_ne, flag2
+      // ->
+      // res, flags2 = sub 0, (and X, Y)
+      // cload/cstore ..., cond_e, flag2
+      Src = DAG.getNode(ISD::AND, DL, Op1.getValueType(), Op10.getOperand(0),
+                        Op1.getOperand(1));
+      Ops[3] = DAG.getTargetConstant(X86::COND_E, DL, MVT::i8);
+    }
     // res, flags2 = sub 0, (and X, Y)
-    // cload/cstore ..., cond_ne, flag2
+    // cload/cstore ..., cc, flag2
     // ->
     // res, flags2 = cmp (and X, Y), 0
-    // cload/cstore ..., cond_ne, flag2
-    Ops[4] = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Op1, Sub.getOperand(0));
+    // cload/cstore ..., cc, flag2
+    Ops[4] = DAG.getNode(X86ISD::CMP, DL, MVT::i32, Src, Sub.getOperand(0));
   } else {
     return SDValue();
   }

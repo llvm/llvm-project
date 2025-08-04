@@ -61,8 +61,10 @@ namespace llvm {
   for (bool _c =                                                               \
            (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE, LEVEL));     \
        _c; _c = false)                                                         \
+    for (::llvm::impl::RAIINewLineStream NewLineStream{(STREAM)}; _c;          \
+         _c = false)                                                           \
   ::llvm::impl::raw_ldbg_ostream{                                              \
-      ::llvm::impl::computePrefix(TYPE, FILE, LINE, LEVEL), (STREAM)}          \
+      ::llvm::impl::computePrefix(TYPE, FILE, LINE, LEVEL), NewLineStream}     \
       .asLvalue()
 
 #define DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE, FILE)          \
@@ -81,14 +83,15 @@ namespace llvm {
 
 namespace impl {
 
-/// A raw_ostream that tracks `\n` and print the prefix.
+/// A raw_ostream that tracks `\n` and print the prefix after each
+/// newline.
 class LLVM_ABI raw_ldbg_ostream final : public raw_ostream {
   std::string Prefix;
   raw_ostream &Os;
-  bool HasPendingNewline = true;
+  bool HasPendingNewline;
 
-  /// Split the line on newlines and insert the prefix before each newline.
-  /// Forward everything to the underlying stream.
+  /// Split the line on newlines and insert the prefix before each
+  /// newline. Forward everything to the underlying stream.
   void write_impl(const char *Ptr, size_t Size) final {
     auto Str = StringRef(Ptr, Size);
     // Handle the initial prefix.
@@ -109,22 +112,18 @@ class LLVM_ABI raw_ldbg_ostream final : public raw_ostream {
   }
   void emitPrefix() { Os.write(Prefix.c_str(), Prefix.size()); }
   void writeWithPrefix(StringRef Str) {
-    if (HasPendingNewline) {
-      emitPrefix();
-      HasPendingNewline = false;
-    }
+    flushEol();
     Os.write(Str.data(), Str.size());
   }
 
 public:
-  explicit raw_ldbg_ostream(std::string Prefix, raw_ostream &Os)
-      : Prefix(std::move(Prefix)), Os(Os) {
+  explicit raw_ldbg_ostream(std::string Prefix, raw_ostream &Os,
+                            bool HasPendingNewline = true)
+      : Prefix(std::move(Prefix)), Os(Os),
+        HasPendingNewline(HasPendingNewline) {
     SetUnbuffered();
   }
-  ~raw_ldbg_ostream() final {
-    flushEol();
-    Os << '\n';
-  }
+  ~raw_ldbg_ostream() final { flushEol(); }
   void flushEol() {
     if (HasPendingNewline) {
       emitPrefix();
@@ -135,8 +134,20 @@ public:
   /// Forward the current_pos method to the underlying stream.
   uint64_t current_pos() const final { return Os.tell(); }
 
-  /// Some of the `<<` operators expect an lvalue, so we trick the type system.
+  /// Some of the `<<` operators expect an lvalue, so we trick the type
+  /// system.
   raw_ldbg_ostream &asLvalue() { return *this; }
+};
+
+/// A raw_ostream that prints a newline on destruction, useful for LDBG()
+class RAIINewLineStream final : public raw_ostream {
+  raw_ostream &Os;
+
+public:
+  RAIINewLineStream(raw_ostream &Os) : Os(Os) { SetUnbuffered(); }
+  ~RAIINewLineStream() { Os << '\n'; }
+  void write_impl(const char *Ptr, size_t Size) final { Os.write(Ptr, Size); }
+  uint64_t current_pos() const final { return Os.tell(); }
 };
 
 /// Remove the path prefix from the file name.
