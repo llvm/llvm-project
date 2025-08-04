@@ -1129,22 +1129,9 @@ unsigned RISCVCC::getBrCond(RISCVCC::CondCode CC, unsigned SelectOpc) {
 }
 
 RISCVCC::CondCode RISCVCC::getOppositeBranchCondition(RISCVCC::CondCode CC) {
-  switch (CC) {
-  default:
-    llvm_unreachable("Unrecognized conditional branch");
-  case RISCVCC::COND_EQ:
-    return RISCVCC::COND_NE;
-  case RISCVCC::COND_NE:
-    return RISCVCC::COND_EQ;
-  case RISCVCC::COND_LT:
-    return RISCVCC::COND_GE;
-  case RISCVCC::COND_GE:
-    return RISCVCC::COND_LT;
-  case RISCVCC::COND_LTU:
-    return RISCVCC::COND_GEU;
-  case RISCVCC::COND_GEU:
-    return RISCVCC::COND_LTU;
-  }
+  // To reverse a condition it's necessary to only invert the low bit:
+  assert(CC != RISCVCC::COND_INVALID && "COND_INVALID has no inverse!");
+  return static_cast<RISCVCC::CondCode>(static_cast<unsigned>(CC) ^ 0x1);
 }
 
 bool RISCVInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
