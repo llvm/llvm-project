@@ -84,21 +84,22 @@ IterationAction DWARFIndex::ProcessFunctionDIE(
 }
 
 DWARFIndex::DIERefCallbackImpl::DIERefCallbackImpl(
-    const DWARFIndex &index, llvm::function_ref<bool(DWARFDIE die)> callback,
+    const DWARFIndex &index,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback,
     llvm::StringRef name)
     : m_index(index),
       m_dwarf(*llvm::cast<SymbolFileDWARF>(
           index.m_module.GetSymbolFile()->GetBackingSymbolFile())),
       m_callback(callback), m_name(name) {}
 
-bool DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
+IterationAction DWARFIndex::DIERefCallbackImpl::operator()(DIERef ref) const {
   if (DWARFDIE die = m_dwarf.GetDIE(ref))
     return m_callback(die);
   m_index.ReportInvalidDIERef(ref, m_name);
-  return true;
+  return IterationAction::Continue;
 }
 
-bool DWARFIndex::DIERefCallbackImpl::operator()(
+IterationAction DWARFIndex::DIERefCallbackImpl::operator()(
     const llvm::AppleAcceleratorTable::Entry &entry) const {
   return this->operator()(DIERef(std::nullopt, DIERef::Section::DebugInfo,
                                  *entry.getDIESectionOffset()));
