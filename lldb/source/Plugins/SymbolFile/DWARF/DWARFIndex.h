@@ -33,17 +33,17 @@ public:
   /// Finds global variables with the given base name. Any additional filtering
   /// (e.g., to only retrieve variables from a given context) should be done by
   /// the consumer.
-  virtual void
-  GetGlobalVariables(ConstString basename,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+  virtual void GetGlobalVariables(
+      ConstString basename,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
 
-  virtual void
-  GetGlobalVariables(const RegularExpression &regex,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+  virtual void GetGlobalVariables(
+      const RegularExpression &regex,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
   /// \a cu must be the skeleton unit if possible, not GetNonSkeletonUnit().
-  virtual void
-  GetGlobalVariables(DWARFUnit &cu,
-                     llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+  virtual void GetGlobalVariables(
+      DWARFUnit &cu,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
   virtual void
   GetObjCMethods(ConstString class_name,
                  llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
@@ -64,7 +64,7 @@ public:
                         llvm::function_ref<bool(DWARFDIE die)> callback);
   virtual void
   GetNamespaces(ConstString name,
-                llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+                llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
   /// Get type DIEs meeting requires of \a query.
   /// in its decl parent chain as subset.  A base implementation is provided,
   /// Specializations should override this if they are able to provide a faster
@@ -76,10 +76,9 @@ public:
   /// parent_decl_ctx in its decl parent chain.  A base implementation
   /// is provided. Specializations should override this if they are able to
   /// provide a faster implementation.
-  virtual void
-  GetNamespacesWithParents(ConstString name,
-                           const CompilerDeclContext &parent_decl_ctx,
-                           llvm::function_ref<bool(DWARFDIE die)> callback);
+  virtual void GetNamespacesWithParents(
+      ConstString name, const CompilerDeclContext &parent_decl_ctx,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback);
   virtual void
   GetFunctions(const Module::LookupInfo &lookup_info, SymbolFileDWARF &dwarf,
                const CompilerDeclContext &parent_decl_ctx,
@@ -139,9 +138,9 @@ protected:
   bool
   ProcessTypeDIEMatchQuery(TypeQuery &query, DWARFDIE die,
                            llvm::function_ref<bool(DWARFDIE die)> callback);
-  bool ProcessNamespaceDieMatchParents(
+  IterationAction ProcessNamespaceDieMatchParents(
       const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
-      llvm::function_ref<bool(DWARFDIE die)> callback);
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   /// Helper to convert callbacks that return an \c IterationAction
   /// to a callback that returns a \c bool, where \c true indicates
