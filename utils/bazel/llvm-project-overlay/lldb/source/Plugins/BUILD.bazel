@@ -483,6 +483,22 @@ cc_library(
 )
 
 cc_library(
+    name = "PluginProcessWasm",
+    srcs = glob(["Process/wasm/*.cpp"]),
+    hdrs = glob(["Process/wasm/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessGDBRemote",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
+        "//lldb:TargetHeaders",
+        "//lldb:Utility",
+        "//lldb:UtilityPrivateHeaders",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "PluginObjectContainerMachOArchive",
     srcs = glob(["ObjectContainer/Universal-Mach-O/*.cpp"]),
     hdrs = glob(["ObjectContainer/Universal-Mach-O/*.h"]),

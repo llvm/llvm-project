@@ -2801,7 +2801,6 @@ public:
     EndOpenMP();
   }
   void Unparse(const OmpFailClause &x) { Walk(x.v); }
-  void Unparse(const OmpMemoryOrderClause &x) { Walk(x.v); }
   void Unparse(const OmpMetadirectiveDirective &x) {
     BeginOpenMP();
     Word("!$OMP METADIRECTIVE ");
