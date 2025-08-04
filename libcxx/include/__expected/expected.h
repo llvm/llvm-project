@@ -845,7 +845,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& value() const&& {
-    static_assert(is_copy_constructible_v<_Err> && is_constructible_v<_Err, decltype(std::move(error()))>,
+    static_assert(bool(is_copy_constructible_v<_Err> && is_constructible_v<_Err, decltype(std::move(error()))>),
                   "error_type has to be both copy constructible and constructible from decltype(std::move(error()))");
     if (!this->__has_val()) {
       std::__throw_bad_expected_access<_Err>(std::move(error()));
@@ -854,7 +854,7 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& value() && {
-    static_assert(is_copy_constructible_v<_Err> && is_constructible_v<_Err, decltype(std::move(error()))>,
+    static_assert(bool(is_copy_constructible_v<_Err> && is_constructible_v<_Err, decltype(std::move(error()))>),
                   "error_type has to be both copy constructible and constructible from decltype(std::move(error()))");
     if (!this->__has_val()) {
       std::__throw_bad_expected_access<_Err>(std::move(error()));
