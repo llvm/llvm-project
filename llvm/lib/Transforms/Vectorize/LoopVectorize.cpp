@@ -10004,8 +10004,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                  "SpeculativeLoadsDisabled", ORE, L);
       return false;
     }
-    // DataWithEVL is needed to lower VPWidenFFLoadRecipe into
-    // VPWidenFFLoadEVLRecipe.
+    // VPWidenFFLoadEVLRecipe is currently the only concrete recipe that generates
+    // speculative load intrinsics. Since it relies on the EVL transform,
+    // speculative loads are only supported when tail-folding with EVL is enabled.
     if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL ||
         PreferPredicateOverEpilogue !=
             PreferPredicateTy::PredicateOrDontVectorize) {
