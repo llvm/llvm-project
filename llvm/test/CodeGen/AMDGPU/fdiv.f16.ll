@@ -1702,7 +1702,7 @@ entry:
   %gep.r = getelementptr inbounds half, ptr addrspace(1) %r, i64 %tid.ext
   %a.val = load volatile half, ptr addrspace(1) %gep.a
   %b.val = load volatile half, ptr addrspace(1) %gep.b
-  %r.val = fdiv half %a.val, %b.val
+  %r.val = fdiv afn half %a.val, %b.val
   store half %r.val, ptr addrspace(1) %gep.r
   ret void
 }
@@ -2475,4 +2475,4 @@ declare <2 x half> @llvm.sqrt.v2f16(<2 x half>) #2
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-attributes #2 = { nounwind "unsafe-fp-math"="true" }
+attributes #2 = { nounwind }

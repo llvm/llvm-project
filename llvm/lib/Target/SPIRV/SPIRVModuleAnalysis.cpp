@@ -1564,6 +1564,13 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::BFloat16ConversionINTEL);
     }
     break;
+  case SPIRV::OpRoundFToTF32INTEL:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_tensor_float32_conversion)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_tensor_float32_conversion);
+      Reqs.addCapability(SPIRV::Capability::TensorFloat32RoundingINTEL);
+    }
+    break;
   case SPIRV::OpVariableLengthArrayINTEL:
   case SPIRV::OpSaveMemoryINTEL:
   case SPIRV::OpRestoreMemoryINTEL:
