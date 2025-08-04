@@ -1,0 +1,1 @@
+struct M { int j; };

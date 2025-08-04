@@ -88,7 +88,8 @@ void SwiftDWARFImporterForClangTypes::lookupValue(
         continue;
       auto ts = module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift);
       if (!ts) {
-        llvm::consumeError(ts.takeError());
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), ts.takeError(),
+                       "no Swift type system: {0}");
         continue;
       }
       auto swift_ts = llvm::dyn_cast_or_null<TypeSystemSwift>(ts->get());
@@ -127,7 +128,9 @@ void SwiftDWARFImporterDelegate::importType(
       from_ctx.getSourceManager().getFileManager(), false);
   llvm::Expected<clang::QualType> clang_type(importer.Import(qual_type));
   if (!clang_type) {
-    llvm::consumeError(clang_type.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), clang_type.takeError(),
+                   "could not import DWARF type {1} into Clang AST: {0}",
+                   qual_type.getAsString());
     return;
   }
 
