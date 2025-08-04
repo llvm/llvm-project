@@ -334,6 +334,21 @@ entry:
 
   ret void
 }
+
+; Lifetimes on poison should be ignored.
+define void @lifetime_poison(i64 %a) #0 {
+; CHECK-LABEL: define void @lifetime_poison(
+; CHECK-SAME: i64 [[A:%.*]]) {
+; CHECK-NEXT:    [[A_ADDR:%.*]] = alloca i64, align 8
+; CHECK-NEXT:    store i64 [[A]], ptr [[A_ADDR]], align 8
+; CHECK-NEXT:    ret void
+;
+  %a.addr = alloca i64, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr poison)
+  store i64 %a, ptr %a.addr, align 8
+  call void @llvm.lifetime.end.p0(i64 8, ptr poison)
+  ret void
+}
 ;.
 ; CHECK-DEFAULT: [[PROF1]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.
