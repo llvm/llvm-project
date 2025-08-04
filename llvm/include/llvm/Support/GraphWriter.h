@@ -200,8 +200,9 @@ public:
       O << "<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\""
         << " cellpadding=\"0\"><tr><td align=\"text\" colspan=\"" << ColSpan
         << "\">";
-    } else
+    } else {
       O << "\"{";
+    }
 
     if (!DTraits.renderGraphFromBottomUp()) {
       if (RenderUsingHTML)

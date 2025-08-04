@@ -388,7 +388,7 @@ struct MatchableInfo {
     StringRef Token;
 
     /// The unique class instance this operand should match.
-    ClassInfo *Class;
+    ClassInfo *Class = nullptr;
 
     /// The operand name this is, if anything.
     StringRef SrcOpName;
@@ -397,18 +397,17 @@ struct MatchableInfo {
     StringRef OrigSrcOpName;
 
     /// The suboperand index within SrcOpName, or -1 for the entire operand.
-    int SubOpIdx;
+    int SubOpIdx = -1;
 
     /// Whether the token is "isolated", i.e., it is preceded and followed
     /// by separators.
     bool IsIsolatedToken;
 
     /// Register record if this token is singleton register.
-    const Record *SingletonReg;
+    const Record *SingletonReg = nullptr;
 
     explicit AsmOperand(bool IsIsolatedToken, StringRef T)
-        : Token(T), Class(nullptr), SubOpIdx(-1),
-          IsIsolatedToken(IsIsolatedToken), SingletonReg(nullptr) {}
+        : Token(T), IsIsolatedToken(IsIsolatedToken) {}
   };
 
   /// ResOperand - This represents a single operand in the result instruction
@@ -1330,8 +1329,7 @@ void AsmMatcherInfo::buildRegisterClasses(
   for (const RegisterSet &RS : RegisterSets) {
     ClassInfo *CI = RegisterSetClasses[RS];
     for (const RegisterSet &RS2 : RegisterSets)
-      if (RS != RS2 && std::includes(RS2.begin(), RS2.end(), RS.begin(),
-                                     RS.end(), LessRecordByID()))
+      if (RS != RS2 && llvm::includes(RS2, RS, LessRecordByID()))
         CI->SuperClasses.push_back(RegisterSetClasses[RS2]);
   }
 
@@ -1543,7 +1541,7 @@ void AsmMatcherInfo::buildInfo() {
     Variant.Name = AsmVariant->getValueAsString("Name");
     Variant.AsmVariantNo = AsmVariant->getValueAsInt("Variant");
 
-    for (const CodeGenInstruction *CGI : Target.getInstructionsByEnumValue()) {
+    for (const CodeGenInstruction *CGI : Target.getInstructions()) {
 
       // If the tblgen -match-prefix option is specified (for tblgen hackers),
       // filter the set of instructions we consider.
@@ -1714,22 +1712,21 @@ void AsmMatcherInfo::buildInstructionOperandReference(MatchableInfo *II,
   MatchableInfo::AsmOperand *Op = &II->AsmOperands[AsmOpIdx];
 
   // Map this token to an operand.
-  unsigned Idx;
-  if (!Operands.hasOperandNamed(OperandName, Idx))
+  std::optional<unsigned> Idx = Operands.findOperandNamed(OperandName);
+  if (!Idx)
     PrintFatalError(II->TheDef->getLoc(),
                     "error: unable to find operand: '" + OperandName + "'");
-
   // If the instruction operand has multiple suboperands, but the parser
   // match class for the asm operand is still the default "ImmAsmOperand",
   // then handle each suboperand separately.
-  if (Op->SubOpIdx == -1 && Operands[Idx].MINumOperands > 1) {
-    const Record *Rec = Operands[Idx].Rec;
+  if (Op->SubOpIdx == -1 && Operands[*Idx].MINumOperands > 1) {
+    const Record *Rec = Operands[*Idx].Rec;
     assert(Rec->isSubClassOf("Operand") && "Unexpected operand!");
     const Record *MatchClass = Rec->getValueAsDef("ParserMatchClass");
     if (MatchClass && MatchClass->getValueAsString("Name") == "Imm") {
       // Insert remaining suboperands after AsmOpIdx in II->AsmOperands.
       StringRef Token = Op->Token; // save this in case Op gets moved
-      for (unsigned SI = 1, SE = Operands[Idx].MINumOperands; SI != SE; ++SI) {
+      for (unsigned SI = 1, SE = Operands[*Idx].MINumOperands; SI != SE; ++SI) {
         MatchableInfo::AsmOperand NewAsmOp(/*IsIsolatedToken=*/true, Token);
         NewAsmOp.SubOpIdx = SI;
         II->AsmOperands.insert(II->AsmOperands.begin() + AsmOpIdx + SI,
@@ -1742,7 +1739,7 @@ void AsmMatcherInfo::buildInstructionOperandReference(MatchableInfo *II,
   }
 
   // Set up the operand class.
-  Op->Class = getOperandClass(Operands[Idx], Op->SubOpIdx);
+  Op->Class = getOperandClass(Operands[*Idx], Op->SubOpIdx);
   Op->OrigSrcOpName = OperandName;
 
   // If the named operand is tied, canonicalize it to the untied operand.
@@ -1754,14 +1751,14 @@ void AsmMatcherInfo::buildInstructionOperandReference(MatchableInfo *II,
   //   "inc $dst"
   // so that we know how to provide the $dst operand when filling in the result.
   int OITied = -1;
-  if (Operands[Idx].MINumOperands == 1)
-    OITied = Operands[Idx].getTiedRegister();
+  if (Operands[*Idx].MINumOperands == 1)
+    OITied = Operands[*Idx].getTiedRegister();
   if (OITied != -1) {
     // The tied operand index is an MIOperand index, find the operand that
     // contains it.
-    std::pair<unsigned, unsigned> Idx = Operands.getSubOperandNumber(OITied);
-    OperandName = Operands[Idx.first].Name;
-    Op->SubOpIdx = Idx.second;
+    auto [OpIdx, SubopIdx] = Operands.getSubOperandNumber(OITied);
+    OperandName = Operands[OpIdx].Name;
+    Op->SubOpIdx = SubopIdx;
   }
 
   Op->SrcOpName = OperandName;
@@ -1908,7 +1905,7 @@ void MatchableInfo::buildAliasResultOperands(bool AliasConstraintsAreChecked) {
     }
 
     // Handle all the suboperands for this operand.
-    const std::string &OpName = OpInfo.Name;
+    StringRef OpName = OpInfo.Name;
     for (; AliasOpNo < LastOpNo &&
            CGA.ResultInstOperandIndex[AliasOpNo].first == Idx;
          ++AliasOpNo) {
@@ -3443,7 +3440,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
   if (!ReportMultipleNearMisses)
     emitAsmTiedOperandConstraints(Target, Info, OS, HasOptionalOperands);
 
-  StringToOffsetTable StringTable;
+  StringToOffsetTable StringTable(/*AppendZero=*/false);
 
   size_t MaxNumOperands = 0;
   unsigned MaxMnemonicIndex = 0;
@@ -3454,8 +3451,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
 
     // Store a pascal-style length byte in the mnemonic.
     std::string LenMnemonic = char(MI->Mnemonic.size()) + MI->Mnemonic.lower();
-    MaxMnemonicIndex = std::max(
-        MaxMnemonicIndex, StringTable.GetOrAddStringOffset(LenMnemonic, false));
+    MaxMnemonicIndex = std::max(MaxMnemonicIndex,
+                                StringTable.GetOrAddStringOffset(LenMnemonic));
   }
 
   OS << "static const char MnemonicTable[] =\n";
@@ -3727,7 +3724,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
         "<< ActualIdx);\n";
   OS << "      if (ActualIdx < Operands.size())\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \" (\";\n";
-  OS << "                        Operands[ActualIdx]->print(dbgs()); dbgs() << "
+  OS << "                        Operands[ActualIdx]->print(dbgs(), "
+        "*getContext().getAsmInfo()); dbgs() << "
         "\"): \");\n";
   OS << "      else\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \": \");\n";

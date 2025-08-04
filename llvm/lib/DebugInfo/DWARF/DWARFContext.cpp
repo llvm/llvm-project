@@ -621,10 +621,6 @@ public:
     else
       return getNormalTypeUnitMap();
   }
-
-  Error doWorkThreadSafely(function_ref<Error()> Work) override {
-    return Work();
-  }
 };
 
 class ThreadSafeState : public ThreadUnsafeDWARFContextState {
@@ -739,11 +735,6 @@ public:
   getTypeUnitMap(bool IsDWO) override {
     std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
     return ThreadUnsafeDWARFContextState::getTypeUnitMap(IsDWO);
-  }
-
-  Error doWorkThreadSafely(function_ref<Error()> Work) override {
-    std::unique_lock<std::recursive_mutex> LockGuard(Mutex);
-    return ThreadUnsafeDWARFContextState::doWorkThreadSafely(Work);
   }
 };
 } // namespace
@@ -1911,8 +1902,8 @@ static Error createError(const Twine &Reason, llvm::Error E) {
 /// SymInfo contains information about symbol: it's address
 /// and section index which is -1LL for absolute symbols.
 struct SymInfo {
-  uint64_t Address;
-  uint64_t SectionIndex;
+  uint64_t Address = 0;
+  uint64_t SectionIndex = 0;
 };
 
 /// Returns the address of symbol relocation used against and a section index.
@@ -1930,7 +1921,7 @@ static Expected<SymInfo> getSymbolInfo(const object::ObjectFile &Obj,
   // in the object file
   if (Sym != Obj.symbol_end()) {
     bool New;
-    std::tie(CacheIt, New) = Cache.insert({*Sym, {0, 0}});
+    std::tie(CacheIt, New) = Cache.try_emplace(*Sym);
     if (!New)
       return CacheIt->second;
 
@@ -2269,7 +2260,7 @@ public:
           continue;
       }
 
-      if (Section.relocation_begin() == Section.relocation_end())
+      if (Section.relocations().empty())
         continue;
 
       // Symbol to [address, section index] cache mapping.

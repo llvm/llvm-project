@@ -284,6 +284,8 @@ public:
       return GetStringValue();
     if constexpr (std::is_same_v<T, ArchSpec>)
       return GetArchSpecValue();
+    if constexpr (std::is_same_v<T, FormatEntity::Entry>)
+      return GetFormatEntityValue();
     if constexpr (std::is_enum_v<T>)
       if (std::optional<int64_t> value = GetEnumerationValue())
         return static_cast<T>(*value);
@@ -295,11 +297,9 @@ public:
                 typename std::remove_pointer<T>::type>::type,
             std::enable_if_t<std::is_pointer_v<T>, bool> = true>
   T GetValueAs() const {
-    if constexpr (std::is_same_v<U, FormatEntity::Entry>)
-      return GetFormatEntity();
-    if constexpr (std::is_same_v<U, RegularExpression>)
-      return GetRegexValue();
-    return {};
+    static_assert(std::is_same_v<U, RegularExpression>,
+                  "only for RegularExpression");
+    return GetRegexValue();
   }
 
   bool SetValueAs(bool v) { return SetBooleanValue(v); }
@@ -382,7 +382,7 @@ private:
   std::optional<UUID> GetUUIDValue() const;
   bool SetUUIDValue(const UUID &uuid);
 
-  const FormatEntity::Entry *GetFormatEntity() const;
+  FormatEntity::Entry GetFormatEntityValue() const;
   bool SetFormatEntityValue(const FormatEntity::Entry &entry);
 
   const RegularExpression *GetRegexValue() const;

@@ -70,8 +70,6 @@ static cl::opt<bool> SimplifyMIR(
 static cl::opt<bool> PrintLocations("mir-debug-loc", cl::Hidden, cl::init(true),
                                     cl::desc("Print MIR debug-locations"));
 
-extern cl::opt<bool> UseNewDbgInfoFormat;
-
 namespace {
 
 /// This structure describes how to print out stack object references.
@@ -188,25 +186,16 @@ static void printMF(raw_ostream &OS, const MachineModuleInfo &MMI,
   YamlMF.IsOutlined = MF.isOutlined();
   YamlMF.UseDebugInstrRef = MF.useDebugInstrRef();
 
-  YamlMF.Legalized = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::Legalized);
-  YamlMF.RegBankSelected = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::RegBankSelected);
-  YamlMF.Selected = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::Selected);
-  YamlMF.FailedISel = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailedISel);
-  YamlMF.FailsVerification = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::FailsVerification);
-  YamlMF.TracksDebugUserValues = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::TracksDebugUserValues);
-
-  YamlMF.NoPHIs = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoPHIs);
-  YamlMF.IsSSA = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::IsSSA);
-  YamlMF.NoVRegs = MF.getProperties().hasProperty(
-      MachineFunctionProperties::Property::NoVRegs);
+  const MachineFunctionProperties &Props = MF.getProperties();
+  YamlMF.Legalized = Props.hasLegalized();
+  YamlMF.RegBankSelected = Props.hasRegBankSelected();
+  YamlMF.Selected = Props.hasSelected();
+  YamlMF.FailedISel = Props.hasFailedISel();
+  YamlMF.FailsVerification = Props.hasFailsVerification();
+  YamlMF.TracksDebugUserValues = Props.hasTracksDebugUserValues();
+  YamlMF.NoPHIs = Props.hasNoPHIs();
+  YamlMF.IsSSA = Props.hasIsSSA();
+  YamlMF.NoVRegs = Props.hasNoVRegs();
 
   convertMRI(YamlMF, MF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   MachineModuleSlotTracker &MST = State.MST;
@@ -536,23 +525,29 @@ static void convertCallSiteObjects(yaml::MachineFunction &YMF,
                                    const MachineFunction &MF,
                                    ModuleSlotTracker &MST) {
   const auto *TRI = MF.getSubtarget().getRegisterInfo();
-  for (auto CSInfo : MF.getCallSitesInfo()) {
+  for (auto [MI, CallSiteInfo] : MF.getCallSitesInfo()) {
     yaml::CallSiteInfo YmlCS;
     yaml::MachineInstrLoc CallLocation;
 
     // Prepare instruction position.
-    MachineBasicBlock::const_instr_iterator CallI = CSInfo.first->getIterator();
+    MachineBasicBlock::const_instr_iterator CallI = MI->getIterator();
     CallLocation.BlockNum = CallI->getParent()->getNumber();
     // Get call instruction offset from the beginning of block.
     CallLocation.Offset =
         std::distance(CallI->getParent()->instr_begin(), CallI);
     YmlCS.CallLocation = CallLocation;
+
+    auto [ArgRegPairs, CalleeTypeIds] = CallSiteInfo;
     // Construct call arguments and theirs forwarding register info.
-    for (auto ArgReg : CSInfo.second.ArgRegPairs) {
+    for (auto ArgReg : ArgRegPairs) {
       yaml::CallSiteInfo::ArgRegPair YmlArgReg;
       YmlArgReg.ArgNo = ArgReg.ArgNo;
       printRegMIR(ArgReg.Reg, YmlArgReg.Reg, TRI);
       YmlCS.ArgForwardingRegs.emplace_back(YmlArgReg);
+    }
+    // Get type ids.
+    for (auto *CalleeTypeId : CalleeTypeIds) {
+      YmlCS.CalleeTypeIds.push_back(CalleeTypeId->getZExtValue());
     }
     YMF.CallSitesInfo.push_back(std::move(YmlCS));
   }
@@ -825,6 +820,11 @@ static void printMI(raw_ostream &OS, MFPrintState &State,
     OS << "nusw ";
   if (MI.getFlag(MachineInstr::SameSign))
     OS << "samesign ";
+  if (MI.getFlag(MachineInstr::InBounds))
+    OS << "inbounds ";
+
+  // NOTE: Please add new MIFlags also to the MI_FLAGS_STR in
+  // llvm/utils/update_mir_test_checks.py.
 
   OS << TII->getName(MI.getOpcode());
 
@@ -976,18 +976,11 @@ void MIRFormatter::printIRValue(raw_ostream &OS, const Value &V,
 }
 
 void llvm::printMIR(raw_ostream &OS, const Module &M) {
-  ScopedDbgInfoFormatSetter FormatSetter(const_cast<Module &>(M),
-                                         UseNewDbgInfoFormat);
-
   yaml::Output Out(OS);
   Out << const_cast<Module &>(M);
 }
 
 void llvm::printMIR(raw_ostream &OS, const MachineModuleInfo &MMI,
                     const MachineFunction &MF) {
-  // RemoveDIs: as there's no textual form for DbgRecords yet, print debug-info
-  // in dbg.value format.
-  ScopedDbgInfoFormatSetter FormatSetter(
-      const_cast<Function &>(MF.getFunction()), UseNewDbgInfoFormat);
   printMF(OS, MMI, MF);
 }

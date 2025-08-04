@@ -8,6 +8,7 @@
 
 #include "lldb/Core/AddressRange.h"
 #include "lldb/Expression/DWARFExpressionList.h"
+#include "lldb/Core/AddressRange.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StackFrame.h"
@@ -21,7 +22,7 @@ bool DWARFExpressionList::IsAlwaysValidSingleExpr() const {
   return GetAlwaysValidExpr() != nullptr;
 }
 
-const DWARFExpression * DWARFExpressionList::GetAlwaysValidExpr() const {
+const DWARFExpression *DWARFExpressionList::GetAlwaysValidExpr() const {
   if (m_exprs.GetSize() != 1)
     return nullptr;
   const auto *expr = m_exprs.GetEntryAtIndex(0);

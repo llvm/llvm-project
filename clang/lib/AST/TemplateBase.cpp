@@ -37,7 +37,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <optional>
 
 using namespace clang;
 
@@ -338,6 +337,17 @@ bool TemplateArgument::isPackExpansion() const {
   }
 
   llvm_unreachable("Invalid TemplateArgument Kind!");
+}
+
+bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
+  if (getKind() == TemplateArgument::Template) {
+    if (isa<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
+      return true;
+    else if (auto *TTP = dyn_cast_if_present<TemplateTemplateParmDecl>(
+                 getAsTemplate().getAsTemplateDecl()))
+      return TTP->templateParameterKind() == TNK_Concept_template;
+  }
+  return false;
 }
 
 bool TemplateArgument::containsUnexpandedParameterPack() const {
@@ -727,7 +737,7 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
   RAngleLoc = Info.getRAngleLoc();
   NumTemplateArgs = Info.size();
 
-  TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
+  TemplateArgumentLoc *ArgBuffer = getTrailingObjects();
   for (unsigned i = 0; i != NumTemplateArgs; ++i)
     new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
 }
@@ -738,7 +748,7 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
   RAngleLoc = Info->getRAngleLoc();
   NumTemplateArgs = Info->getNumTemplateArgs();
 
-  TemplateArgumentLoc *ArgBuffer = getTrailingObjects<TemplateArgumentLoc>();
+  TemplateArgumentLoc *ArgBuffer = getTrailingObjects();
   for (unsigned i = 0; i != NumTemplateArgs; ++i)
     new (&ArgBuffer[i]) TemplateArgumentLoc((*Info)[i]);
 }

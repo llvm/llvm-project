@@ -31,7 +31,7 @@ void function() {
 // expected-note@#3 {{checking the satisfaction of concept 'convertible_to<bool, bool>'}}
 // expected-note@#2 {{substituting template arguments into constraint expression here}}
 // expected-note@#5 {{checking constraint satisfaction for template 'compare<Object *, Object *>'}}
-// expected-note@#5 {{in instantiation of function template specialization 'compare<Object *, Object *>' requested here}}
+// expected-note@#5 {{while substituting deduced template arguments into function template 'compare' [with IteratorL = Object *, IteratorR = Object *]}}
 
 // expected-note@#4 {{candidate template ignored: constraints not satisfied [with IteratorL = Object *, IteratorR = Object *]}}
 // We don't know exactly the substituted type for `lhs == rhs`, thus a placeholder 'expr-type' is emitted.
@@ -60,3 +60,17 @@ concept atomicish = requires() {
 };
 atomicish<int> f(); // expected-error {{expected 'auto' or 'decltype(auto)' after concept name}}
 } // namespace GH138820
+
+namespace GH138823 {
+  template <typename T> void foo();
+  template <class... Ts>
+  concept ConceptA = requires { foo<Ts>(); };
+  // expected-error@-1 {{expression contains unexpanded parameter pack 'Ts'}}
+
+  template <class>
+  concept ConceptB = ConceptA<int>;
+
+  template <ConceptB Foo> void bar(Foo);
+
+  void test() { bar(1); }
+}

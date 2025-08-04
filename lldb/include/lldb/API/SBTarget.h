@@ -349,6 +349,18 @@ public:
 
   SBError SetLabel(const char *label);
 
+  /// Architecture opcode byte size width accessor
+  ///
+  /// \return
+  /// The minimum size in 8-bit (host) bytes of an opcode.
+  uint32_t GetMinimumOpcodeByteSize() const;
+
+  /// Architecture opcode byte size width accessor
+  ///
+  /// \return
+  /// The maximum size in 8-bit (host) bytes of an opcode.
+  uint32_t GetMaximumOpcodeByteSize() const;
+
   /// Architecture data byte width accessor
   ///
   /// \return

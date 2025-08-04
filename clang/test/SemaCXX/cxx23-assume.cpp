@@ -8,6 +8,14 @@
 struct A{};
 struct B{ explicit operator bool() { return true; } };
 
+// This should be the first test case of this file.
+void IsActOnFinishFullExprCalled() {
+  // Do not add other test cases to this function.
+  // Make sure `ActOnFinishFullExpr` is called and creates `ExprWithCleanups`
+  // to avoid assertion failure.
+  [[assume(B{})]]; // expected-warning {{assumption is ignored because it contains (potential) side-effects}} // ext-warning {{C++23 extension}}
+}
+
 template <bool cond>
 void f() {
   [[assume(cond)]]; // ext-warning {{C++23 extension}}
@@ -129,12 +137,12 @@ constexpr int f5() requires (!C<T>) { return 2; } // expected-note 4 {{while che
 
 static_assert(f5<int>() == 1);
 static_assert(f5<D>() == 1); // expected-note 3 {{while checking constraint satisfaction}}
-                             // expected-note@-1 3 {{in instantiation of}}
+                             // expected-note@-1 3 {{while substituting deduced template arguments}}
                              // expected-error@-2 {{no matching function for call}}
 
 static_assert(f5<double>() == 2);
-static_assert(f5<E>() == 1); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
-static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisfaction}} expected-note {{in instantiation of}}
+static_assert(f5<E>() == 1); // expected-note {{while checking constraint satisfaction}} expected-note {{while substituting deduced template arguments}}
+static_assert(f5<F>() == 2); // expected-note {{while checking constraint satisfaction}} expected-note {{while substituting deduced template arguments}}
 
 // Do not validate assumptions whose evaluation would have side-effects.
 constexpr int foo() {

@@ -16,18 +16,18 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/DWARF.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Object/Archive.h"
 #include "llvm/Object/IRObjectFile.h"
+#include "llvm/Support/AArch64AttributeParser.h"
 #include "llvm/Support/ARMAttributeParser.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -539,6 +539,41 @@ uint32_t ObjFile<ELFT>::getSectionIndex(const Elf_Sym &sym) const {
       this);
 }
 
+template <class ELFT>
+static void
+handleAArch64BAAndGnuProperties(ObjFile<ELFT> *file, Ctx &ctx,
+                                const AArch64BuildAttrSubsections &baInfo) {
+  if (file->aarch64PauthAbiCoreInfo) {
+    // Check for data mismatch.
+    if (file->aarch64PauthAbiCoreInfo) {
+      if (baInfo.Pauth.TagPlatform != file->aarch64PauthAbiCoreInfo->platform ||
+          baInfo.Pauth.TagSchema != file->aarch64PauthAbiCoreInfo->version)
+        Err(ctx) << file
+                 << " GNU properties and build attributes have conflicting "
+                    "AArch64 PAuth data";
+    }
+    if (baInfo.AndFeatures != file->andFeatures)
+      Err(ctx) << file
+               << " GNU properties and build attributes have conflicting "
+                  "AArch64 PAuth data";
+  } else {
+    // When BuildAttributes are missing, PauthABI value defaults to (TagPlatform
+    // = 0, TagSchema = 0). GNU properties do not write PAuthAbiCoreInfo if GNU
+    // property is not present. To match this behaviour, we only write
+    // PAuthAbiCoreInfo when there is at least one non-zero value. The
+    // specification reserves TagPlatform = 0, TagSchema = 1 values to match the
+    // 'Invalid' GNU property section with platform = 0, version = 0.
+    if (baInfo.Pauth.TagPlatform || baInfo.Pauth.TagSchema) {
+      if (baInfo.Pauth.TagPlatform == 0 && baInfo.Pauth.TagSchema == 1)
+        file->aarch64PauthAbiCoreInfo = {0, 0};
+      else
+        file->aarch64PauthAbiCoreInfo = {baInfo.Pauth.TagPlatform,
+                                         baInfo.Pauth.TagSchema};
+    }
+    file->andFeatures = baInfo.AndFeatures;
+  }
+}
+
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   object::ELFFile<ELFT> obj = this->getObj();
   // Read a section table. justSymbols is usually false.
@@ -556,6 +591,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
   sections.resize(size);
   for (size_t i = 0; i != size; ++i) {
     const Elf_Shdr &sec = objSections[i];
+
     if (LLVM_LIKELY(sec.sh_type == SHT_PROGBITS))
       continue;
     if (LLVM_LIKELY(sec.sh_type == SHT_GROUP)) {
@@ -639,13 +675,6 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
       break;
     case EM_AARCH64:
-      // FIXME: BuildAttributes have been implemented in llvm, but not yet in
-      // lld. Remove the section so that it does not accumulate in the output
-      // file. When support is implemented we expect not to output a build
-      // attributes section in files of type ET_EXEC or ET_SHARED, but ld -r
-      // ouptut will need a single merged attributes section.
-      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES)
-        sections[i] = &InputSection::discarded;
       // Producing a static binary with MTE globals is not currently supported,
       // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
       // medatada, and we don't want them to end up in the output file for
@@ -746,6 +775,8 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
   StringRef shstrtab = CHECK2(obj.getSectionStringTable(objSections), this);
   uint64_t size = objSections.size();
   SmallVector<ArrayRef<Elf_Word>, 0> selectedGroups;
+  AArch64BuildAttrSubsections aarch64BAsubSections;
+  bool hasAArch64BuildAttributes = false;
   for (size_t i = 0; i != size; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
@@ -777,6 +808,26 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
       continue;
     }
 
+    // Processor-specific types that do not use the following switch statement.
+    //
+    // Extract Build Attributes section contents into aarch64BAsubSections.
+    // Input objects may contain both build Build Attributes and GNU
+    // properties. We delay processing Build Attributes until we have finished
+    // reading all sections so that we can check that these are consistent.
+    if (type == SHT_AARCH64_ATTRIBUTES && ctx.arg.emachine == EM_AARCH64) {
+      ArrayRef<uint8_t> contents = check(obj.getSectionContents(sec));
+      AArch64AttributeParser attributes;
+      if (Error e = attributes.parse(contents, ELFT::Endianness)) {
+        StringRef name = check(obj.getSectionName(sec, shstrtab));
+        InputSection isec(*this, sec, name);
+        Warn(ctx) << &isec << ": " << std::move(e);
+      } else {
+        aarch64BAsubSections = extractBuildAttributesSubsections(attributes);
+        hasAArch64BuildAttributes = true;
+      }
+      this->sections[i] = &InputSection::discarded;
+      continue;
+    }
     switch (type) {
     case SHT_GROUP: {
       if (!ctx.arg.relocatable)
@@ -914,6 +965,12 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
           << linkSec;
   }
 
+  // Handle AArch64 Build Attributes and GNU properties:
+  // - Err on mismatched values.
+  // - Store missing values as GNU properties.
+  if (hasAArch64BuildAttributes)
+    handleAArch64BAAndGnuProperties<ELFT>(this, ctx, aarch64BAsubSections);
+
   for (ArrayRef<Elf_Word> entries : selectedGroups)
     handleSectionGroup<ELFT>(this->sections, entries);
 }
@@ -950,7 +1007,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
     } else if (ctx.arg.emachine == EM_AARCH64 &&
                type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
       ArrayRef<uint8_t> contents = data ? *data : desc;
-      if (!f.aarch64PauthAbiCoreInfo.empty()) {
+      if (f.aarch64PauthAbiCoreInfo) {
         return void(
             err(contents.data())
             << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
@@ -961,7 +1018,9 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
                        "is invalid: expected 16 bytes, but got "
                     << size);
       }
-      f.aarch64PauthAbiCoreInfo = desc;
+      f.aarch64PauthAbiCoreInfo = {
+          support::endian::read64<ELFT::Endianness>(&desc[0]),
+          support::endian::read64<ELFT::Endianness>(&desc[8])};
     }
 
     // Padding is present in the note descriptor, if necessary.
@@ -970,7 +1029,7 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
 }
 // Read the following info from the .note.gnu.property section and write it to
 // the corresponding fields in `ObjFile`:
-// - Feature flags (32 bits) representing x86 or AArch64 features for
+// - Feature flags (32 bits) representing x86, AArch64 or RISC-V features for
 //   hardware-assisted call flow control;
 // - AArch64 PAuth ABI core info (16 bytes).
 template <class ELFT>
@@ -978,6 +1037,22 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
                             ObjFile<ELFT> &f) {
   using Elf_Nhdr = typename ELFT::Nhdr;
   using Elf_Note = typename ELFT::Note;
+
+  uint32_t featureAndType;
+  switch (ctx.arg.emachine) {
+  case EM_386:
+  case EM_X86_64:
+    featureAndType = GNU_PROPERTY_X86_FEATURE_1_AND;
+    break;
+  case EM_AARCH64:
+    featureAndType = GNU_PROPERTY_AARCH64_FEATURE_1_AND;
+    break;
+  case EM_RISCV:
+    featureAndType = GNU_PROPERTY_RISCV_FEATURE_1_AND;
+    break;
+  default:
+    return;
+  }
 
   ArrayRef<uint8_t> data = sec.content();
   auto err = [&](const uint8_t *place) -> ELFSyncStream {
@@ -998,10 +1073,6 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
       data = data.slice(nhdr->getSize(sec.addralign));
       continue;
     }
-
-    uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
-                                  ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
-                                  : GNU_PROPERTY_X86_FEATURE_1_AND;
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
@@ -1066,9 +1137,9 @@ InputSectionBase *ObjFile<ELFT>::createInputSection(uint32_t idx,
     }
 
     // Object files that use processor features such as Intel Control-Flow
-    // Enforcement (CET) or AArch64 Branch Target Identification BTI, use a
-    // .note.gnu.property section containing a bitfield of feature bits like the
-    // GNU_PROPERTY_X86_FEATURE_1_IBT flag. Read a bitmap containing the flag.
+    // Enforcement (CET), AArch64 Branch Target Identification BTI or RISC-V
+    // Zicfilp/Zicfiss extensions, use a .note.gnu.property section containing
+    // a bitfield of feature bits like the GNU_PROPERTY_X86_FEATURE_1_IBT flag.
     //
     // Since we merge bitmaps from multiple object files to create a new
     // .note.gnu.property containing a single AND'ed bitmap, we discard an input
@@ -1741,6 +1812,39 @@ static uint8_t getOsAbi(const Triple &t) {
   }
 }
 
+// For DTLTO, bitcode member names must be valid paths to files on disk.
+// For thin archives, resolve `memberPath` relative to the archive's location.
+// Returns true if adjusted; false otherwise. Non-thin archives are unsupported.
+static bool dtltoAdjustMemberPathIfThinArchive(Ctx &ctx, StringRef archivePath,
+                                               std::string &memberPath) {
+  assert(!archivePath.empty());
+
+  if (ctx.arg.dtltoDistributor.empty())
+    return false;
+
+  // Read the archive header to determine if it's a thin archive.
+  auto bufferOrErr =
+      MemoryBuffer::getFileSlice(archivePath, sizeof(ThinArchiveMagic) - 1, 0);
+  if (std::error_code ec = bufferOrErr.getError()) {
+    ErrAlways(ctx) << "cannot open " << archivePath << ": " << ec.message();
+    return false;
+  }
+
+  if (!bufferOrErr->get()->getBuffer().starts_with(ThinArchiveMagic))
+    return false;
+
+  SmallString<128> resolvedPath;
+  if (path::is_relative(memberPath)) {
+    resolvedPath = path::parent_path(archivePath);
+    path::append(resolvedPath, memberPath);
+  } else
+    resolvedPath = memberPath;
+
+  path::remove_dots(resolvedPath, /*remove_dot_dot=*/true);
+  memberPath = resolvedPath.str();
+  return true;
+}
+
 BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive, bool lazy)
     : InputFile(ctx, BitcodeKind, mb) {
@@ -1751,17 +1855,22 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
   if (ctx.arg.thinLTOIndexOnly)
     path = replaceThinLTOSuffix(ctx, mb.getBufferIdentifier());
 
-  // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
-  // name. If two archives define two members with the same name, this
-  // causes a collision which result in only one of the objects being taken
-  // into consideration at LTO time (which very likely causes undefined
-  // symbols later in the link stage). So we append file offset to make
-  // filename unique.
   StringSaver &ss = ctx.saver;
-  StringRef name = archiveName.empty()
-                       ? ss.save(path)
-                       : ss.save(archiveName + "(" + path::filename(path) +
-                                 " at " + utostr(offsetInArchive) + ")");
+  StringRef name;
+  if (archiveName.empty() ||
+      dtltoAdjustMemberPathIfThinArchive(ctx, archiveName, path)) {
+    name = ss.save(path);
+  } else {
+    // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
+    // name. If two archives define two members with the same name, this
+    // causes a collision which result in only one of the objects being taken
+    // into consideration at LTO time (which very likely causes undefined
+    // symbols later in the link stage). So we append file offset to make
+    // filename unique.
+    name = ss.save(archiveName + "(" + path::filename(path) + " at " +
+                   utostr(offsetInArchive) + ")");
+  }
+
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
   obj = CHECK2(lto::InputFile::create(mbref), this);

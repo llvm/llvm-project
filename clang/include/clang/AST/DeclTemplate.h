@@ -26,6 +26,7 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "clang/Basic/TemplateKinds.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -139,10 +140,8 @@ public:
   unsigned size() const { return NumParams; }
   bool empty() const { return NumParams == 0; }
 
-  ArrayRef<NamedDecl *> asArray() { return llvm::ArrayRef(begin(), end()); }
-  ArrayRef<const NamedDecl*> asArray() const {
-    return llvm::ArrayRef(begin(), size());
-  }
+  ArrayRef<NamedDecl *> asArray() { return {begin(), end()}; }
+  ArrayRef<const NamedDecl *> asArray() const { return {begin(), size()}; }
 
   NamedDecl* getParam(unsigned Idx) {
     assert(Idx < size() && "Template parameter index out-of-range");
@@ -279,7 +278,7 @@ public:
 
   /// Produce this as an array ref.
   ArrayRef<TemplateArgument> asArray() const {
-    return llvm::ArrayRef(data(), size());
+    return getTrailingObjects(size());
   }
 
   /// Retrieve the number of template arguments in this
@@ -287,9 +286,7 @@ public:
   unsigned size() const { return NumArguments; }
 
   /// Retrieve a pointer to the template argument list.
-  const TemplateArgument *data() const {
-    return getTrailingObjects<TemplateArgument>();
-  }
+  const TemplateArgument *data() const { return getTrailingObjects(); }
 };
 
 void *allocateDefaultArgStorageChain(const ASTContext &C);
@@ -505,12 +502,10 @@ private:
         TemplateArgumentsAsWritten(TemplateArgsAsWritten),
         PointOfInstantiation(POI) {
     if (MSInfo)
-      getTrailingObjects<MemberSpecializationInfo *>()[0] = MSInfo;
+      getTrailingObjects()[0] = MSInfo;
   }
 
-  size_t numTrailingObjects(OverloadToken<MemberSpecializationInfo*>) const {
-    return Function.getInt();
-  }
+  size_t numTrailingObjects() const { return Function.getInt(); }
 
 public:
   friend TrailingObjects;
@@ -597,9 +592,7 @@ public:
   /// function and the function template, and should always be
   /// TSK_ExplicitSpecialization whenever we have MemberSpecializationInfo.
   MemberSpecializationInfo *getMemberSpecializationInfo() const {
-    return numTrailingObjects(OverloadToken<MemberSpecializationInfo *>())
-               ? getTrailingObjects<MemberSpecializationInfo *>()[0]
-               : nullptr;
+    return numTrailingObjects() ? getTrailingObjects()[0] : nullptr;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {
@@ -778,7 +771,7 @@ protected:
 
   void loadLazySpecializationsImpl(bool OnlyPartial = false) const;
 
-  bool loadLazySpecializationsImpl(llvm::ArrayRef<TemplateArgument> Args,
+  bool loadLazySpecializationsImpl(ArrayRef<TemplateArgument> Args,
                                    TemplateParameterList *TPL = nullptr) const;
 
   template <class EntryType, typename... ProfileArguments>
@@ -1593,6 +1586,9 @@ class TemplateTemplateParmDecl final
       DefaultArgStorage<TemplateTemplateParmDecl, TemplateArgumentLoc *>;
   DefArgStorage DefaultArgument;
 
+  LLVM_PREFERRED_TYPE(TemplateNameKind)
+  unsigned ParameterKind : 3;
+
   /// Whether this template template parameter was declaration with
   /// the 'typename' keyword.
   ///
@@ -1615,13 +1611,16 @@ class TemplateTemplateParmDecl final
 
   TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, unsigned D,
                            unsigned P, bool ParameterPack, IdentifierInfo *Id,
-                           bool Typename, TemplateParameterList *Params)
+                           TemplateNameKind ParameterKind, bool Typename,
+                           TemplateParameterList *Params)
       : TemplateDecl(TemplateTemplateParm, DC, L, Id, Params),
-        TemplateParmPosition(D, P), Typename(Typename),
-        ParameterPack(ParameterPack), ExpandedParameterPack(false) {}
+        TemplateParmPosition(D, P), ParameterKind(ParameterKind),
+        Typename(Typename), ParameterPack(ParameterPack),
+        ExpandedParameterPack(false) {}
 
   TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L, unsigned D,
-                           unsigned P, IdentifierInfo *Id, bool Typename,
+                           unsigned P, IdentifierInfo *Id,
+                           TemplateNameKind ParameterKind, bool Typename,
                            TemplateParameterList *Params,
                            ArrayRef<TemplateParameterList *> Expansions);
 
@@ -1632,15 +1631,16 @@ public:
   friend class ASTDeclWriter;
   friend TrailingObjects;
 
-  static TemplateTemplateParmDecl *Create(const ASTContext &C, DeclContext *DC,
-                                          SourceLocation L, unsigned D,
-                                          unsigned P, bool ParameterPack,
-                                          IdentifierInfo *Id, bool Typename,
-                                          TemplateParameterList *Params);
   static TemplateTemplateParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation L, unsigned D,
-         unsigned P, IdentifierInfo *Id, bool Typename,
-         TemplateParameterList *Params,
+         unsigned P, bool ParameterPack, IdentifierInfo *Id,
+         TemplateNameKind ParameterKind, bool Typename,
+         TemplateParameterList *Params);
+
+  static TemplateTemplateParmDecl *
+  Create(const ASTContext &C, DeclContext *DC, SourceLocation L, unsigned D,
+         unsigned P, IdentifierInfo *Id, TemplateNameKind ParameterKind,
+         bool Typename, TemplateParameterList *Params,
          ArrayRef<TemplateParameterList *> Expansions);
 
   static TemplateTemplateParmDecl *CreateDeserialized(ASTContext &C,
@@ -1752,6 +1752,16 @@ public:
     if (hasDefaultArgument() && !defaultArgumentWasInherited())
       End = getDefaultArgument().getSourceRange().getEnd();
     return SourceRange(getTemplateParameters()->getTemplateLoc(), End);
+  }
+
+  TemplateNameKind templateParameterKind() const {
+    return static_cast<TemplateNameKind>(ParameterKind);
+  }
+
+  bool isTypeConceptTemplateParam() const {
+    return templateParameterKind() == TemplateNameKind::TNK_Concept_template &&
+           getTemplateParameters()->size() > 0 &&
+           isa<TemplateTypeParmDecl>(getTemplateParameters()->getParam(0));
   }
 
   // Implement isa/cast/dyncast/etc.
@@ -3349,7 +3359,11 @@ inline TemplateDecl *getAsTypeTemplateDecl(Decl *D) {
   return TD && (isa<ClassTemplateDecl>(TD) ||
                 isa<ClassTemplatePartialSpecializationDecl>(TD) ||
                 isa<TypeAliasTemplateDecl>(TD) ||
-                isa<TemplateTemplateParmDecl>(TD))
+                [&]() {
+                  if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(TD))
+                    return TTP->templateParameterKind() == TNK_Type_template;
+                  return false;
+                }())
              ? TD
              : nullptr;
 }

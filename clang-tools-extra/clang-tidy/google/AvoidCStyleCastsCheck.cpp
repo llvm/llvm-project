@@ -120,8 +120,8 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       IsFunction(SourceTypeAsWritten) && IsFunction(DestTypeAsWritten);
 
   const bool ConstructorCast = !CastExpr->getTypeAsWritten().hasQualifiers() &&
-      DestTypeAsWritten->isRecordType() &&
-      !DestTypeAsWritten->isElaboratedTypeSpecifier();
+                               DestTypeAsWritten->isRecordType() &&
+                               !DestTypeAsWritten->isElaboratedTypeSpecifier();
 
   if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast) {
     // Function pointer/reference casts may be needed to resolve ambiguities in

@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -135,10 +136,10 @@ class raw_ostream;
     explicit operator bool() const { return isValid(); }
 
     /// Print this index to the given raw_ostream.
-    void print(raw_ostream &os) const;
+    LLVM_ABI void print(raw_ostream &os) const;
 
     /// Dump this index to stderr.
-    void dump() const;
+    LLVM_ABI void dump() const;
 
     /// Compare two SlotIndex objects for equality.
     bool operator==(SlotIndex other) const {
@@ -319,9 +320,9 @@ class raw_ostream;
     // For legacy pass manager.
     SlotIndexes() = default;
 
-    void clear();
+    LLVM_ABI void clear();
 
-    void analyze(MachineFunction &MF);
+    LLVM_ABI void analyze(MachineFunction &MF);
 
     IndexListEntry* createEntry(MachineInstr *mi, unsigned index) {
       IndexListEntry *entry =
@@ -334,29 +335,29 @@ class raw_ostream;
     }
 
     /// Renumber locally after inserting curItr.
-    void renumberIndexes(IndexList::iterator curItr);
+    LLVM_ABI void renumberIndexes(IndexList::iterator curItr);
 
   public:
     SlotIndexes(SlotIndexes &&) = default;
 
     SlotIndexes(MachineFunction &MF) { analyze(MF); }
 
-    ~SlotIndexes();
+    LLVM_ABI ~SlotIndexes();
 
     void reanalyze(MachineFunction &MF) {
       clear();
       analyze(MF);
     }
 
-    void print(raw_ostream &OS) const;
+    LLVM_ABI void print(raw_ostream &OS) const;
 
     /// Dump the indexes.
-    void dump() const;
+    LLVM_ABI void dump() const;
 
     /// Repair indexes after adding and removing instructions.
-    void repairIndexesInRange(MachineBasicBlock *MBB,
-                              MachineBasicBlock::iterator Begin,
-                              MachineBasicBlock::iterator End);
+    LLVM_ABI void repairIndexesInRange(MachineBasicBlock *MBB,
+                                       MachineBasicBlock::iterator Begin,
+                                       MachineBasicBlock::iterator End);
 
     /// Returns the zero index for this analysis.
     SlotIndex getZeroIndex() {
@@ -574,13 +575,13 @@ class raw_ostream;
     /// If \p AllowBundled is set then this can be used on a bundled
     /// instruction; however, this exists to support handleMoveIntoBundle,
     /// and in general removeSingleMachineInstrFromMaps should be used instead.
-    void removeMachineInstrFromMaps(MachineInstr &MI,
-                                    bool AllowBundled = false);
+    LLVM_ABI void removeMachineInstrFromMaps(MachineInstr &MI,
+                                             bool AllowBundled = false);
 
     /// Removes a single machine instruction \p MI from the mapping.
     /// This should be called before MachineInstr::eraseFromBundle() is used to
     /// remove a single instruction (out of a bundle).
-    void removeSingleMachineInstrFromMaps(MachineInstr &MI);
+    LLVM_ABI void removeSingleMachineInstrFromMaps(MachineInstr &MI);
 
     /// ReplaceMachineInstrInMaps - Replacing a machine instr with a new one in
     /// maps used by register allocator. \returns the index where the new
@@ -633,7 +634,7 @@ class raw_ostream;
     }
 
     /// Renumber all indexes using the default instruction distance.
-    void packIndexes();
+    LLVM_ABI void packIndexes();
   };
 
   // Specialize IntervalMapInfo for half-open slot index intervals.
@@ -643,11 +644,11 @@ class raw_ostream;
 
   class SlotIndexesAnalysis : public AnalysisInfoMixin<SlotIndexesAnalysis> {
     friend AnalysisInfoMixin<SlotIndexesAnalysis>;
-    static AnalysisKey Key;
+    LLVM_ABI static AnalysisKey Key;
 
   public:
     using Result = SlotIndexes;
-    Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
+    LLVM_ABI Result run(MachineFunction &MF, MachineFunctionAnalysisManager &);
   };
 
   class SlotIndexesPrinterPass : public PassInfoMixin<SlotIndexesPrinterPass> {
@@ -655,12 +656,12 @@ class raw_ostream;
 
   public:
     explicit SlotIndexesPrinterPass(raw_ostream &OS) : OS(OS) {}
-    PreservedAnalyses run(MachineFunction &MF,
-                          MachineFunctionAnalysisManager &MFAM);
+    LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM);
     static bool isRequired() { return true; }
   };
 
-  class SlotIndexesWrapperPass : public MachineFunctionPass {
+  class LLVM_ABI SlotIndexesWrapperPass : public MachineFunctionPass {
     SlotIndexes SI;
 
   public:

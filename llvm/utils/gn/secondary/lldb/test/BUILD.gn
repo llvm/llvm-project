@@ -1,5 +1,6 @@
 import("//llvm/triples.gni")
 
+import("//llvm/utils/gn/build/buildflags.gni")
 #import("//llvm/utils/gn/build/libs/xar/enable.gni")
 import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
@@ -91,7 +92,14 @@ write_lit_cfg("lit_api_site_cfg") {
     "LLDB_FRAMEWORK_DIR=XXX_framework_dir",
     "CMAKE_CXX_COMPILER=c++",  # XXX use bin/clang++ instead?
     "HOST_OS=$host_os",  # XXX
+    "Python3_ROOT_DIR=",  # FIXME
   ]
+
+  if (is_debug) {
+    extra_values += [ "CMAKE_BUILD_TYPE=Debug" ]
+  } else {
+    extra_values += [ "CMAKE_BUILD_TYPE=Releas" ]
+  }
 
   dir = get_path_info(output, "dir")
   if (host_os == "win") {
@@ -110,6 +118,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "CLANG_RESOURCE_DIR=",
     "DEFAULT_SYSROOT=",
     "LIBCXX_LIBRARY_DIR=" + rebase_path("$root_build_dir/lib"),
+    "LLDB_BUILD_LLDBRPC=0", # FIXME: add lldb-rpc-gen target, enable
     "LLDB_ENABLE_LUA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_LZMA=0",  # FIXME: gn arg, use in Config.h
     "LLDB_ENABLE_PYTHON=0",  # FIXME: gn arg, use in Config.h
@@ -135,6 +144,7 @@ write_lit_cfg("lit_shell_site_cfg") {
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_USE_SANITIZER=",
     "Python3_EXECUTABLE=$python_path",
+    "Python3_ROOT_DIR=",  # FIXME
   ]
 
   if (llvm_enable_zlib) {
@@ -160,6 +170,7 @@ write_lit_cfg("lit_unit_site_cfg") {
     "LLVM_BUILD_MODE=.",
     "LLVM_USE_SANITIZER=",
     "Python3_EXECUTABLE=$python_path",
+    "Python3_ROOT_DIR=",  # FIXME
   ]
 }
 

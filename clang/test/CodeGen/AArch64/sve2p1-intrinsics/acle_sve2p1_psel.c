@@ -3,21 +3,21 @@
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
 // RUN:   -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -O1 -Werror -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
+// RUN:   -target-feature +sme -O1 -Werror -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
+// RUN:   -target-feature +sve -target-feature +sme -O1 -Werror -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
 // RUN:   -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
-// RUN:   -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -O1 -Werror -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
-// RUN:   -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu \
-// RUN:   -target-feature +bf16 -target-feature +sme -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
-// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +bf16 -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
+// RUN:   -target-feature +sme -O1 -Werror -emit-llvm -o - -x c++ %s | FileCheck %s -check-prefix=CPP-CHECK
+// RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sme -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 // RUN: %clang_cc1 -fclang-abi-compat=latest -triple aarch64-none-linux-gnu -target-feature +sve -target-feature +sve2 -target-feature +sve2p1 -S -disable-O0-optnone -Werror -Wall -o /dev/null %s
 
 #include <arm_sve.h>
 
-#ifdef __ARM_FEATURE_SME
+#if defined(__ARM_FEATURE_SME) && defined(__ARM_FEATURE_SVE)
+#define ATTR __arm_streaming_compatible
+#elif defined(__ARM_FEATURE_SME)
 #define ATTR __arm_streaming
 #else
 #define ATTR
