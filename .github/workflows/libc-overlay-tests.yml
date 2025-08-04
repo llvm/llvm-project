@@ -80,7 +80,7 @@ jobs:
     - name: Prepare dependencies (macOS)
       if: runner.os == 'macOS'
       run: |
-        brew install ninja
+        brew install ninja lld
 
     - name: Set reusable strings
       id: strings
