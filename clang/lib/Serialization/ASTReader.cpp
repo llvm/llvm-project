@@ -12854,8 +12854,13 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   case OpenACCClauseKind::Private: {
     SourceLocation LParenLoc = readSourceLocation();
     llvm::SmallVector<Expr *> VarList = readOpenACCVarList();
+
+    llvm::SmallVector<VarDecl *> RecipeList;
+    for (unsigned I = 0; I < VarList.size(); ++I)
+      RecipeList.push_back(readDeclAs<VarDecl>());
+
     return OpenACCPrivateClause::Create(getContext(), BeginLoc, LParenLoc,
-                                        VarList, EndLoc);
+                                        VarList, RecipeList, EndLoc);
   }
   case OpenACCClauseKind::Host: {
     SourceLocation LParenLoc = readSourceLocation();
