@@ -496,6 +496,8 @@ def EXTW : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins),
   let hasSideEffects = 1;
 }
 
+def : Pat<(Xtensa_mem_barrier), (MEMW)>;
+
 //===----------------------------------------------------------------------===//
 // Illegal instructions
 //===----------------------------------------------------------------------===//
@@ -1496,6 +1498,162 @@ def RFI : RRR_Inst<0x00, 0x00, 0x00, (outs), (ins uimm4:$imm),
   let r = 0x3;
   let s = imm{3-0};
   let t = 0x1;
+}
+
+//===----------------------------------------------------------------------===//
+// S32C1I
+//===----------------------------------------------------------------------===//
+
+let mayStore = 1, mayLoad = 1, Predicates = [HasS32C1I] in {
+  def S32C1I : RRI8_Inst<0x02, (outs AR:$a), (ins AR:$t, mem32:$addr),
+                        "s32c1i\t$t, $addr", []> {
+    bits<12> addr;
+
+    let r = 0x0e;
+    let Uses = [SCOMPARE1];
+    let Constraints = "$a = $t";
+    let imm8{7-0} = addr{11-4};
+    let s{3-0} = addr{3-0};
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Atomic patterns
+//===----------------------------------------------------------------------===//
+
+// Atomic load/store are available under both +s32c1i and +force-atomics.
+// Fences will be inserted for atomic load/stores according to the logic in
+// XtensaTargetLowering.
+let Predicates = [HasAtomicLdSt] in {
+  def : Pat<(i32 (atomic_load_8  addr_ish1:$addr)), (L8UI addr_ish1:$addr)>;
+  def : Pat<(i32 (atomic_load_16 addr_ish2:$addr)), (L16UI addr_ish2:$addr)>;
+  def : Pat<(i32 (atomic_load_32 addr_ish4:$addr)), (L32I addr_ish4:$addr)>;
+
+  def : Pat<(atomic_store_8  AR:$t, addr_ish1:$addr), (S8I AR:$t, addr_ish1:$addr)>;
+  def : Pat<(atomic_store_16 AR:$t, addr_ish2:$addr), (S16I AR:$t, addr_ish2:$addr)>;
+  def : Pat<(atomic_store_32 AR:$t, addr_ish4:$addr), (S32I AR:$t, addr_ish4:$addr)>;
+}
+
+let usesCustomInserter = 1, Predicates = [HasS32C1I] in {
+  def ATOMIC_CMP_SWAP_8_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$cmp, AR:$swap),
+                                  "!atomic_cmp_swap_8_p, $dst, $ptr, $cmp, $swap",
+                                  [(set AR:$dst, (atomic_cmp_swap_i8 AR:$ptr, AR:$cmp, AR:$swap))]>;
+  def ATOMIC_CMP_SWAP_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$cmp, AR:$swap),
+                                   "!atomic_cmp_swap_16_p, $dst, $ptr, $cmp, $swap",
+                                   [(set AR:$dst, (atomic_cmp_swap_i16 AR:$ptr, AR:$cmp, AR:$swap))]>;
+  def ATOMIC_CMP_SWAP_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$cmp, AR:$swap),
+                                   "!atomic_cmp_swap_32_p, $dst, $ptr, $cmp, $swap",
+                                   [(set AR:$dst, (atomic_cmp_swap_i32 AR:$ptr, AR:$cmp, AR:$swap))]>;
+
+  def ATOMIC_SWAP_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$swap),
+                               "!atomic_swap_8_p, $dst, $ptr, $swap",
+                               [(set AR:$dst, (atomic_swap_i8 AR:$ptr, AR:$swap))]>;
+  def ATOMIC_SWAP_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$swap),
+                               "!atomic_swap_16_p, $dst, $ptr, $swap",
+                               [(set AR:$dst, (atomic_swap_i16 AR:$ptr, AR:$swap))]>;
+  def ATOMIC_SWAP_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$swap),
+                               "!atomic_swap_32_p, $dst, $ptr, $swap",
+                               [(set AR:$dst, (atomic_swap_i32 AR:$ptr, AR:$swap))]>;
+
+  def ATOMIC_LOAD_ADD_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_add_8_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_add_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_ADD_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_add_16_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_add_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_ADD_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_add_32_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_add_i32 AR:$ptr, AR:$arg))]>;
+
+  def ATOMIC_LOAD_SUB_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_sub_8_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_sub_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_SUB_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_sub_16_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_sub_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_SUB_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_sub_32_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_sub_i32 AR:$ptr, AR:$arg))]>;
+
+  def ATOMIC_LOAD_AND_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_and_8_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_and_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_AND_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_and_16_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_and_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_AND_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_and_32_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_and_i32 AR:$ptr, AR:$arg))]>;
+
+  def ATOMIC_LOAD_OR_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_or_8_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_or_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_OR_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_or_16_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_or_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_OR_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_or_32_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_or_i32 AR:$ptr, AR:$arg))]>;
+
+  def ATOMIC_LOAD_XOR_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_xor_8_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_xor_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_XOR_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_xor_16_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_xor_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_XOR_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_xor_32_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_xor_i32 AR:$ptr, AR:$arg))]>;
+
+  def ATOMIC_LOAD_NAND_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                    "!atomic_load_nand_8_p, $dst, $ptr, $arg",
+                                    [(set AR:$dst, (atomic_load_nand_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_NAND_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                    "!atomic_load_nand_16_p, $dst, $ptr, $arg",
+                                    [(set AR:$dst, (atomic_load_nand_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_NAND_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                    "!atomic_load_nand_32_p, $dst, $ptr, $arg",
+                                    [(set AR:$dst, (atomic_load_nand_i32 AR:$ptr, AR:$arg))]>;
+
+  def ATOMIC_LOAD_MIN_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_min_8_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_min_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_MIN_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_min_16_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_min_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_MIN_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_min_32_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_min_i32 AR:$ptr, AR:$arg))]>;
+
+  def ATOMIC_LOAD_MAX_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_max_8_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_max_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_MAX_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_max_16_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_max_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_MAX_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                   "!atomic_load_max_32_p, $dst, $ptr, $arg",
+                                   [(set AR:$dst, (atomic_load_max_i32 AR:$ptr, AR:$arg))]>;
+
+  def ATOMIC_LOAD_UMIN_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                    "!atomic_load_umin_8_p, $dst, $ptr, $arg",
+                                    [(set AR:$dst, (atomic_load_umin_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_UMIN_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                    "!atomic_load_umin_16_p, $dst, $ptr, $arg",
+                                    [(set AR:$dst, (atomic_load_umin_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_UMIN_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                    "!atomic_load_umin_32_p, $dst, $ptr, $arg",
+                                    [(set AR:$dst, (atomic_load_umin_i32 AR:$ptr, AR:$arg))]>;
+
+  def ATOMIC_LOAD_UMAX_8_P  : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                    "!atomic_load_umax_8_p, $dst, $ptr, $arg",
+                                    [(set AR:$dst, (atomic_load_umax_i8 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_UMAX_16_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                    "!atomic_load_umax_16_p, $dst, $ptr, $arg",
+                                    [(set AR:$dst, (atomic_load_umax_i16 AR:$ptr, AR:$arg))]>;
+  def ATOMIC_LOAD_UMAX_32_P : Pseudo<(outs AR:$dst), (ins AR:$ptr, AR:$arg),
+                                    "!atomic_load_umax_32_p, $dst, $ptr, $arg",
+                                    [(set AR:$dst, (atomic_load_umax_i32 AR:$ptr, AR:$arg))]>;
 }
 
 //===----------------------------------------------------------------------===//
