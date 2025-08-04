@@ -116,10 +116,10 @@ define void @f0() nounwind {
 ; O3O32-NEXT:    lui $2, %hi(_gp_disp)
 ; O3O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O3O32-NEXT:    addiu $sp, $sp, -32
-; O3O32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
-; O3O32-NEXT:    sw $17, 24($sp) # 4-byte Folded Spill
 ; O3O32-NEXT:    sw $16, 20($sp) # 4-byte Folded Spill
 ; O3O32-NEXT:    addu $16, $2, $25
+; O3O32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; O3O32-NEXT:    sw $17, 24($sp) # 4-byte Folded Spill
 ; O3O32-NEXT:    lw $25, %call16(f1)($16)
 ; O3O32-NEXT:    jalr $25
 ; O3O32-NEXT:    move $gp, $16
@@ -148,10 +148,10 @@ define void @f0() nounwind {
 ; O3N64-LABEL: f0:
 ; O3N64:       # %bb.0: # %entry
 ; O3N64-NEXT:    daddiu $sp, $sp, -32
-; O3N64-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
-; O3N64-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
-; O3N64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
 ; O3N64-NEXT:    lui $1, %hi(%neg(%gp_rel(f0)))
+; O3N64-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
+; O3N64-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
+; O3N64-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
 ; O3N64-NEXT:    daddu $1, $1, $25
 ; O3N64-NEXT:    daddiu $gp, $1, %lo(%neg(%gp_rel(f0)))
 ; O3N64-NEXT:    ld $25, %call16(f1)($gp)
@@ -180,10 +180,10 @@ define void @f0() nounwind {
 ; O3N32-LABEL: f0:
 ; O3N32:       # %bb.0: # %entry
 ; O3N32-NEXT:    addiu $sp, $sp, -32
-; O3N32-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
-; O3N32-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
-; O3N32-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
 ; O3N32-NEXT:    lui $1, %hi(%neg(%gp_rel(f0)))
+; O3N32-NEXT:    sd $gp, 16($sp) # 8-byte Folded Spill
+; O3N32-NEXT:    sd $ra, 24($sp) # 8-byte Folded Spill
+; O3N32-NEXT:    sd $16, 8($sp) # 8-byte Folded Spill
 ; O3N32-NEXT:    addu $1, $1, $25
 ; O3N32-NEXT:    addiu $gp, $1, %lo(%neg(%gp_rel(f0)))
 ; O3N32-NEXT:    lw $25, %call16(f1)($gp)
