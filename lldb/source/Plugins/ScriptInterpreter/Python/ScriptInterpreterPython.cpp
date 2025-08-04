@@ -137,7 +137,16 @@ public:
     config.install_signal_handlers = 0;
     Py_InitializeFromConfig(&config);
     PyConfig_Clear(&config);
-    InitializeThreadsPrivate();
+
+    // The only case we should go further and acquire the GIL: it is unlocked.
+    if (PyGILState_Check())
+      return;
+
+    m_was_already_initialized = true;
+    m_gil_state = PyGILState_Ensure();
+    LLDB_LOGV(GetLog(LLDBLog::Script),
+              "Ensured PyGILState. Previous state = {0}locked\n",
+              m_gil_state == PyGILState_UNLOCKED ? "un" : "");
   }
 
   ~InitializePythonRAII() {
@@ -153,46 +162,6 @@ public:
   }
 
 private:
-  void InitializeThreadsPrivate() {
-    // Since Python 3.7 `Py_Initialize` calls `PyEval_InitThreads` inside
-    // itself, so there is no way to determine whether the embedded interpreter
-    // was already initialized by some external code.
-    // `PyEval_ThreadsInitialized` would always return `true` and
-    // `PyGILState_Ensure/Release` flow would be executed instead of unlocking
-    // GIL with `PyEval_SaveThread`. When an another thread calls
-    // `PyGILState_Ensure` it would get stuck in deadlock.
-
-    // The only case we should go further and acquire the GIL: it is unlocked.
-    if (PyGILState_Check())
-      return;
-
-// `PyEval_ThreadsInitialized` was deprecated in Python 3.9 and removed in
-// Python 3.13. It has been returning `true` always since Python 3.7.
-#if PY_VERSION_HEX < 0x03090000
-    if (PyEval_ThreadsInitialized()) {
-#else
-    if (true) {
-#endif
-      Log *log = GetLog(LLDBLog::Script);
-
-      m_was_already_initialized = true;
-      m_gil_state = PyGILState_Ensure();
-      LLDB_LOGV(log, "Ensured PyGILState. Previous state = {0}locked\n",
-                m_gil_state == PyGILState_UNLOCKED ? "un" : "");
-
-// `PyEval_InitThreads` was deprecated in Python 3.9 and removed in
-// Python 3.13.
-#if PY_VERSION_HEX < 0x03090000
-      return;
-    }
-
-    // InitThreads acquires the GIL if it hasn't been called before.
-    PyEval_InitThreads();
-#else
-    }
-#endif
-  }
-
   PyGILState_STATE m_gil_state = PyGILState_UNLOCKED;
   bool m_was_already_initialized = false;
 };
