@@ -40,7 +40,7 @@ vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
   %0 = getelementptr inbounds nuw [1024 x { i32, i32 }], ptr @a, i64 0, i64 %index
   %a = load <8 x i32>, ptr %0, align 4
-  %b = shufflevector <8 x i32> %a, <8 x i32> undef, <8 x i32> <i32 1, i32 7, i32 undef, i32 0, i32 undef, i32 undef, i32 3, i32 5>
+  %b = shufflevector <8 x i32> %a, <8 x i32> poison, <8 x i32> <i32 1, i32 7, i32 poison, i32 0, i32 poison, i32 poison, i32 3, i32 5>
   store <8 x i32> %b, ptr %0, align 4
   %index.next = add nuw i64 %index, 2
   %1 = icmp eq i64 %index.next, 1024
