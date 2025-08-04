@@ -22569,7 +22569,8 @@ static SDValue foldToMaskedStore(StoreSDNode *Store, SelectionDAG &DAG,
   }
 
   auto *Load = cast<LoadSDNode>(StoredVal.getOperand(LoadPos));
-  if (!Load->isSimple() || !ISD::isNormalLoad(Load))
+  if (!Load->isSimple() || !ISD::isNormalLoad(Load) ||
+      Load->getAddressSpace() != AddrSpace)
     return SDValue();
 
   if (!Store->getChain().reachesChainWithoutSideEffects(LoadCh))
