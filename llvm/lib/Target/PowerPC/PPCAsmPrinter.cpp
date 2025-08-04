@@ -3114,7 +3114,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     setCsectAlignment(&G);
     std::optional<CodeModel::Model> OptionalCodeModel = G.getCodeModel();
     if (OptionalCodeModel)
-      setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&G)),
+      setOptionalCodeModel(static_cast<MCSymbolXCOFF *>(getSymbol(&G)),
                            *OptionalCodeModel);
   }
 
@@ -3141,7 +3141,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     if (GVar) {
       std::optional<CodeModel::Model> OptionalCodeModel = GVar->getCodeModel();
       if (OptionalCodeModel)
-        setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&Alias)),
+        setOptionalCodeModel(static_cast<MCSymbolXCOFF *>(getSymbol(&Alias)),
                              *OptionalCodeModel);
     }
 
