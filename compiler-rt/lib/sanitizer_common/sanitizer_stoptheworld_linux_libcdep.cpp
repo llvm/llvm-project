@@ -426,13 +426,13 @@ static void TestPTrace() {
     if (internal_iserror(pid, &rverrno)) {
       Report("WARNING: TestPTrace() failed to fork (errno %d)\n", rverrno);
     }
-    _exit(-1);
+    internal__exit(-1);
   }
 
   if (pid == 0) {
     // Child subprocess
     internal_ptrace(PTRACE_ATTACH, 0, nullptr, nullptr);
-    _exit(0);
+    internal__exit(0);
   } else {
     int wstatus;
     internal_waitpid(pid, &wstatus, 0);
