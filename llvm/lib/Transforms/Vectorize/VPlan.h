@@ -2140,7 +2140,7 @@ public:
   /// Generate vector values for the pointer induction.
   void execute(VPTransformState &State) override {
     llvm_unreachable("cannot execute this recipe, should be expanded via "
-                     "expandVPWidenIntOrFpInductionRecipe");
+                     "expandVPWidenPointerInduction");
   };
 
   /// Returns true if only scalar values will be generated.
