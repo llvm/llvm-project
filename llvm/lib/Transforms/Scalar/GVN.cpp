@@ -2502,6 +2502,10 @@ bool GVNPass::replaceOperandsForInBlockEquality(Instruction *Instr) const {
     Value *Operand = Instr->getOperand(OpNum);
     auto It = ReplaceOperandsWithMap.find(Operand);
     if (It != ReplaceOperandsWithMap.end()) {
+      // Do not replace lifetime alloca argument with something else.
+      if (Instr->isLifetimeStartOrEnd())
+        continue;
+
       LLVM_DEBUG(dbgs() << "GVN replacing: " << *Operand << " with "
                         << *It->second << " in instruction " << *Instr << '\n');
       Instr->setOperand(OpNum, It->second);
