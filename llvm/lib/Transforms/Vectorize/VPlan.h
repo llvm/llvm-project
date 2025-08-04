@@ -4132,6 +4132,18 @@ public:
     return It->second;
   }
 
+  /// Return a VPValue wrapping i1 true.
+  VPValue *getTrue() {
+    LLVMContext &Ctx = getContext();
+    return getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+  }
+
+  /// Return a VPValue wrapping i1 false.
+  VPValue *getFalse() {
+    LLVMContext &Ctx = getContext();
+    return getOrAddLiveIn(ConstantInt::getFalse(Ctx));
+  }
+
   /// Return the live-in VPValue for \p V, if there is one or nullptr otherwise.
   VPValue *getLiveIn(Value *V) const { return Value2VPValue.lookup(V); }
 
