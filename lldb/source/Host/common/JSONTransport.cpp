@@ -36,11 +36,9 @@ Expected<std::vector<std::string>> HTTPDelimitedJSONTransport::Parse() {
   StringRef buffer = m_buffer;
   while (buffer.contains(kEndOfHeader)) {
     auto [headers, rest] = buffer.split(kEndOfHeader);
-    SmallVector<StringRef> kv_pairs;
-    // HTTP Headers are formatted like `<field-name> ':' [<field-value>]`.
-    headers.split(kv_pairs, kHeaderSeparator);
     size_t content_length = 0;
-    for (const auto &header : kv_pairs) {
+    // HTTP Headers are formatted like `<field-name> ':' [<field-value>]`.
+    for (const auto &header : llvm::split(headers, kHeaderSeparator)) {
       auto [key, value] = header.split(kHeaderFieldSeparator);
       // 'Content-Length' is the only meaningful key at the moment. Others are
       // ignored.
