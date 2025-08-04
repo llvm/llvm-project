@@ -14,7 +14,6 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/OpenACCMPCommon/Interfaces/AtomicInterfaces.h"
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -25,15 +24,15 @@
 #include "mlir/Interfaces/FoldInterfaces.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include <cstddef>
 #include <iterator>
 #include <optional>
@@ -1731,8 +1730,7 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange mapVars) {
     if (!mapOp.getDefiningOp())
       return emitError(op->getLoc(), "missing map operation");
 
-    if (auto mapInfoOp =
-            mlir::dyn_cast<mlir::omp::MapInfoOp>(mapOp.getDefiningOp())) {
+    if (auto mapInfoOp = mapOp.getDefiningOp<mlir::omp::MapInfoOp>()) {
       uint64_t mapTypeBits = mapInfoOp.getMapType();
 
       bool to = mapTypeToBitFlag(
@@ -3032,6 +3030,356 @@ void LoopNestOp::gatherWrappers(
 }
 
 //===----------------------------------------------------------------------===//
+// OpenMP canonical loop handling
+//===----------------------------------------------------------------------===//
+
+std::tuple<NewCliOp, OpOperand *, OpOperand *>
+mlir::omp ::decodeCli(Value cli) {
+
+  // Defining a CLI for a generated loop is optional; if there is none then
+  // there is no followup-tranformation
+  if (!cli)
+    return {{}, nullptr, nullptr};
+
+  assert(cli.getType() == CanonicalLoopInfoType::get(cli.getContext()) &&
+         "Unexpected type of cli");
+
+  NewCliOp create = cast<NewCliOp>(cli.getDefiningOp());
+  OpOperand *gen = nullptr;
+  OpOperand *cons = nullptr;
+  for (OpOperand &use : cli.getUses()) {
+    auto op = cast<LoopTransformationInterface>(use.getOwner());
+
+    unsigned opnum = use.getOperandNumber();
+    if (op.isGeneratee(opnum)) {
+      assert(!gen && "Each CLI may have at most one def");
+      gen = &use;
+    } else if (op.isApplyee(opnum)) {
+      assert(!cons && "Each CLI may have at most one consumer");
+      cons = &use;
+    } else {
+      llvm_unreachable("Unexpected operand for a CLI");
+    }
+  }
+
+  return {create, gen, cons};
+}
+
+void NewCliOp::build(::mlir::OpBuilder &odsBuilder,
+                     ::mlir::OperationState &odsState) {
+  odsState.addTypes(CanonicalLoopInfoType::get(odsBuilder.getContext()));
+}
+
+void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
+  Value result = getResult();
+  auto [newCli, gen, cons] = decodeCli(result);
+
+  // Derive the CLI variable name from its generator:
+  //  * "canonloop" for omp.canonical_loop
+  //  * custom name for loop transformation generatees
+  //  * "cli" as fallback if no generator
+  //  * "_r<idx>" suffix for nested loops, where <idx> is the sequential order
+  //  at that level
+  //  * "_s<idx>" suffix for operations with multiple regions, where <idx> is
+  //  the index of that region
+  std::string cliName{"cli"};
+  if (gen) {
+    cliName =
+        TypeSwitch<Operation *, std::string>(gen->getOwner())
+            .Case([&](CanonicalLoopOp op) {
+              // Find the canonical loop nesting: For each ancestor add a
+              // "+_r<idx>" suffix (in reverse order)
+              SmallVector<std::string> components;
+              Operation *o = op.getOperation();
+              while (o) {
+                if (o->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>())
+                  break;
+
+                Region *r = o->getParentRegion();
+                if (!r)
+                  break;
+
+                auto getSequentialIndex = [](Region *r, Operation *o) {
+                  llvm::ReversePostOrderTraversal<Block *> traversal(
+                      &r->getBlocks().front());
+                  size_t idx = 0;
+                  for (Block *b : traversal) {
+                    for (Operation &op : *b) {
+                      if (&op == o)
+                        return idx;
+                      // Only consider operations that are containers as
+                      // possible children
+                      if (!op.getRegions().empty())
+                        idx += 1;
+                    }
+                  }
+                  llvm_unreachable("Operation not part of the region");
+                };
+                size_t sequentialIdx = getSequentialIndex(r, o);
+                components.push_back(("s" + Twine(sequentialIdx)).str());
+
+                Operation *parent = r->getParentOp();
+                if (!parent)
+                  break;
+
+                // If the operation has more than one region, also count in
+                // which of the regions
+                if (parent->getRegions().size() > 1) {
+                  auto getRegionIndex = [](Operation *o, Region *r) {
+                    for (auto [idx, region] :
+                         llvm::enumerate(o->getRegions())) {
+                      if (&region == r)
+                        return idx;
+                    }
+                    llvm_unreachable("Region not child its parent operation");
+                  };
+                  size_t regionIdx = getRegionIndex(parent, r);
+                  components.push_back(("r" + Twine(regionIdx)).str());
+                }
+
+                // next parent
+                o = parent;
+              }
+
+              SmallString<64> Name("canonloop");
+              for (std::string s : reverse(components)) {
+                Name += '_';
+                Name += s;
+              }
+
+              return Name;
+            })
+            .Case([&](UnrollHeuristicOp op) -> std::string {
+              llvm_unreachable("heuristic unrolling does not generate a loop");
+            })
+            .Default([&](Operation *op) {
+              assert(false && "TODO: Custom name for this operation");
+              return "transformed";
+            });
+  }
+
+  setNameFn(result, cliName);
+}
+
+LogicalResult NewCliOp::verify() {
+  Value cli = getResult();
+
+  assert(cli.getType() == CanonicalLoopInfoType::get(cli.getContext()) &&
+         "Unexpected type of cli");
+
+  // Check that the CLI is used in at most generator and one consumer
+  OpOperand *gen = nullptr;
+  OpOperand *cons = nullptr;
+  for (mlir::OpOperand &use : cli.getUses()) {
+    auto op = cast<mlir::omp::LoopTransformationInterface>(use.getOwner());
+
+    unsigned opnum = use.getOperandNumber();
+    if (op.isGeneratee(opnum)) {
+      if (gen) {
+        InFlightDiagnostic error =
+            emitOpError("CLI must have at most one generator");
+        error.attachNote(gen->getOwner()->getLoc())
+            .append("first generator here:");
+        error.attachNote(use.getOwner()->getLoc())
+            .append("second generator here:");
+        return error;
+      }
+
+      gen = &use;
+    } else if (op.isApplyee(opnum)) {
+      if (cons) {
+        InFlightDiagnostic error =
+            emitOpError("CLI must have at most one consumer");
+        error.attachNote(cons->getOwner()->getLoc())
+            .append("first consumer here:")
+            .appendOp(*cons->getOwner(),
+                      OpPrintingFlags().printGenericOpForm());
+        error.attachNote(use.getOwner()->getLoc())
+            .append("second consumer here:")
+            .appendOp(*use.getOwner(), OpPrintingFlags().printGenericOpForm());
+        return error;
+      }
+
+      cons = &use;
+    } else {
+      llvm_unreachable("Unexpected operand for a CLI");
+    }
+  }
+
+  // If the CLI is source of a transformation, it must have a generator
+  if (cons && !gen) {
+    InFlightDiagnostic error = emitOpError("CLI has no generator");
+    error.attachNote(cons->getOwner()->getLoc())
+        .append("see consumer here: ")
+        .appendOp(*cons->getOwner(), OpPrintingFlags().printGenericOpForm());
+    return error;
+  }
+
+  return success();
+}
+
+void CanonicalLoopOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                            Value tripCount) {
+  odsState.addOperands(tripCount);
+  odsState.addOperands(Value());
+  (void)odsState.addRegion();
+}
+
+void CanonicalLoopOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                            Value tripCount, ::mlir::Value cli) {
+  odsState.addOperands(tripCount);
+  odsState.addOperands(cli);
+  (void)odsState.addRegion();
+}
+
+void CanonicalLoopOp::getAsmBlockNames(OpAsmSetBlockNameFn setNameFn) {
+  setNameFn(&getRegion().front(), "body_entry");
+}
+
+void CanonicalLoopOp::getAsmBlockArgumentNames(Region &region,
+                                               OpAsmSetValueNameFn setNameFn) {
+  setNameFn(region.getArgument(0), "iv");
+}
+
+void CanonicalLoopOp::print(OpAsmPrinter &p) {
+  if (getCli())
+    p << '(' << getCli() << ')';
+  p << ' ' << getInductionVar() << " : " << getInductionVar().getType()
+    << " in range(" << getTripCount() << ") ";
+
+  p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/true);
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+mlir::ParseResult CanonicalLoopOp::parse(::mlir::OpAsmParser &parser,
+                                         ::mlir::OperationState &result) {
+  CanonicalLoopInfoType cliType =
+      CanonicalLoopInfoType::get(parser.getContext());
+
+  // Parse (optional) omp.cli identifier
+  OpAsmParser::UnresolvedOperand cli;
+  SmallVector<mlir::Value, 1> cliOperand;
+  if (!parser.parseOptionalLParen()) {
+    if (parser.parseOperand(cli) ||
+        parser.resolveOperand(cli, cliType, cliOperand) || parser.parseRParen())
+      return failure();
+  }
+
+  // We derive the type of tripCount from inductionVariable. MLIR requires the
+  // type of tripCount to be known when calling resolveOperand so we have parse
+  // the type before processing the inductionVariable.
+  OpAsmParser::Argument inductionVariable;
+  OpAsmParser::UnresolvedOperand tripcount;
+  if (parser.parseArgument(inductionVariable, /*allowType*/ true) ||
+      parser.parseKeyword("in") || parser.parseKeyword("range") ||
+      parser.parseLParen() || parser.parseOperand(tripcount) ||
+      parser.parseRParen() ||
+      parser.resolveOperand(tripcount, inductionVariable.type, result.operands))
+    return failure();
+
+  // Parse the loop body.
+  Region *region = result.addRegion();
+  if (parser.parseRegion(*region, {inductionVariable}))
+    return failure();
+
+  // We parsed the cli operand forst, but because it is optional, it must be
+  // last in the operand list.
+  result.operands.append(cliOperand);
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+LogicalResult CanonicalLoopOp::verify() {
+  // The region's entry must accept the induction variable
+  // It can also be empty if just created
+  if (!getRegion().empty()) {
+    Region &region = getRegion();
+    if (region.getNumArguments() != 1)
+      return emitOpError(
+          "Canonical loop region must have exactly one argument");
+
+    if (getInductionVar().getType() != getTripCount().getType())
+      return emitOpError(
+          "Region argument must be the same type as the trip count");
+  }
+
+  return success();
+}
+
+Value CanonicalLoopOp::getInductionVar() { return getRegion().getArgument(0); }
+
+std::pair<unsigned, unsigned>
+CanonicalLoopOp::getApplyeesODSOperandIndexAndLength() {
+  // No applyees
+  return {0, 0};
+}
+
+std::pair<unsigned, unsigned>
+CanonicalLoopOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_cli);
+}
+
+//===----------------------------------------------------------------------===//
+// UnrollHeuristicOp
+//===----------------------------------------------------------------------===//
+
+void UnrollHeuristicOp::build(::mlir::OpBuilder &odsBuilder,
+                              ::mlir::OperationState &odsState,
+                              ::mlir::Value cli) {
+  odsState.addOperands(cli);
+}
+
+void UnrollHeuristicOp::print(OpAsmPrinter &p) {
+  p << '(' << getApplyee() << ')';
+
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+mlir::ParseResult UnrollHeuristicOp::parse(::mlir::OpAsmParser &parser,
+                                           ::mlir::OperationState &result) {
+  auto cliType = CanonicalLoopInfoType::get(parser.getContext());
+
+  if (parser.parseLParen())
+    return failure();
+
+  OpAsmParser::UnresolvedOperand applyee;
+  if (parser.parseOperand(applyee) ||
+      parser.resolveOperand(applyee, cliType, result.operands))
+    return failure();
+
+  if (parser.parseRParen())
+    return failure();
+
+  // Optional output loop (full unrolling has none)
+  if (!parser.parseOptionalArrow()) {
+    if (parser.parseLParen() || parser.parseRParen())
+      return failure();
+  }
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return mlir::success();
+}
+
+std::pair<unsigned, unsigned>
+UnrollHeuristicOp ::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyee);
+}
+
+std::pair<unsigned, unsigned>
+UnrollHeuristicOp::getGenerateesODSOperandIndexAndLength() {
+  return {0, 0};
+}
+
+//===----------------------------------------------------------------------===//
 // Critical construct (2.17.1)
 //===----------------------------------------------------------------------===//
 
@@ -3510,6 +3858,20 @@ LogicalResult ScanOp::verify() {
   return emitError("SCAN directive needs to be enclosed within a parent "
                    "worksharing loop construct or SIMD construct with INSCAN "
                    "reduction modifier");
+}
+
+/// Verifies align clause in allocate directive
+
+LogicalResult AllocateDirOp::verify() {
+  std::optional<uint64_t> align = this->getAlign();
+
+  if (align.has_value()) {
+    if ((align.value() > 0) && !llvm::has_single_bit(align.value()))
+      return emitError() << "ALIGN value : " << align.value()
+                         << " must be power of 2";
+  }
+
+  return success();
 }
 
 #define GET_ATTRDEF_CLASSES

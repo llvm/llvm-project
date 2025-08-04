@@ -656,18 +656,19 @@ ASTMutationListener *Sema::getASTMutationListener() const {
   return getASTConsumer().GetASTMutationListener();
 }
 
-void Sema::addExternalSource(ExternalSemaSource *E) {
+void Sema::addExternalSource(IntrusiveRefCntPtr<ExternalSemaSource> E) {
   assert(E && "Cannot use with NULL ptr");
 
   if (!ExternalSource) {
-    ExternalSource = E;
+    ExternalSource = std::move(E);
     return;
   }
 
-  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource))
-    Ex->AddSource(E);
+  if (auto *Ex = dyn_cast<MultiplexExternalSemaSource>(ExternalSource.get()))
+    Ex->AddSource(std::move(E));
   else
-    ExternalSource = new MultiplexExternalSemaSource(ExternalSource.get(), E);
+    ExternalSource = llvm::makeIntrusiveRefCnt<MultiplexExternalSemaSource>(
+        ExternalSource, std::move(E));
 }
 
 void Sema::PrintStats() const {
@@ -1616,6 +1617,8 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   if (!PP.isIncrementalProcessingEnabled())
     TUScope = nullptr;
+
+  checkExposure(Context.getTranslationUnitDecl());
 }
 
 
@@ -2249,16 +2252,15 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
     }
 
     // Don't allow SVE types in functions without a SVE target.
-    if (Ty->isSVESizelessBuiltinType() && FD) {
+    if (Ty->isSVESizelessBuiltinType() && FD && !FD->getType().isNull()) {
       llvm::StringMap<bool> CallerFeatureMap;
       Context.getFunctionFeatureMap(CallerFeatureMap, FD);
       if (!Builtin::evaluateRequiredTargetFeatures("sve", CallerFeatureMap)) {
         if (!Builtin::evaluateRequiredTargetFeatures("sme", CallerFeatureMap))
           Diag(Loc, diag::err_sve_vector_in_non_sve_target) << Ty;
         else if (!IsArmStreamingFunction(FD,
-                                         /*IncludeLocallyStreaming=*/true)) {
+                                         /*IncludeLocallyStreaming=*/true))
           Diag(Loc, diag::err_sve_vector_in_non_streaming_function) << Ty;
-        }
       }
     }
 

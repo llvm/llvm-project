@@ -838,7 +838,7 @@ TEST_F(TargetDeclTest, OverloadExpr) {
   )cpp";
   // Sized deallocation is enabled by default in C++14 onwards.
   EXPECT_DECLS("CXXDeleteExpr",
-               "void operator delete(void *, unsigned long) noexcept");
+               "void operator delete(void *, __size_t) noexcept");
 }
 
 TEST_F(TargetDeclTest, DependentExprs) {

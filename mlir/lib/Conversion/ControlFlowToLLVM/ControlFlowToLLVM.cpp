@@ -73,13 +73,13 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
         OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(module.getBody());
         auto abortFuncTy = LLVM::LLVMFunctionType::get(getVoidType(), {});
-        abortFunc = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
-                                                      "abort", abortFuncTy);
+        abortFunc = LLVM::LLVMFuncOp::create(rewriter, rewriter.getUnknownLoc(),
+                                             "abort", abortFuncTy);
       }
-      rewriter.create<LLVM::CallOp>(loc, abortFunc, ValueRange());
-      rewriter.create<LLVM::UnreachableOp>(loc);
+      LLVM::CallOp::create(rewriter, loc, abortFunc, ValueRange());
+      LLVM::UnreachableOp::create(rewriter, loc);
     } else {
-      rewriter.create<LLVM::BrOp>(loc, ValueRange(), continuationBlock);
+      LLVM::BrOp::create(rewriter, loc, ValueRange(), continuationBlock);
     }
 
     // Generate assertion test.
@@ -138,11 +138,12 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
                           TypeRange(adaptor.getOperands()));
     if (failed(convertedBlock))
       return failure();
+    DictionaryAttr attrs = op->getAttrDictionary();
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
         op, adaptor.getOperands(), *convertedBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(op->getAttrDictionary());
+    newOp->setAttrs(attrs);
     return success();
   }
 };
@@ -166,18 +167,14 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
                           TypeRange(adaptor.getFalseDestOperands()));
     if (failed(convertedFalseBlock))
       return failure();
+    DictionaryAttr attrs = op->getAttrDictionary();
     auto newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
-        op, adaptor.getCondition(), *convertedTrueBlock,
-        adaptor.getTrueDestOperands(), *convertedFalseBlock,
-        adaptor.getFalseDestOperands());
-    ArrayRef<int32_t> weights = op.getWeights();
-    if (!weights.empty()) {
-      newOp.setWeights(weights);
-      op.removeBranchWeightsAttr();
-    }
+        op, adaptor.getCondition(), adaptor.getTrueDestOperands(),
+        adaptor.getFalseDestOperands(), op.getBranchWeightsAttr(),
+        *convertedTrueBlock, *convertedFalseBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(op->getAttrDictionary());
+    newOp->setAttrs(attrs);
     return success();
   }
 };
