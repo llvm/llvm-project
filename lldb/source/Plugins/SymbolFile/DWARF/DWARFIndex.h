@@ -110,20 +110,22 @@ protected:
 
   class DIERefCallbackImpl {
   public:
-    DIERefCallbackImpl(const DWARFIndex &index,
-                       llvm::function_ref<bool(DWARFDIE die)> callback,
-                       llvm::StringRef name);
-    bool operator()(DIERef ref) const;
-    bool operator()(const llvm::AppleAcceleratorTable::Entry &entry) const;
+    DIERefCallbackImpl(
+        const DWARFIndex &index,
+        llvm::function_ref<IterationAction(DWARFDIE die)> callback,
+        llvm::StringRef name);
+    IterationAction operator()(DIERef ref) const;
+    IterationAction
+    operator()(const llvm::AppleAcceleratorTable::Entry &entry) const;
 
   private:
     const DWARFIndex &m_index;
     SymbolFileDWARF &m_dwarf;
-    const llvm::function_ref<bool(DWARFDIE die)> m_callback;
+    const llvm::function_ref<IterationAction(DWARFDIE die)> m_callback;
     const llvm::StringRef m_name;
   };
   DIERefCallbackImpl
-  DIERefCallback(llvm::function_ref<bool(DWARFDIE die)> callback,
+  DIERefCallback(llvm::function_ref<IterationAction(DWARFDIE die)> callback,
                  llvm::StringRef name = {}) const {
     return DIERefCallbackImpl(*this, callback, name);
   }
