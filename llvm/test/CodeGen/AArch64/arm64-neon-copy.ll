@@ -1708,7 +1708,7 @@ define <16 x i8> @test_concat_v16i8_v8i8_v16i8(<8 x i8> %x, <16 x i8> %y) #0 {
 ; CHECK-GI-LABEL: test_concat_v16i8_v8i8_v16i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0 def $q0 def $q0 def $q0 def $q0 def $q0 def $q0 def $q0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI127_0
 ; CHECK-GI-NEXT:    mov v1.b[0], v0.b[0]
 ; CHECK-GI-NEXT:    mov v1.b[1], v0.b[1]
@@ -1752,7 +1752,7 @@ define <16 x i8> @test_concat_v16i8_v16i8_v8i8(<16 x i8> %x, <8 x i8> %y) #0 {
 ; CHECK-GI-LABEL: test_concat_v16i8_v16i8_v8i8:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov b2, v0.b[0]
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1 def $q1 def $q1 def $q1 def $q1 def $q1 def $q1 def $q1
 ; CHECK-GI-NEXT:    mov v2.b[1], v0.b[1]
 ; CHECK-GI-NEXT:    mov v2.b[2], v0.b[2]
 ; CHECK-GI-NEXT:    mov v2.b[3], v0.b[3]
@@ -1816,9 +1816,9 @@ define <16 x i8> @test_concat_v16i8_v8i8_v8i8(<8 x i8> %x, <8 x i8> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v16i8_v8i8_v8i8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0 def $q0 def $q0 def $q0 def $q0 def $q0 def $q0 def $q0
 ; CHECK-GI-NEXT:    mov v2.b[0], v0.b[0]
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1 def $q1 def $q1 def $q1 def $q1 def $q1 def $q1 def $q1
 ; CHECK-GI-NEXT:    mov v2.b[1], v0.b[1]
 ; CHECK-GI-NEXT:    mov v2.b[2], v0.b[2]
 ; CHECK-GI-NEXT:    mov v2.b[3], v0.b[3]
@@ -1901,7 +1901,7 @@ define <8 x i16> @test_concat_v8i16_v4i16_v8i16(<4 x i16> %x, <8 x i16> %y) #0 {
 ; CHECK-GI-LABEL: test_concat_v8i16_v4i16_v8i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0 def $q0 def $q0 def $q0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI131_0
 ; CHECK-GI-NEXT:    mov v1.h[0], v0.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[1], v0.h[1]
@@ -1933,7 +1933,7 @@ define <8 x i16> @test_concat_v8i16_v8i16_v4i16(<8 x i16> %x, <4 x i16> %y) #0 {
 ; CHECK-GI-LABEL: test_concat_v8i16_v8i16_v4i16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov h2, v0.h[0]
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1 def $q1 def $q1 def $q1
 ; CHECK-GI-NEXT:    mov v2.h[1], v0.h[1]
 ; CHECK-GI-NEXT:    mov v2.h[2], v0.h[2]
 ; CHECK-GI-NEXT:    mov v2.h[3], v0.h[3]
@@ -1973,9 +1973,9 @@ define <8 x i16> @test_concat_v8i16_v4i16_v4i16(<4 x i16> %x, <4 x i16> %y) #0 {
 ;
 ; CHECK-GI-LABEL: test_concat_v8i16_v4i16_v4i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0 def $q0 def $q0 def $q0
 ; CHECK-GI-NEXT:    mov v2.h[0], v0.h[0]
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1 def $q1 def $q1 def $q1
 ; CHECK-GI-NEXT:    mov v2.h[1], v0.h[1]
 ; CHECK-GI-NEXT:    mov v2.h[2], v0.h[2]
 ; CHECK-GI-NEXT:    mov v2.h[3], v0.h[3]
@@ -2034,7 +2034,7 @@ define <4 x i32> @test_concat_v4i32_v2i32_v4i32(<2 x i32> %x, <4 x i32> %y) #0 {
 ; CHECK-GI-LABEL: test_concat_v4i32_v2i32_v4i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0 def $q0
 ; CHECK-GI-NEXT:    adrp x8, .LCPI135_0
 ; CHECK-GI-NEXT:    mov v1.s[0], v0.s[0]
 ; CHECK-GI-NEXT:    mov v1.s[1], v0.s[1]
@@ -2060,7 +2060,7 @@ define <4 x i32> @test_concat_v4i32_v4i32_v2i32(<4 x i32> %x, <2 x i32> %y) #0 {
 ; CHECK-GI-LABEL: test_concat_v4i32_v4i32_v2i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    mov s2, v0.s[0]
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1 def $q1
 ; CHECK-GI-NEXT:    mov v2.s[1], v0.s[1]
 ; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
 ; CHECK-GI-NEXT:    mov v2.s[3], v1.s[1]
