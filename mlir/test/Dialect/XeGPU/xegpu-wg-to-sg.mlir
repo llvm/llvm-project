@@ -6,26 +6,24 @@ gpu.module @test_1_1_assignment {
   // CHECK-LABEL: create_nd_tdesc
   // CHECK-SAME: [[ARG_0:%.*]]: memref<256x128xf32>
   gpu.func @create_nd_tdesc(%src: memref<256x128xf32>) {
-  //CHECK: [[SGID:%.+]] = gpu.subgroup_id : index
-  //CHECK: [[SGIDY:%.+]] = affine.apply #map()[[[SGID]]]
-  //CHECK: [[SGIDX:%.+]] = affine.apply #map1()[[[SGID]]]
-  //CHECK: [[C12:%.+]] = arith.constant 12 : index
-  //CHECK: [[LY:%.+]] = index.mul [[SGIDY]], [[C12]]
-  //CHECK: [[C8:%.+]] = arith.constant 8 : index
-  //CHECK: [[LX:%.+]] = index.mul [[SGIDX]], [[C8]]
-  //CHECK: [[C0:%.+]] = arith.constant 0 : index
-  //CHECK: [[C0_1:%.+]] = arith.constant 0 : index
-  //CHECK: [[UY:%.+]] = arith.addi [[LY]], [[C0]] : index
-  //CHECK: [[UX:%.+]] = arith.addi [[LX]], [[C0_1]] : index
-  //CHECK: [[C24:%.+]] = arith.constant 24 : index
-  //CHECK: [[Y:%.+]] = index.remu [[UY]], [[C24]]
-  //CHECK: [[C32:%.+]] = arith.constant 32 : index
-  //CHECK: [[X:%.+]] = index.remu [[UX]], [[C32]]
-  //CHECK: [[TDESC:%.+]] = xegpu.create_nd_tdesc [[ARG_0]][[[Y]], [[X]]] : memref<24x32xf32> -> !xegpu.tensor_desc<12x8xf32, #xegpu.layout<lane_layout = [2, 8], lane_data = [1, 1]>>
-
-  %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
-    -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
-  gpu.return
+    //CHECK: [[SGID:%.+]] = gpu.subgroup_id : index
+    //CHECK: [[SGIDY:%.+]] = affine.apply #map()[[[SGID]]]
+    //CHECK: [[SGIDX:%.+]] = affine.apply #map1()[[[SGID]]]
+    //CHECK: [[C32:%.+]] = arith.constant 32 : index
+    //CHECK: [[LY:%.+]] = index.mul [[SGIDY]], [[C32]]
+    //CHECK: [[LX:%.+]] = index.mul [[SGIDX]], [[C32]]
+    //CHECK: [[C0:%.+]] = arith.constant 0 : index
+    //CHECK: [[C0_1:%.+]] = arith.constant 0 : index
+    //CHECK: [[UY:%.+]] = arith.addi [[LY]], [[C0]] : index
+    //CHECK: [[UX:%.+]] = arith.addi [[LX]], [[C0_1]] : index
+    //CHECK: [[C256:%.+]] = arith.constant 256 : index
+    //CHECK: [[Y:%.+]] = index.remu [[UY]], [[C256]]
+    //CHECK: [[C128:%.+]] = arith.constant 128 : index
+    //CHECK: [[X:%.+]] = index.remu [[UX]], [[C128]]
+    //CHECK: [[TDESC:%.+]] = xegpu.create_nd_tdesc [[ARG_0]][[[Y]], [[X]]] : memref<256x128xf32> -> !xegpu.tensor_desc<32x32xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
+    %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<256x128xf32>
+      -> !xegpu.tensor_desc<256x128xf32, #xegpu.layout<sg_layout = [8, 4], sg_data = [32, 32], lane_layout = [1, 16], lane_data = [1, 1]>>
+    gpu.return
   }
 
   // CHECK-LABEL: load_nd_tdesc
