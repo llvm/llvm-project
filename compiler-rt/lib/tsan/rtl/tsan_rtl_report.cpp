@@ -807,7 +807,7 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
   DynamicMutexSet mset1;
   MutexSet *mset[kMop] = {&thr->mset, mset1};
 
-  ScopedReport *_rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   // Take a new scope as Swift symbolizer the below locks released before
   // symbolizing in order to avoid a deadlock
   {
@@ -840,43 +840,46 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
       }
     }
 
-    new (_rep) ScopedReport(rep_typ, tag);
-    ScopedReport &rep = *_rep;
+    new (rep) ScopedReport(rep_typ, tag);
     for (uptr i = 0; i < kMop; i++)
-      rep.AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
+      rep->AddMemoryAccess(addr, tags[i], s[i], tids[i], traces[i], mset[i]);
 
     for (uptr i = 0; i < kMop; i++) {
       ThreadContext *tctx = static_cast<ThreadContext *>(
           ctx->thread_registry.GetThreadLocked(tids[i]));
-      rep.AddThread(tctx);
+      rep->AddThread(tctx);
     }
 
-    rep.AddLocation(addr_min, addr_max - addr_min);
+    rep->AddLocation(addr_min, addr_max - addr_min);
 
     if (flags()->print_full_thread_history) {
-      const ReportDesc *rep_desc = rep.GetReport();
+      const ReportDesc *rep_desc = rep->GetReport();
       for (uptr i = 0; i < rep_desc->threads.Size(); i++) {
         Tid parent_tid = rep_desc->threads[i]->parent_tid;
         if (parent_tid == kMainTid || parent_tid == kInvalidTid)
           continue;
         ThreadContext *parent_tctx = static_cast<ThreadContext *>(
             ctx->thread_registry.GetThreadLocked(parent_tid));
-        rep.AddThread(parent_tctx);
+        rep->AddThread(parent_tctx);
       }
     }
 
 #if !SANITIZER_GO
     if (!((typ0 | typ1) & kAccessFree) &&
         s[1].epoch() <= thr->last_sleep_clock.Get(s[1].sid()))
-      rep.AddSleep(thr->last_sleep_stack_id);
+      rep->AddSleep(thr->last_sleep_stack_id);
 #endif
 
+#if SANITIZER_APPLE
   }  // Close this scope to release the locks
-
-  OutputReport(thr, *_rep);
+  OutputReport(thr, *rep);
+#else
+    OutputReport(thr, *rep);
+  }
+#endif
 
   // Need to manually destroy this because we used placement new to allocate
-  _rep->~ScopedReport();
+  rep->~ScopedReport();
 }
 
 void PrintCurrentStack(ThreadState *thr, uptr pc) {

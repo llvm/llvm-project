@@ -437,25 +437,28 @@ void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
 }
 
 static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
-  ScopedReport *_rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
+  ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   // Take a new scope as Apple platforms require the below locks released
   // before symbolizing in order to avoid a deadlock
   {
     ThreadRegistryLock l(&ctx->thread_registry);
-    new (_rep) ScopedReport(ReportTypeMutexHeldWrongContext);
-    ScopedReport &rep = *_rep;
+    new (rep) ScopedReport(ReportTypeMutexHeldWrongContext);
     for (uptr i = 0; i < thr->mset.Size(); ++i) {
       MutexSet::Desc desc = thr->mset.Get(i);
-      rep.AddMutex(desc.addr, desc.stack_id);
+      rep->AddMutex(desc.addr, desc.stack_id);
     }
     VarSizeStackTrace trace;
     ObtainCurrentStack(thr, pc, &trace);
-    rep.AddStack(trace, true);
+    rep->AddStack(trace, true);
+#if SANITIZER_APPLE
   }  // Close this scope to release the locks
-
-  OutputReport(thr, *_rep);
+  OutputReport(thr, *rep);
+#else
+    OutputReport(thr, *rep);
+  }
+#endif
   // Need to manually destroy this because we used placement new to allocate
-  _rep->~ScopedReport();
+  rep->~ScopedReport();
 }
 
 INTERFACE_ATTRIBUTE

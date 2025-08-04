@@ -2151,19 +2151,20 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
     new (rep) ScopedReport(ReportTypeErrnoInSignal);
     rep->SetSigNum(sig);
     suppressed = IsFiredSuppression(ctx, ReportTypeErrnoInSignal, stack);
-    if (suppressed)
+    if (!suppressed)
       rep->AddStack(stack, true);
 #if SANITIZER_APPLE
   }  // Close this scope to release the locks before writing report
-#endif
-    if (suppressed)
+  if (!suppressed)
+    OutputReport(thr, *rep);
+#else
+    if (!suppressed)
       OutputReport(thr, *rep);
-
-    // Need to manually destroy this because we used placement new to allocate
-    rep->~ScopedReport();
-#if !SANITIZER_APPLE
   }
 #endif
+
+  // Need to manually destroy this because we used placement new to allocate
+  rep->~ScopedReport();
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
