@@ -236,7 +236,7 @@ private:
 
       // Skip relocations virtual sections.
       if (S.isVirtual()) {
-        if (S.relocation_begin() != S.relocation_end())
+        if (!S.relocations().empty())
           return make_error<JITLinkError>("Virtual section contains "
                                           "relocations");
         continue;

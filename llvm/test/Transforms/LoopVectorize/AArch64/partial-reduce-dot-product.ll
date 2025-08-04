@@ -1852,6 +1852,17 @@ define i64 @dotp_cost_disagreement(ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD]] to <vscale x 8 x i64>
 ; CHECK-MAXBW-NEXT:    [[TMP10:%.*]] = add nuw nsw i64 [[INDEX]], 1
 ; CHECK-MAXBW-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 [[TMP10]]
+; CHECK-MAXBW-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x i8>, ptr [[TMP11]], align 1
+; CHECK-MAXBW-NEXT:    [[TMP12:%.*]] = zext <vscale x 8 x i8> [[WIDE_LOAD1]] to <vscale x 8 x i64>
+; CHECK-MAXBW-NEXT:    [[TMP15:%.*]] = mul nuw nsw <vscale x 8 x i64> [[TMP12]], [[TMP9]]
+; CHECK-MAXBW-NEXT:    [[TMP14]] = add <vscale x 8 x i64> [[VEC_PHI]], [[TMP15]]
+; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
+; CHECK-MAXBW-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
+; CHECK-MAXBW:       middle.block:
+; CHECK-MAXBW-NEXT:    [[TMP16:%.*]] = call i64 @llvm.vector.reduce.add.nxv8i64(<vscale x 8 x i64> [[TMP14]])
+; CHECK-MAXBW-NEXT:    [[CMP_N:%.*]] = icmp eq i64 41, [[N_VEC]]
+; CHECK-MAXBW-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK-MAXBW:       scalar.ph:
 ;
 entry:

@@ -60,6 +60,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
+#include "lldb/Expression/Expression.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
@@ -615,10 +616,10 @@ void TypeSystemClang::SetTargetTriple(llvm::StringRef target_triple) {
 }
 
 void TypeSystemClang::SetExternalSource(
-    llvm::IntrusiveRefCntPtr<ExternalASTSource> &ast_source_up) {
+    llvm::IntrusiveRefCntPtr<ExternalASTSource> ast_source_sp) {
   ASTContext &ast = getASTContext();
   ast.getTranslationUnitDecl()->setHasExternalLexicalStorage(true);
-  ast.setExternalSource(ast_source_up);
+  ast.setExternalSource(std::move(ast_source_sp));
 }
 
 ASTContext &TypeSystemClang::getASTContext() const {
@@ -701,9 +702,9 @@ void TypeSystemClang::CreateASTContext() {
 
   GetASTMap().Insert(m_ast_up.get(), this);
 
-  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_up(
-      new ClangExternalASTSourceCallbacks(*this));
-  SetExternalSource(ast_source_up);
+  auto ast_source_sp =
+      llvm::makeIntrusiveRefCnt<ClangExternalASTSourceCallbacks>(*this);
+  SetExternalSource(ast_source_sp);
 }
 
 TypeSystemClang *TypeSystemClang::GetASTContext(clang::ASTContext *ast) {
@@ -795,6 +796,8 @@ TypeSystemClang::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
       return GetType(ast.LongDoubleTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.HalfTy))
       return GetType(ast.HalfTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, ast.Float128Ty))
+      return GetType(ast.Float128Ty);
     break;
 
   case eEncodingVector:
@@ -956,6 +959,13 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
     if (type_name == "long double" &&
         QualTypeMatchesBitSize(bit_size, ast, ast.LongDoubleTy))
       return GetType(ast.LongDoubleTy);
+    // As Rust currently uses `TypeSystemClang`, match `f128` here as well so it
+    // doesn't get misinterpreted as `long double` on targets where they are
+    // the same size but different formats.
+    if ((type_name == "__float128" || type_name == "_Float128" ||
+         type_name == "f128") &&
+        QualTypeMatchesBitSize(bit_size, ast, ast.Float128Ty))
+      return GetType(ast.Float128Ty);
     // Fall back to not requiring a name match
     if (QualTypeMatchesBitSize(bit_size, ast, ast.FloatTy))
       return GetType(ast.FloatTy);
@@ -965,6 +975,8 @@ CompilerType TypeSystemClang::GetBuiltinTypeForDWARFEncodingAndBitSize(
       return GetType(ast.LongDoubleTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.HalfTy))
       return GetType(ast.HalfTy);
+    if (QualTypeMatchesBitSize(bit_size, ast, ast.Float128Ty))
+      return GetType(ast.Float128Ty);
     break;
 
   case DW_ATE_signed:
@@ -1630,11 +1642,12 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   // type that includes a template template argument. Only the name matters for
   // this purpose, so we use dummy values for the other characteristics of the
   // type.
-  return TemplateTemplateParmDecl::Create(ast, decl_ctx, SourceLocation(),
-                                          /*Depth=*/0, /*Position=*/0,
-                                          /*IsParameterPack=*/false,
-                                          &identifier_info, /*Typename=*/false,
-                                          template_param_list);
+  return TemplateTemplateParmDecl::Create(
+      ast, decl_ctx, SourceLocation(),
+      /*Depth*/ 0, /*Position*/ 0,
+      /*IsParameterPack=*/false, &identifier_info,
+      TemplateNameKind::TNK_Type_template, /*DeclaredWithTypename=*/true,
+      template_param_list);
 }
 
 ClassTemplateSpecializationDecl *
@@ -2054,6 +2067,8 @@ TypeSystemClang::GetOpaqueCompilerType(clang::ASTContext *ast,
     return ast->DoubleTy.getAsOpaquePtr();
   case eBasicTypeLongDouble:
     return ast->LongDoubleTy.getAsOpaquePtr();
+  case eBasicTypeFloat128:
+    return ast->Float128Ty.getAsOpaquePtr();
   case eBasicTypeFloatComplex:
     return ast->getComplexType(ast->FloatTy).getAsOpaquePtr();
   case eBasicTypeDoubleComplex:
@@ -2169,8 +2184,7 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   // This is done separately for member functions in
   // AddMethodToCXXRecordType.
   if (!asm_label.empty())
-    func_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(ast, asm_label,
-                                                           /*literal=*/true));
+    func_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(ast, asm_label));
 
   SetOwningModule(func_decl, owning_module);
   decl_ctx->addDecl(func_decl);
@@ -4742,19 +4756,24 @@ CompilerType TypeSystemClang::CreateGenericFunctionPrototype() {
 // Exploring the type
 
 const llvm::fltSemantics &
-TypeSystemClang::GetFloatTypeSemantics(size_t byte_size) {
+TypeSystemClang::GetFloatTypeSemantics(size_t byte_size, lldb::Format format) {
   clang::ASTContext &ast = getASTContext();
   const size_t bit_size = byte_size * 8;
   if (bit_size == ast.getTypeSize(ast.FloatTy))
     return ast.getFloatTypeSemantics(ast.FloatTy);
   else if (bit_size == ast.getTypeSize(ast.DoubleTy))
     return ast.getFloatTypeSemantics(ast.DoubleTy);
+  else if (format == eFormatFloat128 &&
+           bit_size == ast.getTypeSize(ast.Float128Ty))
+    return ast.getFloatTypeSemantics(ast.Float128Ty);
   else if (bit_size == ast.getTypeSize(ast.LongDoubleTy) ||
            bit_size == llvm::APFloat::semanticsSizeInBits(
                            ast.getFloatTypeSemantics(ast.LongDoubleTy)))
     return ast.getFloatTypeSemantics(ast.LongDoubleTy);
   else if (bit_size == ast.getTypeSize(ast.HalfTy))
     return ast.getFloatTypeSemantics(ast.HalfTy);
+  else if (bit_size == ast.getTypeSize(ast.Float128Ty))
+    return ast.getFloatTypeSemantics(ast.Float128Ty);
   return llvm::APFloatBase::Bogus();
 }
 
@@ -5232,6 +5251,8 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:
       return lldb::eFormatFloat;
+    case clang::BuiltinType::Float128:
+      return lldb::eFormatFloat128;
     default:
       return lldb::eFormatHex;
     }
@@ -5529,6 +5550,8 @@ TypeSystemClang::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
         return eBasicTypeDouble;
       case clang::BuiltinType::LongDouble:
         return eBasicTypeLongDouble;
+      case clang::BuiltinType::Float128:
+        return eBasicTypeFloat128;
 
       case clang::BuiltinType::NullPtr:
         return eBasicTypeNullPtr;
@@ -6090,6 +6113,7 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
     case clang::BuiltinType::Float:
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:
+    case clang::BuiltinType::Float128:
     case clang::BuiltinType::Dependent:
     case clang::BuiltinType::Overload:
     case clang::BuiltinType::ObjCId:
@@ -7799,8 +7823,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_method_decl->addAttr(clang::UsedAttr::CreateImplicit(getASTContext()));
 
   if (!asm_label.empty())
-    cxx_method_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
-        getASTContext(), asm_label, /*literal=*/true));
+    cxx_method_decl->addAttr(
+        clang::AsmLabelAttr::CreateImplicit(getASTContext(), asm_label));
 
   // Parameters on member function declarations in DWARF generally don't
   // have names, so we omit them when creating the ParmVarDecls.
@@ -8733,6 +8757,7 @@ bool TypeSystemClang::DumpTypeValue(
         case eFormatHex:
         case eFormatHexUppercase:
         case eFormatFloat:
+        case eFormatFloat128:
         case eFormatOctal:
         case eFormatOSType:
         case eFormatUnsigned:
@@ -9043,6 +9068,21 @@ ConstString TypeSystemClang::DeclGetName(void *opaque_decl) {
   return ConstString();
 }
 
+static ConstString
+ExtractMangledNameFromFunctionCallLabel(llvm::StringRef label) {
+  auto label_or_err = FunctionCallLabel::fromString(label);
+  if (!label_or_err) {
+    llvm::consumeError(label_or_err.takeError());
+    return {};
+  }
+
+  llvm::StringRef mangled = label_or_err->lookup_name;
+  if (Mangled::IsMangledName(mangled))
+    return ConstString(mangled);
+
+  return {};
+}
+
 ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
   clang::NamedDecl *nd = llvm::dyn_cast_or_null<clang::NamedDecl>(
       static_cast<clang::Decl *>(opaque_decl));
@@ -9053,6 +9093,13 @@ ConstString TypeSystemClang::DeclGetMangledName(void *opaque_decl) {
   clang::MangleContext *mc = getMangleContext();
   if (!mc || !mc->shouldMangleCXXName(nd))
     return {};
+
+  // We have an LLDB FunctionCallLabel instead of an ordinary mangled name.
+  // Extract the mangled name out of this label.
+  if (const auto *label = nd->getAttr<AsmLabelAttr>())
+    if (ConstString mangled =
+            ExtractMangledNameFromFunctionCallLabel(label->getLabel()))
+      return mangled;
 
   llvm::SmallVector<char, 1024> buf;
   llvm::raw_svector_ostream llvm_ostrm(buf);
@@ -9573,8 +9620,8 @@ public:
         m_scratch_ast_source_up(std::move(ast_source)) {
     // Setup the ClangASTSource to complete this AST.
     m_scratch_ast_source_up->InstallASTContext(*this);
-    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
-        m_scratch_ast_source_up->CreateProxy());
+    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source =
+        m_scratch_ast_source_up->CreateProxy();
     SetExternalSource(proxy_ast_source);
   }
 
@@ -9594,8 +9641,8 @@ ScratchTypeSystemClang::ScratchTypeSystemClang(Target &target,
           new ClangPersistentVariables(target.shared_from_this())) {
   m_scratch_ast_source_up = CreateASTSource();
   m_scratch_ast_source_up->InstallASTContext(*this);
-  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
-      m_scratch_ast_source_up->CreateProxy());
+  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source =
+      m_scratch_ast_source_up->CreateProxy();
   SetExternalSource(proxy_ast_source);
 }
 

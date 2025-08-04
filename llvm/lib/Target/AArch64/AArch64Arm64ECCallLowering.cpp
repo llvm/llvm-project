@@ -813,8 +813,8 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
       }
     }
 
-    if (!F.hasFnAttribute(Attribute::HybridPatchable) || F.isDeclaration() ||
-        F.hasLocalLinkage() ||
+    if (!F.hasFnAttribute(Attribute::HybridPatchable) ||
+        F.isDeclarationForLinker() || F.hasLocalLinkage() ||
         F.getName().ends_with(HybridPatchableTargetSuffix))
       continue;
 
@@ -857,7 +857,7 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
 
   SetVector<GlobalValue *> DirectCalledFns;
   for (Function &F : Mod)
-    if (!F.isDeclaration() &&
+    if (!F.isDeclarationForLinker() &&
         F.getCallingConv() != CallingConv::ARM64EC_Thunk_Native &&
         F.getCallingConv() != CallingConv::ARM64EC_Thunk_X64)
       processFunction(F, DirectCalledFns, FnsMap);
@@ -869,7 +869,8 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
   };
   SmallVector<ThunkInfo> ThunkMapping;
   for (Function &F : Mod) {
-    if (!F.isDeclaration() && (!F.hasLocalLinkage() || F.hasAddressTaken()) &&
+    if (!F.isDeclarationForLinker() &&
+        (!F.hasLocalLinkage() || F.hasAddressTaken()) &&
         F.getCallingConv() != CallingConv::ARM64EC_Thunk_Native &&
         F.getCallingConv() != CallingConv::ARM64EC_Thunk_X64) {
       if (!F.hasComdat())
@@ -959,7 +960,7 @@ bool AArch64Arm64ECCallLowering::processFunction(
       // unprototyped functions in C)
       if (Function *F = CB->getCalledFunction()) {
         if (!LowerDirectToIndirect || F->hasLocalLinkage() ||
-            F->isIntrinsic() || !F->isDeclaration())
+            F->isIntrinsic() || !F->isDeclarationForLinker())
           continue;
 
         DirectCalledFns.insert(F);
