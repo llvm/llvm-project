@@ -47,8 +47,8 @@ The approach used by the LLVM implementation is to use a small set of
 between LLVM program objects and the source-level objects.  The description of
 the source-level program is maintained in LLVM metadata in an
 :ref:`implementation-defined format <ccxx_frontend>` (the C/C++ front-end
-currently uses working draft 7 of the `DWARF 3 standard
-<http://www.eagercon.com/dwarf/dwarf3std.htm>`_).
+currently defaults to using the `DWARF 5 standard
+<https://dwarfstd.org/dwarf5std.html>`_).
 
 When a program is being debugged, a debugger interacts with the user and turns
 the stored debug information into source-language specific information.  As
