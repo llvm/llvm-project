@@ -2571,7 +2571,7 @@ void VPlanTransforms::createInterleaveGroups(
     GEPNoWrapFlags NW = GEPNoWrapFlags::none();
     if (auto *Gep = dyn_cast<GetElementPtrInst>(
             getLoadStorePointerOperand(IRInsertPos)->stripPointerCasts()))
-      NW = Gep->getNoWrapFlags();
+      NW = Gep->getNoWrapFlags().withoutNoUnsignedWrap();
 
     // Get or create the start address for the interleave group.
     auto *Start =
