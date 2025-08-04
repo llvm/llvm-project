@@ -41,11 +41,9 @@ class raw_ostream;
 /// it is a reference to an external entity, it has a null section.
 class MCSymbol {
 protected:
-  /// A symbol can contain an Offset, or Value, or be Common, but never more
-  /// than one of these.
+  // A symbol can be regular, equated to an expression, or a common symbol.
   enum Contents : uint8_t {
     SymContentsUnset,
-    SymContentsOffset,
     SymContentsVariable,
     SymContentsCommon,
     SymContentsTargetCommon, // Index stores the section index
@@ -294,20 +292,15 @@ public:
     Index = Value;
   }
 
-  bool isUnset() const { return SymbolContents == SymContentsUnset; }
-
   uint64_t getOffset() const {
-    assert((SymbolContents == SymContentsUnset ||
-            SymbolContents == SymContentsOffset) &&
+    assert(SymbolContents == SymContentsUnset &&
            "Cannot get offset for a common/variable symbol");
     return Offset;
   }
   void setOffset(uint64_t Value) {
-    assert((SymbolContents == SymContentsUnset ||
-            SymbolContents == SymContentsOffset) &&
+    assert(SymbolContents == SymContentsUnset &&
            "Cannot set offset for a common/variable symbol");
     Offset = Value;
-    SymbolContents = SymContentsOffset;
   }
 
   /// Return the size of a 'common' symbol.
