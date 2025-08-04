@@ -44,12 +44,12 @@ public:
   virtual void GetGlobalVariables(
       DWARFUnit &cu,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
-  virtual void
-  GetObjCMethods(ConstString class_name,
-                 llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
-  virtual void
-  GetCompleteObjCClass(ConstString class_name, bool must_be_implementation,
-                       llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
+  virtual void GetObjCMethods(
+      ConstString class_name,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
+  virtual void GetCompleteObjCClass(
+      ConstString class_name, bool must_be_implementation,
+      llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
   virtual void GetTypes(ConstString name,
                         llvm::function_ref<bool(DWARFDIE die)> callback) = 0;
   virtual void GetTypes(const DWARFDeclContext &context,

@@ -1676,7 +1676,8 @@ SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
 }
 
 void SymbolFileDWARF::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString class_name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   m_index->GetObjCMethods(class_name, callback);
 }
 
@@ -3028,18 +3029,18 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
         // Don't try and resolve the DIE we are looking for with the DIE
         // itself!
         if (type_die == die || !IsStructOrClassTag(type_die.Tag()))
-          return true;
+          return IterationAction::Continue;
 
         if (must_be_implementation) {
           const bool try_resolving_type = type_die.GetAttributeValueAsUnsigned(
               DW_AT_APPLE_objc_complete_type, 0);
           if (!try_resolving_type)
-            return true;
+            return IterationAction::Continue;
         }
 
         Type *resolved_type = ResolveType(type_die, false, true);
         if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
-          return true;
+          return IterationAction::Continue;
 
         DEBUG_PRINTF(
             "resolved 0x%8.8" PRIx64 " from %s to 0x%8.8" PRIx64
@@ -3051,7 +3052,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
         if (die)
           GetDIEToType()[die.GetDIE()] = resolved_type;
         type_sp = resolved_type->shared_from_this();
-        return false;
+        return IterationAction::Stop;
       });
   return type_sp;
 }

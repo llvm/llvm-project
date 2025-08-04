@@ -182,20 +182,22 @@ void AppleDWARFIndex::GetGlobalVariables(
 }
 
 void AppleDWARFIndex::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString class_name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_objc_up)
     return;
-  SearchFor(*m_apple_objc_up, class_name, callback);
+  SearchFor(*m_apple_objc_up, class_name, IterationActionAdaptor(callback));
 }
 
 void AppleDWARFIndex::GetCompleteObjCClass(
     ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   if (!m_apple_types_up)
     return;
 
   llvm::SmallVector<DIERef> decl_dies;
-  auto converted_cb = DIERefCallback(callback, class_name);
+  auto adapted_cb = IterationActionAdaptor(callback);
+  auto converted_cb = DIERefCallback(adapted_cb, class_name);
 
   for (const auto &entry : m_apple_types_up->equal_range(class_name)) {
     if (HasImplementationFlag(entry)) {
