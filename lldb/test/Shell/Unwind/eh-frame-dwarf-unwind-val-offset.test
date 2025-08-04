@@ -20,8 +20,8 @@ process launch
 stepi
 stepi
 stepi
-print/x $r12
-# CHECK: (unsigned long) 0x[[#%.16x,R12:]]{{$}}
+register read -G x r12
+# CHECK: r12 = 0x[[#%.16x,R12:]]{{$}}
 
 continue
 # CHECK: stop reason = breakpoint 2.1
@@ -46,13 +46,13 @@ target modules show-unwind -n asm_main
 # CHECK: row[2]: 11: CFA=rbp+16 => rbp=[CFA-16] rip=[CFA-8]
 # CHECK: row[3]: 30: CFA=rsp +8 => rbp=[CFA-16] rip=[CFA-8]
 
-print/x $r12
-# CHECK: (unsigned long) 0x0000000000000456
+register read -G x r12
+# CHECK: r12 = 0x0000000000000456
 
 frame select 1
-print/x $r12
-# CHECK: (unsigned long) 0x0000000000000456
+register read -G x r12
+# CHECK: r12 = 0x0000000000000456
 
 frame select 2
-print/x $r12
-# CHECK: (unsigned long) 0x[[#R12 + 32]]
+register read -G x r12
+# CHECK: r12 = 0x[[#R12 + 32]]

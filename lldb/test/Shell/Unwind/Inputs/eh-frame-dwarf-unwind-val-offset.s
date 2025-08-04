@@ -7,6 +7,9 @@ bar:
         .cfi_endproc
 
         .globl  foo
+        # This function uses a non-standard calling convention (return address
+        # needs to be adjusted) to force lldb to use eh_frame/debug_frame
+        # instead of reading the code directly.
 foo:
         .cfi_startproc
         .cfi_escape 0x16, 0x10, 0x06, 0x38, 0x1c, 0x06, 0x08, 0x47, 0x1c
