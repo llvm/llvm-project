@@ -25,7 +25,7 @@ and
 
 will generate a warning.
 
-STL containers for which operator[] is well-defined for all inputs are excluded
+STL containers for which ``operator[]`` is well-defined for all inputs are excluded
 from this check (e.g.: ``std::map::operator[]``).
 
 This check enforces part of the `SL.con.3
