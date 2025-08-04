@@ -2075,37 +2075,43 @@ void COFFDumper::printCOFFPseudoReloc() {
       (RawRelocs.size() - sizeof(PseudoRelocationHeader)) /
           sizeof(PseudoRelocationRecord));
 
-  // Cache of symbol searched at least once in IAT
-  DenseMap<uint32_t, StringRef> ImportedSymbols;
+  struct CachingImportedSymbolLookup {
+    const StringRef *find(const COFFObjectFile *Obj, uint32_t EntryRVA) {
+      if (auto Ite = ImportedSymbols.find(EntryRVA);
+          Ite != ImportedSymbols.end())
+        return &Ite->second;
+
+      for (auto D : Obj->import_directories()) {
+        uint32_t RVA;
+        if (auto E = D.getImportAddressTableRVA(RVA))
+          reportError(std::move(E), Obj->getFileName());
+        if (EntryRVA < RVA)
+          continue;
+        for (auto S : D.imported_symbols()) {
+          if (RVA == EntryRVA) {
+            StringRef &NameDst = ImportedSymbols[RVA];
+            if (auto E = S.getSymbolName(NameDst))
+              reportError(std::move(E), Obj->getFileName());
+            return &NameDst;
+          }
+          RVA += Obj->is64() ? 8 : 4;
+        }
+      }
+
+      return nullptr;
+    }
+
+  private:
+    DenseMap<uint32_t, StringRef> ImportedSymbols;
+  };
+  CachingImportedSymbolLookup ImportedSymbols;
 
   ListScope D(W, "PseudoReloc");
   for (const auto &Reloc : RelocRecords) {
     DictScope Entry(W, "Entry");
     W.printHex("Symbol", Reloc.Symbol);
-
-    // find and print the pointed symbol from IAT
-    [&]() {
-      for (auto D : Obj->import_directories()) {
-        uint32_t RVA;
-        if (auto E = D.getImportAddressTableRVA(RVA))
-          reportError(std::move(E), Obj->getFileName());
-        if (Reloc.Symbol < RVA)
-          continue;
-        for (auto S : D.imported_symbols()) {
-          if (RVA == Reloc.Symbol) {
-            if (auto E = S.getSymbolName(ImportedSymbols[RVA]))
-              reportError(std::move(E), Obj->getFileName());
-            return;
-          }
-          RVA += Obj->is64() ? 8 : 4;
-        }
-      }
-    }();
-    if (auto Ite = ImportedSymbols.find(Reloc.Symbol);
-        Ite != ImportedSymbols.end()) {
-      W.printString("SymbolName", Ite->second);
-    }
-
+    if (const auto *Sym = ImportedSymbols.find(Obj, Reloc.Symbol))
+      W.printString("SymbolName", *Sym);
     W.printHex("Target", Reloc.Target);
     W.printNumber("BitWidth", Reloc.BitSize);
   }
