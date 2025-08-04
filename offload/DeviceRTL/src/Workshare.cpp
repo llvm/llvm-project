@@ -912,18 +912,18 @@ public:
 
 #define OMP_LOOP_ENTRY(BW, TY)                                                 \
   [[gnu::flatten, clang::always_inline]] void                                  \
-      __kmpc_distribute_for_static_loop##BW(                                   \
-          IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,       \
-          TY num_threads, TY block_chunk, TY thread_chunk,                     \
-          TY one_iteration_per_thread) {                                       \
+  __kmpc_distribute_for_static_loop##BW(                                       \
+      IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,           \
+      TY num_threads, TY block_chunk, TY thread_chunk,                         \
+      TY one_iteration_per_thread) {                                           \
     ompx::StaticLoopChunker<TY>::DistributeFor(                                \
         loc, fn, arg, num_iters, num_threads, block_chunk, thread_chunk,       \
         one_iteration_per_thread);                                             \
   }                                                                            \
   [[gnu::flatten, clang::always_inline]] void                                  \
-      __kmpc_distribute_static_loop##BW(                                       \
-          IdentTy *loc, void (*fn)(TY, void *), void *arg, TY num_iters,       \
-          TY block_chunk, TY one_iteration_per_thread) {                       \
+  __kmpc_distribute_static_loop##BW(IdentTy *loc, void (*fn)(TY, void *),      \
+                                    void *arg, TY num_iters, TY block_chunk,   \
+                                    TY one_iteration_per_thread) {             \
     ompx::StaticLoopChunker<TY>::Distribute(                                   \
         loc, fn, arg, num_iters, block_chunk, one_iteration_per_thread);       \
   }                                                                            \
