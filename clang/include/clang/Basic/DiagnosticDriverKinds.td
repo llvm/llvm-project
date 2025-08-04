@@ -252,13 +252,13 @@ def err_drv_invalid_argument_to_option : Error<
 def err_drv_missing_sanitizer_ignorelist : Error<
   "missing sanitizer ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_ignorelist : Error<
-  "failed to %select{load|parse}0 malformed sanitizer ignorelist: '%1'">;
+  "malformed sanitizer ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_coverage_allowlist : Error<
-  "failed to %select{load|parse}0 malformed sanitizer coverage allowlist: '%1'">;
+  "malformed sanitizer coverage allowlist: '%0'">;
 def err_drv_malformed_sanitizer_coverage_ignorelist : Error<
-  "failed to %select{load|parse}0 malformed sanitizer coverage ignorelist: '%1'">;
+  "malformed sanitizer coverage ignorelist: '%0'">;
 def err_drv_malformed_sanitizer_metadata_ignorelist : Error<
-  "failed to %select{load|parse}0 malformed sanitizer metadata ignorelist: '%1'">;
+  "malformed sanitizer metadata ignorelist: '%0'">;
 def err_drv_unsupported_static_sanitizer_darwin : Error<
   "static %0 runtime is not supported on darwin">;
 def err_drv_duplicate_config : Error<
@@ -393,6 +393,8 @@ def err_drv_small_columns : Error<
 def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
+
+def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;

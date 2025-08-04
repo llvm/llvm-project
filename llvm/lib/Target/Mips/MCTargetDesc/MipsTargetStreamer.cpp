@@ -931,7 +931,7 @@ MipsTargetELFStreamer::MipsTargetELFStreamer(MCStreamer &S,
 }
 
 void MipsTargetELFStreamer::emitLabel(MCSymbol *S) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   getStreamer().getAssembler().registerSymbol(*Symbol);
   uint8_t Type = Symbol->getType();
   if (Type != ELF::STT_FUNC)
@@ -969,7 +969,7 @@ void MipsTargetELFStreamer::finish() {
 
       Align Alignment = Section.getAlign();
       S.switchSection(&Section);
-      if (Section.useCodeAlign())
+      if (getContext().getAsmInfo()->useCodeAlign(Section))
         S.emitCodeAlignment(Alignment, &STI, Alignment.value());
       else
         S.emitValueToAlignment(Alignment, 0, 1, Alignment.value());
@@ -1015,11 +1015,11 @@ void MipsTargetELFStreamer::finish() {
 }
 
 void MipsTargetELFStreamer::emitAssignment(MCSymbol *S, const MCExpr *Value) {
-  auto *Symbol = cast<MCSymbolELF>(S);
+  auto *Symbol = static_cast<MCSymbolELF *>(S);
   // If on rhs is micromips symbol then mark Symbol as microMips.
   if (Value->getKind() != MCExpr::SymbolRef)
     return;
-  const auto &RhsSym = cast<MCSymbolELF>(
+  auto &RhsSym = static_cast<const MCSymbolELF &>(
       static_cast<const MCSymbolRefExpr *>(Value)->getSymbol());
 
   if (!(RhsSym.getOther() & ELF::STO_MIPS_MICROMIPS))

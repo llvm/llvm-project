@@ -47,14 +47,18 @@ MCAssembler *MCObjectStreamer::getAssemblerPtr() {
 }
 
 void MCObjectStreamer::newFragment() {
-  addFragment(getContext().allocFragment<MCFragment>());
+  addFragment(allocFragment<MCFragment>());
 }
 
-void MCObjectStreamer::insert(MCFragment *F) {
-  assert(F->getKind() != MCFragment::FT_Data &&
-         "F should have a variable-size tail");
-  addFragment(F);
+void MCObjectStreamer::addSpecialFragment(MCFragment *Frag) {
+  assert(Frag->getKind() != MCFragment::FT_Data &&
+         "Frag should have a variable-size tail");
+  addFragment(Frag);
   newFragment();
+}
+
+void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
+  CurFrag->appendContents(Contents);
 }
 
 void MCObjectStreamer::appendContents(size_t Num, char Elt) {
@@ -62,7 +66,7 @@ void MCObjectStreamer::appendContents(size_t Num, char Elt) {
 }
 
 void MCObjectStreamer::addFixup(const MCExpr *Value, MCFixupKind Kind) {
-  CurFrag->addFixup(MCFixup::create(CurFrag->getFixedSize(), Value, Kind));
+  CurFrag->addFixup(MCFixup::create(getCurFragSize(), Value, Kind));
 }
 
 // As a compile-time optimization, avoid allocating and evaluating an MCExpr
@@ -111,6 +115,7 @@ void MCObjectStreamer::reset() {
   }
   EmitEHFrame = true;
   EmitDebugFrame = false;
+  SpecialFragAllocator.Reset();
   MCStreamer::reset();
 }
 
@@ -263,7 +268,7 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
   // If the subsection number is not in the sorted Subsections list, create a
   // new fragment list.
   if (I == E || Subsections[I].first != Subsection) {
-    auto *F = getContext().allocFragment<MCFragment>();
+    auto *F = allocFragment<MCFragment>();
     F->setParent(Section);
     Subsections.insert(Subsections.begin() + I,
                        {Subsection, MCSection::FragList{F, F}});
@@ -278,11 +283,6 @@ void MCObjectStreamer::changeSection(MCSection *Section, uint32_t Subsection) {
     Sym->setFragment(Subsection ? F0 : CurFrag);
     getAssembler().registerSymbol(*Sym);
   }
-}
-
-void MCObjectStreamer::switchSectionNoPrint(MCSection *Section) {
-  MCStreamer::switchSectionNoPrint(Section);
-  changeSection(Section, 0);
 }
 
 void MCObjectStreamer::emitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
@@ -345,31 +345,33 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
   MCFragment *F = getCurrentFragment();
 
   // Append the instruction to the data fragment.
-  size_t FixupStartIndex = F->getFixups().size();
   size_t CodeOffset = F->getContents().size();
   SmallVector<MCFixup, 1> Fixups;
   getAssembler().getEmitter().encodeInstruction(
       Inst, F->getContentsForAppending(), Fixups, STI);
   F->doneAppending();
-  if (!Fixups.empty())
-    F->appendFixups(Fixups);
   F->setHasInstructions(STI);
 
+  if (Fixups.empty())
+    return;
   bool MarkedLinkerRelaxable = false;
-  for (auto &Fixup : MutableArrayRef(F->getFixups()).slice(FixupStartIndex)) {
+  for (auto &Fixup : Fixups) {
     Fixup.setOffset(Fixup.getOffset() + CodeOffset);
-    if (!Fixup.isLinkerRelaxable())
+    if (!Fixup.isLinkerRelaxable() || MarkedLinkerRelaxable)
       continue;
-    F->setLinkerRelaxable();
+    MarkedLinkerRelaxable = true;
+    // Set the fragment's order within the subsection for use by
+    // MCAssembler::relaxAlign.
+    auto *Sec = F->getParent();
+    if (!Sec->isLinkerRelaxable())
+      Sec->setLinkerRelaxable();
     // Do not add data after a linker-relaxable instruction. The difference
     // between a new label and a label at or before the linker-relaxable
     // instruction cannot be resolved at assemble-time.
-    if (!MarkedLinkerRelaxable) {
-      MarkedLinkerRelaxable = true;
-      getCurrentSectionOnly()->setLinkerRelaxable();
-      newFragment();
-    }
+    F->setLinkerRelaxable();
+    newFragment();
   }
+  F->appendFixups(Fixups);
 }
 
 void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
@@ -541,8 +543,7 @@ void MCObjectStreamer::emitCVFileChecksumOffsetDirective(unsigned FileNo) {
 
 void MCObjectStreamer::emitBytes(StringRef Data) {
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());
-  MCFragment *DF = getCurrentFragment();
-  DF->appendContents(ArrayRef(Data.data(), Data.size()));
+  appendContents(ArrayRef(Data.data(), Data.size()));
 }
 
 void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
@@ -570,7 +571,7 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
                                          unsigned char Value,
                                          SMLoc Loc) {
-  insert(getContext().allocFragment<MCOrgFragment>(*Offset, Value, Loc));
+  newSpecialFragment<MCOrgFragment>(*Offset, Value, Loc);
 }
 
 void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
@@ -602,8 +603,7 @@ void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
 void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                                 SMLoc Loc) {
   assert(getCurrentSectionOnly() && "need a section");
-  insert(
-      getContext().allocFragment<MCFillFragment>(FillValue, 1, NumBytes, Loc));
+  newSpecialFragment<MCFillFragment>(FillValue, 1, NumBytes, Loc);
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
@@ -630,15 +630,13 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
 
   // Otherwise emit as fragment.
   assert(getCurrentSectionOnly() && "need a section");
-  insert(
-      getContext().allocFragment<MCFillFragment>(Expr, Size, NumValues, Loc));
+  newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
 }
 
 void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
                                 SMLoc Loc, const MCSubtargetInfo &STI) {
   assert(getCurrentSectionOnly() && "need a section");
-  insert(getContext().allocFragment<MCNopsFragment>(
-      NumBytes, ControlledNopLength, Loc, STI));
+  newSpecialFragment<MCNopsFragment>(NumBytes, ControlledNopLength, Loc, STI);
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {

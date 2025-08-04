@@ -69,12 +69,12 @@ void test_uaf(void)
 {
   struct SomeData *data = alloc_data();
   put_data_uncond(data);
-  data->i += 1; // expected-warning{{Use of memory after it is freed}}
+  data->i += 1; // expected-warning{{Use of memory after it is released}}
 }
 
 void test_no_uaf_atomic_after(void)
 {
   struct SomeData *data = alloc_data();
   put_data_unrelated_atomic(data);
-  data->i += 1; // expected-warning{{Use of memory after it is freed}}
+  data->i += 1; // expected-warning{{Use of memory after it is released}}
 }

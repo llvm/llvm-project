@@ -80,11 +80,13 @@ private:
 
   FragmentType Kind;
 
-protected:
+  //== Used by certain fragment types for better packing.
+
+  // The number of fixups for the optional variable-size tail must be small.
+  uint8_t VarFixupSize = 0;
+
   bool LinkerRelaxable : 1;
 
-  /// Used by certain fragment types for better packing.
-  ///
   /// FT_Data, FT_Relaxable
   bool HasInstructions : 1;
   /// FT_Relaxable, x86-specific
@@ -103,7 +105,6 @@ protected:
   uint32_t VarContentStart = 0;
   uint32_t VarContentEnd = 0;
   uint32_t VarFixupStart = 0;
-  uint32_t VarFixupEnd = 0;
 
   const MCSubtargetInfo *STI = nullptr;
 
@@ -149,23 +150,6 @@ public:
                       bool HasInstructions = false);
   MCFragment(const MCFragment &) = delete;
   MCFragment &operator=(const MCFragment &) = delete;
-
-  bool isEncoded() const {
-    MCFragment::FragmentType Kind = getKind();
-    switch (Kind) {
-    default:
-      return false;
-    case MCFragment::FT_Relaxable:
-    case MCFragment::FT_Data:
-    case MCFragment::FT_Align:
-    case MCFragment::FT_Dwarf:
-    case MCFragment::FT_DwarfFrame:
-    case MCFragment::FT_LEB:
-    case MCFragment::FT_CVInlineLines:
-    case MCFragment::FT_CVDefRange:
-      return true;
-    }
-  }
 
   MCFragment *getNext() const { return Next; }
 
@@ -220,7 +204,7 @@ public:
   MutableArrayRef<char> getContents();
   ArrayRef<char> getContents() const;
 
-  void setVarContents(ArrayRef<char> Contents);
+  LLVM_ABI void setVarContents(ArrayRef<char> Contents);
   void clearVarContents() { setVarContents({}); }
   MutableArrayRef<char> getVarContents();
   ArrayRef<char> getVarContents() const;
@@ -241,7 +225,7 @@ public:
 
   // Source fixup offsets are relative to the variable part's start.
   // Stored fixup offsets are relative to the fixed part's start.
-  void setVarFixups(ArrayRef<MCFixup> Fixups);
+  LLVM_ABI void setVarFixups(ArrayRef<MCFixup> Fixups);
   void clearVarFixups() { setVarFixups({}); }
   MutableArrayRef<MCFixup> getVarFixups();
   ArrayRef<MCFixup> getVarFixups() const;
@@ -326,13 +310,8 @@ public:
   }
 };
 
-/// Interface implemented by fragments that contain encoded instructions and/or
-/// data.
-class MCEncodedFragment : public MCFragment {
-protected:
-  MCEncodedFragment(MCFragment::FragmentType FType, bool HasInstructions)
-      : MCFragment(FType, HasInstructions) {}
-};
+// MCFragment subclasses do not use the fixed-size part or variable-size tail of
+// MCFragment. Instead, they encode content in a specialized way.
 
 class MCFillFragment : public MCFragment {
   uint8_t ValueSize;
@@ -348,7 +327,7 @@ class MCFillFragment : public MCFragment {
 public:
   MCFillFragment(uint64_t Value, uint8_t VSize, const MCExpr &NumValues,
                  SMLoc Loc)
-      : MCFragment(FT_Fill, false), ValueSize(VSize), Value(Value),
+      : MCFragment(FT_Fill), ValueSize(VSize), Value(Value),
         NumValues(NumValues), Loc(Loc) {}
 
   uint64_t getValue() const { return Value; }
@@ -379,7 +358,7 @@ class MCNopsFragment : public MCFragment {
 public:
   MCNopsFragment(int64_t NumBytes, int64_t ControlledNopLength, SMLoc L,
                  const MCSubtargetInfo &STI)
-      : MCFragment(FT_Nops, false), Size(NumBytes),
+      : MCFragment(FT_Nops), Size(NumBytes),
         ControlledNopLength(ControlledNopLength), Loc(L), STI(STI) {}
 
   int64_t getNumBytes() const { return Size; }
@@ -404,13 +383,16 @@ class MCOrgFragment : public MCFragment {
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
+  uint64_t Size = 0;
+
 public:
   MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc)
-      : MCFragment(FT_Org, false), Value(Value), Offset(&Offset), Loc(Loc) {}
+      : MCFragment(FT_Org), Value(Value), Offset(&Offset), Loc(Loc) {}
 
   const MCExpr &getOffset() const { return *Offset; }
-
   uint8_t getValue() const { return Value; }
+  uint64_t getSize() const { return Size; }
+  void setSize(uint64_t Value) { Size = Value; }
 
   SMLoc getLoc() const { return Loc; }
 
@@ -424,8 +406,7 @@ class MCSymbolIdFragment : public MCFragment {
   const MCSymbol *Sym;
 
 public:
-  MCSymbolIdFragment(const MCSymbol *Sym)
-      : MCFragment(FT_SymbolId, false), Sym(Sym) {}
+  MCSymbolIdFragment(const MCSymbol *Sym) : MCFragment(FT_SymbolId), Sym(Sym) {}
 
   const MCSymbol *getSymbol() { return Sym; }
   const MCSymbol *getSymbol() const { return Sym; }
@@ -437,7 +418,7 @@ public:
 
 /// Fragment representing the binary annotations produced by the
 /// .cv_inline_linetable directive.
-class MCCVInlineLineTableFragment : public MCEncodedFragment {
+class MCCVInlineLineTableFragment : public MCFragment {
   unsigned SiteFuncId;
   unsigned StartFileId;
   unsigned StartLineNum;
@@ -452,7 +433,7 @@ public:
   MCCVInlineLineTableFragment(unsigned SiteFuncId, unsigned StartFileId,
                               unsigned StartLineNum, const MCSymbol *FnStartSym,
                               const MCSymbol *FnEndSym)
-      : MCEncodedFragment(FT_CVInlineLines, false), SiteFuncId(SiteFuncId),
+      : MCFragment(FT_CVInlineLines), SiteFuncId(SiteFuncId),
         StartFileId(StartFileId), StartLineNum(StartLineNum),
         FnStartSym(FnStartSym), FnEndSym(FnEndSym) {}
 
@@ -465,7 +446,7 @@ public:
 };
 
 /// Fragment representing the .cv_def_range directive.
-class MCCVDefRangeFragment : public MCEncodedFragment {
+class MCCVDefRangeFragment : public MCFragment {
   ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges;
   StringRef FixedSizePortion;
 
@@ -477,8 +458,7 @@ public:
   MCCVDefRangeFragment(
       ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> Ranges,
       StringRef FixedSizePortion)
-      : MCEncodedFragment(FT_CVDefRange, false),
-        Ranges(Ranges.begin(), Ranges.end()),
+      : MCFragment(FT_CVDefRange), Ranges(Ranges.begin(), Ranges.end()),
         FixedSizePortion(FixedSizePortion) {}
 
   ArrayRef<std::pair<const MCSymbol *, const MCSymbol *>> getRanges() const {
@@ -509,8 +489,7 @@ class MCBoundaryAlignFragment : public MCFragment {
 
 public:
   MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)
-      : MCFragment(FT_BoundaryAlign, false), AlignBoundary(AlignBoundary),
-        STI(STI) {}
+      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary), STI(STI) {}
 
   uint64_t getSize() const { return Size; }
   void setSize(uint64_t Value) { Size = Value; }
@@ -540,17 +519,6 @@ public:
   friend class MCFragment;
   static constexpr unsigned NonUniqueID = ~0U;
 
-  enum SectionVariant {
-    SV_COFF = 0,
-    SV_ELF,
-    SV_GOFF,
-    SV_MachO,
-    SV_Wasm,
-    SV_XCOFF,
-    SV_SPIRV,
-    SV_DXContainer,
-  };
-
   struct iterator {
     MCFragment *F = nullptr;
     iterator() = default;
@@ -570,6 +538,8 @@ private:
   // At parse time, this holds the fragment list of the current subsection. At
   // layout time, this holds the concatenated fragment lists of all subsections.
   FragList *CurFragList;
+  // In many object file formats, this denotes the section symbol. In Mach-O,
+  // this denotes an optional temporary label at the section start.
   MCSymbol *Begin;
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
@@ -604,12 +574,8 @@ private:
 protected:
   // TODO Make Name private when possible.
   StringRef Name;
-  SectionVariant Variant;
 
-  MCSection(SectionVariant V, StringRef Name, bool IsText, bool IsBss,
-            MCSymbol *Begin);
-  // Protected non-virtual dtor prevents destroy through a base class pointer.
-  ~MCSection() {}
+  MCSection(StringRef Name, bool IsText, bool IsBss, MCSymbol *Begin);
 
 public:
   MCSection(const MCSection &) = delete;
@@ -617,8 +583,6 @@ public:
 
   StringRef getName() const { return Name; }
   bool isText() const { return IsText; }
-
-  SectionVariant getVariant() const { return Variant; }
 
   MCSymbol *getBeginSymbol() { return Begin; }
   const MCSymbol *getBeginSymbol() const {
@@ -660,14 +624,6 @@ public:
 
   void dump(DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>>
                 *FragToSyms = nullptr) const;
-
-  virtual void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
-                                    raw_ostream &OS,
-                                    uint32_t Subsection) const = 0;
-
-  /// Return true if a .align directive should use "optimized nops" to fill
-  /// instead of 0s.
-  virtual bool useCodeAlign() const = 0;
 
   /// Check whether this section is "virtual", that is has no actual object
   /// file contents.
@@ -720,11 +676,10 @@ inline ArrayRef<MCFixup> MCFragment::getFixups() const {
 
 inline MutableArrayRef<MCFixup> MCFragment::getVarFixups() {
   return MutableArrayRef(getParent()->FixupStorage)
-      .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
+      .slice(VarFixupStart, VarFixupSize);
 }
 inline ArrayRef<MCFixup> MCFragment::getVarFixups() const {
-  return ArrayRef(getParent()->FixupStorage)
-      .slice(VarFixupStart, VarFixupEnd - VarFixupStart);
+  return ArrayRef(getParent()->FixupStorage).slice(VarFixupStart, VarFixupSize);
 }
 
 //== FT_Relaxable functions

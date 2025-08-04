@@ -325,7 +325,9 @@ public:
   };
 
   /// Hold counters for incrementally naming temporaries
+  unsigned counterRefTmp = 0;
   unsigned counterAggTmp = 0;
+  std::string getCounterRefTmpAsString();
   std::string getCounterAggTmpAsString();
 
   /// Helpers to convert Clang's SourceLocation to a MLIR Location.
@@ -604,6 +606,19 @@ public:
   void popCleanupBlocks(size_t oldCleanupStackDepth);
   void popCleanupBlock();
 
+  /// Push a cleanup to be run at the end of the current full-expression.  Safe
+  /// against the possibility that we're currently inside a
+  /// conditionally-evaluated expression.
+  template <class T, class... As>
+  void pushFullExprCleanup(CleanupKind kind, As... a) {
+    // If we're not in a conditional branch, or if none of the
+    // arguments requires saving, then use the unconditional cleanup.
+    if (!isInConditionalBranch())
+      return ehStack.pushCleanup<T>(kind, a...);
+
+    cgm.errorNYI("pushFullExprCleanup in conditional branch");
+  }
+
   /// Enters a new scope for capturing cleanups, all of which
   /// will be executed once the scope is exited.
   class RunCleanupsScope {
@@ -619,6 +634,7 @@ public:
   protected:
     CIRGenFunction &cgf;
 
+  public:
     /// Enter a new cleanup scope.
     explicit RunCleanupsScope(CIRGenFunction &cgf)
         : performCleanup(true), cgf(cgf) {
@@ -801,6 +817,9 @@ public:
 
   static Destroyer destroyCXXObject;
 
+  void pushDestroy(CleanupKind kind, Address addr, QualType type,
+                   Destroyer *destroyer);
+
   Destroyer *getDestroyer(clang::QualType::DestructionKind kind);
 
   /// ----------------------
@@ -848,13 +867,18 @@ public:
   /// even if no aggregate location is provided.
   RValue emitAnyExprToTemp(const clang::Expr *e);
 
+  void emitArrayDestroy(mlir::Value begin, mlir::Value end,
+                        QualType elementType, CharUnits elementAlign,
+                        Destroyer *destroyer);
+
   mlir::Value emitArrayLength(const clang::ArrayType *arrayType,
                               QualType &baseType, Address &addr);
   LValue emitArraySubscriptExpr(const clang::ArraySubscriptExpr *e);
 
   Address emitArrayToPointerDecay(const Expr *array);
 
-  AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d);
+  AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
+                                    mlir::OpBuilder::InsertPoint ip = {});
 
   /// Emit code and set up symbol table for a variable declaration with auto,
   /// register, or no storage class specifier. These turn into simple stack
@@ -865,6 +889,8 @@ public:
   void emitAutoVarInit(const AutoVarEmission &emission);
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               clang::QualType::DestructionKind dtorKind);
+
+  void maybeEmitDeferredVarDeclInit(const VarDecl *vd);
 
   void emitBaseInitializer(mlir::Location loc, const CXXRecordDecl *classDecl,
                            CXXCtorInitializer *baseInit);
@@ -1055,7 +1081,7 @@ public:
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
 
-  void emitDecl(const clang::Decl &d);
+  void emitDecl(const clang::Decl &d, bool evaluateConditionDecl = false);
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
   LValue emitDeclRefLValue(const clang::DeclRefExpr *e);
 
@@ -1132,6 +1158,8 @@ public:
                                           const clang::FieldDecl *field,
                                           llvm::StringRef fieldName);
 
+  LValue emitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *e);
+
   LValue emitMemberExpr(const MemberExpr *e);
 
   /// Given an expression with a pointer type, emit the value and compute our
@@ -1200,6 +1228,8 @@ public:
   /// This method handles emission of any variable declaration
   /// inside a function, including static vars etc.
   void emitVarDecl(const clang::VarDecl &d);
+
+  void emitVariablyModifiedType(QualType ty);
 
   mlir::LogicalResult emitWhileStmt(const clang::WhileStmt &s);
 
@@ -1369,6 +1399,7 @@ public:
     mlir::Location beginLoc;
     mlir::Value varValue;
     std::string name;
+    QualType baseType;
     llvm::SmallVector<mlir::Value> bounds;
   };
   // Gets the collection of info required to lower and OpenACC clause or cache

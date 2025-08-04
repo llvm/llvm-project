@@ -56,12 +56,11 @@ void MCTargetStreamer::finish() {}
 
 void MCTargetStreamer::emitConstantPools() {}
 
-void MCTargetStreamer::changeSection(const MCSection *CurSection,
-                                     MCSection *Section, uint32_t Subsection,
-                                     raw_ostream &OS) {
-  Section->printSwitchToSection(*Streamer.getContext().getAsmInfo(),
-                                Streamer.getContext().getTargetTriple(), OS,
-                                Subsection);
+void MCTargetStreamer::changeSection(const MCSection *, MCSection *Sec,
+                                     uint32_t Subsection, raw_ostream &OS) {
+  auto &MAI = *Streamer.getContext().getAsmInfo();
+  MAI.printSwitchToSection(*Sec, Subsection,
+                           Streamer.getContext().getTargetTriple(), OS);
 }
 
 void MCTargetStreamer::emitDwarfFileDirective(StringRef Directive) {
@@ -838,8 +837,8 @@ static MCSection *getWinCFISection(MCContext &Context, unsigned *NextWinCFIID,
   if (TextSec == Context.getObjectFileInfo()->getTextSection())
     return MainCFISec;
 
-  const auto *TextSecCOFF = cast<MCSectionCOFF>(TextSec);
-  auto *MainCFISecCOFF = cast<MCSectionCOFF>(MainCFISec);
+  const auto *TextSecCOFF = static_cast<const MCSectionCOFF *>(TextSec);
+  auto *MainCFISecCOFF = static_cast<MCSectionCOFF *>(MainCFISec);
   unsigned UniqueID = TextSecCOFF->getOrAssignWinCFISectionID(NextWinCFIID);
 
   // If this section is COMDAT, this unwind section should be COMDAT associative
@@ -1314,11 +1313,20 @@ void MCStreamer::emitZerofill(MCSection *, MCSymbol *, uint64_t, Align, SMLoc) {
 }
 void MCStreamer::emitTBSSSymbol(MCSection *Section, MCSymbol *Symbol,
                                 uint64_t Size, Align ByteAlignment) {}
+
 void MCStreamer::changeSection(MCSection *Sec, uint32_t) {
   CurFrag = &Sec->getDummyFragment();
-  if (auto *Sym = Sec->getBeginSymbol())
-    Sym->setFragment(&Sec->getDummyFragment());
+  auto *Sym = Sec->getBeginSymbol();
+  if (!Sym || !Sym->isUndefined())
+    return;
+  // In Mach-O, DWARF sections use Begin as a temporary label, requiring a label
+  // definition, unlike section symbols in other file formats.
+  if (getContext().getObjectFileType() == MCContext::IsMachO)
+    emitLabel(Sym);
+  else
+    Sym->setFragment(CurFrag);
 }
+
 void MCStreamer::emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) {}
 void MCStreamer::emitBytes(StringRef Data) {}
 void MCStreamer::emitBinaryData(StringRef Data) { emitBytes(Data); }
