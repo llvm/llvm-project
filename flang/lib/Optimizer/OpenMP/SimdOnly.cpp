@@ -54,10 +54,6 @@ public:
     if (op->getParentOfType<mlir::omp::SimdOp>() &&
         (mlir::isa<mlir::omp::YieldOp>(op) ||
          mlir::isa<mlir::omp::LoopNestOp>(op) ||
-         mlir::isa<mlir::omp::WsloopOp>(op) ||
-         mlir::isa<mlir::omp::WorkshareLoopWrapperOp>(op) ||
-         mlir::isa<mlir::omp::DistributeOp>(op) ||
-         mlir::isa<mlir::omp::TaskloopOp>(op) ||
          mlir::isa<mlir::omp::TerminatorOp>(op)))
       return rewriter.notifyMatchFailure(op, "Op is part of a simd construct");
 
@@ -66,6 +62,10 @@ public:
          mlir::isa<mlir::omp::YieldOp>(op)))
       return rewriter.notifyMatchFailure(op,
                                          "Non top-level yield or terminator");
+
+    if (mlir::isa<mlir::omp::UnrollHeuristicOp>(op))
+      return rewriter.notifyMatchFailure(
+          op, "UnrollHeuristic has special handling");
 
     // SectionOp overrides its BlockArgInterface based on the parent SectionsOp.
     // We need to make sure we only rewrite omp.sections once all omp.section
@@ -288,6 +288,129 @@ public:
       threadPrivateOp.getTlsAddr().replaceAllUsesWith(
           threadPrivateOp.getSymAddr());
       rewriter.eraseOp(threadPrivateOp);
+      return mlir::success();
+    }
+
+    if (auto cLoopOp = mlir::dyn_cast<mlir::omp::CanonicalLoopOp>(op)) {
+      assert("CanonicalLoopOp has one region" && cLoopOp->getNumRegions() == 1);
+      auto cli = cLoopOp.getCli();
+      auto tripCount = cLoopOp.getTripCount();
+
+      builder.setInsertionPoint(cLoopOp);
+      mlir::Type indexType = builder.getIndexType();
+      mlir::Type oldIndexType = tripCount.getType();
+      auto one = mlir::arith::ConstantIndexOp::create(builder, loc, 1);
+      auto ub = builder.createConvert(loc, indexType, tripCount);
+
+      llvm::SmallVector<mlir::Value> loopIndArgs;
+      auto doLoop = fir::DoLoopOp::create(builder, loc, one, ub, one, false);
+      builder.setInsertionPointToStart(doLoop.getBody());
+      if (oldIndexType != indexType) {
+        auto convertedIndVar =
+            builder.createConvert(loc, oldIndexType, doLoop.getInductionVar());
+        loopIndArgs.push_back(convertedIndVar);
+      } else {
+        loopIndArgs.push_back(doLoop.getInductionVar());
+      }
+
+      if (cLoopOp.getRegion().getBlocks().size() == 1) {
+        auto &block = *cLoopOp.getRegion().getBlocks().begin();
+        // DoLoopOp will handle incrementing the induction variable
+        if (auto addIOp = mlir::dyn_cast<mlir::arith::AddIOp>(block.front())) {
+          rewriter.replaceOpUsesWithinBlock(addIOp, addIOp.getLhs(), &block);
+          rewriter.eraseOp(addIOp);
+        }
+
+        rewriter.mergeBlocks(&block, doLoop.getBody(), loopIndArgs);
+
+        // Find the new loop block terminator and move it before the end of the
+        // block
+        for (auto &loopBodyOp : doLoop.getBody()->getOperations()) {
+          if (auto resultOp = mlir::dyn_cast<fir::ResultOp>(loopBodyOp)) {
+            rewriter.moveOpBefore(resultOp.getOperation(),
+                                  &doLoop.getBody()->back());
+            break;
+          }
+        }
+
+        // Remove omp.terminator at the end of the loop body
+        if (auto terminatorOp = mlir::dyn_cast<mlir::omp::TerminatorOp>(
+                doLoop.getBody()->back())) {
+          rewriter.eraseOp(terminatorOp);
+        }
+      } else {
+        rewriter.inlineRegionBefore(cLoopOp->getRegion(0), doLoop.getBody());
+        auto indVarArg = doLoop.getBody()->getArgument(0);
+        // fir::convertDoLoopToCFG expects the induction variable to be of type
+        // index while the OpenMP CanonicalLoopOp can have indices of different
+        // types. We need to work around it.
+        if (indVarArg.getType() != indexType)
+          indVarArg.setType(indexType);
+
+        // fir.do_loop, unlike omp.canonical_loop does not support multi-block
+        // regions. If we're dealing with multiple blocks inside omp.loop_nest,
+        // we need to convert it into basic control-flow operations instead.
+        auto loopBlocks =
+            fir::convertDoLoopToCFG(doLoop, rewriter, false, false);
+        auto *conditionalBlock = loopBlocks.first;
+        auto *firstBlock =
+            conditionalBlock->getNextNode(); // Start of the loop body
+        auto *lastBlock = loopBlocks.second; // Incrementing induction variables
+
+        // Incrementing the induction variable is handled elsewhere
+        if (auto addIOp =
+                mlir::dyn_cast<mlir::arith::AddIOp>(firstBlock->front())) {
+          rewriter.replaceOpUsesWithinBlock(addIOp, addIOp.getLhs(),
+                                            firstBlock);
+          rewriter.eraseOp(addIOp);
+        }
+
+        // If the induction variable is used within the loop and was originally
+        // not of type index, then we need to add a convert to the original type
+        // and replace its uses inside the loop body.
+        if (oldIndexType != indexType) {
+          indVarArg = conditionalBlock->getArgument(0);
+          builder.setInsertionPointToStart(firstBlock);
+          auto convertedIndVar =
+              builder.createConvert(loc, oldIndexType, indVarArg);
+          rewriter.replaceUsesWithIf(
+              indVarArg, convertedIndVar, [&](auto &use) -> bool {
+                return use.getOwner() != convertedIndVar.getDefiningOp() &&
+                       use.getOwner()->getBlock() != lastBlock;
+              });
+        }
+
+        // There might be an unused convert and an unused argument to the block.
+        // If so, remove them.
+        if (lastBlock->front().getUses().empty())
+          lastBlock->front().erase();
+        for (auto arg : lastBlock->getArguments()) {
+          if (arg.getUses().empty())
+            lastBlock->eraseArgument(arg.getArgNumber());
+        }
+
+        // Any loop blocks that end in omp.terminator should just branch to
+        // lastBlock.
+        for (auto *loopBlock = conditionalBlock; loopBlock != lastBlock;
+             loopBlock = loopBlock->getNextNode()) {
+          if (auto terminatorOp =
+                  mlir::dyn_cast<mlir::omp::TerminatorOp>(loopBlock->back())) {
+            builder.setInsertionPointToEnd(loopBlock);
+            mlir::cf::BranchOp::create(builder, loc, lastBlock);
+            rewriter.eraseOp(terminatorOp);
+          }
+        }
+      }
+
+      rewriter.eraseOp(cLoopOp);
+      // Handle the optional omp.new_cli op
+      if (cli) {
+        // cli will be used by omp.unroll_heuristic ops
+        for (auto *user : cli.getUsers())
+          rewriter.eraseOp(user);
+        rewriter.eraseOp(cli.getDefiningOp());
+      }
+
       return mlir::success();
     }
 
