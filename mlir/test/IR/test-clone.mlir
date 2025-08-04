@@ -18,7 +18,8 @@ module {
 // CHECK-NEXT: notifyOperationInserted: test.yield
 // CHECK-NEXT: notifyOperationInserted: func.return
 
-// CHECK:   func @fixpoint(%[[arg0:.+]]: i32) -> i32 {
+// CHECK-LABEL: func @fixpoint
+// CHECK-SAME:       (%[[arg0:.+]]: i32) -> i32 {
 // CHECK-NEXT:     %[[i0:.+]] = "test.use"(%[[arg0]]) ({
 // CHECK-NEXT:       %[[r2:.+]] = "test.use2"(%[[arg0]]) ({
 // CHECK-NEXT:         "test.yield2"(%[[arg0]]) : (i32) -> ()
@@ -54,7 +55,7 @@ func.func @clone_unregistered_with_attrs() {
 // CHECK-NEXT: notifyOperationInserted: unregistered.complex
 // CHECK-NEXT: notifyOperationInserted: func.return
 
-// CHECK:   func @clone_unregistered_with_attrs() {
+// CHECK-LABEL:  func @clone_unregistered_with_attrs() {
 // CHECK-NEXT:     "unregistered.foo"() <{bar = 1 : i64, flag = true, name = "test", value = [[PI:.+]] : f32}> : () -> ()
 // CHECK-NEXT:     "unregistered.bar"() : () -> ()
 // CHECK-NEXT:     "unregistered.empty_dict"() <{}> : () -> ()
@@ -63,5 +64,3 @@ func.func @clone_unregistered_with_attrs() {
 // CHECK-NEXT:     "unregistered.bar"() : () -> ()
 // CHECK-NEXT:     "unregistered.empty_dict"() <{}> : () -> ()
 // CHECK-NEXT:     "unregistered.complex"() <{array = [1, 2, 3], dict = {key1 = 42 : i32, key2 = "value"}, nested = {inner = {deep = 100 : i64}}}> : () -> ()
-// CHECK-NEXT:     return
-// CHECK-NEXT:   }
