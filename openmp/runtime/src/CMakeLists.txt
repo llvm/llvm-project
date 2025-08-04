@@ -11,7 +11,7 @@
 include(ExtendPath)
 
 # The generated headers will be placed in clang's resource directory if present.
-if(OPENMP_STANDALONE_BUILD OR NOT LLVM_RUNTIMES_BUILD)
+if(NOT LLVM_TREE_AVAILABLE)
   set(LIBOMP_HEADERS_INTDIR ${CMAKE_CURRENT_BINARY_DIR})
 else()
   set(LIBOMP_HEADERS_INTDIR ${LLVM_BINARY_DIR}/${LIBOMP_HEADERS_INSTALL_PATH})
@@ -457,12 +457,27 @@ if(WIN32)
       \"${alias}${CMAKE_STATIC_LIBRARY_SUFFIX}\" WORKING_DIRECTORY \"${outdir}\")")
   endforeach()
 else()
-
   if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     install(FILES ${LIBOMP_LIBRARY_DIR}/libomp.a DESTINATION "${OPENMP_INSTALL_LIBDIR}" COMPONENT runtime)
   else()
-    install(TARGETS omp ${export_to_llvmexports} ${LIBOMP_INSTALL_KIND} DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+    install(TARGETS omp ${export_to_llvmexports} EXPORT openmpTargets ${LIBOMP_INSTALL_KIND}
+            DESTINATION "${OPENMP_INSTALL_LIBDIR}")
+    install(EXPORT openmpTargets FILE openmpTargets.cmake NAMESPACE OpenMP::
+            DESTINATION ${OPENMP_INSTALL_CFGDIR}/openmp)
+    target_include_directories(omp PUBLIC $<INSTALL_INTERFACE:${LIBOMP_HEADERS_INSTALL_PATH}>)
   endif()
+
+  # Create cmake configuration files
+  include(CMakePackageConfigHelpers)
+
+  configure_package_config_file(
+   ../openmp-config.cmake.in
+   openmp-config.cmake
+   INSTALL_DESTINATION ${OPENMP_INSTALL_CFGDIR}/openmp
+   PATH_VARS LIBOMP_HEADERS_INSTALL_PATH OPENMP_INSTALL_LIBDIR)
+
+  install(FILES ${CMAKE_CURRENT_BINARY_DIR}/openmp-config.cmake
+          DESTINATION ${OPENMP_INSTALL_CFGDIR}/openmp)
 
   if(${LIBOMP_INSTALL_ALIASES})
     # Create aliases (symlinks) of the library for backwards compatibility

@@ -1660,18 +1660,18 @@ public:
   /// getEndLoc - Get the location of the last token of this operand.
   SMLoc getEndLoc() const override { return EndLoc; }
 
-  void print(raw_ostream &OS) const override {
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override {
     switch (Kind) {
     case k_Immediate:
       OS << "Imm<";
-      OS << *Imm.Val;
+      MAI.printExpr(OS, *Imm.Val);
       OS << ">";
       break;
     case k_Memory:
       OS << "Mem<";
-      Mem.Base->print(OS);
+      Mem.Base->print(OS, MAI);
       OS << ", ";
-      OS << *Mem.Off;
+      MAI.printExpr(OS, *Mem.Off);
       OS << ">";
       break;
     case k_RegisterIndex:
@@ -1774,7 +1774,7 @@ static bool isEvaluated(const MCExpr *Expr) {
   case MCExpr::Constant:
     return true;
   case MCExpr::SymbolRef:
-    return (cast<MCSymbolRefExpr>(Expr)->getKind() != MCSymbolRefExpr::VK_None);
+    return (cast<MCSymbolRefExpr>(Expr)->getSpecifier());
   case MCExpr::Binary: {
     const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
     if (!isEvaluated(BE->getLHS()))
@@ -1817,7 +1817,7 @@ static bool needsExpandMemInst(MCInst &Inst, const MCInstrDesc &MCID) {
 
     // Expand symbol.
     const MCSymbolRefExpr *SR = static_cast<const MCSymbolRefExpr *>(Expr);
-    return SR->getKind() == MCSymbolRefExpr::VK_None;
+    return SR->getSpecifier() == 0;
   }
 
   return false;
@@ -2101,7 +2101,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
       TOut.getStreamer().emitRelocDirective(
           *TmpExpr, inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
-          RelocJalrExpr, IDLoc, *STI);
+          RelocJalrExpr);
       TOut.getStreamer().emitLabel(TmpLabel);
     }
 
@@ -2948,8 +2948,9 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     bool IsPtr64 = ABI.ArePtrs64bit();
     bool IsLocalSym =
         Res.getAddSym()->isInSection() || Res.getAddSym()->isTemporary() ||
-        (Res.getAddSym()->isELF() &&
-         cast<MCSymbolELF>(Res.getAddSym())->getBinding() == ELF::STB_LOCAL);
+        (getContext().isELF() &&
+         static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
+             ELF::STB_LOCAL);
     // For O32, "$"-prefixed symbols are recognized as temporary while
     // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
     // manually.
@@ -2965,9 +2966,9 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
         Res.getConstant() == 0 && !IsLocalSym) {
       if (UseXGOT) {
         const MCExpr *CallHiExpr =
-            MipsMCExpr::create(Mips::S_CALL_HI16, SymExpr, getContext());
+            MCSpecifierExpr::create(SymExpr, Mips::S_CALL_HI16, getContext());
         const MCExpr *CallLoExpr =
-            MipsMCExpr::create(Mips::S_CALL_LO16, SymExpr, getContext());
+            MCSpecifierExpr::create(SymExpr, Mips::S_CALL_LO16, getContext());
         TOut.emitRX(Mips::LUi, DstReg, MCOperand::createExpr(CallHiExpr), IDLoc,
                     STI);
         TOut.emitRRR(IsPtr64 ? Mips::DADDu : Mips::ADDu, DstReg, DstReg, GPReg,
@@ -2976,7 +2977,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
                      MCOperand::createExpr(CallLoExpr), IDLoc, STI);
       } else {
         const MCExpr *CallExpr =
-            MipsMCExpr::create(Mips::S_GOT_CALL, SymExpr, getContext());
+            MCSpecifierExpr::create(SymExpr, Mips::S_GOT_CALL, getContext());
         TOut.emitRRX(IsPtr64 ? Mips::LD : Mips::LW, DstReg, GPReg,
                      MCOperand::createExpr(CallExpr), IDLoc, STI);
       }
@@ -3009,9 +3010,9 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       // this happens then the last instruction must use $rd as the result
       // register.
       const MCExpr *CallHiExpr =
-          MipsMCExpr::create(Mips::S_GOT_HI16, SymExpr, getContext());
-      const MCExpr *CallLoExpr =
-          MipsMCExpr::create(Res.getAddSym(), Mips::S_GOT_LO16, getContext());
+          MCSpecifierExpr::create(SymExpr, Mips::S_GOT_HI16, getContext());
+      const MCExpr *CallLoExpr = MCSpecifierExpr::create(
+          Res.getAddSym(), Mips::S_GOT_LO16, getContext());
 
       TOut.emitRX(Mips::LUi, TmpReg, MCOperand::createExpr(CallHiExpr), IDLoc,
                   STI);
@@ -3042,8 +3043,8 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       // The daddiu's marked with a '>' may be omitted if they are redundant. If
       // this happens then the last instruction must use $rd as the result
       // register.
-      GotExpr =
-          MipsMCExpr::create(Res.getAddSym(), Mips::S_GOT_DISP, getContext());
+      GotExpr = MCSpecifierExpr::create(Res.getAddSym(), Mips::S_GOT_DISP,
+                                        getContext());
       if (Res.getConstant() != 0) {
         // Symbols fully resolve with just the %got_disp(symbol) but we
         // must still account for any offset to the symbol for
@@ -3070,14 +3071,14 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
       // this happens then the last instruction must use $rd as the result
       // register.
       if (IsLocalSym) {
-        GotExpr = MipsMCExpr::create(Mips::S_GOT, SymExpr, getContext());
-        LoExpr = MipsMCExpr::create(Mips::S_LO, SymExpr, getContext());
+        GotExpr = MCSpecifierExpr::create(SymExpr, Mips::S_GOT, getContext());
+        LoExpr = MCSpecifierExpr::create(SymExpr, Mips::S_LO, getContext());
       } else {
         // External symbols fully resolve the symbol with just the %got(symbol)
         // but we must still account for any offset to the symbol for
         // expressions like symbol+8.
         GotExpr =
-            MipsMCExpr::create(Res.getAddSym(), Mips::S_GOT, getContext());
+            MCSpecifierExpr::create(Res.getAddSym(), Mips::S_GOT, getContext());
         if (Res.getConstant() != 0)
           LoExpr = MCConstantExpr::create(Res.getConstant(), getContext());
       }
@@ -3097,8 +3098,10 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     return false;
   }
 
-  const auto *HiExpr = MipsMCExpr::create(Mips::S_HI, SymExpr, getContext());
-  const auto *LoExpr = MipsMCExpr::create(Mips::S_LO, SymExpr, getContext());
+  const auto *HiExpr =
+      MCSpecifierExpr::create(SymExpr, Mips::S_HI, getContext());
+  const auto *LoExpr =
+      MCSpecifierExpr::create(SymExpr, Mips::S_LO, getContext());
 
   // This is the 64-bit symbol address expansion.
   if (ABI.ArePtrs64bit() && isGP64bit()) {
@@ -3110,9 +3113,9 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     // source register.
 
     const auto *HighestExpr =
-        MipsMCExpr::create(Mips::S_HIGHEST, SymExpr, getContext());
+        MCSpecifierExpr::create(SymExpr, Mips::S_HIGHEST, getContext());
     const auto *HigherExpr =
-        MipsMCExpr::create(Mips::S_HIGHER, SymExpr, getContext());
+        MCSpecifierExpr::create(SymExpr, Mips::S_HIGHER, getContext());
 
     bool RdRegIsRsReg =
         UseSrcReg &&
@@ -3310,7 +3313,8 @@ bool MipsAsmParser::emitPartialAddress(MipsTargetStreamer &TOut, SMLoc IDLoc,
 
   if(IsPicEnabled) {
     const MCExpr *GotSym = MCSymbolRefExpr::create(Sym, getContext());
-    const auto *GotExpr = MipsMCExpr::create(Mips::S_GOT, GotSym, getContext());
+    const auto *GotExpr =
+        MCSpecifierExpr::create(GotSym, Mips::S_GOT, getContext());
 
     if(isABI_O32() || isABI_N32()) {
       TOut.emitRRX(Mips::LW, ATReg, GPReg, MCOperand::createExpr(GotExpr),
@@ -3321,7 +3325,8 @@ bool MipsAsmParser::emitPartialAddress(MipsTargetStreamer &TOut, SMLoc IDLoc,
     }
   } else { //!IsPicEnabled
     const MCExpr *HiSym = MCSymbolRefExpr::create(Sym, getContext());
-    const auto *HiExpr = MipsMCExpr::create(Mips::S_HI, HiSym, getContext());
+    const auto *HiExpr =
+        MCSpecifierExpr::create(HiSym, Mips::S_HI, getContext());
 
     // FIXME: This is technically correct but gives a different result to gas,
     // but gas is incomplete there (it has a fixme noting it doesn't work with
@@ -3334,10 +3339,10 @@ bool MipsAsmParser::emitPartialAddress(MipsTargetStreamer &TOut, SMLoc IDLoc,
     } else { //isABI_N64()
       const MCExpr *HighestSym = MCSymbolRefExpr::create(Sym, getContext());
       const auto *HighestExpr =
-          MipsMCExpr::create(Mips::S_HIGHEST, HighestSym, getContext());
+          MCSpecifierExpr::create(HighestSym, Mips::S_HIGHEST, getContext());
       const MCExpr *HigherSym = MCSymbolRefExpr::create(Sym, getContext());
       const auto *HigherExpr =
-          MipsMCExpr::create(Mips::S_HIGHER, HigherSym, getContext());
+          MCSpecifierExpr::create(HigherSym, Mips::S_HIGHER, getContext());
 
       TOut.emitRX(Mips::LUi, ATReg, MCOperand::createExpr(HighestExpr), IDLoc,
                   STI);
@@ -3424,7 +3429,7 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
 
   MCSymbol *Sym = getContext().createTempSymbol();
   const MCExpr *LoSym = MCSymbolRefExpr::create(Sym, getContext());
-  const auto *LoExpr = MipsMCExpr::create(Mips::S_LO, LoSym, getContext());
+  const auto *LoExpr = MCSpecifierExpr::create(LoSym, Mips::S_LO, getContext());
 
   getStreamer().switchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
@@ -3474,7 +3479,7 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
 
   MCSymbol *Sym = getContext().createTempSymbol();
   const MCExpr *LoSym = MCSymbolRefExpr::create(Sym, getContext());
-  const auto *LoExpr = MipsMCExpr::create(Mips::S_LO, LoSym, getContext());
+  const auto *LoExpr = MCSpecifierExpr::create(LoSym, Mips::S_LO, getContext());
 
   getStreamer().switchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
@@ -3554,7 +3559,7 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
 
   MCSymbol *Sym = getContext().createTempSymbol();
   const MCExpr *LoSym = MCSymbolRefExpr::create(Sym, getContext());
-  const auto *LoExpr = MipsMCExpr::create(Mips::S_LO, LoSym, getContext());
+  const auto *LoExpr = MCSpecifierExpr::create(LoSym, Mips::S_LO, getContext());
 
   getStreamer().switchSection(ReadOnlySection);
   getStreamer().emitLabel(Sym, IDLoc);
@@ -3777,15 +3782,15 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       //                  sw  $8,  %lo(sym)($at)
       const MCExpr *OffExpr = OffsetOp.getExpr();
       MCOperand LoOperand = MCOperand::createExpr(
-          MipsMCExpr::create(Mips::S_LO, OffExpr, getContext()));
+          MCSpecifierExpr::create(OffExpr, Mips::S_LO, getContext()));
       MCOperand HiOperand = MCOperand::createExpr(
-          MipsMCExpr::create(Mips::S_HI, OffExpr, getContext()));
+          MCSpecifierExpr::create(OffExpr, Mips::S_HI, getContext()));
 
       if (ABI.IsN64()) {
         MCOperand HighestOperand = MCOperand::createExpr(
-            MipsMCExpr::create(Mips::S_HIGHEST, OffExpr, getContext()));
+            MCSpecifierExpr::create(OffExpr, Mips::S_HIGHEST, getContext()));
         MCOperand HigherOperand = MCOperand::createExpr(
-            MipsMCExpr::create(Mips::S_HIGHER, OffExpr, getContext()));
+            MCSpecifierExpr::create(OffExpr, Mips::S_HIGHER, getContext()));
 
         TOut.emitRX(Mips::LUi, TmpReg, HighestOperand, IDLoc, STI);
         TOut.emitRRX(Mips::DADDiu, TmpReg, TmpReg, HigherOperand, IDLoc, STI);
@@ -6394,7 +6399,7 @@ const MCExpr *MipsAsmParser::parseRelocExpr() {
   while (Ops.size()) {
     if (Parser.parseToken(AsmToken::RParen, "expected ')'"))
       return nullptr;
-    Res = MipsMCExpr::create(Ops.pop_back_val(), Res, getContext());
+    Res = MCSpecifierExpr::create(Res, Ops.pop_back_val(), getContext());
   }
   return Res;
 }
@@ -6649,7 +6654,7 @@ bool MipsAsmParser::searchSymbolAlias(OperandVector &Operands) {
           llvm_unreachable("Should never fail");
       }
     }
-  } else if (Sym->isUnset()) {
+  } else if (Sym->isUndefined()) {
     // If symbol is unset, it might be created in the `parseSetAssignment`
     // routine as an alias for a numeric register name.
     // Lookup in the aliases list.
@@ -8902,7 +8907,8 @@ bool MipsAsmParser::parseInternalDirectiveReallowModule() {
   return false;
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsAsmParser() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeMipsAsmParser() {
   RegisterMCAsmParser<MipsAsmParser> X(getTheMipsTarget());
   RegisterMCAsmParser<MipsAsmParser> Y(getTheMipselTarget());
   RegisterMCAsmParser<MipsAsmParser> A(getTheMips64Target());

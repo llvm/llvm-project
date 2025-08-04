@@ -19,6 +19,7 @@
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/BitVector.h"
 using namespace clang;
@@ -367,8 +368,10 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
 
   case Stmt::IfStmtClass: {
     IfStmt *IS = cast<IfStmt>(S);
+    bool AMDGPUPredicate = false;
     if (!(IS->isConstexpr() || IS->isConsteval() ||
-          IS->isObjCAvailabilityCheck()))
+          IS->isObjCAvailabilityCheck() ||
+          (AMDGPUPredicate = this->S.AMDGPU().IsPredicate(IS->getCond()))))
       break;
 
     unsigned Diag = diag::note_protected_by_if_available;
@@ -376,6 +379,8 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
       Diag = diag::note_protected_by_constexpr_if;
     else if (IS->isConsteval())
       Diag = diag::note_protected_by_consteval_if;
+    else if (AMDGPUPredicate)
+      Diag = diag::note_amdgcn_protected_by_predicate;
 
     if (VarDecl *Var = IS->getConditionVariable())
       BuildScopeInformation(Var, ParentScope);

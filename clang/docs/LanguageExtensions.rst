@@ -15,6 +15,7 @@ Clang Language Extensions
    AutomaticReferenceCounting
    PointerAuthentication
    MatrixTypes
+   CXXTypeAwareAllocators
 
 Introduction
 ============
@@ -137,7 +138,7 @@ for support for non-standardized features, i.e. features not prefixed ``c_``,
 ``cxx_`` or ``objc_``.
 
 Another use of ``__has_feature`` is to check for compiler features not related
-to the language standard, such as e.g. :doc:`AddressSanitizer
+to the language standard, such as :doc:`AddressSanitizer
 <AddressSanitizer>`.
 
 If the ``-pedantic-errors`` option is given, ``__has_extension`` is equivalent
@@ -376,8 +377,8 @@ Builtin Macros
 
 ``__FILE_NAME__``
   Clang-specific extension that functions similar to ``__FILE__`` but only
-  renders the last path component (the filename) instead of an invocation
-  dependent full path to that file.
+  renders the last path component (the filename) instead of an
+  invocation-dependent full path to that file.
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
@@ -715,7 +716,7 @@ See also :ref:`langext-__builtin_shufflevector`, :ref:`langext-__builtin_convert
   a NEON vector or an SVE vector, it's only available in C++ and uses normal bool
   conversions (that is, != 0).
   If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
-  And it selects base on signedness of the condition operands (OpenCL v1.1 s6.3.9).
+  And it selects based on signedness of the condition operands (OpenCL v1.1 s6.3.9).
 .. [#] sizeof can only be used on vector length specific SVE types.
 .. [#] Clang does not allow the address of an element to be taken while GCC
    allows this. This is intentional for vectors with a boolean element type and
@@ -847,6 +848,14 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 semantics, see `LangRef
                                                 <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
                                                 for the comparison.
+ T __builtin_elementwise_maximumnum(T x, T y)   return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
+ T __builtin_elementwise_minimumnum(T x, T y)   return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                for the comparison.
 ============================================== ====================================================================== =========================================
 
 
@@ -856,7 +865,7 @@ Each builtin returns a scalar equivalent to applying the specified
 operation(x, y) as recursive even-odd pairwise reduction to all vector
 elements. ``operation(x, y)`` is repeatedly applied to each non-overlapping
 even-odd element pair with indices ``i * 2`` and ``i * 2 + 1`` with
-``i in [0, Number of elements / 2)``. If the numbers of elements is not a
+``i in [0, Number of elements / 2)``. If the number of elements is not a
 power of 2, the vector is widened with neutral elements for the reduction
 at the end to the next power of 2.
 
@@ -1490,7 +1499,7 @@ C++14 digit separators
 
 Use ``__cpp_digit_separators`` to determine if support for digit separators
 using single quotes (for instance, ``10'000``) is enabled. At this time, there
-is no corresponding ``__has_feature`` name
+is no corresponding ``__has_feature`` name.
 
 C++14 generalized lambda capture
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1539,6 +1548,13 @@ C++14 variable templates
 Use ``__has_feature(cxx_variable_templates)`` or
 ``__has_extension(cxx_variable_templates)`` to determine if support for
 templated variable declarations is enabled.
+
+C++ type aware allocators
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use ``__has_extension(cxx_type_aware_allocators)`` to determine the existence of
+support for the future C++2d type aware allocator feature. For full details, see
+:doc:`C++ Type Aware Allocators <CXXTypeAwareAllocators>` for additional details.
 
 C11
 ---
@@ -1635,7 +1651,7 @@ Modules
 Use ``__has_feature(modules)`` to determine if Modules have been enabled.
 For example, compiling code with ``-fmodules`` enables the use of Modules.
 
-More information could be found `here <https://clang.llvm.org/docs/Modules.html>`_.
+More information can be found `here <https://clang.llvm.org/docs/Modules.html>`_.
 
 Language Extensions Back-ported to Previous Standards
 =====================================================
@@ -1870,7 +1886,7 @@ The following type trait primitives are supported by Clang. Those traits marked
   C++26 relocatable types, and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
   This trait is deprecated and should be replaced by
-  ``__builtin_is_cpp_trivially_relocatable``. Note however that it is generally
+  ``__builtin_is_cpp_trivially_relocatable``. Note, however, that it is generally
   unsafe to relocate a C++-relocatable type with ``memcpy`` or ``memmove``;
   use ``__builtin_trivially_relocate``.
 * ``__builtin_is_cpp_trivially_relocatable`` (C++): Returns true if an object
@@ -1999,7 +2015,7 @@ even if there is no valid ``std::tuple_element`` specialization or suitable
 Blocks
 ======
 
-The syntax and high level language feature description is in
+The syntax and high-level language feature description is in
 :doc:`BlockLanguageSpec<BlockLanguageSpec>`. Implementation and ABI details for
 the clang implementation are in :doc:`Block-ABI-Apple<Block-ABI-Apple>`.
 
@@ -2069,7 +2085,7 @@ producing an object with the following member functions
   constexpr size_t size() const;
 
 such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
-This mechanism follow the same rules as ``static_assert`` messages in
+This mechanism follows the same rules as ``static_assert`` messages in
 C++26, see ``[dcl.pre]/p12``.
 
 Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
@@ -2316,7 +2332,7 @@ Objective-C Autosynthesis of Properties
 
 Clang provides support for autosynthesis of declared properties.  Using this
 feature, clang provides default synthesis of those properties not declared
-@dynamic and not having user provided backing getter and setter methods.
+@dynamic and not having user-provided backing getter and setter methods.
 ``__has_feature(objc_default_synthesize_properties)`` checks for availability
 of this feature in version of clang being used.
 
@@ -2330,7 +2346,7 @@ In Objective-C, functions and methods are generally assumed to follow the
 <https://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html>`_
 conventions for ownership of object arguments and
 return values. However, there are exceptions, and so Clang provides attributes
-to allow these exceptions to be documented. This are used by ARC and the
+to allow these exceptions to be documented. These are used by ARC and the
 `static analyzer <https://clang-analyzer.llvm.org>`_ Some exceptions may be
 better described using the ``objc_method_family`` attribute instead.
 
@@ -2556,7 +2572,7 @@ Such functionality is not conformant and does not guarantee to compile
 correctly in any circumstances. It can be used if:
 
 - the kernel source does not contain call expressions to (member-) function
-  pointers, or virtual functions. For example this extension can be used in
+  pointers, or virtual functions. For example, this extension can be used in
   metaprogramming algorithms to be able to specify/detect types generically.
 
 - the generated kernel binary does not contain indirect calls because they
@@ -2594,7 +2610,7 @@ functions with variadic prototypes do not get generated in binary e.g. the
 variadic prototype is used to specify a function type with any number of
 arguments in metaprogramming algorithms in C++ for OpenCL.
 
-This extensions can also be used when the kernel code is intended for targets
+This extension can also be used when the kernel code is intended for targets
 supporting the variadic arguments e.g. majority of CPU targets.
 
 **Example of Use**:
@@ -2683,7 +2699,7 @@ address space qualifiers, therefore, other type qualifiers such as
 Legacy 1.x atomics with generic address space
 ---------------------------------------------
 
-Clang allows use of atomic functions from the OpenCL 1.x standards
+Clang allows the use of atomic functions from the OpenCL 1.x standards
 with the generic address space pointer in C++ for OpenCL mode.
 
 This is a non-portable feature and might not be supported by all
@@ -2814,7 +2830,7 @@ to a possibly overlapping destination region. It takes five arguments.
 The first argument is the destination WebAssembly table, and the second
 argument is the source WebAssembly table. The third argument is the
 destination index from where the copy starts, the fourth argument is the
-source index from there the copy starts, and the fifth and last argument
+source index from where the copy starts, and the fifth and last argument
 is the number of elements to copy. It returns nothing.
 
 .. code-block:: c++
@@ -3114,7 +3130,7 @@ Query for this feature with ``__has_builtin(__builtin_get_vtable_pointer)``.
 ------------------------------------
 
 ``__builtin_call_with_static_chain`` is used to perform a static call while
-setting updating the static chain register.
+updating the static chain register.
 
 **Syntax**:
 
@@ -3226,7 +3242,7 @@ Query for this feature with ``__has_builtin(__builtin_readsteadycounter)``.
 The ``__builtin_cpu_supports`` function detects if the run-time CPU supports
 features specified in string argument. It returns a positive integer if all
 features are supported and 0 otherwise. Feature names are target specific. On
-AArch64 features are combined using ``+`` like this
+AArch64, features are combined using ``+`` like this
 ``__builtin_cpu_supports("flagm+sha3+lse+rcpc2+fcma+memtag+bti+sme2")``.
 If a feature name is not supported, Clang will issue a warning and replace
 builtin by the constant 0.
@@ -3446,7 +3462,7 @@ Query for this feature with ``__has_builtin(__builtin_convertvector)``.
 **Description**:
 
 The '``__builtin_bitreverse``' family of builtins is used to reverse
-the bitpattern of an integer value; for example ``0b10110110`` becomes
+the bitpattern of an integer value; for example, ``0b10110110`` becomes
 ``0b01101101``. These builtins can be used within constant expressions.
 
 ``__builtin_rotateleft``
@@ -3798,6 +3814,17 @@ Trivially relocates ``count`` objects of relocatable, complete type ``T``
 from ``src`` to ``dest`` and returns ``dest``.
 This builtin is used to implement ``std::trivially_relocate``.
 
+``__builtin_invoke``
+--------------------
+
+**Syntax**:
+
+.. code-block:: c++
+
+  template <class Callee, class... Args>
+  decltype(auto) __builtin_invoke(Callee&& callee, Args&&... args);
+
+``__builtin_invoke`` is equivalent to ``std::invoke``.
 
 ``__builtin_preserve_access_index``
 -----------------------------------
@@ -3940,7 +3967,7 @@ the debugging experience.
 
 ``__builtin_allow_runtime_check`` returns true if the check at the current
 program location should be executed. It is expected to be used to implement
-``assert`` like checks which can be safely removed by optimizer.
+``assert`` like checks which can be safely removed by the optimizer.
 
 **Syntax**:
 
@@ -5027,12 +5054,8 @@ a functional mechanism for programatically querying:
 
 .. code-block:: c
 
-  // When used as the predicate for a control structure
-  bool __builtin_amdgcn_processor_is(const char*);
-  bool __builtin_amdgcn_is_invocable(builtin_name);
-  // Otherwise
-  void __builtin_amdgcn_processor_is(const char*);
-  void __builtin_amdgcn_is_invocable(void);
+  __amdgpu_feature_predicate_t __builtin_amdgcn_processor_is(const char*);
+  __amdgpu_feature_predicate_t __builtin_amdgcn_is_invocable(builtin_name);
 
 **Example of use**:
 
@@ -5051,7 +5074,7 @@ a functional mechanism for programatically querying:
   while (__builtin_amdgcn_processor_is("gfx1101")) *p += x;
 
   do {
-    *p -= x;
+    break;
   } while (__builtin_amdgcn_processor_is("gfx1010"));
 
   for (; __builtin_amdgcn_processor_is("gfx1201"); ++*p) break;
@@ -5062,7 +5085,7 @@ a functional mechanism for programatically querying:
     __builtin_amdgcn_s_ttracedata_imm(1);
 
   do {
-    *p -= x;
+    break;
   } while (
       __builtin_amdgcn_is_invocable(__builtin_amdgcn_global_load_tr_b64_i32));
 
@@ -5071,17 +5094,50 @@ a functional mechanism for programatically querying:
 
 **Description**:
 
-When used as the predicate value of the following control structures:
+The builtins return a value of type ``__amdgpu_feature_predicate_t``, which is a
+target specific type that behaves as if its C++ definition was the following:
 
 .. code-block:: c++
 
-  if (...)
-  while (...)
-  do { } while (...)
-  for (...)
+  struct __amdgpu_feature_predicate_t {
+    __amdgpu_feature_predicate_t() = delete;
+    __amdgpu_feature_predicate_t(const __amdgpu_feature_predicate_t&) = delete;
+    __amdgpu_feature_predicate_t(__amdgpu_feature_predicate_t&&) = delete;
 
-be it directly, or as arguments to logical operators such as ``!, ||, &&``, the
-builtins return a boolean value that:
+    explicit
+    operator bool() const noexcept;
+  };
+
+The builtins can be used in C as well, wherein the
+``__amdgpu_feature_predicate_t`` type behaves as an opaque, forward declared
+type with conditional automated conversion to ``_Bool`` when used as the
+predicate argument to a control structure:
+
+.. code-block:: c
+
+  struct __amdgpu_feature_predicate_t ret();     // Error
+  void arg(struct __amdgpu_feature_predicate_t); // Error
+  void local() {
+    struct __amdgpu_feature_predicate_t x;       // Error
+    struct __amdgpu_feature_predicate_t y =
+        __builtin_amdgcn_processor_is("gfx900"); // Error
+  }
+  void valid_use() {
+    _Bool x = (_Bool)__builtin_amdgcn_processor_is("gfx900"); // OK
+    if (__builtin_amdgcn_processor_is("gfx900"))       // Implicit cast to _Bool
+      return;
+    for (; __builtin_amdgcn_processor_is("gfx900");)   // Implicit cast to _Bool
+      break;
+    while (__builtin_amdgcn_processor_is("gfx900"))    // Implicit cast to _Bool
+      break;
+    do {
+      break;
+    } while (__builtin_amdgcn_processor_is("gfx900")); // Implicit cast to _Bool
+
+    __builtin_amdgcn_processor_is("gfx900") ? x : !x;
+  }
+
+The boolean interpretation of the predicate values returned by the builtins:
 
 * indicates whether the current target matches the argument; the argument MUST
   be a string literal and a valid AMDGPU target
@@ -5089,45 +5145,14 @@ builtins return a boolean value that:
   by the current target; the argument MUST be either a generic or AMDGPU
   specific builtin name
 
-Outside of these contexts, the builtins have a ``void`` returning signature
-which prevents their misuse.
-
-**Example of invalid use**:
-
-.. code-block:: c++
-
-  void kernel(int* p, int x, bool (*pfn)(bool), const char* str) {
-    if (__builtin_amdgcn_processor_is("not_an_amdgcn_gfx_id")) return;
-    else if (__builtin_amdgcn_processor_is(str)) __builtin_trap();
-
-    bool a = __builtin_amdgcn_processor_is("gfx906");
-    const bool b = !__builtin_amdgcn_processor_is("gfx906");
-    const bool c = !__builtin_amdgcn_processor_is("gfx906");
-    bool d = __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
-    bool e = !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
-    const auto f =
-        !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready)
-        || __builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
-    const auto g =
-        !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_wait_event_export_ready)
-        || !__builtin_amdgcn_is_invocable(__builtin_amdgcn_s_sleep_var);
-    __builtin_amdgcn_processor_is("gfx1201")
-      ? __builtin_amdgcn_s_sleep_var(x) : __builtin_amdgcn_s_sleep(42);
-    if (pfn(__builtin_amdgcn_processor_is("gfx1200")))
-      __builtin_amdgcn_s_sleep_var(x);
-
-    if (__builtin_amdgcn_is_invocable("__builtin_amdgcn_s_sleep_var")) return;
-    else if (__builtin_amdgcn_is_invocable(x)) __builtin_trap();
-  }
-
 When invoked while compiling for a concrete target, the builtins are evaluated
 early by Clang, and never produce any CodeGen effects / have no observable
-side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
-which is an abstract target, a series of predicate values are implicitly
-created. These predicates get resolved when finalizing the compilation process
-for a concrete target, and shall reflect the latter's identity and features.
-Thus, it is possible to author high-level code, in e.g. HIP, that is target
-adaptive in a dynamic fashion, contrary to macro based mechanisms.
++side-effects in IR. Conversely, when compiling for AMDGCN flavoured SPIR-v,
++which is an abstract target, a series of predicate values are implicitly
++created. These predicates get resolved when finalizing the compilation process
++for a concrete target, and shall reflect the latter's identity and features.
++Thus, it is possible to author high-level code, in e.g. HIP, that is target
++adaptive in a dynamic fashion, contrary to macro based mechanisms.
 
 ARM/AArch64 Language Extensions
 -------------------------------

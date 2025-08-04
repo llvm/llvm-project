@@ -91,9 +91,6 @@ SmallVector<StringRef, 1> getInputFiles(driver::Command &Command) {
   return Paths;
 }
 
-bool isSourceCodeInput(const driver::InputInfo &II) {
-  return driver::types::isSrcFile(II.getType());
-}
 } // namespace
 ClangCommand::ClangCommand(driver::Command &Command,
                            DiagnosticOptions &DiagOpts, vfs::FileSystem &VFS,
@@ -150,13 +147,7 @@ bool ClangCommand::canCache() const {
   bool HasOneOutput = Command.getOutputFilenames().size() == 1;
   bool IsPreprocessorCommand = getClass() == driver::Action::PreprocessJobClass;
 
-  // This reduces the applicability of the cache, but it helps us deliver
-  // something now and deal with the PCH issues later. The cache would still
-  // help for spirv compilation (e.g. bitcode->asm) and for intermediate
-  // compilation steps
-  bool HasSourceCodeInput = any_of(Command.getInputInfos(), isSourceCodeInput);
-
-  return HasOneOutput && !IsPreprocessorCommand && !HasSourceCodeInput &&
+  return HasOneOutput && !IsPreprocessorCommand &&
          !hasDebugOrProfileInfo(Command.getArguments());
 }
 

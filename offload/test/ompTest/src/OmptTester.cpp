@@ -7,9 +7,6 @@
 
 using namespace omptest;
 
-// Global Logger instance
-extern logging::Logger *Log;
-
 // Callback handler, which receives and relays OMPT callbacks
 extern OmptCallbackHandler *Handler;
 
@@ -407,9 +404,6 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
     register_ompt_callback(ompt_callback_target_map);
   }
 
-  // Construct global logger instance
-  logging::Logger::get(logging::Level::WARNING, std::cerr, ColoredLog);
-
   // Construct & subscribe the reporter, so it will be notified of events
   EventReporter = new OmptEventReporter();
   OmptCallbackHandler::get().subscribe(EventReporter);
@@ -423,10 +417,8 @@ int ompt_initialize(ompt_function_lookup_t lookup, int initial_device_num,
 void ompt_finalize(ompt_data_t *tool_data) {
   assert(Handler && "Callback handler should be present at this point");
   assert(EventReporter && "EventReporter should be present at this point");
-  assert(Log && "Logger should be present at this point");
   delete Handler;
   delete EventReporter;
-  delete Log;
 }
 
 #ifdef __cplusplus

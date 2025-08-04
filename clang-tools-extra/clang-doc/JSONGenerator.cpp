@@ -22,13 +22,54 @@ public:
 
 const char *JSONGenerator::Format = "json";
 
-static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
-                          std::optional<StringRef> RepositoryUrl);
-static void serializeInfo(const EnumInfo &I, json::Object &Obj,
-                          std::optional<StringRef> RepositoryUrl);
+static void serializeInfo(const ConstraintInfo &I, Object &Obj);
+static void serializeInfo(const RecordInfo &I, Object &Obj,
+                          const std::optional<StringRef> &RepositoryUrl);
 
-static json::Object serializeLocation(const Location &Loc,
-                                      std::optional<StringRef> RepositoryUrl) {
+static void serializeReference(const Reference &Ref, Object &ReferenceObj);
+
+template <typename Container, typename SerializationFunc>
+static void serializeArray(const Container &Records, Object &Obj,
+                           const std::string &Key,
+                           SerializationFunc SerializeInfo);
+
+// Convenience lambda to pass to serializeArray.
+// If a serializeInfo needs a RepositoryUrl, create a local lambda that captures
+// the optional.
+static auto SerializeInfoLambda = [](const auto &Info, Object &Object) {
+  serializeInfo(Info, Object);
+};
+static auto SerializeReferenceLambda = [](const auto &Ref, Object &Object) {
+  serializeReference(Ref, Object);
+};
+
+static std::string infoTypeToString(InfoType IT) {
+  switch (IT) {
+  case InfoType::IT_default:
+    return "default";
+  case InfoType::IT_namespace:
+    return "namespace";
+  case InfoType::IT_record:
+    return "record";
+  case InfoType::IT_function:
+    return "function";
+  case InfoType::IT_enum:
+    return "enum";
+  case InfoType::IT_typedef:
+    return "typedef";
+  case InfoType::IT_concept:
+    return "concept";
+  case InfoType::IT_variable:
+    return "variable";
+  case InfoType::IT_friend:
+    return "friend";
+  }
+  llvm_unreachable("Unknown InfoType encountered.");
+}
+
+static json::Object
+serializeLocation(const Location &Loc,
+                  const std::optional<StringRef> RepositoryUrl) {
   Object LocationObj = Object();
   LocationObj["LineNumber"] = Loc.StartLineNumber;
   LocationObj["Filename"] = Loc.Filename;
@@ -42,7 +83,39 @@ static json::Object serializeLocation(const Location &Loc,
   return LocationObj;
 }
 
-static json::Value serializeComment(const CommentInfo &I) {
+static void insertComment(Object &Description, json::Value &Comment,
+                          StringRef Key) {
+  auto DescriptionIt = Description.find(Key);
+
+  if (DescriptionIt == Description.end()) {
+    auto CommentsArray = json::Array();
+    CommentsArray.push_back(Comment);
+    Description[Key] = std::move(CommentsArray);
+    Description["Has" + Key.str()] = true;
+  } else {
+    DescriptionIt->getSecond().getAsArray()->push_back(Comment);
+  }
+}
+
+static json::Value extractTextComments(Object *ParagraphComment) {
+  if (!ParagraphComment)
+    return json::Object();
+  return *ParagraphComment->get("Children");
+}
+
+static json::Value extractVerbatimComments(json::Array VerbatimLines) {
+  json::Value TextArray = json::Array();
+  auto &TextArrayRef = *TextArray.getAsArray();
+  for (auto &Line : VerbatimLines)
+    TextArrayRef.push_back(*Line.getAsObject()
+                                ->get("VerbatimBlockLineComment")
+                                ->getAsObject()
+                                ->get("Text"));
+
+  return TextArray;
+}
+
+static Object serializeComment(const CommentInfo &I, Object &Description) {
   // taken from PR #142273
   Object Obj = Object();
 
@@ -53,7 +126,7 @@ static json::Value serializeComment(const CommentInfo &I) {
   auto &CARef = *ChildArr.getAsArray();
   CARef.reserve(I.Children.size());
   for (const auto &C : I.Children)
-    CARef.emplace_back(serializeComment(*C));
+    CARef.emplace_back(serializeComment(*C, Description));
 
   switch (I.Kind) {
   case CommentKind::CK_TextComment: {
@@ -62,9 +135,11 @@ static json::Value serializeComment(const CommentInfo &I) {
   }
 
   case CommentKind::CK_BlockCommandComment: {
-    Child.insert({"Command", I.Name});
-    Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    auto TextCommentsArray = extractTextComments(CARef.front().getAsObject());
+    if (I.Name == "brief")
+      insertComment(Description, TextCommentsArray, "BriefComments");
+    else if (I.Name == "return")
+      insertComment(Description, TextCommentsArray, "ReturnComments");
     return Obj;
   }
 
@@ -86,17 +161,20 @@ static json::Value serializeComment(const CommentInfo &I) {
     Child.insert({"ParamName", I.ParamName});
     Child.insert({"Direction", I.Direction});
     Child.insert({"Explicit", I.Explicit});
-    Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    auto TextCommentsArray = extractTextComments(CARef.front().getAsObject());
+    Child.insert({"Children", TextCommentsArray});
+    if (I.Kind == CommentKind::CK_ParamCommandComment)
+      insertComment(Description, ChildVal, "ParamComments");
     return Obj;
   }
 
   case CommentKind::CK_VerbatimBlockComment: {
-    Child.insert({"Text", I.Text});
-    if (!I.CloseName.empty())
-      Child.insert({"CloseName", I.CloseName});
-    Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
+    if (I.CloseName == "endcode") {
+      // We don't support \code language specification
+      auto TextCommentsArray = extractVerbatimComments(CARef);
+      insertComment(Description, TextCommentsArray, "CodeComments");
+    } else if (I.CloseName == "endverbatim")
+      insertComment(Description, ChildVal, "VerbatimComments");
     return Obj;
   }
 
@@ -138,8 +216,8 @@ static json::Value serializeComment(const CommentInfo &I) {
   case CommentKind::CK_FullComment:
   case CommentKind::CK_ParagraphComment: {
     Child.insert({"Children", ChildArr});
-    Obj.insert({commentKindToString(I.Kind), ChildVal});
-    return Obj;
+    Child["ParagraphComment"] = true;
+    return Child;
   }
 
   case CommentKind::CK_Unknown: {
@@ -150,10 +228,14 @@ static json::Value serializeComment(const CommentInfo &I) {
   llvm_unreachable("Unknown comment kind encountered.");
 }
 
-static void serializeCommonAttributes(const Info &I, json::Object &Obj,
-                                      std::optional<StringRef> RepositoryUrl) {
+static void
+serializeCommonAttributes(const Info &I, json::Object &Obj,
+                          const std::optional<StringRef> RepositoryUrl) {
   Obj["Name"] = I.Name;
   Obj["USR"] = toHex(toStringRef(I.USR));
+  Obj["InfoType"] = infoTypeToString(I.IT);
+  if (!I.DocumentationFileName.empty())
+    Obj["DocumentationFileName"] = I.DocumentationFileName;
 
   if (!I.Path.empty())
     Obj["Path"] = I.Path;
@@ -165,12 +247,20 @@ static void serializeCommonAttributes(const Info &I, json::Object &Obj,
   }
 
   if (!I.Description.empty()) {
-    json::Value DescArray = json::Array();
-    auto &DescArrayRef = *DescArray.getAsArray();
-    DescArrayRef.reserve(I.Description.size());
-    for (const auto &Comment : I.Description)
-      DescArrayRef.push_back(serializeComment(Comment));
-    Obj["Description"] = DescArray;
+    Object Description = Object();
+    // Skip straight to the FullComment's children
+    auto &Comments = I.Description.at(0).Children;
+    for (const auto &CommentInfo : Comments) {
+      json::Value Comment = serializeComment(*CommentInfo, Description);
+      // if a ParagraphComment is returned, then it is a top-level comment that
+      // needs to be inserted manually.
+      if (auto *ParagraphComment = Comment.getAsObject();
+          ParagraphComment->get("ParagraphComment")) {
+        auto TextCommentsArray = extractTextComments(ParagraphComment);
+        insertComment(Description, TextCommentsArray, "ParagraphComments");
+      }
+    }
+    Obj["Description"] = std::move(Description);
   }
 
   // Namespaces aren't SymbolInfos, so they dont have a DefLoc
@@ -187,65 +277,65 @@ static void serializeReference(const Reference &Ref, Object &ReferenceObj) {
   ReferenceObj["Name"] = Ref.Name;
   ReferenceObj["QualName"] = Ref.QualName;
   ReferenceObj["USR"] = toHex(toStringRef(Ref.USR));
-}
-
-static void serializeReference(const SmallVector<Reference, 4> &References,
-                               Object &Obj, std::string Key) {
-  json::Value ReferencesArray = Array();
-  json::Array &ReferencesArrayRef = *ReferencesArray.getAsArray();
-  ReferencesArrayRef.reserve(References.size());
-  for (const auto &Reference : References) {
-    json::Value ReferenceVal = Object();
-    auto &ReferenceObj = *ReferenceVal.getAsObject();
-    serializeReference(Reference, ReferenceObj);
-    ReferencesArrayRef.push_back(ReferenceVal);
-  }
-  Obj[Key] = ReferencesArray;
+  if (!Ref.DocumentationFileName.empty())
+    ReferenceObj["DocumentationFileName"] = Ref.DocumentationFileName;
 }
 
 // Although namespaces and records both have ScopeChildren, they serialize them
 // differently. Only enums, records, and typedefs are handled here.
-static void serializeCommonChildren(const ScopeChildren &Children,
-                                    json::Object &Obj,
-                                    std::optional<StringRef> RepositoryUrl) {
+static void
+serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
+                        const std::optional<StringRef> RepositoryUrl) {
+  static auto SerializeInfo = [RepositoryUrl](const auto &Info,
+                                              Object &Object) {
+    serializeInfo(Info, Object, RepositoryUrl);
+  };
+
   if (!Children.Enums.empty()) {
-    json::Value EnumsArray = Array();
-    auto &EnumsArrayRef = *EnumsArray.getAsArray();
-    EnumsArrayRef.reserve(Children.Enums.size());
-    for (const auto &Enum : Children.Enums) {
-      json::Value EnumVal = Object();
-      auto &EnumObj = *EnumVal.getAsObject();
-      serializeInfo(Enum, EnumObj, RepositoryUrl);
-      EnumsArrayRef.push_back(EnumVal);
-    }
-    Obj["Enums"] = EnumsArray;
+    serializeArray(Children.Enums, Obj, "Enums", SerializeInfo);
+    Obj["HasEnums"] = true;
   }
 
-  if (!Children.Typedefs.empty()) {
-    json::Value TypedefsArray = Array();
-    auto &TypedefsArrayRef = *TypedefsArray.getAsArray();
-    TypedefsArrayRef.reserve(Children.Typedefs.size());
-    for (const auto &Typedef : Children.Typedefs) {
-      json::Value TypedefVal = Object();
-      auto &TypedefObj = *TypedefVal.getAsObject();
-      serializeInfo(Typedef, TypedefObj, RepositoryUrl);
-      TypedefsArrayRef.push_back(TypedefVal);
-    }
-    Obj["Typedefs"] = TypedefsArray;
-  }
+  if (!Children.Typedefs.empty())
+    serializeArray(Children.Typedefs, Obj, "Typedefs", SerializeInfo);
 
   if (!Children.Records.empty()) {
-    json::Value RecordsArray = Array();
-    auto &RecordsArrayRef = *RecordsArray.getAsArray();
-    RecordsArrayRef.reserve(Children.Records.size());
-    for (const auto &Record : Children.Records) {
-      json::Value RecordVal = Object();
-      auto &RecordObj = *RecordVal.getAsObject();
-      serializeReference(Record, RecordObj);
-      RecordsArrayRef.push_back(RecordVal);
-    }
-    Obj["Records"] = RecordsArray;
+    serializeArray(Children.Records, Obj, "Records", SerializeReferenceLambda);
+    Obj["HasRecords"] = true;
   }
+}
+
+template <typename Container, typename SerializationFunc>
+static void serializeArray(const Container &Records, Object &Obj,
+                           const std::string &Key,
+                           SerializationFunc SerializeInfo) {
+  json::Value RecordsArray = Array();
+  auto &RecordsArrayRef = *RecordsArray.getAsArray();
+  RecordsArrayRef.reserve(Records.size());
+  for (size_t Index = 0; Index < Records.size(); ++Index) {
+    json::Value ItemVal = Object();
+    auto &ItemObj = *ItemVal.getAsObject();
+    SerializeInfo(Records[Index], ItemObj);
+    if (Index == Records.size() - 1)
+      ItemObj["End"] = true;
+    RecordsArrayRef.push_back(ItemVal);
+  }
+  Obj[Key] = RecordsArray;
+}
+
+static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
+  serializeReference(I.ConceptRef, Obj);
+  Obj["Expression"] = I.ConstraintExpr;
+}
+
+static void serializeInfo(const ArrayRef<TemplateParamInfo> &Params,
+                          Object &Obj) {
+  json::Value ParamsArray = Array();
+  auto &ParamsArrayRef = *ParamsArray.getAsArray();
+  ParamsArrayRef.reserve(Params.size());
+  for (const auto &Param : Params)
+    ParamsArrayRef.push_back(Param.Contents);
+  Obj["Parameters"] = ParamsArray;
 }
 
 static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
@@ -257,27 +347,27 @@ static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
     auto &TemplateSpecializationObj = *TemplateSpecializationVal.getAsObject();
     TemplateSpecializationObj["SpecializationOf"] =
         toHex(toStringRef(Template.Specialization->SpecializationOf));
-    if (!Template.Specialization->Params.empty()) {
-      json::Value ParamsArray = Array();
-      auto &ParamsArrayRef = *ParamsArray.getAsArray();
-      ParamsArrayRef.reserve(Template.Specialization->Params.size());
-      for (const auto &Param : Template.Specialization->Params)
-        ParamsArrayRef.push_back(Param.Contents);
-      TemplateSpecializationObj["Parameters"] = ParamsArray;
-    }
+    if (!Template.Specialization->Params.empty())
+      serializeInfo(Template.Specialization->Params, TemplateSpecializationObj);
     TemplateObj["Specialization"] = TemplateSpecializationVal;
   }
 
-  if (!Template.Params.empty()) {
-    json::Value ParamsArray = Array();
-    auto &ParamsArrayRef = *ParamsArray.getAsArray();
-    ParamsArrayRef.reserve(Template.Params.size());
-    for (const auto &Param : Template.Params)
-      ParamsArrayRef.push_back(Param.Contents);
-    TemplateObj["Parameters"] = ParamsArray;
-  }
+  if (!Template.Params.empty())
+    serializeInfo(Template.Params, TemplateObj);
+
+  if (!Template.Constraints.empty())
+    serializeArray(Template.Constraints, TemplateObj, "Constraints",
+                   SerializeInfoLambda);
 
   Obj["Template"] = TemplateVal;
+}
+
+static void serializeInfo(const ConceptInfo &I, Object &Obj,
+                          const std::optional<StringRef> &RepositoryUrl) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl);
+  Obj["IsType"] = I.IsType;
+  Obj["ConstraintExpression"] = I.ConstraintExpression;
+  serializeInfo(I.Template, Obj);
 }
 
 static void serializeInfo(const TypeInfo &I, Object &Obj) {
@@ -288,8 +378,13 @@ static void serializeInfo(const TypeInfo &I, Object &Obj) {
   Obj["IsBuiltIn"] = I.IsBuiltIn;
 }
 
+static void serializeInfo(const FieldTypeInfo &I, Object &Obj) {
+  Obj["Name"] = I.Name;
+  Obj["Type"] = I.Type.Name;
+}
+
 static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
-                          std::optional<StringRef> RepositoryURL) {
+                          const std::optional<StringRef> RepositoryURL) {
   serializeCommonAttributes(F, Obj, RepositoryURL);
   Obj["IsStatic"] = F.IsStatic;
 
@@ -297,26 +392,23 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
   serializeInfo(F.ReturnType, ReturnTypeObj);
   Obj["ReturnType"] = std::move(ReturnTypeObj);
 
-  if (!F.Params.empty()) {
-    json::Value ParamsArray = json::Array();
-    auto &ParamsArrayRef = *ParamsArray.getAsArray();
-    ParamsArrayRef.reserve(F.Params.size());
-    for (const auto &Param : F.Params) {
-      json::Value ParamVal = Object();
-      auto &ParamObj = *ParamVal.getAsObject();
-      ParamObj["Name"] = Param.Name;
-      ParamObj["Type"] = Param.Type.Name;
-      ParamsArrayRef.push_back(ParamVal);
-    }
-    Obj["Params"] = ParamsArray;
-  }
+  if (!F.Params.empty())
+    serializeArray(F.Params, Obj, "Params", SerializeInfoLambda);
 
   if (F.Template)
     serializeInfo(F.Template.value(), Obj);
 }
 
+static void serializeInfo(const EnumValueInfo &I, Object &Obj) {
+  Obj["Name"] = I.Name;
+  if (!I.ValueExpr.empty())
+    Obj["ValueExpr"] = I.ValueExpr;
+  else
+    Obj["Value"] = I.Value;
+}
+
 static void serializeInfo(const EnumInfo &I, json::Object &Obj,
-                          std::optional<StringRef> RepositoryUrl) {
+                          const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
   Obj["Scoped"] = I.Scoped;
 
@@ -329,26 +421,12 @@ static void serializeInfo(const EnumInfo &I, json::Object &Obj,
     Obj["BaseType"] = BaseTypeVal;
   }
 
-  if (!I.Members.empty()) {
-    json::Value MembersArray = Array();
-    auto &MembersArrayRef = *MembersArray.getAsArray();
-    MembersArrayRef.reserve(I.Members.size());
-    for (const auto &Member : I.Members) {
-      json::Value MemberVal = Object();
-      auto &MemberObj = *MemberVal.getAsObject();
-      MemberObj["Name"] = Member.Name;
-      if (!Member.ValueExpr.empty())
-        MemberObj["ValueExpr"] = Member.ValueExpr;
-      else
-        MemberObj["Value"] = Member.Value;
-      MembersArrayRef.push_back(MemberVal);
-    }
-    Obj["Members"] = MembersArray;
-  }
+  if (!I.Members.empty())
+    serializeArray(I.Members, Obj, "Members", SerializeInfoLambda);
 }
 
 static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
-                          std::optional<StringRef> RepositoryUrl) {
+                          const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
   Obj["TypeDeclaration"] = I.TypeDeclaration;
   Obj["IsUsing"] = I.IsUsing;
@@ -358,12 +436,42 @@ static void serializeInfo(const TypedefInfo &I, json::Object &Obj,
   Obj["Underlying"] = TypeVal;
 }
 
+static void serializeInfo(const BaseRecordInfo &I, Object &Obj,
+                          const std::optional<StringRef> &RepositoryUrl) {
+  serializeInfo(static_cast<const RecordInfo &>(I), Obj, RepositoryUrl);
+  Obj["IsVirtual"] = I.IsVirtual;
+  Obj["Access"] = getAccessSpelling(I.Access);
+  Obj["IsParent"] = I.IsParent;
+}
+
+static void serializeInfo(const FriendInfo &I, Object &Obj) {
+  auto FriendRef = Object();
+  serializeReference(I.Ref, FriendRef);
+  Obj["Reference"] = std::move(FriendRef);
+  Obj["IsClass"] = I.IsClass;
+  if (I.Template)
+    serializeInfo(I.Template.value(), Obj);
+  if (I.Params)
+    serializeArray(I.Params.value(), Obj, "Params", SerializeInfoLambda);
+  if (I.ReturnType) {
+    auto ReturnTypeObj = Object();
+    serializeInfo(I.ReturnType.value(), ReturnTypeObj);
+    Obj["ReturnType"] = std::move(ReturnTypeObj);
+  }
+}
+
+static void insertArray(Object &Obj, json::Value &Array, StringRef Key) {
+  Obj[Key] = Array;
+  Obj["Has" + Key.str()] = true;
+}
+
 static void serializeInfo(const RecordInfo &I, json::Object &Obj,
-                          std::optional<StringRef> RepositoryUrl) {
+                          const std::optional<StringRef> &RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
   Obj["FullName"] = I.FullName;
   Obj["TagType"] = getTagType(I.TagType);
   Obj["IsTypedef"] = I.IsTypeDef;
+  Obj["MangledName"] = I.MangledName;
 
   if (!I.Children.Functions.empty()) {
     json::Value PubFunctionsArray = Array();
@@ -383,7 +491,7 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     }
 
     if (!PubFunctionsArrayRef.empty())
-      Obj["PublicFunctions"] = PubFunctionsArray;
+      insertArray(Obj, PubFunctionsArray, "PublicFunctions");
     if (!ProtFunctionsArrayRef.empty())
       Obj["ProtectedFunctions"] = ProtFunctionsArray;
   }
@@ -407,70 +515,80 @@ static void serializeInfo(const RecordInfo &I, json::Object &Obj,
     }
 
     if (!PubMembersArrayRef.empty())
-      Obj["PublicMembers"] = PublicMembersArray;
+      insertArray(Obj, PublicMembersArray, "PublicMembers");
     if (!ProtMembersArrayRef.empty())
       Obj["ProtectedMembers"] = ProtectedMembersArray;
   }
 
-  if (!I.Bases.empty()) {
-    json::Value BasesArray = Array();
-    json::Array &BasesArrayRef = *BasesArray.getAsArray();
-    BasesArrayRef.reserve(I.Bases.size());
-    for (const auto &BaseInfo : I.Bases) {
-      json::Value BaseInfoVal = Object();
-      auto &BaseInfoObj = *BaseInfoVal.getAsObject();
-      serializeInfo(BaseInfo, BaseInfoObj, RepositoryUrl);
-      BaseInfoObj["IsVirtual"] = BaseInfo.IsVirtual;
-      BaseInfoObj["Access"] = getAccessSpelling(BaseInfo.Access);
-      BaseInfoObj["IsParent"] = BaseInfo.IsParent;
-      BasesArrayRef.push_back(BaseInfoVal);
-    }
-    Obj["Bases"] = BasesArray;
-  }
+  if (!I.Bases.empty())
+    serializeArray(
+        I.Bases, Obj, "Bases",
+        [&RepositoryUrl](const BaseRecordInfo &Base, Object &BaseObj) {
+          serializeInfo(Base, BaseObj, RepositoryUrl);
+        });
 
   if (!I.Parents.empty())
-    serializeReference(I.Parents, Obj, "Parents");
+    serializeArray(I.Parents, Obj, "Parents", SerializeReferenceLambda);
 
   if (!I.VirtualParents.empty())
-    serializeReference(I.VirtualParents, Obj, "VirtualParents");
+    serializeArray(I.VirtualParents, Obj, "VirtualParents",
+                   SerializeReferenceLambda);
 
   if (I.Template)
     serializeInfo(I.Template.value(), Obj);
 
+  if (!I.Friends.empty())
+    serializeArray(I.Friends, Obj, "Friends", SerializeInfoLambda);
+
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
 }
 
+static void serializeInfo(const VarInfo &I, json::Object &Obj,
+                          const std::optional<StringRef> RepositoryUrl) {
+  serializeCommonAttributes(I, Obj, RepositoryUrl);
+  Obj["IsStatic"] = I.IsStatic;
+  auto TypeObj = Object();
+  serializeInfo(I.Type, TypeObj);
+  Obj["Type"] = std::move(TypeObj);
+}
+
 static void serializeInfo(const NamespaceInfo &I, json::Object &Obj,
-                          std::optional<StringRef> RepositoryUrl) {
+                          const std::optional<StringRef> RepositoryUrl) {
   serializeCommonAttributes(I, Obj, RepositoryUrl);
 
-  if (!I.Children.Namespaces.empty()) {
-    json::Value NamespacesArray = Array();
-    auto &NamespacesArrayRef = *NamespacesArray.getAsArray();
-    NamespacesArrayRef.reserve(I.Children.Namespaces.size());
-    for (auto &Namespace : I.Children.Namespaces) {
-      json::Value NamespaceVal = Object();
-      auto &NamespaceObj = *NamespaceVal.getAsObject();
-      serializeReference(Namespace, NamespaceObj);
-      NamespacesArrayRef.push_back(NamespaceVal);
-    }
-    Obj["Namespaces"] = NamespacesArray;
-  }
+  if (!I.Children.Namespaces.empty())
+    serializeArray(I.Children.Namespaces, Obj, "Namespaces",
+                   SerializeReferenceLambda);
 
-  if (!I.Children.Functions.empty()) {
-    json::Value FunctionsArray = Array();
-    auto &FunctionsArrayRef = *FunctionsArray.getAsArray();
-    FunctionsArrayRef.reserve(I.Children.Functions.size());
-    for (const auto &Function : I.Children.Functions) {
-      json::Value FunctionVal = Object();
-      auto &FunctionObj = *FunctionVal.getAsObject();
-      serializeInfo(Function, FunctionObj, RepositoryUrl);
-      FunctionsArrayRef.push_back(FunctionVal);
-    }
-    Obj["Functions"] = FunctionsArray;
-  }
+  static auto SerializeInfo = [RepositoryUrl](const auto &Info,
+                                              Object &Object) {
+    serializeInfo(Info, Object, RepositoryUrl);
+  };
+
+  if (!I.Children.Functions.empty())
+    serializeArray(I.Children.Functions, Obj, "Functions", SerializeInfo);
+
+  if (!I.Children.Concepts.empty())
+    serializeArray(I.Children.Concepts, Obj, "Concepts", SerializeInfo);
+
+  if (!I.Children.Variables.empty())
+    serializeArray(I.Children.Variables, Obj, "Variables", SerializeInfo);
 
   serializeCommonChildren(I.Children, Obj, RepositoryUrl);
+}
+
+static SmallString<16> determineFileName(Info *I, SmallString<128> &Path) {
+  SmallString<16> FileName;
+  if (I->IT == InfoType::IT_record) {
+    auto *RecordSymbolInfo = static_cast<SymbolInfo *>(I);
+    FileName = RecordSymbolInfo->MangledName;
+  } else if (I->IT == InfoType::IT_namespace && I->Name != "")
+    // Serialize the global namespace as index.json
+    FileName = I->Name;
+  else
+    FileName = I->getFileBaseName();
+  sys::path::append(Path, FileName + ".json");
+  return FileName;
 }
 
 Error JSONGenerator::generateDocs(
@@ -483,7 +601,6 @@ Error JSONGenerator::generateDocs(
 
     SmallString<128> Path;
     sys::path::native(RootDir, Path);
-    sys::path::append(Path, Info->getRelativeFilePath(""));
     if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = sys::fs::create_directories(Path);
           Err != std::error_code())
@@ -491,8 +608,11 @@ Error JSONGenerator::generateDocs(
       CreatedDirs.insert(Path);
     }
 
-    sys::path::append(Path, Info->getFileBaseName() + ".json");
+    SmallString<16> FileName = determineFileName(Info, Path);
+    if (FileToInfos.contains(Path))
+      continue;
     FileToInfos[Path].push_back(Info);
+    Info->DocumentationFileName = FileName;
   }
 
   for (const auto &Group : FileToInfos) {
@@ -520,9 +640,12 @@ Error JSONGenerator::generateDocForInfo(Info *I, raw_ostream &OS,
   case InfoType::IT_record:
     serializeInfo(*static_cast<RecordInfo *>(I), Obj, CDCtx.RepositoryUrl);
     break;
+  case InfoType::IT_concept:
   case InfoType::IT_enum:
   case InfoType::IT_function:
   case InfoType::IT_typedef:
+  case InfoType::IT_variable:
+  case InfoType::IT_friend:
     break;
   case InfoType::IT_default:
     return createStringError(inconvertibleErrorCode(), "unexpected info type");

@@ -152,31 +152,9 @@ enum LocationAtom {
 };
 
 enum LlvmUserLocationAtom {
-#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) DW_OP_LLVM_USER_##NAME = ID,
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) DW_OP_LLVM_##NAME = ID,
 #include "llvm/BinaryFormat/Dwarf.def"
 };
-
-inline std::optional<LlvmUserLocationAtom> getUserOp(uint8_t Op) {
-  switch (Op) {
-#define HANDLE_HETEROGENEOUS_OP(NAME)                                          \
-  case DW_OP_LLVM_##NAME:                                                      \
-    return DW_OP_LLVM_USER_##NAME;
-#include "llvm/BinaryFormat/Dwarf.def"
-  default:
-    return std::nullopt;
-  }
-}
-
-inline std::optional<LocationAtom> getNonUserOp(uint8_t UserOp) {
-  switch (UserOp) {
-#define HANDLE_HETEROGENEOUS_OP(NAME)                                          \
-  case DW_OP_LLVM_USER_##NAME:                                                 \
-    return DW_OP_LLVM_##NAME;
-#include "llvm/BinaryFormat/Dwarf.def"
-  default:
-    return std::nullopt;
-  }
-}
 
 enum TypeKind : uint8_t {
 #define HANDLE_DW_ATE(ID, NAME, VERSION, VENDOR) DW_ATE_##NAME = ID,
@@ -1068,6 +1046,7 @@ LLVM_ABI unsigned getSubOperationEncoding(unsigned OpEncoding,
 LLVM_ABI unsigned getVirtuality(StringRef VirtualityString);
 LLVM_ABI unsigned getEnumKind(StringRef EnumKindString);
 LLVM_ABI unsigned getLanguage(StringRef LanguageString);
+LLVM_ABI unsigned getMemorySpace(StringRef LanguageString);
 LLVM_ABI unsigned getCallingConvention(StringRef LanguageString);
 LLVM_ABI unsigned getMemorySpace(StringRef LanguageString);
 LLVM_ABI unsigned getAttributeEncoding(StringRef EncodingString);
@@ -1230,32 +1209,32 @@ template <typename Enum> struct EnumTraits : public std::false_type {};
 
 template <> struct EnumTraits<Attribute> : public std::true_type {
   static constexpr char Type[3] = "AT";
-  static constexpr StringRef (*StringFn)(unsigned) = &AttributeString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<Form> : public std::true_type {
   static constexpr char Type[5] = "FORM";
-  static constexpr StringRef (*StringFn)(unsigned) = &FormEncodingString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<Index> : public std::true_type {
   static constexpr char Type[4] = "IDX";
-  static constexpr StringRef (*StringFn)(unsigned) = &IndexString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<Tag> : public std::true_type {
   static constexpr char Type[4] = "TAG";
-  static constexpr StringRef (*StringFn)(unsigned) = &TagString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<LineNumberOps> : public std::true_type {
   static constexpr char Type[4] = "LNS";
-  static constexpr StringRef (*StringFn)(unsigned) = &LNStandardString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 template <> struct EnumTraits<LocationAtom> : public std::true_type {
   static constexpr char Type[3] = "OP";
-  static constexpr StringRef (*StringFn)(unsigned) = &OperationEncodingString;
+  LLVM_ABI static StringRef (*const StringFn)(unsigned);
 };
 
 inline uint64_t computeTombstoneAddress(uint8_t AddressByteSize) {

@@ -23,6 +23,7 @@
 #include "Hexagon.h"
 #include "MSP430.h"
 #include "Solaris.h"
+#include "ToolChains/Cuda.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -176,7 +177,13 @@ static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
 // even if new frame records are not created.
 static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
                                         const llvm::Triple &Triple) {
-  if (Triple.isARM() || Triple.isThumb()) {
+  switch (Triple.getArch()) {
+  default:
+    return false;
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
     // For 32-bit Arm, the -mframe-chain=aapcs and -mframe-chain=aapcs+leaf
     // options require the frame pointer register to be reserved (or point to a
     // new AAPCS-compilant frame record), even with	-fno-omit-frame-pointer.
@@ -185,8 +192,13 @@ static bool mustMaintainValidFrameChain(const llvm::opt::ArgList &Args,
       return V != "none";
     }
     return false;
+
+  case llvm::Triple::aarch64:
+    // Arm64 Windows requires that the frame chain is valid, as there is no
+    // way to indicate during a stack walk that a frame has used the frame
+    // pointer as a general purpose register.
+    return Triple.isOSWindows();
   }
-  return false;
 }
 
 // True if a target-specific option causes -fno-omit-frame-pointer to also
@@ -285,17 +297,22 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
     Format = A->getValue();
 
   SmallString<128> F;
-  const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
-  if (A)
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_foptimization_record_file_EQ)) {
     F = A->getValue();
-  else if (Output.isFilename())
+    F += ".";
+  } else if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
+    F = A->getValue();
+  } else if (Output.isFilename()) {
     F = Output.getFilename();
+    F += ".";
+  }
 
   assert(!F.empty() && "Cannot determine remarks output name.");
   // Append "opt.ld.<format>" to the end of the file name.
   CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) +
-                                       "opt-remarks-filename=" + F +
-                                       ".opt.ld." + Format));
+                                       "opt-remarks-filename=" + F + "opt.ld." +
+                                       Format));
 
   if (const Arg *A =
           Args.getLastArg(options::OPT_foptimization_record_passes_EQ))
@@ -526,6 +543,85 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
         CmdArgs.push_back(Args.MakeArgString("--pop-state"));
       addArchSpecificRPath(TC, Args, CmdArgs);
     }
+  }
+}
+
+const char *tools::getLDMOption(const llvm::Triple &T, const ArgList &Args) {
+  switch (T.getArch()) {
+  case llvm::Triple::x86:
+    if (T.isOSIAMCU())
+      return "elf_iamcu";
+    return "elf_i386";
+  case llvm::Triple::aarch64:
+    if (T.isOSManagarm())
+      return "aarch64managarm";
+    else if (aarch64::isAArch64BareMetal(T))
+      return "aarch64elf";
+    return "aarch64linux";
+  case llvm::Triple::aarch64_be:
+    if (aarch64::isAArch64BareMetal(T))
+      return "aarch64elfb";
+    return "aarch64linuxb";
+  case llvm::Triple::arm:
+  case llvm::Triple::thumb:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumbeb: {
+    bool IsBigEndian = tools::arm::isARMBigEndian(T, Args);
+    if (arm::isARMEABIBareMetal(T))
+      return IsBigEndian ? "armelfb" : "armelf";
+    return IsBigEndian ? "armelfb_linux_eabi" : "armelf_linux_eabi";
+  }
+  case llvm::Triple::m68k:
+    return "m68kelf";
+  case llvm::Triple::ppc:
+    if (T.isOSLinux())
+      return "elf32ppclinux";
+    return "elf32ppc";
+  case llvm::Triple::ppcle:
+    if (T.isOSLinux())
+      return "elf32lppclinux";
+    return "elf32lppc";
+  case llvm::Triple::ppc64:
+    return "elf64ppc";
+  case llvm::Triple::ppc64le:
+    return "elf64lppc";
+  case llvm::Triple::riscv32:
+    return "elf32lriscv";
+  case llvm::Triple::riscv64:
+    return "elf64lriscv";
+  case llvm::Triple::sparc:
+  case llvm::Triple::sparcel:
+    return "elf32_sparc";
+  case llvm::Triple::sparcv9:
+    return "elf64_sparc";
+  case llvm::Triple::loongarch32:
+    return "elf32loongarch";
+  case llvm::Triple::loongarch64:
+    return "elf64loongarch";
+  case llvm::Triple::mips:
+    return "elf32btsmip";
+  case llvm::Triple::mipsel:
+    return "elf32ltsmip";
+  case llvm::Triple::mips64:
+    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
+      return "elf32btsmipn32";
+    return "elf64btsmip";
+  case llvm::Triple::mips64el:
+    if (tools::mips::hasMipsAbiArg(Args, "n32") || T.isABIN32())
+      return "elf32ltsmipn32";
+    return "elf64ltsmip";
+  case llvm::Triple::systemz:
+    return "elf64_s390";
+  case llvm::Triple::x86_64:
+    if (T.isX32())
+      return "elf32_x86_64";
+    return "elf_x86_64";
+  case llvm::Triple::ve:
+    return "elf64ve";
+  case llvm::Triple::csky:
+    return "cskyelf_linux";
+  default:
+    return nullptr;
   }
 }
 
@@ -781,7 +877,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9:
-    sparc::getSparcTargetFeatures(D, Args, Features);
+    sparc::getSparcTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
@@ -993,9 +1089,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     }
   }
 
-  if (Args.hasArg(options::OPT_gsplit_dwarf))
-    CmdArgs.push_back(Args.MakeArgString(
-        Twine(PluginOptPrefix) + "dwo_dir=" + Output.getFilename() + "_dwo"));
+  if (Args.hasArg(options::OPT_gsplit_dwarf)) {
+    SmallString<128> F;
+    if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
+      F = A->getValue();
+    } else {
+      F = Output.getFilename();
+      F += "_";
+    }
+    CmdArgs.push_back(
+        Args.MakeArgString(Twine(PluginOptPrefix) + "dwo_dir=" + F + "dwo"));
+  }
 
   if (IsThinLTO && !IsOSAIX)
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "thinlto"));
@@ -1246,6 +1350,17 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   if (Args.hasArg(options::OPT_ftime_report))
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
+
+  if (Arg *A = Args.getLastArg(options::OPT_fthinlto_distributor_EQ)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-distributor=" + Twine(A->getValue())));
+    CmdArgs.push_back(
+        Args.MakeArgString("--thinlto-remote-compiler=" +
+                           Twine(ToolChain.getDriver().getClangProgramPath())));
+
+    for (auto A : Args.getAllArgValues(options::OPT_Xthinlto_distributor_EQ))
+      CmdArgs.push_back(Args.MakeArgString("--thinlto-distributor-arg=" + A));
+  }
 }
 
 void tools::addOpenMPRuntimeSpecificRPath(const ToolChain &TC,
@@ -1470,7 +1585,7 @@ void tools::addOpenMPHostOffloadingArgs(const Compilation &C,
 
   // For all the host OpenMP offloading compile jobs we need to pass the targets
   // information using -fopenmp-targets= option.
-  constexpr llvm::StringLiteral Targets("-fopenmp-targets=");
+  constexpr llvm::StringLiteral Targets("--offload-targets=");
 
   SmallVector<std::string> Triples;
   auto TCRange = C.getOffloadToolChains<Action::OFK_OpenMP>();
@@ -2394,6 +2509,13 @@ static void AddLibgcc(const ToolChain &TC, const Driver &D,
   if (LGT == LibGccType::SharedLibGcc ||
       (LGT == LibGccType::UnspecifiedLibGcc && D.CCCIsCXX()))
     CmdArgs.push_back("-lgcc");
+  // compiler-rt is needed after libgcc for flang on AArch64 for the
+  // __trampoline_setup symbol
+  if (D.IsFlangMode() && TC.getArch() == llvm::Triple::aarch64) {
+    CmdArgs.push_back("--as-needed");
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "builtins"));
+    CmdArgs.push_back("--no-as-needed");
+  }
 }
 
 void tools::AddRunTimeLibs(const ToolChain &TC, const Driver &D,
@@ -3094,12 +3216,12 @@ void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,
                                    llvm::opt::ArgStringList &CmdArgs) {
   if (TCArgs.hasFlag(options::OPT_offload_compress,
                      options::OPT_no_offload_compress, false))
-    CmdArgs.push_back("-compress");
+    CmdArgs.push_back("--compress");
   if (TCArgs.hasArg(options::OPT_v))
-    CmdArgs.push_back("-verbose");
+    CmdArgs.push_back("--verbose");
   if (auto *Arg = TCArgs.getLastArg(options::OPT_offload_compression_level_EQ))
     CmdArgs.push_back(
-        TCArgs.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
+        TCArgs.MakeArgString(Twine("--compression-level=") + Arg->getValue()));
 }
 
 void tools::addMCModel(const Driver &D, const llvm::opt::ArgList &Args,
@@ -3531,4 +3653,31 @@ StringRef tools::parseMRecipOption(clang::DiagnosticsEngine &Diags,
   }
 
   return Out;
+}
+
+std::string tools::complexRangeKindToStr(LangOptions::ComplexRangeKind Range) {
+  switch (Range) {
+  case LangOptions::ComplexRangeKind::CX_Full:
+    return "full";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Basic:
+    return "basic";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Improved:
+    return "improved";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Promoted:
+    return "promoted";
+    break;
+  default:
+    return "";
+  }
+}
+
+std::string
+tools::renderComplexRangeOption(LangOptionsBase::ComplexRangeKind Range) {
+  std::string ComplexRangeStr = complexRangeKindToStr(Range);
+  if (!ComplexRangeStr.empty())
+    return "-complex-range=" + ComplexRangeStr;
+  return ComplexRangeStr;
 }

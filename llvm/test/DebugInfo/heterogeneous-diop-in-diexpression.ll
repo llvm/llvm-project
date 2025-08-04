@@ -43,16 +43,16 @@ define dso_local void @func() #0 !dbg !13 {
 entry:
   %var = alloca i32, align 4
   ; CHECK: #dbg_value(!DIArgList(ptr %var), ![[#]], !DIExpression(DIOpArg(0, ptr), DIOpFragment(1, 2), DIOpDeref(i32)),
-  tail call void @llvm.dbg.value(metadata !DIArgList(ptr %var), metadata !18, metadata !DIExpression(DIOpArg(0, ptr), DIOpFragment(1, 2), DIOpDeref(i32))), !dbg !19
+    #dbg_value(!DIArgList(ptr %var), !18, !DIExpression(DIOpArg(0, ptr), DIOpFragment(1, 2), DIOpDeref(i32)), !19)
   ; CHECK: #dbg_value(ptr %var, ![[#VAR:]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32)),
-  tail call void @llvm.dbg.value(metadata ptr %var, metadata !18, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32))), !dbg !19
+    #dbg_value(ptr %var, !18, !DIExpression(DIOpArg(0, ptr), DIOpDeref(i32)), !19)
   %var_fragmented.lo = alloca i16, align 2
   %var_fragmented.hi = alloca i16, align 2
   ; CHECK: #dbg_value(ptr %var_fragmented.lo, ![[#VAR_FRAGMENTED:]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(0, 16)),
-  tail call void @llvm.dbg.value(metadata ptr %var_fragmented.lo, metadata !22, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(0, 16))), !dbg !19
+    #dbg_value(ptr %var_fragmented.lo, !22, !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(0, 16)), !19)
   call void @ex()
   ; CHECK: #dbg_value(ptr %var_fragmented.hi, ![[#VAR_FRAGMENTED]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(16, 16)),
-  tail call void @llvm.dbg.value(metadata ptr %var_fragmented.hi, metadata !22, metadata !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(16, 16))), !dbg !19
+    #dbg_value(ptr %var_fragmented.hi, !22, !DIExpression(DIOpArg(0, ptr), DIOpDeref(i16), DIOpFragment(16, 16)), !19)
   ret void, !dbg !20
 }
 

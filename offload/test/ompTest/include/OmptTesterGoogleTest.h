@@ -16,6 +16,13 @@ namespace testing {
 class GTEST_API_ OmptTestCase : public testing::Test,
                                 public omptest::OmptEventGroupInterface {
 public:
+  std::unique_ptr<omptest::OmptSequencedAsserter> SequenceAsserter =
+      std::make_unique<omptest::OmptSequencedAsserter>();
+  std::unique_ptr<omptest::OmptEventAsserter> SetAsserter =
+      std::make_unique<omptest::OmptEventAsserter>();
+  std::unique_ptr<omptest::OmptEventReporter> EventReporter =
+      std::make_unique<omptest::OmptEventReporter>();
+
 protected:
   void SetUp() override {
     omptest::OmptCallbackHandler::get().subscribe(SequenceAsserter.get());
@@ -31,8 +38,8 @@ protected:
     omptest::OmptCallbackHandler::get().clearSubscribers();
 
     // This common testcase must not encounter any failures.
-    if (SequenceAsserter->getState() == omptest::AssertState::fail ||
-        SetAsserter->getState() == omptest::AssertState::fail)
+    if (SequenceAsserter->checkState() == omptest::AssertState::fail ||
+        SetAsserter->checkState() == omptest::AssertState::fail)
       ADD_FAILURE();
   }
 };
@@ -47,8 +54,8 @@ protected:
     omptest::OmptCallbackHandler::get().clearSubscribers();
 
     // This eXpectedly failing testcase has to encounter at least one failure.
-    if (SequenceAsserter->getState() == omptest::AssertState::pass &&
-        SetAsserter->getState() == omptest::AssertState::pass)
+    if (SequenceAsserter->checkState() == omptest::AssertState::pass &&
+        SetAsserter->checkState() == omptest::AssertState::pass)
       ADD_FAILURE();
   }
 };

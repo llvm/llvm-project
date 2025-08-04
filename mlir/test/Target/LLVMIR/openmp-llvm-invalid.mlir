@@ -89,3 +89,48 @@ llvm.func @omp_threadprivate() {
   llvm.store %3, %5 : i32, !llvm.ptr
   llvm.return
 }
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @host_op_in_device(%arg0 : !llvm.ptr) {
+    // expected-error @below {{unsupported host op found in device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.threadprivate}}
+    %0 = omp.threadprivate %arg0 : !llvm.ptr -> !llvm.ptr
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @host_op_in_device_nested_target(%arg0 : !llvm.ptr) {
+    // expected-error @below {{unsupported host op found in device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.parallel}}
+    omp.parallel {
+      omp.target {
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// -----
+
+module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
+  llvm.func @host_op_in_device_sibling_target(%x: !llvm.ptr, %expr: i32) {
+    omp.target {
+      omp.terminator
+    }
+    // expected-error @below {{unsupported host op found in device}}
+    // expected-error @below {{LLVM Translation failed for operation: omp.atomic.update}}
+    omp.atomic.update %x : !llvm.ptr {
+    ^bb0(%xval: i32):
+      %newval = llvm.add %xval, %expr : i32
+      omp.yield(%newval : i32)
+    }
+    llvm.return
+  }
+}

@@ -22,6 +22,7 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -356,6 +357,9 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::PATCHPOINT:
     Res = PromoteIntRes_PATCHPOINT(N);
+    break;
+  case ISD::READ_REGISTER:
+    Res = PromoteIntRes_READ_REGISTER(N);
     break;
   }
 
@@ -2076,6 +2080,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PATCHPOINT:
     Res = PromoteIntOp_PATCHPOINT(N, OpNo);
     break;
+  case ISD::WRITE_REGISTER:
+    Res = PromoteIntOp_WRITE_REGISTER(N, OpNo);
+    break;
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     Res = PromoteIntOp_VP_STRIDED(N, OpNo);
@@ -2210,8 +2217,9 @@ SDValue DAGTypeLegalizer::PromoteIntOp_BITCAST(SDNode *N) {
 
   switch (getTypeAction(InVT)) {
   case TargetLowering::TypePromoteInteger: {
-    // TODO: Handle big endian
-    if (OutVT.isVector() && DAG.getDataLayout().isLittleEndian()) {
+    // TODO: Handle big endian & vector input type.
+    if (OutVT.isVector() && !InVT.isVector() &&
+        DAG.getDataLayout().isLittleEndian()) {
       EVT EltVT = OutVT.getVectorElementType();
       TypeSize EltSize = EltVT.getSizeInBits();
       TypeSize NInSize = NInVT.getSizeInBits();
@@ -2605,9 +2613,22 @@ SDValue DAGTypeLegalizer::PromoteIntOp_STRICT_UINT_TO_FP(SDNode *N) {
 
 SDValue DAGTypeLegalizer::PromoteIntOp_ZERO_EXTEND(SDNode *N) {
   SDLoc dl(N);
-  SDValue Op = GetPromotedInteger(N->getOperand(0));
-  Op = DAG.getNode(ISD::ANY_EXTEND, dl, N->getValueType(0), Op);
-  return DAG.getZeroExtendInReg(Op, dl, N->getOperand(0).getValueType());
+  SDValue Src = N->getOperand(0);
+  SDValue Op = GetPromotedInteger(Src);
+  EVT VT = N->getValueType(0);
+
+  // If this zext has the nneg flag and the target prefers sext, see if the
+  // promoted input is already sign extended.
+  // TODO: Should we have some way to set nneg on ISD::AND instead?
+  if (N->getFlags().hasNonNeg() && Op.getValueType() == VT &&
+      TLI.isSExtCheaperThanZExt(Src.getValueType(), VT)) {
+    unsigned OpEffectiveBits = DAG.ComputeMaxSignificantBits(Op);
+    if (OpEffectiveBits <= Src.getScalarValueSizeInBits())
+      return Op;
+  }
+
+  Op = DAG.getNode(ISD::ANY_EXTEND, dl, VT, Op);
+  return DAG.getZeroExtendInReg(Op, dl, Src.getValueType());
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VP_ZERO_EXTEND(SDNode *N) {
@@ -2838,6 +2859,15 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PATCHPOINT(SDNode *N, unsigned OpNo) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), Operand.getValueType());
   NewOps[OpNo] = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), NVT, Operand);
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_WRITE_REGISTER(SDNode *N,
+                                                      unsigned OpNo) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
+      "cannot use llvm.write_register with illegal type", Fn,
+      N->getDebugLoc()));
+  return N->getOperand(0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_VP_STRIDED(SDNode *N, unsigned OpNo) {
@@ -3113,6 +3143,10 @@ void DAGTypeLegalizer::ExpandIntegerResult(SDNode *N, unsigned ResNo) {
 
   case ISD::VSCALE:
     ExpandIntRes_VSCALE(N, Lo, Hi);
+    break;
+
+  case ISD::READ_REGISTER:
+    ExpandIntRes_READ_REGISTER(N, Lo, Hi);
     break;
   }
 
@@ -4367,8 +4401,13 @@ void DAGTypeLegalizer::ExpandIntRes_Logical(SDNode *N,
   SDValue LL, LH, RL, RH;
   GetExpandedInteger(N->getOperand(0), LL, LH);
   GetExpandedInteger(N->getOperand(1), RL, RH);
-  Lo = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LL, RL);
-  Hi = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LH, RH);
+
+  SDNodeFlags Flags;
+  if (N->getOpcode() == ISD::OR)
+    Flags.setDisjoint(N->getFlags().hasDisjoint());
+
+  Lo = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LL, RL, Flags);
+  Hi = DAG.getNode(N->getOpcode(), dl, LL.getValueType(), LH, RH, Flags);
 }
 
 void DAGTypeLegalizer::ExpandIntRes_MUL(SDNode *N,
@@ -5453,6 +5492,18 @@ void DAGTypeLegalizer::ExpandIntRes_VSCALE(SDNode *N, SDValue &Lo,
   SplitInteger(Res, Lo, Hi);
 }
 
+void DAGTypeLegalizer::ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo,
+                                                  SDValue &Hi) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
+      "cannot use llvm.read_register with illegal type", Fn, N->getDebugLoc()));
+  ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+  Lo = DAG.getPOISON(LoVT);
+  Hi = DAG.getPOISON(HiVT);
+}
+
 //===----------------------------------------------------------------------===//
 //  Integer Operand Expansion
 //===----------------------------------------------------------------------===//
@@ -5518,6 +5569,9 @@ bool DAGTypeLegalizer::ExpandIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
     Res = ExpandIntOp_VP_STRIDED(N, OpNo);
+    break;
+  case ISD::WRITE_REGISTER:
+    Res = ExpandIntOp_WRITE_REGISTER(N, OpNo);
     break;
   }
 
@@ -5917,6 +5971,15 @@ SDValue DAGTypeLegalizer::ExpandIntOp_VP_STRIDED(SDNode *N, unsigned OpNo) {
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 
+SDValue DAGTypeLegalizer::ExpandIntOp_WRITE_REGISTER(SDNode *N, unsigned OpNo) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
+      "cannot use llvm.write_register with illegal type", Fn,
+      N->getDebugLoc()));
+
+  return N->getOperand(0);
+}
+
 SDValue DAGTypeLegalizer::PromoteIntRes_VECTOR_SPLICE(SDNode *N) {
   SDLoc dl(N);
 
@@ -6312,6 +6375,16 @@ SDValue DAGTypeLegalizer::PromoteIntRes_PATCHPOINT(SDNode *N) {
   DAG.ReplaceAllUsesOfValuesWith(From, To, 2);
 
   return Res.getValue(0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_READ_REGISTER(SDNode *N) {
+  const Function &Fn = DAG.getMachineFunction().getFunction();
+  Fn.getContext().diagnose(DiagnosticInfoLegalizationFailure(
+      "cannot use llvm.read_register with illegal type", Fn, N->getDebugLoc()));
+
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  ReplaceValueWith(SDValue(N, 1), N->getOperand(0));
+  return DAG.getPOISON(NVT);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N) {

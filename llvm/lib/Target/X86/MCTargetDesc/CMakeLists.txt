@@ -28,3 +28,4 @@ add_llvm_component_library(LLVMX86Desc
   ADD_TO_COMPONENT
   X86
   )
+set_source_files_properties(X86MCCodeEmitter.cpp PROPERTIES COMPILE_FLAGS "-O2")

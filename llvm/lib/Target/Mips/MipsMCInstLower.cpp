@@ -175,9 +175,9 @@ MCOperand MipsMCInstLower::LowerSymbolOperand(const MachineOperand &MO,
   }
 
   if (IsGpOff)
-    Expr = MipsMCExpr::createGpOff(TargetKind, Expr, *Ctx);
+    Expr = Mips::createGpOff(Expr, TargetKind, *Ctx);
   else if (TargetKind != Mips::S_None)
-    Expr = MipsMCExpr::create(TargetKind, Expr, *Ctx);
+    Expr = MCSpecifierExpr::create(Expr, TargetKind, *Ctx);
 
   return MCOperand::createExpr(Expr);
 }
@@ -216,7 +216,7 @@ MCOperand MipsMCInstLower::createSub(MachineBasicBlock *BB1,
   const MCSymbolRefExpr *Sym2 = MCSymbolRefExpr::create(BB2->getSymbol(), *Ctx);
   const MCBinaryExpr *Sub = MCBinaryExpr::createSub(Sym1, Sym2, *Ctx);
 
-  return MCOperand::createExpr(MipsMCExpr::create(Kind, Sub, *Ctx));
+  return MCOperand::createExpr(MCSpecifierExpr::create(Sub, Kind, *Ctx));
 }
 
 void MipsMCInstLower::
@@ -248,7 +248,7 @@ lowerLongBranchLUi(const MachineInstr *MI, MCInst &OutMI) const {
   if (MI->getNumOperands() == 2) {
     const MCExpr *Expr =
         MCSymbolRefExpr::create(MI->getOperand(1).getMBB()->getSymbol(), *Ctx);
-    const auto *MipsExpr = MipsMCExpr::create(Spec, Expr, *Ctx);
+    const auto *MipsExpr = MCSpecifierExpr::create(Expr, Spec, *Ctx);
     OutMI.addOperand(MCOperand::createExpr(MipsExpr));
   } else if (MI->getNumOperands() == 3) {
     // Create %hi($tgt-$baltgt).
@@ -290,7 +290,7 @@ void MipsMCInstLower::lowerLongBranchADDiu(const MachineInstr *MI,
     // Lower register operand.
     const MCExpr *Expr =
         MCSymbolRefExpr::create(MI->getOperand(2).getMBB()->getSymbol(), *Ctx);
-    const auto *MipsExpr = MipsMCExpr::create(Spec, Expr, *Ctx);
+    const auto *MipsExpr = MCSpecifierExpr::create(Expr, Spec, *Ctx);
     OutMI.addOperand(MCOperand::createExpr(MipsExpr));
   } else if (MI->getNumOperands() == 4) {
     // Create %lo($tgt-$baltgt) or %hi($tgt-$baltgt).

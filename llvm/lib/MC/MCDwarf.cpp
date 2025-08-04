@@ -120,9 +120,8 @@ static inline const MCExpr *makeEndMinusStartExpr(MCContext &Ctx,
                                                   const MCSymbol &Start,
                                                   const MCSymbol &End,
                                                   int IntVal) {
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *Res = MCSymbolRefExpr::create(&End, Variant, Ctx);
-  const MCExpr *RHS = MCSymbolRefExpr::create(&Start, Variant, Ctx);
+  const MCExpr *Res = MCSymbolRefExpr::create(&End, Ctx);
+  const MCExpr *RHS = MCSymbolRefExpr::create(&Start, Ctx);
   const MCExpr *Res1 = MCBinaryExpr::create(MCBinaryExpr::Sub, Res, RHS, Ctx);
   const MCExpr *Res2 = MCConstantExpr::create(IntVal, Ctx);
   const MCExpr *Res3 = MCBinaryExpr::create(MCBinaryExpr::Sub, Res1, Res2, Ctx);
@@ -134,8 +133,7 @@ static inline const MCExpr *makeEndMinusStartExpr(MCContext &Ctx,
 //
 static inline const MCExpr *
 makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
-  MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
-  const MCExpr *LHS = MCSymbolRefExpr::create(&Start, Variant, Ctx);
+  const MCExpr *LHS = MCSymbolRefExpr::create(&Start, Ctx);
   const MCExpr *RHS = MCConstantExpr::create(IntVal, Ctx);
   const MCExpr *Res = MCBinaryExpr::create(MCBinaryExpr::Add, LHS, RHS, Ctx);
   return Res;
@@ -449,10 +447,17 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
         StringRef(reinterpret_cast<const char *>(Cksum.data()), Cksum.size()));
   }
   if (HasAnySource) {
+    // From https://dwarfstd.org/issues/180201.1.html
+    // * The value is an empty null-terminated string if no source is available
+    StringRef Source = DwarfFile.Source.value_or(StringRef());
+    // * If the source is available but is an empty file then the value is a
+    // null-terminated single "\n".
+    if (DwarfFile.Source && DwarfFile.Source->empty())
+      Source = "\n";
     if (LineStr)
-      LineStr->emitRef(MCOS, DwarfFile.Source.value_or(StringRef()));
+      LineStr->emitRef(MCOS, Source);
     else {
-      MCOS->emitBytes(DwarfFile.Source.value_or(StringRef())); // Source and...
+      MCOS->emitBytes(Source);             // Source and...
       MCOS->emitBytes(StringRef("\0", 1)); // its null terminator.
     }
   }
@@ -1662,11 +1667,8 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
 
     if (VRs.size() == 1 && VRs[0].SizeInBits % 8 == 0) {
       encodeDwarfRegisterLocation(VRs[0].Register, OSBlock);
-      if (EmitHeterogeneousDwarfAsUserOps) {
-        OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-                << uint8_t(dwarf::DW_OP_LLVM_USER_offset_uconst);
-      } else
-        OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
+      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+              << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
       encodeULEB128((VRs[0].SizeInBits / 8) * VRs[0].Lane, OSBlock);
     } else {
       for (const auto &VR : VRs) {
@@ -1706,25 +1708,16 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     raw_svector_ostream OSBlock(Block);
     encodeDwarfRegisterLocation(Instr.getRegister(), OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_swap);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_offset_uconst);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_offset_uconst);
     encodeULEB128(Instr.getOffset(), OSBlock);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_call_frame_entry_reg);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
     encodeULEB128(Fields.MaskRegister, OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_deref_size);
     OSBlock << uint8_t(Fields.MaskRegisterSizeInBits / 8);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_select_bit_piece);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
     encodeULEB128(Fields.RegisterSizeInBits, OSBlock);
     encodeULEB128(Fields.MaskRegisterSizeInBits, OSBlock);
 
@@ -1753,19 +1746,13 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     raw_svector_ostream OSBlock(Block);
     encodeDwarfRegisterLocation(Instr.getRegister(), OSBlock);
     encodeDwarfRegisterLocation(Fields.SpillRegister, OSBlock);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_call_frame_entry_reg);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_call_frame_entry_reg);
     encodeULEB128(Fields.MaskRegister, OSBlock);
     OSBlock << uint8_t(dwarf::DW_OP_deref_size)
             << uint8_t(Fields.MaskRegisterSizeInBits / 8);
-    if (EmitHeterogeneousDwarfAsUserOps)
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
-              << uint8_t(dwarf::DW_OP_LLVM_USER_select_bit_piece);
-    else
-      OSBlock << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
+    OSBlock << uint8_t(dwarf::DW_OP_LLVM_user)
+            << uint8_t(dwarf::DW_OP_LLVM_select_bit_piece);
     encodeULEB128(Fields.SpillRegisterLaneSizeInBits, OSBlock);
     encodeULEB128(Fields.MaskRegisterSizeInBits, OSBlock);
 
@@ -2131,7 +2118,7 @@ struct CIEKey {
   unsigned LsdaEncoding = -1;
   bool IsSignalFrame = false;
   bool IsSimple = false;
-  unsigned RAReg = static_cast<unsigned>(UINT_MAX);
+  unsigned RAReg = UINT_MAX;
   bool IsBKeyFrame = false;
   bool IsMTETaggedFrame = false;
 };

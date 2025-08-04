@@ -97,7 +97,7 @@ void DescriptorStorage<COPY_VALUES>::resize(size_type newCapacity) {
   // Avoid passing a null pointer, since it would result in an undefined
   // behavior.
   if (data_ != nullptr) {
-    memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
+    Fortran::runtime::memcpy(newData, data_, capacity_ * sizeof(Descriptor *));
     FreeMemory(data_);
   }
   data_ = newData;

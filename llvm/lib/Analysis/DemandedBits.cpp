@@ -46,8 +46,7 @@ using namespace llvm::PatternMatch;
 #define DEBUG_TYPE "demanded-bits"
 
 static bool isAlwaysLive(Instruction *I) {
-  return I->isTerminator() || isa<DbgInfoIntrinsic>(I) || I->isEHPad() ||
-         I->mayHaveSideEffects();
+  return I->isTerminator() || I->isEHPad() || I->mayHaveSideEffects();
 }
 
 void DemandedBits::determineLiveOperandBits(

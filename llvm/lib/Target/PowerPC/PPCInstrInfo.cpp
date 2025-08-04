@@ -1926,7 +1926,7 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
   } else if (PPC::DMRROWpRCRegClass.hasSubClassEq(RC)) {
     llvm_unreachable("TODO: Implement spill DMRROWp regclass!");
   } else if (PPC::DMRpRCRegClass.hasSubClassEq(RC)) {
-    llvm_unreachable("TODO: Implement spill DMRp regclass!");
+    OpcodeIndex = SOK_DMRpSpill;
   } else if (PPC::DMRRCRegClass.hasSubClassEq(RC)) {
     OpcodeIndex = SOK_DMRSpill;
   } else {

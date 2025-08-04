@@ -341,9 +341,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
       new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
   FixupDiagPrefixExeName(DiagClient, ProgName);
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  DiagnosticsEngine Diags(DiagnosticIDs::create(), *DiagOpts, DiagClient);
 
-  DiagnosticsEngine Diags(DiagID, *DiagOpts, DiagClient);
   unsigned NumParallelJobs =
       getLastArgIntValue(ArgList, options::OPT_parallel_jobs_EQ, 1, Diags);
   UseNewCC1Process =

@@ -2925,6 +2925,19 @@ TEST_P(ASTMatchersTest, IsBitField) {
                          fieldDecl(isBitField(), hasName("b"))));
   EXPECT_TRUE(matches("struct C { int a : 2; int b : 4; };",
                       fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  if (GetParam().isCXX()) {
+    // This test verifies 2 things:
+    // (1) That templates work correctly.
+    // (2) That the matcher does not crash on template-dependent bit widths.
+    EXPECT_TRUE(matches("template<int N> "
+                        "struct C { "
+                        "explicit C(bool x) : a(x) { } "
+                        "int a : N; "
+                        "int b : 4; "
+                        "}; "
+                        "template struct C<2>;",
+                        fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+  }
 }
 
 TEST_P(ASTMatchersTest, HasInClassInitializer) {

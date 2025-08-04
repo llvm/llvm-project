@@ -1,6 +1,6 @@
 ! REQUIRES: openmp_runtime
 
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags  -fopenmp-version=50
 ! OpenMP Version 5.0
 ! 2.11.3 allocate Directive
 ! A variable that is part of another variable (as an array or
@@ -18,7 +18,6 @@ use omp_lib
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the ALLOCATE directive
   !$omp allocate(my_var%array)
 
-  !WARNING: OpenMP directive ALLOCATE has been deprecated, please use ALLOCATORS instead.
   !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear on the ALLOCATE directive
   !$omp allocate(darray, my_var%array) allocator(omp_default_mem_alloc)
     allocate ( darray(a, b) )
