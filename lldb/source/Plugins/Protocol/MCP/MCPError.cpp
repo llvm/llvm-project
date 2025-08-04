@@ -25,8 +25,8 @@ std::error_code MCPError::convertToErrorCode() const {
   return llvm::inconvertibleErrorCode();
 }
 
-protocol::Error MCPError::toProtcolError() const {
-  protocol::Error error;
+lldb_protocol::mcp::Error MCPError::toProtcolError() const {
+  lldb_protocol::mcp::Error error;
   error.error.code = m_error_code;
   error.error.message = m_message;
   return error;
