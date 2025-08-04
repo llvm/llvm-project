@@ -819,6 +819,7 @@ For an int eq predicate ``ICMP_EQ``, the syntax is:
 .. TODO: Describe the syntax of the metadata machine operands, and the
    instructions debug location attribute.
 .. TODO: Describe the syntax of the register live out machine operands.
+.. TODO: Describe the syntax of the lanemask machine operands.
 .. TODO: Describe the syntax of the machine memory operands.
 
 Comments

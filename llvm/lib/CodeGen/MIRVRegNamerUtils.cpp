@@ -106,6 +106,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     case MachineOperand::MO_ExternalSymbol:
     case MachineOperand::MO_GlobalAddress:
     case MachineOperand::MO_BlockAddress:
+    case MachineOperand::MO_LaneMask:
     case MachineOperand::MO_RegisterMask:
     case MachineOperand::MO_RegisterLiveOut:
     case MachineOperand::MO_Metadata:
