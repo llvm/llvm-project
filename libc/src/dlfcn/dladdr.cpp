@@ -14,6 +14,6 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // TODO: https:// github.com/llvm/llvm-project/issues/97929
-LLVM_LIBC_FUNCTION(int, dladdr, (const void *, DL_info *)) { return -1; }
+LLVM_LIBC_FUNCTION(int, dladdr, (const void *, Dl_info *)) { return -1; }
 
 } // namespace LIBC_NAMESPACE_DECL

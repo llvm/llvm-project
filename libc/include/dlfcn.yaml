@@ -30,7 +30,7 @@ macros:
       - gnu
     macro_value: "0x01000"
 types:
-  - type_name: DL_info
+  - type_name: Dl_info
 functions:
   - name: dlclose
     standards:
@@ -63,4 +63,4 @@ functions:
     return_type: int
     arguments:
       - type: const void *
-      - type: DL_info *
+      - type: Dl_info *

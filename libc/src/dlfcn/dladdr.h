@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-int dladdr(const void *, DL_info *);
+int dladdr(const void *, Dl_info *);
 
 } // namespace LIBC_NAMESPACE_DECL
 
