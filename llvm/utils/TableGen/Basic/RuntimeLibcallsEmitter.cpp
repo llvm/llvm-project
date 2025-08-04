@@ -356,7 +356,8 @@ const uint16_t RTLIB::RuntimeLibcallsInfo::RuntimeLibcallNameOffsetTable[] = {
 void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     raw_ostream &OS) const {
   OS << "void llvm::RTLIB::RuntimeLibcallsInfo::setTargetRuntimeLibcallSets("
-        "const llvm::Triple &TT, FloatABI::ABIType FloatABI, EABI EABIVersion, "
+        "const llvm::Triple &TT, ExceptionHandling ExceptionModel, "
+        "FloatABI::ABIType FloatABI, EABI EABIVersion, "
         "StringRef ABIName) {\n"
         "  struct LibcallImplPair {\n"
         "    RTLIB::Libcall Func;\n"
