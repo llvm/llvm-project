@@ -2189,7 +2189,7 @@ void MachineInstr::clearRegisterKills(Register Reg,
     }
   };
 
-  if (Type != AllInBundle || !isBundled() || isBundledWithPred())
+  if (Type == IgnoreBundle || !isBundled() || isBundledWithPred())
     clearKills(operands());
   else
     clearKills(mi_bundle_ops(*this));
