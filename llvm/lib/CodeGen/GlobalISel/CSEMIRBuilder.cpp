@@ -95,7 +95,7 @@ void CSEMIRBuilder::profileSrcOp(const SrcOp &Op,
                                  GISelInstProfileBuilder &B) const {
   switch (Op.getSrcOpKind()) {
   case SrcOp::SrcType::Ty_Imm:
-    B.addNodeIDImmediate(static_cast<int64_t>(Op.getImm()));
+    B.addNodeIDImmediate(Op.getImm());
     break;
   case SrcOp::SrcType::Ty_Predicate:
     B.addNodeIDImmediate(static_cast<int64_t>(Op.getPredicate()));
