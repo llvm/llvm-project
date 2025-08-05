@@ -20,6 +20,10 @@ mlir_tablegen(CIROpsAttributes.h.inc -gen-attrdef-decls)
 mlir_tablegen(CIROpsAttributes.cpp.inc -gen-attrdef-defs)
 add_public_tablegen_target(MLIRCIREnumsGen)
 
+clang_tablegen(CIRBuiltinsLowering.inc -gen-cir-builtins-lowering
+               SOURCE CIROps.td
+               TARGET CIRBuiltinsLowering)
+
 set(LLVM_TARGET_DEFINITIONS CIRTypeConstraints.td)
 mlir_tablegen(CIRTypeConstraints.h.inc -gen-type-constraint-decls)
 mlir_tablegen(CIRTypeConstraints.cpp.inc -gen-type-constraint-defs)
