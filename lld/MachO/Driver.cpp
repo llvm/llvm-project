@@ -1640,14 +1640,12 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // path. Hence we've picked a reasonably large number here.
     SmallString<1024> expanded;
     // Expand "." into the current working directory.
-    if (config->osoPrefix == ".") {
-      if (!fs::current_path(expanded)) {
-        // Note: LD64 expands "." to be `<current_dir>/
-        // (ie., it has a slash suffix) whereas current_path() doesn't.
-        // So we have to append '/' to be consistent because this is
-        // meaningful for our text based stripping.
-        expanded += sys::path::get_separator();
-      }
+    if (config->osoPrefix == "." && !fs::current_path(expanded)) {
+      // Note: LD64 expands "." to be `<current_dir>/
+      // (ie., it has a slash suffix) whereas current_path() doesn't.
+      // So we have to append '/' to be consistent because this is
+      // meaningful for our text based stripping.
+      expanded += sys::path::get_separator();
     } else {
       expanded = config->osoPrefix;
     }
