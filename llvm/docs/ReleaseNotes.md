@@ -326,6 +326,9 @@ Changes to LLDB
   RISC-V code with `disassemble`'s `--byte` option.
 * LLDB added native support for the Model Context Protocol  (MCP). An MCP
   server can be started with the `protocol-server start MCP` command.
+* On AArch64 Linux, LLDB will now show the state of the `STORE_ONLY` field of
+  `mte_ctrl`. This will only be shown on hardware that has the
+  `FEAT_MTE_STORE_ONLY` architecture feature.
 
 
 ### Changes to lldb-dap
