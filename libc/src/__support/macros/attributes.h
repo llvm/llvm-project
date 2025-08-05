@@ -28,7 +28,16 @@
 #define LIBC_INLINE_ASM __asm__ __volatile__
 #define LIBC_UNUSED __attribute__((unused))
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
+// Uses the platform specific specialization
+#define LIBC_THREAD_MODE_PLATFORM 0
+
+// Mutex guards nothing, used in single-threaded implementations
+#define LIBC_THREAD_MODE_SINGLE 1
+
+// Vendor provides implementation
+#define LIBC_THREAD_MODE_EXTERNAL 2
+
+#if LIBC_THREAD_MODE == LIBC_THREAD_MODE_SINGLE
 #define LIBC_THREAD_LOCAL
 #else
 #define LIBC_THREAD_LOCAL thread_local
