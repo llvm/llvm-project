@@ -402,6 +402,16 @@ public:
                   mlir::ConversionPatternRewriter &) const override;
 };
 
+class CIRToLLVMUnreachableOpLowering
+    : public mlir::OpConversionPattern<cir::UnreachableOp> {
+public:
+  using mlir::OpConversionPattern<cir::UnreachableOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::UnreachableOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
 class CIRToLLVMTrapOpLowering : public mlir::OpConversionPattern<cir::TrapOp> {
 public:
   using mlir::OpConversionPattern<cir::TrapOp>::OpConversionPattern;
