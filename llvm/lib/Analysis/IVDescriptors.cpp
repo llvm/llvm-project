@@ -1314,8 +1314,6 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
 
     if (Cur->getOpcode() == Instruction::Sub && getOpcode() == Instruction::Add)
       return true;
-    if (Cur->getOpcode() == Instruction::Add && getOpcode() == Instruction::Sub)
-      return true;
 
     return Cur->getOpcode() == getOpcode();
   };

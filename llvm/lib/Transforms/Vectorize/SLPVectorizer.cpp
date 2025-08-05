@@ -23664,8 +23664,9 @@ private:
                 IsSigned);
           Value *Scale = ConstantVector::getSplat(
               EC, ConstantInt::get(DestTy->getScalarType(), Cnt));
-          LLVM_DEBUG(dbgs() << "SLP: " << (RdxKind == RecurKind::Add ? "Add" : "Sub") << " (to-mul) " << Cnt << "of " << Vec
-                            << ". (HorRdx)\n");
+          LLVM_DEBUG(dbgs()
+                     << "SLP: " << (RdxKind == RecurKind::Add ? "Add" : "Sub")
+                     << " (to-mul) " << Cnt << "of " << Vec << ". (HorRdx)\n");
           ++NumVectorInstructions;
           Vec = Builder.CreateMul(Vec, Scale);
           break;
@@ -23809,8 +23810,10 @@ private:
     case RecurKind::Add: {
       // res = mul vv, n
       Value *Scale = ConstantInt::get(VectorizedValue->getType(), Cnt);
-      LLVM_DEBUG(dbgs() << "SLP: " << (RdxKind == RecurKind::Add ? "Add" : "Sub") << " (to-mul) " << Cnt << "of "
-                        << VectorizedValue << ". (HorRdx)\n");
+      LLVM_DEBUG(dbgs() << "SLP: "
+                        << (RdxKind == RecurKind::Add ? "Add" : "Sub")
+                        << " (to-mul) " << Cnt << "of " << VectorizedValue
+                        << ". (HorRdx)\n");
       return Builder.CreateMul(VectorizedValue, Scale);
     }
     case RecurKind::Xor: {
@@ -23885,8 +23888,10 @@ private:
         Vals.push_back(ConstantInt::get(V->getType(), Cnt, /*IsSigned=*/false));
       }
       auto *Scale = ConstantVector::get(Vals);
-      LLVM_DEBUG(dbgs() << "SLP: " << (RdxKind == RecurKind::Add ? "Add" : "Sub") << " (to-mul) " << Scale << "of "
-                        << VectorizedValue << ". (HorRdx)\n");
+      LLVM_DEBUG(dbgs() << "SLP: "
+                        << (RdxKind == RecurKind::Add ? "Add" : "Sub")
+                        << " (to-mul) " << Scale << "of " << VectorizedValue
+                        << ". (HorRdx)\n");
       return Builder.CreateMul(VectorizedValue, Scale);
     }
     case RecurKind::And:
