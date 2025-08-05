@@ -174,9 +174,8 @@ mlir::Value fir::runtime::genMalloc(fir::FirOpBuilder &builder,
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(Malloc)>(loc, builder);
   auto argTy = runtimeFunc.getArgumentTypes()[0];
-  return builder
-      .create<fir::CallOp>(loc, runtimeFunc,
-                           builder.createConvert(loc, argTy, size))
+  return fir::CallOp::create(builder, loc, runtimeFunc,
+                             builder.createConvert(loc, argTy, size))
       .getResult(0);
 }
 
