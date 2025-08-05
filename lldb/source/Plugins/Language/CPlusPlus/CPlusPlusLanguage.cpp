@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
 
+#include "lldb/Core/DemangledNameInfo.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -271,8 +272,25 @@ GetDemangledBasename(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  return demangled_name.slice(info.BasenameRange.first,
-                              info.BasenameRange.second);
+  return CPlusPlusLanguage::GetDemangledBasename(demangled_name, info);
+}
+
+llvm::StringRef
+CPlusPlusLanguage::GetDemangledBasename(llvm::StringRef demangled,
+                                        const DemangledNameInfo &info) {
+  assert(info.hasBasename());
+  return demangled.slice(info.BasenameRange.first, info.BasenameRange.second);
+}
+
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledTemplateArguments(
+    llvm::StringRef demangled, const DemangledNameInfo &info) {
+  if (!info.hasTemplateArguments())
+    return llvm::createStringError(
+        "Template arguments range for '%s' is invalid.", demangled.data());
+
+  return demangled.slice(info.TemplateArgumentsRange.first,
+                         info.TemplateArgumentsRange.second);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -283,12 +301,17 @@ GetDemangledTemplateArguments(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasTemplateArguments())
-    return llvm::createStringError(
-        "Template arguments range for '%s' is invalid.", demangled_name.data());
+  return CPlusPlusLanguage::GetDemangledTemplateArguments(demangled_name, info);
+}
 
-  return demangled_name.slice(info.TemplateArgumentsRange.first,
-                              info.TemplateArgumentsRange.second);
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledReturnTypeLHS(llvm::StringRef demangled,
+                                             const DemangledNameInfo &info) {
+  if (info.ScopeRange.first >= demangled.size())
+    return llvm::createStringError(
+        "Scope range for '%s' LHS return type is invalid.", demangled.data());
+
+  return demangled.substr(0, info.ScopeRange.first);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -299,12 +322,18 @@ GetDemangledReturnTypeLHS(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.ScopeRange.first >= demangled_name.size())
-    return llvm::createStringError(
-        "Scope range for '%s' LHS return type is invalid.",
-        demangled_name.data());
+  return CPlusPlusLanguage::GetDemangledReturnTypeLHS(demangled_name, info);
+}
 
-  return demangled_name.substr(0, info.ScopeRange.first);
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledFunctionQualifiers(
+    llvm::StringRef demangled, const DemangledNameInfo &info) {
+  if (!info.hasQualifiers())
+    return llvm::createStringError("Qualifiers range for '%s' is invalid.",
+                                   demangled.data());
+
+  return demangled.slice(info.QualifiersRange.first,
+                         info.QualifiersRange.second);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -315,12 +344,20 @@ GetDemangledFunctionQualifiers(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasQualifiers())
-    return llvm::createStringError("Qualifiers range for '%s' is invalid.",
-                                   demangled_name.data());
+  return CPlusPlusLanguage::GetDemangledFunctionQualifiers(demangled_name,
+                                                           info);
+}
 
-  return demangled_name.slice(info.QualifiersRange.first,
-                              info.QualifiersRange.second);
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledReturnTypeRHS(llvm::StringRef demangled,
+                                             const DemangledNameInfo &info) {
+  if (info.QualifiersRange.first < info.ArgumentsRange.second)
+    return llvm::createStringError(
+        "Qualifiers range for '%s' RHS return type  is invalid.",
+        demangled.data());
+
+  return demangled.slice(info.ArgumentsRange.second,
+                         info.QualifiersRange.first);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -331,13 +368,17 @@ GetDemangledReturnTypeRHS(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.QualifiersRange.first < info.ArgumentsRange.second)
-    return llvm::createStringError(
-        "Qualifiers range for '%s' RHS return type  is invalid.",
-        demangled_name.data());
+  return CPlusPlusLanguage::GetDemangledReturnTypeRHS(demangled_name, info);
+}
 
-  return demangled_name.slice(info.ArgumentsRange.second,
-                              info.QualifiersRange.first);
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledScope(llvm::StringRef demangled,
+                                     const DemangledNameInfo &info) {
+  if (!info.hasScope())
+    return llvm::createStringError("Scope range for '%s' is invalid.",
+                                   demangled.data());
+
+  return demangled.slice(info.ScopeRange.first, info.ScopeRange.second);
 }
 
 static llvm::Expected<llvm::StringRef>
@@ -348,15 +389,16 @@ GetDemangledScope(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasScope())
-    return llvm::createStringError("Scope range for '%s' is invalid.",
-                                   demangled_name.data());
-
-  return demangled_name.slice(info.ScopeRange.first, info.ScopeRange.second);
+  return CPlusPlusLanguage::GetDemangledScope(demangled_name, info);
 }
 
 /// Handles anything printed after the FunctionEncoding ItaniumDemangle
-/// node. Most notably the DotSUffix node.
+/// node. Most notably the DotSuffix node.
+///
+/// FIXME: the suffix should also have an associated
+/// CPlusPlusLanguage::GetDemangledFunctionSuffix
+/// once we start setting the `DemangledNameInfo::SuffixRange`
+/// from inside the `TrackingOutputBuffer`.
 static llvm::Expected<llvm::StringRef>
 GetDemangledFunctionSuffix(const SymbolContext &sc) {
   auto info_or_err = GetAndValidateInfo(sc);
@@ -372,6 +414,16 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
   return demangled_name.slice(info.SuffixRange.first, info.SuffixRange.second);
 }
 
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledFunctionArguments(
+    llvm::StringRef demangled, const DemangledNameInfo &info) {
+  if (!info.hasArguments())
+    return llvm::createStringError(
+        "Function arguments range for '%s' is invalid.", demangled.data());
+
+  return demangled.slice(info.ArgumentsRange.first, info.ArgumentsRange.second);
+}
+
 static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
   assert(sc.symbol);
 
@@ -382,13 +434,19 @@ static bool PrintDemangledArgumentList(Stream &s, const SymbolContext &sc) {
                    "frame-format variable: {0}");
     return false;
   }
+
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasArguments())
+  auto args_or_err =
+      CPlusPlusLanguage::GetDemangledFunctionArguments(demangled_name, info);
+  if (!args_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Language), args_or_err.takeError(),
+                   "Failed to handle ${{function.formatted-arguments}} "
+                   "frame-format variable: {0}");
     return false;
+  }
 
-  s << demangled_name.slice(info.ArgumentsRange.first,
-                            info.ArgumentsRange.second);
+  s << *args_or_err;
 
   return true;
 }
@@ -2261,7 +2319,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     FormatEntity::Entry::Type type, Stream &s) {
   switch (type) {
   case FormatEntity::Entry::Type::FunctionScope: {
-    auto scope_or_err = GetDemangledScope(sc);
+    auto scope_or_err = ::GetDemangledScope(sc);
     if (!scope_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), scope_or_err.takeError(),
@@ -2275,7 +2333,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   }
 
   case FormatEntity::Entry::Type::FunctionBasename: {
-    auto name_or_err = GetDemangledBasename(sc);
+    auto name_or_err = ::GetDemangledBasename(sc);
     if (!name_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), name_or_err.takeError(),
@@ -2289,7 +2347,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
   }
 
   case FormatEntity::Entry::Type::FunctionTemplateArguments: {
-    auto template_args_or_err = GetDemangledTemplateArguments(sc);
+    auto template_args_or_err = ::GetDemangledTemplateArguments(sc);
     if (!template_args_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language),
                      template_args_or_err.takeError(),
@@ -2327,7 +2385,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     return true;
   }
   case FormatEntity::Entry::Type::FunctionReturnRight: {
-    auto return_rhs_or_err = GetDemangledReturnTypeRHS(sc);
+    auto return_rhs_or_err = ::GetDemangledReturnTypeRHS(sc);
     if (!return_rhs_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_rhs_or_err.takeError(),
                      "Failed to handle ${{function.return-right}} frame-format "
@@ -2340,7 +2398,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     return true;
   }
   case FormatEntity::Entry::Type::FunctionReturnLeft: {
-    auto return_lhs_or_err = GetDemangledReturnTypeLHS(sc);
+    auto return_lhs_or_err = ::GetDemangledReturnTypeLHS(sc);
     if (!return_lhs_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), return_lhs_or_err.takeError(),
                      "Failed to handle ${{function.return-left}} frame-format "
@@ -2353,7 +2411,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     return true;
   }
   case FormatEntity::Entry::Type::FunctionQualifiers: {
-    auto quals_or_err = GetDemangledFunctionQualifiers(sc);
+    auto quals_or_err = ::GetDemangledFunctionQualifiers(sc);
     if (!quals_or_err) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Language), quals_or_err.takeError(),
                      "Failed to handle ${{function.qualifiers}} frame-format "
