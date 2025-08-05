@@ -721,7 +721,7 @@ PredicateInfo::~PredicateInfo() {
   CreatedDeclarations.clear();
 
   for (Function *F : FunctionPtrs) {
-    assert(F->user_begin() == F->user_end() &&
+    assert(F->users().empty() &&
            "PredicateInfo consumer did not remove all SSA copies.");
     F->eraseFromParent();
   }

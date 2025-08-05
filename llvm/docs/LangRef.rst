@@ -26658,14 +26658,17 @@ Arguments:
 The first argument is a constant integer, which is ignored and will be removed
 in the future.
 
-The second argument is a pointer to an ``alloca`` instruction.
+The second argument is either a pointer to an ``alloca`` instruction or
+a ``poison`` value.
 
 Semantics:
 """"""""""
 
-The stack-allocated object that ``ptr`` points to is initially marked as dead.
-After '``llvm.lifetime.start``', the stack object is marked as alive and has an
-uninitialized value.
+If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
+
+Otherwise, the stack-allocated object that ``ptr`` points to is initially
+marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
+alive and has an uninitialized value.
 The stack object is marked as dead when either
 :ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
 function returns.
@@ -26699,13 +26702,16 @@ Arguments:
 The first argument is a constant integer, which is ignored and will be removed
 in the future.
 
-The second argument is a pointer to an ``alloca`` instruction.
+The second argument is either a pointer to an ``alloca`` instruction or
+a ``poison`` value.
 
 Semantics:
 """"""""""
 
-The stack-allocated object that ``ptr`` points to becomes dead after the call
-to this intrinsic.
+If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
+
+Otherwise, the stack-allocated object that ``ptr`` points to becomes dead after
+the call to this intrinsic.
 
 Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
 

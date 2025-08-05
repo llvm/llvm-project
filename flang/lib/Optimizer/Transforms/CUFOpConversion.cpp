@@ -860,10 +860,9 @@ public:
             if (auto global = symTab.lookup<fir::GlobalOp>(
                     addrOfOp.getSymbol().getRootReference().getValue())) {
               if (cuf::isRegisteredDeviceGlobal(global)) {
-                arg = rewriter
-                          .create<cuf::DeviceAddressOp>(op.getLoc(),
-                                                        addrOfOp.getType(),
-                                                        addrOfOp.getSymbol())
+                arg = cuf::DeviceAddressOp::create(rewriter, op.getLoc(),
+                                                   addrOfOp.getType(),
+                                                   addrOfOp.getSymbol())
                           .getResult();
               }
             }

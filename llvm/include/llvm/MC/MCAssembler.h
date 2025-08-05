@@ -120,6 +120,7 @@ private:
   bool relaxCVInlineLineTable(MCCVInlineLineTableFragment &DF);
   bool relaxCVDefRange(MCCVDefRangeFragment &DF);
   bool relaxFill(MCFillFragment &F);
+  bool relaxOrg(MCOrgFragment &F);
 
 public:
   /// Construct a new assembler instance.

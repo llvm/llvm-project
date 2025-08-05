@@ -345,7 +345,7 @@ void GOFFWriter::defineSymbols() {
   for (const MCSymbol &Sym : Asm.symbols()) {
     if (Sym.isTemporary())
       continue;
-    auto &Symbol = cast<MCSymbolGOFF>(Sym);
+    auto &Symbol = static_cast<const MCSymbolGOFF &>(Sym);
     if (Symbol.hasLDAttributes()) {
       Symbol.setIndex(++Ordinal);
       defineLabel(Symbol);

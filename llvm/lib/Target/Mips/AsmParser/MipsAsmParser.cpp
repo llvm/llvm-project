@@ -6654,7 +6654,7 @@ bool MipsAsmParser::searchSymbolAlias(OperandVector &Operands) {
           llvm_unreachable("Should never fail");
       }
     }
-  } else if (Sym->isUnset()) {
+  } else if (Sym->isUndefined()) {
     // If symbol is unset, it might be created in the `parseSetAssignment`
     // routine as an alias for a numeric register name.
     // Lookup in the aliases list.

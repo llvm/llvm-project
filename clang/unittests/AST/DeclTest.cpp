@@ -74,7 +74,6 @@ TEST(Decl, AsmLabelAttr) {
   StringRef Code = R"(
     struct S {
       void f() {}
-      void g() {}
     };
   )";
   auto AST =
@@ -87,11 +86,8 @@ TEST(Decl, AsmLabelAttr) {
   const auto *DeclS =
       selectFirst<CXXRecordDecl>("d", match(cxxRecordDecl().bind("d"), Ctx));
   NamedDecl *DeclF = *DeclS->method_begin();
-  NamedDecl *DeclG = *(++DeclS->method_begin());
 
-  // Attach asm labels to the decls: one literal, and one not.
-  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "foo", /*LiteralLabel=*/true));
-  DeclG->addAttr(AsmLabelAttr::Create(Ctx, "goo", /*LiteralLabel=*/false));
+  DeclF->addAttr(AsmLabelAttr::Create(Ctx, "foo"));
 
   // Mangle the decl names.
   std::string MangleF, MangleG;
@@ -99,14 +95,11 @@ TEST(Decl, AsmLabelAttr) {
       ItaniumMangleContext::create(Ctx, Diags));
   {
     llvm::raw_string_ostream OS_F(MangleF);
-    llvm::raw_string_ostream OS_G(MangleG);
     MC->mangleName(DeclF, OS_F);
-    MC->mangleName(DeclG, OS_G);
   }
 
   ASSERT_EQ(MangleF, "\x01"
                      "foo");
-  ASSERT_EQ(MangleG, "goo");
 }
 
 TEST(Decl, MangleDependentSizedArray) {

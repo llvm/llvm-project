@@ -86,7 +86,7 @@ void MCObjectStreamer::ensureHeadroom(size_t Headroom) {
 
 void MCObjectStreamer::addSpecialFragment(MCFragment *Frag) {
   assert(Frag->getKind() != MCFragment::FT_Data &&
-         "F should have a variable-size tail");
+         "Frag should have a variable-size tail");
   // Frag is not connected to FragSpace. Before modifying CurFrag with
   // addFragment(Frag), allocate an empty fragment to maintain FragSpace
   // connectivity, potentially reusing CurFrag's associated space.

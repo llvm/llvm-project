@@ -25,8 +25,11 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
-; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
-; GCN-NEXT:  ; %bb.1: ; %bb2
+; GCN-NEXT:    s_cbranch_scc0 .LBB0_1
+; GCN-NEXT:  ; %bb.3: ; %bb
+; GCN-NEXT:    s_add_pc_i64 .LBB0_2-.Lpost_addpc0
+; GCN-NEXT:  .Lpost_addpc0:
+; GCN-NEXT:  .LBB0_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
@@ -64,8 +67,8 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
-; GCN-NEXT:    s_add_pc_i64 .LBB1_2-.Lpost_addpc0
-; GCN-NEXT:  .Lpost_addpc0:
+; GCN-NEXT:    s_add_pc_i64 .LBB1_2-.Lpost_addpc1
+; GCN-NEXT:  .Lpost_addpc1:
 ; GCN-NEXT:  .LBB1_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
@@ -106,8 +109,8 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_cmp_eq_f32 s0, 0
 ; GCN-NEXT:    s_cbranch_scc0 .LBB2_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
-; GCN-NEXT:    s_add_pc_i64 .LBB2_2-.Lpost_addpc1
-; GCN-NEXT:  .Lpost_addpc1:
+; GCN-NEXT:    s_add_pc_i64 .LBB2_2-.Lpost_addpc2
+; GCN-NEXT:  .Lpost_addpc2:
 ; GCN-NEXT:  .LBB2_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:     ; 32 bytes
@@ -157,8 +160,8 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    v_cmpx_ne_u32_e32 0, v2
 ; GCN-NEXT:    s_cbranch_execnz .LBB3_1
 ; GCN-NEXT:  ; %bb.3: ; %bb
-; GCN-NEXT:    s_add_pc_i64 .LBB3_2-.Lpost_addpc2
-; GCN-NEXT:  .Lpost_addpc2:
+; GCN-NEXT:    s_add_pc_i64 .LBB3_2-.Lpost_addpc3
+; GCN-NEXT:  .Lpost_addpc3:
 ; GCN-NEXT:  .LBB3_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:     ; 32 bytes
@@ -209,8 +212,8 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_cbranch_scc0 .LBB4_2
 ; GCN-NEXT:  ; %bb.3: ; %bb2
 ; GCN-NEXT:    ; in Loop: Header=BB4_1 Depth=1
-; GCN-NEXT:    s_add_pc_i64 .LBB4_1-.Lpost_addpc3
-; GCN-NEXT:  .Lpost_addpc3:
+; GCN-NEXT:    s_add_pc_i64 .LBB4_1-.Lpost_addpc4
+; GCN-NEXT:  .Lpost_addpc4:
 ; GCN-NEXT:  .LBB4_2: ; %bb3
 ; GCN-NEXT:    s_endpgm
 bb:
@@ -242,8 +245,8 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_mov_b32 s0, -1
 ; GCN-NEXT:    s_cbranch_scc0 .LBB5_1
 ; GCN-NEXT:  ; %bb.7: ; %bb0
-; GCN-NEXT:    s_add_pc_i64 .LBB5_4-.Lpost_addpc5
-; GCN-NEXT:  .Lpost_addpc5:
+; GCN-NEXT:    s_add_pc_i64 .LBB5_4-.Lpost_addpc6
+; GCN-NEXT:  .Lpost_addpc6:
 ; GCN-NEXT:  .LBB5_1: ; %Flow
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_vccnz .LBB5_3
@@ -268,11 +271,11 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_cbranch_execnz .LBB5_5
 ; GCN-NEXT:  ; %bb.9: ; %bb3
-; GCN-NEXT:    s_add_pc_i64 .LBB5_2-.Lpost_addpc6
-; GCN-NEXT:  .Lpost_addpc6:
+; GCN-NEXT:    s_add_pc_i64 .LBB5_2-.Lpost_addpc7
+; GCN-NEXT:  .Lpost_addpc7:
 ; GCN-NEXT:  .LBB5_5: ; %bb3
-; GCN-NEXT:    s_add_pc_i64 .LBB5_3-.Lpost_addpc4
-; GCN-NEXT:  .Lpost_addpc4:
+; GCN-NEXT:    s_add_pc_i64 .LBB5_3-.Lpost_addpc5
+; GCN-NEXT:  .Lpost_addpc5:
 bb0:
   %tmp = icmp ne i32 %arg1, 0
   br i1 %tmp, label %bb2, label %bb3
@@ -310,8 +313,8 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ; GCN-NEXT:    s_cbranch_vccz .LBB6_2
 ; GCN-NEXT:  ; %bb.3: ; %loop
 ; GCN-NEXT:    ; in Loop: Header=BB6_1 Depth=1
-; GCN-NEXT:    s_add_pc_i64 .LBB6_1-.Lpost_addpc7
-; GCN-NEXT:  .Lpost_addpc7:
+; GCN-NEXT:    s_add_pc_i64 .LBB6_1-.Lpost_addpc8
+; GCN-NEXT:  .Lpost_addpc8:
 ; GCN-NEXT:  .LBB6_2: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -350,8 +353,8 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_vccz .LBB7_3
 ; GCN-NEXT:  ; %bb.5: ; %Flow
-; GCN-NEXT:    s_add_pc_i64 .LBB7_4-.Lpost_addpc8
-; GCN-NEXT:  .Lpost_addpc8:
+; GCN-NEXT:    s_add_pc_i64 .LBB7_4-.Lpost_addpc9
+; GCN-NEXT:  .Lpost_addpc9:
 ; GCN-NEXT:  .LBB7_3: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
@@ -406,8 +409,8 @@ define amdgpu_kernel void @uniform_inside_divergent(ptr addrspace(1) %out, i32 %
 ; GCN-NEXT:    v_cmpx_gt_u32_e32 16, v0
 ; GCN-NEXT:    s_cbranch_execnz .LBB8_1
 ; GCN-NEXT:  ; %bb.4: ; %entry
-; GCN-NEXT:    s_add_pc_i64 .LBB8_3-.Lpost_addpc9
-; GCN-NEXT:  .Lpost_addpc9:
+; GCN-NEXT:    s_add_pc_i64 .LBB8_3-.Lpost_addpc10
+; GCN-NEXT:  .Lpost_addpc10:
 ; GCN-NEXT:  .LBB8_1: ; %if
 ; GCN-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
@@ -465,8 +468,8 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:    s_and_not1_saveexec_b32 s0, s0
 ; GCN-NEXT:    s_cbranch_execnz .LBB9_3
 ; GCN-NEXT:  ; %bb.6: ; %Flow1
-; GCN-NEXT:    s_add_pc_i64 .LBB9_5-.Lpost_addpc10
-; GCN-NEXT:  .Lpost_addpc10:
+; GCN-NEXT:    s_add_pc_i64 .LBB9_5-.Lpost_addpc11
+; GCN-NEXT:  .Lpost_addpc11:
 ; GCN-NEXT:  .LBB9_3: ; %loop.preheader
 ; GCN-NEXT:    s_mov_b32 vcc_lo, 0
 ; GCN-NEXT:  .LBB9_4: ; %loop
@@ -484,8 +487,8 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:    s_cbranch_vccnz .LBB9_5
 ; GCN-NEXT:  ; %bb.8: ; %loop
 ; GCN-NEXT:    ; in Loop: Header=BB9_4 Depth=1
-; GCN-NEXT:    s_add_pc_i64 .LBB9_4-.Lpost_addpc11
-; GCN-NEXT:  .Lpost_addpc11:
+; GCN-NEXT:    s_add_pc_i64 .LBB9_4-.Lpost_addpc12
+; GCN-NEXT:  .Lpost_addpc12:
 ; GCN-NEXT:  .LBB9_5: ; %UnifiedReturnBlock
 ; GCN-NEXT:    s_endpgm
 entry:
@@ -528,20 +531,20 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_cmp_lt_i32 s3, 6
 ; GCN-NEXT:    s_cbranch_scc0 .LBB10_1
 ; GCN-NEXT:  ; %bb.10: ; %bb
-; GCN-NEXT:    s_add_pc_i64 .LBB10_4-.Lpost_addpc13
-; GCN-NEXT:  .Lpost_addpc13:
+; GCN-NEXT:    s_add_pc_i64 .LBB10_4-.Lpost_addpc14
+; GCN-NEXT:  .Lpost_addpc14:
 ; GCN-NEXT:  .LBB10_1: ; %Flow
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s7
 ; GCN-NEXT:    s_cbranch_vccnz .LBB10_2
 ; GCN-NEXT:  ; %bb.12: ; %Flow
-; GCN-NEXT:    s_add_pc_i64 .LBB10_5-.Lpost_addpc14
-; GCN-NEXT:  .Lpost_addpc14:
+; GCN-NEXT:    s_add_pc_i64 .LBB10_5-.Lpost_addpc15
+; GCN-NEXT:  .Lpost_addpc15:
 ; GCN-NEXT:  .LBB10_2: ; %Flow5
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_vccz .LBB10_3
 ; GCN-NEXT:  ; %bb.14: ; %Flow5
-; GCN-NEXT:    s_add_pc_i64 .LBB10_6-.Lpost_addpc15
-; GCN-NEXT:  .Lpost_addpc15:
+; GCN-NEXT:    s_add_pc_i64 .LBB10_6-.Lpost_addpc16
+; GCN-NEXT:  .Lpost_addpc16:
 ; GCN-NEXT:  .LBB10_3: ; %bb14
 ; GCN-NEXT:    s_cmp_lt_i32 s1, 9
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
@@ -553,8 +556,8 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GCN-NEXT:  ; %bb.8: ; %bb14
-; GCN-NEXT:    s_add_pc_i64 .LBB10_7-.Lpost_addpc12
-; GCN-NEXT:  .Lpost_addpc12:
+; GCN-NEXT:    s_add_pc_i64 .LBB10_7-.Lpost_addpc13
+; GCN-NEXT:  .Lpost_addpc13:
 ; GCN-NEXT:  .LBB10_4: ; %bb13
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
@@ -565,8 +568,8 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_sleep 0
 ; GCN-NEXT:    s_cbranch_execz .LBB10_5
 ; GCN-NEXT:  ; %bb.16: ; %bb13
-; GCN-NEXT:    s_add_pc_i64 .LBB10_2-.Lpost_addpc16
-; GCN-NEXT:  .Lpost_addpc16:
+; GCN-NEXT:    s_add_pc_i64 .LBB10_2-.Lpost_addpc17
+; GCN-NEXT:  .Lpost_addpc17:
 ; GCN-NEXT:  .LBB10_5: ; %bb9
 ; GCN-NEXT:    s_cmp_lt_i32 s3, 11
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
@@ -577,8 +580,8 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_vccnz .LBB10_6
 ; GCN-NEXT:  ; %bb.18: ; %bb9
-; GCN-NEXT:    s_add_pc_i64 .LBB10_3-.Lpost_addpc17
-; GCN-NEXT:  .Lpost_addpc17:
+; GCN-NEXT:    s_add_pc_i64 .LBB10_3-.Lpost_addpc18
+; GCN-NEXT:  .Lpost_addpc18:
 ; GCN-NEXT:  .LBB10_6:
 ; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:  .LBB10_7: ; %bb19
