@@ -6247,6 +6247,30 @@ GetCPUTypesFromHost(nub_process_t pid) {
   return {cputype, cpusubtype};
 }
 
+#if !__has_include(<os/security_config.h>) // macOS 26.1
+extern "C" {
+using os_security_config_t = uint64_t;
+#define OS_SECURITY_CONFIG_MTE 0x4
+
+API_AVAILABLE(macos(26.0), ios(26.0), tvos(26.0), watchos(26.0), visionos(26.0),
+              driverkit(25.0))
+OS_EXPORT OS_NOTHROW OS_NONNULL_ALL int
+os_security_config_get_for_proc(pid_t pid, os_security_config_t *config);
+}
+#endif
+static bool ProcessRunningWithMemoryTagging(pid_t pid) {
+  if (__builtin_available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0,
+                          visionOS 26.0, driverkit 25.0, *)) {
+    os_security_config_t config;
+    int ret = ::os_security_config_get_for_proc(pid, &config);
+    if (ret != 0)
+      return false;
+
+    return (config & OS_SECURITY_CONFIG_MTE);
+  }
+  return false;
+}
+
 // Note that all numeric values returned by qProcessInfo are hex encoded,
 // including the pid and the cpu type.
 
@@ -6422,6 +6446,9 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
   }
 
   rep << "vendor:apple;";
+
+  if (ProcessRunningWithMemoryTagging(pid))
+    rep << "mte:enabled;";
 
 #if defined(__LITTLE_ENDIAN__)
   rep << "endian:little;";

@@ -172,10 +172,9 @@ nub_bool_t MachVMMemory::GetMemoryTags(task_t task, nub_addr_t address,
       (size / tag_granule) + ((size % tag_granule > 0) ? 1 : 0);
   ptr_count = std::min(ptr_count, max_ptr_count);
 
-  auto ptr_arr = std::make_unique<nub_addr_t[]>(ptr_count);
-  for (size_t i = 0; i < ptr_count; i++) {
+  auto ptr_arr = std::make_unique<mach_vm_offset_t[]>(ptr_count);
+  for (size_t i = 0; i < ptr_count; i++)
     ptr_arr[i] = (address + i * tag_granule);
-  }
 
   mach_msg_type_number_t ptr_count_out = ptr_count;
   m_err = ::mach_vm_update_pointers_with_remote_tags(
