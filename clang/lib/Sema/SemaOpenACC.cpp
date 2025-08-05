@@ -2575,7 +2575,8 @@ SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
 }
 
-VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
+VarDecl *SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
+                                       const Expr *VarExpr) {
   // Strip off any array subscripts/array section exprs to get to the type of
   // the variable.
   while (isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
@@ -2602,7 +2603,7 @@ VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
 
   ExprResult Init;
 
-  {
+  if (CK == OpenACCClauseKind::Private) {
     // Trap errors so we don't get weird ones here. If we can't init, we'll just
     // swallow the errors.
     Sema::TentativeAnalysisScope Trap{SemaRef};
@@ -2612,6 +2613,12 @@ VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
 
     InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
     Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
+  } else if (CK == OpenACCClauseKind::FirstPrivate) {
+    // TODO: OpenACC: Implement this to do a 'copy' operation.
+  } else if (CK == OpenACCClauseKind::Reduction) {
+    // TODO: OpenACC: Implement this for whatever reduction needs.
+  } else {
+    llvm_unreachable("Unknown clause kind in CreateInitRecipe");
   }
 
   if (Init.get()) {
