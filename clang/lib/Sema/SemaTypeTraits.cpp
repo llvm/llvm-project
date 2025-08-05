@@ -1965,6 +1965,7 @@ static std::optional<TypeTrait> StdNameToTypeTrait(StringRef Name) {
       .Case("is_assignable", TypeTrait::BTT_IsAssignable)
       .Case("is_empty", TypeTrait::UTT_IsEmpty)
       .Case("is_standard_layout", TypeTrait::UTT_IsStandardLayout)
+      .Case("is_aggregate", TypeTrait::UTT_IsAggregate)
       .Case("is_constructible", TypeTrait::TT_IsConstructible)
       .Default(std::nullopt);
 }
@@ -2595,6 +2596,11 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc, QualType T) {
+  SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
+      << T << diag::TraitName::Aggregate;
+}
+
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
   E = E->IgnoreParenImpCasts();
   if (E->containsErrors())
@@ -2626,6 +2632,9 @@ void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
     break;
   case TT_IsConstructible:
     DiagnoseNonConstructibleReason(*this, E->getBeginLoc(), Args);
+    break;
+  case UTT_IsAggregate:
+    DiagnoseNonAggregateReason(*this, E->getBeginLoc(), Args[0]);
     break;
   default:
     break;
