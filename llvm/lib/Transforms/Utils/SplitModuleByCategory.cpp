@@ -318,6 +318,6 @@ void llvm::splitModuleTransitiveFromEntryPoints(
   ModuleSplitter Splitter(std::move(M), std::move(Groups));
   while (Splitter.hasMoreSplits()) {
     ModuleDesc MD = Splitter.getNextSplit();
-    Callback(std::move(MD.releaseModule()));
+    Callback(MD.releaseModule());
   }
 }
