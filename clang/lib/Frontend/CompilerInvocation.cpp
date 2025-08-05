@@ -3944,10 +3944,10 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
   case LangOptions::ClangABI::Ver##Major:                                      \
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, #Major ".0");              \
     break;
-#include "clang/Basic/ABIVersions.def"
-
-  case LangOptions::ClangABI::Latest:
+#define ABI_VER_LATEST(Latest)                                                 \
+  case LangOptions::ClangABI::Latest:                                          \
     break;
+#include "clang/Basic/ABIVersions.def"
   }
 
   if (Opts.getSignReturnAddressScope() ==
@@ -4461,8 +4461,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   if (Major <= Major_)                                                         \
     Opts.setClangABICompat(LangOptions::ClangABI::Ver##Major_);                \
   else
+#define ABI_VER_LATEST(Latest)                                                 \
+  { /* Equivalent to latest version - do nothing */                            \
+  }
 #include "clang/Basic/ABIVersions.def"
-      {} // sub-statement of the last else branch
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();

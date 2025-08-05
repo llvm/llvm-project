@@ -188,9 +188,8 @@ public:
   enum class ClangABI {
 #define ABI_VER_MAJOR_MINOR(Major, Minor) Ver##Major##_##Minor,
 #define ABI_VER_MAJOR(Major) Ver##Major,
+#define ABI_VER_LATEST(Latest) Latest
 #include "clang/Basic/ABIVersions.def"
-
-    Latest
   };
 
   enum class CoreFoundationABI {
