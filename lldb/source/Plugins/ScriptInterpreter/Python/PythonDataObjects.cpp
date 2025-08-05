@@ -1093,40 +1093,6 @@ public:
 char SimplePythonFile::ID = 0;
 } // namespace
 
-namespace {
-class PythonBuffer {
-public:
-  PythonBuffer &operator=(const PythonBuffer &) = delete;
-  PythonBuffer(const PythonBuffer &) = delete;
-
-  static Expected<PythonBuffer> Create(PythonObject &obj,
-                                       int flags = PyBUF_SIMPLE) {
-    Py_buffer py_buffer = {};
-    PyObject_GetBuffer(obj.get(), &py_buffer, flags);
-    if (!py_buffer.obj)
-      return llvm::make_error<PythonException>();
-    return PythonBuffer(py_buffer);
-  }
-
-  PythonBuffer(PythonBuffer &&other) {
-    m_buffer = other.m_buffer;
-    other.m_buffer.obj = nullptr;
-  }
-
-  ~PythonBuffer() {
-    if (m_buffer.obj)
-      PyBuffer_Release(&m_buffer);
-  }
-
-  Py_buffer &get() { return m_buffer; }
-
-private:
-  // takes ownership of the buffer.
-  PythonBuffer(const Py_buffer &py_buffer) : m_buffer(py_buffer) {}
-  Py_buffer m_buffer;
-};
-} // namespace
-
 // Shared methods between TextPythonFile and BinaryPythonFile
 namespace {
 class PythonIOFile : public OwnedPythonFile<File> {
@@ -1220,12 +1186,12 @@ public:
       num_bytes = 0;
       return Status();
     }
-    auto pybuffer = PythonBuffer::Create(pybuffer_obj.get());
-    if (!pybuffer)
-      // Cloning since the wrapped exception may still reference the PyThread.
-      return Status::FromError(pybuffer.takeError()).Clone();
-    memcpy(buf, pybuffer.get().get().buf, pybuffer.get().get().len);
-    num_bytes = pybuffer.get().get().len;
+    PythonBytes pybytes(PyRefType::Borrowed, pybuffer_obj->get());
+    if (!pybytes)
+      return Status::FromError(llvm::make_error<PythonException>());
+    llvm::ArrayRef<uint8_t> bytes = pybytes.GetBytes();
+    memcpy(buf, bytes.begin(), bytes.size());
+    num_bytes = bytes.size();
     return Status();
   }
 };
