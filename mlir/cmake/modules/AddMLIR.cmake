@@ -622,27 +622,27 @@ endfunction(add_mlir_aggregate)
 function(add_mlir_library_install name)
   get_target_property(_install_with_toolchain ${name} MLIR_INSTALL_WITH_TOOLCHAIN)
   if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR _install_with_toolchain)
-  get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
-  install(TARGETS ${name}
-    COMPONENT ${name}
-    ${export_to_mlirtargets}
-    LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
-    # Note that CMake will create a directory like:
-    #   objects-${CMAKE_BUILD_TYPE}/obj.LibName
-    # and put object files there.
-    OBJECTS DESTINATION lib${LLVM_LIBDIR_SUFFIX}
-  )
+    get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
+    install(TARGETS ${name}
+      COMPONENT ${name}
+      ${export_to_mlirtargets}
+      LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+      ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+      RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+      # Note that CMake will create a directory like:
+      #   objects-${CMAKE_BUILD_TYPE}/obj.LibName
+      # and put object files there.
+      OBJECTS DESTINATION lib${LLVM_LIBDIR_SUFFIX}
+    )
 
-  if (NOT LLVM_ENABLE_IDE)
-    add_llvm_install_targets(install-${name}
-                            DEPENDS ${name}
-                            COMPONENT ${name})
+    if (NOT LLVM_ENABLE_IDE)
+      add_llvm_install_targets(install-${name}
+                              DEPENDS ${name}
+                              COMPONENT ${name})
+    endif()
+    set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
+    set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
   endif()
-  set_property(GLOBAL APPEND PROPERTY MLIR_ALL_LIBS ${name})
-  endif()
-  set_property(GLOBAL APPEND PROPERTY MLIR_EXPORTS ${name})
 endfunction()
 
 # Declare an mlir library which is part of the public C-API.
