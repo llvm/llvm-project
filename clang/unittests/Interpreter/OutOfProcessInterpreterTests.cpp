@@ -45,14 +45,10 @@ llvm::ExitOnError ExitOnError;
 
 namespace {
 
-class InterpreterRemoteTest : public InterpreterTestBase {
-  // TODO: Collect common variables and utility functions here
-};
-
 using Args = std::vector<const char *>;
 
 static void removePathComponent(unsigned N, llvm::SmallString<256> &Path) {
-  for (int i = 0; i < N; ++i)
+  for (unsigned i = 0; i < N; ++i)
     llvm::sys::path::remove_filename(Path);
 }
 
@@ -134,7 +130,7 @@ static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
-TEST_F(InterpreterRemoteTest, SanityWithRemoteExecution) {
+TEST_F(InterpreterTestBase, SanityWithRemoteExecution) {
   if (!HostSupportsJIT())
     GTEST_SKIP();
 
