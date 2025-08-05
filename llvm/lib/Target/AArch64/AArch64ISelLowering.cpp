@@ -8244,7 +8244,39 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  if (!Subtarget->useNewSMEABILowering() || Attrs.hasAgnosticZAInterface()) {
+  if (Subtarget->useNewSMEABILowering() && !Attrs.hasAgnosticZAInterface()) {
+    if (Subtarget->isTargetWindows() || hasInlineStackProbe(MF)) {
+      SDValue Size;
+      if (Attrs.hasZAState()) {
+        SDValue SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                                  DAG.getConstant(1, DL, MVT::i32));
+        Size = DAG.getNode(ISD::MUL, DL, MVT::i64, SVL, SVL);
+      } else if (Attrs.hasAgnosticZAInterface()) {
+        SDValue Callee = DAG.getExternalSymbol(
+            "__arm_sme_state_size", getPointerTy(DAG.getDataLayout()));
+        auto *RetTy = EVT(MVT::i64).getTypeForEVT(*DAG.getContext());
+        TargetLowering::CallLoweringInfo CLI(DAG);
+        CLI.setDebugLoc(DL).setChain(Chain).setLibCallee(
+            CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1,
+            RetTy, Callee, {});
+        std::tie(Size, Chain) = LowerCallTo(CLI);
+      }
+      if (Size) {
+        SDValue Buffer = DAG.getNode(
+            ISD::DYNAMIC_STACKALLOC, DL, DAG.getVTList(MVT::i64, MVT::Other),
+            {Chain, Size, DAG.getConstant(1, DL, MVT::i64)});
+        Chain = Buffer.getValue(1);
+
+        Register BufferPtr =
+            MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+        Chain = DAG.getCopyToReg(Chain, DL, BufferPtr, Buffer);
+        Chain = DAG.getNode(AArch64ISD::SME_STATE_ALLOC, DL,
+                            DAG.getVTList(MVT::Other), Chain);
+        FuncInfo->setEarlyAllocSMESaveBuffer(BufferPtr);
+        MFI.CreateVariableSizedObject(Align(16), nullptr);
+      }
+    }
+  } else {
     // Old SME ABI lowering (deprecated):
     // Create a 16 Byte TPIDR2 object. The dynamic buffer
     // will be expanded and stored in the static object later using a
