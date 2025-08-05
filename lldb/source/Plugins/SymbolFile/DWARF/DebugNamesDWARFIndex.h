@@ -122,8 +122,9 @@ private:
   std::optional<DWARFTypeUnit *>
   GetForeignTypeUnit(const DebugNames::Entry &entry) const;
 
-  bool ProcessEntry(const DebugNames::Entry &entry,
-                    llvm::function_ref<bool(DWARFDIE die)> callback);
+  IterationAction
+  ProcessEntry(const DebugNames::Entry &entry,
+               llvm::function_ref<IterationAction(DWARFDIE die)> callback);
 
   /// Returns true if `parent_entries` have identical names to `parent_names`.
   bool SameParentChain(llvm::ArrayRef<llvm::StringRef> parent_names,
