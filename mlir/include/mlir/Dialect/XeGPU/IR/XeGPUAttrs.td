@@ -390,7 +390,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
     Like LayoutAttr, SliceAttr describes data distribution among subgroups or work-items.
     However, whereas LayoutAttr requires the data to have the same rank as the attribute,
     SliceAttr permits the data to have a lower rank. In this case, compute units in the
-    specified dimensions share the data, provided that the remaining ranks match the data
+    specified dimensions (given by `$dims`) share the data, provided that the remaining ranks match the data
     rank. SliceAttr is commonly used by operations such as vector.multi_reduction and
     vector.broadcast.
 
