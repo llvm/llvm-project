@@ -587,28 +587,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     }
   }
 
-  // In EABI, these functions have an __aeabi_ prefix, but in GNUEABI they have
-  // a __gnu_ prefix (which is the default).
-  if (TT.isTargetAEABI()) {
-    // FIXME: This does not depend on the subtarget and should go directly into
-    // RuntimeLibcalls. This is only here because of missing support for setting
-    // the calling convention of an implementation.
-    static const struct {
-      const RTLIB::Libcall Op;
-      const RTLIB::LibcallImpl Impl;
-    } LibraryCalls[] = {
-        {RTLIB::FPROUND_F32_F16, RTLIB::__aeabi_f2h},
-        {RTLIB::FPEXT_F16_F32, RTLIB::__aeabi_h2f},
-    };
-
-    for (const auto &LC : LibraryCalls) {
-      setLibcallImpl(LC.Op, LC.Impl);
-    }
-  } else if (!TT.isOSBinFormatMachO()) {
-    setLibcallImpl(RTLIB::FPROUND_F32_F16, RTLIB::__gnu_f2h_ieee);
-    setLibcallImpl(RTLIB::FPEXT_F16_F32, RTLIB::__gnu_h2f_ieee);
-  }
-
   if (Subtarget->isThumb1Only())
     addRegisterClass(MVT::i32, &ARM::tGPRRegClass);
   else
