@@ -624,8 +624,15 @@ namespace {
       CallArgList Args;
       Args.add(RValue::get(Arg),
                CGF.getContext().getPointerType(Var.getType()));
-      auto Callee = CGCallee::forDirect(CleanupFn);
-      CGF.EmitCall(FnInfo, Callee, ReturnValueSlot(), Args);
+      bool HasCleanupAttr = Var.hasAttr<CleanupAttr>();
+      GlobalDecl GD = HasCleanupAttr
+                          ? (Var.getAttr<CleanupAttr>()->getFunctionDecl())
+                          : GlobalDecl();
+      SourceLocation Loc = HasCleanupAttr ? Var.getAttr<CleanupAttr>()->getLoc()
+                                          : SourceLocation();
+      auto Callee = CGCallee::forDirect(CleanupFn, CGCalleeInfo(GD));
+      CGF.EmitCall(FnInfo, Callee, ReturnValueSlot(), Args,
+                   /*callOrInvoke*/ nullptr, /*IsMustTail*/ false, Loc);
     }
   };
 } // end anonymous namespace
