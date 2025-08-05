@@ -109,7 +109,7 @@ define void @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i6
 ; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP6]] to i64
 ; TF-SCALABLE-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP8]], [[INDEX]]
 ; TF-SCALABLE-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
-; TF-SCALABLE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 1025
+; TF-SCALABLE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TF-SCALABLE-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; TF-SCALABLE:       [[MIDDLE_BLOCK]]:
 ; TF-SCALABLE-NEXT:    br label %[[FOR_END:.*]]
@@ -431,7 +431,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; TF-SCALABLE-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP15]], [[INDEX]]
 ; TF-SCALABLE-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP15]]
 ; TF-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
-; TF-SCALABLE-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 1025
+; TF-SCALABLE-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TF-SCALABLE-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; TF-SCALABLE:       [[MIDDLE_BLOCK]]:
 ; TF-SCALABLE-NEXT:    br label %[[FOR_END:.*]]
@@ -581,7 +581,7 @@ define void @uniform_load_unaligned(ptr noalias nocapture %a, ptr noalias nocapt
 ; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = zext i32 [[TMP6]] to i64
 ; TF-SCALABLE-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP8]], [[INDEX]]
 ; TF-SCALABLE-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP8]]
-; TF-SCALABLE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 1025
+; TF-SCALABLE-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TF-SCALABLE-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; TF-SCALABLE:       [[MIDDLE_BLOCK]]:
 ; TF-SCALABLE-NEXT:    br label %[[FOR_END:.*]]
@@ -718,7 +718,7 @@ define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; TF-SCALABLE-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP5]] to i64
 ; TF-SCALABLE-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP7]], [[INDEX]]
 ; TF-SCALABLE-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]
-; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 1025
+; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TF-SCALABLE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; TF-SCALABLE:       [[MIDDLE_BLOCK]]:
 ; TF-SCALABLE-NEXT:    br label %[[FOR_END:.*]]
@@ -882,7 +882,7 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; TF-SCALABLE-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP11]], [[INDEX]]
 ; TF-SCALABLE-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP11]]
 ; TF-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT2]]
-; TF-SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 1025
+; TF-SCALABLE-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TF-SCALABLE-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; TF-SCALABLE:       [[MIDDLE_BLOCK]]:
 ; TF-SCALABLE-NEXT:    br label %[[FOR_END:.*]]
@@ -1060,7 +1060,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; TF-SCALABLE-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP14]], [[INDEX]]
 ; TF-SCALABLE-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP14]]
 ; TF-SCALABLE-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; TF-SCALABLE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 1025
+; TF-SCALABLE-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TF-SCALABLE-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
 ; TF-SCALABLE:       [[MIDDLE_BLOCK]]:
 ; TF-SCALABLE-NEXT:    br label %[[FOR_END:.*]]
@@ -1208,7 +1208,7 @@ define void @uniform_store_unaligned(ptr noalias nocapture %a, ptr noalias nocap
 ; TF-SCALABLE-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP5]] to i64
 ; TF-SCALABLE-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP7]], [[INDEX]]
 ; TF-SCALABLE-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP7]]
-; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 1025
+; TF-SCALABLE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; TF-SCALABLE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP17:![0-9]+]]
 ; TF-SCALABLE:       [[MIDDLE_BLOCK]]:
 ; TF-SCALABLE-NEXT:    br label %[[FOR_END:.*]]

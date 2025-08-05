@@ -216,9 +216,10 @@ struct VPlanTransforms {
   /// variable vector lengths instead of fixed lengths. This transformation:
   ///  * Makes EVL-Phi concrete.
   //   * Removes CanonicalIV and increment.
-  ///  * Replaces fixed-length stepping (branch-on-cond CanonicalIVInc,
-  ///    VectorTripCount) with variable-length stepping (branch-on-cond
-  ///    EVLIVInc, TripCount).
+  ///  * Replaces the exit condition from
+  ///      (branch-on-cond CanonicalIVInc, VectorTripCount)
+  ///    to
+  ///      (branch-on-cond AVLNext, 0)
   static void canonicalizeEVLLoops(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd. Use \p
