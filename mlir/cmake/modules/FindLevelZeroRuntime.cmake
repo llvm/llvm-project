@@ -74,22 +74,17 @@ function(compare_versions VERSION_STR1 VERSION_STR2 OUTPUT)
     # If they differ in size pad the shorter list with 0s
     if(VL1_LEN GREATER VL2_LEN)
         math(EXPR DIFF "${VL1_LEN} - ${VL2_LEN}" OUTPUT_FORMAT DECIMAL)
-
         foreach(IDX RANGE 1 ${DIFF} 1)
             list(APPEND VL2 "0")
         endforeach()
     elseif(VL2_LEN GREATER VL2_LEN)
         math(EXPR DIFF "${VL1_LEN} - ${VL2_LEN}" OUTPUT_FORMAT DECIMAL)
-
         foreach(IDX RANGE 1 ${DIFF} 1)
             list(APPEND VL2 "0")
         endforeach()
-
         set(LEN ${VL2_LEN})
     endif()
-
     math(EXPR LEN_SUB_ONE "${LEN}-1")
-
     foreach(IDX RANGE 0 ${LEN_SUB_ONE} 1)
         list(GET VL1 ${IDX} VAL1)
         list(GET VL2 ${IDX} VAL2)
