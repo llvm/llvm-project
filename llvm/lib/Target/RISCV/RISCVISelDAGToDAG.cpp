@@ -545,18 +545,19 @@ void RISCVDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
       : IntNo == Intrinsic::riscv_sf_vsettm ? RISCV::PseudoSF_VSETTM
                                             : RISCV::PseudoSF_VSETTK;
 
-  unsigned VTypeI = RISCVVType::encodeXSfmmVType(SEW, Widen, 0);
-  SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
-  SDValue Log2SEW = CurDAG->getTargetConstant(Log2_32(SEW), DL, XLenVT);
-  SDValue TWiden = CurDAG->getTargetConstant(Widen, DL, XLenVT);
+  if (IntNo == Intrinsic::riscv_sf_vsettnt) {
+    unsigned VTypeI = RISCVVType::encodeXSfmmVType(SEW, Widen, 0);
+    SDValue VTypeIOp = CurDAG->getTargetConstant(VTypeI, DL, XLenVT);
 
-  if (IntNo == Intrinsic::riscv_sf_vsettnt)
     ReplaceNode(Node, CurDAG->getMachineNode(PseudoOpCode, DL, XLenVT,
                                              Node->getOperand(1), VTypeIOp));
-  else
+  } else {
+    SDValue Log2SEW = CurDAG->getTargetConstant(Log2_32(SEW), DL, XLenVT);
+    SDValue TWiden = CurDAG->getTargetConstant(Widen, DL, XLenVT);
     ReplaceNode(Node,
                 CurDAG->getMachineNode(PseudoOpCode, DL, XLenVT,
                                        Node->getOperand(1), Log2SEW, TWiden));
+  }
 }
 
 bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
@@ -2425,12 +2426,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
       SDValue SEWOp = CurDAG->getTargetConstant(Log2SEW, DL, XLenVT);
       SDValue TWidenOp = CurDAG->getTargetConstant(1, DL, XLenVT);
-      SmallVector<SDValue, 7> Operands = {Node->getOperand(2),
-                                          Node->getOperand(3),
-                                          Node->getOperand(4),
-                                          SEWOp,
-                                          TWidenOp,
-                                          Node->getOperand(0)};
+      SDValue Operands[] = {Node->getOperand(2),
+                            Node->getOperand(3),
+                            Node->getOperand(4),
+                            SEWOp,
+                            TWidenOp,
+                            Node->getOperand(0)};
 
       MachineSDNode *TileLoad =
           CurDAG->getMachineNode(PseudoInst, DL, Node->getVTList(), Operands);
@@ -2502,7 +2503,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       // sf.mm.f.f with sew=32, twiden=2 is invalid
       if (IntNo == Intrinsic::riscv_sf_mm_f_f && Log2SEW == 5 &&
           TWidenOp->getAsZExtVal() == 2)
-        report_fatal_error("sf.mm.f.f doesn't support (sew=32, twiden=2)");
+        reportFatalUsageError("sf.mm.f.f doesn't support (sew=32, twiden=2)");
 
       SmallVector<SDValue, 10> Operands(
           {CurDAG->getRegister(getTileReg(TileNum), XLenVT), Op1, Op2});

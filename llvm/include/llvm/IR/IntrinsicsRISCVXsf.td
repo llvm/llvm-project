@@ -190,11 +190,10 @@ let TargetPrefix = "riscv" in {
                               [ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<2>>, IntrNoMem]>;
 
   // Input: (tss, base, tn)
-  // IntrReadMem, IntrHasSideEffects does not work for pattern matching.
   class RISCVSFTileLoad
       : DefaultAttrsIntrinsic<[],
                               [llvm_anyint_ty, llvm_ptr_ty, LLVMMatchType<0>],
-                              [NoCapture<ArgIndex<1>>]>,
+                              [NoCapture<ArgIndex<1>>, IntrHasSideEffects]>,
         RISCVVIntrinsic;
 
   // Input: (tss, base, tn)

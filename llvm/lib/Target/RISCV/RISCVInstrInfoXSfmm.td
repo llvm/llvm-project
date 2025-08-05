@@ -412,8 +412,8 @@ let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 }
 
 class VPatXSfmmTileStore<string intrinsic_name,
-                               string inst_name,
-                               int log2sew> :
+                         string inst_name,
+                         int log2sew> :
   Pat<(!cast<Intrinsic>(intrinsic_name)
        (XLenVT GPR:$rs2),
        (XLenVT GPR:$rs1),
@@ -424,9 +424,9 @@ class VPatXSfmmTileStore<string intrinsic_name,
        GPR:$tn, log2sew, 1)>;
 
 class VPatXSfmmTileMove_T_V<string intrinsic_name,
-                              string inst_name,
-                              ValueType reg_type,
-                              int log2sew> :
+                            string inst_name,
+                            ValueType reg_type,
+                            int log2sew> :
   Pat<(!cast<Intrinsic>(intrinsic_name)
                     (XLenVT GPR:$rs1),
                     (reg_type VRM8:$vs2),
@@ -437,9 +437,9 @@ class VPatXSfmmTileMove_T_V<string intrinsic_name,
        GPR:$atn, log2sew, 1)>;
 
 class VPatXSfmmTileMove_V_T<string intrinsic_name,
-                              string inst_name,
-                              ValueType result_type,
-                              int log2sew> :
+                            string inst_name,
+                            ValueType result_type,
+                            int log2sew> :
   Pat<(result_type (!cast<Intrinsic>(intrinsic_name)
                     (XLenVT GPR:$rs1),
                     (XLenVT AVL:$atn))),
@@ -448,7 +448,7 @@ class VPatXSfmmTileMove_V_T<string intrinsic_name,
        GPR:$atn, log2sew, 1)>;
 
 class VPatXSfmmVTDiscard<string intrinsic_name,
-                           string inst_name> :
+                         string inst_name> :
   Pat<(!cast<Intrinsic>(intrinsic_name)),
       (!cast<Instruction>(inst_name))>;
 
