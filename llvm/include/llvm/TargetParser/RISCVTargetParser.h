@@ -150,6 +150,8 @@ inline static bool isAltFmt(unsigned VType) { return VType & 0x100; }
 
 void printVType(unsigned VType, raw_ostream &OS);
 
+void printXSfmmVType(unsigned VType, raw_ostream &OS);
+
 unsigned getSEWLMULRatio(unsigned SEW, VLMUL VLMul);
 
 std::optional<VLMUL> getSameRatioLMUL(unsigned SEW, VLMUL VLMUL, unsigned EEW);

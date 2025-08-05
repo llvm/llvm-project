@@ -78,8 +78,8 @@ def isVectorConfigInstr
                      ]>>>;
 
 // Returns true if this is a PseudoSF_VSETTNT* instructions.
-def isXSfmmVectorTNConfigInstr
-    : TIIPredicate<"isXSfmmVectorTNConfigInstr",
+def isXSfmmVectorConfigTNInstr
+    : TIIPredicate<"isXSfmmVectorConfigTNInstr",
                    MCReturnStatement<
                      CheckOpcode<[
                        PseudoSF_VSETTNT,
