@@ -405,14 +405,17 @@ namespace std {
 #  include <__config>
 
 #  if _LIBCPP_STD_VER >= 20
+#    include <__ranges/access.h>
 #    include <__ranges/all.h>
 #    include <__ranges/common_view.h>
 #    include <__ranges/concepts.h>
 #    include <__ranges/counted.h>
 #    include <__ranges/dangling.h>
+#    include <__ranges/data.h>
 #    include <__ranges/drop_view.h>
 #    include <__ranges/drop_while_view.h>
 #    include <__ranges/elements_view.h>
+#    include <__ranges/empty.h>
 #    include <__ranges/empty_view.h>
 #    include <__ranges/enable_borrowed_range.h>
 #    include <__ranges/enable_view.h>
@@ -420,9 +423,12 @@ namespace std {
 #    include <__ranges/iota_view.h>
 #    include <__ranges/join_view.h>
 #    include <__ranges/lazy_split_view.h>
+#    include <__ranges/rbegin.h>
 #    include <__ranges/ref_view.h>
+#    include <__ranges/rend.h>
 #    include <__ranges/reverse_view.h>
 #    include <__ranges/single_view.h>
+#    include <__ranges/size.h>
 #    include <__ranges/split_view.h>
 #    include <__ranges/subrange.h>
 #    include <__ranges/take_view.h>
@@ -454,7 +460,7 @@ namespace std {
 // [ranges.syn]
 #  include <compare>
 #  include <initializer_list>
-#  include <iterator> // some CPOs are provided in <iterator> per [range.access.general]
+#  include <iterator>
 
 // [tuple.helper]
 #  include <__tuple/tuple_element.h>
