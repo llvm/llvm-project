@@ -3187,7 +3187,6 @@ static SPIRVType *getLayoutType(const TargetExtType *ExtensionType,
 namespace SPIRV {
 TargetExtType *parseBuiltinTypeNameToTargetExtType(std::string TypeName,
                                                    LLVMContext &Context) {
-  assert(!TypeName.empty() && "Empty builtin type name!");
   StringRef NameWithParameters = TypeName;
 
   // Pointers-to-opaque-structs representing OpenCL types are first translated

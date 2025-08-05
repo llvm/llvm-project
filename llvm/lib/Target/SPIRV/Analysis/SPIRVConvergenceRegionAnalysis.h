@@ -73,7 +73,6 @@ public:
         Entry(std::move(CR.Entry)), Exits(std::move(CR.Exits)),
         Blocks(std::move(CR.Blocks)) {}
 
-  // Destructor.
   ~ConvergenceRegion() { releaseMemory(); }
 
   ConvergenceRegion &operator=(ConvergenceRegion &&CR) = delete;
@@ -106,8 +105,8 @@ public:
 
   ~ConvergenceRegionInfo() { releaseMemory(); }
 
-  ConvergenceRegionInfo(const ConvergenceRegionInfo &LHS) = default;
-  ConvergenceRegionInfo &operator=(const ConvergenceRegionInfo &LHS) = default;
+  ConvergenceRegionInfo(const ConvergenceRegionInfo &LHS) = delete;
+  ConvergenceRegionInfo &operator=(const ConvergenceRegionInfo &LHS) = delete;
 
   ConvergenceRegionInfo(ConvergenceRegionInfo &&LHS)
       : TopLevelRegion(LHS.TopLevelRegion) {

@@ -463,8 +463,9 @@ std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
     DemangledNameLenStart = NameSpaceStart + 11;
   }
   Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
-  bool Error = Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
-                   .getAsInteger(10, Len);
+  [[maybe_unused]] bool Error =
+      Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+          .getAsInteger(10, Len);
   assert(!Error && "Failed to parse demangled name length");
   return Name.substr(Start, Len).str();
 }

@@ -474,9 +474,8 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
   }
   if (Type->getOpcode() == SPIRV::OpTypeFloat) {
     SPIRVType *SpvBaseType = getOrCreateSPIRVFloatType(BitWidth, I, TII);
-    assert(isa<ConstantFP>(Val) && "Expected ConstantFP for OpTypeFloat");
-    return getOrCreateConstFP(dyn_cast<ConstantFP>(Val)->getValue(), I,
-                              SpvBaseType, TII, ZeroAsNull);
+    return getOrCreateConstFP(cast<ConstantFP>(Val)->getValue(), I, SpvBaseType,
+                              TII, ZeroAsNull);
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);

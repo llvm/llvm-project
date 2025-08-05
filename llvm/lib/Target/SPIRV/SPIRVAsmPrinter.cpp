@@ -592,7 +592,8 @@ void SPIRVAsmPrinter::outputAnnotations(const Module &M) {
           cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
 
       StringRef AnnotationString;
-      bool Success = getConstantStringInfo(GV, AnnotationString);
+      [[maybe_unused]] bool Success =
+          getConstantStringInfo(GV, AnnotationString);
       assert(Success && "Failed to get annotation string");
       MCInst Inst;
       Inst.setOpcode(SPIRV::OpDecorate);
