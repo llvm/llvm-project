@@ -61,33 +61,24 @@ declare void @llvm.assume(i1) #0
 
 attributes #0 = { nounwind willreturn }
 
-%struct.data = type { ptr, ptr }
-
-define void @test2(ptr nocapture readonly %d) {
+define void @test2(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: define void @test2(
-; CHECK-SAME: ptr readonly captures(none) [[D:%.*]]) {
+; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B:%.*]] = getelementptr inbounds [[STRUCT_DATA:%.*]], ptr [[D]], i64 0, i32 1
-; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[B]], align 8
-; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
 ; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[D]], align 8
-; CHECK-NEXT:    [[PTRINT2:%.*]] = ptrtoint ptr [[TMP1]] to i64
+; CHECK-NEXT:    [[PTRINT2:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[MASKEDPTR3:%.*]] = and i64 [[PTRINT2]], 31
 ; CHECK-NEXT:    [[MASKCOND4:%.*]] = icmp eq i64 [[MASKEDPTR3]], 0
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
-; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[PTRINT2]], [[PTRINT]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 16
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP0]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i32 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP4]], align 4
@@ -95,7 +86,7 @@ define void @test2(ptr nocapture readonly %d) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x float> [[WIDE_LOAD1]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND4]])
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds float, ptr [[TMP7]], i32 2
 ; CHECK-NEXT:    store <2 x float> [[TMP5]], ptr [[TMP7]], align 4
 ; CHECK-NEXT:    store <2 x float> [[TMP6]], ptr [[TMP8]], align 4
@@ -107,13 +98,10 @@ define void @test2(ptr nocapture readonly %d) {
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
-  %b = getelementptr inbounds %struct.data, ptr %d, i64 0, i32 1
-  %0 = load ptr, ptr %b, align 8
-  %ptrint = ptrtoint ptr %0 to i64
+  %ptrint = ptrtoint ptr %a to i64
   %maskedptr = and i64 %ptrint, 31
   %maskcond = icmp eq i64 %maskedptr, 0
-  %1 = load ptr, ptr %d, align 8
-  %ptrint2 = ptrtoint ptr %1 to i64
+  %ptrint2 = ptrtoint ptr %b to i64
   %maskedptr3 = and i64 %ptrint2, 31
   %maskcond4 = icmp eq i64 %maskedptr3, 0
   br label %for.body
@@ -122,11 +110,11 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   tail call void @llvm.assume(i1 %maskcond)
-  %arrayidx = getelementptr inbounds float, ptr %0, i64 %indvars.iv
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 %indvars.iv
   %2 = load float, ptr %arrayidx, align 4
   %add = fadd float %2, 1.000000e+00
   tail call void @llvm.assume(i1 %maskcond4)
-  %arrayidx5 = getelementptr inbounds float, ptr %1, i64 %indvars.iv
+  %arrayidx5 = getelementptr inbounds float, ptr %b, i64 %indvars.iv
   store float %add, ptr %arrayidx5, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv, 1599
