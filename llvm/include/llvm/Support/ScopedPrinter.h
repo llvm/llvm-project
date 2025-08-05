@@ -107,6 +107,14 @@ std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   return utohexstr(Value, true);
 }
 
+template <typename T, typename TEnum>
+StringRef enumToStringRef(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
+  for (const EnumEntry<TEnum> &EnumItem : EnumValues)
+    if (EnumItem.Value == Value)
+      return EnumItem.AltName;
+  return "";
+}
+
 class LLVM_ABI ScopedPrinter {
 public:
   enum class ScopedPrinterKind {
