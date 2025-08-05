@@ -2188,6 +2188,7 @@ protected:
 
   class SubstPackTypeBitfields {
     friend class SubstPackType;
+    friend class SubstTemplateTypeParmPackType;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
@@ -2197,23 +2198,12 @@ protected:
     /// However as this limit is somewhat easy to hit with template
     /// metaprogramming we'd prefer to keep it as large as possible.
     unsigned NumArgs : 16;
-  };
-  // FIXME: idiomatically, we want to have exact numbers, but that
-  //        ends up generating incorrect code (writes to
-  //        SubstTemplateTypeParmPackTypeBitfields.Index also update
-  //        bits in NumArgs).
-  // enum { NumSubstPackTypeBits = NumTypeBits + 16 };
-  static_assert(NumTypeBits + 16 <= 48);
-  enum { NumSubstPackTypeBits = 48 };
-
-  class SubstTemplateTypeParmPackTypeBitfields {
-    friend class SubstTemplateTypeParmPackType;
-
-    LLVM_PREFERRED_TYPE(SubstPackTypeBitfields)
-    unsigned : NumSubstPackTypeBits;
 
     // The index of the template parameter this substitution represents.
-    unsigned Index : 16;
+    // Only used by SubstTemplateTypeParmPackType. We keep it in the same
+    // class to avoid dealing with complexities of bitfields that go over
+    // the size of `unsigned`.
+    unsigned SubstTemplTypeParmPackIndex : 16;
   };
 
   class TemplateSpecializationTypeBitfields {
@@ -2330,7 +2320,6 @@ protected:
     TemplateTypeParmTypeBitfields TemplateTypeParmTypeBits;
     SubstTemplateTypeParmTypeBitfields SubstTemplateTypeParmTypeBits;
     SubstPackTypeBitfields SubstPackTypeBits;
-    SubstTemplateTypeParmPackTypeBitfields SubstTemplateTypeParmPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     DependentTemplateSpecializationTypeBitfields
       DependentTemplateSpecializationTypeBits;
@@ -6757,7 +6746,9 @@ public:
 
   /// Returns the index of the replaced parameter in the associated declaration.
   /// This should match the result of `getReplacedParameter()->getIndex()`.
-  unsigned getIndex() const { return SubstTemplateTypeParmPackTypeBits.Index; }
+  unsigned getIndex() const {
+    return SubstPackTypeBits.SubstTemplTypeParmPackIndex;
+  }
 
   // This substitution will be Final, which means the substitution will be fully
   // sugared: it doesn't need to be resugared later.

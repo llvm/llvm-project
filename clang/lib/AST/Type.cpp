@@ -4430,7 +4430,7 @@ SubstTemplateTypeParmPackType::SubstTemplateTypeParmPackType(
       AssociatedDeclAndFinal(AssociatedDecl, Final) {
   assert(AssociatedDecl != nullptr);
 
-  SubstTemplateTypeParmPackTypeBits.Index = Index;
+  SubstPackTypeBits.SubstTemplTypeParmPackIndex = Index;
   assert(getNumArgs() == ArgPack.pack_size() &&
          "Parent bitfields in SubstPackType were overwritten."
          "Check NumSubstPackTypeBits.");
