@@ -737,7 +737,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
         {RTLIB::FPROUND_F32_F16, RTLIB::__aeabi_f2h},
-        {RTLIB::FPROUND_F64_F16, RTLIB::__aeabi_d2h},
         {RTLIB::FPEXT_F16_F32, RTLIB::__aeabi_h2f},
     };
 
