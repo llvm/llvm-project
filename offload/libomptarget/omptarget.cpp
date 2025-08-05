@@ -421,8 +421,11 @@ static int performPointerAttachment(DeviceTy &Device, AsyncInfoTy &AsyncInfo,
   // pointer attachment for (3) needs to update the bounds information
   // in the descriptor of p on device.
   if (!PtrTPR.getEntry()->addShadowPointer(
-          ShadowPtrInfoTy{HstPtrAddr, HstPteeBase, TgtPtrAddr, TgtPteeBase}))
+          ShadowPtrInfoTy{HstPtrAddr, HstPteeBase, TgtPtrAddr, TgtPteeBase})) {
+    DP("Pointer " DPxMOD " is already attached to " DPxMOD "\n",
+       DPxPTR(TgtPtrAddr), DPxPTR(TgtPteeBase));
     return OFFLOAD_SUCCESS;
+  }
 
   DP("Update pointer (" DPxMOD ") -> [" DPxMOD "]\n", DPxPTR(TgtPtrAddr),
      DPxPTR(TgtPteeBase));
@@ -774,8 +777,8 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
                    Ptr < reinterpret_cast<void *>(
                              reinterpret_cast<char *>(AllocPtr) + AllocSize);
           });
-      DP("ATTACH entry %zu: %s pointer " DPxMOD " was newly allocated: %s\n",
-         EntryIdx, PtrName, DPxPTR(Ptr), IsNewlyAllocated ? "yes" : "no");
+      DP("Attach %s " DPxMOD " was newly allocated: %s\n", PtrName, DPxPTR(Ptr),
+         IsNewlyAllocated ? "yes" : "no");
       return IsNewlyAllocated;
     };
 
@@ -789,9 +792,6 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
       continue;
     }
 
-    DP("Processing ATTACH entry %zu: Always=%s\n", EntryIdx,
-       IsAttachAlways ? "yes" : "no");
-
     // Lambda to perform target pointer lookup and validation
     auto LookupTargetPointer =
         [&](void *Ptr, int64_t Size,
@@ -802,9 +802,7 @@ int processAttachEntries(DeviceTy &Device, AttachInfoTy &AttachInfo,
           Ptr, Size, /*UpdateRefCount=*/false,
           /*UseHoldRefCount=*/false, /*MustContain=*/true);
 
-      DP("ATTACH entry %zu: %s lookup - HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
-         ", IsPresent=%s, IsHostPtr=%s\n",
-         EntryIdx, PtrType, DPxPTR(Ptr), DPxPTR(TPR.TargetPointer),
+      DP("Attach %s lookup - IsPresent=%s, IsHostPtr=%s\n", PtrType,
          TPR.isPresent() ? "yes" : "no",
          TPR.Flags.IsHostPointer ? "yes" : "no");
 
