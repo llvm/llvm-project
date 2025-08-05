@@ -804,6 +804,13 @@ class Base(unittest.TestCase):
             )
         return commands
 
+    def getDebugInfoSetupCommands(self):
+        if self.getDebugInfo() == "native-pdb":
+            return ["settings set plugin.symbol-file.pdb.reader native"]
+        if self.getDebugInfo() == "dia-pdb":
+            return ["settings set plugin.symbol-file.pdb.reader dia"]
+        return []
+
     def setUp(self):
         """Fixture for unittest test case setup.
 
@@ -828,13 +835,6 @@ class Base(unittest.TestCase):
         else:
             self.lldbDAPExec = None
 
-        self.lldbOption = " ".join("-o '" + s + "'" for s in self.setUpCommands())
-
-        # If we spawn an lldb process for test (via pexpect), do not load the
-        # init file unless told otherwise.
-        if os.environ.get("NO_LLDBINIT") != "NO":
-            self.lldbOption += " --no-lldbinit"
-
         # Assign the test method name to self.testMethodName.
         #
         # For an example of the use of this attribute, look at test/types dir.
@@ -842,6 +842,14 @@ class Base(unittest.TestCase):
         # module cacheing subsystem to be confused with executable name "a.out"
         # used for all the test cases.
         self.testMethodName = self._testMethodName
+
+        setUpCommands = self.setUpCommands() + self.getDebugInfoSetupCommands()
+        self.lldbOption = " ".join("-o '" + s + "'" for s in setUpCommands)
+
+        # If we spawn an lldb process for test (via pexpect), do not load the
+        # init file unless told otherwise.
+        if os.environ.get("NO_LLDBINIT") != "NO":
+            self.lldbOption += " --no-lldbinit"
 
         # This is for the case of directly spawning 'lldb'/'gdb' and interacting
         # with it using pexpect.
@@ -1792,6 +1800,12 @@ class LLDBTestCaseFactory(type):
                         if can_replicate
                     ]
 
+                    # PDB is off by default, because it has a lot of failures right now.
+                    # See llvm.org/pr149498
+                    if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
+                        dbginfo_categories.append("native-pdb")
+                        dbginfo_categories.append("dia-pdb")
+
                 xfail_for_debug_info_cat_fn = getattr(
                     attrvalue, "__xfail_for_debug_info_cat_fn__", no_reason
                 )
@@ -1879,6 +1893,14 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
     # test multiple times with various debug info types.
     NO_DEBUG_INFO_TESTCASE = False
 
+    TEST_WITH_PDB_DEBUG_INFO = False
+    """
+    Subclasses can set this to True to test with both native and DIA PDB in addition to
+    the other debug info types. This id off by default because many tests will
+    fail due to missing functionality in PDB.
+    See llvm.org/pr149498.
+    """
+
     def generateSource(self, source):
         template = source + ".template"
         temp = os.path.join(self.getSourceDir(), template)
@@ -1917,6 +1939,8 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         Base.setUp(self)
 
         for s in self.setUpCommands():
+            self.runCmd(s)
+        for s in self.getDebugInfoSetupCommands():
             self.runCmd(s)
 
         # We want our debugger to be synchronous.
@@ -2264,7 +2288,9 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         given list of completions"""
         interp = self.dbg.GetCommandInterpreter()
         match_strings = lldb.SBStringList()
-        interp.HandleCompletion(command, len(command), 0, max_completions, match_strings)
+        interp.HandleCompletion(
+            command, len(command), 0, max_completions, match_strings
+        )
         # match_strings is a 1-indexed list, so we have to slice...
         self.assertCountEqual(
             completions, list(match_strings)[1:], "List of returned completion is wrong"

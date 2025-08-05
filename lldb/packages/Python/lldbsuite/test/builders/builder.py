@@ -258,6 +258,8 @@ class Builder:
             "gmodules": {"MAKE_DSYM": "NO", "MAKE_GMODULES": "YES"},
             "debug_names": {"MAKE_DEBUG_NAMES": "YES"},
             "dwp": {"MAKE_DSYM": "NO", "MAKE_DWP": "YES"},
+            "native-pdb": {"DEBUG_INFO_FLAG": "-g"},
+            "dia-pdb": {"DEBUG_INFO_FLAG": "-g"},
         }
 
         # Collect all flags, with later options overriding earlier ones
