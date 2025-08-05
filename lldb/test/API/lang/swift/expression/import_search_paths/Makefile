@@ -25,6 +25,6 @@ libDirect: $(SRCDIR)/Direct.swift libHidden
 		DYLIB_SWIFT_SOURCES=Direct.swift \
 		DYLIB_MODULENAME=Direct \
 		SWIFTFLAGS_EXTRAS="-I$(BUILDDIR)/hidden" \
-		LD_EXTRAS="-L$(BUILDDIR)/hidden -lIndirect" \
+		LD_EXTRAS="-L$(BUILDDIR)/hidden -lIndirect -Xlinker -rpath -Xlinker $(BUILDDIR)/hidden" \
 		MAKE_DSYM=NO
 
