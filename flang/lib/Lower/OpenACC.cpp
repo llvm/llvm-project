@@ -383,7 +383,7 @@ static inline void
 genAtomicCaptureStatement(Fortran::lower::AbstractConverter &converter,
                           mlir::Value fromAddress, mlir::Value toAddress,
                           mlir::Type elementType, mlir::Location loc) {
-  // Generate `atomic.read` operation for atomic assigment statements
+  // Generate `atomic.read` operation for atomic assignment statements
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
   mlir::acc::AtomicReadOp::create(firOpBuilder, loc, fromAddress, toAddress,
