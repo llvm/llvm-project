@@ -14425,9 +14425,9 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
     // Process the transformed loop statement
     LoopAnalysis &NewTransformedSingleLoop =
         SeqAnalysis.Loops.emplace_back(OMPLoopCategory::TransformSingleLoop);
-    unsigned IsCanonical =
-        checkOpenMPLoop(Kind, nullptr, nullptr, TransformedStmt, SemaRef,
-                        *DSAStack, TmpDSA, NewTransformedSingleLoop.HelperExprs);
+    unsigned IsCanonical = checkOpenMPLoop(
+        Kind, nullptr, nullptr, TransformedStmt, SemaRef, *DSAStack, TmpDSA,
+        NewTransformedSingleLoop.HelperExprs);
 
     if (!IsCanonical) {
       Diag(TransformedStmt->getBeginLoc(), diag::err_omp_not_canonical_loop)
@@ -14446,9 +14446,9 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
   auto AnalyzeRegularLoop = [&](Stmt *Child) {
     LoopAnalysis &NewRegularLoop =
         SeqAnalysis.Loops.emplace_back(OMPLoopCategory::RegularLoop);
-    unsigned IsCanonical = checkOpenMPLoop(
-        Kind, nullptr, nullptr, Child, SemaRef, *DSAStack, TmpDSA,
-        NewRegularLoop.HelperExprs);
+    unsigned IsCanonical =
+        checkOpenMPLoop(Kind, nullptr, nullptr, Child, SemaRef, *DSAStack,
+                        TmpDSA, NewRegularLoop.HelperExprs);
 
     if (!IsCanonical) {
       Diag(Child->getBeginLoc(), diag::err_omp_not_canonical_loop)
@@ -15905,8 +15905,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
         << getOpenMPDirectiveName(OMPD_fuse);
 
   // Select the type with the largest bit width among all induction variables
-  QualType IVType = SeqAnalysis.Loops[FirstVal - 1]
-                        .HelperExprs.IterationVarRef->getType();
+  QualType IVType =
+      SeqAnalysis.Loops[FirstVal - 1].HelperExprs.IterationVarRef->getType();
   for (unsigned I = FirstVal; I < LastVal; ++I) {
     QualType CurrentIVType =
         SeqAnalysis.Loops[I].HelperExprs.IterationVarRef->getType();
@@ -15986,14 +15986,12 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // looprange section
   unsigned int TransformIndex = 0;
   for (unsigned I : llvm::seq<unsigned>(FirstVal - 1)) {
-    if (SeqAnalysis.Loops[I].Category ==
-        OMPLoopCategory::TransformSingleLoop)
+    if (SeqAnalysis.Loops[I].Category == OMPLoopCategory::TransformSingleLoop)
       ++TransformIndex;
   }
 
   for (unsigned int I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
-    if (SeqAnalysis.Loops[I].Category ==
-        OMPLoopCategory::RegularLoop) {
+    if (SeqAnalysis.Loops[I].Category == OMPLoopCategory::RegularLoop) {
       addLoopPreInits(Context, SeqAnalysis.Loops[I].HelperExprs,
                       SeqAnalysis.Loops[I].ForStmt,
                       SeqAnalysis.Loops[I].OriginalInits, PreInits);
@@ -16011,12 +16009,12 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                       SeqAnalysis.Loops[I].ForStmt,
                       SeqAnalysis.Loops[I].OriginalInits, PreInits);
     }
-    auto [UBVD, UBDStmt] = CreateHelperVarAndStmt(
-        SeqAnalysis.Loops[I].HelperExprs.UB, "ub", J);
-    auto [LBVD, LBDStmt] = CreateHelperVarAndStmt(
-        SeqAnalysis.Loops[I].HelperExprs.LB, "lb", J);
-    auto [STVD, STDStmt] = CreateHelperVarAndStmt(
-        SeqAnalysis.Loops[I].HelperExprs.ST, "st", J);
+    auto [UBVD, UBDStmt] =
+        CreateHelperVarAndStmt(SeqAnalysis.Loops[I].HelperExprs.UB, "ub", J);
+    auto [LBVD, LBDStmt] =
+        CreateHelperVarAndStmt(SeqAnalysis.Loops[I].HelperExprs.LB, "lb", J);
+    auto [STVD, STDStmt] =
+        CreateHelperVarAndStmt(SeqAnalysis.Loops[I].HelperExprs.ST, "st", J);
     auto [NIVD, NIDStmt] = CreateHelperVarAndStmt(
         SeqAnalysis.Loops[I].HelperExprs.NumIterations, "ni", J, true);
     auto [IVVD, IVDStmt] = CreateHelperVarAndStmt(
@@ -16203,8 +16201,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     // Update the original i_k = IV_k
     SmallVector<Stmt *, 4> BodyStmts;
     BodyStmts.push_back(IdxExpr.get());
-    llvm::append_range(BodyStmts,
-                       SeqAnalysis.Loops[I].HelperExprs.Updates);
+    llvm::append_range(BodyStmts, SeqAnalysis.Loops[I].HelperExprs.Updates);
 
     // If the loop is a CXXForRangeStmt then the iterator variable is needed
     if (auto *SourceCXXFor =
