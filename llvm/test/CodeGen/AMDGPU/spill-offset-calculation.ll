@@ -125,7 +125,6 @@ define void @test_sgpr_offset_function_scavenge_fail_func() #2 {
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
-; MUBUF-NEXT:    s_add_i32 s10, s32, 0x40100
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s10 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
@@ -147,7 +146,6 @@ define void @test_sgpr_offset_function_scavenge_fail_func() #2 {
 ; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    s_add_i32 s8, s32, 0x1004
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s8 ; 4-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    ;;#ASMSTART
@@ -466,7 +464,6 @@ define void @test_sgpr_offset_function() {
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s4 ; 4-byte Folded Spill
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
-; MUBUF-NEXT:    s_add_i32 s4, s32, 0x40100
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:8
@@ -482,7 +479,6 @@ define void @test_sgpr_offset_function() {
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s0 ; 4-byte Folded Spill
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ;;#ASMEND
-; FLATSCR-NEXT:    s_add_i32 s0, s32, 0x1004
 ; FLATSCR-NEXT:    scratch_load_dword v0, off, s0 ; 4-byte Folded Reload
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_store_dword off, v0, s32 offset:8
@@ -586,7 +582,6 @@ define void @test_inst_offset_subregs_function() {
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    s_add_i32 s4, s32, 0x3ff00
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s4 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    buffer_load_dword v1, off, s[0:3], s4 offset:4 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
