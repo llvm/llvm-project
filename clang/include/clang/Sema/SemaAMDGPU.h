@@ -69,7 +69,7 @@ public:
   void handleAMDGPUWavegroupKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUSpatialClusterKernelAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUNoRankSpecializationAttr(Decl *D, const ParsedAttr &AL);
-  void handleAMDGPUSpecializeKernelAttr(Decl *D, const ParsedAttr &AL);
+  void handleAMDGPUEnableWaspAttr(Decl *D, const ParsedAttr &AL);
 };
 } // namespace clang
 

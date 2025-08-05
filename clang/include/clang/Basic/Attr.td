@@ -2487,9 +2487,9 @@ def AMDGPUNoRankSpecialization : InheritableAttr {
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 
-def AMDGPUSpecializeKernel : InheritableAttr {
-  let Spellings = [Clang<"amdgpu_specialize_kernel", 0>];
-  let Documentation = [AMDGPUSpecializeKernelDocs];
+def AMDGPUEnableWasp : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_enable_wasp", 0>];
+  let Documentation = [AMDGPUEnableWaspDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 

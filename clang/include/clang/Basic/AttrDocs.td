@@ -3336,16 +3336,15 @@ rank.
   }];
 }
 
-def AMDGPUSpecializeKernelDocs : Documentation {
+def AMDGPUEnableWaspDocs : Documentation {
   let Category = DocCatAMDGPUAttributes;
   let Content = [{
-When marked with this attribute, function will be split into three wave specialized kernels. 
+Kernels marked with this attribute will have the AMDGPU Wasp (wave specialization) optimization applied to them. 
 
 Clang supports the
-``__attribute__((amdgpu_no_rank_specialization()))``
+``__attribute__((amdgpu_enable_wasp()))``
 attribute for the AMDGPU target when compiling for a GFX13 target. This attribute may be attached
-to HIP wavegroup kernel function definitions to enable the specialization of waves by wavegroup 
-rank.
+to HIP kernel function definitions to enable amdgpu-wasp optimization.
   }];
 }
 

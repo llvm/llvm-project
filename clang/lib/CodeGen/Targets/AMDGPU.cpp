@@ -437,8 +437,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     F->addFnAttr("amdgpu-no-rank-specialization");
   }
 
-  if (const auto *Attr = FD->getAttr<AMDGPUSpecializeKernelAttr>()) {
-    F->addFnAttr("amdgpu-specialize-kernel");
+  if (const auto *Attr = FD->getAttr<AMDGPUEnableWaspAttr>()) {
+    F->addFnAttr("amdgpu-enable-wasp");
   }
 
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {

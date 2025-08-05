@@ -3,13 +3,13 @@
 // The number of supported attributes should never go down!
 
 // CHECK: #pragma clang attribute supports the following attributes:
+// CHECK-NEXT: AMDGPUEnableWasp (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUFlatWorkGroupSize (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUMaxNumWorkGroups (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNoRankSpecialization (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumSGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUNumVGPR (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUSpatialClusterKernel (SubjectMatchRule_function)
-// CHECK-NEXT: AMDGPUSpecializeKernel (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUWavegroupKernel (SubjectMatchRule_function)
 // CHECK-NEXT: AMDGPUWavesPerEU (SubjectMatchRule_function)
 // CHECK-NEXT: AVRSignal (SubjectMatchRule_function)

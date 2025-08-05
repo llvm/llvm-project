@@ -544,10 +544,9 @@ void SemaAMDGPU::handleAMDGPUNoRankSpecializationAttr(Decl *D,
   D->addAttr(Addr);
 }
 
-void SemaAMDGPU::handleAMDGPUSpecializeKernelAttr(Decl *D,
-                                                  const ParsedAttr &AL) {
+void SemaAMDGPU::handleAMDGPUEnableWaspAttr(Decl *D, const ParsedAttr &AL) {
   auto *Addr =
-      ::new (getASTContext()) AMDGPUSpecializeKernelAttr(getASTContext(), AL);
+      ::new (getASTContext()) AMDGPUEnableWaspAttr(getASTContext(), AL);
   D->addAttr(Addr);
 }
 
