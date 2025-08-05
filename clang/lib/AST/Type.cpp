@@ -5347,7 +5347,7 @@ void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
 
 AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
                    TypeDependence ExtraDependence, QualType Canon,
-                   ConceptDecl *TypeConstraintConcept,
+                   TemplateDecl *TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
     : DeducedType(Auto, DeducedAsType, ExtraDependence, Canon) {
   AutoTypeBits.Keyword = llvm::to_underlying(Keyword);
@@ -5355,6 +5355,9 @@ AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
   this->TypeConstraintConcept = TypeConstraintConcept;
   assert(TypeConstraintConcept || AutoTypeBits.NumArgs == 0);
   if (TypeConstraintConcept) {
+    if (isa<TemplateTemplateParmDecl>(TypeConstraintConcept))
+      addDependence(TypeDependence::DependentInstantiation);
+
     auto *ArgBuffer =
         const_cast<TemplateArgument *>(getTypeConstraintArguments().data());
     for (const TemplateArgument &Arg : TypeConstraintArgs) {
@@ -5370,7 +5373,7 @@ AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
 
 void AutoType::Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                        QualType Deduced, AutoTypeKeyword Keyword,
-                       bool IsDependent, ConceptDecl *CD,
+                       bool IsDependent, TemplateDecl *CD,
                        ArrayRef<TemplateArgument> Arguments) {
   ID.AddPointer(Deduced.getAsOpaquePtr());
   ID.AddInteger((unsigned)Keyword);

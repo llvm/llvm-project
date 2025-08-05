@@ -273,7 +273,7 @@ static NestedNameSpecifier *createNestedNameSpecifierForScopeOf(
         //
         // Make the situation is 'useable' but looking a bit odd by
         // picking a random instance as the declaring context.
-        if (ClassTempl->spec_begin() != ClassTempl->spec_end()) {
+        if (!ClassTempl->specializations().empty()) {
           Decl = *(ClassTempl->spec_begin());
           Outer = dyn_cast<NamedDecl>(Decl);
           OuterNS = dyn_cast<NamespaceDecl>(Decl);

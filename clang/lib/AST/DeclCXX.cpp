@@ -1983,7 +1983,7 @@ CXXRecordDecl::getVisibleConversionFunctions() const {
   ASTContext &Ctx = getASTContext();
 
   ASTUnresolvedSet *Set;
-  if (bases_begin() == bases_end()) {
+  if (bases().empty()) {
     // If root class, all conversions are visible.
     Set = &data().Conversions.get(Ctx);
   } else {
