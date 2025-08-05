@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_PROTOCOL_MCP_MCPERROR_H
+#define LLDB_PROTOCOL_MCP_MCPERROR_H
+
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Support/Error.h"
 #include <string>
-
-#ifndef LLDB_PROTOCOL_MCP_MCPERROR_H
-#define LLDB_PROTOCOL_MCP_MCPERROR_H
 
 namespace lldb_protocol::mcp {
 
