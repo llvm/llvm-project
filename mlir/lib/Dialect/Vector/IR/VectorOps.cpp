@@ -2335,6 +2335,10 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
   return success();
 }
 
+/// The canonical form of vector operations that just reshape vectors is
+/// vector.shape_cast. This pattern canonicalizes vector.extract ops of this
+/// kind.
+///
 /// BEFORE:
 /// %0 = vector.extract %arg0[0] : vector<4xf32> from vector<1x4xf32>
 /// AFTER:
@@ -2348,14 +2352,16 @@ struct ExtractToShapeCast final : public OpRewritePattern<vector::ExtractOp> {
     if (!outType)
       return failure();
 
-    // Negative values in `position` indicates poison, which cannot be
-    // represented with a shape_cast
+    if (sourceType.getNumElements() != outType.getNumElements())
+      return rewriter.notifyMatchFailure(
+          extractOp, "extract to vector with fewer elements");
+
+    // Negative values in `position` means that the extacted value is poison.
+    // There is a vector.extract folder for this.
     if (llvm::any_of(extractOp.getMixedPosition(),
                      [](OpFoldResult v) { return !isConstantIntValue(v, 0); }))
-      return failure();
-
-    if (sourceType.getNumElements() != outType.getNumElements())
-      return failure();
+      return rewriter.notifyMatchFailure(extractOp,
+                                         "leaving for extract poison folder");
 
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(extractOp, outType,
                                                      extractOp.getVector());
@@ -2960,6 +2966,10 @@ struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
   }
 };
 
+/// The canonical form of vector operations that just reshape vectors is
+/// vector.shape_cast. This pattern canonicalizes vector.broadcast ops of this
+/// kind.
+///
 /// BEFORE:
 /// %0 = vector.broadcast %arg0 : vector<4xi8> to vector<1x1x4xi8>
 /// AFTER:
@@ -2976,8 +2986,10 @@ struct BroadcastToShapeCast final
     }
 
     VectorType outType = broadcast.getType();
-    if (sourceType.getNumElements() != outType.getNumElements())
-      return failure();
+    if (sourceType.getNumElements() != outType.getNumElements()) {
+      return rewriter.notifyMatchFailure(
+          broadcast, "broadcast to a greater number of elements");
+    }
 
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(broadcast, outType,
                                                      broadcast.getSource());
@@ -6082,9 +6094,7 @@ static VectorType trimTrailingOneDims(VectorType oldType) {
 /// Looks at `vector.shape_cast` Ops that simply "drop" the trailing unit
 /// dimension. If the input vector comes from `vector.create_mask` for which
 /// the corresponding mask input value is 1 (e.g. `%c1` below), then it is safe
-/// to fold shape_cast into create_mask.
-///
-/// BEFORE:
+/// to fold shape_cast into creatto a greater number of BEFORE:
 ///    %1 = vector.create_mask %c1, %dim, %c1, %c1 : vector<1x[4]x1x1xi1>
 ///    %2 = vector.shape_cast %1 : vector<1x[4]x1x1xi1> to vector<1x[4]xi1>
 /// AFTER:
@@ -6605,6 +6615,10 @@ public:
   }
 };
 
+/// The canonical form of operations that just reshape a vector is
+/// vector.shape_cast. This pattern canonicalizes vector.transpose operations of
+/// this kind.
+///
 /// BEFORE:
 /// %0 = vector.transpose %arg0, [0, 2, 1] :
 ///                   vector<2x1x2xf32> to vector<2x2x1xf32>
