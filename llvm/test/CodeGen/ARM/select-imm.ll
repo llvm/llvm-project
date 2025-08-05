@@ -696,27 +696,14 @@ define i1 @t11() {
 ; ARMT2:       @ %bb.0: @ %entry
 ; ARMT2-NEXT:    .pad #4
 ; ARMT2-NEXT:    sub sp, sp, #4
-; ARMT2-NEXT:    ldr r1, [sp]
-; ARMT2-NEXT:    mov r0, #33
-; ARMT2-NEXT:    movw r2, #39322
-; ARMT2-NEXT:    movt r2, #6553
-; ARMT2-NEXT:    bfi r1, r0, #0, #12
-; ARMT2-NEXT:    mov r0, #10
-; ARMT2-NEXT:    bfi r1, r0, #12, #13
-; ARMT2-NEXT:    mov r0, r1
-; ARMT2-NEXT:    bfc r0, #12, #20
-; ARMT2-NEXT:    umull r2, r3, r0, r2
-; ARMT2-NEXT:    add r2, r3, r3, lsl #2
-; ARMT2-NEXT:    sub r0, r0, r2, lsl #1
-; ARMT2-NEXT:    movw r2, #40960
-; ARMT2-NEXT:    movt r2, #65024
-; ARMT2-NEXT:    and r1, r1, r2
-; ARMT2-NEXT:    orr r0, r1, r0
+; ARMT2-NEXT:    ldr r0, [sp]
+; ARMT2-NEXT:    movw r1, #40960
+; ARMT2-NEXT:    movt r1, #65024
+; ARMT2-NEXT:    orr r0, r0, #40960
+; ARMT2-NEXT:    and r0, r0, r1
+; ARMT2-NEXT:    orr r0, r0, #3
 ; ARMT2-NEXT:    str r0, [sp]
-; ARMT2-NEXT:    and r0, r0, #15
-; ARMT2-NEXT:    sub r0, r0, #3
-; ARMT2-NEXT:    clz r0, r0
-; ARMT2-NEXT:    lsr r0, r0, #5
+; ARMT2-NEXT:    mov r0, #1
 ; ARMT2-NEXT:    add sp, sp, #4
 ; ARMT2-NEXT:    bx lr
 ;
@@ -758,27 +745,14 @@ define i1 @t11() {
 ; THUMB2:       @ %bb.0: @ %entry
 ; THUMB2-NEXT:    .pad #4
 ; THUMB2-NEXT:    sub sp, #4
-; THUMB2-NEXT:    ldr r1, [sp]
-; THUMB2-NEXT:    movs r0, #33
-; THUMB2-NEXT:    movw r2, #39322
-; THUMB2-NEXT:    bfi r1, r0, #0, #12
-; THUMB2-NEXT:    movs r0, #10
-; THUMB2-NEXT:    bfi r1, r0, #12, #13
-; THUMB2-NEXT:    mov r0, r1
-; THUMB2-NEXT:    movt r2, #6553
-; THUMB2-NEXT:    bfc r0, #12, #20
-; THUMB2-NEXT:    umull r2, r3, r0, r2
-; THUMB2-NEXT:    add.w r2, r3, r3, lsl #2
-; THUMB2-NEXT:    sub.w r0, r0, r2, lsl #1
-; THUMB2-NEXT:    movw r2, #40960
-; THUMB2-NEXT:    movt r2, #65024
-; THUMB2-NEXT:    ands r1, r2
-; THUMB2-NEXT:    orrs r0, r1
+; THUMB2-NEXT:    ldr r0, [sp]
+; THUMB2-NEXT:    movw r1, #40960
+; THUMB2-NEXT:    movt r1, #65024
+; THUMB2-NEXT:    orr r0, r0, #40960
+; THUMB2-NEXT:    ands r0, r1
+; THUMB2-NEXT:    adds r0, #3
 ; THUMB2-NEXT:    str r0, [sp]
-; THUMB2-NEXT:    and r0, r0, #15
-; THUMB2-NEXT:    subs r0, #3
-; THUMB2-NEXT:    clz r0, r0
-; THUMB2-NEXT:    lsrs r0, r0, #5
+; THUMB2-NEXT:    movs r0, #1
 ; THUMB2-NEXT:    add sp, #4
 ; THUMB2-NEXT:    bx lr
 ;

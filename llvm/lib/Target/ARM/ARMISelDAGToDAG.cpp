@@ -303,6 +303,7 @@ private:
 
   /// Try to select SBFX/UBFX instructions for ARM.
   bool tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned);
+  bool tryV6T2BitfieldInsertOp(SDNode *N);
 
   bool tryInsertVectorElt(SDNode *N);
 
@@ -3323,6 +3324,165 @@ bool ARMDAGToDAGISel::tryFMULFixed(SDNode *N, SDLoc dl) {
       N, N, LHS.getOpcode() == ISD::UINT_TO_FP, true);
 }
 
+bool ARMDAGToDAGISel::tryV6T2BitfieldInsertOp(SDNode *N) {
+  if (!Subtarget->hasV6T2Ops())
+    return false;
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32)
+    return false;
+
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  SDLoc DL(N);
+
+  unsigned MaskImm;
+  // Must be a single use AND with an immediate operand.
+  if (!N0.hasOneUse() ||
+      !isOpcWithIntImmediate(N0.getNode(), ISD::AND, MaskImm))
+    return false;
+
+  // If the mask is 0xffff, we can do better
+  // via a movt instruction, so don't use BFI in that case.
+  if (MaskImm == 0xffff)
+    return false;
+
+  SDValue N00 = N0.getOperand(0);
+  unsigned Mask = MaskImm;
+
+  // Case (1): or (and A, mask), val => ARMbfi A, val, mask
+  ConstantSDNode *N1C = dyn_cast<ConstantSDNode>(N1);
+  if (N1C) {
+    unsigned Val = N1C->getZExtValue();
+    if ((Val & ~Mask) != Val)
+      return false;
+
+    if (ARM::isBitFieldInvertedMask(Mask)) {
+      Val >>= llvm::countr_zero(~Mask);
+
+      // Materialize the constant to be inserted
+      unsigned MovOpc = Subtarget->isThumb() ? ARM::t2MOVi32imm : ARM::MOVi32imm;
+      SDNode *ValNode = CurDAG->getMachineNode(
+          MovOpc, DL, VT, CurDAG->getTargetConstant(Val, DL, MVT::i32));
+
+      SDValue Ops[] = {N00, SDValue(ValNode, 0),
+                       CurDAG->getTargetConstant(Mask, DL, MVT::i32),
+                       getAL(CurDAG, DL), CurDAG->getRegister(0, MVT::i32)};
+      unsigned Opc = Subtarget->isThumb() ? ARM::t2BFI : ARM::BFI;
+      CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+      return true;
+    }
+  } else if (N1.getOpcode() == ISD::AND) {
+    // case (2) or (and A, mask), (and B, mask2) => ARMbfi A, (lsr B, amt), mask
+    ConstantSDNode *N11C = dyn_cast<ConstantSDNode>(N1.getOperand(1));
+    if (!N11C)
+      return false;
+    unsigned Mask2 = N11C->getZExtValue();
+
+    // Mask and ~Mask2 (or reverse) must be equivalent for the BFI pattern
+    // as is to match.
+    if (ARM::isBitFieldInvertedMask(Mask) && (Mask == ~Mask2)) {
+      // The pack halfword instruction works better for masks that fit it,
+      // so use that when it's available.
+      if (Subtarget->hasDSP() && (Mask == 0xffff || Mask == 0xffff0000))
+        return false;
+      // 2a
+      unsigned amt = llvm::countr_zero(Mask2);
+
+      // Create machine shift instruction
+      SDNode *Shift;
+      if (Subtarget->isThumb()) {
+        // For Thumb2, use t2LSRri: Rm, imm, pred, pred_reg, cc_out
+        SDValue ShiftOps[] = {
+            N1.getOperand(0), CurDAG->getTargetConstant(amt, DL, MVT::i32),
+            getAL(CurDAG, DL),                // predicate
+            CurDAG->getRegister(0, MVT::i32), // pred_reg
+            CurDAG->getRegister(0, MVT::i32)  // cc_out
+        };
+        Shift = CurDAG->getMachineNode(ARM::t2LSRri, DL, VT, ShiftOps);
+      } else {
+        // For ARM mode, use MOVsi: Rm, so_reg_imm, pred, pred_reg, cc_out
+        SDValue ShiftOps[] = {
+            N1.getOperand(0),
+            CurDAG->getTargetConstant(ARM_AM::getSORegOpc(ARM_AM::lsr, amt), DL,
+                                      MVT::i32),
+            getAL(CurDAG, DL),                // predicate
+            CurDAG->getRegister(0, MVT::i32), // pred_reg
+            CurDAG->getRegister(0, MVT::i32)  // cc_out
+        };
+        Shift = CurDAG->getMachineNode(ARM::MOVsi, DL, VT, ShiftOps);
+      }
+
+      SDValue Ops[] = {N00, SDValue(Shift, 0),
+                       CurDAG->getTargetConstant(Mask, DL, MVT::i32),
+                       getAL(CurDAG, DL), CurDAG->getRegister(0, MVT::i32)};
+      unsigned Opc = Subtarget->isThumb() ? ARM::t2BFI : ARM::BFI;
+      CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+      return true;
+    } else if (ARM::isBitFieldInvertedMask(~Mask) && (~Mask == Mask2)) {
+      // The pack halfword instruction works better for masks that fit it,
+      // so use that when it's available.
+      if (Subtarget->hasDSP() && (Mask2 == 0xffff || Mask2 == 0xffff0000))
+        return false;
+      // 2b
+      unsigned lsb = llvm::countr_zero(Mask);
+
+      // Create machine shift instruction
+      SDNode *Shift;
+      if (Subtarget->isThumb()) {
+        // For Thumb2, use t2LSRri: Rm, imm, pred, pred_reg, cc_out
+        SDValue ShiftOps[] = {
+            N00, CurDAG->getTargetConstant(lsb, DL, MVT::i32),
+            getAL(CurDAG, DL),                // predicate
+            CurDAG->getRegister(0, MVT::i32), // pred_reg
+            CurDAG->getRegister(0, MVT::i32)  // cc_out
+        };
+        Shift = CurDAG->getMachineNode(ARM::t2LSRri, DL, VT, ShiftOps);
+      } else {
+        // For ARM mode, use MOVsi: Rm, so_reg_imm, pred, pred_reg, cc_out
+        SDValue ShiftOps[] = {
+            N00,
+            CurDAG->getTargetConstant(ARM_AM::getSORegOpc(ARM_AM::lsr, lsb), DL,
+                                      MVT::i32),
+            getAL(CurDAG, DL),                // predicate
+            CurDAG->getRegister(0, MVT::i32), // pred_reg
+            CurDAG->getRegister(0, MVT::i32)  // cc_out
+        };
+        Shift = CurDAG->getMachineNode(ARM::MOVsi, DL, VT, ShiftOps);
+      }
+
+      SDValue Ops[] = {N1.getOperand(0), SDValue(Shift, 0),
+                       CurDAG->getTargetConstant(Mask2, DL, MVT::i32),
+                       getAL(CurDAG, DL), CurDAG->getRegister(0, MVT::i32)};
+      unsigned Opc = Subtarget->isThumb() ? ARM::t2BFI : ARM::BFI;
+      CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+      return true;
+    }
+  }
+
+  // Case (3): or (and (shl A, #shamt), mask), B => ARMbfi B, A, ~mask
+  // where lsb(mask) == #shamt and masked bits of B are known zero.
+  if (CurDAG->MaskedValueIsZero(N1, APInt(32, Mask)) &&
+      N00.getOpcode() == ISD::SHL && isa<ConstantSDNode>(N00.getOperand(1)) &&
+      ARM::isBitFieldInvertedMask(~Mask)) {
+    SDValue ShAmt = N00.getOperand(1);
+    unsigned ShAmtC = cast<ConstantSDNode>(ShAmt)->getZExtValue();
+    unsigned LSB = llvm::countr_zero(Mask);
+    if (ShAmtC != LSB)
+      return false;
+
+    SDValue Ops[] = {N1, N00.getOperand(0),
+                     CurDAG->getTargetConstant(~Mask, DL, MVT::i32),
+                     getAL(CurDAG, DL), CurDAG->getRegister(0, MVT::i32)};
+
+    unsigned Opc = Subtarget->isThumb() ? ARM::t2BFI : ARM::BFI;
+    CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+    return true;
+  }
+
+  return false;
+}
+
 bool ARMDAGToDAGISel::tryV6T2BitfieldExtractOp(SDNode *N, bool isSigned) {
   if (!Subtarget->hasV6T2Ops())
     return false;
@@ -3833,6 +3993,11 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
       }
     }
     break;
+  case ISD::OR: {
+    if (tryV6T2BitfieldInsertOp(N))
+      return;
+    break;
+  }
   case ISD::AND: {
     // Check for unsigned bitfield extract
     if (tryV6T2BitfieldExtractOp(N, false))
