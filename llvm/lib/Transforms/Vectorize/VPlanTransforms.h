@@ -59,8 +59,8 @@ struct VPlanTransforms {
   /// \p TheLoop being directly translated to VPBasicBlocks with VPInstruction
   /// corresponding to the input IR.
   ///
-  /// The created loop is wrapped into an initial skeleton to facilitate
-  /// vectorization, consisting of a vector pre-header, a exit block for the
+  /// The created loop is wrapped in an initial skeleton to facilitate
+  /// vectorization, consisting of a vector pre-header, an exit block for the
   /// main vector loop (middle.block) and a new block as preheader of the scalar
   /// loop (scalar.ph). It also adds a canonical IV and its increment, using \p
   /// InductionTy and \p IVDL, and creates a VPValue expression for the original
@@ -69,12 +69,15 @@ struct VPlanTransforms {
   buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy, DebugLoc IVDL,
               PredicatedScalarEvolution &PSE);
 
-  /// Update \p Plan to account for all early exits. If a check is needed to
-  /// guard executing the scalar epilogue loop, it will be added to the middle
-  /// block.
-  LLVM_ABI_FOR_TEST static void handleEarlyExitsAndAddMiddleCheck(
-      VPlan &Plan, bool RequiresScalarEpilogueCheck, bool TailFolded,
-      bool HasUncountableExit, VFRange &Range);
+  /// Update \p Plan to account for all early exits.
+  LLVM_ABI_FOR_TEST static void
+  handleEarlyExits(VPlan &Plan, bool HasUncountableExit, VFRange &Range);
+
+  /// If a check is needed to guard executing the scalar epilogue loop, it will
+  /// be added to the middle block.
+  LLVM_ABI_FOR_TEST static void addMiddleCheck(VPlan &Plan,
+                                               bool RequiresScalarEpilogueCheck,
+                                               bool TailFolded);
 
   /// Replace loops in \p Plan's flat CFG with VPRegionBlocks, turning \p Plan's
   /// flat CFG into a hierarchical CFG.

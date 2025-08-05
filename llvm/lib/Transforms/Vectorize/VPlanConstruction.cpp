@@ -514,14 +514,13 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
   return VPlan0;
 }
 
-void VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(
-    VPlan &Plan, bool RequiresScalarEpilogueCheck, bool TailFolded,
-    bool HasUncountableEarlyExit, VFRange &Range) {
+void VPlanTransforms::handleEarlyExits(VPlan &Plan,
+                                       bool HasUncountableEarlyExit,
+                                       VFRange &Range) {
   auto *MiddleVPBB = cast<VPBasicBlock>(
       Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
-  VPBlockBase *HeaderVPB =
-      Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor();
-  auto *LatchVPBB = cast<VPBasicBlock>(HeaderVPB->getPredecessors()[1]);
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+  VPBlockBase *HeaderVPB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
 
   // Disconnect all early exits from the loop leaving it with a single exit from
   // the latch. Early exits that are countable are left for a scalar epilog. The
@@ -551,7 +550,13 @@ void VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(
 
   assert((!HasUncountableEarlyExit || HandledUncountableEarlyExit) &&
          "missed an uncountable exit that must be handled");
+}
 
+void VPlanTransforms::addMiddleCheck(VPlan &Plan,
+                                     bool RequiresScalarEpilogueCheck,
+                                     bool TailFolded) {
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
   // If MiddleVPBB has a single successor then the original loop does not exit
   // via the latch and the single successor must be the scalar preheader.
   // There's no need to add a runtime check to MiddleVPBB.
@@ -578,6 +583,7 @@ void VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(
   // the corresponding compare because they may have ended up with different
   // line numbers and we want to avoid awkward line stepping while debugging.
   // E.g., if the compare has got a line number inside the loop.
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
   DebugLoc LatchDL = LatchVPBB->getTerminator()->getDebugLoc();
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;

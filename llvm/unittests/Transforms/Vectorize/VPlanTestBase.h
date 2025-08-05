@@ -76,8 +76,9 @@ protected:
                                              {}, PSE);
 
     VFRange R(ElementCount::getFixed(1), ElementCount::getFixed(2));
-    VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(*Plan, true, false,
-                                                       false, R);
+    VPlanTransforms::handleEarlyExits(*Plan, false, R);
+    VPlanTransforms::addMiddleCheck(*Plan, true, false);
+
     VPlanTransforms::createLoopRegions(*Plan);
     return Plan;
   }
