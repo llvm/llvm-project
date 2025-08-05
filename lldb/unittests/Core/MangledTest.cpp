@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/SymbolFile/Symtab/SymbolFileSymtab.h"
 #include "TestingSupport/SubsystemRAII.h"
@@ -19,6 +20,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/SymbolContext.h"
 
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -852,25 +854,45 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
 
   auto tracked_name = llvm::StringRef(*OB);
 
-  auto return_left = tracked_name.slice(0, OB->NameInfo.ScopeRange.first);
-  auto scope = tracked_name.slice(OB->NameInfo.ScopeRange.first,
-                                  OB->NameInfo.ScopeRange.second);
-  auto basename = tracked_name.slice(OB->NameInfo.BasenameRange.first,
-                                     OB->NameInfo.BasenameRange.second);
-  auto template_args = tracked_name.slice(OB->NameInfo.BasenameRange.second,
-                                          OB->NameInfo.ArgumentsRange.first);
-  auto args = tracked_name.slice(OB->NameInfo.ArgumentsRange.first,
-                                 OB->NameInfo.ArgumentsRange.second);
-  auto return_right = tracked_name.slice(OB->NameInfo.ArgumentsRange.second,
-                                         OB->NameInfo.QualifiersRange.first);
-  auto qualifiers = tracked_name.slice(OB->NameInfo.QualifiersRange.first,
-                                       OB->NameInfo.QualifiersRange.second);
+  std::string reconstructed_name;
+
+  auto return_left =
+      CPlusPlusLanguage::GetDemangledReturnTypeLHS(tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(return_left, llvm::Succeeded());
+  reconstructed_name += *return_left;
+
+  auto scope = CPlusPlusLanguage::GetDemangledScope(tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(scope, llvm::Succeeded());
+  reconstructed_name += *scope;
+
+  auto basename =
+      CPlusPlusLanguage::GetDemangledBasename(tracked_name, OB->NameInfo);
+  reconstructed_name += basename;
+
+  auto template_args = CPlusPlusLanguage::GetDemangledTemplateArguments(
+      tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(template_args, llvm::Succeeded());
+  reconstructed_name += *template_args;
+
+  auto args = CPlusPlusLanguage::GetDemangledFunctionArguments(tracked_name,
+                                                               OB->NameInfo);
+  EXPECT_THAT_EXPECTED(args, llvm::Succeeded());
+  reconstructed_name += *args;
+
+  auto return_right =
+      CPlusPlusLanguage::GetDemangledReturnTypeRHS(tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(return_right, llvm::Succeeded());
+  reconstructed_name += *return_right;
+
+  auto qualifiers = CPlusPlusLanguage::GetDemangledFunctionQualifiers(
+      tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(qualifiers, llvm::Succeeded());
+  reconstructed_name += *qualifiers;
+
+  // TODO: should retrieve suffix using the plugin too.
   auto suffix = tracked_name.slice(OB->NameInfo.QualifiersRange.second,
                                    llvm::StringRef::npos);
-
-  auto reconstructed_name =
-      llvm::join_items("", return_left, scope, basename, template_args, args,
-                       return_right, qualifiers, suffix);
+  reconstructed_name += suffix;
 
   EXPECT_EQ(reconstructed_name, demangled);
 }
