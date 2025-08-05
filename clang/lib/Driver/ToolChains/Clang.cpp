@@ -1363,7 +1363,7 @@ void RenderARMABI(const Driver &D, const llvm::Triple &Triple,
     ABIName = A->getValue();
   } else {
     std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
-    ABIName = llvm::ARM::computeDefaultTargetABI(Triple, CPU).data();
+    ABIName = llvm::ARM::computeDefaultTargetABI(Triple).data();
   }
 
   CmdArgs.push_back("-target-abi");
