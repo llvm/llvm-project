@@ -37,26 +37,6 @@ define void @test_alloca_with_lifetimes(ptr %result) {
   ret void
 }
 
-; memcpy size is larger than lifetime, don't optimize.
-define void @test_copy_larger_than_lifetime_size(ptr %result) {
-; CHECK-LABEL: @test_copy_larger_than_lifetime_size(
-; CHECK-NEXT:    [[A:%.*]] = alloca [[T:%.*]], align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 12, ptr [[A]])
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 12, ptr [[A]])
-; CHECK-NEXT:    call void @free(ptr [[A]])
-; CHECK-NEXT:    ret void
-;
-  %a = alloca %T, align 8
-  call void @llvm.lifetime.start.p0(i64 12, ptr %a)
-  call void @llvm.memset.p0.i64(ptr align 8 %a, i8 0, i64 12, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr align 8 %a, i64 16, i1 false)
-  call void @llvm.lifetime.end.p0(i64 12, ptr %a)
-  call void @free(ptr %a)
-  ret void
-}
-
 ; The trailing bytes are not known to be undef, we can't ignore them.
 define void @test_not_undef_memory(ptr %result, ptr %input) {
 ; CHECK-LABEL: @test_not_undef_memory(
