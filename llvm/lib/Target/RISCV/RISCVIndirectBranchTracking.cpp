@@ -19,11 +19,14 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/RISCVISAUtils.h"
 
 #define DEBUG_TYPE "riscv-indrect-branch-tracking"
 #define PASS_NAME "RISC-V Indirect Branch Tracking"
 
 using namespace llvm;
+using namespace llvm::RISCVISAUtils;
 
 cl::opt<uint32_t> PreferredLandingPadLabel(
     "riscv-landing-pad-label", cl::ReallyHidden,
@@ -64,8 +67,24 @@ static void emitLpad(MachineBasicBlock &MBB, const RISCVInstrInfo *TII,
 bool RISCVIndirectBranchTracking::runOnMachineFunction(MachineFunction &MF) {
   const auto &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = Subtarget.getInstrInfo();
-  if (!Subtarget.hasStdExtZicfilp())
+
+  const Module *const M = MF.getFunction().getParent();
+  if (!M)
     return false;
+  if (const Metadata *const Flag = M->getModuleFlag("cf-protection-branch");
+      !Flag || mdconst::extract<ConstantInt>(Flag)->isZero())
+    return false;
+
+  StringRef CFBranchLabelScheme;
+  if (const Metadata *const MD = M->getModuleFlag("cf-branch-label-scheme"))
+    CFBranchLabelScheme = cast<MDString>(MD)->getString();
+  else
+    report_fatal_error("missing cf-branch-label-scheme module flag");
+
+  const ZicfilpLabelSchemeKind Scheme =
+      getZicfilpLabelScheme(CFBranchLabelScheme);
+  if (Scheme != ZicfilpLabelSchemeKind::Unlabeled)
+    report_fatal_error("unsupported cf-branch-label-scheme module flag");
 
   uint32_t FixedLabel = 0;
   if (PreferredLandingPadLabel.getNumOccurrences() > 0) {
