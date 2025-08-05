@@ -3446,6 +3446,110 @@ cc_library(
 )
 
 ##---------------------------------------------------------------------------##
+# WasmSSA dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "WasmSSATdFiles",
+    srcs = glob(["include/mlir/Dialect/WasmSSA/IR/*.td"]),
+    includes = ["include"],
+    deps = [
+        ":BuiltinDialectTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "WasmSSAIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSAOpsDialect.h.inc": [
+            "-gen-dialect-decls",
+            "-dialect=wasmssa",
+        ],
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSAOpsDialect.cpp.inc": [
+            "-gen-dialect-defs",
+            "-dialect=wasmssa",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/WasmSSA/IR/WasmSSABase.td",
+    deps = [
+        ":WasmSSATdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "WasmSSATypesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSATypeConstraints.h.inc": ["-gen-type-constraint-decls"],
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSATypeConstraints.cpp.inc": ["-gen-type-constraint-defs"],
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSAOpsTypes.h.inc": [
+            "-gen-typedef-decls",
+            "-typedefs-dialect=wasmssa",
+        ],
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSAOpsTypes.cpp.inc": [
+            "-gen-typedef-defs",
+            "-typedefs-dialect=wasmssa",
+        ],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/WasmSSA/IR/WasmSSATypes.td",
+    deps = [
+        ":WasmSSATdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "WasmSSAOpsIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSAOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSAOps.cpp.inc": ["-gen-op-defs"],
+        "g3doc/Dialects/WasmSSA/WasmSSA.md": ["-gen-op-doc"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/WasmSSA/IR/WasmSSAOps.td",
+    deps = [
+        ":FunctionInterfacesTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
+        ":WasmSSATdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "WasmSSAInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/WasmSSA/IR/WasmSSAInterfaces.td",
+    deps = [
+        ":WasmSSATdFiles",
+    ],
+)
+
+cc_library(
+    name = "WasmSSADialect",
+    srcs = glob(["lib/Dialect/WasmSSA/IR/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/WasmSSA/IR/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":BytecodeOpInterface",
+        ":DialectUtils",
+        ":FunctionInterfaces",
+        ":IR",
+        ":InferTypeOpInterface",
+        ":Support",
+        ":WasmSSAIncGen",
+        ":WasmSSAOpsIncGen",
+        ":WasmSSATypesIncGen",
+        ":WasmSSAInterfacesIncGen",
+        "//llvm:Support",
+    ],
+)
+
+
+##---------------------------------------------------------------------------##
 # XeGPU dialect.
 ##---------------------------------------------------------------------------##
 
@@ -8981,6 +9085,7 @@ cc_library(
         ":UBDialect",
         ":VectorDialect",
         ":VectorTransforms",
+        ":WasmSSADialect",
         ":X86VectorDialect",
         ":XeGPUDialect",
         ":XeVMDialect",
