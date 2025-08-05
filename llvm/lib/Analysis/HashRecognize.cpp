@@ -73,216 +73,86 @@ using namespace SCEVPatternMatch;
 
 #define DEBUG_TYPE "hash-recognize"
 
-// KnownBits for a PHI node. There are at most two PHI nodes, corresponding to
-// the Simple Recurrence and Conditional Recurrence. The IndVar PHI is not
-// relevant.
-using KnownPhiMap = SmallDenseMap<const PHINode *, KnownBits, 2>;
-
-// A pair of a PHI node along with its incoming value from within a loop.
-using PhiStepPair = std::pair<const PHINode *, const Instruction *>;
-
-/// A much simpler version of ValueTracking, in that it computes KnownBits of
-/// values, except that it computes the evolution of KnownBits in a loop with a
-/// given trip count, and predication is specialized for a significant-bit
-/// check.
-class ValueEvolution {
-  const unsigned TripCount;
-  const bool ByteOrderSwapped;
-  APInt GenPoly;
-  StringRef ErrStr;
-  unsigned AtIter;
-
-  // Compute the KnownBits of a BinaryOperator.
-  KnownBits computeBinOp(const BinaryOperator *I);
-
-  // Compute the KnownBits of an Instruction.
-  KnownBits computeInstr(const Instruction *I);
-
-  // Compute the KnownBits of a Value.
-  KnownBits compute(const Value *V);
-
-public:
-  // ValueEvolution is meant to be constructed with the TripCount of the loop,
-  // and a boolean indicating whether the polynomial algorithm is big-endian
-  // (for the significant-bit check).
-  ValueEvolution(unsigned TripCount, bool ByteOrderSwapped);
-
-  // Given a list of PHI nodes along with their incoming value from within the
-  // loop, computeEvolutions computes the KnownBits of each of the PHI nodes on
-  // the final iteration. Returns true on success and false on error.
-  bool computeEvolutions(ArrayRef<PhiStepPair> PhiEvolutions);
-
-  // In case ValueEvolution encounters an error, this is meant to be used for a
-  // precise error message.
-  StringRef getError() const { return ErrStr; }
-
-  // A set of Instructions visited by ValueEvolution. The only unvisited
-  // instructions will be ones not on the use-def chain of the PHIs' evolutions.
-  SmallPtrSet<const Instruction *, 16> Visited;
-
-  // The computed KnownBits for each PHI node, which is populated after
-  // computeEvolutions is called.
-  KnownPhiMap KnownPhis;
-};
-
-ValueEvolution::ValueEvolution(unsigned TripCount, bool ByteOrderSwapped)
-    : TripCount(TripCount), ByteOrderSwapped(ByteOrderSwapped) {}
-
-KnownBits ValueEvolution::computeBinOp(const BinaryOperator *I) {
-  KnownBits KnownL(compute(I->getOperand(0)));
-  KnownBits KnownR(compute(I->getOperand(1)));
-
-  switch (I->getOpcode()) {
-  case Instruction::BinaryOps::And:
-    return KnownL & KnownR;
-  case Instruction::BinaryOps::Or:
-    return KnownL | KnownR;
-  case Instruction::BinaryOps::Xor:
-    return KnownL ^ KnownR;
-  case Instruction::BinaryOps::Shl: {
-    auto *OBO = cast<OverflowingBinaryOperator>(I);
-    return KnownBits::shl(KnownL, KnownR, OBO->hasNoUnsignedWrap(),
-                          OBO->hasNoSignedWrap());
-  }
-  case Instruction::BinaryOps::LShr:
-    return KnownBits::lshr(KnownL, KnownR);
-  case Instruction::BinaryOps::AShr:
-    return KnownBits::ashr(KnownL, KnownR);
-  case Instruction::BinaryOps::Add: {
-    auto *OBO = cast<OverflowingBinaryOperator>(I);
-    return KnownBits::add(KnownL, KnownR, OBO->hasNoUnsignedWrap(),
-                          OBO->hasNoSignedWrap());
-  }
-  case Instruction::BinaryOps::Sub: {
-    auto *OBO = cast<OverflowingBinaryOperator>(I);
-    return KnownBits::sub(KnownL, KnownR, OBO->hasNoUnsignedWrap(),
-                          OBO->hasNoSignedWrap());
-  }
-  case Instruction::BinaryOps::Mul: {
-    Value *Op0 = I->getOperand(0);
-    Value *Op1 = I->getOperand(1);
-    bool SelfMultiply = Op0 == Op1 && isGuaranteedNotToBeUndef(Op0);
-    return KnownBits::mul(KnownL, KnownR, SelfMultiply);
-  }
-  case Instruction::BinaryOps::UDiv:
-    return KnownBits::udiv(KnownL, KnownR);
-  case Instruction::BinaryOps::SDiv:
-    return KnownBits::sdiv(KnownL, KnownR);
-  case Instruction::BinaryOps::URem:
-    return KnownBits::urem(KnownL, KnownR);
-  case Instruction::BinaryOps::SRem:
-    return KnownBits::srem(KnownL, KnownR);
-  default:
-    ErrStr = "Unknown BinaryOperator";
-    unsigned BitWidth = I->getType()->getScalarSizeInBits();
-    return {BitWidth};
-  }
-}
-
-KnownBits ValueEvolution::computeInstr(const Instruction *I) {
-  unsigned BitWidth = I->getType()->getScalarSizeInBits();
-
-  // computeInstr is the only entry-point that needs to update the Visited set.
-  Visited.insert(I);
-
-  // We look up in the map that contains the KnownBits of the PHI from the
-  // previous iteration.
-  if (const PHINode *P = dyn_cast<PHINode>(I))
-    return KnownPhis.lookup_or(P, BitWidth);
-
-  // Compute the KnownBits for a Select(Cmp()), forcing it to take the branch
-  // that is (least|most)-significant-bit-clear.
+/// Check the well-formedness of the (most|least) significant bit check \p SI,
+/// where \p BitShift is the bit-shift branch: the other branch must be a
+/// bit-shift-and-xor-poly branch, as already checked by
+/// matchConditionalRecurrence. We check that the compare is `>= 0` in the
+/// big-endian case, and `== 0` in the little-endian case (or the inverse, in
+/// which case the branches of the compare are swapped). We check LCR against
+/// CheckLCR, which is full-set in the big-endian case, and [0, 2) in the
+/// little-endian case: CheckLCR checks that the comparison is `>= 0` in the
+/// big-endian case, and that the compare is to 0 or 1 in the little-endian case
+/// (as a value and'ed with 1 is passed as the operand). We then check
+/// AllowedByR against CheckAllowedByR, which is [0, smin) in the big-endian
+/// case, and [0, 1) in the little-endian case: CheckAllowedByR checks for
+/// significant-bit-clear, and this must be equal to \p BitShift for
+/// well-formedness.
+static bool isSignificantBitCheckWellFormed(const SelectInst *SI,
+                                            const BinaryOperator *BitShift,
+                                            bool ByteOrderSwapped) {
+  DataLayout DL = SI->getParent()->getDataLayout();
   CmpPredicate Pred;
   Value *L, *R;
   Instruction *TV, *FV;
-  if (match(I, m_Select(m_ICmp(Pred, m_Value(L), m_Value(R)), m_Instruction(TV),
-                        m_Instruction(FV)))) {
-    Visited.insert(cast<Instruction>(I->getOperand(0)));
+  [[maybe_unused]] bool Match =
+      match(SI, m_Select(m_ICmp(Pred, m_Value(L), m_Value(R)),
+                         m_Instruction(TV), m_Instruction(FV)));
+  assert(Match && "Select(ICmp()) expected in signficant-bit-check");
 
-    // Check that the predication is on (most|least) significant bit. We check
-    // that the compare is `>= 0` in the big-endian case, and `== 0` in the
-    // little-endian case (or the inverse, in which case the branches of the
-    // compare are swapped). We check LCR against CheckLCR, which is full-set,
-    // [0, -1), [0, -3), [0, -7), etc. depending on AtIter in the big-endian
-    // case, and [0, 2) in the little-endian case: CheckLCR checks that we are
-    // shifting in zero bits in every loop iteration in the big-endian case, and
-    // the compare 0 or 1 in the little-endian case (as a value and'ed with 1 is
-    // passed as the operand). We then check AllowedByR against CheckAllowedByR,
-    // which is [0, smin) in the big-endian case, and [0, 1) in the
-    // little-endian case: CheckAllowedByR checks for significant-bit-clear,
-    // which means that we visit the bit-shift branch instead of the
-    // bit-shift-and-xor-poly branch.
-    KnownBits KnownL = compute(L);
-    unsigned ICmpBW = KnownL.getBitWidth();
-    auto LCR = ConstantRange::fromKnownBits(KnownL, false);
-    auto CheckLCR = ConstantRange::getNonEmpty(
-        APInt::getZero(ICmpBW), ByteOrderSwapped
-                                    ? -APInt::getLowBitsSet(ICmpBW, AtIter)
-                                    : APInt(ICmpBW, 2));
-    if (LCR != CheckLCR) {
-      ErrStr = "Bad LHS of significant-bit-check";
-      return {BitWidth};
-    }
+  KnownBits KnownL = computeKnownBits(L, DL);
+  unsigned ICmpBW = KnownL.getBitWidth();
+  auto LCR = ConstantRange::fromKnownBits(KnownL, false);
+  auto CheckLCR = ConstantRange::getNonEmpty(
+      APInt::getZero(ICmpBW),
+      ByteOrderSwapped ? APInt::getZero(ICmpBW) : APInt(ICmpBW, 2));
+  if (LCR != CheckLCR)
+    return false;
 
-    KnownBits KnownR = compute(R);
-    auto RCR = ConstantRange::fromKnownBits(KnownR, false);
-    auto AllowedByR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
-    ConstantRange CheckAllowedByR(
-        APInt::getZero(ICmpBW),
-        ByteOrderSwapped ? APInt::getSignedMinValue(ICmpBW) : APInt(ICmpBW, 1));
+  KnownBits KnownR = computeKnownBits(R, DL);
+  auto RCR = ConstantRange::fromKnownBits(KnownR, false);
+  auto AllowedByR = ConstantRange::makeAllowedICmpRegion(Pred, RCR);
+  ConstantRange CheckAllowedByR(
+      APInt::getZero(ICmpBW),
+      ByteOrderSwapped ? APInt::getSignedMinValue(ICmpBW) : APInt(ICmpBW, 1));
 
-    // We only compute KnownBits of either TV or FV, as the other branch would
-    // be the bit-shift-and-xor-poly branch, as determined by the conditional
-    // recurrence.
-    if (AllowedByR == CheckAllowedByR) {
-      Visited.insert(FV);
-      return compute(TV);
-    }
-    if (AllowedByR.inverse() == CheckAllowedByR) {
-      Visited.insert(TV);
-      return compute(FV);
-    }
-
-    ErrStr = "Bad RHS of significant-bit-check";
-    return {BitWidth};
-  }
-
-  if (auto *BO = dyn_cast<BinaryOperator>(I))
-    return computeBinOp(BO);
-
-  switch (I->getOpcode()) {
-  case Instruction::CastOps::Trunc:
-    return compute(I->getOperand(0)).trunc(BitWidth);
-  case Instruction::CastOps::ZExt:
-    return compute(I->getOperand(0)).zext(BitWidth);
-  case Instruction::CastOps::SExt:
-    return compute(I->getOperand(0)).sext(BitWidth);
-  default:
-    ErrStr = "Unknown Instruction";
-    return {BitWidth};
-  }
+  if (AllowedByR == CheckAllowedByR)
+    return TV == BitShift;
+  if (AllowedByR.inverse() == CheckAllowedByR)
+    return FV == BitShift;
+  return false;
 }
 
-KnownBits ValueEvolution::compute(const Value *V) {
-  if (auto *CI = dyn_cast<ConstantInt>(V))
-    return KnownBits::makeConstant(CI->getValue());
+/// Checks if Loop \p L contains instructions unreachable or unhandled from \p
+/// Roots on the use-def chain.
+static bool
+containsUnreachableOrUnhandled(const Loop &L,
+                               ArrayRef<const Instruction *> Roots) {
+  SmallPtrSet<const Instruction *, 16> Visited;
+  BasicBlock *Latch = L.getLoopLatch();
 
-  if (auto *I = dyn_cast<Instruction>(V))
-    return computeInstr(I);
+  SmallVector<const Instruction *, 16> Worklist(Roots);
+  while (!Worklist.empty()) {
+    const Instruction *I = Worklist.pop_back_val();
+    Visited.insert(I);
 
-  ErrStr = "Unknown Value";
-  unsigned BitWidth = V->getType()->getScalarSizeInBits();
-  return {BitWidth};
-}
+    if (isa<PHINode>(I))
+      continue;
 
-bool ValueEvolution::computeEvolutions(ArrayRef<PhiStepPair> PhiEvolutions) {
-  for (unsigned I = 0; I < TripCount; ++I) {
-    AtIter = I;
-    for (auto [Phi, Step] : PhiEvolutions)
-      KnownPhis.emplace_or_assign(Phi, computeInstr(Step));
+    if (!isa<TruncInst, BinaryOperator, SelectInst, CmpInst, BranchInst>(I))
+      return true;
+
+    for (const Use &U : I->operands()) {
+      if (auto *UI = dyn_cast<Instruction>(U)) {
+        if (!L.contains(UI))
+          return true;
+        Worklist.push_back(UI);
+        continue;
+      }
+      if (!isa<ConstantInt, BasicBlock>(U))
+        return true;
+    }
   }
-
-  return ErrStr.empty();
+  return std::distance(Latch->begin(), Latch->end()) != Visited.size();
 }
 
 /// A structure that can hold either a Simple Recurrence or a Conditional
@@ -473,26 +343,6 @@ PolynomialInfo::PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
     : TripCount(TripCount), LHS(LHS), RHS(RHS), ComputedValue(ComputedValue),
       ByteOrderSwapped(ByteOrderSwapped), LHSAux(LHSAux) {}
 
-/// In the big-endian case, checks the bottom N bits against CheckFn, and that
-/// the rest are unknown. In the little-endian case, checks the top N bits
-/// against CheckFn, and that the rest are unknown. Callers usually call this
-/// function with N = TripCount, and CheckFn checking that the remainder bits of
-/// the CRC polynomial division are zero.
-static bool checkExtractBits(const KnownBits &Known, unsigned N,
-                             function_ref<bool(const KnownBits &)> CheckFn,
-                             bool ByteOrderSwapped) {
-  // Check that the entire thing is a constant.
-  if (N == Known.getBitWidth())
-    return CheckFn(Known.extractBits(N, 0));
-
-  // Check that the {top, bottom} N bits are not unknown and that the {bottom,
-  // top} N bits are known.
-  unsigned BitPos = ByteOrderSwapped ? 0 : Known.getBitWidth() - N;
-  unsigned SwappedBitPos = ByteOrderSwapped ? N : 0;
-  return CheckFn(Known.extractBits(N, BitPos)) &&
-         Known.extractBits(Known.getBitWidth() - N, SwappedBitPos).isUnknown();
-}
-
 /// Generate a lookup table of 256 entries by interleaving the generating
 /// polynomial. The optimization technique of table-lookup for CRC is also
 /// called the Sarwate algorithm.
@@ -525,9 +375,7 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
 /// Checks that \p P1 and \p P2 are used together in an XOR in the use-def chain
 /// of \p SI's condition, ignoring any casts. The purpose of this function is to
 /// ensure that LHSAux from the SimpleRecurrence is used correctly in the CRC
-/// computation. We cannot check the correctness of casts at this point, and
-/// rely on the KnownBits propagation to check correctness of the CRC
-/// computation.
+/// computation. We cannot check the correctness of casts at this point.
 ///
 /// In other words, it checks for the following pattern:
 ///
@@ -584,10 +432,8 @@ static std::optional<bool> isBigEndianBitShift(Value *V, ScalarEvolution &SE) {
 }
 
 /// The main entry point for analyzing a loop and recognizing the CRC algorithm.
-/// Returns a PolynomialInfo on success, and either an ErrBits or a StringRef on
-/// failure.
-std::variant<PolynomialInfo, ErrBits, StringRef>
-HashRecognize::recognizeCRC() const {
+/// Returns a PolynomialInfo on success, and a StringRef on failure.
+std::variant<PolynomialInfo, StringRef> HashRecognize::recognizeCRC() const {
   if (!L.isInnermost())
     return "Loop is not innermost";
   BasicBlock *Latch = L.getLoopLatch();
@@ -651,35 +497,19 @@ HashRecognize::recognizeCRC() const {
          "Expected ExtraConst in conditional recurrence");
   const APInt &GenPoly = *ConditionalRecurrence.ExtraConst;
 
-  // PhiEvolutions are pairs of PHINodes along with their incoming value from
-  // within the loop, which we term as their step. Note that in the case of a
-  // Simple Recurrence, Step is an operand of the BO, while in a Conditional
-  // Recurrence, it is a SelectInst.
-  SmallVector<PhiStepPair, 2> PhiEvolutions;
-  PhiEvolutions.emplace_back(ConditionalRecurrence.Phi, ComputedValue);
+  if (!isSignificantBitCheckWellFormed(
+          cast<SelectInst>(ConditionalRecurrence.Step),
+          ConditionalRecurrence.BO, *ByteOrderSwapped))
+    return "Malformed significant-bit check";
+
+  SmallVector<const Instruction *> Roots(
+      {ComputedValue,
+       cast<Instruction>(IndVar->getIncomingValueForBlock(Latch)),
+       L.getLatchCmpInst(), Latch->getTerminator()});
   if (SimpleRecurrence)
-    PhiEvolutions.emplace_back(SimpleRecurrence.Phi, SimpleRecurrence.BO);
-
-  ValueEvolution VE(TC, *ByteOrderSwapped);
-  if (!VE.computeEvolutions(PhiEvolutions))
-    return VE.getError();
-  KnownBits ResultBits = VE.KnownPhis.at(ConditionalRecurrence.Phi);
-
-  // There must be exactly four unvisited instructions, corresponding to the
-  // IndVar PHI. Any other unvisited instructions from the KnownBits propagation
-  // can complicate the optimization, which replaces the entire loop with the
-  // table-lookup version of the hash algorithm.
-  std::initializer_list<const Instruction *> AugmentVisited = {
-      IndVar, Latch->getTerminator(), L.getLatchCmpInst(),
-      cast<Instruction>(IndVar->getIncomingValueForBlock(Latch))};
-  VE.Visited.insert_range(AugmentVisited);
-  if (std::distance(Latch->begin(), Latch->end()) != VE.Visited.size())
-    return "Found stray unvisited instructions";
-
-  unsigned N = std::min(TC, ResultBits.getBitWidth());
-  auto IsZero = [](const KnownBits &K) { return K.isZero(); };
-  if (!checkExtractBits(ResultBits, N, IsZero, *ByteOrderSwapped))
-    return ErrBits(ResultBits, TC, *ByteOrderSwapped);
+    Roots.push_back(SimpleRecurrence.BO);
+  if (containsUnreachableOrUnhandled(L, Roots))
+    return "Found stray unvisited or unhandled instructions";
 
   return PolynomialInfo(TC, LHS, GenPoly, ComputedValue, *ByteOrderSwapped,
                         LHSAux);
@@ -707,13 +537,6 @@ void HashRecognize::print(raw_ostream &OS) const {
     OS << "Did not find a hash algorithm\n";
     if (std::holds_alternative<StringRef>(Ret))
       OS << "Reason: " << std::get<StringRef>(Ret) << "\n";
-    if (std::holds_alternative<ErrBits>(Ret)) {
-      auto [Actual, Iter, ByteOrderSwapped] = std::get<ErrBits>(Ret);
-      OS << "Reason: Expected " << (ByteOrderSwapped ? "bottom " : "top ")
-         << Iter << " bits zero (";
-      Actual.print(OS);
-      OS << ")\n";
-    }
     return;
   }
 
