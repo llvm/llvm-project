@@ -2038,7 +2038,12 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
                                       const FunctionDecl *FuncDecl,
                                       bool Activate) {
   assert(VarScope->getKind() == ScopeKind::Call);
-  llvm::BitVector NonNullArgs = collectNonNullArgs(FuncDecl, Args);
+  bool HasNonNullAttr = false;
+  llvm::BitVector NonNullArgs;
+  if (FuncDecl && FuncDecl->hasAttr<NonNullAttr>()) {
+    HasNonNullAttr = true;
+    NonNullArgs = collectNonNullArgs(FuncDecl, Args);
+  }
 
   unsigned ArgIndex = 0;
   for (const Expr *Arg : Args) {
@@ -2064,7 +2069,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
         return false;
     }
 
-    if (FuncDecl && NonNullArgs[ArgIndex]) {
+    if (HasNonNullAttr && NonNullArgs[ArgIndex]) {
       PrimType ArgT = classify(Arg).value_or(PT_Ptr);
       if (ArgT == PT_Ptr) {
         if (!this->emitCheckNonNullArg(ArgT, Arg))
