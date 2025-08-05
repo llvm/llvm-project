@@ -2592,13 +2592,13 @@ def int_amdgcn_cs_chain:
 // calling convention and must not be variadic. The remaining arguments to the
 // callee are taken from the arguments passed to the intrinsic. Lanes that are
 // inactive at the point of the call will receive poison. The return value is
-// the return value of the callee for the active lanes and poison for the
-// inactive ones.
+// the return value of the callee for the active lanes (there is no return
+// value in the inactive ones).
 def int_amdgcn_call_whole_wave:
   Intrinsic<[llvm_any_ty],    // The return type of the callee.
             [llvm_anyptr_ty,  // The callee.
              llvm_vararg_ty], // The arguments to the callee.
-            [IntrConvergent, IntrNoReturn, IntrNoCallback, IntrNoFree]>;
+            [IntrConvergent]>;
 
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
