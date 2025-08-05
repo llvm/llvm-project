@@ -427,7 +427,9 @@ using std::__math::islessgreater;
 using std::__math::isnan;
 using std::__math::isnormal;
 using std::__math::isunordered;
-#      elif _LIBCPP_STD_VER >= 20
+#      endif // _LIBCPP_MSVCRT
+
+#      if defined(_LIBCPP_MSVCRT) && _LIBCPP_STD_VER >= 20
 // MS UCRT incorrectly defines some functions in a way not working with integer types. Until C++20, this was worked
 // around by -fdelayed-template-parsing. Since C++20, we can use standard feature "requires" instead.
 
@@ -444,7 +446,7 @@ using std::__math::__ucrt::islessgreater;
 using std::__math::__ucrt::isnan;
 using std::__math::__ucrt::isnormal;
 using std::__math::__ucrt::isunordered;
-#      endif // _LIBCPP_MSVCRT
+#      endif // defined(_LIBCPP_MSVCRT) && _LIBCPP_STD_VER >= 20
 
 // We have to provide double overloads for <math.h> to work on platforms that don't provide the full set of math
 // functions. To make the overload set work with multiple functions that take the same arguments, we make our overloads
