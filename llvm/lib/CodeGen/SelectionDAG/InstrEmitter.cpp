@@ -1178,7 +1178,9 @@ EmitMachineNode(SDNode *Node, bool IsClone, bool IsCloned,
   if (Node->getValueType(Node->getNumValues()-1) == MVT::Glue) {
     for (SDNode *F = Node->getGluedUser(); F; F = F->getGluedUser()) {
       if (F->getOpcode() == ISD::CopyFromReg) {
-        UsedRegs.push_back(cast<RegisterSDNode>(F->getOperand(1))->getReg());
+        Register Reg = cast<RegisterSDNode>(F->getOperand(1))->getReg();
+        if (Reg.isPhysical())
+          UsedRegs.push_back(Reg);
         continue;
       } else if (F->getOpcode() == ISD::CopyToReg) {
         // Skip CopyToReg nodes that are internal to the glue chain.
