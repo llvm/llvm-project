@@ -246,9 +246,9 @@ body:             |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(slt), [[SUB]](s64), [[COPY]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s64) = G_ICMP intpred(sgt), [[COPY1]](s64), [[C]]
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ICMP1]], [[ICMP]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(slt), [[COPY]](s64), [[COPY1]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s64) = G_ICMP intpred(slt), [[SUB]](s64), [[C]]
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ICMP]], [[ICMP1]]
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY [[SUB]](s64)
     ; CHECK-NEXT: $x10 = COPY [[COPY2]](s64)
     ; CHECK-NEXT: $x11 = COPY [[XOR]](s64)

@@ -48,11 +48,10 @@ define i32 @addusat(i32 %a, i32 %b) {
 define i32 @subsat(i32 %a, i32 %b) {
 ; RV32I-LABEL: subsat:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a2, a0
-; RV32I-NEXT:    sgtz a3, a1
+; RV32I-NEXT:    slt a2, a0, a1
 ; RV32I-NEXT:    sub a0, a0, a1
-; RV32I-NEXT:    slt a1, a0, a2
-; RV32I-NEXT:    beq a3, a1, .LBB2_2
+; RV32I-NEXT:    slti a1, a0, 0
+; RV32I-NEXT:    beq a2, a1, .LBB2_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    srai a0, a0, 31
 ; RV32I-NEXT:    lui a1, 524288
