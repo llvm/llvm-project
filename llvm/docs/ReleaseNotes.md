@@ -108,7 +108,6 @@ Changes to the RISC-V Backend
   and data using mapping symbols such as `$x` and `$d`. Switching architectures
   using `$x` with an architecture string suffix is not yet supported.
 
-
 Changes to the WebAssembly Backend
 ----------------------------------
 

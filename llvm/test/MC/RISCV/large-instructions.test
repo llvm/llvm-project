@@ -1,5 +1,5 @@
-# RUN: yaml2obj -o - %s \
-# RUN:     | llvm-objdump -d - | FileCheck %s
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump -d %t | FileCheck %s
 
 ## This CHECKs objdump's handling of wide instruction encodings, and how it
 ## groups the instruction bytes when disassembling.
@@ -15,74 +15,46 @@ FileHeader:
   Machine:         EM_RISCV
   SectionHeaderStringTable: .strtab
 Sections:
-  - Name:            .text.six_byte
+  - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
     AddressAlign:    0x1
-    Content:         1F0123456789
-    # CHECK: 011f 4523 8967 <unknown>
-  - Name:            .text.eight_byte
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x1
-    Content:         3F0123456789ABCD
-    # CHECK: 4523013f cdab8967 <unknown>
-  - Name:            .text.ten_byte
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x1
-    Content:         7F0023456789ABCDEFFE
-    # CHECK: 007f 4523 8967 cdab feef <unknown>
-  - Name:            .text.twelve_byte
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x1
-    Content:         7F1023456789ABCDEFFEDCBA
-    # CHECK: 4523107f cdab8967 badcfeef <unknown>
-  - Name:            .text.fourteen_byte
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x1
-    Content:         7F2023456789ABCDEFFEDCBA9876
-    # CHECK: 207f 4523 8967 cdab feef badc 7698 <unknown>
-  - Name:            .text.sixteen_byte
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x1
-    Content:         7F3023456789ABCDEFFEDCBA98765432
-    # CHECK: 4523307f cdab8967 badcfeef 32547698 <unknown>
-  - Name:            .text.eighteen_byte
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x1
-    Content:         7F4023456789ABCDEFFEDCBA987654321012
-    # CHECK: 407f 4523 8967 cdab feef badc 7698 3254 1210 <unknown>
-  - Name:            .text.twenty_byte
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x1
-    Content:         7F5023456789ABCDEFFEDCBA9876543210123456
-    # CHECK: 4523507f cdab8967 badcfeef 32547698 56341210 <unknown>
-  - Name:            .text.twentytwo_byte
-    Type:            SHT_PROGBITS
-    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
-    AddressAlign:    0x1
-    Content:         7F6023456789ABCDEFFEDCBA9876543210123456789A
-    # CHECK: 607f 4523 8967 cdab feef badc 7698 3254 1210 5634 9a78 <unknown>
+    ContentArray:    [
+      # CHECK: 011f 4523 8967 <unknown>
+      0x1f, 0x01, 0x23, 0x45, 0x67, 0x89,
+
+      # CHECK: 4523013f cdab8967 <unknown>
+      0x3f, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd,
+
+      # CHECK: 007f 4523 8967 cdab feef <unknown>
+      0x7f, 0x00, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe,
+
+      # CHECK: 4523107f cdab8967 badcfeef <unknown>
+      0x7f, 0x10, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba,
+
+      # CHECK: 207f 4523 8967 cdab feef badc 7698 <unknown>
+      0x7f, 0x20, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76,
+
+      # CHECK: 4523307f cdab8967 badcfeef 32547698 <unknown>
+      0x7f, 0x30, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32,
+
+      # CHECK: 407f 4523 8967 cdab feef badc 7698 3254 1210 <unknown>
+      0x7f, 0x40, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10, 0x12,
+
+      # CHECK: 4523507f cdab8967 badcfeef 32547698 56341210 <unknown>
+      0x7f, 0x50, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10, 0x12, 0x34, 0x56,
+
+      # CHECK: 607f 4523 8967 cdab feef badc 7698 3254 1210 5634 9a78 <unknown>
+      0x7f, 0x60, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10, 0x12, 0x34, 0x56, 0x78, 0x9a,
+    ]
+
   - Type:            SectionHeaderTable
     Sections:
       - Name:            .strtab
-      - Name:            .text.six_byte
-      - Name:            .text.eight_byte
-      - Name:            .text.ten_byte
-      - Name:            .text.twelve_byte
-      - Name:            .text.fourteen_byte
-      - Name:            .text.sixteen_byte
-      - Name:            .text.eighteen_byte
-      - Name:            .text.twenty_byte
-      - Name:            .text.twentytwo_byte
       - Name:            .symtab
+      - Name:            .text
 Symbols:
-  - Name:            '$x'
-    Section:         .text.six_byte
+  - Name:    "$x"
+    Section: .text
+    Value:   0x0
 ...
