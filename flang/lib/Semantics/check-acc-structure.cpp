@@ -287,7 +287,6 @@ std::optional<std::int64_t> AccStructureChecker::getGangDimensionSize(
           }
         }
       }
-      return 1;
     }
   }
   return std::nullopt;
@@ -305,10 +304,29 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
             if (IsInsideParallelConstruct()) {
               auto parentDim = getGangDimensionSize(parent);
               auto currentDim = getGangDimensionSize(GetContext());
-              if (*parentDim <= *currentDim) {
+              std::int64_t parentDimNum = 1, currentDimNum = 1;
+              if (parentDim) {
+                parentDimNum = *parentDim;
+              }
+              if (currentDim) {
+                currentDimNum = *currentDim;
+              }
+              if (parentDimNum <= currentDimNum) {
+                std::string parentDimStr, currentDimStr;
+                if (parentDim) {
+                  parentDimStr = "(dim:" + std::to_string(parentDimNum) + ")";
+                }
+                if (currentDim) {
+                  currentDimStr = "(dim:" + std::to_string(currentDimNum) + ")";
+                }
                 context_.Say(GetContext().clauseSource,
-                    "gang(dim:%ld) clause is not allowed in the region of a loop with the gang(dim:%ld) clause"_err_en_US,
-                    *currentDim, *parentDim);
+                    "%s%s clause is not allowed in the region of a loop with the %s%s clause"_err_en_US,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(cl).str()),
+                    currentDimStr,
+                    parser::ToUpperCaseLetters(
+                        llvm::acc::getOpenACCClauseName(parentClause).str()),
+                    parentDimStr);
                 continue;
               }
             } else {
