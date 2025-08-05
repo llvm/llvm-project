@@ -11403,12 +11403,12 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     if (TVal.getOpcode() == ISD::SUB && FVal.getOpcode() == ISD::SUB) {
       if (TVal.getOperand(0) == LHS && TVal.getOperand(1) == RHS &&
           FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS) {
-        FVal = DAG.getNegative(TVal, DL, TVal.getValueType());
         TVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
+        FVal = DAG.getNegative(TVal, DL, TVal.getValueType());
       } else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
                  FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS) {
-        TVal = DAG.getNegative(FVal, DL, FVal.getValueType());
         FVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
+        TVal = DAG.getNegative(FVal, DL, FVal.getValueType());
       }
     }
 
