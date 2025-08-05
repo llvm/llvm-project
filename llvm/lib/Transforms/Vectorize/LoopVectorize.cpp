@@ -8338,9 +8338,8 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     // Add backedge value.
     PhiRecipe->addOperand(Operands[1]);
     return PhiRecipe;
-  } else {
-    assert(!R->isPhi() && "only VPPhi nodes expected at this point");
   }
+  assert(!R->isPhi() && "only VPPhi nodes expected at this point");
 
   if (isa<TruncInst>(Instr) && (Recipe = tryToOptimizeInductionTruncate(
                                     cast<TruncInst>(Instr), Operands, Range)))
