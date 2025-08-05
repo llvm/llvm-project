@@ -43,3 +43,4 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   MLIRVectorDialect
 )
 
+set_target_properties(obj.MLIRMemRefTransforms PROPERTIES UNITY_BUILD_BATCH_SIZE 1)
