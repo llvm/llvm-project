@@ -2080,6 +2080,11 @@ ExpectedType clang::ASTNodeImporter::VisitDependentBitIntType(
                                                         *ToNumBitsExprOrErr);
 }
 
+ExpectedType clang::ASTNodeImporter::VisitPredefinedSugarType(
+    const clang::PredefinedSugarType *T) {
+  return Importer.getToContext().getPredefinedSugarType(T->getKind());
+}
+
 ExpectedType clang::ASTNodeImporter::VisitDependentSizedMatrixType(
     const clang::DependentSizedMatrixType *T) {
   Error Err = Error::success();
@@ -6263,8 +6268,8 @@ ASTNodeImporter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
           ToD, D, Importer.getToContext(),
           Importer.getToContext().getTranslationUnitDecl(), *LocationOrErr,
           D->getDepth(), D->getPosition(), D->isParameterPack(),
-          (*NameOrErr).getAsIdentifierInfo(), D->wasDeclaredWithTypename(),
-          *TemplateParamsOrErr))
+          (*NameOrErr).getAsIdentifierInfo(), D->templateParameterKind(),
+          D->wasDeclaredWithTypename(), *TemplateParamsOrErr))
     return ToD;
 
   if (Error Err = importTemplateParameterDefaultArgument(D, ToD))

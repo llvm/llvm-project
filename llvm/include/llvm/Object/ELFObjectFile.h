@@ -1479,6 +1479,7 @@ template <class ELFT> Triple::OSType ELFObjectFile<ELFT>::getOS() const {
   case ELF::ELFOSABI_OPENBSD:
     return Triple::OpenBSD;
   case ELF::ELFOSABI_CUDA:
+  case ELF::ELFOSABI_CUDA_V2:
     return Triple::CUDA;
   case ELF::ELFOSABI_AMDGPU_HSA:
     return Triple::AMDHSA;

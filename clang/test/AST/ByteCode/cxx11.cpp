@@ -39,9 +39,8 @@ struct S {
 constexpr S s = { 5 };
 constexpr const int *p = &s.m + 1;
 
-constexpr const int *np2 = &(*(int(*)[4])nullptr)[0];
-// ref-error@-1 {{constexpr variable 'np2' must be initialized by a constant expression}} \
-// ref-note@-1  {{dereferencing a null pointer is not allowed in a constant expression}}
+constexpr const int *np2 = &(*(int(*)[4])nullptr)[0]; // both-error {{constexpr variable 'np2' must be initialized by a constant expression}} \
+                                                      // both-note  {{dereferencing a null pointer is not allowed in a constant expression}}
 
 constexpr int preDec(int x) { // both-error {{never produces a constant expression}}
   return --x;                 // both-note {{subexpression}}
@@ -290,3 +289,23 @@ namespace OverlappingStrings {
 
 
 }
+
+namespace NonConstLocal {
+  int a() {
+    const int t=t; // both-note {{declared here}}
+
+    switch(1) {
+      case t:; // both-note {{initializer of 't' is not a constant expression}} \
+               // both-error {{case value is not a constant expression}}
+    }
+  }
+}
+
+#define ATTR __attribute__((require_constant_initialization))
+int somefunc() {
+  const int non_global = 42; // both-note {{declared here}}
+  ATTR static const int &local_init = non_global; // both-error {{variable does not have a constant initializer}} \
+                                                  // both-note {{required by}} \
+                                                  // both-note {{reference to 'non_global' is not a constant expression}}
+}
+
