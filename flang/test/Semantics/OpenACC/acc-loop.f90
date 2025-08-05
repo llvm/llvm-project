@@ -302,7 +302,8 @@ program openacc_loop_validity
   end do
   !$acc end kernels
 
-  !$acc kernels loop gang(dim:1)
+  !$acc parallel
+  !$acc loop gang(dim:1)
   do i = 1, n
     !ERROR: gang(dim:1) clause is not allowed in the region of a loop with the gang(dim:1) clause
     !$acc loop gang(dim:1)
@@ -324,9 +325,9 @@ program openacc_loop_validity
       end do
     end do
   end do
-  !$acc end kernels loop
+  !$acc end parallel
 
-  !$acc kernels loop gang(dim:3)
+  !$acc parallel loop gang(dim:3)
   do i = 1, n
     !$acc loop gang(dim:2)
     do j = 1, n
@@ -335,9 +336,9 @@ program openacc_loop_validity
       end do
     end do
   end do
-  !$acc end kernels loop
+  !$acc end parallel loop
 
-  !$acc parallel loop gang(dim:3)
+  !$acc kernels loop gang(dim:3)
   do i = 1, n
     !ERROR: GANG clause is not allowed in the region of a loop with the GANG clause
     !$acc loop gang(dim:2)
@@ -348,7 +349,7 @@ program openacc_loop_validity
       end do
     end do
   end do
-  !$acc end parallel loop
+  !$acc end kernels loop
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the PARALLEL directive
   !$acc parallel device_type(*) if(.TRUE.)

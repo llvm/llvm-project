@@ -138,10 +138,10 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
   }
 }
 
-bool AccStructureChecker::IsInsideKernelsConstruct() const {
+bool AccStructureChecker::IsInsideParallelConstruct() const {
   if (auto directive = getParentComputeConstruct()) {
-    if (*directive == llvm::acc::ACCD_kernels ||
-        *directive == llvm::acc::ACCD_kernels_loop) {
+    if (*directive == llvm::acc::ACCD_parallel ||
+        *directive == llvm::acc::ACCD_parallel_loop) {
       return true;
     }
   }
@@ -302,7 +302,7 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
           bool invalid{false};
           if (parentClause == llvm::acc::Clause::ACCC_gang &&
               cl == llvm::acc::Clause::ACCC_gang) {
-            if (IsInsideKernelsConstruct()) {
+            if (IsInsideParallelConstruct()) {
               auto parentDim = getGangDimensionSize(parent);
               auto currentDim = getGangDimensionSize(GetContext());
               if (*parentDim <= *currentDim) {
