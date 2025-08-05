@@ -351,7 +351,6 @@ int main(int argc, const char **argv) {
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
     std::string Input;
-    llvm::raw_ostream &OS = llvm::outs();
     LE.setListCompleter(ReplListCompleter(CB, *Interp));
     while (std::optional<std::string> Line = LE.readLine()) {
       llvm::StringRef L = *Line;
@@ -375,10 +374,10 @@ int main(int argc, const char **argv) {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input == R"(%help)") {
-        OS << "%help\t\tlist clang-repl %commands\n"
-           << "%undo\t\tundo the previous input\n"
-           << "%lib\t<path>\tlink a dynamic library\n"
-           << "%quit\t\texit clang-repl\n";
+        llvm::outs() << "%help\t\tlist clang-repl %commands\n"
+                     << "%undo\t\tundo the previous input\n"
+                     << "%lib\t<path>\tlink a dynamic library\n"
+                     << "%quit\t\texit clang-repl\n";
       } else if (Input == R"(%lib)") {
         auto Err = llvm::make_error<llvm::StringError>(
             "%lib expects 1 argument: the path to a dynamic library\n",
