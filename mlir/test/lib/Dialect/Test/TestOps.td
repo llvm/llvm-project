@@ -1169,7 +1169,7 @@ def OpP : TEST_Op<"op_p"> {
   let results = (outs I32);
 }
 
-// Test constant-folding a pattern that maps (F32, F32) -> I32.
+// Test constant-folding a pattern that maps `(F32) -> SI32`.
 def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
   let arguments = (ins RankedTensorOf<[F32]>:$operand);
   let results = (outs RankedTensorOf<[SI32]>:$result);
@@ -1179,7 +1179,7 @@ def SignOp : TEST_Op<"sign", [SameOperandsAndResultShape]> {
   }];
 }
 
-// Test constant-folding a pattern that maps (F32, F32) -> I32.
+// Test constant-folding a pattern that maps `(F32, F32) -> I1`.
 def LessThanOp : TEST_Op<"less_than", [SameOperandsAndResultShape]> {
   let arguments = (ins RankedTensorOf<[F32]>:$lhs, RankedTensorOf<[F32]>:$rhs);
   let results = (outs RankedTensorOf<[I1]>:$result);
