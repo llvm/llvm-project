@@ -58,3 +58,19 @@ module @globals {
     return
   }
 }
+
+// -----
+
+// CHECK-LABEL: reinterpret_cast
+func.func @reinterpret_cast(%arg18: memref<1xi32>) {
+  // CHECK: %0 = builtin.unrealized_conversion_cast %arg0 : memref<1xi32> to !emitc.array<1xi32>
+  // CHECK: %1 = "emitc.constant"() <{value = 0 : index}> : () -> index
+  // CHECK: %2 = emitc.subscript %0[%1] : (!emitc.array<1xi32>, index) -> !emitc.lvalue<i32>
+  // CHECK: %3 = emitc.apply "&"(%2) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
+  // CHECK: %4 = "emitc.constant"() <{value = 0 : index}> : () -> index
+  // CHECK: %5 = "emitc.constant"() <{value = 1 : index}> : () -> index
+  // CHECK: %6 = "emitc.constant"() <{value = 1 : index}> : () -> index
+  %base_buffer_485, %offset_486, %sizes_487, %strides_488 = memref.extract_strided_metadata %arg18 : memref<1xi32> -> memref<i32>, index, index, index
+  return
+}
+

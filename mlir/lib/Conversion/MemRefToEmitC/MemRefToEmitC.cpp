@@ -303,28 +303,39 @@ struct ConvertExtractStridedMetadata final
     Value source = extractStridedMetadataOp.getSource();
 
     MemRefType memrefType = cast<MemRefType>(source.getType());
-    if (!isMemRefTypeLegalForEmitC(memrefType)) {
+    if (!isMemRefTypeLegalForEmitC(memrefType))
       return rewriter.notifyMatchFailure(
           loc, "incompatible memref type for EmitC conversion");
-    }
 
-    Type resultType = convertMemRefType(memrefType, getTypeConverter());
-    if (!resultType) {
-      return rewriter.notifyMatchFailure(loc, "cannot convert result type");
-    }
+    emitc::ConstantOp zeroIndex = rewriter.create<emitc::ConstantOp>(
+        loc, rewriter.getIndexType(), rewriter.getIndexAttr(0));
+    TypedValue<emitc::ArrayType> srcArrayValue =
+        cast<TypedValue<emitc::ArrayType>>(operands.getSource());
+    auto createPointerFromEmitcArray = [loc, &rewriter, &zeroIndex,
+                                        srcArrayValue]() -> emitc::ApplyOp {
+      int64_t rank = srcArrayValue.getType().getRank();
+      llvm::SmallVector<mlir::Value> indices;
+      for (int i = 0; i < rank; ++i) {
+        indices.push_back(zeroIndex);
+      }
 
-    auto baseptr =
-        cast<MemRefType>(extractStridedMetadataOp.getBaseBuffer().getType());
-    auto emitcType = convertMemRefType(baseptr, getTypeConverter());
-    auto arrT = emitc::ArrayType::get(memrefType.getShape(), emitcType);
-    auto valVar = rewriter.create<emitc::VariableOp>(
-        loc, arrT, emitc::OpaqueAttr::get(rewriter.getContext(), ""));
+      emitc::SubscriptOp subPtr = rewriter.create<emitc::SubscriptOp>(
+          loc, srcArrayValue, mlir::ValueRange(indices));
+      emitc::ApplyOp ptr = rewriter.create<emitc::ApplyOp>(
+          loc,
+          emitc::PointerType::get(srcArrayValue.getType().getElementType()),
+          rewriter.getStringAttr("&"), subPtr);
+
+      return ptr;
+    };
+
+    emitc::ApplyOp srcPtr = createPointerFromEmitcArray();
     auto [strides, offset] = memrefType.getStridesAndOffset();
     Value offsetValue = rewriter.create<emitc::ConstantOp>(
         loc, rewriter.getIndexType(), rewriter.getIndexAttr(offset));
 
     SmallVector<Value> results;
-    results.push_back(valVar);
+    results.push_back(srcPtr);
     results.push_back(offsetValue);
 
     for (unsigned i = 0, e = memrefType.getRank(); i < e; ++i) {
@@ -339,39 +350,6 @@ struct ConvertExtractStridedMetadata final
     }
 
     rewriter.replaceOp(extractStridedMetadataOp, results);
-    return success();
-  }
-};
-
-struct ConvertReinterpretCastOp
-    : public OpConversionPattern<memref::ReinterpretCastOp> {
-  using OpConversionPattern::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(memref::ReinterpretCastOp castOp, OpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    MemRefType srcType = cast<MemRefType>(castOp.getSource().getType());
-
-    MemRefType targetMemRefType =
-        cast<MemRefType>(castOp.getResult().getType());
-
-    auto srcInEmitC = convertMemRefType(srcType, getTypeConverter());
-    auto targetInEmitC =
-        convertMemRefType(targetMemRefType, getTypeConverter());
-    if (!srcInEmitC || !targetInEmitC) {
-      return rewriter.notifyMatchFailure(castOp.getLoc(),
-                                         "cannot convert memref type");
-    }
-
-    // Create descriptor.
-    Location loc = castOp.getLoc();
-
-    auto vals = adaptor.getOperands();
-
-    auto res =
-        UnrealizedConversionCastOp::create(rewriter, loc, targetInEmitC, vals)
-            .getResult(0);
-
     return success();
   }
 };
@@ -409,7 +387,6 @@ void mlir::populateMemRefToEmitCTypeConversion(TypeConverter &typeConverter) {
 void mlir::populateMemRefToEmitCConversionPatterns(
     RewritePatternSet &patterns, const TypeConverter &converter) {
   patterns.add<ConvertAlloca, ConvertAlloc, ConvertExtractStridedMetadata,
-               ConvertGlobal, ConvertGetGlobal, ConvertLoad,
-               ConvertReinterpretCastOp, ConvertStore>(converter,
-                                                       patterns.getContext());
+               ConvertGlobal, ConvertGetGlobal, ConvertLoad, ConvertStore>(
+      converter, patterns.getContext());
 }
