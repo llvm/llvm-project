@@ -76,8 +76,30 @@ while.end:                                        ; preds = %while.body, %entry
   ret i8 %r.0.lcssa
 }
 
-define i16 @load16postinc(ptr %p, i16 %cnt) {
+define i16 @load16postinc(ptr %x, i16 %y) {
 ; CHECK-LABEL: load16postinc:
+; CHECK: ld {{.*}}, {{[XYZ]}}+
+; CHECK: ld {{.*}}, {{[XYZ]}}+
+entry:
+  %tobool2 = icmp eq i16 %y, 0
+  br i1 %tobool2, label %while.end, label %while.body
+while.body:                                       ; preds = %entry, %while.body
+  %r.05 = phi i16 [ %add, %while.body ], [ 0, %entry ]
+  %y.addr.04 = phi i16 [ %dec, %while.body ], [ %y, %entry ]
+  %x.addr.03 = phi ptr [ %incdec.ptr, %while.body ], [ %x, %entry ]
+  %dec = add nsw i16 %y.addr.04, -1
+  %incdec.ptr = getelementptr inbounds i16, ptr %x.addr.03, i16 1
+  %0 = load i16, ptr %x.addr.03
+  %add = add nsw i16 %0, %r.05
+  %tobool = icmp eq i16 %dec, 0
+  br i1 %tobool, label %while.end, label %while.body
+while.end:                                        ; preds = %while.body, %entry
+  %r.0.lcssa = phi i16 [ 0, %entry ], [ %add, %while.body ]
+  ret i16 %r.0.lcssa
+}
+
+define i16 @load16postincloopreduce(ptr %p, i16 %cnt) {
+; CHECK-LABEL: load16postincloopreduce:
 ; CHECK: ld {{.*}}, {{[XYZ]}}+
 ; CHECK: ld {{.*}}, {{[XYZ]}}+
 entry:
