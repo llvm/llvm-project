@@ -3216,7 +3216,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
   // for 16-bit types as the codegen replaces the operand without adding a
   // srcmod. This is intentionally finding the cases where we are performing
   // float neg and abs on int types, the goal is not to obtain two's complement
-  // neg or abs. Hence, this is non-canonicalizing.
+  // neg or abs. Limit converison to select operands via the nonCanonalizing
+  // pattern.
   // TODO: Add 16-bit support.
   if (IsCanonicalizing)
     return true;
