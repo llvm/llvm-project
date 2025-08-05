@@ -33,7 +33,6 @@ class AVRTTIImpl final : public BasicTTIImplBase<AVRTTIImpl> {
 
   const AVRSubtarget *ST;
   const AVRTargetLowering *TLI;
-  const Function *currentF;
 
   const AVRSubtarget *getST() const { return ST; }
   const AVRTargetLowering *getTLI() const { return TLI; }
@@ -41,21 +40,10 @@ class AVRTTIImpl final : public BasicTTIImplBase<AVRTTIImpl> {
 public:
   explicit AVRTTIImpl(const AVRTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
-        TLI(ST->getTargetLowering()), currentF(&F) {}
+        TLI(ST->getTargetLowering()) {}
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override {
-    // Detect %incdec.ptr because loop-reduce loses them
-    for (const BasicBlock &BB : *currentF) {
-      if (BB.getName().find("while.body") != std::string::npos) {
-        for (const Instruction &I : BB) {
-          std::string str;
-          llvm::raw_string_ostream(str) << I;
-          if (str.find("%incdec.ptr") != std::string::npos)
-            return false;
-        }
-      }
-    }
     if (C2.Insns == ~0u)
       return true;
     return 2 * C1.Insns + C1.AddRecCost + C1.SetupCost + C1.NumRegs <
