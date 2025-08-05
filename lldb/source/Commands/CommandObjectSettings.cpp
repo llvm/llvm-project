@@ -507,6 +507,48 @@ protected:
   }
 };
 
+// CommandObjectSettingsModified -- List modified variables
+
+class CommandObjectSettingsModified : public CommandObjectParsed {
+public:
+  CommandObjectSettingsModified(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "settings modified",
+                            "List modified debugger settings.") {}
+
+  ~CommandObjectSettingsModified() override = default;
+
+protected:
+  void HandleProperties(OptionValueProperties *properties, Stream &strm) {
+    if (!properties)
+      return;
+
+    for (const auto &property : *properties) {
+      auto value_sp = property.GetValue();
+      if (!value_sp)
+        continue;
+
+      if (auto *subproperties = value_sp->GetAsProperties()) {
+        HandleProperties(subproperties, strm);
+        continue;
+      }
+
+      if (value_sp->OptionWasSet()) {
+        property.DumpQualifiedName(strm);
+        strm.PutCString(" = ");
+        value_sp->DumpValue(&m_exe_ctx, strm, OptionValue::eDumpOptionValue);
+        strm.EOL();
+      }
+    }
+  }
+
+  void DoExecute(Args &args, CommandReturnObject &result) override {
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+
+    if (auto properties_sp = GetDebugger().GetValueProperties())
+      HandleProperties(properties_sp.get(), result.GetOutputStream());
+  }
+};
+
 // CommandObjectSettingsRemove
 
 class CommandObjectSettingsRemove : public CommandObjectRaw {
@@ -1070,6 +1112,8 @@ CommandObjectMultiwordSettings::CommandObjectMultiwordSettings(
                  CommandObjectSP(new CommandObjectSettingsShow(interpreter)));
   LoadSubCommand("list",
                  CommandObjectSP(new CommandObjectSettingsList(interpreter)));
+  LoadSubCommand("modified", CommandObjectSP(new CommandObjectSettingsModified(
+                                 interpreter)));
   LoadSubCommand("remove",
                  CommandObjectSP(new CommandObjectSettingsRemove(interpreter)));
   LoadSubCommand("replace", CommandObjectSP(
