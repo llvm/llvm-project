@@ -1812,7 +1812,10 @@ def note_unsatisfied_trait_reason
            "%DeletedAssign{has a deleted %select{copy|move}1 "
            "assignment operator}|"
            "%UnionWithUserDeclaredSMF{is a union with a user-declared "
-           "%sub{select_special_member_kind}1}"
+           "%sub{select_special_member_kind}1}|"
+           "%FunctionType{is a function type}|"
+           "%CVVoidType{is a cv void type}|"
+           "%IncompleteArrayType{is an incomplete array type}"
            "}0">;
 
 def warn_consteval_if_always_true : Warning<
@@ -13534,7 +13537,8 @@ def err_acc_device_type_multiple_archs
 def warn_acc_var_referenced_lacks_op
     : Warning<"variable of type %0 referenced in OpenACC '%1' clause does not "
               "have a %enum_select<AccVarReferencedReason>{%DefCtor{default "
-              "constructor}|%Dtor{destructor}}2; reference has no effect">,
+              "constructor}|%CopyCtor{copy constructor}|%Dtor{destructor}}2; "
+              "reference has no effect">,
       InGroup<DiagGroup<"openacc-var-lacks-operation">>,
       DefaultError;
 

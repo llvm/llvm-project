@@ -644,9 +644,12 @@ clang::Decl *PdbAstBuilder::TryGetDecl(PdbSymUid uid) const {
 clang::NamespaceDecl *
 PdbAstBuilder::GetOrCreateNamespaceDecl(const char *name,
                                         clang::DeclContext &context) {
-  return m_clang.GetUniqueNamespaceDeclaration(
+  clang::NamespaceDecl *ns = m_clang.GetUniqueNamespaceDeclaration(
       IsAnonymousNamespaceName(name) ? nullptr : name, &context,
       OptionalClangModuleID());
+  m_known_namespaces.insert(ns);
+  m_parent_to_namespaces[&context].insert(ns);
+  return ns;
 }
 
 clang::BlockDecl *
@@ -1451,4 +1454,31 @@ PdbAstBuilder::FromCompilerDeclContext(CompilerDeclContext context) {
 
 void PdbAstBuilder::Dump(Stream &stream, llvm::StringRef filter) {
   m_clang.Dump(stream.AsRawOstream(), filter);
+}
+
+clang::NamespaceDecl *
+PdbAstBuilder::FindNamespaceDecl(const clang::DeclContext *parent,
+                                 llvm::StringRef name) {
+  NamespaceSet *set;
+  if (parent) {
+    auto it = m_parent_to_namespaces.find(parent);
+    if (it == m_parent_to_namespaces.end())
+      return nullptr;
+
+    set = &it->second;
+  } else {
+    // In this case, search through all known namespaces
+    set = &m_known_namespaces;
+  }
+  assert(set);
+
+  for (clang::NamespaceDecl *namespace_decl : *set)
+    if (namespace_decl->getName() == name)
+      return namespace_decl;
+
+  for (clang::NamespaceDecl *namespace_decl : *set)
+    if (namespace_decl->isAnonymousNamespace())
+      return FindNamespaceDecl(namespace_decl, name);
+
+  return nullptr;
 }
