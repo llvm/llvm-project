@@ -71,6 +71,93 @@ LLDB_PLUGIN_DEFINE(SymbolFilePDB)
 char SymbolFilePDB::ID;
 
 namespace {
+
+enum PDBReader {
+  ePDBReaderDefault,
+  ePDBReaderDIA,
+  ePDBReaderNative,
+};
+
+constexpr OptionEnumValueElement g_pdb_reader_enums[] = {
+    {
+        ePDBReaderDefault,
+        "default",
+        "Use DIA PDB reader unless LLDB_USE_NATIVE_PDB_READER environment "
+        "variable is set",
+    },
+    {
+        ePDBReaderDIA,
+        "dia",
+        "Use DIA PDB reader",
+    },
+    {
+        ePDBReaderNative,
+        "native",
+        "Use native PDB reader",
+    },
+};
+
+#define LLDB_PROPERTIES_symbolfilepdb
+#include "SymbolFilePDBProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_symbolfilepdb
+#include "SymbolFilePDBPropertiesEnum.inc"
+};
+
+#if LLVM_ENABLE_DIA_SDK && defined(_WIN32)
+bool ShouldUseNativeReaderByDefault() {
+  static bool g_use_native_by_default = true;
+
+  static llvm::once_flag g_initialize;
+  llvm::call_once(g_initialize, [] {
+    llvm::StringRef env_value = ::getenv("LLDB_USE_NATIVE_PDB_READER");
+    if (!env_value.equals_insensitive("on") &&
+        !env_value.equals_insensitive("yes") &&
+        !env_value.equals_insensitive("1") &&
+        !env_value.equals_insensitive("true"))
+      g_use_native_by_default = false;
+  });
+
+  return g_use_native_by_default;
+}
+#endif
+
+class PluginProperties : public Properties {
+public:
+  static llvm::StringRef GetSettingName() {
+    return SymbolFilePDB::GetPluginNameStatic();
+  }
+
+  PluginProperties() {
+    m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
+    m_collection_sp->Initialize(g_symbolfilepdb_properties);
+  }
+
+  bool UseNativeReader() const {
+#if LLVM_ENABLE_DIA_SDK && defined(_WIN32)
+    auto value =
+        GetPropertyAtIndexAs<PDBReader>(ePropertyReader, ePDBReaderDefault);
+    switch (value) {
+    case ePDBReaderNative:
+      return true;
+    case ePDBReaderDIA:
+      return false;
+    default:
+    case ePDBReaderDefault:
+      return ShouldUseNativeReaderByDefault();
+    }
+#else
+    return true;
+#endif
+  }
+};
+
+PluginProperties &GetGlobalPluginProperties() {
+  static PluginProperties g_settings;
+  return g_settings;
+}
+
 lldb::LanguageType TranslateLanguage(PDB_Lang lang) {
   switch (lang) {
   case PDB_Lang::Cpp:
@@ -97,39 +184,33 @@ bool ShouldAddLine(uint32_t requested_line, uint32_t actual_line,
 }
 } // namespace
 
-static bool ShouldUseNativeReader() {
-#if defined(_WIN32)
-#if LLVM_ENABLE_DIA_SDK
-  llvm::StringRef use_native = ::getenv("LLDB_USE_NATIVE_PDB_READER");
-  if (!use_native.equals_insensitive("on") &&
-      !use_native.equals_insensitive("yes") &&
-      !use_native.equals_insensitive("1") &&
-      !use_native.equals_insensitive("true"))
-    return false;
-#endif
-#endif
-  return true;
-}
-
 void SymbolFilePDB::Initialize() {
-  if (ShouldUseNativeReader()) {
-    npdb::SymbolFileNativePDB::Initialize();
-  } else {
-    PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance,
-                                  DebuggerInitialize);
-  }
+  // Initialize both but check in CreateInstance for the desired plugin
+  npdb::SymbolFileNativePDB::Initialize();
+
+  PluginManager::RegisterPlugin(GetPluginNameStatic(),
+                                GetPluginDescriptionStatic(), CreateInstance,
+                                DebuggerInitialize);
 }
 
 void SymbolFilePDB::Terminate() {
-  if (ShouldUseNativeReader()) {
-    npdb::SymbolFileNativePDB::Terminate();
-  } else {
-    PluginManager::UnregisterPlugin(CreateInstance);
-  }
+  npdb::SymbolFileNativePDB::Terminate();
+
+  PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-void SymbolFilePDB::DebuggerInitialize(lldb_private::Debugger &debugger) {}
+bool SymbolFilePDB::UseNativePDB() {
+  return GetGlobalPluginProperties().UseNativeReader();
+}
+
+void SymbolFilePDB::DebuggerInitialize(lldb_private::Debugger &debugger) {
+  if (!PluginManager::GetSettingForSymbolFilePlugin(
+          debugger, PluginProperties::GetSettingName())) {
+    PluginManager::CreateSettingForSymbolFilePlugin(
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
+        "Properties for the PDB symbol-file plug-in.", true);
+  }
+}
 
 llvm::StringRef SymbolFilePDB::GetPluginDescriptionStatic() {
   return "Microsoft PDB debug symbol file reader.";
@@ -137,6 +218,9 @@ llvm::StringRef SymbolFilePDB::GetPluginDescriptionStatic() {
 
 lldb_private::SymbolFile *
 SymbolFilePDB::CreateInstance(ObjectFileSP objfile_sp) {
+  if (UseNativePDB())
+    return nullptr;
+
   return new SymbolFilePDB(std::move(objfile_sp));
 }
 
