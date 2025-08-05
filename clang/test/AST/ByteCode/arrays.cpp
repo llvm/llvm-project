@@ -779,3 +779,24 @@ namespace DiscardedSubScriptExpr {
     return true;
   }
 }
+
+namespace SubPtr {
+  struct A {};
+  struct B : A { int n; int m; };
+  B a[3][3];
+  constexpr int diff1 = &a[2] - &a[0];
+  constexpr int diff2 = &a[1][3] - &a[1][0];
+  constexpr int diff3 = &a[2][0] - &a[1][0]; // both-error {{must be initialized by a constant expression}} \
+                                             // both-note {{subtracted pointers are not elements of the same array}}
+  struct S {
+    int a;
+    int b;
+    constexpr S() : a(1), b(2) {}
+  };
+
+  constexpr int  f5() { // both-error {{never produces a constant expression}}
+    struct S s;
+    int d = &s.b - &s.a; // both-note {{subtracted pointers are not elements of the same array}}
+    return d;
+  }
+}
