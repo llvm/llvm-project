@@ -1213,6 +1213,104 @@ private:
     __node_pointer __cache_root_;
     __node_pointer __cache_elem_;
   };
+
+  class __tree_deleter {
+    __node_allocator& __alloc_;
+
+  public:
+    using pointer = __node_pointer;
+
+    _LIBCPP_HIDE_FROM_ABI __tree_deleter(__node_allocator& __alloc) : __alloc_(__alloc) {}
+
+#ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
+    _LIBCPP_HIDE_FROM_ABI
+#endif
+    void
+    operator()(__node_pointer __ptr) {
+      if (!__ptr)
+        return;
+
+      (*this)(static_cast<__node_pointer>(__ptr->__left_));
+
+      auto __right = __ptr->__right_;
+
+      __node_traits::destroy(__alloc_, std::addressof(__ptr->__value_));
+      __node_traits::deallocate(__alloc_, __ptr, 1);
+
+      (*this)(static_cast<__node_pointer>(__right));
+    }
+  };
+
+  // This copy construction will always produce a correct red-black-tree assuming the incoming tree is correct, since we
+  // copy the exact structure 1:1. Since this is for copy construction _only_ we know that we get a correct tree. If we
+  // didn't get a correct tree, the invariants of __tree are broken and we have a much bigger problem than an improperly
+  // balanced tree.
+#ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
+  _LIBCPP_HIDE_FROM_ABI
+#endif
+  __node_pointer
+  __copy_construct_tree(__node_pointer __src) {
+    if (!__src)
+      return nullptr;
+
+    __node_holder __new_node = __construct_node(__src->__value_);
+
+    unique_ptr<__node, __tree_deleter> __left(
+        __copy_construct_tree(static_cast<__node_pointer>(__src->__left_)), __node_alloc_);
+    __node_pointer __right = __copy_construct_tree(static_cast<__node_pointer>(__src->__right_));
+
+    __node_pointer __new_node_ptr = __new_node.release();
+
+    __new_node_ptr->__is_black_ = __src->__is_black_;
+    __new_node_ptr->__left_     = static_cast<__node_base_pointer>(__left.release());
+    __new_node_ptr->__right_    = static_cast<__node_base_pointer>(__right);
+    if (__new_node_ptr->__left_)
+      __new_node_ptr->__left_->__parent_ = static_cast<__end_node_pointer>(__new_node_ptr);
+    if (__new_node_ptr->__right_)
+      __new_node_ptr->__right_->__parent_ = static_cast<__end_node_pointer>(__new_node_ptr);
+    return __new_node_ptr;
+  }
+
+  // This copy assignment will always produce a correct red-black-tree assuming the incoming tree is correct, since our
+  // own tree is a red-black-tree and the incoming tree is a red-black-tree. The invariants of a red-black-tree are
+  // temporarily not met until all of the incoming red-black tree is copied.
+#ifdef _LIBCPP_COMPILER_CLANG_BASED // FIXME: GCC complains about not being able to always_inline a recursive function
+  _LIBCPP_HIDE_FROM_ABI
+#endif
+  __node_pointer
+  __copy_assign_tree(__node_pointer __dest, __node_pointer __src) {
+    if (!__src) {
+      destroy(__dest);
+      return nullptr;
+    }
+
+    __assign_value(__dest->__value_, __src->__value_);
+    __dest->__is_black_ = __src->__is_black_;
+
+    // If we already have a left node in the destination tree, reuse it and copy-assign recursively
+    if (__dest->__left_) {
+      __dest->__left_ = static_cast<__node_base_pointer>(__copy_assign_tree(
+          static_cast<__node_pointer>(__dest->__left_), static_cast<__node_pointer>(__src->__left_)));
+
+      // Otherwise, we must create new nodes; copy-construct from here on
+    } else if (__src->__left_) {
+      auto __new_left       = __copy_construct_tree(static_cast<__node_pointer>(__src->__left_));
+      __dest->__left_       = static_cast<__node_base_pointer>(__new_left);
+      __new_left->__parent_ = static_cast<__end_node_pointer>(__dest);
+    }
+
+    // Identical to the left case above, just for the right nodes
+    if (__dest->__right_) {
+      __dest->__right_ = static_cast<__node_base_pointer>(__copy_assign_tree(
+          static_cast<__node_pointer>(__dest->__right_), static_cast<__node_pointer>(__src->__right_)));
+    } else if (__src->__right_) {
+      auto __new_right       = __copy_construct_tree(static_cast<__node_pointer>(__src->__right_));
+      __dest->__right_       = static_cast<__node_base_pointer>(__new_right);
+      __new_right->__parent_ = static_cast<__end_node_pointer>(__dest);
+    }
+
+    return __dest;
+  }
 };
 
 template <class _Tp, class _Compare, class _Allocator>
@@ -1277,11 +1375,22 @@ __tree<_Tp, _Compare, _Allocator>::_DetachedTreeCache::__detach_next(__node_poin
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(const __tree& __t) {
-  if (this != std::addressof(__t)) {
-    value_comp() = __t.value_comp();
-    __copy_assign_alloc(__t);
-    __assign_multi(__t.begin(), __t.end());
+  if (this == std::addressof(__t))
+    return *this;
+
+  value_comp() = __t.value_comp();
+  __copy_assign_alloc(__t);
+
+  if (__size_ != 0) {
+    *__root_ptr() = static_cast<__node_base_pointer>(__copy_assign_tree(__root(), __t.__root()));
+  } else {
+    *__root_ptr() = static_cast<__node_base_pointer>(__copy_construct_tree(__t.__root()));
+    if (__root())
+      __root()->__parent_ = __end_node();
   }
+  __begin_node_ = static_cast<__end_node_pointer>(std::__tree_min(static_cast<__node_base_pointer>(__end_node())));
+  __size_       = __t.size();
+
   return *this;
 }
 
@@ -1327,11 +1436,17 @@ void __tree<_Tp, _Compare, _Allocator>::__assign_multi(_InputIterator __first, _
 
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::__tree(const __tree& __t)
-    : __begin_node_(),
+    : __begin_node_(__end_node()),
       __node_alloc_(__node_traits::select_on_container_copy_construction(__t.__node_alloc())),
       __size_(0),
       __value_comp_(__t.value_comp()) {
-  __begin_node_ = __end_node();
+  if (__t.size() == 0)
+    return;
+
+  *__root_ptr()       = static_cast<__node_base_pointer>(__copy_construct_tree(__t.__root()));
+  __root()->__parent_ = __end_node();
+  __begin_node_ = static_cast<__end_node_pointer>(std::__tree_min(static_cast<__node_base_pointer>(__end_node())));
+  __size_       = __t.size();
 }
 
 template <class _Tp, class _Compare, class _Allocator>
@@ -1430,13 +1545,7 @@ __tree<_Tp, _Compare, _Allocator>::~__tree() {
 
 template <class _Tp, class _Compare, class _Allocator>
 void __tree<_Tp, _Compare, _Allocator>::destroy(__node_pointer __nd) _NOEXCEPT {
-  if (__nd != nullptr) {
-    destroy(static_cast<__node_pointer>(__nd->__left_));
-    destroy(static_cast<__node_pointer>(__nd->__right_));
-    __node_allocator& __na = __node_alloc();
-    __node_traits::destroy(__na, std::addressof(__nd->__value_));
-    __node_traits::deallocate(__na, __nd, 1);
-  }
+  (__tree_deleter(__node_alloc_))(__nd);
 }
 
 template <class _Tp, class _Compare, class _Allocator>
