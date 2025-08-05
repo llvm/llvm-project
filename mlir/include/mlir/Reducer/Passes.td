@@ -31,6 +31,10 @@ def ReductionTreePass : Pass<"reduction-tree"> {
     Option<"traversalModeId", "traversal-mode", "unsigned",
            /* default */"0",
            "The graph traversal mode, the default is single-path mode">,
+    Option<"replaceOperands", "replace-operands", "bool",
+           /* default */"false",
+           "Whether the pass should replace operands with previously defined values with the same type">,
+
   ] # CommonReductionPassOptions.options;
 }
 

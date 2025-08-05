@@ -15,11 +15,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/Reducer/Passes.h"
 #include "mlir/Reducer/ReductionNode.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Reducer/Tester.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -38,7 +40,7 @@ using namespace mlir;
 static void applyPatterns(Region &region,
                           const FrozenRewritePatternSet &patterns,
                           ArrayRef<ReductionNode::Range> rangeToKeep,
-                          bool eraseOpNotInRange) {
+                          bool eraseOpNotInRange, bool replaceOperands) {
   std::vector<Operation *> opsNotInRange;
   std::vector<Operation *> opsInRange;
   size_t keepIndex = 0;
@@ -53,17 +55,33 @@ static void applyPatterns(Region &region,
       opsInRange.push_back(&op.value());
   }
 
+  DominanceInfo domInfo(region.getParentOp());
+  mlir::DenseMap<mlir::Type, mlir::SmallVector<mlir::Value, 5>> valueMap;
+
   // `applyOpPatternsGreedily` with folding may erase the ops so we can't do the
   // pattern matching in above iteration. Besides, erase op not-in-range may end
   // up in invalid module, so `applyOpPatternsGreedily` with folding should come
   // before that transform.
   for (Operation *op : opsInRange) {
+    if (replaceOperands)
+      for (auto operandTie : llvm::enumerate(op->getOperands())) {
+        size_t index = operandTie.index();
+        auto operand = operandTie.value();
+        for (auto candidate : valueMap[operand.getType()])
+          if (domInfo.properlyDominates(candidate, op))
+            op->setOperand(index, candidate);
+      }
+
     // `applyOpPatternsGreedily` with folding returns whether the op is
     // converted. Omit it because we don't have expectation this reduction will
     // be success or not.
     (void)applyOpPatternsGreedily(op, patterns,
                                   GreedyRewriteConfig().setStrictness(
                                       GreedyRewriteStrictness::ExistingOps));
+
+    if (op && replaceOperands)
+      for (auto result : op->getResults())
+        valueMap[result.getType()].push_back(result);
   }
 
   if (eraseOpNotInRange)
@@ -83,7 +101,8 @@ static void applyPatterns(Region &region,
 template <typename IteratorType>
 static LogicalResult findOptimal(ModuleOp module, Region &region,
                                  const FrozenRewritePatternSet &patterns,
-                                 const Tester &test, bool eraseOpNotInRange) {
+                                 const Tester &test, bool eraseOpNotInRange,
+                                 bool replaceOperands) {
   std::pair<Tester::Interestingness, size_t> initStatus =
       test.isInteresting(module);
   // While exploring the reduction tree, we always branch from an interesting
@@ -111,7 +130,7 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
     Region &curRegion = currentNode.getRegion();
 
     applyPatterns(curRegion, patterns, currentNode.getRanges(),
-                  eraseOpNotInRange);
+                  eraseOpNotInRange, replaceOperands);
     currentNode.update(test.isInteresting(currentNode.getModule()));
 
     if (currentNode.isInteresting() == Tester::Interestingness::True &&
@@ -134,7 +153,8 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
   // Reduce the region through the optimal path.
   while (!trace.empty()) {
     ReductionNode *top = trace.pop_back_val();
-    applyPatterns(region, patterns, top->getStartRanges(), eraseOpNotInRange);
+    applyPatterns(region, patterns, top->getStartRanges(), eraseOpNotInRange,
+                  replaceOperands);
   }
 
   if (test.isInteresting(module).first != Tester::Interestingness::True)
@@ -148,19 +168,21 @@ static LogicalResult findOptimal(ModuleOp module, Region &region,
 template <typename IteratorType>
 static LogicalResult findOptimal(ModuleOp module, Region &region,
                                  const FrozenRewritePatternSet &patterns,
-                                 const Tester &test) {
+                                 const Tester &test, bool replaceOperands) {
   // We separate the reduction process into 2 steps, the first one is to erase
   // redundant operations and the second one is to apply the reducer patterns.
 
   // In the first phase, we don't apply any patterns so that we only select the
   // range of operations to keep to the module stay interesting.
   if (failed(findOptimal<IteratorType>(module, region, /*patterns=*/{}, test,
-                                       /*eraseOpNotInRange=*/true)))
+                                       /*eraseOpNotInRange=*/true,
+                                       replaceOperands)))
     return failure();
   // In the second phase, we suppose that no operation is redundant, so we try
   // to rewrite the operation into simpler form.
   return findOptimal<IteratorType>(module, region, patterns, test,
-                                   /*eraseOpNotInRange=*/false);
+                                   /*eraseOpNotInRange=*/false,
+                                   /*replaceOperands=*/false);
 }
 
 namespace {
@@ -248,7 +270,7 @@ LogicalResult ReductionTreePass::reduceOp(ModuleOp module, Region &region) {
   switch (traversalModeId) {
   case TraversalMode::SinglePath:
     return findOptimal<ReductionNode::iterator<TraversalMode::SinglePath>>(
-        module, region, reducerPatterns, test);
+        module, region, reducerPatterns, test, replaceOperands);
   default:
     return module.emitError() << "unsupported traversal mode detected";
   }
