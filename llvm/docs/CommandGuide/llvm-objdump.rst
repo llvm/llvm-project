@@ -25,6 +25,11 @@ combined with other commands:
 
   Display the information contained within an archive's headers.
 
+.. option:: --call-graph-info
+
+  Dump call graph information including indirect call and target IDs from call
+  graph section, if available.
+
 .. option:: -d, --disassemble
 
   Disassemble all executable sections found in the input files. On some

@@ -1,0 +1,40 @@
+## Tests --call-graph-info prints call sites.
+
+# RUN: llvm-mc %s -filetype=obj -triple=x86_64-pc-linux -o %t
+# RUN: llvm-objdump --call-graph-info %t 2>&1 | FileCheck %s -DFILE=%t
+
+# CHECK: [[FILE]]: file format elf64-x86-64
+
+# CHECK: INDIRECT CALL SITES (CALLER_ADDR [CALL_SITE_ADDR,])
+# CHECK-NEXT: 1 8
+# CHECK-NEXT: 12 14
+# CHECK-EMPTY:
+# CHECK-NEXT: DIRECT CALL SITES (CALLER_ADDR [(CALL_SITE_ADDR, TARGET_ADDR),])
+# CHECK-NEXT: 1 6 6 d d 12 12
+# CHECK-NEXT: 12 19 19
+# CHECK-EMPTY:
+# CHECK-NEXT: FUNCTIONS (FUNC_ENTRY_ADDR, SYM_NAME)
+# CHECK-NEXT: 0 foo
+# CHECK-NEXT: 1 bar
+# CHECK-NEXT: 12 baz
+
+.text
+
+.globl foo
+.type foo,@function
+foo:
+ retq
+
+.globl bar
+.type bar,@function
+bar:
+ callq foo
+ callq	*%rcx
+ callq bar
+ callq foo
+
+.globl baz
+.type baz,@function
+baz:
+ callq *%rcx
+ callq foo
