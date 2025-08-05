@@ -1062,10 +1062,10 @@ bool MachineSinking::isWorthBreakingCriticalEdge(
     }
   }
 
-  if (From->isSuccessor(To) &&
-      MBPI->getEdgeProbability(From, To) <=
-          BranchProbability(SplitEdgeProbabilityThreshold, 100))
-    return true;
+  // if (From->isSuccessor(To) &&
+  //     MBPI->getEdgeProbability(From, To) <=
+  //         BranchProbability(SplitEdgeProbabilityThreshold, 100))
+  //   return true;
 
   // MI is cheap, we probably don't want to break the critical edge for it.
   // However, if this would allow some definitions of its source operands
