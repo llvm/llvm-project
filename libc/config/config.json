@@ -95,6 +95,10 @@
     "LIBC_CONF_RWLOCK_DEFAULT_SPIN_COUNT": {
       "value": 100,
       "doc": "Default number of spins before blocking if a rwlock is in contention (default to 100)."
+    },
+    "LIBC_CONF_ENABLE_MALLOC_THREAD_CLEANUP": {
+      "value": false,
+      "doc": "Enable the `_malloc_thread_cleanup` weak symbol. When defined, this is function is called after `__cxa` and pthread-specific dtors. On main thread, this will be called after `atexit` functions and `.fini` dtors, right before TLS tearing down. This function can be overridden by allocators to perform cleanup. Allocators can use this symbol to avoid registering thread dtors using potentially reentrant routines."
     }
   },
   "math": {

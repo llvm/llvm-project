@@ -73,6 +73,12 @@ add_header_library(
     libc.src.__support.threads.mutex_common
 )
 
+if (LIBC_CONF_ENABLE_MALLOC_THREAD_CLEANUP)
+  set(malloc_cleanup_flags -DLIBC_COPT_ENABLE_MALLOC_THREAD_CLEANUP)
+else()
+  set(malloc_cleanup_flags)
+endif()
+
 add_object_library(
   thread
   SRCS
@@ -91,6 +97,7 @@ add_object_library(
     libc.src.__support.threads.thread_common
   COMPILE_OPTIONS
     ${libc_opt_high_flag}
+    ${malloc_cleanup_flags}
     -fno-omit-frame-pointer # This allows us to sniff out the thread args from
                             # the new thread's stack reliably.
     -Wno-frame-address      # Yes, calling __builtin_return_address with a
