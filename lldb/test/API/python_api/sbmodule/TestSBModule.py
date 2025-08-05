@@ -50,6 +50,7 @@ class SBModuleAPICase(TestBase):
             self.assertTrue(module.IsValid(), f"Module for {obj_name} is valid")
             self.assertEqual(module.GetObjectName(), obj_name, f"Object name for {obj_name} matches")
             found.add(obj_name)
+            
         self.assertEqual(found, expected, "Did not find all expected archive members")
 
     @skipUnlessDarwin

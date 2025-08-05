@@ -1,5 +1,4 @@
-C_SOURCES := main.c a.c b.c c.c
-EXE :=  # Define a.out explicitly
+C_SOURCES := main.c a.c b.c
 MAKE_DSYM := NO
 
 all: a.out 
