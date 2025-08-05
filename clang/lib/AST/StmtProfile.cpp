@@ -2681,6 +2681,9 @@ void OpenACCClauseProfiler::VisitCollapseClause(
 void OpenACCClauseProfiler::VisitPrivateClause(
     const OpenACCPrivateClause &Clause) {
   VisitClauseWithVarList(Clause);
+
+  for (auto *VD : Clause.getInitRecipes())
+    Profiler.VisitDecl(VD);
 }
 
 void OpenACCClauseProfiler::VisitFirstPrivateClause(

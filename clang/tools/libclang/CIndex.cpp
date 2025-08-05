@@ -2891,6 +2891,8 @@ void OpenACCClauseEnqueue::VisitTileClause(const OpenACCTileClause &C) {
 
 void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
   VisitVarList(C);
+  for (VarDecl *V : C.getInitRecipes())
+    Visitor.AddDecl(V);
 }
 
 void OpenACCClauseEnqueue::VisitHostClause(const OpenACCHostClause &C) {
