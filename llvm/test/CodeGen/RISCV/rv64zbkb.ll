@@ -407,10 +407,9 @@ define void @pack_lo_packh_hi_packh(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2,
 ;
 ; RV64ZBKB-LABEL: pack_lo_packh_hi_packh:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a3, a3, 24
 ; RV64ZBKB-NEXT:    packh a0, a0, a1
-; RV64ZBKB-NEXT:    packw a0, a0, a2
-; RV64ZBKB-NEXT:    or a0, a0, a3
+; RV64ZBKB-NEXT:    packh a1, a2, a3
+; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    sw a0, 0(a4)
 ; RV64ZBKB-NEXT:    ret
   %a = zext i8 %0 to i32
@@ -441,11 +440,9 @@ define void @pack_lo_packh_hi_packh_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %
 ;
 ; RV64ZBKB-LABEL: pack_lo_packh_hi_packh_2:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a2, a2, 16
-; RV64ZBKB-NEXT:    slli a3, a3, 24
 ; RV64ZBKB-NEXT:    packh a0, a0, a1
-; RV64ZBKB-NEXT:    or a0, a3, a0
-; RV64ZBKB-NEXT:    or a0, a2, a0
+; RV64ZBKB-NEXT:    packh a1, a3, a2
+; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    sw a0, 0(a4)
 ; RV64ZBKB-NEXT:    ret
   %a = zext i8 %0 to i32
@@ -475,8 +472,7 @@ define void @pack_lo_zext_hi_packh(i16 zeroext %0, i8 zeroext %1, i8 zeroext %2,
 ; RV64ZBKB-LABEL: pack_lo_zext_hi_packh:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    packh a1, a2, a2
-; RV64ZBKB-NEXT:    slli a1, a1, 16
-; RV64ZBKB-NEXT:    or a0, a1, a0
+; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    sw a0, 0(a3)
 ; RV64ZBKB-NEXT:    ret
   %a = zext i16 %0 to i32
