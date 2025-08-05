@@ -18074,12 +18074,6 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     return FrozenN0;
   }
 
-  // We currently avoid folding freeze over SRA/SRL, due to the problems seen
-  // with (freeze (assert ext)) blocking simplifications of SRA/SRL. See for
-  // example https://reviews.llvm.org/D136529#4120959.
-  if (N0.getOpcode() == ISD::SRA || N0.getOpcode() == ISD::SRL)
-    return SDValue();
-
   // Fold freeze(op(x, ...)) -> op(freeze(x), ...).
   // Try to push freeze through instructions that propagate but don't produce
   // poison as far as possible. If an operand of freeze follows three
@@ -18091,19 +18085,6 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
                                  /*ConsiderFlags*/ false) ||
       N0->getNumValues() != 1 || !N0->hasOneUse())
     return SDValue();
-
-  // TOOD: we should always allow multiple operands, however this increases the
-  // likelihood of infinite loops due to the ReplaceAllUsesOfValueWith call
-  // below causing later nodes that share frozen operands to fold again and no
-  // longer being able to confirm other operands are not poison due to recursion
-  // depth limits on isGuaranteedNotToBeUndefOrPoison.
-  bool AllowMultipleMaybePoisonOperands =
-      N0.getOpcode() == ISD::SELECT_CC || N0.getOpcode() == ISD::SETCC ||
-      N0.getOpcode() == ISD::BUILD_VECTOR ||
-      N0.getOpcode() == ISD::INSERT_SUBVECTOR ||
-      N0.getOpcode() == ISD::BUILD_PAIR ||
-      N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
-      N0.getOpcode() == ISD::CONCAT_VECTORS || N0.getOpcode() == ISD::FMUL;
 
   // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
   // ones" or "constant" into something that depends on FrozenUndef. We can
@@ -18137,10 +18118,6 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
       MaybePoisonOperandNumbers.push_back(OpNo);
     if (!HadMaybePoisonOperands)
       continue;
-    if (IsNewMaybePoisonOperand && !AllowMultipleMaybePoisonOperands) {
-      // Multiple maybe-poison ops when not allowed - bail out.
-      return SDValue();
-    }
   }
   // NOTE: the whole op may be not guaranteed to not be undef or poison because
   // it could create undef or poison due to it's poison-generating flags.
