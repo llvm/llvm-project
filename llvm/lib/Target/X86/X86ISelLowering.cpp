@@ -8279,8 +8279,8 @@ static SDValue ExpandHorizontalBinOp(const SDValue &V0, const SDValue &V1,
 static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
                              const X86Subtarget &Subtarget, SelectionDAG &DAG,
                              SDValue &Opnd0, SDValue &Opnd1,
-                             unsigned &NumExtracts,
-                             bool &IsSubAdd) {
+                             unsigned &NumExtracts, bool &IsSubAdd,
+                             bool &HasAllowContract) {
   using namespace SDPatternMatch;
 
   MVT VT = BV->getSimpleValueType(0);
@@ -8292,6 +8292,7 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
   SDValue InVec1 = DAG.getUNDEF(VT);
 
   NumExtracts = 0;
+  HasAllowContract = NumElts != 0;
 
   // Odd-numbered elements in the input build vector are obtained from
   // adding/subtracting two integer/float elements.
@@ -8350,6 +8351,7 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
 
     // Increment the number of extractions done.
     ++NumExtracts;
+    HasAllowContract &= Op->getFlags().hasAllowContract();
   }
 
   // Ensure we have found an opcode for both parities and that they are
@@ -8393,9 +8395,10 @@ static bool isAddSubOrSubAdd(const BuildVectorSDNode *BV,
 /// is illegal sometimes. E.g. 512-bit ADDSUB is not available, while 512-bit
 /// FMADDSUB is.
 static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget,
-                                 SelectionDAG &DAG,
-                                 SDValue &Opnd0, SDValue &Opnd1, SDValue &Opnd2,
-                                 unsigned ExpectedUses) {
+                                 SelectionDAG &DAG, SDValue &Opnd0,
+                                 SDValue &Opnd1, SDValue &Opnd2,
+                                 unsigned ExpectedUses,
+                                 bool AllowSubAddOrAddSubContract) {
   if (Opnd0.getOpcode() != ISD::FMUL ||
       !Opnd0->hasNUsesOfValue(ExpectedUses, 0) || !Subtarget.hasAnyFMA())
     return false;
@@ -8406,7 +8409,8 @@ static bool isFMAddSubOrFMSubAdd(const X86Subtarget &Subtarget,
   // or MUL + ADDSUB to FMADDSUB.
   const TargetOptions &Options = DAG.getTarget().Options;
   bool AllowFusion =
-      (Options.AllowFPOpFusion == FPOpFusion::Fast || Options.UnsafeFPMath);
+      Options.AllowFPOpFusion == FPOpFusion::Fast ||
+      (AllowSubAddOrAddSubContract && Opnd0->getFlags().hasAllowContract());
   if (!AllowFusion)
     return false;
 
@@ -8427,15 +8431,17 @@ static SDValue lowerToAddSubOrFMAddSub(const BuildVectorSDNode *BV,
   SDValue Opnd0, Opnd1;
   unsigned NumExtracts;
   bool IsSubAdd;
-  if (!isAddSubOrSubAdd(BV, Subtarget, DAG, Opnd0, Opnd1, NumExtracts,
-                        IsSubAdd))
+  bool HasAllowContract;
+  if (!isAddSubOrSubAdd(BV, Subtarget, DAG, Opnd0, Opnd1, NumExtracts, IsSubAdd,
+                        HasAllowContract))
     return SDValue();
 
   MVT VT = BV->getSimpleValueType(0);
 
   // Try to generate X86ISD::FMADDSUB node here.
   SDValue Opnd2;
-  if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, NumExtracts)) {
+  if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, NumExtracts,
+                           HasAllowContract)) {
     unsigned Opc = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
     return DAG.getNode(Opc, DL, VT, Opnd0, Opnd1, Opnd2);
   }
@@ -43180,7 +43186,7 @@ static bool isAddSubOrSubAddMask(ArrayRef<int> Mask, bool &Op0Even) {
 /// the fact that they're unused.
 static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG, SDValue &Opnd0, SDValue &Opnd1,
-                             bool &IsSubAdd) {
+                             bool &IsSubAdd, bool &HasAllowContract) {
 
   EVT VT = N->getValueType(0);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -43231,6 +43237,8 @@ static bool isAddSubOrSubAdd(SDNode *N, const X86Subtarget &Subtarget,
   // It's a subadd if the vector in the even parity is an FADD.
   IsSubAdd = Op0Even ? V1->getOpcode() == ISD::FADD
                      : V2->getOpcode() == ISD::FADD;
+  HasAllowContract =
+      V1->getFlags().hasAllowContract() && V2->getFlags().hasAllowContract();
 
   Opnd0 = LHS;
   Opnd1 = RHS;
@@ -43288,14 +43296,17 @@ static SDValue combineShuffleToAddSubOrFMAddSub(SDNode *N, const SDLoc &DL,
 
   SDValue Opnd0, Opnd1;
   bool IsSubAdd;
-  if (!isAddSubOrSubAdd(N, Subtarget, DAG, Opnd0, Opnd1, IsSubAdd))
+  bool HasAllowContract;
+  if (!isAddSubOrSubAdd(N, Subtarget, DAG, Opnd0, Opnd1, IsSubAdd,
+                        HasAllowContract))
     return SDValue();
 
   MVT VT = N->getSimpleValueType(0);
 
   // Try to generate X86ISD::FMADDSUB node here.
   SDValue Opnd2;
-  if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, 2)) {
+  if (isFMAddSubOrFMSubAdd(Subtarget, DAG, Opnd0, Opnd1, Opnd2, 2,
+                           HasAllowContract)) {
     unsigned Opc = IsSubAdd ? X86ISD::FMSUBADD : X86ISD::FMADDSUB;
     return DAG.getNode(Opc, DL, VT, Opnd0, Opnd1, Opnd2);
   }
