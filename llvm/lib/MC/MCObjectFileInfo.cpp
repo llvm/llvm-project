@@ -537,6 +537,8 @@ void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   EHFrameSection =
       Ctx->getELFSection(".eh_frame", EHSectionType, EHSectionFlags);
 
+  CallGraphSection = Ctx->getELFSection(".callgraph", ELF::SHT_PROGBITS, 0);
+
   StackSizesSection = Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, 0);
 
   PseudoProbeSection = Ctx->getELFSection(".pseudo_probe", DebugSecType, 0);
@@ -1121,6 +1123,25 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
 }
 
 MCSection *
+MCObjectFileInfo::getCallGraphSection(const MCSection &TextSec) const {
+  if (Ctx->getObjectFileType() != MCContext::IsELF)
+    return CallGraphSection;
+
+  const MCSectionELF &ElfSec = static_cast<const MCSectionELF &>(TextSec);
+  unsigned Flags = ELF::SHF_LINK_ORDER;
+  StringRef GroupName;
+  if (const MCSymbol *Group = ElfSec.getGroup()) {
+    GroupName = Group->getName();
+    Flags |= ELF::SHF_GROUP;
+  }
+
+  return Ctx->getELFSection(
+      ".callgraph", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
+}
+
+MCSection *
 MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
   if ((Ctx->getObjectFileType() != MCContext::IsELF) ||
       Ctx->getTargetTriple().isPS4())
@@ -1134,9 +1155,10 @@ MCObjectFileInfo::getStackSizesSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".stack_sizes", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".stack_sizes", ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1154,9 +1176,10 @@ MCObjectFileInfo::getBBAddrMapSection(const MCSection &TextSec) const {
 
   // Use the text section's begin symbol and unique ID to create a separate
   // .llvm_bb_addr_map section associated with every unique text section.
-  return Ctx->getELFSection(".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".llvm_bb_addr_map", ELF::SHT_LLVM_BB_ADDR_MAP, Flags, 0, GroupName, true,
+      ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1172,10 +1195,10 @@ MCObjectFileInfo::getKCFITrapSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0,
-                            GroupName,
-                            /*IsComdat=*/true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      ".kcfi_traps", ELF::SHT_PROGBITS, Flags, 0, GroupName,
+      /*IsComdat=*/true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1191,9 +1214,10 @@ MCObjectFileInfo::getPseudoProbeSection(const MCSection &TextSec) const {
     Flags |= ELF::SHF_GROUP;
   }
 
-  return Ctx->getELFSection(PseudoProbeSection->getName(), ELF::SHT_PROGBITS,
-                            Flags, 0, GroupName, true, ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec.getBeginSymbol()));
+  return Ctx->getELFSection(
+      PseudoProbeSection->getName(), ELF::SHT_PROGBITS, Flags, 0, GroupName,
+      true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec.getBeginSymbol()));
 }
 
 MCSection *
@@ -1241,7 +1265,7 @@ MCSection *MCObjectFileInfo::getPCSection(StringRef Name,
     GroupName = Group->getName();
     Flags |= ELF::SHF_GROUP;
   }
-  return Ctx->getELFSection(Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true,
-                            ElfSec.getUniqueID(),
-                            cast<MCSymbolELF>(TextSec->getBeginSymbol()));
+  return Ctx->getELFSection(
+      Name, ELF::SHT_PROGBITS, Flags, 0, GroupName, true, ElfSec.getUniqueID(),
+      static_cast<const MCSymbolELF *>(TextSec->getBeginSymbol()));
 }
