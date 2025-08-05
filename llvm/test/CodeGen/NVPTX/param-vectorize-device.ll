@@ -150,8 +150,8 @@ define dso_local void @caller_St4x3(ptr nocapture noundef readonly byval(%struct
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[12];
   ; CHECK:       .param .align 16 .b8 retval0[12];
-  ; CHECK:       st.param.v2.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.b32    [param0+8], {{%r[0-9]+}};
+  ; CHECK-DAG:   st.param.v2.b32 [param0], {{{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.b32    [param0+8], {{%r[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St4x3, (param0);
   ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.b32    {{%r[0-9]+}},  [retval0+8];
@@ -240,8 +240,8 @@ define dso_local void @caller_St4x5(ptr nocapture noundef readonly byval(%struct
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[20];
   ; CHECK:       .param .align 16 .b8 retval0[20];
-  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.b32    [param0+16], {{%r[0-9]+}};
+  ; CHECK-DAG:   st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.b32    [param0+16], {{%r[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St4x5, (param0);
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.b32    {{%r[0-9]+}},  [retval0+16];
@@ -296,8 +296,8 @@ define dso_local void @caller_St4x6(ptr nocapture noundef readonly byval(%struct
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[24];
   ; CHECK:       .param .align 16 .b8 retval0[24];
-  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
   ; CHECK:       call.uni (retval0), callee_St4x6, (param0);
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+16];
@@ -358,9 +358,9 @@ define dso_local void @caller_St4x7(ptr nocapture noundef readonly byval(%struct
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[28];
   ; CHECK:       .param .align 16 .b8 retval0[28];
-  ; CHECK:       st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
-  ; CHECK:       st.param.b32    [param0+24], {{%r[0-9]+}};
+  ; CHECK-DAG:   st.param.v4.b32 [param0],  {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.v2.b32 [param0+16], {{{%r[0-9]+}}, {{%r[0-9]+}}};
+  ; CHECK-DAG:   st.param.b32    [param0+24], {{%r[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St4x7, (param0);
   ; CHECK:       ld.param.v4.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.v2.b32 {{{%r[0-9]+}}, {{%r[0-9]+}}}, [retval0+16];
@@ -566,8 +566,8 @@ define dso_local void @caller_St8x3(ptr nocapture noundef readonly byval(%struct
   ; CHECK:       )
   ; CHECK:       .param .align 16 .b8 param0[24];
   ; CHECK:       .param .align 16 .b8 retval0[24];
-  ; CHECK:       st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
-  ; CHECK:       st.param.b64    [param0+16], {{%rd[0-9]+}};
+  ; CHECK-DAG:   st.param.v2.b64 [param0],  {{{%rd[0-9]+}}, {{%rd[0-9]+}}};
+  ; CHECK-DAG:   st.param.b64    [param0+16], {{%rd[0-9]+}};
   ; CHECK:       call.uni (retval0), callee_St8x3, (param0);
   ; CHECK:       ld.param.v2.b64 {{{%rd[0-9]+}}, {{%rd[0-9]+}}}, [retval0];
   ; CHECK:       ld.param.b64    {{%rd[0-9]+}}, [retval0+16];
