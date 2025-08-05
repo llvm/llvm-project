@@ -314,6 +314,28 @@ void test_amdgcn_wmma_f32_wmma_f32_32x16x128_f4(global v16f* out, v16i a, v8i b,
   *out = __builtin_amdgcn_wmma_f32_32x16x128_f4(a, b, 0, c);
 }
 
+// CHECK-GFX1250-LABEL: @test_amdgcn_wmma_scale_f32_32x16x128_f4(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <16 x float> @llvm.amdgcn.wmma.scale.f32.32x16x128.f4.v16f32.v16i32.v8i32(<16 x i32> [[A:%.*]], <8 x i32> [[B:%.*]], i16 0, <16 x float> [[C:%.*]], i32 1, i32 2, i32 [[SCALE_SRC0:%.*]], i32 2, i32 1, i32 [[SCALE_SRC1:%.*]], i1 false, i1 true)
+// CHECK-GFX1250-NEXT:    store <16 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 64, !tbaa [[TBAA4]]
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_wmma_scale_f32_32x16x128_f4(global v16f* out, v16i a, v8i b, v16f c, int scale_src0, int scale_src1)
+{
+  *out = __builtin_amdgcn_wmma_scale_f32_32x16x128_f4(a, b, 0, c, 1, 2, scale_src0, 2, 1, scale_src1, 0, 1);
+}
+
+// CHECK-GFX1250-LABEL: @test_amdgcn_wmma_scale16_f32_32x16x128_f4(
+// CHECK-GFX1250-NEXT:  entry:
+// CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <16 x float> @llvm.amdgcn.wmma.scale16.f32.32x16x128.f4.v16f32.v16i32.v8i32(<16 x i32> [[A:%.*]], <8 x i32> [[B:%.*]], i16 0, <16 x float> [[C:%.*]], i32 1, i32 2, i64 [[SCALE_SRC0:%.*]], i32 2, i32 1, i64 [[SCALE_SRC1:%.*]], i1 false, i1 true)
+// CHECK-GFX1250-NEXT:    store <16 x float> [[TMP0]], ptr addrspace(1) [[OUT:%.*]], align 64, !tbaa [[TBAA4]]
+// CHECK-GFX1250-NEXT:    ret void
+//
+void test_amdgcn_wmma_scale16_f32_32x16x128_f4(global v16f* out, v16i a, v8i b, v16f c, long scale_src0, long scale_src1)
+{
+  *out = __builtin_amdgcn_wmma_scale16_f32_32x16x128_f4(a, b, 0, c, 1, 2, scale_src0, 2, 1, scale_src1, 0, 1);
+}
+
 // CHECK-GFX1250-LABEL: @test_amdgcn_swmmac_f32_16x16x64_bf16(
 // CHECK-GFX1250-NEXT:  entry:
 // CHECK-GFX1250-NEXT:    [[TMP0:%.*]] = tail call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.bf16.v8f32.v16bf16.v32bf16.i32(i1 false, <16 x bfloat> [[A:%.*]], i1 false, <32 x bfloat> [[B:%.*]], <8 x float> [[C:%.*]], i32 [[INDEX:%.*]], i1 false, i1 true)
