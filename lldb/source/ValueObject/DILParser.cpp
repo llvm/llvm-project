@@ -396,30 +396,26 @@ ASTNodeUP DILParser::ParseNumericLiteral() {
   return numeric_constant;
 }
 
-static constexpr std::pair<const char *, lldb::BasicType> type_suffixes[] = {
-    {"ull", lldb::eBasicTypeUnsignedLongLong},
-    {"ul", lldb::eBasicTypeUnsignedLong},
-    {"u", lldb::eBasicTypeUnsignedInt},
-    {"ll", lldb::eBasicTypeLongLong},
-    {"l", lldb::eBasicTypeLong},
-};
-
 ASTNodeUP DILParser::ParseIntegerLiteral() {
   Token token = CurToken();
   auto spelling = token.GetSpelling();
   llvm::StringRef spelling_ref = spelling;
-  lldb::BasicType type = lldb::eBasicTypeInt;
-  for (auto [suffix, t] : type_suffixes) {
-    if (spelling_ref.consume_back_insensitive(suffix)) {
-      type = t;
-      break;
-    }
-  }
+
+  auto radix = llvm::getAutoSenseRadix(spelling_ref);
+  bool is_unsigned = false, is_long = false, is_longlong = false;
+  if (spelling_ref.consume_back_insensitive("ll"))
+    is_longlong = true;
+  if (spelling_ref.consume_back_insensitive("l"))
+    is_long = true;
+  if (spelling_ref.consume_back_insensitive("u"))
+    is_unsigned = true;
+
   llvm::APInt raw_value;
-  if (!spelling_ref.getAsInteger(0, raw_value)) {
+  if (!spelling_ref.getAsInteger(radix, raw_value)) {
     Scalar scalar_value(raw_value);
-    return std::make_unique<ScalarLiteralNode>(token.GetLocation(), type,
-                                               scalar_value);
+    return std::make_unique<ScalarLiteralNode>(token.GetLocation(),
+                                               scalar_value, radix, is_unsigned,
+                                               is_long, is_longlong);
   }
   return std::make_unique<ErrorNode>();
 }
@@ -428,19 +424,20 @@ ASTNodeUP DILParser::ParseFloatingPointLiteral() {
   Token token = CurToken();
   auto spelling = token.GetSpelling();
   llvm::StringRef spelling_ref = spelling;
-  spelling_ref = spelling;
-  lldb::BasicType type = lldb::eBasicTypeDouble;
+
+  bool is_float = false;
   llvm::APFloat raw_float(llvm::APFloat::IEEEdouble());
   if (spelling_ref.consume_back_insensitive("f")) {
-    type = lldb::eBasicTypeFloat;
+    is_float = true;
     raw_float = llvm::APFloat(llvm::APFloat::IEEEsingle());
   }
+
   auto StatusOrErr = raw_float.convertFromString(
       spelling_ref, llvm::APFloat::rmNearestTiesToEven);
   if (!errorToBool(StatusOrErr.takeError())) {
     Scalar scalar_value(raw_float);
-    return std::make_unique<ScalarLiteralNode>(token.GetLocation(), type,
-                                               scalar_value);
+    return std::make_unique<ScalarLiteralNode>(token.GetLocation(),
+                                               scalar_value, is_float);
   }
   return std::make_unique<ErrorNode>();
 }
