@@ -413,7 +413,7 @@ static void TestPTrace() {
   // internal_fork() on SPARC actually calls __fork(). We can't safely fork,
   // because it's possible seccomp has been configured to disallow fork() but
   // allow clone().
-  Report("Warning: skipping TestPTrace() because this is SPARC\n");
+  Report("WARNING: skipping TestPTrace() because this is SPARC\n");
   Report(
       "If seccomp blocks ptrace, LeakSanitizer may hang without further "
       "notice\n");
@@ -460,7 +460,7 @@ static void TestPTrace() {
     // Handle SCMP_ACT_KILL
     if (WIFSIGNALED(wstatus)) {
       VReport(0,
-              "Warning: ptrace appears to be blocked (is seccomp enabled?). "
+              "WARNING: ptrace appears to be blocked (is seccomp enabled?). "
               "LeakSanitizer may hang.\n");
       VReport(0, "Child exited with signal %d.\n", WTERMSIG(wstatus));
       // We don't abort the sanitizer - it's still worth letting the sanitizer
