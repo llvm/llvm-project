@@ -8,7 +8,7 @@ extern "C"
 
 int foo()
 {
-    puts("foo");
+    puts("foo"); //% self.expect("image lookup -v -a $pc", substrs=['mangled = "foo"'])
     return 2;
 }
 
