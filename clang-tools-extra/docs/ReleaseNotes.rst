@@ -244,6 +244,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by 
+  adding detection for the local variables initialized with the member variable
+  of a const object.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
