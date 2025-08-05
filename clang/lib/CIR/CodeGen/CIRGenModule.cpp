@@ -656,8 +656,6 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
-  const QualType astTy = vd->getType();
-
   if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice) {
     errorNYI(vd->getSourceRange(), "emit OpenCL/OpenMP global variable");
     return;
@@ -701,7 +699,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // never attempt to emit a tentative definition if a real one
     // exists. A use may still exists, however, so we still may need
     // to do a RAUW.
-    assert(!astTy->isIncompleteType() && "Unexpected incomplete type");
+    assert(!vd->getType()->isIncompleteType() && "Unexpected incomplete type");
     init = builder.getZeroInitAttr(convertType(vd->getType()));
   } else {
     emitter.emplace(*this);
@@ -1298,6 +1296,7 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
              decl->getDeclKindName());
     break;
 
+  case Decl::CXXConversion:
   case Decl::CXXMethod:
   case Decl::Function: {
     auto *fd = cast<FunctionDecl>(decl);
@@ -1307,8 +1306,13 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
   }
 
-  case Decl::Var: {
+  case Decl::Var:
+  case Decl::Decomposition: {
     auto *vd = cast<VarDecl>(decl);
+    if (isa<DecompositionDecl>(decl)) {
+      errorNYI(decl->getSourceRange(), "global variable decompositions");
+      break;
+    }
     emitGlobal(vd);
     break;
   }
@@ -1330,8 +1334,14 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
     break;
 
   // No code generation needed.
-  case Decl::UsingShadow:
+  case Decl::ClassTemplate:
+  case Decl::Concept:
+  case Decl::CXXDeductionGuide:
   case Decl::Empty:
+  case Decl::FunctionTemplate:
+  case Decl::StaticAssert:
+  case Decl::TypeAliasTemplate:
+  case Decl::UsingShadow:
     break;
 
   case Decl::CXXConstructor:
@@ -1593,10 +1603,10 @@ static bool shouldAssumeDSOLocal(const CIRGenModule &cgm,
 
   const llvm::Triple &tt = cgm.getTriple();
   const CodeGenOptions &cgOpts = cgm.getCodeGenOpts();
-  if (tt.isWindowsGNUEnvironment()) {
-    // In MinGW, variables without DLLImport can still be automatically
-    // imported from a DLL by the linker; don't mark variables that
-    // potentially could come from another DLL as DSO local.
+  if (tt.isOSCygMing()) {
+    // In MinGW and Cygwin, variables without DLLImport can still be
+    // automatically imported from a DLL by the linker; don't mark variables
+    // that potentially could come from another DLL as DSO local.
 
     // With EmulatedTLS, TLS variables can be autoimported from other DLLs
     // (and this actually happens in the public interface of libstdc++), so

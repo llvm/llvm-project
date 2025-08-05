@@ -5,7 +5,6 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-from dex.debugger.DAP import DAP
 from dex.debugger.Debuggers import Debuggers
 from dex.debugger.DebuggerControllers.DebuggerControllerBase import (
     DebuggerControllerBase,

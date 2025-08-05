@@ -267,6 +267,11 @@ class CIRToLLVMFuncOpLowering : public mlir::OpConversionPattern<cir::FuncOp> {
       cir::FuncOp func, bool filterArgAndResAttrs,
       mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
 
+  mlir::LogicalResult
+  matchAndRewriteAlias(cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty,
+                       OpAdaptor adaptor,
+                       mlir::ConversionPatternRewriter &rewriter) const;
+
 public:
   using mlir::OpConversionPattern<cir::FuncOp>::OpConversionPattern;
 
@@ -394,6 +399,16 @@ public:
 
   mlir::LogicalResult
   matchAndRewrite(cir::GetMemberOp op, OpAdaptor,
+                  mlir::ConversionPatternRewriter &) const override;
+};
+
+class CIRToLLVMUnreachableOpLowering
+    : public mlir::OpConversionPattern<cir::UnreachableOp> {
+public:
+  using mlir::OpConversionPattern<cir::UnreachableOp>::OpConversionPattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(cir::UnreachableOp op, OpAdaptor,
                   mlir::ConversionPatternRewriter &) const override;
 };
 
