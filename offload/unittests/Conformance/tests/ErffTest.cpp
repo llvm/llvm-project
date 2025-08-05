@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains the conformance test of the hypotf16 function.
+/// This file contains the conformance test of the erff function.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -16,43 +16,38 @@
 #include "mathtest/IndexedRange.hpp"
 #include "mathtest/TestConfig.hpp"
 #include "mathtest/TestRunner.hpp"
-#include "mathtest/TypeExtras.hpp"
 
 #include "llvm/ADT/StringRef.h"
 
 #include <cstdlib>
 #include <math.h>
 
-using namespace mathtest;
-
-extern "C" float16 hypotf16(float16, float16);
-
 namespace mathtest {
 
-template <> struct FunctionConfig<hypotf16> {
-  static constexpr llvm::StringRef Name = "hypotf16";
-  static constexpr llvm::StringRef KernelName = "hypotf16Kernel";
+template <> struct FunctionConfig<erff> {
+  static constexpr llvm::StringRef Name = "erff";
+  static constexpr llvm::StringRef KernelName = "erffKernel";
 
   // Source: The Khronos Group, The OpenCL C Specification v3.0.19, Sec. 7.4,
-  //         Table 69 (Full Profile), Khronos Registry [July 10, 2025].
-  static constexpr uint64_t UlpTolerance = 2;
+  //         Table 65, Khronos Registry [July 10, 2025].
+  static constexpr uint64_t UlpTolerance = 16;
 };
 } // namespace mathtest
 
 int main(int argc, const char **argv) {
-  llvm::cl::ParseCommandLineOptions(
-      argc, argv, "Conformance test of the hypotf16 function");
+  llvm::cl::ParseCommandLineOptions(argc, argv,
+                                    "Conformance test of the erff function");
 
-  IndexedRange<float16> RangeX;
-  IndexedRange<float16> RangeY;
-  ExhaustiveGenerator<float16, float16> Generator(RangeX, RangeY);
+  using namespace mathtest;
+
+  IndexedRange<float> Range;
+  ExhaustiveGenerator<float> Generator(Range);
 
   const auto Configs = cl::getTestConfigs();
   const llvm::StringRef DeviceBinaryDir = DEVICE_BINARY_DIR;
   const bool IsVerbose = cl::IsVerbose;
 
-  bool Passed =
-      runTests<hypotf16>(Generator, Configs, DeviceBinaryDir, IsVerbose);
+  bool Passed = runTests<erff>(Generator, Configs, DeviceBinaryDir, IsVerbose);
 
   return Passed ? EXIT_SUCCESS : EXIT_FAILURE;
 }

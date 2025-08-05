@@ -15,6 +15,8 @@ if (NOT TARGET llvm_gtest)
   return ()
 endif ()
 
+set(OFFLOAD_UNITTESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+
 function(add_offload_test_device_code test_filename test_name)
   set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${test_filename})
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
@@ -39,6 +41,7 @@ function(add_offload_test_device_code test_filename test_name)
       add_custom_command(
         OUTPUT ${output_file}
         COMMAND ${CMAKE_CXX_COMPILER}
+        -I${OFFLOAD_UNITTESTS_DIR}
         --target=nvptx64-nvidia-cuda -march=${nvptx_arch}
         -nogpulib --cuda-path=${cuda_path} -flto ${ARGN}
         ${SRC_PATH} -o ${output_file}
@@ -63,6 +66,7 @@ function(add_offload_test_device_code test_filename test_name)
       add_custom_command(
         OUTPUT ${output_file}
         COMMAND ${CMAKE_CXX_COMPILER}
+        -I${OFFLOAD_UNITTESTS_DIR}
         --target=amdgcn-amd-amdhsa -mcpu=${amdgpu_arch}
         -nogpulib -flto ${ARGN} ${SRC_PATH} -o ${output_file}
         DEPENDS ${SRC_PATH}
