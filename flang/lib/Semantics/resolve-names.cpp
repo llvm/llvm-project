@@ -1484,18 +1484,18 @@ public:
   }
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
-  bool Pre(const parser::OmpBeginBlockDirective &x) {
+  bool Pre(const parser::OmpBeginDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
-  void Post(const parser::OmpBeginBlockDirective &) {
+  void Post(const parser::OmpBeginDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
-  bool Pre(const parser::OmpEndBlockDirective &x) {
+  bool Pre(const parser::OmpEndDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
-  void Post(const parser::OmpEndBlockDirective &) {
+  void Post(const parser::OmpEndDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
@@ -1646,7 +1646,8 @@ public:
           populateDeclareTargetNames(linkClause->v);
         } else if (const auto *enterClause{
                        std::get_if<parser::OmpClause::Enter>(&clause.u)}) {
-          populateDeclareTargetNames(enterClause->v);
+          populateDeclareTargetNames(
+              std::get<parser::OmpObjectList>(enterClause->v.t));
         }
       }
     }
@@ -1724,9 +1725,7 @@ private:
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
-  const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
-  const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-  switch (beginDir.v) {
+  switch (x.BeginDir().DirId()) {
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
     return false;
@@ -2139,7 +2138,7 @@ bool ImplicitRules::isImplicitNoneExternal() const {
 
 const DeclTypeSpec *ImplicitRules::GetType(
     SourceName name, bool respectImplicitNoneType) const {
-  char ch{name.begin()[0]};
+  char ch{name.front()};
   if (isImplicitNoneType_ && respectImplicitNoneType) {
     return nullptr;
   } else if (auto it{map_.find(ch)}; it != map_.end()) {
@@ -2351,7 +2350,8 @@ bool AttrsVisitor::IsConflictingAttr(Attr attrName) {
       HaveAttrConflict(attrName, Attr::PASS, Attr::NOPASS) || // C781
       HaveAttrConflict(attrName, Attr::PURE, Attr::IMPURE) ||
       HaveAttrConflict(attrName, Attr::PUBLIC, Attr::PRIVATE) ||
-      HaveAttrConflict(attrName, Attr::RECURSIVE, Attr::NON_RECURSIVE);
+      HaveAttrConflict(attrName, Attr::RECURSIVE, Attr::NON_RECURSIVE) ||
+      HaveAttrConflict(attrName, Attr::INTRINSIC, Attr::EXTERNAL);
 }
 bool AttrsVisitor::CheckAndSet(Attr attrName) {
   if (IsConflictingAttr(attrName) || IsDuplicateAttr(attrName)) {
@@ -8574,8 +8574,10 @@ bool ResolveNamesVisitor::Pre(const parser::ImportStmt &x) {
         } else {
           Say(name,
               "A distinct '%s' is already present in this scope"_err_en_US)
-              .Attach(symbol->name(), "Previous declaration of '%s'"_en_US)
-              .Attach(outer->name(), "Declaration of '%s' in host scope"_en_US);
+              .Attach(symbol->name(), "Previous declaration of '%s'"_en_US,
+                  symbol->name().ToString())
+              .Attach(outer->name(), "Declaration of '%s' in host scope"_en_US,
+                  outer->name().ToString());
         }
       }
     } else {

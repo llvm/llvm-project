@@ -246,9 +246,9 @@ private:
   genParallelOp(mlir::Location loc, mlir::ConversionPatternRewriter &rewriter,
                 looputils::InductionVariableInfos &ivInfos,
                 mlir::IRMapping &mapper) const {
-    auto parallelOp = rewriter.create<mlir::omp::ParallelOp>(loc);
+    auto parallelOp = mlir::omp::ParallelOp::create(rewriter, loc);
     rewriter.createBlock(&parallelOp.getRegion());
-    rewriter.setInsertionPoint(rewriter.create<mlir::omp::TerminatorOp>(loc));
+    rewriter.setInsertionPoint(mlir::omp::TerminatorOp::create(rewriter, loc));
 
     genLoopNestIndVarAllocs(rewriter, ivInfos, mapper);
     return parallelOp;
@@ -312,11 +312,24 @@ private:
               bool isComposite) const {
     mlir::omp::WsloopOperands wsloopClauseOps;
 
+    auto cloneFIRRegionToOMP = [&rewriter](mlir::Region &firRegion,
+                                           mlir::Region &ompRegion) {
+      if (!firRegion.empty()) {
+        rewriter.cloneRegionBefore(firRegion, ompRegion, ompRegion.begin());
+        auto firYield =
+            mlir::cast<fir::YieldOp>(ompRegion.back().getTerminator());
+        rewriter.setInsertionPoint(firYield);
+        mlir::omp::YieldOp::create(rewriter, firYield.getLoc(),
+                                   firYield.getOperands());
+        rewriter.eraseOp(firYield);
+      }
+    };
+
     // For `local` (and `local_init`) opernads, emit corresponding `private`
     // clauses and attach these clauses to the workshare loop.
-    if (!loop.getLocalOperands().empty())
+    if (!loop.getLocalVars().empty())
       for (auto [op, sym, arg] : llvm::zip_equal(
-               loop.getLocalOperands(),
+               loop.getLocalVars(),
                loop.getLocalSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
                loop.getRegionLocalArgs())) {
         auto localizer = mlir::SymbolTable::lookupNearestSymbolFrom<
@@ -326,55 +339,71 @@ private:
           TODO(localizer.getLoc(),
                "local_init conversion is not supported yet");
 
-        auto oldIP = rewriter.saveInsertionPoint();
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointAfter(localizer);
-        auto privatizer = rewriter.create<mlir::omp::PrivateClauseOp>(
-            localizer.getLoc(), sym.getLeafReference().str() + ".omp",
+
+        auto privatizer = mlir::omp::PrivateClauseOp::create(
+            rewriter, localizer.getLoc(), sym.getLeafReference().str() + ".omp",
             localizer.getTypeAttr().getValue(),
             mlir::omp::DataSharingClauseType::Private);
 
-        if (!localizer.getInitRegion().empty()) {
-          rewriter.cloneRegionBefore(localizer.getInitRegion(),
-                                     privatizer.getInitRegion(),
-                                     privatizer.getInitRegion().begin());
-          auto firYield = mlir::cast<fir::YieldOp>(
-              privatizer.getInitRegion().back().getTerminator());
-          rewriter.setInsertionPoint(firYield);
-          rewriter.create<mlir::omp::YieldOp>(firYield.getLoc(),
-                                              firYield.getOperands());
-          rewriter.eraseOp(firYield);
-        }
-
-        if (!localizer.getDeallocRegion().empty()) {
-          rewriter.cloneRegionBefore(localizer.getDeallocRegion(),
-                                     privatizer.getDeallocRegion(),
-                                     privatizer.getDeallocRegion().begin());
-          auto firYield = mlir::cast<fir::YieldOp>(
-              privatizer.getDeallocRegion().back().getTerminator());
-          rewriter.setInsertionPoint(firYield);
-          rewriter.create<mlir::omp::YieldOp>(firYield.getLoc(),
-                                              firYield.getOperands());
-          rewriter.eraseOp(firYield);
-        }
-
-        rewriter.restoreInsertionPoint(oldIP);
+        cloneFIRRegionToOMP(localizer.getInitRegion(),
+                            privatizer.getInitRegion());
+        cloneFIRRegionToOMP(localizer.getDeallocRegion(),
+                            privatizer.getDeallocRegion());
 
         wsloopClauseOps.privateVars.push_back(op);
         wsloopClauseOps.privateSyms.push_back(
             mlir::SymbolRefAttr::get(privatizer));
       }
 
+    if (!loop.getReduceVars().empty()) {
+      for (auto [op, byRef, sym, arg] : llvm::zip_equal(
+               loop.getReduceVars(), loop.getReduceByrefAttr().asArrayRef(),
+               loop.getReduceSymsAttr().getAsRange<mlir::SymbolRefAttr>(),
+               loop.getRegionReduceArgs())) {
+        auto firReducer =
+            mlir::SymbolTable::lookupNearestSymbolFrom<fir::DeclareReductionOp>(
+                loop, sym);
+
+        mlir::OpBuilder::InsertionGuard guard(rewriter);
+        rewriter.setInsertionPointAfter(firReducer);
+
+        auto ompReducer = mlir::omp::DeclareReductionOp::create(
+            rewriter, firReducer.getLoc(),
+            sym.getLeafReference().str() + ".omp",
+            firReducer.getTypeAttr().getValue());
+
+        cloneFIRRegionToOMP(firReducer.getAllocRegion(),
+                            ompReducer.getAllocRegion());
+        cloneFIRRegionToOMP(firReducer.getInitializerRegion(),
+                            ompReducer.getInitializerRegion());
+        cloneFIRRegionToOMP(firReducer.getReductionRegion(),
+                            ompReducer.getReductionRegion());
+        cloneFIRRegionToOMP(firReducer.getAtomicReductionRegion(),
+                            ompReducer.getAtomicReductionRegion());
+        cloneFIRRegionToOMP(firReducer.getCleanupRegion(),
+                            ompReducer.getCleanupRegion());
+
+        wsloopClauseOps.reductionVars.push_back(op);
+        wsloopClauseOps.reductionByref.push_back(byRef);
+        wsloopClauseOps.reductionSyms.push_back(
+            mlir::SymbolRefAttr::get(ompReducer));
+      }
+    }
+
     auto wsloopOp =
-        rewriter.create<mlir::omp::WsloopOp>(loop.getLoc(), wsloopClauseOps);
+        mlir::omp::WsloopOp::create(rewriter, loop.getLoc(), wsloopClauseOps);
     wsloopOp.setComposite(isComposite);
 
     Fortran::common::openmp::EntryBlockArgs wsloopArgs;
     wsloopArgs.priv.vars = wsloopClauseOps.privateVars;
+    wsloopArgs.reduction.vars = wsloopClauseOps.reductionVars;
     Fortran::common::openmp::genEntryBlock(rewriter, wsloopArgs,
                                            wsloopOp.getRegion());
 
     auto loopNestOp =
-        rewriter.create<mlir::omp::LoopNestOp>(loop.getLoc(), clauseOps);
+        mlir::omp::LoopNestOp::create(rewriter, loop.getLoc(), clauseOps);
 
     // Clone the loop's body inside the loop nest construct using the
     // mapped values.
@@ -382,7 +411,7 @@ private:
                                loopNestOp.getRegion().begin(), mapper);
 
     rewriter.setInsertionPointToEnd(&loopNestOp.getRegion().back());
-    rewriter.create<mlir::omp::YieldOp>(loop->getLoc());
+    mlir::omp::YieldOp::create(rewriter, loop->getLoc());
 
     // `local` region arguments are transferred/cloned from the `do concurrent`
     // loop to the loopnest op when the region is cloned above. Instead, these
@@ -393,7 +422,8 @@ private:
                              clauseOps.loopLowerBounds.size())))
       rewriter.replaceAllUsesWith(loopNestArg, wsloopArg);
 
-    for (unsigned i = 0; i < loop.getLocalVars().size(); ++i)
+    for (unsigned i = 0;
+         i < loop.getLocalVars().size() + loop.getReduceVars().size(); ++i)
       loopNestOp.getRegion().eraseArgument(clauseOps.loopLowerBounds.size());
 
     return loopNestOp;

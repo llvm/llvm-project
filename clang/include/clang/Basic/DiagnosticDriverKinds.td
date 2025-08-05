@@ -116,6 +116,8 @@ def err_drv_cuda_host_arch : Error<
   "unsupported architecture '%0' for host compilation">;
 def err_drv_mix_cuda_hip : Error<
   "mixed CUDA and HIP compilation is not supported">;
+def err_drv_mix_offload : Error<
+  "mixed %0 and %1 offloading compilation is not supported">;
 def err_drv_bad_target_id : Error<
   "invalid target ID '%0'; format is a processor name followed by an optional "
   "colon-delimited list of features followed by an enable/disable sign (e.g., "
@@ -391,6 +393,8 @@ def err_drv_small_columns : Error<
 def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   "ignoring '-f%select{no-|}0raw-string-literals', which is only valid for C and C++ standards before C++11">,
   InGroup<UnusedCommandLineArgument>;
+
+def err_drv_libclc_not_found : Error<"no libclc library '%0' found in the clang resource directory">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;

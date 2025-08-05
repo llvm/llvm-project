@@ -618,19 +618,15 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
   }
 }
 
-/// Returns all DbgVariableIntrinsic in F.
-static std::pair<SmallVector<DbgVariableIntrinsic *, 8>,
-                 SmallVector<DbgVariableRecord *>>
-collectDbgVariableIntrinsics(Function &F) {
-  SmallVector<DbgVariableIntrinsic *, 8> Intrinsics;
+/// Returns all debug records in F.
+static SmallVector<DbgVariableRecord *>
+collectDbgVariableRecords(Function &F) {
   SmallVector<DbgVariableRecord *> DbgVariableRecords;
   for (auto &I : instructions(F)) {
     for (DbgVariableRecord &DVR : filterDbgVars(I.getDbgRecordRange()))
       DbgVariableRecords.push_back(&DVR);
-    if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-      Intrinsics.push_back(DVI);
   }
-  return {Intrinsics, DbgVariableRecords};
+  return DbgVariableRecords;
 }
 
 void coro::BaseCloner::replaceSwiftErrorOps() {
@@ -638,13 +634,11 @@ void coro::BaseCloner::replaceSwiftErrorOps() {
 }
 
 void coro::BaseCloner::salvageDebugInfo() {
-  auto [Worklist, DbgVariableRecords] = collectDbgVariableIntrinsics(*NewF);
+  auto DbgVariableRecords = collectDbgVariableRecords(*NewF);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
   // Only 64-bit ABIs have a register we can refer to with the entry value.
   bool UseEntryValue = OrigF.getParent()->getTargetTriple().isArch64Bit();
-  for (DbgVariableIntrinsic *DVI : Worklist)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DVI, UseEntryValue);
   for (DbgVariableRecord *DVR : DbgVariableRecords)
     coro::salvageDebugInfo(ArgToAllocaMap, *DVR, UseEntryValue);
 
@@ -655,7 +649,7 @@ void coro::BaseCloner::salvageDebugInfo() {
     return !isPotentiallyReachable(&NewF->getEntryBlock(), BB, nullptr,
                                    &DomTree);
   };
-  auto RemoveOne = [&](auto *DVI) {
+  auto RemoveOne = [&](DbgVariableRecord *DVI) {
     if (IsUnreachableBlock(DVI->getParent()))
       DVI->eraseFromParent();
     else if (isa_and_nonnull<AllocaInst>(DVI->getVariableLocationOp(0))) {
@@ -669,7 +663,6 @@ void coro::BaseCloner::salvageDebugInfo() {
         DVI->eraseFromParent();
     }
   };
-  for_each(Worklist, RemoveOne);
   for_each(DbgVariableRecords, RemoveOne);
 }
 
@@ -808,15 +801,14 @@ static void updateScopeLine(Instruction *ActiveSuspend,
     return;
 
   // No subsequent instruction -> fallback to the location of ActiveSuspend.
-  if (!ActiveSuspend->getNextNonDebugInstruction()) {
+  if (!ActiveSuspend->getNextNode()) {
     if (auto DL = ActiveSuspend->getDebugLoc())
       if (SPToUpdate.getFile() == DL->getFile())
         SPToUpdate.setScopeLine(DL->getLine());
     return;
   }
 
-  BasicBlock::iterator Successor =
-      ActiveSuspend->getNextNonDebugInstruction()->getIterator();
+  BasicBlock::iterator Successor = ActiveSuspend->getNextNode()->getIterator();
   // Corosplit splits the BB around ActiveSuspend, so the meaningful
   // instructions are not in the same BB.
   if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
@@ -1484,12 +1476,9 @@ private:
     // If there is no DISubprogram for F, it implies the function is compiled
     // without debug info. So we also don't generate debug info for the
     // suspension points.
-    bool AddDebugLabels =
-        (DIS && DIS->getUnit() &&
-         (DIS->getUnit()->getEmissionKind() ==
-              DICompileUnit::DebugEmissionKind::FullDebug ||
-          DIS->getUnit()->getEmissionKind() ==
-              DICompileUnit::DebugEmissionKind::LineTablesOnly));
+    bool AddDebugLabels = DIS && DIS->getUnit() &&
+                          (DIS->getUnit()->getEmissionKind() ==
+                           DICompileUnit::DebugEmissionKind::FullDebug);
 
     // resume.entry:
     //  %index.addr = getelementptr inbounds %f.Frame, %f.Frame* %FramePtr, i32
@@ -1579,7 +1568,7 @@ private:
         if (DebugLoc SuspendLoc = S->getDebugLoc()) {
           std::string LabelName =
               ("__coro_resume_" + Twine(SuspendIndex)).str();
-          DILocation &DILoc = *SuspendLoc.get();
+          DILocation &DILoc = *SuspendLoc;
           DILabel *ResumeLabel =
               DBuilder.createLabel(DIS, LabelName, DILoc.getFile(),
                                    SuspendLoc.getLine(), SuspendLoc.getCol(),
@@ -2026,9 +2015,7 @@ static void doSplitCoroutine(Function &F, SmallVectorImpl<Function *> &Clones,
   // original function. The Cloner has already salvaged debug info in the new
   // coroutine funclets.
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
-  auto [DbgInsts, DbgVariableRecords] = collectDbgVariableIntrinsics(F);
-  for (auto *DDI : DbgInsts)
-    coro::salvageDebugInfo(ArgToAllocaMap, *DDI, false /*UseEntryValue*/);
+  auto DbgVariableRecords = collectDbgVariableRecords(F);
   for (DbgVariableRecord *DVR : DbgVariableRecords)
     coro::salvageDebugInfo(ArgToAllocaMap, *DVR, false /*UseEntryValue*/);
 

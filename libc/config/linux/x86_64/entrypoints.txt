@@ -36,6 +36,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.poll.poll
 
     # sched.h entrypoints
+    libc.src.sched.getcpu
     libc.src.sched.sched_get_priority_max
     libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_getaffinity
@@ -377,6 +378,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcsrchr
     libc.src.wchar.wcsspn
     libc.src.wchar.wcscspn
+    libc.src.wchar.wcsdup
     libc.src.wchar.wmemcmp
     libc.src.wchar.wmempcpy
     libc.src.wchar.wmemcpy
@@ -391,6 +393,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcpcpy
     libc.src.wchar.wcpncpy
     libc.src.wchar.wcstok
+    libc.src.wchar.wcstol
+    libc.src.wchar.wcstoll
+    libc.src.wchar.wcstoul
+    libc.src.wchar.wcstoull
+
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
@@ -659,6 +668,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderl
@@ -883,6 +893,12 @@ if(LIBC_TYPES_HAS_FLOAT128)
   )
 endif()
 
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.fabsbf16
+)
+
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
     # stdfix.h _Fract and _Accum entrypoints
@@ -1041,6 +1057,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_join
     libc.src.pthread.pthread_key_create
     libc.src.pthread.pthread_key_delete
+    libc.src.pthread.pthread_barrier_init
+    libc.src.pthread.pthread_barrier_wait
+    libc.src.pthread.pthread_barrier_destroy
     libc.src.pthread.pthread_mutex_destroy
     libc.src.pthread.pthread_mutex_init
     libc.src.pthread.pthread_mutex_lock
@@ -1253,10 +1272,19 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.socket.recvmsg
 
     # wchar.h entrypoints
+    libc.src.wchar.mblen
+    libc.src.wchar.mbrlen
+    libc.src.wchar.mbsinit
     libc.src.wchar.mbrtowc
     libc.src.wchar.mbtowc
+    libc.src.wchar.mbstowcs
+    libc.src.wchar.mbsrtowcs
+    libc.src.wchar.mbsnrtowcs
     libc.src.wchar.wcrtomb
     libc.src.wchar.wctomb
+    libc.src.wchar.wcstombs
+    libc.src.wchar.wcsrtombs
+    libc.src.wchar.wcsnrtombs
   )
 endif()
 

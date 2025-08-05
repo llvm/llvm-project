@@ -529,7 +529,7 @@ private:
   void mangleUnqualifiedBlock(const BlockDecl *Block);
   void mangleTemplateParamDecl(const NamedDecl *Decl);
   void mangleTemplateParameterList(const TemplateParameterList *Params);
-  void mangleTypeConstraint(const ConceptDecl *Concept,
+  void mangleTypeConstraint(const TemplateDecl *Concept,
                             ArrayRef<TemplateArgument> Arguments);
   void mangleTypeConstraint(const TypeConstraint *Constraint);
   void mangleRequiresClause(const Expr *RequiresClause);
@@ -1384,14 +1384,6 @@ void CXXNameMangler::mangleUnresolvedPrefix(NestedNameSpecifier *qualifier,
       Out << "sr";
     mangleSourceNameWithAbiTags(qualifier->getAsNamespace());
     break;
-  case NestedNameSpecifier::NamespaceAlias:
-    if (qualifier->getPrefix())
-      mangleUnresolvedPrefix(qualifier->getPrefix(),
-                             /*recursive*/ true);
-    else
-      Out << "sr";
-    mangleSourceNameWithAbiTags(qualifier->getAsNamespaceAlias());
-    break;
 
   case NestedNameSpecifier::TypeSpec: {
     const Type *type = qualifier->getAsType();
@@ -2088,7 +2080,7 @@ void CXXNameMangler::mangleTemplateParameterList(
 }
 
 void CXXNameMangler::mangleTypeConstraint(
-    const ConceptDecl *Concept, ArrayRef<TemplateArgument> Arguments) {
+    const TemplateDecl *Concept, ArrayRef<TemplateArgument> Arguments) {
   const DeclContext *DC = Context.getEffectiveDeclContext(Concept);
   if (!Arguments.empty())
     mangleTemplateName(Concept, Arguments);
@@ -2185,11 +2177,7 @@ void CXXNameMangler::manglePrefix(NestedNameSpecifier *qualifier) {
     llvm_unreachable("Can't mangle __super specifier");
 
   case NestedNameSpecifier::Namespace:
-    mangleName(qualifier->getAsNamespace());
-    return;
-
-  case NestedNameSpecifier::NamespaceAlias:
-    mangleName(qualifier->getAsNamespaceAlias()->getNamespace());
+    mangleName(qualifier->getAsNamespace()->getNamespace());
     return;
 
   case NestedNameSpecifier::TypeSpec:
@@ -2524,6 +2512,10 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
 
   case Type::Typedef:
     mangleSourceNameWithAbiTags(cast<TypedefType>(Ty)->getDecl());
+    break;
+
+  case Type::PredefinedSugar:
+    mangleType(cast<PredefinedSugarType>(Ty)->desugar());
     break;
 
   case Type::UnresolvedUsing:
