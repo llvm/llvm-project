@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Common.hpp"
+#include "Conformance/device_code/Common.hpp"
 
 #include <gpuintrin.h>
 #include <math.h>

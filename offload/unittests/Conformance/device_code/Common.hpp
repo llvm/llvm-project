@@ -12,8 +12,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef COMMON_HPP
-#define COMMON_HPP
+#ifndef CONFORMANCE_DEVICE_CODE_COMMON_HPP
+#define CONFORMANCE_DEVICE_CODE_COMMON_HPP
 
 #include <gpuintrin.h>
 #include <stddef.h>
@@ -34,4 +34,4 @@ void runKernelBody(size_t NumElements, OutType *Out, const InTypes *...Ins) {
 }
 } // namespace common
 
-#endif // COMMON_HPP
+#endif // CONFORMANCE_DEVICE_CODE_COMMON_HPP
