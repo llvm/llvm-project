@@ -2466,6 +2466,33 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 }
 
+static bool isDuplicateMappedSymbol(
+    const semantics::Symbol &sym,
+    const llvm::SetVector<const semantics::Symbol *> &privatizedSyms,
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &hasDevSyms,
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &mappedSyms) {
+  llvm::SmallVector<const semantics::Symbol *> concatSyms;
+  concatSyms.reserve(privatizedSyms.size() + hasDevSyms.size() +
+                     mappedSyms.size());
+  concatSyms.append(privatizedSyms.begin(), privatizedSyms.end());
+  concatSyms.append(hasDevSyms.begin(), hasDevSyms.end());
+  concatSyms.append(mappedSyms.begin(), mappedSyms.end());
+
+  auto checkSymbol = [&](const semantics::Symbol &checkSym) {
+    return std::any_of(concatSyms.begin(), concatSyms.end(),
+                       [&](auto v) { return v->GetUltimate() == checkSym; });
+  };
+
+  if (checkSymbol(sym))
+    return true;
+
+  const auto *hostAssoc{sym.detailsIf<semantics::HostAssocDetails>()};
+  if (hostAssoc && checkSymbol(hostAssoc->symbol()))
+    return true;
+
+  return checkSymbol(sym.GetUltimate());
+}
+
 static mlir::omp::TargetOp
 genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             lower::StatementContext &stmtCtx,
@@ -2492,7 +2519,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/
                            lower::omp::isLastItemInQueue(item, queue),
-                           /*useDelayedPrivatization=*/true, symTable);
+                           /*useDelayedPrivatization=*/true, symTable,
+                           /*isTargetPrivitization=*/true);
   dsp.processStep1(&clauseOps);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
@@ -2501,17 +2529,6 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // attribute clauses (neither data-sharing; e.g. `private`, nor `map`
   // clauses).
   auto captureImplicitMap = [&](const semantics::Symbol &sym) {
-    if (dsp.getAllSymbolsToPrivatize().contains(&sym))
-      return;
-
-    // Skip parameters/constants as they do not need to be mapped.
-    if (semantics::IsNamedConstant(sym))
-      return;
-
-    // These symbols are mapped individually in processHasDeviceAddr.
-    if (llvm::is_contained(hasDeviceAddrSyms, &sym))
-      return;
-
     // Structure component symbols don't have bindings, and can only be
     // explicitly mapped individually. If a member is captured implicitly
     // we map the entirety of the derived type when we find its symbol.
@@ -2533,7 +2550,12 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (!converter.getSymbolAddress(sym))
       return;
 
-    if (!llvm::is_contained(mapSyms, &sym)) {
+    // Skip parameters/constants as they do not need to be mapped.
+    if (semantics::IsNamedConstant(sym))
+      return;
+
+    if (!isDuplicateMappedSymbol(sym, dsp.getAllSymbolsToPrivatize(),
+                                 hasDeviceAddrSyms, mapSyms)) {
       if (const auto *details =
               sym.template detailsIf<semantics::HostAssocDetails>())
         converter.copySymbolBinding(details->symbol(), sym);
