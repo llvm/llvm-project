@@ -440,6 +440,12 @@ SYMBOL(atomic_ushort, std::, <atomic>)
 SYMBOL(atomic_ushort, std::, <memory>)
 SYMBOL(atomic_wchar_t, std::, <atomic>)
 SYMBOL(atomic_wchar_t, std::, <memory>)
+SYMBOL(range_const_reference_t, std::ranges::, <ranges>)
+SYMBOL(range_difference_t, std::ranges::, <ranges>)
+SYMBOL(range_reference_t, std::ranges::, <ranges>)
+SYMBOL(range_rvalue_reference_t, std::ranges::, <ranges>)
+SYMBOL(range_size_t, std::ranges::, <ranges>)
+SYMBOL(range_value_t, std::ranges::, <ranges>)
 
 // These are C symbols that are not under std namespace.
 SYMBOL(localtime_r, None, <ctime>)
@@ -452,9 +458,9 @@ SYMBOL(gmtime_s, None, <ctime>)
 SYMBOL(gmtime_s, None, <time.h>)
 
 // The std::placeholder symbols (_1, ..., _N) are listed in the cppreference
-// placeholder.html, but the index only contains a single entry with "_1, _2, ..., _N"
-// text, which are not handled by the script.
-// N is an implementation-defined number (10 for libc++; 29 for libstdc++).
+// placeholder.html, but the index only contains a single entry with "_1, _2,
+// ..., _N" text, which are not handled by the script. N is an
+// implementation-defined number (10 for libc++; 29 for libstdc++).
 SYMBOL(_1, std::placeholders::, <functional>)
 SYMBOL(_2, std::placeholders::, <functional>)
 SYMBOL(_3, std::placeholders::, <functional>)

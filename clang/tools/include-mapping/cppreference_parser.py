@@ -84,13 +84,16 @@ def _ParseSymbolPage(symbol_page_html, symbol_name, qual_name):
                     break
                 # Symbols are usually in the first cell, except alternative operators.
                 for col in row.select("td"):
-                    found_symbols = []
-                    for sym in col.stripped_strings:
-                        found_symbols.extend(re.findall(r"[A-Za-z_]\w*", sym))
-                    if any(
-                        sym == symbol_name or sym == qual_name for sym in found_symbols
-                    ):
-                        headers.extend(current_headers)
+                    matches = [
+                        word
+                        for strings in col.stripped_strings
+                        for word in re.findall(r"[A-Za-z_]\w*(?:::\w+)*", strings)
+                        if word in (symbol_name, qual_name)
+                    ]
+                    if matches:
+                        for header in current_headers:
+                            if symbol_name in matches or not header.endswith(".h>"):
+                                headers.append(header)
                     if headers:
                         break
             elif _HasClass(row, "t-dsc-header"):
