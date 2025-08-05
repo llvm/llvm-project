@@ -16,6 +16,8 @@ func.func @emitc_constant() {
   %c8 = "emitc.constant"(){value = dense<0> : tensor<i32>} : () -> tensor<i32>
   %c9 = "emitc.constant"(){value = dense<[0, 1]> : tensor<2xindex>} : () -> tensor<2xindex>
   %c10 = "emitc.constant"(){value = dense<[[0.0, 1.0], [2.0, 3.0]]> : tensor<2x2xf32>} : () -> tensor<2x2xf32>
+  %c11 = "emitc.constant"(){value = dense<[0, 1]> : !emitc.array<2xindex>} : () -> !emitc.array<2xindex>
+  %c12 = "emitc.constant"(){value = dense<[0.0, 1.0]> : !emitc.array<2xf32>} : () -> !emitc.array<2xf32>
   return
 }
 // CPP-DEFAULT: void emitc_constant() {
@@ -33,6 +35,8 @@ func.func @emitc_constant() {
 // CPP-DEFAULT-NEXT: Tensor<int32_t> [[V8:[^ ]*]] = {0};
 // CPP-DEFAULT-NEXT: Tensor<size_t, 2> [[V9:[^ ]*]] = {0, 1};
 // CPP-DEFAULT-NEXT: Tensor<float, 2, 2> [[V10:[^ ]*]] = {0.0e+00f, 1.000000000e+00f, 2.000000000e+00f, 3.000000000e+00f};
+// CPP-DEFAULT-NEXT: size_t [[V11:[^ ]*]][2] = {0, 1};
+// CPP-DEFAULT-NEXT: float [[V12:[^ ]*]][2] = {0.0e+00f, 1.000000000e+00f};
 
 // CPP-DECLTOP: void emitc_constant() {
 // CPP-DECLTOP-NEXT: int32_t [[V0:[^ ]*]];
@@ -49,6 +53,8 @@ func.func @emitc_constant() {
 // CPP-DECLTOP-NEXT: Tensor<int32_t> [[V8:[^ ]*]];
 // CPP-DECLTOP-NEXT: Tensor<size_t, 2> [[V9:[^ ]*]];
 // CPP-DECLTOP-NEXT: Tensor<float, 2, 2> [[V10:[^ ]*]];
+// CPP-DECLTOP-NEXT: size_t [[V11:[^ ]*]][2];
+// CPP-DECLTOP-NEXT: float [[V12:[^ ]*]][2];
 // CPP-DECLTOP-NEXT: [[V0]] = INT_MAX;
 // CPP-DECLTOP-NEXT: [[V1]] = 42;
 // CPP-DECLTOP-NEXT: [[V2]] = -1;
@@ -63,3 +69,5 @@ func.func @emitc_constant() {
 // CPP-DECLTOP-NEXT: [[V8]] = {0};
 // CPP-DECLTOP-NEXT: [[V9]] = {0, 1};
 // CPP-DECLTOP-NEXT: [[V10]] = {0.0e+00f, 1.000000000e+00f, 2.000000000e+00f, 3.000000000e+00f};
+// CPP-DECLTOP-NEXT: [[V11]] = {0, 1};
+// CPP-DECLTOP-NEXT: [[V12]] = {0.0e+00f, 1.000000000e+00f};
