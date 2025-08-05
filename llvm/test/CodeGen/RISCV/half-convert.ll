@@ -2167,12 +2167,12 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV32IZFH-NEXT:    addi a2, a3, -1
 ; RV32IZFH-NEXT:  .LBB10_4: # %start
 ; RV32IZFH-NEXT:    feq.s a3, fs0, fs0
-; RV32IZFH-NEXT:    neg a4, a1
-; RV32IZFH-NEXT:    neg a1, s0
+; RV32IZFH-NEXT:    neg a4, s0
+; RV32IZFH-NEXT:    neg a5, a1
 ; RV32IZFH-NEXT:    neg a3, a3
-; RV32IZFH-NEXT:    and a0, a1, a0
+; RV32IZFH-NEXT:    and a0, a4, a0
 ; RV32IZFH-NEXT:    and a1, a3, a2
-; RV32IZFH-NEXT:    or a0, a4, a0
+; RV32IZFH-NEXT:    or a0, a5, a0
 ; RV32IZFH-NEXT:    and a0, a3, a0
 ; RV32IZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFH-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -2215,12 +2215,12 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV32IDZFH-NEXT:    addi a2, a3, -1
 ; RV32IDZFH-NEXT:  .LBB10_4: # %start
 ; RV32IDZFH-NEXT:    feq.s a3, fs0, fs0
-; RV32IDZFH-NEXT:    neg a4, a1
-; RV32IDZFH-NEXT:    neg a1, s0
+; RV32IDZFH-NEXT:    neg a4, s0
+; RV32IDZFH-NEXT:    neg a5, a1
 ; RV32IDZFH-NEXT:    neg a3, a3
-; RV32IDZFH-NEXT:    and a0, a1, a0
+; RV32IDZFH-NEXT:    and a0, a4, a0
 ; RV32IDZFH-NEXT:    and a1, a3, a2
-; RV32IDZFH-NEXT:    or a0, a4, a0
+; RV32IDZFH-NEXT:    or a0, a5, a0
 ; RV32IDZFH-NEXT:    and a0, a3, a0
 ; RV32IDZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IDZFH-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -2460,12 +2460,12 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV32ID-ILP32-NEXT:    addi a2, a3, -1
 ; RV32ID-ILP32-NEXT:  .LBB10_4: # %start
 ; RV32ID-ILP32-NEXT:    feq.s a3, fa5, fa5
-; RV32ID-ILP32-NEXT:    neg a4, a1
-; RV32ID-ILP32-NEXT:    neg a1, s0
+; RV32ID-ILP32-NEXT:    neg a4, s0
+; RV32ID-ILP32-NEXT:    neg a5, a1
 ; RV32ID-ILP32-NEXT:    neg a3, a3
-; RV32ID-ILP32-NEXT:    and a0, a1, a0
+; RV32ID-ILP32-NEXT:    and a0, a4, a0
 ; RV32ID-ILP32-NEXT:    and a1, a3, a2
-; RV32ID-ILP32-NEXT:    or a0, a4, a0
+; RV32ID-ILP32-NEXT:    or a0, a5, a0
 ; RV32ID-ILP32-NEXT:    and a0, a3, a0
 ; RV32ID-ILP32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ID-ILP32-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -2566,12 +2566,12 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV32IFZFHMIN-NEXT:    addi a2, a3, -1
 ; RV32IFZFHMIN-NEXT:  .LBB10_4: # %start
 ; RV32IFZFHMIN-NEXT:    feq.s a3, fs0, fs0
-; RV32IFZFHMIN-NEXT:    neg a4, a1
-; RV32IFZFHMIN-NEXT:    neg a1, s0
+; RV32IFZFHMIN-NEXT:    neg a4, s0
+; RV32IFZFHMIN-NEXT:    neg a5, a1
 ; RV32IFZFHMIN-NEXT:    neg a3, a3
-; RV32IFZFHMIN-NEXT:    and a0, a1, a0
+; RV32IFZFHMIN-NEXT:    and a0, a4, a0
 ; RV32IFZFHMIN-NEXT:    and a1, a3, a2
-; RV32IFZFHMIN-NEXT:    or a0, a4, a0
+; RV32IFZFHMIN-NEXT:    or a0, a5, a0
 ; RV32IFZFHMIN-NEXT:    and a0, a3, a0
 ; RV32IFZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IFZFHMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -2615,12 +2615,12 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV32IDZFHMIN-NEXT:    addi a2, a3, -1
 ; RV32IDZFHMIN-NEXT:  .LBB10_4: # %start
 ; RV32IDZFHMIN-NEXT:    feq.s a3, fs0, fs0
-; RV32IDZFHMIN-NEXT:    neg a4, a1
-; RV32IDZFHMIN-NEXT:    neg a1, s0
+; RV32IDZFHMIN-NEXT:    neg a4, s0
+; RV32IDZFHMIN-NEXT:    neg a5, a1
 ; RV32IDZFHMIN-NEXT:    neg a3, a3
-; RV32IDZFHMIN-NEXT:    and a0, a1, a0
+; RV32IDZFHMIN-NEXT:    and a0, a4, a0
 ; RV32IDZFHMIN-NEXT:    and a1, a3, a2
-; RV32IDZFHMIN-NEXT:    or a0, a4, a0
+; RV32IDZFHMIN-NEXT:    or a0, a5, a0
 ; RV32IDZFHMIN-NEXT:    and a0, a3, a0
 ; RV32IDZFHMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IDZFHMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload

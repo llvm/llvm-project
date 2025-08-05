@@ -4,15 +4,11 @@
 define double @PR120093() {
 ; CHECK-LABEL: PR120093:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    xorpd %xmm0, %xmm0
-; CHECK-NEXT:    xorpd %xmm1, %xmm1
-; CHECK-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
-; CHECK-NEXT:    cmpnltpd %xmm1, %xmm0
-; CHECK-NEXT:    movmskpd %xmm0, %eax
-; CHECK-NEXT:    cmpl $3, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb2
-; CHECK-NEXT:    xorpd %xmm0, %xmm0
+; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %bb3
 bb:

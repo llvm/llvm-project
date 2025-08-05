@@ -141,7 +141,7 @@ define <2 x i32> @ustest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    vmov.32 d8[0], r0
 ; CHECK-NEXT:    mvn r3, #0
 ; CHECK-NEXT:    subs r4, r4, r3
-; CHECK-NEXT:    vmov.i64 q9, #0xffffffff
+; CHECK-NEXT:    vmov.i64 q8, #0xffffffff
 ; CHECK-NEXT:    vmov.32 d9[1], r5
 ; CHECK-NEXT:    sbcs r5, r5, #0
 ; CHECK-NEXT:    mov r5, #0
@@ -155,10 +155,10 @@ define <2 x i32> @ustest_f64i32(<2 x double> %x) {
 ; CHECK-NEXT:    mov r0, #0
 ; CHECK-NEXT:    movwlt r0, #1
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    vdup.32 d17, r5
+; CHECK-NEXT:    vdup.32 d19, r5
 ; CHECK-NEXT:    mvnne r0, #0
-; CHECK-NEXT:    vdup.32 d16, r0
-; CHECK-NEXT:    vbsl q8, q4, q9
+; CHECK-NEXT:    vdup.32 d18, r0
+; CHECK-NEXT:    vbit q8, q4, q9
 ; CHECK-NEXT:    vmov r0, r1, d17
 ; CHECK-NEXT:    vmov r3, r5, d16
 ; CHECK-NEXT:    rsbs r0, r0, #0
@@ -428,12 +428,12 @@ define <4 x i32> @ustest_f32i32(<4 x float> %x) {
 ; CHECK-NEXT:    vdup.32 d16, r0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    vbif q4, q5, q8
+; CHECK-NEXT:    vmov r7, r10, d8
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    vmov.32 d13[0], r0
 ; CHECK-NEXT:    mov r0, r8
 ; CHECK-NEXT:    mov r6, r1
-; CHECK-NEXT:    vmov r7, r10, d8
 ; CHECK-NEXT:    bl __aeabi_f2lz
 ; CHECK-NEXT:    subs r2, r5, r9
 ; CHECK-NEXT:    vmov.32 d12[0], r0

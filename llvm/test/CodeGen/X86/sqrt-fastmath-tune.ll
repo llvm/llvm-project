@@ -74,11 +74,11 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 ; BDW:       # %bb.0:
 ; BDW-NEXT:    vrsqrtps %xmm0, %xmm1
 ; BDW-NEXT:    vmulps %xmm1, %xmm0, %xmm2
-; BDW-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; BDW-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
-; BDW-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; BDW-NEXT:    vmulps %xmm1, %xmm2, %xmm1
-; BDW-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; BDW-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; BDW-NEXT:    vmulps %xmm3, %xmm2, %xmm3
+; BDW-NEXT:    vbroadcastss {{.*#+}} xmm4 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; BDW-NEXT:    vfmadd231ps {{.*#+}} xmm4 = (xmm2 * xmm1) + xmm4
+; BDW-NEXT:    vmulps %xmm4, %xmm3, %xmm1
 ; BDW-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; BDW-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; BDW-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
@@ -162,11 +162,11 @@ define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; BDW:       # %bb.0:
 ; BDW-NEXT:    vrsqrtps %ymm0, %ymm1
 ; BDW-NEXT:    vmulps %ymm1, %ymm0, %ymm2
-; BDW-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; BDW-NEXT:    vfmadd231ps {{.*#+}} ymm3 = (ymm2 * ymm1) + ymm3
-; BDW-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; BDW-NEXT:    vmulps %ymm1, %ymm2, %ymm1
-; BDW-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; BDW-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; BDW-NEXT:    vmulps %ymm3, %ymm2, %ymm3
+; BDW-NEXT:    vbroadcastss {{.*#+}} ymm4 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; BDW-NEXT:    vfmadd231ps {{.*#+}} ymm4 = (ymm2 * ymm1) + ymm4
+; BDW-NEXT:    vmulps %ymm4, %ymm3, %ymm1
 ; BDW-NEXT:    vbroadcastss {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
 ; BDW-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; BDW-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
@@ -278,11 +278,11 @@ define <4 x float> @v4f32_daz(<4 x float> %f) #1 {
 ; BDW:       # %bb.0:
 ; BDW-NEXT:    vrsqrtps %xmm0, %xmm1
 ; BDW-NEXT:    vmulps %xmm1, %xmm0, %xmm2
-; BDW-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; BDW-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
-; BDW-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; BDW-NEXT:    vmulps %xmm1, %xmm2, %xmm1
-; BDW-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; BDW-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; BDW-NEXT:    vmulps %xmm3, %xmm2, %xmm3
+; BDW-NEXT:    vbroadcastss {{.*#+}} xmm4 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; BDW-NEXT:    vfmadd231ps {{.*#+}} xmm4 = (xmm2 * xmm1) + xmm4
+; BDW-NEXT:    vmulps %xmm4, %xmm3, %xmm1
 ; BDW-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; BDW-NEXT:    vcmpneqps %xmm2, %xmm0, %xmm0
 ; BDW-NEXT:    vandps %xmm1, %xmm0, %xmm0
@@ -355,11 +355,11 @@ define <8 x float> @v8f32_daz(<8 x float> %f) #1 {
 ; BDW:       # %bb.0:
 ; BDW-NEXT:    vrsqrtps %ymm0, %ymm1
 ; BDW-NEXT:    vmulps %ymm1, %ymm0, %ymm2
-; BDW-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; BDW-NEXT:    vfmadd231ps {{.*#+}} ymm3 = (ymm2 * ymm1) + ymm3
-; BDW-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; BDW-NEXT:    vmulps %ymm1, %ymm2, %ymm1
-; BDW-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; BDW-NEXT:    vbroadcastss {{.*#+}} ymm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; BDW-NEXT:    vmulps %ymm3, %ymm2, %ymm3
+; BDW-NEXT:    vbroadcastss {{.*#+}} ymm4 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; BDW-NEXT:    vfmadd231ps {{.*#+}} ymm4 = (ymm2 * ymm1) + ymm4
+; BDW-NEXT:    vmulps %ymm4, %ymm3, %ymm1
 ; BDW-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; BDW-NEXT:    vcmpneqps %ymm2, %ymm0, %ymm0
 ; BDW-NEXT:    vandps %ymm1, %ymm0, %ymm0
