@@ -539,7 +539,7 @@ class CrashLog(symbolication.Symbolicator):
     def get_target(self):
         return self.target
 
-    def load_images(self, options, loaded_images=None):
+    def load_images(self, options, loaded_images=None, current_thread=None):
         if not loaded_images:
             loaded_images = []
         images_to_load = self.images
@@ -554,6 +554,12 @@ class CrashLog(symbolication.Symbolicator):
                         for image in self.find_images_with_identifier(ident):
                             image.resolve = True
                             images_to_load.append(image)
+        elif current_thread:
+            images_to_load = []
+            for ident in current_thread.idents:
+                for image in self.find_images_with_identifier(ident):
+                    image.resolve = True
+                    images_to_load.append(image)
 
         futures = []
         with tempfile.TemporaryDirectory() as obj_dir:
