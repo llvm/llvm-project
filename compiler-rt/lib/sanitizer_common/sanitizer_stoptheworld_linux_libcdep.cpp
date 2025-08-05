@@ -405,8 +405,8 @@ struct ScopedSetTracerPID {
 
 // This detects whether ptrace is blocked (e.g., by seccomp), by forking and
 // then attempting ptrace.
-// This separate check is necessary because StopTheWorld() creates a child
-// process with a shared virtual address space and shared TLS, and therefore
+// This separate check is necessary because StopTheWorld() creates a thread
+// with a shared virtual address space and shared TLS, and therefore
 // cannot use waitpid() due to the shared errno.
 static void TestPTrace() {
 #  if SANITIZER_SPARC
