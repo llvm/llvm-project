@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output 2>&1 | FileCheck %s
+; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output 2>&1 | FileCheck %s --check-prefixes=CHECK,NRMDEPS
+; RUN: opt -S < %s -p loop-vectorize -debug-only=loop-vectorize -force-vector-width=4 -disable-output 2>&1 -max-dependences=1 | FileCheck %s --check-prefixes=CHECK,MAXDEP1
 
 define i64 @loop_contains_store(ptr %dest) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store'
@@ -106,7 +107,8 @@ exit:
 
 define void @loop_contains_store_safe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(96) %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_safe_dependency'
-; CHECK:       LV: Not vectorizing: No dependencies allowed for critical early exit condition load in a loop with side effects.
+; NRMDEPS:     LV: Not vectorizing: No dependencies allowed for critical early exit condition load in a loop with side effects.
+; MAXDEP1:     LV: Not vectorizing: Invalid memory dependencies result.
 entry:
   %pred.plus.8 = getelementptr inbounds nuw i16, ptr %pred, i64 8
   br label %for.body
