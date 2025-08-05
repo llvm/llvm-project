@@ -941,7 +941,7 @@ func.func @fold_extract_broadcast_to_equal_rank(%a : vector<1xf32>, %idx0 : inde
 
 // CHECK-LABEL: fold_extract_broadcastlike_shape_cast
 //  CHECK-SAME:   %[[A:.*]]: vector<1xf32>
-//       CHECK:   %[[R:.*]] = vector.broadcast %[[A]] : vector<1xf32> to vector<1x1xf32>
+//       CHECK:   %[[R:.*]] = vector.shape_cast %[[A]] : vector<1xf32> to vector<1x1xf32>
 //       CHECK:   return %[[R]] : vector<1x1xf32>
 func.func @fold_extract_broadcastlike_shape_cast(%a : vector<1xf32>, %idx0 : index)
   -> vector<1x1xf32> {
