@@ -3642,6 +3642,11 @@ std::string RISCVInstrInfo::createMIROperandComment(
     RISCVVType::printVType(Imm, OS);
     break;
   }
+  case RISCVOp::OPERAND_XSFMM_VTYPE: {
+    unsigned Imm = Op.getImm();
+    RISCVVType::printXSfmmVType(Imm, OS);
+    break;
+  }
   case RISCVOp::OPERAND_SEW:
   case RISCVOp::OPERAND_SEW_MASK: {
     unsigned Log2SEW = Op.getImm();

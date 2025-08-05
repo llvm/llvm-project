@@ -986,7 +986,7 @@ RISCVInsertVSETVLI::getInfoForVSETVLI(const MachineInstr &MI) const {
   VSETVLIInfo NewInfo;
   if (MI.getOpcode() == RISCV::PseudoVSETIVLI) {
     NewInfo.setAVLImm(MI.getOperand(1).getImm());
-  } else if (RISCVInstrInfo::isXSfmmVectorTNConfigInstr(MI)) {
+  } else if (RISCVInstrInfo::isXSfmmVectorConfigTNInstr(MI)) {
     assert(MI.getOpcode() == RISCV::PseudoSF_VSETTNT ||
            MI.getOpcode() == RISCV::PseudoSF_VSETTNTX0);
     switch (MI.getOpcode()) {
@@ -1965,7 +1965,7 @@ bool RISCVInsertVSETVLI::insertVSETMTK(MachineBasicBlock &MBB,
                      .addReg(RISCV::X0, RegState::Define | RegState::Dead)
                      .addReg(Op.getReg())
                      .addImm(Log2_32(CurrInfo.getSEW()))
-                     .addImm((CurrInfo.getTWiden() >> 1) + 1);
+                     .addImm(Log2_32(CurrInfo.getTWiden()) + 1);
 
     Changed = true;
     if (LIS)
@@ -2053,11 +2053,10 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     insertReadVL(MBB);
 
-  for (MachineBasicBlock &MBB : MF)
+  for (MachineBasicBlock &MBB : MF) {
     insertVSETMTK(MBB, VSETTM);
-
-  for (MachineBasicBlock &MBB : MF)
     insertVSETMTK(MBB, VSETTK);
+  }
 
   BlockInfo.clear();
   return HaveVectorOp;
