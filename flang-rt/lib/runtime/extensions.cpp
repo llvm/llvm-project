@@ -334,8 +334,8 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   // will perform initialization and the other threads wait their turn.
   for (;;) {
     // "Acquire" will show writes from other threads.
-    std::time_t currentStartingPoint =
-        startingPoint.load(std::memory_order_acquire);
+    std::time_t currentStartingPoint{startingPoint.load(
+        std::memory_order_acquire)};
     if (currentStartingPoint > TIME_INITIALIZING) {
       // Initialization was already done, use the starting point value
       localStartingPoint = currentStartingPoint;
@@ -348,8 +348,8 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
       // Try to start initialization
       std::time_t expected{TIME_UNINITIALIZED};
       if (startingPoint.compare_exchange_strong(expected, TIME_INITIALIZING,
-              std::memory_order_acq_rel, // "Aquire and release" on success
-              std::memory_order_acquire)) { // "Aquire" on failure
+          std::memory_order_acq_rel,    // "Acquire and release" on success
+          std::memory_order_acquire)) { // "Acquire" on failure
         // This thread is doing initialization of startingPoint
         struct tm timeInfo;
 #ifdef _WIN32
@@ -372,6 +372,7 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
         }
         // "Release" will make this value available to other threads
         startingPoint.store(localStartingPoint, std::memory_order_release);
+        break;
       } else {
         // This thread couln't start initialization. Try again.
         continue;
