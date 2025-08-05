@@ -73,4 +73,5 @@ int assume_and_fallthrough_at_the_same_attrstmt(int a, int b) {
 void assume_opaque_gh151854_no_crash() {
   extern bool opaque();
   [[assume(opaque())]]; // no-crash
+  // expected-warning@-1 {{assumption is ignored because it contains (potential) side-effects}}
 }
