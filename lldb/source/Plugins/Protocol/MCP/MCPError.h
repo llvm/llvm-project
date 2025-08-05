@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Protocol.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <string>
@@ -24,7 +24,7 @@ public:
 
   const std::string &getMessage() const { return m_message; }
 
-  protocol::Error toProtcolError() const;
+  lldb_protocol::mcp::Error toProtcolError() const;
 
   static constexpr int64_t kResourceNotFound = -32002;
   static constexpr int64_t kInternalError = -32603;
