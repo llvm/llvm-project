@@ -10,4 +10,4 @@ add_public_tablegen_target(MLIRWasmSSAInterfacesIncGen)
 set(LLVM_TARGET_DEFINITIONS WasmSSAOps.td)
 
 add_mlir_dialect(WasmSSAOps wasmssa)
-add_mlir_doc(WasmSSAOps WasmSSAOps Dialects/ -gen-dialect-doc)
+add_mlir_doc(WasmSSAOps WasmSSAOps Dialects/ -gen-dialect-doc -dialect wasmssa)
