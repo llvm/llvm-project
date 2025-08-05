@@ -1,4 +1,4 @@
-//===-- Exhaustive tests for bfloat16 subtration --------------------------===//
+//===-- Exhaustive tests for bfloat16 subtraction -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -45,7 +45,7 @@ struct Bfloat16SubChecker : public virtual LIBC_NAMESPACE::testing::Test {
   }
 };
 
-using LlvmLibcBfloat16ExhaustiveSubtractionTest =
+using LlvmLibcBfloat16ExhaustiveSubTest =
     LlvmLibcExhaustiveMathTest<Bfloat16SubChecker, 1 << 2>;
 
 // range: [0, inf]
@@ -56,10 +56,10 @@ static constexpr uint16_t POS_STOP = 0x7f80U;
 static constexpr uint16_t NEG_START = 0x8000U;
 static constexpr uint16_t NEG_STOP = 0xff80U;
 
-TEST_F(LlvmLibcBfloat16ExhaustiveSubtractionTest, PositiveRange) {
+TEST_F(LlvmLibcBfloat16ExhaustiveSubTest, PositiveRange) {
   test_full_range_all_roundings(POS_START, POS_STOP, POS_START, POS_STOP);
 }
 
-TEST_F(LlvmLibcBfloat16ExhaustiveSubtractionTest, NegativeRange) {
+TEST_F(LlvmLibcBfloat16ExhaustiveSubTest, NegativeRange) {
   test_full_range_all_roundings(NEG_START, NEG_STOP, NEG_START, NEG_STOP);
 }

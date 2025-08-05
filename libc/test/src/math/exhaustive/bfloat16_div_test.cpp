@@ -1,4 +1,4 @@
-//===-- Exhaustive tests for bfloat16 subtration --------------------------===//
+//===-- Exhaustive tests for bfloat16 division ----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
