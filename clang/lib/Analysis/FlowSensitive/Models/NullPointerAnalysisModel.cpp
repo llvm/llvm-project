@@ -60,12 +60,7 @@ enum class SatisfiabilityResult {
   Unknown
 };
 
-enum class CompareResult {
-  Same,
-  Different,
-  Top,
-  Unknown
-};
+enum class CompareResult { Same, Different, Top, Unknown };
 
 using SR = SatisfiabilityResult;
 using CR = CompareResult;
@@ -99,9 +94,8 @@ auto addressofMatcher() {
 }
 
 auto functionCallMatcher() {
-  return callExpr(
-      callee(functionDecl(hasAnyParameter(anyOf(hasType(pointerType()),
-                                                hasType(referenceType()))))));
+  return callExpr(callee(functionDecl(hasAnyParameter(
+      anyOf(hasType(pointerType()), hasType(referenceType()))))));
 }
 
 auto assignMatcher() {
@@ -117,9 +111,9 @@ auto nullCheckExprMatcher() {
 // FIXME: When TK_IgnoreUnlessSpelledInSource is removed from ptrWithBinding(),
 // this matcher should be merged with nullCheckExprMatcher().
 auto equalExprMatcher() {
-  return binaryOperator(hasAnyOperatorName("==", "!="),
-                        hasOperands(ptrWithBinding(kVar),
-                                    ptrWithBinding(kValue)));
+  return binaryOperator(
+      hasAnyOperatorName("==", "!="),
+      hasOperands(ptrWithBinding(kVar), ptrWithBinding(kValue)));
 }
 
 auto anyPointerMatcher() { return expr(hasType(isAnyPointer())).bind(kVar); }
@@ -246,8 +240,8 @@ void matchDereferenceExpr(const Stmt *stmt,
 }
 
 void matchNullCheckExpr(const Expr *NullCheck,
-                    const MatchFinder::MatchResult &Result,
-                    Environment &Env) {
+                        const MatchFinder::MatchResult &Result,
+                        Environment &Env) {
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
   assert(Var != nullptr);
 
@@ -271,17 +265,16 @@ void matchNullCheckExpr(const Expr *NullCheck,
     CondValue = &A.makeAtomValue();
     Env.setValue(*NullCheck, *CondValue);
   }
-  const Formula &CondFormula = IsNonnullOp ? CondValue->formula()
-                                             : A.makeNot(CondValue->formula());
+  const Formula &CondFormula =
+      IsNonnullOp ? CondValue->formula() : A.makeNot(CondValue->formula());
 
   Env.assume(A.makeImplies(CondFormula, A.makeNot(IsNull.formula())));
-  Env.assume(A.makeImplies(A.makeNot(CondFormula),
-                           A.makeNot(IsNonnull.formula())));
+  Env.assume(
+      A.makeImplies(A.makeNot(CondFormula), A.makeNot(IsNonnull.formula())));
 }
 
 void matchEqualExpr(const BinaryOperator *EqualExpr,
-                    const MatchFinder::MatchResult &Result,
-                    Environment &Env) {
+                    const MatchFinder::MatchResult &Result, Environment &Env) {
   bool IsNotEqualsOp = EqualExpr->getOpcode() == BO_NE;
 
   const auto *LHSVar = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -308,17 +301,19 @@ void matchEqualExpr(const BinaryOperator *EqualExpr,
     Env.setValue(*EqualExpr, *CondValue);
   }
 
-  const Formula &CondFormula = IsNotEqualsOp ? A.makeNot(CondValue->formula())
-                                       : CondValue->formula();
+  const Formula &CondFormula =
+      IsNotEqualsOp ? A.makeNot(CondValue->formula()) : CondValue->formula();
 
   // FIXME: Simplify formulas
   // If the pointers are equal, the nullability properties are the same.
-  Env.assume(A.makeImplies(CondFormula, 
+  Env.assume(A.makeImplies(
+      CondFormula,
       A.makeAnd(A.makeEquals(LHSNull.formula(), RHSNull.formula()),
                 A.makeEquals(LHSNonnull.formula(), RHSNonnull.formula()))));
 
   // If the pointers are not equal, at most one of the pointers is null.
-  Env.assume(A.makeImplies(A.makeNot(CondFormula),
+  Env.assume(A.makeImplies(
+      A.makeNot(CondFormula),
       A.makeNot(A.makeAnd(LHSNull.formula(), RHSNull.formula()))));
 }
 
@@ -365,8 +360,7 @@ void matchPtrArgFunctionExpr(const CallExpr *fncall,
   for (const auto *Arg : fncall->arguments()) {
     // FIXME: Add handling for reference types as arguments
     if (Arg->getType()->isPointerType()) {
-      PointerValue *OuterValue = cast_or_null<PointerValue>(
-          Env.getValue(*Arg));
+      PointerValue *OuterValue = cast_or_null<PointerValue>(Env.getValue(*Arg));
 
       if (!OuterValue)
         continue;
@@ -376,27 +370,27 @@ void matchPtrArgFunctionExpr(const CallExpr *fncall,
         continue;
 
       StorageLocation &InnerLoc = OuterValue->getPointeeLoc();
-      
+
       PointerValue *InnerValue =
           cast_or_null<PointerValue>(Env.getValue(InnerLoc));
 
       if (!InnerValue)
         continue;
-      
+
       Value *NewValue = Env.createValue(InnerType);
       assert(NewValue && "Failed to re-initialize a pointer's value");
 
       Env.setValue(InnerLoc, *NewValue);
 
-    // FIXME: Recursively invalidate all member pointers of eg. a struct
-    // Should be part of the framework, most likely.
+      // FIXME: Recursively invalidate all member pointers of eg. a struct
+      // Should be part of the framework, most likely.
     }
   }
 
   if (fncall->getCallReturnType(*Result.Context)->isPointerType() &&
       !Env.getValue(*fncall)) {
-    Value *PtrValue = Env.createValue( 
-        fncall->getCallReturnType(*Result.Context));
+    Value *PtrValue =
+        Env.createValue(fncall->getCallReturnType(*Result.Context));
     if (!PtrValue)
       return;
 
@@ -445,9 +439,10 @@ diagnoseDerefLocation(const Expr *Deref, const MatchFinder::MatchResult &Result,
   return {};
 }
 
-Diagnoser::ResultType diagnoseAssignLocation(const Expr *Assign,
-                                             const MatchFinder::MatchResult &Result,
-                                             Diagnoser::DiagnoseArgs &Data) {
+Diagnoser::ResultType
+diagnoseAssignLocation(const Expr *Assign,
+                       const MatchFinder::MatchResult &Result,
+                       Diagnoser::DiagnoseArgs &Data) {
   auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
 
   const auto *RHSVar = Result.Nodes.getNodeAs<Expr>(kValue);
@@ -467,8 +462,8 @@ Diagnoser::ResultType diagnoseAssignLocation(const Expr *Assign,
 
 NullCheckAfterDereferenceDiagnoser::ResultType
 diagnoseNullCheckExpr(const Expr *NullCheck,
-      const MatchFinder::MatchResult &Result,
-      const Diagnoser::DiagnoseArgs &Data) {
+                      const MatchFinder::MatchResult &Result,
+                      const Diagnoser::DiagnoseArgs &Data) {
   auto [ValToDerefLoc, WarningLocToVal, Env] = Data;
 
   const auto *Var = Result.Nodes.getNodeAs<Expr>(kVar);
@@ -488,7 +483,8 @@ diagnoseNullCheckExpr(const Expr *NullCheck,
         assert(Inserted && "multiple warnings at the same source location");
         (void)Inserted;
 
-        return {{Var->getBeginLoc(), Diagnoser::DiagnosticType::CheckAfterDeref}};
+        return {
+            {Var->getBeginLoc(), Diagnoser::DiagnosticType::CheckAfterDeref}};
       }
 
       if (IsNull && !IsNonnull) {
@@ -520,22 +516,24 @@ diagnoseEqualExpr(const Expr *PtrCheck, const MatchFinder::MatchResult &Result,
   assert(LHSVar != nullptr);
   const auto *RHSVar = Result.Nodes.getNodeAs<Expr>(kValue);
   assert(RHSVar != nullptr);
-  
+
   Arena &A = Env.arena();
   llvm::SmallVector<Diagnoser::DiagnosticEntry> NullVarLocations;
 
   if (Value *LHSValue = Env.getValue(*LHSVar);
-      LHSValue->getProperty(kIsNonnull) && 
+      LHSValue->getProperty(kIsNonnull) &&
       Env.proves(A.makeNot(getVal(kIsNonnull, *LHSValue).formula()))) {
     WarningLocToVal.try_emplace(LHSVar->getBeginLoc(), LHSValue);
-    NullVarLocations.push_back({LHSVar->getBeginLoc(), Diagnoser::DiagnosticType::CheckWhenNull});
+    NullVarLocations.push_back(
+        {LHSVar->getBeginLoc(), Diagnoser::DiagnosticType::CheckWhenNull});
   }
 
   if (Value *RHSValue = Env.getValue(*RHSVar);
-      RHSValue->getProperty(kIsNonnull) && 
+      RHSValue->getProperty(kIsNonnull) &&
       Env.proves(A.makeNot(getVal(kIsNonnull, *RHSValue).formula()))) {
     WarningLocToVal.try_emplace(RHSVar->getBeginLoc(), RHSValue);
-    NullVarLocations.push_back({RHSVar->getBeginLoc(), Diagnoser::DiagnosticType::CheckWhenNull});
+    NullVarLocations.push_back(
+        {RHSVar->getBeginLoc(), Diagnoser::DiagnosticType::CheckWhenNull});
   }
 
   return NullVarLocations;
@@ -653,7 +651,7 @@ void NullPointerAnalysisModel::join(QualType Type, const Value &Val1,
   } else {
     MergedVal.setProperty(kIsNonnull, NonnullValue);
     MergedVal.setProperty(kIsNull, NullValue);
-  
+
     MergedEnv.assume(MergedEnv.makeOr(NonnullValue, NullValue).formula());
   }
 }
@@ -709,12 +707,10 @@ ComparisonResult NullPointerAnalysisModel::compare(QualType Type,
   if (NullComparison == CR::Top || NonnullComparison == CR::Top)
     return ComparisonResult::Same;
 
-  if (NullComparison == CR::Different ||
-      NonnullComparison == CR::Different)
+  if (NullComparison == CR::Different || NonnullComparison == CR::Different)
     return ComparisonResult::Different;
 
-  if (NullComparison == CR::Unknown ||
-      NonnullComparison == CR::Unknown)
+  if (NullComparison == CR::Unknown || NonnullComparison == CR::Unknown)
     return ComparisonResult::Unknown;
 
   return ComparisonResult::Same;
@@ -770,12 +766,10 @@ ComparisonResult compareAndReplace(QualType Type, Value &Val1,
   if (NullComparison == CR::Top || NonnullComparison == CR::Top)
     return ComparisonResult::Same;
 
-  if (NullComparison == CR::Different ||
-      NonnullComparison == CR::Different)
+  if (NullComparison == CR::Different || NonnullComparison == CR::Different)
     return ComparisonResult::Different;
 
-  if (NullComparison == CR::Unknown ||
-      NonnullComparison == CR::Unknown)
+  if (NullComparison == CR::Unknown || NonnullComparison == CR::Unknown)
     return ComparisonResult::Unknown;
 
   return ComparisonResult::Same;
@@ -803,7 +797,7 @@ NullCheckAfterDereferenceDiagnoser::NullCheckAfterDereferenceDiagnoser()
 
 NullCheckAfterDereferenceDiagnoser::ResultType
 NullCheckAfterDereferenceDiagnoser::operator()(
-    const CFGElement &Elt, ASTContext &Ctx, 
+    const CFGElement &Elt, ASTContext &Ctx,
     const TransferStateForDiagnostics<NoopLattice> &State) {
   DiagnoseArgs Args = {ValToDerefLoc, WarningLocToVal, State.Env};
   return DiagnoseMatchSwitch(Elt, Ctx, Args);

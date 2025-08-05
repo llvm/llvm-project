@@ -66,9 +66,11 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
   Diagnoser Diagnoser;
 
   Diagnoser::ResultType Diagnostics;
-  
-  if (llvm::Error E = dataflow::diagnoseFunction<NullPointerAnalysisModel, Diagnoser::DiagnosticEntry>(
-    FuncDecl, ASTCtx, Diagnoser).moveInto(Diagnostics)) {
+
+  if (llvm::Error E = dataflow::diagnoseFunction<NullPointerAnalysisModel,
+                                                 Diagnoser::DiagnosticEntry>(
+                          FuncDecl, ASTCtx, Diagnoser)
+                          .moveInto(Diagnostics)) {
     llvm::dbgs() << "Dataflow analysis failed: " << llvm::toString(std::move(E))
                  << ".\n";
     return std::nullopt;
@@ -76,8 +78,7 @@ analyzeFunction(const FunctionDecl &FuncDecl) {
 
   ExpandedResultType ExpandedDiagnostics;
 
-  llvm::transform(Diagnostics,
-                  std::back_inserter(ExpandedDiagnostics),
+  llvm::transform(Diagnostics, std::back_inserter(ExpandedDiagnostics),
                   [&](Diagnoser::DiagnosticEntry Entry) -> ExpandedResult {
                     if (auto Val = Diagnoser.WarningLocToVal[Entry.Location];
                         auto DerefExpr = Diagnoser.ValToDerefLoc[Val]) {
@@ -139,9 +140,10 @@ void NullCheckAfterDereferenceCheck::check(
              "pointer value is checked but it can only be null at this point");
 
         if (DerefLoc) {
-          diag(*DerefLoc,
-               "one of the locations where the pointer's value can only be null",
-               DiagnosticIDs::Note);
+          diag(
+              *DerefLoc,
+              "one of the locations where the pointer's value can only be null",
+              DiagnosticIDs::Note);
         }
         break;
       }

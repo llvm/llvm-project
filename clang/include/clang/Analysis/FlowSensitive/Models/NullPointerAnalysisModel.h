@@ -41,6 +41,7 @@ class NullPointerAnalysisModel
     : public DataflowAnalysis<NullPointerAnalysisModel, NoopLattice> {
 private:
   CFGMatchSwitch<Environment> TransferMatchSwitch;
+
 public:
   explicit NullPointerAnalysisModel(ASTContext &Context);
 
