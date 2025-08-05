@@ -19,6 +19,9 @@
 #include "libunwind.h"
 #include "shadow_stack_unwind.h"
 
+#if defined(_LIBUNWIND_PTRAUTH_AVAILABLE)
+#include <ptrauth.h>
+#endif
 namespace libunwind {
 
 // For emulating 128-bit registers
@@ -1823,9 +1826,147 @@ extern "C" void *__libunwind_shstk_get_jump_target() {
 #endif
 
 class _LIBUNWIND_HIDDEN Registers_arm64 {
+  struct GPRs;
+
+private:
+#define PAC_DISCRIMINATOR ((uint16_t)0xFACEU)
+
+#if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
+  /// The program counter is effectively used as a return address when the
+  /// context is restored; therefore, it should be protected with PAC to prevent
+  /// arbitrary returns. The base address of the context is blended with a
+  /// discriminator using the A key for authentication and signing. Return
+  /// address authentication is still managed according to the unwind
+  /// information. In some cases, the LR contains significant bits in the space
+  /// reserved for PAC bits, so the value of the PC is stored in two halves.
+  ///  The second half is signed using the first half as a discriminator to bind
+  ///  the two halves together.
+#if defined(_LIBUNWIND_PTRAUTH_AVAILABLE)
+  /// Use Pointer Authentication Intrinsics when available.
+#define __libunwind_ptrauth_auth_data(__value, __key, __discriminator)         \
+  ptrauth_auth_data(__value, __key, __discriminator)
+#define __libunwind_ptrauth_auth_and_resign(pointer, oldKey, oldDiscriminator, \
+                                            newKey, newDiscriminator)          \
+  ptrauth_auth_and_resign(pointer, oldKey, oldDiscriminator, newKey,           \
+                          newDiscriminator)
+#define __libunwind_ptrauth_sign_unauthenticated(__value, __key, __data)       \
+  ptrauth_sign_unauthenticated(__value, __key, __data)
+#define __libunwind_ptrauth_blend_discriminator(__ptr, __data)                 \
+  ptrauth_blend_discriminator(__ptr, __data)
+#else // !_LIBUNWIND_PTRAUTH_AVAILABLE
+  typedef enum {
+    ptrauth_key_asia = 0,
+  } ptrauth_key;
+  /// Using only the NOP space compatible instructions. FPAC might not be
+  /// available on the target so a manual check is added.
+  inline void *__libunwind_ptrauth_strip(void *__value,
+                                         ptrauth_key __key) const {
+    assert(__key == ptrauth_key_asia && "Only A key is supported");
+    void *__return = 0;
+    asm("mov   x30, %[__value]      \r\n"
+        "hint  0x7                  \r\n" // xpaclri
+        "mov   %[__return], x30     \r\n"
+        : [__return] "+r"(__return)
+        : [__value] "r"(__value)
+        : "x30");
+    return __return;
+  }
+
+  inline void *__libunwind_ptrauth_auth_data(void *__value, ptrauth_key __key,
+                                             uint64_t __discriminator) const {
+    assert(__key == ptrauth_key_asia && "Only A key is supported");
+    register void *x17 __asm("x17") = __value;
+    register uintptr_t x16 __asm("x16") = __discriminator;
+    asm("hint  0xc" // autia1716
+        : "+r"(x17)
+        : "r"(x16)
+        :);
+    if (x17 != __libunwind_ptrauth_strip(__value, __key))
+      _LIBUNWIND_ABORT("ptrauth authentication failure");
+    return x17;
+  }
+
+  inline void *
+  __libunwind_ptrauth_sign_unauthenticated(void *__value, ptrauth_key __key,
+                                           uint64_t __discriminator) const {
+    assert(__key == ptrauth_key_asia && "Only A key is supported");
+    register void *x17 __asm("x17") = __value;
+    register uint64_t x16 __asm("x16") = __discriminator;
+    asm("hint 0x8" : "+r"(x17) : "r"(x16));
+    return x17;
+  }
+
+  inline void *__libunwind_ptrauth_auth_and_resign(
+      void *pointer, ptrauth_key oldKey, uint64_t oldDiscriminator,
+      ptrauth_key newKey, uint64_t newDiscriminator) const {
+    return __libunwind_ptrauth_sign_unauthenticated(
+        __libunwind_ptrauth_auth_data(pointer, oldKey, oldDiscriminator),
+        newKey, newDiscriminator);
+  }
+  inline uint64_t
+  __libunwind_ptrauth_blend_discriminator(const void *__ptr,
+                                          uint16_t __data) const {
+    return (reinterpret_cast<uint64_t>(__ptr) & (~0 >> 16)) |
+           ((uint64_t)__data << 48);
+  }
+#endif
+  // Authenticate the currently stored PC and return it's raw value.
+  inline uint64_t authPC(const struct GPRs *gprs,
+                         uint64_t discriminator) const {
+    uint64_t upper = (uint64_t)__libunwind_ptrauth_auth_data(
+        (void *)gprs->__pc2, ptrauth_key_asia, gprs->__pc);
+    uint64_t lower = (uint64_t)__libunwind_ptrauth_auth_data(
+        (void *)gprs->__pc, ptrauth_key_asia, discriminator);
+    return (upper << 32) | lower;
+  }
+
+  // Sign and store the new PC.
+  inline void updatePC(uint64_t value) __attribute__((always_inline)) {
+    _registers.__pc = (uint64_t)__libunwind_ptrauth_sign_unauthenticated(
+        (void *)(value & (((uint64_t)~0) >> 32)), ptrauth_key_asia,
+        getDiscriminator());
+    _registers.__pc2 = (uint64_t)__libunwind_ptrauth_sign_unauthenticated(
+        (void *)(value >> 32), ptrauth_key_asia, _registers.__pc);
+  }
+
+  // Update the signature on the current PC.
+  inline void resignPC(uint64_t oldDiscriminator) {
+    uint64_t old_signed_pc = _registers.__pc;
+    _registers.__pc = (uint64_t)__libunwind_ptrauth_auth_and_resign(
+        (void *)_registers.__pc, ptrauth_key_asia, oldDiscriminator,
+        ptrauth_key_asia, getDiscriminator());
+    _registers.__pc2 = (uint64_t)__libunwind_ptrauth_auth_and_resign(
+        (void *)_registers.__pc2, ptrauth_key_asia, old_signed_pc,
+        ptrauth_key_asia, _registers.__pc);
+  }
+#else //! defined(_LIBUNWIND_AARCH64_PC_PROTECTION))
+  inline uint64_t
+  __libunwind_ptrauth_blend_discriminator(const void *__ptr,
+                                          uint16_t __data) const {
+    (void)__data;
+    return __ptr;
+  }
+  // Remote unwinding is not supported by this protection.
+  inline uint64_t authPC(const struct GPRs *gprs,
+                         const uint64_t discriminator) const {
+    (void)discriminator;
+    return gprs->__pc;
+  }
+  inline void updatePC(const uint64_t value) { _registers.__pc = value; }
+  inline void resignPC(uint64_t oldDiscriminator) { (void)oldDiscriminator; }
+#endif
+
+  inline uint64_t getDiscriminator() const {
+    return __libunwind_ptrauth_blend_discriminator(this, PAC_DISCRIMINATOR);
+  }
+
 public:
   Registers_arm64();
   Registers_arm64(const void *registers);
+  Registers_arm64(const Registers_arm64 &other);
+  Registers_arm64(const Registers_arm64 &&other) = delete;
+  Registers_arm64 &operator=(const Registers_arm64 &other);
+  Registers_arm64 &operator=(Registers_arm64 &&other) = delete;
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -1845,8 +1986,14 @@ public:
 
   uint64_t  getSP() const         { return _registers.__sp; }
   void      setSP(uint64_t value) { _registers.__sp = value; }
-  uint64_t  getIP() const         { return _registers.__pc; }
-  void      setIP(uint64_t value) { _registers.__pc = value; }
+  uint64_t getIP() const { return authPC(&_registers, getDiscriminator()); }
+  void setIP(uint64_t value) {
+    // First authenticate the current value of the IP to ensure the context
+    // is still valid. This also ensure the setIP can't be used for signing
+    // arbitrary values.
+    authPC(&_registers, getDiscriminator());
+    updatePC(value);
+  }
   uint64_t  getFP() const         { return _registers.__fp; }
   void      setFP(uint64_t value) { _registers.__fp = value; }
 
@@ -1858,12 +2005,15 @@ private:
     uint64_t __sp;    // Stack pointer x31
     uint64_t __pc;    // Program counter
     uint64_t __ra_sign_state; // RA sign state register
+#if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
+    uint64_t __pc2; // PC's signed upper part
+#endif
   };
 
   GPRs    _registers;
   double  _vectorHalfRegisters[32];
-  // Currently only the lower double in 128-bit vectore registers
-  // is perserved during unwinding.  We could define new register
+  // Currently only the lower double in 128-bit vector registers
+  // is preserved during unwinding.  We could define new register
   // numbers (> 96) which mean whole vector registers, then this
   // struct would need to change to contain whole vector registers.
 };
@@ -1872,8 +2022,16 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   static_assert((check_fit<Registers_arm64, unw_context_t>::does_fit),
                 "arm64 registers do not fit into unw_context_t");
   memcpy(&_registers, registers, sizeof(_registers));
+#if defined(_LIBUNWIND_AARCH64_PC_PROTECTION)
+  static_assert(sizeof(GPRs) == 0x118,
+                "expected VFP registers to be at offset 280");
+#else
   static_assert(sizeof(GPRs) == 0x110,
                 "expected VFP registers to be at offset 272");
+#endif
+  // getcontext signs the PC with the base address of the context.
+  resignPC(
+      __libunwind_ptrauth_blend_discriminator(registers, PAC_DISCRIMINATOR));
   memcpy(_vectorHalfRegisters,
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
@@ -1882,6 +2040,25 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
 inline Registers_arm64::Registers_arm64() {
   memset(&_registers, 0, sizeof(_registers));
   memset(&_vectorHalfRegisters, 0, sizeof(_vectorHalfRegisters));
+  // We don't know the value of the PC but let's sign it to indicate we have a
+  // valid register set.
+  updatePC(0);
+}
+
+inline Registers_arm64::Registers_arm64(const Registers_arm64 &other) {
+  memcpy(&_registers, &other._registers, sizeof(_registers));
+  memcpy(&_vectorHalfRegisters, &other._vectorHalfRegisters,
+         sizeof(_vectorHalfRegisters));
+  resignPC(other.getDiscriminator());
+}
+
+inline Registers_arm64 &
+Registers_arm64::operator=(const Registers_arm64 &other) {
+  memcpy(&_registers, &other._registers, sizeof(_registers));
+  memcpy(&_vectorHalfRegisters, &other._vectorHalfRegisters,
+         sizeof(_vectorHalfRegisters));
+  resignPC(other.getDiscriminator());
+  return *this;
 }
 
 inline bool Registers_arm64::validRegister(int regNum) const {
@@ -1902,7 +2079,7 @@ inline bool Registers_arm64::validRegister(int regNum) const {
 
 inline uint64_t Registers_arm64::getRegister(int regNum) const {
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
-    return _registers.__pc;
+    return getIP();
   if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     return _registers.__sp;
   if (regNum == UNW_AARCH64_RA_SIGN_STATE)
@@ -1918,7 +2095,7 @@ inline uint64_t Registers_arm64::getRegister(int regNum) const {
 
 inline void Registers_arm64::setRegister(int regNum, uint64_t value) {
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
-    _registers.__pc = value;
+    setIP(value);
   else if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     _registers.__sp = value;
   else if (regNum == UNW_AARCH64_RA_SIGN_STATE)
