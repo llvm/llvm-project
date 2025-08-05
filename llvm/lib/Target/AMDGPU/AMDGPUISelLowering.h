@@ -388,6 +388,16 @@ public:
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
+
+  bool hasMultipleConditionRegisters(EVT VT) const override {
+    // FIXME: This is only partially true. If we have to do vector compares, any
+    // SGPR pair can be a condition register. If we have a uniform condition, we
+    // are better off doing SALU operations, where there is only one SCC. For
+    // now, we don't have a way of knowing during instruction selection if a
+    // condition will be uniform and we always use vector compares. Assume we
+    // are using vector compares until that is fixed.
+    return true;
+  }
 };
 
 namespace AMDGPUISD {
