@@ -373,7 +373,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   bool UseVirtualCall = CanUseVirtualCall && !DevirtualizedMethod;
 
   if (const CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl)) {
-    assert(CE->arg_begin() == CE->arg_end() &&
+    assert(CE->arguments().empty() &&
            "Destructor shouldn't have explicit parameters");
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
     if (UseVirtualCall) {
