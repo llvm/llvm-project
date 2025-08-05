@@ -112,6 +112,8 @@ bool SBThread::IsValid() const {
 }
 SBThread::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
+  if (!m_opaque_sp)
+    return false;
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
@@ -537,7 +539,7 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker, &error.ref());
   if (!stop_locker.IsLocked())
     return;
 
@@ -587,7 +589,7 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker, &error.ref());
   if (!stop_locker.IsLocked())
     return;
 
@@ -647,7 +649,7 @@ void SBThread::StepOut(SBError &error) {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker, &error.ref());
   if (!stop_locker.IsLocked())
     return;
 
@@ -685,7 +687,7 @@ void SBThread::StepOutOfFrame(SBFrame &sb_frame, SBError &error) {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker, &error.ref());
   if (!stop_locker.IsLocked())
     return;
 
@@ -732,7 +734,7 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker, &error.ref());
   if (!stop_locker.IsLocked())
     return;
 
@@ -764,7 +766,7 @@ void SBThread::RunToAddress(lldb::addr_t addr, SBError &error) {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker, &error.ref());
   if (!stop_locker.IsLocked())
     return;
 
@@ -799,7 +801,8 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker,
+                           &sb_error.ref());
   if (!stop_locker.IsLocked())
     return sb_error;
 
@@ -937,7 +940,7 @@ SBError SBThread::StepUsingScriptedThreadPlan(const char *script_class_name,
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker, &error.ref());
   if (!stop_locker.IsLocked())
     return error;
 
@@ -976,7 +979,8 @@ SBError SBThread::JumpToLine(lldb::SBFileSpec &file_spec, uint32_t line) {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker,
+                           &sb_error.ref());
   if (!stop_locker.IsLocked())
     return sb_error;
 
@@ -999,7 +1003,8 @@ SBError SBThread::ReturnFromFrame(SBFrame &frame, SBValue &return_value) {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker,
+                           &sb_error.ref());
   if (!stop_locker.IsLocked())
     return sb_error;
 
@@ -1019,7 +1024,8 @@ SBError SBThread::UnwindInnermostExpression() {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker,
+                           &sb_error.ref());
   if (!stop_locker.IsLocked())
     return sb_error;
 
@@ -1045,7 +1051,7 @@ bool SBThread::Suspend(SBError &error) {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker, &error.ref());
   if (!stop_locker.IsLocked()) {
     error = Status::FromErrorString("process is running");
     return false;
@@ -1072,7 +1078,7 @@ bool SBThread::Resume(SBError &error) {
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker, &error.ref());
   if (!stop_locker.IsLocked()) {
     error = Status::FromErrorString("process is running");
     return false;

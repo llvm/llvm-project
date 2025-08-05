@@ -316,16 +316,25 @@ public:
   ExecutionContext(const ExecutionContextRef *exe_ctx_ref,
                    bool thread_and_frame_only_if_stopped = false);
 
-  // These two variants take in a locker, and grab the target, lock the API
-  // mutex into locker, then fill in the rest of the shared pointers.
+  /// These two variants take in an API lock and a process run lock.
+  /// If the ExecutionContextRef has a Target, the API lock will be acquired.
+  /// If the ExecutionContextRef also has a Process, an attempt to acquire
+  /// ProcessRunLock is made. If successful (i.e. the Process is stopped), frame
+  /// and thread information might be available.
+  /// As a corollary, if the ProcessRunLocker has been locked, this
+  /// ExecutionContext contains non-null Process and Target pointers.
+  /// If a Status object is provided, it will be updated if the
+  /// ExecutionContextRef/Process/Target are null, or if the process is running.
   ExecutionContext(const ExecutionContextRef &exe_ctx_ref,
-                   std::unique_lock<std::recursive_mutex> &locker,
-                   ProcessRunLock::ProcessRunLocker &stop_locker)
-      : ExecutionContext(&exe_ctx_ref, locker, stop_locker) {}
+                   std::unique_lock<std::recursive_mutex> &api_lock,
+                   ProcessRunLock::ProcessRunLocker &stop_locker,
+                   Status *status = nullptr)
+      : ExecutionContext(&exe_ctx_ref, api_lock, stop_locker, status) {}
 
   ExecutionContext(const ExecutionContextRef *exe_ctx_ref,
-                   std::unique_lock<std::recursive_mutex> &locker,
-                   ProcessRunLock::ProcessRunLocker &stop_locker);
+                   std::unique_lock<std::recursive_mutex> &api_lock,
+                   ProcessRunLock::ProcessRunLocker &stop_locker,
+                   Status *status = nullptr);
   // Create execution contexts from execution context scopes
   ExecutionContext(ExecutionContextScope *exe_scope);
   ExecutionContext(ExecutionContextScope &exe_scope);

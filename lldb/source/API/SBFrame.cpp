@@ -97,6 +97,8 @@ bool SBFrame::IsValid() const {
 }
 SBFrame::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
+  if (!m_opaque_sp)
+    return false;
 
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;

@@ -12,6 +12,7 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
 
 using namespace lldb_private;
@@ -127,21 +128,41 @@ ExecutionContext::ExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr,
 
 ExecutionContext::ExecutionContext(
     const ExecutionContextRef *exe_ctx_ref_ptr,
-    std::unique_lock<std::recursive_mutex> &lock,
-    ProcessRunLock::ProcessRunLocker &stop_locker)
+    std::unique_lock<std::recursive_mutex> &api_lock,
+    ProcessRunLock::ProcessRunLocker &stop_locker, Status *status)
     : m_target_sp(), m_process_sp(), m_thread_sp(), m_frame_sp() {
-  if (exe_ctx_ref_ptr) {
-    m_target_sp = exe_ctx_ref_ptr->GetTargetSP();
-    if (m_target_sp) {
-      lock = std::unique_lock<std::recursive_mutex>(m_target_sp->GetAPIMutex());
+  auto set_status = [&](const char *msg) {
+    if (status)
+      *status = Status::FromErrorString(msg);
+  };
 
-      m_process_sp = exe_ctx_ref_ptr->GetProcessSP();
-      if (m_process_sp && stop_locker.TryLock(&m_process_sp->GetRunLock())) {
-        m_thread_sp = exe_ctx_ref_ptr->GetThreadSP();
-        m_frame_sp = exe_ctx_ref_ptr->GetFrameSP();
-      }
-    }
+  if (!exe_ctx_ref_ptr) {
+    set_status("ExecutionContext created with an empty ExecutionContextRef");
+    return;
   }
+
+  m_target_sp = exe_ctx_ref_ptr->GetTargetSP();
+  if (!m_target_sp) {
+    set_status("ExecutionContext created with a null target");
+    return;
+  }
+
+  api_lock = std::unique_lock<std::recursive_mutex>(m_target_sp->GetAPIMutex());
+  m_process_sp = exe_ctx_ref_ptr->GetProcessSP();
+  if (!m_process_sp) {
+    set_status("ExecutionContext created with a null process");
+    return;
+  }
+
+  if (!stop_locker.TryLock(&m_process_sp->GetRunLock())) {
+    const char *msg = "ExecutionContext created with a running process";
+    set_status(msg);
+    LLDB_LOG(GetLog(LLDBLog::API), msg);
+    return;
+  }
+
+  m_thread_sp = exe_ctx_ref_ptr->GetThreadSP();
+  m_frame_sp = exe_ctx_ref_ptr->GetFrameSP();
 }
 
 ExecutionContext::ExecutionContext(ExecutionContextScope *exe_scope_ptr)

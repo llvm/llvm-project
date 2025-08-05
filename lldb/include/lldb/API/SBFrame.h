@@ -233,8 +233,8 @@ protected:
 
   void SetFrameSP(const lldb::StackFrameSP &lldb_object_sp);
 
-  /// Return an SBValue with an error message warning that the process is not
-  /// currently stopped.
+  /// Return an SBValue containing an error message that warns the process is
+  /// not currently stopped.
   static SBValue CreateProcessIsRunningExprEvalError();
 
   lldb::ExecutionContextRefSP m_opaque_sp;
