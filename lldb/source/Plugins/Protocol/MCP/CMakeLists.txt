@@ -1,5 +1,4 @@
 add_lldb_library(lldbPluginProtocolServerMCP PLUGIN
-  MCPError.cpp
   ProtocolServerMCP.cpp
   Resource.cpp
   Tool.cpp

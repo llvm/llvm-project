@@ -7,8 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProtocolServerMCP.h"
-#include "MCPError.h"
+#include "Resource.h"
+#include "Tool.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Protocol/MCP/MCPError.h"
+#include "lldb/Protocol/MCP/Tool.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/StringExtras.h"
@@ -18,6 +21,7 @@
 
 using namespace lldb_private;
 using namespace lldb_private::mcp;
+using namespace lldb_protocol::mcp;
 using namespace llvm;
 
 LLDB_PLUGIN_DEFINE(ProtocolServerMCP)
@@ -112,7 +116,7 @@ void ProtocolServerMCP::AcceptCallback(std::unique_ptr<Socket> socket) {
   auto read_handle_up = m_loop.RegisterReadObject(
       io_sp,
       [this, client](MainLoopBase &loop) {
-        if (Error error = ReadCallback(*client)) {
+        if (llvm::Error error = ReadCallback(*client)) {
           LLDB_LOG_ERROR(GetLog(LLDBLog::Host), std::move(error), "{0}");
           client->read_handle_up.reset();
         }
