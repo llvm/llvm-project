@@ -9,8 +9,8 @@
 /// provides helper functions to translate PropertySetRegistry from/to JSON.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 
 #include <map>
@@ -27,8 +27,10 @@ using PropertyValue = std::variant<uint32_t, ByteArray>;
 using PropertySet = std::map<std::string, PropertyValue>;
 using PropertySetRegistry = std::map<std::string, PropertySet>;
 
-LLVM_ABI void writePropertiesToJSON(const PropertySetRegistry &P, raw_ostream &O);
-LLVM_ABI Expected<PropertySetRegistry> readPropertiesFromJSON(MemoryBufferRef Buf);
+LLVM_ABI void writePropertiesToJSON(const PropertySetRegistry &P,
+                                    raw_ostream &O);
+LLVM_ABI Expected<PropertySetRegistry>
+readPropertiesFromJSON(MemoryBufferRef Buf);
 
 } // namespace offloading
 } // namespace llvm

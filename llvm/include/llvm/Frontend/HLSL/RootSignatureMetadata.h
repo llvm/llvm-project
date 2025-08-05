@@ -14,11 +14,11 @@
 #ifndef LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 #define LLVM_FRONTEND_HLSL_ROOTSIGNATUREMETADATA_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/HLSL/HLSLRootSignature.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/MC/DXContainerRootSignature.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class LLVMContext;

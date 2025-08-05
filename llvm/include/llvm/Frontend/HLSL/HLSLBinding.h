@@ -13,9 +13,9 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLBINDING_H
 #define LLVM_FRONTEND_HLSL_HLSLBINDING_H
 
-#include "llvm/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 
