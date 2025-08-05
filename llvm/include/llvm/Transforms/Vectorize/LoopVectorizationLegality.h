@@ -514,8 +514,7 @@ private:
   /// we read and write from memory. This method checks if it is
   /// legal to vectorize the code, considering only memory constrains.
   /// Returns true if the loop is vectorizable
-  bool canVectorizeMemory(
-      std::optional<LoadInst *> CriticalEarlyExitUncountedConditionLoad);
+  bool canVectorizeMemory();
 
   /// If LAA cannot determine whether all dependences are safe, we may be able
   /// to further analyse some IndirectUnsafe dependences and if they match a
@@ -533,20 +532,21 @@ private:
   /// Returns true if this is an early exit loop that can be vectorized.
   /// Currently, a loop with an uncountable early exit is considered
   /// vectorizable if:
-  ///   1. There are no writes to memory in the loop.
+  ///   1. Writes to memory do not form a dependence with any load used as
+  ///      part of the uncounted exit condition.
   ///   2. The loop has only one early uncountable exit
   ///   3. The early exit block dominates the latch block.
   ///   4. The latch block has an exact exit count.
   ///   5. The loop does not contain reductions or recurrences.
   ///   6. We can prove at compile-time that loops will not contain faulting
-  ///   loads.
+  ///      loads, or that any faulting loads would also occur in a purely
+  ///      scalar loop.
   ///   7. It is safe to speculatively execute instructions such as divide or
-  ///   call instructions.
+  ///      call instructions.
   /// The list above is not based on theoretical limitations of vectorization,
   /// but simply a statement that more work is needed to support these
   /// additional cases safely.
-  bool isVectorizableEarlyExitLoop(
-      std::optional<LoadInst *> &CriticalEarlyExitUncountedConditionLoad);
+  bool isVectorizableEarlyExitLoop();
 
   /// Clears any current early exit data gathered if a check failed.
   void clearEarlyExitData() {
