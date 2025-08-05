@@ -339,14 +339,14 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
 size_t SBThread::GetStopDescription(char *dst, size_t dst_len) {
   LLDB_INSTRUMENT_VA(this, dst, dst_len);
 
+  if (dst)
+    *dst = 0;
+
   std::unique_lock<std::recursive_mutex> lock;
   Process::StopLocker stop_locker;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
   if (!stop_locker.IsLocked())
     return 0;
-
-  if (dst)
-    *dst = 0;
 
   if (!exe_ctx.HasThreadScope())
     return 0;
