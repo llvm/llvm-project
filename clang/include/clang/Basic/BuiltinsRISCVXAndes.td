@@ -22,10 +22,19 @@ let Attributes = [NoThrow, Const] in {
 // XAndesPerf extension.
 //===----------------------------------------------------------------------===//
 
-def ffb     : RISCVXAndesBuiltin<"long int(unsigned long int, unsigned long int)", "xandesperf">;
-def ffzmism : RISCVXAndesBuiltin<"long int(unsigned long int, unsigned long int)", "xandesperf">;
-def ffmism  : RISCVXAndesBuiltin<"long int(unsigned long int, unsigned long int)", "xandesperf">;
-def flmism  : RISCVXAndesBuiltin<"long int(unsigned long int, unsigned long int)", "xandesperf">;
+let Features = "xandesperf,32bit" in {
+def ffb_32     : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
+def ffzmism_32 : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
+def ffmism_32  : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
+def flmism_32  : RISCVXAndesBuiltin<"int32_t(uint32_t, uint32_t)">;
+}
+
+let Features = "xandesperf,64bit" in {
+def ffb_64     : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
+def ffzmism_64 : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
+def ffmism_64  : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
+def flmism_64  : RISCVXAndesBuiltin<"int64_t(uint64_t, uint64_t)">;
+}
 
 //===----------------------------------------------------------------------===//
 // XAndesBFHCvt extension.

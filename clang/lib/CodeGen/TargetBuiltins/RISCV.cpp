@@ -414,19 +414,23 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     break;
 
   // XAndesPerf
-  case RISCV::BI__builtin_riscv_nds_ffb:
+  case RISCV::BI__builtin_riscv_nds_ffb_32:
+  case RISCV::BI__builtin_riscv_nds_ffb_64:
     IntrinsicTypes = {ResultType};
     ID = Intrinsic::riscv_nds_ffb;
     break;
-  case RISCV::BI__builtin_riscv_nds_ffzmism:
+  case RISCV::BI__builtin_riscv_nds_ffzmism_32:
+  case RISCV::BI__builtin_riscv_nds_ffzmism_64:
     IntrinsicTypes = {ResultType};
     ID = Intrinsic::riscv_nds_ffzmism;
     break;
-  case RISCV::BI__builtin_riscv_nds_ffmism:
+  case RISCV::BI__builtin_riscv_nds_ffmism_32:
+  case RISCV::BI__builtin_riscv_nds_ffmism_64:
     IntrinsicTypes = {ResultType};
     ID = Intrinsic::riscv_nds_ffmism;
     break;
-  case RISCV::BI__builtin_riscv_nds_flmism:
+  case RISCV::BI__builtin_riscv_nds_flmism_32:
+  case RISCV::BI__builtin_riscv_nds_flmism_64:
     IntrinsicTypes = {ResultType};
     ID = Intrinsic::riscv_nds_flmism;
     break;
