@@ -133,7 +133,7 @@ LogicalResult getVectorToLLVMAlignment(LoadOrStoreOp loadOrStoreOp,
                                        MemRefType memrefType, unsigned &align,
                                        bool useVectorAlignment) {
   if (auto alignment = loadOrStoreOp.getAlignment()) {
-    align = alignment.value_or(0);
+    align = alignment.value();
     return success();
   }
   return getVectorToLLVMAlignment(typeConverter, vectorType, memrefType,
