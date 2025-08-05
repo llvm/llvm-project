@@ -181,22 +181,36 @@ private:
 
 class ScalarLiteralNode : public ASTNode {
 public:
-  ScalarLiteralNode(uint32_t location, lldb::BasicType type, Scalar value)
-      : ASTNode(location, NodeKind::eScalarLiteralNode), m_type(type),
-        m_value(value) {}
+  ScalarLiteralNode(uint32_t location, Scalar value, uint32_t radix,
+                    bool is_unsigned, bool is_long, bool is_longlong)
+      : ASTNode(location, NodeKind::eScalarLiteralNode), m_value(value),
+        m_radix(radix), m_is_unsigned(is_unsigned), m_is_long(is_long),
+        m_is_longlong(is_longlong) {}
+
+  ScalarLiteralNode(uint32_t location, Scalar value, bool is_float)
+      : ASTNode(location, NodeKind::eScalarLiteralNode), m_value(value),
+        m_is_float(is_float) {}
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  lldb::BasicType GetType() const { return m_type; }
   Scalar GetValue() const & { return m_value; }
+  uint32_t GetRadix() const { return m_radix; }
+  bool IsUnsigned() const { return m_is_unsigned; }
+  bool IsLong() const { return m_is_long; }
+  bool IsLongLong() const { return m_is_longlong; }
+  bool IsFloat() const { return m_is_float; }
 
   static bool classof(const ASTNode *node) {
     return node->GetKind() == NodeKind::eScalarLiteralNode;
   }
 
 private:
-  lldb::BasicType m_type;
   Scalar m_value;
+  uint32_t m_radix;
+  bool m_is_unsigned;
+  bool m_is_long;
+  bool m_is_longlong;
+  bool m_is_float;
 };
 
 /// This class contains one Visit method for each specialized type of

@@ -57,6 +57,11 @@ private:
   llvm::Expected<lldb::ValueObjectSP>
   Visit(const ScalarLiteralNode *node) override;
 
+  llvm::Expected<CompilerType>
+  PickLiteralType(lldb::TypeSystemSP type_system,
+                  std::shared_ptr<ExecutionContextScope> ctx,
+                  const ScalarLiteralNode *literal);
+
   // Used by the interpreter to create objects, perform casts, etc.
   lldb::TargetSP m_target;
   llvm::StringRef m_expr;
