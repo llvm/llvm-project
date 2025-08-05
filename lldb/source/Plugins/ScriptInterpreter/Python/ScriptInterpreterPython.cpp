@@ -2715,8 +2715,8 @@ bool ScriptInterpreterPythonImpl::GetShortHelpForCommandObject(
 
   if (py_return.IsAllocated() && PythonString::Check(py_return.get())) {
     PythonString py_string(PyRefType::Borrowed, py_return.get());
-    llvm::StringRef return_data(py_string.GetString());
-    dest.assign(return_data.data(), return_data.size());
+    std::string return_data = py_string.GetString();
+    dest.assign(return_data.c_str(), return_data.size());
     return true;
   }
 
@@ -2996,8 +2996,8 @@ bool ScriptInterpreterPythonImpl::GetLongHelpForCommandObject(
   bool got_string = false;
   if (py_return.IsAllocated() && PythonString::Check(py_return.get())) {
     PythonString str(PyRefType::Borrowed, py_return.get());
-    llvm::StringRef str_data(str.GetString());
-    dest.assign(str_data.data(), str_data.size());
+    std::string str_data = str.GetString();
+    dest.assign(str_data.c_str(), str_data.size());
     got_string = true;
   }
 

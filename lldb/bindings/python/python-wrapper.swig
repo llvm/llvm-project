@@ -173,7 +173,7 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallTypeScript(
   else
     result = pfunc(value_arg, dict, SWIGBridge::ToSWIGWrapper(*options_sp));
 
-  retval = result.Str().GetString().str();
+  retval = result.Str().GetString();
 
   return true;
 }
@@ -604,7 +604,7 @@ lldb_private::python::SWIGBridge::LLDBSwigPythonGetRepeatCommandForScriptedComma
   if (result.IsNone())
     return std::nullopt;
 
-  return result.Str().GetString().str();
+  return result.Str().GetString();
 }
 
 StructuredData::DictionarySP
@@ -807,7 +807,7 @@ bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordProcess(
 
   auto result = pfunc(SWIGBridge::ToSWIGWrapper(process), dict);
 
-  output = result.Str().GetString().str();
+  output = result.Str().GetString();
 
   return true;
 }
@@ -831,7 +831,7 @@ std::optional<std::string> lldb_private::python::SWIGBridge::LLDBSWIGPythonRunSc
 
   auto result = pfunc(SWIGBridge::ToSWIGWrapper(std::move(thread)), dict);
 
-  return result.Str().GetString().str();
+  return result.Str().GetString();
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordTarget(
@@ -854,7 +854,7 @@ bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordTarget(
 
   auto result = pfunc(SWIGBridge::ToSWIGWrapper(target), dict);
 
-  output = result.Str().GetString().str();
+  output = result.Str().GetString();
 
   return true;
 }
@@ -878,7 +878,7 @@ std::optional<std::string> lldb_private::python::SWIGBridge::LLDBSWIGPythonRunSc
 
   auto result = pfunc(SWIGBridge::ToSWIGWrapper(std::move(frame)), dict);
 
-  return result.Str().GetString().str();
+  return result.Str().GetString();
 }
 
 bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordValue(
@@ -901,7 +901,7 @@ bool lldb_private::python::SWIGBridge::LLDBSWIGPythonRunScriptKeywordValue(
 
   auto result = pfunc(SWIGBridge::ToSWIGWrapper(value), dict);
 
-  output = result.Str().GetString().str();
+  output = result.Str().GetString();
 
   return true;
 }

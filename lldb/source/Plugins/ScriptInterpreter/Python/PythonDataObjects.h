@@ -460,9 +460,9 @@ public:
 
   static bool Check(PyObject *py_obj);
 
-  llvm::StringRef GetString() const; // safe, empty string on error
+  std::string GetString() const; // safe, empty string on error
 
-  llvm::Expected<llvm::StringRef> AsUTF8() const;
+  llvm::Expected<std::string> AsUTF8() const;
 
   size_t GetSize() const;
 

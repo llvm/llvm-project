@@ -405,28 +405,40 @@ bool PythonString::Check(PyObject *py_obj) {
   return false;
 }
 
-llvm::StringRef PythonString::GetString() const {
+std::string PythonString::GetString() const {
   auto s = AsUTF8();
   if (!s) {
     llvm::consumeError(s.takeError());
-    return llvm::StringRef("");
+    return "";
   }
   return s.get();
 }
 
-Expected<llvm::StringRef> PythonString::AsUTF8() const {
+Expected<std::string> PythonString::AsUTF8() const {
   if (!IsValid())
     return nullDeref();
 
-  Py_ssize_t size;
-  const char *data;
-
-  data = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
-
-  if (!data)
+  // PyUnicode_AsUTF8AndSize caches the UTF-8 representation of the string in
+  // the Unicode object, making it more efficient than PyUnicode_AsUTF8String.
+#if defined(Py_LIMITED_API) && (Py_LIMITED_API < 0x030a0000)
+  PyObject *py_bytes = PyUnicode_AsUTF8String(m_py_obj);
+  if (!py_bytes)
     return exception();
 
-  return llvm::StringRef(data, size);
+  auto release_py_str =
+      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+
+  Py_ssize_t size = PyBytes_Size(py_bytes);
+  const char *str = PyBytes_AsString(py_bytes);
+#else
+  Py_ssize_t size;
+  const char *str = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
+#endif
+
+  if (!str)
+    return exception();
+
+  return std::string(str, size);
 }
 
 size_t PythonString::GetSize() const {
@@ -1248,12 +1260,12 @@ public:
       // EOF
       return Status();
     }
-    auto stringref = pystring.get().AsUTF8();
-    if (!stringref)
+    auto str = pystring.get().AsUTF8();
+    if (!str)
       // Cloning since the wrapped exception may still reference the PyThread.
-      return Status::FromError(stringref.takeError()).Clone();
-    num_bytes = stringref.get().size();
-    memcpy(buf, stringref.get().begin(), num_bytes);
+      return Status::FromError(str.takeError()).Clone();
+    num_bytes = str->size();
+    memcpy(buf, str->c_str(), num_bytes);
     return Status();
   }
 };
