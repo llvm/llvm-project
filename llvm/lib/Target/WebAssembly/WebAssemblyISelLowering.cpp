@@ -3409,30 +3409,18 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (!IsVectorBitCastCheap(X) || !IsVectorBitCastCheap(Y))
     return SDValue();
 
-  // TODO: Not sure what's the purpose of this? I'm keeping here since RISCV has
-  // it
-  if (DCI.DAG.getMachineFunction().getFunction().hasFnAttribute(
-          Attribute::NoImplicitFloat))
-    return SDValue();
-
-  unsigned OpSize = OpVT.getSizeInBits();
-  unsigned VecSize = OpSize / 8;
-
-  EVT VecVT = EVT::getVectorVT(*DCI.DAG.getContext(), MVT::i8, VecSize);
-  EVT CmpVT = EVT::getVectorVT(*DCI.DAG.getContext(), MVT::i8, VecSize);
+  EVT VecVT = MVT::v16i8;
 
   SDValue VecX = DAG.getBitcast(VecVT, X);
   SDValue VecY = DAG.getBitcast(VecVT, Y);
 
-  SDValue Cmp = DAG.getSetCC(DL, CmpVT, VecX, VecY, CC);
+  SDValue Cmp = DAG.getSetCC(DL, VecVT, VecX, VecY, CC);
 
-  SDValue AllTrue = DAG.getZExtOrTrunc(
-      DAG.getNode(
-          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-          {DAG.getConstant(Intrinsic::wasm_alltrue, DL, MVT::i32), Cmp}),
-      DL, MVT::i1);
+  SDValue AllTrue = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+      {DAG.getConstant(Intrinsic::wasm_alltrue, DL, MVT::i32), Cmp});
 
-  return DAG.getSetCC(DL, VT, AllTrue, DAG.getConstant(0, DL, MVT::i1), CC);
+  return DAG.getSetCC(DL, VT, AllTrue, DAG.getConstant(0, DL, MVT::i32), CC);
 }
 
 static SDValue performSETCCCombine(SDNode *N,
