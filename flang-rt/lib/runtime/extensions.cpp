@@ -18,6 +18,7 @@
 #include "flang/Runtime/entry-names.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/iostat-consts.h"
+#include <atomic>
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -308,6 +309,8 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   constexpr float FAIL_SECNDS{-1.0f}; // Failure code for this function
   // Failure code for time functions that return std::time_t
   constexpr std::time_t FAIL_TIME{std::time_t{-1}};
+  constexpr std::time_t TIME_UNINITIALIZED{std::time_t{0}};
+  constexpr std::time_t TIME_INITIALIZING{std::time_t{1}};
   if (!refTime) {
     return FAIL_SECNDS;
   }
@@ -319,8 +322,11 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   // comes out to about 194 days. Thus, need to pick a starting point.
   // Given the description of this function, midnight of the current
   // day is the best starting point.
-  static std::time_t startingPoint{0};
-  if (!startingPoint) {
+  static std::atomic<std::time_t> startingPoint{TIME_UNINITIALIZED};
+  std::time_t expected{TIME_UNINITIALIZED};
+  std::time_t localStartingPoint{TIME_UNINITIALIZED};
+  if (startingPoint.compare_exchange_strong(expected, TIME_INITIALIZING)) {
+    // This thread is doing initialization of startingPoint
     struct tm timeInfo;
 #ifdef _WIN32
     if (localtime_s(&timeInfo, &now)) {
@@ -335,12 +341,20 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
     timeInfo.tm_hour = 0;
     timeInfo.tm_min = 0;
     timeInfo.tm_sec = 0;
-    startingPoint = std::mktime(&timeInfo);
-    if (startingPoint == FAIL_TIME) {
+    std::time_t midnight = std::mktime(&timeInfo);
+    if (midnight == FAIL_TIME) {
       return FAIL_SECNDS;
     }
+    localStartingPoint = midnight;
+    startingPoint.store(midnight, std::memory_order_release);
+  } else {
+    // This thread is not doing initialization of startingPoint, need to wait
+    // for initialization to complete.
+    while ((localStartingPoint = startingPoint.load(std::memory_order_acquire)) <= TIME_INITIALIZING) {
+      std::this_thread::yield();
+    }
   }
-  double diffStartingPoint{std::difftime(now, startingPoint)};
+  double diffStartingPoint{std::difftime(now, localStartingPoint)};
   return static_cast<float>(diffStartingPoint) - *refTime;
 }
 
