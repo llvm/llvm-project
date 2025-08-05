@@ -155,8 +155,9 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
     return;
   }
   if (auto *II = dyn_cast<LifetimeIntrinsic>(&Inst)) {
-    AllocaInst *AI = cast<AllocaInst>(II->getArgOperand(1));
-    if (getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
+    AllocaInst *AI = dyn_cast<AllocaInst>(II->getArgOperand(1));
+    if (!AI ||
+        getAllocaInterestingness(*AI) != AllocaInterestingness::kInteresting)
       return;
     if (II->getIntrinsicID() == Intrinsic::lifetime_start)
       Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
