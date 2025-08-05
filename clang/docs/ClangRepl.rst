@@ -167,8 +167,6 @@ Comments:
    clang-repl> // Comments in Clang-Repl
    clang-repl> /* Comments in Clang-Repl */
 
-
-
 Built in Commands:
 ==================
 clang-repl has some special commands that are of the form ``%<something>``. To list all these commands, use the ``%help`` command:
@@ -227,7 +225,6 @@ The ``%undo`` command undoes the previous input.
    1 | a
    * | ^
    error: Parsing failed.
-
 
 Quit:
 -----
