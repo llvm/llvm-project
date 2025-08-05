@@ -105,6 +105,10 @@ Improvements to clang-tidy
   now run checks in parallel by default using all available hardware threads.
   Both scripts display the number of threads being used in their output.
 
+- Improved :program:`run-clang-tidy.py` by adding a new option
+  `enable-check-profile` to enable per-check timing profiles and print a
+  report based on all analyzed files.
+
 New checks
 ^^^^^^^^^^
 
@@ -138,6 +142,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/signed-char-misuse>` check by fixing
   false positives on C23 enums with the fixed underlying type of signed char.
 
+- Improved :doc:`bugprone-tagged-union-member-count
+  <clang-tidy/checks/bugprone/tagged-union-member-count>` by fixing a false
+  positive when enums or unions from system header files or the ``std``
+  namespace are treated as the tag or the data part of a user-defined
+  tagged union respectively.
+
 - Improved :doc:`bugprone-unhandled-self-assignment
   <clang-tidy/checks/bugprone/unhandled-self-assignment>` check by adding
   an additional matcher that generalizes the copy-and-swap idiom pattern
@@ -159,6 +169,14 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-print>` check to correctly match
   when the format string is converted to a different type by an implicit
   constructor call.
+
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
+  the type of the diagnosed variable.
+
+- Improved :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` by printing
+  the type of the diagnosed variable.
 
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
