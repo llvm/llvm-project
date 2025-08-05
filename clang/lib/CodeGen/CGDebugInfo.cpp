@@ -2874,7 +2874,7 @@ static bool isDefinedInClangModule(const RecordDecl *RD) {
       if (!Explicit && CXXDecl->getEnclosingNamespaceContext())
         return false;
       // This is a template, check the origin of the first member.
-      if (CXXDecl->field_begin() == CXXDecl->field_end())
+      if (CXXDecl->fields().empty())
         return TemplateKind == TSK_ExplicitInstantiationDeclaration;
       if (!CXXDecl->field_begin()->isFromASTFile())
         return false;
