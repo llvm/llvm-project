@@ -192,9 +192,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // Combine wide-vector muls, with extend inputs, to extmul_half.
     setTargetDAGCombine(ISD::MUL);
 
-    // Combine add with vector shuffle of muls to dots
-    setTargetDAGCombine(ISD::ADD);
-
     // Combine vector mask reductions into alltrue/anytrue
     setTargetDAGCombine(ISD::SETCC);
 
@@ -3439,53 +3436,6 @@ static SDValue performSETCCCombine(SDNode *N,
   return SDValue();
 }
 
-static SDValue performAddCombine(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::ADD);
-  EVT VT = N->getValueType(0);
-  SDValue N0 = N->getOperand(0), N1 = N->getOperand(1);
-
-  if (VT != MVT::v4i32)
-    return SDValue();
-
-  auto IsShuffleWithMask = [](SDValue V, ArrayRef<int> ShuffleValue) {
-    if (V.getOpcode() != ISD::VECTOR_SHUFFLE)
-      return SDValue();
-    if (cast<ShuffleVectorSDNode>(V)->getMask() != ShuffleValue)
-      return SDValue();
-    return V;
-  };
-  auto ShuffleA = IsShuffleWithMask(N0, {0, 2, 4, 6});
-  auto ShuffleB = IsShuffleWithMask(N1, {1, 3, 5, 7});
-  // two SDValues must be muls
-  if (!ShuffleA || !ShuffleB)
-    return SDValue();
-
-  if (ShuffleA.getOperand(0) != ShuffleB.getOperand(0) ||
-      ShuffleA.getOperand(1) != ShuffleB.getOperand(1))
-    return SDValue();
-
-  auto IsMulExtend =
-      [](SDValue V, WebAssemblyISD::NodeType I) -> std::pair<SDValue, SDValue> {
-    if (V.getOpcode() != ISD::MUL)
-      return {};
-
-    auto V0 = V.getOperand(0), V1 = V.getOperand(1);
-    if (V0.getOpcode() != I || V1.getOpcode() != I)
-      return {};
-    return {V0.getOperand(0), V1.getOperand(0)};
-  };
-
-  auto [LowA, LowB] =
-      IsMulExtend(ShuffleA.getOperand(0), WebAssemblyISD::EXTEND_LOW_S);
-  auto [HighA, HighB] =
-      IsMulExtend(ShuffleA.getOperand(1), WebAssemblyISD::EXTEND_HIGH_S);
-
-  if (!LowA || !LowB || !HighA || !HighB || LowA != HighA || LowB != HighB)
-    return SDValue();
-
-  return DAG.getNode(WebAssemblyISD::DOT, SDLoc(N), MVT::v4i32, LowA, LowB);
-}
-
 static SDValue TryWideExtMulCombine(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   if (VT != MVT::v8i32 && VT != MVT::v16i32)
@@ -3647,7 +3597,5 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::MUL:
     return performMulCombine(N, DCI);
-  case ISD::ADD:
-    return performAddCombine(N, DCI.DAG);
   }
 }
