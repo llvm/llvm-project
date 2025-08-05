@@ -5255,9 +5255,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q0, q2, q0
 ; CHECK-NEXT:    lsll r4, r5, #2
@@ -5278,9 +5278,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #3
@@ -5301,9 +5301,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #4
@@ -5324,9 +5324,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #5
@@ -5347,9 +5347,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #6
@@ -5370,9 +5370,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #7
@@ -5393,9 +5393,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #8
@@ -5416,9 +5416,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #9
@@ -5439,9 +5439,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #10
@@ -5462,9 +5462,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #11
@@ -5485,9 +5485,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #12
@@ -5508,9 +5508,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #13
@@ -5531,9 +5531,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #14
@@ -5554,9 +5554,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #15
@@ -5577,9 +5577,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #16
@@ -5600,9 +5600,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #17
@@ -5623,9 +5623,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #18
@@ -5646,9 +5646,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #19
@@ -5669,9 +5669,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #20
@@ -5692,9 +5692,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #21
@@ -5715,9 +5715,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #22
@@ -5738,9 +5738,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #23
@@ -5761,9 +5761,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #24
@@ -5784,9 +5784,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #25
@@ -5807,9 +5807,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #26
@@ -5830,9 +5830,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #27
@@ -5853,9 +5853,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #28
@@ -5876,9 +5876,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #29
@@ -5899,9 +5899,9 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #30
@@ -9413,9 +9413,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q0, q2, q0
 ; CHECK-NEXT:    lsll r4, r5, #2
@@ -9436,9 +9436,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #3
@@ -9459,9 +9459,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #4
@@ -9482,9 +9482,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #5
@@ -9505,9 +9505,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #6
@@ -9528,9 +9528,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #7
@@ -9551,9 +9551,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #8
@@ -9574,9 +9574,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #9
@@ -9597,9 +9597,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #10
@@ -9620,9 +9620,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #11
@@ -9643,9 +9643,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #12
@@ -9666,9 +9666,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #13
@@ -9689,9 +9689,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #14
@@ -9712,9 +9712,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #15
@@ -9735,9 +9735,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #16
@@ -9758,9 +9758,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #17
@@ -9781,9 +9781,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #18
@@ -9804,9 +9804,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #19
@@ -9827,9 +9827,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #20
@@ -9850,9 +9850,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #21
@@ -9873,9 +9873,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #22
@@ -9896,9 +9896,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #23
@@ -9919,9 +9919,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #24
@@ -9942,9 +9942,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #25
@@ -9965,9 +9965,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #26
@@ -9988,9 +9988,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #27
@@ -10011,9 +10011,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #28
@@ -10034,9 +10034,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #29
@@ -10057,9 +10057,9 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #30
@@ -12585,9 +12585,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q0, q2, q0
 ; CHECK-NEXT:    lsll r4, r5, #2
@@ -12608,9 +12608,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #3
@@ -12631,9 +12631,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #4
@@ -12654,9 +12654,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #5
@@ -12677,9 +12677,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #6
@@ -12700,9 +12700,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #7
@@ -12723,9 +12723,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #8
@@ -12746,9 +12746,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #9
@@ -12769,9 +12769,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #10
@@ -12792,9 +12792,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #11
@@ -12815,9 +12815,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #12
@@ -12838,9 +12838,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #13
@@ -12861,9 +12861,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #14
@@ -12884,9 +12884,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #15
@@ -12907,9 +12907,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #16
@@ -12930,9 +12930,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #17
@@ -12953,9 +12953,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #18
@@ -12976,9 +12976,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #19
@@ -12999,9 +12999,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #20
@@ -13022,9 +13022,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #21
@@ -13045,9 +13045,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #22
@@ -13068,9 +13068,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #23
@@ -13091,9 +13091,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #24
@@ -13114,9 +13114,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #25
@@ -13137,9 +13137,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #26
@@ -13160,9 +13160,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #27
@@ -13183,9 +13183,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #28
@@ -13206,9 +13206,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #29
@@ -13229,9 +13229,9 @@ define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    vldrw.u32 q3, [r2]
 ; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r2, s12
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    lsll r4, r5, #30

@@ -5,9 +5,10 @@ define <4 x i32> @freeze_or_setcc(<4 x i32> %a, <4 x i32> %b, <4 x i32> %x, <4 x
 ; CHECK-LABEL: freeze_or_setcc:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    add.4s v4, v0, v1
-; CHECK-NEXT:    cmgt.4s v0, v1, v0
-; CHECK-NEXT:    cmgt.4s v4, v4, #0
-; CHECK-NEXT:    orr.16b v0, v4, v0
+; CHECK-NEXT:    sub.4s v0, v0, v1
+; CHECK-NEXT:    cmgt.4s v1, v4, #0
+; CHECK-NEXT:    cmlt.4s v0, v0, #0
+; CHECK-NEXT:    orr.16b v0, v1, v0
 ; CHECK-NEXT:    bsl.16b v0, v2, v3
 ; CHECK-NEXT:    ret
   %add = add nsw <4 x i32> %a, %b

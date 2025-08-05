@@ -69,12 +69,12 @@ define <2 x i64> @var_shuffle_zero_v2i64(<2 x i64> %v, <2 x i64> %indices) nounw
 ; SSE3-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE3-NEXT:    pxor %xmm1, %xmm2
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; SSE3-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE3-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[0,0,2,2]
-; SSE3-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE3-NEXT:    pand %xmm4, %xmm3
+; SSE3-NEXT:    pand %xmm3, %xmm4
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSE3-NEXT:    por %xmm3, %xmm2
+; SSE3-NEXT:    por %xmm4, %xmm2
 ; SSE3-NEXT:    por %xmm2, %xmm1
 ; SSE3-NEXT:    movq %xmm1, %rax
 ; SSE3-NEXT:    andl $1, %eax
@@ -94,12 +94,12 @@ define <2 x i64> @var_shuffle_zero_v2i64(<2 x i64> %v, <2 x i64> %indices) nounw
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSSE3-NEXT:    pxor %xmm1, %xmm2
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; SSSE3-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSSE3-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[0,0,2,2]
-; SSSE3-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSSE3-NEXT:    pand %xmm4, %xmm3
+; SSSE3-NEXT:    pand %xmm3, %xmm4
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSSE3-NEXT:    por %xmm3, %xmm2
+; SSSE3-NEXT:    por %xmm4, %xmm2
 ; SSSE3-NEXT:    por %xmm2, %xmm1
 ; SSSE3-NEXT:    movq %xmm1, %rax
 ; SSSE3-NEXT:    andl $1, %eax
@@ -1089,12 +1089,12 @@ define <2 x double> @var_shuffle_zero_v2f64(<2 x double> %v, <2 x i64> %indices)
 ; SSE3-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSE3-NEXT:    pxor %xmm1, %xmm2
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; SSE3-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSE3-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[0,0,2,2]
-; SSE3-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE3-NEXT:    pand %xmm4, %xmm3
+; SSE3-NEXT:    pand %xmm3, %xmm4
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSE3-NEXT:    por %xmm3, %xmm2
+; SSE3-NEXT:    por %xmm4, %xmm2
 ; SSE3-NEXT:    por %xmm2, %xmm1
 ; SSE3-NEXT:    movq %xmm1, %rax
 ; SSE3-NEXT:    andl $1, %eax
@@ -1114,12 +1114,12 @@ define <2 x double> @var_shuffle_zero_v2f64(<2 x double> %v, <2 x i64> %indices)
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [9223372039002259456,9223372039002259456]
 ; SSSE3-NEXT:    pxor %xmm1, %xmm2
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; SSSE3-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
 ; SSSE3-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[0,0,2,2]
-; SSSE3-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSSE3-NEXT:    pand %xmm4, %xmm3
+; SSSE3-NEXT:    pand %xmm3, %xmm4
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
-; SSSE3-NEXT:    por %xmm3, %xmm2
+; SSSE3-NEXT:    por %xmm4, %xmm2
 ; SSSE3-NEXT:    por %xmm2, %xmm1
 ; SSSE3-NEXT:    movq %xmm1, %rax
 ; SSSE3-NEXT:    andl $1, %eax
@@ -2028,8 +2028,8 @@ define void @indices_convert() {
 ; SSE3:       # %bb.0: # %bb
 ; SSE3-NEXT:    movdqa (%rax), %xmm0
 ; SSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE3-NEXT:    movd %xmm1, %eax
+; SSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE3-NEXT:    movdqa %xmm0, -24(%rsp)
 ; SSE3-NEXT:    movdqa %xmm0, -40(%rsp)
 ; SSE3-NEXT:    andl $3, %eax
@@ -2048,8 +2048,8 @@ define void @indices_convert() {
 ; SSSE3:       # %bb.0: # %bb
 ; SSSE3-NEXT:    movdqa (%rax), %xmm0
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSSE3-NEXT:    movdqa %xmm0, -24(%rsp)
 ; SSSE3-NEXT:    movdqa %xmm0, -40(%rsp)
 ; SSSE3-NEXT:    andl $3, %eax
@@ -2066,16 +2066,14 @@ define void @indices_convert() {
 ;
 ; SSE41-LABEL: indices_convert:
 ; SSE41:       # %bb.0: # %bb
-; SSE41-NEXT:    movdqa (%rax), %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE41-NEXT:    movd %xmm1, %eax
-; SSE41-NEXT:    movdqa %xmm0, -24(%rsp)
-; SSE41-NEXT:    movdqa %xmm0, -40(%rsp)
+; SSE41-NEXT:    movaps (%rax), %xmm0
+; SSE41-NEXT:    extractps $2, %xmm0, %eax
+; SSE41-NEXT:    movaps %xmm0, -24(%rsp)
+; SSE41-NEXT:    movaps %xmm0, -40(%rsp)
 ; SSE41-NEXT:    andl $3, %eax
-; SSE41-NEXT:    pextrd $1, %xmm1, %ecx
-; SSE41-NEXT:    movdqa %xmm0, -56(%rsp)
-; SSE41-NEXT:    movdqa %xmm0, -72(%rsp)
+; SSE41-NEXT:    extractps $3, %xmm0, %ecx
+; SSE41-NEXT:    movaps %xmm0, -56(%rsp)
+; SSE41-NEXT:    movaps %xmm0, -72(%rsp)
 ; SSE41-NEXT:    andl $3, %ecx
 ; SSE41-NEXT:    movsd -72(%rsp,%rcx,8), %xmm0 # xmm0 = mem[0],zero
 ; SSE41-NEXT:    movsd -40(%rsp,%rax,8), %xmm1 # xmm1 = mem[0],zero

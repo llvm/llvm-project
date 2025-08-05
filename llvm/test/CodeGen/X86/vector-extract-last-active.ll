@@ -40,20 +40,20 @@ define i32 @extract_last_active_v4i32(<4 x i32> %a, <4 x i1> %c) nounwind {
 ; SSE42-LABEL: extract_last_active_v4i32:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pslld $31, %xmm1
-; SSE42-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE42-NEXT:    movmskps %xmm1, %ecx
+; SSE42-NEXT:    psrad $31, %xmm1
+; SSE42-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; SSE42-NEXT:    pmaxud %xmm2, %xmm1
+; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; SSE42-NEXT:    pmaxud %xmm2, %xmm1
+; SSE42-NEXT:    movd %xmm1, %edx
+; SSE42-NEXT:    andl $3, %edx
 ; SSE42-NEXT:    xorl %eax, %eax
 ; SSE42-NEXT:    cmpl $1, %ecx
 ; SSE42-NEXT:    sbbl %eax, %eax
-; SSE42-NEXT:    psrad $31, %xmm1
-; SSE42-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
-; SSE42-NEXT:    pmaxud %xmm0, %xmm1
-; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; SSE42-NEXT:    pmaxud %xmm0, %xmm1
-; SSE42-NEXT:    movd %xmm1, %ecx
-; SSE42-NEXT:    andl $3, %ecx
-; SSE42-NEXT:    orl -24(%rsp,%rcx,4), %eax
+; SSE42-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; SSE42-NEXT:    orl -24(%rsp,%rdx,4), %eax
 ; SSE42-NEXT:    retq
 ;
 ; AVX2-LABEL: extract_last_active_v4i32:
@@ -61,17 +61,17 @@ define i32 @extract_last_active_v4i32(<4 x i32> %a, <4 x i1> %c) nounwind {
 ; AVX2-NEXT:    vpslld $31, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX2-NEXT:    vpsrad $31, %xmm1, %xmm0
-; AVX2-NEXT:    vmovmskps %xmm1, %ecx
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    cmpl $1, %ecx
-; AVX2-NEXT:    sbbl %eax, %eax
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; AVX2-NEXT:    vpmaxud %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
-; AVX2-NEXT:    vpmaxud %xmm0, %xmm1, %xmm0
+; AVX2-NEXT:    vpmaxud %xmm0, %xmm2, %xmm0
 ; AVX2-NEXT:    vmovd %xmm0, %ecx
 ; AVX2-NEXT:    andl $3, %ecx
+; AVX2-NEXT:    vmovmskps %xmm1, %edx
+; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    cmpl $1, %edx
+; AVX2-NEXT:    sbbl %eax, %eax
 ; AVX2-NEXT:    orl -24(%rsp,%rcx,4), %eax
 ; AVX2-NEXT:    retq
 ;
@@ -495,7 +495,9 @@ define i32 @extract_last_active_v16i32(<16 x i32> %a, <16 x i1> %c) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    psllw $7, %xmm4
-; SSE2-NEXT:    pcmpgtb %xmm4, %xmm5
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; SSE2-NEXT:    pand %xmm4, %xmm6
+; SSE2-NEXT:    pcmpgtb %xmm6, %xmm5
 ; SSE2-NEXT:    movaps %xmm3, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
@@ -654,7 +656,6 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE2-NEXT:    psrlw $8, %xmm5
 ; SSE2-NEXT:    pmaxub %xmm1, %xmm5
 ; SSE2-NEXT:    movd %xmm5, %eax
-; SSE2-NEXT:    movzbl %al, %eax
 ; SSE2-NEXT:    pmovmskb %xmm3, %ecx
 ; SSE2-NEXT:    pandn %xmm0, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
@@ -668,8 +669,7 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE2-NEXT:    psrlw $8, %xmm1
 ; SSE2-NEXT:    pmaxub %xmm0, %xmm1
 ; SSE2-NEXT:    movd %xmm1, %edx
-; SSE2-NEXT:    movzbl %dl, %edx
-; SSE2-NEXT:    addq $16, %rdx
+; SSE2-NEXT:    addl $16, %edx
 ; SSE2-NEXT:    cmpl $65535, %ecx # imm = 0xFFFF
 ; SSE2-NEXT:    cmoveq %rax, %rdx
 ; SSE2-NEXT:    andl $31, %edx
@@ -684,9 +684,9 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE42-LABEL: extract_last_active_split:
 ; SSE42:       # %bb.0:
 ; SSE42-NEXT:    pxor %xmm4, %xmm4
-; SSE42-NEXT:    movdqa %xmm3, %xmm5
+; SSE42-NEXT:    movdqa %xmm2, %xmm5
 ; SSE42-NEXT:    pcmpeqb %xmm4, %xmm5
-; SSE42-NEXT:    pcmpeqb %xmm2, %xmm4
+; SSE42-NEXT:    pcmpeqb %xmm3, %xmm4
 ; SSE42-NEXT:    pcmpeqd %xmm6, %xmm6
 ; SSE42-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE42-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
@@ -700,6 +700,7 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE42-NEXT:    movd %xmm1, %eax
 ; SSE42-NEXT:    notb %al
 ; SSE42-NEXT:    movzbl %al, %eax
+; SSE42-NEXT:    addl $16, %eax
 ; SSE42-NEXT:    pandn %xmm0, %xmm5
 ; SSE42-NEXT:    pxor %xmm6, %xmm5
 ; SSE42-NEXT:    movdqa %xmm5, %xmm0
@@ -709,9 +710,8 @@ define i8 @extract_last_active_split(<32 x i8> %data, <32 x i8> %mask, i8 %passt
 ; SSE42-NEXT:    movd %xmm0, %ecx
 ; SSE42-NEXT:    notb %cl
 ; SSE42-NEXT:    movzbl %cl, %ecx
-; SSE42-NEXT:    addq $16, %rcx
 ; SSE42-NEXT:    ptest %xmm3, %xmm3
-; SSE42-NEXT:    cmoveq %rax, %rcx
+; SSE42-NEXT:    cmovneq %rax, %rcx
 ; SSE42-NEXT:    andl $31, %ecx
 ; SSE42-NEXT:    por %xmm3, %xmm2
 ; SSE42-NEXT:    ptest %xmm2, %xmm2
