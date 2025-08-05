@@ -310,6 +310,16 @@ class CollectUnexpandedParameterPacksVisitor
       return DynamicRecursiveASTVisitor::TraverseLambdaCapture(Lambda, C, Init);
     }
 
+    bool TraverseUnresolvedLookupExpr(UnresolvedLookupExpr *E) override {
+      if (E->getNumDecls() == 1) {
+        NamedDecl *ND = *E->decls_begin();
+        if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(ND);
+            TTP && TTP->isParameterPack())
+          addUnexpanded(ND, E->getBeginLoc());
+      }
+      return DynamicRecursiveASTVisitor::TraverseUnresolvedLookupExpr(E);
+    }
+
 #ifndef NDEBUG
     bool TraverseFunctionParmPackExpr(FunctionParmPackExpr *) override {
       ContainsIntermediatePacks = true;

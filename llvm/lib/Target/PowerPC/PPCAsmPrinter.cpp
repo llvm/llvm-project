@@ -2767,7 +2767,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
   if (GV->hasComdat())
     report_fatal_error("COMDAT not yet supported by AIX.");
 
-  MCSymbolXCOFF *GVSym = cast<MCSymbolXCOFF>(getSymbol(GV));
+  auto *GVSym = static_cast<MCSymbolXCOFF *>(getSymbol(GV));
 
   if (GV->isDeclarationForLinker()) {
     emitLinkage(GV, GVSym);
@@ -2860,7 +2860,7 @@ void PPCAIXAsmPrinter::emitFunctionDescriptor() {
   MCSectionSubPair Current = OutStreamer->getCurrentSection();
   // Emit function descriptor.
   OutStreamer->switchSection(
-      cast<MCSymbolXCOFF>(CurrentFnDescSym)->getRepresentedCsect());
+      static_cast<MCSymbolXCOFF *>(CurrentFnDescSym)->getRepresentedCsect());
 
   // Emit aliasing label for function descriptor csect.
   for (const GlobalAlias *Alias : GOAliasMap[&MF->getFunction()])
@@ -2995,7 +2995,8 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
       SmallString<128> Name;
       StringRef Prefix = ".";
       Name += Prefix;
-      Name += cast<MCSymbolXCOFF>(I.first.first)->getSymbolTableName();
+      Name += static_cast<const MCSymbolXCOFF *>(I.first.first)
+                  ->getSymbolTableName();
       MCSymbol *S = OutContext.getOrCreateSymbol(Name);
       TCEntry = static_cast<MCSectionXCOFF *>(
           getObjFileLowering().getSectionForTOCEntry(S, TM));
@@ -3113,7 +3114,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     setCsectAlignment(&G);
     std::optional<CodeModel::Model> OptionalCodeModel = G.getCodeModel();
     if (OptionalCodeModel)
-      setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&G)),
+      setOptionalCodeModel(static_cast<MCSymbolXCOFF *>(getSymbol(&G)),
                            *OptionalCodeModel);
   }
 
@@ -3140,7 +3141,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
     if (GVar) {
       std::optional<CodeModel::Model> OptionalCodeModel = GVar->getCodeModel();
       if (OptionalCodeModel)
-        setOptionalCodeModel(cast<MCSymbolXCOFF>(getSymbol(&Alias)),
+        setOptionalCodeModel(static_cast<MCSymbolXCOFF *>(getSymbol(&Alias)),
                              *OptionalCodeModel);
     }
 
@@ -3191,8 +3192,8 @@ void PPCAIXAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::BL_NOP: {
     const MachineOperand &MO = MI->getOperand(0);
     if (MO.isSymbol()) {
-      MCSymbolXCOFF *S =
-          cast<MCSymbolXCOFF>(OutContext.getOrCreateSymbol(MO.getSymbolName()));
+      auto *S = static_cast<MCSymbolXCOFF *>(
+          OutContext.getOrCreateSymbol(MO.getSymbolName()));
       ExtSymSDNodeSymbols.insert(S);
     }
   } break;
