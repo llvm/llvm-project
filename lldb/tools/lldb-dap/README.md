@@ -372,6 +372,27 @@ for more details on Debug Adapter Protocol events and the VS Code
 [debug.onDidReceiveDebugSessionCustomEvent](https://code.visualstudio.com/api/references/vscode-api#debug.onDidReceiveDebugSessionCustomEvent)
 API for handling a custom event from an extension.
 
+## Working with other VS Code debugger extensions
+
+Other VS Code debugger extensions can be used in conjunction with this extension to leverage this extension's settings and logic (e.g. "Server Mode").
+
+When debug sessions are started in other extensions, they can invoke the following VS Code commands to resolve configuration, create adapter descriptor,
+and get the `lldb-dap` process for state tracking, additional interaction, and telemetry.
+
+```
+// Resolve debug configuration
+const resolvedConfiguration = await vscode.commands.executeCommand("lldb-dap.resolveDebugConfiguration", folder, configuration, token);
+
+// Resolve debug configuration with substituted variables
+const resolvedConfigurationWithSubstitutedVariables = await vscode.commands.executeCommand("lldb-dap.resolveDebugConfigurationWithSubstitutedVariables", folder, configuration, token);
+
+// Create debug adapter descriptor
+const adapterDescriptor = await vscode.commands.executeCommand("lldb-dap.createDebugAdapterDescriptor", session, executable);
+
+// Get dap server process
+const process = await vscode.commands.executeCommand("lldb-dap.getServerProcess");
+```
+
 ## Contributing
 
 `lldb-dap` and `lldb` are developed under the umbrella of the [LLVM project](https://llvm.org/).
