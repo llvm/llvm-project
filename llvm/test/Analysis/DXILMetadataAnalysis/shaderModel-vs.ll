@@ -8,6 +8,7 @@ target triple = "dxil-pc-shadermodel-vertex"
 ; CHECK-NEXT: entry
 ; CHECK-NEXT:  Function Shader Stage : vertex
 ; CHECK-NEXT:   NumThreads: 0,0,0
+; CHECK-NEXT: Strip Root Signature: 1
 ; CHECK-EMPTY:
 
 define void @entry() #0 {

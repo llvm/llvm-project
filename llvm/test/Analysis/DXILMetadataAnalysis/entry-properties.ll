@@ -14,6 +14,7 @@ target triple = "dxil-pc-shadermodel6.8-library"
 ; CHECK-NEXT: entry_cs
 ; CHECK-NEXT:   Function Shader Stage : compute
 ; CHECK-NEXT:   NumThreads: 1,2,1
+; CHECK-NEXT: Strip Root Signature: 1
 ; CHECK-EMPTY:
 
 define void @entry_as() #0 {

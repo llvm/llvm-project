@@ -8,6 +8,7 @@ target triple = "dxil-pc-shadermodel6.6-mesh"
 ; CHECK-NEXT: entry
 ; CHECK-NEXT:  Function Shader Stage : mesh
 ; CHECK-NEXT:   NumThreads: 0,0,0
+; CHECK-NEXT: Strip Root Signature: 1
 ; CHECK-EMPTY:
 
 define void @entry() #0 {
