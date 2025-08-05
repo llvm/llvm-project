@@ -143,29 +143,31 @@ public:
     llvm_unreachable("Illegal empty element");
   }
 
-  /// find_next - Returns the index of the next set bit starting from the
-  /// "Curr" bit. Returns -1 if the next set bit is not found.
-  int find_next(unsigned Curr) const {
-    if (Curr >= BITS_PER_ELEMENT)
-      return -1;
+  /// find_next - Sets Curr to the index of the next set bit starting after the
+  /// Curr bit and returns false, or sets Curr to ~0U and returns true if no
+  /// next bit is found.
+  bool find_next(unsigned &Curr) const {
+    assert(Curr < BITS_PER_ELEMENT);
 
     unsigned WordPos = Curr / BITWORD_SIZE;
     unsigned BitPos = Curr % BITWORD_SIZE;
-    BitWord Copy = Bits[WordPos];
-    assert(WordPos <= BITWORDS_PER_ELEMENT
-           && "Word Position outside of element");
 
     // Mask off previous bits.
-    Copy &= ~0UL << BitPos;
-
-    if (Copy != 0)
-      return WordPos * BITWORD_SIZE + llvm::countr_zero(Copy);
+    BitWord Copy = Bits[WordPos] & ~1UL << BitPos;
+    if (Copy != 0) {
+      Curr = WordPos * BITWORD_SIZE + llvm::countr_zero(Copy);
+      return false;
+    }
 
     // Check subsequent words.
-    for (unsigned i = WordPos+1; i < BITWORDS_PER_ELEMENT; ++i)
-      if (Bits[i] != 0)
-        return i * BITWORD_SIZE + llvm::countr_zero(Bits[i]);
-    return -1;
+    for (unsigned i = WordPos + 1; i < BITWORDS_PER_ELEMENT; ++i) {
+      if (Bits[i] != 0) {
+        Curr = i * BITWORD_SIZE + llvm::countr_zero(Bits[i]);
+        return false;
+      }
+    }
+    Curr = ~0U;
+    return true;
   }
 
   // Union this element with RHS and return true if this one changed.
@@ -314,101 +316,33 @@ class SparseBitVector {
     return FindLowerBoundImpl(ElementIndex);
   }
 
-  // Iterator to walk set bits in the bitmap.  This iterator is a lot uglier
-  // than it would be, in order to be efficient.
+  // Iterator to walk set bits in the bitvector.
   class SparseBitVectorIterator {
   private:
-    bool AtEnd;
+    // Current bit number within the current element, or ~0U if we are at the
+    // end.
+    unsigned BitPos = ~0U;
 
-    const SparseBitVector<ElementSize> *BitVector = nullptr;
-
-    // Current element inside of bitmap.
+    // Iterators to the current element and the end of the bitvector. These are
+    // only valid when BitPos >= 0.
     ElementListConstIter Iter;
-
-    // Current bit number inside of our bitmap.
-    unsigned BitNumber;
-
-    // Current word number inside of our element.
-    unsigned WordNumber;
-
-    // Current bits from the element.
-    typename SparseBitVectorElement<ElementSize>::BitWord Bits;
-
-    // Move our iterator to the first non-zero bit in the bitmap.
-    void AdvanceToFirstNonZero() {
-      if (AtEnd)
-        return;
-      if (BitVector->Elements.empty()) {
-        AtEnd = true;
-        return;
-      }
-      Iter = BitVector->Elements.begin();
-      BitNumber = Iter->index() * ElementSize;
-      unsigned BitPos = Iter->find_first();
-      BitNumber += BitPos;
-      WordNumber = (BitNumber % ElementSize) / BITWORD_SIZE;
-      Bits = Iter->word(WordNumber);
-      Bits >>= BitPos % BITWORD_SIZE;
-    }
-
-    // Move our iterator to the next non-zero bit.
-    void AdvanceToNextNonZero() {
-      if (AtEnd)
-        return;
-
-      while (Bits && !(Bits & 1)) {
-        Bits >>= 1;
-        BitNumber += 1;
-      }
-
-      // See if we ran out of Bits in this word.
-      if (!Bits) {
-        int NextSetBitNumber = Iter->find_next(BitNumber % ElementSize) ;
-        // If we ran out of set bits in this element, move to next element.
-        if (NextSetBitNumber == -1 || (BitNumber % ElementSize == 0)) {
-          ++Iter;
-          WordNumber = 0;
-
-          // We may run out of elements in the bitmap.
-          if (Iter == BitVector->Elements.end()) {
-            AtEnd = true;
-            return;
-          }
-          // Set up for next non-zero word in bitmap.
-          BitNumber = Iter->index() * ElementSize;
-          NextSetBitNumber = Iter->find_first();
-          BitNumber += NextSetBitNumber;
-          WordNumber = (BitNumber % ElementSize) / BITWORD_SIZE;
-          Bits = Iter->word(WordNumber);
-          Bits >>= NextSetBitNumber % BITWORD_SIZE;
-        } else {
-          WordNumber = (NextSetBitNumber % ElementSize) / BITWORD_SIZE;
-          Bits = Iter->word(WordNumber);
-          Bits >>= NextSetBitNumber % BITWORD_SIZE;
-          BitNumber = Iter->index() * ElementSize;
-          BitNumber += NextSetBitNumber;
-        }
-      }
-    }
+    ElementListConstIter End;
 
   public:
     SparseBitVectorIterator() = default;
 
-    SparseBitVectorIterator(const SparseBitVector<ElementSize> *RHS,
-                            bool end = false):BitVector(RHS) {
-      Iter = BitVector->Elements.begin();
-      BitNumber = 0;
-      Bits = 0;
-      WordNumber = ~0;
-      AtEnd = end;
-      AdvanceToFirstNonZero();
+    SparseBitVectorIterator(const ElementList &Elements) {
+      if (Elements.empty())
+        return;
+      Iter = Elements.begin();
+      End = Elements.end();
+      BitPos = Iter->find_first();
     }
 
     // Preincrement.
     inline SparseBitVectorIterator& operator++() {
-      ++BitNumber;
-      Bits >>= 1;
-      AdvanceToNextNonZero();
+      if (Iter->find_next(BitPos) && ++Iter != End)
+        BitPos = Iter->find_first();
       return *this;
     }
 
@@ -421,16 +355,12 @@ class SparseBitVector {
 
     // Return the current set bit number.
     unsigned operator*() const {
-      return BitNumber;
+      assert(BitPos != ~0U);
+      return Iter->index() * ElementSize + BitPos;
     }
 
     bool operator==(const SparseBitVectorIterator &RHS) const {
-      // If they are both at the end, ignore the rest of the fields.
-      if (AtEnd && RHS.AtEnd)
-        return true;
-      // Otherwise they are the same if they have the same bit number and
-      // bitmap.
-      return AtEnd == RHS.AtEnd && RHS.BitNumber == BitNumber;
+      return BitPos == RHS.BitPos;
     }
 
     bool operator!=(const SparseBitVectorIterator &RHS) const {
@@ -807,13 +737,9 @@ public:
     return BitCount;
   }
 
-  iterator begin() const {
-    return iterator(this);
-  }
+  iterator begin() const { return iterator(Elements); }
 
-  iterator end() const {
-    return iterator(this, true);
-  }
+  iterator end() const { return iterator(); }
 };
 
 // Convenience functions to allow Or and And without dereferencing in the user
