@@ -1,0 +1,47 @@
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mi>&#x0393;</mi>
+    <mfenced>
+      <mrow>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mo>=</mo>
+    <msup>
+      <mfenced>
+        <mrow>
+          <mfrac>
+            <mrow>
+              <mi>z</mi>
+              <mo>+</mo>
+              <mi>g</mi>
+              <mo>&#x2212;</mo>
+              <mn>0.5</mn>
+            </mrow>
+            <mi>e</mi>
+          </mfrac>
+        </mrow>
+      </mfenced>
+      <mrow>
+        <mi>z</mi>
+        <mo>&#x2212;</mo>
+        <mn>0.5</mn>
+      </mrow>
+    </msup>
+    <msub>
+      <mi>L</mi>
+      <mrow>
+        <mi>g</mi>
+        <mo>,</mo>
+        <mi>e</mi>
+      </mrow>
+    </msub>
+    <mfenced>
+      <mrow>
+        <mi>z</mi>
+      </mrow>
+    </mfenced>
+    <mo>;</mo>
+  </mrow>
+</math>
+

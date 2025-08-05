@@ -1,0 +1,248 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Lanczos Smoothing Derivatives</title>
+<link rel="stylesheet" href="../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../quadrature.html" title="Chapter 14. Quadrature and Differentiation">
+<link rel="prev" href="autodiff.html" title="Automatic Differentiation">
+<link rel="next" href="../filters.html" title="Chapter 15. Filters">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="autodiff.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../quadrature.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../filters.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h2 class="title" style="clear: both">
+<a name="math_toolkit.diff0"></a><a class="link" href="diff0.html" title="Lanczos Smoothing Derivatives">Lanczos Smoothing Derivatives</a>
+</h2></div></div></div>
+<h4>
+<a name="math_toolkit.diff0.h0"></a>
+      <span class="phrase"><a name="math_toolkit.diff0.synopsis"></a></span><a class="link" href="diff0.html#math_toolkit.diff0.synopsis">Synopsis</a>
+    </h4>
+<pre class="programlisting"><span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">differentiation</span><span class="special">/</span><span class="identifier">lanczos_smoothing</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+
+<span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">differentiation</span> <span class="special">{</span>
+
+    <span class="keyword">template</span> <span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">Real</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">order</span><span class="special">=</span><span class="number">1</span><span class="special">&gt;</span>
+    <span class="keyword">class</span> <span class="identifier">discrete_lanczos_derivative</span> <span class="special">{</span>
+    <span class="keyword">public</span><span class="special">:</span>
+        <span class="identifier">discrete_lanczos_derivative</span><span class="special">(</span><span class="identifier">Real</span> <span class="identifier">spacing</span><span class="special">,</span>
+                                    <span class="identifier">size_t</span> <span class="identifier">n</span> <span class="special">=</span> <span class="number">18</span><span class="special">,</span>
+                                    <span class="identifier">size_t</span> <span class="identifier">approximation_order</span> <span class="special">=</span> <span class="number">3</span><span class="special">);</span>
+
+        <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RandomAccessContainer</span><span class="special">&gt;</span>
+        <span class="identifier">Real</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">RandomAccessContainer</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">size_t</span> <span class="identifier">i</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+        <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RandomAccessContainer</span><span class="special">&gt;</span>
+        <span class="keyword">void</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">RandomAccessContainer</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">v</span><span class="special">,</span> <span class="identifier">RandomAccessContainer</span> <span class="special">&amp;</span> <span class="identifier">dvdt</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+        <span class="keyword">template</span><span class="special">&lt;</span><span class="keyword">class</span> <span class="identifier">RandomAccessContainer</span><span class="special">&gt;</span>
+        <span class="identifier">RandomAccessContainer</span> <span class="keyword">operator</span><span class="special">()(</span><span class="identifier">RandomAccessContainer</span> <span class="keyword">const</span> <span class="special">&amp;</span> <span class="identifier">v</span><span class="special">)</span> <span class="keyword">const</span><span class="special">;</span>
+
+        <span class="identifier">Real</span> <span class="identifier">get_spacing</span><span class="special">()</span> <span class="keyword">const</span><span class="special">;</span>
+    <span class="special">};</span>
+
+<span class="special">}</span> <span class="comment">// namespaces</span>
+</pre>
+<h4>
+<a name="math_toolkit.diff0.h1"></a>
+      <span class="phrase"><a name="math_toolkit.diff0.description"></a></span><a class="link" href="diff0.html#math_toolkit.diff0.description">Description</a>
+    </h4>
+<p>
+      The <code class="computeroutput"><span class="identifier">discrete_lanczos_derivative</span></code>
+      class calculates a finite-difference approximation to the derivative of a noisy
+      sequence of equally-spaced values <span class="emphasis"><em>v</em></span>. A basic usage is
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+<span class="comment">// fill v with noisy data.</span>
+<span class="keyword">double</span> <span class="identifier">spacing</span> <span class="special">=</span> <span class="number">0.001</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">::</span><span class="identifier">differentiation</span><span class="special">::</span><span class="identifier">discrete_lanczos_derivative</span><span class="special">;</span>
+<span class="keyword">auto</span> <span class="identifier">lanczos</span> <span class="special">=</span> <span class="identifier">discrete_lanczos_derivative</span><span class="special">(</span><span class="identifier">spacing</span><span class="special">);</span>
+<span class="comment">// Compute dvdt at index 30:</span>
+<span class="keyword">double</span> <span class="identifier">dvdt30</span> <span class="special">=</span> <span class="identifier">lanczos</span><span class="special">(</span><span class="identifier">v</span><span class="special">,</span> <span class="number">30</span><span class="special">);</span>
+<span class="comment">// Compute derivative of entire vector:</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">dvdt</span> <span class="special">=</span> <span class="identifier">lanczos</span><span class="special">(</span><span class="identifier">v</span><span class="special">);</span>
+</pre>
+<p>
+      Noise-suppressing second derivatives can also be computed. The syntax is as
+      follows:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+<span class="comment">// fill v with noisy data.</span>
+<span class="keyword">auto</span> <span class="identifier">lanczos</span> <span class="special">=</span> <span class="identifier">lanczos_derivative</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">,</span> <span class="number">2</span><span class="special">&gt;(</span><span class="identifier">spacing</span><span class="special">);</span>
+<span class="comment">// evaluate second derivative at a point:</span>
+<span class="keyword">double</span> <span class="identifier">d2vdt2</span> <span class="special">=</span> <span class="identifier">lanczos</span><span class="special">(</span><span class="identifier">v</span><span class="special">,</span> <span class="number">18</span><span class="special">);</span>
+<span class="comment">// evaluate second derivative of entire vector:</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">d2vdt2</span> <span class="special">=</span> <span class="identifier">lanczos</span><span class="special">(</span><span class="identifier">v</span><span class="special">);</span>
+</pre>
+<p>
+      For memory conscious programmers, you can reuse the memory space for the derivative
+      as follows:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">dvdt</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+<span class="comment">// . . . define spacing, create and instance of discrete_lanczos_derivative</span>
+
+<span class="comment">// populate dvdt, perhaps in a loop:</span>
+<span class="identifier">lanczos</span><span class="special">(</span><span class="identifier">v</span><span class="special">,</span> <span class="identifier">dvdt</span><span class="special">);</span>
+</pre>
+<p>
+      If the data has variance σ<sup>2</sup>, then the variance of the computed derivative
+      is roughly σ<sup>2</sup><span class="emphasis"><em>p</em></span><sup>3</sup> <span class="emphasis"><em>n</em></span><sup>-3</sup> Δ
+      <span class="emphasis"><em>t</em></span><sup>-2</sup>, i.e., it increases cubically with the approximation
+      order <span class="emphasis"><em>p</em></span>, linearly with the data variance, and decreases
+      at the cube of the filter length <span class="emphasis"><em>n</em></span>. In addition, we must
+      not forget the discretization error which is <span class="emphasis"><em>O</em></span>(Δ
+      <span class="emphasis"><em>t</em></span><sup><span class="emphasis"><em>p</em></span></sup>). You can play around with the
+      approximation order <span class="emphasis"><em>p</em></span> and the filter length <span class="emphasis"><em>n</em></span>:
+    </p>
+<pre class="programlisting"><span class="identifier">size_t</span> <span class="identifier">n</span> <span class="special">=</span> <span class="number">12</span><span class="special">;</span>
+<span class="identifier">size_t</span> <span class="identifier">p</span> <span class="special">=</span> <span class="number">2</span><span class="special">;</span>
+<span class="keyword">auto</span> <span class="identifier">lanczos</span> <span class="special">=</span> <span class="identifier">lanczos_derivative</span><span class="special">(</span><span class="identifier">spacing</span><span class="special">,</span> <span class="identifier">n</span><span class="special">,</span> <span class="identifier">p</span><span class="special">);</span>
+<span class="keyword">double</span> <span class="identifier">dvdt</span> <span class="special">=</span> <span class="identifier">lanczos</span><span class="special">(</span><span class="identifier">v</span><span class="special">,</span> <span class="identifier">i</span><span class="special">);</span>
+</pre>
+<p>
+      If <span class="emphasis"><em>p=2n</em></span>, then the discrete Lanczos derivative is not smoothing:
+      It reduces to the standard <span class="emphasis"><em>2n+1</em></span>-point finite-difference
+      formula. For <span class="emphasis"><em>p&gt;2n</em></span>, an assertion is hit as the filter
+      is undefined.
+    </p>
+<p>
+      In our tests with AWGN, we have found the error decreases monotonically with
+      <span class="emphasis"><em>n</em></span>, as is expected from the theory discussed above. So
+      the choice of <span class="emphasis"><em>n</em></span> is simple: As high as possible given your
+      speed requirements (larger <span class="emphasis"><em>n</em></span> implies a longer filter and
+      hence more compute), balanced against the danger of overfitting and averaging
+      over non-stationarity.
+    </p>
+<p>
+      The choice of approximation order <span class="emphasis"><em>p</em></span> for a given <span class="emphasis"><em>n</em></span>
+      is more difficult. If your signal is believed to be a polynomial, it does not
+      make sense to set <span class="emphasis"><em>p</em></span> to larger than the polynomial degree-
+      though it may be sensible to take <span class="emphasis"><em>p</em></span> less than this.
+    </p>
+<p>
+      For a sinusoidal signal contaminated with AWGN, we ran a few tests showing
+      that for SNR = 1, p = n/8 gave the best results, for SNR = 10, p = n/7 was
+      the best, and for SNR = 100, p = n/6 was the most reasonable choice. For SNR
+      = 0.1, the method appears to be useless. The user is urged to use these results
+      with caution: they have no theoretical backing and are extrapolated from a
+      single case.
+    </p>
+<p>
+      The filters are (regrettably) computed at runtime-the vast number of combinations
+      of approximation order and filter length makes the number of filters that must
+      be stored excessive for compile-time data. The constructor call computes the
+      filters. Since each filter has length <span class="emphasis"><em>2n+1</em></span> and there are
+      <span class="emphasis"><em>n</em></span> filters, whose element each consist of <span class="emphasis"><em>p</em></span>
+      summands, the complexity of the constructor call is O(<span class="emphasis"><em>n</em></span><sup>2</sup><span class="emphasis"><em>p</em></span>).
+      This is not cheap-though for most cases small <span class="emphasis"><em>p</em></span> and <span class="emphasis"><em>n</em></span>
+      not too large (&lt; 20) is desired. However, for concreteness, on the author's
+      2.7GHz Intel laptop CPU, the <span class="emphasis"><em>n=16</em></span>, <span class="emphasis"><em>p=3</em></span>
+      filter takes 9 microseconds to compute. This is far from negligible, and as
+      such the filters may be used with multiple data, and even shared between threads:
+    </p>
+<pre class="programlisting"><span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v1</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">v2</span><span class="special">(</span><span class="number">500</span><span class="special">);</span>
+<span class="comment">// fill v1, v2 with noisy data.</span>
+<span class="keyword">auto</span> <span class="identifier">lanczos</span> <span class="special">=</span> <span class="identifier">lanczos_derivative</span><span class="special">(</span><span class="identifier">spacing</span><span class="special">);</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">dv1dt</span> <span class="special">=</span> <span class="identifier">lanczos</span><span class="special">(</span><span class="identifier">v1</span><span class="special">);</span> <span class="comment">// threadsafe</span>
+<span class="identifier">std</span><span class="special">::</span><span class="identifier">vector</span><span class="special">&lt;</span><span class="keyword">double</span><span class="special">&gt;</span> <span class="identifier">dv2dt</span> <span class="special">=</span> <span class="identifier">lanczos</span><span class="special">(</span><span class="identifier">v2</span><span class="special">);</span> <span class="comment">// threadsafe</span>
+<span class="comment">// need to use a different spacing?</span>
+<span class="identifier">lanczos</span><span class="special">.</span><span class="identifier">reset_spacing</span><span class="special">(</span><span class="number">0.02</span><span class="special">);</span> <span class="comment">// not threadsafe</span>
+</pre>
+<p>
+      The implementation follows <a href="https://doi.org/10.1080/00207160.2012.666348" target="_top">McDevitt,
+      2012</a>, who vastly expanded the ideas of Lanczos to create a very general
+      framework for numerically differentiating noisy equispaced data.
+    </p>
+<h4>
+<a name="math_toolkit.diff0.h2"></a>
+      <span class="phrase"><a name="math_toolkit.diff0.example"></a></span><a class="link" href="diff0.html#math_toolkit.diff0.example">Example</a>
+    </h4>
+<p>
+      We have extracted some data from the <a href="https://www.gw-openscience.org/data/" target="_top">LIGO
+      signal</a> and differentiated it using the (<span class="emphasis"><em>n</em></span>, <span class="emphasis"><em>p</em></span>)
+      = (60, 4) Lanczos smoothing derivative, as well as using the (<span class="emphasis"><em>n</em></span>,
+      <span class="emphasis"><em>p</em></span>) = (4, 8) (nonsmoothing) derivative.
+    </p>
+<div class="blockquote"><blockquote class="blockquote"><p>
+        <span class="inlinemediaobject"><img src="../../graphs/ligo_derivative.svg" align="middle"></span>
+
+      </p></blockquote></div>
+<p>
+      The original data is in orange, the smoothing derivative in blue, and the non-smoothing
+      standard finite difference formula is in gray. (Each time series has been rescaled
+      to fit in the same graph.) We can see that the smoothing derivative tracks
+      the increase and decrease in the trend well, whereas the standard finite difference
+      formula produces nonsense and amplifies noise.
+    </p>
+<h4>
+<a name="math_toolkit.diff0.h3"></a>
+      <span class="phrase"><a name="math_toolkit.diff0.caveats"></a></span><a class="link" href="diff0.html#math_toolkit.diff0.caveats">Caveats</a>
+    </h4>
+<p>
+      The computation of the filters is ill-conditioned for large <span class="emphasis"><em>p</em></span>.
+      In order to mitigate this problem, we have computed the filters in higher precision
+      and cast the results to the desired type. However, this simply pushes the problem
+      to larger <span class="emphasis"><em>p</em></span>. In practice, this is not a problem, as large
+      <span class="emphasis"><em>p</em></span> corresponds to less powerful denoising, but keep it
+      in mind.
+    </p>
+<p>
+      In addition, the <code class="computeroutput"><span class="special">-</span><span class="identifier">ffast</span><span class="special">-</span><span class="identifier">math</span></code> flag
+      has a very large effect on the speed of these functions. In our benchmarks,
+      they were 50% faster with the flag enabled, which is much larger than the usual
+      performance increases we see by turning on this flag. Hence, if the default
+      performance is not sufficient, this flag is available, though it comes with
+      its own problems.
+    </p>
+<p>
+      This requires C++17 <code class="computeroutput"><span class="keyword">if</span> <span class="keyword">constexpr</span></code>.
+    </p>
+<h4>
+<a name="math_toolkit.diff0.h4"></a>
+      <span class="phrase"><a name="math_toolkit.diff0.references"></a></span><a class="link" href="diff0.html#math_toolkit.diff0.references">References</a>
+    </h4>
+<div class="itemizedlist"><ul class="itemizedlist" style="list-style-type: disc; ">
+<li class="listitem">
+          Corless, Robert M., and Nicolas Fillion. <span class="emphasis"><em>A graduate introduction
+          to numerical methods.</em></span> AMC 10 (2013): 12.
+        </li>
+<li class="listitem">
+          Lanczos, Cornelius. <span class="emphasis"><em>Applied analysis.</em></span> Courier Corporation,
+          1988.
+        </li>
+<li class="listitem">
+          Timothy J. McDevitt (2012): <span class="emphasis"><em>Discrete Lanczos derivatives of noisy
+          data</em></span>, International Journal of Computer Mathematics, 89:7, 916-931
+        </li>
+</ul></div>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="autodiff.html"><img src="../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../quadrature.html"><img src="../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../index.html"><img src="../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="../filters.html"><img src="../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

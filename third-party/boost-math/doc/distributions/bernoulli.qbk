@@ -1,0 +1,121 @@
+[section:bernoulli_dist Bernoulli Distribution]
+
+``#include <boost/math/distributions/bernoulli.hpp>``
+
+   namespace boost{ namespace math{
+    template <class RealType = double,
+              class ``__Policy``   = ``__policy_class`` >
+    class bernoulli_distribution;
+
+    typedef bernoulli_distribution<> bernoulli;
+
+    template <class RealType, class ``__Policy``>
+    class bernoulli_distribution
+    {
+    public:
+       typedef RealType  value_type;
+       typedef Policy    policy_type;
+
+       BOOST_MATH_GPU_ENABLED bernoulli_distribution(RealType p); // Constructor.
+       // Accessor function.
+       BOOST_MATH_GPU_ENABLED RealType success_fraction() const
+       // Probability of success (as a fraction).
+    };
+   }} // namespaces
+
+The Bernoulli distribution is a discrete distribution of the outcome
+of a single trial with only two results, 0 (failure) or 1 (success),
+with a probability of success p.
+
+The Bernoulli distribution is the simplest building block
+on which other discrete distributions of
+sequences of independent Bernoulli trials can be based.
+
+The Bernoulli is the binomial distribution (k = 1, p) with only one trial.
+
+[@http://en.wikipedia.org/wiki/Probability_density_function probability density function pdf]
+[expression f(0) = 1 - p, f(1) = p]
+
+[@http://en.wikipedia.org/wiki/Cumulative_Distribution_Function Cumulative distribution function]
+[expression D(k) = if (k == 0) 1 - p else 1]
+
+The following graph illustrates how the
+[@http://en.wikipedia.org/wiki/Probability_density_function probability density function pdf]
+varies with the outcome of the single trial:
+
+[graph bernoulli_pdf]
+
+and the [@http://en.wikipedia.org/wiki/Cumulative_Distribution_Function Cumulative distribution function]
+
+[graph bernoulli_cdf]
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED bernoulli_distribution(RealType p);
+
+Constructs a [@http://en.wikipedia.org/wiki/bernoulli_distribution
+bernoulli distribution] with success_fraction /p/.
+
+   BOOST_MATH_GPU_ENABLED RealType success_fraction() const
+
+Returns the /success_fraction/ parameter of this distribution.
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions]
+that are generic to all distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is 0 and 1,
+and the useful supported range is only 0 or 1.
+
+Outside this range, functions are undefined, or may throw domain_error exception
+and make an error message available.
+
+[h4 Accuracy]
+
+The Bernoulli distribution is implemented with simple arithmetic operators
+and so should have errors within an epsilon or two.
+
+[h4 Implementation]
+
+In the following table /p/ is the probability of success and /q = 1-p/.
+/k/ is the random variate, either 0 or 1.
+
+[note The Bernoulli distribution is implemented here as a /strict discrete/ distribution.
+If a generalised version, allowing k to be any real, is required then
+the binomial distribution with a single trial should be used, for example:
+
+`binomial_distribution(1, 0.25)`
+]
+
+[table
+[[Function][Implementation Notes]]
+[[Supported range][{0, 1}]]
+[[pdf][Using the relation: pdf = 1 - p for k = 0, else p ]]
+[[cdf][Using the relation: cdf = 1 - p for k = 0, else 1]]
+[[cdf complement][q = 1 - p]]
+[[quantile][if x <= (1-p) 0 else 1]]
+[[quantile from the complement][if x <= (1-p) 1 else 0]]
+[[mean][p]]
+[[variance][p * (1 - p)]]
+[[mode][if (p < 0.5) 0 else 1]]
+[[skewness][(1 - 2 * p) / sqrt(p * q)]]
+[[kurtosis][6 * p * p - 6 * p +1/ p * q]]
+[[kurtosis excess][kurtosis -3]]
+]
+
+[h4 References]
+* [@http://en.wikipedia.org/wiki/Bernoulli_distribution Wikipedia Bernoulli distribution]
+* [@http://mathworld.wolfram.com/BernoulliDistribution.html Weisstein, Eric W. "Bernoulli Distribution." From MathWorld--A Wolfram Web Resource.]
+
+[endsect] [/section:bernoulli_dist bernoulli]
+
+[/
+  Copyright 2006 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+

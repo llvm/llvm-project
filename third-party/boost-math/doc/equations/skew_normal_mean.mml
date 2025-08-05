@@ -1,0 +1,53 @@
+<?xml version='1.0'?>
+<!DOCTYPE html PUBLIC '-//W3C//DTD XHTML 1.1 plus MathML 2.0//EN'
+  'http://www.w3.org/TR/MathML2/dtd/xhtml-math11-f.dtd'
+  [<!ENTITY mathml 'http://www.w3.org/1998/Math/MathML'>]>
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head><title>skew_normal_mean</title>
+<!-- MathML created with MathCast Equation Editor version 0.9 -->
+</head>
+<body>
+<math xmlns="http://www.w3.org/1998/Math/MathML" display="block">
+  <mrow>
+    <mi>&#x3BE;</mi>
+    <mo>+</mo>
+    <mi>&#x3C9;</mi>
+    <mi>&#x3B4;</mi>
+    <msqrt>
+      <mfenced>
+        <mrow>
+          <mfrac>
+            <mn>2</mn>
+            <mi>&#x3C0;</mi>
+          </mfrac>
+        </mrow>
+      </mfenced>
+    </msqrt>
+    <mspace width="1em"/>
+    <mi>w</mi>
+    <mi>h</mi>
+    <mi>e</mi>
+    <mi>r</mi>
+    <mi>e</mi>
+    <mspace width="1em"/>
+    <mi>&#x3B4;</mi>
+    <mo>=</mo>
+    <mfrac>
+      <mi>&#x3B1;</mi>
+      <msqrt>
+        <mfenced>
+          <mrow>
+            <mn>1</mn>
+            <mo>+</mo>
+            <msup>
+              <mi>&#x3B1;</mi>
+              <mn>2</mn>
+            </msup>
+          </mrow>
+        </mfenced>
+      </msqrt>
+    </mfrac>
+  </mrow>
+</math>
+</body>
+</html>

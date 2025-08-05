@@ -1,0 +1,178 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Estimating how large a sample size would have to become in order to give a significant Students-t test result with a single sample test</title>
+<link rel="stylesheet" href="../../../../math.css" type="text/css">
+<meta name="generator" content="DocBook XSL Stylesheets V1.79.1">
+<link rel="home" href="../../../../index.html" title="Math Toolkit 4.2.1">
+<link rel="up" href="../st_eg.html" title="Student's t Distribution Examples">
+<link rel="prev" href="tut_mean_test.html" title='Testing a sample mean for difference from a "true" mean'>
+<link rel="next" href="two_sample_students_t.html" title="Comparing the means of two samples with the Students-t test">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<table cellpadding="2" width="100%"><tr>
+<td valign="top"><img alt="Boost C++ Libraries" width="277" height="86" src="../../../../../../../../boost.png"></td>
+<td align="center"><a href="../../../../../../../../index.html">Home</a></td>
+<td align="center"><a href="../../../../../../../../libs/libraries.htm">Libraries</a></td>
+<td align="center"><a href="http://www.boost.org/users/people.html">People</a></td>
+<td align="center"><a href="http://www.boost.org/users/faq.html">FAQ</a></td>
+<td align="center"><a href="../../../../../../../../more/index.htm">More</a></td>
+</tr></table>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tut_mean_test.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../st_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="two_sample_students_t.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+<div class="section">
+<div class="titlepage"><div><div><h5 class="title">
+<a name="math_toolkit.stat_tut.weg.st_eg.tut_mean_size"></a><a class="link" href="tut_mean_size.html" title="Estimating how large a sample size would have to become in order to give a significant Students-t test result with a single sample test">Estimating
+          how large a sample size would have to become in order to give a significant
+          Students-t test result with a single sample test</a>
+</h5></div></div></div>
+<p>
+            Imagine you have conducted a Students-t test on a single sample in order
+            to check for systematic errors in your measurements. Imagine that the
+            result is borderline. At this point one might go off and collect more
+            data, but it might be prudent to first ask the question "How much
+            more?". The parameter estimators of the students_t_distribution
+            class can provide this information.
+          </p>
+<p>
+            This section is based on the example code in <a href="../../../../../../example/students_t_single_sample.cpp" target="_top">students_t_single_sample.cpp</a>
+            and we begin by defining a procedure that will print out a table of estimated
+            sample sizes for various confidence levels:
+          </p>
+<pre class="programlisting"><span class="comment">// Needed includes:</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">boost</span><span class="special">/</span><span class="identifier">math</span><span class="special">/</span><span class="identifier">distributions</span><span class="special">/</span><span class="identifier">students_t</span><span class="special">.</span><span class="identifier">hpp</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iostream</span><span class="special">&gt;</span>
+<span class="preprocessor">#include</span> <span class="special">&lt;</span><span class="identifier">iomanip</span><span class="special">&gt;</span>
+<span class="comment">// Bring everything into global namespace for ease of use:</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">boost</span><span class="special">::</span><span class="identifier">math</span><span class="special">;</span>
+<span class="keyword">using</span> <span class="keyword">namespace</span> <span class="identifier">std</span><span class="special">;</span>
+
+<span class="keyword">void</span> <span class="identifier">single_sample_find_df</span><span class="special">(</span>
+   <span class="keyword">double</span> <span class="identifier">M</span><span class="special">,</span>          <span class="comment">// M = true mean.</span>
+   <span class="keyword">double</span> <span class="identifier">Sm</span><span class="special">,</span>         <span class="comment">// Sm = Sample Mean.</span>
+   <span class="keyword">double</span> <span class="identifier">Sd</span><span class="special">)</span>         <span class="comment">// Sd = Sample Standard Deviation.</span>
+<span class="special">{</span>
+</pre>
+<p>
+            Next we define a table of significance levels:
+          </p>
+<pre class="programlisting"><span class="keyword">double</span> <span class="identifier">alpha</span><span class="special">[]</span> <span class="special">=</span> <span class="special">{</span> <span class="number">0.5</span><span class="special">,</span> <span class="number">0.25</span><span class="special">,</span> <span class="number">0.1</span><span class="special">,</span> <span class="number">0.05</span><span class="special">,</span> <span class="number">0.01</span><span class="special">,</span> <span class="number">0.001</span><span class="special">,</span> <span class="number">0.0001</span><span class="special">,</span> <span class="number">0.00001</span> <span class="special">};</span>
+</pre>
+<p>
+            Printing out the table of sample sizes required for various confidence
+            levels begins with the table header:
+          </p>
+<pre class="programlisting"><span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="string">"\n\n"</span>
+        <span class="string">"_______________________________________________________________\n"</span>
+        <span class="string">"Confidence       Estimated          Estimated\n"</span>
+        <span class="string">" Value (%)      Sample Size        Sample Size\n"</span>
+        <span class="string">"              (one sided test)    (two sided test)\n"</span>
+        <span class="string">"_______________________________________________________________\n"</span><span class="special">;</span>
+</pre>
+<p>
+            And now the important part: the sample sizes required. Class <code class="computeroutput"><span class="identifier">students_t_distribution</span></code> has a static
+            member function <code class="computeroutput"><span class="identifier">find_degrees_of_freedom</span></code>
+            that will calculate how large a sample size needs to be in order to give
+            a definitive result.
+          </p>
+<p>
+            The first argument is the difference between the means that you wish
+            to be able to detect, here it's the absolute value of the difference
+            between the sample mean, and the true mean.
+          </p>
+<p>
+            Then come two probability values: alpha and beta. Alpha is the maximum
+            acceptable risk of rejecting the null-hypothesis when it is in fact true.
+            Beta is the maximum acceptable risk of failing to reject the null-hypothesis
+            when in fact it is false. Also note that for a two-sided test, alpha
+            must be divided by 2.
+          </p>
+<p>
+            The final parameter of the function is the standard deviation of the
+            sample.
+          </p>
+<p>
+            In this example, we assume that alpha and beta are the same, and call
+            <code class="computeroutput"><span class="identifier">find_degrees_of_freedom</span></code>
+            twice: once with alpha for a one-sided test, and once with alpha/2 for
+            a two-sided test.
+          </p>
+<pre class="programlisting">   <span class="keyword">for</span><span class="special">(</span><span class="keyword">unsigned</span> <span class="identifier">i</span> <span class="special">=</span> <span class="number">0</span><span class="special">;</span> <span class="identifier">i</span> <span class="special">&lt;</span> <span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">alpha</span><span class="special">)/</span><span class="keyword">sizeof</span><span class="special">(</span><span class="identifier">alpha</span><span class="special">[</span><span class="number">0</span><span class="special">]);</span> <span class="special">++</span><span class="identifier">i</span><span class="special">)</span>
+   <span class="special">{</span>
+      <span class="comment">// Confidence value:</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">3</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">10</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="number">100</span> <span class="special">*</span> <span class="special">(</span><span class="number">1</span><span class="special">-</span><span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]);</span>
+      <span class="comment">// calculate df for single sided test:</span>
+      <span class="keyword">double</span> <span class="identifier">df</span> <span class="special">=</span> <span class="identifier">students_t</span><span class="special">::</span><span class="identifier">find_degrees_of_freedom</span><span class="special">(</span>
+         <span class="identifier">fabs</span><span class="special">(</span><span class="identifier">M</span> <span class="special">-</span> <span class="identifier">Sm</span><span class="special">),</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">],</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">],</span> <span class="identifier">Sd</span><span class="special">);</span>
+      <span class="comment">// convert to sample size:</span>
+      <span class="keyword">double</span> <span class="identifier">size</span> <span class="special">=</span> <span class="identifier">ceil</span><span class="special">(</span><span class="identifier">df</span><span class="special">)</span> <span class="special">+</span> <span class="number">1</span><span class="special">;</span>
+      <span class="comment">// Print size:</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">16</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">size</span><span class="special">;</span>
+      <span class="comment">// calculate df for two sided test:</span>
+      <span class="identifier">df</span> <span class="special">=</span> <span class="identifier">students_t</span><span class="special">::</span><span class="identifier">find_degrees_of_freedom</span><span class="special">(</span>
+         <span class="identifier">fabs</span><span class="special">(</span><span class="identifier">M</span> <span class="special">-</span> <span class="identifier">Sm</span><span class="special">),</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">]/</span><span class="number">2</span><span class="special">,</span> <span class="identifier">alpha</span><span class="special">[</span><span class="identifier">i</span><span class="special">],</span> <span class="identifier">Sd</span><span class="special">);</span>
+      <span class="comment">// convert to sample size:</span>
+      <span class="identifier">size</span> <span class="special">=</span> <span class="identifier">ceil</span><span class="special">(</span><span class="identifier">df</span><span class="special">)</span> <span class="special">+</span> <span class="number">1</span><span class="special">;</span>
+      <span class="comment">// Print size:</span>
+      <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">fixed</span> <span class="special">&lt;&lt;</span> <span class="identifier">setprecision</span><span class="special">(</span><span class="number">0</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">setw</span><span class="special">(</span><span class="number">16</span><span class="special">)</span> <span class="special">&lt;&lt;</span> <span class="identifier">right</span> <span class="special">&lt;&lt;</span> <span class="identifier">size</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+   <span class="special">}</span>
+   <span class="identifier">cout</span> <span class="special">&lt;&lt;</span> <span class="identifier">endl</span><span class="special">;</span>
+<span class="special">}</span>
+</pre>
+<p>
+            Let's now look at some sample output using data taken from <span class="emphasis"><em>P.K.Hou,
+            O. W. Lau &amp; M.C. Wong, Analyst (1983) vol. 108, p 64. and from Statistics
+            for Analytical Chemistry, 3rd ed. (1994), pp 54-55 J. C. Miller and J.
+            N. Miller, Ellis Horwood ISBN 0 13 0309907.</em></span> The values result
+            from the determination of mercury by cold-vapour atomic absorption.
+          </p>
+<p>
+            Only three measurements were made, and the Students-t test above gave
+            a borderline result, so this example will show us how many samples would
+            need to be collected:
+          </p>
+<pre class="programlisting">_____________________________________________________________
+Estimated sample sizes required for various confidence levels
+_____________________________________________________________
+
+True Mean                               =  38.90000
+Sample Mean                             =  37.80000
+Sample Standard Deviation               =  0.96437
+
+
+_______________________________________________________________
+Confidence       Estimated          Estimated
+ Value (%)      Sample Size        Sample Size
+              (one sided test)    (two sided test)
+_______________________________________________________________
+    75.000               3               4
+    90.000               7               9
+    95.000              11              13
+    99.000              20              22
+    99.900              35              37
+    99.990              50              53
+    99.999              66              68
+</pre>
+<p>
+            So in this case, many more measurements would have had to be made, for
+            example at the 95% level, 14 measurements in total for a two-sided test.
+          </p>
+</div>
+<div class="copyright-footer">Copyright © 2006-2021 Nikhar Agrawal, Anton Bikineev, Matthew Borland,
+      Paul A. Bristow, Marco Guazzone, Christopher Kormanyos, Hubert Holin, Bruno
+      Lalande, John Maddock, Evan Miller, Jeremy Murphy, Matthew Pulver, Johan Råde,
+      Gautam Sewani, Benjamin Sobotta, Nicholas Thompson, Thijs van den Berg, Daryle
+      Walker and Xiaogang Zhang<p>
+        Distributed under the Boost Software License, Version 1.0. (See accompanying
+        file LICENSE_1_0.txt or copy at <a href="http://www.boost.org/LICENSE_1_0.txt" target="_top">http://www.boost.org/LICENSE_1_0.txt</a>)
+      </p>
+</div>
+<hr>
+<div class="spirit-nav">
+<a accesskey="p" href="tut_mean_test.html"><img src="../../../../../../../../doc/src/images/prev.png" alt="Prev"></a><a accesskey="u" href="../st_eg.html"><img src="../../../../../../../../doc/src/images/up.png" alt="Up"></a><a accesskey="h" href="../../../../index.html"><img src="../../../../../../../../doc/src/images/home.png" alt="Home"></a><a accesskey="n" href="two_sample_students_t.html"><img src="../../../../../../../../doc/src/images/next.png" alt="Next"></a>
+</div>
+</body>
+</html>

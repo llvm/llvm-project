@@ -1,0 +1,123 @@
+[section:normal_dist Normal (Gaussian) Distribution]
+
+``#include <boost/math/distributions/normal.hpp>``
+
+   namespace boost{ namespace math{
+
+   template <class RealType = double,
+             class ``__Policy``   = ``__policy_class`` >
+   class normal_distribution;
+
+   typedef normal_distribution<> normal;
+
+   template <class RealType, class ``__Policy``>
+   class normal_distribution
+   {
+   public:
+      typedef RealType value_type;
+      typedef Policy   policy_type;
+      // Construct:
+      BOOST_MATH_GPU_ENABLED normal_distribution(RealType mean = 0, RealType sd = 1);
+      // Accessors:
+      BOOST_MATH_GPU_ENABLED RealType mean()const; // location.
+      BOOST_MATH_GPU_ENABLED RealType standard_deviation()const; // scale.
+      // Synonyms, provided to allow generic use of find_location and find_scale.
+      BOOST_MATH_GPU_ENABLED RealType location()const;
+      BOOST_MATH_GPU_ENABLED RealType scale()const;
+   };
+
+   }} // namespaces
+
+The normal distribution is probably the most well known statistical
+distribution: it is also known as the Gaussian Distribution.
+A normal distribution with mean zero and standard deviation one
+is known as the ['Standard Normal Distribution].
+
+Given mean [mu] and standard deviation [sigma] it has the PDF:
+
+[equation normal_ref1]
+
+The variation the PDF with its parameters is illustrated
+in the following graph:
+
+[graph normal_pdf]
+
+The cumulative distribution function is given by
+
+[equation normal_cdf]
+
+and illustrated by this graph
+
+[graph normal_cdf]
+
+
+[h4 Member Functions]
+
+   BOOST_MATH_GPU_ENABLED normal_distribution(RealType mean = 0, RealType sd = 1);
+
+Constructs a normal distribution with mean /mean/ and
+standard deviation /sd/.
+
+Requires /sd/ > 0, otherwise __domain_error is called.
+
+   BOOST_MATH_GPU_ENABLED RealType mean()const;
+   BOOST_MATH_GPU_ENABLED RealType location()const;
+
+both return the /mean/ of this distribution.
+
+   BOOST_MATH_GPU_ENABLED RealType standard_deviation()const;
+   BOOST_MATH_GPU_ENABLED RealType scale()const;
+
+both return the /standard deviation/ of this distribution.
+(Redundant location and scale function are provided to match other similar distributions,
+allowing the functions find_location and find_scale to be used generically).
+
+[h4 Non-member Accessors]
+
+All the [link math_toolkit.dist_ref.nmp usual non-member accessor functions] that are generic to all
+distributions are supported: __usual_accessors.
+For this distribution all non-member accessor functions are marked with `BOOST_MATH_GPU_ENABLED` and can
+be run on both host and device.
+
+The domain of the random variable is \[-[max_value], +[min_value]\].
+However, the pdf of +[infin] and -[infin] = 0 is also supported,
+and cdf at -[infin] = 0, cdf at +[infin] = 1,
+and complement cdf -[infin] = 1 and +[infin] = 0,
+if RealType permits.
+
+[h4 Accuracy]
+
+The normal distribution is implemented in terms of the
+[link math_toolkit.sf_erf.error_function error function],
+and as such should have very low error rates.
+
+[h4 Implementation]
+
+In the following table /m/ is the mean of the distribution,
+and /s/ is its standard deviation.
+
+[table
+[[Function][Implementation Notes]]
+[[pdf][Using the relation: pdf = e[super -(x-m)[super 2]\/(2s[super 2])] \/ (s * sqrt(2*pi)) ]]
+[[logpdf][log(pdf) = -log(s) - log(2*[pi])/2 - (x-mean)[super 2]/(2*s[super 2]) ]]
+[[cdf][Using the relation: p = 0.5 * __erfc(-(x-m)/(s*sqrt(2))) ]]
+[[cdf complement][Using the relation: q = 0.5 * __erfc((x-m)/(s*sqrt(2))) ]]
+[[quantile][Using the relation: x = m - s * sqrt(2) * __erfc_inv(2*p)]]
+[[quantile from the complement][Using the relation: x = m + s * sqrt(2) * __erfc_inv(2*p)]]
+[[mean and standard deviation][The same as `dist.mean()` and `dist.standard_deviation()`]]
+[[mode][The same as the mean.]]
+[[median][The same as the mean.]]
+[[skewness][0]]
+[[kurtosis][3]]
+[[kurtosis excess][0]]
+]
+
+[endsect] [/section:normal_dist Normal]
+
+[/ normal.qbk
+  Copyright 2006, 2007, 2012 John Maddock and Paul A. Bristow.
+  Distributed under the Boost Software License, Version 1.0.
+  (See accompanying file LICENSE_1_0.txt or copy at
+  http://www.boost.org/LICENSE_1_0.txt).
+]
+
