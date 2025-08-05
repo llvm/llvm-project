@@ -702,8 +702,8 @@ Fortran::lower::genCallOpAndResult(
     fir::FirOpBuilder *bldr = &converter.getFirOpBuilder();
     if (!isElemental)
       stmtCtx.attachCleanup([bldr, loc, expr, mustFinalizeResult]() {
-        bldr->create<hlfir::DestroyOp>(loc, expr,
-                                       /*finalize=*/mustFinalizeResult);
+        hlfir::DestroyOp::create(*bldr, loc, expr,
+                                 /*finalize=*/mustFinalizeResult);
       });
     return {LoweredResult{hlfir::EntityWithAttributes{expr}},
             mustFinalizeResult};
@@ -2244,8 +2244,9 @@ public:
           if (hlfir::AssociateOp associate =
                   preparedActual->associateIfArrayExpr(loc, builder)) {
             fir::FirOpBuilder *bldr = &builder;
-            callContext.stmtCtx.attachCleanup(
-                [=]() { bldr->create<hlfir::EndAssociateOp>(loc, associate); });
+            callContext.stmtCtx.attachCleanup([=]() {
+              hlfir::EndAssociateOp::create(*bldr, loc, associate);
+            });
           }
         }
       }
@@ -2314,7 +2315,7 @@ public:
     bool mustFinalizeExpr = impl().resultMayRequireFinalization(callContext);
     fir::FirOpBuilder *bldr = &builder;
     callContext.stmtCtx.attachCleanup([=]() {
-      bldr->create<hlfir::DestroyOp>(loc, elemental, mustFinalizeExpr);
+      hlfir::DestroyOp::create(*bldr, loc, elemental, mustFinalizeExpr);
     });
     return hlfir::EntityWithAttributes{elemental};
   }
@@ -2739,7 +2740,7 @@ genIntrinsicRef(const Fortran::evaluate::SpecificIntrinsic *intrinsic,
   if (result && mlir::isa<hlfir::ExprType>(result->getType())) {
     fir::FirOpBuilder *bldr = &callContext.getBuilder();
     callContext.stmtCtx.attachCleanup(
-        [=]() { bldr->create<hlfir::DestroyOp>(loc, *result); });
+        [=]() { hlfir::DestroyOp::create(*bldr, loc, *result); });
   }
   return result;
 }
