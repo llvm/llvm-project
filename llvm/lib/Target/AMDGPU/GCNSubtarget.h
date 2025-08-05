@@ -236,6 +236,7 @@ protected:
   bool Has64BitLiterals = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
+  bool HasTensorCvtLutInsts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
@@ -273,6 +274,7 @@ protected:
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
   bool HasAddSubU64Insts = false;
+  bool HasMadU32Inst = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
@@ -1040,6 +1042,9 @@ public:
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            const SchedRegion &Region) const override;
 
+  void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                 const SchedRegion &Region) const override;
+
   void mirFileLoaded(MachineFunction &MF) const override;
 
   unsigned getMaxNumUserSGPRs() const {
@@ -1407,6 +1412,8 @@ public:
 
   bool hasTanhInsts() const { return HasTanhInsts; }
 
+  bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
+
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
   bool hasMinimum3Maximum3PKF16() const {
@@ -1521,8 +1528,21 @@ public:
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
   bool hasAddSubU64Insts() const { return HasAddSubU64Insts; }
 
+  // \returns true if the target has V_MAD_U32 instruction.
+  bool hasMadU32Inst() const { return HasMadU32Inst; }
+
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
   bool hasVectorMulU64() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
+  // instructions.
+  bool hasMadU64U32NoCarry() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
+  bool hasIntMinMax64() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
+  bool hasAddMinMaxInsts() const { return GFX1250Insts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
   bool hasPkAddMinMaxInsts() const { return GFX1250Insts; }

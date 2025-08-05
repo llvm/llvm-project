@@ -47,15 +47,10 @@ public:
     EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.zero));
     EXPECT_FP_EQ(inf, func(in.inf, in.neg_zero));
     EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.neg_zero));
-
-    EXPECT_FP_EQ_ALL_ROUNDING(zero, func(InType(1.0f), InType(1.0f)));
-    EXPECT_FP_EQ_ALL_ROUNDING(zero, func(InType(2.0f), InType(2.0f)));
-    EXPECT_FP_EQ_ALL_ROUNDING(zero, func(InType(-1.0f), InType(-1.0f)));
-    EXPECT_FP_EQ_ALL_ROUNDING(InType(-1.0f), func(InType(3.0f), InType(4.0f)));
-    EXPECT_FP_EQ_ALL_ROUNDING(InType(0.125f),
-                              func(InType(3.125f), InType(3.0f)));
-    EXPECT_FP_EQ_ALL_ROUNDING(InType(-0.875f),
-                              func(InType(3.125f), InType(4.0f)));
+    EXPECT_FP_EQ(neg_inf, func(in.zero, in.inf));
+    EXPECT_FP_EQ(neg_inf, func(in.neg_zero, in.inf));
+    EXPECT_FP_EQ(inf, func(in.zero, in.neg_inf));
+    EXPECT_FP_EQ(inf, func(in.neg_zero, in.neg_inf));
   }
 
   void test_invalid_operations(SubFunc func) {

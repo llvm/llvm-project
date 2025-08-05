@@ -447,6 +447,10 @@ public:
     return create<cir::CmpOp>(loc, getBoolTy(), kind, lhs, rhs);
   }
 
+  mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
+    return createCompare(loc, cir::CmpOpKind::ne, operand, operand);
+  }
+
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
                           bool isShiftLeft) {
     return create<cir::ShiftOp>(loc, lhs.getType(), lhs, rhs, isShiftLeft);
