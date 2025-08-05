@@ -121,6 +121,25 @@ LogicalResult getVectorToLLVMAlignment(const LLVMTypeConverter &typeConverter,
   return success();
 }
 
+// Helper to resolve the alignment for vector load/store, gather and scatter
+// ops. First, this method will try to obtain the preferred alignment from the
+// load or store operation itself. If the store or load operation does not
+// contain any preferred alignment, then it will get alignment attribute through
+// the type or the backend.
+template <class LoadOrStoreOp>
+LogicalResult getVectorToLLVMAlignment(LoadOrStoreOp loadOrStoreOp,
+                                       const LLVMTypeConverter &typeConverter,
+                                       VectorType vectorType,
+                                       MemRefType memrefType, unsigned &align,
+                                       bool useVectorAlignment) {
+  if (auto alignment = loadOrStoreOp.getAlignment()) {
+    align = alignment.value_or(0);
+    return success();
+  }
+  return getVectorToLLVMAlignment(typeConverter, vectorType, memrefType,
+                                    align, useVectorAlignment);
+}
+
 // Check if the last stride is non-unit and has a valid memory space.
 static LogicalResult isMemRefTypeSupported(MemRefType memRefType,
                                            const LLVMTypeConverter &converter) {
@@ -247,8 +266,9 @@ public:
     MemRefType memRefTy = loadOrStoreOp.getMemRefType();
 
     // Resolve alignment.
-    unsigned align = loadOrStoreOp.getAlignment().value_or(0);
-    if (!align && failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
+    unsigned align;
+    if (failed(getVectorToLLVMAlignment(loadOrStoreOp,
+                                        *this->getTypeConverter(), vectorTy,
                                         memRefTy, align, useVectorAlignment)))
       return rewriter.notifyMatchFailure(loadOrStoreOp,
                                          "could not resolve alignment");
