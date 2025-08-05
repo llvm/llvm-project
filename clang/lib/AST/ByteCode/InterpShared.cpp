@@ -16,23 +16,23 @@ namespace interp {
 llvm::BitVector collectNonNullArgs(const FunctionDecl *F,
                                    ArrayRef<const Expr *> Args) {
   llvm::BitVector NonNullArgs;
-  if (!F)
-    return NonNullArgs;
 
   assert(F);
+  assert(F->hasAttr<NonNullAttr>());
   NonNullArgs.resize(Args.size());
 
   for (const auto *Attr : F->specific_attrs<NonNullAttr>()) {
     if (!Attr->args_size()) {
       NonNullArgs.set();
       break;
-    } else
-      for (auto Idx : Attr->args()) {
-        unsigned ASTIdx = Idx.getASTIndex();
-        if (ASTIdx >= Args.size())
-          continue;
-        NonNullArgs[ASTIdx] = true;
-      }
+    }
+
+    for (auto Idx : Attr->args()) {
+      unsigned ASTIdx = Idx.getASTIndex();
+      if (ASTIdx >= Args.size())
+        continue;
+      NonNullArgs[ASTIdx] = true;
+    }
   }
 
   return NonNullArgs;
