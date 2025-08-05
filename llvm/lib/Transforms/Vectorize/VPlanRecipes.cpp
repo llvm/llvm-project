@@ -1091,8 +1091,8 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
-  case VPInstruction::WidePtrAdd:
   case VPInstruction::WideIVStep:
+  case VPInstruction::WidePtrAdd:
   case VPInstruction::StepVector:
   case VPInstruction::ReductionStartVector:
     return false;
