@@ -313,18 +313,9 @@ Status MinidumpFileBuilder::AddModuleList() {
   // array of module structures.
   DataBufferHeap helper_data;
 
-  // Struct to hold module information.
-  struct ValidModuleInfo {
-    ModuleSP module;
-    std::string module_name;
-    uint64_t module_size;
-  };
-
   // Vector to store modules that pass validation.
-  std::vector<ValidModuleInfo> valid_modules;
+  std::vector<std::pair<ModuleSP, uint64_t>> valid_modules;
 
-  // Track the count of successfully processed modules and log errors.
-  uint32_t successful_modules_count = 0;
   for (size_t i = 0; i < modules_count; ++i) {
     ModuleSP mod = modules.GetModuleAtIndex(i);
     std::string module_name = mod->GetSpecificationDescription();
@@ -341,24 +332,25 @@ Status MinidumpFileBuilder::AddModuleList() {
           });
       continue;
     }
-    ++successful_modules_count;
-    valid_modules.push_back({mod, module_name, *maybe_mod_size});
+    valid_modules.emplace_back(mod, *maybe_mod_size);
   }
 
   size_t module_stream_size = sizeof(llvm::support::ulittle32_t) +
-                              successful_modules_count * minidump_module_size;
+                              valid_modules.size() * minidump_module_size;
 
   error = AddDirectory(StreamType::ModuleList, module_stream_size);
   if (error.Fail())
     return error;
 
-  m_data.AppendData(&successful_modules_count,
-                    sizeof(llvm::support::ulittle32_t));
+  // Setting the header with the number of modules.
+  llvm::support::ulittle32_t count =
+      static_cast<llvm::support::ulittle32_t>(valid_modules.size());
+  m_data.AppendData(&count, sizeof(llvm::support::ulittle32_t));
 
   for (const auto &valid_module : valid_modules) {
-    ModuleSP mod = valid_module.module;
-    std::string module_name = valid_module.module_name;
-    uint64_t mod_size = valid_module.module_size;
+    ModuleSP mod = valid_module.first;
+    uint64_t module_size = valid_module.second;
+    std::string module_name = mod->GetSpecificationDescription();
 
     llvm::support::ulittle32_t signature =
         static_cast<llvm::support::ulittle32_t>(
@@ -398,7 +390,8 @@ Status MinidumpFileBuilder::AddModuleList() {
     llvm::minidump::Module m{};
     m.BaseOfImage = static_cast<llvm::support::ulittle64_t>(
         mod->GetObjectFile()->GetBaseAddress().GetLoadAddress(&target));
-    m.SizeOfImage = static_cast<llvm::support::ulittle32_t>(mod_size);
+    m.SizeOfImage =
+        static_cast<llvm::support::ulittle32_t>(module_size);
     m.Checksum = static_cast<llvm::support::ulittle32_t>(0);
     m.TimeDateStamp =
         static_cast<llvm::support::ulittle32_t>(std::time(nullptr));
