@@ -79,11 +79,15 @@ private:
                                      BatchAAResults &BAA);
   bool performMemCpyToMemSetOptzn(MemCpyInst *MemCpy, MemSetInst *MemSet,
                                   BatchAAResults &BAA);
+  bool performStackHoistOptzn(MemCpyInst *M, AllocaInst *DestAlloca,
+                              TypeSize Size, BatchAAResults &BAA);
   bool processByValArgument(CallBase &CB, unsigned ArgNo);
   bool processImmutArgument(CallBase &CB, unsigned ArgNo);
   Instruction *tryMergingIntoMemset(Instruction *I, Value *StartPtr,
                                     Value *ByteVal);
   bool moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI);
+  bool canMoveUp(Instruction *I, Instruction *P);
+  void moveUp(Instruction *I, Instruction *P);
   bool performStackMoveOptzn(Instruction *Load, Instruction *Store,
                              AllocaInst *DestAlloca, AllocaInst *SrcAlloca,
                              TypeSize Size, BatchAAResults &BAA);
