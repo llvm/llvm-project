@@ -5,8 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
 #include "hdr/stdint_proxy.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include <stddef.h>
@@ -65,14 +65,19 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
 static constexpr uint64_t MEMORY_SIZE = 16384;
 static uint8_t memory[MEMORY_SIZE];
-static uint8_t *ptr = memory;
+static LIBC_NAMESPACE::cpp::Atomic<size_t> used = 0;
 
 extern "C" {
 
+// For simple test purposes.
 void *malloc(size_t s) {
-  void *mem = ptr;
-  ptr += s;
-  return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
+  // Emulate the alignment of std::max_align_t.
+  constexpr size_t DEFAULT_ALIGNMENT = alignof(long double);
+  s += (-s) & (DEFAULT_ALIGNMENT - 1); // Align to default alignment.
+  auto res = used.fetch_add(s, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
+  if (res + s > MEMORY_SIZE)
+    return nullptr; // Out of memory.
+  return &memory[res];
 }
 
 void free(void *) {}
