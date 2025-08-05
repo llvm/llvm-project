@@ -66,9 +66,17 @@ private:
   void WriteAll(const Scope &);
   void WriteOne(const Scope &);
   void Write(const Symbol &);
-  std::string GetAsString(const Symbol &);
+  std::string GetAsString(const Symbol *, std::string);
   void PrepareRenamings(const Scope &);
-  void PutSymbols(const Scope &, UnorderedSymbolSet *hermetic);
+  std::optional<SourceName> GetUseName(
+      const Scope &, const Symbol &, const Scope &symMod);
+  void PutRenamedSymbolUse(const Scope &, const Symbol &);
+  void PutSymbols(
+      const Scope &, bool omitModules, UnorderedSymbolSet *fullHermeticModules);
+  std::string PutDependencyModules(
+      std::string originalModuleName, const SymbolVector &);
+  std::string PutDependencyModule(
+      const std::string &modName, const SymbolVector &);
   // Returns true if a derived type with bindings and "contains" was emitted
   bool PutComponents(const Symbol &);
   void PutSymbol(llvm::raw_ostream &, const Symbol &);

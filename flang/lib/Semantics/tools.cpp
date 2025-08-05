@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "flang/Parser/tools.h"
+#include "flang/Semantics/tools.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
-#include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"
 #include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
@@ -58,9 +58,16 @@ const Scope *FindModuleOrSubmoduleContaining(const Scope &start) {
   });
 }
 
-const Scope *FindModuleFileContaining(const Scope &start) {
-  return FindScopeContaining(
-      start, [](const Scope &scope) { return scope.IsModuleFile(); });
+bool IsInModuleFile(const Scope &start) {
+  for (const Scope *scope{&start};; scope = &scope->parent()) {
+    if (scope->IsModuleFile() ||
+        scope == scope->context().currentHermeticModuleFileScope()) {
+      return true;
+    } else if (scope->IsTopLevel()) {
+      break;
+    }
+  }
+  return false;
 }
 
 const Scope &GetProgramUnitContaining(const Scope &start) {
@@ -1173,7 +1180,7 @@ std::optional<parser::MessageFormattedText> CheckAccessibleSymbol(
     const Scope &scope, const Symbol &symbol) {
   if (IsAccessible(symbol, scope)) {
     return std::nullopt;
-  } else if (FindModuleFileContaining(scope)) {
+  } else if (IsInModuleFile(scope)) {
     // Don't enforce component accessibility checks in module files;
     // there may be forward-substituted named constants of derived type
     // whose structure constructors reference private components.
@@ -1860,4 +1867,18 @@ bool HadUseError(
   }
 }
 
+bool CheckForSymbolMatch(const SomeExpr *lhs, const SomeExpr *rhs) {
+  if (lhs && rhs) {
+    if (SymbolVector lhsSymbols{evaluate::GetSymbolVector(*lhs)};
+        !lhsSymbols.empty()) {
+      const Symbol &first{*lhsSymbols.front()};
+      for (const Symbol &symbol : evaluate::GetSymbolVector(*rhs)) {
+        if (first == symbol) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
 } // namespace Fortran::semantics

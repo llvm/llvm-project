@@ -42,6 +42,7 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Semantics/tools.h"
 #include "flang/Support/default-kinds.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -455,13 +456,7 @@ void SemanticsContext::UpdateScopeIndex(
 }
 
 bool SemanticsContext::IsInModuleFile(parser::CharBlock source) const {
-  for (const Scope *scope{&FindScope(source)}; !scope->IsGlobal();
-       scope = &scope->parent()) {
-    if (scope->IsModuleFile()) {
-      return true;
-    }
-  }
-  return false;
+  return semantics::IsInModuleFile(FindScope(source));
 }
 
 void SemanticsContext::PopConstruct() {
@@ -646,7 +641,8 @@ bool Semantics::Perform() {
       PerformStatementSemantics(context_, program_) &&
       CanonicalizeDirectives(context_.messages(), program_) &&
       ModFileWriter{context_}
-          .set_hermeticModuleFileOutput(hermeticModuleFileOutput_)
+          .set_hermeticModuleFileOutput(
+              hermeticModuleFileOutput_ || getenv("PMK_HERMETIC"))
           .WriteAll();
 }
 
