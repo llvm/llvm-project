@@ -282,7 +282,42 @@ bool IndexUnitReaderImpl::init(std::unique_ptr<MemoryBuffer> Buf,
                                sys::TimePoint<> ModTime,
                                std::string &Error) {
   this->ModTime = ModTime;
-  this->MemBuf = std::move(Buf);
+
+  if (Buf->getBuffer().starts_with("CIDXU")) {
+    if (!llvm::compression::zlib::isAvailable()) {
+      Error = "zlib not available to decompress compressed index unit";
+      return true;
+    }
+
+    ArrayRef compressedBuffer = llvm::arrayRefFromStringRef(Buf->getBuffer());
+
+    // Slice off the `CIDXU` marker we checked above.
+    compressedBuffer = compressedBuffer.slice(5);
+
+    // Read the uncompressed size of the unit.
+    if (compressedBuffer.size() < 4) {
+      Error = "Unexpectedly found end of record unit";
+      return true;
+    }
+    size_t uncompressedSize =
+        llvm::support::endian::read32le(compressedBuffer.data());
+    compressedBuffer = compressedBuffer.slice(4);
+
+    // Decompress the unit
+    llvm::SmallVector<uint8_t, 0> decompressed;
+    llvm::Error decompressError = llvm::compression::zlib::decompress(
+        compressedBuffer, decompressed, uncompressedSize);
+    if (decompressError) {
+      llvm::raw_string_ostream ErrorOS(Error);
+      ErrorOS << "Failed to decompress index unit: " << decompressError;
+      return true;
+    }
+    this->MemBuf = llvm::MemoryBuffer::getMemBufferCopy(
+        llvm::toStringRef(decompressed),
+        Buf->getBufferIdentifier() + " decompressed");
+  } else {
+    this->MemBuf = std::move(Buf);
+  }
   llvm::BitstreamCursor Stream(*MemBuf);
 
   if (Stream.AtEndOfStream()) {
