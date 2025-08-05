@@ -1795,8 +1795,7 @@ func.func @store_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
 
 // -----
 
-func.func @store_alignment(%memref : memref<200x100xf32>, %i : index, %j : index) {
-  %val = arith.constant dense<11.0> : vector<4xf32>
+func.func @store_alignment(%memref : memref<200x100xf32>, %i : index, %j : index, %val : vector<4xf32>) {
   vector.store %val, %memref[%i, %j] {alignment = 8} : memref<200x100xf32>, vector<4xf32>
   return
 }
@@ -1860,9 +1859,8 @@ func.func @masked_load_index_scalable(%arg0: memref<?xindex>, %arg1: vector<[16]
 
 // -----
 
-func.func @masked_load_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>) -> vector<16xf32> {
-  %c0 = arith.constant 0: index
-  %0 = vector.maskedload %arg0[%c0], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+func.func @masked_load_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>, %arg3: index) -> vector<16xf32> {
+  %0 = vector.maskedload %arg0[%arg3], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %0 : vector<16xf32>
 }
 
@@ -1923,9 +1921,8 @@ func.func @masked_store_index_scalable(%arg0: memref<?xindex>, %arg1: vector<[16
 
 // -----
 
-func.func @masked_store_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>) {
-  %c0 = arith.constant 0: index
-  vector.maskedstore %arg0[%c0], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
+func.func @masked_store_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>, %arg3: index) {
+  vector.maskedstore %arg0[%arg3], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
   return
 }
 
