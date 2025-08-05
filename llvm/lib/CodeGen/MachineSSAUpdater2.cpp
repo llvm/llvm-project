@@ -1,5 +1,4 @@
-//===- MachineSSAUpdater2.cpp - Unstructured SSA Update Tool
-//------------------===//
+//===- MachineSSAUpdater2.cpp - Unstructured SSA Update Tool --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -50,7 +49,7 @@ using namespace llvm;
 /// Given sets of UsingBlocks and DefBlocks, compute the set of LiveInBlocks.
 /// This is basically a subgraph limited by DefBlocks and UsingBlocks.
 static void
-ComputeLiveInBlocks(const SmallPtrSetImpl<MachineBasicBlock *> &UsingBlocks,
+computeLiveInBlocks(const SmallPtrSetImpl<MachineBasicBlock *> &UsingBlocks,
                     const SmallPtrSetImpl<MachineBasicBlock *> &DefBlocks,
                     SmallPtrSetImpl<MachineBasicBlock *> &LiveInBlocks) {
   // To determine liveness, we must iterate through the predecessors of blocks
@@ -84,7 +83,7 @@ ComputeLiveInBlocks(const SmallPtrSetImpl<MachineBasicBlock *> &UsingBlocks,
 }
 
 MachineInstrBuilder
-MachineSSAUpdater2::CreateInst(unsigned Opc, MachineBasicBlock *BB,
+MachineSSAUpdater2::createInst(unsigned Opc, MachineBasicBlock *BB,
                                MachineBasicBlock::iterator I) {
   return BuildMI(*BB, I, DebugLoc(), TII.get(Opc),
                  MRI.createVirtualRegister(RegAttrs));
@@ -92,7 +91,7 @@ MachineSSAUpdater2::CreateInst(unsigned Opc, MachineBasicBlock *BB,
 
 // IsLiveOut indicates whether we are computing live-out values (true) or
 // live-in values (false).
-Register MachineSSAUpdater2::ComputeValue(MachineBasicBlock *BB,
+Register MachineSSAUpdater2::computeValue(MachineBasicBlock *BB,
                                           bool IsLiveOut) {
   auto *BBInfo = &BBInfos[BB];
 
@@ -102,8 +101,8 @@ Register MachineSSAUpdater2::ComputeValue(MachineBasicBlock *BB,
   if (BBInfo->LiveInValue)
     return BBInfo->LiveInValue;
 
-  SmallVector<BBValueInfo *, 4> Stack = {BBInfo};
-  MachineBasicBlock *DomBB = BB;
+  SmallVector<BBValueInfo *, 4> DomPath = {BBInfo};
+  MachineBasicBlock *DomBB = BB, *TopDomBB = BB;
   Register V;
 
   while (DT.isReachableFromEntry(DomBB) && !DomBB->pred_empty() &&
@@ -117,30 +116,28 @@ Register MachineSSAUpdater2::ComputeValue(MachineBasicBlock *BB,
       V = BBInfo->LiveInValue;
       break;
     }
-    Stack.emplace_back(BBInfo);
+    TopDomBB = DomBB;
+    DomPath.emplace_back(BBInfo);
   }
-
-  for (auto *BBInfo : Stack)
-    // Loop above can insert new entries into the BBInfos map: assume the
-    // map shouldn't grow due to [1] and BBInfo references are valid.
-    BBInfo->LiveInValue = V;
 
   if (!V) {
-    V = CreateInst(TargetOpcode::IMPLICIT_DEF, BB,
-                   IsLiveOut ? BB->getFirstTerminator() : BB->getFirstNonPHI())
+    V = createInst(TargetOpcode::IMPLICIT_DEF, TopDomBB,
+                   TopDomBB->getFirstNonPHI())
             .getReg(0);
-    if (IsLiveOut)
-      BBInfos[BB].LiveOutValue = V;
-    else
-      BBInfos[BB].LiveInValue = V;
   }
+
+  for (auto *BBInfo : DomPath)
+    // Loop above can insert new entries into the BBInfos map: assume the
+    // map shouldn't grow as the caller should have been allocated enough
+    // buckets, see [1].
+    BBInfo->LiveInValue = V;
 
   return V;
 }
 
 /// Perform all the necessary updates, including new PHI-nodes insertion and the
 /// requested uses update.
-void MachineSSAUpdater2::Calculate() {
+void MachineSSAUpdater2::calculate() {
   MachineForwardIDFCalculator IDF(DT);
 
   SmallPtrSet<MachineBasicBlock *, 2> DefBlocks;
@@ -148,13 +145,11 @@ void MachineSSAUpdater2::Calculate() {
     DefBlocks.insert(BB);
   IDF.setDefiningBlocks(DefBlocks);
 
-  SmallPtrSet<MachineBasicBlock *, 2> UsingBlocks;
-  for (MachineBasicBlock *BB : UseBlocks)
-    UsingBlocks.insert(BB);
-
+  SmallPtrSet<MachineBasicBlock *, 2> UsingBlocks(UseBlocks.begin(),
+                                                  UseBlocks.end());
   SmallVector<MachineBasicBlock *, 32> IDFBlocks;
   SmallPtrSet<MachineBasicBlock *, 32> LiveInBlocks;
-  ComputeLiveInBlocks(UsingBlocks, DefBlocks, LiveInBlocks);
+  computeLiveInBlocks(UsingBlocks, DefBlocks, LiveInBlocks);
   IDF.setLiveInBlocks(LiveInBlocks);
   IDF.calculate(IDFBlocks);
 
@@ -166,7 +161,7 @@ void MachineSSAUpdater2::Calculate() {
 
   for (auto *FrontierBB : IDFBlocks) {
     Register NewVR =
-        CreateInst(TargetOpcode::PHI, FrontierBB, FrontierBB->begin())
+        createInst(TargetOpcode::PHI, FrontierBB, FrontierBB->begin())
             .getReg(0);
     BBInfos[FrontierBB].LiveInValue = NewVR;
   }
@@ -176,10 +171,10 @@ void MachineSSAUpdater2::Calculate() {
     assert(PHI->isPHI());
     MachineInstrBuilder MIB(*BB->getParent(), PHI);
     for (MachineBasicBlock *Pred : BB->predecessors())
-      MIB.addReg(ComputeValue(Pred, /*IsLiveOut=*/true)).addMBB(Pred);
+      MIB.addReg(computeValue(Pred, /*IsLiveOut=*/true)).addMBB(Pred);
   }
 }
 
-Register MachineSSAUpdater2::GetValueInMiddleOfBlock(MachineBasicBlock *BB) {
-  return ComputeValue(BB, /*IsLiveOut=*/false);
+Register MachineSSAUpdater2::getValueInMiddleOfBlock(MachineBasicBlock *BB) {
+  return computeValue(BB, /*IsLiveOut=*/false);
 }

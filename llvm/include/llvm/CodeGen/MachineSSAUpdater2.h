@@ -37,12 +37,12 @@ class MachineSSAUpdater2 {
   SmallVector<MachineBasicBlock *, 4> UseBlocks;
   DenseMap<MachineBasicBlock *, BBValueInfo> BBInfos;
 
-  MachineInstrBuilder CreateInst(unsigned Opc, MachineBasicBlock *BB,
+  MachineInstrBuilder createInst(unsigned Opc, MachineBasicBlock *BB,
                                  MachineBasicBlock::iterator I);
 
   // IsLiveOut indicates whether we are computing live-out values (true) or
   // live-in values (false).
-  Register ComputeValue(MachineBasicBlock *BB, bool IsLiveOut);
+  Register computeValue(MachineBasicBlock *BB, bool IsLiveOut);
 
 public:
   MachineSSAUpdater2(MachineDominatorTree &DT, MachineFunction &MF,
@@ -56,21 +56,21 @@ public:
 
   /// Indicate that a rewritten value is available in the specified block
   /// with the specified value. Must be called before invoking Calculate().
-  void AddAvailableValue(MachineBasicBlock *BB, Register V) {
+  void addAvailableValue(MachineBasicBlock *BB, Register V) {
     Defines.emplace_back(BB, V);
   }
 
   /// Record a basic block that uses the value. This method should be called for
   /// every basic block where the value will be used. Must be called before
   /// invoking Calculate().
-  void AddUseBlock(MachineBasicBlock *BB) { UseBlocks.push_back(BB); }
+  void addUseBlock(MachineBasicBlock *BB) { UseBlocks.push_back(BB); }
 
   /// Calculate and insert necessary PHI nodes for SSA form.
   /// Must be called after registering all definitions and uses.
-  void Calculate();
+  void calculate();
 
   /// See SSAUpdater::GetValueInMiddleOfBlock description.
-  Register GetValueInMiddleOfBlock(MachineBasicBlock *BB);
+  Register getValueInMiddleOfBlock(MachineBasicBlock *BB);
 };
 
 } // end namespace llvm

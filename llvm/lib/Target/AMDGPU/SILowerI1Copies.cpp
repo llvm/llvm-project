@@ -287,14 +287,14 @@ public:
       Dom = DT.findNearestCommonDominator(Dom, Incoming.Block);
 
     if (!inLoopLevel(*Dom, LoopLevel, Incomings)) {
-      SSAUpdater.AddAvailableValue(
+      SSAUpdater.addAvailableValue(
           Dom, insertUndefLaneMask(Dom, &MRI, LaneMaskRegAttrs));
     } else {
       // The dominator is part of the loop or the given blocks, so add the
       // undef value to unreachable predecessors instead.
       for (MachineBasicBlock *Pred : Dom->predecessors()) {
         if (!inLoopLevel(*Pred, LoopLevel, Incomings))
-          SSAUpdater.AddAvailableValue(
+          SSAUpdater.addAvailableValue(
               Pred, insertUndefLaneMask(Pred, &MRI, LaneMaskRegAttrs));
       }
     }
@@ -525,25 +525,25 @@ bool PhiLoweringHelper::lowerPhis() {
     unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
 
     MachineSSAUpdater2 SSAUpdater(*DT, *MF, DstReg);
-    SSAUpdater.AddUseBlock(&MBB);
+    SSAUpdater.addUseBlock(&MBB);
 
     if (FoundLoopLevel) {
       LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs,
                         Incomings);
 
       for (auto &Incoming : Incomings) {
-        SSAUpdater.AddUseBlock(Incoming.Block);
+        SSAUpdater.addUseBlock(Incoming.Block);
         Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-        SSAUpdater.AddAvailableValue(Incoming.Block, Incoming.UpdatedReg);
+        SSAUpdater.addAvailableValue(Incoming.Block, Incoming.UpdatedReg);
       }
 
-      SSAUpdater.Calculate();
+      SSAUpdater.calculate();
 
       for (auto &Incoming : Incomings) {
         MachineBasicBlock &IMBB = *Incoming.Block;
         buildMergeLaneMasks(
             IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-            SSAUpdater.GetValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+            SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
       }
     } else {
       // The phi is not observed from outside a loop. Use a more accurate
@@ -551,22 +551,22 @@ bool PhiLoweringHelper::lowerPhis() {
       PIA.analyze(MBB, Incomings);
 
       for (MachineBasicBlock *MBB : PIA.predecessors())
-        SSAUpdater.AddAvailableValue(
+        SSAUpdater.addAvailableValue(
             MBB, insertUndefLaneMask(MBB, MRI, LaneMaskRegAttrs));
 
       for (auto &Incoming : Incomings) {
         MachineBasicBlock &IMBB = *Incoming.Block;
         if (PIA.isSource(IMBB)) {
           constrainAsLaneMask(Incoming);
-          SSAUpdater.AddAvailableValue(&IMBB, Incoming.Reg);
+          SSAUpdater.addAvailableValue(&IMBB, Incoming.Reg);
         } else {
-          SSAUpdater.AddUseBlock(&IMBB);
+          SSAUpdater.addUseBlock(&IMBB);
           Incoming.UpdatedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-          SSAUpdater.AddAvailableValue(&IMBB, Incoming.UpdatedReg);
+          SSAUpdater.addAvailableValue(&IMBB, Incoming.UpdatedReg);
         }
       }
 
-      SSAUpdater.Calculate();
+      SSAUpdater.calculate();
 
       for (auto &Incoming : Incomings) {
         if (!Incoming.UpdatedReg.isValid())
@@ -575,11 +575,11 @@ bool PhiLoweringHelper::lowerPhis() {
         MachineBasicBlock &IMBB = *Incoming.Block;
         buildMergeLaneMasks(
             IMBB, getSaluInsertionAtEnd(IMBB), {}, Incoming.UpdatedReg,
-            SSAUpdater.GetValueInMiddleOfBlock(&IMBB), Incoming.Reg);
+            SSAUpdater.getValueInMiddleOfBlock(&IMBB), Incoming.Reg);
       }
     }
 
-    Register NewReg = SSAUpdater.GetValueInMiddleOfBlock(&MBB);
+    Register NewReg = SSAUpdater.getValueInMiddleOfBlock(&MBB);
     if (NewReg != DstReg) {
       replaceDstReg(NewReg, DstReg, &MBB);
       MI->eraseFromParent();
@@ -650,13 +650,13 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
       unsigned FoundLoopLevel = LF.findLoop(PostDomBound);
       if (FoundLoopLevel) {
         MachineSSAUpdater2 SSAUpdater(*DT, *MF, DstReg);
-        SSAUpdater.AddUseBlock(&MBB);
-        SSAUpdater.AddAvailableValue(&MBB, DstReg);
+        SSAUpdater.addUseBlock(&MBB);
+        SSAUpdater.addAvailableValue(&MBB, DstReg);
         LF.addLoopEntries(FoundLoopLevel, SSAUpdater, *MRI, LaneMaskRegAttrs);
 
-        SSAUpdater.Calculate();
+        SSAUpdater.calculate();
         buildMergeLaneMasks(MBB, MI, DL, DstReg,
-                            SSAUpdater.GetValueInMiddleOfBlock(&MBB), SrcReg);
+                            SSAUpdater.getValueInMiddleOfBlock(&MBB), SrcReg);
         DeadCopies.push_back(&MI);
       }
     }
