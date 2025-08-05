@@ -322,40 +322,64 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   // comes out to about 194 days. Thus, need to pick a starting point.
   // Given the description of this function, midnight of the current
   // day is the best starting point.
+  //
+  // In addition, use atomic operations for thread safety. startingPoint
+  // also acts as a state variable that can take on the following values:
+  // TIME_UNINITIALIZED to indicate that it's not initialized,
+  // TIME_INITIALIZING to indicate that it is being initialized,
+  // any other value to indicate the starting point time.
   static std::atomic<std::time_t> startingPoint{TIME_UNINITIALIZED};
-  std::time_t expected{TIME_UNINITIALIZED};
   std::time_t localStartingPoint{TIME_UNINITIALIZED};
-  if (startingPoint.compare_exchange_strong(expected, TIME_INITIALIZING)) {
-    // This thread is doing initialization of startingPoint
-    struct tm timeInfo;
-#ifdef _WIN32
-    if (localtime_s(&timeInfo, &now)) {
-      startingPoint.store(TIME_UNINITIALIZED, std::memory_order_relaxed);
-      return FAIL_SECNDS;
-    }
-#else
-    if (!localtime_r(&now, &timeInfo)) {
-      startingPoint.store(TIME_UNINITIALIZED, std::memory_order_relaxed);
-      return FAIL_SECNDS;
-    }
-#endif
-    // Back to midnight
-    timeInfo.tm_hour = 0;
-    timeInfo.tm_min = 0;
-    timeInfo.tm_sec = 0;
-    std::time_t midnight{std::mktime(&timeInfo)};
-    if (midnight == FAIL_TIME) {
-      return FAIL_SECNDS;
-    }
-    localStartingPoint = midnight;
-    startingPoint.store(midnight, std::memory_order_release);
-  } else {
-    // This thread is not doing initialization of startingPoint, need to wait
-    // for initialization to complete.
-    while ((localStartingPoint = startingPoint.load(
-                std::memory_order_acquire)) <= TIME_INITIALIZING) {
+  // Use retry logic to ensure that in case of multiple threads, one thread
+  // will perform initialization and the other threads wait their turn.
+  for (;;) {
+    // "Acquire" will show writes from other threads.
+    std::time_t currentStartingPoint = startingPoint.load(
+        std::memory_order_acquire);
+    if (currentStartingPoint > TIME_INITIALIZING) {
+      // Initialization was already done, use the starting point value
+      localStartingPoint = currentStartingPoint;
+      break;
+    } else if (currentStartingPoint == TIME_INITIALIZING) {
+      // Some other thread is currently initializing
       std::this_thread::yield();
+      continue;
+    } else if (currentStartingPoint == TIME_UNINITIALIZED) {
+      // Try to start initialization
+      std::time_t expected{TIME_UNINITIALIZED};
+      if (startingPoint.compare_exchange_strong(expected, TIME_INITIALIZING,
+          std::memory_order_acq_rel,    // "Aquire and release" on success
+          std::memory_order_acquire)) { // "Aquire" on failure
+        // This thread is doing initialization of startingPoint
+        struct tm timeInfo;
+#ifdef _WIN32
+        if (localtime_s(&timeInfo, &now)) {
+#else
+        if (!localtime_r(&now, &timeInfo)) {
+#endif
+          // "Relaxed" ensures atomicity, but not ordering
+          startingPoint.store(TIME_UNINITIALIZED, std::memory_order_relaxed);
+          return FAIL_SECNDS;
+        }
+        // Back to midnight
+        timeInfo.tm_hour = 0;
+        timeInfo.tm_min = 0;
+        timeInfo.tm_sec = 0;
+        localStartingPoint = std::mktime(&timeInfo);
+        if (localStartingPoint == FAIL_TIME) {
+          startingPoint.store(TIME_UNINITIALIZED, std::memory_order_relaxed);
+          return FAIL_SECNDS;
+        }
+        // "Release" will make this value available to other threads
+        startingPoint.store(localStartingPoint, std::memory_order_release);
+      } else {
+        // This thread couln't start initialization. Try again.
+        continue;
+      }
     }
+  }
+  if (localStartingPoint <= TIME_INITIALIZING) {
+    return FAIL_SECNDS;
   }
   double diffStartingPoint{std::difftime(now, localStartingPoint)};
   return static_cast<float>(diffStartingPoint) - *refTime;
