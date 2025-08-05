@@ -1685,11 +1685,7 @@ func.func @load_alignment(%memref : memref<200x100xf32>, %i : index, %j : index)
 }
 
 // CHECK-LABEL: func @load_alignment
-// CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.load %[[GEP]] {alignment = 8 : i64} : !llvm.ptr -> vector<8xf32>
+// CHECK: llvm.load {{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<8xf32>
 
 // -----
 
@@ -1806,11 +1802,7 @@ func.func @store_alignment(%memref : memref<200x100xf32>, %i : index, %j : index
 }
 
 // CHECK-LABEL: func @store_alignment
-// CHECK: %[[C100:.*]] = llvm.mlir.constant(100 : index) : i64
-// CHECK: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C100]]  : i64
-// CHECK: %[[ADD:.*]] = llvm.add %[[MUL]], %{{.*}}  : i64
-// CHECK: %[[GEP:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.store %{{.*}}, %[[GEP]] {alignment = 8 : i64} :  vector<4xf32>, !llvm.ptr
+// CHECK: llvm.store %{{.*}} {alignment = 8 : i64} :  vector<4xf32>, !llvm.ptr
 
 // -----
 
@@ -1870,16 +1862,12 @@ func.func @masked_load_index_scalable(%arg0: memref<?xindex>, %arg1: vector<[16]
 
 func.func @masked_load_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>) -> vector<16xf32> {
   %c0 = arith.constant 0: index
-  %0 = vector.maskedload %arg0[%c0], %arg1, %arg2 { alignment = 8 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+  %0 = vector.maskedload %arg0[%c0], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %0 : vector<16xf32>
 }
 
-// CHECK-LABEL: func @masked_load
-// CHECK: %[[CO:.*]] = arith.constant 0 : index
-// CHECK: %[[C:.*]] = builtin.unrealized_conversion_cast %[[CO]] : index to i64
-// CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%[[C]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: %[[L:.*]] = llvm.intr.masked.load %[[P]], %{{.*}}, %{{.*}} {alignment = 8 : i32} : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
-// CHECK: return %[[L]] : vector<16xf32>
+// CHECK-LABEL: func @masked_load_alignment
+// CHECK: llvm.intr.masked.load %{{.*}} {alignment = 2 : i32} : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
 
 // -----
 
@@ -1937,15 +1925,12 @@ func.func @masked_store_index_scalable(%arg0: memref<?xindex>, %arg1: vector<[16
 
 func.func @masked_store_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>) {
   %c0 = arith.constant 0: index
-  vector.maskedstore %arg0[%c0], %arg1, %arg2 { alignment = 8 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
+  vector.maskedstore %arg0[%c0], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
   return
 }
 
-// CHECK-LABEL: func @masked_store
-// CHECK: %[[CO:.*]] = arith.constant 0 : index
-// CHECK: %[[C:.*]] = builtin.unrealized_conversion_cast %[[CO]] : index to i64
-// CHECK: %[[P:.*]] = llvm.getelementptr %{{.*}}[%[[C]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
-// CHECK: llvm.intr.masked.store %{{.*}}, %[[P]], %{{.*}} {alignment = 8 : i32} : vector<16xf32>, vector<16xi1> into !llvm.ptr
+// CHECK-LABEL: func @masked_store_alignment
+// CHECK: llvm.intr.masked.store %{{.*}} {alignment = 2 : i32} : vector<16xf32>, vector<16xi1> into !llvm.ptr
 
 // -----
 
