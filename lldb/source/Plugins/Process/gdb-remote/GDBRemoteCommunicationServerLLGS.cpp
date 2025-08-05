@@ -620,7 +620,7 @@ static llvm::StringRef GetFormatNameOrEmpty(const RegisterInfo &reg_info) {
   case eFormatFloat128:
     return "float128";
   default:
-    llvm_unreachable("Unkown register format")
+    llvm_unreachable("Unknown register format");
   };
 }
 
