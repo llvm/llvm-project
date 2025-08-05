@@ -11,7 +11,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
-namespace lldb_private::mcp {
+using namespace lldb_private::mcp;
 
 char MCPError::ID;
 char UnsupportedURI::ID;
@@ -41,5 +41,3 @@ void UnsupportedURI::log(llvm::raw_ostream &OS) const {
 std::error_code UnsupportedURI::convertToErrorCode() const {
   return llvm::inconvertibleErrorCode();
 }
-
-} // namespace lldb_private::mcp

@@ -1,4 +1,3 @@
-
 add_lldb_library(lldbProtocolMCP NO_PLUGIN_DEPENDENCIES
   Protocol.cpp
 
