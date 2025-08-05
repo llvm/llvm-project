@@ -318,7 +318,9 @@ public:
   // These two variants take in a locker, and grab the target, lock the API
   // mutex into locker, then fill in the rest of the shared pointers.
   ExecutionContext(const ExecutionContextRef &exe_ctx_ref,
-                   std::unique_lock<std::recursive_mutex> &locker);
+                   std::unique_lock<std::recursive_mutex> &locker)
+      : ExecutionContext(&exe_ctx_ref, locker) {}
+
   ExecutionContext(const ExecutionContextRef *exe_ctx_ref,
                    std::unique_lock<std::recursive_mutex> &locker);
   // Create execution contexts from execution context scopes

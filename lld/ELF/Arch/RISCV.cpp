@@ -54,8 +54,9 @@ public:
   bool maybeSynthesizeAlign(uint64_t &dot, InputSection *sec) override;
   void finalizeRelax(int passes) const override;
 
-  // Used by synthesized ALIGN relocations.
+  // The following two variables are used by synthesized ALIGN relocations.
   InputSection *baseSec = nullptr;
+  // r_offset and r_addend pairs.
   SmallVector<std::pair<uint64_t, uint64_t>, 0> synthesizedAligns;
 };
 
@@ -976,7 +977,8 @@ template <class ELFT, class RelTy>
 bool RISCV::synthesizeAlignOne(uint64_t &dot, InputSection *sec,
                                Relocs<RelTy> rels) {
   if (!baseSec) {
-    // Record the first section with RELAX relocations.
+    // Record the first input section with RELAX relocations. We will synthesize
+    // ALIGN relocations here.
     for (auto rel : rels) {
       if (rel.getType(false) == R_RISCV_RELAX) {
         baseSec = sec;
@@ -986,11 +988,10 @@ bool RISCV::synthesizeAlignOne(uint64_t &dot, InputSection *sec,
   } else if (sec->addralign >= 4) {
     // If the alignment is >= 4 and the section does not start with an ALIGN
     // relocation, synthesize one.
-    bool alignRel = false;
-    for (auto rel : rels)
-      if (rel.r_offset == 0 && rel.getType(false) == R_RISCV_ALIGN)
-        alignRel = true;
-    if (!alignRel) {
+    bool hasAlignRel = llvm::any_of(rels, [](const RelTy &rel) {
+      return rel.r_offset == 0 && rel.getType(false) == R_RISCV_ALIGN;
+    });
+    if (!hasAlignRel) {
       synthesizedAligns.emplace_back(dot - baseSec->getVA(),
                                      sec->addralign - 2);
       dot += sec->addralign - 2;

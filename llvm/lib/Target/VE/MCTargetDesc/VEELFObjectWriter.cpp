@@ -44,8 +44,8 @@ unsigned VEELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case VE::S_TLS_GD_LO32:
   case VE::S_TPOFF_HI32:
   case VE::S_TPOFF_LO32:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
