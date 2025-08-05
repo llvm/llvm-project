@@ -560,12 +560,12 @@ define i64 @fcvt_l_bf16_sat(bfloat %a) nounwind {
 ; RV32ID-NEXT:    addi a2, a3, -1
 ; RV32ID-NEXT:  .LBB10_4: # %start
 ; RV32ID-NEXT:    feq.s a3, fs0, fs0
-; RV32ID-NEXT:    neg a4, a1
-; RV32ID-NEXT:    neg a1, s0
+; RV32ID-NEXT:    neg a4, s0
+; RV32ID-NEXT:    neg a5, a1
 ; RV32ID-NEXT:    neg a3, a3
-; RV32ID-NEXT:    and a0, a1, a0
+; RV32ID-NEXT:    and a0, a4, a0
 ; RV32ID-NEXT:    and a1, a3, a2
-; RV32ID-NEXT:    or a0, a4, a0
+; RV32ID-NEXT:    or a0, a5, a0
 ; RV32ID-NEXT:    and a0, a3, a0
 ; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ID-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload

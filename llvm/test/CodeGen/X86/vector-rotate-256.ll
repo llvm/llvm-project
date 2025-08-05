@@ -321,12 +321,12 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
 ; AVX1-NEXT:    vpsllw $5, %xmm5, %xmm5
 ; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm2, %xmm2
-; AVX1-NEXT:    vpsrlw $6, %xmm2, %xmm3
+; AVX1-NEXT:    vpsllw $2, %xmm2, %xmm3
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [252,252,252,252,252,252,252,252,252,252,252,252,252,252,252,252]
-; AVX1-NEXT:    vpandn %xmm3, %xmm6, %xmm3
-; AVX1-NEXT:    vpsllw $2, %xmm2, %xmm7
-; AVX1-NEXT:    vpand %xmm6, %xmm7, %xmm7
-; AVX1-NEXT:    vpor %xmm3, %xmm7, %xmm3
+; AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vpsrlw $6, %xmm2, %xmm7
+; AVX1-NEXT:    vpandn %xmm7, %xmm6, %xmm7
+; AVX1-NEXT:    vpor %xmm7, %xmm3, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm5, %xmm5, %xmm5
 ; AVX1-NEXT:    vpblendvb %xmm5, %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsrlw $7, %xmm2, %xmm3
@@ -343,11 +343,11 @@ define <32 x i8> @var_rotate_v32i8(<32 x i8> %a, <32 x i8> %b) nounwind {
 ; AVX1-NEXT:    vpor %xmm3, %xmm4, %xmm3
 ; AVX1-NEXT:    vpsllw $5, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpsrlw $6, %xmm0, %xmm3
-; AVX1-NEXT:    vpandn %xmm3, %xmm6, %xmm3
-; AVX1-NEXT:    vpsllw $2, %xmm0, %xmm4
-; AVX1-NEXT:    vpand %xmm6, %xmm4, %xmm4
-; AVX1-NEXT:    vpor %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpsllw $2, %xmm0, %xmm3
+; AVX1-NEXT:    vpand %xmm6, %xmm3, %xmm3
+; AVX1-NEXT:    vpsrlw $6, %xmm0, %xmm4
+; AVX1-NEXT:    vpandn %xmm4, %xmm6, %xmm4
+; AVX1-NEXT:    vpor %xmm4, %xmm3, %xmm3
 ; AVX1-NEXT:    vpaddb %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vpblendvb %xmm1, %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsrlw $7, %xmm0, %xmm3

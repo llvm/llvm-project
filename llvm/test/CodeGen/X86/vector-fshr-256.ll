@@ -594,17 +594,17 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt) 
 ; AVX2-NEXT:    vpblendvb %ymm5, %ymm4, %ymm1, %ymm1
 ; AVX2-NEXT:    vpandn %ymm3, %ymm2, %ymm2
 ; AVX2-NEXT:    vpsllw $5, %ymm2, %ymm2
-; AVX2-NEXT:    vpaddb %ymm2, %ymm2, %ymm3
 ; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vpsllw $4, %ymm0, %ymm4
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm4
-; AVX2-NEXT:    vpblendvb %ymm2, %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
-; AVX2-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
-; AVX2-NEXT:    vpaddb %ymm3, %ymm3, %ymm3
-; AVX2-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsllw $4, %ymm0, %ymm3
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpsllw $2, %ymm0, %ymm3
+; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
+; AVX2-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
+; AVX2-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
+; AVX2-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
@@ -626,17 +626,17 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt) 
 ; AVX512F-NEXT:    vpblendvb %ymm5, %ymm4, %ymm1, %ymm1
 ; AVX512F-NEXT:    vpandn %ymm3, %ymm2, %ymm2
 ; AVX512F-NEXT:    vpsllw $5, %ymm2, %ymm2
-; AVX512F-NEXT:    vpaddb %ymm2, %ymm2, %ymm3
 ; AVX512F-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
-; AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm4
-; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm4, %ymm4
-; AVX512F-NEXT:    vpblendvb %ymm2, %ymm4, %ymm0, %ymm0
-; AVX512F-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm2, %ymm2
-; AVX512F-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
-; AVX512F-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
-; AVX512F-NEXT:    vpaddb %ymm3, %ymm3, %ymm3
-; AVX512F-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsllw $4, %ymm0, %ymm3
+; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
+; AVX512F-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsllw $2, %ymm0, %ymm3
+; AVX512F-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm3, %ymm3
+; AVX512F-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; AVX512F-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
+; AVX512F-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
+; AVX512F-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; AVX512F-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512F-NEXT:    retq
 ;
@@ -658,17 +658,17 @@ define <32 x i8> @var_funnnel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %amt) 
 ; AVX512VL-NEXT:    vpblendvb %ymm5, %ymm4, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vpandn %ymm3, %ymm2, %ymm2
 ; AVX512VL-NEXT:    vpsllw $5, %ymm2, %ymm2
-; AVX512VL-NEXT:    vpaddb %ymm2, %ymm2, %ymm3
 ; AVX512VL-NEXT:    vpaddb %ymm0, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm4
-; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm4, %ymm4
-; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm4, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpsllw $2, %ymm0, %ymm2
-; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm2, %ymm2
-; AVX512VL-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpaddb %ymm0, %ymm0, %ymm2
-; AVX512VL-NEXT:    vpaddb %ymm3, %ymm3, %ymm3
-; AVX512VL-NEXT:    vpblendvb %ymm3, %ymm2, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsllw $4, %ymm0, %ymm3
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm3, %ymm3
+; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsllw $2, %ymm0, %ymm3
+; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm3, %ymm3
+; AVX512VL-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpaddb %ymm0, %ymm0, %ymm3
+; AVX512VL-NEXT:    vpaddb %ymm2, %ymm2, %ymm2
+; AVX512VL-NEXT:    vpblendvb %ymm2, %ymm3, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retq
 ;

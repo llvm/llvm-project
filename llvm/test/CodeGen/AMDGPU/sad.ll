@@ -459,12 +459,13 @@ define amdgpu_kernel void @v_sad_u32_i8_pat1(ptr addrspace(1) %out, i8 %a, i8 %b
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_lshr_b32 s4, s2, 8
 ; GCN-NEXT:    s_and_b32 s3, s2, 0xff
-; GCN-NEXT:    s_bfe_u32 s4, s2, 0x80008
 ; GCN-NEXT:    s_lshr_b32 s2, s2, 16
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NEXT:    v_sad_u32 v2, s3, v0, v1
+; GCN-NEXT:    s_and_b32 s4, s4, 0xff
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-NEXT:    v_sad_u32 v2, s3, v1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_store_byte v[0:1], v2
@@ -524,12 +525,13 @@ define amdgpu_kernel void @s_sad_u32_i8_pat2(ptr addrspace(1) %out, i8 zeroext %
 ; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    s_lshr_b32 s4, s2, 8
 ; GCN-NEXT:    s_and_b32 s3, s2, 0xff
-; GCN-NEXT:    s_bfe_u32 s4, s2, 0x80008
 ; GCN-NEXT:    s_lshr_b32 s2, s2, 16
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, s2
-; GCN-NEXT:    v_sad_u32 v2, s3, v0, v1
+; GCN-NEXT:    s_and_b32 s4, s4, 0xff
+; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-NEXT:    v_sad_u32 v2, s3, v1, v0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s0
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_store_byte v[0:1], v2

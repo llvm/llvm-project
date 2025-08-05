@@ -1687,9 +1687,10 @@ define <64 x i8> @var_shl_v64i8(<64 x i8> %a, <64 x i8> %b) nounwind {
 ; GFNIAVX512BW-NEXT:    vpsllw $5, %zmm1, %zmm1
 ; GFNIAVX512BW-NEXT:    vpmovb2m %zmm1, %k1
 ; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 {%k1}
+; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm2
 ; GFNIAVX512BW-NEXT:    vpaddb %zmm1, %zmm1, %zmm1
 ; GFNIAVX512BW-NEXT:    vpmovb2m %zmm1, %k1
-; GFNIAVX512BW-NEXT:    vgf2p8affineqb $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0 {%k1}
+; GFNIAVX512BW-NEXT:    vmovdqu8 %zmm2, %zmm0 {%k1}
 ; GFNIAVX512BW-NEXT:    vpaddb %zmm1, %zmm1, %zmm1
 ; GFNIAVX512BW-NEXT:    vpmovb2m %zmm1, %k1
 ; GFNIAVX512BW-NEXT:    vpaddb %zmm0, %zmm0, %zmm0 {%k1}
