@@ -122,8 +122,7 @@ struct Arch64EmulatorTester : public EmulateInstructionARM64 {
                                     void *baton, const Context &context,
                                     addr_t addr, const void *dst,
                                     size_t length) {
-    // TODO: implement when required
-    assert(false);
+    llvm_unreachable("implement when required");
     return 0;
   };
 
