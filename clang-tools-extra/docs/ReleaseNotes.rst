@@ -170,6 +170,10 @@ Changes in existing checks
   when the format string is converted to a different type by an implicit
   constructor call.
 
+- Improved :doc:`modernize-use-using
+  <clang-tidy/checks/modernize/use-using>` check by removing many incorrect
+  fix-its and providing fix-its where before there was only a warning.
+
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.
