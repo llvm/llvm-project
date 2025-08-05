@@ -73,7 +73,7 @@ extern "C" {
 void *malloc(size_t s) {
   // Emulate the alignment of std::max_align_t.
   constexpr size_t DEFAULT_ALIGNMENT = alignof(long double);
-  s += (-s) & (DEFAULT_ALIGNMENT - 1); // Align to max alignment.
+  s += (-s) & (DEFAULT_ALIGNMENT - 1); // Align to default alignment.
   auto res = used.fetch_add(s, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
   if (res + s > MEMORY_SIZE)
     return nullptr; // Out of memory.
