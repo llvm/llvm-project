@@ -277,7 +277,8 @@ void *allocateDefaultArgStorageChain(const ASTContext &C) {
 
 bool isPackProducingBuiltinTemplate(const TemplateDecl *D) {
   auto *BD = llvm::dyn_cast<BuiltinTemplateDecl>(D);
-  return BD && BD->getBuiltinTemplateKind() == clang::BTK__builtin_dedup_pack;
+  return BD && (BD->getBuiltinTemplateKind() == clang::BTK__builtin_sort_pack ||
+                BD->getBuiltinTemplateKind() == clang::BTK__builtin_dedup_pack);
 }
 
 bool isPackProducingBuiltinTemplateName(TemplateName N) {

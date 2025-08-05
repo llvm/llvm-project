@@ -66,3 +66,6 @@ def __hlsl_spirv_type : HLSLBuiltinTemplate<
 // template <class ...Args>
 def __builtin_dedup_pack
     : CPlusPlusBuiltinTemplate<[Class<"Args", /*is_variadic=*/1>]>;
+// template <class ...Args>
+def __builtin_sort_pack
+    : CPlusPlusBuiltinTemplate<[Class<"Args", /*is_variadic=*/1>]>;

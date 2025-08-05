@@ -3511,6 +3511,43 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     return Context.getSubstBuiltinTemplatePack(
         TemplateArgument::CreatePackCopy(Context, OutArgs));
   }
+  case BTK__builtin_sort_pack: {
+    assert(Converted.size() == 1);
+    assert(Converted[0].getKind() == TemplateArgument::Pack);
+    // Delay if we have any dependencies, the mangled names may change after
+    // subsistution or may not be well-defined for dependent types.
+    if (Converted[0].isDependent())
+      return QualType();
+
+    auto InputArgs = Converted[0].getPackAsArray();
+    std::unique_ptr<MangleContext> Mangler(
+        SemaRef.getASTContext().createMangleContext());
+
+    // Prepare our sort keys, i.e. the mangled names.
+    llvm::SmallVector<std::string> MangledNames(InputArgs.size());
+    for (unsigned I = 0; I < InputArgs.size(); ++I) {
+      llvm::raw_string_ostream OS(MangledNames[I]);
+      Mangler->mangleCanonicalTypeName(
+          InputArgs[I].getAsType().getCanonicalType(), OS);
+    }
+
+    // Sort array of indices into the InputArgs/MangledNames.
+    llvm::SmallVector<unsigned> Indexes(InputArgs.size());
+    for (unsigned I = 0; I < InputArgs.size(); ++I) {
+      Indexes[I] = I;
+    }
+    llvm::stable_sort(Indexes, [&](unsigned L, unsigned R) {
+      return MangledNames[L] < MangledNames[R];
+    });
+
+    llvm::SmallVector<TemplateArgument> SortedArguments;
+    SortedArguments.reserve(InputArgs.size());
+    for (unsigned I : Indexes)
+      SortedArguments.push_back(InputArgs[I]);
+
+    return Context.getSubstBuiltinTemplatePack(
+        TemplateArgument::CreatePackCopy(Context, SortedArguments));
+  }
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
 }
