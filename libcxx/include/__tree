@@ -912,10 +912,10 @@ private:
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 __node_pointer __root() const _NOEXCEPT {
     // double t = __end_node()->__left_;
-    using __ptr_traits   = pointer_traits<__node_pointer>;
-    using __element_type = typename __ptr_traits::element_type;
-typename __element_type_type x{};
-    double t = x;
+//     using __ptr_traits   = pointer_traits<__node_pointer>;
+//     using __element_type = typename __ptr_traits::element_type;
+// typename __element_type_type x{};
+//     double t = x;
     return std::__static_fancy_pointer_cast<__node_pointer>(__end_node()->__left_);
     // return static_cast<__node_pointer>(__end_node()->__left_);
   }
@@ -1072,12 +1072,14 @@ typename __element_type_type x{};
   __insert_unique_from_orphaned_node(const_iterator __p, __get_node_value_type_t<_Tp>&& __value) {
     // fails here for move_alloc.pass.cpp
     if (__libcpp_is_constant_evaluated()) {
-      // __node_allocator& __na = __value.__node_alloc();
+      __node_allocator& __na = __value.__node_alloc();
       // __node_traits::destroy(__na, std::addressof(__lhs));
       // __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
       key_type __kk;
-      new (std::addressof(__kk))(key_type)(__value.first);
-      // __node_traits::construct(__na, std::addressof(__kk), std::move(__value.first));
+      // new (std::addressof(__kk))(key_type)(__value.first);
+      __node_traits::construct(__na, std::addressof(__kk), std::move(__value.first));
+      // __node_holder __h = __construct_node(std::forward<_Args>(__args)...);?
+      // __node_holder __h = __construct_node(__value);?
       __emplace_hint_unique(__p, std::move(__kk), std::move(__value.second));
     } else {
       __emplace_hint_unique(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
