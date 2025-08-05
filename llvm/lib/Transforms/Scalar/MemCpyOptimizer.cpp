@@ -23,6 +23,7 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
@@ -1395,8 +1396,10 @@ static bool hasUndefContents(MemorySSA *MSSA, BatchAAResults &AA, Value *V,
   if (auto *II = dyn_cast_or_null<IntrinsicInst>(Def->getMemoryInst())) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
       auto *LTSize = cast<ConstantInt>(II->getArgOperand(0));
+      if (LTSize->getZExtValue() == (uint64_t)-1)
+        return true;
 
-      if (auto *CSize = dyn_cast<ConstantInt>(Size)) {
+      if (auto *CSize = dyn_cast_or_null<ConstantInt>(Size)) {
         if (AA.isMustAlias(V, II->getArgOperand(1)) &&
             LTSize->getZExtValue() >= CSize->getZExtValue())
           return true;
@@ -1435,6 +1438,30 @@ static bool overreadUndefContents(MemorySSA *MSSA, MemCpyInst *MemCpy,
       MemSrcAccess->getDefiningAccess(), MemCpyLoc, BAA);
   if (auto *MD = dyn_cast<MemoryDef>(Clobber))
     if (hasUndefContents(MSSA, BAA, MemCpy->getSource(), MD, CopySize))
+      return true;
+  return false;
+}
+
+// If only the MemSrc instruction is known, a similar but slightly weaker
+// analysis can apply
+static bool allOverreadUndefContents(MemorySSA *MSSA, Instruction *Store,
+                                     BatchAAResults &BAA) {
+  MemoryLocation Loc;
+  Value *Ptr;
+  if (auto SI = dyn_cast<StoreInst>(Store)) {
+    Loc = MemoryLocation::get(SI);
+    Ptr = SI->getPointerOperand();
+  } else if (auto MI = dyn_cast<MemCpyInst>(Store)) {
+    Loc = MemoryLocation::getForDest(MI);
+    Ptr = MI->getDest();
+  } else {
+    llvm_unreachable("performStackMoveOptzn must have a known store kind");
+  }
+  MemoryUseOrDef *MemAccess = MSSA->getMemoryAccess(Store);
+  MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+      MemAccess->getDefiningAccess(), Loc, BAA);
+  if (auto *MD = dyn_cast<MemoryDef>(Clobber))
+    if (hasUndefContents(MSSA, BAA, Ptr, MD, nullptr))
       return true;
   return false;
 }
@@ -1532,21 +1559,43 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return false;
   }
 
-  // Check that copy is full with static size.
-  const DataLayout &DL = DestAlloca->getDataLayout();
-  std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
-  if (!SrcSize || Size != *SrcSize) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Source alloca size mismatch\n");
+  if (SrcAlloca->isUsedWithInAlloca() || DestAlloca->isUsedWithInAlloca())
     return false;
-  }
-  std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
-  if (!DestSize || Size != *DestSize) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
-    return false;
-  }
 
-  if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca())
-    return false;
+  Type *SrcType = SrcAlloca->getAllocatedType();
+  Type *DestType = DestAlloca->getAllocatedType();
+  // If they don't have common type, then they will need to be converted to a
+  // common size at runtime
+  const auto &DL = SrcAlloca->getDataLayout();
+  TypeSize SrcSize = DL.getTypeAllocSize(SrcType);
+  TypeSize DestSize = DL.getTypeAllocSize(DestType);
+  if (SrcType != DestType)
+    if (SrcSize != DestSize)
+      if (!SrcSize.isFixed() || !DestSize.isFixed())
+        return false;
+
+  // Check that copy is full with dest size, either because it wrote every byte,
+  // or it was fresh.
+  std::optional<TypeSize> FullSize = DestAlloca->getAllocationSize(DL);
+  if (!FullSize || Size != *FullSize)
+    if (!allOverreadUndefContents(MSSA, Store, BAA)) {
+      LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
+      return false;
+    }
+
+  // Check if it will be legal to combine allocas without breaking dominator.
+  // TODO: Try to hoist the arguments (recursively) instead of giving up
+  // immediately.
+  bool MoveSrc = !DT->dominates(SrcAlloca, DestAlloca);
+  if (MoveSrc) {
+    if (!DT->dominates(DestAlloca, SrcAlloca))
+      return false;
+    if (!DT->dominates(SrcAlloca->getArraySize(), DestAlloca))
+      return false;
+  } else {
+    if (!DT->dominates(DestAlloca->getArraySize(), SrcAlloca))
+      return false;
+  }
 
   // Check that src and dest are never captured, unescaped allocas. Also
   // find the nearest common dominator and postdominator for all users in
@@ -1555,7 +1604,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
 
   SmallVector<Instruction *, 4> LifetimeMarkers;
   SmallSet<Instruction *, 4> AAMetadataInstrs;
-  bool SrcNotDom = false;
 
   auto CaptureTrackingWithModRef =
       [&](Instruction *AI,
@@ -1569,10 +1617,6 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
       Instruction *I = Worklist.pop_back_val();
       for (const Use &U : I->uses()) {
         auto *UI = cast<Instruction>(U.getUser());
-        // If any use that isn't dominated by SrcAlloca exists, we move src
-        // alloca to the entry before the transformation.
-        if (!DT->dominates(SrcAlloca, UI))
-          SrcNotDom = true;
 
         if (Visited.size() >= MaxUsesToExplore) {
           LLVM_DEBUG(
@@ -1680,14 +1724,42 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback))
     return false;
 
-  // We can do the transformation. First, move the SrcAlloca to the start of the
-  // BB.
-  if (SrcNotDom)
-    SrcAlloca->moveBefore(*SrcAlloca->getParent(),
-                          SrcAlloca->getParent()->getFirstInsertionPt());
+  // We can now do the transformation. First move the Src if it was after Dest.
+  if (MoveSrc)
+    SrcAlloca->moveBefore(DestAlloca->getIterator());
+
   // Align the allocas appropriately.
   SrcAlloca->setAlignment(
       std::max(SrcAlloca->getAlign(), DestAlloca->getAlign()));
+
+  // Size the allocas appropriately.
+  Value *SrcArraySize = SrcAlloca->getArraySize();
+  Value *DestArraySize = DestAlloca->getArraySize();
+  IRBuilder<InstSimplifyFolder> Builder(SrcAlloca->getContext(),
+                                        InstSimplifyFolder(DL));
+  Builder.SetInsertPoint(SrcAlloca);
+  Type *Int32Ty = Builder.getInt32Ty();
+  if (SrcType != DestType && SrcSize != DestSize) {
+    SrcAlloca->setAllocatedType(Type::getInt8Ty(Load->getContext()));
+    if (SrcArraySize->getType() != Int32Ty)
+      SrcArraySize = Builder.CreateZExtOrTrunc(SrcArraySize, Int32Ty);
+    if (DestArraySize->getType() != Int32Ty)
+      DestArraySize = Builder.CreateZExtOrTrunc(DestArraySize, Int32Ty);
+    SrcArraySize = Builder.CreateMul(
+        SrcArraySize, ConstantInt::get(Int32Ty, SrcSize.getFixedValue()), "",
+        true, true);
+    DestArraySize = Builder.CreateMul(
+        DestArraySize, ConstantInt::get(Int32Ty, DestSize.getFixedValue()), "",
+        true, true);
+  }
+  if (SrcArraySize != DestArraySize) {
+    if (SrcArraySize->getType() != DestArraySize->getType()) {
+      SrcArraySize = Builder.CreateZExtOrTrunc(SrcArraySize, Int32Ty);
+      DestArraySize = Builder.CreateZExtOrTrunc(DestArraySize, Int32Ty);
+    }
+    SrcAlloca->setOperand(0, Builder.CreateBinaryIntrinsic(
+                                 Intrinsic::umax, SrcArraySize, DestArraySize));
+  }
 
   // Merge the two allocas.
   DestAlloca->replaceAllUsesWith(SrcAlloca);
@@ -1716,7 +1788,7 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     I->setMetadata(LLVMContext::MD_tbaa_struct, nullptr);
   }
 
-  LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
+  LLVM_DEBUG(dbgs() << "Stack Move: Performed stack-move optimization\n");
   NumStackMove++;
   return true;
 }
