@@ -23,7 +23,7 @@ namespace cpp {
 // do the checks before invoking the methods.
 //
 // This class will be extended as needed in future.
-class string_view {
+class LIBC_GSL_POINTER string_view {
 private:
   const char *Data;
   size_t Len;
@@ -75,6 +75,10 @@ public:
 
   // Preconditions: [Str, Str + N) is a valid range.
   LIBC_INLINE constexpr string_view(const char *Str, size_t N)
+      : Data(Str), Len(N) {}
+
+  template <size_t N>
+  LIBC_INLINE constexpr string_view(LIBC_LIFETIMEBOUND const char (&Str)[N])
       : Data(Str), Len(N) {}
 
   LIBC_INLINE constexpr const char *data() const { return Data; }
