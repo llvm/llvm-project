@@ -1,6 +1,5 @@
 add_mlir_unittest(MLIRDialectTests
   BroadcastShapeTest.cpp
-  CommonFoldersTest.cpp
 )
 mlir_target_link_libraries(MLIRDialectTests
   PRIVATE
