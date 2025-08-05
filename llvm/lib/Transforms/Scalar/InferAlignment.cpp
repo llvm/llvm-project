@@ -74,7 +74,7 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
     // Derive the base pointer alignment from the load/store alignment
     // and the offset from the base pointer.
     Align BasePointerAlign =
-        commonAlignment(LoadStoreAlign, OffsetFromBase.getLimitedValue());
+        commonAlignment(LoadStoreAlign, OffsetFromBase.abs().getLimitedValue());
 
     auto [It, Inserted] =
         BestBasePointerAligns.try_emplace(PtrOp, BasePointerAlign);
@@ -85,7 +85,7 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
       // improved base pointer alignment for future iterations.
       if (It->second > BasePointerAlign) {
         Align BetterLoadStoreAlign =
-            commonAlignment(It->second, OffsetFromBase.getLimitedValue());
+            commonAlignment(It->second, OffsetFromBase.abs().getLimitedValue());
         return BetterLoadStoreAlign;
       }
       It->second = BasePointerAlign;
