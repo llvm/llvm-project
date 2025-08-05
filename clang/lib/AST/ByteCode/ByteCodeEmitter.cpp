@@ -216,7 +216,9 @@ bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args,
   // The opcode is followed by arguments. The source info is
   // attached to the address after the opcode.
   emit(P, Code, Op, Success);
-  if (SI)
+  if (LocOverride)
+    SrcMap.emplace_back(Code.size(), *LocOverride);
+  else if (SI)
     SrcMap.emplace_back(Code.size(), SI);
 
   (..., emit(P, Code, Args, Success));
