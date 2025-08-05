@@ -81,7 +81,7 @@ struct VectorDim {
 struct AlignmentBytes {
   uint64_t alignment = 0;
   AlignmentBytes() = default;
-  explicit AlignmentBytes(uint64_t alignment_) : alignment(alignment_){};
+  explicit AlignmentBytes(uint64_t alignment) : alignment(alignment) {};
   operator bool() const { return 0 != alignment; }
 };
 
