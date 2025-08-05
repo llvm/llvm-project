@@ -36,9 +36,6 @@ private:
     // Break on 4 or 2 byte instructions.
     return size == 4 || size == 2;
   }
-
-  virtual llvm::Error WriteHardwareDebugReg(DREGType hwbType,
-                                            int hwb_index) = 0;
 };
 
 } // namespace lldb_private

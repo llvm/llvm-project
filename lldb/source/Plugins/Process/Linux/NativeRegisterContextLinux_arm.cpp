@@ -333,55 +333,40 @@ NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(DREGType hwbType) {
 #endif // ifdef __arm__
 }
 
+#ifdef __arm__
 llvm::Error
 NativeRegisterContextLinux_arm::WriteHardwareDebugReg(DREGType hwbType,
                                                       int hwb_index) {
   Status error;
   lldb::addr_t *addr_buf;
   uint32_t *ctrl_buf;
+  int addr_idx = (hwb_index << 1) + 1;
+  int ctrl_idx = addr_idx + 1;
 
   if (hwbType == NativeRegisterContextDBReg::eDREGTypeWATCH) {
+    addr_idx *= -1;
     addr_buf = &m_hwp_regs[hwb_index].address;
+    ctrl_idx *= -1;
     ctrl_buf = &m_hwp_regs[hwb_index].control;
-
-    error = NativeProcessLinux::PtraceWrapper(
-        PTRACE_SETHBPREGS, m_thread.GetID(),
-        (PTRACE_TYPE_ARG3)(intptr_t) - ((hwb_index << 1) + 1), addr_buf,
-        sizeof(unsigned int));
-
-    if (error.Fail())
-      return error.ToError();
-
-    error = NativeProcessLinux::PtraceWrapper(
-        PTRACE_SETHBPREGS, m_thread.GetID(),
-        (PTRACE_TYPE_ARG3)(intptr_t) - ((hwb_index << 1) + 2), ctrl_buf,
-        sizeof(unsigned int));
-
-    if (error.Fail())
-      return error.ToError();
   } else {
     addr_buf = &m_hbp_regs[hwb_index].address;
     ctrl_buf = &m_hbp_regs[hwb_index].control;
-
-    error = NativeProcessLinux::PtraceWrapper(
-        PTRACE_SETHBPREGS, m_thread.GetID(),
-        (PTRACE_TYPE_ARG3)(intptr_t)((hwb_index << 1) + 1), addr_buf,
-        sizeof(unsigned int));
-
-    if (error.Fail())
-      return error.ToError();
-
-    error = NativeProcessLinux::PtraceWrapper(
-        PTRACE_SETHBPREGS, m_thread.GetID(),
-        (PTRACE_TYPE_ARG3)(intptr_t)((hwb_index << 1) + 2), ctrl_buf,
-        sizeof(unsigned int));
-
-    if (error.Fail())
-      return error.ToError();
   }
+
+  error = NativeProcessLinux::PtraceWrapper(
+      PTRACE_SETHBPREGS, m_thread.GetID(), (PTRACE_TYPE_ARG3)(intptr_t)addr_idx,
+      addr_buf, sizeof(unsigned int));
+
+  if (error.Fail())
+    return error.ToError();
+
+  error = NativeProcessLinux::PtraceWrapper(
+      PTRACE_SETHBPREGS, m_thread.GetID(), (PTRACE_TYPE_ARG3)(intptr_t)ctrl_idx,
+      ctrl_buf, sizeof(unsigned int));
 
   return error.ToError();
 }
+#endif // ifdef __arm__
 
 uint32_t NativeRegisterContextLinux_arm::CalculateFprOffset(
     const RegisterInfo *reg_info) const {

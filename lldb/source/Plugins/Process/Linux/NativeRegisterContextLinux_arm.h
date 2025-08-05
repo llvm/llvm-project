@@ -77,7 +77,9 @@ private:
   llvm::Error ReadHardwareDebugInfo() override;
 
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
-  llvm::Error WriteHardwareDebugReg(DREGType hwbType, int hwb_index) override;
+#ifdef __arm__
+  llvm::Error WriteHardwareDebugReg(DREGType hwbType, int hwb_index);
+#endif
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
