@@ -350,7 +350,8 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   } else {
     // This thread is not doing initialization of startingPoint, need to wait
     // for initialization to complete.
-    while ((localStartingPoint = startingPoint.load(std::memory_order_acquire)) <= TIME_INITIALIZING) {
+    while ((localStartingPoint = startingPoint.load(
+                std::memory_order_acquire)) <= TIME_INITIALIZING) {
       std::this_thread::yield();
     }
   }
