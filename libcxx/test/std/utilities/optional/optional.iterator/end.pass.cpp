@@ -11,48 +11,47 @@
 // <optional>
 
 // constexpr iterator optional::end() noexcept;
-// constexpr const_iterator optional::end() noexcept;
+// constexpr const_iterator optional::end() const noexcept;
 
 #include <cassert>
 #include <iterator>
-#include <ranges>
 #include <optional>
+#include <ranges>
+#include <utility>
 
 template <typename T>
 constexpr bool test() {
   std::optional<T> disengaged{std::nullopt};
-  const std::optional<T> disengaged2{std::nullopt};
 
   { // end() is marked noexcept
     static_assert(noexcept(disengaged.end()));
-    static_assert(noexcept(disengaged2.end()));
+    static_assert(noexcept(std::as_const(disengaged).end()));
   }
 
   { // end() == begin() and end() == end() if the optional is disengaged
     auto it  = disengaged.end();
-    auto it2 = disengaged2.end();
+    auto it2 = std::as_const(disengaged).end();
 
     assert(it == disengaged.begin());
     assert(disengaged.begin() == it);
     assert(it == disengaged.end());
 
-    assert(it2 == disengaged2.begin());
-    assert(disengaged2.begin() == it2);
-    assert(it2 == disengaged2.end());
+    assert(it2 == std::as_const(disengaged).begin());
+    assert(std::as_const(disengaged).begin() == it2);
+    assert(it2 == std::as_const(disengaged).end());
   }
 
   std::optional<T> engaged{T{}};
-  const std::optional<T> engaged2{T{}};
 
   { // end() != begin() if the optional is engaged
     auto it  = engaged.end();
-    auto it2 = engaged2.end();
+    auto it2 = std::as_const(engaged).end();
 
     assert(it != engaged.begin());
     assert(engaged.begin() != it);
 
-    assert(it2 != engaged2.begin());
-    assert(engaged2.begin() != it2);
+    assert(it2 != std::as_const(engaged).begin());
+    assert(std::as_const(engaged).begin() != it2);
   }
 
   return true;
