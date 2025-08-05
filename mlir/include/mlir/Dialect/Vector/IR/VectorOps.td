@@ -1731,7 +1731,7 @@ def Vector_LoadOp : Vector_Op<"load", [
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"AlignmentBytes", "AlignmentBytes()">: $alignment), [{
       return build($_builder, $_state, resultType, base, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment ? $_builder.getI64IntegerAttr(alignment.getAlignment()) :
                                     nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
@@ -1740,7 +1740,7 @@ def Vector_LoadOp : Vector_Op<"load", [
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"AlignmentBytes", "AlignmentBytes()">: $alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment ? $_builder.getI64IntegerAttr(alignment.getAlignment()) :
                                     nullptr);
     }]>
   ];
@@ -1849,7 +1849,7 @@ def Vector_StoreOp : Vector_Op<"store", [
                    CArg<"bool", "false">:$nontemporal,
                    CArg<"AlignmentBytes", "AlignmentBytes()">:$alignment), [{
       return build($_builder, $_state, valueToStore, base, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment ? $_builder.getI64IntegerAttr(alignment.getAlignment()) :
                                     nullptr);
     }]>
   ];

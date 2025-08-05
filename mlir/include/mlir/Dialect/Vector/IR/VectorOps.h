@@ -82,7 +82,8 @@ struct AlignmentBytes {
   uint64_t alignment = 0;
   AlignmentBytes() = default;
   explicit AlignmentBytes(uint64_t alignment) : alignment(alignment) {};
-  operator bool() const { return 0 != alignment; }
+  explicit operator bool() const { return alignment; }
+  uint64_t getAlignment() const { return alignment; }
 };
 
 BroadcastableToResult
