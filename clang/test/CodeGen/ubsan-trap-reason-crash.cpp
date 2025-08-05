@@ -16,5 +16,5 @@ void caller() {
 
 
 // CHECK-LABEL: @_Z6callerv
-// CHECK: call void @llvm.ubsantrap(i8 22){{.*}}!nosanitize
+// CHECK: call void @llvm.ubsantrap(i8 25){{.*}}!nosanitize
 // CHECK-NOT: __clang_trap_msg

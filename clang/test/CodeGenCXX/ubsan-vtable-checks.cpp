@@ -26,7 +26,7 @@ int get_v(T* t) {
   // CHECK-NULL-NOT: load {{.*}} (ptr{{.*}})**, {{.*}} (ptr{{.*}})***
   // CHECK-NULL: [[UBSAN_CMP_RES:%[0-9]+]] = icmp ne ptr %{{[_a-z0-9]+}}, null
   // CHECK-NULL-NEXT: br i1 [[UBSAN_CMP_RES]], label %{{.*}}, label %{{.*}}
-  // CHECK-NULL: call void @__ubsan_handle_type_mismatch_v1_abort
+  // CHECK-NULL: call void @__ubsan_handle_null_pointer_use_abort
   // Second, we check that vtable is actually loaded once the type check is done.
   // CHECK-NULL: load ptr, ptr {{.*}}
 
@@ -51,7 +51,7 @@ int get_v(T* t) {
 void delete_it(T *t) {
   // CHECK-VPTR-NOT: load {{.*}} (ptr{{.*}})**, {{.*}} (ptr{{.*}})***
   // CHECK-VPTR: br i1 {{.*}} label %{{.*}}
-  // CHECK-VPTR: call void @__ubsan_handle_type_mismatch_v1_abort
+  // CHECK-VPTR: call void @__ubsan_handle_null_pointer_use_abort
   // Second, we check that vtable is actually loaded once the type check is done.
   // CHECK-VPTR: load ptr, ptr {{.*}}
 

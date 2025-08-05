@@ -10,7 +10,7 @@
 //.
 // CHECK: @.src = private unnamed_addr addrspace(4) constant [{{[0-9]+}} x i8] c
 // CHECK: @0 = private unnamed_addr addrspace(1) constant { i16, i16, [7 x i8] } { i16 0, i16 7, [7 x i8] c"'char'\00" }
-// CHECK: @1 = private unnamed_addr addrspace(1) global { { ptr, i32, i32 }, ptr addrspace(1), i8, i8 } { { ptr, i32, i32 } { ptr addrspacecast (ptr addrspace(4) @.src to ptr), i32 {{[0-9]+}}, i32 3 }, ptr addrspace(1) @0, i8 1, i8 1 }
+// CHECK: @1 = private unnamed_addr addrspace(1) global { { ptr, i32, i32 }, ptr addrspace(1), i8 } { { ptr, i32, i32 } { ptr addrspacecast (ptr addrspace(4) @.src to ptr), i32 34, i32 3 }, ptr addrspace(1) @0, i8 1 }
 //.
 // CHECK-LABEL: @_Z3fooPc(
 // CHECK-NEXT:  entry:
@@ -22,9 +22,9 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[TMP0]], null, !nosanitize !4
 // CHECK-NEXT:    br i1 [[TMP1]], label [[CONT:%.*]], label [[HANDLER_TYPE_MISMATCH:%.*]], !prof [[PROF4:![0-9]+]], !nosanitize !4
-// CHECK:       handler.type_mismatch:
+// CHECK:       handler.null_pointer_use:
 // CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[TMP0]] to i64, !nosanitize !4
-// CHECK-NEXT:    call void @__ubsan_handle_type_mismatch_v1_abort(ptr addrspace(1) @[[GLOB1:[0-9]+]], i64 [[TMP2]]) #[[ATTR2:[0-9]+]], !nosanitize !4
+// CHECK-NEXT:    call void @__ubsan_handle_null_pointer_use_abort(ptr addrspace(1) @[[GLOB1:[0-9]+]], i64 [[TMP2]]) #[[ATTR2:[0-9]+]], !nosanitize !4
 // CHECK-NEXT:    unreachable, !nosanitize !4
 // CHECK:       cont:
 // CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1

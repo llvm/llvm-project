@@ -44,7 +44,7 @@ void call_func_with_nonnull_arg(int *_Nonnull p) {
 void nonnull_assign1(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne ptr {{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_ASSIGN1_LOC]]
+  // CHECK: call void @__ubsan_handle_null_pointer_use_with_nullability{{.*}}[[NONNULL_ASSIGN1_LOC]]
   int *_Nonnull local;
   local = p;
 }
@@ -54,7 +54,7 @@ void nonnull_assign1(int *p) {
 void nonnull_assign2(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_ASSIGN2_LOC]]
+  // CHECK: call void @__ubsan_handle_null_pointer_use_with_nullability{{.*}}[[NONNULL_ASSIGN2_LOC]]
   int *_Nonnull arr[1];
   arr[0] = p;
 }
@@ -68,8 +68,8 @@ struct S1 {
 void nonnull_assign3(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_ASSIGN3_LOC]]
-  // CHECK-NOT: call void @__ubsan_handle_type_mismatch
+  // CHECK: call void @__ubsan_handle_null_pointer_use_with_nullability{{.*}}[[NONNULL_ASSIGN3_LOC]]
+  // CHECK-NOT: call void @__ubsan_handle_null_pointer_use_with_nullability
   struct S1 s;
   s.mptr = p;
 }
@@ -79,7 +79,7 @@ void nonnull_assign3(int *p) {
 void nonnull_init1(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_INIT1_LOC]]
+  // CHECK: call void @__ubsan_handle_null_pointer_use_with_nullability{{.*}}[[NONNULL_INIT1_LOC]]
   int *_Nonnull local = p;
 }
 
@@ -88,10 +88,10 @@ void nonnull_init1(int *p) {
 void nonnull_init2(int *p) {
   // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_INIT2_LOC1]]
+  // CHECK: call void @__ubsan_handle_null_pointer_use_with_nullability{{.*}}[[NONNULL_INIT2_LOC1]]
   // CHECK: [[ICMP:%.*]] = icmp ne ptr %{{.*}}, null, !nosanitize
   // CHECK-NEXT: br i1 [[ICMP]], {{.*}}, !nosanitize
-  // CHECK: call void @__ubsan_handle_type_mismatch{{.*}}[[NONNULL_INIT2_LOC2]]
+  // CHECK: call void @__ubsan_handle_null_pointer_use_with_nullability{{.*}}[[NONNULL_INIT2_LOC2]]
   int *_Nonnull arr[] = {p, p};
 }
 
