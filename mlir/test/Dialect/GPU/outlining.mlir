@@ -509,7 +509,7 @@ func.func @launch_cluster() {
 // CHECK-NEXT: = memref.load %[[KERNEL_ARG1]][%[[TID]]] : memref<?xf32, 1>
 
 // -----
-// This test tests the two optional attributes kernelModule and kernelFunc for gpu.launch
+// This test tests the two optional attributes `module` and `function` for gpu.launch
 // CHECK-LABEL: func.func @testKernelAttributes()
 // CHECK: gpu.launch_func  @test_module::@test_kernel_func blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
 // CHECK: gpu.module @test_module
@@ -526,12 +526,12 @@ func.func @testKernelAttributes() {
              threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {kernelModule = @test_module, kernelFunc = @test_kernel_func}
+  } {module = @test_module, function = @test_kernel_func}
   return
 }
 
 // -----
-// This test tests the two optional attributes kernelModule and kernelFunc for gpu.launch, when kernelModule already exists.
+// This test tests the two optional attributes `module` and `function` for gpu.launch, when kernelModule already exists.
 
 // CHECK-LABEL: gpu.module @existing_module
 // CHECK: gpu.func @test_kernel_func()
@@ -559,12 +559,12 @@ func.func @testExistingModule() {
              threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {kernelModule = @existing_module, kernelFunc = @test_kernel_func}
+  } {module = @existing_module, function = @test_kernel_func}
   return
 }
 
 // -----
-// This test tests the optional attribute kernelModule for gpu.launch.
+// This test tests the optional attribute `module` for gpu.launch.
 // CHECK-LABEL: func.func @testKernelModuleOnly()
 // CHECK: gpu.launch_func  @test_module::@testKernelModuleOnly_kernel blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
 // CHECK: gpu.module @test_module
@@ -581,12 +581,12 @@ func.func @testKernelModuleOnly() {
              threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {kernelModule = @test_module}
+  } {module = @test_module}
   return
 }
 
 // -----
-// This test tests the optional attribute kernelFunc for gpu.launch.
+// This test tests the optional attribute `function` for gpu.launch.
 // CHECK-LABEL: func.func @testKernelFuncOnly()
 // CHECK: gpu.launch_func  @test_kernel_func::@test_kernel_func blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
 
@@ -604,12 +604,12 @@ func.func @testKernelFuncOnly() {
              threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {kernelFunc = @test_kernel_func}
+  } {function = @test_kernel_func}
   return
 }
 
 // -----
-// This test tests gpu.launch when optional attributes kernelModule and kernelFunc are not specified.
+// This test tests gpu.launch when optional attributes `module` and `function` are not specified.
 // CHECK-LABEL: func.func @testNoAttributes()
 // CHECK: gpu.launch_func  @testNoAttributes_kernel::@testNoAttributes_kernel blocks in (%[[GRID_X:.*]], %[[GRID_Y:.*]], %[[GRID_Z:.*]]) threads in (%[[BLOCK_X:.*]], %[[BLOCK_Y:.*]], %[[BLOCK_Z:.*]])
 

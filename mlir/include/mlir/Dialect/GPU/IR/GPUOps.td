@@ -804,8 +804,8 @@ def GPU_LaunchOp : GPU_Op<"launch", [
                Optional<Index>:$clusterSizeY,
                Optional<Index>:$clusterSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
-               OptionalAttr<SymbolRefAttr>:$kernelFunc,
-               OptionalAttr<SymbolRefAttr>:$kernelModule)>,
+               OptionalAttr<FlatSymbolRefAttr>:$function,
+               OptionalAttr<FlatSymbolRefAttr>:$module)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "GPU kernel launch operation";
 
@@ -839,7 +839,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
     -   a variadic number of Workgroup memory attributions.
     -   a variadic number of Private memory attributions.
 
-    The `kernelFunc` and `kernelModule` attributes are optional and specifies
+    The `function` and `module` attributes are optional and specifies
     the kernel name and a module in which the kernel should be outlined.
 
     Syntax:
