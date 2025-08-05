@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR,CXX_CIR
 // RUN: %clang_cc1 -x c -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM,CXX_LLVM
 // RUN: %clang_cc1 -x c -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG,CXX_OGCG
 // RUN: %clang_cc1 -x c -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
@@ -225,3 +225,64 @@ void foo3() {
 // OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { half, half }, ptr %[[B_ADDR]], i32 0, i32 1
 // OGCG: store half %[[ADD_REAL_F16]], ptr %[[B_REAL_PTR]], align 2
 // OGCG: store half %[[ADD_IMAG_F16]], ptr %[[B_IMAG_PTR]], align 2
+
+#ifdef __cplusplus
+void foo4() {
+  volatile _Complex int a;
+  volatile _Complex int b;
+  int _Complex c = b += a;
+}
+#endif
+
+// CXX_CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a"]
+// CXX_CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b"]
+// CXX_CIR: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CXX_CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CXX_CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CXX_CIR: %[[RESULT:.*]] = cir.complex.add %[[TMP_B]], %[[TMP_A]] : !cir.complex<!s32i>
+// CXX_CIR: cir.store{{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CXX_CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
+// CXX_CIR: cir.store{{.*}} %[[TMP_B]], %[[C_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>
+
+// CXX_LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// CXX_LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// CXX_LLVM: %[[C_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
+// CXX_LLVM: %[[TMP_A:.*]] = load { i32, i32 }, ptr %[[A_ADDR]], align 4
+// CXX_LLVM: %[[TMP_B:.*]] = load { i32, i32 }, ptr %[[B_ADDR]], align 4
+// CXX_LLVM: %[[B_REAL:.*]] = extractvalue { i32, i32 } %[[TMP_B]], 0
+// CXX_LLVM: %[[B_IMAG:.*]] = extractvalue { i32, i32 } %[[TMP_B]], 1
+// CXX_LLVM: %[[A_REAL:.*]] = extractvalue { i32, i32 } %[[TMP_A]], 0
+// CXX_LLVM: %[[A_IMAG:.*]] = extractvalue { i32, i32 } %[[TMP_A]], 1
+// CXX_LLVM: %[[ADD_REAL:.*]] = add i32 %[[B_REAL]], %[[A_REAL]]
+// CXX_LLVM: %[[ADD_IMAG:.*]] = add i32 %[[B_IMAG]], %[[A_IMAG]]
+// CXX_LLVM: %[[TMP_RESULT:.*]] = insertvalue { i32, i32 } poison, i32 %[[ADD_REAL]], 0
+// CXX_LLVM: %[[RESULT:.*]] = insertvalue { i32, i32 } %[[TMP_RESULT]], i32 %[[ADD_IMAG]], 1
+// CXX_LLVM: store { i32, i32 } %[[RESULT]], ptr %[[B_ADDR]], align 4
+// CXX_LLVM: %[[TMP_B:.*]] = load { i32, i32 }, ptr %[[B_ADDR]], align 4
+// CXX_LLVM: store { i32, i32 } %[[TMP_B]], ptr %[[C_ADDR]], align 4
+
+// CXX_OGCG: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// CXX_OGCG: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
+// CXX_OGCG: %[[C_ADDR:.*]] = alloca { i32, i32 }, align 4
+// CXX_OGCG: %a.realp = getelementptr inbounds nuw { i32, i32 }, ptr %[[A_ADDR]], i32 0, i32 0
+// CXX_OGCG: %a.real = load volatile i32, ptr %a.realp, align 4
+// CXX_OGCG: %a.imagp = getelementptr inbounds nuw { i32, i32 }, ptr %[[A_ADDR]], i32 0, i32 1
+// CXX_OGCG: %a.imag = load volatile i32, ptr %a.imagp, align 4
+// CXX_OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[B_ADDR]], i32 0, i32 0
+// CXX_OGCG: %[[B_REAL:.*]] = load volatile i32, ptr %[[B_REAL_PTR]], align 4
+// CXX_OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[B_ADDR]], i32 0, i32 1
+// CXX_OGCG: %[[B_IMAG:.*]] = load volatile i32, ptr %[[B_IMAG_PTR]], align 4
+// CXX_OGCG: %[[ADD_REAL:.*]] = add i32 %[[B_REAL]], %[[A_REAL]]
+// CXX_OGCG: %[[ADD_IMAG:.*]] = add i32 %[[B_IMAG]], %[[A_IMAG]]
+// CXX_OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[B_ADDR]], i32 0, i32 0
+// CXX_OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[B_ADDR]], i32 0, i32 1
+// CXX_OGCG: store volatile i32 %[[ADD_REAL]], ptr %[[B_REAL_PTR]], align 4
+// CXX_OGCG: store volatile i32 %[[ADD_IMAG]], ptr %[[B_IMAG_PTR]], align 4
+// CXX_OGCG: %[[B_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[B_ADDR]], i32 0, i32 0
+// CXX_OGCG: %[[B_REAL:.*]] = load volatile i32, ptr %[[B_REAL_PTR]], align 4
+// CXX_OGCG: %[[B_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[B_ADDR]], i32 0, i32 1
+// CXX_OGCG: %[[B_IMAG:.*]] = load volatile i32, ptr %[[B_IMAG_PTR]], align 4
+// CXX_OGCG: %[[C_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[C_ADDR]], i32 0, i32 0
+// CXX_OGCG: %[[C_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[C_ADDR]], i32 0, i32 1
+// CXX_OGCG: store i32 %[[B_REAL]], ptr %[[C_REAL_PTR]], align 4
+// CXX_OGCG: store i32 %[[B_IMAG]], ptr %[[C_IMAG_PTR]], align 4
