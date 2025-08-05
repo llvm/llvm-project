@@ -25,7 +25,6 @@
 #include "InterpStack.h"
 #include "InterpState.h"
 #include "MemberPointer.h"
-#include "Opcode.h"
 #include "PrimType.h"
 #include "Program.h"
 #include "State.h"
@@ -481,13 +480,11 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
     Result.elem<Floating>(0) = RA; // Floating(ResR);
-    Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
     Result.elem<Floating>(1) = RI; // Floating(ResI);
-    Result.atIndex(1).initialize();
-    Result.initialize();
+    Result.initializeAllElements();
   } else {
     // Integer element type.
     const T &LHSR = LHS.elem<T>(0);
@@ -505,7 +502,6 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::sub(A, B, Bits, &Result.elem<T>(0)))
       return false;
-    Result.atIndex(0).initialize();
 
     // imag(Result) = (real(LHS) * imag(RHS)) + (imag(LHS) * real(RHS))
     if (T::mul(LHSR, RHSI, Bits, &A))
@@ -514,8 +510,8 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::add(A, B, Bits, &Result.elem<T>(1)))
       return false;
-    Result.atIndex(1).initialize();
     Result.initialize();
+    Result.initializeAllElements();
   }
 
   return true;
@@ -541,14 +537,12 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     Floating RA = S.allocFloat(A.getSemantics());
     RA.copy(ResR);
     Result.elem<Floating>(0) = RA; // Floating(ResR);
-    Result.atIndex(0).initialize();
 
     Floating RI = S.allocFloat(A.getSemantics());
     RI.copy(ResI);
     Result.elem<Floating>(1) = RI; // Floating(ResI);
-    Result.atIndex(1).initialize();
 
-    Result.initialize();
+    Result.initializeAllElements();
   } else {
     // Integer element type.
     const T &LHSR = LHS.elem<T>(0);
@@ -590,7 +584,6 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::div(ResultR, Den, Bits, &ResultR))
       return false;
-    Result.atIndex(0).initialize();
 
     // imag(Result) = ((imag(LHS) * real(RHS)) - (real(LHS) * imag(RHS))) / Den
     if (T::mul(LHSI, RHSR, Bits, &A) || T::mul(LHSR, RHSI, Bits, &B))
@@ -599,8 +592,7 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::div(ResultI, Den, Bits, &ResultI))
       return false;
-    Result.atIndex(1).initialize();
-    Result.initialize();
+    Result.initializeAllElements();
   }
 
   return true;
@@ -1138,8 +1130,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << LHS.toDiagnosticString(S.getASTContext());
     return false;
-  } else if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
-             LHS.getOffset() == 0) {
+  }
+  if (RHS.isOnePastEnd() && !LHS.isOnePastEnd() && !LHS.isZero() &&
+      LHS.getOffset() == 0) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_past_end)
         << RHS.toDiagnosticString(S.getASTContext());
@@ -1157,8 +1150,9 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
         S.FFDiag(Loc, diag::note_constexpr_literal_comparison);
         return false;
-      } else if (const auto *CE = dyn_cast<CallExpr>(E);
-                 CE && IsOpaqueConstantCall(CE)) {
+      }
+      if (const auto *CE = dyn_cast<CallExpr>(E);
+          CE && IsOpaqueConstantCall(CE)) {
         const SourceInfo &Loc = S.Current->getSource(OpPC);
         S.FFDiag(Loc, diag::note_constexpr_opaque_call_comparison)
             << P.toDiagnosticString(S.getASTContext());
@@ -2688,6 +2682,14 @@ static inline bool CastFixedPointIntegral(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+static inline bool FnPtrCast(InterpState &S, CodePtr OpPC) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
+      << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  return true;
+}
+
 static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
   const auto &Ptr = S.Stk.peek<Pointer>();
 
@@ -3273,7 +3275,8 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     S.CCEDiag(Loc, diag::note_constexpr_invalid_cast)
         << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
     return !Fatal;
-  } else if (Kind == CastKind::Volatile) {
+  }
+  if (Kind == CastKind::Volatile) {
     if (!S.checkingPotentialConstantExpression()) {
       const auto *E = cast<CastExpr>(S.Current->getExpr(OpPC));
       if (S.getLangOpts().CPlusPlus)
@@ -3284,7 +3287,8 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind,
     }
 
     return false;
-  } else if (Kind == CastKind::Dynamic) {
+  }
+  if (Kind == CastKind::Dynamic) {
     assert(!S.getLangOpts().CPlusPlus20);
     S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_invalid_cast)
         << diag::ConstexprInvalidCastKind::Dynamic;
