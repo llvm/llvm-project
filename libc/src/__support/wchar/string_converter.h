@@ -78,7 +78,7 @@ public:
     }
 
     ErrorOr<CharType> out = cr.pop<CharType>();
-    if (out.has_value() && out.value() == L'\0')
+    if (out.has_value() && out.value() == 0) // if out isn't null terminator or an error
       src_len = src_idx;
 
     num_to_write--;
