@@ -147,7 +147,8 @@ mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
   assert((cst >= 0 || mlir::isa<mlir::IndexType>(ty) ||
           mlir::cast<mlir::IntegerType>(ty).getWidth() <= 64) &&
          "must use APint");
-  return create<mlir::arith::ConstantOp>(loc, ty, getIntegerAttr(ty, cst));
+  return mlir::arith::ConstantOp::create(*this, loc, ty,
+                                         getIntegerAttr(ty, cst));
 }
 
 mlir::Value fir::FirOpBuilder::createAllOnesInteger(mlir::Location loc,
@@ -156,7 +157,8 @@ mlir::Value fir::FirOpBuilder::createAllOnesInteger(mlir::Location loc,
     return createIntegerConstant(loc, ty, -1);
   llvm::APInt allOnes =
       llvm::APInt::getAllOnes(mlir::cast<mlir::IntegerType>(ty).getWidth());
-  return create<mlir::arith::ConstantOp>(loc, ty, getIntegerAttr(ty, allOnes));
+  return mlir::arith::ConstantOp::create(*this, loc, ty,
+                                         getIntegerAttr(ty, allOnes));
 }
 
 mlir::Value
@@ -185,7 +187,7 @@ mlir::Value fir::FirOpBuilder::createRealConstant(mlir::Location loc,
                                                   const llvm::APFloat &value) {
   if (mlir::isa<mlir::FloatType>(fltTy)) {
     auto attr = getFloatAttr(fltTy, value);
-    return create<mlir::arith::ConstantOp>(loc, fltTy, attr);
+    return mlir::arith::ConstantOp::create(*this, loc, fltTy, attr);
   }
   llvm_unreachable("should use builtin floating-point type");
 }
@@ -418,12 +420,12 @@ mlir::Value fir::FirOpBuilder::genTempDeclareOp(
 mlir::Value fir::FirOpBuilder::genStackSave(mlir::Location loc) {
   mlir::Type voidPtr = mlir::LLVM::LLVMPointerType::get(
       getContext(), fir::factory::getAllocaAddressSpace(&getDataLayout()));
-  return create<mlir::LLVM::StackSaveOp>(loc, voidPtr);
+  return mlir::LLVM::StackSaveOp::create(*this, loc, voidPtr);
 }
 
 void fir::FirOpBuilder::genStackRestore(mlir::Location loc,
                                         mlir::Value stackPointer) {
-  create<mlir::LLVM::StackRestoreOp>(loc, stackPointer);
+  mlir::LLVM::StackRestoreOp::create(*this, loc, stackPointer);
 }
 
 /// Create a global variable in the (read-only) data section. A global variable
@@ -701,8 +703,8 @@ mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
       for (auto [lbnd, extent] : llvm::zip(lbounds, extents)) {
         auto lb = createConvert(loc, idxTy, lbnd);
         auto ext = createConvert(loc, idxTy, extent);
-        auto shift = create<mlir::arith::SubIOp>(loc, lb, one);
-        auto ub = create<mlir::arith::AddIOp>(loc, ext, shift);
+        auto shift = mlir::arith::SubIOp::create(*this, loc, lb, one);
+        auto ub = mlir::arith::AddIOp::create(*this, loc, ext, shift);
         trips.push_back(lb);
         trips.push_back(ub);
         trips.push_back(one);
@@ -852,12 +854,12 @@ mlir::Value fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc,
   lb = createConvert(loc, type, lb);
   ub = createConvert(loc, type, ub);
   step = createConvert(loc, type, step);
-  auto diff = create<mlir::arith::SubIOp>(loc, ub, lb);
-  auto add = create<mlir::arith::AddIOp>(loc, diff, step);
-  auto div = create<mlir::arith::DivSIOp>(loc, add, step);
-  auto cmp = create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::sgt,
-                                         div, zero);
-  return create<mlir::arith::SelectOp>(loc, cmp, div, zero);
+  auto diff = mlir::arith::SubIOp::create(*this, loc, ub, lb);
+  auto add = mlir::arith::AddIOp::create(*this, loc, diff, step);
+  auto div = mlir::arith::DivSIOp::create(*this, loc, add, step);
+  auto cmp = mlir::arith::CmpIOp::create(
+      *this, loc, mlir::arith::CmpIPredicate::sgt, div, zero);
+  return mlir::arith::SelectOp::create(*this, loc, cmp, div, zero);
 }
 
 mlir::Value fir::FirOpBuilder::genAbsentOp(mlir::Location loc,
