@@ -45,7 +45,7 @@
     "vscode:prepublish": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "format": "npx prettier './src-ts/' --write",
-    "package": "vsce package --out ./out/lldb-dap.vsix",
+    "package": "rm -rf ./out/lldb-dap.vsix && vsce package --out ./out/lldb-dap.vsix",
     "publish": "vsce publish",
     "vscode-uninstall": "code --uninstall-extension llvm-vs-code-extensions.lldb-dap",
     "vscode-install": "code --install-extension ./out/lldb-dap.vsix"
