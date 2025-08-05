@@ -34,8 +34,14 @@
 function (get_toolchain_library_subdir outvar)
   set(outval "lib")
 
-  get_toolchain_arch_dirname(arch_dirname)
-  set(outval "${outval}/${arch_dirname}")
+  if (APPLE)
+    # Required to be "darwin" for MachO toolchain.
+    get_toolchain_os_dirname(os_dirname)
+    set(outval "${outval}/${os_dirname}")
+  else ()
+    get_toolchain_arch_dirname(arch_dirname)
+    set(outval "${outval}/${arch_dirname}")
+  endif ()
 
   set(${outvar} "${outval}" PARENT_SCOPE)
 endfunction ()
