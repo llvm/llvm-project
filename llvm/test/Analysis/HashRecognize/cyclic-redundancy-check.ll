@@ -649,7 +649,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.wrong.sb.check.const(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.wrong.sb.check.const'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Bad LHS of significant-bit-check
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -676,7 +676,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.wrong.sb.check.pred(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.wrong.sb.check.pred'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Bad LHS of significant-bit-check
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -750,7 +750,7 @@ exit:                                              ; preds = %loop
 define i32 @not.crc.unknown.icmp.rhs(i32 %checksum, i32 %msg, i32 %unknown) {
 ; CHECK-LABEL: 'not.crc.unknown.icmp.rhs'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Bad LHS of significant-bit-check
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -777,7 +777,7 @@ exit:                                              ; preds = %loop
 define i32 @not.crc.unknown.icmp.lhs(i32 %checksum, i32 %msg, i32 %unknown) {
 ; CHECK-LABEL: 'not.crc.unknown.icmp.lhs'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Bad LHS of significant-bit-check
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -805,7 +805,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.stray.or(i16 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.stray.or'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Bad LHS of significant-bit-check
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -833,7 +833,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.inverse.sb.check(i16 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.inverse.sb.check'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Expected top 16 bits zero (1100000000000001)
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -860,7 +860,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.sb.check.endian.mismatch(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.sb.check.endian.mismatch'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Bad LHS of significant-bit-check
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -888,7 +888,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.init.arg.inverted.select(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.init.arg.inverted.select'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Expected top 8 bits zero (11000000????????)
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -912,7 +912,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.bad.endian.swapped.sb.check(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'not.crc.bad.endian.swapped.sb.check'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Bad LHS of significant-bit-check
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -1109,7 +1109,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.unknown.value(i16 %msg, i16 %checksum, i16 %corrupt) {
 ; CHECK-LABEL: 'not.crc.unknown.value'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Unknown Value
+; CHECK-NEXT:  Reason: Found stray unvisited or unhandled instructions
 ;
 entry:
   br label %loop
@@ -1120,6 +1120,63 @@ loop:                                              ; preds = %loop, %entry
   %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
   %xor.crc.data = xor i16 %crc, %data
   %xor.crc.data.corrupt = mul i16 %xor.crc.data, %corrupt
+  %and.crc.data = and i16 %xor.crc.data.corrupt, 1
+  %data.next = lshr i16 %data, 1
+  %check.sb = icmp eq i16 %and.crc.data, 0
+  %crc.lshr = lshr i16 %crc, 1
+  %crc.xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.unknown.call.outside.loop(i16 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.unknown.call.outside.loop'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Found stray unvisited or unhandled instructions
+;
+entry:
+  %corrupt = call i16 @side.effect()
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %crc, %data
+  %xor.crc.data.corrupt = mul i16 %xor.crc.data, %corrupt
+  %and.crc.data = and i16 %xor.crc.data.corrupt, 1
+  %data.next = lshr i16 %data, 1
+  %check.sb = icmp eq i16 %and.crc.data, 0
+  %crc.lshr = lshr i16 %crc, 1
+  %crc.xor = xor i16 %crc.lshr, -24575
+  %crc.next = select i1 %check.sb, i16 %crc.lshr, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.constant.sb.check.corruption(i16 %msg, i16 %checksum) {
+; CHECK-LABEL: 'not.crc.constant.sb.check.corruption'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Malformed significant-bit check
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %crc, %data
+  %xor.crc.data.corrupt = mul i16 %xor.crc.data, 2
   %and.crc.data = and i16 %xor.crc.data.corrupt, 1
   %data.next = lshr i16 %data, 1
   %check.sb = icmp eq i16 %and.crc.data, 0
@@ -1193,7 +1250,7 @@ exit:                                              ; preds = %loop
 define i16 @not.crc.stray.unvisited.call(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.stray.unvisited.call'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Found stray unvisited instructions
+; CHECK-NEXT:  Reason: Found stray unvisited or unhandled instructions
 ;
 entry:
   br label %loop
@@ -1219,7 +1276,7 @@ declare void @print(i16)
 define i16 @not.crc.call.sb.check(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.call.sb.check'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Bad LHS of significant-bit-check
+; CHECK-NEXT:  Reason: Found stray unvisited or unhandled instructions
 ;
 entry:
   br label %loop
@@ -1240,12 +1297,10 @@ exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
 
-declare i16 @side.effect()
-
 define i16 @not.crc.bad.lhs.sb.check.be(i16 %crc.init) {
 ; CHECK-LABEL: 'not.crc.bad.lhs.sb.check.be'
 ; CHECK-NEXT:  Did not find a hash algorithm
-; CHECK-NEXT:  Reason: Bad LHS of significant-bit-check
+; CHECK-NEXT:  Reason: Malformed significant-bit check
 ;
 entry:
   br label %loop
@@ -1264,3 +1319,58 @@ loop:                                              ; preds = %loop, %entry
 exit:                                              ; preds = %loop
   ret i16 %crc.next
 }
+
+define i16 @not.crc.knownbits.sb.check.fail(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.knownbits.sb.check.fail'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Malformed significant-bit check
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %evil.and.iv = and i16 %iv, 2
+  %evil.and.1 = add i16 %evil.and.iv, 1
+  %evil.mul = mul i16 %crc.shl, %evil.and.1
+  %evil.xor = xor i16 %evil.mul, 4129
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %evil.xor, i16 %evil.mul
+  %iv.next = add nuw nsw i16 %iv, 1
+  %exitcond.not = icmp eq i16 %iv.next, 8
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @not.crc.knownbits.sb.check.fail.call.outside.loop(i16 %crc.init) {
+; CHECK-LABEL: 'not.crc.knownbits.sb.check.fail.call.outside.loop'
+; CHECK-NEXT:  Did not find a hash algorithm
+; CHECK-NEXT:  Reason: Malformed significant-bit check
+;
+entry:
+  %corrupt = call i16 @side.effect()
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %crc.init, %entry ], [ %crc.next, %loop ]
+  %crc.shl = shl i16 %crc, 1
+  %evil.and.corrupt = and i16 %corrupt, 2
+  %evil.and.1 = add i16 %evil.and.corrupt, 1
+  %evil.mul = mul i16 %crc.shl, %evil.and.1
+  %evil.xor = xor i16 %evil.mul, 4129
+  %check.sb = icmp slt i16 %crc, 0
+  %crc.next = select i1 %check.sb, i16 %evil.xor, i16 %evil.mul
+  %iv.next = add nuw nsw i16 %iv, 1
+  %exitcond.not = icmp eq i16 %iv.next, 8
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+declare i16 @side.effect()
