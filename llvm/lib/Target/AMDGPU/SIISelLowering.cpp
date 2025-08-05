@@ -16476,12 +16476,12 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
 
   const TargetRegisterClass *RC = nullptr;
   if (Constraint.size() == 1) {
-    const unsigned BitWidth = VT.getSizeInBits();
     switch (Constraint[0]) {
     default:
       return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
     case 's':
-    case 'r':
+    case 'r': {
+      const unsigned BitWidth = VT.getSizeInBits();
       switch (BitWidth) {
       case 16:
         RC = &AMDGPU::SReg_32RegClass;
@@ -16496,7 +16496,9 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         break;
       }
       break;
-    case 'v':
+    }
+    case 'v': {
+      const unsigned BitWidth = VT.getSizeInBits();
       switch (BitWidth) {
       case 16:
         RC = Subtarget->useRealTrue16Insts() ? &AMDGPU::VGPR_16RegClass
@@ -16509,9 +16511,11 @@ SITargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI_,
         break;
       }
       break;
+    }
     case 'a':
       if (!Subtarget->hasMAIInsts())
         break;
+      const unsigned BitWidth = VT.getSizeInBits();
       switch (BitWidth) {
       case 16:
         RC = &AMDGPU::AGPR_32RegClass;
