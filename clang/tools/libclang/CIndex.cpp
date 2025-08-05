@@ -4720,8 +4720,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
 
       std::string strRef(StrE->getString().str());
       result->EvalData.stringVal = new char[strRef.size() + 1];
-      strncpy((char *)result->EvalData.stringVal, strRef.c_str(),
-              strRef.size());
+      strncpy(result->EvalData.stringVal, strRef.c_str(), strRef.size());
       result->EvalData.stringVal[strRef.size()] = '\0';
       return result.release();
     }
@@ -4741,7 +4740,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
 
     std::string strRef(StrE->getString().str());
     result->EvalData.stringVal = new char[strRef.size() + 1];
-    strncpy((char *)result->EvalData.stringVal, strRef.c_str(), strRef.size());
+    strncpy(result->EvalData.stringVal, strRef.c_str(), strRef.size());
     result->EvalData.stringVal[strRef.size()] = '\0';
     return result.release();
   }
@@ -4760,7 +4759,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
         result->EvalType = CXEval_CFStr;
 
         result->EvalData.stringVal = new char[strLiteral.size() + 1];
-        strncpy((char *)result->EvalData.stringVal, strLiteral.c_str(),
+        strncpy(result->EvalData.stringVal, strLiteral.c_str(),
                 strLiteral.size());
         result->EvalData.stringVal[strLiteral.size()] = '\0';
         return result.release();
@@ -4785,7 +4784,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
         std::string strLiteral(S->getString().str());
         result->EvalType = CXEval_CFStr;
         result->EvalData.stringVal = new char[strLiteral.size() + 1];
-        strncpy((char *)result->EvalData.stringVal, strLiteral.c_str(),
+        strncpy(result->EvalData.stringVal, strLiteral.c_str(),
                 strLiteral.size());
         result->EvalData.stringVal[strLiteral.size()] = '\0';
         return result.release();
