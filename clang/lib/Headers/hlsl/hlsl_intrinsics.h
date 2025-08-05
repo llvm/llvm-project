@@ -418,7 +418,7 @@ const inline float4 lit(float NDotL, float NDotH, float M) {
 /// This function swizzles and scales components of the \a x parameter. Use this
 /// function to compensate for the lack of UBYTE4 support in some hardware.
 
-constexpr vector<uint, 4> D3DCOLORtoUBYTE4(vector<float, 4> V) {
+constexpr int4 D3DCOLORtoUBYTE4(float4 V) {
   return __detail::d3d_color_to_ubyte4_impl(V);
 }
 

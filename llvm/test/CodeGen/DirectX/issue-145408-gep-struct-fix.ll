@@ -8,10 +8,12 @@ define void @test_no_transform_of_struct()  {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[OUTPUTSIZESLOCAL_I:%.*]] = alloca [[STRUCT_RAWSTRUCT8D:%.*]], align 4
 ; CHECK-NEXT:    [[ARRAYINIT_ELEMENT13_I76:%.*]] = getelementptr inbounds nuw [1 x %struct.RawStruct8D], ptr [[OUTPUTSIZESLOCAL_I]], i32 0, i32 0
+; CHECK-NEXT:    [[ARRAYINIT_ELEMENT13_I76_I1:%.*]] = getelementptr inbounds nuw [8 x i32], ptr [[ARRAYINIT_ELEMENT13_I76]], i32 0, i32 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %outputSizesLocal.i = alloca %struct.RawStruct8D, align 4
   %arrayinit.element13.i76 = getelementptr inbounds nuw [1 x %struct.RawStruct8D], ptr %outputSizesLocal.i, i32 0, i32 0
+  %arrayinit.element13.i76.i1 = getelementptr inbounds nuw [8 x i32], ptr %arrayinit.element13.i76, i32 0, i32 1
   ret void
 }
