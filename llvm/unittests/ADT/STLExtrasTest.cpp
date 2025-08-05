@@ -398,6 +398,8 @@ struct some_struct {
   std::string swap_val;
 };
 
+struct derives_from_some_struct : some_struct {};
+
 std::vector<int>::const_iterator begin(const some_struct &s) {
   return s.data.begin();
 }
@@ -530,6 +532,33 @@ TEST(STLExtrasTest, ConcatRangeADL) {
   some_namespace::some_struct S1;
   S1.data = {3, 4};
   EXPECT_THAT(concat<const int>(S0, S1), ElementsAre(1, 2, 3, 4));
+}
+
+TEST(STLExtrasTest, ConcatRangeRef) {
+  SmallVector<some_namespace::some_struct> V12{{{1, 2}, "V12[0]"}};
+  SmallVector<some_namespace::some_struct> V3456{{{3, 4}, "V3456[0]"},
+                                                 {{5, 6}, "V3456[1]"}};
+
+  // Use concat with `iterator type = some_namespace::some_struct *` and value
+  // being a reference type.
+  std::vector<some_namespace::some_struct *> Expected = {&V12[0], &V3456[0],
+                                                         &V3456[1]};
+  std::vector<some_namespace::some_struct *> Test;
+  for (auto &i : concat<some_namespace::some_struct>(V12, V3456))
+    Test.push_back(&i);
+  EXPECT_EQ(Expected, Test);
+}
+
+TEST(STLExtrasTest, ConcatRangePtrToDerivedClass) {
+  some_namespace::some_struct S0{};
+  some_namespace::derives_from_some_struct S1{};
+  SmallVector<some_namespace::some_struct *> V0{&S0};
+  SmallVector<some_namespace::derives_from_some_struct *> V1{&S1, &S1};
+
+  // Use concat over ranges of pointers to different (but related) types.
+  EXPECT_THAT(concat<some_namespace::some_struct *>(V0, V1),
+              ElementsAre(&S0, static_cast<some_namespace::some_struct *>(&S1),
+                          static_cast<some_namespace::some_struct *>(&S1)));
 }
 
 TEST(STLExtrasTest, MakeFirstSecondRangeADL) {
