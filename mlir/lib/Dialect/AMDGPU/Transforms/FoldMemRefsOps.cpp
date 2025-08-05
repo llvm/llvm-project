@@ -37,6 +37,9 @@ static LogicalResult foldMemrefViewOp(
     Value &memrefBase, StringRef role) 
 {
     Operation *defOp = view.getDefiningOp();
+    if (!defOp) {
+        return failure();
+    }
     return llvm::TypeSwitch<Operation *, LogicalResult>(defOp)
         .Case<memref::SubViewOp>([&](memref::SubViewOp subviewOp) {
             mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
@@ -81,12 +84,19 @@ struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
     auto foldSrcResult = foldMemrefViewOp(
         rewriter, loc, op.getSrc(), op.getSrcIndices(), sourceIndices, memrefSource, "source");
   
+    if (failed(foldSrcResult)) {
+        memrefSource = op.getSrc();
+        sourceIndices = op.getSrcIndices();
+    }
+
     auto foldDstResult = foldMemrefViewOp(
         rewriter, loc, op.getDst(), op.getDstIndices(), destIndices, memrefDest, "destination");
 
-    if (failed(foldSrcResult) || failed(foldDstResult)) {
-      return failure();
-    }
+    if (failed(foldDstResult)) {
+        memrefDest = op.getDst();
+        destIndices = op.getDstIndices();
+     }
+  
 
     rewriter.replaceOpWithNewOp<GatherToLDSOp>(op, memrefSource, sourceIndices,
                                               memrefDest, destIndices,
