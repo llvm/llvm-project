@@ -40,13 +40,16 @@ config.test_source_root = os.path.dirname(__file__)
 
 # test_exec_root: The root path where tests should be run.
 config.test_exec_root = os.path.join(config.orcrt_obj_root, "test")
-llvm_config.with_environment("PATH", os.path.join(config.orcrt_obj_root, "tools", "orc-executor"), append_path=True)
+llvm_config.with_environment(
+    "PATH",
+    os.path.join(config.orcrt_obj_root, "tools", "orc-executor"),
+    append_path=True)
 config.substitutions.append(("%PATH%", config.environment["PATH"]))
-#config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
+# config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
 config.substitutions.append(("%llvm_src_root", config.llvm_src_root))
-#config.substitutions.append(("%host_cxx", config.host_cxx))
-#config.substitutions.append(("%host_cc", config.host_cc))
-if (config.llvm_rt_tools_dir):
+# config.substitutions.append(("%host_cxx", config.host_cxx))
+# config.substitutions.append(("%host_cc", config.host_cc))
+if config.llvm_rt_tools_dir:
     config.llvm_tools_dir = config.llvm_rt_tools_dir
 llvm_config.use_default_substitutions()
 
