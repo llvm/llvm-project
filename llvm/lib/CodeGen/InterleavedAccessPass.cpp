@@ -385,25 +385,25 @@ bool InterleavedAccessImpl::lowerInterleavedLoad(
       replaceBinOpShuffles(BinOpShuffles.getArrayRef(), Shuffles, Load);
 
   Value *Mask = nullptr;
-  unsigned MaskFactor = Factor;
+  unsigned GapMaskFactor = Factor;
   if (LI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved load: " << *Load << "\n");
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    std::tie(Mask, MaskFactor) = getMask(getMaskOperand(II), Factor, VecTy);
+    std::tie(Mask, GapMaskFactor) = getMask(getMaskOperand(II), Factor, VecTy);
     if (!Mask)
       return false;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.load or masked.load: "
                       << *Load << "\n");
     LLVM_DEBUG(dbgs() << "IA: With nominal factor " << Factor
-                      << " and mask factor " << MaskFactor << "\n");
+                      << " and mask factor " << GapMaskFactor << "\n");
   }
 
   // Try to create target specific intrinsics to replace the load and
   // shuffles.
   if (!TLI->lowerInterleavedLoad(cast<Instruction>(Load), Mask, Shuffles,
-                                 Indices, Factor, MaskFactor))
+                                 Indices, Factor, GapMaskFactor))
     // If Extracts is not empty, tryReplaceExtracts made changes earlier.
     return !Extracts.empty() || BinOpShuffleChanged;
 
@@ -540,15 +540,20 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
          "number of stored element should be a multiple of Factor");
 
   Value *Mask = nullptr;
+  unsigned GapMaskFactor = Factor;
   if (SI) {
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved store: " << *Store << "\n");
   } else {
     // Check mask operand. Handle both all-true/false and interleaved mask.
     unsigned LaneMaskLen = NumStoredElements / Factor;
-    std::tie(Mask, std::ignore) = getMask(getMaskOperand(II), Factor,
-                                          ElementCount::getFixed(LaneMaskLen));
+    std::tie(Mask, GapMaskFactor) = getMask(
+        getMaskOperand(II), Factor, ElementCount::getFixed(LaneMaskLen));
     if (!Mask)
       return false;
+    // We shouldn't transform stores even it has a gap mask. And since we might
+    // already change the IR, we're returning true here.
+    if (GapMaskFactor != Factor)
+      return true;
 
     LLVM_DEBUG(dbgs() << "IA: Found an interleaved vp.store or masked.store: "
                       << *Store << "\n");
@@ -565,13 +570,57 @@ bool InterleavedAccessImpl::lowerInterleavedStore(
   return true;
 }
 
+// A wide mask <1, 1, 0, 1, 1, 0, 1, 1, 0, 1, 1, 0> could be used to skip the
+// last field in a factor-of-three interleaved store or deinterleaved load (in
+// which case LeafMaskLen is 4). Such (wide) mask is also known as gap mask.
+// This helper function tries to detect this pattern and return the actual
+// factor we're accessing, which is 2 in this example.
+static unsigned getGapMaskFactor(const Constant &MaskConst, unsigned Factor,
+                                 unsigned LeafMaskLen) {
+  APInt FactorMask(Factor, 0);
+  FactorMask.setAllBits();
+  for (unsigned F = 0U; F < Factor; ++F) {
+    unsigned Idx;
+    for (Idx = 0U; Idx < LeafMaskLen; ++Idx) {
+      Constant *C = MaskConst.getAggregateElement(F + Idx * Factor);
+      if (!C->isZeroValue())
+        break;
+    }
+    // All mask bits on this field are zero, skipping it.
+    if (Idx >= LeafMaskLen)
+      FactorMask.clearBit(F);
+  }
+  // We currently only allow gaps in the "trailing" factors / fields. So
+  // given the original factor being 4, we can skip fields 2 and 3, but we
+  // cannot only skip fields 1 and 2. If FactorMask does not match such
+  // pattern, reset it.
+  if (!FactorMask.isMask())
+    FactorMask.setAllBits();
+
+  return FactorMask.popcount();
+}
+
 static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
                                             ElementCount LeafValueEC) {
+  using namespace PatternMatch;
+
   if (auto *IMI = dyn_cast<IntrinsicInst>(WideMask)) {
     if (unsigned F = getInterleaveIntrinsicFactor(IMI->getIntrinsicID());
         F && F == Factor && llvm::all_equal(IMI->args())) {
       return {IMI->getArgOperand(0), Factor};
     }
+  }
+
+  // Try to match `and <interleaved mask>, <gap mask>`. The WideMask here is
+  // expected to be a fixed vector and gap mask should be a constant mask.
+  Value *AndMaskLHS;
+  Constant *AndMaskRHS;
+  if (match(WideMask, m_c_And(m_Value(AndMaskLHS), m_Constant(AndMaskRHS))) &&
+      LeafValueEC.isFixed()) {
+    assert(!isa<Constant>(AndMaskLHS) &&
+           "expect constants to be folded already");
+    return {getMask(AndMaskLHS, Factor, LeafValueEC).first,
+            getGapMaskFactor(*AndMaskRHS, Factor, LeafValueEC.getFixedValue())};
   }
 
   if (auto *ConstMask = dyn_cast<Constant>(WideMask)) {
@@ -581,33 +630,17 @@ static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
 
     if (LeafValueEC.isFixed()) {
       unsigned LeafMaskLen = LeafValueEC.getFixedValue();
-      // First, check if the mask completely skips some of the factors / fields.
-      APInt FactorMask(Factor, 0);
-      FactorMask.setAllBits();
-      for (unsigned F = 0U; F < Factor; ++F) {
-        unsigned Idx;
-        for (Idx = 0U; Idx < LeafMaskLen; ++Idx) {
-          Constant *C = ConstMask->getAggregateElement(F + Idx * Factor);
-          if (!C->isZeroValue())
-            break;
-        }
-        // All mask bits on this field are zero, skipping it.
-        if (Idx >= LeafMaskLen)
-          FactorMask.clearBit(F);
-      }
-      // We currently only support skipping "trailing" factors / fields. So
-      // given the original factor being 4, we can skip fields 2 and 3, but we
-      // cannot only skip fields 1 and 2. If FactorMask does not match such
-      // pattern, reset it.
-      if (!FactorMask.isMask())
-        FactorMask.setAllBits();
+      // First, check if we use a gap mask to skip some of the factors / fields.
+      const unsigned GapMaskFactor =
+          getGapMaskFactor(*ConstMask, Factor, LeafMaskLen);
+      assert(GapMaskFactor <= Factor);
 
       SmallVector<Constant *, 8> LeafMask(LeafMaskLen, nullptr);
       // If this is a fixed-length constant mask, each lane / leaf has to
       // use the same mask. This is done by checking if every group with Factor
       // number of elements in the interleaved mask has homogeneous values.
       for (unsigned Idx = 0U; Idx < LeafMaskLen * Factor; ++Idx) {
-        if (!FactorMask[Idx % Factor])
+        if (Idx % Factor >= GapMaskFactor)
           continue;
         Constant *C = ConstMask->getAggregateElement(Idx);
         if (LeafMask[Idx / Factor] && LeafMask[Idx / Factor] != C)
@@ -615,7 +648,7 @@ static std::pair<Value *, unsigned> getMask(Value *WideMask, unsigned Factor,
         LeafMask[Idx / Factor] = C;
       }
 
-      return {ConstantVector::get(LeafMask), FactorMask.popcount()};
+      return {ConstantVector::get(LeafMask), GapMaskFactor};
     }
   }
 
