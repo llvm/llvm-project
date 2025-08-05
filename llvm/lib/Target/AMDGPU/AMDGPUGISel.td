@@ -151,6 +151,9 @@ def gi_global_saddr_no_ioffset_scale_offset :
 def gi_global_saddr_no_ioffset_m0 :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffsetM0">,
     GIComplexPatternEquiv<GlobalSAddrNoIOffsetM0>;
+def gi_global_saddr_no_ioffset_scale_offset_m0 :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffsetScaleOffsetM0">,
+    GIComplexPatternEquiv<GlobalSAddrNoIOffsetScaleOffsetM0>;
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,

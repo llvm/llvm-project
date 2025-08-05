@@ -2143,6 +2143,22 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetScaleOffsetM0(
+    SDNode *N, SDValue Addr, SDValue &SAddr, SDValue &VOffset,
+    SDValue &CPol) const {
+  bool ScaleOffset;
+  SDValue DummyOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, DummyOffset, ScaleOffset,
+                         false, false))
+    return false;
+
+  // We are assuming CPol is second from last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 2) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(PassedCPol, SDLoc(), MVT::i32);
+  return true;
+}
+
 static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
   if (auto *FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
     SAddr = CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));

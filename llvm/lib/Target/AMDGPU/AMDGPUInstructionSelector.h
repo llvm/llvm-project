@@ -269,6 +269,8 @@ private:
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffsetScaleOffset(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffsetScaleOffsetM0(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffsetM0(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoScaleOffset(MachineOperand &Root) const;

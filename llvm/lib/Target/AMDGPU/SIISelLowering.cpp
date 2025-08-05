@@ -1330,6 +1330,7 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_load_async_to_lds_b32:
   case Intrinsic::amdgcn_dds_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b32:
   case Intrinsic::amdgcn_global_store_async_from_lds_b32:
   case Intrinsic::amdgcn_cooperative_atomic_load_32x4B:
   case Intrinsic::amdgcn_cooperative_atomic_store_32x4B:
@@ -1345,6 +1346,7 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_load_async_to_lds_b64:
   case Intrinsic::amdgcn_dds_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b64:
   case Intrinsic::amdgcn_global_store_async_from_lds_b64:
   case Intrinsic::amdgcn_cooperative_atomic_load_16x8B:
   case Intrinsic::amdgcn_cooperative_atomic_store_16x8B:
@@ -1358,6 +1360,7 @@ static unsigned getIntrMemWidth(unsigned IntrID) {
   case Intrinsic::amdgcn_global_load_async_to_lds_b128:
   case Intrinsic::amdgcn_dds_load_async_to_lds_b128:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b128:
   case Intrinsic::amdgcn_global_store_async_from_lds_b128:
   case Intrinsic::amdgcn_cooperative_atomic_load_8x16B:
   case Intrinsic::amdgcn_cooperative_atomic_store_8x16B:
@@ -1772,6 +1775,9 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
   case Intrinsic::amdgcn_dds_load_async_to_lds_b32:
   case Intrinsic::amdgcn_dds_load_async_to_lds_b64:
   case Intrinsic::amdgcn_dds_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b32:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b64:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b128:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b8:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
@@ -2001,6 +2007,9 @@ bool SITargetLowering::getAddrModeArguments(const IntrinsicInst *II,
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b32:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b64:
   case Intrinsic::amdgcn_cluster_load_async_to_lds_b128:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b32:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b64:
+  case Intrinsic::amdgcn_dds_load_async_mcast_to_lds_b128:
   case Intrinsic::amdgcn_global_tiled_store_b128:
   case Intrinsic::amdgcn_global_tiled_store_b64:
   case Intrinsic::amdgcn_global_tiled_store_half_b128:
