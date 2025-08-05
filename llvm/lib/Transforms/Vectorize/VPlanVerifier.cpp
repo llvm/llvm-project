@@ -79,9 +79,8 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
 
-    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI) &&
-        !isa<VPInstruction>(*RecipeI) &&
-        cast<VPInstruction>(RecipeI)->getOpcode() == Instruction::PHI) {
+    if (IsHeaderVPBB &&
+        !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(*RecipeI)) {
       errs() << "Found non-header PHI recipe in header VPBB";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
@@ -173,7 +172,8 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
           if (I->getOpcode() == Instruction::PHI ||
-              I->getOpcode() == Instruction::ICmp)
+              I->getOpcode() == Instruction::ICmp ||
+              I->getOpcode() == Instruction::Sub)
             return VerifyEVLUse(*I, 1);
           switch (I->getOpcode()) {
           case Instruction::Add:

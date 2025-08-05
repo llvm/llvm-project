@@ -237,7 +237,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
       } else {
         // We don't have access to the signature, so create a symbol without one
         MCSymbol *Sym = getContext().createTempSymbol("typeindex", true);
-        auto *WasmSym = cast<MCSymbolWasm>(Sym);
+        auto *WasmSym = static_cast<MCSymbolWasm *>(Sym);
         WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
         const MCExpr *Expr = MCSymbolRefExpr::create(
             WasmSym, WebAssembly::S_TYPEINDEX, getContext());

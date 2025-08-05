@@ -141,6 +141,9 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* LLDB can now set breakpoints, show backtraces, and display variables when
+  debugging Wasm with supported runtimes (WAMR and V8).
+
 Changes to BOLT
 ---------------------------------
 
