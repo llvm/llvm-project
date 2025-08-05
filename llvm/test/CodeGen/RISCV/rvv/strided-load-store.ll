@@ -467,7 +467,7 @@ define <vscale x 1 x i64> @straightline_offset_disjoint_or_1(ptr %p) {
 define <vscale x 1 x i64> @straightline_offset_disjoint_or(ptr %p, i1 %offset) {
 ; CHECK-LABEL: @straightline_offset_disjoint_or(
 ; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[OFFSET:%.*]] to i64
-; CHECK-NEXT:    [[TMP4:%.*]] = add i64 4, [[AND]]
+; CHECK-NEXT:    [[TMP4:%.*]] = or disjoint i64 4, [[AND]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <vscale x 1 x i64> @llvm.experimental.vp.strided.load.nxv1i64.p0.i64(ptr [[TMP1]], i64 8, <vscale x 1 x i1> splat (i1 true), i32 [[TMP2]])
