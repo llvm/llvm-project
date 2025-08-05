@@ -259,6 +259,9 @@ Crash and bug fixes
 - Fixed a crash in the static analyzer that when the expression in an 
   ``[[assume(expr)]]`` attribute was enclosed in parentheses.  (#GH151529)
 
+- Fixed a crash when analyzing default bindings as compound literals in
+  designated initializers for bitfields in unions. (#GH146050)
+
 Improvements
 ^^^^^^^^^^^^
 
