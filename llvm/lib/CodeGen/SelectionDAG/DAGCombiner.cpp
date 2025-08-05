@@ -16813,8 +16813,7 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
   SmallSet<SDValue, 8> MaybePoisonOperands;
   SmallVector<unsigned, 8> MaybePoisonOperandNumbers;
   for (auto [OpNo, Op] : enumerate(N0->ops())) {
-    if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly*/ false,
-                                             /*Depth*/ 1))
+    if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly=*/false))
       continue;
     bool HadMaybePoisonOperands = !MaybePoisonOperands.empty();
     bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op).second;
