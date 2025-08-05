@@ -95,6 +95,7 @@ void ThreadFinalize(ThreadState *thr) {
                                                         &leaks);
   }
 
+  // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   for (uptr i = 0; i < leaks.Size(); i++) {
     {

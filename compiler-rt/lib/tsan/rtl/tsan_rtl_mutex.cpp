@@ -56,6 +56,7 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     return;
   if (!ShouldReport(thr, typ))
     return;
+  // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   // Take a new scope as Apple platforms require the below locks released
   // before symbolizing in order to avoid a deadlock
@@ -541,6 +542,7 @@ void AfterSleep(ThreadState *thr, uptr pc) {
 void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
   if (r == 0 || !ShouldReport(thr, ReportTypeDeadlock))
     return;
+  // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   // Take a new scope as Apple platforms require the below locks released
   // before symbolizing in order to avoid a deadlock
@@ -580,6 +582,7 @@ void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
 
 void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
                          FastState last_lock, StackID creation_stack_id) {
+  // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   // Take a new scope as Apple platforms require the below locks released
   // before symbolizing in order to avoid a deadlock

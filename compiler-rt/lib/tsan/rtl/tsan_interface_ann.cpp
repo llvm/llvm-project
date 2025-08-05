@@ -437,6 +437,7 @@ void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
 }
 
 static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
+  // Use alloca, because malloc during signal handling deadlocks
   ScopedReport *rep = (ScopedReport *)__builtin_alloca(sizeof(ScopedReport));
   // Take a new scope as Apple platforms require the below locks released
   // before symbolizing in order to avoid a deadlock
