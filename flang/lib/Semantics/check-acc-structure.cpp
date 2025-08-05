@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "check-acc-structure.h"
+#include "resolve-names-utils.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/parse-tree.h"
@@ -106,18 +107,27 @@ bool AccStructureChecker::IsComputeConstruct(
       directive == llvm::acc::ACCD_kernels_loop;
 }
 
-bool AccStructureChecker::IsInsideComputeConstruct() const {
-  if (dirContext_.size() <= 1) {
-    return false;
-  }
+bool AccStructureChecker::IsLoopConstruct(
+    llvm::acc::Directive directive) const {
+  return directive == llvm::acc::Directive::ACCD_loop ||
+      directive == llvm::acc::ACCD_parallel_loop ||
+      directive == llvm::acc::ACCD_serial_loop ||
+      directive == llvm::acc::ACCD_kernels_loop;
+}
 
+std::optional<llvm::acc::Directive>
+AccStructureChecker::getParentComputeConstruct() const {
   // Check all nested context skipping the first one.
   for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
     if (IsComputeConstruct(dirContext_[i - 1].directive)) {
-      return true;
+      return dirContext_[i - 1].directive;
     }
   }
-  return false;
+  return std::nullopt;
+}
+
+bool AccStructureChecker::IsInsideComputeConstruct() const {
+  return getParentComputeConstruct().has_value();
 }
 
 void AccStructureChecker::CheckNotInComputeConstruct() {
@@ -126,6 +136,16 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
         "Directive %s may not be called within a compute region"_err_en_US,
         ContextDirectiveAsFortran());
   }
+}
+
+bool AccStructureChecker::IsInsideKernelsConstruct() const {
+  if (auto directive = getParentComputeConstruct()) {
+    if (*directive == llvm::acc::ACCD_kernels ||
+        *directive == llvm::acc::ACCD_kernels_loop) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void AccStructureChecker::Enter(const parser::AccClause &x) {
@@ -250,6 +270,77 @@ void AccStructureChecker::Leave(const parser::OpenACCCombinedConstruct &x) {
   dirContext_.pop_back();
 }
 
+std::optional<std::int64_t> AccStructureChecker::getGangDimensionSize(
+    DirectiveContext &dirContext) {
+  for (auto it : dirContext.clauseInfo) {
+    const auto *clause{it.second};
+    if (const auto *gangClause{
+            std::get_if<parser::AccClause::Gang>(&clause->u)}) {
+      if (gangClause->v) {
+        const Fortran::parser::AccGangArgList &x{*gangClause->v};
+        for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+          if (const auto *dim{
+                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)}) {
+            if (const auto v{EvaluateInt64(context_, dim->v)}) {
+              return *v;
+            }
+          }
+        }
+      }
+      return 1;
+    }
+  }
+  return std::nullopt;
+}
+
+void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
+  for (std::size_t i = dirContext_.size() - 1; i > 0; --i) {
+    auto &parent{dirContext_[i - 1]};
+    if (IsLoopConstruct(parent.directive)) {
+      for (auto parentClause : parent.actualClauses) {
+        for (auto cl : GetContext().actualClauses) {
+          bool invalid{false};
+          if (parentClause == llvm::acc::Clause::ACCC_gang &&
+              cl == llvm::acc::Clause::ACCC_gang) {
+            if (IsInsideKernelsConstruct()) {
+              auto parentDim = getGangDimensionSize(parent);
+              auto currentDim = getGangDimensionSize(GetContext());
+              if (*parentDim <= *currentDim) {
+                context_.Say(GetContext().clauseSource,
+                    "gang(dim:%ld) clause is not allowed in the region of a loop with the gang(dim:%ld) clause"_err_en_US,
+                    *currentDim, *parentDim);
+                continue;
+              }
+            } else {
+              invalid = true;
+            }
+          } else if (parentClause == llvm::acc::Clause::ACCC_worker &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker)) {
+            invalid = true;
+          } else if (parentClause == llvm::acc::Clause::ACCC_vector &&
+              (cl == llvm::acc::Clause::ACCC_gang ||
+                  cl == llvm::acc::Clause::ACCC_worker ||
+                  cl == llvm::acc::Clause::ACCC_vector)) {
+            invalid = true;
+          }
+          if (invalid) {
+            context_.Say(GetContext().clauseSource,
+                "%s clause is not allowed in the region of a loop with the %s clause"_err_en_US,
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(cl).str()),
+                parser::ToUpperCaseLetters(
+                    llvm::acc::getOpenACCClauseName(parentClause).str()));
+          }
+        }
+      }
+    }
+    if (IsComputeConstruct(parent.directive)) {
+      break;
+    }
+  }
+}
+
 void AccStructureChecker::Enter(const parser::OpenACCLoopConstruct &x) {
   const auto &beginDir{std::get<parser::AccBeginLoopDirective>(x.t)};
   const auto &loopDir{std::get<parser::AccLoopDirective>(beginDir.t)};
@@ -267,6 +358,8 @@ void AccStructureChecker::Leave(const parser::OpenACCLoopConstruct &x) {
     CheckNotAllowedIfClause(llvm::acc::Clause::ACCC_seq,
         {llvm::acc::Clause::ACCC_gang, llvm::acc::Clause::ACCC_vector,
             llvm::acc::Clause::ACCC_worker});
+    // Restriction - 2.9.2, 2.9.3, 2.9.4
+    CheckNotInSameOrSubLevelLoopConstruct();
   }
   dirContext_.pop_back();
 }
@@ -570,8 +663,8 @@ void AccStructureChecker::Enter(const parser::OpenACCCacheConstruct &x) {
   PushContextAndClauseSets(verbatim.source, llvm::acc::Directive::ACCD_cache);
   SetContextDirectiveSource(verbatim.source);
   if (loopNestLevel == 0) {
-    context_.Say(verbatim.source,
-          "The CACHE directive must be inside a loop"_err_en_US);
+    context_.Say(
+        verbatim.source, "The CACHE directive must be inside a loop"_err_en_US);
   }
 }
 void AccStructureChecker::Leave(const parser::OpenACCCacheConstruct &x) {

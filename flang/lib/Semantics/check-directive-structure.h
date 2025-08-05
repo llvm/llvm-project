@@ -160,7 +160,7 @@ private:
     if (numDoConstruct_ > 0) {
       return;
     }
-    // did not found an enclosing looping construct within the OpenMP/OpenACC
+    // did not find an enclosing looping construct within the OpenMP/OpenACC
     // directive
     EmitUnlabelledBranchOutError(stmt);
   }
