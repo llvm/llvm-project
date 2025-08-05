@@ -3092,7 +3092,7 @@ static mlir::omp::DistributeOp genCompositeDistributeSimd(
                            /*shouldCollectPreDeterminedSymbols=*/true,
                            /*useDelayedPrivatization=*/false, symTable);
   dsp.processStep1();
-
+  dsp.processStep2();
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
   mlir::omp::LoopNestOperands loopNestClauseOps;
@@ -3146,12 +3146,14 @@ static mlir::omp::WsloopOp genCompositeDoSimd(
       converter, semaCtx, doItem->clauses, eval,
       /*shouldCollectPreDeterminedSymbols=*/false,
       /*useDelayedPrivatization=*/true, symTable);
-  wsloopItemDSP.processStep1(&wsloopClauseOps);
+  wsloopItemDSP.processStep1();
+  wsloopItemDSP.processStep2(&wsloopClauseOps);
 
   DataSharingProcessor simdItemDSP(converter, semaCtx, simdItem->clauses, eval,
                                    /*shouldCollectPreDeterminedSymbols=*/true,
                                    /*useDelayedPrivatization=*/true, symTable);
-  simdItemDSP.processStep1(&simdClauseOps);
+  simdItemDSP.processStep1();
+  simdItemDSP.processStep2(&simdClauseOps);
 
   // Pass the innermost leaf construct's clauses because that's where COLLAPSE
   // is placed by construct decomposition.
