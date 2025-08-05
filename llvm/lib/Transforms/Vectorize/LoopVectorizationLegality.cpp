@@ -1198,8 +1198,7 @@ bool LoopVectorizationLegality::canVectorizeIndirectUnsafeDependences() {
   return findHistogram(LI, SI, TheLoop, LAI->getPSE(), Histograms);
 }
 
-bool LoopVectorizationLegality::canVectorizeMemory(
-    std::optional<LoadInst *> CriticalEELoad) {
+bool LoopVectorizationLegality::canVectorizeMemory() {
   LAI = &LAIs.getInfo(*TheLoop);
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
@@ -1209,31 +1208,7 @@ bool LoopVectorizationLegality::canVectorizeMemory(
     });
   }
 
-  if (LAI->canVectorizeMemory()) {
-    // FIXME: Remove or reduce this restriction. We're in a bit of an odd spot
-    //        since we're (potentially) doing the load out of its normal order
-    //        in the loop and that may throw off dependency checking.
-    //        A forward dependency should be fine, but a backwards dep may not
-    //        be even if LAA thinks it is due to performing the load for the
-    //        vector iteration i+1 in vector iteration i.
-    if (CriticalEELoad) {
-      const MemoryDepChecker &DepChecker = LAI->getDepChecker();
-      const auto *Deps = DepChecker.getDependences();
-
-      if (any_of(*Deps, [&](const MemoryDepChecker::Dependence &Dep) {
-            return (Dep.getDestination(DepChecker) == *CriticalEELoad ||
-                    Dep.getSource(DepChecker) == *CriticalEELoad);
-          })) {
-        reportVectorizationFailure(
-            "No dependencies allowed for critical early exit condition load "
-            "in a loop with side effects",
-            "Critical Early exit condition loads in a loop with side effects "
-            "may not have a dependence with another memory operation.",
-            "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE, TheLoop);
-        return false;
-      }
-    }
-  } else {
+  if (!LAI->canVectorizeMemory()) {
     if (!hasUncountedExitWithSideEffects())
       return canVectorizeIndirectUnsafeDependences();
     reportVectorizationFailure(
@@ -1677,8 +1652,7 @@ bool LoopVectorizationLegality::canVectorizeLoopNestCFG(
   return Result;
 }
 
-bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
-    std::optional<LoadInst *> &CriticalEELoad) {
+bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   BasicBlock *LatchBB = TheLoop->getLoopLatch();
   if (!LatchBB) {
     reportVectorizationFailure("Loop does not have a latch",
@@ -1804,6 +1778,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
 
   // TODO: Handle loops that may fault.
   Predicates.clear();
+  LoadInst *CriticalUncountedExitConditionLoad = nullptr;
   if (UncountedExitWithSideEffects) {
     // Record load for analysis by isDereferenceableAndAlignedInLoop
     // and later by dependence analysis.
@@ -1824,7 +1799,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
             // FIXME: We may have multiple levels of conditional loads, so will
             //        need to improve on outright rejection at some point.
             if (SafetyInfo.isGuaranteedToExecute(*Load, DT, TheLoop))
-              CriticalEELoad = Load;
+              CriticalUncountedExitConditionLoad = Load;
             else
               reportVectorizationFailure(
                   "Early exit condition load not guaranteed to execute",
@@ -1849,7 +1824,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
       return false;
     }
 
-    if (!CriticalEELoad) {
+    if (!CriticalUncountedExitConditionLoad) {
       reportVectorizationFailure(
           "Early exit loop with store but no condition load",
           "Cannot vectorize early exit loop with store but no condition load",
@@ -1864,6 +1839,43 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop(
           "Loop may fault",
           "Cannot vectorize potentially faulting early exit loop",
           "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+      return false;
+    }
+  }
+
+  // FIXME: Remove or reduce this restriction. We're in a bit of an odd spot
+  //        since we're (potentially) doing the load out of its normal order
+  //        in the loop and that may throw off dependency checking.
+  //        A forward dependency should be fine, but a backwards dep may not
+  //        be even if LAA thinks it is due to performing the load for the
+  //        vector iteration i+1 in vector iteration i.
+  if (CriticalUncountedExitConditionLoad) {
+    LAI = &LAIs.getInfo(*TheLoop);
+    const MemoryDepChecker &DepChecker = LAI->getDepChecker();
+    const auto *Deps = DepChecker.getDependences();
+    if (!Deps) {
+      reportVectorizationFailure(
+          "Invalid memory dependencies result",
+          "Unable to determine memory dependencies for an early exit loop with "
+          "side effects.",
+          "CantVectorizeInvalidDependencesForEELoopsWithSideEffects", ORE,
+          TheLoop);
+      return false;
+    }
+
+    if (any_of(*Deps, [&](const MemoryDepChecker::Dependence &Dep) {
+          return (Dep.getDestination(DepChecker) ==
+                      CriticalUncountedExitConditionLoad ||
+                  Dep.getSource(DepChecker) ==
+                      CriticalUncountedExitConditionLoad);
+        })) {
+      reportVectorizationFailure(
+          "No dependencies allowed for critical early exit condition load "
+          "in a loop with side effects",
+          "Critical Early exit condition loads in a loop with side effects "
+          "may not have a dependence with another memory operation.",
+          "CantVectorizeUnsafeDependencyForEELoopWithSideEffects", ORE,
+          TheLoop);
       return false;
     }
   }
@@ -1939,7 +1951,6 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  std::optional<LoadInst *> CriticalEarlyExitUncountedConditionLoad;
   if (isa<SCEVCouldNotCompute>(PSE.getBackedgeTakenCount())) {
     if (TheLoop->getExitingBlock()) {
       reportVectorizationFailure("Cannot vectorize uncountable loop",
@@ -1949,11 +1960,10 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       else
         return false;
     } else {
-      if (!isVectorizableEarlyExitLoop(CriticalEarlyExitUncountedConditionLoad)) {
+      if (!isVectorizableEarlyExitLoop()) {
         assert(!hasUncountableEarlyExit() &&
                "Must be false without vectorizable early-exit loop");
         clearEarlyExitData();
-        CriticalEarlyExitUncountedConditionLoad.reset();
         if (DoExtraAnalysis)
           Result = false;
         else
@@ -1963,7 +1973,7 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
   }
 
   // Go over each instruction and look at memory deps.
-  if (!canVectorizeMemory(CriticalEarlyExitUncountedConditionLoad)) {
+  if (!canVectorizeMemory()) {
     LLVM_DEBUG(dbgs() << "LV: Can't vectorize due to memory conflicts\n");
     if (DoExtraAnalysis)
       Result = false;
