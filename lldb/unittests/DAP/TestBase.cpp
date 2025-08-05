@@ -12,9 +12,11 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -25,6 +27,8 @@ using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 using namespace lldb_dap_tests;
 using lldb_private::File;
+using lldb_private::MainLoop;
+using lldb_private::MainLoopBase;
 using lldb_private::NativeFile;
 using lldb_private::Pipe;
 
@@ -118,14 +122,18 @@ void DAPTestBase::LoadCore() {
 std::vector<Message> DAPTestBase::DrainOutput() {
   std::vector<Message> msgs;
   output.CloseWriteFileDescriptor();
-  while (true) {
-    Expected<Message> next =
-        from_dap->Read<protocol::Message>(std::chrono::milliseconds(1));
-    if (!next) {
-      consumeError(next.takeError());
-      break;
-    }
-    msgs.push_back(*next);
-  }
+  auto handle = from_dap->RegisterReadObject<protocol::Message>(
+      loop, [&](MainLoopBase &loop, Expected<protocol::Message> next) {
+        if (llvm::Error error = next.takeError()) {
+          loop.RequestTermination();
+          consumeError(std::move(error));
+          return;
+        }
+
+        msgs.push_back(*next);
+      });
+
+  consumeError(handle.takeError());
+  consumeError(loop.Run().takeError());
   return msgs;
 }
