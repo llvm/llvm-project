@@ -178,6 +178,8 @@ static void verifyLoadedModule(Module &TheModule) {
   if (BrokenDebugInfo) {
     TheModule.getContext().diagnose(ThinLTODiagnosticInfo(
         "Invalid debug info found, debug info will be stripped", DS_Warning));
+    TheModule.getContext().diagnose(ThinLTODiagnosticInfo(
+        "Source File Name: " + TheModule.getSourceFileName(), DS_Warning));
     StripDebugInfo(TheModule);
   }
 }
