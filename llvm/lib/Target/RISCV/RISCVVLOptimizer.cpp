@@ -69,6 +69,7 @@ struct OperandInfo {
   // Represent as 1,2,4,8, ... and fractional indicator. This is because
   // EMUL can take on values that don't map to RISCVVType::VLMUL values exactly.
   // For example, a mask operand can have an EMUL less than MF8.
+  // If nullopt, then EMUL isn't used (i.e. only a single scalar is read).
   std::optional<std::pair<unsigned, bool>> EMUL;
 
   unsigned Log2EEW;
@@ -83,12 +84,14 @@ struct OperandInfo {
 
   OperandInfo() = delete;
 
-  static bool EMULAndEEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    return A.Log2EEW == B.Log2EEW && A.EMUL == B.EMUL;
-  }
-
-  static bool EEWAreEqual(const OperandInfo &A, const OperandInfo &B) {
-    return A.Log2EEW == B.Log2EEW;
+  /// Return true if the EMUL and EEW produced by \p Def is compatible with the
+  /// EMUL and EEW used by \p User.
+  static bool areCompatible(const OperandInfo &Def, const OperandInfo &User) {
+    if (Def.Log2EEW != User.Log2EEW)
+      return false;
+    if (User.EMUL && Def.EMUL != User.EMUL)
+      return false;
+    return true;
   }
 
   void print(raw_ostream &OS) const {
@@ -98,7 +101,7 @@ struct OperandInfo {
         OS << "f";
       OS << EMUL->first;
     } else
-      OS << "EMUL: unknown\n";
+      OS << "EMUL: none\n";
     OS << ", EEW: " << (1 << Log2EEW);
   }
 };
@@ -1399,13 +1402,7 @@ RISCVVLOptimizer::checkUsers(const MachineInstr &MI) const {
       return std::nullopt;
     }
 
-    // If the operand is used as a scalar operand, then the EEW must be
-    // compatible. Otherwise, the EMUL *and* EEW must be compatible.
-    bool IsVectorOpUsedAsScalarOp = isVectorOpUsedAsScalarOp(UserOp);
-    if ((IsVectorOpUsedAsScalarOp &&
-         !OperandInfo::EEWAreEqual(*ConsumerInfo, *ProducerInfo)) ||
-        (!IsVectorOpUsedAsScalarOp &&
-         !OperandInfo::EMULAndEEWAreEqual(*ConsumerInfo, *ProducerInfo))) {
+    if (!OperandInfo::areCompatible(*ProducerInfo, *ConsumerInfo)) {
       LLVM_DEBUG(
           dbgs()
           << "    Abort due to incompatible information for EMUL or EEW.\n");
