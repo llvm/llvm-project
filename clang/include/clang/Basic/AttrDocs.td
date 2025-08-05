@@ -942,6 +942,7 @@ type the returned pointer is cast to.
   void consumer_func(int *);
 
   int main() {
+    int *ptr = my_malloc(sizeof(int)); // no warning
     int *w = my_malloc(1); // warning: allocation of insufficient size '1' for type 'int' with size '4'
     consumer_func(my_malloc(1)); // warning: allocation of insufficient size '1' for type 'int' with size '4'
   }

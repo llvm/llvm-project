@@ -7828,7 +7828,7 @@ static void CheckSufficientAllocSize(Sema &S, QualType DestType,
       DestType == SourceType)
     return;
 
-  const auto *CE = dyn_cast<CallExpr>(E->IgnoreCasts());
+  const auto *CE = dyn_cast<CallExpr>(E->IgnoreParenCasts());
   if (!CE)
     return;
 
