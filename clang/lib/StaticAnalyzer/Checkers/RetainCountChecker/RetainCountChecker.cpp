@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "RetainCountChecker.h"
-#include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include <optional>
 
@@ -501,13 +500,13 @@ static bool isSmartPtrField(const MemRegion *MR) {
 /// assigned to a struct field, unless it is a known smart pointer
 /// implementation, about which we know that it is inlined.
 /// FIXME: This could definitely be improved upon.
-static bool shouldEscapeRegion(const MemRegion *R) {
+static bool shouldEscapeRegion(ProgramStateRef State, const MemRegion *R) {
   if (isSmartPtrField(R))
     return false;
 
   const auto *VR = dyn_cast<VarRegion>(R);
 
-  if (!R->hasStackStorage() || !VR)
+  if (!R->hasMemorySpace<StackSpaceRegion>(State) || !VR)
     return true;
 
   const VarDecl *VD = VR->getDecl();
@@ -561,7 +560,7 @@ updateOutParameters(ProgramStateRef State, const RetainSummary &Summ,
     if (!Pointee)
       continue;
 
-    if (shouldEscapeRegion(ArgRegion))
+    if (shouldEscapeRegion(State, ArgRegion))
       continue;
 
     auto makeNotOwnedParameter = [&](ProgramStateRef St) {
@@ -931,8 +930,7 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
     if (RetVal.isUnknown() ||
         (hasTrustedImplementationAnnotation && !ResultTy.isNull())) {
       SValBuilder &SVB = C.getSValBuilder();
-      RetVal =
-          SVB.conjureSymbolVal(nullptr, CE, LCtx, ResultTy, C.blockCount());
+      RetVal = SVB.conjureSymbolVal(Call, C.blockCount());
     }
 
     // Bind the value.
@@ -1032,8 +1030,7 @@ ExplodedNode * RetainCountChecker::processReturn(const ReturnStmt *S,
     return nullptr;
 
   // Update the autorelease counts.
-  static CheckerProgramPointTag AutoreleaseTag(this, "Autorelease");
-  state = handleAutoreleaseCounts(state, Pred, &AutoreleaseTag, C, Sym, X, S);
+  state = handleAutoreleaseCounts(state, Pred, C, Sym, X, S);
 
   // Have we generated a sink node?
   if (!state)
@@ -1090,8 +1087,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
         // Generate an error node.
         state = setRefBinding(state, Sym, X);
 
-        static CheckerProgramPointTag ReturnOwnLeakTag(this, "ReturnsOwnLeak");
-        ExplodedNode *N = C.addTransition(state, Pred, &ReturnOwnLeakTag);
+        ExplodedNode *N = C.addTransition(state, Pred);
         if (N) {
           const LangOptions &LOpts = C.getASTContext().getLangOpts();
           auto R =
@@ -1114,10 +1110,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
         // owned object.
         state = setRefBinding(state, Sym, X ^ RefVal::ErrorReturnedNotOwned);
 
-        static CheckerProgramPointTag
-            ReturnNotOwnedTag(this, "ReturnNotOwnedForOwned");
-
-        ExplodedNode *N = C.addTransition(state, Pred, &ReturnNotOwnedTag);
+        ExplodedNode *N = C.addTransition(state, Pred);
         if (N) {
           auto R = std::make_unique<RefCountReport>(
               *ReturnNotOwnedForOwned, C.getASTContext().getLangOpts(), N, Sym);
@@ -1141,7 +1134,7 @@ void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
 
   // Find all symbols referenced by 'val' that we are tracking
   // and stop tracking them.
-  if (MR && shouldEscapeRegion(MR)) {
+  if (MR && shouldEscapeRegion(state, MR)) {
     state = state->scanReachableSymbols<StopTrackingCallback>(val).getState();
     C.addTransition(state);
   }
@@ -1203,14 +1196,9 @@ ProgramStateRef RetainCountChecker::checkRegionChanges(
   return state;
 }
 
-ProgramStateRef
-RetainCountChecker::handleAutoreleaseCounts(ProgramStateRef state,
-                                            ExplodedNode *Pred,
-                                            const ProgramPointTag *Tag,
-                                            CheckerContext &Ctx,
-                                            SymbolRef Sym,
-                                            RefVal V,
-                                            const ReturnStmt *S) const {
+ProgramStateRef RetainCountChecker::handleAutoreleaseCounts(
+    ProgramStateRef state, ExplodedNode *Pred, CheckerContext &Ctx,
+    SymbolRef Sym, RefVal V, const ReturnStmt *S) const {
   unsigned ACnt = V.getAutoreleaseCount();
 
   // No autorelease counts?  Nothing to be done.
@@ -1261,7 +1249,7 @@ RetainCountChecker::handleAutoreleaseCounts(ProgramStateRef state,
   V = V ^ RefVal::ErrorOverAutorelease;
   state = setRefBinding(state, Sym, V);
 
-  ExplodedNode *N = Ctx.generateSink(state, Pred, Tag);
+  ExplodedNode *N = Ctx.generateSink(state, Pred);
   if (N) {
     SmallString<128> sbuf;
     llvm::raw_svector_ostream os(sbuf);
@@ -1384,8 +1372,7 @@ void RetainCountChecker::checkEndFunction(const ReturnStmt *RS,
   }
 
   for (auto &I : B) {
-    state = handleAutoreleaseCounts(state, Pred, /*Tag=*/nullptr, Ctx,
-                                    I.first, I.second);
+    state = handleAutoreleaseCounts(state, Pred, Ctx, I.first, I.second);
     if (!state)
       return;
   }
@@ -1417,9 +1404,8 @@ void RetainCountChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   for (const auto &I: state->get<RefBindings>()) {
     SymbolRef Sym = I.first;
     if (SymReaper.isDead(Sym)) {
-      static CheckerProgramPointTag Tag(this, "DeadSymbolAutorelease");
       const RefVal &V = I.second;
-      state = handleAutoreleaseCounts(state, Pred, &Tag, C, Sym, V);
+      state = handleAutoreleaseCounts(state, Pred, C, Sym, V);
       if (!state)
         return;
 
@@ -1473,15 +1459,15 @@ void RetainCountChecker::printState(raw_ostream &Out, ProgramStateRef State,
 // Checker registration.
 //===----------------------------------------------------------------------===//
 
-std::unique_ptr<CheckerProgramPointTag> RetainCountChecker::DeallocSentTag;
-std::unique_ptr<CheckerProgramPointTag> RetainCountChecker::CastFailTag;
+std::unique_ptr<SimpleProgramPointTag> RetainCountChecker::DeallocSentTag;
+std::unique_ptr<SimpleProgramPointTag> RetainCountChecker::CastFailTag;
 
 void ento::registerRetainCountBase(CheckerManager &Mgr) {
   auto *Chk = Mgr.registerChecker<RetainCountChecker>();
-  Chk->DeallocSentTag =
-      std::make_unique<CheckerProgramPointTag>(Chk, "DeallocSent");
-  Chk->CastFailTag =
-      std::make_unique<CheckerProgramPointTag>(Chk, "DynamicCastFail");
+  Chk->DeallocSentTag = std::make_unique<SimpleProgramPointTag>(
+      "RetainCountChecker", "DeallocSent");
+  Chk->CastFailTag = std::make_unique<SimpleProgramPointTag>(
+      "RetainCountChecker", "DynamicCastFail");
 }
 
 bool ento::shouldRegisterRetainCountBase(const CheckerManager &mgr) {

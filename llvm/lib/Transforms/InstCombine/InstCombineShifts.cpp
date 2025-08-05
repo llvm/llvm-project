@@ -567,7 +567,7 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt, bool IsOuterShl,
     unsigned MaskShift =
         IsInnerShl ? TypeWidth - InnerShAmt : InnerShAmt - OuterShAmt;
     APInt Mask = APInt::getLowBitsSet(TypeWidth, OuterShAmt) << MaskShift;
-    if (IC.MaskedValueIsZero(InnerShift->getOperand(0), Mask, 0, CxtI))
+    if (IC.MaskedValueIsZero(InnerShift->getOperand(0), Mask, CxtI))
       return true;
   }
 
@@ -683,7 +683,7 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
     Value *And = Builder.CreateAnd(InnerShift->getOperand(0),
                                    ConstantInt::get(ShType, Mask));
     if (auto *AndI = dyn_cast<Instruction>(And)) {
-      AndI->moveBefore(InnerShift);
+      AndI->moveBefore(InnerShift->getIterator());
       AndI->takeName(InnerShift);
     }
     return And;
@@ -994,16 +994,22 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
       I.setIsExact();
       return true;
     }
+    // Infer 'exact' flag if shift amount is cttz(x) on the same operand.
+    if (match(I.getOperand(1), m_Intrinsic<Intrinsic::cttz>(
+                                   m_Specific(I.getOperand(0)), m_Value()))) {
+      I.setIsExact();
+      return true;
+    }
   }
 
   // Compute what we know about shift count.
-  KnownBits KnownCnt = computeKnownBits(I.getOperand(1), /* Depth */ 0, Q);
+  KnownBits KnownCnt = computeKnownBits(I.getOperand(1), Q);
   unsigned BitWidth = KnownCnt.getBitWidth();
   // Since shift produces a poison value if RHS is equal to or larger than the
   // bit width, we can safely assume that RHS is less than the bit width.
   uint64_t MaxCnt = KnownCnt.getMaxValue().getLimitedValue(BitWidth - 1);
 
-  KnownBits KnownAmt = computeKnownBits(I.getOperand(0), /* Depth */ 0, Q);
+  KnownBits KnownAmt = computeKnownBits(I.getOperand(0), Q);
   bool Changed = false;
 
   if (I.getOpcode() == Instruction::Shl) {
@@ -1015,8 +1021,8 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
     // If we have more sign bits than maximum shift cnt we have nsw.
     if (!I.hasNoSignedWrap()) {
       if (MaxCnt < KnownAmt.countMinSignBits() ||
-          MaxCnt < ComputeNumSignBits(I.getOperand(0), Q.DL, /*Depth*/ 0, Q.AC,
-                                      Q.CxtI, Q.DT)) {
+          MaxCnt <
+              ComputeNumSignBits(I.getOperand(0), Q.DL, Q.AC, Q.CxtI, Q.DT)) {
         I.setHasNoSignedWrap();
         Changed = true;
       }
@@ -1062,7 +1068,7 @@ Instruction *InstCombinerImpl::visitShl(BinaryOperator &I) {
     if (match(Op0, m_OneUse(m_ZExt(m_Value(X))))) {
       unsigned SrcWidth = X->getType()->getScalarSizeInBits();
       if (ShAmtC < SrcWidth &&
-          MaskedValueIsZero(X, APInt::getHighBitsSet(SrcWidth, ShAmtC), 0, &I))
+          MaskedValueIsZero(X, APInt::getHighBitsSet(SrcWidth, ShAmtC), &I))
         return new ZExtInst(Builder.CreateShl(X, ShAmtC), Ty);
     }
 
@@ -1305,8 +1311,8 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
 
   // Fold (X + Y) / 2 --> (X & Y) iff (X u<= 1) && (Y u<= 1)
   if (match(Op0, m_Add(m_Value(X), m_Value(Y))) && match(Op1, m_One()) &&
-      computeKnownBits(X, /*Depth=*/0, &I).countMaxActiveBits() <= 1 &&
-      computeKnownBits(Y, /*Depth=*/0, &I).countMaxActiveBits() <= 1)
+      computeKnownBits(X, &I).countMaxActiveBits() <= 1 &&
+      computeKnownBits(Y, &I).countMaxActiveBits() <= 1)
     return BinaryOperator::CreateAnd(X, Y);
 
   // (sub nuw X, (Y << nuw Z)) >>u exact Z --> (X >>u exact Z) sub nuw Y
@@ -1613,6 +1619,22 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
   if (Instruction *Overflow = foldLShrOverflowBit(I))
     return Overflow;
 
+  // Transform ((pow2 << x) >> cttz(pow2 << y)) -> ((1 << x) >> y)
+  Value *Shl0_Op0, *Shl0_Op1, *Shl1_Op1;
+  BinaryOperator *Shl1;
+  if (match(Op0, m_Shl(m_Value(Shl0_Op0), m_Value(Shl0_Op1))) &&
+      match(Op1, m_Intrinsic<Intrinsic::cttz>(m_BinOp(Shl1))) &&
+      match(Shl1, m_Shl(m_Specific(Shl0_Op0), m_Value(Shl1_Op1))) &&
+      isKnownToBeAPowerOfTwo(Shl0_Op0, /*OrZero=*/true, &I)) {
+    auto *Shl0 = cast<BinaryOperator>(Op0);
+    bool HasNUW = Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap();
+    bool HasNSW = Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap();
+    if (HasNUW || HasNSW) {
+      Value *NewShl = Builder.CreateShl(ConstantInt::get(Shl1->getType(), 1),
+                                        Shl0_Op1, "", HasNUW, HasNSW);
+      return BinaryOperator::CreateLShr(NewShl, Shl1_Op1);
+    }
+  }
   return nullptr;
 }
 
@@ -1807,7 +1829,7 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
     return R;
 
   // See if we can turn a signed shr into an unsigned shr.
-  if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), 0, &I)) {
+  if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), &I)) {
     Instruction *Lshr = BinaryOperator::CreateLShr(Op0, Op1);
     Lshr->setIsExact(I.isExact());
     return Lshr;

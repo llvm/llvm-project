@@ -41,8 +41,7 @@ PressureTracker::PressureTracker(const MCSchedModel &Model)
   }
 
   ResourceUsers.resize(NextResourceUsersIdx);
-  std::fill(ResourceUsers.begin(), ResourceUsers.end(),
-            std::make_pair<unsigned, unsigned>(~0U, 0U));
+  llvm::fill(ResourceUsers, std::make_pair<unsigned, unsigned>(~0U, 0U));
 }
 
 void PressureTracker::getResourceUsers(uint64_t ResourceMask,
@@ -58,7 +57,7 @@ void PressureTracker::getResourceUsers(uint64_t ResourceMask,
 }
 
 void PressureTracker::onInstructionDispatched(unsigned IID) {
-  IPI.insert(std::make_pair(IID, InstructionPressureInfo()));
+  IPI.try_emplace(IID);
 }
 
 void PressureTracker::onInstructionExecuted(unsigned IID) { IPI.erase(IID); }

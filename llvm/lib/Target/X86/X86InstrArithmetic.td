@@ -25,11 +25,25 @@ let SchedRW = [WriteLEA] in {
                      [(set GR32:$dst, lea32addr:$src)]>,
                      OpSize32, Requires<[Not64BitMode]>;
 
-  def LEA64_32r : I<0x8D, MRMSrcMem,
-                    (outs GR32:$dst), (ins lea64_32mem:$src),
+  let Predicates = [HasNDD], isCodeGenOnly = 1 in {
+    def LEA64_8r : I<0x8D, MRMSrcMem, (outs GR8:$dst), (ins lea64_8mem:$src),
+                     "lea{b}\t{$src|$dst}, {$dst|$src}",
+                     [(set GR8:$dst, lea64_iaddr:$src)]>,
+                   OpSize16,
+                   Requires<[In64BitMode]>;
+
+    def LEA64_16r : I<0x8D, MRMSrcMem, (outs GR16:$dst), (ins lea64_16mem:$src),
+                      "lea{w}\t{$src|$dst}, {$dst|$src}",
+                      [(set GR16:$dst, lea64_iaddr:$src)]>,
+                    OpSize16,
+                    Requires<[In64BitMode]>;
+  }
+
+  def LEA64_32r : I<0x8D, MRMSrcMem, (outs GR32:$dst), (ins lea64_32mem:$src),
                     "lea{l}\t{$src|$dst}, {$dst|$src}",
-                    [(set GR32:$dst, lea64_32addr:$src)]>,
-                    OpSize32, Requires<[In64BitMode]>;
+                    [(set GR32:$dst, lea64_iaddr:$src)]>,
+                  OpSize32,
+                  Requires<[In64BitMode]>;
 
   let isReMaterializable = 1 in
     def LEA64r   : RI<0x8D, MRMSrcMem, (outs GR64:$dst), (ins lea64mem:$src),

@@ -4,7 +4,7 @@
 
 module m
   !ERROR: An ABSTRACT derived type must be extensible
-  !PORTABILITY: A derived type with the BIND attribute should not be empty
+  !PORTABILITY: A derived type with the BIND attribute should not be empty [-Wempty-bind-c-derived-type]
   type, abstract, bind(c) :: badAbstract1
   end type
   !ERROR: An ABSTRACT derived type must be extensible
@@ -45,7 +45,7 @@ module m
   end type
   type, extends(intermediate) :: concrete2  ! ensure no false missing binding error
   end type
-  !WARNING: A derived type with the BIND attribute should not be empty
+  !WARNING: A derived type with the BIND attribute should not be empty [-Wempty-bind-c-derived-type]
   type, bind(c) :: inextensible1
   end type
   !ERROR: The parent type is not extensible
@@ -226,7 +226,7 @@ module m8 ! C1529 - warning only
   end subroutine
   subroutine test
     type(t) a(2)
-    !PORTABILITY: Base of NOPASS type-bound procedure reference should be scalar
+    !PORTABILITY: Base of NOPASS type-bound procedure reference should be scalar [-Wnopass-scalar-base]
     call a%tbp
     !ERROR: Base of procedure component reference must be scalar
     call a%pp
@@ -290,6 +290,48 @@ module m11
   subroutine t1p
   end
   subroutine t2p
+  end
+end
+
+module m12
+  type t
+    procedure(sub), pointer, nopass :: pp
+   contains
+    procedure, non_overridable, nopass :: tbp1 => sub
+    procedure, nopass :: tbp2 => sub
+    generic :: gen1 => tbp1
+    generic :: gen2 => tbp2
+  end type
+ contains
+  subroutine sub
+  end
+  subroutine test(x, y)
+    class(t) :: x[*]
+    type(t) :: y[*]
+    call x%pp ! ok
+    call y%pp ! ok
+    !ERROR: Base of procedure component reference may not be coindexed
+    call x[1]%pp
+    !ERROR: Base of procedure component reference may not be coindexed
+    call y[1]%pp
+    call x%tbp1 ! ok
+    call y%tbp1 ! ok
+    call x[1]%tbp1 ! ok
+    call y[1]%tbp1 ! ok
+    call x%tbp2 ! ok
+    call y%tbp2 ! ok
+    !ERROR: A procedure binding may not be coindexed unless it can be resolved at compilation time
+    call x[1]%tbp2
+    call y[1]%tbp2 ! ok
+    call x%gen1 ! ok
+    call y%gen1 ! ok
+    call x[1]%gen1 ! ok
+    call y[1]%gen1 ! ok
+    call x%gen2 ! ok
+    call y%gen2 ! ok
+    !ERROR: A procedure binding may not be coindexed unless it can be resolved at compilation time
+    call x[1]%gen2
+    call y[1]%gen2 ! ok
   end
 end
 

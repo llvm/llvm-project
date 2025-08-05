@@ -129,13 +129,10 @@ void CrtpConstructorAccessibilityCheck::check(
         << HintFriend;
   }
 
-  auto WithFriendHintIfNeeded =
-      [&](const DiagnosticBuilder &Diag,
-          bool NeedsFriend) -> const DiagnosticBuilder & {
+  auto WithFriendHintIfNeeded = [&](const DiagnosticBuilder &Diag,
+                                    bool NeedsFriend) {
     if (NeedsFriend)
       Diag << HintFriend;
-
-    return Diag;
   };
 
   if (!CRTPDeclaration->hasUserDeclaredConstructor()) {
@@ -157,7 +154,7 @@ void CrtpConstructorAccessibilityCheck::check(
   }
 
   for (auto &&Ctor : CRTPDeclaration->ctors()) {
-    if (Ctor->getAccess() == AS_private)
+    if (Ctor->getAccess() == AS_private || Ctor->isDeleted())
       continue;
 
     const bool IsPublic = Ctor->getAccess() == AS_public;

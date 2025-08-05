@@ -26,8 +26,6 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 #include <memory>
 #include <optional>
@@ -226,7 +224,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
     return;
   }
 
-  ExplodedNodeVector *V = Storage.dyn_cast<ExplodedNodeVector *>();
+  ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage);
 
   if (!V) {
     // Switch from single-node to multi-node representation.
@@ -251,7 +249,7 @@ unsigned ExplodedNode::NodeGroup::size() const {
   const GroupStorage &Storage = reinterpret_cast<const GroupStorage &>(P);
   if (Storage.isNull())
     return 0;
-  if (ExplodedNodeVector *V = Storage.dyn_cast<ExplodedNodeVector *>())
+  if (ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage))
     return V->size();
   return 1;
 }
@@ -263,7 +261,7 @@ ExplodedNode * const *ExplodedNode::NodeGroup::begin() const {
   const GroupStorage &Storage = reinterpret_cast<const GroupStorage &>(P);
   if (Storage.isNull())
     return nullptr;
-  if (ExplodedNodeVector *V = Storage.dyn_cast<ExplodedNodeVector *>())
+  if (ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage))
     return V->begin();
   return Storage.getAddrOfPtr1();
 }
@@ -275,7 +273,7 @@ ExplodedNode * const *ExplodedNode::NodeGroup::end() const {
   const GroupStorage &Storage = reinterpret_cast<const GroupStorage &>(P);
   if (Storage.isNull())
     return nullptr;
-  if (ExplodedNodeVector *V = Storage.dyn_cast<ExplodedNodeVector *>())
+  if (ExplodedNodeVector *V = dyn_cast<ExplodedNodeVector *>(Storage))
     return V->end();
   return Storage.getAddrOfPtr1() + 1;
 }
@@ -442,6 +440,10 @@ std::unique_ptr<ExplodedGraph>
 ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
                     InterExplodedGraphMap *ForwardMap,
                     InterExplodedGraphMap *InverseMap) const {
+  // FIXME: The two-pass algorithm of this function (which was introduced in
+  // 2008) is terribly overcomplicated and should be replaced by a single
+  // (backward) pass.
+
   if (Nodes.empty())
     return nullptr;
 
@@ -467,8 +469,9 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     if (!Pass1.insert(N).second)
       continue;
 
-    // If this is a root enqueue it to the second worklist.
+    // If this is the root enqueue it to the second worklist.
     if (N->Preds.empty()) {
+      assert(N == getRoot() && "Found non-root node with no predecessors!");
       WL2.push_back(N);
       continue;
     }
@@ -477,33 +480,39 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     WL1.append(N->Preds.begin(), N->Preds.end());
   }
 
-  // We didn't hit a root? Return with a null pointer for the new graph.
+  // We didn't hit the root? Return with a null pointer for the new graph.
   if (WL2.empty())
     return nullptr;
 
+  assert(WL2.size() == 1 && "There must be only one root!");
+
   // Create an empty graph.
-  std::unique_ptr<ExplodedGraph> G = MakeEmptyGraph();
+  std::unique_ptr<ExplodedGraph> G = std::make_unique<ExplodedGraph>();
 
   // ===- Pass 2 (forward DFS to construct the new graph) -===
   while (!WL2.empty()) {
     const ExplodedNode *N = WL2.pop_back_val();
 
+    auto [Place, Inserted] = Pass2.try_emplace(N);
+
     // Skip this node if we have already processed it.
-    if (Pass2.contains(N))
+    if (!Inserted)
       continue;
 
     // Create the corresponding node in the new graph and record the mapping
     // from the old node to the new node.
     ExplodedNode *NewN = G->createUncachedNode(N->getLocation(), N->State,
                                                N->getID(), N->isSink());
-    Pass2[N] = NewN;
+    Place->second = NewN;
 
     // Also record the reverse mapping from the new node to the old node.
     if (InverseMap) (*InverseMap)[NewN] = N;
 
-    // If this node is a root, designate it as such in the graph.
-    if (N->Preds.empty())
-      G->addRoot(NewN);
+    // If this node is the root, designate it as such in the graph.
+    if (N->Preds.empty()) {
+      assert(N == getRoot());
+      G->designateAsRoot(NewN);
+    }
 
     // In the case that some of the intended predecessors of NewN have already
     // been created, we should hook them up as predecessors.

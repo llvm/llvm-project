@@ -15,10 +15,10 @@
 
 ## Check that passing the default value for --debug-vars-indent (52) makes no
 ## change to the output.
-# RUN: llvm-objdump %t.o -d --debug-vars --debug-vars-indent=52 | \
+# RUN: llvm-objdump %t.o -d --debug-vars --debug-indent=52 | \
 # RUN:     FileCheck %s --check-prefix=RAW --strict-whitespace
 
-# RUN: llvm-objdump %t.o -d --debug-vars --debug-vars-indent=30 | \
+# RUN: llvm-objdump %t.o -d --debug-vars --debug-indent=30 | \
 # RUN:     FileCheck %s --check-prefix=INDENT --strict-whitespace
 
 # RUN: llvm-objdump %t.o -d --debug-vars --no-show-raw-insn | \

@@ -309,6 +309,14 @@ macro(get_test_cc_for_arch arch cc_out cflags_out)
     endif()
     string(REPLACE ";" " " ${cflags_out} "${${cflags_out}}")
   endif()
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND NOT ANDROID)
+    # ARM on Linux might use the slow unwinder as default and the unwind table
+    # is required to get a complete stacktrace.
+    string(APPEND ${cflags_out} " -funwind-tables")
+    if(CMAKE_SYSROOT)
+      string(APPEND ${cflags_out} " --sysroot=${CMAKE_SYSROOT}")
+    endif()
+  endif()
 endmacro()
 
 # Returns CFLAGS that should be used to run tests for the
@@ -760,7 +768,7 @@ set(COMPILER_RT_SANITIZERS_TO_BUILD all CACHE STRING
 list_replace(COMPILER_RT_SANITIZERS_TO_BUILD all "${ALL_SANITIZERS}")
 
 if (SANITIZER_COMMON_SUPPORTED_ARCH AND NOT LLVM_USE_SANITIZER AND
-    (OS_NAME MATCHES "Android|Darwin|Linux|FreeBSD|NetBSD|Fuchsia|SunOS" OR
+    (OS_NAME MATCHES "Android|Darwin|Linux|FreeBSD|NetBSD|Fuchsia|SunOS|Haiku" OR
     (OS_NAME MATCHES "Windows" AND NOT CYGWIN AND
         (NOT MINGW OR CMAKE_CXX_COMPILER_ID MATCHES "Clang"))))
   set(COMPILER_RT_HAS_SANITIZER_COMMON TRUE)
@@ -875,7 +883,7 @@ else()
 endif()
 
 if (COMPILER_RT_HAS_SANITIZER_COMMON AND UBSAN_SUPPORTED_ARCH AND
-    OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|Windows|Android|Fuchsia|SunOS")
+    OS_NAME MATCHES "Darwin|Linux|FreeBSD|NetBSD|Windows|Android|Fuchsia|SunOS|Haiku")
   set(COMPILER_RT_HAS_UBSAN TRUE)
 else()
   set(COMPILER_RT_HAS_UBSAN FALSE)

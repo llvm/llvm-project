@@ -16,13 +16,14 @@ class AsanTestReportDataCase(TestBase):
     @skipUnlessAddressSanitizer
     @skipIf(archs=["i386"], bugnumber="llvm.org/PR36710")
     def test(self):
-        self.build(make_targets=["asan"])
+        self.build(make_targets=["compiler_rt-asan"])
         self.asan_tests()
 
-    @skipIf(oslist=no_match(["macosx"]))
+    @skipUnlessDarwin
+    @skipIf(bugnumber="rdar://109913184&143590169")
     def test_libsanitizers_asan(self):
         try:
-            self.build(make_targets=["libsanitizers"])
+            self.build(make_targets=["libsanitizers-asan"])
         except BuildError as e:
             self.skipTest("failed to build with libsanitizers")
         self.asan_tests(libsanitizers=True)
@@ -41,9 +42,7 @@ class AsanTestReportDataCase(TestBase):
         target = self.createTestTarget()
 
         if libsanitizers:
-            self.runCmd(
-                "env SanitizersAddress=1 MallocSanitizerZone=1 MallocSecureAllocator=0"
-            )
+            self.runCmd("env SanitizersAddress=1 MallocSanitizerZone=1")
         else:
             self.registerSanitizerLibrariesWithTarget(target)
 

@@ -39,7 +39,7 @@ public:
   ///
   /// \return Returns a reference to the unknown SPIR-V extension name from the
   /// list if present, or an empty StringRef on success.
-  static llvm::StringRef
+  static StringRef
   checkExtensions(const std::vector<std::string> &ExtNames,
                   std::set<SPIRV::Extension::Extension> &AllowedExtensions);
 };

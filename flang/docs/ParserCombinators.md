@@ -141,7 +141,7 @@ collect the values that they return.
 * `applyLambda([](&&x){}, p1, p2, ...)` is the same thing, but for lambdas
   and other function objects.
 * `applyMem(mf, p1, p2, ...)` is the same thing, but invokes a member
-  function of the result of the first parser for updates in place.
+  function of the result of the first parser.
 
 ### Token Parsers
 Last, we have these basic parsers on which the actual grammar of the Fortran

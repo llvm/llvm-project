@@ -318,3 +318,81 @@ func.func @pad_generic_static(%small_input: tensor<58x1xf32>, %large_input: tens
   }
   return %for0 : tensor<64x128xf32>
 }
+
+// -----
+
+#map0 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+#map1 = affine_map<(d0, d1, d2, d3) -> (d0, d3, d2)>
+#map2 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map4 = affine_map<(d0, d1, d2) -> (d2, d1)>
+#map5 = affine_map<(d0, d1, d2) -> (d0, d1)>
+func.func @rank_reduced_extract_slice(
+    %prod_in: tensor<1x6x5xf32>, %prod_weight: tensor<1x5x6xf32>,
+    %cons_in: tensor<4x6xf32>, %prod_init: tensor<1x6x6xf32>,
+    %for_iv_init: tensor<4x6xf32>, %cons_init: tensor<4x2xf32>
+) -> tensor<4x6xf32> {
+  %c0 = arith.constant 0 : index
+  %c2 = arith.constant 2 : index
+  %c6 = arith.constant 6 : index
+  %mmul_prod = linalg.generic
+    {indexing_maps = [#map0, #map1, #map2], iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
+    ins(%prod_in, %prod_weight : tensor<1x6x5xf32>, tensor<1x5x6xf32>) outs(%prod_init : tensor<1x6x6xf32>) {
+  ^bb0(%in: f32, %in_1: f32, %out: f32):
+    %10 = arith.mulf %in, %in_1 : f32
+    %11 = arith.addf %out, %10 : f32
+    linalg.yield %11 : f32
+  } -> tensor<1x6x6xf32>
+  %for = scf.for %arg7 = %c0 to %c6 step %c2 iter_args(%arg6 = %for_iv_init) -> (tensor<4x6xf32>) {
+
+    // Extract slice with rank-reduced result type. When fused in the loop
+    // with sliced operands, the producer linalg must have its now sliced
+    // result be rank-reduced as well to match consumer's use type.
+    %prod_slice = tensor.extract_slice %mmul_prod[0, 0, %arg7] [1, 6, 2] [1, 1, 1] : tensor<1x6x6xf32> to tensor<6x2xf32>
+    %mmul_cons = linalg.generic
+     {indexing_maps = [#map3, #map4, #map5], iterator_types = ["parallel", "parallel", "reduction"]}
+     ins(%cons_in, %prod_slice : tensor<4x6xf32>, tensor<6x2xf32>) outs(%cons_init : tensor<4x2xf32>) {
+    ^bb0(%in: f32, %in_1: f32, %out: f32):
+      %20 = arith.mulf %in, %in_1 : f32
+      %21 = arith.addf %out, %20 : f32
+      linalg.yield %21 : f32
+    } -> tensor<4x2xf32>
+    %4 = tensor.insert_slice %mmul_cons into %arg6[0, %arg7] [4, 2] [1, 1]  : tensor<4x2xf32> into tensor<4x6xf32>
+    scf.yield %4 : tensor<4x6xf32>
+  }
+  return %for : tensor<4x6xf32>
+}
+
+//       CHECK: func @rank_reduced_extract_slice(
+//  CHECK-SAME: %[[PROD_IN:[0-9a-z]*]]: tensor<1x6x5xf32>
+//  CHECK-SAME: %[[PROD_WEIGHT:[0-9a-z]*]]: tensor<1x5x6xf32>
+//  CHECK-SAME: %[[CONS_IN:[0-9a-z]*]]: tensor<4x6xf32>
+//  CHECK-SAME: %[[PROD_INIT:[0-9a-z]*]]: tensor<1x6x6xf32>
+//  CHECK-SAME: %[[FOR_IV_INIT:[0-9a-z]*]]: tensor<4x6xf32>
+//  CHECK-SAME: %[[CONS_INIT:[0-9a-z]*]]: tensor<4x2xf32>
+
+//   CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
+//   CHECK-DAG: %[[C2:.*]] = arith.constant 2 : index
+//   CHECK-DAG: %[[C6:.*]] = arith.constant 6 : index
+
+//  For loop right after tensor alloc & fill, no linalg.generic.
+//   CHECK-NOT: linalg.generic
+//  CHECK-NEXT: %[[FOR:.*]] = scf.for %[[I:[0-9a-z]*]] = %[[C0]] to %[[C6]] step %[[C2]] iter_args(%[[ARG_ITER:.*]] = %[[FOR_IV_INIT]])
+
+//  Producer linalg.generic now inside the loop, with tiled args sliced before
+//  it.
+//   CHECK-DAG:   %[[PROD_WEIGHT_SLICE:.*]] = tensor.extract_slice %[[PROD_WEIGHT]][0, 0, %[[I]]] [1, 5, 2] [1, 1, 1]  : tensor<1x5x6xf32> to tensor<1x5x2xf32>
+//   CHECK-DAG:   %[[PROD_INIT_SLICE:.*]] = tensor.extract_slice %[[PROD_INIT]][0, 0, %[[I]]] [1, 6, 2] [1, 1, 1]  : tensor<1x6x6xf32> to tensor<1x6x2xf32>
+//       CHECK:    %[[MMUL_PROD:.*]] = linalg.generic
+//  CHECK-SAME:        ins(%[[PROD_IN]], %[[PROD_WEIGHT_SLICE]] : tensor<1x6x5xf32>, tensor<1x5x2xf32>)
+//  CHECK-SAME:        outs(%[[PROD_INIT_SLICE]] : tensor<1x6x2xf32>)
+//
+//  Consumer uses a rank-reduced version of producer result so a collapse_shape
+//  is generated.
+//       CHECK:    %[[PROD_COLLAPSE:.*]] = tensor.collapse_shape %[[MMUL_PROD]] {{\[\[0, 1\], \[2\]\]}} : tensor<1x6x2xf32> into tensor<6x2xf32>
+//       CHECK:    %[[MMUL_CONS:.*]] = linalg.generic
+//  CHECK-SAME:        ins(%[[CONS_IN]], %[[PROD_COLLAPSE]] : tensor<4x6xf32>, tensor<6x2xf32>)
+//  CHECK-SAME:        outs(%[[CONS_INIT]] : tensor<4x2xf32>)
+//       CHECK:   %[[CONS_SLICE:.*]] = tensor.insert_slice %[[MMUL_CONS]] into %[[ARG_ITER]][0, %[[I]]] [4, 2] [1, 1] : tensor<4x2xf32> into tensor<4x6xf32>
+//       CHECK:   scf.yield %[[CONS_SLICE]] : tensor<4x6xf32>
+//       CHECK: return %[[FOR]] : tensor<4x6xf32>

@@ -260,7 +260,7 @@ OperationFolder::processFoldResults(Operation *op,
 
     // Check to see if there is a canonicalized version of this constant.
     auto res = op->getResult(i);
-    Attribute attrRepl = foldResults[i].get<Attribute>();
+    Attribute attrRepl = cast<Attribute>(foldResults[i]);
     if (auto *constOp =
             tryGetOrCreateConstant(uniquedConstants, dialect, attrRepl,
                                    res.getType(), erasedFoldedLocation)) {

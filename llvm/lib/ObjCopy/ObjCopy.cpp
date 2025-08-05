@@ -26,15 +26,13 @@
 #include "llvm/Object/Wasm.h"
 #include "llvm/Object/XCOFFObjectFile.h"
 
-namespace llvm {
-namespace objcopy {
-
+using namespace llvm;
 using namespace llvm::object;
 
 /// The function executeObjcopyOnBinary does the dispatch based on the format
 /// of the input binary (ELF, MachO or COFF).
-Error executeObjcopyOnBinary(const MultiFormatConfig &Config,
-                             object::Binary &In, raw_ostream &Out) {
+Error objcopy::executeObjcopyOnBinary(const MultiFormatConfig &Config,
+                                      object::Binary &In, raw_ostream &Out) {
   if (auto *ELFBinary = dyn_cast<object::ELFObjectFileBase>(&In)) {
     Expected<const ELFConfig &> ELFConfig = Config.getELFConfig();
     if (!ELFConfig)
@@ -83,6 +81,3 @@ Error executeObjcopyOnBinary(const MultiFormatConfig &Config,
   return createStringError(object_error::invalid_file_type,
                            "unsupported object file format");
 }
-
-} // end namespace objcopy
-} // end namespace llvm

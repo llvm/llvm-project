@@ -17,7 +17,6 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/PrintCallHelper.h"
-#include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -25,8 +24,6 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/StringRef.h"
-#include <functional>
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTCONTROLFLOWTOLLVMPASS
@@ -44,9 +41,10 @@ namespace {
 /// lowering.
 struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
   explicit AssertOpLowering(const LLVMTypeConverter &typeConverter,
-                            bool abortOnFailedAssert = true)
+                            bool abortOnFailedAssert = true,
+                            SymbolTableCollection *symbolTables = nullptr)
       : ConvertOpToLLVMPattern<cf::AssertOp>(typeConverter, /*benefit=*/1),
-        abortOnFailedAssert(abortOnFailedAssert) {}
+        abortOnFailedAssert(abortOnFailedAssert), symbolTables(symbolTables) {}
 
   LogicalResult
   matchAndRewrite(cf::AssertOp op, OpAdaptor adaptor,
@@ -61,9 +59,13 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
 
     // Failed block: Generate IR to print the message and call `abort`.
     Block *failureBlock = rewriter.createBlock(opBlock->getParent());
-    LLVM::createPrintStrCall(rewriter, loc, module, "assert_msg", op.getMsg(),
-                             *getTypeConverter(), /*addNewLine=*/false,
-                             /*runtimeFunctionName=*/"puts");
+    auto createResult = LLVM::createPrintStrCall(
+        rewriter, loc, module, "assert_msg", op.getMsg(), *getTypeConverter(),
+        /*addNewLine=*/false,
+        /*runtimeFunctionName=*/"puts", symbolTables);
+    if (createResult.failed())
+      return failure();
+
     if (abortOnFailedAssert) {
       // Insert the `abort` declaration if necessary.
       auto abortFunc = module.lookupSymbol<LLVM::LLVMFuncOp>("abort");
@@ -71,13 +73,13 @@ struct AssertOpLowering : public ConvertOpToLLVMPattern<cf::AssertOp> {
         OpBuilder::InsertionGuard guard(rewriter);
         rewriter.setInsertionPointToStart(module.getBody());
         auto abortFuncTy = LLVM::LLVMFunctionType::get(getVoidType(), {});
-        abortFunc = rewriter.create<LLVM::LLVMFuncOp>(rewriter.getUnknownLoc(),
-                                                      "abort", abortFuncTy);
+        abortFunc = LLVM::LLVMFuncOp::create(rewriter, rewriter.getUnknownLoc(),
+                                             "abort", abortFuncTy);
       }
-      rewriter.create<LLVM::CallOp>(loc, abortFunc, std::nullopt);
-      rewriter.create<LLVM::UnreachableOp>(loc);
+      LLVM::CallOp::create(rewriter, loc, abortFunc, ValueRange());
+      LLVM::UnreachableOp::create(rewriter, loc);
     } else {
-      rewriter.create<LLVM::BrOp>(loc, ValueRange(), continuationBlock);
+      LLVM::BrOp::create(rewriter, loc, ValueRange(), continuationBlock);
     }
 
     // Generate assertion test.
@@ -92,6 +94,8 @@ private:
   /// If set to `false`, messages are printed but program execution continues.
   /// This is useful for testing asserts.
   bool abortOnFailedAssert = true;
+
+  SymbolTableCollection *symbolTables = nullptr;
 };
 
 /// Helper function for converting branch ops. This function converts the
@@ -134,11 +138,12 @@ struct BranchOpLowering : public ConvertOpToLLVMPattern<cf::BranchOp> {
                           TypeRange(adaptor.getOperands()));
     if (failed(convertedBlock))
       return failure();
+    DictionaryAttr attrs = op->getAttrDictionary();
     Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::BrOp>(
         op, adaptor.getOperands(), *convertedBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(op->getAttrDictionary());
+    newOp->setAttrs(attrs);
     return success();
   }
 };
@@ -162,13 +167,14 @@ struct CondBranchOpLowering : public ConvertOpToLLVMPattern<cf::CondBranchOp> {
                           TypeRange(adaptor.getFalseDestOperands()));
     if (failed(convertedFalseBlock))
       return failure();
-    Operation *newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
-        op, adaptor.getCondition(), *convertedTrueBlock,
-        adaptor.getTrueDestOperands(), *convertedFalseBlock,
-        adaptor.getFalseDestOperands());
+    DictionaryAttr attrs = op->getAttrDictionary();
+    auto newOp = rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
+        op, adaptor.getCondition(), adaptor.getTrueDestOperands(),
+        adaptor.getFalseDestOperands(), op.getBranchWeightsAttr(),
+        *convertedTrueBlock, *convertedFalseBlock);
     // TODO: We should not just forward all attributes like that. But there are
     // existing Flang tests that depend on this behavior.
-    newOp->setAttrs(op->getAttrDictionary());
+    newOp->setAttrs(attrs);
     return success();
   }
 };
@@ -215,7 +221,6 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
-      AssertOpLowering,
       BranchOpLowering,
       CondBranchOpLowering,
       SwitchOpLowering>(converter);
@@ -224,8 +229,8 @@ void mlir::cf::populateControlFlowToLLVMConversionPatterns(
 
 void mlir::cf::populateAssertToLLVMConversionPattern(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
-    bool abortOnFailure) {
-  patterns.add<AssertOpLowering>(converter, abortOnFailure);
+    bool abortOnFailure, SymbolTableCollection *symbolTables) {
+  patterns.add<AssertOpLowering>(converter, abortOnFailure, symbolTables);
 }
 
 //===----------------------------------------------------------------------===//
@@ -258,6 +263,7 @@ struct ConvertControlFlowToLLVM
     LLVMTypeConverter converter(ctx, options);
     RewritePatternSet patterns(ctx);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
+    mlir::cf::populateAssertToLLVMConversionPattern(converter, patterns);
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -286,6 +292,7 @@ struct ControlFlowToLLVMDialectInterface
       RewritePatternSet &patterns) const final {
     mlir::cf::populateControlFlowToLLVMConversionPatterns(typeConverter,
                                                           patterns);
+    mlir::cf::populateAssertToLLVMConversionPattern(typeConverter, patterns);
   }
 };
 } // namespace

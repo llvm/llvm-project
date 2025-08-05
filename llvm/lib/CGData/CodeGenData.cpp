@@ -18,8 +18,6 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 
 #define DEBUG_TYPE "cg-data"
@@ -27,10 +25,10 @@
 using namespace llvm;
 using namespace cgdata;
 
-cl::opt<bool>
+static cl::opt<bool>
     CodeGenDataGenerate("codegen-data-generate", cl::init(false), cl::Hidden,
                         cl::desc("Emit CodeGen Data into custom sections"));
-cl::opt<std::string>
+static cl::opt<std::string>
     CodeGenDataUsePath("codegen-data-use-path", cl::init(""), cl::Hidden,
                        cl::desc("File path to where .cgdata file is read"));
 cl::opt<bool> CodeGenDataThinLTOTwoRounds(
@@ -188,7 +186,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Curr) {
     return make_error<CGDataError>(cgdata_error::unsupported_version);
   H.DataKind = endian::readNext<uint32_t, endianness::little, unaligned>(Curr);
 
-  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version2,
+  static_assert(IndexedCGData::CGDataVersion::CurrentVersion == Version3,
                 "Please update the offset computation below if a new field has "
                 "been added to the header.");
   H.OutlinedHashTreeOffset =
@@ -204,7 +202,7 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Curr) {
 
 namespace cgdata {
 
-void warn(Twine Message, std::string Whence, std::string Hint) {
+void warn(Twine Message, StringRef Whence, StringRef Hint) {
   WithColor::warning();
   if (!Whence.empty())
     errs() << Whence << ": ";
@@ -216,7 +214,7 @@ void warn(Twine Message, std::string Whence, std::string Hint) {
 void warn(Error E, StringRef Whence) {
   if (E.isA<CGDataError>()) {
     handleAllErrors(std::move(E), [&](const CGDataError &IPE) {
-      warn(IPE.message(), Whence.str(), "");
+      warn(IPE.message(), Whence, "");
     });
   }
 }
@@ -233,6 +231,9 @@ void saveModuleForTwoRounds(const Module &TheModule, unsigned Task,
 
   WriteBitcodeToFile(TheModule, *Stream->OS,
                      /*ShouldPreserveUseListOrder=*/true);
+
+  if (Error Err = Stream->commit())
+    report_fatal_error(std::move(Err));
 }
 
 std::unique_ptr<Module> loadModuleForTwoRounds(BitcodeModule &OrigModule,

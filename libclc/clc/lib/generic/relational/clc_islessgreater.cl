@@ -1,12 +1,18 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include <clc/internal/clc.h>
 #include <clc/relational/relational.h>
 
-// Note: It would be nice to use __builtin_islessgreater with vector inputs, but
-// it seems to only take scalar values as input, which will produce incorrect
-// output for vector input types.
+#define _CLC_RELATIONAL_OP(X, Y) ((X) < (Y)) || ((X) > (Y))
 
-_CLC_DEFINE_RELATIONAL_BINARY(int, __clc_islessgreater, __builtin_islessgreater,
-                              float, float)
+_CLC_DEFINE_SIMPLE_RELATIONAL_BINARY(int, int, __clc_islessgreater, float,
+                                     float)
 
 #ifdef cl_khr_fp64
 
@@ -14,25 +20,20 @@ _CLC_DEFINE_RELATIONAL_BINARY(int, __clc_islessgreater, __builtin_islessgreater,
 
 // The scalar version of __clc_islessgreater(double, double) returns an int, but
 // the vector versions return long.
-
-_CLC_DEF _CLC_OVERLOAD int __clc_islessgreater(double x, double y) {
-  return __builtin_islessgreater(x, y);
-}
-
-_CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(long, __clc_islessgreater, double, double)
+_CLC_DEFINE_SIMPLE_RELATIONAL_BINARY(int, long, __clc_islessgreater, double,
+                                     double)
 
 #endif
+
 #ifdef cl_khr_fp16
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 // The scalar version of __clc_islessgreater(half, half) returns an int, but the
 // vector versions return short.
-
-_CLC_DEF _CLC_OVERLOAD int __clc_islessgreater(half x, half y) {
-  return __builtin_islessgreater(x, y);
-}
-
-_CLC_DEFINE_RELATIONAL_BINARY_VEC_ALL(short, __clc_islessgreater, half, half)
+_CLC_DEFINE_SIMPLE_RELATIONAL_BINARY(int, short, __clc_islessgreater, half,
+                                     half)
 
 #endif
+
+#undef _CLC_RELATIONAL_OP

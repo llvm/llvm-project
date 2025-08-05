@@ -16,8 +16,27 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/SandboxIR/Type.h"
 #include "llvm/SandboxIR/Utils.h"
+#include "llvm/Support/Compiler.h"
 
-namespace llvm::sandboxir {
+namespace llvm {
+/// Traits for DenseMap.
+template <> struct DenseMapInfo<SmallVector<sandboxir::Value *>> {
+  static inline SmallVector<sandboxir::Value *> getEmptyKey() {
+    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-1});
+  }
+  static inline SmallVector<sandboxir::Value *> getTombstoneKey() {
+    return SmallVector<sandboxir::Value *>({(sandboxir::Value *)-2});
+  }
+  static unsigned getHashValue(const SmallVector<sandboxir::Value *> &Vec) {
+    return hash_combine_range(Vec);
+  }
+  static bool isEqual(const SmallVector<sandboxir::Value *> &Vec1,
+                      const SmallVector<sandboxir::Value *> &Vec2) {
+    return Vec1 == Vec2;
+  }
+};
+
+namespace sandboxir {
 
 class VecUtils {
 public:
@@ -100,6 +119,8 @@ public:
     }
     return FixedVectorType::get(ElemTy, NumElts);
   }
+  /// \Returns the instruction in \p Instrs that is lowest in the BB. Expects
+  /// that all instructions are in the same BB.
   static Instruction *getLowest(ArrayRef<Instruction *> Instrs) {
     Instruction *LowestI = Instrs.front();
     for (auto *I : drop_begin(Instrs)) {
@@ -108,6 +129,47 @@ public:
     }
     return LowestI;
   }
+  /// \Returns the lowest instruction in \p Vals, or nullptr if no instructions
+  /// are found. Skips instructions not in \p BB.
+  static Instruction *getLowest(ArrayRef<Value *> Vals, BasicBlock *BB) {
+    // Find the first Instruction in Vals that is also in `BB`.
+    auto It = find_if(Vals, [BB](Value *V) {
+      return isa<Instruction>(V) && cast<Instruction>(V)->getParent() == BB;
+    });
+    // If we couldn't find an instruction return nullptr.
+    if (It == Vals.end())
+      return nullptr;
+    Instruction *FirstI = cast<Instruction>(*It);
+    // Now look for the lowest instruction in Vals starting from one position
+    // after FirstI.
+    Instruction *LowestI = FirstI;
+    for (auto *V : make_range(std::next(It), Vals.end())) {
+      auto *I = dyn_cast<Instruction>(V);
+      // Skip non-instructions.
+      if (I == nullptr)
+        continue;
+      // Skips instructions not in \p BB.
+      if (I->getParent() != BB)
+        continue;
+      // If `LowestI` comes before `I` then `I` is the new lowest.
+      if (LowestI->comesBefore(I))
+        LowestI = I;
+    }
+    return LowestI;
+  }
+
+  /// If \p I is not a PHI it returns it. Else it walks down the instruction
+  /// chain looking for the last PHI and returns it. \Returns nullptr if \p I is
+  /// nullptr.
+  static Instruction *getLastPHIOrSelf(Instruction *I) {
+    Instruction *LastI = I;
+    while (I != nullptr && isa<PHINode>(I)) {
+      LastI = I;
+      I = I->getNextNode();
+    }
+    return LastI;
+  }
+
   /// If all values in \p Bndl are of the same scalar type then return it,
   /// otherwise return nullptr.
   static Type *tryGetCommonScalarType(ArrayRef<Value *> Bndl) {
@@ -133,8 +195,82 @@ public:
     assert(tryGetCommonScalarType(Bndl) && "Expected common scalar type!");
     return ScalarTy;
   }
+  /// \Returns the first integer power of 2 that is <= Num.
+  LLVM_ABI static unsigned getFloorPowerOf2(unsigned Num);
+
+  /// Helper struct for `matchPack()`. Describes the instructions and operands
+  /// of a pack pattern.
+  struct PackPattern {
+    /// The insertelement instructions that form the pack pattern in bottom-up
+    /// order, i.e., the first instruction in `Instrs` is the bottom-most
+    /// InsertElement instruction of the pack pattern.
+    /// For example in this simple pack pattern:
+    ///  %Pack0 = insertelement <2 x i8> poison, i8 %v0, i64 0
+    ///  %Pack1 = insertelement <2 x i8> %Pack0, i8 %v1, i64 1
+    /// this is [ %Pack1, %Pack0 ].
+    SmallVector<Instruction *> Instrs;
+    /// The "external" operands of the pack pattern, i.e., the values that get
+    /// packed into a vector, skipping the ones in `Instrs`. The operands are in
+    /// bottom-up order, starting from the operands of the bottom-most insert.
+    /// So in our example this would be [ %v1, %v0 ].
+    SmallVector<Value *> Operands;
+  };
+
+  /// If \p I is the last instruction of a pack pattern (i.e., an InsertElement
+  /// into a vector), then this function returns the instructions in the pack
+  /// and the operands in the pack, else returns nullopt.
+  /// Here is an example of a matched pattern:
+  ///  %PackA0 = insertelement <2 x i8> poison, i8 %v0, i64 0
+  ///  %PackA1 = insertelement <2 x i8> %PackA0, i8 %v1, i64 1
+  /// TODO: this currently detects only simple canonicalized patterns.
+  static std::optional<PackPattern> matchPack(Instruction *I) {
+    // TODO: Support vector pack patterns.
+    // TODO: Support out-of-order inserts.
+
+    // Early return if `I` is not an Insert.
+    if (!isa<InsertElementInst>(I))
+      return std::nullopt;
+    auto *BB0 = I->getParent();
+    // The pack contains as many instrs as the lanes of the bottom-most Insert
+    unsigned ExpectedNumInserts = VecUtils::getNumLanes(I);
+    assert(ExpectedNumInserts >= 2 && "Expected at least 2 inserts!");
+    PackPattern Pack;
+    Pack.Operands.resize(ExpectedNumInserts);
+    // Collect the inserts by walking up the use-def chain.
+    Instruction *InsertI = I;
+    for (auto ExpectedLane : reverse(seq<unsigned>(ExpectedNumInserts))) {
+      if (InsertI == nullptr)
+        return std::nullopt;
+      if (InsertI->getParent() != BB0)
+        return std::nullopt;
+      // Check the lane.
+      auto *LaneC = dyn_cast<ConstantInt>(InsertI->getOperand(2));
+      if (LaneC == nullptr || LaneC->getSExtValue() != ExpectedLane)
+        return std::nullopt;
+      Pack.Instrs.push_back(InsertI);
+      Pack.Operands[ExpectedLane] = InsertI->getOperand(1);
+
+      Value *Op = InsertI->getOperand(0);
+      if (ExpectedLane == 0) {
+        // Check the topmost insert. The operand should be a Poison.
+        if (!isa<PoisonValue>(Op))
+          return std::nullopt;
+      } else {
+        InsertI = dyn_cast<InsertElementInst>(Op);
+      }
+    }
+    return Pack;
+  }
+
+#ifndef NDEBUG
+  /// Helper dump function for debugging.
+  LLVM_DUMP_METHOD static void dump(ArrayRef<Value *> Bndl);
+  LLVM_DUMP_METHOD static void dump(ArrayRef<Instruction *> Bndl);
+#endif // NDEBUG
 };
 
-} // namespace llvm::sandboxir
+} // namespace sandboxir
+
+} // namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H

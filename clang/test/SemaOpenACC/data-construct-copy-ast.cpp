@@ -14,18 +14,18 @@ void NormalUses(float *PointerParam) {
   // CHECK: FunctionDecl{{.*}}NormalUses
   // CHECK: ParmVarDecl
   // CHECK-NEXT: CompoundStmt
-#pragma acc data copy(GlobalArray) pcopy(PointerParam[Global]) present_or_copy(Global)
+#pragma acc data copy(GlobalArray) pcopy(always, alwaysin: PointerParam[Global]) present_or_copy(alwaysout: Global)
   ;
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
   // CHECK-NEXT: copy clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'short[5]' lvalue Var{{.*}}'GlobalArray' 'short[5]'
-  // CHECK-NEXT: pcopy clause
+  // CHECK-NEXT: pcopy clause modifiers: always, alwaysin
   // CHECK-NEXT: ArraySubscriptExpr{{.*}}'float' lvalue
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'float *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'float *' lvalue ParmVar{{.*}}'PointerParam' 'float *'
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
-  // CHECK-NEXT: present_or_copy clause
+  // CHECK-NEXT: present_or_copy clause modifiers: alwaysout
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue Var{{.*}}'Global' 'int'
   // CHECK-NEXT: NullStmt
 }
@@ -40,15 +40,15 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: ParmVarDecl{{.*}} referenced u 'U'
   // CHECK-NEXT: CompoundStmt
 
-#pragma acc data copy(t) pcopy(NTTP, u) present_or_copy(u[0:t])
+#pragma acc data copy(always: t) pcopy(NTTP, u) present_or_copy(alwaysin, alwaysout: u[0:t])
   ;
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
-  // CHECK-NEXT: copy clause
+  // CHECK-NEXT: copy clause modifiers: always
   // CHECK-NEXT: DeclRefExpr{{.*}}'T' lvalue ParmVar{{.*}} 't' 'T'
   // CHECK-NEXT: pcopy clause
   // CHECK-NEXT: DeclRefExpr{{.*}}'auto' lvalue NonTypeTemplateParm{{.*}} 'NTTP' 'auto &'
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
-  // CHECK-NEXT: present_or_copy clause
+  // CHECK-NEXT: present_or_copy clause modifiers: alwaysin, alwaysout
   // CHECK-NEXT: ArraySectionExpr
   // CHECK-NEXT: DeclRefExpr{{.*}}'U' lvalue ParmVar{{.*}} 'u' 'U'
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 0
@@ -69,14 +69,14 @@ void TemplUses(T t, U u) {
   // CHECK-NEXT: CompoundStmt
 
   // CHECK-NEXT: OpenACCDataConstruct{{.*}} data
-  // CHECK-NEXT: copy clause
+  // CHECK-NEXT: copy clause modifiers: always
   // CHECK-NEXT: DeclRefExpr{{.*}}'int' lvalue ParmVar{{.*}} 't' 'int'
   // CHECK-NEXT: pcopy clause
   // CHECK-NEXT: SubstNonTypeTemplateParmExpr{{.*}}'const unsigned int' lvalue
   // CHECK-NEXT: NonTypeTemplateParmDecl{{.*}} referenced 'auto &' depth 0 index 0 NTTP
   // CHECK-NEXT: DeclRefExpr{{.*}}'const unsigned int' lvalue Var{{.*}} 'CEVar' 'const unsigned int'
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'
-  // CHECK-NEXT: present_or_copy clause
+  // CHECK-NEXT: present_or_copy clause modifiers: alwaysin, alwaysout
   // CHECK-NEXT: ArraySectionExpr
   // CHECK-NEXT: ImplicitCastExpr{{.*}} 'int *' <LValueToRValue>
   // CHECK-NEXT: DeclRefExpr{{.*}}'int *' lvalue ParmVar{{.*}} 'u' 'int *'

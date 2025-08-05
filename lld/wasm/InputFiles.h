@@ -73,7 +73,7 @@ public:
 
 protected:
   InputFile(Kind k, MemoryBufferRef m)
-      : mb(m), fileKind(k), live(!config->gcSections) {}
+      : mb(m), fileKind(k), live(!ctx.arg.gcSections) {}
 
   void checkArch(llvm::Triple::ArchType arch) const;
 

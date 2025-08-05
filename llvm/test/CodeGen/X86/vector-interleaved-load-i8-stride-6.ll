@@ -7354,12 +7354,12 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-LABEL: load_i8_stride6_vf64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    subq $40, %rsp
-; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512-NEXT:    vmovdqa {{.*#+}} ymm12 = [65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
 ; AVX512-NEXT:    vmovdqa64 224(%rdi), %ymm25
 ; AVX512-NEXT:    vmovdqa64 192(%rdi), %ymm26
 ; AVX512-NEXT:    vmovdqa %ymm12, %ymm0
 ; AVX512-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm25 ^ (ymm0 & (ymm26 ^ ymm25))
+; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512-NEXT:    vpshufb %xmm1, %xmm0, %xmm3
 ; AVX512-NEXT:    vmovdqa {{.*#+}} xmm5 = [128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u]
 ; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm4
@@ -7608,12 +7608,12 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-FCP-LABEL: load_i8_stride6_vf64:
 ; AVX512-FCP:       # %bb.0:
 ; AVX512-FCP-NEXT:    subq $40, %rsp
-; AVX512-FCP-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512-FCP-NEXT:    vmovdqa {{.*#+}} ymm12 = [65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
 ; AVX512-FCP-NEXT:    vmovdqa64 224(%rdi), %ymm25
 ; AVX512-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm26
 ; AVX512-FCP-NEXT:    vmovdqa %ymm12, %ymm0
 ; AVX512-FCP-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm25 ^ (ymm0 & (ymm26 ^ ymm25))
+; AVX512-FCP-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512-FCP-NEXT:    vpshufb %xmm1, %xmm0, %xmm3
 ; AVX512-FCP-NEXT:    vmovdqa {{.*#+}} xmm5 = [128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u]
 ; AVX512-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm4
@@ -7862,12 +7862,12 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-LABEL: load_i8_stride6_vf64:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    subq $40, %rsp
-; AVX512DQ-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} ymm12 = [65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
 ; AVX512DQ-NEXT:    vmovdqa64 224(%rdi), %ymm25
 ; AVX512DQ-NEXT:    vmovdqa64 192(%rdi), %ymm26
 ; AVX512DQ-NEXT:    vmovdqa %ymm12, %ymm0
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm25 ^ (ymm0 & (ymm26 ^ ymm25))
+; AVX512DQ-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512DQ-NEXT:    vpshufb %xmm1, %xmm0, %xmm3
 ; AVX512DQ-NEXT:    vmovdqa {{.*#+}} xmm5 = [128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u]
 ; AVX512DQ-NEXT:    vextracti128 $1, %ymm0, %xmm4
@@ -8116,12 +8116,12 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-FCP-LABEL: load_i8_stride6_vf64:
 ; AVX512DQ-FCP:       # %bb.0:
 ; AVX512DQ-FCP-NEXT:    subq $40, %rsp
-; AVX512DQ-FCP-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512DQ-FCP-NEXT:    vmovdqa {{.*#+}} ymm12 = [65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535,65535,0,65535]
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 224(%rdi), %ymm25
 ; AVX512DQ-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm26
 ; AVX512DQ-FCP-NEXT:    vmovdqa %ymm12, %ymm0
 ; AVX512DQ-FCP-NEXT:    vpternlogq {{.*#+}} ymm0 = ymm25 ^ (ymm0 & (ymm26 ^ ymm25))
+; AVX512DQ-FCP-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512DQ-FCP-NEXT:    vpshufb %xmm1, %xmm0, %xmm3
 ; AVX512DQ-FCP-NEXT:    vmovdqa {{.*#+}} xmm5 = [128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u]
 ; AVX512DQ-FCP-NEXT:    vextracti128 $1, %ymm0, %xmm4
@@ -8370,12 +8370,12 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-LABEL: load_i8_stride6_vf64:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512BW-NEXT:    vmovdqa 224(%rdi), %ymm0
 ; AVX512BW-NEXT:    vmovdqa64 192(%rdi), %ymm23
 ; AVX512BW-NEXT:    movw $18724, %r10w # imm = 0x4924
 ; AVX512BW-NEXT:    kmovd %r10d, %k1
 ; AVX512BW-NEXT:    vpblendmw %ymm0, %ymm23, %ymm9 {%k1}
+; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512BW-NEXT:    vpshufb %xmm2, %xmm9, %xmm1
 ; AVX512BW-NEXT:    vmovdqa {{.*#+}} xmm4 = [128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u]
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm9, %xmm12
@@ -8606,12 +8606,12 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-FCP-LABEL: load_i8_stride6_vf64:
 ; AVX512BW-FCP:       # %bb.0:
 ; AVX512BW-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512BW-FCP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512BW-FCP-NEXT:    vmovdqa 224(%rdi), %ymm0
 ; AVX512BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm23
 ; AVX512BW-FCP-NEXT:    movw $18724, %r10w # imm = 0x4924
 ; AVX512BW-FCP-NEXT:    kmovd %r10d, %k1
 ; AVX512BW-FCP-NEXT:    vpblendmw %ymm0, %ymm23, %ymm9 {%k1}
+; AVX512BW-FCP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512BW-FCP-NEXT:    vpshufb %xmm2, %xmm9, %xmm1
 ; AVX512BW-FCP-NEXT:    vmovdqa {{.*#+}} xmm4 = [128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u]
 ; AVX512BW-FCP-NEXT:    vextracti128 $1, %ymm9, %xmm12
@@ -8842,12 +8842,12 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-LABEL: load_i8_stride6_vf64:
 ; AVX512DQ-BW:       # %bb.0:
 ; AVX512DQ-BW-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512DQ-BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512DQ-BW-NEXT:    vmovdqa 224(%rdi), %ymm0
 ; AVX512DQ-BW-NEXT:    vmovdqa64 192(%rdi), %ymm23
 ; AVX512DQ-BW-NEXT:    movw $18724, %r10w # imm = 0x4924
 ; AVX512DQ-BW-NEXT:    kmovd %r10d, %k1
 ; AVX512DQ-BW-NEXT:    vpblendmw %ymm0, %ymm23, %ymm9 {%k1}
+; AVX512DQ-BW-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512DQ-BW-NEXT:    vpshufb %xmm2, %xmm9, %xmm1
 ; AVX512DQ-BW-NEXT:    vmovdqa {{.*#+}} xmm4 = [128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u]
 ; AVX512DQ-BW-NEXT:    vextracti128 $1, %ymm9, %xmm12
@@ -9078,12 +9078,12 @@ define void @load_i8_stride6_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-FCP-LABEL: load_i8_stride6_vf64:
 ; AVX512DQ-BW-FCP:       # %bb.0:
 ; AVX512DQ-BW-FCP-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX512DQ-BW-FCP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa 224(%rdi), %ymm0
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa64 192(%rdi), %ymm23
 ; AVX512DQ-BW-FCP-NEXT:    movw $18724, %r10w # imm = 0x4924
 ; AVX512DQ-BW-FCP-NEXT:    kmovd %r10d, %k1
 ; AVX512DQ-BW-FCP-NEXT:    vpblendmw %ymm0, %ymm23, %ymm9 {%k1}
+; AVX512DQ-BW-FCP-NEXT:    vmovdqa {{.*#+}} xmm2 = [0,6,12,128,128,128,4,10,128,128,128,u,u,u,u,u]
 ; AVX512DQ-BW-FCP-NEXT:    vpshufb %xmm2, %xmm9, %xmm1
 ; AVX512DQ-BW-FCP-NEXT:    vmovdqa {{.*#+}} xmm4 = [128,128,128,2,8,14,128,128,0,6,12,u,u,u,u,u]
 ; AVX512DQ-BW-FCP-NEXT:    vextracti128 $1, %ymm9, %xmm12

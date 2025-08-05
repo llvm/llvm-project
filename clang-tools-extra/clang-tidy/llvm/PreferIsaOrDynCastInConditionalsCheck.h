@@ -15,8 +15,9 @@ namespace clang::tidy::llvm_check {
 
 /// Looks at conditionals and finds and replaces cases of ``cast<>``, which will
 /// assert rather than return a null pointer, and ``dyn_cast<>`` where
-/// the return value is not captured.  Additionally, finds and replaces cases that match the
-/// pattern ``var && isa<X>(var)``, where ``var`` is evaluated twice.
+/// the return value is not captured.  Additionally, finds and replaces cases
+/// that match the pattern ``var && isa<X>(var)``, where ``var`` is evaluated
+/// twice.
 ///
 /// Finds cases like these:
 /// \code

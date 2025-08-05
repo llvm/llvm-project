@@ -28,7 +28,9 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <bitset>
 
 #define GET_INSTRINFO_MC_DESC
@@ -40,15 +42,6 @@
 
 #define GET_SUBTARGETINFO_MC_DESC
 #include "RISCVGenSubtargetInfo.inc"
-
-namespace llvm::RISCVVInversePseudosTable {
-
-using namespace RISCV;
-
-#define GET_RISCVVInversePseudosTable_IMPL
-#include "RISCVGenSearchableTables.inc"
-
-} // namespace llvm::RISCVVInversePseudosTable
 
 using namespace llvm;
 
@@ -89,7 +82,22 @@ static MCSubtargetInfo *createRISCVMCSubtargetInfo(const Triple &TT,
   if (CPU.empty() || CPU == "generic")
     CPU = TT.isArch64Bit() ? "generic-rv64" : "generic-rv32";
 
-  return createRISCVMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+  MCSubtargetInfo *X =
+      createRISCVMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
+
+  // If the CPU is "help" fill in 64 or 32 bit feature so we can pass
+  // RISCVFeatures::validate.
+  // FIXME: Why does llvm-mc still expect a source file with -mcpu=help?
+  if (CPU == "help") {
+    llvm::FeatureBitset Features = X->getFeatureBits();
+    if (TT.isArch64Bit())
+      Features.set(RISCV::Feature64Bit);
+    else
+      Features.set(RISCV::Feature32Bit);
+    X->setFeatureBits(Features);
+  }
+
+  return X;
 }
 
 static MCInstPrinter *createRISCVMCInstPrinter(const Triple &T,
@@ -189,7 +197,7 @@ public:
     }
     case RISCV::AUIPC:
       setGPRState(Inst.getOperand(0).getReg(),
-                  Addr + (Inst.getOperand(1).getImm() << 12));
+                  Addr + SignExtend64<32>(Inst.getOperand(1).getImm() << 12));
       break;
     }
   }
@@ -206,23 +214,23 @@ public:
       return true;
     }
 
-    if (Inst.getOpcode() == RISCV::C_JAL || Inst.getOpcode() == RISCV::C_J) {
+    switch (Inst.getOpcode()) {
+    case RISCV::C_J:
+    case RISCV::C_JAL:
+    case RISCV::QC_E_J:
+    case RISCV::QC_E_JAL:
       Target = Addr + Inst.getOperand(0).getImm();
       return true;
-    }
-
-    if (Inst.getOpcode() == RISCV::JAL) {
+    case RISCV::JAL:
       Target = Addr + Inst.getOperand(1).getImm();
       return true;
-    }
-
-    if (Inst.getOpcode() == RISCV::JALR) {
+    case RISCV::JALR: {
       if (auto TargetRegState = getGPRState(Inst.getOperand(1).getReg())) {
         Target = *TargetRegState + Inst.getOperand(2).getImm();
         return true;
       }
-
       return false;
+    }
     }
 
     return false;
@@ -298,6 +306,47 @@ public:
     }
   }
 
+  /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const MCSubtargetInfo &STI) const override {
+    uint32_t LoadInsnOpCode;
+    if (const Triple &T = STI.getTargetTriple(); T.isRISCV64())
+      LoadInsnOpCode = 0x3003; // ld
+    else if (T.isRISCV32())
+      LoadInsnOpCode = 0x2003; // lw
+    else
+      return {};
+
+    constexpr uint64_t FirstEntryAt = 32, EntrySize = 16;
+    if (PltContents.size() < FirstEntryAt + EntrySize)
+      return {};
+
+    std::vector<std::pair<uint64_t, uint64_t>> Results;
+    for (uint64_t EntryStart = FirstEntryAt,
+                  EntryStartEnd = PltContents.size() - EntrySize;
+         EntryStart <= EntryStartEnd; EntryStart += EntrySize) {
+      const uint32_t AuipcInsn =
+          support::endian::read32le(PltContents.data() + EntryStart);
+      const bool IsAuipc = (AuipcInsn & 0x7F) == 0x17;
+      if (!IsAuipc)
+        continue;
+
+      const uint32_t LoadInsn =
+          support::endian::read32le(PltContents.data() + EntryStart + 4);
+      const bool IsLoad = (LoadInsn & 0x707F) == LoadInsnOpCode;
+      if (!IsLoad)
+        continue;
+
+      const uint64_t GotPltSlotVA = PltSectionVA + EntryStart +
+                                    (AuipcInsn & 0xFFFFF000) +
+                                    SignExtend64<12>(LoadInsn >> 20);
+      Results.emplace_back(PltSectionVA + EntryStart, GotPltSlotVA);
+    }
+
+    return Results;
+  }
+
 private:
   static bool maybeReturnAddress(MCRegister Reg) {
     // X1 is used for normal returns, X5 for returns from outlined functions.
@@ -325,17 +374,8 @@ static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
   return new RISCVMCInstrAnalysis(Info);
 }
 
-namespace {
-MCStreamer *createRISCVELFStreamer(const Triple &T, MCContext &Context,
-                                   std::unique_ptr<MCAsmBackend> &&MAB,
-                                   std::unique_ptr<MCObjectWriter> &&MOW,
-                                   std::unique_ptr<MCCodeEmitter> &&MCE) {
-  return createRISCVELFStreamer(Context, std::move(MAB), std::move(MOW),
-                                std::move(MCE));
-}
-} // end anonymous namespace
-
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeRISCVTargetMC() {
   for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {
     TargetRegistry::RegisterMCAsmInfo(*T, createRISCVMCAsmInfo);
     TargetRegistry::RegisterMCObjectFileInfo(*T, createRISCVMCObjectFileInfo);

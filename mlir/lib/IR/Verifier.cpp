@@ -31,13 +31,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/IR/Threading.h"
-#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/PrettyStackTrace.h"
-#include "llvm/Support/Regex.h"
-#include <atomic>
 #include <optional>
 
 using namespace mlir;
@@ -185,7 +179,6 @@ LogicalResult OperationVerifier::verifyOnEntrance(Operation &op) {
   if (!numRegions)
     return success();
   auto kindInterface = dyn_cast<RegionKindInterface>(&op);
-  SmallVector<Operation *> opsWithIsolatedRegions;
   // Verify that all child regions are ok.
   MutableArrayRef<Region> regions = op.getRegions();
   for (unsigned i = 0; i < numRegions; ++i) {
@@ -226,10 +219,15 @@ LogicalResult OperationVerifier::verifyOnExit(Operation &op) {
               o.hasTrait<OpTrait::IsIsolatedFromAbove>())
             opsWithIsolatedRegions.push_back(&o);
   }
-  if (failed(failableParallelForEach(
-          op.getContext(), opsWithIsolatedRegions,
-          [&](Operation *o) { return verifyOpAndDominance(*o); })))
+
+  std::atomic<bool> opFailedVerify = false;
+  parallelForEach(op.getContext(), opsWithIsolatedRegions, [&](Operation *o) {
+    if (failed(verifyOpAndDominance(*o)))
+      opFailedVerify.store(true, std::memory_order_relaxed);
+  });
+  if (opFailedVerify.load(std::memory_order_relaxed))
     return failure();
+
   OperationName opName = op.getName();
   std::optional<RegisteredOperationName> registeredInfo =
       opName.getRegisteredInfo();

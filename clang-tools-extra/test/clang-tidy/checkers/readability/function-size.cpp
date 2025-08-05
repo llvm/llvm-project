@@ -319,3 +319,60 @@ void variables_16() {
 // CHECK-MESSAGES: :[[@LINE-5]]:6: note: 3 lines including whitespace and comments (threshold 0)
 // CHECK-MESSAGES: :[[@LINE-6]]:6: note: 4 statements (threshold 0)
 // CHECK-MESSAGES: :[[@LINE-7]]:6: note: 2 variables (threshold 1)
+
+struct A {
+  A(int c, int d) : a(0), b(c) { ; }
+  int a;
+  int b;
+};
+// CHECK-MESSAGES: :[[@LINE-4]]:3: warning: function 'A' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-5]]:3: note: 3 statements (threshold 0)
+
+struct B {
+  B(int x, int y, int z) : a(x + y * z), b(), c_a(y, z) {
+    ;
+  }
+  int a;
+  int b;
+  A c_a;
+};
+// CHECK-MESSAGES: :[[@LINE-7]]:3: warning: function 'B' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-8]]:3: note: 2 lines including whitespace and comments (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-9]]:3: note: 4 statements (threshold 0)
+
+struct C : A, B {
+  C() : A(0, 4), B(1, 2, 3) {}
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:3: warning: function 'C' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-3]]:3: note: 2 statements (threshold 0)
+
+template<typename T>
+struct TemplateC {
+  // 0 statements
+  TemplateC() : a(3) {}
+  T a;
+};
+// CHECK-MESSAGES: :[[@LINE-3]]:3: warning: function 'TemplateC<T>' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-4]]:3: note: 1 statements (threshold 0)
+
+template<typename T>
+struct TemplateD {
+  template<typename U>
+  TemplateD(U&& val) : member(val) { 
+    ;
+  }
+  
+  T member;
+};
+// CHECK-MESSAGES: :[[@LINE-6]]:3: warning: function 'TemplateD<T>' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-7]]:3: note: 2 lines including whitespace and comments (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-8]]:3: note: 2 statements (threshold 0)
+
+void instantiate() {
+  TemplateC<int> c;
+  TemplateD<int> d(5);
+}
+// CHECK-MESSAGES: :[[@LINE-4]]:6: warning: function 'instantiate' exceeds recommended size/complexity thresholds [readability-function-size]
+// CHECK-MESSAGES: :[[@LINE-5]]:6: note: 3 lines including whitespace and comments (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-6]]:6: note: 2 statements (threshold 0)
+// CHECK-MESSAGES: :[[@LINE-7]]:6: note: 2 variables (threshold 1)

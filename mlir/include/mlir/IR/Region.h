@@ -353,16 +353,16 @@ class RegionRange
 public:
   using RangeBaseT::RangeBaseT;
 
-  RegionRange(MutableArrayRef<Region> regions = std::nullopt);
+  RegionRange(MutableArrayRef<Region> regions = {});
 
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<std::unique_ptr<Region>>, Arg>::value>>
-  RegionRange(Arg &&arg)
+  RegionRange(Arg &&arg LLVM_LIFETIME_BOUND)
       : RegionRange(ArrayRef<std::unique_ptr<Region>>(std::forward<Arg>(arg))) {
   }
   template <typename Arg>
   RegionRange(
-      Arg &&arg,
+      Arg &&arg LLVM_LIFETIME_BOUND,
       std::enable_if_t<std::is_constructible<ArrayRef<Region *>, Arg>::value>
           * = nullptr)
       : RegionRange(ArrayRef<Region *>(std::forward<Arg>(arg))) {}

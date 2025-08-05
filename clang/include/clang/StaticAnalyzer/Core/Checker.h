@@ -221,6 +221,22 @@ public:
   }
 };
 
+class BlockEntrance {
+  template <typename CHECKER>
+  static void _checkBlockEntrance(void *Checker,
+                                  const clang::BlockEntrance &Entrance,
+                                  CheckerContext &C) {
+    ((const CHECKER *)Checker)->checkBlockEntrance(Entrance, C);
+  }
+
+public:
+  template <typename CHECKER>
+  static void _register(CHECKER *checker, CheckerManager &mgr) {
+    mgr._registerForBlockEntrance(CheckerManager::CheckBlockEntranceFunc(
+        checker, _checkBlockEntrance<CHECKER>));
+  }
+};
+
 class EndAnalysis {
   template <typename CHECKER>
   static void _checkEndAnalysis(void *checker, ExplodedGraph &G,
@@ -484,46 +500,94 @@ public:
 
 } // end eval namespace
 
-class CheckerBase : public ProgramPointTag {
-  CheckerNameRef Name;
-  friend class ::clang::ento::CheckerManager;
+/// A `CheckerFrontend` instance is what the user recognizes as "one checker":
+/// it has a public canonical name (injected from the `CheckerManager`), can be
+/// enabled or disabled, can have associated checker options and can be printed
+/// as the "source" of bug reports.
+/// The singleton instance of a simple `Checker<...>` is-a `CheckerFrontend`
+/// (for historical reasons, to preserve old straightforward code), while the
+/// singleton instance of a `CheckerFamily<...>` class owns multiple
+/// `CheckerFrontend` instances as data members.
+/// Modeling checkers that are hidden from the user but can be enabled or
+/// disabled separately (as dependencies of other checkers) are also considered
+/// to be `CheckerFrontend`s.
+class CheckerFrontend {
+  /// The `Name` is nullopt if and only if the checker is disabled.
+  std::optional<CheckerNameRef> Name;
 
 public:
-  StringRef getTagDescription() const override;
-  CheckerNameRef getCheckerName() const;
+  void enable(CheckerManager &Mgr) {
+    assert(!Name && "Checker part registered twice!");
+    Name = Mgr.getCurrentCheckerName();
+  }
+  bool isEnabled() const { return Name.has_value(); }
+  CheckerNameRef getName() const { return *Name; }
+};
 
-  /// See CheckerManager::runCheckersForPrintState.
+/// `CheckerBackend` is an abstract base class that serves as the common
+/// ancestor of all the `Checker<...>` and `CheckerFamily<...>` classes which
+/// can create `ExplodedNode`s (by acting as a `ProgramPointTag`) and can be
+/// registered to handle various checker callbacks. (Moreover the debug
+/// callback `printState` is also introduced here.)
+class CheckerBackend : public ProgramPointTag {
+public:
+  /// Debug state dump callback, see CheckerManager::runCheckersForPrintState.
+  /// Default implementation does nothing.
   virtual void printState(raw_ostream &Out, ProgramStateRef State,
-                          const char *NL, const char *Sep) const { }
+                          const char *NL, const char *Sep) const;
 };
 
-/// Dump checker name to stream.
-raw_ostream& operator<<(raw_ostream &Out, const CheckerBase &Checker);
-
-/// Tag that can use a checker name as a message provider
-/// (see SimpleProgramPointTag).
-class CheckerProgramPointTag : public SimpleProgramPointTag {
+/// The non-templated common ancestor of all the simple `Checker<...>` classes.
+class CheckerBase : public CheckerFrontend, public CheckerBackend {
 public:
-  CheckerProgramPointTag(StringRef CheckerName, StringRef Msg);
-  CheckerProgramPointTag(const CheckerBase *Checker, StringRef Msg);
+  /// Attached to nodes created by this checker class when the ExplodedGraph is
+  /// dumped for debugging.
+  StringRef getDebugTag() const override;
 };
 
-template <typename CHECK1, typename... CHECKs>
-class Checker : public CHECK1, public CHECKs..., public CheckerBase {
+/// Simple checker classes that implement one frontend (i.e. checker name)
+/// should derive from this template and specify all the implemented callbacks
+/// (i.e. classes like `check::PreStmt` or `eval::Call`) as template arguments
+/// of `Checker`.
+template <typename... CHECKs>
+class Checker : public CheckerBase, public CHECKs... {
 public:
+  using BlockEntrance = clang::BlockEntrance;
+
   template <typename CHECKER>
-  static void _register(CHECKER *checker, CheckerManager &mgr) {
-    CHECK1::_register(checker, mgr);
-    Checker<CHECKs...>::_register(checker, mgr);
+  static void _register(CHECKER *Chk, CheckerManager &Mgr) {
+    (CHECKs::_register(Chk, Mgr), ...);
   }
 };
 
-template <typename CHECK1>
-class Checker<CHECK1> : public CHECK1, public CheckerBase {
+/// Checker families (where a single backend class implements multiple related
+/// frontends) should derive from this template and specify all the implemented
+/// callbacks (i.e. classes like `check::PreStmt` or `eval::Call`) as template
+/// arguments of `FamilyChecker.`
+///
+/// NOTE: Classes deriving from `CheckerFamily` must implement the pure virtual
+/// method `StringRef getDebugTag()` which is inherited from `ProgramPointTag`
+/// and should return the name of the class as a string.
+///
+/// Obviously, this boilerplate is not a good thing, but unfortunately there is
+/// no portable way to stringify the name of a type (e.g. class), so any
+/// portable implementation of `getDebugTag` would need to take the name of
+/// the class from *somewhere* where it's present as a string -- and then
+/// directly placing it in a method override is much simpler than loading it
+/// from `Checkers.td`.
+///
+/// Note that the existing `CLASS` field in `Checkers.td` is not suitable for
+/// our goals, because instead of storing the same class name for each
+/// frontend, in fact each frontendchecker needs to have its own unique value
+/// there (to ensure that the names of the register methods are all unique).
+template <typename... CHECKs>
+class CheckerFamily : public CheckerBackend, public CHECKs... {
 public:
+  using BlockEntrance = clang::BlockEntrance;
+
   template <typename CHECKER>
-  static void _register(CHECKER *checker, CheckerManager &mgr) {
-    CHECK1::_register(checker, mgr);
+  static void _register(CHECKER *Chk, CheckerManager &Mgr) {
+    (CHECKs::_register(Chk, Mgr), ...);
   }
 };
 

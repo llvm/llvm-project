@@ -30,7 +30,7 @@ template <class _Duration>
 class hh_mm_ss {
 private:
   static_assert(__is_duration_v<_Duration>, "template parameter of hh_mm_ss must be a std::chrono::duration");
-  using __CommonType = common_type_t<_Duration, chrono::seconds>;
+  using __CommonType _LIBCPP_NODEBUG = common_type_t<_Duration, chrono::seconds>;
 
   _LIBCPP_HIDE_FROM_ABI static constexpr uint64_t __pow10(unsigned __exp) {
     uint64_t __ret = 1;

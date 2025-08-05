@@ -294,7 +294,7 @@ define ptr @geps_combinable_different_elem_type_extra_use2(ptr %a, i64 %idx) {
 define ptr @geps_combinable_scalable(ptr %a, i64 %idx) {
 ; CHECK-LABEL: @geps_combinable_scalable(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 3
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
 ; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw i8, ptr [[A2]], i64 4
 ; CHECK-NEXT:    ret ptr [[A3]]
@@ -307,7 +307,7 @@ define ptr @geps_combinable_scalable(ptr %a, i64 %idx) {
 define ptr @geps_combinable_scalable_vector_array(ptr %a, i64 %idx) {
 ; CHECK-LABEL: @geps_combinable_scalable_vector_array(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 5
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 5
 ; CHECK-NEXT:    [[A2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[A3:%.*]] = getelementptr inbounds nuw i8, ptr [[A2]], i64 4
 ; CHECK-NEXT:    ret ptr [[A3]]
@@ -464,6 +464,41 @@ define i1 @cmp_gep_same_base_same_type(ptr %ptr, i64 %idx1, i64 %idx2) {
   %gep1 = getelementptr inbounds i32, ptr %ptr, i64 %idx1
   %gep2 = getelementptr inbounds i32, ptr %ptr, i64 %idx2
   %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @cmp_gep_same_base_same_type_maywrap(ptr %ptr, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @cmp_gep_same_base_same_type_maywrap(
+; CHECK-NEXT:    [[CMP_UNSHIFTED:%.*]] = xor i64 [[IDX1:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    [[CMP_MASK:%.*]] = and i64 [[CMP_UNSHIFTED]], 4611686018427387903
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[CMP_MASK]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i32, ptr %ptr, i64 %idx1
+  %gep2 = getelementptr i32, ptr %ptr, i64 %idx2
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @cmp_gep_same_base_same_type_nuw(ptr %ptr, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @cmp_gep_same_base_same_type_nuw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX1:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nuw i32, ptr %ptr, i64 %idx1
+  %gep2 = getelementptr nuw i32, ptr %ptr, i64 %idx2
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @cmp_gep_same_base_same_type_nusw(ptr %ptr, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @cmp_gep_same_base_same_type_nusw(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IDX1:%.*]], [[IDX2:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr nusw i32, ptr %ptr, i64 %idx1
+  %gep2 = getelementptr nusw i32, ptr %ptr, i64 %idx2
+  %cmp = icmp eq ptr %gep1, %gep2
   ret i1 %cmp
 }
 
@@ -646,6 +681,64 @@ if:
 
 else:
   %gep2 = getelementptr i32, ptr %p, i64 2
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  %gep = getelementptr i32, ptr %phi, i64 1
+  ret ptr %gep
+}
+
+define ptr @gep_of_phi_of_gep_flags1(i1 %c, ptr %p) {
+; CHECK-LABEL: @gep_of_phi_of_gep_flags1(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 4, [[IF]] ], [ 8, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr inbounds i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr i32, ptr %p, i64 2
+  br label %join
+
+join:
+  %phi = phi ptr [ %gep1, %if ], [ %gep2, %else ]
+  %gep = getelementptr i32, ptr %phi, i64 1
+  ret ptr %gep
+}
+
+define ptr @gep_of_phi_of_gep_flags2(i1 %c, ptr %p) {
+; CHECK-LABEL: @gep_of_phi_of_gep_flags2(
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[TMP1:%.*]] = phi i64 [ 4, [[IF]] ], [ 8, [[ELSE]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nuw i8, ptr [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  br i1 %c, label %if, label %else
+
+if:
+  %gep1 = getelementptr nuw i32, ptr %p, i64 1
+  br label %join
+
+else:
+  %gep2 = getelementptr nuw i32, ptr %p, i64 2
   br label %join
 
 join:

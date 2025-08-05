@@ -1,4 +1,3 @@
-import("//clang/lib/ARCMigrate/enable.gni")
 import("//clang/lib/StaticAnalyzer/Frontend/enable.gni")
 import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/Target/targets.gni")
@@ -45,42 +44,33 @@ write_lit_config("lit_site_cfg") {
   output = clang_lit_site_cfg_file
   dir = get_path_info(output, "dir")
   extra_values = [
+    "BUILD_SHARED_LIBS=0",
+    "LLVM_LINK_LLVM_DYLIB=0",
+    "CLANG_LINK_CLANG_DYLIB=0",
     "LLVM_WITH_Z3=0",
+    "TEST_WITH_Z3_MOCK=0",
     "CLANG_BUILD_EXAMPLES=0",
     "CLANG_BUILT_STANDALONE=0",
     "CLANG_DEFAULT_CXX_STDLIB=",  # Empty string means "default value" here.
     "CLANG_DEFAULT_PIE_ON_LINUX=0",
     "CLANG_ENABLE_CIR=0",
+    "CLANG_ENABLE_OBJC_REWRITER=1",  # FIXME: flag?
     "CLANG_PLUGIN_SUPPORT=0",  # FIXME: Analysis/plugins need global -fPIC
     "CURRENT_TOOLS_DIR=" + rebase_path("$root_out_dir/bin", dir),
     "CLANG_VENDOR_UTI=org.llvm.clang",
-
-    # This is only used if LLVM_USE_SANITIZER includes lsan and the host
-    # OS is macOS. Since the GN build currently never uses LLVM_USE_SANITIZER,
-    # this is never read.  If it's ever needed,
-    # utils/gn/build/toolchain/BUILD.gn should get the compiler from a variable
-    # that's also read here -- but that should happen after multi-toolchain
-    # builds exist, to make sure it's a toolchain var.
-    "CMAKE_CXX_COMPILER=c++",
-    "CMAKE_C_COMPILER=cc",
     "ENABLE_BACKTRACES=1",
     "ENABLE_SHARED=0",
+    "LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS=0",
     "LLVM_EXTERNAL_LIT=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
+    "LLVM_INCLUDE_SPIRV_TOOLS_TESTS=0",
     "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOL_LLVM_DRIVER_BUILD=0",  # FIXME: Add actual support for this.
     "LLVM_USE_SANITIZER=",
     "LLVM_VERSION_MAJOR=$llvm_version_major",
     "Python3_EXECUTABLE=$python_path",
-    "USE_Z3_SOLVER=",
     "PPC_LINUX_DEFAULT_IEEELONGDOUBLE=0",
   ]
-
-  if (clang_enable_arcmt) {
-    extra_values += [ "CLANG_ENABLE_ARCMT=1" ]
-  } else {
-    extra_values += [ "CLANG_ENABLE_ARCMT=0" ]
-  }
 
   if (clang_enable_static_analyzer) {
     extra_values += [ "CLANG_ENABLE_STATIC_ANALYZER=1" ]
@@ -189,6 +179,7 @@ group("test") {
     "//llvm/tools/llvm-dis",
     "//llvm/tools/llvm-dwarfdump",
     "//llvm/tools/llvm-ifs",
+    "//llvm/tools/llvm-link",
     "//llvm/tools/llvm-lto",
     "//llvm/tools/llvm-lto2",
     "//llvm/tools/llvm-modextract",
@@ -210,12 +201,6 @@ group("test") {
     "//llvm/utils/not",
     "//llvm/utils/split-file",
   ]
-  if (clang_enable_arcmt) {
-    deps += [
-      "//clang/tools/arcmt-test",
-      "//clang/tools/c-arcmt-test",
-    ]
-  }
   if (clang_enable_static_analyzer) {
     deps += [
       "//clang/tools/clang-check",

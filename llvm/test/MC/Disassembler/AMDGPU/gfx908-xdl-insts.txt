@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx908 -disassemble -show-encoding < %s | FileCheck %s
 # RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a -disassemble -show-encoding < %s | FileCheck %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx940 -disassemble -show-encoding < %s | FileCheck %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx942 -disassemble -show-encoding < %s | FileCheck %s
 
 # CHECK: v_dot2c_f32_f16_e32 v5, v1, v2 ; encoding: [0x01,0x05,0x0a,0x6e]
 0x01,0x05,0x0a,0x6e

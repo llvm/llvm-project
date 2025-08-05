@@ -152,12 +152,12 @@ can run the LLVM and Clang tests simultaneously using:
 
     % make check-all
 
-To run the tests with Valgrind (Memcheck by default), use the ``LIT_ARGS`` make
+To run the tests with Valgrind (Memcheck by default), use the ``LIT_OPTS`` make
 variable to pass the required options to lit. For example, you can use:
 
 .. code-block:: bash
 
-    % make check LIT_ARGS="-v --vg --vg-leak"
+    % make check LIT_OPTS="-v --vg --vg-leak"
 
 to enable testing with valgrind and with leak checking enabled.
 
@@ -167,13 +167,17 @@ script which is built as part of LLVM. For example, to run the
 
 .. code-block:: bash
 
-    % llvm-lit ~/llvm/test/Integer/BitPacked.ll
+    % llvm-lit <path to llvm-project>/llvm/test/Integer/BitPacked.ll
 
-or to run all of the ARM CodeGen tests:
+.. note::
+   The test files are in the ``llvm-project`` directory, not the directory you
+   are building LLVM in.
+
+Or you can run a whole folder of tests. To run all of the ARM CodeGen tests:
 
 .. code-block:: bash
 
-    % llvm-lit ~/llvm/test/CodeGen/ARM
+    % llvm-lit <path to llvm-project>/llvm/test/CodeGen/ARM
 
 The regression tests will use the Python psutil module only if installed in a
 **non-user** location. Under Linux, install with sudo or within a virtual

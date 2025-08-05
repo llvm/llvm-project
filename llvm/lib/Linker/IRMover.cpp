@@ -8,9 +8,7 @@
 
 #include "llvm/Linker/IRMover.h"
 #include "LinkDiagnosticInfo.h"
-#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/Constants.h"
@@ -27,7 +25,6 @@
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Path.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
@@ -49,21 +46,6 @@ class TypeMapTy : public ValueMapTypeRemapper {
   /// This is a mapping from a source type to a destination type to use.
   DenseMap<Type *, Type *> MappedTypes;
 
-  /// When checking to see if two subgraphs are isomorphic, we speculatively
-  /// add types to MappedTypes, but keep track of them here in case we need to
-  /// roll back.
-  SmallVector<Type *, 16> SpeculativeTypes;
-
-  SmallVector<StructType *, 16> SpeculativeDstOpaqueTypes;
-
-  /// This is a list of non-opaque structs in the source module that are mapped
-  /// to an opaque struct in the destination module.
-  SmallVector<StructType *, 16> SrcDefinitionsToResolve;
-
-  /// This is the set of opaque types in the destination modules who are
-  /// getting a body from the source module.
-  SmallPtrSet<StructType *, 16> DstResolvedOpaqueTypes;
-
 public:
   TypeMapTy(IRMover::IdentifiedStructTypeSet &DstStructTypesSet)
       : DstStructTypesSet(DstStructTypesSet) {}
@@ -73,14 +55,9 @@ public:
   /// equivalent to the specified type in the source module.
   void addTypeMapping(Type *DstTy, Type *SrcTy);
 
-  /// Produce a body for an opaque type in the dest module from a type
-  /// definition in the source module.
-  Error linkDefinedTypeBodies();
-
   /// Return the mapped type to use for the specified input type from the
   /// source module.
   Type *get(Type *SrcTy);
-  Type *get(Type *SrcTy, SmallPtrSet<StructType *, 8> &Visited);
 
   FunctionType *get(FunctionType *T) {
     return cast<FunctionType>(get((Type *)T));
@@ -89,45 +66,19 @@ public:
 private:
   Type *remapType(Type *SrcTy) override { return get(SrcTy); }
 
-  bool areTypesIsomorphic(Type *DstTy, Type *SrcTy);
+  bool recursivelyAddMappingIfTypesAreIsomorphic(Type *DstTy, Type *SrcTy);
 };
 }
 
 void TypeMapTy::addTypeMapping(Type *DstTy, Type *SrcTy) {
-  assert(SpeculativeTypes.empty());
-  assert(SpeculativeDstOpaqueTypes.empty());
-
-  // Check to see if these types are recursively isomorphic and establish a
-  // mapping between them if so.
-  if (!areTypesIsomorphic(DstTy, SrcTy)) {
-    // Oops, they aren't isomorphic.  Just discard this request by rolling out
-    // any speculative mappings we've established.
-    for (Type *Ty : SpeculativeTypes)
-      MappedTypes.erase(Ty);
-
-    SrcDefinitionsToResolve.resize(SrcDefinitionsToResolve.size() -
-                                   SpeculativeDstOpaqueTypes.size());
-    for (StructType *Ty : SpeculativeDstOpaqueTypes)
-      DstResolvedOpaqueTypes.erase(Ty);
-  } else {
-    // SrcTy and DstTy are recursively ismorphic. We clear names of SrcTy
-    // and all its descendants to lower amount of renaming in LLVM context
-    // Renaming occurs because we load all source modules to the same context
-    // and declaration with existing name gets renamed (i.e Foo -> Foo.42).
-    // As a result we may get several different types in the destination
-    // module, which are in fact the same.
-    for (Type *Ty : SpeculativeTypes)
-      if (auto *STy = dyn_cast<StructType>(Ty))
-        if (STy->hasName())
-          STy->setName("");
-  }
-  SpeculativeTypes.clear();
-  SpeculativeDstOpaqueTypes.clear();
+  recursivelyAddMappingIfTypesAreIsomorphic(DstTy, SrcTy);
 }
 
 /// Recursively walk this pair of types, returning true if they are isomorphic,
-/// false if they are not.
-bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
+/// false if they are not. Types that were determined to be isomorphic are
+/// added to MappedTypes.
+bool TypeMapTy::recursivelyAddMappingIfTypesAreIsomorphic(Type *DstTy,
+                                                          Type *SrcTy) {
   // Two types with differing kinds are clearly not isomorphic.
   if (DstTy->getTypeID() != SrcTy->getTypeID())
     return false;
@@ -146,29 +97,10 @@ bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
 
   // Okay, we have two types with identical kinds that we haven't seen before.
 
-  // If this is an opaque struct type, special case it.
+  // Always consider opaque struct types non-isomorphic.
   if (StructType *SSTy = dyn_cast<StructType>(SrcTy)) {
-    // Mapping an opaque type to any struct, just keep the dest struct.
-    if (SSTy->isOpaque()) {
-      Entry = DstTy;
-      SpeculativeTypes.push_back(SrcTy);
-      return true;
-    }
-
-    // Mapping a non-opaque source type to an opaque dest.  If this is the first
-    // type that we're mapping onto this destination type then we succeed.  Keep
-    // the dest, but fill it in later. If this is the second (different) type
-    // that we're trying to map onto the same opaque type then we fail.
-    if (cast<StructType>(DstTy)->isOpaque()) {
-      // We can only map one source type onto the opaque destination type.
-      if (!DstResolvedOpaqueTypes.insert(cast<StructType>(DstTy)).second)
-        return false;
-      SrcDefinitionsToResolve.push_back(SSTy);
-      SpeculativeTypes.push_back(SrcTy);
-      SpeculativeDstOpaqueTypes.push_back(cast<StructType>(DstTy));
-      Entry = DstTy;
-      return true;
-    }
+    if (SSTy->isOpaque() || cast<StructType>(DstTy)->isOpaque())
+      return false;
   }
 
   // If the number of subtypes disagree between the two types, then we fail.
@@ -197,46 +129,30 @@ bool TypeMapTy::areTypesIsomorphic(Type *DstTy, Type *SrcTy) {
       return false;
   }
 
-  // Otherwise, we speculate that these two types will line up and recursively
-  // check the subelements.
-  Entry = DstTy;
-  SpeculativeTypes.push_back(SrcTy);
-
+  // Recursively check the subelements.
   for (unsigned I = 0, E = SrcTy->getNumContainedTypes(); I != E; ++I)
-    if (!areTypesIsomorphic(DstTy->getContainedType(I),
-                            SrcTy->getContainedType(I)))
+    if (!recursivelyAddMappingIfTypesAreIsomorphic(DstTy->getContainedType(I),
+                                                   SrcTy->getContainedType(I)))
       return false;
 
   // If everything seems to have lined up, then everything is great.
+  [[maybe_unused]] auto Res = MappedTypes.insert({SrcTy, DstTy});
+  assert(!Res.second && "Recursive type?");
+
+  if (auto *STy = dyn_cast<StructType>(SrcTy)) {
+    // We clear name of SrcTy to lower amount of renaming in LLVM context.
+    // Renaming occurs because we load all source modules to the same context
+    // and declaration with existing name gets renamed (i.e Foo -> Foo.42).
+    // As a result we may get several different types in the destination
+    // module, which are in fact the same.
+    if (STy->hasName())
+      STy->setName("");
+  }
+
   return true;
 }
 
-Error TypeMapTy::linkDefinedTypeBodies() {
-  SmallVector<Type *, 16> Elements;
-  for (StructType *SrcSTy : SrcDefinitionsToResolve) {
-    StructType *DstSTy = cast<StructType>(MappedTypes[SrcSTy]);
-    assert(DstSTy->isOpaque());
-
-    // Map the body of the source type over to a new body for the dest type.
-    Elements.resize(SrcSTy->getNumElements());
-    for (unsigned I = 0, E = Elements.size(); I != E; ++I)
-      Elements[I] = get(SrcSTy->getElementType(I));
-
-    if (auto E = DstSTy->setBodyOrError(Elements, SrcSTy->isPacked()))
-      return E;
-    DstStructTypesSet.switchToNonOpaque(DstSTy);
-  }
-  SrcDefinitionsToResolve.clear();
-  DstResolvedOpaqueTypes.clear();
-  return Error::success();
-}
-
 Type *TypeMapTy::get(Type *Ty) {
-  SmallPtrSet<StructType *, 8> Visited;
-  return get(Ty, Visited);
-}
-
-Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   // If we already have an entry for this type, return it.
   Type **Entry = &MappedTypes[Ty];
   if (*Entry)
@@ -252,11 +168,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
              "mapping to a source type");
     }
 #endif
-
-    if (!Visited.insert(cast<StructType>(Ty)).second) {
-      StructType *DTy = StructType::create(Ty->getContext());
-      return *Entry = DTy;
-    }
   }
 
   // If this is not a recursive type, then just map all of the elements and
@@ -272,7 +183,7 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   bool AnyChange = false;
   ElementTypes.resize(Ty->getNumContainedTypes());
   for (unsigned I = 0, E = Ty->getNumContainedTypes(); I != E; ++I) {
-    ElementTypes[I] = get(Ty->getContainedType(I), Visited);
+    ElementTypes[I] = get(Ty->getContainedType(I));
     AnyChange |= ElementTypes[I] != Ty->getContainedType(I);
   }
 
@@ -296,9 +207,6 @@ Type *TypeMapTy::get(Type *Ty, SmallPtrSet<StructType *, 8> &Visited) {
   case Type::FixedVectorTyID:
     return *Entry = VectorType::get(ElementTypes[0],
                                     cast<VectorType>(Ty)->getElementCount());
-  case Type::PointerTyID:
-    return *Entry = PointerType::get(ElementTypes[0],
-                                     cast<PointerType>(Ty)->getAddressSpace());
   case Type::FunctionTyID:
     return *Entry = FunctionType::get(ElementTypes[0],
                                       ArrayRef(ElementTypes).slice(1),
@@ -686,7 +594,6 @@ Function *IRLinker::copyFunctionProto(const Function *SF) {
                              SF->getAddressSpace(), SF->getName(), &DstM);
   F->copyAttributesFrom(SF);
   F->setAttributes(mapAttributeTypes(F->getContext(), F->getAttributes()));
-  F->IsNewDbgInfoFormat = SF->IsNewDbgInfoFormat;
   return F;
 }
 
@@ -859,10 +766,6 @@ void IRLinker::computeTypeMapping() {
     if (TypeMap.DstStructTypesSet.hasType(DST))
       TypeMap.addTypeMapping(DST, ST);
   }
-
-  // Now that we have discovered all of the type equivalences, get a body for
-  // any 'opaque' types in the dest module that are now resolved.
-  setError(TypeMap.linkDefinedTypeBodies());
 }
 
 static void getArrayElements(const Constant *C,
@@ -972,8 +875,6 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
   NG->copyAttributesFrom(SrcGV);
   forceRenaming(NG, SrcGV->getName());
 
-  Constant *Ret = ConstantExpr::getBitCast(NG, TypeMap.get(SrcGV->getType()));
-
   Mapper.scheduleMapAppendingVariable(
       *NG,
       (DstGV && !DstGV->isDeclaration()) ? DstGV->getInitializer() : nullptr,
@@ -985,7 +886,7 @@ IRLinker::linkAppendingVarProto(GlobalVariable *DstGV,
     RAUWWorklist.push_back(std::make_pair(DstGV, NG));
   }
 
-  return Ret;
+  return NG;
 }
 
 bool IRLinker::shouldLink(GlobalValue *DGV, GlobalValue &SGV) {
@@ -1127,7 +1028,6 @@ Error IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
     Dst.setPrologueData(Src.getPrologueData());
   if (Src.hasPersonalityFn())
     Dst.setPersonalityFn(Src.getPersonalityFn());
-  assert(Src.IsNewDbgInfoFormat == Dst.IsNewDbgInfoFormat);
 
   // Copy over the metadata attachments without remapping.
   Dst.copyMetadata(&Src, 0);
@@ -1247,6 +1147,7 @@ Error IRLinker::linkModuleFlagsMetadata() {
 
   // Check for module flag for updates before do anything.
   UpgradeModuleFlags(*SrcM);
+  UpgradeNVVMAnnotations(*SrcM);
 
   // If the destination module doesn't have module flags yet, then just copy
   // over the source module's flags.
@@ -1540,9 +1441,6 @@ Error IRLinker::run() {
     if (Error Err = SrcM->getMaterializer()->materializeMetadata())
       return Err;
 
-  // Convert source module to match dest for the duration of the link.
-  ScopedDbgInfoFormatSetter FormatSetter(*SrcM, DstM.IsNewDbgInfoFormat);
-
   // Inherit the target data from the source module if the destination
   // module doesn't have one already.
   if (DstM.getDataLayout().isDefault())
@@ -1562,10 +1460,6 @@ Error IRLinker::run() {
   bool EnableDLWarning = true;
   bool EnableTripleWarning = true;
   if (SrcTriple.isNVPTX() && DstTriple.isNVPTX()) {
-    std::string ModuleId = SrcM->getModuleIdentifier();
-    StringRef FileName = llvm::sys::path::filename(ModuleId);
-    bool SrcIsLibDevice =
-        FileName.starts_with("libdevice") && FileName.ends_with(".10.bc");
     bool SrcHasLibDeviceDL =
         (SrcM->getDataLayoutStr().empty() ||
          SrcM->getDataLayoutStr() == "e-i64:64-v16:16-v32:32-n16:32:64");
@@ -1576,8 +1470,8 @@ Error IRLinker::run() {
                                   SrcTriple.getOSName() == "gpulibs") ||
                                  (SrcTriple.getVendorName() == "unknown" &&
                                   SrcTriple.getOSName() == "unknown");
-    EnableTripleWarning = !(SrcIsLibDevice && SrcHasLibDeviceTriple);
-    EnableDLWarning = !(SrcIsLibDevice && SrcHasLibDeviceDL);
+    EnableTripleWarning = !SrcHasLibDeviceTriple;
+    EnableDLWarning = !(SrcHasLibDeviceTriple && SrcHasLibDeviceDL);
   }
 
   if (EnableDLWarning && (SrcM->getDataLayout() != DstM.getDataLayout())) {
@@ -1592,11 +1486,11 @@ Error IRLinker::run() {
       !SrcTriple.isCompatibleWith(DstTriple))
     emitWarning("Linking two modules of different target triples: '" +
                 SrcM->getModuleIdentifier() + "' is '" +
-                SrcM->getTargetTriple() + "' whereas '" +
-                DstM.getModuleIdentifier() + "' is '" + DstM.getTargetTriple() +
-                "'\n");
+                SrcM->getTargetTriple().str() + "' whereas '" +
+                DstM.getModuleIdentifier() + "' is '" +
+                DstM.getTargetTriple().str() + "'\n");
 
-  DstM.setTargetTriple(SrcTriple.merge(DstTriple));
+  DstM.setTargetTriple(Triple(SrcTriple.merge(DstTriple)));
 
   // Loop over all of the linked values to compute type mappings.
   computeTypeMapping();
@@ -1659,6 +1553,8 @@ Error IRLinker::run() {
     if (GV.hasAppendingLinkage())
       continue;
     Value *NewValue = Mapper.mapValue(GV);
+    if (FoundError)
+      return std::move(*FoundError);
     if (NewValue) {
       auto *NewGV = dyn_cast<GlobalVariable>(NewValue->stripPointerCasts());
       if (NewGV) {
@@ -1695,8 +1591,7 @@ StructType *IRMover::StructTypeKeyInfo::getTombstoneKey() {
 }
 
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const KeyTy &Key) {
-  return hash_combine(hash_combine_range(Key.ETypes.begin(), Key.ETypes.end()),
-                      Key.IsPacked);
+  return hash_combine(hash_combine_range(Key.ETypes), Key.IsPacked);
 }
 
 unsigned IRMover::StructTypeKeyInfo::getHashValue(const StructType *ST) {
@@ -1773,7 +1668,5 @@ Error IRMover::move(std::unique_ptr<Module> Src,
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
                        IsPerformingImport);
-  Error E = TheIRLinker.run();
-  Composite.dropTriviallyDeadConstantArrays();
-  return E;
+  return TheIRLinker.run();
 }

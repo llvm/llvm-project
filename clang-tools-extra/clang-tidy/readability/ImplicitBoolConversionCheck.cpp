@@ -348,8 +348,8 @@ void ImplicitBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
               implicitCastExpr().bind("implicitCastFromBool"),
               unless(hasParent(BitfieldConstruct)),
               // Check also for nested casts, for example: bool -> int -> float.
-              anyOf(hasParent(implicitCastExpr().bind("furtherImplicitCast")),
-                    anything()),
+              optionally(
+                  hasParent(implicitCastExpr().bind("furtherImplicitCast"))),
               unless(isInTemplateInstantiation()),
               unless(IsInCompilerGeneratedFunction))),
       this);
@@ -361,14 +361,15 @@ void ImplicitBoolConversionCheck::check(
   if (const auto *CastToBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastToBool")) {
     const auto *Parent = Result.Nodes.getNodeAs<Stmt>("parentStmt");
-    return handleCastToBool(CastToBool, Parent, *Result.Context);
+    handleCastToBool(CastToBool, Parent, *Result.Context);
+    return;
   }
 
   if (const auto *CastFromBool =
           Result.Nodes.getNodeAs<ImplicitCastExpr>("implicitCastFromBool")) {
     const auto *NextImplicitCast =
         Result.Nodes.getNodeAs<ImplicitCastExpr>("furtherImplicitCast");
-    return handleCastFromBool(CastFromBool, NextImplicitCast, *Result.Context);
+    handleCastFromBool(CastFromBool, NextImplicitCast, *Result.Context);
   }
 }
 

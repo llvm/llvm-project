@@ -36,27 +36,32 @@ template <typename T>
 using remove_cvref_t // NOLINT(readability-identifier-naming)
     = typename llvm::remove_cvref<T>::type;
 
+// TODO: Remove this in favor of std::type_identity<T> once we switch to C++23.
+template <typename T>
+struct type_identity // NOLINT(readability-identifier-naming)
+{
+  using type = T;
+};
+
+// TODO: Remove this in favor of std::type_identity_t<T> once we switch to
+// C++23.
+template <typename T>
+using type_identity_t // NOLINT(readability-identifier-naming)
+    = typename llvm::type_identity<T>::type;
+
 //===----------------------------------------------------------------------===//
 //     Features from C++23
 //===----------------------------------------------------------------------===//
 
 // TODO: Remove this in favor of std::optional<T>::transform once we switch to
 // C++23.
-template <typename T, typename Function>
-auto transformOptional(const std::optional<T> &O, const Function &F)
-    -> std::optional<decltype(F(*O))> {
-  if (O)
-    return F(*O);
-  return std::nullopt;
-}
-
-// TODO: Remove this in favor of std::optional<T>::transform once we switch to
-// C++23.
-template <typename T, typename Function>
-auto transformOptional(std::optional<T> &&O, const Function &F)
-    -> std::optional<decltype(F(*std::move(O)))> {
-  if (O)
-    return F(*std::move(O));
+template <typename Optional, typename Function,
+          typename Value = typename llvm::remove_cvref_t<Optional>::value_type>
+std::optional<std::invoke_result_t<Function, Value>>
+transformOptional(Optional &&O, Function &&F) {
+  if (O) {
+    return F(*std::forward<Optional>(O));
+  }
   return std::nullopt;
 }
 
@@ -67,6 +72,11 @@ template <typename Enum>
   return static_cast<std::underlying_type_t<Enum>>(E);
 }
 
+// A tag for constructors accepting ranges.
+struct from_range_t {
+  explicit from_range_t() = default;
+};
+inline constexpr from_range_t from_range{};
 } // namespace llvm
 
 #endif // LLVM_ADT_STLFORWARDCOMPAT_H

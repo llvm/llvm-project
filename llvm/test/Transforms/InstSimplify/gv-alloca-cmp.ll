@@ -46,7 +46,7 @@ define i1 @cmp_gv_weak_alloca() {
 }
 
 %opaque = type opaque
-@gv_unsized = weak global %opaque zeroinitializer, align 16
+@gv_unsized = external global %opaque, align 16
 
 define i1 @cmp_gv_unsized_alloca() {
 ; CHECK-LABEL: define i1 @cmp_gv_unsized_alloca() {

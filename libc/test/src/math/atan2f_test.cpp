@@ -81,7 +81,7 @@ TEST_F(LlvmLibcAtan2fTest, InFloatRange) {
         if (FPBits(w).is_nan() || FPBits(w).is_inf())
           continue;
 
-        LIBC_NAMESPACE::libc_errno = 0;
+        libc_errno = 0;
         float result = LIBC_NAMESPACE::atan2f(x, y);
         ++total_count;
         if (FPBits(result).is_nan() || FPBits(result).is_inf())

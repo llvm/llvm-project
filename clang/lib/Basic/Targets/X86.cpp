@@ -14,7 +14,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/TargetParser/X86TargetParser.h"
@@ -23,31 +22,53 @@
 namespace clang {
 namespace targets {
 
-static constexpr Builtin::Info BuiltinInfoX86[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/BuiltinsX86.def"
+// The x86-32 builtins are a subset and prefix of the x86-64 builtins.
+static constexpr int NumX86Builtins =
+    X86::LastX86CommonBuiltin - Builtin::FirstTSBuiltin + 1;
+static constexpr int NumX86_64Builtins =
+    X86::LastTSBuiltin - X86::FirstX86_64Builtin;
+static constexpr int NumBuiltins = X86::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins == (NumX86Builtins + NumX86_64Builtins));
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
+namespace X86 {
+#define GET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsX86.inc"
+#undef GET_BUILTIN_STR_TABLE
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/BuiltinsX86_64.def"
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsX86.inc"
+#undef GET_BUILTIN_INFOS
 };
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsX86.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumX86Builtins);
+} // namespace X86
+
+namespace X86_64 {
+#define GET_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsX86_64.inc"
+#undef GET_BUILTIN_STR_TABLE
+
+static constexpr Builtin::Info BuiltinInfos[] = {
+#define GET_BUILTIN_INFOS
+#include "clang/Basic/BuiltinsX86_64.inc"
+#undef GET_BUILTIN_INFOS
+};
+
+static constexpr Builtin::Info PrefixedBuiltinInfos[] = {
+#define GET_BUILTIN_PREFIXED_INFOS
+#include "clang/Basic/BuiltinsX86_64.inc"
+#undef GET_BUILTIN_PREFIXED_INFOS
+};
+static_assert((std::size(BuiltinInfos) + std::size(PrefixedBuiltinInfos)) ==
+              NumX86_64Builtins);
+} // namespace X86_64
 
 static const char *const GCCRegNames[] = {
     "ax",    "dx",    "cx",    "bx",    "si",      "di",    "bp",    "sp",
@@ -1087,6 +1108,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
 
   if (HasFloat128)
     Builder.defineMacro("__SIZEOF_FLOAT128__", "16");
+
+  if (Opts.CFProtectionReturn || Opts.CFProtectionBranch)
+    Builder.defineMacro("__CET__", Twine{(Opts.CFProtectionReturn << 1) |
+                                         Opts.CFProtectionBranch});
 }
 
 bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
@@ -1365,7 +1390,7 @@ static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
   // correct, so it asserts if the value is out of range.
 }
 
-unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+llvm::APInt X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   auto getPriority = [](StringRef Feature) -> unsigned {
     // Valid CPUs have a 'key feature' that compares just better than its key
     // feature.
@@ -1384,7 +1409,7 @@ unsigned X86TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
   for (StringRef Feature : Features)
     if (!Feature.empty())
       Priority = std::max(Priority, getPriority(Feature));
-  return Priority;
+  return llvm::APInt(32, Priority);
 }
 
 bool X86TargetInfo::validateCPUSpecificCPUDispatch(StringRef Name) const {
@@ -1864,12 +1889,21 @@ ArrayRef<TargetInfo::AddlRegName> X86TargetInfo::getGCCAddlRegNames() const {
   return llvm::ArrayRef(AddlRegNames);
 }
 
-ArrayRef<Builtin::Info> X86_32TargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfoX86, clang::X86::LastX86CommonBuiltin -
-                                            Builtin::FirstTSBuiltin + 1);
+llvm::SmallVector<Builtin::InfosShard>
+X86_32TargetInfo::getTargetBuiltins() const {
+  return {
+      {&X86::BuiltinStrings, X86::BuiltinInfos},
+      {&X86::BuiltinStrings, X86::PrefixedBuiltinInfos, "__builtin_ia32_"},
+  };
 }
 
-ArrayRef<Builtin::Info> X86_64TargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfoX86,
-                        X86::LastTSBuiltin - Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+X86_64TargetInfo::getTargetBuiltins() const {
+  return {
+      {&X86::BuiltinStrings, X86::BuiltinInfos},
+      {&X86::BuiltinStrings, X86::PrefixedBuiltinInfos, "__builtin_ia32_"},
+      {&X86_64::BuiltinStrings, X86_64::BuiltinInfos},
+      {&X86_64::BuiltinStrings, X86_64::PrefixedBuiltinInfos,
+       "__builtin_ia32_"},
+  };
 }

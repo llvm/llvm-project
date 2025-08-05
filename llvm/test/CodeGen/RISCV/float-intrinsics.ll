@@ -802,23 +802,6 @@ define float @maxnum_f32(float %a, float %b) nounwind {
   ret float %1
 }
 
-; TODO: FMINNAN and FMAXNAN aren't handled in
-; SelectionDAGLegalize::ExpandNode.
-
-; declare float @llvm.minimum.f32(float, float)
-
-; define float @fminimum_f32(float %a, float %b) nounwind {
-;   %1 = call float @llvm.minimum.f32(float %a, float %b)
-;   ret float %1
-; }
-
-; declare float @llvm.maximum.f32(float, float)
-
-; define float @fmaximum_f32(float %a, float %b) nounwind {
-;   %1 = call float @llvm.maximum.f32(float %a, float %b)
-;   ret float %1
-; }
-
 declare float @llvm.copysign.f32(float, float)
 
 define float @copysign_f32(float %a, float %b) nounwind {
@@ -1642,18 +1625,18 @@ define i1 @fpclass(float %x) {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    slli a1, a0, 1
 ; RV32I-NEXT:    lui a2, 2048
-; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    lui a3, 522240
 ; RV32I-NEXT:    lui a4, 1046528
-; RV32I-NEXT:    srli a1, a1, 1
+; RV32I-NEXT:    srli a5, a1, 1
 ; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    addi a5, a1, -1
+; RV32I-NEXT:    xor a6, a5, a3
+; RV32I-NEXT:    slt a3, a3, a5
+; RV32I-NEXT:    add a4, a5, a4
+; RV32I-NEXT:    addi a5, a5, -1
 ; RV32I-NEXT:    sltu a2, a5, a2
-; RV32I-NEXT:    xor a5, a1, a3
-; RV32I-NEXT:    slt a3, a3, a1
-; RV32I-NEXT:    add a4, a1, a4
+; RV32I-NEXT:    slti a0, a0, 0
 ; RV32I-NEXT:    seqz a1, a1
-; RV32I-NEXT:    seqz a5, a5
+; RV32I-NEXT:    seqz a5, a6
 ; RV32I-NEXT:    srli a4, a4, 24
 ; RV32I-NEXT:    and a2, a2, a0
 ; RV32I-NEXT:    or a1, a1, a5
@@ -1666,29 +1649,29 @@ define i1 @fpclass(float %x) {
 ;
 ; RV64I-LABEL: fpclass:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a1, a0
-; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    slli a1, a0, 33
 ; RV64I-NEXT:    lui a2, 2048
 ; RV64I-NEXT:    lui a3, 522240
 ; RV64I-NEXT:    lui a4, 1046528
-; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    addiw a2, a2, -1
-; RV64I-NEXT:    slti a1, a1, 0
-; RV64I-NEXT:    addi a5, a0, -1
+; RV64I-NEXT:    srli a5, a1, 33
+; RV64I-NEXT:    addi a2, a2, -1
+; RV64I-NEXT:    xor a6, a5, a3
+; RV64I-NEXT:    slt a3, a3, a5
+; RV64I-NEXT:    add a4, a5, a4
+; RV64I-NEXT:    addi a5, a5, -1
 ; RV64I-NEXT:    sltu a2, a5, a2
-; RV64I-NEXT:    xor a5, a0, a3
-; RV64I-NEXT:    slt a3, a3, a0
-; RV64I-NEXT:    add a4, a0, a4
-; RV64I-NEXT:    seqz a0, a0
-; RV64I-NEXT:    seqz a5, a5
+; RV64I-NEXT:    sext.w a0, a0
+; RV64I-NEXT:    slti a0, a0, 0
+; RV64I-NEXT:    seqz a1, a1
+; RV64I-NEXT:    seqz a5, a6
 ; RV64I-NEXT:    srliw a4, a4, 24
-; RV64I-NEXT:    and a2, a2, a1
-; RV64I-NEXT:    or a0, a0, a5
+; RV64I-NEXT:    and a2, a2, a0
+; RV64I-NEXT:    or a1, a1, a5
 ; RV64I-NEXT:    sltiu a4, a4, 127
-; RV64I-NEXT:    or a0, a0, a2
-; RV64I-NEXT:    or a0, a0, a3
-; RV64I-NEXT:    and a1, a4, a1
-; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    or a1, a1, a2
+; RV64I-NEXT:    or a1, a1, a3
+; RV64I-NEXT:    and a0, a4, a0
+; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
   %cmp = call i1 @llvm.is.fpclass.f32(float %x, i32 639)
   ret i1 %cmp
@@ -1781,7 +1764,7 @@ define i1 @isqnan_fpclass(float %x) {
 ; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    lui a1, 523264
 ; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 2)  ; qnan
@@ -2170,7 +2153,7 @@ define i1 @isnotfinite_fpclass(float %x) {
 ; RV64I-NEXT:    slli a0, a0, 33
 ; RV64I-NEXT:    lui a1, 522240
 ; RV64I-NEXT:    srli a0, a0, 33
-; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    addi a1, a1, -1
 ; RV64I-NEXT:    slt a0, a1, a0
 ; RV64I-NEXT:    ret
   %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 519)  ; ox207 = "inf|nan"

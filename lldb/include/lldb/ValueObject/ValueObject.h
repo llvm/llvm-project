@@ -357,7 +357,7 @@ public:
   virtual bool CanProvideValue();
 
   // Subclasses must implement the functions below.
-  virtual std::optional<uint64_t> GetByteSize() = 0;
+  virtual llvm::Expected<uint64_t> GetByteSize() = 0;
 
   virtual lldb::ValueType GetValueType() const = 0;
 
@@ -498,7 +498,7 @@ public:
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
 
-  virtual size_t GetIndexOfChildWithName(llvm::StringRef name);
+  virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name);
 
   llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
   /// Like \c GetNumChildren but returns 0 on error.  You probably
@@ -573,10 +573,14 @@ public:
   /// child as well.
   void SetName(ConstString name) { m_name = name; }
 
-  virtual lldb::addr_t GetAddressOf(bool scalar_is_load_address = true,
-                                    AddressType *address_type = nullptr);
+  struct AddrAndType {
+    lldb::addr_t address = LLDB_INVALID_ADDRESS;
+    AddressType type = eAddressTypeInvalid;
+  };
 
-  lldb::addr_t GetPointerValue(AddressType *address_type = nullptr);
+  virtual AddrAndType GetAddressOf(bool scalar_is_load_address = true);
+
+  AddrAndType GetPointerValue();
 
   lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;
 
@@ -864,6 +868,19 @@ public:
   virtual uint64_t GetLanguageFlags() { return m_language_flags; }
 
   virtual void SetLanguageFlags(uint64_t flags) { m_language_flags = flags; }
+
+  /// Returns the local buffer that this ValueObject points to if it's
+  /// available.
+  /// \return
+  ///     The local buffer if this value object's value points to a
+  ///     host address, and if that buffer can be determined. Otherwise, returns
+  ///     an empty ArrayRef.
+  ///
+  /// TODO: Because a ValueObject's Value can point to any arbitrary memory
+  /// location, it is possible that we can't find what what buffer we're
+  /// pointing to, and thus also can't know its size. See the comment in
+  /// Value::m_value for a more thorough explanation of why that is.
+  llvm::ArrayRef<uint8_t> GetLocalBuffer() const;
 
 protected:
   typedef ClusterManager<ValueObject> ValueObjectManager;

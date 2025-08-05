@@ -41,11 +41,8 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(unsigned NumClauses)
           OpenACCLoopConstructClass, OpenACCDirectiveKind::Loop,
           SourceLocation{}, SourceLocation{}, SourceLocation{},
           /*AssociatedStmt=*/nullptr) {
-  std::uninitialized_value_construct(
-      getTrailingObjects<const OpenACCClause *>(),
-      getTrailingObjects<const OpenACCClause *>() + NumClauses);
-  setClauseList(
-      MutableArrayRef(getTrailingObjects<const OpenACCClause *>(), NumClauses));
+  std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+  setClauseList(getTrailingObjects(NumClauses));
 }
 
 OpenACCLoopConstruct::OpenACCLoopConstruct(
@@ -61,11 +58,9 @@ OpenACCLoopConstruct::OpenACCLoopConstruct(
   assert((Loop == nullptr || isa<ForStmt, CXXForRangeStmt>(Loop)) &&
          "Associated Loop not a for loop?");
   // Initialize the trailing storage.
-  std::uninitialized_copy(Clauses.begin(), Clauses.end(),
-                          getTrailingObjects<const OpenACCClause *>());
+  llvm::uninitialized_copy(Clauses, getTrailingObjects());
 
-  setClauseList(MutableArrayRef(getTrailingObjects<const OpenACCClause *>(),
-                                Clauses.size()));
+  setClauseList(getTrailingObjects(Clauses.size()));
 }
 
 OpenACCLoopConstruct *OpenACCLoopConstruct::CreateEmpty(const ASTContext &C,
@@ -214,7 +209,7 @@ OpenACCWaitConstruct *OpenACCWaitConstruct::Create(
     ArrayRef<Expr *> QueueIdExprs, SourceLocation RParenLoc, SourceLocation End,
     ArrayRef<const OpenACCClause *> Clauses) {
 
-  assert(llvm::all_of(QueueIdExprs, [](Expr *E) { return E != nullptr; }));
+  assert(!llvm::is_contained(QueueIdExprs, nullptr));
 
   void *Mem = C.Allocate(
       OpenACCWaitConstruct::totalSizeToAlloc<Expr *, OpenACCClause *>(
@@ -263,5 +258,85 @@ OpenACCShutdownConstruct *OpenACCShutdownConstruct::Create(
           Clauses.size()));
   auto *Inst =
       new (Mem) OpenACCShutdownConstruct(Start, DirectiveLoc, End, Clauses);
+  return Inst;
+}
+
+OpenACCSetConstruct *OpenACCSetConstruct::CreateEmpty(const ASTContext &C,
+                                                      unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCSetConstruct::totalSizeToAlloc<const OpenACCClause *>(NumClauses));
+  auto *Inst = new (Mem) OpenACCSetConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCSetConstruct *
+OpenACCSetConstruct::Create(const ASTContext &C, SourceLocation Start,
+                            SourceLocation DirectiveLoc, SourceLocation End,
+                            ArrayRef<const OpenACCClause *> Clauses) {
+  void *Mem =
+      C.Allocate(OpenACCSetConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst = new (Mem) OpenACCSetConstruct(Start, DirectiveLoc, End, Clauses);
+  return Inst;
+}
+
+OpenACCUpdateConstruct *
+OpenACCUpdateConstruct::CreateEmpty(const ASTContext &C, unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCUpdateConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCUpdateConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCUpdateConstruct *
+OpenACCUpdateConstruct::Create(const ASTContext &C, SourceLocation Start,
+                               SourceLocation DirectiveLoc, SourceLocation End,
+                               ArrayRef<const OpenACCClause *> Clauses) {
+  void *Mem = C.Allocate(
+      OpenACCUpdateConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst =
+      new (Mem) OpenACCUpdateConstruct(Start, DirectiveLoc, End, Clauses);
+  return Inst;
+}
+
+OpenACCAtomicConstruct *
+OpenACCAtomicConstruct::CreateEmpty(const ASTContext &C, unsigned NumClauses) {
+  void *Mem = C.Allocate(
+      OpenACCAtomicConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          NumClauses));
+  auto *Inst = new (Mem) OpenACCAtomicConstruct(NumClauses);
+  return Inst;
+}
+
+OpenACCAtomicConstruct *OpenACCAtomicConstruct::Create(
+    const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+    OpenACCAtomicKind AtKind, SourceLocation End,
+    ArrayRef<const OpenACCClause *> Clauses, Stmt *AssociatedStmt) {
+  void *Mem = C.Allocate(
+      OpenACCAtomicConstruct::totalSizeToAlloc<const OpenACCClause *>(
+          Clauses.size()));
+  auto *Inst = new (Mem) OpenACCAtomicConstruct(Start, DirectiveLoc, AtKind,
+                                                End, Clauses, AssociatedStmt);
+  return Inst;
+}
+
+OpenACCCacheConstruct *OpenACCCacheConstruct::CreateEmpty(const ASTContext &C,
+                                                          unsigned NumVars) {
+  void *Mem =
+      C.Allocate(OpenACCCacheConstruct::totalSizeToAlloc<Expr *>(NumVars));
+  auto *Inst = new (Mem) OpenACCCacheConstruct(NumVars);
+  return Inst;
+}
+
+OpenACCCacheConstruct *OpenACCCacheConstruct::Create(
+    const ASTContext &C, SourceLocation Start, SourceLocation DirectiveLoc,
+    SourceLocation LParenLoc, SourceLocation ReadOnlyLoc,
+    ArrayRef<Expr *> VarList, SourceLocation RParenLoc, SourceLocation End) {
+  void *Mem = C.Allocate(
+      OpenACCCacheConstruct::totalSizeToAlloc<Expr *>(VarList.size()));
+  auto *Inst = new (Mem) OpenACCCacheConstruct(
+      Start, DirectiveLoc, LParenLoc, ReadOnlyLoc, VarList, RParenLoc, End);
   return Inst;
 }

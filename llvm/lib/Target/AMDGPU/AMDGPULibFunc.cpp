@@ -929,23 +929,38 @@ AMDGPULibFuncBase::Param AMDGPULibFuncBase::Param::getFromTy(Type *Ty,
   return P;
 }
 
-static Type* getIntrinsicParamType(
-  LLVMContext& C,
-  const AMDGPULibFunc::Param& P,
-  bool useAddrSpace) {
-  Type* T = nullptr;
+static Type *getIntrinsicParamType(LLVMContext &C,
+                                   const AMDGPULibFunc::Param &P,
+                                   bool UseAddrSpace) {
+  Type *T = nullptr;
   switch (P.ArgType) {
+  default:
+    return nullptr;
   case AMDGPULibFunc::U8:
-  case AMDGPULibFunc::I8:   T = Type::getInt8Ty(C);   break;
+  case AMDGPULibFunc::I8:
+    T = Type::getInt8Ty(C);
+    break;
   case AMDGPULibFunc::U16:
-  case AMDGPULibFunc::I16:  T = Type::getInt16Ty(C);  break;
+  case AMDGPULibFunc::I16:
+    T = Type::getInt16Ty(C);
+    break;
   case AMDGPULibFunc::U32:
-  case AMDGPULibFunc::I32:  T = Type::getInt32Ty(C);  break;
+  case AMDGPULibFunc::I32:
+    T = Type::getInt32Ty(C);
+    break;
   case AMDGPULibFunc::U64:
-  case AMDGPULibFunc::I64:  T = Type::getInt64Ty(C);  break;
-  case AMDGPULibFunc::F16:  T = Type::getHalfTy(C);   break;
-  case AMDGPULibFunc::F32:  T = Type::getFloatTy(C);  break;
-  case AMDGPULibFunc::F64:  T = Type::getDoubleTy(C); break;
+  case AMDGPULibFunc::I64:
+    T = Type::getInt64Ty(C);
+    break;
+  case AMDGPULibFunc::F16:
+    T = Type::getHalfTy(C);
+    break;
+  case AMDGPULibFunc::F32:
+    T = Type::getFloatTy(C);
+    break;
+  case AMDGPULibFunc::F64:
+    T = Type::getDoubleTy(C);
+    break;
 
   case AMDGPULibFunc::IMG1DA:
   case AMDGPULibFunc::IMG1DB:
@@ -972,7 +987,7 @@ static Type* getIntrinsicParamType(
     T = FixedVectorType::get(T, P.VectorSize);
   if (P.PtrKind != AMDGPULibFunc::BYVALUE)
     T = PointerType::get(
-        C, useAddrSpace ? ((P.PtrKind & AMDGPULibFunc::ADDR_SPACE) - 1) : 0);
+        C, UseAddrSpace ? ((P.PtrKind & AMDGPULibFunc::ADDR_SPACE) - 1) : 0);
   return T;
 }
 
@@ -989,9 +1004,11 @@ FunctionType *AMDGPUMangledLibFunc::getFunctionType(const Module &M) const {
     Args.push_back(ParamTy);
   }
 
-  return FunctionType::get(
-    getIntrinsicParamType(C, getRetType(FuncId, Leads), true),
-    Args, false);
+  Type *RetTy = getIntrinsicParamType(C, getRetType(FuncId, Leads), true);
+  if (!RetTy)
+    return nullptr;
+
+  return FunctionType::get(RetTy, Args, false);
 }
 
 unsigned AMDGPUMangledLibFunc::getNumArgs() const {
@@ -1080,6 +1097,7 @@ FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
   }
 
   FunctionType *FuncTy = fInfo.getFunctionType(*M);
+  assert(FuncTy);
 
   bool hasPtr = false;
   for (FunctionType::param_iterator

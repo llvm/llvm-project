@@ -20,11 +20,12 @@ body:             |
 
     ; CHECK-LABEL: name: shl_gep_sext_ldrwrow
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %load:gpr32 = LDRWroW %base, %foo, 1, 1 :: (load (s32))
-    ; CHECK: $w0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %load:gpr32 = LDRWroW %base, %foo, 1, 1 :: (load (s32))
+    ; CHECK-NEXT: $w0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -54,11 +55,12 @@ body:             |
 
     ; CHECK-LABEL: name: shl_gep_zext_ldrwrow
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %load:gpr32 = LDRWroW %base, %foo, 0, 1 :: (load (s32))
-    ; CHECK: $w0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %load:gpr32 = LDRWroW %base, %foo, 0, 1 :: (load (s32))
+    ; CHECK-NEXT: $w0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_ZEXT %foo(s32)
@@ -88,11 +90,12 @@ body:             |
 
     ; CHECK-LABEL: name: shl_gep_anyext_ldrwrow
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %load:gpr32 = LDRWroW %base, %foo, 0, 1 :: (load (s32))
-    ; CHECK: $w0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %load:gpr32 = LDRWroW %base, %foo, 0, 1 :: (load (s32))
+    ; CHECK-NEXT: $w0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_ANYEXT %foo(s32)
@@ -120,11 +123,12 @@ body:             |
     liveins: $w1, $x0
     ; CHECK-LABEL: name: mul_gep_sext_ldrwrow
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %load:gpr32 = LDRWroW %base, %foo, 1, 1 :: (load (s32))
-    ; CHECK: $w0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %load:gpr32 = LDRWroW %base, %foo, 1, 1 :: (load (s32))
+    ; CHECK-NEXT: $w0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -152,11 +156,12 @@ body:             |
 
     ; CHECK-LABEL: name: mul_gep_zext_ldrwrow
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %load:gpr32 = LDRWroW %base, %foo, 0, 1 :: (load (s32))
-    ; CHECK: $w0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %load:gpr32 = LDRWroW %base, %foo, 0, 1 :: (load (s32))
+    ; CHECK-NEXT: $w0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_ZEXT %foo(s32)
@@ -184,11 +189,12 @@ body:             |
 
     ; CHECK-LABEL: name: mul_gep_anyext_ldrwrow
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %load:gpr32 = LDRWroW %base, %foo, 0, 1 :: (load (s32))
-    ; CHECK: $w0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %load:gpr32 = LDRWroW %base, %foo, 0, 1 :: (load (s32))
+    ; CHECK-NEXT: $w0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_ANYEXT %foo(s32)
@@ -216,11 +222,12 @@ body:             |
 
     ; CHECK-LABEL: name: ldrdrow
     ; CHECK: liveins: $w1, $x0, $d0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %load:fpr64 = LDRDroW %base, %foo, 1, 1 :: (load (<2 x s32>))
-    ; CHECK: $x0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %load:fpr64 = LDRDroW %base, %foo, 1, 1 :: (load (<2 x s32>))
+    ; CHECK-NEXT: $x0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -248,11 +255,12 @@ body:             |
 
     ; CHECK-LABEL: name: ldrxrow
     ; CHECK: liveins: $w1, $x0, $d0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %load:gpr64 = LDRXroW %base, %foo, 1, 1 :: (load (s64))
-    ; CHECK: $x0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %load:gpr64 = LDRXroW %base, %foo, 1, 1 :: (load (s64))
+    ; CHECK-NEXT: $x0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -281,11 +289,12 @@ body:             |
 
     ; CHECK-LABEL: name: ldrbbrow
     ; CHECK: liveins: $x0, $w0, $w1
-    ; CHECK: %val:gpr32 = COPY $w1
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %load:gpr32 = LDRBBroW %base, %val, 1, 0 :: (load (s8))
-    ; CHECK: $w0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %val:gpr32 = COPY $w1
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %load:gpr32 = LDRBBroW %base, %val, 1, 0 :: (load (s8))
+    ; CHECK-NEXT: $w0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %val:gpr(s32) = COPY $w1
     %base:gpr(p0) = COPY $x0
     %ext:gpr(s64) = G_SEXT %val(s32)
@@ -311,11 +320,12 @@ body:             |
 
     ; CHECK-LABEL: name: ldrhrow
     ; CHECK: liveins: $w1, $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %foo:gpr32 = COPY $w1
-    ; CHECK: %load:fpr16 = LDRHroW %base, %foo, 1, 1 :: (load (s16))
-    ; CHECK: $h0 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $h0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %foo:gpr32 = COPY $w1
+    ; CHECK-NEXT: %load:fpr16 = LDRHroW %base, %foo, 1, 1 :: (load (s16))
+    ; CHECK-NEXT: $h0 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %base:gpr(p0) = COPY $x0
     %foo:gpr(s32) = COPY $w1
     %ext:gpr(s64) = G_SEXT %foo(s32)
@@ -343,12 +353,13 @@ body:             |
 
     ; CHECK-LABEL: name: bad_and_mask_1
     ; CHECK: liveins: $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %imp:gpr64 = IMPLICIT_DEF
-    ; CHECK: %and:gpr64common = ANDXri %imp, 4103
-    ; CHECK: %load:gpr64 = LDRXroX %base, %and, 0, 1 :: (load (s64))
-    ; CHECK: $x1 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %imp:gpr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: %and:gpr64common = ANDXri %imp, 4103
+    ; CHECK-NEXT: %load:gpr64 = LDRXroX %base, %and, 0, 1 :: (load (s64))
+    ; CHECK-NEXT: $x1 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %base:gpr(p0) = COPY $x0
     %imp:gpr(s64) = G_IMPLICIT_DEF
     %bad_mask:gpr(s64) = G_CONSTANT i64 255
@@ -377,12 +388,13 @@ body:             |
 
     ; CHECK-LABEL: name: bad_and_mask_2
     ; CHECK: liveins: $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %imp:gpr64 = IMPLICIT_DEF
-    ; CHECK: %and:gpr64common = ANDXri %imp, 4111
-    ; CHECK: %load:gpr64 = LDRXroX %base, %and, 0, 1 :: (load (s64))
-    ; CHECK: $x1 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %imp:gpr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: %and:gpr64common = ANDXri %imp, 4111
+    ; CHECK-NEXT: %load:gpr64 = LDRXroX %base, %and, 0, 1 :: (load (s64))
+    ; CHECK-NEXT: $x1 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %base:gpr(p0) = COPY $x0
     %imp:gpr(s64) = G_IMPLICIT_DEF
     %bad_mask:gpr(s64) = G_CONSTANT i64 65535
@@ -410,13 +422,14 @@ body:             |
 
     ; CHECK-LABEL: name: and_uxtw
     ; CHECK: liveins: $x0
-    ; CHECK: %base:gpr64sp = COPY $x0
-    ; CHECK: %imp:gpr64 = IMPLICIT_DEF
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32all = COPY %imp.sub_32
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
-    ; CHECK: %load:gpr64 = LDRXroW %base, [[COPY1]], 0, 1 :: (load (s64))
-    ; CHECK: $x1 = COPY %load
-    ; CHECK: RET_ReallyLR implicit $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %base:gpr64sp = COPY $x0
+    ; CHECK-NEXT: %imp:gpr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32all = COPY %imp.sub_32
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[COPY]]
+    ; CHECK-NEXT: %load:gpr64 = LDRXroW %base, [[COPY1]], 0, 1 :: (load (s64))
+    ; CHECK-NEXT: $x1 = COPY %load
+    ; CHECK-NEXT: RET_ReallyLR implicit $x1
     %base:gpr(p0) = COPY $x0
     %imp:gpr(s64) = G_IMPLICIT_DEF
     %mask:gpr(s64) = G_CONSTANT i64 4294967295
@@ -445,12 +458,13 @@ body:             |
 
     ; CHECK-LABEL: name: zext_shl_LDRWroW
     ; CHECK: liveins: $w0, $x1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
-    ; CHECK: [[ANDWri:%[0-9]+]]:gpr32common = ANDWri [[COPY]], 7
-    ; CHECK: [[LDRWroW:%[0-9]+]]:gpr32 = LDRWroW [[COPY1]], [[ANDWri]], 0, 1 :: (load (s32))
-    ; CHECK: $w0 = COPY [[LDRWroW]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY $x1
+    ; CHECK-NEXT: [[ANDWri:%[0-9]+]]:gpr32common = ANDWri [[COPY]], 7
+    ; CHECK-NEXT: [[LDRWroW:%[0-9]+]]:gpr32 = LDRWroW [[COPY1]], [[ANDWri]], 0, 1 :: (load (s32))
+    ; CHECK-NEXT: $w0 = COPY [[LDRWroW]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(s32) = COPY $w0
     %1:gpr(p0) = COPY $x1
     %2:gpr(s32) = G_CONSTANT i32 255

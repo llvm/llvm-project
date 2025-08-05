@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
@@ -409,7 +410,37 @@ TEST(LlvmLibcTypeTraitsTest, is_object) {
 
 // TODO is_scalar
 
-// TODO is_signed
+TEST(LlvmLibcTypeTraitsTest, is_signed) {
+  EXPECT_TRUE((is_signed_v<int>));
+  EXPECT_TRUE((is_signed_v<long>));
+  EXPECT_TRUE((is_signed_v<long long>));
+  EXPECT_FALSE((is_signed_v<unsigned int>));
+  EXPECT_FALSE((is_signed_v<unsigned long>));
+  EXPECT_FALSE((is_signed_v<unsigned long long>));
+  EXPECT_TRUE((is_signed_v<float>));
+  EXPECT_TRUE((is_signed_v<double>));
+  EXPECT_TRUE((is_signed_v<long double>));
+
+#ifdef LIBC_COMPILER_HAS_FIXED_POINT
+  // for fixed point types
+  EXPECT_TRUE((is_signed_v<fract>));
+  EXPECT_FALSE((is_signed_v<unsigned fract>));
+  EXPECT_TRUE((is_signed_v<accum>));
+  EXPECT_FALSE((is_signed_v<unsigned accum>));
+  EXPECT_TRUE((is_signed_v<sat fract>));
+  EXPECT_FALSE((is_signed_v<unsigned sat fract>));
+  EXPECT_TRUE((is_signed_v<sat accum>));
+  EXPECT_FALSE((is_signed_v<unsigned sat accum>));
+  EXPECT_TRUE((is_signed_v<short fract>));
+  EXPECT_FALSE((is_signed_v<unsigned short fract>));
+  EXPECT_TRUE((is_signed_v<short accum>));
+  EXPECT_FALSE((is_signed_v<unsigned short accum>));
+  EXPECT_TRUE((is_signed_v<long fract>));
+  EXPECT_FALSE((is_signed_v<unsigned long fract>));
+  EXPECT_TRUE((is_signed_v<long accum>));
+  EXPECT_FALSE((is_signed_v<unsigned long accum>));
+#endif
+}
 
 // TODO is_trivially_constructible
 
@@ -419,7 +450,37 @@ TEST(LlvmLibcTypeTraitsTest, is_object) {
 
 // TODO is_union
 
-// TODO is_unsigned
+TEST(LlvmLibcTypeTraitsTest, is_unsigned) {
+  EXPECT_FALSE((is_unsigned_v<int>));
+  EXPECT_FALSE((is_unsigned_v<long>));
+  EXPECT_FALSE((is_unsigned_v<long long>));
+  EXPECT_TRUE((is_unsigned_v<unsigned int>));
+  EXPECT_TRUE((is_unsigned_v<unsigned long>));
+  EXPECT_TRUE((is_unsigned_v<unsigned long long>));
+  EXPECT_FALSE((is_unsigned_v<float>));
+  EXPECT_FALSE((is_unsigned_v<double>));
+  EXPECT_FALSE((is_unsigned_v<long double>));
+
+#ifdef LIBC_COMPILER_HAS_FIXED_POINT
+  // for fixed point types
+  EXPECT_FALSE((is_unsigned_v<fract>));
+  EXPECT_TRUE((is_unsigned_v<unsigned fract>));
+  EXPECT_FALSE((is_unsigned_v<accum>));
+  EXPECT_TRUE((is_unsigned_v<unsigned accum>));
+  EXPECT_FALSE((is_unsigned_v<sat fract>));
+  EXPECT_TRUE((is_unsigned_v<unsigned sat fract>));
+  EXPECT_FALSE((is_unsigned_v<sat accum>));
+  EXPECT_TRUE((is_unsigned_v<unsigned sat accum>));
+  EXPECT_FALSE((is_unsigned_v<short fract>));
+  EXPECT_TRUE((is_unsigned_v<unsigned short fract>));
+  EXPECT_FALSE((is_unsigned_v<short accum>));
+  EXPECT_TRUE((is_unsigned_v<unsigned short accum>));
+  EXPECT_FALSE((is_unsigned_v<long fract>));
+  EXPECT_TRUE((is_unsigned_v<unsigned long fract>));
+  EXPECT_FALSE((is_unsigned_v<long accum>));
+  EXPECT_TRUE((is_unsigned_v<unsigned long accum>));
+#endif
+}
 
 // TODO is_void
 

@@ -30,7 +30,7 @@
 # RUN:   | FileCheck -check-prefix=RV32E-LP64 %s
 # RUN: llvm-mc -triple=riscv32 -mattr=+e,+f -target-abi lp64f < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EF-LP64F %s
-# RUN: not --crash llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi lp64f < %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi lp64f < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EFD-LP64D %s
 # RUN: llvm-mc -triple=riscv32 -mattr=+e -target-abi lp64e %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32E-LP64E %s
@@ -70,9 +70,9 @@
 # RUN:   | FileCheck -check-prefix=RV32EF-ILP32F %s
 # RUN: llvm-mc -triple=riscv32 -mattr=+e,+f -target-abi ilp32f < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EF-ILP32F %s
-# RUN: not --crash llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi ilp32f < %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi ilp32f < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EFD-ILP32F %s
-# RUN: not --crash llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi ilp32d < %s 2>&1 \
+# RUN: not llvm-mc -triple=riscv32 -mattr=+e,+d -target-abi ilp32d < %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=RV32EFD-ILP32D %s
 
 # RV32E-ILP32: Only the ilp32e ABI is supported for RV32E (ignoring target-abi)

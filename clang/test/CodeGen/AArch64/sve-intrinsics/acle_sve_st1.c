@@ -205,6 +205,21 @@ void test_svst1_f64(svbool_t pg, float64_t *base, svfloat64_t data) MODE_ATTR
   return SVE_ACLE_FUNC(svst1,_f64,,)(pg, base, data);
 }
 
+// CHECK-LABEL: @test_svst1_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[DATA:%.*]], ptr [[BASE:%.*]], i32 1, <vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    ret void
+//
+// CPP-CHECK-LABEL: @_Z14test_svst1_mf8u10__SVBool_tPu6__mfp8u13__SVMfloat8_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[DATA:%.*]], ptr [[BASE:%.*]], i32 1, <vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    ret void
+//
+void test_svst1_mf8(svbool_t pg, mfloat8_t *base, svmfloat8_t data) MODE_ATTR
+{
+  return SVE_ACLE_FUNC(svst1,_mf8,,)(pg, base, data);
+}
+
 // CHECK-LABEL: @test_svst1_vnum_s8(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
@@ -474,6 +489,29 @@ void test_svst1_vnum_f32(svbool_t pg, float32_t *base, int64_t vnum, svfloat32_t
 void test_svst1_vnum_f64(svbool_t pg, float64_t *base, int64_t vnum, svfloat64_t data) MODE_ATTR
 {
   return SVE_ACLE_FUNC(svst1_vnum,_f64,,)(pg, base, vnum, data);
+}
+
+// CHECK-LABEL: @test_svst1_vnum_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP1]]
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[DATA:%.*]], ptr [[TMP2]], i32 1, <vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    ret void
+//
+// CPP-CHECK-LABEL: @_Z19test_svst1_vnum_mf8u10__SVBool_tPu6__mfp8lu13__SVMfloat8_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[TMP0]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP1]]
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CPP-CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[DATA:%.*]], ptr [[TMP2]], i32 1, <vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    ret void
+//
+void test_svst1_vnum_mf8(svbool_t pg, mfloat8_t *base, int64_t vnum, svmfloat8_t data) MODE_ATTR
+{
+  return SVE_ACLE_FUNC(svst1_vnum,_mf8,,)(pg, base, vnum, data);
 }
 
 #ifndef __ARM_FEATURE_SME
@@ -1205,3 +1243,45 @@ void test_svst1_scatter_u64base_index_f64(svbool_t pg, svuint64_t bases, int64_t
 }
 
 #endif
+
+// CHECK-LABEL: @test_svst1_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[BASE:%.*]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CHECK-NEXT:    ret void
+//
+// CPP-CHECK-LABEL: @_Z15test_svst1_bf16u10__SVBool_tPu6__bf16u14__SVBfloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[BASE:%.*]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    ret void
+//
+void test_svst1_bf16(svbool_t pg, bfloat16_t *base, svbfloat16_t data) MODE_ATTR
+{
+  return SVE_ACLE_FUNC(svst1,_bf16,,)(pg, base, data);
+}
+
+// CHECK-LABEL: @test_svst1_vnum_bf16(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CHECK-NEXT:    ret void
+//
+// CPP-CHECK-LABEL: @_Z20test_svst1_vnum_bf16u10__SVBool_tPu6__bf16lu14__SVBfloat16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    [[TMP1:%.*]] = tail call i64 @llvm.vscale.i64()
+// CPP-CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 4
+// CPP-CHECK-NEXT:    [[DOTIDX:%.*]] = mul i64 [[VNUM:%.*]], [[TMP2]]
+// CPP-CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[DOTIDX]]
+// CPP-CHECK-NEXT:    tail call void @llvm.masked.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[DATA:%.*]], ptr [[TMP3]], i32 1, <vscale x 8 x i1> [[TMP0]])
+// CPP-CHECK-NEXT:    ret void
+//
+void test_svst1_vnum_bf16(svbool_t pg, bfloat16_t *base, int64_t vnum, svbfloat16_t data) MODE_ATTR
+{
+  return SVE_ACLE_FUNC(svst1_vnum,_bf16,,)(pg, base, vnum, data);
+}

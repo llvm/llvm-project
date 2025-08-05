@@ -158,7 +158,7 @@ _Pragma("clang attribute pop");
 #pragma clang attribute pop
 
 #pragma clang attribute push ([[fallthrough]], apply_to=function) // expected-error {{attribute 'fallthrough' is not supported by '#pragma clang attribute'}}
-#pragma clang attribute push ([[clang::fallthrough]], apply_to=function) // expected-error {{attribute 'fallthrough' is not supported by '#pragma clang attribute'}}
+#pragma clang attribute push ([[clang::fallthrough]], apply_to=function) // expected-error {{attribute 'clang::fallthrough' is not supported by '#pragma clang attribute'}}
 
 #pragma clang attribute push ([[]], apply_to = function) // A noop
 
@@ -182,15 +182,15 @@ _Pragma("clang attribute pop");
 
 #pragma clang attribute push([[clang::uninitialized]], apply_to = variable(is_local))
 #pragma clang attribute pop
-#pragma clang attribute push([[clang::uninitialized]], apply_to = function) // expected-error {{attribute 'uninitialized' cannot be applied to 'function'}}
+#pragma clang attribute push([[clang::uninitialized]], apply_to = function) // expected-error {{attribute 'clang::uninitialized' cannot be applied to 'function'}}
 #pragma clang attribute pop
-#pragma clang attribute push([[clang::uninitialized]], apply_to = variable) // expected-error {{attribute 'uninitialized' cannot be applied to 'variable'}}
+#pragma clang attribute push([[clang::uninitialized]], apply_to = variable) // expected-error {{attribute 'clang::uninitialized' cannot be applied to 'variable'}}
 #pragma clang attribute pop
-#pragma clang attribute push([[clang::uninitialized]], apply_to = variable(is_thread_local)) // expected-error {{attribute 'uninitialized' cannot be applied to 'variable(is_thread_local)'}}
+#pragma clang attribute push([[clang::uninitialized]], apply_to = variable(is_thread_local)) // expected-error {{attribute 'clang::uninitialized' cannot be applied to 'variable(is_thread_local)'}}
 #pragma clang attribute pop
-#pragma clang attribute push([[clang::uninitialized]], apply_to = variable(is_global)) // expected-error {{attribute 'uninitialized' cannot be applied to 'variable(is_global)'}}
+#pragma clang attribute push([[clang::uninitialized]], apply_to = variable(is_global)) // expected-error {{attribute 'clang::uninitialized' cannot be applied to 'variable(is_global)'}}
 #pragma clang attribute pop
-#pragma clang attribute push([[clang::uninitialized]], apply_to = any(variable(is_parameter), variable(unless(is_parameter)))) // expected-error {{attribute 'uninitialized' cannot be applied to 'variable(is_parameter)', and 'variable(unless(is_parameter))'}}
+#pragma clang attribute push([[clang::uninitialized]], apply_to = any(variable(is_parameter), variable(unless(is_parameter)))) // expected-error {{attribute 'clang::uninitialized' cannot be applied to 'variable(is_parameter)', and 'variable(unless(is_parameter))'}}
 #pragma clang attribute pop
 // We're allowed to apply attributes to subsets of allowed subjects.
 #pragma clang attribute push([[clang::no_destroy]], apply_to = variable)

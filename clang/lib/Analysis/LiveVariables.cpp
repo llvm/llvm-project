@@ -16,9 +16,10 @@
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <optional>
 #include <vector>
 
@@ -545,8 +546,8 @@ LiveVariablesImpl::runOnBlock(const CFGBlock *block,
 
 void LiveVariables::runOnAllBlocks(LiveVariables::Observer &obs) {
   const CFG *cfg = getImpl(impl).analysisContext.getCFG();
-  for (CFG::const_iterator it = cfg->begin(), ei = cfg->end(); it != ei; ++it)
-    getImpl(impl).runOnBlock(*it, getImpl(impl).blocksEndToLiveness[*it], &obs);
+  for (CFGBlock *B : *cfg)
+    getImpl(impl).runOnBlock(B, getImpl(impl).blocksEndToLiveness[B], &obs);
 }
 
 LiveVariables::LiveVariables(void *im) : impl(im) {}
@@ -617,10 +618,8 @@ void LiveVariables::dumpBlockLiveness(const SourceManager &M) {
 
 void LiveVariablesImpl::dumpBlockLiveness(const SourceManager &M) {
   std::vector<const CFGBlock *> vec;
-  for (llvm::DenseMap<const CFGBlock *, LiveVariables::LivenessValues>::iterator
-       it = blocksEndToLiveness.begin(), ei = blocksEndToLiveness.end();
-       it != ei; ++it) {
-    vec.push_back(it->first);
+  for (const auto &KV : blocksEndToLiveness) {
+    vec.push_back(KV.first);
   }
   llvm::sort(vec, [](const CFGBlock *A, const CFGBlock *B) {
     return A->getBlockID() < B->getBlockID();
@@ -662,12 +661,19 @@ void LiveVariables::dumpExprLiveness(const SourceManager &M) {
 }
 
 void LiveVariablesImpl::dumpExprLiveness(const SourceManager &M) {
+  const ASTContext &Ctx = analysisContext.getASTContext();
+  auto ByIDs = [&Ctx](const Expr *L, const Expr *R) {
+    return L->getID(Ctx) < R->getID(Ctx);
+  };
+
   // Don't iterate over blockEndsToLiveness directly because it's not sorted.
   for (const CFGBlock *B : *analysisContext.getCFG()) {
-
     llvm::errs() << "\n[ B" << B->getBlockID()
                  << " (live expressions at block exit) ]\n";
-    for (const Expr *E : blocksEndToLiveness[B].liveExprs) {
+    std::vector<const Expr *> LiveExprs;
+    llvm::append_range(LiveExprs, blocksEndToLiveness[B].liveExprs);
+    llvm::sort(LiveExprs, ByIDs);
+    for (const Expr *E : LiveExprs) {
       llvm::errs() << "\n";
       E->dump();
     }

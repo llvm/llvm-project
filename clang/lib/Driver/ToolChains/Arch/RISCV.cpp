@@ -8,14 +8,11 @@
 
 #include "RISCV.h"
 #include "../Clang.h"
-#include "ToolChains/CommonArgs.h"
-#include "clang/Basic/CharInfo.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -318,14 +315,15 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
 
     if (MABI.equals_insensitive("ilp32e"))
       return "rv32e";
-    else if (MABI.equals_insensitive("lp64e"))
+    if (MABI.equals_insensitive("lp64e"))
       return "rv64e";
-    else if (MABI.starts_with_insensitive("ilp32"))
+    if (MABI.starts_with_insensitive("ilp32"))
       return "rv32imafdc";
-    else if (MABI.starts_with_insensitive("lp64")) {
+    if (MABI.starts_with_insensitive("lp64")) {
       if (Triple.isAndroid())
         return "rv64imafdcv_zba_zbb_zbs";
-
+      if (Triple.isOSFuchsia())
+        return "rva22u64_v";
       return "rv64imafdc";
     }
   }
@@ -338,16 +336,16 @@ std::string riscv::getRISCVArch(const llvm::opt::ArgList &Args,
   if (Triple.isRISCV32()) {
     if (Triple.getOS() == llvm::Triple::UnknownOS)
       return "rv32imac";
-    else
-      return "rv32imafdc";
-  } else {
-    if (Triple.getOS() == llvm::Triple::UnknownOS)
-      return "rv64imac";
-    else if (Triple.isAndroid())
-      return "rv64imafdcv_zba_zbb_zbs";
-    else
-      return "rv64imafdc";
+    return "rv32imafdc";
   }
+
+  if (Triple.getOS() == llvm::Triple::UnknownOS)
+    return "rv64imac";
+  if (Triple.isAndroid())
+    return "rv64imafdcv_zba_zbb_zbs";
+  if (Triple.isOSFuchsia())
+    return "rva22u64_v";
+  return "rv64imafdc";
 }
 
 std::string riscv::getRISCVTargetCPU(const llvm::opt::ArgList &Args,

@@ -39,6 +39,10 @@
 # define __has_builtin(x) 0
 #endif
 
+#ifndef __has_warning
+# define __has_warning(x) 0
+#endif
+
 // Only use __has_cpp_attribute in C++ mode. GCC defines __has_cpp_attribute in
 // C mode, but the :: in __has_cpp_attribute(scoped::attribute) is invalid.
 #ifndef LLVM_HAS_CPP_ATTRIBUTE
@@ -129,7 +133,7 @@
 #endif
 
 #if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
-     (defined(__MINGW32__) && defined(__clang__)))
+     ((defined(__MINGW32__) || defined(__CYGWIN__)) && defined(__clang__)))
 #define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
 // Clang compilers older then 15 do not support gnu style attributes on
 // namespaces.
@@ -167,26 +171,19 @@
 /// for both functions and classes. On windows its turned in to dllimport for
 /// library consumers, for other platforms its a default visibility attribute.
 ///
-/// LLVM_C_ABI is used to annotated functions and data that need to be exported
-/// for the libllvm-c API. This used both for the llvm-c headers and for the
-/// functions declared in the different Target's c++ source files that don't
-/// include the header forward declaring them.
+/// LLVM_ABI_FOR_TEST is for annotating symbols that are only exported because
+/// they are imported from a test. These symbols are not technically part of the
+/// LLVM public interface and could be conditionally excluded when not building
+/// tests in the future.
+///
 #ifndef LLVM_ABI_GENERATING_ANNOTATIONS
 // Marker to add to classes or functions in public headers that should not have
 // export macros added to them by the clang tool
 #define LLVM_ABI_NOT_EXPORTED
-#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS) ||       \
-    defined(LLVM_ENABLE_PLUGINS)
-// Some libraries like those for tablegen are linked in to tools that used
-// in the build so can't depend on the llvm shared library. If export macros
-// were left enabled when building these we would get duplicate or
-// missing symbol linker errors on windows.
-#if defined(LLVM_BUILD_STATIC)
-#define LLVM_ABI
-#define LLVM_TEMPLATE_ABI
-#define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT
-#elif defined(_WIN32) && !defined(__MINGW32__)
+// TODO(https://github.com/llvm/llvm-project/issues/145406): eliminate need for
+// two preprocessor definitions to gate LLVM_ABI macro definitions.
+#if defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && !defined(LLVM_BUILD_STATIC)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #if defined(LLVM_EXPORTS)
 #define LLVM_ABI __declspec(dllexport)
 #define LLVM_TEMPLATE_ABI
@@ -197,25 +194,28 @@
 #define LLVM_EXPORT_TEMPLATE
 #endif
 #define LLVM_ABI_EXPORT __declspec(dllexport)
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
-    defined(__MVS__)
-#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#elif __has_attribute(visibility)
+#if defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||               \
+    defined(__MVS__) || defined(__CYGWIN__)
+#define LLVM_ABI __attribute__((visibility("default")))
+#define LLVM_TEMPLATE_ABI LLVM_ABI
 #define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#elif defined(__MACH__) || defined(__WASM__)
-#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_ABI_EXPORT LLVM_ABI
+#elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
+#define LLVM_ABI __attribute__((visibility("default")))
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_ABI_EXPORT LLVM_ABI
 #endif
-#else
+#endif
+#endif
+#if !defined(LLVM_ABI)
 #define LLVM_ABI
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT
 #endif
-#define LLVM_C_ABI LLVM_ABI
+#define LLVM_ABI_FOR_TEST LLVM_ABI
 #endif
 
 #if defined(__GNUC__)
@@ -224,10 +224,26 @@
 #define LLVM_PREFETCH(addr, rw, locality)
 #endif
 
+#if __has_attribute(uninitialized)
+#define LLVM_ATTRIBUTE_UNINITIALIZED __attribute__((uninitialized))
+#else
+#define LLVM_ATTRIBUTE_UNINITIALIZED
+#endif
+
 #if __has_attribute(used)
 #define LLVM_ATTRIBUTE_USED __attribute__((__used__))
 #else
 #define LLVM_ATTRIBUTE_USED
+#endif
+
+// Only enabled for clang:
+// See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=99587
+// GCC may produce "warning: 'retain' attribute ignored" (despite
+// __has_attribute(retain) being 1).
+#if defined(__clang__) && __has_attribute(retain)
+#define LLVM_ATTRIBUTE_RETAIN __attribute__((__retain__))
+#else
+#define LLVM_ATTRIBUTE_RETAIN
 #endif
 
 #if defined(__clang__)
@@ -619,7 +635,8 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 /// get stripped in release builds.
 // FIXME: Move this to a private config.h as it's not usable in public headers.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-#define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED
+#define LLVM_DUMP_METHOD                                                       \
+  LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_USED LLVM_ATTRIBUTE_RETAIN
 #else
 #define LLVM_DUMP_METHOD LLVM_ATTRIBUTE_NOINLINE
 #endif
@@ -688,5 +705,29 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #else
 #define LLVM_PREFERRED_TYPE(T)
 #endif
+
+/// \macro LLVM_VIRTUAL_ANCHOR_FUNCTION
+/// This macro is used to adhere to LLVM's policy that each class with a vtable
+/// must have at least one out-of-line virtual function. This macro allows us
+/// to declare such a function in `final` classes without triggering a warning.
+// clang-format off
+// Autoformatting makes this look awful.
+#if defined(__clang__)
+  // Make sure this is only parsed if __clang__ is defined
+  #if __has_warning("-Wunnecessary-virtual-specifier")
+    #define LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION()                            \
+      _Pragma("clang diagnostic push")                                        \
+      _Pragma("clang diagnostic ignored \"-Wunnecessary-virtual-specifier\"") \
+      virtual void anchor()                                                   \
+      _Pragma("clang diagnostic pop")
+  #else // __has_warning
+    #define LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION()                            \
+      virtual void anchor()
+  #endif
+#else // defined(__clang__)
+  #define LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION()                              \
+    virtual void anchor()
+#endif
+// clang-format on
 
 #endif

@@ -134,7 +134,7 @@ struct DeviceTy {
   int32_t recordEvent(void *Event, AsyncInfoTy &AsyncInfo);
 
   /// Wait for an event. This function can be blocking or non-blocking,
-  /// depending on the implmentation. It is expected to set a dependence on the
+  /// depending on the implementation. It is expected to set a dependence on the
   /// event such that corresponding operations shall only start once the event
   /// is fulfilled.
   int32_t waitEvent(void *Event, AsyncInfoTy &AsyncInfo);

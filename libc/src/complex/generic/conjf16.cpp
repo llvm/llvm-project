@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/complex/conjf16.h"
-#if defined(LIBC_TYPES_HAS_CFLOAT16)
-
 #include "src/__support/common.h"
-#include "src/__support/complex_type.h"
+#include "src/__support/complex_basic_ops.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -19,5 +17,3 @@ LLVM_LIBC_FUNCTION(cfloat16, conjf16, (cfloat16 x)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LIBC_TYPES_HAS_CFLOAT16

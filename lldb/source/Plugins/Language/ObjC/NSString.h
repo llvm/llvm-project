@@ -25,6 +25,10 @@ bool NSTaggedString_SummaryProvider(
     ValueObject &valobj, ObjCLanguageRuntime::ClassDescriptorSP descriptor,
     Stream &stream, const TypeSummaryOptions &summary_options);
 
+bool NSIndirectTaggedString_SummaryProvider(
+    ValueObject &valobj, ObjCLanguageRuntime::ClassDescriptorSP descriptor,
+    Stream &stream, const TypeSummaryOptions &summary_options);
+
 bool NSAttributedStringSummaryProvider(ValueObject &valobj, Stream &stream,
                                        const TypeSummaryOptions &options);
 

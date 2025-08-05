@@ -15,15 +15,14 @@
 #define LLVM_UTILS_TABLEGEN_BASIC_SEQUENCETOOFFSETTABLE_H
 
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/Main.h"
 #include <algorithm>
 #include <cassert>
 #include <functional>
 #include <map>
 
 namespace llvm {
-extern cl::opt<bool> EmitLongStrLiterals;
 
 inline void printChar(raw_ostream &OS, char C) {
   unsigned char UC(C);
@@ -93,7 +92,7 @@ public:
     if (I != Seqs.end() && isSuffix(Seq, I->first))
       return;
 
-    I = Seqs.insert(I, std::pair(Seq, 0u));
+    I = Seqs.insert(I, {Seq, 0u});
 
     // The entry before I may be a suffix of Seq that can now be erased.
     if (I != Seqs.begin() && isSuffix((--I)->first, Seq))

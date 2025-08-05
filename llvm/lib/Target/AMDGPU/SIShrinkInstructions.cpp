@@ -33,6 +33,7 @@ class SIShrinkInstructions {
   const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
+  bool IsPostRA;
 
   bool foldImmediates(MachineInstr &MI, bool TryToCommute = true) const;
   bool shouldShrinkTrue16(MachineInstr &MI) const;
@@ -417,8 +418,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
     return;
 
   // There is no advantage to doing this pre-RA.
-  if (!MF->getProperties().hasProperty(
-          MachineFunctionProperties::Property::NoVRegs))
+  if (!IsPostRA)
     return;
 
   if (TII->hasAnyModifiersSet(MI))
@@ -455,8 +455,17 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAAK_F16_fake16
-                                          : AMDGPU::V_FMAAK_F16;
+      NewOpcode = AMDGPU::V_FMAAK_F16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_t16_e64:
+      NewOpcode = AMDGPU::V_FMAAK_F16_t16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
+      NewOpcode = AMDGPU::V_FMAAK_F16_fake16;
+      break;
+    case AMDGPU::V_FMA_F64_e64:
+      if (ST->hasFmaakFmamkF64Insts())
+        NewOpcode = AMDGPU::V_FMAAK_F64;
       break;
     }
   }
@@ -484,8 +493,17 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
       break;
     case AMDGPU::V_FMA_F16_e64:
     case AMDGPU::V_FMA_F16_gfx9_e64:
-      NewOpcode = ST->hasTrue16BitInsts() ? AMDGPU::V_FMAMK_F16_fake16
-                                          : AMDGPU::V_FMAMK_F16;
+      NewOpcode = AMDGPU::V_FMAMK_F16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_t16_e64:
+      NewOpcode = AMDGPU::V_FMAMK_F16_t16;
+      break;
+    case AMDGPU::V_FMA_F16_gfx9_fake16_e64:
+      NewOpcode = AMDGPU::V_FMAMK_F16_fake16;
+      break;
+    case AMDGPU::V_FMA_F64_e64:
+      if (ST->hasFmaakFmamkF64Insts())
+        NewOpcode = AMDGPU::V_FMAMK_F64;
       break;
     }
   }
@@ -828,15 +846,11 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
+  IsPostRA = MF.getProperties().hasNoVRegs();
 
   unsigned VCCReg = ST->isWave32() ? AMDGPU::VCC_LO : AMDGPU::VCC;
 
-  std::vector<unsigned> I1Defs;
-
-  for (MachineFunction::iterator BI = MF.begin(), BE = MF.end();
-                                                  BI != BE; ++BI) {
-
-    MachineBasicBlock &MBB = *BI;
+  for (MachineBasicBlock &MBB : MF) {
     MachineBasicBlock::iterator I, Next;
     for (I = MBB.begin(); I != MBB.end(); I = Next) {
       Next = std::next(I);
@@ -850,9 +864,8 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
 
         // Test if we are after regalloc. We only want to do this after any
         // optimizations happen because this will confuse them.
-        // XXX - not exactly a check for post-regalloc run.
         MachineOperand &Src = MI.getOperand(1);
-        if (Src.isImm() && MI.getOperand(0).getReg().isPhysical()) {
+        if (Src.isImm() && IsPostRA) {
           int32_t ModImm;
           unsigned ModOpcode =
               canModifyToInlineImmOp32(TII, Src, ModImm, /*Scalar=*/false);
@@ -941,10 +954,8 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           continue;
       }
 
-      if (TII->isMIMG(MI.getOpcode()) &&
-          ST->getGeneration() >= AMDGPUSubtarget::GFX10 &&
-          MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::NoVRegs)) {
+      if (IsPostRA && TII->isMIMG(MI.getOpcode()) &&
+          ST->getGeneration() >= AMDGPUSubtarget::GFX10) {
         shrinkMIMG(MI);
         continue;
       }
@@ -956,16 +967,22 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
           MI.getOpcode() == AMDGPU::V_FMA_F32_e64 ||
           MI.getOpcode() == AMDGPU::V_MAD_F16_e64 ||
           MI.getOpcode() == AMDGPU::V_FMA_F16_e64 ||
-          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64) {
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_e64 ||
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_t16_e64 ||
+          MI.getOpcode() == AMDGPU::V_FMA_F16_gfx9_fake16_e64 ||
+          (MI.getOpcode() == AMDGPU::V_FMA_F64_e64 &&
+           ST->hasFmaakFmamkF64Insts())) {
         shrinkMadFma(MI);
         continue;
       }
 
-      if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
-        // If there is no chance we will shrink it and use VCC as sdst to get
-        // a 32 bit form try to replace dead sdst with NULL.
+      // If there is no chance we will shrink it and use VCC as sdst to get
+      // a 32 bit form try to replace dead sdst with NULL.
+      if (TII->isVOP3(MI.getOpcode())) {
         tryReplaceDeadSDST(MI);
-        continue;
+        if (!TII->hasVALU32BitEncoding(MI.getOpcode())) {
+          continue;
+        }
       }
 
       if (!TII->canShrink(MI, *MRI)) {
@@ -1051,9 +1068,11 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
       // fold an immediate into the shrunk instruction as a literal operand. In
       // GFX10 VOP3 instructions can take a literal operand anyway, so there is
       // no advantage to doing this.
+      // However, if 64-bit literals are allowed we still need to shrink it
+      // for such literal to be able to fold.
       if (ST->hasVOP3Literal() &&
-          !MF.getProperties().hasProperty(
-              MachineFunctionProperties::Property::NoVRegs))
+          (!ST->has64BitLiterals() || AMDGPU::isTrue16Inst(MI.getOpcode())) &&
+          !IsPostRA)
         continue;
 
       if (ST->hasTrue16BitInsts() && AMDGPU::isTrue16Inst(MI.getOpcode()) &&

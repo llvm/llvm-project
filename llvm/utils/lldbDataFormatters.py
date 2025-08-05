@@ -3,6 +3,7 @@ LLDB Formatters for LLVM data types.
 
 Load into LLDB with 'command script import /path/to/lldbDataFormatters.py'
 """
+
 from __future__ import annotations
 
 import collections
@@ -41,16 +42,6 @@ def __lldb_init_module(debugger, internal_dict):
         "type summary add -w llvm "
         '-e -s "size=${svar%#}" '
         '-x "^llvm::ArrayRef<.+>$"'
-    )
-    debugger.HandleCommand(
-        "type synthetic add -w llvm "
-        f"-l {__name__}.OptionalSynthProvider "
-        '-x "^llvm::Optional<.+>$"'
-    )
-    debugger.HandleCommand(
-        "type summary add -w llvm "
-        f"-e -F {__name__}.OptionalSummaryProvider "
-        '-x "^llvm::Optional<.+>$"'
     )
     debugger.HandleCommand(
         "type summary add -w llvm "
@@ -92,11 +83,21 @@ def __lldb_init_module(debugger, internal_dict):
         f"-l {__name__}.DenseMapSynthetic "
         '-x "^llvm::DenseMap<.+>$"'
     )
+    debugger.HandleCommand(
+        "type synthetic add -w llvm "
+        f"-l {__name__}.DenseSetSynthetic "
+        '-x "^llvm::DenseSet<.+>$"'
+    )
 
     debugger.HandleCommand(
         "type synthetic add -w llvm "
         f"-l {__name__}.ExpectedSynthetic "
         '-x "^llvm::Expected<.+>$"'
+    )
+    debugger.HandleCommand(
+        "type summary add -w llvm "
+        f"-F {__name__}.SmallBitVectorSummary "
+        "llvm::SmallBitVector"
     )
 
 
@@ -175,53 +176,6 @@ class ArrayRefSynthProvider:
         self.data_type = self.data.GetType().GetPointeeType()
         self.type_size = self.data_type.GetByteSize()
         assert self.type_size != 0
-
-
-def GetOptionalValue(valobj):
-    storage = valobj.GetChildMemberWithName("Storage")
-    if not storage:
-        storage = valobj
-
-    failure = 2
-    hasVal = storage.GetChildMemberWithName("hasVal").GetValueAsUnsigned(failure)
-    if hasVal == failure:
-        return "<could not read llvm::Optional>"
-
-    if hasVal == 0:
-        return None
-
-    underlying_type = storage.GetType().GetTemplateArgumentType(0)
-    storage = storage.GetChildMemberWithName("value")
-    return storage.Cast(underlying_type)
-
-
-def OptionalSummaryProvider(valobj, internal_dict):
-    val = GetOptionalValue(valobj)
-    if val is None:
-        return "None"
-    if val.summary:
-        return val.summary
-    return ""
-
-
-class OptionalSynthProvider:
-    """Provides deref support to llvm::Optional<T>"""
-
-    def __init__(self, valobj, internal_dict):
-        self.valobj = valobj
-
-    def num_children(self):
-        return self.valobj.num_children
-
-    def get_child_index(self, name):
-        if name == "$$dereference$$":
-            return self.valobj.num_children
-        return self.valobj.GetIndexOfChildWithName(name)
-
-    def get_child_at_index(self, index):
-        if index < self.valobj.num_children:
-            return self.valobj.GetChildAtIndex(index)
-        return GetOptionalValue(self.valobj) or lldb.SBValue()
 
 
 def SmallStringSummaryProvider(valobj, internal_dict):
@@ -429,7 +383,8 @@ class DenseMapSynthetic:
         # For each key, collect a list of buckets it appears in.
         key_buckets: dict[str, list[int]] = collections.defaultdict(list)
         for index in range(num_buckets):
-            key = buckets.GetValueForExpressionPath(f"[{index}].first")
+            bucket = buckets.GetValueForExpressionPath(f"[{index}]")
+            key = bucket.GetChildAtIndex(0)
             key_buckets[str(key.data)].append(index)
 
         # Heuristic: This is not a multi-map, any repeated (non-unique) keys are
@@ -438,6 +393,26 @@ class DenseMapSynthetic:
         for indexes in key_buckets.values():
             if len(indexes) == 1:
                 self.child_buckets.append(indexes[0])
+
+
+class DenseSetSynthetic:
+    valobj: lldb.SBValue
+    map: lldb.SBValue
+
+    def __init__(self, valobj: lldb.SBValue, _) -> None:
+        self.valobj = valobj
+
+    def num_children(self) -> int:
+        return self.map.num_children
+
+    def get_child_at_index(self, idx: int) -> lldb.SBValue:
+        map_entry = self.map.child[idx]
+        set_entry = map_entry.GetChildAtIndex(0)
+        return set_entry.Clone(f"[{idx}]")
+
+    def update(self):
+        raw_map = self.valobj.GetChildMemberWithName("TheMap")
+        self.map = raw_map.GetSyntheticValue()
 
 
 class ExpectedSynthetic:
@@ -478,3 +453,28 @@ class ExpectedSynthetic:
         if idx == 0:
             return self.stored_value
         return lldb.SBValue()
+
+
+def SmallBitVectorSummary(valobj, _):
+    underlyingValue = valobj.GetChildMemberWithName("X").unsigned
+    numBaseBits = valobj.target.addr_size * 8
+    smallNumRawBits = numBaseBits - 1
+    smallNumSizeBits = None
+    if numBaseBits == 32:
+        smallNumSizeBits = 5
+    elif numBaseBits == 64:
+        smallNumSizeBits = 6
+    else:
+        smallNumSizeBits = smallNumRawBits
+    smallNumDataBits = smallNumRawBits - smallNumSizeBits
+
+    # If our underlying value is not small, print we can not dump large values.
+    isSmallMask = 1
+    if underlyingValue & isSmallMask == 0:
+        return "<can not read large SmallBitVector>"
+
+    smallRawBits = underlyingValue >> 1
+    smallSize = smallRawBits >> smallNumDataBits
+    bits = smallRawBits & ((1 << (smallSize + 1)) - 1)
+    # format `bits` in binary (b), with 0 padding, of width `smallSize`, and left aligned (>)
+    return f"[{bits:0>{smallSize}b}]"

@@ -13,4 +13,4 @@ use modfile63b
 call s2
 end
 
-! ERROR: Cannot read module file for module 'modfile63a': File is not the right module file for 'modfile63a':
+! ERROR: Cannot use module file for module 'modfile63a': File is not the right module file for 'modfile63a':

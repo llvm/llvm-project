@@ -489,9 +489,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs).set(
-          MachineFunctionProperties::Property::TracksLiveness);
+      return MachineFunctionProperties().setNoVRegs().setTracksLiveness();
     }
 
     StringRef getPassName() const override {
@@ -568,7 +566,7 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
     }
     if (!ModifiedITs.empty())
       return false;
-    Killed.insert(RemoveITs.begin(), RemoveITs.end());
+    Killed.insert_range(RemoveITs);
     return true;
   };
 
@@ -577,7 +575,7 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
     return false;
 
   if (WontCorruptITs(Uses, RDA)) {
-    ToRemove.insert(Uses.begin(), Uses.end());
+    ToRemove.insert_range(Uses);
     LLVM_DEBUG(dbgs() << "ARM Loops: Able to remove: " << *MI
                << " - can also remove:\n";
                for (auto *Use : Uses)
@@ -586,7 +584,7 @@ static bool TryRemove(MachineInstr *MI, ReachingDefAnalysis &RDA,
     SmallPtrSet<MachineInstr*, 4> Killed;
     RDA.collectKilledOperands(MI, Killed);
     if (WontCorruptITs(Killed, RDA)) {
-      ToRemove.insert(Killed.begin(), Killed.end());
+      ToRemove.insert_range(Killed);
       LLVM_DEBUG(for (auto *Dead : Killed)
                    dbgs() << "   - " << *Dead);
     }
@@ -759,7 +757,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     SmallPtrSet<MachineInstr*, 2> Ignore;
     unsigned ExpectedVectorWidth = getTailPredVectorWidth(VCTP->getOpcode());
 
-    Ignore.insert(VCTPs.begin(), VCTPs.end());
+    Ignore.insert_range(VCTPs);
 
     if (TryRemove(Def, RDA, ElementChain, Ignore)) {
       bool FoundSub = false;
@@ -781,7 +779,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
           return false;
         }
       }
-      ToRemove.insert(ElementChain.begin(), ElementChain.end());
+      ToRemove.insert_range(ElementChain);
     }
   }
 
@@ -794,8 +792,7 @@ bool LowOverheadLoop::ValidateTailPredicate() {
       !RDA.hasLocalDefBefore(VCTP, VCTP->getOperand(1).getReg())) {
     if (auto *Def = RDA.getUniqueReachingMIDef(
             &Preheader->back(), VCTP->getOperand(1).getReg().asMCReg())) {
-      SmallPtrSet<MachineInstr*, 2> Ignore;
-      Ignore.insert(VCTPs.begin(), VCTPs.end());
+      SmallPtrSet<MachineInstr *, 2> Ignore(llvm::from_range, VCTPs);
       TryRemove(Def, RDA, ToRemove, Ignore);
     }
   }
@@ -1294,9 +1291,9 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &mf) {
 
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   RDA = &getAnalysis<ReachingDefAnalysis>();
-  MF->getProperties().set(MachineFunctionProperties::Property::TracksLiveness);
+  MF->getProperties().setTracksLiveness();
   MRI = &MF->getRegInfo();
-  TII = static_cast<const ARMBaseInstrInfo*>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   BBUtils = std::make_unique<ARMBasicBlockUtils>(*MF);
   BBUtils->computeAllBlockSizes();
@@ -1693,7 +1690,7 @@ void ARMLowOverheadLoops::ConvertVPTBlocks(LowOverheadLoop &LoLoop) {
     }
   }
 
-  LoLoop.ToRemove.insert(LoLoop.VCTPs.begin(), LoLoop.VCTPs.end());
+  LoLoop.ToRemove.insert_range(LoLoop.VCTPs);
 }
 
 void ARMLowOverheadLoops::Expand(LowOverheadLoop &LoLoop) {

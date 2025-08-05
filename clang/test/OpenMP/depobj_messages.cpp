@@ -4,12 +4,16 @@
 // RUN: -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=52 \
 // RUN: -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp -fopenmp-version=60 \
+// RUN: -ferror-limit 100 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp50 -fopenmp-simd -fopenmp-version=50 \
 // RUN: -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd \
 // RUN: -ferror-limit 100 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=52 \
+// RUN: -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp52 -fopenmp-simd -fopenmp-version=60 \
 // RUN: -ferror-limit 100 %s -Wuninitialized
 
 struct S1 { // expected-note 2 {{declared here}}

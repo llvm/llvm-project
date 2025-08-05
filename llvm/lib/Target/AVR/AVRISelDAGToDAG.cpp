@@ -413,8 +413,7 @@ template <> bool AVRDAGToDAGISel::select<ISD::LOAD>(SDNode *N) {
     case MVT::i8:
       if (ProgMemBank == 0) {
         unsigned Opc = Subtarget->hasLPMX() ? AVR::LPMRdZ : AVR::LPMBRdZ;
-        ResNode =
-            CurDAG->getMachineNode(Opc, DL, MVT::i8, MVT::Other, Ptr);
+        ResNode = CurDAG->getMachineNode(Opc, DL, MVT::i8, MVT::Other, Ptr);
       } else {
         // Do not combine the LDI instruction into the ELPM pseudo instruction,
         // since it may be reused by other ELPM pseudo instructions.
@@ -571,7 +570,6 @@ void AVRDAGToDAGISel::Select(SDNode *N) {
 
 bool AVRDAGToDAGISel::trySelect(SDNode *N) {
   unsigned Opcode = N->getOpcode();
-  SDLoc DL(N);
 
   switch (Opcode) {
   // Nodes we fully handle.

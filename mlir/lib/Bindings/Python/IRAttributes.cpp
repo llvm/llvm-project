@@ -16,8 +16,8 @@
 #include "NanobindUtils.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
-#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "mlir/Bindings/Python/Nanobind.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -845,7 +845,7 @@ public:
       }
       shapedType = *explicitType;
     } else {
-      SmallVector<int64_t> shape{static_cast<int64_t>(numAttributes)};
+      SmallVector<int64_t> shape = {static_cast<int64_t>(numAttributes)};
       shapedType = mlirRankedTensorTypeGet(
           shape.size(), shape.data(),
           mlirAttributeGetType(pyTryCast<PyAttribute>(attributes[0])),
@@ -1372,13 +1372,19 @@ public:
 
     MlirType type = mlirAttributeGetType(*this);
     type = mlirShapedTypeGetElementType(type);
-    assert(mlirTypeIsAInteger(type) &&
-           "expected integer element type in dense int elements attribute");
+    // Index type can also appear as a DenseIntElementsAttr and therefore can be
+    // casted to integer.
+    assert(mlirTypeIsAInteger(type) ||
+           mlirTypeIsAIndex(type) && "expected integer/index element type in "
+                                     "dense int elements attribute");
     // Dispatch element extraction to an appropriate C function based on the
     // elemental type of the attribute. nb::int_ is implicitly constructible
     // from any C++ integral type and handles bitwidth correctly.
     // TODO: consider caching the type properties in the constructor to avoid
     // querying them on each element access.
+    if (mlirTypeIsAIndex(type)) {
+      return nb::int_(mlirDenseElementsAttrGetIndexValue(*this, pos));
+    }
     unsigned width = mlirIntegerTypeGetWidth(type);
     bool isUnsigned = mlirIntegerTypeIsUnsigned(type);
     if (isUnsigned) {
@@ -1421,6 +1427,12 @@ public:
     c.def("__getitem__", &PyDenseIntElementsAttribute::dunderGetItem);
   }
 };
+
+// Check if the python version is less than 3.13. Py_IsFinalizing is a part
+// of stable ABI since 3.13 and before it was available as _Py_IsFinalizing.
+#if PY_VERSION_HEX < 0x030d0000
+#define Py_IsFinalizing _Py_IsFinalizing
+#endif
 
 class PyDenseResourceElementsAttribute
     : public PyConcreteAttribute<PyDenseResourceElementsAttribute> {
@@ -1468,7 +1480,11 @@ public:
     // The userData is a Py_buffer* that the deleter owns.
     auto deleter = [](void *userData, const void *data, size_t size,
                       size_t align) {
+      if (Py_IsFinalizing())
+        return;
+      assert(Py_IsInitialized() && "expected interpreter to be initialized");
       Py_buffer *ownedView = static_cast<Py_buffer *>(userData);
+      nb::gil_scoped_acquire gil;
       PyBuffer_Release(ownedView);
       delete ownedView;
     };
@@ -1661,7 +1677,7 @@ public:
         [](int64_t rank, DefaultingPyMlirContext ctx) {
           auto dynamic = mlirShapedTypeGetDynamicStrideOrOffset();
           std::vector<int64_t> strides(rank);
-          std::fill(strides.begin(), strides.end(), dynamic);
+          llvm::fill(strides, dynamic);
           MlirAttribute attr = mlirStridedLayoutAttrGet(
               ctx->get(), dynamic, strides.size(), strides.data());
           return PyStridedLayoutAttribute(ctx->getRef(), attr);

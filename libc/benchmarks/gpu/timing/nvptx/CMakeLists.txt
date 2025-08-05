@@ -3,6 +3,7 @@ add_header_library(
   HDRS
     timing.h
   DEPENDS
+    libc.hdr.stdint_proxy
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.attributes

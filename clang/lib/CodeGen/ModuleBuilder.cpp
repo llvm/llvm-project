@@ -151,7 +151,7 @@ namespace {
     void Initialize(ASTContext &Context) override {
       Ctx = &Context;
 
-      M->setTargetTriple(Ctx->getTargetInfo().getTriple().getTriple());
+      M->setTargetTriple(Ctx->getTargetInfo().getTriple());
       M->setDataLayout(Ctx->getTargetInfo().getDataLayoutString());
       const auto &SDKVersion = Ctx->getTargetInfo().getSDKVersion();
       if (!SDKVersion.empty())
@@ -186,8 +186,8 @@ namespace {
       HandlingTopLevelDeclRAII HandlingDecl(*this);
 
       // Make sure to emit all elements of a Decl.
-      for (DeclGroupRef::iterator I = DG.begin(), E = DG.end(); I != E; ++I)
-        Builder->EmitTopLevelDecl(*I);
+      for (auto &I : DG)
+        Builder->EmitTopLevelDecl(I);
 
       return true;
     }

@@ -17,9 +17,13 @@ include "mlir/IR/EnumAttr.td"
 
 def I32Case5:  I32EnumAttrCase<"case5", 5>;
 def I32Case10: I32EnumAttrCase<"case10", 10>;
+def I32CaseSignedMaxPlusOne
+    : I32EnumAttrCase<"caseSignedMaxPlusOne", 2147483648>;
+def I32CaseUnsignedMax : I32EnumAttrCase<"caseUnsignedMax", 4294967295>;
 
-def SomeI32Enum: I32EnumAttr<
-  "SomeI32Enum", "", [I32Case5, I32Case10]>;
+def SomeI32Enum : I32EnumAttr<"SomeI32Enum", "",
+                              [I32Case5, I32Case10, I32CaseSignedMaxPlusOne,
+                               I32CaseUnsignedMax]>;
 
 def I64Case5:  I64EnumAttrCase<"case5", 5>;
 def I64Case10: I64EnumAttrCase<"case10", 10>;
@@ -42,11 +46,10 @@ def TestEnum
   let cppNamespace = "test";
 }
 
-def TestSimpleEnum : I32EnumAttr<"SimpleEnum", "", [
-    I32EnumAttrCase<"a", 0>,
-    I32EnumAttrCase<"b", 1>
+def TestSimpleEnum : I32Enum<"SimpleEnum", "", [
+    I32EnumCase<"a", 0>,
+    I32EnumCase<"b", 1>
   ]> {
-  let genSpecializedAttr = 0;
   let cppNamespace = "::test";
 }
 
@@ -56,30 +59,29 @@ def TestSimpleEnum : I32EnumAttr<"SimpleEnum", "", [
 
 // Define the C++ enum.
 def TestBitEnum
-    : I32BitEnumAttr<"TestBitEnum", "a test bit enum", [
-        I32BitEnumAttrCaseBit<"Read", 0, "read">,
-        I32BitEnumAttrCaseBit<"Write", 1, "write">,
-        I32BitEnumAttrCaseBit<"Execute", 2, "execute">,
+    : I32BitEnum<"TestBitEnum", "a test bit enum", [
+        I32BitEnumCaseBit<"Read", 0, "read">,
+        I32BitEnumCaseBit<"Write", 1, "write">,
+        I32BitEnumCaseBit<"Execute", 2, "execute">,
       ]> {
-  let genSpecializedAttr = 0;
   let cppNamespace = "test";
   let separator = ", ";
 }
 
 // Define an enum with a different separator
 def TestBitEnumVerticalBar
-    : I32BitEnumAttr<"TestBitEnumVerticalBar", "another test bit enum", [
-        I32BitEnumAttrCaseBit<"User", 0, "user">,
-        I32BitEnumAttrCaseBit<"Group", 1, "group">,
-        I32BitEnumAttrCaseBit<"Other", 2, "other">,
+    : I32BitEnum<"TestBitEnumVerticalBar", "another test bit enum", [
+        I32BitEnumCaseBit<"User", 0, "user">,
+        I32BitEnumCaseBit<"Group", 1, "group">,
+        I32BitEnumCaseBit<"Other", 2, "other">,
       ]> {
-  let genSpecializedAttr = 0;
   let cppNamespace = "test";
   let separator = " | ";
 }
 
 //===----------------------------------------------------------------------===//
 // Test Patterns (Multi-result Ops)
+//===----------------------------------------------------------------------===//
 
 def MultiResultOpKind1: I64EnumAttrCase<"kind1", 1>;
 def MultiResultOpKind2: I64EnumAttrCase<"kind2", 2>;

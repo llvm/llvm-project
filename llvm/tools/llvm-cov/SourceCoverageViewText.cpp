@@ -186,8 +186,8 @@ void SourceCoverageViewText::renderLine(raw_ostream &OS, LineRef L,
     if (getOptions().Debug && Highlight)
       HighlightedRanges.push_back(std::make_pair(Col, End));
     Col = End;
-    if ((!S->IsGapRegion || (Highlight && *Highlight == raw_ostream::RED)) &&
-        S->HasCount && S->Count == 0)
+    if ((!S->IsGapRegion || Highlight == raw_ostream::RED) && S->HasCount &&
+        S->Count == 0)
       Highlight = raw_ostream::RED;
     else if (Col == ExpansionCol)
       Highlight = raw_ostream::CYAN;
@@ -216,7 +216,7 @@ void SourceCoverageViewText::renderLineCoverageColumn(
     OS.indent(LineCoverageColumnWidth) << '|';
     return;
   }
-  std::string C = formatCount(Line.getExecutionCount());
+  std::string C = formatBinaryCount(Line.getExecutionCount());
   OS.indent(LineCoverageColumnWidth - C.size());
   colored_ostream(OS, raw_ostream::MAGENTA,
                   Line.hasMultipleRegions() && getOptions().Colors)
@@ -263,7 +263,7 @@ void SourceCoverageViewText::renderRegionMarkers(raw_ostream &OS,
 
     if (getOptions().Debug)
       errs() << "Marker at " << S->Line << ":" << S->Col << " = "
-            << formatCount(S->Count) << "\n";
+             << formatBinaryCount(S->Count) << "\n";
   }
   OS << '\n';
 }
@@ -307,7 +307,7 @@ void SourceCoverageViewText::renderBranchView(raw_ostream &OS, BranchView &BRV,
         << Label;
 
     if (getOptions().ShowBranchCounts)
-      OS << ": " << formatCount(Count);
+      OS << ": " << formatBinaryCount(Count);
     else
       OS << ": " << format("%0.2f", (Total != 0 ? 100.0 * Count / Total : 0.0))
          << "%";

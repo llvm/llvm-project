@@ -66,8 +66,8 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   lldb::addr_t domain_location = ptr_value + 3 * ptr_size;
 
   Status error;
-  uint64_t code = process_sp->ReadUnsignedIntegerFromMemory(code_location,
-                                                            ptr_size, 0, error);
+  int64_t code = process_sp->ReadSignedIntegerFromMemory(code_location,
+                                                         ptr_size, 0, error);
   if (error.Fail())
     return false;
 
@@ -77,7 +77,7 @@ bool lldb_private::formatters::NSError_SummaryProvider(
     return false;
 
   if (!domain_str_value) {
-    stream.Printf("domain: nil - code: %" PRIu64, code);
+    stream.Printf("domain: nil - code: %" PRIi64, code);
     return true;
   }
 
@@ -98,11 +98,11 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   StreamString domain_str_summary;
   if (NSStringSummaryProvider(*domain_str_sp, domain_str_summary, options) &&
       !domain_str_summary.Empty()) {
-    stream.Printf("domain: %s - code: %" PRIu64, domain_str_summary.GetData(),
+    stream.Printf("domain: %s - code: %" PRIi64, domain_str_summary.GetData(),
                   code);
     return true;
   } else {
-    stream.Printf("domain: nil - code: %" PRIu64, code);
+    stream.Printf("domain: nil - code: %" PRIi64, code);
     return true;
   }
 }
@@ -165,13 +165,12 @@ public:
     return lldb::ChildCacheState::eRefetch;
   }
 
-  bool MightHaveChildren() override { return true; }
-
-  size_t GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
     static ConstString g_userInfo("_userInfo");
     if (name == g_userInfo)
       return 0;
-    return UINT32_MAX;
+    return llvm::createStringError("Type has no child named '%s'",
+                                   name.AsCString());
   }
 
 private:

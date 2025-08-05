@@ -141,6 +141,77 @@ class FuseIntoContainingOp(FuseIntoContainingOp):
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
+class FuseOp(FuseOp):
+    """Specialization for FuseOp class."""
+
+    @overload
+    def __init__(
+        self,
+        loop_types: Union[Type, Sequence[Type]],
+        target: Union[Operation, Value, OpView],
+        *,
+        tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
+        tile_interchange: OptionalIntList = None,
+        apply_cleanup: Optional[bool] = False,
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    @overload
+    def __init__(
+        self,
+        target: Union[Operation, Value, OpView],
+        *,
+        tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
+        tile_interchange: OptionalIntList = None,
+        apply_cleanup: Optional[bool] = False,
+        loc=None,
+        ip=None,
+    ):
+        ...
+
+    def __init__(
+        self,
+        loop_types_or_target: Union[Type, Sequence[Type], Operation, OpView, Value],
+        target_or_none: Optional[Union[Operation, Value, OpView]] = None,
+        *,
+        tile_sizes: Optional[Union[DynamicIndexList, ArrayAttr]] = None,
+        tile_interchange: OptionalIntList = None,
+        apply_cleanup: Optional[bool] = False,
+        loc=None,
+        ip=None,
+    ):
+        tile_sizes = tile_sizes if tile_sizes else []
+        tile_interchange = tile_interchange if tile_interchange else []
+        _, tile_sizes, _ = _dispatch_dynamic_index_list(tile_sizes)
+        _, tile_interchange, _ = _dispatch_dynamic_index_list(tile_interchange)
+        num_loops = sum(0 if v == 0 else 1 for v in tile_sizes)
+
+        if isinstance(loop_types_or_target, (Operation, Value, OpView)):
+            loop_types = [transform.AnyOpType.get()] * num_loops
+            target = loop_types_or_target
+            assert target_or_none is None, "Cannot construct FuseOp with two targets."
+        else:
+            loop_types = (
+                ([loop_types_or_target] * num_loops)
+                if isinstance(loop_types_or_target, Type)
+                else loop_types_or_target
+            )
+            target = target_or_none
+        super().__init__(
+            target.type,
+            loop_types,
+            target,
+            tile_sizes=tile_sizes,
+            tile_interchange=tile_interchange,
+            apply_cleanup=apply_cleanup,
+            loc=loc,
+            ip=ip,
+        )
+
+
+@_ods_cext.register_operation(_Dialect, replace=True)
 class GeneralizeOp(GeneralizeOp):
     """Specialization for GeneralizeOp class."""
 

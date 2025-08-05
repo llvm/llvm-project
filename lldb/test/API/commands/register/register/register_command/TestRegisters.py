@@ -40,7 +40,7 @@ class RegisterCommandsTestCase(TestBase):
         return None
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["freebsd", "netbsd"], bugnumber="llvm.org/pr48371")
     def test_register_commands(self):
         """Test commands related to registers, in particular vector registers."""
@@ -56,6 +56,13 @@ class RegisterCommandsTestCase(TestBase):
             # registers when not in Streaming SVE Mode/SME, so
             # `register read -a` will report that some registers
             # could not be read.  This is expected.
+            error_str_matched = True
+
+        if self.getArchitecture() == "x86_64" and self.platformIsDarwin():
+            # debugserver on x86 will provide ds/es/ss/gsbase when the
+            # kernel provides them, but most of the time they will be
+            # unavailable.  So "register read -a" will report that
+            # 4 registers were unavailable, it is expected.
             error_str_matched = True
 
         self.expect(
@@ -93,7 +100,7 @@ class RegisterCommandsTestCase(TestBase):
     # Writing of mxcsr register fails, presumably due to a kernel/hardware
     # problem
     @skipIfTargetAndroid(archs=["i386"])
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_register_write(self):
         """Test commands that write to registers, in particular floating-point registers."""
@@ -104,7 +111,6 @@ class RegisterCommandsTestCase(TestBase):
     # "register read fstat" always return 0xffff
     @expectedFailureAndroid(archs=["i386"])
     @skipIf(archs=no_match(["amd64", "i386", "x86_64"]))
-    @skipIfOutOfTreeDebugserver
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37995")
     def test_fp_special_purpose_register_read(self):
         """Test commands that read fpu special purpose registers."""
@@ -112,7 +118,7 @@ class RegisterCommandsTestCase(TestBase):
         self.fp_special_purpose_register_read()
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr37683")
     def test_register_expressions(self):
         """Test expression evaluation with commands related to registers."""
@@ -550,7 +556,7 @@ class RegisterCommandsTestCase(TestBase):
             self.expect("expr -- $ax == (($ah << 8) | $al)", substrs=["true"])
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     def test_invalid_invocation(self):
         self.build()
         self.common_setup()
@@ -583,7 +589,7 @@ class RegisterCommandsTestCase(TestBase):
         )
 
     @skipIfiOSSimulator
-    @skipIf(archs=no_match(["amd64", "arm", "i386", "x86_64"]))
+    @skipIf(archs=no_match(["amd64", "arm$", "i386", "x86_64"]))
     def test_write_unknown_register(self):
         self.build()
         self.common_setup()
@@ -656,14 +662,14 @@ class RegisterCommandsTestCase(TestBase):
         # N/Z/C/V bits will always be present, so check only for those.
         self.expect(
             "register read cpsr",
-            patterns=["= \(N = [0|1], Z = [0|1], C = [0|1], V = [0|1]"],
+            patterns=[r"= \(N = [0|1], Z = [0|1], C = [0|1], V = [0|1]"],
         )
         self.expect(
-            "register read fpsr", patterns=["= \(QC = [0|1], IDC = [0|1], IXC = [0|1]"]
+            "register read fpsr", patterns=[r"= \(QC = [0|1], IDC = [0|1], IXC = [0|1]"]
         )
         # AHP/DN/FZ always present, others may vary.
         self.expect(
-            "register read fpcr", patterns=["= \(AHP = [0|1], DN = [0|1], FZ = [0|1]"]
+            "register read fpcr", patterns=[r"= \(AHP = [0|1], DN = [0|1], FZ = [0|1]"]
         )
 
         # Should get enumerator descriptions for RMode.

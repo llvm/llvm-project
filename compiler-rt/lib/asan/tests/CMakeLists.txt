@@ -109,6 +109,7 @@ if(NOT APPLE)
   append_list_if(COMPILER_RT_HAS_LIBM -lm ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBDL -ldl ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBRT -lrt ASAN_UNITTEST_NOINST_LINK_FLAGS)
+  append_list_if(HAIKU -lbsd ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread ASAN_UNITTEST_NOINST_LINK_FLAGS)
   append_list_if(COMPILER_RT_HAS_LIBPTHREAD -pthread ASAN_DYNAMIC_UNITTEST_INSTRUMENTED_LINK_FLAGS)
 endif()
@@ -301,7 +302,7 @@ if(ANDROID)
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
       $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>
       $<TARGET_OBJECTS:RTLSanCommon.${arch}>
-      $<TARGET_OBJECTS:RTUbsan.${arch}>>
+      $<TARGET_OBJECTS:RTUbsan.${arch}>
       ${COMPILER_RT_GTEST_SOURCE}
       ${ASAN_NOINST_TEST_SOURCES})
     set_target_compile_flags(AsanNoinstTest ${ASAN_UNITTEST_COMMON_CFLAGS})

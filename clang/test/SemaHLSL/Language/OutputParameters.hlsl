@@ -10,11 +10,11 @@ void InOutVecFn(inout float3) {}
 void case1() {
   float f;
   int i;
-  OutVecFn(f); // expected-error{{illegal scalar extension cast on argument f to out paramemter}}
-  InOutVecFn(f); // expected-error{{illegal scalar extension cast on argument f to inout paramemter}}
+  OutVecFn(f); // expected-error{{illegal scalar extension cast on argument 'f' to out paramemter}}
+  InOutVecFn(f); // expected-error{{illegal scalar extension cast on argument 'f' to inout paramemter}}
 
-  OutVecFn(i); // expected-error{{illegal scalar extension cast on argument i to out paramemter}}
-  InOutVecFn(i); // expected-error{{illegal scalar extension cast on argument i to inout paramemter}}
+  OutVecFn(i); // expected-error{{illegal scalar extension cast on argument 'i' to out paramemter}}
+  InOutVecFn(i); // expected-error{{illegal scalar extension cast on argument 'i' to inout paramemter}}
 }
 
 // Case 2: Conversion warnings on argument initialization. Clang generates

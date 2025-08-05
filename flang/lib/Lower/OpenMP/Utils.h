@@ -9,7 +9,7 @@
 #ifndef FORTRAN_LOWER_OPENMPUTILS_H
 #define FORTRAN_LOWER_OPENMPUTILS_H
 
-#include "Clauses.h"
+#include "flang/Lower/OpenMP/Clauses.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
@@ -17,8 +17,6 @@
 #include <cstdint>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
-extern llvm::cl::opt<bool> enableDelayedPrivatization;
-extern llvm::cl::opt<bool> enableDelayedPrivatizationStaging;
 
 namespace fir {
 class FirOpBuilder;
@@ -116,7 +114,8 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 llvm::ArrayRef<mlir::Value> members,
                 mlir::ArrayAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap = false);
+                bool partialMap = false,
+                mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
 
 void insertChildMapInfoIntoParent(
     Fortran::lower::AbstractConverter &converter,
@@ -161,6 +160,12 @@ void genObjectList(const ObjectList &objects,
 
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
+
+bool collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
 
 } // namespace omp
 } // namespace lower

@@ -15,16 +15,14 @@ declare i32 @llvm.fshl.i32(i32, i32, i32)
 declare i32 @llvm.fshr.i32(i32, i32, i32)
 
 
-; SM20: rotate32
-; SM35: rotate32
 define i32 @rotate32(i32 %a, i32 %b) {
 ; SM20-LABEL: rotate32(
 ; SM20:       {
 ; SM20-NEXT:    .reg .b32 %r<9>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u32 %r1, [rotate32_param_0];
-; SM20-NEXT:    ld.param.u32 %r2, [rotate32_param_1];
+; SM20-NEXT:    ld.param.b32 %r1, [rotate32_param_0];
+; SM20-NEXT:    ld.param.b32 %r2, [rotate32_param_1];
 ; SM20-NEXT:    and.b32 %r3, %r2, 31;
 ; SM20-NEXT:    shl.b32 %r4, %r1, %r3;
 ; SM20-NEXT:    neg.s32 %r5, %r2;
@@ -39,8 +37,8 @@ define i32 @rotate32(i32 %a, i32 %b) {
 ; SM35-NEXT:    .reg .b32 %r<4>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u32 %r1, [rotate32_param_0];
-; SM35-NEXT:    ld.param.u32 %r2, [rotate32_param_1];
+; SM35-NEXT:    ld.param.b32 %r1, [rotate32_param_0];
+; SM35-NEXT:    ld.param.b32 %r2, [rotate32_param_1];
 ; SM35-NEXT:    shf.l.wrap.b32 %r3, %r1, %r1, %r2;
 ; SM35-NEXT:    st.param.b32 [func_retval0], %r3;
 ; SM35-NEXT:    ret;
@@ -48,8 +46,6 @@ define i32 @rotate32(i32 %a, i32 %b) {
   ret i32 %val
 }
 
-; SM20: rotate64
-; SM35: rotate64
 define i64 @rotate64(i64 %a, i32 %b) {
 ; SM20-LABEL: rotate64(
 ; SM20:       {
@@ -57,8 +53,8 @@ define i64 @rotate64(i64 %a, i32 %b) {
 ; SM20-NEXT:    .reg .b64 %rd<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u64 %rd1, [rotate64_param_0];
-; SM20-NEXT:    ld.param.u32 %r1, [rotate64_param_1];
+; SM20-NEXT:    ld.param.b64 %rd1, [rotate64_param_0];
+; SM20-NEXT:    ld.param.b32 %r1, [rotate64_param_1];
 ; SM20-NEXT:    and.b32 %r2, %r1, 63;
 ; SM20-NEXT:    shl.b64 %rd2, %rd1, %r2;
 ; SM20-NEXT:    neg.s32 %r3, %r1;
@@ -74,8 +70,8 @@ define i64 @rotate64(i64 %a, i32 %b) {
 ; SM35-NEXT:    .reg .b64 %rd<5>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u64 %rd1, [rotate64_param_0];
-; SM35-NEXT:    ld.param.u32 %r1, [rotate64_param_1];
+; SM35-NEXT:    ld.param.b64 %rd1, [rotate64_param_0];
+; SM35-NEXT:    ld.param.b32 %r1, [rotate64_param_1];
 ; SM35-NEXT:    and.b32 %r2, %r1, 63;
 ; SM35-NEXT:    shl.b64 %rd2, %rd1, %r2;
 ; SM35-NEXT:    neg.s32 %r3, %r1;
@@ -88,8 +84,6 @@ define i64 @rotate64(i64 %a, i32 %b) {
   ret i64 %val
 }
 
-; SM20: rotateright64
-; SM35: rotateright64
 define i64 @rotateright64(i64 %a, i32 %b) {
 ; SM20-LABEL: rotateright64(
 ; SM20:       {
@@ -97,8 +91,8 @@ define i64 @rotateright64(i64 %a, i32 %b) {
 ; SM20-NEXT:    .reg .b64 %rd<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u64 %rd1, [rotateright64_param_0];
-; SM20-NEXT:    ld.param.u32 %r1, [rotateright64_param_1];
+; SM20-NEXT:    ld.param.b64 %rd1, [rotateright64_param_0];
+; SM20-NEXT:    ld.param.b32 %r1, [rotateright64_param_1];
 ; SM20-NEXT:    and.b32 %r2, %r1, 63;
 ; SM20-NEXT:    shr.u64 %rd2, %rd1, %r2;
 ; SM20-NEXT:    neg.s32 %r3, %r1;
@@ -114,8 +108,8 @@ define i64 @rotateright64(i64 %a, i32 %b) {
 ; SM35-NEXT:    .reg .b64 %rd<5>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u64 %rd1, [rotateright64_param_0];
-; SM35-NEXT:    ld.param.u32 %r1, [rotateright64_param_1];
+; SM35-NEXT:    ld.param.b64 %rd1, [rotateright64_param_0];
+; SM35-NEXT:    ld.param.b32 %r1, [rotateright64_param_1];
 ; SM35-NEXT:    and.b32 %r2, %r1, 63;
 ; SM35-NEXT:    shr.u64 %rd2, %rd1, %r2;
 ; SM35-NEXT:    neg.s32 %r3, %r1;
@@ -128,15 +122,13 @@ define i64 @rotateright64(i64 %a, i32 %b) {
   ret i64 %val
 }
 
-; SM20: rotl0
-; SM35: rotl0
 define i32 @rotl0(i32 %x) {
 ; SM20-LABEL: rotl0(
 ; SM20:       {
 ; SM20-NEXT:    .reg .b32 %r<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u32 %r1, [rotl0_param_0];
+; SM20-NEXT:    ld.param.b32 %r1, [rotl0_param_0];
 ; SM20-NEXT:    shr.u32 %r2, %r1, 24;
 ; SM20-NEXT:    shl.b32 %r3, %r1, 8;
 ; SM20-NEXT:    or.b32 %r4, %r3, %r2;
@@ -148,7 +140,7 @@ define i32 @rotl0(i32 %x) {
 ; SM35-NEXT:    .reg .b32 %r<3>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u32 %r1, [rotl0_param_0];
+; SM35-NEXT:    ld.param.b32 %r1, [rotl0_param_0];
 ; SM35-NEXT:    shf.l.wrap.b32 %r2, %r1, %r1, 8;
 ; SM35-NEXT:    st.param.b32 [func_retval0], %r2;
 ; SM35-NEXT:    ret;
@@ -158,7 +150,6 @@ define i32 @rotl0(i32 %x) {
   ret i32 %t2
 }
 
-; SM35: rotl64
 define i64 @rotl64(i64 %a, i64 %n) {
 ; SM20-LABEL: rotl64(
 ; SM20:       {
@@ -166,8 +157,8 @@ define i64 @rotl64(i64 %a, i64 %n) {
 ; SM20-NEXT:    .reg .b64 %rd<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u64 %rd1, [rotl64_param_0];
-; SM20-NEXT:    ld.param.u32 %r1, [rotl64_param_1];
+; SM20-NEXT:    ld.param.b64 %rd1, [rotl64_param_0];
+; SM20-NEXT:    ld.param.b32 %r1, [rotl64_param_1];
 ; SM20-NEXT:    and.b32 %r2, %r1, 63;
 ; SM20-NEXT:    shl.b64 %rd2, %rd1, %r2;
 ; SM20-NEXT:    neg.s32 %r3, %r1;
@@ -183,8 +174,8 @@ define i64 @rotl64(i64 %a, i64 %n) {
 ; SM35-NEXT:    .reg .b64 %rd<5>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u64 %rd1, [rotl64_param_0];
-; SM35-NEXT:    ld.param.u32 %r1, [rotl64_param_1];
+; SM35-NEXT:    ld.param.b64 %rd1, [rotl64_param_0];
+; SM35-NEXT:    ld.param.b32 %r1, [rotl64_param_1];
 ; SM35-NEXT:    and.b32 %r2, %r1, 63;
 ; SM35-NEXT:    shl.b64 %rd2, %rd1, %r2;
 ; SM35-NEXT:    neg.s32 %r3, %r1;
@@ -197,36 +188,94 @@ define i64 @rotl64(i64 %a, i64 %n) {
   ret i64 %val
 }
 
-; SM35: rotl64_imm
-define i64 @rotl64_imm(i64 %a) {
-; SM20-LABEL: rotl64_imm(
+define i64 @rotl64_low_imm(i64 %a) {
+; SM20-LABEL: rotl64_low_imm(
 ; SM20:       {
 ; SM20-NEXT:    .reg .b64 %rd<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u64 %rd1, [rotl64_imm_param_0];
+; SM20-NEXT:    ld.param.b64 %rd1, [rotl64_low_imm_param_0];
 ; SM20-NEXT:    shr.u64 %rd2, %rd1, 62;
 ; SM20-NEXT:    shl.b64 %rd3, %rd1, 2;
 ; SM20-NEXT:    or.b64 %rd4, %rd3, %rd2;
 ; SM20-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; SM20-NEXT:    ret;
 ;
-; SM35-LABEL: rotl64_imm(
+; SM35-LABEL: rotl64_low_imm(
 ; SM35:       {
-; SM35-NEXT:    .reg .b64 %rd<5>;
+; SM35-NEXT:    .reg .b32 %r<5>;
+; SM35-NEXT:    .reg .b64 %rd<3>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u64 %rd1, [rotl64_imm_param_0];
-; SM35-NEXT:    shr.u64 %rd2, %rd1, 62;
-; SM35-NEXT:    shl.b64 %rd3, %rd1, 2;
-; SM35-NEXT:    or.b64 %rd4, %rd3, %rd2;
-; SM35-NEXT:    st.param.b64 [func_retval0], %rd4;
+; SM35-NEXT:    ld.param.b64 %rd1, [rotl64_low_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    shf.l.wrap.b32 %r3, %r1, %r2, 2;
+; SM35-NEXT:    shf.l.wrap.b32 %r4, %r2, %r1, 2;
+; SM35-NEXT:    mov.b64 %rd2, {%r4, %r3};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; SM35-NEXT:    ret;
   %val = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 66)
   ret i64 %val
 }
 
-; SM35: rotr64
+define i64 @rotl64_high_imm(i64 %a) {
+; SM20-LABEL: rotl64_high_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<5>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [rotl64_high_imm_param_0];
+; SM20-NEXT:    shr.u64 %rd2, %rd1, 1;
+; SM20-NEXT:    shl.b64 %rd3, %rd1, 63;
+; SM20-NEXT:    or.b64 %rd4, %rd3, %rd2;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd4;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: rotl64_high_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<5>;
+; SM35-NEXT:    .reg .b64 %rd<3>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [rotl64_high_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    shf.l.wrap.b32 %r3, %r2, %r1, 31;
+; SM35-NEXT:    shf.l.wrap.b32 %r4, %r1, %r2, 31;
+; SM35-NEXT:    mov.b64 %rd2, {%r4, %r3};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd2;
+; SM35-NEXT:    ret;
+  %val = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 63)
+  ret i64 %val
+}
+
+define i64 @rotl64_32_imm(i64 %a) {
+; SM20-LABEL: rotl64_32_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<5>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [rotl64_32_imm_param_0];
+; SM20-NEXT:    shr.u64 %rd2, %rd1, 32;
+; SM20-NEXT:    shl.b64 %rd3, %rd1, 32;
+; SM20-NEXT:    or.b64 %rd4, %rd3, %rd2;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd4;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: rotl64_32_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<3>;
+; SM35-NEXT:    .reg .b64 %rd<3>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [rotl64_32_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    mov.b64 %rd2, {%r2, %r1};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd2;
+; SM35-NEXT:    ret;
+  %val = tail call i64 @llvm.fshl.i64(i64 %a, i64 %a, i64 32)
+  ret i64 %val
+}
+
 define i64 @rotr64(i64 %a, i64 %n) {
 ; SM20-LABEL: rotr64(
 ; SM20:       {
@@ -234,8 +283,8 @@ define i64 @rotr64(i64 %a, i64 %n) {
 ; SM20-NEXT:    .reg .b64 %rd<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u64 %rd1, [rotr64_param_0];
-; SM20-NEXT:    ld.param.u32 %r1, [rotr64_param_1];
+; SM20-NEXT:    ld.param.b64 %rd1, [rotr64_param_0];
+; SM20-NEXT:    ld.param.b32 %r1, [rotr64_param_1];
 ; SM20-NEXT:    and.b32 %r2, %r1, 63;
 ; SM20-NEXT:    shr.u64 %rd2, %rd1, %r2;
 ; SM20-NEXT:    neg.s32 %r3, %r1;
@@ -251,8 +300,8 @@ define i64 @rotr64(i64 %a, i64 %n) {
 ; SM35-NEXT:    .reg .b64 %rd<5>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u64 %rd1, [rotr64_param_0];
-; SM35-NEXT:    ld.param.u32 %r1, [rotr64_param_1];
+; SM35-NEXT:    ld.param.b64 %rd1, [rotr64_param_0];
+; SM35-NEXT:    ld.param.b32 %r1, [rotr64_param_1];
 ; SM35-NEXT:    and.b32 %r2, %r1, 63;
 ; SM35-NEXT:    shr.u64 %rd2, %rd1, %r2;
 ; SM35-NEXT:    neg.s32 %r3, %r1;
@@ -265,32 +314,91 @@ define i64 @rotr64(i64 %a, i64 %n) {
   ret i64 %val
 }
 
-; SM35: rotr64_imm
-define i64 @rotr64_imm(i64 %a) {
-; SM20-LABEL: rotr64_imm(
+define i64 @rotr64_low_imm(i64 %a) {
+; SM20-LABEL: rotr64_low_imm(
 ; SM20:       {
 ; SM20-NEXT:    .reg .b64 %rd<5>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u64 %rd1, [rotr64_imm_param_0];
-; SM20-NEXT:    shl.b64 %rd2, %rd1, 62;
-; SM20-NEXT:    shr.u64 %rd3, %rd1, 2;
+; SM20-NEXT:    ld.param.b64 %rd1, [rotr64_low_imm_param_0];
+; SM20-NEXT:    shl.b64 %rd2, %rd1, 52;
+; SM20-NEXT:    shr.u64 %rd3, %rd1, 12;
 ; SM20-NEXT:    or.b64 %rd4, %rd3, %rd2;
 ; SM20-NEXT:    st.param.b64 [func_retval0], %rd4;
 ; SM20-NEXT:    ret;
 ;
-; SM35-LABEL: rotr64_imm(
+; SM35-LABEL: rotr64_low_imm(
 ; SM35:       {
-; SM35-NEXT:    .reg .b64 %rd<5>;
+; SM35-NEXT:    .reg .b32 %r<5>;
+; SM35-NEXT:    .reg .b64 %rd<3>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u64 %rd1, [rotr64_imm_param_0];
-; SM35-NEXT:    shl.b64 %rd2, %rd1, 62;
-; SM35-NEXT:    shr.u64 %rd3, %rd1, 2;
-; SM35-NEXT:    or.b64 %rd4, %rd3, %rd2;
-; SM35-NEXT:    st.param.b64 [func_retval0], %rd4;
+; SM35-NEXT:    ld.param.b64 %rd1, [rotr64_low_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    shf.r.wrap.b32 %r3, %r2, %r1, 12;
+; SM35-NEXT:    shf.r.wrap.b32 %r4, %r1, %r2, 12;
+; SM35-NEXT:    mov.b64 %rd2, {%r4, %r3};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; SM35-NEXT:    ret;
-  %val = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 66)
+  %val = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 12)
+  ret i64 %val
+}
+
+define i64 @rotr64_high_imm(i64 %a) {
+; SM20-LABEL: rotr64_high_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<5>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [rotr64_high_imm_param_0];
+; SM20-NEXT:    shl.b64 %rd2, %rd1, 21;
+; SM20-NEXT:    shr.u64 %rd3, %rd1, 43;
+; SM20-NEXT:    or.b64 %rd4, %rd3, %rd2;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd4;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: rotr64_high_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<5>;
+; SM35-NEXT:    .reg .b64 %rd<3>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [rotr64_high_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    shf.r.wrap.b32 %r3, %r1, %r2, 11;
+; SM35-NEXT:    shf.r.wrap.b32 %r4, %r2, %r1, 11;
+; SM35-NEXT:    mov.b64 %rd2, {%r4, %r3};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd2;
+; SM35-NEXT:    ret;
+  %val = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 43)
+  ret i64 %val
+}
+
+define i64 @rotr64_32_imm(i64 %a) {
+; SM20-LABEL: rotr64_32_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<5>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [rotr64_32_imm_param_0];
+; SM20-NEXT:    shl.b64 %rd2, %rd1, 32;
+; SM20-NEXT:    shr.u64 %rd3, %rd1, 32;
+; SM20-NEXT:    or.b64 %rd4, %rd3, %rd2;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd4;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: rotr64_32_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<3>;
+; SM35-NEXT:    .reg .b64 %rd<3>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [rotr64_32_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    mov.b64 %rd2, {%r2, %r1};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd2;
+; SM35-NEXT:    ret;
+  %val = tail call i64 @llvm.fshr.i64(i64 %a, i64 %a, i64 32)
   ret i64 %val
 }
 
@@ -300,10 +408,10 @@ define i32 @funnel_shift_right_32(i32 %a, i32 %b, i32 %c) {
 ; SM20-NEXT:    .reg .b32 %r<11>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u32 %r1, [funnel_shift_right_32_param_0];
-; SM20-NEXT:    ld.param.u32 %r2, [funnel_shift_right_32_param_2];
+; SM20-NEXT:    ld.param.b32 %r1, [funnel_shift_right_32_param_0];
+; SM20-NEXT:    ld.param.b32 %r2, [funnel_shift_right_32_param_2];
 ; SM20-NEXT:    and.b32 %r3, %r2, 31;
-; SM20-NEXT:    ld.param.u32 %r4, [funnel_shift_right_32_param_1];
+; SM20-NEXT:    ld.param.b32 %r4, [funnel_shift_right_32_param_1];
 ; SM20-NEXT:    shr.u32 %r5, %r4, %r3;
 ; SM20-NEXT:    shl.b32 %r6, %r1, 1;
 ; SM20-NEXT:    not.b32 %r7, %r2;
@@ -318,9 +426,9 @@ define i32 @funnel_shift_right_32(i32 %a, i32 %b, i32 %c) {
 ; SM35-NEXT:    .reg .b32 %r<5>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u32 %r1, [funnel_shift_right_32_param_0];
-; SM35-NEXT:    ld.param.u32 %r2, [funnel_shift_right_32_param_1];
-; SM35-NEXT:    ld.param.u32 %r3, [funnel_shift_right_32_param_2];
+; SM35-NEXT:    ld.param.b32 %r1, [funnel_shift_right_32_param_0];
+; SM35-NEXT:    ld.param.b32 %r2, [funnel_shift_right_32_param_1];
+; SM35-NEXT:    ld.param.b32 %r3, [funnel_shift_right_32_param_2];
 ; SM35-NEXT:    shf.r.wrap.b32 %r4, %r2, %r1, %r3;
 ; SM35-NEXT:    st.param.b32 [func_retval0], %r4;
 ; SM35-NEXT:    ret;
@@ -334,11 +442,11 @@ define i32 @funnel_shift_left_32(i32 %a, i32 %b, i32 %c) {
 ; SM20-NEXT:    .reg .b32 %r<11>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u32 %r1, [funnel_shift_left_32_param_0];
-; SM20-NEXT:    ld.param.u32 %r2, [funnel_shift_left_32_param_2];
+; SM20-NEXT:    ld.param.b32 %r1, [funnel_shift_left_32_param_0];
+; SM20-NEXT:    ld.param.b32 %r2, [funnel_shift_left_32_param_2];
 ; SM20-NEXT:    and.b32 %r3, %r2, 31;
 ; SM20-NEXT:    shl.b32 %r4, %r1, %r3;
-; SM20-NEXT:    ld.param.u32 %r5, [funnel_shift_left_32_param_1];
+; SM20-NEXT:    ld.param.b32 %r5, [funnel_shift_left_32_param_1];
 ; SM20-NEXT:    shr.u32 %r6, %r5, 1;
 ; SM20-NEXT:    not.b32 %r7, %r2;
 ; SM20-NEXT:    and.b32 %r8, %r7, 31;
@@ -352,9 +460,9 @@ define i32 @funnel_shift_left_32(i32 %a, i32 %b, i32 %c) {
 ; SM35-NEXT:    .reg .b32 %r<5>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u32 %r1, [funnel_shift_left_32_param_0];
-; SM35-NEXT:    ld.param.u32 %r2, [funnel_shift_left_32_param_1];
-; SM35-NEXT:    ld.param.u32 %r3, [funnel_shift_left_32_param_2];
+; SM35-NEXT:    ld.param.b32 %r1, [funnel_shift_left_32_param_0];
+; SM35-NEXT:    ld.param.b32 %r2, [funnel_shift_left_32_param_1];
+; SM35-NEXT:    ld.param.b32 %r3, [funnel_shift_left_32_param_2];
 ; SM35-NEXT:    shf.l.wrap.b32 %r4, %r2, %r1, %r3;
 ; SM35-NEXT:    st.param.b32 [func_retval0], %r4;
 ; SM35-NEXT:    ret;
@@ -369,10 +477,10 @@ define i64 @funnel_shift_right_64(i64 %a, i64 %b, i64 %c) {
 ; SM20-NEXT:    .reg .b64 %rd<7>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u64 %rd1, [funnel_shift_right_64_param_0];
-; SM20-NEXT:    ld.param.u32 %r1, [funnel_shift_right_64_param_2];
+; SM20-NEXT:    ld.param.b64 %rd1, [funnel_shift_right_64_param_0];
+; SM20-NEXT:    ld.param.b32 %r1, [funnel_shift_right_64_param_2];
 ; SM20-NEXT:    and.b32 %r2, %r1, 63;
-; SM20-NEXT:    ld.param.u64 %rd2, [funnel_shift_right_64_param_1];
+; SM20-NEXT:    ld.param.b64 %rd2, [funnel_shift_right_64_param_1];
 ; SM20-NEXT:    shr.u64 %rd3, %rd2, %r2;
 ; SM20-NEXT:    shl.b64 %rd4, %rd1, 1;
 ; SM20-NEXT:    not.b32 %r3, %r1;
@@ -388,10 +496,10 @@ define i64 @funnel_shift_right_64(i64 %a, i64 %b, i64 %c) {
 ; SM35-NEXT:    .reg .b64 %rd<7>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u64 %rd1, [funnel_shift_right_64_param_0];
-; SM35-NEXT:    ld.param.u32 %r1, [funnel_shift_right_64_param_2];
+; SM35-NEXT:    ld.param.b64 %rd1, [funnel_shift_right_64_param_0];
+; SM35-NEXT:    ld.param.b32 %r1, [funnel_shift_right_64_param_2];
 ; SM35-NEXT:    and.b32 %r2, %r1, 63;
-; SM35-NEXT:    ld.param.u64 %rd2, [funnel_shift_right_64_param_1];
+; SM35-NEXT:    ld.param.b64 %rd2, [funnel_shift_right_64_param_1];
 ; SM35-NEXT:    shr.u64 %rd3, %rd2, %r2;
 ; SM35-NEXT:    shl.b64 %rd4, %rd1, 1;
 ; SM35-NEXT:    not.b32 %r3, %r1;
@@ -411,11 +519,11 @@ define i64 @funnel_shift_left_64(i64 %a, i64 %b, i64 %c) {
 ; SM20-NEXT:    .reg .b64 %rd<7>;
 ; SM20-EMPTY:
 ; SM20-NEXT:  // %bb.0:
-; SM20-NEXT:    ld.param.u64 %rd1, [funnel_shift_left_64_param_0];
-; SM20-NEXT:    ld.param.u32 %r1, [funnel_shift_left_64_param_2];
+; SM20-NEXT:    ld.param.b64 %rd1, [funnel_shift_left_64_param_0];
+; SM20-NEXT:    ld.param.b32 %r1, [funnel_shift_left_64_param_2];
 ; SM20-NEXT:    and.b32 %r2, %r1, 63;
 ; SM20-NEXT:    shl.b64 %rd2, %rd1, %r2;
-; SM20-NEXT:    ld.param.u64 %rd3, [funnel_shift_left_64_param_1];
+; SM20-NEXT:    ld.param.b64 %rd3, [funnel_shift_left_64_param_1];
 ; SM20-NEXT:    shr.u64 %rd4, %rd3, 1;
 ; SM20-NEXT:    not.b32 %r3, %r1;
 ; SM20-NEXT:    and.b32 %r4, %r3, 63;
@@ -430,11 +538,11 @@ define i64 @funnel_shift_left_64(i64 %a, i64 %b, i64 %c) {
 ; SM35-NEXT:    .reg .b64 %rd<7>;
 ; SM35-EMPTY:
 ; SM35-NEXT:  // %bb.0:
-; SM35-NEXT:    ld.param.u64 %rd1, [funnel_shift_left_64_param_0];
-; SM35-NEXT:    ld.param.u32 %r1, [funnel_shift_left_64_param_2];
+; SM35-NEXT:    ld.param.b64 %rd1, [funnel_shift_left_64_param_0];
+; SM35-NEXT:    ld.param.b32 %r1, [funnel_shift_left_64_param_2];
 ; SM35-NEXT:    and.b32 %r2, %r1, 63;
 ; SM35-NEXT:    shl.b64 %rd2, %rd1, %r2;
-; SM35-NEXT:    ld.param.u64 %rd3, [funnel_shift_left_64_param_1];
+; SM35-NEXT:    ld.param.b64 %rd3, [funnel_shift_left_64_param_1];
 ; SM35-NEXT:    shr.u64 %rd4, %rd3, 1;
 ; SM35-NEXT:    not.b32 %r3, %r1;
 ; SM35-NEXT:    and.b32 %r4, %r3, 63;
@@ -446,3 +554,194 @@ define i64 @funnel_shift_left_64(i64 %a, i64 %b, i64 %c) {
   ret i64 %val
 }
 
+define i64 @fshl64_low_imm(i64 %a, i64 %b) {
+; SM20-LABEL: fshl64_low_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<6>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [fshl64_low_imm_param_0];
+; SM20-NEXT:    ld.param.b64 %rd2, [fshl64_low_imm_param_1];
+; SM20-NEXT:    shr.u64 %rd3, %rd2, 59;
+; SM20-NEXT:    shl.b64 %rd4, %rd1, 5;
+; SM20-NEXT:    or.b64 %rd5, %rd4, %rd3;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd5;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: fshl64_low_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<7>;
+; SM35-NEXT:    .reg .b64 %rd<4>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [fshl64_low_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    ld.param.b64 %rd2, [fshl64_low_imm_param_1];
+; SM35-NEXT:    mov.b64 {%r3, %r4}, %rd2;
+; SM35-NEXT:    shf.l.wrap.b32 %r5, %r4, %r1, 5;
+; SM35-NEXT:    shf.l.wrap.b32 %r6, %r1, %r2, 5;
+; SM35-NEXT:    mov.b64 %rd3, {%r5, %r6};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM35-NEXT:    ret;
+  %val = call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 5)
+  ret i64 %val
+}
+
+define i64 @fshl64_high_imm(i64 %a, i64 %b) {
+; SM20-LABEL: fshl64_high_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<6>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [fshl64_high_imm_param_0];
+; SM20-NEXT:    ld.param.b64 %rd2, [fshl64_high_imm_param_1];
+; SM20-NEXT:    shr.u64 %rd3, %rd2, 9;
+; SM20-NEXT:    shl.b64 %rd4, %rd1, 55;
+; SM20-NEXT:    or.b64 %rd5, %rd4, %rd3;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd5;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: fshl64_high_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<7>;
+; SM35-NEXT:    .reg .b64 %rd<4>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [fshl64_high_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    ld.param.b64 %rd2, [fshl64_high_imm_param_1];
+; SM35-NEXT:    mov.b64 {%r3, %r4}, %rd2;
+; SM35-NEXT:    shf.l.wrap.b32 %r5, %r4, %r1, 23;
+; SM35-NEXT:    shf.l.wrap.b32 %r6, %r3, %r4, 23;
+; SM35-NEXT:    mov.b64 %rd3, {%r6, %r5};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM35-NEXT:    ret;
+  %val = call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 55)
+  ret i64 %val
+}
+
+define i64 @fshl64_32_imm(i64 %a, i64 %b) {
+; SM20-LABEL: fshl64_32_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<5>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [fshl64_32_imm_param_0];
+; SM20-NEXT:    shl.b64 %rd2, %rd1, 32;
+; SM20-NEXT:    ld.param.b32 %rd3, [fshl64_32_imm_param_1+4];
+; SM20-NEXT:    or.b64 %rd4, %rd2, %rd3;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd4;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: fshl64_32_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<5>;
+; SM35-NEXT:    .reg .b64 %rd<4>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [fshl64_32_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    ld.param.b64 %rd2, [fshl64_32_imm_param_1];
+; SM35-NEXT:    mov.b64 {%r3, %r4}, %rd2;
+; SM35-NEXT:    mov.b64 %rd3, {%r4, %r1};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM35-NEXT:    ret;
+  %val = call i64 @llvm.fshl.i64(i64 %a, i64 %b, i64 32)
+  ret i64 %val
+}
+
+define i64 @fshr64_low_imm(i64 %a, i64 %b) {
+; SM20-LABEL: fshr64_low_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<6>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [fshr64_low_imm_param_0];
+; SM20-NEXT:    ld.param.b64 %rd2, [fshr64_low_imm_param_1];
+; SM20-NEXT:    shr.u64 %rd3, %rd2, 31;
+; SM20-NEXT:    shl.b64 %rd4, %rd1, 33;
+; SM20-NEXT:    or.b64 %rd5, %rd4, %rd3;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd5;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: fshr64_low_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<7>;
+; SM35-NEXT:    .reg .b64 %rd<4>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [fshr64_low_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    ld.param.b64 %rd2, [fshr64_low_imm_param_1];
+; SM35-NEXT:    mov.b64 {%r3, %r4}, %rd2;
+; SM35-NEXT:    shf.r.wrap.b32 %r5, %r4, %r1, 31;
+; SM35-NEXT:    shf.r.wrap.b32 %r6, %r3, %r4, 31;
+; SM35-NEXT:    mov.b64 %rd3, {%r6, %r5};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM35-NEXT:    ret;
+  %val = call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 31)
+  ret i64 %val
+}
+
+define i64 @fshr64_high_imm(i64 %a, i64 %b) {
+; SM20-LABEL: fshr64_high_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<6>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [fshr64_high_imm_param_0];
+; SM20-NEXT:    ld.param.b64 %rd2, [fshr64_high_imm_param_1];
+; SM20-NEXT:    shr.u64 %rd3, %rd2, 33;
+; SM20-NEXT:    shl.b64 %rd4, %rd1, 31;
+; SM20-NEXT:    or.b64 %rd5, %rd4, %rd3;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd5;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: fshr64_high_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<7>;
+; SM35-NEXT:    .reg .b64 %rd<4>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [fshr64_high_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    ld.param.b64 %rd2, [fshr64_high_imm_param_1];
+; SM35-NEXT:    mov.b64 {%r3, %r4}, %rd2;
+; SM35-NEXT:    shf.r.wrap.b32 %r5, %r4, %r1, 1;
+; SM35-NEXT:    shf.r.wrap.b32 %r6, %r1, %r2, 1;
+; SM35-NEXT:    mov.b64 %rd3, {%r5, %r6};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM35-NEXT:    ret;
+  %val = call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 33)
+  ret i64 %val
+}
+
+define i64 @fshr64_32_imm(i64 %a, i64 %b) {
+; SM20-LABEL: fshr64_32_imm(
+; SM20:       {
+; SM20-NEXT:    .reg .b64 %rd<5>;
+; SM20-EMPTY:
+; SM20-NEXT:  // %bb.0:
+; SM20-NEXT:    ld.param.b64 %rd1, [fshr64_32_imm_param_0];
+; SM20-NEXT:    shl.b64 %rd2, %rd1, 32;
+; SM20-NEXT:    ld.param.b32 %rd3, [fshr64_32_imm_param_1+4];
+; SM20-NEXT:    or.b64 %rd4, %rd2, %rd3;
+; SM20-NEXT:    st.param.b64 [func_retval0], %rd4;
+; SM20-NEXT:    ret;
+;
+; SM35-LABEL: fshr64_32_imm(
+; SM35:       {
+; SM35-NEXT:    .reg .b32 %r<5>;
+; SM35-NEXT:    .reg .b64 %rd<4>;
+; SM35-EMPTY:
+; SM35-NEXT:  // %bb.0:
+; SM35-NEXT:    ld.param.b64 %rd1, [fshr64_32_imm_param_0];
+; SM35-NEXT:    mov.b64 {%r1, %r2}, %rd1;
+; SM35-NEXT:    ld.param.b64 %rd2, [fshr64_32_imm_param_1];
+; SM35-NEXT:    mov.b64 {%r3, %r4}, %rd2;
+; SM35-NEXT:    mov.b64 %rd3, {%r4, %r1};
+; SM35-NEXT:    st.param.b64 [func_retval0], %rd3;
+; SM35-NEXT:    ret;
+  %val = call i64 @llvm.fshr.i64(i64 %a, i64 %b, i64 32)
+  ret i64 %val
+}

@@ -109,8 +109,9 @@ void llvm::createMemCpyLoopKnownSize(
   uint64_t BytesCopied = LoopEndCount;
   uint64_t RemainingBytes = CopyLen->getZExtValue() - BytesCopied;
   if (RemainingBytes) {
-    IRBuilder<> RBuilder(PostLoopBB ? PostLoopBB->getFirstNonPHI()
-                                    : InsertBefore);
+    BasicBlock::iterator InsertIt = PostLoopBB ? PostLoopBB->getFirstNonPHIIt()
+                                               : InsertBefore->getIterator();
+    IRBuilder<> RBuilder(InsertIt->getParent(), InsertIt);
 
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
@@ -735,14 +736,16 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     // the same way, except that we change the IRBuilder insert point for each
     // load/store pair so that each one is inserted before the previous one
     // instead of after it.
-    IRBuilder<> BwdResBuilder(CopyBackwardsBB->getFirstNonPHI());
+    IRBuilder<> BwdResBuilder(CopyBackwardsBB,
+                              CopyBackwardsBB->getFirstNonPHIIt());
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
                                           SrcAS, DstAS, PartSrcAlign,
                                           PartDstAlign);
     for (auto *OpTy : RemainingOps) {
       // reverse the order of the emitted operations
-      BwdResBuilder.SetInsertPoint(CopyBackwardsBB->getFirstNonPHI());
+      BwdResBuilder.SetInsertPoint(CopyBackwardsBB,
+                                   CopyBackwardsBB->getFirstNonPHIIt());
       GenerateResidualLdStPair(OpTy, BwdResBuilder, BytesCopied);
     }
   }
@@ -979,9 +982,10 @@ void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
                    Memset->isVolatile());
 }
 
-void llvm::expandAtomicMemCpyAsLoop(AtomicMemCpyInst *AtomicMemcpy,
+void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
                                     const TargetTransformInfo &TTI,
                                     ScalarEvolution *SE) {
+  assert(AtomicMemcpy->isAtomic());
   if (ConstantInt *CI = dyn_cast<ConstantInt>(AtomicMemcpy->getLength())) {
     createMemCpyLoopKnownSize(
         /* InsertBefore */ AtomicMemcpy,

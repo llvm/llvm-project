@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPC.h"
-#include "ToolChains/CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
@@ -72,6 +71,11 @@ void ppc::getPPCTargetFeatures(const Driver &D, const llvm::Triple &Triple,
       D.Diag(diag::err_drv_argument_only_allowed_with)
           << "-maix-small-local-[exec|dynamic]-tls" << "-fdata-sections";
   }
+
+  if (Args.hasArg(options::OPT_maix_shared_lib_tls_model_opt) &&
+      !(Triple.isOSAIX() && Triple.isArch64Bit()))
+    D.Diag(diag::err_opt_not_valid_on_target)
+        << "-maix-shared-lib-tls-model-opt";
 }
 
 ppc::ReadGOTPtrMode ppc::getPPCReadGOTPtrMode(const Driver &D, const llvm::Triple &Triple,

@@ -129,16 +129,8 @@ define void @neg_dist_dep_type_size_equivalence(ptr nocapture %vec, i64 %n) {
 ; CHECK-LABEL: 'neg_dist_dep_type_size_equivalence'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:  Unknown data dependence.
+; CHECK-NEXT:  Backward loop carried data dependence that prevents store-to-load forwarding.
 ; CHECK-NEXT:      Dependences:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %ld.f64 = load double, ptr %gep.iv, align 8 ->
-; CHECK-NEXT:            store i32 %ld.i64.i32, ptr %gep.iv.n.i64, align 8
-; CHECK-EMPTY:
-; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            %ld.i64 = load i64, ptr %gep.iv, align 8 ->
-; CHECK-NEXT:            store i32 %ld.i64.i32, ptr %gep.iv.n.i64, align 8
-; CHECK-EMPTY:
 ; CHECK-NEXT:        BackwardVectorizableButPreventsForwarding:
 ; CHECK-NEXT:            %ld.f64 = load double, ptr %gep.iv, align 8 ->
 ; CHECK-NEXT:            store double %val, ptr %gep.iv.101.i64, align 8
@@ -189,6 +181,82 @@ loop:
   ;; Loop condition.
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %cond = icmp eq i64 %indvars.iv.next, %n
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; In the following test, the sink is loop-invariant.
+
+define void @type_size_equivalence_sink_loopinv(ptr nocapture %vec, i64 %n) {
+; CHECK-LABEL: 'type_size_equivalence_sink_loopinv'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %gep.n = getelementptr inbounds i64, ptr %vec, i64 %n
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %gep.iv = getelementptr i64, ptr %vec, i64 %iv
+  %ld.i64 = load i64, ptr %gep.iv, align 8
+
+  %ld.i64.i32 = trunc i64 %ld.i64 to i32
+  store i32 %ld.i64.i32, ptr %gep.n, align 8
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp eq i64 %iv.next, %n
+  br i1 %cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Variant of the above, with a negative induction step and a gep exposing
+; type-mismtach.
+
+define void @type_size_equivalence_sink_loopinv_negind(ptr nocapture %vec, i64 %n) {
+; CHECK-LABEL: 'type_size_equivalence_sink_loopinv_negind'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %minus.n = sub nsw i64 0, %n
+  %gep.minus.n = getelementptr inbounds i64, ptr %vec, i64 %minus.n
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %minus.iv = sub nsw i64 0, %iv
+  %gep.minus.iv = getelementptr i64, ptr %vec, i64 %minus.iv
+  %gep.minus.iv.4 = getelementptr i8, ptr %gep.minus.iv, i64 -4
+  %ld.i64 = load i64, ptr %gep.minus.iv.4, align 8
+
+  %ld.i64.i32 = trunc i64 %ld.i64 to i32
+  store i32 %ld.i64.i32, ptr %gep.minus.n, align 8
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %cond = icmp eq i64 %iv.next, %n
   br i1 %cond, label %exit, label %loop
 
 exit:

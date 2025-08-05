@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 
 using namespace llvm;
@@ -128,7 +127,7 @@ bool X86ArgumentStackSlotPass::runOnMachineFunction(MachineFunction &MF) {
           if (!MO.isReg())
             continue;
           Register Reg = MO.getReg();
-          if (!Register::isPhysicalRegister(Reg))
+          if (!Reg.isPhysical())
             continue;
           if (TRI->isSuperOrSubRegisterEq(BasePtr, Reg))
             return true;

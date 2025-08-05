@@ -24,6 +24,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -348,11 +349,11 @@ static mlir::RewriterRegistration
     rewriteMarkRanges("mark-ranges", "Indicate ranges parsed", markRanges);
 
 int main(int argc, char **argv) {
-  static llvm::cl::opt<std::string> inputFilename(
-      llvm::cl::Positional, llvm::cl::desc("<input file>"),
-      llvm::cl::init("-"));
+  llvm::cl::opt<std::string> inputFilename(llvm::cl::Positional,
+                                           llvm::cl::desc("<input file>"),
+                                           llvm::cl::init("-"));
 
-  static llvm::cl::opt<std::string> outputFilename(
+  llvm::cl::opt<std::string> outputFilename(
       "o", llvm::cl::desc("Output filename"), llvm::cl::value_desc("filename"),
       llvm::cl::init("-"));
 

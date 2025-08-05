@@ -17,8 +17,8 @@ void test_1(Object *p) {
   clang_analyzer_explain(p); // expected-warning-re{{{{^argument 'p'$}}}}
   clang_analyzer_explain(p->x); // expected-warning-re{{{{^initial value of instance variable 'x' of object at argument 'p'$}}}}
   Object *q = [[Object alloc] init];
-  clang_analyzer_explain(q); // expected-warning-re{{{{^symbol of type 'Object \*' conjured at statement '\[\[Object alloc\] init\]'$}}}}
-  clang_analyzer_explain(q->x); // expected-warning-re{{{{^initial value of instance variable 'x' of object at symbol of type 'Object \*' conjured at statement '\[\[Object alloc\] init\]'$}}}}
+  clang_analyzer_explain(q); // expected-warning-re{{{{^symbol of type 'Object \*' conjured at CFG element '\[\[Object alloc\] init\]'$}}}}
+  clang_analyzer_explain(q->x); // expected-warning-re{{{{^initial value of instance variable 'x' of object at symbol of type 'Object \*' conjured at CFG element '\[\[Object alloc\] init\]'$}}}}
 }
 
 void test_2(void) {

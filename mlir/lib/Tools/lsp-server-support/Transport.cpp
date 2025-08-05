@@ -11,7 +11,6 @@
 #include "mlir/Tools/lsp-server-support/Logging.h"
 #include "mlir/Tools/lsp-server-support/Protocol.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 #include <optional>
 #include <system_error>
@@ -209,13 +208,13 @@ void JSONTransport::reply(llvm::json::Value id,
 
 llvm::Error JSONTransport::run(MessageHandler &handler) {
   std::string json;
-  while (!feof(in)) {
-    if (ferror(in)) {
+  while (!in->isEndOfInput()) {
+    if (in->hasError()) {
       return llvm::errorCodeToError(
           std::error_code(errno, std::system_category()));
     }
 
-    if (succeeded(readMessage(json))) {
+    if (succeeded(in->readMessage(json))) {
       if (llvm::Expected<llvm::json::Value> doc = llvm::json::parse(json)) {
         if (!handleMessage(std::move(*doc), handler))
           return llvm::Error::success();
@@ -303,13 +302,14 @@ LogicalResult readLine(std::FILE *in, SmallVectorImpl<char> &out) {
 // Returns std::nullopt when:
 //  - ferror(), feof(), or shutdownRequested() are set.
 //  - Content-Length is missing or empty (protocol error)
-LogicalResult JSONTransport::readStandardMessage(std::string &json) {
+LogicalResult
+JSONTransportInputOverFile::readStandardMessage(std::string &json) {
   // A Language Server Protocol message starts with a set of HTTP headers,
   // delimited  by \r\n, and terminated by an empty line (\r\n).
   unsigned long long contentLength = 0;
   llvm::SmallString<128> line;
   while (true) {
-    if (feof(in) || ferror(in) || failed(readLine(in, line)))
+    if (feof(in) || hasError() || failed(readLine(in, line)))
       return failure();
 
     // Content-Length is a mandatory header, and the only one we handle.
@@ -349,7 +349,8 @@ LogicalResult JSONTransport::readStandardMessage(std::string &json) {
 /// This is a testing path, so favor simplicity over performance here.
 /// When returning failure: feof(), ferror(), or shutdownRequested() will be
 /// set.
-LogicalResult JSONTransport::readDelimitedMessage(std::string &json) {
+LogicalResult
+JSONTransportInputOverFile::readDelimitedMessage(std::string &json) {
   json.clear();
   llvm::SmallString<128> line;
   while (succeeded(readLine(in, line))) {

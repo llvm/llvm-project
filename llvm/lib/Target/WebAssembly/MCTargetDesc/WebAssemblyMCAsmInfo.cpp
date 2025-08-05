@@ -14,11 +14,22 @@
 
 #include "WebAssemblyMCAsmInfo.h"
 #include "WebAssemblyMCTargetDesc.h"
+#include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-mc-asm-info"
+
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {
+    {WebAssembly::S_TYPEINDEX, "TYPEINDEX"},
+    {WebAssembly::S_TBREL, "TBREL"},
+    {WebAssembly::S_MBREL, "MBREL"},
+    {WebAssembly::S_TLSREL, "TLSREL"},
+    {WebAssembly::S_GOT, "GOT"},
+    {WebAssembly::S_GOT_TLS, "GOT@TLS"},
+    {WebAssembly::S_FUNCINDEX, "FUNCINDEX"},
+};
 
 WebAssemblyMCAsmInfo::~WebAssemblyMCAsmInfo() = default; // anchor.
 
@@ -44,12 +55,7 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
   LCOMMDirectiveAlignmentType = LCOMM::Log2Alignment;
 
   SupportsDebugInformation = true;
+  ExceptionsType = ExceptionHandling::None;
 
-  // When compilation is done on a cpp file by clang, the exception model info
-  // is stored in LangOptions, which is later used to set the info in
-  // TargetOptions and then MCAsmInfo in CodeGenTargetMachine::initAsmInfo().
-  // But this process does not happen when compiling bitcode directly with
-  // clang, so we make sure this info is set correctly.
-  if (WebAssembly::WasmEnableEH || WebAssembly::WasmEnableSjLj)
-    ExceptionsType = ExceptionHandling::Wasm;
+  initializeAtSpecifiers(atSpecifiers);
 }

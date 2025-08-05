@@ -1,16 +1,16 @@
-// RUN: %clang_cc1 -std=c++2a -DEXPORT %s -verify
-// RUN: %clang_cc1 -std=c++2a -DEXPORT %s -emit-module-interface -o %t.pcm
-// RUN: %clang_cc1 -std=c++2a -UEXPORT %s -verify -fmodule-file=M=%t.pcm
+// RUN: rm -rf %t
+// RUN: split-file %s %t
 
-#ifdef EXPORT
+// RUN: %clang_cc1 -std=c++2a %t/pmf_in_interface.cpp -verify
+// RUN: %clang_cc1 -std=c++2a %t/pmf_in_interface.cpp -emit-module-interface -o %t.pcm
+// RUN: %clang_cc1 -std=c++2a %t/pmf_in_implementation.cpp -verify -fmodule-file=M=%t.pcm
+
+
+//--- pmf_in_interface.cpp
 // expected-no-diagnostics
-export
-#else
-// expected-note@+2 {{add 'export' here}}
-#endif
-module M;
-
-#ifndef EXPORT
-// expected-error@+2 {{private module fragment in module implementation unit}}
-#endif
+export module M;
 module :private;
+
+//--- pmf_in_implementation.cpp
+module M; // expected-note {{add 'export' here}}
+module :private; // expected-error {{private module fragment in module implementation unit}}

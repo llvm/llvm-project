@@ -116,8 +116,7 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
 
   auto buildElaboratedType = [&]() {
     auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace());
-    NNS = NestedNameSpecifier::Create(S.Context, NNS, false,
-                                      CoroTrait.getTypePtr());
+    NNS = NestedNameSpecifier::Create(S.Context, NNS, CoroTrait.getTypePtr());
     return S.Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
                                        PromiseType);
   };
@@ -309,15 +308,6 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
       /*Scope=*/nullptr);
   if (Result.isInvalid())
     return ExprError();
-
-  // We meant exactly what we asked for. No need for typo correction.
-  if (auto *TE = dyn_cast<TypoExpr>(Result.get())) {
-    S.clearDelayedTypo(TE);
-    S.Diag(Loc, diag::err_no_member)
-        << NameInfo.getName() << Base->getType()->getAsCXXRecordDecl()
-        << Base->getSourceRange();
-    return ExprError();
-  }
 
   auto EndLoc = Args.empty() ? Loc : Args.back()->getEndLoc();
   return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, EndLoc, nullptr);
@@ -698,8 +688,10 @@ static void checkReturnStmtInCoroutine(Sema &S, FunctionScopeInfo *FSI) {
 bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
                                    StringRef Keyword) {
   // Ignore previous expr evaluation contexts.
-  EnterExpressionEvaluationContext PotentiallyEvaluated(
-      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
+  EnterExpressionEvaluationContextForFunction PotentiallyEvaluated(
+      *this, Sema::ExpressionEvaluationContext::PotentiallyEvaluated,
+      dyn_cast_or_null<FunctionDecl>(CurContext));
+
   if (!checkCoroutineContext(*this, KWLoc, Keyword))
     return false;
   auto *ScopeInfo = getCurFunction();
@@ -788,7 +780,12 @@ static bool checkSuspensionContext(Sema &S, SourceLocation Loc,
   // First emphasis of [expr.await]p2: must be a potentially evaluated context.
   // That is, 'co_await' and 'co_yield' cannot appear in subexpressions of
   // \c sizeof.
-  if (S.isUnevaluatedContext()) {
+  const auto ExprContext = S.currentEvaluationContext().ExprContext;
+  const bool BadContext =
+      S.isUnevaluatedContext() ||
+      (ExprContext != Sema::ExpressionEvaluationContextRecord::EK_Other &&
+       ExprContext != Sema::ExpressionEvaluationContextRecord::EK_VariableInit);
+  if (BadContext) {
     S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
     return false;
   }
@@ -798,7 +795,6 @@ static bool checkSuspensionContext(Sema &S, SourceLocation Loc,
     S.Diag(Loc, diag::err_coroutine_within_handler) << Keyword;
     return false;
   }
-
   return true;
 }
 
@@ -807,7 +803,6 @@ ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
     return ExprError();
 
   if (!ActOnCoroutineBodyStart(S, Loc, "co_await")) {
-    CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
 
@@ -966,7 +961,6 @@ ExprResult Sema::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E) {
     return ExprError();
 
   if (!ActOnCoroutineBodyStart(S, Loc, "co_yield")) {
-    CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
 
@@ -1021,7 +1015,6 @@ ExprResult Sema::BuildCoyieldExpr(SourceLocation Loc, Expr *E) {
 
 StmtResult Sema::ActOnCoreturnStmt(Scope *S, SourceLocation Loc, Expr *E) {
   if (!ActOnCoroutineBodyStart(S, Loc, "co_return")) {
-    CorrectDelayedTyposInExpr(E);
     return StmtError();
   }
   return BuildCoreturnStmt(Loc, E);
@@ -1095,12 +1088,39 @@ static TypeSourceInfo *getTypeSourceInfoForStdAlignValT(Sema &S,
   return S.Context.getTrivialTypeSourceInfo(StdAlignValDecl);
 }
 
+// When searching for custom allocators on the PromiseType we want to
+// warn that we will ignore type aware allocators.
+static bool DiagnoseTypeAwareAllocators(Sema &S, SourceLocation Loc,
+                                        unsigned DiagnosticID,
+                                        DeclarationName Name,
+                                        QualType PromiseType) {
+  assert(PromiseType->isRecordType());
+
+  LookupResult R(S, Name, Loc, Sema::LookupOrdinaryName);
+  S.LookupQualifiedName(R, PromiseType->getAsCXXRecordDecl());
+  bool HaveIssuedWarning = false;
+  for (auto Decl : R) {
+    if (!Decl->getAsFunction()->isTypeAwareOperatorNewOrDelete())
+      continue;
+    if (!HaveIssuedWarning) {
+      S.Diag(Loc, DiagnosticID) << Name;
+      HaveIssuedWarning = true;
+    }
+    S.Diag(Decl->getLocation(), diag::note_type_aware_operator_declared)
+        << /* isTypeAware=*/1 << Decl << Decl->getDeclContext();
+  }
+  R.suppressDiagnostics();
+  return HaveIssuedWarning;
+}
+
 // Find an appropriate delete for the promise.
 static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseType,
                                  FunctionDecl *&OperatorDelete) {
   DeclarationName DeleteName =
       S.Context.DeclarationNames.getCXXOperatorName(OO_Delete);
-
+  DiagnoseTypeAwareAllocators(S, Loc,
+                              diag::warn_coroutine_type_aware_allocator_ignored,
+                              DeleteName, PromiseType);
   auto *PointeeRD = PromiseType->getAsCXXRecordDecl();
   assert(PointeeRD && "PromiseType must be a CxxRecordDecl type");
 
@@ -1110,9 +1130,10 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
   // The deallocation function's name is looked up by searching for it in the
   // scope of the promise type. If nothing is found, a search is performed in
   // the global scope.
+  ImplicitDeallocationParameters IDP = {
+      alignedAllocationModeFromBool(Overaligned), SizedDeallocationMode::Yes};
   if (S.FindDeallocationFunction(Loc, PointeeRD, DeleteName, OperatorDelete,
-                                 /*Diagnose*/ true, /*WantSize*/ true,
-                                 /*WantAligned*/ Overaligned))
+                                 IDP, /*Diagnose=*/true))
     return false;
 
   // [dcl.fct.def.coroutine]p12
@@ -1123,18 +1144,18 @@ static bool findDeleteForPromise(Sema &S, SourceLocation Loc, QualType PromiseTy
   //   shall be the function with one parameter.
   if (!OperatorDelete) {
     // Look for a global declaration.
-    // Coroutines can always provide their required size.
-    const bool CanProvideSize = true;
     // Sema::FindUsualDeallocationFunction will try to find the one with two
     // parameters first. It will return the deallocation function with one
     // parameter if failed.
-    OperatorDelete = S.FindUsualDeallocationFunction(Loc, CanProvideSize,
-                                                     Overaligned, DeleteName);
+    // Coroutines can always provide their required size.
+    IDP.PassSize = SizedDeallocationMode::Yes;
+    OperatorDelete = S.FindUsualDeallocationFunction(Loc, IDP, DeleteName);
 
     if (!OperatorDelete)
       return false;
   }
 
+  assert(!OperatorDelete->isTypeAwareOperatorNewOrDelete());
   S.MarkFunctionReferenced(Loc, OperatorDelete);
   return true;
 }
@@ -1175,6 +1196,10 @@ void Sema::CheckCompletedCoroutineBody(FunctionDecl *FD, Stmt *&Body) {
   // extension wouldn't be meaningful in coroutines.
   for (AddrLabelExpr *ALE : Fn->AddrLabels)
     Diag(ALE->getBeginLoc(), diag::err_coro_invalid_addr_of_label);
+
+  // Coroutines always return a handle, so they can't be [[noreturn]].
+  if (FD->isNoReturn())
+    Diag(FD->getLocation(), diag::warn_noreturn_coroutine) << FD;
 
   CoroutineStmtBuilder Builder(*this, *FD, *Fn, Body);
   if (Builder.isInvalid() || !Builder.buildStatements())
@@ -1405,10 +1430,10 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   FunctionDecl *OperatorNew = nullptr;
   SmallVector<Expr *, 1> PlacementArgs;
+  DeclarationName NewName =
+      S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
 
-  const bool PromiseContainsNew = [this, &PromiseType]() -> bool {
-    DeclarationName NewName =
-        S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
+  const bool PromiseContainsNew = [this, &PromiseType, NewName]() -> bool {
     LookupResult R(S, NewName, Loc, Sema::LookupOrdinaryName);
 
     if (PromiseType->isRecordType())
@@ -1419,9 +1444,10 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   // Helper function to indicate whether the last lookup found the aligned
   // allocation function.
-  bool PassAlignment = S.getLangOpts().CoroAlignedAllocation;
-  auto LookupAllocationFunction = [&](Sema::AllocationFunctionScope NewScope =
-                                          Sema::AFS_Both,
+  ImplicitAllocationParameters IAP(
+      alignedAllocationModeFromBool(S.getLangOpts().CoroAlignedAllocation));
+  auto LookupAllocationFunction = [&](AllocationFunctionScope NewScope =
+                                          AllocationFunctionScope::Both,
                                       bool WithoutPlacementArgs = false,
                                       bool ForceNonAligned = false) {
     // [dcl.fct.def.coroutine]p9
@@ -1430,17 +1456,23 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     // - If any declarations are found, ...
     // - If no declarations are found in the scope of the promise type, a search
     // is performed in the global scope.
-    if (NewScope == Sema::AFS_Both)
-      NewScope = PromiseContainsNew ? Sema::AFS_Class : Sema::AFS_Global;
+    if (NewScope == AllocationFunctionScope::Both)
+      NewScope = PromiseContainsNew ? AllocationFunctionScope::Class
+                                    : AllocationFunctionScope::Global;
 
-    PassAlignment = !ForceNonAligned && S.getLangOpts().CoroAlignedAllocation;
+    bool ShouldUseAlignedAlloc =
+        !ForceNonAligned && S.getLangOpts().CoroAlignedAllocation;
+    IAP = ImplicitAllocationParameters(
+        alignedAllocationModeFromBool(ShouldUseAlignedAlloc));
+
     FunctionDecl *UnusedResult = nullptr;
-    S.FindAllocationFunctions(Loc, SourceRange(), NewScope,
-                              /*DeleteScope*/ Sema::AFS_Both, PromiseType,
-                              /*isArray*/ false, PassAlignment,
-                              WithoutPlacementArgs ? MultiExprArg{}
-                                                   : PlacementArgs,
-                              OperatorNew, UnusedResult, /*Diagnose*/ false);
+    S.FindAllocationFunctions(
+        Loc, SourceRange(), NewScope,
+        /*DeleteScope=*/AllocationFunctionScope::Both, PromiseType,
+        /*isArray=*/false, IAP,
+        WithoutPlacementArgs ? MultiExprArg{} : PlacementArgs, OperatorNew,
+        UnusedResult, /*Diagnose=*/false);
+    assert(!OperatorNew || !OperatorNew->isTypeAwareOperatorNewOrDelete());
   };
 
   // We don't expect to call to global operator new with (size, p0, …, pn).
@@ -1464,9 +1496,9 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     // by passing the amount of space requested as an argument of type
     // std::size_t as the first argument, and the requested alignment as
     // an argument of type std:align_val_t as the second argument.
-    if (!OperatorNew ||
-        (S.getLangOpts().CoroAlignedAllocation && !PassAlignment))
-      LookupAllocationFunction(/*NewScope*/ Sema::AFS_Class,
+    if (!OperatorNew || (S.getLangOpts().CoroAlignedAllocation &&
+                         !isAlignedAllocation(IAP.PassAlignment)))
+      LookupAllocationFunction(/*NewScope*/ AllocationFunctionScope::Class,
                                /*WithoutPlacementArgs*/ true);
   }
 
@@ -1490,15 +1522,15 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // Helper variable to emit warnings.
   bool FoundNonAlignedInPromise = false;
   if (PromiseContainsNew && S.getLangOpts().CoroAlignedAllocation)
-    if (!OperatorNew || !PassAlignment) {
+    if (!OperatorNew || !isAlignedAllocation(IAP.PassAlignment)) {
       FoundNonAlignedInPromise = OperatorNew;
 
-      LookupAllocationFunction(/*NewScope*/ Sema::AFS_Class,
+      LookupAllocationFunction(/*NewScope*/ AllocationFunctionScope::Class,
                                /*WithoutPlacementArgs*/ false,
                                /*ForceNonAligned*/ true);
 
       if (!OperatorNew && !PlacementArgs.empty())
-        LookupAllocationFunction(/*NewScope*/ Sema::AFS_Class,
+        LookupAllocationFunction(/*NewScope*/ AllocationFunctionScope::Class,
                                  /*WithoutPlacementArgs*/ true,
                                  /*ForceNonAligned*/ true);
     }
@@ -1514,7 +1546,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
       return false;
     PlacementArgs = {StdNoThrow};
     OperatorNew = nullptr;
-    LookupAllocationFunction(Sema::AFS_Global);
+    LookupAllocationFunction(AllocationFunctionScope::Global);
   }
 
   // If we found a non-aligned allocation function in the promise_type,
@@ -1527,14 +1559,22 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   }
 
   if (!OperatorNew) {
-    if (PromiseContainsNew)
+    if (PromiseContainsNew) {
       S.Diag(Loc, diag::err_coroutine_unusable_new) << PromiseType << &FD;
-    else if (RequiresNoThrowAlloc)
+      DiagnoseTypeAwareAllocators(
+          S, Loc, diag::note_coroutine_unusable_type_aware_allocators, NewName,
+          PromiseType);
+    } else if (RequiresNoThrowAlloc)
       S.Diag(Loc, diag::err_coroutine_unfound_nothrow_new)
           << &FD << S.getLangOpts().CoroAlignedAllocation;
 
     return false;
   }
+  assert(!OperatorNew->isTypeAwareOperatorNewOrDelete());
+
+  DiagnoseTypeAwareAllocators(S, Loc,
+                              diag::warn_coroutine_type_aware_allocator_ignored,
+                              NewName, PromiseType);
 
   if (RequiresNoThrowAlloc) {
     const auto *FT = OperatorNew->getType()->castAs<FunctionProtoType>();
@@ -1555,6 +1595,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     //   If no usual deallocation function is found, the program is ill-formed.
     return false;
   }
+
+  assert(!OperatorDelete->isTypeAwareOperatorNewOrDelete());
 
   Expr *FramePtr =
       S.BuildBuiltinCallExpr(Loc, Builtin::BI__builtin_coro_frame, {});
@@ -1585,7 +1627,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     return false;
 
   SmallVector<Expr *, 2> NewArgs(1, FrameSize);
-  if (S.getLangOpts().CoroAlignedAllocation && PassAlignment)
+  if (S.getLangOpts().CoroAlignedAllocation &&
+      isAlignedAllocation(IAP.PassAlignment))
     NewArgs.push_back(FrameAlignment);
 
   if (OperatorNew->getNumParams() > NewArgs.size())

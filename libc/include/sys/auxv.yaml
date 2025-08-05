@@ -1,0 +1,13 @@
+header: sys/auxv.h
+header_template: auxv.h.def
+macros: []
+types: []
+enums: []
+objects: []
+functions:
+  - name: getauxval
+    standards:
+      - GNUExtensions
+    return_type: unsigned long
+    arguments:
+      - type: unsigned long

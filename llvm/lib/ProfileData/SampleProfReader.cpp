@@ -411,9 +411,6 @@ std::error_code SampleProfileReaderText::readImpl() {
         break;
       }
       case LineType::BodyProfile: {
-        while (InlineStack.size() > Depth) {
-          InlineStack.pop_back();
-        }
         FunctionSamples &FProfile = *InlineStack.back();
         for (const auto &name_count : TargetCountMap) {
           mergeSampleProfErrors(Result, FProfile.addCalledTargetSamples(
@@ -612,7 +609,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
       return EC;
 
     if (!isOffsetLegal(*LineOffset)) {
-      return std::error_code();
+      return sampleprof_error::illegal_line_offset;
     }
 
     auto Discriminator = readNumber<uint64_t>();
@@ -826,13 +823,23 @@ bool SampleProfileReaderExtBinaryBase::useFuncOffsetList() const {
 std::error_code
 SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
                                        SampleProfileMap &Profiles) {
+  if (FuncsToUse.empty())
+    return sampleprof_error::success;
+
   Data = ProfileSecRange.first;
   End = ProfileSecRange.second;
   if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
     return EC;
   End = Data;
+  DenseSet<FunctionSamples *> ProfilesToReadMetadata;
+  for (auto FName : FuncsToUse) {
+    auto I = Profiles.find(FName);
+    if (I != Profiles.end())
+      ProfilesToReadMetadata.insert(&I->second);
+  }
 
-  if (std::error_code EC = readFuncMetadata(ProfileHasAttribute, Profiles))
+  if (std::error_code EC =
+          readFuncMetadata(ProfileHasAttribute, ProfilesToReadMetadata))
     return EC;
   return sampleprof_error::success;
 }
@@ -898,7 +905,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     DenseSet<uint64_t> FuncGuidsToUse;
     if (useMD5()) {
       for (auto Name : FuncsToUse)
-        FuncGuidsToUse.insert(Function::getGUID(Name));
+        FuncGuidsToUse.insert(Function::getGUIDAssumingExternalLinkage(Name));
     }
 
     // For each function in current module, load all context profiles for
@@ -1229,7 +1236,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readCSNameTableSec() {
         return EC;
 
       if (!isOffsetLegal(*LineOffset))
-        return std::error_code();
+        return sampleprof_error::illegal_line_offset;
 
       auto Discriminator = readNumber<uint64_t>();
       if (std::error_code EC = Discriminator.getError())
@@ -1300,14 +1307,12 @@ SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
   return sampleprof_error::success;
 }
 
-std::error_code
-SampleProfileReaderExtBinaryBase::readFuncMetadata(bool ProfileHasAttribute,
-                                                   SampleProfileMap &Profiles) {
+std::error_code SampleProfileReaderExtBinaryBase::readFuncMetadata(
+    bool ProfileHasAttribute, DenseSet<FunctionSamples *> &Profiles) {
   if (FuncMetadataIndex.empty())
     return sampleprof_error::success;
 
-  for (auto &I : Profiles) {
-    FunctionSamples *FProfile = &I.second;
+  for (auto *FProfile : Profiles) {
     auto R = FuncMetadataIndex.find(FProfile->getContext().getHashCode());
     if (R == FuncMetadataIndex.end())
       continue;
@@ -1834,7 +1839,7 @@ std::error_code SampleProfileReaderGCC::readImpl() {
 }
 
 bool SampleProfileReaderGCC::hasFormat(const MemoryBuffer &Buffer) {
-  StringRef Magic(reinterpret_cast<const char *>(Buffer.getBufferStart()));
+  StringRef Magic(Buffer.getBufferStart());
   return Magic == "adcg*704";
 }
 

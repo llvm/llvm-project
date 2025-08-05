@@ -9,23 +9,24 @@
 // This file defines the machine model for Znver4 to support instruction
 // scheduling and other instruction cost heuristics.
 // Based on:
-//  * AMD Software Optimization Guide for AMD Family 19h Processors.
-//    https://www.amd.com/system/files/TechDocs/56665.zip
+//  * AMD Software Optimization Guide for the AMD Family 19h (Zen4) 
+//    Microarchitecture
+//    https://www.amd.com/system/files/TechDocs/57647.zip
 //===----------------------------------------------------------------------===//
 
 def Znver4Model : SchedMachineModel {
-  // AMD SOG 19h, 2.9.6 Dispatch
+  // AMD SOG Zen4, 2.9.6 Dispatch
   // The processor may dispatch up to 6 macro ops per cycle
   // into the execution engine.
   let IssueWidth = 6;
-  // AMD SOG 19h, 2.10.3
+  // AMD SOG Zen4, 2.10.3
   // The retire control unit (RCU) tracks the completion status of all
   // outstanding operations (integer, load/store, and floating-point) and is
   // the final arbiter for exception processing and recovery.
   // The unit can receive up to 6 macro ops dispatched per cycle and track up
   // to 320 macro ops in-flight in non-SMT mode or 160 per thread in SMT mode.
   let MicroOpBufferSize = 320;
-  // AMD SOG 19h, 2.9.1 Op Cache
+  // AMD SOG Zen4, 2.9.1 Op Cache
   // The op cache is organized as an associative cache with 64 sets and 8 ways.
   // At each set-way intersection is an entry containing up to 8 macro ops.
   // The maximum capacity of the op cache is 6.75K ops.
@@ -33,13 +34,13 @@ def Znver4Model : SchedMachineModel {
   // the op-cache, we limit the loop buffer to 9*12 = 108 to avoid loop
   // unrolling leading to excessive filling of the op-cache from frontend.
   let LoopMicroOpBufferSize = 108;
-  // AMD SOG 19h, 2.6.2 L1 Data Cache
+  // AMD SOG Zen4, 2.6.2 L1 Data Cache
   // The L1 data cache has a 4- or 5- cycle integer load-to-use latency.
-  // AMD SOG 19h, 2.12 L1 Data Cache
+  // AMD SOG Zen4, 2.12 L1 Data Cache
   // The AGU and LS pipelines are optimized for simple address generation modes.
   // <...> and can achieve 4-cycle load-to-use integer load latency.
   let LoadLatency = 4;
-  // AMD SOG 19h, 2.12 L1 Data Cache
+  // AMD SOG Zen4, 2.12 L1 Data Cache
   // The AGU and LS pipelines are optimized for simple address generation modes.
   // <...> and can achieve <...> 7-cycle load-to-use FP load latency.
   int VecLoadLatency = 7;
@@ -47,7 +48,7 @@ def Znver4Model : SchedMachineModel {
   int StoreLatency = 1;
   // FIXME:
   let HighLatency = 25; // FIXME: any better choice?
-  // AMD SOG 19h, 2.8 Optimizing Branching
+  // AMD SOG Zen4, 2.8 Optimizing Branching
   // The branch misprediction penalty is in the range from 11 to 18 cycles,
   // <...>. The common case penalty is 13 cycles.
   let MispredictPenalty = 13;
@@ -64,7 +65,7 @@ let SchedModel = Znver4Model in {
 // RCU
 //===----------------------------------------------------------------------===//
 
-// AMD SOG 19h, 2.10.3 Retire Control Unit
+// AMD SOG Zen4, 2.10.3 Retire Control Unit
 // The unit can receive up to 6 macro ops dispatched per cycle and track up to
 // 320 macro ops in-flight in non-SMT mode or 128 per thread in SMT mode. <...>
 // The retire unit handles in-order commit of up to nine macro ops per cycle.
@@ -74,7 +75,7 @@ def Zn4RCU : RetireControlUnit<Znver4Model.MicroOpBufferSize, 9>;
 // Integer Execution Unit
 //
 
-// AMD SOG 19h, 2.4 Superscalar Organization
+// AMD SOG Zen4, 2.4 Superscalar Organization
 // The processor uses four decoupled independent integer scheduler queues,
 // each one servicing one ALU pipeline and one or two other pipelines
 
@@ -82,7 +83,7 @@ def Zn4RCU : RetireControlUnit<Znver4Model.MicroOpBufferSize, 9>;
 // Execution pipes
 //===----------------------------------------------------------------------===//
 
-// AMD SOG 19h, 2.10.2 Execution Units
+// AMD SOG Zen4, 2.10.2 Execution Units
 // The processor contains 4 general purpose integer execution pipes.
 // Each pipe has an ALU capable of general purpose integer operations.
 def Zn4ALU0 : ProcResource<1>;
@@ -90,11 +91,11 @@ def Zn4ALU1 : ProcResource<1>;
 def Zn4ALU2 : ProcResource<1>;
 def Zn4ALU3 : ProcResource<1>;
 
-// AMD SOG 19h, 2.10.2 Execution Units
+// AMD SOG Zen4, 2.10.2 Execution Units
 // There is also a separate branch execution unit.
 def Zn4BRU1 : ProcResource<1>;
 
-// AMD SOG 19h, 2.10.2 Execution Units
+// AMD SOG Zen4, 2.10.2 Execution Units
 // There are three Address Generation Units (AGUs) for all load and store
 // address generation. There are also 3 store data movement units
 // associated with the same schedulers as the AGUs.
@@ -106,11 +107,11 @@ def Zn4AGU2 : ProcResource<1>;
 // Execution Units
 //===----------------------------------------------------------------------===//
 
-// AMD SOG 19h, 2.10.2 Execution Units
+// AMD SOG Zen4, 2.10.2 Execution Units
 // ALU0 additionally has divide <...> execution capability.
 defvar Zn4Divider = Zn4ALU0;
 
-// AMD SOG 19h, 2.10.2 Execution Units
+// AMD SOG Zen4, 2.10.2 Execution Units
 // ALU0 additionally has <...> branch execution capability.
 defvar Zn4BRU0 = Zn4ALU0;
 
@@ -143,14 +144,14 @@ def Zn4ALU12 : ProcResGroup<[Zn4ALU1, Zn4ALU2]>;
 // Scheduling
 //===----------------------------------------------------------------------===//
 
-// AMD SOG 19h, 2.10.3 Retire Control Unit
+// AMD SOG Zen4, 2.10.3 Retire Control Unit
 // The integer physical register file (PRF) consists of 224 registers.
 def Zn4IntegerPRF : RegisterFile<224, [GR64, CCR], [1, 1], [1, 0],
                               6,  // Max moves that can be eliminated per cycle.
                               0>; // Restrict move elimination to zero regs.
 
 // anandtech, The integer scheduler has a 4*24 entry macro op capacity.
-// AMD SOG 19h, 2.10.1 Schedulers
+// AMD SOG Zen4, 2.10.1 Schedulers
 // The schedulers can receive up to six macro ops per cycle, with a limit of
 // two per scheduler. Each scheduler can issue one micro op per cycle into
 // each of its associated pipelines
@@ -167,7 +168,7 @@ def Zn4Int : ProcResGroup<[Zn4ALU0, Zn4AGU0, Zn4BRU0, // scheduler 0
 // Floating-Point Unit
 //
 
-// AMD SOG 19h, 2.4 Superscalar Organization
+// AMD SOG Zen4, 2.4 Superscalar Organization
 // The processor uses <...> two decoupled independent floating point schedulers
 // each servicing two FP pipelines and one store or FP-to-integer pipeline.
 
@@ -175,7 +176,7 @@ def Zn4Int : ProcResGroup<[Zn4ALU0, Zn4AGU0, Zn4BRU0, // scheduler 0
 // Execution pipes
 //===----------------------------------------------------------------------===//
 
-// AMD SOG 19h, 2.10.1 Schedulers
+// AMD SOG Zen4, 2.10.1 Schedulers
 // <...>, and six FPU pipes.
 // Agner, 22.10 Floating point execution pipes
 // There are six floating point/vector execution pipes,
@@ -188,7 +189,7 @@ def Zn4FP45 : ProcResource<2>;
 //
 // Execution Units
 //===----------------------------------------------------------------------===//
-// AMD SOG 19h, 2.11.1 Floating Point Execution Resources
+// AMD SOG Zen4, 2.11.1 Floating Point Execution Resources
 
 // (v)FMUL*, (v)FMA*, Floating Point Compares, Blendv(DQ)
 defvar Zn4FPFMul0 = Zn4FP0;
@@ -203,7 +204,7 @@ defvar Zn4FPFCvt0 = Zn4FP2;
 defvar Zn4FPFCvt1 = Zn4FP3;
 
 // All Divide and Square Root except Reciprocal Approximation
-// AMD SOG 19h, 2.11.1 Floating Point Execution Resources
+// AMD SOG Zen4, 2.11.1 Floating Point Execution Resources
 // FDIV unit can support 2 simultaneous operations in flight
 // even though it occupies a single pipe.
 // FIXME: BufferSize=2 ?
@@ -252,7 +253,7 @@ defvar Zn4FPCLM1 = Zn4FP1;
 // Execution pipeline grouping
 //===----------------------------------------------------------------------===//
 
-// AMD SOG 19h, 2.11 Floating-Point Unit
+// AMD SOG Zen4, 2.11 Floating-Point Unit
 // Stores and floating point to general purpose register transfer
 // have 2 dedicated pipelines (pipe 5 and 6).
 def Zn4FPU0123 : ProcResGroup<[Zn4FP0, Zn4FP1, Zn4FP2, Zn4FP3]>;
@@ -281,12 +282,12 @@ def Zn4FPFMisc23 : ProcResGroup<[Zn4FPFMisc2, Zn4FPFMisc3]>;
 def Zn4FPFMisc123 : ProcResGroup<[Zn4FPFMisc1,Zn4FPFMisc2, Zn4FPFMisc3]>;
 
 // Loads, Stores and Move to General Register (EX) Operations
-// AMD SOG 19h, 2.11 Floating-Point Unit
+// AMD SOG Zen4, 2.11 Floating-Point Unit
 // Stores and floating point to general purpose register transfer
 // have 2 dedicated pipelines (pipe 5 and 6).
 defvar Zn4FPLd01 = Zn4FP45;
 
-// AMD SOG 19h, 2.11 Floating-Point Unit
+// AMD SOG Zen4, 2.11 Floating-Point Unit
 // Note that FP stores are supported on two pipelines,
 // but throughput is limited to one per cycle.
 let Super = Zn4FP45 in
@@ -334,9 +335,9 @@ def Zn4FpPRF : RegisterFile<192, [VR64, VR128, VR256, VR512], [1, 1, 1, 1], [0, 
                             6,  // Max moves that can be eliminated per cycle.
                             0>; // Restrict move elimination to zero regs.
 
-// AMD SOG 19h, 2.11 Floating-Point Unit
+// AMD SOG Zen4, 2.11 Floating-Point Unit
 // The floating-point scheduler has a 2*32 entry macro op capacity.
-// AMD SOG 19h, 2.11 Floating-Point Unit
+// AMD SOG Zen4, 2.11 Floating-Point Unit
 // <...> the scheduler can issue 1 micro op per cycle for each pipe.
 // FIXME: those are two separate schedulers, not a single big one.
 def Zn4FP : ProcResGroup<[Zn4FP0, Zn4FP2,          /*Zn4FP4,*/ // scheduler 0
@@ -345,7 +346,7 @@ def Zn4FP : ProcResGroup<[Zn4FP0, Zn4FP2,          /*Zn4FP4,*/ // scheduler 0
   let BufferSize = !mul(2, 32);
 }
 
-// AMD SOG 19h, 2.11 Floating-Point Unit
+// AMD SOG Zen4, 2.11 Floating-Point Unit
 // Macro ops can be dispatched to the 64 entry Non Scheduling Queue (NSQ)
 // even if floating-point scheduler is full.
 // FIXME: how to model this properly?
@@ -355,27 +356,27 @@ def Zn4FP : ProcResGroup<[Zn4FP0, Zn4FP2,          /*Zn4FP4,*/ // scheduler 0
 // Load-Store Unit
 //
 
-// AMD SOG 19h, 2.12 Load-Store Unit
+// AMD SOG Zen4, 2.12 Load-Store Unit
 // The LS unit contains three largely independent pipe-lines
 // enabling the execution of three 256-bit memory operations per cycle.
 def Zn4LSU : ProcResource<3>;
 
-// AMD SOG 19h, 2.12 Load-Store Unit
+// AMD SOG Zen4, 2.12 Load-Store Unit
 // All three memory operations can be loads.
 let Super = Zn4LSU in
 def Zn4Load : ProcResource<3> {
-  // AMD SOG 19h, 2.12 Load-Store Unit
+  // AMD SOG Zen4, 2.12 Load-Store Unit
   // The LS unit can process up to 72 out-of-order loads.
   let BufferSize = 72;
 }
 
 def Zn4LoadQueue : LoadQueue<Zn4Load>;
 
-// AMD SOG 19h, 2.12 Load-Store Unit
+// AMD SOG Zen4, 2.12 Load-Store Unit
 // A maximum of two of the memory operations can be stores.
 let Super = Zn4LSU in
 def Zn4Store : ProcResource<2> {
-  // AMD SOG 19h, 2.12 Load-Store Unit
+  // AMD SOG Zen4, 2.12 Load-Store Unit
   // The LS unit utilizes a 64-entry store queue (STQ).
   let BufferSize = 64;
 }
@@ -491,7 +492,7 @@ def : ReadAdvance<ReadAfterVecLd, Znver4Model.VecLoadLatency>;
 def : ReadAdvance<ReadAfterVecXLd, Znver4Model.VecLoadLatency>;
 def : ReadAdvance<ReadAfterVecYLd, Znver4Model.VecLoadLatency>;
 
-// AMD SOG 19h, 2.11 Floating-Point Unit
+// AMD SOG Zen4, 2.11 Floating-Point Unit
 // There is 1 cycle of added latency for a result to cross
 // from F to I or I to F domain.
 def : ReadAdvance<ReadInt2Fpu, -1>;
@@ -1545,7 +1546,7 @@ def Zn4WriteSCALErr: SchedWriteRes<[Zn4FPFMisc23]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[Zn4WriteSCALErr], (instregex
-        "V(SCALEF|REDUCE)(S|P)(S|D)(Z?|Z128?|Z256?)(rr|rrb|rrkz|rrik|rrikz|rri)(_Int?|_Intkz?)",
+        "V(SCALEF|REDUCE)(S|P)(S|D)(Z?|Z128?|Z256?)(rr|rrb|rrkz|rrik|rrikz|rri)(_Int?)",
         "(V?)REDUCE(PD|PS|SD|SS)(Z?|Z128?)(rri|rrikz|rrib)"
 	)>;
 
@@ -1585,7 +1586,7 @@ def : InstRW<[Zn4WriteSHIFTrr], (instregex
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z?|Z128?|Z256?)(rr|rrk|rrkz)",
         "(V?)P(ROL|ROR)(D|Q|VD|VQ)(Z256?)(ri|rik|rikz)",
         "(V?)P(ROL|ROR)(D|Q)(Z?|Z128?)(ri|rik|rikz)",
-	"VPSHUFBITQMBZ128rr", "VFMSUB231SSZr_Intkz"
+	"VPSHUFBITQMBZ128rr", "VFMSUB231SSZrkz_Int"
 	)>;
 
 def Zn4WriteSHIFTri: SchedWriteRes<[Zn4FPFMisc01]> {

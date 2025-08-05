@@ -36,7 +36,17 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
-  bool enableCFIFixup(MachineFunction &MF) const override;
+  /// Harden the entire function with pac-ret.
+  ///
+  /// If pac-ret+leaf is requested, we want to harden as much code as possible.
+  /// This function inserts pac-ret hardening at the points where prologue and
+  /// epilogue are traditionally inserted, ignoring possible shrink-wrapping
+  /// optimization.
+  void emitPacRetPlusLeafHardening(MachineFunction &MF) const;
+
+  bool enableCFIFixup(const MachineFunction &MF) const override;
+
+  bool enableFullCFIFixup(const MachineFunction &MF) const override;
 
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
 
@@ -124,6 +134,8 @@ public:
   orderFrameObjects(const MachineFunction &MF,
                     SmallVectorImpl<int> &ObjectsToAllocate) const override;
 
+  bool isFPReserved(const MachineFunction &MF) const;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
@@ -146,7 +158,7 @@ private:
                                       int &MinCSFrameIndex,
                                       int &MaxCSFrameIndex) const;
   bool shouldCombineCSRLocalStackBumpInEpilogue(MachineBasicBlock &MBB,
-                                                unsigned StackBumpBytes) const;
+                                                uint64_t StackBumpBytes) const;
   void emitCalleeSavedGPRLocations(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI) const;
   void emitCalleeSavedSVELocations(MachineBasicBlock &MBB,

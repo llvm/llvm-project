@@ -40,6 +40,17 @@ using namespace llvm;
   CASE_MASK_INS_COMMON(Inst, Suffix, src)         \
   CASE_MASKZ_INS_COMMON(Inst, Suffix, src)
 
+#define CASE_MASK_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##k_Int:
+
+#define CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src) \
+  case X86::V##Inst##Suffix##src##kz_Int:
+
+#define CASE_AVX512_INS_COMMON_INT(Inst, Suffix, src) \
+  CASE_AVX_INS_COMMON(Inst, Suffix, src##_Int)        \
+  CASE_MASK_INS_COMMON_INT(Inst, Suffix, src)         \
+  CASE_MASKZ_INS_COMMON_INT(Inst, Suffix, src)
+
 #define CASE_FPCLASS_PACKED(Inst, src)    \
   CASE_AVX_INS_COMMON(Inst, Z, src##i)    \
   CASE_AVX_INS_COMMON(Inst, Z256, src##i) \
@@ -196,8 +207,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , r_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, r)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, r)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, r_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, r_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, r)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, r)
 
 #define CASE_FMA_SCALAR_MEM(Inst)                 \
   CASE_AVX_INS_COMMON(Inst##SD, , m)              \
@@ -206,8 +217,8 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst##SS, , m_Int)          \
   CASE_AVX_INS_COMMON(Inst##SD, Z, m)             \
   CASE_AVX_INS_COMMON(Inst##SS, Z, m)             \
-  CASE_AVX512_INS_COMMON(Inst##SD, Z, m_Int)      \
-  CASE_AVX512_INS_COMMON(Inst##SS, Z, m_Int)
+  CASE_AVX512_INS_COMMON_INT(Inst##SD, Z, m)      \
+  CASE_AVX512_INS_COMMON_INT(Inst##SS, Z, m)
 
 #define CASE_FMA4(Inst, suf)                      \
   CASE_AVX_INS_COMMON(Inst, 4, suf)               \
@@ -920,10 +931,18 @@ static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
     // dest, src1, mask, src2, memory, tbl
     CASE_PTERNLOG(PTERNLOGD, m)
     CASE_PTERNLOG(PTERNLOGQ, m)
-    CASE_PTERNLOG(PTERNLOGD, mb)
-    CASE_PTERNLOG(PTERNLOGQ, mb)
     Src2Idx = NumOperands - 7;
     Src3Idx = -1;
+    break;
+
+    CASE_PTERNLOG(PTERNLOGD, mb)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -2;
+    break;
+
+    CASE_PTERNLOG(PTERNLOGQ, mb)
+    Src2Idx = NumOperands - 7;
+    Src3Idx = -3;
     break;
 
   default:
@@ -932,8 +951,21 @@ static bool printPTERNLOGComments(const MCInst *MI, raw_ostream &OS,
   StringRef DestName = getRegName(MI->getOperand(0).getReg());
   StringRef Src1Name = getRegName(MI->getOperand(1).getReg());
   StringRef Src2Name = getRegName(MI->getOperand(Src2Idx).getReg());
-  StringRef Src3Name =
-      Src3Idx != -1 ? getRegName(MI->getOperand(Src3Idx).getReg()) : "mem";
+  StringRef Src3Name;
+  switch (Src3Idx) {
+  case -1:
+    Src3Name = "mem";
+    break;
+  case -2:
+    Src3Name = "m32bcst";
+    break;
+  case -3:
+    Src3Name = "m64bcst";
+    break;
+  default:
+    Src3Name = getRegName(MI->getOperand(Src3Idx).getReg());
+    break;
+  }
   uint8_t TruthTable = MI->getOperand(NumOperands - 1).getImm();
 
   StringRef SrcNames[] = {Src1Name, Src2Name, Src3Name};
@@ -968,7 +1000,7 @@ static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
   unsigned NumOperands = MI->getNumOperands();
   int SrcIdx;
   switch (MI->getOpcode()) {
-    CASE_FPCLASS_PACKED(FPCLASSPBF16, r)
+    CASE_FPCLASS_PACKED(FPCLASSBF16, r)
     CASE_FPCLASS_PACKED(FPCLASSPH, r)
     CASE_FPCLASS_PACKED(FPCLASSPS, r)
     CASE_FPCLASS_PACKED(FPCLASSPD, r)
@@ -978,7 +1010,7 @@ static bool printFPCLASSComments(const MCInst *MI, raw_ostream &OS,
       SrcIdx = NumOperands - 2;
       break;
     }
-    CASE_FPCLASS_PACKED_MEM(FPCLASSPBF16)
+    CASE_FPCLASS_PACKED_MEM(FPCLASSBF16)
     CASE_FPCLASS_PACKED_MEM(FPCLASSPH)
     CASE_FPCLASS_PACKED_MEM(FPCLASSPS)
     CASE_FPCLASS_PACKED_MEM(FPCLASSPD)

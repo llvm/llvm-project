@@ -63,7 +63,7 @@ protected:
 
   template <typename OP, typename... BUILD_ARGS>
   inline OP createOp(BUILD_ARGS... args) {
-    return builder.create<OP>(loc, args...);
+    return OP::create(builder, loc, args...);
   }
 
   mlir::Value loadBoxAddress(
@@ -170,6 +170,17 @@ protected:
             mlir::Type stmtResultType) override;
 };
 
+class HlfirReshapeLowering : public HlfirTransformationalIntrinsic {
+public:
+  using HlfirTransformationalIntrinsic::HlfirTransformationalIntrinsic;
+
+protected:
+  mlir::Value
+  lowerImpl(const Fortran::lower::PreparedActualArguments &loweredActuals,
+            const fir::IntrinsicArgumentLoweringRules *argLowering,
+            mlir::Type stmtResultType) override;
+};
+
 } // namespace
 
 mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
@@ -184,7 +195,7 @@ mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
       // this is a box address type but is not dynamically optional. Just load
       // the box, assuming it is well formed (!fir.ref<!fir.box<...>> ->
       // !fir.box<...>)
-      return builder.create<fir::LoadOp>(loc, actual.getBase());
+      return fir::LoadOp::create(builder, loc, actual.getBase());
     }
     return actual;
   }
@@ -198,9 +209,9 @@ mlir::Value HlfirTransformationalIntrinsic::loadBoxAddress(
   // ensures it won't be.
   mlir::Value box = builder.createBox(loc, exv);
   mlir::Type boxType = box.getType();
-  auto absent = builder.create<fir::AbsentOp>(loc, boxType);
-  auto boxOrAbsent = builder.create<mlir::arith::SelectOp>(
-      loc, boxType, isPresent, box, absent);
+  auto absent = fir::AbsentOp::create(builder, loc, boxType);
+  auto boxOrAbsent = mlir::arith::SelectOp::create(builder, loc, boxType,
+                                                   isPresent, box, absent);
 
   return boxOrAbsent;
 }
@@ -221,11 +232,11 @@ static mlir::Value loadOptionalValue(
         assert(actual.isScalar() && fir::isa_trivial(eleType) &&
                "must be a numerical or logical scalar");
         hlfir::Entity val = hlfir::loadTrivialScalar(loc, builder, actual);
-        builder.create<fir::ResultOp>(loc, val);
+        fir::ResultOp::create(builder, loc, val);
       })
       .genElse([&]() {
         mlir::Value zero = fir::factory::createZeroValue(builder, loc, eleType);
-        builder.create<fir::ResultOp>(loc, zero);
+        fir::ResultOp::create(builder, loc, zero);
       })
       .getResults()[0];
 }
@@ -419,6 +430,17 @@ mlir::Value HlfirCShiftLowering::lowerImpl(
   return createOp<hlfir::CShiftOp>(resultType, operands);
 }
 
+mlir::Value HlfirReshapeLowering::lowerImpl(
+    const Fortran::lower::PreparedActualArguments &loweredActuals,
+    const fir::IntrinsicArgumentLoweringRules *argLowering,
+    mlir::Type stmtResultType) {
+  auto operands = getOperandVector(loweredActuals, argLowering);
+  assert(operands.size() == 4);
+  mlir::Type resultType = computeResultType(operands[0], stmtResultType);
+  return createOp<hlfir::ReshapeOp>(resultType, operands[0], operands[1],
+                                    operands[2], operands[3]);
+}
+
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
     fir::FirOpBuilder &builder, mlir::Location loc, const std::string &name,
     const Fortran::lower::PreparedActualArguments &loweredActuals,
@@ -467,6 +489,9 @@ std::optional<hlfir::EntityWithAttributes> Fortran::lower::lowerHlfirIntrinsic(
   if (name == "cshift")
     return HlfirCShiftLowering{builder, loc}.lower(loweredActuals, argLowering,
                                                    stmtResultType);
+  if (name == "reshape")
+    return HlfirReshapeLowering{builder, loc}.lower(loweredActuals, argLowering,
+                                                    stmtResultType);
   if (mlir::isa<fir::CharacterType>(stmtResultType)) {
     if (name == "min")
       return HlfirCharExtremumLowering{builder, loc,

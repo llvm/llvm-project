@@ -15,7 +15,6 @@
 #include "mlir/TableGen/Predicate.h"
 #include "mlir/TableGen/Trait.h"
 #include "mlir/TableGen/Type.h"
-#include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -26,7 +25,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
-#include <list>
 
 #define DEBUG_TYPE "mlir-tblgen-operator"
 
@@ -231,7 +229,7 @@ unsigned Operator::getNumVariableLengthOperands() const {
 }
 
 bool Operator::hasSingleVariadicArg() const {
-  return getNumArgs() == 1 && getArg(0).is<NamedTypeConstraint *>() &&
+  return getNumArgs() == 1 && isa<NamedTypeConstraint *>(getArg(0)) &&
          getOperand(0).isVariadic();
 }
 
@@ -468,6 +466,37 @@ void Operator::populateTypeInferenceInfo(
       continue;
     }
 
+    // The `ShapedTypeMatchesElementCountAndTypes` trait represents a 1 -> 1
+    // type inference edge where a shaped type matches element count and types
+    // of variadic elements.
+    if (def.isSubClassOf("ShapedTypeMatchesElementCountAndTypes")) {
+      StringRef shapedArg = def.getValueAsString("shaped");
+      StringRef elementsArg = def.getValueAsString("elements");
+
+      int shapedIndex = argumentsAndResultsIndex.lookup(shapedArg);
+      int elementsIndex = argumentsAndResultsIndex.lookup(elementsArg);
+
+      // Handle result type inference from shaped type to variadic elements.
+      if (InferredResultType::isResultIndex(elementsIndex) &&
+          InferredResultType::isArgIndex(shapedIndex)) {
+        int resultIndex = InferredResultType::unmapResultIndex(elementsIndex);
+        ResultTypeInference &infer = inference[resultIndex];
+        if (!infer.inferred) {
+          infer.sources.emplace_back(
+              shapedIndex,
+              "::llvm::SmallVector<::mlir::Type>(::llvm::cast<::mlir::"
+              "ShapedType>($_self).getNumElements(), "
+              "::llvm::cast<::mlir::ShapedType>($_self).getElementType())");
+          infer.inferred = true;
+        }
+      }
+
+      // Type inference in the opposite direction is not possible as the actual
+      // shaped type can't be inferred from the variadic elements.
+
+      continue;
+    }
+
     if (!def.isSubClassOf("AllTypesMatch"))
       continue;
 
@@ -503,8 +532,8 @@ void Operator::populateTypeInferenceInfo(
         for (int otherResultIndex : resultIndices) {
           if (resultIndex == otherResultIndex)
             continue;
-          inference[resultIndex].sources.emplace_back(otherResultIndex,
-                                                      "$_self");
+          inference[resultIndex].sources.emplace_back(
+              InferredResultType::unmapResultIndex(otherResultIndex), "$_self");
         }
       }
     }
@@ -781,7 +810,7 @@ void Operator::populateOpStructure() {
   // Populate the builders.
   auto *builderList = dyn_cast_or_null<ListInit>(def.getValueInit("builders"));
   if (builderList && !builderList->empty()) {
-    for (const Init *init : builderList->getValues())
+    for (const Init *init : builderList->getElements())
       builders.emplace_back(cast<DefInit>(init)->getDef(), def.getLoc());
   } else if (skipDefaultBuilders()) {
     PrintFatalError(
@@ -829,7 +858,7 @@ void Operator::print(llvm::raw_ostream &os) const {
     if (auto *attr = llvm::dyn_cast_if_present<NamedAttribute *>(arg))
       os << "[attribute] " << attr->name << '\n';
     else
-      os << "[operand] " << arg.get<NamedTypeConstraint *>()->name << '\n';
+      os << "[operand] " << cast<NamedTypeConstraint *>(arg)->name << '\n';
   }
 }
 

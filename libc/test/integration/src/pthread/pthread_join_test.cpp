@@ -9,7 +9,7 @@
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 
 #include "test/IntegrationTest/test.h"
 #include <pthread.h>
@@ -25,7 +25,7 @@ static void nullJoinTest() {
 }
 
 TEST_MAIN() {
-  LIBC_NAMESPACE::libc_errno = 0;
+  libc_errno = 0;
   nullJoinTest();
   return 0;
 }

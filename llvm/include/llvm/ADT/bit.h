@@ -15,6 +15,7 @@
 #define LLVM_ADT_BIT_H
 
 #include "llvm/Support/Compiler.h"
+#include <cstddef> // for std::size_t
 #include <cstdint>
 #include <limits>
 #include <type_traits>
@@ -29,7 +30,7 @@
 
 #if defined(__linux__) || defined(__GNU__) || defined(__HAIKU__) ||            \
     defined(__Fuchsia__) || defined(__EMSCRIPTEN__) || defined(__NetBSD__) ||  \
-    defined(__OpenBSD__) || defined(__DragonFly__)
+    defined(__OpenBSD__) || defined(__DragonFly__) || defined(__managarm__)
 #include <endian.h>
 #elif defined(_AIX)
 #include <sys/machine.h>
@@ -147,65 +148,6 @@ template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
   return (Value != 0) && ((Value & (Value - 1)) == 0);
 }
 
-namespace detail {
-template <typename T, std::size_t SizeOfT> struct TrailingZerosCounter {
-  static unsigned count(T Val) {
-    if (!Val)
-      return std::numeric_limits<T>::digits;
-    if (Val & 0x1)
-      return 0;
-
-    // Bisection method.
-    unsigned ZeroBits = 0;
-    T Shift = std::numeric_limits<T>::digits >> 1;
-    T Mask = std::numeric_limits<T>::max() >> Shift;
-    while (Shift) {
-      if ((Val & Mask) == 0) {
-        Val >>= Shift;
-        ZeroBits |= Shift;
-      }
-      Shift >>= 1;
-      Mask >>= Shift;
-    }
-    return ZeroBits;
-  }
-};
-
-#if defined(__GNUC__) || defined(_MSC_VER)
-template <typename T> struct TrailingZerosCounter<T, 4> {
-  static unsigned count(T Val) {
-    if (Val == 0)
-      return 32;
-
-#if __has_builtin(__builtin_ctz) || defined(__GNUC__)
-    return __builtin_ctz(Val);
-#elif defined(_MSC_VER)
-    unsigned long Index;
-    _BitScanForward(&Index, Val);
-    return Index;
-#endif
-  }
-};
-
-#if !defined(_MSC_VER) || defined(_M_X64)
-template <typename T> struct TrailingZerosCounter<T, 8> {
-  static unsigned count(T Val) {
-    if (Val == 0)
-      return 64;
-
-#if __has_builtin(__builtin_ctzll) || defined(__GNUC__)
-    return __builtin_ctzll(Val);
-#elif defined(_MSC_VER)
-    unsigned long Index;
-    _BitScanForward64(&Index, Val);
-    return Index;
-#endif
-  }
-};
-#endif
-#endif
-} // namespace detail
-
 /// Count number of 0's from the least significant bit to the most
 ///   stopping at the first 1.
 ///
@@ -215,62 +157,42 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
 template <typename T> [[nodiscard]] int countr_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
-  return llvm::detail::TrailingZerosCounter<T, sizeof(T)>::count(Val);
-}
+  if (!Val)
+    return std::numeric_limits<T>::digits;
 
-namespace detail {
-template <typename T, std::size_t SizeOfT> struct LeadingZerosCounter {
-  static unsigned count(T Val) {
-    if (!Val)
-      return std::numeric_limits<T>::digits;
+  // Use the intrinsic if available.
+  if constexpr (sizeof(T) == 4) {
+#if __has_builtin(__builtin_ctz) || defined(__GNUC__)
+    return __builtin_ctz(Val);
+#elif defined(_MSC_VER)
+    unsigned long Index;
+    _BitScanForward(&Index, Val);
+    return Index;
+#endif
+  } else if constexpr (sizeof(T) == 8) {
+#if __has_builtin(__builtin_ctzll) || defined(__GNUC__)
+    return __builtin_ctzll(Val);
+#elif defined(_MSC_VER) && defined(_M_X64)
+    unsigned long Index;
+    _BitScanForward64(&Index, Val);
+    return Index;
+#endif
+  }
 
-    // Bisection method.
-    unsigned ZeroBits = 0;
-    for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
-      T Tmp = Val >> Shift;
-      if (Tmp)
-        Val = Tmp;
-      else
-        ZeroBits |= Shift;
+  // Fall back to the bisection method.
+  unsigned ZeroBits = 0;
+  T Shift = std::numeric_limits<T>::digits >> 1;
+  T Mask = std::numeric_limits<T>::max() >> Shift;
+  while (Shift) {
+    if ((Val & Mask) == 0) {
+      Val >>= Shift;
+      ZeroBits |= Shift;
     }
-    return ZeroBits;
+    Shift >>= 1;
+    Mask >>= Shift;
   }
-};
-
-#if defined(__GNUC__) || defined(_MSC_VER)
-template <typename T> struct LeadingZerosCounter<T, 4> {
-  static unsigned count(T Val) {
-    if (Val == 0)
-      return 32;
-
-#if __has_builtin(__builtin_clz) || defined(__GNUC__)
-    return __builtin_clz(Val);
-#elif defined(_MSC_VER)
-    unsigned long Index;
-    _BitScanReverse(&Index, Val);
-    return Index ^ 31;
-#endif
-  }
-};
-
-#if !defined(_MSC_VER) || defined(_M_X64)
-template <typename T> struct LeadingZerosCounter<T, 8> {
-  static unsigned count(T Val) {
-    if (Val == 0)
-      return 64;
-
-#if __has_builtin(__builtin_clzll) || defined(__GNUC__)
-    return __builtin_clzll(Val);
-#elif defined(_MSC_VER)
-    unsigned long Index;
-    _BitScanReverse64(&Index, Val);
-    return Index ^ 63;
-#endif
-  }
-};
-#endif
-#endif
-} // namespace detail
+  return ZeroBits;
+}
 
 /// Count number of 0's from the most significant bit to the least
 ///   stopping at the first 1.
@@ -281,7 +203,38 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
 template <typename T> [[nodiscard]] int countl_zero(T Val) {
   static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
-  return llvm::detail::LeadingZerosCounter<T, sizeof(T)>::count(Val);
+  if (!Val)
+    return std::numeric_limits<T>::digits;
+
+  // Use the intrinsic if available.
+  if constexpr (sizeof(T) == 4) {
+#if __has_builtin(__builtin_clz) || defined(__GNUC__)
+    return __builtin_clz(Val);
+#elif defined(_MSC_VER)
+    unsigned long Index;
+    _BitScanReverse(&Index, Val);
+    return Index ^ 31;
+#endif
+  } else if constexpr (sizeof(T) == 8) {
+#if __has_builtin(__builtin_clzll) || defined(__GNUC__)
+    return __builtin_clzll(Val);
+#elif defined(_MSC_VER) && defined(_M_X64)
+    unsigned long Index;
+    _BitScanReverse64(&Index, Val);
+    return Index ^ 63;
+#endif
+  }
+
+  // Fall back to the bisection method.
+  unsigned ZeroBits = 0;
+  for (T Shift = std::numeric_limits<T>::digits >> 1; Shift; Shift >>= 1) {
+    T Tmp = Val >> Shift;
+    if (Tmp)
+      Val = Tmp;
+    else
+      ZeroBits |= Shift;
+  }
+  return ZeroBits;
 }
 
 /// Count the number of ones from the most significant bit to the first
@@ -347,11 +300,12 @@ template <typename T> [[nodiscard]] T bit_ceil(T Value) {
   return T(1) << llvm::bit_width<T>(Value - 1u);
 }
 
-namespace detail {
-template <typename T, std::size_t SizeOfT> struct PopulationCounter {
-  static int count(T Value) {
-    // Generic version, forward to 32 bits.
-    static_assert(SizeOfT <= 4, "Not implemented!");
+/// Count the number of set bits in a value.
+/// Ex. popcount(0xF000F000) = 8
+/// Returns 0 if the word is zero.
+template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
+[[nodiscard]] inline int popcount(T Value) noexcept {
+  if constexpr (sizeof(T) <= 4) {
 #if defined(__GNUC__)
     return (int)__builtin_popcount(Value);
 #else
@@ -360,11 +314,7 @@ template <typename T, std::size_t SizeOfT> struct PopulationCounter {
     v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
     return int(((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24);
 #endif
-  }
-};
-
-template <typename T> struct PopulationCounter<T, 8> {
-  static int count(T Value) {
+  } else if constexpr (sizeof(T) <= 8) {
 #if defined(__GNUC__)
     return (int)__builtin_popcountll(Value);
 #else
@@ -374,16 +324,9 @@ template <typename T> struct PopulationCounter<T, 8> {
     v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
     return int((uint64_t)(v * 0x0101010101010101ULL) >> 56);
 #endif
+  } else {
+    static_assert(sizeof(T) == 0, "T must be 8 bytes or less");
   }
-};
-} // namespace detail
-
-/// Count the number of set bits in a value.
-/// Ex. popcount(0xF000F000) = 8
-/// Returns 0 if the word is zero.
-template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-[[nodiscard]] inline int popcount(T Value) noexcept {
-  return detail::PopulationCounter<T, sizeof(T)>::count(Value);
 }
 
 // Forward-declare rotr so that rotl can use it.

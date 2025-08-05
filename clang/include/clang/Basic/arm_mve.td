@@ -710,7 +710,7 @@ defm vrndmq: vrnd<IRIntBase<"floor", [Vector]>, "m">;
 defm vrndpq: vrnd<IRIntBase<"ceil",  [Vector]>, "p">;
 defm vrndaq: vrnd<IRIntBase<"round", [Vector]>, "a">;
 defm vrndxq: vrnd<IRIntBase<"rint",  [Vector]>, "x">;
-defm vrndnq: vrnd<IRInt<"vrintn",    [Vector]>, "n">;
+defm vrndnq: vrnd<IRIntBase<"roundeven", [Vector]>, "n">;
 
 multiclass compare_with_pred<string condname, dag arguments,
                              dag cmp, string suffix> {
@@ -1537,7 +1537,7 @@ foreach desttype = T.All in {
 let params = T.All in {
   let pnt = PNT_None in {
     def vcreateq: Intrinsic<Vector, (args u64:$a, u64:$b),
-        (vreinterpret (ielt_const (ielt_const (undef VecOf<u64>), $a, 0),
+        (vreinterpret (ielt_const (ielt_const (poison VecOf<u64>), $a, 0),
                              $b, 1), Vector)>;
     def vuninitializedq: Intrinsic<Vector, (args), (undef Vector)>;
   }

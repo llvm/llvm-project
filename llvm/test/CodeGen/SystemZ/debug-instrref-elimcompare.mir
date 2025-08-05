@@ -1,0 +1,65 @@
+# Check that the backend properly tracks debug-instr-references across the
+# elim-compare pass.
+#
+# RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z14 -run-pass=systemz-elim-compare \
+# RUN:   -o - 2>&1 | FileCheck %s
+
+# bb.0 - elimination of CHI, modification of BRC, no substitutions
+# bb.1 - elimination of CHI, replacement of LR with LTR, one substitution
+# bb.2 - elimination of L and CHI, modification of CondTrap into LAT, one substitution
+# CHECK: name:            foo
+# CHECK: debugValueSubstitutions:
+# these are the correct substitutions
+# CHECK-NEXT:  - { srcinst: 5, srcop: 0, dstinst: 13, dstop: 0, subreg: 0 }
+# CHECK-NEXT:  - { srcinst: 7, srcop: 0, dstinst: 9, dstop: 0, subreg: 0 }
+# CHECK-NEXT:  - { srcinst: 10, srcop: 0, dstinst: 14, dstop: 0, subreg: 0 }
+# we also need to make sure that these are the only substitutions
+# CHECK-NEXT: constants:       []
+---
+name:            foo
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r2l', virtual-reg: '' }
+  - { reg: '$r3l', virtual-reg: '' }
+  - { reg: '$r4l', virtual-reg: '' }
+  - { reg: '$r5d', virtual-reg: '' }
+debugValueSubstitutions: []
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+    liveins: $r2l, $r3l, $r4l, $r5d
+  
+    renamable $r3l = nsw AR killed renamable $r3l, renamable $r2l, implicit-def dead $cc, debug-instr-number 1
+    CHI renamable $r3l, 0, implicit-def $cc, debug-instr-number 2
+    BRC 14, 12, %bb.1, implicit $cc, debug-instr-number 3
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+    liveins: $r2l, $r3l, $r4l, $r5d
+    
+    CHI renamable $r2l, 0, implicit-def $cc, debug-instr-number 4
+    renamable $r3l = LR renamable $r2l, debug-instr-number 5
+    BRC 14, 8, %bb.2, implicit killed $cc, debug-instr-number 6
+
+  bb.2:
+    successors: %bb.3(0x80000000)
+    liveins: $r2l, $r3l, $r4l, $r5d
+
+    renamable $r2l = L killed renamable $r5d, 0, $noreg, debug-instr-number 7
+    CHI renamable $r2l, 0, implicit-def $cc, debug-instr-number 8
+    CondTrap 14, 8, implicit killed $cc, debug-instr-number 9
+    J %bb.3
+
+  bb.3:
+    successors: %bb.4(080000000)
+    liveins: $r2l, $r3l, $r4l, $r5d
+
+    renamable $r3l = L renamable $r5d, 0, $noreg, debug-instr-number 10
+    CHI renamable $r3l, 0, implicit-def $cc, debug-instr-number 11
+    BRC 14, 8, %bb.4, implicit killed $cc, debug-instr-number 12
+  
+  bb.4:
+    $r2l = LHI 2
+    Return implicit $r2l
+
+...

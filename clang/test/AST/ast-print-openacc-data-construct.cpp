@@ -2,23 +2,19 @@
 
 void foo() {
   int Var;
-  // TODO OpenACC: These are only legal if they have one of a list of clauses on
-  // them, so the 'check' lines should start to include those once we implement
-  // them.  For now, they don't emit those because they are 'not implemented'.
-
 // CHECK: #pragma acc data default(none)
 #pragma acc data default(none)
   ;
 
-// CHECK: #pragma acc data default(none) device_type(int)
-#pragma acc data default(none) device_type(int)
+// CHECK: #pragma acc data default(none) device_type(radeon)
+#pragma acc data default(none) device_type(radeon)
   ;
 
 // CHECK: #pragma acc enter data copyin(Var)
 #pragma acc enter data copyin(Var)
   ;
-// CHECK: #pragma acc exit data copyout(Var)
-#pragma acc exit data copyout(Var)
+// CHECK: #pragma acc exit data copyout(always, zero: Var)
+#pragma acc exit data copyout(zero, always: Var)
   ;
 // CHECK: #pragma acc host_data use_device(Var)
 #pragma acc host_data use_device(Var)
@@ -44,20 +40,20 @@ void foo() {
 // CHECK: #pragma acc data default(none) async(i)
 #pragma acc data default(none) async(i)
   ;
-// CHECK: #pragma acc enter data copyin(i) async(i)
-#pragma acc enter data copyin(i) async(i)
+// CHECK: #pragma acc enter data copyin(always: i) async(i)
+#pragma acc enter data copyin(always: i) async(i)
 // CHECK: #pragma acc exit data copyout(i) async
 #pragma acc exit data copyout(i) async
 
 // CHECK: #pragma acc data default(none) wait
-#pragma acc data default(none) wait()
+#pragma acc data default(none) wait
   ;
 
-// CHECK: #pragma acc enter data copyin(Var) wait()
-#pragma acc enter data copyin(Var) wait()
+// CHECK: #pragma acc enter data copyin(Var) wait
+#pragma acc enter data copyin(Var) wait
 
-// CHECK: #pragma acc exit data copyout(Var) wait(*iPtr, i)
-#pragma acc exit data copyout(Var) wait(*iPtr, i)
+// CHECK: #pragma acc exit data copyout(always, zero: Var) wait(*iPtr, i)
+#pragma acc exit data copyout(always, zero: Var) wait(*iPtr, i)
 
 // CHECK: #pragma acc data default(none) wait(queues: *iPtr, i)
 #pragma acc data default(none) wait(queues:*iPtr, i)
@@ -88,8 +84,8 @@ void foo() {
 #pragma acc data present(i, array[1], array, array[1:2])
   ;
 
-// CHECK: #pragma acc data default(none) copy(i, array[1], array, array[1:2]) pcopy(i, array[1], array, array[1:2]) present_or_copy(i, array[1], array, array[1:2])
-#pragma acc data default(none) copy(i, array[1], array, array[1:2]) pcopy(i, array[1], array, array[1:2]) present_or_copy(i, array[1], array, array[1:2])
+// CHECK: #pragma acc data default(none) copy(i, array[1], array, array[1:2]) pcopy(i, array[1], array, array[1:2]) present_or_copy(alwaysin, alwaysout: i, array[1], array, array[1:2])
+#pragma acc data default(none) copy(i, array[1], array, array[1:2]) pcopy(i, array[1], array, array[1:2]) present_or_copy(alwaysin, alwaysout: i, array[1], array, array[1:2])
   ;
 
 // CHECK: #pragma acc enter data copyin(i, array[1], array, array[1:2]) pcopyin(readonly: i, array[1], array, array[1:2]) present_or_copyin(i, array[1], array, array[1:2])

@@ -31,6 +31,7 @@ DLWRAP(cuDeviceGet, 2)
 DLWRAP(cuDeviceGetAttribute, 3)
 DLWRAP(cuDeviceGetCount, 1)
 DLWRAP(cuFuncGetAttribute, 3)
+DLWRAP(cuFuncSetAttribute, 3)
 
 // Device info
 DLWRAP(cuDeviceGetName, 3)
@@ -39,6 +40,7 @@ DLWRAP(cuDriverGetVersion, 1)
 
 DLWRAP(cuGetErrorString, 2)
 DLWRAP(cuLaunchKernel, 11)
+DLWRAP(cuLaunchHostFunc, 3)
 
 DLWRAP(cuMemAlloc, 2)
 DLWRAP(cuMemAllocHost, 2)
@@ -63,6 +65,7 @@ DLWRAP(cuStreamCreate, 2)
 DLWRAP(cuStreamDestroy, 1)
 DLWRAP(cuStreamSynchronize, 1)
 DLWRAP(cuStreamQuery, 1)
+DLWRAP(cuStreamAddCallback, 4)
 DLWRAP(cuCtxSetCurrent, 1)
 DLWRAP(cuDevicePrimaryCtxRelease, 1)
 DLWRAP(cuDevicePrimaryCtxGetState, 3)

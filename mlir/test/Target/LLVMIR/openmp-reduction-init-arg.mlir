@@ -46,11 +46,9 @@ module {
 // CHECK:         store ptr %[[VAL_2]], ptr %[[VAL_8]], align 8
 // CHECK:         call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @1, i32 1, ptr @_QFPreduce..omp_par, ptr %[[VAL_0]])
 // CHECK:         br label %[[VAL_9:.*]]
-// CHECK:       omp.par.outlined.exit:                            ; preds = %[[VAL_6]]
-// CHECK:         br label %[[VAL_10:.*]]
-// CHECK:       omp.par.exit.split:                               ; preds = %[[VAL_9]]
+// CHECK:       omp.par.exit:                                     ; preds = %[[VAL_6]]
 // CHECK:         ret void
-// CHECK:       omp.par.entry:
+// CHECK:       [[PAR_ENTRY:omp.par.entry]]:
 // CHECK:         %[[VAL_11:.*]] = getelementptr { ptr, ptr }, ptr %[[VAL_12:.*]], i32 0, i32 0
 // CHECK:         %[[VAL_13:.*]] = load ptr, ptr %[[VAL_11]], align 8
 // CHECK:         %[[VAL_14:.*]] = getelementptr { ptr, ptr }, ptr %[[VAL_12]], i32 0, i32 1
@@ -62,16 +60,20 @@ module {
 // CHECK:         %[[VAL_21:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_23:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_24:.*]] = alloca [2 x ptr], align 8
+// CHECK:         br label %[[VAL_25:.*]]
+
+// CHECK:       [[VAL_25]]:
+// CHECK:         br label %[[PAR_REG:omp.par.region]]
+
+// CHECK:       [[PAR_REG]]:                                   ; preds = %[[VAL_25]]
 // CHECK:         br label %[[INIT_LABEL:.*]]
 // CHECK: [[INIT_LABEL]]:
 // CHECK:         %[[VAL_20:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[VAL_13]], align 8
 // CHECK:         store ptr %[[VAL_13]], ptr %[[VAL_21]], align 8
 // CHECK:         %[[VAL_22:.*]] = load { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[VAL_15]], align 8
 // CHECK:         store ptr %[[VAL_15]], ptr %[[VAL_23]], align 8
-// CHECK:         br label %[[VAL_25:.*]]
-// CHECK:       omp.par.region:                                   ; preds = %[[VAL_26:.*]]
 // CHECK:         br label %[[VAL_27:.*]]
-// CHECK:       omp.par.region1:                                  ; preds = %[[VAL_25]]
+// CHECK:       omp.par.region1:                                  ; preds = %[[INIT_LABEL]]
 // CHECK:         br label %[[VAL_28:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_27]]
 // CHECK:         %[[VAL_29:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_24]], i64 0, i64 0
@@ -95,7 +97,7 @@ module {
 // CHECK:         br label %[[VAL_38:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_33]]
 // CHECK:         br label %[[VAL_39:.*]]
-// CHECK:       omp.par.outlined.exit.exitStub:                   ; preds = %[[VAL_38]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_38]]
 // CHECK:         ret void
 // CHECK:         %[[VAL_40:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_41:.*]], i64 0, i64 0
 // CHECK:         %[[VAL_42:.*]] = load ptr, ptr %[[VAL_40]], align 8

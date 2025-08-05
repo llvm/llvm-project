@@ -31,6 +31,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -58,8 +59,8 @@ public:
 
   ~MCDisasmInstance() = default;
 
-  uint64_t GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
-                     lldb::addr_t pc, llvm::MCInst &mc_inst) const;
+  bool GetMCInst(const uint8_t *opcode_data, size_t opcode_data_len,
+                 lldb::addr_t pc, llvm::MCInst &mc_inst, uint64_t &size) const;
   void PrintMCInst(llvm::MCInst &mc_inst, lldb::addr_t pc,
                    std::string &inst_string, std::string &comments_string);
   void SetStyle(bool use_hex_immed, HexImmediateStyle hex_style);
@@ -485,8 +486,13 @@ public:
           break;
 
         default:
-          m_opcode.SetOpcodeBytes(data.PeekData(data_offset, min_op_byte_size),
-                                  min_op_byte_size);
+          if (arch.GetTriple().isRISCV())
+            m_opcode.SetOpcode16_32TupleBytes(
+                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size,
+                byte_order);
+          else
+            m_opcode.SetOpcodeBytes(
+                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size);
           got_op = true;
           break;
         }
@@ -523,13 +529,16 @@ public:
           const addr_t pc = m_address.GetFileAddress();
           llvm::MCInst inst;
 
-          const size_t inst_size =
-              mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
-          if (inst_size == 0)
-            m_opcode.Clear();
-          else {
-            m_opcode.SetOpcodeBytes(opcode_data, inst_size);
-            m_is_valid = true;
+          uint64_t inst_size = 0;
+          m_is_valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len,
+                                                pc, inst, inst_size);
+          m_opcode.Clear();
+          if (inst_size != 0) {
+            if (arch.GetTriple().isRISCV())
+              m_opcode.SetOpcode16_32TupleBytes(opcode_data, inst_size,
+                                                byte_order);
+            else
+              m_opcode.SetOpcodeBytes(opcode_data, inst_size);
           }
         }
       }
@@ -603,10 +612,11 @@ public:
         const uint8_t *opcode_data = data.GetDataStart();
         const size_t opcode_data_len = data.GetByteSize();
         llvm::MCInst inst;
-        size_t inst_size =
-            mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
+        uint64_t inst_size = 0;
+        bool valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc,
+                                              inst, inst_size);
 
-        if (inst_size > 0) {
+        if (valid && inst_size > 0) {
           mc_disasm_ptr->SetStyle(use_hex_immediates, hex_style);
 
           const bool saved_use_color = mc_disasm_ptr->GetUseColor();
@@ -817,7 +827,7 @@ public:
             return std::make_pair(ret, osi);
           }
         case 'x':
-          if (!str.compare("0")) {
+          if (str == "0") {
             is_hex = true;
             str.push_back(*osi);
           } else {
@@ -1145,7 +1155,7 @@ public:
       }
     }
 
-    if (Log *log = GetLog(LLDBLog::Process)) {
+    if (Log *log = GetLog(LLDBLog::Process | LLDBLog::Disassembler)) {
       StreamString ss;
 
       ss.Printf("[%s] expands to %zu operands:\n", operands_string,
@@ -1205,9 +1215,10 @@ protected:
     const uint8_t *opcode_data = data.GetDataStart();
     const size_t opcode_data_len = data.GetByteSize();
     llvm::MCInst inst;
-    const size_t inst_size =
-        mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len, pc, inst);
-    if (inst_size == 0)
+    uint64_t inst_size = 0;
+    const bool valid = mc_disasm_ptr->GetMCInst(opcode_data, opcode_data_len,
+                                                pc, inst, inst_size);
+    if (!valid)
       return;
 
     m_has_visited_instruction = true;
@@ -1336,19 +1347,19 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
          m_asm_info_up && m_context_up && m_disasm_up && m_instr_printer_up);
 }
 
-uint64_t DisassemblerLLVMC::MCDisasmInstance::GetMCInst(
-    const uint8_t *opcode_data, size_t opcode_data_len, lldb::addr_t pc,
-    llvm::MCInst &mc_inst) const {
+bool DisassemblerLLVMC::MCDisasmInstance::GetMCInst(const uint8_t *opcode_data,
+                                                    size_t opcode_data_len,
+                                                    lldb::addr_t pc,
+                                                    llvm::MCInst &mc_inst,
+                                                    uint64_t &size) const {
   llvm::ArrayRef<uint8_t> data(opcode_data, opcode_data_len);
   llvm::MCDisassembler::DecodeStatus status;
 
-  uint64_t new_inst_size;
-  status = m_disasm_up->getInstruction(mc_inst, new_inst_size, data, pc,
-                                       llvm::nulls());
+  status = m_disasm_up->getInstruction(mc_inst, size, data, pc, llvm::nulls());
   if (status == llvm::MCDisassembler::Success)
-    return new_inst_size;
+    return true;
   else
-    return 0;
+    return false;
 }
 
 void DisassemblerLLVMC::MCDisasmInstance::PrintMCInst(
@@ -1787,9 +1798,9 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
           module_sp->ResolveFileAddress(value, value_so_addr);
           module_sp->ResolveFileAddress(pc, pc_so_addr);
         }
-      } else if (target && !target->GetSectionLoadList().IsEmpty()) {
-        target->GetSectionLoadList().ResolveLoadAddress(value, value_so_addr);
-        target->GetSectionLoadList().ResolveLoadAddress(pc, pc_so_addr);
+      } else if (target && target->HasLoadedSections()) {
+        target->ResolveLoadAddress(value, value_so_addr);
+        target->ResolveLoadAddress(pc, pc_so_addr);
       }
 
       SymbolContext sym_ctx;
@@ -1806,10 +1817,13 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
         bool format_omitting_current_func_name = false;
         if (sym_ctx.symbol || sym_ctx.function) {
           AddressRange range;
-          if (sym_ctx.GetAddressRange(resolve_scope, 0, false, range) &&
-              range.GetBaseAddress().IsValid() &&
-              range.ContainsLoadAddress(value_so_addr, target)) {
-            format_omitting_current_func_name = true;
+          for (uint32_t idx = 0;
+               sym_ctx.GetAddressRange(resolve_scope, idx, false, range);
+               ++idx) {
+            if (range.ContainsLoadAddress(value_so_addr, target)) {
+              format_omitting_current_func_name = true;
+              break;
+            }
           }
         }
 

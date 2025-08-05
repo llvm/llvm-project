@@ -7,6 +7,10 @@ module mod1
     integer :: i
   end type
 
+  type :: t2
+    integer, device, allocatable, dimension(:) :: x
+  end type
+
   integer, device, dimension(11:20) :: cdev
 
 contains
@@ -112,8 +116,8 @@ end
 
 ! CHECK: %[[TEMP:.*]] = fir.allocmem !fir.array<10xi32> {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: %[[DECL_TEMP:.*]]:2 = hlfir.declare %[[TEMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
-! CHECK: %[[ADEV_TEMP:.*]]:2 = hlfir.declare %[[DECL_TEMP]]#1(%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub2Eadev"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
-! CHECK: cuf.data_transfer %[[ADEV]]#1 to %[[DECL_TEMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
+! CHECK: %[[ADEV_TEMP:.*]]:2 = hlfir.declare %[[DECL_TEMP]]#0(%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub2Eadev"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
+! CHECK: cuf.data_transfer %[[ADEV]]#0 to %[[DECL_TEMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
 ! CHECK: %[[ELEMENTAL:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<10xi32>
 ! CHECK: hlfir.assign %[[ELEMENTAL]] to %[[BHOST]]#0 : !hlfir.expr<10xi32>, !fir.ref<!fir.array<10xi32>>
 ! CHECK: fir.freemem %[[TEMP]] : !fir.heap<!fir.array<10xi32>>
@@ -132,7 +136,7 @@ end
 ! CHECK: %[[BHOST:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFsub3Ebhost"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK: %[[T:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub3Et"} : (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>) -> (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>)
 ! CHECK: %[[TMP_DECL:.*]]:2 = hlfir.declare %0 {uniq_name = ".tmp"} : (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>) -> (!fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>)
-! CHECK: cuf.data_transfer %[[T]]#1 to %[[TMP_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>
+! CHECK: cuf.data_transfer %[[T]]#0 to %[[TMP_DECL]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>, !fir.ref<!fir.type<_QMmod1Tt1{i:i32}>>
 
 
 ! Check that cuf.data_transfer are not generated within cuf kernel
@@ -230,7 +234,7 @@ end subroutine
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}
 
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %1 {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub10Ea"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK: cuf.data_transfer %[[A]]#1 to %{{.*}}#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<i32>, !fir.ref<i32>
+! CHECK: cuf.data_transfer %[[A]]#0 to %{{.*}}#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<i32>, !fir.ref<i32>
 ! CHECK-NOT: cuf.data_transfer
 
 subroutine sub11(n)
@@ -392,5 +396,51 @@ end subroutine
 ! CHECK: %[[ADEV_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub19Eadev"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK: %[[ALLOC_TMP:.*]] = fir.allocmem !fir.array<10xi32> {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %[[ALLOC_TMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
-! CHECK: cuf.data_transfer %[[ADEV_DECL]]#1 to %[[TMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
-! CHECL: hlfir.assign 
+! CHECK: cuf.data_transfer %[[ADEV_DECL]]#0 to %[[TMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
+! CHECK: hlfir.assign 
+
+subroutine sub20()
+  integer, managed :: a(10)
+  a = a + 2 ! ok. No data transfer. Assignment on the host.
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub20()
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign
+
+subroutine sub21()
+  real, allocatable,device:: a(:,:), b(:,:)
+  real:: s
+  integer:: i,j,N=16
+  allocate(a(N,N),b(N,N))
+  do concurrent(i=1:N, j=1:N) reduce(+:s)
+    b(i,j)=a(i,j)**2
+    s=s+b(i,j)
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub21()
+! CHECK: fir.do_concurrent.loop
+! CHECK-NOT: cuf.data_transfer
+! CHECK: hlfir.assign
+
+
+subroutine sub22()
+  use mod1
+  type(t2) :: a
+  integer :: b(100)
+  allocate(a%x(100))
+
+  b = a%x
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub22()
+! CHECK: cuf.data_transfer
+
+subroutine sub23(n)
+  integer :: n
+  real(8), device :: d(n,n), x(n)
+  x = sum(d,dim=2) ! Was triggering Unsupported CUDA data transfer
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub23

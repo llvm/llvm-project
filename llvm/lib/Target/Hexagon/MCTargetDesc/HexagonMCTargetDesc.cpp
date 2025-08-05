@@ -34,6 +34,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/HexagonAttributes.h"
 #include "llvm/Support/raw_ostream.h"
@@ -97,7 +98,7 @@ cl::opt<bool> MV79("mv79", cl::Hidden, cl::desc("Build for Hexagon V79"),
                    cl::init(false));
 } // namespace
 
-cl::opt<Hexagon::ArchEnum> EnableHVX(
+static cl::opt<Hexagon::ArchEnum> EnableHVX(
     "mhvx", cl::desc("Enable Hexagon Vector eXtensions"),
     cl::values(clEnumValN(Hexagon::ArchEnum::V60, "v60", "Build for HVX v60"),
                clEnumValN(Hexagon::ArchEnum::V62, "v62", "Build for HVX v62"),
@@ -125,7 +126,7 @@ static cl::opt<bool>
 static cl::opt<bool> EnableHexagonCabac
   ("mcabac", cl::desc("tbd"), cl::init(false));
 
-static StringRef DefaultArch = "hexagonv60";
+static constexpr StringRef DefaultArch = "hexagonv68";
 
 static StringRef HexagonGetArchVariant() {
   if (MV5)
@@ -251,8 +252,21 @@ public:
     std::string Buffer;
     {
       raw_string_ostream TempStream(Buffer);
-      InstPrinter.printInst(&Inst, Address, "", STI, TempStream);
+      for (auto &I : HexagonMCInstrInfo::bundleInstructions(Inst)) {
+        InstPrinter.printInst(I.getInst(), Address, "", STI, TempStream);
+        TempStream << "\n";
+      }
     }
+
+    std::string LoopString = "";
+    bool IsLoop0 = HexagonMCInstrInfo::isInnerLoop(Inst);
+    bool IsLoop1 = HexagonMCInstrInfo::isOuterLoop(Inst);
+    if (IsLoop0) {
+      LoopString += (IsLoop1 ? " :endloop01" : " :endloop0");
+    } else if (IsLoop1) {
+      LoopString += " :endloop1";
+    }
+
     StringRef Contents(Buffer);
     auto PacketBundle = Contents.rsplit('\n');
     auto HeadTail = PacketBundle.first.split('\n');
@@ -274,9 +288,9 @@ public:
     }
 
     if (HexagonMCInstrInfo::isMemReorderDisabled(Inst))
-      OS << "\n\t} :mem_noshuf" << PacketBundle.second;
+      OS << "\n\t} :mem_noshuf" << LoopString;
     else
-      OS << "\t}" << PacketBundle.second;
+      OS << "\t}" << LoopString;
   }
 
   void finish() override { finishAttributeSection(); }
@@ -614,7 +628,7 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   }
 
   // Add qfloat subtarget feature by default to v68 and above
-  // unless explicitely disabled
+  // unless explicitly disabled
   if (checkFeature(X, Hexagon::ExtensionHVXV68) &&
       !ArchFS.contains("-hvx-qfloat")) {
     llvm::FeatureBitset Features = X->getFeatureBits();
@@ -644,9 +658,8 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
 void Hexagon_MC::addArchSubtarget(MCSubtargetInfo const *STI, StringRef FS) {
   assert(STI != nullptr);
   if (STI->getCPU().contains("t")) {
-    auto ArchSTI = createHexagonMCSubtargetInfo(
-        STI->getTargetTriple(),
-        STI->getCPU().substr(0, STI->getCPU().size() - 1), FS);
+    auto ArchSTI = createHexagonMCSubtargetInfo(STI->getTargetTriple(),
+                                                STI->getCPU().drop_back(), FS);
     std::lock_guard<std::mutex> Lock(ArchSubtargetMutex);
     ArchSubtarget[std::string(STI->getCPU())] =
         std::unique_ptr<MCSubtargetInfo const>(ArchSTI);
@@ -734,15 +747,50 @@ public:
     Target = Value;
     return true;
   }
+
+  uint32_t getValueFromMask(uint32_t Instruction, uint32_t Mask) const {
+    uint32_t Result = 0;
+    uint32_t Offset = 0;
+    while (Mask) {
+      if (Instruction & (Mask & -Mask))
+        Result |= (1 << Offset);
+      Mask &= (Mask - 1);
+      ++Offset;
+    }
+    return Result;
+  }
+
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const MCSubtargetInfo &STI) const override {
+    // Do a lightweight parsing of PLT entries.
+    std::vector<std::pair<uint64_t, uint64_t>> Result;
+    for (uint64_t Byte = 0x0, End = PltContents.size(); Byte < End; Byte += 4) {
+      // Recognize immext(##gotpltn)
+      uint32_t ImmExt = support::endian::read32le(PltContents.data() + Byte);
+      if ((ImmExt & 0x00004000) != 0x00004000)
+        continue;
+      uint32_t LoadGotPlt =
+          support::endian::read32le(PltContents.data() + Byte + 4);
+      if ((LoadGotPlt & 0x6a49c00c) != 0x6a49c00c)
+        continue;
+      uint32_t Address = (getValueFromMask(ImmExt, 0xfff3fff) << 6) +
+                         getValueFromMask(LoadGotPlt, 0x1f80) + PltSectionVA +
+                         Byte;
+      Result.emplace_back(PltSectionVA + Byte, Address);
+    }
+    return Result;
+  }
 };
-}
+} // namespace
 
 static MCInstrAnalysis *createHexagonMCInstrAnalysis(const MCInstrInfo *Info) {
   return new HexagonMCInstrAnalysis(Info);
 }
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeHexagonTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeHexagonTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfoFn X(getTheHexagonTarget(), createHexagonMCAsmInfo);
 

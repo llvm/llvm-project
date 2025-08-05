@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
+#define CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
 
 include "mlir/IR/OpBase.td"
 
@@ -27,7 +27,20 @@ def CIR_Dialect : Dialect {
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 0;
 
+  // Enable constant materialization for the CIR dialect. This generates a
+  // declaration for the cir::CIRDialect::materializeConstant function. This
+  // hook is necessary for canonicalization to properly handle attributes
+  // returned by fold methods, allowing them to be materialized as constant
+  // operations in the IR.
+  let hasConstantMaterializer = 1;
+
   let extraClassDeclaration = [{
+    static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+    static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
+    static llvm::StringRef getCalleeAttrName() { return "callee"; }
+    static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
+    static llvm::StringRef getSideEffectAttrName() { return "side_effect"; }
+
     void registerAttributes();
     void registerTypes();
 
@@ -43,4 +56,4 @@ def CIR_Dialect : Dialect {
   }];
 }
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_TD

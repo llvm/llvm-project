@@ -34,7 +34,7 @@ class DeclContext;
 // Example 2:
 //   // The fwd decl to Foo is not found in the lookupPtr of the DC of the
 //   // translation unit decl.
-//   // Here we could find the node by doing a traverse throught the list of
+//   // Here we could find the node by doing a traverse through the list of
 //   // the Decls in the DC, but that would not scale.
 //   struct A { struct Foo *p; };
 // This is a severe problem because the importer decides if it has to create a

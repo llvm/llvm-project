@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -75,13 +74,24 @@ void skipComments(Lexer &Lex, Token &Tok) {
       return;
 }
 
-// Returns the offset after header guard directives and any comments
-// before/after header guards (e.g. #ifndef/#define pair, #pragma once). If no
-// header guard is present in the code, this will return the offset after
-// skipping all comments from the start of the code.
-unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
-                                               StringRef Code,
-                                               const IncludeStyle &Style) {
+bool checkAndConsumeModuleDecl(const SourceManager &SM, Lexer &Lex,
+                               Token &Tok) {
+  bool Matched = Tok.is(tok::raw_identifier) &&
+                 Tok.getRawIdentifier() == "module" &&
+                 !Lex.LexFromRawLexer(Tok) && Tok.is(tok::semi) &&
+                 !Lex.LexFromRawLexer(Tok);
+  return Matched;
+}
+
+// Determines the minimum offset into the file where we want to insert header
+// includes. This will be put (when available):
+// - after `#pragma once`
+// - after header guards (`#ifdef` and `#define`)
+// - after opening global module (`module;`)
+// - after any comments at the start of the file or immediately following one of
+//   the above constructs
+unsigned getMinHeaderInsertionOffset(StringRef FileName, StringRef Code,
+                                     const IncludeStyle &Style) {
   // \p Consume returns location after header guard or 0 if no header guard is
   // found.
   auto ConsumeHeaderGuardAndComment =
@@ -96,7 +106,17 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
               return std::max(InitialOffset, Consume(SM, Lex, Tok));
             });
       };
-  return std::max(
+
+  auto ModuleDecl = ConsumeHeaderGuardAndComment(
+      [](const SourceManager &SM, Lexer &Lex, Token Tok) -> unsigned {
+        if (checkAndConsumeModuleDecl(SM, Lex, Tok)) {
+          skipComments(Lex, Tok);
+          return SM.getFileOffset(Tok.getLocation());
+        }
+        return 0;
+      });
+
+  auto HeaderAndPPOffset = std::max(
       // #ifndef/#define
       ConsumeHeaderGuardAndComment(
           [](const SourceManager &SM, Lexer &Lex, Token Tok) -> unsigned {
@@ -116,6 +136,7 @@ unsigned getOffsetAfterHeaderGuardsAndComments(StringRef FileName,
               return SM.getFileOffset(Tok.getLocation());
             return 0;
           }));
+  return std::max(HeaderAndPPOffset, ModuleDecl);
 }
 
 // Check if a sequence of tokens is like
@@ -281,13 +302,11 @@ const llvm::Regex HeaderIncludes::IncludeRegex(IncludeRegexPattern);
 HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
                                const IncludeStyle &Style)
     : FileName(FileName), Code(Code), FirstIncludeOffset(-1),
-      MinInsertOffset(
-          getOffsetAfterHeaderGuardsAndComments(FileName, Code, Style)),
+      MinInsertOffset(getMinHeaderInsertionOffset(FileName, Code, Style)),
       MaxInsertOffset(MinInsertOffset +
                       getMaxHeaderInsertionOffset(
                           FileName, Code.drop_front(MinInsertOffset), Style)),
-      MainIncludeFound(false),
-      Categories(Style, FileName) {
+      MainIncludeFound(false), Categories(Style, FileName) {
   // Add 0 for main header and INT_MAX for headers that are not in any
   // category.
   Priorities = {0, INT_MAX};

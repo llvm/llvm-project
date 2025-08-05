@@ -73,14 +73,15 @@ struct SegmentInfo {
   uint64_t FileSize;          /// Size in file.
   uint64_t Alignment;         /// Alignment of the segment.
   bool IsExecutable;          /// Is the executable bit set on the Segment?
+  bool IsWritable;            /// Is the segment writable.
 
   void print(raw_ostream &OS) const {
     OS << "SegmentInfo { Address: 0x" << Twine::utohexstr(Address)
        << ", Size: 0x" << Twine::utohexstr(Size) << ", FileOffset: 0x"
        << Twine::utohexstr(FileOffset) << ", FileSize: 0x"
        << Twine::utohexstr(FileSize) << ", Alignment: 0x"
-       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : " ")
-       << "}";
+       << Twine::utohexstr(Alignment) << ", " << (IsExecutable ? "x" : "")
+       << (IsWritable ? "w" : "") << " }";
   };
 };
 
@@ -333,8 +334,13 @@ public:
                                   std::optional<StringRef> Source,
                                   unsigned CUID, unsigned DWARFVersion);
 
+  /// Input file segment info
+  ///
   /// [start memory address] -> [segment info] mapping.
   std::map<uint64_t, SegmentInfo> SegmentMapInfo;
+
+  /// Newly created segments.
+  std::vector<SegmentInfo> NewSegments;
 
   /// Symbols that are expected to be undefined in MCContext during emission.
   std::unordered_set<MCSymbol *> UndefinedSymbols;
@@ -536,6 +542,18 @@ public:
   /// Create BOLT-injected function
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
                                                bool IsSimple = true);
+
+  /// Patch the original binary contents at address \p Address with a sequence
+  /// of instructions from the \p Instructions list. The callee is responsible
+  /// for checking that the sequence doesn't cross any function or section
+  /// boundaries.
+  ///
+  /// Optional \p Name can be assigned to the patch. The name will be emitted to
+  /// the symbol table at \p Address.
+  BinaryFunction *
+  createInstructionPatch(uint64_t Address,
+                         const InstructionListType &Instructions,
+                         const Twine &Name = "");
 
   std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
@@ -1284,7 +1302,7 @@ public:
   void foldFunction(BinaryFunction &ChildBF, BinaryFunction &ParentBF);
 
   /// Add a Section relocation at a given \p Address.
-  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
+  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
                      uint64_t Addend = 0, uint64_t Value = 0);
 
   /// Return a relocation registered at a given \p Address, or nullptr if there
@@ -1297,7 +1315,7 @@ public:
   }
 
   /// Register dynamic relocation at \p Address.
-  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t Type,
+  void addDynamicRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t Type,
                             uint64_t Addend, uint64_t Value = 0);
 
   /// Return a dynamic relocation registered at a given \p Address, or nullptr
@@ -1361,6 +1379,12 @@ public:
   computeInstructionSize(const MCInst &Inst,
                          const MCCodeEmitter *Emitter = nullptr) const {
     if (std::optional<uint32_t> Size = MIB->getSize(Inst))
+      return *Size;
+
+    if (MIB->isPseudo(Inst))
+      return 0;
+
+    if (std::optional<uint32_t> Size = MIB->getInstructionSize(Inst))
       return *Size;
 
     if (!Emitter)
@@ -1429,6 +1453,17 @@ public:
                         bool PrintRelocations = false,
                         StringRef Endl = "\n") const;
 
+  /// Print data when embedded in the instruction stream keeping the format
+  /// similar to printInstruction().
+  void printData(raw_ostream &OS, ArrayRef<uint8_t> Data,
+                 uint64_t Offset) const;
+
+  /// Extract data from the binary corresponding to [Address, Address + Size)
+  /// range. Return an empty ArrayRef if the address range does not belong to
+  /// any section in the binary, crosses a section boundary, or falls into a
+  /// virtual section.
+  ArrayRef<uint8_t> extractData(uint64_t Address, uint64_t Size) const;
+
   /// Print a range of instructions.
   template <typename Itr>
   uint64_t
@@ -1470,7 +1505,7 @@ public:
     MCEInstance.LocalCtx.reset(
         new MCContext(*TheTriple, AsmInfo.get(), MRI.get(), STI.get()));
     MCEInstance.LocalMOFI.reset(
-        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx.get(),
+        TheTarget->createMCObjectFileInfo(*MCEInstance.LocalCtx,
                                           /*PIC=*/!HasFixedLoadAddress));
     MCEInstance.LocalCtx->setObjectFileInfo(MCEInstance.LocalMOFI.get());
     MCEInstance.MCE.reset(

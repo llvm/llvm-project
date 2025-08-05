@@ -871,10 +871,11 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   for (const auto *Relocate : SI.GCRelocates) {
     Value *Derived = Relocate->getDerivedPtr();
     SDValue SD = getValue(Derived);
-    if (!LowerAsVReg.count(SD))
+    auto It = LowerAsVReg.find(SD);
+    if (It == LowerAsVReg.end())
       continue;
 
-    SDValue Relocated = SDValue(StatepointMCNode, LowerAsVReg[SD]);
+    SDValue Relocated = SDValue(StatepointMCNode, It->second);
 
     // Handle local relocate. Note that different relocates might
     // map to the same SDValue.
@@ -888,7 +889,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     }
 
     // Handle multiple gc.relocates of the same input efficiently.
-    if (VirtRegs.count(SD))
+    auto [VRegIt, Inserted] = VirtRegs.try_emplace(SD);
+    if (!Inserted)
       continue;
 
     auto *RetTy = Relocate->getType();
@@ -899,7 +901,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     RFV.getCopyToRegs(Relocated, DAG, getCurSDLoc(), Chain, nullptr);
     PendingExports.push_back(Chain);
 
-    VirtRegs[SD] = Reg;
+    VRegIt->second = Reg;
   }
 
   // Record for later use how each relocation was lowered.  This is needed to
@@ -914,13 +916,16 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     bool IsLocal = (Relocate->getParent() == StatepointInstr->getParent());
 
     RecordType Record;
-    if (IsLocal && LowerAsVReg.count(SDV)) {
-      // Result is already stored in StatepointLowering
-      Record.type = RecordType::SDValueNode;
-    } else if (LowerAsVReg.count(SDV)) {
-      Record.type = RecordType::VReg;
-      assert(VirtRegs.count(SDV));
-      Record.payload.Reg = VirtRegs[SDV];
+    if (LowerAsVReg.count(SDV)) {
+      if (IsLocal) {
+        // Result is already stored in StatepointLowering
+        Record.type = RecordType::SDValueNode;
+      } else {
+        Record.type = RecordType::VReg;
+        auto It = VirtRegs.find(SDV);
+        assert(It != VirtRegs.end());
+        Record.payload.Reg = It->second;
+      }
     } else if (Loc.getNode()) {
       Record.type = RecordType::Spill;
       Record.payload.FI = cast<FrameIndexSDNode>(Loc)->getIndex();

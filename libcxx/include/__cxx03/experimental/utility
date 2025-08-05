@@ -12,22 +12,16 @@
 
 /*
     experimental/utility synopsis
-
 // C++1y
-
 #include <__cxx03/utility>
-
 namespace std {
 namespace experimental {
 inline namespace fundamentals_v1 {
-
   3.1.2, erased-type placeholder
   struct erased_type { };
-
 } // namespace fundamentals_v1
 } // namespace experimental
 } // namespace std
-
  */
 
 #include <__cxx03/experimental/__config>

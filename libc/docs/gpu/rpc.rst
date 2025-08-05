@@ -20,8 +20,8 @@ operating system while executing on a GPU.
 We implemented remote procedure calls using unified virtual memory to create a
 shared communicate channel between the two processes. This memory is often
 pinned memory that can be accessed asynchronously and atomically by multiple
-processes simultaneously. This supports means that we can simply provide mutual
-exclusion on a shared better to swap work back and forth between the host system
+processes simultaneously. This support means that we can simply provide mutual
+exclusion on a shared buffer to swap work back and forth between the host system
 and the GPU. We can then use this to create a simple client-server protocol
 using this shared memory.
 
@@ -39,7 +39,7 @@ In order to make this transmission channel thread-safe, we abstract ownership of
 the given mailbox pair and buffer around a port, effectively acting as a lock
 and an index into the allocated buffer slice. The server and device have
 independent locks around the given port. In this scheme, the buffer can be used
-to communicate intent and data generically with the server. We them simply
+to communicate intent and data generically with the server. We then simply
 provide multiple copies of this protocol and expose them as multiple ports.
 
 If this were simply a standard CPU system, this would be sufficient. However,
@@ -184,6 +184,7 @@ but the following example shows how it can be used by a standard user.
 
   #include <shared/rpc.h>
   #include <shared/rpc_opcodes.h>
+  #include <shared/rpc_server.h>
 
   [[noreturn]] void handle_error(cudaError_t err) {
     fprintf(stderr, "CUDA error: %s\n", cudaGetErrorString(err));
@@ -230,30 +231,35 @@ but the following example shows how it can be used by a standard user.
     // Requires non-blocking CUDA kernels but avoids a separate thread.
     do {
       auto port = server.try_open(warp_size, /*index=*/0);
-      // From libllvmlibc_rpc_server.a in the installation.
-      if (port)
-        handle_libc_opcodes(*port, warp_size);
+      if (!port)
+        continue;
+
+      // Only available in-tree from the 'libc' sources.
+      handle_libc_opcodes(*port, warp_size);
+      port->close();
     } while (cudaStreamQuery(stream) == cudaErrorNotReady);
   }
 
 The above code must be compiled in CUDA's relocatable device code mode and with
 the advanced offloading driver to link in the library. Currently this can be
 done with the following invocation. Using LTO avoids the overhead normally
-associated with relocatable device code linking. The C library for GPUs is
-linked in by forwarding the static library to the device-side link job.
+associated with relocatable device code linking. The C library for GPU's
+handling is included through the ``shared/`` directory. This is not currently
+installed as it does not use a stable interface.
+
 
 .. code-block:: sh
 
   $> clang++ -x cuda rpc.cpp --offload-arch=native -fgpu-rdc -lcudart \
-       -I<install-path>include -L<install-path>/lib -lllvmlibc_rpc_server \
-       -Xoffload-linker -lc -O3 -foffload-lto -o hello
+       -I<install-path>include -L<install-path>/lib -Xoffload-linker -lc \
+       -O3 -foffload-lto -o hello
   $> ./hello
   Hello world!
 
 Extensions
 ----------
 
-The opcode is a 32-bit integer that must be unique to the requested operation. 
-All opcodes used by ``libc`` internally have the character ``c`` in the most 
+The opcode is a 32-bit integer that must be unique to the requested operation.
+All opcodes used by ``libc`` internally have the character ``c`` in the most
 significant byte. Any other opcode is available for use outside of the ``libc``
 implementation.

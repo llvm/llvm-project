@@ -101,7 +101,10 @@ Type getType(OpFoldResult ofr);
 /// Helper struct to build simple arithmetic quantities with minimal type
 /// inference support.
 struct ArithBuilder {
-  ArithBuilder(OpBuilder &b, Location loc) : b(b), loc(loc) {}
+  ArithBuilder(
+      OpBuilder &b, Location loc,
+      arith::IntegerOverflowFlags ovf = arith::IntegerOverflowFlags::none)
+      : b(b), loc(loc), ovf(ovf) {}
 
   Value _and(Value lhs, Value rhs);
   Value add(Value lhs, Value rhs);
@@ -114,6 +117,15 @@ struct ArithBuilder {
 private:
   OpBuilder &b;
   Location loc;
+  arith::IntegerOverflowFlags ovf;
+};
+
+/// ArithBuilder specialized specifically for tensor/memref indexing
+/// calculations. Those calculations generally should never signed overflow and
+/// always use signed integers, so we can set oveflow flags accordingly.
+struct ArithIndexingBuilder : public ArithBuilder {
+  ArithIndexingBuilder(OpBuilder &b, Location loc)
+      : ArithBuilder(b, loc, arith::IntegerOverflowFlags::nsw) {}
 };
 
 namespace arith {

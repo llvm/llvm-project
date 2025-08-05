@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_AFFINE_PASSES_H
 #define MLIR_DIALECT_AFFINE_PASSES_H
 
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include <limits>
 
@@ -22,6 +23,9 @@ namespace mlir {
 namespace func {
 class FuncOp;
 } // namespace func
+namespace memref {
+class MemRefDialect;
+} // namespace memref
 
 namespace affine {
 class AffineForOp;
@@ -47,6 +51,9 @@ createAffineLoopInvariantCodeMotionPass();
 /// Creates a pass to convert all parallel affine.for's into 1-d affine.parallel
 /// ops.
 std::unique_ptr<OperationPass<func::FuncOp>> createAffineParallelizePass();
+
+/// Creates a pass that converts some memref operators to affine operators.
+std::unique_ptr<OperationPass<func::FuncOp>> createRaiseMemrefToAffine();
 
 /// Apply normalization transformations to affine loop-like ops. If
 /// `promoteSingleIter` is true, single iteration loops are promoted (i.e., the
@@ -97,7 +104,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLoopTilingPass();
 /// factors supplied through other means. If -1 is passed as the unrollFactor
 /// and no callback is provided, anything passed from the command-line (if at
 /// all) or the default unroll factor is used (LoopUnroll:kDefaultUnrollFactor).
-std::unique_ptr<OperationPass<func::FuncOp>> createLoopUnrollPass(
+std::unique_ptr<InterfacePass<FunctionOpInterface>> createLoopUnrollPass(
     int unrollFactor = -1, bool unrollUpToFactor = false,
     bool unrollFull = false,
     const std::function<unsigned(AffineForOp)> &getUnrollFactor = nullptr);
@@ -105,7 +112,7 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLoopUnrollPass(
 /// Creates a loop unroll jam pass to unroll jam by the specified factor. A
 /// factor of -1 lets the pass use the default factor or the one on the command
 /// line if provided.
-std::unique_ptr<OperationPass<func::FuncOp>>
+std::unique_ptr<InterfacePass<FunctionOpInterface>>
 createLoopUnrollAndJamPass(int unrollJamFactor = -1);
 
 /// Creates a pass to pipeline explicit movement of data across levels of the

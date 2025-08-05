@@ -567,7 +567,6 @@ void CombineRuleOperandTypeChecker::getInstEqClasses(
 
 CombineRuleOperandTypeChecker::TypeEquivalenceClasses
 CombineRuleOperandTypeChecker::getRuleEqClasses() const {
-  StringMap<unsigned> OpNameToEqClassIdx;
   TypeEquivalenceClasses TECs;
 
   if (DebugTypeInfer)
@@ -581,9 +580,9 @@ CombineRuleOperandTypeChecker::getRuleEqClasses() const {
 
   if (DebugTypeInfer) {
     errs() << "Final Type Equivalence Classes: ";
-    for (auto ClassIt = TECs.begin(); ClassIt != TECs.end(); ++ClassIt) {
+    for (const auto &Class : TECs) {
       // only print non-empty classes.
-      if (auto MembIt = TECs.member_begin(ClassIt);
+      if (auto MembIt = TECs.member_begin(*Class);
           MembIt != TECs.member_end()) {
         errs() << '[';
         StringRef Sep = "";
@@ -798,17 +797,45 @@ bool CombineRuleBuilder::parseAll() {
   if (!parseDefs(*RuleDef.getValueAsDag("Defs")))
     return false;
 
-  if (!Parser.parsePatternList(
-          *RuleDef.getValueAsDag("Match"),
-          [this](auto Pat) { return addMatchPattern(std::move(Pat)); }, "match",
-          (RuleDef.getName() + "_match").str()))
-    return false;
+  const DagInit &Act0 = *RuleDef.getValueAsDag("Action0");
+  const DagInit &Act1 = *RuleDef.getValueAsDag("Action1");
 
-  if (!Parser.parsePatternList(
-          *RuleDef.getValueAsDag("Apply"),
-          [this](auto Pat) { return addApplyPattern(std::move(Pat)); }, "apply",
-          (RuleDef.getName() + "_apply").str()))
+  StringRef Act0Op = Act0.getOperatorAsDef(RuleDef.getLoc())->getName();
+  StringRef Act1Op = Act1.getOperatorAsDef(RuleDef.getLoc())->getName();
+
+  if (Act0Op == "match" && Act1Op == "apply") {
+    if (!Parser.parsePatternList(
+            Act0, [this](auto Pat) { return addMatchPattern(std::move(Pat)); },
+            "match", (RuleDef.getName() + "_match").str()))
+      return false;
+
+    if (!Parser.parsePatternList(
+            Act1, [this](auto Pat) { return addApplyPattern(std::move(Pat)); },
+            "apply", (RuleDef.getName() + "_apply").str()))
+      return false;
+
+  } else if (Act0Op == "combine" && Act1Op == "empty_action") {
+    // combine: everything is a "match" except C++ code which is an apply.
+    const auto AddCombinePat = [this](std::unique_ptr<Pattern> Pat) {
+      if (isa<CXXPattern>(Pat.get()))
+        return addApplyPattern(std::move(Pat));
+      return addMatchPattern(std::move(Pat));
+    };
+
+    if (!Parser.parsePatternList(Act0, AddCombinePat, "combine",
+                                 (RuleDef.getName() + "_combine").str()))
+      return false;
+
+    if (MatchPats.empty() || ApplyPats.empty()) {
+      PrintError("'combine' action needs at least one pattern to match, and "
+                 "C++ code to apply");
+      return false;
+    }
+  } else {
+    PrintError("expected both a 'match' and 'apply' action in combine rule, "
+               "or a single 'combine' action");
     return false;
+  }
 
   if (!buildRuleOperandsTable() || !typecheckPatterns() || !findRoots() ||
       !checkSemantics() || !buildPermutationsToEmit())
@@ -1134,7 +1161,7 @@ bool CombineRuleBuilder::buildPermutationsToEmit() {
     PermutationsToEmit.clear();
 
     for (const auto &Perm : CurPerms) {
-      assert(!Perm.count(Pat.get()) && "Pattern already emitted?");
+      assert(!Perm.contains(Pat.get()) && "Pattern already emitted?");
       for (unsigned K = 0; K < NumAlts; ++K) {
         PatternAlternatives NewPerm = Perm;
         NewPerm[Pat.get()] = K;
@@ -1250,8 +1277,9 @@ bool CombineRuleBuilder::checkSemantics() {
                    "patterns");
         return false;
       }
-    } else
+    } else {
       IsUsingCXXPatterns = isa<CXXPattern>(Pat);
+    }
 
     assert(Pat);
     const auto *IP = dyn_cast<InstructionPattern>(Pat);
@@ -1340,6 +1368,8 @@ bool CombineRuleBuilder::checkSemantics() {
     }
   }
 
+  // TODO: Diagnose uses of MatchDatas if the Rule doesn't have C++ on both the
+  //       match and apply. It's useless in such cases.
   if (!hasOnlyCXXApplyPatterns() && !MatchDatas.empty()) {
     PrintError(MatchDataClassName +
                " can only be used if 'apply' in entirely written in C++");
@@ -1374,7 +1404,7 @@ bool CombineRuleBuilder::addFeaturePredicates(RuleMatcher &M) {
     return true;
 
   const ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
-  for (const Init *PI : Preds->getValues()) {
+  for (const Init *PI : Preds->getElements()) {
     const DefInit *Pred = dyn_cast<DefInit>(PI);
     if (!Pred)
       continue;
@@ -1581,8 +1611,9 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
       return false;
   } else if (isa<BuiltinPattern>(&IP)) {
     llvm_unreachable("No match builtins known!");
-  } else
+  } else {
     llvm_unreachable("Unknown kind of InstructionPattern!");
+  }
 
   // Emit remaining patterns
   const bool IsUsingCustomCXXAction = hasOnlyCXXApplyPatterns();
@@ -2383,6 +2414,7 @@ class GICombinerEmitter final : public GlobalISelMatchTableExecutorEmitter {
   void emitAdditionalImpl(raw_ostream &OS) override;
 
   void emitMIPredicateFns(raw_ostream &OS) override;
+  void emitLeafPredicateFns(raw_ostream &OS) override;
   void emitI64ImmPredicateFns(raw_ostream &OS) override;
   void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
   void emitAPIntImmPredicateFns(raw_ostream &OS) override;
@@ -2550,6 +2582,12 @@ void GICombinerEmitter::emitMIPredicateFns(raw_ostream &OS) {
       [](const CXXPredicateCode *C) -> StringRef { return C->Code; });
 }
 
+void GICombinerEmitter::emitLeafPredicateFns(raw_ostream &OS) {
+  // Unused, but still needs to be called.
+  emitLeafPredicateFnsImpl<unsigned>(
+      OS, "", {}, [](unsigned) { return ""; }, [](unsigned) { return ""; });
+}
+
 void GICombinerEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
   // Unused, but still needs to be called.
   emitImmPredicateFnsImpl<unsigned>(
@@ -2578,10 +2616,10 @@ void GICombinerEmitter::emitTestSimplePredicate(raw_ostream &OS) {
     // To avoid emitting a switch, we expect that all those rules are in order.
     // That way we can just get the RuleID from the enum by subtracting
     // (GICXXPred_Invalid + 1).
-    unsigned ExpectedID = 0;
-    (void)ExpectedID;
+    [[maybe_unused]] unsigned ExpectedID = 0;
     for (const auto &ID : keys(AllCombineRules)) {
-      assert(ExpectedID++ == ID && "combine rules are not ordered!");
+      assert(ExpectedID == ID && "combine rules are not ordered!");
+      ++ExpectedID;
       OS << "  " << getIsEnabledPredicateEnumName(ID) << EnumeratorSeparator;
       EnumeratorSeparator = ",\n";
     }
@@ -2645,18 +2683,18 @@ GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
   for (RuleMatcher &Rule : Rules) {
     const StringRef Opcode = Rule.getOpcode();
     assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.count(Opcode) == 0)
-      OpcodeOrder[Opcode] = CurrentOrdering++;
+    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
+      ++CurrentOrdering;
   }
 
   llvm::stable_sort(InputRules, [&OpcodeOrder](const Matcher *A,
                                                const Matcher *B) {
     auto *L = static_cast<const RuleMatcher *>(A);
     auto *R = static_cast<const RuleMatcher *>(B);
-    return std::make_tuple(OpcodeOrder[L->getOpcode()],
-                           L->insnmatchers_front().getNumOperandMatchers()) <
-           std::make_tuple(OpcodeOrder[R->getOpcode()],
-                           R->insnmatchers_front().getNumOperandMatchers());
+    return std::tuple(OpcodeOrder[L->getOpcode()],
+                      L->insnmatchers_front().getNumOperandMatchers()) <
+           std::tuple(OpcodeOrder[R->getOpcode()],
+                      R->insnmatchers_front().getNumOperandMatchers());
   });
 
   for (Matcher *Rule : InputRules)

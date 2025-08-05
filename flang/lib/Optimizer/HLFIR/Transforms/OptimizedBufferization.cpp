@@ -21,6 +21,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Dominance.h"
@@ -86,6 +87,13 @@ private:
   };
   /// determines if the transformation can be applied to this elemental
   static std::optional<MatchInfo> findMatch(hlfir::ElementalOp elemental);
+
+  /// Returns the array indices for the given hlfir.designate.
+  /// It recognizes the computations used to transform the one-based indices
+  /// into the array's lb-based indices, and returns the one-based indices
+  /// in these cases.
+  static llvm::SmallVector<mlir::Value>
+  getDesignatorIndices(hlfir::DesignateOp designate);
 
 public:
   using mlir::OpRewritePattern<hlfir::ElementalOp>::OpRewritePattern;
@@ -430,6 +438,73 @@ bool ArraySectionAnalyzer::isLess(mlir::Value v1, mlir::Value v2) {
   return false;
 }
 
+llvm::SmallVector<mlir::Value>
+ElementalAssignBufferization::getDesignatorIndices(
+    hlfir::DesignateOp designate) {
+  mlir::Value memref = designate.getMemref();
+
+  // If the object is a box, then the indices may be adjusted
+  // according to the box's lower bound(s). Scan through
+  // the computations to try to find the one-based indices.
+  if (mlir::isa<fir::BaseBoxType>(memref.getType())) {
+    // Look for the following pattern:
+    //   %13 = fir.load %12 : !fir.ref<!fir.box<...>
+    //   %14:3 = fir.box_dims %13, %c0 : (!fir.box<...>, index) -> ...
+    //   %17 = arith.subi %14#0, %c1 : index
+    //   %18 = arith.addi %arg2, %17 : index
+    //   %19 = hlfir.designate %13 (%18)  : (!fir.box<...>, index) -> ...
+    //
+    // %arg2 is a one-based index.
+
+    auto isNormalizedLb = [memref](mlir::Value v, unsigned dim) {
+      // Return true, if v and dim are such that:
+      //   %14:3 = fir.box_dims %13, %dim : (!fir.box<...>, index) -> ...
+      //   %17 = arith.subi %14#0, %c1 : index
+      //   %19 = hlfir.designate %13 (...)  : (!fir.box<...>, index) -> ...
+      if (auto subOp =
+              mlir::dyn_cast_or_null<mlir::arith::SubIOp>(v.getDefiningOp())) {
+        auto cst = fir::getIntIfConstant(subOp.getRhs());
+        if (!cst || *cst != 1)
+          return false;
+        if (auto dimsOp = mlir::dyn_cast_or_null<fir::BoxDimsOp>(
+                subOp.getLhs().getDefiningOp())) {
+          if (memref != dimsOp.getVal() ||
+              dimsOp.getResult(0) != subOp.getLhs())
+            return false;
+          auto dimsOpDim = fir::getIntIfConstant(dimsOp.getDim());
+          return dimsOpDim && dimsOpDim == dim;
+        }
+      }
+      return false;
+    };
+
+    llvm::SmallVector<mlir::Value> newIndices;
+    for (auto index : llvm::enumerate(designate.getIndices())) {
+      if (auto addOp = mlir::dyn_cast_or_null<mlir::arith::AddIOp>(
+              index.value().getDefiningOp())) {
+        for (unsigned opNum = 0; opNum < 2; ++opNum)
+          if (isNormalizedLb(addOp->getOperand(opNum), index.index())) {
+            newIndices.push_back(addOp->getOperand((opNum + 1) % 2));
+            break;
+          }
+
+        // If new one-based index was not added, exit early.
+        if (newIndices.size() <= index.index())
+          break;
+      }
+    }
+
+    // If any of the indices is not adjusted to the array's lb,
+    // then return the original designator indices.
+    if (newIndices.size() != designate.getIndices().size())
+      return designate.getIndices();
+
+    return newIndices;
+  }
+
+  return designate.getIndices();
+}
+
 std::optional<ElementalAssignBufferization::MatchInfo>
 ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   mlir::Operation::user_range users = elemental->getUsers();
@@ -498,13 +573,11 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   // hlfir.assign, check there are no effects which make this unsafe
 
   // keep track of any values written to in the elemental, as these can't be
-  // read from between the elemental and the assignment
+  // read from or written to between the elemental and the assignment
+  mlir::SmallVector<mlir::Value, 1> notToBeAccessedBeforeAssign;
   // likewise, values read in the elemental cannot be written to between the
   // elemental and the assign
-  mlir::SmallVector<mlir::Value, 1> notToBeAccessedBeforeAssign;
-  // any accesses to the array between the array and the assignment means it
-  // would be unsafe to move the elemental to the assignment
-  notToBeAccessedBeforeAssign.push_back(match.array);
+  mlir::SmallVector<mlir::Value, 1> notToBeWrittenBeforeAssign;
 
   // 1) side effects in the elemental body - it isn't sufficient to just look
   // for ordered elementals because we also cannot support out of order reads
@@ -519,10 +592,12 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
   for (const mlir::MemoryEffects::EffectInstance &effect : *effects) {
     mlir::AliasResult res = containsReadOrWriteEffectOn(effect, match.array);
     if (res.isNo()) {
-      if (mlir::isa<mlir::MemoryEffects::Write, mlir::MemoryEffects::Read>(
-              effect.getEffect()))
-        if (effect.getValue())
+      if (effect.getValue()) {
+        if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect()))
           notToBeAccessedBeforeAssign.push_back(effect.getValue());
+        else if (mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect()))
+          notToBeWrittenBeforeAssign.push_back(effect.getValue());
+      }
 
       // this is safe in the elemental
       continue;
@@ -531,6 +606,12 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
     // don't allow any aliasing writes in the elemental
     if (mlir::isa<mlir::MemoryEffects::Write>(effect.getEffect())) {
       LLVM_DEBUG(llvm::dbgs() << "write inside the elemental body\n");
+      return std::nullopt;
+    }
+
+    if (effect.getValue() == nullptr) {
+      LLVM_DEBUG(llvm::dbgs()
+                 << "side-effect with no value, cannot analyze further\n");
       return std::nullopt;
     }
 
@@ -557,7 +638,7 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
                                   << " at " << elemental.getLoc() << "\n");
           return std::nullopt;
         }
-        auto indices = designate.getIndices();
+        auto indices = getDesignatorIndices(designate);
         auto elementalIndices = elemental.getIndices();
         if (indices.size() == elementalIndices.size() &&
             std::equal(indices.begin(), indices.end(), elementalIndices.begin(),
@@ -589,8 +670,20 @@ ElementalAssignBufferization::findMatch(hlfir::ElementalOp elemental) {
       mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
       if (!res.isNo()) {
         LLVM_DEBUG(llvm::dbgs()
-                   << "diasllowed side-effect: " << effect.getValue() << " for "
+                   << "disallowed side-effect: " << effect.getValue() << " for "
                    << elemental.getLoc() << "\n");
+        return std::nullopt;
+      }
+    }
+    // Anything that is read inside the elemental can only be safely read
+    // between the elemental and the assignment.
+    for (mlir::Value val : notToBeWrittenBeforeAssign) {
+      mlir::AliasResult res = containsReadOrWriteEffectOn(effect, val);
+      if (!res.isNo() &&
+          !mlir::isa<mlir::MemoryEffects::Read>(effect.getEffect())) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "disallowed non-read side-effect: " << effect.getValue()
+                   << " for " << elemental.getLoc() << "\n");
         return std::nullopt;
       }
     }
@@ -608,10 +701,17 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
 
   mlir::Location loc = elemental->getLoc();
   fir::FirOpBuilder builder(rewriter, elemental.getOperation());
-  auto extents = hlfir::getIndexExtents(loc, builder, elemental.getShape());
+  auto rhsExtents = hlfir::getIndexExtents(loc, builder, elemental.getShape());
 
   // create the loop at the assignment
   builder.setInsertionPoint(match->assign);
+  hlfir::Entity lhs{match->array};
+  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
+  mlir::Value lhsShape = hlfir::genShape(loc, builder, lhs);
+  llvm::SmallVector<mlir::Value> lhsExtents =
+      hlfir::getIndexExtents(loc, builder, lhsShape);
+  llvm::SmallVector<mlir::Value> extents =
+      fir::factory::deduceOptimalExtents(rhsExtents, lhsExtents);
 
   // Generate a loop nest looping around the hlfir.elemental shape and clone
   // hlfir.elemental region inside the inner loop
@@ -625,10 +725,10 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   rewriter.eraseOp(yield);
 
   // Assign the element value to the array element for this iteration.
-  auto arrayElement = hlfir::getElementAt(
-      loc, builder, hlfir::Entity{match->array}, loopNest.oneBasedIndices);
-  builder.create<hlfir::AssignOp>(
-      loc, elementValue, arrayElement, /*realloc=*/false,
+  auto arrayElement =
+      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
+  hlfir::AssignOp::create(
+      builder, loc, elementValue, arrayElement, /*realloc=*/false,
       /*keep_lhs_length_if_realloc=*/false, match->assign.getTemporaryLhs());
 
   rewriter.eraseOp(match->assign);
@@ -687,559 +787,57 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   mlir::Value shape = hlfir::genShape(loc, builder, lhs);
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
-  hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
-                         flangomp::shouldUseWorkshareLowering(assign));
-  builder.setInsertionPointToStart(loopNest.body);
-  auto arrayElement =
-      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-  builder.create<hlfir::AssignOp>(loc, rhs, arrayElement);
+
+  if (lhs.isSimplyContiguous() && extents.size() > 1) {
+    // Flatten the array to use a single assign loop, that can be better
+    // optimized.
+    mlir::Value n = extents[0];
+    for (size_t i = 1; i < extents.size(); ++i)
+      n = mlir::arith::MulIOp::create(builder, loc, n, extents[i]);
+    llvm::SmallVector<mlir::Value> flatExtents = {n};
+
+    mlir::Type flatArrayType;
+    mlir::Value flatArray = lhs.getBase();
+    if (mlir::isa<fir::BoxType>(lhs.getType())) {
+      shape = builder.genShape(loc, flatExtents);
+      flatArrayType = fir::BoxType::get(fir::SequenceType::get(eleTy, 1));
+      flatArray = fir::ReboxOp::create(builder, loc, flatArrayType, flatArray,
+                                       shape, /*slice=*/mlir::Value{});
+    } else {
+      // Array references must have fixed shape, when used in assignments.
+      auto seqTy =
+          mlir::cast<fir::SequenceType>(fir::unwrapRefType(lhs.getType()));
+      llvm::ArrayRef<int64_t> fixedShape = seqTy.getShape();
+      int64_t flatExtent = 1;
+      for (int64_t extent : fixedShape)
+        flatExtent *= extent;
+      flatArrayType =
+          fir::ReferenceType::get(fir::SequenceType::get({flatExtent}, eleTy));
+      flatArray = builder.createConvert(loc, flatArrayType, flatArray);
+    }
+
+    hlfir::LoopNest loopNest =
+        hlfir::genLoopNest(loc, builder, flatExtents, /*isUnordered=*/true,
+                           flangomp::shouldUseWorkshareLowering(assign));
+    builder.setInsertionPointToStart(loopNest.body);
+
+    mlir::Value arrayElement =
+        hlfir::DesignateOp::create(builder, loc, fir::ReferenceType::get(eleTy),
+                                   flatArray, loopNest.oneBasedIndices);
+    hlfir::AssignOp::create(builder, loc, rhs, arrayElement);
+  } else {
+    hlfir::LoopNest loopNest =
+        hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                           flangomp::shouldUseWorkshareLowering(assign));
+    builder.setInsertionPointToStart(loopNest.body);
+    auto arrayElement =
+        hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
+    hlfir::AssignOp::create(builder, loc, rhs, arrayElement);
+  }
+
   rewriter.eraseOp(assign);
   return mlir::success();
 }
-
-/// Expand hlfir.assign of array RHS to array LHS into a loop nest
-/// of element-by-element assignments:
-///   hlfir.assign %4 to %5 : !fir.ref<!fir.array<3x3xf32>>,
-///                           !fir.ref<!fir.array<3x3xf32>>
-/// into:
-///   fir.do_loop %arg1 = %c1 to %c3 step %c1 unordered {
-///     fir.do_loop %arg2 = %c1 to %c3 step %c1 unordered {
-///       %6 = hlfir.designate %4 (%arg2, %arg1)  :
-///           (!fir.ref<!fir.array<3x3xf32>>, index, index) -> !fir.ref<f32>
-///       %7 = fir.load %6 : !fir.ref<f32>
-///       %8 = hlfir.designate %5 (%arg2, %arg1)  :
-///           (!fir.ref<!fir.array<3x3xf32>>, index, index) -> !fir.ref<f32>
-///       hlfir.assign %7 to %8 : f32, !fir.ref<f32>
-///     }
-///   }
-///
-/// The transformation is correct only when LHS and RHS do not alias.
-/// This transformation does not support runtime checking for
-/// non-conforming LHS/RHS arrays' shapes currently.
-class VariableAssignBufferization
-    : public mlir::OpRewritePattern<hlfir::AssignOp> {
-private:
-public:
-  using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
-
-  llvm::LogicalResult
-  matchAndRewrite(hlfir::AssignOp assign,
-                  mlir::PatternRewriter &rewriter) const override;
-};
-
-llvm::LogicalResult VariableAssignBufferization::matchAndRewrite(
-    hlfir::AssignOp assign, mlir::PatternRewriter &rewriter) const {
-  if (assign.isAllocatableAssignment())
-    return rewriter.notifyMatchFailure(assign, "AssignOp may imply allocation");
-
-  hlfir::Entity rhs{assign.getRhs()};
-
-  // To avoid conflicts with ElementalAssignBufferization pattern, we avoid
-  // matching RHS when it is an `ExprType` defined by an `ElementalOp`; which is
-  // among the main criteria matched by ElementalAssignBufferization.
-  if (mlir::isa<hlfir::ExprType>(rhs.getType()) &&
-      mlir::isa<hlfir::ElementalOp>(rhs.getDefiningOp()))
-    return rewriter.notifyMatchFailure(
-        assign, "RHS is an ExprType defined by ElementalOp");
-
-  if (!rhs.isArray())
-    return rewriter.notifyMatchFailure(assign,
-                                       "AssignOp's RHS is not an array");
-
-  mlir::Type rhsEleTy = rhs.getFortranElementType();
-  if (!fir::isa_trivial(rhsEleTy))
-    return rewriter.notifyMatchFailure(
-        assign, "AssignOp's RHS data type is not trivial");
-
-  hlfir::Entity lhs{assign.getLhs()};
-  if (!lhs.isArray())
-    return rewriter.notifyMatchFailure(assign,
-                                       "AssignOp's LHS is not an array");
-
-  mlir::Type lhsEleTy = lhs.getFortranElementType();
-  if (!fir::isa_trivial(lhsEleTy))
-    return rewriter.notifyMatchFailure(
-        assign, "AssignOp's LHS data type is not trivial");
-
-  if (lhsEleTy != rhsEleTy)
-    return rewriter.notifyMatchFailure(assign,
-                                       "RHS/LHS element types mismatch");
-
-  fir::AliasAnalysis aliasAnalysis;
-  mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
-  // TODO: use areIdenticalOrDisjointSlices() to check if
-  // we can still do the expansion.
-  if (!aliasRes.isNo()) {
-    LLVM_DEBUG(llvm::dbgs() << "VariableAssignBufferization:\n"
-                            << "\tLHS: " << lhs << "\n"
-                            << "\tRHS: " << rhs << "\n"
-                            << "\tALIAS: " << aliasRes << "\n");
-    return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
-  }
-
-  mlir::Location loc = assign->getLoc();
-  fir::FirOpBuilder builder(rewriter, assign.getOperation());
-  builder.setInsertionPoint(assign);
-  rhs = hlfir::derefPointersAndAllocatables(loc, builder, rhs);
-  lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
-  mlir::Value shape = hlfir::genShape(loc, builder, lhs);
-  llvm::SmallVector<mlir::Value> extents =
-      hlfir::getIndexExtents(loc, builder, shape);
-  hlfir::LoopNest loopNest =
-      hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
-                         flangomp::shouldUseWorkshareLowering(assign));
-  builder.setInsertionPointToStart(loopNest.body);
-  auto rhsArrayElement =
-      hlfir::getElementAt(loc, builder, rhs, loopNest.oneBasedIndices);
-  rhsArrayElement = hlfir::loadTrivialScalar(loc, builder, rhsArrayElement);
-  auto lhsArrayElement =
-      hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-  builder.create<hlfir::AssignOp>(loc, rhsArrayElement, lhsArrayElement);
-  rewriter.eraseOp(assign);
-  return mlir::success();
-}
-
-using GenBodyFn =
-    std::function<mlir::Value(fir::FirOpBuilder &, mlir::Location, mlir::Value,
-                              const llvm::SmallVectorImpl<mlir::Value> &)>;
-static mlir::Value generateReductionLoop(fir::FirOpBuilder &builder,
-                                         mlir::Location loc, mlir::Value init,
-                                         mlir::Value shape, GenBodyFn genBody) {
-  auto extents = hlfir::getIndexExtents(loc, builder, shape);
-  mlir::Value reduction = init;
-  mlir::IndexType idxTy = builder.getIndexType();
-  mlir::Value oneIdx = builder.createIntegerConstant(loc, idxTy, 1);
-
-  // Create a reduction loop nest. We use one-based indices so that they can be
-  // passed to the elemental, and reverse the order so that they can be
-  // generated in column-major order for better performance.
-  llvm::SmallVector<mlir::Value> indices(extents.size(), mlir::Value{});
-  for (unsigned i = 0; i < extents.size(); ++i) {
-    auto loop = builder.create<fir::DoLoopOp>(
-        loc, oneIdx, extents[extents.size() - i - 1], oneIdx, false,
-        /*finalCountValue=*/false, reduction);
-    reduction = loop.getRegionIterArgs()[0];
-    indices[extents.size() - i - 1] = loop.getInductionVar();
-    // Set insertion point to the loop body so that the next loop
-    // is inserted inside the current one.
-    builder.setInsertionPointToStart(loop.getBody());
-  }
-
-  // Generate the body
-  reduction = genBody(builder, loc, reduction, indices);
-
-  // Unwind the loop nest.
-  for (unsigned i = 0; i < extents.size(); ++i) {
-    auto result = builder.create<fir::ResultOp>(loc, reduction);
-    auto loop = mlir::cast<fir::DoLoopOp>(result->getParentOp());
-    reduction = loop.getResult(0);
-    // Set insertion point after the loop operation that we have
-    // just processed.
-    builder.setInsertionPointAfter(loop.getOperation());
-  }
-
-  return reduction;
-}
-
-auto makeMinMaxInitValGenerator(bool isMax) {
-  return [isMax](fir::FirOpBuilder builder, mlir::Location loc,
-                 mlir::Type elementType) -> mlir::Value {
-    if (auto ty = mlir::dyn_cast<mlir::FloatType>(elementType)) {
-      const llvm::fltSemantics &sem = ty.getFloatSemantics();
-      llvm::APFloat limit = llvm::APFloat::getInf(sem, /*Negative=*/isMax);
-      return builder.createRealConstant(loc, elementType, limit);
-    }
-    unsigned bits = elementType.getIntOrFloatBitWidth();
-    int64_t limitInt =
-        isMax ? llvm::APInt::getSignedMinValue(bits).getSExtValue()
-              : llvm::APInt::getSignedMaxValue(bits).getSExtValue();
-    return builder.createIntegerConstant(loc, elementType, limitInt);
-  };
-}
-
-mlir::Value generateMinMaxComparison(fir::FirOpBuilder builder,
-                                     mlir::Location loc, mlir::Value elem,
-                                     mlir::Value reduction, bool isMax) {
-  if (mlir::isa<mlir::FloatType>(reduction.getType())) {
-    // For FP reductions we want the first smallest value to be used, that
-    // is not NaN. A OGL/OLT condition will usually work for this unless all
-    // the values are Nan or Inf. This follows the same logic as
-    // NumericCompare for Minloc/Maxlox in extrema.cpp.
-    mlir::Value cmp = builder.create<mlir::arith::CmpFOp>(
-        loc,
-        isMax ? mlir::arith::CmpFPredicate::OGT
-              : mlir::arith::CmpFPredicate::OLT,
-        elem, reduction);
-    mlir::Value cmpNan = builder.create<mlir::arith::CmpFOp>(
-        loc, mlir::arith::CmpFPredicate::UNE, reduction, reduction);
-    mlir::Value cmpNan2 = builder.create<mlir::arith::CmpFOp>(
-        loc, mlir::arith::CmpFPredicate::OEQ, elem, elem);
-    cmpNan = builder.create<mlir::arith::AndIOp>(loc, cmpNan, cmpNan2);
-    return builder.create<mlir::arith::OrIOp>(loc, cmp, cmpNan);
-  } else if (mlir::isa<mlir::IntegerType>(reduction.getType())) {
-    return builder.create<mlir::arith::CmpIOp>(
-        loc,
-        isMax ? mlir::arith::CmpIPredicate::sgt
-              : mlir::arith::CmpIPredicate::slt,
-        elem, reduction);
-  }
-  llvm_unreachable("unsupported type");
-}
-
-/// Given a reduction operation with an elemental/designate source, attempt to
-/// generate a do-loop to perform the operation inline.
-///   %e = hlfir.elemental %shape unordered
-///   %r = hlfir.count %e
-/// =>
-///   %r = for.do_loop %arg = 1 to bound(%shape) step 1 iter_args(%arg2 = init)
-///     %i = <inline elemental>
-///     %c = <reduce count> %i
-///     fir.result %c
-template <typename Op>
-class ReductionConversion : public mlir::OpRewritePattern<Op> {
-public:
-  using mlir::OpRewritePattern<Op>::OpRewritePattern;
-
-  llvm::LogicalResult
-  matchAndRewrite(Op op, mlir::PatternRewriter &rewriter) const override {
-    mlir::Location loc = op.getLoc();
-    // Select source and validate its arguments.
-    mlir::Value source;
-    bool valid = false;
-    if constexpr (std::is_same_v<Op, hlfir::AnyOp> ||
-                  std::is_same_v<Op, hlfir::AllOp> ||
-                  std::is_same_v<Op, hlfir::CountOp>) {
-      source = op.getMask();
-      valid = !op.getDim();
-    } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
-                         std::is_same_v<Op, hlfir::MinvalOp>) {
-      source = op.getArray();
-      valid = !op.getDim() && !op.getMask();
-    } else if constexpr (std::is_same_v<Op, hlfir::MaxlocOp> ||
-                         std::is_same_v<Op, hlfir::MinlocOp>) {
-      source = op.getArray();
-      valid = !op.getDim() && !op.getMask() && !op.getBack();
-    }
-    if (!valid)
-      return rewriter.notifyMatchFailure(
-          op, "Currently does not accept optional arguments");
-
-    hlfir::ElementalOp elemental;
-    hlfir::DesignateOp designate;
-    mlir::Value shape;
-    if ((elemental = source.template getDefiningOp<hlfir::ElementalOp>())) {
-      shape = elemental.getOperand(0);
-    } else if ((designate =
-                    source.template getDefiningOp<hlfir::DesignateOp>())) {
-      shape = designate.getShape();
-    } else {
-      return rewriter.notifyMatchFailure(op, "Did not find valid argument");
-    }
-
-    auto inlineSource =
-        [elemental, &designate](
-            fir::FirOpBuilder builder, mlir::Location loc,
-            const llvm::SmallVectorImpl<mlir::Value> &indices) -> mlir::Value {
-      if (elemental) {
-        // Inline the elemental and get the value from it.
-        auto yield = inlineElementalOp(loc, builder, elemental, indices);
-        auto tmp = yield.getElementValue();
-        yield->erase();
-        return tmp;
-      }
-      if (designate) {
-        // Create a designator over designator, then load the reference.
-        auto resEntity = hlfir::Entity{designate.getResult()};
-        auto tmp = builder.create<hlfir::DesignateOp>(
-            loc, getVariableElementType(resEntity), designate, indices);
-        return builder.create<fir::LoadOp>(loc, tmp);
-      }
-      llvm_unreachable("unsupported type");
-    };
-
-    fir::KindMapping kindMap =
-        fir::getKindMapping(op->template getParentOfType<mlir::ModuleOp>());
-    fir::FirOpBuilder builder{op, kindMap};
-
-    mlir::Value init;
-    GenBodyFn genBodyFn;
-    if constexpr (std::is_same_v<Op, hlfir::AnyOp>) {
-      init = builder.createIntegerConstant(loc, builder.getI1Type(), 0);
-      genBodyFn =
-          [inlineSource](fir::FirOpBuilder builder, mlir::Location loc,
-                         mlir::Value reduction,
-                         const llvm::SmallVectorImpl<mlir::Value> &indices)
-          -> mlir::Value {
-        // Conditionally set the reduction variable.
-        mlir::Value cond = builder.create<fir::ConvertOp>(
-            loc, builder.getI1Type(), inlineSource(builder, loc, indices));
-        return builder.create<mlir::arith::OrIOp>(loc, reduction, cond);
-      };
-    } else if constexpr (std::is_same_v<Op, hlfir::AllOp>) {
-      init = builder.createIntegerConstant(loc, builder.getI1Type(), 1);
-      genBodyFn =
-          [inlineSource](fir::FirOpBuilder builder, mlir::Location loc,
-                         mlir::Value reduction,
-                         const llvm::SmallVectorImpl<mlir::Value> &indices)
-          -> mlir::Value {
-        // Conditionally set the reduction variable.
-        mlir::Value cond = builder.create<fir::ConvertOp>(
-            loc, builder.getI1Type(), inlineSource(builder, loc, indices));
-        return builder.create<mlir::arith::AndIOp>(loc, reduction, cond);
-      };
-    } else if constexpr (std::is_same_v<Op, hlfir::CountOp>) {
-      init = builder.createIntegerConstant(loc, op.getType(), 0);
-      genBodyFn =
-          [inlineSource](fir::FirOpBuilder builder, mlir::Location loc,
-                         mlir::Value reduction,
-                         const llvm::SmallVectorImpl<mlir::Value> &indices)
-          -> mlir::Value {
-        // Conditionally add one to the current value
-        mlir::Value cond = builder.create<fir::ConvertOp>(
-            loc, builder.getI1Type(), inlineSource(builder, loc, indices));
-        mlir::Value one =
-            builder.createIntegerConstant(loc, reduction.getType(), 1);
-        mlir::Value add1 =
-            builder.create<mlir::arith::AddIOp>(loc, reduction, one);
-        return builder.create<mlir::arith::SelectOp>(loc, cond, add1,
-                                                     reduction);
-      };
-    } else if constexpr (std::is_same_v<Op, hlfir::MaxlocOp> ||
-                         std::is_same_v<Op, hlfir::MinlocOp>) {
-      // TODO: implement minloc/maxloc conversion.
-      return rewriter.notifyMatchFailure(
-          op, "Currently minloc/maxloc is not handled");
-    } else if constexpr (std::is_same_v<Op, hlfir::MaxvalOp> ||
-                         std::is_same_v<Op, hlfir::MinvalOp>) {
-      bool isMax = std::is_same_v<Op, hlfir::MaxvalOp>;
-      init = makeMinMaxInitValGenerator(isMax)(builder, loc, op.getType());
-      genBodyFn = [inlineSource,
-                   isMax](fir::FirOpBuilder builder, mlir::Location loc,
-                          mlir::Value reduction,
-                          const llvm::SmallVectorImpl<mlir::Value> &indices)
-          -> mlir::Value {
-        mlir::Value val = inlineSource(builder, loc, indices);
-        mlir::Value cmp =
-            generateMinMaxComparison(builder, loc, val, reduction, isMax);
-        return builder.create<mlir::arith::SelectOp>(loc, cmp, val, reduction);
-      };
-    } else {
-      llvm_unreachable("unsupported type");
-    }
-
-    mlir::Value res =
-        generateReductionLoop(builder, loc, init, shape, genBodyFn);
-    if (res.getType() != op.getType())
-      res = builder.create<fir::ConvertOp>(loc, op.getType(), res);
-
-    // Check if the op was the only user of the source (apart from a destroy),
-    // and remove it if so.
-    mlir::Operation *sourceOp = source.getDefiningOp();
-    mlir::Operation::user_range srcUsers = sourceOp->getUsers();
-    hlfir::DestroyOp srcDestroy;
-    if (std::distance(srcUsers.begin(), srcUsers.end()) == 2) {
-      srcDestroy = mlir::dyn_cast<hlfir::DestroyOp>(*srcUsers.begin());
-      if (!srcDestroy)
-        srcDestroy = mlir::dyn_cast<hlfir::DestroyOp>(*++srcUsers.begin());
-    }
-
-    rewriter.replaceOp(op, res);
-    if (srcDestroy) {
-      rewriter.eraseOp(srcDestroy);
-      rewriter.eraseOp(sourceOp);
-    }
-    return mlir::success();
-  }
-};
-
-// Look for minloc(mask=elemental) and generate the minloc loop with
-// inlined elemental.
-//  %e = hlfir.elemental %shape ({ ... })
-//  %m = hlfir.minloc %array mask %e
-template <typename Op>
-class ReductionMaskConversion : public mlir::OpRewritePattern<Op> {
-public:
-  using mlir::OpRewritePattern<Op>::OpRewritePattern;
-
-  llvm::LogicalResult
-  matchAndRewrite(Op mloc, mlir::PatternRewriter &rewriter) const override {
-    if (!mloc.getMask() || mloc.getDim() || mloc.getBack())
-      return rewriter.notifyMatchFailure(mloc,
-                                         "Did not find valid minloc/maxloc");
-
-    bool isMax = std::is_same_v<Op, hlfir::MaxlocOp>;
-
-    auto elemental =
-        mloc.getMask().template getDefiningOp<hlfir::ElementalOp>();
-    if (!elemental || hlfir::elementalOpMustProduceTemp(elemental))
-      return rewriter.notifyMatchFailure(mloc, "Did not find elemental");
-
-    mlir::Value array = mloc.getArray();
-
-    unsigned rank = mlir::cast<hlfir::ExprType>(mloc.getType()).getShape()[0];
-    mlir::Type arrayType = array.getType();
-    if (!mlir::isa<fir::BoxType>(arrayType))
-      return rewriter.notifyMatchFailure(
-          mloc, "Currently requires a boxed type input");
-    mlir::Type elementType = hlfir::getFortranElementType(arrayType);
-    if (!fir::isa_trivial(elementType))
-      return rewriter.notifyMatchFailure(
-          mloc, "Character arrays are currently not handled");
-
-    mlir::Location loc = mloc.getLoc();
-    fir::FirOpBuilder builder{rewriter, mloc.getOperation()};
-    mlir::Value resultArr = builder.createTemporary(
-        loc, fir::SequenceType::get(
-                 rank, hlfir::getFortranElementType(mloc.getType())));
-
-    auto init = makeMinMaxInitValGenerator(isMax);
-
-    auto genBodyOp =
-        [&rank, &resultArr, &elemental, isMax](
-            fir::FirOpBuilder builder, mlir::Location loc,
-            mlir::Type elementType, mlir::Value array, mlir::Value flagRef,
-            mlir::Value reduction,
-            const llvm::SmallVectorImpl<mlir::Value> &indices) -> mlir::Value {
-      // We are in the innermost loop: generate the elemental inline
-      mlir::Value oneIdx =
-          builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-      llvm::SmallVector<mlir::Value> oneBasedIndices;
-      llvm::transform(
-          indices, std::back_inserter(oneBasedIndices), [&](mlir::Value V) {
-            return builder.create<mlir::arith::AddIOp>(loc, V, oneIdx);
-          });
-      hlfir::YieldElementOp yield =
-          hlfir::inlineElementalOp(loc, builder, elemental, oneBasedIndices);
-      mlir::Value maskElem = yield.getElementValue();
-      yield->erase();
-
-      mlir::Type ifCompatType = builder.getI1Type();
-      mlir::Value ifCompatElem =
-          builder.create<fir::ConvertOp>(loc, ifCompatType, maskElem);
-
-      llvm::SmallVector<mlir::Type> resultsTy = {elementType, elementType};
-      fir::IfOp maskIfOp =
-          builder.create<fir::IfOp>(loc, elementType, ifCompatElem,
-                                    /*withElseRegion=*/true);
-      builder.setInsertionPointToStart(&maskIfOp.getThenRegion().front());
-
-      // Set flag that mask was true at some point
-      mlir::Value flagSet = builder.createIntegerConstant(
-          loc, mlir::cast<fir::ReferenceType>(flagRef.getType()).getEleTy(), 1);
-      mlir::Value isFirst = builder.create<fir::LoadOp>(loc, flagRef);
-      mlir::Value addr = hlfir::getElementAt(loc, builder, hlfir::Entity{array},
-                                             oneBasedIndices);
-      mlir::Value elem = builder.create<fir::LoadOp>(loc, addr);
-
-      // Compare with the max reduction value
-      mlir::Value cmp =
-          generateMinMaxComparison(builder, loc, elem, reduction, isMax);
-
-      // The condition used for the loop is isFirst || <the condition above>.
-      isFirst = builder.create<fir::ConvertOp>(loc, cmp.getType(), isFirst);
-      isFirst = builder.create<mlir::arith::XOrIOp>(
-          loc, isFirst, builder.createIntegerConstant(loc, cmp.getType(), 1));
-      cmp = builder.create<mlir::arith::OrIOp>(loc, cmp, isFirst);
-
-      // Set the new coordinate to the result
-      fir::IfOp ifOp = builder.create<fir::IfOp>(loc, elementType, cmp,
-                                                 /*withElseRegion*/ true);
-
-      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-      builder.create<fir::StoreOp>(loc, flagSet, flagRef);
-      mlir::Type resultElemTy =
-          hlfir::getFortranElementType(resultArr.getType());
-      mlir::Type returnRefTy = builder.getRefType(resultElemTy);
-      mlir::IndexType idxTy = builder.getIndexType();
-
-      for (unsigned int i = 0; i < rank; ++i) {
-        mlir::Value index = builder.createIntegerConstant(loc, idxTy, i + 1);
-        mlir::Value resultElemAddr = builder.create<hlfir::DesignateOp>(
-            loc, returnRefTy, resultArr, index);
-        mlir::Value fortranIndex = builder.create<fir::ConvertOp>(
-            loc, resultElemTy, oneBasedIndices[i]);
-        builder.create<fir::StoreOp>(loc, fortranIndex, resultElemAddr);
-      }
-      builder.create<fir::ResultOp>(loc, elem);
-      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-      builder.create<fir::ResultOp>(loc, reduction);
-      builder.setInsertionPointAfter(ifOp);
-
-      // Close the mask if
-      builder.create<fir::ResultOp>(loc, ifOp.getResult(0));
-      builder.setInsertionPointToStart(&maskIfOp.getElseRegion().front());
-      builder.create<fir::ResultOp>(loc, reduction);
-      builder.setInsertionPointAfter(maskIfOp);
-
-      return maskIfOp.getResult(0);
-    };
-    auto getAddrFn = [](fir::FirOpBuilder builder, mlir::Location loc,
-                        const mlir::Type &resultElemType, mlir::Value resultArr,
-                        mlir::Value index) {
-      mlir::Type resultRefTy = builder.getRefType(resultElemType);
-      mlir::Value oneIdx =
-          builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-      index = builder.create<mlir::arith::AddIOp>(loc, index, oneIdx);
-      return builder.create<hlfir::DesignateOp>(loc, resultRefTy, resultArr,
-                                                index);
-    };
-
-    // Initialize the result
-    mlir::Type resultElemTy = hlfir::getFortranElementType(resultArr.getType());
-    mlir::Type resultRefTy = builder.getRefType(resultElemTy);
-    mlir::Value returnValue =
-        builder.createIntegerConstant(loc, resultElemTy, 0);
-    for (unsigned int i = 0; i < rank; ++i) {
-      mlir::Value index =
-          builder.createIntegerConstant(loc, builder.getIndexType(), i + 1);
-      mlir::Value resultElemAddr = builder.create<hlfir::DesignateOp>(
-          loc, resultRefTy, resultArr, index);
-      builder.create<fir::StoreOp>(loc, returnValue, resultElemAddr);
-    }
-
-    fir::genMinMaxlocReductionLoop(builder, array, init, genBodyOp, getAddrFn,
-                                   rank, elementType, loc, builder.getI1Type(),
-                                   resultArr, false);
-
-    mlir::Value asExpr = builder.create<hlfir::AsExprOp>(
-        loc, resultArr, builder.createBool(loc, false));
-
-    // Check all the users - the destroy is no longer required, and any assign
-    // can use resultArr directly so that VariableAssignBufferization in this
-    // pass can optimize the results. Other operations are replaces with an
-    // AsExpr for the temporary resultArr.
-    llvm::SmallVector<hlfir::DestroyOp> destroys;
-    llvm::SmallVector<hlfir::AssignOp> assigns;
-    for (auto user : mloc->getUsers()) {
-      if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(user))
-        destroys.push_back(destroy);
-      else if (auto assign = mlir::dyn_cast<hlfir::AssignOp>(user))
-        assigns.push_back(assign);
-    }
-
-    // Check if the minloc/maxloc was the only user of the elemental (apart from
-    // a destroy), and remove it if so.
-    mlir::Operation::user_range elemUsers = elemental->getUsers();
-    hlfir::DestroyOp elemDestroy;
-    if (std::distance(elemUsers.begin(), elemUsers.end()) == 2) {
-      elemDestroy = mlir::dyn_cast<hlfir::DestroyOp>(*elemUsers.begin());
-      if (!elemDestroy)
-        elemDestroy = mlir::dyn_cast<hlfir::DestroyOp>(*++elemUsers.begin());
-    }
-
-    for (auto d : destroys)
-      rewriter.eraseOp(d);
-    for (auto a : assigns)
-      a.setOperand(0, resultArr);
-    rewriter.replaceOp(mloc, asExpr);
-    if (elemDestroy) {
-      rewriter.eraseOp(elemDestroy);
-      rewriter.eraseOp(elemental);
-    }
-    return mlir::success();
-  }
-};
 
 class EvaluateIntoMemoryAssignBufferization
     : public mlir::OpRewritePattern<hlfir::EvaluateInMemoryOp> {
@@ -1344,8 +942,8 @@ public:
 
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks
-    config.enableRegionSimplification =
-        mlir::GreedySimplifyRegionLevel::Disabled;
+    config.setRegionSimplificationLevel(
+        mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
     // TODO: right now the patterns are non-conflicting,
@@ -1356,21 +954,7 @@ public:
     // This requires small code reordering in ElementalAssignBufferization.
     patterns.insert<ElementalAssignBufferization>(context);
     patterns.insert<BroadcastAssignBufferization>(context);
-    patterns.insert<VariableAssignBufferization>(context);
     patterns.insert<EvaluateIntoMemoryAssignBufferization>(context);
-    patterns.insert<ReductionConversion<hlfir::CountOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::AnyOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::AllOp>>(context);
-    // TODO: implement basic minloc/maxloc conversion.
-    // patterns.insert<ReductionConversion<hlfir::MaxlocOp>>(context);
-    // patterns.insert<ReductionConversion<hlfir::MinlocOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MaxvalOp>>(context);
-    patterns.insert<ReductionConversion<hlfir::MinvalOp>>(context);
-    patterns.insert<ReductionMaskConversion<hlfir::MinlocOp>>(context);
-    patterns.insert<ReductionMaskConversion<hlfir::MaxlocOp>>(context);
-    // TODO: implement masked minval/maxval conversion.
-    // patterns.insert<ReductionMaskConversion<hlfir::MaxvalOp>>(context);
-    // patterns.insert<ReductionMaskConversion<hlfir::MinvalOp>>(context);
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {

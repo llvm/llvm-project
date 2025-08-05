@@ -226,11 +226,11 @@ TEST(HasDeclaration, HasDeclarationOfEnumType) {
 }
 
 TEST(HasDeclaration, HasGetDeclTraitTest) {
-  static_assert(internal::has_getDecl<TypedefType>::value,
+  static_assert(internal::has_getDecl<TypedefType>,
                 "Expected TypedefType to have a getDecl.");
-  static_assert(internal::has_getDecl<RecordType>::value,
+  static_assert(internal::has_getDecl<RecordType>,
                 "Expected RecordType to have a getDecl.");
-  static_assert(!internal::has_getDecl<TemplateSpecializationType>::value,
+  static_assert(!internal::has_getDecl<TemplateSpecializationType>,
                 "Expected TemplateSpecializationType to *not* have a getDecl.");
 }
 
@@ -665,6 +665,7 @@ void check_match_co_return() {
 #include <coro_header>
 void check_match_co_await() {
   co_await a;
+  co_return 1;
 }
 )cpp";
   EXPECT_TRUE(matchesConditionally(CoAwaitCode,
@@ -674,6 +675,7 @@ void check_match_co_await() {
 #include <coro_header>
 void check_match_co_yield() {
   co_yield 1.0;
+  co_return 1;
 }
 )cpp";
   EXPECT_TRUE(matchesConditionally(CoYieldCode,
@@ -714,7 +716,7 @@ void coro() {
 void coro() try {
   int thevar;
   co_return 1;
-} catch (...) {}
+} catch (...) { co_return 1; }
 )cpp";
   EXPECT_TRUE(matchesConditionally(
       CoroWithTryCatchDeclCode,
@@ -2023,14 +2025,24 @@ void plusIntOperator()
                          hasOperatorName("+"), hasUnaryOperand(expr())))));
 
   Code = R"cpp(
-struct HasOpArrow
+struct S {
+  void foo(int);
+};
+struct HasOpStar
 {
     int& operator*();
 };
-void foo()
+struct HasOpArrow
 {
-    HasOpArrow s1;
-    *s1;
+    S* operator->();
+};
+void hasOpStarMem(HasOpStar s)
+{
+    *s;
+}
+void hasOpArrowMem(HasOpArrow a)
+{
+    a->foo(42);
 }
 )cpp";
 
@@ -2038,6 +2050,11 @@ void foo()
       matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
                              cxxOperatorCallExpr(hasOperatorName("*"),
                                                  hasUnaryOperand(expr())))));
+  EXPECT_TRUE(matches(
+      Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                     cxxOperatorCallExpr(hasOperatorName("->"),
+                                         hasUnaryOperand(declRefExpr(
+                                             to(varDecl(hasName("a")))))))));
 }
 
 TEST(Matcher, UnaryOperatorTypes) {
@@ -5758,10 +5775,10 @@ TEST(ElaboratedTypeNarrowing, namesType) {
 
 TEST(NNS, BindsNestedNameSpecifiers) {
   EXPECT_TRUE(matchAndVerifyResultTrue(
-    "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
-    nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
-    std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>(
-      "nns", "ns::struct E::")));
+      "namespace ns { struct E { struct B {}; }; } ns::E::B b;",
+      nestedNameSpecifier(specifiesType(asString("struct ns::E"))).bind("nns"),
+      std::make_unique<VerifyIdIsBoundTo<NestedNameSpecifier>>("nns",
+                                                               "ns::E::")));
 }
 
 TEST(NNS, BindsNestedNameSpecifierLocs) {

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "MemRefDescriptor.h"
 #include "mlir/Conversion/LLVMCommon/MemRefBuilder.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -85,14 +84,14 @@ static Value unrankedMemRefMaterialization(OpBuilder &builder,
                                            UnrankedMemRefType resultType,
                                            ValueRange inputs, Location loc,
                                            const LLVMTypeConverter &converter) {
-  // An argument materialization must return a value of type
+  // A source materialization must return a value of type
   // `resultType`, so insert a cast from the memref descriptor type
   // (!llvm.struct) to the original memref type.
   Value packed =
       packUnrankedMemRefDesc(builder, resultType, inputs, loc, converter);
   if (!packed)
     return Value();
-  return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
+  return UnrealizedConversionCastOp::create(builder, loc, resultType, packed)
       .getResult(0);
 }
 
@@ -101,14 +100,14 @@ static Value rankedMemRefMaterialization(OpBuilder &builder,
                                          MemRefType resultType,
                                          ValueRange inputs, Location loc,
                                          const LLVMTypeConverter &converter) {
-  // An argument materialization must return a value of type `resultType`,
+  // A source materialization must return a value of type `resultType`,
   // so insert a cast from the memref descriptor type (!llvm.struct) to the
   // original memref type.
   Value packed =
       packRankedMemRefDesc(builder, resultType, inputs, loc, converter);
   if (!packed)
     return Value();
-  return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
+  return UnrealizedConversionCastOp::create(builder, loc, resultType, packed)
       .getResult(0);
 }
 
@@ -225,28 +224,18 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   // non-LLVM types persist after an LLVM conversion.
   addSourceMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs, Location loc) {
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
         .getResult(0);
   });
   addTargetMaterialization([&](OpBuilder &builder, Type resultType,
                                ValueRange inputs, Location loc) {
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, resultType, inputs)
         .getResult(0);
   });
 
-  // Argument materializations convert from the new block argument types
+  // Source materializations convert from the new block argument types
   // (multiple SSA values that make up a memref descriptor) back to the
   // original block argument type.
-  addArgumentMaterialization([&](OpBuilder &builder,
-                                 UnrankedMemRefType resultType,
-                                 ValueRange inputs, Location loc) {
-    return unrankedMemRefMaterialization(builder, resultType, inputs, loc,
-                                         *this);
-  });
-  addArgumentMaterialization([&](OpBuilder &builder, MemRefType resultType,
-                                 ValueRange inputs, Location loc) {
-    return rankedMemRefMaterialization(builder, resultType, inputs, loc, *this);
-  });
   addSourceMaterialization([&](OpBuilder &builder,
                                UnrankedMemRefType resultType, ValueRange inputs,
                                Location loc) {
@@ -304,13 +293,20 @@ Type LLVMTypeConverter::convertIntegerType(IntegerType type) const {
 }
 
 Type LLVMTypeConverter::convertFloatType(FloatType type) const {
-  if (type.isFloat8E5M2() || type.isFloat8E4M3() || type.isFloat8E4M3FN() ||
-      type.isFloat8E5M2FNUZ() || type.isFloat8E4M3FNUZ() ||
-      type.isFloat8E4M3B11FNUZ() || type.isFloat8E3M4() ||
-      type.isFloat4E2M1FN() || type.isFloat6E2M3FN() || type.isFloat6E3M2FN() ||
-      type.isFloat8E8M0FNU())
+  // Valid LLVM float types are used directly.
+  if (LLVM::isCompatibleType(type))
+    return type;
+
+  // F4, F6, F8 types are converted to integer types with the same bit width.
+  if (isa<Float8E5M2Type, Float8E4M3Type, Float8E4M3FNType, Float8E5M2FNUZType,
+          Float8E4M3FNUZType, Float8E4M3B11FNUZType, Float8E3M4Type,
+          Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType,
+          Float8E8M0FNUType>(type))
     return IntegerType::get(&getContext(), type.getWidth());
-  return type;
+
+  // Other floating-point types: A custom type conversion rule must be
+  // specified by the user.
+  return Type();
 }
 
 // Convert a `ComplexType` to an LLVM type. The result is a complex number
@@ -488,7 +484,7 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) const {
 SmallVector<Type, 5>
 LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
                                              bool unpackAggregates) const {
-  if (!isStrided(type)) {
+  if (!type.isStrided()) {
     emitError(
         UnknownLoc::get(type.getContext()),
         "conversion to strided form failed either due to non-strided layout "
@@ -606,14 +602,14 @@ bool LLVMTypeConverter::canConvertToBarePtr(BaseMemRefType type) {
 
   int64_t offset = 0;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(memrefTy, strides, offset)))
+  if (failed(memrefTy.getStridesAndOffset(strides, offset)))
     return false;
 
   for (int64_t stride : strides)
     if (ShapedType::isDynamic(stride))
       return false;
 
-  return !ShapedType::isDynamic(offset);
+  return ShapedType::isStatic(offset);
 }
 
 /// Convert a memref type to a bare pointer to the memref element type.
@@ -735,12 +731,12 @@ Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
   // Alloca with proper alignment. We do not expect optimizations of this
   // alloca op and so we omit allocating at the entry block.
   auto ptrType = LLVM::LLVMPointerType::get(builder.getContext());
-  Value one = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
-                                               builder.getIndexAttr(1));
+  Value one = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
+                                       builder.getIndexAttr(1));
   Value allocated =
-      builder.create<LLVM::AllocaOp>(loc, ptrType, operand.getType(), one);
+      LLVM::AllocaOp::create(builder, loc, ptrType, operand.getType(), one);
   // Store into the alloca'ed descriptor.
-  builder.create<LLVM::StoreOp>(loc, operand, allocated);
+  LLVM::StoreOp::create(builder, loc, operand, allocated);
   return allocated;
 }
 
@@ -758,7 +754,7 @@ LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
     if (useBarePtrCallConv) {
       // For the bare-ptr calling convention, we only have to extract the
       // aligned pointer of a memref.
-      if (dyn_cast<MemRefType>(operand.getType())) {
+      if (isa<MemRefType>(operand.getType())) {
         MemRefDescriptor desc(llvmOperand);
         llvmOperand = desc.alignedPtr(builder, loc);
       } else if (isa<UnrankedMemRefType>(operand.getType())) {
