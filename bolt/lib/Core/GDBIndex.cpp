@@ -77,7 +77,8 @@ void GDBIndex::updateGdbIndexSection(
     exit(1);
   }
   DenseSet<uint64_t> OriginalOffsets;
-  for (unsigned Index = 0, Units = BC.DwCtx->getNumCompileUnits();
+  for (unsigned Index = 0, PresentUnitsIndex = 0,
+                Units = BC.DwCtx->getNumCompileUnits();
        Index < Units; ++Index) {
     const DWARFUnit *CU = BC.DwCtx->getUnitAtIndex(Index);
     if (SkipTypeUnits && CU->isTypeUnit())
@@ -90,7 +91,7 @@ void GDBIndex::updateGdbIndexSection(
     }
 
     OriginalOffsets.insert(Offset);
-    OffsetToIndexMap[Offset] = Index;
+    OffsetToIndexMap[Offset] = PresentUnitsIndex++;
   }
 
   // Ignore old address table.
