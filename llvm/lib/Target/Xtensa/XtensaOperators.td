@@ -39,8 +39,6 @@ def SDT_XtensaEXTUI               : SDTypeProfile<1, 3, [SDTCisVT<0, i32>, SDTCi
 
 def SDT_XtensaMOVSP               : SDTypeProfile<0, 1, [SDTCisVT<0, i32>]>;
 
-def SDT_XtensaMEMBARRIER         : SDTypeProfile<0, 0, []>;
-
 def SDT_XtensaRUR                : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
 //===----------------------------------------------------------------------===//
@@ -80,9 +78,6 @@ def Xtensa_extui: SDNode<"XtensaISD::EXTUI", SDT_XtensaEXTUI>;
 
 def Xtensa_movsp: SDNode<"XtensaISD::MOVSP", SDT_XtensaMOVSP,
                         [SDNPHasChain, SDNPSideEffect, SDNPInGlue]>;
-
-def Xtensa_mem_barrier: SDNode<"XtensaISD::MEMW", SDT_XtensaMEMBARRIER,
-                              [SDNPHasChain, SDNPSideEffect]>;
 
 def Xtensa_rur: SDNode<"XtensaISD::RUR", SDT_XtensaRUR,
                       [SDNPInGlue]>;

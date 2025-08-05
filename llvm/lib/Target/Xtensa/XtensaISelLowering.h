@@ -37,7 +37,6 @@ enum {
   // of the field [1..16]
   EXTUI,
 
-  MEMW,
   MOVSP,
 
   // Wraps a TargetGlobalAddress that should be loaded using PC-relative
@@ -150,6 +149,8 @@ public:
     return true;
   }
 
+  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+
   bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
                               SDValue C) const override;
 
@@ -200,26 +201,12 @@ private:
 
   SDValue LowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
 
-  SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG) const;
-
   SDValue getAddrPCRel(SDValue Op, SelectionDAG &DAG) const;
 
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg) const;
 
   MachineBasicBlock *emitSelectCC(MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
-  MachineBasicBlock *emitAtomicSwap(MachineInstr &MI, MachineBasicBlock *BB,
-                                    int isByteOperand) const;
-  MachineBasicBlock *emitAtomicCmpSwap(MachineInstr &MI, MachineBasicBlock *BB,
-                                       int isByteOperand) const;
-  MachineBasicBlock *emitAtomicSwap(MachineInstr &MI,
-                                    MachineBasicBlock *BB) const;
-  MachineBasicBlock *emitAtomicRMW(MachineInstr &MI, MachineBasicBlock *BB,
-                                   bool isByteOperand, unsigned Opcode,
-                                   bool inv, bool minmax) const;
-  MachineBasicBlock *emitAtomicRMW(MachineInstr &MI, MachineBasicBlock *BB,
-                                   unsigned Opcode, bool inv,
-                                   bool minmax) const;
 };
 
 } // end namespace llvm
