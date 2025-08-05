@@ -9,6 +9,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Iterators.h"
 #include "mlir/IR/RegionKindInterface.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
@@ -348,14 +349,29 @@ void RewriterBase::mergeBlocks(Block *source, Block *dest,
 /// Split the operations starting at "before" (inclusive) out of the given
 /// block into a new block, and return it.
 Block *RewriterBase::splitBlock(Block *block, Block::iterator before) {
+  Block *newBlock;
+
+  // If the current insertion point is at or after the split point, adjust the
+  // insertion point to the new block.
+  bool moveIpToNewBlock = getBlock() == block &&
+                          !block->isBeforeInBlock(getInsertionPoint(), before);
+  auto adjustInsertionPoint = llvm::make_scope_exit([&]() {
+    if (getInsertionPoint() == block->end()) {
+      // If the insertion point is at the end of the block, move it to the end
+      // of the new block.
+      setInsertionPointToEnd(newBlock);
+    } else if (moveIpToNewBlock) {
+      setInsertionPoint(newBlock, getInsertionPoint());
+    }
+  });
+
   // Fast path: If no listener is attached, split the block directly.
   if (!listener)
-    return block->splitBlock(before);
+    return newBlock = block->splitBlock(before);
 
   // `createBlock` sets the insertion point at the beginning of the new block.
   InsertionGuard g(*this);
-  Block *newBlock =
-      createBlock(block->getParent(), std::next(block->getIterator()));
+  newBlock = createBlock(block->getParent(), std::next(block->getIterator()));
 
   // If `before` points to end of the block, no ops should be moved.
   if (before == block->end())
@@ -413,6 +429,12 @@ void RewriterBase::moveOpBefore(Operation *op, Block *block,
   Block *currentBlock = op->getBlock();
   Block::iterator nextIterator = std::next(op->getIterator());
   op->moveBefore(block, iterator);
+
+  // If the current insertion point is before the moved operation, we may have
+  // to adjust the insertion block.
+  if (getInsertionPoint() == op->getIterator())
+    setInsertionPoint(block, op->getIterator());
+
   if (listener)
     listener->notifyOperationInserted(
         op, /*previous=*/InsertPoint(currentBlock, nextIterator));
