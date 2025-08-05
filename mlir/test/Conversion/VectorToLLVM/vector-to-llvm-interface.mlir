@@ -1679,12 +1679,12 @@ func.func @load_0d(%memref : memref<200x100xf32>, %i : index, %j : index) -> vec
 
 // -----
 
-func.func @load_alignment(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
+func.func @load_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
   %0 = vector.load %memref[%i, %j] { alignment = 8 } : memref<200x100xf32>, vector<8xf32>
   return %0 : vector<8xf32>
 }
 
-// CHECK-LABEL: func @load_alignment
+// CHECK-LABEL: func @load_with_alignment
 // CHECK: llvm.load {{.*}} {alignment = 8 : i64} : !llvm.ptr -> vector<8xf32>
 
 // -----
@@ -1795,12 +1795,12 @@ func.func @store_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
 
 // -----
 
-func.func @store_alignment(%memref : memref<200x100xf32>, %i : index, %j : index, %val : vector<4xf32>) {
+func.func @store_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : index, %val : vector<4xf32>) {
   vector.store %val, %memref[%i, %j] {alignment = 8} : memref<200x100xf32>, vector<4xf32>
   return
 }
 
-// CHECK-LABEL: func @store_alignment
+// CHECK-LABEL: func @store_with_alignment
 // CHECK: llvm.store %{{.*}} {alignment = 8 : i64} :  vector<4xf32>, !llvm.ptr
 
 // -----
@@ -1859,12 +1859,12 @@ func.func @masked_load_index_scalable(%arg0: memref<?xindex>, %arg1: vector<[16]
 
 // -----
 
-func.func @masked_load_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>, %arg3: index) -> vector<16xf32> {
+func.func @masked_load_with_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>, %arg3: index) -> vector<16xf32> {
   %0 = vector.maskedload %arg0[%arg3], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
   return %0 : vector<16xf32>
 }
 
-// CHECK-LABEL: func @masked_load_alignment
+// CHECK-LABEL: func @masked_load_with_alignment
 // CHECK: llvm.intr.masked.load %{{.*}} {alignment = 2 : i32} : (!llvm.ptr, vector<16xi1>, vector<16xf32>) -> vector<16xf32>
 
 // -----
@@ -1921,12 +1921,12 @@ func.func @masked_store_index_scalable(%arg0: memref<?xindex>, %arg1: vector<[16
 
 // -----
 
-func.func @masked_store_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>, %arg3: index) {
+func.func @masked_store_with_alignment(%arg0: memref<?xf32>, %arg1: vector<16xi1>, %arg2: vector<16xf32>, %arg3: index) {
   vector.maskedstore %arg0[%arg3], %arg1, %arg2 { alignment = 2 } : memref<?xf32>, vector<16xi1>, vector<16xf32>
   return
 }
 
-// CHECK-LABEL: func @masked_store_alignment
+// CHECK-LABEL: func @masked_store_with_alignment
 // CHECK: llvm.intr.masked.store %{{.*}} {alignment = 2 : i32} : vector<16xf32>, vector<16xi1> into !llvm.ptr
 
 // -----
