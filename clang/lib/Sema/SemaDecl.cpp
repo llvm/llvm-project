@@ -3063,7 +3063,8 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       // error since the definition will have already been created without
       // the semantic effects of the attribute having been applied.
       S.Diag(NewAttribute->getLocation(),
-             diag::err_sycl_entry_point_after_definition);
+             diag::err_sycl_entry_point_after_definition)
+          << NewAttribute;
       S.Diag(Def->getLocation(), diag::note_previous_definition);
       cast<SYCLKernelEntryPointAttr>(NewAttribute)->setInvalidAttr();
       ++I;
@@ -3266,6 +3267,14 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     // Already handled.
     if (isa<UsedAttr>(I) || isa<RetainAttr>(I))
       continue;
+
+    if (isa<InferredNoReturnAttr>(I)) {
+      if (auto *FD = dyn_cast<FunctionDecl>(New)) {
+        if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+          continue; // Don't propagate inferred noreturn attributes to explicit
+                    // specializations.
+      }
+    }
 
     if (mergeDeclAttribute(*this, New, I, LocalAMK))
       foundAny = true;
@@ -12578,9 +12587,9 @@ static bool isDefaultStdCall(FunctionDecl *FD, Sema &S) {
   if (FD->getName() == "main" || FD->getName() == "wmain")
     return false;
 
-  // Default calling convention for MinGW is __cdecl
+  // Default calling convention for MinGW and Cygwin is __cdecl
   const llvm::Triple &T = S.Context.getTargetInfo().getTriple();
-  if (T.isWindowsGNUEnvironment())
+  if (T.isOSCygMing())
     return false;
 
   // Default calling convention for WinMain, wWinMain and DllMain
@@ -16250,19 +16259,19 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         FD->getAttr<SYCLKernelEntryPointAttr>();
     if (FD->isDefaulted()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << /*defaulted function*/ 3;
+          << SKEPAttr << /*defaulted function*/ 3;
       SKEPAttr->setInvalidAttr();
     } else if (FD->isDeleted()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << /*deleted function*/ 2;
+          << SKEPAttr << /*deleted function*/ 2;
       SKEPAttr->setInvalidAttr();
     } else if (FSI->isCoroutine()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << /*coroutine*/ 7;
+          << SKEPAttr << /*coroutine*/ 7;
       SKEPAttr->setInvalidAttr();
     } else if (Body && isa<CXXTryStmt>(Body)) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << /*function defined with a function try block*/ 8;
+          << SKEPAttr << /*function defined with a function try block*/ 8;
       SKEPAttr->setInvalidAttr();
     }
 
@@ -20573,7 +20582,8 @@ TopLevelStmtDecl *Sema::ActOnStartTopLevelStmtDecl(Scope *S) {
 }
 
 void Sema::ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement) {
-  D->setStmt(Statement);
+  if (Statement)
+    D->setStmt(Statement);
   PopCompoundScope();
   PopFunctionScopeInfo();
   PopDeclContext();

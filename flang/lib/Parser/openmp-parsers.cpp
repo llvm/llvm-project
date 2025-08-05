@@ -34,6 +34,39 @@ namespace Fortran::parser {
 constexpr auto startOmpLine = skipStuffBeforeStatement >> "!$OMP "_sptok;
 constexpr auto endOmpLine = space >> endOfLine;
 
+// Given a parser for a single element, and a parser for a list of elements
+// of the same type, create a parser that constructs the entire list by having
+// the single element be the head of the list, and the rest be the tail.
+template <typename ParserH, typename ParserT> struct ConsParser {
+  static_assert(std::is_same_v<std::list<typename ParserH::resultType>,
+      typename ParserT::resultType>);
+
+  using resultType = typename ParserT::resultType;
+  constexpr ConsParser(ParserH h, ParserT t) : head_(h), tail_(t) {}
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    if (auto &&first{head_.Parse(state)}) {
+      if (auto rest{tail_.Parse(state)}) {
+        rest->push_front(std::move(*first));
+        return std::move(*rest);
+      }
+    }
+    return std::nullopt;
+  }
+
+private:
+  const ParserH head_;
+  const ParserT tail_;
+};
+
+template <typename ParserH, typename ParserT,
+    typename ValueH = typename ParserH::resultType,
+    typename ValueT = typename ParserT::resultType,
+    typename = std::enable_if_t<std::is_same_v<std::list<ValueH>, ValueT>>>
+constexpr auto cons(ParserH head, ParserT tail) {
+  return ConsParser<ParserH, ParserT>(head, tail);
+}
+
 // Given a parser P for a wrapper class, invoke P, and if it succeeds return
 // the wrapped object.
 template <typename Parser> struct UnwrapParser {
@@ -449,6 +482,9 @@ TYPE_PARSER(construct<OmpAllocatorSimpleModifier>(scalarIntExpr))
 TYPE_PARSER(construct<OmpAlwaysModifier>( //
     "ALWAYS" >> pure(OmpAlwaysModifier::Value::Always)))
 
+TYPE_PARSER(construct<OmpAutomapModifier>(
+    "AUTOMAP" >> pure(OmpAutomapModifier::Value::Automap)))
+
 TYPE_PARSER(construct<OmpChunkModifier>( //
     "SIMD" >> pure(OmpChunkModifier::Value::Simd)))
 
@@ -465,6 +501,8 @@ TYPE_PARSER(construct<OmpDependenceType>(
 TYPE_PARSER(construct<OmpDeviceModifier>(
     "ANCESTOR" >> pure(OmpDeviceModifier::Value::Ancestor) ||
     "DEVICE_NUM" >> pure(OmpDeviceModifier::Value::Device_Num)))
+
+TYPE_PARSER(construct<OmpDirectiveNameModifier>(OmpDirectiveNameParser{}))
 
 TYPE_PARSER(construct<OmpExpectation>( //
     "PRESENT" >> pure(OmpExpectation::Value::Present)))
@@ -601,6 +639,9 @@ TYPE_PARSER(sourced(construct<OmpDependClause::TaskDep::Modifier>(sourced(
 TYPE_PARSER(
     sourced(construct<OmpDeviceClause::Modifier>(Parser<OmpDeviceModifier>{})))
 
+TYPE_PARSER(
+    sourced(construct<OmpEnterClause::Modifier>(Parser<OmpAutomapModifier>{})))
+
 TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
     sourced(construct<OmpFromClause::Modifier>(Parser<OmpExpectation>{}) ||
         construct<OmpFromClause::Modifier>(Parser<OmpMapper>{}) ||
@@ -609,7 +650,8 @@ TYPE_PARSER(sourced(construct<OmpFromClause::Modifier>(
 TYPE_PARSER(sourced(
     construct<OmpGrainsizeClause::Modifier>(Parser<OmpPrescriptiveness>{})))
 
-TYPE_PARSER(sourced(construct<OmpIfClause::Modifier>(OmpDirectiveNameParser{})))
+TYPE_PARSER(sourced(
+    construct<OmpIfClause::Modifier>(Parser<OmpDirectiveNameModifier>{})))
 
 TYPE_PARSER(sourced(
     construct<OmpInitClause::Modifier>(
@@ -734,6 +776,10 @@ TYPE_PARSER(construct<OmpDefaultClause>(
     construct<OmpDefaultClause>(
         Parser<OmpDefaultClause::DataSharingAttribute>{}) ||
     construct<OmpDefaultClause>(indirect(Parser<OmpDirectiveSpecification>{}))))
+
+TYPE_PARSER(construct<OmpEnterClause>(
+    maybe(nonemptyList(Parser<OmpEnterClause::Modifier>{}) / ":"),
+    Parser<OmpObjectList>{}))
 
 TYPE_PARSER(construct<OmpFailClause>(
     "ACQ_REL" >> pure(common::OmpMemoryOrderType::Acq_Rel) ||
@@ -1023,7 +1069,7 @@ TYPE_PARSER( //
     "DYNAMIC_ALLOCATORS" >>
         construct<OmpClause>(construct<OmpClause::DynamicAllocators>()) ||
     "ENTER" >> construct<OmpClause>(construct<OmpClause::Enter>(
-                   parenthesized(Parser<OmpObjectList>{}))) ||
+                   parenthesized(Parser<OmpEnterClause>{}))) ||
     "EXCLUSIVE" >> construct<OmpClause>(construct<OmpClause::Exclusive>(
                        parenthesized(Parser<OmpObjectList>{}))) ||
     "FAIL" >> construct<OmpClause>(construct<OmpClause::Fail>(
@@ -1207,6 +1253,61 @@ TYPE_PARSER(sourced(
         maybe(parenthesized(Parser<OmpArgumentList>{})),
         maybe(Parser<OmpClauseList>{}),
         pure(OmpDirectiveSpecification::Flags::None))))
+
+static bool IsFortranBlockConstruct(const ExecutionPartConstruct &epc) {
+  // ExecutionPartConstruct -> ExecutableConstruct
+  //   -> Indirection<BlockConstruct>
+  if (auto *ec{std::get_if<ExecutableConstruct>(&epc.u)}) {
+    return std::holds_alternative<common::Indirection<BlockConstruct>>(ec->u);
+  } else {
+    return false;
+  }
+}
+
+struct StrictlyStructuredBlockParser {
+  using resultType = Block;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    // Detect BLOCK construct without parsing the entire thing.
+    if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
+      if (auto epc{Parser<ExecutionPartConstruct>{}.Parse(state)}) {
+        if (IsFortranBlockConstruct(*epc)) {
+          Block block;
+          block.emplace_back(std::move(*epc));
+          return std::move(block);
+        }
+      }
+    }
+    return std::nullopt;
+  }
+};
+
+struct LooselyStructuredBlockParser {
+  using resultType = Block;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    // Detect BLOCK construct without parsing the entire thing.
+    if (lookAhead(skipStuffBeforeStatement >> "BLOCK"_tok).Parse(state)) {
+      return std::nullopt;
+    }
+    Block body;
+    if (auto epc{attempt(Parser<ExecutionPartConstruct>{}).Parse(state)}) {
+      if (!IsFortranBlockConstruct(*epc)) {
+        body.emplace_back(std::move(*epc));
+        if (auto &&blk{attempt(block).Parse(state)}) {
+          for (auto &&s : *blk) {
+            body.emplace_back(std::move(s));
+          }
+        }
+      } else {
+        // Fail if the first construct is BLOCK.
+        return std::nullopt;
+      }
+    }
+    // Empty body is ok.
+    return std::move(body);
+  }
+};
 
 TYPE_PARSER(sourced(construct<OmpNothingDirective>("NOTHING" >> ok)))
 
@@ -1570,12 +1671,16 @@ TYPE_PARSER(
             Parser<OpenMPInteropConstruct>{})) /
     endOfLine)
 
+// Directive names (of non-block constructs) whose prefix is a name of
+// a block-associated construct. We need to exclude them from the block
+// directive parser below to avoid parsing parts of them.
+static constexpr auto StandaloneDirectiveLookahead{//
+    "TARGET ENTER DATA"_sptok || "TARGET_ENTER_DATA"_sptok || //
+    "TARGET EXIT DATA"_sptok || "TARGET_EXIT"_sptok || //
+    "TARGET UPDATE"_sptok || "TARGET_UPDATE"_sptok};
+
 // Directives enclosing structured-block
-TYPE_PARSER(
-    // In this context "TARGET UPDATE" can be parsed as a TARGET directive
-    // followed by an UPDATE clause. This is the only combination at the
-    // moment, exclude it explicitly.
-    (!("TARGET UPDATE"_sptok || "TARGET_UPDATE"_sptok)) >=
+TYPE_PARSER((!StandaloneDirectiveLookahead) >=
     construct<OmpBlockDirective>(first(
         "MASKED" >> pure(llvm::omp::Directive::OMPD_masked),
         "MASTER" >> pure(llvm::omp::Directive::OMPD_master),
@@ -1749,9 +1854,12 @@ TYPE_PARSER(sourced(
         block, maybe(Parser<OmpEndAssumeDirective>{} / endOmpLine))))
 
 // Block Construct
-TYPE_PARSER(construct<OpenMPBlockConstruct>(
-    Parser<OmpBeginBlockDirective>{} / endOmpLine, block,
-    Parser<OmpEndBlockDirective>{} / endOmpLine))
+TYPE_PARSER( //
+    construct<OpenMPBlockConstruct>(Parser<OmpBeginBlockDirective>{},
+        StrictlyStructuredBlockParser{},
+        maybe(Parser<OmpEndBlockDirective>{})) ||
+    construct<OpenMPBlockConstruct>(Parser<OmpBeginBlockDirective>{},
+        LooselyStructuredBlockParser{}, Parser<OmpEndBlockDirective>{}))
 
 // OMP SECTIONS Directive
 TYPE_PARSER(construct<OmpSectionsDirective>(first(
@@ -1766,19 +1874,20 @@ TYPE_PARSER(
                         sourced("END"_tok >> Parser<OmpSectionsDirective>{}),
                         Parser<OmpClauseList>{})))
 
-// OMP SECTION-BLOCK
-
-TYPE_PARSER(construct<OpenMPSectionConstruct>(block))
-
-TYPE_PARSER(maybe(startOmpLine >> "SECTION"_tok / endOmpLine) >>
-    construct<OmpSectionBlocks>(nonemptySeparated(
-        construct<OpenMPConstruct>(sourced(Parser<OpenMPSectionConstruct>{})),
-        startOmpLine >> "SECTION"_tok / endOmpLine)))
+static constexpr auto sectionDir{
+    startOmpLine >> (predicated(OmpDirectiveNameParser{},
+                         IsDirective(llvm::omp::Directive::OMPD_section)) >=
+                        Parser<OmpDirectiveSpecification>{})};
 
 // OMP SECTIONS (OpenMP 5.0 - 2.8.1), PARALLEL SECTIONS (OpenMP 5.0 - 2.13.3)
-TYPE_PARSER(construct<OpenMPSectionsConstruct>(
+TYPE_PARSER(sourced(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
-    Parser<OmpSectionBlocks>{}, Parser<OmpEndSectionsDirective>{} / endOmpLine))
+    cons( //
+        construct<OpenMPConstruct>(sourced(
+            construct<OpenMPSectionConstruct>(maybe(sectionDir), block))),
+        many(construct<OpenMPConstruct>(
+            sourced(construct<OpenMPSectionConstruct>(sectionDir, block))))),
+    Parser<OmpEndSectionsDirective>{} / endOmpLine)))
 
 static bool IsExecutionPart(const OmpDirectiveName &name) {
   return name.IsExecutionPart();

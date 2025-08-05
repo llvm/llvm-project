@@ -4877,10 +4877,6 @@ def int_amdgcn_cooperative_atomic_load_16x8B : AMDGPUCooperativeAtomicLoad<llvm_
 def int_amdgcn_cooperative_atomic_store_16x8B : AMDGPUCooperativeAtomicStore<llvm_v2i32_ty>;
 def int_amdgcn_cooperative_atomic_load_8x16B : AMDGPUCooperativeAtomicLoad<llvm_v4i32_ty>;
 def int_amdgcn_cooperative_atomic_store_8x16B : AMDGPUCooperativeAtomicStore<llvm_v4i32_ty>;
-def int_amdgcn_cooperative_atomic_load_32x8B : AMDGPUCooperativeAtomicLoad<llvm_v2i32_ty>;
-def int_amdgcn_cooperative_atomic_store_32x8B : AMDGPUCooperativeAtomicStore<llvm_v2i32_ty>;
-def int_amdgcn_cooperative_atomic_load_16x16B : AMDGPUCooperativeAtomicLoad<llvm_v4i32_ty>;
-def int_amdgcn_cooperative_atomic_store_16x16B : AMDGPUCooperativeAtomicStore<llvm_v4i32_ty>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend
@@ -4969,20 +4965,32 @@ class AMDGPUAsyncGlobalStoreFromLDS : Intrinsic <
   "", [SDNPMemOperand]
 >;
 
-def int_amdgcn_cluster_load_async_to_lds_b8     : AMDGPUAsyncClusterLoadLDS;
-def int_amdgcn_cluster_load_async_to_lds_b32    : AMDGPUAsyncClusterLoadLDS;
-def int_amdgcn_cluster_load_async_to_lds_b64    : AMDGPUAsyncClusterLoadLDS;
-def int_amdgcn_cluster_load_async_to_lds_b128   : AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b8     :
+  ClangBuiltin<"__builtin_amdgcn_cluster_load_async_to_lds_b8">, AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b32    :
+  ClangBuiltin<"__builtin_amdgcn_cluster_load_async_to_lds_b32">, AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b64    :
+  ClangBuiltin<"__builtin_amdgcn_cluster_load_async_to_lds_b64">, AMDGPUAsyncClusterLoadLDS;
+def int_amdgcn_cluster_load_async_to_lds_b128   :
+  ClangBuiltin<"__builtin_amdgcn_cluster_load_async_to_lds_b128">, AMDGPUAsyncClusterLoadLDS;
 
-def int_amdgcn_global_load_async_to_lds_b8      : AMDGPUAsyncGlobalLoadToLDS;
-def int_amdgcn_global_load_async_to_lds_b32     : AMDGPUAsyncGlobalLoadToLDS;
-def int_amdgcn_global_load_async_to_lds_b64     : AMDGPUAsyncGlobalLoadToLDS;
-def int_amdgcn_global_load_async_to_lds_b128    : AMDGPUAsyncGlobalLoadToLDS;
+def int_amdgcn_global_load_async_to_lds_b8      :
+  ClangBuiltin<"__builtin_amdgcn_global_load_async_to_lds_b8">, AMDGPUAsyncGlobalLoadToLDS;
+def int_amdgcn_global_load_async_to_lds_b32     :
+  ClangBuiltin<"__builtin_amdgcn_global_load_async_to_lds_b32">, AMDGPUAsyncGlobalLoadToLDS;
+def int_amdgcn_global_load_async_to_lds_b64      :
+  ClangBuiltin<"__builtin_amdgcn_global_load_async_to_lds_b64">, AMDGPUAsyncGlobalLoadToLDS;
+def int_amdgcn_global_load_async_to_lds_b128    :
+  ClangBuiltin<"__builtin_amdgcn_global_load_async_to_lds_b128">, AMDGPUAsyncGlobalLoadToLDS;
 
-def int_amdgcn_global_store_async_from_lds_b8   : AMDGPUAsyncGlobalStoreFromLDS;
-def int_amdgcn_global_store_async_from_lds_b32  : AMDGPUAsyncGlobalStoreFromLDS;
-def int_amdgcn_global_store_async_from_lds_b64  : AMDGPUAsyncGlobalStoreFromLDS;
-def int_amdgcn_global_store_async_from_lds_b128 : AMDGPUAsyncGlobalStoreFromLDS;
+def int_amdgcn_global_store_async_from_lds_b8   :
+  ClangBuiltin<"__builtin_amdgcn_global_store_async_from_lds_b8">, AMDGPUAsyncGlobalStoreFromLDS;
+def int_amdgcn_global_store_async_from_lds_b32  :
+  ClangBuiltin<"__builtin_amdgcn_global_store_async_from_lds_b32">, AMDGPUAsyncGlobalStoreFromLDS;
+def int_amdgcn_global_store_async_from_lds_b64  :
+  ClangBuiltin<"__builtin_amdgcn_global_store_async_from_lds_b64">, AMDGPUAsyncGlobalStoreFromLDS;
+def int_amdgcn_global_store_async_from_lds_b128 :
+  ClangBuiltin<"__builtin_amdgcn_global_store_async_from_lds_b128">, AMDGPUAsyncGlobalStoreFromLDS;
 
 // Async instructions increment ASYNCcnt which is modeled as InaccessibleMem.
 class AMDGPUAsyncDDSLoadLDS : Intrinsic <

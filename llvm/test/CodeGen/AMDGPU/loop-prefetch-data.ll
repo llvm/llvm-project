@@ -484,6 +484,9 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB3_1
 ; GFX1250-NEXT:  .LBB3_2: ; %for.end
 ; GFX1250-NEXT:    s_endpgm
+
+
+
 entry:
   %cmp6.not = icmp eq i32 %n, 0
   br i1 %cmp6.not, label %for.end, label %for.body

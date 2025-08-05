@@ -325,7 +325,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF2-NEXT:    br [[EXIT:label %.*]]
 ; VF2:       [[SCALAR_PH]]:
 ;
 ; VF2IC2-LABEL: define void @narrow_with_uniform_add_and_gep(
@@ -352,7 +352,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF2IC2-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
-; VF2IC2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF2IC2-NEXT:    br [[EXIT:label %.*]]
 ; VF2IC2:       [[SCALAR_PH]]:
 ;
 ; VF4-LABEL: define void @narrow_with_uniform_add_and_gep(
@@ -378,7 +378,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF4-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 512
 ; VF4-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
-; VF4-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; VF4-NEXT:    br [[EXIT:label %.*]]
 ; VF4:       [[SCALAR_PH]]:
 ;
 entry:

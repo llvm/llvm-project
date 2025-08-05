@@ -41,32 +41,6 @@ entry:
   ret <4 x i32> %0
 }
 
-define <2 x i32> @test_flat_amdgcn_cooperative_atomic_load_32x8B_relaxed(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_load_32x8B_relaxed:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.32x8B.p0(ptr %addr, i32 0, metadata !0)
-  ret <2 x i32> %0
-}
-
-define <4 x i32> @test_flat_amdgcn_cooperative_atomic_load_16x16B_relaxed(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_load_16x16B_relaxed:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.16x16B.p0(ptr %addr, i32 0, metadata !0)
-  ret <4 x i32> %0
-}
-
 define void @test_flat_amdgcn_cooperative_atomic_store_32x4B_relaxed(ptr noundef %addr, i32 noundef %val)  {
 ; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_store_32x4B_relaxed:
 ; GFX1250:       ; %bb.0: ; %entry
@@ -103,32 +77,6 @@ define void @test_flat_amdgcn_cooperative_atomic_store_8x16B_relaxed(ptr noundef
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   tail call void @llvm.amdgcn.cooperative.atomic.store.8x16B.p0(ptr %addr, <4 x i32> %val, i32 0, metadata !0)
-  ret void
-}
-
-define void @test_flat_amdgcn_cooperative_atomic_store_32x8B_relaxed(ptr noundef %addr, <2 x i32> noundef %val)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_store_32x8B_relaxed:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.32x8B.p0(ptr %addr, <2 x i32> %val, i32 0, metadata !0)
-  ret void
-}
-
-define void @test_flat_amdgcn_cooperative_atomic_store_16x16B_relaxed(ptr noundef %addr, <4 x i32> noundef %val)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_store_16x16B_relaxed:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.16x16B.p0(ptr %addr, <4 x i32> %val, i32 0, metadata !0)
   ret void
 }
 
@@ -177,37 +125,6 @@ entry:
   ret <4 x i32> %0
 }
 
-define <2 x i32> @test_flat_amdgcn_cooperative_atomic_load_32x8B_acquire(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_load_32x8B_acquire:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.32x8B.p0(ptr %addr, i32 2, metadata !0)
-  ret <2 x i32> %0
-}
-
-define <4 x i32> @test_flat_amdgcn_cooperative_atomic_load_16x16B_acquire(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_load_16x16B_acquire:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.16x16B.p0(ptr %addr, i32 2, metadata !0)
-  ret <4 x i32> %0
-}
-
-
 define void @test_flat_amdgcn_cooperative_atomic_store_32x4B_release(ptr noundef %addr, i32 noundef %val)  {
 ; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_store_32x4B_release:
 ; GFX1250:       ; %bb.0: ; %entry
@@ -250,36 +167,6 @@ define void @test_flat_amdgcn_cooperative_atomic_store_8x16B_release(ptr noundef
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   tail call void @llvm.amdgcn.cooperative.atomic.store.8x16B.p0(ptr %addr, <4 x i32> %val, i32 3, metadata !0)
-  ret void
-}
-
-define void @test_flat_amdgcn_cooperative_atomic_store_32x8B_release(ptr noundef %addr, <2 x i32> noundef %val)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_store_32x8B_release:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.32x8B.p0(ptr %addr, <2 x i32> %val, i32 3, metadata !0)
-  ret void
-}
-
-define void @test_flat_amdgcn_cooperative_atomic_store_16x16B_release(ptr noundef %addr, <4 x i32> noundef %val)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_store_16x16B_release:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.16x16B.p0(ptr %addr, <4 x i32> %val, i32 3, metadata !0)
   ret void
 }
 
@@ -331,38 +218,6 @@ entry:
   ret <4 x i32> %0
 }
 
-define <2 x i32> @test_flat_amdgcn_cooperative_atomic_load_32x8B_seq_cst(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_load_32x8B_seq_cst:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.32x8B.p0(ptr %addr, i32 5, metadata !0)
-  ret <2 x i32> %0
-}
-
-define <4 x i32> @test_flat_amdgcn_cooperative_atomic_load_16x16B_seq_cst(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_load_16x16B_seq_cst:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.16x16B.p0(ptr %addr, i32 5, metadata !0)
-  ret <4 x i32> %0
-}
-
 define void @test_flat_amdgcn_cooperative_atomic_store_32x4B_seq_cst(ptr noundef %addr, i32 noundef %val)  {
 ; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_store_32x4B_seq_cst:
 ; GFX1250:       ; %bb.0: ; %entry
@@ -408,36 +263,6 @@ entry:
   ret void
 }
 
-define void @test_flat_amdgcn_cooperative_atomic_store_32x8B_seq_cst(ptr noundef %addr, <2 x i32> noundef %val)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_store_32x8B_seq_cst:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.32x8B.p0(ptr %addr, <2 x i32> %val, i32 5, metadata !0)
-  ret void
-}
-
-define void @test_flat_amdgcn_cooperative_atomic_store_16x16B_seq_cst(ptr noundef %addr, <4 x i32> noundef %val)  {
-; GFX1250-LABEL: test_flat_amdgcn_cooperative_atomic_store_16x16B_seq_cst:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.16x16B.p0(ptr %addr, <4 x i32> %val, i32 5, metadata !0)
-  ret void
-}
-
 define i32 @test_one_as_flat_amdgcn_cooperative_atomic_load_32x4B_relaxed(ptr noundef readonly %addr)  {
 ; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_load_32x4B_relaxed:
 ; GFX1250:       ; %bb.0: ; %entry
@@ -477,32 +302,6 @@ entry:
   ret <4 x i32> %0
 }
 
-define <2 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_32x8B_relaxed(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_load_32x8B_relaxed:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.32x8B.p0(ptr %addr, i32 0, metadata !1)
-  ret <2 x i32> %0
-}
-
-define <4 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_16x16B_relaxed(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_load_16x16B_relaxed:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.16x16B.p0(ptr %addr, i32 0, metadata !1)
-  ret <4 x i32> %0
-}
-
 define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_relaxed(ptr noundef %addr, i32 noundef %val)  {
 ; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_relaxed:
 ; GFX1250:       ; %bb.0: ; %entry
@@ -539,32 +338,6 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_8x16B_relaxed(ptr 
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   tail call void @llvm.amdgcn.cooperative.atomic.store.8x16B.p0(ptr %addr, <4 x i32> %val, i32 0, metadata !1)
-  ret void
-}
-
-define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x8B_relaxed(ptr noundef %addr, <2 x i32> noundef %val)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_store_32x8B_relaxed:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.32x8B.p0(ptr %addr, <2 x i32> %val, i32 0, metadata !1)
-  ret void
-}
-
-define void @test_one_as_flat_amdgcn_cooperative_atomic_store_16x16B_relaxed(ptr noundef %addr, <4 x i32> noundef %val)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_store_16x16B_relaxed:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.16x16B.p0(ptr %addr, <4 x i32> %val, i32 0, metadata !1)
   ret void
 }
 
@@ -613,37 +386,6 @@ entry:
   ret <4 x i32> %0
 }
 
-define <2 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_32x8B_acquire(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_load_32x8B_acquire:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.32x8B.p0(ptr %addr, i32 2, metadata !1)
-  ret <2 x i32> %0
-}
-
-define <4 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_16x16B_acquire(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_load_16x16B_acquire:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.16x16B.p0(ptr %addr, i32 2, metadata !1)
-  ret <4 x i32> %0
-}
-
-
 define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_release(ptr noundef %addr, i32 noundef %val)  {
 ; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_release:
 ; GFX1250:       ; %bb.0: ; %entry
@@ -686,36 +428,6 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_8x16B_release(ptr 
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   tail call void @llvm.amdgcn.cooperative.atomic.store.8x16B.p0(ptr %addr, <4 x i32> %val, i32 3, metadata !1)
-  ret void
-}
-
-define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x8B_release(ptr noundef %addr, <2 x i32> noundef %val)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_store_32x8B_release:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.32x8B.p0(ptr %addr, <2 x i32> %val, i32 3, metadata !1)
-  ret void
-}
-
-define void @test_one_as_flat_amdgcn_cooperative_atomic_store_16x16B_release(ptr noundef %addr, <4 x i32> noundef %val)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_store_16x16B_release:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.16x16B.p0(ptr %addr, <4 x i32> %val, i32 3, metadata !1)
   ret void
 }
 
@@ -767,38 +479,6 @@ entry:
   ret <4 x i32> %0
 }
 
-define <2 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_32x8B_seq_cst(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_load_32x8B_seq_cst:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_load_b64 v[0:1], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <2 x i32> @llvm.amdgcn.cooperative.atomic.load.32x8B.p0(ptr %addr, i32 5, metadata !1)
-  ret <2 x i32> %0
-}
-
-define <4 x i32> @test_one_as_flat_amdgcn_cooperative_atomic_load_16x16B_seq_cst(ptr noundef readonly %addr)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_load_16x16B_seq_cst:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_load_b128 v[0:3], v[0:1] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt 0x0
-; GFX1250-NEXT:    global_inv scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.16x16B.p0(ptr %addr, i32 5, metadata !1)
-  ret <4 x i32> %0
-}
-
 define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_seq_cst(ptr noundef %addr, i32 noundef %val)  {
 ; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_store_32x4B_seq_cst:
 ; GFX1250:       ; %bb.0: ; %entry
@@ -841,36 +521,6 @@ define void @test_one_as_flat_amdgcn_cooperative_atomic_store_8x16B_seq_cst(ptr 
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   tail call void @llvm.amdgcn.cooperative.atomic.store.8x16B.p0(ptr %addr, <4 x i32> %val, i32 5, metadata !1)
-  ret void
-}
-
-define void @test_one_as_flat_amdgcn_cooperative_atomic_store_32x8B_seq_cst(ptr noundef %addr, <2 x i32> noundef %val)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_store_32x8B_seq_cst:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_store_b64 v[0:1], v[2:3] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.32x8B.p0(ptr %addr, <2 x i32> %val, i32 5, metadata !1)
-  ret void
-}
-
-define void @test_one_as_flat_amdgcn_cooperative_atomic_store_16x16B_seq_cst(ptr noundef %addr, <4 x i32> noundef %val)  {
-; GFX1250-LABEL: test_one_as_flat_amdgcn_cooperative_atomic_store_16x16B_seq_cst:
-; GFX1250:       ; %bb.0: ; %entry
-; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_wb scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_storecnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v[0:1], v[2:5] scope:SCOPE_SYS
-; GFX1250-NEXT:    s_wait_dscnt 0x0
-; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
-entry:
-  tail call void @llvm.amdgcn.cooperative.atomic.store.16x16B.p0(ptr %addr, <4 x i32> %val, i32 5, metadata !1)
   ret void
 }
 

@@ -643,16 +643,7 @@ unsigned CGDebugInfo::getColumnNumber(SourceLocation Loc, bool Force) {
 }
 
 StringRef CGDebugInfo::getCurrentDirname() {
-  if (!CGM.getCodeGenOpts().DebugCompilationDir.empty())
-    return CGM.getCodeGenOpts().DebugCompilationDir;
-
-  if (!CWDName.empty())
-    return CWDName;
-  llvm::ErrorOr<std::string> CWD =
-      CGM.getFileSystem()->getCurrentWorkingDirectory();
-  if (!CWD)
-    return StringRef();
-  return CWDName = internString(*CWD);
+  return CGM.getCodeGenOpts().DebugCompilationDir;
 }
 
 void CGDebugInfo::CreateCompileUnit() {
@@ -2647,6 +2638,8 @@ void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
                                    const CXXRecordDecl *RD) {
   if (!CGM.getTarget().getCXXABI().isItaniumFamily())
     return;
+  if (DebugKind <= llvm::codegenoptions::DebugLineTablesOnly)
+    return;
 
   ASTContext &Context = CGM.getContext();
   StringRef SymbolName = "_vtable$";
@@ -3252,6 +3245,9 @@ llvm::DIModule *CGDebugInfo::getOrCreateModuleRef(ASTSourceDescriptor Mod,
     std::string Remapped = remapDIPath(Path);
     StringRef Relative(Remapped);
     StringRef CompDir = TheCU->getDirectory();
+    if (CompDir.empty())
+      return Remapped;
+
     if (Relative.consume_front(CompDir))
       Relative.consume_front(llvm::sys::path::get_separator());
 
@@ -6441,7 +6437,7 @@ CodeGenFunction::LexicalScope::~LexicalScope() {
 static std::string SanitizerHandlerToCheckLabel(SanitizerHandler Handler) {
   std::string Label;
   switch (Handler) {
-#define SANITIZER_CHECK(Enum, Name, Version)                                   \
+#define SANITIZER_CHECK(Enum, Name, Version, Msg)                              \
   case Enum:                                                                   \
     Label = "__ubsan_check_" #Name;                                            \
     break;

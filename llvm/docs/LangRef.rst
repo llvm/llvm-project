@@ -413,6 +413,8 @@ added in the future:
     - On AArch64 the callee preserves all general purpose registers, except
       X0-X8 and X16-X18. Not allowed with ``nest``.
 
+    - On RISC-V the callee preserve x5-x31 except x6, x7 and x28 registers.
+
     The idea behind this convention is to support calls to runtime functions
     that have a hot path and a cold path. The hot path is usually a small piece
     of code that doesn't use many registers. The cold path might need to call out to
@@ -3355,6 +3357,19 @@ behavior is undefined:
    the pointer after the end of the object),
 -  the size of all allocated objects must be non-negative and not exceed the
    largest signed integer that fits into the index type.
+
+Allocated objects that are created with operations recognized by LLVM (such as
+:ref:`alloca <i_alloca>`, heap allocation functions marked as such, and global
+variables) may *not* change their size. (``realloc``-style operations do not
+change the size of an existing allocated object; instead, they create a new
+allocated object. Even if the object is at the same location as the old one, old
+pointers cannot be used to access this new object.) However, allocated objects
+can also be created by means not recognized by LLVM, e.g. by directly calling
+``mmap``. Those allocated objects are allowed to grow to the right (i.e.,
+keeping the same base address, but increasing their size) while maintaining the
+validity of existing pointers, as long as they always satisfy the properties
+described above. Currently, allocated objects are not permitted to grow to the
+left or to shrink, nor can they have holes.
 
 .. _objectlifetime:
 
@@ -11928,6 +11943,9 @@ if the ``getelementptr`` has any non-zero indices, the following rules apply:
    :ref:`based <pointeraliasing>` on. This means that it points into that
    allocated object, or to its end. Note that the object does not have to be
    live anymore; being in-bounds of a deallocated object is sufficient.
+   If the allocated object can grow, then the relevant size for being *in
+   bounds* is the maximal size the object could have while satisfying the
+   allocated object rules, not its current size.
  * During the successive addition of offsets to the address, the resulting
    pointer must remain *in bounds* of the allocated object at each step.
 
@@ -26639,9 +26657,10 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The first argument is a constant integer representing the size of the
-object, or -1 if it is variable sized. The second argument is a pointer
-to an ``alloca`` instruction.
+The first argument is a constant integer, which is ignored and will be removed
+in the future.
+
+The second argument is a pointer to an ``alloca`` instruction.
 
 Semantics:
 """"""""""
@@ -26679,9 +26698,10 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The first argument is a constant integer representing the size of the
-object, or -1 if it is variable sized. The second argument is a pointer
-to an ``alloca`` instruction.
+The first argument is a constant integer, which is ignored and will be removed
+in the future.
+
+The second argument is a pointer to an ``alloca`` instruction.
 
 Semantics:
 """"""""""

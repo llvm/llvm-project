@@ -89,7 +89,7 @@ public:
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const override;
 
-  uint64_t getFeatureMask(const Function &F) const override;
+  APInt getFeatureMask(const Function &F) const override;
 
   bool isMultiversionedFunction(const Function &F) const override;
 
