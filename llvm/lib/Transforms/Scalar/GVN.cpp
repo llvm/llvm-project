@@ -2515,6 +2515,11 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
       Worklist.emplace_back(A, ConstantInt::get(A->getType(), IsKnownTrue));
       continue;
     }
+
+    if (match(LHS, m_Not(m_Value(A)))) {
+      Worklist.emplace_back(A, ConstantInt::get(A->getType(), !IsKnownTrue));
+      continue;
+    }
   }
 
   return Changed;
