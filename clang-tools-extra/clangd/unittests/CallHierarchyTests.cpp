@@ -633,6 +633,35 @@ TEST(CallHierarchy, HierarchyOnVar) {
                                 iFromRanges(Source.range("Callee")))));
 }
 
+TEST(CallHierarchy, HierarchyOnEnumConstant) {
+  // Tests that the call hierarchy works on enum constants.
+  Annotations Source(R"cpp(
+    enum class Coin { heads$Heads^ , tai$Tails^ls };
+    void caller() {
+      Coin::$CallerH[[heads]];
+      Coin::$CallerT[[tails]];
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point("Heads"), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("heads")));
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get());
+  ASSERT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(withName("caller")),
+                                iFromRanges(Source.range("CallerH")))));
+  Items =
+      prepareCallHierarchy(AST, Source.point("Tails"), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("tails")));
+  IncomingLevel1 = incomingCalls(Items[0], Index.get());
+  ASSERT_THAT(IncomingLevel1,
+              ElementsAre(AllOf(from(withName("caller")),
+                                iFromRanges(Source.range("CallerT")))));
+}
+
 TEST(CallHierarchy, CallInDifferentFileThanCaller) {
   Annotations Header(R"cpp(
     #define WALDO void caller() {

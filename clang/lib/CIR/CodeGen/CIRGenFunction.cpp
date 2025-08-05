@@ -219,7 +219,9 @@ void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
   assert(isa<NamedDecl>(var) && "Needs a named decl");
   assert(!cir::MissingFeatures::cgfSymbolTable());
 
-  auto allocaOp = cast<cir::AllocaOp>(addrVal.getDefiningOp());
+  auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
+  assert(allocaOp && "expected cir::AllocaOp");
+
   if (isParam)
     allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
@@ -381,6 +383,7 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
         !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
 
     if (shouldEmitUnreachable) {
+      assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
         builder.create<cir::TrapOp>(localScope->endLoc);
       else
