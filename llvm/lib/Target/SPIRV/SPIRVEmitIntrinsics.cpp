@@ -21,7 +21,9 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/TypedPointerType.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 #include <queue>
 #include <unordered_set>
@@ -186,6 +188,8 @@ class SPIRVEmitIntrinsics
                                   Instruction *Dest, bool DeleteOld = true);
 
   void applyDemangledPtrArgTypes(IRBuilder<> &B);
+
+  GetElementPtrInst *simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP);
 
   bool runOnFunction(Function &F);
   bool postprocessTypes(Module &M);
@@ -2561,6 +2565,30 @@ void SPIRVEmitIntrinsics::applyDemangledPtrArgTypes(IRBuilder<> &B) {
   }
 }
 
+GetElementPtrInst *
+SPIRVEmitIntrinsics::simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP) {
+  // getelementptr [0 x T], P, 0 (zero), I -> getelementptr T, P, I.
+  // If type is 0-length array and first index is 0 (zero), drop both the
+  // 0-length array type and the first index. This is a common pattern in the
+  // IR, e.g. when using a zero-length array as a placeholder for a flexible
+  // array such as unbound arrays.
+  assert(GEP && "GEP is null");
+  Type *SrcTy = GEP->getSourceElementType();
+  SmallVector<Value *, 8> Indices(GEP->indices());
+  ArrayType *ArrTy = dyn_cast<ArrayType>(SrcTy);
+  if (ArrTy && ArrTy->getNumElements() == 0 &&
+      PatternMatch::match(Indices[0], PatternMatch::m_Zero())) {
+    IRBuilder<> Builder(GEP);
+    Indices.erase(Indices.begin());
+    SrcTy = ArrTy->getElementType();
+    Value *NewGEP = Builder.CreateGEP(SrcTy, GEP->getPointerOperand(), Indices,
+                                      "", GEP->getNoWrapFlags());
+    assert(llvm::isa<GetElementPtrInst>(NewGEP) && "NewGEP should be a GEP");
+    return cast<GetElementPtrInst>(NewGEP);
+  }
+  return nullptr;
+}
+
 bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   if (Func.isDeclaration())
     return false;
@@ -2578,13 +2606,29 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConstTypes.clear();
   AggrStores.clear();
 
-  // fix GEP result types ahead of inference
+  // Fix GEP result types ahead of inference, and simplify if possible.
+  // Data structure for dead instructions that were simplified and replaced.
+  SmallPtrSet<Instruction *, 4> DeadInsts;
   for (auto &I : instructions(Func)) {
     auto *Ref = dyn_cast<GetElementPtrInst>(&I);
     if (!Ref || GR->findDeducedElementType(Ref))
       continue;
+
+    GetElementPtrInst *NewGEP = simplifyZeroLengthArrayGepInst(Ref);
+    if (NewGEP) {
+      Ref->replaceAllUsesWith(NewGEP);
+      if (isInstructionTriviallyDead(Ref))
+        DeadInsts.insert(Ref);
+
+      Ref = NewGEP;
+    }
     if (Type *GepTy = getGEPType(Ref))
       GR->addDeducedElementType(Ref, normalizeType(GepTy));
+  }
+  // Remove dead instructions that were simplified and replaced.
+  for (auto *I : DeadInsts) {
+    assert(I->use_empty() && "Dead instruction should not have any uses left");
+    I->eraseFromParent();
   }
 
   processParamTypesByFunHeader(CurrF, B);
