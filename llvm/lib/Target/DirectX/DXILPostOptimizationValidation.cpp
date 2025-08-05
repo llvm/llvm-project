@@ -248,10 +248,8 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
         llvm::hlsl::BindingInfo::BindingRange ResRange(
             ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
 
-        auto IsBound = Info.isBound(ResList.first, ResBinding.Space, ResRange);
-        if (!IsBound) {
+        if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
           reportRegNotBound(M, ResList.first, ResBinding);
-        }
       }
     }
   }
