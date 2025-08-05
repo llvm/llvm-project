@@ -26,36 +26,28 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _SegmentedIterator, class _Size, class _Functor>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _SegmentedIterator
-__for_each_n_segment(_SegmentedIterator __first, _Size __orig_n, _Functor __func) {
+__for_each_n_segment(_SegmentedIterator __first, _Size __n, _Functor __func) {
   static_assert(__is_segmented_iterator_v<_SegmentedIterator> &&
                     __has_random_access_iterator_category<
                         typename __segmented_iterator_traits<_SegmentedIterator>::__local_iterator>::value,
                 "__for_each_n_segment only works with segmented iterators with random-access local iterators");
-  if (__orig_n <= 0)
+  if (__n <= 0)
     return __first;
 
   using _Traits        = __segmented_iterator_traits<_SegmentedIterator>;
   using __local_iter_t = typename _Traits::__local_iterator;
-  using __difference_t = typename std::iterator_traits<__local_iter_t>::difference_type;
-  __difference_t __n   = __orig_n;
-  auto __seg           = _Traits::__segment(__first);
+  auto __segment_iter  = _Traits::__segment(__first);
   auto __local_first   = _Traits::__local(__first);
   __local_iter_t __local_last;
 
+  __n = __func(_Traits::__local(__first), _Traits::__end(__segment_iter), __n);
+
   while (__n > 0) {
-    __local_last    = _Traits::__end(__seg);
-    auto __seg_size = __local_last - __local_first;
-    if (__n <= __seg_size) {
-      __local_last = __local_first + __n;
-      __func(__local_first, __local_last);
-      break;
-    }
-    __func(__local_first, __local_last);
-    __n -= __seg_size;
-    __local_first = _Traits::__begin(++__seg);
+    ++__segment_iter;
+    __n = __func(_Traits::__begin(__segment_iter), _Traits::__end(__segment_iter), __n);
   }
 
-  return _Traits::__compose(__seg, __local_last);
+  return _Traits::__compose(__segment_iter, __local_last);
 }
 
 _LIBCPP_END_NAMESPACE_STD
