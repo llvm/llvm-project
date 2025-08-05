@@ -1218,7 +1218,6 @@ define amdgpu_kernel void @v_sad_u32_i16_pat1(ptr addrspace(1) %out, i16 %a, i16
 ; GFX12-5-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-5-SDAG-NEXT:    s_lshr_b32 s4, s2, 16
 ; GFX12-5-SDAG-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX12-5-SDAG-NEXT:    s_and_b32 s4, s4, 0xffff
 ; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-5-SDAG-NEXT:    s_min_u32 s5, s2, s4
 ; GFX12-5-SDAG-NEXT:    s_max_u32 s2, s2, s4
@@ -1425,12 +1424,11 @@ define amdgpu_kernel void @v_sad_u32_i8_pat1(ptr addrspace(1) %out, i8 %a, i8 %b
 ; GFX12-5-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX12-5-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
 ; GFX12-5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-5-SDAG-NEXT:    s_lshr_b32 s3, s2, 8
-; GFX12-5-SDAG-NEXT:    s_and_b32 s4, s2, 0xff
-; GFX12-5-SDAG-NEXT:    s_and_b32 s3, s3, 0xff
+; GFX12-5-SDAG-NEXT:    s_and_b32 s3, s2, 0xff
+; GFX12-5-SDAG-NEXT:    s_bfe_u32 s4, s2, 0x80008
 ; GFX12-5-SDAG-NEXT:    s_lshr_b32 s2, s2, 16
-; GFX12-5-SDAG-NEXT:    s_min_u32 s5, s4, s3
-; GFX12-5-SDAG-NEXT:    s_max_u32 s3, s4, s3
+; GFX12-5-SDAG-NEXT:    s_min_u32 s5, s3, s4
+; GFX12-5-SDAG-NEXT:    s_max_u32 s3, s3, s4
 ; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-5-SDAG-NEXT:    s_sub_co_i32 s3, s3, s5
 ; GFX12-5-SDAG-NEXT:    s_add_co_i32 s2, s3, s2
@@ -1635,12 +1633,11 @@ define amdgpu_kernel void @s_sad_u32_i8_pat2(ptr addrspace(1) %out, i8 zeroext %
 ; GFX12-5-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX12-5-SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
 ; GFX12-5-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-5-SDAG-NEXT:    s_lshr_b32 s3, s2, 8
-; GFX12-5-SDAG-NEXT:    s_and_b32 s4, s2, 0xff
-; GFX12-5-SDAG-NEXT:    s_and_b32 s3, s3, 0xff
+; GFX12-5-SDAG-NEXT:    s_and_b32 s3, s2, 0xff
+; GFX12-5-SDAG-NEXT:    s_bfe_u32 s4, s2, 0x80008
 ; GFX12-5-SDAG-NEXT:    s_lshr_b32 s2, s2, 16
-; GFX12-5-SDAG-NEXT:    s_min_u32 s5, s4, s3
-; GFX12-5-SDAG-NEXT:    s_max_u32 s3, s4, s3
+; GFX12-5-SDAG-NEXT:    s_min_u32 s5, s3, s4
+; GFX12-5-SDAG-NEXT:    s_max_u32 s3, s3, s4
 ; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-5-SDAG-NEXT:    s_sub_co_i32 s3, s3, s5
 ; GFX12-5-SDAG-NEXT:    s_add_co_i32 s2, s3, s2
