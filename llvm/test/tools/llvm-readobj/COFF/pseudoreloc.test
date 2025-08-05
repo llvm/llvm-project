@@ -1,17 +1,17 @@
 REQUIRE: x86-registered-target
 
 DEFINE: %{local} = 0x3000
-DEFINE: %{addr1l} = E0
-DEFINE: %{addr3l} = D0
+DEFINE: %{addr1l} = E8
+DEFINE: %{addr3l} = D8
 RUN: yaml2obj %p/Inputs/pseudoreloc.x86_64.yaml | llvm-readobj --coff-pseudoreloc - 2>&1 \
 RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-X64 --match-full-lines --implicit-check-not=warning \
-RUN:       -D#WORD=8 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local}
+RUN:       -D#WORD=8 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local} -DPREFIX=
 
-REDEFINE: %{addr1l} = A4
-REDEFINE: %{addr3l} = B0
+REDEFINE: %{addr1l} = B0
+REDEFINE: %{addr3l} = BC
 RUN: yaml2obj %p/Inputs/pseudoreloc.i386.yaml   | llvm-readobj --coff-pseudoreloc - 2>&1 \
 RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-386 --match-full-lines --implicit-check-not=warning \
-RUN:       -D#WORD=4 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local}
+RUN:       -D#WORD=4 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local} -DPREFIX=_
 
 CHECK-X64:      Format: COFF-x86-64
 CHECK-X64-NEXT: Arch: x86_64
@@ -23,24 +23,35 @@ CHECK-NEXT:  Entry {
 CHECK-NEXT:   Symbol: 0x[[#%X,SYM1]]
 CHECK-NEXT:   SymbolName: sym1
 CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A]]
+CHECK-NEXT:   TargetSymbol: .data+0x0
 CHECK-NEXT:   BitWidth: [[#BW]]
 CHECK-NEXT:  }
 CHECK-NEXT:  Entry {
 CHECK-NEXT:   Symbol: 0x[[#%X,SYM1+mul(1,WORD)]]
 CHECK-NEXT:   SymbolName: sym2
 CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A+mul(1,WORD)]]
+CHECK-NEXT:   TargetSymbol: [[PREFIX]]local2a
 CHECK-NEXT:   BitWidth: [[#BW]]
 CHECK-NEXT:  }
 CHECK-NEXT:  Entry {
 CHECK-NEXT:   Symbol: 0x[[#%X,SYM3]]
 CHECK-NEXT:   SymbolName: sym3
 CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A+mul(2,WORD)]]
+CHECK-NEXT:   TargetSymbol: [[PREFIX]]local3a
+CHECK-NEXT:   BitWidth: [[#BW]]
+CHECK-NEXT:  }
+CHECK-NEXT:  Entry {
+CHECK-NEXT:   Symbol: 0x[[#%X,SYM3]]
+CHECK-NEXT:   SymbolName: sym3
+CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A+mul(3,WORD)]]
+CHECK-NEXT:   TargetSymbol: [[PREFIX]]local3a+0x[[#%X,mul(1,WORD)]]
 CHECK-NEXT:   BitWidth: [[#BW]]
 CHECK-NEXT:  }
 CHECK-NEXT:  Entry {
 CHECK-NEXT:   Symbol: 0x[[#%X,SYM1]]
 CHECK-NEXT:   SymbolName: sym1
-CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A+mul(3,WORD)]]
+CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A+mul(4,WORD)]]
+CHECK-NEXT:   TargetSymbol: [[PREFIX]]local3a+0x[[#%X,mul(2,WORD)]]
 CHECK-NEXT:   BitWidth: [[#BW]]
 CHECK-NEXT:  }
 CHECK-NEXT: ]
@@ -169,8 +180,8 @@ obj2yaml pseudoreloc.x86_64.exe -o pseudoreloc.x86_64.yaml
 @sym3 = external dso_local global [4 x i8]
 @dummy_to_bump_address = private constant i64 u0x4488226655117733
 @local1a = private global ptr getelementptr (i8, ptr @sym1, i32 1)
-@local2a = private global ptr getelementptr (i8, ptr @sym2, i32 2)
-@local3a = private global ptr getelementptr (i8, ptr @sym3, i32 1)
+@local2a = dso_local global ptr getelementptr (i8, ptr @sym2, i32 2)
+@local3a = dso_local global [2 x ptr] [ptr getelementptr (i8, ptr @sym3, i32 1), ptr getelementptr (i8, ptr @sym3, i32 1)]
 @local1b = private global ptr getelementptr (i8, ptr @sym1, i32 2)
 
 define dso_local i32 @start() noinline nounwind {

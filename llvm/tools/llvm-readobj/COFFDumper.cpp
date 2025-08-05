@@ -2015,31 +2015,47 @@ void COFFDumper::printCOFFPseudoReloc() {
                                      ? "___RUNTIME_PSEUDO_RELOC_LIST_END__"
                                      : "__RUNTIME_PSEUDO_RELOC_LIST_END__";
 
-  COFFSymbolRef RelocBegin, RelocEnd;
   auto Count = Obj->getNumberOfSymbols();
   if (Count == 0) {
     W.startLine() << "the symbol table has been stripped\n";
     return;
   }
-  for (auto i = 0u;
-       i < Count && (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()); ++i) {
+
+  struct SymbolEntry {
+    COFFSymbolRef Symbol;
+    const coff_section *Section;
+    StringRef SymbolName;
+  };
+  std::map<uint32_t, SymbolEntry> RVASymbolMap;
+  COFFSymbolRef RelocBegin, RelocEnd;
+  for (auto i = 0u; i < Count; ++i) {
     auto Sym = Obj->getSymbol(i);
     if (!Sym) {
       consumeError(Sym.takeError());
       continue;
     }
+    i += Sym->getNumberOfAuxSymbols();
+
+    if (Sym->getSectionNumber() <= 0)
+      continue;
     auto Name = Obj->getSymbolName(*Sym);
     if (!Name) {
       consumeError(Name.takeError());
       continue;
     }
-    if (*Name == RelocBeginName) {
-      if (Sym->getSectionNumber() > 0)
-        RelocBegin = *Sym;
-    } else if (*Name == RelocEndName) {
-      if (Sym->getSectionNumber() > 0)
-        RelocEnd = *Sym;
+
+    if (*Name == RelocBeginName)
+      RelocBegin = *Sym;
+    else if (*Name == RelocEndName)
+      RelocEnd = *Sym;
+
+    auto Sec = Obj->getSection(Sym->getSectionNumber());
+    if (!Sec) {
+      consumeError(Sec.takeError());
+      continue;
     }
+    RVASymbolMap.emplace((*Sec)->VirtualAddress + Sym->getValue(),
+                         SymbolEntry{*Sym, *Sec, *Name});
   }
   if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
     W.startLine()
@@ -2168,10 +2184,30 @@ void COFFDumper::printCOFFPseudoReloc() {
   ListScope D(W, "PseudoReloc");
   for (const auto &Reloc : RelocRecords) {
     DictScope Entry(W, "Entry");
+
     W.printHex("Symbol", Reloc.Symbol);
     if (const auto *Sym = ImportedSymbols.find(Reloc.Symbol))
       W.printString("SymbolName", *Sym);
+
     W.printHex("Target", Reloc.Target);
+    if (auto Ite = RVASymbolMap.upper_bound(Reloc.Target.value());
+        Ite == RVASymbolMap.begin())
+      W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
+    else if (const uint32_t Offset = Reloc.Target.value() - (--Ite)->first;
+             Offset == 0)
+      W.printString("TargetSymbol", Ite->second.SymbolName);
+    else if (Offset < Ite->second.Section->VirtualSize)
+      W.printSymbolOffset("TargetSymbol", Ite->second.SymbolName, Offset);
+    else if (++Ite == RVASymbolMap.end())
+      W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
+    else if (auto Name = Obj->getSectionName(Ite->second.Section)) {
+      W.printSymbolOffset("TargetSymbol", *Name,
+                          Reloc.Target - Ite->second.Section->VirtualAddress);
+    } else {
+      consumeError(Name.takeError());
+      W.printSymbolOffset("TargetSymbol", "(base)", Reloc.Target);
+    }
+
     W.printNumber("BitWidth", Reloc.BitSize);
   }
 }
