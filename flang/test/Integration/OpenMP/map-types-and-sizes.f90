@@ -6,17 +6,14 @@
 ! added to this directory and sub-directories.
 !===----------------------------------------------------------------------===!
 
-!RUN: %flang_fc1 -emit-llvm -fopenmp -mmlir --enable-delayed-privatization-staging=false -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-NO-FPRIV
-!RUN: %flang_fc1 -emit-llvm -fopenmp -mmlir --enable-delayed-privatization-staging=true -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-FPRIV
-
+!RUN: %flang_fc1 -emit-llvm -fopenmp -fopenmp-version=51 -fopenmp-targets=amdgcn-amd-amdhsa %s -o - | FileCheck %s
 
 !===============================================================================
 ! Check MapTypes for target implicit captures
 !===============================================================================
 
 !CHECK: @.offload_sizes = private unnamed_addr constant [1 x i64] [i64 4]
-!CHECK-FPRIV: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 289]
-!CHECK-NO-FPRIV: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 800]
+!CHECK: @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 289]
 subroutine mapType_scalar
   integer :: a
   !$omp target
@@ -375,8 +372,7 @@ allocate(alloca_dtype%vertexes(2)%vertexy(10))
 end subroutine
 
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [2 x i64] [i64 8, i64 4]
-!CHECK-FPRIV: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 544, i64 289]
-!CHECK-NO-FPRIV: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 544, i64 800]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [2 x i64] [i64 544, i64 289]
 subroutine mapType_c_ptr
   use iso_c_binding, only : c_ptr, c_loc
   type(c_ptr) :: a
@@ -387,8 +383,7 @@ subroutine mapType_c_ptr
 end subroutine mapType_c_ptr
 
 !CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [1 x i64] [i64 1]
-!CHECK-FPRIV: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 289]
-!CHECK-NO-FPRIV: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 800]
+!CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [1 x i64] [i64 289]
 subroutine mapType_char
   character :: a
   !$omp target

@@ -58,7 +58,7 @@ class MapsForPrivatizedSymbolsPass
     // Check if a value of type `type` can be passed to the kernel by value.
     // All kernel parameters are of pointer type, so if the value can be
     // represented inside of a pointer, then it can be passed by value.
-    auto canPassByValue = [&](mlir::Type type) {
+    auto isLiteralType = [&](mlir::Type type) {
       const mlir::DataLayout &dl = builder.getDataLayout();
       mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
       uint64_t ptrSize = dl.getTypeSize(ptrTy);
@@ -112,7 +112,7 @@ class MapsForPrivatizedSymbolsPass
         mlir::omp::VariableCaptureKind::ByRef;
     if (fir::isa_trivial(fir::unwrapRefType(varPtr.getType())) ||
         fir::isa_char(fir::unwrapRefType(varPtr.getType()))) {
-      if (canPassByValue(fir::unwrapRefType(varPtr.getType()))) {
+      if (isLiteralType(fir::unwrapRefType(varPtr.getType()))) {
         captureKind = mlir::omp::VariableCaptureKind::ByCopy;
       }
     }
