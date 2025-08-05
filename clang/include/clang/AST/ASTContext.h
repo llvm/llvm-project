@@ -2394,9 +2394,8 @@ public:
   /// Retrieve the implicitly-predeclared 'struct type_info' declaration.
   TagDecl *getMSTypeInfoTagDecl() const {
     // Lazily create this type on demand - it's only needed for MS builds.
-    if (!MSTypeInfoTagDecl) {
-      MSTypeInfoTagDecl = buildImplicitRecord("type_info");
-    }
+    if (!MSTypeInfoTagDecl)
+      MSTypeInfoTagDecl = buildImplicitRecord("type_info", TagTypeKind::Class);
     return MSTypeInfoTagDecl;
   }
 
