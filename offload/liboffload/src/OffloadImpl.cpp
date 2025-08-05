@@ -488,7 +488,8 @@ Error olSyncQueue_impl(ol_queue_handle_t Queue) {
   // on it, but we have nothing to synchronize in that situation anyway.
   if (Queue->AsyncInfo->Queue) {
     // We don't need to release the queue and we would like the ability for
-    // other offload threads to submit work concurrently, so pass "false" here.
+    // other offload threads to submit work concurrently, so pass "false" here
+    // so we don't release the underlying queue object.
     if (auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo, false))
       return Err;
   }

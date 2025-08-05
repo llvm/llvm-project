@@ -78,8 +78,6 @@ struct __tgt_async_info {
   llvm::SmallVector<void *, 2> AssociatedAllocations;
 
   /// Mutex to guard access to AssociatedAllocations and the Queue.
-  /// This is only used for liboffload and should be ignored in libomptarget
-  /// code.
   std::mutex Mutex;
 
   /// The kernel launch environment used to issue a kernel. Stored here to
