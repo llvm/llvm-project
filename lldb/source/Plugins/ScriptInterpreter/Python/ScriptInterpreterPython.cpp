@@ -139,11 +139,12 @@ public:
     PyConfig_Clear(&config);
 
     // The only case we should go further and acquire the GIL: it is unlocked.
-    if (PyGILState_Check())
+    PyGILState_STATE gil_state = PyGILState_Ensure();
+    if (gil_state != PyGILState_UNLOCKED)
       return;
 
     m_was_already_initialized = true;
-    m_gil_state = PyGILState_Ensure();
+    m_gil_state = gil_state;
     LLDB_LOGV(GetLog(LLDBLog::Script),
               "Ensured PyGILState. Previous state = {0}",
               m_gil_state == PyGILState_UNLOCKED ? "unlocked" : "locked");
