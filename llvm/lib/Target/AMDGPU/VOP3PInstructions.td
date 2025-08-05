@@ -2009,6 +2009,8 @@ let SubtargetPredicate = isGFX125xOnly in {
 
   foreach I = ["f8_f8", "f8_f6", "f8_f4", "f6_f8", "f6_f6", "f6_f4", "f4_f8", "f4_f6", "f4_f4"] in {
     defm : WMMAPat<"V_WMMA_F32_16X16X128_F8F6F4_" # I # "_w32",         int_amdgcn_wmma_f32_16x16x128_f8f6f4,         !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_" # I # "_w32")>;
+    defm : WMMAPat<"V_WMMA_SCALE_F32_16X16X128_F8F6F4_" # I # "_w32",   int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4,   !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_SCALE_" # I # "_w32")>;
+    defm : WMMAPat<"V_WMMA_SCALE16_F32_16X16X128_F8F6F4_" # I # "_w32", int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4, !cast<VOP3PWMMA_Profile>("F32_16X16X128_F8F6F4_SCALE16_" # I # "_w32")>;
   }
 
   def : SWMMACPat<V_SWMMAC_F32_16X16X64_BF16_w32_twoaddr,     int_amdgcn_swmmac_f32_16x16x64_bf16,     F32_BF16X64_SWMMAC_w32>;
