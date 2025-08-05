@@ -121,7 +121,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Utils/LoopUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -1069,21 +1068,6 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
     if (auto *V = dyn_cast<ValueAsMetadata>(Op)) {
       visitValueAsMetadata(*V, nullptr);
       continue;
-    }
-  }
-
-  // Check llvm.loop.estimated_trip_count.
-  if (MD.getNumOperands() > 0 &&
-      MD.getOperand(0).equalsStr(LLVMLoopEstimatedTripCount)) {
-    Check(MD.getNumOperands() == 1 || MD.getNumOperands() == 2,
-          "Expected one or two operands", &MD);
-    if (MD.getNumOperands() == 2) {
-      auto *Count = dyn_cast_or_null<ConstantAsMetadata>(MD.getOperand(1));
-      Check(Count && Count->getType()->isIntegerTy() &&
-                cast<IntegerType>(Count->getType())->getBitWidth() <= 32,
-            "Expected optional second operand to be an integer constant of "
-            "type i32 or smaller",
-            &MD);
     }
   }
 
@@ -6785,10 +6769,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
     break;
   }
   case Intrinsic::lifetime_start:
-  case Intrinsic::lifetime_end:
-    Check(isa<AllocaInst>(Call.getArgOperand(1)),
-          "llvm.lifetime.start/end can only be used on alloca", &Call);
+  case Intrinsic::lifetime_end: {
+    Value *Ptr = Call.getArgOperand(1);
+    Check(isa<AllocaInst>(Ptr) || isa<PoisonValue>(Ptr),
+          "llvm.lifetime.start/end can only be used on alloca or poison",
+          &Call);
     break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.

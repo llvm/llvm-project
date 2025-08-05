@@ -26,7 +26,7 @@ readable assembly language representation. This allows LLVM to provide a
 powerful intermediate representation for efficient compiler
 transformations and analysis, while providing a natural means to debug
 and visualize the transformations. The three different forms of LLVM are
-all equivalent. This document describes the human readable
+all equivalent. This document describes the human-readable
 representation and notation.
 
 The LLVM representation aims to be light-weight and low-level while
@@ -7959,67 +7959,6 @@ the non-distributed fallback version will have. See
 The attributes in this metadata is added to all followup loops of the
 loop distribution pass. See
 :ref:`Transformation Metadata <transformation-metadata>` for details.
-
-'``llvm.loop.estimated_trip_count``' Metadata
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-This metadata records an estimated trip count for the loop.  The first operand
-is the string ``llvm.loop.estimated_trip_count``.  The second operand is an
-integer constant of type ``i32`` or smaller specifying the count, which might be
-omitted for the reasons described below.  For example:
-
-.. code-block:: llvm
-
-   !0 = !{!"llvm.loop.estimated_trip_count", i32 8}
-   !1 = !{!"llvm.loop.estimated_trip_count"}
-
-Purpose
-"""""""
-
-A loop's estimated trip count is an estimate of the average number of loop
-iterations (specifically, the number of times the loop's header executes) each
-time execution reaches the loop.  It is usually only an estimate based on, for
-example, profile data.  The actual number of iterations might vary widely.
-
-The estimated trip count serves as a parameter for various loop transformations
-and typically helps estimate transformation cost.  For example, it can help
-determine how many iterations to peel or how aggressively to unroll.
-
-Initialization and Maintenance
-""""""""""""""""""""""""""""""
-
-The ``pgo-estimate-trip-counts`` pass typically runs immediately after profile
-ingestion to add this metadata to all loops.  It estimates each loop's trip
-count from the loop's ``branch_weights`` metadata.  This way of initially
-estimating trip counts appears to be useful for the passes that consume them.
-
-As passes transform existing loops and create new loops, they must be free to
-update and create ``branch_weights`` metadata to maintain accurate block
-frequencies.  Trip counts estimated from this new ``branch_weights`` metadata
-are not necessarily useful to the passes that consume them.  In general, when
-passes transform and create loops, they should separately estimate new trip
-counts from previously estimated trip counts, and they should record them by
-creating or updating this metadata.  For this or any other work involving
-estimated trip counts, passes should always call
-``llvm::getLoopEstimatedTripCount`` and ``llvm::setLoopEstimatedTripCount``.
-
-Missing Metadata and Values
-"""""""""""""""""""""""""""
-
-If the current implementation of ``pgo-estimate-trip-counts`` cannot estimate a
-trip count from the loop's ``branch_weights`` metadata due to the loop's form or
-due to missing profile data, it creates this metadata for the loop but omits the
-value.  This situation is currently common (e.g., the LLVM IR loop that Clang
-emits for a simple C ``for`` loop).  A later pass (e.g., ``loop-rotate``) might
-modify the loop's form in a way that enables estimating its trip count even if
-those modifications provably never impact the actual number of loop iterations.
-That later pass should then add an appropriate value to the metadata.
-
-However, not all such passes currently do so.  Thus, if this metadata has no
-value, ``llvm::getLoopEstimatedTripCount`` will disregard it and estimate the
-trip count from the loop's ``branch_weights`` metadata.  It does the same when
-the metadata is missing altogether, perhaps because ``pgo-estimate-trip-counts``
-was not specified in a minimal pass list to a tool like ``opt``.
 
 '``llvm.licm.disable``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -21350,7 +21289,7 @@ Semantics:
 On some architectures the address of the code to be executed needs to be
 different than the address where the trampoline is actually stored. This
 intrinsic returns the executable address corresponding to ``tramp``
-after performing the required machine specific adjustments. The pointer
+after performing the required machine-specific adjustments. The pointer
 returned can then be :ref:`bitcast and executed <int_trampoline>`.
 
 
@@ -26719,14 +26658,17 @@ Arguments:
 The first argument is a constant integer, which is ignored and will be removed
 in the future.
 
-The second argument is a pointer to an ``alloca`` instruction.
+The second argument is either a pointer to an ``alloca`` instruction or
+a ``poison`` value.
 
 Semantics:
 """"""""""
 
-The stack-allocated object that ``ptr`` points to is initially marked as dead.
-After '``llvm.lifetime.start``', the stack object is marked as alive and has an
-uninitialized value.
+If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
+
+Otherwise, the stack-allocated object that ``ptr`` points to is initially
+marked as dead. After '``llvm.lifetime.start``', the stack object is marked as
+alive and has an uninitialized value.
 The stack object is marked as dead when either
 :ref:`llvm.lifetime.end <int_lifeend>` to the alloca is executed or the
 function returns.
@@ -26760,13 +26702,16 @@ Arguments:
 The first argument is a constant integer, which is ignored and will be removed
 in the future.
 
-The second argument is a pointer to an ``alloca`` instruction.
+The second argument is either a pointer to an ``alloca`` instruction or
+a ``poison`` value.
 
 Semantics:
 """"""""""
 
-The stack-allocated object that ``ptr`` points to becomes dead after the call
-to this intrinsic.
+If ``ptr`` is a ``poison`` value, the intrinsic has no effect.
+
+Otherwise, the stack-allocated object that ``ptr`` points to becomes dead after
+the call to this intrinsic.
 
 Calling ``llvm.lifetime.end`` on an already dead alloca is no-op.
 
@@ -29443,7 +29388,7 @@ None.
 Semantics:
 """"""""""
 
-This intrinsic is lowered to the target dependent trap instruction. If
+This intrinsic is lowered to the target-dependent trap instruction. If
 the target does not have a trap instruction, this intrinsic will be
 lowered to a call of the ``abort()`` function.
 

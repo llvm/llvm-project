@@ -2714,8 +2714,10 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   }
 
   ctx.symtab.initializeSameAddressThunks();
-  for (auto alias : aliases)
+  for (auto alias : aliases) {
+    assert(alias->kind() == Symbol::UndefinedKind);
     alias->resolveWeakAlias();
+  }
 
   if (config->mingw) {
     // Make sure the crtend.o object is the last object file. This object
