@@ -125,14 +125,12 @@ Block *FuncOp::addEntryBlock() {
   return &block;
 }
 
-void FuncOp::build(OpBuilder &odsBuilder,
-                   OperationState &odsState, StringRef symbol,
-                   FunctionType funcType) {
+void FuncOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                   StringRef symbol, FunctionType funcType) {
   FuncOp::build(odsBuilder, odsState, symbol, funcType, {}, {}, "nested");
 }
 
-ParseResult FuncOp::parse(OpAsmParser &parser,
-                          OperationState &result) {
+ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
   auto buildFuncType = [&parser](Builder &builder, ArrayRef<Type> argTypes,
                                  ArrayRef<Type> results,
                                  function_interface_impl::VariadicFlag,
@@ -195,10 +193,9 @@ void FuncOp::print(OpAsmPrinter &p) {
 // FuncImportOp
 //===----------------------------------------------------------------------===//
 
-void FuncImportOp::build(OpBuilder &odsBuilder,
-                         OperationState &odsState, StringRef symbol,
-                         StringRef moduleName, StringRef importName,
-                         FunctionType type) {
+void FuncImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                         StringRef symbol, StringRef moduleName,
+                         StringRef importName, FunctionType type) {
   FuncImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
                       type, {}, {}, odsBuilder.getStringAttr("nested"));
 }
@@ -207,9 +204,8 @@ void FuncImportOp::build(OpBuilder &odsBuilder,
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
-void GlobalOp::build(OpBuilder &odsBuilder,
-                     OperationState &odsState, StringRef symbol,
-                     Type type, bool isMutable) {
+void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                     StringRef symbol, Type type, bool isMutable) {
   GlobalOp::build(odsBuilder, odsState, symbol, type, isMutable,
                   odsBuilder.getStringAttr("nested"));
 }
@@ -283,10 +279,9 @@ GlobalGetOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 // GlobalImportOp
 //===----------------------------------------------------------------------===//
 
-void GlobalImportOp::build(OpBuilder &odsBuilder,
-                           OperationState &odsState, StringRef symbol,
-                           StringRef moduleName, StringRef importName,
-                           Type type, bool isMutable) {
+void GlobalImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                           StringRef symbol, StringRef moduleName,
+                           StringRef importName, Type type, bool isMutable) {
   GlobalImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
                         type, isMutable, odsBuilder.getStringAttr("nested"));
 }
@@ -399,9 +394,8 @@ Block *LoopOp::getLabelTarget() { return &getBody().front(); }
 // MemOp
 //===----------------------------------------------------------------------===//
 
-void MemOp::build(OpBuilder &odsBuilder,
-                  OperationState &odsState, StringRef symbol,
-                  LimitType limit) {
+void MemOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                  StringRef symbol, LimitType limit) {
   MemOp::build(odsBuilder, odsState, symbol, limit,
                odsBuilder.getStringAttr("nested"));
 }
@@ -410,8 +404,7 @@ void MemOp::build(OpBuilder &odsBuilder,
 // MemImportOp
 //===----------------------------------------------------------------------===//
 
-void MemImportOp::build(OpBuilder &odsBuilder,
-                        OperationState &odsState,
+void MemImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                         StringRef symbol, StringRef moduleName,
                         StringRef importName, LimitType limits) {
   MemImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
@@ -437,16 +430,14 @@ LogicalResult ReinterpretOp::verify() {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-void ReturnOp::build(OpBuilder &odsBuilder,
-                     OperationState &odsState) {}
+void ReturnOp::build(OpBuilder &odsBuilder, OperationState &odsState) {}
 
 //===----------------------------------------------------------------------===//
 // TableOp
 //===----------------------------------------------------------------------===//
 
-void TableOp::build(OpBuilder &odsBuilder,
-                    OperationState &odsState, StringRef symbol,
-                    TableType type) {
+void TableOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                    StringRef symbol, TableType type) {
   TableOp::build(odsBuilder, odsState, symbol, type,
                  odsBuilder.getStringAttr("nested"));
 }
@@ -455,8 +446,7 @@ void TableOp::build(OpBuilder &odsBuilder,
 // TableImportOp
 //===----------------------------------------------------------------------===//
 
-void TableImportOp::build(OpBuilder &odsBuilder,
-                          OperationState &odsState,
+void TableImportOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                           StringRef symbol, StringRef moduleName,
                           StringRef importName, TableType type) {
   TableImportOp::build(odsBuilder, odsState, symbol, moduleName, importName,
