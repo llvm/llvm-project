@@ -304,6 +304,12 @@ HLSLToolChain::TranslateArgs(const DerivedArgList &Args, StringRef BoundArch,
       A->claim();
       continue;
     }
+    if (A->getOption().getID() == options::OPT_dxc_Qstrip_rootsignature) {
+      DAL->AddFlagArg(nullptr,
+                      Opts.getOption(options::OPT_Qdx_rootsignature_strip));
+      A->claim();
+      continue;
+    }
     if (A->getOption().getID() == options::OPT__SLASH_O) {
       StringRef OStr = A->getValue();
       if (OStr == "d") {

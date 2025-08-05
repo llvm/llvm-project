@@ -3790,18 +3790,18 @@ static void RenderOpenCLOptions(const ArgList &Args, ArgStringList &CmdArgs,
 
 static void RenderHLSLOptions(const ArgList &Args, ArgStringList &CmdArgs,
                               types::ID InputType) {
-  const unsigned ForwardedArguments[] = {
-      options::OPT_dxil_validator_version,
-      options::OPT_res_may_alias,
-      options::OPT_D,
-      options::OPT_I,
-      options::OPT_O,
-      options::OPT_emit_llvm,
-      options::OPT_emit_obj,
-      options::OPT_disable_llvm_passes,
-      options::OPT_fnative_half_type,
-      options::OPT_hlsl_entrypoint,
-      options::OPT_fdx_rootsignature_version};
+  const unsigned ForwardedArguments[] = {options::OPT_dxil_validator_version,
+                                         options::OPT_res_may_alias,
+                                         options::OPT_D,
+                                         options::OPT_I,
+                                         options::OPT_O,
+                                         options::OPT_emit_llvm,
+                                         options::OPT_emit_obj,
+                                         options::OPT_disable_llvm_passes,
+                                         options::OPT_fnative_half_type,
+                                         options::OPT_hlsl_entrypoint,
+                                         options::OPT_fdx_rootsignature_version,
+                                         options::OPT_Qdx_rootsignature_strip};
   if (!types::isHLSL(InputType))
     return;
   for (const auto &Arg : ForwardedArguments)
