@@ -182,6 +182,9 @@ def LayoutTrait: AttrInterface<"LayoutTrait"> {
   }];
 
   let methods = [
+    InterfaceMethod<"Get the rank of attribute",
+                    "int64_t",
+                    "getRank">,
     InterfaceMethod<"Get the effective sg layout",
                     "std::optional<SmallVector<int64_t>>",
                     "getEffectiveSgLayout">,
@@ -192,7 +195,6 @@ def LayoutTrait: AttrInterface<"LayoutTrait"> {
                     "FailureOr<SmallVector<Value>>",
                     "delinearizeSubgroupId",
                     (ins "OpBuilder &": $builder, "Location":$loc, "Value":$linearId)>,
-
     InterfaceMethod<"Get the local offset to be accessed by the given subgroup Id",
                     "FailureOr<SmallVector<SmallVector<Value>>>",
                     "getOffsets",
@@ -404,30 +406,40 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
   }];
 
   let parameters = (ins
-    "xegpu::LayoutAttr": $parent,
+    "xegpu::LayoutTrait": $parent,
     "DenseI64ArrayAttr": $dims
   );
 
   let extraClassDeclaration = [{
 
     int64_t getRank() const {
-      return getParent().getRank() - getDims().size();
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.getRank() - attr.getDims().size();
     }
 
     DenseI32ArrayAttr getOrder() const {
-      return getParent().getOrder();
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.getOrder();
     }
 
     bool isWgLayout() const {
-      return getParent().isWgLayout();
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.isWgLayout();
     }
 
     bool isSgLayout() const {
-      return getParent().isSgLayout();
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      return parent.isSgLayout();
     }
 
     std::optional<SmallVector<int64_t>> getEffectiveSgLayout() const {
-      if (auto layout = getParent().getEffectiveSgLayout()) {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      if (auto layout = parent.getEffectiveSgLayout()) {
         ArrayRef<int64_t> dims = getDims().asArrayRef();
         return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*layout), dims);
       }
@@ -435,12 +447,20 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
     }
 
     std::optional<SmallVector<int64_t>> getEffectiveSgData() const {
-      if (auto data = getParent().getEffectiveSgData()) {
+      SliceAttr attr = flatten();
+      auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+      if (auto data = parent.getEffectiveSgData()) {
         ArrayRef<int64_t> dims = getDims().asArrayRef();
         return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*data), dims);
       }
       return std::nullopt;
     }
+
+    /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
+    /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>
+    /// it will coalese two slice operations and return a simplified SliceAttr
+    /// #xegpu.slice<#xegpu.layout<sg_laout = [4, 8, 12]>, dims = [0, 1]>
+    SliceAttr flatten() const;
 
     FailureOr<SmallVector<Value>>
     delinearizeSubgroupId(OpBuilder &builder, Location loc, Value linearId);

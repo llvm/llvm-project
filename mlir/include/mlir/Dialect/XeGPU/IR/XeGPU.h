@@ -24,6 +24,7 @@ namespace mlir {
 namespace xegpu {
 class TensorDescType;
 class LayoutAttr;
+class SliceAttr;
 } // namespace xegpu
 } // namespace mlir
 

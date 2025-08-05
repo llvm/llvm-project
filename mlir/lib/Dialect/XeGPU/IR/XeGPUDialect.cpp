@@ -15,6 +15,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/Debug.h"
 
 using std::optional;
 
@@ -297,11 +298,12 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
 //===----------------------------------------------------------------------===//
 LogicalResult
 SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
-                  xegpu::LayoutAttr parent, DenseI64ArrayAttr dims) {
+                  xegpu::LayoutTrait parent, DenseI64ArrayAttr dims) {
   if (!parent || !dims)
     return emitError() << "expected parent layout and dims attribute";
 
-  int rank = parent.getRank();
+  int64_t rank = parent.getRank();
+
   // check every element in dims is unique and smaller than rank
   llvm::SmallDenseSet<int64_t> seen;
   for (int64_t dim : dims.asArrayRef()) {
@@ -313,10 +315,41 @@ SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
   return success();
 }
 
+SliceAttr SliceAttr::flatten() const {
+  xegpu::LayoutTrait parent = getParent();
+  SmallVector<DenseI64ArrayAttr> slicedDims({getDims()});
+
+  while (auto sliceAttr = dyn_cast<xegpu::SliceAttr>(parent)) {
+    parent = sliceAttr.getParent();
+    slicedDims.push_back(sliceAttr.getDims());
+  }
+
+  auto layoutAttr = dyn_cast<xegpu::LayoutAttr>(parent);
+  SmallVector<int64_t> indices =
+      llvm::to_vector(llvm::seq<int64_t>(0, layoutAttr.getRank()));
+
+  // get remaining dims (flattend) by applying slice ops with all slicedDims
+  SmallVector<int64_t> remainingIndices(indices);
+  for (auto dim : llvm::reverse(slicedDims))
+    remainingIndices = XeGPUDialect::slice(
+        llvm::ArrayRef<int64_t>(remainingIndices), dim.asArrayRef());
+
+  // get flattend sliced dims by applying slice ops with the remaining dims
+  SmallVector<int64_t> flattendDims =
+      XeGPUDialect::slice(llvm::ArrayRef<int64_t>(indices),
+                          llvm::ArrayRef<int64_t>(remainingIndices));
+
+  return xegpu::SliceAttr::get(
+      getContext(), layoutAttr,
+      DenseI64ArrayAttr::get(getContext(), flattendDims));
+}
+
 FailureOr<SmallVector<Value>>
 SliceAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
                                  Value linearId) {
-  return getParent().delinearizeSubgroupId(builder, loc, linearId);
+  SliceAttr attr = flatten();
+  auto parent = dyn_cast<LayoutAttr>(attr.getParent());
+  return parent.delinearizeSubgroupId(builder, loc, linearId);
 }
 
 FailureOr<SmallVector<SmallVector<Value>>>
