@@ -37,6 +37,55 @@ macros:
     standards:
       - gnu
     macro_value: "((void *) 0)"
+enums:
+  - name: RTLD_DI_LMID
+    standards:
+      - gnu
+    value: 1
+  - name: RTLD_DI_LINKMAP
+    standards:
+      - gnu
+    value: 2
+  - name: RTLD_DI_CONFIGADDR,
+    standards:
+      - gnu
+    value: 3
+  - name: RTLD_DI_SERINFO
+    standards:
+      - gnu
+    value: 4
+  - name: RTLD_DI_SERINFOSIZE
+    standards:
+      - gnu
+    value: 5
+  - name: RTLD_DI_ORIGIN
+    standards:
+      - gnu
+    value: 6
+  - name: RTLD_DI_PROFILENAME
+    standards:
+      - gnu
+    value: 7
+  - name: RTLD_DI_PROFILEOUT
+    standards:
+      - gnu
+    value: 8
+  - name: RTLD_DI_TLS_MODID
+    standards:
+      - gnu
+    value: 9
+  - name: RTLD_DI_TLS_DATA
+    standards:
+      - gnu
+    value: 10
+  - name: RTLD_DI_PHDR
+    standards:
+      - gnu
+    value: 11
+  - name: RTLD_DI_MAX
+    standards:
+      - gnu
+    value: 11
 functions:
   - name: dlclose
     standards:
@@ -63,3 +112,11 @@ functions:
     arguments:
       - type: void *__restrict
       - type: const char *__restrict
+  - name: dlinfo
+    standards:
+      - gnu
+    return_type: int
+    arguments:
+      - type: void *__restrict
+      - type: int
+      - type: void *__restrict
