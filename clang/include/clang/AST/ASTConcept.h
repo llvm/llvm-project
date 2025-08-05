@@ -18,6 +18,7 @@
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Basic/UnsignedOrNone.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
@@ -26,6 +27,7 @@
 namespace clang {
 
 class ConceptDecl;
+class TemplateDecl;
 class Expr;
 class NamedDecl;
 struct PrintingPolicy;
@@ -92,11 +94,11 @@ struct ASTConstraintSatisfaction final :
   bool ContainsErrors : 1;
 
   const UnsatisfiedConstraintRecord *begin() const {
-    return getTrailingObjects<UnsatisfiedConstraintRecord>();
+    return getTrailingObjects();
   }
 
   const UnsatisfiedConstraintRecord *end() const {
-    return getTrailingObjects<UnsatisfiedConstraintRecord>() + NumRecords;
+    return getTrailingObjects() + NumRecords;
   }
 
   ASTConstraintSatisfaction(const ASTContext &C,
@@ -122,6 +124,7 @@ struct ASTConstraintSatisfaction final :
 ///   template <std::derives_from<Expr> T> void dump();
 ///             ~~~~~~~~~~~~~~~~~~~~~~~ (in TemplateTypeParmDecl)
 class ConceptReference {
+protected:
   // \brief The optional nested name specifier used when naming the concept.
   NestedNameSpecifierLoc NestedNameSpec;
 
@@ -139,7 +142,7 @@ class ConceptReference {
   NamedDecl *FoundDecl;
 
   /// \brief The concept named.
-  ConceptDecl *NamedConcept;
+  TemplateDecl *NamedConcept;
 
   /// \brief The template argument list source info used to specialize the
   /// concept.
@@ -147,7 +150,7 @@ class ConceptReference {
 
   ConceptReference(NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
                    DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
-                   ConceptDecl *NamedConcept,
+                   TemplateDecl *NamedConcept,
                    const ASTTemplateArgumentListInfo *ArgsAsWritten)
       : NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
         ConceptName(ConceptNameInfo), FoundDecl(FoundDecl),
@@ -157,7 +160,7 @@ public:
   static ConceptReference *
   Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
          SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
-         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
+         NamedDecl *FoundDecl, TemplateDecl *NamedConcept,
          const ASTTemplateArgumentListInfo *ArgsAsWritten);
 
   const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
@@ -196,9 +199,7 @@ public:
     return FoundDecl;
   }
 
-  ConceptDecl *getNamedConcept() const {
-    return NamedConcept;
-  }
+  TemplateDecl *getNamedConcept() const { return NamedConcept; }
 
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     return ArgsAsWritten;
@@ -229,15 +230,14 @@ class TypeConstraint {
   /// type-constraint.
   Expr *ImmediatelyDeclaredConstraint = nullptr;
   ConceptReference *ConceptRef;
-  int ArgumentPackSubstitutionIndex;
+  UnsignedOrNone ArgPackSubstIndex;
 
 public:
   TypeConstraint(ConceptReference *ConceptRef,
                  Expr *ImmediatelyDeclaredConstraint,
-                 int ArgumentPackSubstitutionIndex)
+                 UnsignedOrNone ArgPackSubstIndex)
       : ImmediatelyDeclaredConstraint(ImmediatelyDeclaredConstraint),
-        ConceptRef(ConceptRef),
-        ArgumentPackSubstitutionIndex(ArgumentPackSubstitutionIndex) {}
+        ConceptRef(ConceptRef), ArgPackSubstIndex(ArgPackSubstIndex) {}
 
   /// \brief Get the immediately-declared constraint expression introduced by
   /// this type-constraint, that is - the constraint expression that is added to
@@ -248,13 +248,13 @@ public:
 
   ConceptReference *getConceptReference() const { return ConceptRef; }
 
-  int getArgumentPackSubstitutionIndex() const {
-    return ArgumentPackSubstitutionIndex;
-  }
+  UnsignedOrNone getArgPackSubstIndex() const { return ArgPackSubstIndex; }
 
   // FIXME: Instead of using these concept related functions the callers should
   // directly work with the corresponding ConceptReference.
-  ConceptDecl *getNamedConcept() const { return ConceptRef->getNamedConcept(); }
+  TemplateDecl *getNamedConcept() const {
+    return ConceptRef->getNamedConcept();
+  }
 
   SourceLocation getConceptNameLoc() const {
     return ConceptRef->getConceptNameLoc();

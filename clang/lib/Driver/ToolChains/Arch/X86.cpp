@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
-#include "ToolChains/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
@@ -122,7 +120,8 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
   // Claim and report unsupported -mabi=. Note: we don't support "sysv_abi" or
   // "ms_abi" as default function attributes.
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mabi_EQ)) {
-    StringRef DefaultAbi = Triple.isOSWindows() ? "ms" : "sysv";
+    StringRef DefaultAbi =
+        (Triple.isOSWindows() || Triple.isUEFI()) ? "ms" : "sysv";
     if (A->getValue() != DefaultAbi)
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getSpelling() << Triple.getTriple();
@@ -252,7 +251,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
         D.Diag(diag::warn_drv_deprecated_arg) << Name << 1 << Name.drop_back(4);
       else if (Width == "256")
         D.Diag(diag::warn_drv_deprecated_custom)
-            << Name << "because AVX10/256 is not supported and will be removed";
+            << Name
+            << "no alternative argument provided because "
+               "AVX10/256 is not supported and will be removed";
       else
         assert((Width == "256" || Width == "512") && "Invalid vector length.");
       Features.push_back(Args.MakeArgString((IsNegative ? "-" : "+") + Name));
@@ -286,7 +287,9 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (A->getOption().matches(options::OPT_mevex512) ||
         A->getOption().matches(options::OPT_mno_evex512))
       D.Diag(diag::warn_drv_deprecated_custom)
-          << Name << "because AVX10/256 is not supported and will be removed";
+          << Name
+          << "no alternative argument provided because "
+             "AVX10/256 is not supported and will be removed";
 
     if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {

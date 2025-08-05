@@ -2,6 +2,9 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+# To run these tests:
+# python -m unittest generate_test_report_lib_test.py
+
 import unittest
 from io import StringIO
 from textwrap import dedent
@@ -18,7 +21,28 @@ def junit_from_xml(xml):
 class TestReports(unittest.TestCase):
     def test_title_only(self):
         self.assertEqual(
-            generate_test_report_lib.generate_report("Foo", 0, []), ("", "success")
+            generate_test_report_lib.generate_report("Foo", 0, []),
+            dedent(
+                """\
+                # Foo
+
+                The build succeeded and no tests ran. This is expected in some build configurations."""
+            ),
+        )
+
+    def test_title_only_failure(self):
+        self.assertEqual(
+            generate_test_report_lib.generate_report("Foo", 1, []),
+            dedent(
+                """\
+            # Foo
+
+            The build failed before running any tests.
+
+            Download the build's log file to see the details.
+
+            If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+            ),
         )
 
     def test_no_tests_in_testsuite(self):
@@ -39,7 +63,16 @@ class TestReports(unittest.TestCase):
                     )
                 ],
             ),
-            ("", None),
+            dedent(
+                """\
+                # Foo
+
+                The build failed before running any tests.
+
+                Download the build's log file to see the details.
+
+                If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+            ),
         )
 
     def test_no_failures(self):
@@ -67,8 +100,7 @@ class TestReports(unittest.TestCase):
               # Foo
 
               * 1 test passed"""
-                ),
-                "success",
+                )
             ),
         )
 
@@ -90,12 +122,6 @@ class TestReports(unittest.TestCase):
                         )
                     )
                 ],
-                buildkite_info={
-                    "BUILDKITE_ORGANIZATION_SLUG": "organization_slug",
-                    "BUILDKITE_PIPELINE_SLUG": "pipeline_slug",
-                    "BUILDKITE_BUILD_NUMBER": "build_number",
-                    "BUILDKITE_JOB_ID": "job_id",
-                },
             ),
             (
                 dedent(
@@ -106,9 +132,10 @@ class TestReports(unittest.TestCase):
 
               All tests passed but another part of the build **failed**.
 
-              [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details."""
-                ),
-                "error",
+              Download the build's log file to see the details.
+              
+              If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
             ),
         )
 
@@ -150,7 +177,7 @@ class TestReports(unittest.TestCase):
           * 2 tests failed
 
           ## Failed Tests
-          (click to see output)
+          (click on a test name to see its output)
 
           ### Bar
           <details>
@@ -166,15 +193,15 @@ class TestReports(unittest.TestCase):
           ```
           Other output goes here
           ```
-          </details>"""
-                ),
-                "error",
+          </details>
+          
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
             ),
         )
 
-    MULTI_SUITE_OUTPUT = (
-        dedent(
-            """\
+    MULTI_SUITE_OUTPUT = dedent(
+        """\
         # ABC and DEF
 
         * 1 test passed
@@ -182,7 +209,7 @@ class TestReports(unittest.TestCase):
         * 2 tests failed
 
         ## Failed Tests
-        (click to see output)
+        (click on a test name to see its output)
 
         ### ABC
         <details>
@@ -200,9 +227,9 @@ class TestReports(unittest.TestCase):
         ```
         DEF/test_2 output goes here
         ```
-        </details>"""
-        ),
-        "error",
+        </details>
+        
+        If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
     )
 
     def test_report_single_file_multiple_testsuites(self):
@@ -308,9 +335,10 @@ class TestReports(unittest.TestCase):
 
           * 1 test failed
 
-          Failed tests and their output was too large to report. Download the build's log file to see the details."""
-                ),
-                "error",
+          Failed tests and their output was too large to report. Download the build's log file to see the details.
+          
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
             ),
         )
 
@@ -335,12 +363,6 @@ class TestReports(unittest.TestCase):
                     )
                 ],
                 list_failures=False,
-                buildkite_info={
-                    "BUILDKITE_ORGANIZATION_SLUG": "organization_slug",
-                    "BUILDKITE_PIPELINE_SLUG": "pipeline_slug",
-                    "BUILDKITE_BUILD_NUMBER": "build_number",
-                    "BUILDKITE_JOB_ID": "job_id",
-                },
             ),
             (
                 dedent(
@@ -349,13 +371,15 @@ class TestReports(unittest.TestCase):
 
           * 1 test failed
 
-          Failed tests and their output was too large to report. [Download](https://buildkite.com/organizations/organization_slug/pipelines/pipeline_slug/builds/build_number/jobs/job_id/download.txt) the build's log file to see the details."""
-                ),
-                "error",
+          Failed tests and their output was too large to report. Download the build's log file to see the details.
+          
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
             ),
         )
 
     def test_report_size_limit(self):
+        test_output = "f" * 1000
         self.assertEqual(
             generate_test_report_lib.generate_report(
                 "Foo",
@@ -368,14 +392,16 @@ class TestReports(unittest.TestCase):
           <testsuites time="0.02">
           <testsuite name="Bar" tests="1" failures="1" skipped="0" time="0.02">
           <testcase classname="Bar/test_1" name="test_1" time="0.02">
-            <failure><![CDATA[Some long output goes here...]]></failure>
+            <failure><![CDATA[{output}]]></failure>
           </testcase>
           </testsuite>
-          </testsuites>"""
+          </testsuites>""".format(
+                                output=test_output
+                            )
                         )
                     )
                 ],
-                size_limit=128,
+                size_limit=512,
             ),
             (
                 dedent(
@@ -384,8 +410,9 @@ class TestReports(unittest.TestCase):
 
           * 1 test failed
 
-          Failed tests and their output was too large to report. Download the build's log file to see the details."""
-                ),
-                "error",
+          Failed tests and their output was too large to report. Download the build's log file to see the details.
+          
+          If these failures are unrelated to your changes (for example tests are broken or flaky at HEAD), please open an issue at https://github.com/llvm/llvm-project/issues and add the `infrastructure` label."""
+                )
             ),
         )

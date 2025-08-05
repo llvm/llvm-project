@@ -10,6 +10,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/Type.h"
 
 namespace clang {
 
@@ -139,7 +140,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
     if (MightHaveChanged) {
       QualType QT = Ctx.getTemplateSpecializationType(
           TST->getTemplateName(), FQArgs,
-          TST->getCanonicalTypeInternal());
+          /*CanonicalArgs=*/{}, TST->desugar());
       // getTemplateSpecializationType returns a fully qualified
       // version of the specialization itself, so no need to qualify
       // it.
@@ -171,7 +172,7 @@ static const Type *getFullyQualifiedTemplateType(const ASTContext &Ctx,
         TemplateName TN(TSTDecl->getSpecializedTemplate());
         QualType QT = Ctx.getTemplateSpecializationType(
             TN, FQArgs,
-            TSTRecord->getCanonicalTypeInternal());
+            /*CanonicalArgs=*/{}, TSTRecord->getCanonicalTypeInternal());
         // getTemplateSpecializationType returns a fully qualified
         // version of the specialization itself, so no need to qualify
         // it.
@@ -217,16 +218,7 @@ static NestedNameSpecifier *getFullyQualifiedNestedNameSpecifier(
       return Scope;
     case NestedNameSpecifier::Namespace:
       return TypeName::createNestedNameSpecifier(
-          Ctx, Scope->getAsNamespace(), WithGlobalNsPrefix);
-    case NestedNameSpecifier::NamespaceAlias:
-      // Namespace aliases are only valid for the duration of the
-      // scope where they were introduced, and therefore are often
-      // invalid at the end of the TU.  So use the namespace name more
-      // likely to be valid at the end of the TU.
-      return TypeName::createNestedNameSpecifier(
-          Ctx,
-          Scope->getAsNamespaceAlias()->getNamespace()->getCanonicalDecl(),
-          WithGlobalNsPrefix);
+          Ctx, Scope->getAsNamespace()->getNamespace(), WithGlobalNsPrefix);
     case NestedNameSpecifier::Identifier:
       // A function or some other construct that makes it un-namable
       // at the end of the TU. Skip the current component of the name,
@@ -281,7 +273,7 @@ static NestedNameSpecifier *createNestedNameSpecifierForScopeOf(
         //
         // Make the situation is 'useable' but looking a bit odd by
         // picking a random instance as the declaring context.
-        if (ClassTempl->spec_begin() != ClassTempl->spec_end()) {
+        if (!ClassTempl->specializations().empty()) {
           Decl = *(ClassTempl->spec_begin());
           Outer = dyn_cast<NamedDecl>(Decl);
           OuterNS = dyn_cast<NamespaceDecl>(Decl);
@@ -414,6 +406,18 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
     // Add back the qualifiers.
     QT = Ctx.getQualifiedType(QT, Quals);
     return QT;
+  }
+
+  // Handle types with attributes such as `unique_ptr<int> _Nonnull`.
+  if (auto *AT = dyn_cast<AttributedType>(QT.getTypePtr())) {
+    QualType NewModified =
+        getFullyQualifiedType(AT->getModifiedType(), Ctx, WithGlobalNsPrefix);
+    QualType NewEquivalent =
+        getFullyQualifiedType(AT->getEquivalentType(), Ctx, WithGlobalNsPrefix);
+    Qualifiers Qualifiers = QT.getLocalQualifiers();
+    return Ctx.getQualifiedType(
+        Ctx.getAttributedType(AT->getAttrKind(), NewModified, NewEquivalent),
+        Qualifiers);
   }
 
   // Remove the part of the type related to the type being a template

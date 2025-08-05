@@ -131,7 +131,7 @@ public:
   }
 
   void addVar(StringRef Name, const Init *I) {
-    bool Ins = Vars.try_emplace(std::string(Name), I).second;
+    bool Ins = Vars.try_emplace(Name.str(), I).second;
     (void)Ins;
     assert(Ins && "Local variable already exists");
   }
@@ -161,10 +161,10 @@ class TGParser {
   // Record tracker
   RecordKeeper &Records;
 
-  // A "named boolean" indicating how to parse identifiers.  Usually
+  // A "named boolean" indicating how to parse identifiers. Usually
   // identifiers map to some existing object but in special cases
   // (e.g. parsing def names) no such object exists yet because we are
-  // in the middle of creating in.  For those situations, allow the
+  // in the middle of creating in. For those situations, allow the
   // parser to ignore missing object errors.
   enum IDParseMode {
     ParseValueMode,   // We are parsing a value we expect to look up.
@@ -183,7 +183,7 @@ public:
         NoWarnOnUnusedTemplateArgs(NoWarnOnUnusedTemplateArgs),
         TrackReferenceLocs(TrackReferenceLocs) {}
 
-  /// ParseFile - Main entrypoint for parsing a tblgen file.  These parser
+  /// ParseFile - Main entrypoint for parsing a tblgen file. These parser
   /// routines return true on error, or false on success.
   bool ParseFile();
 

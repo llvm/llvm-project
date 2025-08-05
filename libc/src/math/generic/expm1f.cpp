@@ -30,6 +30,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
   uint32_t x_u = xbits.uintval();
   uint32_t x_abs = x_u & 0x7fff'ffffU;
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Exceptional value
   if (LIBC_UNLIKELY(x_u == 0x3e35'bec5U)) { // x = 0x1.6b7d8ap-3f
     int round_mode = fputil::quick_get_round();
@@ -37,7 +38,6 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
       return 0x1.8dbe64p-3f;
     return 0x1.8dbe62p-3f;
   }
-
 #if !defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
   if (LIBC_UNLIKELY(x_u == 0xbdc1'c6cbU)) { // x = -0x1.838d96p-4f
     int round_mode = fputil::quick_get_round();
@@ -46,6 +46,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
     return -0x1.71c882p-4f;
   }
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // When |x| > 25*log(2), or nan
   if (LIBC_UNLIKELY(x_abs >= 0x418a'a123U)) {

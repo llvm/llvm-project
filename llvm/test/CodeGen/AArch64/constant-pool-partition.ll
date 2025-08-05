@@ -1,12 +1,10 @@
-; RUN: llc -mtriple=aarch64 -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
-; RUN:     -unique-section-names=false \
+; RUN: llc -mtriple=aarch64 -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
 
 ; Repeat the RUN command above for big-endian systems.
-; RUN: llc -mtriple=aarch64_be -enable-split-machine-functions \
-; RUN:     -partition-static-data-sections=true -function-sections=true \
-; RUN:     -unique-section-names=false \
+; RUN: llc -mtriple=aarch64_be -partition-static-data-sections \
+; RUN:     -function-sections -unique-section-names=false \
 ; RUN:     %s -o - 2>&1 | FileCheck %s --dump-input=always
 
 ; Tests that constant pool hotness is aggregated across the module. The
@@ -21,11 +19,11 @@
 ;   function, constant pools for this constant should not have `.unlikely` suffix.
 
 ;; Constant pools for function @cold_func.
-; CHECK:       .section	.rodata.cst8.hot,"aM",@progbits,8
+; CHECK:       .section	.rodata.cst8.hot.,"aM",@progbits,8
 ; CHECK-NEXT:     .p2align
 ; CHECK-NEXT:   .LCPI0_0:
 ; CHECK-NEXT:	    .xword	0x3fe5c28f5c28f5c3              // double 0.68000000000000005
-; CHECK-NEXT: .section	.rodata.cst8.unlikely,"aM",@progbits,8
+; CHECK-NEXT: .section	.rodata.cst8.unlikely.,"aM",@progbits,8
 ; CHECK-NEXT:     .p2align
 ; CHECK-NEXT:   .LCPI0_1:
 ; CHECK-NEXT:     .xword 0x3fe5eb851eb851ec              // double 0.68500000000000005
@@ -60,7 +58,7 @@
 ; CHECK-NEXT:     .word 3                                 // 0x3
 ; CHECK-NEXT:     .word 5                                 // 0x5
 ; CHECK-NEXT:     .word 7                                 // 0x7
-; CHECK-NEXT: .section        .rodata.cst16.hot,"aM",@progbits,16
+; CHECK-NEXT: .section        .rodata.cst16.hot.,"aM",@progbits,16
 ; CHECK-NEXT:     .p2align
 ; CHECK-NEXT:   .LCPI1_2:
 ; CHECK-NEXT:     .word   442                             // 0x1ba
@@ -69,11 +67,11 @@
 ; CHECK-NEXT:     .word   0                               // 0x0
 
 ;; Constant pools for function @hot_func
-; CHECK:      .section        .rodata.cst8.hot,"aM",@progbits,8
+; CHECK:      .section        .rodata.cst8.hot.,"aM",@progbits,8
 ; CHECK-NEXT:     .p2align
 ; CHECK-NEXT:   .LCPI2_0:
 ; CHECK-NEXT:     .xword  0x3fe5c28f5c28f5c3              // double 0.68000000000000005
-; CHECK-NEXT: .section        .rodata.cst16.hot,"aM",@progbits,16
+; CHECK-NEXT: .section        .rodata.cst16.hot.,"aM",@progbits,16
 ; CHECK-NEXT:     .p2align
 ; CHECK-NEXT:   .LCPI2_1:
 ; CHECK-NEXT:     .word   0                               // 0x0

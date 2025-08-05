@@ -52,7 +52,7 @@ size_t strnlen(const char *s, size_t maxlen) // expected-note {{'strnlen' has be
 
 void test2(const char *s, int i) {
 // CHECK: define {{.*}}void @test2
-  const char c[123];
+  const char c[123] = { 0 };
   strnlen(s, i);
 // CHECK: call {{.*}}strnlen_real1
   strnlen(s, 999);

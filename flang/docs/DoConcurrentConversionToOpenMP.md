@@ -202,6 +202,57 @@ variables: `i` and `j`. These are locally allocated inside the parallel/target
 OpenMP region similar to what the single-range example in previous section
 shows.
 
+### Data environment
+
+By default, variables that are used inside a `do concurrent` loop nest are
+either treated as `shared` in case of mapping to `host`, or mapped into the
+`target` region using a `map` clause in case of mapping to `device`. The only
+exceptions to this are:
+  1. the loop's iteration variable(s) (IV) of **perfect** loop nests. In that
+     case, for each IV, we allocate a local copy as shown by the mapping
+     examples above.
+  1. any values that are from allocations outside the loop nest and used
+     exclusively inside of it. In such cases, a local privatized
+     copy is created in the OpenMP region to prevent multiple teams of threads
+     from accessing and destroying the same memory block, which causes runtime
+     issues. For an example of such cases, see
+     `flang/test/Transforms/DoConcurrent/locally_destroyed_temp.f90`.
+
+Implicit mapping detection (for mapping to the target device) is still quite
+limited and work to make it smarter is underway for both OpenMP in general 
+and `do concurrent` mapping.
+
+#### Non-perfectly-nested loops' IVs
+
+For non-perfectly-nested loops, the IVs are still treated as `shared` or
+`map` entries as pointed out above. This **might not** be consistent with what
+the Fortran specification tells us. In particular, taking the following
+snippets from the spec (version 2023) into account:
+
+> § 3.35
+> ------
+> construct entity
+> entity whose identifier has the scope of a construct
+
+> § 19.4
+> ------
+>  A variable that appears as an index-name in a FORALL or DO CONCURRENT
+>  construct [...] is a construct entity. A variable that has LOCAL or
+>  LOCAL_INIT locality in a DO CONCURRENT construct is a construct entity.
+> [...]
+> The name of a variable that appears as an index-name in a DO CONCURRENT
+> construct, FORALL statement, or FORALL construct has a scope of the statement
+> or construct. A variable that has LOCAL or LOCAL_INIT locality in a DO
+> CONCURRENT construct has the scope of that construct.
+
+From the above quotes, it seems there is an equivalence between the IV of a `do
+concurrent` loop and a variable with a `LOCAL` locality specifier (equivalent
+to OpenMP's `private` clause). Which means that we should probably
+localize/privatize a `do concurrent` loop's IV even if it is not perfectly
+nested in the nest we are parallelizing. For now, however, we **do not** do
+that as pointed out previously. In the near future, we propose a middle-ground
+solution (see the Next steps section for more details).
+
 <!--
 More details about current status will be added along with relevant parts of the
 implementation in later upstreaming patches.

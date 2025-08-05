@@ -147,6 +147,7 @@ function generate-cmake() {
     generate-cmake-base \
           -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
           -DLIBCXX_CXX_ABI=libcxxabi \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
           "${@}"
 }
 
@@ -438,6 +439,12 @@ generic-hardening-mode-fast-with-abi-breaks)
 generic-hardening-mode-extensive)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-extensive.cmake"
+    check-runtimes
+    check-abi-list
+;;
+generic-hardening-mode-extensive-observe-semantic)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-extensive-observe-semantic.cmake"
     check-runtimes
     check-abi-list
 ;;

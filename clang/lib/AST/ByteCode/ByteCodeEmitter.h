@@ -60,6 +60,7 @@ protected:
 
   /// We're always emitting bytecode.
   bool isActive() const { return true; }
+  bool checkingForUndefinedBehavior() const { return false; }
 
   /// Callback for local registration.
   Local createLocal(Descriptor *D);
@@ -87,7 +88,7 @@ private:
   /// Location of label relocations.
   llvm::DenseMap<LabelTy, llvm::SmallVector<unsigned, 5>> LabelRelocs;
   /// Program code.
-  std::vector<std::byte> Code;
+  llvm::SmallVector<std::byte> Code;
   /// Opcode to expression mapping.
   SourceMap SrcMap;
 

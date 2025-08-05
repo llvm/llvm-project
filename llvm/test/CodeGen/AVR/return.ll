@@ -126,8 +126,8 @@ define i32 @return32_arg(i32 %x) {
 define i32 @return32_arg2(i32 %x, i32 %y, i32 %z) {
 ; AVR-LABEL: return32_arg2:
 ; AVR:       ; %bb.0:
-; AVR-NEXT:    movw r22, r14
 ; AVR-NEXT:    movw r24, r16
+; AVR-NEXT:    movw r22, r14
 ; AVR-NEXT:    ret
 ;
 ; TINY-LABEL: return32_arg2:

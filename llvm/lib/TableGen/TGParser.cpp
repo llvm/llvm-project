@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TGParser.h"
+#include "TGLexer.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
@@ -240,17 +241,15 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, const Init *ValName,
     return Error(Loc, "Value '" + ValName->getAsUnquotedString() +
                  "' unknown!");
 
-  // Do not allow assignments like 'X = X'.  This will just cause infinite loops
+  // Do not allow assignments like 'X = X'. This will just cause infinite loops
   // in the resolution machinery.
   if (BitList.empty())
     if (const auto *VI = dyn_cast<VarInit>(V))
       if (VI->getNameInit() == ValName && !AllowSelfAssignment)
         return Error(Loc, "Recursion / self-assignment forbidden");
 
-  // If we are assigning to a subset of the bits in the value... then we must be
-  // assigning to a field of BitsRecTy, which must have a BitsInit
-  // initializer.
-  //
+  // If we are assigning to a subset of the bits in the value we must be
+  // assigning to a field of BitsRecTy, which must have a BitsInit initializer.
   if (!BitList.empty()) {
     const auto *CurVal = dyn_cast<BitsInit>(RV->getValue());
     if (!CurVal)
@@ -332,17 +331,10 @@ bool TGParser::AddSubClass(Record *CurRec, SubClassReference &SubClass) {
 
   // Since everything went well, we can now set the "superclass" list for the
   // current record.
-  for (const auto &[SC, Loc] : SC->getSuperClasses()) {
-    if (CurRec->isSubClassOf(SC))
-      return Error(SubClass.RefRange.Start,
-                   "Already subclass of '" + SC->getName() + "'!\n");
-    CurRec->addSuperClass(SC, Loc);
-  }
-
   if (CurRec->isSubClassOf(SC))
     return Error(SubClass.RefRange.Start,
                  "Already subclass of '" + SC->getName() + "'!\n");
-  CurRec->addSuperClass(SC, SubClass.RefRange);
+  CurRec->addDirectSuperClass(SC, SubClass.RefRange);
   return false;
 }
 
@@ -434,9 +426,9 @@ bool TGParser::resolve(const ForeachLoop &Loop, SubstStack &Substs,
   const Init *List = Loop.ListValue->resolveReferences(R);
 
   // For if-then-else blocks, we lower to a foreach loop whose list is a
-  // ternary selection between lists of different length.  Since we don't
+  // ternary selection between lists of different length. Since we don't
   // have a means to track variable length record lists, we *must* resolve
-  // the condition here.  We want to defer final resolution of the arms
+  // the condition here. We want to defer final resolution of the arms
   // until the resulting records are finalized.
   // e.g. !if(!exists<SchedWrite>("__does_not_exist__"), [1], [])
   if (const auto *TI = dyn_cast<TernOpInit>(List);
@@ -707,7 +699,7 @@ const Init *TGParser::ParseObjectName(MultiClass *CurMultiClass) {
   return Name;
 }
 
-/// ParseClassID - Parse and resolve a reference to a class name.  This returns
+/// ParseClassID - Parse and resolve a reference to a class name. This returns
 /// null on error.
 ///
 ///    ClassID ::= ID
@@ -795,7 +787,7 @@ ParseSubClassReference(Record *CurRec, bool isDefm) {
 }
 
 /// ParseSubMultiClassReference - Parse a reference to a subclass or to a
-/// templated submulticlass.  This returns a SubMultiClassRefTy with a null
+/// templated submulticlass. This returns a SubMultiClassRefTy with a null
 /// Record* on error.
 ///
 ///  SubMultiClassRef ::= MultiClassID
@@ -1085,7 +1077,7 @@ bool TGParser::ParseOptionalBitList(SmallVectorImpl<unsigned> &Ranges) {
   return false;
 }
 
-/// ParseType - Parse and return a tblgen type.  This returns null on error.
+/// ParseType - Parse and return a tblgen type. This returns null on error.
 ///
 ///   Type ::= STRING                       // string type
 ///   Type ::= CODE                         // code type
@@ -1187,7 +1179,7 @@ const Init *TGParser::ParseIDValue(Record *CurRec, const StringInit *Name,
   return nullptr;
 }
 
-/// ParseOperation - Parse an operator.  This returns null on error.
+/// ParseOperation - Parse an operator. This returns null on error.
 ///
 /// Operation ::= XOperator ['<' Type '>'] '(' Args ')'
 ///
@@ -1208,6 +1200,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   case tgtok::XCast:
   case tgtok::XRepr:
   case tgtok::XGetDagOp:
+  case tgtok::XGetDagOpName:
   case tgtok::XInitialized: { // Value ::= !unop '(' Value ')'
     UnOpInit::UnaryOp Code;
     const RecTy *Type = nullptr;
@@ -1295,6 +1288,11 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
         Type = RecordRecTy::get(Records, {});
       }
       Code = UnOpInit::GETDAGOP;
+      break;
+    case tgtok::XGetDagOpName:
+      Lex.Lex(); // eat the operation
+      Type = StringRecTy::get(Records);
+      Code = UnOpInit::GETDAGOPNAME;
       break;
     case tgtok::XInitialized:
       Lex.Lex(); // eat the operation
@@ -1523,7 +1521,8 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   case tgtok::XInterleave:
   case tgtok::XGetDagArg:
   case tgtok::XGetDagName:
-  case tgtok::XSetDagOp: { // Value ::= !binop '(' Value ',' Value ')'
+  case tgtok::XSetDagOp:
+  case tgtok::XSetDagOpName: { // Value ::= !binop '(' Value ',' Value ')'
     tgtok::TokKind OpTok = Lex.getCode();
     SMLoc OpLoc = Lex.getLoc();
     Lex.Lex();  // eat the operation
@@ -1559,6 +1558,9 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     case tgtok::XStrConcat:  Code = BinOpInit::STRCONCAT; break;
     case tgtok::XInterleave: Code = BinOpInit::INTERLEAVE; break;
     case tgtok::XSetDagOp:   Code = BinOpInit::SETDAGOP; break;
+    case tgtok::XSetDagOpName:
+      Code = BinOpInit::SETDAGOPNAME;
+      break;
     case tgtok::XGetDagArg:
       Code = BinOpInit::GETDAGARG;
       break;
@@ -1587,6 +1589,10 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
         TokError("did not get type for !getdagarg operator");
         return nullptr;
       }
+      ArgType = DagRecTy::get(Records);
+      break;
+    case tgtok::XSetDagOpName:
+      Type = DagRecTy::get(Records);
       ArgType = DagRecTy::get(Records);
       break;
     case tgtok::XGetDagName:
@@ -1782,22 +1788,26 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
       // Deal with BinOps whose arguments have different types, by
       // rewriting ArgType in between them.
       switch (Code) {
-        case BinOpInit::SETDAGOP:
-          // After parsing the first dag argument, switch to expecting
-          // a record, with no restriction on its superclasses.
-          ArgType = RecordRecTy::get(Records, {});
-          break;
-        case BinOpInit::GETDAGARG:
-          // After parsing the first dag argument, expect an index integer or a
-          // name string.
-          ArgType = nullptr;
-          break;
-        case BinOpInit::GETDAGNAME:
-          // After parsing the first dag argument, expect an index integer.
-          ArgType = IntRecTy::get(Records);
-          break;
-        default:
-          break;
+      case BinOpInit::SETDAGOPNAME:
+        // After parsing the first dag argument, expect a string.
+        ArgType = StringRecTy::get(Records);
+        break;
+      case BinOpInit::SETDAGOP:
+        // After parsing the first dag argument, switch to expecting
+        // a record, with no restriction on its superclasses.
+        ArgType = RecordRecTy::get(Records, {});
+        break;
+      case BinOpInit::GETDAGARG:
+        // After parsing the first dag argument, expect an index integer or a
+        // name string.
+        ArgType = nullptr;
+        break;
+      case BinOpInit::GETDAGNAME:
+        // After parsing the first dag argument, expect an index integer.
+        ArgType = IntRecTy::get(Records);
+        break;
+      default:
+        break;
       }
 
       if (!consume(tgtok::comma))
@@ -1935,9 +1945,10 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
         const auto *Arg2 = cast<TypedInit>(Args[2]);
         assert(isa<IntRecTy>(Arg2->getType()));
         RHS = Arg2;
-      } else
+      } else {
         // (start, end, 1)
         RHS = IntInit::get(Records, 1);
+      }
     }
     return TernOpInit::get(TernOpInit::RANGE, LHS, MHS, RHS,
                            IntRecTy::get(Records)->getListTy())
@@ -1953,7 +1964,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     const RecTy *Type = nullptr;
 
     tgtok::TokKind LexCode = Lex.getCode();
-    Lex.Lex();  // eat the operation
+    Lex.Lex(); // Eat the operation.
     switch (LexCode) {
     default: llvm_unreachable("Unhandled code!");
     case tgtok::XDag:
@@ -2259,7 +2270,7 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
   }
 }
 
-/// ParseOperatorType - Parse a type for an operator.  This returns
+/// ParseOperatorType - Parse a type for an operator. This returns
 /// null on error.
 ///
 /// OperatorType ::= '<' Type '>'
@@ -2676,7 +2687,7 @@ const Init *TGParser::ParseOperationCond(Record *CurRec,
   return CondOpInit::get(Case, Val, Type)->Fold(CurRec);
 }
 
-/// ParseSimpleValue - Parse a tblgen value.  This returns null on error.
+/// ParseSimpleValue - Parse a tblgen value. This returns null on error.
 ///
 ///   SimpleValue ::= IDValue
 ///   SimpleValue ::= INTVAL
@@ -2809,7 +2820,7 @@ const Init *TGParser::ParseSimpleValue(Record *CurRec, const RecTy *ItemType,
     SmallVector<const Init *, 16> NewBits;
 
     // As we parse { a, b, ... }, 'a' is the highest bit, but we parse it
-    // first.  We'll first read everything in to a vector, then we can reverse
+    // first. We'll first read everything in to a vector, then we can reverse
     // it to get the bits in the correct order for the BitsInit value.
     for (unsigned i = 0, e = Vals.size(); i != e; ++i) {
       // FIXME: The following two loops would not be duplicated
@@ -3325,10 +3336,10 @@ bool TGParser::ParseTemplateArgValueList(
 }
 
 /// ParseDeclaration - Read a declaration, returning the name of field ID, or an
-/// empty string on error.  This can happen in a number of different contexts,
+/// empty string on error. This can happen in a number of different contexts,
 /// including within a def or in the template args for a class (in which case
 /// CurRec will be non-null) and within the template args for a multiclass (in
-/// which case CurRec will be null, but CurMultiClass will be set).  This can
+/// which case CurRec will be null, but CurMultiClass will be set). This can
 /// also happen within a def that is within a multiclass, which will set both
 /// CurRec and CurMultiClass.
 ///
@@ -3390,7 +3401,7 @@ const Init *TGParser::ParseDeclaration(Record *CurRec,
     if (!Val ||
         SetValue(CurRec, ValLoc, DeclName, {}, Val,
                  /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/false)) {
-      // Return the name, even if an error is thrown.  This is so that we can
+      // Return the name, even if an error is thrown. This is so that we can
       // continue to make some progress, even without the value having been
       // initialized.
       return DeclName;
@@ -3401,7 +3412,7 @@ const Init *TGParser::ParseDeclaration(Record *CurRec,
 }
 
 /// ParseForeachDeclaration - Read a foreach declaration, returning
-/// the name of the declared object or a NULL Init on error.  Return
+/// the name of the declared object or a NULL Init on error. Return
 /// the name of the parsed initializer list through ForeachListName.
 ///
 ///  ForeachDeclaration ::= ID '=' '{' RangeList '}'
@@ -3483,7 +3494,7 @@ TGParser::ParseForeachDeclaration(const Init *&ForeachListValue) {
 }
 
 /// ParseTemplateArgList - Read a template argument list, which is a non-empty
-/// sequence of template-declarations in <>'s.  If CurRec is non-null, these are
+/// sequence of template-declarations in <>'s. If CurRec is non-null, these are
 /// template args for a class. If null, these are the template args for a
 /// multiclass.
 ///
@@ -3584,7 +3595,7 @@ bool TGParser::ParseBodyItem(Record *CurRec) {
   return SetValue(CurRec, IdLoc, FieldName, BitList, Val);
 }
 
-/// ParseBody - Read the body of a class or def.  Return true on error, false on
+/// ParseBody - Read the body of a class or def. Return true on error, false on
 /// success.
 ///
 ///   Body     ::= ';'
@@ -3647,8 +3658,8 @@ bool TGParser::ApplyLetStack(RecordsEntry &Entry) {
   return false;
 }
 
-/// ParseObjectBody - Parse the body of a def or class.  This consists of an
-/// optional ClassList followed by a Body.  CurRec is the current def or class
+/// ParseObjectBody - Parse the body of a def or class. This consists of an
+/// optional ClassList followed by a Body. CurRec is the current def or class
 /// that is being parsed.
 ///
 ///   ObjectBody      ::= BaseClassList Body
@@ -3847,8 +3858,8 @@ bool TGParser::ParseDefvar(Record *CurRec) {
   return false;
 }
 
-/// ParseForeach - Parse a for statement.  Return the record corresponding
-/// to it.  This returns true on error.
+/// ParseForeach - Parse a for statement. Return the record corresponding
+/// to it. This returns true on error.
 ///
 ///   Foreach ::= FOREACH Declaration IN '{ ObjectList '}'
 ///   Foreach ::= FOREACH Declaration IN Object
@@ -4056,7 +4067,7 @@ bool TGParser::ParseClass() {
   if (CurRec) {
     // If the body was previously defined, this is an error.
     if (!CurRec->getValues().empty() ||
-        !CurRec->getSuperClasses().empty() ||
+        !CurRec->getDirectSuperClasses().empty() ||
         !CurRec->getTemplateArgs().empty())
       return TokError("Class '" + CurRec->getNameInitAsString() +
                       "' already defined");
@@ -4135,7 +4146,7 @@ void TGParser::ParseLetList(SmallVectorImpl<LetRecord> &Result) {
   } while (consume(tgtok::comma));
 }
 
-/// ParseTopLevelLet - Parse a 'let' at top level.  This can be a couple of
+/// ParseTopLevelLet - Parse a 'let' at top level. This can be a couple of
 /// different related productions. This works inside multiclasses too.
 ///
 ///   Object ::= LET LetList IN '{' ObjectList '}'
@@ -4333,7 +4344,7 @@ bool TGParser::ParseDefm(MultiClass *CurMultiClass) {
     // through its template argument names. Substs contains a substitution
     // value for each argument, either the value specified or the default.
     // Then we can resolve the template arguments.
-    MultiClass *MC = MultiClasses[std::string(Ref.Rec->getName())].get();
+    MultiClass *MC = MultiClasses[Ref.Rec->getName().str()].get();
     assert(MC && "Didn't lookup multiclass correctly?");
 
     SubstStack Substs;
