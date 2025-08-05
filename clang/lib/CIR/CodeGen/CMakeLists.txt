@@ -11,17 +11,22 @@ add_clang_library(clangCIR
   CIRGenBuilder.cpp
   CIRGenCall.cpp
   CIRGenClass.cpp
+  CIRGenCleanup.cpp
+  CIRGenCXX.cpp
   CIRGenCXXABI.cpp
   CIRGenCXXExpr.cpp
+  CIRGenBuiltin.cpp
   CIRGenDecl.cpp
   CIRGenDeclOpenACC.cpp
   CIRGenExpr.cpp
   CIRGenExprAggregate.cpp
+  CIRGenExprComplex.cpp
   CIRGenExprConstant.cpp
   CIRGenExprScalar.cpp
   CIRGenFunction.cpp
   CIRGenItaniumCXXABI.cpp
   CIRGenModule.cpp
+  CIRGenOpenACC.cpp
   CIRGenOpenACCClause.cpp
   CIRGenRecordLayoutBuilder.cpp
   CIRGenStmt.cpp

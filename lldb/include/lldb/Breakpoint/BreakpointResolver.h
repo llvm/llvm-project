@@ -148,8 +148,7 @@ public:
   enum ResolverTy GetResolverTy() {
     if (SubclassID > ResolverTy::LastKnownResolverType)
       return ResolverTy::UnknownResolver;
-    else
-      return (enum ResolverTy)SubclassID;
+    return (enum ResolverTy)SubclassID;
   }
 
   const char *GetResolverName() { return ResolverTyToName(GetResolverTy()); }

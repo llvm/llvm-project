@@ -259,12 +259,10 @@ void LVOptions::resolveDependencies() {
 }
 
 void LVOptions::calculateIndentationSize() {
-#ifndef NDEBUG
   if (getInternalID()) {
     std::string String = hexSquareString(0);
     IndentationSize += String.length();
   }
-#endif
   if (getCompareExecute() && (getAttributeAdded() || getAttributeMissing()))
     ++IndentationSize;
   if (getAttributeOffset()) {

@@ -64,6 +64,9 @@ inline class_match<const SCEV> m_SCEV() { return class_match<const SCEV>(); }
 inline class_match<const SCEVConstant> m_SCEVConstant() {
   return class_match<const SCEVConstant>();
 }
+inline class_match<const SCEVVScale> m_SCEVVScale() {
+  return class_match<const SCEVVScale>();
+}
 
 template <typename Class> struct bind_ty {
   Class *&VR;
@@ -85,6 +88,10 @@ inline bind_ty<const SCEVConstant> m_SCEVConstant(const SCEVConstant *&V) {
   return V;
 }
 inline bind_ty<const SCEVUnknown> m_SCEVUnknown(const SCEVUnknown *&V) {
+  return V;
+}
+
+inline bind_ty<const SCEVAddExpr> m_scev_Add(const SCEVAddExpr *&V) {
   return V;
 }
 
@@ -155,6 +162,12 @@ template <typename Op0_t>
 inline SCEVUnaryExpr_match<SCEVZeroExtendExpr, Op0_t>
 m_scev_ZExt(const Op0_t &Op0) {
   return m_scev_Unary<SCEVZeroExtendExpr>(Op0);
+}
+
+template <typename Op0_t>
+inline SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>
+m_scev_PtrToInt(const Op0_t &Op0) {
+  return SCEVUnaryExpr_match<SCEVPtrToIntExpr, Op0_t>(Op0);
 }
 
 /// Match a binary SCEV.

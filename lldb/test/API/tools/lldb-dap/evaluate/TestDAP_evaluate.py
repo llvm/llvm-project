@@ -131,7 +131,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluateFailure("a_function(1)")
             self.assertEvaluateFailure("var2 + struct1.foo")
             self.assertEvaluateFailure("foo_func")
-            self.assertEvaluateFailure("foo_var")
+            self.assertEvaluate("foo_var", "44")
 
         # Expressions at breakpoint 2, which is an anonymous block
         self.continue_to_breakpoint(breakpoint_2)
@@ -169,7 +169,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluateFailure("a_function(1)")
             self.assertEvaluateFailure("var2 + struct1.foo")
             self.assertEvaluateFailure("foo_func")
-            self.assertEvaluateFailure("foo_var")
+            self.assertEvaluate("foo_var", "44")
 
         # Expressions at breakpoint 3, which is inside a_function
         self.continue_to_breakpoint(breakpoint_3)
@@ -195,7 +195,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluateFailure("a_function(1)")
             self.assertEvaluateFailure("list + 1")
             self.assertEvaluateFailure("foo_func")
-            self.assertEvaluateFailure("foo_var")
+            self.assertEvaluate("foo_var", "44")
 
         # Now we check that values are updated after stepping
         self.continue_to_breakpoint(breakpoint_4)

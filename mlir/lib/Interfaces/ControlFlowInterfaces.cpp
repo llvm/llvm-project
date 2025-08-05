@@ -10,7 +10,6 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace mlir;
 
@@ -78,6 +77,47 @@ detail::verifyBranchSuccessorOperands(Operation *op, unsigned succNo,
                              << " of successor #" << succNo;
   }
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// WeightedBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+static LogicalResult verifyWeights(Operation *op,
+                                   llvm::ArrayRef<int32_t> weights,
+                                   std::size_t expectedWeightsNum,
+                                   llvm::StringRef weightAnchorName,
+                                   llvm::StringRef weightRefName) {
+  if (weights.empty())
+    return success();
+
+  if (weights.size() != expectedWeightsNum)
+    return op->emitError() << "expects number of " << weightAnchorName
+                           << " weights to match number of " << weightRefName
+                           << ": " << weights.size() << " vs "
+                           << expectedWeightsNum;
+
+  if (llvm::all_of(weights, [](int32_t value) { return value == 0; }))
+    return op->emitError() << "branch weights cannot all be zero";
+
+  return success();
+}
+
+LogicalResult detail::verifyBranchWeights(Operation *op) {
+  llvm::ArrayRef<int32_t> weights =
+      cast<WeightedBranchOpInterface>(op).getWeights();
+  return verifyWeights(op, weights, op->getNumSuccessors(), "branch",
+                       "successors");
+}
+
+//===----------------------------------------------------------------------===//
+// WeightedRegionBranchOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult detail::verifyRegionBranchWeights(Operation *op) {
+  llvm::ArrayRef<int32_t> weights =
+      cast<WeightedRegionBranchOpInterface>(op).getWeights();
+  return verifyWeights(op, weights, op->getNumRegions(), "region", "regions");
 }
 
 //===----------------------------------------------------------------------===//

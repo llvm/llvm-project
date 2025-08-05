@@ -199,6 +199,8 @@ bool IsPolymorphic(const Symbol &);
 bool IsUnlimitedPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
 
+bool IsDeviceAllocatable(const Symbol &symbol);
+
 inline bool IsCUDADeviceContext(const Scope *scope) {
   if (scope) {
     if (const Symbol * symbol{scope->symbol()}) {
@@ -220,6 +222,8 @@ inline bool HasCUDAAttr(const Symbol &sym) {
   }
   return false;
 }
+
+bool HasCUDAComponent(const Symbol &sym);
 
 inline bool IsCUDAShared(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
@@ -247,6 +251,8 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
   }
   return false;
 }
+
+bool CanCUDASymbolBeGlobal(const Symbol &sym);
 
 const Scope *FindCUDADeviceContext(const Scope *);
 std::optional<common::CUDADataAttr> GetCUDADataAttr(const Symbol *);
@@ -654,6 +660,8 @@ DirectComponentIterator::const_iterator FindAllocatableOrPointerDirectComponent(
     const DerivedTypeSpec &);
 PotentialComponentIterator::const_iterator
 FindPolymorphicAllocatablePotentialComponent(const DerivedTypeSpec &);
+UltimateComponentIterator::const_iterator
+FindCUDADeviceAllocatableUltimateComponent(const DerivedTypeSpec &);
 
 // The LabelEnforce class (given a set of labels) provides an error message if
 // there is a branch to a label which is not in the given set.
@@ -756,7 +764,5 @@ std::string GetCommonBlockObjectName(const Symbol &, bool underscoring);
 // Check for ambiguous USE associations
 bool HadUseError(SemanticsContext &, SourceName at, const Symbol *);
 
-// Checks whether the symbol on the LHS is present in the RHS expression.
-bool CheckForSymbolMatch(const SomeExpr *lhs, const SomeExpr *rhs);
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TOOLS_H_

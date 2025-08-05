@@ -314,7 +314,7 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // to use in a given machine function. The code will be inserted in a
   // function like this:
   //
-  //   static inline unsigned f(const MachineFunction &MF) { ... }
+  //   static inline unsigned f(const MachineFunction &MF, bool Rev) { ... }
   //
   // The function should return 0 to select the default order defined by
   // MemberList, 1 to select the first AltOrders entry and so on.
@@ -538,11 +538,11 @@ include "llvm/Target/TargetInstrPredicate.td"
 include "llvm/Target/TargetSchedule.td"
 
 class InstructionEncoding {
-  // Size of encoded instruction.
+  // Size of encoded instruction in bytes.
   int Size;
 
-  // The "namespace" in which this instruction exists, on targets like ARM
-  // which multiple ISA namespaces exist.
+  // The "namespace" in which this instruction exists (on targets like ARM
+  // where multiple ISA namespaces exist).
   string DecoderNamespace = "";
 
   // List of predicates which will be turned into isel matching code.

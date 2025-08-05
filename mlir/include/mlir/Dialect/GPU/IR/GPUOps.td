@@ -1304,8 +1304,8 @@ def GPU_ShuffleOp : GPU_Op<
     Results<(outs AnyIntegerOrFloatOr1DVector:$shuffleResult, I1:$valid)> {
   let summary = "Shuffles values within a subgroup.";
   let description = [{
-    The "shuffle" op moves values to a across lanes (a.k.a., invocations,
-    work items) within the same subgroup. The `width` argument specifies the
+    The "shuffle" op moves values across lanes in a subgroup (a.k.a., local
+    invocation) within the same subgroup. The `width` argument specifies the
     number of lanes that participate in the shuffle, and must be uniform
     across all lanes. Further, the first `width` lanes of the subgroup must
     be active.
@@ -1332,7 +1332,8 @@ def GPU_ShuffleOp : GPU_Op<
     %3, %4 = gpu.shuffle down %0, %cst1, %width : f32
     ```
 
-    For lane `k`, returns the value from lane `(k + 1) % width`.
+    For lane `k`, returns the value from lane `(k + cst1)`. If `(k + cst1)` is
+    bigger than or equal to `width`, the value is poison and `valid` is `false`.
 
     `up` example:
 
@@ -1341,7 +1342,8 @@ def GPU_ShuffleOp : GPU_Op<
     %5, %6 = gpu.shuffle up %0, %cst1, %width : f32
     ```
 
-    For lane `k`, returns the value from lane `(k - 1) % width`.
+    For lane `k`, returns the value from lane `(k - cst1)`. If `(k - cst1)` is
+    smaller than `0`, the value is poison and `valid` is `false`.
 
     `idx` example:
 
@@ -1362,6 +1364,49 @@ def GPU_ShuffleOp : GPU_Op<
     OpBuilder<(ins "Value":$value, "int32_t":$offset, "int32_t":$width,
                    "ShuffleMode":$mode)>
   ];
+}
+
+def GPU_RotateOp : GPU_Op<
+    "rotate", [Pure, AllTypesMatch<["value", "rotateResult"]>]>,
+    Arguments<(ins AnyIntegerOrFloatOr1DVector:$value,
+                   ConfinedAttr<I32Attr, [IntMinValue<0>]>:$offset,
+                   ConfinedAttr<I32Attr, [IntPowerOf2]>:$width)>,
+    Results<(outs AnyIntegerOrFloatOr1DVector:$rotateResult, I1:$valid)> {
+  let summary = "Rotate values within a subgroup.";
+  let description = [{
+    The "rotate" op moves values across lanes in a subgroup (a.k.a., local
+    invocations) within the same subgroup. The `width` attribute specifies the
+    number of lanes that participate in the rotation, and must be uniform across
+    all participating lanes. Further, the first `width` lanes of the subgroup
+    must be active.
+
+    `width` must be a power of two, and `offset` must be in the range
+    `[0, width)`.
+
+    Return the `rotateResult` of the invocation whose id within the group is
+    calculated as follows:
+
+    ```mlir
+    Invocation ID = ((LaneId + offset) & (width - 1)) + (LaneId & ~(width - 1))
+    ```
+
+    Returns the `rotateResult` and `true` if the current lane id is smaller than
+    `width`, and poison value and `false` otherwise.
+
+    example:
+
+    ```mlir
+    %1, %2 = gpu.rotate %0, 1, 16 : f32
+    ```
+
+    For lane `k`, returns the value from lane `(k + cst1) % width`.
+  }];
+
+  let assemblyFormat = [{
+    $value `,` $offset `,` $width attr-dict `:` type($value)
+  }];
+
+  let hasVerifier = 1;
 }
 
 def GPU_BarrierOp : GPU_Op<"barrier"> {

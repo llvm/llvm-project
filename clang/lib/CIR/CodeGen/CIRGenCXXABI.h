@@ -37,6 +37,10 @@ public:
 
   void setCXXABIThisValue(CIRGenFunction &cgf, mlir::Value thisPtr);
 
+  /// Emit a single constructor/destructor with the gen type from a C++
+  /// constructor/destructor Decl.
+  virtual void emitCXXStructor(clang::GlobalDecl gd) = 0;
+
 public:
   clang::ImplicitParamDecl *getThisDecl(CIRGenFunction &cgf) {
     return cgf.cxxabiThisDecl;
@@ -55,11 +59,36 @@ public:
     return md->getParent();
   }
 
+  /// Return whether the given global decl needs a VTT (virtual table table)
+  /// parameter.
+  virtual bool needsVTTParameter(clang::GlobalDecl gd) { return false; }
+
   /// Build a parameter variable suitable for 'this'.
   void buildThisParam(CIRGenFunction &cgf, FunctionArgList &params);
 
   /// Loads the incoming C++ this pointer as it was passed by the caller.
   mlir::Value loadIncomingCXXThis(CIRGenFunction &cgf);
+
+  /// Emit constructor variants required by this ABI.
+  virtual void emitCXXConstructors(const clang::CXXConstructorDecl *d) = 0;
+
+  /// Emit dtor variants required by this ABI.
+  virtual void emitCXXDestructors(const clang::CXXDestructorDecl *d) = 0;
+
+  virtual void emitDestructorCall(CIRGenFunction &cgf,
+                                  const CXXDestructorDecl *dd, CXXDtorType type,
+                                  bool forVirtualBase, bool delegating,
+                                  Address thisAddr, QualType thisTy) = 0;
+
+  /// Returns true if the given destructor type should be emitted as a linkonce
+  /// delegating thunk, regardless of whether the dtor is defined in this TU or
+  /// not.
+  virtual bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
+                                      CXXDtorType dt) const = 0;
+
+  virtual cir::GlobalLinkageKind
+  getCXXDestructorLinkage(GVALinkage linkage, const CXXDestructorDecl *dtor,
+                          CXXDtorType dt) const;
 
   /// Returns true if the given constructor or destructor is one of the kinds
   /// that the ABI says returns 'this' (only applies when called non-virtually

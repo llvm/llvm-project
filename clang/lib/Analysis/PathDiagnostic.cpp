@@ -323,8 +323,8 @@ static bool compareCrossTUSourceLocs(FullSourceLoc XL, FullSourceLoc YL) {
     return true;
   if (XL.isValid() && YL.isInvalid())
     return false;
-  std::pair<FileID, unsigned> XOffs = XL.getDecomposedLoc();
-  std::pair<FileID, unsigned> YOffs = YL.getDecomposedLoc();
+  FileIDAndOffset XOffs = XL.getDecomposedLoc();
+  FileIDAndOffset YOffs = YL.getDecomposedLoc();
   const SourceManager &SM = XL.getManager();
   std::pair<bool, bool> InSameTU = SM.isInTheSameTranslationUnit(XOffs, YOffs);
   if (InSameTU.first)
@@ -1146,9 +1146,9 @@ void PathDiagnostic::FullProfile(llvm::FoldingSetNodeID &ID) const {
 
 LLVM_DUMP_METHOD void PathPieces::dump() const {
   unsigned index = 0;
-  for (PathPieces::const_iterator I = begin(), E = end(); I != E; ++I) {
+  for (const PathDiagnosticPieceRef &Piece : *this) {
     llvm::errs() << "[" << index++ << "]  ";
-    (*I)->dump();
+    Piece->dump();
     llvm::errs() << "\n";
   }
 }

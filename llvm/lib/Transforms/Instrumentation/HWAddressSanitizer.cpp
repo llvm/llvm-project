@@ -160,6 +160,16 @@ static cl::opt<bool> ClGenerateTagsWithCalls(
 static cl::opt<bool> ClGlobals("hwasan-globals", cl::desc("Instrument globals"),
                                cl::Hidden, cl::init(false));
 
+static cl::opt<bool> ClAllGlobals(
+    "hwasan-all-globals",
+    cl::desc(
+        "Instrument globals, even those within user-defined sections. Warning: "
+        "This may break existing code which walks globals via linker-generated "
+        "symbols, expects certain globals to be contiguous with each other, or "
+        "makes other assumptions which are invalidated by HWASan "
+        "instrumentation."),
+    cl::Hidden, cl::init(false));
+
 static cl::opt<int> ClMatchAllTag(
     "hwasan-match-all-tag",
     cl::desc("don't report bad accesses via pointers with this tag"),
@@ -363,10 +373,10 @@ private:
   void tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
-  bool instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
+  void instrumentStack(memtag::StackInfo &Info, Value *StackTag, Value *UARTag,
                        const DominatorTree &DT, const PostDominatorTree &PDT,
                        const LoopInfo &LI);
-  bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
+  void instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
   Value *getAllocaTag(IRBuilder<> &IRB, Value *StackTag, unsigned AllocaNo);
@@ -681,10 +691,10 @@ void HWAddressSanitizer::initializeModule() {
       !CompileKernel && !UsePageAliases && optOr(ClGlobals, NewRuntime);
 
   if (!CompileKernel) {
-    createHwasanCtorComdat();
-
     if (InstrumentGlobals)
       instrumentGlobals();
+
+    createHwasanCtorComdat();
 
     bool InstrumentPersonalityFunctions =
         optOr(ClInstrumentPersonalityFunctions, NewRuntime);
@@ -1418,19 +1428,18 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   }
 }
 
-bool HWAddressSanitizer::instrumentLandingPads(
+void HWAddressSanitizer::instrumentLandingPads(
     SmallVectorImpl<Instruction *> &LandingPadVec) {
   for (auto *LP : LandingPadVec) {
-    IRBuilder<> IRB(LP->getNextNonDebugInstruction());
+    IRBuilder<> IRB(LP->getNextNode());
     IRB.CreateCall(
         HwasanHandleVfork,
         {memtag::readRegister(
             IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp" : "sp")});
   }
-  return true;
 }
 
-bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
+void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
                                          Value *StackTag, Value *UARTag,
                                          const DominatorTree &DT,
                                          const PostDominatorTree &PDT,
@@ -1446,7 +1455,7 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     auto N = I++;
     auto *AI = KV.first;
     memtag::AllocaInfo &Info = KV.second;
-    IRBuilder<> IRB(AI->getNextNonDebugInstruction());
+    IRBuilder<> IRB(AI->getNextNode());
 
     // Replace uses of the alloca with tagged address.
     Value *Tag = getAllocaTag(IRB, StackTag, N);
@@ -1460,8 +1469,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
 
-    Value *AICast = IRB.CreatePointerCast(AI, PtrTy);
-
     auto HandleLifetime = [&](IntrinsicInst *II) {
       // Set the lifetime intrinsic to cover the whole alloca. This reduces the
       // set of assumptions we need to make about the lifetime. Without this we
@@ -1474,14 +1481,13 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       // one set of start / end in any execution (i.e. the ends are not
       // reachable from each other), so this will not cause any problems.
       II->setArgOperand(0, ConstantInt::get(Int64Ty, AlignedSize));
-      II->setArgOperand(1, AICast);
     };
     llvm::for_each(Info.LifetimeStart, HandleLifetime);
     llvm::for_each(Info.LifetimeEnd, HandleLifetime);
 
-    AI->replaceUsesWithIf(Replacement, [AICast, AILong](const Use &U) {
+    AI->replaceUsesWithIf(Replacement, [AILong](const Use &U) {
       auto *User = U.getUser();
-      return User != AILong && User != AICast && !isa<LifetimeIntrinsic>(User);
+      return User != AILong && !isa<LifetimeIntrinsic>(User);
     });
 
     memtag::annotateDebugRecords(Info, retagMask(N));
@@ -1500,7 +1506,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     // statement if return_twice functions are called.
     bool StandardLifetime =
         !SInfo.CallsReturnTwice &&
-        SInfo.UnrecognizedLifetimes.empty() &&
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
                                    &LI, ClMaxLifetimes);
     if (DetectUseAfterScope && StandardLifetime) {
@@ -1525,9 +1530,6 @@ bool HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     }
     memtag::alignAndPadAlloca(Info, Mapping.getObjectAlignment());
   }
-  for (auto &I : SInfo.UnrecognizedLifetimes)
-    I->eraseFromParent();
-  return true;
 }
 
 static void emitRemark(const Function &F, OptimizationRemarkEmitter &ORE,
@@ -1780,11 +1782,17 @@ void HWAddressSanitizer::instrumentGlobals() {
     if (GV.hasCommonLinkage())
       continue;
 
-    // Globals with custom sections may be used in __start_/__stop_ enumeration,
-    // which would be broken both by adding tags and potentially by the extra
-    // padding/alignment that we insert.
-    if (GV.hasSection())
-      continue;
+    if (ClAllGlobals) {
+      // Avoid instrumenting intrinsic global variables.
+      if (GV.getSection() == "llvm.metadata")
+        continue;
+    } else {
+      // Globals with custom sections may be used in __start_/__stop_
+      // enumeration, which would be broken both by adding tags and potentially
+      // by the extra padding/alignment that we insert.
+      if (GV.hasSection())
+        continue;
+    }
 
     Globals.push_back(&GV);
   }

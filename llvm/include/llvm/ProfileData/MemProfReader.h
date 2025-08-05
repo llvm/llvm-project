@@ -62,8 +62,7 @@ public:
       return make_error<InstrProfError>(instrprof_error::eof);
 
     if (Callback == nullptr)
-      Callback =
-          std::bind(&MemProfReader::idToFrame, this, std::placeholders::_1);
+      Callback = [&](FrameId Id) { return idToFrame(Id); };
 
     CallStackIdConverter<decltype(MemProfData.CallStacks)> CSIdConv(
         MemProfData.CallStacks, Callback);

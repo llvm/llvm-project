@@ -2508,3 +2508,50 @@ define void @D107009(ptr %input, ptr %output) {
   store <64 x i32> %i7, ptr %output, align 16
   ret void
 }
+
+; Ensure concatenation of repeated subvector loads before vector can be split apart.
+define void @split_v2i64_subvector_broadcast(ptr readonly align 8 captures(none) dereferenceable(64) %arg) {
+; SSE-LABEL: split_v2i64_subvector_broadcast:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movups 8(%rdi), %xmm0
+; SSE-NEXT:    movups 40(%rdi), %xmm1
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; SSE-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; SSE-NEXT:    movups %xmm0, (%rax)
+; SSE-NEXT:    movups %xmm2, (%rax)
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: split_v2i64_subvector_broadcast:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
+; AVX1-NEXT:    vmovupd %ymm0, (%rax)
+; AVX1-NEXT:    vzeroupper
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: split_v2i64_subvector_broadcast:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovups 40(%rdi), %xmm0
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,0,2,1]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = mem[0,1,1,3]
+; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3],ymm1[4,5],ymm0[6,7]
+; AVX2-NEXT:    vmovups %ymm0, (%rax)
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; XOP-LABEL: split_v2i64_subvector_broadcast:
+; XOP:       # %bb.0:
+; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; XOP-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = mem[0,1,0,1]
+; XOP-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[0],ymm1[3],ymm0[3]
+; XOP-NEXT:    vmovupd %ymm0, (%rax)
+; XOP-NEXT:    vzeroupper
+; XOP-NEXT:    retq
+  %gep = getelementptr inbounds nuw i8, ptr %arg, i64 8
+  %load = load <6 x i64>, ptr %gep, align 8
+  %shuffle = shufflevector <6 x i64> %load, <6 x i64> poison, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
+  store <4 x i64> %shuffle, ptr poison, align 8
+  ret void
+}

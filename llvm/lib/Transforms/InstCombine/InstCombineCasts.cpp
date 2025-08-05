@@ -708,10 +708,14 @@ static Instruction *shrinkSplatShuffle(TruncInst &Trunc,
   auto *Shuf = dyn_cast<ShuffleVectorInst>(Trunc.getOperand(0));
   if (Shuf && Shuf->hasOneUse() && match(Shuf->getOperand(1), m_Undef()) &&
       all_equal(Shuf->getShuffleMask()) &&
-      Shuf->getType() == Shuf->getOperand(0)->getType()) {
+      ElementCount::isKnownGE(Shuf->getType()->getElementCount(),
+                              cast<VectorType>(Shuf->getOperand(0)->getType())
+                                  ->getElementCount())) {
     // trunc (shuf X, Undef, SplatMask) --> shuf (trunc X), Poison, SplatMask
     // trunc (shuf X, Poison, SplatMask) --> shuf (trunc X), Poison, SplatMask
-    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), Trunc.getType());
+    Type *NewTruncTy = Shuf->getOperand(0)->getType()->getWithNewType(
+        Trunc.getType()->getScalarType());
+    Value *NarrowOp = Builder.CreateTrunc(Shuf->getOperand(0), NewTruncTy);
     return new ShuffleVectorInst(NarrowOp, Shuf->getShuffleMask());
   }
 
@@ -813,6 +817,12 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       Constant *Log2C1 = ConstantInt::get(SrcTy, C1->exactLogBase2());
       Constant *CmpC = ConstantExpr::getSub(C2, Log2C1);
       return new ICmpInst(ICmpInst::ICMP_EQ, X, CmpC);
+    }
+
+    if (match(Src, m_Shr(m_Value(X), m_SpecificInt(SrcWidth - 1)))) {
+      // trunc (ashr X, BW-1) to i1 --> icmp slt X, 0
+      // trunc (lshr X, BW-1) to i1 --> icmp slt X, 0
+      return new ICmpInst(ICmpInst::ICMP_SLT, X, Zero);
     }
 
     Constant *C;
@@ -1917,7 +1927,9 @@ Instruction *InstCombinerImpl::visitFPTrunc(FPTruncInst &FPT) {
       II->getOperandBundlesAsDefs(OpBundles);
       CallInst *NewCI =
           CallInst::Create(Overload, {InnerTrunc}, OpBundles, II->getName());
-      NewCI->copyFastMathFlags(II);
+      // A normal value may be converted to an infinity. It means that we cannot
+      // propagate ninf from the intrinsic. So we propagate FMF from fptrunc.
+      NewCI->copyFastMathFlags(&FPT);
       return NewCI;
     }
     }
