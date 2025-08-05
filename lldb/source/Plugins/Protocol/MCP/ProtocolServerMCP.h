@@ -9,12 +9,12 @@
 #ifndef LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
 #define LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
 
-#include "Protocol.h"
 #include "Resource.h"
 #include "Tool.h"
 #include "lldb/Core/ProtocolServer.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/ADT/StringMap.h"
 #include <thread>
 
@@ -41,10 +41,11 @@ public:
   Socket *GetSocket() const override { return m_listener.get(); }
 
 protected:
-  using RequestHandler = std::function<llvm::Expected<protocol::Response>(
-      const protocol::Request &)>;
+  using RequestHandler =
+      std::function<llvm::Expected<lldb_protocol::mcp::Response>(
+          const lldb_protocol::mcp::Request &)>;
   using NotificationHandler =
-      std::function<void(const protocol::Notification &)>;
+      std::function<void(const lldb_protocol::mcp::Notification &)>;
 
   void AddTool(std::unique_ptr<Tool> tool);
   void AddResourceProvider(std::unique_ptr<ResourceProvider> resource_provider);
@@ -56,26 +57,27 @@ protected:
 private:
   void AcceptCallback(std::unique_ptr<Socket> socket);
 
-  llvm::Expected<std::optional<protocol::Message>>
+  llvm::Expected<std::optional<lldb_protocol::mcp::Message>>
   HandleData(llvm::StringRef data);
 
-  llvm::Expected<protocol::Response> Handle(protocol::Request request);
-  void Handle(protocol::Notification notification);
+  llvm::Expected<lldb_protocol::mcp::Response>
+  Handle(lldb_protocol::mcp::Request request);
+  void Handle(lldb_protocol::mcp::Notification notification);
 
-  llvm::Expected<protocol::Response>
-  InitializeHandler(const protocol::Request &);
+  llvm::Expected<lldb_protocol::mcp::Response>
+  InitializeHandler(const lldb_protocol::mcp::Request &);
 
-  llvm::Expected<protocol::Response>
-  ToolsListHandler(const protocol::Request &);
-  llvm::Expected<protocol::Response>
-  ToolsCallHandler(const protocol::Request &);
+  llvm::Expected<lldb_protocol::mcp::Response>
+  ToolsListHandler(const lldb_protocol::mcp::Request &);
+  llvm::Expected<lldb_protocol::mcp::Response>
+  ToolsCallHandler(const lldb_protocol::mcp::Request &);
 
-  llvm::Expected<protocol::Response>
-  ResourcesListHandler(const protocol::Request &);
-  llvm::Expected<protocol::Response>
-  ResourcesReadHandler(const protocol::Request &);
+  llvm::Expected<lldb_protocol::mcp::Response>
+  ResourcesListHandler(const lldb_protocol::mcp::Request &);
+  llvm::Expected<lldb_protocol::mcp::Response>
+  ResourcesReadHandler(const lldb_protocol::mcp::Request &);
 
-  protocol::Capabilities GetCapabilities();
+  lldb_protocol::mcp::Capabilities GetCapabilities();
 
   llvm::StringLiteral kName = "lldb-mcp";
   llvm::StringLiteral kVersion = "0.1.0";

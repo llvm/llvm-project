@@ -11,6 +11,8 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
+using namespace lldb_private;
+using namespace lldb_protocol;
 using namespace lldb_private::mcp;
 using namespace llvm;
 
@@ -28,11 +30,11 @@ bool fromJSON(const llvm::json::Value &V, CommandToolArguments &A,
 }
 
 /// Helper function to create a TextResult from a string output.
-static lldb_private::mcp::protocol::TextResult
-createTextResult(std::string output, bool is_error = false) {
-  lldb_private::mcp::protocol::TextResult text_result;
+static lldb_protocol::mcp::TextResult createTextResult(std::string output,
+                                                       bool is_error = false) {
+  lldb_protocol::mcp::TextResult text_result;
   text_result.content.emplace_back(
-      lldb_private::mcp::protocol::TextContent{{std::move(output)}});
+      lldb_protocol::mcp::TextContent{{std::move(output)}});
   text_result.isError = is_error;
   return text_result;
 }
@@ -42,8 +44,8 @@ createTextResult(std::string output, bool is_error = false) {
 Tool::Tool(std::string name, std::string description)
     : m_name(std::move(name)), m_description(std::move(description)) {}
 
-protocol::ToolDefinition Tool::GetDefinition() const {
-  protocol::ToolDefinition definition;
+lldb_protocol::mcp::ToolDefinition Tool::GetDefinition() const {
+  lldb_protocol::mcp::ToolDefinition definition;
   definition.name = m_name;
   definition.description = m_description;
 
@@ -53,8 +55,8 @@ protocol::ToolDefinition Tool::GetDefinition() const {
   return definition;
 }
 
-llvm::Expected<protocol::TextResult>
-CommandTool::Call(const protocol::ToolArguments &args) {
+llvm::Expected<lldb_protocol::mcp::TextResult>
+CommandTool::Call(const lldb_protocol::mcp::ToolArguments &args) {
   if (!std::holds_alternative<json::Value>(args))
     return createStringError("CommandTool requires arguments");
 

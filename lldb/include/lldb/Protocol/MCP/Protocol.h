@@ -11,15 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOL_H
-#define LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOL_H
+#ifndef LLDB_PROTOCOL_MCP_PROTOCOL_H
+#define LLDB_PROTOCOL_MCP_PROTOCOL_H
 
 #include "llvm/Support/JSON.h"
 #include <optional>
 #include <string>
 #include <variant>
 
-namespace lldb_private::mcp::protocol {
+namespace lldb_protocol::mcp {
 
 static llvm::StringLiteral kVersion = "2024-11-05";
 
@@ -183,6 +183,6 @@ llvm::json::Value toJSON(const Message &);
 
 using ToolArguments = std::variant<std::monostate, llvm::json::Value>;
 
-} // namespace lldb_private::mcp::protocol
+} // namespace lldb_protocol::mcp
 
 #endif

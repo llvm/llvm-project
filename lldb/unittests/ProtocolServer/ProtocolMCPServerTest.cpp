@@ -16,13 +16,14 @@
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Host/JSONTransport.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::mcp::protocol;
+using namespace lldb_protocol::mcp;
 
 namespace {
 class TestProtocolServerMCP : public lldb_private::mcp::ProtocolServerMCP {
@@ -47,8 +48,7 @@ class TestTool : public mcp::Tool {
 public:
   using mcp::Tool::Tool;
 
-  virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const ToolArguments &args) override {
+  virtual llvm::Expected<TextResult> Call(const ToolArguments &args) override {
     std::string argument;
     if (const json::Object *args_obj =
             std::get<json::Value>(args).getAsObject()) {
@@ -57,8 +57,8 @@ public:
       }
     }
 
-    mcp::protocol::TextResult text_result;
-    text_result.content.emplace_back(mcp::protocol::TextContent{{argument}});
+    TextResult text_result;
+    text_result.content.emplace_back(TextContent{{argument}});
     return text_result;
   }
 };
@@ -100,8 +100,7 @@ class ErrorTool : public mcp::Tool {
 public:
   using mcp::Tool::Tool;
 
-  virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const ToolArguments &args) override {
+  virtual llvm::Expected<TextResult> Call(const ToolArguments &args) override {
     return llvm::createStringError("error");
   }
 };
@@ -111,10 +110,9 @@ class FailTool : public mcp::Tool {
 public:
   using mcp::Tool::Tool;
 
-  virtual llvm::Expected<mcp::protocol::TextResult>
-  Call(const ToolArguments &args) override {
-    mcp::protocol::TextResult text_result;
-    text_result.content.emplace_back(mcp::protocol::TextContent{{"failed"}});
+  virtual llvm::Expected<TextResult> Call(const ToolArguments &args) override {
+    TextResult text_result;
+    text_result.content.emplace_back(TextContent{{"failed"}});
     text_result.isError = true;
     return text_result;
   }
@@ -309,8 +307,7 @@ TEST_F(ProtocolServerMCPTest, NotificationInitialized) {
   std::mutex mutex;
 
   m_server_up->AddNotificationHandler(
-      "notifications/initialized",
-      [&](const mcp::protocol::Notification &notification) {
+      "notifications/initialized", [&](const Notification &notification) {
         {
           std::lock_guard<std::mutex> lock(mutex);
           handler_called = true;

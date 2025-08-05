@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/Protocol/MCP/Protocol.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::mcp::protocol;
+using namespace lldb_protocol::mcp;
 
 TEST(ProtocolMCPTest, Request) {
   Request request;
