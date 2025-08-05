@@ -597,6 +597,14 @@ Function *AArch64Arm64ECCallLowering::buildEntryThunk(Function *F) {
   return Thunk;
 }
 
+std::optional<std::string> getArm64ECMangledFunctionName(GlobalValue &GV) {
+  if (!GV.hasName()) {
+    GV.setName("__unnamed");
+  }
+
+  return llvm::getArm64ECMangledFunctionName(GV.getName());
+}
+
 // Builds the "guest exit thunk", a helper to call a function which may or may
 // not be an exit thunk. (We optimistically assume non-dllimport function
 // declarations refer to functions defined in AArch64 code; if the linker
@@ -608,7 +616,7 @@ Function *AArch64Arm64ECCallLowering::buildGuestExitThunk(Function *F) {
   getThunkType(F->getFunctionType(), F->getAttributes(),
                Arm64ECThunkType::GuestExit, NullThunkName, Arm64Ty, X64Ty,
                ArgTranslations);
-  auto MangledName = getArm64ECMangledFunctionName(F->getName().str());
+  auto MangledName = getArm64ECMangledFunctionName(*F);
   assert(MangledName && "Can't guest exit to function that's already native");
   std::string ThunkName = *MangledName;
   if (ThunkName[0] == '?' && ThunkName.find("@") != std::string::npos) {
@@ -790,7 +798,7 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
     if (!F)
       continue;
     if (std::optional<std::string> MangledName =
-            getArm64ECMangledFunctionName(A.getName().str())) {
+            getArm64ECMangledFunctionName(A)) {
       F->addMetadata("arm64ec_unmangled_name",
                      *MDNode::get(M->getContext(),
                                   MDString::get(M->getContext(), A.getName())));
@@ -807,7 +815,7 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
           cast<GlobalValue>(F.getPersonalityFn()->stripPointerCasts());
       if (PersFn->getValueType() && PersFn->getValueType()->isFunctionTy()) {
         if (std::optional<std::string> MangledName =
-                getArm64ECMangledFunctionName(PersFn->getName().str())) {
+                getArm64ECMangledFunctionName(*PersFn)) {
           PersFn->setName(MangledName.value());
         }
       }
@@ -821,7 +829,7 @@ bool AArch64Arm64ECCallLowering::runOnModule(Module &Mod) {
     // Rename hybrid patchable functions and change callers to use a global
     // alias instead.
     if (std::optional<std::string> MangledName =
-            getArm64ECMangledFunctionName(F.getName().str())) {
+            getArm64ECMangledFunctionName(F)) {
       std::string OrigName(F.getName());
       F.setName(MangledName.value() + HybridPatchableTargetSuffix);
 
@@ -927,7 +935,7 @@ bool AArch64Arm64ECCallLowering::processFunction(
   // FIXME: Handle functions with weak linkage?
   if (!F.hasLocalLinkage() || F.hasAddressTaken()) {
     if (std::optional<std::string> MangledName =
-            getArm64ECMangledFunctionName(F.getName().str())) {
+            getArm64ECMangledFunctionName(F)) {
       F.addMetadata("arm64ec_unmangled_name",
                     *MDNode::get(M->getContext(),
                                  MDString::get(M->getContext(), F.getName())));
