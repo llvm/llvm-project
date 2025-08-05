@@ -38,8 +38,8 @@ void free(void *Ptr);
 } // namespace ompx
 
 extern "C" {
-[[gnu::weak]] void *malloc(size_t Size);
-[[gnu::weak]] void free(void *Ptr);
+void *malloc(size_t Size);
+void free(void *Ptr);
 }
 
 #endif
