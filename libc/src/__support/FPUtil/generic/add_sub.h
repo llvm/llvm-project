@@ -22,7 +22,6 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil::generic {
@@ -105,33 +104,26 @@ add_or_sub(InType x, InType y) {
         }
       }
 
-      // volatile prevents Clang from converting tmp to OutType and then
-      // immediately back to InType before negating it, resulting in double
-      // rounding.
-      volatile InType tmp = y;
-      if constexpr (IsSub) {
-        if constexpr (cpp::is_same_v<InType, bfloat16> &&
-                      cpp::is_same_v<OutType, bfloat16>) {
-          // TODO: check if this is correct
-          tmp.bits ^= static_cast<uint16_t>(1000'0000'0000'0000u);
-        } else {
-          tmp = -tmp;
-        }
-      }
       if constexpr (cpp::is_same_v<InType, bfloat16> &&
-                    cpp::is_same_v<OutType, bfloat16>)
-        return bfloat16{tmp.bits};
-      else
+                    cpp::is_same_v<OutType, bfloat16>) {
+        OutFPBits y_bits(y);
+        if constexpr (IsSub)
+          y_bits.set_sign(y_bits.sign().negate());
+        return y_bits.get_val();
+      } else {
+
+        // volatile prevents Clang from converting tmp to OutType and then
+        // immediately back to InType before negating it, resulting in double
+        // rounding.
+        volatile InType tmp = y;
+        if constexpr (IsSub)
+          tmp = -tmp;
         return cast<OutType>(tmp);
+      }
     }
 
-    if (y_bits.is_zero()) {
-      if constexpr (cpp::is_same_v<InType, bfloat16> &&
-                    cpp::is_same_v<OutType, bfloat16>)
-        return bfloat16{x.bits};
-      else
-        return cast<OutType>(x);
-    }
+    if (y_bits.is_zero())
+      return cast<OutType>(x);
   }
 
   InType x_abs = x_bits.abs().get_val();
