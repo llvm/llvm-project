@@ -10,10 +10,10 @@
 
 include_guard(GLOBAL)
 
-set(RUNTIMES_SUPPORTED_C_LIBRARIES system llvm-libc)
+set(RUNTIMES_SUPPORTED_C_LIBRARIES system llvm-libc picolibc newlib)
 set(RUNTIMES_USE_LIBC "system" CACHE STRING "Specify C library to use. Supported values are ${RUNTIMES_SUPPORTED_C_LIBRARIES}.")
 if (NOT "${RUNTIMES_USE_LIBC}" IN_LIST RUNTIMES_SUPPORTED_C_LIBRARIES)
-  message(FATAL_ERROR "Unsupported C library: '${RUNTIMES_CXX_ABI}'. Supported values are ${RUNTIMES_SUPPORTED_C_LIBRARIES}.")
+  message(FATAL_ERROR "Unsupported C library: '${RUNTIMES_USE_LIBC}'. Supported values are ${RUNTIMES_SUPPORTED_C_LIBRARIES}.")
 endif()
 
 # Link against a system-provided libc
