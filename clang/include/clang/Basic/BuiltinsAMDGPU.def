@@ -163,6 +163,16 @@ BUILTIN(__builtin_amdgcn_raw_buffer_load_b64, "V2UiQbiiIi", "n")
 BUILTIN(__builtin_amdgcn_raw_buffer_load_b96, "V3UiQbiiIi", "n")
 BUILTIN(__builtin_amdgcn_raw_buffer_load_b128, "V4UiQbiiIi", "n")
 
+BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32, "iiQbiiIi", "t")
+
+TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_f32, "ffQbiiIi", "t", "atomic-fadd-rtn-insts")
+TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fadd_v2f16, "V2hV2hQbiiIi", "t", "atomic-buffer-global-pk-add-f16-insts")
+
+TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f32, "ffQbiiIi", "t", "atomic-fmin-fmax-global-f32")
+TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f32, "ffQbiiIi", "t", "atomic-fmin-fmax-global-f32")
+TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmin_f64, "ddQbiiIi", "t", "atomic-fmin-fmax-global-f64")
+TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_atomic_fmax_f64, "ddQbiiIi", "t", "atomic-fmin-fmax-global-f64")
+
 TARGET_BUILTIN(__builtin_amdgcn_raw_ptr_buffer_load_lds, "vQbv*3IUiiiIiIi", "t", "vmem-to-lds-load-insts")
 TARGET_BUILTIN(__builtin_amdgcn_struct_ptr_buffer_load_lds, "vQbv*3IUiiiiIiIi", "t", "vmem-to-lds-load-insts")
 
