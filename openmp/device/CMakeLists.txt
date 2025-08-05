@@ -7,9 +7,10 @@ if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
                       " is not 'Clang ${req_ver}'.")
 endif()
 
+option(OFFLOAD_ENABLE_EMISSARY_APIS "Enable build of GPU Emissary APIs" ON)
 if(OFFLOAD_ENABLE_EMISSARY_APIS)
+  add_definitions(-DOFFLOAD_ENABLE_EMISSARY_APIS)
   set(emissary_sources
-    src/Emissary.cpp
     src/EmissaryFortrt.cpp
     src/EmissaryPrint.cpp
   )
@@ -38,6 +39,28 @@ set(src_files
   ${emissary_sources}
 
 )
+if(NOT LLVM_TARGETS_TO_BUILD OR "AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
+  set(amdbc_dirs
+    "${CMAKE_BINARY_DIR}/../rocm-device-libs-prefix/src/rocm-device-libs-build/lib/llvm/lib/clang/${LLVM_VERSION_MAJOR}/lib/amdgcn/bitcode"
+    "${CMAKE_INSTALL_PREFIX}/../../amdgcn/bitcode"
+    "/opt/rocm/amdgcn/bitcode")
+  foreach(amdbc_dir ${amdbc_dirs})
+    if(EXISTS "${amdbc_dir}/ockl.bc" AND NOT _ockl_bc)
+      set(_ockl_bc ${amdbc_dir}/ockl.bc)
+    endif()
+    if(EXISTS "${amdbc_dir}/ocml.bc" AND NOT _ocml_bc)
+      set(_ocml_bc ${amdbc_dir}/ocml.bc)
+    endif()
+  endforeach()
+  if(NOT _ockl_bc)
+    message(FATAL_ERROR "Could not find ockl.bc")
+  endif()
+  if(NOT _ocml_bc)
+    message(FATAL_ERROR "Could not find ocml.bc")
+  endif()
+  list(APPEND compile_flags "SHELL: -Xclang -mlink-builtin-bitcode -Xclang ${_ockl_bc}")
+  list(APPEND compile_flags "SHELL: -Xclang -mlink-builtin-bitcode -Xclang ${_ocml_bc}")
+endif()
 
 list(APPEND compile_options -flto)
 list(APPEND compile_options -fvisibility=hidden)
@@ -87,7 +110,7 @@ target_include_directories(libompdevice PRIVATE
                            ${CMAKE_CURRENT_SOURCE_DIR}/include
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../libc
                            ${CMAKE_CURRENT_SOURCE_DIR}/../../offload/include)
-target_compile_options(libompdevice PRIVATE ${compile_options})
+target_compile_options(libompdevice PRIVATE ${compile_options} ${compile_flags})
 target_link_options(libompdevice PRIVATE
                     "-flto" "-r" "-nostdlib" "-Wl,--lto-emit-llvm")
 if(LLVM_DEFAULT_TARGET_TRIPLE)
