@@ -2168,9 +2168,36 @@ void SymbolFileNativePDB::GetTypes(lldb_private::SymbolContextScope *sc_scope,
                                    TypeClass type_mask,
                                    lldb_private::TypeList &type_list) {}
 
-CompilerDeclContext SymbolFileNativePDB::FindNamespace(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx, bool) {
-  return {};
+CompilerDeclContext
+SymbolFileNativePDB::FindNamespace(ConstString name,
+                                   const CompilerDeclContext &parent_decl_ctx,
+                                   bool /* only_root_namespaces */) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  auto ts_or_err = GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
+  if (auto err = ts_or_err.takeError())
+    return {};
+  auto ts = *ts_or_err;
+  if (!ts)
+    return {};
+  auto *clang = llvm::dyn_cast_or_null<TypeSystemClang>(ts.get());
+  if (!clang)
+    return {};
+
+  PdbAstBuilder *ast_builder = clang->GetNativePDBParser();
+  if (!ast_builder)
+    return {};
+
+  clang::DeclContext *decl_context = nullptr;
+  if (parent_decl_ctx)
+    decl_context = static_cast<clang::DeclContext *>(
+        parent_decl_ctx.GetOpaqueDeclContext());
+
+  auto *namespace_decl =
+      ast_builder->FindNamespaceDecl(decl_context, name.GetStringRef());
+  if (!namespace_decl)
+    return CompilerDeclContext();
+
+  return clang->CreateDeclContext(namespace_decl);
 }
 
 llvm::Expected<lldb::TypeSystemSP>
