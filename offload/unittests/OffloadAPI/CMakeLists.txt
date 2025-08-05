@@ -9,8 +9,9 @@ add_offload_unittest("device"
     device/olGetDeviceInfoSize.cpp)
 
 add_offload_unittest("event"
+    event/olCreateEvent.cpp
     event/olDestroyEvent.cpp
-    event/olWaitEvent.cpp
+    event/olSyncEvent.cpp
     event/olGetEventInfo.cpp
     event/olGetEventInfoSize.cpp)
 
@@ -36,10 +37,11 @@ add_offload_unittest("program"
 
 add_offload_unittest("queue"
     queue/olCreateQueue.cpp
-    queue/olWaitQueue.cpp
+    queue/olSyncQueue.cpp
     queue/olDestroyQueue.cpp
     queue/olGetQueueInfo.cpp
-    queue/olGetQueueInfoSize.cpp)
+    queue/olGetQueueInfoSize.cpp
+    queue/olWaitEvents.cpp)
 
 add_offload_unittest("symbol"
     symbol/olGetSymbol.cpp

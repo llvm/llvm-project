@@ -1930,7 +1930,7 @@ public:
 
   /// Returns a bitmask constructed from the target-features or fmv-features
   /// metadata of a function.
-  LLVM_ABI uint64_t getFeatureMask(const Function &F) const;
+  LLVM_ABI APInt getFeatureMask(const Function &F) const;
 
   /// Returns true if this is an instance of a function with multiple versions.
   LLVM_ABI bool isMultiversionedFunction(const Function &F) const;
@@ -1949,6 +1949,10 @@ public:
   LLVM_ABI void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
+
+  /// Returns true if GEP should not be used to index into vectors for this
+  /// target.
+  LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
 
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;

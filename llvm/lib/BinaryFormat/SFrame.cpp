@@ -35,3 +35,36 @@ ArrayRef<EnumEntry<sframe::ABI>> sframe::getABIs() {
   };
   return ArrayRef(ABIs);
 }
+
+ArrayRef<EnumEntry<sframe::FREType>> sframe::getFRETypes() {
+  static constexpr EnumEntry<sframe::FREType> FRETypes[] = {
+#define HANDLE_SFRAME_FRE_TYPE(CODE, NAME) {#NAME, sframe::FREType::NAME},
+#include "llvm/BinaryFormat/SFrameConstants.def"
+  };
+  return ArrayRef(FRETypes);
+}
+
+ArrayRef<EnumEntry<sframe::FDEType>> sframe::getFDETypes() {
+  static constexpr EnumEntry<sframe::FDEType> FDETypes[] = {
+#define HANDLE_SFRAME_FDE_TYPE(CODE, NAME) {#NAME, sframe::FDEType::NAME},
+#include "llvm/BinaryFormat/SFrameConstants.def"
+  };
+  return ArrayRef(FDETypes);
+}
+
+ArrayRef<EnumEntry<sframe::AArch64PAuthKey>> sframe::getAArch64PAuthKeys() {
+  static constexpr EnumEntry<sframe::AArch64PAuthKey> AArch64PAuthKeys[] = {
+#define HANDLE_SFRAME_AARCH64_PAUTH_KEY(CODE, NAME)                            \
+  {#NAME, sframe::AArch64PAuthKey::NAME},
+#include "llvm/BinaryFormat/SFrameConstants.def"
+  };
+  return ArrayRef(AArch64PAuthKeys);
+}
+
+ArrayRef<EnumEntry<sframe::FREOffset>> sframe::getFREOffsets() {
+  static constexpr EnumEntry<sframe::FREOffset> FREOffsets[] = {
+#define HANDLE_SFRAME_FRE_OFFSET(CODE, NAME) {#NAME, sframe::FREOffset::NAME},
+#include "llvm/BinaryFormat/SFrameConstants.def"
+  };
+  return ArrayRef(FREOffsets);
+}

@@ -1863,7 +1863,6 @@ void AttributeInferer::run(const SCCNodeSet &SCCNodes,
 
 struct SCCNodesResult {
   SCCNodeSet SCCNodes;
-  bool HasUnknownCall;
 };
 
 } // end anonymous namespace
@@ -2227,29 +2226,13 @@ static void addWillReturn(const SCCNodeSet &SCCNodes,
 
 static SCCNodesResult createSCCNodeSet(ArrayRef<Function *> Functions) {
   SCCNodesResult Res;
-  Res.HasUnknownCall = false;
   for (Function *F : Functions) {
     if (!F || F->hasOptNone() || F->hasFnAttribute(Attribute::Naked) ||
         F->isPresplitCoroutine()) {
-      // Treat any function we're trying not to optimize as if it were an
-      // indirect call and omit it from the node set used below.
-      Res.HasUnknownCall = true;
+      // Omit any functions we're trying not to optimize from the set.
       continue;
     }
-    // Track whether any functions in this SCC have an unknown call edge.
-    // Note: if this is ever a performance hit, we can common it with
-    // subsequent routines which also do scans over the instructions of the
-    // function.
-    if (!Res.HasUnknownCall) {
-      for (Instruction &I : instructions(*F)) {
-        if (auto *CB = dyn_cast<CallBase>(&I)) {
-          if (!CB->getCalledFunction()) {
-            Res.HasUnknownCall = true;
-            break;
-          }
-        }
-      }
-    }
+
     Res.SCCNodes.insert(F);
   }
   return Res;
@@ -2282,15 +2265,10 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   addColdAttrs(Nodes.SCCNodes, Changed);
   addWillReturn(Nodes.SCCNodes, Changed);
   addNoUndefAttrs(Nodes.SCCNodes, Changed);
-
-  // If we have no external nodes participating in the SCC, we can deduce some
-  // more precise attributes as well.
-  if (!Nodes.HasUnknownCall) {
-    addNoAliasAttrs(Nodes.SCCNodes, Changed);
-    addNonNullAttrs(Nodes.SCCNodes, Changed);
-    inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
-    addNoRecurseAttrs(Nodes.SCCNodes, Changed);
-  }
+  addNoAliasAttrs(Nodes.SCCNodes, Changed);
+  addNonNullAttrs(Nodes.SCCNodes, Changed);
+  inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
+  addNoRecurseAttrs(Nodes.SCCNodes, Changed);
 
   // Finally, infer the maximal set of attributes from the ones we've inferred
   // above.  This is handling the cases where one attribute on a signature

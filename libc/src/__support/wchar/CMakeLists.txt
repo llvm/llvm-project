@@ -3,7 +3,8 @@ add_header_library(
   HDRS
     mbstate.h
   DEPENDS
-    libc.hdr.types.char32_t    
+    libc.hdr.stdint_proxy
+    libc.hdr.types.char32_t
 )
 
 add_header_library(
@@ -59,12 +60,46 @@ add_object_library(
   SRCS
     mbrtowc.cpp
   DEPENDS
-  libc.hdr.errno_macros
-  libc.hdr.types.wchar_t
-  libc.hdr.types.size_t
-  libc.src.__support.common
-  libc.src.__support.error_or
-  libc.src.__support.macros.config
-  .character_converter
-  .mbstate
+    libc.hdr.errno_macros
+    libc.hdr.types.wchar_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    .character_converter
+    .mbstate
+)
+
+add_header_library(
+  mbsnrtowcs
+  HDRS
+    mbsnrtowcs.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.wchar_t
+    libc.hdr.types.size_t
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    .character_converter
+    .mbstate
+    .string_converter
+)
+
+add_header_library(
+  wcsnrtombs
+  HDRS
+    wcsnrtombs.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.char8_t
+    libc.hdr.types.char32_t
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.__support.error_or
+    libc.src.__support.common
+    .string_converter
+    .character_converter
+    .mbstate
 )

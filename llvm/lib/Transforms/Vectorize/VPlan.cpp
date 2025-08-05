@@ -951,20 +951,15 @@ VPlan::~VPlan() {
     delete BackedgeTakenCount;
 }
 
-void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
-                             VPTransformState &State) {
-  Type *TCTy = TripCountV->getType();
-  // Check if the backedge taken count is needed, and if so build it.
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
-    IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
-    auto *TCMO = Builder.CreateSub(TripCountV, ConstantInt::get(TCTy, 1),
-                                   "trip.count.minus.1");
-    BackedgeTakenCount->setUnderlyingValue(TCMO);
-  }
-
-  VectorTripCount.setUnderlyingValue(VectorTripCountV);
+void VPlan::prepareToExecute(Value *VectorTripCountV, VPTransformState &State) {
+  if (!VectorTripCount.getUnderlyingValue())
+    VectorTripCount.setUnderlyingValue(VectorTripCountV);
+  else
+    assert(VectorTripCount.getUnderlyingValue() == VectorTripCountV &&
+           "VectorTripCount set earlier must much VectorTripCountV");
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  Type *TCTy = VectorTripCountV->getType();
   // FIXME: Model VF * UF computation completely in VPlan.
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
@@ -1042,21 +1037,6 @@ void VPlan::execute(VPTransformState *State) {
     // Skip phi-like recipes that generate their backedege values themselves.
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
-
-    if (auto *WidenPhi = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
-      assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-             "recipe generating only scalars should have been replaced");
-      auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-      PHINode *Phi = cast<PHINode>(GEP->getPointerOperand());
-
-      Phi->setIncomingBlock(1, VectorLatchBB);
-
-      // Move the last step to the end of the latch block. This ensures
-      // consistent placement of all induction updates.
-      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
-      continue;
-    }
 
     auto *PhiR = cast<VPSingleDefRecipe>(&R);
     // VPInstructions currently model scalar Phis only.
