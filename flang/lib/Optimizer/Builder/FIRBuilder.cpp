@@ -138,7 +138,7 @@ mlir::Type fir::FirOpBuilder::getRealType(int kind) {
 mlir::Value fir::FirOpBuilder::createNullConstant(mlir::Location loc,
                                                   mlir::Type ptrType) {
   auto ty = ptrType ? ptrType : getRefType(getNoneType());
-  return create<fir::ZeroOp>(loc, ty);
+  return fir::ZeroOp::create(*this, loc, ty);
 }
 
 mlir::Value fir::FirOpBuilder::createIntegerConstant(mlir::Location loc,
@@ -242,13 +242,13 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
   // Create the local variable.
   if (name.empty()) {
     if (uniqName.empty())
-      return create<fir::AllocaOp>(loc, ty, pinned, elidedLenParams, indices,
-                                   attrs);
-    return create<fir::AllocaOp>(loc, ty, uniqName, pinned, elidedLenParams,
-                                 indices, attrs);
+      return fir::AllocaOp::create(*this, loc, ty, pinned, elidedLenParams,
+                                   indices, attrs);
+    return fir::AllocaOp::create(*this, loc, ty, uniqName, pinned,
+                                 elidedLenParams, indices, attrs);
   }
-  return create<fir::AllocaOp>(loc, ty, uniqName, name, pinned, elidedLenParams,
-                               indices, attrs);
+  return fir::AllocaOp::create(*this, loc, ty, uniqName, name, pinned,
+                               elidedLenParams, indices, attrs);
 }
 
 mlir::Value fir::FirOpBuilder::allocateLocal(
@@ -328,8 +328,9 @@ mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
                                 /*unique_name=*/llvm::StringRef{}, name, attr,
                                 lenParams, shape, attrs);
   } else {
-    return create<fir::AllocaOp>(loc, type, /*unique_name=*/llvm::StringRef{},
-                                 name, pinned, lenParams, shape, attrs);
+    return fir::AllocaOp::create(*this, loc, type,
+                                 /*unique_name=*/llvm::StringRef{}, name,
+                                 pinned, lenParams, shape, attrs);
   }
 }
 
@@ -369,8 +370,9 @@ mlir::Value fir::FirOpBuilder::createHeapTemporary(
       fir::factory::elideLengthsAlreadyInType(type, lenParams);
 
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
-  return create<fir::AllocMemOp>(loc, type, /*unique_name=*/llvm::StringRef{},
-                                 name, dynamicLength, dynamicShape, attrs);
+  return fir::AllocMemOp::create(*this, loc, type,
+                                 /*unique_name=*/llvm::StringRef{}, name,
+                                 dynamicLength, dynamicShape, attrs);
 }
 
 std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
@@ -385,7 +387,7 @@ std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
     mlir::Value boxAddress = fir::factory::getAndEstablishBoxStorage(
         *this, loc, boxType, shape, typeParams, polymorphicMold);
     fir::runtime::genAllocatableAllocate(*this, loc, boxAddress);
-    mlir::Value box = create<fir::LoadOp>(loc, boxAddress);
+    mlir::Value box = fir::LoadOp::create(*this, loc, boxAddress);
     mlir::Value base =
         genDeclare(*this, loc, box, tmpName, /*shape=*/mlir::Value{},
                    typeParams, fir::FortranVariableFlagsAttr{});
@@ -442,8 +444,8 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
     attrs.push_back(mlir::NamedAttribute(
         fir::GlobalOp::getDataAttrAttrName(globalOpName), dataAttr));
   }
-  auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value,
-                                    linkage, attrs);
+  auto glob = fir::GlobalOp::create(*this, loc, name, isConst, isTarget, type,
+                                    value, linkage, attrs);
   restoreInsertionPoint(insertPt);
   if (symbolTable)
     symbolTable->insert(glob);
@@ -459,7 +461,7 @@ fir::GlobalOp fir::FirOpBuilder::createGlobal(
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   setInsertionPoint(module.getBody(), module.getBody()->end());
-  auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type,
+  auto glob = fir::GlobalOp::create(*this, loc, name, isConst, isTarget, type,
                                     mlir::Attribute{}, linkage);
   auto &region = glob.getRegion();
   region.push_back(new mlir::Block);
@@ -482,7 +484,7 @@ fir::FirOpBuilder::createTypeInfoOp(mlir::Location loc,
     return {typeInfo, InsertPoint{}};
   InsertPoint insertPoint = saveInsertionPoint();
   setInsertionPoint(module.getBody(), module.getBody()->end());
-  auto typeInfo = create<fir::TypeInfoOp>(loc, recordType, parentType);
+  auto typeInfo = fir::TypeInfoOp::create(*this, loc, recordType, parentType);
   if (symbolTable)
     symbolTable->insert(typeInfo);
   return {typeInfo, insertPoint};
@@ -538,14 +540,14 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
     assert((fir::unwrapRefType(toTy) ==
                 fir::unwrapRefType(fir::unwrapPassByRefType(fromTy)) &&
             "element types expected to match"));
-    return create<fir::BoxAddrOp>(loc, toTy, val);
+    return fir::BoxAddrOp::create(*this, loc, toTy, val);
   }
   if (fir::isa_ref_type(fromTy) && mlir::isa<fir::BoxProcType>(toTy)) {
     // Call is expecting a boxed procedure, not a reference to other data type.
     // Convert the reference to a procedure and embox it.
     mlir::Type procTy = mlir::cast<fir::BoxProcType>(toTy).getEleTy();
     mlir::Value proc = createConvert(loc, procTy, val);
-    return create<fir::EmboxProcOp>(loc, toTy, proc);
+    return fir::EmboxProcOp::create(*this, loc, toTy, proc);
   }
 
   // Legacy: remove when removing non HLFIR lowering path.
@@ -555,7 +557,7 @@ mlir::Value fir::FirOpBuilder::convertWithSemantics(
           fir::isPolymorphicType(toTy)) ||
          (fir::isPolymorphicType(fromTy) && mlir::isa<fir::BoxType>(toTy))) &&
         !(fir::isUnlimitedPolymorphicType(fromTy) && fir::isAssumedType(toTy)))
-      return create<fir::ReboxOp>(loc, toTy, val, mlir::Value{},
+      return fir::ReboxOp::create(*this, loc, toTy, val, mlir::Value{},
                                   /*slice=*/mlir::Value{});
 
   return createConvert(loc, toTy, val);
@@ -568,7 +570,7 @@ mlir::Value fir::FirOpBuilder::createVolatileCast(mlir::Location loc,
       fir::updateTypeWithVolatility(val.getType(), isVolatile);
   if (volatileAdjustedType == val.getType())
     return val;
-  return create<fir::VolatileCastOp>(loc, volatileAdjustedType, val);
+  return fir::VolatileCastOp::create(*this, loc, volatileAdjustedType, val);
 }
 
 mlir::Value fir::FirOpBuilder::createConvertWithVolatileCast(mlir::Location loc,
@@ -602,12 +604,12 @@ void fir::FirOpBuilder::createStoreWithConvert(mlir::Location loc,
   mlir::Type unwrapedRefType = fir::unwrapRefType(addr.getType());
   val = createVolatileCast(loc, fir::isa_volatile_type(unwrapedRefType), val);
   mlir::Value cast = createConvert(loc, unwrapedRefType, val);
-  create<fir::StoreOp>(loc, cast, addr);
+  fir::StoreOp::create(*this, loc, cast, addr);
 }
 
 mlir::Value fir::FirOpBuilder::loadIfRef(mlir::Location loc, mlir::Value val) {
   if (fir::isa_ref_type(val.getType()))
-    return create<fir::LoadOp>(loc, val);
+    return fir::LoadOp::create(*this, loc, val);
   return val;
 }
 
@@ -620,13 +622,13 @@ fir::StringLitOp fir::FirOpBuilder::createStringLitOp(mlir::Location loc,
   auto sizeTag = mlir::StringAttr::get(getContext(), fir::StringLitOp::size());
   mlir::NamedAttribute sizeAttr(sizeTag, getI64IntegerAttr(data.size()));
   llvm::SmallVector<mlir::NamedAttribute> attrs{dataAttr, sizeAttr};
-  return create<fir::StringLitOp>(loc, llvm::ArrayRef<mlir::Type>{type},
+  return fir::StringLitOp::create(*this, loc, llvm::ArrayRef<mlir::Type>{type},
                                   mlir::ValueRange{}, attrs);
 }
 
 mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
                                         llvm::ArrayRef<mlir::Value> exts) {
-  return create<fir::ShapeOp>(loc, exts);
+  return fir::ShapeOp::create(*this, loc, exts);
 }
 
 mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
@@ -640,7 +642,7 @@ mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
     shapeArgs.push_back(lb);
     shapeArgs.push_back(ext);
   }
-  return create<fir::ShapeShiftOp>(loc, shapeType, shapeArgs);
+  return fir::ShapeShiftOp::create(*this, loc, shapeType, shapeArgs);
 }
 
 mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
@@ -653,7 +655,7 @@ mlir::Value fir::FirOpBuilder::genShape(mlir::Location loc,
 mlir::Value fir::FirOpBuilder::genShift(mlir::Location loc,
                                         llvm::ArrayRef<mlir::Value> shift) {
   auto shiftType = fir::ShiftType::get(getContext(), shift.size());
-  return create<fir::ShiftOp>(loc, shiftType, shift);
+  return fir::ShiftOp::create(*this, loc, shiftType, shift);
 }
 
 mlir::Value fir::FirOpBuilder::createShape(mlir::Location loc,
@@ -665,7 +667,7 @@ mlir::Value fir::FirOpBuilder::createShape(mlir::Location loc,
         if (!box.getLBounds().empty()) {
           auto shiftType =
               fir::ShiftType::get(getContext(), box.getLBounds().size());
-          return create<fir::ShiftOp>(loc, shiftType, box.getLBounds());
+          return fir::ShiftOp::create(*this, loc, shiftType, box.getLBounds());
         }
         return {};
       },
@@ -694,7 +696,7 @@ mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
           trips.push_back(v);
           trips.push_back(one);
         }
-        return create<fir::SliceOp>(loc, trips, path);
+        return fir::SliceOp::create(*this, loc, trips, path);
       }
       for (auto [lbnd, extent] : llvm::zip(lbounds, extents)) {
         auto lb = createConvert(loc, idxTy, lbnd);
@@ -705,7 +707,7 @@ mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
         trips.push_back(ub);
         trips.push_back(one);
       }
-      return create<fir::SliceOp>(loc, trips, path);
+      return fir::SliceOp::create(*this, loc, trips, path);
     };
     return exv.match(
         [&](const fir::ArrayBoxValue &box) {
@@ -725,7 +727,7 @@ mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
         },
         [&](auto) -> mlir::Value { fir::emitFatalError(loc, "not an array"); });
   }
-  return create<fir::SliceOp>(loc, triples, path);
+  return fir::SliceOp::create(*this, loc, triples, path);
 }
 
 mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
@@ -763,43 +765,44 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
         mlir::Value empty;
         mlir::ValueRange emptyRange;
         mlir::Value s = createShape(loc, exv);
-        return create<fir::EmboxOp>(loc, boxTy, itemAddr, s, /*slice=*/empty,
+        return fir::EmboxOp::create(*this, loc, boxTy, itemAddr, s,
+                                    /*slice=*/empty,
                                     /*typeparams=*/emptyRange,
                                     isPolymorphic ? box.getSourceBox() : tdesc);
       },
       [&](const fir::CharArrayBoxValue &box) -> mlir::Value {
         mlir::Value s = createShape(loc, exv);
         if (fir::factory::CharacterExprHelper::hasConstantLengthInType(exv))
-          return create<fir::EmboxOp>(loc, boxTy, itemAddr, s);
+          return fir::EmboxOp::create(*this, loc, boxTy, itemAddr, s);
 
         mlir::Value emptySlice;
         llvm::SmallVector<mlir::Value> lenParams{box.getLen()};
-        return create<fir::EmboxOp>(loc, boxTy, itemAddr, s, emptySlice,
+        return fir::EmboxOp::create(*this, loc, boxTy, itemAddr, s, emptySlice,
                                     lenParams);
       },
       [&](const fir::CharBoxValue &box) -> mlir::Value {
         if (fir::factory::CharacterExprHelper::hasConstantLengthInType(exv))
-          return create<fir::EmboxOp>(loc, boxTy, itemAddr);
+          return fir::EmboxOp::create(*this, loc, boxTy, itemAddr);
         mlir::Value emptyShape, emptySlice;
         llvm::SmallVector<mlir::Value> lenParams{box.getLen()};
-        return create<fir::EmboxOp>(loc, boxTy, itemAddr, emptyShape,
+        return fir::EmboxOp::create(*this, loc, boxTy, itemAddr, emptyShape,
                                     emptySlice, lenParams);
       },
       [&](const fir::MutableBoxValue &x) -> mlir::Value {
-        return create<fir::LoadOp>(
-            loc, fir::factory::getMutableIRBox(*this, loc, x));
+        return fir::LoadOp::create(
+            *this, loc, fir::factory::getMutableIRBox(*this, loc, x));
       },
       [&](const fir::PolymorphicValue &p) -> mlir::Value {
         mlir::Value empty;
         mlir::ValueRange emptyRange;
-        return create<fir::EmboxOp>(loc, boxTy, itemAddr, empty, empty,
+        return fir::EmboxOp::create(*this, loc, boxTy, itemAddr, empty, empty,
                                     emptyRange,
                                     isPolymorphic ? p.getSourceBox() : tdesc);
       },
       [&](const auto &) -> mlir::Value {
         mlir::Value empty;
         mlir::ValueRange emptyRange;
-        return create<fir::EmboxOp>(loc, boxTy, itemAddr, empty, empty,
+        return fir::EmboxOp::create(*this, loc, boxTy, itemAddr, empty, empty,
                                     emptyRange, tdesc);
       });
 }
@@ -810,8 +813,8 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc, mlir::Type boxType,
                                          llvm::ArrayRef<mlir::Value> lengths,
                                          mlir::Value tdesc) {
   mlir::Type valueOrSequenceType = fir::unwrapPassByRefType(boxType);
-  return create<fir::EmboxOp>(
-      loc, boxType, addr, shape, slice,
+  return fir::EmboxOp::create(
+      *this, loc, boxType, addr, shape, slice,
       fir::factory::elideLengthsAlreadyInType(valueOrSequenceType, lengths),
       tdesc);
 }
@@ -860,11 +863,12 @@ mlir::Value fir::FirOpBuilder::genExtentFromTriplet(mlir::Location loc,
 mlir::Value fir::FirOpBuilder::genAbsentOp(mlir::Location loc,
                                            mlir::Type argTy) {
   if (!fir::isCharacterProcedureTuple(argTy))
-    return create<fir::AbsentOp>(loc, argTy);
+    return fir::AbsentOp::create(*this, loc, argTy);
 
-  auto boxProc =
-      create<fir::AbsentOp>(loc, mlir::cast<mlir::TupleType>(argTy).getType(0));
-  mlir::Value charLen = create<fir::UndefOp>(loc, getCharacterLengthType());
+  auto boxProc = fir::AbsentOp::create(
+      *this, loc, mlir::cast<mlir::TupleType>(argTy).getType(0));
+  mlir::Value charLen =
+      fir::UndefOp::create(*this, loc, getCharacterLengthType());
   return fir::factory::createCharacterProcedureTuple(*this, loc, argTy, boxProc,
                                                      charLen);
 }
@@ -972,9 +976,8 @@ mlir::Value fir::factory::readExtent(fir::FirOpBuilder &builder,
           return x.getExplicitExtents()[dim];
         auto idxTy = builder.getIndexType();
         auto dimVal = builder.createIntegerConstant(loc, idxTy, dim);
-        return builder
-            .create<fir::BoxDimsOp>(loc, idxTy, idxTy, idxTy, x.getAddr(),
-                                    dimVal)
+        return fir::BoxDimsOp::create(builder, loc, idxTy, idxTy, idxTy,
+                                      x.getAddr(), dimVal)
             .getResult(1);
       },
       [&](const fir::MutableBoxValue &x) -> mlir::Value {
