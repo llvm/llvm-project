@@ -78,7 +78,7 @@ div(InType x, InType y) {
     }
 
     if (y_bits.is_inf())
-      return OutFPBits::inf(result_sign).get_val();
+      return OutFPBits::zero(result_sign).get_val();
 
     if (y_bits.is_zero()) {
       if (x_bits.is_zero()) {
