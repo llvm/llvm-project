@@ -518,10 +518,12 @@ public:
     return true;
   }
 
-  /// Return true if multiple condition registers are available.
-  bool hasMultipleConditionRegisters() const {
-    return HasMultipleConditionRegisters;
-  }
+  /// Does the target have multiple (allocatable) condition registers that
+  /// can be used to store the results of comparisons for use by selects
+  /// and conditional branches. With multiple condition registers, the code
+  /// generator will not aggressively sink comparisons into the blocks of their
+  /// users.
+  virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
 
   /// Return true if the target has BitExtract instructions.
   bool hasExtractBitsInsn() const { return HasExtractBitsInsn; }
@@ -2453,7 +2455,7 @@ public:
                                                EVT VT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
-    if (hasMultipleConditionRegisters())
+    if (hasMultipleConditionRegisters(VT))
       return false;
     // Only do the transform if the value won't be split into multiple
     // registers.
@@ -2558,15 +2560,6 @@ protected:
   /// llvm.savestack/llvm.restorestack should save and restore.
   void setStackPointerRegisterToSaveRestore(Register R) {
     StackPointerRegisterToSaveRestore = R;
-  }
-
-  /// Tells the code generator that the target has multiple (allocatable)
-  /// condition registers that can be used to store the results of comparisons
-  /// for use by selects and conditional branches. With multiple condition
-  /// registers, the code generator will not aggressively sink comparisons into
-  /// the blocks of their users.
-  void setHasMultipleConditionRegisters(bool hasManyRegs = true) {
-    HasMultipleConditionRegisters = hasManyRegs;
   }
 
   /// Tells the code generator that the target has BitExtract instructions.
@@ -3603,13 +3596,6 @@ public:
 
 private:
   const TargetMachine &TM;
-
-  /// Tells the code generator that the target has multiple (allocatable)
-  /// condition registers that can be used to store the results of comparisons
-  /// for use by selects and conditional branches. With multiple condition
-  /// registers, the code generator will not aggressively sink comparisons into
-  /// the blocks of their users.
-  bool HasMultipleConditionRegisters;
 
   /// Tells the code generator that the target has BitExtract instructions.
   /// The code generator will aggressively sink "shift"s into the blocks of
