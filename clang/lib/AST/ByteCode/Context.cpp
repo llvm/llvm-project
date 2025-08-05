@@ -474,7 +474,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     IsLambdaStaticInvoker = true;
 
     const CXXRecordDecl *ClosureClass = MD->getParent();
-    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+    assert(ClosureClass->captures().empty());
     if (ClosureClass->isGenericLambda()) {
       const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
       assert(MD->isFunctionTemplateSpecialization() &&
