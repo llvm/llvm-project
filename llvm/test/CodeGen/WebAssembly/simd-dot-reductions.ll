@@ -2,9 +2,10 @@
 ; RUN: llc < %s -mattr=+simd128 | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
-define <4 x i32> @dot(<8 x i16> %a, <8 x i16> %b) {
-; CHECK-LABEL: dot:
-; CHECK:         .functype dot (v128, v128) -> (v128)
+
+define <4 x i32> @dot_sext_1(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: dot_sext_1:
+; CHECK:         .functype dot_sext_1 (v128, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
@@ -12,10 +13,76 @@ define <4 x i32> @dot(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-NEXT:    # fallthrough-return
   %sext1 = sext <8 x i16> %a to <8 x i32>
   %sext2 = sext <8 x i16> %b to <8 x i32>
-  %mul = mul nsw <8 x i32> %sext1, %sext2
+  %mul = mul <8 x i32> %sext1, %sext2
   %shuffle1 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %shuffle2 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %res = add <4 x i32> %shuffle1, %shuffle2
   ret <4 x i32> %res
 }
 
+
+define <4 x i32> @dot_sext_2(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: dot_sext_2:
+; CHECK:         .functype dot_sext_2 (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.dot_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %sext1 = sext <8 x i16> %a to <8 x i32>
+  %sext2 = sext <8 x i16> %b to <8 x i32>
+  %mul = mul <8 x i32> %sext1, %sext2
+  %shuffle1 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %shuffle2 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %res = add <4 x i32> %shuffle2, %shuffle1
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @dot_zext(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: dot_zext:
+; CHECK:         .functype dot_zext (v128, v128) -> (v128)
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.extmul_low_i16x8_u
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.extmul_high_i16x8_u
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
+; CHECK-NEXT:    i32x4.add
+; CHECK-NEXT:    # fallthrough-return
+  %zext1 = zext <8 x i16> %a to <8 x i32>
+  %zext2 = zext <8 x i16> %b to <8 x i32>
+  %mul = mul <8 x i32> %zext1, %zext2
+  %shuffle1 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %shuffle2 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %res = add <4 x i32> %shuffle1, %shuffle2
+  ret <4 x i32> %res
+}
+
+define <4 x i32> @dot_wrong_shuffle(<8 x i16> %a, <8 x i16> %b) {
+; CHECK-LABEL: dot_wrong_shuffle:
+; CHECK:         .functype dot_wrong_shuffle (v128, v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i32x4.extmul_high_i16x8_s
+; CHECK-NEXT:    i32x4.add
+; CHECK-NEXT:    # fallthrough-return
+  %sext1 = sext <8 x i16> %a to <8 x i32>
+  %sext2 = sext <8 x i16> %b to <8 x i32>
+  %mul = mul <8 x i32> %sext1, %sext2
+  %shuffle1 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle2 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %res = add <4 x i32> %shuffle1, %shuffle2
+  ret <4 x i32> %res
+}
