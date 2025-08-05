@@ -420,6 +420,18 @@ cc_library(
     deps = ["//lldb:Core"],
 )
 
+gentbl_cc_library(
+    name = "SymbolFilePDBProperties",
+    strip_include_prefix = "SymbolFile/PDB",
+    tbl_outs = {
+        "SymbolFile/PDB/SymbolFilePDBProperties.inc": ["-gen-lldb-property-defs"],
+        "SymbolFile/PDB/SymbolFilePDBPropertiesEnum.inc": ["-gen-lldb-property-enum-defs"],
+    },
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "SymbolFile/PDB/SymbolFilePDBProperties.td",
+    deps = ["//lldb:CoreTdFiles"],
+)
+
 cc_library(
     name = "PluginSymbolFilePDB",
     srcs = glob(["SymbolFile/PDB/*.cpp"]),
@@ -430,6 +442,7 @@ cc_library(
         ":PluginSymbolFileNativePDBHeaders",
         ":PluginSymbolFilePDBHeaders",
         ":PluginTypeSystemClangHeaders",
+        ":SymbolFilePDBProperties",
         "//clang:ast",
         "//clang:lex",
         "//lldb:Core",
