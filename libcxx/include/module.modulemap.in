@@ -112,10 +112,6 @@ module std_core [system] {
       header "__type_traits/is_always_bitcastable.h"
       export std_core.type_traits.integral_constant
     }
-    module is_applicable {
-      header "__type_traits/is_applicable.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_arithmetic {
       header "__type_traits/is_arithmetic.h"
       export std_core.type_traits.integral_constant
@@ -2115,6 +2111,10 @@ module std [system] {
   module tuple {
     module find_index               { header "__tuple/find_index.h" }
     module ignore                   { header "__tuple/ignore.h" }
+    module is_applicable {
+      header "__tuple/is_applicable.h"
+      export std_core.type_traits.integral_constant
+    }
     module make_tuple_types         { header "__tuple/make_tuple_types.h" }
     module sfinae_helpers           { header "__tuple/sfinae_helpers.h" }
     module tuple_element            { header "__tuple/tuple_element.h" }
