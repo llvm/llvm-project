@@ -2128,8 +2128,8 @@ private:
     bool result = rp.processReductionArguments<fir::DeclareReductionOp>(
         toLocation(), *this, info.reduceOperatorList, reduceVars,
         reduceVarByRef, reductionDeclSymbols, info.reduceSymList);
-    assert(result && "Failed to process `do concurrent` reductions");
-    (void)result;
+    if (!result)
+      TODO(toLocation(), "Lowering unrecognised reduction type");
 
     doConcurrentLoopOp.getReduceVarsMutable().assign(reduceVars);
     doConcurrentLoopOp.setReduceSymsAttr(
@@ -3436,8 +3436,8 @@ private:
       }
     }
 
-    auto op = builder->create<cuf::KernelOp>(
-        loc, gridValues, blockValues, streamAddr, lbs, ubs, steps, n,
+    auto op = cuf::KernelOp::create(
+        *builder, loc, gridValues, blockValues, streamAddr, lbs, ubs, steps, n,
         mlir::ValueRange(reduceOperands), builder->getArrayAttr(reduceAttrs));
     builder->createBlock(&op.getRegion(), op.getRegion().end(), ivTypes,
                          ivLocs);
