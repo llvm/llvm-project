@@ -530,21 +530,21 @@ public:
   /// bodies.
   IfBuilder genIfOp(mlir::Location loc, mlir::TypeRange results,
                     mlir::Value cdt, bool withElseRegion) {
-    auto op = create<fir::IfOp>(loc, results, cdt, withElseRegion);
+    auto op = fir::IfOp::create(*this, loc, results, cdt, withElseRegion);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with no "else" region, and no result values.
   /// Usage: genIfThen(loc, cdt).genThen(lambda).end();
   IfBuilder genIfThen(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, false);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, false);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with an "else" region, and no result values.
   /// Usage: genIfThenElse(loc, cdt).genThen(lambda).genElse(lambda).end();
   IfBuilder genIfThenElse(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, true);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, true);
     return IfBuilder(op, *this);
   }
 

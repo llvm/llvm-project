@@ -233,6 +233,14 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(const SourceInfo &Info) {
       return false;
     }
   } else {
+    // If this is pointing to a local variable, just return
+    // the result, even if the pointer is dead.
+    // This will later be diagnosed by CheckLValueConstantExpression.
+    if (Ptr.isBlockPointer() && !Ptr.block()->isStatic()) {
+      EvalResult.setValue(Ptr.toAPValue(Ctx.getASTContext()));
+      return true;
+    }
+
     if (!Ptr.isLive() && !Ptr.isTemporary())
       return false;
 

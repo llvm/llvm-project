@@ -466,7 +466,9 @@ private:
 
   void genSimpleAllocation(const Allocation &alloc,
                            const fir::MutableBoxValue &box) {
-    bool isCudaSymbol = Fortran::semantics::HasCUDAAttr(alloc.getSymbol());
+    bool isCudaAllocate =
+        Fortran::semantics::HasCUDAAttr(alloc.getSymbol()) ||
+        Fortran::semantics::HasCUDAComponent(alloc.getSymbol());
     bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
     bool inlineAllocation = !box.isDerived() && !errorManager.hasStatSpec() &&
                             !alloc.type.IsPolymorphic() &&
@@ -475,7 +477,7 @@ private:
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(alloc.getSymbol());
 
     if (inlineAllocation &&
-        ((isCudaSymbol && isCudaDeviceContext) || !isCudaSymbol)) {
+        ((isCudaAllocate && isCudaDeviceContext) || !isCudaAllocate)) {
       // Pointers must use PointerAllocate so that their deallocations
       // can be validated.
       genInlinedAllocation(alloc, box);
@@ -494,7 +496,7 @@ private:
     genSetDeferredLengthParameters(alloc, box);
     genAllocateObjectBounds(alloc, box);
     mlir::Value stat;
-    if (!isCudaSymbol) {
+    if (!isCudaAllocate) {
       stat = genRuntimeAllocate(builder, loc, box, errorManager);
       setPinnedToFalse();
     } else {

@@ -1399,13 +1399,9 @@ def __aeabi_lasr : RuntimeLibcallImpl<SRA_I64>; // CallingConv::ARM_AAPCS
 
 // Integer division functions
 // RTABI chapter 4.3.1
-def __aeabi_idiv__i8 : RuntimeLibcallImpl<SDIV_I8, "__aeabi_idiv">; // CallingConv::ARM_AAPCS
-def __aeabi_idiv__i16 : RuntimeLibcallImpl<SDIV_I16, "__aeabi_idiv">; // CallingConv::ARM_AAPCS
-def __aeabi_idiv__i32 : RuntimeLibcallImpl<SDIV_I32, "__aeabi_idiv">; // CallingConv::ARM_AAPCS
+def __aeabi_idiv : RuntimeLibcallImpl<SDIV_I32>; // CallingConv::ARM_AAPCS
 def __aeabi_ldivmod : RuntimeLibcallImpl<SDIVREM_I64>; //  CallingConv::ARM_AAPCS
-def __aeabi_uidiv__i8 : RuntimeLibcallImpl<UDIV_I8, "__aeabi_uidiv">; // CallingConv::ARM_AAPCS
-def __aeabi_uidiv__i16 : RuntimeLibcallImpl<UDIV_I16, "__aeabi_uidiv">; // CallingConv::ARM_AAPCS
-def __aeabi_uidiv__i32 : RuntimeLibcallImpl<UDIV_I32, "__aeabi_uidiv">; // CallingConv::ARM_AAPCS
+def __aeabi_uidiv : RuntimeLibcallImpl<UDIV_I32>; // CallingConv::ARM_AAPCS
 def __aeabi_uldivmod : RuntimeLibcallImpl<UDIVREM_I64>; // CallingConv::ARM_AAPCS
 
 def __aeabi_idivmod : RuntimeLibcallImpl<SDIVREM_I32>; //  CallingConv::ARM_AAPCS
