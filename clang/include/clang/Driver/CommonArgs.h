@@ -215,6 +215,9 @@ void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         StringRef BitcodeSuffix, const llvm::Triple &Triple,
                         const ToolChain &HostTC);
 
+void addOpenCLBuiltinsLib(const Driver &D, const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args);
+
 void addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
                            const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs,

@@ -2985,6 +2985,43 @@ void tools::addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
   }
 }
 
+void tools::addOpenCLBuiltinsLib(const Driver &D,
+                                 const llvm::opt::ArgList &DriverArgs,
+                                 llvm::opt::ArgStringList &CC1Args) {
+  // Check whether user specifies a libclc bytecode library
+  const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
+  if (!A)
+    return;
+
+  // Find device libraries in <LLVM_DIR>/lib/clang/<ver>/lib/libclc/
+  SmallString<128> LibclcPath(D.ResourceDir);
+  llvm::sys::path::append(LibclcPath, "lib", "libclc");
+
+  // If the namespec is of the form :filename, search for that file.
+  StringRef LibclcNamespec(A->getValue());
+  bool FilenameSearch = LibclcNamespec.consume_front(":");
+  SmallString<128> LibclcTargetFile(LibclcNamespec);
+
+  if (FilenameSearch && llvm::sys::fs::exists(LibclcTargetFile)) {
+    CC1Args.push_back("-mlink-builtin-bitcode");
+    CC1Args.push_back(DriverArgs.MakeArgString(LibclcTargetFile));
+  } else {
+    // Search the library paths for the file
+    if (!FilenameSearch)
+      LibclcTargetFile += ".bc";
+
+    llvm::sys::path::append(LibclcPath, LibclcTargetFile);
+    if (llvm::sys::fs::exists(LibclcPath)) {
+      CC1Args.push_back("-mlink-builtin-bitcode");
+      CC1Args.push_back(DriverArgs.MakeArgString(LibclcPath));
+    } else {
+      // Since the user requested a library, if we haven't one then report an
+      // error.
+      D.Diag(diag::err_drv_libclc_not_found) << LibclcTargetFile;
+    }
+  }
+}
+
 void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
                                   const llvm::opt::ArgList &Args,
                                   llvm::opt::ArgStringList &CmdArgs,
