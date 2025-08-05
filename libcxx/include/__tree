@@ -2062,10 +2062,11 @@ template <class _Tp, class _Compare, class _Allocator>
 template <class _Key>
 typename __tree<_Tp, _Compare, _Allocator>::size_type
 __tree<_Tp, _Compare, _Allocator>::__erase_unique(const _Key& __k) {
-  iterator __i = find(__k);
-  if (__i == end())
+  __end_node_pointer __parent;
+  __node_base_pointer __i = __find_equal(__parent, __k);
+  if (__i == nullptr)
     return 0;
-  erase(__i);
+  erase(iterator(static_cast<__node_pointer>(__i)));
   return 1;
 }
 
