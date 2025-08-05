@@ -138,6 +138,7 @@ struct MachineSMEABI : public MachineFunctionPass {
   }
 
   void collectNeededZAStates(MachineFunction &MF, SMEAttrs);
+  void propagateDesiredStates(MachineFunction &MF);
   void pickBundleZAStates(MachineFunction &MF);
   void insertStateChanges(MachineFunction &MF, bool IsAgnosticZA);
 
@@ -202,8 +203,10 @@ private:
   };
 
   struct BlockInfo {
-    ZAState FixedEntryState{ZAState::ANY};
     SmallVector<InstInfo> Insts;
+    ZAState FixedEntryState{ZAState::ANY};
+    ZAState DesiredIncomingState{ZAState::ANY};
+    ZAState DesiredOutgoingState{ZAState::ANY};
     LiveRegs PhysLiveRegsAtEntry = LiveRegs::None;
     LiveRegs PhysLiveRegsAtExit = LiveRegs::None;
   };
@@ -294,28 +297,74 @@ void MachineSMEABI::collectNeededZAStates(MachineFunction &MF,
 
     // Reverse vector (as we had to iterate backwards for liveness).
     std::reverse(Block.Insts.begin(), Block.Insts.end());
+
+    // Record the desired states on entry/exit of this block. These are the
+    // states that would not incur a state transition.
+    if (!Block.Insts.empty()) {
+      Block.DesiredIncomingState = Block.Insts.front().NeededState;
+      Block.DesiredOutgoingState = Block.Insts.back().NeededState;
+    }
+  }
+}
+
+void MachineSMEABI::propagateDesiredStates(MachineFunction &MF) {
+  // This propagates desired states from predecessors to successors. This
+  // propagates state up loop nests (as an inner loop is a predecessor
+  // to outer its loops).
+  SmallVector<MachineBasicBlock *> Worklist;
+  for (auto [BlockID, BlockInfo] : enumerate(State.Blocks)) {
+    if (!isLegalEdgeBundleZAState(BlockInfo.DesiredIncomingState))
+      Worklist.push_back(MF.getBlockNumbered(BlockID));
+  }
+
+  while (!Worklist.empty()) {
+    MachineBasicBlock *MBB = Worklist.pop_back_val();
+    auto &BlockInfo = State.Blocks[MBB->getNumber()];
+
+    // Pick a legal edge bundle state that matches the majority of predecessors.
+    int PredStateCounts[ZAState::NUM_ZA_STATE] = {0};
+    for (MachineBasicBlock *Pred : predecessors(MBB)) {
+      auto &PredBlockInfo = State.Blocks[Pred->getNumber()];
+      if (isLegalEdgeBundleZAState(PredBlockInfo.DesiredOutgoingState))
+        PredStateCounts[PredBlockInfo.DesiredOutgoingState]++;
+    }
+    ZAState PropagatedState =
+        ZAState(max_element(PredStateCounts) - PredStateCounts);
+
+    if (PropagatedState != BlockInfo.DesiredIncomingState) {
+      BlockInfo.DesiredIncomingState = PropagatedState;
+      // Propagate to outgoing state for blocks that don't care about their
+      // ZA state.
+      if (BlockInfo.DesiredOutgoingState == ZAState::ANY)
+        BlockInfo.DesiredOutgoingState = PropagatedState;
+
+      // Push any successors that may need updating to the worklist.
+      for (MachineBasicBlock *Succ : successors(MBB)) {
+        auto &SuccBlockInfo = State.Blocks[Succ->getNumber()];
+        if (!isLegalEdgeBundleZAState(SuccBlockInfo.DesiredIncomingState))
+          Worklist.push_back(Succ);
+      }
+    }
   }
 }
 
 void MachineSMEABI::pickBundleZAStates(MachineFunction &MF) {
   State.BundleStates.resize(Bundles->getNumBundles());
+
+  if (OptLevel != CodeGenOptLevel::None)
+    propagateDesiredStates(MF);
+
   for (unsigned I = 0, E = Bundles->getNumBundles(); I != E; ++I) {
     LLVM_DEBUG(dbgs() << "Picking ZA state for edge bundle: " << I << '\n');
 
     // Attempt to pick a ZA state for this bundle that minimizes state
     // transitions. Edges within loops are given a higher weight as we assume
     // they will be executed more than once.
-    // TODO: We should propagate desired incoming/outgoing states through blocks
-    // that have the "ANY" state first to make better global decisions.
     int EdgeStateCounts[ZAState::NUM_ZA_STATE] = {0};
     for (unsigned BlockID : Bundles->getBlocks(I)) {
       LLVM_DEBUG(dbgs() << "- bb." << BlockID);
 
       BlockInfo &Block = State.Blocks[BlockID];
-      if (Block.Insts.empty()) {
-        LLVM_DEBUG(dbgs() << " (no state preference)\n");
-        continue;
-      }
       bool IsLoop = MLI && MLI->getLoopFor(MF.getBlockNumbered(BlockID));
       bool InEdge = Bundles->getBundle(BlockID, /*Out=*/false) == I;
       bool OutEdge = Bundles->getBundle(BlockID, /*Out=*/true) == I;
@@ -324,26 +373,28 @@ void MachineSMEABI::pickBundleZAStates(MachineFunction &MF) {
         LLVM_DEBUG(dbgs() << " IsLoop");
 
       LLVM_DEBUG(dbgs() << " (EdgeWeight: " << EdgeWeight << ')');
-      ZAState DesiredIncomingState = Block.Insts.front().NeededState;
-      if (InEdge && isLegalEdgeBundleZAState(DesiredIncomingState)) {
-        EdgeStateCounts[DesiredIncomingState] += EdgeWeight;
+      bool LegalInEdge =
+          InEdge && isLegalEdgeBundleZAState(Block.DesiredIncomingState);
+      bool LegalOutEgde =
+          OutEdge && isLegalEdgeBundleZAState(Block.DesiredOutgoingState);
+      if (LegalInEdge) {
         LLVM_DEBUG(dbgs() << " DesiredIncomingState: "
-                          << getZAStateString(DesiredIncomingState));
+                          << getZAStateString(Block.DesiredIncomingState));
+        EdgeStateCounts[Block.DesiredIncomingState] += EdgeWeight;
       }
-      ZAState DesiredOutgoingState = Block.Insts.back().NeededState;
-      if (OutEdge && isLegalEdgeBundleZAState(DesiredOutgoingState)) {
-        EdgeStateCounts[DesiredOutgoingState] += EdgeWeight;
+      if (LegalOutEgde) {
         LLVM_DEBUG(dbgs() << " DesiredOutgoingState: "
-                          << getZAStateString(DesiredOutgoingState));
+                          << getZAStateString(Block.DesiredOutgoingState));
+        EdgeStateCounts[Block.DesiredOutgoingState] += EdgeWeight;
       }
+      if (!LegalInEdge && !LegalOutEgde)
+        LLVM_DEBUG(dbgs() << " (no state preference)");
       LLVM_DEBUG(dbgs() << '\n');
     }
 
     ZAState BundleState =
         ZAState(max_element(EdgeStateCounts) - EdgeStateCounts);
 
-    // Force ZA to be active in bundles that don't have a preferred state.
-    // TODO: Something better here (to avoid extra mode switches).
     if (BundleState == ZAState::ANY)
       BundleState = ZAState::ACTIVE;
 
