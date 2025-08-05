@@ -349,12 +349,13 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
     const CheckContext &Ctx) {
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
-           "the %select{|const qualified }0variable %1 is "
+           "the %select{|const qualified }0variable %1 of type %2 is "
            "copy-constructed "
            "from a const reference%select{%select{ but is only used as const "
-           "reference|}0| but is never used}2; consider "
-           "%select{making it a const reference|removing the statement}2")
-      << Ctx.Var.getType().isConstQualified() << &Ctx.Var << Ctx.IsVarUnused;
+           "reference|}0| but is never used}3; consider "
+           "%select{making it a const reference|removing the statement}3")
+      << Ctx.Var.getType().isConstQualified() << &Ctx.Var << Ctx.Var.getType()
+      << Ctx.IsVarUnused;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
@@ -362,10 +363,11 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
     const CheckContext &Ctx, const VarDecl &OldVar) {
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
-           "local copy %1 of the variable %0 is never modified%select{"
-           "| and never used}2; consider %select{avoiding the copy|removing "
-           "the statement}2")
-      << &OldVar << &Ctx.Var << Ctx.IsVarUnused;
+           "local copy %0 of the variable %1 of type %2 is never "
+           "modified%select{"
+           "| and never used}3; consider %select{avoiding the copy|removing "
+           "the statement}3")
+      << &Ctx.Var << &OldVar << Ctx.Var.getType() << Ctx.IsVarUnused;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
