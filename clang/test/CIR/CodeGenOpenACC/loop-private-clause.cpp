@@ -43,7 +43,24 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.private.recipe @privatization__ZTSA5_14NonDefaultCtor : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {{.*}}):
-// CHECK-NEXT: cir.alloca !cir.array<!rec_NonDefaultCtor x 5>, !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>, ["openacc.private.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !cir.array<!rec_NonDefaultCtor x 5>, !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>, ["openacc.private.init", init]
+// CHECK-NEXT: %[[LAST_IDX:.*]] = cir.const #cir.int<5> : !u64i
+// CHECK-NEXT: %[[ARRPTR:.*]] = cir.cast(array_to_ptrdecay, %[[ALLOCA]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>), !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: %[[LAST_ELEM:.*]] = cir.ptr_stride(%[[ARRPTR]] : !cir.ptr<!rec_NonDefaultCtor>, %[[LAST_IDX]] : !u64i), !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: %[[ITR:.*]] = cir.alloca !cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>, ["__array_idx"]
+// CHECK-NEXT: cir.store %[[ARRPTR]], %[[ITR]] : !cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>
+// CHECK-NEXT: cir.do {
+// CHECK-NEXT: %[[ELEM_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>, !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1Ev(%[[ELEM_LOAD]]) : (!cir.ptr<!rec_NonDefaultCtor>) -> ()
+// CHECK-NEXT: %[[ONE_CONST:.*]] = cir.const #cir.int<1> : !u64i
+// CHECK-NEXT: %[[ELEM:.*]] = cir.ptr_stride(%[[ELEM_LOAD]] : !cir.ptr<!rec_NonDefaultCtor>, %[[ONE_CONST]] : !u64i), !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: cir.store %[[ELEM]], %[[ITR]] : !cir.ptr<!rec_NonDefaultCtor>, !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>
+// CHECK-NEXT: cir.yield
+// CHECK-NEXT: } while {
+// CHECK-NEXT: %[[ELEM_LOAD:.*]] = cir.load %[[ITR]] : !cir.ptr<!cir.ptr<!rec_NonDefaultCtor>>, !cir.ptr<!rec_NonDefaultCtor>
+// CHECK-NEXT: %[[CMP:.*]] = cir.cmp(ne, %[[ELEM_LOAD]], %[[LAST_ELEM]]) : !cir.ptr<!rec_NonDefaultCtor>, !cir.bool
+// CHECK-NEXT: cir.condition(%[[CMP]])
+// CHECK-NEXT: }
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
@@ -83,7 +100,8 @@ struct HasDtor {
 //
 // CHECK-NEXT: acc.private.recipe @privatization__ZTS14NonDefaultCtor : !cir.ptr<!rec_NonDefaultCtor> init {
 // CHECK-NEXT: ^bb0(%[[ARG:.*]]: !cir.ptr<!rec_NonDefaultCtor> {{.*}}):
-// CHECK-NEXT: cir.alloca !rec_NonDefaultCtor, !cir.ptr<!rec_NonDefaultCtor>, ["openacc.private.init"]
+// CHECK-NEXT: %[[ALLOCA:.*]] = cir.alloca !rec_NonDefaultCtor, !cir.ptr<!rec_NonDefaultCtor>, ["openacc.private.init", init]
+// CHECK-NEXT: cir.call @_ZN14NonDefaultCtorC1Ev(%[[ALLOCA]]) : (!cir.ptr<!rec_NonDefaultCtor>) -> ()
 // CHECK-NEXT: acc.yield
 // CHECK-NEXT: }
 //
