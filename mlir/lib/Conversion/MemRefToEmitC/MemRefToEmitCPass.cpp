@@ -37,6 +37,16 @@ emitc::IncludeOp addStandardHeader(OpBuilder &builder, ModuleOp module,
       /*is_standard_include=*/builder.getUnitAttr());
 }
 
+bool isExpectedStandardInclude(ConvertMemRefToEmitCOptions options,
+                               emitc::IncludeOp includeOp) {
+  return ((options.lowerToCpp &&
+           (includeOp.getInclude() == cppStandardLibraryHeader ||
+            includeOp.getInclude() == cppStringLibraryHeader)) ||
+          (!options.lowerToCpp &&
+           (includeOp.getInclude() == cStandardLibraryHeader ||
+            includeOp.getInclude() == cStringLibraryHeader)));
+}
+
 struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   using Base::Base;
@@ -77,10 +87,7 @@ struct ConvertMemRefToEmitCPass
           continue;
 
         if (includeOp.getIsStandardInclude() &&
-            ((options.lowerToCpp &&
-              includeOp.getInclude() == cppStandardLibraryHeader) ||
-             (!options.lowerToCpp &&
-              includeOp.getInclude() == cStandardLibraryHeader)))
+            isExpectedStandardInclude(options, includeOp))
           return mlir::WalkResult::interrupt();
       }
 

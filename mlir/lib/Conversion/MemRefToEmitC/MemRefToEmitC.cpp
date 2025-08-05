@@ -196,20 +196,20 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
     MemRefType targetMemrefType =
         cast<MemRefType>(copyOp.getTarget().getType());
 
-    if (!isMemRefTypeLegalForEmitC(srcMemrefType)) {
+    if (!isMemRefTypeLegalForEmitC(srcMemrefType))
       return rewriter.notifyMatchFailure(
           loc, "incompatible source memref type for EmitC conversion");
-    }
-    if (!isMemRefTypeLegalForEmitC(targetMemrefType)) {
+
+    if (!isMemRefTypeLegalForEmitC(targetMemrefType))
       return rewriter.notifyMatchFailure(
           loc, "incompatible target memref type for EmitC conversion");
-    }
+
+    emitc::ConstantOp zeroIndex = rewriter.create<emitc::ConstantOp>(
+        loc, rewriter.getIndexType(), rewriter.getIndexAttr(0));
 
     auto createPointerFromEmitcArray =
-        [&](mlir::Location loc, mlir::OpBuilder &rewriter,
-            mlir::TypedValue<emitc::ArrayType> arrayValue,
-            mlir::MemRefType memrefType,
-            emitc::ConstantOp zeroIndex) -> emitc::ApplyOp {
+        [loc, &rewriter, &zeroIndex](
+            mlir::TypedValue<emitc::ArrayType> arrayValue) -> emitc::ApplyOp {
       int64_t rank = arrayValue.getType().getRank();
       llvm::SmallVector<mlir::Value> indices;
       for (int i = 0; i < rank; ++i) {
@@ -219,30 +219,25 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
       emitc::SubscriptOp subPtr = rewriter.create<emitc::SubscriptOp>(
           loc, arrayValue, mlir::ValueRange(indices));
       emitc::ApplyOp ptr = rewriter.create<emitc::ApplyOp>(
-          loc, emitc::PointerType::get(memrefType.getElementType()),
+          loc, emitc::PointerType::get(arrayValue.getType().getElementType()),
           rewriter.getStringAttr("&"), subPtr);
 
       return ptr;
     };
 
-    emitc::ConstantOp zeroIndex = rewriter.create<emitc::ConstantOp>(
-        loc, rewriter.getIndexType(), rewriter.getIndexAttr(0));
-
     auto srcArrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getSource());
-    emitc::ApplyOp srcPtr = createPointerFromEmitcArray(
-        loc, rewriter, srcArrayValue, srcMemrefType, zeroIndex);
+        cast<TypedValue<emitc::ArrayType>>(operands.getSource());
+    emitc::ApplyOp srcPtr = createPointerFromEmitcArray(srcArrayValue);
 
     auto targetArrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getTarget());
-    emitc::ApplyOp targetPtr = createPointerFromEmitcArray(
-        loc, rewriter, targetArrayValue, targetMemrefType, zeroIndex);
+        cast<TypedValue<emitc::ArrayType>>(operands.getTarget());
+    emitc::ApplyOp targetPtr = createPointerFromEmitcArray(targetArrayValue);
 
-    OpBuilder builder = rewriter;
     emitc::CallOpaqueOp memCpyCall = rewriter.create<emitc::CallOpaqueOp>(
         loc, TypeRange{}, "memcpy",
-        ValueRange{targetPtr.getResult(), srcPtr.getResult(),
-                   calculateMemrefTotalSizeBytes(loc, srcMemrefType, builder)});
+        ValueRange{
+            targetPtr.getResult(), srcPtr.getResult(),
+            calculateMemrefTotalSizeBytes(loc, srcMemrefType, rewriter)});
 
     rewriter.replaceOp(copyOp, memCpyCall.getResults());
 
