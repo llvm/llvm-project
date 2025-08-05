@@ -106,25 +106,14 @@ bool InitLink::emit(Compiler<Emitter> *Ctx, const Expr *E) const {
   return true;
 }
 
-/// Scope managing label targets.
-template <class Emitter> class LabelScope {
-public:
-  virtual ~LabelScope() {}
-
-protected:
-  LabelScope(Compiler<Emitter> *Ctx) : Ctx(Ctx) {}
-  /// Compiler instance.
-  Compiler<Emitter> *Ctx;
-};
-
 /// Sets the context for break/continue statements.
-template <class Emitter> class LoopScope final : public LabelScope<Emitter> {
+template <class Emitter> class LoopScope final {
 public:
   using LabelTy = typename Compiler<Emitter>::LabelTy;
   using OptLabelTy = typename Compiler<Emitter>::OptLabelTy;
 
   LoopScope(Compiler<Emitter> *Ctx, LabelTy BreakLabel, LabelTy ContinueLabel)
-      : LabelScope<Emitter>(Ctx), OldBreakLabel(Ctx->BreakLabel),
+      : Ctx(Ctx), OldBreakLabel(Ctx->BreakLabel),
         OldContinueLabel(Ctx->ContinueLabel),
         OldBreakVarScope(Ctx->BreakVarScope),
         OldContinueVarScope(Ctx->ContinueVarScope) {
@@ -142,6 +131,7 @@ public:
   }
 
 private:
+  Compiler<Emitter> *Ctx;
   OptLabelTy OldBreakLabel;
   OptLabelTy OldContinueLabel;
   VariableScope<Emitter> *OldBreakVarScope;
@@ -149,7 +139,7 @@ private:
 };
 
 // Sets the context for a switch scope, mapping labels.
-template <class Emitter> class SwitchScope final : public LabelScope<Emitter> {
+template <class Emitter> class SwitchScope final {
 public:
   using LabelTy = typename Compiler<Emitter>::LabelTy;
   using OptLabelTy = typename Compiler<Emitter>::OptLabelTy;
@@ -157,7 +147,7 @@ public:
 
   SwitchScope(Compiler<Emitter> *Ctx, CaseMap &&CaseLabels, LabelTy BreakLabel,
               OptLabelTy DefaultLabel)
-      : LabelScope<Emitter>(Ctx), OldBreakLabel(Ctx->BreakLabel),
+      : Ctx(Ctx), OldBreakLabel(Ctx->BreakLabel),
         OldDefaultLabel(this->Ctx->DefaultLabel),
         OldCaseLabels(std::move(this->Ctx->CaseLabels)),
         OldLabelVarScope(Ctx->BreakVarScope) {
@@ -175,6 +165,7 @@ public:
   }
 
 private:
+  Compiler<Emitter> *Ctx;
   OptLabelTy OldBreakLabel;
   OptLabelTy OldDefaultLabel;
   CaseMap OldCaseLabels;
@@ -194,6 +185,31 @@ private:
   bool OldFlag;
 };
 
+/// When generating code for e.g. implicit field initializers in constructors,
+/// we don't have anything to point to in case the initializer causes an error.
+/// In that case, we need to disable location tracking for the initializer so
+/// we later point to the call range instead.
+template <class Emitter> class LocOverrideScope final {
+public:
+  LocOverrideScope(Compiler<Emitter> *Ctx, SourceInfo NewValue,
+                   bool Enabled = true)
+      : Ctx(Ctx), OldFlag(Ctx->LocOverride), Enabled(Enabled) {
+
+    if (Enabled)
+      Ctx->LocOverride = NewValue;
+  }
+
+  ~LocOverrideScope() {
+    if (Enabled)
+      Ctx->LocOverride = OldFlag;
+  }
+
+private:
+  Compiler<Emitter> *Ctx;
+  std::optional<SourceInfo> OldFlag;
+  bool Enabled;
+};
+
 } // namespace interp
 } // namespace clang
 
@@ -210,6 +226,28 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return this->emitInvalidCast(CastKind::Volatile, /*Fatal=*/true, CE);
 
     OptPrimType SubExprT = classify(SubExpr->getType());
+    // Try to load the value directly. This is purely a performance
+    // optimization.
+    if (SubExprT) {
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
+        const ValueDecl *D = DRE->getDecl();
+        bool IsReference = D->getType()->isReferenceType();
+
+        if (!IsReference) {
+          if (Context::shouldBeGloballyIndexed(D)) {
+            if (auto GlobalIndex = P.getGlobal(D))
+              return this->emitGetGlobal(*SubExprT, *GlobalIndex, CE);
+          } else if (auto It = Locals.find(D); It != Locals.end()) {
+            return this->emitGetLocal(*SubExprT, It->second.Offset, CE);
+          } else if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+            if (auto It = this->Params.find(PVD); It != this->Params.end()) {
+              return this->emitGetParam(*SubExprT, It->second.Offset, CE);
+            }
+          }
+        }
+      }
+    }
+
     // Prepare storage for the result.
     if (!Initializing && !SubExprT) {
       std::optional<unsigned> LocalIndex = allocateLocal(SubExpr);
@@ -340,6 +378,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_FloatingToIntegral: {
+    if (!CE->getType()->isIntegralOrEnumerationType())
+      return false;
     if (!this->visit(SubExpr))
       return false;
     PrimType ToT = classifyPrim(CE);
@@ -1378,10 +1418,15 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   // BitAdd/BitOr/BitXor/Shl/Shr doesn't support bool type, we need perform the
   // integer promotion.
   bool NeedIntPromot = ElemT == PT_Bool && (E->isBitwiseOp() || E->isShiftOp());
-  QualType PromotTy =
-      Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
-  PrimType PromotT = classifyPrim(PromotTy);
-  PrimType OpT = NeedIntPromot ? PromotT : ElemT;
+  QualType PromotTy;
+  PrimType PromotT = PT_Bool;
+  PrimType OpT = ElemT;
+  if (NeedIntPromot) {
+    PromotTy =
+        Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
+    PromotT = classifyPrim(PromotTy);
+    OpT = PromotT;
+  }
 
   auto getElem = [=](unsigned Offset, PrimType ElemT, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
@@ -1767,6 +1812,9 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->delegate(Inits[0]);
 
+    if (!R)
+      return false;
+
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T,
                                   bool Activate = false) -> bool {
@@ -2015,7 +2063,12 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
                                       const FunctionDecl *FuncDecl,
                                       bool Activate) {
   assert(VarScope->getKind() == ScopeKind::Call);
-  llvm::BitVector NonNullArgs = collectNonNullArgs(FuncDecl, Args);
+  bool HasNonNullAttr = false;
+  llvm::BitVector NonNullArgs;
+  if (FuncDecl && FuncDecl->hasAttr<NonNullAttr>()) {
+    HasNonNullAttr = true;
+    NonNullArgs = collectNonNullArgs(FuncDecl, Args);
+  }
 
   unsigned ArgIndex = 0;
   for (const Expr *Arg : Args) {
@@ -2041,7 +2094,7 @@ bool Compiler<Emitter>::visitCallArgs(ArrayRef<const Expr *> Args,
         return false;
     }
 
-    if (FuncDecl && NonNullArgs[ArgIndex]) {
+    if (HasNonNullAttr && NonNullArgs[ArgIndex]) {
       PrimType ArgT = classify(Arg).value_or(PT_Ptr);
       if (ArgT == PT_Ptr) {
         if (!this->emitCheckNonNullArg(ArgT, Arg))
@@ -3856,10 +3909,7 @@ template <class Emitter>
 bool Compiler<Emitter>::VisitAddrLabelExpr(const AddrLabelExpr *E) {
   assert(E->getType()->isVoidPointerType());
 
-  unsigned Offset =
-      allocateLocalPrimitive(E->getLabel(), PT_Ptr, /*IsConst=*/true);
-
-  return this->emitGetLocal(PT_Ptr, Offset, E);
+  return this->emitDummyPtr(E, E);
 }
 
 template <class Emitter>
@@ -5894,7 +5944,7 @@ bool Compiler<Emitter>::emitLambdaStaticInvokerBody(const CXXMethodDecl *MD) {
 
   const CXXRecordDecl *ClosureClass = MD->getParent();
   const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
-  assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+  assert(ClosureClass->captures().empty());
   const Function *Func = this->getFunction(LambdaCallOp);
   if (!Func)
     return false;
@@ -5992,6 +6042,8 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   bool IsUnion = R->isUnion();
 
   if (IsUnion && Ctor->isCopyOrMoveConstructor()) {
+    LocOverrideScope<Emitter> LOS(this, SourceInfo{});
+
     if (R->getNumFields() == 0)
       return this->emitRetVoid(Ctor);
     // union copy and move ctors are special.
@@ -6018,6 +6070,11 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
     if (const FieldDecl *Member = Init->getMember()) {
       const Record::Field *F = R->getField(Member);
 
+      LocOverrideScope<Emitter> LOS(this, SourceInfo{},
+                                    !Init->isWritten() &&
+                                        !Init->isInClassMemberInitializer() &&
+                                        (!isa<CXXConstructExpr>(InitExpr) ||
+                                         Member->isAnonymousStructOrUnion()));
       if (!emitFieldInitializer(F, F->Offset, InitExpr, IsUnion))
         return false;
     } else if (const Type *Base = Init->getBaseClass()) {
@@ -6046,6 +6103,10 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       if (!this->emitFinishInitPop(InitExpr))
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
+      LocOverrideScope<Emitter> LOS(this, SourceInfo{},
+                                    !Init->isWritten() &&
+                                        !Init->isInClassMemberInitializer() &&
+                                        !isa<CXXConstructExpr>(InitExpr));
 
       assert(IFD->getChainingSize() >= 2);
 
@@ -6124,6 +6185,8 @@ bool Compiler<Emitter>::compileDestructor(const CXXDestructorDecl *Dtor) {
 
   assert(R);
   if (!R->isUnion()) {
+
+    LocOverrideScope<Emitter> LOS(this, SourceInfo{});
     // First, destroy all fields.
     for (const Record::Field &Field : llvm::reverse(R->fields())) {
       const Descriptor *D = Field.Desc;
