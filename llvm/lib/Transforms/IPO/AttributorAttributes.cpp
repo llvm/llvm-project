@@ -5189,9 +5189,8 @@ struct AADereferenceableCallSiteReturned final
 
 namespace {
 
-static std::optional<Align> getKnownAlignForIntrinsic(Attributor &A,
-                                                      AAAlign &QueryingAA,
-                                                      const IntrinsicInst *II) {
+Align getKnownAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
+                                const IntrinsicInst *II) {
   switch (II->getIntrinsicID()) {
   case Intrinsic::ptrmask: {
     const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
@@ -5223,12 +5222,12 @@ static std::optional<Align> getKnownAlignForIntrinsic(Attributor &A,
   default:
     break;
   }
-  return std::nullopt;
+  return Align(1);
 }
 
-static std::optional<Align>
-getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
-                            const IntrinsicInst *II) {
+Align getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
+                                  const IntrinsicInst *II) {
+  Align Alignment;
   switch (II->getIntrinsicID()) {
   case Intrinsic::ptrmask: {
     const auto *ConstVals = A.getAAFor<AAPotentialConstantValues>(
@@ -5237,7 +5236,6 @@ getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
     const auto *AlignAA =
         A.getAAFor<AAAlign>(QueryingAA, IRPosition::value(*(II->getOperand(0))),
                             DepClassTy::REQUIRED);
-    Align Alignment;
     bool NeedRet = false;
     if (ConstVals && ConstVals->isValidState()) {
       const DataLayout &DL = A.getDataLayout();
@@ -5262,7 +5260,7 @@ getAssumedAlignForIntrinsic(Attributor &A, AAAlign &QueryingAA,
   default:
     break;
   }
-  return std::nullopt;
+  return Alignment;
 }
 
 static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
@@ -5280,11 +5278,8 @@ static unsigned getKnownAlignForUse(Attributor &A, AAAlign &QueryingAA,
       TrackUse = true;
     return 0;
   }
-  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-    std::optional<Align> Align = getKnownAlignForIntrinsic(A, QueryingAA, II);
-    if (Align.has_value())
-      return Align.value().value();
-  }
+  if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I))
+    return getKnownAlignForIntrinsic(A, QueryingAA, II).value();
 
   MaybeAlign MA;
   if (const auto *CB = dyn_cast<CallBase>(I)) {
@@ -5587,13 +5582,11 @@ struct AAAlignCallSiteReturned final
   ChangeStatus updateImpl(Attributor &A) override {
     Instruction *I = getIRPosition().getCtxI();
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
-      std::optional<Align> Align = getAssumedAlignForIntrinsic(A, *this, II);
-      if (Align.has_value()) {
-        uint64_t OldAssumed = getAssumed();
-        takeAssumedMinimum(Align.value().value());
-        return OldAssumed == getAssumed() ? ChangeStatus::UNCHANGED
-                                          : ChangeStatus::CHANGED;
-      }
+      Align Align = getAssumedAlignForIntrinsic(A, *this, II);
+      uint64_t OldAssumed = getAssumed();
+      takeAssumedMinimum(Align.value());
+      return OldAssumed == getAssumed() ? ChangeStatus::UNCHANGED
+                                        : ChangeStatus::CHANGED;
     }
     return Base::updateImpl(A);
   };
