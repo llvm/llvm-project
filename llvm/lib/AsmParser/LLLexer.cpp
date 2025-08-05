@@ -150,9 +150,8 @@ static void UnEscapeLexed(std::string &Str) {
 }
 
 /// isLabelChar - Return true for [-a-zA-Z$._0-9].
-static bool isLabelChar(char C) {
-  return isalnum(static_cast<unsigned char>(C)) || C == '-' || C == '$' ||
-         C == '.' || C == '_';
+static bool isLabelChar(int C) {
+  return isalnum(C) || C == '-' || C == '$' || C == '.' || C == '_';
 }
 
 /// isLabelTail - Return true if this pointer points to a valid end of a label.
@@ -175,19 +174,24 @@ LLLexer::LLLexer(StringRef StartBuf, SourceMgr &SM, SMDiagnostic &Err,
 }
 
 int LLLexer::getNextChar() {
-  char CurChar = *CurPtr++;
-  switch (CurChar) {
-  default: return (unsigned char)CurChar;
-  case 0:
-    // A nul character in the stream is either the end of the current buffer or
-    // a random nul in the file.  Disambiguate that here.
-    if (CurPtr-1 != CurBuf.end())
-      return 0;  // Just whitespace.
-
-    // Otherwise, return end of file.
-    --CurPtr;  // Another call to lex will return EOF again.
+  if (CurPtr == CurBuf.end())
     return EOF;
+  return *CurPtr++;
+}
+
+/// isLabelTail - Return true if the buffer is valid end of a label. If not,
+/// it returns false and restores the current pointer to where it was.
+bool LLLexer::isLabelTail() {
+  const char *SavedPtr = CurPtr;
+  while (true) {
+    int CurChar = getNextChar();
+    if (CurChar == ':')
+      return true;
+    if (!isLabelChar(CurChar))
+      break;
   }
+  CurPtr = SavedPtr;
+  return false;
 }
 
 lltok::Kind LLLexer::LexToken() {
@@ -215,8 +219,7 @@ lltok::Kind LLLexer::LexToken() {
     case '%': return LexPercent();
     case '"': return LexQuote();
     case '.':
-      if (const char *Ptr = isLabelTail(CurPtr)) {
-        CurPtr = Ptr;
+      if (isLabelTail()) {
         StrVal.assign(TokStart, CurPtr-1);
         return lltok::LabelStr;
       }
@@ -262,7 +265,8 @@ lltok::Kind LLLexer::LexToken() {
 
 void LLLexer::SkipLineComment() {
   while (true) {
-    if (CurPtr[0] == '\n' || CurPtr[0] == '\r' || getNextChar() == EOF)
+    int CurChar = getNextChar();
+    if (CurChar == '\n' || CurChar == '\r' || CurChar == EOF)
       return;
   }
 }
@@ -298,7 +302,7 @@ lltok::Kind LLLexer::LexAt() {
 }
 
 lltok::Kind LLLexer::LexDollar() {
-  if (const char *Ptr = isLabelTail(TokStart)) {
+  if (const char *Ptr = ::isLabelTail(TokStart)) {
     CurPtr = Ptr;
     StrVal.assign(TokStart, CurPtr - 1);
     return lltok::LabelStr;
@@ -1145,7 +1149,7 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
   if (!isdigit(static_cast<unsigned char>(TokStart[0])) &&
       !isdigit(static_cast<unsigned char>(CurPtr[0]))) {
     // Okay, this is not a number after the -, it's probably a label.
-    if (const char *End = isLabelTail(CurPtr)) {
+    if (const char *End = ::isLabelTail(CurPtr)) {
       StrVal.assign(TokStart, End-1);
       CurPtr = End;
       return lltok::LabelStr;
@@ -1172,7 +1176,7 @@ lltok::Kind LLLexer::LexDigitOrNegative() {
 
   // Check to see if this really is a string label, e.g. "-1:".
   if (isLabelChar(CurPtr[0]) || CurPtr[0] == ':') {
-    if (const char *End = isLabelTail(CurPtr)) {
+    if (const char *End = ::isLabelTail(CurPtr)) {
       StrVal.assign(TokStart, End-1);
       CurPtr = End;
       return lltok::LabelStr;
