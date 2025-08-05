@@ -24,8 +24,7 @@ namespace common {
 typedef _Float16 float16;
 
 template <auto Func, typename OutType, typename... InTypes>
-__attribute__((always_inline)) void
-runKernelBody(size_t NumElements, OutType *Out, const InTypes *...Ins) {
+void runKernelBody(size_t NumElements, OutType *Out, const InTypes *...Ins) {
   uint32_t Index =
       __gpu_num_threads_x() * __gpu_block_id_x() + __gpu_thread_id_x();
 
