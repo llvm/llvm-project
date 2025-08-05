@@ -90,3 +90,22 @@
 
 // RVE: "-target-feature" "+e"
 // RVE-SAME: "-target-feature" "-i"
+
+// RUN: %clang --target=riscv32 -fcf-protection=full -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-FUNC-SIG
+// RUN: %clang --target=riscv32 -fcf-protection=full -mcf-branch-label-scheme=func-sig -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-FUNC-SIG
+// RUN: %clang --target=riscv32 -fcf-protection=full -mcf-branch-label-scheme=unlabeled -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-UNLABELED
+// RUN: %clang --target=riscv32 -fcf-protection=branch -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-FUNC-SIG
+// RUN: %clang --target=riscv32 -fcf-protection=branch -mcf-branch-label-scheme=func-sig -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-FUNC-SIG
+// RUN: %clang --target=riscv32 -fcf-protection=branch -mcf-branch-label-scheme=unlabeled -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-UNLABELED
+// RUN: %clang --target=riscv64 -fcf-protection=full -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-FUNC-SIG
+// RUN: %clang --target=riscv64 -fcf-protection=full -mcf-branch-label-scheme=func-sig -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-FUNC-SIG
+// RUN: %clang --target=riscv64 -fcf-protection=full -mcf-branch-label-scheme=unlabeled -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-UNLABELED
+// RUN: %clang --target=riscv64 -fcf-protection=branch -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-FUNC-SIG
+// RUN: %clang --target=riscv64 -fcf-protection=branch -mcf-branch-label-scheme=func-sig -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-FUNC-SIG
+// RUN: %clang --target=riscv64 -fcf-protection=branch -mcf-branch-label-scheme=unlabeled -### %s -fsyntax-only 2>&1 | FileCheck %s -check-prefixes=ZICFILP-UNLABELED
+// ZICFILP-FUNC-SIG-NOT: "-target-feature" "-zicfilp-unlabeled"
+// ZICFILP-FUNC-SIG:     "-target-feature" "+zicfilp-func-sig"
+// ZICFILP-FUNC-SIG-NOT: "-target-feature" "-zicfilp-unlabeled"
+// ZICFILP-UNLABELED-NOT: "-target-feature" "-zicfilp-func-sig"
+// ZICFILP-UNLABELED:     "-target-feature" "+zicfilp-unlabeled"
+// ZICFILP-UNLABELED-NOT: "-target-feature" "-zicfilp-func-sig"

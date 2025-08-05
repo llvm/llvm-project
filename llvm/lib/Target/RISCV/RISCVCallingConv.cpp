@@ -337,9 +337,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     // Static chain parameter must not be passed in normal argument registers,
     // so we assign t2/t3 for it as done in GCC's
     // __builtin_call_with_static_chain
-    bool HasCFBranch =
-        Subtarget.hasStdExtZicfilp() &&
-        MF.getFunction().getParent()->getModuleFlag("cf-protection-branch");
+    bool HasCFBranch = Subtarget.hasZicfilpCFI();
 
     // Normal: t2, Branch control flow protection: t3
     const auto StaticChainReg = HasCFBranch ? RISCV::X28 : RISCV::X7;

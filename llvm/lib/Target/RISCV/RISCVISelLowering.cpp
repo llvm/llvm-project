@@ -8969,10 +8969,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   //     28: <FunctionAddressOffset>
   //     36:
 
-  const bool HasCFBranch =
-      Subtarget.hasStdExtZicfilp() &&
-      DAG.getMachineFunction().getFunction().getParent()->getModuleFlag(
-          "cf-protection-branch");
+  const bool HasCFBranch = Subtarget.hasZicfilpCFI();
   const unsigned StaticChainIdx = HasCFBranch ? 5 : 4;
   const unsigned StaticChainOffset = StaticChainIdx * 4;
   const unsigned FunctionAddressOffset = StaticChainOffset + 8;
@@ -24082,11 +24079,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Use software guarded branch for large code model non-indirect calls
   // Tail call to external symbol will have a null CLI.CB and we need another
   // way to determine the callsite type
-  bool NeedSWGuarded = false;
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      Subtarget.hasStdExtZicfilp() &&
-      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
-    NeedSWGuarded = true;
+  const bool NeedSWGuarded =
+      getTargetMachine().getCodeModel() == CodeModel::Large &&
+      Subtarget.hasZicfilpCFI() &&
+      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol);
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
@@ -25722,8 +25718,8 @@ SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                     SDValue Value, SDValue Addr,
                                                     int JTI,
                                                     SelectionDAG &DAG) const {
-  if (Subtarget.hasStdExtZicfilp()) {
-    // When Zicfilp enabled, we need to use software guarded branch for jump
+  if (Subtarget.hasZicfilpCFI()) {
+    // When Zicfilp CFI is used, we need to use software guarded branch for jump
     // table branch.
     SDValue Chain = Value;
     // Jump table debug info is only needed if CodeView is enabled.
