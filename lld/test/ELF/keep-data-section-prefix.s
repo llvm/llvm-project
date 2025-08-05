@@ -28,13 +28,13 @@
 # RUN: ld.lld -z nokeep-text-section-prefix b.o -o out2
 # RUN: cmp out1 out2
 
-# RUN: ld.lld -z keep-data-section-prefix b.o -o out3
-# RUN: llvm-readelf -S out3 | FileCheck --check-prefix=KEEP %s
-
 ## With a SECTIONS command, orphan sections are created verbatim.
 ## No grouping is performed for them.
 # RUN: ld.lld -T x2.lds -z keep-data-section-prefix b.o -o out4
 # RUN: llvm-readelf -S out4 | FileCheck --check-prefix=SCRIPT %s
+
+# RUN: ld.lld -z keep-data-section-prefix b.o -o out3
+# RUN: llvm-readelf -S out3 | FileCheck --check-prefix=KEEP %s
 
 ## The first RW PT_LOAD segment has FileSiz 0x126f (0x1000 + 0x200 + 0x60 + 0xf),
 ## and its p_offset p_vaddr p_paddr p_filesz should match PT_GNU_RELRO.
@@ -160,7 +160,7 @@ _start:
   .byte 0
 .section .bss.hot.b,"aw"
   .byte 0
-.section .bss.unlikely.c,"aw"
+.section .bss.unlikely.c.,"aw"
   .byte 0
 .section .bss.split.d,"aw"
   .byte 0

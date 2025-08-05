@@ -109,41 +109,55 @@ StringRef LinkerScript::getOutputSectionName(const InputSectionBase *s) const {
       ".data.rel.ro", ".data", ".rodata", ".bss.rel.ro", ".bss",
   };
 
-  for (auto [index, v] : llvm::enumerate(dataSectionPrefixes)) {
-    StringRef secName = s->name;
-    if (!secName.consume_front(v))
-      continue;
-    if (!secName.empty() && secName[0] != '.')
-      continue;
+  // If keep-data-section-prefix is enabled, map hot-prefixed data sections
+  // to a .hot variant in the output and map unlikely-prefixed data sections
+  // to a .unlikely variant. Mapping for the hot input sections is illustrated
+  // below, and the same applies for unlikely ones.
+  // [bar] is a placeholder to represent optional global variable name below
+  // - .data.rel.ro.hot.[bar]  => .data.rel.ro.hot
+  // - .data.hot.[bar] => .data.hot
+  // - {.rodata.hot.[bar], .rodata.str.*.hot., .rodata.cst*.hot.} => .rodata.hot
+  // - .bss.rel.ro => .bss.rel.ro
+  // - .bss.hot.[bar] => .bss.hot
+  // Note .bss.rel.ro doesn't have hot / unlikely mapping. It's placed before
+  // .bss so they get processed before `.bss` prefix is seen, just like
+  // how `.data.rel.ro` should be processed before seeing the `.data` prefix.
+  if (ctx.arg.zKeepDataSectionPrefix)
+    for (auto [index, v] : llvm::enumerate(dataSectionPrefixes)) {
+      StringRef secName = s->name;
+      // If v is the prefix, trim it from secName. Otherwise just continue to
+      // try the next prefix.
+      if (!secName.consume_front(v))
+        continue;
 
-    // The section name starts with 'v', and the remaining string is either
-    // empty or starts with a '.' character. If keep-data-section-prefix is
-    // false, map s to output section with name 'v'.
-    if (!ctx.arg.zKeepDataSectionPrefix)
-      return v;
-    // Preserve .hot or .unlikely suffixes in data sections with
-    // keep-data-section-prefix=true.
-    if (isSectionPrefix(".hot", secName))
-      return s->name.substr(0, v.size() + 4);
-    if (isSectionPrefix(".unlikely", secName))
-      return s->name.substr(0, v.size() + 9);
-    if (index == 2) {
-      // Place input .rodata.str<N>.hot. or .rodata.cst<N>.hot. into the
-      // .rodata.hot section.
-      if (s->name.ends_with(".hot."))
-        return ".rodata.hot";
-      // Place input .rodata.str<N>.hot. or .rodata.cst<N>.unlikely. into the
-      // .rodata.unlikely section.
-      if (s->name.ends_with(".unlikely."))
-        return ".rodata.unlikely";
+      // Object file writer emits the trailing dot in `.hot.` and `.unlikely.`
+      // to disambiguate between `.<section>.<variable-name>` (without trailing
+      // dot) and `.<section>.hot.[optional-variable-name]`. We check the same
+      // (trailing dot required) to not map a C variable named `unlikely` to a
+      // unlikely variant.
+      if (secName.starts_with(".hot."))
+        return s->name.substr(0, v.size() + 4);
+      if (secName.starts_with(".unlikely."))
+        return s->name.substr(0, v.size() + 9);
+      if (index == 2) {
+        // Place input .rodata.str<N>.hot. or .rodata.cst<N>.hot. into the
+        // .rodata.hot section.
+        if (s->name.ends_with(".hot."))
+          return ".rodata.hot";
+        // Place input .rodata.str<N>.hot. or .rodata.cst<N>.unlikely. into
+        // the .rodata.unlikely section.
+        if (s->name.ends_with(".unlikely."))
+          return ".rodata.unlikely";
+      }
     }
-    return v;
-  }
 
-  for (StringRef v :
-       {".ldata", ".lrodata", ".lbss", ".gcc_except_table", ".init_array",
-        ".fini_array", ".tbss", ".tdata", ".ARM.exidx", ".ARM.extab", ".ctors",
-        ".dtors", ".sbss", ".sdata", ".srodata"})
+  for (StringRef v : {".data.rel.ro", ".data",       ".rodata",
+                      ".bss.rel.ro",  ".bss",        ".ldata",
+                      ".lrodata",     ".lbss",       ".gcc_except_table",
+                      ".init_array",  ".fini_array", ".tbss",
+                      ".tdata",       ".ARM.exidx",  ".ARM.extab",
+                      ".ctors",       ".dtors",      ".sbss",
+                      ".sdata",       ".srodata"})
     if (isSectionPrefix(v, s->name))
       return v;
 
