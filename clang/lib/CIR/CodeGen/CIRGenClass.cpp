@@ -349,12 +349,16 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   // doesn't happen, but it's not clear that it's worth it.
 
   // Optimize for a constant count.
-  auto constantCount = dyn_cast<cir::ConstantOp>(numElements.getDefiningOp());
-  if (constantCount) {
-    auto constIntAttr = mlir::dyn_cast<cir::IntAttr>(constantCount.getValue());
-    // Just skip out if the constant count is zero.
-    if (constIntAttr && constIntAttr.getUInt() == 0)
-      return;
+  if (auto constantCount = numElements.getDefiningOp<cir::ConstantOp>()) {
+    if (auto constIntAttr = constantCount.getValueAttr<cir::IntAttr>()) {
+      // Just skip out if the constant count is zero.
+      if (constIntAttr.getUInt() == 0)
+        return;
+      // Otherwise, emit the check.
+    }
+
+    if (constantCount.use_empty())
+      constantCount.erase();
   } else {
     // Otherwise, emit the check.
     cgm.errorNYI(e->getSourceRange(), "dynamic-length array expression");
@@ -417,9 +421,6 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
           builder.create<cir::YieldOp>(loc);
         });
   }
-
-  if (constantCount.use_empty())
-    constantCount.erase();
 }
 
 void CIRGenFunction::emitDelegateCXXConstructorCall(
@@ -478,6 +479,19 @@ void CIRGenFunction::emitImplicitAssignmentOperatorBody(FunctionArgList &args) {
       cgm.errorNYI(s->getSourceRange(),
                    std::string("emitImplicitAssignmentOperatorBody: ") +
                        s->getStmtClassName());
+}
+
+void CIRGenFunction::destroyCXXObject(CIRGenFunction &cgf, Address addr,
+                                      QualType type) {
+  const RecordType *rtype = type->castAs<RecordType>();
+  const CXXRecordDecl *record = cast<CXXRecordDecl>(rtype->getDecl());
+  const CXXDestructorDecl *dtor = record->getDestructor();
+  // TODO(cir): Unlike traditional codegen, CIRGen should actually emit trivial
+  // dtors which shall be removed on later CIR passes. However, only remove this
+  // assertion after we have a test case to exercise this path.
+  assert(!dtor->isTrivial());
+  cgf.emitCXXDestructorCall(dtor, Dtor_Complete, /*forVirtualBase*/ false,
+                            /*delegating=*/false, addr, type);
 }
 
 void CIRGenFunction::emitDelegatingCXXConstructorCall(

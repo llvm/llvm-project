@@ -3238,11 +3238,8 @@ define amdgpu_kernel void @fadd_fadd_fsub_0(<2 x float> %arg) {
 ; GFX90A-GISEL-LABEL: fadd_fadd_fsub_0:
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
 ; GFX90A-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX90A-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX90A-GISEL-NEXT:    s_mov_b32 s3, s2
-; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[0:1], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90A-GISEL-NEXT:    v_pk_add_f32 v[0:1], s[0:1], v[0:1]
+; GFX90A-GISEL-NEXT:    v_pk_add_f32 v[0:1], s[0:1], 0
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX90A-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0
 ; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v2, s0
@@ -3253,11 +3250,8 @@ define amdgpu_kernel void @fadd_fadd_fsub_0(<2 x float> %arg) {
 ; GFX942-GISEL-LABEL: fadd_fadd_fsub_0:
 ; GFX942-GISEL:       ; %bb.0: ; %bb
 ; GFX942-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX942-GISEL-NEXT:    s_mov_b32 s2, 0
-; GFX942-GISEL-NEXT:    s_mov_b32 s3, s2
-; GFX942-GISEL-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX942-GISEL-NEXT:    v_pk_add_f32 v[0:1], s[0:1], v[0:1]
+; GFX942-GISEL-NEXT:    v_pk_add_f32 v[0:1], s[0:1], 0
 ; GFX942-GISEL-NEXT:    s_nop 0
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0
@@ -3565,13 +3559,13 @@ define amdgpu_kernel void @fneg_v2f32_scalar(ptr addrspace(1) %a, <2 x float> %x
 ; PACKED-SDAG-LABEL: fneg_v2f32_scalar:
 ; PACKED-SDAG:       ; %bb.0:
 ; PACKED-SDAG-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
-; PACKED-SDAG-NEXT:    v_mov_b32_e32 v2, 0
+; PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, 0
 ; PACKED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; PACKED-SDAG-NEXT:    s_xor_b32 s3, s3, 0x80000000
 ; PACKED-SDAG-NEXT:    s_xor_b32 s2, s2, 0x80000000
-; PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s2
-; PACKED-SDAG-NEXT:    v_mov_b32_e32 v1, s3
-; PACKED-SDAG-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
+; PACKED-SDAG-NEXT:    v_mov_b32_e32 v2, s2
+; PACKED-SDAG-NEXT:    v_mov_b32_e32 v3, s3
+; PACKED-SDAG-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
 ; PACKED-SDAG-NEXT:    s_endpgm
 ;
 ; PACKED-GISEL-LABEL: fneg_v2f32_scalar:
