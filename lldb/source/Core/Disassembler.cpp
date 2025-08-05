@@ -732,7 +732,8 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
       return;
 
     addr_t current_pc = m_address.GetLoadAddress(target_sp.get());
-    addr_t original_pc = frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
+    addr_t original_pc =
+        frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
 
     if (!frame->ChangePC(current_pc))
       return;
@@ -744,7 +745,8 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
     SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
     addr_t func_load_addr = LLDB_INVALID_ADDRESS;
     if (sc.function)
-      func_load_addr = sc.function->GetAddress().GetLoadAddress(target_sp.get());
+      func_load_addr =
+          sc.function->GetAddress().GetLoadAddress(target_sp.get());
 
     // Only annotate if the current disassembly line is short enough
     // to keep annotations aligned past the desired annotation_column.
@@ -763,22 +765,26 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
         continue;
 
       // Handle std::optional<DWARFExpressionEntry>.
-      if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc)) {
+      if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(
+              func_load_addr, current_pc)) {
         auto entry = *entryOrErr;
         // Check if entry has a file_range, and filter on address if so.
         if (!entry.file_range || entry.file_range->ContainsFileAddress(
-                (current_pc - func_load_addr) + expr_list.GetFuncFileAddress())) {
+                                     (current_pc - func_load_addr) +
+                                     expr_list.GetFuncFileAddress())) {
 
           StreamString loc_str;
           ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
           llvm::DIDumpOptions opts;
           opts.ShowAddresses = false;
-          opts.PrintRegisterOnly = true; // <-- important: suppress DW_OP_... annotations, etc.
+          opts.PrintRegisterOnly =
+              true; // <-- important: suppress DW_OP_... annotations, etc.
 
           entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi, opts);
-          
+
           // Only include if not empty.
-          llvm::StringRef loc_clean = llvm::StringRef(loc_str.GetString()).trim();
+          llvm::StringRef loc_clean =
+              llvm::StringRef(loc_str.GetString()).trim();
           if (!loc_clean.empty()) {
             annotations.push_back(llvm::formatv("{0} = {1}", name, loc_clean));
           }
@@ -808,7 +814,6 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   s->PutCString(ss.GetString());
 }
 
-
 bool Instruction::DumpEmulation(const ArchSpec &arch) {
   std::unique_ptr<EmulateInstruction> insn_emulator_up(
       EmulateInstruction::FindPlugin(arch, eInstructionTypeAny, nullptr));
@@ -820,9 +825,7 @@ bool Instruction::DumpEmulation(const ArchSpec &arch) {
   return false;
 }
 
-bool Instruction::CanSetBreakpoint () {
-  return !HasDelaySlot();
-}
+bool Instruction::CanSetBreakpoint() { return !HasDelaySlot(); }
 
 bool Instruction::HasDelaySlot() {
   // Default is false.
@@ -1159,10 +1162,8 @@ void InstructionList::Append(lldb::InstructionSP &inst_sp) {
     m_instructions.push_back(inst_sp);
 }
 
-uint32_t
-InstructionList::GetIndexOfNextBranchInstruction(uint32_t start,
-                                                 bool ignore_calls,
-                                                 bool *found_calls) const {
+uint32_t InstructionList::GetIndexOfNextBranchInstruction(
+    uint32_t start, bool ignore_calls, bool *found_calls) const {
   size_t num_instructions = m_instructions.size();
 
   uint32_t next_branch = UINT32_MAX;

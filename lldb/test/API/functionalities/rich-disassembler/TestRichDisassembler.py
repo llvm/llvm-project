@@ -1,13 +1,14 @@
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
+
 class TestRichDisassembler(TestBase):
     def test_d_original_example_O1(self):
         """
         Tests disassembler output for d_original_example.c built with -O1.
         """
         self.build(
-            dictionary={'C_SOURCES': 'd_original_example.c', 'CFLAGS_EXTRAS': '-g -O1'}
+            dictionary={"C_SOURCES": "d_original_example.c", "CFLAGS_EXTRAS": "-g -O1"}
         )
         exe = self.getBuildArtifact("a.out")
         target = self.dbg.CreateTarget(exe)
