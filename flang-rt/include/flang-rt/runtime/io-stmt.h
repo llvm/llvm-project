@@ -461,6 +461,9 @@ public:
     inNamelistSequence_ = inNamelistSequence;
   }
 
+protected:
+  bool inNamelistSequence_{false};
+
 private:
   int remaining_{0}; // for "r*" repetition
   Fortran::common::optional<SavedPosition> repeatPosition_;
@@ -468,7 +471,6 @@ private:
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
   bool imaginaryPart_{false};
-  bool inNamelistSequence_{false};
 };
 
 template <Direction DIR>
@@ -688,7 +690,8 @@ template <Direction DIR>
 class ChildListIoStatementState : public ChildIoStatementState<DIR>,
                                   public ListDirectedStatementState<DIR> {
 public:
-  using ChildIoStatementState<DIR>::ChildIoStatementState;
+  RT_API_ATTRS ChildListIoStatementState(
+      ChildIo &, const char *sourceFile = nullptr, int sourceLine = 0);
   using ListDirectedStatementState<DIR>::GetNextDataEdit;
   RT_API_ATTRS int EndIoStatement();
 };

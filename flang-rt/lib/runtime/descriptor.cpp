@@ -231,6 +231,7 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
     const SubscriptValue *stride) {
   *this = source;
   raw_.attribute = CFI_attribute_pointer;
+  SetAllocIdx(source.GetAllocIdx());
   int newRank{raw_.rank};
   for (int j{0}; j < raw_.rank; ++j) {
     if (!stride || stride[j] == 0) {
@@ -242,6 +243,9 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
     }
   }
   raw_.rank = newRank;
+  if (CFI_section(&raw_, &source.raw_, lower, upper, stride) != CFI_SUCCESS) {
+    return false;
+  }
   if (const auto *sourceAddendum = source.Addendum()) {
     if (auto *addendum{Addendum()}) {
       *addendum = *sourceAddendum;
@@ -249,7 +253,7 @@ RT_API_ATTRS bool Descriptor::EstablishPointerSection(const Descriptor &source,
       return false;
     }
   }
-  return CFI_section(&raw_, &source.raw_, lower, upper, stride) == CFI_SUCCESS;
+  return true;
 }
 
 RT_API_ATTRS void Descriptor::ApplyMold(
