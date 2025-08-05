@@ -20,6 +20,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Errno.h"
@@ -131,23 +132,30 @@ void StructuredPythonObject::Serialize(llvm::json::OStream &s) const {
 // PythonObject
 
 void PythonObject::Dump(Stream &strm) const {
-  if (m_py_obj) {
-    FILE *file = llvm::sys::RetryAfterSignal(nullptr, ::tmpfile);
-    if (file) {
-      ::PyObject_Print(m_py_obj, file, 0);
-      const long length = ftell(file);
-      if (length) {
-        ::rewind(file);
-        std::vector<char> file_contents(length, '\0');
-        const size_t length_read =
-            ::fread(file_contents.data(), 1, file_contents.size(), file);
-        if (length_read > 0)
-          strm.Write(file_contents.data(), length_read);
-      }
-      ::fclose(file);
-    }
-  } else
-    strm.PutCString("NULL");
+  if (!m_py_obj) {
+    strm << "NULL";
+    return;
+  }
+
+  PyObject *py_str = PyObject_Repr(m_py_obj);
+  if (!py_str)
+    return;
+
+  auto release_py_str = llvm::make_scope_exit([py_str] { Py_DECREF(py_str); });
+
+  PyObject *py_bytes = PyUnicode_AsEncodedString(py_str, "utf-8", "replace");
+  if (!py_bytes)
+    return;
+
+  auto release_py_bytes =
+      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+
+  char *buffer = nullptr;
+  Py_ssize_t length = 0;
+  if (PyBytes_AsStringAndSize(py_bytes, &buffer, &length) == -1)
+    return;
+
+  strm << llvm::StringRef(buffer, length);
 }
 
 PyObjectType PythonObject::GetObjectType() const {
