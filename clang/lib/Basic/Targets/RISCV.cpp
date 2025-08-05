@@ -15,6 +15,7 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <optional>
@@ -639,4 +640,31 @@ bool RISCVTargetInfo::validateCpuIs(StringRef CPUName) const {
          "__builtin_cpu_is() is only supported for Linux.");
 
   return llvm::RISCV::hasValidCPUModel(CPUName);
+}
+
+bool RISCVTargetInfo::checkCFBranchLabelSchemeSupported(
+    const CFBranchLabelSchemeKind Scheme, DiagnosticsEngine &Diags) const {
+  // TODO: Allow the default func-sig scheme to be selected after backend
+  // implements it
+  switch (Scheme) {
+  case CFBranchLabelSchemeKind::Default:
+    Diags.Report(diag::err_opt_not_valid_without_opt)
+        << "fcf-protection=branch"
+        << (Twine("mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
+               .str();
+    return false;
+  case CFBranchLabelSchemeKind::Unlabeled:
+    return true;
+  case CFBranchLabelSchemeKind::FuncSig:
+    Diags.Report(diag::err_opt_unsupported_with_sugguest)
+        << (Twine("mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::FuncSig))
+               .str()
+        << (Twine("mcf-branch-label-scheme=") +
+            getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
+               .str();
+    return false;
+  }
+  return TargetInfo::checkCFBranchLabelSchemeSupported(Scheme, Diags);
 }
