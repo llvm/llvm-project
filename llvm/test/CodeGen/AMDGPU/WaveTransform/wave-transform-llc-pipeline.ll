@@ -343,6 +343,7 @@
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        SI Shrink Instructions
 ; GCN-O3-NEXT:        Register Usage Information Propagation
+; GCN-O3-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O3-NEXT:        Detect Dead Lanes
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        Init Undef Pass
@@ -371,6 +372,7 @@
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter
 ; GCN-O3-NEXT:        Greedy Register Allocator
 ; GCN-O3-NEXT:        GCN NSA Reassign
+; GCN-O3-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        Machine Cycle Info Analysis
 ; GCN-O3-NEXT:        AMDGPU Control Flow Wave Transform

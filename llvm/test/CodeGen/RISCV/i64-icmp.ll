@@ -767,4 +767,56 @@ define i64 @icmp_ne_zext_inreg_umin(i64 %a) nounwind {
   %4 = zext i1 %3 to i64
   ret i64 %4
 }
+
+define i64 @mask_test_eq(i64 %x) nounwind {
+; RV64I-LABEL: mask_test_eq:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+  %y = and i64 %x, 4611686018427387903
+  %cmp = icmp eq i64 %y, 0
+  %ext = zext i1 %cmp to i64
+  ret i64 %ext
+}
+
+define i64 @mask_test_ne(i64 %x) nounwind {
+; RV64I-LABEL: mask_test_ne:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    snez a0, a0
+; RV64I-NEXT:    ret
+  %y = and i64 %x, 4611686018427387903
+  %cmp = icmp ne i64 %y, 0
+  %ext = zext i1 %cmp to i64
+  ret i64 %ext
+}
+
+define i64 @mask_test_eq_simm12(i64 %x) nounwind {
+; RV64I-LABEL: mask_test_eq_simm12:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a0, a0, 3
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    ret
+  %y = and i64 %x, 3
+  %cmp = icmp eq i64 %y, 0
+  %ext = zext i1 %cmp to i64
+  ret i64 %ext
+}
+
+define i64 @mask_test_eq_multiuse(i64 %x, ptr %p) nounwind {
+; RV64I-LABEL: mask_test_eq_multiuse:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 2
+; RV64I-NEXT:    srli a2, a0, 2
+; RV64I-NEXT:    seqz a0, a0
+; RV64I-NEXT:    sd a2, 0(a1)
+; RV64I-NEXT:    ret
+  %y = and i64 %x, 4611686018427387903
+  store i64 %y, ptr %p, align 8
+  %cmp = icmp eq i64 %y, 0
+  %ext = zext i1 %cmp to i64
+  ret i64 %ext
+}
+
 declare i64 @llvm.umin.i64(i64, i64)

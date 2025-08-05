@@ -8,7 +8,7 @@
 define amdgpu_kernel void @int32_k(i32 %a) !dbg !9 {
   ; CHECK: DW_AT_location
   ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_regx SGPR{{[0-9]+}})
-  tail call void @llvm.dbg.value(metadata i32 %a, metadata !12, metadata !DIExpression(DIOpArg(0, i32))), !dbg !14
+    #dbg_value(i32 %a, !12, !DIExpression(DIOpArg(0, i32)), !14)
   store i32 %a, ptr @glob_ptr, align 4, !dbg !14
   ret void, !dbg !15
 }
@@ -17,7 +17,7 @@ define amdgpu_kernel void @int32_k(i32 %a) !dbg !9 {
 define amdgpu_kernel void @int64_k(i64 %a) !dbg !31 {
   ; CHECK: DW_AT_location
   ; CHECK-NEXT: DW_OP_regx SGPR{{[0-9a-z]+}}, DW_OP_piece 0x4, DW_OP_regx SGPR{{[0-9a-z]+}}, DW_OP_piece 0x4, DW_OP_LLVM_user DW_OP_LLVM_piece_end
-  tail call void @llvm.dbg.value(metadata i64 %a, metadata !32, metadata !DIExpression(DIOpArg(0, i64))), !dbg !33
+    #dbg_value(i64 %a, !32, !DIExpression(DIOpArg(0, i64)), !33)
   store i64 %a, ptr @glob_ptr, align 8, !dbg !33
   ret void, !dbg !33
 }
@@ -26,7 +26,7 @@ define amdgpu_kernel void @int64_k(i64 %a) !dbg !31 {
 define void @as1_ptr(ptr addrspace(1) %ptr) !dbg !16 {
   ; CHECK: DW_AT_location
   ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_regx 0x{{[0-9a-z]+}}, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_regx 0x{{[0-9a-z]+}}, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4)
-  tail call void @llvm.dbg.value(metadata ptr addrspace(1) %ptr, metadata !17, metadata !DIExpression(DIOpArg(0, ptr addrspace(1)))), !dbg !20
+    #dbg_value(ptr addrspace(1) %ptr, !17, !DIExpression(DIOpArg(0, ptr addrspace(1))), !20)
   store ptr addrspace(1) %ptr, ptr @glob_ptr, align 8, !dbg !20
   ret void, !dbg !20
 }
@@ -35,7 +35,7 @@ define void @as1_ptr(ptr addrspace(1) %ptr) !dbg !16 {
 define void @int64(i64 %a) !dbg !21 {
   ; CHECK: DW_AT_location
   ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_regx 0x{{[0-9a-z]+}}, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_regx 0x{{[0-9a-z]+}}, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4)
-  tail call void @llvm.dbg.value(metadata i64 %a, metadata !22, metadata !DIExpression(DIOpArg(0, i64))), !dbg !23
+    #dbg_value(i64 %a, !22, !DIExpression(DIOpArg(0, i64)), !23)
   store i64 %a, ptr @glob_ptr, align 8, !dbg !23
   ret void, !dbg !24
 }
@@ -43,7 +43,7 @@ define void @int64(i64 %a) !dbg !21 {
 ; CHECK-LABEL: DW_AT_name ("int32")
 define void @int32(i32 %a) !dbg !25 {
   ; CHECK: DW_AT_location (DW_OP_regx 0x{{[0-9a-z]+}}, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset)
-  tail call void @llvm.dbg.value(metadata i32 %a, metadata !26, metadata !DIExpression(DIOpArg(0, i32))), !dbg !27
+    #dbg_value(i32 %a, !26, !DIExpression(DIOpArg(0, i32)), !27)
   store i32 %a, ptr @glob_ptr, align 4, !dbg !27
   ret void, !dbg !27
 }
@@ -52,7 +52,7 @@ define void @int32(i32 %a) !dbg !25 {
 define void @gen_ptr(ptr %ptr) !dbg !28 {
   ; CHECK: DW_AT_location
   ; CHECK-NEXT: [0x{{[0-9a-z]+}}, 0x{{[0-9a-z]+}}): DW_OP_regx 0x{{[0-9a-z]+}}, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4, DW_OP_regx 0x{{[0-9a-z]+}}, DW_OP_LLVM_user DW_OP_LLVM_push_lane, DW_OP_lit4, DW_OP_mul, DW_OP_LLVM_user DW_OP_LLVM_offset, DW_OP_piece 0x4)
-  tail call void @llvm.dbg.value(metadata ptr %ptr, metadata !29, metadata !DIExpression(DIOpArg(0, ptr))), !dbg !30
+    #dbg_value(ptr %ptr, !29, !DIExpression(DIOpArg(0, ptr)), !30)
   store ptr %ptr, ptr @glob_ptr, align 8, !dbg !30
   ret void, !dbg !30
 }

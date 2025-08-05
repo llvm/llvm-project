@@ -21,6 +21,7 @@
 #include <mach/exception_types.h>
 #include <mach/mach_vm.h>
 #include <mach/task_info.h>
+#include <memory>
 #include <pwd.h>
 #include <string>
 #include <sys/stat.h>
@@ -1476,7 +1477,6 @@ bool RNBRemote::InitializeRegisters(bool force) {
 
 void RNBRemote::NotifyThatProcessStopped(void) {
   RNBRemote::HandlePacket_last_signal(NULL);
-  return;
 }
 
 /* 'A arglen,argnum,arg,...'
@@ -5411,9 +5411,8 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
             JSONGenerator::ArraySP medata_array_sp(new JSONGenerator::Array());
             for (nub_size_t i = 0;
                  i < tid_stop_info.details.exception.data_count; ++i) {
-              medata_array_sp->AddItem(
-                  JSONGenerator::IntegerSP(new JSONGenerator::Integer(
-                      tid_stop_info.details.exception.data[i])));
+              medata_array_sp->AddItem(std::make_shared<JSONGenerator::Integer>(
+                  tid_stop_info.details.exception.data[i]));
             }
             thread_dict_sp->AddItem("medata", medata_array_sp);
           }

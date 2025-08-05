@@ -21,7 +21,9 @@
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/terminator.h"
+RT_OFFLOAD_VAR_GROUP_BEGIN
 #include "flang/Common/constexpr-bitset.h"
+RT_OFFLOAD_VAR_GROUP_END
 #include "flang/Common/optional.h"
 #include <cstdlib>
 #include <cstring>
@@ -45,6 +47,8 @@ extern RT_VAR_ATTRS ExternalFileUnit *defaultInput; // unit 5
 extern RT_VAR_ATTRS ExternalFileUnit *defaultOutput; // unit 6
 extern RT_VAR_ATTRS ExternalFileUnit *errorOutput; // unit 0 extension
 RT_OFFLOAD_VAR_GROUP_END
+
+RT_OFFLOAD_API_GROUP_BEGIN
 
 #if defined(RT_USE_PSEUDO_FILE_UNIT)
 // A flavor of OpenFile class that pretends to be a terminal,
@@ -159,9 +163,6 @@ public:
     lock_.Take();
 #endif
     A &state{u_.emplace<A>(std::forward<X>(xs)...)};
-    if constexpr (!std::is_same_v<A, OpenStatementState>) {
-      state.mutableModes() = ConnectionState::modes;
-    }
     directAccessRecWasSet_ = false;
     io_.emplace(state);
     return *io_;
@@ -297,6 +298,8 @@ private:
       u_;
   Fortran::common::optional<IoStatementState> io_;
 };
+
+RT_OFFLOAD_API_GROUP_END
 
 } // namespace Fortran::runtime::io
 #endif // FLANG_RT_RUNTIME_UNIT_H_

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/uint128.h"
 #include "src/stdlib/strtold.h"
 

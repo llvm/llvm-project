@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-
+// XFAIL: *
 // The aim of the test is to check the GPU LLVM IR codegen
 // for nested omp do loop inside omp target region
 

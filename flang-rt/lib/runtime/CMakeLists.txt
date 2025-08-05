@@ -12,6 +12,8 @@ find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror")
+
 # List of files that are buildable for all devices.
 set(supported_sources
   ${FLANG_SOURCE_DIR}/lib/Decimal/binary-to-decimal.cpp
@@ -68,6 +70,7 @@ set(supported_sources
   type-info.cpp
   unit.cpp
   utf.cpp
+  work-queue.cpp
 )
 
 # List of source not used for GPU offloading.
@@ -131,6 +134,7 @@ set(gpu_sources
   type-code.cpp
   type-info.cpp
   utf.cpp
+  work-queue.cpp
   complex-powi.cpp
   reduce.cpp
   reduction.cpp

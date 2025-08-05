@@ -300,7 +300,9 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   bool HasInitWholeWave = false;
   bool WholeWaveCF = true;
+  bool IsWholeWaveFunction = false;
 
+  unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   SIMachineFunctionInfo() = default;
@@ -355,8 +357,10 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
     YamlIO.mapOptional("wholeWaveCF", MFI.WholeWaveCF, true);
+    YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
+    YamlIO.mapOptional("isWholeWaveFunction", MFI.IsWholeWaveFunction, false);
   }
 };
 
@@ -480,6 +484,8 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
+  unsigned DynamicVGPRBlockSize = 0;
+
   // The size in bytes of the scratch space reserved for the CWSR trap handler
   // to spill some of the dynamic VGPRs.
   unsigned ScratchReservedForDynamicVGPRs = 0;
@@ -571,6 +577,8 @@ private:
   // for actual spilling. A separate set makes the register reserved part and
   // the serialization easier.
   ReservedRegSet WWMReservedRegs;
+
+  bool IsWholeWaveFunction = false;
 
   using PrologEpilogSGPRSpill =
       std::pair<Register, PrologEpilogSGPRSaveRestoreInfo>;
@@ -683,6 +691,8 @@ public:
   bool isWWMReservedRegister(Register Reg) const {
     return WWMReservedRegs.contains(Reg);
   }
+
+  bool isWholeWaveFunction() const { return IsWholeWaveFunction; }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));
@@ -847,6 +857,9 @@ public:
   void setBytesInStackArgArea(unsigned Bytes) {
     BytesInStackArgArea = Bytes;
   }
+
+  bool isDynamicVGPREnabled() const { return DynamicVGPRBlockSize != 0; }
+  unsigned getDynamicVGPRBlockSize() const { return DynamicVGPRBlockSize; }
 
   // This is only used if we need to save any dynamic VGPRs in scratch.
   unsigned getScratchReservedForDynamicVGPRs() const {

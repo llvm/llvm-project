@@ -22,8 +22,10 @@ subroutine teams()
 
   !$omp end target
 
-  ! BOTH: omp.teams
-  ! BOTH-SAME: num_teams({{.*}}) thread_limit({{.*}}) {
+  ! HOST: omp.teams
+  ! HOST-SAME: num_teams({{.*}}) thread_limit({{.*}}) {
+
+  ! DEVICE-NOT: omp.teams
   !$omp teams num_teams(1) thread_limit(2)
   call foo()
   !$omp end teams
@@ -76,13 +78,18 @@ subroutine distribute_parallel_do()
   !$omp end distribute parallel do
   !$omp end target teams
 
-  ! BOTH: omp.teams
+  ! HOST: omp.teams
+  ! DEVICE-NOT: omp.teams
   !$omp teams
 
-  ! BOTH: omp.parallel
-  ! BOTH-SAME: num_threads({{.*}})
-  ! BOTH: omp.distribute
-  ! BOTH-NEXT: omp.wsloop
+  ! HOST: omp.parallel
+  ! HOST-SAME: num_threads({{.*}})
+  ! HOST: omp.distribute
+  ! HOST-NEXT: omp.wsloop
+
+  ! DEVICE-NOT: omp.parallel
+  ! DEVICE-NOT: omp.distribute
+  ! DEVICE-NOT: omp.wsloop
   !$omp distribute parallel do num_threads(1)
   do i=1,10
     call foo()
@@ -140,14 +147,20 @@ subroutine distribute_parallel_do_simd()
   !$omp end distribute parallel do simd
   !$omp end target teams
 
-  ! BOTH: omp.teams
+  ! HOST: omp.teams
+  ! DEVICE-NOT: omp.teams
   !$omp teams
 
-  ! BOTH: omp.parallel
-  ! BOTH-SAME: num_threads({{.*}})
-  ! BOTH: omp.distribute
-  ! BOTH-NEXT: omp.wsloop
-  ! BOTH-NEXT: omp.simd
+  ! HOST: omp.parallel
+  ! HOST-SAME: num_threads({{.*}})
+  ! HOST: omp.distribute
+  ! HOST-NEXT: omp.wsloop
+  ! HOST-NEXT: omp.simd
+
+  ! DEVICE-NOT: omp.parallel
+  ! DEVICE-NOT: omp.distribute
+  ! DEVICE-NOT: omp.wsloop
+  ! DEVICE-NOT: omp.simd
   !$omp distribute parallel do simd num_threads(1)
   do i=1,10
     call foo()
@@ -194,10 +207,12 @@ subroutine distribute()
   !$omp end distribute
   !$omp end target teams
 
-  ! BOTH: omp.teams
+  ! HOST: omp.teams
+  ! DEVICE-NOT: omp.teams
   !$omp teams
 
-  ! BOTH: omp.distribute
+  ! HOST: omp.distribute
+  ! DEVICE-NOT: omp.distribute
   !$omp distribute
   do i=1,10
     call foo()
@@ -246,11 +261,15 @@ subroutine distribute_simd()
   !$omp end distribute simd
   !$omp end target teams
 
-  ! BOTH: omp.teams
+  ! HOST: omp.teams
+  ! DEVICE-NOT: omp.teams
   !$omp teams
 
-  ! BOTH: omp.distribute
-  ! BOTH-NEXT: omp.simd
+  ! HOST: omp.distribute
+  ! HOST-NEXT: omp.simd
+
+  ! DEVICE-NOT: omp.distribute
+  ! DEVICE-NOT: omp.simd
   !$omp distribute simd
   do i=1,10
     call foo()

@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=50
 
 ! OpenMP Version 5.0
 ! Check OpenMP construct validity for the following directives:
@@ -42,7 +42,6 @@ program main
   !$omp end teams
   end do
 
-  !WARNING: OpenMP directive MASTER has been deprecated, please use MASKED instead.
   !$omp master
   !ERROR: TEAMS region can only be strictly nested within the implicit parallel region or TARGET region
   !$omp teams

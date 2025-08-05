@@ -38,7 +38,7 @@ using namespace llvm::object;
 /// It simply encapsulates the symbol name, symbol size, and symbol address
 /// (which might be host or device depending on the context).
 struct GlobalTy {
-  GlobalTy(const std::string &Name, uint32_t Size, void *Ptr = nullptr)
+  GlobalTy(const std::string &Name, uint32_t Size = 0, void *Ptr = nullptr)
       : Name(Name), Size(Size), Ptr(Ptr) {}
 
   const std::string &getName() const { return Name; }
@@ -139,8 +139,11 @@ public:
   bool isSymbolInImage(GenericDeviceTy &Device, DeviceImageTy &Image,
                        StringRef SymName);
 
-  /// Get the address and size of a global in the image. Address and size are
-  /// return in \p ImageGlobal, the global name is passed in \p ImageGlobal.
+  /// Get the address and size of a global in the image. Address is
+  /// returned in \p ImageGlobal and the global name is passed in \p
+  /// ImageGlobal. If no size is present in \p ImageGlobal, then the size of the
+  /// global will be stored there. If it is present, it will be validated
+  /// against the real size of the global.
   Error getGlobalMetadataFromImage(GenericDeviceTy &Device,
                                    DeviceImageTy &Image, GlobalTy &ImageGlobal);
 
@@ -149,9 +152,11 @@ public:
   Error readGlobalFromImage(GenericDeviceTy &Device, DeviceImageTy &Image,
                             const GlobalTy &HostGlobal);
 
-  /// Get the address and size of a global from the device. Address is return in
-  /// \p DeviceGlobal, the global name and expected size are passed in
-  /// \p DeviceGlobal.
+  /// Get the address and size of a global from the device. Address is
+  /// returned in \p ImageGlobal and the global name is passed in \p
+  /// ImageGlobal. If no size is present in \p ImageGlobal, then the size of the
+  /// global will be stored there. If it is present, it will be validated
+  /// against the real size of the global.
   virtual Error getGlobalMetadataFromDevice(GenericDeviceTy &Device,
                                             DeviceImageTy &Image,
                                             GlobalTy &DeviceGlobal) = 0;

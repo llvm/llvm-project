@@ -40,6 +40,8 @@ struct {
 #define I_BITMASK (1ULL << 8)
 #define M_GROUPID 0
 #define M_BITMASK (1ULL << 12)
+#define Q_GROUPID 0
+#define Q_BITMASK (1ULL << 16)
 #define V_GROUPID 0
 #define V_BITMASK (1ULL << 21)
 #define ZACAS_GROUPID 0

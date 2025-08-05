@@ -33,6 +33,8 @@ void AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
                      const llvm::opt::ArgList &Args,
                      llvm::opt::ArgStringList &CmdArgs, const JobAction &JA);
 
+const char *getLDMOption(const llvm::Triple &T, const llvm::opt::ArgList &Args);
+
 void addLinkerCompressDebugSectionsOption(const ToolChain &TC,
                                           const llvm::opt::ArgList &Args,
                                           llvm::opt::ArgStringList &CmdArgs);
@@ -301,6 +303,12 @@ StringRef parseMPreferVectorWidthOption(clang::DiagnosticsEngine &Diags,
 // Otherwise, return an empty string and issue a diagnosic message if needed.
 StringRef parseMRecipOption(clang::DiagnosticsEngine &Diags,
                             const llvm::opt::ArgList &Args);
+
+// Convert ComplexRangeKind to a string that can be passed as a frontend option.
+std::string complexRangeKindToStr(LangOptions::ComplexRangeKind Range);
+
+// Render a frontend option corresponding to ComplexRangeKind.
+std::string renderComplexRangeOption(LangOptions::ComplexRangeKind Range);
 
 } // end namespace tools
 } // end namespace driver

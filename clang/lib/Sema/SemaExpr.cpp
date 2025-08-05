@@ -51,10 +51,11 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
+#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
-#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
@@ -65,6 +66,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/TypeSize.h"
+#include <limits>
 #include <optional>
 
 using namespace clang;
@@ -1906,7 +1908,7 @@ ExprResult Sema::CreateGenericSelectionExpr(
   }
 
   SmallVector<unsigned, 1> CompatIndices;
-  unsigned DefaultIndex = -1U;
+  unsigned DefaultIndex = std::numeric_limits<unsigned>::max();
   // Look at the canonical type of the controlling expression in case it was a
   // deduced type like __auto_type. However, when issuing diagnostics, use the
   // type the user wrote in source rather than the canonical one.
@@ -1961,7 +1963,8 @@ ExprResult Sema::CreateGenericSelectionExpr(
   // C11 6.5.1.1p2 "If a generic selection has no default generic association,
   // its controlling expression shall have type compatible with exactly one of
   // the types named in its generic association list."
-  if (DefaultIndex == -1U && CompatIndices.size() == 0) {
+  if (DefaultIndex == std::numeric_limits<unsigned>::max() &&
+      CompatIndices.size() == 0) {
     auto P = GetControllingRangeAndType(ControllingExpr, ControllingType);
     SourceRange SR = P.first;
     Diag(SR.getBegin(), diag::err_generic_sel_no_match) << SR << P.second;
@@ -2070,9 +2073,9 @@ ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks) {
   for (const Token &Tok : StringToks)
     StringTokLocs.push_back(Tok.getLocation());
 
-  StringLiteral *Lit = StringLiteral::Create(
-      Context, Literal.GetString(), StringLiteralKind::Unevaluated, false, {},
-      &StringTokLocs[0], StringTokLocs.size());
+  StringLiteral *Lit = StringLiteral::Create(Context, Literal.GetString(),
+                                             StringLiteralKind::Unevaluated,
+                                             false, {}, StringTokLocs);
 
   if (!Literal.getUDSuffix().empty()) {
     SourceLocation UDSuffixLoc =
@@ -2206,10 +2209,8 @@ Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
       Context.getStringLiteralArrayType(CharTy, Literal.GetNumStringChars());
 
   // Pass &StringTokLocs[0], StringTokLocs.size() to factory!
-  StringLiteral *Lit = StringLiteral::Create(Context, Literal.GetString(),
-                                             Kind, Literal.Pascal, StrTy,
-                                             &StringTokLocs[0],
-                                             StringTokLocs.size());
+  StringLiteral *Lit = StringLiteral::Create(
+      Context, Literal.GetString(), Kind, Literal.Pascal, StrTy, StringTokLocs);
   if (Literal.getUDSuffix().empty())
     return Lit;
 
@@ -2903,8 +2904,9 @@ Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
     // in BuildTemplateIdExpr().
     // The single lookup result must be a variable template declaration.
     if (Id.getKind() == UnqualifiedIdKind::IK_TemplateId && Id.TemplateId &&
-        Id.TemplateId->Kind == TNK_Var_template) {
-      assert(R.getAsSingle<VarTemplateDecl>() &&
+        (Id.TemplateId->Kind == TNK_Var_template ||
+         Id.TemplateId->Kind == TNK_Concept_template)) {
+      assert(R.getAsSingle<TemplateDecl>() &&
              "There should only be one declaration found.");
     }
 
@@ -3793,7 +3795,7 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       Expr *Lit =
           StringLiteral::Create(Context, StringRef(TokSpelling.data(), Length),
                                 StringLiteralKind::Ordinary,
-                                /*Pascal*/ false, StrTy, &TokLoc, 1);
+                                /*Pascal*/ false, StrTy, TokLoc);
       return BuildLiteralOperatorCall(R, OpNameInfo, Lit, TokLoc);
     }
 
@@ -4563,6 +4565,9 @@ static void captureVariablyModifiedType(ASTContext &Context, QualType T,
       break;
     case Type::Atomic:
       T = cast<AtomicType>(Ty)->getValueType();
+      break;
+    case Type::PredefinedSugar:
+      T = cast<PredefinedSugarType>(Ty)->desugar();
       break;
     }
   } while (!T.isNull() && T->isVariablyModifiedType());
@@ -6520,8 +6525,7 @@ ExprResult Sema::ActOnCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   // Diagnose uses of the C++20 "ADL-only template-id call" feature in earlier
   // language modes.
   if (const auto *ULE = dyn_cast<UnresolvedLookupExpr>(Fn);
-      ULE && ULE->hasExplicitTemplateArgs() &&
-      ULE->decls_begin() == ULE->decls_end()) {
+      ULE && ULE->hasExplicitTemplateArgs() && ULE->decls().empty()) {
     DiagCompat(Fn->getExprLoc(), diag_compat::adl_only_template_id)
         << ULE->getName();
   }
@@ -6575,14 +6579,14 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   // without any additional checking.
   if (Fn->getType() == Context.BuiltinFnTy && ArgExprs.size() == 1 &&
       ArgExprs[0]->getType() == Context.BuiltinFnTy) {
-    auto *FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
+    const auto *FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
 
     if (FD->getName() == "__builtin_amdgcn_is_invocable") {
-      auto FnPtrTy = Context.getPointerType(FD->getType());
-      auto *R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
-      return CallExpr::Create(Context, R, ArgExprs, Context.VoidTy,
-                              ExprValueKind::VK_PRValue, RParenLoc,
-                              FPOptionsOverride());
+      QualType FnPtrTy = Context.getPointerType(FD->getType());
+      Expr *R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
+      return CallExpr::Create(
+          Context, R, ArgExprs, Context.AMDGPUFeaturePredicateTy,
+          ExprValueKind::VK_PRValue, RParenLoc, FPOptionsOverride());
     }
   }
 
@@ -7192,6 +7196,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   //   void func(char *para[(int [1]){ 0 }[0]);
   const Scope *S = getCurScope();
   bool IsFileScope = !CurContext->isFunctionOrMethod() &&
+                     !S->isInCFunctionScope() &&
                      (!S || !S->isFunctionPrototypeScope());
 
   // In C, compound literals are l-values for some reason.
@@ -9414,8 +9419,8 @@ AssignConvertType Sema::CheckAssignmentConstraints(QualType LHSType,
     // Allow assignments between fixed-length and sizeless SVE vectors.
     if ((LHSType->isSVESizelessBuiltinType() && RHSType->isVectorType()) ||
         (LHSType->isVectorType() && RHSType->isSVESizelessBuiltinType()))
-      if (Context.areCompatibleSveTypes(LHSType, RHSType) ||
-          Context.areLaxCompatibleSveTypes(LHSType, RHSType)) {
+      if (ARM().areCompatibleSveTypes(LHSType, RHSType) ||
+          ARM().areLaxCompatibleSveTypes(LHSType, RHSType)) {
         Kind = CK_BitCast;
         return AssignConvertType::Compatible;
       }
@@ -15881,7 +15886,9 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
         // Vector logical not returns the signed variant of the operand type.
         resultType = GetSignedVectorType(resultType);
         break;
-      } else if (IsAMDGPUPredicateBI(InputExpr)) {
+      } else if (resultType == Context.AMDGPUFeaturePredicateTy) {
+        resultType = Context.getLogicalOperationType();
+        Input = AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast<CallExpr>(InputExpr));
         break;
       } else {
         return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
@@ -18002,6 +18009,25 @@ HandleImmediateInvocations(Sema &SemaRef,
       Rec.isImmediateFunctionContext() || SemaRef.RebuildingImmediateInvocation)
     return;
 
+  // An expression or conversion is 'manifestly constant-evaluated' if it is:
+  // [...]
+  // - the initializer of a variable that is usable in constant expressions or
+  //   has constant initialization.
+  if (SemaRef.getLangOpts().CPlusPlus23 &&
+      Rec.ExprContext ==
+          Sema::ExpressionEvaluationContextRecord::EK_VariableInit) {
+    auto *VD = cast<VarDecl>(Rec.ManglingContextDecl);
+    if (VD->isUsableInConstantExpressions(SemaRef.Context) ||
+        VD->hasConstantInitialization()) {
+      // An expression or conversion is in an 'immediate function context' if it
+      // is potentially evaluated and either:
+      // [...]
+      // - it is a subexpression of a manifestly constant-evaluated expression
+      //   or conversion.
+      return;
+    }
+  }
+
   /// When we have more than 1 ImmediateInvocationCandidates or previously
   /// failed immediate invocations, we need to check for nested
   /// ImmediateInvocationCandidates in order to avoid duplicate diagnostics.
@@ -18320,6 +18346,11 @@ static bool isImplicitlyDefinableConstexprFunction(FunctionDecl *Func) {
 
   if (Func->isImplicitlyInstantiable() || !Func->isUserProvided())
     return true;
+
+  // Lambda conversion operators are never user provided.
+  if (CXXConversionDecl *Conv = dyn_cast<CXXConversionDecl>(Func))
+    return isLambdaConversionOperator(Conv);
+
   auto *CCD = dyn_cast<CXXConstructorDecl>(Func);
   return CCD && CCD->getInheritedConstructor();
 }
@@ -20237,6 +20268,9 @@ MarkExprReferenced(Sema &SemaRef, SourceLocation Loc, Decl *D, Expr *E,
   if (SemaRef.OpenMP().isInOpenMPDeclareTargetContext())
     SemaRef.OpenMP().checkDeclIsAllowedInOpenMPTarget(E, D);
 
+  if (SemaRef.getLangOpts().OpenACC)
+    SemaRef.OpenACC().CheckDeclReference(Loc, E, D);
+
   if (VarDecl *Var = dyn_cast<VarDecl>(D)) {
     DoMarkVarDeclReferenced(SemaRef, Loc, Var, E, RefsMinusAssignments);
     if (SemaRef.getLangOpts().CPlusPlus)
@@ -20743,13 +20777,8 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
   E = result.get();
 
   if (!E->isTypeDependent()) {
-    if (E->getType()->isVoidType()) {
-      bool InvalidPredicate = false;
-      if (auto *BIC = MaybeHandleAMDGPUPredicateBI(*this, E, InvalidPredicate))
-        return BIC;
-      else if (InvalidPredicate)
-        return ExprError();
-    }
+    if (E->getType() == Context.AMDGPUFeaturePredicateTy)
+      return AMDGPU().ExpandAMDGPUPredicateBI(dyn_cast_or_null<CallExpr>(E));
 
     if (getLangOpts().CPlusPlus)
       return CheckCXXBooleanCondition(E, IsConstexpr); // C++ 6.4p4
@@ -20786,6 +20815,7 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
     break;
 
   case ConditionKind::ConstexprIf:
+    // Note: this might produce a FullExpr
     Cond = CheckBooleanCondition(Loc, SubExpr, true);
     break;
 
@@ -20798,13 +20828,13 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
                               {SubExpr}, PreferredConditionType(CK));
     if (!Cond.get())
       return ConditionError();
-  }
-  // FIXME: FullExprArg doesn't have an invalid bit, so check nullness instead.
-  FullExprArg FullExpr = MakeFullExpr(Cond.get(), Loc);
-  if (!FullExpr.get())
+  } else if (Cond.isUsable() && !isa<FullExpr>(Cond.get()))
+    Cond = ActOnFinishFullExpr(Cond.get(), Loc, /*DiscardedValue*/ false);
+
+  if (!Cond.isUsable())
     return ConditionError();
 
-  return ConditionResult(*this, nullptr, FullExpr,
+  return ConditionResult(*this, nullptr, Cond,
                          CK == ConditionKind::ConstexprIf);
 }
 
@@ -21368,7 +21398,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     }
     if (TST.isNull())
       TST = Context.getTemplateSpecializationType(
-          TN, ULE->template_arguments(), /*CanonicalArgs=*/std::nullopt,
+          TN, ULE->template_arguments(), /*CanonicalArgs=*/{},
           HasAnyDependentTA ? Context.DependentTy : Context.IntTy);
     QualType ET =
         Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS, TST);

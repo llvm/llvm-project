@@ -1448,7 +1448,7 @@ void InstructionOpcodeMatcher::initOpcodeValuesMap(
     const CodeGenTarget &Target) {
   OpcodeValues.clear();
 
-  for (const CodeGenInstruction *I : Target.getInstructionsByEnumValue())
+  for (const CodeGenInstruction *I : Target.getInstructions())
     OpcodeValues[I] = Target.getInstrIntValue(I->TheDef);
 }
 

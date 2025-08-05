@@ -1972,6 +1972,18 @@ private:
     return Plugin::success();
   }
 
+  /// Complete pending post actions until and including the event in target
+  /// slot.
+  Error completeUntil(uint32_t TargetSlot) {
+    for (uint32_t Slot = 0; Slot <= TargetSlot; ++Slot) {
+      // Take the post action of the operation if any.
+      if (auto Err = Slots[Slot].performAction())
+        return Err;
+    }
+
+    return Plugin::success();
+  }
+
   /// Make the current stream wait on a specific operation of another stream.
   /// The idea is to make the current stream waiting on two signals: 1) the last
   /// signal of the current stream, and 2) the last signal of the other stream.
@@ -2551,6 +2563,11 @@ public:
     return complete();
   }
 
+  /// Synchronize the stream until the given event. The current thread waits
+  /// until the provided event is finalized, and it performs the pending post
+  /// actions for that and prior events.
+  Error synchronizeOn(AMDGPUEventTy &Event);
+
   /// Query the stream and complete pending post actions if operations finished.
   /// Return whether all the operations completed. This operation does not block
   /// the calling thread.
@@ -2624,6 +2641,21 @@ struct AMDGPUEventTy {
     return Stream.waitEvent(*this);
   }
 
+  Error sync() {
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    if (!RecordedStream)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "event does not have any recorded stream");
+
+    // No need to wait on anything, the recorded stream already finished the
+    // corresponding operation.
+    if (RecordedSlot < 0)
+      return Plugin::success();
+
+    return RecordedStream->synchronizeOn(*this);
+  }
+
 protected:
   /// The stream registered in this event.
   AMDGPUStreamTy *RecordedStream;
@@ -2677,6 +2709,27 @@ Error AMDGPUStreamTy::waitEvent(const AMDGPUEventTy &Event) {
 
   // Otherwise, make the current stream wait on the other stream's operation.
   return waitOnStreamOperation(RecordedStream, Event.RecordedSlot);
+}
+
+Error AMDGPUStreamTy::synchronizeOn(AMDGPUEventTy &Event) {
+  std::lock_guard<std::mutex> Lock(Mutex);
+
+  // If this event was for an older sync cycle, it has already been finalized
+  if (Event.RecordedSyncCycle < SyncCycle)
+    return Plugin::success();
+  assert(Event.RecordedSyncCycle == SyncCycle && "event is from the future?");
+
+  // Wait until the requested slot has completed
+  if (auto Err = Slots[Event.RecordedSlot].Signal->wait(
+          StreamBusyWaitMicroseconds, &Device))
+    return Err;
+
+  // If the event is the last one in the stream, just do a full finalize
+  if (Event.RecordedSlot == last())
+    return complete();
+
+  // Otherwise, only finalize until the appropriate event
+  return completeUntil(Event.RecordedSlot);
 }
 
 struct AMDGPUStreamManagerTy final
@@ -3023,7 +3076,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                     1 * 1024 * 1024), // 1MB
         OMPX_DGPUMaps("OMPX_DGPU_MAPS", false),
         OMPX_SharedDescriptorMaxSize("LIBOMPTARGET_SHARED_DESCRIPTOR_MAX_SIZE",
-                                     96),
+                                     0),
         OMPX_EnableDevice2DeviceMemAccess(
             "OMPX_ENABLE_DEVICE_TO_DEVICE_MEM_ACCESS", false),
         AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
@@ -3312,6 +3365,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     return Plugin::success();
   }
 
+  Error unloadBinaryImpl(DeviceImageTy *Image) override {
+    AMDGPUDeviceImageTy &AMDImage = static_cast<AMDGPUDeviceImageTy &>(*Image);
+
+    // Unload the executable of the image.
+    return AMDImage.unloadExecutable();
+  }
+
   /// Deinitialize the device and release its resources.
   Error deinitImpl() override {
     // Deinitialize the stream and event pools.
@@ -3323,19 +3383,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     if (auto Err = AMDGPUSignalManager.deinit())
       return Err;
-
-    // Close modules if necessary.
-    if (!LoadedImages.empty()) {
-      // Each image has its own module.
-      for (DeviceImageTy *Image : LoadedImages) {
-        AMDGPUDeviceImageTy &AMDImage =
-            static_cast<AMDGPUDeviceImageTy &>(*Image);
-
-        // Unload the executable of the image.
-        if (auto Err = AMDImage.unloadExecutable())
-          return Err;
-      }
-    }
 
     // Invalidate agent reference.
     Agent = {0};
@@ -3658,7 +3705,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
+    // FIXME: Currently hsa async copy fails to see completion signal for
+    //        non-x86 dataSubmit/Retrieve. Other non-x86 calls to asyncMemCopy
+    //        work. So for now, skip async copy for non-x86 for dataSubmit
+    //        and dataRetrive only.
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86)
     if (OMPX_ForceSyncRegions || Size >= OMPX_MaxAsyncCopyBytes) {
+#else
+    if (false) {
+#endif
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
           return Err;
@@ -3745,7 +3800,15 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
+    // FIXME: Currently hsa async copy fails to see completion signal for
+    //        non-x86 dataSubmit/Retrieve. Other non-x86 calls to asyncMemCopy
+    //        work. So for now, skip async copy for non-x86 for dataSubmit
+    //        and dataRetrive only.
+#if defined(__i386__) || defined(__x86_64__) || defined(_M_IX86)
     if (OMPX_ForceSyncRegions || Size >= OMPX_MaxAsyncCopyBytes) {
+#else
+    if (false) {
+#endif
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
           return Err;
@@ -3962,8 +4025,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Synchronize the current thread with the event.
   Error syncEventImpl(void *EventPtr) override {
-    return Plugin::error(ErrorCode::UNIMPLEMENTED,
-                         "synchronize event not implemented");
+    AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
+    return Event->sync();
   }
 
   /// Print information about the device.
@@ -3984,7 +4047,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     Status2 = hsa_system_get_info(HSA_SYSTEM_INFO_VERSION_MINOR, &Minor);
     if (Status == HSA_STATUS_SUCCESS && Status2 == HSA_STATUS_SUCCESS)
       Info.add("HSA Runtime Version",
-               std::to_string(Major) + "." + std::to_string(Minor));
+               std::to_string(Major) + "." + std::to_string(Minor), "",
+               DeviceInfo::DRIVER_VERSION);
 
     Info.add("HSA OpenMP Device Number", DeviceId);
 
@@ -3994,11 +4058,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Device Name", TmpChar);
+      Info.add("Device Name", TmpChar, "", DeviceInfo::NAME);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_VENDOR_NAME, TmpChar);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Vendor Name", TmpChar);
+      Info.add("Vendor Name", TmpChar, "", DeviceInfo::VENDOR);
 
     hsa_device_type_t DevType;
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_DEVICE, DevType);
@@ -4012,6 +4076,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         break;
       case HSA_DEVICE_TYPE_DSP:
         TmpCharPtr = "DSP";
+        break;
+      default:
+        TmpCharPtr = "Unknown";
         break;
       }
       Info.add("Device Type", TmpCharPtr);
@@ -4071,7 +4138,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_DIM, WorkgrpMaxDim);
     if (Status == HSA_STATUS_SUCCESS) {
-      auto &MaxSize = *Info.add("Workgroup Max Size per Dimension");
+      auto &MaxSize =
+          *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
+                    DeviceInfo::MAX_WORK_GROUP_SIZE);
       MaxSize.add("x", WorkgrpMaxDim[0]);
       MaxSize.add("y", WorkgrpMaxDim[1]);
       MaxSize.add("z", WorkgrpMaxDim[2]);
@@ -4914,15 +4983,16 @@ struct AMDGPUGlobalHandlerTy final : public GenericGlobalHandlerTy {
     }
 
     // Check the size of the symbol.
-    if (SymbolSize != DeviceGlobal.getSize())
+    if (DeviceGlobal.getSize() && SymbolSize != DeviceGlobal.getSize())
       return Plugin::error(
           ErrorCode::INVALID_BINARY,
           "failed to load global '%s' due to size mismatch (%zu != %zu)",
           DeviceGlobal.getName().data(), SymbolSize,
           (size_t)DeviceGlobal.getSize());
 
-    // Store the symbol address on the device global metadata.
+    // Store the symbol address and size on the device global metadata.
     DeviceGlobal.setPtr(reinterpret_cast<void *>(SymbolAddr));
+    DeviceGlobal.setSize(SymbolSize);
 
     return Plugin::success();
   }
@@ -5430,6 +5500,9 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
   switch (ResultCode) {
   case HSA_STATUS_ERROR_INVALID_SYMBOL_NAME:
     OffloadErrCode = ErrorCode::NOT_FOUND;
+    break;
+  case HSA_STATUS_ERROR_INVALID_CODE_OBJECT:
+    OffloadErrCode = ErrorCode::INVALID_BINARY;
     break;
   default:
     OffloadErrCode = ErrorCode::UNKNOWN;

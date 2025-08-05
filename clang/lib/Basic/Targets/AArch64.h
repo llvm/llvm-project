@@ -152,13 +152,11 @@ public:
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
   bool setCPU(const std::string &Name) override;
 
-  uint64_t getFMVPriority(ArrayRef<StringRef> Features) const override;
+  llvm::APInt getFMVPriority(ArrayRef<StringRef> Features) const override;
 
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
-
-  void setArchFeatures();
 
   void getTargetDefinesARMV81A(const LangOptions &Opts,
                                MacroBuilder &Builder) const;
@@ -198,7 +196,7 @@ public:
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const override;
 
   std::optional<std::pair<unsigned, unsigned>>
-  getVScaleRange(const LangOptions &LangOpts, bool IsArmStreamingFunction,
+  getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
                  llvm::StringMap<bool> *FeatureMap = nullptr) const override;
   bool doesFeatureAffectCodeGen(StringRef Name) const override;
   bool validateCpuSupports(StringRef FeatureStr) const override;

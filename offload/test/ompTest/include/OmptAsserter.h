@@ -1,6 +1,7 @@
 #ifndef OFFLOAD_TEST_OMPTEST_INCLUDE_OMPTASSERTER_H
 #define OFFLOAD_TEST_OMPTEST_INCLUDE_OMPTASSERTER_H
 
+#include "Logging.h"
 #include "OmptAssertEvent.h"
 
 #include <cassert>
@@ -70,7 +71,8 @@ private:
 /// Base class for asserting on OMPT events
 class OmptAsserter : public OmptListener {
 public:
-  OmptAsserter(OmptEventGroupInterface *ParentTC) : TC(ParentTC) {}
+  OmptAsserter();
+  virtual ~OmptAsserter() = default;
 
   /// Add an event to the asserter's internal data structure.
   virtual void insert(omptest::OmptAssertEvent &&AE);
@@ -86,10 +88,30 @@ public:
   /// Get the number of currently remaining events, with: ObserveState::always.
   virtual size_t getRemainingEventCount() = 0;
 
-  /// Determine and return the asserter's current state.
-  virtual omptest::AssertState getState();
+  /// Get the total number of received, effective notifications.
+  int getNotificationCount() { return NumNotifications; }
 
-  /// Check the given events' group association. If the event indicates the
+  /// Get the total number of successful assertion checks.
+  int getSuccessfulAssertionCount() { return NumSuccessfulAsserts; }
+
+  /// Get the asserter's current operationmode: e.g.: strict or relaxed.
+  AssertMode getOperationMode() { return OperationMode; }
+
+  /// Return the asserter's current state.
+  omptest::AssertState getState() { return State; }
+
+  /// Determine and return the asserter's state.
+  virtual omptest::AssertState checkState();
+
+  /// Accessor for the event group interface.
+  std::shared_ptr<OmptEventGroupInterface> getEventGroups() const {
+    return EventGroups;
+  }
+
+  /// Accessor for the event group interface.
+  std::shared_ptr<logging::Logger> getLog() const { return Log; }
+
+  /// Check the observed events' group association. If the event indicates the
   /// begin/end of an OpenMP target region, we will create/deprecate the
   /// expected event's group. Return true if the expected event group exists
   /// (and is active), otherwise: false. Note: BufferRecords may also match with
@@ -100,6 +122,13 @@ public:
   /// Set the asserter's mode of operation w.r.t. assertion.
   void setOperationMode(AssertMode Mode);
 
+  /// The total number of effective notifications. For example, if specific
+  /// notifications are to be ignored, they will not count towards this total.
+  int NumNotifications{0};
+
+  /// The number of successful assertion checks.
+  int NumSuccessfulAsserts{0};
+
 protected:
   /// The asserter's current state.
   omptest::AssertState State{omptest::AssertState::pass};
@@ -107,18 +136,31 @@ protected:
   /// Mutex to avoid data races w.r.t. event notifications and/or insertions.
   std::mutex AssertMutex;
 
-  /// Pointer to the parent TestCase.
-  OmptEventGroupInterface *TC{nullptr};
+  /// Pointer to the OmptEventGroupInterface.
+  std::shared_ptr<OmptEventGroupInterface> EventGroups{nullptr};
+
+  /// Pointer to the logging instance.
+  std::shared_ptr<logging::Logger> Log{nullptr};
 
   /// Operation mode during assertion / notification.
   AssertMode OperationMode{AssertMode::strict};
+
+private:
+  /// Mutex for creating/accessing the singleton members
+  static std::mutex StaticMemberAccessMutex;
+
+  /// Static member to manage the singleton event group interface instance
+  static std::weak_ptr<OmptEventGroupInterface> EventGroupInterfaceInstance;
+
+  /// Static member to manage the singleton logging instance
+  static std::weak_ptr<logging::Logger> LoggingInstance;
 };
 
 /// Class that can assert in a sequenced fashion, i.e., events have to occur in
 /// the order they were registered
-struct OmptSequencedAsserter : public OmptAsserter {
-  OmptSequencedAsserter(OmptEventGroupInterface *ParentTC = nullptr)
-      : OmptAsserter(ParentTC), NextEvent(0) {}
+class OmptSequencedAsserter : public OmptAsserter {
+public:
+  OmptSequencedAsserter() : OmptAsserter(), NextEvent(0) {}
 
   /// Add the event to the in-sequence set of events that the asserter should
   /// check for.
@@ -129,19 +171,38 @@ struct OmptSequencedAsserter : public OmptAsserter {
 
   size_t getRemainingEventCount() override;
 
-  omptest::AssertState getState() override;
+  omptest::AssertState checkState() override;
 
   bool AssertionSuspended{false};
-  int NumAssertSuccesses{0};
-  int NumNotifications{0};
+
+protected:
+  /// Notification helper function, implementing SyncPoint logic. Returns true
+  /// in case of consumed event, indicating early exit of notification.
+  bool consumeSyncPoint(const omptest::OmptAssertEvent &AE);
+
+  /// Notification helper function, implementing excess event notification
+  /// logic. Returns true when no more events were expected, indicating early
+  /// exit of notification.
+  bool checkExcessNotify(const omptest::OmptAssertEvent &AE);
+
+  /// Notification helper function, implementing Suspend logic. Returns true
+  /// in case of consumed event, indicating early exit of notification.
+  bool consumeSuspend();
+
+  /// Notification helper function, implementing regular event notification
+  /// logic. Returns true when a matching event was encountered, indicating
+  /// early exit of notification.
+  bool consumeRegularEvent(const omptest::OmptAssertEvent &AE);
+
+public:
+  /// Index of the next, expected event.
   size_t NextEvent{0};
   std::vector<omptest::OmptAssertEvent> Events{};
 };
 
 /// Class that asserts with set semantics, i.e., unordered
 struct OmptEventAsserter : public OmptAsserter {
-  OmptEventAsserter(OmptEventGroupInterface *ParentTC = nullptr)
-      : OmptAsserter(ParentTC), NumEvents(0), Events() {}
+  OmptEventAsserter() : OmptAsserter(), NumEvents(0), Events() {}
 
   /// Add the event to the set of events that the asserter should check for.
   void insert(omptest::OmptAssertEvent &&AE) override;
@@ -151,10 +212,8 @@ struct OmptEventAsserter : public OmptAsserter {
 
   size_t getRemainingEventCount() override;
 
-  omptest::AssertState getState() override;
+  omptest::AssertState checkState() override;
 
-  int NumAssertSuccesses{0};
-  int NumNotifications{0};
   size_t NumEvents{0};
 
   /// For now use vector (but do set semantics)
@@ -168,8 +227,8 @@ public:
   OmptEventReporter(std::ostream &OutStream = std::cout)
       : OutStream(OutStream) {}
 
-  // Called from the CallbackHandler with a corresponding AssertEvent to which
-  // callback was handled.
+  /// Called from the CallbackHandler with a corresponding AssertEvent to which
+  /// callback was handled.
   void notify(omptest::OmptAssertEvent &&AE) override;
 
 private:
@@ -181,33 +240,34 @@ private:
 /// coherent view of active and past events or SyncPoints.
 class OmptEventGroupInterface {
 public:
-  OmptEventGroupInterface()
-      : SequenceAsserter{std::make_unique<OmptSequencedAsserter>(this)},
-        SetAsserter{std::make_unique<OmptEventAsserter>(this)},
-        EventReporter{std::make_unique<OmptEventReporter>()} {}
+  OmptEventGroupInterface() = default;
+  ~OmptEventGroupInterface() = default;
 
-  // Add given group to the set of active event groups.
+  /// Non-copyable and non-movable
+  OmptEventGroupInterface(const OmptEventGroupInterface &) = delete;
+  OmptEventGroupInterface &operator=(const OmptEventGroupInterface &) = delete;
+  OmptEventGroupInterface(OmptEventGroupInterface &&) = delete;
+  OmptEventGroupInterface &operator=(OmptEventGroupInterface &&) = delete;
+
+  /// Add given group to the set of active event groups. Effectively connecting
+  /// the given groupname (expected) with a target region id (observed).
   bool addActiveEventGroup(const std::string &GroupName,
                            omptest::AssertEventGroup Group);
 
-  // Move given group from the set of active event groups to the set of
-  // previously active event groups.
+  /// Move given group from the set of active event groups to the set of
+  /// previously active event groups.
   bool deprecateActiveEventGroup(const std::string &GroupName);
 
-  // Check if given group is currently part of the active event groups.
+  /// Check if given group is currently part of the active event groups.
   bool checkActiveEventGroups(const std::string &GroupName,
                               omptest::AssertEventGroup Group);
 
-  // Check if given group is currently part of the deprecated event groups.
+  /// Check if given group is currently part of the deprecated event groups.
   bool checkDeprecatedEventGroups(const std::string &GroupName,
                                   omptest::AssertEventGroup Group);
 
-  std::unique_ptr<OmptSequencedAsserter> SequenceAsserter;
-  std::unique_ptr<OmptEventAsserter> SetAsserter;
-  std::unique_ptr<OmptEventReporter> EventReporter;
-
 private:
-  std::mutex GroupMutex;
+  mutable std::mutex GroupMutex;
   std::map<std::string, omptest::AssertEventGroup> ActiveEventGroups{};
   std::map<std::string, omptest::AssertEventGroup> DeprecatedEventGroups{};
   std::set<std::string> EncounteredSyncPoints{};

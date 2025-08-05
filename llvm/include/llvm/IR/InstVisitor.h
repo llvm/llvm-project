@@ -205,8 +205,6 @@ public:
   RetTy visitDbgVariableIntrinsic(DbgVariableIntrinsic &I)
                                                   { DELEGATE(DbgInfoIntrinsic);}
   RetTy visitDbgLabelInst(DbgLabelInst &I)        { DELEGATE(DbgInfoIntrinsic);}
-  RetTy visitDbgDefInst(DbgDefInst &I)            { DELEGATE(DbgInfoIntrinsic);}
-  RetTy visitDbgKillInst(DbgKillInst &I)          { DELEGATE(DbgInfoIntrinsic);}
   RetTy visitDbgInfoIntrinsic(DbgInfoIntrinsic &I){ DELEGATE(IntrinsicInst); }
   RetTy visitMemSetInst(MemSetInst &I)            { DELEGATE(MemIntrinsic); }
   RetTy visitMemSetPatternInst(MemSetPatternInst &I) {
@@ -291,8 +289,6 @@ private:
       case Intrinsic::dbg_declare: DELEGATE(DbgDeclareInst);
       case Intrinsic::dbg_value:   DELEGATE(DbgValueInst);
       case Intrinsic::dbg_label:   DELEGATE(DbgLabelInst);
-      case Intrinsic::dbg_def:     DELEGATE(DbgDefInst);
-      case Intrinsic::dbg_kill:    DELEGATE(DbgKillInst);
       case Intrinsic::memcpy:
       case Intrinsic::memcpy_inline:
         DELEGATE(MemCpyInst);

@@ -2889,6 +2889,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.HLSL().mergeWaveSizeAttr(D, *WS, WS->getMin(), WS->getMax(),
                                          WS->getPreferred(),
                                          WS->getSpelledArgsCount());
+  else if (const auto *CI = dyn_cast<HLSLVkConstantIdAttr>(Attr))
+    NewAttr = S.HLSL().mergeVkConstantIdAttr(D, *CI, CI->getId());
   else if (const auto *SA = dyn_cast<HLSLShaderAttr>(Attr))
     NewAttr = S.HLSL().mergeShaderAttr(D, *SA, SA->getType());
   else if (isa<SuppressAttr>(Attr))
@@ -3061,7 +3063,8 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       // error since the definition will have already been created without
       // the semantic effects of the attribute having been applied.
       S.Diag(NewAttribute->getLocation(),
-             diag::err_sycl_entry_point_after_definition);
+             diag::err_sycl_entry_point_after_definition)
+          << NewAttribute;
       S.Diag(Def->getLocation(), diag::note_previous_definition);
       cast<SYCLKernelEntryPointAttr>(NewAttribute)->setInvalidAttr();
       ++I;
@@ -3264,6 +3267,14 @@ void Sema::mergeDeclAttributes(NamedDecl *New, Decl *Old,
     // Already handled.
     if (isa<UsedAttr>(I) || isa<RetainAttr>(I))
       continue;
+
+    if (isa<InferredNoReturnAttr>(I)) {
+      if (auto *FD = dyn_cast<FunctionDecl>(New)) {
+        if (FD->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+          continue; // Don't propagate inferred noreturn attributes to explicit
+                    // specializations.
+      }
+    }
 
     if (mergeDeclAttribute(*this, New, I, LocalAMK))
       foundAny = true;
@@ -5244,8 +5255,8 @@ Decl *Sema::ParsedFreeStandingDeclSpec(Scope *S, AccessSpecifier AS,
   if (getLangOpts().CPlusPlus &&
       DS.getStorageClassSpec() != DeclSpec::SCS_typedef)
     if (EnumDecl *Enum = dyn_cast_or_null<EnumDecl>(Tag))
-      if (Enum->enumerator_begin() == Enum->enumerator_end() &&
-          !Enum->getIdentifier() && !Enum->isInvalidDecl())
+      if (Enum->enumerators().empty() && !Enum->getIdentifier() &&
+          !Enum->isInvalidDecl())
         DeclaresAnything = false;
 
   if (!DS.isMissingDeclaratorOk()) {
@@ -8057,7 +8068,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     NewVD->setInvalidDecl();
 
   // Handle GNU asm-label extension (encoded as an attribute).
-  if (Expr *E = (Expr*)D.getAsmLabel()) {
+  if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
     StringLiteral *SE = cast<StringLiteral>(E);
     StringRef Label = SE->getString();
@@ -10331,7 +10342,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
                        isFunctionTemplateSpecialization);
 
   // Handle GNU asm-label extension (encoded as an attribute).
-  if (Expr *E = (Expr*) D.getAsmLabel()) {
+  if (Expr *E = D.getAsmLabel()) {
     // The parser guarantees this is a string.
     StringLiteral *SE = cast<StringLiteral>(E);
     NewFD->addAttr(AsmLabelAttr::Create(Context, SE->getString(),
@@ -12398,12 +12409,9 @@ bool Sema::CheckFunctionDeclaration(Scope *S, FunctionDecl *NewFD,
 
 void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
   // [basic.start.main]p3
-  //    The main function shall not be declared with a linkage-specification.
-  if (FD->isExternCContext() ||
-      (FD->isExternCXXContext() &&
-       FD->getDeclContext()->getRedeclContext()->isTranslationUnit()))
-    Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification)
-        << FD->getLanguageLinkage();
+  //    The main function shall not be declared with C linkage-specification.
+  if (FD->isExternCContext())
+    Diag(FD->getLocation(), diag::ext_main_invalid_linkage_specification);
 
   // C++11 [basic.start.main]p3:
   //   A program that [...] declares main to be inline, static or
@@ -12486,6 +12494,15 @@ void Sema::CheckMain(FunctionDecl *FD, const DeclSpec &DS) {
           << (RTRange.isValid() ? FixItHint::CreateReplacement(RTRange, "int")
                                 : FixItHint());
       FD->setInvalidDecl(true);
+    }
+
+    // [basic.start.main]p3:
+    // A program that declares a function main that belongs to the global scope
+    // and is attached to a named module is ill-formed.
+    if (FD->isInNamedModule()) {
+      const SourceLocation start = FD->getTypeSpecStartLoc();
+      Diag(start, diag::warn_main_in_named_module)
+          << FixItHint::CreateInsertion(start, "extern \"C++\" ", true);
     }
   }
 
@@ -12570,9 +12587,9 @@ static bool isDefaultStdCall(FunctionDecl *FD, Sema &S) {
   if (FD->getName() == "main" || FD->getName() == "wmain")
     return false;
 
-  // Default calling convention for MinGW is __cdecl
+  // Default calling convention for MinGW and Cygwin is __cdecl
   const llvm::Triple &T = S.Context.getTargetInfo().getTriple();
-  if (T.isWindowsGNUEnvironment())
+  if (T.isOSCygMing())
     return false;
 
   // Default calling convention for WinMain, wWinMain and DllMain
@@ -13521,21 +13538,19 @@ bool Sema::GloballyUniqueObjectMightBeAccidentallyDuplicated(
 
   // The target is "hidden" (from the dynamic linker) if:
   // 1. On posix, it has hidden visibility, or
-  // 2. On windows, it has no import/export annotation
+  // 2. On windows, it has no import/export annotation, and neither does the
+  // class which directly contains it.
   if (Context.getTargetInfo().shouldDLLImportComdatSymbols()) {
     if (Target->hasAttr<DLLExportAttr>() || Target->hasAttr<DLLImportAttr>())
       return false;
 
     // If the variable isn't directly annotated, check to see if it's a member
     // of an annotated class.
-    const VarDecl *VD = dyn_cast<VarDecl>(Target);
+    const CXXRecordDecl *Ctx =
+        dyn_cast<CXXRecordDecl>(Target->getDeclContext());
+    if (Ctx && (Ctx->hasAttr<DLLExportAttr>() || Ctx->hasAttr<DLLImportAttr>()))
+      return false;
 
-    if (VD && VD->isStaticDataMember()) {
-      const CXXRecordDecl *Ctx = dyn_cast<CXXRecordDecl>(VD->getDeclContext());
-      if (Ctx &&
-          (Ctx->hasAttr<DLLExportAttr>() || Ctx->hasAttr<DLLImportAttr>()))
-        return false;
-    }
   } else if (Lnk.getVisibility() != HiddenVisibility) {
     // Posix case
     return false;
@@ -13627,6 +13642,26 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
         CreateRecoveryExpr(Init->getBeginLoc(), Init->getEndLoc(), {Init});
     if (Expr *E = Recovery.get())
       VDecl->setInit(E);
+    return;
+  }
+
+  // __amdgpu_feature_predicate_t cannot be initialised
+  if (VDecl->getType().getDesugaredType(Context) ==
+      Context.AMDGPUFeaturePredicateTy) {
+    Diag(VDecl->getLocation(),
+         diag::err_amdgcn_predicate_type_is_not_constructible)
+        << VDecl;
+    VDecl->setInvalidDecl();
+    return;
+  }
+
+  // __amdgpu_feature_predicate_t cannot be initialised
+  if (VDecl->getType().getDesugaredType(Context) ==
+      Context.AMDGPUFeaturePredicateTy) {
+    Diag(VDecl->getLocation(),
+         diag::err_amdgcn_predicate_type_is_not_constructible)
+        << VDecl;
+    VDecl->setInvalidDecl();
     return;
   }
 
@@ -13755,6 +13790,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     VDecl->setInvalidDecl();
     return;
   }
+
+  if (getLangOpts().HLSL)
+    if (!HLSL().handleInitialization(VDecl, Init))
+      return;
 
   // Get the decls type and save a reference for later, since
   // CheckInitializerTypes may change it.
@@ -13962,31 +14001,10 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
 
     // We allow integer constant expressions in all cases.
     } else if (DclT->isIntegralOrEnumerationType()) {
-      // Check whether the expression is a constant expression.
-      SourceLocation Loc;
       if (getLangOpts().CPlusPlus11 && DclT.isVolatileQualified())
         // In C++11, a non-constexpr const static data member with an
         // in-class initializer cannot be volatile.
         Diag(VDecl->getLocation(), diag::err_in_class_initializer_volatile);
-      else if (Init->isValueDependent())
-        ; // Nothing to check.
-      else if (Init->isIntegerConstantExpr(Context, &Loc))
-        ; // Ok, it's an ICE!
-      else if (Init->getType()->isScopedEnumeralType() &&
-               Init->isCXX11ConstantExpr(Context))
-        ; // Ok, it is a scoped-enum constant expression.
-      else if (Init->isEvaluatable(Context)) {
-        // If we can constant fold the initializer through heroics, accept it,
-        // but report this as a use of an extension for -pedantic.
-        Diag(Loc, diag::ext_in_class_initializer_non_constant)
-          << Init->getSourceRange();
-      } else {
-        // Otherwise, this is some crazy unknown case.  Report the issue at the
-        // location provided by the isIntegerConstantExpr failed check.
-        Diag(Loc, diag::err_in_class_initializer_non_constant)
-          << Init->getSourceRange();
-        VDecl->setInvalidDecl();
-      }
 
     // We allow foldable floating-point constants as an extension.
     } else if (DclT->isFloatingType()) { // also permits complex, which is ok
@@ -14140,6 +14158,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
   if (VarDecl *Var = dyn_cast<VarDecl>(RealDecl)) {
     QualType Type = Var->getType();
 
+    if (Type.getDesugaredType(Context) == Context.AMDGPUFeaturePredicateTy) {
+      Diag(Var->getLocation(),
+           diag::err_amdgcn_predicate_type_is_not_constructible)
+          << Var;
+      Var->setInvalidDecl();
+      return;
+    }
     // C++1z [dcl.dcl]p1 grammar implies that an initializer is mandatory.
     if (isa<DecompositionDecl>(RealDecl)) {
       Diag(Var->getLocation(), diag::err_decomp_decl_requires_init) << Var;
@@ -14197,6 +14222,13 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
         Var->setInvalidDecl();
         return;
       }
+    }
+
+    // HLSL variable with the `vk::constant_id` attribute must be initialized.
+    if (!Var->isInvalidDecl() && Var->hasAttr<HLSLVkConstantIdAttr>()) {
+      Diag(Var->getLocation(), diag::err_specialization_const);
+      Var->setInvalidDecl();
+      return;
     }
 
     if (!Var->isInvalidDecl() && RealDecl->hasAttr<LoaderUninitializedAttr>()) {
@@ -14714,6 +14746,17 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
       // Compute and cache the constant value, and remember that we have a
       // constant initializer.
       if (HasConstInit) {
+        if (var->isStaticDataMember() && !var->isInline() &&
+            var->getLexicalDeclContext()->isRecord() &&
+            type->isIntegralOrEnumerationType()) {
+          // In C++98, in-class initialization for a static data member must
+          // be an integer constant expression.
+          if (!Init->isIntegerConstantExpr(Context)) {
+            Diag(Init->getExprLoc(),
+                 diag::ext_in_class_initializer_non_constant)
+                << Init->getSourceRange();
+          }
+        }
         (void)var->checkForConstantInitialization(Notes);
         Notes.clear();
       } else if (CacheCulprit) {
@@ -14749,6 +14792,13 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
           << Attr->getRange() << Attr->isConstinit();
       for (auto &it : Notes)
         Diag(it.first, it.second);
+    } else if (var->isStaticDataMember() && !var->isInline() &&
+               var->getLexicalDeclContext()->isRecord()) {
+      Diag(var->getLocation(), diag::err_in_class_initializer_non_constant)
+          << Init->getSourceRange();
+      for (auto &it : Notes)
+        Diag(it.first, it.second);
+      var->setInvalidDecl();
     } else if (IsGlobal &&
                !getDiagnostics().isIgnored(diag::warn_global_constructor,
                                            var->getLocation())) {
@@ -16236,19 +16286,19 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         FD->getAttr<SYCLKernelEntryPointAttr>();
     if (FD->isDefaulted()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << /*defaulted function*/ 3;
+          << SKEPAttr << /*defaulted function*/ 3;
       SKEPAttr->setInvalidAttr();
     } else if (FD->isDeleted()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << /*deleted function*/ 2;
+          << SKEPAttr << /*deleted function*/ 2;
       SKEPAttr->setInvalidAttr();
     } else if (FSI->isCoroutine()) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << /*coroutine*/ 7;
+          << SKEPAttr << /*coroutine*/ 7;
       SKEPAttr->setInvalidAttr();
     } else if (Body && isa<CXXTryStmt>(Body)) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << /*function defined with a function try block*/ 8;
+          << SKEPAttr << /*function defined with a function try block*/ 8;
       SKEPAttr->setInvalidAttr();
     }
 
@@ -16380,7 +16430,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
           // Returns true if the token beginning at this Loc is `const`.
           auto isLocAtConst = [&](SourceLocation Loc, const SourceManager &SM,
                                   const LangOptions &LangOpts) {
-            std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(Loc);
+            FileIDAndOffset LocInfo = SM.getDecomposedLoc(Loc);
             if (LocInfo.first.isInvalid())
               return false;
 
@@ -17141,6 +17191,30 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
   if (T->isDependentType())
     return false;
 
+  // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
+  // integral type; any cv-qualification is ignored.
+  // C23 6.7.3.3p5: The underlying type of the enumeration is the unqualified,
+  // non-atomic version of the type specified by the type specifiers in the
+  // specifier qualifier list.
+  // Because of how odd C's rule is, we'll let the user know that operations
+  // involving the enumeration type will be non-atomic.
+  if (T->isAtomicType())
+    Diag(UnderlyingLoc, diag::warn_atomic_stripped_in_enum);
+
+  Qualifiers Q = T.getQualifiers();
+  std::optional<unsigned> QualSelect;
+  if (Q.hasConst() && Q.hasVolatile())
+    QualSelect = diag::CVQualList::Both;
+  else if (Q.hasConst())
+    QualSelect = diag::CVQualList::Const;
+  else if (Q.hasVolatile())
+    QualSelect = diag::CVQualList::Volatile;
+
+  if (QualSelect)
+    Diag(UnderlyingLoc, diag::warn_cv_stripped_in_enum) << *QualSelect;
+
+  T = T.getAtomicUnqualifiedType();
+
   // This doesn't use 'isIntegralType' despite the error message mentioning
   // integral type because isIntegralType would also allow enum types in C.
   if (const BuiltinType *BT = T->getAs<BuiltinType>())
@@ -17537,6 +17611,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
     } else if (UnderlyingType.get()) {
       // C++0x 7.2p2: The type-specifier-seq of an enum-base shall name an
       // integral type; any cv-qualification is ignored.
+      // C23 6.7.3.3p5: The underlying type of the enumeration is the
+      // unqualified, non-atomic version of the type specified by the type
+      // specifiers in the specifier qualifier list.
       TypeSourceInfo *TI = nullptr;
       GetTypeFromParser(UnderlyingType.get(), &TI);
       EnumUnderlying = TI;
@@ -17548,6 +17625,18 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       if (DiagnoseUnexpandedParameterPack(TI->getTypeLoc().getBeginLoc(), TI,
                                           UPPC_FixedUnderlyingType))
         EnumUnderlying = Context.IntTy.getTypePtr();
+
+      // If the underlying type is atomic, we need to adjust the type before
+      // continuing. This only happens in the case we stored a TypeSourceInfo
+      // into EnumUnderlying because the other cases are error recovery up to
+      // this point. But because it's not possible to gin up a TypeSourceInfo
+      // for a non-atomic type from an atomic one, we'll store into the Type
+      // field instead. FIXME: it would be nice to have an easy way to get a
+      // derived TypeSourceInfo which strips qualifiers including the weird
+      // ones like _Atomic where it forms a different type.
+      if (TypeSourceInfo *TI = dyn_cast<TypeSourceInfo *>(EnumUnderlying);
+          TI && TI->getType()->isAtomicType())
+        EnumUnderlying = TI->getType().getAtomicUnqualifiedType().getTypePtr();
 
     } else if (Context.getTargetInfo().getTriple().isWindowsMSVCEnvironment()) {
       // For MSVC ABI compatibility, unfixed enums must use an underlying type
@@ -18423,6 +18512,10 @@ CreateNewDecl:
   // record.
   AddPushedVisibilityAttribute(New);
 
+  // If this is not a definition, process API notes for it now.
+  if (TUK != TagUseKind::Definition)
+    ProcessAPINotes(New);
+
   if (isMemberSpecialization && !New->isInvalidDecl())
     CompleteMemberSpecialization(New, Previous);
 
@@ -18622,8 +18715,7 @@ ExprResult Sema::VerifyBitField(SourceLocation FieldLoc,
         << FieldName << FieldTy << BitWidth->getSourceRange();
     return Diag(FieldLoc, diag::err_not_integral_type_anon_bitfield)
       << FieldTy << BitWidth->getSourceRange();
-  } else if (DiagnoseUnexpandedParameterPack(const_cast<Expr *>(BitWidth),
-                                             UPPC_BitFieldWidth))
+  } else if (DiagnoseUnexpandedParameterPack(BitWidth, UPPC_BitFieldWidth))
     return ExprError();
 
   // If the bit-width is type- or value-dependent, don't try to check
@@ -20517,7 +20609,8 @@ TopLevelStmtDecl *Sema::ActOnStartTopLevelStmtDecl(Scope *S) {
 }
 
 void Sema::ActOnFinishTopLevelStmtDecl(TopLevelStmtDecl *D, Stmt *Statement) {
-  D->setStmt(Statement);
+  if (Statement)
+    D->setStmt(Statement);
   PopCompoundScope();
   PopFunctionScopeInfo();
   PopDeclContext();

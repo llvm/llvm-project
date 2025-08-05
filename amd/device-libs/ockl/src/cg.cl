@@ -54,19 +54,28 @@ choose_one_grid_workitem(void)
             __builtin_amdgcn_workitem_id_z() | __builtin_amdgcn_workgroup_id_z()) == 0;
 }
 
-static inline void
-single_grid_sync(__global struct mg_sync *s, uint members)
+static inline uint
+single_grid_arrive(__global struct mg_sync *s, uint members)
 {
     // Assumes 65535 or fewer workgroups in the grid
     uint v = AA(&s->w0, 1U, memory_scope_device);
-    if ((v & 0xffff) == members-1) {
+    if ((v & 0xffff) == members-1)
         AA(&s->w0, 0x10000 - members, memory_scope_device);
-    } else {
-        v &= ~0xffff;
-        do {
-            __builtin_amdgcn_s_sleep(1);
-        } while ((AL(&s->w0, memory_scope_device) & ~0xffff) == v);
-    }
+    return v & ~0xffff;
+}
+
+static inline void
+single_grid_wait(__global struct mg_sync *s, uint t)
+{
+    while ((AL(&s->w0, memory_scope_device) & ~0xffff) == t)
+        __builtin_amdgcn_s_sleep(1);
+}
+
+
+static inline void
+single_grid_sync(__global struct mg_sync *s, uint members)
+{
+    single_grid_wait(s, single_grid_arrive(s, members));
 }
 
 static inline void
@@ -102,12 +111,44 @@ __ockl_grid_is_valid(void)
     return get_mg_info_arg() != 0UL;
 }
 
+uint
+__ockl_grid_bar_arrive(void)
+{
+    __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
+    __builtin_amdgcn_s_barrier();
+    uint ret = 0;
+    if (choose_one_workgroup_workitem()) {
+        __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
+        __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent");
+        __global struct mg_info *mi = (__global struct mg_info *)get_mg_info_arg();
+        ret = single_grid_arrive(&mi->sgs, mi->num_wg);
+    }
+    return ret;
+}
+
+void
+__ockl_grid_bar_wait(uint t)
+{
+    if (choose_one_workgroup_workitem()) {
+        __global struct mg_info *mi = (__global struct mg_info *)get_mg_info_arg();
+        single_grid_wait(&mi->sgs, t);
+        __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
+        __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
+    }
+    __builtin_amdgcn_s_barrier();
+    __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
+}
+
 void
 __ockl_grid_sync(void)
 {
-    __builtin_amdgcn_fence(__ATOMIC_SEQ_CST, "agent");
+    __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
     __builtin_amdgcn_s_barrier();
+
     if (choose_one_workgroup_workitem()) {
+        __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
+        __builtin_amdgcn_fence(__ATOMIC_RELEASE, "agent");
+
         if (AVOID_GWS()) {
             __global struct mg_info *mi = (__global struct mg_info *)get_mg_info_arg();
             single_grid_sync(&mi->sgs, mi->num_wg);
@@ -115,8 +156,13 @@ __ockl_grid_sync(void)
             uint nwm1 = (uint)__ockl_get_num_groups(0) * (uint)__ockl_get_num_groups(1) * (uint)__ockl_get_num_groups(2) - 1;
             __ockl_gws_barrier(nwm1, 0);
         }
+
+        __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "agent");
+        __builtin_amdgcn_fence(__ATOMIC_RELEASE, "workgroup");
     }
+
     __builtin_amdgcn_s_barrier();
+    __builtin_amdgcn_fence(__ATOMIC_ACQUIRE, "workgroup");
 }
 
 __attribute__((const)) uint

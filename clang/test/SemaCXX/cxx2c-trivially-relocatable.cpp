@@ -372,7 +372,7 @@ void test__builtin_trivially_relocate() {
     __builtin_trivially_relocate((S*)0, 0, 0); //expected-error {{argument to '__builtin_trivially_relocate' must be relocatable}}
     __builtin_trivially_relocate((int*)0, 0, 0); //expected-error {{first and second arguments to '__builtin_trivially_relocate' must be of the same type}}
 
-    __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error-re {{cannot initialize a value of type '{{.*}}' with an rvalue of type 'int *'}}
+    __builtin_trivially_relocate((int*)0, (int*)0, (int*)0); // expected-error-re {{cannot initialize a value of type '__size_t' (aka '{{.*}}') with an rvalue of type 'int *'}}
     __builtin_trivially_relocate((int*)0, (int*)0, 0);
     __builtin_trivially_relocate((R*)0, (R*)0, 0);
 }
@@ -409,4 +409,40 @@ C& C::operator=(const C&) = default;
 
 static_assert (!__builtin_is_cpp_trivially_relocatable(C));
 static_assert (!__builtin_is_replaceable(C));
+}
+
+namespace GH144232 {
+
+struct E trivially_relocatable_if_eligible replaceable_if_eligible {
+  E (E &&);
+  E &operator= (E &&) = default;
+};
+
+struct F trivially_relocatable_if_eligible replaceable_if_eligible {
+  F (F &&) = default;
+  F &operator= (F &&);
+};
+
+struct G trivially_relocatable_if_eligible replaceable_if_eligible { G (G const &) = default; };
+
+struct I trivially_relocatable_if_eligible replaceable_if_eligible { I &operator= (const I &) = default; };
+
+struct J trivially_relocatable_if_eligible replaceable_if_eligible { J (J const &); };
+struct K trivially_relocatable_if_eligible replaceable_if_eligible { K (K const &); };
+
+
+
+static_assert (__builtin_is_replaceable (E));
+static_assert (__builtin_is_cpp_trivially_relocatable(E));
+static_assert (__builtin_is_replaceable (F));
+static_assert (__builtin_is_cpp_trivially_relocatable(F));
+static_assert (__builtin_is_replaceable (G));
+static_assert (__builtin_is_cpp_trivially_relocatable(G));
+static_assert (__builtin_is_replaceable (I));
+static_assert (__builtin_is_cpp_trivially_relocatable(I));
+static_assert (__builtin_is_replaceable (J));
+static_assert (__builtin_is_cpp_trivially_relocatable(J));
+static_assert (__builtin_is_replaceable (K));
+static_assert (__builtin_is_cpp_trivially_relocatable(K));
+
 }

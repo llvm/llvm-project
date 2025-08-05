@@ -35,6 +35,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -657,7 +658,8 @@ INITIALIZE_PASS(SPIRVAsmPrinter, "spirv-asm-printer", "SPIRV Assembly Printer",
                 false, false)
 
 // Force static initialization.
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSPIRVAsmPrinter() {
   RegisterAsmPrinter<SPIRVAsmPrinter> X(getTheSPIRV32Target());
   RegisterAsmPrinter<SPIRVAsmPrinter> Y(getTheSPIRV64Target());
   RegisterAsmPrinter<SPIRVAsmPrinter> Z(getTheSPIRVLogicalTarget());

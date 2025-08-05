@@ -54,42 +54,23 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %p.coerce, i32 %x) {
 ; GFX906-NEXT:  [[ENTRY:.*:]]
 ; GFX906-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[P_COERCE]] to i64
 ; GFX906-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr
-; GFX906-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS1:.*]]
-; GFX906:       [[IF_GFX1201_OR_GFX12_INSTS1]]:
-; GFX906-NEXT:    br label %[[IF_NOT_GFX906:.*]]
-; GFX906:       [[IF_GFX1201_OR_GFX12_INSTS:.*:]]
-; GFX906-NEXT:    call void @llvm.amdgcn.s.sleep.var(i32 [[X]])
-; GFX906-NEXT:    br label %[[IF_NOT_GFX906]]
-; GFX906:       [[IF_NOT_GFX906]]:
-; GFX906-NEXT:    br label %[[IF_GFX1010_OR_GFX1102:.*]]
-; GFX906:       [[IF_NOT_GFX907:.*:]]
-; GFX906-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
-; GFX906-NEXT:    br label %[[IF_END6:.*]]
-; GFX906:       [[IF_GFX1010_OR_GFX1102]]:
+; GFX906-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS:.*]]
+; GFX906:       [[IF_GFX1201_OR_GFX12_INSTS]]:
+; GFX906-NEXT:    br label %[[IF_NOT_GFX907:.*]]
+; GFX906:       [[IF_NOT_GFX907]]:
+; GFX906-NEXT:    br label %[[IF_GFX1010_OR_GFX1101:.*]]
+; GFX906:       [[IF_GFX1010_OR_GFX1101]]:
 ; GFX906-NEXT:    br label %[[LOR_NOT_GFX1010:.*]]
 ; GFX906:       [[LOR_NOT_GFX1010]]:
 ; GFX906-NEXT:    br label %[[FOR_COND:.*]]
-; GFX906:       [[IF_GFX1010_OR_GFX1101:.*:]]
-; GFX906-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX906-NEXT:    br label %[[IF_END6]]
-; GFX906:       [[IF_END6]]:
-; GFX906-NEXT:    call void @llvm.assume(i1 true)
-; GFX906-NEXT:    call void @llvm.assume(i1 true)
-; GFX906-NEXT:    br label %[[FOR_COND]]
 ; GFX906:       [[FOR_COND]]:
 ; GFX906-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr [[TMP1]], align 4
 ; GFX906-NEXT:    [[SUB_PEEL:%.*]] = sub nsw i32 [[DOTPROMOTED]], [[X]]
 ; GFX906-NEXT:    store i32 [[SUB_PEEL]], ptr [[TMP1]], align 4
-; GFX906-NEXT:    br label %[[IF_GFX10_INSTS1:.*]]
-; GFX906:       [[IF_GFX11_INSTS:.*:]]
-; GFX906-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
-; GFX906-NEXT:    br label %[[IF_END11:.*]]
-; GFX906:       [[IF_GFX10_INSTS1]]:
-; GFX906-NEXT:    br label %[[IF_END11]]
-; GFX906:       [[IF_GFX10_INSTS:.*:]]
-; GFX906-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX906-NEXT:    br label %[[IF_END11]]
-; GFX906:       [[IF_END11]]:
+; GFX906-NEXT:    br label %[[IF_GFX11_INSTS:.*]]
+; GFX906:       [[IF_GFX11_INSTS]]:
+; GFX906-NEXT:    br label %[[IF_GFX10_INSTS:.*]]
+; GFX906:       [[IF_GFX10_INSTS]]:
 ; GFX906-NEXT:    call void @llvm.assume(i1 true)
 ; GFX906-NEXT:    [[DOTPROMOTED9:%.*]] = load i32, ptr [[TMP1]], align 4
 ; GFX906-NEXT:    [[SUB13_PEEL:%.*]] = sub nsw i32 [[DOTPROMOTED9]], [[X]]
@@ -101,41 +82,28 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %p.coerce, i32 %x) {
 ; GFX1010-NEXT:  [[ENTRY:.*:]]
 ; GFX1010-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[P_COERCE]] to i64
 ; GFX1010-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr
-; GFX1010-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS1:.*]]
-; GFX1010:       [[IF_GFX1201_OR_GFX12_INSTS1]]:
-; GFX1010-NEXT:    br label %[[IF_END:.*]]
-; GFX1010:       [[IF_GFX1201_OR_GFX12_INSTS:.*:]]
-; GFX1010-NEXT:    call void @llvm.amdgcn.s.sleep.var(i32 [[X]])
-; GFX1010-NEXT:    br label %[[IF_END]]
-; GFX1010:       [[IF_END]]:
-; GFX1010-NEXT:    br label %[[IF_NOT_GFX907:.*]]
-; GFX1010:       [[IF_NOT_GFX907]]:
+; GFX1010-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS:.*]]
+; GFX1010:       [[IF_GFX1201_OR_GFX12_INSTS]]:
+; GFX1010-NEXT:    br label %[[IF_NOT_GFX906:.*]]
+; GFX1010:       [[IF_NOT_GFX906]]:
+; GFX1010-NEXT:    br label %[[LOR_NOT_GFX1010:.*]]
+; GFX1010:       [[LOR_NOT_GFX1010]]:
 ; GFX1010-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
 ; GFX1010-NEXT:    br label %[[IF_END6:.*]]
-; GFX1010:       [[IF_NOT_GFX906:.*:]]
-; GFX1010-NEXT:    br label %[[IF_GFX1010_OR_GFX1101:.*]]
-; GFX1010:       [[LOR_NOT_GFX1010:.*:]]
-; GFX1010-NEXT:    br label %[[FOR_COND:.*]]
-; GFX1010:       [[IF_GFX1010_OR_GFX1101]]:
-; GFX1010-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX1010-NEXT:    br label %[[IF_END6]]
 ; GFX1010:       [[IF_END6]]:
 ; GFX1010-NEXT:    call void @llvm.assume(i1 true)
-; GFX1010-NEXT:    call void @llvm.assume(i1 false)
-; GFX1010-NEXT:    br label %[[FOR_COND]]
+; GFX1010-NEXT:    call void @llvm.assume(i1 true)
+; GFX1010-NEXT:    br label %[[FOR_COND:.*]]
 ; GFX1010:       [[FOR_COND]]:
 ; GFX1010-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr [[TMP1]], align 4
 ; GFX1010-NEXT:    [[SUB_PEEL:%.*]] = sub nsw i32 [[DOTPROMOTED]], [[X]]
 ; GFX1010-NEXT:    store i32 [[SUB_PEEL]], ptr [[TMP1]], align 4
-; GFX1010-NEXT:    br label %[[IF_ELSE8:.*]]
-; GFX1010:       [[IF_GFX11_INSTS:.*:]]
-; GFX1010-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
-; GFX1010-NEXT:    br label %[[IF_END11:.*]]
-; GFX1010:       [[IF_ELSE8]]:
+; GFX1010-NEXT:    br label %[[IF_GFX11_INSTS:.*]]
+; GFX1010:       [[IF_GFX11_INSTS]]:
 ; GFX1010-NEXT:    br label %[[IF_GFX10_INSTS:.*]]
 ; GFX1010:       [[IF_GFX10_INSTS]]:
 ; GFX1010-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX1010-NEXT:    br label %[[IF_END11]]
+; GFX1010-NEXT:    br label %[[IF_END11:.*]]
 ; GFX1010:       [[IF_END11]]:
 ; GFX1010-NEXT:    call void @llvm.assume(i1 true)
 ; GFX1010-NEXT:    [[DOTPROMOTED9:%.*]] = load i32, ptr [[TMP1]], align 4
@@ -148,26 +116,16 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %p.coerce, i32 %x) {
 ; GFX1101-NEXT:  [[ENTRY:.*:]]
 ; GFX1101-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[P_COERCE]] to i64
 ; GFX1101-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr
-; GFX1101-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS1:.*]]
-; GFX1101:       [[IF_GFX1201_OR_GFX12_INSTS1]]:
+; GFX1101-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS:.*]]
+; GFX1101:       [[IF_GFX1201_OR_GFX12_INSTS]]:
 ; GFX1101-NEXT:    br label %[[IF_END:.*]]
-; GFX1101:       [[IF_GFX1201_OR_GFX12_INSTS:.*:]]
-; GFX1101-NEXT:    call void @llvm.amdgcn.s.sleep.var(i32 [[X]])
-; GFX1101-NEXT:    br label %[[IF_END]]
 ; GFX1101:       [[IF_END]]:
 ; GFX1101-NEXT:    br label %[[IF_NOT_GFX907:.*]]
 ; GFX1101:       [[IF_NOT_GFX907]]:
 ; GFX1101-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
-; GFX1101-NEXT:    br label %[[IF_END6:.*]]
-; GFX1101:       [[IF_NOT_GFX906:.*:]]
-; GFX1101-NEXT:    br label %[[LOR_NOT_GFX1010:.*]]
-; GFX1101:       [[LOR_NOT_GFX1010]]:
-; GFX1101-NEXT:    br label %[[IF_GFX1010_OR_GFX1101:.*]]
-; GFX1101:       [[IF_GFX1010_OR_GFX1101]]:
-; GFX1101-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX1101-NEXT:    br label %[[IF_END6]]
-; GFX1101:       [[IF_END6]]:
-; GFX1101-NEXT:    call void @llvm.assume(i1 false)
+; GFX1101-NEXT:    br label %[[IF_NOT_GFX906:.*]]
+; GFX1101:       [[IF_NOT_GFX906]]:
+; GFX1101-NEXT:    call void @llvm.assume(i1 true)
 ; GFX1101-NEXT:    call void @llvm.assume(i1 true)
 ; GFX1101-NEXT:    br label %[[FOR_COND:.*]]
 ; GFX1101:       [[FOR_COND]]:
@@ -177,13 +135,8 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %p.coerce, i32 %x) {
 ; GFX1101-NEXT:    br label %[[IF_GFX11_INSTS:.*]]
 ; GFX1101:       [[IF_GFX11_INSTS]]:
 ; GFX1101-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
-; GFX1101-NEXT:    br label %[[IF_END11:.*]]
-; GFX1101:       [[IF_ELSE8:.*:]]
-; GFX1101-NEXT:    br label %[[IF_GFX10_INSTS:.*]]
-; GFX1101:       [[IF_GFX10_INSTS]]:
-; GFX1101-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX1101-NEXT:    br label %[[IF_END11]]
-; GFX1101:       [[IF_END11]]:
+; GFX1101-NEXT:    br label %[[IF_ELSE8:.*]]
+; GFX1101:       [[IF_ELSE8]]:
 ; GFX1101-NEXT:    call void @llvm.assume(i1 true)
 ; GFX1101-NEXT:    [[DOTPROMOTED9:%.*]] = load i32, ptr [[TMP1]], align 4
 ; GFX1101-NEXT:    [[SUB13_PEEL:%.*]] = sub nsw i32 [[DOTPROMOTED9]], [[X]]
@@ -195,28 +148,19 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %p.coerce, i32 %x) {
 ; GFX1201-NEXT:  [[ENTRY:.*:]]
 ; GFX1201-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[P_COERCE]] to i64
 ; GFX1201-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr
-; GFX1201-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS:.*]]
-; GFX1201:       [[LOR_NOT_GFX1201:.*:]]
-; GFX1201-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS]]
-; GFX1201:       [[IF_GFX1201_OR_GFX12_INSTS]]:
+; GFX1201-NEXT:    br label %[[LOR_NOT_GFX1201:.*]]
+; GFX1201:       [[LOR_NOT_GFX1201]]:
 ; GFX1201-NEXT:    call void @llvm.amdgcn.s.sleep.var(i32 [[X]])
-; GFX1201-NEXT:    br label %[[IF_END:.*]]
-; GFX1201:       [[IF_END]]:
-; GFX1201-NEXT:    br label %[[IF_NOT_GFX907:.*]]
-; GFX1201:       [[IF_NOT_GFX907]]:
+; GFX1201-NEXT:    br label %[[IF_NOT_GFX906:.*]]
+; GFX1201:       [[IF_NOT_GFX906]]:
+; GFX1201-NEXT:    br label %[[IF_GFX1010_OR_GFX1101:.*]]
+; GFX1201:       [[IF_GFX1010_OR_GFX1101]]:
 ; GFX1201-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
 ; GFX1201-NEXT:    br label %[[IF_END6:.*]]
-; GFX1201:       [[IF_NOT_GFX906:.*:]]
-; GFX1201-NEXT:    br label %[[IF_GFX1010_OR_GFX1102:.*]]
-; GFX1201:       [[IF_GFX1010_OR_GFX1102]]:
-; GFX1201-NEXT:    br label %[[FOR_COND:.*]]
-; GFX1201:       [[IF_GFX1010_OR_GFX1101:.*:]]
-; GFX1201-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX1201-NEXT:    br label %[[IF_END6]]
 ; GFX1201:       [[IF_END6]]:
 ; GFX1201-NEXT:    call void @llvm.assume(i1 true)
 ; GFX1201-NEXT:    call void @llvm.assume(i1 true)
-; GFX1201-NEXT:    br label %[[FOR_COND]]
+; GFX1201-NEXT:    br label %[[FOR_COND:.*]]
 ; GFX1201:       [[FOR_COND]]:
 ; GFX1201-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr [[TMP1]], align 4
 ; GFX1201-NEXT:    [[SUB_PEEL:%.*]] = sub nsw i32 [[DOTPROMOTED]], [[X]]
@@ -224,13 +168,8 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %p.coerce, i32 %x) {
 ; GFX1201-NEXT:    br label %[[IF_GFX11_INSTS:.*]]
 ; GFX1201:       [[IF_GFX11_INSTS]]:
 ; GFX1201-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
-; GFX1201-NEXT:    br label %[[IF_END11:.*]]
-; GFX1201:       [[IF_ELSE8:.*:]]
-; GFX1201-NEXT:    br label %[[IF_GFX10_INSTS:.*]]
-; GFX1201:       [[IF_GFX10_INSTS]]:
-; GFX1201-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX1201-NEXT:    br label %[[IF_END11]]
-; GFX1201:       [[IF_END11]]:
+; GFX1201-NEXT:    br label %[[IF_ELSE8:.*]]
+; GFX1201:       [[IF_ELSE8]]:
 ; GFX1201-NEXT:    call void @llvm.assume(i1 true)
 ; GFX1201-NEXT:    [[DOTPROMOTED9:%.*]] = load i32, ptr [[TMP1]], align 4
 ; GFX1201-NEXT:    [[SUB13_PEEL:%.*]] = sub nsw i32 [[DOTPROMOTED9]], [[X]]
@@ -242,28 +181,19 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %p.coerce, i32 %x) {
 ; GFX1201-W64-NEXT:  [[ENTRY:.*:]]
 ; GFX1201-W64-NEXT:    [[TMP0:%.*]] = ptrtoint ptr addrspace(1) [[P_COERCE]] to i64
 ; GFX1201-W64-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr
-; GFX1201-W64-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS:.*]]
-; GFX1201-W64:       [[LOR_NOT_GFX1201:.*:]]
-; GFX1201-W64-NEXT:    br label %[[IF_GFX1201_OR_GFX12_INSTS]]
-; GFX1201-W64:       [[IF_GFX1201_OR_GFX12_INSTS]]:
+; GFX1201-W64-NEXT:    br label %[[LOR_NOT_GFX1201:.*]]
+; GFX1201-W64:       [[LOR_NOT_GFX1201]]:
 ; GFX1201-W64-NEXT:    call void @llvm.amdgcn.s.sleep.var(i32 [[X]])
-; GFX1201-W64-NEXT:    br label %[[IF_END:.*]]
-; GFX1201-W64:       [[IF_END]]:
-; GFX1201-W64-NEXT:    br label %[[IF_NOT_GFX907:.*]]
-; GFX1201-W64:       [[IF_NOT_GFX907]]:
+; GFX1201-W64-NEXT:    br label %[[IF_NOT_GFX906:.*]]
+; GFX1201-W64:       [[IF_NOT_GFX906]]:
+; GFX1201-W64-NEXT:    br label %[[IF_GFX1010_OR_GFX1101:.*]]
+; GFX1201-W64:       [[IF_GFX1010_OR_GFX1101]]:
 ; GFX1201-W64-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
 ; GFX1201-W64-NEXT:    br label %[[IF_END6:.*]]
-; GFX1201-W64:       [[IF_NOT_GFX906:.*:]]
-; GFX1201-W64-NEXT:    br label %[[IF_GFX1010_OR_GFX1102:.*]]
-; GFX1201-W64:       [[IF_GFX1010_OR_GFX1102]]:
-; GFX1201-W64-NEXT:    br label %[[FOR_COND:.*]]
-; GFX1201-W64:       [[IF_GFX1010_OR_GFX1101:.*:]]
-; GFX1201-W64-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX1201-W64-NEXT:    br label %[[IF_END6]]
 ; GFX1201-W64:       [[IF_END6]]:
 ; GFX1201-W64-NEXT:    call void @llvm.assume(i1 true)
 ; GFX1201-W64-NEXT:    call void @llvm.assume(i1 true)
-; GFX1201-W64-NEXT:    br label %[[FOR_COND]]
+; GFX1201-W64-NEXT:    br label %[[FOR_COND:.*]]
 ; GFX1201-W64:       [[FOR_COND]]:
 ; GFX1201-W64-NEXT:    [[DOTPROMOTED:%.*]] = load i32, ptr [[TMP1]], align 4
 ; GFX1201-W64-NEXT:    [[SUB_PEEL:%.*]] = sub nsw i32 [[DOTPROMOTED]], [[X]]
@@ -271,14 +201,9 @@ define amdgpu_kernel void @kernel(ptr addrspace(1) %p.coerce, i32 %x) {
 ; GFX1201-W64-NEXT:    br label %[[IF_GFX11_INSTS:.*]]
 ; GFX1201-W64:       [[IF_GFX11_INSTS]]:
 ; GFX1201-W64-NEXT:    call void @llvm.amdgcn.s.wait.event.export.ready()
-; GFX1201-W64-NEXT:    br label %[[IF_END11:.*]]
-; GFX1201-W64:       [[IF_ELSE8:.*:]]
-; GFX1201-W64-NEXT:    br label %[[IF_GFX10_INSTS:.*]]
-; GFX1201-W64:       [[IF_GFX10_INSTS]]:
-; GFX1201-W64-NEXT:    call void @llvm.amdgcn.s.ttracedata.imm(i16 1)
-; GFX1201-W64-NEXT:    br label %[[IF_END11]]
-; GFX1201-W64:       [[IF_END11]]:
-; GFX1201-W64-NEXT:    call void @llvm.assume(i1 false)
+; GFX1201-W64-NEXT:    br label %[[IF_ELSE8:.*]]
+; GFX1201-W64:       [[IF_ELSE8]]:
+; GFX1201-W64-NEXT:    call void @llvm.assume(i1 true)
 ; GFX1201-W64-NEXT:    [[DOTPROMOTED9:%.*]] = load i32, ptr [[TMP1]], align 4
 ; GFX1201-W64-NEXT:    [[SUB13_PEEL:%.*]] = sub nsw i32 [[DOTPROMOTED9]], [[X]]
 ; GFX1201-W64-NEXT:    store i32 [[SUB13_PEEL]], ptr [[TMP1]], align 4

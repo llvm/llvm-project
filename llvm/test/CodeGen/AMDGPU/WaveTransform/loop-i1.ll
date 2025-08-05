@@ -115,7 +115,7 @@ define amdgpu_kernel void @loop_i1(ptr addrspace(1) %filter.coerce, ptr addrspac
   ; GFX90A-NEXT:   [[COPY16:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
   ; GFX90A-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY16]], %subreg.sub0, killed [[COPY15]], %subreg.sub1
   ; GFX90A-NEXT:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[PHI4]], implicit $exec
-  ; GFX90A-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY [[V_ASHRREV_I32_e64_]]
+  ; GFX90A-NEXT:   [[COPY17:%[0-9]+]]:vgpr_32 = COPY killed [[V_ASHRREV_I32_e64_]]
   ; GFX90A-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[PHI4]], %subreg.sub0, killed [[COPY17]], %subreg.sub1
   ; GFX90A-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GFX90A-NEXT:   [[V_LSHLREV_B64_e64_:%[0-9]+]]:vreg_64_align2 = nsw V_LSHLREV_B64_e64 killed [[S_MOV_B32_9]], killed [[REG_SEQUENCE5]], implicit $exec
@@ -225,7 +225,7 @@ define amdgpu_kernel void @loop_i1(ptr addrspace(1) %filter.coerce, ptr addrspac
   ; GFX1200-NEXT:   [[COPY14:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
   ; GFX1200-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sreg_64 = REG_SEQUENCE killed [[COPY14]], %subreg.sub0, killed [[COPY13]], %subreg.sub1
   ; GFX1200-NEXT:   [[V_ASHRREV_I32_e64_:%[0-9]+]]:vgpr_32 = V_ASHRREV_I32_e64 31, [[PHI4]], implicit $exec
-  ; GFX1200-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY [[V_ASHRREV_I32_e64_]]
+  ; GFX1200-NEXT:   [[COPY15:%[0-9]+]]:vgpr_32 = COPY killed [[V_ASHRREV_I32_e64_]]
   ; GFX1200-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[PHI4]], %subreg.sub0, killed [[COPY15]], %subreg.sub1
   ; GFX1200-NEXT:   [[S_MOV_B32_10:%[0-9]+]]:sreg_32 = S_MOV_B32 2
   ; GFX1200-NEXT:   [[V_LSHLREV_B64_pseudo_e64_:%[0-9]+]]:vreg_64 = nsw V_LSHLREV_B64_pseudo_e64 killed [[S_MOV_B32_10]], killed [[REG_SEQUENCE5]], implicit $exec

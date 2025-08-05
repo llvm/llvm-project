@@ -40,4 +40,4 @@ subroutine omp_target_team_separate
    return
 end subroutine omp_target_team_separate
 !CHECK-LABEL: func.func @_QPomp_target_team_separate() {
-!CHECK:  omp.map.info var_ptr({{.*}} : !fir.ref<i64>, i64) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i64> {name = "s3"}
+!CHECK:  omp.map.info var_ptr({{.*}} : !fir.ref<i64>, i64) map_clauses(to) capture(ByCopy) -> !fir.ref<i64>

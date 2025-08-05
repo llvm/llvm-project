@@ -105,7 +105,7 @@ void test_mixed() {
   __builtin_amdgcn_fence( __ATOMIC_SEQ_CST, "workgroup", "local", "local", "global", "local", "local");
 }
 //.
-// CHECK: [[META3]] = !{!"amdgpu-as", !"local"}
-// CHECK: [[META4]] = !{!"amdgpu-as", !"global"}
+// CHECK: [[META3]] = !{!"amdgpu-synchronize-as", !"local"}
+// CHECK: [[META4]] = !{!"amdgpu-synchronize-as", !"global"}
 // CHECK: [[META5]] = !{[[META4]], [[META3]]}
 //.

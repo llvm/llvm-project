@@ -1,6 +1,6 @@
 // COM: Run Comgr binary to compile OpenCL source into LLVM IR Bitcode,
 // COM: and, then generate an executable
-// RUN: compile-minimal-test %s %t.bin
+// RUN: compile-opencl-minimal %s %t.bin 1.2
 
 // COM: Dissasemble
 // RUN: llvm-objdump -d %t.bin | FileCheck %s

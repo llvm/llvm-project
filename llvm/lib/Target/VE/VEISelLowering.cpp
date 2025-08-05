@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VEISelLowering.h"
-#include "MCTargetDesc/VEMCExpr.h"
+#include "MCTargetDesc/VEMCAsmInfo.h"
 #include "VECustomDAG.h"
 #include "VEInstrBuilder.h"
 #include "VEMachineFunctionInfo.h"
@@ -298,8 +298,6 @@ void VETargetLowering::initSPUActions() {
   setOperationAction(ISD::EH_SJLJ_LONGJMP, MVT::Other, Custom);
   setOperationAction(ISD::EH_SJLJ_SETJMP, MVT::i32, Custom);
   setOperationAction(ISD::EH_SJLJ_SETUP_DISPATCH, MVT::Other, Custom);
-  if (TM.Options.ExceptionModel == ExceptionHandling::SjLj)
-    setLibcallName(RTLIB::UNWIND_RESUME, "_Unwind_SjLj_Resume");
   /// } SJLJ instructions
 
   // Intrinsic instructions
@@ -565,12 +563,8 @@ Register VETargetLowering::getRegisterByName(const char *RegName, LLT VT,
                      .Case("info", VE::SX17)  // Info area register
                      .Case("got", VE::SX15)   // Global offset table register
                      .Case("plt", VE::SX16) // Procedure linkage table register
-                     .Default(0);
-
-  if (Reg)
-    return Reg;
-
-  report_fatal_error("Invalid register name global variable");
+                     .Default(Register());
+  return Reg;
 }
 
 //===----------------------------------------------------------------------===//
@@ -744,18 +738,16 @@ SDValue VETargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // necessary since all emitted instructions must be stuck together in order
   // to pass the live physical registers.
   SDValue InGlue;
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
-    Chain = DAG.getCopyToReg(Chain, DL, RegsToPass[i].first,
-                             RegsToPass[i].second, InGlue);
+  for (const auto &[Reg, N] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, N, InGlue);
     InGlue = Chain.getValue(1);
   }
 
   // Build the operands for the call instruction itself.
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
-  for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i)
-    Ops.push_back(DAG.getRegister(RegsToPass[i].first,
-                                  RegsToPass[i].second.getValueType()));
+  for (const auto &[Reg, N] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, N.getValueType()));
 
   // Add a register mask operand representing the call-preserved registers.
   const VERegisterInfo *TRI = Subtarget->getRegisterInfo();
@@ -1746,9 +1738,6 @@ static SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
-
-  if (TLI.verifyReturnAddressArgumentIsConstant(Op, DAG))
-    return SDValue();
 
   SDValue FrameAddr = lowerFRAMEADDR(Op, DAG, TLI, Subtarget);
 
