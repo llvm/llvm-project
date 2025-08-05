@@ -3842,9 +3842,7 @@ static Constant *ConstantFoldFixedVectorCall(
       ConstantInt *Elt1 =
           cast<ConstantInt>(Operands[1]->getAggregateElement(I));
 
-      APInt IMul = Elt0->getValue().sext(32) * Elt1->getValue().sext(32);
-
-      MulVector[I] = IMul.getSExtValue();
+      MulVector[I] = Elt0->getSExtValue() * Elt1->getSExtValue();
     }
     for (unsigned I = 0; I < Result.size(); I++) {
       int32_t IAdd = MulVector[I * 2] + MulVector[I * 2 + 1];
