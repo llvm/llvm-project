@@ -413,7 +413,12 @@ static void TestPTrace() {
   // internal_fork() on SPARC actually calls __fork(). We can't safely fork,
   // because it's possible seccomp has been configured to disallow fork() but
   // allow clone().
-  Report("WARNING: skipping TestPTrace() because this is SPARC\n");
+  Report("Warning: skipping TestPTrace() because this is SPARC\n");
+  Report(
+      "If seccomp blocks ptrace, LeakSanitizer may hang without further "
+      "notice\n");
+  Report(
+      "If seccomp does not block ptrace, you can safely ignore this warning\n");
 #  else
   // Heuristic: only check the first time this is called. This is not always
   // correct (e.g., user manually triggers leak detection, then updates
