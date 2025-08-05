@@ -116,8 +116,9 @@ define i32 @convert_double_to_i32(double %a) nounwind {
 define i32 @convert_double_to_u32(double %a) nounwind {
 ; LA32-LABEL: convert_double_to_u32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI7_0)
-; LA32-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI7_0)
+; LA32-NEXT:  .Lpcadd_hi0:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI7_0)
+; LA32-NEXT:    fld.d $fa1, $a0, %pcadd_lo12(.Lpcadd_hi0)
 ; LA32-NEXT:    fcmp.clt.d $fcc0, $fa0, $fa1
 ; LA32-NEXT:    movcf2gr $a0, $fcc0
 ; LA32-NEXT:    bne $a0, $zero, .LBB7_2
@@ -232,8 +233,9 @@ define double @convert_u32_to_double(i32 %a) nounwind {
 ; LA32-NEXT:    st.w $a1, $sp, 12
 ; LA32-NEXT:    st.w $a0, $sp, 8
 ; LA32-NEXT:    fld.d $fa0, $sp, 8
-; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI12_0)
-; LA32-NEXT:    fld.d $fa1, $a0, %pc_lo12(.LCPI12_0)
+; LA32-NEXT:  .Lpcadd_hi1:
+; LA32-NEXT:    pcaddu12i $a0, %pcadd_hi20(.LCPI12_0)
+; LA32-NEXT:    fld.d $fa1, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32-NEXT:    fsub.d $fa0, $fa0, $fa1
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
