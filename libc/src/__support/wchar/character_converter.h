@@ -12,6 +12,7 @@
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
 #include "hdr/types/size_t.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/wchar/mbstate.h"
@@ -39,6 +40,12 @@ public:
 
   ErrorOr<char8_t> pop_utf8();
   ErrorOr<char32_t> pop_utf32();
+  template <typename CharType> ErrorOr<CharType> pop() {
+    if constexpr (cpp::is_same_v<CharType, char8_t>)
+      return pop_utf8();
+    else
+      return pop_utf32();
+  }
 };
 
 } // namespace internal
