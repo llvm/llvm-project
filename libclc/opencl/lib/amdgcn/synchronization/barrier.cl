@@ -8,10 +8,10 @@
 
 #include <clc/opencl/synchronization/barrier.h>
 #include <clc/opencl/synchronization/utils.h>
-#include <clc/synchronization/clc_barrier.h>
+#include <clc/synchronization/clc_work_group_barrier.h>
 
 _CLC_DEF _CLC_OVERLOAD void barrier(cl_mem_fence_flags flags) {
-  Scope scope = getCLCScope(memory_scope_device);
-  MemorySemantics semantics = getCLCMemorySemantics(flags);
-  __clc_barrier(scope, semantics);
+  int memory_scope = getCLCMemoryScope(flags);
+  int memory_order = __ATOMIC_SEQ_CST;
+  __clc_work_group_barrier(memory_scope, memory_order);
 }

@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/synchronization/clc_barrier.h>
+#include <clc/synchronization/clc_work_group_barrier.h>
 
-_CLC_OVERLOAD _CLC_DEF void __clc_barrier(Scope scope,
-                                          MemorySemantics semantics) {
+_CLC_OVERLOAD _CLC_DEF void __clc_work_group_barrier(int memory_scope,
+                                                     int memory_order) {
   __syncthreads();
 }

@@ -11,9 +11,9 @@
 #include <clc/opencl/synchronization/utils.h>
 
 _CLC_DEF _CLC_OVERLOAD void mem_fence(cl_mem_fence_flags flags) {
-  Scope scope = getCLCScope(memory_scope_device);
-  MemorySemantics semantics = getCLCMemorySemantics(flags);
-  __clc_mem_fence(scope, semantics);
+  int memory_scope = getCLCMemoryScope(flags);
+  int memory_order = __ATOMIC_SEQ_CST;
+  __clc_mem_fence(memory_scope, memory_order);
 }
 
 // We do not have separate mechanism for read and write fences.

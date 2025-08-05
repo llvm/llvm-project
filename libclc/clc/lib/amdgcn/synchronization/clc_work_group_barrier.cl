@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_SYNCHRONIZATION_CLC_BARRIER_H__
-#define __CLC_SYNCHRONIZATION_CLC_BARRIER_H__
+#include <clc/mem_fence/clc_mem_fence.h>
+#include <clc/synchronization/clc_work_group_barrier.h>
 
-#include <clc/internal/clc.h>
-#include <clc/mem_fence/clc_mem_scope_semantics.h>
-
-_CLC_OVERLOAD _CLC_DECL void __clc_barrier(Scope scope,
-                                           MemorySemantics semantics);
-
-#endif // __CLC_SYNCHRONIZATION_CLC_BARRIER_H__
+_CLC_OVERLOAD _CLC_DEF void __clc_work_group_barrier(int memory_scope,
+                                                     int memory_order) {
+  __clc_mem_fence(memory_scope, memory_order);
+  __builtin_amdgcn_s_barrier();
+}
