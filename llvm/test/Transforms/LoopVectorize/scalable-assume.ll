@@ -73,12 +73,10 @@ attributes #0 = { nounwind willreturn }
 
 %struct.data = type { ptr, ptr }
 
-define void @test2(ptr %a, ptr %b) {
+define void @test2(ptr %a, ptr noalias %b) {
 ; CHECK-LABEL: define void @test2(
-; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B]] to i64
 ; CHECK-NEXT:    [[PTRINT1:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[PTRINT1]], 0
 ; CHECK-NEXT:    [[PTRINT2:%.*]] = ptrtoint ptr [[B]] to i64
@@ -86,14 +84,7 @@ define void @test2(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1600, [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
-; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
-; CHECK-NEXT:    [[TMP4:%.*]] = mul i64 [[TMP3]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[B1]], [[A2]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 4
