@@ -12,7 +12,6 @@
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
-#include "flang/Runtime/extensions.h"
 #include <cerrno>
 #include <cstdlib>
 #include <limits>
@@ -308,12 +307,6 @@ std::int32_t RTNAME(Hostnm)(
   }
 
   return status;
-}
-
-float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line) {
-  Terminator terminator{sourceFile, line};
-  RUNTIME_CHECK(terminator, refTime != nullptr);
-  return FORTRAN_PROCEDURE_NAME(secnds)(refTime);
 }
 
 std::int32_t RTNAME(PutEnv)(

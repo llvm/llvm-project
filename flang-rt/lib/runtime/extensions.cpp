@@ -307,7 +307,7 @@ void RTNAME(Perror)(const char *str) { perror(str); }
 float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   constexpr float FAIL_SECNDS{-1.0f}; // Failure code for this function
   // Failure code for time functions that return std::time_t
-  constexpr time_t FAIL_TIME{std::time_t{-1}};
+  constexpr std::time_t FAIL_TIME{std::time_t{-1}};
   if (!refTime) {
     return FAIL_SECNDS;
   }
@@ -319,7 +319,7 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   // comes out to about 194 days. Thus, need to pick a starting point.
   // Given the description of this function, midnight of the current
   // day is the best starting point.
-  static time_t startingPoint{0};
+  static std::time_t startingPoint{0};
   if (!startingPoint) {
     struct tm timeInfo;
 #ifdef _WIN32
@@ -342,6 +342,12 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   }
   double diffStartingPoint{std::difftime(now, startingPoint)};
   return static_cast<float>(diffStartingPoint) - *refTime;
+}
+
+float RTNAME(Secnds)(float *refTime, const char *sourceFile, int line) {
+  Terminator terminator{sourceFile, line};
+  RUNTIME_CHECK(terminator, refTime != nullptr);
+  return FORTRAN_PROCEDURE_NAME(secnds)(refTime);
 }
 
 // GNU extension function TIME()
