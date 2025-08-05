@@ -34,7 +34,6 @@ public:
   struct SymbolAddrs {
     ExecutorAddr Instance;
     ExecutorAddr Open;
-    ExecutorAddr Lookup;
     ExecutorAddr Resolve;
   };
 

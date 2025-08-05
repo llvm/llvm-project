@@ -25,7 +25,6 @@ namespace rt {
 
 LLVM_ABI extern const char *SimpleExecutorDylibManagerInstanceName;
 LLVM_ABI extern const char *SimpleExecutorDylibManagerOpenWrapperName;
-LLVM_ABI extern const char *SimpleExecutorDylibManagerLookupWrapperName;
 LLVM_ABI extern const char *SimpleExecutorDylibManagerResolveWrapperName;
 
 LLVM_ABI extern const char *SimpleExecutorMemoryManagerInstanceName;
@@ -66,11 +65,6 @@ LLVM_ABI extern const char *RunAsIntFunctionWrapperName;
 using SPSSimpleExecutorDylibManagerOpenSignature =
     shared::SPSExpected<shared::SPSExecutorAddr>(shared::SPSExecutorAddr,
                                                  shared::SPSString, uint64_t);
-
-using SPSSimpleExecutorDylibManagerLookupSignature =
-    shared::SPSExpected<shared::SPSSequence<shared::SPSExecutorSymbolDef>>(
-        shared::SPSExecutorAddr, shared::SPSExecutorAddr,
-        shared::SPSRemoteSymbolLookupSet);
 
 using SPSSimpleExecutorDylibManagerResolveSignature = shared::SPSExpected<
     shared::SPSSequence<shared::SPSOptional<shared::SPSExecutorSymbolDef>>>(
