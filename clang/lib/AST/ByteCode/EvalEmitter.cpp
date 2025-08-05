@@ -53,6 +53,7 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD,
                                             bool CheckFullyInitialized) {
   this->CheckFullyInitialized = CheckFullyInitialized;
   S.EvaluatingDecl = VD;
+  S.setEvalLocation(VD->getLocation());
   EvalResult.setSource(VD);
 
   if (const Expr *Init = VD->getAnyInitializer()) {

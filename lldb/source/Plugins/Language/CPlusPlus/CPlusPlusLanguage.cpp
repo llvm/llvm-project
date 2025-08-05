@@ -283,12 +283,12 @@ GetDemangledTemplateArguments(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (info.ArgumentsRange.first < info.BasenameRange.second)
-    return llvm::createStringError("Arguments range for '%s' is invalid.",
-                                   demangled_name.data());
+  if (!info.hasTemplateArguments())
+    return llvm::createStringError(
+        "Template arguments range for '%s' is invalid.", demangled_name.data());
 
-  return demangled_name.slice(info.BasenameRange.second,
-                              info.ArgumentsRange.first);
+  return demangled_name.slice(info.TemplateArgumentsRange.first,
+                              info.TemplateArgumentsRange.second);
 }
 
 static llvm::Expected<llvm::StringRef>
