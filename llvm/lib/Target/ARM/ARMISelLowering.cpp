@@ -588,8 +588,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   }
 
   // RTLIB
-  if (TM.isAAPCS_ABI() && (TT.isTargetAEABI() || TT.isTargetGNUAEABI() ||
-                           TT.isTargetMuslAEABI() || TT.isAndroid())) {
+  if (TT.isTargetAEABI() || TT.isTargetGNUAEABI() || TT.isTargetMuslAEABI() ||
+      TT.isAndroid()) {
     // FIXME: This does not depend on the subtarget and should go directly into
     // RuntimeLibcalls. This is only here because of missing support for setting
     // the calling convention of an implementation.
