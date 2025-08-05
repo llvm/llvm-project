@@ -1120,8 +1120,8 @@ TEST_F(MemorySSATest, LifetimeMarkersAreClobbers) {
   B.CreateStore(B.getInt8(0), Foo);
   B.CreateStore(B.getInt8(0), Bar);
 
-  B.CreateLifetimeEnd(Foo, B.getInt64(3));
-  Instruction *LifetimeStart = B.CreateLifetimeStart(Foo, B.getInt64(3));
+  B.CreateLifetimeEnd(Foo);
+  Instruction *LifetimeStart = B.CreateLifetimeStart(Foo);
 
   Instruction *FooStore = B.CreateStore(B.getInt8(0), Foo);
   Instruction *BarStore = B.CreateStore(B.getInt8(0), Bar);
