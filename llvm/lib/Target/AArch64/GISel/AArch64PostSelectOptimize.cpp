@@ -71,6 +71,10 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
     return AArch64::SUBXrs;
   case AArch64::SUBSWrs:
     return AArch64::SUBWrs;
+  case AArch64::SUBSWrx:
+    return AArch64::SUBWrx;
+  case AArch64::SUBSXrx:
+    return AArch64::SUBXrx;
   case AArch64::SUBSXri:
     return AArch64::SUBXri;
   case AArch64::SUBSWri:
@@ -83,6 +87,10 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
     return AArch64::ADDXrs;
   case AArch64::ADDSWrs:
     return AArch64::ADDWrs;
+  case AArch64::ADDSWrx:
+    return AArch64::ADDWrx;
+  case AArch64::ADDSXrx:
+    return AArch64::ADDXrx;
   case AArch64::ADDSXri:
     return AArch64::ADDXri;
   case AArch64::ADDSWri:
@@ -95,6 +103,26 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
     return AArch64::ADCXr;
   case AArch64::ADCSWr:
     return AArch64::ADCWr;
+  case AArch64::ANDSWri:
+    return AArch64::ANDWri;
+  case AArch64::ANDSWrr:
+    return AArch64::ANDWrr;
+  case AArch64::ANDSWrs:
+    return AArch64::ANDWrs;
+  case AArch64::ANDSXri:
+    return AArch64::ANDXri;
+  case AArch64::ANDSXrr:
+    return AArch64::ANDXrr;
+  case AArch64::ANDSXrs:
+    return AArch64::ANDXrs;
+  case AArch64::BICSWrr:
+    return AArch64::BICWrr;
+  case AArch64::BICSWrs:
+    return AArch64::BICWrs;
+  case AArch64::BICSXrr:
+    return AArch64::BICXrr;
+  case AArch64::BICSXrs:
+    return AArch64::BICXrs;
   }
 }
 
