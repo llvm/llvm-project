@@ -440,7 +440,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       if (auto layout = parent.getEffectiveSgLayout()) {
-        ArrayRef<int64_t> dims = getDims().asArrayRef();
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
         return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*layout), dims);
       }
       return std::nullopt;
@@ -450,7 +450,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
       SliceAttr attr = flatten();
       auto parent = dyn_cast<LayoutAttr>(attr.getParent());
       if (auto data = parent.getEffectiveSgData()) {
-        ArrayRef<int64_t> dims = getDims().asArrayRef();
+        ArrayRef<int64_t> dims = attr.getDims().asArrayRef();
         return XeGPUDialect::slice(llvm::ArrayRef<int64_t>(*data), dims);
       }
       return std::nullopt;
@@ -459,7 +459,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [LayoutTrait]> {
     /// flatten a nested SliceAttr, e.g., for 2-level nested SliceAttr
     /// #xegpu.slice<#xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0]>, dims = [0]>
     /// it will coalese two slice operations and return a simplified SliceAttr
-    /// #xegpu.slice<#xegpu.layout<sg_laout = [4, 8, 12]>, dims = [0, 1]>
+    /// #xegpu.slice<#xegpu.layout<sg_layout = [4, 8, 12]>, dims = [0, 1]>
     SliceAttr flatten() const;
 
     FailureOr<SmallVector<Value>>
