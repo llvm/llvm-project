@@ -256,16 +256,17 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
 
         const Function *Callee = getCalleeFunction(*CalleeOp);
 
+        auto isSameFunction = [](const MachineFunction &MF, const Function *F) {
+          return F == &MF.getFunction();
+        };
+
         // Avoid crashing on undefined behavior with an illegal call to a
         // kernel. If a callsite's calling convention doesn't match the
         // function's, it's undefined behavior. If the callsite calling
         // convention does match, that would have errored earlier.
-        if (Callee && AMDGPU::isEntryFunctionCC(Callee->getCallingConv()))
+        if (Callee && AMDGPU::isEntryFunctionCC(Callee->getCallingConv()) &&
+            !isSameFunction(MF, Callee))
           report_fatal_error("invalid call to entry function");
-
-        auto isSameFunction = [](const MachineFunction &MF, const Function *F) {
-          return F == &MF.getFunction();
-        };
 
         if (Callee && !isSameFunction(MF, Callee))
           Info.Callees.push_back(Callee);

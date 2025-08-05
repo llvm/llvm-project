@@ -1,4 +1,3 @@
-; XFAIL: *
 ; REQUIRES: asserts
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s
 
