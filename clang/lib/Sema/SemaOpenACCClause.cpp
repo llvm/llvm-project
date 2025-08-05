@@ -795,9 +795,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPrivateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
-  return OpenACCPrivateClause::Create(Ctx, Clause.getBeginLoc(),
-                                      Clause.getLParenLoc(),
-                                      Clause.getVarList(), Clause.getEndLoc());
+  llvm::SmallVector<VarDecl *> InitRecipes;
+
+  // Assemble the recipes list.
+  for (const Expr *VarExpr : Clause.getVarList())
+    InitRecipes.push_back(
+        SemaRef.CreateInitRecipe(OpenACCClauseKind::Private, VarExpr));
+
+  return OpenACCPrivateClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
+      InitRecipes, Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitFirstPrivateClause(
@@ -806,9 +813,16 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFirstPrivateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
+  llvm::SmallVector<VarDecl *> InitRecipes;
+
+  // Assemble the recipes list.
+  for (const Expr *VarExpr : Clause.getVarList())
+    InitRecipes.push_back(
+        SemaRef.CreateInitRecipe(OpenACCClauseKind::FirstPrivate, VarExpr));
+
   return OpenACCFirstPrivateClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
-      Clause.getEndLoc());
+      InitRecipes, Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitNoCreateClause(
@@ -1919,6 +1933,14 @@ ExprResult SemaOpenACC::CheckReductionVar(OpenACCDirectiveKind DirectiveKind,
           << EltTy << /*Sub array base type*/ 1;
       return ExprError();
     }
+  } else if (VarExpr->getType()->isArrayType()) {
+    // Arrays are considered an 'aggregate variable' explicitly, so are OK, no
+    // additional checking required.
+    //
+    // Glossary: Aggregate variables – a variable of any non-scalar datatype,
+    // including array or composite variables.
+    //
+    // The next branch (record decl) checks for composite variables.
   } else if (auto *RD = VarExpr->getType()->getAsRecordDecl()) {
     if (!RD->isStruct() && !RD->isClass()) {
       Diag(VarExpr->getExprLoc(), diag::err_acc_reduction_composite_type)
@@ -2246,7 +2268,13 @@ bool SemaOpenACC::CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause,
         continue;
       }
     } else {
-      const auto *DRE = cast<DeclRefExpr>(VarExpr);
+
+      const Expr *VarExprTemp = VarExpr;
+
+      while (const auto *ASE = dyn_cast<ArraySectionExpr>(VarExprTemp))
+        VarExprTemp = ASE->getBase()->IgnoreParenImpCasts();
+
+      const auto *DRE = cast<DeclRefExpr>(VarExprTemp);
       if (const auto *Var = dyn_cast<VarDecl>(DRE->getDecl())) {
         CurDecl = Var->getCanonicalDecl();
 

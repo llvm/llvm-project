@@ -744,8 +744,14 @@ void SPIRV::RequirementHandler::checkSatisfiable(
     IsSatisfiable = false;
   }
 
+  AvoidCapabilitiesSet AvoidCaps;
+  if (!ST.isShader())
+    AvoidCaps.S.insert(SPIRV::Capability::Shader);
+  else
+    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
+
   for (auto Cap : MinimalCaps) {
-    if (AvailableCaps.contains(Cap))
+    if (AvailableCaps.contains(Cap) && !AvoidCaps.S.contains(Cap))
       continue;
     LLVM_DEBUG(dbgs() << "Capability not supported: "
                       << getSymbolicOperandMnemonic(
@@ -1564,6 +1570,13 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::BFloat16ConversionINTEL);
     }
     break;
+  case SPIRV::OpRoundFToTF32INTEL:
+    if (ST.canUseExtension(
+            SPIRV::Extension::SPV_INTEL_tensor_float32_conversion)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_tensor_float32_conversion);
+      Reqs.addCapability(SPIRV::Capability::TensorFloat32RoundingINTEL);
+    }
+    break;
   case SPIRV::OpVariableLengthArrayINTEL:
   case SPIRV::OpSaveMemoryINTEL:
   case SPIRV::OpRestoreMemoryINTEL:
@@ -1856,6 +1869,11 @@ void addInstrRequirements(const MachineInstr &MI,
           false);
     Reqs.addExtension(SPIRV::Extension::SPV_INTEL_ternary_bitwise_function);
     Reqs.addCapability(SPIRV::Capability::TernaryBitwiseFunctionINTEL);
+    break;
+  }
+  case SPIRV::OpCopyMemorySized: {
+    Reqs.addCapability(SPIRV::Capability::Addresses);
+    // TODO: Add UntypedPointersKHR when implemented.
     break;
   }
 

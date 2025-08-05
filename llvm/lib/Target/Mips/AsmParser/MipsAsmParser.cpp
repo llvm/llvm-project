@@ -2948,8 +2948,9 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
     bool IsPtr64 = ABI.ArePtrs64bit();
     bool IsLocalSym =
         Res.getAddSym()->isInSection() || Res.getAddSym()->isTemporary() ||
-        (Res.getAddSym()->isELF() &&
-         cast<MCSymbolELF>(Res.getAddSym())->getBinding() == ELF::STB_LOCAL);
+        (getContext().isELF() &&
+         static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
+             ELF::STB_LOCAL);
     // For O32, "$"-prefixed symbols are recognized as temporary while
     // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
     // manually.
@@ -6653,7 +6654,7 @@ bool MipsAsmParser::searchSymbolAlias(OperandVector &Operands) {
           llvm_unreachable("Should never fail");
       }
     }
-  } else if (Sym->isUnset()) {
+  } else if (Sym->isUndefined()) {
     // If symbol is unset, it might be created in the `parseSetAssignment`
     // routine as an alias for a numeric register name.
     // Lookup in the aliases list.

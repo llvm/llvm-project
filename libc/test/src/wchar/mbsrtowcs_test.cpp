@@ -9,6 +9,7 @@
 #include "hdr/types/mbstate_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/libc_errno.h"
+#include "src/__support/macros/null_check.h"
 #include "src/__support/wchar/mbstate.h"
 #include "src/string/memset.h"
 #include "src/wchar/mbsrtowcs.h"
@@ -175,10 +176,10 @@ TEST_F(LlvmLibcMBSRToWCSTest, ErrnoChecks) {
   ASSERT_EQ(src, original + 8);
 }
 
-#if defined(LIBC_ADD_NULL_CHECKS) && !defined(LIBC_HAS_SANITIZER)
+#if defined(LIBC_ADD_NULL_CHECKS)
 TEST(LlvmLibcMBSRToWCSTest, NullptrCrash) {
   // Passing in a nullptr should crash the program.
   EXPECT_DEATH([] { LIBC_NAMESPACE::mbsrtowcs(nullptr, nullptr, 1, nullptr); },
                WITH_SIGNAL(-1));
 }
-#endif // LIBC_HAS_ADDRESS_SANITIZER
+#endif // LIBC_ADD_NULL_CHECKS

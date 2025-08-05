@@ -137,6 +137,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  mbsinit
+  SRCS
+    mbsinit.cpp
+  HDRS
+    mbsinit.h
+  DEPENDS
+    libc.hdr.types.wchar_t
+    libc.hdr.types.mbstate_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.wchar.character_converter
+    libc.src.__support.wchar.mbstate
+)
+
+add_entrypoint_object(
   mbrtowc
   SRCS
     mbrtowc.cpp
@@ -180,6 +195,7 @@ add_entrypoint_object(
     libc.hdr.types.wchar_t
     libc.src.__support.common
     libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
     libc.src.__support.libc_errno
     libc.src.__support.wchar.mbstate
     libc.src.__support.wchar.mbsnrtowcs
