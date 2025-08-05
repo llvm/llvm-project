@@ -12,9 +12,11 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Host/File.h"
+#include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 #include <memory>
@@ -25,16 +27,13 @@ using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 using namespace lldb_dap_tests;
 using lldb_private::File;
+using lldb_private::MainLoop;
+using lldb_private::MainLoopBase;
 using lldb_private::NativeFile;
 using lldb_private::Pipe;
 
-void PipeBase::SetUp() {
-  ASSERT_THAT_ERROR(input.CreateNew(false).ToError(), Succeeded());
-  ASSERT_THAT_ERROR(output.CreateNew(false).ToError(), Succeeded());
-}
-
 void TransportBase::SetUp() {
-  PipeBase::SetUp();
+  PipePairTest::SetUp();
   to_dap = std::make_unique<Transport>(
       "to_dap", nullptr,
       std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
@@ -63,10 +62,12 @@ void DAPTestBase::SetUp() {
 }
 
 void DAPTestBase::TearDown() {
-  if (core)
+  if (core) {
     ASSERT_THAT_ERROR(core->discard(), Succeeded());
-  if (binary)
+  }
+  if (binary) {
     ASSERT_THAT_ERROR(binary->discard(), Succeeded());
+  }
 }
 
 void DAPTestBase::SetUpTestSuite() {
@@ -121,13 +122,18 @@ void DAPTestBase::LoadCore() {
 std::vector<Message> DAPTestBase::DrainOutput() {
   std::vector<Message> msgs;
   output.CloseWriteFileDescriptor();
-  while (true) {
-    Expected<Message> next = from_dap->Read(std::chrono::milliseconds(1));
-    if (!next) {
-      consumeError(next.takeError());
-      break;
-    }
-    msgs.push_back(*next);
-  }
+  auto handle = from_dap->RegisterReadObject<protocol::Message>(
+      loop, [&](MainLoopBase &loop, Expected<protocol::Message> next) {
+        if (llvm::Error error = next.takeError()) {
+          loop.RequestTermination();
+          consumeError(std::move(error));
+          return;
+        }
+
+        msgs.push_back(*next);
+      });
+
+  consumeError(handle.takeError());
+  consumeError(loop.Run().takeError());
   return msgs;
 }

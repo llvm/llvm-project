@@ -2023,6 +2023,8 @@ def SLBSYNC : XForm_0<31, 338, (outs), (ins), "slbsync", IIC_SprSLBSYNC, []>;
 
 } // IsISA3_0
 
+def : Pat<(int_ppc_ldarx ForceXForm:$ptr),
+          (LDARX ForceXForm:$ptr)>;
 def : Pat<(int_ppc_stdcx ForceXForm:$dst, g8rc:$A),
           (RLWINM (STDCX g8rc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, g8rc:$A, 8),

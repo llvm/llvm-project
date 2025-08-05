@@ -21,14 +21,31 @@
 using namespace clang;
 using namespace clang::interp;
 
+template <typename T> static constexpr bool needsCtor() {
+  if constexpr (std::is_same_v<T, Integral<8, true>> ||
+                std::is_same_v<T, Integral<8, false>> ||
+                std::is_same_v<T, Integral<16, true>> ||
+                std::is_same_v<T, Integral<16, false>> ||
+                std::is_same_v<T, Integral<32, true>> ||
+                std::is_same_v<T, Integral<32, false>> ||
+                std::is_same_v<T, Integral<64, true>> ||
+                std::is_same_v<T, Integral<64, false>> ||
+                std::is_same_v<T, Boolean>)
+    return false;
+
+  return true;
+}
+
 template <typename T>
 static void ctorTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
                    const Descriptor *) {
+  static_assert(needsCtor<T>());
   new (Ptr) T();
 }
 
 template <typename T>
 static void dtorTy(Block *, std::byte *Ptr, const Descriptor *) {
+  static_assert(needsCtor<T>());
   reinterpret_cast<T *>(Ptr)->~T();
 }
 
@@ -45,9 +62,11 @@ static void ctorArrayTy(Block *, std::byte *Ptr, bool, bool, bool, bool, bool,
                         const Descriptor *D) {
   new (Ptr) InitMapPtr(std::nullopt);
 
-  Ptr += sizeof(InitMapPtr);
-  for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    new (&reinterpret_cast<T *>(Ptr)[I]) T();
+  if constexpr (needsCtor<T>()) {
+    Ptr += sizeof(InitMapPtr);
+    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
+      new (&reinterpret_cast<T *>(Ptr)[I]) T();
+    }
   }
 }
 
@@ -57,9 +76,12 @@ static void dtorArrayTy(Block *, std::byte *Ptr, const Descriptor *D) {
 
   if (IMP)
     IMP = std::nullopt;
-  Ptr += sizeof(InitMapPtr);
-  for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    reinterpret_cast<T *>(Ptr)[I].~T();
+
+  if constexpr (needsCtor<T>()) {
+    Ptr += sizeof(InitMapPtr);
+    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
+      reinterpret_cast<T *>(Ptr)[I].~T();
+    }
   }
 }
 
@@ -74,10 +96,14 @@ static void moveArrayTy(Block *, std::byte *Src, std::byte *Dst,
   }
   Src += sizeof(InitMapPtr);
   Dst += sizeof(InitMapPtr);
-  for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
-    auto *SrcPtr = &reinterpret_cast<T *>(Src)[I];
-    auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
-    new (DstPtr) T(std::move(*SrcPtr));
+  if constexpr (!needsCtor<T>()) {
+    std::memcpy(Dst, Src, D->getNumElems() * D->getElemSize());
+  } else {
+    for (unsigned I = 0, NE = D->getNumElems(); I < NE; ++I) {
+      auto *SrcPtr = &reinterpret_cast<T *>(Src)[I];
+      auto *DstPtr = &reinterpret_cast<T *>(Dst)[I];
+      new (DstPtr) T(std::move(*SrcPtr));
+    }
   }
 }
 
@@ -162,6 +188,8 @@ static void initField(Block *B, std::byte *Ptr, bool IsConst, bool IsMutable,
   Desc->IsConst = IsConst || D->IsConst;
   Desc->IsFieldMutable = IsMutable || D->IsMutable;
   Desc->IsVolatile = IsVolatile || D->IsVolatile;
+  // True if this field is const AND the parent is mutable.
+  Desc->IsConstInMutable = Desc->IsConst && IsMutable;
 
   if (auto Fn = D->CtorFn)
     Fn(B, Ptr + FieldOffset, Desc->IsConst, Desc->IsFieldMutable,
@@ -368,7 +396,7 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
                        bool IsTemporary, bool IsConst, UnknownSize)
     : Source(D), ElemSize(primSize(Type)), Size(UnknownSizeMark),
       MDSize(MD.value_or(0)),
-      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)),
+      AllocSize(MDSize + sizeof(InitMapPtr) + alignof(void *)), PrimT(Type),
       IsConst(IsConst), IsMutable(false), IsTemporary(IsTemporary),
       IsArray(true), CtorFn(getCtorArrayPrim(Type)),
       DtorFn(getDtorArrayPrim(Type)), MoveFn(getMoveArrayPrim(Type)) {
@@ -500,6 +528,21 @@ SourceInfo Descriptor::getLoc() const {
   if (const auto *E = dyn_cast<const Expr *>(Source))
     return SourceInfo(E);
   llvm_unreachable("Invalid descriptor type");
+}
+
+bool Descriptor::hasTrivialDtor() const {
+  if (isPrimitive() || isPrimitiveArray() || isDummy())
+    return true;
+
+  if (isRecord()) {
+    assert(ElemRecord);
+    const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+    return !Dtor || Dtor->isTrivial();
+  }
+
+  // Composite arrays.
+  assert(ElemDesc);
+  return ElemDesc->hasTrivialDtor();
 }
 
 bool Descriptor::isUnion() const { return isRecord() && ElemRecord->isUnion(); }

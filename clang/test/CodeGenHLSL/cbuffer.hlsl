@@ -46,14 +46,14 @@ cbuffer CBScalars : register(b1, space5) {
 
 // CHECK: @CBScalars.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars,
 // CHECK-SAME: 56, 0, 8, 16, 24, 32, 36, 40, 48))
-// CHECK: @a1 = external addrspace(2) global float, align 4
-// CHECK: @a2 = external addrspace(2) global double, align 8
-// CHECK: @a3 = external addrspace(2) global half, align 2
-// CHECK: @a4 = external addrspace(2) global i64, align 8
-// CHECK: @a5 = external addrspace(2) global i32, align 4
-// CHECK: @a6 = external addrspace(2) global i16, align 2
-// CHECK: @a7 = external addrspace(2) global i32, align 4
-// CHECK: @a8 = external addrspace(2) global i64, align 8
+// CHECK: @a1 = external hidden addrspace(2) global float, align 4
+// CHECK: @a2 = external hidden addrspace(2) global double, align 8
+// CHECK: @a3 = external hidden addrspace(2) global half, align 2
+// CHECK: @a4 = external hidden addrspace(2) global i64, align 8
+// CHECK: @a5 = external hidden addrspace(2) global i32, align 4
+// CHECK: @a6 = external hidden addrspace(2) global i16, align 2
+// CHECK: @a7 = external hidden addrspace(2) global i32, align 4
+// CHECK: @a8 = external hidden addrspace(2) global i64, align 8
 // CHECK: @CBScalars.str = private unnamed_addr constant [10 x i8] c"CBScalars\00", align 1
 
 cbuffer CBVectors {
@@ -69,13 +69,13 @@ cbuffer CBVectors {
 
 // CHECK: @CBVectors.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBVectors,
 // CHECK-SAME: 136, 0, 16, 40, 48, 80, 96, 112))
-// CHECK: @b1 = external addrspace(2) global <3 x float>, align 16
-// CHECK: @b2 = external addrspace(2) global <3 x double>, align 32
-// CHECK: @b3 = external addrspace(2) global <2 x half>, align 4
-// CHECK: @b4 = external addrspace(2) global <3 x i64>, align 32
-// CHECK: @b5 = external addrspace(2) global <4 x i32>, align 16
-// CHECK: @b6 = external addrspace(2) global <3 x i16>, align 8
-// CHECK: @b7 = external addrspace(2) global <3 x i64>, align 32
+// CHECK: @b1 = external hidden addrspace(2) global <3 x float>, align 16
+// CHECK: @b2 = external hidden addrspace(2) global <3 x double>, align 32
+// CHECK: @b3 = external hidden addrspace(2) global <2 x half>, align 4
+// CHECK: @b4 = external hidden addrspace(2) global <3 x i64>, align 32
+// CHECK: @b5 = external hidden addrspace(2) global <4 x i32>, align 16
+// CHECK: @b6 = external hidden addrspace(2) global <3 x i16>, align 8
+// CHECK: @b7 = external hidden addrspace(2) global <3 x i64>, align 32
 // CHECK: @CBVectors.str = private unnamed_addr constant [10 x i8] c"CBVectors\00", align 1
 
 cbuffer CBArrays : register(b2) {
@@ -91,14 +91,14 @@ cbuffer CBArrays : register(b2) {
 
 // CHECK: @CBArrays.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBArrays,
 // CHECK-SAME: 708, 0, 48, 112, 176, 224, 608, 624, 656))
-// CHECK: @c1 = external addrspace(2) global [3 x float], align 4
-// CHECK: @c2 = external addrspace(2) global [2 x <3 x double>], align 32
-// CHECK: @c3 = external addrspace(2) global [2 x [2 x half]], align 2
-// CHECK: @c4 = external addrspace(2) global [3 x i64], align 8
-// CHECK: @c5 = external addrspace(2) global [2 x [3 x [4 x <4 x i32>]]], align 16
-// CHECK: @c6 = external addrspace(2) global [1 x i16], align 2
-// CHECK: @c7 = external addrspace(2) global [2 x i64], align 8
-// CHECK: @c8 = external addrspace(2) global [4 x i32], align 4
+// CHECK: @c1 = external hidden addrspace(2) global [3 x float], align 4
+// CHECK: @c2 = external hidden addrspace(2) global [2 x <3 x double>], align 32
+// CHECK: @c3 = external hidden addrspace(2) global [2 x [2 x half]], align 2
+// CHECK: @c4 = external hidden addrspace(2) global [3 x i64], align 8
+// CHECK: @c5 = external hidden addrspace(2) global [2 x [3 x [4 x <4 x i32>]]], align 16
+// CHECK: @c6 = external hidden addrspace(2) global [1 x i16], align 2
+// CHECK: @c7 = external hidden addrspace(2) global [2 x i64], align 8
+// CHECK: @c8 = external hidden addrspace(2) global [4 x i32], align 4
 // CHECK: @CBArrays.str = private unnamed_addr constant [9 x i8] c"CBArrays\00", align 1
 
 typedef uint32_t4 uint32_t8[2];
@@ -112,8 +112,8 @@ cbuffer CBTypedefArray : register(space2) {
 
 // CHECK: @CBTypedefArray.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBTypedefArray,
 // CHECK-SAME: 128, 0, 64))
-// CHECK: @t1 = external addrspace(2) global [2 x [2 x <4 x i32>]], align 16
-// CHECK: @t2 = external addrspace(2) global [2 x [2 x <4 x i32>]], align 16
+// CHECK: @t1 = external hidden addrspace(2) global [2 x [2 x <4 x i32>]], align 16
+// CHECK: @t2 = external hidden addrspace(2) global [2 x [2 x <4 x i32>]], align 16
 // CHECK: @CBTypedefArray.str = private unnamed_addr constant [15 x i8] c"CBTypedefArray\00", align 1
 struct Empty {};
 
@@ -137,13 +137,13 @@ struct D {
 
 // CHECK: @CBStructs.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBStructs,
 // CHECK-SAME: 246, 0, 16, 32, 64, 144, 238, 240))
-// CHECK: @a = external addrspace(2) global target("dx.Layout", %A, 8, 0), align 1
-// CHECK: @b = external addrspace(2) global target("dx.Layout", %B, 14, 0, 8), align 1
-// CHECK: @c = external addrspace(2) global target("dx.Layout", %C, 24, 0, 16), align 1
-// CHECK: @array_of_A = external addrspace(2) global [5 x target("dx.Layout", %A, 8, 0)], align 1
-// CHECK: @d = external addrspace(2) global target("dx.Layout", %__cblayout_D, 94, 0), align 1
-// CHECK: @e = external addrspace(2) global half, align 2
-// CHECK: @f = external addrspace(2) global <3 x i16>, align 8
+// CHECK: @a = external hidden addrspace(2) global target("dx.Layout", %A, 8, 0), align 1
+// CHECK: @b = external hidden addrspace(2) global target("dx.Layout", %B, 14, 0, 8), align 1
+// CHECK: @c = external hidden addrspace(2) global target("dx.Layout", %C, 24, 0, 16), align 1
+// CHECK: @array_of_A = external hidden addrspace(2) global [5 x target("dx.Layout", %A, 8, 0)], align 1
+// CHECK: @d = external hidden addrspace(2) global target("dx.Layout", %__cblayout_D, 94, 0), align 1
+// CHECK: @e = external hidden addrspace(2) global half, align 2
+// CHECK: @f = external hidden addrspace(2) global <3 x i16>, align 8
 // CHECK: @CBStructs.str = private unnamed_addr constant [10 x i8] c"CBStructs\00", align 1
 
 cbuffer CBStructs {
@@ -178,10 +178,10 @@ cbuffer CBClasses {
 
 // CHECK: @CBClasses.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBClasses,
 // CHECK-SAME: 260, 0, 16, 32, 112))
-// CHECK: @k = external addrspace(2) global target("dx.Layout", %K, 4, 0), align 1
-// CHECK: @l = external addrspace(2) global target("dx.Layout", %L, 8, 0, 4), align 1
-// CHECK: @m = external addrspace(2) global target("dx.Layout", %M, 68, 0), align 1
-// CHECK: @ka = external addrspace(2) global [10 x target("dx.Layout", %K, 4, 0)], align 1
+// CHECK: @k = external hidden addrspace(2) global target("dx.Layout", %K, 4, 0), align 1
+// CHECK: @l = external hidden addrspace(2) global target("dx.Layout", %L, 8, 0, 4), align 1
+// CHECK: @m = external hidden addrspace(2) global target("dx.Layout", %M, 68, 0), align 1
+// CHECK: @ka = external hidden addrspace(2) global [10 x target("dx.Layout", %K, 4, 0)], align 1
 // CHECK: @CBClasses.str = private unnamed_addr constant [10 x i8] c"CBClasses\00", align 1
 
 struct Test {
@@ -190,16 +190,16 @@ struct Test {
 
 // CHECK: @CBMix.cb = global target("dx.CBuffer", target("dx.Layout", %__cblayout_CBMix,
 // CHECK-SAME: 170, 0, 24, 32, 120, 128, 136, 144, 152, 160, 168))
-// CHECK: @test = external addrspace(2) global [2 x target("dx.Layout", %Test, 8, 0, 4)], align 1
-// CHECK: @f1 = external addrspace(2) global float, align 4
-// CHECK: @f2 = external addrspace(2) global [3 x [2 x <2 x float>]], align 8
-// CHECK: @f3 = external addrspace(2) global float, align 4
-// CHECK: @f4 = external addrspace(2) global target("dx.Layout", %anon, 4, 0), align 1
-// CHECK: @f5 = external addrspace(2) global double, align 8
-// CHECK: @f6 = external addrspace(2) global target("dx.Layout", %anon.0, 8, 0), align 1
-// CHECK: @f7 = external addrspace(2) global float, align 4
-// CHECK: @f8 = external addrspace(2) global <1 x double>, align 8
-// CHECK: @f9 = external addrspace(2) global i16, align 2
+// CHECK: @test = external hidden addrspace(2) global [2 x target("dx.Layout", %Test, 8, 0, 4)], align 1
+// CHECK: @f1 = external hidden addrspace(2) global float, align 4
+// CHECK: @f2 = external hidden addrspace(2) global [3 x [2 x <2 x float>]], align 8
+// CHECK: @f3 = external hidden addrspace(2) global float, align 4
+// CHECK: @f4 = external hidden addrspace(2) global target("dx.Layout", %anon, 4, 0), align 1
+// CHECK: @f5 = external hidden addrspace(2) global double, align 8
+// CHECK: @f6 = external hidden addrspace(2) global target("dx.Layout", %anon.0, 8, 0), align 1
+// CHECK: @f7 = external hidden addrspace(2) global float, align 4
+// CHECK: @f8 = external hidden addrspace(2) global <1 x double>, align 8
+// CHECK: @f9 = external hidden addrspace(2) global i16, align 2
 // CHECK: @CBMix.str = private unnamed_addr constant [6 x i8] c"CBMix\00", align 1
 
 cbuffer CBMix {

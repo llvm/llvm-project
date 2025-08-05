@@ -927,6 +927,12 @@ namespace llvm {
       return true;
     }
 
+    Value *emitLoadLinked(IRBuilderBase &Builder, Type *ValueTy, Value *Addr,
+                          AtomicOrdering Ord) const override;
+
+    Value *emitStoreConditional(IRBuilderBase &Builder, Value *Val, Value *Addr,
+                                AtomicOrdering Ord) const override;
+
     Instruction *emitLeadingFence(IRBuilderBase &Builder, Instruction *Inst,
                                   AtomicOrdering Ord) const override;
     Instruction *emitTrailingFence(IRBuilderBase &Builder, Instruction *Inst,
@@ -1082,7 +1088,7 @@ namespace llvm {
 
     /// It returns EVT::Other if the type should be determined using generic
     /// target-independent logic.
-    EVT getOptimalMemOpType(const MemOp &Op,
+    EVT getOptimalMemOpType(LLVMContext &Context, const MemOp &Op,
                             const AttributeList &FuncAttributes) const override;
 
     /// Is unaligned memory access allowed for the given type, and is it fast
@@ -1200,6 +1206,8 @@ namespace llvm {
     CCAssignFn *ccAssignFnForCall(CallingConv::ID CC, bool Return,
                                   bool IsVarArg) const;
     bool supportsTailCallFor(const CallBase *CB) const;
+
+    bool hasMultipleConditionRegisters(EVT VT) const override;
 
   private:
     struct ReuseLoadInfo {

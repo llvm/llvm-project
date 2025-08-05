@@ -35,8 +35,11 @@
 //                const _Ctype& __ct, ios_base::iostate& __err,
 //                bool __case_sensitive = true);
 
-#include <locale>
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
+#include <__locale_dir/scan_keyword.h>
 #include <cassert>
+#include <locale>
 
 #include "test_macros.h"
 

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVFixupKinds.h"
-#include "MCTargetDesc/RISCVMCExpr.h"
+#include "MCTargetDesc/RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
@@ -48,21 +48,21 @@ RISCVELFObjectWriter::~RISCVELFObjectWriter() = default;
 unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                             const MCValue &Target,
                                             bool IsPCRel) const {
-  unsigned Kind = Fixup.getTargetKind();
-  auto Spec = RISCVMCExpr::Specifier(Target.getSpecifier());
+  auto Kind = Fixup.getKind();
+  auto Spec = Target.getSpecifier();
   switch (Spec) {
   case ELF::R_RISCV_TPREL_HI20:
   case ELF::R_RISCV_TLS_GOT_HI20:
   case ELF::R_RISCV_TLS_GD_HI20:
   case ELF::R_RISCV_TLSDESC_HI20:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   case ELF::R_RISCV_PLT32:
   case ELF::R_RISCV_GOT32_PCREL:
     if (Kind == FK_Data_4)
       break;
-    reportError(Fixup.getLoc(), "%" + RISCVMCExpr::getSpecifierName(Spec) +
+    reportError(Fixup.getLoc(), "%" + RISCV::getSpecifierName(Spec) +
                                     " can only be used in a .word directive");
     return ELF::R_RISCV_NONE;
   default:
@@ -101,8 +101,10 @@ unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
       return ELF::R_RISCV_CALL_PLT;
     case RISCV::fixup_riscv_qc_e_branch:
       return ELF::R_RISCV_QC_E_BRANCH;
-    case RISCV::fixup_riscv_qc_e_jump_plt:
-      return ELF::R_RISCV_QC_E_JUMP_PLT;
+    case RISCV::fixup_riscv_qc_e_call_plt:
+      return ELF::R_RISCV_QC_E_CALL_PLT;
+    case RISCV::fixup_riscv_nds_branch_10:
+      return ELF::R_RISCV_NDS_BRANCH_10;
     }
   }
 
@@ -133,6 +135,9 @@ unsigned RISCVELFObjectWriter::getRelocType(const MCFixup &Fixup,
     return ELF::R_RISCV_LO12_I;
   case RISCV::fixup_riscv_lo12_s:
     return ELF::R_RISCV_LO12_S;
+  case RISCV::fixup_riscv_rvc_imm:
+    reportError(Fixup.getLoc(), "No relocation for CI-type instructions");
+    return ELF::R_RISCV_NONE;
   case RISCV::fixup_riscv_qc_e_32:
     return ELF::R_RISCV_QC_E_32;
   case RISCV::fixup_riscv_qc_abs20_u:

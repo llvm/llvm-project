@@ -94,9 +94,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr(<4 x s16>) = COPY $d0
     ; CHECK-NEXT: [[C:%[0-9]+]]:gpr(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:fpr(<8 x s16>) = G_CONCAT_VECTORS [[COPY]](<4 x s16>), [[DEF]](<4 x s16>)
-    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:fpr(s16) = G_EXTRACT_VECTOR_ELT [[CONCAT_VECTORS]](<8 x s16>), [[C]](s64)
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:fpr(s16) = G_EXTRACT_VECTOR_ELT [[COPY]](<4 x s16>), [[C]](s64)
     ; CHECK-NEXT: $h0 = COPY [[EVEC]](s16)
     ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:_(<4 x s16>) = COPY $d0

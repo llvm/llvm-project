@@ -46,7 +46,9 @@ class ImplicitControlFlowTracking;
 class LoadInst;
 class LoopInfo;
 class MemDepResult;
+class MemoryAccess;
 class MemoryDependenceResults;
+class MemoryLocation;
 class MemorySSA;
 class MemorySSAUpdater;
 class NonLocalDepResult;
@@ -170,6 +172,10 @@ public:
     // Value number to PHINode mapping. Used for phi-translate in scalarpre.
     DenseMap<uint32_t, PHINode *> NumberingPhi;
 
+    // Value number to BasicBlock mapping. Used for phi-translate across
+    // MemoryPhis.
+    DenseMap<uint32_t, BasicBlock *> NumberingBB;
+
     // Cache for phi-translate in scalarpre.
     using PhiTranslateMap =
         DenseMap<std::pair<uint32_t, const BasicBlock *>, uint32_t>;
@@ -177,6 +183,9 @@ public:
 
     AAResults *AA = nullptr;
     MemoryDependenceResults *MD = nullptr;
+    bool IsMDEnabled = false;
+    MemorySSA *MSSA = nullptr;
+    bool IsMSSAEnabled = false;
     DominatorTree *DT = nullptr;
 
     uint32_t NextValueNumber = 1;
@@ -187,12 +196,14 @@ public:
     Expression createExtractvalueExpr(ExtractValueInst *EI);
     Expression createGEPExpr(GetElementPtrInst *GEP);
     uint32_t lookupOrAddCall(CallInst *C);
+    uint32_t computeLoadStoreVN(Instruction *I);
     uint32_t phiTranslateImpl(const BasicBlock *BB, const BasicBlock *PhiBlock,
                               uint32_t Num, GVNPass &GVN);
     bool areCallValsEqual(uint32_t Num, uint32_t NewNum, const BasicBlock *Pred,
                           const BasicBlock *PhiBlock, GVNPass &GVN);
     std::pair<uint32_t, bool> assignExpNewValueNum(Expression &Exp);
     bool areAllValsInBB(uint32_t Num, const BasicBlock *BB, GVNPass &GVN);
+    void addMemoryStateToExp(Instruction *I, Expression &Exp);
 
   public:
     LLVM_ABI ValueTable();
@@ -201,6 +212,7 @@ public:
     LLVM_ABI ~ValueTable();
     LLVM_ABI ValueTable &operator=(const ValueTable &Arg);
 
+    LLVM_ABI uint32_t lookupOrAdd(MemoryAccess *MA);
     LLVM_ABI uint32_t lookupOrAdd(Value *V);
     LLVM_ABI uint32_t lookup(Value *V, bool Verify = true) const;
     LLVM_ABI uint32_t lookupOrAddCmp(unsigned Opcode, CmpInst::Predicate Pred,
@@ -216,7 +228,14 @@ public:
     LLVM_ABI void erase(Value *V);
     void setAliasAnalysis(AAResults *A) { AA = A; }
     AAResults *getAliasAnalysis() const { return AA; }
-    void setMemDep(MemoryDependenceResults *M) { MD = M; }
+    void setMemDep(MemoryDependenceResults *M, bool MDEnabled = true) {
+      MD = M;
+      IsMDEnabled = MDEnabled;
+    }
+    void setMemorySSA(MemorySSA *M, bool MSSAEnabled = false) {
+      MSSA = M;
+      IsMSSAEnabled = MSSAEnabled;
+    }
     void setDomTree(DominatorTree *D) { DT = D; }
     uint32_t getNextUnusedValueNumber() { return NextValueNumber; }
     LLVM_ABI void verifyRemoved(const Value *) const;
