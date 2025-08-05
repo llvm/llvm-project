@@ -229,6 +229,16 @@ void ScopedString::append(const char *Format, ...) {
   va_end(Args);
 }
 
+size_t ScopedString::copyToBuffer(char *OutputBase, size_t OutputLength) {
+  DCHECK(OutputBase);
+  if (OutputLength) {
+    const size_t Written = Min(length(), OutputLength - 1);
+    memcpy(OutputBase, data(), Written);
+    OutputBase[Written] = '\0';
+  }
+  return length() + 1;
+}
+
 void Printf(const char *Format, ...) {
   va_list Args;
   va_start(Args, Format);
