@@ -2392,9 +2392,6 @@ static bool isDuplicateMappedSymbol(
   concatSyms.append(mappedSyms.begin(), mappedSyms.end());
 
   auto checkSymbol = [&](const semantics::Symbol &checkSym) {
-    if (llvm::is_contained(concatSyms, &checkSym))
-      return true;
-
     return std::any_of(concatSyms.begin(), concatSyms.end(),
                        [&](auto v) { return v->GetUltimate() == checkSym; });
   };
