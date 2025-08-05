@@ -13,9 +13,7 @@
 #include <__algorithm/min.h>
 #include <__assert>
 #include <__config>
-#include <__fwd/map.h>
 #include <__fwd/pair.h>
-#include <__fwd/set.h>
 #include <__iterator/distance.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/next.h>
@@ -686,16 +684,6 @@ private:
   friend class __tree;
   template <class, class, class>
   friend class __tree_const_iterator;
-  template <class>
-  friend class __map_iterator;
-  template <class, class, class, class>
-  friend class map;
-  template <class, class, class, class>
-  friend class multimap;
-  template <class, class, class>
-  friend class set;
-  template <class, class, class>
-  friend class multiset;
 };
 
 template <class _Tp, class _NodePtr, class _DiffType>
@@ -709,18 +697,15 @@ class __tree_const_iterator {
   __end_node_pointer __ptr_;
 
 public:
-  using iterator_category = bidirectional_iterator_tag;
-  using value_type        = __get_node_value_type_t<_Tp>;
-  using difference_type   = _DiffType;
-  using reference         = const value_type&;
-  using pointer           = __rebind_pointer_t<_NodePtr, const value_type>;
+  using iterator_category                    = bidirectional_iterator_tag;
+  using value_type                           = __get_node_value_type_t<_Tp>;
+  using difference_type                      = _DiffType;
+  using reference                            = const value_type&;
+  using pointer                              = __rebind_pointer_t<_NodePtr, const value_type>;
+  using __non_const_iterator _LIBCPP_NODEBUG = __tree_iterator<_Tp, __node_pointer, difference_type>;
 
   _LIBCPP_HIDE_FROM_ABI __tree_const_iterator() _NOEXCEPT : __ptr_(nullptr) {}
 
-private:
-  typedef __tree_iterator<_Tp, __node_pointer, difference_type> __non_const_iterator;
-
-public:
   _LIBCPP_HIDE_FROM_ABI __tree_const_iterator(__non_const_iterator __p) _NOEXCEPT : __ptr_(__p.__ptr_) {}
 
   _LIBCPP_HIDE_FROM_ABI reference operator*() const { return __get_np()->__value_; }
@@ -762,16 +747,6 @@ private:
 
   template <class, class, class>
   friend class __tree;
-  template <class, class, class, class>
-  friend class map;
-  template <class, class, class, class>
-  friend class multimap;
-  template <class, class, class>
-  friend class set;
-  template <class, class, class>
-  friend class multiset;
-  template <class>
-  friend class __map_const_iterator;
 };
 
 template <class _Tp, class _Compare>
