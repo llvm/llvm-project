@@ -309,3 +309,12 @@ int somefunc() {
                                                   // both-note {{reference to 'non_global' is not a constant expression}}
 }
 
+namespace PR19010 {
+  struct Empty {};
+  struct Empty2 : Empty {};
+  struct Test : Empty2 {
+    constexpr Test() {}
+    Empty2 array[2];
+  };
+  void test() { constexpr Test t; }
+}
