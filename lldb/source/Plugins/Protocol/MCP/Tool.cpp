@@ -41,20 +41,6 @@ static lldb_protocol::mcp::TextResult createTextResult(std::string output,
 
 } // namespace
 
-Tool::Tool(std::string name, std::string description)
-    : m_name(std::move(name)), m_description(std::move(description)) {}
-
-lldb_protocol::mcp::ToolDefinition Tool::GetDefinition() const {
-  lldb_protocol::mcp::ToolDefinition definition;
-  definition.name = m_name;
-  definition.description = m_description;
-
-  if (std::optional<llvm::json::Value> input_schema = GetSchema())
-    definition.inputSchema = *input_schema;
-
-  return definition;
-}
-
 llvm::Expected<lldb_protocol::mcp::TextResult>
 CommandTool::Call(const lldb_protocol::mcp::ToolArguments &args) {
   if (!std::holds_alternative<json::Value>(args))

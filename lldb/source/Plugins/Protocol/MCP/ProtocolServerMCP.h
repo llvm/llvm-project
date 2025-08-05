@@ -9,12 +9,12 @@
 #ifndef LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
 #define LLDB_PLUGINS_PROTOCOL_MCP_PROTOCOLSERVERMCP_H
 
-#include "Resource.h"
-#include "Tool.h"
 #include "lldb/Core/ProtocolServer.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Protocol/MCP/Protocol.h"
+#include "lldb/Protocol/MCP/Resource.h"
+#include "lldb/Protocol/MCP/Tool.h"
 #include "llvm/ADT/StringMap.h"
 #include <thread>
 
@@ -47,8 +47,9 @@ protected:
   using NotificationHandler =
       std::function<void(const lldb_protocol::mcp::Notification &)>;
 
-  void AddTool(std::unique_ptr<Tool> tool);
-  void AddResourceProvider(std::unique_ptr<ResourceProvider> resource_provider);
+  void AddTool(std::unique_ptr<lldb_protocol::mcp::Tool> tool);
+  void AddResourceProvider(
+      std::unique_ptr<lldb_protocol::mcp::ResourceProvider> resource_provider);
 
   void AddRequestHandler(llvm::StringRef method, RequestHandler handler);
   void AddNotificationHandler(llvm::StringRef method,
@@ -99,8 +100,9 @@ private:
   std::vector<std::unique_ptr<Client>> m_clients;
 
   std::mutex m_server_mutex;
-  llvm::StringMap<std::unique_ptr<Tool>> m_tools;
-  std::vector<std::unique_ptr<ResourceProvider>> m_resource_providers;
+  llvm::StringMap<std::unique_ptr<lldb_protocol::mcp::Tool>> m_tools;
+  std::vector<std::unique_ptr<lldb_protocol::mcp::ResourceProvider>>
+      m_resource_providers;
 
   llvm::StringMap<RequestHandler> m_request_handlers;
   llvm::StringMap<NotificationHandler> m_notification_handlers;
