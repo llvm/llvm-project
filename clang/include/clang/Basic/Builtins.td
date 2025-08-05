@@ -1196,6 +1196,18 @@ def Trap : Builtin {
   let Prototype = "void()";
 }
 
+def ProvenanceBegin : Builtin {
+  let Spellings = ["__builtin_experimental_provenance_begin"];
+  let Attributes = [NoThrow];
+  let Prototype = "void*(void*)";
+}
+
+def ProvenanceEnd : Builtin {
+  let Spellings = ["__builtin_experimental_provenance_end"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(void*)";
+}
+
 def VerboseTrap : Builtin {
   let Spellings = ["__builtin_verbose_trap"];
   let Attributes = [NoThrow, NoReturn];

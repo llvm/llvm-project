@@ -824,6 +824,7 @@ bool isNoopIntrinsic(Instruction *I) {
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
     case Intrinsic::assume:
+    case Intrinsic::experimental_provenance_end:
       return true;
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_label:

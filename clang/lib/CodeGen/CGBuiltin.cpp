@@ -3733,6 +3733,20 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_trap:
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
+  case Builtin::BI__builtin_experimental_provenance_begin:{
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    SmallVector<Value *, 2> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    Function *F = CGM.getIntrinsic(Intrinsic::experimental_provenance_begin, {ConvertType(E->getType()), Ptr->getType()});
+    return RValue::get(Builder.CreateCall(F, {Args}));
+  }
+  case Builtin::BI__builtin_experimental_provenance_end:{
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Function *F = CGM.getIntrinsic(Intrinsic::experimental_provenance_end, Ptr->getType());
+    Builder.CreateCall(F, {Ptr});
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_verbose_trap: {
     llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
     if (getDebugInfo()) {

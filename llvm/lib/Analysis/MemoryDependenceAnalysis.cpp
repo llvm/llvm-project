@@ -156,6 +156,7 @@ static ModRefInfo GetLocation(const Instruction *Inst, MemoryLocation &Loc,
       // will allow them to be handled conservatively.
       return ModRefInfo::Mod;
     case Intrinsic::invariant_end:
+    case Intrinsic::experimental_provenance_end:
       Loc = MemoryLocation::getForArgument(II, 2, TLI);
       // These intrinsics don't really modify the memory, but returning Mod
       // will allow them to be handled conservatively.
