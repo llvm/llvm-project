@@ -68,6 +68,18 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     }
     MMDAI.EntryPropertyVec.push_back(EFP);
   }
+  NamedMDNode *RootSignaturesNode = M.getNamedMetadata("dx.rootsignatures");
+  if (RootSignaturesNode) {
+    // Only insert any extra root signature lowering info on insert
+    MDNode *InfoMD = RootSignaturesNode->getOperand(0);
+    [[maybe_unused]] bool HasStripMD =
+        mdconst::hasa<ConstantInt>(InfoMD->getOperand(0));
+    assert(HasStripMD && "Failed to parse Strip Root Signature component");
+    auto *StripRootSignature =
+        mdconst::dyn_extract<ConstantInt>(InfoMD->getOperand(0));
+    if (StripRootSignature)
+      MMDAI.StripRootSignature = StripRootSignature->getZExtValue();
+  }
   return MMDAI;
 }
 
@@ -84,6 +96,7 @@ void ModuleMetadataInfo::print(raw_ostream &OS) const {
     OS << "  NumThreads: " << EP.NumThreadsX << "," << EP.NumThreadsY << ","
        << EP.NumThreadsZ << "\n";
   }
+  OS << "Strip Root Signature: " << StripRootSignature << "\n";
 }
 
 //===----------------------------------------------------------------------===//

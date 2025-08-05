@@ -154,6 +154,10 @@ void DXContainerGlobals::addRootSignature(Module &M,
   dxil::ModuleMetadataInfo &MMI =
       getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
 
+  // Compiler flag denotes to not output the root signature part (RTS0)
+  if (MMI.StripRootSignature)
+    return;
+
   // Root Signature in Library don't compile to DXContainer.
   if (MMI.ShaderProfile == llvm::Triple::Library)
     return;

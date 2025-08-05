@@ -527,8 +527,17 @@ analyzeModule(Module &M) {
   NamedMDNode *RootSignatureNode = M.getNamedMetadata("dx.rootsignatures");
   if (RootSignatureNode == nullptr)
     return RSDMap;
+  if (RootSignatureNode->getNumOperands() == 0) {
+    reportError(Ctx, "Invalid Root Signature metadata - expected lowering "
+                     "info and then Root Signature operands.");
+    return RSDMap;
+  }
 
-  for (const auto &RSDefNode : RootSignatureNode->operands()) {
+  // Ignore the lowering info metadata
+  auto Begin = std::next(RootSignatureNode->op_begin());
+  auto RSNodes = iterator_range(Begin, RootSignatureNode->op_end());
+
+  for (const auto &RSDefNode : RSNodes) {
     if (RSDefNode->getNumOperands() != 3) {
       reportError(Ctx, "Invalid Root Signature metadata - expected function, "
                        "signature, and version.");
