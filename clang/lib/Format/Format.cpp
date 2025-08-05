@@ -1024,6 +1024,8 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BinPackArguments", Style.BinPackArguments);
     IO.mapOptional("BinPackLongBracedList", Style.BinPackLongBracedList);
     IO.mapOptional("BinPackParameters", Style.BinPackParameters);
+    IO.mapOptional("ApplyAlwaysOnePerLineToTemplateArguments",
+                   Style.ApplyAlwaysOnePerLineToTemplateArguments);
     IO.mapOptional("BitFieldColonSpacing", Style.BitFieldColonSpacing);
     IO.mapOptional("BracedInitializerIndentWidth",
                    Style.BracedInitializerIndentWidth);
@@ -1543,6 +1545,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BinPackArguments = true;
   LLVMStyle.BinPackLongBracedList = true;
   LLVMStyle.BinPackParameters = FormatStyle::BPPS_BinPack;
+  LLVMStyle.ApplyAlwaysOnePerLineToTemplateArguments = true;
   LLVMStyle.BitFieldColonSpacing = FormatStyle::BFCS_Both;
   LLVMStyle.BracedInitializerIndentWidth = -1;
   LLVMStyle.BraceWrapping = {/*AfterCaseLabel=*/false,
