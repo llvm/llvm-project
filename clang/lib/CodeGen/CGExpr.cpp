@@ -3717,6 +3717,33 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   }
 }
 
+// Adapts the arguments to the handler function.
+// It is expected that {StaticArgs..., DynamicArgs...} sequence matches the
+// corresponding XxxData type from the ubsan_handlers.h file.
+// Minimal hadler can use a subset of the arguments.
+static void
+AdaptArgsToHandler(CodeGenModule &CGM, SanitizerHandler CheckHandler,
+                   ArrayRef<llvm::Constant *> StaticArgs,
+                   ArrayRef<llvm::Value *> DynamicArgs,
+                   SmallVectorImpl<llvm::Constant *> &HandlerStaticArgs,
+                   SmallVectorImpl<llvm::Value *> &HandlerDynamicArgs) {
+  if (!CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
+    HandlerStaticArgs.assign(StaticArgs.begin(), StaticArgs.end());
+    HandlerDynamicArgs.assign(DynamicArgs.begin(), DynamicArgs.end());
+    return;
+  }
+
+  switch (CheckHandler) {
+  case SanitizerHandler::TypeMismatch:
+    // Pass value pointer only. It adds minimal overhead.
+    HandlerDynamicArgs.assign(DynamicArgs.begin(), DynamicArgs.end());
+    break;
+  default:
+    // No arguments for other checks.
+    break;
+  }
+}
+
 void CodeGenFunction::EmitCheck(
     ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>> Checked,
     SanitizerHandler CheckHandler, ArrayRef<llvm::Constant *> StaticArgs,
@@ -3794,28 +3821,37 @@ void CodeGenFunction::EmitCheck(
   // representing operand values.
   SmallVector<llvm::Value *, 4> Args;
   SmallVector<llvm::Type *, 4> ArgTypes;
-  if (!CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
-    Args.reserve(DynamicArgs.size() + 1);
-    ArgTypes.reserve(DynamicArgs.size() + 1);
 
-    // Emit handler arguments and create handler function type.
-    if (!StaticArgs.empty()) {
-      llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-      auto *InfoPtr = new llvm::GlobalVariable(
-          CGM.getModule(), Info->getType(), false,
-          llvm::GlobalVariable::PrivateLinkage, Info, "", nullptr,
-          llvm::GlobalVariable::NotThreadLocal,
-          CGM.getDataLayout().getDefaultGlobalsAddressSpace());
-      InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-      Args.push_back(InfoPtr);
-      ArgTypes.push_back(Args.back()->getType());
-    }
+  SmallVector<llvm::Constant *, 4> HandlerStaticArgs;
+  SmallVector<llvm::Value *, 4> HandlerDynamicArgs;
+  AdaptArgsToHandler(CGM, CheckHandler, StaticArgs, DynamicArgs,
+                     HandlerStaticArgs, HandlerDynamicArgs);
 
-    for (llvm::Value *DynamicArg : DynamicArgs) {
-      Args.push_back(EmitCheckValue(DynamicArg));
-      ArgTypes.push_back(IntPtrTy);
-    }
+  Args.reserve(HandlerDynamicArgs.size() + 1);
+  ArgTypes.reserve(HandlerDynamicArgs.size() + 1);
+
+  // Emit handler arguments and create handler function type.
+  if (!HandlerStaticArgs.empty()) {
+    llvm::Constant *Info = llvm::ConstantStruct::getAnon(HandlerStaticArgs);
+    auto *InfoPtr = new llvm::GlobalVariable(
+        CGM.getModule(), Info->getType(),
+        // Non-constant global is used in non-minimal handler to deduplicate
+        // reports. Minimal handler stores history statically.
+        // TODO: make it constant for non-minimal handler.
+        /*isConstant=*/
+        CGM.getCodeGenOpts().SanitizeMinimalRuntime,
+        llvm::GlobalVariable::PrivateLinkage, Info, "", nullptr,
+        llvm::GlobalVariable::NotThreadLocal,
+        CGM.getDataLayout().getDefaultGlobalsAddressSpace());
+    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+    Args.push_back(InfoPtr);
+    ArgTypes.push_back(Args.back()->getType());
+  }
+
+  for (llvm::Value *DynamicArg : HandlerDynamicArgs) {
+    Args.push_back(EmitCheckValue(DynamicArg));
+    ArgTypes.push_back(IntPtrTy);
   }
 
   llvm::FunctionType *FnType =
