@@ -2449,8 +2449,8 @@ public:
   /// select(N0|N1, X, Y) => select(N0, select(N1, X, Y, Y)) if it is likely
   /// that it saves us from materializing N0 and N1 in an integer register.
   /// Targets that are able to perform and/or on flags should return false here.
-  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context,
-                                               EVT VT) const {
+  virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
+                                               SDNode *) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
     if (hasMultipleConditionRegisters())
@@ -2461,6 +2461,10 @@ public:
     return Action != TypeExpandInteger && Action != TypeExpandFloat &&
       Action != TypeSplitVector;
   }
+
+  // Return true is targets has a conditional zero-ing instruction
+  // i.e. select cond, x, 0
+  virtual bool hasConditionalZero() const { return false; }
 
   virtual bool isProfitableToCombineMinNumMaxNum(EVT VT) const { return true; }
 
