@@ -379,6 +379,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["atomic-fadd-rtn-insts"] = true;
     Features["atomic-flat-pk-add-16-insts"] = true;
     Features["atomic-global-pk-add-bf16-inst"] = true;
+    Features["bf16-trans-insts"] = true;
+    Features["bf16-cvt-insts"] = true;
     Features["bf8-cvt-scale-insts"] = true;
     Features["bitop3-insts"] = true;
     Features["ci-insts"] = true;
@@ -401,9 +403,10 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["f32-to-f16bf16-cvt-sr-insts"] = true;
     Features["fp4-cvt-scale-insts"] = true;
     Features["fp6bf6-cvt-scale-insts"] = true;
-    Features["fp8-insts"] = true;
+    Features["fp8e5m3-insts"] = true;
     Features["fp8-conversion-insts"] = true;
     Features["fp8-cvt-scale-insts"] = true;
+    Features["fp8-insts"] = true;
     Features["gfx8-insts"] = true;
     Features["gfx9-insts"] = true;
     Features["gfx90a-insts"] = true;
@@ -413,17 +416,23 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
     Features["gfx10-3-insts"] = true;
     Features["gfx11-insts"] = true;
     Features["gfx12-insts"] = true;
+    Features["gfx1250-insts"] = true;
     Features["gws"] = true;
     Features["image-insts"] = true;
-    Features["s-memrealtime"] = true;
-    Features["s-memtime-inst"] = true;
     Features["mai-insts"] = true;
     Features["permlane16-swap"] = true;
     Features["permlane32-swap"] = true;
     Features["prng-inst"] = true;
+    Features["setprio-inc-wg-inst"] = true;
+    Features["s-memrealtime"] = true;
+    Features["s-memtime-inst"] = true;
+    Features["tanh-insts"] = true;
+    Features["tensor-cvt-lut-insts"] = true;
+    Features["transpose-load-f4f6-insts"] = true;
+    Features["vmem-pref-insts"] = true;
+    Features["vmem-to-lds-load-insts"] = true;
     Features["wavefrontsize32"] = true;
     Features["wavefrontsize64"] = true;
-    Features["vmem-to-lds-load-insts"] = true;
   } else if (T.isAMDGCN()) {
     AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
     switch (Kind) {
