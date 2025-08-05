@@ -582,8 +582,7 @@ void VPlanTransforms::handleEarlyExitsAndAddMiddleCheck(
   VPBuilder Builder(MiddleVPBB);
   VPValue *Cmp;
   if (!RequiresScalarEpilogueCheck)
-    Cmp = Plan.getOrAddLiveIn(
-        ConstantInt::getFalse(IntegerType::getInt1Ty(Plan.getContext())));
+    Cmp = Plan.getFalse();
   else if (TailFolded)
     Cmp = Plan.getOrAddLiveIn(
         ConstantInt::getTrue(IntegerType::getInt1Ty(Plan.getContext())));

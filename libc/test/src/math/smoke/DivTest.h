@@ -47,6 +47,11 @@ public:
     EXPECT_FP_EQ(neg_inf, func(in.neg_inf, in.zero));
     EXPECT_FP_EQ(neg_inf, func(in.inf, in.neg_zero));
     EXPECT_FP_EQ(inf, func(in.neg_inf, in.neg_zero));
+    EXPECT_FP_EQ(zero, func(in.min_normal, in.inf));
+    EXPECT_FP_EQ(zero, func(in.zero, in.inf));
+    EXPECT_FP_EQ(zero, func(in.neg_zero, in.neg_inf));
+    EXPECT_FP_EQ(neg_zero, func(in.min_normal, in.neg_inf));
+    EXPECT_FP_EQ(neg_zero, func(in.zero, in.neg_inf));
   }
 
   void test_division_by_zero(DivFunc func) {
