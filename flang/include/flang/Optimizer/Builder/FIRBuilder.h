@@ -530,27 +530,28 @@ public:
   /// bodies.
   IfBuilder genIfOp(mlir::Location loc, mlir::TypeRange results,
                     mlir::Value cdt, bool withElseRegion) {
-    auto op = create<fir::IfOp>(loc, results, cdt, withElseRegion);
+    auto op = fir::IfOp::create(*this, loc, results, cdt, withElseRegion);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with no "else" region, and no result values.
   /// Usage: genIfThen(loc, cdt).genThen(lambda).end();
   IfBuilder genIfThen(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, false);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, false);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with an "else" region, and no result values.
   /// Usage: genIfThenElse(loc, cdt).genThen(lambda).genElse(lambda).end();
   IfBuilder genIfThenElse(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, true);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, true);
     return IfBuilder(op, *this);
   }
 
   mlir::Value genNot(mlir::Location loc, mlir::Value boolean) {
-    return create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
-                                       boolean, createBool(loc, false));
+    return mlir::arith::CmpIOp::create(*this, loc,
+                                       mlir::arith::CmpIPredicate::eq, boolean,
+                                       createBool(loc, false));
   }
 
   /// Generate code testing \p addr is not a null address.
@@ -609,6 +610,17 @@ public:
     return integerOverflowFlags;
   }
 
+  /// Set ComplexDivisionToRuntimeFlag value. If set to true, complex number
+  /// division is lowered to a runtime function by this builder.
+  void setComplexDivisionToRuntimeFlag(bool flag) {
+    complexDivisionToRuntimeFlag = flag;
+  }
+
+  /// Get current ComplexDivisionToRuntimeFlag value.
+  bool getComplexDivisionToRuntimeFlag() const {
+    return complexDivisionToRuntimeFlag;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -630,7 +642,7 @@ public:
   mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
                              mlir::Value left, mlir::Value right) {
     if (!resultType.isIntOrFloat())
-      return create<OpTy>(loc, resultType, left, right);
+      return OpTy::create(*this, loc, resultType, left, right);
     mlir::Type signlessType = mlir::IntegerType::get(
         getContext(), resultType.getIntOrFloatBitWidth(),
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -643,7 +655,7 @@ public:
       right = createConvert(loc, signlessType, right);
       opResType = signlessType;
     }
-    mlir::Value result = create<OpTy>(loc, opResType, left, right);
+    mlir::Value result = OpTy::create(*this, loc, opResType, left, right);
     if (resultType.isUnsignedInteger())
       result = createConvert(loc, resultType, result);
     return result;
@@ -655,7 +667,7 @@ public:
                             mlir::Value ptr1, mlir::Value ptr2) {
     ptr1 = createConvert(loc, getIndexType(), ptr1);
     ptr2 = createConvert(loc, getIndexType(), ptr2);
-    return create<mlir::arith::CmpIOp>(loc, predicate, ptr1, ptr2);
+    return mlir::arith::CmpIOp::create(*this, loc, predicate, ptr1, ptr2);
   }
 
 private:
@@ -672,6 +684,10 @@ private:
   /// IntegerOverflowFlags that need to be set for operations that support
   /// mlir::arith::IntegerOverflowFlagsAttr.
   mlir::arith::IntegerOverflowFlags integerOverflowFlags{};
+
+  /// Flag to control whether complex number division is lowered to a runtime
+  /// function or to the MLIR complex dialect.
+  bool complexDivisionToRuntimeFlag = true;
 
   /// fir::GlobalOp and func::FuncOp symbol table to speed-up
   /// lookups.
@@ -899,6 +915,10 @@ uint64_t getAllocaAddressSpace(const mlir::DataLayout *dataLayout);
 /// and extents2[j] is not, then result[j] is the MLIR value extents1[j].
 llvm::SmallVector<mlir::Value> deduceOptimalExtents(mlir::ValueRange extents1,
                                                     mlir::ValueRange extents2);
+
+uint64_t getGlobalAddressSpace(mlir::DataLayout *dataLayout);
+
+uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
 
 /// Given array extents generate code that sets them all to zeroes,
 /// if the array is empty, e.g.:

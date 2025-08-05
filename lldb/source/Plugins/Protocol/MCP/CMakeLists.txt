@@ -1,7 +1,7 @@
 add_lldb_library(lldbPluginProtocolServerMCP PLUGIN
   MCPError.cpp
-  Protocol.cpp
   ProtocolServerMCP.cpp
+  Resource.cpp
   Tool.cpp
 
   LINK_COMPONENTS
@@ -9,5 +9,6 @@ add_lldb_library(lldbPluginProtocolServerMCP PLUGIN
 
   LINK_LIBS
     lldbHost
+    lldbProtocolMCP
     lldbUtility
 )

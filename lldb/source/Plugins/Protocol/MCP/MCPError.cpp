@@ -11,9 +11,10 @@
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
-namespace lldb_private::mcp {
+using namespace lldb_private::mcp;
 
 char MCPError::ID;
+char UnsupportedURI::ID;
 
 MCPError::MCPError(std::string message, int64_t error_code)
     : m_message(message), m_error_code(error_code) {}
@@ -24,11 +25,19 @@ std::error_code MCPError::convertToErrorCode() const {
   return llvm::inconvertibleErrorCode();
 }
 
-protocol::Error MCPError::toProtcolError() const {
-  protocol::Error error;
+lldb_protocol::mcp::Error MCPError::toProtcolError() const {
+  lldb_protocol::mcp::Error error;
   error.error.code = m_error_code;
   error.error.message = m_message;
   return error;
 }
 
-} // namespace lldb_private::mcp
+UnsupportedURI::UnsupportedURI(std::string uri) : m_uri(uri) {}
+
+void UnsupportedURI::log(llvm::raw_ostream &OS) const {
+  OS << "unsupported uri: " << m_uri;
+}
+
+std::error_code UnsupportedURI::convertToErrorCode() const {
+  return llvm::inconvertibleErrorCode();
+}

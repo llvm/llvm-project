@@ -1701,7 +1701,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
                                     .addReg(ARM::SP)
                                     .setMIFlags(MachineInstr::FrameSetup)
                                     .add(predOps(ARMCC::AL));
-      for (const auto [Reg, Kill] : Regs)
+      for (const auto &[Reg, Kill] : Regs)
         MIB.addReg(Reg, getKillRegState(Kill));
     } else if (Regs.size() == 1) {
       BuildMI(MBB, MI, DL, TII.get(StrOpc), ARM::SP)
@@ -1747,9 +1747,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
          RetOpcode == ARM::TCRETURNrinotr12);
     isInterrupt =
         RetOpcode == ARM::SUBS_PC_LR || RetOpcode == ARM::t2SUBS_PC_LR;
-    isTrap =
-        RetOpcode == ARM::TRAP || RetOpcode == ARM::TRAPNaCl ||
-        RetOpcode == ARM::tTRAP;
+    isTrap = RetOpcode == ARM::TRAP || RetOpcode == ARM::tTRAP;
     isCmseEntry = (RetOpcode == ARM::tBXNS || RetOpcode == ARM::tBXNS_RET);
   }
 

@@ -447,10 +447,17 @@ static void emitOneV5FileEntry(MCStreamer *MCOS, const MCDwarfFile &DwarfFile,
         StringRef(reinterpret_cast<const char *>(Cksum.data()), Cksum.size()));
   }
   if (HasAnySource) {
+    // From https://dwarfstd.org/issues/180201.1.html
+    // * The value is an empty null-terminated string if no source is available
+    StringRef Source = DwarfFile.Source.value_or(StringRef());
+    // * If the source is available but is an empty file then the value is a
+    // null-terminated single "\n".
+    if (DwarfFile.Source && DwarfFile.Source->empty())
+      Source = "\n";
     if (LineStr)
-      LineStr->emitRef(MCOS, DwarfFile.Source.value_or(StringRef()));
+      LineStr->emitRef(MCOS, Source);
     else {
-      MCOS->emitBytes(DwarfFile.Source.value_or(StringRef())); // Source and...
+      MCOS->emitBytes(Source);             // Source and...
       MCOS->emitBytes(StringRef("\0", 1)); // its null terminator.
     }
   }
@@ -1879,7 +1886,7 @@ struct CIEKey {
   unsigned LsdaEncoding = -1;
   bool IsSignalFrame = false;
   bool IsSimple = false;
-  unsigned RAReg = static_cast<unsigned>(UINT_MAX);
+  unsigned RAReg = UINT_MAX;
   bool IsBKeyFrame = false;
   bool IsMTETaggedFrame = false;
 };

@@ -362,7 +362,7 @@ define void @test_x86_sse2_storeu_pd(ptr %a0, <2 x double> %a1) {
 ; X64-SSE:       ## %bb.0:
 ; X64-SSE-NEXT:    xorpd %xmm1, %xmm1 ## encoding: [0x66,0x0f,0x57,0xc9]
 ; X64-SSE-NEXT:    movhpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 ## encoding: [0x66,0x0f,0x16,0x0d,A,A,A,A]
-; X64-SSE-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-SSE-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; X64-SSE-NEXT:    ## xmm1 = xmm1[0],mem[0]
 ; X64-SSE-NEXT:    addpd %xmm0, %xmm1 ## encoding: [0x66,0x0f,0x58,0xc8]
 ; X64-SSE-NEXT:    movupd %xmm1, (%rdi) ## encoding: [0x66,0x0f,0x11,0x0f]
@@ -372,7 +372,7 @@ define void @test_x86_sse2_storeu_pd(ptr %a0, <2 x double> %a1) {
 ; X64-AVX1:       ## %bb.0:
 ; X64-AVX1-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 ## encoding: [0xc5,0xf1,0x57,0xc9]
 ; X64-AVX1-NEXT:    vmovhpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 ## encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
-; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-AVX1-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; X64-AVX1-NEXT:    ## xmm1 = xmm1[0],mem[0]
 ; X64-AVX1-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x58,0xc1]
 ; X64-AVX1-NEXT:    vmovupd %xmm0, (%rdi) ## encoding: [0xc5,0xf9,0x11,0x07]
@@ -382,7 +382,7 @@ define void @test_x86_sse2_storeu_pd(ptr %a0, <2 x double> %a1) {
 ; X64-AVX512:       ## %bb.0:
 ; X64-AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0x57,0xc9]
 ; X64-AVX512-NEXT:    vmovhpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 ## EVEX TO VEX Compression encoding: [0xc5,0xf1,0x16,0x0d,A,A,A,A]
-; X64-AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; X64-AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
 ; X64-AVX512-NEXT:    ## xmm1 = xmm1[0],mem[0]
 ; X64-AVX512-NEXT:    vaddpd %xmm1, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x58,0xc1]
 ; X64-AVX512-NEXT:    vmovupd %xmm0, (%rdi) ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x11,0x07]

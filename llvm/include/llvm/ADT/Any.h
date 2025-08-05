@@ -119,7 +119,6 @@ private:
   template <class T> friend T any_cast(Any &&Value);
   template <class T> friend const T *any_cast(const Any *Value);
   template <class T> friend T *any_cast(Any *Value);
-  template <typename T> friend bool any_isa(const Any &Value);
 
   std::unique_ptr<StorageBase> Storage;
 };

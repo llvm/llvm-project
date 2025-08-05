@@ -171,6 +171,20 @@ namespace Arrays {
   }
   static_assert(mismatch2() == 6); // both-error {{not an integral constant expression}} \
                                    // both-note {{in call to 'mismatch2()'}}
+
+  constexpr int mismatch3() { // both-error {{never produces a constant expression}}
+    int a = 0;
+    struct S {};
+    struct T : S {};
+    T *p = new T[3]{}; // both-note 2{{heap allocation performed here}}
+    delete (S*)p; // both-note 2{{non-array delete used to delete pointer to array object of type 'T[3]'}}
+
+    return 0;
+
+  }
+  static_assert(mismatch3() == 0); // both-error {{not an integral constant expression}} \
+                                   // both-note {{in call to}}
+
   /// Array of composite elements.
   constexpr int foo() {
     S *ss = new S[12];
@@ -532,14 +546,13 @@ namespace FaultyDtorCalledByDelete {
       a = new int(13);
       IF.mem = new int(100);
     }
-    constexpr ~Foo() { delete a; } // expected-note {{in call to}}
+    constexpr ~Foo() { delete a; }
   };
 
   constexpr int abc() {
     Foo *F = new Foo();
     int n = *F->a;
-    delete F; // both-note {{in call to}} \
-              // ref-note {{in call to}}
+    delete F; // both-note 2{{in call to}}
 
     return n;
   }
@@ -1020,6 +1033,42 @@ namespace OpNewNothrow {
   }
   static_assert(f()); // both-error {{not an integral constant expression}} \
                       // both-note {{in call to}}
+}
+
+namespace BaseCompare {
+  struct Cmp {
+    void *p;
+
+    template<typename T>
+    constexpr Cmp(T *t) : p(t) {}
+
+    constexpr friend bool operator==(Cmp a, Cmp b) {
+      return a.p == b.p;
+    }
+  };
+
+  class Base {};
+  class Derived : public Base {};
+  constexpr bool foo() {
+    Derived *D = std::allocator<Derived>{}.allocate(1);;
+    std::construct_at<Derived>(D);
+
+    Derived *d = D;
+    Base    *b = D;
+
+    Cmp ca(d);
+    Cmp cb(b);
+
+    if (ca == cb) {
+      std::allocator<Derived>{}.deallocate(D);
+      return true;
+    }
+    std::allocator<Derived>{}.deallocate(D);
+
+    return false;
+
+  }
+  static_assert(foo());
 }
 
 #else

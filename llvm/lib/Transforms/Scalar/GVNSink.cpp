@@ -308,7 +308,7 @@ public:
 
     for (auto &U : I->uses())
       op_push_back(U.getUser());
-    llvm::sort(op_begin(), op_end());
+    llvm::sort(operands());
   }
 
   void setMemoryUseOrder(unsigned MUO) { MemoryUseOrder = MUO; }
@@ -799,7 +799,7 @@ void GVNSink::sinkLastInstruction(ArrayRef<BasicBlock *> Blocks,
                                   BasicBlock *BBEnd) {
   SmallVector<Instruction *, 4> Insts;
   for (BasicBlock *BB : Blocks)
-    Insts.push_back(BB->getTerminator()->getPrevNonDebugInstruction());
+    Insts.push_back(BB->getTerminator()->getPrevNode());
   Instruction *I0 = Insts.front();
 
   SmallVector<Value *, 4> NewOperands;

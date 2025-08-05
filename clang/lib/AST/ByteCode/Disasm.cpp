@@ -445,6 +445,7 @@ LLVM_DUMP_METHOD void InlineDescriptor::dump(llvm::raw_ostream &OS) const {
   OS << "InUnion: " << InUnion << "\n";
   OS << "IsFieldMutable: " << IsFieldMutable << "\n";
   OS << "IsArrayElement: " << IsArrayElement << "\n";
+  OS << "IsConstInMutable: " << IsConstInMutable << '\n';
   OS << "Desc: ";
   if (Desc)
     Desc->dump(OS);
@@ -530,7 +531,7 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   Desc->dump(OS);
   OS << ")\n";
   unsigned NPointers = 0;
-  for (const Pointer *P = Pointers; P; P = P->Next) {
+  for (const Pointer *P = Pointers; P; P = P->asBlockPointer().Next) {
     ++NPointers;
   }
   OS << "  EvalID: " << EvalID << '\n';

@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Protocol.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <string>
 
 namespace lldb_private::mcp {
@@ -16,18 +17,34 @@ class MCPError : public llvm::ErrorInfo<MCPError> {
 public:
   static char ID;
 
-  MCPError(std::string message, int64_t error_code);
+  MCPError(std::string message, int64_t error_code = kInternalError);
 
   void log(llvm::raw_ostream &OS) const override;
   std::error_code convertToErrorCode() const override;
 
   const std::string &getMessage() const { return m_message; }
 
-  protocol::Error toProtcolError() const;
+  lldb_protocol::mcp::Error toProtcolError() const;
+
+  static constexpr int64_t kResourceNotFound = -32002;
+  static constexpr int64_t kInternalError = -32603;
 
 private:
   std::string m_message;
   int64_t m_error_code;
+};
+
+class UnsupportedURI : public llvm::ErrorInfo<UnsupportedURI> {
+public:
+  static char ID;
+
+  UnsupportedURI(std::string uri);
+
+  void log(llvm::raw_ostream &OS) const override;
+  std::error_code convertToErrorCode() const override;
+
+private:
+  std::string m_uri;
 };
 
 } // namespace lldb_private::mcp

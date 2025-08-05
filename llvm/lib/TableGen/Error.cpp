@@ -24,7 +24,7 @@ namespace llvm {
 SourceMgr SrcMgr;
 unsigned ErrorsPrinted = 0;
 
-static void PrintMessage(ArrayRef<SMLoc> Loc, SourceMgr::DiagKind Kind,
+static void PrintMessage(ArrayRef<SMLoc> Locs, SourceMgr::DiagKind Kind,
                          const Twine &Msg) {
   // Count the total number of errors printed.
   // This is used to exit with an error code if there were any errors.
@@ -32,11 +32,11 @@ static void PrintMessage(ArrayRef<SMLoc> Loc, SourceMgr::DiagKind Kind,
     ++ErrorsPrinted;
 
   SMLoc NullLoc;
-  if (Loc.empty())
-    Loc = NullLoc;
-  SrcMgr.PrintMessage(Loc.front(), Kind, Msg);
-  for (unsigned i = 1; i < Loc.size(); ++i)
-    SrcMgr.PrintMessage(Loc[i], SourceMgr::DK_Note,
+  if (Locs.empty())
+    Locs = NullLoc;
+  SrcMgr.PrintMessage(Locs.consume_front(), Kind, Msg);
+  for (SMLoc Loc : Locs)
+    SrcMgr.PrintMessage(Loc, SourceMgr::DK_Note,
                         "instantiated from multiclass");
 }
 
