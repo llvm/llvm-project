@@ -1264,7 +1264,8 @@ def WindowsARM64ECSystemLibrary
     : SystemRuntimeLibrary<isWindowsArm64EC,
                            (add WinArm64ECDefaultRuntimeLibcallImpls,
                                 arm64ec___stack_chk_fail,
-                                __security_check_cookie_arm64ec)>;
+                                LibcallImpls<(add __security_check_cookie_arm64ec),
+                                              isWindowsMSVCEnvironment>)>;
 
 //===----------------------------------------------------------------------===//
 // AMDGPU Runtime Libcalls
