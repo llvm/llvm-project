@@ -14313,7 +14313,7 @@ bool SemaOpenMP::checkTransformableLoopNest(
 ///         }
 ///     }
 /// }
-/// Result: Loop 'i' contains 2 loops, Loop 'r' also contains 2 loops
+/// Result: Loop 'i' contains 2 loops, Loop 'r' also contains 2 loops.
 class NestedLoopCounterVisitor final : public DynamicRecursiveASTVisitor {
 private:
   unsigned NestedLoopCount = 0;
@@ -14341,24 +14341,24 @@ public:
     // LambdaExpr, StmtExpr, BlockExpr, and RequiresExpr. These expressions
     // may contain inner statements (and even loops), but they are not part
     // of the syntactic body of the surrounding loop structure.
-    //  Therefore must not be counted
+    //  Therefore must not be counted.
     if (isa<Expr>(S))
       return true;
 
-    // Only recurse into CompoundStmt (block {}) and loop bodies
+    // Only recurse into CompoundStmt (block {}) and loop bodies.
     if (isa<CompoundStmt, ForStmt, CXXForRangeStmt>(S)) {
       return DynamicRecursiveASTVisitor::TraverseStmt(S);
     }
 
     // Stop traversal of the rest of statements, that break perfect
-    // loop nesting, such as control flow (IfStmt, SwitchStmt...)
+    // loop nesting, such as control flow (IfStmt, SwitchStmt...).
     return true;
   }
 
   bool TraverseDecl(Decl *D) override {
     // Stop in the case of finding a declaration, it is not important
     // in order to find nested loops (Possible CXXRecordDecl, RecordDecl,
-    // FunctionDecl...)
+    // FunctionDecl...).
     return true;
   }
 };
@@ -14370,7 +14370,7 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
 
   VarsWithInheritedDSAType TmpDSA;
   /// Helper Lambda to handle storing initialization and body statements for
-  /// both ForStmt and CXXForRangeStmt
+  /// both ForStmt and CXXForRangeStmt.
   auto StoreLoopStatements = [](LoopAnalysis &Analysis, Stmt *LoopStmt) {
     if (auto *For = dyn_cast<ForStmt>(LoopStmt)) {
       Analysis.OriginalInits.push_back(For->getInit());
@@ -14384,7 +14384,7 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
 
   /// Helper lambda functions to encapsulate the processing of different
   /// derivations of the canonical loop sequence grammar
-  /// Modularized code for handling loop generation and transformations
+  /// Modularized code for handling loop generation and transformations.
   auto AnalyzeLoopGeneration = [&](Stmt *Child) {
     auto *LoopTransform = dyn_cast<OMPLoopTransformationDirective>(Child);
     Stmt *TransformedStmt = LoopTransform->getTransformedStmt();
@@ -14442,7 +14442,7 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
     return true;
   };
 
-  /// Modularized code for handling regular canonical loops
+  /// Modularized code for handling regular canonical loops.
   auto AnalyzeRegularLoop = [&](Stmt *Child) {
     LoopAnalysis &NewRegularLoop =
         SeqAnalysis.Loops.emplace_back(OMPLoopCategory::RegularLoop);
@@ -14463,31 +14463,27 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
     return true;
   };
 
-  /// Helper functions to validate loop sequence grammar derivations
+  /// Helper functions to validate loop sequence grammar derivations.
   auto IsLoopSequenceDerivation = [](auto *Child) {
     return isa<ForStmt, CXXForRangeStmt, OMPLoopTransformationDirective>(Child);
   };
-  /// Helper functions to validate loop generating grammar derivations
+  /// Helper functions to validate loop generating grammar derivations.
   auto IsLoopGeneratingStmt = [](auto *Child) {
     return isa<OMPLoopTransformationDirective>(Child);
   };
 
-  // High level grammar validation
+  // High level grammar validation.
   for (auto *Child : LoopSeqStmt->children()) {
-
     if (!Child)
       continue;
-
-    // Skip over non-loop-sequence statements
+    // Skip over non-loop-sequence statements.
     if (!IsLoopSequenceDerivation(Child)) {
       Child = Child->IgnoreContainers();
-
-      // Ignore empty compound statement
+      // Ignore empty compound statement.
       if (!Child)
         continue;
-
       // In the case of a nested loop sequence ignoring containers would not
-      // be enough, a recurisve transversal of the loop sequence is required
+      // be enough, a recurisve transversal of the loop sequence is required.
       if (isa<CompoundStmt>(Child)) {
         if (!analyzeLoopSequence(Child, SeqAnalysis, Context, Kind))
           return false;
@@ -14495,23 +14491,19 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
         continue;
       }
     }
-    // Regular loop sequence handling
+    // Regular loop sequence handling.
     if (IsLoopSequenceDerivation(Child)) {
       if (IsLoopGeneratingStmt(Child)) {
         if (!AnalyzeLoopGeneration(Child))
           return false;
-
-        // AnalyzeLoopGeneration updates Loop Sequence size accordingly
-
+        // AnalyzeLoopGeneration updates SeqAnalysis.LoopSeqSize accordingly.
       } else {
         if (!AnalyzeRegularLoop(Child))
           return false;
-
-        // Update the Loop Sequence size by one
         SeqAnalysis.LoopSeqSize++;
       }
     } else {
-      // Report error for invalid statement inside canonical loop sequence
+      // Report error for invalid statement inside canonical loop sequence.
       Diag(Child->getBeginLoc(), diag::err_omp_not_for)
           << 0 << getOpenMPDirectiveName(Kind);
       return false;
@@ -14523,14 +14515,6 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
 bool SemaOpenMP::checkTransformableLoopSequence(
     OpenMPDirectiveKind Kind, Stmt *AStmt, LoopSequenceAnalysis &SeqAnalysis,
     ASTContext &Context) {
-
-  // Checks whether the given statement is a compound statement
-  if (!isa<CompoundStmt>(AStmt)) {
-    Diag(AStmt->getBeginLoc(), diag::err_omp_not_a_loop_sequence)
-        << getOpenMPDirectiveName(Kind);
-    return false;
-  }
-
   // Following OpenMP 6.0 API Specification, a Canonical Loop Sequence follows
   // the grammar:
   //
@@ -14543,17 +14527,25 @@ bool SemaOpenMP::checkTransformableLoopSequence(
   // 2. loop-nest
   // 3. loop-sequence-generating-construct (i.e OMPLoopTransformationDirective)
   //
-  // To recognise and traverse this structure the following helper functions
-  // have been defined. analyzeLoopSequence serves as the recurisve entry point
+  // To recognise and traverse this structure the helper function
+  // analyzeLoopSequence serves as the recurisve entry point
   // and tries to match the input AST to the canonical loop sequence grammar
   // structure. This function will perform both a semantic and syntactical
   // analysis of the given statement according to OpenMP 6.0 definition of
-  // the aforementioned canonical loop sequence
+  // the aforementioned canonical loop sequence.
+
+  // We expect an outer compound statement.
+  if (!isa<CompoundStmt>(AStmt)) {
+    Diag(AStmt->getBeginLoc(), diag::err_omp_not_a_loop_sequence)
+        << getOpenMPDirectiveName(Kind);
+    return false;
+  }
 
   // Recursive entry point to process the main loop sequence
   if (!analyzeLoopSequence(AStmt, SeqAnalysis, Context, Kind))
     return false;
 
+  // Diagnose an empty loop sequence.
   if (SeqAnalysis.LoopSeqSize <= 0) {
     Diag(AStmt->getBeginLoc(), diag::err_omp_empty_loop_sequence)
         << getOpenMPDirectiveName(Kind);

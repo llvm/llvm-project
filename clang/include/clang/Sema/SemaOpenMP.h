@@ -1495,7 +1495,7 @@ private:
       Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits);
 
   /// Categories of loops encountered during semantic OpenMP loop
-  /// analysis
+  /// analysis.
   ///
   /// This enumeration identifies the structural category of a loop or sequence
   /// of loops analyzed in the context of OpenMP transformations and directives.
@@ -1505,12 +1505,12 @@ private:
     /// @var OMPLoopCategory::RegularLoop
     /// Represents a standard canonical loop nest found in the
     /// original source code or an intact loop after transformations
-    /// (i.e Post/Pre loops of a loopranged fusion)
+    /// (i.e Post/Pre loops of a loopranged fusion).
     RegularLoop,
 
     /// @var OMPLoopCategory::TransformSingleLoop
     /// Represents the resulting loop structure when an OpenMP loop
-    //  transformation, generates a single, top-level loop
+    /// transformation, generates a single, top-level loop.
     TransformSingleLoop,
   };
 
