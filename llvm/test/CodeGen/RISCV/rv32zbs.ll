@@ -785,16 +785,16 @@ define i32 @bset_trailing_ones_i32_no_mask(i32 %a) nounwind {
 define i64 @bset_trailing_ones_i64_mask(i64 %a) nounwind {
 ; CHECK-LABEL: bset_trailing_ones_i64_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    andi a3, a0, 63
-; CHECK-NEXT:    addi a1, a3, -32
-; CHECK-NEXT:    sll a0, a2, a0
+; CHECK-NEXT:    andi a2, a0, 63
+; CHECK-NEXT:    li a3, -1
+; CHECK-NEXT:    addi a1, a2, -32
+; CHECK-NEXT:    sll a0, a3, a0
 ; CHECK-NEXT:    bltz a1, .LBB43_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    sll a2, a2, a3
+; CHECK-NEXT:    sll a2, a3, a2
 ; CHECK-NEXT:    j .LBB43_3
 ; CHECK-NEXT:  .LBB43_2:
-; CHECK-NEXT:    not a2, a3
+; CHECK-NEXT:    not a2, a2
 ; CHECK-NEXT:    lui a3, 524288
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    srl a2, a3, a2

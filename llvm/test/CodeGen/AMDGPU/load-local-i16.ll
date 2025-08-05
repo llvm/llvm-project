@@ -1083,12 +1083,12 @@ define amdgpu_kernel void @local_sextload_v4i16_to_v4i32(ptr addrspace(3) %out, 
 ; SI-NEXT:    s_mov_b32 m0, -1
 ; SI-NEXT:    ds_read_b64 v[0:1], v0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_ashrrev_i32_e32 v2, 16, v1
-; SI-NEXT:    v_ashrrev_i32_e32 v4, 16, v0
-; SI-NEXT:    v_bfe_i32 v1, v1, 0, 16
-; SI-NEXT:    v_bfe_i32 v3, v0, 0, 16
+; SI-NEXT:    v_ashrrev_i32_e32 v3, 16, v0
+; SI-NEXT:    v_ashrrev_i32_e32 v5, 16, v1
+; SI-NEXT:    v_bfe_i32 v2, v0, 0, 16
+; SI-NEXT:    v_bfe_i32 v4, v1, 0, 16
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    ds_write2_b64 v0, v[3:4], v[1:2] offset1:1
+; SI-NEXT:    ds_write2_b64 v0, v[2:3], v[4:5] offset1:1
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-NO-DS128-LABEL: local_sextload_v4i16_to_v4i32:
@@ -6153,11 +6153,11 @@ define amdgpu_kernel void @local_sextload_v8i16_to_v8i64(ptr addrspace(3) %out, 
 ; SI-NEXT:    v_bfe_i32 v8, v1, 0, 16
 ; SI-NEXT:    v_bfe_i32 v2, v2, 0, 16
 ; SI-NEXT:    v_bfe_i32 v10, v9, 0, 16
-; SI-NEXT:    v_bfe_i32 v12, v12, 0, 16
-; SI-NEXT:    v_bfe_i32 v14, v11, 0, 16
 ; SI-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; SI-NEXT:    v_bfe_i32 v12, v12, 0, 16
 ; SI-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; SI-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; SI-NEXT:    v_bfe_i32 v14, v11, 0, 16
 ; SI-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; SI-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
 ; SI-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
@@ -6819,10 +6819,10 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i64(ptr addrspace(3) %out
 ; SI-NEXT:    v_mov_b32_e32 v18, s0
 ; SI-NEXT:    s_waitcnt lgkmcnt(1)
 ; SI-NEXT:    v_mov_b32_e32 v12, v3
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v14, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v15, 16, v2
 ; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_mov_b32_e32 v14, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v17, 16, v6
 ; SI-NEXT:    v_lshrrev_b32_e32 v19, 16, v4
 ; SI-NEXT:    v_ashrrev_i32_e32 v9, 31, v5
@@ -6845,24 +6845,24 @@ define amdgpu_kernel void @local_sextload_v16i16_to_v16i64(ptr addrspace(3) %out
 ; SI-NEXT:    v_bfe_i32 v1, v4, 0, 16
 ; SI-NEXT:    v_bfe_i32 v3, v5, 0, 16
 ; SI-NEXT:    v_bfe_i32 v5, v6, 0, 16
-; SI-NEXT:    v_bfe_i32 v7, v0, 0, 16
-; SI-NEXT:    v_bfe_i32 v10, v2, 0, 16
+; SI-NEXT:    v_bfe_i32 v10, v0, 0, 16
+; SI-NEXT:    v_bfe_i32 v7, v2, 0, 16
 ; SI-NEXT:    v_bfe_i32 v12, v19, 0, 16
-; SI-NEXT:    v_bfe_i32 v14, v17, 0, 16
-; SI-NEXT:    v_bfe_i32 v16, v16, 0, 16
+; SI-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; SI-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; SI-NEXT:    v_bfe_i32 v14, v17, 0, 16
+; SI-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
+; SI-NEXT:    v_bfe_i32 v16, v16, 0, 16
+; SI-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; SI-NEXT:    ds_write2_b64 v18, v[3:4], v[8:9] offset0:2 offset1:3
 ; SI-NEXT:    v_bfe_i32 v3, v15, 0, 16
-; SI-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; SI-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; SI-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
-; SI-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; SI-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
 ; SI-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
 ; SI-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
 ; SI-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; SI-NEXT:    ds_write2_b64 v18, v[10:11], v[3:4] offset0:12 offset1:13
-; SI-NEXT:    ds_write2_b64 v18, v[7:8], v[16:17] offset0:8 offset1:9
+; SI-NEXT:    ds_write2_b64 v18, v[7:8], v[3:4] offset0:12 offset1:13
+; SI-NEXT:    ds_write2_b64 v18, v[10:11], v[16:17] offset0:8 offset1:9
 ; SI-NEXT:    ds_write2_b64 v18, v[5:6], v[14:15] offset0:4 offset1:5
 ; SI-NEXT:    ds_write2_b64 v18, v[1:2], v[12:13] offset1:1
 ; SI-NEXT:    s_endpgm
@@ -8114,16 +8114,16 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; SI-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
 ; SI-NEXT:    ds_write2_b64 v7, v[10:11], v[12:13] offset0:4 offset1:5
 ; SI-NEXT:    v_bfe_i32 v11, v6, 0, 16
+; SI-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; SI-NEXT:    v_bfe_i32 v13, v4, 0, 16
+; SI-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
 ; SI-NEXT:    v_bfe_i32 v15, v15, 0, 16
+; SI-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; SI-NEXT:    v_bfe_i32 v16, v14, 0, 16
 ; SI-NEXT:    v_ashrrev_i32_e32 v10, 31, v9
 ; SI-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
 ; SI-NEXT:    ds_write2_b64 v7, v[9:10], v[16:17] offset1:1
 ; SI-NEXT:    v_bfe_i32 v17, v18, 0, 16
-; SI-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; SI-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; SI-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
 ; SI-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; SI-NEXT:    v_ashrrev_i32_e32 v12, 31, v11
 ; SI-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
