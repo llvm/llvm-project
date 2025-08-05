@@ -83,9 +83,16 @@ void DemandedBits::determineLiveOperandBits(
     AB = APInt::getZero(BitWidth);
     uint64_t LoopRange = Max - Min;
     APInt Mask = AOut;
+    APInt Shifted = AOut; // AOut | (AOut << 1) | ... | (AOut << (ShiftAmnt - 1)
     for (unsigned ShiftAmnt = 1; ShiftAmnt <= LoopRange; ShiftAmnt <<= 1) {
-      APInt Shifted = ShiftF(Mask, ShiftAmnt);
-      Mask |= Shifted;
+      if (LoopRange & ShiftAmnt) {
+        // Account for (LoopRange - ShiftAmnt, LoopRange]
+        Mask |= ShiftF(Shifted, LoopRange - ShiftAmnt + 1);
+        // Clears the low bit.
+        LoopRange -= ShiftAmnt;
+      }
+      // [0, ShiftAmnt) -> [0, ShiftAmnt * 2)
+      Shifted |= ShiftF(Shifted, ShiftAmnt);
     }
     AB = ShiftF(Mask, Min);
   };
