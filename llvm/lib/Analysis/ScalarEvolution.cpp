@@ -7425,12 +7425,10 @@ ScalarEvolution::getLoopProperties(const Loop *L) {
       if (I->mayThrow())
         return true;
 
-      // Check if the function accesses inaccessible memory.
-      if (auto *CI = dyn_cast<CallInst>(I)) {
-        auto ME = CI->getMemoryEffects();
-        if (!isModSet(ME.getModRef(IRMemLocation::InaccessibleMem)))
-          return false;
-      }
+      // Non-volatile memset / memcpy do not count as side-effect for forward
+      // progress.
+      if (isa<MemIntrinsic>(I) && !I->isVolatile())
+        return false;
 
       return I->mayWriteToMemory();
     };
