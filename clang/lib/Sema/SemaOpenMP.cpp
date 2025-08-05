@@ -14240,11 +14240,11 @@ static bool tryHandleAs(T *Type, F &&Func) {
 /// Updates OriginalInits by checking Transform against loop transformation
 /// directives and appending their pre-inits if a match is found.
 static void updatePreInits(OMPLoopBasedDirective *Transform,
-                           SmallVectorImpl<SmallVector<Stmt *>> &PreInits) {
+                           SmallVectorImpl<Stmt *> &PreInits) {
   if (!tryHandleAs<OMPTileDirective, OMPUnrollDirective, OMPReverseDirective,
                    OMPInterchangeDirective, OMPFuseDirective>(
           Transform, [&PreInits](auto *Dir) {
-            appendFlattenedStmtList(PreInits.back(), Dir->getPreInits());
+            appendFlattenedStmtList(PreInits, Dir->getPreInits());
           }))
     llvm_unreachable("Unhandled loop transformation");
 }
@@ -14279,7 +14279,7 @@ bool SemaOpenMP::checkTransformableLoopNest(
         return false;
       },
       [&OriginalInits](OMPLoopBasedDirective *Transform) {
-        updatePreInits(Transform, OriginalInits);
+        updatePreInits(Transform, OriginalInits.back());
       });
   assert(OriginalInits.back().empty() && "No preinit after innermost loop");
   OriginalInits.pop_back();
@@ -14363,27 +14363,22 @@ public:
   }
 };
 
-bool SemaOpenMP::analyzeLoopSequence(
-    Stmt *LoopSeqStmt, unsigned &LoopSeqSize, unsigned &NumLoops,
-    SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-    SmallVectorImpl<Stmt *> &ForStmts,
-    SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits,
-    SmallVectorImpl<SmallVector<Stmt *>> &TransformsPreInits,
-    SmallVectorImpl<SmallVector<Stmt *>> &LoopSequencePreInits,
-    SmallVectorImpl<OMPLoopCategory> &LoopCategories, ASTContext &Context,
-    OpenMPDirectiveKind Kind) {
+bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
+                                     LoopSequenceAnalysis &SeqAnalysis,
+                                     ASTContext &Context,
+                                     OpenMPDirectiveKind Kind) {
 
   VarsWithInheritedDSAType TmpDSA;
   /// Helper Lambda to handle storing initialization and body statements for
   /// both ForStmt and CXXForRangeStmt
-  auto StoreLoopStatements = [&](Stmt *LoopStmt) {
+  auto StoreLoopStatements = [](LoopAnalysis &Analysis, Stmt *LoopStmt) {
     if (auto *For = dyn_cast<ForStmt>(LoopStmt)) {
-      OriginalInits.back().push_back(For->getInit());
-      ForStmts.push_back(For);
+      Analysis.OriginalInits.push_back(For->getInit());
+      Analysis.ForStmt = For;
     } else {
       auto *CXXFor = cast<CXXForRangeStmt>(LoopStmt);
-      OriginalInits.back().push_back(CXXFor->getBeginStmt());
-      ForStmts.push_back(CXXFor);
+      Analysis.OriginalInits.push_back(CXXFor->getBeginStmt());
+      Analysis.ForStmt = CXXFor;
     }
   };
 
@@ -14399,8 +14394,8 @@ bool SemaOpenMP::analyzeLoopSequence(
     // dependent contexts
     if (!TransformedStmt) {
       if (NumGeneratedLoopNests > 0) {
-        LoopSeqSize += NumGeneratedLoopNests;
-        NumLoops += NumGeneratedLoops;
+        SeqAnalysis.LoopSeqSize += NumGeneratedLoopNests;
+        SeqAnalysis.NumLoops += NumGeneratedLoops;
         return true;
       }
       // Unroll full (0 loops produced)
@@ -14419,50 +14414,41 @@ bool SemaOpenMP::analyzeLoopSequence(
     if (NumGeneratedLoopNests > 1) {
       // Get the preinits related to this loop sequence generating
       // loop transformation (i.e loopranged fuse, split...)
-      LoopSequencePreInits.emplace_back();
       // These preinits differ slightly from regular inits/pre-inits related
       // to single loop generating loop transformations (interchange, unroll)
       // given that they are not bounded to a particular loop nest
       // so they need to be treated independently
-      updatePreInits(LoopTransform, LoopSequencePreInits);
-      return analyzeLoopSequence(TransformedStmt, LoopSeqSize, NumLoops,
-                                 LoopHelpers, ForStmts, OriginalInits,
-                                 TransformsPreInits, LoopSequencePreInits,
-                                 LoopCategories, Context, Kind);
+      updatePreInits(LoopTransform, SeqAnalysis.LoopSequencePreInits);
+      return analyzeLoopSequence(TransformedStmt, SeqAnalysis, Context, Kind);
     }
     // Vast majority: (Tile, Unroll, Stripe, Reverse, Interchange, Fuse all)
     // Process the transformed loop statement
-    OriginalInits.emplace_back();
-    TransformsPreInits.emplace_back();
-    LoopHelpers.emplace_back();
-    LoopCategories.push_back(OMPLoopCategory::TransformSingleLoop);
-
+    LoopAnalysis &NewTransformedSingleLoop =
+        SeqAnalysis.Loops.emplace_back(OMPLoopCategory::TransformSingleLoop);
     unsigned IsCanonical =
         checkOpenMPLoop(Kind, nullptr, nullptr, TransformedStmt, SemaRef,
-                        *DSAStack, TmpDSA, LoopHelpers[LoopSeqSize]);
+                        *DSAStack, TmpDSA, NewTransformedSingleLoop.HelperExprs);
 
     if (!IsCanonical) {
       Diag(TransformedStmt->getBeginLoc(), diag::err_omp_not_canonical_loop)
           << getOpenMPDirectiveName(Kind);
       return false;
     }
-    StoreLoopStatements(TransformedStmt);
-    updatePreInits(LoopTransform, TransformsPreInits);
+    StoreLoopStatements(NewTransformedSingleLoop, TransformedStmt);
+    updatePreInits(LoopTransform, NewTransformedSingleLoop.TransformsPreInits);
 
-    NumLoops += NumGeneratedLoops;
-    ++LoopSeqSize;
+    SeqAnalysis.NumLoops += NumGeneratedLoops;
+    SeqAnalysis.LoopSeqSize++;
     return true;
   };
 
   /// Modularized code for handling regular canonical loops
   auto AnalyzeRegularLoop = [&](Stmt *Child) {
-    OriginalInits.emplace_back();
-    LoopHelpers.emplace_back();
-    LoopCategories.push_back(OMPLoopCategory::RegularLoop);
-
-    unsigned IsCanonical =
-        checkOpenMPLoop(Kind, nullptr, nullptr, Child, SemaRef, *DSAStack,
-                        TmpDSA, LoopHelpers[LoopSeqSize]);
+    LoopAnalysis &NewRegularLoop =
+        SeqAnalysis.Loops.emplace_back(OMPLoopCategory::RegularLoop);
+    unsigned IsCanonical = checkOpenMPLoop(
+        Kind, nullptr, nullptr, Child, SemaRef, *DSAStack, TmpDSA,
+        NewRegularLoop.HelperExprs);
 
     if (!IsCanonical) {
       Diag(Child->getBeginLoc(), diag::err_omp_not_canonical_loop)
@@ -14470,10 +14456,10 @@ bool SemaOpenMP::analyzeLoopSequence(
       return false;
     }
 
-    StoreLoopStatements(Child);
+    StoreLoopStatements(NewRegularLoop, Child);
     auto NLCV = NestedLoopCounterVisitor();
     NLCV.TraverseStmt(Child);
-    NumLoops += NLCV.getNestedLoopCount();
+    SeqAnalysis.NumLoops += NLCV.getNestedLoopCount();
     return true;
   };
 
@@ -14503,10 +14489,7 @@ bool SemaOpenMP::analyzeLoopSequence(
       // In the case of a nested loop sequence ignoring containers would not
       // be enough, a recurisve transversal of the loop sequence is required
       if (isa<CompoundStmt>(Child)) {
-        if (!analyzeLoopSequence(Child, LoopSeqSize, NumLoops, LoopHelpers,
-                                 ForStmts, OriginalInits, TransformsPreInits,
-                                 LoopSequencePreInits, LoopCategories, Context,
-                                 Kind))
+        if (!analyzeLoopSequence(Child, SeqAnalysis, Context, Kind))
           return false;
         // Already been treated, skip this children
         continue;
@@ -14525,7 +14508,7 @@ bool SemaOpenMP::analyzeLoopSequence(
           return false;
 
         // Update the Loop Sequence size by one
-        ++LoopSeqSize;
+        SeqAnalysis.LoopSeqSize++;
       }
     } else {
       // Report error for invalid statement inside canonical loop sequence
@@ -14538,14 +14521,8 @@ bool SemaOpenMP::analyzeLoopSequence(
 }
 
 bool SemaOpenMP::checkTransformableLoopSequence(
-    OpenMPDirectiveKind Kind, Stmt *AStmt, unsigned &LoopSeqSize,
-    unsigned &NumLoops,
-    SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-    SmallVectorImpl<Stmt *> &ForStmts,
-    SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits,
-    SmallVectorImpl<SmallVector<Stmt *>> &TransformsPreInits,
-    SmallVectorImpl<SmallVector<Stmt *>> &LoopSequencePreInits,
-    SmallVectorImpl<OMPLoopCategory> &LoopCategories, ASTContext &Context) {
+    OpenMPDirectiveKind Kind, Stmt *AStmt, LoopSequenceAnalysis &SeqAnalysis,
+    ASTContext &Context) {
 
   // Checks whether the given statement is a compound statement
   if (!isa<CompoundStmt>(AStmt)) {
@@ -14553,10 +14530,6 @@ bool SemaOpenMP::checkTransformableLoopSequence(
         << getOpenMPDirectiveName(Kind);
     return false;
   }
-  // Number of top level canonical loop nests observed (And acts as index)
-  LoopSeqSize = 0;
-  // Number of total observed loops
-  NumLoops = 0;
 
   // Following OpenMP 6.0 API Specification, a Canonical Loop Sequence follows
   // the grammar:
@@ -14578,12 +14551,10 @@ bool SemaOpenMP::checkTransformableLoopSequence(
   // the aforementioned canonical loop sequence
 
   // Recursive entry point to process the main loop sequence
-  if (!analyzeLoopSequence(AStmt, LoopSeqSize, NumLoops, LoopHelpers, ForStmts,
-                           OriginalInits, TransformsPreInits,
-                           LoopSequencePreInits, LoopCategories, Context, Kind))
+  if (!analyzeLoopSequence(AStmt, SeqAnalysis, Context, Kind))
     return false;
 
-  if (LoopSeqSize <= 0) {
+  if (SeqAnalysis.LoopSeqSize <= 0) {
     Diag(AStmt->getBeginLoc(), diag::err_omp_empty_loop_sequence)
         << getOpenMPDirectiveName(Kind);
     return false;
@@ -14591,7 +14562,7 @@ bool SemaOpenMP::checkTransformableLoopSequence(
   return true;
 }
 
-/// Add preinit statements that need to be propageted from the selected loop.
+/// Add preinit statements that need to be propagated from the selected loop.
 static void addLoopPreInits(ASTContext &Context,
                             OMPLoopBasedDirective::HelperExprs &LoopHelper,
                             Stmt *LoopStmt, ArrayRef<Stmt *> OriginalInit,
@@ -15862,32 +15833,25 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   if (!AStmt)
     return StmtError();
 
-  unsigned NumLoops = 1;
-  unsigned LoopSeqSize = 1;
-
   // Defer transformation in dependent contexts
   // The NumLoopNests argument is set to a placeholder 1 (even though
   // using looprange fuse could yield up to 3 top level loop nests)
   // because a dependent context could prevent determining its true value
   if (CurrContext->isDependentContext()) {
     return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
-                                    NumLoops, LoopSeqSize, AStmt, nullptr,
-                                    nullptr);
+                                    /* NumLoops */ 1, /* LoopSeqSize */ 1,
+                                    AStmt, nullptr, nullptr);
   }
 
   // Validate that the potential loop sequence is transformable for fusion
   // Also collect the HelperExprs, Loop Stmts, Inits, and Number of loops
-  SmallVector<OMPLoopBasedDirective::HelperExprs, 4> LoopHelpers;
-  SmallVector<Stmt *> LoopStmts;
-  SmallVector<SmallVector<Stmt *>> OriginalInits;
-  SmallVector<SmallVector<Stmt *>> TransformsPreInits;
-  SmallVector<SmallVector<Stmt *>> LoopSequencePreInits;
-  SmallVector<OMPLoopCategory, 0> LoopCategories;
-  if (!checkTransformableLoopSequence(OMPD_fuse, AStmt, LoopSeqSize, NumLoops,
-                                      LoopHelpers, LoopStmts, OriginalInits,
-                                      TransformsPreInits, LoopSequencePreInits,
-                                      LoopCategories, Context))
+  LoopSequenceAnalysis SeqAnalysis;
+  if (!checkTransformableLoopSequence(OMPD_fuse, AStmt, SeqAnalysis, Context))
     return StmtError();
+
+  // SeqAnalysis.LoopSeqSize exists mostly to handle dependent contexts,
+  // otherwise it must be the same as SeqAnalysis.Loops.size().
+  assert(SeqAnalysis.LoopSeqSize == SeqAnalysis.Loops.size());
 
   // Handle clauses, which can be any of the following: [looprange, apply]
   const OMPLoopRangeClause *LRC =
@@ -15916,7 +15880,7 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
                            unsigned NumLoops) -> bool {
     return FirstVal + CountVal - 1 <= NumLoops;
   };
-  uint64_t FirstVal = 1, CountVal = 0, LastVal = LoopSeqSize;
+  uint64_t FirstVal = 1, CountVal = 0, LastVal = SeqAnalysis.LoopSeqSize;
 
   // Validates the loop range after evaluating the semantic information
   // and ensures that the range is valid for the given loop sequence size.
@@ -15928,10 +15892,10 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       SemaRef.Diag(LRC->getCountLoc(), diag::warn_omp_redundant_fusion)
           << getOpenMPDirectiveName(OMPD_fuse);
 
-    if (!ValidLoopRange(FirstVal, CountVal, LoopSeqSize)) {
+    if (!ValidLoopRange(FirstVal, CountVal, SeqAnalysis.LoopSeqSize)) {
       SemaRef.Diag(LRC->getFirstLoc(), diag::err_omp_invalid_looprange)
           << getOpenMPDirectiveName(OMPD_fuse) << FirstVal
-          << (FirstVal + CountVal - 1) << LoopSeqSize;
+          << (FirstVal + CountVal - 1) << SeqAnalysis.LoopSeqSize;
       return StmtError();
     }
 
@@ -15940,25 +15904,20 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
 
   // Complete fusion generates a single canonical loop nest
   // However looprange clause generates several loop nests
-  unsigned NumLoopNests = LRC ? LoopSeqSize - CountVal + 1 : 1;
+  unsigned NumLoopNests = LRC ? SeqAnalysis.LoopSeqSize - CountVal + 1 : 1;
 
   // Emit a warning for redundant loop fusion when the sequence contains only
   // one loop.
-  if (LoopSeqSize == 1)
+  if (SeqAnalysis.LoopSeqSize == 1)
     SemaRef.Diag(AStmt->getBeginLoc(), diag::warn_omp_redundant_fusion)
         << getOpenMPDirectiveName(OMPD_fuse);
 
-  assert(LoopHelpers.size() == LoopSeqSize &&
-         "Expecting loop iteration space dimensionality to match number of "
-         "affected loops");
-  assert(OriginalInits.size() == LoopSeqSize &&
-         "Expecting loop iteration space dimensionality to match number of "
-         "affected loops");
-
   // Select the type with the largest bit width among all induction variables
-  QualType IVType = LoopHelpers[FirstVal - 1].IterationVarRef->getType();
+  QualType IVType = SeqAnalysis.Loops[FirstVal - 1]
+                        .HelperExprs.IterationVarRef->getType();
   for (unsigned I = FirstVal; I < LastVal; ++I) {
-    QualType CurrentIVType = LoopHelpers[I].IterationVarRef->getType();
+    QualType CurrentIVType =
+        SeqAnalysis.Loops[I].HelperExprs.IterationVarRef->getType();
     if (Context.getTypeSize(CurrentIVType) > Context.getTypeSize(IVType)) {
       IVType = CurrentIVType;
     }
@@ -16008,8 +15967,6 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // helper variables required for the transformation. Other loop transforms
   // also contain their own preinits
   SmallVector<Stmt *> PreInits;
-  // Iterator to keep track of loop transformations
-  unsigned int TransformIndex = 0;
 
   //  Update the general preinits using the preinits generated by loop sequence
   //  generating loop transformations. These preinits differ slightly from
@@ -16020,11 +15977,8 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   //  original loop. the preinit structure must ensure that hidden variables
   //  like '.omp.fuse.max' are still properly handled.
   // Transformations that apply this concept: Loopranged Fuse, Split
-  if (!LoopSequencePreInits.empty()) {
-    for (const auto &LTPreInits : LoopSequencePreInits) {
-      if (!LTPreInits.empty())
-        llvm::append_range(PreInits, LTPreInits);
-    }
+  if (!SeqAnalysis.LoopSequencePreInits.empty()) {
+    llvm::append_range(PreInits, SeqAnalysis.LoopSequencePreInits);
   }
 
   // Process each single loop to generate and collect declarations
@@ -16036,35 +15990,45 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   // transformations, also append their preinits (which contain the original
   // loop initialization statement or other statements)
 
-  // Firstly we need to update TransformIndex to match the begining of the
+  // Firstly we need to set TransformIndex to match the begining of the
   // looprange section
+  unsigned int TransformIndex = 0;
   for (unsigned I : llvm::seq<unsigned>(FirstVal - 1)) {
-    if (LoopCategories[I] == OMPLoopCategory::TransformSingleLoop)
+    if (SeqAnalysis.Loops[I].Category ==
+        OMPLoopCategory::TransformSingleLoop)
       ++TransformIndex;
   }
-  for (unsigned int I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
 
-    if (LoopCategories[I] == OMPLoopCategory::RegularLoop) {
-      addLoopPreInits(Context, LoopHelpers[I], LoopStmts[I], OriginalInits[I],
-                      PreInits);
-    } else if (LoopCategories[I] == OMPLoopCategory::TransformSingleLoop) {
+  for (unsigned int I = FirstVal - 1, J = 0; I < LastVal; ++I, ++J) {
+    if (SeqAnalysis.Loops[I].Category ==
+        OMPLoopCategory::RegularLoop) {
+      addLoopPreInits(Context, SeqAnalysis.Loops[I].HelperExprs,
+                      SeqAnalysis.Loops[I].ForStmt,
+                      SeqAnalysis.Loops[I].OriginalInits, PreInits);
+    } else if (SeqAnalysis.Loops[I].Category ==
+               OMPLoopCategory::TransformSingleLoop) {
       // For transformed loops, insert both pre-inits and original inits.
       // Order matters: pre-inits may define variables used in the original
       // inits such as upper bounds...
-      auto TransformPreInit = TransformsPreInits[TransformIndex++];
+      auto &TransformPreInit =
+          SeqAnalysis.Loops[TransformIndex++].TransformsPreInits;
       if (!TransformPreInit.empty())
         llvm::append_range(PreInits, TransformPreInit);
 
-      addLoopPreInits(Context, LoopHelpers[I], LoopStmts[I], OriginalInits[I],
-                      PreInits);
+      addLoopPreInits(Context, SeqAnalysis.Loops[I].HelperExprs,
+                      SeqAnalysis.Loops[I].ForStmt,
+                      SeqAnalysis.Loops[I].OriginalInits, PreInits);
     }
-    auto [UBVD, UBDStmt] = CreateHelperVarAndStmt(LoopHelpers[I].UB, "ub", J);
-    auto [LBVD, LBDStmt] = CreateHelperVarAndStmt(LoopHelpers[I].LB, "lb", J);
-    auto [STVD, STDStmt] = CreateHelperVarAndStmt(LoopHelpers[I].ST, "st", J);
-    auto [NIVD, NIDStmt] =
-        CreateHelperVarAndStmt(LoopHelpers[I].NumIterations, "ni", J, true);
-    auto [IVVD, IVDStmt] =
-        CreateHelperVarAndStmt(LoopHelpers[I].IterationVarRef, "iv", J);
+    auto [UBVD, UBDStmt] = CreateHelperVarAndStmt(
+        SeqAnalysis.Loops[I].HelperExprs.UB, "ub", J);
+    auto [LBVD, LBDStmt] = CreateHelperVarAndStmt(
+        SeqAnalysis.Loops[I].HelperExprs.LB, "lb", J);
+    auto [STVD, STDStmt] = CreateHelperVarAndStmt(
+        SeqAnalysis.Loops[I].HelperExprs.ST, "st", J);
+    auto [NIVD, NIDStmt] = CreateHelperVarAndStmt(
+        SeqAnalysis.Loops[I].HelperExprs.NumIterations, "ni", J, true);
+    auto [IVVD, IVDStmt] = CreateHelperVarAndStmt(
+        SeqAnalysis.Loops[I].HelperExprs.IterationVarRef, "iv", J);
 
     assert(LBVD && STVD && NIVD && IVVD &&
            "OpenMP Fuse Helper variables creation failed");
@@ -16247,15 +16211,18 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     // Update the original i_k = IV_k
     SmallVector<Stmt *, 4> BodyStmts;
     BodyStmts.push_back(IdxExpr.get());
-    llvm::append_range(BodyStmts, LoopHelpers[I].Updates);
+    llvm::append_range(BodyStmts,
+                       SeqAnalysis.Loops[I].HelperExprs.Updates);
 
     // If the loop is a CXXForRangeStmt then the iterator variable is needed
-    if (auto *SourceCXXFor = dyn_cast<CXXForRangeStmt>(LoopStmts[I]))
+    if (auto *SourceCXXFor =
+            dyn_cast<CXXForRangeStmt>(SeqAnalysis.Loops[I].ForStmt))
       BodyStmts.push_back(SourceCXXFor->getLoopVarStmt());
 
-    Stmt *Body = (isa<ForStmt>(LoopStmts[I]))
-                     ? cast<ForStmt>(LoopStmts[I])->getBody()
-                     : cast<CXXForRangeStmt>(LoopStmts[I])->getBody();
+    Stmt *Body =
+        (isa<ForStmt>(SeqAnalysis.Loops[I].ForStmt))
+            ? cast<ForStmt>(SeqAnalysis.Loops[I].ForStmt)->getBody()
+            : cast<CXXForRangeStmt>(SeqAnalysis.Loops[I].ForStmt)->getBody();
     BodyStmts.push_back(Body);
 
     CompoundStmt *CombinedBody =
@@ -16294,8 +16261,9 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
   //  treatment is skipped)
 
   Stmt *FusionStmt = FusedForStmt;
-  if (LRC && CountVal != LoopSeqSize) {
+  if (LRC && CountVal != SeqAnalysis.LoopSeqSize) {
     SmallVector<Stmt *, 4> FinalLoops;
+
     // Reset the transform index
     TransformIndex = 0;
 
@@ -16303,11 +16271,12 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     // Pre-fusion and post-fusion loops are inserted in order exploiting their
     // symmetry, along with their corresponding transformation pre-inits if
     // needed. The fused loop is added between the two regions.
-    for (unsigned I = 0; I < LoopSeqSize; ++I) {
+    for (unsigned I = 0; I < SeqAnalysis.LoopSeqSize; ++I) {
       if (I >= FirstVal - 1 && I < FirstVal + CountVal - 1) {
         // Update the Transformation counter to skip already treated
         // loop transformations
-        if (LoopCategories[I] != OMPLoopCategory::TransformSingleLoop)
+        if (SeqAnalysis.Loops[I].Category !=
+            OMPLoopCategory::TransformSingleLoop)
           ++TransformIndex;
         continue;
       }
@@ -16316,24 +16285,25 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
       // Regular loops: they are kept intact as-is.
       // Loop-sequence-generating transformations: already handled earlier.
       // Only TransformSingleLoop requires inserting pre-inits here
-
-      if (LoopCategories[I] == OMPLoopCategory::TransformSingleLoop) {
-        const auto &TransformPreInit = TransformsPreInits[TransformIndex++];
+      if (SeqAnalysis.Loops[I].Category ==
+          OMPLoopCategory::TransformSingleLoop) {
+        const auto &TransformPreInit =
+            SeqAnalysis.Loops[TransformIndex++].TransformsPreInits;
         if (!TransformPreInit.empty()) {
           llvm::append_range(PreInits, TransformPreInit);
         }
       }
 
-      FinalLoops.push_back(LoopStmts[I]);
+      FinalLoops.push_back(SeqAnalysis.Loops[I].ForStmt);
     }
 
     FinalLoops.insert(FinalLoops.begin() + (FirstVal - 1), FusedForStmt);
     FusionStmt = CompoundStmt::Create(Context, FinalLoops, FPOptionsOverride(),
                                       SourceLocation(), SourceLocation());
   }
-  return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses, NumLoops,
-                                  NumLoopNests, AStmt, FusionStmt,
-                                  buildPreInits(Context, PreInits));
+  return OMPFuseDirective::Create(Context, StartLoc, EndLoc, Clauses,
+                                  SeqAnalysis.NumLoops, NumLoopNests, AStmt,
+                                  FusionStmt, buildPreInits(Context, PreInits));
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind,

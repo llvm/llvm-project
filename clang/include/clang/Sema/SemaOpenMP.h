@@ -1502,7 +1502,6 @@ private:
   /// This categorization helps differentiate between original source loops
   /// and the structures resulting from applying OpenMP loop transformations.
   enum class OMPLoopCategory {
-
     /// @var OMPLoopCategory::RegularLoop
     /// Represents a standard canonical loop nest found in the
     /// original source code or an intact loop after transformations
@@ -1513,12 +1512,34 @@ private:
     /// Represents the resulting loop structure when an OpenMP loop
     //  transformation, generates a single, top-level loop
     TransformSingleLoop,
+  };
 
-    /// @var OMPLoopCategory::TransformLoopSequence
-    /// Represents the resulting loop structure when an OpenMP loop
-    /// transformation
-    /// generates a sequence of two or more canonical loop nests
-    TransformLoopSequence
+  /// Holds the result of the analysis of a (possibly canonical) loop.
+  struct LoopAnalysis {
+    /// Category of the analyzed loop.
+    OMPLoopCategory Category;
+    /// Loop analyses results.
+    OMPLoopBasedDirective::HelperExprs HelperExprs;
+    /// The for-statement of the loop.
+    Stmt *ForStmt;
+    /// Initialization statements before transformations.
+    SmallVector<Stmt *> OriginalInits;
+    /// Initialization statements required after transformation of this loop.
+    SmallVector<Stmt *> TransformsPreInits;
+
+    explicit LoopAnalysis(OMPLoopCategory Category) : Category(Category) {}
+  };
+
+  /// Holds the result of the analysis of a (possibly canonical) loop sequence.
+  struct LoopSequenceAnalysis {
+    /// Number of top level canonical loops.
+    unsigned LoopSeqSize = 0;
+    /// Number of canonical loops, including nested.
+    unsigned NumLoops = 0;
+    /// For each loop results of the analysis.
+    std::vector<LoopAnalysis> Loops;
+    /// Additional code required before entering the transformed loop sequence.
+    SmallVector<Stmt *> LoopSequencePreInits;
   };
 
   /// The main recursive process of `checkTransformableLoopSequence` that
@@ -1529,37 +1550,14 @@ private:
   /// Loop Sequences
   ///
   /// \param LoopSeqStmt    The AST of the original statement.
-  /// \param LoopSeqSize    [out] Number of top level canonical loops.
-  /// \param NumLoops       [out] Number of total canonical loops (nested too).
-  /// \param LoopHelpers    [out] The multiple loop analyses results.
-  /// \param ForStmts       [out] The multiple Stmt of each For loop.
-  /// \param OriginalInits  [out] The raw original initialization statements
-  ///                       of each belonging to a loop of the loop sequence
-  /// \param TransformPreInits [out] The multiple collection of statements and
-  ///                       declarations that must have been executed/declared
-  ///                       before entering the loop (each belonging to a
-  ///                       particular loop transformation, nullptr otherwise)
-  /// \param LoopSequencePreInits [out] Additional general collection of loop
-  ///                       transformation related statements and declarations
-  ///                       not bounded to a particular loop that must be
-  ///                       executed before entering the loop transformation
-  /// \param LoopCategories [out] A sequence of OMPLoopCategory values,
-  ///                       one for each loop or loop transformation node
-  ///                       successfully analyzed.
+  /// \param SeqAnalysis    [out] Result of the analysis of \p LoopSeqStmt
   /// \param Context
   /// \param Kind           The loop transformation directive kind.
   /// \return Whether the original statement is both syntactically and
   /// semantically correct according to OpenMP 6.0 canonical loop
   /// sequence definition.
-  bool analyzeLoopSequence(
-      Stmt *LoopSeqStmt, unsigned &LoopSeqSize, unsigned &NumLoops,
-      SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-      SmallVectorImpl<Stmt *> &ForStmts,
-      SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits,
-      SmallVectorImpl<SmallVector<Stmt *>> &TransformsPreInits,
-      SmallVectorImpl<SmallVector<Stmt *>> &LoopSequencePreInits,
-      SmallVectorImpl<OMPLoopCategory> &LoopCategories, ASTContext &Context,
-      OpenMPDirectiveKind Kind);
+  bool analyzeLoopSequence(Stmt *LoopSeqStmt, LoopSequenceAnalysis &SeqAnalysis,
+                           ASTContext &Context, OpenMPDirectiveKind Kind);
 
   /// Validates and checks whether a loop sequence can be transformed according
   /// to the given directive, providing necessary setup and initialization
@@ -1567,34 +1565,12 @@ private:
   ///
   /// \param Kind           The loop transformation directive kind.
   /// \param AStmt          The AST of the original statement
-  /// \param LoopSeqSize    [out] Number of top level canonical loops.
-  /// \param NumLoops       [out] Number of total canonical loops (nested too)
-  /// \param LoopHelpers    [out] The multiple loop analyses results.
-  /// \param ForStmts       [out] The multiple Stmt of each For loop.
-  /// \param OriginalInits  [out] The raw original initialization statements
-  ///                       of each belonging to a loop of the loop sequence
-  /// \param TransformsPreInits [out] The multiple collection of statements and
-  ///                       declarations that must have been executed/declared
-  ///                       before entering the loop (each belonging to a
-  ///                       particular loop transformation, nullptr otherwise)
-  /// \param LoopSequencePreInits [out] Additional general collection of loop
-  ///                       transformation related statements and declarations
-  ///                       not bounded to a particular loop that must be
-  ///                       executed before entering the loop transformation
-  /// \param LoopCategories [out] A sequence of OMPLoopCategory values,
-  ///                       one for each loop or loop transformation node
-  ///                       successfully analyzed.
+  /// \param SeqAnalysis    [out] Result of the analysis of \p LoopSeqStmt
   /// \param Context
   /// \return Whether there was an absence of errors or not
-  bool checkTransformableLoopSequence(
-      OpenMPDirectiveKind Kind, Stmt *AStmt, unsigned &LoopSeqSize,
-      unsigned &NumLoops,
-      SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-      SmallVectorImpl<Stmt *> &ForStmts,
-      SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits,
-      SmallVectorImpl<SmallVector<Stmt *>> &TransformsPreInits,
-      SmallVectorImpl<SmallVector<Stmt *>> &LoopSequencePreInits,
-      SmallVectorImpl<OMPLoopCategory> &LoopCategories, ASTContext &Context);
+  bool checkTransformableLoopSequence(OpenMPDirectiveKind Kind, Stmt *AStmt,
+                                      LoopSequenceAnalysis &SeqAnalysis,
+                                      ASTContext &Context);
 
   /// Helper to keep information about the current `omp begin/end declare
   /// variant` nesting.

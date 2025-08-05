@@ -2164,7 +2164,7 @@ enum CXCursorKind {
 
   /** OpenMP fuse directive
    */
-  CXCursor_OMPFuseDirective = 318,
+  CXCursor_OMPFuseDirective = 311,
 
   /** OpenACC Compute Construct.
    */
