@@ -17,6 +17,7 @@
 #include "AMDGPUTargetMachine.h"
 #include "AMDGPU.h"
 #include "AMDGPUAliasAnalysis.h"
+#include "AMDGPUBarrierLatency.h"
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
 #include "AMDGPUExportKernelRuntimeHandles.h"
@@ -592,6 +593,7 @@ createGCNMaxOccupancyMachineScheduler(MachineSchedContext *C) {
   DAG->addMutation(createIGroupLPDAGMutation(AMDGPU::SchedulingPhase::Initial));
   DAG->addMutation(createAMDGPUMacroFusionDAGMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation());
   return DAG;
 }
 
@@ -612,6 +614,7 @@ createGCNMaxMemoryClauseMachineScheduler(MachineSchedContext *C) {
   if (ST.shouldClusterStores())
     DAG->addMutation(createStoreClusterDAGMutation(DAG->TII, DAG->TRI));
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation());
   return DAG;
 }
 
@@ -1166,6 +1169,7 @@ GCNTargetMachine::createPostMachineScheduler(MachineSchedContext *C) const {
       EnableVOPD)
     DAG->addMutation(createVOPDPairingMutation());
   DAG->addMutation(createAMDGPUExportClusteringDAGMutation());
+  DAG->addMutation(createAMDGPUBarrierLatencyDAGMutation());
   return DAG;
 }
 //===----------------------------------------------------------------------===//
