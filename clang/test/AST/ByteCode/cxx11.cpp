@@ -301,4 +301,11 @@ namespace NonConstLocal {
   }
 }
 
+#define ATTR __attribute__((require_constant_initialization))
+int somefunc() {
+  const int non_global = 42; // both-note {{declared here}}
+  ATTR static const int &local_init = non_global; // both-error {{variable does not have a constant initializer}} \
+                                                  // both-note {{required by}} \
+                                                  // both-note {{reference to 'non_global' is not a constant expression}}
+}
 
