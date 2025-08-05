@@ -8315,15 +8315,17 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::loop_dependence_war_mask:
-  case Intrinsic::loop_dependence_raw_mask: {
-    auto IntrinsicVT = EVT::getEVT(I.getType());
-    unsigned ID = Intrinsic == Intrinsic::loop_dependence_war_mask
-                      ? ISD::LOOP_DEPENDENCE_WAR_MASK
-                      : ISD::LOOP_DEPENDENCE_RAW_MASK;
     setValue(&I,
-             DAG.getNode(ID, sdl, IntrinsicVT, getValue(I.getOperand(0)),
+             DAG.getNode(ISD::LOOP_DEPENDENCE_WAR_MASK, sdl,
+                         EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
                          getValue(I.getOperand(1)), getValue(I.getOperand(2))));
-  }
+    return;
+  case Intrinsic::loop_dependence_raw_mask:
+    setValue(&I,
+             DAG.getNode(ISD::LOOP_DEPENDENCE_RAW_MASK, sdl,
+                         EVT::getEVT(I.getType()), getValue(I.getOperand(0)),
+                         getValue(I.getOperand(1)), getValue(I.getOperand(2))));
+    return;
   }
 }
 

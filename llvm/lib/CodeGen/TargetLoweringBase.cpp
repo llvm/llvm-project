@@ -900,7 +900,6 @@ void TargetLoweringBase::initActions() {
     // Masked vector extracts default to expand.
     setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Expand);
 
-    // Lane mask with non-aliasing lanes enabled default to expand
     setOperationAction(ISD::LOOP_DEPENDENCE_RAW_MASK, VT, Expand);
     setOperationAction(ISD::LOOP_DEPENDENCE_WAR_MASK, VT, Expand);
 

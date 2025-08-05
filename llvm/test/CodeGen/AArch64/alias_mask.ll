@@ -58,9 +58,9 @@ entry:
 define <8 x i1> @whilewr_16(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    whilewr p0.b, x0, x1
-; CHECK-SVE-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    whilewr p0.h, x0, x1
+; CHECK-SVE-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-SVE-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NOSVE-LABEL: whilewr_16:
@@ -98,9 +98,9 @@ entry:
 define <4 x i1> @whilewr_32(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    whilewr p0.h, x0, x1
-; CHECK-SVE-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    whilewr p0.s, x0, x1
+; CHECK-SVE-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-SVE-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NOSVE-LABEL: whilewr_32:
@@ -132,9 +132,9 @@ entry:
 define <2 x i1> @whilewr_64(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilewr_64:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    whilewr p0.s, x0, x1
-; CHECK-SVE-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    whilewr p0.d, x0, x1
+; CHECK-SVE-NEXT:    mov z0.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-SVE-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NOSVE-LABEL: whilewr_64:
@@ -216,9 +216,9 @@ entry:
 define <8 x i1> @whilerw_16(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilerw_16:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    whilerw p0.b, x0, x1
-; CHECK-SVE-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    whilerw p0.h, x0, x1
+; CHECK-SVE-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-SVE-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NOSVE-LABEL: whilerw_16:
@@ -257,9 +257,9 @@ entry:
 define <4 x i1> @whilerw_32(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilerw_32:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    whilerw p0.h, x0, x1
-; CHECK-SVE-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    whilerw p0.s, x0, x1
+; CHECK-SVE-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-SVE-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NOSVE-LABEL: whilerw_32:
@@ -292,9 +292,9 @@ entry:
 define <2 x i1> @whilerw_64(ptr %a, ptr %b) {
 ; CHECK-SVE-LABEL: whilerw_64:
 ; CHECK-SVE:       // %bb.0: // %entry
-; CHECK-SVE-NEXT:    whilerw p0.s, x0, x1
-; CHECK-SVE-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-SVE-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SVE-NEXT:    whilerw p0.d, x0, x1
+; CHECK-SVE-NEXT:    mov z0.d, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-SVE-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-SVE-NEXT:    ret
 ;
 ; CHECK-NOSVE-LABEL: whilerw_64:

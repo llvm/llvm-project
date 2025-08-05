@@ -2115,10 +2115,6 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::PARTIAL_REDUCE_SUMLA:
     Res = PromoteIntOp_PARTIAL_REDUCE_MLA(N);
     break;
-  case ISD::LOOP_DEPENDENCE_RAW_MASK:
-  case ISD::LOOP_DEPENDENCE_WAR_MASK:
-    Res = PromoteIntOp_LOOP_DEPENDENCE_MASK(N, OpNo);
-    break;
   }
 
   // If the result is null, the sub-method took care of registering results etc.
@@ -2949,13 +2945,6 @@ SDValue DAGTypeLegalizer::PromoteIntOp_PARTIAL_REDUCE_MLA(SDNode *N) {
   default:
     llvm_unreachable("unexpected opcode");
   }
-  return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
-}
-
-SDValue DAGTypeLegalizer::PromoteIntOp_LOOP_DEPENDENCE_MASK(SDNode *N,
-                                                            unsigned OpNo) {
-  SmallVector<SDValue, 4> NewOps(N->ops());
-  NewOps[OpNo] = GetPromotedInteger(N->getOperand(OpNo));
   return SDValue(DAG.UpdateNodeOperands(N, NewOps), 0);
 }
 

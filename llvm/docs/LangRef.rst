@@ -24193,6 +24193,9 @@ A read-after-write hazard occurs when a read-after-write sequence for a given
 lane in a vector ends up being executed as a write-after-read sequence due to
 the aliasing of pointers.
 
+Note that the case where (ptrB - ptrA) < 0 does not result in any
+read-after-write hazards, but may introduce new store-to-load-forwarding stalls
+where both the store and load partially access the same addresses.
 
 Arguments:
 """"""""""
@@ -24211,10 +24214,6 @@ The element of the result mask is active when no read-after-write hazard occurs,
 
   abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
   is committed before loading from this address)
-
-Note that the case where (ptrB - ptrA) < 0 does not result in any
-read-after-write hazards, but may introduce new store-to-load-forwarding stalls
-where both the store and load partially access the same addresses.
 
 Examples:
 """""""""

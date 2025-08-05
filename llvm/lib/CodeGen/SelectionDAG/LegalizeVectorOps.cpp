@@ -1810,8 +1810,8 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
   SDValue EltSize = N->getOperand(2);
 
   bool IsReadAfterWrite = N->getOpcode() == ISD::LOOP_DEPENDENCE_RAW_MASK;
-  auto VT = N->getValueType(0);
-  auto PtrVT = SourceValue->getValueType(0);
+  EVT VT = N->getValueType(0);
+  EVT PtrVT = SourceValue->getValueType(0);
 
   SDValue Diff = DAG.getNode(ISD::SUB, DL, PtrVT, SinkValue, SourceValue);
   if (IsReadAfterWrite)
@@ -1827,22 +1827,22 @@ SDValue VectorLegalizer::ExpandLOOP_DEPENDENCE_MASK(SDNode *N) {
                              IsReadAfterWrite ? ISD::SETEQ : ISD::SETLE);
 
   // Create the lane mask
-  EVT SplatTY = VT.changeElementType(PtrVT);
-  SDValue DiffSplat = DAG.getSplat(SplatTY, DL, Diff);
-  SDValue VectorStep = DAG.getStepVector(DL, SplatTY);
+  EVT SplatVT = VT.changeElementType(PtrVT);
+  SDValue DiffSplat = DAG.getSplat(SplatVT, DL, Diff);
+  SDValue VectorStep = DAG.getStepVector(DL, SplatVT);
   EVT MaskVT = VT.changeElementType(MVT::i1);
   SDValue DiffMask =
       DAG.getSetCC(DL, MaskVT, VectorStep, DiffSplat, ISD::CondCode::SETULT);
 
-  EVT VTElementTy = VT.getVectorElementType();
+  EVT EltVT = VT.getVectorElementType();
   // Extend the diff setcc in case the intrinsic has been promoted to a vector
   // type with elements larger than i1
-  if (VTElementTy.getScalarSizeInBits() > MaskVT.getScalarSizeInBits())
+  if (EltVT.getScalarSizeInBits() > MaskVT.getScalarSizeInBits())
     DiffMask = DAG.getNode(ISD::ANY_EXTEND, DL, VT, DiffMask);
 
   // Splat the compare result then OR it with the lane mask
-  if (CmpVT.getScalarSizeInBits() < VTElementTy.getScalarSizeInBits())
-    Cmp = DAG.getNode(ISD::ZERO_EXTEND, DL, VTElementTy, Cmp);
+  if (CmpVT.getScalarSizeInBits() < EltVT.getScalarSizeInBits())
+    Cmp = DAG.getNode(ISD::ZERO_EXTEND, DL, EltVT, Cmp);
   SDValue Splat = DAG.getSplat(VT, DL, Cmp);
   return DAG.getNode(ISD::OR, DL, VT, DiffMask, Splat);
 }
