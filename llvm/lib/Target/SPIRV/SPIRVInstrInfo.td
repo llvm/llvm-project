@@ -570,7 +570,8 @@ def OpLogicalOr: BinOp<"OpLogicalOr", 166>;
 def OpLogicalAnd: BinOp<"OpLogicalAnd", 167>;
 def OpLogicalNot: UnOp<"OpLogicalNot", 168>;
 
-defm OpSelect: TernOpTypedGen<"OpSelect", 169, select, 1, 1, 1, 1>;
+defm OpSelectF: TernOpTypedGen<"OpSelect", 169, select, 0, 0, 1, 1>;
+defm OpSelect: TernOpTypedGen<"OpSelect", 169, select, 1, 1, 0, 1>;
 
 def OpIEqual: BinOp<"OpIEqual", 170>;
 def OpINotEqual: BinOp<"OpINotEqual", 171>;
