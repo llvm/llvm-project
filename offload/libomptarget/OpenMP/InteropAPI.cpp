@@ -247,16 +247,14 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
   if (Ctx->flags.implicit) {
     // This is a request for an RTL managed interop object.
     // Get it from the InteropTbl if possible
-    if (PM->InteropTbl.size() > 0) {
-      for (auto iop : PM->InteropTbl) {
-        if (iop->isCompatibleWith(InteropType, InteropSpec, DeviceNum, gtid)) {
-          Interop = iop;
-          Interop->markDirty();
-          DP("Reused interop " DPxMOD " from device number %" PRId64
-             " for gtid %" PRId32 "\n",
-             DPxPTR(Interop), DeviceNum, gtid);
-          return Interop;
-        }
+    for (auto iop : PM->InteropTbl) {
+      if (iop->isCompatibleWith(InteropType, InteropSpec, DeviceNum, gtid)) {
+        Interop = iop;
+        Interop->markDirty();
+        DP("Reused interop " DPxMOD " from device number %" PRId64
+           " for gtid %" PRId32 "\n",
+           DPxPTR(Interop), DeviceNum, gtid);
+        return Interop;
       }
     }
   }
@@ -271,7 +269,7 @@ omp_interop_val_t *__tgt_interop_get(ident_t *LocRef, int32_t InteropType,
     Interop->markDirty();
     PM->InteropTbl.add(Interop);
   } else {
-    Interop->setOwner(-1);
+    Interop->setOwner(omp_interop_val_t::no_owner);
   }
 
   return Interop;

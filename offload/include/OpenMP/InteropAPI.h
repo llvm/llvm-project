@@ -91,10 +91,13 @@ typedef struct omp_interop_val_t {
   interop_attrs_t attrs{false, 0}; // Common prefer specification attributes
   int64_t impl_attrs = 0; // Implementation prefer specification attributes
 
+  // Constants
+  static constexpr int no_owner = -1; // This interop has no current owner
+
   void *rtl_property = nullptr; // Plugin dependent information
   // For implicitly created Interop objects (e.g., from a dispatch construct)
   // who owns the object
-  int owner_gtid = -1;
+  int owner_gtid = no_owner;
   // Marks whether the object was requested since the last time it was synced
   bool clean = true;
 
@@ -103,14 +106,14 @@ typedef struct omp_interop_val_t {
   callback_list_t completion_cbs;
 
   void reset() {
-    owner_gtid = -1;
+    owner_gtid = no_owner;
     markClean();
     clearCompletionCbs();
   }
 
   llvm::Expected<DeviceTy &> getDevice() const;
 
-  bool hasOwner() const { return owner_gtid != -1; }
+  bool hasOwner() const { return owner_gtid != no_owner; }
 
   void setOwner(int gtid) { owner_gtid = gtid; }
   bool isOwnedBy(int gtid) { return owner_gtid == gtid; }
