@@ -150,13 +150,10 @@ static inline unsigned GetCondBranchFromCond(XCore::CondCode CC)
 
 /// GetOppositeBranchCondition - Return the inverse of the specified
 /// condition, e.g. turning COND_E to COND_NE.
-static inline XCore::CondCode GetOppositeBranchCondition(XCore::CondCode CC)
-{
-  switch (CC) {
-  default: llvm_unreachable("Illegal condition code!");
-  case XCore::COND_TRUE   : return XCore::COND_FALSE;
-  case XCore::COND_FALSE  : return XCore::COND_TRUE;
-  }
+static inline XCore::CondCode GetOppositeBranchCondition(XCore::CondCode CC) {
+  // To reverse a condition it's necessary to only invert the low bit:
+  assert(CC != XCore::COND_INVALID && "COND_INVALID has no inverse!");
+  return static_cast<XCore::CondCode>(static_cast<unsigned>(CC) ^ 0x1);
 }
 
 /// analyzeBranch - Analyze the branching code at the end of MBB, returning
