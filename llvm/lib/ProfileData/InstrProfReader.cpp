@@ -554,10 +554,11 @@ Error RawInstrProfReader<IntPtrT>::createSymtab(InstrProfSymtab &Symtab) {
                               StringRef(VNamesStart, VNamesEnd - VNamesStart)))
     return error(std::move(E));
   for (const RawInstrProf::ProfileData<IntPtrT> *I = Data; I != DataEnd; ++I) {
-    const IntPtrT FPtr = swap(I->FunctionPointer);
+    const IntPtrT FPtr =
+        Correlator ? I->FunctionPointer : swap(I->FunctionPointer);
     if (!FPtr)
       continue;
-    Symtab.mapAddress(FPtr, swap(I->NameRef));
+    Symtab.mapAddress(FPtr, Correlator ? I->NameRef : swap(I->NameRef));
   }
 
   if (VTableBegin != nullptr && VTableEnd != nullptr) {
@@ -712,18 +713,20 @@ Error RawInstrProfReader<IntPtrT>::readName(NamedInstrProfRecord &Record) {
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readFuncHash(NamedInstrProfRecord &Record) {
-  Record.Hash = swap(Data->FuncHash);
+  Record.Hash = Correlator ? Data->FuncHash : swap(Data->FuncHash);
   return success();
 }
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readRawCounts(
     InstrProfRecord &Record) {
-  uint32_t NumCounters = swap(Data->NumCounters);
+  uint32_t NumCounters =
+      Correlator ? Data->NumCounters : swap(Data->NumCounters);
   if (NumCounters == 0)
     return error(instrprof_error::malformed, "number of counters is zero");
 
-  ptrdiff_t CounterBaseOffset = swap(Data->CounterPtr) - CountersDelta;
+  ptrdiff_t CounterBaseOffset =
+      Correlator ? Data->CounterPtr : swap(Data->CounterPtr) - CountersDelta;
   if (CounterBaseOffset < 0)
     return error(
         instrprof_error::malformed,
@@ -755,8 +758,8 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
       uint64_t TimestampValue = swap(*reinterpret_cast<const uint64_t *>(Ptr));
       if (TimestampValue != 0 &&
           TimestampValue != std::numeric_limits<uint64_t>::max()) {
-        TemporalProfTimestamps.emplace_back(TimestampValue,
-                                            swap(Data->NameRef));
+        TemporalProfTimestamps.emplace_back(
+            TimestampValue, Correlator ? Data->NameRef : swap(Data->NameRef));
         TemporalProfTraceStreamSize = 1;
       }
       if (hasSingleByteCoverage()) {
@@ -786,7 +789,8 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
 
 template <class IntPtrT>
 Error RawInstrProfReader<IntPtrT>::readRawBitmapBytes(InstrProfRecord &Record) {
-  uint32_t NumBitmapBytes = swap(Data->NumBitmapBytes);
+  uint32_t NumBitmapBytes =
+      Correlator ? Data->NumBitmapBytes : swap(Data->NumBitmapBytes);
 
   Record.BitmapBytes.clear();
   Record.BitmapBytes.reserve(NumBitmapBytes);
@@ -797,7 +801,8 @@ Error RawInstrProfReader<IntPtrT>::readRawBitmapBytes(InstrProfRecord &Record) {
     return success();
 
   // BitmapDelta decreases as we advance to the next data record.
-  ptrdiff_t BitmapOffset = swap(Data->BitmapPtr) - BitmapDelta;
+  ptrdiff_t BitmapOffset =
+      Correlator ? Data->BitmapPtr : swap(Data->BitmapPtr) - BitmapDelta;
   if (BitmapOffset < 0)
     return error(
         instrprof_error::malformed,
