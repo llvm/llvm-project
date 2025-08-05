@@ -461,7 +461,7 @@ public:
   };
 
   /* TODO(BoundsSafety) Deprecate the flag  */
-  enum BoundsSafetyNewChecks : uint8_t {
+  enum BoundsSafetyNewChecks : unsigned {
     BS_CHK_None = 0,
 
     BS_CHK_AccessSize = 1 << 0,          // rdar://72252593
