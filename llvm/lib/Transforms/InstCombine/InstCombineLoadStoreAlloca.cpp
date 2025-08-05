@@ -718,6 +718,14 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
   return nullptr;
 }
 
+// Check if the aggregate load has a invariant.load metadata
+// If aggregate load has invariant.load metadata, add it to the
+// unpacked loads as well.
+static void copyInvariantLoadMetadata(LoadInst &LI, LoadInst *NewLoad) {
+  if (MDNode *MD = LI.getMetadata("invariant.load"))
+    NewLoad->setMetadata("invariant.load", MD);
+}
+
 static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
   // FIXME: We could probably with some care handle both volatile and atomic
   // stores here but it isn't clear that this is important.
@@ -737,6 +745,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       LoadInst *NewLoad = IC.combineLoadToNewType(LI, ST->getTypeAtIndex(0U),
                                                   ".unpack");
       NewLoad->setAAMetadata(LI.getAAMetadata());
+      copyInvariantLoadMetadata(LI, NewLoad);
       return IC.replaceInstUsesWith(LI, IC.Builder.CreateInsertValue(
         PoisonValue::get(T), NewLoad, 0, Name));
     }
@@ -764,6 +773,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
           Name + ".unpack");
       // Propagate AA metadata. It'll still be valid on the narrowed load.
       L->setAAMetadata(LI.getAAMetadata());
+      copyInvariantLoadMetadata(LI, L);
       V = IC.Builder.CreateInsertValue(V, L, i);
     }
 
