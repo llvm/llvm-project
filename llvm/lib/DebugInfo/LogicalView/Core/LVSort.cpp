@@ -64,11 +64,13 @@ LVSortValue llvm::logicalview::compareRange(const LVObject *LHS,
 LVSortValue llvm::logicalview::sortByKind(const LVObject *LHS,
                                           const LVObject *RHS) {
   // Order in which the object attributes are used for comparison:
-  // kind, name, line number, offset.
-  std::tuple<std::string, StringRef, uint32_t, LVOffset> Left(
-      LHS->kind(), LHS->getName(), LHS->getLineNumber(), LHS->getOffset());
-  std::tuple<std::string, StringRef, uint32_t, LVOffset> Right(
-      RHS->kind(), RHS->getName(), RHS->getLineNumber(), RHS->getOffset());
+  // kind, name, line number, offset, ID.
+  std::tuple<std::string, StringRef, uint32_t, LVOffset, uint32_t> Left(
+      LHS->kind(), LHS->getName(), LHS->getLineNumber(), LHS->getOffset(),
+      LHS->getID());
+  std::tuple<std::string, StringRef, uint32_t, LVOffset, uint32_t> Right(
+      RHS->kind(), RHS->getName(), RHS->getLineNumber(), RHS->getOffset(),
+      RHS->getID());
   return Left < Right;
 }
 
@@ -76,11 +78,13 @@ LVSortValue llvm::logicalview::sortByKind(const LVObject *LHS,
 LVSortValue llvm::logicalview::sortByLine(const LVObject *LHS,
                                           const LVObject *RHS) {
   // Order in which the object attributes are used for comparison:
-  // line number, name, kind, offset.
-  std::tuple<uint32_t, StringRef, std::string, LVOffset> Left(
-      LHS->getLineNumber(), LHS->getName(), LHS->kind(), LHS->getOffset());
-  std::tuple<uint32_t, StringRef, std::string, LVOffset> Right(
-      RHS->getLineNumber(), RHS->getName(), RHS->kind(), RHS->getOffset());
+  // line number, name, kind, offset, ID.
+  std::tuple<uint32_t, StringRef, std::string, LVOffset, uint32_t> Left(
+      LHS->getLineNumber(), LHS->getName(), LHS->kind(), LHS->getOffset(),
+      LHS->getID());
+  std::tuple<uint32_t, StringRef, std::string, LVOffset, uint32_t> Right(
+      RHS->getLineNumber(), RHS->getName(), RHS->kind(), RHS->getOffset(),
+      RHS->getID());
   return Left < Right;
 }
 
@@ -88,20 +92,32 @@ LVSortValue llvm::logicalview::sortByLine(const LVObject *LHS,
 LVSortValue llvm::logicalview::sortByName(const LVObject *LHS,
                                           const LVObject *RHS) {
   // Order in which the object attributes are used for comparison:
-  // name, line number, kind, offset.
-  std::tuple<StringRef, uint32_t, std::string, LVOffset> Left(
-      LHS->getName(), LHS->getLineNumber(), LHS->kind(), LHS->getOffset());
-  std::tuple<StringRef, uint32_t, std::string, LVOffset> Right(
-      RHS->getName(), RHS->getLineNumber(), RHS->kind(), RHS->getOffset());
+  // name, line number, kind, offset, ID.
+  std::tuple<StringRef, uint32_t, std::string, LVOffset, uint32_t> Left(
+      LHS->getName(), LHS->getLineNumber(), LHS->kind(), LHS->getOffset(),
+      LHS->getID());
+  std::tuple<StringRef, uint32_t, std::string, LVOffset, uint32_t> Right(
+      RHS->getName(), RHS->getLineNumber(), RHS->kind(), RHS->getOffset(),
+      RHS->getID());
+  return Left < Right;
+}
+
+// Callback comparator based on multiple keys (First: Offset).
+LVSortValue llvm::logicalview::sortByOffset(const LVObject *LHS,
+                                            const LVObject *RHS) {
+  // Order in which the object attributes are used for comparison:
+  // offset, ID.
+  std::tuple<LVOffset, uint32_t> Left(LHS->getOffset(), LHS->getID());
+  std::tuple<LVOffset, uint32_t> Right(RHS->getOffset(), RHS->getID());
   return Left < Right;
 }
 
 LVSortFunction llvm::logicalview::getSortFunction() {
   using LVSortInfo = std::map<LVSortMode, LVSortFunction>;
   static LVSortInfo SortInfo = {
-      {LVSortMode::None, nullptr},         {LVSortMode::Kind, sortByKind},
-      {LVSortMode::Line, sortByLine},      {LVSortMode::Name, sortByName},
-      {LVSortMode::Offset, compareOffset},
+      {LVSortMode::None, nullptr},        {LVSortMode::Kind, sortByKind},
+      {LVSortMode::Line, sortByLine},     {LVSortMode::Name, sortByName},
+      {LVSortMode::Offset, sortByOffset},
   };
 
   LVSortFunction SortFunction = nullptr;
