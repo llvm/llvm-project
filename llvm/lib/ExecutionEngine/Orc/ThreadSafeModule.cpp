@@ -14,53 +14,62 @@
 namespace llvm {
 namespace orc {
 
-ThreadSafeModule cloneToContext(const ThreadSafeModule &TSM,
+ThreadSafeModule cloneToContext(const Module &M,
                                 ThreadSafeContext TSCtx,
                                 GVPredicate ShouldCloneDef,
                                 GVModifier UpdateClonedDefSource) {
-  assert(TSM && "Can not clone null module");
-
   if (!ShouldCloneDef)
     ShouldCloneDef = [](const GlobalValue &) { return true; };
 
   // First copy the source module into a buffer.
   std::string ModuleName;
   SmallVector<char, 1> ClonedModuleBuffer;
-  TSM.withModuleDo([&](Module &M) {
-    ModuleName = M.getModuleIdentifier();
-    std::set<GlobalValue *> ClonedDefsInSrc;
-    ValueToValueMapTy VMap;
-    auto Tmp = CloneModule(M, VMap, [&](const GlobalValue *GV) {
-      if (ShouldCloneDef(*GV)) {
-        ClonedDefsInSrc.insert(const_cast<GlobalValue *>(GV));
-        return true;
-      }
-      return false;
-    });
-
-    if (UpdateClonedDefSource)
-      for (auto *GV : ClonedDefsInSrc)
-        UpdateClonedDefSource(*GV);
-
-    BitcodeWriter BCWriter(ClonedModuleBuffer);
-    BCWriter.writeModule(*Tmp);
-    BCWriter.writeSymtab();
-    BCWriter.writeStrtab();
+  ModuleName = M.getModuleIdentifier();
+  std::set<GlobalValue *> ClonedDefsInSrc;
+  ValueToValueMapTy VMap;
+  auto Tmp = CloneModule(M, VMap, [&](const GlobalValue *GV) {
+    if (ShouldCloneDef(*GV)) {
+      ClonedDefsInSrc.insert(const_cast<GlobalValue *>(GV));
+      return true;
+    }
+    return false;
   });
+
+  if (UpdateClonedDefSource)
+    for (auto *GV : ClonedDefsInSrc)
+      UpdateClonedDefSource(*GV);
+
+  BitcodeWriter BCWriter(ClonedModuleBuffer);
+  BCWriter.writeModule(*Tmp);
+  BCWriter.writeSymtab();
+  BCWriter.writeStrtab();
 
   MemoryBufferRef ClonedModuleBufferRef(
       StringRef(ClonedModuleBuffer.data(), ClonedModuleBuffer.size()),
       "cloned module buffer");
 
   // Then parse the buffer into the new Module.
-  auto M = TSCtx.withContextDo([&](LLVMContext *Ctx) {
+  auto R = TSCtx.withContextDo([&](LLVMContext *Ctx) {
     assert(Ctx && "No LLVMContext provided");
     auto TmpM = cantFail(parseBitcodeFile(ClonedModuleBufferRef, *Ctx));
     TmpM->setModuleIdentifier(ModuleName);
     return TmpM;
   });
 
-  return ThreadSafeModule(std::move(M), std::move(TSCtx));
+  return ThreadSafeModule(std::move(R), std::move(TSCtx));
+}
+
+ThreadSafeModule cloneToContext(const ThreadSafeModule &TSM,
+                                ThreadSafeContext TSCtx,
+                                GVPredicate ShouldCloneDef,
+                                GVModifier UpdateClonedDefSource) {
+  assert(TSM && "Can not clone null module");
+
+  ThreadSafeModule R;
+  TSM.withModuleDo([&](Module &M) {
+    R = cloneToContext(M, TSCtx, ShouldCloneDef, UpdateClonedDefSource);
+  });
+  return R;
 }
 
 ThreadSafeModule cloneToNewContext(const ThreadSafeModule &TSM,
