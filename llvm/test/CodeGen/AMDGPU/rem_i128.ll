@@ -533,8 +533,9 @@ define i128 @v_srem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_and_b32_e64 v6, 1, v6
 ; GFX9-O0-NEXT:    v_cmp_eq_u32_e64 s[8:9], v6, 1
 ; GFX9-O0-NEXT:    s_or_b64 s[8:9], s[4:5], s[8:9]
-; GFX9-O0-NEXT:    s_mov_b64 s[4:5], -1
-; GFX9-O0-NEXT:    s_xor_b64 s[4:5], s[8:9], s[4:5]
+; GFX9-O0-NEXT:    s_mov_b64 s[14:15], -1
+; GFX9-O0-NEXT:    s_mov_b64 s[4:5], s[8:9]
+; GFX9-O0-NEXT:    s_xor_b64 s[4:5], s[4:5], s[14:15]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX9-O0-NEXT:    s_mov_b32 s14, s13
 ; GFX9-O0-NEXT:    v_xor_b32_e64 v6, v6, s14
@@ -1912,8 +1913,9 @@ define i128 @v_urem_i128_vv(i128 %lhs, i128 %rhs) {
 ; GFX9-O0-NEXT:    v_and_b32_e64 v6, 1, v6
 ; GFX9-O0-NEXT:    v_cmp_eq_u32_e64 s[8:9], v6, 1
 ; GFX9-O0-NEXT:    s_or_b64 s[8:9], s[4:5], s[8:9]
-; GFX9-O0-NEXT:    s_mov_b64 s[4:5], -1
-; GFX9-O0-NEXT:    s_xor_b64 s[4:5], s[8:9], s[4:5]
+; GFX9-O0-NEXT:    s_mov_b64 s[14:15], -1
+; GFX9-O0-NEXT:    s_mov_b64 s[4:5], s[8:9]
+; GFX9-O0-NEXT:    s_xor_b64 s[4:5], s[4:5], s[14:15]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v6, v5
 ; GFX9-O0-NEXT:    s_mov_b32 s14, s13
 ; GFX9-O0-NEXT:    v_xor_b32_e64 v6, v6, s14

@@ -1151,6 +1151,10 @@ defvar LibmHasFrexpF128 = LibcallImpls<(add frexp_f128), isNotOSWindowsOrIsCygwi
 defvar LibmHasLdexpF128 = LibcallImpls<(add ldexp_f128), isNotOSWindowsOrIsCygwinMinGW>;
 
 defvar has__stack_chk_fail = LibcallImpls<(add __stack_chk_fail), isNotOSOpenBSD>;
+defvar has__stack_smash_handler = LibcallImpls<(add __stack_smash_handler), isOSOpenBSD>;
+
+defvar DefaultStackProtector = (add has__stack_chk_fail,
+                                    has__stack_smash_handler);
 
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
@@ -1229,7 +1233,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        DarwinExp10, DarwinSinCosStret,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
        DefaultLibmExp10,
-       has__stack_chk_fail)
+       DefaultStackProtector)
 >;
 
 // Prepend a # to every name
@@ -1395,13 +1399,9 @@ def __aeabi_lasr : RuntimeLibcallImpl<SRA_I64>; // CallingConv::ARM_AAPCS
 
 // Integer division functions
 // RTABI chapter 4.3.1
-def __aeabi_idiv__i8 : RuntimeLibcallImpl<SDIV_I8, "__aeabi_idiv">; // CallingConv::ARM_AAPCS
-def __aeabi_idiv__i16 : RuntimeLibcallImpl<SDIV_I16, "__aeabi_idiv">; // CallingConv::ARM_AAPCS
-def __aeabi_idiv__i32 : RuntimeLibcallImpl<SDIV_I32, "__aeabi_idiv">; // CallingConv::ARM_AAPCS
+def __aeabi_idiv : RuntimeLibcallImpl<SDIV_I32>; // CallingConv::ARM_AAPCS
 def __aeabi_ldivmod : RuntimeLibcallImpl<SDIVREM_I64>; //  CallingConv::ARM_AAPCS
-def __aeabi_uidiv__i8 : RuntimeLibcallImpl<UDIV_I8, "__aeabi_uidiv">; // CallingConv::ARM_AAPCS
-def __aeabi_uidiv__i16 : RuntimeLibcallImpl<UDIV_I16, "__aeabi_uidiv">; // CallingConv::ARM_AAPCS
-def __aeabi_uidiv__i32 : RuntimeLibcallImpl<UDIV_I32, "__aeabi_uidiv">; // CallingConv::ARM_AAPCS
+def __aeabi_uidiv : RuntimeLibcallImpl<UDIV_I32>; // CallingConv::ARM_AAPCS
 def __aeabi_uldivmod : RuntimeLibcallImpl<UDIVREM_I64>; // CallingConv::ARM_AAPCS
 
 def __aeabi_idivmod : RuntimeLibcallImpl<SDIVREM_I32>; //  CallingConv::ARM_AAPCS
@@ -1506,7 +1506,7 @@ def ARMSystemLibrary
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
                                                   (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
-           has__stack_chk_fail)> {
+           DefaultStackProtector)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
      (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) ?
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
@@ -2015,7 +2015,7 @@ def PPCSystemLibrary
            LibmHasSinCosPPCF128,
            AvailableIf<memcpy, isNotAIX>,
            LibcallImpls<(add Int128RTLibcalls), isPPC64>,
-           has__stack_chk_fail)>;
+           DefaultStackProtector)>;
 
 //===----------------------------------------------------------------------===//
 // RISCV Runtime Libcalls
@@ -2030,7 +2030,7 @@ def RISCVSystemLibrary
            exp10f, exp10, exp10l_f128,
            __riscv_flush_icache,
            LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
-           has__stack_chk_fail)>;
+           DefaultStackProtector)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -2098,7 +2098,7 @@ def SPARCSystemLibrary
        LibcallImpls<(add _Q_qtoll, _Q_qtoull, _Q_lltoq, _Q_ulltoq), isSPARC32>,
        LibcallImpls<(add SPARC64_MulDivCalls, Int128RTLibcalls), isSPARC64>,
        LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
-       has__stack_chk_fail)
+       DefaultStackProtector)
 >;
 
 //===----------------------------------------------------------------------===//
@@ -2159,7 +2159,7 @@ defvar X86CommonLibcalls =
        // FIXME: MSVCRT doesn't have powi. The f128 case is added as a
        // hack for one test relying on it.
        __powitf2_f128,
-       has__stack_chk_fail
+       DefaultStackProtector
 );
 
 defvar Windows32DivRemMulCalls =
@@ -2328,5 +2328,5 @@ def LegacyDefaultSystemLibrary
          exp10f, exp10, exp10l_f128,
          __powisf2, __powidf2, __powitf2_f128,
          LibcallImpls<(add Int128RTLibcalls), isArch64Bit>,
-         has__stack_chk_fail
+         DefaultStackProtector
 )>;
