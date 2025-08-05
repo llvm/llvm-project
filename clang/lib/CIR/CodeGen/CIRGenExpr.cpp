@@ -1939,6 +1939,20 @@ LValue CIRGenFunction::emitLoadOfReferenceLValue(Address refAddr,
                         pointeeBaseInfo);
 }
 
+void CIRGenFunction::emitTrap(mlir::Location loc, bool createNewBlock) {
+  cir::TrapOp::create(builder, loc);
+  if (createNewBlock)
+    builder.createBlock(builder.getBlock()->getParent());
+}
+
+void CIRGenFunction::emitUnreachable(clang::SourceLocation loc,
+                                     bool createNewBlock) {
+  assert(!cir::MissingFeatures::sanitizers());
+  cir::UnreachableOp::create(builder, getLoc(loc));
+  if (createNewBlock)
+    builder.createBlock(builder.getBlock()->getParent());
+}
+
 mlir::Value CIRGenFunction::createDummyValue(mlir::Location loc,
                                              clang::QualType qt) {
   mlir::Type t = convertType(qt);
