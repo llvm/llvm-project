@@ -330,10 +330,12 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
     struct tm timeInfo;
 #ifdef _WIN32
     if (localtime_s(&timeInfo, &now)) {
+      startingPoint.store(TIME_UNINITIALIZED, std::memory_order_relaxed);
       return FAIL_SECNDS;
     }
 #else
     if (!localtime_r(&now, &timeInfo)) {
+      startingPoint.store(TIME_UNINITIALIZED, std::memory_order_relaxed);
       return FAIL_SECNDS;
     }
 #endif
