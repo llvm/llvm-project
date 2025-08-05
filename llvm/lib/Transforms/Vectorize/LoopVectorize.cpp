@@ -9782,17 +9782,26 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
   VPValue *VectorTC = &MainPlan.getVectorTripCount();
   // If there is a suitable resume value for the canonical induction in the
-  // scalar (which will become vector) epilogue loop we are done. Otherwise
-  // create it below.
-  if (any_of(*MainScalarPH, [VectorTC](VPRecipeBase &R) {
+  // scalar (which will become vector) epilogue loop, use it and move it to the
+  // beginning of the scalar preheader. Otherwise create it below.
+  auto ResumePhiIter =
+      find_if(MainScalarPH->phis(), [VectorTC](VPRecipeBase &R) {
         return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),
                                                            m_SpecificInt(0)));
-      }))
-    return;
-  VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
-  ScalarPHBuilder.createScalarPhi(
-      {VectorTC, MainPlan.getCanonicalIV()->getStartValue()}, {},
-      "vec.epilog.resume.val");
+      });
+  VPPhi *ResumePhi = nullptr;
+  if (ResumePhiIter == MainScalarPH->phis().end()) {
+    VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
+    ResumePhi = ScalarPHBuilder.createScalarPhi(
+        {VectorTC, MainPlan.getCanonicalIV()->getStartValue()}, {},
+        "vec.epilog.resume.val");
+  } else {
+    ResumePhi = cast<VPPhi>(&*ResumePhiIter);
+    if (MainScalarPH->begin() == MainScalarPH->end())
+      ResumePhi->moveBefore(*MainScalarPH, MainScalarPH->end());
+    else if (&*MainScalarPH->begin() != ResumePhi)
+      ResumePhi->moveBefore(*MainScalarPH, MainScalarPH->begin());
+  }
 }
 
 /// Prepare \p Plan for vectorizing the epilogue loop. That is, re-use expanded
@@ -9813,30 +9822,35 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
       // When vectorizing the epilogue loop, the canonical induction start
       // value needs to be changed from zero to the value after the main
       // vector loop. Find the resume value created during execution of the main
-      // VPlan.
+      // VPlan. It must be the first phi in the loop preheader.
       // FIXME: Improve modeling for canonical IV start values in the epilogue
       // loop.
       using namespace llvm::PatternMatch;
-      Type *IdxTy = IV->getScalarType();
-      PHINode *EPResumeVal = find_singleton<PHINode>(
-          L->getLoopPreheader()->phis(),
-          [&EPI, IdxTy](PHINode &P, bool) -> PHINode * {
-            if (P.getType() == IdxTy &&
-                match(
-                    P.getIncomingValueForBlock(EPI.MainLoopIterationCountCheck),
-                    m_SpecificInt(0)) &&
-                any_of(P.incoming_values(),
-                       [&EPI](Value *Inc) {
-                         return Inc == EPI.VectorTripCount;
-                       }) &&
-                all_of(P.incoming_values(), [&EPI](Value *Inc) {
-                  return Inc == EPI.VectorTripCount ||
-                         match(Inc, m_SpecificInt(0));
-                }))
-              return &P;
-            return nullptr;
-          });
-      assert(EPResumeVal && "must have a resume value for the canonical IV");
+      PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
+      assert(EPResumeVal->getType() == IV->getScalarType() &&
+             match(EPResumeVal->getIncomingValueForBlock(
+                       EPI.MainLoopIterationCountCheck),
+                   m_SpecificInt(0)) &&
+             EPResumeVal ==
+                 find_singleton<PHINode>(
+                     L->getLoopPreheader()->phis(),
+                     [&EPI, IV](PHINode &P, bool) -> PHINode * {
+                       if (P.getType() == IV->getScalarType() &&
+                           match(P.getIncomingValueForBlock(
+                                     EPI.MainLoopIterationCountCheck),
+                                 m_SpecificInt(0)) &&
+                           any_of(P.incoming_values(),
+                                  [&EPI](Value *Inc) {
+                                    return Inc == EPI.VectorTripCount;
+                                  }) &&
+                           all_of(P.incoming_values(), [&EPI](Value *Inc) {
+                             return Inc == EPI.VectorTripCount ||
+                                    match(Inc, m_SpecificInt(0));
+                           }))
+                         return &P;
+                       return nullptr;
+                     }) &&
+             "Epilogue resume phis do not match!");
       VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
       assert(all_of(IV->users(),
                     [](const VPUser *U) {
