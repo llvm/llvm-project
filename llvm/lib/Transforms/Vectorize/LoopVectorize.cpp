@@ -2558,7 +2558,8 @@ namespace {
 struct CSEDenseMapInfo {
   static bool canHandle(const Instruction *I) {
     return isa<InsertElementInst>(I) || isa<ExtractElementInst>(I) ||
-           isa<ShuffleVectorInst>(I) || isa<GetElementPtrInst>(I);
+           isa<ShuffleVectorInst>(I) || isa<GetElementPtrInst>(I) ||
+           isa<CastInst>(I) || isa<SelectInst>(I);
   }
 
   static inline Instruction *getEmptyKey() {
@@ -2585,7 +2586,7 @@ struct CSEDenseMapInfo {
 
 } // end anonymous namespace
 
-///Perform cse of induction variable instructions.
+/// Perform cse of induction variable instructions, casts and selects.
 static void cse(BasicBlock *BB) {
   // Perform simple cse.
   SmallDenseMap<Instruction *, Instruction *, 4, CSEDenseMapInfo> CSEMap;
