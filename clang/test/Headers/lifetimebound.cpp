@@ -6,6 +6,7 @@
 
 struct has_lifetimebound_method {
   const char* get_ptr(char* ptr __lifetimebound) const;
+  const char* get_ptr() const __lifetimebound;
 };
 
 struct has_lifetime_capture_by_method {
