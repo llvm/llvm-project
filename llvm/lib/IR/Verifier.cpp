@@ -566,6 +566,7 @@ private:
   void visitUIToFPInst(UIToFPInst &I);
   void visitSIToFPInst(SIToFPInst &I);
   void visitIntToPtrInst(IntToPtrInst &I);
+  void visitPtrToAddrInst(PtrToAddrInst &I);
   void visitPtrToIntInst(PtrToIntInst &I);
   void visitBitCastInst(BitCastInst &I);
   void visitAddrSpaceCastInst(AddrSpaceCastInst &I);
@@ -3529,6 +3530,28 @@ void Verifier::visitFPToSIInst(FPToSIInst &I) {
               cast<VectorType>(DestTy)->getElementCount(),
           "FPToSI source and dest vector length mismatch", &I);
 
+  visitInstruction(I);
+}
+
+void Verifier::visitPtrToAddrInst(PtrToAddrInst &I) {
+  // Get the source and destination types
+  Type *SrcTy = I.getOperand(0)->getType();
+  Type *DestTy = I.getType();
+
+  Check(SrcTy->isPtrOrPtrVectorTy(), "PtrToAddr source must be pointer", &I);
+  Check(DestTy->isIntOrIntVectorTy(), "PtrToAddr result must be integral", &I);
+  Check(SrcTy->isVectorTy() == DestTy->isVectorTy(), "PtrToAddr type mismatch",
+        &I);
+
+  if (SrcTy->isVectorTy()) {
+    auto *VSrc = cast<VectorType>(SrcTy);
+    auto *VDest = cast<VectorType>(DestTy);
+    Check(VSrc->getElementCount() == VDest->getElementCount(),
+          "PtrToAddr vector width mismatch", &I);
+  }
+
+  Type *AddrTy = DL.getAddressType(SrcTy);
+  Check(AddrTy == DestTy, "PtrToAddr result must be address width", &I);
   visitInstruction(I);
 }
 

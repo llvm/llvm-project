@@ -359,6 +359,11 @@ UseCaptureInfo llvm::DetermineUseCaptureKind(const Use &U, const Value *Base) {
   case Instruction::AddrSpaceCast:
     // The original value is not captured via this if the new value isn't.
     return UseCaptureInfo::passthrough();
+  case Instruction::PtrToAddr:
+    // FIXME: the following does not work as expected, so just assume address
+    // is always captured:
+    //  return UseCaptureInfo(CaptureComponents::None, CaptureComponents::Address);
+    return CaptureComponents::Address;
   case Instruction::ICmp: {
     unsigned Idx = U.getOperandNo();
     unsigned OtherIdx = 1 - Idx;
