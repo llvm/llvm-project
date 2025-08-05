@@ -8,12 +8,12 @@
 
 static int Result;
 
-void __ubsan_report_error(const char *kind, uintptr_t caller) {
+void __ubsan_minimal_report_error(const char *kind, uintptr_t caller) {
   fprintf(stderr, "CUSTOM_CALLBACK: %s\n", kind);
 }
 
 #if OVERRIDE
-void __ubsan_report_error_fatal(const char *kind, uintptr_t caller) {
+void __ubsan_minimal_report_error_fatal(const char *kind, uintptr_t caller) {
   fprintf(stderr, "FATAL_CALLBACK: %s\n", kind);
 }
 #endif
