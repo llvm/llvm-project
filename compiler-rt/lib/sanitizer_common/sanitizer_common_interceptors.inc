@@ -34,7 +34,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <stdarg.h>
-#include <stddef.h>
 
 #include "interception/interception.h"
 #include "sanitizer_addrhashmap.h"
