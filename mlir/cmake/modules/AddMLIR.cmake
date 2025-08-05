@@ -388,6 +388,9 @@ function(add_mlir_library name)
 
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
+    if(ARG_INSTALL_WITH_TOOLCHAIN)
+      set_target_properties(${name} PROPERTIES MLIR_INSTALL_WITH_TOOLCHAIN TRUE)
+    endif()
     if(NOT ARG_DISABLE_INSTALL)
       add_mlir_library_install(${name})
     endif()
@@ -617,7 +620,8 @@ endfunction(add_mlir_aggregate)
 # This is usually done as part of add_mlir_library but is broken out for cases
 # where non-standard library builds can be installed.
 function(add_mlir_library_install name)
-  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  get_target_property(_install_with_toolchain ${name} MLIR_INSTALL_WITH_TOOLCHAIN)
+  if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR _install_with_toolchain)
   get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
   install(TARGETS ${name}
     COMPONENT ${name}
