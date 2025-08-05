@@ -13,11 +13,18 @@
 
 using namespace mlir;
 
-static ParseResult
-parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
-                          SmallVectorImpl<OpAsmParser::Argument> &arguments,
-                          bool &isVariadic) {
+static inline ParseResult defaultTypeParser(AsmParser &parser, Type &ty) {
+  return parser.parseType(ty);
+}
 
+static inline void defaultTypePrinter(AsmPrinter &printer, Type ty) {
+  printer << ty;
+}
+
+static ParseResult parseFunctionArgumentList(
+    OpAsmParser &parser, bool allowVariadic,
+    SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser) {
   // Parse the function arguments.  The argument list either has to consistently
   // have ssa-id's followed by types, or just be a type list.  It isn't ok to
   // sometimes have SSA ID's and sometimes not.
@@ -40,7 +47,7 @@ parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
         // Parse argument name if present.
         OpAsmParser::Argument argument;
         auto argPresent = parser.parseOptionalArgument(
-            argument, /*allowType=*/true, /*allowAttrs=*/true);
+            argument, /*allowType=*/true, /*allowAttrs=*/true, typeParser);
         if (argPresent.has_value()) {
           if (failed(argPresent.value()))
             return failure(); // Present but malformed.
@@ -59,7 +66,7 @@ parseFunctionArgumentList(OpAsmParser &parser, bool allowVariadic,
                                     "expected SSA identifier");
 
           NamedAttrList attrs;
-          if (parser.parseType(argument.type) ||
+          if (typeParser(parser, argument.type) ||
               parser.parseOptionalAttrDict(attrs) ||
               parser.parseOptionalLocationSpecifier(argument.sourceLoc))
             return failure();
@@ -74,19 +81,25 @@ ParseResult function_interface_impl::parseFunctionSignatureWithArguments(
     OpAsmParser &parser, bool allowVariadic,
     SmallVectorImpl<OpAsmParser::Argument> &arguments, bool &isVariadic,
     SmallVectorImpl<Type> &resultTypes,
-    SmallVectorImpl<DictionaryAttr> &resultAttrs) {
-  if (parseFunctionArgumentList(parser, allowVariadic, arguments, isVariadic))
+    SmallVectorImpl<DictionaryAttr> &resultAttrs,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser) {
+  if (!typeParser)
+    typeParser = defaultTypeParser;
+
+  if (parseFunctionArgumentList(parser, allowVariadic, arguments, isVariadic,
+                                typeParser))
     return failure();
   if (succeeded(parser.parseOptionalArrow()))
-    return call_interface_impl::parseFunctionResultList(parser, resultTypes,
-                                                        resultAttrs);
+    return call_interface_impl::parseFunctionResultList(
+        parser, resultTypes, resultAttrs, typeParser);
   return success();
 }
 
 ParseResult function_interface_impl::parseFunctionOp(
     OpAsmParser &parser, OperationState &result, bool allowVariadic,
     StringAttr typeAttrName, FuncTypeBuilder funcTypeBuilder,
-    StringAttr argAttrsName, StringAttr resAttrsName) {
+    StringAttr argAttrsName, StringAttr resAttrsName,
+    function_ref<ParseResult(AsmParser &, Type &)> typeParser) {
   SmallVector<OpAsmParser::Argument> entryArgs;
   SmallVector<DictionaryAttr> resultAttrs;
   SmallVector<Type> resultTypes;
@@ -105,7 +118,8 @@ ParseResult function_interface_impl::parseFunctionOp(
   SMLoc signatureLocation = parser.getCurrentLocation();
   bool isVariadic = false;
   if (parseFunctionSignatureWithArguments(parser, allowVariadic, entryArgs,
-                                          isVariadic, resultTypes, resultAttrs))
+                                          isVariadic, resultTypes, resultAttrs,
+                                          typeParser))
     return failure();
 
   std::string errorMessage;
@@ -174,7 +188,11 @@ void function_interface_impl::printFunctionAttributes(
 
 void function_interface_impl::printFunctionOp(
     OpAsmPrinter &p, FunctionOpInterface op, bool isVariadic,
-    StringRef typeAttrName, StringAttr argAttrsName, StringAttr resAttrsName) {
+    StringRef typeAttrName, StringAttr argAttrsName, StringAttr resAttrsName,
+    function_ref<void(AsmPrinter &, Type)> typePrinter) {
+  if (!typePrinter)
+    typePrinter = defaultTypePrinter;
+
   // Print the operation and the function name.
   auto funcName =
       op->getAttrOfType<StringAttr>(SymbolTable::getSymbolAttrName())
@@ -188,7 +206,7 @@ void function_interface_impl::printFunctionOp(
 
   ArrayRef<Type> argTypes = op.getArgumentTypes();
   ArrayRef<Type> resultTypes = op.getResultTypes();
-  printFunctionSignature(p, op, argTypes, isVariadic, resultTypes);
+  printFunctionSignature(p, op, argTypes, isVariadic, resultTypes, typePrinter);
   printFunctionAttributes(
       p, op, {visibilityAttrName, typeAttrName, argAttrsName, resAttrsName});
   // Print the body if this is not an external function.
