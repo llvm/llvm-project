@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_TYPES_Dl_INFO_H
-#define LLVM_LIBC_TYPES_Dl_INFO_H
+#ifndef LLVM_LIBC_TYPES_DL_INFO_H
+#define LLVM_LIBC_TYPES_DL_INFO_H
 
 typedef struct {
   const char *dli_fname;
@@ -16,4 +16,4 @@ typedef struct {
   void *dli_saddr;
 } Dl_info;
 
-#endif // LLVM_LIBC_TYPES_Dl_INFO_H
+#endif // LLVM_LIBC_TYPES_DL_INFO_H
