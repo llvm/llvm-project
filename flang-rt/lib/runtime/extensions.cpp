@@ -341,7 +341,7 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
     timeInfo.tm_hour = 0;
     timeInfo.tm_min = 0;
     timeInfo.tm_sec = 0;
-    std::time_t midnight = std::mktime(&timeInfo);
+    std::time_t midnight{std::mktime(&timeInfo)};
     if (midnight == FAIL_TIME) {
       return FAIL_SECNDS;
     }
