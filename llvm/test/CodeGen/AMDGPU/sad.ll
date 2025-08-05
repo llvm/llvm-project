@@ -1195,7 +1195,6 @@ define amdgpu_kernel void @v_sad_u32_i16_pat1(ptr addrspace(1) %out, i16 %a, i16
 ; GFX12-5-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-5-SDAG-NEXT:    s_lshr_b32 s4, s2, 16
 ; GFX12-5-SDAG-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX12-5-SDAG-NEXT:    s_and_b32 s4, s4, 0xffff
 ; GFX12-5-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-5-SDAG-NEXT:    s_min_u32 s5, s2, s4
 ; GFX12-5-SDAG-NEXT:    s_max_u32 s2, s2, s4
