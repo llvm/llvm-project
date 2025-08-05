@@ -1320,7 +1320,7 @@ private:
     auto copyData = [&](hlfir::Entity l, hlfir::Entity r) {
       // Dereference RHS and load it if trivial scalar.
       r = hlfir::loadTrivialScalar(loc, *builder, r);
-      builder->create<hlfir::AssignOp>(loc, r, l, isAllocatable);
+      hlfir::AssignOp::create(*builder, loc, r, l, isAllocatable);
     };
 
     if (isPointer) {
@@ -3061,11 +3061,11 @@ private:
         exprVal = builder->createConvert(loc, builder->getI1Type(), exprVal);
       if (innerInsertionPoint.isSet())
         builder->restoreInsertionPoint(innerInsertionPoint);
-      builder->create<hlfir::YieldOp>(loc, exprVal);
+      hlfir::YieldOp::create(*builder, loc, exprVal);
     };
     for (const Fortran::parser::ConcurrentControl &control :
          std::get<std::list<Fortran::parser::ConcurrentControl>>(header.t)) {
-      auto forallOp = builder->create<hlfir::ForallOp>(loc);
+      auto forallOp = hlfir::ForallOp::create(*builder, loc);
       if (isOutterForall && !outerForall)
         outerForall = forallOp;
       evaluateControl(std::get<1>(control.t), forallOp.getLbRegion());
@@ -3082,8 +3082,8 @@ private:
       mlir::Type controlVarType = genType(*controlVar);
       mlir::Block *forallBody = builder->createBlock(&forallOp.getBody(), {},
                                                      {controlVarType}, {loc});
-      auto forallIndex = builder->create<hlfir::ForallIndexOp>(
-          loc, fir::ReferenceType::get(controlVarType),
+      auto forallIndex = hlfir::ForallIndexOp::create(
+          *builder, loc, fir::ReferenceType::get(controlVarType),
           forallBody->getArguments()[0],
           builder->getStringAttr(controlVar->name().ToString()));
       localSymbols.addVariableDefinition(*controlVar, forallIndex,
@@ -3096,7 +3096,7 @@ private:
             std::get<std::optional<Fortran::parser::ScalarLogicalExpr>>(
                 header.t)) {
       // Create hlfir.forall_mask and set insertion point in its body.
-      auto forallMaskOp = builder->create<hlfir::ForallMaskOp>(loc);
+      auto forallMaskOp = hlfir::ForallMaskOp::create(*builder, loc);
       evaluateControl(*maskExpr, forallMaskOp.getMaskRegion(), /*isMask=*/true);
       builder->createBlock(&forallMaskOp.getBody());
       auto end = fir::FirEndOp::create(*builder, loc);
@@ -4577,14 +4577,14 @@ private:
     // descriptor address/value and later implemented with a store.
     // The RHS is fully prepared in lowering, so that all that is left
     // in hlfir.region_assign code generation is the store.
-    auto regionAssignOp = builder->create<hlfir::RegionAssignOp>(loc);
+    auto regionAssignOp = hlfir::RegionAssignOp::create(*builder, loc);
 
     // Lower LHS in its own region.
     builder->createBlock(&regionAssignOp.getLhsRegion());
     Fortran::lower::StatementContext lhsContext;
     hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
         loc, *this, assign.lhs, localSymbols, lhsContext);
-    auto lhsYieldOp = builder->create<hlfir::YieldOp>(loc, lhs);
+    auto lhsYieldOp = hlfir::YieldOp::create(*builder, loc, lhs);
     Fortran::lower::genCleanUpInRegionIfAny(
         loc, *builder, lhsYieldOp.getCleanup(), lhsContext);
 
@@ -4593,7 +4593,7 @@ private:
     Fortran::lower::StatementContext rhsContext;
     mlir::Value rhs =
         genForallPointerAssignmentRhs(loc, lhs, assign, rhsContext);
-    auto rhsYieldOp = builder->create<hlfir::YieldOp>(loc, rhs);
+    auto rhsYieldOp = hlfir::YieldOp::create(*builder, loc, rhs);
     Fortran::lower::genCleanUpInRegionIfAny(
         loc, *builder, rhsYieldOp.getCleanup(), rhsContext);
 
@@ -5364,7 +5364,7 @@ private:
     if (!lowerToHighLevelFIR()) {
       implicitIterSpace.growStack();
     } else {
-      whereOp = builder->create<hlfir::WhereOp>(loc);
+      whereOp = hlfir::WhereOp::create(*builder, loc);
       builder->createBlock(&whereOp.getMaskRegion());
     }
 
@@ -5426,7 +5426,7 @@ private:
     hlfir::Entity mask = Fortran::lower::convertExprToHLFIR(
         loc, *this, *maskExpr, localSymbols, maskContext);
     mask = hlfir::loadTrivialScalar(loc, *builder, mask);
-    auto yieldOp = builder->create<hlfir::YieldOp>(loc, mask);
+    auto yieldOp = hlfir::YieldOp::create(*builder, loc, mask);
     Fortran::lower::genCleanUpInRegionIfAny(loc, *builder, yieldOp.getCleanup(),
                                             maskContext);
   }
@@ -5442,7 +5442,7 @@ private:
     mlir::Location loc = getCurrentLocation();
     hlfir::ElseWhereOp elsewhereOp;
     if (lowerToHighLevelFIR()) {
-      elsewhereOp = builder->create<hlfir::ElseWhereOp>(loc);
+      elsewhereOp = hlfir::ElseWhereOp::create(*builder, loc);
       // Lower mask in the mask region.
       builder->createBlock(&elsewhereOp.getMaskRegion());
     }
@@ -5470,7 +5470,7 @@ private:
   void genFIR(const Fortran::parser::WhereConstruct::Elsewhere &ew) {
     if (lowerToHighLevelFIR()) {
       auto elsewhereOp =
-          builder->create<hlfir::ElseWhereOp>(getCurrentLocation());
+          hlfir::ElseWhereOp::create(*builder, getCurrentLocation());
       builder->createBlock(&elsewhereOp.getBody());
     }
     genNestedStatement(
@@ -5496,7 +5496,7 @@ private:
         std::get<Fortran::parser::LogicalExpr>(stmt.t));
     if (lowerToHighLevelFIR()) {
       mlir::Location loc = getCurrentLocation();
-      auto whereOp = builder->create<hlfir::WhereOp>(loc);
+      auto whereOp = hlfir::WhereOp::create(*builder, loc);
       builder->createBlock(&whereOp.getMaskRegion());
       lowerWhereMaskToHlfir(loc, mask);
       builder->createBlock(&whereOp.getBody());
