@@ -421,11 +421,6 @@ if(LLVM_ENABLE_PIC)
       EXCLUDE_FROM_LIBMLIR
     )
 
-    # check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)
-
-    # if(NOT CXX_HAS_FRTTI_FLAG)
-    # message(FATAL_ERROR "CXX compiler does not accept flag -frtti")
-    # endif()
     target_compile_options(mlir_levelzero_runtime PUBLIC -fexceptions -frtti)
 
     target_include_directories(mlir_levelzero_runtime PRIVATE
