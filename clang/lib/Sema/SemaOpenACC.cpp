@@ -630,7 +630,7 @@ namespace {
 // private, firstprivate, and reduction, which require certain operators to be
 // available.
 ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
-                        Expr *InnerExpr) {
+                        SourceLocation InnerLoc, QualType InnerTy) {
   // There is nothing to do here, only these three have these sorts of
   // restrictions.
   if (CK != OpenACCClauseKind::Private &&
@@ -639,10 +639,17 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
     return VarExpr;
 
   // We can't test this if it isn't here, or if the type isn't clear yet.
-  if (!InnerExpr || InnerExpr->isTypeDependent())
+  if (InnerTy.isNull() || InnerTy->isDependentType())
     return VarExpr;
 
-  auto *RD = InnerExpr->getType()->getAsCXXRecordDecl();
+  InnerTy = InnerTy.getUnqualifiedType();
+  if (auto *RefTy = InnerTy->getAs<ReferenceType>())
+    InnerTy = RefTy->getPointeeType();
+
+  if (auto *ArrTy = InnerTy->getAsArrayTypeUnsafe())
+    return CheckVarType(S, CK, VarExpr, InnerLoc, ArrTy->getElementType());
+
+  auto *RD = InnerTy->getAsCXXRecordDecl();
 
   // if this isn't a C++ record decl, we can create/copy/destroy this thing at
   // will without problem, so this is a success.
@@ -655,10 +662,8 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
           return CD->isDefaultConstructor() && !CD->isDeleted();
         }) != RD->ctors().end();
     if (!HasNonDeletedDefaultCtor && !RD->needsImplicitDefaultConstructor()) {
-      S.Diag(InnerExpr->getBeginLoc(),
-             clang::diag::warn_acc_var_referenced_lacks_op)
-          << InnerExpr->getType() << CK
-          << clang::diag::AccVarReferencedReason::DefCtor;
+      S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_lacks_op)
+          << InnerTy << CK << clang::diag::AccVarReferencedReason::DefCtor;
       return ExprError();
     }
   } else if (CK == OpenACCClauseKind::FirstPrivate) {
@@ -670,16 +675,14 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
 
       if (SMOR.getKind() != Sema::SpecialMemberOverloadResult::Success ||
           SMOR.getMethod()->isDeleted()) {
-        S.Diag(InnerExpr->getBeginLoc(),
-               clang::diag::warn_acc_var_referenced_lacks_op)
-            << InnerExpr->getType() << CK
-            << clang::diag::AccVarReferencedReason::CopyCtor;
+        S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_lacks_op)
+            << InnerTy << CK << clang::diag::AccVarReferencedReason::CopyCtor;
         return ExprError();
       }
     }
   } else if (CK == OpenACCClauseKind::Reduction) {
     // TODO: OpenACC:
-    // Reduction must have copyctor + dtor + operation in InnerExpr I think?
+    // Reduction must have copyctor + dtor + operation in InnerTy I think?
     // Need to confirm when implementing this part.
   }
 
@@ -687,13 +690,19 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
   bool DestructorDeleted =
       RD->getDestructor() && RD->getDestructor()->isDeleted();
   if (DestructorDeleted && !RD->needsImplicitDestructor()) {
-    S.Diag(InnerExpr->getBeginLoc(),
-           clang::diag::warn_acc_var_referenced_lacks_op)
-        << InnerExpr->getType() << CK
-        << clang::diag::AccVarReferencedReason::Dtor;
+    S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_lacks_op)
+        << InnerTy << CK << clang::diag::AccVarReferencedReason::Dtor;
     return ExprError();
   }
   return VarExpr;
+}
+
+ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
+                        Expr *InnerExpr) {
+  if (!InnerExpr)
+    return VarExpr;
+  return CheckVarType(S, CK, VarExpr, InnerExpr->getBeginLoc(),
+                      InnerExpr->getType());
 }
 } // namespace
 

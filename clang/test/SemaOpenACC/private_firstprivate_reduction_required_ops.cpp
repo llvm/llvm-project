@@ -11,12 +11,13 @@ struct DefaultedCtor {
 };
 
 struct ImpledCtor {
-  ImpledCtor() = default;
+  ImpledCtor();
 };
 
 
 struct DeletedCtor {
   DeletedCtor() = delete;
+  DeletedCtor(int i);
 };
 
 struct ImpledDtor {
@@ -43,6 +44,7 @@ struct DefaultedCopy {
   DefaultedCopy(const DefaultedCopy&) = default;
 };
 struct UserCopy {
+  UserCopy();
   UserCopy(const UserCopy&);
 };
 
@@ -74,7 +76,7 @@ void private_uses(ImplicitCtorDtor &CDT, ImplDeletedCtor &IDC,
 #pragma acc parallel private(DefD)
   ;
 
-  // expected-error@+1{{variable of type 'DeletedDtor' referenced in OpenACC 'private' clause does not have a destructor; reference has no effect}}
+  // expected-error@+1{{variable of type 'DeletedDtor' referenced in OpenACC 'private' clause does not have a}}
 #pragma acc parallel private(DelD)
   ;
 
@@ -111,6 +113,45 @@ void inst(ImplicitCtorDtor &CDT, ImplDeletedCtor &IDC,
   // expected-error@#PRIV{{variable of type 'ImplicitDelDtor' referenced in OpenACC 'private' clause does not have a destructor; reference has no effect}}
   // expected-note@+1{{in instantiation}}
   private_templ(IDD);
+}
+
+void private_arrays() {
+  char *ptr;
+  ImplicitCtorDtor CDTArr[5];
+  ImplDeletedCtor IDCArr[5]{1,2,3,4,5};
+  DefaultedCtor DefCArr[5];
+  ImpledCtor ICArr[5];
+  DeletedCtor DelCArr[5]{1,2,3,4,5};
+  ImpledDtor IDArr[5];
+  DefaultedDtor DefDArr[5];
+  using DelDArrTy = DeletedDtor[5];
+  DelDArrTy &DelDArr = *((DelDArrTy*)ptr);
+  using IDDArrTy = ImplicitDelDtor[5];
+  IDDArrTy &IDDArr = *((IDDArrTy*)ptr);
+
+
+#pragma acc parallel private(CDTArr)
+  ;
+  // expected-error@+1{{variable of type 'ImplDeletedCtor' referenced in OpenACC 'private' clause does not have a default constructor; reference has no effect}}
+#pragma acc parallel private(IDCArr)
+  ;
+#pragma acc parallel private(DefCArr)
+  ;
+#pragma acc parallel private(ICArr)
+  ;
+  // expected-error@+1{{variable of type 'DeletedCtor' referenced in OpenACC 'private' clause does not have a default constructor; reference has no effect}}
+#pragma acc parallel private(DelCArr)
+  ;
+#pragma acc parallel private(IDArr)
+  ;
+#pragma acc parallel private(DefDArr)
+  ;
+  // expected-error@+1{{variable of type 'DeletedDtor' referenced in OpenACC 'private' clause does not have a destructor; reference has no effect}}
+#pragma acc parallel private(DelDArr)
+  ;
+  // expected-error@+1{{variable of type 'ImplicitDelDtor' referenced in OpenACC 'private' clause does not have a destructor; reference has no effect}}
+#pragma acc parallel private(IDDArr)
+  ;
 }
 
 void firstprivate_uses(ImplicitCtorDtor &CDT, ImplDeletedCtor &IDC,
@@ -187,3 +228,48 @@ void firstprivate_inst(ImplicitCtorDtor &CDT, ImplDeletedCtor &IDC,
   firstprivate_template(UDCopy);
 }
 
+void firstprivate_arrays() {
+  char *ptr;
+  ImplicitCtorDtor CDTArr[5];
+  ImplDeletedCtor IDCArr[5]{1,2,3,4,5};
+  DefaultedCtor DefCArr[5];
+  ImpledCtor ICArr[5];
+  DeletedCtor DelCArr[5]{1,2,3,4,5};
+  ImpledDtor IDArr[5];
+  DefaultedDtor DefDArr[5];
+  using DelDArrTy = DeletedDtor[5];
+  DelDArrTy &DelDArr = *((DelDArrTy*)ptr);
+  using IDDArrTy = ImplicitDelDtor[5];
+  IDDArrTy &IDDArr = *((IDDArrTy*)ptr);
+  DeletedCopy DelCopyArr[5]{};
+  DefaultedCopy DefCopyArr[5]{};
+  UserCopy UDCopyArr[5]{};
+
+#pragma acc parallel firstprivate(CDTArr)
+  ;
+#pragma acc parallel firstprivate(IDCArr)
+  ;
+#pragma acc parallel firstprivate(DefCArr)
+  ;
+#pragma acc parallel firstprivate(ICArr)
+  ;
+#pragma acc parallel firstprivate(DelCArr)
+  ;
+#pragma acc parallel firstprivate(IDArr)
+  ;
+#pragma acc parallel firstprivate(DefDArr)
+  ;
+  // expected-error@+1{{variable of type 'DeletedDtor' referenced in OpenACC 'firstprivate' clause does not have a destructor; reference has no effect}}
+#pragma acc parallel firstprivate(DelDArr)
+  ;
+  // expected-error@+1{{variable of type 'ImplicitDelDtor' referenced in OpenACC 'firstprivate' clause does not have a copy constructor; reference has no effect}}
+#pragma acc parallel firstprivate(IDDArr)
+  ;
+  // expected-error@+1{{variable of type 'DeletedCopy' referenced in OpenACC 'firstprivate' clause does not have a copy constructor; reference has no effect}}
+#pragma acc parallel firstprivate(DelCopyArr)
+  ;
+#pragma acc parallel firstprivate(DefCopyArr)
+  ;
+#pragma acc parallel firstprivate(UDCopyArr)
+  ;
+}
