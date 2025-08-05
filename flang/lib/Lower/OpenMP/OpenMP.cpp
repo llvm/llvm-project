@@ -2390,9 +2390,6 @@ static bool isDuplicateMappedSymbol(
   concatSyms.append(mappedSyms.begin(), mappedSyms.end());
 
   auto checkSymbol = [&](const semantics::Symbol &checkSym) {
-    if (llvm::is_contained(concatSyms, &checkSym))
-      return true;
-
     return std::any_of(concatSyms.begin(), concatSyms.end(),
                        [&](auto v) { return v->GetUltimate() == checkSym; });
   };
@@ -2435,8 +2432,7 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                            lower::omp::isLastItemInQueue(item, queue),
                            /*useDelayedPrivatization=*/true, symTable,
                            /*isTargetPrivitization=*/true);
-  dsp.processStep1();
-  dsp.processStep2(&clauseOps);
+  dsp.processStep1(&clauseOps);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
   // The following code follows the implicit data-mapping rules to map all the

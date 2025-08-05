@@ -823,11 +823,10 @@ private:
       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
       Symbol::Flag::OmpLinear};
 
-  Symbol::Flags dataMappingAttributeFlags {
-      Symbol::Flag::OmpMapTo, Symbol::Flag::OmpMapFrom,
-      Symbol::Flag::OmpMapToFrom, Symbol::Flag::OmpMapStorage,
-      Symbol::Flag::OmpMapDelete, Symbol::Flag::OmpIsDevicePtr,
-      Symbol::Flag::OmpHasDeviceAddr};
+  Symbol::Flags dataMappingAttributeFlags{Symbol::Flag::OmpMapTo,
+      Symbol::Flag::OmpMapFrom, Symbol::Flag::OmpMapToFrom,
+      Symbol::Flag::OmpMapStorage, Symbol::Flag::OmpMapDelete,
+      Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
   Symbol::Flags privateDataSharingAttributeFlags{Symbol::Flag::OmpPrivate,
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate};
@@ -2418,17 +2417,20 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     std::map<parser::OmpVariableCategory::Value,
         parser::OmpDefaultmapClause::ImplicitBehavior>
         defaultMap) {
+  // If a Defaultmap clause is present for the current target scope, and it has
+  // specified behaviour other than Firstprivate for scalars then we exit early,
+  // as it overrides the implicit Firstprivatization of scalars OpenMP rule.
   if (!defaultMap.empty()) {
     if (llvm::is_contained(
-            defaultMap, parser::OmpVariableCategory::Value::Scalar) &&
-        defaultMap[parser::OmpVariableCategory::Value::Scalar] !=
+            defaultMap, parser::OmpVariableCategory::Value::All) &&
+        defaultMap[parser::OmpVariableCategory::Value::All] !=
             parser::OmpDefaultmapClause::ImplicitBehavior::Firstprivate) {
       return false;
     }
 
     if (llvm::is_contained(
-            defaultMap, parser::OmpVariableCategory::Value::All) &&
-        defaultMap[parser::OmpVariableCategory::Value::All] !=
+            defaultMap, parser::OmpVariableCategory::Value::Scalar) &&
+        defaultMap[parser::OmpVariableCategory::Value::Scalar] !=
             parser::OmpDefaultmapClause::ImplicitBehavior::Firstprivate) {
       return false;
     }
@@ -2441,7 +2443,7 @@ static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     // TODO: Relax restriction as we progress privitization and further
     // investigate the flags we can intermix with.
     if (!(dsa & (dataSharingAttributeFlags | dataMappingAttributeFlags))
-             .none() ||
+            .none() ||
         !checkSym.flags().none() || semantics::IsAssumedShape(checkSym) ||
         semantics::IsAllocatableOrPointer(checkSym)) {
       return false;
@@ -2564,7 +2566,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
 
     bool taskGenDir = llvm::omp::taskGeneratingSet.test(dirContext.directive);
     bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
-    bool parallelDir = llvm::omp::allParallelSet.test(dirContext.directive);
+    bool parallelDir = llvm::omp::topParallelSet.test(dirContext.directive);
     bool teamsDir = llvm::omp::allTeamsSet.test(dirContext.directive);
     bool isStaticStorageDuration = IsSymbolStaticStorageDuration(*symbol);
 
@@ -2624,7 +2626,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
       // 4) not mapped target variable  -> firstprivate
       //    - i.e. implicit, but meets OpenMP specification rules for
       //    firstprivate "promotion"
-      if (/*enableDelayedPrivatizationStaging && */
+      if (enableDelayedPrivatizationStaging &&
           IsTargetCaptureImplicitlyFirstprivatizeable(*symbol, prevDSA,
               dataSharingAttributeFlags, dataMappingAttributeFlags,
               dirContext.defaultMap)) {
