@@ -1901,6 +1901,7 @@ void addInstrRequirements(const MachineInstr &MI,
   case SPIRV::OpCopyMemorySized: {
     Reqs.addCapability(SPIRV::Capability::Addresses);
     // TODO: Add UntypedPointersKHR when implemented.
+    break;
   }
 
   default:
