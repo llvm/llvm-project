@@ -89,6 +89,8 @@ A complete list of currently supported format string variables is listed below:
 +---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``function.name-without-args``                    | The name of the current function without arguments and values (used to include a function name in-line in the ``disassembly-format``)                                                                                                                                                       |
 +---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
+| ``function.name-qualifiers``                      | Any qualifiers added after the name of a function and before its arguments or template arguments. E.g., for Swift the name qualifier for ``closure #1 in A.foo<Int>()`` is `` in A.foo``.                                                                                                   |
++---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``function.basename``                             | The basename of the current function depending on the frame's language. E.g., for C++ the basename for ``void ns::foo<float>::bar<int>(int) const`` is ``bar``.                                                                                                                             |
 +---------------------------------------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 | ``function.prefix``                               | Any prefix added to the demangled function name of the current function. This depends on the frame's language. E.g., for C++ the prefix will always be empty.                                                                                                                               |
@@ -332,6 +334,7 @@ The function names displayed in backtraces/``frame info``/``thread info`` are th
 - ``${function.prefix}``
 - ``${function.scope}``
 - ``${function.basename}``
+- ``${function.name-qualifiers}``
 - ``${function.template-arguments}``
 - ``${function.formatted-arguments}``
 - ``${function.qualifiers}``
