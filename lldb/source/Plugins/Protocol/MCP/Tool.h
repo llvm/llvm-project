@@ -9,8 +9,8 @@
 #ifndef LLDB_PLUGINS_PROTOCOL_MCP_TOOL_H
 #define LLDB_PLUGINS_PROTOCOL_MCP_TOOL_H
 
-#include "Protocol.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Support/JSON.h"
 #include <string>
 
@@ -21,14 +21,14 @@ public:
   Tool(std::string name, std::string description);
   virtual ~Tool() = default;
 
-  virtual llvm::Expected<protocol::TextResult>
-  Call(const protocol::ToolArguments &args) = 0;
+  virtual llvm::Expected<lldb_protocol::mcp::TextResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) = 0;
 
   virtual std::optional<llvm::json::Value> GetSchema() const {
     return llvm::json::Object{{"type", "object"}};
   }
 
-  protocol::ToolDefinition GetDefinition() const;
+  lldb_protocol::mcp::ToolDefinition GetDefinition() const;
 
   const std::string &GetName() { return m_name; }
 
@@ -42,8 +42,8 @@ public:
   using mcp::Tool::Tool;
   ~CommandTool() = default;
 
-  virtual llvm::Expected<protocol::TextResult>
-  Call(const protocol::ToolArguments &args) override;
+  virtual llvm::Expected<lldb_protocol::mcp::TextResult>
+  Call(const lldb_protocol::mcp::ToolArguments &args) override;
 
   virtual std::optional<llvm::json::Value> GetSchema() const override;
 };

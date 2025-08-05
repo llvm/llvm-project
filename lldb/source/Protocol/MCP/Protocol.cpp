@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Protocol.h"
+#include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
 
-namespace lldb_private::mcp::protocol {
+namespace lldb_protocol::mcp {
 
 static bool mapRaw(const json::Value &Params, StringLiteral Prop,
                    std::optional<json::Value> &V, json::Path P) {
@@ -228,7 +228,7 @@ bool fromJSON(const llvm::json::Value &V, Message &M, llvm::json::Path P) {
 
   // A message without an ID is a Notification.
   if (!O->get("id")) {
-    protocol::Notification N;
+    Notification N;
     if (!fromJSON(V, N, P))
       return false;
     M = std::move(N);
@@ -236,7 +236,7 @@ bool fromJSON(const llvm::json::Value &V, Message &M, llvm::json::Path P) {
   }
 
   if (O->get("error")) {
-    protocol::Error E;
+    Error E;
     if (!fromJSON(V, E, P))
       return false;
     M = std::move(E);
@@ -244,7 +244,7 @@ bool fromJSON(const llvm::json::Value &V, Message &M, llvm::json::Path P) {
   }
 
   if (O->get("result")) {
-    protocol::Response R;
+    Response R;
     if (!fromJSON(V, R, P))
       return false;
     M = std::move(R);
@@ -252,7 +252,7 @@ bool fromJSON(const llvm::json::Value &V, Message &M, llvm::json::Path P) {
   }
 
   if (O->get("method")) {
-    protocol::Request R;
+    Request R;
     if (!fromJSON(V, R, P))
       return false;
     M = std::move(R);
@@ -263,4 +263,4 @@ bool fromJSON(const llvm::json::Value &V, Message &M, llvm::json::Path P) {
   return false;
 }
 
-} // namespace lldb_private::mcp::protocol
+} // namespace lldb_protocol::mcp
