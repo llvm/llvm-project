@@ -26,6 +26,7 @@
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Semantics/attr.h"
+#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallSet.h"
