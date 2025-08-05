@@ -211,3 +211,4 @@ FUZZER_FLAG_STRING(collect_data_flow,
 FUZZER_FLAG_INT(create_missing_dirs, 0, "Automatically attempt to create "
      "directories for arguments that would normally expect them to already "
      "exist (i.e. artifact_prefix, exact_artifact_path, features_dir, corpus)")
+FUZZER_FLAG_STRING(log_file, "Output file for fuzzer, default is stderr")
