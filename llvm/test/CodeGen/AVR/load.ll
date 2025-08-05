@@ -123,6 +123,9 @@ for.body:                                         ; preds = %entry, %for.body
 define i8 @load8predec(ptr %x, i8 %y) {
 ; CHECK-LABEL: load8predec:
 ; TODO: ld {{.*}}, -{{[XYZ]}}
+; TODO: ld {{.*}}, -{{[XYZ]}}
+; CHECK: sbiw {{.*}}, 1
+; CHECK: ld {{.*}}, {{[XYZ]}}
 entry:
   %tobool6 = icmp eq i8 %y, 0
   br i1 %tobool6, label %while.end, label %while.body
@@ -145,6 +148,9 @@ define i16 @load16predec(ptr %x, i16 %y) {
 ; CHECK-LABEL: load16predec:
 ; TODO: ld {{.*}}, -{{[XYZ]}}
 ; TODO: ld {{.*}}, -{{[XYZ]}}
+; CHECK: sbiw {{.*}}, 2
+; CHECK: ld {{.*}}, {{[XZ]}}
+; CHECK: ldd {{.*}}, {{[XZ]}}+1
 entry:
   %tobool2 = icmp eq i16 %y, 0
   br i1 %tobool2, label %while.end, label %while.body

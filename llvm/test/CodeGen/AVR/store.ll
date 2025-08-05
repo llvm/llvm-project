@@ -95,6 +95,8 @@ while.end:                                        ; preds = %while.body, %entry
 define void @store8predec(ptr %x, i8 %y) {
 ; CHECK-LABEL: store8predec:
 ; TODO: st -{{[XYZ]}}, {{.*}}
+; CHECK: sbiw {{..*}}, 1
+; CHECK: st {{[XYZ]}}, {{.*}}
 entry:
   %tobool3 = icmp eq i8 %y, 0
   br i1 %tobool3, label %while.end, label %while.body
@@ -114,6 +116,9 @@ define void @store16predec(ptr %x, i16 %y) {
 ; CHECK-LABEL: store16predec:
 ; TODO: st -{{[XYZ]}}, {{.*}}
 ; TODO: st -{{[XYZ]}}, {{.*}}
+; CHECK: sbiw {{..*}}, 2
+; CHECK: std {{[XYZ]}}+1, {{.*}}
+; CHECK: st {{[XYZ]}}, {{.*}}
 entry:
   %tobool3 = icmp eq i16 %y, 0
   br i1 %tobool3, label %while.end, label %while.body
