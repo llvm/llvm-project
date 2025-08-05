@@ -864,6 +864,7 @@ static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_sub_s
 static_assert(__builtin_elementwise_ctlz(2) == 30);
 static_assert(__builtin_elementwise_ctlz(2, 8) == 30);
 static_assert(__builtin_elementwise_ctlz(0, 8) == 8);
+static_assert(__builtin_elementwise_ctlz(0, 0) == 0);
 static_assert(__builtin_elementwise_ctlz((char)2) == 6);
 static_assert(__builtin_elementwise_ctlz((short)2) == 14);
 static_assert(__builtin_elementwise_ctlz((char)1) == 0x7);
@@ -879,10 +880,12 @@ constexpr vector4char clz1 = __builtin_elementwise_ctlz((vector4char){1, 0, 3, 4
 // expected-error@-1 {{must be initialized by a constant expression}} \
 // expected-note@-1 {{evaluation of __builtin_elementwise_ctlz with a zero value is undefined}}
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_ctlz((vector4char){1, 0, 127, 0}, (vector4char){9, -1, 9, -2})) == (LITTLE_END ? 0xFE01FF07 : 0x07FF01FE));
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_ctlz((vector4char){0, 0, 0, 0}, (vector4char){0, 0, 0, 0})) == 0);
 
 static_assert(__builtin_elementwise_cttz(2) == 1);
 static_assert(__builtin_elementwise_cttz(2, 8) == 1);
 static_assert(__builtin_elementwise_cttz(0, 8) == 8);
+static_assert(__builtin_elementwise_cttz(0, 0) == 0);
 static_assert(__builtin_elementwise_cttz((char)2) == 1);
 static_assert(__builtin_elementwise_cttz((short)2) == 1);
 static_assert(__builtin_elementwise_cttz((char)8) == 0x3);
@@ -898,3 +901,4 @@ constexpr vector4char ctz1 = __builtin_elementwise_cttz((vector4char){1, 0, 3, 4
 // expected-error@-1 {{must be initialized by a constant expression}} \
 // expected-note@-1 {{evaluation of __builtin_elementwise_cttz with a zero value is undefined}}
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_cttz((vector4char){8, 0, 127, 0}, (vector4char){9, -1, 9, -2})) == (LITTLE_END ? 0xFE00FF03 : 0x03FF00FE));
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_cttz((vector4char){0, 0, 0, 0}, (vector4char){0, 0, 0, 0})) == 0);
