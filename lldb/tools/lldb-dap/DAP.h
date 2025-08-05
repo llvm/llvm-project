@@ -31,6 +31,8 @@
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/Status.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -424,6 +426,8 @@ private:
       const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
       SourceBreakpointMap &existing_breakpoints);
 
+  lldb_private::Status TransportHandler();
+
   /// Registration of request handler.
   /// @{
   void RegisterRequests();
@@ -450,6 +454,9 @@ private:
   std::deque<protocol::Message> m_queue;
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
+
+  // Loop for managing reading from the client.
+  lldb_private::MainLoop m_loop;
 
   std::mutex m_cancelled_requests_mutex;
   llvm::SmallSet<int64_t, 4> m_cancelled_requests;
