@@ -735,9 +735,6 @@ AArch64Arm64ECCallLowering::buildPatchableThunk(GlobalAlias *UnmangledAlias,
 
 // Lower an indirect call with inline code.
 void AArch64Arm64ECCallLowering::lowerCall(CallBase *CB) {
-  assert(CB->getModule()->getTargetTriple().isOSWindows() &&
-         "Only applicable for Windows targets");
-
   IRBuilder<> B(CB);
   Value *CalledOperand = CB->getCalledOperand();
 
