@@ -844,8 +844,8 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
   if (ScalarTy->isIntegerTy())
     return B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
   if (ScalarTy->isPointerTy()) {
-    auto *Zero = Plan.getOrAddLiveIn(
-        ConstantInt::get(Step->getLiveInIRValue()->getType(), 0));
+    Type *StepTy = TypeInfo.inferScalarType(Step);
+    auto *Zero = Plan.getOrAddLiveIn(ConstantInt::get(StepTy, 0));
     return B.createPtrAdd(EndValue,
                           B.createNaryOp(Instruction::Sub, {Zero, Step}), {},
                           "ind.escape");
@@ -1502,10 +1502,8 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   } else {
     // The vector region contains header phis for which we cannot remove the
     // loop region yet.
-    LLVMContext &Ctx = SE.getContext();
-    auto *BOC = new VPInstruction(
-        VPInstruction::BranchOnCond,
-        {Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx))}, Term->getDebugLoc());
+    auto *BOC = new VPInstruction(VPInstruction::BranchOnCond, {Plan.getTrue()},
+                                  Term->getDebugLoc());
     ExitingVPBB->appendRecipe(BOC);
   }
 
@@ -2171,7 +2169,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
-  VPValue *AllOneMask = Plan.getOrAddLiveIn(ConstantInt::getTrue(Ctx));
+  VPValue *AllOneMask = Plan.getTrue();
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 

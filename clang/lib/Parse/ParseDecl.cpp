@@ -3310,6 +3310,7 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
       case NameClassificationKind::TypeTemplate:
       case NameClassificationKind::UndeclaredNonType:
       case NameClassificationKind::UndeclaredTemplate:
+      case NameClassificationKind::Concept:
         // Not a previously-declared non-type entity.
         MightBeDeclarator = false;
         break;
@@ -3320,7 +3321,6 @@ Parser::DiagnoseMissingSemiAfterTagDefinition(DeclSpec &DS, AccessSpecifier AS,
       case NameClassificationKind::OverloadSet:
       case NameClassificationKind::VarTemplate:
       case NameClassificationKind::FunctionTemplate:
-      case NameClassificationKind::Concept:
         // Might be a redeclaration of a prior entity.
         break;
       }

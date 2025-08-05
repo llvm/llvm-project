@@ -20,6 +20,12 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.5, [Shader], []> {
 
 // -----
 
+// CHECK: v1.6
+spirv.module Logical GLSL450 requires #spirv.vce<v1.6, [Shader, Linkage], []> {
+}
+
+// -----
+
 // CHECK: [Shader, Float16]
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Float16], []> {
 }

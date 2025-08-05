@@ -322,22 +322,28 @@ void CIRGenFunction::emitStoreOfScalar(mlir::Value value, Address addr,
   assert(!cir::MissingFeatures::opTBAA());
 }
 
+// TODO: Replace this with a proper TargetInfo function call.
+/// Helper method to check if the underlying ABI is AAPCS
+static bool isAAPCS(const TargetInfo &targetInfo) {
+  return targetInfo.getABI().starts_with("aapcs");
+}
+
 mlir::Value CIRGenFunction::emitStoreThroughBitfieldLValue(RValue src,
                                                            LValue dst) {
-
-  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
 
   const CIRGenBitFieldInfo &info = dst.getBitFieldInfo();
   mlir::Type resLTy = convertTypeForMem(dst.getType());
   Address ptr = dst.getBitFieldAddress();
 
-  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  bool useVoaltile = cgm.getCodeGenOpts().AAPCSBitfieldWidth &&
+                     dst.isVolatileQualified() &&
+                     info.volatileStorageSize != 0 && isAAPCS(cgm.getTarget());
 
   mlir::Value dstAddr = dst.getAddress().getPointer();
 
   return builder.createSetBitfield(dstAddr.getLoc(), resLTy, ptr,
                                    ptr.getElementType(), src.getValue(), info,
-                                   dst.isVolatileQualified());
+                                   dst.isVolatileQualified(), useVoaltile);
 }
 
 RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
@@ -347,10 +353,12 @@ RValue CIRGenFunction::emitLoadOfBitfieldLValue(LValue lv, SourceLocation loc) {
   mlir::Type resLTy = convertType(lv.getType());
   Address ptr = lv.getBitFieldAddress();
 
-  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
+  bool useVoaltile = lv.isVolatileQualified() && info.volatileOffset != 0 &&
+                     isAAPCS(cgm.getTarget());
 
-  mlir::Value field = builder.createGetBitfield(
-      getLoc(loc), resLTy, ptr, ptr.getElementType(), info, lv.isVolatile());
+  mlir::Value field =
+      builder.createGetBitfield(getLoc(loc), resLTy, ptr, ptr.getElementType(),
+                                info, lv.isVolatile(), useVoaltile);
   assert(!cir::MissingFeatures::opLoadEmitScalarRangeCheck() && "NYI");
   return RValue::get(field);
 }
@@ -375,10 +383,10 @@ LValue CIRGenFunction::emitLValueForBitField(LValue base,
   const CIRGenRecordLayout &layout =
       cgm.getTypes().getCIRGenRecordLayout(field->getParent());
   const CIRGenBitFieldInfo &info = layout.getBitFieldInfo(field);
-  assert(!cir::MissingFeatures::armComputeVolatileBitfields());
-  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
-  unsigned idx = layout.getCIRFieldNo(field);
 
+  assert(!cir::MissingFeatures::preservedAccessIndexRegion());
+
+  unsigned idx = layout.getCIRFieldNo(field);
   Address addr = getAddrOfBitFieldStorage(base, field, info.storageType, idx);
 
   mlir::Location loc = getLoc(field->getLocation());

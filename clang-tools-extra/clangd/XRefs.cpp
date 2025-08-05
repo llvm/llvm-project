@@ -859,17 +859,47 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
   for (auto &Inc : AST.getIncludeStructure().MainFileIncludes) {
     if (Inc.Resolved.empty())
       continue;
+
+    // Get the location of the # symbole of the "#include ..." statement
     auto HashLoc = SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
+
+    // get the # Token itself, std::next to get the "include" token and the
+    // first token after (aka "File Token")
     const auto *HashTok = AST.getTokens().spelledTokenContaining(HashLoc);
     assert(HashTok && "got inclusion at wrong offset");
     const auto *IncludeTok = std::next(HashTok);
     const auto *FileTok = std::next(IncludeTok);
-    // FileTok->range is not sufficient here, as raw lexing wouldn't yield
-    // correct tokens for angled filenames. Hence we explicitly use
-    // Inc.Written's length.
-    auto FileRange =
-        syntax::FileRange(SM, FileTok->location(), Inc.Written.length())
-            .toCharRange(SM);
+
+    // The File Token can either be of kind :
+    // "less" if using the "#include <h-char-sequence> new-line" syntax
+    // "string_literal" if using the "#include "q-char-sequence" new-line"
+    // syntax something else (most likely "identifier") if using the "#include
+    // pp-tokens new-line" syntax (#include with macro argument)
+
+    CharSourceRange FileRange;
+
+    if (FileTok->kind() == tok::TokenKind::less) {
+      // FileTok->range would only include the '<' char. Hence we explicitly use
+      // Inc.Written's length.
+      FileRange =
+          syntax::FileRange(SM, FileTok->location(), Inc.Written.length())
+              .toCharRange(SM);
+    } else if (FileTok->kind() == tok::TokenKind::string_literal) {
+      // FileTok->range includes the quotes for string literals so just return
+      // it.
+      FileRange = FileTok->range(SM).toCharRange(SM);
+    } else {
+      // FileTok is the first Token of a macro spelling
+
+      // Report the range of the first token (as it should be the macro
+      // identifier)
+      // We could use the AST to find the last spelled token of the macro and
+      // report a range spanning the full macro expression, but it would require
+      // using token-buffers that are deemed too unstable and crash-prone
+      // due to optimizations in cland
+
+      FileRange = FileTok->range(SM).toCharRange(SM);
+    }
 
     Result.push_back(
         DocumentLink({halfOpenToRange(SM, FileRange),

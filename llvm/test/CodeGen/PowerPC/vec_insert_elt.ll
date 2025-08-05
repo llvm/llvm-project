@@ -940,25 +940,21 @@ entry:
 define <2 x double> @testDoubleImm1(<2 x double> %a, double %b) {
 ; CHECK-LABEL: testDoubleImm1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-NEXT:    xxmrghd v2, v2, vs1
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: testDoubleImm1:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-BE-NEXT:    xxpermdi v2, vs1, v2, 1
 ; CHECK-BE-NEXT:    blr
 ;
 ; CHECK-P9-LABEL: testDoubleImm1:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; CHECK-P9-NEXT:    xxpermdi v2, vs1, v2, 1
 ; CHECK-P9-NEXT:    blr
 ;
 ; AIX-P8-LABEL: testDoubleImm1:
 ; AIX-P8:       # %bb.0: # %entry
-; AIX-P8-NEXT:    # kill: def $f1 killed $f1 def $vsl1
 ; AIX-P8-NEXT:    xxpermdi v2, vs1, v2, 1
 ; AIX-P8-NEXT:    blr
 entry:

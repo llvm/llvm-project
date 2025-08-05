@@ -3086,6 +3086,23 @@ Either the comparison is useless or there is division by zero.
    if (x == 0) { } // warn
  }
 
+.. _alpha-core-StoreToImmutable:
+
+alpha.core.StoreToImmutable (C, C++)
+""""""""""""""""""""""""""""""""""""
+Check for writes to immutable memory regions. This implements part of SEI CERT Rule ENV30-C.
+
+This checker detects attempts to write to memory regions that are marked as immutable,
+including const variables, string literals, and other const-qualified memory.
+
+.. literalinclude:: checkers/storetoimmutable_example.cpp
+    :language: cpp
+
+**Solution**
+
+Avoid writing to const-qualified memory regions. If you need to modify the data,
+remove the const qualifier from the original declaration or use a mutable copy.
+
 alpha.cplusplus
 ^^^^^^^^^^^^^^^
 

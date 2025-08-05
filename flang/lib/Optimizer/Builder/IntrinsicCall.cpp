@@ -2402,7 +2402,7 @@ mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
     for (mlir::BlockArgument bArg : function.front().getArguments()) {
       auto refType = mlir::dyn_cast<fir::ReferenceType>(bArg.getType());
       if (loadRefArguments && refType) {
-        auto loaded = localBuilder->create<fir::LoadOp>(localLoc, bArg);
+        auto loaded = fir::LoadOp::create(*localBuilder, localLoc, bArg);
         localArguments.push_back(loaded);
       } else {
         localArguments.push_back(bArg);
@@ -3480,9 +3480,9 @@ void IntrinsicLibrary::genCFPointer(llvm::ArrayRef<fir::ExtendedValue> args) {
             fir::unwrapSequenceType(fir::unwrapPassByRefType(lower.getType()));
         for (int i = 0; i < arrayRank; ++i) {
           mlir::Value index = builder.createIntegerConstant(loc, idxType, i);
-          mlir::Value var = builder.create<fir::CoordinateOp>(
-              loc, builder.getRefType(lowerElementType), lower, index);
-          mlir::Value load = builder.create<fir::LoadOp>(loc, var);
+          mlir::Value var = fir::CoordinateOp::create(
+              builder, loc, builder.getRefType(lowerElementType), lower, index);
+          mlir::Value load = fir::LoadOp::create(builder, loc, var);
           lbounds.push_back(builder.createConvert(loc, idxType, load));
         }
       }

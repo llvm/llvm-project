@@ -495,21 +495,14 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
   return success;
 }
 
-SBError SBThread::ResumeNewPlan(ExecutionContext &exe_ctx,
-                                ThreadPlan *new_plan) {
-  SBError sb_error;
-
+static Status ResumeNewPlan(ExecutionContext &exe_ctx, ThreadPlan *new_plan) {
   Process *process = exe_ctx.GetProcessPtr();
-  if (!process) {
-    sb_error = Status::FromErrorString("No process in SBThread::ResumeNewPlan");
-    return sb_error;
-  }
+  if (!process)
+    return Status::FromErrorString("No process in SBThread::ResumeNewPlan");
 
   Thread *thread = exe_ctx.GetThreadPtr();
-  if (!thread) {
-    sb_error = Status::FromErrorString("No thread in SBThread::ResumeNewPlan");
-    return sb_error;
-  }
+  if (!thread)
+    return Status::FromErrorString("No thread in SBThread::ResumeNewPlan");
 
   // User level plans should be Controlling Plans so they can be interrupted,
   // other plans executed, and then a "continue" will resume the plan.
@@ -522,11 +515,8 @@ SBError SBThread::ResumeNewPlan(ExecutionContext &exe_ctx,
   process->GetThreadList().SetSelectedThreadByID(thread->GetID());
 
   if (process->GetTarget().GetDebugger().GetAsyncExecution())
-    sb_error.ref() = process->Resume();
-  else
-    sb_error.ref() = process->ResumeSynchronous(nullptr);
-
-  return sb_error;
+    return process->Resume();
+  return process->ResumeSynchronous(nullptr);
 }
 
 void SBThread::StepOver(lldb::RunMode stop_other_threads) {

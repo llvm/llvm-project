@@ -1975,14 +1975,13 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
                   piece_byte_size,
                   (uint64_t)curr_piece_source_value.GetScalar().GetByteSize());
             }
-            // Create curr_piece with bit_size. By default Scalar
-            // grows to the nearest host integer type.
-            llvm::APInt fail_value(1, 0, false);
-            llvm::APInt ap_int = scalar.UInt128(fail_value);
-            assert(ap_int.getBitWidth() >= bit_size);
-            llvm::ArrayRef<uint64_t> buf{ap_int.getRawData(),
-                                         ap_int.getNumWords()};
-            curr_piece.GetScalar() = Scalar(llvm::APInt(bit_size, buf));
+
+            // We have seen a case where we have expression like:
+            //      DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x28
+            // here we are assuming the compiler was trying to zero
+            // extend the value that we should append to the buffer.
+            scalar.TruncOrExtendTo(bit_size, /*sign=*/false);
+            curr_piece.GetScalar() = scalar;
           } break;
           }
 

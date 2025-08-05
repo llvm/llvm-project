@@ -107,18 +107,6 @@ class VOP1_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[]> :
   VOP_DPP_Pseudo <OpName, P, pattern> {
 }
 
-class getVOP1Pat <SDPatternOperator node, VOPProfile P> : LetDummies {
-  list<dag> ret =
-    !if(P.HasModifiers,
-        [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3Mods P.Src0VT:$src0, i32:$src0_modifiers))))],
-        !if(P.HasOMod,
-            [(set P.DstVT:$vdst, (node (P.Src0VT (VOP3OMods P.Src0VT:$src0,
-                                                  i1:$clamp, i32:$omod))))],
-            [(set P.DstVT:$vdst, (node (P.Src0VT P.Src0RC32:$src0)))]
-        )
-    );
-}
-
 multiclass VOP1Inst <string opName, VOPProfile P,
                      SDPatternOperator node = null_frag, int VOPDOp = -1> {
   // We only want to set this on the basic, non-SDWA or DPP forms.

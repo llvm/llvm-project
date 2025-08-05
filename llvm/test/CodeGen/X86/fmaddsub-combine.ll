@@ -6,7 +6,7 @@
 
 ; This test checks the fusing of MUL + ADDSUB to FMADDSUB.
 
-define <2 x double> @mul_addsub_pd128(<2 x double> %A, <2 x double> %B,  <2 x double> %C) #0 {
+define <2 x double> @mul_addsub_pd128(<2 x double> %A, <2 x double> %B,  <2 x double> %C) {
 ; NOFMA-LABEL: mul_addsub_pd128:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
@@ -23,14 +23,14 @@ define <2 x double> @mul_addsub_pd128(<2 x double> %A, <2 x double> %B,  <2 x do
 ; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm0 * xmm1) +/- xmm2
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <2 x double> %A, %B
-  %Sub = fsub <2 x double> %AB, %C
-  %Add = fadd <2 x double> %AB, %C
+  %AB = fmul contract <2 x double> %A, %B
+  %Sub = fsub contract <2 x double> %AB, %C
+  %Add = fadd contract <2 x double> %AB, %C
   %Addsub = shufflevector <2 x double> %Sub, <2 x double> %Add, <2 x i32> <i32 0, i32 3>
   ret <2 x double> %Addsub
 }
 
-define <4 x float> @mul_addsub_ps128(<4 x float> %A, <4 x float> %B, <4 x float> %C) #0 {
+define <4 x float> @mul_addsub_ps128(<4 x float> %A, <4 x float> %B, <4 x float> %C) {
 ; NOFMA-LABEL: mul_addsub_ps128:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulps %xmm1, %xmm0, %xmm0
@@ -47,14 +47,14 @@ define <4 x float> @mul_addsub_ps128(<4 x float> %A, <4 x float> %B, <4 x float>
 ; FMA4-NEXT:    vfmaddsubps {{.*#+}} xmm0 = (xmm0 * xmm1) +/- xmm2
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <4 x float> %A, %B
-  %Sub = fsub <4 x float> %AB, %C
-  %Add = fadd <4 x float> %AB, %C
+  %AB = fmul contract <4 x float> %A, %B
+  %Sub = fsub contract <4 x float> %AB, %C
+  %Add = fadd contract <4 x float> %AB, %C
   %Addsub = shufflevector <4 x float> %Sub, <4 x float> %Add, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x float> %Addsub
 }
 
-define <4 x double> @mul_addsub_pd256(<4 x double> %A, <4 x double> %B, <4 x double> %C) #0 {
+define <4 x double> @mul_addsub_pd256(<4 x double> %A, <4 x double> %B, <4 x double> %C) {
 ; NOFMA-LABEL: mul_addsub_pd256:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
@@ -71,14 +71,14 @@ define <4 x double> @mul_addsub_pd256(<4 x double> %A, <4 x double> %B, <4 x dou
 ; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm0 = (ymm0 * ymm1) +/- ymm2
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <4 x double> %A, %B
-  %Sub = fsub <4 x double> %AB, %C
-  %Add = fadd <4 x double> %AB, %C
+  %AB = fmul contract <4 x double> %A, %B
+  %Sub = fsub contract <4 x double> %AB, %C
+  %Add = fadd contract <4 x double> %AB, %C
   %Addsub = shufflevector <4 x double> %Sub, <4 x double> %Add, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
   ret <4 x double> %Addsub
 }
 
-define <8 x float> @mul_addsub_ps256(<8 x float> %A, <8 x float> %B, <8 x float> %C) #0 {
+define <8 x float> @mul_addsub_ps256(<8 x float> %A, <8 x float> %B, <8 x float> %C) {
 ; NOFMA-LABEL: mul_addsub_ps256:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulps %ymm1, %ymm0, %ymm0
@@ -95,14 +95,14 @@ define <8 x float> @mul_addsub_ps256(<8 x float> %A, <8 x float> %B, <8 x float>
 ; FMA4-NEXT:    vfmaddsubps {{.*#+}} ymm0 = (ymm0 * ymm1) +/- ymm2
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <8 x float> %A, %B
-  %Sub = fsub <8 x float> %AB, %C
-  %Add = fadd <8 x float> %AB, %C
+  %AB = fmul contract <8 x float> %A, %B
+  %Sub = fsub contract <8 x float> %AB, %C
+  %Add = fadd contract <8 x float> %AB, %C
   %Addsub = shufflevector <8 x float> %Sub, <8 x float> %Add, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   ret <8 x float> %Addsub
 }
 
-define <8 x double> @mul_addsub_pd512(<8 x double> %A, <8 x double> %B, <8 x double> %C) #0 {
+define <8 x double> @mul_addsub_pd512(<8 x double> %A, <8 x double> %B, <8 x double> %C) {
 ; NOFMA-LABEL: mul_addsub_pd512:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
@@ -128,14 +128,14 @@ define <8 x double> @mul_addsub_pd512(<8 x double> %A, <8 x double> %B, <8 x dou
 ; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm1 = (ymm1 * ymm3) +/- ymm5
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <8 x double> %A, %B
-  %Sub = fsub <8 x double> %AB, %C
-  %Add = fadd <8 x double> %AB, %C
+  %AB = fmul contract <8 x double> %A, %B
+  %Sub = fsub contract <8 x double> %AB, %C
+  %Add = fadd contract <8 x double> %AB, %C
   %Addsub = shufflevector <8 x double> %Sub, <8 x double> %Add, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
   ret <8 x double> %Addsub
 }
 
-define <16 x float> @mul_addsub_ps512(<16 x float> %A, <16 x float> %B, <16 x float> %C) #0 {
+define <16 x float> @mul_addsub_ps512(<16 x float> %A, <16 x float> %B, <16 x float> %C) {
 ; NOFMA-LABEL: mul_addsub_ps512:
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    vmulps %ymm3, %ymm1, %ymm1
@@ -161,14 +161,14 @@ define <16 x float> @mul_addsub_ps512(<16 x float> %A, <16 x float> %B, <16 x fl
 ; FMA4-NEXT:    vfmaddsubps {{.*#+}} ymm1 = (ymm1 * ymm3) +/- ymm5
 ; FMA4-NEXT:    retq
 entry:
-  %AB = fmul <16 x float> %A, %B
-  %Sub = fsub <16 x float> %AB, %C
-  %Add = fadd <16 x float> %AB, %C
+  %AB = fmul contract <16 x float> %A, %B
+  %Sub = fsub contract <16 x float> %AB, %C
+  %Add = fadd contract <16 x float> %AB, %C
   %Addsub = shufflevector <16 x float> %Sub, <16 x float> %Add, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
   ret <16 x float> %Addsub
 }
 
-define <4 x float> @buildvector_mul_addsub_ps128(<4 x float> %C, <4 x float> %D, <4 x float> %B) #0 {
+define <4 x float> @buildvector_mul_addsub_ps128(<4 x float> %C, <4 x float> %D, <4 x float> %B) {
 ; NOFMA-LABEL: buildvector_mul_addsub_ps128:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulps %xmm1, %xmm0, %xmm0
@@ -185,19 +185,19 @@ define <4 x float> @buildvector_mul_addsub_ps128(<4 x float> %C, <4 x float> %D,
 ; FMA4-NEXT:    vfmaddsubps {{.*#+}} xmm0 = (xmm0 * xmm1) +/- xmm2
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <4 x float> %C, %D
+  %A = fmul contract <4 x float> %C, %D
   %A0 = extractelement <4 x float> %A, i32 0
   %B0 = extractelement <4 x float> %B, i32 0
-  %sub0 = fsub float %A0, %B0
+  %sub0 = fsub contract float %A0, %B0
   %A2 = extractelement <4 x float> %A, i32 2
   %B2 = extractelement <4 x float> %B, i32 2
-  %sub2 = fsub float %A2, %B2
+  %sub2 = fsub contract float %A2, %B2
   %A1 = extractelement <4 x float> %A, i32 1
   %B1 = extractelement <4 x float> %B, i32 1
-  %add1 = fadd float %A1, %B1
+  %add1 = fadd contract float %A1, %B1
   %A3 = extractelement <4 x float> %A, i32 3
   %B3 = extractelement <4 x float> %B, i32 3
-  %add3 = fadd float %A3, %B3
+  %add3 = fadd contract float %A3, %B3
   %vecinsert1 = insertelement <4 x float> undef, float %sub0, i32 0
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add1, i32 1
   %vecinsert3 = insertelement <4 x float> %vecinsert2, float %sub2, i32 2
@@ -205,7 +205,7 @@ bb:
   ret <4 x float> %vecinsert4
 }
 
-define <2 x double> @buildvector_mul_addsub_pd128(<2 x double> %C, <2 x double> %D, <2 x double> %B) #0 {
+define <2 x double> @buildvector_mul_addsub_pd128(<2 x double> %C, <2 x double> %D, <2 x double> %B) {
 ; NOFMA-LABEL: buildvector_mul_addsub_pd128:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
@@ -222,19 +222,19 @@ define <2 x double> @buildvector_mul_addsub_pd128(<2 x double> %C, <2 x double> 
 ; FMA4-NEXT:    vfmaddsubpd {{.*#+}} xmm0 = (xmm0 * xmm1) +/- xmm2
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <2 x double> %C, %D
+  %A = fmul contract <2 x double> %C, %D
   %A0 = extractelement <2 x double> %A, i32 0
   %B0 = extractelement <2 x double> %B, i32 0
-  %sub0 = fsub double %A0, %B0
+  %sub0 = fsub contract double %A0, %B0
   %A1 = extractelement <2 x double> %A, i32 1
   %B1 = extractelement <2 x double> %B, i32 1
-  %add1 = fadd double %A1, %B1
+  %add1 = fadd contract double %A1, %B1
   %vecinsert1 = insertelement <2 x double> undef, double %sub0, i32 0
   %vecinsert2 = insertelement <2 x double> %vecinsert1, double %add1, i32 1
   ret <2 x double> %vecinsert2
 }
 
-define <8 x float> @buildvector_mul_addsub_ps256(<8 x float> %C, <8 x float> %D, <8 x float> %B) #0 {
+define <8 x float> @buildvector_mul_addsub_ps256(<8 x float> %C, <8 x float> %D, <8 x float> %B) {
 ; NOFMA-LABEL: buildvector_mul_addsub_ps256:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulps %ymm1, %ymm0, %ymm0
@@ -251,31 +251,31 @@ define <8 x float> @buildvector_mul_addsub_ps256(<8 x float> %C, <8 x float> %D,
 ; FMA4-NEXT:    vfmaddsubps {{.*#+}} ymm0 = (ymm0 * ymm1) +/- ymm2
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <8 x float> %C, %D
+  %A = fmul contract <8 x float> %C, %D
   %A0 = extractelement <8 x float> %A, i32 0
   %B0 = extractelement <8 x float> %B, i32 0
-  %sub0 = fsub float %A0, %B0
+  %sub0 = fsub contract float %A0, %B0
   %A2 = extractelement <8 x float> %A, i32 2
   %B2 = extractelement <8 x float> %B, i32 2
-  %sub2 = fsub float %A2, %B2
+  %sub2 = fsub contract float %A2, %B2
   %A4 = extractelement <8 x float> %A, i32 4
   %B4 = extractelement <8 x float> %B, i32 4
-  %sub4 = fsub float %A4, %B4
+  %sub4 = fsub contract float %A4, %B4
   %A6 = extractelement <8 x float> %A, i32 6
   %B6 = extractelement <8 x float> %B, i32 6
-  %sub6 = fsub float %A6, %B6
+  %sub6 = fsub contract float %A6, %B6
   %A1 = extractelement <8 x float> %A, i32 1
   %B1 = extractelement <8 x float> %B, i32 1
-  %add1 = fadd float %A1, %B1
+  %add1 = fadd contract float %A1, %B1
   %A3 = extractelement <8 x float> %A, i32 3
   %B3 = extractelement <8 x float> %B, i32 3
-  %add3 = fadd float %A3, %B3
+  %add3 = fadd contract float %A3, %B3
   %A5 = extractelement <8 x float> %A, i32 5
   %B5 = extractelement <8 x float> %B, i32 5
-  %add5 = fadd float %A5, %B5
+  %add5 = fadd contract float %A5, %B5
   %A7 = extractelement <8 x float> %A, i32 7
   %B7 = extractelement <8 x float> %B, i32 7
-  %add7 = fadd float %A7, %B7
+  %add7 = fadd contract float %A7, %B7
   %vecinsert1 = insertelement <8 x float> undef, float %sub0, i32 0
   %vecinsert2 = insertelement <8 x float> %vecinsert1, float %add1, i32 1
   %vecinsert3 = insertelement <8 x float> %vecinsert2, float %sub2, i32 2
@@ -287,7 +287,7 @@ bb:
   ret <8 x float> %vecinsert8
 }
 
-define <4 x double> @buildvector_mul_addsub_pd256(<4 x double> %C, <4 x double> %D, <4 x double> %B) #0 {
+define <4 x double> @buildvector_mul_addsub_pd256(<4 x double> %C, <4 x double> %D, <4 x double> %B) {
 ; NOFMA-LABEL: buildvector_mul_addsub_pd256:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
@@ -304,19 +304,19 @@ define <4 x double> @buildvector_mul_addsub_pd256(<4 x double> %C, <4 x double> 
 ; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm0 = (ymm0 * ymm1) +/- ymm2
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <4 x double> %C, %D
+  %A = fmul contract <4 x double> %C, %D
   %A0 = extractelement <4 x double> %A, i32 0
   %B0 = extractelement <4 x double> %B, i32 0
-  %sub0 = fsub double %A0, %B0
+  %sub0 = fsub contract double %A0, %B0
   %A2 = extractelement <4 x double> %A, i32 2
   %B2 = extractelement <4 x double> %B, i32 2
-  %sub2 = fsub double %A2, %B2
+  %sub2 = fsub contract double %A2, %B2
   %A1 = extractelement <4 x double> %A, i32 1
   %B1 = extractelement <4 x double> %B, i32 1
-  %add1 = fadd double %A1, %B1
+  %add1 = fadd contract double %A1, %B1
   %A3 = extractelement <4 x double> %A, i32 3
   %B3 = extractelement <4 x double> %B, i32 3
-  %add3 = fadd double %A3, %B3
+  %add3 = fadd contract double %A3, %B3
   %vecinsert1 = insertelement <4 x double> undef, double %sub0, i32 0
   %vecinsert2 = insertelement <4 x double> %vecinsert1, double %add1, i32 1
   %vecinsert3 = insertelement <4 x double> %vecinsert2, double %sub2, i32 2
@@ -324,7 +324,7 @@ bb:
   ret <4 x double> %vecinsert4
 }
 
-define <16 x float> @buildvector_mul_addsub_ps512(<16 x float> %C, <16 x float> %D, <16 x float> %B) #0 {
+define <16 x float> @buildvector_mul_addsub_ps512(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
 ; NOFMA-LABEL: buildvector_mul_addsub_ps512:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulps %ymm3, %ymm1, %ymm1
@@ -350,55 +350,55 @@ define <16 x float> @buildvector_mul_addsub_ps512(<16 x float> %C, <16 x float> 
 ; FMA4-NEXT:    vfmaddsubps {{.*#+}} ymm1 = (ymm1 * ymm3) +/- ymm5
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <16 x float> %C, %D
+  %A = fmul contract <16 x float> %C, %D
   %A0 = extractelement <16 x float> %A, i32 0
   %B0 = extractelement <16 x float> %B, i32 0
-  %sub0 = fsub float %A0, %B0
+  %sub0 = fsub contract float %A0, %B0
   %A2 = extractelement <16 x float> %A, i32 2
   %B2 = extractelement <16 x float> %B, i32 2
-  %sub2 = fsub float %A2, %B2
+  %sub2 = fsub contract float %A2, %B2
   %A4 = extractelement <16 x float> %A, i32 4
   %B4 = extractelement <16 x float> %B, i32 4
-  %sub4 = fsub float %A4, %B4
+  %sub4 = fsub contract float %A4, %B4
   %A6 = extractelement <16 x float> %A, i32 6
   %B6 = extractelement <16 x float> %B, i32 6
-  %sub6 = fsub float %A6, %B6
+  %sub6 = fsub contract float %A6, %B6
   %A8 = extractelement <16 x float> %A, i32 8
   %B8 = extractelement <16 x float> %B, i32 8
-  %sub8 = fsub float %A8, %B8
+  %sub8 = fsub contract float %A8, %B8
   %A10 = extractelement <16 x float> %A, i32 10
   %B10 = extractelement <16 x float> %B, i32 10
-  %sub10 = fsub float %A10, %B10
+  %sub10 = fsub contract float %A10, %B10
   %A12 = extractelement <16 x float> %A, i32 12
   %B12 = extractelement <16 x float> %B, i32 12
-  %sub12 = fsub float %A12, %B12
+  %sub12 = fsub contract float %A12, %B12
   %A14 = extractelement <16 x float> %A, i32 14
   %B14 = extractelement <16 x float> %B, i32 14
-  %sub14 = fsub float %A14, %B14
+  %sub14 = fsub contract float %A14, %B14
   %A1 = extractelement <16 x float> %A, i32 1
   %B1 = extractelement <16 x float> %B, i32 1
-  %add1 = fadd float %A1, %B1
+  %add1 = fadd contract float %A1, %B1
   %A3 = extractelement <16 x float> %A, i32 3
   %B3 = extractelement <16 x float> %B, i32 3
-  %add3 = fadd float %A3, %B3
+  %add3 = fadd contract float %A3, %B3
   %A5 = extractelement <16 x float> %A, i32 5
   %B5 = extractelement <16 x float> %B, i32 5
-  %add5 = fadd float %A5, %B5
+  %add5 = fadd contract float %A5, %B5
   %A7 = extractelement <16 x float> %A, i32 7
   %B7 = extractelement <16 x float> %B, i32 7
-  %add7 = fadd float %A7, %B7
+  %add7 = fadd contract float %A7, %B7
   %A9 = extractelement <16 x float> %A, i32 9
   %B9 = extractelement <16 x float> %B, i32 9
-  %add9 = fadd float %A9, %B9
+  %add9 = fadd contract float %A9, %B9
   %A11 = extractelement <16 x float> %A, i32 11
   %B11 = extractelement <16 x float> %B, i32 11
-  %add11 = fadd float %A11, %B11
+  %add11 = fadd contract float %A11, %B11
   %A13 = extractelement <16 x float> %A, i32 13
   %B13 = extractelement <16 x float> %B, i32 13
-  %add13 = fadd float %A13, %B13
+  %add13 = fadd contract float %A13, %B13
   %A15 = extractelement <16 x float> %A, i32 15
   %B15 = extractelement <16 x float> %B, i32 15
-  %add15 = fadd float %A15, %B15
+  %add15 = fadd contract float %A15, %B15
   %vecinsert1 = insertelement <16 x float> undef, float %sub0, i32 0
   %vecinsert2 = insertelement <16 x float> %vecinsert1, float %add1, i32 1
   %vecinsert3 = insertelement <16 x float> %vecinsert2, float %sub2, i32 2
@@ -418,7 +418,7 @@ bb:
   ret <16 x float> %vecinsert16
 }
 
-define <8 x double> @buildvector_mul_addsub_pd512(<8 x double> %C, <8 x double> %D, <8 x double> %B) #0 {
+define <8 x double> @buildvector_mul_addsub_pd512(<8 x double> %C, <8 x double> %D, <8 x double> %B) {
 ; NOFMA-LABEL: buildvector_mul_addsub_pd512:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
@@ -444,28 +444,28 @@ define <8 x double> @buildvector_mul_addsub_pd512(<8 x double> %C, <8 x double> 
 ; FMA4-NEXT:    vfmaddsubpd {{.*#+}} ymm1 = (ymm1 * ymm3) +/- ymm5
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <8 x double> %C, %D
+  %A = fmul contract <8 x double> %C, %D
   %A0 = extractelement <8 x double> %A, i32 0
   %B0 = extractelement <8 x double> %B, i32 0
-  %sub0 = fsub double %A0, %B0
+  %sub0 = fsub contract double %A0, %B0
   %A2 = extractelement <8 x double> %A, i32 2
   %B2 = extractelement <8 x double> %B, i32 2
-  %sub2 = fsub double %A2, %B2
+  %sub2 = fsub contract double %A2, %B2
   %A4 = extractelement <8 x double> %A, i32 4
   %B4 = extractelement <8 x double> %B, i32 4
-  %sub4 = fsub double %A4, %B4
+  %sub4 = fsub contract double %A4, %B4
   %A6 = extractelement <8 x double> %A, i32 6
   %B6 = extractelement <8 x double> %B, i32 6
-  %sub6 = fsub double %A6, %B6
+  %sub6 = fsub contract double %A6, %B6
   %A1 = extractelement <8 x double> %A, i32 1
   %B1 = extractelement <8 x double> %B, i32 1
-  %add1 = fadd double %A1, %B1
+  %add1 = fadd contract double %A1, %B1
   %A3 = extractelement <8 x double> %A, i32 3
   %B3 = extractelement <8 x double> %B, i32 3
-  %add3 = fadd double %A3, %B3
+  %add3 = fadd contract double %A3, %B3
   %A7 = extractelement <8 x double> %A, i32 7
   %B7 = extractelement <8 x double> %B, i32 7
-  %add7 = fadd double %A7, %B7
+  %add7 = fadd contract double %A7, %B7
   %vecinsert1 = insertelement <8 x double> undef, double %sub0, i32 0
   %vecinsert2 = insertelement <8 x double> %vecinsert1, double %add1, i32 1
   %vecinsert3 = insertelement <8 x double> %vecinsert2, double %sub2, i32 2
@@ -477,7 +477,7 @@ bb:
   ret <8 x double> %vecinsert8
 }
 
-define <4 x float> @buildvector_mul_subadd_ps128(<4 x float> %C, <4 x float> %D, <4 x float> %B) #0 {
+define <4 x float> @buildvector_mul_subadd_ps128(<4 x float> %C, <4 x float> %D, <4 x float> %B) {
 ; NOFMA-LABEL: buildvector_mul_subadd_ps128:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulps %xmm1, %xmm0, %xmm0
@@ -506,19 +506,19 @@ define <4 x float> @buildvector_mul_subadd_ps128(<4 x float> %C, <4 x float> %D,
 ; FMA4-NEXT:    vfmsubaddps {{.*#+}} xmm0 = (xmm0 * xmm1) -/+ xmm2
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <4 x float> %C, %D
+  %A = fmul contract <4 x float> %C, %D
   %A0 = extractelement <4 x float> %A, i32 0
   %B0 = extractelement <4 x float> %B, i32 0
-  %sub0 = fadd float %A0, %B0
+  %sub0 = fadd contract float %A0, %B0
   %A2 = extractelement <4 x float> %A, i32 2
   %B2 = extractelement <4 x float> %B, i32 2
-  %sub2 = fadd float %A2, %B2
+  %sub2 = fadd contract float %A2, %B2
   %A1 = extractelement <4 x float> %A, i32 1
   %B1 = extractelement <4 x float> %B, i32 1
-  %add1 = fsub float %A1, %B1
+  %add1 = fsub contract float %A1, %B1
   %A3 = extractelement <4 x float> %A, i32 3
   %B3 = extractelement <4 x float> %B, i32 3
-  %add3 = fsub float %A3, %B3
+  %add3 = fsub contract float %A3, %B3
   %vecinsert1 = insertelement <4 x float> undef, float %sub0, i32 0
   %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add1, i32 1
   %vecinsert3 = insertelement <4 x float> %vecinsert2, float %sub2, i32 2
@@ -526,7 +526,7 @@ bb:
   ret <4 x float> %vecinsert4
 }
 
-define <2 x double> @buildvector_mul_subadd_pd128(<2 x double> %C, <2 x double> %D, <2 x double> %B) #0 {
+define <2 x double> @buildvector_mul_subadd_pd128(<2 x double> %C, <2 x double> %D, <2 x double> %B) {
 ; NOFMA-LABEL: buildvector_mul_subadd_pd128:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulpd %xmm1, %xmm0, %xmm0
@@ -547,19 +547,19 @@ define <2 x double> @buildvector_mul_subadd_pd128(<2 x double> %C, <2 x double> 
 ; FMA4-NEXT:    vfmsubaddpd {{.*#+}} xmm0 = (xmm0 * xmm1) -/+ xmm2
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <2 x double> %C, %D
+  %A = fmul contract <2 x double> %C, %D
   %A0 = extractelement <2 x double> %A, i32 0
   %B0 = extractelement <2 x double> %B, i32 0
-  %sub0 = fadd double %A0, %B0
+  %sub0 = fadd contract double %A0, %B0
   %A1 = extractelement <2 x double> %A, i32 1
   %B1 = extractelement <2 x double> %B, i32 1
-  %add1 = fsub double %A1, %B1
+  %add1 = fsub contract double %A1, %B1
   %vecinsert1 = insertelement <2 x double> undef, double %sub0, i32 0
   %vecinsert2 = insertelement <2 x double> %vecinsert1, double %add1, i32 1
   ret <2 x double> %vecinsert2
 }
 
-define <8 x float> @buildvector_mul_subadd_ps256(<8 x float> %C, <8 x float> %D, <8 x float> %B) #0 {
+define <8 x float> @buildvector_mul_subadd_ps256(<8 x float> %C, <8 x float> %D, <8 x float> %B) {
 ; NOFMA-LABEL: buildvector_mul_subadd_ps256:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulps %ymm1, %ymm0, %ymm0
@@ -604,31 +604,31 @@ define <8 x float> @buildvector_mul_subadd_ps256(<8 x float> %C, <8 x float> %D,
 ; FMA4-NEXT:    vfmsubaddps {{.*#+}} ymm0 = (ymm0 * ymm1) -/+ ymm2
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <8 x float> %C, %D
+  %A = fmul contract <8 x float> %C, %D
   %A0 = extractelement <8 x float> %A, i32 0
   %B0 = extractelement <8 x float> %B, i32 0
-  %sub0 = fadd float %A0, %B0
+  %sub0 = fadd contract float %A0, %B0
   %A2 = extractelement <8 x float> %A, i32 2
   %B2 = extractelement <8 x float> %B, i32 2
-  %sub2 = fadd float %A2, %B2
+  %sub2 = fadd contract float %A2, %B2
   %A4 = extractelement <8 x float> %A, i32 4
   %B4 = extractelement <8 x float> %B, i32 4
-  %sub4 = fadd float %A4, %B4
+  %sub4 = fadd contract float %A4, %B4
   %A6 = extractelement <8 x float> %A, i32 6
   %B6 = extractelement <8 x float> %B, i32 6
-  %sub6 = fadd float %A6, %B6
+  %sub6 = fadd contract float %A6, %B6
   %A1 = extractelement <8 x float> %A, i32 1
   %B1 = extractelement <8 x float> %B, i32 1
-  %add1 = fsub float %A1, %B1
+  %add1 = fsub contract float %A1, %B1
   %A3 = extractelement <8 x float> %A, i32 3
   %B3 = extractelement <8 x float> %B, i32 3
-  %add3 = fsub float %A3, %B3
+  %add3 = fsub contract float %A3, %B3
   %A5 = extractelement <8 x float> %A, i32 5
   %B5 = extractelement <8 x float> %B, i32 5
-  %add5 = fsub float %A5, %B5
+  %add5 = fsub contract float %A5, %B5
   %A7 = extractelement <8 x float> %A, i32 7
   %B7 = extractelement <8 x float> %B, i32 7
-  %add7 = fsub float %A7, %B7
+  %add7 = fsub contract float %A7, %B7
   %vecinsert1 = insertelement <8 x float> undef, float %sub0, i32 0
   %vecinsert2 = insertelement <8 x float> %vecinsert1, float %add1, i32 1
   %vecinsert3 = insertelement <8 x float> %vecinsert2, float %sub2, i32 2
@@ -640,7 +640,7 @@ bb:
   ret <8 x float> %vecinsert8
 }
 
-define <4 x double> @buildvector_mul_subadd_pd256(<4 x double> %C, <4 x double> %D, <4 x double> %B) #0 {
+define <4 x double> @buildvector_mul_subadd_pd256(<4 x double> %C, <4 x double> %D, <4 x double> %B) {
 ; NOFMA-LABEL: buildvector_mul_subadd_pd256:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulpd %ymm1, %ymm0, %ymm0
@@ -669,19 +669,19 @@ define <4 x double> @buildvector_mul_subadd_pd256(<4 x double> %C, <4 x double> 
 ; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm0 = (ymm0 * ymm1) -/+ ymm2
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <4 x double> %C, %D
+  %A = fmul contract <4 x double> %C, %D
   %A0 = extractelement <4 x double> %A, i32 0
   %B0 = extractelement <4 x double> %B, i32 0
-  %sub0 = fadd double %A0, %B0
+  %sub0 = fadd contract double %A0, %B0
   %A2 = extractelement <4 x double> %A, i32 2
   %B2 = extractelement <4 x double> %B, i32 2
-  %sub2 = fadd double %A2, %B2
+  %sub2 = fadd contract double %A2, %B2
   %A1 = extractelement <4 x double> %A, i32 1
   %B1 = extractelement <4 x double> %B, i32 1
-  %add1 = fsub double %A1, %B1
+  %add1 = fsub contract double %A1, %B1
   %A3 = extractelement <4 x double> %A, i32 3
   %B3 = extractelement <4 x double> %B, i32 3
-  %add3 = fsub double %A3, %B3
+  %add3 = fsub contract double %A3, %B3
   %vecinsert1 = insertelement <4 x double> undef, double %sub0, i32 0
   %vecinsert2 = insertelement <4 x double> %vecinsert1, double %add1, i32 1
   %vecinsert3 = insertelement <4 x double> %vecinsert2, double %sub2, i32 2
@@ -689,7 +689,7 @@ bb:
   ret <4 x double> %vecinsert4
 }
 
-define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> %D, <16 x float> %B) #0 {
+define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> %D, <16 x float> %B) {
 ; NOFMA-LABEL: buildvector_mul_subadd_ps512:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulps %ymm3, %ymm1, %ymm1
@@ -765,55 +765,55 @@ define <16 x float> @buildvector_mul_subadd_ps512(<16 x float> %C, <16 x float> 
 ; FMA4-NEXT:    vfmsubaddps {{.*#+}} ymm1 = (ymm1 * ymm3) -/+ ymm5
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <16 x float> %C, %D
+  %A = fmul contract <16 x float> %C, %D
   %A0 = extractelement <16 x float> %A, i32 0
   %B0 = extractelement <16 x float> %B, i32 0
-  %sub0 = fadd float %A0, %B0
+  %sub0 = fadd contract float %A0, %B0
   %A2 = extractelement <16 x float> %A, i32 2
   %B2 = extractelement <16 x float> %B, i32 2
-  %sub2 = fadd float %A2, %B2
+  %sub2 = fadd contract float %A2, %B2
   %A4 = extractelement <16 x float> %A, i32 4
   %B4 = extractelement <16 x float> %B, i32 4
-  %sub4 = fadd float %A4, %B4
+  %sub4 = fadd contract float %A4, %B4
   %A6 = extractelement <16 x float> %A, i32 6
   %B6 = extractelement <16 x float> %B, i32 6
-  %sub6 = fadd float %A6, %B6
+  %sub6 = fadd contract float %A6, %B6
   %A8 = extractelement <16 x float> %A, i32 8
   %B8 = extractelement <16 x float> %B, i32 8
-  %sub8 = fadd float %A8, %B8
+  %sub8 = fadd contract float %A8, %B8
   %A10 = extractelement <16 x float> %A, i32 10
   %B10 = extractelement <16 x float> %B, i32 10
-  %sub10 = fadd float %A10, %B10
+  %sub10 = fadd contract float %A10, %B10
   %A12 = extractelement <16 x float> %A, i32 12
   %B12 = extractelement <16 x float> %B, i32 12
-  %sub12 = fadd float %A12, %B12
+  %sub12 = fadd contract float %A12, %B12
   %A14 = extractelement <16 x float> %A, i32 14
   %B14 = extractelement <16 x float> %B, i32 14
-  %sub14 = fadd float %A14, %B14
+  %sub14 = fadd contract float %A14, %B14
   %A1 = extractelement <16 x float> %A, i32 1
   %B1 = extractelement <16 x float> %B, i32 1
-  %add1 = fsub float %A1, %B1
+  %add1 = fsub contract float %A1, %B1
   %A3 = extractelement <16 x float> %A, i32 3
   %B3 = extractelement <16 x float> %B, i32 3
-  %add3 = fsub float %A3, %B3
+  %add3 = fsub contract float %A3, %B3
   %A5 = extractelement <16 x float> %A, i32 5
   %B5 = extractelement <16 x float> %B, i32 5
-  %add5 = fsub float %A5, %B5
+  %add5 = fsub contract float %A5, %B5
   %A7 = extractelement <16 x float> %A, i32 7
   %B7 = extractelement <16 x float> %B, i32 7
-  %add7 = fsub float %A7, %B7
+  %add7 = fsub contract float %A7, %B7
   %A9 = extractelement <16 x float> %A, i32 9
   %B9 = extractelement <16 x float> %B, i32 9
-  %add9 = fsub float %A9, %B9
+  %add9 = fsub contract float %A9, %B9
   %A11 = extractelement <16 x float> %A, i32 11
   %B11 = extractelement <16 x float> %B, i32 11
-  %add11 = fsub float %A11, %B11
+  %add11 = fsub contract float %A11, %B11
   %A13 = extractelement <16 x float> %A, i32 13
   %B13 = extractelement <16 x float> %B, i32 13
-  %add13 = fsub float %A13, %B13
+  %add13 = fsub contract float %A13, %B13
   %A15 = extractelement <16 x float> %A, i32 15
   %B15 = extractelement <16 x float> %B, i32 15
-  %add15 = fsub float %A15, %B15
+  %add15 = fsub contract float %A15, %B15
   %vecinsert1 = insertelement <16 x float> undef, float %sub0, i32 0
   %vecinsert2 = insertelement <16 x float> %vecinsert1, float %add1, i32 1
   %vecinsert3 = insertelement <16 x float> %vecinsert2, float %sub2, i32 2
@@ -833,7 +833,7 @@ bb:
   ret <16 x float> %vecinsert16
 }
 
-define <8 x double> @buildvector_mul_subadd_pd512(<8 x double> %C, <8 x double> %D, <8 x double> %B) #0 {
+define <8 x double> @buildvector_mul_subadd_pd512(<8 x double> %C, <8 x double> %D, <8 x double> %B) {
 ; NOFMA-LABEL: buildvector_mul_subadd_pd512:
 ; NOFMA:       # %bb.0: # %bb
 ; NOFMA-NEXT:    vmulpd %ymm3, %ymm1, %ymm1
@@ -879,28 +879,28 @@ define <8 x double> @buildvector_mul_subadd_pd512(<8 x double> %C, <8 x double> 
 ; FMA4-NEXT:    vfmsubaddpd {{.*#+}} ymm1 = (ymm1 * ymm3) -/+ ymm5
 ; FMA4-NEXT:    retq
 bb:
-  %A = fmul <8 x double> %C, %D
+  %A = fmul contract <8 x double> %C, %D
   %A0 = extractelement <8 x double> %A, i32 0
   %B0 = extractelement <8 x double> %B, i32 0
-  %sub0 = fadd double %A0, %B0
+  %sub0 = fadd contract double %A0, %B0
   %A2 = extractelement <8 x double> %A, i32 2
   %B2 = extractelement <8 x double> %B, i32 2
-  %sub2 = fadd double %A2, %B2
+  %sub2 = fadd contract double %A2, %B2
   %A4 = extractelement <8 x double> %A, i32 4
   %B4 = extractelement <8 x double> %B, i32 4
-  %sub4 = fadd double %A4, %B4
+  %sub4 = fadd contract double %A4, %B4
   %A6 = extractelement <8 x double> %A, i32 6
   %B6 = extractelement <8 x double> %B, i32 6
-  %sub6 = fadd double %A6, %B6
+  %sub6 = fadd contract double %A6, %B6
   %A1 = extractelement <8 x double> %A, i32 1
   %B1 = extractelement <8 x double> %B, i32 1
-  %add1 = fsub double %A1, %B1
+  %add1 = fsub contract double %A1, %B1
   %A3 = extractelement <8 x double> %A, i32 3
   %B3 = extractelement <8 x double> %B, i32 3
-  %add3 = fsub double %A3, %B3
+  %add3 = fsub contract double %A3, %B3
   %A7 = extractelement <8 x double> %A, i32 7
   %B7 = extractelement <8 x double> %B, i32 7
-  %add7 = fsub double %A7, %B7
+  %add7 = fsub contract double %A7, %B7
   %vecinsert1 = insertelement <8 x double> undef, double %sub0, i32 0
   %vecinsert2 = insertelement <8 x double> %vecinsert1, double %add1, i32 1
   %vecinsert3 = insertelement <8 x double> %vecinsert2, double %sub2, i32 2
@@ -911,5 +911,3 @@ bb:
   %vecinsert8 = insertelement <8 x double> %vecinsert7, double %add7, i32 7
   ret <8 x double> %vecinsert8
 }
-
-attributes #0 = { nounwind "unsafe-fp-math"="true" }

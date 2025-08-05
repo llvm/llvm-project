@@ -45,12 +45,12 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
   Compiler<ByteCodeEmitter>(*this, *P).compileFunc(
       FD, const_cast<Function *>(Func));
 
-  ++EvalID;
-  // And run it.
-  if (!Run(Parent, Func))
+  if (!Func->isValid())
     return false;
 
-  return Func->isValid();
+  ++EvalID;
+  // And run it.
+  return Run(Parent, Func);
 }
 
 void Context::isPotentialConstantExprUnevaluated(State &Parent, const Expr *E,
@@ -474,7 +474,7 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
     IsLambdaStaticInvoker = true;
 
     const CXXRecordDecl *ClosureClass = MD->getParent();
-    assert(ClosureClass->captures_begin() == ClosureClass->captures_end());
+    assert(ClosureClass->captures().empty());
     if (ClosureClass->isGenericLambda()) {
       const CXXMethodDecl *LambdaCallOp = ClosureClass->getLambdaCallOperator();
       assert(MD->isFunctionTemplateSpecialization() &&

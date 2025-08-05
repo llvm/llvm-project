@@ -223,6 +223,8 @@ inline bool HasCUDAAttr(const Symbol &sym) {
   return false;
 }
 
+bool HasCUDAComponent(const Symbol &sym);
+
 inline bool IsCUDAShared(const Symbol &sym) {
   if (const auto *details{sym.GetUltimate().detailsIf<ObjectEntityDetails>()}) {
     if (details->cudaDataAttr() &&

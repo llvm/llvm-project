@@ -67,3 +67,15 @@ define void @alloca_constexpr_elt() {
  store i32 0, ptr %alloca
  ret void
 }
+
+; CHECK-LABEL: @alloca_lifetimes(
+; ZERO: call void @llvm.lifetime.start.p0(i64 4, ptr %alloca)
+; ONE: call void @llvm.lifetime.start.p0(i64 4, ptr %alloca)
+; POISON: call void @llvm.lifetime.start.p0(i64 4, ptr %alloca)
+define void @alloca_lifetimes() {
+  %alloca = alloca i32
+  call void @llvm.lifetime.start.p0(i64 4, ptr %alloca)
+  store i32 0, ptr %alloca
+  call void @llvm.lifetime.end.p0(i64 4, ptr %alloca)
+  ret void
+}

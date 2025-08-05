@@ -17,6 +17,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Sema/Initialization.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/StringExtras.h"
@@ -641,21 +642,13 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
   if (!InnerExpr || InnerExpr->isTypeDependent())
     return VarExpr;
 
-  const auto *RD = InnerExpr->getType()->getAsCXXRecordDecl();
+  auto *RD = InnerExpr->getType()->getAsCXXRecordDecl();
 
   // if this isn't a C++ record decl, we can create/copy/destroy this thing at
   // will without problem, so this is a success.
   if (!RD)
     return VarExpr;
 
-  // TODO: OpenACC:
-  // Private must have default ctor + dtor in InnerExpr
-  // FirstPrivate must have copyctor + dtor in InnerExpr
-  // Reduction must have copyctor + dtor + operation in InnerExpr
-
-  // TODO OpenACC: It isn't clear what the requirements are for default
-  // constructor/copy constructor are for First private and reduction, but
-  // private requires a default constructor.
   if (CK == OpenACCClauseKind::Private) {
     bool HasNonDeletedDefaultCtor =
         llvm::find_if(RD->ctors(), [](const CXXConstructorDecl *CD) {
@@ -668,6 +661,26 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
           << clang::diag::AccVarReferencedReason::DefCtor;
       return ExprError();
     }
+  } else if (CK == OpenACCClauseKind::FirstPrivate) {
+    if (!RD->hasSimpleCopyConstructor()) {
+      Sema::SpecialMemberOverloadResult SMOR = S.SemaRef.LookupSpecialMember(
+          RD, CXXSpecialMemberKind::CopyConstructor, /*ConstArg=*/true,
+          /*VolatileArg=*/false, /*RValueThis=*/false, /*ConstThis=*/false,
+          /*VolatileThis=*/false);
+
+      if (SMOR.getKind() != Sema::SpecialMemberOverloadResult::Success ||
+          SMOR.getMethod()->isDeleted()) {
+        S.Diag(InnerExpr->getBeginLoc(),
+               clang::diag::warn_acc_var_referenced_lacks_op)
+            << InnerExpr->getType() << CK
+            << clang::diag::AccVarReferencedReason::CopyCtor;
+        return ExprError();
+      }
+    }
+  } else if (CK == OpenACCClauseKind::Reduction) {
+    // TODO: OpenACC:
+    // Reduction must have copyctor + dtor + operation in InnerExpr I think?
+    // Need to confirm when implementing this part.
   }
 
   // All 3 things need to make sure they have a dtor.
@@ -2551,4 +2564,51 @@ SemaOpenACC::BuildOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
 ExprResult
 SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
+}
+
+VarDecl *SemaOpenACC::CreateInitRecipe(const Expr *VarExpr) {
+  // Strip off any array subscripts/array section exprs to get to the type of
+  // the variable.
+  while (isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
+    if (const auto *AS = dyn_cast<ArraySectionExpr>(VarExpr))
+      VarExpr = AS->getBase()->IgnoreParenImpCasts();
+    else if (const auto *Sub = dyn_cast<ArraySubscriptExpr>(VarExpr))
+      VarExpr = Sub->getBase()->IgnoreParenImpCasts();
+  }
+
+  // If for some reason the expression is invalid, or this is dependent, just
+  // fill in with nullptr.  We'll count on TreeTransform to make this if
+  // necessary.
+  if (!VarExpr || VarExpr->getType()->isDependentType())
+    return nullptr;
+
+  QualType VarTy =
+      VarExpr->getType().getNonReferenceType().getUnqualifiedType();
+
+  VarDecl *Recipe = VarDecl::Create(
+      getASTContext(), SemaRef.getCurContext(), VarExpr->getBeginLoc(),
+      VarExpr->getBeginLoc(),
+      &getASTContext().Idents.get("openacc.private.init"), VarTy,
+      getASTContext().getTrivialTypeSourceInfo(VarTy), SC_Auto);
+
+  ExprResult Init;
+
+  {
+    // Trap errors so we don't get weird ones here. If we can't init, we'll just
+    // swallow the errors.
+    Sema::TentativeAnalysisScope Trap{SemaRef};
+    InitializedEntity Entity = InitializedEntity::InitializeVariable(Recipe);
+    InitializationKind Kind =
+        InitializationKind::CreateDefault(Recipe->getLocation());
+
+    InitializationSequence InitSeq(SemaRef.SemaRef, Entity, Kind, {});
+    Init = InitSeq.Perform(SemaRef.SemaRef, Entity, Kind, {});
+  }
+
+  if (Init.get()) {
+    Recipe->setInit(Init.get());
+    Recipe->setInitStyle(VarDecl::CallInit);
+  }
+
+  return Recipe;
 }

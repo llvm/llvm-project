@@ -14,6 +14,14 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
+def SDT_SetMultiple : SDTypeProfile<0, 4, [SDTCisSameAs<0, 1>,
+                                           SDTCisSameAs<1, 3>,
+                                           SDTCisPtrTy<2>,
+                                           SDTCisVT<3, XLenVT>]>;
+
+def qc_setwmi : RVSDNode<"QC_SETWMI", SDT_SetMultiple,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 def uimm5nonzero : RISCVOp<XLenVT>,
                    ImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5, "NonZero">;
@@ -26,6 +34,8 @@ def uimm5nonzero : RISCVOp<XLenVT>,
     return (Imm != 0) && isUInt<5>(Imm);;
   }];
 }
+
+def tuimm5nonzero : TImmLeaf<XLenVT, [{return (Imm != 0) && isUInt<5>(Imm);}]>;
 
 def uimm5gt3 : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
   [{return (Imm > 3) && isUInt<5>(Imm);}]> {
@@ -91,6 +101,8 @@ def uimm5slist : RISCVOp<XLenVT>, ImmLeaf<XLenVT,
             (Imm == 15) || (Imm == 31));
   }];
 }
+
+def tuimm7_lsb00 : TImmLeaf<XLenVT,[{return isShiftedUInt<5, 2>(Imm);}]>;
 
 def uimm10 : RISCVUImmLeafOp<10>;
 
@@ -1565,6 +1577,11 @@ def : QCISELECTICCPatInv <SETNE,  QC_SELECTIEQ>;
 def : QCISELECTIICCPat <SETEQ,  QC_SELECTIIEQ>;
 def : QCISELECTIICCPat <SETNE,  QC_SELECTIINE>;
 } // Predicates = [HasVendorXqcics, IsRV32]
+
+let Predicates = [HasVendorXqcilsm, IsRV32] in {
+def : Pat<(qc_setwmi GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7),
+          (QC_SETWMI GPR:$rs3, GPR:$rs1, tuimm5nonzero:$uimm5, tuimm7_lsb00:$uimm7)>;
+} // Predicates = [HasVendorXqcilsm, IsRV32]
 
 //===----------------------------------------------------------------------===/i
 // Compress Instruction tablegen backend.

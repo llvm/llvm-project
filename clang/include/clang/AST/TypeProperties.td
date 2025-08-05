@@ -495,9 +495,9 @@ let Class = AutoType in {
   def : Property<"keyword", AutoTypeKeyword> {
     let Read = [{ node->getKeyword() }];
   }
-  def : Property<"typeConstraintConcept", Optional<ConceptDeclRef>> {
+  def : Property<"typeConstraintConcept", Optional<TemplateDeclRef>> {
     let Read = [{ makeOptionalFromPointer(
-        const_cast<const ConceptDecl*>(node->getTypeConstraintConcept())) }];
+        node->getTypeConstraintConcept()) }];
   }
   def : Property<"typeConstraintArguments", Array<TemplateArgument>> {
     let Read = [{ node->getTypeConstraintArguments() }];

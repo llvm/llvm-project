@@ -1094,6 +1094,21 @@ bool IsDeviceAllocatable(const Symbol &symbol) {
   return false;
 }
 
+bool HasCUDAComponent(const Symbol &symbol) {
+  if (const auto *details{symbol.GetUltimate()
+              .detailsIf<Fortran::semantics::ObjectEntityDetails>()}) {
+    const Fortran::semantics::DeclTypeSpec *type{details->type()};
+    const Fortran::semantics::DerivedTypeSpec *derived{
+        type ? type->AsDerived() : nullptr};
+    if (derived) {
+      if (FindCUDADeviceAllocatableUltimateComponent(*derived)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 UltimateComponentIterator::const_iterator
 FindCUDADeviceAllocatableUltimateComponent(const DerivedTypeSpec &derived) {
   UltimateComponentIterator ultimates{derived};

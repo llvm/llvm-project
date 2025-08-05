@@ -35,12 +35,17 @@ class Bitset {
   static_assert(BITWORD_SIZE == 64 || BITWORD_SIZE == 32,
                 "Unsupported word size");
 
-  static constexpr unsigned NumWords = (NumBits + BITWORD_SIZE-1) / BITWORD_SIZE;
-  std::array<BitWord, NumWords> Bits{};
+  static constexpr unsigned NumWords =
+      (NumBits + BITWORD_SIZE - 1) / BITWORD_SIZE;
 
 protected:
-  constexpr Bitset(const std::array<BitWord, NumWords> &B)
-      : Bits{B} {}
+  using StorageType = std::array<BitWord, NumWords>;
+
+private:
+  StorageType Bits{};
+
+protected:
+  constexpr Bitset(const StorageType &B) : Bits{B} {}
 
 public:
   constexpr Bitset() = default;

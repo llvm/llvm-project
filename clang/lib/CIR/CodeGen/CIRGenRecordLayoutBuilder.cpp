@@ -847,8 +847,9 @@ void CIRRecordLowering::computeVolatileBitfields() {
 
       const CharUnits fEnd =
           fOffset +
-          astContext.toCharUnitsFromBits(astContext.toBits(
-              getSizeInBits(cirGenTypes.convertTypeForMem(f->getType())))) -
+          astContext.toCharUnitsFromBits(
+              getSizeInBits(cirGenTypes.convertTypeForMem(f->getType()))
+                  .getQuantity()) -
           CharUnits::One();
       // If no overlap, continue.
       if (end < fOffset || fEnd < storageOffset)

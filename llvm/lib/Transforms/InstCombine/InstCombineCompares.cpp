@@ -6090,7 +6090,7 @@ Instruction *InstCombinerImpl::foldICmpEquality(ICmpInst &I) {
        match(Op1, m_OneUse(m_LShr(m_Value(B), m_APIntAllowPoison(AP2))))) ||
       (match(Op0, m_OneUse(m_AShr(m_Value(A), m_APIntAllowPoison(AP1)))) &&
        match(Op1, m_OneUse(m_AShr(m_Value(B), m_APIntAllowPoison(AP2)))))) {
-    if (AP1 != AP2)
+    if (*AP1 != *AP2)
       return nullptr;
     unsigned TypeBits = AP1->getBitWidth();
     unsigned ShAmt = AP1->getLimitedValue(TypeBits);

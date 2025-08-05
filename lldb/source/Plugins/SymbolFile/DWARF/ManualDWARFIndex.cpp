@@ -417,28 +417,27 @@ void ManualDWARFIndex::GetGlobalVariables(
     ConstString basename,
     llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
-  m_set.globals.Find(basename, DIERefCallback(IterationActionAdaptor(callback),
-                                              basename.GetStringRef()));
+  m_set.globals.Find(basename,
+                     DIERefCallback(callback, basename.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
     const RegularExpression &regex,
     llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
-  m_set.globals.Find(
-      regex, DIERefCallback(IterationActionAdaptor(callback), regex.GetText()));
+  m_set.globals.Find(regex, DIERefCallback(callback, regex.GetText()));
 }
 
 void ManualDWARFIndex::GetGlobalVariables(
     DWARFUnit &unit,
     llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
-  m_set.globals.FindAllEntriesForUnit(
-      unit, DIERefCallback(IterationActionAdaptor(callback)));
+  m_set.globals.FindAllEntriesForUnit(unit, DIERefCallback(callback));
 }
 
 void ManualDWARFIndex::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString class_name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.objc_class_selectors.Find(
       class_name, DIERefCallback(callback, class_name.GetStringRef()));
@@ -446,21 +445,22 @@ void ManualDWARFIndex::GetObjCMethods(
 
 void ManualDWARFIndex::GetCompleteObjCClass(
     ConstString class_name, bool must_be_implementation,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.types.Find(class_name,
                    DIERefCallback(callback, class_name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetTypes(
-    ConstString name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   m_set.types.Find(name, DIERefCallback(callback, name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetTypes(
     const DWARFDeclContext &context,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
   auto name = context[0].name;
   m_set.types.Find(ConstString(name),
@@ -471,8 +471,7 @@ void ManualDWARFIndex::GetNamespaces(
     ConstString name,
     llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
-  m_set.namespaces.Find(name, DIERefCallback(IterationActionAdaptor(callback),
-                                             name.GetStringRef()));
+  m_set.namespaces.Find(name, DIERefCallback(callback, name.GetStringRef()));
 }
 
 void ManualDWARFIndex::GetFunctions(
@@ -485,39 +484,39 @@ void ManualDWARFIndex::GetFunctions(
 
   if (name_type_mask & eFunctionNameTypeFull) {
     if (!m_set.function_fullnames.Find(
-            name, DIERefCallback(IterationActionAdaptor([&](DWARFDIE die) {
-                                   if (!SymbolFileDWARF::DIEInDeclContext(
-                                           parent_decl_ctx, die))
-                                     return IterationAction::Continue;
-                                   return callback(die);
-                                 }),
-                                 name.GetStringRef())))
+            name, DIERefCallback(
+                      [&](DWARFDIE die) {
+                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
+                                                               die))
+                          return IterationAction::Continue;
+                        return callback(die);
+                      },
+                      name.GetStringRef())))
       return;
   }
   if (name_type_mask & eFunctionNameTypeBase) {
     if (!m_set.function_basenames.Find(
-            name, DIERefCallback(IterationActionAdaptor([&](DWARFDIE die) {
-                                   if (!SymbolFileDWARF::DIEInDeclContext(
-                                           parent_decl_ctx, die))
-                                     return IterationAction::Continue;
-                                   return callback(die);
-                                 }),
-                                 name.GetStringRef())))
+            name, DIERefCallback(
+                      [&](DWARFDIE die) {
+                        if (!SymbolFileDWARF::DIEInDeclContext(parent_decl_ctx,
+                                                               die))
+                          return IterationAction::Continue;
+                        return callback(die);
+                      },
+                      name.GetStringRef())))
       return;
   }
 
   if (name_type_mask & eFunctionNameTypeMethod && !parent_decl_ctx.IsValid()) {
     if (!m_set.function_methods.Find(
-            name, DIERefCallback(IterationActionAdaptor(callback),
-                                 name.GetStringRef())))
+            name, DIERefCallback(callback, name.GetStringRef())))
       return;
   }
 
   if (name_type_mask & eFunctionNameTypeSelector &&
       !parent_decl_ctx.IsValid()) {
     if (!m_set.function_selectors.Find(
-            name, DIERefCallback(IterationActionAdaptor(callback),
-                                 name.GetStringRef())))
+            name, DIERefCallback(callback, name.GetStringRef())))
       return;
   }
 }
@@ -527,13 +526,11 @@ void ManualDWARFIndex::GetFunctions(
     llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   Index();
 
-  if (!m_set.function_basenames.Find(
-          regex,
-          DIERefCallback(IterationActionAdaptor(callback), regex.GetText())))
+  if (!m_set.function_basenames.Find(regex,
+                                     DIERefCallback(callback, regex.GetText())))
     return;
-  if (!m_set.function_fullnames.Find(
-          regex,
-          DIERefCallback(IterationActionAdaptor(callback), regex.GetText())))
+  if (!m_set.function_fullnames.Find(regex,
+                                     DIERefCallback(callback, regex.GetText())))
     return;
 }
 

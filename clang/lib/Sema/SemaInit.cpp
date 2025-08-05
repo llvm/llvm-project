@@ -3713,7 +3713,7 @@ ValueDecl *InitializedEntity::getDecl() const {
   case EK_ParenAggInitMember:
   case EK_Binding:
   case EK_TemplateParameter:
-    return Variable.VariableOrMember;
+    return cast<ValueDecl>(Variable.VariableOrMember);
 
   case EK_Parameter:
   case EK_Parameter_CF_Audited:

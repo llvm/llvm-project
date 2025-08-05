@@ -403,7 +403,54 @@ struct ScopedSetTracerPID {
   }
 };
 
+// This detects whether ptrace is blocked (e.g., by seccomp), by forking and
+// then attempting ptrace.
+// This separate check is necessary because StopTheWorld() creates a child
+// process with a shared virtual address space and shared TLS, and therefore
+// cannot use waitpid() due to the shared errno.
+static void TestPTrace() {
+  // Heuristic: only check the first time this is called. This is not always
+  // correct (e.g., user manually triggers leak detection, then updates
+  // seccomp, then leak detection is triggered again).
+  static bool checked = false;
+  if (checked)
+    return;
+  checked = true;
+
+  // We hope that fork() is not too expensive, because of copy-on-write.
+  // Besides, this is only called the first time.
+  int pid = internal_fork();
+
+  if (pid < 0) {
+    int rverrno;
+    if (internal_iserror(pid, &rverrno)) {
+      Report("WARNING: TestPTrace() failed to fork (errno %d)\n", rverrno);
+    }
+    internal__exit(-1);
+  }
+
+  if (pid == 0) {
+    // Child subprocess
+    internal_ptrace(PTRACE_ATTACH, 0, nullptr, nullptr);
+    internal__exit(0);
+  } else {
+    int wstatus;
+    internal_waitpid(pid, &wstatus, 0);
+
+    if (WIFSIGNALED(wstatus)) {
+      VReport(0,
+              "Warning: ptrace appears to be blocked (is seccomp enabled?). "
+              "LeakSanitizer may hang.\n");
+      VReport(0, "Child exited with signal %d.\n", WTERMSIG(wstatus));
+      // We don't abort the sanitizer - it's still worth letting the sanitizer
+      // try.
+    }
+  }
+}
+
 void StopTheWorld(StopTheWorldCallback callback, void *argument) {
+  TestPTrace();
+
   StopTheWorldScope in_stoptheworld;
   // Prepare the arguments for TracerThread.
   struct TracerThreadArgument tracer_thread_argument;
@@ -457,7 +504,8 @@ void StopTheWorld(StopTheWorldCallback callback, void *argument) {
     internal_prctl(PR_SET_PTRACER, tracer_pid, 0, 0, 0);
     // Allow the tracer thread to start.
     tracer_thread_argument.mutex.Unlock();
-    // NOTE: errno is shared between this thread and the tracer thread.
+    // NOTE: errno is shared between this thread and the tracer thread
+    //       (clone was called without CLONE_SETTLS / newtls).
     // internal_waitpid() may call syscall() which can access/spoil errno,
     // so we can't call it now. Instead we for the tracer thread to finish using
     // the spin loop below. Man page for sched_yield() says "In the Linux

@@ -2522,12 +2522,10 @@ mlir::Value Fortran::lower::genInquireStatement(
         fir::getBase(converter.genExprAddr(loc, ioLengthVar, stmtCtx));
     llvm::SmallVector<mlir::Value> args = {cookie};
     mlir::Value length =
-        builder
-            .create<fir::CallOp>(
-                loc,
-                fir::runtime::getIORuntimeFunc<mkIOKey(GetIoLength)>(loc,
-                                                                     builder),
-                args)
+        fir::CallOp::create(
+            builder, loc,
+            fir::runtime::getIORuntimeFunc<mkIOKey(GetIoLength)>(loc, builder),
+            args)
             .getResult(0);
     mlir::Value length1 =
         builder.createConvert(loc, converter.genType(*ioLengthVar), length);

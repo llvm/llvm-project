@@ -19,14 +19,12 @@ define void @f_f___un_3C_unf_3E_un_3C_unf_3E_(<16 x i1> %x) {
 ; CHECK-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; CHECK-NEXT:    vpslld $31, %zmm0, %zmm0
 ; CHECK-NEXT:    vpmovd2m %zmm0, %k1
-; CHECK-NEXT:    vmovapd 0, %zmm0
-; CHECK-NEXT:    vmovapd 64, %zmm1
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} zmm2 = [0,16,0,16,0,16,0,16,0,16,0,16,0,16,0,16]
+; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [0,16,0,16,0,16,0,16,0,16,0,16,0,16,0,16]
+; CHECK-NEXT:    vporq 64, %zmm0, %zmm1
+; CHECK-NEXT:    vporq 0, %zmm0, %zmm0
 ; CHECK-NEXT:    kshiftrw $8, %k1, %k2
-; CHECK-NEXT:    vorpd %zmm2, %zmm1, %zmm1 {%k2}
-; CHECK-NEXT:    vorpd %zmm2, %zmm0, %zmm0 {%k1}
-; CHECK-NEXT:    vmovapd %zmm0, 0
-; CHECK-NEXT:    vmovapd %zmm1, 64
+; CHECK-NEXT:    vmovdqa64 %zmm0, 0 {%k1}
+; CHECK-NEXT:    vmovdqa64 %zmm1, 64 {%k2}
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retl
   %a_load22 = load <16 x i64>, ptr null, align 1
