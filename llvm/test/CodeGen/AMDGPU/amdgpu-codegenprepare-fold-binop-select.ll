@@ -129,7 +129,7 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -211,7 +211,7 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; GCN-NEXT:    s_getpc_b64 s[4:5]
 ; GCN-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x0
 ; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

@@ -16918,14 +16918,10 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     // creating a cycle in a DAG. Let's undo that by mutating the freeze.
     assert(N->getOperand(0) == FrozenN0 && "Expected cycle in DAG");
     DAG.UpdateNodeOperands(N, N0);
+    // Revisit the node.
+    AddToWorklist(N);
     return FrozenN0;
   }
-
-  // We currently avoid folding freeze over SRA/SRL, due to the problems seen
-  // with (freeze (assert ext)) blocking simplifications of SRA/SRL. See for
-  // example https://reviews.llvm.org/D136529#4120959.
-  if (N0.getOpcode() == ISD::SRA || N0.getOpcode() == ISD::SRL)
-    return SDValue();
 
   // Fold freeze(op(x, ...)) -> op(freeze(x), ...).
   // Try to push freeze through instructions that propagate but don't produce
@@ -16938,19 +16934,6 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
                                  /*ConsiderFlags*/ false) ||
       N0->getNumValues() != 1 || !N0->hasOneUse())
     return SDValue();
-
-  // TOOD: we should always allow multiple operands, however this increases the
-  // likelihood of infinite loops due to the ReplaceAllUsesOfValueWith call
-  // below causing later nodes that share frozen operands to fold again and no
-  // longer being able to confirm other operands are not poison due to recursion
-  // depth limits on isGuaranteedNotToBeUndefOrPoison.
-  bool AllowMultipleMaybePoisonOperands =
-      N0.getOpcode() == ISD::SELECT_CC || N0.getOpcode() == ISD::SETCC ||
-      N0.getOpcode() == ISD::BUILD_VECTOR ||
-      N0.getOpcode() == ISD::INSERT_SUBVECTOR ||
-      N0.getOpcode() == ISD::BUILD_PAIR ||
-      N0.getOpcode() == ISD::VECTOR_SHUFFLE ||
-      N0.getOpcode() == ISD::CONCAT_VECTORS || N0.getOpcode() == ISD::FMUL;
 
   // Avoid turning a BUILD_VECTOR that can be recognized as "all zeros", "all
   // ones" or "constant" into something that depends on FrozenUndef. We can
@@ -16972,74 +16955,13 @@ SDValue DAGCombiner::visitFREEZE(SDNode *N) {
     }
   }
 
-  SmallSet<SDValue, 8> MaybePoisonOperands;
-  SmallVector<unsigned, 8> MaybePoisonOperandNumbers;
-  for (auto [OpNo, Op] : enumerate(N0->ops())) {
-    if (DAG.isGuaranteedNotToBeUndefOrPoison(Op, /*PoisonOnly=*/false))
-      continue;
-    bool HadMaybePoisonOperands = !MaybePoisonOperands.empty();
-    bool IsNewMaybePoisonOperand = MaybePoisonOperands.insert(Op).second;
-    if (IsNewMaybePoisonOperand)
-      MaybePoisonOperandNumbers.push_back(OpNo);
-    if (!HadMaybePoisonOperands)
-      continue;
-    if (IsNewMaybePoisonOperand && !AllowMultipleMaybePoisonOperands) {
-      // Multiple maybe-poison ops when not allowed - bail out.
-      return SDValue();
-    }
-  }
-  // NOTE: the whole op may be not guaranteed to not be undef or poison because
-  // it could create undef or poison due to it's poison-generating flags.
-  // So not finding any maybe-poison operands is fine.
-
-  for (unsigned OpNo : MaybePoisonOperandNumbers) {
-    // N0 can mutate during iteration, so make sure to refetch the maybe poison
-    // operands via the operand numbers. The typical scenario is that we have
-    // something like this
-    //   t262: i32 = freeze t181
-    //   t150: i32 = ctlz_zero_undef t262
-    //   t184: i32 = ctlz_zero_undef t181
-    //   t268: i32 = select_cc t181, Constant:i32<0>, t184, t186, setne:ch
-    // When freezing the t181 operand we get t262 back, and then the
-    // ReplaceAllUsesOfValueWith call will not only replace t181 by t262, but
-    // also recursively replace t184 by t150.
-    SDValue MaybePoisonOperand = N->getOperand(0).getOperand(OpNo);
-    // Don't replace every single UNDEF everywhere with frozen UNDEF, though.
-    if (MaybePoisonOperand.isUndef())
-      continue;
-    // First, freeze each offending operand.
-    SDValue FrozenMaybePoisonOperand = DAG.getFreeze(MaybePoisonOperand);
-    // Then, change all other uses of unfrozen operand to use frozen operand.
-    DAG.ReplaceAllUsesOfValueWith(MaybePoisonOperand, FrozenMaybePoisonOperand);
-    if (FrozenMaybePoisonOperand.getOpcode() == ISD::FREEZE &&
-        FrozenMaybePoisonOperand.getOperand(0) == FrozenMaybePoisonOperand) {
-      // But, that also updated the use in the freeze we just created, thus
-      // creating a cycle in a DAG. Let's undo that by mutating the freeze.
-      DAG.UpdateNodeOperands(FrozenMaybePoisonOperand.getNode(),
-                             MaybePoisonOperand);
-    }
-
-    // This node has been merged with another.
-    if (N->getOpcode() == ISD::DELETED_NODE)
-      return SDValue(N, 0);
-  }
-
-  assert(N->getOpcode() != ISD::DELETED_NODE && "Node was deleted!");
-
-  // The whole node may have been updated, so the value we were holding
-  // may no longer be valid. Re-fetch the operand we're `freeze`ing.
-  N0 = N->getOperand(0);
+  // Collect and freeze all operands.
+  SmallVector<SDValue> Ops(N0->ops());
+  for (auto &Op : Ops)
+    Op = DAG.getFreeze(Op);
 
   // Finally, recreate the node, it's operands were updated to use
   // frozen operands, so we just need to use it's "original" operands.
-  SmallVector<SDValue> Ops(N0->ops());
-  // TODO: ISD::UNDEF and ISD::POISON should get separate handling, but best
-  // leave for a future patch.
-  for (SDValue &Op : Ops) {
-    if (Op.isUndef())
-      Op = DAG.getFreeze(Op);
-  }
-
   SDLoc DL(N0);
 
   // Special case handling for ShuffleVectorSDNode nodes.
