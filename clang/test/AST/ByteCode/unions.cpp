@@ -849,14 +849,14 @@ namespace Activation2 {
 
 namespace CopyCtorMutable {
   struct E {
-    union { // expected-note {{read of mutable member 'b'}}
+    union {
       int a;
       mutable int b; // both-note {{here}}
     };
   };
   constexpr E e1 = {{1}};
   constexpr E e2 = e1; // both-error {{constant}} \
-                       // ref-note {{read of mutable member 'b'}} \
+                       // both-note {{read of mutable member 'b'}} \
                        // both-note {{in call}}
 }
 
