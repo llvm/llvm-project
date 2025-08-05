@@ -390,8 +390,7 @@ Status MinidumpFileBuilder::AddModuleList() {
     llvm::minidump::Module m{};
     m.BaseOfImage = static_cast<llvm::support::ulittle64_t>(
         mod->GetObjectFile()->GetBaseAddress().GetLoadAddress(&target));
-    m.SizeOfImage =
-        static_cast<llvm::support::ulittle32_t>(module_size);
+    m.SizeOfImage = static_cast<llvm::support::ulittle32_t>(module_size);
     m.Checksum = static_cast<llvm::support::ulittle32_t>(0);
     m.TimeDateStamp =
         static_cast<llvm::support::ulittle32_t>(std::time(nullptr));
