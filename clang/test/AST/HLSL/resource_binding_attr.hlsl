@@ -34,6 +34,10 @@ RWBuffer<float> UAV1 : register(u2), UAV2 : register(u4);
 // CHECK: HLSLResourceBindingAttr {{.*}} "" "space5"
 RWBuffer<float> UAV3 : register(space5);
 
+// CHECK: VarDecl {{.*}} UAV_Array 'RWBuffer<float>[10]'
+// CHECK: HLSLResourceBindingAttr {{.*}} "u10" "space6"
+RWBuffer<float> UAV_Array[10] : register(u10, space6);
+
 //
 // Default constants ($Globals) layout annotations
 
@@ -56,3 +60,19 @@ struct S {
 // CHECK: VarDecl {{.*}} s 'hlsl_constant S'
 // CHECK: HLSLResourceBindingAttr {{.*}} "c10" "space0
 S s : register(c10);
+
+//
+// Implicit binding
+
+// Constant buffers should have implicit binding attribute added by SemaHLSL
+// CHECK: HLSLBufferDecl {{.*}} line:[[# @LINE + 3]]:9 cbuffer CB2
+// CHECK-NEXT: HLSLResourceClassAttr {{.*}} Implicit CBuffer
+// CHECK-NEXT: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+cbuffer CB2 {
+  float4 c;
+}
+
+// Resource arrays should have implicit binding attribute added by SemaHLSL
+// CHECK: VarDecl {{.*}} SB 'StructuredBuffer<float>[10]'
+// CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
+StructuredBuffer<float> SB[10];
