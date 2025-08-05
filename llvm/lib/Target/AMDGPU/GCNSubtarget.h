@@ -281,6 +281,7 @@ protected:
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
+  bool HasGloballyAddressableScratch = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1324,6 +1325,10 @@ public:
   bool requiresCodeObjectV6() const { return RequiresCOV6; }
 
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
+
+  bool hasGloballyAddressableScratch() const {
+    return HasGloballyAddressableScratch;
+  }
 
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
