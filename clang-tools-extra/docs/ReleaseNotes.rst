@@ -220,7 +220,8 @@ Changes in existing checks
 
 - Improved :doc:`performance-unnecessary-copy-initialization
   <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
-  the type of the diagnosed variable.
+  the type of the diagnosed variable and adding detection for local variables
+  initialized with a member variable of a const object.
 
 - Improved :doc:`performance-unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` by printing
@@ -243,11 +244,6 @@ Changes in existing checks
 - Improved :doc:`readability-qualified-auto
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
-
-- Improved :doc:`performance-unnecessary-copy-initialization
-  <clang-tidy/checks/performance/unnecessary-copy-initialization>` check by 
-  adding detection for the local variables initialized with the member variable
-  of a const object.
 
 Removed checks
 ^^^^^^^^^^^^^^
