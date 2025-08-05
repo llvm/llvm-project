@@ -29,7 +29,7 @@ define void @assume_eq_arg(ptr %arg) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[ALLOCA]], [[ARG]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[ALLOCA]])
-; CHECK-NEXT:    store volatile i32 0, ptr [[ARG]], align 4
+; CHECK-NEXT:    store volatile i32 0, ptr [[ALLOCA]], align 4
 ; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[ALLOCA]])
 ; CHECK-NEXT:    ret void
 ;

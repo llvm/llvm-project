@@ -2499,11 +2499,11 @@ void GVNPass::assignBlockRPONumber(Function &F) {
 bool GVNPass::replaceOperandsForInBlockEquality(Instruction *Instr) const {
   bool Changed = false;
   for (unsigned OpNum = 0; OpNum < Instr->getNumOperands(); ++OpNum) {
-    Value *Operand = Instr->getOperand(OpNum);
-    auto It = ReplaceOperandsWithMap.find(Operand);
+    Use &Operand = Instr->getOperandUse(OpNum);
+    auto It = ReplaceOperandsWithMap.find(Operand.get());
     if (It != ReplaceOperandsWithMap.end()) {
-      // Do not replace lifetime alloca argument with something else.
-      if (Instr->isLifetimeStartOrEnd())
+      const DataLayout &DL = Instr->getDataLayout();
+      if (!canReplacePointersInUseIfEqual(Operand, It->second, DL))
         continue;
 
       LLVM_DEBUG(dbgs() << "GVN replacing: " << *Operand << " with "
