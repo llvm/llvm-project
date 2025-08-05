@@ -265,7 +265,7 @@ redirection to be used.
 
 There are some quoting rules that you must pay attention to when writing
 your ``RUN`` lines. In general, nothing needs to be quoted. :program:`lit` won't
-strip off any quote characters so they will get passed to the invoked program.
+strip off any quote characters, so they will get passed to the invoked program.
 To avoid this use curly braces to tell :program:`lit` that it should treat
 everything enclosed as one value.
 
