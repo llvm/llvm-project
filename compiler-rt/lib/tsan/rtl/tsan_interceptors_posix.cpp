@@ -2155,11 +2155,10 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
       rep->AddStack(stack, true);
 #if SANITIZER_APPLE
   }  // Close this scope to release the locks before writing report
-  if (!suppressed)
-    OutputReport(thr, *rep);
-#else
+#endif
     if (!suppressed)
       OutputReport(thr, *rep);
+#if !SANITIZER_APPLE
   }
 #endif
 
