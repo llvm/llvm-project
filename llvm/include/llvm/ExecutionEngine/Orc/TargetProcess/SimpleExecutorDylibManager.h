@@ -40,8 +40,6 @@ public:
   virtual ~SimpleExecutorDylibManager();
 
   Expected<tpctypes::DylibHandle> open(const std::string &Path, uint64_t Mode);
-  Expected<std::vector<ExecutorSymbolDef>>
-  lookup(tpctypes::DylibHandle H, const RemoteSymbolLookupSet &L);
 
   Error shutdown() override;
   void addBootstrapSymbols(StringMap<ExecutorAddr> &M) override;
@@ -51,9 +49,6 @@ private:
 
   static llvm::orc::shared::CWrapperFunctionResult
   openWrapper(const char *ArgData, size_t ArgSize);
-
-  static llvm::orc::shared::CWrapperFunctionResult
-  lookupWrapper(const char *ArgData, size_t ArgSize);
 
   static llvm::orc::shared::CWrapperFunctionResult
   resolveWrapper(const char *ArgData, size_t ArgSize);
