@@ -661,6 +661,13 @@ def : Pat<(binop_allwusers<or> (shl GPR:$rs2, (i64 16)),
 def : Pat<(i64 (or (sext_inreg (shl GPR:$rs2, (i64 16)), i32),
                    (zexti16 (i64 GPR:$rs1)))),
           (PACKW GPR:$rs1, GPR:$rs2)>;
+
+// Match a packh for the high half with a zero extended value in the low half.
+// If the low half also happens to be a packh, it can be matched separately.
+def : Pat<(or (or (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 24)),
+                  (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
+              (XLenVT GPR:$rs1)),
+          (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 } // Predicates = [HasStdExtZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV32] in
