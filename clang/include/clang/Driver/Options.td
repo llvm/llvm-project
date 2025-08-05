@@ -2018,6 +2018,14 @@ def fno_bounds_safety_bringup_missing_checks : Flag<["-"], "fno-bounds-safety-br
   Alias<fno_bounds_safety_bringup_missing_checks_EQ>, AliasArgs<["all"]>,
   HelpText<"Disable new -fbounds-safety run-time checks">;
 
+defm lifetime_safety : BoolFOption<
+  "experimental-lifetime-safety",
+  LangOpts<"EnableLifetimeSafety">, DefaultFalse,
+  PosFlag<SetTrue, [], [CC1Option], "Enable">,
+  NegFlag<SetFalse, [], [CC1Option], "Disable">,
+  BothFlags<[], [CC1Option],
+          " experimental lifetime safety for C++">>;
+
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Emit">,
