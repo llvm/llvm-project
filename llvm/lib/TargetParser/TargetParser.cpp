@@ -667,7 +667,11 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["s-memrealtime"] = true;
-      [[fallthrough]];
+      Features["ci-insts"] = true;
+      Features["image-insts"] = true;
+      Features["s-memtime-inst"] = true;
+      Features["gws"] = true;
+      break;
     case GK_GFX705:
     case GK_GFX704:
     case GK_GFX703:
@@ -682,6 +686,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["image-insts"] = true;
       Features["s-memtime-inst"] = true;
       Features["gws"] = true;
+      Features["atomic-fmin-fmax-global-f32"] = true;
+      Features["atomic-fmin-fmax-global-f64"] = true;
       break;
     case GK_NONE:
       break;

@@ -62,15 +62,15 @@
 // NOCPU-WAVE32: "target-features"="+wavefrontsize32"
 // NOCPU-WAVE64: "target-features"="+wavefrontsize64"
 
-// GFX600: "target-features"="+s-memtime-inst,+wavefrontsize64"
-// GFX601: "target-features"="+s-memtime-inst,+wavefrontsize64"
-// GFX602: "target-features"="+s-memtime-inst,+wavefrontsize64"
-// GFX700: "target-features"="+ci-insts,+s-memtime-inst,+wavefrontsize64"
-// GFX701: "target-features"="+ci-insts,+s-memtime-inst,+wavefrontsize64"
-// GFX702: "target-features"="+ci-insts,+s-memtime-inst,+wavefrontsize64"
-// GFX703: "target-features"="+ci-insts,+s-memtime-inst,+wavefrontsize64"
-// GFX704: "target-features"="+ci-insts,+s-memtime-inst,+wavefrontsize64"
-// GFX705: "target-features"="+ci-insts,+s-memtime-inst,+wavefrontsize64"
+// GFX600: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+s-memtime-inst,+wavefrontsize64
+// GFX601: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+s-memtime-inst,+wavefrontsize64
+// GFX602: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+s-memtime-inst,+wavefrontsize64
+// GFX700: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+s-memtime-inst,+wavefrontsize64"
+// GFX701: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+s-memtime-inst,+wavefrontsize64"
+// GFX702: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+s-memtime-inst,+wavefrontsize64"
+// GFX703: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+s-memtime-inst,+wavefrontsize64"
+// GFX704: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+s-memtime-inst,+wavefrontsize64"
+// GFX705: "target-features"="+atomic-fmin-fmax-global-f32,+atomic-fmin-fmax-global-f64,+ci-insts,+s-memtime-inst,+wavefrontsize64"
 // GFX801: "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64"
 // GFX802: "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64"
 // GFX803: "target-features"="+16-bit-insts,+ci-insts,+dpp,+gfx8-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64"
