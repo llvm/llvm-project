@@ -39,6 +39,15 @@ def AArch64_save_zt : SDNode<"AArch64ISD::SAVE_ZT", SDTypeProfile<0, 2,
 def AArch64CoalescerBarrier
     : SDNode<"AArch64ISD::COALESCER_BARRIER", SDTypeProfile<1, 1, []>, [SDNPOptInGlue, SDNPOutGlue]>;
 
+def AArch64CallerIsStreaming
+  : SDNode<"AArch64ISD::CALLER_IS_STREAMING", SDTypeProfile<1, 0,
+    [SDTCisInt<0>]>, [SDNPHasChain, SDNPSideEffect]>;
+
+let usesCustomInserter = 1 in {
+  def CallerIsStreaming : Pseudo<(outs GPR64:$is_streaming), (ins), []>, Sched<[]> {}
+}
+def : Pat<(i64 (AArch64CallerIsStreaming)), (CallerIsStreaming)>;
+
 def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
                            [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
 
