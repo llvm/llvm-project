@@ -729,6 +729,8 @@ bool SemaRISCV::CheckBuiltinFunctionCall(const TargetInfo &TI,
     return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15) ||
            SemaRef.BuiltinConstantArgMultiple(TheCall, 0, 4);
   }
+  case RISCVVector::BI__builtin_rvv_sf_vtzero_t:
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, 0, 15);
   case RISCVVector::BI__builtin_rvv_vget_v: {
     ASTContext::BuiltinVectorTypeInfo ResVecInfo =
         Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(
