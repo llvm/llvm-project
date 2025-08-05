@@ -228,10 +228,16 @@ private:
 
   void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
-  bool initGlobalResourceDecl(VarDecl *VD);
   uint32_t getNextImplicitBindingOrderID() {
     return ImplicitBindingNextOrderID++;
   }
+
+  bool initGlobalResourceDecl(VarDecl *VD);
+  bool initGlobalResourceArrayDecl(VarDecl *VD);
+  void createResourceRecordCtorArgs(const Type *ResourceTy, StringRef VarName,
+                                    HLSLResourceBindingAttr *RBA,
+                                    uint32_t ArrayIndex,
+                                    llvm::SmallVector<Expr *> &Args);
 };
 
 } // namespace clang
