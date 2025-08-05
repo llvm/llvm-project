@@ -11,7 +11,7 @@
 // <optional>
 
 // constexpr iterator optional::begin() noexcept;
-// constexpr const_iterator optional::begin() noexcept;
+// constexpr const_iterator optional::begin() const noexcept;
 
 #include <cassert>
 #include <iterator>
@@ -21,21 +21,20 @@
 
 template <typename T>
 constexpr bool test() {
-  const std::optional<T> opt{T{}};
-  std::optional<T> nonconst_opt{T{}};
+  std::optional<T> opt{T{}};
 
   { // begin() is marked noexcept
     static_assert(noexcept(opt.begin()));
-    static_assert(noexcept(nonconst_opt.begin()));
+    static_assert(noexcept(std::as_const(opt).begin()));
   }
 
   { // Dereferencing an iterator at the beginning == indexing the 0th element, and that calling begin() again return the same iterator.
     auto iter1 = opt.begin();
-    auto iter2 = nonconst_opt.begin();
+    auto iter2 = std::as_const(opt).begin();
     assert(*iter1 == iter1[0]);
     assert(*iter2 == iter2[0]);
     assert(iter1 == opt.begin());
-    assert(iter2 == nonconst_opt.begin());
+    assert(iter2 == std::as_const(opt).begin());
   }
 
   { // Calling begin() multiple times on a disengaged optional returns the same iterator.

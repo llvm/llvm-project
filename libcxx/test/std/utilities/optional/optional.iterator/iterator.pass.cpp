@@ -21,19 +21,18 @@
 
 template <typename T, T __val>
 constexpr bool test() {
-  const std::optional<T> opt{__val};
-  std::optional<T> nonconst_opt{__val};
+  std::optional<T> opt{__val};
 
   { // Dereferencing an iterator of an engaged optional will return the same value that the optional holds.
     auto it  = opt.begin();
-    auto it2 = nonconst_opt.begin();
+    auto it2 = std::as_const(opt).begin();
     assert(*it == *opt);
-    assert(*it2 == *nonconst_opt);
+    assert(*it2 == *std::as_const(opt));
   }
 
   { // optional::iterator and optional::const_iterator satisfy the Cpp17RandomAccessIterator and contiguous iterator.
     auto it  = opt.begin();
-    auto it2 = nonconst_opt.begin();
+    auto it2 = std::as_const(opt).begin();
     assert(std::contiguous_iterator<decltype(it)>);
     assert(std::contiguous_iterator<decltype(it2)>);
 
@@ -43,18 +42,18 @@ constexpr bool test() {
 
   { // const_iterator::value_type == std::remove_cv_t<T>, const_iterator::reference == const T&, iterator::value_type = std::remove_cv_t<T>, iterator::reference == T&
     auto it  = opt.begin();
-    auto it2 = nonconst_opt.begin();
+    auto it2 = std::as_const(opt).begin();
     assert((std::is_same_v<typename decltype(it)::value_type, std::remove_cv_t<T>>));
-    assert((std::is_same_v<typename decltype(it)::reference, const T&>));
+    assert((std::is_same_v<typename decltype(it)::reference, T&>));
     assert((std::is_same_v<typename decltype(it2)::value_type, std::remove_cv_t<T>>));
-    assert((std::is_same_v<typename decltype(it2)::reference, T&>));
+    assert((std::is_same_v<typename decltype(it2)::reference, const T&>));
   }
 
   { // std::ranges::size for an engaged optional<T> == 1, disengaged optional<T> == 0
     const std::optional<T> disengaged{std::nullopt};
     std::optional<T> disengaged2{std::nullopt};
     assert(std::ranges::size(opt) == 1);
-    assert(std::ranges::size(nonconst_opt) == 1);
+    assert(std::ranges::size(std::as_const(opt)) == 1);
 
     assert(std::ranges::size(disengaged) == 0);
     assert(std::ranges::size(disengaged2) == 0);
