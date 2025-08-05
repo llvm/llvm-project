@@ -2882,8 +2882,21 @@ struct BroadcastFolder : public OpRewritePattern<BroadcastOp> {
   }
 };
 
+// Return the broadcasted dimensions. Including broadcasts in the leading
+// dimensions and broadcasts through unit dimension (i.e. dim-1).
+static BitVector getBroadcastedDims(ArrayRef<int64_t> srcShape,
+                                    ArrayRef<int64_t> destShape) {
+  assert(destShape.size() >= srcShape.size());
+  BitVector broadcastedDims(destShape.size());
+  broadcastedDims.set(0, destShape.size() - srcShape.size());
+  auto unitDims = computeBroadcastedUnitDims(srcShape, destShape);
+  for (int64_t dim : unitDims)
+    broadcastedDims.set(dim);
+  return broadcastedDims;
+}
+
 // Fold broadcast(shape_cast(x)) into broadcast(x) if x's type is compatible
-// with broadcast's result type.
+// with broadcast's result type and the broadcasted dimensions are the same.
 struct FoldBroadcastOfShapeCast : public OpRewritePattern<BroadcastOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -2895,8 +2908,26 @@ struct FoldBroadcastOfShapeCast : public OpRewritePattern<BroadcastOp> {
 
     VectorType srcType = srcShapeCast.getSourceVectorType();
     VectorType destType = broadcastOp.getResultVectorType();
+    // Check type compatibility.
     if (vector::isBroadcastableTo(srcType, destType) !=
         BroadcastableToResult::Success)
+      return failure();
+
+    // Given
+    // ```
+    // %s = shape_cast(%x)
+    // %b = broadcast(%s)
+    // ```
+    // If we want to fold %x into %b, the broadcasted dimensions from %x to
+    // %b has to be the same as that of from %s to %b.
+    ArrayRef<int64_t> shapecastShape =
+        srcShapeCast.getResultVectorType().getShape();
+    ArrayRef<int64_t> srcShape = srcType.getShape();
+    ArrayRef<int64_t> destShape = destType.getShape();
+    BitVector origBroadcastedDims =
+        getBroadcastedDims(shapecastShape, destShape);
+    BitVector newBroadcastedDims = getBroadcastedDims(srcShape, destShape);
+    if (newBroadcastedDims != origBroadcastedDims)
       return failure();
 
     rewriter.replaceOpWithNewOp<BroadcastOp>(broadcastOp, destType,
