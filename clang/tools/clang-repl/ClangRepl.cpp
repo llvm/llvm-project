@@ -28,6 +28,7 @@
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
@@ -364,15 +365,34 @@ int main(int argc, const char **argv) {
       }
 
       Input += L;
+      // If we add more % commands, there should be better architecture than
+      // this.
       if (Input == R"(%quit)") {
         break;
       }
       if (Input == R"(%undo)") {
         if (auto Err = Interp->Undo())
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      } else if (Input == R"(%help)") {
+        llvm::outs() << "%help\t\tlist clang-repl %commands\n"
+                     << "%undo\t\tundo the previous input\n"
+                     << "%lib\t<path>\tlink a dynamic library\n"
+                     << "%quit\t\texit clang-repl\n";
+      } else if (Input == R"(%lib)") {
+        auto Err = llvm::make_error<llvm::StringError>(
+            "%lib expects 1 argument: the path to a dynamic library\n",
+            std::error_code());
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (Input.rfind("%lib ", 0) == 0) {
         if (auto Err = Interp->LoadDynamicLibrary(Input.data() + 5))
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+      } else if (Input[0] == '%') {
+        auto Err = llvm::make_error<llvm::StringError>(
+            llvm::formatv(
+                "Invalid % command \"{0}\", use \"%help\" to list commands\n",
+                Input),
+            std::error_code());
+        llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       } else if (auto Err = Interp->ParseAndExecute(Input)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
       }
