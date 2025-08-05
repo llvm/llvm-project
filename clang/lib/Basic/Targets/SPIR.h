@@ -438,6 +438,10 @@ public:
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
+  BuiltinVaListKind getBuiltinVaListKind() const override {
+    return TargetInfo::CharPtrBuiltinVaList;
+  }
+
   bool initFeatureMap(llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags,
                       StringRef,
                       const std::vector<std::string> &) const override;
