@@ -469,7 +469,8 @@ private:
 
   bool tryToSinkFreeOperands(Instruction *I);
   bool replaceMathCmpWithIntrinsic(BinaryOperator *BO, Value *Arg0, Value *Arg1,
-                                   CmpInst *Cmp, Intrinsic::ID IID);
+                                   CmpInst *Cmp, Intrinsic::ID IID,
+                                   bool NegateOverflow = false);
   bool optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT);
   bool optimizeURem(Instruction *Rem);
   bool combineToUSubWithOverflow(CmpInst *Cmp, ModifyDT &ModifiedDT);
@@ -1551,7 +1552,8 @@ static bool isIVIncrement(const Value *V, const LoopInfo *LI) {
 bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
                                                  Value *Arg0, Value *Arg1,
                                                  CmpInst *Cmp,
-                                                 Intrinsic::ID IID) {
+                                                 Intrinsic::ID IID,
+                                                 bool NegateOverflow) {
   auto IsReplacableIVIncrement = [this, &Cmp](BinaryOperator *BO) {
     if (!isIVIncrement(BO, LI))
       return false;
@@ -1623,6 +1625,8 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     assert(BO->hasOneUse() &&
            "Patterns with XOr should use the BO only in the compare");
   Value *OV = Builder.CreateExtractValue(MathOV, 1, "ov");
+  if (NegateOverflow)
+    OV = Builder.CreateNot(OV, "not");
   replaceAllUsesWith(Cmp, OV, FreshBBs, IsHugeFunc);
   Cmp->eraseFromParent();
   BO->eraseFromParent();
@@ -1659,6 +1663,38 @@ static bool matchUAddWithOverflowConstantEdgeCases(CmpInst *Cmp,
   return false;
 }
 
+/// Match special-case patterns that check for unsigned add overflow but inverts
+/// the add check
+static bool
+matchUAddWithOverflowConstantEdgeCasesInverted(CmpInst *Cmp,
+                                               BinaryOperator *&Add) {
+  // Add = add A, 1; Cmp = icmp ne A,-1 (overflow if A is max val)
+  // Add = add A,-1; Cmp = icmp eq A, 0 (overflow if A is non-zero)
+  Value *A = Cmp->getOperand(0), *B = Cmp->getOperand(1);
+
+  // We are not expecting non-canonical/degenerate code. Just bail out.
+  if (isa<Constant>(A))
+    return false;
+
+  ICmpInst::Predicate Pred = Cmp->getPredicate();
+  if (Pred == ICmpInst::ICMP_NE && match(B, m_AllOnes()))
+    B = ConstantInt::get(B->getType(), 1);
+  else if (Pred == ICmpInst::ICMP_EQ && match(B, m_ZeroInt()))
+    B = Constant::getAllOnesValue(B->getType());
+  else
+    return false;
+
+  // Check the users of the variable operand of the compare looking for an add
+  // with the adjusted constant.
+  for (User *U : A->users()) {
+    if (match(U, m_Add(m_Specific(A), m_Specific(B)))) {
+      Add = cast<BinaryOperator>(U);
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Try to combine the compare into a call to the llvm.uadd.with.overflow
 /// intrinsic. Return true if any changes were made.
 bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp,
@@ -1666,13 +1702,24 @@ bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp,
   bool EdgeCase = false;
   Value *A, *B;
   BinaryOperator *Add;
+  bool Negate = false;
   if (!match(Cmp, m_UAddWithOverflow(m_Value(A), m_Value(B), m_BinOp(Add)))) {
-    if (!matchUAddWithOverflowConstantEdgeCases(Cmp, Add))
-      return false;
-    // Set A and B in case we match matchUAddWithOverflowConstantEdgeCases.
-    A = Add->getOperand(0);
-    B = Add->getOperand(1);
-    EdgeCase = true;
+    if (matchUAddWithOverflowConstantEdgeCases(Cmp, Add)) {
+      // Set A and B in case we match matchUAddWithOverflowConstantEdgeCases.
+      A = Add->getOperand(0);
+      B = Add->getOperand(1);
+      EdgeCase = true;
+    } else {
+      Negate = true;
+      if (!match(Cmp,
+                 m_UAddWithOverflowInv(m_Value(A), m_Value(B), m_BinOp(Add)))) {
+        if (!matchUAddWithOverflowConstantEdgeCasesInverted(Cmp, Add))
+          return false;
+        A = Add->getOperand(0);
+        B = Add->getOperand(1);
+        EdgeCase = true;
+      }
+    }
   }
 
   if (!TLI->shouldFormOverflowOp(ISD::UADDO,
@@ -1687,7 +1734,7 @@ bool CodeGenPrepare::combineToUAddWithOverflow(CmpInst *Cmp,
     return false;
 
   if (!replaceMathCmpWithIntrinsic(Add, A, B, Cmp,
-                                   Intrinsic::uadd_with_overflow))
+                                   Intrinsic::uadd_with_overflow, Negate))
     return false;
 
   // Reset callers - do not crash by iterating over a dead instruction.
@@ -2221,10 +2268,10 @@ bool CodeGenPrepare::optimizeCmp(CmpInst *Cmp, ModifyDT &ModifiedDT) {
   if (sinkCmpExpression(Cmp, *TLI))
     return true;
 
-  if (combineToUAddWithOverflow(Cmp, ModifiedDT))
+  if (combineToUSubWithOverflow(Cmp, ModifiedDT))
     return true;
 
-  if (combineToUSubWithOverflow(Cmp, ModifiedDT))
+  if (combineToUAddWithOverflow(Cmp, ModifiedDT))
     return true;
 
   if (unfoldPowerOf2Test(Cmp))
