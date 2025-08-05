@@ -29,6 +29,7 @@
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -880,6 +881,42 @@ struct EvaluateInMemoryOpConversion
   }
 };
 
+struct ExactlyOnceOpConversion
+    : public mlir::OpConversionPattern<hlfir::ExactlyOnceOp> {
+  using mlir::OpConversionPattern<hlfir::ExactlyOnceOp>::OpConversionPattern;
+  explicit ExactlyOnceOpConversion(mlir::MLIRContext *ctx)
+      : mlir::OpConversionPattern<hlfir::ExactlyOnceOp>{ctx} {}
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::ExactlyOnceOp exactlyOnce, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    fir::FirOpBuilder builder(rewriter, exactlyOnce.getOperation());
+
+    // The body of the exactly_once op may contain operations that will require
+    // to be translated
+    HLFIRListener listener{builder, rewriter};
+    builder.setListener(&listener);
+
+    // Clone the exactly_once region body and convert it inline
+    mlir::Region &region = exactlyOnce.getBody();
+    mlir::Block &block = region.front();
+    mlir::IRMapping mapper;
+
+    // Clone all operations except the terminator
+    for (auto &op : block.without_terminator()) {
+      rewriter.clone(op, mapper);
+    }
+
+    // Get the yielded value and replace the exactly_once operation with it.
+    // Later we will register the pattern and mark the ExactlyOnceOp as
+    // illegal (see below).
+    auto yield = mlir::cast<hlfir::YieldOp>(block.getTerminator());
+    mlir::Value yieldedValue = mapper.lookupOrDefault(yield.getEntity());
+
+    rewriter.replaceOp(exactlyOnce, yieldedValue);
+    return mlir::success();
+  }
+};
+
 class BufferizeHLFIR : public hlfir::impl::BufferizeHLFIRBase<BufferizeHLFIR> {
 public:
   using BufferizeHLFIRBase<BufferizeHLFIR>::BufferizeHLFIRBase;
@@ -899,8 +936,9 @@ public:
                     AssociateOpConversion, CharExtremumOpConversion,
                     ConcatOpConversion, DestroyOpConversion,
                     EndAssociateOpConversion, EvaluateInMemoryOpConversion,
-                    NoReassocOpConversion, SetLengthOpConversion,
-                    ShapeOfOpConversion, GetLengthOpConversion>(context);
+                    ExactlyOnceOpConversion, NoReassocOpConversion,
+                    SetLengthOpConversion, ShapeOfOpConversion,
+                    GetLengthOpConversion>(context);
     patterns.insert<ElementalOpConversion>(context, optimizeEmptyElementals);
     mlir::ConversionTarget target(*context);
     // Note that YieldElementOp is not marked as an illegal operation.
@@ -909,7 +947,8 @@ public:
     // survives this pass, the verifier will detect it because it has to be
     // a child of ElementalOp and ElementalOp's are explicitly illegal.
     target.addIllegalOp<hlfir::ApplyOp, hlfir::AssociateOp, hlfir::ElementalOp,
-                        hlfir::EndAssociateOp, hlfir::SetLengthOp>();
+                        hlfir::EndAssociateOp, hlfir::ExactlyOnceOp,
+                        hlfir::SetLengthOp>();
 
     target.markUnknownOpDynamicallyLegal([](mlir::Operation *op) {
       return llvm::all_of(op->getResultTypes(),
