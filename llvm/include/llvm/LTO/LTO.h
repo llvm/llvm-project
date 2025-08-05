@@ -546,10 +546,12 @@ private:
   // resolutions used by a single input module. Functions return ranges refering
   // to the resolutions for the remaining modules in the InputFile.
   Expected<ArrayRef<SymbolResolution>>
-  addModule(InputFile &Input, unsigned ModI, ArrayRef<SymbolResolution> Res);
+  addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+            unsigned ModI, ArrayRef<SymbolResolution> Res);
 
   Expected<std::pair<RegularLTOState::AddedModule, ArrayRef<SymbolResolution>>>
-  addRegularLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
+  addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
+                BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                 ArrayRef<SymbolResolution> Res);
   Error linkRegularLTO(RegularLTOState::AddedModule Mod,
                        bool LivenessFromIndex);

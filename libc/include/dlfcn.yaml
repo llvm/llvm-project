@@ -29,6 +29,14 @@ macros:
     standards:
       - gnu
     macro_value: "0x01000"
+  - macro_name: RTLD_NEXT
+    standards:
+      - gnu
+    macro_value: "((void *) -1l)"
+  - macro_name: RTLD_DEFAULT
+    standards:
+      - gnu
+    macro_value: "((void *) 0)"
 functions:
   - name: dlclose
     standards:

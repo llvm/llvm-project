@@ -128,9 +128,8 @@ int main(int argc, const char **argv) {
   LangOptions DefaultLangOptions;
   DiagnosticOptions DiagOpts;
   clang::TextDiagnosticPrinter DiagnosticPrinter(errs(), DiagOpts);
-  DiagnosticsEngine Diagnostics(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs()), DiagOpts,
-      &DiagnosticPrinter, false);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts,
+                                &DiagnosticPrinter, false);
   auto &FileMgr = Tool.getFiles();
   SourceManager Sources(Diagnostics, FileMgr);
   Rewriter Rewrite(Sources, DefaultLangOptions);
