@@ -266,7 +266,7 @@ gpu.module @test {
 }
 
 // -----
-// Explicitly check that update_nd_offset distributed tensor descriptor retains the layouts.
+// Explicitly check that update_nd_offset op's source retain layout when yielded from the warp op (PR150545)
 // CHECK-LABEL: gpu.func @check_update_nd_offset_distributed_tensor_desc
 // CHECK:      %[[W:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[16] ->
 // CHECK-SAME:    (!xegpu.tensor_desc<16x16xf32, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>) {
