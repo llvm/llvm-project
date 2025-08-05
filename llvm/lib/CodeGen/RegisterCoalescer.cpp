@@ -1624,11 +1624,11 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
           UpdatedSubRanges = true;
         } else {
           // We know that this lane is defined by this instruction,
-          // but at this point it may be empty because it is not used by
-          // anything. This happens when updateRegDefUses adds the missing
-          // lanes. Assign that lane a dead def so that the interferences
-          // are properly modeled.
-          if (SR.empty())
+          // but at this point it might not be live because it was not defined
+          // by the original instruction. This happens when the
+          // rematerialization widens the defined register. Assign that lane a
+          // dead def so that the interferences are properly modeled.
+          if (!SR.liveAt(DefIndex))
             SR.createDeadDef(DefIndex, Alloc);
         }
       }

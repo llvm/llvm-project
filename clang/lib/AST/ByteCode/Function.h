@@ -236,7 +236,7 @@ private:
            bool HasRVO, bool IsLambdaStaticInvoker);
 
   /// Sets the code of a function.
-  void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
+  void setCode(unsigned NewFrameSize, llvm::SmallVector<std::byte> &&NewCode,
                SourceMap &&NewSrcMap, llvm::SmallVector<Scope, 2> &&NewScopes,
                bool NewHasBody) {
     FrameSize = NewFrameSize;
@@ -266,7 +266,7 @@ private:
   /// Size of the argument stack.
   unsigned ArgSize;
   /// Program code.
-  std::vector<std::byte> Code;
+  llvm::SmallVector<std::byte> Code;
   /// Opcode-to-expression mapping.
   SourceMap SrcMap;
   /// List of block descriptors.
