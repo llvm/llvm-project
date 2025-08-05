@@ -56,9 +56,42 @@ enum CondCode {
 // mb tag based
 
 static inline M68k::CondCode GetOppositeBranchCondition(M68k::CondCode CC) {
-  // To reverse a condition it's necessary to only invert the low bit:
-  assert(CC != M86k::COND_INVALID && "COND_INVALID has no inverse!");
-  return static_cast<CondCode>(static_cast<unsigned>(CC) ^ 0x1);
+  switch (CC) {
+  default:
+    llvm_unreachable("Illegal condition code!");
+  case M68k::COND_T:
+    return M68k::COND_F;
+  case M68k::COND_F:
+    return M68k::COND_T;
+  case M68k::COND_HI:
+    return M68k::COND_LS;
+  case M68k::COND_LS:
+    return M68k::COND_HI;
+  case M68k::COND_CC:
+    return M68k::COND_CS;
+  case M68k::COND_CS:
+    return M68k::COND_CC;
+  case M68k::COND_NE:
+    return M68k::COND_EQ;
+  case M68k::COND_EQ:
+    return M68k::COND_NE;
+  case M68k::COND_VC:
+    return M68k::COND_VS;
+  case M68k::COND_VS:
+    return M68k::COND_VC;
+  case M68k::COND_PL:
+    return M68k::COND_MI;
+  case M68k::COND_MI:
+    return M68k::COND_PL;
+  case M68k::COND_GE:
+    return M68k::COND_LT;
+  case M68k::COND_LT:
+    return M68k::COND_GE;
+  case M68k::COND_GT:
+    return M68k::COND_LE;
+  case M68k::COND_LE:
+    return M68k::COND_GT;
+  }
 }
 
 static inline unsigned GetCondBranchFromCond(M68k::CondCode CC) {
