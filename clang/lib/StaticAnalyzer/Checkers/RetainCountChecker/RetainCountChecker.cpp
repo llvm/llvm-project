@@ -1128,7 +1128,7 @@ ExplodedNode * RetainCountChecker::checkReturnWithRetEffect(const ReturnStmt *S,
 //===----------------------------------------------------------------------===//
 
 void RetainCountChecker::checkBind(SVal loc, SVal val, const Stmt *S,
-                                   CheckerContext &C) const {
+                                   bool atDeclInit, CheckerContext &C) const {
   ProgramStateRef state = C.getState();
   const MemRegion *MR = loc.getAsRegion();
 

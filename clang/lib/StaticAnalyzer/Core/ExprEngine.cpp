@@ -3725,7 +3725,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
   // Do a previsit of the bind.
   ExplodedNodeSet CheckedSet;
   getCheckerManager().runCheckersForBind(CheckedSet, Pred, location, Val,
-                                         StoreE, *this, *PP);
+                                         StoreE, atDeclInit, *this, *PP);
 
   StmtNodeBuilder Bldr(CheckedSet, Dst, *currBldrCtx);
 

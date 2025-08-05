@@ -26,13 +26,13 @@ class UndefinedAssignmentChecker
   const BugType BT{this, "Assigned value is uninitialized"};
 
 public:
-  void checkBind(SVal location, SVal val, const Stmt *S,
+  void checkBind(SVal location, SVal val, const Stmt *S, bool atDeclInit,
                  CheckerContext &C) const;
 };
 }
 
 void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
-                                           const Stmt *StoreE,
+                                           const Stmt *StoreE, bool atDeclInit,
                                            CheckerContext &C) const {
   if (!val.isUndef())
     return;
