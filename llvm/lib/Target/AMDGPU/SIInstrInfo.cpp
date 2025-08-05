@@ -6123,7 +6123,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
       // Do not fold a non-inlineable and non-register operand into an
       // instruction that already has a frame index. The frame index handling
       // code could not handle well when a fame index co-exists with another
-      // non-register operand, unless that operand is a inlineable immediate.
+      // non-register operand, unless that operand is an inlineable immediate.
       if (Op.isFI())
         return false;
     }
