@@ -29,7 +29,7 @@ static raw_ostream &printFlags(raw_ostream &OS, const T Value,
         OS << " | ";
 
       StringRef MaybeFlag = enumToStringRef(T(Bit), Flags);
-      if (0 < MaybeFlag.size())
+      if (!MaybeFlag.empty())
         OS << MaybeFlag;
       else
         OS << "invalid: " << Bit;
