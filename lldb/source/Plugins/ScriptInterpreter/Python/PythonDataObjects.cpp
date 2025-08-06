@@ -71,24 +71,11 @@ Expected<std::string> python::As<std::string>(Expected<PythonObject> &&obj) {
   return std::string(utf8.get());
 }
 
-static bool python_is_finalizing() {
-#if PY_VERSION_HEX >= 0x030d0000
-  return Py_IsFinalizing();
-#else
-  return _Py_IsFinalizing();
-#endif
-}
-
 void PythonObject::Reset() {
   if (m_py_obj && Py_IsInitialized()) {
-    if (python_is_finalizing()) {
-      // Leak m_py_obj rather than crashing the process.
-      // https://docs.python.org/3/c-api/init.html#c.PyGILState_Ensure
-    } else {
-      PyGILState_STATE state = PyGILState_Ensure();
-      Py_DECREF(m_py_obj);
-      PyGILState_Release(state);
-    }
+    PyGILState_STATE state = PyGILState_Ensure();
+    Py_DECREF(m_py_obj);
+    PyGILState_Release(state);
   }
   m_py_obj = nullptr;
 }

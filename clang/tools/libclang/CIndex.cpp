@@ -2895,8 +2895,10 @@ void OpenACCClauseEnqueue::VisitDeviceClause(const OpenACCDeviceClause &C) {
 void OpenACCClauseEnqueue::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
   VisitVarList(C);
-  for (VarDecl *V : C.getInitRecipes())
-    Visitor.AddDecl(V);
+  for (const OpenACCFirstPrivateRecipe &R : C.getInitRecipes()) {
+    Visitor.AddDecl(R.RecipeDecl);
+    Visitor.AddDecl(R.InitFromTemporary);
+  }
 }
 
 void OpenACCClauseEnqueue::VisitPresentClause(const OpenACCPresentClause &C) {
@@ -2976,9 +2978,7 @@ void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 void OpenACCClauseEnqueue::VisitNoHostClause(const OpenACCNoHostClause &C) {}
-void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) {
-  assert(false && "TODO ERICH");
-}
+void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) { }
 void OpenACCClauseEnqueue::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
 }
 void OpenACCClauseEnqueue::VisitIfPresentClause(
