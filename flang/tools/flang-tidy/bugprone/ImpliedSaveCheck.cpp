@@ -24,8 +24,24 @@ void ImpliedSaveCheck::Enter(const parser::EntityDecl &entityDecl) {
   if (symbol && semantics::IsSaved(*symbol) &&
       scope.kind() != semantics::Scope::Kind::Module &&
       !symbol->attrs().test(semantics::Attr::SAVE)) {
-    Say(symbol->name(), "Implicit SAVE on symbol '%s'"_warn_en_US,
-        symbol->name());
+
+    if (scope.hasSAVE()) {
+      const auto name = scope.GetName();
+      if (name) {
+        Say(symbol->name(),
+            "Symbol '%s' is implicitly saved in scope '%s', but does not have "
+            "the SAVE attribute"_warn_en_US,
+            symbol->name(), name->ToString());
+      } else {
+        Say(symbol->name(),
+            "Symbol '%s' is implicitly saved in enclosing scope, but does not "
+            "have the SAVE attribute"_warn_en_US,
+            symbol->name());
+      }
+    } else {
+      Say(symbol->name(), "Implicit SAVE on symbol '%s'"_warn_en_US,
+          symbol->name());
+    }
   }
 }
 
