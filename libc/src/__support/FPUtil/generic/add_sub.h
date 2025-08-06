@@ -174,8 +174,8 @@ add_or_sub(InType x, InType y) {
     int alignment = (max_bits.get_biased_exponent() - max_bits.is_normal()) -
                     (min_bits.get_biased_exponent() - min_bits.is_normal());
 
-    InStorageType aligned_min_mant =
-        min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN);
+    InStorageType aligned_min_mant = static_cast<InStorageType>(
+        min_mant >> cpp::min(alignment, RESULT_MANTISSA_LEN));
     bool aligned_min_mant_sticky;
 
     if (alignment <= GUARD_BITS_LEN)
