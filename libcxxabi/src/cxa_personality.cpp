@@ -596,7 +596,7 @@ namespace {
 // it impossible to directly cast them without breaking the authentication,
 // as a result we need this pair of helpers.
 template <typename PtrType>
-void set_landing_pad_as_ptr(scan_results& results, const PtrType& out) {
+[[maybe_unused]] void set_landing_pad_as_ptr(scan_results& results, const PtrType& out) {
   union {
     landing_pad_t* as_landing_pad;
     landing_pad_ptr_t* as_pointer;
