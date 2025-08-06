@@ -764,6 +764,46 @@ class NVVM_TCGEN05_LDST_ACCESS_SIZE<string Shape, int Num> {
                         true : llvm_void_ty);
 }
 
+class NVVM_TCGEN05_MMA_NAME<string Sp, string AOperand, string AShift = "", string ScaleInputD = ""> {
+  string intr = "llvm.nvvm.tcgen05.mma"
+                # Sp # "." # AOperand
+                # ScaleInputD # AShift;
+  string record = !subst(".", "_", !subst("llvm.", "int_", intr));
+}
+
+class NVVM_TCGEN05_MMA_BLOCKSCALE_NAME<string Sp, string AOperand, string Kind, string ScaleVecSize> {
+  string intr = "llvm.nvvm.tcgen05.mma"
+                # Sp # "." # AOperand
+                # "." # Kind # ScaleVecSize
+                # ".block_scale";
+  string record = !subst(".", "_", !subst("llvm.", "int_", intr));
+}
+
+class NVVM_TCGEN05_MMA_WS_NAME<string Sp, string AOp, string ZeroColMask> {
+  string intr = "llvm.nvvm.tcgen05.mma.ws"
+                # Sp # "." # AOp # ZeroColMask;
+  string record = !subst(".", "_", !subst("llvm.", "int_", intr));
+}
+
+class NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<string Sp, string AOp, int CtaGroup, string AShift = "", string ScaleInputD = ""> {
+  string intr = "llvm.nvvm.tcgen05.mma"
+                # Sp # "." # AOp # ScaleInputD
+                # ".disable_output_lane.cg" # CtaGroup # AShift;
+  string record = !subst(".", "_", !subst("llvm.", "int_", intr));
+}
+
+class NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<string Kind, string ScaleVecSize> {
+  bit ret = !cond(
+    !and(!eq(Kind, "mxf8f6f4"), !eq(ScaleVecSize, ""))         : true,
+    !and(!eq(Kind, "mxf4"),     !eq(ScaleVecSize, ""))         : true,
+    !and(!eq(Kind, "mxf4nvf4"), !eq(ScaleVecSize, ".block16")) : true,
+    !and(!eq(Kind, "mxf4"),     !eq(ScaleVecSize, ".block32")) : true,
+    !and(!eq(Kind, "mxf4nvf4"), !eq(ScaleVecSize, ".block32")) : true,
+    !and(!eq(Kind, "mxf8f6f4"), !eq(ScaleVecSize, ".block32")) : true,
+    true: false
+  );
+}
+
 class TexVector<string name, list<LLVMType> types> {
   string Name = name;
   list<LLVMType> Types = types;
@@ -2462,6 +2502,394 @@ foreach dim = ["x", "y", "z"] in {
 def int_nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_ # dim
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i128_ty], [IntrNoMem, IntrSpeculatable],
                             "llvm.nvvm.clusterlaunchcontrol.query_cancel.get_first_ctaid." # dim>;
+}
+
+//
+// tcgen05.mma Intrinsics
+//
+
+foreach space = ["tensor", "shared"] in {
+  foreach ashiftid = !if(!eq(space, "tensor"), [0, 1], [0]) in {
+    defvar a_operand_type = !if(!eq(space, "tensor"), llvm_tmem_ptr_ty,
+                                                      llvm_i64_ty);
+
+    defvar ashift = !if(!eq(ashiftid, 1), ".ashift", "");
+    defvar collector_usage_a_range = !if(!eq(ashiftid, 1), 2, 4);
+
+    def NVVM_TCGEN05_MMA_NAME<"", space, ashift, "">.record:
+          DefaultAttrsIntrinsic<[],
+            !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                         a_operand_type,     // 1. a
+                         llvm_i64_ty,        // 2. b
+                         llvm_i32_ty,        // 3. idesc
+                         llvm_i1_ty],        // 4. enable_inp_d
+                        // flags
+                        [llvm_i32_ty,        // 5. kind
+                         llvm_i32_ty,        // 6. cta_group
+                         llvm_i32_ty]),      // 7. collector_usage_a
+            !listconcat([IntrArgMemOnly,
+                         WriteOnly<ArgIndex<0>>],
+                        !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                        [ImmArg<ArgIndex<5>>, Range<ArgIndex<5>, 0, 4>,
+                         ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 1, 3>,
+                         ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, collector_usage_a_range>]),
+            NVVM_TCGEN05_MMA_NAME<"", space, ashift, "">.intr>;
+
+    def NVVM_TCGEN05_MMA_NAME<".sp", space, ashift, "">.record:
+          DefaultAttrsIntrinsic<[],
+            !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                         a_operand_type,     // 1. a
+                         llvm_i64_ty,        // 2. b
+                         llvm_i32_ty,        // 3. idesc
+                         llvm_i1_ty,         // 4. enable_inp_d
+                         llvm_tmem_ptr_ty],  // 5. spmetadata
+                        // flags
+                        [llvm_i32_ty,        // 6. kind
+                         llvm_i32_ty,        // 7. cta_group
+                         llvm_i32_ty]),      // 8. collector_usage_a
+            !listconcat([IntrArgMemOnly,
+                         WriteOnly<ArgIndex<0>>],
+                        !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                        [ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 0, 4>,
+                         ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 1, 3>,
+                         ImmArg<ArgIndex<8>>, Range<ArgIndex<8>, 0, collector_usage_a_range>]),
+            NVVM_TCGEN05_MMA_NAME<".sp", space, ashift, "">.intr>;
+
+    // scale_d
+    foreach kind = ["f16", "tf32"] in {
+      def NVVM_TCGEN05_MMA_NAME<"", space, ashift, "." # kind # ".scale_d">.record: 
+            DefaultAttrsIntrinsic<[],
+              !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                           a_operand_type,     // 1. a
+                           llvm_i64_ty,        // 2. b
+                           llvm_i32_ty,        // 3. idesc
+                           llvm_i1_ty,         // 4. enable_inp_d
+                           llvm_i64_ty],       // 5. scale_d_imm
+                          // flags
+                          [llvm_i32_ty,        // 6. cta_group
+                           llvm_i32_ty]),      // 7. collector_usage_a
+              !listconcat([IntrArgMemOnly,
+                           WriteOnly<ArgIndex<0>>],
+                          !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                          [ImmArg<ArgIndex<5>>, Range<ArgIndex<5>, 0, 16>,
+                           ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 1, 3>,
+                           ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, collector_usage_a_range>]),
+              NVVM_TCGEN05_MMA_NAME<"", space, ashift, "." # kind # ".scale_d">.intr>;
+
+      def NVVM_TCGEN05_MMA_NAME<".sp", space, ashift, "." # kind # ".scale_d">.record: 
+            DefaultAttrsIntrinsic<[],
+              !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                           a_operand_type,     // 1. a
+                           llvm_i64_ty,        // 2. b
+                           llvm_i32_ty,        // 3. idesc
+                           llvm_i1_ty,         // 4. enable_inp_d
+                           llvm_tmem_ptr_ty,   // 5. spmetadata
+                           llvm_i64_ty],       // 6. scale_d_imm
+                            // flags
+                          [llvm_i32_ty,        // 7. cta_group
+                           llvm_i32_ty]),      // 8. collector_usage_a
+              !listconcat([IntrArgMemOnly,
+                           WriteOnly<ArgIndex<0>>],
+                          !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                          [ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 0, 16>,
+                           ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 1, 3>,
+                           ImmArg<ArgIndex<8>>, Range<ArgIndex<8>, 0, collector_usage_a_range>]),
+                NVVM_TCGEN05_MMA_NAME<".sp", space, ashift, "." # kind # ".scale_d">.intr>;
+    }
+  }
+}
+
+//
+// tcgen05.mma disable_output_lane intrinsics
+//
+foreach space = ["tensor", "shared"] in {
+  foreach ashiftid = !if(!eq(space, "tensor"), [0, 1], [0]) in {
+  defvar a_operand_type = !if(!eq(space, "tensor"),
+                                llvm_tmem_ptr_ty,
+                                llvm_i64_ty);
+  defvar ashift = !if(!eq(ashiftid, 1), ".ashift", "");
+  defvar collector_usage_a_range = !if(!eq(ashiftid, 1), 2, 4);
+
+  def NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<"", space, 1, ashift>.record:
+        DefaultAttrsIntrinsic<[],
+          !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                       a_operand_type,     // 1. a
+                       llvm_i64_ty,        // 2. b
+                       llvm_i32_ty,        // 3. idesc
+                       llvm_i1_ty,         // 4. enable_inp_d
+                       llvm_v4i32_ty],     // 5. disable output lane
+                      // flags
+                      [llvm_i32_ty,        // 6. kind
+                       llvm_i32_ty]),      // 7. collector_usage_a
+          !listconcat([IntrArgMemOnly,
+                       WriteOnly<ArgIndex<0>>],
+                      !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                      [ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 0, 4>,
+                       ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, collector_usage_a_range>]),
+          NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<"", space, 1, ashift>.intr>;
+
+  def NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<"", space, 2, ashift>.record:
+        DefaultAttrsIntrinsic<[],
+          !listconcat([llvm_tmem_ptr_ty,    // 0. dtmem
+                       a_operand_type,      // 1. a
+                       llvm_i64_ty,         // 2. b
+                       llvm_i32_ty,         // 3. idesc
+                       llvm_i1_ty,          // 4. enable_inp_d
+                       llvm_v8i32_ty],      // 5. disable output lane
+                        // flags
+                      [llvm_i32_ty,         // 6. kind
+                       llvm_i32_ty]),       // 7. collector_usage_a
+          !listconcat([IntrArgMemOnly,
+                       WriteOnly<ArgIndex<0>>],
+                       !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                       [ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 0, 4>,
+                        ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, collector_usage_a_range>]),
+          NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<"", space, 2, ashift>.intr>;
+
+    def NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<".sp", space, 1, ashift>.record:
+          DefaultAttrsIntrinsic<[],
+            !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                         a_operand_type,     // 1. a
+                         llvm_i64_ty,        // 2. b
+                         llvm_i32_ty,        // 3. idesc
+                         llvm_i1_ty,         // 4. enable_inp_d
+                         llvm_tmem_ptr_ty,   // 5. spmetadata
+                         llvm_v4i32_ty],     // 6. disable output lane
+                        // flags
+                        [llvm_i32_ty,        // 7. kind
+                         llvm_i32_ty]),      // 8. collector_usage_a
+            !listconcat([IntrArgMemOnly,
+                         WriteOnly<ArgIndex<0>>],
+                        !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                        [ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, 4>,
+                         ImmArg<ArgIndex<8>>, Range<ArgIndex<8>, 0, collector_usage_a_range>]),
+            NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<".sp", space, 1, ashift>.intr>;
+
+  def NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<".sp", space, 2, ashift>.record:
+        DefaultAttrsIntrinsic<[],
+          !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                       a_operand_type,     // 1. a
+                       llvm_i64_ty,        // 2. b
+                       llvm_i32_ty,        // 3. idesc
+                       llvm_i1_ty,         // 4. enable_inp_d
+                       llvm_tmem_ptr_ty,   // 5. spmetadata
+                       llvm_v8i32_ty],     // 6. disable output lane
+                        // flags
+                      [llvm_i32_ty,        // 7. kind
+                       llvm_i32_ty]),      // 8. collector_usage_a
+          !listconcat([IntrArgMemOnly,
+                       WriteOnly<ArgIndex<0>>],
+                      !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                      [ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, 4>,
+                       ImmArg<ArgIndex<8>>, Range<ArgIndex<8>, 0, collector_usage_a_range>]),
+          NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<".sp", space, 2, ashift>.intr>;
+
+    // scale-input-d
+    foreach kind = ["f16", "tf32"] in {
+      def NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<"", space, 1, ashift, "." # kind # ".scale_d">.record:
+            DefaultAttrsIntrinsic<[],
+              !listconcat([llvm_tmem_ptr_ty,    // 0. dtmem
+                           a_operand_type,      // 1. a
+                           llvm_i64_ty,         // 2. b
+                           llvm_i32_ty,         // 3. idesc
+                           llvm_i1_ty,          // 4. enable_inp_d
+                           llvm_i64_ty,         // 5. scale_d_imm
+                           llvm_v4i32_ty],      // 6. disable output lane
+                            // flags
+                          [llvm_i32_ty]),       // 7. collector_usage_a
+              !listconcat([IntrArgMemOnly,
+                           WriteOnly<ArgIndex<0>>],
+                          !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                          [ImmArg<ArgIndex<5>>, Range<ArgIndex<5>, 0, 16>,
+                           ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, collector_usage_a_range>]),
+              NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<"", space, 1, ashift, "." # kind # ".scale_d">.intr>;
+
+      def NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<"", space, 2, ashift, "." # kind # ".scale_d">.record:
+            DefaultAttrsIntrinsic<[],
+              !listconcat([llvm_tmem_ptr_ty,    // 0. dtmem
+                           a_operand_type,      // 1. a
+                           llvm_i64_ty,         // 2. b
+                           llvm_i32_ty,         // 3. idesc
+                           llvm_i1_ty,          // 4. enable_inp_d
+                           llvm_i64_ty,         // 5. scale_d_imm
+                           llvm_v8i32_ty],      // 6. disable output lane
+                            // flags
+                          [llvm_i32_ty]),       // 7. collector_usage_a
+              !listconcat([IntrArgMemOnly,
+                           WriteOnly<ArgIndex<0>>],
+                          !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                          [ImmArg<ArgIndex<5>>, Range<ArgIndex<5>, 0, 16>,
+                           ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, collector_usage_a_range>]),
+              NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<"", space, 2, ashift, "." # kind # ".scale_d">.intr>;
+
+      def NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<".sp", space, 1, ashift, "." # kind # ".scale_d">.record:
+            DefaultAttrsIntrinsic<[],
+              !listconcat([llvm_tmem_ptr_ty,     // 0. dtmem
+                           a_operand_type,       // 1. a
+                           llvm_i64_ty,          // 2. b
+                           llvm_i32_ty,          // 3. idesc
+                           llvm_i1_ty,           // 4. enable_inp_d
+                           llvm_tmem_ptr_ty,     // 5. spmetadata
+                           llvm_i64_ty,          // 6. scale_d_imm
+                           llvm_v4i32_ty],       // 7. disable output lane
+                            // flags
+                          [llvm_i32_ty]),        // 8. collector_usage_a
+              !listconcat([IntrArgMemOnly,
+                           WriteOnly<ArgIndex<0>>],
+                          !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                          [ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 0, 16>,
+                           ImmArg<ArgIndex<8>>, Range<ArgIndex<8>, 0, collector_usage_a_range>]),
+              NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<".sp", space, 1, ashift, "." # kind # ".scale_d">.intr>;
+
+      def NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<".sp", space, 2, ashift, "." # kind # ".scale_d">.record:
+            DefaultAttrsIntrinsic<[],
+              !listconcat([llvm_tmem_ptr_ty,    // 0. dtmem
+                           a_operand_type,      // 1. a
+                           llvm_i64_ty,         // 2. b
+                           llvm_i32_ty,         // 3. idesc
+                           llvm_i1_ty,          // 4. enable_inp_d
+                           llvm_tmem_ptr_ty,    // 5. spmetadata
+                           llvm_i64_ty,         // 6. scale_d_imm
+                           llvm_v8i32_ty],      // 7. disable output lane
+                            // flags
+                          [llvm_i32_ty]),       // 8. collector_usage_a
+              !listconcat([IntrArgMemOnly,
+                           WriteOnly<ArgIndex<0>>],
+                          !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                          [ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 0, 16>,
+                           ImmArg<ArgIndex<8>>, Range<ArgIndex<8>, 0, collector_usage_a_range>]),
+              NVVM_TCGEN05_MMA_DISABLE_OUTPUT_LANE_NAME<".sp", space, 2, ashift, "." # kind # ".scale_d">.intr>;
+    }
+  }
+}
+
+//
+// tcgen05.mma block_scale intrinsics
+//
+foreach sp = ["", ".sp"] in {
+  foreach space = ["tensor", "shared"] in {
+    foreach kind = ["mxf8f6f4", "mxf4", "mxf4nvf4"] in {
+      foreach scale_vec_size = ["", ".block16", ".block32"] in {
+        defvar a_operand_type = !if(!eq(space, "tensor"), llvm_tmem_ptr_ty,
+                                                          llvm_i64_ty);
+        defvar CtaGroupIdx = !if(!eq(sp, ".sp"), 8, 7);
+        defvar CollectorUsageIdx = !if(!eq(sp, ".sp"), 9, 8);
+
+        if NVVM_TCGEN05_MMA_BLOCKSCALE_SUPPORTED<kind, scale_vec_size>.ret then {
+          def NVVM_TCGEN05_MMA_BLOCKSCALE_NAME<sp, space, kind, scale_vec_size>.record: DefaultAttrsIntrinsic<[],
+            !listconcat([llvm_tmem_ptr_ty,               // dtmem
+                         a_operand_type,                 // a
+                         llvm_i64_ty,                    // b
+                         llvm_i32_ty,                    // idesc
+                         llvm_i1_ty],                    // enable_inp_d
+                        !if(!eq(sp, ".sp"),
+                                [llvm_tmem_ptr_ty], []), // spmetadata
+                        [llvm_tmem_ptr_ty,               // scale a
+                         llvm_tmem_ptr_ty],              // scale b
+                        // flags
+                        [llvm_i32_ty,                    // cta_group
+                         llvm_i32_ty]                    // collector_usage_a
+                        ),
+            !listconcat([IntrArgMemOnly,
+                         WriteOnly<ArgIndex<0>>],
+                        !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                        [ImmArg<ArgIndex<CtaGroupIdx>>,
+                          Range<ArgIndex<CtaGroupIdx>, 1, 3>,
+                         ImmArg<ArgIndex<CollectorUsageIdx>>,
+                          Range<ArgIndex<CollectorUsageIdx>, 0, 4>]),
+            NVVM_TCGEN05_MMA_BLOCKSCALE_NAME<sp, space, kind, scale_vec_size>.intr>;
+        }
+      }
+    }
+  }
+}
+
+//
+// tcgen05.mma ws intrinsics
+//
+foreach space = ["tensor", "shared"] in {
+  defvar a_operand_type = !if(!eq(space, "tensor"), llvm_tmem_ptr_ty,
+                                                    llvm_i64_ty);
+
+  def NVVM_TCGEN05_MMA_WS_NAME<"", space, "">.record:
+        DefaultAttrsIntrinsic<[],
+          !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                       a_operand_type,     // 1. a
+                       llvm_i64_ty,        // 2. b
+                       llvm_i32_ty,        // 3. idesc
+                       llvm_i1_ty],        // 4. enable_inp_d
+                        // flags
+                      [llvm_i32_ty,        // 5. kind
+                       llvm_i32_ty,        // 6. collector_buffer_b
+                       llvm_i32_ty]),      // 7. collector_usage_b_op
+          !listconcat([IntrArgMemOnly,
+                       WriteOnly<ArgIndex<0>>],
+                      !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                      [ImmArg<ArgIndex<5>>, Range<ArgIndex<5>, 0, 4>,
+                       ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 0, 4>,
+                       ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, 4>]),
+          NVVM_TCGEN05_MMA_WS_NAME<"", space, "">.intr>;
+
+    def NVVM_TCGEN05_MMA_WS_NAME<".sp", space, "">.record:
+          DefaultAttrsIntrinsic<[],
+            !listconcat([llvm_tmem_ptr_ty,    // 0. dtmem
+                         a_operand_type,      // 1. a
+                         llvm_i64_ty,         // 2. b
+                         llvm_i32_ty,         // 3. idesc
+                         llvm_i1_ty,          // 4. enable_inp_d
+                         llvm_tmem_ptr_ty],   // 5. spmetadata
+                          // flags
+                        [llvm_i32_ty,         // 6. kind
+                         llvm_i32_ty,         // 7. collector_buffer_b
+                         llvm_i32_ty]),       // 8. collector_usage_b_op
+            !listconcat([IntrArgMemOnly,
+                         WriteOnly<ArgIndex<0>>],
+                        !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                        [ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 0, 4>,
+                         ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, 4>,
+                         ImmArg<ArgIndex<8>>, Range<ArgIndex<8>, 0, 4>]),
+            NVVM_TCGEN05_MMA_WS_NAME<".sp", space, "">.intr>;
+
+    def NVVM_TCGEN05_MMA_WS_NAME<"", space, ".zero_col_mask">.record:
+          DefaultAttrsIntrinsic<[],
+            !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                         a_operand_type,     // 1. a
+                         llvm_i64_ty,        // 2. b
+                         llvm_i32_ty,        // 3. idesc
+                         llvm_i1_ty,         // 4. enable_inp_d
+                         llvm_i64_ty],       // 5. zero_col_mask
+                          // flags
+                        [llvm_i32_ty,        // 6. kind
+                         llvm_i32_ty,        // 7. collector_buffer_b
+                         llvm_i32_ty]),      // 8. collector_usage_b_op
+            !listconcat([IntrArgMemOnly,
+                         WriteOnly<ArgIndex<0>>],
+                        !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                        [ImmArg<ArgIndex<6>>, Range<ArgIndex<6>, 0, 4>,
+                         ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, 4>,
+                         ImmArg<ArgIndex<8>>, Range<ArgIndex<8>, 0, 4>]),
+              NVVM_TCGEN05_MMA_WS_NAME<"", space, ".zero_col_mask">.intr>;
+
+    def NVVM_TCGEN05_MMA_WS_NAME<".sp", space, ".zero_col_mask">.record:
+          DefaultAttrsIntrinsic<[],
+            !listconcat([llvm_tmem_ptr_ty,   // 0. dtmem
+                         a_operand_type,     // 1. a
+                         llvm_i64_ty,        // 2. b
+                         llvm_i32_ty,        // 3. idesc
+                         llvm_i1_ty,         // 4. enable_inp_d
+                         llvm_tmem_ptr_ty,   // 5. spmetadata
+                         llvm_i64_ty],       // 6. zero_col_mask
+                          // flags
+                        [llvm_i32_ty,        // 7. kind
+                         llvm_i32_ty,        // 8. collector_buffer_b
+                         llvm_i32_ty]),      // 9. collector_usage_b_op
+            !listconcat([IntrArgMemOnly,
+                          WriteOnly<ArgIndex<0>>],
+                        !if(!eq(space, "tensor"), [ReadOnly<ArgIndex<1>>], []),
+                        [ImmArg<ArgIndex<7>>, Range<ArgIndex<7>, 0, 4>,
+                         ImmArg<ArgIndex<8>>, Range<ArgIndex<8>, 0, 4>,
+                         ImmArg<ArgIndex<9>>, Range<ArgIndex<9>, 0, 4>]),
+              NVVM_TCGEN05_MMA_WS_NAME<".sp", space, ".zero_col_mask">.intr>;
 }
 
 } // let TargetPrefix = "nvvm"
