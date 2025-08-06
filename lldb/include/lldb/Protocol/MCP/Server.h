@@ -14,6 +14,7 @@
 #include "lldb/Protocol/MCP/Tool.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Error.h"
+#include <mutex>
 
 namespace lldb_protocol::mcp {
 
