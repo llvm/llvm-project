@@ -263,8 +263,17 @@ exit:
   ret void
 }
 
-; The type-size of the source is different from that of the sink,
-; and the dependence distance is 10.
+;       i16       i32
+; [ . . 0 0 . . 1 1] [ 1 1 0 0 . . 1 1 ]
+;  ^~~^ gep i8 = 1
+;  ^ ~~ ^ iv.2 = iv + 2
+;       ^ ~~~~~ ^ dependence distance = 4
+;              ^ ~~~~~~~~~~~~~~~~~ ^ 8
+;       ^ ~~~~~~~~~~~~~~~~ ^ 8
+;   ^ ~~~~~~~~~~~~~~~~ ^ iv.next = iv + 8
+;
+; Measurements are in bytes.
+;
 ; TODO: Relax the HasSameSize check; the strided accesses are
 ; independent, as determined by both the source size and the sink size.
 ; This test should report no dependencies.
@@ -276,7 +285,7 @@ define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Unknown:
 ; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
-; CHECK-NEXT:            store i8 1, ptr %gep.10.iv, align 1
+; CHECK-NEXT:            store i32 1, ptr %gep.4.iv, align 4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -287,16 +296,17 @@ define void @different_type_sizes_strided_accesses_independent(ptr %dst) {
 ; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
-  %gep.10 = getelementptr nuw i8, ptr %dst, i64 10
+  %gep.4 = getelementptr nuw i8, ptr %dst, i64 4
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.iv = getelementptr i8, ptr %dst, i64 %iv
+  %iv.2 = add nuw nsw i64 %iv, 2
+  %gep.iv = getelementptr i8, ptr %dst, i64 %iv.2
   store i16 0, ptr %gep.iv
-  %gep.10.iv = getelementptr i8, ptr %gep.10, i64 %iv
-  store i8 1, ptr %gep.10.iv
-  %iv.next = add i64 %iv, 8
+  %gep.4.iv = getelementptr i8, ptr %gep.4, i64 %iv.2
+  store i32 1, ptr %gep.4.iv
+  %iv.next = add nuw nsw i64 %iv, 8
   %ec = icmp eq i64 %iv.next, 64
   br i1 %ec, label %exit, label %loop
 
@@ -304,8 +314,16 @@ exit:
   ret void
 }
 
-; Variant of the above, where the source size forbids strided access
-; independence.
+
+;     i16      i64
+; [ . 0 0 . 1 1 1 1] [ 1 x x 1 1 1 1 1 ]
+;  ^~~^ gep i8 = 1
+;  ^~~^ iv.1 = iv + 1
+;     ^ ~~ ^ dependence distance = 3
+;     ^ ~~~~~~~~~~~~~~~~ ^ 8
+;           ^ ~~~~~~~~~~~~~~~~ ^ 8
+;   ^ ~~~~~~~~~~~~~~~~ ^ iv.next = iv + 8
+;
 ; TODO: Relax the HasSameSize check; this test should report a backward
 ; loop-carried dependence.
 define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
@@ -315,8 +333,8 @@ define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
 ; CHECK-NEXT:  Unknown data dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        Unknown:
-; CHECK-NEXT:            store i64 0, ptr %gep.iv, align 4 ->
-; CHECK-NEXT:            store i8 1, ptr %gep.10.iv, align 1
+; CHECK-NEXT:            store i16 0, ptr %gep.iv, align 2 ->
+; CHECK-NEXT:            store i64 1, ptr %gep.3.iv, align 4
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
@@ -327,16 +345,17 @@ define void @different_type_sizes_strided_accesses_dependent(ptr %dst) {
 ; CHECK-NEXT:      Expressions re-written:
 ;
 entry:
-  %gep.10 = getelementptr nuw i8, ptr %dst, i64 10
+  %gep.3 = getelementptr nuw i8, ptr %dst, i64 3
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.iv = getelementptr i8, ptr %dst, i64 %iv
-  store i64 0, ptr %gep.iv
-  %gep.10.iv = getelementptr i8, ptr %gep.10, i64 %iv
-  store i8 1, ptr %gep.10.iv
-  %iv.next = add i64 %iv, 8
+  %iv.1 = add nuw nsw i64 %iv, 1
+  %gep.iv = getelementptr i8, ptr %dst, i64 %iv.1
+  store i16 0, ptr %gep.iv
+  %gep.3.iv = getelementptr i8, ptr %gep.3, i64 %iv.1
+  store i64 1, ptr %gep.3.iv
+  %iv.next = add nuw nsw i64 %iv, 8
   %ec = icmp eq i64 %iv.next, 64
   br i1 %ec, label %exit, label %loop
 
