@@ -45,7 +45,7 @@ define void @test_multiple_autoreleases() {
 ; CHECK-NEXT:    call void @use_object(ptr [[OBJ1]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ1]]) #[[ATTR0]]
 ; CHECK-NEXT:    call void @use_object(ptr [[OBJ2]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ2]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ2]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
 ; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[POOL]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
@@ -212,9 +212,7 @@ define void @test_complex_shadowing() {
 ; CHECK-NEXT:    [[OBJ3:%.*]] = call ptr @create_object()
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ1]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ2]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
-; CHECK-NEXT:    [[INNER2_POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ3]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[INNER2_POOL]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ3]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %obj1 = call ptr @create_object()
@@ -319,11 +317,9 @@ define ptr @function_that_might_autorelease() {
 define void @test_autoreleaseRV_optimization(ptr %obj) {
 ; CHECK-LABEL: define void @test_autoreleaseRV_optimization(
 ; CHECK-SAME: ptr [[OBJ:%.*]]) {
-; CHECK-NEXT:    [[POOL:%.*]] = call ptr @llvm.objc.autoreleasePoolPush() #[[ATTR0]]
 ; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ]]) #[[ATTR0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.objc.autorelease(ptr [[OBJ]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @llvm.objc.autoreleasePoolPop(ptr [[POOL]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
+; CHECK-NEXT:    call void @llvm.objc.release(ptr [[OBJ]]) #[[ATTR0]], !clang.imprecise_release [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %pool = call ptr @llvm.objc.autoreleasePoolPush()
