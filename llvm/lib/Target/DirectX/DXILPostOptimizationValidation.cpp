@@ -154,18 +154,6 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
-std::optional<mcdxbc::RootSignatureDesc>
-getRootSignature(RootSignatureBindingInfo &RSBI,
-                 dxil::ModuleMetadataInfo &MMI) {
-  if (MMI.EntryPropertyVec.size() == 0)
-    return std::nullopt;
-  std::optional<mcdxbc::RootSignatureDesc> RootSigDesc =
-      RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
-  if (!RootSigDesc)
-    return std::nullopt;
-  return RootSigDesc;
-}
-
 static void reportOverlappingRegisters(
     Module &M, const llvm::hlsl::BindingInfoBuilder::Binding &Reported,
     const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping) {
@@ -236,6 +224,18 @@ static void trackRootSigDescBinding(hlsl::BindingInfoBuilder &Builder,
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
                          S.ShaderRegister, S.ShaderRegister, &S);
   }
+}
+
+std::optional<mcdxbc::RootSignatureDesc>
+getRootSignature(RootSignatureBindingInfo &RSBI,
+                 dxil::ModuleMetadataInfo &MMI) {
+  if (MMI.EntryPropertyVec.size() == 0)
+    return std::nullopt;
+  std::optional<mcdxbc::RootSignatureDesc> RootSigDesc =
+      RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
+  if (!RootSigDesc)
+    return std::nullopt;
+  return RootSigDesc;
 }
 
 static void reportErrors(Module &M, DXILResourceMap &DRM,

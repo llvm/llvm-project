@@ -300,6 +300,7 @@ public:
   DXILPrepareModule() : ModulePass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
     AU.addPreserved<RootSignatureAnalysisWrapper>();
     AU.addPreserved<ShaderFlagsAnalysisWrapper>();
     AU.addPreserved<DXILMetadataAnalysisWrapperPass>();
