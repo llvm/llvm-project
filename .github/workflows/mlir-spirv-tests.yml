@@ -24,5 +24,5 @@ jobs:
     with:
       build_target: check-mlir
       projects: mlir
-      extra_cmake_args: '-DLLVM_TARGETS_TO_BUILD="X86" -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON'
+      extra_cmake_args: '-DLLVM_TARGETS_TO_BUILD="host" -DLLVM_INCLUDE_SPIRV_TOOLS_TESTS=ON'
       os_list: '["ubuntu-24.04"]'
