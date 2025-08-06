@@ -78,3 +78,7 @@ add_custom_target(lldb-rpc-generate-sources
   lldb-sbapi-dwarf-enums)
 
 add_dependencies(lldb-rpc-generate-sources clang-resource-headers)
+
+# Add a compile definition to liblldb in order to create a macro for
+# a Clang attribute for lldb-rpc-gen.
+target_compile_definitions(liblldb PUBLIC LLDB_RPC_GEN)

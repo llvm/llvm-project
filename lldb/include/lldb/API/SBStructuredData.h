@@ -104,6 +104,7 @@ public:
   /// \return
   ///     Returns the byte size needed to completely write the string value at
   ///     \a dst in all cases.
+  LLDB_RPC_POINTER_PLUS_LEN
   size_t GetStringValue(char *dst, size_t dst_len) const;
 
   /// Return the generic pointer if this data structure is a generic type.

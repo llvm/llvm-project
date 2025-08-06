@@ -81,6 +81,7 @@ public:
   SBThreadCollection
   GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type);
 
+  LLDB_RPC_POINTER_PLUS_LEN
   size_t GetStopDescription(char *dst_or_null, size_t dst_len);
 
   SBValue GetStopReturnValue();
