@@ -2365,6 +2365,7 @@ static QualType GeneralizeFunctionType(ASTContext &Ctx, QualType Ty) {
 
   llvm_unreachable("Encountered unknown FunctionType");
 }
+
 llvm::ConstantInt *CodeGenModule::CreateKCFITypeId(QualType T) {
   if (getCodeGenOpts().SanitizeCfiICallGeneralizePointers)
     T = GeneralizeFunctionType(getContext(), T);
