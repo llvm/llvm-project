@@ -164,3 +164,31 @@ define void @prop_align_negative_offset_2(ptr %v) {
   %loadUnaligned= load float, ptr %v, align 4
   ret void
 }
+
+define void @prop_align_negative_offset_3(ptr %v) {
+; CHECK-LABEL: define void @prop_align_negative_offset_3(
+; CHECK-SAME: ptr [[V:%.*]]) {
+; CHECK-NEXT:    [[LOADALIGNED:%.*]] = load float, ptr [[V]], align 16
+; CHECK-NEXT:    [[GEPNEGATIVE:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 -8
+; CHECK-NEXT:    [[LOADUNALIGNED:%.*]] = load float, ptr [[GEPNEGATIVE]], align 8
+; CHECK-NEXT:    ret void
+;
+  %loadAligned= load float, ptr %v, align 16
+  %gepNegative = getelementptr inbounds nuw i8, ptr %v, i64 -8
+  %loadUnaligned = load float, ptr %gepNegative, align 4
+  ret void
+}
+
+define void @prop_align_negative_offset_4(ptr %v) {
+; CHECK-LABEL: define void @prop_align_negative_offset_4(
+; CHECK-SAME: ptr [[V:%.*]]) {
+; CHECK-NEXT:    [[LOADALIGNED:%.*]] = load float, ptr [[V]], align 16
+; CHECK-NEXT:    [[GEPNEGATIVE:%.*]] = getelementptr inbounds nuw i8, ptr [[V]], i64 -20
+; CHECK-NEXT:    [[LOADUNALIGNED:%.*]] = load float, ptr [[GEPNEGATIVE]], align 4
+; CHECK-NEXT:    ret void
+;
+  %loadAligned= load float, ptr %v, align 16
+  %gepNegative = getelementptr inbounds nuw i8, ptr %v, i64 -20
+  %loadUnaligned = load float, ptr %gepNegative, align 4
+  ret void
+}
