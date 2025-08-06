@@ -3212,6 +3212,9 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
+  if (Mods != SISrcMods::NONE)
+    return true;
+
   // Convert various sign-bit masks on integers to src mods. Currently disabled
   // for 16-bit types as the codegen replaces the operand without adding a
   // srcmod. This is intentionally finding the cases where we are performing
@@ -3228,7 +3231,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
       (VT != MVT::i32 && VT != MVT::v2i32 && VT != MVT::i64))
     return true;
 
-  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Src->getOperand(1));
+  ConstantSDNode *CRHS = isConstOrConstSplat((Src->getOperand(1)));
   if (!CRHS)
     return true;
 
@@ -3243,8 +3246,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
     Mods |= SISrcMods::ABS;
     Src = Src.getOperand(0);
   } else if (Opc == ISD::OR && AllowAbs && CRHS->getAPIntValue().isSignMask()) {
-    Mods |= SISrcMods::ABS;
-    Mods |= SISrcMods::NEG;
+    Mods |= SISrcMods::ABS | SISrcMods::NEG;
     Src = Src.getOperand(0);
   }
 
