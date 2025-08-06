@@ -468,8 +468,10 @@ module std_core [system] {
   module utility_core {
     module declval            { header "__utility/declval.h" }
     module empty              { header "__utility/empty.h" }
+    module exchange           { header "__utility/exchange.h" }
     module forward            { header "__utility/forward.h" }
     module integer_sequence   { header "__utility/integer_sequence.h" }
+    module move               { header "__utility/move.h" }
   }
 } // module std_core
 
@@ -2185,7 +2187,6 @@ module std [system] {
     module convert_to_integral        { header "__utility/convert_to_integral.h" }
     module element_count              { header "__utility/element_count.h" }
     module exception_guard            { header "__utility/exception_guard.h" }
-    module exchange                   { header "__utility/exchange.h" }
     module forward_like               { header "__utility/forward_like.h" }
     module in_place {
       header "__utility/in_place.h"
@@ -2193,7 +2194,6 @@ module std [system] {
     }
     module is_pointer_in_range        { header "__utility/is_pointer_in_range.h" }
     module is_valid_range             { header "__utility/is_valid_range.h" }
-    module move                       { header "__utility/move.h" }
     module no_destroy                 { header "__utility/no_destroy.h" }
     module pair                       { header "__utility/pair.h" }
     module piecewise_construct        { header "__utility/piecewise_construct.h" }
