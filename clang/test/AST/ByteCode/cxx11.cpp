@@ -301,4 +301,20 @@ namespace NonConstLocal {
   }
 }
 
+#define ATTR __attribute__((require_constant_initialization))
+int somefunc() {
+  const int non_global = 42; // both-note {{declared here}}
+  ATTR static const int &local_init = non_global; // both-error {{variable does not have a constant initializer}} \
+                                                  // both-note {{required by}} \
+                                                  // both-note {{reference to 'non_global' is not a constant expression}}
+}
 
+namespace PR19010 {
+  struct Empty {};
+  struct Empty2 : Empty {};
+  struct Test : Empty2 {
+    constexpr Test() {}
+    Empty2 array[2];
+  };
+  void test() { constexpr Test t; }
+}

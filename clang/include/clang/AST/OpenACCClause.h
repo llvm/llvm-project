@@ -878,23 +878,46 @@ public:
 
 class OpenACCFirstPrivateClause final
     : public OpenACCClauseWithVarList,
-      private llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *> {
+      private llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *,
+                                    VarDecl *> {
   friend TrailingObjects;
 
   OpenACCFirstPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
-                            ArrayRef<Expr *> VarList, SourceLocation EndLoc)
+                            ArrayRef<Expr *> VarList,
+                            ArrayRef<VarDecl *> InitRecipes,
+                            SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::FirstPrivate, BeginLoc,
                                  LParenLoc, EndLoc) {
-    setExprs(getTrailingObjects(VarList.size()), VarList);
+    assert(VarList.size() == InitRecipes.size());
+    setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
+    llvm::uninitialized_copy(InitRecipes, getTrailingObjects<VarDecl *>());
   }
 
 public:
   static bool classof(const OpenACCClause *C) {
     return C->getClauseKind() == OpenACCClauseKind::FirstPrivate;
   }
+
+  // Gets a list of 'made up' `VarDecl` objects that can be used by codegen to
+  // ensure that we properly initialize each of these variables.
+  ArrayRef<VarDecl *> getInitRecipes() {
+    return ArrayRef<VarDecl *>{getTrailingObjects<VarDecl *>(),
+                               getExprs().size()};
+  }
+
+  ArrayRef<VarDecl *> getInitRecipes() const {
+    return ArrayRef<VarDecl *>{getTrailingObjects<VarDecl *>(),
+                               getExprs().size()};
+  }
+
   static OpenACCFirstPrivateClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-         ArrayRef<Expr *> VarList, SourceLocation EndLoc);
+         ArrayRef<Expr *> VarList, ArrayRef<VarDecl *> InitRecipes,
+         SourceLocation EndLoc);
+
+  size_t numTrailingObjects(OverloadToken<Expr *>) const {
+    return getExprs().size();
+  }
 };
 
 class OpenACCDevicePtrClause final

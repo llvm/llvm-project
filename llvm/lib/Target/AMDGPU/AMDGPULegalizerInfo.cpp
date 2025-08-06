@@ -2271,6 +2271,9 @@ Register AMDGPULegalizerInfo::getSegmentAperture(
     const unsigned ApertureRegNo = (AS == AMDGPUAS::LOCAL_ADDRESS)
                                        ? AMDGPU::SRC_SHARED_BASE
                                        : AMDGPU::SRC_PRIVATE_BASE;
+    assert((ApertureRegNo != AMDGPU::SRC_PRIVATE_BASE ||
+            !ST.hasGloballyAddressableScratch()) &&
+           "Cannot use src_private_base with globally addressable scratch!");
     // FIXME: It would be more natural to emit a COPY here, but then copy
     // coalescing would kick in and it would think it's okay to use the "HI"
     // subregister (instead of extracting the HI 32 bits) which is an artificial
@@ -2396,11 +2399,30 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS &&
       (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
        DestAS == AMDGPUAS::PRIVATE_ADDRESS)) {
+    auto castFlatToLocalOrPrivate = [&](const DstOp &Dst) -> Register {
+      if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
+          ST.hasGloballyAddressableScratch()) {
+        // flat -> private with globally addressable scratch: subtract
+        // src_flat_scratch_base_lo.
+        const LLT S32 = LLT::scalar(32);
+        Register SrcLo = B.buildExtract(S32, Src, 0).getReg(0);
+        Register FlatScratchBaseLo =
+            B.buildInstr(AMDGPU::S_MOV_B32, {S32},
+                         {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE_LO)})
+                .getReg(0);
+        MRI.setRegClass(FlatScratchBaseLo, &AMDGPU::SReg_32RegClass);
+        Register Sub = B.buildSub(S32, SrcLo, FlatScratchBaseLo).getReg(0);
+        return B.buildIntToPtr(Dst, Sub).getReg(0);
+      }
+
+      // Extract low 32-bits of the pointer.
+      return B.buildExtract(Dst, Src, 0).getReg(0);
+    };
+
     // For llvm.amdgcn.addrspacecast.nonnull we can always assume non-null, for
     // G_ADDRSPACE_CAST we need to guess.
     if (isa<GIntrinsic>(MI) || isKnownNonNull(Src, MRI, TM, SrcAS)) {
-      // Extract low 32-bits of the pointer.
-      B.buildExtract(Dst, Src, 0);
+      castFlatToLocalOrPrivate(Dst);
       MI.eraseFromParent();
       return true;
     }
@@ -2411,7 +2433,7 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     auto FlatNull = B.buildConstant(SrcTy, 0);
 
     // Extract low 32-bits of the pointer.
-    auto PtrLo32 = B.buildExtract(DstTy, Src, 0);
+    auto PtrLo32 = castFlatToLocalOrPrivate(DstTy);
 
     auto CmpRes =
         B.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Src, FlatNull.getReg(0));
@@ -2425,13 +2447,44 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
       (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
        SrcAS == AMDGPUAS::PRIVATE_ADDRESS)) {
     auto castLocalOrPrivateToFlat = [&](const DstOp &Dst) -> Register {
-      Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
-      if (!ApertureReg.isValid())
-        return false;
-
       // Coerce the type of the low half of the result so we can use
       // merge_values.
       Register SrcAsInt = B.buildPtrToInt(S32, Src).getReg(0);
+
+      if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
+          ST.hasGloballyAddressableScratch()) {
+        // For wave32: Addr = (TID[4:0] << 52) + FLAT_SCRATCH_BASE + privateAddr
+        // For wave64: Addr = (TID[5:0] << 51) + FLAT_SCRATCH_BASE + privateAddr
+        Register AllOnes = B.buildConstant(S32, -1).getReg(0);
+        Register ThreadID = B.buildConstant(S32, 0).getReg(0);
+        ThreadID = B.buildIntrinsic(Intrinsic::amdgcn_mbcnt_lo, {S32})
+                       .addUse(AllOnes)
+                       .addUse(ThreadID)
+                       .getReg(0);
+        if (ST.isWave64()) {
+          ThreadID = B.buildIntrinsic(Intrinsic::amdgcn_mbcnt_hi, {S32})
+                         .addUse(AllOnes)
+                         .addUse(ThreadID)
+                         .getReg(0);
+        }
+        Register ShAmt =
+            B.buildConstant(S32, 57 - 32 - ST.getWavefrontSizeLog2()).getReg(0);
+        Register SrcHi = B.buildShl(S32, ThreadID, ShAmt).getReg(0);
+        Register CvtPtr =
+            B.buildMergeLikeInstr(DstTy, {SrcAsInt, SrcHi}).getReg(0);
+        // Accessing src_flat_scratch_base_lo as a 64-bit operand gives the full
+        // 64-bit hi:lo value.
+        Register FlatScratchBase =
+            B.buildInstr(AMDGPU::S_MOV_B64, {S64},
+                         {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE)})
+                .getReg(0);
+        MRI.setRegClass(FlatScratchBase, &AMDGPU::SReg_64RegClass);
+        return B.buildPtrAdd(Dst, CvtPtr, FlatScratchBase).getReg(0);
+      }
+
+      Register ApertureReg = getSegmentAperture(SrcAS, MRI, B);
+      if (!ApertureReg.isValid())
+        return false;
 
       // TODO: Should we allow mismatched types but matching sizes in merges to
       // avoid the ptrtoint?
@@ -5788,11 +5841,25 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
                                               MachineRegisterInfo &MRI,
                                               MachineIRBuilder &B,
                                               unsigned AddrSpace) const {
-  Register ApertureReg = getSegmentAperture(AddrSpace, MRI, B);
-  auto Unmerge = B.buildUnmerge(LLT::scalar(32), MI.getOperand(2).getReg());
+  const LLT S32 = LLT::scalar(32);
+  auto Unmerge = B.buildUnmerge(S32, MI.getOperand(2).getReg());
   Register Hi32 = Unmerge.getReg(1);
 
-  B.buildICmp(ICmpInst::ICMP_EQ, MI.getOperand(0), Hi32, ApertureReg);
+  if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS &&
+      ST.hasGloballyAddressableScratch()) {
+    Register FlatScratchBaseHi =
+        B.buildInstr(AMDGPU::S_MOV_B32, {S32},
+                     {Register(AMDGPU::SRC_FLAT_SCRATCH_BASE_HI)})
+            .getReg(0);
+    MRI.setRegClass(FlatScratchBaseHi, &AMDGPU::SReg_32RegClass);
+    // Test bits 63..58 against the aperture address.
+    Register XOR = B.buildXor(S32, Hi32, FlatScratchBaseHi).getReg(0);
+    B.buildICmp(ICmpInst::ICMP_ULT, MI.getOperand(0), XOR,
+                B.buildConstant(S32, 1u << 26));
+  } else {
+    Register ApertureReg = getSegmentAperture(AddrSpace, MRI, B);
+    B.buildICmp(ICmpInst::ICMP_EQ, MI.getOperand(0), Hi32, ApertureReg);
+  }
   MI.eraseFromParent();
   return true;
 }

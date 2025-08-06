@@ -27,8 +27,9 @@ transforms to:
   virtual auto f3() const && -> float = delete;
   auto lambda = []() -> void {};
 
-Known Limitations
------------------
+
+Limitations
+-----------
 
 The following categories of return types cannot be rewritten currently:
 

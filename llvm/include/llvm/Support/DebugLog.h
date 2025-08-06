@@ -41,80 +41,31 @@ namespace llvm {
 //
 #define LDBG(...) _GET_LDBG_MACRO(__VA_ARGS__)(__VA_ARGS__)
 
-// Helper macros to choose the correct macro based on the number of arguments.
-#define LDBG_FUNC_CHOOSER(_f1, _f2, ...) _f2
-#define LDBG_FUNC_RECOMPOSER(argsWithParentheses)                              \
-  LDBG_FUNC_CHOOSER argsWithParentheses
-#define LDBG_CHOOSE_FROM_ARG_COUNT(...)                                        \
-  LDBG_FUNC_RECOMPOSER((__VA_ARGS__, LDBG_LOG_LEVEL, ))
-#define LDBG_NO_ARG_EXPANDER() , LDBG_LOG_LEVEL_1
-#define _GET_LDBG_MACRO(...)                                                   \
-  LDBG_CHOOSE_FROM_ARG_COUNT(LDBG_NO_ARG_EXPANDER __VA_ARGS__())
-
-// Dispatch macros to support the `level` argument or none (default to 1)
-#define LDBG_LOG_LEVEL(LEVEL)                                                  \
-  DEBUGLOG_WITH_STREAM_AND_TYPE(llvm::dbgs(), LEVEL, DEBUG_TYPE)
-#define LDBG_LOG_LEVEL_1() LDBG_LOG_LEVEL(1)
-
-#define DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(STREAM, LEVEL, TYPE, FILE,     \
-                                                LINE)                          \
-  for (bool _c =                                                               \
-           (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE, LEVEL));     \
-       _c; _c = false)                                                         \
-    for (::llvm::impl::RAIINewLineStream NewLineStream{(STREAM)}; _c;          \
-         _c = false)                                                           \
-  ::llvm::impl::raw_ldbg_ostream{                                              \
-      ::llvm::impl::computePrefix(TYPE, FILE, LINE, LEVEL), NewLineStream}     \
-      .asLvalue()
-
-#define DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE, FILE)          \
-  DEBUGLOG_WITH_STREAM_TYPE_FILE_AND_LINE(STREAM, LEVEL, TYPE, FILE, __LINE__)
-// When __SHORT_FILE__ is not defined, the File is the full path,
-// otherwise __SHORT_FILE__ is defined in CMake to provide the file name
-// without the path prefix.
-#if defined(__SHORT_FILE__)
-#define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, LEVEL, TYPE)                     \
-  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE, __SHORT_FILE__)
-#else
-#define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, LEVEL, TYPE)                     \
-  DEBUGLOG_WITH_STREAM_TYPE_AND_FILE(STREAM, LEVEL, TYPE,                      \
-                                     ::llvm::impl::getShortFileName(__FILE__))
-#endif
+#define DEBUGLOG_WITH_STREAM_AND_TYPE(STREAM, TYPE)                            \
+  for (bool _c = (::llvm::DebugFlag && ::llvm::isCurrentDebugType(TYPE)); _c;  \
+       _c = false)                                                             \
+  ::llvm::impl::LogWithNewline(TYPE, __FILE__, __LINE__, (STREAM))
 
 namespace impl {
-
-/// A raw_ostream that tracks `\n` and print the prefix after each
-/// newline.
-class LLVM_ABI raw_ldbg_ostream final : public raw_ostream {
-  std::string Prefix;
-  raw_ostream &Os;
-  bool HasPendingNewline;
-
-  /// Split the line on newlines and insert the prefix before each
-  /// newline. Forward everything to the underlying stream.
-  void write_impl(const char *Ptr, size_t Size) final {
-    auto Str = StringRef(Ptr, Size);
-    // Handle the initial prefix.
-    if (!Str.empty())
-      writeWithPrefix(StringRef());
-
-    auto Eol = Str.find('\n');
-    while (Eol != StringRef::npos) {
-      StringRef Line = Str.take_front(Eol + 1);
-      if (!Line.empty())
-        writeWithPrefix(Line);
-      HasPendingNewline = true;
-      Str = Str.drop_front(Eol + 1);
-      Eol = Str.find('\n');
-    }
-    if (!Str.empty())
-      writeWithPrefix(Str);
+class LogWithNewline {
+public:
+  LogWithNewline(const char *debug_type, const char *file, int line,
+                 raw_ostream &os)
+      : os(os) {
+    if (debug_type)
+      os << "[" << debug_type << "] ";
+    os << file << ":" << line << " ";
   }
-  void emitPrefix() { Os.write(Prefix.c_str(), Prefix.size()); }
-  void writeWithPrefix(StringRef Str) {
-    flushEol();
-    Os.write(Str.data(), Str.size());
+  ~LogWithNewline() { os << '\n'; }
+  template <typename T> raw_ostream &operator<<(const T &t) && {
+    return os << t;
   }
+
+  // Prevent copying, as this class manages newline responsibility and is
+  // intended for use as a temporary.
+  LogWithNewline(const LogWithNewline &) = delete;
+  LogWithNewline &operator=(const LogWithNewline &) = delete;
+  LogWithNewline &operator=(LogWithNewline &&) = delete;
 
 public:
   explicit raw_ldbg_ostream(std::string Prefix, raw_ostream &Os,

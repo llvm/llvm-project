@@ -18,11 +18,11 @@ entry:
   %retval = alloca i32, align 4
   %c = alloca [2 x i8], align 1
 
-  ; Memory is poisoned in prologue: F1F1F1F104F3F8F2
-  ; CHECK-UAS: store i64 -866676825215864335, ptr %{{[0-9]+}}
+  ; Memory is poisoned in prologue: F1F1F1F1F8F3F3F3
+  ; CHECK-UAS: store i64 -868082052615769615, ptr %{{[0-9]+}}
   ; CHECK-UAS-SS-NOT: store i64
 
-  call void @llvm.lifetime.start.p0(i64 1, ptr %c)
+  call void @llvm.lifetime.start.p0(i64 2, ptr %c)
   ; Memory is unpoisoned at llvm.lifetime.start: 01
   ; CHECK-UAS: store i8 2, ptr %{{[0-9]+}}
 
@@ -30,7 +30,7 @@ entry:
   store volatile i32 0, ptr %retval
   store volatile i8 0, ptr %ci, align 1
 
-  call void @llvm.lifetime.end.p0(i64 1, ptr %c)
+  call void @llvm.lifetime.end.p0(i64 2, ptr %c)
   ; Memory is poisoned at llvm.lifetime.end: F8
   ; CHECK-UAS: store i8 -8, ptr %{{[0-9]+}}
   ; CHECK-UAS-SS-NOT: store i8 -8,

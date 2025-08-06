@@ -752,6 +752,8 @@ bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 
 // Similarly, for local loads.
 bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckLifetime(S, OpPC, Ptr, AK_Read))
+    return false;
   if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK_Read))

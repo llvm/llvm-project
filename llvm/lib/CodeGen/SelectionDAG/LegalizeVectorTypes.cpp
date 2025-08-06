@@ -1152,6 +1152,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_LOAD:
     SplitVecRes_VP_LOAD(cast<VPLoadSDNode>(N), Lo, Hi);
     break;
+  case ISD::VP_LOAD_FF:
+    SplitVecRes_VP_LOAD_FF(cast<VPLoadFFSDNode>(N), Lo, Hi);
+    break;
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     SplitVecRes_VP_STRIDED_LOAD(cast<VPStridedLoadSDNode>(N), Lo, Hi);
     break;
@@ -2225,6 +2228,45 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(LD, 1), Ch);
+}
+
+void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
+                                              SDValue &Hi) {
+  SDLoc dl(LD);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(LD->getValueType(0));
+
+  SDValue Ch = LD->getChain();
+  SDValue Ptr = LD->getBasePtr();
+  Align Alignment = LD->getBaseAlign();
+  SDValue Mask = LD->getMask();
+  SDValue EVL = LD->getVectorLength();
+
+  // Split Mask operand
+  SDValue MaskLo, MaskHi;
+  if (Mask.getOpcode() == ISD::SETCC) {
+    SplitVecRes_SETCC(Mask.getNode(), MaskLo, MaskHi);
+  } else {
+    if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
+      GetSplitVector(Mask, MaskLo, MaskHi);
+    else
+      std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, dl);
+  }
+
+  // Split EVL operand
+  auto [EVLLo, EVLHi] = DAG.SplitEVL(EVL, LD->getValueType(0), dl);
+
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      LD->getPointerInfo(), MachineMemOperand::MOLoad,
+      LocationSize::beforeOrAfterPointer(), Alignment, LD->getAAInfo(),
+      LD->getRanges());
+
+  Lo = DAG.getLoadFFVP(LoVT, dl, Ch, Ptr, MaskLo, EVLLo, MMO);
+
+  // Fill the upper half with poison.
+  Hi = DAG.getUNDEF(HiVT);
+
+  ReplaceValueWith(SDValue(LD, 1), Lo.getValue(1));
+  ReplaceValueWith(SDValue(LD, 2), Lo.getValue(2));
 }
 
 void DAGTypeLegalizer::SplitVecRes_VP_STRIDED_LOAD(VPStridedLoadSDNode *SLD,
@@ -4707,6 +4749,9 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_LOAD:
     Res = WidenVecRes_VP_LOAD(cast<VPLoadSDNode>(N));
     break;
+  case ISD::VP_LOAD_FF:
+    Res = WidenVecRes_VP_LOAD_FF(cast<VPLoadFFSDNode>(N));
+    break;
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     Res = WidenVecRes_VP_STRIDED_LOAD(cast<VPStridedLoadSDNode>(N));
     break;
@@ -6160,6 +6205,29 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_LOAD(VPLoadSDNode *N) {
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_VP_LOAD_FF(VPLoadFFSDNode *N) {
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  SDValue Mask = N->getMask();
+  SDValue EVL = N->getVectorLength();
+  SDLoc dl(N);
+
+  // The mask should be widened as well
+  assert(getTypeAction(Mask.getValueType()) ==
+             TargetLowering::TypeWidenVector &&
+         "Unable to widen binary VP op");
+  Mask = GetWidenedVector(Mask);
+  assert(Mask.getValueType().getVectorElementCount() ==
+             TLI.getTypeToTransformTo(*DAG.getContext(), Mask.getValueType())
+                 .getVectorElementCount() &&
+         "Unable to widen vector load");
+
+  SDValue Res = DAG.getLoadFFVP(WidenVT, dl, N->getChain(), N->getBasePtr(),
+                                Mask, EVL, N->getMemOperand());
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  ReplaceValueWith(SDValue(N, 2), Res.getValue(2));
   return Res;
 }
 

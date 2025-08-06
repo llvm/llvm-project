@@ -530,27 +530,28 @@ public:
   /// bodies.
   IfBuilder genIfOp(mlir::Location loc, mlir::TypeRange results,
                     mlir::Value cdt, bool withElseRegion) {
-    auto op = create<fir::IfOp>(loc, results, cdt, withElseRegion);
+    auto op = fir::IfOp::create(*this, loc, results, cdt, withElseRegion);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with no "else" region, and no result values.
   /// Usage: genIfThen(loc, cdt).genThen(lambda).end();
   IfBuilder genIfThen(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, false);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, false);
     return IfBuilder(op, *this);
   }
 
   /// Create an IfOp with an "else" region, and no result values.
   /// Usage: genIfThenElse(loc, cdt).genThen(lambda).genElse(lambda).end();
   IfBuilder genIfThenElse(mlir::Location loc, mlir::Value cdt) {
-    auto op = create<fir::IfOp>(loc, mlir::TypeRange(), cdt, true);
+    auto op = fir::IfOp::create(*this, loc, mlir::TypeRange(), cdt, true);
     return IfBuilder(op, *this);
   }
 
   mlir::Value genNot(mlir::Location loc, mlir::Value boolean) {
-    return create<mlir::arith::CmpIOp>(loc, mlir::arith::CmpIPredicate::eq,
-                                       boolean, createBool(loc, false));
+    return mlir::arith::CmpIOp::create(*this, loc,
+                                       mlir::arith::CmpIPredicate::eq, boolean,
+                                       createBool(loc, false));
   }
 
   /// Generate code testing \p addr is not a null address.
@@ -641,7 +642,7 @@ public:
   mlir::Value createUnsigned(mlir::Location loc, mlir::Type resultType,
                              mlir::Value left, mlir::Value right) {
     if (!resultType.isIntOrFloat())
-      return create<OpTy>(loc, resultType, left, right);
+      return OpTy::create(*this, loc, resultType, left, right);
     mlir::Type signlessType = mlir::IntegerType::get(
         getContext(), resultType.getIntOrFloatBitWidth(),
         mlir::IntegerType::SignednessSemantics::Signless);
@@ -654,7 +655,7 @@ public:
       right = createConvert(loc, signlessType, right);
       opResType = signlessType;
     }
-    mlir::Value result = create<OpTy>(loc, opResType, left, right);
+    mlir::Value result = OpTy::create(*this, loc, opResType, left, right);
     if (resultType.isUnsignedInteger())
       result = createConvert(loc, resultType, result);
     return result;
@@ -666,7 +667,7 @@ public:
                             mlir::Value ptr1, mlir::Value ptr2) {
     ptr1 = createConvert(loc, getIndexType(), ptr1);
     ptr2 = createConvert(loc, getIndexType(), ptr2);
-    return create<mlir::arith::CmpIOp>(loc, predicate, ptr1, ptr2);
+    return mlir::arith::CmpIOp::create(*this, loc, predicate, ptr1, ptr2);
   }
 
 private:

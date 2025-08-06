@@ -8761,6 +8761,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *FPC = cast<OpenACCFirstPrivateClause>(C);
     writeSourceLocation(FPC->getLParenLoc());
     writeOpenACCVarList(FPC);
+
+    for (VarDecl *VD : FPC->getInitRecipes())
+      AddDeclRef(VD);
     return;
   }
   case OpenACCClauseKind::Attach: {
