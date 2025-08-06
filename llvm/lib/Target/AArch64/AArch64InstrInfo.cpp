@@ -5883,7 +5883,7 @@ static void appendConstantExpr(SmallVectorImpl<char> &Expr, int64_t Constant,
 
 // Convenience function to create a DWARF expression for a register.
 static void appendReadRegExpr(SmallVectorImpl<char> &Expr, unsigned RegNum) {
-  Expr.push_back(dwarf::DW_OP_bregx);
+  Expr.push_back((char)dwarf::DW_OP_bregx);
   appendLEB128<LEB128Sign::Unsigned>(Expr, RegNum);
   Expr.push_back(0);
 }
