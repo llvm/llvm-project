@@ -35,6 +35,6 @@ add_header_library(
   HDRS
     libc_constraint_handler.h
   DEPENDS
-    libc.src.__support.annex_k.abort_handler_s
+    .abort_handler_s
     libc.hdr.types.errno_t
 )

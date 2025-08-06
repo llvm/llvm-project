@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_ANNEX_K_LIBC_CONSTRAINT_HANDER_H
 #define LLVM_LIBC_SRC___SUPPORT_ANNEX_K_LIBC_CONSTRAINT_HANDER_H
 
+#include "abort_handler_s.h"
 #include "hdr/types/constraint_handler_t.h"
-#include "src/__support/annex_k/abort_handler_s.h"
 
 namespace LIBC_NAMESPACE_DECL {
 

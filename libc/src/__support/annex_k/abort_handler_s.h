@@ -21,7 +21,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LIBC_INLINE static void abort_handler_s(const char *__restrict msg,
-                                        void *__restrict ptr, errno_t error) {
+                                        [[maybe_unused]] void *__restrict ptr,
+                                        errno_t error) {
   libc_errno = error;
   fprintf(stderr, "abort_handler_s was called in response to a "
                   "runtime-constraint violation.\n\n");

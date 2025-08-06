@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_ANNEX_K_HELPER_MACROS_H
 #define LLVM_LIBC_SRC___SUPPORT_ANNEX_K_HELPER_MACROS_H
 
-#include "libc_constraint_hander.h"
+#include "libc_constraint_handler.h"
 
 #define _CONSTRAINT_VIOLATION(msg, error_code, ret_code)                       \
   {                                                                            \

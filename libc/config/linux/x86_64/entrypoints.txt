@@ -198,6 +198,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
+    libc.src.stdlib.set_constraint_handler_s
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
@@ -1131,6 +1132,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
     libc.src.stdio.fopen
+    libc.src.stdio.fopen_s
     libc.src.stdio.fopencookie
     libc.src.stdio.fputc
     libc.src.stdio.fputs
@@ -1166,6 +1168,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.quick_exit
+    libc.src.stdlib.set_constraint_handler_s
 
     # signal.h entrypoints
     libc.src.signal.kill

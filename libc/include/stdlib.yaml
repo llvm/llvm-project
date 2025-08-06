@@ -17,6 +17,7 @@ types:
   - type_name: lldiv_t
   - type_name: locale_t
   - type_name: size_t
+  - type_name: rsize_t
   - type_name: errno_t
   - type_name: constraint_handler_t
 enums: []
@@ -188,6 +189,22 @@ functions:
     return_type: constraint_handler_t
     arguments:
       - type: constraint_handler_t
+  - name: abort_handler_s
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: const char *__restrict
+      - type: void *__restrict
+      - type: errno_t
+  - name: ignore_handler_s
+    standards:
+      - stdc
+    return_type: void
+    arguments:
+      - type: const char *__restrict
+      - type: void *__restrict
+      - type: errno_t
   - name: srand
     standards:
       - stdc
