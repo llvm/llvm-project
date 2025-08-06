@@ -779,6 +779,16 @@ class DeclOrStmtAttr : InheritableAttr;
 /// An attribute class for HLSL Annotations.
 class HLSLAnnotationAttr : InheritableAttr;
 
+class HLSLSemanticAttr<bit Indexable> : HLSLAnnotationAttr {
+  bit SemanticIndexable = Indexable;
+  int SemanticIndex = 0;
+  bit SemanticExplicitIndex = 0;
+
+  let Spellings = [];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
+  let LangOpts = [HLSL];
+}
+
 /// A target-specific attribute.  This class is meant to be used as a mixin
 /// with InheritableAttr or Attr depending on the attribute's needs.
 class TargetSpecificAttr<TargetSpec target> {
@@ -4889,27 +4899,6 @@ def HLSLNumThreads: InheritableAttr {
   let Documentation = [NumThreadsDocs];
 }
 
-def HLSLSV_GroupThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_groupthreadid">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_GroupThreadIDDocs];
-}
-
-def HLSLSV_GroupID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_groupid">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_GroupIDDocs];
-}
-
-def HLSLSV_GroupIndex: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_groupindex">];
-  let Subjects = SubjectList<[ParmVar, GlobalVar]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_GroupIndexDocs];
-}
-
 def HLSLVkBinding : InheritableAttr {
   let Spellings = [CXX11<"vk", "binding">];
   let Subjects = SubjectList<[HLSLBufferObj, ExternalGlobalVar], ErrorDiag>;
@@ -4968,11 +4957,33 @@ def HLSLResourceBinding: InheritableAttr {
   }];
 }
 
-def HLSLSV_Position : HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_position">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
+def HLSLUnparsedSemantic : HLSLAnnotationAttr {
+  let Spellings = [];
+  let Args = [DefaultIntArgument<"Index", 0>,
+              DefaultBoolArgument<"ExplicitIndex", 0>];
+  let Subjects = SubjectList<[ParmVar, Field, Function]>;
   let LangOpts = [HLSL];
+  let Documentation = [InternalOnly];
+}
+
+def HLSLSV_Position : HLSLSemanticAttr</* Indexable= */ 1> {
   let Documentation = [HLSLSV_PositionDocs];
+}
+
+def HLSLSV_GroupThreadID : HLSLSemanticAttr</* Indexable= */ 0> {
+  let Documentation = [HLSLSV_GroupThreadIDDocs];
+}
+
+def HLSLSV_GroupID : HLSLSemanticAttr</* Indexable= */ 0> {
+  let Documentation = [HLSLSV_GroupIDDocs];
+}
+
+def HLSLSV_GroupIndex : HLSLSemanticAttr</* Indexable= */ 0> {
+  let Documentation = [HLSLSV_GroupIndexDocs];
+}
+
+def HLSLSV_DispatchThreadID : HLSLSemanticAttr</* Indexable= */ 0> {
+  let Documentation = [HLSLSV_DispatchThreadIDDocs];
 }
 
 def HLSLPackOffset: HLSLAnnotationAttr {
@@ -4985,13 +4996,6 @@ def HLSLPackOffset: HLSLAnnotationAttr {
     return subcomponent * 16 + component * 4;
   }
   }];
-}
-
-def HLSLSV_DispatchThreadID: HLSLAnnotationAttr {
-  let Spellings = [HLSLAnnotation<"sv_dispatchthreadid">];
-  let Subjects = SubjectList<[ParmVar, Field]>;
-  let LangOpts = [HLSL];
-  let Documentation = [HLSLSV_DispatchThreadIDDocs];
 }
 
 def HLSLShader : InheritableAttr {
