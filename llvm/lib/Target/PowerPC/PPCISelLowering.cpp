@@ -9593,12 +9593,14 @@ static bool isValidSplatLoad(const PPCSubtarget &Subtarget, const SDValue &Op,
   return false;
 }
 
-bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN) {
+bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN,
+                     bool IsLittleEndian) {
   assert(BVN.getNumOperands() > 0 && "Unexpected 0-size build vector");
 
   BitMask.clearAllBits();
   EVT VT = BVN.getValueType(0);
-  APInt ConstValue(VT.getSizeInBits(), 0);
+  unsigned VTSize = VT.getSizeInBits();
+  APInt ConstValue(VTSize, 0);
 
   unsigned EltWidth = VT.getScalarSizeInBits();
 
@@ -9608,8 +9610,10 @@ bool isValidMtVsrBmi(APInt &BitMask, BuildVectorSDNode &BVN) {
 
     if (!CN)
       return false;
-
-    ConstValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltWidth), BitPos);
+    // The elements in a vector register are ordered in reverse byte order
+    // between little-endian and big-endian modes.
+    ConstValue.insertBits(CN->getAPIntValue().zextOrTrunc(EltWidth),
+                          IsLittleEndian ? BitPos : VTSize - EltWidth - BitPos);
     BitPos += EltWidth;
   }
 
@@ -9640,7 +9644,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // we do not convert it to MTVSRBMI.
     // The xxleqv instruction sets a vector with all ones.
     // The xxlxor instruction sets a vector with all zeros.
-    if (isValidMtVsrBmi(BitMask, *BVN) && BitMask != 0 && BitMask != 0xffff) {
+    if (isValidMtVsrBmi(BitMask, *BVN, Subtarget.isLittleEndian()) &&
+        BitMask != 0 && BitMask != 0xffff) {
       SDValue SDConstant = DAG.getTargetConstant(BitMask, dl, MVT::i32);
       MachineSDNode *MSDNode =
           DAG.getMachineNode(PPC::MTVSRBMI, dl, MVT::v16i8, SDConstant);

@@ -13,7 +13,7 @@
 # run only the relevant tests.
 #
 
-source ./utils.sh
+source .ci/utils.sh
 
 projects="${1}"
 targets="${2}"

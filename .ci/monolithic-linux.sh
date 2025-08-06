@@ -19,7 +19,7 @@ INSTALL_DIR="${BUILD_DIR}/install"
 
 mkdir -p artifacts/reproducers
 
-# Make sure any clang reproducers will end up as artifactss
+# Make sure any clang reproducers will end up as artifacts
 export CLANG_CRASH_DIAGNOSTICS_DIR=`realpath artifacts/reproducers`
 
 projects="${1}"
