@@ -635,6 +635,39 @@ TEST_F(PatternMatchTest, ZExtSExtSelf) {
   EXPECT_TRUE(m_ZExtOrSExtOrSelf(m_One()).match(One64S));
 }
 
+TEST_F(PatternMatchTest, TruncZextSelf) {
+  LLVMContext &Ctx = IRB.getContext();
+
+  Value *One32 = IRB.getInt32(1);
+  Value *One64 = IRB.getInt64(1);
+  Value *One32T = IRB.CreateTrunc(One64, IRB.getInt32Ty());
+  Value *One64Z = IRB.CreateZExt(One32, IntegerType::getInt64Ty(Ctx));
+  Value *One64S = IRB.CreateSExt(One32, IntegerType::getInt64Ty(Ctx));
+
+  EXPECT_TRUE(m_One().match(One32));
+  EXPECT_TRUE(m_One().match(One64));
+  EXPECT_FALSE(m_One().match(One32T));
+  EXPECT_FALSE(m_One().match(One64Z));
+  EXPECT_FALSE(m_One().match(One64S));
+
+  EXPECT_FALSE(m_Trunc(m_One()).match(One32));
+  EXPECT_TRUE(m_Trunc(m_One()).match(One32T));
+  EXPECT_FALSE(m_Trunc(m_One()).match(One64Z));
+  EXPECT_FALSE(m_Trunc(m_One()).match(One64S));
+
+  EXPECT_FALSE(m_ZExt(m_One()).match(One32));
+  EXPECT_FALSE(m_ZExt(m_One()).match(One64));
+  EXPECT_FALSE(m_ZExt(m_One()).match(One32T));
+  EXPECT_TRUE(m_ZExt(m_One()).match(One64Z));
+  EXPECT_FALSE(m_ZExt(m_One()).match(One64S));
+
+  EXPECT_TRUE(m_TruncOrZExtOrSelf(m_One()).match(One32));
+  EXPECT_TRUE(m_TruncOrZExtOrSelf(m_One()).match(One64));
+  EXPECT_TRUE(m_TruncOrZExtOrSelf(m_One()).match(One32T));
+  EXPECT_TRUE(m_TruncOrZExtOrSelf(m_One()).match(One64Z));
+  EXPECT_FALSE(m_TruncOrZExtOrSelf(m_One()).match(One64S));
+}
+
 TEST_F(PatternMatchTest, BitCast) {
   Value *OneDouble = ConstantFP::get(IRB.getDoubleTy(), APFloat(1.0));
   Value *ScalableDouble = ConstantFP::get(
