@@ -289,9 +289,11 @@ int runFlangTidy(const FlangTidyOptions &options) {
   auto &messages = context.Context->messages();
   filterMessagesWithNoLint(messages, &context);
 
+  bool hasFatalError = messages.AnyFatalError();
+
   semantics.EmitMessages(llvm::outs());
 
-  return 0;
+  return hasFatalError ? 1 : 0;
 }
 
 } // namespace Fortran::tidy
