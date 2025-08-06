@@ -511,4 +511,8 @@ def ReturnLike : TraitList<[
     >
 ]>;
 
+// Use to inject an implementation of getSpeculatability.  Users should not use
+// this directly.
+def Convergent : NativeOpTrait<"Convergent">;
+
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES
