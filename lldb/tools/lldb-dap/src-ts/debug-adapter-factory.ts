@@ -5,6 +5,7 @@ import * as child_process from "child_process";
 import * as fs from "node:fs/promises";
 import { ConfigureButton, OpenSettingsButton } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
+import { LogFilePathProvider, LogType } from "./logging";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -160,12 +161,16 @@ async function getDAPArguments(
  * Creates a new {@link vscode.DebugAdapterExecutable} based on the provided workspace folder and
  * debug configuration. Assumes that the given debug configuration is for a local launch of lldb-dap.
  *
+ * @param logger The {@link vscode.LogOutputChannel} to log setup diagnostics
+ * @param logFilePath The {@link LogFilePathProvider} for determining where to put session logs
  * @param workspaceFolder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
  * @param configuration The {@link vscode.DebugConfiguration} that will be launched
  * @throws An {@link ErrorWithNotification} if something went wrong
  * @returns The {@link vscode.DebugAdapterExecutable} that can be used to launch lldb-dap
  */
 export async function createDebugAdapterExecutable(
+  logger: vscode.LogOutputChannel,
+  logFilePath: LogFilePathProvider,
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
 ): Promise<vscode.DebugAdapterExecutable> {
@@ -176,6 +181,10 @@ export async function createDebugAdapterExecutable(
   let env: { [key: string]: string } = {};
   if (log_path) {
     env["LLDBDAP_LOG"] = log_path;
+  } else if (
+    vscode.workspace.getConfiguration("lldb-dap").get("captureSessionLogs", false)
+  ) {
+    env["LLDBDAP_LOG"] = logFilePath.get(LogType.DEBUG_SESSION);
   }
   const configEnvironment =
     config.get<{ [key: string]: string }>("environment") || {};
@@ -190,6 +199,11 @@ export async function createDebugAdapterExecutable(
   };
   const dbgArgs = await getDAPArguments(workspaceFolder, configuration);
 
+  logger.info(`lldb-dap path: ${dapPath}`);
+  logger.info(`lldb-dap args: ${dbgArgs}`);
+  logger.info(`cwd: ${dbgOptions.cwd}`);
+  logger.info(`env: ${JSON.stringify(dbgOptions.env)}`);
+
   return new vscode.DebugAdapterExecutable(dapPath, dbgArgs, dbgOptions);
 }
 
@@ -200,18 +214,33 @@ export async function createDebugAdapterExecutable(
 export class LLDBDapDescriptorFactory
   implements vscode.DebugAdapterDescriptorFactory
 {
+  constructor(
+    private readonly logger: vscode.LogOutputChannel,
+    private logFilePath: LogFilePathProvider,
+  ) {}
+
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,
     executable: vscode.DebugAdapterExecutable | undefined,
   ): Promise<vscode.DebugAdapterDescriptor | undefined> {
+    this.logger.info(`Creating debug adapter for session "${session.name}"`);
+    this.logger.info(
+      `Session "${session.name}" debug configuration:\n` +
+        JSON.stringify(session.configuration, undefined, 2),
+    );
     if (executable) {
-      throw new Error(
+      const error = new Error(
         "Setting the debug adapter executable in the package.json is not supported.",
       );
+      this.logger.error(error);
+      throw error;
     }
 
     // Use a server connection if the debugAdapterPort is provided
     if (session.configuration.debugAdapterPort) {
+      this.logger.info(
+        `Spawning debug adapter server on port ${session.configuration.debugAdapterPort}`,
+      );
       return new vscode.DebugAdapterServer(
         session.configuration.debugAdapterPort,
         session.configuration.debugAdapterHostname,
@@ -219,6 +248,8 @@ export class LLDBDapDescriptorFactory
     }
 
     return createDebugAdapterExecutable(
+      this.logger,
+      this.logFilePath,
       session.workspaceFolder,
       session.configuration,
     );

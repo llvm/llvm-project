@@ -669,13 +669,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
       // Integer division functions
       // RTABI chapter 4.3.1
-      { RTLIB::SDIV_I8,  RTLIB::__aeabi_idiv__i8 },
-      { RTLIB::SDIV_I16, RTLIB::__aeabi_idiv__i16 },
-      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv__i32},
+      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv },
       { RTLIB::SDIV_I64, RTLIB::__aeabi_ldivmod },
-      { RTLIB::UDIV_I8,  RTLIB::__aeabi_uidiv__i8 },
-      { RTLIB::UDIV_I16, RTLIB::__aeabi_uidiv__i16 },
-      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv__i32 },
+      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv },
       { RTLIB::UDIV_I64, RTLIB::__aeabi_uldivmod },
     };
     // clang-format on
@@ -741,7 +737,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
         {RTLIB::FPROUND_F32_F16, RTLIB::__aeabi_f2h},
-        {RTLIB::FPROUND_F64_F16, RTLIB::__aeabi_d2h},
         {RTLIB::FPEXT_F16_F32, RTLIB::__aeabi_h2f},
     };
 
@@ -20355,7 +20350,8 @@ static bool isIncompatibleReg(const MCPhysReg &PR, MVT VT) {
   if (PR == 0 || VT == MVT::Other)
     return false;
   return (ARM::SPRRegClass.contains(PR) && VT != MVT::f32 && VT != MVT::i32) ||
-         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64);
+         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64 &&
+          !VT.is64BitVector());
 }
 
 using RCPair = std::pair<unsigned, const TargetRegisterClass *>;
@@ -21363,7 +21359,9 @@ bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
 }
 
 void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
-  if (!Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookieLibcall == RTLIB::Unsupported)
     return TargetLowering::insertSSPDeclarations(M);
 
   // MSVC CRT has a global variable holding security cookie.
@@ -21372,23 +21370,32 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
 
   // MSVC CRT has a function to validate security cookie.
   FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-      "__security_check_cookie", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(M.getContext()));
+      getLibcallImplName(SecurityCheckCookieLibcall),
+      Type::getVoidTy(M.getContext()), PointerType::getUnqual(M.getContext()));
   if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
     F->addParamAttr(0, Attribute::AttrKind::InReg);
 }
 
 Value *ARMTargetLowering::getSDagStackGuard(const Module &M) const {
-  // MSVC CRT has a global variable holding security cookie.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
+    // MSVC CRT has a global variable holding security cookie.
+    //
+    // FIXME: We have a libcall entry for the correlated check function, but not
+    // the global name.
     return M.getGlobalVariable("__security_cookie");
+  }
+
   return TargetLowering::getSDagStackGuard(M);
 }
 
 Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
   // MSVC CRT has a function to validate security cookie.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
-    return M.getFunction("__security_check_cookie");
+  RTLIB::LibcallImpl SecurityCheckCookie =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookie != RTLIB::Unsupported)
+    return M.getFunction(getLibcallImplName(SecurityCheckCookie));
   return TargetLowering::getSSPStackGuardCheck(M);
 }
 
