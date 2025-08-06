@@ -33,8 +33,6 @@ public:
   bool isValidState();
 
   template <typename CharType> size_t sizeAs();
-  template <> size_t sizeAs<char8_t>() { return state->total_bytes; }
-  template <> size_t sizeAs<char32_t>() { return 1; }
 
   int push(char8_t utf8_byte);
   int push(char32_t utf32);
@@ -42,8 +40,6 @@ public:
   ErrorOr<char8_t> pop_utf8();
   ErrorOr<char32_t> pop_utf32();
   template <typename CharType> ErrorOr<CharType> pop();
-  template <> ErrorOr<char8_t> pop() { return pop_utf8(); }
-  template <> ErrorOr<char32_t> pop() { return pop_utf32(); }
 };
 
 } // namespace internal
