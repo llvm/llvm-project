@@ -27,11 +27,11 @@ CHECK-NEXT:  }
 CHECK-NEXT: ]
 
 NOSYM-NOT: PseudoReloc
-NOSYM: The symbol table has been stripped
+NOSYM: the symbol table has been stripped
 NOSYM-NOT: PseudoReloc
 
 NORELOC-NOT: PseudoReloc
-NORELOC: The symbols for runtime pseudo-relocation are not found
+NORELOC: the symbols for runtime pseudo-relocation are not found
 NORELOC-NOT: PseudoReloc
 
 

@@ -2012,17 +2012,21 @@ void COFFDumper::printCOFFPseudoReloc() {
   COFFSymbolRef RelocBegin, RelocEnd;
   auto Count = Obj->getNumberOfSymbols();
   if (Count == 0) {
-    W.startLine() << "The symbol table has been stripped\n";
+    W.startLine() << "the symbol table has been stripped\n";
     return;
   }
   for (auto i = 0u;
        i < Count && (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()); ++i) {
     auto Sym = Obj->getSymbol(i);
-    if (Sym.takeError())
+    if (!Sym) {
+      consumeError(Sym.takeError());
       continue;
+    }
     auto Name = Obj->getSymbolName(*Sym);
-    if (Name.takeError())
+    if (!Name) {
+      consumeError(Name.takeError());
       continue;
+    }
     if (*Name == RelocBeginName) {
       if (Sym->getSectionNumber() > 0)
         RelocBegin = *Sym;
@@ -2033,18 +2037,18 @@ void COFFDumper::printCOFFPseudoReloc() {
   }
   if (!RelocBegin.getRawPtr() || !RelocEnd.getRawPtr()) {
     W.startLine()
-        << "The symbols for runtime pseudo-relocation are not found\n";
+        << "the symbols for runtime pseudo-relocation are not found\n";
     return;
   }
 
   ArrayRef<uint8_t> Data;
   auto Section = Obj->getSection(RelocBegin.getSectionNumber());
   if (auto E = Section.takeError()) {
-    reportError(std::move(E), Obj->getFileName());
+    reportWarning(std::move(E), Obj->getFileName());
     return;
   }
   if (auto E = Obj->getSectionContents(*Section, Data)) {
-    reportError(std::move(E), Obj->getFileName());
+    reportWarning(std::move(E), Obj->getFileName());
     return;
   }
   ArrayRef<uint8_t> RawRelocs =
@@ -2060,7 +2064,7 @@ void COFFDumper::printCOFFPseudoReloc() {
   if (RawRelocs.size() < sizeof(HeaderV2) ||
       (memcmp(RawRelocs.data(), &HeaderV2, sizeof(HeaderV2)) != 0)) {
     reportWarning(
-        createStringError("Invalid runtime pseudo-relocation records"),
+        createStringError("invalid runtime pseudo-relocation records"),
         Obj->getFileName());
     return;
   }
@@ -2084,14 +2088,14 @@ void COFFDumper::printCOFFPseudoReloc() {
       for (auto D : Obj->import_directories()) {
         uint32_t RVA;
         if (auto E = D.getImportAddressTableRVA(RVA))
-          reportError(std::move(E), Obj->getFileName());
+          reportWarning(std::move(E), Obj->getFileName());
         if (EntryRVA < RVA)
           continue;
         for (auto S : D.imported_symbols()) {
           if (RVA == EntryRVA) {
             StringRef &NameDst = ImportedSymbols[RVA];
             if (auto E = S.getSymbolName(NameDst))
-              reportError(std::move(E), Obj->getFileName());
+              reportWarning(std::move(E), Obj->getFileName());
             return &NameDst;
           }
           RVA += Obj->is64() ? 8 : 4;
