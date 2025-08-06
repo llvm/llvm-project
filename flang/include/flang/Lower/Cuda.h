@@ -1,4 +1,4 @@
-//===-- Lower/CUDA.h -- CUDA Fortran utilities ------------------*- C++ -*-===//
+//===-- Lower/Cuda.h -- Cuda Fortran utilities ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,7 +15,6 @@
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
-#include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -37,15 +36,6 @@ static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
   }
   return kDefaultAllocator;
 }
-
-void initializeDeviceComponentAllocator(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::semantics::Symbol &sym, const fir::MutableBoxValue &box);
-
-mlir::Type gatherDeviceComponentCoordinatesAndType(
-    fir::FirOpBuilder &builder, mlir::Location loc,
-    const Fortran::semantics::Symbol &sym, fir::RecordType recTy,
-    llvm::SmallVector<mlir::Value> &coordinates);
 
 } // end namespace Fortran::lower
 
