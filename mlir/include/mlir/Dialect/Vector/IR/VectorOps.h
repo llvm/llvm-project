@@ -78,6 +78,7 @@ struct VectorDim {
   bool isScalable;
 };
 
+// Struct used to denote bytes is the unit of alignment.
 struct AlignmentBytes {
   uint64_t alignment = 0;
   AlignmentBytes() = default;
