@@ -80,7 +80,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DATA-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA:       while.body:
-; DATA-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; DATA-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; DATA-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; DATA-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
 ; DATA-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
@@ -127,7 +127,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_NO_LANEMASK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DATA_NO_LANEMASK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_NO_LANEMASK:       while.body:
-; DATA_NO_LANEMASK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; DATA_NO_LANEMASK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; DATA_NO_LANEMASK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; DATA_NO_LANEMASK-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
 ; DATA_NO_LANEMASK-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
@@ -169,7 +169,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DATA_AND_CONTROL-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_AND_CONTROL:       while.body:
-; DATA_AND_CONTROL-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; DATA_AND_CONTROL-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; DATA_AND_CONTROL-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; DATA_AND_CONTROL-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
 ; DATA_AND_CONTROL-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1
@@ -216,7 +216,7 @@ define void @simple_memset_tailfold(i32 %val, ptr %ptr, i64 %n) "target-features
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; DATA_AND_CONTROL_NO_RT_CHECK:       while.body:
-; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    store i32 [[VAL]], ptr [[GEP]], align 4
 ; DATA_AND_CONTROL_NO_RT_CHECK-NEXT:    [[INDEX_NEXT]] = add nsw i64 [[INDEX]], 1

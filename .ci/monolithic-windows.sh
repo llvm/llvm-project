@@ -34,7 +34,7 @@ function at-exit {
   shopt -s nullglob
 
   if [[ "$GITHUB_STEP_SUMMARY" != "" ]]; then
-    python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":window: Windows x64 Test Results" \
+    python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
       $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
   fi
 }
