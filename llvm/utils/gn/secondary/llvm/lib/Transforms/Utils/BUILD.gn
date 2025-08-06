@@ -91,6 +91,7 @@ static_library("Utils") {
     "SimplifyLibCalls.cpp",
     "SizeOpts.cpp",
     "SplitModule.cpp",
+    "SplitModuleByCategory.cpp",
     "StripGCRelocates.cpp",
     "StripNonLineTableDebugInfo.cpp",
     "SymbolRewriter.cpp",

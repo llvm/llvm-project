@@ -155,10 +155,10 @@ define <16 x i32> @PR42819(ptr %a0) {
 define void @PR42833() {
 ; SSE2-LABEL: PR42833:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movl b(%rip), %eax
-; SSE2-NEXT:    movdqa c+128(%rip), %xmm0
 ; SSE2-NEXT:    movdqa c+144(%rip), %xmm2
-; SSE2-NEXT:    addl c+128(%rip), %eax
+; SSE2-NEXT:    movdqa c+128(%rip), %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    addl b(%rip), %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    movd %eax, %xmm3
 ; SSE2-NEXT:    paddd %xmm0, %xmm3
@@ -191,10 +191,10 @@ define void @PR42833() {
 ;
 ; SSE42-LABEL: PR42833:
 ; SSE42:       # %bb.0:
-; SSE42-NEXT:    movl b(%rip), %eax
-; SSE42-NEXT:    movdqa c+128(%rip), %xmm0
 ; SSE42-NEXT:    movdqa c+144(%rip), %xmm1
-; SSE42-NEXT:    addl c+128(%rip), %eax
+; SSE42-NEXT:    movdqa c+128(%rip), %xmm0
+; SSE42-NEXT:    movd %xmm0, %eax
+; SSE42-NEXT:    addl b(%rip), %eax
 ; SSE42-NEXT:    movd %eax, %xmm2
 ; SSE42-NEXT:    paddd %xmm0, %xmm2
 ; SSE42-NEXT:    movdqa d+144(%rip), %xmm3
