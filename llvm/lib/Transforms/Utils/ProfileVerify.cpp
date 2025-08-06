@@ -26,6 +26,18 @@ using namespace llvm;
 static cl::opt<int64_t>
     DefaultFunctionEntryCount("profcheck-default-function-entry-count",
                               cl::init(1000));
+static cl::opt<bool>
+    AnnotateSelect("profcheck-annotate-select", cl::init(true),
+                   cl::desc("Also inject (if missing) and verify MD_prof for "
+                            "`select` instructions"));
+static cl::opt<uint32_t> SelectTrueWeight(
+    "profcheck-default-select-true-weight", cl::init(2U),
+    cl::desc("When annotating `select` instructions, this value will be used "
+             "for the first ('true') case."));
+static cl::opt<uint32_t> SelectFalseWeight(
+    "profcheck-default-select-false-weight", cl::init(3U),
+    cl::desc("When annotating `select` instructions, this value will be used "
+             "for the second ('false') case."));
 namespace {
 class ProfileInjector {
   Function &F;
@@ -82,6 +94,13 @@ bool ProfileInjector::inject() {
     return false;
   bool Changed = false;
   for (auto &BB : F) {
+    if (AnnotateSelect) {
+      for (auto &I : BB) {
+        if (isa<SelectInst>(I) && !I.getMetadata(LLVMContext::MD_prof))
+          setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
+                           /*IsExpected=*/false);
+      }
+    }
     auto *Term = getTerminatorBenefitingFromMDProf(BB);
     if (!Term || Term->getMetadata(LLVMContext::MD_prof))
       continue;
@@ -144,12 +163,18 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
   }
   if (EntryCount->getCount() == 0)
     return PreservedAnalyses::all();
-  for (const auto &BB : F)
+  for (const auto &BB : F) {
+    if (AnnotateSelect) {
+      for (const auto &I : BB)
+        if (isa<SelectInst>(I) && !I.getMetadata(LLVMContext::MD_prof))
+          F.getContext().emitError(
+              "Profile verification failed: select annotation missing");
+    }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))
       if (!Term->getMetadata(LLVMContext::MD_prof))
         F.getContext().emitError(
             "Profile verification failed: branch annotation missing");
-
+  }
   return PreservedAnalyses::all();
 }

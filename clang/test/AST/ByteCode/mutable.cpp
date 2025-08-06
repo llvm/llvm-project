@@ -66,3 +66,11 @@ namespace MutableInConst {
   static_assert(mutableInConst() == 1, "");
 }
 #endif
+
+struct D { mutable int y; }; // both-note {{declared here}}
+constexpr D d1 = { 1 };
+constexpr D d2 = d1; // both-error {{must be initialized by a constant expression}} \
+                     // both-note {{read of mutable member 'y}} \
+                     // both-note {{in call to}}
+
+

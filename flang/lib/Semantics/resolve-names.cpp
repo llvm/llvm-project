@@ -1962,18 +1962,10 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
     llvm_unreachable("Cannot find global scope");
   }()};
 
-  auto findSymbol{[&](const parser::Name &n) {
-    if (auto *s{FindSymbol(n)}) {
-      return s;
-    } else {
-      return FindInScope(globalScope, n);
-    }
-  }};
-
   if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
     if (auto *desg{omp::GetDesignatorFromObj(*object)}) {
       if (auto *name{getDesignatorNameIfDataRef(*desg)}) {
-        if (auto *symbol{findSymbol(*name)}) {
+        if (auto *symbol{FindInScope(globalScope, *name)}) {
           if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
             SayWithDecl(*name, *symbol,
                 "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
