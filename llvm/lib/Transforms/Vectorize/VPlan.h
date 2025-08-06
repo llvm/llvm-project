@@ -1233,26 +1233,15 @@ public:
                       getAsRecipe()->op_begin() + getNumIncoming());
   }
 
-  using const_incoming_block_iterator =
-      mapped_iterator<detail::index_iterator,
-                      std::function<const VPBasicBlock *(size_t)>>;
-  using const_incoming_blocks_range =
-      iterator_range<const_incoming_block_iterator>;
-
-  const_incoming_block_iterator incoming_block_begin() const {
-    return const_incoming_block_iterator(
-        detail::index_iterator(0),
-        [this](size_t Idx) { return getIncomingBlock(Idx); });
-  }
-  const_incoming_block_iterator incoming_block_end() const {
-    return const_incoming_block_iterator(
-        detail::index_iterator(getNumIncoming()),
-        [this](size_t Idx) { return getIncomingBlock(Idx); });
-  }
+  using const_incoming_blocks_range = iterator_range<mapped_iterator<
+      detail::index_iterator, std::function<const VPBasicBlock *(size_t)>>>;
 
   /// Returns an iterator range over the incoming blocks.
   const_incoming_blocks_range incoming_blocks() const {
-    return make_range(incoming_block_begin(), incoming_block_end());
+    std::function<const VPBasicBlock *(size_t)> GetBlock = [this](size_t Idx) {
+      return getIncomingBlock(Idx);
+    };
+    return map_range(index_range(0, getNumIncoming()), GetBlock);
   }
 
   /// Returns an iterator range over pairs of incoming values and corresponding
