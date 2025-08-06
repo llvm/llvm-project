@@ -32,24 +32,18 @@ public:
   bool isEmpty();
   bool isValidState();
 
-  template <typename CharType> size_t sizeAs() {
-    if constexpr (cpp::is_same_v<CharType, char8_t>)
-      return state->total_bytes;
-    else        // char32_t
-      return 1; // every character fits in a single char32_t
-  }
+  template <typename CharType> size_t sizeAs();
+  template <> size_t sizeAs<char8_t>() { return state->total_bytes; }
+  template <> size_t sizeAs<char32_t>() { return 1; }
 
   int push(char8_t utf8_byte);
   int push(char32_t utf32);
 
   ErrorOr<char8_t> pop_utf8();
   ErrorOr<char32_t> pop_utf32();
-  template <typename CharType> ErrorOr<CharType> pop() {
-    if constexpr (cpp::is_same_v<CharType, char8_t>)
-      return pop_utf8();
-    else
-      return pop_utf32();
-  }
+  template <typename CharType> ErrorOr<CharType> pop();
+  template <> ErrorOr<char8_t> pop() { return pop_utf8(); }
+  template <> ErrorOr<char32_t> pop() { return pop_utf32(); }
 };
 
 } // namespace internal
