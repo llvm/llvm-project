@@ -267,7 +267,7 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
           reportOverlappingRegisters(M, ReportedBinding, Overlaping);
         });
     // Next checks require that the root signature definition is valid.
-    if (!HasOverlap){
+    if (!HasOverlap) {
       for (const auto &ResList :
            {std::make_pair(ResourceClass::SRV, DRM.srvs()),
             std::make_pair(ResourceClass::UAV, DRM.uavs()),
