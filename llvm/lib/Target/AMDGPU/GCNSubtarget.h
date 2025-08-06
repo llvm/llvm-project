@@ -187,6 +187,7 @@ protected:
   bool HasFlatBufferGlobalAtomicFaddF64Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
+  bool HasEmulatedSystemScopeAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   bool HasXF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
@@ -950,6 +951,12 @@ public:
     return HasAgentScopeFineGrainedRemoteMemoryAtomics;
   }
 
+  /// \return true is HW emulates system scope atomics unsupported by the PCI-e
+  /// via CAS loop.
+  bool hasEmulatedSystemScopeAtomics() const {
+    return HasEmulatedSystemScopeAtomics;
+  }
+
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
 
   bool hasDefaultComponentBroadcast() const {
@@ -1081,7 +1088,7 @@ public:
   }
 
   bool hasLDSFPAtomicAddF32() const { return GFX8Insts; }
-  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts; }
+  bool hasLDSFPAtomicAddF64() const { return GFX90AInsts || GFX1250Insts; }
 
   /// \returns true if the subtarget has the v_permlanex16_b32 instruction.
   bool hasPermLaneX16() const { return getGeneration() >= GFX10; }
