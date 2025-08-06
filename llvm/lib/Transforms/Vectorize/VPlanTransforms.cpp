@@ -2177,19 +2177,21 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   assert(all_of(Plan.getVF().users(),
                 IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
                         VPWidenIntOrFpInductionRecipe>) &&
-         all_of(Plan.getVFxUF().users(),
+         "User of VF that we can't transform to EVL.");
+  Plan.getVF().replaceAllUsesWith(&EVL);
+
+  assert(all_of(Plan.getVFxUF().users(),
                 [&Plan](VPUser *U) {
-                  // VFxUF users must either be VPWidenPointerInductionRecipe or
-                  // canonical IV increment.
                   return match(U, m_c_Binary<Instruction::Add>(
                                       m_Specific(Plan.getCanonicalIV()),
                                       m_Specific(&Plan.getVFxUF()))) ||
                          isa<VPWidenPointerInductionRecipe>(U);
                 }) &&
-         "User of VF that we can't transform to EVL.");
-  Plan.getVF().replaceAllUsesWith(&EVL);
+         "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
+         "increment of the canonical induction.");
   Plan.getVFxUF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
-    // Don't replace the canonical IV increment.
+    // Only replace uses in VPWidenPointerInductionRecipe; The increment of the
+    // canonical induction must not be updated.
     return isa<VPWidenPointerInductionRecipe>(U);
   });
 
