@@ -3,10 +3,10 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 
-; GCN-LABEL: {{^}}gs_const:
+; GCN-LABEL: {{^}}ps_const:
 ; GCN-NOT: v_cmpx
 ; GCN: s_mov_b64 exec, 0
-define amdgpu_gs void @gs_const() {
+define amdgpu_ps void @ps_const() {
   %tmp = icmp ule i32 0, 3
   %tmp1 = select i1 %tmp, float 1.000000e+00, float -1.000000e+00
   %c1 = fcmp oge float %tmp1, 0.0
@@ -37,7 +37,7 @@ define amdgpu_ps void @vcc_implicit_def(float %arg13, float %arg14) {
 ; GCN-LABEL: {{^}}true:
 ; GCN-NEXT: %bb.
 ; GCN-NEXT: s_endpgm
-define amdgpu_gs void @true() {
+define amdgpu_ps void @true() {
   call void @llvm.amdgcn.kill(i1 true)
   ret void
 }
@@ -45,7 +45,7 @@ define amdgpu_gs void @true() {
 ; GCN-LABEL: {{^}}false:
 ; GCN-NOT: v_cmpx
 ; GCN: s_mov_b64 exec, 0
-define amdgpu_gs void @false() {
+define amdgpu_ps void @false() {
   call void @llvm.amdgcn.kill(i1 false)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
   ret void
@@ -58,7 +58,7 @@ define amdgpu_gs void @false() {
 ; GCN: s_and{{n2|_not1}}_b64 s[0:1], exec, s[0:1]
 ; GCN: s_and{{n2|_not1}}_b64 s[2:3], s[2:3], s[0:1]
 ; GCN: s_and_b64 exec, exec, s[2:3]
-define amdgpu_gs void @and(i32 %a, i32 %b, i32 %c, i32 %d) {
+define amdgpu_ps void @and(i32 %a, i32 %b, i32 %c, i32 %d) {
   %c1 = icmp slt i32 %a, %b
   %c2 = icmp slt i32 %c, %d
   %x = or i1 %c1, %c2
@@ -73,7 +73,7 @@ define amdgpu_gs void @and(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; GCN: s_xor_b64 s[0:1]
 ; GCN: s_and{{n2|_not1}}_b64 s[2:3], s[2:3], s[0:1]
 ; GCN: s_and_b64 exec, exec, s[2:3]
-define amdgpu_gs void @andn2(i32 %a, i32 %b, i32 %c, i32 %d) {
+define amdgpu_ps void @andn2(i32 %a, i32 %b, i32 %c, i32 %d) {
   %c1 = icmp slt i32 %a, %b
   %c2 = icmp slt i32 %c, %d
   %x = xor i1 %c1, %c2
@@ -85,7 +85,7 @@ define amdgpu_gs void @andn2(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 ; GCN-LABEL: {{^}}oeq:
 ; GCN: v_cmp_neq_f32
-define amdgpu_gs void @oeq(float %a) {
+define amdgpu_ps void @oeq(float %a) {
   %c1 = fcmp oeq float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -94,7 +94,7 @@ define amdgpu_gs void @oeq(float %a) {
 
 ; GCN-LABEL: {{^}}ogt:
 ; GCN: v_cmp_nlt_f32
-define amdgpu_gs void @ogt(float %a) {
+define amdgpu_ps void @ogt(float %a) {
   %c1 = fcmp ogt float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -103,7 +103,7 @@ define amdgpu_gs void @ogt(float %a) {
 
 ; GCN-LABEL: {{^}}oge:
 ; GCN: v_cmp_nle_f32
-define amdgpu_gs void @oge(float %a) {
+define amdgpu_ps void @oge(float %a) {
   %c1 = fcmp oge float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -112,7 +112,7 @@ define amdgpu_gs void @oge(float %a) {
 
 ; GCN-LABEL: {{^}}olt:
 ; GCN: v_cmp_ngt_f32
-define amdgpu_gs void @olt(float %a) {
+define amdgpu_ps void @olt(float %a) {
   %c1 = fcmp olt float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -121,7 +121,7 @@ define amdgpu_gs void @olt(float %a) {
 
 ; GCN-LABEL: {{^}}ole:
 ; GCN: v_cmp_nge_f32
-define amdgpu_gs void @ole(float %a) {
+define amdgpu_ps void @ole(float %a) {
   %c1 = fcmp ole float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -130,7 +130,7 @@ define amdgpu_gs void @ole(float %a) {
 
 ; GCN-LABEL: {{^}}one:
 ; GCN: v_cmp_nlg_f32
-define amdgpu_gs void @one(float %a) {
+define amdgpu_ps void @one(float %a) {
   %c1 = fcmp one float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -139,7 +139,7 @@ define amdgpu_gs void @one(float %a) {
 
 ; GCN-LABEL: {{^}}ord:
 ; GCN: v_cmp_o_f32
-define amdgpu_gs void @ord(float %a) {
+define amdgpu_ps void @ord(float %a) {
   %c1 = fcmp ord float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -148,7 +148,7 @@ define amdgpu_gs void @ord(float %a) {
 
 ; GCN-LABEL: {{^}}uno:
 ; GCN: v_cmp_u_f32
-define amdgpu_gs void @uno(float %a) {
+define amdgpu_ps void @uno(float %a) {
   %c1 = fcmp uno float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -157,7 +157,7 @@ define amdgpu_gs void @uno(float %a) {
 
 ; GCN-LABEL: {{^}}ueq:
 ; GCN: v_cmp_lg_f32
-define amdgpu_gs void @ueq(float %a) {
+define amdgpu_ps void @ueq(float %a) {
   %c1 = fcmp ueq float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -166,7 +166,7 @@ define amdgpu_gs void @ueq(float %a) {
 
 ; GCN-LABEL: {{^}}ugt:
 ; GCN: v_cmp_ge_f32
-define amdgpu_gs void @ugt(float %a) {
+define amdgpu_ps void @ugt(float %a) {
   %c1 = fcmp ugt float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -175,7 +175,7 @@ define amdgpu_gs void @ugt(float %a) {
 
 ; GCN-LABEL: {{^}}uge:
 ; GCN: v_cmp_gt_f32_e32 vcc, -1.0
-define amdgpu_gs void @uge(float %a) {
+define amdgpu_ps void @uge(float %a) {
   %c1 = fcmp uge float %a, -1.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -184,7 +184,7 @@ define amdgpu_gs void @uge(float %a) {
 
 ; GCN-LABEL: {{^}}ult:
 ; GCN: v_cmp_le_f32_e32 vcc, -2.0
-define amdgpu_gs void @ult(float %a) {
+define amdgpu_ps void @ult(float %a) {
   %c1 = fcmp ult float %a, -2.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -193,7 +193,7 @@ define amdgpu_gs void @ult(float %a) {
 
 ; GCN-LABEL: {{^}}ule:
 ; GCN: v_cmp_lt_f32_e32 vcc, 2.0
-define amdgpu_gs void @ule(float %a) {
+define amdgpu_ps void @ule(float %a) {
   %c1 = fcmp ule float %a, 2.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -202,7 +202,7 @@ define amdgpu_gs void @ule(float %a) {
 
 ; GCN-LABEL: {{^}}une:
 ; GCN: v_cmp_eq_f32_e32 vcc, 0
-define amdgpu_gs void @une(float %a) {
+define amdgpu_ps void @une(float %a) {
   %c1 = fcmp une float %a, 0.0
   call void @llvm.amdgcn.kill(i1 %c1)
   call void @llvm.amdgcn.s.sendmsg(i32 3, i32 0)
@@ -211,7 +211,7 @@ define amdgpu_gs void @une(float %a) {
 
 ; GCN-LABEL: {{^}}neg_olt:
 ; GCN: v_cmp_gt_f32_e32 vcc, 1.0
-define amdgpu_gs void @neg_olt(float %a) {
+define amdgpu_ps void @neg_olt(float %a) {
   %c1 = fcmp olt float %a, 1.0
   %c2 = xor i1 %c1, 1
   call void @llvm.amdgcn.kill(i1 %c2)

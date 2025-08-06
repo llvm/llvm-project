@@ -2727,7 +2727,7 @@ main_body:
 
 declare void @llvm.amdgcn.kill(i1)
 
-define void @kill_true() {
+define amdgpu_ps void @kill_true() {
 ; CHECK-LABEL: @kill_true(
 ; CHECK-NEXT:    ret void
 ;

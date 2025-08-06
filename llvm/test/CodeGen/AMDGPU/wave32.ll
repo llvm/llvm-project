@@ -1760,7 +1760,7 @@ define amdgpu_ps void @test_kill_i1_terminator_float() #0 {
   ret void
 }
 
-define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d) #0 {
+define amdgpu_ps void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d) #0 {
 ; GFX1032-LABEL: test_kill_i1_terminator_i1:
 ; GFX1032:       ; %bb.0:
 ; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v0, v1
@@ -1769,12 +1769,15 @@ define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d
 ; GFX1032-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX1032-NEXT:    s_andn2_b32 s0, exec_lo, s0
 ; GFX1032-NEXT:    s_andn2_b32 s1, s1, s0
+; GFX1032-NEXT:    s_cbranch_scc0 .LBB32_2
+; GFX1032-NEXT:  ; %bb.1:
 ; GFX1032-NEXT:    s_and_b32 exec_lo, exec_lo, s1
 ; GFX1032-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1032-NEXT:    exp mrt0 off, off, off, off
 ; GFX1032-NEXT:    s_endpgm
-; GFX1032-NEXT:  ; %bb.1:
+; GFX1032-NEXT:  .LBB32_2:
 ; GFX1032-NEXT:    s_mov_b32 exec_lo, 0
+; GFX1032-NEXT:    exp null off, off, off, off done vm
 ; GFX1032-NEXT:    s_endpgm
 ;
 ; GFX1064-LABEL: test_kill_i1_terminator_i1:
@@ -1785,12 +1788,15 @@ define amdgpu_gs void @test_kill_i1_terminator_i1(i32 %a, i32 %b, i32 %c, i32 %d
 ; GFX1064-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
 ; GFX1064-NEXT:    s_andn2_b64 s[0:1], exec, s[0:1]
 ; GFX1064-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[0:1]
+; GFX1064-NEXT:    s_cbranch_scc0 .LBB32_2
+; GFX1064-NEXT:  ; %bb.1:
 ; GFX1064-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; GFX1064-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1064-NEXT:    exp mrt0 off, off, off, off
 ; GFX1064-NEXT:    s_endpgm
-; GFX1064-NEXT:  ; %bb.1:
+; GFX1064-NEXT:  .LBB32_2:
 ; GFX1064-NEXT:    s_mov_b64 exec, 0
+; GFX1064-NEXT:    exp null off, off, off, off done vm
 ; GFX1064-NEXT:    s_endpgm
   %c1 = icmp slt i32 %a, %b
   %c2 = icmp slt i32 %c, %d

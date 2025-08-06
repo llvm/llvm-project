@@ -145,10 +145,10 @@ define amdgpu_kernel void @test_flush_f64_outputs(ptr addrspace(1) %out0, ptr ad
   ret void
 }
 
-; GCN-LABEL: {{^}}kill_gs_const:
+; GCN-LABEL: {{^}}kill_ps_const:
 ; GCN: FloatMode: 240
 ; GCN: IeeeMode: 0
-define amdgpu_gs void @kill_gs_const() {
+define amdgpu_ps void @kill_ps_const() {
 main_body:
   %cmp0 = icmp ule i32 0, 3
   call void @llvm.amdgcn.kill(i1 %cmp0)
