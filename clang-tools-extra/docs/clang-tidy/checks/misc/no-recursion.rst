@@ -14,7 +14,9 @@ References:
 * JPL Institutional Coding Standard for the C Programming Language (JPL DOCID D-60411) rule `2.4 Do not use direct or indirect recursion`.
 * OpenCL Specification, Version 1.2 rule `6.9 Restrictions: i. Recursion is not supported. <https://www.khronos.org/registry/OpenCL/specs/opencl-1.2.pdf>`_.
 
-Limitations:
+
+Limitations
+-----------
 
 * The check does not handle calls done through function pointers
 * The check does not handle C++ destructors

@@ -884,6 +884,8 @@ int OperationName::UnregisteredOpModel::getOpPropertyByteSize() {
 void OperationName::UnregisteredOpModel::initProperties(
     OperationName opName, OpaqueProperties storage, OpaqueProperties init) {
   new (storage.as<Attribute *>()) Attribute();
+  if (init)
+    *storage.as<Attribute *>() = *init.as<Attribute *>();
 }
 void OperationName::UnregisteredOpModel::deleteProperties(
     OpaqueProperties prop) {

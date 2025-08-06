@@ -6484,7 +6484,9 @@ class BaseSIMDThreeSameVectorDot<bit Q, bit U, bits<2> sz, bits<4> opc, string a
               (OpNode (AccumType RegType:$Rd),
                       (InputType RegType:$Rn),
                       (InputType RegType:$Rm)))]> {
-  let AsmString = !strconcat(asm, "{\t$Rd" # kind1 # ", $Rn" # kind2 # ", $Rm" # kind2 # "}");
+
+  let AsmString = !strconcat(asm, "{\t$Rd" # kind1 # ", $Rn" # kind2 # ", $Rm" # kind2 #
+                                  "|" # kind1 # "\t$Rd, $Rn, $Rm}");
 }
 
 multiclass SIMDThreeSameVectorDot<bit U, bit Mixed, string asm, SDPatternOperator OpNode> {
@@ -6507,7 +6509,8 @@ class BaseSIMDThreeSameVectorFML<bit Q, bit U, bit b13, bits<3> size, string asm
               (OpNode (AccumType RegType:$Rd),
                       (InputType RegType:$Rn),
                       (InputType RegType:$Rm)))]> {
-  let AsmString = !strconcat(asm, "{\t$Rd" # kind1 # ", $Rn" # kind2 # ", $Rm" # kind2 # "}");
+  let AsmString = !strconcat(asm, "{\t$Rd" # kind1 # ", $Rn" # kind2 # ", $Rm" # kind2 # 
+                                  "|" # kind1 # "\t$Rd, $Rn, $Rm}");
   let Inst{13} = b13;
 }
 
@@ -8986,7 +8989,8 @@ class BaseSIMDThreeSameVectorBFDot<bit Q, bit U, string asm, string kind1,
                                             (InputType RegType:$Rm)))]> {
   let AsmString = !strconcat(asm,
                              "{\t$Rd" # kind1 # ", $Rn" # kind2 #
-                               ", $Rm" # kind2 # "}");
+                               ", $Rm" # kind2 #
+                             "|" # kind1 # "\t$Rd, $Rn, $Rm}");
 }
 
 multiclass SIMDThreeSameVectorBFDot<bit U, string asm> {
@@ -9032,7 +9036,7 @@ class SIMDBF16MLAL<bit Q, string asm, SDPatternOperator OpNode>
               [(set (v4f32 V128:$dst), (OpNode (v4f32 V128:$Rd),
                                                (v8bf16 V128:$Rn),
                                                (v8bf16 V128:$Rm)))]> {
-  let AsmString = !strconcat(asm, "{\t$Rd.4s, $Rn.8h, $Rm.8h}");
+  let AsmString = !strconcat(asm, "{\t$Rd.4s, $Rn.8h, $Rm.8h|.4s\t$Rd, $Rn, $Rm}");
 }
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
@@ -9071,8 +9075,7 @@ class SIMDThreeSameVectorBF16MatrixMul<string asm>
                                 (int_aarch64_neon_bfmmla (v4f32 V128:$Rd),
                                                          (v8bf16 V128:$Rn),
                                                          (v8bf16 V128:$Rm)))]> {
-  let AsmString = !strconcat(asm, "{\t$Rd", ".4s", ", $Rn", ".8h",
-                                    ", $Rm", ".8h", "}");
+  let AsmString = !strconcat(asm, "{\t$Rd.4s, $Rn.8h, $Rm.8h|.4s\t$Rd, $Rn, $Rm}");
 }
 
 let mayRaiseFPException = 1, Uses = [FPCR] in
@@ -9143,7 +9146,7 @@ class SIMDThreeSameVectorMatMul<bit B, bit U, string asm, SDPatternOperator OpNo
               [(set (v4i32 V128:$dst), (OpNode (v4i32 V128:$Rd),
                                                (v16i8 V128:$Rn),
                                                (v16i8 V128:$Rm)))]> {
-  let AsmString = asm # "{\t$Rd.4s, $Rn.16b, $Rm.16b}";
+  let AsmString = asm # "{\t$Rd.4s, $Rn.16b, $Rm.16b|.4s\t$Rd, $Rn, $Rm}";
 }
 
 //----------------------------------------------------------------------------
@@ -13344,8 +13347,8 @@ multiclass AtomicFPStore<bit R, bits<3> op0, string asm> {
 class BaseSIMDThreeSameVectorFP8MatrixMul<string asm, bits<2> size, string kind>
   : BaseSIMDThreeSameVectorTied<1, 1, {size, 0}, 0b11101,
                                 V128, asm, ".16b", []> {
-  let AsmString = !strconcat(asm, "{\t$Rd", kind, ", $Rn", ".16b",
-                                    ", $Rm", ".16b", "}");
+  let AsmString = !strconcat(asm, "{\t$Rd", kind, ", $Rn.16b, $Rm.16b",
+                                   "|", kind, "\t$Rd, $Rn, $Rm}");
 }
 
 multiclass SIMDThreeSameVectorFP8MatrixMul<string asm>{

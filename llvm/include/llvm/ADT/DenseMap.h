@@ -1109,17 +1109,17 @@ public:
       // temporary storage. Have the loop move the TmpEnd forward as it goes.
       const KeyT EmptyKey = this->getEmptyKey();
       const KeyT TombstoneKey = this->getTombstoneKey();
-      for (BucketT *P = getBuckets(), *E = P + InlineBuckets; P != E; ++P) {
-        if (!KeyInfoT::isEqual(P->getFirst(), EmptyKey) &&
-            !KeyInfoT::isEqual(P->getFirst(), TombstoneKey)) {
+      for (BucketT &B : inlineBuckets()) {
+        if (!KeyInfoT::isEqual(B.getFirst(), EmptyKey) &&
+            !KeyInfoT::isEqual(B.getFirst(), TombstoneKey)) {
           assert(size_t(TmpEnd - TmpBegin) < InlineBuckets &&
                  "Too many inline buckets!");
-          ::new (&TmpEnd->getFirst()) KeyT(std::move(P->getFirst()));
-          ::new (&TmpEnd->getSecond()) ValueT(std::move(P->getSecond()));
+          ::new (&TmpEnd->getFirst()) KeyT(std::move(B.getFirst()));
+          ::new (&TmpEnd->getSecond()) ValueT(std::move(B.getSecond()));
           ++TmpEnd;
-          P->getSecond().~ValueT();
+          B.getSecond().~ValueT();
         }
-        P->getFirst().~KeyT();
+        B.getFirst().~KeyT();
       }
 
       // AtLeast == InlineBuckets can happen if there are many tombstones,
@@ -1218,6 +1218,11 @@ private:
 
   unsigned getNumBuckets() const {
     return Small ? InlineBuckets : getLargeRep()->NumBuckets;
+  }
+
+  iterator_range<BucketT *> inlineBuckets() {
+    BucketT *Begin = getInlineBuckets();
+    return llvm::make_range(Begin, Begin + InlineBuckets);
   }
 
   void deallocateBuckets() {

@@ -1433,7 +1433,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
   if (Subtarget.useCRBits()) {
-    setHasMultipleConditionRegisters();
     setJumpIsExpensive();
   }
 
@@ -19855,4 +19854,8 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Hi = Builder.CreateZExt(Hi, ValTy, "hi64");
   return Builder.CreateOr(
       Lo, Builder.CreateShl(Hi, ConstantInt::get(ValTy, 64)), "val64");
+}
+
+bool PPCTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
+  return Subtarget.useCRBits();
 }

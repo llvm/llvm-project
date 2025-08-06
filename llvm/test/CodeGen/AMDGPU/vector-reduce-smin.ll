@@ -3963,8 +3963,8 @@ define i64 @test_vector_reduce_smin_v16i64(<16 x i64> %v) {
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
 ; GFX7-SDAG-NEXT:    v_cmp_lt_i64_e32 vcc, v[2:3], v[4:5]
-; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
+; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; GFX7-SDAG-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GFX7-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
@@ -4067,8 +4067,8 @@ define i64 @test_vector_reduce_smin_v16i64(<16 x i64> %v) {
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
 ; GFX8-SDAG-NEXT:    v_cmp_lt_i64_e32 vcc, v[2:3], v[4:5]
-; GFX8-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
+; GFX8-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; GFX8-SDAG-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
 ; GFX8-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc
@@ -4175,8 +4175,8 @@ define i64 @test_vector_reduce_smin_v16i64(<16 x i64> %v) {
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v4, v6, v4, vcc
 ; GFX9-SDAG-NEXT:    v_cmp_lt_i64_e32 vcc, v[2:3], v[4:5]
 ; GFX9-SDAG-NEXT:    s_nop 1
-; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v2, v4, v2, vcc
+; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v3, v5, v3, vcc
 ; GFX9-SDAG-NEXT:    v_cmp_lt_i64_e32 vcc, v[0:1], v[2:3]
 ; GFX9-SDAG-NEXT:    s_nop 1
 ; GFX9-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc
@@ -4283,8 +4283,8 @@ define i64 @test_vector_reduce_smin_v16i64(<16 x i64> %v) {
 ; GFX10-SDAG-NEXT:    v_cmp_lt_i64_e64 s4, v[2:3], v[6:7]
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v1, v5, v1, vcc_lo
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v0, v4, v0, vcc_lo
-; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s4
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v2, v6, v2, s4
+; GFX10-SDAG-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s4
 ; GFX10-SDAG-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v0, v2, v0, vcc_lo
 ; GFX10-SDAG-NEXT:    v_cndmask_b32_e32 v1, v3, v1, vcc_lo
@@ -4387,8 +4387,8 @@ define i64 @test_vector_reduce_smin_v16i64(<16 x i64> %v) {
 ; GFX11-SDAG-NEXT:    v_cmp_lt_i64_e64 s0, v[2:3], v[6:7]
 ; GFX11-SDAG-NEXT:    v_dual_cndmask_b32 v1, v5, v1 :: v_dual_cndmask_b32 v0, v4, v0
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s0
 ; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v2, v6, v2, s0
+; GFX11-SDAG-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s0
 ; GFX11-SDAG-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX11-SDAG-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -4502,8 +4502,8 @@ define i64 @test_vector_reduce_smin_v16i64(<16 x i64> %v) {
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v1, v5, v1 :: v_dual_cndmask_b32 v0, v4, v0
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s0
 ; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v2, v6, v2, s0
+; GFX12-SDAG-NEXT:    v_cndmask_b32_e64 v3, v7, v3, s0
 ; GFX12-SDAG-NEXT:    v_cmp_lt_i64_e32 vcc_lo, v[0:1], v[2:3]
 ; GFX12-SDAG-NEXT:    s_wait_alu 0xfffd
 ; GFX12-SDAG-NEXT:    v_dual_cndmask_b32 v0, v2, v0 :: v_dual_cndmask_b32 v1, v3, v1

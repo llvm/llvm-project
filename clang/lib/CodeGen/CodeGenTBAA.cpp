@@ -439,7 +439,7 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
 
     // TODO: Handle C++ base classes.
     if (const CXXRecordDecl *Decl = dyn_cast<CXXRecordDecl>(RD))
-      if (Decl->bases_begin() != Decl->bases_end())
+      if (!Decl->bases().empty())
         return false;
 
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);

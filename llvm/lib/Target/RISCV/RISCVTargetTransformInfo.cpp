@@ -979,11 +979,11 @@ InstructionCost RISCVTTIImpl::getInterleavedMemoryOpCost(
     Align Alignment, unsigned AddressSpace, TTI::TargetCostKind CostKind,
     bool UseMaskForCond, bool UseMaskForGaps) const {
 
-  // The interleaved memory access pass will lower interleaved memory ops (i.e
-  // a load and store followed by a specific shuffle) to vlseg/vsseg
-  // intrinsics.
-  if (!UseMaskForCond && !UseMaskForGaps &&
-      Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+  // The interleaved memory access pass will lower (de)interleave ops combined
+  // with an adjacent appropriate memory to vlseg/vsseg intrinsics. vlseg/vsseg
+  // only support masking per-iteration (i.e. condition), not per-segment (i.e.
+  // gap).
+  if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     auto *VTy = cast<VectorType>(VecTy);
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VTy);
     // Need to make sure type has't been scalarized

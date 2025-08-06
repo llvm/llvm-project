@@ -520,10 +520,10 @@ public:
     llvm::SmallVector<mlir::Value, 1> newCallResults;
     // TODO propagate/update call argument and result attributes.
     if constexpr (std::is_same_v<std::decay_t<A>, mlir::gpu::LaunchFuncOp>) {
-      auto newCall = rewriter->create<A>(
-          loc, callOp.getKernel(), callOp.getGridSizeOperandValues(),
-          callOp.getBlockSizeOperandValues(),
-          callOp.getDynamicSharedMemorySize(), newOpers);
+      auto newCall = A::create(*rewriter, loc, callOp.getKernel(),
+                               callOp.getGridSizeOperandValues(),
+                               callOp.getBlockSizeOperandValues(),
+                               callOp.getDynamicSharedMemorySize(), newOpers);
       if (callOp.getClusterSizeX())
         newCall.getClusterSizeXMutable().assign(callOp.getClusterSizeX());
       if (callOp.getClusterSizeY())
@@ -585,9 +585,10 @@ public:
       else
         newCallResults.append(newCall.result_begin(), newCall.result_end());
     } else {
-      fir::DispatchOp dispatchOp = rewriter->create<A>(
-          loc, newResTys, rewriter->getStringAttr(callOp.getMethod()),
-          callOp.getOperands()[0], newOpers,
+      fir::DispatchOp dispatchOp = A::create(
+          *rewriter, loc, newResTys,
+          rewriter->getStringAttr(callOp.getMethod()), callOp.getOperands()[0],
+          newOpers,
           rewriter->getI32IntegerAttr(*callOp.getPassArgPos() + passArgShift),
           /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
           callOp.getProcedureAttrsAttr());
@@ -1056,7 +1057,7 @@ public:
             auto cast =
                 fir::ConvertOp::create(*rewriter, loc, oldOperTy, newArg);
             fir::StoreOp::create(*rewriter, loc, oldOper, cast);
-            rewriter->create<ReturnOpTy>(loc);
+            ReturnOpTy::create(*rewriter, loc);
             ret.erase();
           });
         } break;
@@ -1069,7 +1070,7 @@ public:
             mlir::Value bitcast =
                 convertValueInMemory(loc, oldOper, newResTys[fixup.index],
                                      /*inputMayBeBigger=*/false);
-            rewriter->create<ReturnOpTy>(loc, bitcast);
+            ReturnOpTy::create(*rewriter, loc, bitcast);
             ret.erase();
           });
         } break;

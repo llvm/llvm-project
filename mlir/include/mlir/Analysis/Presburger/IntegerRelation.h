@@ -20,6 +20,7 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DynamicAPInt.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
 #include <optional>
@@ -266,6 +267,13 @@ public:
   /// Return the index at Which the specified kind of vars ends.
   unsigned getVarKindEnd(VarKind kind) const {
     return space.getVarKindEnd(kind);
+  }
+
+  /// Return an interator over the variables of the specified kind
+  /// starting at the relevant offset. The return type is auto in
+  /// keeping with the convention for iterators.
+  auto iterVarKind(VarKind kind) {
+    return llvm::seq(getVarKindOffset(kind), getVarKindEnd(kind));
   }
 
   /// Get the number of elements of the specified kind in the range

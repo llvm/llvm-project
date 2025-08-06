@@ -2413,14 +2413,14 @@ mlir::func::FuncOp IntrinsicLibrary::getWrapper(GeneratorType generator,
 
     if constexpr (std::is_same_v<GeneratorType, SubroutineGenerator>) {
       localLib.invokeGenerator(generator, localArguments);
-      localBuilder->create<mlir::func::ReturnOp>(localLoc);
+      mlir::func::ReturnOp::create(*localBuilder, localLoc);
     } else {
       assert(funcType.getNumResults() == 1 &&
              "expect one result for intrinsic function wrapper type");
       mlir::Type resultType = funcType.getResult(0);
       auto result =
           localLib.invokeGenerator(generator, resultType, localArguments);
-      localBuilder->create<mlir::func::ReturnOp>(localLoc, result);
+      mlir::func::ReturnOp::create(*localBuilder, localLoc, result);
     }
   } else {
     // Wrapper was already built, ensure it has the sought type
@@ -6662,9 +6662,8 @@ IntrinsicLibrary::genMatchAllSync(mlir::Type resultType,
   mlir::Type retTy =
       mlir::LLVM::LLVMStructType::getLiteral(context, {resultType, i1Ty});
   auto match =
-      builder
-          .create<mlir::NVVM::MatchSyncOp>(loc, retTy, args[0], arg1,
-                                           mlir::NVVM::MatchSyncKind::all)
+      mlir::NVVM::MatchSyncOp::create(builder, loc, retTy, args[0], arg1,
+                                      mlir::NVVM::MatchSyncKind::all)
           .getResult();
   auto value = mlir::LLVM::ExtractValueOp::create(builder, loc, match, 0);
   auto pred = mlir::LLVM::ExtractValueOp::create(builder, loc, match, 1);
@@ -6701,9 +6700,8 @@ IntrinsicLibrary::genMatchAnySync(mlir::Type resultType,
     arg1 = fir::ConvertOp::create(
         builder, loc, is32 ? builder.getI32Type() : builder.getI64Type(), arg1);
 
-  return builder
-      .create<mlir::NVVM::MatchSyncOp>(loc, resultType, args[0], arg1,
-                                       mlir::NVVM::MatchSyncKind::any)
+  return mlir::NVVM::MatchSyncOp::create(builder, loc, resultType, args[0],
+                                         arg1, mlir::NVVM::MatchSyncKind::any)
       .getResult();
 }
 
@@ -8142,7 +8140,7 @@ mlir::Value IntrinsicLibrary::genSinpi(mlir::Type resultType,
   mlir::Value dfactor =
       builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("sin", ftype)(builder, loc, {arg});
 }
 
@@ -8239,7 +8237,7 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
   mlir::Value dfactor =
       builder.createRealConstant(loc, mlir::Float64Type::get(context), pi);
   mlir::Value factor = builder.createConvert(loc, args[0].getType(), dfactor);
-  mlir::Value arg = builder.create<mlir::arith::MulFOp>(loc, args[0], factor);
+  mlir::Value arg = mlir::arith::MulFOp::create(builder, loc, args[0], factor);
   return getRuntimeCallGenerator("tan", ftype)(builder, loc, {arg});
 }
 

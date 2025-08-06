@@ -5,6 +5,7 @@ import { LLDBDapServer } from "./lldb-dap-server";
 import { createDebugAdapterExecutable } from "./debug-adapter-factory";
 import { ConfigureButton, showErrorMessage } from "./ui/show-error-message";
 import { ErrorWithNotification } from "./ui/error-with-notification";
+import { LogFilePathProvider } from "./logging";
 
 const exec = util.promisify(child_process.execFile);
 
@@ -71,13 +72,24 @@ const configurations: Record<string, DefaultConfig> = {
 export class LLDBDapConfigurationProvider
   implements vscode.DebugConfigurationProvider
 {
-  constructor(private readonly server: LLDBDapServer) {}
+  constructor(
+    private readonly server: LLDBDapServer,
+    private readonly logger: vscode.LogOutputChannel,
+    private readonly logFilePath: LogFilePathProvider,
+  ) {}
 
   async resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,
     debugConfiguration: vscode.DebugConfiguration,
     token?: vscode.CancellationToken,
   ): Promise<vscode.DebugConfiguration> {
+    this.logger.info(
+      `Resolving debug configuration for "${debugConfiguration.name}"`,
+    );
+    this.logger.debug(
+      "Initial debug configuration:\n" +
+        JSON.stringify(debugConfiguration, undefined, 2),
+    );
     let config = vscode.workspace.getConfiguration("lldb-dap");
     for (const [key, cfg] of Object.entries(configurations)) {
       if (Reflect.has(debugConfiguration, key)) {
@@ -152,6 +164,8 @@ export class LLDBDapConfigurationProvider
         // Always try to create the debug adapter executable as this will show the user errors
         // if there are any.
         const executable = await createDebugAdapterExecutable(
+          this.logger,
+          this.logFilePath,
           folder,
           debugConfiguration,
         );
@@ -184,8 +198,14 @@ export class LLDBDapConfigurationProvider
         }
       }
 
+      this.logger.info(
+        "Resolved debug configuration:\n" +
+          JSON.stringify(debugConfiguration, undefined, 2),
+      );
+
       return debugConfiguration;
     } catch (error) {
+      this.logger.error(error as Error);
       // Show a better error message to the user if possible
       if (!(error instanceof ErrorWithNotification)) {
         throw error;

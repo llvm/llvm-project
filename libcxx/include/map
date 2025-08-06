@@ -970,7 +970,7 @@ public:
       : map(from_range, std::forward<_Range>(__range), key_compare(), __a) {}
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI map(const map& __m) : __tree_(__m.__tree_) { insert(__m.begin(), __m.end()); }
+  _LIBCPP_HIDE_FROM_ABI map(const map& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI map& operator=(const map& __m) = default;
 
@@ -1637,11 +1637,7 @@ public:
       : multimap(from_range, std::forward<_Range>(__range), key_compare(), __a) {}
 #  endif
 
-  _LIBCPP_HIDE_FROM_ABI multimap(const multimap& __m)
-      : __tree_(__m.__tree_.value_comp(),
-                __alloc_traits::select_on_container_copy_construction(__m.__tree_.__alloc())) {
-    insert(__m.begin(), __m.end());
-  }
+  _LIBCPP_HIDE_FROM_ABI multimap(const multimap& __m) = default;
 
   _LIBCPP_HIDE_FROM_ABI multimap& operator=(const multimap& __m) = default;
 

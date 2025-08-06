@@ -48,7 +48,8 @@ static bool validateDeclsInsideHLSLBuffer(Parser::DeclGroupPtrTy DG,
   return IsValid;
 }
 
-Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
+Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd,
+                              ParsedAttributes &Attrs) {
   assert((Tok.is(tok::kw_cbuffer) || Tok.is(tok::kw_tbuffer)) &&
          "Not a cbuffer or tbuffer!");
   bool IsCBuffer = Tok.is(tok::kw_cbuffer);
@@ -62,7 +63,6 @@ Decl *Parser::ParseHLSLBuffer(SourceLocation &DeclEnd) {
   IdentifierInfo *Identifier = Tok.getIdentifierInfo();
   SourceLocation IdentifierLoc = ConsumeToken();
 
-  ParsedAttributes Attrs(AttrFactory);
   MaybeParseHLSLAnnotations(Attrs, nullptr);
 
   ParseScope BufferScope(this, Scope::DeclScope);

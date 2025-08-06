@@ -775,13 +775,6 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     break;
   }
-  case ISD::FREEZE: {
-    SDValue N0 = Op.getOperand(0);
-    if (DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts,
-                                             /*PoisonOnly=*/false, Depth + 1))
-      return N0;
-    break;
-  }
   case ISD::AND: {
     LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
     RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);

@@ -396,8 +396,9 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
       }
     }
   } else if (first == radixPointChar || (first >= '0' && first <= '9') ||
-      (bzMode && (first == ' ' || first == '\t')) || first == 'E' ||
-      first == 'D' || first == 'Q') {
+      (bzMode && (first == ' ' || first == '\t')) ||
+      (remaining.has_value() &&
+          (first == 'D' || first == 'E' || first == 'Q'))) {
     if (first == '0') {
       next = io.NextInField(remaining, edit);
       if (next && (*next == 'x' || *next == 'X')) { // 0X...
@@ -462,6 +463,14 @@ static RT_API_ATTRS ScannedRealInput ScanRealInput(
         // optional exponent letter and the exponent value.
         io.SkipSpaces(remaining);
         next = io.NextInField(remaining, edit);
+        if (!next) {
+          if (remaining.has_value()) {
+            // bare exponent letter accepted in fixed-width field
+            hasGoodExponent = true;
+          } else {
+            return {}; // error
+          }
+        }
       }
     }
     if (next &&

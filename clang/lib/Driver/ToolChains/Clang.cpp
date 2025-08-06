@@ -1320,12 +1320,10 @@ void RenderARMABI(const Driver &D, const llvm::Triple &Triple,
   // FIXME: Support -meabi.
   // FIXME: Parts of this are duplicated in the backend, unify this somehow.
   const char *ABIName = nullptr;
-  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
     ABIName = A->getValue();
-  } else {
-    std::string CPU = getCPUName(D, Args, Triple, /*FromAs*/ false);
-    ABIName = llvm::ARM::computeDefaultTargetABI(Triple, CPU).data();
-  }
+  else
+    ABIName = llvm::ARM::computeDefaultTargetABI(Triple).data();
 
   CmdArgs.push_back("-target-abi");
   CmdArgs.push_back(ABIName);

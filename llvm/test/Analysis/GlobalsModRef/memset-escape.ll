@@ -7,23 +7,14 @@ target triple = "x86_64-apple-macosx10.10.0"
 @a = internal global [3 x i32] zeroinitializer, align 4
 @b = common global i32 0, align 4
 
-; The important thing we're checking for here is the reload of (some element of)
-; @a after the memset.
+; The important thing we're checking here is that the value from the memset
+; rather than the preceding store is forwarded.
 
 define i32 @main() {
 ; CHECK-LABEL: define noundef i32 @main(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    store i32 1, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 4
-; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr noundef nonnull align 4 dereferenceable(12) @a, i8 0, i64 12, i1 false)
 ; CHECK-NEXT:    store i32 3, ptr @b, align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @a, i64 8), align 4
-; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[CMP1_NOT]], label %[[IF_END:.*]], label %[[IF_THEN:.*]]
-; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    tail call void @abort()
-; CHECK-NEXT:    unreachable
-; CHECK:       [[IF_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:

@@ -5,6 +5,7 @@ import * as vscode from "vscode";
 // prettier-ignore
 interface EventMap {
   "module": DebugProtocol.ModuleEvent;
+  "exited": DebugProtocol.ExitedEvent;
 }
 
 /** A type assertion to check if a ProtocolMessage is an event or if it is a specific event. */
@@ -47,7 +48,7 @@ export class DebugSessionTracker
   onDidChangeModules: vscode.Event<vscode.DebugSession | undefined> =
     this.modulesChanged.event;
 
-  constructor() {
+  constructor(private logger: vscode.LogOutputChannel) {
     this.onDidChangeModules(this.moduleChangedListener, this);
     vscode.debug.onDidChangeActiveDebugSession((session) =>
       this.modulesChanged.fire(session),
@@ -62,8 +63,12 @@ export class DebugSessionTracker
   createDebugAdapterTracker(
     session: vscode.DebugSession,
   ): vscode.ProviderResult<vscode.DebugAdapterTracker> {
+    this.logger.info(`Starting debug session "${session.name}"`);
+    let stopping = false;
     return {
+      onError: (error) => !stopping && this.logger.error(error), // Can throw benign read errors when shutting down.
       onDidSendMessage: (message) => this.onDidSendMessage(session, message),
+      onWillStopSession: () => (stopping = true),
       onExit: () => this.onExit(session),
     };
   }
@@ -134,6 +139,13 @@ export class DebugSessionTracker
       }
       this.modules.set(session, modules);
       this.modulesChanged.fire(session);
+    } else if (isEvent(message, "exited")) {
+      // The vscode.DebugAdapterTracker#onExit event is sometimes called with
+      // exitCode = undefined but the exit event from LLDB-DAP always has the "exitCode"
+      const { exitCode } = message.body;
+      this.logger.info(
+        `Session "${session.name}" exited with code ${exitCode}`,
+      );
     }
   }
 }

@@ -26,14 +26,14 @@ class SomewhatTrivial {
 void positiveExpensiveConstValue(const ExpensiveToCopyType Obj);
 // CHECK-FIXES: void positiveExpensiveConstValue(const ExpensiveToCopyType& Obj);
 void positiveExpensiveConstValue(const ExpensiveToCopyType Obj) {
-  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'Obj' is copied for each invocation; consider making it a reference [performance-unnecessary-value-param]
+  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the const qualified parameter 'Obj' of type 'const ExpensiveToCopyType' is copied for each invocation; consider making it a reference [performance-unnecessary-value-param]
   // CHECK-FIXES: void positiveExpensiveConstValue(const ExpensiveToCopyType& Obj) {
 }
 
 void positiveExpensiveValue(ExpensiveToCopyType Obj);
 // CHECK-FIXES: void positiveExpensiveValue(const ExpensiveToCopyType& Obj);
 void positiveExpensiveValue(ExpensiveToCopyType Obj) {
-  // CHECK-MESSAGES: [[@LINE-1]]:49: warning: the parameter 'Obj' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
+  // CHECK-MESSAGES: [[@LINE-1]]:49: warning: the parameter 'Obj' of type 'ExpensiveToCopyType' is copied for each invocation but only used as a const reference; consider making it a const reference [performance-unnecessary-value-param]
   // CHECK-FIXES: void positiveExpensiveValue(const ExpensiveToCopyType& Obj) {
   Obj.constReference();
   useAsConstReference(Obj);

@@ -65,7 +65,7 @@ class UnrollState {
 
   /// Unroll a widen induction recipe \p IV. This introduces recipes to compute
   /// the induction steps for each part.
-  void unrollWidenInductionByUF(VPWidenIntOrFpInductionRecipe *IV,
+  void unrollWidenInductionByUF(VPWidenInductionRecipe *IV,
                                 VPBasicBlock::iterator InsertPtForPhi);
 
   VPValue *getConstantVPV(unsigned Part) {
@@ -148,7 +148,7 @@ void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
 }
 
 void UnrollState::unrollWidenInductionByUF(
-    VPWidenIntOrFpInductionRecipe *IV, VPBasicBlock::iterator InsertPtForPhi) {
+    VPWidenInductionRecipe *IV, VPBasicBlock::iterator InsertPtForPhi) {
   VPBasicBlock *PH = cast<VPBasicBlock>(
       IV->getParent()->getEnclosingLoopRegion()->getSinglePredecessor());
   Type *IVTy = TypeInfo.inferScalarType(IV);
@@ -159,9 +159,11 @@ void UnrollState::unrollWidenInductionByUF(
 
   VPValue *ScalarStep = IV->getStepValue();
   VPBuilder Builder(PH);
+  Type *VectorStepTy =
+      IVTy->isPointerTy() ? TypeInfo.inferScalarType(ScalarStep) : IVTy;
   VPInstruction *VectorStep = Builder.createNaryOp(
-      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, IVTy, Flags,
-      IV->getDebugLoc());
+      VPInstruction::WideIVStep, {&Plan.getVF(), ScalarStep}, VectorStepTy,
+      Flags, IV->getDebugLoc());
 
   ToSkip.insert(VectorStep);
 
@@ -169,8 +171,8 @@ void UnrollState::unrollWidenInductionByUF(
   // remains the header phi. Parts > 0 are computed by adding Step to the
   // previous part. The header phi recipe will get 2 new operands: the step
   // value for a single part and the last part, used to compute the backedge
-  // value during VPWidenIntOrFpInductionRecipe::execute. %Part.0 =
-  // VPWidenIntOrFpInductionRecipe %Start, %ScalarStep, %VectorStep, %Part.3
+  // value during VPWidenInductionRecipe::execute.
+  // %Part.0 = VPWidenInductionRecipe %Start, %ScalarStep, %VectorStep, %Part.3
   // %Part.1 = %Part.0 + %VectorStep
   // %Part.2 = %Part.1 + %VectorStep
   // %Part.3 = %Part.2 + %VectorStep
@@ -179,8 +181,13 @@ void UnrollState::unrollWidenInductionByUF(
   // again.
   VPValue *Prev = IV;
   Builder.setInsertPoint(IV->getParent(), InsertPtForPhi);
-  unsigned AddOpc =
-      IVTy->isFloatingPointTy() ? ID.getInductionOpcode() : Instruction::Add;
+  unsigned AddOpc;
+  if (IVTy->isPointerTy())
+    AddOpc = VPInstruction::WidePtrAdd;
+  else if (IVTy->isFloatingPointTy())
+    AddOpc = ID.getInductionOpcode();
+  else
+    AddOpc = Instruction::Add;
   for (unsigned Part = 1; Part != UF; ++Part) {
     std::string Name =
         Part > 1 ? "step.add." + std::to_string(Part) : "step.add";
@@ -207,7 +214,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
     return;
 
   // Generate step vectors for each unrolled part.
-  if (auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(R)) {
+  if (auto *IV = dyn_cast<VPWidenInductionRecipe>(R)) {
     unrollWidenInductionByUF(IV, InsertPtForPhi);
     return;
   }
@@ -221,10 +228,7 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
     VPRecipeBase *Copy = R->clone();
     Copy->insertBefore(*R->getParent(), InsertPt);
     addRecipeForPart(R, Copy, Part);
-    if (isa<VPWidenPointerInductionRecipe>(R)) {
-      Copy->addOperand(R);
-      Copy->addOperand(getConstantVPV(Part));
-    } else if (RdxPhi) {
+    if (RdxPhi) {
       // If the start value is a ReductionStartVector, use the identity value
       // (second operand) for unrolled parts. If the scaling factor is > 1,
       // create a new ReductionStartVector with the scale factor and both
@@ -450,8 +454,7 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF, LLVMContext &Ctx) {
       Unroller.remapOperand(&H, 1, UF - 1);
       continue;
     }
-    if (Unroller.contains(H.getVPSingleValue()) ||
-        isa<VPWidenPointerInductionRecipe>(&H)) {
+    if (Unroller.contains(H.getVPSingleValue())) {
       Part = 1;
       continue;
     }

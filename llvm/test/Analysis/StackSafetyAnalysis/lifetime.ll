@@ -786,27 +786,6 @@ end:
   ret void
 }
 
-define void @alloca_size() {
-; CHECK-LABEL: define void @alloca_size
-entry:
-; CHECK: entry:
-; MAY-NEXT: Alive: <x>
-; MUST-NEXT: Alive: <>
-  %x = alloca [5 x i32], align 4
-
-  call void @llvm.lifetime.start.p0(i64 15, ptr %x)
-; CHECK: call void @llvm.lifetime.start.p0(i64 15, ptr %x)
-; MAY-NEXT: Alive: <x>
-; MUST-NEXT: Alive: <>
-
-  call void @llvm.lifetime.end.p0(i64 15, ptr %x)
-; CHECK: call void @llvm.lifetime.end.p0(i64 15, ptr %x)
-; MAY-NEXT: Alive: <x>
-; MUST-NEXT: Alive: <>
-
-  ret void
-}
-
 define void @multiple_start_end() {
 ; CHECK-LABEL: define void @multiple_start_end
 entry:

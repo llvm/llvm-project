@@ -16,83 +16,121 @@
 #include <cassert>
 #include <iterator>
 
+#include "min_allocator.h"
 #include "test_macros.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
 
+template <template <class> class Alloc>
+void test_alloc() {
+  { // Simple check
+    using Set = std::multiset<int, std::less<int>, Alloc<int> >;
+
+    int arr[] = {1, 2, 2};
+    const Set orig(std::begin(arr), std::end(arr));
+    Set copy = orig;
+    assert(copy.size() == 3);
+    assert(*std::next(copy.begin(), 0) == 1);
+    assert(*std::next(copy.begin(), 1) == 2);
+    assert(*std::next(copy.begin(), 2) == 2);
+    assert(std::next(copy.begin(), 3) == copy.end());
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 3);
+    assert(*std::next(orig.begin(), 0) == 1);
+    assert(*std::next(orig.begin(), 1) == 2);
+    assert(*std::next(orig.begin(), 2) == 2);
+    assert(std::next(orig.begin(), 3) == orig.end());
+  }
+
+  { // copy empty set
+    using Set = std::multiset<int, std::less<int>, Alloc<int> >;
+
+    const Set orig;
+    Set copy = orig;
+    assert(copy.size() == 0);
+    assert(copy.begin() == copy.end());
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 0);
+    assert(orig.begin() == orig.end());
+  }
+
+  { // only some leaf nodes exist
+    using Set = std::multiset<int, std::less<int>, Alloc<int> >;
+
+    int arr[] = {1, 2, 3, 3, 5};
+    const Set orig(std::begin(arr), std::end(arr));
+    Set copy = orig;
+    assert(copy.size() == 5);
+    assert(*std::next(copy.begin(), 0) == 1);
+    assert(*std::next(copy.begin(), 1) == 2);
+    assert(*std::next(copy.begin(), 2) == 3);
+    assert(*std::next(copy.begin(), 3) == 3);
+    assert(*std::next(copy.begin(), 4) == 5);
+    assert(std::next(copy.begin(), 5) == copy.end());
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 5);
+    assert(*std::next(orig.begin(), 0) == 1);
+    assert(*std::next(orig.begin(), 1) == 2);
+    assert(*std::next(orig.begin(), 2) == 3);
+    assert(*std::next(orig.begin(), 3) == 3);
+    assert(*std::next(orig.begin(), 4) == 5);
+    assert(std::next(orig.begin(), 5) == orig.end());
+  }
+}
+
+void test() {
+  test_alloc<std::allocator>();
+  test_alloc<min_allocator>(); // Make sure that fancy pointers work
+
+  { // Ensure that the comparator is copied
+    using Set = std::multiset<int, test_less<int> >;
+
+    int arr[] = {1, 2, 2};
+    const Set orig(std::begin(arr), std::end(arr), test_less<int>(3));
+    Set copy = orig;
+    assert(copy.size() == 3);
+    assert(copy.key_comp() == test_less<int>(3));
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 3);
+    assert(orig.key_comp() == test_less<int>(3));
+  }
+
+  { // Ensure that the allocator is copied
+    using Set = std::multiset<int, std::less<int>, test_allocator<int> >;
+
+    int arr[] = {1, 2, 2};
+    const Set orig(std::begin(arr), std::end(arr), std::less<int>(), test_allocator<int>(10));
+    Set copy = orig;
+    assert(copy.size() == 3);
+    assert(copy.get_allocator() == test_allocator<int>(10));
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 3);
+    assert(orig.get_allocator() == test_allocator<int>(10));
+    assert(orig.get_allocator().get_id() != test_alloc_base::moved_value);
+  }
+
+  { // Ensure that soccc is handled properly
+    using Set = std::multiset<int, std::less<int>, other_allocator<int> >;
+
+    int arr[] = {1, 2, 2};
+    const Set orig(std::begin(arr), std::end(arr), std::less<int>(), other_allocator<int>(10));
+    Set copy = orig;
+    assert(copy.size() == 3);
+    assert(copy.get_allocator() == other_allocator<int>(-2));
+
+    // Check that orig is still what is expected
+    assert(orig.size() == 3);
+    assert(orig.get_allocator() == other_allocator<int>(10));
+  }
+}
+
 int main(int, char**) {
-  {
-    typedef int V;
-    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
-    typedef test_less<int> C;
-    typedef test_allocator<V> A;
-    std::multiset<int, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(7));
-    std::multiset<int, C, A> m = mo;
-    assert(m.get_allocator() == A(7));
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 9);
-    assert(std::distance(m.begin(), m.end()) == 9);
-    assert(*std::next(m.begin(), 0) == 1);
-    assert(*std::next(m.begin(), 1) == 1);
-    assert(*std::next(m.begin(), 2) == 1);
-    assert(*std::next(m.begin(), 3) == 2);
-    assert(*std::next(m.begin(), 4) == 2);
-    assert(*std::next(m.begin(), 5) == 2);
-    assert(*std::next(m.begin(), 6) == 3);
-    assert(*std::next(m.begin(), 7) == 3);
-    assert(*std::next(m.begin(), 8) == 3);
-
-    assert(mo.get_allocator() == A(7));
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 9);
-    assert(std::distance(mo.begin(), mo.end()) == 9);
-    assert(*std::next(mo.begin(), 0) == 1);
-    assert(*std::next(mo.begin(), 1) == 1);
-    assert(*std::next(mo.begin(), 2) == 1);
-    assert(*std::next(mo.begin(), 3) == 2);
-    assert(*std::next(mo.begin(), 4) == 2);
-    assert(*std::next(mo.begin(), 5) == 2);
-    assert(*std::next(mo.begin(), 6) == 3);
-    assert(*std::next(mo.begin(), 7) == 3);
-    assert(*std::next(mo.begin(), 8) == 3);
-  }
-#if TEST_STD_VER >= 11
-  {
-    typedef int V;
-    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
-    typedef test_less<int> C;
-    typedef other_allocator<V> A;
-    std::multiset<int, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(7));
-    std::multiset<int, C, A> m = mo;
-    assert(m.get_allocator() == A(-2));
-    assert(m.key_comp() == C(5));
-    assert(m.size() == 9);
-    assert(std::distance(m.begin(), m.end()) == 9);
-    assert(*std::next(m.begin(), 0) == 1);
-    assert(*std::next(m.begin(), 1) == 1);
-    assert(*std::next(m.begin(), 2) == 1);
-    assert(*std::next(m.begin(), 3) == 2);
-    assert(*std::next(m.begin(), 4) == 2);
-    assert(*std::next(m.begin(), 5) == 2);
-    assert(*std::next(m.begin(), 6) == 3);
-    assert(*std::next(m.begin(), 7) == 3);
-    assert(*std::next(m.begin(), 8) == 3);
-
-    assert(mo.get_allocator() == A(7));
-    assert(mo.key_comp() == C(5));
-    assert(mo.size() == 9);
-    assert(std::distance(mo.begin(), mo.end()) == 9);
-    assert(*std::next(mo.begin(), 0) == 1);
-    assert(*std::next(mo.begin(), 1) == 1);
-    assert(*std::next(mo.begin(), 2) == 1);
-    assert(*std::next(mo.begin(), 3) == 2);
-    assert(*std::next(mo.begin(), 4) == 2);
-    assert(*std::next(mo.begin(), 5) == 2);
-    assert(*std::next(mo.begin(), 6) == 3);
-    assert(*std::next(mo.begin(), 7) == 3);
-    assert(*std::next(mo.begin(), 8) == 3);
-  }
-#endif
+  test();
 
   return 0;
 }

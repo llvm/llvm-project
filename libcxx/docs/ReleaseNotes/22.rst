@@ -43,6 +43,9 @@ Implemented Papers
 Improvements and New Features
 -----------------------------
 
+- The performance of ``map::map(const map&)`` has been improved up to 2.3x
+- The performance of ``map::operator=(const map&)`` has been improved by up to 11x
+
 Deprecations and Removals
 -------------------------
 

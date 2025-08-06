@@ -170,6 +170,14 @@ Changes in existing checks
   when the format string is converted to a different type by an implicit
   constructor call.
 
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>` by printing
+  the type of the diagnosed variable.
+
+- Improved :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>` by printing
+  the type of the diagnosed variable.
+
 - Improved :doc:`portability-template-virtual-member-function
   <clang-tidy/checks/portability/template-virtual-member-function>` check to
   avoid false positives on pure virtual member functions.

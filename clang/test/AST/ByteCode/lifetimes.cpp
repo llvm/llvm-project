@@ -31,8 +31,7 @@ struct S {
                                 // expected-note {{read of temporary whose lifetime has ended}}
 };
 constexpr int k1 = S().t; // both-error {{must be initialized by a constant expression}} \
-                          // ref-note {{in call to}} \
-                          // expected-note {{in call to}}
+                          // both-note {{in call to}}
 
 
 namespace MoveFnWorks {
