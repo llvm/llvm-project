@@ -195,6 +195,57 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   return Rc;
 }
 
+/// Check whether a pointer is accessible from a device.
+/// the functionality is available in OpenMP 5.1 and later
+/// OpenMP 5.1
+/// omp_target_is_accessible checks whether a host pointer is accessible from a
+/// device OpenMP 6.0 removes restriction on pointer, allowing any pointer
+/// interpreted as a pointer in the address space of the given device.
+EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
+                                    int DeviceNum) {
+  TIMESCOPE();
+  OMPT_IF_BUILT(ReturnAddressSetterRAII RA(__builtin_return_address(0)));
+  DP("Call to omp_target_is_accessible for device %d, address " DPxMOD
+     ", size %zu\n",
+     DeviceNum, DPxPTR(Ptr), Size);
+
+  if (!Ptr) {
+    DP("Call to omp_target_is_accessible with NULL ptr returning false\n");
+    return false;
+  }
+
+  if (DeviceNum == omp_get_initial_device()) {
+    DP("Call to omp_target_is_accessible on host, returning true\n");
+    return true;
+  }
+
+  // the device number must refer to a valid device
+  auto DeviceOrErr = PM->getDevice(DeviceNum);
+  if (!DeviceOrErr)
+    FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
+
+  // TODO: Add check for openmp version compatability
+
+  // for OpenMP 5.1 the routine checks whether a host pointer is accessible from
+  // the device this requires for the device to support unified shared memory
+  if (DeviceOrErr->supportsUnifiedMemory()) {
+    DP("Device %d supports unified memory, returning true\n", DeviceNum);
+    return true;
+  }
+
+  // TODO: Provide stubs & implementation to check whether a pointer is
+  // accessible from a given device using hsa_amd_pointer_info for AMDGPU
+  // implementation for OpenMP 6.x the specification is required to return true
+  // if the accessibility of the pointer can be determined otherwise it's
+  // allowed to return false the specification will be clarified from the
+  // current wording
+
+  // functionality to check whether a device pointer is accessible from a device
+  // (OpenMP 6.0) from the host might not be possible
+  DP("Device %d does not support unified memory, returning false\n", DeviceNum);
+  return false;
+}
+
 EXTERN int omp_target_memcpy(void *Dst, const void *Src, size_t Length,
                              size_t DstOffset, size_t SrcOffset, int DstDevice,
                              int SrcDevice) {
