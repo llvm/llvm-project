@@ -1,14 +1,14 @@
 ; UNSUPPORTED: expensive_checks
-; RUN: llc -O0 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -disable-amdgpu-loop-align=true -O0 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
-; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -disable-amdgpu-loop-align=true -O1 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1 %s
-; RUN: llc -O1 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
+; RUN: llc -disable-amdgpu-loop-align=true -O1 -mtriple=amdgcn--amdhsa -disable-verify -amdgpu-scalar-ir-passes -amdgpu-sdwa-peephole \
 ; RUN:   -amdgpu-load-store-vectorizer -amdgpu-enable-pre-ra-optimizations -amdgpu-loop-prefetch -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O1-OPTS %s
-; RUN: llc -O2 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -disable-amdgpu-loop-align=true -O2 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O2 %s
-; RUN: llc -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
+; RUN: llc -disable-amdgpu-loop-align=true -O3 -mtriple=amdgcn--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O3 %s
 
 ; REQUIRES: asserts
@@ -1055,6 +1055,9 @@
 ; GCN-O2-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O2-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O2-NEXT:        Branch relaxation pass
+; GCN-O2-NEXT:        MachineDominator Tree Construction
+; GCN-O2-NEXT:        Machine Natural Loop Construction
+; GCN-O2-NEXT:        AMDGPU Loop Align
 ; GCN-O2-NEXT:        Register Usage Information Collector Pass
 ; GCN-O2-NEXT:        Remove Loads Into Fake Uses
 ; GCN-O2-NEXT:        Live DEBUG_VALUE analysis
@@ -1386,6 +1389,9 @@
 ; GCN-O3-NEXT:        AMDGPU Insert waits for SGPR read hazards
 ; GCN-O3-NEXT:        AMDGPU Insert Delay ALU
 ; GCN-O3-NEXT:        Branch relaxation pass
+; GCN-O3-NEXT:        MachineDominator Tree Construction
+; GCN-O3-NEXT:        Machine Natural Loop Construction
+; GCN-O3-NEXT:        AMDGPU Loop Align
 ; GCN-O3-NEXT:        Register Usage Information Collector Pass
 ; GCN-O3-NEXT:        Remove Loads Into Fake Uses
 ; GCN-O3-NEXT:        Live DEBUG_VALUE analysis
