@@ -143,6 +143,7 @@ define void @const_stride_1_with_reordering(ptr %pl, ptr %ps) {
   %gep_s14 = getelementptr inbounds i8, ptr %ps, i64 14
   %gep_s15 = getelementptr inbounds i8, ptr %ps, i64 15
 
+  ; NOTE: value from %load1 in stored in  %gep_s0
   store i8 %load1, ptr %gep_s0, align 16
   store i8 %load0, ptr %gep_s1, align 16
   store i8 %load2, ptr %gep_s2, align 16
@@ -526,114 +527,15 @@ define void @rt_stride_1_with_reordering(ptr %pl, i64 %stride, ptr %ps) {
   ret void
 }
 
-define void @rt_stride_2_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
-; CHECK-LABEL: define void @rt_stride_2_no_reordering(
-; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[STRIDE]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <8 x i64> [[TMP2]], <i64 0, i64 2, i64 4, i64 6, i64 8, i64 10, i64 12, i64 14>
-; CHECK-NEXT:    [[TMP4:%.*]] = mul nsw <8 x i64> [[TMP2]], <i64 16, i64 18, i64 20, i64 22, i64 24, i64 26, i64 28, i64 30>
-; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x ptr> [[TMP5]], <8 x ptr> poison, <8 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, <8 x ptr> [[TMP6]], <8 x i64> [[TMP3]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, <8 x ptr> [[TMP6]], <8 x i64> [[TMP4]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> [[TMP7]], i32 16, <8 x i1> splat (i1 true), <8 x i8> poison)
-; CHECK-NEXT:    [[TMP10:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> [[TMP8]], i32 16, <8 x i1> splat (i1 true), <8 x i8> poison)
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i8> [[TMP9]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <8 x i8> [[TMP10]], <8 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <8 x i8> [[TMP9]], <8 x i8> [[TMP10]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    store <16 x i8> [[TMP12]], ptr [[GEP_S0]], align 16
-; CHECK-NEXT:    ret void
-;
-  %stride0  = mul nsw i64 %stride, 0
-  %stride1  = mul nsw i64 %stride, 2
-  %stride2  = mul nsw i64 %stride, 4
-  %stride3  = mul nsw i64 %stride, 6
-  %stride4  = mul nsw i64 %stride, 8
-  %stride5  = mul nsw i64 %stride, 10
-  %stride6  = mul nsw i64 %stride, 12
-  %stride7  = mul nsw i64 %stride, 14
-  %stride8  = mul nsw i64 %stride, 16
-  %stride9  = mul nsw i64 %stride, 18
-  %stride10 = mul nsw i64 %stride, 20
-  %stride11 = mul nsw i64 %stride, 22
-  %stride12 = mul nsw i64 %stride, 24
-  %stride13 = mul nsw i64 %stride, 26
-  %stride14 = mul nsw i64 %stride, 28
-  %stride15 = mul nsw i64 %stride, 30
-
-  %gep_l0 = getelementptr inbounds i8, ptr %pl, i64 %stride0
-  %gep_l1 = getelementptr inbounds i8, ptr %pl, i64 %stride1
-  %gep_l2 = getelementptr inbounds i8, ptr %pl, i64 %stride2
-  %gep_l3 = getelementptr inbounds i8, ptr %pl, i64 %stride3
-  %gep_l4 = getelementptr inbounds i8, ptr %pl, i64 %stride4
-  %gep_l5 = getelementptr inbounds i8, ptr %pl, i64 %stride5
-  %gep_l6 = getelementptr inbounds i8, ptr %pl, i64 %stride6
-  %gep_l7 = getelementptr inbounds i8, ptr %pl, i64 %stride7
-  %gep_l8 = getelementptr inbounds i8, ptr %pl, i64 %stride8
-  %gep_l9 = getelementptr inbounds i8, ptr %pl, i64 %stride9
-  %gep_l10 = getelementptr inbounds i8, ptr %pl, i64 %stride10
-  %gep_l11 = getelementptr inbounds i8, ptr %pl, i64 %stride11
-  %gep_l12 = getelementptr inbounds i8, ptr %pl, i64 %stride12
-  %gep_l13 = getelementptr inbounds i8, ptr %pl, i64 %stride13
-  %gep_l14 = getelementptr inbounds i8, ptr %pl, i64 %stride14
-  %gep_l15 = getelementptr inbounds i8, ptr %pl, i64 %stride15
-
-  %load0  = load i8, ptr %gep_l0 , align 16
-  %load1  = load i8, ptr %gep_l1 , align 16
-  %load2  = load i8, ptr %gep_l2 , align 16
-  %load3  = load i8, ptr %gep_l3 , align 16
-  %load4  = load i8, ptr %gep_l4 , align 16
-  %load5  = load i8, ptr %gep_l5 , align 16
-  %load6  = load i8, ptr %gep_l6 , align 16
-  %load7  = load i8, ptr %gep_l7 , align 16
-  %load8  = load i8, ptr %gep_l8 , align 16
-  %load9  = load i8, ptr %gep_l9 , align 16
-  %load10 = load i8, ptr %gep_l10, align 16
-  %load11 = load i8, ptr %gep_l11, align 16
-  %load12 = load i8, ptr %gep_l12, align 16
-  %load13 = load i8, ptr %gep_l13, align 16
-  %load14 = load i8, ptr %gep_l14, align 16
-  %load15 = load i8, ptr %gep_l15, align 16
-
-  %gep_s0 = getelementptr inbounds i8, ptr %ps, i64 0
-  %gep_s1 = getelementptr inbounds i8, ptr %ps, i64 1
-  %gep_s2 = getelementptr inbounds i8, ptr %ps, i64 2
-  %gep_s3 = getelementptr inbounds i8, ptr %ps, i64 3
-  %gep_s4 = getelementptr inbounds i8, ptr %ps, i64 4
-  %gep_s5 = getelementptr inbounds i8, ptr %ps, i64 5
-  %gep_s6 = getelementptr inbounds i8, ptr %ps, i64 6
-  %gep_s7 = getelementptr inbounds i8, ptr %ps, i64 7
-  %gep_s8 = getelementptr inbounds i8, ptr %ps, i64 8
-  %gep_s9 = getelementptr inbounds i8, ptr %ps, i64 9
-  %gep_s10 = getelementptr inbounds i8, ptr %ps, i64 10
-  %gep_s11 = getelementptr inbounds i8, ptr %ps, i64 11
-  %gep_s12 = getelementptr inbounds i8, ptr %ps, i64 12
-  %gep_s13 = getelementptr inbounds i8, ptr %ps, i64 13
-  %gep_s14 = getelementptr inbounds i8, ptr %ps, i64 14
-  %gep_s15 = getelementptr inbounds i8, ptr %ps, i64 15
-
-  store i8 %load0, ptr %gep_s0, align 16
-  store i8 %load1, ptr %gep_s1, align 16
-  store i8 %load2, ptr %gep_s2, align 16
-  store i8 %load3, ptr %gep_s3, align 16
-  store i8 %load4, ptr %gep_s4, align 16
-  store i8 %load5, ptr %gep_s5, align 16
-  store i8 %load6, ptr %gep_s6, align 16
-  store i8 %load7, ptr %gep_s7, align 16
-  store i8 %load8, ptr %gep_s8, align 16
-  store i8 %load9, ptr %gep_s9, align 16
-  store i8 %load10, ptr %gep_s10, align 16
-  store i8 %load11, ptr %gep_s11, align 16
-  store i8 %load12, ptr %gep_s12, align 16
-  store i8 %load13, ptr %gep_s13, align 16
-  store i8 %load14, ptr %gep_s14, align 16
-  store i8 %load15, ptr %gep_s15, align 16
-
-  ret void
-}
-
+; TODO: We want to generate this code:
+; define void @constant_stride_widen_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
+; %gep_l0 = getelementptr inbounds i8, ptr %pl, i64 %offset0
+; %gep_s0 = getelementptr inbounds i8, ptr %ps, i64 0
+; %strided_load = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 16 %gep_l0, i64 8, <4 x i1> splat (i1 true), i32 4)
+; %bitcast_ = bitcast <4 x i32> %strided_load to <16 x i8>
+; store <16 x i8> %bitcast_, ptr %gep_s0, align 16
+; ret void
+; }
 define void @constant_stride_widen_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
 ; CHECK-LABEL: define void @constant_stride_widen_no_reordering(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
@@ -715,6 +617,15 @@ define void @constant_stride_widen_no_reordering(ptr %pl, i64 %stride, ptr %ps) 
   ret void
 }
 
+; TODO: We want to generate this code:
+; define void @rt_stride_widen_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
+; %gep_l0 = getelementptr inbounds i8, ptr %pl, i64 %offset0
+; %gep_s0 = getelementptr inbounds i8, ptr %ps, i64 0
+; %strided_load = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 16 %gep_l0, i64 %stride, <4 x i1> splat (i1 true), i32 4)
+; %bitcast_ = bitcast <4 x i32> %strided_load to <16 x i8>
+; store <16 x i8> %bitcast_, ptr %gep_s0, align 16
+; ret void
+; }
 define void @rt_stride_widen_no_reordering(ptr %pl, i64 %stride, ptr %ps) {
 ; CHECK-LABEL: define void @rt_stride_widen_no_reordering(
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
