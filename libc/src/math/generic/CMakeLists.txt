@@ -163,9 +163,9 @@ add_entrypoint_object(
   HDRS
     ../ceilbf16.h
   DEPENDS
+    libc.src.__support.common
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.common
     libc.src.__support.macros.config
   FLAGS
     ROUND_OPT
@@ -823,9 +823,9 @@ add_entrypoint_object(
   HDRS
     ../truncbf16.h
   DEPENDS
+    libc.src.__support.common
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.common
     libc.src.__support.macros.config
   FLAGS
     ROUND_OPT
@@ -898,9 +898,9 @@ add_entrypoint_object(
   HDRS
     ../floorbf16.h
   DEPENDS
+    libc.src.__support.common
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.common
     libc.src.__support.macros.config
   FLAGS
     ROUND_OPT
@@ -973,9 +973,9 @@ add_entrypoint_object(
   HDRS
     ../roundbf16.h
   DEPENDS
+    libc.src.__support.common
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.common
     libc.src.__support.macros.config
   FLAGS
     ROUND_OPT
@@ -1048,9 +1048,9 @@ add_entrypoint_object(
   HDRS
     ../roundevenbf16.h
   DEPENDS
+    libc.src.__support.common
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
-    libc.src.__support.common
     libc.src.__support.macros.config
   FLAGS
     ROUND_OPT
