@@ -273,6 +273,14 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
     return failure();
 
   // TODO: handle order attribute
+  auto hasDefaultOrder = [&]() {
+    DenseI32ArrayAttr order = getOrder();
+    return !order || isIdentityPermutation(llvm::to_vector_of<int64_t>(
+                         llvm::reverse(order.asArrayRef())));
+  };
+  if (!hasDefaultOrder())
+    return mlir::emitError(loc, "order attribute is currently not supported.");
+
   auto dims = llvm::map_to_vector(*getSgLayoutAsInt(), [&](int64_t d) -> Value {
     return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
   });
