@@ -1164,6 +1164,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (auto *Phi = dyn_cast<VPPhi>(Def)) {
+    if (Phi->getNumOperands() == 1)
+      Phi->replaceAllUsesWith(Phi->getOperand(0));
+    return;
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
