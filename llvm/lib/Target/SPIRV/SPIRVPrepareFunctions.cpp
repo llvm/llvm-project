@@ -234,7 +234,7 @@ static SmallVector<Metadata *> parseAnnotation(Value *I,
       return SmallVector<Metadata *>{};
     MDs.push_back(MDNode::get(Ctx, MDsItem));
   }
-  return Pos == static_cast<int>(Anno.length()) ? MDs
+  return Pos == static_cast<int>(Anno.length()) ? std::move(MDs)
                                                 : SmallVector<Metadata *>{};
 }
 
