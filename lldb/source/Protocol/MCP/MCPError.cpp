@@ -1,4 +1,4 @@
-//===-- MCPError.cpp ------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCPError.h"
+#include "lldb/Protocol/MCP/MCPError.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <system_error>
 
-using namespace lldb_private::mcp;
+using namespace lldb_protocol::mcp;
 
 char MCPError::ID;
 char UnsupportedURI::ID;
