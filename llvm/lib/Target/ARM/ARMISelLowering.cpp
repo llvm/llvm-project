@@ -669,13 +669,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
       // Integer division functions
       // RTABI chapter 4.3.1
-      { RTLIB::SDIV_I8,  RTLIB::__aeabi_idiv__i8 },
-      { RTLIB::SDIV_I16, RTLIB::__aeabi_idiv__i16 },
-      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv__i32},
+      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv },
       { RTLIB::SDIV_I64, RTLIB::__aeabi_ldivmod },
-      { RTLIB::UDIV_I8,  RTLIB::__aeabi_uidiv__i8 },
-      { RTLIB::UDIV_I16, RTLIB::__aeabi_uidiv__i16 },
-      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv__i32 },
+      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv },
       { RTLIB::UDIV_I64, RTLIB::__aeabi_uldivmod },
     };
     // clang-format on
@@ -741,7 +737,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
         {RTLIB::FPROUND_F32_F16, RTLIB::__aeabi_f2h},
-        {RTLIB::FPROUND_F64_F16, RTLIB::__aeabi_d2h},
         {RTLIB::FPEXT_F16_F32, RTLIB::__aeabi_h2f},
     };
 
