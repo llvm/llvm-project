@@ -610,6 +610,7 @@ struct __is_std_optional<optional<_Tp>> : true_type {};
 template <class _Tp, class = void>
 struct __optional_iterator_aliases {};
 
+#    if _LIBCPP_STD_VER >= 26
 // disallow T (&)() and T (&)[]
 template <class _Tp>
 struct __optional_iterator_aliases<
@@ -621,7 +622,6 @@ private:
   using __const_pointer _LIBCPP_NODEBUG = std::add_pointer_t<const _Tp>;
 
 public:
-#    if _LIBCPP_STD_VER >= 26
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
   using __iterator _LIBCPP_NODEBUG       = __bounded_iter<__wrap_iter<__pointer>>;
   using __const_iterator _LIBCPP_NODEBUG = __bounded_iter<__wrap_iter<__const_pointer>>;
@@ -629,8 +629,9 @@ public:
   using __iterator _LIBCPP_NODEBUG       = __wrap_iter<__pointer>;
   using __const_iterator _LIBCPP_NODEBUG = __wrap_iter<__const_pointer>;
 #      endif
-#    endif
 };
+
+#    endif
 
 template <class _Tp>
 class _LIBCPP_DECLSPEC_EMPTY_BASES optional
