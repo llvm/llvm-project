@@ -3037,16 +3037,16 @@ bool IRTranslator::translateCallBr(const User &U,
   // FIXME: inline asm not yet supported for callbr in GlobalISel As soon as we
   // add support, we need to handle the indirect asm targets, see
   // SelectionDAGBuilder::visitCallBr().
+  Intrinsic::ID IID = I.getIntrinsicID();
   if (I.isInlineAsm())
     return false;
-  if (I.getIntrinsicID() == Intrinsic::not_intrinsic)
+  if (IID == Intrinsic::not_intrinsic)
     return false;
-  if (!translateTargetIntrinsic(I, I.getIntrinsicID(), MIRBuilder))
+  if (!translateTargetIntrinsic(I, IID, MIRBuilder))
     return false;
 
   // Retrieve successors.
-  SmallPtrSet<BasicBlock *, 8> Dests;
-  Dests.insert(I.getDefaultDest());
+  SmallPtrSet<BasicBlock *, 8> Dests = {I.getDefaultDest()};
   MachineBasicBlock *Return = &getMBB(*I.getDefaultDest());
 
   // Update successor info.

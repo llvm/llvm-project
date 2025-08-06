@@ -5422,17 +5422,11 @@ SDVTList SelectionDAGBuilder::getTargetIntrinsicVTList(const CallBase &I,
 SDValue SelectionDAGBuilder::getTargetNonMemIntrinsicNode(
     const CallBase &I, bool HasChain, SmallVector<SDValue, 8> &Ops,
     SDVTList &VTs) {
-  SDValue Result;
-
-  if (!HasChain) {
-    Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
-  } else if (!I.getType()->isVoidTy()) {
-    Result = DAG.getNode(ISD::INTRINSIC_W_CHAIN, getCurSDLoc(), VTs, Ops);
-  } else {
-    Result = DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops);
-  }
-
-  return Result;
+  if (!HasChain)
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
+  if (!I.getType()->isVoidTy())
+    return DAG.getNode(ISD::INTRINSIC_W_CHAIN, getCurSDLoc(), VTs, Ops);
+  return DAG.getNode(ISD::INTRINSIC_VOID, getCurSDLoc(), VTs, Ops);
 }
 
 /// Set root, convert return type if necessaey and check alignment.

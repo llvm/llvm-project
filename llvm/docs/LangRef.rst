@@ -9678,8 +9678,7 @@ This instruction requires several arguments:
    indicates the function accepts a variable number of arguments, the
    extra arguments can be specified.
 #. '``fallthrough label``': the label reached when the inline assembly's
-   execution exits the bottom. In case of an intrinsic call, the semantic
-   depends on the semantic of the intrinsic.
+   execution exits the bottom / the intrinsic call terminates.
 #. '``indirect labels``': the labels reached when a callee transfers control
    to a location other than the '``fallthrough label``'. Label constraints
    refer to these destinations.
@@ -9697,7 +9696,7 @@ flow goes after the call.
 The output values of a '``callbr``' instruction are available both in the
 the '``fallthrough``' block, and any '``indirect``' blocks(s).
 
-The only uses of this today are:
+The only current uses of this are:
 
 #. implement the "goto" feature of gcc inline assembly where additional
    labels can be provided as locations for the inline assembly to jump to.
