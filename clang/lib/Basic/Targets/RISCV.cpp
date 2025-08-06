@@ -649,19 +649,19 @@ bool RISCVTargetInfo::checkCFBranchLabelSchemeSupported(
   switch (Scheme) {
   case CFBranchLabelSchemeKind::Default:
     Diags.Report(diag::err_opt_not_valid_without_opt)
-        << "fcf-protection=branch"
-        << (Twine("mcf-branch-label-scheme=") +
+        << "-fcf-protection=branch"
+        << (Twine("-mcf-branch-label-scheme=") +
             getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
                .str();
     return false;
   case CFBranchLabelSchemeKind::Unlabeled:
     return true;
   case CFBranchLabelSchemeKind::FuncSig:
-    Diags.Report(diag::err_opt_unsupported_with_sugguest)
-        << (Twine("mcf-branch-label-scheme=") +
+    Diags.Report(diag::err_opt_unsupported_with_suggest)
+        << (Twine("-mcf-branch-label-scheme=") +
             getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::FuncSig))
                .str()
-        << (Twine("mcf-branch-label-scheme=") +
+        << (Twine("-mcf-branch-label-scheme=") +
             getCFBranchLabelSchemeFlagVal(CFBranchLabelSchemeKind::Unlabeled))
                .str();
     return false;
