@@ -29,6 +29,8 @@ constexpr void test() {
   std::basic_string<CharT, TraitsT, AllocT> s{CS("Hello cruel world!"), AllocT{}};
 
   { // With a default position and a character length.
+
+    // Check it the return type of subview() is correct.
     std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview();
 
     assert(sv == CS("Hello cruel world!"));
@@ -36,28 +38,19 @@ constexpr void test() {
     assert(std::as_const(s).subview() == CS("Hello cruel world!"));
   }
 
-  { // With a explict position and a character length.
-    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(6, 5);
+  { // Check with different position and length.
 
-    assert(sv == CS("cruel"));
-  }
+    // With a explict position and a character length.
+    assert(s.subview(6, 5) == CS("cruel"));
 
-  { // From the beginning of the string with a explicit character length.
-    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(0, 5);
+    // From the beginning of the string with a explicit character length.
+    assert(sv = s.subview(0, 5) == CS("Hello"));
 
-    assert(sv == CS("Hello"));
-  }
+    // To the end of string with the default character length.
+    assert(subview(12) == CS("world!"));
 
-  { // To the end of string with the default character length.
-    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(12);
-
-    assert(sv == CS("world!"));
-  }
-
-  { // From the beginning to the end of the string with explicit values.
-    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview(0, s.size());
-
-    assert(sv == CS("Hello cruel world!"));
+    // From the beginning to the end of the string with explicit values.
+    assert(subview(0, s.size() == CS("Hello cruel world!"));
   }
 
   // Test if exceptions are thrown correctly.
@@ -68,7 +61,7 @@ constexpr void test() {
         s.subview(s.size() + 1);
         assert(false && "Expected std::out_of_range exception");
       } catch (const std::out_of_range&) {
-        // Expected exception
+        // Expected exception...
       }
     }
 
@@ -77,7 +70,7 @@ constexpr void test() {
         s.subview(s.size() + 1, 0);
         assert(false && "Expected std::out_of_range exception");
       } catch (const std::out_of_range&) {
-        // Expected exception
+        // Expected exception...
       }
     }
 
@@ -86,7 +79,7 @@ constexpr void test() {
         s.subview(s.size() + 1, 1);
         assert(false && "Expected std::out_of_range exception");
       } catch (const std::out_of_range&) {
-        // Expected exception
+        // Expected exception...
       }
     }
   }
