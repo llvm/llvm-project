@@ -3520,6 +3520,17 @@ void RewriteInstance::disassembleFunctions() {
       }
     }
 
+    // Check if fillCFIInfoFor removed any OpNegateRAState CFIs from the
+    // function.
+    if (Function.containedNegateRAState()) {
+      if (opts::DisallowPacret) {
+        BC->errs() << "BOLT-ERROR: --disallow-pacret flag was used, but "
+                   << Function.getPrintName()
+                   << " contains .cfi-negate-ra-state.\n";
+        exit(1);
+      }
+    }
+
     // Parse LSDA.
     if (Function.getLSDAAddress() != 0 &&
         !BC->getFragmentsToSkip().count(&Function)) {
