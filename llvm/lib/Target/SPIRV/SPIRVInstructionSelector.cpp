@@ -220,8 +220,8 @@ private:
   bool selectConst(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
 
-  bool selectSelect(Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
-                    bool IsSigned) const;
+  bool selectSelect(Register ResVReg, const SPIRVType *ResType,
+                    MachineInstr &I) const;
   bool selectSelectDefaultArgs(Register ResVReg, const SPIRVType *ResType,
                                MachineInstr &I, bool IsSigned) const;
   bool selectIToF(Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
@@ -516,7 +516,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
         if (Def->getOpcode() == TargetOpcode::G_SELECT) {
           Register SelectDstReg = Def->getOperand(0).getReg();
           Res = selectSelect(SelectDstReg, GR.getSPIRVTypeForVReg(SelectDstReg),
-                             *Def, true);
+                             *Def);
           GR.invalidateMachineInstr(Def);
           Def->removeFromParent();
           MRI->replaceRegWith(DstReg, SelectDstReg);
@@ -2578,8 +2578,7 @@ Register SPIRVInstructionSelector::buildOnesVal(bool AllOnes,
 
 bool SPIRVInstructionSelector::selectSelect(Register ResVReg,
                                             const SPIRVType *ResType,
-                                            MachineInstr &I,
-                                            bool IsSigned) const {
+                                            MachineInstr &I) const {
   bool IsFloatTy =
       GR.isScalarOrVectorOfType(I.getOperand(2).getReg(), SPIRV::OpTypeFloat) ||
       GR.isScalarOrVectorOfType(I.getOperand(3).getReg(), SPIRV::OpTypeFloat);
@@ -2634,7 +2633,6 @@ bool SPIRVInstructionSelector::selectSelectDefaultArgs(Register ResVReg,
       GR.isScalarOfType(I.getOperand(1).getReg(), SPIRV::OpTypeBool);
   unsigned Opcode =
       IsScalarBool ? SPIRV::OpSelectSISCond : SPIRV::OpSelectVIVCond;
-
   return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
