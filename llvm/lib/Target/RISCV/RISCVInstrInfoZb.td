@@ -663,6 +663,27 @@ def : Pat<(binop_allwusers<or> (shl GPR:$rs2, (i64 16)),
 def : Pat<(i64 (or (sext_inreg (shl GPR:$rs2, (i64 16)), i32),
                    (zexti16 (i64 GPR:$rs1)))),
           (PACKW GPR:$rs1, GPR:$rs2)>;
+
+// Match a pattern of 2 bytes being inserted into bits [31:16], with bits
+// bits [15:0] coming from a zero extended value, and bits [63:32] being
+// ignored. We can use packw with packh for bits [31:16]. If bits [15:0] can
+// also be a packh, it can be matched separately.
+def : Pat<(binop_allwusers<or>
+               (or (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 24)),
+                   (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
+               (zexti16 (XLenVT GPR:$rs1))),
+          (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
+// We need to manually reassociate the patterns because of the binop_allwusers.
+def : Pat<(binop_allwusers<or>
+               (or (zexti16 (XLenVT GPR:$rs1)),
+                   (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
+               (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 24))),
+          (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
+def : Pat<(binop_allwusers<or>
+               (or (zexti16 (XLenVT GPR:$rs1)),
+                   (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 24))),
+               (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 16))),
+          (PACKW GPR:$rs1, (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 } // Predicates = [HasStdExtZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbb, IsRV32] in
