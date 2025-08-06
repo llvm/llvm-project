@@ -324,8 +324,7 @@ float FORTRAN_PROCEDURE_NAME(secnds)(float *refTime) {
   // day is the best starting point.
   static std::atomic<std::time_t> startingPoint{TIME_UNINITIALIZED};
   // "Acquire" will give us writes from other threads.
-  std::time_t localStartingPoint{
-      startingPoint.load(std::memory_order_acquire)};
+  std::time_t localStartingPoint{startingPoint.load(std::memory_order_acquire)};
   // Initialize startingPoint if we haven't initialized it yet or
   // if we were passed 0.0f, which indicates to compute seconds from
   // current day's midnight.
