@@ -61,8 +61,6 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Mixed precision vectorization tests.
-
 // CHECK-LABEL: @float_mixed_precision_matmul
 // CHECK-COUNT-3: vector.transfer_read
 // CHECK-NOT:     arith.extf
@@ -194,12 +192,10 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Mixed precision vectorization tests.
-
 // CHECK-LABEL: @float_mixed_precision_matmul_as_contract
 // CHECK-COUNT-3: vector.transfer_read
 // CHECK-NOT:     arith.extf
-// CHECK:        vector.contract {{.*}} : vector<24x12xbf16>, vector<12x25xbf16> into vector<24x25xf32>
+// CHECK:         vector.contract {{.*}} : vector<24x12xbf16>, vector<12x25xbf16> into vector<24x25xf32>
 // CHECK:         vector.transfer_write
 func.func @float_mixed_precision_matmul_as_contract(%A: tensor<24x12xbf16>,
                               %B: tensor<12x25xbf16>,
@@ -1828,14 +1824,12 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Mixed precision vectorization tests.
-
-// CHECK-LABEL: func @float_mixed_precision_generic_as_contract
+// CHECK-LABEL: func @float_mixed_precision_matmul_as_generic
 // CHECK-COUNT-3: vector.transfer_read
 // CHECK-NOT:     arith.extf
-// CHECK:         vector.contract {{.*}} : vector<8x32x16xbf16>, vector<8x32x16xbf16> into vector<8x32xf32>
+// CHECK:         vector.contract {{.*}} : vector<8x16xbf16>, vector<16x32xbf16> into vector<8x32xf32>
 // CHECK:         vector.transfer_write
-func.func @float_mixed_precision_generic_as_contract(%A: memref<8x16xbf16>, %B: memref<16x32xbf16>,
+func.func @float_mixed_precision_matmul_as_generic(%A: memref<8x16xbf16>, %B: memref<16x32xbf16>,
                          %C: memref<8x32xf32>) {
   linalg.generic {
     indexing_maps = [
@@ -1861,19 +1855,19 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1  { fold_type_extensions_into_contract, disable_transfer_permutation_map_lowering_patterns } : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1  { fold_type_extensions_into_contract } : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
 
 // -----
 
-// CHECK-LABEL: func @integer_mixed_precision_generic_as_contract
+// CHECK-LABEL: func @integer_mixed_precision_matmul_as_generic
 // CHECK-COUNT-3: vector.transfer_read
 // CHECK-NOT:     arith.extsi
-// CHECK:         vector.contract {{.*}} : vector<8x32x16xi8>, vector<8x32x16xi8> into vector<8x32xi32>
+// CHECK:         vector.contract {{.*}} : vector<8x16xi8>, vector<16x32xi8> into vector<8x32xi32>
 // CHECK:         vector.transfer_write
-func.func @integer_mixed_precision_generic_as_contract(%A: memref<8x16xi8>, %B: memref<16x32xi8>,
+func.func @integer_mixed_precision_matmul_as_generic(%A: memref<8x16xi8>, %B: memref<16x32xi8>,
                          %C: memref<8x32xi32>) {
   linalg.generic {
     indexing_maps = [
@@ -1899,7 +1893,7 @@ module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1  { fold_type_extensions_into_contract, disable_transfer_permutation_map_lowering_patterns } : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1  { fold_type_extensions_into_contract } : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
