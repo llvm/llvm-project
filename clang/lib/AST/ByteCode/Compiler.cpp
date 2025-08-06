@@ -331,6 +331,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_FloatingToIntegral: {
+    if (!CE->getType()->isIntegralOrEnumerationType())
+      return false;
     if (!this->visit(SubExpr))
       return false;
     PrimType ToT = classifyPrim(CE);
@@ -1369,10 +1371,15 @@ bool Compiler<Emitter>::VisitVectorBinOp(const BinaryOperator *E) {
   // BitAdd/BitOr/BitXor/Shl/Shr doesn't support bool type, we need perform the
   // integer promotion.
   bool NeedIntPromot = ElemT == PT_Bool && (E->isBitwiseOp() || E->isShiftOp());
-  QualType PromotTy =
-      Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
-  PrimType PromotT = classifyPrim(PromotTy);
-  PrimType OpT = NeedIntPromot ? PromotT : ElemT;
+  QualType PromotTy;
+  PrimType PromotT = PT_Bool;
+  PrimType OpT = ElemT;
+  if (NeedIntPromot) {
+    PromotTy =
+        Ctx.getASTContext().getPromotedIntegerType(Ctx.getASTContext().BoolTy);
+    PromotT = classifyPrim(PromotTy);
+    OpT = PromotT;
+  }
 
   auto getElem = [=](unsigned Offset, PrimType ElemT, unsigned Index) {
     if (!this->emitGetLocal(PT_Ptr, Offset, E))
@@ -1757,6 +1764,9 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     if (Inits.size() == 1 && E->getType() == Inits[0]->getType())
       return this->delegate(Inits[0]);
+
+    if (!R)
+      return false;
 
     auto initPrimitiveField = [=](const Record::Field *FieldToInit,
                                   const Expr *Init, PrimType T,

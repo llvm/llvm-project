@@ -52,6 +52,11 @@ class MCObjectStreamer : public MCStreamer {
   DenseMap<const MCSymbol *, SmallVector<PendingAssignment, 1>>
       pendingAssignments;
 
+  // Used to allocate special fragments that do not use MCFragment's fixed-size
+  // part.
+  BumpPtrAllocator SpecialFragAllocator;
+
+  void addSpecialFragment(MCFragment *F);
   void emitInstToData(const MCInst &Inst, const MCSubtargetInfo &);
   void emitCFIStartProcImpl(MCDwarfFrameInfo &Frame) override;
   void emitCFIEndProcImpl(MCDwarfFrameInfo &Frame) override;
@@ -81,11 +86,22 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  // Add a fragment with a variable-size tail and start a new empty fragment.
-  void insert(MCFragment *F);
-
   // Add a new fragment to the current section without a variable-size tail.
   void newFragment();
+
+  template <typename FT, typename... Args> FT *allocFragment(Args &&...args) {
+    auto *F = new (SpecialFragAllocator.Allocate(sizeof(FT), alignof(FT)))
+        FT(std::forward<Args>(args)...);
+    return F;
+  }
+  // Add a new special fragment to the current section and start a new empty
+  // fragment.
+  template <typename FT, typename... Args>
+  FT *newSpecialFragment(Args &&...args) {
+    auto *F = allocFragment<FT, Args...>(std::forward<Args>(args)...);
+    addSpecialFragment(F);
+    return F;
+  }
 
   void appendContents(ArrayRef<char> Contents);
   void appendContents(size_t Num, char Elt);
