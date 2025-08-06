@@ -180,29 +180,20 @@ if ("flang" IN_LIST LLVM_ENABLE_PROJECTS)
 endif()
 
 if ("libc" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=libc is deprecated.  Please use "
+  message(FATAL_ERROR "Using LLVM_ENABLE_PROJECTS=libc is no longer supported.  Please use "
     "-DLLVM_ENABLE_RUNTIMES=libc or see the instructions at "
     "https://libc.llvm.org/ for building the runtimes.")
 endif()
 
 if ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=compiler-rt is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
-    "-DLLVM_ENABLE_RUNTIMES=compiler-rt or see the instructions at "
+  message(FATAL_ERROR "Using LLVM_ENABLE_PROJECTS=compiler-rt is no longer supported. "
+    "Please use -DLLVM_ENABLE_RUNTIMES=compiler-rt or see the instructions at "
     "https://compiler-rt.llvm.org/ for building the runtimes.")
 endif()
 
-if ("offload" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=offload is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
-    "-DLLVM_ENABLE_RUNTIMES=offload or see the instructions at "
-    "https://openmp.llvm.org/ for building the runtimes.")
-endif()
-
 if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=openmp is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
-    "-DLLVM_ENABLE_RUNTIMES=openmp or see the instructions at "
+  message(FATAL_ERROR "Using LLVM_ENABLE_PROJECTS=openmp is no longer supported. "
+    "Please use -DLLVM_ENABLE_RUNTIMES=openmp or see the instructions at "
     "https://openmp.llvm.org/ for building the runtimes.")
 endif()
 
@@ -213,9 +204,8 @@ if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
 endif ()
 
 if ("libclc" IN_LIST LLVM_ENABLE_PROJECTS)
-  message(WARNING "Using LLVM_ENABLE_PROJECTS=libclc is deprecated now, and will "
-    "become a fatal error in the LLVM 21 release.  Please use "
-    "-DLLVM_ENABLE_RUNTIMES=libclc or see the instructions at "
+  message(FATAL_ERROR "Using LLVM_ENABLE_PROJECTS=libclc is no longer supported. "
+    "Please use -DLLVM_ENABLE_RUNTIMES=libclc or see the instructions at "
     "https://libclc.llvm.org/ for building the runtimes.")
 endif()
 
