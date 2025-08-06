@@ -429,7 +429,6 @@ private:
   Context::Factory ContextFactory;
   std::vector<VarDefinition> VarDefinitions;
   std::vector<std::pair<const Stmt *, Context>> SavedContexts;
-  bool Imprecise = false;
 
 public:
   LocalVariableMap() {
@@ -524,11 +523,15 @@ public:
   void traverseCFG(CFG *CFGraph, const PostOrderCFGView *SortedGraph,
                    std::vector<CFGBlockInfo> &BlockInfo);
 
-  /// Returns true if the queries to this instance may be imprecise.
-  bool isImprecise() const { return Imprecise; }
-
 protected:
   friend class VarMapBuilder;
+
+  // Resolve any definition ID down to its non-reference base ID.
+  unsigned getCanonicalDefinitionID(unsigned ID) {
+    while (ID > 0 && VarDefinitions[ID].isReference())
+      ID = VarDefinitions[ID].Ref;
+    return ID;
+  }
 
   // Get the current context index
   unsigned getContextIndex() { return SavedContexts.size()-1; }
@@ -716,14 +719,15 @@ LocalVariableMap::intersectContexts(Context C1, Context C2) {
   Context Result = C1;
   for (const auto &P : C1) {
     const NamedDecl *Dec = P.first;
-    const unsigned *i2 = C2.lookup(Dec);
-    if (!i2) {
+    const unsigned *I2 = C2.lookup(Dec);
+    if (!I2) {
       // The variable doesn't exist on second path.
       Result = removeDefinition(Dec, Result);
-    } else if (*i2 != P.second) {
-      // The variable exists, but has different definition.
+    } else if (getCanonicalDefinitionID(P.second) !=
+               getCanonicalDefinitionID(*I2)) {
+      // If canonical definitions mismatch the underlying definitions are
+      // different, invalidate.
       Result = clearDefinition(Dec, Result);
-      Imprecise = true;
     }
   }
   return Result;
@@ -744,13 +748,22 @@ LocalVariableMap::Context LocalVariableMap::createReferenceContext(Context C) {
 // createReferenceContext.
 void LocalVariableMap::intersectBackEdge(Context C1, Context C2) {
   for (const auto &P : C1) {
-    unsigned i1 = P.second;
-    VarDefinition *VDef = &VarDefinitions[i1];
+    const unsigned I1 = P.second;
+    VarDefinition *VDef = &VarDefinitions[I1];
     assert(VDef->isReference());
 
-    const unsigned *i2 = C2.lookup(P.first);
-    if (!i2 || (*i2 != i1))
-      VDef->Ref = 0;    // Mark this variable as undefined
+    const unsigned *I2 = C2.lookup(P.first);
+    if (!I2) {
+      // Variable does not exist at the end of the loop, invalidate.
+      VDef->Ref = 0;
+      continue;
+    }
+
+    // Compare the canonical IDs. This correctly handles chains of references
+    // and determines if the variable is truly loop-invariant.
+    if (getCanonicalDefinitionID(VDef->Ref) != getCanonicalDefinitionID(*I2)) {
+      VDef->Ref = 0; // Mark this variable as undefined
+    }
   }
 }
 
@@ -1601,9 +1614,11 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
   const LocalVarContext &LVarCtx = PredBlockInfo->ExitContext;
 
   // Temporarily set the lookup context for SExprBuilder.
-  SxBuilder.setLookupLocalVarExpr([&](const NamedDecl *D) {
+  SxBuilder.setLookupLocalVarExpr([&](const NamedDecl *D) -> const Expr * {
+    if (!Handler.issueBetaWarnings())
+      return nullptr;
     auto Ctx = LVarCtx;
-    return LocalVarMap.isImprecise() ? nullptr : LocalVarMap.lookupExpr(D, Ctx);
+    return LocalVarMap.lookupExpr(D, Ctx);
   });
   auto Cleanup = llvm::make_scope_exit(
       [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
@@ -1677,14 +1692,13 @@ public:
       : ConstStmtVisitor<BuildLockset>(), Analyzer(Anlzr), FSet(Info.EntrySet),
         FunctionExitFSet(FunctionExitFSet), LVarCtx(Info.EntryContext),
         CtxIndex(Info.EntryIndex) {
-    Analyzer->SxBuilder.setLookupLocalVarExpr([this](const NamedDecl *D) {
-      auto Ctx = LVarCtx;
-      // Do not resolve aliases if the LocalVarMap is imprecise for this
-      // function, to retain stable variable names at every point.
-      return Analyzer->LocalVarMap.isImprecise()
-                 ? nullptr
-                 : Analyzer->LocalVarMap.lookupExpr(D, Ctx);
-    });
+    Analyzer->SxBuilder.setLookupLocalVarExpr(
+        [this](const NamedDecl *D) -> const Expr * {
+          if (!Analyzer->Handler.issueBetaWarnings())
+            return nullptr;
+          auto Ctx = LVarCtx;
+          return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
+        });
   }
 
   ~BuildLockset() { Analyzer->SxBuilder.setLookupLocalVarExpr(nullptr); }

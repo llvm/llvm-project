@@ -31,7 +31,6 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
@@ -514,9 +513,6 @@ private:
   void mergeEntryMapBackEdge();
   void mergePhiNodesBackEdge(const CFGBlock *Blk);
 
-  // Returns true if a variable is assumed to be reassigned.
-  bool isVariableReassigned(const VarDecl *VD);
-
 private:
   // Set to true when parsing capability expressions, which get translated
   // inaccurately in order to hack around smart pointers etc.
@@ -552,8 +548,6 @@ private:
   llvm::DenseSet<const ValueDecl *> VarsBeingTranslated;
   // Context-dependent lookup of currently valid definitions of local variables.
   std::function<const Expr *(const NamedDecl *)> LookupLocalVarExpr;
-  // Set caching local variables that are reassigned.
-  std::optional<llvm::DenseSet<const VarDecl *>> ReassignedLocalVariables;
 };
 
 #ifndef NDEBUG

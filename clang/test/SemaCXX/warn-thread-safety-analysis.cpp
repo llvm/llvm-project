@@ -7398,6 +7398,37 @@ void testPointerAliasTryLock2() {
   }
 }
 
+// FIXME: This test demonstrates a dubious pattern that the analysis correctly
+// flags as unsafe, though the user might perceive it as a false positive. The
+// pattern combines a TryLock() failure path with a conditional reassignment of
+// the pointer being locked:
+//
+// 1.  The conditional reassignment `ptr = returnsFoo(ptr);` forces `ptr` to
+//     become a phi node in the CFG at the subsequent merge point. The alias
+//     analysis correctly tracks that `ptr` could refer to one of two distinct
+//     objects.
+//
+// 2.  The lock acquired on the `!TryLock()` path should be (conceptually)
+//     `phi(P1, P2)->mu`, while the lock on the successful path is on the
+//     original `P1->mu`. When the paths merge the analysis currently discards
+//     the alias as it cannot prove a single alias on that path.
+//
+// While this pattern is stylistically fragile and difficult to reason about, a
+// robust solution would require a more advanced symbolic representation of
+// capabilities within the analyzer. For now, we warn on such ambiguity.
+void testPointerAliasTryLockDubious(int x) {
+  Foo *ptr = returnsFoo();
+  if (!ptr->mu.TryLock()) {  // expected-note{{mutex acquired here}}
+    if (x)
+      ptr = returnsFoo(ptr); // <-- this breaks the pattern
+    ptr->mu.Lock();          // expected-note{{mutex acquired here}}
+  }
+  ptr->data = 42;            // expected-warning{{writing variable 'data' requires holding mutex 'ptr->mu' exclusively}} \
+                             // expected-warning{{mutex 'ptr->mu' is not held on every path through here}} \
+                             // expected-warning{{mutex 'returnsFoo().mu' is not held on every path through here}}
+  ptr->mu.Unlock();          // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
+}
+
 void testReassignment() {
   Foo f1, f2;
   Foo *ptr = &f1;
@@ -7523,4 +7554,54 @@ void testStrangePattern(Mutex *&out, int &x) {
   x = 42;  // ... perhaps guarded by mu
   mu->Unlock();
 }
+
+void testNestedLoopInvariant(Container *c, int n) {
+  Foo *ptr = &c->foo;
+  ptr->mu.Lock();
+
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j) {
+    }
+  }
+
+  c->foo.data = 42; // ok: alias still valid
+  ptr->mu.Unlock();
+}
+
+void testLoopWithBreak(Foo *f, bool cond) {
+  Foo *ptr = f;
+  ptr->mu.Lock();
+  for (int i = 0; i < 10; ++i) {
+    if (cond) {
+      break; // merge point is after the loop
+    }
+  }
+  f->data = 42; // ok
+  ptr->mu.Unlock();
+}
+
+void testLoopWithContinue(Foo *f, bool cond) {
+  Foo *ptr = f;
+  ptr->mu.Lock();
+  for (int i = 0; i < 10; ++i) {
+    if (cond) {
+      continue; // tests merge at the top of loop.
+    }
+  }
+  f->data = 42; // ok
+  ptr->mu.Unlock();
+}
+
+void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
+  Foo *ptr = f1;
+  ptr->mu.Lock(); // expected-note{{mutex acquired here}}
+
+  for (int i = 0; i < 10; ++i) {
+    if (cond) {
+      ptr = f2; // alias is reassigned on some path inside the loop.
+    }
+  }
+  f1->data = 42;
+  ptr->mu.Unlock(); // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
+} // expected-warning{{mutex 'f1->mu' is still held at the end of function}}
 }  // namespace CapabilityAliases
