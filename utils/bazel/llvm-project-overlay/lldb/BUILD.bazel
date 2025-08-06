@@ -115,6 +115,9 @@ expand_template(
         "#cmakedefine01 LLVM_ENABLE_CURL": "#define LLVM_ENABLE_CURL 0",
 
         # TODO: python support
+        # Note this substitution has to be defined before LLDB_ENABLE_PYTHON.
+        # Otherwise it will get replaced to 0_LIMITED_API.
+        "#cmakedefine01 LLDB_ENABLE_PYTHON_LIMITED_API": "#define LLDB_ENABLE_PYTHON_LIMITED_API 0",
         "#cmakedefine01 LLDB_ENABLE_PYTHON": "#define LLDB_ENABLE_PYTHON 0",
         # Only enabled by default on Windows
         "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 0",
