@@ -9337,19 +9337,23 @@ _mm512_mask_abs_pd(__m512d __W, __mmask8 __K, __m512d __A)
  * This takes log2(n) steps where n is the number of elements in the vector.
  */
 
-static __inline__ long long __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_reduce_add_epi64(__m512i __W) {
+static __inline__ long long __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_reduce_add_epi64(__m512i __W) {
   return __builtin_reduce_add((__v8di)__W);
 }
 
-static __inline__ long long __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_reduce_mul_epi64(__m512i __W) {
+static __inline__ long long __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_reduce_mul_epi64(__m512i __W) {
   return __builtin_reduce_mul((__v8di)__W);
 }
 
-static __inline__ long long __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_reduce_and_epi64(__m512i __W) {
+static __inline__ long long __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_reduce_and_epi64(__m512i __W) {
   return __builtin_reduce_and((__v8di)__W);
 }
 
-static __inline__ long long __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_reduce_or_epi64(__m512i __W) {
+static __inline__ long long __DEFAULT_FN_ATTRS512_CONSTEXPR
+_mm512_reduce_or_epi64(__m512i __W) {
   return __builtin_reduce_or((__v8di)__W);
 }
 
