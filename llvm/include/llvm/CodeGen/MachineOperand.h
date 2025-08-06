@@ -69,8 +69,8 @@ public:
     MO_IntrinsicID,       ///< Intrinsic ID for ISel
     MO_Predicate,         ///< Generic predicate for ISel
     MO_ShuffleMask,       ///< Other IR Constant for ISel (shuffle masks)
-    MO_DbgInstrRef, ///< Integer indices referring to an instruction+operand
-    MO_LaneMask,    ///< Mask to represent active parts of registers
+    MO_DbgInstrRef,       ///< Integer indices referring to an instruction+operand
+    MO_LaneMask,          ///< Mask to represent active parts of registers
     MO_Last = MO_LaneMask
   };
 
