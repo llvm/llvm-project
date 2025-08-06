@@ -295,7 +295,7 @@ static void reportInvalidHandleTy(
     llvm::dxil::ResourceInfo::ResourceBinding Binding = Res->getBinding();
     for (const auto &RD : RDs) {
       if (Binding.overlapsWith(RD)) {
-                TargetExtType *Handle = Res->getHandleTy();
+        TargetExtType *Handle = Res->getHandleTy();
         auto *TypedBuffer = dyn_cast_or_null<TypedBufferExtType>(Handle);
         auto *Texture = dyn_cast_or_null<TextureExtType>(Handle);
 
@@ -336,7 +336,7 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
     // Next checks require that the root signature definition is valid.
     if (!HasOverlap){
       SmallVector<ResourceInfo::ResourceBinding> RDs =
-        getRootDescriptorsBindingInfo(*RSD, Visibility);
+          getRootDescriptorsBindingInfo(*RSD, Visibility);
       for (const auto &ResList :
           {std::make_pair(ResourceClass::SRV, DRM.srvs()),
             std::make_pair(ResourceClass::UAV, DRM.uavs()),
