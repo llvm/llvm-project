@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataExtractor.h"
@@ -62,14 +61,17 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
                SymbolTableOffset, (uint64_t)SymbolTable.size())
      << '\n';
 
-  llvm::DenseMap<uint32_t, uint32_t> OffsetToIdMap(ConstantPoolVectors.size());
-  for (uint32_t Id = 0; Id < ConstantPoolVectors.size(); ++Id)
-    OffsetToIdMap[ConstantPoolVectors[Id].first] = Id;
-
   const auto FindCuVectorId = [&](uint32_t VecOffset) {
-    const auto It = OffsetToIdMap.find(VecOffset);
-    assert(It != OffsetToIdMap.end() && "Invalid symbol table");
-    return It->second;
+    // Entries in ConstantPoolVectors are sorted by their offset in constant
+    // pool, see how ConstantPoolVectors is populated in parseImpl.
+    const auto *It =
+        llvm::lower_bound(ConstantPoolVectors, VecOffset,
+                          [](const auto &ConstantPoolEntry, uint32_t Offset) {
+                            return ConstantPoolEntry.first < Offset;
+                          });
+    assert(It != ConstantPoolVectors.end() && It->first == VecOffset &&
+           "Invalid symbol table");
+    return It - ConstantPoolVectors.begin();
   };
 
   uint32_t I = -1;
