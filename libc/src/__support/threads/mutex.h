@@ -12,28 +12,6 @@
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
-// Uses the platform specific specialization
-#define LIBC_THREAD_MODE_PLATFORM 0
-
-// Mutex guards nothing, used in single-threaded implementations
-#define LIBC_THREAD_MODE_SINGLE 1
-
-// Vendor provides implementation
-#define LIBC_THREAD_MODE_EXTERNAL 2
-
-#if !defined(LIBC_THREAD_MODE)
-#error LIBC_THREAD_MODE is undefined
-#endif // LIBC_THREAD_MODE
-
-#if LIBC_THREAD_MODE != LIBC_THREAD_MODE_PLATFORM &&                           \
-    LIBC_THREAD_MODE != LIBC_THREAD_MODE_SINGLE &&                             \
-    LIBC_THREAD_MODE != LIBC_THREAD_MODE_EXTERNAL
-#error LIBC_THREAD_MODE must be one of the following values: \
-LIBC_THREAD_MODE_PLATFORM, \
-LIBC_THREAD_MODE_SINGLE, \
-LIBC_THREAD_MODE_EXTERNAL.
-#endif
-
 #if LIBC_THREAD_MODE == LIBC_THREAD_MODE_PLATFORM
 
 // Platform independent code will include this header file which pulls
