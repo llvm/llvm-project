@@ -119,7 +119,7 @@ void SystemZInstPrinterCommon::printU8ImmOperand(const MCInst *MI, int OpNum,
 }
 
 void SystemZInstPrinterCommon::printX8ImmOperand(const MCInst *MI, int OpNum,
-                                                  raw_ostream &O) {
+                                                 raw_ostream &O) {
   int64_t Value = MI->getOperand(OpNum).getImm();
   if (Value >= 0)
     printUImmOperand<8>(MI, OpNum, O);

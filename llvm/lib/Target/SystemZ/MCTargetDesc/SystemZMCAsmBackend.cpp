@@ -54,7 +54,7 @@ static uint64_t extractBitsForFixup(MCFixupKind Kind, uint64_t Value,
     return Value;
   };
 
-  auto handleXImmValue = [&] (unsigned W) -> uint64_t {
+  auto handleXImmValue = [&](unsigned W) -> uint64_t {
     if (!checkFixupInRange(minIntN(W), maxUIntN(W)))
       return 0;
     return Value;
