@@ -2976,9 +2976,7 @@ void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 void OpenACCClauseEnqueue::VisitNoHostClause(const OpenACCNoHostClause &C) {}
-void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) {
-  assert(false && "TODO ERICH");
-}
+void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) { }
 void OpenACCClauseEnqueue::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
 }
 void OpenACCClauseEnqueue::VisitIfPresentClause(
