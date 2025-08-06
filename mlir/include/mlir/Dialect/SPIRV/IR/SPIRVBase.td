@@ -1343,7 +1343,7 @@ def SPIRV_C_StorageTensorArrayNonUniformIndexingEXT     : I32EnumAttrCase<"Stora
   ];
 }
 def SPIRV_C_GraphARM                                    : I32EnumAttrCase<"GraphARM", 4191> {
-  list<I32EnumAttrCase> implies = [SPIRV_C_TensorsARM, SPIRV_C_Shader, SPIRV_C_VulkanMemoryModel];
+  list<I32EnumAttrCase> implies = [SPIRV_C_TensorsARM];
   list<Availability> availability = [
     Extension<[SPV_ARM_graph]>
   ];
@@ -4882,7 +4882,6 @@ class SPIRV_NvVendorOp<string mnemonic, list<Trait> traits = []> :
 class SPIRV_ArmVendorOp<string mnemonic, list<Trait> traits = []> :
   SPIRV_VendorOp<mnemonic, "ARM", traits> {
 }
-
 
 def SPIRV_FPFMM_None         : I32BitEnumAttrCaseNone<"None">;
 def SPIRV_FPFMM_NotNaN       : I32BitEnumAttrCaseBit<"NotNaN", 0>;

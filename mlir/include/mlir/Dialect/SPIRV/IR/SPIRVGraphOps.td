@@ -29,38 +29,10 @@ class SPIRV_GraphARMOp<string mnemonic, list<Trait> traits = []> :
   let availability = [
     MinVersion<SPIRV_V_1_0>,
     MaxVersion<SPIRV_V_1_6>,
-    Extension<[SPV_ARM_graph, SPV_ARM_tensors, SPV_KHR_vulkan_memory_model]>,
+    Extension<[SPV_ARM_graph, SPV_ARM_tensors]>,
     Capability<[SPIRV_C_GraphARM]>
   ];
 }
-
-def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [Pure]> {
-  let summary = "Declare a graph constant.";
-
-  let description = [{
-    Declare a graph constant.
-    Result Type must be an OpTypeTensorARM.
-    GraphConstantID must be a 32-bit integer literal.
-  }];
-
-  let arguments = (ins
-    I32Attr: $graph_constant_id
-  );
-
-  let results = (outs
-    SPIRV_AnyTensorArm:$output
-  );
-
-  let hasVerifier = 0;
-
-  let autogenSerialization = 0;
-
-  let assemblyFormat = [{
-    attr-dict `:` type($output)
-  }];
-}
-
-// -----
 
 def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
     AutomaticAllocationScope, DeclareOpInterfaceMethods<CallableOpInterface>,
@@ -122,10 +94,44 @@ def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
   }];
 }
 
+// -----
+
 // Check that an op can only be used within the scope of a spirv.ARM.Graph op.
 def InGraphScope : PredOpTrait<
   "op must appear in a spirv.ARM.Graph op's block",
   CPred<"isNestedInGraphARMOpInterface($_op.getParentOp())">>;
+
+// -----
+
+def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, Pure, ConstantLike]> {
+  let summary = "Declare a graph constant.";
+
+  let description = [{
+    Declare a graph constant.
+    Result Type must be an OpTypeTensorARM.
+    GraphConstantID must be a 32-bit integer literal.
+
+    ```
+    spv-graph-constant-arm-op ::= `spirv.ARM.GraphConstant` { graph_constant_id = 42 : i32 }
+    ```
+  }];
+
+  let arguments = (ins
+    I32Attr: $graph_constant_id
+  );
+
+  let results = (outs
+    SPIRV_AnyTensorArm:$output
+  );
+
+  let hasVerifier = 0;
+
+  let autogenSerialization = 0;
+
+  let assemblyFormat = [{
+    attr-dict `:` type($output)
+  }];
+}
 
 // -----
 

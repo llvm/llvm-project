@@ -1140,13 +1140,11 @@ void spirv::GraphEntryPointARMOp::build(OpBuilder &builder,
 
 ParseResult spirv::GraphEntryPointARMOp::parse(OpAsmParser &parser,
                                                OperationState &result) {
-  SmallVector<Type, 0> idTypes;
   SmallVector<Attribute, 4> interfaceVars;
 
   FlatSymbolRefAttr fn;
-  if (parser.parseAttribute(fn, Type(), kFnNameAttrName, result.attributes)) {
+  if (parser.parseAttribute(fn, Type(), kFnNameAttrName, result.attributes))
     return failure();
-  }
 
   if (!parser.parseOptionalComma()) {
     // Parse the interface variables
@@ -1224,7 +1222,7 @@ ParseResult spirv::GraphARMOp::parse(OpAsmParser &parser,
       getResAttrsAttrName(result.name));
 
   // Parse the optional function body.
-  auto *body = result.addRegion();
+  Region *body = result.addRegion();
   OptionalParseResult parseResult =
       parser.parseOptionalRegion(*body, entryArgs);
   return failure(parseResult.has_value() && failed(*parseResult));
@@ -1234,7 +1232,7 @@ void spirv::GraphARMOp::print(OpAsmPrinter &printer) {
   // Print graph name, signature, and control.
   printer << " ";
   printer.printSymbolName(getSymName());
-  auto grType = getFunctionType();
+  GraphType grType = getFunctionType();
   function_interface_impl::printFunctionSignature(
       printer, *this, grType.getInputs(),
       /*isVariadic=*/false, grType.getResults());
@@ -1288,9 +1286,10 @@ LogicalResult spirv::GraphARMOp::verifyBody() {
                << grType.getNumResults() << " results";
 
       auto graphOutputOperandTypes = graphOutputsARMOp.getValue().getType();
-      for (unsigned i = 0; i < graphOutputOperandTypes.size(); ++i) {
-        auto graphOutputOperandType = graphOutputOperandTypes[i];
-        auto grResultType = grType.getResult(i);
+      for (unsigned i = 0, size = graphOutputOperandTypes.size(); i < size;
+           ++i) {
+        Type graphOutputOperandType = graphOutputOperandTypes[i];
+        Type grResultType = grType.getResult(i);
         if (graphOutputOperandType != grResultType)
           return graphOutputsARMOp.emitError("type of return operand ")
                  << i << " (" << graphOutputOperandType
@@ -1339,13 +1338,13 @@ LogicalResult spirv::GraphOutputsARMOp::verify() {
   auto graph = cast<GraphARMOp>((*this)->getParentOp());
 
   // The operand number and types must match the graph signature.
-  const auto &results = graph.getFunctionType().getResults();
+  const ArrayRef<Type> &results = graph.getFunctionType().getResults();
   if (getNumOperands() != results.size())
     return emitOpError("has ")
            << getNumOperands() << " operands, but enclosing graph (@"
            << graph.getName() << ") returns " << results.size();
 
-  for (unsigned i = 0; i < results.size(); i++)
+  for (unsigned i = 0, size = results.size(); i < size; ++i)
     if (getOperand(i).getType() != results[i])
       return emitError() << "type of return operand " << i << " ("
                          << getOperand(i).getType()
