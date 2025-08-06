@@ -23,6 +23,10 @@
 
 #include "config.h"
 
+#if __has_include(<ptrauth.h>)
+#include <ptrauth.h>
+#endif
+
 namespace libunwind {
 
 /// CFI_Parser does basic parsing of a CFI (Call Frame Information) records.
@@ -33,6 +37,7 @@ template <typename A>
 class CFI_Parser {
 public:
   typedef typename A::pint_t pint_t;
+  typedef pint_t __ptrauth_unwind_cfi_personality personality_t;
 
   /// Information encoded in a CIE (Common Information Entry)
   struct CIE_Info {
@@ -43,7 +48,7 @@ public:
     uint8_t   lsdaEncoding;
     uint8_t   personalityEncoding;
     uint8_t   personalityOffsetInCIE;
-    pint_t    personality;
+    personality_t personality;
     uint32_t  codeAlignFactor;
     int       dataAlignFactor;
     bool      isSignalFrame;
@@ -313,6 +318,17 @@ bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
   }
   return false;
 }
+namespace {
+// This helper function handles setting the manually signed personality on
+// CIE_Info without attempt to authenticate and/or re-sign
+template <typename CIE_Info, typename T>
+void set_cie_info_personality(CIE_Info *info, T signed_personality) {
+  static_assert(sizeof(info->personality) == sizeof(signed_personality),
+                "Signed personality is the wrong size");
+  memmove((void *)&info->personality, (void *)&signed_personality,
+          sizeof(signed_personality));
+}
+}
 
 /// Extract info from a CIE
 template <typename A>
@@ -369,6 +385,7 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
   cieInfo->returnAddressRegister = (uint8_t)raReg;
   // parse augmentation data based on augmentation string
   const char *result = NULL;
+  pint_t resultAddr = 0;
   if (addressSpace.get8(strStart) == 'z') {
     // parse augmentation data length
     addressSpace.getULEB128(p, cieContentEnd);
@@ -377,13 +394,31 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
       case 'z':
         cieInfo->fdesHaveAugmentationData = true;
         break;
-      case 'P':
+      case 'P': {
         cieInfo->personalityEncoding = addressSpace.get8(p);
         ++p;
         cieInfo->personalityOffsetInCIE = (uint8_t)(p - cie);
-        cieInfo->personality = addressSpace
-            .getEncodedP(p, cieContentEnd, cieInfo->personalityEncoding);
+        pint_t personality = addressSpace.getEncodedP(
+            p, cieContentEnd, cieInfo->personalityEncoding,
+            /*datarelBase=*/0, &resultAddr);
+#if __has_feature(ptrauth_calls)
+        if (personality) {
+          // The GOT for the personality function was signed address
+          // authenticated. Manually re-sign with the CIE_Info::personality
+          // schema. If we could guarantee the encoding of the personality we
+          // could avoid this by simply giving resultAddr the correct ptrauth
+          // schema and performing an assignment.
+          const auto discriminator = ptrauth_blend_discriminator(
+              &cieInfo->personality, __ptrauth_unwind_cfi_personality_disc);
+          void *signedPtr = ptrauth_auth_and_resign(
+              (void *)personality, ptrauth_key_function_pointer, resultAddr,
+              ptrauth_key_function_pointer, discriminator);
+          personality = (pint_t)signedPtr;
+        }
+#endif
+        set_cie_info_personality(cieInfo, personality);
         break;
+      }
       case 'L':
         cieInfo->lsdaEncoding = addressSpace.get8(p);
         ++p;

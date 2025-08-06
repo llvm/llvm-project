@@ -14,7 +14,11 @@
 #include "config.h"
 #include "libunwind_ext.h"
 
+#if __has_include(<ptrauth.h>)
+#include <ptrauth.h>
+#endif
 #include <stdlib.h>
+#include <sys/types.h>
 
 // Define the __has_feature extension for compilers that do not support it so
 // that we can later check for the presence of ASan in a compiler-neutral way.
@@ -118,14 +122,42 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
   typedef LocalAddressSpace::pint_t pint_t;
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   if (co->validReg(regNum)) {
-    co->setReg(regNum, (pint_t)value);
     // special case altering IP to re-find info (being called by personality
     // function)
     if (regNum == UNW_REG_IP) {
       unw_proc_info_t info;
       // First, get the FDE for the old location and then update it.
       co->getInfo(&info);
-      co->setInfoBasedOnIPRegister(false);
+
+#if __has_feature(ptrauth_calls)
+      // It is only valid to set the IP within the current function.
+      // This is important for ptrauth, otherwise the IP cannot be correctly
+      // signed.
+      unw_word_t stripped_value =
+          (unw_word_t)ptrauth_strip((void *)value, ptrauth_key_return_address);
+      [[maybe_unused]]stripped_value;
+      assert(stripped_value >= info.start_ip && stripped_value <= info.end_ip);
+#endif
+
+      pint_t sp = (pint_t)co->getReg(UNW_REG_SP);
+
+#if __has_feature(ptrauth_calls)
+      {
+        // PC should have been signed with the sp, so we verify that
+        // roundtripping does not fail.
+        pint_t pc = (pint_t)co->getReg(UNW_REG_IP);
+        if (ptrauth_auth_and_resign((void *)pc, ptrauth_key_return_address, sp,
+                                    ptrauth_key_return_address,
+                                    sp) != (void *)pc) {
+          _LIBUNWIND_LOG("Bad unwind through arm64e (0x%llX, 0x%llX)->0x%llX\n",
+                         pc, sp,
+                         (pint_t)ptrauth_auth_data(
+                             (void *)pc, ptrauth_key_return_address, sp));
+          _LIBUNWIND_ABORT("Bad unwind through arm64e");
+        }
+      }
+#endif
+
       // If the original call expects stack adjustment, perform this now.
       // Normal frame unwinding would have included the offset already in the
       // CFA computation.
@@ -134,6 +166,10 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       // any such platforms and Clang doesn't export a macro for them.
       if (info.gp)
         co->setReg(UNW_REG_SP, co->getReg(UNW_REG_SP) + info.gp);
+      co->setReg(UNW_REG_IP, value);
+      co->setInfoBasedOnIPRegister(false);
+    } else {
+      co->setReg(regNum, (pint_t)value);
     }
     return UNW_ESUCCESS;
   }

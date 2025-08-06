@@ -22,6 +22,9 @@
 #include "dwarf2.h"
 #include "libunwind_ext.h"
 
+#if __has_include(<ptrauth.h>)
+#include <ptrauth.h>
+#endif
 
 namespace libunwind {
 
@@ -34,8 +37,9 @@ public:
   typedef typename A::pint_t pint_t;
   typedef typename A::sint_t sint_t;
 
-  static int stepWithDwarf(A &addressSpace, pint_t pc, pint_t fdeStart,
-                           R &registers, bool &isSignalFrame, bool stage2);
+  static int stepWithDwarf(A &addressSpace, typename R::link_reg_t &pc,
+                           pint_t fdeStart, R &registers, bool &isSignalFrame,
+                           bool stage2);
 
 private:
 
@@ -63,10 +67,11 @@ private:
                                   pint_t cfa, const RegisterLocation &savedReg);
 
   static pint_t getCFA(A &addressSpace, const PrologInfo &prolog,
-                       const R &registers) {
-    if (prolog.cfaRegister != 0)
-      return (pint_t)((sint_t)registers.getRegister((int)prolog.cfaRegister) +
-             prolog.cfaRegisterOffset);
+                       R &registers) {
+    if (prolog.cfaRegister != 0) {
+      uintptr_t cfaRegister = registers.getRegister((int)prolog.cfaRegister);
+      return (pint_t)(cfaRegister + prolog.cfaRegisterOffset);
+    }
     if (prolog.cfaExpression != 0)
       return evaluateExpression((pint_t)prolog.cfaExpression, addressSpace,
                                 registers, 0);
@@ -207,7 +212,8 @@ bool DwarfInstructions<A, R>::isReturnAddressSignedWithPC(A &addressSpace,
 #endif
 
 template <typename A, typename R>
-int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
+int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace,
+                                           typename R::link_reg_t &pc,
                                            pint_t fdeStart, R &registers,
                                            bool &isSignalFrame, bool stage2) {
   FDE_Info fdeInfo;
@@ -264,7 +270,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       // by a CFI directive later on.
       newRegisters.setSP(cfa);
 
-      pint_t returnAddress = 0;
+      typename R::reg_t returnAddress = 0;
       constexpr int lastReg = R::lastDwarfRegNum();
       static_assert(static_cast<int>(CFI_Parser<A>::kMaxRegisterNumber) >=
                         lastReg,

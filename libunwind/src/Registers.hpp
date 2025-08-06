@@ -18,6 +18,11 @@
 #include "config.h"
 #include "libunwind.h"
 #include "shadow_stack_unwind.h"
+#include "libunwind_ext.h"
+
+#if __has_include(<ptrauth.h>)
+#include <ptrauth.h>
+#endif
 
 namespace libunwind {
 
@@ -92,6 +97,13 @@ public:
   void      setESI(uint32_t value) { _registers.__esi = value; }
   uint32_t  getEDI() const         { return _registers.__edi; }
   void      setEDI(uint32_t value) { _registers.__edi = value; }
+
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
+  void      loadAndAuthenticateLinkRegister(reg_t srcLinkRegister,
+                                       link_reg_t *dstLinkRegister) {
+    *dstLinkRegister = srcLinkRegister;
+  }
 
 private:
   struct GPRs {
@@ -310,6 +322,13 @@ public:
   void      setR14(uint64_t value) { _registers.__r14 = value; }
   uint64_t  getR15() const         { return _registers.__r15; }
   void      setR15(uint64_t value) { _registers.__r15 = value; }
+
+  typedef uint64_t reg_t;
+  typedef uint64_t link_reg_t;
+  void      loadAndAuthenticateLinkRegister(reg_t srcLinkRegister,
+                                       link_reg_t *dstLinkRegister) {
+    *dstLinkRegister = srcLinkRegister;
+  }
 
 private:
   struct GPRs {
@@ -621,6 +640,13 @@ public:
   void      setCR(uint32_t value) { _registers.__cr = value; }
   uint64_t  getLR() const         { return _registers.__lr; }
   void      setLR(uint32_t value) { _registers.__lr = value; }
+
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
+  void      loadAndAuthenticateLinkRegister(reg_t srcLinkRegister,
+                                       link_reg_t *dstLinkRegister) {
+    *dstLinkRegister = srcLinkRegister;
+  }
 
 private:
   struct ppc_thread_state_t {
@@ -1826,6 +1852,8 @@ class _LIBUNWIND_HIDDEN Registers_arm64 {
 public:
   Registers_arm64();
   Registers_arm64(const void *registers);
+  Registers_arm64(const Registers_arm64&);
+  Registers_arm64& operator=(const Registers_arm64&);
 
   bool        validRegister(int num) const;
   uint64_t    getRegister(int num) const;
@@ -1845,10 +1873,58 @@ public:
 
   uint64_t  getSP() const         { return _registers.__sp; }
   void      setSP(uint64_t value) { _registers.__sp = value; }
-  uint64_t  getIP() const         { return _registers.__pc; }
-  void      setIP(uint64_t value) { _registers.__pc = value; }
-  uint64_t  getFP() const         { return _registers.__fp; }
-  void      setFP(uint64_t value) { _registers.__fp = value; }
+  uint64_t  getIP() const         {
+    uint64_t value = _registers.__pc;
+#if __has_feature(ptrauth_calls)
+    // Note the value of the PC was signed to its address in the register state
+    // but everyone else expects it to be sign by the SP, so convert on return.
+    value = (uint64_t)ptrauth_auth_and_resign((void *)_registers.__pc,
+                                              ptrauth_key_return_address,
+                                              &_registers.__pc,
+                                              ptrauth_key_return_address,
+                                              getSP());
+#endif
+    return value;
+  }
+  void      setIP(uint64_t value) {
+#if __has_feature(ptrauth_calls)
+    // Note the value which was set should have been signed with the SP.
+    // We then resign with the slot we are being stored in to so that both SP
+    // and LR can't be spoofed at the same time.
+    value = (uint64_t)ptrauth_auth_and_resign((void *)value,
+                                              ptrauth_key_return_address,
+                                              getSP(),
+                                              ptrauth_key_return_address,
+                                              &_registers.__pc);
+#endif
+    _registers.__pc = value;
+  }
+  uint64_t getFP() const { return _registers.__fp; }
+  void setFP(uint64_t value) { _registers.__fp = value; }
+
+  typedef uint64_t reg_t;
+  typedef uint64_t __ptrauth_unwind_arm64_link_reg link_reg_t;
+
+  void
+  loadAndAuthenticateLinkRegister(reg_t inplaceAuthedLinkRegister,
+                                  link_reg_t *referenceAuthedLinkRegister) {
+#if __has_feature(ptrauth_calls)
+    // If we are in an arm64/arm64e frame, then the PC should have been signed
+    // with the SP
+    *referenceAuthedLinkRegister = (uint64_t)ptrauth_auth_data(
+        (void *)inplaceAuthedLinkRegister,
+        ptrauth_key_return_address,
+        _registers.__sp);
+#else
+    *referenceAuthedLinkRegister = inplaceAuthedLinkRegister;
+#endif
+  }
+
+  // arm64_32 and i386 simulator hack
+  void      loadAndAuthenticateLinkRegister(uint32_t srcLinkRegister,
+                                            uint32_t *dstLinkRegister) {
+    *dstLinkRegister = srcLinkRegister;
+  }
 
 private:
   uint64_t lazyGetVG() const;
@@ -1889,6 +1965,31 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
   memcpy(_vectorHalfRegisters,
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
+#if __has_feature(ptrauth_calls)
+  uint64_t pcRegister = 0;
+  memcpy(&pcRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __pc),
+         sizeof(pcRegister));
+  setIP(pcRegister);
+  uint64_t fpRegister = 0;
+  memcpy(&fpRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __fp),
+         sizeof(fpRegister));
+  setFP(fpRegister);
+#endif
+}
+
+inline Registers_arm64::Registers_arm64(const Registers_arm64& other) {
+  *this = other;
+}
+
+inline Registers_arm64& Registers_arm64::operator=(const Registers_arm64& other) {
+  memcpy(&_registers, &other._registers, sizeof(_registers));
+  memcpy(_vectorHalfRegisters, &other._vectorHalfRegisters,
+         sizeof(_vectorHalfRegisters));
+#if __has_feature(ptrauth_calls)
+  setIP(other.getIP());
+  setFP(other.getFP());
+#endif
+  return *this;
 }
 
 inline Registers_arm64::Registers_arm64() {
@@ -1930,13 +2031,13 @@ inline uint64_t Registers_arm64::lazyGetVG() const {
 
 inline uint64_t Registers_arm64::getRegister(int regNum) const {
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
-    return _registers.__pc;
+    return getIP();
   if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     return _registers.__sp;
   if (regNum == UNW_AARCH64_RA_SIGN_STATE)
     return _registers.__ra_sign_state;
   if (regNum == UNW_AARCH64_FP)
-    return _registers.__fp;
+    return getFP();
   if (regNum == UNW_AARCH64_LR)
     return _registers.__lr;
   if (regNum == UNW_AARCH64_VG)
@@ -1948,13 +2049,13 @@ inline uint64_t Registers_arm64::getRegister(int regNum) const {
 
 inline void Registers_arm64::setRegister(int regNum, uint64_t value) {
   if (regNum == UNW_REG_IP || regNum == UNW_AARCH64_PC)
-    _registers.__pc = value;
+    setIP(value);
   else if (regNum == UNW_REG_SP || regNum == UNW_AARCH64_SP)
     _registers.__sp = value;
   else if (regNum == UNW_AARCH64_RA_SIGN_STATE)
     _registers.__ra_sign_state = value;
   else if (regNum == UNW_AARCH64_FP)
-    _registers.__fp = value;
+    setFP(value);
   else if (regNum == UNW_AARCH64_LR)
     _registers.__lr = value;
   else if (regNum == UNW_AARCH64_VG)
@@ -2171,6 +2272,13 @@ public:
   void      setSP(uint32_t value) { _registers.__sp = value; }
   uint32_t  getIP() const         { return _registers.__pc; }
   void      setIP(uint32_t value) { _registers.__pc = value; }
+
+  typedef uint32_t reg_t;
+  typedef uint32_t link_reg_t;
+  void      loadAndAuthenticateLinkRegister(reg_t srcLinkRegister,
+                                       link_reg_t *dstLinkRegister) {
+    *dstLinkRegister = srcLinkRegister;
+  }
 
   void saveVFPAsX() {
     assert(_use_X_for_vfp_save || !_saved_vfp_d0_d15);
