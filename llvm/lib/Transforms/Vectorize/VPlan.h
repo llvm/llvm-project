@@ -1279,7 +1279,7 @@ public:
 
   /// Create a new VPIRPhi for \p \I, if it is a PHINode, otherwise create a
   /// VPIRInstruction.
-  static VPIRInstruction *create(Instruction &I);
+  LLVM_ABI_FOR_TEST static VPIRInstruction *create(Instruction &I);
 
   VP_CLASSOF_IMPL(VPDef::VPIRInstructionSC)
 
@@ -1293,8 +1293,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPIRInstruction.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+  LLVM_ABI_FOR_TEST InstructionCost
+  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
 
   Instruction &getInstruction() const { return I; }
 
@@ -1332,7 +1332,8 @@ public:
 /// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
 /// allowed, and it is used to add a new incoming value for the single
 /// predecessor VPBB.
-struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
+struct LLVM_ABI_FOR_TEST VPIRPhi : public VPIRInstruction,
+                                   public VPPhiAccessors {
   VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
 
   static inline bool classof(const VPRecipeBase *U) {
