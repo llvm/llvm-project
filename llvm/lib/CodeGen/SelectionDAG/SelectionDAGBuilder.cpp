@@ -7984,43 +7984,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     HasTailCall = true;
     return;
   }
-  case Intrinsic::amdgcn_call_whole_wave: {
-    TargetLowering::ArgListTy Args;
-
-    // The first argument is the callee. Skip it when assembling the call args.
-    TargetLowering::ArgListEntry Arg;
-    for (unsigned Idx = 1; Idx < I.arg_size(); ++Idx) {
-      Arg.Node = getValue(I.getArgOperand(Idx));
-      Arg.Ty = I.getArgOperand(Idx)->getType();
-      Arg.setAttributes(&I, Idx);
-      Args.push_back(Arg);
-    }
-
-    SDValue ConvControlToken;
-    if (auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl)) {
-      auto *Token = Bundle->Inputs[0].get();
-      ConvControlToken = getValue(Token);
-    }
-
-    TargetLowering::CallLoweringInfo CLI(DAG);
-    CLI.setDebugLoc(getCurSDLoc())
-        .setChain(getRoot())
-        .setCallee(CallingConv::AMDGPU_Gfx_WholeWave, I.getType(),
-                   getValue(I.getArgOperand(0)), std::move(Args))
-        .setTailCall(false)
-        .setIsPreallocated(
-            I.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
-        .setConvergent(I.isConvergent())
-        .setConvergenceControlToken(ConvControlToken);
-    CLI.CB = &I;
-
-    std::pair<SDValue, SDValue> Result =
-        lowerInvokable(CLI, /*EHPadBB=*/nullptr);
-
-    if (Result.first.getNode())
-      setValue(&I, Result.first);
-    return;
-  }
   case Intrinsic::ptrmask: {
     SDValue Ptr = getValue(I.getOperand(0));
     SDValue Mask = getValue(I.getOperand(1));

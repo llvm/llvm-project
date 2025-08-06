@@ -6612,36 +6612,6 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           "Value for inactive lanes must be a VGPR function argument", &Call);
     break;
   }
-  case Intrinsic::amdgcn_call_whole_wave: {
-    auto F = dyn_cast<Function>(Call.getArgOperand(0));
-    Check(F, "Indirect whole wave calls are not allowed", &Call);
-
-    CallingConv::ID CC = F->getCallingConv();
-    Check(CC == CallingConv::AMDGPU_Gfx_WholeWave,
-          "Callee must have the amdgpu_gfx_whole_wave calling convention",
-          &Call);
-
-    Check(!F->isVarArg(), "Variadic whole wave calls are not allowed", &Call);
-
-    Check(Call.arg_size() == F->arg_size(),
-          "Call argument count must match callee argument count", &Call);
-
-    // The first argument of the call is the callee, and the first argument of
-    // the callee is the active mask. The rest of the arguments must match.
-    Check(F->arg_begin()->getType()->isIntegerTy(1),
-          "Callee must have i1 as its first argument", &Call);
-    for (auto [CallArg, FuncArg] :
-         drop_begin(zip_equal(Call.args(), F->args()))) {
-      Check(CallArg->getType() == FuncArg.getType(),
-            "Argument types must match", &Call);
-
-      // Check that inreg attributes match between call site and function
-      Check(Call.paramHasAttr(FuncArg.getArgNo(), Attribute::InReg) ==
-                FuncArg.hasInRegAttr(),
-            "Argument inreg attributes must match", &Call);
-    }
-    break;
-  }
   case Intrinsic::amdgcn_s_prefetch_data: {
     Check(
         AMDGPU::isFlatGlobalAddrSpace(
