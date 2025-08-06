@@ -641,13 +641,15 @@ def : Pat<(binop_allhusers<or> (shl GPR:$rs2, (XLenVT 8)),
 let Predicates = [HasStdExtZbkb, IsRV32] in {
 def : Pat<(i32 (or (zexti16 (i32 GPR:$rs1)), (shl GPR:$rs2, (i32 16)))),
           (PACK GPR:$rs1, GPR:$rs2)>;
-def : Pat<(or (or
-                  (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 24)),
+
+// Match a pattern of 2 bytes being inserted into bits [31:16], with bits
+// bits [15:0] coming from a zero extended value. We can use pack with packh for
+// bits [31:16]. If bits [15:0] can also be a packh, it can be matched
+// separately.
+def : Pat<(or (or (shl (zexti8 (XLenVT GPR:$op1rs2)), (XLenVT 24)),
                   (shl (zexti8 (XLenVT GPR:$op1rs1)), (XLenVT 16))),
-              (or
-                  (shl (zexti8 (XLenVT GPR:$op0rs2)), (XLenVT 8)),
-                  (zexti8 (XLenVT GPR:$op0rs1)))),
-          (PACK (XLenVT (PACKH GPR:$op0rs1, GPR:$op0rs2)),
+              (zexti16 (XLenVT GPR:$rs1))),
+          (PACK (XLenVT GPR:$rs1),
                 (XLenVT (PACKH GPR:$op1rs1, GPR:$op1rs2)))>;
 }
 
