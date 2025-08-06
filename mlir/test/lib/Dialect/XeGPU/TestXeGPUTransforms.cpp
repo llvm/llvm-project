@@ -155,6 +155,9 @@ struct TestXeGPUUnrollingPatterns
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
+// Test pattern for distributing vector::StepOp from workgroup to subgroup.
+// Validates LayoutTrait interfaces for offset computation abstraction between
+// LayoutAttr and SliceAttr.
 class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
   using OpConversionPattern<vector::StepOp>::OpConversionPattern;
 
@@ -167,8 +170,7 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
     if (!sliceAttr || sliceAttr.getRank() != 1)
       return failure();
 
-    std::optional<SmallVector<int64_t>> sgShape =
-        sliceAttr.getEffectiveSgData();
+    std::optional<SmallVector<int64_t>> sgShape = sliceAttr.getSgDataAsInt();
     if (!sgShape)
       return failure();
 

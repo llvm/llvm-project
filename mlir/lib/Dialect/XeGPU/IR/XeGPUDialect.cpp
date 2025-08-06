@@ -37,9 +37,10 @@ void XeGPUDialect::initialize() {
       >();
 }
 
-// generate offsets computing instructions for a subgroup
-// represented by a nd indices (sgId), given the subgroup layout (sgLayout),
-// the subgroup data size (sgShape), and the overall data size (shape)
+/// Generates instructions to compute offsets for a subgroup identified by
+/// its multidimensional indices (sgId), using the specified subgroup layout
+/// (sgLayout), subgroup data dimensions (sgShape), and the overall data
+/// dimensions (shape).
 static SmallVector<SmallVector<Value>>
 genOffsetsComputations(OpBuilder &builder, Location loc,
                        SmallVector<Value> sgId, ArrayRef<int64_t> sgLayout,
@@ -272,23 +273,24 @@ LayoutAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
     return failure();
 
   // TODO: handle order attribute
-  auto dims =
-      llvm::map_to_vector(*getEffectiveSgLayout(), [&](int64_t d) -> Value {
-        return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
-      });
+  auto dims = llvm::map_to_vector(*getSgLayoutAsInt(), [&](int64_t d) -> Value {
+    return builder.createOrFold<arith::ConstantIndexOp>(loc, d);
+  });
 
   return affine::delinearizeIndex(builder, loc, linearId, dims);
 }
 
+/// Implements LayoutTrait::getOffsets to generate instructions for
+/// computing multi-dimensional offsets when distributed by LayoutAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
 LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
                        ArrayRef<int64_t> shape) {
   if (!isWgLayout())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getEffectiveSgLayout().value();
+  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
   SmallVector<int64_t> sgShape;
-  if (auto maybeSgShape = getEffectiveSgData())
+  if (auto maybeSgShape = getSgDataAsInt())
     sgShape = maybeSgShape.value();
   else if (auto ratio = computeShapeRatio(shape, sgLayout))
     sgShape = ratio.value();
@@ -318,7 +320,7 @@ SliceAttr::verify(llvm::function_ref<InFlightDiagnostic()> emitError,
   // check every element in dims is unique and smaller than rank
   llvm::SmallDenseSet<int64_t> seen;
   for (int64_t dim : dims.asArrayRef()) {
-    if (dim >= rank)
+    if (dim < 0 || dim >= rank)
       return emitError() << "invalid dim (" << dim << ") in slice attribute.";
     if (!seen.insert(dim).second)
       return emitError() << "repeated dim (" << dim << ") in slice attribute.";
@@ -363,6 +365,8 @@ SliceAttr::delinearizeSubgroupId(OpBuilder &builder, Location loc,
   return parent.delinearizeSubgroupId(builder, loc, linearId);
 }
 
+/// Implements LayoutTrait::getOffsets to generate instructions for
+/// computing multi-dimensional offsets when distributed by SliceAttr.
 FailureOr<SmallVector<SmallVector<Value>>>
 SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
                       ArrayRef<int64_t> shape) {
@@ -370,9 +374,9 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   if (!isWgLayout())
     return failure();
 
-  SmallVector<int64_t> sgLayout = getEffectiveSgLayout().value();
+  SmallVector<int64_t> sgLayout = getSgLayoutAsInt().value();
   SmallVector<int64_t> sgShape;
-  if (auto maybeSgShape = getEffectiveSgData())
+  if (auto maybeSgShape = getSgDataAsInt())
     sgShape = maybeSgShape.value();
   else if (auto ratio = computeShapeRatio(shape, sgLayout))
     sgShape = ratio.value();
