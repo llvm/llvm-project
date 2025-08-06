@@ -107,7 +107,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
                             const DebugLoc &DL) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZicfiss();
+                          STI.hasStdExtZimop();
   bool HasSWShadowStack =
       MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   if (!HasHWShadowStack && !HasSWShadowStack)
@@ -123,6 +123,7 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
+  // Prefer HW shadow stack over SW shadow stack.
   if (HasHWShadowStack) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
     return;
@@ -172,7 +173,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
                             const DebugLoc &DL) {
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
-                          STI.hasStdExtZicfiss();
+                          STI.hasStdExtZimop();
   bool HasSWShadowStack =
       MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   if (!HasHWShadowStack && !HasSWShadowStack)
@@ -185,6 +186,7 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
+  // Prefer HW shadow stack over SW shadow stack.
   if (HasHWShadowStack) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
     return;
