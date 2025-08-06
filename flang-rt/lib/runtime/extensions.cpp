@@ -63,10 +63,8 @@ namespace Fortran::runtime {
 // Common implementation that could be used for either SECNDS() or SECNDSD(),
 // which are defined for float or double.
 template <typename T> T SecndsImpl(T *refTime) {
-  static_assert(
-      std::is_same<T, float>::value || std::is_same<T, double>::value,
-      "T must be float or double"
-  );
+  static_assert(std::is_same<T, float>::value || std::is_same<T, double>::value,
+      "T must be float or double");
   constexpr T FAIL_SECNDS{T{-1.0}}; // Failure code for this function
   // Failure code for time functions that return std::time_t
   constexpr std::time_t FAIL_TIME{std::time_t{-1}};
