@@ -545,7 +545,7 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<UniformityInfoWrapperPass>();
-    AU.setPreservesAll();
+    AU.setPreservesCFG();
   }
 
   bool runOnFunction(Function &F) override;
