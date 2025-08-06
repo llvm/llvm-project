@@ -17266,6 +17266,9 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
     return false;
   assert(!Mask && "Unexpected mask on a load");
 
+  if (Factor != MaskFactor)
+    return false;
+
   const DataLayout &DL = LI->getDataLayout();
 
   VectorType *VTy = Shuffles[0]->getType();

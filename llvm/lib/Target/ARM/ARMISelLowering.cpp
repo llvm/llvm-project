@@ -21611,6 +21611,9 @@ bool ARMTargetLowering::lowerInterleavedLoad(
     return false;
   assert(!Mask && "Unexpected mask on a load");
 
+  if (Factor != MaskFactor)
+    return false;
+
   auto *VecTy = cast<FixedVectorType>(Shuffles[0]->getType());
   Type *EltTy = VecTy->getElementType();
 

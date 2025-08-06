@@ -814,6 +814,9 @@ bool X86TargetLowering::lowerInterleavedLoad(
     return false;
   assert(!Mask && "Unexpected mask on a load");
 
+  if (Factor != MaskFactor)
+    return false;
+
   // Create an interleaved access group.
   IRBuilder<> Builder(LI);
   X86InterleavedAccessGroup Grp(LI, Shuffles, Indices, Factor, Subtarget,
