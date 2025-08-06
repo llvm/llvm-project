@@ -617,7 +617,6 @@ struct __optional_iterator_aliases<
     _Tp,
     __enable_if_t<!(is_reference<_Tp>::value && (is_function<__libcpp_remove_reference_t<_Tp>>::value ||
                                                  is_unbounded_array<__libcpp_remove_reference_t<_Tp>>::value))> > {
-public:
   using __pointer _LIBCPP_NODEBUG       = std::add_pointer_t<_Tp>;
   using __const_pointer _LIBCPP_NODEBUG = std::add_pointer_t<const _Tp>;
 #      ifdef _LIBCPP_ABI_BOUNDED_ITERATORS_IN_OPTIONAL
