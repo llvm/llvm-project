@@ -2432,8 +2432,10 @@ void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
 
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
-  MCSection *Sec = getCurrentSectionOnly();
-  Sec->setHasInstructions(true);
+  if (CurFrag) {
+    MCSection *Sec = getCurrentSectionOnly();
+    Sec->setHasInstructions(true);
+  }
 
   if (MAI->isAIX() && CurFrag)
     // Now that a machine instruction has been assembled into this section, make
