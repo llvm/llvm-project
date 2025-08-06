@@ -2041,16 +2041,33 @@ void COFFDumper::printCOFFPseudoReloc() {
     return;
   }
 
-  ArrayRef<uint8_t> Data;
+  if (RelocEnd.getValue() < RelocBegin.getValue()) {
+    reportWarning(createStringError("the symbols for runtime pseudo-relocation "
+                                    "don't consist a valid region"),
+                  Obj->getFileName());
+    return;
+  }
+
   auto Section = Obj->getSection(RelocBegin.getSectionNumber());
   if (auto E = Section.takeError()) {
     reportWarning(std::move(E), Obj->getFileName());
     return;
   }
+
+  ArrayRef<uint8_t> Data;
   if (auto E = Obj->getSectionContents(*Section, Data)) {
     reportWarning(std::move(E), Obj->getFileName());
     return;
   }
+  if (Data.size() <= RelocBegin.getValue() ||
+      Data.size() <= RelocEnd.getValue()) {
+    reportWarning(
+        createStringError("the region of runtime pseudo-relocation records "
+                          "points to out of the valid location"),
+        Obj->getFileName());
+    return;
+  }
+
   ArrayRef<uint8_t> RawRelocs =
       Data.take_front(RelocEnd.getValue()).drop_front(RelocBegin.getValue());
   struct alignas(4) PseudoRelocationHeader {
