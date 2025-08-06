@@ -1505,15 +1505,24 @@ AppleObjCRuntimeV2::GetClassDescriptorFromISA(ObjCISA isa) {
 
 ObjCLanguageRuntime::ClassDescriptorSP
 AppleObjCRuntimeV2::GetClassDescriptor(ValueObject &valobj) {
+  ValueObjectSet seen;
+  return GetClassDescriptorImpl(valobj, seen);
+}
+
+ObjCLanguageRuntime::ClassDescriptorSP
+AppleObjCRuntimeV2::GetClassDescriptorImpl(ValueObject &valobj,
+                                           ValueObjectSet &seen) {
+  seen.insert(&valobj);
+
   ClassDescriptorSP objc_class_sp;
   if (valobj.IsBaseClass()) {
     ValueObject *parent = valobj.GetParent();
-    // if I am my own parent, bail out of here fast..
-    if (parent && parent != &valobj) {
-      ClassDescriptorSP parent_descriptor_sp = GetClassDescriptor(*parent);
-      if (parent_descriptor_sp)
-        return parent_descriptor_sp->GetSuperclass();
-    }
+    // Fail if there's a cycle in our parent chain.
+    if (!parent || seen.count(parent))
+      return nullptr;
+    if (ClassDescriptorSP parent_descriptor_sp =
+            GetClassDescriptorImpl(*parent, seen))
+      return parent_descriptor_sp->GetSuperclass();
     return nullptr;
   }
   // if we get an invalid VO (which might still happen when playing around with
@@ -3453,7 +3462,7 @@ public:
         *exception, eValueTypeVariableArgument);
     exception = exception->GetDynamicValue(eDynamicDontRunTarget);
 
-    m_arguments = ValueObjectListSP(new ValueObjectList());
+    m_arguments = std::make_shared<ValueObjectList>();
     m_arguments->Append(exception);
 
     m_stop_desc = "hit Objective-C exception";

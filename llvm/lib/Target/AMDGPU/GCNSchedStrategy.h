@@ -250,9 +250,6 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
   // limit. Register pressure in these regions usually will result in spilling.
   BitVector RegionsWithExcessRP;
 
-  // Regions that has the same occupancy as the latest MinOccupancy
-  BitVector RegionsWithMinOcc;
-
   // Regions that have IGLP instructions (SCHED_GROUP_BARRIER or IGLP_OPT).
   BitVector RegionsWithIGLPInstrs;
 
@@ -440,8 +437,6 @@ public:
 /// estimates reducing spilling or increasing occupancy is possible, as few
 /// instructions as possible are rematerialized to reduce potential negative
 /// effects on function latency.
-///
-/// TODO: We should extend this to work on SGPRs and AGPRs as well.
 class PreRARematStage : public GCNSchedStage {
 private:
   /// Useful information about a rematerializable instruction.

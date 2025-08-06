@@ -775,6 +775,17 @@ define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
   ret <32 x i8> %4
 }
 
+define <4 x i32> @extract_vpermd(<8 x i32> %a0) {
+; CHECK-LABEL: extract_vpermd:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,3,0]
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = tail call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %a0, <8 x i32> <i32 1, i32 1, i32 3, i32 0, i32 1, i32 0, i32 7, i32 6>)
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %2
+}
+
 ; Not beneficial to concatenate both inputs just to create a 256-bit vpaddb
 define <32 x i8> @concat_add_unnecessary(<16 x i8> %a0, <16 x i8> noundef %a1, <16 x i8> %a2) nounwind {
 ; CHECK-LABEL: concat_add_unnecessary:

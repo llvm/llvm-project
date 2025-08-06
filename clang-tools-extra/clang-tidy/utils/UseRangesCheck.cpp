@@ -43,7 +43,7 @@ static std::string getFullPrefix(ArrayRef<UseRangesCheck::Indexes> Signature) {
   llvm::raw_string_ostream OS(Output);
   for (const UseRangesCheck::Indexes &Item : Signature)
     OS << Item.BeginArg << ":" << Item.EndArg << ":"
-       << (Item.ReplaceArg == Item.First ? '0' : '1');
+       << (Item.ReplaceArg == UseRangesCheck::Indexes::First ? '0' : '1');
   return Output;
 }
 
@@ -149,7 +149,7 @@ void UseRangesCheck::registerMatchers(MatchFinder *Finder) {
     }
     Finder->addMatcher(
         callExpr(
-            callee(functionDecl(hasAnyName(std::move(Names)))
+            callee(functionDecl(hasAnyName(Names))
                        .bind((FuncDecl + Twine(Replacers.size() - 1).str()))),
             ast_matchers::internal::DynTypedMatcher::constructVariadic(
                 ast_matchers::internal::DynTypedMatcher::VO_AnyOf,
@@ -194,7 +194,7 @@ static void removeFunctionArgs(DiagnosticBuilder &Diag, const CallExpr &Call,
 void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
   Replacer *Replacer = nullptr;
   const FunctionDecl *Function = nullptr;
-  for (auto [Node, Value] : Result.Nodes.getMap()) {
+  for (const auto &[Node, Value] : Result.Nodes.getMap()) {
     StringRef NodeStr(Node);
     if (!NodeStr.consume_front(FuncDecl))
       continue;

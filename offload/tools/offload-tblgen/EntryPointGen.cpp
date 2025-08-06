@@ -82,6 +82,10 @@ static void EmitEntryPointFunc(const FunctionRec &F, raw_ostream &OS) {
   }
   OS << ") {\n";
 
+  // Check offload is initialized
+  if (F.getName() != "olInit")
+    OS << "if (!llvm::offload::isOffloadInitialized()) return &UninitError;";
+
   // Emit pre-call prints
   OS << TAB_1 "if (llvm::offload::isTracingEnabled()) {\n";
   OS << formatv(TAB_2 "llvm::errs() << \"---> {0}\";\n", F.getName());
@@ -143,6 +147,14 @@ static void EmitCodeLocWrapper(const FunctionRec &F, raw_ostream &OS) {
 
 void EmitOffloadEntryPoints(const RecordKeeper &Records, raw_ostream &OS) {
   OS << GenericHeader;
+
+  constexpr const char *UninitMessage =
+      "liboffload has not been initialized - please call olInit before using "
+      "this API";
+  OS << formatv("static {0}_error_struct_t UninitError = "
+                "{{{1}_ERRC_UNINITIALIZED, \"{2}\"};",
+                PrefixLower, PrefixUpper, UninitMessage);
+
   for (auto *R : Records.getAllDerivedDefinitions("Function")) {
     EmitValidationFunc(FunctionRec{R}, OS);
     EmitEntryPointFunc(FunctionRec{R}, OS);

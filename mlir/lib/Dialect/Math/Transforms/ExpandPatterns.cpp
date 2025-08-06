@@ -16,10 +16,8 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/APFloat.h"
 
 using namespace mlir;
 
@@ -33,11 +31,11 @@ static Value createFloatConst(Location loc, Type type, APFloat value,
                 APFloat::rmNearestTiesToEven, &losesInfo);
   auto attr = b.getFloatAttr(eltType, value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return b.create<arith::ConstantOp>(loc,
-                                       DenseElementsAttr::get(shapedTy, attr));
+    return arith::ConstantOp::create(b, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
   }
 
-  return b.create<arith::ConstantOp>(loc, attr);
+  return arith::ConstantOp::create(b, loc, attr);
 }
 
 static Value createFloatConst(Location loc, Type type, double value,
@@ -50,11 +48,11 @@ static Value createIntConst(Location loc, Type type, int64_t value,
                             OpBuilder &b) {
   auto attr = b.getIntegerAttr(getElementTypeOrSelf(type), value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return b.create<arith::ConstantOp>(loc,
-                                       DenseElementsAttr::get(shapedTy, attr));
+    return arith::ConstantOp::create(b, loc,
+                                     DenseElementsAttr::get(shapedTy, attr));
   }
 
-  return b.create<arith::ConstantOp>(loc, attr);
+  return arith::ConstantOp::create(b, loc, attr);
 }
 
 static Value createTruncatedFPValue(Value operand, ImplicitLocOpBuilder &b) {
@@ -62,11 +60,11 @@ static Value createTruncatedFPValue(Value operand, ImplicitLocOpBuilder &b) {
   Type i64Ty = b.getI64Type();
   if (auto shapedTy = dyn_cast<ShapedType>(opType))
     i64Ty = shapedTy.clone(i64Ty);
-  Value fixedConvert = b.create<arith::FPToSIOp>(i64Ty, operand);
-  Value fpFixedConvert = b.create<arith::SIToFPOp>(opType, fixedConvert);
+  Value fixedConvert = arith::FPToSIOp::create(b, i64Ty, operand);
+  Value fpFixedConvert = arith::SIToFPOp::create(b, opType, fixedConvert);
   // The truncation does not preserve the sign when the truncated
   // value is -0. So here the sign is copied again.
-  return b.create<math::CopySignOp>(fpFixedConvert, operand);
+  return math::CopySignOp::create(b, fpFixedConvert, operand);
 }
 
 // sinhf(float x) -> (exp(x) - exp(-x)) / 2
@@ -75,12 +73,12 @@ static LogicalResult convertSinhOp(math::SinhOp op, PatternRewriter &rewriter) {
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  Value exp = b.create<math::ExpOp>(operand);
-  Value neg = b.create<arith::NegFOp>(operand);
-  Value nexp = b.create<math::ExpOp>(neg);
-  Value sub = b.create<arith::SubFOp>(exp, nexp);
+  Value exp = math::ExpOp::create(b, operand);
+  Value neg = arith::NegFOp::create(b, operand);
+  Value nexp = math::ExpOp::create(b, neg);
+  Value sub = arith::SubFOp::create(b, exp, nexp);
   Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
-  Value res = b.create<arith::MulFOp>(sub, half);
+  Value res = arith::MulFOp::create(b, sub, half);
   rewriter.replaceOp(op, res);
   return success();
 }
@@ -91,12 +89,12 @@ static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  Value exp = b.create<math::ExpOp>(operand);
-  Value neg = b.create<arith::NegFOp>(operand);
-  Value nexp = b.create<math::ExpOp>(neg);
-  Value add = b.create<arith::AddFOp>(exp, nexp);
+  Value exp = math::ExpOp::create(b, operand);
+  Value neg = arith::NegFOp::create(b, operand);
+  Value nexp = math::ExpOp::create(b, neg);
+  Value add = arith::AddFOp::create(b, exp, nexp);
   Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
-  Value res = b.create<arith::MulFOp>(add, half);
+  Value res = arith::MulFOp::create(b, add, half);
   rewriter.replaceOp(op, res);
   return success();
 }
@@ -117,23 +115,23 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   Value negTwo = createFloatConst(loc, floatType, -2.0, rewriter);
 
   // Compute sign(x) = cast<float_type>(x < 0) * (-2) + 1
-  Value isNegative = rewriter.create<arith::CmpFOp>(
-      loc, arith::CmpFPredicate::OLT, op.getOperand(), zero);
+  Value isNegative = arith::CmpFOp::create(
+      rewriter, loc, arith::CmpFPredicate::OLT, op.getOperand(), zero);
   Value isNegativeFloat =
-      rewriter.create<arith::UIToFPOp>(loc, floatType, isNegative);
+      arith::UIToFPOp::create(rewriter, loc, floatType, isNegative);
   Value isNegativeTimesNegTwo =
-      rewriter.create<arith::MulFOp>(loc, isNegativeFloat, negTwo);
-  Value sign = rewriter.create<arith::AddFOp>(loc, isNegativeTimesNegTwo, one);
+      arith::MulFOp::create(rewriter, loc, isNegativeFloat, negTwo);
+  Value sign = arith::AddFOp::create(rewriter, loc, isNegativeTimesNegTwo, one);
 
   // Normalize input to positive value: y = sign(x) * x
-  Value positiveX = rewriter.create<arith::MulFOp>(loc, sign, op.getOperand());
+  Value positiveX = arith::MulFOp::create(rewriter, loc, sign, op.getOperand());
 
   // Decompose on normalized input
-  Value negDoubledX = rewriter.create<arith::MulFOp>(loc, negTwo, positiveX);
-  Value exp2x = rewriter.create<math::ExpOp>(loc, negDoubledX);
-  Value dividend = rewriter.create<arith::SubFOp>(loc, one, exp2x);
-  Value divisor = rewriter.create<arith::AddFOp>(loc, one, exp2x);
-  Value positiveRes = rewriter.create<arith::DivFOp>(loc, dividend, divisor);
+  Value negDoubledX = arith::MulFOp::create(rewriter, loc, negTwo, positiveX);
+  Value exp2x = math::ExpOp::create(rewriter, loc, negDoubledX);
+  Value dividend = arith::SubFOp::create(rewriter, loc, one, exp2x);
+  Value divisor = arith::AddFOp::create(rewriter, loc, one, exp2x);
+  Value positiveRes = arith::DivFOp::create(rewriter, loc, dividend, divisor);
 
   // Multiply result by sign(x) to retain signs from negative inputs
   rewriter.replaceOpWithNewOp<arith::MulFOp>(op, sign, positiveRes);
@@ -146,9 +144,9 @@ static LogicalResult convertTanOp(math::TanOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
   Type type = operand.getType();
-  Value sin = b.create<math::SinOp>(type, operand);
-  Value cos = b.create<math::CosOp>(type, operand);
-  Value div = b.create<arith::DivFOp>(type, sin, cos);
+  Value sin = math::SinOp::create(b, type, operand);
+  Value cos = math::CosOp::create(b, type, operand);
+  Value div = arith::DivFOp::create(b, type, sin, cos);
   rewriter.replaceOp(op, div);
   return success();
 }
@@ -161,10 +159,10 @@ static LogicalResult convertAsinhOp(math::AsinhOp op,
   Type opType = operand.getType();
 
   Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
-  Value fma = b.create<math::FmaOp>(operand, operand, one);
-  Value sqrt = b.create<math::SqrtOp>(fma);
-  Value add = b.create<arith::AddFOp>(operand, sqrt);
-  Value res = b.create<math::LogOp>(add);
+  Value fma = math::FmaOp::create(b, operand, operand, one);
+  Value sqrt = math::SqrtOp::create(b, fma);
+  Value add = arith::AddFOp::create(b, operand, sqrt);
+  Value res = math::LogOp::create(b, add);
   rewriter.replaceOp(op, res);
   return success();
 }
@@ -177,10 +175,10 @@ static LogicalResult convertAcoshOp(math::AcoshOp op,
   Type opType = operand.getType();
 
   Value negOne = createFloatConst(op->getLoc(), opType, -1.0, rewriter);
-  Value fma = b.create<math::FmaOp>(operand, operand, negOne);
-  Value sqrt = b.create<math::SqrtOp>(fma);
-  Value add = b.create<arith::AddFOp>(operand, sqrt);
-  Value res = b.create<math::LogOp>(add);
+  Value fma = math::FmaOp::create(b, operand, operand, negOne);
+  Value sqrt = math::SqrtOp::create(b, fma);
+  Value add = arith::AddFOp::create(b, operand, sqrt);
+  Value res = math::LogOp::create(b, add);
   rewriter.replaceOp(op, res);
   return success();
 }
@@ -193,13 +191,13 @@ static LogicalResult convertAtanhOp(math::AtanhOp op,
   Type opType = operand.getType();
 
   Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
-  Value add = b.create<arith::AddFOp>(operand, one);
-  Value neg = b.create<arith::NegFOp>(operand);
-  Value sub = b.create<arith::AddFOp>(neg, one);
-  Value div = b.create<arith::DivFOp>(add, sub);
-  Value log = b.create<math::LogOp>(div);
+  Value add = arith::AddFOp::create(b, operand, one);
+  Value neg = arith::NegFOp::create(b, operand);
+  Value sub = arith::AddFOp::create(b, neg, one);
+  Value div = arith::DivFOp::create(b, add, sub);
+  Value log = math::LogOp::create(b, div);
   Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
-  Value res = b.create<arith::MulFOp>(log, half);
+  Value res = arith::MulFOp::create(b, log, half);
   rewriter.replaceOp(op, res);
   return success();
 }
@@ -210,8 +208,8 @@ static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
   Value operandB = op.getOperand(1);
   Value operandC = op.getOperand(2);
   Type type = op.getType();
-  Value mult = b.create<arith::MulFOp>(type, operandA, operandB);
-  Value add = b.create<arith::AddFOp>(type, mult, operandC);
+  Value mult = arith::MulFOp::create(b, type, operandA, operandB);
+  Value add = arith::AddFOp::create(b, type, mult, operandC);
   rewriter.replaceOp(op, add);
   return success();
 }
@@ -236,11 +234,12 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter);
   Value one = createFloatConst(op->getLoc(), opType, 1.00, rewriter);
 
-  Value gtCheck = b.create<arith::CmpFOp>(arith::CmpFPredicate::OGT, operand,
-                                          fpFixedConvert);
-  Value incrValue = b.create<arith::SelectOp>(op->getLoc(), gtCheck, one, zero);
+  Value gtCheck = arith::CmpFOp::create(b, arith::CmpFPredicate::OGT, operand,
+                                        fpFixedConvert);
+  Value incrValue =
+      arith::SelectOp::create(b, op->getLoc(), gtCheck, one, zero);
 
-  Value ret = b.create<arith::AddFOp>(opType, fpFixedConvert, incrValue);
+  Value ret = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
   rewriter.replaceOp(op, ret);
   return success();
 }
@@ -258,9 +257,9 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
 
   auto convertFPowItoPowf = [&]() -> LogicalResult {
     Value castPowerToFp =
-        rewriter.create<arith::SIToFPOp>(op.getLoc(), baseType, power);
-    Value res = rewriter.create<math::PowFOp>(op.getLoc(), baseType, base,
-                                              castPowerToFp);
+        arith::SIToFPOp::create(rewriter, op.getLoc(), baseType, power);
+    Value res = math::PowFOp::create(rewriter, op.getLoc(), baseType, base,
+                                     castPowerToFp);
     rewriter.replaceOp(op, res);
     return success();
   };
@@ -281,9 +280,9 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
 
   while (absPower > 0) {
     if (absPower & 1)
-      res = b.create<arith::MulFOp>(baseType, base, res);
+      res = arith::MulFOp::create(b, baseType, base, res);
     absPower >>= 1;
-    base = b.create<arith::MulFOp>(baseType, base, base);
+    base = arith::MulFOp::create(b, baseType, base, base);
   }
 
   // Make sure not to introduce UB in case of negative power.
@@ -303,14 +302,14 @@ static LogicalResult convertFPowIOp(math::FPowIOp op,
         createFloatConst(op->getLoc(), baseType,
                          APFloat::getInf(sem, /*Negative=*/true), rewriter);
     Value zeroEqCheck =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, res, zero);
+        arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, res, zero);
     Value negZeroEqCheck =
-        b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, res, negZero);
-    res = b.create<arith::DivFOp>(baseType, one, res);
+        arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, res, negZero);
+    res = arith::DivFOp::create(b, baseType, one, res);
     res =
-        b.create<arith::SelectOp>(op->getLoc(), zeroEqCheck, posInfinity, res);
-    res = b.create<arith::SelectOp>(op->getLoc(), negZeroEqCheck, negInfinity,
-                                    res);
+        arith::SelectOp::create(b, op->getLoc(), zeroEqCheck, posInfinity, res);
+    res = arith::SelectOp::create(b, op->getLoc(), negZeroEqCheck, negInfinity,
+                                  res);
   }
 
   rewriter.replaceOp(op, res);
@@ -331,7 +330,7 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
       cast<mlir::FloatType>(getElementTypeOrSelf(typeB)).getFloatSemantics();
   APFloat valueB(sem);
   auto mulf = [&](Value x, Value y) -> Value {
-    return b.create<arith::MulFOp>(x, y);
+    return arith::MulFOp::create(b, x, y);
   };
   if (matchPattern(operandB, m_ConstantFloat(&valueB))) {
     if (valueB.isZero()) {
@@ -348,19 +347,19 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
     if (valueB.isExactlyValue(-1.0)) {
       // a^(-1) -> 1 / a
       Value one = createFloatConst(op->getLoc(), typeA, 1.0, rewriter);
-      Value div = b.create<arith::DivFOp>(one, operandA);
+      Value div = arith::DivFOp::create(b, one, operandA);
       rewriter.replaceOp(op, div);
       return success();
     }
     if (valueB.isExactlyValue(0.5)) {
       // a^(1/2) -> sqrt(a)
-      Value sqrt = b.create<math::SqrtOp>(operandA);
+      Value sqrt = math::SqrtOp::create(b, operandA);
       rewriter.replaceOp(op, sqrt);
       return success();
     }
     if (valueB.isExactlyValue(-0.5)) {
       // a^(-1/2) -> 1 / sqrt(a)
-      Value rsqrt = b.create<math::RsqrtOp>(operandA);
+      Value rsqrt = math::RsqrtOp::create(b, operandA);
       rewriter.replaceOp(op, rsqrt);
       return success();
     }
@@ -373,7 +372,7 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
       // a^(-2) -> 1 / (a * a)
       Value one =
           createFloatConst(op->getLoc(), operandA.getType(), 1.0, rewriter);
-      Value div = b.create<arith::DivFOp>(one, mulf(operandA, operandA));
+      Value div = arith::DivFOp::create(b, one, mulf(operandA, operandA));
       rewriter.replaceOp(op, div);
       return success();
     }
@@ -383,9 +382,9 @@ static LogicalResult convertPowfOp(math::PowFOp op, PatternRewriter &rewriter) {
     }
   }
 
-  Value logA = b.create<math::LogOp>(operandA);
-  Value mult = b.create<arith::MulFOp>(operandB, logA);
-  Value expResult = b.create<math::ExpOp>(mult);
+  Value logA = math::LogOp::create(b, operandA);
+  Value mult = arith::MulFOp::create(b, operandB, logA);
+  Value expResult = math::ExpOp::create(b, mult);
   rewriter.replaceOp(op, expResult);
   return success();
 }
@@ -400,8 +399,8 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
   Value ln2 = createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b);
-  Value mult = b.create<arith::MulFOp>(opType, operand, ln2);
-  Value exp = b.create<math::ExpOp>(op->getLoc(), mult);
+  Value mult = arith::MulFOp::create(b, opType, operand, ln2);
+  Value exp = math::ExpOp::create(b, op->getLoc(), mult);
   rewriter.replaceOp(op, exp);
   return success();
 }
@@ -427,8 +426,8 @@ static LogicalResult convertRoundOp(math::RoundOp op,
   Value c127 = createIntConst(loc, i32Ty, 127, b);
   Value expMask = createIntConst(loc, i32Ty, (1 << 8) - 1, b);
 
-  Value incrValue = b.create<math::CopySignOp>(half, operand);
-  Value add = b.create<arith::AddFOp>(opType, operand, incrValue);
+  Value incrValue = math::CopySignOp::create(b, half, operand);
+  Value add = arith::AddFOp::create(b, opType, operand, incrValue);
   Value fpFixedConvert = createTruncatedFPValue(add, b);
 
   // There are three cases where adding 0.5 to the value and truncating by
@@ -451,15 +450,15 @@ static LogicalResult convertRoundOp(math::RoundOp op,
   //     i64 leading to wrong outputs.
   //
   // All three cases satisfy the property `biasedExp >= 23`.
-  Value operandBitcast = b.create<arith::BitcastOp>(i32Ty, operand);
-  Value operandExp = b.create<arith::AndIOp>(
-      b.create<arith::ShRUIOp>(operandBitcast, c23), expMask);
-  Value operandBiasedExp = b.create<arith::SubIOp>(operandExp, c127);
-  Value isSpecialValOrLargeVal =
-      b.create<arith::CmpIOp>(arith::CmpIPredicate::sge, operandBiasedExp, c23);
+  Value operandBitcast = arith::BitcastOp::create(b, i32Ty, operand);
+  Value operandExp = arith::AndIOp::create(
+      b, arith::ShRUIOp::create(b, operandBitcast, c23), expMask);
+  Value operandBiasedExp = arith::SubIOp::create(b, operandExp, c127);
+  Value isSpecialValOrLargeVal = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::sge, operandBiasedExp, c23);
 
-  Value result = b.create<arith::SelectOp>(isSpecialValOrLargeVal, operand,
-                                           fpFixedConvert);
+  Value result = arith::SelectOp::create(b, isSpecialValOrLargeVal, operand,
+                                         fpFixedConvert);
   rewriter.replaceOp(op, result);
   return success();
 }
@@ -489,21 +488,21 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
     auto bits = createIntConst(loc, operandTy, half, rewriter);
     auto mask = createIntConst(loc, operandTy, allbits >> half, rewriter);
 
-    Value pred =
-        rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ule, x, mask);
-    Value add = rewriter.create<arith::AddIOp>(loc, count, bits);
-    Value shift = rewriter.create<arith::ShLIOp>(loc, x, bits);
+    Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ule,
+                                       x, mask);
+    Value add = arith::AddIOp::create(rewriter, loc, count, bits);
+    Value shift = arith::ShLIOp::create(rewriter, loc, x, bits);
 
-    x = rewriter.create<arith::SelectOp>(loc, pred, shift, x);
-    count = rewriter.create<arith::SelectOp>(loc, pred, add, count);
+    x = arith::SelectOp::create(rewriter, loc, pred, shift, x);
+    count = arith::SelectOp::create(rewriter, loc, pred, add, count);
   }
 
   Value zero = createIntConst(loc, operandTy, 0, rewriter);
-  Value pred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::eq,
-                                              operand, zero);
+  Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::eq,
+                                     operand, zero);
 
   Value bwval = createIntConst(loc, operandTy, bitwidth, rewriter);
-  Value sel = rewriter.create<arith::SelectOp>(loc, pred, bwval, count);
+  Value sel = arith::SelectOp::create(rewriter, loc, pred, bwval, count);
   rewriter.replaceOp(op, sel);
   return success();
 }
@@ -550,29 +549,29 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   Value c23Mask = createIntConst(loc, iTy, (1ull << mantissaWidth) - 1, b);
   Value expMask = createIntConst(loc, iTy, (1ull << exponentWidth) - 1, b);
 
-  Value operandBitcast = b.create<arith::BitcastOp>(iTy, operand);
-  Value round = b.create<math::RoundOp>(operand);
-  Value roundBitcast = b.create<arith::BitcastOp>(iTy, round);
+  Value operandBitcast = arith::BitcastOp::create(b, iTy, operand);
+  Value round = math::RoundOp::create(b, operand);
+  Value roundBitcast = arith::BitcastOp::create(b, iTy, round);
 
   // Get biased exponents for operand and round(operand)
-  Value operandExp = b.create<arith::AndIOp>(
-      b.create<arith::ShRUIOp>(operandBitcast, c23), expMask);
-  Value operandBiasedExp = b.create<arith::SubIOp>(operandExp, c127);
-  Value roundExp = b.create<arith::AndIOp>(
-      b.create<arith::ShRUIOp>(roundBitcast, c23), expMask);
-  Value roundBiasedExp = b.create<arith::SubIOp>(roundExp, c127);
+  Value operandExp = arith::AndIOp::create(
+      b, arith::ShRUIOp::create(b, operandBitcast, c23), expMask);
+  Value operandBiasedExp = arith::SubIOp::create(b, operandExp, c127);
+  Value roundExp = arith::AndIOp::create(
+      b, arith::ShRUIOp::create(b, roundBitcast, c23), expMask);
+  Value roundBiasedExp = arith::SubIOp::create(b, roundExp, c127);
 
   auto safeShiftRight = [&](Value x, Value shift) -> Value {
     // Clamp shift to valid range [0, bitwidth - 1] to avoid undefined behavior
-    Value clampedShift = b.create<arith::MaxSIOp>(shift, c0);
-    clampedShift = b.create<arith::MinSIOp>(clampedShift, c31);
-    return b.create<arith::ShRUIOp>(x, clampedShift);
+    Value clampedShift = arith::MaxSIOp::create(b, shift, c0);
+    clampedShift = arith::MinSIOp::create(b, clampedShift, c31);
+    return arith::ShRUIOp::create(b, x, clampedShift);
   };
 
   auto maskMantissa = [&](Value mantissa,
                           Value mantissaMaskRightShift) -> Value {
     Value shiftedMantissaMask = safeShiftRight(c23Mask, mantissaMaskRightShift);
-    return b.create<arith::AndIOp>(mantissa, shiftedMantissaMask);
+    return arith::AndIOp::create(b, mantissa, shiftedMantissaMask);
   };
 
   // A whole number `x`, such that `|x| != 1`, is even if the mantissa, ignoring
@@ -590,13 +589,13 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   // `biasedExp > 23`, so they get treated as large numbers with no room for
   // decimals, which are always even.
   Value roundBiasedExpEq0 =
-      b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, roundBiasedExp, c0);
-  Value roundBiasedExpMinus1 = b.create<arith::SubIOp>(roundBiasedExp, c1);
+      arith::CmpIOp::create(b, arith::CmpIPredicate::eq, roundBiasedExp, c0);
+  Value roundBiasedExpMinus1 = arith::SubIOp::create(b, roundBiasedExp, c1);
   Value roundMaskedMantissa = maskMantissa(roundBitcast, roundBiasedExpMinus1);
-  Value roundIsNotEvenOrSpecialVal = b.create<arith::CmpIOp>(
-      arith::CmpIPredicate::ne, roundMaskedMantissa, c0);
+  Value roundIsNotEvenOrSpecialVal = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::ne, roundMaskedMantissa, c0);
   roundIsNotEvenOrSpecialVal =
-      b.create<arith::OrIOp>(roundIsNotEvenOrSpecialVal, roundBiasedExpEq0);
+      arith::OrIOp::create(b, roundIsNotEvenOrSpecialVal, roundBiasedExpEq0);
 
   // A value `x` with `0 <= biasedExp < 23`, is halfway between two consecutive
   // integers if the bit at index `biasedExp` starting from the left in the
@@ -605,37 +604,37 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   // values +-0.5 are the only halfway values that have `biasedExp == -1 < 0`,
   // so these are handled separately. In particular, if `biasedExp == -1`, the
   // value is halfway if the entire mantissa is zero.
-  Value operandBiasedExpEqNeg1 = b.create<arith::CmpIOp>(
-      arith::CmpIPredicate::eq, operandBiasedExp, cNeg1);
-  Value expectedOperandMaskedMantissa = b.create<arith::SelectOp>(
-      operandBiasedExpEqNeg1, c0, safeShiftRight(c2To22, operandBiasedExp));
+  Value operandBiasedExpEqNeg1 = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::eq, operandBiasedExp, cNeg1);
+  Value expectedOperandMaskedMantissa = arith::SelectOp::create(
+      b, operandBiasedExpEqNeg1, c0, safeShiftRight(c2To22, operandBiasedExp));
   Value operandMaskedMantissa = maskMantissa(operandBitcast, operandBiasedExp);
   Value operandIsHalfway =
-      b.create<arith::CmpIOp>(arith::CmpIPredicate::eq, operandMaskedMantissa,
-                              expectedOperandMaskedMantissa);
+      arith::CmpIOp::create(b, arith::CmpIPredicate::eq, operandMaskedMantissa,
+                            expectedOperandMaskedMantissa);
   // Ensure `biasedExp` is in the valid range for half values.
-  Value operandBiasedExpGeNeg1 = b.create<arith::CmpIOp>(
-      arith::CmpIPredicate::sge, operandBiasedExp, cNeg1);
-  Value operandBiasedExpLt23 =
-      b.create<arith::CmpIOp>(arith::CmpIPredicate::slt, operandBiasedExp, c23);
+  Value operandBiasedExpGeNeg1 = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::sge, operandBiasedExp, cNeg1);
+  Value operandBiasedExpLt23 = arith::CmpIOp::create(
+      b, arith::CmpIPredicate::slt, operandBiasedExp, c23);
   operandIsHalfway =
-      b.create<arith::AndIOp>(operandIsHalfway, operandBiasedExpLt23);
+      arith::AndIOp::create(b, operandIsHalfway, operandBiasedExpLt23);
   operandIsHalfway =
-      b.create<arith::AndIOp>(operandIsHalfway, operandBiasedExpGeNeg1);
+      arith::AndIOp::create(b, operandIsHalfway, operandBiasedExpGeNeg1);
 
   // Adjust rounded operand with `round(operand) - sign(operand)` to correct the
   // case where `round` rounded in the opposite direction of `roundeven`.
-  Value sign = b.create<math::CopySignOp>(c1Float, operand);
-  Value roundShifted = b.create<arith::SubFOp>(round, sign);
+  Value sign = math::CopySignOp::create(b, c1Float, operand);
+  Value roundShifted = arith::SubFOp::create(b, round, sign);
   // If the rounded value is even or a special value, we default to the behavior
   // of `math.round`.
   Value needsShift =
-      b.create<arith::AndIOp>(roundIsNotEvenOrSpecialVal, operandIsHalfway);
-  Value result = b.create<arith::SelectOp>(needsShift, roundShifted, round);
+      arith::AndIOp::create(b, roundIsNotEvenOrSpecialVal, operandIsHalfway);
+  Value result = arith::SelectOp::create(b, needsShift, roundShifted, round);
   // The `x - sign` adjustment does not preserve the sign when we are adjusting
   // the value -1 to -0. So here the sign is copied again to ensure that -0.5 is
   // rounded to -0.0.
-  result = b.create<math::CopySignOp>(result, operand);
+  result = math::CopySignOp::create(b, result, operand);
   rewriter.replaceOp(op, result);
   return success();
 }
@@ -657,7 +656,7 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
 
   Location loc = op->getLoc();
   auto constOneFloat = createFloatConst(loc, operandTy, 1.0, rewriter);
-  auto sqrtOp = rewriter.create<math::SqrtOp>(loc, operand);
+  auto sqrtOp = math::SqrtOp::create(rewriter, loc, operand);
   rewriter.replaceOpWithNewOp<arith::DivFOp>(op, constOneFloat, sqrtOp);
   return success();
 }

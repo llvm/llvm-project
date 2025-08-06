@@ -165,6 +165,25 @@ func.func @shape_cast_of_transpose(%arg : vector<1x4x4x1x1xi8>) -> vector<4x4xi8
 
 // -----
 
+// In this test, the permutation maps the non-unit dimensions (1 and 2) as follows:
+// 1 -> 0
+// 2 -> 4
+// Because 0 < 4, this permutation is order preserving and effectively a shape_cast.
+// (same as the example above, but one of the dims is scalable)
+// CHECK-LABEL: @shape_cast_of_transpose_scalable
+//  CHECK-SAME:   %[[ARG:.*]]: vector<1x[4]x4x1x1xi8>) -> vector<[4]x4xi8> {
+//       CHECK:   %[[SHAPE_CAST:.*]] = vector.shape_cast %[[ARG]] :
+//  CHECK-SAME:   vector<1x[4]x4x1x1xi8> to vector<[4]x4xi8>
+//       CHECK:   return %[[SHAPE_CAST]] : vector<[4]x4xi8>
+func.func @shape_cast_of_transpose_scalable(%arg : vector<1x[4]x4x1x1xi8>) -> vector<[4]x4xi8> {
+  %0 = vector.transpose %arg, [1, 0, 3, 4, 2]
+     : vector<1x[4]x4x1x1xi8> to vector<[4]x1x1x1x4xi8>
+  %1 = vector.shape_cast %0 : vector<[4]x1x1x1x4xi8> to vector<[4]x4xi8>
+  return %1 : vector<[4]x4xi8>
+}
+
+// -----
+
 // In this test, the mapping of non-unit dimensions (1 and 2) is as follows:
 // 1 -> 2
 // 2 -> 1
@@ -184,35 +203,9 @@ func.func @negative_shape_cast_of_transpose(%arg : vector<1x4x4x1xi8>) -> vector
 
 // -----
 
-// Currently the conversion shape_cast(transpose) -> shape_cast is disabled for
-// scalable vectors because of bad interaction with ConvertIllegalShapeCastOpsToTransposes
-// CHECK-LABEL: @negative_shape_cast_of_transpose_scalable
-//       CHECK:  vector.transpose
-//       CHECK:  vector.shape_cast
-func.func @negative_shape_cast_of_transpose_scalable(%arg : vector<[4]x1xi8>) -> vector<[4]xi8> {
-  %0 = vector.transpose %arg, [1, 0] : vector<[4]x1xi8> to vector<1x[4]xi8>
-  %1 = vector.shape_cast %0 : vector<1x[4]xi8> to vector<[4]xi8>
-  return %1 : vector<[4]xi8>
-}
-
-// -----
-
 /// +--------------------------------------------------------------------------
 /// Tests of FoldTransposeShapeCast:  transpose(shape_cast) -> shape_cast
 /// +--------------------------------------------------------------------------
-
-// The conversion transpose(shape_cast) -> shape_cast is not disabled for scalable
-// vectors.
-// CHECK-LABEL: @transpose_of_shape_cast_scalable
-//       CHECK: vector.shape_cast
-//  CHECK-SAME: vector<[4]xi8> to vector<[4]x1xi8>
-func.func @transpose_of_shape_cast_scalable(%arg : vector<[4]xi8>) -> vector<[4]x1xi8> {
-  %0 = vector.shape_cast %arg : vector<[4]xi8> to vector<1x[4]xi8>
-  %1 = vector.transpose %0, [1, 0] : vector<1x[4]xi8> to vector<[4]x1xi8>
-  return %1 : vector<[4]x1xi8>
-}
-
-// -----
 
 // A transpose that is 'order preserving' can be treated like a shape_cast. 
 // CHECK-LABEL: @transpose_of_shape_cast
@@ -229,11 +222,26 @@ func.func @transpose_of_shape_cast(%arg : vector<2x3x1x1xi8>) ->  vector<6x1x1xi
 
 // -----
 
-// Scalable dimensions should be treated as non-unit dimensions.
 // CHECK-LABEL: @transpose_of_shape_cast_scalable
+//  CHECK-SAME:   %[[ARG:.*]]: vector<[2]x3x1x1xi8>) -> vector<[6]x1x1xi8> {
+//       CHECK:   %[[SHAPE_CAST:.*]] = vector.shape_cast %[[ARG]] :
+//  CHECK-SAME:   vector<[2]x3x1x1xi8> to vector<[6]x1x1xi8>
+//       CHECK:   return %[[SHAPE_CAST]] : vector<[6]x1x1xi8>
+func.func @transpose_of_shape_cast_scalable(%arg : vector<[2]x3x1x1xi8>) ->  vector<[6]x1x1xi8> {
+  %0 = vector.shape_cast %arg : vector<[2]x3x1x1xi8> to vector<[6]x1x1xi8>
+  %1 = vector.transpose %0, [0, 2, 1]
+     : vector<[6]x1x1xi8> to vector<[6]x1x1xi8>
+  return %1 : vector<[6]x1x1xi8>
+}
+
+// -----
+
+// Scalable 1 dimensions (i.e. [1]) should be treated as non-unit dimensions
+// (hence no folding).
+// CHECK-LABEL: @negative_transpose_of_shape_cast_scalable_unit
 //       CHECK: vector.shape_cast
 //       CHECK: vector.transpose
-func.func @transpose_of_shape_cast_scalable_unit(%arg : vector<[1]x4x1xi8>) -> vector<4x[1]xi8> {
+func.func @negative_transpose_of_shape_cast_scalable_unit(%arg : vector<[1]x4x1xi8>) -> vector<4x[1]xi8> {
   %0 = vector.shape_cast %arg : vector<[1]x4x1xi8> to vector<[1]x4xi8>
   %1 = vector.transpose %0, [1, 0] : vector<[1]x4xi8> to vector<4x[1]xi8>
   return %1 : vector<4x[1]xi8>

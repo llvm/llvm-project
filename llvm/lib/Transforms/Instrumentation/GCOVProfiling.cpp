@@ -27,7 +27,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/CRC.h"
@@ -245,7 +244,7 @@ namespace {
   // to the block.
   class GCOVLines : public GCOVRecord {
   public:
-    const StringRef getFilename() { return Filename; }
+    StringRef getFilename() { return Filename; }
 
     void addLine(uint32_t Line) {
       assert(Line != 0 && "Line zero is not a valid real line number.");
