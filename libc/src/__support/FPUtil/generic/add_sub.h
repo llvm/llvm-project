@@ -104,13 +104,22 @@ add_or_sub(InType x, InType y) {
         }
       }
 
-      // volatile prevents Clang from converting tmp to OutType and then
-      // immediately back to InType before negating it, resulting in double
-      // rounding.
-      volatile InType tmp = y;
-      if constexpr (IsSub)
-        tmp = -tmp;
-      return cast<OutType>(tmp);
+      if constexpr (cpp::is_same_v<InType, bfloat16> &&
+                    cpp::is_same_v<OutType, bfloat16>) {
+        OutFPBits y_bits(y);
+        if constexpr (IsSub)
+          y_bits.set_sign(y_bits.sign().negate());
+        return y_bits.get_val();
+      } else {
+
+        // volatile prevents Clang from converting tmp to OutType and then
+        // immediately back to InType before negating it, resulting in double
+        // rounding.
+        volatile InType tmp = y;
+        if constexpr (IsSub)
+          tmp = -tmp;
+        return cast<OutType>(tmp);
+      }
     }
 
     if (y_bits.is_zero())

@@ -5307,6 +5307,69 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  bfloat16_add_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_add_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.os
+    libc.src.__support.macros.properties.types
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
+  bfloat16_div_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_div_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
+  bfloat16_mul_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_mul_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
+  bfloat16_sub_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_sub_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.os
+    libc.src.__support.macros.properties.types
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
   add_same_type_test
   SUITE
     libc-math-smoke-tests
