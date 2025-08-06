@@ -62,6 +62,11 @@ module std_core [system] {
     export std_core.fwd.variant
   }
 
+  // Only the truly dependency-free parts of __functional are here
+  module functional_core {
+    module invoke   { header "__functional/invoke.h" }
+  }
+
   module fwd {
     module array        { header "__fwd/array.h" }
     module complex      { header "__fwd/complex.h" }
@@ -1471,7 +1476,6 @@ module std [system] {
     module function                     { header "__functional/function.h" }
     module hash                         { header "__functional/hash.h" }
     module identity                     { header "__functional/identity.h" }
-    module invoke                       { header "__functional/invoke.h" }
     module is_transparent               { header "__functional/is_transparent.h" }
     module mem_fn                       { header "__functional/mem_fn.h" }
     module mem_fun_ref                  { header "__functional/mem_fun_ref.h" }
