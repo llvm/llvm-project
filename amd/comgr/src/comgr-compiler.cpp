@@ -750,6 +750,11 @@ AMDGPUCompiler::executeInProcessDriver(ArrayRef<const char *> Args) {
                    "AMDGPU Code Object Manager", OverlayFS);
   TheDriver.setCheckInputsExist(false);
 
+  // We do not want the driver to promote -include into -include-pch.
+  // Otherwise, the driver may pick PCH in the wrong format, without permissions,
+  // in the process's CWD.
+  TheDriver.setProbePrecompiled(false);
+
   // Log arguments used to build compilation
   if (env::shouldEmitVerboseLogs()) {
     LogS << "    Compilation Args: ";
