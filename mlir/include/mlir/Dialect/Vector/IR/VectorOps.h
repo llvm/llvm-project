@@ -77,16 +77,6 @@ struct VectorDim {
   int64_t dim;
   bool isScalable;
 };
-
-// Struct used to denote bytes is the unit of alignment.
-struct AlignmentBytes {
-  uint64_t alignment = 0;
-  AlignmentBytes() = default;
-  explicit AlignmentBytes(uint64_t alignment) : alignment(alignment) {};
-  explicit operator bool() const { return alignment; }
-  uint64_t getAlignment() const { return alignment; }
-};
-
 BroadcastableToResult
 isBroadcastableTo(Type srcType, VectorType dstVectorType,
                   std::pair<VectorDim, VectorDim> *mismatchingDims = nullptr);
