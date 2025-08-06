@@ -15,8 +15,6 @@
 
 source .ci/utils.sh
 
-python3 --version
-
 projects="${1}"
 targets="${2}"
 
