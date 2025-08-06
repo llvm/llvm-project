@@ -419,12 +419,6 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
   }
 }
 
-#if defined(WALDO)
-#elif 1
-#else
-#endif
-
-
 TEST(FoldingRanges, PseudoParserLineFoldingsOnly) {
   const char *Tests[] = {
       R"cpp(
