@@ -318,25 +318,25 @@ bool GCNPreRAOptimizationsImpl::createListOfPackedInstr(
   int NumInst = 0;
 
   auto E = BB->end();
-  auto schedModel = TII->getSchedModel();
-  const MCSchedClassDesc *schedClassDesc = schedModel.resolveSchedClass(&BeginMI);
-  const int NumMFMACycles = schedModel.getWriteProcResBegin(schedClassDesc)->ReleaseAtCycle;
-  int totalCyclesBetweenCandidates = 0;
+  auto SchedModel = TII->getSchedModel();
+  const MCSchedClassDesc *SchedClassDesc = SchedModel.resolveSchedClass(&BeginMI);
+  const int NumMFMACycles = SchedModel.getWriteProcResBegin(SchedClassDesc)->ReleaseAtCycle;
+  int TotalCyclesBetweenCandidates = 0;
   for (auto I = std::next(BeginMI.getIterator()); I != E; ++I) {
     MachineInstr &Instr = *I;
-    const MCSchedClassDesc *instrSchedClassDesc = schedModel.resolveSchedClass(&Instr);
-    totalCyclesBetweenCandidates += schedModel.getWriteProcResBegin(instrSchedClassDesc)->ReleaseAtCycle;
+    const MCSchedClassDesc *instrSchedClassDesc = SchedModel.resolveSchedClass(&Instr);
+    TotalCyclesBetweenCandidates += SchedModel.getWriteProcResBegin(instrSchedClassDesc)->ReleaseAtCycle;
     if (Instr.isMetaInstruction())
       continue;
 
     if (Instr.isTerminator())
       return false;
     
-    if (totalCyclesBetweenCandidates > NumMFMACycles)
+    if (TotalCyclesBetweenCandidates > NumMFMACycles)
       return false;
 
     if ((isUnpackingSupportedInstr(Instr)) && TII->isNeverCoissue(Instr)) {
-      totalCyclesBetweenCandidates += 1;
+      TotalCyclesBetweenCandidates += 1;
       instrsToUnpack.insert(&Instr);
     }
   }
@@ -411,10 +411,8 @@ SmallVector<MachineInstr *, 2> GCNPreRAOptimizationsImpl::insertUnpackedMI(
   if (isVreg_64) {
     Op0L_Op1L->getOperand(0).setIsUndef();
   }
-  else {
-    if (I.getOperand(0).isUndef()) {
-      Op0L_Op1L->getOperand(0).setIsUndef();
-    }
+  else if (I.getOperand(0).isUndef()){
+    Op0L_Op1L->getOperand(0).setIsUndef();
   }
 
   LIS->InsertMachineInstrInMaps(*Op0L_Op1L);
@@ -499,58 +497,37 @@ void GCNPreRAOptimizationsImpl::insertMI(MachineInstr &I) {
       TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
   const TargetRegisterClass *SrcRC = TRI->getSubClassWithSubReg(Src0RC, 1);
 
-  if ((Src1RC->getID() == AMDGPU::SGPR_64RegClassID) ||
-      (Src0RC->getID() == AMDGPU::SGPR_64RegClassID)) {
-    if (Src1RC->getID() == AMDGPU::SGPR_64RegClassID) {
-      // try with sgpr32
-      SmallVector<MachineInstr *, 2> copyInstrs = copyToVregAndInsertMI(I, 4);
-      MachineInstr *CopySGPR1 = copyInstrs[0];
-      MachineInstr *CopySGPR2 = copyInstrs[1];
+  if (Src1RC->getID() == AMDGPU::SGPR_64RegClassID) {
+    // try with sgpr32
+    SmallVector<MachineInstr *, 2> copyInstrs = copyToVregAndInsertMI(I, 4);
+    MachineInstr *CopySGPR1 = copyInstrs[0];
+    MachineInstr *CopySGPR2 = copyInstrs[1];
 
-      if (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID) {
-        SmallVector<MachineInstr *, 2> unpackedInstrs = insertUnpackedMI(
-            I, DstMO, SrcMO1, CopySGPR1->getOperand(0), SrcMO1,
-            CopySGPR2->getOperand(0), true);
-        unpackedInstrs[0]->addRegisterKilled(unpackedInstrs[0]->getOperand(2).getReg(), TRI);
-        unpackedInstrs[1]->addRegisterKilled(unpackedInstrs[1]->getOperand(2).getReg(), TRI);
-      } else {
-        SmallVector<MachineInstr *, 2> unpackedInstrs = insertUnpackedMI(
-            I, DstMO, SrcMO1, CopySGPR1->getOperand(0), SrcMO1,
-            CopySGPR2->getOperand(0), false);
-        unpackedInstrs[0]->addRegisterKilled(unpackedInstrs[0]->getOperand(2).getReg(), TRI);
-        unpackedInstrs[1]->addRegisterKilled(unpackedInstrs[1]->getOperand(2).getReg(), TRI);
-      }
-    }
-    else {
-      SmallVector<MachineInstr *, 2> copyInstrs = copyToVregAndInsertMI(I, 2);
-      MachineInstr *CopySGPR1 = copyInstrs[0];
-      MachineInstr *CopySGPR2 = copyInstrs[1];
+    bool isVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
+    SmallVector<MachineInstr *, 2> unpackedInstrs = insertUnpackedMI(
+        I, DstMO, SrcMO1, CopySGPR1->getOperand(0), SrcMO1,
+        CopySGPR2->getOperand(0), isVReg64);
+    unpackedInstrs[0]->addRegisterKilled(unpackedInstrs[0]->getOperand(2).getReg(), TRI);
+    unpackedInstrs[1]->addRegisterKilled(unpackedInstrs[1]->getOperand(2).getReg(), TRI);
+    return;
+  }
+  else if (Src0RC->getID() == AMDGPU::SGPR_64RegClassID) {
+    SmallVector<MachineInstr *, 2> copyInstrs = copyToVregAndInsertMI(I, 2);
+    MachineInstr *CopySGPR1 = copyInstrs[0];
+    MachineInstr *CopySGPR2 = copyInstrs[1];
 
-      if (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID) {
-        SmallVector<MachineInstr *, 2> unpackedInstrs = insertUnpackedMI(
-            I, DstMO, CopySGPR1->getOperand(0), SrcMO2, CopySGPR2->getOperand(0), SrcMO2, true);
-        unpackedInstrs[0]->addRegisterKilled(unpackedInstrs[0]->getOperand(1).getReg(), TRI);
-        unpackedInstrs[1]->addRegisterKilled(unpackedInstrs[1]->getOperand(1).getReg(), TRI);
-      } else {
-        SmallVector<MachineInstr *, 2> unpackedInstrs = insertUnpackedMI(
-            I, DstMO, CopySGPR1->getOperand(0), SrcMO2, CopySGPR2->getOperand(0), SrcMO2, false);
-        unpackedInstrs[0]->addRegisterKilled(unpackedInstrs[0]->getOperand(1).getReg(), TRI);
-        unpackedInstrs[1]->addRegisterKilled(unpackedInstrs[1]->getOperand(1).getReg(), TRI);
-      }
-    }
+    bool isVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
+    SmallVector<MachineInstr *, 2> unpackedInstrs = insertUnpackedMI(
+        I, DstMO, CopySGPR1->getOperand(0), SrcMO2, CopySGPR2->getOperand(0), SrcMO2, isVReg64);
+    unpackedInstrs[0]->addRegisterKilled(unpackedInstrs[0]->getOperand(1).getReg(), TRI);
+    unpackedInstrs[1]->addRegisterKilled(unpackedInstrs[1]->getOperand(1).getReg(), TRI);
     return;
   }
 
-  if (DstRC->getID() == AMDGPU::VReg_512_Align2RegClassID) {
-    SmallVector<MachineInstr *, 2> unpackedInstrs = insertUnpackedMI(
-            I, DstMO, SrcMO1, SrcMO2, SrcMO1,
-            SrcMO2, false);
-  }
-  else if (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID) {
-    SmallVector<MachineInstr *, 2> unpackedInstrs = insertUnpackedMI(
-            I, DstMO, SrcMO1, SrcMO2, SrcMO1,
-            SrcMO2, true);
-  }
+  bool isVReg64 = (DstRC->getID() == AMDGPU::VReg_64_Align2RegClassID);
+  SmallVector<MachineInstr *, 2> unpackedInstrs = insertUnpackedMI(
+          I, DstMO, SrcMO1, SrcMO2, SrcMO1,
+          SrcMO2, isVReg64);
   return;
 }
 
