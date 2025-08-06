@@ -381,6 +381,7 @@ set(files
   __format/enable_insertable.h
   __format/escaped_output_table.h
   __format/extended_grapheme_cluster_table.h
+  __format/fmt_pair_like.h
   __format/format_arg.h
   __format/format_arg_store.h
   __format/format_args.h
@@ -403,6 +404,7 @@ set(files
   __format/indic_conjunct_break_table.h
   __format/parser_std_format_spec.h
   __format/range_default_formatter.h
+  __format/range_format.h
   __format/range_formatter.h
   __format/unicode.h
   __format/width_estimation_table.h
@@ -514,7 +516,6 @@ set(files
   __locale_dir/check_grouping.h
   __locale_dir/get_c_locale.h
   __locale_dir/locale_base_api.h
-  __locale_dir/locale_base_api/android.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
   __locale_dir/locale_base_api/musl.h
@@ -535,6 +536,7 @@ set(files
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
   __locale_dir/wstring_convert.h
+  __log_hardening_failure
   __math/abs.h
   __math/copysign.h
   __math/error_functions.h
@@ -737,6 +739,7 @@ set(files
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h
+  __ranges/zip_transform_view.h
   __ranges/zip_view.h
   __split_buffer
   __std_mbstate_t.h
@@ -780,7 +783,6 @@ set(files
   __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
-  __tuple/tuple_indices.h
   __tuple/tuple_like.h
   __tuple/tuple_like_ext.h
   __tuple/tuple_like_no_subrange.h
@@ -944,6 +946,7 @@ set(files
   __vector/vector_bool.h
   __vector/vector_bool_formatter.h
   __verbose_abort
+  __verbose_trap
   algorithm
   any
   array
@@ -1569,6 +1572,7 @@ set(files
   __cxx03/__utility/unreachable.h
   __cxx03/__variant/monostate.h
   __cxx03/__verbose_abort
+  __cxx03/__verbose_trap
   __cxx03/algorithm
   __cxx03/array
   __cxx03/atomic

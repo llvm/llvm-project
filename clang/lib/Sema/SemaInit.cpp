@@ -3572,7 +3572,7 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
       Designators.push_back(ASTDesignator::CreateFieldDesignator(
           D.getFieldDecl(), D.getDotLoc(), D.getFieldLoc()));
     } else if (D.isArrayDesignator()) {
-      Expr *Index = static_cast<Expr *>(D.getArrayIndex());
+      Expr *Index = D.getArrayIndex();
       llvm::APSInt IndexValue;
       if (!Index->isTypeDependent() && !Index->isValueDependent())
         Index = CheckArrayDesignatorExpr(*this, Index, IndexValue).get();
@@ -3584,8 +3584,8 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
         InitExpressions.push_back(Index);
       }
     } else if (D.isArrayRangeDesignator()) {
-      Expr *StartIndex = static_cast<Expr *>(D.getArrayRangeStart());
-      Expr *EndIndex = static_cast<Expr *>(D.getArrayRangeEnd());
+      Expr *StartIndex = D.getArrayRangeStart();
+      Expr *EndIndex = D.getArrayRangeEnd();
       llvm::APSInt StartValue;
       llvm::APSInt EndValue;
       bool StartDependent = StartIndex->isTypeDependent() ||
@@ -3713,7 +3713,7 @@ ValueDecl *InitializedEntity::getDecl() const {
   case EK_ParenAggInitMember:
   case EK_Binding:
   case EK_TemplateParameter:
-    return Variable.VariableOrMember;
+    return cast<ValueDecl>(Variable.VariableOrMember);
 
   case EK_Parameter:
   case EK_Parameter_CF_Audited:
@@ -4836,7 +4836,7 @@ static void TryReferenceListInitialization(Sema &S,
     }
 
     // Update the initializer if we've resolved an overloaded function.
-    if (Sequence.step_begin() != Sequence.step_end())
+    if (!Sequence.steps().empty())
       Sequence.RewrapReferenceInitList(cv1T1, InitList);
   }
   // Perform address space compatibility check.
