@@ -102,6 +102,8 @@ Changes to the MIPS Backend
 Changes to the PowerPC Backend
 ------------------------------
 
+* `half` now uses a soft float ABI, which works correctly in more cases.
+
 Changes to the RISC-V Backend
 -----------------------------
 
