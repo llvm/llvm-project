@@ -110,20 +110,22 @@ protected:
 
   class DIERefCallbackImpl {
   public:
-    DIERefCallbackImpl(const DWARFIndex &index,
-                       llvm::function_ref<bool(DWARFDIE die)> callback,
-                       llvm::StringRef name);
-    bool operator()(DIERef ref) const;
-    bool operator()(const llvm::AppleAcceleratorTable::Entry &entry) const;
+    DIERefCallbackImpl(
+        const DWARFIndex &index,
+        llvm::function_ref<IterationAction(DWARFDIE die)> callback,
+        llvm::StringRef name);
+    IterationAction operator()(DIERef ref) const;
+    IterationAction
+    operator()(const llvm::AppleAcceleratorTable::Entry &entry) const;
 
   private:
     const DWARFIndex &m_index;
     SymbolFileDWARF &m_dwarf;
-    const llvm::function_ref<bool(DWARFDIE die)> m_callback;
+    const llvm::function_ref<IterationAction(DWARFDIE die)> m_callback;
     const llvm::StringRef m_name;
   };
   DIERefCallbackImpl
-  DIERefCallback(llvm::function_ref<bool(DWARFDIE die)> callback,
+  DIERefCallback(llvm::function_ref<IterationAction(DWARFDIE die)> callback,
                  llvm::StringRef name = {}) const {
     return DIERefCallbackImpl(*this, callback, name);
   }
@@ -143,25 +145,6 @@ protected:
   IterationAction ProcessNamespaceDieMatchParents(
       const CompilerDeclContext &parent_decl_ctx, DWARFDIE die,
       llvm::function_ref<IterationAction(DWARFDIE die)> callback);
-
-  /// Helper to convert callbacks that return an \c IterationAction
-  /// to a callback that returns a \c bool, where \c true indicates
-  /// we should continue iterating. This will be used to incrementally
-  /// migrate the callbacks to return an \c IterationAction.
-  ///
-  /// FIXME: remove once all callbacks in the DWARFIndex APIs return
-  /// IterationAction.
-  struct IterationActionAdaptor {
-    IterationActionAdaptor(
-        llvm::function_ref<IterationAction(DWARFDIE die)> callback)
-        : m_callback_ref(callback) {}
-
-    bool operator()(DWARFDIE die) {
-      return m_callback_ref(std::move(die)) == IterationAction::Continue;
-    }
-
-    llvm::function_ref<IterationAction(DWARFDIE die)> m_callback_ref;
-  };
 };
 } // namespace dwarf
 } // namespace lldb_private::plugin
