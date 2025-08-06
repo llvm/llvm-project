@@ -7,39 +7,32 @@ define i32 @needless_promotion(ptr nocapture noundef readonly %S, i64 noundef %r
 ; CHECK-O2-LABEL: needless_promotion:
 ; CHECK-O2:       // %bb.0: // %entry
 ; CHECK-O2-NEXT:    ldrsh w8, [x0, #4]
-; CHECK-O2-NEXT:    tbnz w8, #31, .LBB0_3
+; CHECK-O2-NEXT:    mov w9, #1 // =0x1
+; CHECK-O2-NEXT:    tbnz w8, #31, .LBB0_2
 ; CHECK-O2-NEXT:  // %bb.1: // %lor.rhs
-; CHECK-O2-NEXT:    cbz x1, .LBB0_5
-; CHECK-O2-NEXT:  // %bb.2:
-; CHECK-O2-NEXT:    mov w9, #2
-; CHECK-O2-NEXT:    b .LBB0_4
-; CHECK-O2-NEXT:  .LBB0_3:
-; CHECK-O2-NEXT:    mov w9, #1
-; CHECK-O2-NEXT:  .LBB0_4: // %lor.end.sink.split
+; CHECK-O2-NEXT:    mov w9, #2 // =0x2
+; CHECK-O2-NEXT:    cbz x1, .LBB0_3
+; CHECK-O2-NEXT:  .LBB0_2: // %lor.end.sink.split
 ; CHECK-O2-NEXT:    cmp w8, w9
 ; CHECK-O2-NEXT:    cset w0, eq
 ; CHECK-O2-NEXT:    ret
-; CHECK-O2-NEXT:  .LBB0_5:
+; CHECK-O2-NEXT:  .LBB0_3:
 ; CHECK-O2-NEXT:    mov w0, wzr
 ; CHECK-O2-NEXT:    ret
 ;
 ; CHECK-O3-LABEL: needless_promotion:
 ; CHECK-O3:       // %bb.0: // %entry
 ; CHECK-O3-NEXT:    ldrsh w8, [x0, #4]
-; CHECK-O3-NEXT:    tbnz w8, #31, .LBB0_3
+; CHECK-O3-NEXT:    mov w9, #1 // =0x1
+; CHECK-O3-NEXT:    tbnz w8, #31, .LBB0_2
 ; CHECK-O3-NEXT:  // %bb.1: // %lor.rhs
-; CHECK-O3-NEXT:    cbz x1, .LBB0_4
-; CHECK-O3-NEXT:  // %bb.2:
-; CHECK-O3-NEXT:    mov w9, #2
+; CHECK-O3-NEXT:    mov w9, #2 // =0x2
+; CHECK-O3-NEXT:    cbz x1, .LBB0_3
+; CHECK-O3-NEXT:  .LBB0_2: // %lor.end.sink.split
 ; CHECK-O3-NEXT:    cmp w8, w9
 ; CHECK-O3-NEXT:    cset w0, eq
 ; CHECK-O3-NEXT:    ret
 ; CHECK-O3-NEXT:  .LBB0_3:
-; CHECK-O3-NEXT:    mov w9, #1
-; CHECK-O3-NEXT:    cmp w8, w9
-; CHECK-O3-NEXT:    cset w0, eq
-; CHECK-O3-NEXT:    ret
-; CHECK-O3-NEXT:  .LBB0_4:
 ; CHECK-O3-NEXT:    mov w0, wzr
 ; CHECK-O3-NEXT:    ret
 entry:

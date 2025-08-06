@@ -1492,6 +1492,7 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_lshr_b32 s4, s6, 16
 ; SI-NEXT:    s_cmp_lg_u32 s4, 0
+; SI-NEXT:    s_mov_b64 s[4:5], -1
 ; SI-NEXT:    s_cbranch_scc0 .LBB14_4
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_mov_b32 s11, 0xf000
@@ -1513,7 +1514,9 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB14_4:
 ; SI-NEXT:    ; implicit-def: $vgpr0
-; SI-NEXT:    s_branch .LBB14_2
+; SI-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; SI-NEXT:    s_cbranch_vccz .LBB14_2
+; SI-NEXT:    s_branch .LBB14_3
 ;
 ; VI-LABEL: ctpop_i16_in_br:
 ; VI:       ; %bb.0: ; %entry
@@ -1522,6 +1525,7 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s4, s6, 16
 ; VI-NEXT:    s_cmp_lg_u32 s4, 0
+; VI-NEXT:    s_mov_b64 s[4:5], -1
 ; VI-NEXT:    s_cbranch_scc0 .LBB14_4
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_mov_b32 s11, 0xf000
@@ -1543,7 +1547,9 @@ define amdgpu_kernel void @ctpop_i16_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:  .LBB14_4:
 ; VI-NEXT:    ; implicit-def: $vgpr0
-; VI-NEXT:    s_branch .LBB14_2
+; VI-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; VI-NEXT:    s_cbranch_vccz .LBB14_2
+; VI-NEXT:    s_branch .LBB14_3
 ;
 ; EG-LABEL: ctpop_i16_in_br:
 ; EG:       ; %bb.0: ; %entry

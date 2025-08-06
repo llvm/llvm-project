@@ -7,22 +7,20 @@ define i8 @cmov_bsr8(i8 %x, i8 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    testb %cl, %cl
-; X86-NEXT:    je .LBB0_1
-; X86-NEXT:  # %bb.2: # %cond.false
+; X86-NEXT:    movb $8, %al
+; X86-NEXT:    je .LBB0_2
+; X86-NEXT:  # %bb.1: # %cond.false
 ; X86-NEXT:    movzbl %cl, %eax
 ; X86-NEXT:    bsrl %eax, %eax
 ; X86-NEXT:    xorl $7, %eax
+; X86-NEXT:  .LBB0_2: # %cond.end
 ; X86-NEXT:    testb %cl, %cl
-; X86-NEXT:    je .LBB0_4
-; X86-NEXT:  .LBB0_5: # %cond.end
+; X86-NEXT:    je .LBB0_3
+; X86-NEXT:  # %bb.4: # %cond.end
 ; X86-NEXT:    xorb $7, %al
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB0_1:
-; X86-NEXT:    movb $8, %al
-; X86-NEXT:    testb %cl, %cl
-; X86-NEXT:    jne .LBB0_5
-; X86-NEXT:  .LBB0_4:
+; X86-NEXT:  .LBB0_3:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-NEXT:    retl
@@ -78,21 +76,19 @@ define i16 @cmov_bsr16(i16 %x, i16 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testw %ax, %ax
-; X86-NEXT:    je .LBB2_1
-; X86-NEXT:  # %bb.2: # %cond.false
+; X86-NEXT:    movw $16, %cx
+; X86-NEXT:    je .LBB2_2
+; X86-NEXT:  # %bb.1: # %cond.false
 ; X86-NEXT:    bsrw %ax, %cx
 ; X86-NEXT:    xorl $15, %ecx
+; X86-NEXT:  .LBB2_2: # %cond.end
 ; X86-NEXT:    testw %ax, %ax
-; X86-NEXT:    jne .LBB2_4
-; X86-NEXT:  .LBB2_5: # %cond.end
+; X86-NEXT:    jne .LBB2_3
+; X86-NEXT:  # %bb.4: # %cond.end
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB2_1:
-; X86-NEXT:    movw $16, %cx
-; X86-NEXT:    testw %ax, %ax
-; X86-NEXT:    je .LBB2_5
-; X86-NEXT:  .LBB2_4:
+; X86-NEXT:  .LBB2_3:
 ; X86-NEXT:    movzwl %cx, %eax
 ; X86-NEXT:    xorl $15, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -143,20 +139,18 @@ define i32 @cmov_bsr32(i32 %x, i32 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    je .LBB4_1
-; X86-NEXT:  # %bb.2: # %cond.false
+; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    je .LBB4_2
+; X86-NEXT:  # %bb.1: # %cond.false
 ; X86-NEXT:    bsrl %ecx, %eax
 ; X86-NEXT:    xorl $31, %eax
+; X86-NEXT:  .LBB4_2: # %cond.end
 ; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    je .LBB4_4
-; X86-NEXT:  .LBB4_5: # %cond.end
+; X86-NEXT:    je .LBB4_3
+; X86-NEXT:  # %bb.4: # %cond.end
 ; X86-NEXT:    xorl $31, %eax
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB4_1:
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    jne .LBB4_5
-; X86-NEXT:  .LBB4_4:
+; X86-NEXT:  .LBB4_3:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
 ;
@@ -206,32 +200,29 @@ define i64 @cmov_bsr64(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    je .LBB6_1
-; X86-NEXT:  # %bb.2: # %cond.false
+; X86-NEXT:    movl $64, %eax
+; X86-NEXT:    je .LBB6_4
+; X86-NEXT:  # %bb.1: # %cond.false
 ; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    jne .LBB6_3
-; X86-NEXT:  # %bb.4: # %cond.false
+; X86-NEXT:    jne .LBB6_2
+; X86-NEXT:  # %bb.3: # %cond.false
 ; X86-NEXT:    bsrl %esi, %eax
 ; X86-NEXT:    xorl $31, %eax
 ; X86-NEXT:    orl $32, %eax
+; X86-NEXT:  .LBB6_4: # %cond.end
 ; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    je .LBB6_7
-; X86-NEXT:    jmp .LBB6_6
-; X86-NEXT:  .LBB6_1:
-; X86-NEXT:    movl $64, %eax
-; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    jne .LBB6_6
-; X86-NEXT:  .LBB6_7: # %cond.end
+; X86-NEXT:    jne .LBB6_5
+; X86-NEXT:  .LBB6_6: # %cond.end
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB6_3:
+; X86-NEXT:  .LBB6_2:
 ; X86-NEXT:    bsrl %ecx, %eax
 ; X86-NEXT:    xorl $31, %eax
 ; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    je .LBB6_7
-; X86-NEXT:  .LBB6_6:
+; X86-NEXT:    je .LBB6_6
+; X86-NEXT:  .LBB6_5:
 ; X86-NEXT:    xorl $63, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl

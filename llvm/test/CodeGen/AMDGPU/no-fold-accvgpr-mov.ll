@@ -32,10 +32,13 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-NEXT:  .LBB0_2: ; %bb
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GFX942-NEXT:    s_mov_b64 s[4:5], -1
 ; GFX942-NEXT:    s_cbranch_vccz .LBB0_1
-; GFX942-NEXT:  ; %bb.3:
+; GFX942-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
 ; GFX942-NEXT:    ; implicit-def: $sgpr3
 ; GFX942-NEXT:    ; implicit-def: $agpr2
+; GFX942-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; GFX942-NEXT:    s_cbranch_vccnz .LBB0_2
 ; GFX942-NEXT:  .LBB0_4: ; %common.ret
 ; GFX942-NEXT:    s_endpgm
 ;
@@ -58,7 +61,7 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908-NEXT:    s_ashr_i32 s5, s3, 31
 ; GFX908-NEXT:    s_mov_b32 s3, s2
 ; GFX908-NEXT:    v_mov_b32_e32 v1, s2
-; GFX908-NEXT:    s_nop 2
+; GFX908-NEXT:    s_nop 1
 ; GFX908-NEXT:    v_accvgpr_read_b32 v0, a2
 ; GFX908-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX908-NEXT:    v_accvgpr_read_b32 v4, a1
@@ -72,10 +75,13 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX908-NEXT:  .LBB0_2: ; %bb
 ; GFX908-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX908-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GFX908-NEXT:    s_mov_b64 s[4:5], -1
 ; GFX908-NEXT:    s_cbranch_vccz .LBB0_1
-; GFX908-NEXT:  ; %bb.3:
+; GFX908-NEXT:  ; %bb.3: ; in Loop: Header=BB0_2 Depth=1
 ; GFX908-NEXT:    ; implicit-def: $sgpr3
 ; GFX908-NEXT:    ; implicit-def: $agpr2
+; GFX908-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; GFX908-NEXT:    s_cbranch_vccnz .LBB0_2
 ; GFX908-NEXT:  .LBB0_4: ; %common.ret
 ; GFX908-NEXT:    s_endpgm
 entry:

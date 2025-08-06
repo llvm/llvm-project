@@ -73,6 +73,7 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:  ; %bb.1: ; %bb14
 ; GFX11-NEXT:    s_load_b128 s[20:23], s[16:17], 0x2c
 ; GFX11-NEXT:    s_mov_b32 s18, 0
+; GFX11-NEXT:    s_mov_b32 s2, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_bitcmp1_b32 s21, 0
 ; GFX11-NEXT:    s_cselect_b32 s24, -1, 0
@@ -91,14 +92,12 @@ define amdgpu_kernel void @f2(i32 %arg, i32 %arg1, i32 %arg2, i1 %arg3, i32 %arg
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s14, s21
+; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_mov_b32 s2, -1
-; GFX11-NEXT:    s_cbranch_execz .LBB2_4
-; GFX11-NEXT:    s_branch .LBB2_12
-; GFX11-NEXT:  .LBB2_3:
-; GFX11-NEXT:    s_mov_b32 s2, 0
+; GFX11-NEXT:  .LBB2_3: ; %Flow10
 ; GFX11-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
 ; GFX11-NEXT:    s_cbranch_vccnz .LBB2_12
-; GFX11-NEXT:  .LBB2_4: ; %bb16
+; GFX11-NEXT:  ; %bb.4: ; %bb16
 ; GFX11-NEXT:    s_load_b32 s0, s[16:17], 0x54
 ; GFX11-NEXT:    s_bitcmp1_b32 s23, 0
 ; GFX11-NEXT:    s_cselect_b32 s9, -1, 0

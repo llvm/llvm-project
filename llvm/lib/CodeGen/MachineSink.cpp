@@ -835,6 +835,7 @@ bool MachineSinking::run(MachineFunction &MF) {
 
   RegClassInfo.runOnMachineFunction(MF);
 
+  SmallSet<MachineBasicBlock *, 8> NewBlocks;
   bool EverMadeChange = false;
 
   while (true) {
@@ -854,6 +855,7 @@ bool MachineSinking::run(MachineFunction &MF) {
       auto NewSucc = Pair.first->SplitCriticalEdge(
           Pair.second, {LIS, SI, LV, MLI}, nullptr, &MDTU);
       if (NewSucc != nullptr) {
+        NewBlocks.insert(NewSucc);
         LLVM_DEBUG(dbgs() << " *** Splitting critical edge: "
                           << printMBBReference(*Pair.first) << " -- "
                           << printMBBReference(*NewSucc) << " -- "
@@ -871,6 +873,28 @@ bool MachineSinking::run(MachineFunction &MF) {
     if (!MadeChange)
       break;
     EverMadeChange = true;
+  }
+
+  for (MachineBasicBlock *MBB : NewBlocks) {
+    if (MBB->isReturnBlock() || MBB->getSingleSuccessor()->isReturnBlock())
+      continue;
+    // Only consider cheap instructions which don't touch physical registers.
+    if (all_of(llvm::make_range(MBB->begin(), MBB->getFirstTerminator()),
+               [this](const MachineInstr &MI) {
+                 if (!MI.isAsCheapAsAMove())
+                   return false;
+                 return all_of(MI.operands(), [this](const MachineOperand &MO) {
+                   return !MO.isReg() || MO.getReg().isVirtual() ||
+                          TRI->isConstantPhysReg(MO.getReg());
+                 });
+               })) {
+      assert(MBB->pred_size() == 1 &&
+             "Block must have exactly one predecessor");
+      assert(MBB->succ_size() == 1 && "Block must have exactly one successor");
+      MachineBasicBlock *Pred = *MBB->pred_begin();
+      Pred->splice(Pred->getFirstTerminator(), MBB, MBB->begin(),
+                   MBB->getFirstTerminator());
+    }
   }
 
   if (SinkInstsIntoCycle) {

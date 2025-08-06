@@ -1153,16 +1153,15 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX6-LABEL: add64_in_branch:
 ; GFX6:       ; %bb.0: ; %entry
 ; GFX6-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x9
-; GFX6-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    v_cmp_ne_u64_e64 s[10:11], s[4:5], 0
-; GFX6-NEXT:    s_and_b64 vcc, exec, s[10:11]
+; GFX6-NEXT:    v_cmp_ne_u64_e64 s[8:9], s[4:5], 0
+; GFX6-NEXT:    s_and_b64 vcc, exec, s[8:9]
+; GFX6-NEXT:    s_mov_b64 s[8:9], -1
 ; GFX6-NEXT:    s_cbranch_vccz .LBB9_4
 ; GFX6-NEXT:  ; %bb.1: ; %else
 ; GFX6-NEXT:    s_add_u32 s4, s4, s6
 ; GFX6-NEXT:    s_addc_u32 s5, s5, s7
-; GFX6-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; GFX6-NEXT:    s_cbranch_vccnz .LBB9_3
+; GFX6-NEXT:    s_cbranch_execnz .LBB9_3
 ; GFX6-NEXT:  .LBB9_2: ; %if
 ; GFX6-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; GFX6-NEXT:  .LBB9_3: ; %endif
@@ -1175,20 +1174,21 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX6-NEXT:    s_endpgm
 ; GFX6-NEXT:  .LBB9_4:
 ; GFX6-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX6-NEXT:    s_branch .LBB9_2
+; GFX6-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
+; GFX6-NEXT:    s_cbranch_vccz .LBB9_2
+; GFX6-NEXT:    s_branch .LBB9_3
 ;
 ; GFX8-LABEL: add64_in_branch:
 ; GFX8:       ; %bb.0: ; %entry
 ; GFX8-NEXT:    s_load_dwordx8 s[0:7], s[4:5], 0x24
-; GFX8-NEXT:    s_mov_b64 s[8:9], 0
+; GFX8-NEXT:    s_mov_b64 s[8:9], -1
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX8-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX8-NEXT:  ; %bb.1: ; %else
 ; GFX8-NEXT:    s_add_u32 s4, s4, s6
 ; GFX8-NEXT:    s_addc_u32 s5, s5, s7
-; GFX8-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
-; GFX8-NEXT:    s_cbranch_vccnz .LBB9_3
+; GFX8-NEXT:    s_cbranch_execnz .LBB9_3
 ; GFX8-NEXT:  .LBB9_2: ; %if
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x0
 ; GFX8-NEXT:  .LBB9_3: ; %endif
@@ -1201,20 +1201,21 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX8-NEXT:    s_endpgm
 ; GFX8-NEXT:  .LBB9_4:
 ; GFX8-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX8-NEXT:    s_branch .LBB9_2
+; GFX8-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
+; GFX8-NEXT:    s_cbranch_vccz .LBB9_2
+; GFX8-NEXT:    s_branch .LBB9_3
 ;
 ; GFX9-LABEL: add64_in_branch:
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
-; GFX9-NEXT:    s_mov_b64 s[2:3], 0
+; GFX9-NEXT:    s_mov_b64 s[2:3], -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_cmp_lg_u64 s[12:13], 0
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB9_4
 ; GFX9-NEXT:  ; %bb.1: ; %else
 ; GFX9-NEXT:    s_add_u32 s0, s12, s14
 ; GFX9-NEXT:    s_addc_u32 s1, s13, s15
-; GFX9-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
-; GFX9-NEXT:    s_cbranch_vccnz .LBB9_3
+; GFX9-NEXT:    s_cbranch_execnz .LBB9_3
 ; GFX9-NEXT:  .LBB9_2: ; %if
 ; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[10:11], 0x0
 ; GFX9-NEXT:  .LBB9_3: ; %endif
@@ -1226,11 +1227,14 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:  .LBB9_4:
 ; GFX9-NEXT:    ; implicit-def: $sgpr0_sgpr1
-; GFX9-NEXT:    s_branch .LBB9_2
+; GFX9-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
+; GFX9-NEXT:    s_cbranch_vccz .LBB9_2
+; GFX9-NEXT:    s_branch .LBB9_3
 ;
 ; GFX10-LABEL: add64_in_branch:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_load_dwordx8 s[8:15], s[4:5], 0x24
+; GFX10-NEXT:    s_mov_b32 s2, -1
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    s_cmp_lg_u64 s[12:13], 0
 ; GFX10-NEXT:    s_cbranch_scc0 .LBB9_4
@@ -1249,11 +1253,14 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB9_4:
 ; GFX10-NEXT:    ; implicit-def: $sgpr0_sgpr1
-; GFX10-NEXT:    s_branch .LBB9_2
+; GFX10-NEXT:    s_andn2_b32 vcc_lo, exec_lo, s2
+; GFX10-NEXT:    s_cbranch_vccz .LBB9_2
+; GFX10-NEXT:    s_branch .LBB9_3
 ;
 ; GFX11-LABEL: add64_in_branch:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX11-NEXT:    s_mov_b32 s8, -1
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB9_4
@@ -1271,11 +1278,14 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB9_4:
 ; GFX11-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX11-NEXT:    s_branch .LBB9_2
+; GFX11-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s8
+; GFX11-NEXT:    s_cbranch_vccz .LBB9_2
+; GFX11-NEXT:    s_branch .LBB9_3
 ;
 ; GFX12-LABEL: add64_in_branch:
 ; GFX12:       ; %bb.0: ; %entry
 ; GFX12-NEXT:    s_load_b256 s[0:7], s[4:5], 0x24
+; GFX12-NEXT:    s_mov_b32 s8, -1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GFX12-NEXT:    s_cbranch_scc0 .LBB9_4
@@ -1292,7 +1302,9 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB9_4:
 ; GFX12-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; GFX12-NEXT:    s_branch .LBB9_2
+; GFX12-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s8
+; GFX12-NEXT:    s_cbranch_vccz .LBB9_2
+; GFX12-NEXT:    s_branch .LBB9_3
 entry:
   %0 = icmp eq i64 %a, 0
   br i1 %0, label %if, label %else

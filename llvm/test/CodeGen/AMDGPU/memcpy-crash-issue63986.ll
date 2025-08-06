@@ -27,10 +27,13 @@ define void @issue63986(i64 %0, i64 %idxprom, ptr inreg %ptr) {
 ; CHECK-NEXT:    flat_store_dwordx4 v[6:7], v[10:13]
 ; CHECK-NEXT:    s_cbranch_vccz .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %loop-memcpy-residual-header
+; CHECK-NEXT:    s_mov_b64 s[4:5], -1
 ; CHECK-NEXT:    s_branch .LBB0_4
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    ; implicit-def: $vgpr6_vgpr7
-; CHECK-NEXT:    s_branch .LBB0_5
+; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[4:5]
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_5
+; CHECK-NEXT:    s_branch .LBB0_8
 ; CHECK-NEXT:  .LBB0_4: ; %loop-memcpy-residual-header.post-loop-memcpy-expansion_crit_edge
 ; CHECK-NEXT:    v_lshlrev_b64 v[6:7], 6, v[2:3]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_8
@@ -161,10 +164,13 @@ define void @issue63986_reduced_expanded(i64 %idxprom) {
 ; CHECK-NEXT:  ; %bb.2: ; %loop-memcpy-residual-header
 ; CHECK-NEXT:    s_and_b32 s4, 32, 15
 ; CHECK-NEXT:    s_mov_b32 s5, 0
+; CHECK-NEXT:    s_mov_b64 s[6:7], -1
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB1_4
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; CHECK-NEXT:    s_branch .LBB1_5
+; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[6:7]
+; CHECK-NEXT:    s_cbranch_vccz .LBB1_5
+; CHECK-NEXT:    s_branch .LBB1_8
 ; CHECK-NEXT:  .LBB1_4: ; %loop-memcpy-residual-header.post-loop-memcpy-expansion_crit_edge
 ; CHECK-NEXT:    v_lshlrev_b64 v[0:1], 1, v[0:1]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB1_8

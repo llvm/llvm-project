@@ -339,11 +339,12 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0xd
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_lg_u32 s8, 0
+; SI-NEXT:    s_mov_b64 s[8:9], -1
 ; SI-NEXT:    s_cbranch_scc0 .LBB7_4
 ; SI-NEXT:  ; %bb.1: ; %else
 ; SI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x2
-; SI-NEXT:    s_mov_b64 s[2:3], 0
-; SI-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
+; SI-NEXT:    s_mov_b64 s[8:9], 0
+; SI-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b64 vcc, vcc
 ; SI-NEXT:    s_cbranch_vccnz .LBB7_3
@@ -359,7 +360,9 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB7_4:
 ; SI-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; SI-NEXT:    s_branch .LBB7_2
+; SI-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
+; SI-NEXT:    s_cbranch_vccz .LBB7_2
+; SI-NEXT:    s_branch .LBB7_3
 ;
 ; VI-LABEL: ctpop_i64_in_br:
 ; VI:       ; %bb.0: ; %entry
@@ -368,6 +371,7 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_cmp_lg_u32 s8, 0
+; VI-NEXT:    s_mov_b64 s[8:9], -1
 ; VI-NEXT:    s_cbranch_scc0 .LBB7_4
 ; VI-NEXT:  ; %bb.1: ; %else
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x8
@@ -386,7 +390,9 @@ define amdgpu_kernel void @ctpop_i64_in_br(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:    s_endpgm
 ; VI-NEXT:  .LBB7_4:
 ; VI-NEXT:    ; implicit-def: $sgpr4_sgpr5
-; VI-NEXT:    s_branch .LBB7_2
+; VI-NEXT:    s_andn2_b64 vcc, exec, s[8:9]
+; VI-NEXT:    s_cbranch_vccz .LBB7_2
+; VI-NEXT:    s_branch .LBB7_3
 entry:
   %tmp0 = icmp eq i32 %cond, 0
   br i1 %tmp0, label %if, label %else

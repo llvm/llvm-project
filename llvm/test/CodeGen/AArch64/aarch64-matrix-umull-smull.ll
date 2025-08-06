@@ -583,8 +583,8 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-SD-NEXT:    mov w10, w2
 ; CHECK-SD-NEXT:    b.hi .LBB5_4
 ; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov x11, xzr
 ; CHECK-SD-NEXT:    mov w8, wzr
+; CHECK-SD-NEXT:    mov x11, xzr
 ; CHECK-SD-NEXT:    b .LBB5_7
 ; CHECK-SD-NEXT:  .LBB5_3:
 ; CHECK-SD-NEXT:    mov w8, wzr
@@ -631,12 +631,12 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-GI-NEXT:    cbz w2, .LBB5_3
 ; CHECK-GI-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-GI-NEXT:    cmp w2, #16
+; CHECK-GI-NEXT:    mov w9, #0 // =0x0
 ; CHECK-GI-NEXT:    mov w8, w2
 ; CHECK-GI-NEXT:    b.hs .LBB5_4
 ; CHECK-GI-NEXT:  // %bb.2:
-; CHECK-GI-NEXT:    mov w10, #0 // =0x0
+; CHECK-GI-NEXT:    fmov s0, w9
 ; CHECK-GI-NEXT:    mov x9, xzr
-; CHECK-GI-NEXT:    fmov s0, w10
 ; CHECK-GI-NEXT:    b .LBB5_8
 ; CHECK-GI-NEXT:  .LBB5_3:
 ; CHECK-GI-NEXT:    mov w0, wzr

@@ -125,20 +125,17 @@ define i32 @cmov_bsf32(i32 %x, i32 %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    je .LBB4_1
-; X86-NEXT:  # %bb.2: # %cond.false
-; X86-NEXT:    rep bsfl %ecx, %eax
-; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    jne .LBB4_5
-; X86-NEXT:  .LBB4_4:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:  .LBB4_5: # %cond.end
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB4_1:
 ; X86-NEXT:    movl $32, %eax
+; X86-NEXT:    je .LBB4_2
+; X86-NEXT:  # %bb.1: # %cond.false
+; X86-NEXT:    rep bsfl %ecx, %eax
+; X86-NEXT:  .LBB4_2: # %cond.end
 ; X86-NEXT:    testl %ecx, %ecx
-; X86-NEXT:    je .LBB4_4
-; X86-NEXT:    jmp .LBB4_5
+; X86-NEXT:    jne .LBB4_4
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:  .LBB4_4: # %cond.end
+; X86-NEXT:    retl
 ;
 ; X64-LABEL: cmov_bsf32:
 ; X64:       # %bb.0:
@@ -185,31 +182,28 @@ define i64 @cmov_bsf64(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    je .LBB6_1
-; X86-NEXT:  # %bb.2: # %cond.false
+; X86-NEXT:    movl $64, %eax
+; X86-NEXT:    je .LBB6_4
+; X86-NEXT:  # %bb.1: # %cond.false
 ; X86-NEXT:    testl %esi, %esi
-; X86-NEXT:    jne .LBB6_3
-; X86-NEXT:  # %bb.4: # %cond.false
+; X86-NEXT:    jne .LBB6_2
+; X86-NEXT:  # %bb.3: # %cond.false
 ; X86-NEXT:    rep bsfl %ecx, %eax
 ; X86-NEXT:    addl $32, %eax
+; X86-NEXT:  .LBB6_4: # %cond.end
 ; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    je .LBB6_6
-; X86-NEXT:    jmp .LBB6_7
-; X86-NEXT:  .LBB6_1:
-; X86-NEXT:    movl $64, %eax
-; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    jne .LBB6_7
-; X86-NEXT:  .LBB6_6: # %cond.end
+; X86-NEXT:    jne .LBB6_6
+; X86-NEXT:  .LBB6_5: # %cond.end
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:  .LBB6_7: # %cond.end
+; X86-NEXT:  .LBB6_6: # %cond.end
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
-; X86-NEXT:  .LBB6_3:
+; X86-NEXT:  .LBB6_2:
 ; X86-NEXT:    rep bsfl %esi, %eax
 ; X86-NEXT:    orl %ecx, %esi
-; X86-NEXT:    je .LBB6_6
-; X86-NEXT:    jmp .LBB6_7
+; X86-NEXT:    je .LBB6_5
+; X86-NEXT:    jmp .LBB6_6
 ;
 ; X64-LABEL: cmov_bsf64:
 ; X64:       # %bb.0:

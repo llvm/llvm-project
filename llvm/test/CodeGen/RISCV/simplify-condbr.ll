@@ -112,21 +112,21 @@ if.end1497:                                       ; preds = %if.else1492, %sw.ep
 define ptr @Perl_pp_refassign(ptr %PL_stack_sp, i1 %tobool.not, i1 %tobool3.not, i1 %cond1) nounwind {
 ; CHECK-LABEL: Perl_pp_refassign:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a1, a1, 1
-; CHECK-NEXT:    beqz a1, .LBB1_3
+; CHECK-NEXT:    andi a3, a1, 1
+; CHECK-NEXT:    beqz a3, .LBB1_3
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    bnez a2, .LBB1_4
+; CHECK-NEXT:    andi a3, a2, 1
+; CHECK-NEXT:    bnez a3, .LBB1_4
 ; CHECK-NEXT:  .LBB1_2: # %cond.true4
 ; CHECK-NEXT:    ld a0, 0(a0)
-; CHECK-NEXT:    snez a0, a0
-; CHECK-NEXT:    bnez a0, .LBB1_5
+; CHECK-NEXT:    snez a2, a0
+; CHECK-NEXT:    bnez a2, .LBB1_5
 ; CHECK-NEXT:    j .LBB1_6
 ; CHECK-NEXT:  .LBB1_3: # %cond.true
 ; CHECK-NEXT:    ld a1, 0(a0)
-; CHECK-NEXT:    andi a2, a2, 1
-; CHECK-NEXT:    beqz a2, .LBB1_2
+; CHECK-NEXT:    andi a3, a2, 1
+; CHECK-NEXT:    beqz a3, .LBB1_2
 ; CHECK-NEXT:  .LBB1_4:
 ; CHECK-NEXT:    j .LBB1_6
 ; CHECK-NEXT:  .LBB1_5: # %sw.bb85

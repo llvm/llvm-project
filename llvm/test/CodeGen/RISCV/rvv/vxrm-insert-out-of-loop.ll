@@ -86,14 +86,14 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    # Child Loop BB0_15 Depth 2
 ; RV32-NEXT:    beqz t1, .LBB0_12
 ; RV32-NEXT:  # %bb.11: # in Loop: Header=BB0_10 Depth=1
-; RV32-NEXT:    li t4, 0
 ; RV32-NEXT:    li t3, 0
+; RV32-NEXT:    li t4, 0
 ; RV32-NEXT:    j .LBB0_15
 ; RV32-NEXT:  .LBB0_12: # %vector.ph
 ; RV32-NEXT:    # in Loop: Header=BB0_10 Depth=1
-; RV32-NEXT:    li t3, 0
-; RV32-NEXT:    neg t4, t2
-; RV32-NEXT:    and t4, t4, a6
+; RV32-NEXT:    li t4, 0
+; RV32-NEXT:    neg t3, t2
+; RV32-NEXT:    and t3, t3, a6
 ; RV32-NEXT:    li t6, 0
 ; RV32-NEXT:    li t5, 0
 ; RV32-NEXT:    vsetvli s0, zero, e8, m2, ta, ma
@@ -108,7 +108,7 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    add s1, t6, t2
 ; RV32-NEXT:    sltu t6, s1, t6
 ; RV32-NEXT:    add t5, t5, t6
-; RV32-NEXT:    xor t6, s1, t4
+; RV32-NEXT:    xor t6, s1, t3
 ; RV32-NEXT:    vaaddu.vv v8, v8, v10
 ; RV32-NEXT:    or s2, t6, t5
 ; RV32-NEXT:    vs2r.v v8, (s0)
@@ -116,23 +116,23 @@ define void @test1(ptr nocapture noundef writeonly %dst, i32 noundef signext %i_
 ; RV32-NEXT:    bnez s2, .LBB0_13
 ; RV32-NEXT:  # %bb.14: # %middle.block
 ; RV32-NEXT:    # in Loop: Header=BB0_10 Depth=1
-; RV32-NEXT:    beq t4, a6, .LBB0_9
+; RV32-NEXT:    beq t3, a6, .LBB0_9
 ; RV32-NEXT:  .LBB0_15: # %for.body4.us
 ; RV32-NEXT:    # Parent Loop BB0_10 Depth=1
 ; RV32-NEXT:    # => This Inner Loop Header: Depth=2
-; RV32-NEXT:    add t5, a2, t4
-; RV32-NEXT:    add t6, a4, t4
-; RV32-NEXT:    add s0, a0, t4
+; RV32-NEXT:    add t5, a2, t3
+; RV32-NEXT:    add t6, a4, t3
+; RV32-NEXT:    add s0, a0, t3
 ; RV32-NEXT:    lbu t5, 0(t5)
 ; RV32-NEXT:    lbu t6, 0(t6)
-; RV32-NEXT:    addi t4, t4, 1
-; RV32-NEXT:    seqz s1, t4
-; RV32-NEXT:    add t3, t3, s1
+; RV32-NEXT:    addi t3, t3, 1
+; RV32-NEXT:    seqz s1, t3
+; RV32-NEXT:    add t4, t4, s1
 ; RV32-NEXT:    add t5, t5, t6
-; RV32-NEXT:    xor t6, t4, a6
+; RV32-NEXT:    xor t6, t3, a6
 ; RV32-NEXT:    addi t5, t5, 1
 ; RV32-NEXT:    srli t5, t5, 1
-; RV32-NEXT:    or t6, t6, t3
+; RV32-NEXT:    or t6, t6, t4
 ; RV32-NEXT:    sb t5, 0(s0)
 ; RV32-NEXT:    bnez t6, .LBB0_15
 ; RV32-NEXT:    j .LBB0_9

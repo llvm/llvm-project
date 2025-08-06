@@ -8,16 +8,16 @@ define void @fma_dup_f16(ptr noalias nocapture noundef readonly %A, half noundef
 ; CHECK-NEXT:    cbz w2, .LBB0_8
 ; CHECK-NEXT:  // %bb.1: // %for.body.preheader
 ; CHECK-NEXT:    cmp w2, #15
-; CHECK-NEXT:    mov w8, w2
+; CHECK-NEXT:    mov w9, w2
 ; CHECK-NEXT:    b.hi .LBB0_3
 ; CHECK-NEXT:  // %bb.2:
-; CHECK-NEXT:    mov x9, xzr
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    b .LBB0_6
 ; CHECK-NEXT:  .LBB0_3: // %vector.ph
-; CHECK-NEXT:    and x9, x8, #0xfffffff0
+; CHECK-NEXT:    and x8, x9, #0xfffffff0
 ; CHECK-NEXT:    add x10, x1, #16
 ; CHECK-NEXT:    add x11, x0, #16
-; CHECK-NEXT:    mov x12, x9
+; CHECK-NEXT:    mov x12, x8
 ; CHECK-NEXT:  .LBB0_4: // %vector.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldp q1, q4, [x10, #-16]
@@ -30,11 +30,11 @@ define void @fma_dup_f16(ptr noalias nocapture noundef readonly %A, half noundef
 ; CHECK-NEXT:    add x10, x10, #32
 ; CHECK-NEXT:    b.ne .LBB0_4
 ; CHECK-NEXT:  // %bb.5: // %middle.block
-; CHECK-NEXT:    cmp x9, x8
+; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    b.eq .LBB0_8
 ; CHECK-NEXT:  .LBB0_6: // %for.body.preheader1
-; CHECK-NEXT:    lsl x10, x9, #1
-; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    lsl x10, x8, #1
+; CHECK-NEXT:    sub x8, x9, x8
 ; CHECK-NEXT:    add x9, x1, x10
 ; CHECK-NEXT:    add x10, x0, x10
 ; CHECK-NEXT:  .LBB0_7: // %for.body
