@@ -163,6 +163,8 @@ TEST(LlvmLibcOSUtilVDSOTest, GetRandom) {
   vdso::TypedSymbol<vdso::VDSOSym::GetRandom> symbol;
   if (!symbol)
     return;
+  // This structure exists in kernel UAPI header; but we define it on our own to
+  // make sure we can test it even on platform without support.
   struct VGetrandomOpaqueParams {
     uint32_t size_of_opaque_states;
     uint32_t mmap_prot;
@@ -170,10 +172,14 @@ TEST(LlvmLibcOSUtilVDSOTest, GetRandom) {
     uint32_t reserved[13];
   };
   VGetrandomOpaqueParams param{0, 0, 0, {}};
+  // When getrandom vDSO symbol is called with special parameters (~0 for state
+  // size), it populates the desired configuration into VGetrandomOpaqueParams.
   int res = symbol(
       /*buf=*/nullptr, /*count=*/0, /*flags=*/0,
       /*opaque_states=*/&param,
       /*size_of_opaque_states=*/~0);
+  // Test that the size of the states are correctly populated after a successful
+  // call.
   EXPECT_EQ(res, 0);
   EXPECT_GT(param.size_of_opaque_states, 0u);
 }
