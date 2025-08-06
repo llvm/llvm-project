@@ -18,18 +18,18 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 
 ; PRINT:; Resource Bindings:
 ; PRINT-NEXT:;
-; PRINT-NEXT:; Name                                 Type  Format         Dim      ID      HLSL Bind    Count
-; PRINT-NEXT:; ------------------------------ ---------- ------- ----------- ------- -------------- --------
-; PRINT-NEXT:; Zero                              texture     f16         buf      T0             t0        1
-; PRINT-NEXT:; One                               texture     f32         buf      T1             t1        1
-; PRINT-NEXT:; Two                               texture     f64         buf      T2             t2        1
-; PRINT-NEXT:; Three                             texture     i32         buf      T3             t3        1
-; PRINT-NEXT:; Four                              texture    byte         r/o      T4             t5        1
-; PRINT-NEXT:; Five                              texture  struct         r/o      T5             t6        1
-; PRINT-NEXT:; Six                               texture     u64         buf      T6     t10,space2        1
-; PRINT-NEXT:; Array                             texture     f32         buf      T7      t4,space3      100
+; PRINT-NEXT:; Name                                 Type  Format         Dim      ID      HLSL Bind     Count
+; PRINT-NEXT:; ------------------------------ ---------- ------- ----------- ------- -------------- ---------
+; PRINT-NEXT:; Zero                              texture     f16         buf      T0             t0         1
+; PRINT-NEXT:; One                               texture     f32         buf      T1             t1         1
+; PRINT-NEXT:; Two                               texture     f64         buf      T2             t2         1
+; PRINT-NEXT:; Three                             texture     i32         buf      T3             t3         1
+; PRINT-NEXT:; Four                              texture    byte         r/o      T4             t5         1
+; PRINT-NEXT:; Five                              texture  struct         r/o      T5             t6         1
+; PRINT-NEXT:; Six                               texture     u64         buf      T6     t10,space2         1
+; PRINT-NEXT:; Array                             texture     f32         buf      T7      t4,space3       100
 ; PRINT-NEXT:; Array2                            texture     f64         buf      T8      t2,space4 unbounded
-; PRINT-NEXT:; Seven                             texture     u64         buf      T9     t20,space5        1
+; PRINT-NEXT:; Seven                             texture     u64         buf      T9     t20,space5         1
 ;
 
 define void @test() #0 {
