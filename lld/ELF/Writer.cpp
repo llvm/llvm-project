@@ -1541,10 +1541,10 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
   if (ctx.arg.randomizeSectionPadding)
     randomizeSectionPadding(ctx);
 
+  // Iterate until a fixed point is reached, skipping relocatable links since
+  // the final addresses are unavailable.
   uint32_t pass = 0, assignPasses = 0;
-  for (;;) {
-    if (ctx.arg.relocatable)
-      break;
+  while (!ctx.arg.relocatable) {
     bool changed = ctx.target->needsThunks
                        ? tc.createThunks(pass, ctx.outputSections)
                        : ctx.target->relaxOnce(pass);
