@@ -536,7 +536,6 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_stdatomic_h                          202011L
 # define __cpp_lib_string_contains                      202011L
 # define __cpp_lib_string_resize_and_overwrite          202110L
-# define __cpp_lib_string_subview                       202506L
 # define __cpp_lib_to_underlying                        202102L
 // # define __cpp_lib_tuple_like                           202207L
 # define __cpp_lib_unreachable                          202202L
@@ -601,6 +600,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_span_at                              202311L
 # define __cpp_lib_span_initializer_list                202311L
 # define __cpp_lib_sstream_from_string_view             202306L
+# define __cpp_lib_string_subview                       202506L
 # undef  __cpp_lib_string_view
 # define __cpp_lib_string_view                          202403L
 // # define __cpp_lib_submdspan                            202306L

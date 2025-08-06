@@ -821,7 +821,7 @@
 #  endif
 
 #  ifdef __cpp_lib_string_subview
-#    error "__cpp_lib_string_subview should not be defined before c++23"
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_string_udls
@@ -1780,7 +1780,7 @@
 #  endif
 
 #  ifdef __cpp_lib_string_subview
-#    error "__cpp_lib_string_subview should not be defined before c++23"
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_udls
@@ -2925,7 +2925,7 @@
 #  endif
 
 #  ifdef __cpp_lib_string_subview
-#    error "__cpp_lib_string_subview should not be defined before c++23"
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_udls
@@ -4343,7 +4343,7 @@
 #  endif
 
 #  ifdef __cpp_lib_string_subview
-#    error "__cpp_lib_string_subview should not be defined before c++23"
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_udls
@@ -5994,11 +5994,8 @@
 #    error "__cpp_lib_string_resize_and_overwrite should have the value 202110L in c++23"
 #  endif
 
-#  ifndef __cpp_lib_string_subview
-#    error "__cpp_lib_string_subview should be defined in c++23"
-#  endif
-#  if __cpp_lib_string_subview != 202506L
-#    error "__cpp_lib_string_subview should have the value 202506L in c++23"
+#  ifdef __cpp_lib_string_subview
+#    error "__cpp_lib_string_subview should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_string_udls
