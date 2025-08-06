@@ -24,6 +24,7 @@
 #include "flang/Semantics/openmp-modifiers.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Flags.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Support/Debug.h"
 #include <list>
@@ -56,6 +57,10 @@ protected:
     Scope &scope;
     Symbol::Flag defaultDSA{Symbol::Flag::AccShared}; // TODOACC
     std::map<const Symbol *, Symbol::Flag> objectWithDSA;
+    std::map<parser::OmpVariableCategory::Value,
+        parser::OmpDefaultmapClause::ImplicitBehavior>
+        defaultMap;
+
     bool withinConstruct{false};
     std::int64_t associatedLoopLevel{0};
   };
@@ -80,6 +85,10 @@ protected:
     GetContext().directiveSource = dir;
   }
   Scope &currScope() { return GetContext().scope; }
+  void AddContextDefaultmapBehaviour(parser::OmpVariableCategory::Value VarCat,
+      parser::OmpDefaultmapClause::ImplicitBehavior ImpBehav) {
+    GetContext().defaultMap[VarCat] = ImpBehav;
+  }
   void SetContextDefaultDSA(Symbol::Flag flag) {
     GetContext().defaultDSA = flag;
   }
@@ -560,6 +569,7 @@ public:
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpExclusiveScan);
     return false;
   }
+  void Post(const parser::OmpClause::Defaultmap &);
   void Post(const parser::OmpDefaultClause &);
   bool Pre(const parser::OmpClause::Shared &x) {
     ResolveOmpObjectList(x.v, Symbol::Flag::OmpShared);
@@ -812,6 +822,11 @@ private:
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
       Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
       Symbol::Flag::OmpLinear};
+
+  Symbol::Flags dataMappingAttributeFlags{Symbol::Flag::OmpMapTo,
+      Symbol::Flag::OmpMapFrom, Symbol::Flag::OmpMapToFrom,
+      Symbol::Flag::OmpMapStorage, Symbol::Flag::OmpMapDelete,
+      Symbol::Flag::OmpIsDevicePtr, Symbol::Flag::OmpHasDeviceAddr};
 
   Symbol::Flags privateDataSharingAttributeFlags{Symbol::Flag::OmpPrivate,
       Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate};
@@ -2223,6 +2238,28 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPAllocatorsConstruct &x) {
   return true;
 }
 
+void OmpAttributeVisitor::Post(const parser::OmpClause::Defaultmap &x) {
+  using ImplicitBehavior = parser::OmpDefaultmapClause::ImplicitBehavior;
+  using VariableCategory = parser::OmpVariableCategory;
+
+  VariableCategory::Value varCategory;
+  ImplicitBehavior impBehavior;
+
+  if (!dirContext_.empty()) {
+    impBehavior = std::get<ImplicitBehavior>(x.v.t);
+
+    auto &modifiers{OmpGetModifiers(x.v)};
+    auto *maybeCategory{
+        OmpGetUniqueModifier<parser::OmpVariableCategory>(modifiers)};
+    if (maybeCategory)
+      varCategory = maybeCategory->v;
+    else
+      varCategory = VariableCategory::Value::All;
+
+    AddContextDefaultmapBehaviour(varCategory, impBehavior);
+  }
+}
+
 void OmpAttributeVisitor::Post(const parser::OmpDefaultClause &x) {
   // The DEFAULT clause may also be used on METADIRECTIVE. In that case
   // there is nothing to do.
@@ -2374,6 +2411,70 @@ static bool IsSymbolStaticStorageDuration(const Symbol &symbol) {
       (ultSym.flags().test(Symbol::Flag::InCommonBlock));
 }
 
+static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
+    const Symbol::Flags &dsa, const Symbol::Flags &dataSharingAttributeFlags,
+    const Symbol::Flags &dataMappingAttributeFlags,
+    std::map<parser::OmpVariableCategory::Value,
+        parser::OmpDefaultmapClause::ImplicitBehavior>
+        defaultMap) {
+  // If a Defaultmap clause is present for the current target scope, and it has
+  // specified behaviour other than Firstprivate for scalars then we exit early,
+  // as it overrides the implicit Firstprivatization of scalars OpenMP rule.
+  if (!defaultMap.empty()) {
+    if (llvm::is_contained(
+            defaultMap, parser::OmpVariableCategory::Value::All) &&
+        defaultMap[parser::OmpVariableCategory::Value::All] !=
+            parser::OmpDefaultmapClause::ImplicitBehavior::Firstprivate) {
+      return false;
+    }
+
+    if (llvm::is_contained(
+            defaultMap, parser::OmpVariableCategory::Value::Scalar) &&
+        defaultMap[parser::OmpVariableCategory::Value::Scalar] !=
+            parser::OmpDefaultmapClause::ImplicitBehavior::Firstprivate) {
+      return false;
+    }
+  }
+
+  auto checkSymbol = [&](const Symbol &checkSym) {
+    // if we're associated with any other flags we skip implicit privitization
+    // for now. If we're an allocatable, pointer or declare target, we're not
+    // implicitly firstprivitizeable under OpenMP restrictions.
+    // TODO: Relax restriction as we progress privitization and further
+    // investigate the flags we can intermix with.
+    if (!(dsa & (dataSharingAttributeFlags | dataMappingAttributeFlags))
+            .none() ||
+        !checkSym.flags().none() || semantics::IsAssumedShape(checkSym) ||
+        semantics::IsAllocatableOrPointer(checkSym)) {
+      return false;
+    }
+
+    // It is default firstprivatizeable as far as the OpenMP specification is
+    // concerned if it is a non-array scalar type that has been implicitly
+    // captured in a target region
+    const auto *type{checkSym.GetType()};
+    if ((!checkSym.GetShape() || checkSym.GetShape()->empty()) &&
+        (type->category() ==
+                Fortran::semantics::DeclTypeSpec::Category::Numeric ||
+            type->category() ==
+                Fortran::semantics::DeclTypeSpec::Category::Logical ||
+            type->category() ==
+                Fortran::semantics::DeclTypeSpec::Category::Character)) {
+      return true;
+    }
+    return false;
+  };
+
+  if (checkSymbol(symbol)) {
+    const auto *hostAssoc{symbol.detailsIf<HostAssocDetails>()};
+    if (hostAssoc) {
+      return checkSymbol(hostAssoc->symbol());
+    }
+    return true;
+  }
+  return false;
+}
+
 void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
   if (!IsPrivatizable(symbol)) {
     return;
@@ -2465,7 +2566,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
 
     bool taskGenDir = llvm::omp::taskGeneratingSet.test(dirContext.directive);
     bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
-    bool parallelDir = llvm::omp::allParallelSet.test(dirContext.directive);
+    bool parallelDir = llvm::omp::topParallelSet.test(dirContext.directive);
     bool teamsDir = llvm::omp::allTeamsSet.test(dirContext.directive);
     bool isStaticStorageDuration = IsSymbolStaticStorageDuration(*symbol);
 
@@ -2521,8 +2622,19 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
       useLastDeclSymbol();
       PRINT_IMPLICIT_RULE("3) enclosing context");
     } else if (targetDir) {
-      // TODO 4) not mapped target variable -> firstprivate
+      // 4) not mapped target variable  -> firstprivate
+      //    - i.e. implicit, but meets OpenMP specification rules for
+      //    firstprivate "promotion"
+      if (enableDelayedPrivatizationStaging &&
+          IsTargetCaptureImplicitlyFirstprivatizeable(*symbol, prevDSA,
+              dataSharingAttributeFlags, dataMappingAttributeFlags,
+              dirContext.defaultMap)) {
+        prevDSA.set(Symbol::Flag::OmpImplicit);
+        prevDSA.set(Symbol::Flag::OmpFirstPrivate);
+        makeSymbol(prevDSA);
+      }
       dsa = prevDSA;
+      PRINT_IMPLICIT_RULE("4) not mapped target variable  -> firstprivate");
     } else if (taskGenDir) {
       // TODO 5) dummy arg in orphaned taskgen construct -> firstprivate
       if (prevDSA.test(Symbol::Flag::OmpShared) ||

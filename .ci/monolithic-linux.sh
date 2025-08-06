@@ -38,10 +38,24 @@ function at-exit {
   # If building fails there will be no results files.
   shopt -s nullglob
   
-  python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":penguin: Linux x64 Test Results" \
-    $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
+  if [[ "$GITHUB_STEP_SUMMARY" != "" ]]; then
+    python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":penguin: Linux x64 Test Results" \
+      $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
+  fi
 }
 trap at-exit EXIT
+
+function start-group {
+  groupname=$1
+  if [[ "$GITHUB_ACTIONS" != "" ]]; then
+    echo "::endgroup"
+    echo "::group::$groupname"
+  elif [[ "$POSTCOMMIT_CI" != "" ]]; then
+    echo "@@@$STEP@@@"
+  else
+    echo "Starting $groupname"
+  fi
+}
 
 projects="${1}"
 targets="${2}"
@@ -52,7 +66,7 @@ enable_cir="${6}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
-echo "::group::cmake"
+start-group "CMake"
 export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
@@ -83,49 +97,39 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
-echo "::endgroup::"
-echo "::group::ninja"
+start-group "ninja"
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets}
 
-echo "::endgroup::"
-
 if [[ "${runtime_targets}" != "" ]]; then
-  echo "::group::ninja runtimes"
+  start-group "ninja Runtimes"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets}
-
-  echo "::endgroup::"
 fi
 
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
 if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
-  echo "::group::cmake runtimes C++26"
+  start-group "CMake Runtimes C++26"
 
   cmake \
     -D LIBCXX_TEST_PARAMS="std=c++26" \
     -D LIBCXXABI_TEST_PARAMS="std=c++26" \
     "${BUILD_DIR}"
 
-  echo "::endgroup::"
-  echo "::group::ninja runtimes C++26"
+  start-group "ninja Runtimes C++26"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
 
-  echo "::endgroup::"
-  echo "::group::cmake runtimes clang modules"
+  start-group "CMake Runtimes Clang Modules"
 
   cmake \
     -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
     -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
     "${BUILD_DIR}"
 
-  echo "::endgroup::"
-  echo "::group::ninja runtimes clang modules"
+  start-group "ninja Runtimes Clang Modules"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
-
-  echo "::endgroup::"
 fi
