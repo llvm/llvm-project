@@ -2,7 +2,7 @@
 subroutine s1(b, r)
   real, intent(in) :: b
   real, intent(out) :: r
-  r = b ** 6.12E1
+  r = b ** 6.12E2
   ! CHECK-MESSAGES: :[[@LINE-1]]:12: warning: real exponent can be written as an integer literal
 end subroutine s1
 
@@ -22,5 +22,5 @@ end subroutine s3
 subroutine s4(b, r)
   real, intent(in) :: b
   real, intent(out) :: r
-  r = b ** 6.12
+  r = b ** 6.12E1
 end subroutine s4

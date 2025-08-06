@@ -10,12 +10,9 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
-#include "flang/Evaluate/real.h"
 #include "flang/Evaluate/type.h"
-#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
-#include "flang/Semantics/type.h"
 #include <variant>
 
 namespace Fortran::tidy::performance {
