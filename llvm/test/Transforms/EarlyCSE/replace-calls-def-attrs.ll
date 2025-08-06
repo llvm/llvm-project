@@ -13,7 +13,7 @@ declare i8 @buz.fp(float, float)
 define i8 @same_parent_combine_diff_attrs(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @same_parent_combine_diff_attrs(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz(i8 [[C1]], i8 [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -27,7 +27,7 @@ define i8 @same_parent_combine_diff_attrs(i8 %x, i8 %y) {
 define i8 @same_parent_combine_diff_attrs_needs_intersect(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @same_parent_combine_diff_attrs_needs_intersect(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call ptr @baz.ptr(i8 [[X]], i8 noundef [[Y]]) #[[ATTR0]]
+; CHECK-NEXT:    [[C1:%.*]] = call ptr @baz.ptr(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz.ptr(ptr [[C1]], ptr [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -41,7 +41,7 @@ define i8 @same_parent_combine_diff_attrs_needs_intersect(i8 %x, i8 %y) {
 define i8 @same_parent_combine_diff_attrs_fmf(float %x, float %y) {
 ; CHECK-LABEL: define i8 @same_parent_combine_diff_attrs_fmf(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call nnan float @baz.fp(float [[X]], float noundef [[Y]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[C1:%.*]] = call nnan float @baz.fp(float [[X]], float noundef [[Y]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz.fp(float [[C1]], float [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -55,7 +55,7 @@ define i8 @same_parent_combine_diff_attrs_fmf(float %x, float %y) {
 define i8 @same_parent_combine_diff_attrs_fmf2(float %x, float %y) {
 ; CHECK-LABEL: define i8 @same_parent_combine_diff_attrs_fmf2(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call nnan float @baz.fp(float [[X]], float noundef [[Y]]) #[[ATTR0]]
+; CHECK-NEXT:    [[C1:%.*]] = call nnan float @baz.fp(float [[X]], float noundef [[Y]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz.fp(float [[C1]], float [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -69,7 +69,7 @@ define i8 @same_parent_combine_diff_attrs_fmf2(float %x, float %y) {
 define i8 @same_parent_combine_diff_attrs_needs_intersect2(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @same_parent_combine_diff_attrs_needs_intersect2(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call ptr @baz.ptr(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1]]
+; CHECK-NEXT:    [[C1:%.*]] = call ptr @baz.ptr(i8 [[X]], i8 noundef [[Y]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz.ptr(ptr [[C1]], ptr [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -83,7 +83,7 @@ define i8 @same_parent_combine_diff_attrs_needs_intersect2(i8 %x, i8 %y) {
 define i8 @same_parent_combine_diff_attrs_really_needs_intersect(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @same_parent_combine_diff_attrs_really_needs_intersect(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call ptr @baz.ptr(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1]]
+; CHECK-NEXT:    [[C1:%.*]] = call ptr @baz.ptr(i8 [[X]], i8 noundef [[Y]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz.ptr(ptr [[C1]], ptr noundef [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -112,7 +112,7 @@ define i8 @same_parent_combine_diff_attrs_fail_side_effects(i8 %x, i8 %y) {
 define i8 @same_parent_combine_diff_attrs_quasi_side_effects2(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @same_parent_combine_diff_attrs_quasi_side_effects2(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR0]]
+; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]])
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz(i8 [[C0]], i8 [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -127,10 +127,10 @@ define i8 @same_parent_combine_diff_attrs_quasi_side_effects2(i8 %x, i8 %y) {
 define i8 @diff_parent_combine_diff_attrs(i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @diff_parent_combine_diff_attrs(
 ; CHECK-SAME: i1 [[C:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR0]]
+; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
 ; CHECK:       [[T]]:
-; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR1]]
+; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR2]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz(i8 [[C0]], i8 [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ; CHECK:       [[F]]:
@@ -151,7 +151,7 @@ F:
 define i8 @diff_parent_combine_diff_attrs_preserves_return_attrs(i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @diff_parent_combine_diff_attrs_preserves_return_attrs(
 ; CHECK-SAME: i1 [[C:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call nonnull ptr @baz.ptr(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1]]
+; CHECK-NEXT:    [[C1:%.*]] = call nonnull ptr @baz.ptr(i8 [[X]], i8 noundef [[Y]]) #[[ATTR2]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
 ; CHECK:       [[T]]:
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz.ptr(ptr [[C1]], ptr noundef [[C1]])
@@ -172,8 +172,8 @@ F:
 define i8 @same_parent_combine_diff_attrs_todo(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @same_parent_combine_diff_attrs_todo(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR0]]
-; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1]]
+; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz(i8 [[C0]], i8 [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -187,8 +187,8 @@ define i8 @same_parent_combine_diff_attrs_todo(i8 %x, i8 %y) {
 define i8 @same_parent_combine_diff_attrs_fail(i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @same_parent_combine_diff_attrs_fail(
 ; CHECK-SAME: i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR0]]
-; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1]]
+; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz(i8 [[C0]], i8 [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -202,10 +202,10 @@ define i8 @same_parent_combine_diff_attrs_fail(i8 %x, i8 %y) {
 define i8 @diff_parent_combine_diff_attrs_todo(i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @diff_parent_combine_diff_attrs_todo(
 ; CHECK-SAME: i1 [[C:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR0]]
+; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
 ; CHECK:       [[T]]:
-; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz(i8 [[C0]], i8 [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ; CHECK:       [[F]]:
@@ -226,10 +226,10 @@ F:
 define i8 @diff_parent_combine_diff_attrs_fail(i1 %c, i8 %x, i8 %y) {
 ; CHECK-LABEL: define i8 @diff_parent_combine_diff_attrs_fail(
 ; CHECK-SAME: i1 [[C:%.*]], i8 [[X:%.*]], i8 [[Y:%.*]]) {
-; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR0]]
+; CHECK-NEXT:    [[C1:%.*]] = call i8 @baz(i8 [[X]], i8 noundef [[Y]]) #[[ATTR1]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[T:.*]], label %[[F:.*]]
 ; CHECK:       [[T]]:
-; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR3]]
+; CHECK-NEXT:    [[C0:%.*]] = call i8 @baz(i8 noundef [[X]], i8 noundef [[Y]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @buz(i8 [[C0]], i8 [[C1]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ; CHECK:       [[F]]:
@@ -247,10 +247,26 @@ F:
   ret i8 %r2
 }
 
+define i32 @commutative_intrinsic_intersection_failure(i32 %arg, i32 %arg1) {
+; CHECK-LABEL: define i32 @commutative_intrinsic_intersection_failure(
+; CHECK-SAME: i32 [[ARG:%.*]], i32 [[ARG1:%.*]]) {
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.smin.i32(i32 [[ARG]], i32 [[ARG1]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[CALL2:%.*]] = call i32 @llvm.smin.i32(i32 [[ARG1]], i32 [[ARG]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[CALL2]], [[CALL]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %call = call i32 @llvm.smin.i32(i32 %arg, i32 %arg1) strictfp
+  %call2 = call i32 @llvm.smin.i32(i32 %arg1, i32 %arg)
+  %or = or i32 %call2, %call
+  ret i32 %or
+}
+
 ;.
-; CHECK: attributes #[[ATTR0]] = { memory(none) }
-; CHECK: attributes #[[ATTR1]] = { memory(read) }
-; CHECK: attributes #[[ATTR2]] = { alwaysinline memory(none) }
-; CHECK: attributes #[[ATTR3]] = { strictfp memory(none) }
-; CHECK: attributes #[[ATTR4]] = { noinline optnone memory(none) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1]] = { memory(none) }
+; CHECK: attributes #[[ATTR2]] = { memory(read) }
+; CHECK: attributes #[[ATTR3]] = { alwaysinline memory(none) }
+; CHECK: attributes #[[ATTR4]] = { strictfp memory(none) }
+; CHECK: attributes #[[ATTR5]] = { noinline optnone memory(none) }
+; CHECK: attributes #[[ATTR6]] = { strictfp }
 ;.

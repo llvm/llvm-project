@@ -13,7 +13,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
 #include "clang/AST/ODRHash.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Lex/PreprocessingRecord.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,7 +31,7 @@ static bool printLoc(llvm::raw_ostream &OS, SourceLocation Loc,
     return true;
   }
   Loc = SM.getExpansionLoc(Loc);
-  const std::pair<FileID, unsigned> &Decomposed = SM.getDecomposedLoc(Loc);
+  const FileIDAndOffset &Decomposed = SM.getDecomposedLoc(Loc);
   OptionalFileEntryRef FE = SM.getFileEntryRefForID(Decomposed.first);
   if (FE) {
     OS << llvm::sys::path::filename(FE->getName());
@@ -767,7 +766,7 @@ void USRGenerator::VisitType(QualType T) {
   case BuiltinType::Id:                                                        \
     Out << "@BT@" << #Name;                                                    \
     break;
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
         case BuiltinType::Id: \
           Out << "@BT@" << #Name; break;

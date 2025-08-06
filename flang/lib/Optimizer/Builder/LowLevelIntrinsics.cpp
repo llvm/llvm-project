@@ -21,16 +21,6 @@
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 
-mlir::func::FuncOp fir::factory::getLlvmMemset(fir::FirOpBuilder &builder) {
-  auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  llvm::SmallVector<mlir::Type> args = {ptrTy, ptrTy, builder.getI64Type(),
-                                        builder.getI1Type()};
-  auto memsetTy =
-      mlir::FunctionType::get(builder.getContext(), args, std::nullopt);
-  return builder.createFunction(builder.getUnknownLoc(),
-                                "llvm.memset.p0.p0.i64", memsetTy);
-}
-
 mlir::func::FuncOp fir::factory::getRealloc(fir::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   llvm::SmallVector<mlir::Type> args = {ptrTy, builder.getI64Type()};
@@ -41,8 +31,7 @@ mlir::func::FuncOp fir::factory::getRealloc(fir::FirOpBuilder &builder) {
 mlir::func::FuncOp
 fir::factory::getLlvmGetRounding(fir::FirOpBuilder &builder) {
   auto int32Ty = builder.getIntegerType(32);
-  auto funcTy =
-      mlir::FunctionType::get(builder.getContext(), std::nullopt, {int32Ty});
+  auto funcTy = mlir::FunctionType::get(builder.getContext(), {}, {int32Ty});
   return builder.createFunction(builder.getUnknownLoc(), "llvm.get.rounding",
                                 funcTy);
 }
@@ -50,8 +39,7 @@ fir::factory::getLlvmGetRounding(fir::FirOpBuilder &builder) {
 mlir::func::FuncOp
 fir::factory::getLlvmSetRounding(fir::FirOpBuilder &builder) {
   auto int32Ty = builder.getIntegerType(32);
-  auto funcTy =
-      mlir::FunctionType::get(builder.getContext(), {int32Ty}, std::nullopt);
+  auto funcTy = mlir::FunctionType::get(builder.getContext(), {int32Ty}, {});
   return builder.createFunction(builder.getUnknownLoc(), "llvm.set.rounding",
                                 funcTy);
 }
@@ -59,8 +47,8 @@ fir::factory::getLlvmSetRounding(fir::FirOpBuilder &builder) {
 mlir::func::FuncOp
 fir::factory::getLlvmInitTrampoline(fir::FirOpBuilder &builder) {
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
-  auto funcTy = mlir::FunctionType::get(builder.getContext(),
-                                        {ptrTy, ptrTy, ptrTy}, std::nullopt);
+  auto funcTy =
+      mlir::FunctionType::get(builder.getContext(), {ptrTy, ptrTy, ptrTy}, {});
   return builder.createFunction(builder.getUnknownLoc(), "llvm.init.trampoline",
                                 funcTy);
 }
@@ -100,8 +88,7 @@ mlir::func::FuncOp fir::factory::getFeenableexcept(fir::FirOpBuilder &builder) {
 
 mlir::func::FuncOp fir::factory::getFegetexcept(fir::FirOpBuilder &builder) {
   auto int32Ty = builder.getIntegerType(32);
-  auto funcTy =
-      mlir::FunctionType::get(builder.getContext(), std::nullopt, {int32Ty});
+  auto funcTy = mlir::FunctionType::get(builder.getContext(), {}, {int32Ty});
   return builder.createFunction(builder.getUnknownLoc(), "fegetexcept", funcTy);
 }
 

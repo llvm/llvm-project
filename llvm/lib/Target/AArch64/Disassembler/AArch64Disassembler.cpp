@@ -310,7 +310,8 @@ createAArch64ExternalSymbolizer(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
                                        SymbolLookUp, DisInfo);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Disassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAArch64Disassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheAArch64leTarget(),
                                          createAArch64Disassembler);
   TargetRegistry::RegisterMCDisassembler(getTheAArch64beTarget(),

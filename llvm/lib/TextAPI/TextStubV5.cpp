@@ -940,6 +940,12 @@ Array serializeSymbols(InterfaceFile::const_filtered_symbol_range Symbols,
                                 SymbolFields::SymbolTypes &SymField) {
     if (SymField.empty())
       return;
+    llvm::sort(SymField.Globals);
+    llvm::sort(SymField.TLV);
+    llvm::sort(SymField.Weaks);
+    llvm::sort(SymField.ObjCClasses);
+    llvm::sort(SymField.EHTypes);
+    llvm::sort(SymField.IVars);
     Object Segment;
     insertNonEmptyValues(Segment, TBDKey::Globals, std::move(SymField.Globals));
     insertNonEmptyValues(Segment, TBDKey::ThreadLocal, std::move(SymField.TLV));

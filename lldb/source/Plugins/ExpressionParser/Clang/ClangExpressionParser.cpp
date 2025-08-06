@@ -61,10 +61,8 @@
 
 #include "ASTUtils.h"
 #include "ClangASTSource.h"
-#include "ClangDiagnostic.h"
 #include "ClangExpressionDeclMap.h"
 #include "ClangExpressionHelper.h"
-#include "ClangExpressionParser.h"
 #include "ClangHost.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
@@ -166,13 +164,12 @@ static void AddAllFixIts(ClangDiagnostic *diag, const clang::Diagnostic &Info) {
 class ClangDiagnosticManagerAdapter : public clang::DiagnosticConsumer {
 public:
   ClangDiagnosticManagerAdapter(DiagnosticOptions &opts, StringRef filename)
-      : m_filename(filename) {
-    DiagnosticOptions *options = new DiagnosticOptions(opts);
-    options->ShowPresumedLoc = true;
-    options->ShowLevel = false;
+      : m_options(opts), m_filename(filename) {
+    m_options.ShowPresumedLoc = true;
+    m_options.ShowLevel = false;
     m_os = std::make_shared<llvm::raw_string_ostream>(m_output);
     m_passthrough =
-        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, options);
+        std::make_shared<clang::TextDiagnosticPrinter>(*m_os, m_options);
   }
 
   void ResetManager(DiagnosticManager *manager = nullptr) {
@@ -313,6 +310,7 @@ public:
 
 private:
   DiagnosticManager *m_manager = nullptr;
+  DiagnosticOptions m_options;
   std::shared_ptr<clang::TextDiagnosticPrinter> m_passthrough;
   /// Output stream of m_passthrough.
   std::shared_ptr<llvm::raw_string_ostream> m_os;
@@ -320,49 +318,6 @@ private:
   std::string m_output;
   StringRef m_filename;
 };
-
-/// Returns true if the SDK for the specified triple supports
-/// builtin modules in system headers. This is used to decide
-/// whether to pass -fbuiltin-headers-in-system-modules to
-/// the compiler instance when compiling the `std` module.
-static llvm::Expected<bool>
-sdkSupportsBuiltinModules(lldb_private::Target &target) {
-  auto arch_spec = target.GetArchitecture();
-  auto const &triple = arch_spec.GetTriple();
-  auto module_sp = target.GetExecutableModule();
-  if (!module_sp)
-    return llvm::createStringError("Executable module not found.");
-
-  // Get SDK path that the target was compiled against.
-  auto platform_sp = target.GetPlatform();
-  if (!platform_sp)
-    return llvm::createStringError("No Platform plugin found on target.");
-
-  auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*module_sp);
-  if (!sdk_or_err)
-    return sdk_or_err.takeError();
-
-  // Use the SDK path from debug-info to find a local matching SDK directory.
-  auto sdk_path_or_err =
-      HostInfo::GetSDKRoot(HostInfo::SDKOptions{std::move(sdk_or_err->first)});
-  if (!sdk_path_or_err)
-    return sdk_path_or_err.takeError();
-
-  auto VFS = FileSystem::Instance().GetVirtualFileSystem();
-  if (!VFS)
-    return llvm::createStringError("No virtual filesystem available.");
-
-  // Extract SDK version from the /path/to/some.sdk/SDKSettings.json
-  auto parsed_or_err = clang::parseDarwinSDKInfo(*VFS, *sdk_path_or_err);
-  if (!parsed_or_err)
-    return parsed_or_err.takeError();
-
-  auto maybe_sdk = *parsed_or_err;
-  if (!maybe_sdk)
-    return llvm::createStringError("Couldn't find Darwin SDK info.");
-
-  return XcodeSDK::SDKSupportsBuiltinModules(triple, maybe_sdk->getVersion());
-}
 
 static void SetupModuleHeaderPaths(CompilerInstance *compiler,
                                    std::vector<std::string> include_directories,
@@ -707,7 +662,6 @@ static void SetupLangOpts(CompilerInstance &compiler,
 
 static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
                                          lldb_private::Target &target) {
-  Log *log = GetLog(LLDBLog::Expressions);
   LangOptions &lang_opts = compiler.getLangOpts();
   lang_opts.Modules = true;
   // We want to implicitly build modules.
@@ -725,12 +679,7 @@ static void SetupImportStdModuleLangOpts(CompilerInstance &compiler,
   lang_opts.GNUKeywords = true;
   lang_opts.CPlusPlus11 = true;
 
-  if (auto supported_or_err = sdkSupportsBuiltinModules(target))
-    lang_opts.BuiltinHeadersInSystemModules = !*supported_or_err;
-  else
-    LLDB_LOG_ERROR(log, supported_or_err.takeError(),
-                   "Failed to determine BuiltinHeadersInSystemModules when "
-                   "setting up import-std-module: {0}");
+  lang_opts.BuiltinHeadersInSystemModules = false;
 
   // The Darwin libc expects this macro to be set.
   lang_opts.GNUCVersion = 40201;
@@ -789,7 +738,7 @@ ClangExpressionParser::ClangExpressionParser(
 
   if (auto *target_info = TargetInfo::CreateTargetInfo(
           m_compiler->getDiagnostics(),
-          m_compiler->getInvocation().TargetOpts)) {
+          m_compiler->getInvocation().getTargetOpts())) {
     if (log) {
       LLDB_LOGF(log, "Target datalayout string: '%s'",
                 target_info->getDataLayoutString());
@@ -833,7 +782,8 @@ ClangExpressionParser::ClangExpressionParser(
   // FIXME: We shouldn't need to do this, the target should be immutable once
   // created. This complexity should be lifted elsewhere.
   m_compiler->getTarget().adjust(m_compiler->getDiagnostics(),
-                                 m_compiler->getLangOpts());
+                                 m_compiler->getLangOpts(),
+                                 /*AuxTarget=*/nullptr);
 
   // 5. Set up the diagnostic buffer for reporting errors
   auto diag_mgr = new ClangDiagnosticManagerAdapter(
@@ -895,7 +845,7 @@ ClangExpressionParser::ClangExpressionParser(
   m_llvm_context = std::make_unique<LLVMContext>();
   m_code_generator.reset(CreateLLVMCodeGen(
       m_compiler->getDiagnostics(), module_name,
-      &m_compiler->getVirtualFileSystem(), m_compiler->getHeaderSearchOpts(),
+      m_compiler->getVirtualFileSystemPtr(), m_compiler->getHeaderSearchOpts(),
       m_compiler->getPreprocessorOpts(), m_compiler->getCodeGenOpts(),
       *m_llvm_context));
 }
@@ -1316,16 +1266,18 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
     decl_map->InstallCodeGenerator(&m_compiler->getASTConsumer());
     decl_map->InstallDiagnosticManager(diagnostic_manager);
 
-    clang::ExternalASTSource *ast_source = decl_map->CreateProxy();
+    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source =
+        decl_map->CreateProxy();
 
-    auto *ast_source_wrapper = new ExternalASTSourceWrapper(ast_source);
+    auto ast_source_wrapper =
+        llvm::makeIntrusiveRefCnt<ExternalASTSourceWrapper>(ast_source);
 
     if (ast_context.getExternalSource()) {
-      auto *module_wrapper =
-          new ExternalASTSourceWrapper(ast_context.getExternalSource());
+      auto module_wrapper = llvm::makeIntrusiveRefCnt<ExternalASTSourceWrapper>(
+          ast_context.getExternalSourcePtr());
 
-      auto *multiplexer =
-          new SemaSourceWithPriorities(module_wrapper, ast_source_wrapper);
+      auto multiplexer = llvm::makeIntrusiveRefCnt<SemaSourceWithPriorities>(
+          module_wrapper, ast_source_wrapper);
 
       ast_context.setExternalSource(multiplexer);
     } else {

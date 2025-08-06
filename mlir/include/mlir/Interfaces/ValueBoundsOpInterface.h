@@ -135,9 +135,16 @@ public:
 
     /// Construct a variable for a map and its operands.
     Variable(AffineMap map, ArrayRef<Variable> mapOperands);
-    Variable(AffineMap map, ArrayRef<Value> mapOperands);
+    Variable(AffineMap map, ValueRange mapOperands);
 
     MLIRContext *getContext() const { return map.getContext(); }
+
+    /// Returns the affine map.
+    AffineMap getMap() const { return map; }
+
+    /// Returns the map operands.
+    ValueDimList &getOperands() { return mapOperands; }
+    const ValueDimList &getOperands() const { return mapOperands; }
 
   private:
     friend class ValueBoundsConstraintSet;
@@ -254,6 +261,12 @@ public:
   /// prove the relation or until it ran out of IR.
   static bool compare(const Variable &lhs, ComparisonOperator cmp,
                       const Variable &rhs);
+  /// This function is similar to `ValueBoundsConstraintSet::compare`, except
+  /// that it returns false if `!(lhs cmp rhs)`, and `failure` if neither the
+  /// relation nor its inverse relation could be proven.
+  static llvm::FailureOr<bool> strongCompare(const Variable &lhs,
+                                             ComparisonOperator cmp,
+                                             const Variable &rhs);
 
   /// Compute whether the given variables are equal. Return "failure" if
   /// equality could not be determined.
@@ -326,6 +339,16 @@ protected:
   /// This function does not analyze any IR and does not populate any additional
   /// constraints.
   bool comparePos(int64_t lhsPos, ComparisonOperator cmp, int64_t rhsPos);
+
+  /// Return "true" if, based on the current state of the constraint system,
+  /// "lhs cmp rhs" was proven to hold. It returns "false" if "!(lhs cmp rhs)"
+  /// can be proven. Otherwise, it returns `failure` if neither the relation nor
+  /// its inverse relation could be proven.
+  ///
+  /// This function does not analyze any IR and does not populate any additional
+  /// constraints.
+  llvm::FailureOr<bool> strongComparePos(int64_t lhsPos, ComparisonOperator cmp,
+                                         int64_t rhsPos);
 
   /// Given an affine map with a single result (and map operands), add a new
   /// column to the constraint set that represents the result of the map.

@@ -32,8 +32,7 @@ define <4 x double> @src_ins2_v4f64_ext0_v2f64(<4 x double> %a, <2 x double> %b)
 ; SSE-NEXT:    ret <4 x double> [[INS]]
 ;
 ; AVX-LABEL: @src_ins2_v4f64_ext0_v2f64(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>
+; AVX-NEXT:    [[INS:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 poison>
 ; AVX-NEXT:    ret <4 x double> [[INS]]
 ;
   %ext = extractelement <2 x double> %b, i32 0
@@ -48,8 +47,7 @@ define <4 x double> @src_ins3_v4f64_ext0_v2f64(<4 x double> %a, <2 x double> %b)
 ; SSE-NEXT:    ret <4 x double> [[INS]]
 ;
 ; AVX-LABEL: @src_ins3_v4f64_ext0_v2f64(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
-; AVX-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>
+; AVX-NEXT:    [[INS:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 0>
 ; AVX-NEXT:    ret <4 x double> [[INS]]
 ;
   %ext = extractelement <2 x double> %b, i32 0
@@ -86,8 +84,7 @@ define <4 x double> @src_ins2_v4f64_ext1_v2f64(<4 x double> %a, <2 x double> %b)
 ; SSE-NEXT:    ret <4 x double> [[INS]]
 ;
 ; AVX-LABEL: @src_ins2_v4f64_ext1_v2f64(
-; AVX-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
-; AVX-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 poison>
+; AVX-NEXT:    [[INS:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 1, i32 poison>
 ; AVX-NEXT:    ret <4 x double> [[INS]]
 ;
   %ext = extractelement <2 x double> %b, i32 1
@@ -96,10 +93,14 @@ define <4 x double> @src_ins2_v4f64_ext1_v2f64(<4 x double> %a, <2 x double> %b)
 }
 
 define <4 x double> @src_ins3_v4f64_ext1_v2f64(<4 x double> %a, <2 x double> %b) #0 {
-; CHECK-LABEL: @src_ins3_v4f64_ext1_v2f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 1>
-; CHECK-NEXT:    ret <4 x double> [[INS]]
+; SSE-LABEL: @src_ins3_v4f64_ext1_v2f64(
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
+; SSE-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 1>
+; SSE-NEXT:    ret <4 x double> [[INS]]
+;
+; AVX-LABEL: @src_ins3_v4f64_ext1_v2f64(
+; AVX-NEXT:    [[INS:%.*]] = shufflevector <2 x double> [[B:%.*]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 1>
+; AVX-NEXT:    ret <4 x double> [[INS]]
 ;
   %ext = extractelement <2 x double> %b, i32 1
   %ins = insertelement <4 x double> poison, double %ext, i32 3
@@ -119,8 +120,7 @@ define <2 x double> @src_ins0_v2f64_ext0_v4f64(<2 x double> %a, <4 x double> %b)
 
 define <2 x double> @src_ins0_v2f64_ext1_v4f64(<2 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @src_ins0_v2f64_ext1_v4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 poison, i32 1>
-; CHECK-NEXT:    [[INS:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    ret <2 x double> [[INS]]
 ;
   %ext = extractelement <4 x double> %b, i32 1
@@ -152,8 +152,7 @@ define <2 x double> @src_ins0_v2f64_ext3_v4f64(<2 x double> %a, <4 x double> %b)
 
 define <2 x double> @src_ins1_v2f64_ext0_v4f64(<2 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @src_ins1_v2f64_ext0_v4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 0, i32 poison>
-; CHECK-NEXT:    [[INS:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 poison, i32 0>
 ; CHECK-NEXT:    ret <2 x double> [[INS]]
 ;
   %ext = extractelement <4 x double> %b, i32 0
@@ -164,8 +163,7 @@ define <2 x double> @src_ins1_v2f64_ext0_v4f64(<2 x double> %a, <4 x double> %b)
 define <2 x double> @src_ins1_v2f64_ext1_v4f64(<2 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @src_ins1_v2f64_ext1_v4f64(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 poison, i32 1>
-; CHECK-NEXT:    [[INS:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 poison, i32 1>
-; CHECK-NEXT:    ret <2 x double> [[INS]]
+; CHECK-NEXT:    ret <2 x double> [[TMP1]]
 ;
   %ext = extractelement <4 x double> %b, i32 1
   %ins = insertelement <2 x double> poison, double %ext, i32 1
@@ -174,8 +172,7 @@ define <2 x double> @src_ins1_v2f64_ext1_v4f64(<2 x double> %a, <4 x double> %b)
 
 define <2 x double> @src_ins1_v2f64_ext2_v4f64(<2 x double> %a, <4 x double> %b) {
 ; SSE-LABEL: @src_ins1_v2f64_ext2_v4f64(
-; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 2, i32 poison>
-; SSE-NEXT:    [[INS:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; SSE-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 poison, i32 2>
 ; SSE-NEXT:    ret <2 x double> [[INS]]
 ;
 ; AVX-LABEL: @src_ins1_v2f64_ext2_v4f64(
@@ -190,8 +187,7 @@ define <2 x double> @src_ins1_v2f64_ext2_v4f64(<2 x double> %a, <4 x double> %b)
 
 define <2 x double> @src_ins1_v2f64_ext3_v4f64(<2 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: @src_ins1_v2f64_ext3_v4f64(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 3, i32 poison>
-; CHECK-NEXT:    [[INS:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[INS:%.*]] = shufflevector <4 x double> [[B:%.*]], <4 x double> poison, <2 x i32> <i32 poison, i32 3>
 ; CHECK-NEXT:    ret <2 x double> [[INS]]
 ;
   %ext = extractelement <4 x double> %b, i32 3

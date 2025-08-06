@@ -8,19 +8,16 @@
 // RUN: not %clang_cc1 -std=c++20 -fsyntax-only %s -fcxx-exceptions -fexceptions -Wunused-result 2>&1 | FileCheck %s
 
 void no_coroutine_traits_bad_arg_await() {
-  co_await a; // expected-error {{include <coroutine>}}
-  // expected-error@-1 {{use of undeclared identifier 'a'}}
+  co_await a; // expected-error {{use of undeclared identifier 'a'}}
 }
 
 void no_coroutine_traits_bad_arg_yield() {
-  co_yield a; // expected-error {{include <coroutine>}}
-  // expected-error@-1 {{use of undeclared identifier 'a'}}
+  co_yield a; // expected-error {{use of undeclared identifier 'a'}}
 }
 
 
 void no_coroutine_traits_bad_arg_return() {
-  co_return a; // expected-error {{include <coroutine>}}
-  // expected-error@-1 {{use of undeclared identifier 'a'}}
+  co_return a; // expected-error {{use of undeclared identifier 'a'}}
 }
 
 void no_coroutine_traits() {
@@ -208,8 +205,7 @@ void mixed_yield() {
 
 void mixed_yield_invalid() {
   co_yield blah; // expected-error {{use of undeclared identifier}}
-  // expected-note@-1 {{function is a coroutine due to use of 'co_yield'}}
-  return; // expected-error {{return statement not allowed in coroutine}}
+  return;
 }
 
 void mixed_yield_return_first(bool b) {
@@ -231,8 +227,7 @@ void mixed_return_for_range(bool b, T t) {
 template <class T>
 void mixed_yield_template(T) {
   co_yield blah; // expected-error {{use of undeclared identifier}}
-  // expected-note@-1 {{function is a coroutine due to use of 'co_yield'}}
-  return; // expected-error {{return statement not allowed in coroutine}}
+  return;
 }
 
 template <class T>
@@ -314,10 +309,9 @@ template void mixed_coreturn_template(void_tag, bool, int); // expected-note {{r
 template <class T>
 void mixed_coreturn_template2(bool b, T) {
   if (b)
-    co_return v; // expected-note {{use of 'co_return'}}
-    // expected-error@-1 {{use of undeclared identifier 'v'}}
+    co_return v; // expected-error {{use of undeclared identifier 'v'}}
   else
-    return; // expected-error {{not allowed in coroutine}}
+    return;
 }
 
 struct promise_handle;

@@ -86,8 +86,7 @@ define <vscale x 2 x i64> @uunpklo_i32_invalid(ptr %b) #0 {
 define <vscale x 2 x i64> @uunpklo_invalid_all(ptr %b) #0 {
 ; CHECK-LABEL: uunpklo_invalid_all:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
 ; CHECK-NEXT:    ret
   %mask = call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
@@ -183,8 +182,7 @@ define void @uzp1_invalid_all(<vscale x 2 x i64> %a, ptr %b) #0 {
 ; CHECK-LABEL: uzp1_invalid_all:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
   %a.bc = bitcast <vscale x 2 x i64> %a to <vscale x 4 x i32>
   %uzp = call <vscale x 4 x i32> @llvm.aarch64.sve.uzp1.nxv4i32(<vscale x 4 x i32> %a.bc, <vscale x 4 x i32> %a.bc)

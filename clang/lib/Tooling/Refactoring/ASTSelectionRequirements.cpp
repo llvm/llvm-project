@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Tooling/Refactoring/RefactoringActionRuleRequirements.h"
-#include "clang/AST/Attr.h"
 #include <optional>
 
 using namespace clang;

@@ -137,10 +137,7 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
     llvm_unreachable("Dependent nested-name-specifier has no DeclContext");
 
   case NestedNameSpecifier::Namespace:
-    return NNS->getAsNamespace();
-
-  case NestedNameSpecifier::NamespaceAlias:
-    return NNS->getAsNamespaceAlias()->getNamespace();
+    return NNS->getAsNamespace()->getNamespace();
 
   case NestedNameSpecifier::TypeSpec: {
     const TagType *Tag = NNS->getAsType()->getAs<TagType>();
@@ -542,7 +539,7 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
     NestedNameSpecifierValidatorCCC CCC(*this);
     if (TypoCorrection Corrected = CorrectTypo(
             Found.getLookupNameInfo(), Found.getLookupKind(), S, &SS, CCC,
-            CTK_ErrorRecovery, LookupCtx, EnteringContext)) {
+            CorrectTypoKind::ErrorRecovery, LookupCtx, EnteringContext)) {
       if (LookupCtx) {
         bool DroppedSpecifier =
             Corrected.WillReplaceSpecifier() &&
@@ -992,7 +989,6 @@ bool Sema::ShouldEnterDeclaratorScope(Scope *S, const CXXScopeSpec &SS) {
   switch (Qualifier->getKind()) {
   case NestedNameSpecifier::Global:
   case NestedNameSpecifier::Namespace:
-  case NestedNameSpecifier::NamespaceAlias:
     // These are always namespace scopes.  We never want to enter a
     // namespace scope from anything but a file context.
     return CurContext->getRedeclContext()->isFileContext();

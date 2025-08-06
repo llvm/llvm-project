@@ -29,6 +29,10 @@ bool DirectXTTIImpl::isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
                                                             int OpdIdx) const {
   switch (ID) {
   case Intrinsic::dx_asdouble:
+  case Intrinsic::dx_isinf:
+  case Intrinsic::dx_firstbitlow:
+  case Intrinsic::dx_firstbituhigh:
+  case Intrinsic::dx_firstbitshigh:
     return OpdIdx == 0;
   default:
     return OpdIdx == -1;
@@ -43,6 +47,7 @@ bool DirectXTTIImpl::isTargetIntrinsicTriviallyScalarizable(
   case Intrinsic::dx_firstbitshigh:
   case Intrinsic::dx_firstbituhigh:
   case Intrinsic::dx_frac:
+  case Intrinsic::dx_isinf:
   case Intrinsic::dx_rsqrt:
   case Intrinsic::dx_saturate:
   case Intrinsic::dx_splitdouble:

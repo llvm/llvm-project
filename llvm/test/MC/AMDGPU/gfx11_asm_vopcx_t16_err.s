@@ -1009,22 +1009,40 @@ v_cmpx_t_f16_e32 v255.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
 v_cmpx_t_f16_e32 v255.l, v2.l quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:18: error: invalid operand for instruction
 
-v_cmpx_tru_f16_e32 v1, v255
-// GFX11: :[[@LINE-1]]:24: error: invalid operand for instruction
+v_cmpx_tru_f16_e32 v1.h, v255.h
+// GFX11: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmpx_tru_f16_e32 v1, v255 dpp8:[7,6,5,4,3,2,1,0]
-// GFX11: :[[@LINE-1]]:24: error: invalid operand for instruction
+v_cmpx_tru_f16_e32 v1.h, v255.h dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmpx_tru_f16_e32 v1, v255 quad_perm:[3,2,1,0]
-// GFX11: :[[@LINE-1]]:24: error: invalid operand for instruction
+v_cmpx_tru_f16_e32 v1.h, v255.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:26: error: invalid operand for instruction
 
-v_cmpx_tru_f16_e32 v255, v2
+v_cmpx_tru_f16_e32 v1.l, v255.l
+// GFX11: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmpx_tru_f16_e32 v1.l, v255.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmpx_tru_f16_e32 v1.l, v255.l quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:26: error: invalid operand for instruction
+
+v_cmpx_tru_f16_e32 v255.h, v2.h
 // GFX11: :[[@LINE-1]]:20: error: invalid operand for instruction
 
-v_cmpx_tru_f16_e32 v255, v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cmpx_tru_f16_e32 v255.h, v2.h dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: :[[@LINE-1]]:20: error: invalid operand for instruction
 
-v_cmpx_tru_f16_e32 v255, v2 quad_perm:[3,2,1,0]
+v_cmpx_tru_f16_e32 v255.h, v2.h quad_perm:[3,2,1,0]
+// GFX11: :[[@LINE-1]]:20: error: invalid operand for instruction
+
+v_cmpx_tru_f16_e32 v255.l, v2.l
+// GFX11: :[[@LINE-1]]:20: error: invalid operand for instruction
+
+v_cmpx_tru_f16_e32 v255.l, v2.l dpp8:[7,6,5,4,3,2,1,0]
+// GFX11: :[[@LINE-1]]:20: error: invalid operand for instruction
+
+v_cmpx_tru_f16_e32 v255.l, v2.l quad_perm:[3,2,1,0]
 // GFX11: :[[@LINE-1]]:20: error: invalid operand for instruction
 
 v_cmpx_u_f16_e32 v1.h, v255.h

@@ -24,10 +24,10 @@ typedef int *intp;
 int nonConstantGlobal = 5;
 
 __ptrauth(INVALID_KEY) int invalid2; // expected-error{{200 does not identify a valid pointer authentication key for the current target}}
-__ptrauth(VALID_DATA_KEY) int invalid3; // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int' is invalid}}
-__ptrauth(VALID_DATA_KEY) int *invalid4; // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int' is invalid}}
+__ptrauth(VALID_DATA_KEY) int invalid3; // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int' is invalid}}
+__ptrauth(VALID_DATA_KEY) int *invalid4; // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int' is invalid}}
 int * (__ptrauth(VALID_DATA_KEY) invalid5); // expected-error{{expected identifier or '('}} expected-error{{expected ')'}} expected-note {{to match this '('}}
-int *__ptrauth(VALID_DATA_KEY) __ptrauth(VALID_DATA_KEY) invalid6; // expected-error{{type 'int *__ptrauth(2,0,0)' is already __ptrauth-qualified}}
+int *__ptrauth(VALID_DATA_KEY) __ptrauth(VALID_DATA_KEY) invalid6; // expected-error{{type 'int *__ptrauth(2,0,0)' is already '__ptrauth'-qualified}}
 int * __ptrauth(VALID_DATA_KEY, 2) invalid7; // expected-error {{invalid address discrimination flag '2'; '__ptrauth' requires '0' or '1'}}
 int * __ptrauth(VALID_DATA_KEY, -1) invalid8; // expected-error {{invalid address discrimination flag '-1'; '__ptrauth' requires '0' or '1'}}
 int * __ptrauth(VALID_DATA_KEY, 1, -1) invalid9; // expected-error {{invalid extra discriminator flag '-1'; '__ptrauth' requires a value between '0' and '65535'}}
@@ -102,4 +102,46 @@ __attribute__((overloadable)) float overload_func(int * __ptrauth(VALID_DATA_KEY
 static_assert(_Generic(typeof(overload_func(&ptr0)), int : 1, default : 0));
 static_assert(_Generic(typeof(overload_func(&valid0)), float : 1, default : 0));
 
-void func(int array[__ptrauth(VALID_DATA_KEY) 10]); // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int[10]' is invalid}}
+void func(int array[__ptrauth(VALID_DATA_KEY) 10]); // expected-error {{'__ptrauth' qualifier only applies to pointer or pointer sized integer types; 'int[10]' is invalid}}
+
+struct S0 { // expected-note 4 {{struct S0' has subobjects that are non-trivial to copy}}
+  intp __ptrauth(1, 1, 50) f0; // expected-note 4 {{f0 has type '__ptrauth(1,1,50) intp' (aka 'int *__ptrauth(1,1,50)') that is non-trivial to copy}}
+};
+
+union U0 { // expected-note 4 {{union U0' has subobjects that are non-trivial to copy}}
+  struct S0 s0;
+};
+
+struct S1 {
+  intp __ptrauth(1, 0, 50) f0;
+};
+
+union U1 {
+  struct S1 s1;
+};
+
+union U2 { // expected-note 2 {{union U2' has subobjects that are non-trivial to copy}}
+  intp __ptrauth(1, 1, 50) f0; // expected-note 2 {{f0 has type '__ptrauth(1,1,50) intp' (aka 'int *__ptrauth(1,1,50)') that is non-trivial to copy}}
+  intp __ptrauth(1, 0, 50) f1;
+};
+
+struct S2 { // expected-note 2 {{struct S2' has subobjects that are non-trivial to copy}}
+  intp __ptrauth(1, 1, 50) f0[4]; // expected-note 2 {{f0 has type '__ptrauth(1,1,50) intp' (aka 'int *__ptrauth(1,1,50)') that is non-trivial to copy}}
+};
+
+union U3 { // expected-note 2 {{union U3' has subobjects that are non-trivial to copy}}
+  struct S2 s2;
+};
+
+struct S4 {
+  union U0 u0;
+};
+
+union U0 foo0(union U0); // expected-error {{cannot use type 'union U0' for function/method return since it is a union that is non-trivial to copy}} expected-error {{cannot use type 'union U0' for a function/method parameter since it is a union that is non-trivial to copy}}
+union U1 foo1(union U1);
+
+union U2 foo2(union U2); // expected-error {{cannot use type 'union U2' for function/method return since it is a union that is non-trivial to copy}} expected-error {{cannot use type 'union U2' for a function/method parameter since it is a union that is non-trivial to copy}}
+
+union U3 foo3(union U3); // expected-error {{cannot use type 'union U3' for function/method return since it is a union that is non-trivial to copy}} expected-error {{cannot use type 'union U3' for a function/method parameter since it is a union that is non-trivial to copy}}
+
+struct S4 foo4(struct S4);  // expected-error {{cannot use type 'struct S4' for function/method return since it contains a union that is non-trivial to copy}} expected-error {{cannot use type 'struct S4' for a function/method parameter since it contains a union that is non-trivial to copy}}

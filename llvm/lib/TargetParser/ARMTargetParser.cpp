@@ -535,9 +535,8 @@ void ARM::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values) {
   }
 }
 
-StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
-  StringRef ArchName =
-      CPU.empty() ? TT.getArchName() : getArchName(parseCPUArch(CPU));
+StringRef ARM::computeDefaultTargetABI(const Triple &TT) {
+  StringRef ArchName = TT.getArchName();
 
   if (TT.isOSBinFormatMachO()) {
     if (TT.getEnvironment() == Triple::EABI ||
@@ -573,6 +572,22 @@ StringRef ARM::computeDefaultTargetABI(const Triple &TT, StringRef CPU) {
       return "aapcs-linux";
     return "aapcs";
   }
+}
+
+ARM::ARMABI ARM::computeTargetABI(const Triple &TT, StringRef ABIName) {
+  if (ABIName.empty())
+    ABIName = ARM::computeDefaultTargetABI(TT);
+
+  if (ABIName == "aapcs16")
+    return ARM_ABI_AAPCS16;
+
+  if (ABIName.starts_with("aapcs"))
+    return ARM_ABI_AAPCS;
+
+  if (ABIName.starts_with("apcs"))
+    return ARM_ABI_APCS;
+
+  return ARM_ABI_UNKNOWN;
 }
 
 StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
@@ -631,7 +646,6 @@ StringRef ARM::getARMCPUForArch(const llvm::Triple &Triple, StringRef MArch) {
     default:
       return "strongarm";
     }
-  case llvm::Triple::NaCl:
   case llvm::Triple::OpenBSD:
     return "cortex-a8";
   default:

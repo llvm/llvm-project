@@ -25,7 +25,7 @@ void Test() {
   ;
 
   // expected-error@+2{{OpenACC 'async' clause cannot appear more than once on a 'data' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'async' clause is here}}
 #pragma acc data copyin(I) async(I) async(I)
   ;
   // expected-error@+2{{expected ')'}}
@@ -33,39 +33,39 @@ void Test() {
 #pragma acc enter data copyin(I) async(I, I)
   //
   // expected-error@+2{{OpenACC 'async' clause cannot appear more than once on a 'data' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'async' clause is here}}
 #pragma acc data default(none) async async
   while(1);
 
   // expected-error@+2{{OpenACC 'async' clause cannot appear more than once on a 'data' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'async' clause is here}}
 #pragma acc data default(none) async(1) async(2)
   while(1);
 
   // expected-error@+2{{OpenACC 'async' clause cannot appear more than once on a 'data' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'async' clause is here}}
 #pragma acc data default(none) async(1) async(2)
   while(1);
 
   // expected-error@+3{{OpenACC 'async' clause cannot appear more than once in a 'device_type' region on a 'data' directive}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'async' clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc data default(none) async(1) device_type(*) async(1) async(2)
   while(1);
   // expected-error@+3{{OpenACC 'async' clause cannot appear more than once in a 'device_type' region on a 'data' directive}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'async' clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc data default(none) async device_type(*) async async
   while(1);
   // expected-error@+3{{OpenACC 'async' clause cannot appear more than once in a 'device_type' region on a 'data' directive}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'async' clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc data default(none) async(1) device_type(*) async async(2)
   while(1);
 
   // expected-error@+3{{OpenACC 'async' clause cannot appear more than once in a 'device_type' region on a 'data' directive}}
-  // expected-note@+2{{previous clause is here}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+2{{previous 'async' clause is here}}
+  // expected-note@+1{{active 'device_type' clause here}}
 #pragma acc data default(none) device_type(*) async async
   while(1);
 }

@@ -131,6 +131,11 @@ public:
   IeeeFeatures &ieeeFeatures() { return ieeeFeatures_; }
   const IeeeFeatures &ieeeFeatures() const { return ieeeFeatures_; }
 
+  std::size_t integerKindForPointer() { return integerKindForPointer_; }
+  void set_integerKindForPointer(std::size_t newKind) {
+    integerKindForPointer_ = newKind;
+  }
+
 private:
   static constexpr int maxKind{common::maxKind};
   std::uint8_t byteSize_[common::TypeCategory_enumSize][maxKind + 1]{};
@@ -156,6 +161,7 @@ private:
       IeeeFeature::Io, IeeeFeature::NaN, IeeeFeature::Rounding,
       IeeeFeature::Sqrt, IeeeFeature::Standard, IeeeFeature::Subnormal,
       IeeeFeature::UnderflowControl};
+  std::size_t integerKindForPointer_{8}; /* For 64 bit pointer */
 };
 
 } // namespace Fortran::evaluate

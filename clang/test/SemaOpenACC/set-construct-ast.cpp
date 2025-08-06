@@ -84,7 +84,7 @@ void TemplFunc(T t) {
   // CHECK-NEXT: ImplicitCastExpr {{.*}}'unsigned int'
   // CHECK-NEXT: CXXMemberCallExpr{{.*}}'unsigned int'
   // CHECK-NEXT: MemberExpr{{.*}}.operator unsigned int
-  // CHECk-NEXT: DeclRefExpr{{.*}}'t' 'SomeStruct'
+  // CHECK-NEXT: DeclRefExpr{{.*}}'t' 'SomeStruct'
 }
 
 struct SomeStruct{

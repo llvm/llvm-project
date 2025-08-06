@@ -1076,7 +1076,7 @@ llvm::Expected<Args> Options::ParseAlias(const Args &args,
 
     if (!input_line.empty()) {
       llvm::StringRef tmp_arg = args_copy[idx].ref();
-      size_t pos = input_line.find(std::string(tmp_arg));
+      size_t pos = input_line.find(tmp_arg);
       if (pos != std::string::npos)
         input_line.erase(pos, tmp_arg.size());
     }

@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -fopenmp -mmlir --openmp-enable-delayed-privatization-staging=true -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -mmlir --enable-delayed-privatization-staging=true -emit-hlfir %s -o - | FileCheck %s
 
 subroutine first_and_lastprivate
   integer i
@@ -20,8 +20,7 @@ end subroutine
 ! CHECK:  func.func @{{.*}}first_and_lastprivate()
 ! CHECK:    %[[ORIG_VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Evar"}
 ! CHECK:    omp.parallel {
-! CHECK:      omp.barrier
-! CHECK:      omp.wsloop private(@{{.*}}var_firstprivate_i32 {{.*}}) {
+! CHECK:      omp.wsloop private(@{{.*}}var_firstprivate_i32 {{.*}}) private_barrier {
 ! CHECK:        omp.loop_nest {{.*}} {
 ! CHECK:          %[[PRIV_VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "{{.*}}Evar"}
 ! CHECK:          fir.if %{{.*}} {

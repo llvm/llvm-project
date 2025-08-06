@@ -25,6 +25,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -48,7 +49,7 @@ public:
   ///
   /// This returns the cached value if PN has previously been processed,
   /// otherwise it processes it first.
-  const ValueSet &getValuesForPhi(const PHINode *PN);
+  LLVM_ABI const ValueSet &getValuesForPhi(const PHINode *PN);
 
   /// Notify PhiValues that the cached information using V is no longer valid
   ///
@@ -56,17 +57,17 @@ public:
   /// (and the phis that use that phi) become invalid. A user of PhiValues has
   /// to notify it of this by calling invalidateValue on either the operand or
   /// the phi, which will then clear the relevant cached information.
-  void invalidateValue(const Value *V);
+  LLVM_ABI void invalidateValue(const Value *V);
 
   /// Free the memory used by this class.
-  void releaseMemory();
+  LLVM_ABI void releaseMemory();
 
   /// Print out the values currently in the cache.
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
 
   /// Handle invalidation events in the new pass manager.
-  bool invalidate(Function &, const PreservedAnalyses &,
-                  FunctionAnalysisManager::Invalidator &);
+  LLVM_ABI bool invalidate(Function &, const PreservedAnalyses &,
+                           FunctionAnalysisManager::Invalidator &);
 
 private:
   using ConstValueSet = SmallSetVector<const Value *, 4>;
@@ -87,7 +88,7 @@ private:
   /// A CallbackVH to notify PhiValues when a value is deleted or replaced, so
   /// that the cached information for that value can be cleared to avoid
   /// dangling pointers to invalid values.
-  class PhiValuesCallbackVH final : public CallbackVH {
+  class LLVM_ABI PhiValuesCallbackVH final : public CallbackVH {
     PhiValues *PV;
     void deleted() override;
     void allUsesReplacedWith(Value *New) override;
@@ -114,11 +115,11 @@ private:
 /// which will get filled in as it's used.
 class PhiValuesAnalysis : public AnalysisInfoMixin<PhiValuesAnalysis> {
   friend AnalysisInfoMixin<PhiValuesAnalysis>;
-  static AnalysisKey Key;
+  LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = PhiValues;
-  PhiValues run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PhiValues run(Function &F, FunctionAnalysisManager &);
 };
 
 /// A pass for printing the PhiValues for a function.
@@ -131,12 +132,12 @@ class PhiValuesPrinterPass : public PassInfoMixin<PhiValuesPrinterPass> {
 
 public:
   explicit PhiValuesPrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
   static bool isRequired() { return true; }
 };
 
 /// Wrapper pass for the legacy pass manager
-class PhiValuesWrapperPass : public FunctionPass {
+class LLVM_ABI PhiValuesWrapperPass : public FunctionPass {
   std::unique_ptr<PhiValues> Result;
 
 public:

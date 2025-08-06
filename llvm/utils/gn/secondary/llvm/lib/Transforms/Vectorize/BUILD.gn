@@ -8,6 +8,7 @@ static_library("Vectorize") {
     "//llvm/lib/Transforms/Utils",
   ]
   sources = [
+    "EVLIndVarSimplify.cpp",
     "LoadStoreVectorizer.cpp",
     "LoopIdiomVectorize.cpp",
     "LoopVectorizationLegality.cpp",
@@ -18,6 +19,7 @@ static_library("Vectorize") {
     "SandboxVectorizer/Interval.cpp",
     "SandboxVectorizer/Legality.cpp",
     "SandboxVectorizer/Passes/BottomUpVec.cpp",
+    "SandboxVectorizer/Passes/PackReuse.cpp",
     "SandboxVectorizer/Passes/RegionsFromBBs.cpp",
     "SandboxVectorizer/Passes/RegionsFromMetadata.cpp",
     "SandboxVectorizer/Passes/SeedCollection.cpp",
@@ -31,6 +33,7 @@ static_library("Vectorize") {
     "VPlan.cpp",
     "VPlanAnalysis.cpp",
     "VPlanConstruction.cpp",
+    "VPlanPredicator.cpp",
     "VPlanRecipes.cpp",
     "VPlanSLP.cpp",
     "VPlanTransforms.cpp",

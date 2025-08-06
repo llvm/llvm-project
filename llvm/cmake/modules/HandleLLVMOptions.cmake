@@ -199,12 +199,18 @@ endif()
 string(TOUPPER "${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}" uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING)
 
 if( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE" )
-  set( ENABLE_DEBUGLOC_COVERAGE_TRACKING 1 )
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 1 )
+elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "COVERAGE_AND_ORIGIN" )
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 1 )
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN 1 )
 elseif( uppercase_LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING STREQUAL "DISABLED" OR NOT DEFINED LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING )
-  # The DISABLED setting is default and requires no additional defines.
+  # The DISABLED setting is default.
+  set( LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE 0 )
 else()
   message(FATAL_ERROR "Unknown value for LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING: \"${LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING}\"!")
 endif()
+# LLVM_ENABLE_DEBUGLOC_TRACKING_COVERAGE (non-cached) is expected to be
+# 1 or 0 here, assuming referenced in #cmakedefine01.
 
 if(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS)
   add_compile_definitions(EXPERIMENTAL_KEY_INSTRUCTIONS)
@@ -214,15 +220,15 @@ if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
 
-if(WIN32)
+if(WIN32 OR CYGWIN)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   if(CYGWIN)
     set(LLVM_ON_WIN32 0)
     set(LLVM_ON_UNIX 1)
-  else(CYGWIN)
+  else()
     set(LLVM_ON_WIN32 1)
     set(LLVM_ON_UNIX 0)
-  endif(CYGWIN)
+  endif()
 elseif(FUCHSIA OR UNIX)
   set(LLVM_ON_WIN32 0)
   set(LLVM_ON_UNIX 1)
@@ -459,7 +465,7 @@ if( LLVM_ENABLE_PIC )
 endif()
 
 if((NOT (${CMAKE_SYSTEM_NAME} MATCHES "AIX")) AND
-   (NOT (WIN32 OR CYGWIN) OR (MINGW AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
+   (NOT (WIN32 OR CYGWIN) OR ((MINGW OR CYGWIN) AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")))
   # GCC for MinGW does nothing about -fvisibility-inlines-hidden, but warns
   # about use of the attributes. As long as we don't use the attributes (to
   # override the default) we shouldn't set the command line options either.
@@ -1032,13 +1038,14 @@ if(LLVM_USE_SANITIZER)
         # lld string tail merging interacts badly with ASAN on Windows, turn it off here
         # See https://github.com/llvm/llvm-project/issues/62078
         append("/opt:nolldtailmerge" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+        # Static and dynamic C runtimes all load ASAN as a DLL
+        # See https://devblogs.microsoft.com/cppblog/msvc-address-sanitizer-one-dll-for-all-runtime-configurations/
+        append("clang_rt.asan_dynamic-${arch}.lib" CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         if (${CMAKE_MSVC_RUNTIME_LIBRARY} MATCHES "^(MultiThreaded|MultiThreadedDebug)$")
-          append("/wholearchive:clang_rt.asan-${arch}.lib /wholearchive:clang_rt.asan_cxx-${arch}.lib"
-            CMAKE_EXE_LINKER_FLAGS)
-          append("/wholearchive:clang_rt.asan_dll_thunk-${arch}.lib"
-            CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+          append("/wholearchive:clang_rt.asan_static_runtime_thunk-${arch}.lib"
+            CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         else()
-          append("clang_rt.asan_dynamic-${arch}.lib /wholearchive:clang_rt.asan_dynamic_runtime_thunk-${arch}.lib"
+          append("/wholearchive:clang_rt.asan_dynamic_runtime_thunk-${arch}.lib"
             CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
         endif()
       endif()
@@ -1235,6 +1242,8 @@ if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
   else()
     message(FATAL_ERROR "LLVM_PROFDATA_FILE can only be specified when compiling with clang")
   endif()
+elseif(LLVM_PROFDATA_FILE)
+  message(WARNING "LLVM_PROFDATA_FILE specified, but ${LLVM_PROFDATA_FILE} not found")
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)

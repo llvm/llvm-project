@@ -277,6 +277,12 @@ constexpr bool4 isinf(double4 V) { return isinf((float4)V); }
 // lerp builtins overloads
 //===----------------------------------------------------------------------===//
 
+template <typename T, uint N>
+constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
+lerp(vector<T, N> x, vector<T, N> y, T s) {
+  return lerp(x, y, (vector<T, N>)s);
+}
+
 _DXC_COMPAT_TERNARY_DOUBLE_OVERLOADS(lerp)
 _DXC_COMPAT_TERNARY_INTEGER_OVERLOADS(lerp)
 

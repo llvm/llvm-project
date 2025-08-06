@@ -30,6 +30,10 @@ RWBuffer<float> UAV : register(u3);
 // CHECK: HLSLResourceBindingAttr {{.*}} "u4" "space0"
 RWBuffer<float> UAV1 : register(u2), UAV2 : register(u4);
 
+// CHECK: VarDecl {{.*}} UAV3 'RWBuffer<float>':'hlsl::RWBuffer<float>'
+// CHECK: HLSLResourceBindingAttr {{.*}} "" "space5"
+RWBuffer<float> UAV3 : register(space5);
+
 //
 // Default constants ($Globals) layout annotations
 

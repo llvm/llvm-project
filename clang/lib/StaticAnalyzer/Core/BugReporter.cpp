@@ -20,7 +20,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ParentMap.h"
-#include "clang/AST/ParentMapContext.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtObjC.h"
@@ -44,7 +43,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/SMTConv.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -53,15 +51,10 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -2171,6 +2164,7 @@ PathSensitiveBugReport::PathSensitiveBugReport(
     : BugReport(Kind::PathSensitive, bt, shortDesc, desc), ErrorNode(errorNode),
       ErrorNodeRange(getStmt() ? getStmt()->getSourceRange() : SourceRange()),
       UniqueingLocation(LocationToUnique), UniqueingDecl(DeclToUnique) {
+  assert(ErrorNode && "The error node must be non-null!");
   assert(!isDependency(ErrorNode->getState()
                            ->getAnalysisManager()
                            .getCheckerManager()
@@ -2660,8 +2654,7 @@ BugPathGetter::BugPathGetter(const ExplodedGraph *OriginalGraph,
   // Perform a forward BFS to find all the shortest paths.
   std::queue<const ExplodedNode *> WS;
 
-  assert(TrimmedGraph->num_roots() == 1);
-  WS.push(*TrimmedGraph->roots_begin());
+  WS.push(TrimmedGraph->getRoot());
   unsigned Priority = 0;
 
   while (!WS.empty()) {
@@ -2722,7 +2715,9 @@ BugPathInfo *BugPathGetter::getNextBugPath() {
 
     // Are we at the final node?
     if (OrigN->pred_empty()) {
-      GNew->addRoot(NewN);
+      assert(OrigN == TrimmedGraph->getRoot() &&
+             "There should be only one root!");
+      GNew->designateAsRoot(NewN);
       break;
     }
 
@@ -3377,8 +3372,6 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
     BugReport *exampleReport,
     ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
     ArrayRef<BugReport *> bugReports) {
-  std::vector<BasicBugReport *> BasicBugReports;
-  std::vector<PathSensitiveBugReport *> PathSensitiveBugReports;
   if (isa<BasicBugReport>(exampleReport))
     return BugReporter::generateDiagnosticForConsumerMap(exampleReport,
                                                          consumers, bugReports);
@@ -3413,9 +3406,9 @@ PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
-                                  const CheckerBase *Checker, StringRef Name,
-                                  StringRef Category, StringRef Str,
-                                  PathDiagnosticLocation Loc,
+                                  const CheckerFrontend *Checker,
+                                  StringRef Name, StringRef Category,
+                                  StringRef Str, PathDiagnosticLocation Loc,
                                   ArrayRef<SourceRange> Ranges,
                                   ArrayRef<FixItHint> Fixits) {
   EmitBasicReport(DeclWithIssue, Checker->getName(), Name, Category, Str, Loc,

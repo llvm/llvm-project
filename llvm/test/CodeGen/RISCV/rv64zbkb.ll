@@ -114,7 +114,7 @@ define i64 @pack_i64_3(ptr %0, ptr %1) {
 ; RV64ZBKB-LABEL: pack_i64_3:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    lw a0, 0(a0)
-; RV64ZBKB-NEXT:    lwu a1, 0(a1)
+; RV64ZBKB-NEXT:    lw a1, 0(a1)
 ; RV64ZBKB-NEXT:    pack a0, a1, a0
 ; RV64ZBKB-NEXT:    ret
   %3 = load i32, ptr %0, align 4
@@ -319,7 +319,7 @@ define i64 @pack_i64_imm() {
 ; RV64I-LABEL: pack_i64_imm:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    lui a0, 65793
-; RV64I-NEXT:    addiw a0, a0, 16
+; RV64I-NEXT:    addi a0, a0, 16
 ; RV64I-NEXT:    slli a1, a0, 32
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    ret

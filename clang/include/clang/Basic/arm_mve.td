@@ -710,7 +710,7 @@ defm vrndmq: vrnd<IRIntBase<"floor", [Vector]>, "m">;
 defm vrndpq: vrnd<IRIntBase<"ceil",  [Vector]>, "p">;
 defm vrndaq: vrnd<IRIntBase<"round", [Vector]>, "a">;
 defm vrndxq: vrnd<IRIntBase<"rint",  [Vector]>, "x">;
-defm vrndnq: vrnd<IRInt<"vrintn",    [Vector]>, "n">;
+defm vrndnq: vrnd<IRIntBase<"roundeven", [Vector]>, "n">;
 
 multiclass compare_with_pred<string condname, dag arguments,
                              dag cmp, string suffix> {

@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -38,23 +39,18 @@ class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPInterleaveRecipe;
+class VPPhiAccessors;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
 // coming from the input IR and instructions which VPlan will generate if
 // executed.
-class VPValue {
-  friend class VPBuilder;
+class LLVM_ABI_FOR_TEST VPValue {
   friend class VPDef;
   friend struct VPDoubleValueDef;
-  friend class VPInstruction;
   friend class VPInterleaveRecipe;
-  friend struct VPlanTransforms;
-  friend class VPBasicBlock;
-  friend class VPInterleavedAccessInfo;
-  friend class VPSlotTracker;
-  friend class VPRecipeBase;
   friend class VPlan;
+  friend class VPExpressionRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -181,7 +177,7 @@ public:
     return getUnderlyingValue();
   }
 
-  /// Returns true if the VPValue is defined outside any loop region.
+  /// Returns true if the VPValue is defined outside any loop.
   bool isDefinedOutsideLoopRegions() const;
 
   // Set \p Val as the underlying Value of this VPValue.
@@ -199,7 +195,17 @@ raw_ostream &operator<<(raw_ostream &OS, const VPRecipeBase &R);
 /// This class augments VPValue with operands which provide the inverse def-use
 /// edges from VPValue's users to their defs.
 class VPUser {
+  /// Grant access to removeOperand for VPPhiAccessors, the only supported user.
+  friend class VPPhiAccessors;
+
   SmallVector<VPValue *, 2> Operands;
+
+  /// Removes the operand at index \p Idx. This also removes the VPUser from the
+  /// use-list of the operand.
+  void removeOperand(unsigned Idx) {
+    getOperand(Idx)->removeUser(*this);
+    Operands.erase(Operands.begin() + Idx);
+  }
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -208,14 +214,6 @@ protected:
 #endif
 
   VPUser(ArrayRef<VPValue *> Operands) {
-    for (VPValue *Operand : Operands)
-      addOperand(Operand);
-  }
-
-  VPUser(std::initializer_list<VPValue *> Operands)
-      : VPUser(ArrayRef<VPValue *>(Operands)) {}
-
-  template <typename IterT> VPUser(iterator_range<IterT> Operands) {
     for (VPValue *Operand : Operands)
       addOperand(Operand);
   }
@@ -334,6 +332,7 @@ public:
     VPBranchOnMaskSC,
     VPDerivedIVSC,
     VPExpandSCEVSC,
+    VPExpressionSC,
     VPIRInstructionSC,
     VPInstructionSC,
     VPInterleaveSC,

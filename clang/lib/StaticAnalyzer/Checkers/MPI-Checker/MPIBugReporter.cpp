@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "MPIBugReporter.h"
-#include "MPIChecker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 
 namespace clang {

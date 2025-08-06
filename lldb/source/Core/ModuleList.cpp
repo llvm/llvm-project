@@ -214,34 +214,38 @@ const ModuleList &ModuleList::operator=(const ModuleList &rhs) {
 ModuleList::~ModuleList() = default;
 
 void ModuleList::AppendImpl(const ModuleSP &module_sp, bool use_notifier) {
-  if (module_sp) {
+  if (!module_sp)
+    return;
+  {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     // We are required to keep the first element of the Module List as the
-    // executable module.  So check here and if the first module is NOT an 
-    // but the new one is, we insert this module at the beginning, rather than 
+    // executable module.  So check here and if the first module is NOT an
+    // but the new one is, we insert this module at the beginning, rather than
     // at the end.
     // We don't need to do any of this if the list is empty:
     if (m_modules.empty()) {
       m_modules.push_back(module_sp);
     } else {
-      // Since producing the ObjectFile may take some work, first check the 0th
-      // element, and only if that's NOT an executable look at the incoming
-      // ObjectFile.  That way in the normal case we only look at the element
-      // 0 ObjectFile. 
-      const bool elem_zero_is_executable 
-          = m_modules[0]->GetObjectFile()->GetType() 
-              == ObjectFile::Type::eTypeExecutable;
+      // Since producing the ObjectFile may take some work, first check the
+      // 0th element, and only if that's NOT an executable look at the
+      // incoming ObjectFile.  That way in the normal case we only look at the
+      // element 0 ObjectFile.
+      const bool elem_zero_is_executable =
+          m_modules[0]->GetObjectFile()->GetType() ==
+          ObjectFile::Type::eTypeExecutable;
       lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
-      if (!elem_zero_is_executable && obj 
-          && obj->GetType() == ObjectFile::Type::eTypeExecutable) {
+      if (!elem_zero_is_executable && obj &&
+          obj->GetType() == ObjectFile::Type::eTypeExecutable) {
         m_modules.insert(m_modules.begin(), module_sp);
       } else {
         m_modules.push_back(module_sp);
       }
     }
-    if (use_notifier && m_notifier)
-      m_notifier->NotifyModuleAdded(*this, module_sp);
   }
+  // Release the mutex before calling the notifier to avoid deadlock
+  // NotifyModuleAdded should be thread-safe
+  if (use_notifier && m_notifier)
+    m_notifier->NotifyModuleAdded(*this, module_sp);
 }
 
 void ModuleList::Append(const ModuleSP &module_sp, bool notify) {
@@ -584,6 +588,20 @@ ModuleSP ModuleList::FindModule(const UUID &uuid) const {
   return module_sp;
 }
 
+ModuleSP ModuleList::FindModule(lldb::user_id_t uid) const {
+  ModuleSP module_sp;
+  ForEach([&](const ModuleSP &m) {
+    if (m->GetID() == uid) {
+      module_sp = m;
+      return IterationAction::Stop;
+    }
+
+    return IterationAction::Continue;
+  });
+
+  return module_sp;
+}
+
 void ModuleList::FindTypes(Module *search_first, const TypeQuery &query,
                            TypeResults &results) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
@@ -917,9 +935,10 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
 
   // Fixup the incoming path in case the path points to a valid file, yet the
   // arch or UUID (if one was passed in) don't match.
-  ModuleSpec located_binary_modulespec =
-      PluginManager::LocateExecutableObjectFile(module_spec);
-
+  ModuleSpec located_binary_modulespec;
+  StatisticsMap symbol_locator_map;
+  located_binary_modulespec = PluginManager::LocateExecutableObjectFile(
+      module_spec, symbol_locator_map);
   // Don't look for the file if it appears to be the same one we already
   // checked for above...
   if (located_binary_modulespec.GetFileSpec() != module_file_spec) {
@@ -992,6 +1011,7 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
       // By getting the object file we can guarantee that the architecture
       // matches
       if (module_sp && module_sp->GetObjectFile()) {
+        module_sp->GetSymbolLocatorStatistics().merge(symbol_locator_map);
         if (module_sp->GetObjectFile()->GetType() ==
             ObjectFile::eTypeStubLibrary) {
           module_sp.reset();
@@ -1044,8 +1064,14 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 bool continue_on_error) {
   if (!target)
     return false;
-  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
-  for (auto module : m_modules) {
+  m_modules_mutex.lock();
+  // Don't hold the module list mutex while loading the scripting resources,
+  // The initializer might do any amount of work, and having that happen while
+  // the module list is held is asking for A/B locking problems.
+  const ModuleList tmp_module_list(*this);
+  m_modules_mutex.unlock();
+
+  for (auto module : tmp_module_list.ModulesNoLocking()) {
     if (module) {
       Status error;
       if (!module->LoadScriptingResourceInTarget(target, error,
@@ -1069,12 +1095,12 @@ bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
 }
 
 void ModuleList::ForEach(
-    std::function<bool(const ModuleSP &module_sp)> const &callback) const {
+    std::function<IterationAction(const ModuleSP &module_sp)> const &callback)
+    const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (const auto &module_sp : m_modules) {
     assert(module_sp != nullptr);
-    // If the callback returns false, then stop iterating and break out
-    if (!callback(module_sp))
+    if (callback(module_sp) == IterationAction::Stop)
       break;
   }
 }

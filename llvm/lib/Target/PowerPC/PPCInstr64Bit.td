@@ -1958,8 +1958,8 @@ def : Pat<(PPCaddTls i64:$in, i64:$addr),
           (ADD8TLS $in, $addr)>;
 
 // 64-bits atomic loads and stores
-def : Pat<(atomic_load_64 DSForm:$src), (LD  memrix:$src)>;
-def : Pat<(atomic_load_64 XForm:$src),  (LDX memrr:$src)>;
+def : Pat<(atomic_load_nonext_64 DSForm:$src), (LD  memrix:$src)>;
+def : Pat<(atomic_load_nonext_64 XForm:$src),  (LDX memrr:$src)>;
 
 def : Pat<(atomic_store_64 i64:$val, DSForm:$ptr), (STD  g8rc:$val, memrix:$ptr)>;
 def : Pat<(atomic_store_64 i64:$val, XForm:$ptr), (STDX g8rc:$val, memrr:$ptr)>;
@@ -2023,6 +2023,8 @@ def SLBSYNC : XForm_0<31, 338, (outs), (ins), "slbsync", IIC_SprSLBSYNC, []>;
 
 } // IsISA3_0
 
+def : Pat<(int_ppc_ldarx ForceXForm:$ptr),
+          (LDARX ForceXForm:$ptr)>;
 def : Pat<(int_ppc_stdcx ForceXForm:$dst, g8rc:$A),
           (RLWINM (STDCX g8rc:$A, ForceXForm:$dst), 31, 31, 31)>;
 def : Pat<(PPCStoreCond ForceXForm:$dst, g8rc:$A, 8),

@@ -15,7 +15,7 @@ define <16 x float> @test3(<4 x float> %a) {
 ; CHECK-LABEL: test3:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
-; CHECK-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [0,1,2,3,4,18,16,7,8,9,10,11,12,13,14,15]
+; CHECK-NEXT:    vmovaps {{.*#+}} zmm2 = [0,1,2,3,4,18,16,7,8,9,10,11,12,13,14,15]
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0

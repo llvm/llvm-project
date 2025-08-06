@@ -75,8 +75,7 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -458,7 +457,7 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
   TII = ST->getInstrInfo();
 
   const Function &F = MF.getFunction();
-  bool OptForSize = F.hasFnAttribute(Attribute::OptimizeForSize);
+  bool OptForSize = F.hasOptSize();
 
   // Combine aggressively (for code size)
   ShouldCombineAggressively =

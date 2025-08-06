@@ -140,7 +140,9 @@ def : PatFprFpr<fmul, FMUL_D, FPR64>;
 def : PatFprFpr<fdiv, FDIV_D, FPR64>;
 def : PatFprFpr<fcopysign, FCOPYSIGN_D, FPR64>;
 def : PatFprFpr<fmaxnum_ieee, FMAX_D, FPR64>;
+def : PatFprFpr<fmaxnum, FMAX_D, FPR64>;
 def : PatFprFpr<fminnum_ieee, FMIN_D, FPR64>;
+def : PatFprFpr<fminnum, FMIN_D, FPR64>;
 def : PatFpr<fneg, FNEG_D, FPR64>;
 def : PatFpr<fabs, FABS_D, FPR64>;
 def : PatFpr<fsqrt, FSQRT_D, FPR64>;
@@ -317,3 +319,19 @@ def : Pat<(bitconvert FPR64:$src), (MOVFR2GR_D FPR64:$src)>;
 let Predicates = [HasBasicD, IsLA64] in {
 def : PatFpr<frint, FRINT_D, FPR64>;
 } // Predicates = [HasBasicD, IsLA64]
+
+/// Pseudo-instructions needed for the soft-float ABI with LA32D
+
+let Predicates = [HasBasicD, IsLA32] in {
+// Moves two GPRs to an FPR.
+let usesCustomInserter = 1 in
+def BuildPairF64Pseudo
+    : Pseudo<(outs FPR64:$dst), (ins GPR:$src1, GPR:$src2),
+             [(set FPR64:$dst, (loongarch_build_pair_f64 GPR:$src1, GPR:$src2))]>;
+
+// Moves an FPR to two GPRs.
+let usesCustomInserter = 1 in
+def SplitPairF64Pseudo
+    : Pseudo<(outs GPR:$dst1, GPR:$dst2), (ins FPR64:$src),
+             [(set GPR:$dst1, GPR:$dst2, (loongarch_split_pair_f64 FPR64:$src))]>;
+} // Predicates = [HasBasicD, IsLA32]

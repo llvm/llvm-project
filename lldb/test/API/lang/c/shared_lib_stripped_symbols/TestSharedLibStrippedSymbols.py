@@ -13,7 +13,7 @@ class SharedLibStrippedTestCase(TestBase):
     # Sometimes fails with:
     # error: Couldn't allocate space for materialized struct: Couldn't malloc: address space is full
     # On 32 bit Arm Linux.
-    @skipIf(archs=["arm"])
+    @skipIf(archs=["arm$"])
     def test_expr(self):
         """Test that types work when defined in a shared library and forward-declared in the main executable"""
         if "clang" in self.getCompiler() and "3.4" in self.getCompilerVersion():

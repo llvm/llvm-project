@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
@@ -40,6 +41,27 @@ using namespace llvm;
 
 #define DEBUG_TYPE "clone-function"
 
+STATISTIC(RemappedAtomMax, "Highest global NextAtomGroup (after mapping)");
+
+void llvm::mapAtomInstance(const DebugLoc &DL, ValueToValueMapTy &VMap) {
+  auto CurGroup = DL->getAtomGroup();
+  if (!CurGroup)
+    return;
+
+  // Try inserting a new entry. If there's already a mapping for this atom
+  // then there's nothing to do.
+  auto [It, Inserted] = VMap.AtomMap.insert({{DL.getInlinedAt(), CurGroup}, 0});
+  if (!Inserted)
+    return;
+
+  // Map entry to a new atom group.
+  uint64_t NewGroup = DL->getContext().incNextDILocationAtomGroup();
+  assert(NewGroup > CurGroup && "Next should always be greater than current");
+  It->second = NewGroup;
+
+  RemappedAtomMax = std::max<uint64_t>(NewGroup, RemappedAtomMax);
+}
+
 namespace {
 void collectDebugInfoFromInstructions(const Function &F,
                                       DebugInfoFinder &DIFinder) {
@@ -59,17 +81,28 @@ MetadataPredicate createIdentityMDPredicate(const Function &F,
     return [](const Metadata *MD) { return false; };
 
   DISubprogram *SPClonedWithinModule = F.getSubprogram();
+
+  // Don't clone inlined subprograms.
+  auto ShouldKeep = [SPClonedWithinModule](const DISubprogram *SP) -> bool {
+    return SP != SPClonedWithinModule;
+  };
+
   return [=](const Metadata *MD) {
     // Avoid cloning types, compile units, and (other) subprograms.
     if (isa<DICompileUnit>(MD) || isa<DIType>(MD))
       return true;
 
     if (auto *SP = dyn_cast<DISubprogram>(MD))
-      return SP != SPClonedWithinModule;
+      return ShouldKeep(SP);
 
     // If a subprogram isn't going to be cloned skip its lexical blocks as well.
     if (auto *LScope = dyn_cast<DILocalScope>(MD))
-      return LScope->getSubprogram() != SPClonedWithinModule;
+      return ShouldKeep(LScope->getSubprogram());
+
+    // Avoid cloning local variables of subprograms that won't be cloned.
+    if (auto *DV = dyn_cast<DILocalVariable>(MD))
+      if (auto *S = dyn_cast_or_null<DILocalScope>(DV->getScope()))
+        return ShouldKeep(S->getSubprogram());
 
     return false;
   };
@@ -79,9 +112,8 @@ MetadataPredicate createIdentityMDPredicate(const Function &F,
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,
-                                  ClonedCodeInfo *CodeInfo) {
+                                  ClonedCodeInfo *CodeInfo, bool MapAtoms) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
-  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
@@ -97,6 +129,11 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
     NewInst->cloneDebugInfoFrom(&I);
 
     VMap[&I] = NewInst; // Add instruction map to value.
+
+    if (MapAtoms) {
+      if (const DebugLoc &DL = NewInst->getDebugLoc())
+        mapAtomInstance(DL.get(), VMap);
+    }
 
     if (isa<CallInst>(I) && !I.isDebugOrPseudoInst()) {
       hasCalls = true;
@@ -248,7 +285,6 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
                              const char *NameSuffix, ClonedCodeInfo *CodeInfo,
                              ValueMapTypeRemapper *TypeMapper,
                              ValueMaterializer *Materializer) {
-  NewFunc->setIsNewDbgInfoFormat(OldFunc->IsNewDbgInfoFormat);
   assert(NameSuffix && "NameSuffix cannot be null!");
 
 #ifndef NDEBUG
@@ -353,7 +389,6 @@ Function *llvm::CloneFunction(Function *F, ValueToValueMapTy &VMap,
   // Create the new function...
   Function *NewF = Function::Create(FTy, F->getLinkage(), F->getAddressSpace(),
                                     F->getName(), F->getParent());
-  NewF->setIsNewDbgInfoFormat(F->IsNewDbgInfoFormat);
 
   // Loop over the arguments, copying the names of the mapped arguments over...
   Function::arg_iterator DestI = NewF->arg_begin();
@@ -487,7 +522,6 @@ void PruningFunctionCloner::CloneBlock(
   BasicBlock *NewBB;
   Twine NewName(BB->hasName() ? Twine(BB->getName()) + NameSuffix : "");
   BBEntry = NewBB = BasicBlock::Create(BB->getContext(), NewName, NewFunc);
-  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
 
   // It is only legal to clone a function if a block address within that
   // function is never referenced outside of the function.  Given that, we
@@ -510,10 +544,7 @@ void PruningFunctionCloner::CloneBlock(
   // Keep a cursor pointing at the last place we cloned debug-info records from.
   BasicBlock::const_iterator DbgCursor = StartingInst;
   auto CloneDbgRecordsToHere =
-      [NewBB, &DbgCursor](Instruction *NewInst, BasicBlock::const_iterator II) {
-        if (!NewBB->IsNewDbgInfoFormat)
-          return;
-
+      [&DbgCursor](Instruction *NewInst, BasicBlock::const_iterator II) {
         // Clone debug-info records onto this instruction. Iterate through any
         // source-instructions we've cloned and then subsequently optimised
         // away, so that their debug-info doesn't go missing.
@@ -545,9 +576,8 @@ void PruningFunctionCloner::CloneBlock(
     }
 
     // Eagerly remap operands to the newly cloned instruction, except for PHI
-    // nodes for which we defer processing until we update the CFG. Also defer
-    // debug intrinsic processing because they may contain use-before-defs.
-    if (!isa<PHINode>(NewInst) && !isa<DbgVariableIntrinsic>(NewInst)) {
+    // nodes for which we defer processing until we update the CFG.
+    if (!isa<PHINode>(NewInst)) {
       RemapInstruction(NewInst, VMap,
                        ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges);
 
@@ -700,15 +730,6 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   else {
     StartingBB = &OldFunc->getEntryBlock();
     StartingInst = &StartingBB->front();
-  }
-
-  // Collect debug intrinsics for remapping later.
-  SmallVector<const DbgVariableIntrinsic *, 8> DbgIntrinsics;
-  for (const auto &BB : *OldFunc) {
-    for (const auto &I : BB) {
-      if (const auto *DVI = dyn_cast<DbgVariableIntrinsic>(&I))
-        DbgIntrinsics.push_back(DVI);
-    }
   }
 
   // Clone the entry block, and anything recursively reachable from it.
@@ -868,21 +889,11 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
   // Restore attributes.
   NewFunc->setAttributes(Attrs);
 
-  // Remap debug intrinsic operands now that all values have been mapped.
-  // Doing this now (late) preserves use-before-defs in debug intrinsics. If
+  // Remap debug records operands now that all values have been mapped.
+  // Doing this now (late) preserves use-before-defs in debug records. If
   // we didn't do this, ValueAsMetadata(use-before-def) operands would be
   // replaced by empty metadata. This would signal later cleanup passes to
-  // remove the debug intrinsics, potentially causing incorrect locations.
-  for (const auto *DVI : DbgIntrinsics) {
-    if (DbgVariableIntrinsic *NewDVI =
-            cast_or_null<DbgVariableIntrinsic>(VMap.lookup(DVI)))
-      RemapInstruction(NewDVI, VMap,
-                       ModuleLevelChanges ? RF_None : RF_NoModuleLevelChanges,
-                       TypeMapper, Materializer);
-  }
-
-  // Do the same for DbgVariableRecords, touching all the instructions in the
-  // cloned range of blocks.
+  // remove the debug records, potentially causing incorrect locations.
   Function::iterator Begin = cast<BasicBlock>(VMap[StartingBB])->getIterator();
   for (BasicBlock &BB : make_range(Begin, NewFunc->end())) {
     for (Instruction &I : BB) {

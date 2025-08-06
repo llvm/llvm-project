@@ -210,6 +210,9 @@ def X86call_rvmarker  : SDNode<"X86ISD::CALL_RVMARKER",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
+def X86imp_call  : SDNode<"X86ISD::IMP_CALL",     SDT_X86Call,
+                        [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
+                         SDNPVariadic]>;
 
 def X86NoTrackCall : SDNode<"X86ISD::NT_CALL", SDT_X86Call,
                             [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
@@ -839,15 +842,20 @@ def X86fldf80 : PatFrag<(ops node:$ptr), (X86fld node:$ptr), [{
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::f80;
 }]>;
 
-def X86fild16 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-def X86fild32 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-def X86fild64 : PatFrag<(ops node:$ptr), (X86fild node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+def X86fild16 : PatFrag<(ops node:$ptr), (X86fild node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i16;
+}
+
+def X86fild32 : PatFrag<(ops node:$ptr), (X86fild node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i32;
+}
+
+def X86fild64 : PatFrag<(ops node:$ptr), (X86fild node:$ptr)> {
+  let IsLoad = true;
+  let MemoryVT = i64;
+}
 
 def X86fist32 : PatFrag<(ops node:$val, node:$ptr),
                         (X86fist node:$val, node:$ptr), [{
@@ -859,18 +867,23 @@ def X86fist64 : PatFrag<(ops node:$val, node:$ptr),
   return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
 }]>;
 
-def X86fp_to_i16mem : PatFrag<(ops node:$val, node:$ptr),
-                              (X86fp_to_mem node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-def X86fp_to_i32mem : PatFrag<(ops node:$val, node:$ptr),
-                              (X86fp_to_mem node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-def X86fp_to_i64mem : PatFrag<(ops node:$val, node:$ptr),
-                              (X86fp_to_mem node:$val, node:$ptr), [{
-  return cast<MemIntrinsicSDNode>(N)->getMemoryVT() == MVT::i64;
-}]>;
+def X86fp_to_i16mem
+    : PatFrag<(ops node:$val, node:$ptr), (X86fp_to_mem node:$val, node:$ptr)> {
+  let IsStore = true;
+  let MemoryVT = i16;
+}
+
+def X86fp_to_i32mem
+    : PatFrag<(ops node:$val, node:$ptr), (X86fp_to_mem node:$val, node:$ptr)> {
+  let IsStore = true;
+  let MemoryVT = i32;
+}
+
+def X86fp_to_i64mem
+    : PatFrag<(ops node:$val, node:$ptr), (X86fp_to_mem node:$val, node:$ptr)> {
+  let IsStore = true;
+  let MemoryVT = i64;
+}
 
 //===----------------------------------------------------------------------===//
 // FPStack pattern fragments

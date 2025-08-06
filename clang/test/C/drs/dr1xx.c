@@ -1,8 +1,8 @@
-/* RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c99 -fsyntax-only -verify=expected,c99untilc2x -pedantic -Wno-c11-extensions %s
-   RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c99untilc2x -pedantic %s
-   RUN: %clang_cc1 -std=c2x -fsyntax-only -verify=expected,c2xandup -pedantic %s
+/* RUN: %clang_cc1 -std=c89 -fsyntax-only -verify=expected,c89only,untilc23 -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c99 -fsyntax-only -verify=expected,c99untilc2x,untilc23 -pedantic -Wno-c11-extensions %s
+   RUN: %clang_cc1 -std=c11 -fsyntax-only -verify=expected,c99untilc2x,untilc23 -pedantic %s
+   RUN: %clang_cc1 -std=c17 -fsyntax-only -verify=expected,c99untilc2x,untilc23 -pedantic %s
+   RUN: %clang_cc1 -std=c23 -fsyntax-only -verify=expected,c2xandup -pedantic %s
  */
 
 /* The following are DRs which do not require tests to demonstrate
@@ -87,15 +87,15 @@ void dr101_caller(void) {
  * Tag redeclaration constraints
  */
 void dr102(void) {
-  struct S { int member; }; /* expected-note {{previous definition is here}} */
-  struct S { int member; }; /* expected-error {{redefinition of 'S'}} */
+  struct S { int member; }; /* untilc23-note {{previous definition is here}} */
+  struct S { int member; }; /* untilc23-error {{redefinition of 'S'}} */
 
-  union U { int member; }; /* expected-note {{previous definition is here}} */
-  union U { int member; }; /* expected-error {{redefinition of 'U'}} */
+  union U { int member; }; /* untilc23-note {{previous definition is here}} */
+  union U { int member; }; /* untilc23-error {{redefinition of 'U'}} */
 
-  enum E { member }; /* expected-note 2{{previous definition is here}} */
-  enum E { member }; /* expected-error {{redefinition of 'E'}}
-                        expected-error {{redefinition of enumerator 'member'}} */
+  enum E { member }; /* untilc23-note 2{{previous definition is here}} */
+  enum E { member }; /* untilc23-error {{redefinition of 'E'}}
+                        untilc23-error {{redefinition of enumerator 'member'}} */
 }
 
 /* WG14 DR103: yes
@@ -107,7 +107,7 @@ void dr103_2(struct S s) {} /* expected-warning {{declaration of 'struct S' will
                                expected-note {{forward declaration of 'struct S'}} */
 void dr103_3(struct S s);               /* expected-warning {{declaration of 'struct S' will not be visible outside of this function}}
                                            expected-note {{previous declaration is here}} */
-void dr103_3(struct S { int a; } s) { } /* expected-warning {{declaration of 'struct S' will not be visible outside of this function}}
+void dr103_3(struct S { int a; } s) { } /* untilc23-warning {{declaration of 'struct S' will not be visible outside of this function}}
                                            expected-error {{conflicting types for 'dr103_3'}} */
 void dr103_4(struct S s1, struct S { int a; } s2); /* expected-warning {{declaration of 'struct S' will not be visible outside of this function}} */
 
@@ -289,7 +289,7 @@ void dr124(void) {
  */
 void dr126(void) {
   typedef int *IP;
-  const IP object; /* expected-note {{variable 'object' declared const here}} */
+  const IP object = 0; /* expected-note {{variable 'object' declared const here}} */
 
   /* The root of the DR is whether 'object' is a pointer to a const int, or a
    * const pointer to int.
@@ -329,7 +329,7 @@ void dr129(void) {
 void dr131(void) {
   struct S {
     const int i; /* expected-note {{data member 'i' declared const here}} */
-  } s1, s2;
+  } s1 = { 0 }, s2 = { 0 };
   s1 = s2; /* expected-error {{cannot assign to variable 's1' with const-qualified data member 'i'}} */
 }
 

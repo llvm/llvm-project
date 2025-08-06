@@ -14,6 +14,7 @@ from __future__ import print_function
 
 import re
 import gdb
+import gdb.printing
 
 # One under-documented feature of the gdb pretty-printer API
 # is that clients can call any other member of the API
@@ -62,16 +63,6 @@ def _remove_generics(typename):
 
     match = re.match("^([^<]+)", typename)
     return match.group(1)
-
-
-def _cc_field(node):
-    """Previous versions of libcxx had inconsistent field naming naming. Handle
-    both types.
-    """
-    try:
-        return node["__value_"]["__cc_"]
-    except:
-        return node["__value_"]["__cc"]
 
 
 def _data_field(node):
@@ -673,7 +664,7 @@ class StdMapPrinter(AbstractRBTreePrinter):
         return "map"
 
     def _get_key_value(self, node):
-        key_value = _cc_field(node.cast(self.util.cast_type).dereference())
+        key_value = node.cast(self.util.cast_type).dereference()["__value_"]
         return [key_value["first"], key_value["second"]]
 
 
@@ -738,7 +729,7 @@ class MapIteratorPrinter(AbstractRBTreeIteratorPrinter):
         self._initialize(val["__i_"], _remove_generics(_prettify_typename(val.type)))
 
     def _get_node_value(self, node):
-        return _cc_field(node)
+        return node["__value_"]
 
 
 class SetIteratorPrinter(AbstractRBTreeIteratorPrinter):
@@ -828,7 +819,7 @@ class StdUnorderedMapPrinter(AbstractUnorderedCollectionPrinter):
     """Print a std::unordered_(multi)map."""
 
     def _get_key_value(self, node):
-        key_value = _cc_field(node)
+        key_value = node["__value_"]
         return [key_value["first"], key_value["second"]]
 
     def display_hint(self):
@@ -884,7 +875,7 @@ class StdUnorderedMapIteratorPrinter(AbstractHashMapIteratorPrinter):
         self._initialize(val, val["__i_"]["__node_"])
 
     def _get_key_value(self):
-        key_value = _cc_field(self.node)
+        key_value = self.node["__value_"]
         return [key_value["first"], key_value["second"]]
 
     def display_hint(self):

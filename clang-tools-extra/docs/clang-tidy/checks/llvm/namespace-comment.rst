@@ -39,3 +39,9 @@ Options
 
    An unsigned integer specifying the number of spaces before the comment
    closing a namespace definition. Default is `1U`.
+
+.. option:: AllowOmittingNamespaceComments
+
+   When `true`, the check will accept if no namespace comment is present.
+   The check will only fail if the specified namespace comment is different
+   than expected. Default is `false`.

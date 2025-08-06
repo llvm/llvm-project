@@ -131,8 +131,8 @@
 // VBMI2: "-target-feature" "+avx512vbmi2"
 // NO-VBMI2: "-target-feature" "-avx512vbmi2"
 
-// RUN: %clang -target i386-linux-gnu -mavx512vp2intersect %s -### 2>&1 | FileCheck -check-prefix=VP2INTERSECT %s
-// RUN: %clang -target i386-linux-gnu -mno-avx512vp2intersect %s -### 2>&1 | FileCheck -check-prefix=NO-VP2INTERSECT %s
+// RUN: %clang --target=i386-linux-gnu -mavx512vp2intersect %s -### 2>&1 | FileCheck -check-prefix=VP2INTERSECT %s
+// RUN: %clang --target=i386-linux-gnu -mno-avx512vp2intersect %s -### 2>&1 | FileCheck -check-prefix=NO-VP2INTERSECT %s
 // VP2INTERSECT: "-target-feature" "+avx512vp2intersect"
 // NO-VP2INTERSECT: "-target-feature" "-avx512vp2intersect"
 
@@ -146,27 +146,27 @@
 // RDPRU: "-target-feature" "+rdpru"
 // NO-RDPRU: "-target-feature" "-rdpru"
 
-// RUN: %clang -target i386-linux-gnu -mretpoline %s -### 2>&1 | FileCheck -check-prefix=RETPOLINE %s
-// RUN: %clang -target i386-linux-gnu -mno-retpoline %s -### 2>&1 | FileCheck -check-prefix=NO-RETPOLINE %s
+// RUN: %clang --target=i386-linux-gnu -mretpoline %s -### 2>&1 | FileCheck -check-prefix=RETPOLINE %s
+// RUN: %clang --target=i386-linux-gnu -mno-retpoline %s -### 2>&1 | FileCheck -check-prefix=NO-RETPOLINE %s
 // RETPOLINE: "-target-feature" "+retpoline-indirect-calls" "-target-feature" "+retpoline-indirect-branches"
 // NO-RETPOLINE-NOT: retpoline
 
-// RUN: %clang -target i386-linux-gnu -mretpoline -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=RETPOLINE-EXTERNAL-THUNK %s
-// RUN: %clang -target i386-linux-gnu -mretpoline -mno-retpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=NO-RETPOLINE-EXTERNAL-THUNK %s
+// RUN: %clang --target=i386-linux-gnu -mretpoline -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=RETPOLINE-EXTERNAL-THUNK %s
+// RUN: %clang --target=i386-linux-gnu -mretpoline -mno-retpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=NO-RETPOLINE-EXTERNAL-THUNK %s
 // RETPOLINE-EXTERNAL-THUNK: "-target-feature" "+retpoline-external-thunk"
 // NO-RETPOLINE-EXTERNAL-THUNK: "-target-feature" "-retpoline-external-thunk"
 
-// RUN: %clang -target i386-linux-gnu -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=SLH %s
-// RUN: %clang -target i386-linux-gnu -mretpoline -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=RETPOLINE %s
-// RUN: %clang -target i386-linux-gnu -mno-speculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=NO-SLH %s
+// RUN: %clang --target=i386-linux-gnu -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=SLH %s
+// RUN: %clang --target=i386-linux-gnu -mretpoline -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=RETPOLINE %s
+// RUN: %clang --target=i386-linux-gnu -mno-speculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=NO-SLH %s
 // SLH-NOT: retpoline
 // SLH: "-target-feature" "+retpoline-indirect-calls"
 // SLH-NOT: retpoline
 // SLH: "-mspeculative-load-hardening"
 // NO-SLH-NOT: retpoline
 
-// RUN: %clang -target i386-linux-gnu -mlvi-cfi %s -### 2>&1 | FileCheck -check-prefix=LVICFI %s
-// RUN: %clang -target i386-linux-gnu -mno-lvi-cfi %s -### 2>&1 | FileCheck -check-prefix=NO-LVICFI %s
+// RUN: %clang --target=i386-linux-gnu -mlvi-cfi %s -### 2>&1 | FileCheck -check-prefix=LVICFI %s
+// RUN: %clang --target=i386-linux-gnu -mno-lvi-cfi %s -### 2>&1 | FileCheck -check-prefix=NO-LVICFI %s
 // LVICFI: "-target-feature" "+lvi-cfi"
 // NO-LVICFI-NOT: lvi-cfi
 
@@ -177,8 +177,8 @@
 // RUN: not %clang --target=i386-linux-gnu -mlvi-cfi -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVICFI-RETPOLINE-EXTERNAL-THUNK %s
 // LVICFI-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mlvi-cfi'
 
-// RUN: %clang -target i386-linux-gnu -mlvi-hardening %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING %s
-// RUN: %clang -target i386-linux-gnu -mno-lvi-hardening %s -### 2>&1 | FileCheck -check-prefix=NO-LVIHARDENING %s
+// RUN: %clang --target=i386-linux-gnu -mlvi-hardening %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING %s
+// RUN: %clang --target=i386-linux-gnu -mno-lvi-hardening %s -### 2>&1 | FileCheck -check-prefix=NO-LVIHARDENING %s
 // LVIHARDENING: "-target-feature" "+lvi-load-hardening" "-target-feature" "+lvi-cfi"
 // NO-LVIHARDENING-NOT: "+lvi-
 
@@ -189,14 +189,14 @@
 // RUN: not %clang --target=i386-linux-gnu -mlvi-hardening -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE-EXTERNAL-THUNK %s
 // LVIHARDENING-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mlvi-hardening'
 
-// RUN: %clang -target i386-linux-gnu -mseses %s -### 2>&1 | FileCheck -check-prefix=SESES %s
-// RUN: %clang -target i386-linux-gnu -mno-seses %s -### 2>&1 | FileCheck -check-prefix=NO-SESES %s
+// RUN: %clang --target=i386-linux-gnu -mseses %s -### 2>&1 | FileCheck -check-prefix=SESES %s
+// RUN: %clang --target=i386-linux-gnu -mno-seses %s -### 2>&1 | FileCheck -check-prefix=NO-SESES %s
 // SESES: "-target-feature" "+seses"
 // SESES: "-target-feature" "+lvi-cfi"
 // NO-SESES-NOT: seses
 // NO-SESES-NOT: lvi-cfi
 
-// RUN: %clang -target i386-linux-gnu -mseses -mno-lvi-cfi %s -### 2>&1 | FileCheck -check-prefix=SESES-NOLVICFI %s
+// RUN: %clang --target=i386-linux-gnu -mseses -mno-lvi-cfi %s -### 2>&1 | FileCheck -check-prefix=SESES-NOLVICFI %s
 // SESES-NOLVICFI: "-target-feature" "+seses"
 // SESES-NOLVICFI-NOT: lvi-cfi
 
@@ -210,8 +210,8 @@
 // RUN: not %clang --target=i386-linux-gnu -mseses -mlvi-hardening %s -### 2>&1 | FileCheck -check-prefix=SESES-LVIHARDENING %s
 // SESES-LVIHARDENING: error: invalid argument 'mlvi-hardening' not allowed with 'mseses'
 
-// RUN: %clang -target i386-linux-gnu -mwaitpkg %s -### 2>&1 | FileCheck -check-prefix=WAITPKG %s
-// RUN: %clang -target i386-linux-gnu -mno-waitpkg %s -### 2>&1 | FileCheck -check-prefix=NO-WAITPKG %s
+// RUN: %clang --target=i386-linux-gnu -mwaitpkg %s -### 2>&1 | FileCheck -check-prefix=WAITPKG %s
+// RUN: %clang --target=i386-linux-gnu -mno-waitpkg %s -### 2>&1 | FileCheck -check-prefix=NO-WAITPKG %s
 // WAITPKG: "-target-feature" "+waitpkg"
 // NO-WAITPKG: "-target-feature" "-waitpkg"
 
@@ -265,13 +265,13 @@
 // TSXLDTRK: "-target-feature" "+tsxldtrk"
 // NO-TSXLDTRK: "-target-feature" "-tsxldtrk"
 
-// RUN: %clang -target i386-linux-gnu -mkl %s -### 2>&1 | FileCheck -check-prefix=KL %s
-// RUN: %clang -target i386-linux-gnu -mno-kl %s -### 2>&1 | FileCheck -check-prefix=NO-KL %s
+// RUN: %clang --target=i386-linux-gnu -mkl %s -### 2>&1 | FileCheck -check-prefix=KL %s
+// RUN: %clang --target=i386-linux-gnu -mno-kl %s -### 2>&1 | FileCheck -check-prefix=NO-KL %s
 // KL: "-target-feature" "+kl"
 // NO-KL: "-target-feature" "-kl"
 
-// RUN: %clang -target i386-linux-gnu -mwidekl %s -### 2>&1 | FileCheck -check-prefix=WIDE_KL %s
-// RUN: %clang -target i386-linux-gnu -mno-widekl %s -### 2>&1 | FileCheck -check-prefix=NO-WIDE_KL %s
+// RUN: %clang --target=i386-linux-gnu -mwidekl %s -### 2>&1 | FileCheck -check-prefix=WIDE_KL %s
+// RUN: %clang --target=i386-linux-gnu -mno-widekl %s -### 2>&1 | FileCheck -check-prefix=NO-WIDE_KL %s
 // WIDE_KL: "-target-feature" "+widekl"
 // NO-WIDE_KL: "-target-feature" "-widekl"
 
@@ -297,30 +297,30 @@
 // AMX-FP16: "-target-feature" "+amx-fp16"
 // NO-AMX-FP16: "-target-feature" "-amx-fp16"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-complex %s \
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-complex %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-COMPLEX %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-complex %s \
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-complex %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-COMPLEX %s
 // AMX-COMPLEX: "-target-feature" "+amx-complex"
 // NO-AMX-COMPLEX: "-target-feature" "-amx-complex"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-transpose %s \
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-transpose %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TRANSPOSE %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-transpose %s \
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-transpose %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TRANSPOSE %s
 // AMX-TRANSPOSE: "-target-feature" "+amx-transpose"
 // NO-AMX-TRANSPOSE: "-target-feature" "-amx-transpose"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-avx512 %s \
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-avx512 %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-AVX512 %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-avx512 %s \
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-avx512 %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-AVX512 %s
 // AMX-AVX512: "-target-feature" "+amx-avx512"
 // NO-AMX-AVX512: "-target-feature" "-amx-avx512"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -mamx-tf32 %s \
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mamx-tf32 %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=AMX-TF32 %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mno-amx-tf32 %s \
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-amx-tf32 %s \
 // RUN: -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AMX-TF32 %s
 // AMX-TF32: "-target-feature" "+amx-tf32"
 // NO-AMX-TF32: "-target-feature" "-amx-tf32"
@@ -355,8 +355,8 @@
 // RAOINT: "-target-feature" "+raoint"
 // NO-RAOINT: "-target-feature" "-raoint"
 
-// RUN: %clang -target i386-linux-gnu -mavxifma %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVXIFMA %s
-// RUN: %clang -target i386-linux-gnu -mno-avxifma %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVXIFMA %s
+// RUN: %clang --target=i386-linux-gnu -mavxifma %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVXIFMA %s
+// RUN: %clang --target=i386-linux-gnu -mno-avxifma %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVXIFMA %s
 // AVXIFMA: "-target-feature" "+avxifma"
 // NO-AVXIFMA: "-target-feature" "-avxifma"
 
@@ -471,22 +471,22 @@
 // RUN: touch %t.o
 // RUN: %clang -fdriver-only -Werror --target=x86_64-pc-linux-gnu -mharden-sls=all %t.o -o /dev/null 2>&1 | count 0
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
 //
 // APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu"
 // NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=ppx %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PPX %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NDD %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=ccmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CCMP %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=nf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NF %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=cf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CF %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=zu %s -### -o %t.o 2>&1 | FileCheck -check-prefix=ZU %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=ppx %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PPX %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NDD %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=ccmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CCMP %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=nf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NF %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=cf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=CF %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=zu %s -### -o %t.o 2>&1 | FileCheck -check-prefix=ZU %s
 // EGPR: "-target-feature" "+egpr"
 // PUSH2POP2: "-target-feature" "+push2pop2"
 // PPX: "-target-feature" "+ppx"
@@ -496,20 +496,20 @@
 // CF: "-target-feature" "+cf"
 // ZU: "-target-feature" "+zu"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apx-features=egpr -mno-apx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NO-NDD %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apx-features=egpr -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mno-apx-features=egpr,ndd -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NO-NDD %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr,ndd -mno-apx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NDD %s
-// RUN: %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr -mno-apx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NO-NDD %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr -mapx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apx-features=egpr -mno-apx-features=ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NO-NDD %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apx-features=egpr -mapx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NDD %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apx-features=egpr,ndd -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR-NO-NDD %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr,ndd -mno-apx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NDD %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr -mno-apx-features=egpr,ndd %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-EGPR-NO-NDD %s
 //
 // EGPR-NDD: "-target-feature" "+egpr" "-target-feature" "+ndd"
 // EGPR-NO-NDD: "-target-feature" "-ndd" "-target-feature" "+egpr"
 // NO-EGPR-NDD: "-target-feature" "+ndd" "-target-feature" "-egpr"
 // NO-EGPR-NO-NDD: "-target-feature" "-egpr" "-target-feature" "-ndd"
 
-// RUN: not %clang -target x86_64-unknown-linux-gnu -mapx-features=egpr,foo,bar %s -### -o %t.o 2>&1 | FileCheck -check-prefix=ERROR %s
+// RUN: not %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr,foo,bar %s -### -o %t.o 2>&1 | FileCheck -check-prefix=ERROR %s
 //
 // ERROR: unsupported argument 'foo' to option '-mapx-features='
 // ERROR: unsupported argument 'bar' to option '-mapx-features='

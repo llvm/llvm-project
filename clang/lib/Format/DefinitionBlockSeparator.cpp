@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DefinitionBlockSeparator.h"
-#include "llvm/Support/Debug.h"
 #define DEBUG_TYPE "definition-block-separator"
 
 namespace clang {
@@ -137,6 +136,10 @@ void DefinitionBlockSeparator::separateBlocks(
     const auto MayPrecedeDefinition = [&](const int Direction = -1) {
       assert(Direction >= -1);
       assert(Direction <= 1);
+
+      if (Lines[OpeningLineIndex]->First->is(TT_CSharpGenericTypeConstraint))
+        return true;
+
       const size_t OperateIndex = OpeningLineIndex + Direction;
       assert(OperateIndex < Lines.size());
       const auto &OperateLine = Lines[OperateIndex];

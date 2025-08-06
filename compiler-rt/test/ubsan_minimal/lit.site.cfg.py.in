@@ -5,6 +5,7 @@ config.name_suffix = "@UBSAN_TEST_CONFIG_SUFFIX@"
 # Tool-specific config options.
 config.target_cflags = "@UBSAN_TEST_TARGET_CFLAGS@"
 config.target_arch = "@UBSAN_TEST_TARGET_ARCH@"
+config.test_cfi = @UBSAN_TEST_HAS_CFI_PYBOOL@
 
 # Load common config for all compiler-rt lit tests.
 lit_config.load_config(config, "@COMPILER_RT_BINARY_DIR@/test/lit.common.configured")

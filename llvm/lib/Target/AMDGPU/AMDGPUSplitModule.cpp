@@ -1479,6 +1479,10 @@ static void splitAMDGPUModule(
              << "' - Partition summaries will not be printed\n";
   }
 
+  // One module will import all GlobalValues that are not Functions
+  // and are not subject to conservative import.
+  bool ImportAllGVs = true;
+
   for (unsigned PID = 0; PID < NumParts; ++PID) {
     SplitModuleTimer SMT2("modules_creation",
                           "creating modules for each partition");
@@ -1487,6 +1491,13 @@ static void splitAMDGPUModule(
     DenseSet<const Function *> FnsInPart;
     for (unsigned NodeID : (*Proposal)[PID].set_bits())
       FnsInPart.insert(&SG.getNode(NodeID).getFunction());
+
+    // Don't create empty modules.
+    if (FnsInPart.empty()) {
+      LLVM_DEBUG(dbgs() << "[split] P" << PID
+                        << " is empty, not creating module\n");
+      continue;
+    }
 
     ValueToValueMapTy VMap;
     CostType PartCost = 0;
@@ -1501,9 +1512,11 @@ static void splitAMDGPUModule(
             return false;
           }
 
-          // Everything else goes in the first partition.
-          return needsConservativeImport(GV) || PID == 0;
+          // Everything else goes in the first non-empty module we create.
+          return ImportAllGVs || needsConservativeImport(GV);
         }));
+
+    ImportAllGVs = false;
 
     // FIXME: Aliases aren't seen often, and their handling isn't perfect so
     // bugs are possible.

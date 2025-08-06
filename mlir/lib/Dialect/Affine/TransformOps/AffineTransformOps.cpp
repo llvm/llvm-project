@@ -12,6 +12,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
+#include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
@@ -112,13 +113,12 @@ SimplifyBoundedAffineOpsOp::apply(transform::TransformRewriter &rewriter,
     }
     if (boundedOps.contains(target)) {
       auto diag = emitDefiniteFailure()
-                  << "target op result must not be constrainted";
+                  << "target op result must not be constrained";
       diag.attachNote(target->getLoc()) << "target/constrained op";
       return diag;
     }
     targets.push_back(target);
   }
-  SmallVector<Operation *> transformed;
   RewritePatternSet patterns(getContext());
   // Canonicalization patterns are needed so that affine.apply ops are composed
   // with the remaining affine.min/max ops.
@@ -146,6 +146,42 @@ void SimplifyBoundedAffineOpsOp::getEffects(
   consumesHandle(getTargetMutable(), effects);
   for (OpOperand &operand : getBoundedValuesMutable())
     onlyReadsHandle(operand, effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
+// SimplifyMinMaxAffineOpsOp
+//===----------------------------------------------------------------------===//
+DiagnosedSilenceableFailure
+SimplifyMinMaxAffineOpsOp::apply(transform::TransformRewriter &rewriter,
+                                 TransformResults &results,
+                                 TransformState &state) {
+  SmallVector<Operation *> targets;
+  for (Operation *target : state.getPayloadOps(getTarget())) {
+    if (!isa<AffineMinOp, AffineMaxOp>(target)) {
+      auto diag = emitDefiniteFailure()
+                  << "target must be affine.min or affine.max";
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+    targets.push_back(target);
+  }
+  bool modified = false;
+  if (failed(mlir::affine::simplifyAffineMinMaxOps(rewriter, targets,
+                                                   &modified))) {
+    return emitDefiniteFailure()
+           << "affine.min/max simplification did not converge";
+  }
+  if (!modified) {
+    return emitSilenceableError()
+           << "the transform failed to simplify any of the target operations";
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void SimplifyMinMaxAffineOpsOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTargetMutable(), effects);
   modifiesPayload(effects);
 }
 

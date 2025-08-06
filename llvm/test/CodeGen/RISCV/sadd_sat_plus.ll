@@ -148,7 +148,7 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; RV64I-NEXT:    slli a1, a1, 48
 ; RV64I-NEXT:    srai a1, a1, 48
 ; RV64I-NEXT:    add a0, a0, a1
-; RV64I-NEXT:    addiw a1, a2, -1
+; RV64I-NEXT:    addi a1, a2, -1
 ; RV64I-NEXT:    bge a0, a1, .LBB2_3
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    lui a1, 1048568
@@ -182,7 +182,7 @@ define i16 @func16(i16 %x, i16 %y, i16 %z) nounwind {
 ; RV64IZbb-NEXT:    mul a1, a1, a2
 ; RV64IZbb-NEXT:    lui a2, 8
 ; RV64IZbb-NEXT:    sext.h a1, a1
-; RV64IZbb-NEXT:    addiw a2, a2, -1
+; RV64IZbb-NEXT:    addi a2, a2, -1
 ; RV64IZbb-NEXT:    add a0, a0, a1
 ; RV64IZbb-NEXT:    min a0, a0, a2
 ; RV64IZbb-NEXT:    lui a1, 1048568

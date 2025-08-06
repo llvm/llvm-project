@@ -200,6 +200,15 @@ def parse_args():
         type=_non_negative_int,
     )
     execution_group.add_argument(
+        "--max-retries-per-test",
+        dest="maxRetriesPerTest",
+        metavar="N",
+        help="Maximum number of allowed retry attempts per test "
+        "(NOTE: The config.test_retry_attempts test suite option and "
+        "ALLOWED_RETRIES keyword always take precedence)",
+        type=_positive_int,
+    )
+    execution_group.add_argument(
         "--max-failures",
         help="Stop execution after the given number of failures.",
         type=_positive_int,
@@ -293,6 +302,16 @@ def parse_args():
         type=_semicolon_list,
         help="do not XFAIL tests with paths in the semicolon separated list",
         default=os.environ.get("LIT_XFAIL_NOT", ""),
+    )
+    selection_group.add_argument(
+        "--exclude-xfail",
+        help="exclude XFAIL tests (unless they are in the --xfail-not list). "
+        "Note: This option is implemented in "
+        "lit.TestRunner.parseIntegratedTestScript and so will have no effect on "
+        "test formats that do not call that and do not implement the option "
+        "separately.",
+        default=False,
+        action="store_true",
     )
     selection_group.add_argument(
         "--num-shards",

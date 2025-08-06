@@ -45,8 +45,7 @@ public:
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -88,11 +87,19 @@ static std::optional<APInt> extractConstantBits(const Constant *C) {
   if (isa<UndefValue>(C))
     return APInt::getZero(NumBits);
 
-  if (auto *CInt = dyn_cast<ConstantInt>(C))
-    return CInt->getValue();
+  if (auto *CInt = dyn_cast<ConstantInt>(C)) {
+    if (isa<VectorType>(CInt->getType()))
+      return APInt::getSplat(NumBits, CInt->getValue());
 
-  if (auto *CFP = dyn_cast<ConstantFP>(C))
+    return CInt->getValue();
+  }
+
+  if (auto *CFP = dyn_cast<ConstantFP>(C)) {
+    if (isa<VectorType>(CFP->getType()))
+      return APInt::getSplat(NumBits, CFP->getValue().bitcastToAPInt());
+
     return CFP->getValue().bitcastToAPInt();
+  }
 
   if (auto *CV = dyn_cast<ConstantVector>(C)) {
     if (auto *CVSplat = getSplatValueAllowUndef(CV)) {
@@ -340,6 +347,7 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
   bool HasBWI = ST->hasBWI();
   bool HasVLX = ST->hasVLX();
   bool MultiDomain = ST->hasAVX512() || ST->hasNoDomainDelayMov();
+  bool OptSize = MF.getFunction().hasOptSize();
 
   struct FixupEntry {
     int Op;
@@ -348,6 +356,36 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
     std::function<Constant *(const Constant *, unsigned, unsigned, unsigned)>
         RebuildConstant;
   };
+
+  auto NewOpcPreferable = [&](const FixupEntry &Fixup,
+                              unsigned RegBitWidth) -> bool {
+    if (SM->hasInstrSchedModel()) {
+      unsigned NewOpc = Fixup.Op;
+      auto *OldDesc = SM->getSchedClassDesc(TII->get(Opc).getSchedClass());
+      auto *NewDesc = SM->getSchedClassDesc(TII->get(NewOpc).getSchedClass());
+      unsigned BitsSaved = RegBitWidth - (Fixup.NumCstElts * Fixup.MemBitWidth);
+
+      // Compare tput/lat - avoid any regressions, but allow extra cycle of
+      // latency in exchange for each 128-bit (or less) constant pool reduction
+      // (this is a very simple cost:benefit estimate - there will probably be
+      // better ways to calculate this).
+      double OldTput = MCSchedModel::getReciprocalThroughput(*ST, *OldDesc);
+      double NewTput = MCSchedModel::getReciprocalThroughput(*ST, *NewDesc);
+      if (OldTput != NewTput)
+        return NewTput < OldTput;
+
+      int LatTol = (BitsSaved + 127) / 128;
+      int OldLat = MCSchedModel::computeInstrLatency(*ST, *OldDesc);
+      int NewLat = MCSchedModel::computeInstrLatency(*ST, *NewDesc);
+      if (OldLat != NewLat)
+        return NewLat < (OldLat + LatTol);
+    }
+
+    // We either were unable to get tput/lat or all values were equal.
+    // Prefer the new opcode for reduced constant pool size.
+    return true;
+  };
+
   auto FixupConstant = [&](ArrayRef<FixupEntry> Fixups, unsigned RegBitWidth,
                            unsigned OperandNo) {
 #ifdef EXPENSIVE_CHECKS
@@ -364,7 +402,11 @@ bool X86FixupVectorConstantsPass::processInstruction(MachineFunction &MF,
       unsigned CstBitWidth = C->getType()->getPrimitiveSizeInBits();
       RegBitWidth = RegBitWidth ? RegBitWidth : CstBitWidth;
       for (const FixupEntry &Fixup : Fixups) {
-        if (Fixup.Op) {
+        // Always uses the smallest possible constant load with opt/minsize,
+        // otherwise use the smallest instruction that doesn't affect
+        // performance.
+        // TODO: If constant has been hoisted from loop, use smallest constant.
+        if (Fixup.Op && (OptSize || NewOpcPreferable(Fixup, RegBitWidth))) {
           // Construct a suitable constant and adjust the MI to use the new
           // constant pool entry.
           if (Constant *NewCst = Fixup.RebuildConstant(

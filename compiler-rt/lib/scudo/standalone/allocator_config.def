@@ -54,6 +54,9 @@ BASE_REQUIRED_TEMPLATE_TYPE(SecondaryT)
 // Indicates possible support for Memory Tagging.
 BASE_OPTIONAL(const bool, MaySupportMemoryTagging, false)
 
+// Disable the quarantine code.
+BASE_OPTIONAL(const bool, QuarantineDisabled, false)
+
 // PRIMARY_REQUIRED_TYPE(NAME)
 //
 // SizeClassMap to use with the Primary.

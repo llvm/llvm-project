@@ -5,6 +5,8 @@ declare <2 x double> @llvm.minnum.v2f64(<2 x double>, <2 x double>)
 declare <2 x double> @llvm.maxnum.v2f64(<2 x double>, <2 x double>)
 declare <2 x double> @llvm.minimum.v2f64(<2 x double>, <2 x double>)
 declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
+declare <2 x double> @llvm.minimumnum.v2f64(<2 x double>, <2 x double>)
+declare <2 x double> @llvm.maximumnum.v2f64(<2 x double>, <2 x double>)
 
 ; Constant folding - undef undef.
 
@@ -535,6 +537,38 @@ define <2 x double> @frem_undef_op0_constant_vec(<2 x double> %x) {
 ; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double undef>
 ;
   %r = frem <2 x double> undef, <double 42.0, double undef>
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_nan_op0_vec_partial_poison_op1_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op0_vec_partial_poison_op1_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double poison>
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double poison>, <2 x double> poison)
+  ret <2 x double> %r
+}
+
+define <2 x double> @maximumnum_nan_op1_vec_partial_poison_op0_poison(<2 x double> %x) {
+; CHECK-LABEL: @maximumnum_nan_op1_vec_partial_poison_op0_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double poison>
+;
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> poison, <2 x double> <double 0x7ff8000000000000, double poison>)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_nan_op0_vec_partial_poison_op1_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_nan_op0_vec_partial_poison_op1_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double poison>
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double poison>, <2 x double> poison)
+  ret <2 x double> %r
+}
+
+define <2 x double> @minimumnum_nan_op1_vec_partial_poison_op0_poison(<2 x double> %x) {
+; CHECK-LABEL: @minimumnum_nan_op1_vec_partial_poison_op0_poison(
+; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double poison>
+;
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> poison, <2 x double> <double 0x7ff8000000000000, double poison>)
   ret <2 x double> %r
 }
 

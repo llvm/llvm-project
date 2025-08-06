@@ -12,8 +12,8 @@
 #include "Arch/Mips.h"
 #include "Arch/PPC.h"
 #include "Arch/RISCV.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Distro.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Options.h"
@@ -23,7 +23,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include <system_error>
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -744,9 +743,11 @@ void Linux::AddHIPRuntimeLibArgs(const ArgList &Args,
       Args.MakeArgString(StringRef("-L") + RocmInstallation->getLibPath()));
 
   if (Args.hasFlag(options::OPT_frtlib_add_rpath,
-                   options::OPT_fno_rtlib_add_rpath, false))
-    CmdArgs.append(
-        {"-rpath", Args.MakeArgString(RocmInstallation->getLibPath())});
+                   options::OPT_fno_rtlib_add_rpath, false)) {
+    SmallString<0> p = RocmInstallation->getLibPath();
+    llvm::sys::path::remove_dots(p, true);
+    CmdArgs.append({"-rpath", Args.MakeArgString(p)});
+  }
 
   CmdArgs.push_back("-lamdhip64");
 }

@@ -226,7 +226,7 @@ def Arith_AddIOp : Arith_IntBinaryOpWithOverflowFlags<"addi", [Commutative]> {
     these is required to be the same type. This type may be an integer scalar type, 
     a vector whose element type is integer, or a tensor of integers.
 
-    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    This op supports `nuw`/`nsw` overflow flags which stands for
     "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
     `nsw` flags are present, and an unsigned/signed overflow occurs
     (respectively), the result is poison.
@@ -321,7 +321,7 @@ def Arith_SubIOp : Arith_IntBinaryOpWithOverflowFlags<"subi"> {
     these is required to be the same type. This type may be an integer scalar type,
     a vector whose element type is integer, or a tensor of integers.
 
-    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    This op supports `nuw`/`nsw` overflow flags which stands for
     "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
     `nsw` flags are present, and an unsigned/signed overflow occurs
     (respectively), the result is poison.
@@ -367,7 +367,7 @@ def Arith_MulIOp : Arith_IntBinaryOpWithOverflowFlags<"muli",
     these is required to be the same type. This type may be an integer scalar type,
     a vector whose element type is integer, or a tensor of integers.
 
-    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    This op supports `nuw`/`nsw` overflow flags which stands for
     "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
     `nsw` flags are present, and an unsigned/signed overflow occurs
     (respectively), the result is poison.
@@ -800,7 +800,7 @@ def Arith_ShLIOp : Arith_IntBinaryOpWithOverflowFlags<"shli"> {
     operand is greater or equal than the bitwidth of the first operand, then the
     operation returns poison.
 
-    This op supports `nuw`/`nsw` overflow flags which stands stand for
+    This op supports `nuw`/`nsw` overflow flags which stands for
     "No Unsigned Wrap" and "No Signed Wrap", respectively. If the `nuw` and/or
     `nsw` flags are present, and an unsigned/signed overflow occurs
     (respectively), the result is poison.
@@ -1216,10 +1216,66 @@ def Arith_ExtFOp : Arith_FToFCastOp<"extf", [DeclareOpInterfaceMethods<ArithFast
 }
 
 //===----------------------------------------------------------------------===//
+// Scaling ExtFOp
+//===----------------------------------------------------------------------===//
+def Arith_ScalingExtFOp
+    : Arith_Op<
+          "scaling_extf", [Pure, SameInputOutputTensorDims,
+                           DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                           DeclareOpInterfaceMethods<CastOpInterface>]>,
+      Arguments<(ins FloatLike:$in, FloatLike:$scale,
+          OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+      Results<(outs FloatLike:$out)> {
+  let summary = "Upcasts input floats using provided scales values following "
+                "OCP MXFP Spec";
+  let description = [{
+  This operation upcasts input floating-point values using provided scale 
+  values. It expects both scales and the input operand to be of the same shape, 
+  making the operation elementwise. Scales are usually calculated per block 
+  following the OCP MXFP spec as described in https://arxiv.org/abs/2310.10537.
+
+  If scales are calculated per block where blockSize != 1, then scales may 
+  require broadcasting to make this operation elementwise. For example, let's 
+  say the input is of shape `<dim1 x dim2 x ... dimN>`. Given blockSize != 1 and 
+  assuming quantization happens on the last axis, the input can be reshaped to 
+  `<dim1 x dim2 x ... (dimN/blockSize) x blockSize>`. Scales will be calculated 
+  per block on the last axis. Therefore, scales will be of shape 
+  `<dim1 x dim2 x ... (dimN/blockSize) x 1>`. Scales could also be of some other 
+  shape as long as it is broadcast compatible with the input, e.g., 
+  `<1 x 1 x ... (dimN/blockSize) x 1>`.
+
+  In this example, before calling into `arith.scaling_extf`, scales must be 
+  broadcasted to `<dim1 x dim2 x dim3 ... (dimN/blockSize) x blockSize>`. Note 
+  that there could be multiple quantization axes. Internally, 
+  `arith.scaling_extf` would perform the following:
+ 
+    ```
+    resultTy = get_type(result) 
+    scaleTy  = get_type(scale)
+    inputTy = get_type(input)
+    scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
+    scale.extf = arith.extf(scale.exponent) : f8E8M0 to resultTy
+    input.extf = arith.extf(input) : inputTy to resultTy
+    result = arith.mulf(scale.extf, input.extf)
+    ```
+    It propagates NaN values. Therefore, if either scale or the input element 
+    contains NaN, then the output element value will also be a NaN.
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat =
+      [{ $in `,` $scale (`fastmath` `` $fastmath^)? attr-dict `:` 
+      type($in) `,` type($scale) `to` type($out)}];
+}
+
+//===----------------------------------------------------------------------===//
 // TruncIOp
 //===----------------------------------------------------------------------===//
 
-def Arith_TruncIOp : Arith_IToICastOp<"trunci"> {
+def Arith_TruncIOp : Arith_Op<"trunci",
+    [Pure, SameOperandsAndResultShape, SameInputOutputTensorDims,
+     DeclareOpInterfaceMethods<CastOpInterface>,
+     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+     DeclareOpInterfaceMethods<ArithIntegerOverflowFlagsInterface>]> {
   let summary = "integer truncation operation";
   let description = [{
     The integer truncation operation takes an integer input of
@@ -1227,17 +1283,37 @@ def Arith_TruncIOp : Arith_IToICastOp<"trunci"> {
     bit-width must be smaller than the input bit-width (N < M).
     The top-most (N - M) bits of the input are discarded.
 
+    This op supports `nuw`/`nsw` overflow flags which stands for "No Unsigned
+    Wrap" and "No Signed Wrap", respectively. If the nuw keyword is present,
+    and any of the truncated bits are non-zero, the result is a poison value.
+    If the nsw keyword is present, and any of the truncated bits are not the
+    same as the top bit of the truncation result, the result is a poison value.
+
     Example:
 
     ```mlir
+      // Scalar truncation.
       %1 = arith.constant 21 : i5     // %1 is 0b10101
       %2 = arith.trunci %1 : i5 to i4 // %2 is 0b0101
       %3 = arith.trunci %1 : i5 to i3 // %3 is 0b101
 
-      %5 = arith.trunci %0 : vector<2 x i32> to vector<2 x i16>
+      // Vector truncation.
+      %4 = arith.trunci %0 : vector<2 x i32> to vector<2 x i16>
+
+      // Scalar truncation with overflow flags.
+      %5 = arith.trunci %a overflow<nsw, nuw> : i32 to i16
     ```
   }];
 
+  let arguments = (ins
+      SignlessFixedWidthIntegerLike:$in,
+      DefaultValuedAttr<Arith_IntegerOverflowAttr,
+          "::mlir::arith::IntegerOverflowFlags::none">:$overflowFlags);
+  let results = (outs SignlessFixedWidthIntegerLike:$out);
+  let assemblyFormat = [{
+    $in (`overflow` `` $overflowFlags^)? attr-dict
+    `:` type($in) `to` type($out)
+  }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -1273,10 +1349,68 @@ def Arith_TruncFOp :
   ];
 
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let assemblyFormat = [{ $in ($roundingmode^)?
                           (`fastmath` `` $fastmath^)?
                           attr-dict `:` type($in) `to` type($out) }];
+}
+
+//===----------------------------------------------------------------------===//
+// Scaling TruncFOp
+//===----------------------------------------------------------------------===//
+
+def Arith_ScalingTruncFOp
+    : Arith_Op<"scaling_truncf",
+               [Pure, SameInputOutputTensorDims,
+                DeclareOpInterfaceMethods<ArithRoundingModeInterface>,
+                DeclareOpInterfaceMethods<ArithFastMathInterface>,
+                DeclareOpInterfaceMethods<CastOpInterface>]>,
+      Arguments<(ins FloatLike:$in, FloatLike:$scale,
+          OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
+          OptionalAttr<Arith_FastMathAttr>:$fastmath)>,
+      Results<(outs FloatLike:$out)> {
+  let summary = "Downcasts input floating point values using provided scales "
+                "values following OCP MXFP Spec";
+  let description = [{
+    This operation downcasts input using the provided scale values. It expects 
+    both scales and the input operand to be of the same shape and, therefore, 
+    makes the operation elementwise. Scales are usually calculated per block 
+    following the OCP MXFP spec as described in https://arxiv.org/abs/2310.10537.
+    Users are required to normalize and clamp the scales as necessary before calling
+    passing them to this operation.  OCP MXFP spec also does the flushing of denorms
+    on the input operand, which should be handled during lowering by passing appropriate 
+    fastMath flag to this operation. 
+
+    If scales are calculated per block where blockSize != 1, scales may require 
+    broadcasting to make this operation elementwise. For example, let's say the 
+    input is of shape `<dim1 x dim2 x ... dimN>`. Given blockSize != 1 and 
+    assuming quantization happens on the last axis, the input can be reshaped to 
+    `<dim1 x dim2 x ... (dimN/blockSize) x blockSize>`. Scales will be calculated 
+    per block on the last axis. Therefore, scales will be of shape 
+    `<dim1 x dim2 x ... (dimN/blockSize) x 1>`. Scales could also be of some other 
+    shape as long as it is broadcast compatible with the input, e.g., 
+    `<1 x 1 x ... (dimN/blockSize) x 1>`.
+
+    In this example, before calling into `arith.scaling_truncf`, scales must be 
+    broadcasted to `<dim1 x dim2 x dim3 ... (dimN/blockSize) x blockSize>`. Note 
+    that there could be multiple quantization axes. Internally, 
+    `arith.scaling_truncf` would perform the following:
+
+    ```
+    scaleTy = get_type(scale)
+    inputTy = get_type(input)
+    resultTy = get_type(result)
+    scale.exponent = arith.truncf(scale) : scaleTy to f8E8M0
+    scale.extf = arith.extf(scale.exponent) : f8E8M0 to inputTy
+    result = arith.divf(input, scale.extf)
+    result.cast = arith.truncf(result, resultTy)
+    ```
+  }];
+  let hasVerifier = 1;
+  let assemblyFormat =
+      [{ $in `,` $scale ($roundingmode^)? (`fastmath` `` $fastmath^)? attr-dict `:` 
+      type($in) `,` type($scale) `to` type($out)}];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1554,8 +1688,7 @@ def SelectOp : Arith_Op<"select", [Pure,
     AllTypesMatch<["true_value", "false_value", "result"]>,
     BooleanConditionOrMatchingShape<"condition", "result">,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRangesFromOptional"]>,
-    DeclareOpInterfaceMethods<SelectLikeOpInterface>,
-  ] # ElementwiseMappable.traits> {
+    DeclareOpInterfaceMethods<SelectLikeOpInterface>]> {
   let summary = "select operation";
   let description = [{
     The `arith.select` operation chooses one value based on a binary condition

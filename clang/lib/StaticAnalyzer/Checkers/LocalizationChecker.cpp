@@ -747,9 +747,7 @@ void NonLocalizedStringChecker::reportLocalizationError(
   if (isDebuggingContext(C))
     return;
 
-  static CheckerProgramPointTag Tag("NonLocalizedStringChecker",
-                                    "UnlocalizedString");
-  ExplodedNode *ErrNode = C.addTransition(C.getState(), C.getPredecessor(), &Tag);
+  ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
 
   if (!ErrNode)
     return;
@@ -972,7 +970,6 @@ void NonLocalizedStringChecker::checkPostObjCMessage(const ObjCMethodCall &msg,
   const IdentifierInfo *odInfo = OD->getIdentifier();
 
   Selector S = msg.getSelector();
-  std::string SelectorName = S.getAsString();
 
   std::pair<const IdentifierInfo *, Selector> MethodDescription = {odInfo, S};
 
@@ -1121,8 +1118,7 @@ void EmptyLocalizationContextChecker::MethodCrawler::VisitObjCMessageExpr(
   // source, so SL should point to the NSLocalizedString macro.
   SourceLocation SL =
       Mgr.getSourceManager().getImmediateMacroCallerLoc(R.getBegin());
-  std::pair<FileID, unsigned> SLInfo =
-      Mgr.getSourceManager().getDecomposedLoc(SL);
+  FileIDAndOffset SLInfo = Mgr.getSourceManager().getDecomposedLoc(SL);
 
   SrcMgr::SLocEntry SE = Mgr.getSourceManager().getSLocEntry(SLInfo.first);
 

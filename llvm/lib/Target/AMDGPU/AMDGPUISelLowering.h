@@ -97,6 +97,9 @@ protected:
   SDValue LowerFP_TO_FP16(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue LowerF64ToF16Safe(SDValue Src, const SDLoc &DL,
+                            SelectionDAG &DAG) const;
+
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
@@ -385,6 +388,16 @@ public:
   MVT getFenceOperandTy(const DataLayout &DL) const override {
     return MVT::i32;
   }
+
+  bool hasMultipleConditionRegisters(EVT VT) const override {
+    // FIXME: This is only partially true. If we have to do vector compares, any
+    // SGPR pair can be a condition register. If we have a uniform condition, we
+    // are better off doing SALU operations, where there is only one SCC. For
+    // now, we don't have a way of knowing during instruction selection if a
+    // condition will be uniform and we always use vector compares. Assume we
+    // are using vector compares until that is fixed.
+    return true;
+  }
 };
 
 namespace AMDGPUISD {
@@ -542,6 +555,7 @@ enum NodeType : unsigned {
   /// Pointer to the start of the shader's constant data.
   CONST_DATA_PTR,
   PC_ADD_REL_OFFSET,
+  PC_ADD_REL_OFFSET64,
   LDS,
 
   DUMMY_CHAIN,
@@ -604,6 +618,12 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_FMAX,
   BUFFER_ATOMIC_COND_SUB_U32,
   LAST_MEMORY_OPCODE = BUFFER_ATOMIC_COND_SUB_U32,
+
+  // Set up a whole wave function.
+  WHOLE_WAVE_SETUP,
+
+  // Return from a whole wave function.
+  WHOLE_WAVE_RETURN,
 };
 
 } // End namespace AMDGPUISD

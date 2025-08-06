@@ -65,6 +65,7 @@ set(FLANG_TEST_DEPENDS
   bbc
   FortranDecimal
 )
+
 if (NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS
     llvm-config
@@ -73,16 +74,13 @@ if (NOT FLANG_STANDALONE_BUILD)
     not
     llvm-dis
     llvm-objdump
+    llvm-profdata
     llvm-readobj
     split-file
   )
 endif ()
 
-if (FLANG_INCLUDE_RUNTIME)
-  list(APPEND FLANG_TEST_DEPENDS flang_rt.runtime)
-endif ()
-
-if (LLVM_ENABLE_PLUGINS AND NOT WIN32 AND NOT FLANG_STANDALONE_BUILD)
+if (LLVM_BUILD_EXAMPLES AND LLVM_ENABLE_PLUGINS AND NOT (WIN32 OR CYGWIN) AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 
@@ -132,9 +130,3 @@ if (DEFINED FLANG_TEST_TARGET_TRIPLE)
                         "to use FLANG_TEST_TARGET_TRIPLE.")
   endif()
 endif()
-
-# Compatibility targets.
-if (FLANG_INCLUDE_RUNTIME)
-  add_custom_target(check-flang-rt)
-  add_dependencies(check-flang-rt check-flang)
-endif ()

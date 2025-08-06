@@ -180,37 +180,13 @@ def : Pat<(i64 (ctpop i64:$src)), (POPCrr $src)>;
 //===----------------------------------------------------------------------===//
 
 let Predicates = [Is64Bit] in {
-
-def MULXrr : F3_1<2, 0b001001,
-                  (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
-                  "mulx $rs1, $rs2, $rd",
-                  [(set i64:$rd, (mul i64:$rs1, i64:$rs2))]>;
-def MULXri : F3_2<2, 0b001001,
-                  (outs IntRegs:$rd), (ins IntRegs:$rs1, i64imm:$simm13),
-                  "mulx $rs1, $simm13, $rd",
-                  [(set i64:$rd, (mul i64:$rs1, (i64 simm13:$simm13)))]>;
+defm MULX    : F3_12<"mulx", 0b001001, mul, I64Regs, i64, i64imm>;
 
 // Division can trap.
 let hasSideEffects = 1 in {
-def SDIVXrr : F3_1<2, 0b101101,
-                   (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
-                   "sdivx $rs1, $rs2, $rd",
-                   [(set i64:$rd, (sdiv i64:$rs1, i64:$rs2))]>;
-def SDIVXri : F3_2<2, 0b101101,
-                   (outs IntRegs:$rd), (ins IntRegs:$rs1, i64imm:$simm13),
-                   "sdivx $rs1, $simm13, $rd",
-                   [(set i64:$rd, (sdiv i64:$rs1, (i64 simm13:$simm13)))]>;
-
-def UDIVXrr : F3_1<2, 0b001101,
-                   (outs I64Regs:$rd), (ins I64Regs:$rs1, I64Regs:$rs2),
-                   "udivx $rs1, $rs2, $rd",
-                   [(set i64:$rd, (udiv i64:$rs1, i64:$rs2))]>;
-def UDIVXri : F3_2<2, 0b001101,
-                   (outs IntRegs:$rd), (ins IntRegs:$rs1, i64imm:$simm13),
-                   "udivx $rs1, $simm13, $rd",
-                   [(set i64:$rd, (udiv i64:$rs1, (i64 simm13:$simm13)))]>;
+defm SDIVX    : F3_12<"sdivx", 0b101101, sdiv, I64Regs, i64, i64imm>;
+defm UDIVX    : F3_12<"udivx", 0b001101, udiv, I64Regs, i64, i64imm>;
 } // hasSideEffects = 1
-
 } // Predicates = [Is64Bit]
 
 
@@ -472,9 +448,9 @@ let Predicates = [Is64Bit, HasV9], Constraints = "$swap = $rd" in {
 
 let Predicates = [Is64Bit] in {
 
-// atomic_load_64 addr -> load addr
-def : Pat<(i64 (atomic_load_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
-def : Pat<(i64 (atomic_load_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
+// atomic_load_nonext_64 addr -> load addr
+def : Pat<(i64 (atomic_load_nonext_64 ADDRrr:$src)), (LDXrr ADDRrr:$src)>;
+def : Pat<(i64 (atomic_load_nonext_64 ADDRri:$src)), (LDXri ADDRri:$src)>;
 
 // atomic_store_64 val, addr -> store val, addr
 def : Pat<(atomic_store_64 i64:$val, ADDRrr:$dst), (STXrr ADDRrr:$dst, $val)>;

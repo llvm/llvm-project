@@ -179,7 +179,6 @@ LogicalResult OperationVerifier::verifyOnEntrance(Operation &op) {
   if (!numRegions)
     return success();
   auto kindInterface = dyn_cast<RegionKindInterface>(&op);
-  SmallVector<Operation *> opsWithIsolatedRegions;
   // Verify that all child regions are ok.
   MutableArrayRef<Region> regions = op.getRegions();
   for (unsigned i = 0; i < numRegions; ++i) {

@@ -45,6 +45,7 @@ static const unsigned WebAssemblyAddrSpaceMap[] = {
     0,  // hlsl_constant
     0,  // hlsl_private
     0,  // hlsl_device
+    0,  // hlsl_input
     20, // wasm_funcref
 };
 
@@ -63,6 +64,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
   bool HasFP16 = false;
+  bool HasGC = false;
   bool HasMultiMemory = false;
   bool HasMultivalue = false;
   bool HasMutableGlobals = false;
@@ -175,7 +177,8 @@ private:
 
   bool hasProtectedVisibility() const override { return false; }
 
-  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts) override;
+  void adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+              const TargetInfo *Aux) override;
 };
 
 class LLVM_LIBRARY_VISIBILITY WebAssembly32TargetInfo

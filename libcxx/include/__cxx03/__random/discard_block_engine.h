@@ -34,35 +34,24 @@ class _LIBCPP_TEMPLATE_VIS discard_block_engine {
 
   static_assert(0 < __r, "discard_block_engine invalid parameters");
   static_assert(__r <= __p, "discard_block_engine invalid parameters");
-#ifndef _LIBCPP_CXX03_LANG // numeric_limits::max() is not constexpr in C++03
-  static_assert(__r <= numeric_limits<int>::max(), "discard_block_engine invalid parameters");
-#endif
 
 public:
   // types
   typedef typename _Engine::result_type result_type;
 
   // engine characteristics
-  static _LIBCPP_CONSTEXPR const size_t block_size = __p;
-  static _LIBCPP_CONSTEXPR const size_t used_block = __r;
+  static const size_t block_size = __p;
+  static const size_t used_block = __r;
 
-#ifdef _LIBCPP_CXX03_LANG
   static const result_type _Min = _Engine::_Min;
   static const result_type _Max = _Engine::_Max;
-#else
-  static constexpr result_type _Min = _Engine::min();
-  static constexpr result_type _Max = _Engine::max();
-#endif
 
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Engine::min(); }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Engine::max(); }
+  _LIBCPP_HIDE_FROM_ABI static result_type min() { return _Engine::min(); }
+  _LIBCPP_HIDE_FROM_ABI static result_type max() { return _Engine::max(); }
 
   // constructors and seeding functions
   _LIBCPP_HIDE_FROM_ABI discard_block_engine() : __n_(0) {}
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(const _Engine& __e) : __e_(__e), __n_(0) {}
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(_Engine&& __e) : __e_(std::move(__e)), __n_(0) {}
-#endif // _LIBCPP_CXX03_LANG
   _LIBCPP_HIDE_FROM_ABI explicit discard_block_engine(result_type __sd) : __e_(__sd), __n_(0) {}
   template <
       class _Sseq,
@@ -111,10 +100,10 @@ public:
 };
 
 template <class _Engine, size_t __p, size_t __r>
-_LIBCPP_CONSTEXPR const size_t discard_block_engine<_Engine, __p, __r>::block_size;
+const size_t discard_block_engine<_Engine, __p, __r>::block_size;
 
 template <class _Engine, size_t __p, size_t __r>
-_LIBCPP_CONSTEXPR const size_t discard_block_engine<_Engine, __p, __r>::used_block;
+const size_t discard_block_engine<_Engine, __p, __r>::used_block;
 
 template <class _Engine, size_t __p, size_t __r>
 typename discard_block_engine<_Engine, __p, __r>::result_type discard_block_engine<_Engine, __p, __r>::operator()() {

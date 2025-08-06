@@ -19,6 +19,7 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <algorithm>
 #include <cassert>
@@ -39,7 +40,7 @@ template <typename T> class OwningBinary;
 
 /// Base class for errors originating in RuntimeDyld, e.g. missing relocation
 /// support.
-class RuntimeDyldError : public ErrorInfo<RuntimeDyldError> {
+class LLVM_ABI RuntimeDyldError : public ErrorInfo<RuntimeDyldError> {
 public:
   static char ID;
 
@@ -59,14 +60,14 @@ class RuntimeDyld {
 public:
   // Change the address associated with a section when resolving relocations.
   // Any relocations already associated with the symbol will be re-resolved.
-  void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
+  LLVM_ABI void reassignSectionAddress(unsigned SectionID, uint64_t Addr);
 
   using NotifyStubEmittedFunction = std::function<void(
       StringRef FileName, StringRef SectionName, StringRef SymbolName,
       unsigned SectionID, uint32_t StubOffset)>;
 
   /// Information about the loaded object.
-  class LoadedObjectInfo : public llvm::LoadedObjectInfo {
+  class LLVM_ABI LoadedObjectInfo : public llvm::LoadedObjectInfo {
     friend class RuntimeDyldImpl;
 
   public:
@@ -89,7 +90,7 @@ public:
   };
 
   /// Memory Management.
-  class MemoryManager {
+  class LLVM_ABI MemoryManager {
     friend class RuntimeDyld;
 
   public:
@@ -189,49 +190,51 @@ public:
   };
 
   /// Construct a RuntimeDyld instance.
-  RuntimeDyld(MemoryManager &MemMgr, JITSymbolResolver &Resolver);
+  LLVM_ABI RuntimeDyld(MemoryManager &MemMgr, JITSymbolResolver &Resolver);
   RuntimeDyld(const RuntimeDyld &) = delete;
   RuntimeDyld &operator=(const RuntimeDyld &) = delete;
-  ~RuntimeDyld();
+  LLVM_ABI ~RuntimeDyld();
 
   /// Add the referenced object file to the list of objects to be loaded and
   /// relocated.
-  std::unique_ptr<LoadedObjectInfo> loadObject(const object::ObjectFile &O);
+  LLVM_ABI std::unique_ptr<LoadedObjectInfo>
+  loadObject(const object::ObjectFile &O);
 
   /// Get the address of our local copy of the symbol. This may or may not
   /// be the address used for relocation (clients can copy the data around
   /// and resolve relocatons based on where they put it).
-  void *getSymbolLocalAddress(StringRef Name) const;
+  LLVM_ABI void *getSymbolLocalAddress(StringRef Name) const;
 
   /// Get the section ID for the section containing the given symbol.
-  unsigned getSymbolSectionID(StringRef Name) const;
+  LLVM_ABI unsigned getSymbolSectionID(StringRef Name) const;
 
   /// Get the target address and flags for the named symbol.
   /// This address is the one used for relocation.
-  JITEvaluatedSymbol getSymbol(StringRef Name) const;
+  LLVM_ABI JITEvaluatedSymbol getSymbol(StringRef Name) const;
 
   /// Returns a copy of the symbol table. This can be used by on-finalized
   /// callbacks to extract the symbol table before throwing away the
   /// RuntimeDyld instance. Because the map keys (StringRefs) are backed by
   /// strings inside the RuntimeDyld instance, the map should be processed
   /// before the RuntimeDyld instance is discarded.
-  std::map<StringRef, JITEvaluatedSymbol> getSymbolTable() const;
+  LLVM_ABI std::map<StringRef, JITEvaluatedSymbol> getSymbolTable() const;
 
   /// Resolve the relocations for all symbols we currently know about.
-  void resolveRelocations();
+  LLVM_ABI void resolveRelocations();
 
   /// Map a section to its target address space value.
   /// Map the address of a JIT section as returned from the memory manager
   /// to the address in the target process as the running code will see it.
   /// This is the address which will be used for relocation resolution.
-  void mapSectionAddress(const void *LocalAddress, uint64_t TargetAddress);
+  LLVM_ABI void mapSectionAddress(const void *LocalAddress,
+                                  uint64_t TargetAddress);
 
   /// Returns the section's working memory.
-  StringRef getSectionContent(unsigned SectionID) const;
+  LLVM_ABI StringRef getSectionContent(unsigned SectionID) const;
 
   /// If the section was loaded, return the section's load address,
   /// otherwise return std::nullopt.
-  uint64_t getSectionLoadAddress(unsigned SectionID) const;
+  LLVM_ABI uint64_t getSectionLoadAddress(unsigned SectionID) const;
 
   /// Set the NotifyStubEmitted callback. This is used for debugging
   /// purposes. A callback is made for each stub that is generated.
@@ -244,12 +247,12 @@ public:
   /// for identifying the EH frame and calling the memory manager with the
   /// EH frame section data.  However, the memory manager itself will handle
   /// the actual target-specific EH frame registration.
-  void registerEHFrames();
+  LLVM_ABI void registerEHFrames();
 
-  void deregisterEHFrames();
+  LLVM_ABI void deregisterEHFrames();
 
-  bool hasError();
-  StringRef getErrorString();
+  LLVM_ABI bool hasError();
+  LLVM_ABI StringRef getErrorString();
 
   /// By default, only sections that are "required for execution" are passed to
   /// the RTDyldMemoryManager, and other sections are discarded. Passing 'true'
@@ -281,10 +284,10 @@ public:
   ///   address of a symbol owned by some other instance in order to apply
   ///   relocations.
   ///
-  void finalizeWithMemoryManagerLocking();
+  LLVM_ABI void finalizeWithMemoryManagerLocking();
 
 private:
-  friend void jitLinkForORC(
+  LLVM_ABI friend void jitLinkForORC(
       object::OwningBinary<object::ObjectFile> O,
       RuntimeDyld::MemoryManager &MemMgr, JITSymbolResolver &Resolver,
       bool ProcessAllSections,
@@ -310,7 +313,7 @@ private:
 // but ORC's RTDyldObjectLinkingLayer2. Internally it constructs a RuntimeDyld
 // instance and uses continuation passing to perform the fix-up and finalize
 // steps asynchronously.
-void jitLinkForORC(
+LLVM_ABI void jitLinkForORC(
     object::OwningBinary<object::ObjectFile> O,
     RuntimeDyld::MemoryManager &MemMgr, JITSymbolResolver &Resolver,
     bool ProcessAllSections,

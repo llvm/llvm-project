@@ -87,7 +87,7 @@ R600TargetMachine::getSubtargetImpl(const Function &F) const {
 
 TargetTransformInfo
 R600TargetMachine::getTargetTransformInfo(const Function &F) const {
-  return TargetTransformInfo(R600TTIImpl(this, F));
+  return TargetTransformInfo(std::make_unique<R600TTIImpl>(this, F));
 }
 
 ScheduleDAGInstrs *
@@ -138,7 +138,6 @@ void R600PassConfig::addPreSched2() {
 void R600PassConfig::addPreEmitPass() {
   addPass(createR600MachineCFGStructurizerPass());
   addPass(createR600ExpandSpecialInstrsPass());
-  addPass(&FinalizeMachineBundlesID);
   addPass(createR600Packetizer());
   addPass(createR600ControlFlowFinalizer());
 }

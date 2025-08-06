@@ -32,6 +32,26 @@ enum E2 : S<E2>::I { e };
 #endif
 } // namespace cwg2516
 
+namespace cwg2517 { // cwg2517: 21
+#if __cplusplus >= 202002L
+template<typename ArrayType>
+concept LargeArray = requires (ArrayType my_array) {
+  requires my_array.size() > 5;
+};
+
+struct Big {
+  constexpr int size() const { return 100; }
+};
+
+struct Small {
+  constexpr int size() const { return 3; }
+};
+
+static_assert(LargeArray<Big>);
+static_assert(!LargeArray<Small>);
+#endif
+} // namespace cwg2517
+
 namespace cwg2518 { // cwg2518: 17
 
 #if __cplusplus >= 201103L

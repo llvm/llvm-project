@@ -24,7 +24,7 @@ func.func private @g(%b : !fir.box<f32>)
 func.func private @ga(%b : !fir.box<!fir.array<?xf32>>)
 
 // CHECK-LABEL: define void @f
-// CHECK: (ptr captures(none) %[[ARG:.*]])
+// CHECK: (ptr {{[^%]*}}%[[ARG:.*]])
 func.func @f(%a : !fir.ref<f32>) {
   // CHECK: %[[DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }
   // CHECK: %[[INS0:.*]] = insertvalue {{.*}} { ptr undef, i64 4, i32 20240719, i8 0, i8 27, i8 0, i8 0 }, ptr %[[ARG]], 0
@@ -38,7 +38,7 @@ func.func @f(%a : !fir.ref<f32>) {
 }
 
 // CHECK-LABEL: define void @fa
-// CHECK: (ptr captures(none) %[[ARG:.*]])
+// CHECK: (ptr {{[^%]*}}%[[ARG:.*]])
 func.func @fa(%a : !fir.ref<!fir.array<100xf32>>) {
   %c = fir.convert %a : (!fir.ref<!fir.array<100xf32>>) -> !fir.ref<!fir.array<?xf32>>
   %c1 = arith.constant 1 : index
@@ -54,7 +54,7 @@ func.func @fa(%a : !fir.ref<!fir.array<100xf32>>) {
 
 // Boxing of a scalar character of dynamic length
 // CHECK-LABEL: define void @b1(
-// CHECK-SAME: ptr captures(none) %[[res:.*]], ptr captures(none) %[[arg0:.*]], i64 %[[arg1:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[res:.*]], ptr {{[^%]*}}%[[arg0:.*]], i64 %[[arg1:.*]])
 func.func @b1(%arg0 : !fir.ref<!fir.char<1,?>>, %arg1 : index) -> !fir.box<!fir.char<1,?>> {
   // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }
   // CHECK: %[[size:.*]] = mul i64 1, %[[arg1]]
@@ -69,8 +69,8 @@ func.func @b1(%arg0 : !fir.ref<!fir.char<1,?>>, %arg1 : index) -> !fir.box<!fir.
 
 // Boxing of a dynamic array of character with static length (5)
 // CHECK-LABEL: define void @b2(
-// CHECK-SAME: ptr captures(none) %[[res]],
-// CHECK-SAME: ptr captures(none) %[[arg0:.*]], i64 %[[arg1:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[res]],
+// CHECK-SAME: ptr {{[^%]*}}%[[arg0:.*]], i64 %[[arg1:.*]])
 func.func @b2(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,5>>>, %arg1 : index) -> !fir.box<!fir.array<?x!fir.char<1,5>>> {
   %1 = fir.shape %arg1 : (index) -> !fir.shape<1>
   // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
@@ -85,7 +85,7 @@ func.func @b2(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,5>>>, %arg1 : index) -> 
 
 // Boxing of a dynamic array of character of dynamic length
 // CHECK-LABEL: define void @b3(
-// CHECK-SAME: ptr captures(none) %[[res:.*]], ptr captures(none) %[[arg0:.*]], i64 %[[arg1:.*]], i64 %[[arg2:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[res:.*]], ptr {{[^%]*}}%[[arg0:.*]], i64 %[[arg1:.*]], i64 %[[arg2:.*]])
 func.func @b3(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,?>>>, %arg1 : index, %arg2 : index) -> !fir.box<!fir.array<?x!fir.char<1,?>>> {
   %1 = fir.shape %arg2 : (index) -> !fir.shape<1>
   // CHECK: %[[alloca:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
@@ -103,7 +103,7 @@ func.func @b3(%arg0 : !fir.ref<!fir.array<?x!fir.char<1,?>>>, %arg1 : index, %ar
 
 // Boxing of a static array of character of dynamic length
 // CHECK-LABEL: define void @b4(
-// CHECK-SAME: ptr captures(none) %[[res:.*]], ptr captures(none) %[[arg0:.*]], i64 %[[arg1:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[res:.*]], ptr {{[^%]*}}%[[arg0:.*]], i64 %[[arg1:.*]])
 func.func @b4(%arg0 : !fir.ref<!fir.array<7x!fir.char<1,?>>>, %arg1 : index) -> !fir.box<!fir.array<7x!fir.char<1,?>>> {
   %c_7 = arith.constant 7 : index
   %1 = fir.shape %c_7 : (index) -> !fir.shape<1>
@@ -122,7 +122,7 @@ func.func @b4(%arg0 : !fir.ref<!fir.array<7x!fir.char<1,?>>>, %arg1 : index) -> 
 
 // Storing a fir.box into a fir.ref<fir.box> (modifying descriptors).
 // CHECK-LABEL: define void @b5(
-// CHECK-SAME: ptr captures(none) %[[arg0:.*]], ptr %[[arg1:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[arg0:.*]], ptr {{[^%]*}}%[[arg1:.*]])
 func.func @b5(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, %arg1 : !fir.box<!fir.heap<!fir.array<?x?xf32>>>) {
   fir.store %arg1 to %arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>
   // CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %0, ptr %1, i32 72, i1 false)
@@ -132,7 +132,7 @@ func.func @b5(%arg0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?x?xf32>>>>, %arg1 
 func.func private @callee6(!fir.box<none>) -> i32
 
 // CHECK-LABEL: define i32 @box6(
-// CHECK-SAME: ptr captures(none) %[[ARG0:.*]], i64 %[[ARG1:.*]], i64 %[[ARG2:.*]])
+// CHECK-SAME: ptr {{[^%]*}}%[[ARG0:.*]], i64 %[[ARG1:.*]], i64 %[[ARG2:.*]])
 func.func @box6(%0 : !fir.ref<!fir.array<?x?x?x?xf32>>, %1 : index, %2 : index) -> i32 {
   %c100 = arith.constant 100 : index
   %c50 = arith.constant 50 : index

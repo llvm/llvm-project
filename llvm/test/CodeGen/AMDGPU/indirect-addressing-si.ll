@@ -5763,13 +5763,13 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; GENERIC-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
 ; GENERIC-NEXT:    v_cndmask_b32_e64 v17, 63, v17, s[0:1]
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
-; GENERIC-NEXT:    v_mov_b32_e32 v15, s21
-; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 13, v14
-; GENERIC-NEXT:    v_cndmask_b32_e32 v15, v15, v1, vcc
-; GENERIC-NEXT:    v_cmp_ne_u32_e32 vcc, 13, v18
-; GENERIC-NEXT:    v_cndmask_b32_e32 v15, 63, v15, vcc
 ; GENERIC-NEXT:    v_mov_b32_e32 v19, s20
 ; GENERIC-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v14
+; GENERIC-NEXT:    v_mov_b32_e32 v15, s21
+; GENERIC-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v14
+; GENERIC-NEXT:    v_cndmask_b32_e64 v14, v15, v1, s[0:1]
+; GENERIC-NEXT:    v_cmp_ne_u32_e64 s[0:1], 13, v18
+; GENERIC-NEXT:    v_cndmask_b32_e64 v15, 63, v14, s[0:1]
 ; GENERIC-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; GENERIC-NEXT:    s_mov_b32 s2, -1
 ; GENERIC-NEXT:    v_cndmask_b32_e32 v14, v19, v1, vcc
@@ -6178,13 +6178,12 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; NOOPT-NEXT:    v_mov_b32_e32 v11, v14
 ; NOOPT-NEXT:    v_mov_b32_e32 v12, v13
 ; NOOPT-NEXT:    buffer_store_dwordx4 v[9:12], off, s[4:7], 0 offset:32
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
+; NOOPT-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; implicit-def: $sgpr1
 ; NOOPT-NEXT:    ; kill: def $vgpr8 killed $vgpr8 def $vgpr8_vgpr9_vgpr10_vgpr11 killed $exec
-; NOOPT-NEXT:    s_waitcnt expcnt(0)
 ; NOOPT-NEXT:    v_mov_b32_e32 v9, v4
 ; NOOPT-NEXT:    v_mov_b32_e32 v10, v3
 ; NOOPT-NEXT:    v_mov_b32_e32 v11, v2
@@ -6319,19 +6318,19 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v18
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v11, 63, v11, vcc
 ; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v18
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v10, 63, v10, vcc
 ; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 14, v18
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v17, 63, v17, s[0:1]
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
 ; SI-MOVREL-NEXT:    v_mov_b32_e32 v15, s21
-; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 13, v14
-; SI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v15, v15, v1, vcc
-; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 13, v18
-; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v15, 63, v15, vcc
-; SI-MOVREL-NEXT:    v_mov_b32_e32 v19, s20
+; SI-MOVREL-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v14
+; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
 ; SI-MOVREL-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v14
+; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v14, v15, v1, s[0:1]
+; SI-MOVREL-NEXT:    v_cmp_ne_u32_e64 s[0:1], 13, v18
+; SI-MOVREL-NEXT:    v_cndmask_b32_e64 v15, 63, v14, s[0:1]
+; SI-MOVREL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; SI-MOVREL-NEXT:    v_mov_b32_e32 v19, s20
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v14, v19, v1, vcc
 ; SI-MOVREL-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v18
 ; SI-MOVREL-NEXT:    v_cndmask_b32_e32 v14, 63, v14, vcc
@@ -6426,35 +6425,35 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 15, v14
 ; VI-NEXT:    v_cndmask_b32_e32 v17, v11, v1, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 8, v14
-; VI-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
 ; VI-NEXT:    v_mov_b32_e32 v16, s17
 ; VI-NEXT:    v_cndmask_b32_e32 v10, v15, v1, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 9, v14
-; VI-NEXT:    v_cndmask_b32_e64 v17, 63, v17, s[0:1]
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    v_cndmask_b32_e32 v11, v16, v1, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v18
 ; VI-NEXT:    v_cndmask_b32_e32 v11, 63, v11, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v18
+; VI-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
 ; VI-NEXT:    v_cndmask_b32_e32 v10, 63, v10, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 14, v18
-; VI-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
+; VI-NEXT:    v_cndmask_b32_e64 v17, 63, v17, s[0:1]
 ; VI-NEXT:    v_mov_b32_e32 v15, s21
-; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 13, v14
-; VI-NEXT:    v_cndmask_b32_e32 v15, v15, v1, vcc
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 13, v18
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_add_u32 s2, s0, 48
-; VI-NEXT:    v_cndmask_b32_e32 v15, 63, v15, vcc
-; VI-NEXT:    v_mov_b32_e32 v19, s20
+; VI-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v14
+; VI-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v14
-; VI-NEXT:    s_addc_u32 s3, s1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v14, v15, v1, s[0:1]
+; VI-NEXT:    v_cmp_ne_u32_e64 s[0:1], 13, v18
+; VI-NEXT:    v_cndmask_b32_e64 v15, 63, v14, s[0:1]
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; VI-NEXT:    v_mov_b32_e32 v19, s20
 ; VI-NEXT:    v_cndmask_b32_e32 v14, v19, v1, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v18
+; VI-NEXT:    v_cndmask_b32_e32 v14, 63, v14, vcc
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_add_u32 s2, s0, 48
+; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    v_mov_b32_e32 v19, s3
 ; VI-NEXT:    v_mov_b32_e32 v18, s2
 ; VI-NEXT:    s_add_u32 s2, s0, 32
-; VI-NEXT:    v_cndmask_b32_e32 v14, 63, v14, vcc
 ; VI-NEXT:    s_addc_u32 s3, s1, 0
 ; VI-NEXT:    flat_store_dwordx4 v[18:19], v[14:17]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -6558,19 +6557,19 @@ define amdgpu_kernel void @insert_vgpr_offset_multiple_in_block(ptr addrspace(1)
 ; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 9, v18
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v11, 63, v11, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 8, v18
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v10, 63, v10, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 14, v18
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e64 s[0:1], 15, v18
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v17, 63, v17, s[0:1]
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v15, s21
-; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 13, v14
-; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v15, v15, v1, vcc
-; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 13, v18
-; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v15, 63, v15, vcc
-; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v19, s20
+; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e64 s[0:1], 13, v14
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v16, 63, v19, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_eq_u32_e32 vcc, 12, v14
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v14, v15, v1, s[0:1]
+; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e64 s[0:1], 13, v18
+; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e64 v15, 63, v14, s[0:1]
+; GFX9-IDXMODE-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v19, s20
 ; GFX9-IDXMODE-NEXT:    v_cndmask_b32_e32 v14, v19, v1, vcc
 ; GFX9-IDXMODE-NEXT:    v_cmp_ne_u32_e32 vcc, 12, v18
 ; GFX9-IDXMODE-NEXT:    v_mov_b32_e32 v18, 0
@@ -7297,7 +7296,6 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
 ; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND
@@ -7320,7 +7318,6 @@ define amdgpu_kernel void @extract_adjacent_blocks(i32 %arg) {
 ; NOOPT-NEXT:    buffer_load_dwordx4 v[0:3], off, s[0:3], 0 glc
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
 ; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND
@@ -7541,7 +7538,6 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
 ; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND
@@ -7565,7 +7561,6 @@ define amdgpu_kernel void @insert_adjacent_blocks(i32 %arg, float %val0) {
 ; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ; implicit-def: $sgpr0_sgpr1_sgpr2_sgpr3
 ; NOOPT-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
-; NOOPT-NEXT:    s_waitcnt vmcnt(0)
 ; NOOPT-NEXT:    ;;#ASMSTART
 ; NOOPT-NEXT:    ; reg use v[0:3]
 ; NOOPT-NEXT:    ;;#ASMEND

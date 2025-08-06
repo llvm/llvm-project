@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "DocGenUtilities.h"
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
@@ -527,6 +528,11 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
   // Emit a forward declaration of the interface class so that it becomes usable
   // in the signature of its methods.
+  std::string comments = tblgen::emitSummaryAndDescComments(
+      "", interface.getDescription().value_or(""));
+  if (!comments.empty()) {
+    os << comments << "\n";
+  }
   os << "class " << interfaceName << ";\n";
 
   // Emit the traits struct containing the concept and model declarations.
@@ -589,7 +595,8 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
        << "    auto* interface = getInterfaceFor(base);\n"
        << "    if (!interface)\n"
           "      return false;\n"
-          "    " << interfaceName << " odsInterfaceInstance(base, interface);\n"
+          "    "
+       << interfaceName << " odsInterfaceInstance(base, interface);\n"
        << "    " << tblgen::tgfmt(extraClassOf->trim(), &extraClassOfFmt)
        << "\n  }\n";
   }

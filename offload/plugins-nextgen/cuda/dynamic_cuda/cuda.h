@@ -106,6 +106,7 @@ typedef enum cudaError_enum {
   CUDA_ERROR_INVALID_VALUE = 1,
   CUDA_ERROR_NO_DEVICE = 100,
   CUDA_ERROR_INVALID_HANDLE = 400,
+  CUDA_ERROR_NOT_FOUND = 500,
   CUDA_ERROR_NOT_READY = 600,
   CUDA_ERROR_TOO_MANY_PEERS = 711,
 } CUresult;
@@ -257,6 +258,7 @@ typedef enum CUdevice_attribute_enum {
 
 typedef enum CUfunction_attribute_enum {
   CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK = 0,
+  CU_FUNC_ATTRIBUTE_MAX_DYNAMIC_SHARED_SIZE_BYTES = 8,
 } CUfunction_attribute;
 
 typedef enum CUctx_flags_enum {
@@ -294,6 +296,7 @@ CUresult cuDeviceGet(CUdevice *, int);
 CUresult cuDeviceGetAttribute(int *, CUdevice_attribute, CUdevice);
 CUresult cuDeviceGetCount(int *);
 CUresult cuFuncGetAttribute(int *, CUfunction_attribute, CUfunction);
+CUresult cuFuncSetAttribute(CUfunction, CUfunction_attribute, int);
 
 // Device info
 CUresult cuDeviceGetName(char *, int, CUdevice);

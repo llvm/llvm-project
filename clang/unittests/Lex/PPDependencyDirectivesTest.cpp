@@ -31,16 +31,16 @@ namespace {
 class PPDependencyDirectivesTest : public ::testing::Test {
 protected:
   PPDependencyDirectivesTest()
-      : FileMgr(FileMgrOpts), DiagID(new DiagnosticIDs()),
-        Diags(DiagID, new DiagnosticOptions, new IgnoringDiagConsumer()),
+      : FileMgr(FileMgrOpts),
+        Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-macos12";
-    Target = TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
   FileSystemOptions FileMgrOpts;
   FileManager FileMgr;
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID;
+  DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
   SourceManager SourceMgr;
   LangOptions LangOpts;
@@ -74,7 +74,7 @@ TEST_F(PPDependencyDirectivesTest, MacroGuard) {
   // "head2.h" and "head3.h" have tokens following the macro check, they should
   // be included multiple times.
 
-  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   VFS->addFile(
       "head1.h", 0,
       llvm::MemoryBuffer::getMemBuffer("#ifndef H1_H\n#define H1_H\n#endif\n"));

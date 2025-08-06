@@ -100,8 +100,8 @@ getArgListFromJSON(const StringRef Input, llvm::opt::OptTable *Table,
   }
 
   std::vector<const char *> CArgs(Storage.size());
-  llvm::for_each(Storage,
-                 [&CArgs](StringRef Str) { CArgs.emplace_back(Str.data()); });
+  for (StringRef Str : Storage)
+    CArgs.emplace_back(Str.data());
 
   unsigned MissingArgIndex, MissingArgCount;
   return Table->ParseArgs(CArgs, MissingArgIndex, MissingArgCount);
@@ -610,35 +610,35 @@ Options::processAndFilterOutInstallAPIOptions(ArrayRef<const char *> Args) {
 
   for (const Arg *A : ParsedArgs.filtered(OPT_allowable_client)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.AllowableClients[A->getValue()] =
+    LinkerOpts.AllowableClients.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_l)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.ReexportedLibraries[A->getValue()] =
+    LinkerOpts.ReexportedLibraries.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_library)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.ReexportedLibraryPaths[A->getValue()] =
+    LinkerOpts.ReexportedLibraryPaths.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_reexport_framework)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.ReexportedFrameworks[A->getValue()] =
+    LinkerOpts.ReexportedFrameworks.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
 
   for (const Arg *A : ParsedArgs.filtered(OPT_rpath)) {
     auto It = ArgToArchMap.find(A);
-    LinkerOpts.RPaths[A->getValue()] =
+    LinkerOpts.RPaths.getArchSet(A->getValue()) =
         It != ArgToArchMap.end() ? It->second : ArchitectureSet();
     A->claim();
   }
@@ -730,12 +730,12 @@ Options::Options(DiagnosticsEngine &Diag, FileManager *FM,
   // After all InstallAPI necessary arguments have been collected. Go back and
   // assign values that were unknown before the clang driver opt table was used.
   ArchitectureSet AllArchs;
-  llvm::for_each(DriverOpts.Targets,
-                 [&AllArchs](const auto &T) { AllArchs.set(T.first.Arch); });
+  for (const auto &T : DriverOpts.Targets)
+    AllArchs.set(T.first.Arch);
   auto assignDefaultLibAttrs = [&AllArchs](LibAttrs &Attrs) {
-    for (StringMapEntry<ArchitectureSet> &Entry : Attrs)
-      if (Entry.getValue().empty())
-        Entry.setValue(AllArchs);
+    for (auto &[_, Archs] : Attrs.get())
+      if (Archs.empty())
+        Archs = AllArchs;
   };
   assignDefaultLibAttrs(LinkerOpts.AllowableClients);
   assignDefaultLibAttrs(LinkerOpts.ReexportedFrameworks);
@@ -763,7 +763,6 @@ getInterfaceFile(const StringRef Filename) {
     return errorCodeToError(std::move(Err));
 
   auto Buffer = std::move(*BufferOrErr);
-  std::unique_ptr<InterfaceFile> IF;
   switch (identify_magic(Buffer->getBuffer())) {
   case file_magic::macho_dynamically_linked_shared_lib:
   case file_magic::macho_dynamically_linked_shared_lib_stub:
@@ -789,52 +788,49 @@ std::pair<LibAttrs, ReexportedInterfaces> Options::getReexportedLibraries() {
     std::unique_ptr<InterfaceFile> Reexport = std::move(*ReexportIFOrErr);
     StringRef InstallName = Reexport->getInstallName();
     assert(!InstallName.empty() && "Parse error for install name");
-    Reexports.insert({InstallName, Archs});
+    Reexports.getArchSet(InstallName) = Archs;
     ReexportIFs.emplace_back(std::move(*Reexport));
     return true;
   };
 
   PlatformSet Platforms;
-  llvm::for_each(DriverOpts.Targets,
-                 [&](const auto &T) { Platforms.insert(T.first.Platform); });
+  for (const auto &T : DriverOpts.Targets)
+    Platforms.insert(T.first.Platform);
   // Populate search paths by looking at user paths before system ones.
   PathSeq FwkSearchPaths(FEOpts.FwkPaths.begin(), FEOpts.FwkPaths.end());
   for (const PlatformType P : Platforms) {
     PathSeq PlatformSearchPaths = getPathsForPlatform(FEOpts.SystemFwkPaths, P);
     llvm::append_range(FwkSearchPaths, PlatformSearchPaths);
-    for (const StringMapEntry<ArchitectureSet> &Lib :
-         LinkerOpts.ReexportedFrameworks) {
-      std::string Name = (Lib.getKey() + ".framework/" + Lib.getKey()).str();
+    for (const auto &[Lib, Archs] : LinkerOpts.ReexportedFrameworks.get()) {
+      std::string Name = (Lib + ".framework/" + Lib);
       std::string Path = findLibrary(Name, *FM, FwkSearchPaths, {}, {});
       if (Path.empty()) {
-        Diags->Report(diag::err_cannot_find_reexport) << false << Lib.getKey();
+        Diags->Report(diag::err_cannot_find_reexport) << false << Lib;
         return {};
       }
       if (DriverOpts.TraceLibraryLocation)
         errs() << Path << "\n";
 
-      AccumulateReexports(Path, Lib.getValue());
+      AccumulateReexports(Path, Archs);
     }
     FwkSearchPaths.resize(FwkSearchPaths.size() - PlatformSearchPaths.size());
   }
 
-  for (const StringMapEntry<ArchitectureSet> &Lib :
-       LinkerOpts.ReexportedLibraries) {
-    std::string Name = "lib" + Lib.getKey().str() + ".dylib";
+  for (const auto &[Lib, Archs] : LinkerOpts.ReexportedLibraries.get()) {
+    std::string Name = "lib" + Lib + ".dylib";
     std::string Path = findLibrary(Name, *FM, {}, LinkerOpts.LibPaths, {});
     if (Path.empty()) {
-      Diags->Report(diag::err_cannot_find_reexport) << true << Lib.getKey();
+      Diags->Report(diag::err_cannot_find_reexport) << true << Lib;
       return {};
     }
     if (DriverOpts.TraceLibraryLocation)
       errs() << Path << "\n";
 
-    AccumulateReexports(Path, Lib.getValue());
+    AccumulateReexports(Path, Archs);
   }
 
-  for (const StringMapEntry<ArchitectureSet> &Lib :
-       LinkerOpts.ReexportedLibraryPaths)
-    AccumulateReexports(Lib.getKey(), Lib.getValue());
+  for (const auto &[Lib, Archs] : LinkerOpts.ReexportedLibraryPaths.get())
+    AccumulateReexports(Lib, Archs);
 
   return {std::move(Reexports), std::move(ReexportIFs)};
 }
@@ -1087,10 +1083,10 @@ void Options::addConditionalCC1Args(std::vector<std::string> &ArgStrings,
   // Add specific to platform arguments.
   PathSeq PlatformSearchPaths =
       getPathsForPlatform(FEOpts.SystemFwkPaths, mapToPlatformType(Targ));
-  llvm::for_each(PlatformSearchPaths, [&ArgStrings](const StringRef Path) {
+  for (StringRef Path : PlatformSearchPaths) {
     ArgStrings.push_back("-iframework");
     ArgStrings.push_back(Path.str());
-  });
+  }
 
   // Add specific to header type arguments.
   if (Type == HeaderType::Project)

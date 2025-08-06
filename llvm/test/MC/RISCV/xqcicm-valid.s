@@ -1,16 +1,17 @@
 # Xqcicm - Qualcomm uC Conditional Move Extension
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcicm -M no-aliases -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcicm < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcicm -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcicm -show-encoding \
-# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcicm < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-xqcicm --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# CHECK-INST: qc.c.mveqz      s1, a0
+# CHECK-NOALIAS: qc.c.mveqz      s1, a0
+# CHECK-ALIAS: qc.mveqi s1, s1, 0, a0
 # CHECK-ENC: encoding: [0x06,0xad]
 qc.c.mveqz x9, x10
 
@@ -121,3 +122,22 @@ qc.mvgeui x9, x10, 0, x12
 # CHECK-INST: qc.mvgeui       s1, a0, 31, a2
 # CHECK-ENC: encoding: [0xdb,0x74,0xf5,0x65]
 qc.mvgeui x9, x10, 31, x12
+
+# Check that compress pattern for qc.mveqi works
+
+# CHECK-NOALIAS: qc.c.mveqz s1, a2
+# CHECK-ALIAS: qc.mveqi s1, s1, 0, a2
+# CHECK-ENC: encoding: [0x06,0xae]
+qc.mveqi x9, x9, 0, x12
+
+# CHECK-NOALIAS: qc.c.mveqz s1, a2
+# CHECK-ALIAS: qc.mveqi s1, s1, 0, a2
+# CHECK-ENC: encoding: [0x06,0xae]
+qc.mvltui x9, x9, 1, x12
+
+# Following instruction should not be compressed
+
+# CHECK-INST: qc.mveqi a0, s1, 0, a2
+# CHECK-ENC: encoding: [0x5b,0x85,0x04,0x64]
+qc.mveqi x10, x9, 0, x12
+

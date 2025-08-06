@@ -38,7 +38,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 using namespace llvm;
 
 AnalysisKey LiveVariablesAnalysis::Key;
@@ -633,7 +632,7 @@ void LiveVariables::analyze(MachineFunction &mf) {
   // LiveVariables to improve compilation time and eliminate bizarre pass
   // dependencies. Until then, we can't change much in -O0.
   if (!MRI->isSSA())
-    report_fatal_error("regalloc=... not currently supported with -O0");
+    reportFatalUsageError("regalloc=... not currently supported with -O0");
 
   analyzePHINodes(mf);
 
@@ -764,7 +763,7 @@ void LiveVariables::recomputeForSingleDefVirtReg(Register Reg) {
 void LiveVariables::replaceKillInstruction(Register Reg, MachineInstr &OldMI,
                                            MachineInstr &NewMI) {
   VarInfo &VI = getVarInfo(Reg);
-  std::replace(VI.Kills.begin(), VI.Kills.end(), &OldMI, &NewMI);
+  llvm::replace(VI.Kills, &OldMI, &NewMI);
 }
 
 /// removeVirtualRegistersKilled - Remove all killed info for the specified

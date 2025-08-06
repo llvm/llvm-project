@@ -60,7 +60,7 @@ void Denormalize(llvm::SmallVectorImpl<char> &path, FileSpec::Style style) {
   if (PathStyleIsPosix(style))
     return;
 
-  std::replace(path.begin(), path.end(), '/', '\\');
+  llvm::replace(path, '/', '\\');
 }
 
 } // end anonymous namespace
@@ -186,7 +186,7 @@ void FileSpec::SetFile(llvm::StringRef pathname, Style style) {
 
   // Normalize back slashes to forward slashes
   if (m_style == Style::windows)
-    std::replace(resolved.begin(), resolved.end(), '\\', '/');
+    llvm::replace(resolved, '\\', '/');
 
   if (resolved.empty()) {
     // If we have no path after normalization set the path to the current

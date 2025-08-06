@@ -436,7 +436,7 @@ PreservedAnalyses AssignGUIDPass::run(Module &M, ModuleAnalysisManager &MAM) {
 GlobalValue::GUID AssignGUIDPass::getGUID(const Function &F) {
   if (F.isDeclaration()) {
     assert(GlobalValue::isExternalLinkage(F.getLinkage()));
-    return GlobalValue::getGUID(F.getGlobalIdentifier());
+    return F.getGUID();
   }
   auto *MD = F.getMetadata(GUIDMetadataName);
   assert(MD && "guid not found for defined function");

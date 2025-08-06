@@ -714,7 +714,7 @@ class CheckComplexPatMatcher : public Matcher {
   unsigned MatchNumber;
 
   /// Name - The name of the node we're matching, for comment emission.
-  std::string Name;
+  StringRef Name;
 
   /// FirstResult - This is the first slot in the RecordedNodes list that the
   /// result of the match populates.
@@ -722,14 +722,14 @@ class CheckComplexPatMatcher : public Matcher {
 
 public:
   CheckComplexPatMatcher(const ComplexPattern &pattern, unsigned matchnumber,
-                         const std::string &name, unsigned firstresult)
+                         StringRef name, unsigned firstresult)
       : Matcher(CheckComplexPat), Pattern(pattern), MatchNumber(matchnumber),
         Name(name), FirstResult(firstresult) {}
 
   const ComplexPattern &getPattern() const { return Pattern; }
   unsigned getMatchNumber() const { return MatchNumber; }
 
-  std::string getName() const { return Name; }
+  StringRef getName() const { return Name; }
   unsigned getFirstResult() const { return FirstResult; }
 
   static bool classof(const Matcher *N) {

@@ -105,6 +105,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # unistd.h entrypoints
     libc.src.unistd.getentropy
+
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -127,8 +130,10 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.fenv.feupdateenv
 
     # math.h entrypoints
+    libc.src.math.acos
     libc.src.math.acosf
     libc.src.math.acoshf
+    libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
     libc.src.math.atan2
@@ -293,9 +298,15 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.tanpif
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
+)
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.fabsbf16
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

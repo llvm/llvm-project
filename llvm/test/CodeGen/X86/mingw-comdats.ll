@@ -1,8 +1,11 @@
 ; RUN: llc -function-sections -mtriple=x86_64-windows-itanium < %s | FileCheck %s
 ; RUN: llc -function-sections -mtriple=x86_64-windows-msvc < %s | FileCheck %s
 ; RUN: llc -function-sections -mtriple=x86_64-w64-windows-gnu < %s | FileCheck %s --check-prefix=GNU
+; RUN: llc -function-sections -mtriple=x86_64-pc-cygwin < %s | FileCheck %s --check-prefix=GNU
 ; RUN: llc -function-sections -mtriple=i686-w64-windows-gnu < %s | FileCheck %s --check-prefix=GNU32
+; RUN: llc -function-sections -mtriple=i686-pc-cygwin < %s | FileCheck %s --check-prefix=GNU32
 ; RUN: llc -function-sections -mtriple=x86_64-w64-windows-gnu < %s -filetype=obj | llvm-objdump - --headers | FileCheck %s --check-prefix=GNUOBJ
+; RUN: llc -function-sections -mtriple=x86_64-pc-cygwin < %s -filetype=obj | llvm-objdump - --headers | FileCheck %s --check-prefix=GNUOBJ
 
 ; GCC and MSVC handle comdats completely differently. Make sure we do the right
 ; thing for each.
@@ -27,11 +30,11 @@ entry:
   ret i32 %call
 }
 
-; CHECK: .section        .text,"xr",one_only,main
+; CHECK: .section        .text,"xr",one_only,main,unique,0
 ; CHECK: main:
-; GNU: .section        .text$main,"xr",one_only,main
+; GNU: .section        .text$main,"xr",one_only,main,unique,0
 ; GNU: main:
-; GNU32: .section        .text$main,"xr",one_only,_main
+; GNU32: .section        .text$main,"xr",one_only,_main,unique,0
 ; GNU32: _main:
 
 define dso_local x86_fastcallcc i32 @fastcall(i32 %x, i32 %y) {
@@ -39,11 +42,11 @@ define dso_local x86_fastcallcc i32 @fastcall(i32 %x, i32 %y) {
   ret i32 %rv
 }
 
-; CHECK: .section        .text,"xr",one_only,fastcall
+; CHECK: .section        .text,"xr",one_only,fastcall,unique,1
 ; CHECK: fastcall:
-; GNU: .section        .text$fastcall,"xr",one_only,fastcall
+; GNU: .section        .text$fastcall,"xr",one_only,fastcall,unique,1
 ; GNU: fastcall:
-; GNU32: .section        .text$fastcall,"xr",one_only,@fastcall@8
+; GNU32: .section        .text$fastcall,"xr",one_only,@fastcall@8,unique,1
 ; GNU32: @fastcall@8:
 
 ; Function Attrs: inlinehint uwtable
@@ -55,19 +58,19 @@ entry:
   ret i32 %add
 }
 
-; CHECK: .section        .text,"xr",discard,_Z3fooi
+; CHECK: .section        .text,"xr",discard,_Z3fooi,unique,2
 ; CHECK: _Z3fooi:
 ; CHECK: .section        .data,"dw",discard,gv
 ; CHECK: gv:
 ; CHECK: .long 42
 
-; GNU: .section        .text$_Z3fooi,"xr",discard,_Z3fooi
+; GNU: .section        .text$_Z3fooi,"xr",discard,_Z3fooi,unique,2
 ; GNU: _Z3fooi:
 ; GNU: .section        .data$gv,"dw",discard,gv
 ; GNU: gv:
 ; GNU: .long 42
 
-; GNU32: .section        .text$_Z3fooi,"xr",discard,__Z3fooi
+; GNU32: .section        .text$_Z3fooi,"xr",discard,__Z3fooi,unique,2
 ; GNU32: __Z3fooi:
 ; GNU32: .section        .data$gv,"dw",discard,_gv
 ; GNU32: _gv:

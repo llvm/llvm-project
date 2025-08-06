@@ -5,6 +5,7 @@
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-2.f90 -o - | FileCheck %t/omp-declare-mapper-2.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-3.f90 -o - | FileCheck %t/omp-declare-mapper-3.f90
 ! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-4.f90 -o - | FileCheck %t/omp-declare-mapper-4.f90
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -fopenmp-version=50 %t/omp-declare-mapper-5.f90 -o - | FileCheck %t/omp-declare-mapper-5.f90
 
 !--- omp-declare-mapper-1.f90
 subroutine declare_mapper_1
@@ -22,7 +23,7 @@ subroutine declare_mapper_1
    end type
    type(my_type2)        :: t
    real                   :: x, y(nvals)
-   !CHECK:omp.declare_mapper @[[MY_TYPE_MAPPER:_QQFdeclare_mapper_1my_type\.default]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_1Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>\}>]] {
+   !CHECK:omp.declare_mapper @[[MY_TYPE_MAPPER:_QQFdeclare_mapper_1my_type\.omp\.default\.mapper]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_1Tmy_type\{num_vals:i32,values:!fir\.box<!fir\.heap<!fir\.array<\?xi32>>>\}>]] {
    !CHECK:      ^bb0(%[[VAL_0:.*]]: !fir.ref<[[MY_TYPE]]>):
    !CHECK:        %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFdeclare_mapper_1Evar"} : (!fir.ref<[[MY_TYPE]]>) -> (!fir.ref<[[MY_TYPE]]>, !fir.ref<[[MY_TYPE]]>)
    !CHECK:        %[[VAL_2:.*]] = hlfir.designate %[[VAL_1]]#0{"values"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<[[MY_TYPE]]>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
@@ -149,7 +150,7 @@ subroutine declare_mapper_4
       integer              :: num
    end type
 
-   !CHECK: omp.declare_mapper @[[MY_TYPE_MAPPER:_QQFdeclare_mapper_4my_type.default]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_4Tmy_type\{num:i32\}>]]
+   !CHECK: omp.declare_mapper @[[MY_TYPE_MAPPER:_QQFdeclare_mapper_4my_type.omp.default.mapper]] : [[MY_TYPE:!fir\.type<_QFdeclare_mapper_4Tmy_type\{num:i32\}>]]
    !$omp declare mapper (my_type :: var) map (var%num)
 
    type(my_type) :: a
@@ -171,3 +172,93 @@ subroutine declare_mapper_4
    a%num = 40
    !$omp end target
 end subroutine declare_mapper_4
+
+!--- omp-declare-mapper-5.f90
+program declare_mapper_5
+   implicit none
+
+   type :: mytype
+      integer :: x, y
+   end type
+
+   !CHECK: omp.declare_mapper @[[INNER_MAPPER_NAMED:_QQFFuse_innermy_mapper]] : [[MY_TYPE:!fir\.type<_QFTmytype\{x:i32,y:i32\}>]]
+   !CHECK: omp.declare_mapper @[[INNER_MAPPER_DEFAULT:_QQFFuse_innermytype.omp.default.mapper]] : [[MY_TYPE]]
+   !CHECK: omp.declare_mapper @[[OUTER_MAPPER_NAMED:_QQFmy_mapper]] : [[MY_TYPE]]
+   !CHECK: omp.declare_mapper @[[OUTER_MAPPER_DEFAULT:_QQFmytype.omp.default.mapper]] : [[MY_TYPE]]
+   !$omp declare mapper(mytype :: var) map(tofrom: var%x)
+   !$omp declare mapper(my_mapper : mytype :: var) map(tofrom: var%y)
+
+   type(mytype) :: a
+
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(implicit, tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER_DEFAULT]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+   !$omp target
+   a%x = 10
+   !$omp end target
+
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER_DEFAULT]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+   !$omp target map(a)
+   a%x = 10
+   !$omp end target
+
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER_DEFAULT]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+   !$omp target map(mapper(default) : a)
+   a%x = 10
+   !$omp end target
+
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER_NAMED]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+   !$omp target map(mapper(my_mapper) : a)
+   a%y = 10
+   !$omp end target
+
+contains
+   subroutine use_outer()
+      type(mytype) :: a
+
+      !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(implicit, tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER_DEFAULT]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+      !$omp target
+      a%x = 10
+      !$omp end target
+
+      !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER_DEFAULT]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+      !$omp target map(a)
+      a%x = 10
+      !$omp end target
+
+      !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER_DEFAULT]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+      !$omp target map(mapper(default) : a)
+      a%x = 10
+      !$omp end target
+
+      !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[OUTER_MAPPER_NAMED]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+      !$omp target map(mapper(my_mapper) : a)
+      a%y = 10
+      !$omp end target
+   end subroutine
+
+   subroutine use_inner()
+      !$omp declare mapper(mytype :: var) map(tofrom: var%x)
+      !$omp declare mapper(my_mapper : mytype :: var) map(tofrom: var%y)
+
+      type(mytype) :: a
+
+      !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(implicit, tofrom) capture(ByRef) mapper(@[[INNER_MAPPER_DEFAULT]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+      !$omp target
+      a%x = 10
+      !$omp end target
+
+      !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[INNER_MAPPER_DEFAULT]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+      !$omp target map(a)
+      a%x = 10
+      !$omp end target
+
+      !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[INNER_MAPPER_DEFAULT]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+      !$omp target map(mapper(default) : a)
+      a%x = 10
+      !$omp end target
+
+      !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) map_clauses(tofrom) capture(ByRef) mapper(@[[INNER_MAPPER_NAMED]]) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
+      !$omp target map(mapper(my_mapper) : a)
+      a%y = 10
+      !$omp end target
+   end subroutine
+end program declare_mapper_5

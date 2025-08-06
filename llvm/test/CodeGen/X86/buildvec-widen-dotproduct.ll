@@ -7,7 +7,6 @@
 define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE2-LABEL: dot_ext_v8i8_v8i32:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    pushq %r14
 ; SSE2-NEXT:    pushq %rbx
 ; SSE2-NEXT:    movzbl (%rdi), %eax
 ; SSE2-NEXT:    movzbl (%rdi,%rsi), %ecx
@@ -18,9 +17,9 @@ define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE2-NEXT:    leaq (%rsi,%rsi,4), %rbx
 ; SSE2-NEXT:    movzbl (%rdi,%rbx), %ebx
 ; SSE2-NEXT:    movzbl (%rdi,%r9,2), %r9d
-; SSE2-NEXT:    leaq (,%rsi,8), %r14
-; SSE2-NEXT:    subq %rsi, %r14
-; SSE2-NEXT:    movzbl (%rdi,%r14), %esi
+; SSE2-NEXT:    leaq (%rdi,%rsi,8), %rdi
+; SSE2-NEXT:    subq %rsi, %rdi
+; SSE2-NEXT:    movzbl (%rdi), %esi
 ; SSE2-NEXT:    shll $16, %ecx
 ; SSE2-NEXT:    orl %eax, %ecx
 ; SSE2-NEXT:    movd %ecx, %xmm0
@@ -31,88 +30,61 @@ define i32 @dot_ext_v8i8_v8i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE2-NEXT:    pinsrw $6, %r9d, %xmm0
 ; SSE2-NEXT:    pinsrw $7, %esi, %xmm0
 ; SSE2-NEXT:    movdqu (%rdx), %xmm1
-; SSE2-NEXT:    pmaddwd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    paddd %xmm0, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE2-NEXT:    pmaddwd %xmm0, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    paddd %xmm1, %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    movd %xmm1, %eax
 ; SSE2-NEXT:    popq %rbx
-; SSE2-NEXT:    popq %r14
 ; SSE2-NEXT:    retq
 ;
 ; SSE4-LABEL: dot_ext_v8i8_v8i32:
 ; SSE4:       # %bb.0: # %entry
-; SSE4-NEXT:    leaq (%rsi,%rsi,4), %rax
-; SSE4-NEXT:    leaq (%rsi,%rsi,2), %rcx
-; SSE4-NEXT:    leaq (,%rsi,8), %r8
-; SSE4-NEXT:    movzbl (%rdi), %r9d
-; SSE4-NEXT:    movd %r9d, %xmm0
-; SSE4-NEXT:    pinsrb $1, (%rdi,%rsi), %xmm0
-; SSE4-NEXT:    pinsrb $2, (%rdi,%rsi,2), %xmm0
-; SSE4-NEXT:    pinsrb $3, (%rdi,%rcx), %xmm0
-; SSE4-NEXT:    pinsrb $4, (%rdi,%rsi,4), %xmm0
-; SSE4-NEXT:    pinsrb $5, (%rdi,%rax), %xmm0
-; SSE4-NEXT:    pinsrb $6, (%rdi,%rcx,2), %xmm0
-; SSE4-NEXT:    subq %rsi, %r8
-; SSE4-NEXT:    pinsrb $7, (%rdi,%r8), %xmm0
+; SSE4-NEXT:    movzbl (%rdi), %eax
+; SSE4-NEXT:    leaq (%rsi,%rsi,4), %rcx
+; SSE4-NEXT:    leaq (%rsi,%rsi,2), %r8
+; SSE4-NEXT:    leaq (%rdi,%rsi,8), %r9
+; SSE4-NEXT:    subq %rsi, %r9
+; SSE4-NEXT:    movd %eax, %xmm0
+; SSE4-NEXT:    pinsrb $2, (%rdi,%rsi), %xmm0
+; SSE4-NEXT:    pinsrb $4, (%rdi,%rsi,2), %xmm0
+; SSE4-NEXT:    pinsrb $6, (%rdi,%r8), %xmm0
+; SSE4-NEXT:    pinsrb $8, (%rdi,%rsi,4), %xmm0
+; SSE4-NEXT:    pinsrb $10, (%rdi,%rcx), %xmm0
+; SSE4-NEXT:    pinsrb $12, (%rdi,%r8,2), %xmm0
+; SSE4-NEXT:    pinsrb $14, (%r9), %xmm0
 ; SSE4-NEXT:    movdqu (%rdx), %xmm1
-; SSE4-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; SSE4-NEXT:    pmaddwd %xmm1, %xmm0
-; SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE4-NEXT:    paddd %xmm0, %xmm1
-; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; SSE4-NEXT:    pmaddwd %xmm0, %xmm1
+; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE4-NEXT:    paddd %xmm1, %xmm0
-; SSE4-NEXT:    movd %xmm0, %eax
+; SSE4-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE4-NEXT:    paddd %xmm0, %xmm1
+; SSE4-NEXT:    movd %xmm1, %eax
 ; SSE4-NEXT:    retq
 ;
-; AVX2-LABEL: dot_ext_v8i8_v8i32:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    leaq (%rsi,%rsi,4), %rax
-; AVX2-NEXT:    leaq (%rsi,%rsi,2), %rcx
-; AVX2-NEXT:    leaq (,%rsi,8), %r8
-; AVX2-NEXT:    subq %rsi, %r8
-; AVX2-NEXT:    movzbl (%rdi), %r9d
-; AVX2-NEXT:    vmovd %r9d, %xmm0
-; AVX2-NEXT:    vpinsrb $1, (%rdi,%rsi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $2, (%rdi,%rsi,2), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $3, (%rdi,%rcx), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $4, (%rdi,%rsi,4), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $5, (%rdi,%rax), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $6, (%rdi,%rcx,2), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrb $7, (%rdi,%r8), %xmm0, %xmm0
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmaddwd (%rdx), %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: dot_ext_v8i8_v8i32:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    leaq (%rsi,%rsi,4), %rax
-; AVX512-NEXT:    leaq (%rsi,%rsi,2), %rcx
-; AVX512-NEXT:    leaq (,%rsi,8), %r8
-; AVX512-NEXT:    movzbl (%rdi), %r9d
-; AVX512-NEXT:    vmovd %r9d, %xmm0
-; AVX512-NEXT:    vpinsrb $1, (%rdi,%rsi), %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $2, (%rdi,%rsi,2), %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $3, (%rdi,%rcx), %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $4, (%rdi,%rsi,4), %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $5, (%rdi,%rax), %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrb $6, (%rdi,%rcx,2), %xmm0, %xmm0
-; AVX512-NEXT:    subq %rsi, %r8
-; AVX512-NEXT:    vpinsrb $7, (%rdi,%r8), %xmm0, %xmm0
-; AVX512-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX512-NEXT:    vpmaddwd (%rdx), %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    retq
+; AVX-LABEL: dot_ext_v8i8_v8i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movzbl (%rdi), %eax
+; AVX-NEXT:    leaq (%rsi,%rsi,2), %rcx
+; AVX-NEXT:    leaq (%rsi,%rsi,4), %r8
+; AVX-NEXT:    leaq (%rdi,%rsi,8), %r9
+; AVX-NEXT:    subq %rsi, %r9
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpinsrb $2, (%rdi,%rsi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $4, (%rdi,%rsi,2), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $6, (%rdi,%rcx), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $8, (%rdi,%rsi,4), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $10, (%rdi,%r8), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $12, (%rdi,%rcx,2), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $14, (%r9), %xmm0, %xmm0
+; AVX-NEXT:    vpmaddwd (%rdx), %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
 entry:
   %var0 = load i8, ptr %a, align 1
   %arrayidx.1 = getelementptr inbounds i8, ptr %a, i64 %a_stride
@@ -175,14 +147,13 @@ define i32 @dot_ext_v4i8_v4i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ;
 ; SSE4-LABEL: dot_ext_v4i8_v4i32:
 ; SSE4:       # %bb.0: # %entry
-; SSE4-NEXT:    leaq (%rsi,%rsi,2), %rax
-; SSE4-NEXT:    movzbl (%rdi), %ecx
-; SSE4-NEXT:    movd %ecx, %xmm0
-; SSE4-NEXT:    pinsrb $1, (%rdi,%rsi), %xmm0
-; SSE4-NEXT:    pinsrb $2, (%rdi,%rsi,2), %xmm0
-; SSE4-NEXT:    pinsrb $3, (%rdi,%rax), %xmm0
+; SSE4-NEXT:    movzbl (%rdi), %eax
+; SSE4-NEXT:    leaq (%rsi,%rsi,2), %rcx
+; SSE4-NEXT:    movd %eax, %xmm0
+; SSE4-NEXT:    pinsrb $4, (%rdi,%rsi), %xmm0
+; SSE4-NEXT:    pinsrb $8, (%rdi,%rsi,2), %xmm0
+; SSE4-NEXT:    pinsrb $12, (%rdi,%rcx), %xmm0
 ; SSE4-NEXT:    pmovzxwd {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
-; SSE4-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; SSE4-NEXT:    pmaddwd %xmm0, %xmm1
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE4-NEXT:    paddd %xmm1, %xmm0
@@ -194,12 +165,11 @@ define i32 @dot_ext_v4i8_v4i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; AVX-LABEL: dot_ext_v4i8_v4i32:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movzbl (%rdi), %eax
+; AVX-NEXT:    leaq (%rsi,%rsi,2), %rcx
 ; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpinsrb $1, (%rdi,%rsi), %xmm0, %xmm0
-; AVX-NEXT:    vpinsrb $2, (%rdi,%rsi,2), %xmm0, %xmm0
-; AVX-NEXT:    leaq (%rsi,%rsi,2), %rax
-; AVX-NEXT:    vpinsrb $3, (%rdi,%rax), %xmm0, %xmm0
-; AVX-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; AVX-NEXT:    vpinsrb $4, (%rdi,%rsi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $8, (%rdi,%rsi,2), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrb $12, (%rdi,%rcx), %xmm0, %xmm0
 ; AVX-NEXT:    vpmovzxwd {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
 ; AVX-NEXT:    vpmaddwd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -311,8 +281,7 @@ define i64 @dot_ext_v2i8_v2i64(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE4:       # %bb.0:
 ; SSE4-NEXT:    movzbl (%rdi), %eax
 ; SSE4-NEXT:    movd %eax, %xmm0
-; SSE4-NEXT:    pinsrb $1, (%rdi,%rsi), %xmm0
-; SSE4-NEXT:    pmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; SSE4-NEXT:    pinsrb $8, (%rdi,%rsi), %xmm0
 ; SSE4-NEXT:    pmovsxbq (%rdx), %xmm1
 ; SSE4-NEXT:    pmuldq %xmm0, %xmm1
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
@@ -324,8 +293,7 @@ define i64 @dot_ext_v2i8_v2i64(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzbl (%rdi), %eax
 ; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    vpinsrb $1, (%rdi,%rsi), %xmm0, %xmm0
-; AVX-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
+; AVX-NEXT:    vpinsrb $8, (%rdi,%rsi), %xmm0, %xmm0
 ; AVX-NEXT:    vpmovsxbq (%rdx), %xmm1
 ; AVX-NEXT:    vpmuldq %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
@@ -374,14 +342,13 @@ define i32 @dot_ext_v4i16_v4i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ;
 ; SSE4-LABEL: dot_ext_v4i16_v4i32:
 ; SSE4:       # %bb.0: # %entry
-; SSE4-NEXT:    leaq (%rsi,%rsi,2), %rax
-; SSE4-NEXT:    movzwl (%rdi), %ecx
-; SSE4-NEXT:    movd %ecx, %xmm0
-; SSE4-NEXT:    pinsrw $1, (%rdi,%rsi), %xmm0
-; SSE4-NEXT:    pinsrw $2, (%rdi,%rsi,2), %xmm0
-; SSE4-NEXT:    pinsrw $3, (%rdi,%rax), %xmm0
+; SSE4-NEXT:    movzwl (%rdi), %eax
+; SSE4-NEXT:    leaq (%rsi,%rsi,2), %rcx
+; SSE4-NEXT:    movd %eax, %xmm0
+; SSE4-NEXT:    pinsrw $2, (%rdi,%rsi), %xmm0
+; SSE4-NEXT:    pinsrw $4, (%rdi,%rsi,2), %xmm0
+; SSE4-NEXT:    pinsrw $6, (%rdi,%rcx), %xmm0
 ; SSE4-NEXT:    pmovsxwd (%rdx), %xmm1
-; SSE4-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
 ; SSE4-NEXT:    pmulld %xmm0, %xmm1
 ; SSE4-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE4-NEXT:    paddd %xmm1, %xmm0
@@ -390,41 +357,22 @@ define i32 @dot_ext_v4i16_v4i32(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE4-NEXT:    movd %xmm1, %eax
 ; SSE4-NEXT:    retq
 ;
-; AVX2-LABEL: dot_ext_v4i16_v4i32:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    leaq (%rsi,%rsi,2), %rax
-; AVX2-NEXT:    movzwl (%rdi), %ecx
-; AVX2-NEXT:    vmovd %ecx, %xmm0
-; AVX2-NEXT:    vpinsrw $1, (%rdi,%rsi), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $2, (%rdi,%rsi,2), %xmm0, %xmm0
-; AVX2-NEXT:    vpinsrw $3, (%rdi,%rax), %xmm0, %xmm0
-; AVX2-NEXT:    vpmovsxwd (%rdx), %xmm1
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX2-NEXT:    vpmulld %xmm0, %xmm1, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovd %xmm0, %eax
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: dot_ext_v4i16_v4i32:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    leaq (%rsi,%rsi,2), %rax
-; AVX512-NEXT:    movzwl (%rdi), %ecx
-; AVX512-NEXT:    vmovd %ecx, %xmm0
-; AVX512-NEXT:    vpinsrw $1, (%rdi,%rsi), %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrw $2, (%rdi,%rsi,2), %xmm0, %xmm0
-; AVX512-NEXT:    vpinsrw $3, (%rdi,%rax), %xmm0, %xmm0
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
-; AVX512-NEXT:    vpmovsxwd (%rdx), %xmm1
-; AVX512-NEXT:    vpmulld %xmm0, %xmm1, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vmovd %xmm0, %eax
-; AVX512-NEXT:    retq
+; AVX-LABEL: dot_ext_v4i16_v4i32:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    movzwl (%rdi), %eax
+; AVX-NEXT:    leaq (%rsi,%rsi,2), %rcx
+; AVX-NEXT:    vmovd %eax, %xmm0
+; AVX-NEXT:    vpinsrw $2, (%rdi,%rsi), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $4, (%rdi,%rsi,2), %xmm0, %xmm0
+; AVX-NEXT:    vpinsrw $6, (%rdi,%rcx), %xmm0, %xmm0
+; AVX-NEXT:    vpmovsxwd (%rdx), %xmm1
+; AVX-NEXT:    vpmulld %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    retq
 entry:
   %var0 = load i16, ptr %a, align 1
   %arrayidx.1 = getelementptr inbounds i8, ptr %a, i64 %a_stride
@@ -509,16 +457,15 @@ define i64 @dot_ext_v2i32_v2i64(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,1,3]
-; SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE2-NEXT:    pmuludq %xmm1, %xmm0
-; SSE2-NEXT:    psllq $32, %xmm0
-; SSE2-NEXT:    pmuludq %xmm2, %xmm1
-; SSE2-NEXT:    paddq %xmm0, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; SSE2-NEXT:    psllq $32, %xmm2
+; SSE2-NEXT:    pmuludq %xmm0, %xmm1
+; SSE2-NEXT:    paddq %xmm2, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    paddq %xmm1, %xmm0
 ; SSE2-NEXT:    movq %xmm0, %rax
@@ -560,8 +507,8 @@ define i64 @dot_ext_v2i32_v2i64(ptr %a, i64 %a_stride, ptr %b) nounwind {
 ; AVX512-LABEL: dot_ext_v2i32_v2i64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX512-NEXT:    vpinsrd $1, (%rdi,%rsi), %xmm0, %xmm0
-; AVX512-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX512-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
 ; AVX512-NEXT:    vpmovsxdq (%rdx), %xmm1
 ; AVX512-NEXT:    vpmullq %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]

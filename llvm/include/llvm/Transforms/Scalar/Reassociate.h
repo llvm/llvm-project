@@ -28,6 +28,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
+#include "llvm/Support/Compiler.h"
 #include <deque>
 
 namespace llvm {
@@ -39,6 +40,7 @@ class Function;
 class Instruction;
 class IRBuilderBase;
 class Value;
+struct OverflowTracking;
 
 /// A private "module" namespace for types and utilities used by Reassociate.
 /// These are implementation details and should not be used by clients.
@@ -62,19 +64,6 @@ struct Factor {
   unsigned Power;
 
   Factor(Value *Base, unsigned Power) : Base(Base), Power(Power) {}
-};
-
-struct OverflowTracking {
-  bool HasNUW;
-  bool HasNSW;
-  bool AllKnownNonNegative;
-  bool AllKnownNonZero;
-  // Note: AllKnownNonNegative can be true in a case where one of the operands
-  // is negative, but one the operators is not NSW. AllKnownNonNegative should
-  // not be used independently of HasNSW
-  OverflowTracking()
-      : HasNUW(true), HasNSW(true), AllKnownNonNegative(true),
-        AllKnownNonZero(true) {}
 };
 
 class XorOpnd;
@@ -108,7 +97,7 @@ protected:
   bool MadeChange;
 
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 
 private:
   void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);
@@ -117,7 +106,7 @@ private:
   void ReassociateExpression(BinaryOperator *I);
   void RewriteExprTree(BinaryOperator *I,
                        SmallVectorImpl<reassociate::ValueEntry> &Ops,
-                       reassociate::OverflowTracking Flags);
+                       OverflowTracking Flags);
   Value *OptimizeExpression(BinaryOperator *I,
                             SmallVectorImpl<reassociate::ValueEntry> &Ops);
   Value *OptimizeAdd(Instruction *I,

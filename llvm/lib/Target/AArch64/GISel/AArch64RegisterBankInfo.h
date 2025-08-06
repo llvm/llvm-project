@@ -122,7 +122,7 @@ class AArch64RegisterBankInfo final : public AArch64GenRegisterBankInfo {
 
   /// \returns true if \p MI is a PHI that its def is used by
   /// any instruction that onlyUsesFP.
-  bool isPHIWithFPContraints(const MachineInstr &MI,
+  bool isPHIWithFPConstraints(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI,
                              const TargetRegisterInfo &TRI,
                              unsigned Depth = 0) const;

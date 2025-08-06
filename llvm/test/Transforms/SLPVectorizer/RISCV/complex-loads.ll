@@ -88,7 +88,8 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; CHECK-NEXT:    [[TMP68:%.*]] = shufflevector <4 x i32> [[TMP67]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP69:%.*]] = insertelement <4 x i8> poison, i8 [[TMP115]], i32 0
 ; CHECK-NEXT:    [[TMP70:%.*]] = insertelement <4 x i8> [[TMP69]], i8 [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP71:%.*]] = call <4 x i8> @llvm.vector.insert.v4i8.v2i8(<4 x i8> [[TMP70]], <2 x i8> [[TMP62]], i64 2)
+; CHECK-NEXT:    [[TMP117:%.*]] = shufflevector <2 x i8> [[TMP62]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP71:%.*]] = shufflevector <4 x i8> [[TMP70]], <4 x i8> [[TMP117]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; CHECK-NEXT:    [[TMP72:%.*]] = zext <4 x i8> [[TMP71]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP73:%.*]] = load <4 x i8>, ptr [[ARRAYIDX5_3]], align 1
 ; CHECK-NEXT:    [[TMP74:%.*]] = zext <4 x i8> [[TMP73]] to <4 x i32>
@@ -112,7 +113,8 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; CHECK-NEXT:    [[TMP91:%.*]] = add <4 x i32> [[TMP86]], [[TMP61]]
 ; CHECK-NEXT:    [[TMP92:%.*]] = sub <4 x i32> [[TMP61]], [[TMP86]]
 ; CHECK-NEXT:    [[TMP93:%.*]] = shufflevector <4 x i32> [[TMP92]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP94:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP93]], <4 x i32> [[TMP91]], i64 4)
+; CHECK-NEXT:    [[TMP118:%.*]] = shufflevector <4 x i32> [[TMP91]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP94:%.*]] = shufflevector <8 x i32> [[TMP93]], <8 x i32> [[TMP118]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP95:%.*]] = add <8 x i32> [[TMP94]], [[TMP90]]
 ; CHECK-NEXT:    [[TMP96:%.*]] = sub <8 x i32> [[TMP90]], [[TMP94]]
 ; CHECK-NEXT:    [[TMP97:%.*]] = shufflevector <8 x i32> [[TMP95]], <8 x i32> [[TMP96]], <16 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7, i32 12, i32 8, i32 13, i32 9, i32 14, i32 10, i32 15, i32 11>
@@ -220,7 +222,8 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; THR15-NEXT:    [[TMP68:%.*]] = shufflevector <4 x i32> [[TMP67]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; THR15-NEXT:    [[TMP69:%.*]] = insertelement <4 x i8> poison, i8 [[TMP1]], i32 0
 ; THR15-NEXT:    [[TMP70:%.*]] = insertelement <4 x i8> [[TMP69]], i8 [[TMP0]], i32 1
-; THR15-NEXT:    [[TMP71:%.*]] = call <4 x i8> @llvm.vector.insert.v4i8.v2i8(<4 x i8> [[TMP70]], <2 x i8> [[TMP62]], i64 2)
+; THR15-NEXT:    [[TMP116:%.*]] = shufflevector <2 x i8> [[TMP62]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; THR15-NEXT:    [[TMP71:%.*]] = shufflevector <4 x i8> [[TMP70]], <4 x i8> [[TMP116]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
 ; THR15-NEXT:    [[TMP72:%.*]] = zext <4 x i8> [[TMP71]] to <4 x i32>
 ; THR15-NEXT:    [[TMP73:%.*]] = load <4 x i8>, ptr [[ARRAYIDX5_3]], align 1
 ; THR15-NEXT:    [[TMP74:%.*]] = zext <4 x i8> [[TMP73]] to <4 x i32>
@@ -244,7 +247,8 @@ define i32 @test(ptr %pix1, ptr %pix2, i64 %idx.ext, i64 %idx.ext63, ptr %add.pt
 ; THR15-NEXT:    [[TMP91:%.*]] = add <4 x i32> [[TMP86]], [[TMP61]]
 ; THR15-NEXT:    [[TMP92:%.*]] = sub <4 x i32> [[TMP61]], [[TMP86]]
 ; THR15-NEXT:    [[TMP93:%.*]] = shufflevector <4 x i32> [[TMP92]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; THR15-NEXT:    [[TMP94:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP93]], <4 x i32> [[TMP91]], i64 4)
+; THR15-NEXT:    [[TMP117:%.*]] = shufflevector <4 x i32> [[TMP91]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; THR15-NEXT:    [[TMP94:%.*]] = shufflevector <8 x i32> [[TMP93]], <8 x i32> [[TMP117]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; THR15-NEXT:    [[TMP95:%.*]] = add <8 x i32> [[TMP94]], [[TMP90]]
 ; THR15-NEXT:    [[TMP96:%.*]] = sub <8 x i32> [[TMP90]], [[TMP94]]
 ; THR15-NEXT:    [[TMP97:%.*]] = shufflevector <8 x i32> [[TMP95]], <8 x i32> [[TMP96]], <16 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7, i32 12, i32 8, i32 13, i32 9, i32 14, i32 10, i32 15, i32 11>

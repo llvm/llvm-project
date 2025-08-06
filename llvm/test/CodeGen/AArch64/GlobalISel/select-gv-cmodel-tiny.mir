@@ -31,15 +31,15 @@ body:             |
   bb.1:
     ; CHECK-LABEL: name: gv_tiny
     ; CHECK: [[ADR:%[0-9]+]]:gpr64 = ADR @foo1
-    ; CHECK: [[COPY:%[0-9]+]]:gpr64sp = COPY [[ADR]]
-    ; CHECK: [[ADR1:%[0-9]+]]:gpr64 = ADR @foo2
-    ; CHECK: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[ADR1]]
-    ; CHECK: STRWui $wzr, %stack.0.retval, 0 :: (store (s32) into %ir.retval)
-    ; CHECK: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (s32) from @foo1)
-    ; CHECK: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY1]], 0 :: (load (s32) from @foo2)
-    ; CHECK: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRWui]], [[LDRWui1]]
-    ; CHECK: $w0 = COPY [[ADDWrr]]
-    ; CHECK: RET_ReallyLR implicit $w0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY [[ADR]]
+    ; CHECK-NEXT: [[ADR1:%[0-9]+]]:gpr64 = ADR @foo2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr64sp = COPY [[ADR1]]
+    ; CHECK-NEXT: STRWui $wzr, %stack.0.retval, 0 :: (store (s32) into %ir.retval)
+    ; CHECK-NEXT: [[LDRWui:%[0-9]+]]:gpr32 = LDRWui [[COPY]], 0 :: (load (s32) from @foo1)
+    ; CHECK-NEXT: [[LDRWui1:%[0-9]+]]:gpr32 = LDRWui [[COPY1]], 0 :: (load (s32) from @foo2)
+    ; CHECK-NEXT: [[ADDWrr:%[0-9]+]]:gpr32 = ADDWrr [[LDRWui]], [[LDRWui1]]
+    ; CHECK-NEXT: $w0 = COPY [[ADDWrr]]
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %1:gpr(s32) = G_CONSTANT i32 0
     %4:gpr(p0) = G_GLOBAL_VALUE @foo1
     %3:gpr(p0) = COPY %4(p0)

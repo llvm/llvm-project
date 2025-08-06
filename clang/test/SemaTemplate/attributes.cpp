@@ -572,14 +572,14 @@ void UseRedeclaredAnnotatedFunc() {
 
 namespace preferred_name {
   int x [[clang::preferred_name("frank")]]; // expected-error {{expected a type}}
-  int y [[clang::preferred_name(int)]]; // expected-warning {{'preferred_name' attribute only applies to class templates}}
-  struct [[clang::preferred_name(int)]] A; // expected-warning {{'preferred_name' attribute only applies to class templates}}
-  template<typename T> struct [[clang::preferred_name(int)]] B; // expected-error {{argument 'int' to 'preferred_name' attribute is not a typedef for a specialization of 'B'}}
+  int y [[clang::preferred_name(int)]]; // expected-warning {{'clang::preferred_name' attribute only applies to class templates}}
+  struct [[clang::preferred_name(int)]] A; // expected-warning {{'clang::preferred_name' attribute only applies to class templates}}
+  template<typename T> struct [[clang::preferred_name(int)]] B; // expected-error {{argument 'int' to 'clang::preferred_name' attribute is not a typedef for a specialization of 'B'}}
   template<typename T> struct C;
   using X = C<int>; // expected-note {{'X' declared here}}
   typedef C<float> Y;
   using Z = const C<double>; // expected-note {{'Z' declared here}}
-  template<typename T> struct [[clang::preferred_name(C<int>)]] C; // expected-error {{argument 'C<int>' to 'preferred_name' attribute is not a typedef for a specialization of 'C'}}
+  template<typename T> struct [[clang::preferred_name(C<int>)]] C; // expected-error {{argument 'C<int>' to 'clang::preferred_name' attribute is not a typedef for a specialization of 'C'}}
   template<typename T> struct [[clang::preferred_name(X), clang::preferred_name(Y)]] C;
   template<typename T> struct [[clang::preferred_name(const X)]] C; // expected-error {{argument 'const X'}}
   template<typename T> struct [[clang::preferred_name(Z)]] C; // expected-error {{argument 'Z' (aka 'const C<double>')}}

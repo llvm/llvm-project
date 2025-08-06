@@ -202,5 +202,17 @@ entry:
   ret float %0
 }
 
+define float @test_atan_negzero() nounwind uwtable ssp {
+entry:
+; CHECK-LABEL: @test_atan_negzero(
+; CHECK:    ret float -0.000000e+00
+;
+; FNOBUILTIN-LABEL: @test_atan_negzero(
+; FNOBUILTIN:  ret float -0.000000e+00
+;
+  %1 = call float @atanf(float -0.0)
+  ret float %1
+}
+
 declare double @llvm.pow.f64(double, double) nounwind readonly
 declare float @llvm.pow.f32(float, float) nounwind readonly

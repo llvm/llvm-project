@@ -114,7 +114,7 @@ func.func @LLVM_x86_avxbf16_vcvtneebf162ps128(
   %a: memref<8xbf16>) -> vector<4xf32>
 {
   // CHECK: call <4 x float> @llvm.x86.vcvtneebf162ps128(
-  %0 = x86vector.avx.cvt.packed.even.indexed.bf16_to_f32 %a : memref<8xbf16> -> vector<4xf32>
+  %0 = x86vector.avx.cvt.packed.even.indexed_to_f32 %a : memref<8xbf16> -> vector<4xf32>
   return %0 : vector<4xf32>
 }
 
@@ -123,7 +123,7 @@ func.func @LLVM_x86_avxbf16_vcvtneebf162ps256(
   %a: memref<16xbf16>) -> vector<8xf32>
 {
   // CHECK: call <8 x float> @llvm.x86.vcvtneebf162ps256(
-  %0 = x86vector.avx.cvt.packed.even.indexed.bf16_to_f32 %a : memref<16xbf16> -> vector<8xf32>
+  %0 = x86vector.avx.cvt.packed.even.indexed_to_f32 %a : memref<16xbf16> -> vector<8xf32>
   return %0 : vector<8xf32>
 }
 
@@ -132,7 +132,7 @@ func.func @LLVM_x86_avxbf16_vcvtneobf162ps128(
   %a: memref<8xbf16>) -> vector<4xf32>
 {
   // CHECK: call <4 x float> @llvm.x86.vcvtneobf162ps128(
-  %0 = x86vector.avx.cvt.packed.odd.indexed.bf16_to_f32 %a : memref<8xbf16> -> vector<4xf32>
+  %0 = x86vector.avx.cvt.packed.odd.indexed_to_f32 %a : memref<8xbf16> -> vector<4xf32>
   return %0 : vector<4xf32>
 }
 
@@ -141,7 +141,7 @@ func.func @LLVM_x86_avxbf16_vcvtneobf162ps256(
   %a: memref<16xbf16>) -> vector<8xf32>
 {
   // CHECK: call <8 x float> @llvm.x86.vcvtneobf162ps256(
-  %0 = x86vector.avx.cvt.packed.odd.indexed.bf16_to_f32 %a : memref<16xbf16> -> vector<8xf32>
+  %0 = x86vector.avx.cvt.packed.odd.indexed_to_f32 %a : memref<16xbf16> -> vector<8xf32>
   return %0 : vector<8xf32>
 }
 
@@ -150,7 +150,7 @@ func.func @LLVM_x86_avxbf16_vbcstnebf162ps128(
   %a: memref<1xbf16>) -> vector<4xf32>
 {
   // CHECK: call <4 x float> @llvm.x86.vbcstnebf162ps128(
-  %0 = x86vector.avx.bcst.bf16_to_f32.packed %a : memref<1xbf16> -> vector<4xf32>
+  %0 = x86vector.avx.bcst_to_f32.packed %a : memref<1xbf16> -> vector<4xf32>
   return %0 : vector<4xf32>
 }
 
@@ -159,7 +159,61 @@ func.func @LLVM_x86_avxbf16_vbcstnebf162ps256(
   %a: memref<1xbf16>) -> vector<8xf32>
 {
   // CHECK: call <8 x float> @llvm.x86.vbcstnebf162ps256(
-  %0 = x86vector.avx.bcst.bf16_to_f32.packed %a : memref<1xbf16> -> vector<8xf32>
+  %0 = x86vector.avx.bcst_to_f32.packed %a : memref<1xbf16> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: define <4 x float> @LLVM_x86_avxf16_vcvtneeph2ps128
+func.func @LLVM_x86_avxf16_vcvtneeph2ps128(
+  %a: memref<8xf16>) -> vector<4xf32>
+{
+  // CHECK: call <4 x float> @llvm.x86.vcvtneeph2ps128(
+  %0 = x86vector.avx.cvt.packed.even.indexed_to_f32 %a : memref<8xf16> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: define <8 x float> @LLVM_x86_avxf16_vcvtneeph2ps256
+func.func @LLVM_x86_avxf16_vcvtneeph2ps256(
+  %a: memref<16xf16>) -> vector<8xf32>
+{
+  // CHECK: call <8 x float> @llvm.x86.vcvtneeph2ps256(
+  %0 = x86vector.avx.cvt.packed.even.indexed_to_f32 %a : memref<16xf16> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: define <4 x float> @LLVM_x86_avxf16_vcvtneoph2ps128
+func.func @LLVM_x86_avxf16_vcvtneoph2ps128(
+  %a: memref<8xf16>) -> vector<4xf32>
+{
+  // CHECK: call <4 x float> @llvm.x86.vcvtneoph2ps128(
+  %0 = x86vector.avx.cvt.packed.odd.indexed_to_f32 %a : memref<8xf16> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: define <8 x float> @LLVM_x86_avxf16_vcvtneoph2ps256
+func.func @LLVM_x86_avxf16_vcvtneoph2ps256(
+  %a: memref<16xf16>) -> vector<8xf32>
+{
+  // CHECK: call <8 x float> @llvm.x86.vcvtneoph2ps256(
+  %0 = x86vector.avx.cvt.packed.odd.indexed_to_f32 %a : memref<16xf16> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: define <4 x float> @LLVM_x86_avxf16_vbcstnesh2ps128
+func.func @LLVM_x86_avxf16_vbcstnesh2ps128(
+  %a: memref<1xf16>) -> vector<4xf32>
+{
+  // CHECK: call <4 x float> @llvm.x86.vbcstnesh2ps128(
+  %0 = x86vector.avx.bcst_to_f32.packed %a : memref<1xf16> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL: define <8 x float> @LLVM_x86_avxf16_vbcstnesh2ps256
+func.func @LLVM_x86_avxf16_vbcstnesh2ps256(
+  %a: memref<1xf16>) -> vector<8xf32>
+{
+  // CHECK: call <8 x float> @llvm.x86.vbcstnesh2ps256(
+  %0 = x86vector.avx.bcst_to_f32.packed %a : memref<1xf16> -> vector<8xf32>
   return %0 : vector<8xf32>
 }
 
@@ -179,4 +233,20 @@ func.func @LLVM_x86_avx_dp_ps_256(
   // CHECK: call <8 x float> @llvm.x86.avx.dp.ps.256(
   %0 = x86vector.avx.intr.dot %a, %b : vector<8xf32>
   return %0 : vector<8xf32>
+}
+
+// CHECK-LABEL: define <4 x i32> @LLVM_x86_avx2_vpdpbssd_128
+func.func @LLVM_x86_avx2_vpdpbssd_128(%w: vector<4xi32>, %a: vector<16xi8>,
+    %b: vector<16xi8>) -> vector<4xi32> {
+  // CHECK: call <4 x i32> @llvm.x86.avx2.vpdpbssd.128(
+  %0 = x86vector.avx.dot.i8 %w, %a, %b : vector<16xi8> -> vector<4xi32>
+  return %0 : vector<4xi32>
+}
+
+// CHECK-LABEL: define <8 x i32> @LLVM_x86_avx2_vpdpbssd_256
+func.func @LLVM_x86_avx2_vpdpbssd_256(%w: vector<8xi32>, %a: vector<32xi8>,
+    %b: vector<32xi8>) -> vector<8xi32> {
+  // CHECK: call <8 x i32> @llvm.x86.avx2.vpdpbssd.256(
+  %0 = x86vector.avx.dot.i8 %w, %a, %b : vector<32xi8> -> vector<8xi32>
+  return %0 : vector<8xi32>
 }

@@ -15,6 +15,7 @@
 
 #include "Context.h"
 #include "DynamicAllocator.h"
+#include "Floating.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -52,6 +53,8 @@ public:
 
   InterpState(const InterpState &) = delete;
   InterpState &operator=(const InterpState &) = delete;
+
+  bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
 
   // Stack frame accessors.
   Frame *getSplitFrame() { return Parent.getCurrentFrame(); }
@@ -124,6 +127,33 @@ public:
 
   StdAllocatorCaller getStdAllocatorCaller(StringRef Name) const;
 
+  void *allocate(size_t Size, unsigned Align = 8) const {
+    return Allocator.Allocate(Size, Align);
+  }
+  template <typename T> T *allocate(size_t Num = 1) const {
+    return static_cast<T *>(allocate(Num * sizeof(T), alignof(T)));
+  }
+
+  template <typename T> T allocAP(unsigned BitWidth) {
+    unsigned NumWords = APInt::getNumWords(BitWidth);
+    if (NumWords == 1)
+      return T(BitWidth);
+    uint64_t *Mem = (uint64_t *)this->allocate(NumWords * sizeof(uint64_t));
+    // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
+    return T(Mem, BitWidth);
+  }
+
+  Floating allocFloat(const llvm::fltSemantics &Sem) {
+    if (Floating::singleWord(Sem))
+      return Floating(llvm::APFloatBase::SemanticsToEnum(Sem));
+
+    unsigned NumWords =
+        APInt::getNumWords(llvm::APFloatBase::getSizeInBits(Sem));
+    uint64_t *Mem = (uint64_t *)this->allocate(NumWords * sizeof(uint64_t));
+    // std::memset(Mem, 0, NumWords * sizeof(uint64_t)); // Debug
+    return Floating(Mem, llvm::APFloatBase::SemanticsToEnum(Sem));
+  }
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -159,6 +189,12 @@ public:
   llvm::SmallVector<
       std::pair<const Expr *, const LifetimeExtendedTemporaryDecl *>>
       SeenGlobalTemporaries;
+
+  /// List of blocks we're currently running either constructors or destructors
+  /// for.
+  llvm::SmallVector<const Block *> InitializingBlocks;
+
+  mutable llvm::BumpPtrAllocator Allocator;
 };
 
 class InterpStateCCOverride final {

@@ -252,37 +252,7 @@ void ObjectFileWasm::ParseSymtab(Symtab &symtab) {}
 
 static SectionType GetSectionTypeFromName(llvm::StringRef Name) {
   if (Name.consume_front(".debug_") || Name.consume_front(".zdebug_")) {
-    return llvm::StringSwitch<SectionType>(Name)
-        .Case("abbrev", eSectionTypeDWARFDebugAbbrev)
-        .Case("abbrev.dwo", eSectionTypeDWARFDebugAbbrevDwo)
-        .Case("addr", eSectionTypeDWARFDebugAddr)
-        .Case("aranges", eSectionTypeDWARFDebugAranges)
-        .Case("cu_index", eSectionTypeDWARFDebugCuIndex)
-        .Case("frame", eSectionTypeDWARFDebugFrame)
-        .Case("info", eSectionTypeDWARFDebugInfo)
-        .Case("info.dwo", eSectionTypeDWARFDebugInfoDwo)
-        .Cases("line", "line.dwo", eSectionTypeDWARFDebugLine)
-        .Cases("line_str", "line_str.dwo", eSectionTypeDWARFDebugLineStr)
-        .Case("loc", eSectionTypeDWARFDebugLoc)
-        .Case("loc.dwo", eSectionTypeDWARFDebugLocDwo)
-        .Case("loclists", eSectionTypeDWARFDebugLocLists)
-        .Case("loclists.dwo", eSectionTypeDWARFDebugLocListsDwo)
-        .Case("macinfo", eSectionTypeDWARFDebugMacInfo)
-        .Cases("macro", "macro.dwo", eSectionTypeDWARFDebugMacro)
-        .Case("names", eSectionTypeDWARFDebugNames)
-        .Case("pubnames", eSectionTypeDWARFDebugPubNames)
-        .Case("pubtypes", eSectionTypeDWARFDebugPubTypes)
-        .Case("ranges", eSectionTypeDWARFDebugRanges)
-        .Case("rnglists", eSectionTypeDWARFDebugRngLists)
-        .Case("rnglists.dwo", eSectionTypeDWARFDebugRngListsDwo)
-        .Case("str", eSectionTypeDWARFDebugStr)
-        .Case("str.dwo", eSectionTypeDWARFDebugStrDwo)
-        .Case("str_offsets", eSectionTypeDWARFDebugStrOffsets)
-        .Case("str_offsets.dwo", eSectionTypeDWARFDebugStrOffsetsDwo)
-        .Case("tu_index", eSectionTypeDWARFDebugTuIndex)
-        .Case("types", eSectionTypeDWARFDebugTypes)
-        .Case("types.dwo", eSectionTypeDWARFDebugTypesDwo)
-        .Default(eSectionTypeOther);
+    return ObjectFile::GetDWARFSectionTypeFromName(Name);
   }
   return eSectionTypeOther;
 }
@@ -406,9 +376,13 @@ DataExtractor ObjectFileWasm::ReadImageData(offset_t offset, uint32_t size) {
         DataBufferSP buffer_sp(data_up.release());
         data.SetData(buffer_sp, 0, buffer_sp->GetByteSize());
       }
+    } else if (offset < m_data.GetByteSize()) {
+      size =
+          std::min(static_cast<uint64_t>(size), m_data.GetByteSize() - offset);
+      return DataExtractor(m_data.GetDataStart() + offset, size, GetByteOrder(),
+                           GetAddressByteSize());
     }
   }
-
   data.SetByteOrder(GetByteOrder());
   return data;
 }

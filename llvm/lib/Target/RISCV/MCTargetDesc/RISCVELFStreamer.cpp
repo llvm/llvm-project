@@ -34,13 +34,6 @@ RISCVTargetELFStreamer::RISCVTargetELFStreamer(MCStreamer &S,
   setTargetABI(RISCVABI::computeTargetABI(STI.getTargetTriple(), Features,
                                           MAB.getTargetOptions().getABIName()));
   setFlagsFromFeatures(STI);
-  // `j label` in `.option norelax; j label; .option relax; ...; label:` needs a
-  // relocation to ensure the jump target is correct after linking. This is due
-  // to a limitation that shouldForceRelocation has to make the decision upfront
-  // without knowing a possibly future .option relax. When RISCVAsmParser is used,
-  // its ParseInstruction may call setForceRelocs as well.
-  if (STI.hasFeature(RISCV::FeatureRelax))
-    static_cast<RISCVAsmBackend &>(MAB).setForceRelocs();
 }
 
 RISCVELFStreamer &RISCVTargetELFStreamer::getStreamer() {
@@ -124,7 +117,7 @@ void RISCVTargetELFStreamer::reset() {
 
 void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
   getStreamer().getAssembler().registerSymbol(Symbol);
-  cast<MCSymbolELF>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
+  static_cast<MCSymbolELF &>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
 }
 
 void RISCVELFStreamer::reset() {
@@ -149,7 +142,8 @@ void RISCVELFStreamer::emitInstructionsMappingSymbol() {
 }
 
 void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
-  auto *Symbol = cast<MCSymbolELF>(getContext().createLocalSymbol(Name));
+  auto *Symbol =
+      static_cast<MCSymbolELF *>(getContext().createLocalSymbol(Name));
   emitLabel(Symbol);
   Symbol->setType(ELF::STT_NOTYPE);
   Symbol->setBinding(ELF::STB_LOCAL);

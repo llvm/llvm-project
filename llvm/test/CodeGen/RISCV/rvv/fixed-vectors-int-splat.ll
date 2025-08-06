@@ -431,3 +431,59 @@ define void @vadd_vx_v16i64(ptr %a, i64 %b, ptr %c) {
   store <16 x i64> %vc, ptr %c
   ret void
 }
+
+define <2 x i64> @vadd_vx_v2i64_to_sub(<2 x i64> %va) {
+; RV32-LABEL: vadd_vx_v2i64_to_sub:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    li a0, -256
+; RV32-NEXT:    li a1, 1
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vadd.vv v8, v8, v9
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vadd_vx_v2i64_to_sub:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, -1
+; RV64-NEXT:    srli a0, a0, 24
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vsub.vx v8, v8, a0
+; RV64-NEXT:    ret
+  %v = add <2 x i64> splat (i64 -1099511627775), %va
+  ret <2 x i64> %v
+}
+
+define <2 x i64> @vadd_vx_v2i64_to_sub_swapped(<2 x i64> %va) {
+; RV32-LABEL: vadd_vx_v2i64_to_sub_swapped:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    .cfi_def_cfa_offset 16
+; RV32-NEXT:    li a0, -256
+; RV32-NEXT:    li a1, 1
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw a0, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vadd.vv v8, v8, v9
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vadd_vx_v2i64_to_sub_swapped:
+; RV64:       # %bb.0:
+; RV64-NEXT:    li a0, -1
+; RV64-NEXT:    srli a0, a0, 24
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vsub.vx v8, v8, a0
+; RV64-NEXT:    ret
+  %v = add <2 x i64> %va, splat (i64 -1099511627775)
+  ret <2 x i64> %v
+}

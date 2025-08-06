@@ -58,6 +58,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE COMP_EVEX_NAME
 
+extern cl::opt<bool> X86EnableAPXForRelocation;
+
 namespace {
 // Including the generated EVEX compression tables.
 #define GET_X86_COMPRESS_EVEX_TABLE
@@ -73,8 +75,7 @@ public:
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 };
 
@@ -252,6 +253,13 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
       if (MI.definesRegister(Super, /*TRI=*/nullptr))
         IsRedundantNDD = false;
     }
+
+    // ADDrm/mr instructions with NDD + relocation had been transformed to the
+    // instructions without NDD in X86SuppressAPXForRelocation pass. That is to
+    // keep backward compatibility with linkers without APX support.
+    if (!X86EnableAPXForRelocation)
+      assert(!isAddMemInstrWithRelocation(MI) &&
+             "Unexpected NDD instruction with relocation!");
   }
 
   // NonNF -> NF only if it's not a compressible NDD instruction and eflags is
@@ -292,6 +300,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, const X86Subtarget &ST) {
 }
 
 bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "Start X86CompressEVEXPass\n";);
 #ifndef NDEBUG
   // Make sure the tables are sorted.
   static std::atomic<bool> TableChecked(false);
@@ -312,7 +321,7 @@ bool CompressEVEXPass::runOnMachineFunction(MachineFunction &MF) {
     for (MachineInstr &MI : MBB)
       Changed |= CompressEVEXImpl(MI, ST);
   }
-
+  LLVM_DEBUG(dbgs() << "End X86CompressEVEXPass\n";);
   return Changed;
 }
 

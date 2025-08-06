@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Ptr/IR/PtrTypes.h"
 #include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ptr;
@@ -149,5 +148,17 @@ LogicalResult PtrType::verifyEntries(DataLayoutEntryListRef entries,
                             << " to be a #ptr.spec attribute";
     }
   }
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Pointer metadata
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+PtrMetadataType::verify(function_ref<InFlightDiagnostic()> emitError,
+                        PtrLikeTypeInterface type) {
+  if (!type.hasPtrMetadata())
+    return emitError() << "the ptr-like type has no metadata";
   return success();
 }

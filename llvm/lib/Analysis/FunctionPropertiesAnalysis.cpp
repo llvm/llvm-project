@@ -21,12 +21,13 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include <deque>
 
 using namespace llvm;
 
 namespace llvm {
-cl::opt<bool> EnableDetailedFunctionProperties(
+LLVM_ABI cl::opt<bool> EnableDetailedFunctionProperties(
     "enable-detailed-function-properties", cl::Hidden, cl::init(false),
     cl::desc("Whether or not to compute detailed function properties."));
 
@@ -198,6 +199,25 @@ void FunctionPropertiesInfo::updateForBB(const BasicBlock &BB,
 #undef CHECK_OPERAND
     }
   }
+
+  if (IR2VecVocab) {
+    // We instantiate the IR2Vec embedder each time, as having an unique
+    // pointer to the embedder as member of the class would make it
+    // non-copyable. Instantiating the embedder in itself is not costly.
+    auto Embedder = ir2vec::Embedder::create(IR2VecKind::Symbolic,
+                                             *BB.getParent(), *IR2VecVocab);
+    if (!Embedder) {
+      BB.getContext().emitError("Error creating IR2Vec embeddings");
+      return;
+    }
+    const auto &BBEmbedding = Embedder->getBBVector(BB);
+    // Subtract BBEmbedding from Function embedding if the direction is -1,
+    // and add it if the direction is +1.
+    if (Direction == -1)
+      FunctionEmbedding -= BBEmbedding;
+    else
+      FunctionEmbedding += BBEmbedding;
+  }
 }
 
 void FunctionPropertiesInfo::updateAggregateStats(const Function &F,
@@ -219,19 +239,89 @@ void FunctionPropertiesInfo::updateAggregateStats(const Function &F,
 
 FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
     Function &F, FunctionAnalysisManager &FAM) {
+  // We use the cached result of the IR2VecVocabAnalysis run by
+  // InlineAdvisorAnalysis. If the IR2VecVocabAnalysis is not run, we don't
+  // use IR2Vec embeddings.
+  auto Vocabulary = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
+                        .getCachedResult<IR2VecVocabAnalysis>(*F.getParent());
   return getFunctionPropertiesInfo(F, FAM.getResult<DominatorTreeAnalysis>(F),
-                                   FAM.getResult<LoopAnalysis>(F));
+                                   FAM.getResult<LoopAnalysis>(F), Vocabulary);
 }
 
 FunctionPropertiesInfo FunctionPropertiesInfo::getFunctionPropertiesInfo(
-    const Function &F, const DominatorTree &DT, const LoopInfo &LI) {
+    const Function &F, const DominatorTree &DT, const LoopInfo &LI,
+    const ir2vec::Vocabulary *Vocabulary) {
 
   FunctionPropertiesInfo FPI;
+  if (Vocabulary && Vocabulary->isValid()) {
+    FPI.IR2VecVocab = Vocabulary;
+    FPI.FunctionEmbedding = ir2vec::Embedding(Vocabulary->getDimension(), 0.0);
+  }
   for (const auto &BB : F)
     if (DT.isReachableFromEntry(&BB))
       FPI.reIncludeBB(BB);
   FPI.updateAggregateStats(F, LI);
   return FPI;
+}
+
+bool FunctionPropertiesInfo::operator==(
+    const FunctionPropertiesInfo &FPI) const {
+  if (BasicBlockCount != FPI.BasicBlockCount ||
+      BlocksReachedFromConditionalInstruction !=
+          FPI.BlocksReachedFromConditionalInstruction ||
+      Uses != FPI.Uses ||
+      DirectCallsToDefinedFunctions != FPI.DirectCallsToDefinedFunctions ||
+      LoadInstCount != FPI.LoadInstCount ||
+      StoreInstCount != FPI.StoreInstCount ||
+      MaxLoopDepth != FPI.MaxLoopDepth ||
+      TopLevelLoopCount != FPI.TopLevelLoopCount ||
+      TotalInstructionCount != FPI.TotalInstructionCount ||
+      BasicBlocksWithSingleSuccessor != FPI.BasicBlocksWithSingleSuccessor ||
+      BasicBlocksWithTwoSuccessors != FPI.BasicBlocksWithTwoSuccessors ||
+      BasicBlocksWithMoreThanTwoSuccessors !=
+          FPI.BasicBlocksWithMoreThanTwoSuccessors ||
+      BasicBlocksWithSinglePredecessor !=
+          FPI.BasicBlocksWithSinglePredecessor ||
+      BasicBlocksWithTwoPredecessors != FPI.BasicBlocksWithTwoPredecessors ||
+      BasicBlocksWithMoreThanTwoPredecessors !=
+          FPI.BasicBlocksWithMoreThanTwoPredecessors ||
+      BigBasicBlocks != FPI.BigBasicBlocks ||
+      MediumBasicBlocks != FPI.MediumBasicBlocks ||
+      SmallBasicBlocks != FPI.SmallBasicBlocks ||
+      CastInstructionCount != FPI.CastInstructionCount ||
+      FloatingPointInstructionCount != FPI.FloatingPointInstructionCount ||
+      IntegerInstructionCount != FPI.IntegerInstructionCount ||
+      ConstantIntOperandCount != FPI.ConstantIntOperandCount ||
+      ConstantFPOperandCount != FPI.ConstantFPOperandCount ||
+      ConstantOperandCount != FPI.ConstantOperandCount ||
+      InstructionOperandCount != FPI.InstructionOperandCount ||
+      BasicBlockOperandCount != FPI.BasicBlockOperandCount ||
+      GlobalValueOperandCount != FPI.GlobalValueOperandCount ||
+      InlineAsmOperandCount != FPI.InlineAsmOperandCount ||
+      ArgumentOperandCount != FPI.ArgumentOperandCount ||
+      UnknownOperandCount != FPI.UnknownOperandCount ||
+      CriticalEdgeCount != FPI.CriticalEdgeCount ||
+      ControlFlowEdgeCount != FPI.ControlFlowEdgeCount ||
+      UnconditionalBranchCount != FPI.UnconditionalBranchCount ||
+      IntrinsicCount != FPI.IntrinsicCount ||
+      DirectCallCount != FPI.DirectCallCount ||
+      IndirectCallCount != FPI.IndirectCallCount ||
+      CallReturnsIntegerCount != FPI.CallReturnsIntegerCount ||
+      CallReturnsFloatCount != FPI.CallReturnsFloatCount ||
+      CallReturnsPointerCount != FPI.CallReturnsPointerCount ||
+      CallReturnsVectorIntCount != FPI.CallReturnsVectorIntCount ||
+      CallReturnsVectorFloatCount != FPI.CallReturnsVectorFloatCount ||
+      CallReturnsVectorPointerCount != FPI.CallReturnsVectorPointerCount ||
+      CallWithManyArgumentsCount != FPI.CallWithManyArgumentsCount ||
+      CallWithPointerArgumentCount != FPI.CallWithPointerArgumentCount) {
+    return false;
+  }
+  // Check the equality of the function embeddings. We don't check the equality
+  // of Vocabulary as it remains the same.
+  if (!FunctionEmbedding.approximatelyEquals(FPI.FunctionEmbedding))
+    return false;
+
+  return true;
 }
 
 void FunctionPropertiesInfo::print(raw_ostream &OS) const {
@@ -320,6 +410,16 @@ FunctionPropertiesUpdater::FunctionPropertiesUpdater(
 
   // The caller's entry BB may change due to new alloca instructions.
   LikelyToChangeBBs.insert(&*Caller.begin());
+
+  // The users of the value returned by call instruction can change
+  // leading to the change in embeddings being computed, when used.
+  // We conservatively add the BBs with such uses to LikelyToChangeBBs.
+  for (const auto *User : CB.users())
+    CallUsers.insert(dyn_cast<Instruction>(User)->getParent());
+  // CallSiteBB can be removed from CallUsers if present, it's taken care
+  // separately.
+  CallUsers.erase(&CallSiteBB);
+  LikelyToChangeBBs.insert_range(CallUsers);
 
   // The successors may become unreachable in the case of `invoke` inlining.
   // We track successors separately, too, because they form a boundary, together
@@ -434,6 +534,9 @@ void FunctionPropertiesUpdater::finish(FunctionAnalysisManager &FAM) const {
   if (&CallSiteBB != &*Caller.begin())
     Reinclude.insert(&*Caller.begin());
 
+  // Reinclude the BBs which use the values returned by call instruction
+  Reinclude.insert_range(CallUsers);
+
   // Distribute the successors to the 2 buckets.
   for (const auto *Succ : Successors)
     if (DT.isReachableFromEntry(Succ))
@@ -485,6 +588,9 @@ bool FunctionPropertiesUpdater::isUpdateValid(Function &F,
     return false;
   DominatorTree DT(F);
   LoopInfo LI(DT);
-  auto Fresh = FunctionPropertiesInfo::getFunctionPropertiesInfo(F, DT, LI);
+  auto Vocabulary = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
+                        .getCachedResult<IR2VecVocabAnalysis>(*F.getParent());
+  auto Fresh =
+      FunctionPropertiesInfo::getFunctionPropertiesInfo(F, DT, LI, Vocabulary);
   return FPI == Fresh;
 }

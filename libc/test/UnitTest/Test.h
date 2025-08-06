@@ -42,15 +42,23 @@
 
 #define ASSERT_ERRNO_EQ(VAL)                                                   \
   do {                                                                         \
-    ASSERT_EQ(VAL, static_cast<int>(LIBC_NAMESPACE::libc_errno));              \
-    LIBC_NAMESPACE::libc_errno = 0;                                            \
+    ASSERT_EQ(VAL, static_cast<int>(libc_errno));                              \
+    libc_errno = 0;                                                            \
   } while (0)
-#define ASSERT_ERRNO_SUCCESS()                                                 \
-  ASSERT_EQ(0, static_cast<int>(LIBC_NAMESPACE::libc_errno))
+#define ASSERT_ERRNO_SUCCESS() ASSERT_EQ(0, static_cast<int>(libc_errno))
 #define ASSERT_ERRNO_FAILURE()                                                 \
   do {                                                                         \
-    ASSERT_NE(0, static_cast<int>(LIBC_NAMESPACE::libc_errno));                \
-    LIBC_NAMESPACE::libc_errno = 0;                                            \
+    ASSERT_NE(0, static_cast<int>(libc_errno));                                \
+    libc_errno = 0;                                                            \
   } while (0)
+
+// Some macro utility to append file names with LIBC_TEST macro's value to be
+// used in stdio tests.
+#undef STR
+#undef EVAL_THEN_STR
+#define STR(X) #X
+#define EVAL_THEN_STR(X) STR(X)
+
+#define APPEND_LIBC_TEST(X) X "." EVAL_THEN_STR(LIBC_TEST)
 
 #endif // LLVM_LIBC_TEST_UNITTEST_TEST_H

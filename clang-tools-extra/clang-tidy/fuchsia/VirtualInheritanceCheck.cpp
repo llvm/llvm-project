@@ -16,10 +16,13 @@ namespace clang::tidy::fuchsia {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, hasDirectVirtualBaseClass) {
-  if (!Node.hasDefinition()) return false;
-  if (!Node.getNumVBases()) return false;
+  if (!Node.hasDefinition())
+    return false;
+  if (!Node.getNumVBases())
+    return false;
   for (const CXXBaseSpecifier &Base : Node.bases())
-    if (Base.isVirtual()) return true;
+    if (Base.isVirtual())
+      return true;
   return false;
 }
 } // namespace

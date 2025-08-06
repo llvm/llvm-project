@@ -50,6 +50,14 @@ public:
     f(symtab);
   }
 
+  // Invoke the specified callback for each active symbol table,
+  // skipping the native symbol table on pure ARM64EC targets.
+  void forEachActiveSymtab(std::function<void(SymbolTable &symtab)> f) {
+    if (symtab.ctx.config.machine == ARM64X)
+      f(*hybridSymtab);
+    f(symtab);
+  }
+
   std::vector<ObjFile *> objFileInstances;
   std::map<std::string, PDBInputFile *> pdbInputFileInstances;
   std::vector<ImportFile *> importFileInstances;

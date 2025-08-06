@@ -133,8 +133,8 @@ define i32 @fp(ptr, i64, ptr, ...) local_unnamed_addr #6 {
 ; CHECK-NEXT:    mov x4, xzr
 ; CHECK-NEXT:    orr x0, x8, #0x2
 ; CHECK-NEXT:    bl __stdio_common_vsprintf
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csinv w0, w0, wzr, ge
+; CHECK-NEXT:    cmn w0, #1
+; CHECK-NEXT:    csinv w0, w0, wzr, gt
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp, #24] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr 24
@@ -268,8 +268,8 @@ define i32 @snprintf(ptr, i64, ptr, ...) local_unnamed_addr #5 {
 ; CHECK-NEXT:    mov x4, xzr
 ; CHECK-NEXT:    orr x0, x8, #0x2
 ; CHECK-NEXT:    bl __stdio_common_vsprintf
-; CHECK-NEXT:    cmp w0, #0
-; CHECK-NEXT:    csinv w0, w0, wzr, ge
+; CHECK-NEXT:    cmn w0, #1
+; CHECK-NEXT:    csinv w0, w0, wzr, gt
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x21, x30, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_lrpair x21, 32
