@@ -1848,12 +1848,56 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __p) {
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __first, const_iterator __last) {
-  for (const_iterator __p = __first; __first != __last; __p = __first) {
-    ++__first;
-    erase(__p);
+  if (__first == __last)
+    return iterator(__last.__node_);
+
+  // current node
+  __next_pointer __current = __first.__node_;
+  size_type __bucket_count = bucket_count();
+  size_t __chash = std::__constrain_hash(__current->__hash(), __bucket_count);
+  // find previous node
+  __next_pointer __before_first = __bucket_list_[__chash];
+  for (; __before_first->__next_ != __current; __before_first = __before_first->__next_)
+    ;
+
+  __next_pointer __end = __last.__node_;
+
+  // If __before_first is in the same bucket, clear this bucket first without re-linking it
+  if (__before_first != __first_node_.__ptr() &&
+      std::__constrain_hash(__before_first->__hash(), __bucket_count) == __chash) {
+    while (__current != __end) {
+      if (auto __next_chash = std::__constrain_hash(__current->__hash(), __bucket_count); __next_chash != __chash) {
+        __chash = __next_chash;
+        break;
+      }
+      auto __next = __current->__next_;
+      __node_traits::deallocate(__node_alloc(), __current->__upcast(), 1);
+      __current = __next;
+      --__size_;
+    }
   }
-  __next_pointer __np = __last.__node_;
-  return iterator(__np);
+
+  while (__current != __end) {
+    auto __next = __current->__next_;
+    __node_traits::deallocate(__node_alloc(), __current->__upcast(), 1);
+    __current = __next;
+    --__size_;
+
+    // When switching buckets, set the old bucket to be empty and update the next bucket to have __before_first as its
+    // before-first element
+    if (__next) {
+      if (auto __next_chash = std::__constrain_hash(__next->__hash(), __bucket_count); __next_chash != __chash) {
+        __bucket_list_[__chash] = nullptr;
+        __chash                 = __next_chash;
+        __bucket_list_[__chash] = __before_first;
+      }
+    }
+  }
+
+  // re-link __before_start with __last
+  __before_first->__next_ = __current;
+
+  return iterator(__last.__node_);
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
