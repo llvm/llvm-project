@@ -5122,27 +5122,23 @@ defm INT_SET_MAXNREG_DEC : SET_MAXNREG<"dec", int_nvvm_setmaxnreg_dec_sync_align
 //
 // WGMMA fence instructions
 //
-let isConvergent = true in {
-def INT_NVVM_WGMMA_FENCE_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins), "wgmma.fence.sync.aligned",
-                             [(int_nvvm_wgmma_fence_sync_aligned)]>, Requires<[hasSM90a, hasPTX<80>]>;
+let isConvergent = true, Predicates = [hasSM90a, hasPTX<80>] in {
+def WGMMA_FENCE_SYNC_ALIGNED : NullaryInst<"wgmma.fence.sync.aligned", int_nvvm_wgmma_fence_sync_aligned>;
 
-def INT_NVVM_WGMMA_COMMIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins), "wgmma.commit_group.sync.aligned",
-                             [(int_nvvm_wgmma_commit_group_sync_aligned)]>, Requires<[hasSM90a, hasPTX<80>]>;
+def WGMMA_COMMIT_GROUP_SYNC_ALIGNED : NullaryInst<"wgmma.commit_group.sync.aligned", int_nvvm_wgmma_commit_group_sync_aligned>;
 
-def INT_NVVM_WGMMA_WAIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned",
-                             [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>, Requires<[hasSM90a, hasPTX<80>]>;
+def WGMMA_WAIT_GROUP_SYNC_ALIGNED : BasicNVPTXInst<(outs), (ins i64imm:$n), "wgmma.wait_group.sync.aligned",
+                             [(int_nvvm_wgmma_wait_group_sync_aligned timm:$n)]>;
 } // isConvergent = true
 
 let Predicates = [hasSM<90>, hasPTX<78>] in {
   def GRIDDEPCONTROL_LAUNCH_DEPENDENTS :
-        BasicNVPTXInst<(outs), (ins), "griddepcontrol.launch_dependents",
-                  [(int_nvvm_griddepcontrol_launch_dependents)]>;
+        NullaryInst<"griddepcontrol.launch_dependents", int_nvvm_griddepcontrol_launch_dependents>;
   def GRIDDEPCONTROL_WAIT :
-        BasicNVPTXInst<(outs), (ins), "griddepcontrol.wait",
-                  [(int_nvvm_griddepcontrol_wait)]>;
+        NullaryInst<"griddepcontrol.wait", int_nvvm_griddepcontrol_wait>;
 }
 
-def INT_EXIT : BasicNVPTXInst<(outs), (ins), "exit", [(int_nvvm_exit)]>;
+def EXIT : NullaryInst<"exit", int_nvvm_exit>;
 
 // Tcgen05 intrinsics
 let isConvergent = true, Predicates = [hasTcgen05Instructions] in {
@@ -5170,9 +5166,7 @@ defm TCGEN05_DEALLOC_CG1: TCGEN05_DEALLOC_INTR<"1", int_nvvm_tcgen05_dealloc_cg1
 defm TCGEN05_DEALLOC_CG2: TCGEN05_DEALLOC_INTR<"2", int_nvvm_tcgen05_dealloc_cg2>;
 
 multiclass TCGEN05_RELINQ_PERMIT_INTR<string num, Intrinsic Intr> {
-  def "" : BasicNVPTXInst<(outs), (ins),
-             "tcgen05.relinquish_alloc_permit.cta_group::" # num # ".sync.aligned",
-             [(Intr)]>;
+  def "" : NullaryInst<"tcgen05.relinquish_alloc_permit.cta_group::" # num # ".sync.aligned", Intr>;
 }
 defm TCGEN05_RELINQ_CG1: TCGEN05_RELINQ_PERMIT_INTR<"1", int_nvvm_tcgen05_relinq_alloc_permit_cg1>;
 defm TCGEN05_RELINQ_CG2: TCGEN05_RELINQ_PERMIT_INTR<"2", int_nvvm_tcgen05_relinq_alloc_permit_cg2>;
