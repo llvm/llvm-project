@@ -49,7 +49,6 @@ public:
   FlangTidyContext *context() { return context_; }
   bool fixAvailable() const { return fixAvailable_; }
   bool warningsAsErrors() const { return warningsAsErrors_; }
-  void setWarningsAsErrors(bool toggle) { warningsAsErrors_ = toggle; }
 
   using semantics::BaseChecker::Enter;
   using semantics::BaseChecker::Leave;
@@ -514,7 +513,7 @@ private:
   bool fixAvailable_{false};
   llvm::StringRef name_;
   FlangTidyContext *context_;
-  bool warningsAsErrors_{false};
+  bool warningsAsErrors_;
 };
 
 /// Read a named option from the ``Context`` and parse it as a bool.

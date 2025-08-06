@@ -22,9 +22,7 @@ FlangTidyCheckFactories::createChecks(FlangTidyContext *Context) const {
   std::vector<std::unique_ptr<FlangTidyCheck>> Checks;
   for (const auto &Factory : Factories) {
     if (Context->isCheckEnabled(Factory.getKey())) {
-      auto &check = Checks.emplace_back(Factory.getValue()(Factory.getKey(), Context));
-      bool Werror = Context->isWarningsAsErrorsEnabled(Factory.getKey());
-      check->setWarningsAsErrors(Werror);
+      Checks.emplace_back(Factory.getValue()(Factory.getKey(), Context));
     }
   }
   return Checks;

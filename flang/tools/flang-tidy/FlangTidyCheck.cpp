@@ -18,7 +18,8 @@ namespace Fortran::tidy {
 FlangTidyCheck::FlangTidyCheck(llvm::StringRef CheckName,
                                FlangTidyContext *Context)
     : Options(CheckName, Context->getOptions().CheckOptions, Context),
-      name_(CheckName), context_(Context) {}
+      name_(CheckName), context_(Context),
+      warningsAsErrors_(Context->isWarningsAsErrorsEnabled(CheckName)) {}
 
 FlangTidyCheck::OptionsView::OptionsView(
     llvm::StringRef CheckName, const FlangTidyOptions::OptionMap &CheckOptions,
