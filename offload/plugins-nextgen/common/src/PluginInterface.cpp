@@ -2251,7 +2251,7 @@ GenericPluginTy::create_interop(int32_t ID, int32_t InteropContext,
 int32_t GenericPluginTy::release_interop(int32_t ID,
                                          omp_interop_val_t *Interop) {
   assert(Interop && "Interop is null");
-  assert(Interop->DeviceId == ID && "Interop does not match device id");
+  assert(Interop->device_id == ID && "Interop does not match device id");
   auto &Device = getDevice(ID);
   auto Err = Device.releaseInterop(Interop);
   if (Err) {
