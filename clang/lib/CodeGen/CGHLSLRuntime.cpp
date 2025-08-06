@@ -22,6 +22,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/IR/Constants.h"
@@ -383,47 +384,82 @@ static llvm::Value *createSPIRVBuiltinLoad(IRBuilder<> &B, llvm::Module &M,
   return B.CreateLoad(Ty, GV);
 }
 
-llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
-                                              const ParmVarDecl &D,
-                                              llvm::Type *Ty) {
-  assert(D.hasAttrs() && "Entry parameter missing annotation attribute!");
-  if (D.hasAttr<HLSLSV_GroupIndexAttr>()) {
+llvm::Value *
+CGHLSLRuntime::emitSystemSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                      const clang::DeclaratorDecl *Decl,
+                                      SemanticInfo &ActiveSemantic) {
+  if (HLSLSV_GroupIndexAttr *S =
+          dyn_cast<HLSLSV_GroupIndexAttr>(ActiveSemantic.Semantic)) {
     llvm::Function *GroupIndex =
         CGM.getIntrinsic(getFlattenedThreadIdInGroupIntrinsic());
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
-  if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
+
+  if (HLSLSV_DispatchThreadIDAttr *S =
+          dyn_cast<HLSLSV_DispatchThreadIDAttr>(ActiveSemantic.Semantic)) {
     llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
             ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
             : CGM.getIntrinsic(IntrinID);
-    return buildVectorInput(B, ThreadIDIntrinsic, Ty);
+    return buildVectorInput(B, ThreadIDIntrinsic, Type);
   }
-  if (D.hasAttr<HLSLSV_GroupThreadIDAttr>()) {
+
+  if (HLSLSV_GroupThreadIDAttr *S =
+          dyn_cast<HLSLSV_GroupThreadIDAttr>(ActiveSemantic.Semantic)) {
     llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
             ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
             : CGM.getIntrinsic(IntrinID);
-    return buildVectorInput(B, GroupThreadIDIntrinsic, Ty);
+    return buildVectorInput(B, GroupThreadIDIntrinsic, Type);
   }
-  if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
+
+  if (HLSLSV_GroupIDAttr *S =
+          dyn_cast<HLSLSV_GroupIDAttr>(ActiveSemantic.Semantic)) {
     llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
     llvm::Function *GroupIDIntrinsic =
         llvm::Intrinsic::isOverloaded(IntrinID)
             ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
             : CGM.getIntrinsic(IntrinID);
-    return buildVectorInput(B, GroupIDIntrinsic, Ty);
+    return buildVectorInput(B, GroupIDIntrinsic, Type);
   }
-  if (D.hasAttr<HLSLSV_PositionAttr>()) {
-    if (getArch() == llvm::Triple::spirv)
-      return createSPIRVBuiltinLoad(B, CGM.getModule(), Ty, "sv_position",
-                                    /* BuiltIn::Position */ 0);
-    llvm_unreachable("SV_Position semantic not implemented for this target.");
+
+  if (HLSLSV_PositionAttr *S =
+          dyn_cast<HLSLSV_PositionAttr>(ActiveSemantic.Semantic)) {
+    if (CGM.getTriple().getEnvironment() == Triple::EnvironmentType::Pixel)
+      return createSPIRVBuiltinLoad(B, CGM.getModule(), Type,
+                                    S->getAttrName()->getName(),
+                                    /* BuiltIn::FragCoord */ 15);
   }
-  assert(false && "Unhandled parameter attribute");
-  return nullptr;
+
+  llvm_unreachable("non-handled system semantic. FIXME.");
+}
+
+llvm::Value *
+CGHLSLRuntime::handleScalarSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                        const clang::DeclaratorDecl *Decl,
+                                        SemanticInfo &ActiveSemantic) {
+
+  if (!ActiveSemantic.Semantic) {
+    ActiveSemantic.Semantic = Decl->getAttr<HLSLSemanticAttr>();
+    if (!ActiveSemantic.Semantic) {
+      CGM.getDiags().Report(Decl->getInnerLocStart(),
+                            diag::err_hlsl_semantic_missing);
+      return nullptr;
+    }
+    ActiveSemantic.Index = ActiveSemantic.Semantic->getSemanticIndex();
+  }
+
+  return emitSystemSemanticLoad(B, Type, Decl, ActiveSemantic);
+}
+
+llvm::Value *
+CGHLSLRuntime::handleSemanticLoad(IRBuilder<> &B, llvm::Type *Type,
+                                  const clang::DeclaratorDecl *Decl,
+                                  SemanticInfo &ActiveSemantic) {
+  assert(!Type->isStructTy());
+  return handleScalarSemanticLoad(B, Type, Decl, ActiveSemantic);
 }
 
 void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
@@ -440,13 +476,13 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
                                               Fn->getAttributes().getFnAttrs());
   EntryFn->setAttributes(NewAttrs);
   setHLSLEntryAttributes(FD, EntryFn);
+  llvm::SmallVector<Value *> Args;
 
   // Set the called function as internal linkage.
   Fn->setLinkage(GlobalValue::InternalLinkage);
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", EntryFn);
   IRBuilder<> B(BB);
-  llvm::SmallVector<Value *> Args;
 
   SmallVector<OperandBundleDef, 1> OB;
   if (CGM.shouldEmitConvergenceTokens()) {
@@ -459,6 +495,7 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
 
   // FIXME: support struct parameters where semantics are on members.
   // See: https://github.com/llvm/llvm-project/issues/57874
+
   unsigned SRetOffset = 0;
   for (const auto &Param : Fn->args()) {
     if (Param.hasStructRetAttr()) {
@@ -468,14 +505,17 @@ void CGHLSLRuntime::emitEntryFunction(const FunctionDecl *FD,
       Args.emplace_back(PoisonValue::get(Param.getType()));
       continue;
     }
+
     const ParmVarDecl *PD = FD->getParamDecl(Param.getArgNo() - SRetOffset);
-    Args.push_back(emitInputSemantic(B, *PD, Param.getType()));
+    SemanticInfo ActiveSemantic = {nullptr, 0};
+    Args.push_back(handleSemanticLoad(B, Param.getType(), PD, ActiveSemantic));
   }
 
   CallInst *CI = B.CreateCall(FunctionCallee(Fn), Args, OB);
   CI->setCallingConv(Fn->getCallingConv());
   // FIXME: Handle codegen for return type semantics.
   // See: https://github.com/llvm/llvm-project/issues/57875
+
   B.CreateRetVoid();
 
   // Add and identify root signature to function, if applicable
