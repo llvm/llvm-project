@@ -5937,13 +5937,15 @@ bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
   APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
   APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
   if (isLegal({TargetOpcode::G_TRUNC_SSAT_S, {DstTy, SrcTy}})) {
-    if (mi_match(Src, MRI,
-                 m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMin)),
-                         m_SpecificICstOrSplat(SignedMax))))
+    if (mi_match(
+            Src, MRI,
+            m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMin)),
+                    m_SpecificICstOrSplat(SignedMax))))
       return true;
-    if (mi_match(Src, MRI,
-                 m_GSMax(m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax)),
-                         m_SpecificICstOrSplat(SignedMin))))
+    if (mi_match(
+            Src, MRI,
+            m_GSMax(m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax)),
+                    m_SpecificICstOrSplat(SignedMin))))
       return true;
   }
   return false;
@@ -5973,7 +5975,8 @@ bool CombinerHelper::matchTruncSSatU(MachineInstr &MI,
                          m_SpecificICstOrSplat(UnsignedMax))))
       return true;
     if (mi_match(Src, MRI,
-                 m_GSMax(m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(UnsignedMax)),
+                 m_GSMax(m_GSMin(m_Reg(MatchInfo),
+                                 m_SpecificICstOrSplat(UnsignedMax)),
                          m_SpecificICstOrSplat(0))))
       return true;
     if (mi_match(Src, MRI,
