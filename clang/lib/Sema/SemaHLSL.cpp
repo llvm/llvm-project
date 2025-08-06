@@ -610,8 +610,9 @@ void SemaHLSL::ActOnFinishBuffer(Decl *Dcl, SourceLocation RBrace) {
   // create buffer layout struct
   createHostLayoutStructForBuffer(SemaRef, BufDecl);
 
+  HLSLVkBindingAttr *VkBinding = Dcl->getAttr<HLSLVkBindingAttr>();
   HLSLResourceBindingAttr *RBA = Dcl->getAttr<HLSLResourceBindingAttr>();
-  if (!RBA || !RBA->hasRegisterSlot()) {
+  if (!VkBinding && (!RBA || !RBA->hasRegisterSlot())) {
     SemaRef.Diag(Dcl->getLocation(), diag::warn_hlsl_implicit_binding);
     // Use HLSLResourceBindingAttr to transfer implicit binding order_ID
     // to codegen. If it does not exist, create an implicit attribute.
@@ -1510,6 +1511,23 @@ void SemaHLSL::handleVkConstantIdAttr(Decl *D, const ParsedAttr &AL) {
   HLSLVkConstantIdAttr *NewAttr = mergeVkConstantIdAttr(D, AL, Id);
   if (NewAttr)
     D->addAttr(NewAttr);
+}
+
+void SemaHLSL::handleVkBindingAttr(Decl *D, const ParsedAttr &AL) {
+  // The vk::binding attribute only applies to SPIR-V.
+  if (!getASTContext().getTargetInfo().getTriple().isSPIRV())
+    return;
+
+  uint32_t Binding = 0;
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), Binding))
+    return;
+  uint32_t Set = 0;
+  if (AL.getNumArgs() > 1 &&
+      !SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), Set))
+    return;
+
+  D->addAttr(::new (getASTContext())
+                 HLSLVkBindingAttr(getASTContext(), AL, Binding, Set));
 }
 
 bool SemaHLSL::diagnoseInputIDType(QualType T, const ParsedAttr &AL) {
@@ -3689,11 +3707,15 @@ static bool initVarDeclWithCtor(Sema &S, VarDecl *VD,
 void SemaHLSL::createResourceRecordCtorArgs(const Type *ResourceTy,
                                             StringRef VarName,
                                             HLSLResourceBindingAttr *RBA,
+                                            HLSLVkBindingAttr *VkBinding,
                                             uint32_t ArrayIndex,
                                             llvm::SmallVector<Expr *> &Args) {
   std::optional<uint32_t> RegisterSlot;
   uint32_t SpaceNo = 0;
-  if (RBA) {
+  if (VkBinding) {
+    RegisterSlot = VkBinding->getBinding();
+    SpaceNo = VkBinding->getSet();
+  } else if (RBA) {
     if (RBA->hasRegisterSlot())
       RegisterSlot = RBA->getSlotNumber();
     SpaceNo = RBA->getSpaceNumber();
@@ -3733,7 +3755,8 @@ void SemaHLSL::createResourceRecordCtorArgs(const Type *ResourceTy,
 bool SemaHLSL::initGlobalResourceDecl(VarDecl *VD) {
   SmallVector<Expr *> Args;
   createResourceRecordCtorArgs(VD->getType().getTypePtr(), VD->getName(),
-                               VD->getAttr<HLSLResourceBindingAttr>(), 0, Args);
+                               VD->getAttr<HLSLResourceBindingAttr>(),
+                               VD->getAttr<HLSLVkBindingAttr>(), 0, Args);
   return initVarDeclWithCtor(SemaRef, VD, Args);
 }
 
@@ -3750,7 +3773,8 @@ bool SemaHLSL::initGlobalResourceArrayDecl(VarDecl *VD) {
   SmallVector<Expr *> Args;
   QualType ResElementTy = getArrayElementType(VD->getType());
   createResourceRecordCtorArgs(ResElementTy.getTypePtr(), VD->getName(),
-                               VD->getAttr<HLSLResourceBindingAttr>(), 0, Args);
+                               VD->getAttr<HLSLResourceBindingAttr>(),
+                               VD->getAttr<HLSLVkBindingAttr>(), 0, Args);
 
   SourceLocation Loc = VD->getLocation();
   InitializedEntity Entity =
@@ -3827,6 +3851,9 @@ void SemaHLSL::processExplicitBindingsOnDecl(VarDecl *VD) {
 
   bool HasBinding = false;
   for (Attr *A : VD->attrs()) {
+    if (isa<HLSLVkBindingAttr>(A))
+      HasBinding = true;
+
     HLSLResourceBindingAttr *RBA = dyn_cast<HLSLResourceBindingAttr>(A);
     if (!RBA || !RBA->hasRegisterSlot())
       continue;

@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DXILABI.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -138,7 +139,7 @@ public:
   }
   /// Calculate the binding info - \c ReportOverlap will be called once for each
   /// overlapping binding.
-  BindingInfo calculateBindingInfo(
+  LLVM_ABI BindingInfo calculateBindingInfo(
       llvm::function_ref<void(const BindingInfoBuilder &Builder,
                               const Binding &Overlapping)>
           ReportOverlap);
@@ -153,7 +154,7 @@ public:
 
   /// For use in the \c ReportOverlap callback of \c calculateBindingInfo -
   /// finds a binding that the \c ReportedBinding overlaps with.
-  const Binding &findOverlapping(const Binding &ReportedBinding) const;
+  LLVM_ABI const Binding &findOverlapping(const Binding &ReportedBinding) const;
 };
 
 } // namespace hlsl
