@@ -2025,7 +2025,8 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
 
 size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
                           Status &error, bool force_live_memory,
-                          lldb::addr_t *load_addr_ptr) {
+                          lldb::addr_t *load_addr_ptr,
+                          bool *did_read_live_memory) {
   error.Clear();
 
   Address fixed_addr = addr;
@@ -2124,6 +2125,8 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
       if (bytes_read) {
         if (load_addr_ptr)
           *load_addr_ptr = load_addr;
+        if (did_read_live_memory)
+          *did_read_live_memory = true;
         return bytes_read;
       }
     }

@@ -358,12 +358,12 @@ public:
   swift::Identifier getPreferredPrivateDiscriminator() override {
     if (m_sc.comp_unit) {
       if (lldb_private::Module *module = m_sc.module_sp.get()) {
-        if (lldb_private::SymbolFile *symbol_file =
-                module->GetSymbolFile()) {
+        if (lldb_private::SymbolFile *symbol_file = module->GetSymbolFile()) {
           std::string private_discriminator_string;
           if (symbol_file->GetCompileOption("-private-discriminator",
-                                              private_discriminator_string,
-                                              m_sc.comp_unit)) {
+                                            private_discriminator_string,
+                                            m_sc.comp_unit) &&
+              !private_discriminator_string.empty()) {
             return m_source_file.getASTContext().getIdentifier(
                 private_discriminator_string);
           }

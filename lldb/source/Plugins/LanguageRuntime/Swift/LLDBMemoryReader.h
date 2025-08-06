@@ -51,6 +51,10 @@ private:
 
 class LLDBMemoryReader : public swift::remote::MemoryReader {
 public:
+  /// Besides address space 0 (the DefaultAddressSpace), subclasses are free to
+  /// use any address space for their own implementation purposes. LLDB uses
+  /// this address space to track file addresses it sends to RemoteInspection.
+  static constexpr uint8_t LLDBAddressSpace = 1;
 
   LLDBMemoryReader(Process &p,
                    std::function<swift::remote::RemoteAbsolutePointer(
@@ -97,6 +101,11 @@ public:
   /// Returns whether the filecache optimization is enabled or not.
   bool readMetadataFromFileCacheEnabled() const;
 
+protected:
+  bool readRemoteAddressImpl(swift::remote::RemoteAddress address,
+                             swift::remote::RemoteAddress &out,
+                             std::size_t integerSize) override;
+
 private:
   friend MemoryReaderLocalBufferHolder;
 
@@ -105,7 +114,8 @@ private:
   /// Gets the file address and module that were mapped to a given tagged
   /// address.
   std::optional<std::pair<uint64_t, lldb::ModuleSP>>
-  getFileAddressAndModuleForTaggedAddress(uint64_t tagged_address) const;
+  getFileAddressAndModuleForTaggedAddress(
+      swift::remote::RemoteAddress tagged_address) const;
 
   /// Resolves the address by either mapping a tagged address back to an LLDB
   /// Address with section + offset, or, in case the address is not tagged,
@@ -114,12 +124,20 @@ private:
   /// tagged address back, an Address with just an offset if the address was not
   /// tagged, and None if the address was tagged but we couldn't convert it back
   /// to an Address.
-  std::optional<Address> resolveRemoteAddress(uint64_t address) const;
+  std::optional<Address>
+  remoteAddressToLLDBAddress(swift::remote::RemoteAddress address) const;
+
+  enum class ReadBytesResult { fail, success_from_file, success_from_memory };
+  /// Implementation detail of readBytes. Returns a pair where the first element
+  /// indicates whether the memory was read successfully, the second element
+  /// indicates whether live memory was read.
+  ReadBytesResult readBytesImpl(swift::remote::RemoteAddress address,
+                                uint8_t *dest, uint64_t size);
 
   /// Reads memory from the symbol rich binary from the address into dest.
   /// \return true if it was able to successfully read memory.
-  std::optional<Address>
-  resolveRemoteAddressFromSymbolObjectFile(uint64_t address) const;
+  std::optional<Address> resolveRemoteAddressFromSymbolObjectFile(
+      swift::remote::RemoteAddress address) const;
 
   Process &m_process;
   size_t m_max_read_amount;
@@ -144,14 +162,6 @@ private:
   /// The set of modules where we should read memory from the symbol file's
   /// object file instead of the main object file.
   llvm::SmallSet<lldb::ModuleSP, 8> m_modules_with_metadata_in_symbol_obj_file;
-
-  /// The bit used to tag LLDB's virtual addresses as such. See \c
-  /// m_range_module_map.
-  const static uint64_t LLDB_FILE_ADDRESS_BIT = 0x2000000000000000;
-  static_assert(LLDB_FILE_ADDRESS_BIT & SWIFT_ABI_X86_64_SWIFT_SPARE_BITS_MASK,
-                "LLDB file address bit not in spare bits mask!");
-  static_assert(LLDB_FILE_ADDRESS_BIT & SWIFT_ABI_ARM64_SWIFT_SPARE_BITS_MASK,
-                "LLDB file address bit not in spare bits mask!");
 };
 } // namespace lldb_private
 #endif

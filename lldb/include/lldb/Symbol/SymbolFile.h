@@ -387,6 +387,15 @@ public:
   /// for this module have been changed.
   virtual void SectionFileAddressesChanged() = 0;
 
+  /// Looks for the compile option specified by \p option, and sets \p value to
+  /// it's value. For example, for a flag such as -foo=bar, looking up \p option
+  /// "-foo" will set \p value to "bar". For a standalone flag such as -baz, \p
+  /// value will be empty.
+  ///
+  /// If \p cu is set, only that compile unit is searched. Otherwise, every
+  /// compile unit is searched until the option is found or failure.
+  ///
+  /// Returns true if the option is found.
   virtual bool GetCompileOption(const char *option, std::string &value,
                                 CompileUnit *cu = nullptr) {
     value.clear();
