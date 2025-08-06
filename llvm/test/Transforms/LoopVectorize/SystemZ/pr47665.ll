@@ -96,7 +96,7 @@ define void @test(ptr %p, i40 %a) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i40 [[A]], 24
 ; CHECK-NEXT:    [[ASHR:%.*]] = ashr i40 [[SHL]], 28
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i40 [[ASHR]] to i32

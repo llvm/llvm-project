@@ -50,7 +50,7 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = sub nuw nsw i64 1, [[IV1]]
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP22]]
 ; CHECK-NEXT:    store i64 0, ptr [[ARRAYIDX14]], align 8
