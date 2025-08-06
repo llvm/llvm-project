@@ -12,7 +12,7 @@ SomeLibraryCore.swiftmodule: SomeLibraryCore.swift
 
 SomeLibrary.swiftmodule: SomeLibrary.swift SomeLibraryCore.swiftmodule
 	"$(MAKE)" BASENAME=$(shell basename $@ .swiftmodule) \
-		VPATH=$(SRCDIR) -f $(SRCDIR)/../dylib.mk all
+		VPATH=$(SRCDIR) LD_EXTRAS="-L$(BUILDDIR) -Xlinker -rpath -Xlinker $(BUILDDIR)" -f $(SRCDIR)/../dylib.mk all
 
 clean::
 	rm -rf *.o *.dylib *.so *.dll *.dSYM *.swiftdoc *.swiftmodule *.swiftinterface
