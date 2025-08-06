@@ -1139,6 +1139,9 @@ private:
   /// Pointer to the memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
 
+  /// Per device setting of MemoryManager's Threshold
+  virtual size_t getMemoryManagerSizeThreshold() { return 0; }
+
   /// Environment variables defined by the OpenMP standard.
   Int32Envar OMP_TeamLimit;
   Int32Envar OMP_NumTeams;
