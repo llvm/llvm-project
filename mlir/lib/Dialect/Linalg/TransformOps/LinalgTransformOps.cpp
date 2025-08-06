@@ -3783,13 +3783,13 @@ LogicalResult TileUsingForallOp::verify() {
 
 void transform::VectorizeChildrenAndApplyPatternsOp::build(
     OpBuilder &builder, OperationState &result, Value target,
-    bool foldMixedPrecisionIntoContract, bool vectorizePadding,
+    bool foldTypeExtensionsIntoContract, bool vectorizePadding,
     bool vectorizeExtract, bool flatten1DDepthwiseConv) {
   result.addOperands(target);
-  if (foldMixedPrecisionIntoContract) {
+  if (foldTypeExtensionsIntoContract) {
     result.addAttribute(
         VectorizeChildrenAndApplyPatternsOp::
-            getFoldMixedPrecisionIntoContractAttrName(result.name),
+            getFoldTypeExtensionsIntoContractAttrName(result.name),
         builder.getUnitAttr());
   }
   if (vectorizePadding) {
@@ -3882,7 +3882,7 @@ transform::VectorizeChildrenAndApplyPatternsOp::applyToOne(
 
   patterns.add<CopyVectorizationPattern>(ctx);
 
-  if (getFoldMixedPrecisionIntoContract())
+  if (getFoldTypeExtensionsIntoContract())
     vector::populateFoldArithExtensionPatterns(patterns);
 
   if (getVectorizePadding()) {

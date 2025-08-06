@@ -2348,8 +2348,8 @@ def VectorizeChildrenAndApplyPatternsOp :
     operation that is contained inside the vectorization target.
 
     This transformation supports the following attributes:
-    - `fold_mixed_precision_into_contract`: a `UnitAttr` to enable the folding of
-      arith.extFOp/arith.extIOp into vector.contract with mixed precision.
+    - `fold_type_extensions_into_contract`: a `UnitAttr` to enable the folding of
+      cast operations into vector.contract with mixed precision.
     - `vectorize_padding`: a `UnitAttr` to activate the vectorization of
       `tensor.pad` ops. Different pipelines may prefer to lower such ops to
       loops.
@@ -2370,7 +2370,7 @@ def VectorizeChildrenAndApplyPatternsOp :
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
-                   UnitAttr:$fold_mixed_precision_into_contract,
+                   UnitAttr:$fold_type_extensions_into_contract,
                    UnitAttr:$vectorize_padding,
                    UnitAttr:$vectorize_nd_extract,
                    UnitAttr:$flatten_1d_depthwise_conv,
@@ -2384,7 +2384,7 @@ def VectorizeChildrenAndApplyPatternsOp :
 
   let builders = [
     OpBuilder<(ins "Value":$target,
-               CArg<"bool", "false">:$foldMixedPrecisionIntoContract,
+               CArg<"bool", "false">:$foldTypeExtensionsIntoContract,
                CArg<"bool", "false">:$vectorizePadding,
                CArg<"bool", "false">:$vectorizeNDExtract,
                CArg<"bool", "false">:$flatten1DDepthwise)>
