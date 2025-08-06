@@ -5035,6 +5035,9 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
     // This is a member of some derived class. Truncate LV appropriately.
     // The end of the derived-to-base path for the base object must match the
     // derived-to-base path for the member pointer.
+    // C++23 [expr.mptr.oper]p4:
+    //   If the result of E1 is an object [...] whose most derived object does
+    //   not contain the member to which E2 refers, the behavior is undefined.
     if (LV.Designator.MostDerivedPathLength + MemPtr.Path.size() >
         LV.Designator.Entries.size()) {
       Info.FFDiag(RHS);
@@ -5050,6 +5053,24 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
         Info.FFDiag(RHS);
         return nullptr;
       }
+    }
+    // MemPtr.Path only contains the base classes of the class directly
+    // containing the member E2. It is still necessary to check that the class
+    // directly containing the member E2 lies on the derived-to-base path of E1
+    // to avoid incorrectly permitting member pointer access into a sibling
+    // class of the class containing the member E2. If this class would
+    // correspond to the most-derived class of E1, it either isn't contained in
+    // LV.Designator.Entries or the corresponding entry refers to an array
+    // element instead. Therefore get the most derived class directly in this
+    // case. Otherwise the previous entry should correpond to this class.
+    const CXXRecordDecl *LastLVDecl =
+        (PathLengthToMember > LV.Designator.MostDerivedPathLength)
+            ? getAsBaseClass(LV.Designator.Entries[PathLengthToMember - 1])
+            : LV.Designator.MostDerivedType->getAsCXXRecordDecl();
+    const CXXRecordDecl *LastMPDecl = MemPtr.getContainingRecord();
+    if (LastLVDecl->getCanonicalDecl() != LastMPDecl->getCanonicalDecl()) {
+      Info.FFDiag(RHS);
+      return nullptr;
     }
 
     // Truncate the lvalue to the appropriate derived class.

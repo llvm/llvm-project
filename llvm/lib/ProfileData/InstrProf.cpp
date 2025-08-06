@@ -1160,8 +1160,7 @@ void getValueForSiteInstrProf(const void *R, InstrProfValueData *Dst,
 }
 
 ValueProfData *allocValueProfDataInstrProf(size_t TotalSizeInBytes) {
-  ValueProfData *VD =
-      (ValueProfData *)(new (::operator new(TotalSizeInBytes)) ValueProfData());
+  ValueProfData *VD = new (::operator new(TotalSizeInBytes)) ValueProfData();
   memset(VD, 0, TotalSizeInBytes);
   return VD;
 }
