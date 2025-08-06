@@ -37,7 +37,7 @@ template <typename A>
 class CFI_Parser {
 public:
   typedef typename A::pint_t pint_t;
-  typedef pint_t __ptrauth_unwind_cfi_personality personality_t;
+  typedef pint_t __ptrauth_unwind_cie_info_personality personality_t;
 
   /// Information encoded in a CIE (Common Information Entry)
   struct CIE_Info {
@@ -409,7 +409,7 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
           // could avoid this by simply giving resultAddr the correct ptrauth
           // schema and performing an assignment.
           const auto discriminator = ptrauth_blend_discriminator(
-              &cieInfo->personality, __ptrauth_unwind_cfi_personality_disc);
+              &cieInfo->personality, __ptrauth_unwind_cie_info_personality_disc);
           void *signedPtr = ptrauth_auth_and_resign(
               (void *)personality, ptrauth_key_function_pointer, resultAddr,
               ptrauth_key_function_pointer, discriminator);

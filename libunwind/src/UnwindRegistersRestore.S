@@ -689,7 +689,7 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
 
 #if __has_feature(ptrauth_calls)
   // The LR is signed with its address inside the register state.  Time
-  // to resign to be a regular ROP signed pointer
+  // to resign to be a regular ROP protected signed pointer
   add    x1, x0, #0x100
   autib  lr, x1
   pacib  lr, x16  // signed the scratch register for sp

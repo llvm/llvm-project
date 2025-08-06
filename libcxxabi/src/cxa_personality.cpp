@@ -578,9 +578,9 @@ typedef void* __ptrauth_scan_results_landingpad landing_pad_ptr_t;
 struct scan_results
 {
     int64_t        ttypeIndex;   // > 0 catch handler, < 0 exception spec handler, == 0 a cleanup
-    action_ptr_t actionRecord;   // Currently unused.  Retained to ease future maintenance.
-    lsd_ptr_t languageSpecificData; // Needed only for __cxa_call_unexpected
-    landing_pad_t landingPad;       // null -> nothing found, else something found
+    action_ptr_t   actionRecord; // Currently unused.  Retained to ease future maintenance.
+    lsd_ptr_t      languageSpecificData; // Needed only for __cxa_call_unexpected
+    landing_pad_t  landingPad;   // null -> nothing found, else something found
     void*          adjustedPtr;  // Used in cxa_exception.cpp
     _Unwind_Reason_Code reason;  // One of _URC_FATAL_PHASE1_ERROR,
                                  //        _URC_FATAL_PHASE2_ERROR,
@@ -589,7 +589,7 @@ struct scan_results
 };
 
 }  // unnamed namespace
-}
+} // extern "C"
 
 namespace {
 // The logical model for casting authenticated function pointers makes
@@ -632,16 +632,16 @@ set_registers(_Unwind_Exception* unwind_exception, _Unwind_Context* context,
   _Unwind_SetGR(context, __builtin_eh_return_data_regno(1),
                 static_cast<uintptr_t>(results.ttypeIndex));
 #if __has_feature(ptrauth_qualifier)
-  auto stack_pointer = _Unwind_GetGR(context, UNW_REG_SP);
+  auto stackPointer = _Unwind_GetGR(context, UNW_REG_SP);
   // We manually re-sign the IP as the __ptrauth qualifiers cannot
   // express the required relationship with the destination address
   const auto existingDiscriminator = ptrauth_blend_discriminator(
       &results.landingPad, __ptrauth_scan_results_landingpad_disc);
-  unw_word_t newIP /* opaque __ptrauth(ptrauth_key_return_address, stack_pointer, 0) */ =
+  unw_word_t newIP /* opaque __ptrauth(ptrauth_key_return_address, stackPointer, 0) */ =
       (unw_word_t)ptrauth_auth_and_resign(*(void**)&results.landingPad,
                                           __ptrauth_scan_results_landingpad_key,
                                           existingDiscriminator,
-                                          ptrauth_key_return_address, stack_pointer);
+                                          ptrauth_key_return_address, stackPointer);
   _Unwind_SetIP(context, newIP);
 #else
   _Unwind_SetIP(context, results.landingPad);

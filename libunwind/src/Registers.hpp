@@ -100,10 +100,6 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
-  void      loadAndAuthenticateLinkRegister(reg_t srcLinkRegister,
-                                       link_reg_t *dstLinkRegister) {
-    *dstLinkRegister = srcLinkRegister;
-  }
 
 private:
   struct GPRs {
@@ -325,10 +321,6 @@ public:
 
   typedef uint64_t reg_t;
   typedef uint64_t link_reg_t;
-  void      loadAndAuthenticateLinkRegister(reg_t srcLinkRegister,
-                                       link_reg_t *dstLinkRegister) {
-    *dstLinkRegister = srcLinkRegister;
-  }
 
 private:
   struct GPRs {
@@ -643,10 +635,6 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
-  void      loadAndAuthenticateLinkRegister(reg_t srcLinkRegister,
-                                       link_reg_t *dstLinkRegister) {
-    *dstLinkRegister = srcLinkRegister;
-  }
 
 private:
   struct ppc_thread_state_t {
@@ -1903,28 +1891,20 @@ public:
   void setFP(uint64_t value) { _registers.__fp = value; }
 
   typedef uint64_t reg_t;
-  typedef uint64_t __ptrauth_unwind_arm64_link_reg link_reg_t;
+  typedef uint64_t __ptrauth_unwind_registers_arm64_link_reg link_reg_t;
 
+#if __has_feature(ptrauth_calls)
   void
   loadAndAuthenticateLinkRegister(reg_t inplaceAuthedLinkRegister,
                                   link_reg_t *referenceAuthedLinkRegister) {
-#if __has_feature(ptrauth_calls)
     // If we are in an arm64/arm64e frame, then the PC should have been signed
     // with the SP
-    *referenceAuthedLinkRegister = (uint64_t)ptrauth_auth_data(
-        (void *)inplaceAuthedLinkRegister,
-        ptrauth_key_return_address,
-        _registers.__sp);
-#else
-    *referenceAuthedLinkRegister = inplaceAuthedLinkRegister;
+    *referenceAuthedLinkRegister =
+      (uint64_t)ptrauth_auth_data((void *)inplaceAuthedLinkRegister,
+                                  ptrauth_key_return_address,
+                                  _registers.__sp);
+  }
 #endif
-  }
-
-  // arm64_32 and i386 simulator hack
-  void      loadAndAuthenticateLinkRegister(uint32_t srcLinkRegister,
-                                            uint32_t *dstLinkRegister) {
-    *dstLinkRegister = srcLinkRegister;
-  }
 
 private:
   uint64_t lazyGetVG() const;
@@ -1966,14 +1946,14 @@ inline Registers_arm64::Registers_arm64(const void *registers) {
          static_cast<const uint8_t *>(registers) + sizeof(GPRs),
          sizeof(_vectorHalfRegisters));
 #if __has_feature(ptrauth_calls)
+  // We have to do some pointer authentication fixups after this copy,
+  // and as part of that we need to load the source pc without
+  // authenticating so that we maintain the signature for the resigning
+  // performed by setIP.
   uint64_t pcRegister = 0;
   memcpy(&pcRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __pc),
          sizeof(pcRegister));
   setIP(pcRegister);
-  uint64_t fpRegister = 0;
-  memcpy(&fpRegister, ((uint8_t *)&_registers) + offsetof(GPRs, __fp),
-         sizeof(fpRegister));
-  setFP(fpRegister);
 #endif
 }
 
@@ -1986,8 +1966,9 @@ inline Registers_arm64& Registers_arm64::operator=(const Registers_arm64& other)
   memcpy(_vectorHalfRegisters, &other._vectorHalfRegisters,
          sizeof(_vectorHalfRegisters));
 #if __has_feature(ptrauth_calls)
+  // We perform this step to ensure that we correctly authenticate and re-sign
+  // the pc after the bitwise copy.
   setIP(other.getIP());
-  setFP(other.getFP());
 #endif
   return *this;
 }
@@ -2275,10 +2256,6 @@ public:
 
   typedef uint32_t reg_t;
   typedef uint32_t link_reg_t;
-  void      loadAndAuthenticateLinkRegister(reg_t srcLinkRegister,
-                                       link_reg_t *dstLinkRegister) {
-    *dstLinkRegister = srcLinkRegister;
-  }
 
   void saveVFPAsX() {
     assert(_use_X_for_vfp_save || !_saved_vfp_d0_d15);

@@ -100,7 +100,7 @@
 static _Unwind_Personality_Fn get_handler_function(unw_proc_info_t *frameInfo) {
   union {
     void *opaque_handler;
-    _Unwind_Personality_Fn __ptrauth_unwind_personality_fn *
+    _Unwind_Personality_Fn __ptrauth_unwind_upi_handler *
         handler;
   } u;
   u.opaque_handler = (void *)&frameInfo->handler;

@@ -1055,9 +1055,13 @@ private:
                                const UnwindInfoSections &sects,
                                uint32_t fdeSectionOffsetHint = 0);
   int stepWithDwarfFDE(bool stage2) {
+#if __has_extension(ptrauth_calls)
     typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
     typename R::link_reg_t pc;
     _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+    typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+#endif
     return DwarfInstructions<A, R>::stepWithDwarf(
         _addressSpace, pc, (pint_t)_info.unwind_info, _registers,
         _isSignalFrame, stage2);
@@ -1997,12 +2001,14 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
     personality = _addressSpace.getP(personalityPointer);
 #if __has_feature(ptrauth_calls)
     // The GOT for the personality function was signed address authenticated.
-    // Resign is as a regular function pointer.
-    const auto discriminator = ptrauth_blend_discriminator(
-        &_info.handler, __ptrauth_unwind_personality_fn_disc);
-    void *signedPtr = ptrauth_auth_and_resign(
-        (void *)personality, ptrauth_key_function_pointer, personalityPointer,
-        ptrauth_key_function_pointer, discriminator);
+    // Resign it as a regular function pointer.
+    const auto discriminator =
+      ptrauth_blend_discriminator(&_info.handler,
+                                  __ptrauth_unwind_upi_handler_disc);
+    void *signedPtr =
+      ptrauth_auth_and_resign((void *)personality, ptrauth_key_function_pointer,
+                              personalityPointer, ptrauth_key_function_pointer,
+                              discriminator);
     personality = (__typeof(personality))signedPtr;
 #endif
     if (log)
@@ -2680,7 +2686,11 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #endif
 
   typename R::link_reg_t pc;
+#if __has_extension(ptrauth_calls)
   _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
+#else
+  pc = rawPC;
+#endif
 
   // Exit early if at the top of the stack.
   if (pc == 0) {
@@ -3231,10 +3241,13 @@ void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
 template <typename A, typename R>
 bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
                                          unw_word_t *offset) {
+#if __has_extension(ptrauth_calls)
   typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
   typename R::link_reg_t pc;
   _registers.loadAndAuthenticateLinkRegister(rawPC, &pc);
-
+#else
+  typename R::link_reg_t pc = this->getReg(UNW_REG_IP);
+#endif
   return _addressSpace.findFunctionName(pc, buf, bufLen, offset);
 }
 

@@ -58,85 +58,86 @@
   #endif
 
 // ptrauth_string_discriminator("unw_proc_info_t::handler") == 0x7405
-  #define __ptrauth_unwind_personality_fn_disc 0x7405
+  #define __ptrauth_unwind_upi_handler_disc 0x7405
 
-  #define __ptrauth_unwind_personality_fn \
-    __ptrauth(ptrauth_key_function_pointer, 1, __ptrauth_unwind_personality_fn_disc)
+  #define __ptrauth_unwind_upi_handler \
+    __ptrauth(ptrauth_key_function_pointer, 1, __ptrauth_unwind_upi_handler_disc)
 
-  #define __ptrauth_unwind_personality_fn_intptr \
-    __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer, 1, __ptrauth_unwind_personality_fn_disc)
+  #define __ptrauth_unwind_upi_handler_intptr \
+    __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer, 1,\
+                                       __ptrauth_unwind_upi_handler_disc)
 
 // ptrauth_string_discriminator("unw_proc_info_t::start_ip") == 0xCA2C
-  #define __ptrauth_unwind_proc_startip \
+  #define __ptrauth_unwind_upi_startip \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_independent_code, 1, 0xCA2C)
 
 // ptrauth_string_discriminator("unw_proc_info_t::end_ip") == 0xE183
-  #define __ptrauth_unwind_proc_endip \
+  #define __ptrauth_unwind_upi_endip \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_independent_code, 1, 0xE183)
 
 // ptrauth_string_discriminator("unw_proc_info_t::lsda") == 0x83DE
-  #define __ptrauth_unwind_proc_lsda \
+  #define __ptrauth_unwind_upi_lsda \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0x83DE)
 
 // ptrauth_string_discriminator("unw_proc_info_t::flags") == 0x79A1
-  #define __ptrauth_unwind_proc_flags \
+  #define __ptrauth_unwind_upi_flags \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0x79A1)
 
 // ptrauth_string_discriminator("unw_proc_info_t::unwind_info") == 0xC20C
-  #define __ptrauth_unwind_proc_info \
+  #define __ptrauth_unwind_upi_info \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0xC20C)
 
 // ptrauth_string_discriminator("unw_proc_info_t::extra") == 0x03DF
-  #define __ptrauth_unwind_proc_extra \
+  #define __ptrauth_unwind_upi_extra \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0x03DF)
 
 // ptrauth_string_discriminator("Registers_arm64::link_reg_t") == 0x8301
-  #define __ptrauth_unwind_arm64_link_reg \
+  #define __ptrauth_unwind_registers_arm64_link_reg \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_code, 1, 0x8301)
 
 // ptrauth_string_discriminator("UnwindInfoSections::dso_base") == 0x4FF5
-  #define __ptrauth_unwind_info_section_dso_base \
+  #define __ptrauth_unwind_uis_dso_base \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0x4FF5)
 
 // ptrauth_string_discriminator("UnwindInfoSections::dwarf_section") == 0x4974
-  #define __ptrauth_unwind_info_dwarf_section \
+  #define __ptrauth_unwind_uis_dwarf_section \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0x4974)
 
 // ptrauth_string_discriminator("UnwindInfoSections::dwarf_section_length") == 0x2A9A
-  #define __ptrauth_unwind_info_dwarf_section_length \
+  #define __ptrauth_unwind_uis_dwarf_section_length \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0x2A9A)
 
 // ptrauth_string_discriminator("UnwindInfoSections::compact_unwind_section") == 0xA27B
-  #define __ptrauth_unwind_info_compact_unwind_section \
+  #define __ptrauth_unwind_uis_compact_unwind_section \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0xA27B)
 
 // ptrauth_string_discriminator("UnwindInfoSections::compact_unwind_section_length") == 0x5D0A
-  #define __ptrauth_unwind_info_compact_unwind_section_length \
+  #define __ptrauth_unwind_uis_compact_unwind_section_length \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_process_dependent_data, 1, 0x5D0A)
 
 // ptrauth_string_discriminator("CIE_Info::personality") == 0x6A40
-  #define __ptrauth_unwind_cfi_personality_disc 0x6A40
-  #define __ptrauth_unwind_cfi_personality \
+  #define __ptrauth_unwind_cie_info_personality_disc 0x6A40
+  #define __ptrauth_unwind_cie_info_personality \
     __unwind_ptrauth_restricted_intptr(ptrauth_key_function_pointer, 1, \
-                                       __ptrauth_unwind_cfi_personality_disc)
+                                       __ptrauth_unwind_cie_info_personality_disc)
 
 #else
 
-  #define __ptrauth_unwind_personality_fn
-  #define __ptrauth_unwind_personality_fn_intptr
-  #define __ptrauth_unwind_proc_startip
-  #define __ptrauth_unwind_proc_endip
-  #define __ptrauth_unwind_proc_lsda
-  #define __ptrauth_unwind_proc_flags
-  #define __ptrauth_unwind_proc_info
-  #define __ptrauth_unwind_proc_extra
-  #define __ptrauth_unwind_arm64_link_reg
-  #define __ptrauth_unwind_info_section_dso_base
-  #define __ptrauth_unwind_info_dwarf_section
-  #define __ptrauth_unwind_info_dwarf_section_length
-  #define __ptrauth_unwind_info_compact_unwind_section
-  #define __ptrauth_unwind_info_compact_unwind_section_length
-  #define __ptrauth_unwind_cfi_personality
+  #define __ptrauth_unwind_upi_handler
+  #define __ptrauth_unwind_upi_handler_intptr
+  #define __ptrauth_unwind_upi_startip
+  #define __ptrauth_unwind_upi_endip
+  #define __ptrauth_unwind_upi_lsda
+  #define __ptrauth_unwind_upi_flags
+  #define __ptrauth_unwind_upi_info
+  #define __ptrauth_unwind_upi_extra
+  #define __ptrauth_unwind_registers_arm64_link_reg
+  #define __ptrauth_unwind_uis_dso_base
+  #define __ptrauth_unwind_uis_dwarf_section
+  #define __ptrauth_unwind_uis_dwarf_section_length
+  #define __ptrauth_unwind_uis_compact_unwind_section
+  #define __ptrauth_unwind_uis_compact_unwind_section_length
+  #define __ptrauth_unwind_cie_info_personality
 
 #endif
 
@@ -185,18 +186,18 @@ typedef double unw_fpreg_t;
 #endif
 
 struct unw_proc_info_t {
-  unw_word_t __ptrauth_unwind_proc_startip start_ip; /* start address of function */
-  unw_word_t __ptrauth_unwind_proc_endip end_ip; /* address after end of function */
-  unw_word_t __ptrauth_unwind_proc_lsda lsda; /* address of language specific data area, */
-            /* or zero if not used */
+  unw_word_t __ptrauth_unwind_upi_startip start_ip; /* start address of function */
+  unw_word_t __ptrauth_unwind_upi_endip end_ip;     /* address after end of function */
+  unw_word_t __ptrauth_unwind_upi_lsda lsda;        /* address of language specific data area, */
+                                                    /* or zero if not used */
 
-  unw_word_t __ptrauth_unwind_personality_fn_intptr handler;
-  unw_word_t  gp;               /* not used */
-  unw_word_t __ptrauth_unwind_proc_flags flags; /* not used */
-  uint32_t    format;           /* compact unwind encoding, or zero if none */
-  uint32_t    unwind_info_size; /* size of DWARF unwind info, or zero if none */
-  unw_word_t __ptrauth_unwind_proc_info unwind_info; /* address of DWARF unwind info, or zero */
-  unw_word_t __ptrauth_unwind_proc_extra extra; /* mach_header of mach-o image containing func */
+  unw_word_t __ptrauth_unwind_upi_handler_intptr handler;
+  unw_word_t  gp;                                   /* not used */
+  unw_word_t __ptrauth_unwind_upi_flags flags;      /* not used */
+  uint32_t    format;                               /* compact unwind encoding, or zero if none */
+  uint32_t    unwind_info_size;                     /* size of DWARF unwind info, or zero if none */
+  unw_word_t __ptrauth_unwind_upi_info unwind_info; /* address of DWARF unwind info, or zero */
+  unw_word_t __ptrauth_unwind_upi_extra extra;      /* mach_header of mach-o image containing func */
 };
 typedef struct unw_proc_info_t unw_proc_info_t;
 

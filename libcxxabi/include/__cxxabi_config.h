@@ -48,7 +48,6 @@
   #define _LIBCXXABI_FUNC_VIS __declspec(dllimport)
   #define _LIBCXXABI_TYPE_VIS __declspec(dllimport)
  #endif
-
 #else
  #if !defined(_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS)
   #define _LIBCXXABI_HIDDEN __attribute__((__visibility__("hidden")))

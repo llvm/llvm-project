@@ -137,11 +137,9 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
           (unw_word_t)ptrauth_strip((void *)value, ptrauth_key_return_address);
       [[maybe_unused]]stripped_value;
       assert(stripped_value >= info.start_ip && stripped_value <= info.end_ip);
-#endif
 
       pint_t sp = (pint_t)co->getReg(UNW_REG_SP);
 
-#if __has_feature(ptrauth_calls)
       {
         // PC should have been signed with the sp, so we verify that
         // roundtripping does not fail.

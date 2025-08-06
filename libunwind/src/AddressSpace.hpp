@@ -129,26 +129,31 @@ struct UnwindInfoSections {
     defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND) ||                              \
     defined(_LIBUNWIND_USE_DL_ITERATE_PHDR)
   // No dso_base for SEH.
-  uintptr_t __ptrauth_unwind_info_section_dso_base dso_base = 0;
+  uintptr_t __ptrauth_unwind_uis_dso_base
+                  dso_base = 0;
 #endif
 #if defined(_LIBUNWIND_USE_DL_ITERATE_PHDR)
-  size_t text_segment_length = 0;
+  size_t          text_segment_length;
 #endif
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
-  uintptr_t __ptrauth_unwind_info_dwarf_section dwarf_section = 0;
-  size_t __ptrauth_unwind_info_dwarf_section_length dwarf_section_length = 0;
+  uintptr_t __ptrauth_unwind_uis_dwarf_section
+                  dwarf_section = 0;
+  size_t __ptrauth_unwind_uis_dwarf_section_length
+                  dwarf_section_length = 0;
 #endif
 #if defined(_LIBUNWIND_SUPPORT_DWARF_INDEX)
-  uintptr_t dwarf_index_section = 0;
-  size_t dwarf_index_section_length = 0;
+  uintptr_t       dwarf_index_section;
+  size_t          dwarf_index_section_length;
 #endif
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
-  uintptr_t __ptrauth_unwind_info_compact_unwind_section compact_unwind_section = 0;
-  size_t __ptrauth_unwind_info_compact_unwind_section_length compact_unwind_section_length = 0;
+  uintptr_t __ptrauth_unwind_uis_compact_unwind_section
+                  compact_unwind_section = 0;
+  size_t __ptrauth_unwind_uis_compact_unwind_section_length
+                  compact_unwind_section_length = 0;
 #endif
 #if defined(_LIBUNWIND_ARM_EHABI)
-  uintptr_t arm_section = 0;
-  size_t arm_section_length = 0;
+  uintptr_t       arm_section;
+  size_t          arm_section_length;
 #endif
 };
 
