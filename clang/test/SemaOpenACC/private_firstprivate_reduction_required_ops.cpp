@@ -37,26 +37,12 @@ struct ImplicitDelDtor {
 };
 
 struct DeletedCopy {
-#if __cplusplus >= 202002L
-  // C++20 performs value-initialization while previous language versions
-  // performed aggregate-initialization. This class is also not eligible for
-  // an implicit default constructor. Therefore, the constructor must be
-  // explicitly declared for value-initialization to avoid additional
-  // diagnostics.
   DeletedCopy();
-#endif
   DeletedCopy(const DeletedCopy&) = delete;
 };
 
 struct DefaultedCopy {
-#if __cplusplus >= 202002L
-  // C++20 performs value-initialization while previous language versions
-  // performed aggregate-initialization. This class is also not eligible for
-  // an implicit default constructor. Therefore, the constructor must be
-  // explicitly declared for value-initialization to avoid additional
-  // diagnostics.
   DefaultedCopy();
-#endif
   DefaultedCopy(const DefaultedCopy&) = default;
 };
 struct UserCopy {
