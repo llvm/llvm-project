@@ -351,7 +351,6 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
             reportRegNotBound(M, ResList.first, ResBinding);
         }
         reportInvalidHandleTy(M, RDs, ResList.second);
-
       }
     }
   }
