@@ -322,7 +322,8 @@ namespace {
 // This helper function handles setting the manually signed personality on
 // CIE_Info without attempt to authenticate and/or re-sign
 template <typename CIE_Info, typename T>
-void set_cie_info_personality(CIE_Info *info, T signed_personality) {
+[[maybe_unused]] void set_cie_info_personality(CIE_Info *info,
+                                               T signed_personality) {
   static_assert(sizeof(info->personality) == sizeof(signed_personality),
                 "Signed personality is the wrong size");
   memmove((void *)&info->personality, (void *)&signed_personality,

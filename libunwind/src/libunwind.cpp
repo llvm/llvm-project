@@ -129,6 +129,8 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       // First, get the FDE for the old location and then update it.
       co->getInfo(&info);
 
+      pint_t sp = (pint_t)co->getReg(UNW_REG_SP);
+
 #if __has_feature(ptrauth_calls)
       // It is only valid to set the IP within the current function.
       // This is important for ptrauth, otherwise the IP cannot be correctly
@@ -136,8 +138,6 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       [[maybe_unused]]unw_word_t stripped_value =
           (unw_word_t)ptrauth_strip((void *)value, ptrauth_key_return_address);
       assert(stripped_value >= info.start_ip && stripped_value <= info.end_ip);
-
-      pint_t sp = (pint_t)co->getReg(UNW_REG_SP);
 
       {
         // PC should have been signed with the sp, so we verify that
@@ -162,7 +162,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       // this should actually be - info.gp. LLVM doesn't currently support
       // any such platforms and Clang doesn't export a macro for them.
       if (info.gp)
-        co->setReg(UNW_REG_SP, co->getReg(UNW_REG_SP) + info.gp);
+        co->setReg(UNW_REG_SP, sp + info.gp);
       co->setReg(UNW_REG_IP, value);
       co->setInfoBasedOnIPRegister(false);
     } else {
