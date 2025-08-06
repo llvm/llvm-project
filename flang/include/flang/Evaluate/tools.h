@@ -10,6 +10,7 @@
 #define FORTRAN_EVALUATE_TOOLS_H_
 
 #include "traverse.h"
+#include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/template.h"
 #include "flang/Common/unwrap.h"
@@ -1359,24 +1360,7 @@ inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
 
 /// Check if the expression is a mix of host and device variables that require
 /// implicit data transfer.
-inline bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr) {
-  unsigned hostSymbols{0};
-  unsigned deviceSymbols{0};
-  for (const Symbol &sym : CollectCudaSymbols(expr)) {
-    if (IsCUDADeviceSymbol(sym)) {
-      ++deviceSymbols;
-    } else {
-      if (sym.owner().IsDerivedType()) {
-        if (IsCUDADeviceSymbol(sym.owner().GetSymbol()->GetUltimate())) {
-          ++deviceSymbols;
-        }
-      }
-      ++hostSymbols;
-    }
-  }
-  bool hasConstant{HasConstant(expr)};
-  return (hasConstant || (hostSymbols > 0)) && deviceSymbols > 0;
-}
+bool HasCUDAImplicitTransfer(const Expr<SomeType> &expr);
 
 // Checks whether the symbol on the LHS is present in the RHS expression.
 bool CheckForSymbolMatch(const Expr<SomeType> *lhs, const Expr<SomeType> *rhs);
@@ -1414,12 +1398,12 @@ enum class Operator {
   True,
 };
 
+using OperatorSet = common::EnumSet<Operator, 32>;
+
 std::string ToString(Operator op);
 
-template <typename... Ts, int Kind>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::LogicalOperation<Kind>, Ts...> &op) {
-  switch (op.derived().logicalOperator) {
+template <int Kind> Operator OperationCode(const LogicalOperation<Kind> &op) {
+  switch (op.logicalOperator) {
   case common::LogicalOperator::And:
     return Operator::And;
   case common::LogicalOperator::Or:
@@ -1434,10 +1418,10 @@ Operator OperationCode(
   return Operator::Unknown;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Relational<T>, Ts...> &op) {
-  switch (op.derived().opr) {
+Operator OperationCode(const Relational<SomeType> &op);
+
+template <typename T> Operator OperationCode(const Relational<T> &op) {
+  switch (op.opr) {
   case common::RelationalOperator::LT:
     return Operator::Lt;
   case common::RelationalOperator::LE:
@@ -1454,44 +1438,32 @@ Operator OperationCode(
   return Operator::Unknown;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(const evaluate::Operation<evaluate::Add<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Add<T> &op) {
   return Operator::Add;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Subtract<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Subtract<T> &op) {
   return Operator::Sub;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Multiply<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Multiply<T> &op) {
   return Operator::Mul;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Divide<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Divide<T> &op) {
   return Operator::Div;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Power<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const Power<T> &op) {
   return Operator::Pow;
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::RealToIntPower<T>, Ts...> &op) {
+template <typename T> Operator OperationCode(const RealToIntPower<T> &op) {
   return Operator::Pow;
 }
 
-template <typename T, common::TypeCategory C, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Convert<T, C>, Ts...> &op) {
+template <typename T, common::TypeCategory C>
+Operator OperationCode(const Convert<T, C> &op) {
   if constexpr (C == T::category) {
     return Operator::Resize;
   } else {
@@ -1499,25 +1471,27 @@ Operator OperationCode(
   }
 }
 
-template <typename T, typename... Ts>
-Operator OperationCode(
-    const evaluate::Operation<evaluate::Extremum<T>, Ts...> &op) {
-  if (op.derived().ordering == evaluate::Ordering::Greater) {
+template <typename T> Operator OperationCode(const Extremum<T> &op) {
+  if (op.ordering == Ordering::Greater) {
     return Operator::Max;
   } else {
     return Operator::Min;
   }
 }
 
-template <typename T> Operator OperationCode(const evaluate::Constant<T> &x) {
+template <typename T> Operator OperationCode(const Constant<T> &x) {
   return Operator::Constant;
+}
+
+template <typename T> Operator OperationCode(const Designator<T> &x) {
+  return Operator::Identity;
 }
 
 template <typename T> Operator OperationCode(const T &) {
   return Operator::Unknown;
 }
 
-Operator OperationCode(const evaluate::ProcedureDesignator &proc);
+Operator OperationCode(const ProcedureDesignator &proc);
 
 } // namespace operation
 
@@ -1526,8 +1500,17 @@ Operator OperationCode(const evaluate::ProcedureDesignator &proc);
 std::pair<operation::Operator, std::vector<Expr<SomeType>>>
 GetTopLevelOperation(const Expr<SomeType> &expr);
 
+// Return information about the top-level operation (ignoring parentheses, and
+// resizing converts)
+std::pair<operation::Operator, std::vector<Expr<SomeType>>>
+GetTopLevelOperationIgnoreResizing(const Expr<SomeType> &expr);
+
 // Check if expr is same as x, or a sequence of Convert operations on x.
 bool IsSameOrConvertOf(const Expr<SomeType> &expr, const Expr<SomeType> &x);
+
+// Check if the Variable appears as a subexpression of the expression.
+bool IsVarSubexpressionOf(
+    const Expr<SomeType> &var, const Expr<SomeType> &super);
 
 // Strip away any top-level Convert operations (if any exist) and return
 // the input value. A ComplexConstructor(x, 0) is also considered as a

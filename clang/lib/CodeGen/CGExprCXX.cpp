@@ -373,7 +373,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
   bool UseVirtualCall = CanUseVirtualCall && !DevirtualizedMethod;
 
   if (const CXXDestructorDecl *Dtor = dyn_cast<CXXDestructorDecl>(CalleeDecl)) {
-    assert(CE->arg_begin() == CE->arg_end() &&
+    assert(CE->arguments().empty() &&
            "Destructor shouldn't have explicit parameters");
     assert(ReturnValue.isNull() && "Destructor shouldn't have return value");
     if (UseVirtualCall) {
@@ -2146,30 +2146,9 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
     return;
   }
 
-  // We might be deleting a pointer to array.  If so, GEP down to the
-  // first non-array element.
-  // (this assumes that A(*)[3][7] is converted to [3 x [7 x %A]]*)
-  if (DeleteTy->isConstantArrayType()) {
-    llvm::Value *Zero = Builder.getInt32(0);
-    SmallVector<llvm::Value*,8> GEP;
-
-    GEP.push_back(Zero); // point at the outermost array
-
-    // For each layer of array type we're pointing at:
-    while (const ConstantArrayType *Arr
-             = getContext().getAsConstantArrayType(DeleteTy)) {
-      // 1. Unpeel the array type.
-      DeleteTy = Arr->getElementType();
-
-      // 2. GEP to the first element of the array.
-      GEP.push_back(Zero);
-    }
-
-    Ptr = Builder.CreateInBoundsGEP(Ptr, GEP, ConvertTypeForMem(DeleteTy),
-                                    Ptr.getAlignment(), "del.first");
-  }
-
-  assert(ConvertTypeForMem(DeleteTy) == Ptr.getElementType());
+  // We might be deleting a pointer to array.
+  DeleteTy = getContext().getBaseElementType(DeleteTy);
+  Ptr = Ptr.withElementType(ConvertTypeForMem(DeleteTy));
 
   if (E->isArrayForm()) {
     EmitArrayDelete(*this, E, Ptr, DeleteTy);
@@ -2313,7 +2292,8 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   bool IsExact = !IsDynamicCastToVoid &&
                  CGM.getCodeGenOpts().OptimizationLevel > 0 &&
                  DestRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
-                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy);
+                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy) &&
+                 !getLangOpts().PointerAuthCalls;
 
   // C++ [expr.dynamic.cast]p4:
   //   If the value of v is a null pointer value in the pointer case, the result

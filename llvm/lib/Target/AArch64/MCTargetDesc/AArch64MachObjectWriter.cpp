@@ -53,7 +53,7 @@ bool AArch64MachObjectWriter::getAArch64FixupKindMachOInfo(
   RelocType = unsigned(MachO::ARM64_RELOC_UNSIGNED);
   Log2Size = ~0U;
 
-  switch (Fixup.getTargetKind()) {
+  switch (Fixup.getKind()) {
   default:
     return false;
 
@@ -132,7 +132,8 @@ static bool canUseLocalRelocation(const MCSectionMachO &Section,
   // But only if they don't point to a few forbidden sections.
   if (!Symbol.isInSection())
     return true;
-  const MCSectionMachO &RefSec = cast<MCSectionMachO>(Symbol.getSection());
+  const MCSectionMachO &RefSec =
+      static_cast<MCSectionMachO &>(Symbol.getSection());
   if (RefSec.getType() == MachO::S_CSTRING_LITERALS)
     return false;
 

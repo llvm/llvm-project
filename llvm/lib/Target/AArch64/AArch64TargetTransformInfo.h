@@ -65,16 +65,14 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
 
   // A helper function called by 'getVectorInstrCost'.
   //
-  // 'Val' and 'Index' are forwarded from 'getVectorInstrCost'; 'HasRealUse'
-  // indicates whether the vector instruction is available in the input IR or
-  // just imaginary in vectorizer passes.
-  /// \param ScalarUserAndIdx encodes the information about extracts from a
+  // 'Val' and 'Index' are forwarded from 'getVectorInstrCost';
+  // \param ScalarUserAndIdx encodes the information about extracts from a
   /// vector with 'Scalar' being the value being extracted,'User' being the user
   /// of the extract(nullptr if user is not known before vectorization) and
   /// 'Idx' being the extract lane.
   InstructionCost getVectorInstrCostHelper(
       unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-      bool HasRealUse, const Instruction *I = nullptr, Value *Scalar = nullptr,
+      const Instruction *I = nullptr, Value *Scalar = nullptr,
       ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx = {}) const;
 
 public:
@@ -91,7 +89,7 @@ public:
   unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
                                 unsigned DefaultCallPenalty) const override;
 
-  uint64_t getFeatureMask(const Function &F) const override;
+  APInt getFeatureMask(const Function &F) const override;
 
   bool isMultiversionedFunction(const Function &F) const override;
 
