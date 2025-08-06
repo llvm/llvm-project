@@ -187,6 +187,7 @@ protected:
   bool HasFlatBufferGlobalAtomicFaddF64Inst = false;
   bool HasDefaultComponentZero = false;
   bool HasAgentScopeFineGrainedRemoteMemoryAtomics = false;
+  bool HasEmulatedSystemScopeAtomics = false;
   bool HasDefaultComponentBroadcast = false;
   bool HasXF32Insts = false;
   /// The maximum number of instructions that may be placed within an S_CLAUSE,
@@ -948,6 +949,12 @@ public:
   /// memory.
   bool supportsAgentScopeFineGrainedRemoteMemoryAtomics() const {
     return HasAgentScopeFineGrainedRemoteMemoryAtomics;
+  }
+
+  /// \return true is HW emulates system scope atomics unsupported by the PCI-e
+  /// via CAS loop.
+  bool hasEmulatedSystemScopeAtomics() const {
+    return HasEmulatedSystemScopeAtomics;
   }
 
   bool hasDefaultComponentZero() const { return HasDefaultComponentZero; }
