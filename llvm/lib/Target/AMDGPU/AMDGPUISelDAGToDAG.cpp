@@ -3228,7 +3228,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
   unsigned Opc = Src->getOpcode();
   EVT VT = Src.getValueType();
   if ((Opc != ISD::AND && Opc != ISD::OR && Opc != ISD::XOR) ||
-      (VT != MVT::i32 && VT != MVT::v2i32 && VT != MVT::i64))
+      (VT != MVT::i32 && VT != MVT::i64))
     return true;
 
   ConstantSDNode *CRHS = isConstOrConstSplat((Src->getOperand(1)));
