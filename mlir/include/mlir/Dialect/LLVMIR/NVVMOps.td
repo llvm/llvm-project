@@ -106,9 +106,10 @@ class NVVM_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 /// Base class that defines BasicPtxBuilderOpInterface. 
-class NVVM_PTXBuilder_Op<string mnemonic, 
-  list<Trait> traits = [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> :
-  LLVM_OpBase<NVVM_Dialect, mnemonic, traits> {
+class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> traits = []> :
+  LLVM_OpBase<NVVM_Dialect, mnemonic,
+  !listconcat(traits,
+      [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>])> {
 }
 
 //===----------------------------------------------------------------------===//
