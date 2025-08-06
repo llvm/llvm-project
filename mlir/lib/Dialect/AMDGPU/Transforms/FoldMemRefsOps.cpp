@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
-#include "mlir/IR/ValueRange.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -29,48 +28,49 @@ struct AmdgpuFoldMemRefOpsPass final
   }
 };
 
-
-static LogicalResult foldMemrefViewOp(
-    PatternRewriter &rewriter, Location loc, 
-    Value view, mlir::OperandRange indices, 
-    SmallVectorImpl<Value> &resolvedIndices, 
-    Value &memrefBase, StringRef role) 
-{
-    Operation *defOp = view.getDefiningOp();
-    if (!defOp) {
-        return failure();
-    }
-    return llvm::TypeSwitch<Operation *, LogicalResult>(defOp)
-        .Case<memref::SubViewOp>([&](memref::SubViewOp subviewOp) {
-            mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
-                rewriter, loc, subviewOp.getMixedOffsets(),
-                subviewOp.getMixedStrides(), subviewOp.getDroppedDims(),
-                indices, resolvedIndices);
-            memrefBase = subviewOp.getSource();
-            return success();
-        })
-        .Case<memref::ExpandShapeOp>([&](memref::ExpandShapeOp expandShapeOp) {
-            if (failed(mlir::memref::resolveSourceIndicesExpandShape(
-                    loc, rewriter, expandShapeOp, indices, resolvedIndices, false))) {
-                return failure();
-            }
-            memrefBase = expandShapeOp.getViewSource();
-            return success();
-        })
-        .Case<memref::CollapseShapeOp>([&](memref::CollapseShapeOp collapseShapeOp) {
+static LogicalResult foldMemrefViewOp(PatternRewriter &rewriter, Location loc,
+                                      Value view, mlir::OperandRange indices,
+                                      SmallVectorImpl<Value> &resolvedIndices,
+                                      Value &memrefBase, StringRef role) {
+  Operation *defOp = view.getDefiningOp();
+  if (!defOp) {
+    return failure();
+  }
+  return llvm::TypeSwitch<Operation *, LogicalResult>(defOp)
+      .Case<memref::SubViewOp>([&](memref::SubViewOp subviewOp) {
+        mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
+            rewriter, loc, subviewOp.getMixedOffsets(),
+            subviewOp.getMixedStrides(), subviewOp.getDroppedDims(), indices,
+            resolvedIndices);
+        memrefBase = subviewOp.getSource();
+        return success();
+      })
+      .Case<memref::ExpandShapeOp>([&](memref::ExpandShapeOp expandShapeOp) {
+        if (failed(mlir::memref::resolveSourceIndicesExpandShape(
+                loc, rewriter, expandShapeOp, indices, resolvedIndices,
+                false))) {
+          return failure();
+        }
+        memrefBase = expandShapeOp.getViewSource();
+        return success();
+      })
+      .Case<memref::CollapseShapeOp>(
+          [&](memref::CollapseShapeOp collapseShapeOp) {
             if (failed(mlir::memref::resolveSourceIndicesCollapseShape(
-                    loc, rewriter, collapseShapeOp, indices, resolvedIndices))) {
-                return failure();
+                    loc, rewriter, collapseShapeOp, indices,
+                    resolvedIndices))) {
+              return failure();
             }
             memrefBase = collapseShapeOp.getViewSource();
             return success();
-        })
-        .Default([&](Operation *op) {
-            return rewriter.notifyMatchFailure(
-                op, (role + " producer is not one of SubViewOp, ExpandShapeOp, or CollapseShapeOp").str());
-        });
+          })
+      .Default([&](Operation *op) {
+        return rewriter.notifyMatchFailure(
+            op, (role + " producer is not one of SubViewOp, ExpandShapeOp, or "
+                        "CollapseShapeOp")
+                    .str());
+      });
 }
-
 
 struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -81,26 +81,27 @@ struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
     SmallVector<Value> sourceIndices, destIndices;
     Value memrefSource, memrefDest;
 
-    auto foldSrcResult = foldMemrefViewOp(
-        rewriter, loc, op.getSrc(), op.getSrcIndices(), sourceIndices, memrefSource, "source");
-  
+    auto foldSrcResult =
+        foldMemrefViewOp(rewriter, loc, op.getSrc(), op.getSrcIndices(),
+                         sourceIndices, memrefSource, "source");
+
     if (failed(foldSrcResult)) {
-        memrefSource = op.getSrc();
-        sourceIndices = op.getSrcIndices();
+      memrefSource = op.getSrc();
+      sourceIndices = op.getSrcIndices();
     }
 
-    auto foldDstResult = foldMemrefViewOp(
-        rewriter, loc, op.getDst(), op.getDstIndices(), destIndices, memrefDest, "destination");
+    auto foldDstResult =
+        foldMemrefViewOp(rewriter, loc, op.getDst(), op.getDstIndices(),
+                         destIndices, memrefDest, "destination");
 
     if (failed(foldDstResult)) {
-        memrefDest = op.getDst();
-        destIndices = op.getDstIndices();
-     }
-  
+      memrefDest = op.getDst();
+      destIndices = op.getDstIndices();
+    }
 
     rewriter.replaceOpWithNewOp<GatherToLDSOp>(op, memrefSource, sourceIndices,
-                                              memrefDest, destIndices,
-                                              op.getTransferType());
+                                               memrefDest, destIndices,
+                                               op.getTransferType());
 
     return success();
   }
