@@ -580,14 +580,16 @@ static unsigned getGapMaskFactor(const Constant &MaskConst, unsigned Factor,
   APInt FactorMask(Factor, 0);
   FactorMask.setAllBits();
   for (unsigned F = 0U; F < Factor; ++F) {
-    unsigned Idx;
-    for (Idx = 0U; Idx < LeafMaskLen; ++Idx) {
+    bool AllZero = true;
+    for (unsigned Idx = 0U; Idx < LeafMaskLen; ++Idx) {
       Constant *C = MaskConst.getAggregateElement(F + Idx * Factor);
-      if (!C->isZeroValue())
+      if (!C->isZeroValue()) {
+        AllZero = false;
         break;
+      }
     }
     // All mask bits on this field are zero, skipping it.
-    if (Idx >= LeafMaskLen)
+    if (AllZero)
       FactorMask.clearBit(F);
   }
   // We currently only allow gaps in the "trailing" factors / fields. So
@@ -705,10 +707,12 @@ bool InterleavedAccessImpl::lowerDeinterleaveIntrinsic(
       return false;
 
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    std::tie(Mask, std::ignore) =
+    unsigned GapMaskFactor;
+    std::tie(Mask, GapMaskFactor) =
         getMask(getMaskOperand(II), Factor, getDeinterleavedVectorType(DI));
     if (!Mask)
       return false;
+    assert(GapMaskFactor == Factor);
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.load or masked.load with deinterleave"
                       << " intrinsic " << *DI << " and factor = "
@@ -747,11 +751,13 @@ bool InterleavedAccessImpl::lowerInterleaveIntrinsic(
         II->getIntrinsicID() != Intrinsic::vp_store)
       return false;
     // Check mask operand. Handle both all-true/false and interleaved mask.
-    std::tie(Mask, std::ignore) =
+    unsigned GapMaskFactor;
+    std::tie(Mask, GapMaskFactor) =
         getMask(getMaskOperand(II), Factor,
                 cast<VectorType>(InterleaveValues[0]->getType()));
     if (!Mask)
       return false;
+    assert(GapMaskFactor == Factor);
 
     LLVM_DEBUG(dbgs() << "IA: Found a vp.store or masked.store with interleave"
                       << " intrinsic " << *IntII << " and factor = "
