@@ -2179,6 +2179,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                         VPWidenIntOrFpInductionRecipe>) &&
          all_of(Plan.getVFxUF().users(),
                 [&Plan](VPUser *U) {
+                  // VFxUF users must either be VPWidenPointerInductionRecipe or
+                  // canonical IV increment.
                   return match(U, m_c_Binary<Instruction::Add>(
                                       m_Specific(Plan.getCanonicalIV()),
                                       m_Specific(&Plan.getVFxUF()))) ||
@@ -2187,6 +2189,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
          "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceAllUsesWith(&EVL);
   Plan.getVFxUF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
+    // Don't replace the canonical IV increment.
     return isa<VPWidenPointerInductionRecipe>(U);
   });
 
