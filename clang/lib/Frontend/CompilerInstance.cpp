@@ -1678,6 +1678,14 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
     return false;
   }
 
+  // The module is built successfully, we can update its timestamp now.
+  if (ImportingInstance.getPreprocessor()
+          .getHeaderSearchInfo()
+          .getHeaderSearchOpts()
+          .ModulesValidateOncePerBuildSession) {
+    ImportingInstance.getModuleCache().updateModuleTimestamp(ModuleFileName);
+  }
+
   return readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
                                    Module, ModuleFileName,
                                    /*OutOfDate=*/nullptr, /*Missing=*/nullptr);
