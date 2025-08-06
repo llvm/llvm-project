@@ -175,7 +175,7 @@ llvm::Expected<std::vector<FoldingRange>> getFoldingRanges(ParsedAST &AST) {
   return collectFoldingRanges(SyntaxTree, TM);
 }
 
-// FIXME( usaxena95): Collect includes and other code regions (e.g. 
+// FIXME( usaxena95): Collect includes and other code regions (e.g.
 // public/private/protected sections of classes, control flow statement bodies).
 // Related issue: https://github.com/clangd/clangd/issues/310
 llvm::Expected<std::vector<FoldingRange>>
