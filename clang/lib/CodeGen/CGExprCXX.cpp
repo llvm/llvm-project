@@ -2292,7 +2292,8 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   bool IsExact = !IsDynamicCastToVoid &&
                  CGM.getCodeGenOpts().OptimizationLevel > 0 &&
                  DestRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
-                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy);
+                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy) &&
+                 !getLangOpts().PointerAuthCalls;
 
   // C++ [expr.dynamic.cast]p4:
   //   If the value of v is a null pointer value in the pointer case, the result
