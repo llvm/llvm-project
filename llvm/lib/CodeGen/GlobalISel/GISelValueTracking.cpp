@@ -1903,6 +1903,11 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
       MachineInstr &ExtMI = *MRI.getVRegDef(Src1);
       unsigned ExtOpc = ExtMI.getOpcode();
 
+      // Try to look through ZERO/SIGN/ANY_EXTEND. If all extended bits are
+      // shifted out, then we can compute the number of sign bits for the
+      // operand being extended. A future improvement could be to pass along the
+      // "shifted left by" information in the recursive calls to
+      // ComputeKnownSignBits. Allowing us to handle this more generically.
       if (ExtOpc == TargetOpcode::G_SEXT || ExtOpc == TargetOpcode::G_ZEXT ||
           ExtOpc == TargetOpcode::G_ANYEXT) {
         LLT ExtTy = MRI.getType(Src1);
@@ -1918,6 +1923,7 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
             return Tmp - MaxShAmt;
         }
       }
+      // shl destroys sign bits, ensure it doesn't shift out all sign bits.
       unsigned Tmp = computeNumSignBits(Src1, DemandedElts, Depth + 1);
       if (MaxShAmt < Tmp)
         return Tmp - MaxShAmt;
@@ -2083,7 +2089,6 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   // Okay, we know that the sign bit in Mask is set.  Use CLO to determine
   // the number of identical bits in the top of the input value.
   Mask <<= Mask.getBitWidth() - TyBits;
-  LLVM_DEBUG(dbgs() << "Mask.countl_one(): " << Mask.countl_one() << "\n");
   return std::max(FirstAnswer, Mask.countl_one());
 }
 
