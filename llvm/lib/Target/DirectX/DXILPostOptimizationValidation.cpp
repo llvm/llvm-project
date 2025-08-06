@@ -114,6 +114,21 @@ static void reportOverlappingBinding(Module &M, DXILResourceMap &DRM) {
   }
 }
 
+static void reportOverlappingRegisters(
+    Module &M, const llvm::hlsl::BindingInfoBuilder::Binding &Reported,
+    const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "register " << getResourceClassName(Reported.RC)
+     << " (space=" << Reported.Space << ", register=" << Reported.LowerBound
+     << ")" << " is overlapping with" << " register "
+     << getResourceClassName(Overlaping.RC) << " (space=" << Overlaping.Space
+     << ", register=" << Overlaping.LowerBound << ")"
+     << ", verify your root signature definition.";
+
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
 static void
 reportRegNotBound(Module &M, ResourceClass Class,
                   llvm::dxil::ResourceInfo::ResourceBinding Unbound) {
@@ -152,21 +167,6 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   default:
     llvm_unreachable("Invalid triple to shader stage conversion");
   }
-}
-
-static void reportOverlappingRegisters(
-    Module &M, const llvm::hlsl::BindingInfoBuilder::Binding &Reported,
-    const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping) {
-  SmallString<128> Message;
-  raw_svector_ostream OS(Message);
-  OS << "register " << getResourceClassName(Reported.RC)
-     << " (space=" << Reported.Space << ", register=" << Reported.LowerBound
-     << ")" << " is overlapping with" << " register "
-     << getResourceClassName(Overlaping.RC) << " (space=" << Overlaping.Space
-     << ", register=" << Overlaping.LowerBound << ")"
-     << ", verify your root signature definition.";
-
-  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
 static void trackRootSigDescBinding(hlsl::BindingInfoBuilder &Builder,
