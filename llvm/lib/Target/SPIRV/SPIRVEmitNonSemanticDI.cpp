@@ -116,6 +116,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       }
     }
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
+    assert(ModuleFlags && "Expected llvm.module.flags metadata to be present");
     for (const auto *Op : ModuleFlags->operands()) {
       const MDOperand &MaybeStrOp = Op->getOperand(1);
       if (MaybeStrOp.equalsStr("Dwarf Version"))
