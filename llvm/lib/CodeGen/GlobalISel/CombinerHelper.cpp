@@ -5934,22 +5934,16 @@ bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
   unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
-  APInt MinConst, MaxConst;
   APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
   APInt SignedMin = APInt::getSignedMinValue(NumDstBits).sext(NumSrcBits);
-
   if (isLegal({TargetOpcode::G_TRUNC_SSAT_S, {DstTy, SrcTy}})) {
     if (mi_match(Src, MRI,
-                 m_GSMin(m_GSMax(m_Reg(MatchInfo), m_ICstOrSplat(MinConst)),
-                         m_ICstOrSplat(MaxConst))) &&
-        APInt::isSameValue(MinConst, SignedMin) &&
-        APInt::isSameValue(MaxConst, SignedMax))
+                 m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMin)),
+                         m_SpecificICstOrSplat(SignedMax))))
       return true;
     if (mi_match(Src, MRI,
-                 m_GSMax(m_GSMin(m_Reg(MatchInfo), m_ICstOrSplat(MaxConst)),
-                         m_ICstOrSplat(MinConst))) &&
-        APInt::isSameValue(MinConst, SignedMin) &&
-        APInt::isSameValue(MaxConst, SignedMax))
+                 m_GSMax(m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(SignedMax)),
+                         m_SpecificICstOrSplat(SignedMin))))
       return true;
   }
   return false;
@@ -5972,24 +5966,19 @@ bool CombinerHelper::matchTruncSSatU(MachineInstr &MI,
   unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
-  APInt MaxConst;
   APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
-
   if (isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}})) {
     if (mi_match(Src, MRI,
                  m_GSMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
-                         m_ICstOrSplat(MaxConst))) &&
-        APInt::isSameValue(MaxConst, UnsignedMax))
+                         m_SpecificICstOrSplat(UnsignedMax))))
       return true;
     if (mi_match(Src, MRI,
-                 m_GSMax(m_GSMin(m_Reg(MatchInfo), m_ICstOrSplat(MaxConst)),
-                         m_SpecificICstOrSplat(0))) &&
-        APInt::isSameValue(MaxConst, UnsignedMax))
+                 m_GSMax(m_GSMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(UnsignedMax)),
+                         m_SpecificICstOrSplat(0))))
       return true;
     if (mi_match(Src, MRI,
                  m_GUMin(m_GSMax(m_Reg(MatchInfo), m_SpecificICstOrSplat(0)),
-                         m_ICstOrSplat(MaxConst))) &&
-        APInt::isSameValue(MaxConst, UnsignedMax))
+                         m_SpecificICstOrSplat(UnsignedMax))))
       return true;
   }
   return false;
@@ -6012,13 +6001,10 @@ bool CombinerHelper::matchTruncUSatU(MachineInstr &MI,
   unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
-  APInt MaxConst;
   APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
-
   if (isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}})) {
     if (mi_match(Src, MRI,
-                 m_GUMin(m_Reg(MatchInfo), m_ICstOrSplat(MaxConst))) &&
-        APInt::isSameValue(MaxConst, UnsignedMax))
+                 m_GUMin(m_Reg(MatchInfo), m_SpecificICstOrSplat(UnsignedMax))))
       return true;
   }
   return false;
