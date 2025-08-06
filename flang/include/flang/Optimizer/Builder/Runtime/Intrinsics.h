@@ -70,6 +70,9 @@ void genRandomSeed(fir::FirOpBuilder &, mlir::Location, mlir::Value size,
 void genRename(fir::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value path1, mlir::Value path2, mlir::Value status);
 
+mlir::Value genSecnds(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value refTime);
+
 /// generate time runtime call
 mlir::Value genTime(fir::FirOpBuilder &builder, mlir::Location loc);
 

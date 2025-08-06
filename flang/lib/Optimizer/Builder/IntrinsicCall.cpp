@@ -866,7 +866,7 @@ static constexpr IntrinsicHandler handlers[]{
      /*isElemental=*/true},
     {"secnds",
      &I::genSecnds,
-     {{{"x", asValue}}},
+     {{{"refTime", asAddr}}},
      /*isElemental=*/false},
     {"second",
      &I::genSecond,
@@ -7818,11 +7818,19 @@ IntrinsicLibrary::genScan(mlir::Type resultType,
 }
 
 // SECNDS
-// Lowering is registered, runtime not yet implemented
 fir::ExtendedValue
 IntrinsicLibrary::genSecnds(mlir::Type resultType,
                             llvm::ArrayRef<fir::ExtendedValue> args) {
-  TODO(loc, "not yet implemented: SECNDS");
+  assert(args.size() == 1 && "SECNDS expects one argument");
+
+  mlir::Value refTime = fir::getBase(args[0]);
+
+  if (!refTime)
+    fir::emitFatalError(loc, "expected REFERENCE TIME parameter");
+
+  mlir::Value result = fir::runtime::genSecnds(builder, loc, refTime);
+
+  return builder.createConvert(loc, resultType, result);
 }
 
 // SECOND
