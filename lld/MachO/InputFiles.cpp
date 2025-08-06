@@ -1789,12 +1789,13 @@ void DylibFile::parseExportedSymbols(uint32_t offset, uint32_t size) {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   std::vector<TrieEntry> entries;
   // Find all the $ld$* symbols to process first.
-  parseTrie(buf + offset, size, [&](const Twine &name, uint64_t flags) {
-    StringRef savedName = saver().save(name);
-    if (handleLDSymbol(savedName))
-      return;
-    entries.push_back({savedName, flags});
-  });
+  parseTrie(toString(this), buf + offset, size,
+            [&](const Twine &name, uint64_t flags) {
+              StringRef savedName = saver().save(name);
+              if (handleLDSymbol(savedName))
+                return;
+              entries.push_back({savedName, flags});
+            });
 
   // Process the "normal" symbols.
   for (TrieEntry &entry : entries) {
