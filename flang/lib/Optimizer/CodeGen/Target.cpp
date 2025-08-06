@@ -1443,14 +1443,35 @@ struct TargetAMDGPU : public GenericTarget<TargetAMDGPU> {
   CodeGenSpecifics::Marshalling
   complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
-    TODO(loc, "handle complex argument types");
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle()) {
+      // Lower COMPLEX(KIND=4) as an array of two element values.
+      marshal.emplace_back(fir::SequenceType::get({2}, eleTy), AT{});
+    } else if (sem == &llvm::APFloat::IEEEdouble()) {
+      // Pass COMPLEX(KIND=8) as two separate arguments.
+      marshal.emplace_back(eleTy, AT{});
+      marshal.emplace_back(eleTy, AT{});
+    } else {
+      typeTodo(sem, loc, "argument");
+    }
     return marshal;
   }
 
   CodeGenSpecifics::Marshalling
   complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
     CodeGenSpecifics::Marshalling marshal;
-    TODO(loc, "handle complex return types");
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle()) {
+      // Return COMPLEX(KIND=4) as an array of two elements.
+      marshal.emplace_back(fir::SequenceType::get({2}, eleTy), AT{});
+    } else if (sem == &llvm::APFloat::IEEEdouble()) {
+      // Return COMPLEX(KIND=8) via an aggregate with two fields.
+      marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(),
+                                                mlir::TypeRange{eleTy, eleTy}),
+                           AT{});
+    } else {
+      typeTodo(sem, loc, "return");
+    }
     return marshal;
   }
 };

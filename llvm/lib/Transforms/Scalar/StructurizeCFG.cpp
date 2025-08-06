@@ -421,7 +421,7 @@ public:
 /// if its hoisted to predecessor block. So, this returns true.
 static bool isHoistableInstruction(Instruction *I, BasicBlock *BB,
                                    const TargetTransformInfo *TTI) {
-  if (I->getParent() != BB)
+  if (I->getParent() != BB || isa<PHINode>(I))
     return false;
 
   // If the instruction is not a zero cost instruction, return false.

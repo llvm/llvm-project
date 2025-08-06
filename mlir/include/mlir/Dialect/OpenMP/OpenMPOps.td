@@ -1750,9 +1750,11 @@ def AtomicUpdateOp : OpenMP_Op<"atomic.update", traits = [
     operations.
   }] # clausesDescription;
 
-  let arguments = !con((ins Arg<OpenMP_PointerLikeType,
-                                "Address of variable to be updated",
-                                [MemRead, MemWrite]>:$x), clausesArgs);
+  let arguments = !con(
+      (ins Arg<OpenMP_PointerLikeType,
+               "Address of variable to be updated", [MemRead, MemWrite]>:$x,
+          OptionalAttr<AtomicControlAttr>:$atomic_control),
+      clausesArgs);
 
   // Override region definition.
   let regions = (region SizedRegion<1>:$region);
@@ -2088,6 +2090,29 @@ def MaskedOp : OpenMP_Op<"masked", clauses = [
   let builders = [
     OpBuilder<(ins CArg<"const MaskedOperands &">:$clauses)>
   ];
+}
+
+//===----------------------------------------------------------------------===//
+// [Spec 5.2] 6.5 allocate Directive
+//===----------------------------------------------------------------------===//
+def AllocateDirOp : OpenMP_Op<"allocate_dir", clauses = [
+    OpenMP_AlignClause, OpenMP_AllocatorClause
+  ]> {
+  let summary = "allocate directive";
+  let description = [{
+    The storage for each list item that appears in the allocate directive is
+    provided an allocation through the memory allocator.
+  }] # clausesDescription;
+
+  let arguments = !con((ins Variadic<AnyType>:$varList),
+                       clausesArgs);
+
+  // Override inherited assembly format to include `varList`.
+  let assemblyFormat = " `(` $varList `:` type($varList) `)` oilist(" #
+                       clausesOptAssemblyFormat #
+                       ") attr-dict ";
+
+  let hasVerifier = 1;
 }
 
 #endif // OPENMP_OPS

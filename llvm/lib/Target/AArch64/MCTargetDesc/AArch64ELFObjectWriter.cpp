@@ -57,7 +57,7 @@ AArch64ELFObjectWriter::AArch64ELFObjectWriter(uint8_t OSABI, bool IsILP32)
 // assumes IsILP32 is true
 bool AArch64ELFObjectWriter::isNonILP32reloc(const MCFixup &Fixup,
                                              AArch64::Specifier RefKind) const {
-  if (Fixup.getTargetKind() != AArch64::fixup_aarch64_movw)
+  if (Fixup.getKind() != AArch64::fixup_aarch64_movw)
     return false;
   switch (RefKind) {
   case AArch64::S_ABS_G3:
@@ -84,7 +84,7 @@ bool AArch64ELFObjectWriter::isNonILP32reloc(const MCFixup &Fixup,
 unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                               const MCValue &Target,
                                               bool IsPCRel) const {
-  unsigned Kind = Fixup.getTargetKind();
+  auto Kind = Fixup.getKind();
   AArch64::Specifier RefKind =
       static_cast<AArch64::Specifier>(Target.getSpecifier());
   AArch64::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
@@ -96,8 +96,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case AArch64::S_TPREL:
   case AArch64::S_TLSDESC:
   case AArch64::S_TLSDESC_AUTH:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;
@@ -212,7 +212,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
   } else {
     if (IsILP32 && isNonILP32reloc(Fixup, RefKind))
       return ELF::R_AARCH64_NONE;
-    switch (Fixup.getTargetKind()) {
+    switch (Fixup.getKind()) {
     case FK_Data_1:
       reportError(Fixup.getLoc(), "1-byte data relocations not supported");
       return ELF::R_AARCH64_NONE;
@@ -488,7 +488,8 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
   // this global needs to be tagged. In addition, the linker needs to know
   // whether to emit a special addend when relocating `end` symbols, and this
   // can only be determined by the attributes of the symbol itself.
-  if (Val.getAddSym() && cast<MCSymbolELF>(Val.getAddSym())->isMemtag())
+  if (Val.getAddSym() &&
+      static_cast<const MCSymbolELF *>(Val.getAddSym())->isMemtag())
     return true;
 
   if ((Val.getSpecifier() & AArch64::S_GOT) == AArch64::S_GOT)
