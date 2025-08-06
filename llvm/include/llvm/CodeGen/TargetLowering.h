@@ -518,10 +518,12 @@ public:
     return true;
   }
 
-  /// Return true if multiple condition registers are available.
-  bool hasMultipleConditionRegisters() const {
-    return HasMultipleConditionRegisters;
-  }
+  /// Does the target have multiple (allocatable) condition registers that
+  /// can be used to store the results of comparisons for use by selects
+  /// and conditional branches. With multiple condition registers, the code
+  /// generator will not aggressively sink comparisons into the blocks of their
+  /// users.
+  virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
 
   /// Return true if the target has BitExtract instructions.
   bool hasExtractBitsInsn() const { return HasExtractBitsInsn; }
@@ -2453,7 +2455,7 @@ public:
                                                EVT VT) const {
     // If a target has multiple condition registers, then it likely has logical
     // operations on those registers.
-    if (hasMultipleConditionRegisters())
+    if (hasMultipleConditionRegisters(VT))
       return false;
     // Only do the transform if the value won't be split into multiple
     // registers.
@@ -2558,15 +2560,6 @@ protected:
   /// llvm.savestack/llvm.restorestack should save and restore.
   void setStackPointerRegisterToSaveRestore(Register R) {
     StackPointerRegisterToSaveRestore = R;
-  }
-
-  /// Tells the code generator that the target has multiple (allocatable)
-  /// condition registers that can be used to store the results of comparisons
-  /// for use by selects and conditional branches. With multiple condition
-  /// registers, the code generator will not aggressively sink comparisons into
-  /// the blocks of their users.
-  void setHasMultipleConditionRegisters(bool hasManyRegs = true) {
-    HasMultipleConditionRegisters = hasManyRegs;
   }
 
   /// Tells the code generator that the target has BitExtract instructions.
@@ -3219,22 +3212,16 @@ public:
   /// Lower an interleaved store to target specific intrinsics. Return
   /// true on success.
   ///
-  /// \p SI is the vector store instruction.
+  /// \p SI is the vector store instruction.  Can be either a plain store
+  /// or a vp.store.
+  /// \p Mask is a per-segment (i.e. number of lanes equal to that of one
+  /// component being interwoven) mask.  Can be nullptr, in which case the
+  /// result is unconditional.
   /// \p SVI is the shufflevector to RE-interleave the stored vector.
   /// \p Factor is the interleave factor.
-  virtual bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+  virtual bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                                     ShuffleVectorInst *SVI,
                                      unsigned Factor) const {
-    return false;
-  }
-
-  /// Lower an interleaved store to target specific intrinsics. Return
-  /// true on success.
-  ///
-  /// \p Store is the vp.store instruction.
-  /// \p Mask is a mask value
-  /// \p InterleaveOps is a list of values being interleaved.
-  virtual bool lowerInterleavedVPStore(VPIntrinsic *Store, Value *Mask,
-                                       ArrayRef<Value *> InterleaveOps) const {
     return false;
   }
 
@@ -3566,6 +3553,11 @@ public:
     return Libcalls.getLibcallName(Call);
   }
 
+  /// Get the libcall routine name for the specified libcall implementation
+  const char *getLibcallImplName(RTLIB::LibcallImpl Call) const {
+    return Libcalls.getLibcallImplName(Call);
+  }
+
   const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
 
   /// Get the comparison predicate that's to be used to test the result of the
@@ -3609,13 +3601,6 @@ public:
 
 private:
   const TargetMachine &TM;
-
-  /// Tells the code generator that the target has multiple (allocatable)
-  /// condition registers that can be used to store the results of comparisons
-  /// for use by selects and conditional branches. With multiple condition
-  /// registers, the code generator will not aggressively sink comparisons into
-  /// the blocks of their users.
-  bool HasMultipleConditionRegisters;
 
   /// Tells the code generator that the target has BitExtract instructions.
   /// The code generator will aggressively sink "shift"s into the blocks of

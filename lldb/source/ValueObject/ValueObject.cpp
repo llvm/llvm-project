@@ -1466,8 +1466,9 @@ bool ValueObject::DumpPrintableRepresentation(
           (custom_format == eFormatComplexFloat) ||
           (custom_format == eFormatDecimal) || (custom_format == eFormatHex) ||
           (custom_format == eFormatHexUppercase) ||
-          (custom_format == eFormatFloat) || (custom_format == eFormatOctal) ||
-          (custom_format == eFormatOSType) ||
+          (custom_format == eFormatFloat) ||
+          (custom_format == eFormatFloat128) ||
+          (custom_format == eFormatOctal) || (custom_format == eFormatOSType) ||
           (custom_format == eFormatUnicode16) ||
           (custom_format == eFormatUnicode32) ||
           (custom_format == eFormatUnsigned) ||
@@ -3228,8 +3229,8 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         llvm::APSInt ext =
             int_value_or_err->extOrTrunc(type_byte_size * CHAR_BIT);
         Scalar scalar_int(ext);
-        llvm::APFloat f = scalar_int.CreateAPFloatFromAPSInt(
-            type.GetCanonicalType().GetBasicTypeEnumeration());
+        llvm::APFloat f =
+            scalar_int.CreateAPFloatFromAPSInt(type.GetBasicTypeEnumeration());
         return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                          "result");
       } else {
@@ -3245,7 +3246,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         if (int_value_or_err) {
           Scalar scalar_int(*int_value_or_err);
           llvm::APFloat f = scalar_int.CreateAPFloatFromAPSInt(
-              type.GetCanonicalType().GetBasicTypeEnumeration());
+              type.GetBasicTypeEnumeration());
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {
@@ -3261,7 +3262,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
         if (float_value_or_err) {
           Scalar scalar_float(*float_value_or_err);
           llvm::APFloat f = scalar_float.CreateAPFloatFromAPFloat(
-              type.GetCanonicalType().GetBasicTypeEnumeration());
+              type.GetBasicTypeEnumeration());
           return ValueObject::CreateValueObjectFromAPFloat(target, f, type,
                                                            "result");
         } else {

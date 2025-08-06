@@ -1834,8 +1834,7 @@ define void @PR27999() unnamed_addr {
 entry-block:
   %0 = alloca [2 x i64], align 8
   call void @llvm.lifetime.start.p0(i64 16, ptr %0)
-  %1 = getelementptr inbounds [2 x i64], ptr %0, i32 0, i32 1
-  call void @llvm.lifetime.end.p0(i64 8, ptr %1)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %0)
   ret void
 }
 

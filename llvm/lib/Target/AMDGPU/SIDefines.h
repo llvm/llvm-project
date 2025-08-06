@@ -208,6 +208,7 @@ enum OperandType : unsigned {
   OPERAND_REG_IMM_V2BF16,
   OPERAND_REG_IMM_V2FP16,
   OPERAND_REG_IMM_V2INT16,
+  OPERAND_REG_IMM_NOINLINE_V2FP16,
   OPERAND_REG_IMM_V2INT32,
   OPERAND_REG_IMM_V2FP32,
 
@@ -392,11 +393,13 @@ enum CPol {
   TH_ATOMIC_CASCADE = 4,  // Cascading vs regular
 
   // Scope
-  SCOPE = 0x3 << 3, // All Scope bits
-  SCOPE_CU = 0 << 3,
-  SCOPE_SE = 1 << 3,
-  SCOPE_DEV = 2 << 3,
-  SCOPE_SYS = 3 << 3,
+  SCOPE_SHIFT = 3,
+  SCOPE_MASK = 0x3,
+  SCOPE = SCOPE_MASK << SCOPE_SHIFT, // All Scope bits
+  SCOPE_CU = 0 << SCOPE_SHIFT,
+  SCOPE_SE = 1 << SCOPE_SHIFT,
+  SCOPE_DEV = 2 << SCOPE_SHIFT,
+  SCOPE_SYS = 3 << SCOPE_SHIFT,
 
   NV = 1 << 5, // Non-volatile bit
 
@@ -1014,6 +1017,17 @@ enum MatrixFMT : unsigned {
   MATRIX_FMT_FP6 = 2,
   MATRIX_FMT_BF6 = 3,
   MATRIX_FMT_FP4 = 4
+};
+
+enum MatrixScale : unsigned {
+  MATRIX_SCALE_ROW0 = 0,
+  MATRIX_SCALE_ROW1 = 1,
+};
+
+enum MatrixScaleFmt : unsigned {
+  MATRIX_SCALE_FMT_E8 = 0,
+  MATRIX_SCALE_FMT_E5M3 = 1,
+  MATRIX_SCALE_FMT_E4M3 = 2
 };
 } // namespace WMMA
 

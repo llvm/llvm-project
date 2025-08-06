@@ -940,14 +940,23 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       // In the case of an indirect call find the register that holds
       // the callee.
       const MachineOperand &CalleeOp = TII->getCalleeOperand(MI);
-      if (!CalleeOp.isGlobal() &&
-          (!CalleeOp.isReg() || !CalleeOp.getReg().isPhysical()))
+      bool PhysRegCalleeOperand =
+          CalleeOp.isReg() && CalleeOp.getReg().isPhysical();
+      // Hack: WebAssembly CALL instructions have MCInstrDesc that does not
+      // describe the call target operand.
+      if (CalleeOp.getOperandNo() < MI.getDesc().operands().size()) {
+        const MCOperandInfo &MCOI =
+            MI.getDesc().operands()[CalleeOp.getOperandNo()];
+        PhysRegCalleeOperand =
+            PhysRegCalleeOperand && MCOI.OperandType == MCOI::OPERAND_REGISTER;
+      }
+      if (!CalleeOp.isGlobal() && !PhysRegCalleeOperand)
         continue;
 
       unsigned CallReg = 0;
       const DISubprogram *CalleeSP = nullptr;
       const Function *CalleeDecl = nullptr;
-      if (CalleeOp.isReg()) {
+      if (PhysRegCalleeOperand) {
         CallReg = CalleeOp.getReg();
         if (!CallReg)
           continue;
@@ -972,10 +981,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       // the call graph which could lead to some target function. For tail
       // calls, no return PC information is needed, unless tuning for GDB in
       // DWARF4 mode in which case we fake a return PC for compatibility.
-      const MCSymbol *PCAddr =
-          (!IsTail || CU.useGNUAnalogForDwarf5Feature())
-              ? const_cast<MCSymbol *>(getLabelAfterInsn(TopLevelCallMI))
-              : nullptr;
+      const MCSymbol *PCAddr = (!IsTail || CU.useGNUAnalogForDwarf5Feature())
+                                   ? getLabelAfterInsn(TopLevelCallMI)
+                                   : nullptr;
 
       // For tail calls, it's necessary to record the address of the branch
       // instruction so that the debugger can show where the tail call occurred.

@@ -468,8 +468,10 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
       fir::BoxType boxTy =
           fir::BoxType::get(fir::PointerType::get(converter.genType(s)));
       auto descFunc = [&](fir::FirOpBuilder &b) {
+        bool couldBeInEquivalence =
+            Fortran::semantics::FindEquivalenceSet(s) != nullptr;
         auto box = Fortran::lower::genInitialDataTarget(
-            converter, loc, boxTy, *expr, /*couldBeInEquivalence=*/true);
+            converter, loc, boxTy, *expr, couldBeInEquivalence);
         fir::HasValueOp::create(b, loc, box);
       };
       builder.createGlobalConstant(loc, boxTy, mangleName, descFunc, linkOnce);
@@ -2520,12 +2522,10 @@ mlir::Value Fortran::lower::genInquireStatement(
         fir::getBase(converter.genExprAddr(loc, ioLengthVar, stmtCtx));
     llvm::SmallVector<mlir::Value> args = {cookie};
     mlir::Value length =
-        builder
-            .create<fir::CallOp>(
-                loc,
-                fir::runtime::getIORuntimeFunc<mkIOKey(GetIoLength)>(loc,
-                                                                     builder),
-                args)
+        fir::CallOp::create(
+            builder, loc,
+            fir::runtime::getIORuntimeFunc<mkIOKey(GetIoLength)>(loc, builder),
+            args)
             .getResult(0);
     mlir::Value length1 =
         builder.createConvert(loc, converter.genType(*ioLengthVar), length);
