@@ -869,7 +869,7 @@ private:
   }
 
   bool FindModulesInMap(const ModuleSpec &module_spec,
-                          ModuleList &matching_module_list) const {
+                        ModuleList &matching_module_list) const {
     auto it = m_name_to_modules.find(module_spec.GetFileSpec().GetFilename());
     if (it == m_name_to_modules.end())
       return false;
