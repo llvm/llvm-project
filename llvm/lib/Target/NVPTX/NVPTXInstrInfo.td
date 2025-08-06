@@ -1560,18 +1560,6 @@ def : Pat<(setcc (i16 (sext_inreg (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel
                       (PRMT_B32rii i32:$b, 0, (to_sign_extend_selector $sel_b), PrmtNONE),
                       (cond2cc $cc))>;
 
-// A 16-bit comparison of truncated byte extracts can be be converted to 32-bit
-// comparison because we know that the truncate is just trancating off zeros
-// and that the most-significant byte is also zeros so the meaning of signed and
-// unsigned comparisons will not be changed.
-def : Pat<(setcc (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))),
-                 (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))),
-                 cond:$cc),
-          (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
-                      (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE),
-                      (cond2cc $cc))>;
-
-
 def SDTDeclareArrayParam :
   SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
 def SDTDeclareScalarParam :
