@@ -45,5 +45,3 @@ define float @negative_case_fmad(float %a0, float %a1) {
   ret float %fneg
 }
 
-
-
