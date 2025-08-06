@@ -629,7 +629,7 @@ HoverInfo getHoverContents(const NamedDecl *D, const PrintingPolicy &PP,
   HI.Name = printName(Ctx, *D);
   const auto *CommentD = getDeclForComment(D);
   HI.Documentation = getDeclComment(Ctx, *CommentD);
-  // safe the language options to be able to create the comment::CommandTraits
+  // save the language options to be able to create the comment::CommandTraits
   // to parse the documentation
   HI.CommentOpts = D->getASTContext().getLangOpts().CommentOpts;
   enhanceFromIndex(HI, *CommentD, Index);
@@ -1500,11 +1500,7 @@ markup::Document HoverInfo::presentDoxygen() const {
     Output.addParagraph().appendText(OS.str());
   }
 
-  if (Kind == index::SymbolKind::Parameter) {
-    if (SymbolDoc.isParameterDocumented(Name))
-      SymbolDoc.parameterDocToMarkup(Name, Output.addParagraph());
-  } else
-    SymbolDoc.docToMarkup(Output);
+  SymbolDoc.docToMarkup(Output);
 
   if (!Definition.empty()) {
     Output.addRuler();

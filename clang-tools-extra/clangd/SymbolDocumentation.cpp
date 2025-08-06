@@ -125,6 +125,66 @@ private:
   bool LastChunkEndsWithNewline = false;
 };
 
+class ParagraphToString
+    : public comments::ConstCommentVisitor<ParagraphToString> {
+public:
+  ParagraphToString(llvm::raw_string_ostream &Out,
+                    const comments::CommandTraits &Traits)
+      : Out(Out), Traits(Traits) {}
+
+  void visitParagraphComment(const comments::ParagraphComment *C) {
+    if (!C)
+      return;
+
+    for (const auto *Child = C->child_begin(); Child != C->child_end();
+         ++Child) {
+      visit(*Child);
+    }
+  }
+
+  void visitTextComment(const comments::TextComment *C) { Out << C->getText(); }
+
+  void visitInlineCommandComment(const comments::InlineCommandComment *C) {
+    Out << (C->getCommandMarker() == comments::CommandMarkerKind::CMK_At
+                ? "@"
+                : "\\");
+    Out << C->getCommandName(Traits);
+    if (C->getNumArgs() > 0) {
+      Out << " ";
+      for (unsigned I = 0; I < C->getNumArgs(); ++I) {
+        if (I > 0)
+          Out << " ";
+        Out << C->getArgText(I);
+      }
+    }
+    Out << " ";
+  }
+
+  void visitHTMLStartTagComment(const comments::HTMLStartTagComment *STC) {
+    Out << "<" + STC->getTagName().str();
+
+    for (unsigned I = 0; I < STC->getNumAttrs(); ++I) {
+      const comments::HTMLStartTagComment::Attribute &Attr = STC->getAttr(I);
+      Out << " " + Attr.Name.str() + "=\"" + Attr.Value.str() + "\"";
+    }
+
+    if (STC->isSelfClosing())
+      Out << " /";
+    Out << ">";
+
+    Out << (STC->hasTrailingNewline() ? "\n" : "");
+  }
+
+  void visitHTMLEndTagComment(const comments::HTMLEndTagComment *ETC) {
+    Out << "</" + ETC->getTagName().str() + ">" +
+               (ETC->hasTrailingNewline() ? "\n" : "");
+  }
+
+private:
+  llvm::raw_string_ostream &Out;
+  const comments::CommandTraits &Traits;
+};
+
 class BlockCommentToMarkupDocument
     : public comments::ConstCommentVisitor<BlockCommentToMarkupDocument> {
 public:
@@ -204,6 +264,16 @@ void SymbolDocCommentVisitor::parameterDocToMarkup(StringRef ParamName,
 
   if (const auto *P = Parameters.lookup(ParamName)) {
     ParagraphToMarkupDocument(Out, Traits).visit(P->getParagraph());
+  }
+}
+
+void SymbolDocCommentVisitor::parameterDocToString(
+    StringRef ParamName, llvm::raw_string_ostream &Out) {
+  if (ParamName.empty())
+    return;
+
+  if (const auto *P = Parameters.lookup(ParamName)) {
+    ParagraphToString(Out, Traits).visit(P->getParagraph());
   }
 }
 

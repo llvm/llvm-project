@@ -21,6 +21,7 @@
 #include "clang/AST/CommentSema.h"
 #include "clang/AST/CommentVisitor.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 namespace clang {
@@ -29,6 +30,17 @@ namespace clangd {
 class SymbolDocCommentVisitor
     : public comments::ConstCommentVisitor<SymbolDocCommentVisitor> {
 public:
+  SymbolDocCommentVisitor(comments::FullComment *FC,
+                          const CommentOptions &CommentOpts)
+      : Traits(Allocator, CommentOpts), Allocator() {
+    if (!FC)
+      return;
+
+    for (auto *Block : FC->getBlocks()) {
+      visit(Block);
+    }
+  }
+
   SymbolDocCommentVisitor(llvm::StringRef Documentation,
                           const CommentOptions &CommentOpts)
       : Traits(Allocator, CommentOpts), Allocator() {
@@ -82,10 +94,11 @@ public:
                        Traits);
     comments::FullComment *FC = P.parseFullComment();
 
-    if (FC) {
-      for (auto *Block : FC->getBlocks()) {
-        visit(Block);
-      }
+    if (!FC)
+      return;
+
+    for (auto *Block : FC->getBlocks()) {
+      visit(Block);
     }
   }
 
@@ -95,20 +108,22 @@ public:
 
   void parameterDocToMarkup(StringRef ParamName, markup::Paragraph &Out);
 
+  void parameterDocToString(StringRef ParamName, llvm::raw_string_ostream &Out);
+
   void docToMarkup(markup::Document &Out);
 
   void visitBlockCommandComment(const comments::BlockCommandComment *B) {
-    BlockCommands[CommentPartIndex] = std::move(B);
+    BlockCommands[CommentPartIndex] = B;
     CommentPartIndex++;
   }
 
   void visitParagraphComment(const comments::ParagraphComment *P) {
-    FreeParagraphs[CommentPartIndex] = std::move(P);
+    FreeParagraphs[CommentPartIndex] = P;
     CommentPartIndex++;
   }
 
   void visitParamCommandComment(const comments::ParamCommandComment *P) {
-    Parameters[P->getParamNameAsWritten()] = std::move(P);
+    Parameters[P->getParamNameAsWritten()] = P;
   }
 
 private:

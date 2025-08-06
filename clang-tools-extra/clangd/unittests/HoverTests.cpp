@@ -4477,7 +4477,7 @@ TEST(Hover, FunctionParameters) {
          HI.LocalScope = "foo::";
          HI.Type = "int";
          HI.Definition = "int a";
-         HI.Documentation = "Function doc";
+         HI.Documentation = "";
        },
        "### param `a`\n\n---\nType: `int`\n\n---\n```cpp\n// In foo\nint "
        "a\n```"},
@@ -4492,9 +4492,9 @@ TEST(Hover, FunctionParameters) {
          HI.LocalScope = "foo::";
          HI.Type = "int";
          HI.Definition = "int a";
-         HI.Documentation = "Function doc\n @param a this is doc for a";
+         HI.Documentation = "this is doc for a";
        },
-       "### param `a`\n\n---\nType: `int`\n\n this is doc for "
+       "### param `a`\n\n---\nType: `int`\n\nthis is doc for "
        "a\n\n---\n```cpp\n// In foo\nint a\n```"},
       {R"cpp(/// Function doc
       /// @param b this is doc for b
@@ -4507,7 +4507,7 @@ TEST(Hover, FunctionParameters) {
          HI.LocalScope = "foo::";
          HI.Type = "int";
          HI.Definition = "int a";
-         HI.Documentation = "Function doc\n @param b this is doc for b";
+         HI.Documentation = "";
        },
        "### param `a`\n\n---\nType: `int`\n\n---\n```cpp\n// In foo\nint "
        "a\n```"},
@@ -4522,10 +4522,26 @@ TEST(Hover, FunctionParameters) {
          HI.LocalScope = "foo::";
          HI.Type = "int";
          HI.Definition = "int b";
-         HI.Documentation = "Function doc\n @param b this is doc for \\p b";
+         HI.Documentation = "this is doc for \\p b";
        },
-       "### param `b`\n\n---\nType: `int`\n\n this is doc for "
+       "### param `b`\n\n---\nType: `int`\n\nthis is doc for "
        "`b`\n\n---\n```cpp\n// In foo\nint b\n```"},
+      {R"cpp(/// Function doc
+      /// @param b this is doc for \p b
+      template <typename T>
+      void foo(T a, T [[^b]]);
+    )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "b";
+         HI.Kind = index::SymbolKind::Parameter;
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Type = "T";
+         HI.Definition = "T b";
+         HI.Documentation = "this is doc for \\p b";
+       },
+       "### param `b`\n\n---\nType: `T`\n\nthis is doc for "
+       "`b`\n\n---\n```cpp\n// In foo\nT b\n```"},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.
