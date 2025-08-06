@@ -888,9 +888,7 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
     if (!CurrentProgramInfo.NumVGPRsForWavesPerEU->evaluateAsRelocatable(
             NumVGPRs, nullptr) ||
         !NumVGPRs.isAbsolute()) {
-      OutContext.reportError({}, "unable to resolve _dvgpr$ symbol for '" +
-                                     Twine(CurrentFnSym->getName()) + "'");
-      return;
+      llvm_unreachable("unable to resolve NumVGPRs for _dvgpr$ symbol");
     }
     // Calculate number of VGPR blocks.
     // Treat 0 VGPRs as 1 VGPR to avoid underflowing.
