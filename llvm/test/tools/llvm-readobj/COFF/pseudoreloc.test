@@ -1,97 +1,196 @@
-RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/pseudoreloc.exe | FileCheck %s
-RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/nop.exe.coff-x86-64 | FileCheck %s --check-prefix=NOSYM
-RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/trivial.obj.coff-i386 | FileCheck %s --check-prefix=NORELOC
+REQUIRE: x86-registered-target
 
-CHECK:      Format: COFF-i386
-CHECK-NEXT: Arch: i386
-CHECK-NEXT: AddressSize: 32bit
+DEFINE: %{local} = 0x3000
+DEFINE: %{addr1l} = E0
+DEFINE: %{addr3l} = D0
+RUN: yaml2obj %p/Inputs/pseudoreloc.x86_64.yaml | llvm-readobj --coff-pseudoreloc - 2>&1 \
+RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-X64 --match-full-lines --implicit-check-not=warning \
+RUN:       -D#WORD=8 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local}
+
+REDEFINE: %{addr1l} = A4
+REDEFINE: %{addr3l} = B0
+RUN: yaml2obj %p/Inputs/pseudoreloc.i386.yaml   | llvm-readobj --coff-pseudoreloc - 2>&1 \
+RUN:   | FileCheck %s --check-prefixes=CHECK,CHECK-386 --match-full-lines --implicit-check-not=warning \
+RUN:       -D#WORD=4 -D#SYM1=0x20%{addr1l} -D#SYM3=0x20%{addr3l} -D#LOCAL1A=%{local}
+
+CHECK-X64:      Format: COFF-x86-64
+CHECK-X64-NEXT: Arch: x86_64
+CHECK-386:      Format: COFF-i386
+CHECK-386-NEXT: Arch: i386
+CHECK-NEXT: AddressSize: [[#%u,BW:mul(WORD,8)]]bit
 CHECK-NEXT: PseudoReloc [
 CHECK-NEXT:  Entry {
-CHECK-NEXT:   Symbol: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   Symbol: 0x[[#%X,SYM1]]
 CHECK-NEXT:   SymbolName: sym1
-CHECK-NEXT:   Target: 0x{{[0-9A-Z]+}}
-CHECK-NEXT:   BitWidth: {{[0-9]+}}
+CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A]]
+CHECK-NEXT:   BitWidth: [[#BW]]
 CHECK-NEXT:  }
 CHECK-NEXT:  Entry {
-CHECK-NEXT:   Symbol: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   Symbol: 0x[[#%X,SYM1+mul(1,WORD)]]
 CHECK-NEXT:   SymbolName: sym2
-CHECK-NEXT:   Target: 0x{{[0-9A-Z]+}}
-CHECK-NEXT:   BitWidth: {{[0-9]+}}
+CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A+mul(1,WORD)]]
+CHECK-NEXT:   BitWidth: [[#BW]]
 CHECK-NEXT:  }
 CHECK-NEXT:  Entry {
-CHECK-NEXT:   Symbol: 0x{{[0-9A-Z]+}}
+CHECK-NEXT:   Symbol: 0x[[#%X,SYM3]]
+CHECK-NEXT:   SymbolName: sym3
+CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A+mul(2,WORD)]]
+CHECK-NEXT:   BitWidth: [[#BW]]
+CHECK-NEXT:  }
+CHECK-NEXT:  Entry {
+CHECK-NEXT:   Symbol: 0x[[#%X,SYM1]]
 CHECK-NEXT:   SymbolName: sym1
-CHECK-NEXT:   Target: 0x{{[0-9A-Z]+}}
-CHECK-NEXT:   BitWidth: {{[0-9]+}}
+CHECK-NEXT:   Target: 0x[[#%X,LOCAL1A+mul(3,WORD)]]
+CHECK-NEXT:   BitWidth: [[#BW]]
 CHECK-NEXT:  }
 CHECK-NEXT: ]
 
-NOSYM-NOT: PseudoReloc
+
+; check that silently ignore when imported symbol name is not found
+RUN: sed -E -e '/Name: *\.rdata/,/Name:/{/SectionData:/{s/%{addr1l}200000/30000000/;s/%{addr3l}200000/00FFFF00/}}' %p/Inputs/pseudoreloc.i386.yaml \
+RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 \
+RUN:   | FileCheck %s --check-prefix=INVALIDSYMBOL --match-full-lines -D#LOCAL1A=%{local} --implicit-check-not=warning
+
+INVALIDSYMBOL:      Symbol: 0x30
+INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A]]
+INVALIDSYMBOL:      Symbol: 0xFFFF00
+INVALIDSYMBOL-NEXT: Target: 0x[[#%X,LOCAL1A+8]]
+
+
+; check that shows empty list when the relocation list has no contents
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml \
+RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 \
+RUN:   | FileCheck %s --check-prefix=EMPTY --implicit-check-not=warning
+
+EMPTY:      Format: COFF-i386
+EMPTY-NEXT: Arch: i386
+EMPTY-NEXT: AddressSize: 32bit
+EMPTY-NEXT: PseudoReloc [
+EMPTY-NEXT: ]
+
+
+; assume position of the relocation list for further tests
+RUN: yaml2obj %p/Inputs/pseudoreloc.i386.yaml | llvm-readobj --syms - | FileCheck %s --check-prefix=RELOCPOS --match-full-lines
+
+RELOCPOS: Name: ___RUNTIME_PSEUDO_RELOC_LIST__
+RELOCPOS-NEXT: Value: 8
+
+
+; check that shows message if the header of the relocation list is broken or missing
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml \
+RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=NOHEADER --implicit-check-not=PseudoReloc
+
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/8/}' %p/Inputs/pseudoreloc.i386.yaml \
+RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=NOHEADER --implicit-check-not=PseudoReloc
+
+NOHEADER: invalid runtime pseudo-relocation records
+
+
+; check that warn if end < start
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/8/}' \
+RUN:        -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/20/}' %p/Inputs/pseudoreloc.i386.yaml \
+RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=INVALREGION --implicit-check-not=PseudoReloc
+
+INVALREGION: the symbols for runtime pseudo-relocation don't consist a valid region
+
+
+; check that warn if the relocation list points out of section space
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/9999/}' \
+RUN:        -e '/__RUNTIME_PSEUDO_RELOC_LIST__/,/Name:/{/Value:/s/[0-9]+/8888/}' %p/Inputs/pseudoreloc.i386.yaml \
+RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=OUTOFRANGE --implicit-check-not=PseudoReloc
+
+RUN: sed -E -e '/__RUNTIME_PSEUDO_RELOC_LIST_END__/,/Name:/{/Value:/s/[0-9]+/9999/}' %p/Inputs/pseudoreloc.i386.yaml \
+RUN:   | yaml2obj | llvm-readobj --coff-pseudoreloc - 2>&1 | FileCheck %s --check-prefix=OUTOFRANGE --implicit-check-not=PseudoReloc
+
+OUTOFRANGE: the region of runtime pseudo-relocation records points to out of the valid location
+
+
+; check that warn if image is stripped
+RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/nop.exe.coff-x86-64   2>&1 | FileCheck %s --check-prefix=NOSYM --implicit-check-not=PseudoReloc
+
 NOSYM: the symbol table has been stripped
-NOSYM-NOT: PseudoReloc
 
-NORELOC-NOT: PseudoReloc
+
+; check that warn if the relocation list is missing (intended for MSVC-made binaries)
+RUN: llvm-readobj --coff-pseudoreloc %p/Inputs/trivial.obj.coff-i386 2>&1 | FileCheck %s --check-prefix=NORELOC --implicit-check-not=PseudoReloc
+
 NORELOC: the symbols for runtime pseudo-relocation are not found
-NORELOC-NOT: PseudoReloc
 
 
-pseudoreloc.exe is generated by following script:
+pseudoreloc.*.yaml is generated by following script:
+
+$ split-file pseudoreloc.test /tmp/pseudoreloc && bash /tmp/pseudoreloc/generate.sh && cp /tmp/pseudoreloc/*.yaml Inputs/
+
 
 #--- generate.sh
-llvm-mc -triple i386-mingw32 -filetype obj pseudoreloc.dll.s -o pseudoreloc.dll.o
-ld.lld -m i386pe --dll pseudoreloc.dll.o -o pseudoreloc.dll -entry=
-llvm-mc -triple i386-mingw32 -filetype obj pseudoreloc.s -o pseudoreloc.o
-ld.lld -m i386pe pseudoreloc.o pseudoreloc.dll -o pseudoreloc.exe -entry=start
+cd "$(dirname $0)"
+set -e
 
-#--- pseudoreloc.dll.s
-    .data
-    .globl _sym1
-_sym1:
-    .long 0x11223344
-    .globl _sym2
-_sym2:
-    .long 0x55667788
-    .section .drectve
-    .ascii " -export:sym1,data "
-    .ascii " -export:sym2,data "
-    .addrsig
+llc -mtriple i386-mingw32 -filetype obj export1.ll -o export1.i386.o
+ld.lld -m i386pe --dll export1.i386.o -o export1.i386.dll -entry=
+llc -mtriple i386-mingw32 -filetype obj export2.ll -o export2.i386.o
+ld.lld -m i386pe --dll export2.i386.o -o export2.i386.dll -entry=
+llc -mtriple i386-mingw32 -filetype obj import.ll -o import.i386.o
+ld.lld -m i386pe -S import.i386.o export1.i386.dll export2.i386.dll -o pseudoreloc.i386.exe -entry=start \
+  --disable-dynamicbase --disable-reloc-section
+obj2yaml pseudoreloc.i386.exe -o pseudoreloc.i386.yaml
 
-#--- pseudoreloc.s
-    .text
-    .globl _start
-_start:
-    mov _local1b, %eax
-    movsb (%eax), %ecx
-    mov _local2, %eax
-    movsb (%eax), %edx
-    mov _local1a, %eax
-    movsb (%eax), %eax
-    add %edx, %eax
-    add %ecx, %eax
-    ret
+llc -mtriple x86_64-mingw32 -filetype obj export1.ll -o export1.x86_64.o
+ld.lld -m i386pep --dll export1.x86_64.o -o export1.x86_64.dll -entry=
+llc -mtriple x86_64-mingw32 -filetype obj export2.ll -o export2.x86_64.o
+ld.lld -m i386pep --dll export2.x86_64.o -o export2.x86_64.dll -entry=
+llc -mtriple x86_64-mingw32 -filetype obj import.ll -o import.x86_64.o
+ld.lld -m i386pep -S import.x86_64.o export1.x86_64.dll export2.x86_64.dll -o pseudoreloc.x86_64.exe -entry=start \
+  --disable-dynamicbase --disable-reloc-section
+obj2yaml pseudoreloc.x86_64.exe -o pseudoreloc.x86_64.yaml
 
-    .globl __pei386_runtime_relocator
-__pei386_runtime_relocator:
-    mov ___RUNTIME_PSEUDO_RELOC_LIST__, %eax
-    mov ___RUNTIME_PSEUDO_RELOC_LIST_END__, %ecx
-    sub %ecx, %eax
-    ret
 
-    .data
-    .globl  _local1a
-    .p2align 2
-_local1a:
-    .long _sym1+1
+#--- export1.ll
+@sym1 = dso_local dllexport global [4 x i8] c"\11\22\33\44"
+@sym2 = dso_local dllexport global [4 x i8] c"\55\66\77\88"
 
-    .globl _local2
-    .p2align 2
-_local2:
-    .long _sym2+1
 
-    .globl  _local1b
-    .p2align 2
-_local1b:
-    .long _sym1+3
+#--- export2.ll
+@sym3 = dso_local dllexport global [4 x i8] c"\AA\BB\CC\DD"
 
-    .addrsig
 
+#--- import.ll
+@__RUNTIME_PSEUDO_RELOC_LIST__ = external dso_local constant ptr
+@__RUNTIME_PSEUDO_RELOC_LIST_END__ = external dso_local constant ptr
+@sym1 = external dso_local global [4 x i8]
+@sym2 = external dso_local global [4 x i8]
+@sym3 = external dso_local global [4 x i8]
+@dummy_to_bump_address = private constant i64 u0x4488226655117733
+@local1a = private global ptr getelementptr (i8, ptr @sym1, i32 1)
+@local2a = private global ptr getelementptr (i8, ptr @sym2, i32 2)
+@local3a = private global ptr getelementptr (i8, ptr @sym3, i32 1)
+@local1b = private global ptr getelementptr (i8, ptr @sym1, i32 2)
+
+define dso_local i32 @start() noinline nounwind {
+  %p1a = load ptr, ptr @local1a
+  %v1a = load i8, ptr %p1a
+  %x1a = sext i8 %v1a to i32
+  %p2a = load ptr, ptr @local2a
+  %v2a = load i8, ptr %p2a
+  %x2a = sext i8 %v2a to i32
+  %p3a = load ptr, ptr @local3a
+  %v3a = load i8, ptr %p3a
+  %x3a = sext i8 %v3a to i32
+  %p1b = load ptr, ptr @local1b
+  %v1b = load i8, ptr %p1b
+  %x1b = sext i8 %v1b to i32
+  %1 = add nsw i32 %x1a, %x2a
+  %2 = add nsw i32 %x3a, %x1b
+  %3 = add nsw i32 %1, %2
+  ret i32 %3
+}
+
+define dso_local i32 @_pei386_runtime_relocator() noinline nounwind {
+  %1 = load ptr, ptr @__RUNTIME_PSEUDO_RELOC_LIST_END__
+  %2 = load ptr, ptr @__RUNTIME_PSEUDO_RELOC_LIST__
+  %3 = ptrtoint ptr %1 to i64
+  %4 = ptrtoint ptr %2 to i64
+  %5 = sub i64 %3, %4
+  %6 = trunc i64 %5 to i32
+  ret i32 %6
+}
