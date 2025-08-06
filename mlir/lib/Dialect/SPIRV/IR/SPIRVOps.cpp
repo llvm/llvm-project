@@ -1167,7 +1167,7 @@ ParseResult spirv::GraphEntryPointARMOp::parse(OpAsmParser &parser,
 void spirv::GraphEntryPointARMOp::print(OpAsmPrinter &printer) {
   printer << " ";
   printer.printSymbolName(getFn());
-  auto interfaceVars = getInterface().getValue();
+  ArrayRef<Attribute> interfaceVars = getInterface().getValue();
   if (!interfaceVars.empty()) {
     printer << ", ";
     llvm::interleaveComma(interfaceVars, printer);
