@@ -1700,6 +1700,18 @@ def TuneNLogNVRGather
 def TunePostRAScheduler : SubtargetFeature<"use-postra-scheduler",
     "UsePostRAScheduler", "true", "Schedule again after register allocation">;
 
+def TuneDisableMISchedLoadClustering : SubtargetFeature<"disable-misched-load-clustering",
+    "EnableMISchedLoadClustering", "false", "Disable load clustering in the machine scheduler">;
+
+def TuneDisableMISchedStoreClustering : SubtargetFeature<"disable-misched-store-clustering",
+    "EnableMISchedStoreClustering", "false", "Disable store clustering in the machine scheduler">;
+
+def TuneDisablePostMISchedLoadClustering : SubtargetFeature<"disable-postmisched-load-clustering",
+    "EnablePostMISchedLoadClustering", "false", "Disable PostRA load clustering in the machine scheduler">;
+
+def TuneDisablePostMISchedStoreClustering : SubtargetFeature<"disable-postmisched-store-clustering",
+    "EnablePostMISchedStoreClustering", "false", "Disable PostRA store clustering in the machine scheduler">;
+
 def TuneDisableLatencySchedHeuristic
     : SubtargetFeature<"disable-latency-sched-heuristic", "DisableLatencySchedHeuristic", "true",
                        "Disable latency scheduling heuristic">;
