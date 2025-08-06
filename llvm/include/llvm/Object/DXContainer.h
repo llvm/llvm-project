@@ -586,7 +586,7 @@ public:
   }
 };
 
-class DXContainerObjectFile : public ObjectFile {
+class LLVM_ABI DXContainerObjectFile : public ObjectFile {
 private:
   friend class ObjectFile;
   DXContainer Container;
