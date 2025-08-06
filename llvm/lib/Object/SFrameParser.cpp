@@ -186,6 +186,9 @@ static std::optional<int32_t> getOffset(ArrayRef<int32_t> Offsets, size_t Idx) {
   return std::nullopt;
 }
 
+// The interpretation of offsets is ABI-specific. The implementation of this and
+// the following functions may need to be adjusted when adding support for a new
+// ABI.
 template <endianness E>
 std::optional<int32_t>
 SFrameParser<E>::getCFAOffset(const FrameRowEntry &FRE) const {
