@@ -2892,14 +2892,14 @@ bool MIParser::parseLaneMaskOperand(MachineOperand &Dest) {
 
   lex();
   if (expectAndConsume(MIToken::lparen))
-    return error("expected syntax lanemask(...)");
+    return error("lanemask should begin with '('.");
 
   LaneBitmask LaneMask = LaneBitmask::getAll();
   // Parse lanemask.
   if (Token.isNot(MIToken::IntegerLiteral) && Token.isNot(MIToken::HexLiteral))
-    return error("expected a lane mask");
+    return error("expected a valid lane mask value.");
   static_assert(sizeof(LaneBitmask::Type) == sizeof(uint64_t),
-                "Use correct get-function for lane mask");
+                "Use correct get-function for lane mask.");
   LaneBitmask::Type V;
   if (getUint64(V))
     return error("invalid lanemask value");

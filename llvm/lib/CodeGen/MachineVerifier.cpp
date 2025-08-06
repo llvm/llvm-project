@@ -2428,6 +2428,34 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::COPY_LANEMASK: {
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    const MachineOperand &LaneMaskOp = MI->getOperand(2);
+    const Register SrcReg = SrcOp.getReg();
+    const Register DstReg = DstOp.getReg();
+    const LaneBitmask LaneMask = LaneMaskOp.getLaneMask();
+
+    if (!SrcReg.isPhysical() || !DstReg.isPhysical()) {
+      if (!SrcReg.isPhysical()) {
+        report("Copy with lanemask Instruction uses virtual register", &SrcOp,
+               1);
+      }
+      if (!DstReg.isPhysical()) {
+        report("Copy with lanemask Instruction uses virtual register", &DstOp,
+               0);
+      }
+      break;
+    }
+
+    if (LaneMask.none())
+      report("Lanemask takes up the zero value", MI);
+
+    if (LaneMask.all())
+      report("Copy Instruction can be used instead of copy with lanemask", MI);
+
+    break;
+  }
   case TargetOpcode::STATEPOINT: {
     StatepointOpers SO(MI);
     if (!MI->getOperand(SO.getIDPos()).isImm() ||
