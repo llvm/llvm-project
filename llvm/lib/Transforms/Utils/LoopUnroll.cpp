@@ -58,6 +58,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopRotationUtils.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
@@ -484,8 +485,36 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
 
   assert(ULO.Count > 0);
 
-  // All these values should be taken only after peeling because they might have
-  // changed.
+  LoopUnrollResult Result = LoopUnrollResult::Unmodified;
+
+  // Rotate loop if it makes the exit count from the latch computable (for
+  // later unrolling).
+  // The check for LoopSimplify form is done so that after the rotation this
+  // check does not fail in UnrollRuntimeLoopRemainder and the rotation is not
+  // redundant.
+  if (ULO.Runtime && SE && L->isLoopSimplifyForm()) {
+    BasicBlock *OrigHeader = L->getHeader();
+    BranchInst *BI = dyn_cast<BranchInst>(OrigHeader->getTerminator());
+    if (BI && !BI->isUnconditional() &&
+        isa<SCEVCouldNotCompute>(SE->getExitCount(L, L->getLoopLatch())) &&
+        !isa<SCEVCouldNotCompute>(SE->getExitCount(L, OrigHeader))) {
+      LLVM_DEBUG(
+          dbgs() << "  Rotating loop to make the exit count computable.\n");
+      SimplifyQuery SQ{OrigHeader->getDataLayout()};
+      SQ.TLI = nullptr;
+      SQ.DT = DT;
+      SQ.AC = AC;
+      if (llvm::LoopRotation(L, LI, TTI, AC, DT, SE,
+                             nullptr /*MemorySSAUpdater*/, SQ,
+                             false /*RotationOnly*/, 16 /*Threshold*/,
+                             false /*IsUtilMode*/, false /*PrepareForLTO*/,
+                             [](Loop *, ScalarEvolution *) { return true; }))
+        Result = LoopUnrollResult::Modified;
+    }
+  }
+
+  // All these values should be taken only after peeling or loop rotation
+  // because they might have changed.
   BasicBlock *Preheader = L->getLoopPreheader();
   BasicBlock *Header = L->getHeader();
   BasicBlock *LatchBlock = L->getLoopLatch();
@@ -577,7 +606,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
   if (!LatchBI || (LatchBI->isConditional() && !LatchIsExiting)) {
     LLVM_DEBUG(
         dbgs() << "Can't unroll; a conditional latch must exit the loop");
-    return LoopUnrollResult::Unmodified;
+    return Result;
   }
 
   assert((!ULO.Runtime || canHaveUnrollRemainder(L)) &&
@@ -598,7 +627,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     else {
       LLVM_DEBUG(dbgs() << "Won't unroll; remainder loop could not be "
                            "generated when assuming runtime trip count\n");
-      return LoopUnrollResult::Unmodified;
+      return Result;
     }
   }
 
