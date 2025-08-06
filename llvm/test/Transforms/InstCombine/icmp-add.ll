@@ -3259,9 +3259,8 @@ define i1 @zext_range_check_mergable(i8 %x) {
 define i1 @sext_range_check_ult(i8 %x) {
 ; CHECK-LABEL: @sext_range_check_ult(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[CONV]], -4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 3
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[X:%.*]], -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP0]], 3
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
 entry:
