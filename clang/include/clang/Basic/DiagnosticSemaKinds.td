@@ -10884,6 +10884,8 @@ def err_switch_explicit_conversion : Error<
 def err_switch_incomplete_class_type : Error<
   "switch condition has incomplete class type %0">;
 
+// TODO: It ought to be possible to refactor these to be a single warning that
+// uses %enum_select.
 def warn_empty_if_body : Warning<
   "if statement has empty body">, InGroup<EmptyBody>;
 def warn_empty_for_body : Warning<
@@ -10894,6 +10896,8 @@ def warn_empty_while_body : Warning<
   "while loop has empty body">, InGroup<EmptyBody>;
 def warn_empty_switch_body : Warning<
   "switch statement has empty body">, InGroup<EmptyBody>;
+def warn_empty_defer_body : Warning<"defer statement has empty body">,
+                            InGroup<EmptyBody>;
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 

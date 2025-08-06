@@ -3879,6 +3879,12 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
   return R;
 }
 
+StmtResult Sema::ActOnDeferStmt(SourceLocation DeferLoc, Stmt *Body, Scope *) {
+  DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
+  setFunctionHasBranchProtectedScope();
+  return new (Context) DeferStmt(DeferLoc, Body);
+}
+
 static bool CheckSimplerImplicitMovesMSVCWorkaround(const Sema &S,
                                                     const Expr *E) {
   if (!E || !S.getLangOpts().CPlusPlus23 || !S.getLangOpts().MSVCCompat)

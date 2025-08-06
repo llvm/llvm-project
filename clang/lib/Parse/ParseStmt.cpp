@@ -309,6 +309,10 @@ Retry:
     Res = ParseReturnStatement();
     SemiError = "co_return";
     break;
+  case tok::kw_defer: // C defer TS: defer-statement
+    ProhibitAttributes(GNUAttrs);
+    ProhibitAttributes(CXX11Attrs);
+    return ParseDeferStatement(TrailingElseLoc);
 
   case tok::kw_asm: {
     for (const ParsedAttr &AL : CXX11Attrs)
@@ -2334,6 +2338,29 @@ StmtResult Parser::ParseReturnStatement() {
   if (IsCoreturn)
     return Actions.ActOnCoreturnStmt(getCurScope(), ReturnLoc, R.get());
   return Actions.ActOnReturnStmt(ReturnLoc, R.get(), getCurScope());
+}
+
+StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
+  assert(Tok.is(tok::kw_defer));
+  SourceLocation DeferLoc = ConsumeToken();
+
+  StmtResult Res = ParseStatement(TrailingElseLoc);
+  if (!Res.isUsable())
+    return StmtError();
+
+  // Diagnose this *after* parsing the body for better synchronisation.
+  if (getLangOpts().CPlusPlus) {
+    Diag(DeferLoc, diag::err_defer_unsupported);
+    return StmtError();
+  }
+
+  // The grammar specifically calls for an unlabeled-statement here.
+  if (auto *L = dyn_cast<LabelStmt>(Res.get())) {
+    Diag(L->getIdentLoc(), diag::err_defer_ts_labeled_stmt);
+    return StmtError();
+  }
+
+  return Actions.ActOnDeferStmt(DeferLoc, Res.get(), getCurScope());
 }
 
 StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,

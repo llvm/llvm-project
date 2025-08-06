@@ -11035,6 +11035,8 @@ public:
                                    SourceLocation StarLoc, Expr *DestExp);
   StmtResult ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope);
   StmtResult ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope);
+  StmtResult ActOnDeferStmt(SourceLocation DeferLoc, Stmt *Body,
+                            Scope *CurScope);
 
   struct NamedReturnInfo {
     const VarDecl *Candidate;

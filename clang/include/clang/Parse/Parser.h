@@ -7484,6 +7484,16 @@ public:
   /// \endverbatim
   StmtResult ParseReturnStatement();
 
+  /// ParseDeferStatement
+  /// \verbatim
+  ///       defer-statement:
+  ///         'defer' deferred-block
+  ///
+  ///       deferred-block:
+  ///         unlabeled-statement
+  /// \endverbatim
+  StmtResult ParseDeferStatement(SourceLocation *TrailingElseLoc);
+
   StmtResult ParsePragmaLoopHint(StmtVector &Stmts, ParsedStmtContext StmtCtx,
                                  SourceLocation *TrailingElseLoc,
                                  ParsedAttributes &Attrs);

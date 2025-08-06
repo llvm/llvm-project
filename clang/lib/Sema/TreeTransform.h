@@ -8562,6 +8562,14 @@ TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
   return S;
 }
 
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformDeferStmt(DeferStmt *S) {
+  StmtResult Result = getDerived().TransformStmt(S->getBody());
+  if (!Result.isUsable())
+    return StmtError();
+  return new (getSema().Context) DeferStmt(S->getDeferLoc(), Result.get());
+}
+
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformReturnStmt(ReturnStmt *S) {

@@ -485,6 +485,13 @@ void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
   if (Policy.IncludeNewlines) OS << NL;
 }
 
+void StmtPrinter::VisitDeferStmt(DeferStmt *Node) {
+  Indent() << "defer ";
+  PrintStmt(Node->getBody());
+  if (Policy.IncludeNewlines)
+    OS << NL;
+}
+
 void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
   Indent() << "return";
   if (Node->getRetValue()) {

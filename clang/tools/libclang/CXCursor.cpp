@@ -224,6 +224,11 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_ReturnStmt;
     break;
 
+  // Not exposed for now because 'defer' is currently just a TS.
+  case Stmt::DeferStmtClass:
+    K = CXCursor_UnexposedStmt;
+    break;
+
   case Stmt::GCCAsmStmtClass:
     K = CXCursor_GCCAsmStmt;
     break;

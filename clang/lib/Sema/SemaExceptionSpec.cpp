@@ -1537,6 +1537,7 @@ CanThrowResult Sema::canThrow(const Stmt *S) {
   case Stmt::SEHTryStmtClass:
   case Stmt::SwitchStmtClass:
   case Stmt::WhileStmtClass:
+  case Stmt::DeferStmtClass:
     return canSubStmtsThrow(*this, S);
 
   case Stmt::DeclStmtClass: {

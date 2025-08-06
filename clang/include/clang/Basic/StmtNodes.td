@@ -19,6 +19,7 @@ def IndirectGotoStmt : StmtNode<Stmt>;
 def ContinueStmt : StmtNode<Stmt>;
 def BreakStmt : StmtNode<Stmt>;
 def ReturnStmt : StmtNode<Stmt>;
+def DeferStmt : StmtNode<Stmt>;
 def DeclStmt  : StmtNode<Stmt>;
 def SwitchCase : StmtNode<Stmt, 1>;
 def CaseStmt : StmtNode<SwitchCase>;

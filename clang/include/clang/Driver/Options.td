@@ -1642,6 +1642,14 @@ defm auto_import : BoolFOption<"auto-import",
 def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>, Alias<offload_targets_EQ>,
   HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
+// C 'defer' TS
+defm defer_ts
+    : BoolFOption<
+          "defer-ts", LangOpts<"DeferTS">, DefaultFalse,
+          PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                  "Enable support for the C 'defer' Technical Specification">,
+          NegFlag<SetFalse>>;
+
 // C++ Coroutines
 defm coroutines : BoolFOption<"coroutines",
   LangOpts<"Coroutines">, Default<cpp20.KeyPath>,

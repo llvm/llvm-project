@@ -327,6 +327,16 @@ protected:
     SourceLocation KeywordLoc;
   };
 
+  class DeferStmtBitfields {
+    friend class DeferStmt;
+
+    LLVM_PREFERRED_TYPE(StmtBitfields)
+    unsigned : NumStmtBits;
+
+    /// The location of the "defer".
+    SourceLocation DeferLoc;
+  };
+
   //===--- Expression bitfields classes ---===//
 
   class ExprBitfields {
@@ -1329,6 +1339,7 @@ protected:
     BreakStmtBitfields BreakStmtBits;
     ReturnStmtBitfields ReturnStmtBits;
     SwitchCaseBitfields SwitchCaseBits;
+    DeferStmtBitfields DeferStmtBits;
 
     // Expressions
     ExprBitfields ExprBits;
@@ -3198,6 +3209,46 @@ public:
     if (RetExpr)
       return const_child_range(&RetExpr, &RetExpr + 1);
     return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
+/// DeferStmt - This represents a deferred statement.
+class DeferStmt : public Stmt {
+  friend class ASTStmtReader;
+
+  /// The deferred statement.
+  Stmt *Body;
+
+public:
+  DeferStmt(SourceLocation DeferLoc, Stmt *Body) : Stmt(DeferStmtClass) {
+    setDeferLoc(DeferLoc);
+    setBody(Body);
+  }
+
+  explicit DeferStmt(EmptyShell Empty) : Stmt(DeferStmtClass, Empty) {}
+
+  SourceLocation getDeferLoc() const { return DeferStmtBits.DeferLoc; }
+  void setDeferLoc(SourceLocation DeferLoc) {
+    DeferStmtBits.DeferLoc = DeferLoc;
+  }
+
+  Stmt *getBody() const { return Body; }
+  void setBody(Stmt *S) {
+    assert(S && "defer body must not be null");
+    Body = S;
+  }
+
+  SourceLocation getBeginLoc() const { return getDeferLoc(); }
+  SourceLocation getEndLoc() const { return Body->getEndLoc(); }
+
+  child_range children() { return child_range(&Body, &Body + 1); }
+
+  const_child_range children() const {
+    return const_child_range(&Body, &Body + 1);
+  }
+
+  static bool classof(const Stmt *S) {
+    return S->getStmtClass() == DeferStmtClass;
   }
 };
 
