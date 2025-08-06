@@ -1566,8 +1566,8 @@ template <typename OpTy, typename... Args>
 static OpTy genOpWithBody(const OpWithBodyGenInfo &info,
                           const ConstructQueue &queue,
                           ConstructQueue::const_iterator item, Args &&...args) {
-  auto op = info.converter.getFirOpBuilder().create<OpTy>(
-      info.loc, std::forward<Args>(args)...);
+  auto op = OpTy::create(info.converter.getFirOpBuilder(), info.loc,
+                         std::forward<Args>(args)...);
   createBodyOfOp(*op, info, queue, item);
   return op;
 }
@@ -1948,7 +1948,7 @@ genBarrierOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
              semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
              mlir::Location loc, const ConstructQueue &queue,
              ConstructQueue::const_iterator item) {
-  return converter.getFirOpBuilder().create<mlir::omp::BarrierOp>(loc);
+  return mlir::omp::BarrierOp::create(converter.getFirOpBuilder(), loc);
 }
 
 static mlir::omp::CancelOp genCancelOp(lower::AbstractConverter &converter,
@@ -1960,8 +1960,8 @@ static mlir::omp::CancelOp genCancelOp(lower::AbstractConverter &converter,
   mlir::omp::CancelOperands clauseOps;
   genCancelClauses(converter, semaCtx, item->clauses, loc, clauseOps);
 
-  return converter.getFirOpBuilder().create<mlir::omp::CancelOp>(loc,
-                                                                 clauseOps);
+  return mlir::omp::CancelOp::create(converter.getFirOpBuilder(), loc,
+                                     clauseOps);
 }
 
 static mlir::omp::CancellationPointOp genCancellationPointOp(
@@ -1972,8 +1972,8 @@ static mlir::omp::CancellationPointOp genCancellationPointOp(
   genCancellationPointClauses(converter, semaCtx, item->clauses, loc,
                               clauseOps);
 
-  return converter.getFirOpBuilder().create<mlir::omp::CancellationPointOp>(
-      loc, clauseOps);
+  return mlir::omp::CancellationPointOp::create(converter.getFirOpBuilder(),
+                                                loc, clauseOps);
 }
 
 static mlir::omp::CriticalOp
@@ -2016,8 +2016,9 @@ genFlushOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genFlushClauses(converter, semaCtx, objects, item->clauses, loc,
                   operandRange);
 
-  return converter.getFirOpBuilder().create<mlir::omp::FlushOp>(
-      converter.getCurrentLocation(), operandRange);
+  return mlir::omp::FlushOp::create(converter.getFirOpBuilder(),
+                                    converter.getCurrentLocation(),
+                                    operandRange);
 }
 
 static mlir::omp::LoopNestOp genLoopNestOp(
@@ -2135,36 +2136,37 @@ genCanonicalLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // Start lowering
   mlir::Value zero = firOpBuilder.createIntegerConstant(loc, loopVarType, 0);
   mlir::Value one = firOpBuilder.createIntegerConstant(loc, loopVarType, 1);
-  mlir::Value isDownwards = firOpBuilder.create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::slt, loopStepVar, zero);
+  mlir::Value isDownwards = mlir::arith::CmpIOp::create(
+      firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, loopStepVar, zero);
 
   // Ensure we are counting upwards. If not, negate step and swap lb and ub.
   mlir::Value negStep =
-      firOpBuilder.create<mlir::arith::SubIOp>(loc, zero, loopStepVar);
-  mlir::Value incr = firOpBuilder.create<mlir::arith::SelectOp>(
-      loc, isDownwards, negStep, loopStepVar);
-  mlir::Value lb = firOpBuilder.create<mlir::arith::SelectOp>(
-      loc, isDownwards, loopUBVar, loopLBVar);
-  mlir::Value ub = firOpBuilder.create<mlir::arith::SelectOp>(
-      loc, isDownwards, loopLBVar, loopUBVar);
+      mlir::arith::SubIOp::create(firOpBuilder, loc, zero, loopStepVar);
+  mlir::Value incr = mlir::arith::SelectOp::create(
+      firOpBuilder, loc, isDownwards, negStep, loopStepVar);
+  mlir::Value lb = mlir::arith::SelectOp::create(firOpBuilder, loc, isDownwards,
+                                                 loopUBVar, loopLBVar);
+  mlir::Value ub = mlir::arith::SelectOp::create(firOpBuilder, loc, isDownwards,
+                                                 loopLBVar, loopUBVar);
 
   // Compute the trip count assuming lb <= ub. This guarantees that the result
   // is non-negative and we can use unsigned arithmetic.
-  mlir::Value span = firOpBuilder.create<mlir::arith::SubIOp>(
-      loc, ub, lb, ::mlir::arith::IntegerOverflowFlags::nuw);
+  mlir::Value span = mlir::arith::SubIOp::create(
+      firOpBuilder, loc, ub, lb, ::mlir::arith::IntegerOverflowFlags::nuw);
   mlir::Value tcMinusOne =
-      firOpBuilder.create<mlir::arith::DivUIOp>(loc, span, incr);
-  mlir::Value tcIfLooping = firOpBuilder.create<mlir::arith::AddIOp>(
-      loc, tcMinusOne, one, ::mlir::arith::IntegerOverflowFlags::nuw);
+      mlir::arith::DivUIOp::create(firOpBuilder, loc, span, incr);
+  mlir::Value tcIfLooping =
+      mlir::arith::AddIOp::create(firOpBuilder, loc, tcMinusOne, one,
+                                  ::mlir::arith::IntegerOverflowFlags::nuw);
 
   // Fall back to 0 if lb > ub
-  mlir::Value isZeroTC = firOpBuilder.create<mlir::arith::CmpIOp>(
-      loc, mlir::arith::CmpIPredicate::slt, ub, lb);
-  mlir::Value tripcount = firOpBuilder.create<mlir::arith::SelectOp>(
-      loc, isZeroTC, zero, tcIfLooping);
+  mlir::Value isZeroTC = mlir::arith::CmpIOp::create(
+      firOpBuilder, loc, mlir::arith::CmpIPredicate::slt, ub, lb);
+  mlir::Value tripcount = mlir::arith::SelectOp::create(
+      firOpBuilder, loc, isZeroTC, zero, tcIfLooping);
 
   // Create the CLI handle.
-  auto newcli = firOpBuilder.create<mlir::omp::NewCliOp>(loc);
+  auto newcli = mlir::omp::NewCliOp::create(firOpBuilder, loc);
   mlir::Value cli = newcli.getResult();
 
   auto ivCallback = [&](mlir::Operation *op)
@@ -2177,9 +2179,9 @@ genCanonicalLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     // Compute the value of the loop variable from the logical iteration number.
     mlir::Value natIterNum = fir::getBase(region.front().getArgument(0));
     mlir::Value scaled =
-        firOpBuilder.create<mlir::arith::MulIOp>(loc, natIterNum, loopStepVar);
+        mlir::arith::MulIOp::create(firOpBuilder, loc, natIterNum, loopStepVar);
     mlir::Value userVal =
-        firOpBuilder.create<mlir::arith::AddIOp>(loc, loopLBVar, scaled);
+        mlir::arith::AddIOp::create(firOpBuilder, loc, loopLBVar, scaled);
 
     // Write loop value to loop variable
     mlir::Operation *storeOp = setLoopVar(converter, loc, userVal, iv);
@@ -2226,7 +2228,7 @@ static void genUnrollOp(Fortran::lower::AbstractConverter &converter,
 
   // Apply unrolling to it
   auto cli = canonLoop.getCli();
-  firOpBuilder.create<mlir::omp::UnrollHeuristicOp>(loc, cli);
+  mlir::omp::UnrollHeuristicOp::create(firOpBuilder, loc, cli);
 }
 
 static mlir::omp::MaskedOp
@@ -2310,8 +2312,8 @@ genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           const ConstructQueue &queue, ConstructQueue::const_iterator item) {
   mlir::omp::ScanOperands clauseOps;
   genScanClauses(converter, semaCtx, item->clauses, loc, clauseOps);
-  return converter.getFirOpBuilder().create<mlir::omp::ScanOp>(
-      converter.getCurrentLocation(), clauseOps);
+  return mlir::omp::ScanOp::create(converter.getFirOpBuilder(),
+                                   converter.getCurrentLocation(), clauseOps);
 }
 
 static mlir::omp::SectionsOp
@@ -2466,6 +2468,33 @@ genSingleOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
       queue, item, clauseOps);
 }
 
+static bool isDuplicateMappedSymbol(
+    const semantics::Symbol &sym,
+    const llvm::SetVector<const semantics::Symbol *> &privatizedSyms,
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &hasDevSyms,
+    const llvm::SmallVectorImpl<const semantics::Symbol *> &mappedSyms) {
+  llvm::SmallVector<const semantics::Symbol *> concatSyms;
+  concatSyms.reserve(privatizedSyms.size() + hasDevSyms.size() +
+                     mappedSyms.size());
+  concatSyms.append(privatizedSyms.begin(), privatizedSyms.end());
+  concatSyms.append(hasDevSyms.begin(), hasDevSyms.end());
+  concatSyms.append(mappedSyms.begin(), mappedSyms.end());
+
+  auto checkSymbol = [&](const semantics::Symbol &checkSym) {
+    return std::any_of(concatSyms.begin(), concatSyms.end(),
+                       [&](auto v) { return v->GetUltimate() == checkSym; });
+  };
+
+  if (checkSymbol(sym))
+    return true;
+
+  const auto *hostAssoc{sym.detailsIf<semantics::HostAssocDetails>()};
+  if (hostAssoc && checkSymbol(hostAssoc->symbol()))
+    return true;
+
+  return checkSymbol(sym.GetUltimate());
+}
+
 static mlir::omp::TargetOp
 genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
             lower::StatementContext &stmtCtx,
@@ -2492,7 +2521,8 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            /*shouldCollectPreDeterminedSymbols=*/
                            lower::omp::isLastItemInQueue(item, queue),
-                           /*useDelayedPrivatization=*/true, symTable);
+                           /*useDelayedPrivatization=*/true, symTable,
+                           /*isTargetPrivitization=*/true);
   dsp.processStep1(&clauseOps);
 
   // 5.8.1 Implicit Data-Mapping Attribute Rules
@@ -2501,17 +2531,6 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   // attribute clauses (neither data-sharing; e.g. `private`, nor `map`
   // clauses).
   auto captureImplicitMap = [&](const semantics::Symbol &sym) {
-    if (dsp.getAllSymbolsToPrivatize().contains(&sym))
-      return;
-
-    // Skip parameters/constants as they do not need to be mapped.
-    if (semantics::IsNamedConstant(sym))
-      return;
-
-    // These symbols are mapped individually in processHasDeviceAddr.
-    if (llvm::is_contained(hasDeviceAddrSyms, &sym))
-      return;
-
     // Structure component symbols don't have bindings, and can only be
     // explicitly mapped individually. If a member is captured implicitly
     // we map the entirety of the derived type when we find its symbol.
@@ -2533,7 +2552,12 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (!converter.getSymbolAddress(sym))
       return;
 
-    if (!llvm::is_contained(mapSyms, &sym)) {
+    // Skip parameters/constants as they do not need to be mapped.
+    if (semantics::IsNamedConstant(sym))
+      return;
+
+    if (!isDuplicateMappedSymbol(sym, dsp.getAllSymbolsToPrivatize(),
+                                 hasDeviceAddrSyms, mapSyms)) {
       if (const auto *details =
               sym.template detailsIf<semantics::HostAssocDetails>())
         converter.copySymbolBinding(details->symbol(), sym);
@@ -2625,9 +2649,8 @@ static mlir::omp::TargetDataOp genTargetDataOp(
   genTargetDataClauses(converter, semaCtx, stmtCtx, item->clauses, loc,
                        clauseOps, useDeviceAddrSyms, useDevicePtrSyms);
 
-  auto targetDataOp =
-      converter.getFirOpBuilder().create<mlir::omp::TargetDataOp>(loc,
-                                                                  clauseOps);
+  auto targetDataOp = mlir::omp::TargetDataOp::create(
+      converter.getFirOpBuilder(), loc, clauseOps);
 
   llvm::SmallVector<mlir::Value> useDeviceAddrBaseValues,
       useDevicePtrBaseValues;
@@ -2741,8 +2764,8 @@ genTaskwaitOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
               ConstructQueue::const_iterator item) {
   mlir::omp::TaskwaitOperands clauseOps;
   genTaskwaitClauses(converter, semaCtx, item->clauses, loc, clauseOps);
-  return converter.getFirOpBuilder().create<mlir::omp::TaskwaitOp>(loc,
-                                                                   clauseOps);
+  return mlir::omp::TaskwaitOp::create(converter.getFirOpBuilder(), loc,
+                                       clauseOps);
 }
 
 static mlir::omp::TaskyieldOp
@@ -2751,7 +2774,7 @@ genTaskyieldOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
                lower::pft::Evaluation &eval, mlir::Location loc,
                const ConstructQueue &queue,
                ConstructQueue::const_iterator item) {
-  return converter.getFirOpBuilder().create<mlir::omp::TaskyieldOp>(loc);
+  return mlir::omp::TaskyieldOp::create(converter.getFirOpBuilder(), loc);
 }
 
 static mlir::omp::WorkshareOp genWorkshareOp(

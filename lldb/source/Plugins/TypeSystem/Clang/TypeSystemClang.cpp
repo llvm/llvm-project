@@ -616,10 +616,10 @@ void TypeSystemClang::SetTargetTriple(llvm::StringRef target_triple) {
 }
 
 void TypeSystemClang::SetExternalSource(
-    llvm::IntrusiveRefCntPtr<ExternalASTSource> &ast_source_up) {
+    llvm::IntrusiveRefCntPtr<ExternalASTSource> ast_source_sp) {
   ASTContext &ast = getASTContext();
   ast.getTranslationUnitDecl()->setHasExternalLexicalStorage(true);
-  ast.setExternalSource(ast_source_up);
+  ast.setExternalSource(std::move(ast_source_sp));
 }
 
 ASTContext &TypeSystemClang::getASTContext() const {
@@ -702,9 +702,9 @@ void TypeSystemClang::CreateASTContext() {
 
   GetASTMap().Insert(m_ast_up.get(), this);
 
-  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_up(
-      new ClangExternalASTSourceCallbacks(*this));
-  SetExternalSource(ast_source_up);
+  auto ast_source_sp =
+      llvm::makeIntrusiveRefCnt<ClangExternalASTSourceCallbacks>(*this);
+  SetExternalSource(ast_source_sp);
 }
 
 TypeSystemClang *TypeSystemClang::GetASTContext(clang::ASTContext *ast) {
@@ -1642,11 +1642,12 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   // type that includes a template template argument. Only the name matters for
   // this purpose, so we use dummy values for the other characteristics of the
   // type.
-  return TemplateTemplateParmDecl::Create(ast, decl_ctx, SourceLocation(),
-                                          /*Depth=*/0, /*Position=*/0,
-                                          /*IsParameterPack=*/false,
-                                          &identifier_info, /*Typename=*/false,
-                                          template_param_list);
+  return TemplateTemplateParmDecl::Create(
+      ast, decl_ctx, SourceLocation(),
+      /*Depth*/ 0, /*Position*/ 0,
+      /*IsParameterPack=*/false, &identifier_info,
+      TemplateNameKind::TNK_Type_template, /*DeclaredWithTypename=*/true,
+      template_param_list);
 }
 
 ClassTemplateSpecializationDecl *
@@ -2183,8 +2184,7 @@ FunctionDecl *TypeSystemClang::CreateFunctionDeclaration(
   // This is done separately for member functions in
   // AddMethodToCXXRecordType.
   if (!asm_label.empty())
-    func_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(ast, asm_label,
-                                                           /*literal=*/true));
+    func_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(ast, asm_label));
 
   SetOwningModule(func_decl, owning_module);
   decl_ctx->addDecl(func_decl);
@@ -7823,8 +7823,8 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
     cxx_method_decl->addAttr(clang::UsedAttr::CreateImplicit(getASTContext()));
 
   if (!asm_label.empty())
-    cxx_method_decl->addAttr(clang::AsmLabelAttr::CreateImplicit(
-        getASTContext(), asm_label, /*literal=*/true));
+    cxx_method_decl->addAttr(
+        clang::AsmLabelAttr::CreateImplicit(getASTContext(), asm_label));
 
   // Parameters on member function declarations in DWARF generally don't
   // have names, so we omit them when creating the ParmVarDecls.
@@ -9620,8 +9620,8 @@ public:
         m_scratch_ast_source_up(std::move(ast_source)) {
     // Setup the ClangASTSource to complete this AST.
     m_scratch_ast_source_up->InstallASTContext(*this);
-    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
-        m_scratch_ast_source_up->CreateProxy());
+    llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source =
+        m_scratch_ast_source_up->CreateProxy();
     SetExternalSource(proxy_ast_source);
   }
 
@@ -9641,8 +9641,8 @@ ScratchTypeSystemClang::ScratchTypeSystemClang(Target &target,
           new ClangPersistentVariables(target.shared_from_this())) {
   m_scratch_ast_source_up = CreateASTSource();
   m_scratch_ast_source_up->InstallASTContext(*this);
-  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source(
-      m_scratch_ast_source_up->CreateProxy());
+  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> proxy_ast_source =
+      m_scratch_ast_source_up->CreateProxy();
   SetExternalSource(proxy_ast_source);
 }
 
