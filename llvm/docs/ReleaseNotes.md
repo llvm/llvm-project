@@ -90,6 +90,11 @@ Changes to LLVM infrastructure
 Changes to building LLVM
 ------------------------
 
+* The runtimes `libc`, `compiler-rt`, `openmp` and `libclc` now must be enabled
+  in `LLVM_ENABLE_RUNTIMES`, rather than `LLVM_ENABLE_PROJECTS`. Prior to LLVM 21,
+  they were allowed in `LLVM_ENABLE_PROJECTS`, but a warning was emitted. This
+  is now a fatal error.
+
 Changes to TableGen
 -------------------
 

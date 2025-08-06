@@ -595,12 +595,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   The full list is:
 
-  ``bolt;clang;clang-tools-extra;compiler-rt;cross-project-tests;libc;libclc;lld;lldb;mlir;openmp;polly``
-
-  .. note::
-    Some projects listed here can also go in ``LLVM_ENABLE_RUNTIMES``. They
-    should only appear in one of the two lists. If a project is a valid possibility
-    for both, prefer putting it in ``LLVM_ENABLE_RUNTIMES``.
+  ``bolt;clang;clang-tools-extra;cross-project-tests;lld;lldb;mlir;polly``
 
 **LLVM_ENABLE_RTTI**:BOOL
   Build LLVM with run-time type information. Defaults to OFF.
@@ -617,7 +612,7 @@ enabled sub-projects. Nearly all of these variable names begin with
 
   The full list is:
 
-  ``libc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
+  ``libc;libclc;libunwind;libcxxabi;libcxx;compiler-rt;openmp;llvm-libgcc;offload``
 
   To enable all of them, use:
 
