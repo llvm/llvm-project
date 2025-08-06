@@ -24,7 +24,7 @@ namespace generic {
 //   1.0f + 2^-25 = 1.0f        for FE_TONEAREST, FE_DOWNWARD, FE_TOWARDZERO
 //                = 0x1.000002f for FE_UPWARD.
 LIBC_INLINE bool fenv_is_round_up() {
-  volatile float x = 0x1.0p-25f;
+  static volatile float x = 0x1.0p-25f;
   return (1.0f + x != 1.0f);
 }
 
@@ -33,7 +33,7 @@ LIBC_INLINE bool fenv_is_round_up() {
 //   -1.0f - 2^-25 = -1.0f        for FE_TONEAREST, FE_UPWARD, FE_TOWARDZERO
 //                 = -0x1.000002f for FE_DOWNWARD.
 LIBC_INLINE bool fenv_is_round_down() {
-  volatile float x = 0x1.0p-25f;
+  static volatile float x = 0x1.0p-25f;
   return (-1.0f - x != -1.0f);
 }
 
