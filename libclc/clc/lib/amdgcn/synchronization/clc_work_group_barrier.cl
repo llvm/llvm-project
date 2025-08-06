@@ -6,13 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_SYNCHRONIZATION_CL_MEM_FENCE_FLAGS_H__
-#define __CLC_OPENCL_SYNCHRONIZATION_CL_MEM_FENCE_FLAGS_H__
+#include <clc/mem_fence/clc_mem_fence.h>
+#include <clc/synchronization/clc_work_group_barrier.h>
 
-typedef uint cl_mem_fence_flags;
-
-#define CLK_LOCAL_MEM_FENCE 1
-#define CLK_GLOBAL_MEM_FENCE 2
-#define CLK_IMAGE_MEM_FENCE 4
-
-#endif // __CLC_OPENCL_SYNCHRONIZATION_CL_MEM_FENCE_FLAGS_H__
+_CLC_OVERLOAD _CLC_DEF void __clc_work_group_barrier(int memory_scope,
+                                                     int memory_order) {
+  __clc_mem_fence(memory_scope, memory_order);
+  __builtin_amdgcn_s_barrier();
+}
