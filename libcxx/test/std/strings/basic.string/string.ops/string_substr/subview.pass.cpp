@@ -30,12 +30,12 @@ constexpr void test() {
 
   { // With a default position and a character length.
 
-    // Check it the return type of subview() is correct.
-    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview();
-
-    assert(sv == CS("Hello cruel world!"));
     // Also check if subview() is a const-qualified.
     assert(std::as_const(s).subview() == CS("Hello cruel world!"));
+
+    // Check it the return type of subview() is correct.
+    std::same_as<std::basic_string_view<CharT, TraitsT>> decltype(auto) sv = s.subview();
+    assert(sv == CS("Hello cruel world!"));
   }
 
   { // Check with different position and length.
@@ -44,13 +44,13 @@ constexpr void test() {
     assert(s.subview(6, 5) == CS("cruel"));
 
     // From the beginning of the string with a explicit character length.
-    assert(sv = s.subview(0, 5) == CS("Hello"));
+    assert(s.subview(0, 5) == CS("Hello"));
 
     // To the end of string with the default character length.
-    assert(subview(12) == CS("world!"));
+    assert(s.subview(12) == CS("world!"));
 
     // From the beginning to the end of the string with explicit values.
-    assert(subview(0, s.size() == CS("Hello cruel world!"));
+    assert(s.subview(0, s.size()) == CS("Hello cruel world!"));
   }
 
   // Test if exceptions are thrown correctly.
