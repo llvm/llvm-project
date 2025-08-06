@@ -228,7 +228,7 @@ bool isLinearizableVector(VectorType type);
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              ArrayRef<int64_t> inputVectorSizes, Value padValue,
                              bool useInBoundsInsteadOfMasking = false,
-                             ArrayRef<bool> scalableDims = {});
+                             ArrayRef<bool> inputScalableVecDims = {});
 
 /// Returns success if `inputVectorSizes` is a valid masking configuraion for
 /// given `shape`, i.e., it meets:
