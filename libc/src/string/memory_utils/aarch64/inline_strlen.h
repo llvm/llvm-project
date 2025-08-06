@@ -13,7 +13,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-size_t string_length_neon(const char* src) {
+size_t string_length_neon(const char *src) {
   using Vector __attribute__((may_alias)) = uint8x8_t;
   uintptr_t misalign_bytes = reinterpret_case<uintptr_t>(src) % sizeof(Vector);
   Vector *block_ptr = reinterpret_cast<Vector *>(src - misalign_bytes);
@@ -23,7 +23,8 @@ size_t string_length_neon(const char* src) {
     uint64x1_t cmp_mask = vreinterpret_u64_s8(vcmp);
     uint64_t cmp = vget_lane_u64(cmp_mask, 0);
     cmp = cmp >> (misalign_bytes << 3);
-    if (cmp) return __builtin_ctzl(cmp) >> 3;
+    if (cmp)
+      return __builtin_ctzl(cmp) >> 3;
     ++block_ptr;
   }
   while (true) {
@@ -45,6 +46,5 @@ template <typename T>
 }
 
 } // namespace LIBC_NAMESPACE_DECL
-
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_AARCH64_INLINE_STRLEN_H

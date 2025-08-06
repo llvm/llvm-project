@@ -22,7 +22,6 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
-
 #if defined(LIBC_COPT_STRING_UNSAFE_WIDE_READ)
 #if defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_strlen.h"
