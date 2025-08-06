@@ -740,7 +740,8 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
       // IVStep will be the negated step of the subtraction. Check if Step == -1
       // * IVStep.
       VPValue *Step;
-      if (!match(VPV, m_Sub(m_VPValue(), m_VPValue(Step))) ||
+      if (!match(VPV,
+                 m_Binary<Instruction::Sub>(m_VPValue(), m_VPValue(Step))) ||
           !Step->isLiveIn() || !IVStep->isLiveIn())
         return false;
       auto *StepCI = dyn_cast<ConstantInt>(Step->getLiveInIRValue());
@@ -2400,13 +2401,18 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
         continue;
       }
       if (match(PhiR,
-                m_Phi(m_Specific(Plan.getTripCount()), m_VPValue(Backedge))) &&
-          match(Backedge, m_Sub(m_Specific(PhiR),
-                                m_ZExtOrSelf(m_ExplicitVectorLength(m_CombineOr(
-                                    m_Specific(PhiR),
-                                    // The AVL may be capped to a safe distance.
-                                    m_Select(m_VPValue(), m_Specific(PhiR),
-                                             m_VPValue()))))))) {
+                m_VPInstruction<Instruction::PHI>(
+                    m_Specific(Plan.getTripCount()), m_VPValue(Backedge))) &&
+          match(Backedge,
+                m_VPInstruction<Instruction::Sub>(
+                    m_Specific(PhiR),
+                    m_ZExtOrSelf(
+                        m_VPInstruction<VPInstruction::ExplicitVectorLength>(
+                            m_CombineOr(
+                                m_Specific(PhiR),
+                                // The AVL may be capped to a safe distance.
+                                m_Select(m_VPValue(), m_Specific(PhiR),
+                                         m_VPValue()))))))) {
         AVLNext = Backedge;
       }
     }
