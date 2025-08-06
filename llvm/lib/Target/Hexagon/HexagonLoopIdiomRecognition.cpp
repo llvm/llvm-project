@@ -42,6 +42,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -2246,6 +2247,11 @@ CleanupAndExit:
       Type *PtrTy = PointerType::get(Ctx, 0);
       Type *VoidTy = Type::getVoidTy(Ctx);
       Module *M = Func->getParent();
+
+      // FIXME: This should check if the call is supported
+      StringRef HexagonVolatileMemcpyName =
+          RuntimeLibcallsInfo::getLibcallImplName(
+              RTLIB::impl_hexagon_memcpy_forward_vp4cp4n2);
       FunctionCallee Fn = M->getOrInsertFunction(
           HexagonVolatileMemcpyName, VoidTy, PtrTy, PtrTy, Int32Ty);
 
