@@ -14,40 +14,40 @@
 
 # CHECK-ASM-AND-OBJ: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspopchk x5
 
 # CHECK-ASM-AND-OBJ: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspopchk t0
 
 # CHECK-ASM-AND-OBJ: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspush x1
 
 # CHECK-ASM-AND-OBJ: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspush ra
 
 # CHECK-ASM-AND-OBJ: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations), 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations){{$}}
 c.sspush x1
 
 # CHECK-ASM-AND-OBJ: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations), 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations){{$}}
 c.sspush ra
 
 # CHECK-ASM-AND-OBJ: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations), 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations){{$}}
 c.sspopchk x5
 
 # CHECK-ASM-AND-OBJ: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations), 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zcmop' (Compressed May-Be-Operations){{$}}
 c.sspopchk t0
