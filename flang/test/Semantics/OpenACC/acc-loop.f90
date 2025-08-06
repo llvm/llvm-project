@@ -13,7 +13,7 @@ program openacc_loop_validity
     integer :: n
   end type atype
 
-  integer :: i, j, k, b, gang_size, vector_size, worker_size
+  integer :: i, j, k, l, m, b, gang_size, vector_size, worker_size
   integer, parameter :: N = 256
   integer, dimension(N) :: c
   logical, dimension(N) :: d, e
@@ -258,6 +258,98 @@ program openacc_loop_validity
     a(i) = 3.14
   end do
   !$acc end parallel
+
+  !$acc parallel
+  !$acc loop gang
+  do i = 1, n
+    !$acc loop worker
+    do j = 1, n
+      !ERROR: GANG clause is not allowed in the region of a loop with the WORKER clause
+      !ERROR: GANG clause is not allowed in the region of a loop with the GANG clause
+      !$acc loop gang vector
+      do k = 1, i
+      end do
+    end do
+  end do
+  !$acc end parallel
+
+  !$acc parallel loop vector
+  do  i = 1, n
+    !ERROR: GANG clause is not allowed in the region of a loop with the VECTOR clause
+    !$acc loop gang
+    do j = 1, n
+      !ERROR: WORKER clause is not allowed in the region of a loop with the VECTOR clause
+      !$acc loop worker
+      do k = 1, i
+        !ERROR: VECTOR clause is not allowed in the region of a loop with the VECTOR clause
+        !$acc loop vector
+        do l = 1, 1
+        end do
+      end do
+    end do
+  end do
+  !$acc end parallel loop
+
+  !$acc kernels
+  do  i = 1, n
+    !$acc loop gang worker
+    do j = 1, n
+      !ERROR: WORKER clause is not allowed in the region of a loop with the WORKER clause
+      !$acc loop worker vector
+      do k = 1, i
+      end do
+    end do
+  end do
+  !$acc end kernels
+
+  !$acc parallel
+  !$acc loop gang(dim:1)
+  do i = 1, n
+    !ERROR: GANG(dim:1) clause is not allowed in the region of a loop with the GANG(dim:1) clause
+    !$acc loop gang(dim:1)
+    do j = 1, n
+      !ERROR: GANG(dim:2) clause is not allowed in the region of a loop with the GANG(dim:1) clause
+      !$acc loop gang(dim:2)
+      do k = 1, i
+        !ERROR: GANG(dim:3) clause is not allowed in the region of a loop with the GANG(dim:2) clause
+        !ERROR: GANG(dim:3) clause is not allowed in the region of a loop with the GANG(dim:1) clause
+        !$acc loop gang(dim:3)
+        do l = 1, 1
+          !ERROR: GANG(dim:3) clause is not allowed in the region of a loop with the GANG(dim:3) clause
+          !ERROR: GANG(dim:3) clause is not allowed in the region of a loop with the GANG(dim:2) clause
+          !ERROR: GANG(dim:3) clause is not allowed in the region of a loop with the GANG(dim:1) clause
+          !$acc loop gang(dim:3)
+          do m = 1, 1
+          end do
+        end do
+      end do
+    end do
+  end do
+  !$acc end parallel
+
+  !$acc parallel loop gang(dim:3)
+  do i = 1, n
+    !$acc loop gang(dim:2)
+    do j = 1, n
+      !$acc loop gang(dim:1) worker vector
+      do k = 1, i
+      end do
+    end do
+  end do
+  !$acc end parallel loop
+
+  !$acc kernels loop gang(dim:3)
+  do i = 1, n
+    !ERROR: GANG clause is not allowed in the region of a loop with the GANG clause
+    !$acc loop gang(dim:2)
+    do j = 1, n
+      !ERROR: GANG clause is not allowed in the region of a loop with the GANG clause
+      !$acc loop gang(dim:1) worker vector
+      do k = 1, i
+      end do
+    end do
+  end do
+  !$acc end kernels loop
 
   !ERROR: Clause IF is not allowed after clause DEVICE_TYPE on the PARALLEL directive
   !$acc parallel device_type(*) if(.TRUE.)
