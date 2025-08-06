@@ -77,7 +77,7 @@ class RVInstSMTVDot<bits<2> sign, string opcodestr, string argstr>
 }
 
 // Sliding-window vector dot product format.
-class RVInstSMTVDotSlide<bits<2>funct2, bits<2> sign, string opcodestr, string argstr>
+class RVInstSMTVDotSlide<bits<2> funct2, bits<2> sign, string opcodestr, string argstr>
     : RVInst<(outs VR:$vd), (ins VR:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
   bits<5> vd;
   bits<5> vs1;
