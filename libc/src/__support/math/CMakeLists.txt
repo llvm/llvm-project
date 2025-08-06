@@ -231,6 +231,21 @@ add_header_library(
 )
 
 add_header_library(
+  atan2f128
+  HDRS
+    atan2f128.h
+  DEPENDS
+    .atan_utils
+    libc.src.__support.integer_literals
+    libc.src.__support.uint128
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.nearest_integer
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   atanf
   HDRS
     atanf.h
@@ -257,6 +272,32 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atanhf
+  HDRS
+    atanhf.h
+  DEPENDS
+    .acoshf_utils
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  atanhf16
+  HDRS
+    atanhf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
 )
 
@@ -288,6 +329,21 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  cbrt
+  HDRS
+    cbrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.macros.optimization
+    libc.src.__support.integer_literals
 )
 
 add_header_library(

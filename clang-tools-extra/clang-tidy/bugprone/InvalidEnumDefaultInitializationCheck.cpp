@@ -22,11 +22,10 @@ bool isCompleteAndHasNoZeroValue(const EnumDecl *D) {
   const EnumDecl *Definition = D->getDefinition();
   return Definition && Definition->isComplete() &&
          !Definition->enumerators().empty() &&
-         std::none_of(Definition->enumerator_begin(),
-                      Definition->enumerator_end(),
-                      [](const EnumConstantDecl *Value) {
-                        return Value->getInitVal().isZero();
-                      });
+         llvm::none_of(Definition->enumerators(),
+                       [](const EnumConstantDecl *Value) {
+                         return Value->getInitVal().isZero();
+                       });
 }
 
 AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
