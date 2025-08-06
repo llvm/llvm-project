@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFGdbIndex.h"
+#include <llvm/ADT/DenseMap.h>
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DataExtractor.h"
@@ -17,7 +18,6 @@
 #include <cinttypes>
 #include <cstdint>
 #include <set>
-#include <unordered_map>
 #include <utility>
 
 using namespace llvm;
@@ -62,22 +62,15 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
                SymbolTableOffset, (uint64_t)SymbolTable.size())
      << '\n';
 
-  std::unordered_map<uint32_t, decltype(ConstantPoolVectors)::const_iterator>
-      CuVectorMap{};
-  CuVectorMap.reserve(ConstantPoolVectors.size());
-  const auto FindCuVector =
-      [&CuVectorMap, notFound = ConstantPoolVectors.end()](uint32_t vecOffset) {
-        const auto it = CuVectorMap.find(vecOffset);
-        if (it != CuVectorMap.end()) {
-          return it->second;
-        }
+  llvm::DenseMap<uint32_t, decltype(ConstantPoolVectors)::const_pointer>
+      CuVectorMap(ConstantPoolVectors.size());
+  for (const auto& [Offset, CUVector] : ConstantPoolVectors)
+    CuVectorMap.try_emplace(Offset, &CUVector);
 
-        return notFound;
+  const auto FindCuVector =[&](uint32_t VecOffset) {
+        const auto It = CuVectorMap.find(VecOffset);
+        return It != CuVectorMap.end() ? It->second : ConstantPoolVectors.end();
       };
-  for (auto it = ConstantPoolVectors.begin(); it != ConstantPoolVectors.end();
-       ++it) {
-    CuVectorMap.emplace(it->first, it);
-  }
 
   uint32_t I = -1;
   for (const SymTableEntry &E : SymbolTable) {
@@ -91,7 +84,7 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
     StringRef Name = ConstantPoolStrings.substr(
         ConstantPoolOffset - StringPoolOffset + E.NameOffset);
 
-    auto CuVector = FindCuVector(E.VecOffset);
+    const auto* CuVector = FindCuVector(E.VecOffset);
     assert(CuVector != ConstantPoolVectors.end() && "Invalid symbol table");
     uint32_t CuVectorId = CuVector - ConstantPoolVectors.begin();
     OS << format("      String name: %s, CU vector index: %d\n", Name.data(),
