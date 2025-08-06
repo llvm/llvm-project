@@ -46,14 +46,18 @@ Major New Features
 Improvements to clangd
 ----------------------
 
-Inlay hints
-^^^^^^^^^^^
+Language feature support
+^^^^^^^^^^^^^^^^^^^^^^^^
 
-Diagnostics
-^^^^^^^^^^^
+- Performance improvements and bugfixes to C++20 Modules support
+- Improved support for C++23 "deducing this"
+- Improvements to objective-c++ support
 
-Semantic Highlighting
-^^^^^^^^^^^^^^^^^^^^^
+New Language Server Protocol features
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Added support for `textDocument/rangesFormatting`
+- Added support for `positionEncoding`
 
 Compile flags
 ^^^^^^^^^^^^^
@@ -64,23 +68,57 @@ Compile flags
 Hover
 ^^^^^
 
+- Fixed a bug that would sometimes prevent documentation comments of standard library functions
+  from being shown
+
 Code completion
 ^^^^^^^^^^^^^^^
 
-Code actions
-^^^^^^^^^^^^
-
-Signature help
-^^^^^^^^^^^^^^
+- Added `HeaderInsertion` config option to control whether code completion inserts a missing
+  header needed for the symbol being completed. This is equivalent to the `--header-insertion`
+  command-line option.
+- Added a `CodePatterns` config option to control whether code completion should offer code
+  patterns as completions in addition to symbols.
 
 Cross-references
 ^^^^^^^^^^^^^^^^
 
-Objective-C
+- References to symbols are now collected in array designators
+- Find-references now works for operators new and delete
+- Improvements to code navigation in templated code
+
+Call hierarchy
+^^^^^^^^^^^^^^
+
+- Call hierarchy now works with the remote index
+- Fixed a bug where call hierarchy could sometimes return bogus results
+
+Inlay hints
 ^^^^^^^^^^^
+
+- Parameter hint forwarding now works for variadic forwarding functions declared in header files
+- Improved presentation of block-end hints
+
+Code actions
+^^^^^^^^^^^^
+
+- Improved the rename refactor's name collision checking logic
+
+Clang-tidy integration
+^^^^^^^^^^^^^^^^^^^^^^
+
+- Disabled the cppcoreguidelines-macro-to-enum checker which is incompatible with clangd
+
+Include-cleaner integration
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clangd now respects the `AngledHeaders` and `QuotedHeaders` config options for headers
+  inserted to resolve include-cleaner diagnostics
 
 Miscellaneous
 ^^^^^^^^^^^^^
+
+- Various crash fixes and other stability improvements
 
 Improvements to clang-doc
 -------------------------
