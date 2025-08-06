@@ -1762,8 +1762,9 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
 
   static bool canHandle(const VPSingleDefRecipe *Def) {
     return isa<VPInstruction, VPWidenRecipe, VPWidenCastRecipe,
-               VPWidenSelectRecipe, VPHistogramRecipe, VPPartialReductionRecipe,
-               VPReplicateRecipe, VPWidenIntrinsicRecipe>(Def);
+               VPWidenSelectRecipe, VPHistogramRecipe, VPReplicateRecipe,
+               VPWidenIntrinsicRecipe>(Def) &&
+           !Def->mayReadFromMemory();
   }
 
   static unsigned getHashValue(const VPSingleDefRecipe *Def) {
@@ -1814,7 +1815,6 @@ void VPlanTransforms::cse(VPlan &Plan, Type &CanonicalIVTy) {
         if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(V))
           RFlags->dropPoisonGeneratingFlags();
         Def->replaceAllUsesWith(V);
-        Def->eraseFromParent();
         continue;
       }
       CSEMap[Def] = Def;
