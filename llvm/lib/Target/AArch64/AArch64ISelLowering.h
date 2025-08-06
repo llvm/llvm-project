@@ -181,8 +181,8 @@ public:
                                                MachineBasicBlock *BB) const;
   MachineBasicBlock *EmitGetSMESaveSize(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
-  MachineBasicBlock *EmitCallerIsStreaming(MachineInstr &MI,
-                                           MachineBasicBlock *BB) const;
+  MachineBasicBlock *EmitEntryPStateSM(MachineInstr &MI,
+                                       MachineBasicBlock *BB) const;
 
   /// Replace (0, vreg) discriminator components with the operands of blend
   /// or with (immediate, NoRegister) when possible.

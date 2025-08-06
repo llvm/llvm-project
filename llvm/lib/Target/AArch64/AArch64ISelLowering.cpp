@@ -3102,8 +3102,8 @@ AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
 }
 
 MachineBasicBlock *
-AArch64TargetLowering::EmitCallerIsStreaming(MachineInstr &MI,
-                                             MachineBasicBlock *BB) const {
+AArch64TargetLowering::EmitEntryPStateSM(MachineInstr &MI,
+                                         MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
   AArch64FunctionInfo *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
@@ -3242,8 +3242,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitAllocateSMESaveBuffer(MI, BB);
   case AArch64::GetSMESaveSize:
     return EmitGetSMESaveSize(MI, BB);
-  case AArch64::CallerIsStreaming:
-    return EmitCallerIsStreaming(MI, BB);
+  case AArch64::EntryPStateSM:
+    return EmitEntryPStateSM(MI, BB);
   case AArch64::F128CSEL:
     return EmitF128CSEL(MI, BB);
   case TargetOpcode::STATEPOINT:
@@ -8162,16 +8162,16 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   assert((ArgLocs.size() + ExtraArgLocs) == Ins.size());
 
   if (Attrs.hasStreamingCompatibleInterface()) {
-    SDValue CallerIsStreaming =
-        DAG.getNode(AArch64ISD::CALLER_IS_STREAMING, DL,
+    SDValue EntryPStateSM =
+        DAG.getNode(AArch64ISD::ENTRY_PSTATE_SM, DL,
                     DAG.getVTList(MVT::i64, MVT::Other), {Chain});
 
     // Copy the value to a virtual register, and save that in FuncInfo.
-    Register CallerIsStreamingReg =
+    Register EntryPStateSMReg =
         MF.getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
-    Chain = DAG.getCopyToReg(CallerIsStreaming.getValue(1), DL,
-                             CallerIsStreamingReg, CallerIsStreaming);
-    FuncInfo->setPStateSMReg(CallerIsStreamingReg);
+    Chain = DAG.getCopyToReg(EntryPStateSM.getValue(1), DL, EntryPStateSMReg,
+                             EntryPStateSM);
+    FuncInfo->setPStateSMReg(EntryPStateSMReg);
   }
 
   // Insert the SMSTART if this is a locally streaming function and
