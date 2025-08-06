@@ -24545,8 +24545,8 @@ SDValue RISCVTargetLowering::expandIndirectJTBranch(const SDLoc &dl,
                                                     SDValue Value, SDValue Addr,
                                                     int JTI,
                                                     SelectionDAG &DAG) const {
-  if (Subtarget.hasStdExtZicfilp()) {
-    // When Zicfilp enabled, we need to use software guarded branch for jump
+  if (Subtarget.hasZicfilpCFI()) {
+    // When Zicfilp CFI is used, we need to use software guarded branch for jump
     // table branch.
     SDValue Chain = Value;
     // Jump table debug info is only needed if CodeView is enabled.
