@@ -20,7 +20,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     report = generate_test_report_lib.generate_report_from_files(
-        PLATFORM_TITLES[platform.system], args.return_code, args.junit_files
+        PLATFORM_TITLES[platform.system()], args.return_code, args.junit_files
     )
 
     print(report)
