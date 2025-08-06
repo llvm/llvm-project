@@ -27,10 +27,9 @@ define void @trunc_iv_steps_with_epilogue(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[A]], i32 [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP7]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP8]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i8>, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[TMP9:%.*]] = add <4 x i8> [[WIDE_LOAD]], splat (i8 2)
-; CHECK-NEXT:    store <4 x i8> [[TMP9]], ptr [[TMP8]], align 1
+; CHECK-NEXT:    store <4 x i8> [[TMP9]], ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -50,10 +49,9 @@ define void @trunc_iv_steps_with_epilogue(ptr %A, i64 %N) {
 ; CHECK-NEXT:    [[INDEX5:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT7:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = trunc i64 [[INDEX5]] to i32
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[A]], i32 [[TMP11]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP14]], align 1
+; CHECK-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x i8>, ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i8> [[WIDE_LOAD6]], splat (i8 2)
-; CHECK-NEXT:    store <4 x i8> [[TMP15]], ptr [[TMP14]], align 1
+; CHECK-NEXT:    store <4 x i8> [[TMP15]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT7]] = add nuw i64 [[INDEX5]], 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT7]], [[N_VEC3]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[VEC_EPILOG_MIDDLE_BLOCK:%.*]], label [[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]

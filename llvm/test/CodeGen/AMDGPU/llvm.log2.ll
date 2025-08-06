@@ -3542,45 +3542,15 @@ define float @v_log2_f32_dynamic_mode(float %in) #1 {
 }
 
 define float @v_log2_f32_undef() {
-; GFX689-SDAG-LABEL: v_log2_f32_undef:
-; GFX689-SDAG:       ; %bb.0:
-; GFX689-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX689-SDAG-NEXT:    v_log_f32_e32 v0, s4
-; GFX689-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX689-LABEL: v_log2_f32_undef:
+; GFX689:       ; %bb.0:
+; GFX689-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX689-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX689-GISEL-LABEL: v_log2_f32_undef:
-; GFX689-GISEL:       ; %bb.0:
-; GFX689-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX689-GISEL-NEXT:    v_mov_b32_e32 v0, 0x800000
-; GFX689-GISEL-NEXT:    v_mov_b32_e32 v1, 0x4f800000
-; GFX689-GISEL-NEXT:    v_mul_f32_e32 v1, s4, v1
-; GFX689-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, s4, v0
-; GFX689-GISEL-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
-; GFX689-GISEL-NEXT:    v_log_f32_e32 v0, v0
-; GFX689-GISEL-NEXT:    v_mov_b32_e32 v1, 0x42000000
-; GFX689-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v1, vcc
-; GFX689-GISEL-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX689-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1100-SDAG-LABEL: v_log2_f32_undef:
-; GFX1100-SDAG:       ; %bb.0:
-; GFX1100-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, s0
-; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1100-GISEL-LABEL: v_log2_f32_undef:
-; GFX1100-GISEL:       ; %bb.0:
-; GFX1100-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-GISEL-NEXT:    v_mul_f32_e64 v0, 0x4f800000, s0
-; GFX1100-GISEL-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x800000, s0
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1100-GISEL-NEXT:    v_cndmask_b32_e32 v0, s0, v0, vcc_lo
-; GFX1100-GISEL-NEXT:    v_cndmask_b32_e64 v1, 0, 0x42000000, vcc_lo
-; GFX1100-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1100-GISEL-NEXT:    v_log_f32_e32 v0, v0
-; GFX1100-GISEL-NEXT:    s_waitcnt_depctr 0xfff
-; GFX1100-GISEL-NEXT:    v_sub_f32_e32 v0, v0, v1
-; GFX1100-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX1100-LABEL: v_log2_f32_undef:
+; GFX1100:       ; %bb.0:
+; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_log2_f32_undef:
 ; R600:       ; %bb.0:

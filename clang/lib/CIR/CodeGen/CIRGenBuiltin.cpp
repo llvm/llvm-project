@@ -21,6 +21,7 @@
 #include "mlir/Support/LLVM.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/GlobalDecl.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -121,6 +122,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
 
+  case Builtin::BI__builtin_assume_separate_storage: {
+    mlir::Value value0 = emitScalarExpr(e->getArg(0));
+    mlir::Value value1 = emitScalarExpr(e->getArg(1));
+    builder.create<cir::AssumeSepStorageOp>(loc, value0, value1);
+    return RValue::get(nullptr);
+  }
+
   case Builtin::BI__builtin_complex: {
     mlir::Value real = emitScalarExpr(e->getArg(0));
     mlir::Value imag = emitScalarExpr(e->getArg(1));
@@ -182,6 +190,11 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_clzg:
     assert(!cir::MissingFeatures::builtinCheckKind());
     return emitBuiltinBitOp<cir::BitClzOp>(*this, e, /*poisonZero=*/true);
+
+  case Builtin::BI__builtin_ffs:
+  case Builtin::BI__builtin_ffsl:
+  case Builtin::BI__builtin_ffsll:
+    return emitBuiltinBitOp<cir::BitFfsOp>(*this, e);
 
   case Builtin::BI__builtin_parity:
   case Builtin::BI__builtin_parityl:
@@ -257,6 +270,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
     return emitRotate(e, /*isRotateLeft=*/false);
+
+  case Builtin::BI__builtin_trap:
+    emitTrap(loc, /*createNewBlock=*/true);
+    return RValue::get(nullptr);
+
+  case Builtin::BI__builtin_unreachable:
+    emitUnreachable(e->getExprLoc(), /*createNewBlock=*/true);
+    return RValue::get(nullptr);
   }
 
   // If this is an alias for a lib function (e.g. __builtin_sin), emit

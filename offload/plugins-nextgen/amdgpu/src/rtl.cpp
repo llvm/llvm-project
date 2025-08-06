@@ -1665,6 +1665,11 @@ Error AMDGPUStreamTy::waitEvent(const AMDGPUEventTy &Event) {
 Error AMDGPUStreamTy::synchronizeOn(AMDGPUEventTy &Event) {
   std::lock_guard<std::mutex> Lock(Mutex);
 
+  // If this event was for an older sync cycle, it has already been finalized
+  if (Event.RecordedSyncCycle < SyncCycle)
+    return Plugin::success();
+  assert(Event.RecordedSyncCycle == SyncCycle && "event is from the future?");
+
   // Wait until the requested slot has completed
   if (auto Err = Slots[Event.RecordedSlot].Signal->wait(
           StreamBusyWaitMicroseconds, &Device))
@@ -2697,13 +2702,14 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_SIZE, TmpUInt);
     if (Status == HSA_STATUS_SUCCESS)
-      Info.add("Workgroup Max Size", TmpUInt);
+      Info.add("Workgroup Max Size", TmpUInt, "",
+               DeviceInfo::MAX_WORK_GROUP_SIZE);
 
     Status = getDeviceAttrRaw(HSA_AGENT_INFO_WORKGROUP_MAX_DIM, WorkgrpMaxDim);
     if (Status == HSA_STATUS_SUCCESS) {
       auto &MaxSize =
           *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
-                    DeviceInfo::MAX_WORK_GROUP_SIZE);
+                    DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
       MaxSize.add("x", WorkgrpMaxDim[0]);
       MaxSize.add("y", WorkgrpMaxDim[1]);
       MaxSize.add("z", WorkgrpMaxDim[2]);

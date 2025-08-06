@@ -3923,11 +3923,15 @@ void SelectionDAGBuilder::visitFPTrunc(const User &I) {
   // FPTrunc is never a no-op cast, no need to check
   SDValue N = getValue(I.getOperand(0));
   SDLoc dl = getCurSDLoc();
+  SDNodeFlags Flags;
+  if (auto *TruncInst = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*TruncInst);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   setValue(&I, DAG.getNode(ISD::FP_ROUND, dl, DestVT, N,
                            DAG.getTargetConstant(
-                               0, dl, TLI.getPointerTy(DAG.getDataLayout()))));
+                               0, dl, TLI.getPointerTy(DAG.getDataLayout())),
+                           Flags));
 }
 
 void SelectionDAGBuilder::visitFPExt(const User &I) {
@@ -7594,34 +7598,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (TM.getOptLevel() == CodeGenOptLevel::None)
       return;
 
-    const int64_t ObjectSize =
-        cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
-    Value *const ObjectPtr = I.getArgOperand(1);
-    SmallVector<const Value *, 4> Allocas;
-    getUnderlyingObjects(ObjectPtr, Allocas);
+    const AllocaInst *LifetimeObject = dyn_cast<AllocaInst>(I.getArgOperand(1));
+    if (!LifetimeObject)
+      return;
 
-    for (const Value *Alloca : Allocas) {
-      const AllocaInst *LifetimeObject = dyn_cast_or_null<AllocaInst>(Alloca);
+    // First check that the Alloca is static, otherwise it won't have a
+    // valid frame index.
+    auto SI = FuncInfo.StaticAllocaMap.find(LifetimeObject);
+    if (SI == FuncInfo.StaticAllocaMap.end())
+      return;
 
-      // Could not find an Alloca.
-      if (!LifetimeObject)
-        continue;
-
-      // First check that the Alloca is static, otherwise it won't have a
-      // valid frame index.
-      auto SI = FuncInfo.StaticAllocaMap.find(LifetimeObject);
-      if (SI == FuncInfo.StaticAllocaMap.end())
-        return;
-
-      const int FrameIndex = SI->second;
-      int64_t Offset;
-      if (GetPointerBaseWithConstantOffset(
-              ObjectPtr, Offset, DAG.getDataLayout()) != LifetimeObject)
-        Offset = -1; // Cannot determine offset from alloca to lifetime object.
-      Res = DAG.getLifetimeNode(IsStart, sdl, getRoot(), FrameIndex, ObjectSize,
-                                Offset);
-      DAG.setRoot(Res);
-    }
+    const int FrameIndex = SI->second;
+    Res = DAG.getLifetimeNode(IsStart, sdl, getRoot(), FrameIndex);
+    DAG.setRoot(Res);
     return;
   }
   case Intrinsic::pseudoprobe: {
@@ -7993,6 +7982,43 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
            "Should've lowered as tail call");
 
     HasTailCall = true;
+    return;
+  }
+  case Intrinsic::amdgcn_call_whole_wave: {
+    TargetLowering::ArgListTy Args;
+
+    // The first argument is the callee. Skip it when assembling the call args.
+    TargetLowering::ArgListEntry Arg;
+    for (unsigned Idx = 1; Idx < I.arg_size(); ++Idx) {
+      Arg.Node = getValue(I.getArgOperand(Idx));
+      Arg.Ty = I.getArgOperand(Idx)->getType();
+      Arg.setAttributes(&I, Idx);
+      Args.push_back(Arg);
+    }
+
+    SDValue ConvControlToken;
+    if (auto Bundle = I.getOperandBundle(LLVMContext::OB_convergencectrl)) {
+      auto *Token = Bundle->Inputs[0].get();
+      ConvControlToken = getValue(Token);
+    }
+
+    TargetLowering::CallLoweringInfo CLI(DAG);
+    CLI.setDebugLoc(getCurSDLoc())
+        .setChain(getRoot())
+        .setCallee(CallingConv::AMDGPU_Gfx_WholeWave, I.getType(),
+                   getValue(I.getArgOperand(0)), std::move(Args))
+        .setTailCall(false)
+        .setIsPreallocated(
+            I.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
+        .setConvergent(I.isConvergent())
+        .setConvergenceControlToken(ConvControlToken);
+    CLI.CB = &I;
+
+    std::pair<SDValue, SDValue> Result =
+        lowerInvokable(CLI, /*EHPadBB=*/nullptr);
+
+    if (Result.first.getNode())
+      setValue(&I, Result.first);
     return;
   }
   case Intrinsic::ptrmask: {
@@ -8453,6 +8479,34 @@ void SelectionDAGBuilder::visitVPLoad(
   setValue(&VPIntrin, LD);
 }
 
+void SelectionDAGBuilder::visitVPLoadFF(
+    const VPIntrinsic &VPIntrin, EVT VT, EVT EVLVT,
+    const SmallVectorImpl<SDValue> &OpValues) {
+  assert(OpValues.size() == 3 && "Unexpected number of operands");
+  SDLoc DL = getCurSDLoc();
+  Value *PtrOperand = VPIntrin.getArgOperand(0);
+  MaybeAlign Alignment = VPIntrin.getPointerAlignment();
+  AAMDNodes AAInfo = VPIntrin.getAAMetadata();
+  const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
+  SDValue LD;
+  // Do not serialize variable-length loads of constant memory with
+  // anything.
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT);
+  MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
+  SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
+  LD = DAG.getLoadFFVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
+                       MMO);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, EVLVT, LD.getValue(1));
+  if (AddToChain)
+    PendingLoads.push_back(LD.getValue(2));
+  setValue(&VPIntrin, DAG.getMergeValues({LD.getValue(0), Trunc}, DL));
+}
+
 void SelectionDAGBuilder::visitVPGather(
     const VPIntrinsic &VPIntrin, EVT VT,
     const SmallVectorImpl<SDValue> &OpValues) {
@@ -8685,6 +8739,9 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   }
   case ISD::VP_LOAD:
     visitVPLoad(VPIntrin, ValueVTs[0], OpValues);
+    break;
+  case ISD::VP_LOAD_FF:
+    visitVPLoadFF(VPIntrin, ValueVTs[0], ValueVTs[1], OpValues);
     break;
   case ISD::VP_GATHER:
     visitVPGather(VPIntrin, ValueVTs[0], OpValues);

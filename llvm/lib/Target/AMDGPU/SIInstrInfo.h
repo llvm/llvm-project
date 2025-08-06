@@ -197,8 +197,7 @@ protected:
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     const MachineOperand *fromMO, unsigned toIdx,
-                     const MachineOperand *toMO) const;
+                     unsigned toIdx) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -678,6 +677,12 @@ public:
   bool isFLAT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
+
+  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
+  /// SCRATCH_ memory operands.
+  /// Conservatively correct; will return true if \p MI cannot be proven
+  /// to not hit scratch.
+  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
 
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
@@ -1214,6 +1219,8 @@ public:
   void restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                    Register Reg, SlotIndexes *Indexes = nullptr) const;
+
+  MachineInstr *getWholeWaveFunctionSetup(MachineFunction &MF) const;
 
   /// Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined
