@@ -167,6 +167,10 @@ if(MLIR_ENABLE_SYCL_RUNNER)
   list(APPEND MLIR_TEST_DEPENDS mlir_sycl_runtime)
 endif()
 
+if(MLIR_ENABLE_LEVELZERO_RUNNER)
+  list(APPEND MLIR_TEST_DEPENDS mlir_levelzero_runtime)
+endif()
+
 if (MLIR_RUN_ARM_SME_TESTS AND NOT ARM_SME_ABI_ROUTINES_SHLIB)
   list(APPEND MLIR_TEST_DEPENDS mlir_arm_sme_abi_stubs)
 endif()
