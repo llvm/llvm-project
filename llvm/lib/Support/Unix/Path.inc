@@ -1190,7 +1190,7 @@ Expected<size_t> readNativeFile(file_t FD, MutableArrayRef<char> Buf) {
   size_t Size = Buf.size();
 #endif
   ssize_t NumRead = sys::RetryAfterSignal(-1, ::read, FD, Buf.data(), Size);
-  if (ssize_t(NumRead) == -1)
+  if (NumRead == -1)
     return errorCodeToError(errnoAsErrorCode());
 // The underlying operation on these platforms allow opening directories
 // for reading in more cases than other platforms.

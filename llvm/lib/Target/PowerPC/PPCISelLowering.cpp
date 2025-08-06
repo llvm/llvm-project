@@ -1433,7 +1433,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   // With 32 condition bits, we don't need to sink (and duplicate) compares
   // aggressively in CodeGenPrep.
   if (Subtarget.useCRBits()) {
-    setHasMultipleConditionRegisters();
     setJumpIsExpensive();
   }
 
@@ -5540,8 +5539,8 @@ static SDValue transformCallee(const SDValue &Callee, SelectionDAG &DAG,
   const auto getAIXFuncEntryPointSymbolSDNode = [&](const GlobalValue *GV) {
     const TargetMachine &TM = Subtarget.getTargetMachine();
     const TargetLoweringObjectFile *TLOF = TM.getObjFileLowering();
-    MCSymbolXCOFF *S =
-        cast<MCSymbolXCOFF>(TLOF->getFunctionEntryPointSymbol(GV, TM));
+    auto *S =
+        static_cast<MCSymbolXCOFF *>(TLOF->getFunctionEntryPointSymbol(GV, TM));
 
     MVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
     return DAG.getMCSymbol(S, PtrVT);
@@ -7296,9 +7295,17 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
       if (!ArgVT.isVector() && !ValVT.isVector() && ArgVT.isInteger() &&
           ValVT.isInteger() &&
           ArgVT.getScalarSizeInBits() < ValVT.getScalarSizeInBits()) {
-        SDValue ArgValueTrunc = DAG.getNode(
-            ISD::TRUNCATE, dl, ArgVT.getSimpleVT() == MVT::i1 ? MVT::i8 : ArgVT,
-            ArgValue);
+        // It is possible to have either real integer values
+        // or integers that were not originally integers.
+        // In the latter case, these could have came from structs,
+        // and these integers would not have an extend on the parameter.
+        // Since these types of integers do not have an extend specified
+        // in the first place, the type of extend that we do should not matter.
+        EVT TruncatedArgVT = ArgVT.isSimple() && ArgVT.getSimpleVT() == MVT::i1
+                                 ? MVT::i8
+                                 : ArgVT;
+        SDValue ArgValueTrunc =
+            DAG.getNode(ISD::TRUNCATE, dl, TruncatedArgVT, ArgValue);
         SDValue ArgValueExt =
             ArgSignExt ? DAG.getSExtOrTrunc(ArgValueTrunc, dl, ValVT)
                        : DAG.getZExtOrTrunc(ArgValueTrunc, dl, ValVT);
@@ -19847,4 +19854,8 @@ Value *PPCTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
   Hi = Builder.CreateZExt(Hi, ValTy, "hi64");
   return Builder.CreateOr(
       Lo, Builder.CreateShl(Hi, ConstantInt::get(ValTy, 64)), "val64");
+}
+
+bool PPCTargetLowering::hasMultipleConditionRegisters(EVT VT) const {
+  return Subtarget.useCRBits();
 }

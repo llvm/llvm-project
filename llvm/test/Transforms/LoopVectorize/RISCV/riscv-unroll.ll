@@ -21,15 +21,12 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL1:       vector.body:
 ; LMUL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; LMUL1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; LMUL1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
-; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP3]], align 4
+; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
 ; LMUL1-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
-; LMUL1-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
-; LMUL1-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
+; LMUL1-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4
 ; LMUL1-NEXT:    [[TMP6:%.*]] = add nsw <8 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; LMUL1-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
-; LMUL1-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
-; LMUL1-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP8]], align 4
+; LMUL1-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP7]], align 4
 ; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; LMUL1-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; LMUL1-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -72,15 +69,12 @@ define ptr @array_add(ptr noalias nocapture readonly %a, ptr noalias nocapture r
 ; LMUL2:       vector.body:
 ; LMUL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; LMUL2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
-; LMUL2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[TMP2]], i32 0
-; LMUL2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP3]], align 4
+; LMUL2-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
 ; LMUL2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDEX]]
-; LMUL2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
-; LMUL2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP5]], align 4
+; LMUL2-NEXT:    [[WIDE_LOAD1:%.*]] = load <8 x i32>, ptr [[TMP4]], align 4
 ; LMUL2-NEXT:    [[TMP6:%.*]] = add nsw <8 x i32> [[WIDE_LOAD1]], [[WIDE_LOAD]]
 ; LMUL2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 [[INDEX]]
-; LMUL2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[TMP7]], i32 0
-; LMUL2-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP8]], align 4
+; LMUL2-NEXT:    store <8 x i32> [[TMP6]], ptr [[TMP7]], align 4
 ; LMUL2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; LMUL2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; LMUL2-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
