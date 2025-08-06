@@ -801,10 +801,10 @@ define signext range(i32 0, 43) i32 @bar1_123_OR_AND(i32 noundef signext %x) {
 ; CHECK-NEXT:    ahi %r2, 42
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lghi %r2, 0
-; CHECK-NEXT:    bnlhr %r14
-; CHECK-NEXT:  .LBB35_1: # %entry
 ; CHECK-NEXT:    lghi %r2, 42
+; CHECK-NEXT:    blhr %r14
+; CHECK-NEXT:  .LBB35_1: # %entry
+; CHECK-NEXT:    lghi %r2, 0
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 %x) #2
@@ -5078,12 +5078,7 @@ define i64 @bar4a_023_OR_XOR_c() {
 ; CHECK-NEXT:    alsi 0(%r1), -1
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    ipm %r0
-; CHECK-NEXT:    risbg %r1, %r0, 63, 191, 36
-; CHECK-NEXT:    afi %r0, 1342177280
-; CHECK-NEXT:    srl %r0, 31
-; CHECK-NEXT:    cr %r0, %r1
-; CHECK-NEXT:    jglh dummy@PLT
+; CHECK-NEXT:    jgl dummy@PLT
 ; CHECK-NEXT:  .LBB209_1: # %if.end
 ; CHECK-NEXT:    br %r14
 entry:

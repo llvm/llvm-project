@@ -160,10 +160,10 @@ define signext range(i32 0, 43) i32 @foo_012(i32 noundef signext %x) {
 ; CHECK-NEXT:    ahi %r2, 42
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lghi %r2, 0
-; CHECK-NEXT:    bnor %r14
-; CHECK-NEXT:  .LBB6_1: # %entry
 ; CHECK-NEXT:    lghi %r2, 42
+; CHECK-NEXT:    bor %r14
+; CHECK-NEXT:  .LBB6_1: # %entry
+; CHECK-NEXT:    lghi %r2, 0
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 %x) #2
@@ -185,10 +185,10 @@ define signext range(i32 0, 43) i32 @foo_013(i32 noundef signext %x) {
 ; CHECK-NEXT:    ahi %r2, 42
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lghi %r2, 0
-; CHECK-NEXT:    bnhr %r14
-; CHECK-NEXT:  .LBB7_1: # %entry
 ; CHECK-NEXT:    lghi %r2, 42
+; CHECK-NEXT:    bhr %r14
+; CHECK-NEXT:  .LBB7_1: # %entry
+; CHECK-NEXT:    lghi %r2, 0
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 %x) #2
@@ -236,10 +236,10 @@ define signext range(i32 0, 43) i32 @foo_123(i32 noundef signext %x) {
 ; CHECK-NEXT:    ahi %r2, 42
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    lghi %r2, 0
-; CHECK-NEXT:    bner %r14
-; CHECK-NEXT:  .LBB9_1: # %entry
 ; CHECK-NEXT:    lghi %r2, 42
+; CHECK-NEXT:    ber %r14
+; CHECK-NEXT:  .LBB9_1: # %entry
+; CHECK-NEXT:    lghi %r2, 0
 ; CHECK-NEXT:    br %r14
 entry:
   %0 = tail call { i32, i32 } asm "ahi $0,42\0A", "=d,={@cc},0"(i32 %x) #2
