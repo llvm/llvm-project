@@ -241,9 +241,6 @@ private:
                        bool IsDOT = false) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
-  bool SelectVOP3PModsNeg(SDValue In, SDValue &Src) const;
-  bool SelectVOP3PModsNegs(SDValue In, SDValue &Src) const;
-  bool SelectVOP3PModsNegAbs(SDValue In, SDValue &Src) const;
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 
   bool SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,

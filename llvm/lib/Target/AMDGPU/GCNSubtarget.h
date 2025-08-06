@@ -236,6 +236,7 @@ protected:
   bool Has64BitLiterals = false;
   bool HasBitOp3Insts = false;
   bool HasTanhInsts = false;
+  bool HasTensorCvtLutInsts = false;
   bool HasTransposeLoadF4F6Insts = false;
   bool HasPrngInst = false;
   bool HasBVHDualAndBVH8Insts = false;
@@ -280,6 +281,7 @@ protected:
 
   bool RequiresCOV6 = false;
   bool UseBlockVGPROpsForCSR = false;
+  bool HasGloballyAddressableScratch = false;
 
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
@@ -1041,6 +1043,9 @@ public:
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            const SchedRegion &Region) const override;
 
+  void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
+                                 const SchedRegion &Region) const override;
+
   void mirFileLoaded(MachineFunction &MF) const override;
 
   unsigned getMaxNumUserSGPRs() const {
@@ -1321,6 +1326,10 @@ public:
 
   bool useVGPRBlockOpsForCSR() const { return UseBlockVGPROpsForCSR; }
 
+  bool hasGloballyAddressableScratch() const {
+    return HasGloballyAddressableScratch;
+  }
+
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
   bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
@@ -1407,6 +1416,8 @@ public:
   bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
 
   bool hasTanhInsts() const { return HasTanhInsts; }
+
+  bool hasTensorCvtLutInsts() const { return HasTensorCvtLutInsts; }
 
   bool hasAddPC64Inst() const { return GFX1250Insts; }
 
@@ -1534,6 +1545,9 @@ public:
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
   bool hasIntMinMax64() const { return GFX1250Insts; }
+
+  // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
+  bool hasAddMinMaxInsts() const { return GFX1250Insts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
   bool hasPkAddMinMaxInsts() const { return GFX1250Insts; }
