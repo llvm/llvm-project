@@ -1,13 +1,15 @@
 // RUN: %clang -E -fvisibility=hidden -flto -fno-sanitize-ignorelist -fsanitize=cfi -c %s -o - | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang -E -fvisibility=hidden -flto -fno-sanitize-ignorelist -fsanitize=cfi -fsanitize-cfi-cross-dso -c %s -o - | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang -E -fvisibility=hidden -flto -fno-sanitize-ignorelist -fsanitize=cfi -fno-sanitize=cfi-nvcall,cfi-vcall,cfi-mfcall,cfi-icall -c %s -o - | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang -E -fsanitize=kcfi -c %s -o - | FileCheck %s --check-prefix=CHECK-CFI
 // CHECK-CFI: CFISanitizerEnabled
 
 // RUN: %clang -E -c %s -o - | FileCheck %s --check-prefix=CHECK-NO-CFI
 // CHECK-NO-CFI: CFISanitizerDisabled
 
-// RUN: %clang -E -fsanitize=cfi-cast-strict -c %s -o - | FileCheck %s --check-prefixes=CHECK-CFI,CHECK-CFI-CAST-STRICT
+// RUN: %clang -E -fsanitize=kcfi -c %s -o - | FileCheck %s --check-prefixes=CHECK-KCFI,CHECK-NO-CFI
+// CHECK-KCFI: KCFISanitizerEnabled
+
+// RUN: %clang -E -fsanitize=cfi-cast-strict -c %s -o - | FileCheck %s --check-prefix=CHECK-CFI-CAST-STRICT
 // CHECK-CFI-CAST-STRICT: CFICastStrictSanitizerEnabled
 
 // RUN: %clang -E -fvisibility=hidden -flto -fno-sanitize-ignorelist -fsanitize=cfi-derived-cast -c %s -o - | FileCheck %s --check-prefixes=CHECK-CFI,CHECK-CFI-DERIVED-CAST
@@ -32,6 +34,12 @@
 int CFISanitizerEnabled();
 #else
 int CFISanitizerDisabled();
+#endif
+
+#if __has_feature(kcfi)
+int KCFISanitizerEnabled();
+#else
+int KCFISanitizerDisabled();
 #endif
 
 #if __has_feature(cfi_cast_strict_sanitizer)
