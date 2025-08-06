@@ -1307,7 +1307,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   }
 
   case Decl::Var:
-  case Decl::Decomposition: {
+  case Decl::Decomposition:
+  case Decl::VarTemplateSpecialization: {
     auto *vd = cast<VarDecl>(decl);
     if (isa<DecompositionDecl>(decl)) {
       errorNYI(decl->getSourceRange(), "global variable decompositions");
