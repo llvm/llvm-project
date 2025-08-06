@@ -4,20 +4,23 @@
 """Script to generate a build report for Github."""
 
 import argparse
+import platform
 
 import generate_test_report_lib
 
+PLATFORM_TITLES = {
+    "Windows": ":window: Windows x64 Test Results",
+    "Linux": ":penguin: Linux x64 Test Results",
+}
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "title", help="Title of the test report, without Markdown formatting."
-    )
     parser.add_argument("return_code", help="The build's return code.", type=int)
     parser.add_argument("junit_files", help="Paths to JUnit report files.", nargs="*")
     args = parser.parse_args()
 
     report = generate_test_report_lib.generate_report_from_files(
-        args.title, args.return_code, args.junit_files
+        PLATFORM_TITLES[platform.system()], args.return_code, args.junit_files
     )
 
     print(report)
