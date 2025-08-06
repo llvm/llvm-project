@@ -50,7 +50,6 @@ static_library("Host") {
     "common/UDPSocket.cpp",
     "common/XML.cpp",
     "common/ZipFileResolver.cpp",
-    "posix/Support.cpp",
   ]
 
   if (lldb_enable_libedit) {
@@ -88,6 +87,7 @@ static_library("Host") {
       "posix/MainLoopPosix.cpp",
       "posix/PipePosix.cpp",
       "posix/ProcessLauncherPosixFork.cpp",
+      "posix/Support.cpp",
     ]
   }
 
