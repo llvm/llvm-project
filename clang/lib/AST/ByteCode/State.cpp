@@ -131,6 +131,7 @@ void State::addCallStack(unsigned Limit) {
   const Frame *Bottom = getBottomFrame();
   for (const Frame *F = Top; F != Bottom; F = F->getCaller(), ++CallIdx) {
     SourceRange CallRange = F->getCallRange();
+    assert(CallRange.isValid());
 
     // Skip this call?
     if (CallIdx >= SkipStart && CallIdx < SkipEnd) {
