@@ -1703,11 +1703,8 @@ std::string HoverInfo::present(MarkupKind Kind) const {
     if (Cfg.Documentation.CommentFormat ==
         Config::CommentFormatPolicy::Markdown)
       return presentDefault().asMarkdown();
-    if (Cfg.Documentation.CommentFormat ==
-        Config::CommentFormatPolicy::Doxygen) {
-      std::string T = presentDoxygen().asMarkdown();
-      return T;
-    }
+    if (Cfg.Documentation.CommentFormat == Config::CommentFormatPolicy::Doxygen)
+      return presentDoxygen().asMarkdown();
     if (Cfg.Documentation.CommentFormat ==
         Config::CommentFormatPolicy::PlainText)
       // If the user prefers plain text, we use the present() method to generate
