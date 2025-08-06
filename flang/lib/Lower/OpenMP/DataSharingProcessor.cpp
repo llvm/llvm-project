@@ -60,6 +60,7 @@ static bool isConstructWithTopLevelTarget(lower::pft::Evaluation &eval) {
     case llvm::omp::Directive::OMPD_target_teams_distribute_simd:
     case llvm::omp::Directive::OMPD_target_teams_loop:
     case llvm::omp::Directive::OMPD_target_simd:
+    if (llvm::omp::topTargetSet.test(dir))
       return true;
       break;
     default:
