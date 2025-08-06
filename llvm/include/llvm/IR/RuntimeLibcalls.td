@@ -1511,10 +1511,9 @@ def ARMSystemLibrary
                                                   (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
            DefaultStackProtector)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
-     (!TT.isOSDarwin() && !TT.isiOS() && !TT.isWatchOS() && !TT.isDriverKit()) ?
+     TT.isOSDarwin() ? CallingConv::C :
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
-                                    : CallingConv::ARM_AAPCS) :
-                                      CallingConv::C
+                                    : CallingConv::ARM_AAPCS)
   }]>;
 }
 
