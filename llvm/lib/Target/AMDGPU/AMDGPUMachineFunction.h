@@ -113,6 +113,12 @@ public:
     LaneSharedVGPRSize = std::max(LaneSharedVGPRSize, VGPRSize);
   }
 
+  void recordNumSemaphores(uint32_t GVAddr) {
+    unsigned OwningRank = ((GVAddr & 0xfff) >> 8);
+    unsigned NumSems = ((GVAddr & 0xff) >> 4);
+    NumSemaphores[OwningRank] = std::max(NumSemaphores[OwningRank], NumSems);
+  }
+
   void recordNumNamedBarriers(uint32_t GVAddr, unsigned BarCnt) {
     NumNamedBarriers =
         std::max(NumNamedBarriers, ((GVAddr & 0x1ff) >> 4) + BarCnt - 1);

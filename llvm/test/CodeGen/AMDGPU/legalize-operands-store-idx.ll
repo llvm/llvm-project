@@ -75,25 +75,19 @@ main_body:
   ret void
 }
 
-define void @vnbr(ptr addrspace(10) %itp, ptr addrspace(10) %itp_refl) {
+define amdgpu_kernel void @vnbr(ptr addrspace(10) %itp, ptr addrspace(10) %itp_refl) {
 ; GFX13-LABEL: vnbr:
 ; GFX13:       ; %bb.0: ; %main_body
-; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-NEXT:    s_wait_expcnt 0x0
-; GFX13-NEXT:    s_wait_samplecnt 0x0
-; GFX13-NEXT:    s_wait_rtscnt 0x0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    v_dual_lshrrev_b32 v1, 2, v1 :: v_dual_lshrrev_b32 v0, 2, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX13-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX13-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
-; GFX13-NEXT:    s_set_gpr_idx_u32 idx2, s0
-; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s1
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_lshr_b32 s1, s1, 2
+; GFX13-NEXT:    s_lshr_b32 s0, s0, 2
+; GFX13-NEXT:    s_set_gpr_idx_u32 idx2, s1
+; GFX13-NEXT:    s_set_gpr_idx_u32 idx1, s0
 ; GFX13-NEXT:    s_set_vgpr_frames 0x48 ; vsrc0_idx=0 vsrc1_idx=2 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    v_send_vgpr_next_b32 g1[0], g2[0], v0 sema_id:2 sema_wave_id:1 sema_id_refl:1 sema_wave_id_refl:1 wait_va_vdst:0
-; GFX13-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-NEXT:    v_send_vgpr_next_b32 g1[0], g2[0], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
+; GFX13-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.spatial.cluster.send.next(i32 0, ptr addrspace(10) %itp, ptr addrspace(3) @sem,
                                                 ptr addrspace(10) %itp_refl, ptr addrspace(3) @sem2, i32 0);

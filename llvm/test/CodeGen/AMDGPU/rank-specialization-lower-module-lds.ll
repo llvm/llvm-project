@@ -11,13 +11,15 @@ target datalayout = "A5"
 
 ; The LDS GVs above get packed into a struct accessible from the specializations.
 ; GV:  %llvm.amdgcn.kernel.main.lds.t = type { <9 x i32>, <3 x i32>, <3 x i32>, <3 x i32>, <8 x i16> }
-; GV:  @llvm.amdgcn.kernel.main.lds = internal addrspace(3) global %llvm.amdgcn.kernel.main.lds.t poison, align 64, !absolute_symbol ![[LDSADDRESS:[0-9]+]]
+; GV:  @sem1 = internal addrspace(3) global target("amdgcn.semaphore", 1) poison, !absolute_symbol ![[SEMADDR1:[0-9]+]]
+; GV:  @sem2 = internal addrspace(3) global target("amdgcn.semaphore", 2) poison, !absolute_symbol ![[SEMADDR2:[0-9]+]]
+; GV:  @llvm.amdgcn.kernel.main.lds = internal addrspace(3) global %llvm.amdgcn.kernel.main.lds.t poison, align 64, !absolute_symbol ![[LDSSTRUCT:[0-9]+]]
 
 @sem1 = internal addrspace(3) global target("amdgcn.semaphore", 1) poison
 @sem2 = internal addrspace(3) global target("amdgcn.semaphore", 2) poison
 
-define amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
-; CHECK-LABEL: define amdgpu_kernel void @input(
+define private amdgpu_kernel void @input(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
+; CHECK-LABEL: define private amdgpu_kernel void @input(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[VEC30:%.*]] = load <3 x i32>, ptr addrspace(1) [[INBUF]], align 16
@@ -68,8 +70,8 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
-; CHECK-LABEL: define amdgpu_kernel void @compute(
+define private amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
+; CHECK-LABEL: define private amdgpu_kernel void @compute(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem1)
@@ -78,7 +80,7 @@ define amdgpu_kernel void @compute(ptr addrspace(1) %inbuf, ptr addrspace(1) %wb
 ; CHECK-NEXT:    [[VEC32:%.*]] = load <3 x i32>, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 3), align 32
 ; CHECK-NEXT:    [[WEI:%.*]] = load <9 x i32>, ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, align 64
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call contract <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32(<8 x half> zeroinitializer, <9 x i32> [[WEI]], <3 x i32> [[VEC30]], <3 x i32> [[VEC31]], <3 x i32> [[VEC32]], i32 42, i1 true)
-; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 4), align 16, !tbaa [[TBAA1:![0-9]+]]
+; CHECK-NEXT:    store <8 x half> [[TMP0]], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_MAIN_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.main.lds, i32 0, i32 4), align 16, !tbaa [[TBAA3:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
 ; CHECK-NEXT:    ret void
 ;
@@ -94,8 +96,8 @@ entry:
   ret void
 }
 
-define amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
-; CHECK-LABEL: define amdgpu_kernel void @output(
+define private amdgpu_kernel void @output(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 #1 {
+; CHECK-LABEL: define private amdgpu_kernel void @output(
 ; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
@@ -113,9 +115,9 @@ entry:
 ; Function Attrs: convergent mustprogress nofree norecurse nosync nounwind memory(readwrite, argmem: none, inaccessiblemem: none)
 define amdgpu_kernel void @main(ptr addrspace(1) %inbuf, ptr addrspace(1) %wbuf, ptr addrspace(1) %outbuf) #0 !reqd_work_group_size !{i32 32, i32 12, i32 1} {
 ; CHECK-LABEL: define amdgpu_kernel void @main(
-; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1:[0-9]+]] !reqd_work_group_size [[META4:![0-9]+]] {
+; CHECK-SAME: ptr addrspace(1) [[INBUF:%.*]], ptr addrspace(1) [[WBUF:%.*]], ptr addrspace(1) [[OUTBUF:%.*]]) #[[ATTR1:[0-9]+]] !reqd_work_group_size [[META6:![0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.main.lds) ], !alias.scope [[META5:![0-9]+]], !noalias [[META8:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.main.lds) ], !alias.scope [[META7:![0-9]+]], !noalias [[META10:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr @input)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr @compute)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr @output)
@@ -144,20 +146,22 @@ declare <8 x half> @llvm.amdgcn.convolve.f16.fp8.fp8.3x3.v8f16.v8f16.v9i32.v3i32
 !38 = !{!39}
 !39 = !{i64 1, i1 false}
 
-; GV: attributes #[[ATTR0]] = {{.*}}"amdgpu-lds-size"="128"{{.*}}"amdgpu-wavegroup-rank-function"
-; GV: attributes #[[ATTR1]] = {{.*}}"amdgpu-lds-size"="128"{{.*}}"amdgpu-wavegroup-enable"
-; GV: ![[LDSADDRESS]] = !{i64 0, i64 1}
 
-; CHECK: [[TBAA1]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-; CHECK: [[META2]] = !{!"omnipotent char", [[META3:![0-9]+]], i64 0}
-; CHECK: [[META3]] = !{!"Simple C++ TBAA"}
-; CHECK: [[META4]] = !{i32 32, i32 12, i32 1}
-; CHECK: [[META5]] = !{[[META6:![0-9]+]]}
-; CHECK: [[META6]] = distinct !{[[META6]], [[META7:![0-9]+]]}
-; CHECK: [[META7]] = distinct !{[[META7]]}
-; CHECK: [[META8]] = !{[[META9:![0-9]+]], [[META10:![0-9]+]], [[META11:![0-9]+]], [[META12:![0-9]+]]}
-; CHECK: [[META9]] = distinct !{[[META9]], [[META7]]}
-; CHECK: [[META10]] = distinct !{[[META10]], [[META7]]}
-; CHECK: [[META11]] = distinct !{[[META11]], [[META7]]}
-; CHECK: [[META12]] = distinct !{[[META12]], [[META7]]}
+; GV: ![[SEMADDR1]] = !{i64 8392976, i64 8392977}
+; GV: ![[SEMADDR2]] = !{i64 8393232, i64 8393233}
+; GV: ![[LDSSTRUCT]] = !{i64 0, i64 1}
+; CHECK: [[TBAA3]] = !{[[META4:![0-9]+]], [[META4]], i64 0}
+; CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+; CHECK: [[META5]] = !{!"Simple C++ TBAA"}
+; CHECK: [[META6]] = !{i32 32, i32 12, i32 1}
+; CHECK: [[META7]] = !{[[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]], [[META9:![0-9]+]]}
+; CHECK: [[META9]] = distinct !{[[META9]]}
+; CHECK: [[META10]] = !{[[META11:![0-9]+]], [[META12:![0-9]+]], [[META13:![0-9]+]], [[META14:![0-9]+]]}
+; CHECK: [[META11]] = distinct !{[[META11]], [[META9]]}
+; CHECK: [[META12]] = distinct !{[[META12]], [[META9]]}
+; CHECK: [[META13]] = distinct !{[[META13]], [[META9]]}
+; CHECK: [[META14]] = distinct !{[[META14]], [[META9]]}
 ;.
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; GV: {{.*}}
