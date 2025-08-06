@@ -10074,7 +10074,30 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 
 InstructionUniformity
 SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
+  const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   unsigned opcode = MI.getOpcode();
+
+  auto HandleAddrSpaceCast = [this, &MRI](const MachineInstr &MI) {
+    Register Dst = MI.getOperand(0).getReg();
+    Register Src = isa<GIntrinsic>(MI) ? MI.getOperand(2).getReg()
+                                       : MI.getOperand(1).getReg();
+    LLT DstTy = MRI.getType(Dst);
+    LLT SrcTy = MRI.getType(Src);
+    unsigned DstAS = DstTy.getAddressSpace();
+    unsigned SrcAS = SrcTy.getAddressSpace();
+    return SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
+                   DstAS == AMDGPUAS::FLAT_ADDRESS &&
+                   ST.hasGloballyAddressableScratch()
+               ? InstructionUniformity::NeverUniform
+               : InstructionUniformity::Default;
+  };
+
+  // If the target supports globally addressable scratch, the mapping from
+  // scratch memory to the flat aperture changes therefore an address space cast
+  // is no longer uniform.
+  if (opcode == TargetOpcode::G_ADDRSPACE_CAST)
+    return HandleAddrSpaceCast(MI);
+
   if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
     auto IID = GI->getIntrinsicID();
     if (AMDGPU::isIntrinsicSourceOfDivergence(IID))
@@ -10083,6 +10106,8 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
       return InstructionUniformity::AlwaysUniform;
 
     switch (IID) {
+    case Intrinsic::amdgcn_addrspacecast_nonnull:
+      return HandleAddrSpaceCast(MI);
     case Intrinsic::amdgcn_if:
     case Intrinsic::amdgcn_else:
       // FIXME: Uniform if second result
