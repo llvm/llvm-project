@@ -1222,7 +1222,8 @@ bool ExposureChecker::isTULocal(const NamedDecl *D) {
   // [basic.link]p15.5
   // - a specialization of a template whose (possibly instantiated) declaration
   // is an exposure.
-  if (checkExposure(PrimaryTemplate, /*Diag=*/false))
+  if (ExposureSet.count(PrimaryTemplate) ||
+      checkExposure(PrimaryTemplate, /*Diag=*/false))
     return true;
 
   // Avoid calling checkExposure again since it is expensive.
