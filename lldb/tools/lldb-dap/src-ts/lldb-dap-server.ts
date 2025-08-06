@@ -39,8 +39,7 @@ export class LLDBDapServer implements vscode.Disposable {
       const process = child_process.spawn(dapPath, dapArgs, options);
       process.on("error", (error) => {
         reject(error);
-        this.serverProcess = undefined;
-        this.serverInfo = undefined;
+        this.cleanUp(process);
       });
       process.on("exit", (code, signal) => {
         let errorMessage = "Server process exited early";
@@ -50,8 +49,7 @@ export class LLDBDapServer implements vscode.Disposable {
           errorMessage += ` due to signal ${signal}`;
         }
         reject(new Error(errorMessage));
-        this.serverProcess = undefined;
-        this.serverInfo = undefined;
+        this.cleanUp(process);
       });
       process.stdout.setEncoding("utf8").on("data", (data) => {
         const connection = /connection:\/\/\[([^\]]+)\]:(\d+)/.exec(
@@ -126,7 +124,16 @@ Restarting the server will interrupt any existing debug sessions and start a new
       return;
     }
     this.serverProcess.kill();
-    this.serverProcess = undefined;
-    this.serverInfo = undefined;
+    this.cleanUp(this.serverProcess);
+  }
+
+  cleanUp(process: child_process.ChildProcessWithoutNullStreams) {
+    // If the following don't equal, then the fields have already been updated
+    // (either a new process has started, or the fields were already cleaned
+    // up), and so the cleanup should be skipped.
+    if (this.serverProcess === process) {
+      this.serverProcess = undefined;
+      this.serverInfo = undefined;
+    }
   }
 }
