@@ -149,7 +149,9 @@ exit:
 }
 
 ; The type information of the underlying object is not available, so the
-; delinearization result is different from it.
+; delinearization result is different from the original array size. In this
+; case, the underlying object is a type of int[][8][32], but the
+; delinearization result is like int[][4][64].
 ;
 ; void f(int A[][8][32]) {
 ;   for (i = 0; i < 42; i++)
