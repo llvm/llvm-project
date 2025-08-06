@@ -13482,7 +13482,7 @@ static bool isEXTMask(ArrayRef<int> M, EVT VT, bool &ReverseEXT,
   // Look for the first non-undef element.
   const int *FirstRealElt = find_if(M, [](int Elt) { return Elt >= 0; });
 
-  // Benefit form APInt to handle overflow when calculating expected element.
+  // Benefit from APInt to handle overflow when calculating expected element.
   unsigned NumElts = VT.getVectorNumElements();
   unsigned MaskBits = APInt(32, NumElts * 2).logBase2();
   APInt ExpectedElt = APInt(MaskBits, *FirstRealElt + 1, /*isSigned=*/false,
@@ -13490,7 +13490,7 @@ static bool isEXTMask(ArrayRef<int> M, EVT VT, bool &ReverseEXT,
   // The following shuffle indices must be the successive elements after the
   // first real element.
   bool FoundWrongElt = std::any_of(FirstRealElt + 1, M.end(), [&](int Elt) {
-    return Elt != ExpectedElt++ && Elt != -1;
+    return Elt != ExpectedElt++ && Elt >= 0;
   });
   if (FoundWrongElt)
     return false;
@@ -15777,6 +15777,7 @@ bool AArch64TargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
           isREVMask(M, EltSize, NumElts, 32) ||
           isREVMask(M, EltSize, NumElts, 16) ||
           isEXTMask(M, VT, DummyBool, DummyUnsigned) ||
+          isSingletonEXTMask(M, VT, DummyUnsigned) ||
           isTRNMask(M, NumElts, DummyUnsigned) ||
           isUZPMask(M, NumElts, DummyUnsigned) ||
           isZIPMask(M, NumElts, DummyUnsigned) ||
