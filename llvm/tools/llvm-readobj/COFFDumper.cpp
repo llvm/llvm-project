@@ -2097,41 +2097,73 @@ void COFFDumper::printCOFFPseudoReloc() {
           sizeof(PseudoRelocationRecord));
 
   struct CachingImportedSymbolLookup {
-    const StringRef *find(const COFFObjectFile *Obj, uint32_t EntryRVA) {
+    struct SizedImportDirectoryEntry {
+      uint32_t StartRVA;
+      uint32_t EndRVA;
+      ImportDirectoryEntryRef EntryRef;
+    };
+
+    CachingImportedSymbolLookup(const COFFObjectFile *Obj) : Obj(Obj) {
+      for (auto D : Obj->import_directories()) {
+        auto &Entry = ImportDirectories.emplace_back();
+        Entry.EntryRef = D;
+        Entry.EndRVA = 0;
+        if (auto E = D.getImportAddressTableRVA(Entry.StartRVA))
+          reportError(std::move(E), Obj->getFileName());
+      }
+      if (ImportDirectories.empty())
+        return;
+      llvm::sort(ImportDirectories, [](const auto &x, const auto &y) {
+        return x.StartRVA < y.StartRVA;
+      });
+    }
+
+    const StringRef *find(uint32_t EntryRVA) {
       if (auto Ite = ImportedSymbols.find(EntryRVA);
           Ite != ImportedSymbols.end())
         return &Ite->second;
 
-      for (auto D : Obj->import_directories()) {
-        uint32_t RVA;
-        if (auto E = D.getImportAddressTableRVA(RVA))
-          reportWarning(std::move(E), Obj->getFileName());
-        if (EntryRVA < RVA)
-          continue;
-        for (auto S : D.imported_symbols()) {
-          if (RVA == EntryRVA) {
-            StringRef &NameDst = ImportedSymbols[RVA];
-            if (auto E = S.getSymbolName(NameDst))
-              reportWarning(std::move(E), Obj->getFileName());
-            return &NameDst;
+      auto Ite = llvm::upper_bound(
+          ImportDirectories, EntryRVA,
+          [](uint32_t RVA, const auto &D) { return RVA < D.StartRVA; });
+      if (Ite == ImportDirectories.begin())
+        return nullptr;
+
+      --Ite;
+      const auto &D = Ite->EntryRef;
+      uint32_t RVA = Ite->StartRVA;
+      if (Ite->EndRVA != 0 && Ite->EndRVA <= RVA)
+        return nullptr;
+      // Search with linear iteration to care if padding or garbage exist
+      // between ImportDirectoryEntry
+      for (auto S : D.imported_symbols()) {
+        if (RVA == EntryRVA) {
+          StringRef &NameDst = ImportedSymbols[RVA];
+          if (auto E = S.getSymbolName(NameDst)) {
+            reportWarning(std::move(E), Obj->getFileName());
+            NameDst = "(no symbol)";
           }
-          RVA += Obj->is64() ? 8 : 4;
+          return &NameDst;
         }
+        RVA += Obj->is64() ? 8 : 4;
       }
+      Ite->EndRVA = RVA;
 
       return nullptr;
     }
 
   private:
+    const COFFObjectFile *Obj;
+    SmallVector<SizedImportDirectoryEntry> ImportDirectories;
     DenseMap<uint32_t, StringRef> ImportedSymbols;
   };
-  CachingImportedSymbolLookup ImportedSymbols;
+  CachingImportedSymbolLookup ImportedSymbols(Obj);
 
   ListScope D(W, "PseudoReloc");
   for (const auto &Reloc : RelocRecords) {
     DictScope Entry(W, "Entry");
     W.printHex("Symbol", Reloc.Symbol);
-    if (const auto *Sym = ImportedSymbols.find(Obj, Reloc.Symbol))
+    if (const auto *Sym = ImportedSymbols.find(Reloc.Symbol))
       W.printString("SymbolName", *Sym);
     W.printHex("Target", Reloc.Target);
     W.printNumber("BitWidth", Reloc.BitSize);
