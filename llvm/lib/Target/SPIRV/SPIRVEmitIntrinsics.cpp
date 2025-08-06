@@ -2432,24 +2432,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     // already, and force it to be i8 if not
     if (Postpone && !GR->findAssignPtrTypeInstr(I))
       insertAssignPtrTypeIntrs(I, B, true);
-    if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I)) {
+    if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I))
       useRoundingMode(FPI, B);
-      if (auto *FPCmpI = dyn_cast<ConstrainedFPCmpIntrinsic>(I)) {
-        unsigned int ID = FPCmpI->getIntrinsicID();
-        switch (ID) {
-        case Intrinsic::experimental_constrained_fcmp:
-        case Intrinsic::experimental_constrained_fcmps: {
-          Value *LHS = FPCmpI->getArgOperand(0);
-          Value *RHS = FPCmpI->getArgOperand(1);
-          FCmpInst::Predicate Pred = FPCmpI->getPredicate();
-          Value *NewInst = B.CreateFCmp(Pred, LHS, RHS);
-          I->replaceAllUsesWith(NewInst);
-          I->eraseFromParent();
-          break;
-        }
-        }
-      }
-    }
   }
 
   // Pass backward: use instructions results to specify/update/cast operands
