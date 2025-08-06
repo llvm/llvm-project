@@ -133,9 +133,8 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
       // It is only valid to set the IP within the current function.
       // This is important for ptrauth, otherwise the IP cannot be correctly
       // signed.
-      unw_word_t stripped_value =
+      [[maybe_unused]]unw_word_t stripped_value =
           (unw_word_t)ptrauth_strip((void *)value, ptrauth_key_return_address);
-      [[maybe_unused]]stripped_value;
       assert(stripped_value >= info.start_ip && stripped_value <= info.end_ip);
 
       pint_t sp = (pint_t)co->getReg(UNW_REG_SP);
