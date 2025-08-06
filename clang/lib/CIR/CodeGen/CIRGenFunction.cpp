@@ -785,9 +785,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     }
     if (!ty->isAnyComplexType())
       return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
-    cgm.errorNYI(e->getSourceRange(),
-                 "CompoundAssignOperator with ComplexType");
-    return LValue();
+
+    return emitComplexCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
   }
   case Expr::CallExprClass:
   case Expr::CXXMemberCallExprClass:
