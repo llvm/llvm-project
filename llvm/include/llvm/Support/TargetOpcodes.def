@@ -114,6 +114,11 @@ HANDLE_TARGET_OPCODE(REG_SEQUENCE)
 /// used to copy between subregisters of virtual registers.
 HANDLE_TARGET_OPCODE(COPY)
 
+/// COPY_LANEMASK - Target-independent register copy for active mask in 
+/// register as represented by the lanemask. This instruction can only be 
+/// used to copy between physical registers.
+HANDLE_TARGET_OPCODE(COPY_LANEMASK)
+
 /// BUNDLE - This instruction represents an instruction bundle. Instructions
 /// which immediately follow a BUNDLE instruction which are marked with
 /// 'InsideBundle' flag are inside the bundle.
