@@ -1490,7 +1490,7 @@ Error BinaryFunction::disassemble() {
 add_instruction:
     if (!getDWARFUnits().empty()) {
       SmallVector<DebugLineTableRowRef, 1> Rows;
-      for (DWARFUnit *Unit : getDWARFUnits()) {
+      for (const auto &[_, Unit] : getDWARFUnits()) {
         const DWARFDebugLine::LineTable *LineTable =
             getDWARFLineTableForUnit(Unit);
         if (!LineTable)

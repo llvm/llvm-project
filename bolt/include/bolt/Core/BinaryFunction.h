@@ -35,6 +35,7 @@
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -424,7 +425,8 @@ private:
   unsigned LSDATypeEncoding{dwarf::DW_EH_PE_omit};
 
   /// All compilation units this function belongs to.
-  SmallVector<DWARFUnit *, 1> DwarfUnitVec;
+  /// Maps DWARF unit offset to the unit pointer.
+  DenseMap<uint64_t, DWARFUnit *> DwarfUnitMap;
 
   /// Last computed hash value. Note that the value could be recomputed using
   /// different parameters by every pass.
@@ -2409,19 +2411,16 @@ public:
   void
   computeBlockHashes(HashFunction HashFunction = HashFunction::Default) const;
 
-  void addDWARFUnit(DWARFUnit *Unit) { DwarfUnitVec.push_back(Unit); }
+  void addDWARFUnit(DWARFUnit *Unit) { DwarfUnitMap[Unit->getOffset()] = Unit; }
 
   void removeDWARFUnit(DWARFUnit *Unit) {
-    auto *It = std::find(DwarfUnitVec.begin(), DwarfUnitVec.end(), Unit);
-    // If found, erase it
-    if (It != DwarfUnitVec.end()) {
-      DwarfUnitVec.erase(It);
-    }
+    DwarfUnitMap.erase(Unit->getOffset());
   }
 
   /// Return DWARF compile units for this function.
-  const SmallVector<DWARFUnit *, 1>& getDWARFUnits() const {
-    return DwarfUnitVec;
+  /// Returns a reference to the map of DWARF unit offsets to units.
+  const DenseMap<uint64_t, DWARFUnit *> &getDWARFUnits() const {
+    return DwarfUnitMap;
   }
 
   const DWARFDebugLine::LineTable *

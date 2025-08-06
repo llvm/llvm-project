@@ -438,7 +438,7 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   }
 
   if (opts::UpdateDebugSections && !Function.getDWARFUnits().empty())
-    for (DWARFUnit *Unit : Function.getDWARFUnits())
+    for (const auto &[_, Unit] : Function.getDWARFUnits())
       emitLineInfoEnd(Function, EndSymbol, Unit);
 
   // Exception handling info for the function.
@@ -687,10 +687,10 @@ SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
   const ClusteredRows *Cluster = ClusteredRows::fromSMLoc(NewLoc);
 
   auto addToLineTable = [&](DebugLineTableRowRef RowReference,
-                            const DWARFUnit *TargetCU, unsigned Flags,
-                            MCSymbol *InstrLabel,
+                            const DWARFUnit &TargetCU, unsigned Flags,
+                            MCSymbol &InstrLabel,
                             const DWARFDebugLine::Row &CurrentRow) {
-    const uint64_t TargetUnitIndex = TargetCU->getOffset();
+    const uint64_t TargetUnitIndex = TargetCU.getOffset();
     unsigned TargetFilenum = CurrentRow.File;
     const uint32_t CurrentUnitIndex = RowReference.DwCompileUnitIndex;
     // If the CU id from the current instruction location does not
@@ -711,7 +711,7 @@ SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
                                .getMCLineSections()
                                .getMCLineEntries();
     const auto *It = MapLineEntries.find(Streamer.getCurrentSectionOnly());
-    auto NewLineEntry = MCDwarfLineEntry(InstrLabel, DwarfLoc);
+    auto NewLineEntry = MCDwarfLineEntry(&InstrLabel, DwarfLoc);
 
     // Check if line table exists and has entries before doing comparison
     if (It != MapLineEntries.end() && !It->second.empty()) {
@@ -750,21 +750,17 @@ SMLoc BinaryEmitter::emitLineInfo(const BinaryFunction &BF, SMLoc NewLoc,
     if (FirstInstr)
       Flags |= DWARF2_FLAG_IS_STMT;
     const auto &FunctionDwarfUnits = BF.getDWARFUnits();
-    const auto *It = std::find_if(
-        FunctionDwarfUnits.begin(), FunctionDwarfUnits.end(),
-        [RowReference](const DWARFUnit *Unit) {
-          return Unit->getOffset() == RowReference.DwCompileUnitIndex;
-        });
+    auto It = FunctionDwarfUnits.find(RowReference.DwCompileUnitIndex);
     if (It != FunctionDwarfUnits.end()) {
-      addToLineTable(RowReference, *It, Flags, InstrLabel, CurrentRow);
+      addToLineTable(RowReference, *It->second, Flags, *InstrLabel, CurrentRow);
       continue;
     }
     // This rows is from CU that did not contain the original function.
     // This might happen if BOLT moved/inlined that instruction from other CUs.
     // In this case, we need to insert it to all CUs that the function
     // originally beloned to.
-    for (const DWARFUnit *Unit : BF.getDWARFUnits()) {
-      addToLineTable(RowReference, Unit, Flags, InstrLabel, CurrentRow);
+    for (const auto &[_, Unit] : BF.getDWARFUnits()) {
+      addToLineTable(RowReference, *Unit, Flags, *InstrLabel, CurrentRow);
     }
   }
 
@@ -1148,7 +1144,7 @@ void BinaryEmitter::emitDebugLineInfoForOriginalFunctions() {
       continue;
 
     // Loop through all CUs in the function
-    for (DWARFUnit *Unit : Function.getDWARFUnits()) {
+    for (const auto &[_, Unit] : Function.getDWARFUnits()) {
       const DWARFDebugLine::LineTable *LineTable =
           Function.getDWARFLineTableForUnit(Unit);
       if (!LineTable)
