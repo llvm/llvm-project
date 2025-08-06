@@ -10321,8 +10321,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
       // TODO: Move to general VPlan pipeline once epilogue loops are also
       // supported.
-      VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
-                               BestPlan, VF.Width, IC, PSE);
+      VPlanTransforms::runPass(
+          VPlanTransforms::materializeConstantVectorTripCount, BestPlan,
+          VF.Width, IC, PSE);
 
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
@@ -10393,8 +10394,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                Checks, BestPlan);
         // TODO: Move to general VPlan pipeline once epilogue loops are also
         // supported.
-        VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
-                                 BestPlan, VF.Width, IC, PSE);
+        VPlanTransforms::runPass(
+            VPlanTransforms::materializeConstantVectorTripCount, BestPlan,
+            VF.Width, IC, PSE);
 
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
