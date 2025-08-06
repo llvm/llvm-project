@@ -759,18 +759,16 @@ private:
                        const SmallBitVector &Loops,
                        FullDependence &Result) const;
 
-  /// collectCoefficientInfo - Walks through the subscript,
-  /// collecting each coefficient, the associated loop bounds,
-  /// and recording its positive and negative parts for later use.
+  /// collectCoeffInfo - Walks through the subscript, collecting each
+  /// coefficient, the associated loop bounds, and recording its positive and
+  /// negative parts for later use.
   CoefficientInfo *collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
                                     const SCEV *&Constant) const;
 
   /// getPositivePart - X^+ = max(X, 0).
-  ///
   const SCEV *getPositivePart(const SCEV *X) const;
 
   /// getNegativePart - X^- = min(X, 0).
-  ///
   const SCEV *getNegativePart(const SCEV *X) const;
 
   /// getLowerBound - Looks through all the bounds info and

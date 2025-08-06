@@ -1474,14 +1474,11 @@ static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
   APInt R = G0;
   APInt::sdivrem(G0, G1, Q, R);
   while (R != 0) {
-    APInt A2 = A0 - Q * A1;
-    A0 = A1;
-    A1 = A2;
-    APInt B2 = B0 - Q * B1;
-    B0 = B1;
-    B1 = B2;
-    G0 = G1;
-    G1 = R;
+    // clang-format off
+    APInt A2 = A0 - Q*A1; A0 = A1; A1 = A2;
+    APInt B2 = B0 - Q*B1; B0 = B1; B1 = B2;
+    G0 = G1; G1 = R;
+    // clang-format on
     APInt::sdivrem(G0, G1, Q, R);
   }
   G = G1;
@@ -2770,8 +2767,10 @@ bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
 // and the upper bound is always >= 0.
 void DependenceInfo::findBoundsALL(CoefficientInfo *A, CoefficientInfo *B,
                                    BoundInfo *Bound, unsigned K) const {
-  Bound[K].Lower[Dependence::DVEntry::ALL] = nullptr; // Represents -infinity
-  Bound[K].Upper[Dependence::DVEntry::ALL] = nullptr; // Represents +infinity
+  Bound[K].Lower[Dependence::DVEntry::ALL] =
+      nullptr; // Default value = -infinity.
+  Bound[K].Upper[Dependence::DVEntry::ALL] =
+      nullptr; // Default value = +infinity.
   if (Bound[K].Iterations) {
     Bound[K].Lower[Dependence::DVEntry::ALL] = SE->getMulExpr(
         SE->getMinusSCEV(A[K].NegPart, B[K].PosPart), Bound[K].Iterations);
@@ -3144,8 +3143,6 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
     APInt CdivB = Charlie.sdiv(Beta);
     assert(Charlie.srem(Beta) == 0 && "C should be evenly divisible by B");
     const SCEV *AP_K = findCoefficient(Dst, CurLoop);
-    //    Src = SE->getAddExpr(Src, SE->getMulExpr(AP_K,
-    //    SE->getConstant(CdivB)));
     Src = SE->getMinusSCEV(Src, SE->getMulExpr(AP_K, SE->getConstant(CdivB)));
     Dst = zeroCoefficient(Dst, CurLoop);
     if (!findCoefficient(Src, CurLoop)->isZero())
