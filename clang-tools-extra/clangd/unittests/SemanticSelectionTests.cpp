@@ -379,6 +379,9 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
 
           #ifdef FOO[[
             Variable = 1;
+            #if 1[[
+                Variable = 4;
+            ]]#endif
           ]]#else[[
             Variable = 2;
             //handle nested directives
@@ -390,6 +393,22 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
 
           ]]}
       )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)
+            Variable = 1;
+        #
+      )cpp",
+      R"cpp(
+        int Variable = 0;
+        #if defined(WALDO)[[
+            Variable = 1;
+        ]]#elif 1[[
+            Variable = 2;
+        ]]#else
+            Variable = 3;
+        #
+      )cpp",
   };
   for (const char *Test : Tests) {
     auto T = Annotations(Test);
@@ -399,6 +418,12 @@ TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
         << Test;
   }
 }
+
+#if defined(WALDO)
+#elif 1
+#else
+#endif
+
 
 TEST(FoldingRanges, PseudoParserLineFoldingsOnly) {
   const char *Tests[] = {
