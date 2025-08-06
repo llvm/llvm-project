@@ -13,7 +13,9 @@
 // constexpr basic_string_view<_CharT, _Traits> subview(size_type __pos = 0, size_type __n = npos) const;
 
 #include <cassert>
+#include <concepts>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "constexpr_char_traits.h"

@@ -14,7 +14,8 @@
 //                                     size_type n = npos) const;      // freestanding-deleted
 
 #include <cassert>
-#include <string>
+#include <concepts>
+#include <string_view>
 #include <utility>
 
 #include "constexpr_char_traits.h"
