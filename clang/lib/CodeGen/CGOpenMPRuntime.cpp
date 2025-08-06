@@ -9074,46 +9074,13 @@ public:
     }
   }
 
-  /// For a capture that has an associated clause, generate the base pointers,
-  /// section pointers, sizes, map types, and mappers (all included in
-  /// \a CurCaptureVarInfo).
-  void generateInfoForCaptureFromClauseInfo(
-      const CapturedStmt::Capture *Cap, llvm::Value *Arg,
-      MapCombinedInfoTy &CurCaptureVarInfo, llvm::OpenMPIRBuilder &OMPBuilder,
-      unsigned OffsetForMemberOfFlag) const {
-    assert(!Cap->capturesVariableArrayType() &&
-           "Not expecting to generate map info for a variable array type!");
-
-    // We need to know when we generating information for the first component
-    const ValueDecl *VD = Cap->capturesThis()
-                              ? nullptr
-                              : Cap->getCapturedVar()->getCanonicalDecl();
-
-    // for map(to: lambda): skip here, processing it in
-    // generateDefaultMapInfo
-    if (LambdasMap.count(VD))
+  /// Populate component lists for non-lambda captured variables from map,
+  /// is_device_ptr and has_device_addr clause info.
+  void populateComponentListsForNonLambdaCaptureFromClauses(
+      const ValueDecl *VD, MapDataArrayTy &DeclComponentLists) const {
+    if (VD && LambdasMap.count(VD))
       return;
 
-    // If this declaration appears in a is_device_ptr clause we just have to
-    // pass the pointer by value. If it is a reference to a declaration, we just
-    // pass its value.
-    if (VD && (DevPointersMap.count(VD) || HasDevAddrsMap.count(VD))) {
-      CurCaptureVarInfo.Exprs.push_back(VD);
-      CurCaptureVarInfo.BasePointers.emplace_back(Arg);
-      CurCaptureVarInfo.DevicePtrDecls.emplace_back(VD);
-      CurCaptureVarInfo.DevicePointers.emplace_back(DeviceInfoTy::Pointer);
-      CurCaptureVarInfo.Pointers.push_back(Arg);
-      CurCaptureVarInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
-          CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
-          /*isSigned=*/true));
-      CurCaptureVarInfo.Types.push_back(
-          OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
-          OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
-      CurCaptureVarInfo.Mappers.push_back(nullptr);
-      return;
-    }
-
-    MapDataArrayTy DeclComponentLists;
     // For member fields list in is_device_ptr, store it in
     // DeclComponentLists for generating components info.
     static const OpenMPMapModifierKind Unknown = OMPC_MAP_MODIFIER_unknown;
@@ -9163,19 +9130,60 @@ public:
       bool HasAllocsR = MapType == OMPC_MAP_alloc;
       return (HasPresent && !HasPresentR) || (HasAllocs && !HasAllocsR);
     });
+  }
+
+  /// For a capture that has an associated clause, generate the base pointers,
+  /// section pointers, sizes, map types, and mappers (all included in
+  /// \a CurCaptureVarInfo).
+  void generateInfoForCaptureFromClauseInfo(
+      const MapDataArrayTy &DeclComponentListsFromClauses,
+      const CapturedStmt::Capture *Cap, llvm::Value *Arg,
+      MapCombinedInfoTy &CurCaptureVarInfo, llvm::OpenMPIRBuilder &OMPBuilder,
+      unsigned OffsetForMemberOfFlag) const {
+    assert(!Cap->capturesVariableArrayType() &&
+           "Not expecting to generate map info for a variable array type!");
+
+    // We need to know when we generating information for the first component
+    const ValueDecl *VD = Cap->capturesThis()
+                              ? nullptr
+                              : Cap->getCapturedVar()->getCanonicalDecl();
+
+    // for map(to: lambda): skip here, processing it in
+    // generateDefaultMapInfo
+    if (LambdasMap.count(VD))
+      return;
+
+    // If this declaration appears in a is_device_ptr clause we just have to
+    // pass the pointer by value. If it is a reference to a declaration, we just
+    // pass its value.
+    if (VD && (DevPointersMap.count(VD) || HasDevAddrsMap.count(VD))) {
+      CurCaptureVarInfo.Exprs.push_back(VD);
+      CurCaptureVarInfo.BasePointers.emplace_back(Arg);
+      CurCaptureVarInfo.DevicePtrDecls.emplace_back(VD);
+      CurCaptureVarInfo.DevicePointers.emplace_back(DeviceInfoTy::Pointer);
+      CurCaptureVarInfo.Pointers.push_back(Arg);
+      CurCaptureVarInfo.Sizes.push_back(CGF.Builder.CreateIntCast(
+          CGF.getTypeSize(CGF.getContext().VoidPtrTy), CGF.Int64Ty,
+          /*isSigned=*/true));
+      CurCaptureVarInfo.Types.push_back(
+          OpenMPOffloadMappingFlags::OMP_MAP_LITERAL |
+          OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM);
+      CurCaptureVarInfo.Mappers.push_back(nullptr);
+      return;
+    }
 
     auto GenerateInfoForComponentLists =
-        [&](ArrayRef<MapData> DeclComponentLists,
+        [&](ArrayRef<MapData> DeclComponentListsFromClauses,
             bool IsEligibleForTargetParamFlag) {
           MapCombinedInfoTy CurInfoForComponentLists;
           StructRangeInfoTy PartialStruct;
 
-          if (DeclComponentLists.empty())
+          if (DeclComponentListsFromClauses.empty())
             return;
 
           generateInfoForCaptureFromComponentLists(
-              VD, DeclComponentLists, CurInfoForComponentLists, PartialStruct,
-              IsEligibleForTargetParamFlag);
+              VD, DeclComponentListsFromClauses, CurInfoForComponentLists,
+              PartialStruct, IsEligibleForTargetParamFlag);
 
           // If there is an entry in PartialStruct it means we have a
           // struct with individual members mapped. Emit an extra combined
@@ -9914,10 +9922,17 @@ static void genMapInfoForCaptures(
                               OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT);
       CurInfo.Mappers.push_back(nullptr);
     } else {
+      const ValueDecl *CapturedVD =
+          CI->capturesThis() ? nullptr
+                             : CI->getCapturedVar()->getCanonicalDecl();
+      // Populate component lists for the captured variable from clauses.
+      MappableExprsHandler::MapDataArrayTy DeclComponentLists;
+      MEHandler.populateComponentListsForNonLambdaCaptureFromClauses(
+          CapturedVD, DeclComponentLists);
       // If we have any information in the map clause, we use it, otherwise we
       // just do a default mapping.
       MEHandler.generateInfoForCaptureFromClauseInfo(
-          CI, *CV, CurInfo, OMPBuilder,
+          DeclComponentLists, CI, *CV, CurInfo, OMPBuilder,
           /*OffsetForMemberOfFlag=*/CombinedInfo.BasePointers.size());
 
       if (!CI->capturesThis())
