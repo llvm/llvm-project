@@ -12564,7 +12564,7 @@ multiclass STOPregister<string asm, string instr> {
 let Predicates = [HasLSUI] in
 class BaseSTOPregisterLSUI<string asm, RegisterClass OP, Register Reg,
                         Instruction inst> :
-      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn), 0>;
+      InstAlias<asm # "\t$Rs, [$Rn]", (inst Reg, OP:$Rs, GPR64sp:$Rn)>;
 
 multiclass STOPregisterLSUI<string asm, string instr> {
   def : BaseSTOPregisterLSUI<asm # "l", GPR32, WZR,
