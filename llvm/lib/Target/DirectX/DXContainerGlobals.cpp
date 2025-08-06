@@ -103,7 +103,7 @@ GlobalVariable *DXContainerGlobals::computeShaderHash(Module &M) {
   dxbc::ShaderHash HashData = {0, {0}};
   // The Hash's IncludesSource flag gets set whenever the hashed shader includes
   // debug information.
-  if (M.debug_compile_units_begin() != M.debug_compile_units_end())
+  if (!M.debug_compile_units().empty())
     HashData.Flags = static_cast<uint32_t>(dxbc::HashFlags::IncludesSource);
 
   memcpy(reinterpret_cast<void *>(&HashData.Digest), Result.data(), 16);
