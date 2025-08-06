@@ -56,8 +56,12 @@ public:
       this, "Method should return an owned object",
       "Object with a +0 retain count returned to caller where a +1 (owning) "
       "retain count is expected"};
-  const RefCountBug LeakWithinFunction{this, "Leak", "", true};
-  const RefCountBug LeakAtReturn{this, "Leak of returned object", "", true};
+  // For these two bug types the report message is generated dynamically
+  // so the empty string data member will be unused.
+  const RefCountBug LeakWithinFunction{this, "Leak", /*ReportMsg=*/"",
+                                       /*SuppressOnSink=*/true};
+  const RefCountBug LeakAtReturn{this, "Leak of returned object",
+                                 /*ReportMsg=*/"", /*SuppressOnSink=*/true};
 };
 
 class RefCountReport : public PathSensitiveBugReport {
