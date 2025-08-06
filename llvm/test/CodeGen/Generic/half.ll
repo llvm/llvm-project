@@ -29,9 +29,9 @@
 ; RUN: %if mips-registered-target        %{ llc %s -o - -mtriple=mipsel-unknown-linux-gnu        | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if msp430-registered-target      %{ llc %s -o - -mtriple=msp430-none-elf                 | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if nvptx-registered-target       %{ llc %s -o - -mtriple=nvptx64-nvidia-cuda             | FileCheck %s --check-prefixes=NOCRASH   %}
-; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,BAD   %}
-; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc64-unknown-linux-gnu     | FileCheck %s --check-prefixes=ALL,BAD   %}
-; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc64le-unknown-linux-gnu   | FileCheck %s --check-prefixes=ALL,BAD   %}
+; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK %}
+; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc64-unknown-linux-gnu     | FileCheck %s --check-prefixes=ALL,CHECK %}
+; RUN: %if powerpc-registered-target     %{ llc %s -o - -mtriple=powerpc64le-unknown-linux-gnu   | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if riscv-registered-target       %{ llc %s -o - -mtriple=riscv32-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if riscv-registered-target       %{ llc %s -o - -mtriple=riscv64-unknown-linux-gnu       | FileCheck %s --check-prefixes=ALL,CHECK %}
 ; RUN: %if sparc-registered-target       %{ llc %s -o - -mtriple=sparc-unknown-linux-gnu         | FileCheck %s --check-prefixes=ALL,CHECK %}
