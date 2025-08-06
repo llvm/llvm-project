@@ -170,8 +170,8 @@ def FeatureStdExtZicfilp
 def HasStdExtZicfilp : Predicate<"Subtarget->hasStdExtZicfilp()">,
                        AssemblerPredicate<(all_of FeatureStdExtZicfilp),
                                           "'Zicfilp' (Landing pad)">;
-def NoStdExtZicfilp : Predicate<"!Subtarget->hasStdExtZicfilp()">,
-                      AssemblerPredicate<(all_of (not FeatureStdExtZicfilp))>;
+def HasZicfilpCFI : Predicate<"Subtarget->hasZicfilpCFI()">;
+def HasNoZicfilpCFI : Predicate<"!Subtarget->hasZicfilpCFI()">;
 
 def FeatureStdExtZicfiss
     : RISCVExperimentalExtension<1, 0, "Shadow stack",
