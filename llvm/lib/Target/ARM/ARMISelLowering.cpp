@@ -20350,7 +20350,8 @@ static bool isIncompatibleReg(const MCPhysReg &PR, MVT VT) {
   if (PR == 0 || VT == MVT::Other)
     return false;
   return (ARM::SPRRegClass.contains(PR) && VT != MVT::f32 && VT != MVT::i32) ||
-         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64);
+         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64 &&
+          !VT.is64BitVector());
 }
 
 using RCPair = std::pair<unsigned, const TargetRegisterClass *>;
