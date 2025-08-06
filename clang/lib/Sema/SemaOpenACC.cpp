@@ -646,8 +646,17 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
   if (auto *RefTy = InnerTy->getAs<ReferenceType>())
     InnerTy = RefTy->getPointeeType();
 
-  if (auto *ArrTy = InnerTy->getAsArrayTypeUnsafe())
+  if (auto *ArrTy = InnerTy->getAsArrayTypeUnsafe()) {
+    // Non constant arrays decay to 'pointer', so warn and return that we're
+    // successful.
+    if (!ArrTy->isConstantArrayType()) {
+      S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_non_const_array)
+          << InnerTy << CK;
+      return VarExpr;
+    }
+
     return CheckVarType(S, CK, VarExpr, InnerLoc, ArrTy->getElementType());
+  }
 
   auto *RD = InnerTy->getAsCXXRecordDecl();
 
