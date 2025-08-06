@@ -15,13 +15,14 @@ class TestSwiftForwardInteropExpressions(TestBase):
              self, bkpt_str, lldb.SBFileSpec('main.swift'))
          return thread
 
-    @skipIf(bugnumber='rdar://152745034')
     @skipIfLinux # rdar://106871422"
     @skipIf(setting=('symbols.use-swift-clangimporter', 'false')) # rdar://106871275
     @swiftTest
     def test(self):
         self.setup('Break here')
         
+        types_log = self.getBuildArtifact('types.log')
+        self.expect("log enable lldb types -v -f "+ types_log)
         # Check that we can call free functions.
         self.expect('expr returnsInt()', substrs=['Int32', '42'])
 
@@ -53,6 +54,9 @@ class TestSwiftForwardInteropExpressions(TestBase):
 
         # Check that po prints the fields of a base class
         self.expect('po cxxClass', substrs=['CxxClass', 'a : 100', 'b : 101'])
+
+        self.filecheck('platform shell cat "%s"' % types_log, __file__)
+        # CHECK: [CheckFlagInCU] Found flag -enable-experimental-cxx-interop in CU:
 
     @expectedFailureAll(bugnumber="rdar://106216567")
     @swiftTest

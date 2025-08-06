@@ -1214,7 +1214,6 @@ public:
                             Status &error, bool force_live_memory = false,
                             lldb::addr_t *load_addr_ptr = nullptr,
                             bool *did_read_live_memory = nullptr);
-
   size_t ReadCStringFromMemory(const Address &addr, std::string &out_str,
                                Status &error, bool force_live_memory = false);
 
