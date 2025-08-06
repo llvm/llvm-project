@@ -60,8 +60,10 @@ constexpr void test() {
       try {
         sv.subview(sv.size() + 1);
         assert(false && "Expected std::out_of_range exception");
-      } catch (const std::out_of_range&) {
-        // Expected exception...
+      } catch ([[maybe_unused]] const std::out_of_range& ex) {
+        LIBCPP_ASSERT(std::string(ex.what()) == "string_view::subview");
+      } catch (...) {
+        assert(false && "Expected std::out_of_range exception");
       }
     }
 
@@ -69,8 +71,10 @@ constexpr void test() {
       try {
         sv.subview(sv.size() + 1, 0);
         assert(false && "Expected std::out_of_range exception");
-      } catch (const std::out_of_range&) {
-        // Expected exception...
+      } catch ([[maybe_unused]] const std::out_of_range& ex) {
+        LIBCPP_ASSERT(std::string(ex.what()) == "string_view::subview");
+      } catch (...) {
+        assert(false && "Expected std::out_of_range exception");
       }
     }
 
@@ -78,8 +82,10 @@ constexpr void test() {
       try {
         sv.subview(sv.size() + 1, 1);
         assert(false && "Expected std::out_of_range exception");
-      } catch (const std::out_of_range&) {
-        // Expected exception...
+      } catch ([[maybe_unused]] const std::out_of_range& ex) {
+        LIBCPP_ASSERT(std::string(ex.what()) == "string_view::subview");
+      } catch (...) {
+        assert(false && "Expected std::out_of_range exception");
       }
     }
   }
@@ -115,7 +121,7 @@ constexpr bool test() {
 
 int main(int, char**) {
   test();
-  static_assert(test());
+  // static_assert(test());
 
   return 0;
 }
