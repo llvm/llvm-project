@@ -2556,7 +2556,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
                          getOrCreateVReg(*ConstantInt::getTrue(CI.getType())));
     return true;
   case Intrinsic::amdgcn_cs_chain:
-  case Intrinsic::amdgcn_call_whole_wave:
     return translateCallBase(CI, MIRBuilder);
   case Intrinsic::fptrunc_round: {
     uint32_t Flags = MachineInstr::copyFlagsFromInstruction(CI);
