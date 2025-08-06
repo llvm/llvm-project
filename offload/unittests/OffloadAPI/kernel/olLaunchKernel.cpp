@@ -114,9 +114,9 @@ TEST_P(olLaunchKernelFooTest, SuccessThreaded) {
     } Args{Mem};
 
     ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args),
-                                  &LaunchArgs, nullptr));
+                                  &LaunchArgs));
 
-    ASSERT_SUCCESS(olWaitQueue(Queue));
+    ASSERT_SUCCESS(olSyncQueue(Queue));
 
     uint32_t *Data = (uint32_t *)Mem;
     for (uint32_t i = 0; i < 64; i++) {
