@@ -487,8 +487,8 @@ template <typename Op0_t, typename Op1_t> struct ICmp_match {
   }
 };
 
-/// SpecificICmp_match is a variant of BinaryRecipe_match that also matches the
-/// comparison predicate.
+/// SpecificICmp_match is a variant of ICmp_match that matches the comparison
+/// predicate, instead of binding it.
 template <typename Op0_t, typename Op1_t> struct SpecificICmp_match {
   const CmpPredicate Predicate;
   Op0_t Op0;
@@ -498,14 +498,9 @@ template <typename Op0_t, typename Op1_t> struct SpecificICmp_match {
       : Predicate(Pred), Op0(LHS), Op1(RHS) {}
 
   bool match(const VPValue *V) const {
-    auto *DefR = V->getDefiningRecipe();
-    return DefR && match(DefR);
-  }
-
-  bool match(const VPRecipeBase *V) const {
-    return m_Binary<Instruction::ICmp>(Op0, Op1).match(V) &&
-           CmpPredicate::getMatching(
-               cast<VPRecipeWithIRFlags>(V)->getPredicate(), Predicate);
+    CmpPredicate CurrentPred;
+    return ICmp_match<Op0_t, Op1_t>(CurrentPred, Op0, Op1).match(V) &&
+           CmpPredicate::getMatching(CurrentPred, Predicate);
   }
 };
 
