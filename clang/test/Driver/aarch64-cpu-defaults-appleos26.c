@@ -4,11 +4,11 @@
 // RUN: %clang -target arm64-apple-ios26  -### -c %s 2>&1 | FileCheck %s --check-prefix=A12
 // RUN: %clang -target arm64e-apple-ios26 -### -c %s 2>&1 | FileCheck %s --check-prefix=A12
 
-// arm64e/arm64_32 watchOS 26 default to apple-s6.
+/// arm64e/arm64_32 watchOS 26 default to apple-s6.
 // RUN: %clang -target arm64e-apple-watchos26   -### -c %s 2>&1 | FileCheck %s --check-prefix=S6
 // RUN: %clang -target arm64_32-apple-watchos26 -### -c %s 2>&1 | FileCheck %s --check-prefix=S6
 
-// arm64 is new in watchOS 26, and defaults to apple-s6.
+/// arm64 is new in watchOS 26, and defaults to apple-s6.
 // RUN: %clang -target arm64-apple-watchos26  -### -c %s 2>&1 | FileCheck %s --check-prefix=S6
 
 /// llvm usually treats tvOS like iOS, but it runs on different hardware.
