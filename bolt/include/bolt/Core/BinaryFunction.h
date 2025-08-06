@@ -148,6 +148,8 @@ public:
     PF_MEMEVENT = 4, /// Profile has mem events.
   };
 
+  void setContainedNegateRAState() { HadNegateRAState = true; }
+  bool containedNegateRAState() { return HadNegateRAState; }
   void setInitialRAState(bool State) { InitialRAState = State; }
   bool getInitialRAState() { return InitialRAState; }
 
@@ -224,6 +226,10 @@ private:
   /// Current state of the function.
   State CurrentState{State::Empty};
 
+  /// Indicates if the Function contained .cfi-negate-ra-state. These are not
+  /// read from the binary. This boolean is used when deciding to run the
+  /// .cfi-negate-ra-state rewriting passes on a function or not.
+  bool HadNegateRAState{false};
   bool InitialRAState{false};
 
   /// A list of symbols associated with the function entry point.

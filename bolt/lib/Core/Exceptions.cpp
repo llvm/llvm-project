@@ -647,6 +647,7 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
       // DW_CFA_GNU_window_save and DW_CFA_AARCH64_negate_ra_state just use the
       // same id but mean different things. The latter is used in AArch64.
       if (Function.getBinaryContext().isAArch64()) {
+        Function.setContainedNegateRAState();
         // The location OpNegateRAState CFIs are needed
         // depends on the order of BasicBlocks, which changes during
         // optimizations. Instead of adding OpNegateRAState CFIs, an annotation

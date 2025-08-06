@@ -137,7 +137,13 @@ void InsertNegateRAState::fixUnknownStates(BinaryFunction &BF) {
 
 Error InsertNegateRAState::runOnFunctions(BinaryContext &BC) {
   ParallelUtilities::WorkFuncTy WorkFun = [&](BinaryFunction &BF) {
-    runOnFunction(BF);
+    if (BF.containedNegateRAState()) {
+      // We can skip functions which did not include negate-ra-state CFIs. This
+      // includes code using pac-ret hardening as well, if the binary is
+      // compiled with `-fno-exceptions -fno-unwind-tables
+      // -fno-asynchronous-unwind-tables`
+      runOnFunction(BF);
+    }
   };
 
   ParallelUtilities::runOnEachFunction(
