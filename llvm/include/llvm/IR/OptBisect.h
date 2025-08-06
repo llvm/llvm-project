@@ -72,6 +72,8 @@ public:
     return BisectLimit != Disabled || !BisectSkipNumbers.empty();
   }
 
+  /// Add pass at index SkipNumber to the list of passes to skip
+  /// during bisection.
   void addSkip(int SkipNumber) { BisectSkipNumbers.insert(SkipNumber); }
 
   /// Set the new optimization limit and reset the counter. Passing
