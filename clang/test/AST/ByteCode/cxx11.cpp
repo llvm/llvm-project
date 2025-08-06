@@ -318,3 +318,15 @@ namespace PR19010 {
   };
   void test() { constexpr Test t; }
 }
+
+namespace ReadMutableInCopyCtor {
+  struct G {
+    struct X {};
+    union U { X a; };
+    mutable U u; // both-note {{declared here}}
+  };
+  constexpr G g1 = {};
+  constexpr G g2 = g1; // both-error {{must be initialized by a constant expression}} \
+                       // both-note {{read of mutable member 'u'}} \
+                       // both-note {{in call to 'G(g1)'}}
+}
