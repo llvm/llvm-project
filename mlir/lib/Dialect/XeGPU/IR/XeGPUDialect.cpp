@@ -350,15 +350,14 @@ SliceAttr SliceAttr::flatten() const {
       llvm::to_vector(llvm::seq<int64_t>(0, layoutAttr.getRank()));
 
   // get remaining dims (flattend) by applying slice ops with all slicedDims
-  SmallVector<int64_t> remainingIndices(indices);
+  SmallVector<int64_t> remainingDims(indices);
   for (auto dim : llvm::reverse(slicedDims))
-    remainingIndices = XeGPUDialect::slice(
-        llvm::ArrayRef<int64_t>(remainingIndices), dim.asArrayRef());
+    remainingDims = XeGPUDialect::slice(llvm::ArrayRef<int64_t>(remainingDims),
+                                        dim.asArrayRef());
 
   // get flattend sliced dims by applying slice ops with the remaining dims
-  SmallVector<int64_t> flattendDims =
-      XeGPUDialect::slice(llvm::ArrayRef<int64_t>(indices),
-                          llvm::ArrayRef<int64_t>(remainingIndices));
+  SmallVector<int64_t> flattendDims = XeGPUDialect::slice(
+      llvm::ArrayRef<int64_t>(indices), llvm::ArrayRef<int64_t>(remainingDims));
 
   return xegpu::SliceAttr::get(
       getContext(), layoutAttr,
