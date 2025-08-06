@@ -15,7 +15,6 @@ add_flang_library(FortranLower
   ConvertProcedureDesignator.cpp
   ConvertType.cpp
   ConvertVariable.cpp
-  CUDA.cpp
   CustomIntrinsicCall.cpp
   HlfirIntrinsics.cpp
   HostAssociations.cpp
