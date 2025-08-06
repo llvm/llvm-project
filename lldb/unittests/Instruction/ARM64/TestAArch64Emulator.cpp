@@ -175,6 +175,6 @@ TEST_F(TestAArch64Emulator, TestAutoAdvancePC) {
   ASSERT_TRUE(
       emu.EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC |
                               eEmulateInstructionOptionIgnoreConditions));
-  ASSERT_EQ(emu.gpr.pc, 0x123456789abcde04);
-  ASSERT_EQ(emu.gpr.x[8], 0x44332211);
+  ASSERT_EQ(emu.gpr.pc, (uint64_t)0x123456789abcde04);
+  ASSERT_EQ(emu.gpr.x[8], (uint64_t)0x44332211);
 }

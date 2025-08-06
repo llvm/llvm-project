@@ -8301,7 +8301,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
   VPRecipeBase *Recipe;
   Instruction *Instr = R->getUnderlyingInstr();
   SmallVector<VPValue *, 4> Operands(R->operands());
-  if (auto *PhiR = dyn_cast<VPWidenPHIRecipe>(R)) {
+  if (auto *PhiR = dyn_cast<VPPhi>(R)) {
     VPBasicBlock *Parent = PhiR->getParent();
     [[maybe_unused]] VPRegionBlock *LoopRegionOf =
         Parent->getEnclosingLoopRegion();
@@ -8339,6 +8339,7 @@ VPRecipeBase *VPRecipeBuilder::tryToCreateWidenRecipe(VPSingleDefRecipe *R,
     PhiRecipe->addOperand(Operands[1]);
     return PhiRecipe;
   }
+  assert(!R->isPhi() && "only VPPhi nodes expected at this point");
 
   if (isa<TruncInst>(Instr) && (Recipe = tryToOptimizeInductionTruncate(
                                     cast<TruncInst>(Instr), Operands, Range)))
@@ -10321,8 +10322,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
       // TODO: Move to general VPlan pipeline once epilogue loops are also
       // supported.
-      VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
-                               BestPlan, VF.Width, IC, PSE);
+      VPlanTransforms::runPass(
+          VPlanTransforms::materializeConstantVectorTripCount, BestPlan,
+          VF.Width, IC, PSE);
 
       LVP.executePlan(VF.Width, IC, BestPlan, Unroller, DT, false);
 
@@ -10393,8 +10395,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                Checks, BestPlan);
         // TODO: Move to general VPlan pipeline once epilogue loops are also
         // supported.
-        VPlanTransforms::runPass(VPlanTransforms::materializeVectorTripCount,
-                                 BestPlan, VF.Width, IC, PSE);
+        VPlanTransforms::runPass(
+            VPlanTransforms::materializeConstantVectorTripCount, BestPlan,
+            VF.Width, IC, PSE);
 
         LVP.executePlan(VF.Width, IC, BestPlan, LB, DT, false);
         ++LoopsVectorized;
