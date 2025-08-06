@@ -2002,6 +2002,12 @@ void COFFDumper::printCOFFBaseReloc() {
 }
 
 void COFFDumper::printCOFFPseudoReloc() {
+  if (!Obj->getDOSHeader()) {
+    W.startLine()
+        << "pseudo-relocation is only meaningful for a PE image file\n";
+    return;
+  }
+
   const StringRef RelocBeginName = Obj->getArch() == Triple::x86
                                        ? "___RUNTIME_PSEUDO_RELOC_LIST__"
                                        : "__RUNTIME_PSEUDO_RELOC_LIST__";
