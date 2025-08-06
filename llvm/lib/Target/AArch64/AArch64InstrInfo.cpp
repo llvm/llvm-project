@@ -5861,33 +5861,41 @@ void AArch64InstrInfo::decomposeStackOffsetForFrameOffsets(
   }
 }
 
-// Convenience function to create a DWARF expression for
-//   Expr + NumBytes + NumVGScaledBytes * AArch64::VG
-static void appendVGScaledOffsetExpr(SmallVectorImpl<char> &Expr, int NumBytes,
-                                     int NumVGScaledBytes, unsigned VG,
-                                     llvm::raw_string_ostream &Comment) {
-  uint8_t buffer[16];
-
-  if (NumBytes) {
+// Convenience function to create a DWARF expression for: Constant `Operation`.
+// This helper emits compact sequences for common cases. For example, for`-15
+// DW_OP_plus`, this helper would create DW_OP_lit15 DW_OP_minus.
+static void appendConstantExpr(SmallVectorImpl<char> &Expr, int64_t Constant,
+                               dwarf::LocationAtom Operation) {
+  if (Operation == dwarf::DW_OP_plus && Constant < 0 && -Constant <= 31) {
+    // -Constant (1 to 31)
+    Expr.push_back(dwarf::DW_OP_lit0 - Constant);
+    Operation = dwarf::DW_OP_minus;
+  } else if (Constant >= 0 && Constant <= 31) {
+    // Literal value 0 to 31
+    Expr.push_back(dwarf::DW_OP_lit0 + Constant);
+  } else {
+    // Signed constant
     Expr.push_back(dwarf::DW_OP_consts);
-    Expr.append(buffer, buffer + encodeSLEB128(NumBytes, buffer));
-    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
-    Comment << (NumBytes < 0 ? " - " : " + ") << std::abs(NumBytes);
+    appendLEB128<LEB128Sign::Signed>(Expr, Constant);
   }
+  return Expr.push_back(Operation);
+}
 
-  if (NumVGScaledBytes) {
-    Expr.push_back((uint8_t)dwarf::DW_OP_consts);
-    Expr.append(buffer, buffer + encodeSLEB128(NumVGScaledBytes, buffer));
+// Convenience function to create a DWARF expression for a register.
+static void appendReadRegExpr(SmallVectorImpl<char> &Expr, unsigned RegNum) {
+  Expr.push_back(dwarf::DW_OP_bregx);
+  appendLEB128<LEB128Sign::Unsigned>(Expr, RegNum);
+  Expr.push_back(0);
+}
 
-    Expr.push_back((uint8_t)dwarf::DW_OP_bregx);
-    Expr.append(buffer, buffer + encodeULEB128(VG, buffer));
-    Expr.push_back(0);
-
-    Expr.push_back((uint8_t)dwarf::DW_OP_mul);
-    Expr.push_back((uint8_t)dwarf::DW_OP_plus);
-
-    Comment << (NumVGScaledBytes < 0 ? " - " : " + ")
-            << std::abs(NumVGScaledBytes) << " * VG";
+// Convenience function to create a comment for
+//  (+/-) NumBytes (* RegScale)?
+static void appendOffsetComment(int NumBytes, llvm::raw_string_ostream &Comment,
+                                StringRef RegScale = {}) {
+  if (NumBytes) {
+    Comment << (NumBytes < 0 ? " - " : " + ") << std::abs(NumBytes);
+    if (!RegScale.empty())
+      Comment << ' ' << RegScale;
   }
 }
 
@@ -5909,19 +5917,26 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   else
     Comment << printReg(Reg, &TRI);
 
-  // Build up the expression (Reg + NumBytes + NumVGScaledBytes * AArch64::VG)
+  // Build up the expression (Reg + NumBytes + VG * NumVGScaledBytes)
   SmallString<64> Expr;
   unsigned DwarfReg = TRI.getDwarfRegNum(Reg, true);
-  Expr.push_back((uint8_t)(dwarf::DW_OP_breg0 + DwarfReg));
-  Expr.push_back(0);
-  appendVGScaledOffsetExpr(Expr, NumBytes, NumVGScaledBytes,
-                           TRI.getDwarfRegNum(AArch64::VG, true), Comment);
+  assert(DwarfReg >= 0 && DwarfReg <= 31 && "DwarfReg out of bounds (0..31)");
+  // Reg + NumBytes
+  Expr.push_back(dwarf::DW_OP_breg0 + DwarfReg);
+  appendLEB128<LEB128Sign::Signed>(Expr, NumBytes);
+  appendOffsetComment(NumBytes, Comment);
+  if (NumVGScaledBytes) {
+    // + VG * NumVGScaledBytes
+    appendOffsetComment(NumVGScaledBytes, Comment, "* VG");
+    appendReadRegExpr(Expr, TRI.getDwarfRegNum(AArch64::VG, true));
+    appendConstantExpr(Expr, NumVGScaledBytes, dwarf::DW_OP_mul);
+    Expr.push_back(dwarf::DW_OP_plus);
+  }
 
   // Wrap this into DW_CFA_def_cfa.
   SmallString<64> DefCfaExpr;
   DefCfaExpr.push_back(dwarf::DW_CFA_def_cfa_expression);
-  uint8_t buffer[16];
-  DefCfaExpr.append(buffer, buffer + encodeULEB128(Expr.size(), buffer));
+  appendLEB128<LEB128Sign::Unsigned>(DefCfaExpr, Expr.size());
   DefCfaExpr.append(Expr.str());
   return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
                                         Comment.str());
@@ -5958,17 +5973,25 @@ MCCFIInstruction llvm::createCFAOffset(const TargetRegisterInfo &TRI,
   llvm::raw_string_ostream Comment(CommentBuffer);
   Comment << printReg(Reg, &TRI) << "  @ cfa";
 
-  // Build up expression (NumBytes + NumVGScaledBytes * AArch64::VG)
+  // Build up expression (CFA + VG * NumVGScaledBytes + NumBytes)
+  assert(NumVGScaledBytes && "Expected scalable offset");
   SmallString<64> OffsetExpr;
-  appendVGScaledOffsetExpr(OffsetExpr, NumBytes, NumVGScaledBytes,
-                           TRI.getDwarfRegNum(AArch64::VG, true), Comment);
+  // + VG * NumVGScaledBytes
+  appendOffsetComment(NumVGScaledBytes, Comment, "* VG");
+  appendReadRegExpr(OffsetExpr, TRI.getDwarfRegNum(AArch64::VG, true));
+  appendConstantExpr(OffsetExpr, NumVGScaledBytes, dwarf::DW_OP_mul);
+  OffsetExpr.push_back(dwarf::DW_OP_plus);
+  if (NumBytes) {
+    // + NumBytes
+    appendOffsetComment(NumBytes, Comment);
+    appendConstantExpr(OffsetExpr, NumBytes, dwarf::DW_OP_plus);
+  }
 
   // Wrap this into DW_CFA_expression
   SmallString<64> CfaExpr;
   CfaExpr.push_back(dwarf::DW_CFA_expression);
-  uint8_t buffer[16];
-  CfaExpr.append(buffer, buffer + encodeULEB128(DwarfReg, buffer));
-  CfaExpr.append(buffer, buffer + encodeULEB128(OffsetExpr.size(), buffer));
+  appendLEB128<LEB128Sign::Unsigned>(CfaExpr, DwarfReg);
+  appendLEB128<LEB128Sign::Unsigned>(CfaExpr, OffsetExpr.size());
   CfaExpr.append(OffsetExpr.str());
 
   return MCCFIInstruction::createEscape(nullptr, CfaExpr.str(), SMLoc(),
