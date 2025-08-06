@@ -476,12 +476,9 @@ define void @pack_lo_packh_hi_packh_3(i8 %0, i8 %1, i8 %2, i8 %3, ptr %p) nounwi
 ;
 ; RV64ZBKB-LABEL: pack_lo_packh_hi_packh_3:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    zext.b a2, a2
-; RV64ZBKB-NEXT:    slli a3, a3, 24
 ; RV64ZBKB-NEXT:    packh a0, a0, a1
-; RV64ZBKB-NEXT:    slli a2, a2, 16
-; RV64ZBKB-NEXT:    or a0, a3, a0
-; RV64ZBKB-NEXT:    or a0, a2, a0
+; RV64ZBKB-NEXT:    packh a1, a3, a2
+; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    sw a0, 0(a4)
 ; RV64ZBKB-NEXT:    ret
   %a = zext i8 %0 to i32
@@ -568,11 +565,9 @@ define void @pack_i32_lo_noext_hi_packh_nozeroext(i32 %a, i8 %1, i8 %2, ptr %p) 
 ;
 ; RV64ZBKB-LABEL: pack_i32_lo_noext_hi_packh_nozeroext:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    zext.b a1, a1
-; RV64ZBKB-NEXT:    slli a2, a2, 24
+; RV64ZBKB-NEXT:    packh a1, a1, a2
 ; RV64ZBKB-NEXT:    slli a1, a1, 16
-; RV64ZBKB-NEXT:    or a0, a2, a0
-; RV64ZBKB-NEXT:    or a0, a0, a1
+; RV64ZBKB-NEXT:    or a0, a1, a0
 ; RV64ZBKB-NEXT:    sw a0, 0(a3)
 ; RV64ZBKB-NEXT:    ret
   %b = zext i8 %1 to i32
