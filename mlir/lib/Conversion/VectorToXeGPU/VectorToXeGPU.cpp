@@ -394,9 +394,9 @@ static Value collapseMemrefTo1D(VectorTransferOpInterface xferOp,
 // Create XeGPU gather load operation
 static LogicalResult createLoadGather(vector::TransferReadOp readOp,
                                       PatternRewriter &rewriter,
-                                      Value flatMemref, Value localOffsets,
-                                      VectorType vectorType) {
+                                      Value flatMemref, Value localOffsets) {
   Location loc = readOp.getLoc();
+  VectorType vectorType = readOp.getVectorType();
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
   Value mask = rewriter.create<vector::ConstantMaskOp>(
       loc, VectorType::get(vectorShape, rewriter.getI1Type()), vectorShape);
@@ -412,10 +412,10 @@ static LogicalResult createLoadGather(vector::TransferReadOp readOp,
 
 // Create XeGPU store scatter operation
 static LogicalResult createStoreScatter(vector::TransferWriteOp writeOp,
-                                        PatternRewriter &rewriter,
-                                        Value flatMemref, Value localOffsets,
-                                        Value value, VectorType vectorType) {
+                                        PatternRewriter &rewriter, Value value,
+                                        Value flatMemref, Value localOffsets) {
   Location loc = writeOp.getLoc();
+  VectorType vectorType = writeOp.getVectorType();
   ArrayRef<int64_t> vectorShape = vectorType.getShape();
   Value mask = rewriter.create<vector::ConstantMaskOp>(
       loc, VectorType::get(vectorShape, rewriter.getI1Type()), vectorShape);
@@ -436,17 +436,13 @@ LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
   if (!memrefType)
     return rewriter.notifyMatchFailure(readOp, "Expected memref source");
 
-  VectorType vectorType = readOp.getVectorType();
-  Type elementType = vectorType.getElementType();
-
   SmallVector<Value> strides = computeStrides(readOp, rewriter);
 
   Value localOffsets = computeGatherOffsets(readOp, rewriter, strides);
 
   Value flatMemref = collapseMemrefTo1D(readOp, rewriter);
 
-  return createLoadGather(readOp, rewriter, flatMemref, localOffsets,
-                          vectorType);
+  return createLoadGather(readOp, rewriter, flatMemref, localOffsets);
 }
 
 LogicalResult lowerTransferWriteToStoreOp(vector::TransferWriteOp writeOp,
@@ -456,13 +452,6 @@ LogicalResult lowerTransferWriteToStoreOp(vector::TransferWriteOp writeOp,
   if (!memrefType)
     return rewriter.notifyMatchFailure(writeOp, "Expected memref source");
 
-  Value baseMemref = writeOp.getBase();
-  AffineMap permMap = writeOp.getPermutationMap();
-  VectorType vectorType = writeOp.getVectorType();
-  Type elementType = vectorType.getElementType();
-  SmallVector<Value> indices(writeOp.getIndices().begin(),
-                             writeOp.getIndices().end());
-
   SmallVector<Value> strides = computeStrides(writeOp, rewriter);
 
   Value localOffsets = computeGatherOffsets(writeOp, rewriter, strides);
@@ -470,7 +459,7 @@ LogicalResult lowerTransferWriteToStoreOp(vector::TransferWriteOp writeOp,
   Value flatMemref = collapseMemrefTo1D(writeOp, rewriter);
 
   return createStoreScatter(writeOp, rewriter, writeOp.getVector(), flatMemref,
-                            localOffsets, vectorType);
+                            localOffsets);
 }
 
 static LogicalResult
