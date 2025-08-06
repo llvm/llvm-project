@@ -85,6 +85,7 @@ protected:
 
   bool IsStreaming;
   bool IsStreamingCompatible;
+  bool UseNewSMEABILowering = false;
   std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
@@ -128,7 +129,7 @@ public:
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
-                   bool HasMinSize = false);
+                   bool HasMinSize = false, bool UseNewSMEABILowering = false);
 
   virtual unsigned getHwModeSet() const override;
 
@@ -211,6 +212,9 @@ public:
   bool isSVEorStreamingSVEAvailable() const {
     return hasSVE() || isStreamingSVEAvailable();
   }
+
+  /// Returns true if the new SME ABI lowering should be used.
+  bool useNewSMEABILowering() const { return UseNewSMEABILowering; }
 
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
