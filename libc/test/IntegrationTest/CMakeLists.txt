@@ -13,5 +13,6 @@ add_object_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.CPP.atomic
     ${arch_specific_deps}
 )

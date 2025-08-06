@@ -2262,7 +2262,7 @@ llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
   auto *CE = dyn_cast<const CXXMemberCallExpr *>(E);
   auto *D = dyn_cast<const CXXDeleteExpr *>(E);
   assert((CE != nullptr) ^ (D != nullptr));
-  assert(CE == nullptr || CE->arg_begin() == CE->arg_end());
+  assert(CE == nullptr || CE->arguments().empty());
   assert(DtorType == Dtor_Deleting || DtorType == Dtor_Complete);
 
   GlobalDecl GD(Dtor, DtorType);
