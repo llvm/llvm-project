@@ -60,7 +60,7 @@ def SMT_VDot_Slide3 : SMTVEncoding2<0b10>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 // Base vector dot product (no slide) format.
-class RVInstSMTVDot<bits<2> sign, string opcodestr, string argstr>
+class RVInstSMTVDot<SMTVEncoding2 sign, string opcodestr, string argstr>
     : RVInst<(outs VR:$vd), (ins VR:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
   bits<5> vd;
   bits<5> vs1;
@@ -70,14 +70,14 @@ class RVInstSMTVDot<bits<2> sign, string opcodestr, string argstr>
   let Inst{24-20} = vs2;
   let Inst{19-15} = vs1;
   let Inst{14} = 0b0;
-  let Inst{13-12} = sign;
+  let Inst{13-12} = sign.Value;
   let Inst{11-8} = vd{4-1};
   let Inst{7} = 0b0;
   let Inst{6-0} = OPC_CUSTOM_1.Value;
 }
 
 // Sliding-window vector dot product format.
-class RVInstSMTVDotSlide<bits<2> funct2, bits<2> sign, string opcodestr, string argstr>
+class RVInstSMTVDotSlide<SMTVEncoding2 funct2, SMTVEncoding2 sign, string opcodestr, string argstr>
     : RVInst<(outs VR:$vd), (ins VR:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
   bits<5> vd;
   bits<5> vs1;
@@ -86,8 +86,8 @@ class RVInstSMTVDotSlide<bits<2> funct2, bits<2> sign, string opcodestr, string 
   let Inst{31-25} = OPMMA_SLIDE.Value;
   let Inst{24-20} = vs2;
   let Inst{19-16} = vs1{4-1};
-  let Inst{15-14} = funct2;
-  let Inst{13-12} = sign;
+  let Inst{15-14} = funct2.Value;
+  let Inst{13-12} = sign.Value;
   let Inst{11-8} = vd{4-1};
   let Inst{7} = 0b0;
   let Inst{6-0} = OPC_CUSTOM_1.Value;
@@ -105,10 +105,10 @@ let Predicates = [HasVendorXSMTVDot] in {
 // NOTE: Destination registers (vd) MUST be even-numbered (v0, v2, ..., v30)
 //       due to hardware alignment constraints. Using odd registers may cause undefined behavior.
 // TODO: Enforce even-numbered vd.
-def VMADOT   : RVInstSMTVDot<SMT_VDot_SS.Value, "smt.vmadot",   "$vd, $vs1, $vs2">;
-def VMADOTU  : RVInstSMTVDot<SMT_VDot_UU.Value, "smt.vmadotu",  "$vd, $vs1, $vs2">;
-def VMADOTSU : RVInstSMTVDot<SMT_VDot_SU.Value, "smt.vmadotsu", "$vd, $vs1, $vs2">;
-def VMADOTUU : RVInstSMTVDot<SMT_VDot_US.Value, "smt.vmadotus", "$vd, $vs1, $vs2">;
+def VMADOT   : RVInstSMTVDot<SMT_VDot_SS, "smt.vmadot",   "$vd, $vs1, $vs2">;
+def VMADOTU  : RVInstSMTVDot<SMT_VDot_UU, "smt.vmadotu",  "$vd, $vs1, $vs2">;
+def VMADOTSU : RVInstSMTVDot<SMT_VDot_SU, "smt.vmadotsu", "$vd, $vs1, $vs2">;
+def VMADOTUU : RVInstSMTVDot<SMT_VDot_US, "smt.vmadotus", "$vd, $vs1, $vs2">;
 
 //===----------------------------------------------------------------------===//
 // Sliding-window Vector Dot Product Instructions
@@ -125,17 +125,17 @@ def VMADOTUU : RVInstSMTVDot<SMT_VDot_US.Value, "smt.vmadotus", "$vd, $vs1, $vs2
 //       even-numbered (v0, v2, ..., v30) due to hardware alignment constraints.
 //       Using odd registers may cause undefined behavior.
 // TODO: Enforce even-numbered vd.
-def VMADOT1   : RVInstSMTVDotSlide<SMT_VDot_Slide1.Value, SMT_VDot_SS.Value, "smt.vmadot1",   "$vd, $vs1, $vs2">;
-def VMADOT1U  : RVInstSMTVDotSlide<SMT_VDot_Slide1.Value, SMT_VDot_UU.Value, "smt.vmadot1u",  "$vd, $vs1, $vs2">;
-def VMADOT1SU : RVInstSMTVDotSlide<SMT_VDot_Slide1.Value, SMT_VDot_SU.Value, "smt.vmadot1su", "$vd, $vs1, $vs2">;
-def VMADOT1UU : RVInstSMTVDotSlide<SMT_VDot_Slide1.Value, SMT_VDot_US.Value, "smt.vmadot1us", "$vd, $vs1, $vs2">;
-def VMADOT2   : RVInstSMTVDotSlide<SMT_VDot_Slide2.Value, SMT_VDot_SS.Value, "smt.vmadot2",   "$vd, $vs1, $vs2">;
-def VMADOT2U  : RVInstSMTVDotSlide<SMT_VDot_Slide2.Value, SMT_VDot_UU.Value, "smt.vmadot2u",  "$vd, $vs1, $vs2">;
-def VMADOT2SU : RVInstSMTVDotSlide<SMT_VDot_Slide2.Value, SMT_VDot_SU.Value, "smt.vmadot2su", "$vd, $vs1, $vs2">;
-def VMADOT2UU : RVInstSMTVDotSlide<SMT_VDot_Slide2.Value, SMT_VDot_US.Value, "smt.vmadot2us", "$vd, $vs1, $vs2">;
-def VMADOT3   : RVInstSMTVDotSlide<SMT_VDot_Slide3.Value, SMT_VDot_SS.Value, "smt.vmadot3",   "$vd, $vs1, $vs2">;
-def VMADOT3U  : RVInstSMTVDotSlide<SMT_VDot_Slide3.Value, SMT_VDot_UU.Value, "smt.vmadot3u",  "$vd, $vs1, $vs2">;
-def VMADOT3SU : RVInstSMTVDotSlide<SMT_VDot_Slide3.Value, SMT_VDot_SU.Value, "smt.vmadot3su", "$vd, $vs1, $vs2">;
-def VMADOT3UU : RVInstSMTVDotSlide<SMT_VDot_Slide3.Value, SMT_VDot_US.Value, "smt.vmadot3us", "$vd, $vs1, $vs2">;
+def VMADOT1   : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_SS, "smt.vmadot1",   "$vd, $vs1, $vs2">;
+def VMADOT1U  : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_UU, "smt.vmadot1u",  "$vd, $vs1, $vs2">;
+def VMADOT1SU : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_SU, "smt.vmadot1su", "$vd, $vs1, $vs2">;
+def VMADOT1UU : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_US, "smt.vmadot1us", "$vd, $vs1, $vs2">;
+def VMADOT2   : RVInstSMTVDotSlide<SMT_VDot_Slide2, SMT_VDot_SS, "smt.vmadot2",   "$vd, $vs1, $vs2">;
+def VMADOT2U  : RVInstSMTVDotSlide<SMT_VDot_Slide2, SMT_VDot_UU, "smt.vmadot2u",  "$vd, $vs1, $vs2">;
+def VMADOT2SU : RVInstSMTVDotSlide<SMT_VDot_Slide2, SMT_VDot_SU, "smt.vmadot2su", "$vd, $vs1, $vs2">;
+def VMADOT2UU : RVInstSMTVDotSlide<SMT_VDot_Slide2, SMT_VDot_US, "smt.vmadot2us", "$vd, $vs1, $vs2">;
+def VMADOT3   : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_SS, "smt.vmadot3",   "$vd, $vs1, $vs2">;
+def VMADOT3U  : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_UU, "smt.vmadot3u",  "$vd, $vs1, $vs2">;
+def VMADOT3SU : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_SU, "smt.vmadot3su", "$vd, $vs1, $vs2">;
+def VMADOT3UU : RVInstSMTVDotSlide<SMT_VDot_Slide3, SMT_VDot_US, "smt.vmadot3us", "$vd, $vs1, $vs2">;
 }
 }
