@@ -3750,9 +3750,8 @@ void VPAliasLaneMaskRecipe::execute(VPTransformState &State) {
   Value *SinkValue = State.get(getSinkValue(), true);
   Value *SourceValue = State.get(getSourceValue(), true);
 
-  unsigned IntrinsicID = WriteAfterRead
-                             ? Intrinsic::loop_dependence_war_mask
-                             : Intrinsic::loop_dependence_raw_mask;
+  unsigned IntrinsicID = WriteAfterRead ? Intrinsic::loop_dependence_war_mask
+                                        : Intrinsic::loop_dependence_raw_mask;
   Value *SourceAsPtr = Builder.CreateCast(Instruction::IntToPtr, SourceValue,
                                           Builder.getPtrTy());
   Value *SinkAsPtr =

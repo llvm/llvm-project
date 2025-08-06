@@ -5540,6 +5540,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
   return Cost;
 }
 
+bool AArch64TTIImpl::useSafeEltsMask(ElementCount VF) const {
+  // The whilewr/rw instructions require SVE2
+  return ST->hasSVE2();
+}
+
 InstructionCost
 AArch64TTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                                VectorType *SrcTy, ArrayRef<int> Mask,
