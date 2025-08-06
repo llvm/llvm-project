@@ -146,8 +146,39 @@ readMemInfoBlocksCommon(const char *Ptr, bool IsHistogramEncoded = false) {
     const uint64_t Id =
         endian::readNext<uint64_t, llvm::endianness::little, unaligned>(Ptr);
 
-    MemInfoBlock MIB = *reinterpret_cast<const MemInfoBlock *>(Ptr);
-    Ptr += sizeof(MemInfoBlock);
+    MemInfoBlock MIB;
+#define READ_MIB_FIELD(FIELD)                                                  \
+  MIB.FIELD = endian::readNext<decltype(MIB.FIELD), llvm::endianness::little,  \
+                               unaligned>(Ptr)
+
+    READ_MIB_FIELD(AllocCount);
+    READ_MIB_FIELD(TotalAccessCount);
+    READ_MIB_FIELD(MinAccessCount);
+    READ_MIB_FIELD(MaxAccessCount);
+    READ_MIB_FIELD(TotalSize);
+    READ_MIB_FIELD(MinSize);
+    READ_MIB_FIELD(MaxSize);
+    READ_MIB_FIELD(AllocTimestamp);
+    READ_MIB_FIELD(DeallocTimestamp);
+    READ_MIB_FIELD(TotalLifetime);
+    READ_MIB_FIELD(MinLifetime);
+    READ_MIB_FIELD(MaxLifetime);
+    READ_MIB_FIELD(AllocCpuId);
+    READ_MIB_FIELD(DeallocCpuId);
+    READ_MIB_FIELD(NumMigratedCpu);
+    READ_MIB_FIELD(NumLifetimeOverlaps);
+    READ_MIB_FIELD(NumSameAllocCpu);
+    READ_MIB_FIELD(NumSameDeallocCpu);
+    READ_MIB_FIELD(DataTypeId);
+    READ_MIB_FIELD(TotalAccessDensity);
+    READ_MIB_FIELD(MinAccessDensity);
+    READ_MIB_FIELD(MaxAccessDensity);
+    READ_MIB_FIELD(TotalLifetimeAccessDensity);
+    READ_MIB_FIELD(MinLifetimeAccessDensity);
+    READ_MIB_FIELD(MaxLifetimeAccessDensity);
+    READ_MIB_FIELD(AccessHistogramSize);
+    READ_MIB_FIELD(AccessHistogram);
+#undef READ_MIB_FIELD
 
     if (MIB.AccessHistogramSize > 0) {
       // The in-memory representation uses uint64_t for histogram entries.
