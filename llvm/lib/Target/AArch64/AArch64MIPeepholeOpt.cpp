@@ -206,6 +206,7 @@ static bool splitDisjointBitmaskImm(T Imm, unsigned RegSize, T &Imm1Enc,
       LowestBitSet + llvm::countr_one(Imm >> LowestBitSet);
 
   // Create a mask for the least significant group of consecutive ones.
+  assert(LowestGapBitUnset < sizeof(T) * CHAR_BIT && "Undefined behaviour!");
   T NewImm1 = (static_cast<T>(1) << LowestGapBitUnset) -
               (static_cast<T>(1) << LowestBitSet);
   // Create a disjoint mask for the remaining ones.
