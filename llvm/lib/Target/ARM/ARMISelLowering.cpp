@@ -2026,14 +2026,16 @@ static bool isS16(const SDValue &Op, SelectionDAG &DAG) {
 }
 
 /// IntCCToARMCC - Convert a DAG integer condition code to an ARM CC
-static ARMCC::CondCodes IntCCToARMCC(ISD::CondCode CC) {
+static ARMCC::CondCodes IntCCToARMCC(ISD::CondCode CC, SDValue RHS = {}) {
   switch (CC) {
   default: llvm_unreachable("Unknown condition code!");
   case ISD::SETNE:  return ARMCC::NE;
   case ISD::SETEQ:  return ARMCC::EQ;
   case ISD::SETGT:  return ARMCC::GT;
-  case ISD::SETGE:  return ARMCC::GE;
-  case ISD::SETLT:  return ARMCC::LT;
+  case ISD::SETGE:
+    return (RHS && isNullConstant(RHS)) ? ARMCC::PL : ARMCC::GE;
+  case ISD::SETLT:
+    return (RHS && isNullConstant(RHS)) ? ARMCC::MI : ARMCC::LT;
   case ISD::SETLE:  return ARMCC::LE;
   case ISD::SETUGT: return ARMCC::HI;
   case ISD::SETUGE: return ARMCC::HS;
@@ -4934,22 +4936,7 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     return Shift.getValue(1);
   }
 
-  ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
-
-  // If the RHS is a constant zero then the V (overflow) flag will never be
-  // set. This can allow us to simplify GE to PL or LT to MI, which can be
-  // simpler for other passes (like the peephole optimiser) to deal with.
-  if (isNullConstant(RHS)) {
-    switch (CondCode) {
-      default: break;
-      case ARMCC::GE:
-        CondCode = ARMCC::PL;
-        break;
-      case ARMCC::LT:
-        CondCode = ARMCC::MI;
-        break;
-    }
-  }
+  ARMCC::CondCodes CondCode = IntCCToARMCC(CC, RHS);
 
   ARMISD::NodeType CompareType;
   switch (CondCode) {
