@@ -340,16 +340,12 @@ static void lowerConstrainedFPCmpIntrinsic(
     SmallVector<Instruction *> &EraseFromParent) {
   if (!ConstrainedCmpIntrinsic)
     return;
-
   // Extract the floating-point values being compared
   Value *LHS = ConstrainedCmpIntrinsic->getArgOperand(0);
   Value *RHS = ConstrainedCmpIntrinsic->getArgOperand(1);
   FCmpInst::Predicate Pred = ConstrainedCmpIntrinsic->getPredicate();
-
-  // Insert the replacement fcmp instruction
   IRBuilder<> Builder(ConstrainedCmpIntrinsic);
   Value *FCmp = Builder.CreateFCmp(Pred, LHS, RHS);
-
   ConstrainedCmpIntrinsic->replaceAllUsesWith(FCmp);
   EraseFromParent.push_back(dyn_cast<Instruction>(ConstrainedCmpIntrinsic));
 }
@@ -449,9 +445,8 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
       }
     }
   }
-  for (auto *I : EraseFromParent) {
+  for (auto *I : EraseFromParent)
     I->eraseFromParent();
-  }
   return Changed;
 }
 

@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK
-; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK-DAG: OpFOrdEqual
 ; CHECK-DAG: OpFOrdGreaterThan
@@ -18,22 +18,21 @@
 
 define dso_local spir_kernel void @test(float %a){
 entry:
-  %cmp = tail call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %a, metadata !"oeq", metadata !"fpexcept.strict") #2
-  %cmp1 = tail call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %a, metadata !"ogt", metadata !"fpexcept.strict") #2
-  %cmp2 = tail call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %a, metadata !"oge", metadata !"fpexcept.strict") #2
-  %cmp3 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"olt", metadata !"fpexcept.strict") #2
-  %cmp4 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ole", metadata !"fpexcept.strict") #2
-  %cmp5 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"one", metadata !"fpexcept.strict") #2
-  %cmp6 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ord", metadata !"fpexcept.strict") #2
-  %cmp7 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ueq", metadata !"fpexcept.strict") #2
-  %cmp8 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ugt", metadata !"fpexcept.strict") #2
-  %cmp9 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"uge", metadata !"fpexcept.strict") #2
-  %cmp10 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ult", metadata !"fpexcept.strict") #2
-  %cmp11 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ule", metadata !"fpexcept.strict") #2
-  %cmp12 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"une", metadata !"fpexcept.strict") #2
-  %cmp13 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"uno", metadata !"fpexcept.strict") #2
+  %cmp = tail call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %a, metadata !"oeq", metadata !"fpexcept.strict") 
+  %cmp1 = tail call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %a, metadata !"ogt", metadata !"fpexcept.strict") 
+  %cmp2 = tail call i1 @llvm.experimental.constrained.fcmps.f32(float %a, float %a, metadata !"oge", metadata !"fpexcept.strict") 
+  %cmp3 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"olt", metadata !"fpexcept.strict") 
+  %cmp4 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ole", metadata !"fpexcept.strict") 
+  %cmp5 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"one", metadata !"fpexcept.strict") 
+  %cmp6 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ord", metadata !"fpexcept.strict") 
+  %cmp7 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ueq", metadata !"fpexcept.strict") 
+  %cmp8 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ugt", metadata !"fpexcept.strict") 
+  %cmp9 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"uge", metadata !"fpexcept.strict") 
+  %cmp10 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ult", metadata !"fpexcept.strict") 
+  %cmp11 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"ule", metadata !"fpexcept.strict") 
+  %cmp12 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"une", metadata !"fpexcept.strict") 
+  %cmp13 = tail call i1 @llvm.experimental.constrained.fcmp.f32(float %a, float %a, metadata !"uno", metadata !"fpexcept.strict") 
 
-  ; Chain all comparisons using 'or'
   %or1 = or i1 %cmp, %cmp1
   %or2 = or i1 %or1, %cmp2
   %or3 = or i1 %or2, %cmp3
@@ -53,5 +52,5 @@ true_block:
 false_block:
   ret void
 }
-declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata) #1
-declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata) #1
+declare i1 @llvm.experimental.constrained.fcmps.f32(float, float, metadata, metadata) 
+declare i1 @llvm.experimental.constrained.fcmp.f32(float, float, metadata, metadata) 

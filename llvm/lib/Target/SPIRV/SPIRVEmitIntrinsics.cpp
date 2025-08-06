@@ -2432,6 +2432,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     // already, and force it to be i8 if not
     if (Postpone && !GR->findAssignPtrTypeInstr(I))
       insertAssignPtrTypeIntrs(I, B, true);
+
     if (auto *FPI = dyn_cast<ConstrainedFPIntrinsic>(I))
       useRoundingMode(FPI, B);
   }
