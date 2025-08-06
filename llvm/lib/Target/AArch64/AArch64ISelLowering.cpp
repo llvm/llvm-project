@@ -11391,13 +11391,18 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     //   select_cc lhs, rhs, sub(rhs, lhs), sub(lhs, rhs), cc ->
     //   select_cc lhs, rhs, neg(sub(lhs, rhs)), sub(lhs, rhs), cc
     // The second forms can be matched into subs+cneg.
+    // NOTE: Drop poison generating flags from the negated operand to avoid
+    // inadvertently propagating poison after the canonicalisation.
     if (TVal.getOpcode() == ISD::SUB && FVal.getOpcode() == ISD::SUB) {
       if (TVal.getOperand(0) == LHS && TVal.getOperand(1) == RHS &&
-          FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS)
+          FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS) {
+        TVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
         FVal = DAG.getNegative(TVal, DL, TVal.getValueType());
-      else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
-               FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS)
+      } else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
+                 FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS) {
+        FVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
         TVal = DAG.getNegative(FVal, DL, FVal.getValueType());
+      }
     }
 
     unsigned Opcode = AArch64ISD::CSEL;
@@ -25448,6 +25453,29 @@ static SDValue performCSELCombine(SDNode *N,
       return DAG.getNode(AArch64ISD::CSEL, DL, N->getVTList(), N->getOperand(0),
                          N->getOperand(1), getCondCode(DAG, NewCond),
                          Sub.getValue(1));
+    }
+  }
+
+  // CSEL a, b, cc, SUBS(SUB(x,y), 0) -> CSEL a, b, cc, SUBS(x,y) if cc doesn't
+  // use overflow flags, to avoid the comparison with zero. In case of success,
+  // this also replaces the original SUB(x,y) with the newly created SUBS(x,y).
+  // NOTE: Perhaps in the future use performFlagSettingCombine to replace SUB
+  // nodes with their SUBS equivalent as is already done for other flag-setting
+  // operators, in which case doing the replacement here becomes redundant.
+  if (Cond.getOpcode() == AArch64ISD::SUBS && Cond->hasNUsesOfValue(1, 1) &&
+      isNullConstant(Cond.getOperand(1))) {
+    SDValue Sub = Cond.getOperand(0);
+    AArch64CC::CondCode CC =
+        static_cast<AArch64CC::CondCode>(N->getConstantOperandVal(2));
+    if (Sub.getOpcode() == ISD::SUB &&
+        (CC == AArch64CC::EQ || CC == AArch64CC::NE || CC == AArch64CC::MI ||
+         CC == AArch64CC::PL)) {
+      SDLoc DL(N);
+      SDValue Subs = DAG.getNode(AArch64ISD::SUBS, DL, Cond->getVTList(),
+                                 Sub.getOperand(0), Sub.getOperand(1));
+      DCI.CombineTo(Sub.getNode(), Subs);
+      DCI.CombineTo(Cond.getNode(), Subs, Subs.getValue(1));
+      return SDValue(N, 0);
     }
   }
 
