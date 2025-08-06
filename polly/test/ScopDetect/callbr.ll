@@ -1,7 +1,10 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -polly-detect-track-failures -disable-output -pass-remarks-missed=polly-detect < %s 2>&1 | FileCheck %s --check-prefix=REMARK
+; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -polly-detect-track-failures -disable-output -stats                            < %s 2>&1 | FileCheck %s --check-prefix=STAT
+; REQUIRES: asserts
 
-; CHECK-LABEL: func
-; CHECK-NOT: Valid
+; REMARK: Branch from indirect terminator.
+
+; STAT: 1 polly-detect - Number of rejected regions: Branch from indirect terminator
 
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
