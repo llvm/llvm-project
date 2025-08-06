@@ -10,22 +10,13 @@
 #define LLDB_PLUGINS_PROTOCOL_MCP_RESOURCE_H
 
 #include "lldb/Protocol/MCP/Protocol.h"
+#include "lldb/Protocol/MCP/Resource.h"
 #include "lldb/lldb-private.h"
 #include <vector>
 
 namespace lldb_private::mcp {
 
-class ResourceProvider {
-public:
-  ResourceProvider() = default;
-  virtual ~ResourceProvider() = default;
-
-  virtual std::vector<lldb_protocol::mcp::Resource> GetResources() const = 0;
-  virtual llvm::Expected<lldb_protocol::mcp::ResourceResult>
-  ReadResource(llvm::StringRef uri) const = 0;
-};
-
-class DebuggerResourceProvider : public ResourceProvider {
+class DebuggerResourceProvider : public lldb_protocol::mcp::ResourceProvider {
 public:
   using ResourceProvider::ResourceProvider;
   virtual ~DebuggerResourceProvider() = default;
