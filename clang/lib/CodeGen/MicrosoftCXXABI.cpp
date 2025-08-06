@@ -158,9 +158,15 @@ public:
     // TODO: Add support for exact dynamic_casts.
     return false;
   }
+  std::optional<ExactDynamicCastInfo>
+  getExactDynamicCastInfo(QualType SrcRecordTy, QualType DestTy,
+                          QualType DestRecordTy) override {
+    llvm_unreachable("unsupported");
+  }
   llvm::Value *emitExactDynamicCast(CodeGenFunction &CGF, Address Value,
                                     QualType SrcRecordTy, QualType DestTy,
                                     QualType DestRecordTy,
+                                    const ExactDynamicCastInfo &CastInfo,
                                     llvm::BasicBlock *CastSuccess,
                                     llvm::BasicBlock *CastFail) override {
     llvm_unreachable("unsupported");
