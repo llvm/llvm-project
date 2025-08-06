@@ -1593,6 +1593,14 @@ public:
   }
   bool Pre(const parser::OmpCriticalDirective &x) {
     AddOmpSourceRange(x.source);
+    // Manually resolve names in CRITICAL directives. This is because these
+    // names do not denote Fortran objects, and the CRITICAL directive causes
+    // them to be "auto-declared", i.e. inserted into the global scope.
+    // More specifically, they are not expected to have explicit declarations,
+    // and if they do the behavior is unspeficied.
+    if (auto &maybeName{std::get<std::optional<parser::Name>>(x.t)}) {
+      ResolveCriticalName(*maybeName);
+    }
     return true;
   }
   void Post(const parser::OmpCriticalDirective &) {
@@ -1600,6 +1608,10 @@ public:
   }
   bool Pre(const parser::OmpEndCriticalDirective &x) {
     AddOmpSourceRange(x.source);
+    // Manually resolve names in CRITICAL directives.
+    if (auto &maybeName{std::get<std::optional<parser::Name>>(x.t)}) {
+      ResolveCriticalName(*maybeName);
+    }
     return true;
   }
   void Post(const parser::OmpEndCriticalDirective &) {
@@ -1719,6 +1731,8 @@ private:
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
       const std::optional<parser::OmpClauseList> &clauses,
       const T &wholeConstruct);
+
+  void ResolveCriticalName(const parser::Name &name);
 
   int metaLevel_{0};
   const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
@@ -1944,6 +1958,28 @@ void OmpVisitor::ProcessReductionSpecifier(
   }
   if (name) {
     name->symbol = symbol;
+  }
+}
+
+void OmpVisitor::ResolveCriticalName(const parser::Name &name) {
+  auto &globalScope{[&]() -> Scope & {
+    for (Scope *s{&currScope()};; s = &s->parent()) {
+      if (s->IsTopLevel()) {
+        return *s;
+      }
+    }
+    llvm_unreachable("Cannot find global scope");
+  }()};
+
+  if (auto *symbol{FindInScope(globalScope, name)}) {
+    if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
+      SayWithDecl(name, *symbol,
+          "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
+          name.ToString());
+    }
+  } else {
+    name.symbol = &MakeSymbol(globalScope, name.source, Attrs{});
+    name.symbol->set(Symbol::Flag::OmpCriticalLock);
   }
 }
 
