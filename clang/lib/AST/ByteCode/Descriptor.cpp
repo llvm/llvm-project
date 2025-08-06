@@ -367,7 +367,7 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
 Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
     : Source(D), ElemSize(1), Size(1), MDSize(MD.value_or(0)),
       AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
-      IsTemporary(false), IsDummy(true) {
+      IsTemporary(false) {
   assert(Source && "Missing source");
 }
 
@@ -453,7 +453,7 @@ SourceInfo Descriptor::getLoc() const {
 }
 
 bool Descriptor::hasTrivialDtor() const {
-  if (isPrimitive() || isPrimitiveArray() || isDummy())
+  if (isPrimitive() || isPrimitiveArray())
     return true;
 
   if (isRecord()) {
@@ -462,8 +462,9 @@ bool Descriptor::hasTrivialDtor() const {
     return !Dtor || Dtor->isTrivial();
   }
 
+  if (!ElemDesc)
+    return true;
   // Composite arrays.
-  assert(ElemDesc);
   return ElemDesc->hasTrivialDtor();
 }
 
