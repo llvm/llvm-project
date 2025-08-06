@@ -576,7 +576,7 @@ class NormalizeIndex<int value> {
 class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
   : And<[
       CPred<"::llvm::cast<::mlir::ShapedType>($_self).getRank() >= " # NormalizeIndex<n>.ret>,
-      CPred<"::llvm::is_contained(ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
+      CPred<"::llvm::is_contained(::llvm::ArrayRef<int64_t>({" # !interleave(allowedSizes, ", ") # "}), "
         # "::llvm::cast<::mlir::ShapedType>($_self).getDimSize("
         #   !if(!lt(n, 0),
               "::llvm::cast<::mlir::ShapedType>($_self).getRank() + " # n,
@@ -585,7 +585,7 @@ class IsNthDimSizeIsOneOfPred<int n, list<int> allowedSizes>
 
 // Whether the shape of a vector matches the given `shape` list.
 class IsVectorOfShape<list<int> shape>
-  : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
+  : CPred<"::llvm::cast<::mlir::VectorType>($_self).getShape() == ::llvm::ArrayRef<int64_t>({" # !interleave(shape, ", ") # "})">;
 
 // Any vector where the number of elements is from the given
 // `allowedLengths` list
