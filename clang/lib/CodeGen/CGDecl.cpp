@@ -599,10 +599,11 @@ namespace {
     llvm::Constant *CleanupFn;
     const CGFunctionInfo &FnInfo;
     const VarDecl &Var;
+    SourceLocation Loc;
 
     CallCleanupFunction(llvm::Constant *CleanupFn, const CGFunctionInfo *Info,
-                        const VarDecl *Var)
-      : CleanupFn(CleanupFn), FnInfo(*Info), Var(*Var) {}
+                        const VarDecl *Var, SourceLocation Location)
+        : CleanupFn(CleanupFn), FnInfo(*Info), Var(*Var), Loc(Location) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       DeclRefExpr DRE(CGF.getContext(), const_cast<VarDecl *>(&Var), false,
@@ -628,8 +629,6 @@ namespace {
       GlobalDecl GD = HasCleanupAttr
                           ? (Var.getAttr<CleanupAttr>()->getFunctionDecl())
                           : GlobalDecl();
-      SourceLocation Loc = HasCleanupAttr ? Var.getAttr<CleanupAttr>()->getLoc()
-                                          : SourceLocation();
       auto Callee = CGCallee::forDirect(CleanupFn, CGCalleeInfo(GD));
       CGF.EmitCall(FnInfo, Callee, ReturnValueSlot(), Args,
                    /*callOrInvoke*/ nullptr, /*IsMustTail*/ false, Loc);
@@ -2238,7 +2237,8 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
     assert(F && "Could not find function!");
 
     const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
-    EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D);
+    EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D,
+                                             CA->getLoc());
   }
 
   // If this is a block variable, call _Block_object_destroy
