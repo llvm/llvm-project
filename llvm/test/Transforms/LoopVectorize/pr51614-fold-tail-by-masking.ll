@@ -67,8 +67,8 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IVMINUS1:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i16 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[PREVSUM:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 41, [[SCALAR_PH]] ], [ [[IVMINUS1:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i16 [ 0, [[SCALAR_PH]] ], [ [[PREVSUM:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IVMINUS1]] = add nsw i16 [[IV]], -1
 ; CHECK-NEXT:    [[GEPA0:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[IVMINUS1]], i16 0
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i16, ptr [[GEPA0]], align 1
