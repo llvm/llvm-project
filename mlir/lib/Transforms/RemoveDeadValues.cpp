@@ -36,6 +36,7 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/IR/Value.h"
@@ -51,6 +52,7 @@
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include <cassert>
 #include <cstddef>
 #include <memory>
@@ -58,8 +60,6 @@
 #include <vector>
 
 #define DEBUG_TYPE "remove-dead-values"
-#define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
-#define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
 namespace mlir {
 #define GEN_PASS_DEF_REMOVEDEADVALUES
@@ -119,21 +119,21 @@ static bool hasLive(ValueRange values, const DenseSet<Value> &nonLiveSet,
                     RunLivenessAnalysis &la) {
   for (Value value : values) {
     if (nonLiveSet.contains(value)) {
-      LDBG("Value " << value << " is already marked non-live (dead)");
+      LDBG() << "Value " << value << " is already marked non-live (dead)";
       continue;
     }
 
     const Liveness *liveness = la.getLiveness(value);
     if (!liveness) {
-      LDBG("Value " << value
-                    << " has no liveness info, conservatively considered live");
+      LDBG() << "Value " << value
+             << " has no liveness info, conservatively considered live";
       return true;
     }
     if (liveness->isLive) {
-      LDBG("Value " << value << " is live according to liveness analysis");
+      LDBG() << "Value " << value << " is live according to liveness analysis";
       return true;
     } else {
-      LDBG("Value " << value << " is dead according to liveness analysis");
+      LDBG() << "Value " << value << " is dead according to liveness analysis";
     }
   }
   return false;
@@ -148,8 +148,8 @@ static BitVector markLives(ValueRange values, const DenseSet<Value> &nonLiveSet,
   for (auto [index, value] : llvm::enumerate(values)) {
     if (nonLiveSet.contains(value)) {
       lives.reset(index);
-      LDBG("Value " << value << " is already marked non-live (dead) at index "
-                    << index);
+      LDBG() << "Value " << value
+             << " is already marked non-live (dead) at index " << index;
       continue;
     }
 
@@ -161,17 +161,17 @@ static BitVector markLives(ValueRange values, const DenseSet<Value> &nonLiveSet,
     // (because they weren't erased) and also their liveness is null because
     // liveness analysis ran before their creation.
     if (!liveness) {
-      LDBG("Value " << value << " at index " << index
-                    << " has no liveness info, conservatively considered live");
+      LDBG() << "Value " << value << " at index " << index
+             << " has no liveness info, conservatively considered live";
       continue;
     }
     if (!liveness->isLive) {
       lives.reset(index);
-      LDBG("Value " << value << " at index " << index
-                    << " is dead according to liveness analysis");
+      LDBG() << "Value " << value << " at index " << index
+             << " is dead according to liveness analysis";
     } else {
-      LDBG("Value " << value << " at index " << index
-                    << " is live according to liveness analysis");
+      LDBG() << "Value " << value << " at index " << index
+             << " is live according to liveness analysis";
     }
   }
 
@@ -187,8 +187,8 @@ static void collectNonLiveValues(DenseSet<Value> &nonLiveSet, ValueRange range,
     if (!nonLive[index])
       continue;
     nonLiveSet.insert(result);
-    LDBG("Marking value " << result << " as non-live (dead) at index "
-                          << index);
+    LDBG() << "Marking value " << result << " as non-live (dead) at index "
+           << index;
   }
 }
 
@@ -258,16 +258,18 @@ static SmallVector<OpOperand *> operandsToOpOperands(OperandRange operands) {
 static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
-  LDBG("Processing simple op: " << *op);
+  LDBG() << "Processing simple op: " << *op;
   if (!isMemoryEffectFree(op) || hasLive(op->getResults(), nonLiveSet, la)) {
-    LDBG("Simple op is not memory effect free or has live results, skipping: "
-         << *op);
+    LDBG()
+        << "Simple op is not memory effect free or has live results, skipping: "
+        << *op;
     return;
   }
 
-  LDBG("Simple op has all dead results and is memory effect free, scheduling "
-       "for removal: "
-       << *op);
+  LDBG()
+      << "Simple op has all dead results and is memory effect free, scheduling "
+         "for removal: "
+      << *op;
   cl.operations.push_back(op);
   collectNonLiveValues(nonLiveSet, op->getResults(),
                        BitVector(op->getNumResults(), true));
@@ -286,10 +288,10 @@ static void processSimpleOp(Operation *op, RunLivenessAnalysis &la,
 static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
                           RunLivenessAnalysis &la, DenseSet<Value> &nonLiveSet,
                           RDVFinalCleanupList &cl) {
-  LDBG("Processing function op: " << funcOp.getOperation()->getName());
+  LDBG() << "Processing function op: " << funcOp.getOperation()->getName();
   if (funcOp.isPublic() || funcOp.isExternal()) {
-    LDBG("Function is public or external, skipping: "
-         << funcOp.getOperation()->getName());
+    LDBG() << "Function is public or external, skipping: "
+           << funcOp.getOperation()->getName();
     return;
   }
 
@@ -345,8 +347,6 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   // since it forwards only to non-live value(s) (%1#1).
   Operation *lastReturnOp = funcOp.back().getTerminator();
   size_t numReturns = lastReturnOp->getNumOperands();
-  if (numReturns == 0)
-    return;
   BitVector nonLiveRets(numReturns, true);
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
@@ -368,6 +368,8 @@ static void processFuncOp(FunctionOpInterface funcOp, Operation *module,
   cl.functions.push_back({funcOp, nonLiveArgs, nonLiveRets});
 
   // Do (5) and (6).
+  if (numReturns == 0)
+    return;
   for (SymbolTable::SymbolUse use : uses) {
     Operation *callOp = use.getUser();
     assert(isa<CallOpInterface>(callOp) && "expected a call-like user");
@@ -409,9 +411,8 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
                                   RunLivenessAnalysis &la,
                                   DenseSet<Value> &nonLiveSet,
                                   RDVFinalCleanupList &cl) {
-  LLVM_DEBUG(DBGS() << "Processing region branch op: "; regionBranchOp->print(
-      llvm::dbgs(), OpPrintingFlags().skipRegions());
-             llvm::dbgs() << "\n");
+  LDBG() << "Processing region branch op: "
+         << OpWithFlags(regionBranchOp, OpPrintingFlags().skipRegions());
   // Mark live results of `regionBranchOp` in `liveResults`.
   auto markLiveResults = [&](BitVector &liveResults) {
     liveResults = markLives(regionBranchOp->getResults(), nonLiveSet, la);
@@ -697,7 +698,7 @@ static void processRegionBranchOp(RegionBranchOpInterface regionBranchOp,
 static void processBranchOp(BranchOpInterface branchOp, RunLivenessAnalysis &la,
                             DenseSet<Value> &nonLiveSet,
                             RDVFinalCleanupList &cl) {
-  LDBG("Processing branch op: " << *branchOp);
+  LDBG() << "Processing branch op: " << *branchOp;
   unsigned numSuccessors = branchOp->getNumSuccessors();
 
   for (unsigned succIdx = 0; succIdx < numSuccessors; ++succIdx) {

@@ -19,7 +19,6 @@
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <numeric>
@@ -54,7 +53,7 @@ mlir::xegpu::getDistributedVectorType(xegpu::TensorDescType tdescTy) {
                                 std::multiplies<int64_t>());
 
   // Case 1: regular loads/stores
-  auto scatterAttr = tdescTy.getEncodingAsScatterTensorDescAttr();
+  auto scatterAttr = tdescTy.getEncodingOfType<ScatterTensorDescAttr>();
   if (scatterAttr) {
     auto chunkSize = scatterAttr.getChunkSize().getInt();
     // Verify if the first dimension of the tensor descriptor shape is
@@ -124,6 +123,10 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     Operation *defOp = result.getDefiningOp();
     assert(defOp && "result must have a defining op");
 
+    // For ConvertLayoutOp, the layout is stored in the targetLayoutAttr
+    if (auto convertOp = dyn_cast<xegpu::ConvertLayoutOp>(defOp))
+      return convertOp.getTargetLayoutAttr();
+
     // for LoadNdOp, the layout is stored in the tensor descriptor
     if (auto loadNd = dyn_cast<xegpu::LoadNdOp>(defOp))
       return getLayoutAttr(loadNd.getTensorDesc());
@@ -137,7 +140,8 @@ xegpu::LayoutAttr xegpu::getLayoutAttr(const Value value) {
     auto parentOp = arg.getOwner()->getParentOp();
     if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
       OpOperand *tiedInit = loop.getTiedLoopInit(arg);
-      return getLayoutAttr(tiedInit->get());
+      if (tiedInit)
+        return getLayoutAttr(tiedInit->get());
     }
   }
 
@@ -184,6 +188,31 @@ void xegpu::setLayoutAttrs(Operation *op,
   });
 }
 
+template <typename T, typename>
+void xegpu::removeLayoutAttr(const T &operandOrResult) {
+  Operation *owner = operandOrResult.getOwner();
+  std::string name = xegpu::getLayoutName(operandOrResult);
+  if (owner->hasAttrOfType<LayoutAttr>(name))
+    owner->removeAttr(name);
+}
+
+// Explicit instantiation for OpResult
+template void
+xegpu::removeLayoutAttr<mlir::OpResult>(const mlir::OpResult &result);
+
+// Explicit instantiation for OpOperand
+template void
+xegpu::removeLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand);
+
+void xegpu::removeLayoutAttrs(Operation *op) {
+  op->walk([&](Operation *nestOp) {
+    for (OpOperand &opr : nestOp->getOpOperands())
+      removeLayoutAttr(opr);
+    for (OpResult result : nestOp->getOpResults())
+      removeLayoutAttr(result);
+  });
+}
+
 SmallVector<Value>
 xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
                                         Value value, ArrayRef<int64_t> shape) {
@@ -198,8 +227,8 @@ xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
   SmallVector<Value> result;
   for (SmallVector<int64_t> offsets : StaticTileOffsetRange(srcShape, shape)) {
     SmallVector<int64_t> staticStrides(offsets.size(), 1);
-    result.push_back(builder.create<vector::ExtractStridedSliceOp>(
-        loc, value, offsets, shape, staticStrides));
+    result.push_back(vector::ExtractStridedSliceOp::create(
+        builder, loc, value, offsets, shape, staticStrides));
   }
 
   return result;
@@ -218,14 +247,14 @@ Value xegpu::createVectorWithShapeFromValues(OpBuilder &builder, Location loc,
 
   VectorType resultTy = VectorType::get(shape, elemTy);
   auto zeroAttr = builder.getZeroAttr(elemTy);
-  Value result = builder.create<arith::ConstantOp>(
-      loc, resultTy, DenseElementsAttr::get(resultTy, zeroAttr));
+  Value result = arith::ConstantOp::create(
+      builder, loc, resultTy, DenseElementsAttr::get(resultTy, zeroAttr));
 
   for (auto [src, offsets] :
        llvm::zip_equal(values, StaticTileOffsetRange(shape, tileShape))) {
     SmallVector<int64_t> staticStrides(offsets.size(), 1);
-    result = builder.create<vector::InsertStridedSliceOp>(
-        loc, src, result, offsets, staticStrides);
+    result = vector::InsertStridedSliceOp::create(builder, loc, src, result,
+                                                  offsets, staticStrides);
   }
   return result;
 }
@@ -236,7 +265,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
 
   auto materializeCast = [](OpBuilder &builder, Type type, ValueRange inputs,
                             Location loc) -> Value {
-    return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+    return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
         .getResult(0);
   };
 
@@ -343,8 +372,8 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
 
         if (isa<RankedTensorType>(inputTy) && isa<VectorType>(outputTy)) {
           SmallVector<Value> values = xegpu::flattenValues(adaptor.getInputs());
-          auto newOp = rewriter.create<UnrealizedConversionCastOp>(
-              op.getLoc(), outputTy, values);
+          auto newOp = UnrealizedConversionCastOp::create(rewriter, op.getLoc(),
+                                                          outputTy, values);
           rewriter.replaceOp(op, newOp);
           return success();
         }
@@ -355,7 +384,7 @@ void xegpu::doSCFStructuralTypeConversionWithTensorType(
     converter.addSourceMaterialization(materializeCast);
     converter.addTargetMaterialization([&](OpBuilder &builder, TypeRange type,
                                            ValueRange inputs, Location loc) {
-      return builder.create<UnrealizedConversionCastOp>(loc, type, inputs)
+      return UnrealizedConversionCastOp::create(builder, loc, type, inputs)
           .getResults();
     });
 

@@ -198,6 +198,11 @@ static cl::opt<unsigned> MaxSwitchCasesPerResult(
     "max-switch-cases-per-result", cl::Hidden, cl::init(16),
     cl::desc("Limit cases to analyze when converting a switch to select"));
 
+static cl::opt<unsigned> MaxJumpThreadingLiveBlocks(
+    "max-jump-threading-live-blocks", cl::Hidden, cl::init(24),
+    cl::desc("Limit number of blocks a define in a threaded block is allowed "
+             "to be live in"));
+
 STATISTIC(NumBitMaps, "Number of switch instructions turned into bitmaps");
 STATISTIC(NumLinearMaps,
           "Number of switch instructions turned into linear mapping");
@@ -2227,16 +2232,6 @@ static bool canSinkInstructions(
       return I->getOperand(OI) == I0->getOperand(OI);
     };
     if (!all_of(Insts, SameAsI0)) {
-      // SROA can't speculate lifetime markers of selects/phis, and the
-      // backend may handle such lifetimes incorrectly as well (#104776).
-      // Don't sink lifetimes if it would introduce a phi on the pointer
-      // argument.
-      if (isa<LifetimeIntrinsic>(I0) && OI == 1 &&
-          any_of(Insts, [](const Instruction *I) {
-            return isa<AllocaInst>(I->getOperand(1)->stripPointerCasts());
-          }))
-        return false;
-
       if ((isa<Constant>(Op) && !replacingOperandWithVariableIsCheap(I0, OI)) ||
           !canReplaceOperandWithVariable(I0, OI))
         // We can't create a PHI from this GEP.
@@ -3400,8 +3395,27 @@ bool SimplifyCFGOpt::speculativelyExecuteBB(BranchInst *BI,
   return true;
 }
 
+using BlocksSet = SmallPtrSet<BasicBlock *, 8>;
+
+// Return false if number of blocks searched is too much.
+static bool findReaching(BasicBlock *BB, BasicBlock *DefBB,
+                         BlocksSet &ReachesNonLocalUses) {
+  if (BB == DefBB)
+    return true;
+  if (!ReachesNonLocalUses.insert(BB).second)
+    return true;
+
+  if (ReachesNonLocalUses.size() > MaxJumpThreadingLiveBlocks)
+    return false;
+  for (BasicBlock *Pred : predecessors(BB))
+    if (!findReaching(Pred, DefBB, ReachesNonLocalUses))
+      return false;
+  return true;
+}
+
 /// Return true if we can thread a branch across this block.
-static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
+static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB,
+                                               BlocksSet &NonLocalUseBlocks) {
   int Size = 0;
   EphemeralValueTracker EphTracker;
 
@@ -3421,12 +3435,16 @@ static bool blockIsSimpleEnoughToThreadThrough(BasicBlock *BB) {
         return false; // Don't clone large BB's.
     }
 
-    // We can only support instructions that do not define values that are
-    // live outside of the current basic block.
+    // Record blocks with non-local uses of values defined in the current basic
+    // block.
     for (User *U : I.users()) {
       Instruction *UI = cast<Instruction>(U);
-      if (UI->getParent() != BB || isa<PHINode>(UI))
-        return false;
+      BasicBlock *UsedInBB = UI->getParent();
+      if (UsedInBB == BB) {
+        if (isa<PHINode>(UI))
+          return false;
+      } else
+        NonLocalUseBlocks.insert(UsedInBB);
     }
 
     // Looks ok, continue checking.
@@ -3485,18 +3503,37 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     return false;
 
   // Now we know that this block has multiple preds and two succs.
-  // Check that the block is small enough and values defined in the block are
-  // not used outside of it.
-  if (!blockIsSimpleEnoughToThreadThrough(BB))
+  // Check that the block is small enough and record which non-local blocks use
+  // values defined in the block.
+
+  BlocksSet NonLocalUseBlocks;
+  BlocksSet ReachesNonLocalUseBlocks;
+  if (!blockIsSimpleEnoughToThreadThrough(BB, NonLocalUseBlocks))
     return false;
 
+  // Jump-threading can only be done to destinations where no values defined
+  // in BB are live.
+
+  // Quickly check if both destinations have uses.  If so, jump-threading cannot
+  // be done.
+  if (NonLocalUseBlocks.contains(BI->getSuccessor(0)) &&
+      NonLocalUseBlocks.contains(BI->getSuccessor(1)))
+    return false;
+
+  // Search backward from NonLocalUseBlocks to find which blocks
+  // reach non-local uses.
+  for (BasicBlock *UseBB : NonLocalUseBlocks)
+    // Give up if too many blocks are searched.
+    if (!findReaching(UseBB, BB, ReachesNonLocalUseBlocks))
+      return false;
+
   for (const auto &Pair : KnownValues) {
-    // Okay, we now know that all edges from PredBB should be revectored to
-    // branch to RealDest.
     ConstantInt *CB = Pair.first;
     ArrayRef<BasicBlock *> PredBBs = Pair.second.getArrayRef();
     BasicBlock *RealDest = BI->getSuccessor(!CB->getZExtValue());
 
+    // Okay, we now know that all edges from PredBB should be revectored to
+    // branch to RealDest.
     if (RealDest == BB)
       continue; // Skip self loops.
 
@@ -3504,6 +3541,10 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     if (any_of(PredBBs, [](BasicBlock *PredBB) {
           return isa<IndirectBrInst>(PredBB->getTerminator());
         }))
+      continue;
+
+    // Only revector to RealDest if no values defined in BB are live.
+    if (ReachesNonLocalUseBlocks.contains(RealDest))
       continue;
 
     LLVM_DEBUG({
@@ -6198,7 +6239,7 @@ static bool initializeUniqueCases(SwitchInst *SI, PHINode *&PHI,
 // TODO: Handle switches with more than 2 cases that map to the same result.
 static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
                                  Constant *DefaultResult, Value *Condition,
-                                 IRBuilder<> &Builder) {
+                                 IRBuilder<> &Builder, const DataLayout &DL) {
   // If we are selecting between only two cases transform into a simple
   // select or a two-way select if default is possible.
   // Example:
@@ -6234,10 +6275,33 @@ static Value *foldSwitchToSelect(const SwitchCaseResultVectorTy &ResultVector,
     // case 0,2,8,10 -> Cond & 0b1..0101 == 0 ? result : default
     if (isPowerOf2_32(CaseCount)) {
       ConstantInt *MinCaseVal = CaseValues[0];
-      // Find mininal value.
-      for (auto *Case : CaseValues)
+      // If there are bits that are set exclusively by CaseValues, we
+      // can transform the switch into a select if the conjunction of
+      // all the values uniquely identify CaseValues.
+      APInt AndMask = APInt::getAllOnes(MinCaseVal->getBitWidth());
+
+      // Find the minimum value and compute the and of all the case values.
+      for (auto *Case : CaseValues) {
         if (Case->getValue().slt(MinCaseVal->getValue()))
           MinCaseVal = Case;
+        AndMask &= Case->getValue();
+      }
+      KnownBits Known = computeKnownBits(Condition, DL);
+
+      if (!AndMask.isZero() && Known.getMaxValue().uge(AndMask)) {
+        // Compute the number of bits that are free to vary.
+        unsigned FreeBits = Known.countMaxActiveBits() - AndMask.popcount();
+
+        // Check if the number of values covered by the mask is equal
+        // to the number of cases.
+        if (FreeBits == Log2_32(CaseCount)) {
+          Value *And = Builder.CreateAnd(Condition, AndMask);
+          Value *Cmp = Builder.CreateICmpEQ(
+              And, Constant::getIntegerValue(And->getType(), AndMask));
+          return Builder.CreateSelect(Cmp, ResultVector[0].first,
+                                      DefaultResult);
+        }
+      }
 
       // Mark the bits case number touched.
       APInt BitMask = APInt::getZero(MinCaseVal->getBitWidth());
@@ -6325,7 +6389,7 @@ static bool trySwitchToSelect(SwitchInst *SI, IRBuilder<> &Builder,
   assert(PHI != nullptr && "PHI for value select not found");
   Builder.SetInsertPoint(SI);
   Value *SelectValue =
-      foldSwitchToSelect(UniqueResults, DefaultResult, Cond, Builder);
+      foldSwitchToSelect(UniqueResults, DefaultResult, Cond, Builder, DL);
   if (!SelectValue)
     return false;
 
@@ -6577,16 +6641,20 @@ Value *SwitchLookupTable::buildLookup(Value *Index, IRBuilder<> &Builder,
   }
   case ArrayKind: {
     Type *IndexTy = DL.getIndexType(Array->getType());
+    auto *ArrayTy = cast<ArrayType>(Array->getValueType());
 
-    if (Index->getType() != IndexTy)
+    if (Index->getType() != IndexTy) {
+      unsigned OldBitWidth = Index->getType()->getIntegerBitWidth();
       Index = Builder.CreateZExtOrTrunc(Index, IndexTy);
+      if (auto *Zext = dyn_cast<ZExtInst>(Index))
+        Zext->setNonNeg(
+            isUIntN(OldBitWidth - 1, ArrayTy->getNumElements() - 1));
+    }
 
     Value *GEPIndices[] = {ConstantInt::get(IndexTy, 0), Index};
-    Value *GEP = Builder.CreateInBoundsGEP(Array->getValueType(), Array,
-                                           GEPIndices, "switch.gep");
-    return Builder.CreateLoad(
-        cast<ArrayType>(Array->getValueType())->getElementType(), GEP,
-        "switch.load");
+    Value *GEP =
+        Builder.CreateInBoundsGEP(ArrayTy, Array, GEPIndices, "switch.gep");
+    return Builder.CreateLoad(ArrayTy->getElementType(), GEP, "switch.load");
   }
   }
   llvm_unreachable("Unknown lookup table kind!");
@@ -7470,7 +7538,7 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   SmallPtrSet<PHINode *, 8> Phis;
   SmallPtrSet<BasicBlock *, 8> Seen;
   DenseMap<PHINode *, SmallDenseMap<BasicBlock *, Value *, 8>> PhiPredIVs;
-  DenseMap<BasicBlock *, SmallVector<unsigned, 4>> BBToSuccessorIndexes;
+  DenseMap<BasicBlock *, SmallVector<unsigned, 32>> BBToSuccessorIndexes;
   SmallVector<SwitchSuccWrapper> Cases;
   Cases.reserve(SI->getNumSuccessors());
 
@@ -7482,12 +7550,6 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     if (BB->size() != 1)
       continue;
 
-    // FIXME: This case needs some extra care because the terminators other than
-    // SI need to be updated. For now, consider only backedges to the SI.
-    if (BB->hasNPredecessorsOrMore(4) ||
-        BB->getUniquePredecessor() != SI->getParent())
-      continue;
-
     // FIXME: Relax that the terminator is a BranchInst by checking for equality
     // on other kinds of terminators. We decide to only support unconditional
     // branches for now for compile time reasons.
@@ -7495,14 +7557,24 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
     if (!BI || BI->isConditional())
       continue;
 
-    if (Seen.insert(BB).second) {
-      // Keep track of which PHIs we need as keys in PhiPredIVs below.
-      for (BasicBlock *Succ : BI->successors())
-        Phis.insert_range(llvm::make_pointer_range(Succ->phis()));
-      // Add the successor only if not previously visited.
-      Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
+    if (!Seen.insert(BB).second) {
+      auto It = BBToSuccessorIndexes.find(BB);
+      if (It != BBToSuccessorIndexes.end())
+        It->second.emplace_back(I);
+      continue;
     }
 
+    // FIXME: This case needs some extra care because the terminators other than
+    // SI need to be updated. For now, consider only backedges to the SI.
+    if (BB->getUniquePredecessor() != SI->getParent())
+      continue;
+
+    // Keep track of which PHIs we need as keys in PhiPredIVs below.
+    for (BasicBlock *Succ : BI->successors())
+      Phis.insert_range(llvm::make_pointer_range(Succ->phis()));
+
+    // Add the successor only if not previously visited.
+    Cases.emplace_back(SwitchSuccWrapper{BB, &PhiPredIVs});
     BBToSuccessorIndexes[BB].emplace_back(I);
   }
 

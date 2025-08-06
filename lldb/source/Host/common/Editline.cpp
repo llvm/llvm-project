@@ -1709,6 +1709,13 @@ void Editline::PrintAsync(lldb::LockableStreamFileSP stream_sp, const char *s,
   }
 }
 
+void Editline::Refresh() {
+  if (!m_editline || !m_output_stream_sp)
+    return;
+  LockedStreamFile locked_stream = m_output_stream_sp->Lock();
+  el_set(m_editline, EL_REFRESH);
+}
+
 bool Editline::CompleteCharacter(char ch, EditLineGetCharType &out) {
 #if !LLDB_EDITLINE_USE_WCHAR
   if (ch == (char)EOF)

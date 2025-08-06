@@ -1396,11 +1396,13 @@ bool kmp_topology_t::filter_hw_subset() {
   // One last check that we shouldn't allow filtering entire machine
   if (num_filtered == num_hw_threads) {
     KMP_AFF_WARNING(__kmp_affinity, AffHWSubsetAllFiltered);
+    KMP_CPU_FREE(filtered_mask);
     return false;
   }
 
   // Apply the filter
   restrict_to_mask(filtered_mask);
+  KMP_CPU_FREE(filtered_mask);
   return true;
 }
 
@@ -2225,7 +2227,7 @@ public:
       cache_mask_width = __kmp_cpuid_mask_width(max_threads_sharing);
       cache_level = __kmp_extract_bits<5, 7>(buf2.eax);
       table[depth].level = cache_level;
-      table[depth].mask = ((-1) << cache_mask_width);
+      table[depth].mask = ((0xffffffffu) << cache_mask_width);
       depth++;
       level++;
     }
@@ -2755,13 +2757,13 @@ static bool __kmp_x2apicid_get_levels(int leaf, cpuid_proc_info_t *info,
   // Set the masks to & with apicid
   for (unsigned i = 0; i < levels_index; ++i) {
     if (levels[i].level_type != INTEL_LEVEL_TYPE_INVALID) {
-      levels[i].mask = ~((-1) << levels[i].mask_width);
-      levels[i].cache_mask = (-1) << levels[i].mask_width;
+      levels[i].mask = ~((0xffffffffu) << levels[i].mask_width);
+      levels[i].cache_mask = (0xffffffffu) << levels[i].mask_width;
       for (unsigned j = 0; j < i; ++j)
         levels[i].mask ^= levels[j].mask;
     } else {
       KMP_DEBUG_ASSERT(i > 0);
-      levels[i].mask = (-1) << levels[i - 1].mask_width;
+      levels[i].mask = (0xffffffffu) << levels[i - 1].mask_width;
       levels[i].cache_mask = 0;
     }
     info->description.add(info->levels[i].level_type);
@@ -4217,6 +4219,9 @@ static void __kmp_affinity_process_proclist(kmp_affinity_t &affinity) {
     if (stride > 0) {
       do {
         ADD_MASK_OSID(start, osId2Mask, maxOsId);
+        // Prevent possible overflow calculation
+        if (end - start < stride)
+          break;
         start += stride;
       } while (start <= end);
     } else {
@@ -4238,6 +4243,7 @@ static void __kmp_affinity_process_proclist(kmp_affinity_t &affinity) {
   if (nextNewMask == 0) {
     *out_masks = NULL;
     KMP_CPU_INTERNAL_FREE_ARRAY(newMasks, numNewMasks);
+    KMP_CPU_FREE(sumMask);
     return;
   }
   KMP_CPU_ALLOC_ARRAY((*out_masks), nextNewMask);
@@ -4406,6 +4412,7 @@ static void __kmp_process_place(const char **scan, kmp_affinity_t &affinity,
     (*scan)++; // skip '!'
     __kmp_process_place(scan, affinity, maxOsId, tempMask, setSize);
     KMP_CPU_COMPLEMENT(maxOsId, tempMask);
+    KMP_CPU_AND(tempMask, __kmp_affin_fullMask);
   } else if ((**scan >= '0') && (**scan <= '9')) {
     next = *scan;
     SKIP_DIGITS(next);
@@ -4559,6 +4566,8 @@ void __kmp_affinity_process_placelist(kmp_affinity_t &affinity) {
   *out_numMasks = nextNewMask;
   if (nextNewMask == 0) {
     *out_masks = NULL;
+    KMP_CPU_FREE(tempMask);
+    KMP_CPU_FREE(previousMask);
     KMP_CPU_INTERNAL_FREE_ARRAY(newMasks, numNewMasks);
     return;
   }
@@ -5280,13 +5289,18 @@ void __kmp_affinity_uninitialize(void) {
     if (affinity->os_id_masks != NULL)
       KMP_CPU_FREE_ARRAY(affinity->os_id_masks, affinity->num_os_id_masks);
     if (affinity->proclist != NULL)
-      __kmp_free(affinity->proclist);
+      KMP_INTERNAL_FREE(affinity->proclist);
     if (affinity->ids != NULL)
       __kmp_free(affinity->ids);
     if (affinity->attrs != NULL)
       __kmp_free(affinity->attrs);
     *affinity = KMP_AFFINITY_INIT(affinity->env_var);
   }
+  if (__kmp_affin_fullMask != NULL) {
+    KMP_CPU_FREE(__kmp_affin_fullMask);
+    __kmp_affin_fullMask = NULL;
+  }
+  __kmp_avail_proc = 0;
   if (__kmp_affin_origMask != NULL) {
     if (KMP_AFFINITY_CAPABLE()) {
 #if KMP_OS_AIX

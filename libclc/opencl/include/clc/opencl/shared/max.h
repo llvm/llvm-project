@@ -6,8 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef __CLC_OPENCL_SHARED_MAX_H__
+#define __CLC_OPENCL_SHARED_MAX_H__
+
 #define __CLC_BODY <clc/opencl/shared/max.inc>
 #include <clc/integer/gentype.inc>
 
 #define __CLC_BODY <clc/opencl/shared/max.inc>
 #include <clc/math/gentype.inc>
+
+#endif // __CLC_OPENCL_SHARED_MAX_H__

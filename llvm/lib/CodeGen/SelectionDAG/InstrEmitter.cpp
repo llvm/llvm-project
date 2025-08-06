@@ -402,7 +402,12 @@ void InstrEmitter::AddOperand(MachineInstrBuilder &MIB, SDValue Op,
     AddRegisterOperand(MIB, Op, IIOpNum, II, VRBaseMap,
                        IsDebug, IsClone, IsCloned);
   } else if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
-    MIB.addImm(C->getSExtValue());
+    if (C->getAPIntValue().getSignificantBits() <= 64) {
+      MIB.addImm(C->getSExtValue());
+    } else {
+      MIB.addCImm(
+          ConstantInt::get(MF->getFunction().getContext(), C->getAPIntValue()));
+    }
   } else if (ConstantFPSDNode *F = dyn_cast<ConstantFPSDNode>(Op)) {
     MIB.addFPImm(F->getConstantFPValue());
   } else if (RegisterSDNode *R = dyn_cast<RegisterSDNode>(Op)) {
@@ -631,16 +636,17 @@ void InstrEmitter::EmitSubregNode(SDNode *Node, VRBaseMapType &VRBaseMap,
 void
 InstrEmitter::EmitCopyToRegClassNode(SDNode *Node,
                                      VRBaseMapType &VRBaseMap) {
-  Register VReg = getVR(Node->getOperand(0), VRBaseMap);
-
   // Create the new VReg in the destination class and emit a copy.
   unsigned DstRCIdx = Node->getConstantOperandVal(1);
   const TargetRegisterClass *DstRC =
     TRI->getAllocatableClass(TRI->getRegClass(DstRCIdx));
   Register NewVReg = MRI->createVirtualRegister(DstRC);
-  BuildMI(*MBB, InsertPos, Node->getDebugLoc(), TII->get(TargetOpcode::COPY),
-    NewVReg).addReg(VReg);
+  const MCInstrDesc &II = TII->get(TargetOpcode::COPY);
+  MachineInstrBuilder MIB = BuildMI(*MF, Node->getDebugLoc(), II, NewVReg);
+  AddOperand(MIB, Node->getOperand(0), 1, &II, VRBaseMap, /*IsDebug=*/false,
+             /*IsClone=*/false, /*IsCloned*/ false);
 
+  MBB->insert(InsertPos, MIB);
   SDValue Op(Node, 0);
   bool isNew = VRBaseMap.insert(std::make_pair(Op, NewVReg)).second;
   (void)isNew; // Silence compiler warning.
@@ -783,7 +789,7 @@ MachineInstr *
 InstrEmitter::EmitDbgInstrRef(SDDbgValue *SD,
                               VRBaseMapType &VRBaseMap) {
   MDNode *Var = SD->getVariable();
-  const DIExpression *Expr = (DIExpression *)SD->getExpression();
+  const DIExpression *Expr = SD->getExpression();
   DebugLoc DL = SD->getDebugLoc();
   const MCInstrDesc &RefII = TII->get(TargetOpcode::DBG_INSTR_REF);
 

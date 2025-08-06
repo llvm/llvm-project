@@ -133,6 +133,8 @@ LLVM_ABI bool getEnableStackSizeSection();
 
 LLVM_ABI bool getEnableAddrsig();
 
+LLVM_ABI bool getEnableCallGraphSection();
+
 LLVM_ABI bool getEmitCallSiteInfo();
 
 LLVM_ABI bool getEnableMachineFunctionSplitter();

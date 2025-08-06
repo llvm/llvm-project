@@ -95,6 +95,10 @@ bool isEligibleFunction(Function *F) {
   if (F->getCallingConv() == CallingConv::SwiftTail)
     return false;
 
+  // Unnamed functions are skipped for simplicity.
+  if (!F->hasName())
+    return false;
+
   // If function contains callsites with musttail, if we merge
   // it, the merged function will have the musttail callsite, but
   // the number of parameters can change, thus the parameter count

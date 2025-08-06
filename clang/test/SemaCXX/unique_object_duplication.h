@@ -173,10 +173,6 @@ namespace GlobalTest {
 
     // Always visible
     VISIBLE static inline float allowedStaticMember2 = 0.0;
-
-    // Tests here are sparse because the AddrTest case below will define plenty
-    // more, which aren't problematic to define (because they're immutable), but
-    // may still cause problems if their address is taken.
   };
 
   inline float Test::disallowedStaticMember2 = 2.3; // hidden-warning {{'disallowedStaticMember2' may be duplicated when built into a shared library: it is mutable, with external linkage and hidden visibility}}
@@ -211,3 +207,44 @@ inline int allowedTemplate2 = 0;
 template int allowedTemplate2<int>;
 
 } // namespace TemplateTest
+
+/******************************************************************************
+ * Case four: Nested classes
+ ******************************************************************************/
+
+namespace NestedClassTest {
+// Unlike visibility, declexport annotations do not propagate down to nested
+// classes. Hence on windows, we only avoid duplication of class members if
+// their immediate containing class is annotated. On posix, we get avoid
+// duplication if any containing class is annotated.
+
+class VISIBLE Outer {
+  // Visible because their class is exported
+  inline static int allowedOuterMember = 0;
+  int* allowedOuterFunction() {
+    static int allowed = 0;
+    return &allowed;
+  }
+
+  // No annotation, and visibility is only propagated on posix.
+  class HiddenOnWindows {
+    inline static int disallowedInnerMember = 0; // windows-warning {{'disallowedInnerMember' may be duplicated when built into a shared library: it is mutable, with external linkage and no import/export annotation}}
+
+
+    int* disallowedInnerFunction() {
+      static int disallowed = 0; // windows-warning {{'disallowed' may be duplicated when built into a shared library: it is mutable, with external linkage and no import/export annotation}}
+      return &disallowed;
+    }
+  };
+
+  class VISIBLE AlwaysVisible {
+    inline static int allowedInnerMember = 0;
+
+    int* allowedInnerFunction() {
+      static int allowed = 0;
+      return &allowed;
+    }
+  };
+};
+
+}

@@ -553,6 +553,19 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
   }
 }
 
+// Returns true if this is a variant of .data.rel.ro.
+static bool isRelRoDataSection(Ctx &ctx, StringRef secName) {
+  if (!secName.consume_front(".data.rel.ro"))
+    return false;
+  if (secName.empty())
+    return true;
+  // If -z keep-data-section-prefix is specified, additionally allow
+  // '.data.rel.ro.hot' and '.data.rel.ro.unlikely'.
+  if (ctx.arg.zKeepDataSectionPrefix)
+    return secName == ".hot" || secName == ".unlikely";
+  return false;
+}
+
 // Today's loaders have a feature to make segments read-only after
 // processing dynamic relocations to enhance security. PT_GNU_RELRO
 // is defined for that.
@@ -629,7 +642,7 @@ static bool isRelroSection(Ctx &ctx, const OutputSection *sec) {
   // magic section names.
   StringRef s = sec->name;
 
-  bool abiAgnostic = s == ".data.rel.ro" || s == ".bss.rel.ro" ||
+  bool abiAgnostic = isRelRoDataSection(ctx, s) || s == ".bss.rel.ro" ||
                      s == ".ctors" || s == ".dtors" || s == ".jcr" ||
                      s == ".eh_frame" || s == ".fini_array" ||
                      s == ".init_array" || s == ".preinit_array";
@@ -1573,9 +1586,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
               if (isInt<32>(reloc.sym->getVA(ctx, reloc.addend)))
                 return false;
               part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, elem.inputSec,
-                                      reloc.offset,
-                                      DynamicReloc::AddendOnlyWithTargetVA,
-                                      *reloc.sym, reloc.addend, R_ABS});
+                                      reloc.offset, false, *reloc.sym,
+                                      reloc.addend, R_ABS});
               return true;
             });
         changed |= (it != part.relrAuthDyn->relocs.end());

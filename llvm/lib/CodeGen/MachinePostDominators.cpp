@@ -99,8 +99,8 @@ MachineBasicBlock *MachinePostDominatorTree::findNearestCommonDominator(
     ArrayRef<MachineBasicBlock *> Blocks) const {
   assert(!Blocks.empty());
 
-  MachineBasicBlock *NCD = Blocks.front();
-  for (MachineBasicBlock *BB : Blocks.drop_front()) {
+  MachineBasicBlock *NCD = Blocks.consume_front();
+  for (MachineBasicBlock *BB : Blocks) {
     NCD = Base::findNearestCommonDominator(NCD, BB);
 
     // Stop when the root is reached.

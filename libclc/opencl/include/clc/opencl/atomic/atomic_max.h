@@ -6,5 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION atomic_max
-#include <clc/opencl/atomic/atomic_decl.inc>
+#ifndef __CLC_OPENCL_ATOMIC_ATOMIC_MAX_H__
+#define __CLC_OPENCL_ATOMIC_ATOMIC_MAX_H__
+
+#include <clc/opencl/opencl-base.h>
+
+#define FUNCTION atomic_max
+#include <clc/opencl/atomic/atomic_decl_legacy.inc>
+
+#endif // __CLC_OPENCL_ATOMIC_ATOMIC_MAX_H__

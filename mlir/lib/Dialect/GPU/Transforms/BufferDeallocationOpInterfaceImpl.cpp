@@ -8,7 +8,6 @@
 
 #include "mlir/Dialect/GPU/Transforms/BufferDeallocationOpInterfaceImpl.h"
 #include "mlir/Dialect/Bufferization/IR/BufferDeallocationOpInterface.h"
-#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 using namespace mlir;

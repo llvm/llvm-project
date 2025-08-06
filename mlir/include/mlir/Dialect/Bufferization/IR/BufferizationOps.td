@@ -111,7 +111,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     AliasingValueList getAliasingValues(
         OpOperand &opOperand, const AnalysisState &state);
 
-    FailureOr<BaseMemRefType> getBufferType(
+    FailureOr<BufferLikeType> getBufferType(
         Value value, const BufferizationOptions &options,
         const BufferizationState &state,
         SmallVector<Value> &invocationStack);
@@ -401,7 +401,7 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     SameOperandsAndResultElementType,
     Bufferization_TensorAndBufferMatch<"result", "buffer">
   ]> {
-  let summary = "create a buffer-like type from a tensor-like type";
+  let summary = "create a tensor-like type from a buffer-like type";
   let description = [{
     An operation that creates a tensor from a buffer. The result value is a
     tensor-like type that must match the corresponding buffer-like operand as
@@ -478,10 +478,10 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     bool isWritable(Value value, const AnalysisState &state);
 
-    FailureOr<BaseMemRefType> getBufferType(
+    FailureOr<BufferLikeType> getBufferType(
         Value value, const BufferizationOptions &options,
         const BufferizationState &state, SmallVector<Value> &invocationStack) {
-      return ::llvm::cast<BaseMemRefType>(getBuffer().getType());
+      return getBuffer().getType();
     }
   }];
 

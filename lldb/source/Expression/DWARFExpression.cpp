@@ -41,8 +41,8 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace llvm::dwarf;
 
 // DWARFExpression constructor
 DWARFExpression::DWARFExpression() : m_data() {}
@@ -91,9 +91,10 @@ void DWARFExpression::SetRegisterKind(RegisterKind reg_kind) {
   m_reg_kind = reg_kind;
 }
 
-static llvm::Error ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
-                                             lldb::RegisterKind reg_kind,
-                                             uint32_t reg_num, Value &value) {
+llvm::Error
+DWARFExpression::ReadRegisterValueAsScalar(RegisterContext *reg_ctx,
+                                           lldb::RegisterKind reg_kind,
+                                           uint32_t reg_num, Value &value) {
   if (reg_ctx == nullptr)
     return llvm::createStringError("no register context in frame");
 
@@ -589,7 +590,7 @@ bool DWARFExpression::LinkThreadLocalStorage(
   return true;
 }
 
-static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
+static llvm::Error Evaluate_DW_OP_entry_value(DWARFExpression::Stack &stack,
                                               ExecutionContext *exe_ctx,
                                               RegisterContext *reg_ctx,
                                               const DataExtractor &opcodes,
@@ -654,7 +655,7 @@ static llvm::Error Evaluate_DW_OP_entry_value(std::vector<Value> &stack,
   addr_t return_pc = LLDB_INVALID_ADDRESS;
   uint32_t current_frame_idx = current_frame->GetFrameIndex();
 
-  for (uint32_t parent_frame_idx = current_frame_idx + 1;;parent_frame_idx++) {
+  for (uint32_t parent_frame_idx = current_frame_idx + 1;; parent_frame_idx++) {
     parent_frame = thread->GetStackFrameAtIndex(parent_frame_idx);
     // If this is null, we're at the end of the stack.
     if (!parent_frame)
@@ -860,6 +861,66 @@ ResolveLoadAddress(ExecutionContext *exe_ctx, lldb::ModuleSP &module_sp,
   return load_addr;
 }
 
+static llvm::Error Evaluate_DW_OP_deref(DWARFExpression::Stack &stack,
+                                        ExecutionContext *exe_ctx,
+                                        lldb::ModuleSP module_sp,
+                                        Process *process) {
+  if (stack.empty())
+    return llvm::createStringError("expression stack empty for DW_OP_deref");
+
+  const Value::ValueType value_type = stack.back().GetValueType();
+  switch (value_type) {
+  case Value::ValueType::HostAddress: {
+    void *src = (void *)stack.back().GetScalar().ULongLong();
+    intptr_t ptr;
+    ::memcpy(&ptr, src, sizeof(void *));
+    stack.back().GetScalar() = ptr;
+    stack.back().ClearContext();
+  } break;
+  case Value::ValueType::FileAddress: {
+    auto file_addr = stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+    Address so_addr;
+    auto maybe_load_addr = ResolveLoadAddress(exe_ctx, module_sp, "DW_OP_deref",
+                                              file_addr, so_addr);
+    if (!maybe_load_addr)
+      return maybe_load_addr.takeError();
+    stack.back().GetScalar() = *maybe_load_addr;
+    // Fall through to load address promotion code below.
+  }
+    [[fallthrough]];
+  case Value::ValueType::Scalar:
+    // Promote Scalar to LoadAddress and fall through.
+    stack.back().SetValueType(Value::ValueType::LoadAddress);
+    [[fallthrough]];
+  case Value::ValueType::LoadAddress: {
+    if (!exe_ctx)
+      return llvm::createStringError("NULL execution context for DW_OP_deref");
+    if (!process)
+      return llvm::createStringError("NULL process for DW_OP_deref");
+    lldb::addr_t pointer_addr =
+        stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+    Status error;
+    lldb::addr_t pointer_value =
+        process->ReadPointerFromMemory(pointer_addr, error);
+    if (pointer_value == LLDB_INVALID_ADDRESS)
+      return llvm::joinErrors(
+          llvm::createStringError(
+              "Failed to dereference pointer from 0x%" PRIx64
+              " for DW_OP_deref",
+              pointer_addr),
+          error.takeError());
+    if (ABISP abi_sp = process->GetABI())
+      pointer_value = abi_sp->FixCodeAddress(pointer_value);
+    stack.back().GetScalar() = pointer_value;
+    stack.back().ClearContext();
+  } break;
+  case Value::ValueType::Invalid:
+    return llvm::createStringError("invalid value type for DW_OP_deref");
+  }
+
+  return llvm::Error::success();
+}
+
 /// Helper function to move common code used to load sized data from a uint8_t
 /// buffer.
 ///
@@ -890,7 +951,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
   if (opcodes.GetByteSize() == 0)
     return llvm::createStringError(
         "no location, value may have been optimized out");
-  std::vector<Value> stack;
+
+  Stack stack;
 
   Process *process = nullptr;
   StackFrame *frame = nullptr;
@@ -1019,69 +1081,9 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     // retrieved from the dereferenced address is the size of an address on the
     // target machine.
     case DW_OP_deref: {
-      if (stack.empty())
-        return llvm::createStringError(
-            "expression stack empty for DW_OP_deref");
-      Value::ValueType value_type = stack.back().GetValueType();
-      switch (value_type) {
-      case Value::ValueType::HostAddress: {
-        void *src = (void *)stack.back().GetScalar().ULongLong();
-        intptr_t ptr;
-        ::memcpy(&ptr, src, sizeof(void *));
-        stack.back().GetScalar() = ptr;
-        stack.back().ClearContext();
-      } break;
-      case Value::ValueType::FileAddress: {
-        auto file_addr = stack.back().GetScalar().ULongLong(
-            LLDB_INVALID_ADDRESS);
-
-        Address so_addr;
-        auto maybe_load_addr = ResolveLoadAddress(
-            exe_ctx, module_sp, "DW_OP_deref", file_addr, so_addr);
-
-        if (!maybe_load_addr)
-          return maybe_load_addr.takeError();
-
-        stack.back().GetScalar() = *maybe_load_addr;
-        // Fall through to load address promotion code below.
-      }
-        [[fallthrough]];
-      case Value::ValueType::Scalar:
-        // Promote Scalar to LoadAddress and fall through.
-        stack.back().SetValueType(Value::ValueType::LoadAddress);
-        [[fallthrough]];
-      case Value::ValueType::LoadAddress:
-        if (exe_ctx) {
-          if (process) {
-            lldb::addr_t pointer_addr =
-                stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
-            Status error;
-            lldb::addr_t pointer_value =
-                process->ReadPointerFromMemory(pointer_addr, error);
-            if (pointer_value != LLDB_INVALID_ADDRESS) {
-              if (ABISP abi_sp = process->GetABI())
-                pointer_value = abi_sp->FixCodeAddress(pointer_value);
-              stack.back().GetScalar() = pointer_value;
-              stack.back().ClearContext();
-            } else {
-              return llvm::createStringError(
-                  "Failed to dereference pointer from 0x%" PRIx64
-                  " for DW_OP_deref: %s\n",
-                  pointer_addr, error.AsCString());
-            }
-          } else {
-            return llvm::createStringError("NULL process for DW_OP_deref");
-          }
-        } else {
-          return llvm::createStringError(
-              "NULL execution context for DW_OP_deref");
-        }
-        break;
-
-      case Value::ValueType::Invalid:
-        return llvm::createStringError("invalid value type for DW_OP_deref");
-      }
-
+      if (llvm::Error err =
+              Evaluate_DW_OP_deref(stack, exe_ctx, module_sp, process))
+        return err;
     } break;
 
     // OPCODE: DW_OP_deref_size
@@ -1966,22 +1968,20 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
           case Value::ValueType::Scalar: {
             uint32_t bit_size = piece_byte_size * 8;
             uint32_t bit_offset = 0;
-            if (!scalar.ExtractBitfield(
-                    bit_size, bit_offset)) {
+            if (!scalar.ExtractBitfield(bit_size, bit_offset)) {
               return llvm::createStringError(
                   "unable to extract %" PRIu64 " bytes from a %" PRIu64
                   " byte scalar value.",
                   piece_byte_size,
                   (uint64_t)curr_piece_source_value.GetScalar().GetByteSize());
             }
-            // Create curr_piece with bit_size. By default Scalar
-            // grows to the nearest host integer type.
-            llvm::APInt fail_value(1, 0, false);
-            llvm::APInt ap_int = scalar.UInt128(fail_value);
-            assert(ap_int.getBitWidth() >= bit_size);
-            llvm::ArrayRef<uint64_t> buf{ap_int.getRawData(),
-                                         ap_int.getNumWords()};
-            curr_piece.GetScalar() = Scalar(llvm::APInt(bit_size, buf));
+
+            // We have seen a case where we have expression like:
+            //      DW_OP_lit0, DW_OP_stack_value, DW_OP_piece 0x28
+            // here we are assuming the compiler was trying to zero
+            // extend the value that we should append to the buffer.
+            scalar.TruncOrExtendTo(bit_size, /*sign=*/false);
+            curr_piece.GetScalar() = scalar;
           } break;
           }
 
@@ -2302,7 +2302,8 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     default:
       if (dwarf_cu) {
-        if (dwarf_cu->ParseVendorDWARFOpcode(op, opcodes, offset, stack)) {
+        if (dwarf_cu->ParseVendorDWARFOpcode(op, opcodes, offset, reg_ctx,
+                                             reg_kind, stack)) {
           break;
         }
       }
@@ -2409,8 +2410,7 @@ bool DWARFExpression::MatchesOperand(
     return MatchUnaryOp(
         MatchOpType(Instruction::Operand::Type::Dereference),
         MatchBinaryOp(MatchOpType(Instruction::Operand::Type::Sum),
-                      MatchRegOp(*reg),
-                      MatchImmOp(offset)))(operand);
+                      MatchRegOp(*reg), MatchImmOp(offset)))(operand);
   } else {
     return MatchRegOp(*reg)(operand);
   }

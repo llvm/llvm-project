@@ -26,10 +26,10 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    moduleOp = builder.create<mlir::ModuleOp>(loc);
+    moduleOp = mlir::ModuleOp::create(builder, loc);
     builder.setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func = builder.create<mlir::func::FuncOp>(
-        loc, "func1", builder.getFunctionType(std::nullopt, std::nullopt));
+    mlir::func::FuncOp func = mlir::func::FuncOp::create(
+        builder, loc, "func1", builder.getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder.setInsertionPointToStart(entryBlock);
 
@@ -47,8 +47,8 @@ static arith::CmpIOp createCondition(fir::FirOpBuilder &builder) {
   auto loc = builder.getUnknownLoc();
   auto zero1 = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
   auto zero2 = builder.createIntegerConstant(loc, builder.getIndexType(), 0);
-  return builder.create<arith::CmpIOp>(
-      loc, arith::CmpIPredicate::eq, zero1, zero2);
+  return arith::CmpIOp::create(
+      builder, loc, arith::CmpIPredicate::eq, zero1, zero2);
 }
 
 static void checkIntegerConstant(mlir::Value value, mlir::Type ty, int64_t v) {
@@ -176,8 +176,7 @@ TEST_F(FIRBuilderTest, getNamedFunction) {
   auto func2 = builder.getNamedFunction("func2");
   EXPECT_EQ(nullptr, func2);
   auto loc = builder.getUnknownLoc();
-  func2 = builder.createFunction(
-      loc, "func2", builder.getFunctionType(std::nullopt, std::nullopt));
+  func2 = builder.createFunction(loc, "func2", builder.getFunctionType({}, {}));
   auto func2query = builder.getNamedFunction("func2");
   EXPECT_EQ(func2, func2query);
 }
@@ -414,7 +413,7 @@ TEST_F(FIRBuilderTest, getExtents) {
   llvm::SmallVector<mlir::Value> extents = {c10, c100};
   fir::SequenceType::Shape shape(2, fir::SequenceType::getUnknownExtent());
   auto arrayTy = fir::SequenceType::get(shape, builder.getI64Type());
-  mlir::Value array = builder.create<fir::UndefOp>(loc, arrayTy);
+  mlir::Value array = fir::UndefOp::create(builder, loc, arrayTy);
   fir::ArrayBoxValue aab(array, extents, {});
   fir::ExtendedValue ex(aab);
   auto readExtents = fir::factory::getExtents(loc, builder, ex);
@@ -469,12 +468,12 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
     auto boxTyArray = fir::BoxType::get(arrayType);
     auto boxTyScalar = fir::BoxType::get(elementType);
 
-    auto ptrValArray = builder.create<fir::UndefOp>(loc, ptrTyArray);
-    auto ptrValScalar = builder.create<fir::UndefOp>(loc, ptrTyScalar);
-    auto boxRefValArray = builder.create<fir::UndefOp>(loc, boxRefTyArray);
-    auto boxRefValScalar = builder.create<fir::UndefOp>(loc, boxRefTyScalar);
-    auto boxValArray = builder.create<fir::UndefOp>(loc, boxTyArray);
-    auto boxValScalar = builder.create<fir::UndefOp>(loc, boxTyScalar);
+    auto ptrValArray = fir::UndefOp::create(builder, loc, ptrTyArray);
+    auto ptrValScalar = fir::UndefOp::create(builder, loc, ptrTyScalar);
+    auto boxRefValArray = fir::UndefOp::create(builder, loc, boxRefTyArray);
+    auto boxRefValScalar = fir::UndefOp::create(builder, loc, boxRefTyScalar);
+    auto boxValArray = fir::UndefOp::create(builder, loc, boxTyArray);
+    auto boxValScalar = fir::UndefOp::create(builder, loc, boxTyScalar);
 
     llvm::SmallVector<fir::ExtendedValue, 4> scalars;
     scalars.emplace_back(fir::UnboxedValue(ptrValScalar));
@@ -483,7 +482,7 @@ TEST_F(FIRBuilderTest, getBaseTypeOf) {
         fir::MutableBoxValue(boxRefValScalar, mlir::ValueRange(), {}));
 
     llvm::SmallVector<fir::ExtendedValue, 4> arrays;
-    auto extent = builder.create<fir::UndefOp>(loc, builder.getIndexType());
+    auto extent = fir::UndefOp::create(builder, loc, builder.getIndexType());
     llvm::SmallVector<mlir::Value> extents(
         mlir::dyn_cast<fir::SequenceType>(arrayType).getDimension(),
         extent.getResult());
@@ -538,10 +537,10 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
   auto loc = builder.getUnknownLoc();
 
   auto realTy = mlir::Float32Type::get(ctx);
-  auto arg = builder.create<fir::UndefOp>(loc, realTy);
+  auto arg = fir::UndefOp::create(builder, loc, realTy);
 
   // Test that FastMathFlags is 'none' by default.
-  mlir::Operation *op1 = builder.create<mlir::arith::AddFOp>(loc, arg, arg);
+  mlir::Operation *op1 = mlir::arith::AddFOp::create(builder, loc, arg, arg);
   auto op1_fmi =
       mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op1);
   EXPECT_TRUE(op1_fmi);
@@ -559,7 +558,7 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
   builder_copy.setFastMathFlags(FMF2);
 
   // Modifying FastMathFlags for the copy must not affect the original builder.
-  mlir::Operation *op2 = builder.create<mlir::arith::AddFOp>(loc, arg, arg);
+  mlir::Operation *op2 = mlir::arith::AddFOp::create(builder, loc, arg, arg);
   auto op2_fmi =
       mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op2);
   EXPECT_TRUE(op2_fmi);
@@ -568,7 +567,7 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
 
   // Modifying FastMathFlags for the original builder must not affect the copy.
   mlir::Operation *op3 =
-      builder_copy.create<mlir::arith::AddFOp>(loc, arg, arg);
+      mlir::arith::AddFOp::create(builder_copy, loc, arg, arg);
   auto op3_fmi =
       mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op3);
   EXPECT_TRUE(op3_fmi);
@@ -579,7 +578,7 @@ TEST_F(FIRBuilderTest, genArithFastMath) {
   fir::FirOpBuilder builder_copy2(builder);
 
   mlir::Operation *op4 =
-      builder_copy2.create<mlir::arith::AddFOp>(loc, arg, arg);
+      mlir::arith::AddFOp::create(builder_copy2, loc, arg, arg);
   auto op4_fmi =
       mlir::dyn_cast_or_null<mlir::arith::ArithFastMathInterface>(op4);
   EXPECT_TRUE(op4_fmi);
@@ -593,10 +592,10 @@ TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
   auto loc = builder.getUnknownLoc();
 
   auto intTy = IntegerType::get(ctx, 32);
-  auto arg = builder.create<fir::UndefOp>(loc, intTy);
+  auto arg = fir::UndefOp::create(builder, loc, intTy);
 
   // Test that IntegerOverflowFlags is 'none' by default.
-  mlir::Operation *op1 = builder.create<mlir::arith::AddIOp>(loc, arg, arg);
+  mlir::Operation *op1 = mlir::arith::AddIOp::create(builder, loc, arg, arg);
   auto op1_iofi =
       mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
           op1);
@@ -614,7 +613,7 @@ TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
 
   // Modifying IntegerOverflowFlags for the copy must not affect the original
   // builder.
-  mlir::Operation *op2 = builder.create<mlir::arith::AddIOp>(loc, arg, arg);
+  mlir::Operation *op2 = mlir::arith::AddIOp::create(builder, loc, arg, arg);
   auto op2_iofi =
       mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
           op2);
@@ -625,7 +624,7 @@ TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
   // Modifying IntegerOverflowFlags for the original builder must not affect the
   // copy.
   mlir::Operation *op3 =
-      builder_copy.create<mlir::arith::AddIOp>(loc, arg, arg);
+      mlir::arith::AddIOp::create(builder_copy, loc, arg, arg);
   auto op3_iofi =
       mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
           op3);
@@ -637,7 +636,7 @@ TEST_F(FIRBuilderTest, genArithIntegerOverflow) {
   fir::FirOpBuilder builder_copy2(builder);
 
   mlir::Operation *op4 =
-      builder_copy2.create<mlir::arith::AddIOp>(loc, arg, arg);
+      mlir::arith::AddIOp::create(builder_copy2, loc, arg, arg);
   auto op4_iofi =
       mlir::dyn_cast_or_null<mlir::arith::ArithIntegerOverflowFlagsInterface>(
           op4);

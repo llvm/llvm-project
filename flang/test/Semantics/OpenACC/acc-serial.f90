@@ -84,15 +84,15 @@ program openacc_serial_validity
   !$acc serial wait(wait1) wait(wait2)
   !$acc end serial
 
-  !PORTABILITY: NUM_GANGS clause is not allowed on the SERIAL directive and will be ignored
+  !PORTABILITY: NUM_GANGS clause is not allowed on the SERIAL directive and will be ignored [-Wportability]
   !$acc serial num_gangs(8)
   !$acc end serial
 
-  !PORTABILITY: NUM_WORKERS clause is not allowed on the SERIAL directive and will be ignored
+  !PORTABILITY: NUM_WORKERS clause is not allowed on the SERIAL directive and will be ignored [-Wportability]
   !$acc serial num_workers(8)
   !$acc end serial
 
-  !PORTABILITY: VECTOR_LENGTH clause is not allowed on the SERIAL directive and will be ignored
+  !PORTABILITY: VECTOR_LENGTH clause is not allowed on the SERIAL directive and will be ignored [-Wportability]
   !$acc serial vector_length(128)
   !$acc end serial
 

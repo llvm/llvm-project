@@ -222,3 +222,14 @@ define <vscale x 1 x i64> @vleff_move_past_passthru(ptr %p, ptr %q, iXLen %avl) 
   %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %vec, iXLen %avl)
   ret <vscale x 1 x i64> %b
 }
+
+define <vscale x 1 x i64> @vmerge(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 1 x i1> %m, iXLen %avl) {
+; CHECK-LABEL: vmerge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
+; CHECK-NEXT:    vmerge.vvm v8, v9, v10, v0
+; CHECK-NEXT:    ret
+  %a = call <vscale x 1 x i64> @llvm.riscv.vmerge.nxv1i64.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %x, <vscale x 1 x i64> %y, <vscale x 1 x i1> %m, iXLen %avl)
+  %b = call <vscale x 1 x i64> @llvm.riscv.vmv.v.v.nxv1i64(<vscale x 1 x i64> %passthru, <vscale x 1 x i64> %a, iXLen %avl)
+  ret <vscale x 1 x i64> %b
+}

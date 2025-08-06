@@ -35,9 +35,14 @@ from UpdateTestChecks import common
 VREG_RE = re.compile(r"(%[0-9]+)(?:\.[a-z0-9_]+)?(?::[a-z0-9_]+)?(?:\([<>a-z0-9 ]+\))?")
 MI_FLAGS_STR = (
     r"(frame-setup |frame-destroy |nnan |ninf |nsz |arcp |contract |afn "
-    r"|reassoc |nuw |nsw |exact |nofpexcept |nomerge |disjoint )*"
+    r"|reassoc |nuw |nsw |exact |nofpexcept |nomerge |unpredictable "
+    r"|noconvergent |nneg |disjoint |nusw |samesign |inbounds )*"
 )
 VREG_DEF_FLAGS_STR = r"(?:dead |undef )*"
+
+# Pattern to match the defined vregs and the opcode of an instruction that
+# defines vregs. Opcodes starting with a lower-case 't' are allowed to match
+# ARM's thumb instructions, like tADDi8 and t2ADDri.
 VREG_DEF_RE = re.compile(
     r"^ *(?P<vregs>{2}{0}(?:, {2}{0})*) = "
     r"{1}(?P<opcode>[A-Zt][A-Za-z0-9_]+)".format(

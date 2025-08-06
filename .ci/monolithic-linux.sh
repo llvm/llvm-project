@@ -21,12 +21,7 @@ BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
 INSTALL_DIR="${BUILD_DIR}/install"
 rm -rf "${BUILD_DIR}"
 
-ccache --zero-stats
-
-if [[ -n "${CLEAR_CACHE:-}" ]]; then
-  echo "clearing cache"
-  ccache --clear
-fi
+sccache --zero-stats
 
 mkdir -p artifacts/reproducers
 
@@ -36,7 +31,7 @@ export CLANG_CRASH_DIAGNOSTICS_DIR=`realpath artifacts/reproducers`
 function at-exit {
   retcode=$?
 
-  ccache --print-stats > artifacts/ccache_stats.txt
+  sccache --show-stats > artifacts/sccache_stats.txt
   cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
   cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
 
@@ -53,10 +48,11 @@ targets="${2}"
 runtimes="${3}"
 runtime_targets="${4}"
 runtime_targets_needs_reconfig="${5}"
+enable_cir="${6}"
 
 lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
 
-echo "--- cmake"
+echo "::group::cmake"
 export PIP_BREAK_SYSTEM_PACKAGES=1
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
@@ -72,51 +68,64 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -G Ninja \
       -D CMAKE_PREFIX_PATH="${HOME}/.local" \
       -D CMAKE_BUILD_TYPE=Release \
+      -D CLANG_ENABLE_CIR=${enable_cir} \
       -D LLVM_ENABLE_ASSERTIONS=ON \
       -D LLVM_BUILD_EXAMPLES=ON \
       -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
       -D LLVM_LIT_ARGS="${lit_args}" \
       -D LLVM_ENABLE_LLD=ON \
       -D CMAKE_CXX_FLAGS=-gmlt \
-      -D LLVM_CCACHE_BUILD=ON \
+      -D CMAKE_C_COMPILER_LAUNCHER=sccache \
+      -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D LLDB_ENABLE_PYTHON=ON \
       -D LLDB_ENFORCE_STRICT_TEST_REQUIREMENTS=ON \
       -D CMAKE_INSTALL_PREFIX="${INSTALL_DIR}"
 
-echo "--- ninja"
+echo "::endgroup::"
+echo "::group::ninja"
+
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets}
 
+echo "::endgroup::"
+
 if [[ "${runtime_targets}" != "" ]]; then
-  echo "--- ninja runtimes"
+  echo "::group::ninja runtimes"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets}
+
+  echo "::endgroup::"
 fi
 
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
 if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
-  echo "--- cmake runtimes C++26"
+  echo "::group::cmake runtimes C++26"
 
   cmake \
     -D LIBCXX_TEST_PARAMS="std=c++26" \
     -D LIBCXXABI_TEST_PARAMS="std=c++26" \
     "${BUILD_DIR}"
 
-  echo "--- ninja runtimes C++26"
+  echo "::endgroup::"
+  echo "::group::ninja runtimes C++26"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
 
-  echo "--- cmake runtimes clang modules"
+  echo "::endgroup::"
+  echo "::group::cmake runtimes clang modules"
 
   cmake \
     -D LIBCXX_TEST_PARAMS="enable_modules=clang" \
     -D LIBCXXABI_TEST_PARAMS="enable_modules=clang" \
     "${BUILD_DIR}"
 
-  echo "--- ninja runtimes clang modules"
+  echo "::endgroup::"
+  echo "::group::ninja runtimes clang modules"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+
+  echo "::endgroup::"
 fi

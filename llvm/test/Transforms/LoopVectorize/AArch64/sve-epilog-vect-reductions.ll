@@ -27,11 +27,10 @@ define i64 @int_reduction_add(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i64> [ insertelement (<vscale x 2 x i64> zeroinitializer, i64 5, i32 0), [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <vscale x 2 x i64> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP14:%.*]] = mul nuw i64 [[TMP13]], 2
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[TMP14]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP12]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD3:%.*]] = load <vscale x 2 x i64>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[TMP16]] = add <vscale x 2 x i64> [[WIDE_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP17]] = add <vscale x 2 x i64> [[WIDE_LOAD3]], [[VEC_PHI2]]
@@ -58,8 +57,7 @@ define i64 @int_reduction_add(ptr %a, i64 %N) {
 ; CHECK-NEXT:    [[INDEX7:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT10:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI8:%.*]] = phi <2 x i64> [ [[TMP22]], [[VEC_EPILOG_PH]] ], [ [[TMP26:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX7]]
-; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[TMP24]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP25]], align 8
+; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP24]], align 8
 ; CHECK-NEXT:    [[TMP26]] = add <2 x i64> [[WIDE_LOAD9]], [[VEC_PHI8]]
 ; CHECK-NEXT:    [[INDEX_NEXT10]] = add nuw i64 [[INDEX7]], 2
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq i64 [[INDEX_NEXT10]], [[N_VEC5]]

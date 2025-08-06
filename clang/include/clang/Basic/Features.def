@@ -54,6 +54,47 @@ FEATURE(memtag_globals,
 FEATURE(xray_instrument, LangOpts.XRayInstrument)
 FEATURE(undefined_behavior_sanitizer,
         LangOpts.Sanitize.hasOneOf(SanitizerKind::Undefined))
+FEATURE(undefined_behavior_sanitizer_finegrained_feature_checks, true)
+// These are all part of undefined_behavior_sanitizer:
+FEATURE(alignment_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Alignment))
+FEATURE(bool_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Bool))
+FEATURE(builtin_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Builtin))
+FEATURE(array_bounds_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::ArrayBounds))
+FEATURE(enum_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Enum))
+FEATURE(float_cast_overflow_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::FloatCastOverflow))
+FEATURE(integer_divide_by_zero_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::IntegerDivideByZero))
+FEATURE(nonnull_attribute_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::NonnullAttribute))
+FEATURE(null_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Null))
+FEATURE(object_size_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::ObjectSize))
+FEATURE(pointer_overflow_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::PointerOverflow))
+FEATURE(return_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Return))
+FEATURE(returns_nonnull_attribute_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::ReturnsNonnullAttribute))
+FEATURE(shift_base_sanitizer, LangOpts.Sanitize.has(SanitizerKind::ShiftBase))
+FEATURE(shift_exponent_sanitizer, LangOpts.Sanitize.has(SanitizerKind::ShiftExponent))
+FEATURE(shift_sanitizer,
+        LangOpts.Sanitize.hasOneOf(SanitizerKind::Shift))
+FEATURE(signed_integer_overflow_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::SignedIntegerOverflow))
+FEATURE(unreachable_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Unreachable))
+FEATURE(vla_bound_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::VLABound))
+FEATURE(function_sanitizer,
+        LangOpts.Sanitize.has(SanitizerKind::Function))
+
 FEATURE(realtime_sanitizer,
         LangOpts.Sanitize.has(SanitizerKind::Realtime))
 FEATURE(coverage_sanitizer, LangOpts.SanitizeCoverage)
@@ -119,6 +160,12 @@ FEATURE(ptrauth_indirect_gotos, LangOpts.PointerAuthIndirectGotos)
 FEATURE(ptrauth_init_fini, LangOpts.PointerAuthInitFini)
 FEATURE(ptrauth_init_fini_address_discrimination, LangOpts.PointerAuthInitFiniAddressDiscrimination)
 FEATURE(ptrauth_elf_got, LangOpts.PointerAuthELFGOT)
+
+FEATURE(ptrauth_objc_isa, LangOpts.PointerAuthObjcIsa)
+FEATURE(ptrauth_objc_interface_sel, LangOpts.PointerAuthObjcInterfaceSel)
+FEATURE(ptrauth_objc_signable_class, true)
+FEATURE(ptrauth_objc_method_list_pointer, LangOpts.PointerAuthCalls)
+
 EXTENSION(swiftcc,
   PP.getTargetInfo().checkCallingConvention(CC_Swift) ==
   clang::TargetInfo::CCCR_OK)
@@ -324,6 +371,9 @@ FEATURE(clang_atomic_attributes, true)
 // CUDA/HIP Features
 FEATURE(cuda_noinline_keyword, LangOpts.CUDA)
 EXTENSION(cuda_implicit_host_device_templates, LangOpts.CUDA && LangOpts.OffloadImplicitHostDeviceTemplates)
+
+// C++2d type-aware allocators
+EXTENSION(cxx_type_aware_allocators, true)
 
 #undef EXTENSION
 #undef FEATURE

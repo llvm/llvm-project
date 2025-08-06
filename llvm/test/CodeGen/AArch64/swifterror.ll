@@ -564,11 +564,10 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-AARCH64-NEXT:    mov w0, w8
 ; CHECK-O0-AARCH64-NEXT:    bl _malloc
-; CHECK-O0-AARCH64-NEXT:    mov x1, x0
-; CHECK-O0-AARCH64-NEXT:    mov x0, x1
-; CHECK-O0-AARCH64-NEXT:    str x1, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-AARCH64-NEXT:    mov x9, x0
 ; CHECK-O0-AARCH64-NEXT:    mov w8, #1 ; =0x1
-; CHECK-O0-AARCH64-NEXT:    strb w8, [x0, #8]
+; CHECK-O0-AARCH64-NEXT:    strb w8, [x9, #8]
+; CHECK-O0-AARCH64-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
 ; CHECK-O0-AARCH64-NEXT:  LBB4_3: ; %bb_cont
 ; CHECK-O0-AARCH64-NEXT:    ; in Loop: Header=BB4_1 Depth=1
 ; CHECK-O0-AARCH64-NEXT:    ldr s0, [sp, #16] ; 4-byte Folded Reload
@@ -606,11 +605,12 @@ define float @foo_loop(ptr swifterror %error_ptr_ref, i32 %cc, float %cc2) {
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #16 ; =0x10
 ; CHECK-O0-ARM64_32-NEXT:    mov w0, w8
 ; CHECK-O0-ARM64_32-NEXT:    bl _malloc
-; CHECK-O0-ARM64_32-NEXT:    ; kill: def $x1 killed $x0
-; CHECK-O0-ARM64_32-NEXT:    mov x1, x0
-; CHECK-O0-ARM64_32-NEXT:    str x1, [sp, #8] ; 8-byte Folded Spill
+; CHECK-O0-ARM64_32-NEXT:    mov x9, x0
+; CHECK-O0-ARM64_32-NEXT:    ; kill: def $x0 killed $x9
+; CHECK-O0-ARM64_32-NEXT:    mov x0, x9
 ; CHECK-O0-ARM64_32-NEXT:    mov w8, #1 ; =0x1
-; CHECK-O0-ARM64_32-NEXT:    strb w8, [x0, #8]
+; CHECK-O0-ARM64_32-NEXT:    strb w8, [x9, #8]
+; CHECK-O0-ARM64_32-NEXT:    str x0, [sp, #8] ; 8-byte Folded Spill
 ; CHECK-O0-ARM64_32-NEXT:  LBB4_3: ; %bb_cont
 ; CHECK-O0-ARM64_32-NEXT:    ; in Loop: Header=BB4_1 Depth=1
 ; CHECK-O0-ARM64_32-NEXT:    ldr s0, [sp, #16] ; 4-byte Folded Reload

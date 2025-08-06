@@ -2242,23 +2242,34 @@ TEST_F(OpenMPIRBuilderTest, ApplySimdIf) {
   PB.registerFunctionAnalyses(FAM);
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(*F);
 
-  // Check if there are two loops (one with enabled vectorization)
+  // Check if there is one loop containing branches with and without
+  // vectorization
   const std::vector<Loop *> &TopLvl = LI.getTopLevelLoops();
-  EXPECT_EQ(TopLvl.size(), 2u);
+  EXPECT_EQ(TopLvl.size(), 1u);
 
   Loop *L = TopLvl[0];
   EXPECT_TRUE(findStringMetadataForLoop(L, "llvm.loop.parallel_accesses"));
-  EXPECT_TRUE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
-  EXPECT_EQ(getIntLoopAttribute(L, "llvm.loop.vectorize.width"), 3);
-
-  // The second loop should have disabled vectorization
-  L = TopLvl[1];
-  EXPECT_FALSE(findStringMetadataForLoop(L, "llvm.loop.parallel_accesses"));
+  // These attributes cannot not be set because the loop is shared between simd
+  // and non-simd versions
   EXPECT_FALSE(getBooleanLoopAttribute(L, "llvm.loop.vectorize.enable"));
-  // Check for llvm.access.group metadata attached to the printf
-  // function in the loop body.
+  EXPECT_EQ(getIntLoopAttribute(L, "llvm.loop.vectorize.width"), 0);
+
+  // Check for if condition
   BasicBlock *LoopBody = CLI->getBody();
-  EXPECT_TRUE(any_of(*LoopBody, [](Instruction &I) {
+  BranchInst *IfCond = cast<BranchInst>(LoopBody->getTerminator());
+  EXPECT_EQ(IfCond->getCondition(), IfCmp);
+  BasicBlock *TrueBranch = IfCond->getSuccessor(0);
+  BasicBlock *FalseBranch = IfCond->getSuccessor(1)->getUniqueSuccessor();
+
+  // Check for llvm.access.group metadata attached to the printf
+  // function in the true body.
+  EXPECT_TRUE(any_of(*TrueBranch, [](Instruction &I) {
+    return I.getMetadata("llvm.access.group") != nullptr;
+  }));
+
+  // Check for llvm.access.group metadata attached to the printf
+  // function in the false body.
+  EXPECT_FALSE(any_of(*FalseBranch, [](Instruction &I) {
     return I.getMetadata("llvm.access.group") != nullptr;
   }));
 }
@@ -2725,8 +2736,8 @@ TEST_P(OpenMPIRBuilderTestWithParams, DynamicWorkShareLoop) {
   EXPECT_EQ(OrigUpperBound->getValue(), 21);
   EXPECT_EQ(OrigStride->getValue(), 1);
 
-  CallInst *FiniCall = dyn_cast<CallInst>(
-      &*(LatchBlock->getTerminator()->getPrevNonDebugInstruction(true)));
+  CallInst *FiniCall =
+      dyn_cast<CallInst>(&*(LatchBlock->getTerminator()->getPrevNode()));
   EXPECT_EQ(FiniCall, nullptr);
 
   // The original loop iterator should only be used in the condition, in the
@@ -2829,8 +2840,8 @@ TEST_F(OpenMPIRBuilderTest, DynamicWorkShareLoopOrdered) {
   EXPECT_EQ(SchedVal->getValue(),
             static_cast<uint64_t>(OMPScheduleType::OrderedStaticChunked));
 
-  CallInst *FiniCall = dyn_cast<CallInst>(
-      &*(LatchBlock->getTerminator()->getPrevNonDebugInstruction(true)));
+  CallInst *FiniCall =
+      dyn_cast<CallInst>(&*(LatchBlock->getTerminator()->getPrevNode()));
   ASSERT_NE(FiniCall, nullptr);
   EXPECT_EQ(FiniCall->getCalledFunction()->getName(),
             "__kmpc_dispatch_fini_4u");
@@ -4644,7 +4655,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithThreadLimit) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -4701,7 +4712,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsUpper) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -4761,7 +4772,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsBoth) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -4827,7 +4838,7 @@ TEST_F(OpenMPIRBuilderTest, CreateTeamsWithNumTeamsAndThreadLimit) {
 
   // Verifying that the next instruction to execute is kmpc_fork_teams
   BranchInst *BrInst =
-      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNonDebugInstruction());
+      dyn_cast<BranchInst>(PushNumTeamsCallInst->getNextNode());
   ASSERT_NE(BrInst, nullptr);
   ASSERT_EQ(BrInst->getNumSuccessors(), 1U);
   BasicBlock::iterator NextInstruction =
@@ -7338,8 +7349,8 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskIfCondition) {
   EXPECT_EQ(TaskBeginIfCall->getParent(),
             IfConditionBranchInst->getSuccessor(1));
 
-  EXPECT_EQ(TaskBeginIfCall->getNextNonDebugInstruction(), OulinedFnCall);
-  EXPECT_EQ(OulinedFnCall->getNextNonDebugInstruction(), TaskCompleteCall);
+  EXPECT_EQ(TaskBeginIfCall->getNextNode(), OulinedFnCall);
+  EXPECT_EQ(OulinedFnCall->getNextNode(), TaskCompleteCall);
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
@@ -7423,12 +7434,12 @@ TEST_F(OpenMPIRBuilderTest, CreateTaskgroup) {
                                            OMPRTL___kmpc_global_thread_num));
 
   // Checking the general structure of the IR generated is same as expected.
-  Instruction *GeneratedStoreInst = TaskgroupCall->getNextNonDebugInstruction();
+  Instruction *GeneratedStoreInst = TaskgroupCall->getNextNode();
   EXPECT_EQ(GeneratedStoreInst, InternalStoreInst);
   Instruction *GeneratedLoad32 =
-      GeneratedStoreInst->getNextNonDebugInstruction();
+      GeneratedStoreInst->getNextNode();
   EXPECT_EQ(GeneratedLoad32, InternalLoad32);
-  Instruction *GeneratedLoad128 = GeneratedLoad32->getNextNonDebugInstruction();
+  Instruction *GeneratedLoad128 = GeneratedLoad32->getNextNode();
   EXPECT_EQ(GeneratedLoad128, InternalLoad128);
 
   // Checking the ordering because of the if statements and that

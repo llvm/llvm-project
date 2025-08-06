@@ -10,7 +10,6 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_AMDGPU_H
 
 #include "Gnu.h"
-#include "ROCm.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
@@ -147,7 +146,7 @@ public:
   llvm::SmallVector<BitCodeLibraryInfo, 12>
   getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
                           const std::string &GPUArch,
-                          bool isOpenMP = false) const;
+                          Action::OffloadKind DeviceOffloadingKind) const;
 
   SanitizerMask getSupportedSanitizers() const override {
     return SanitizerKind::Address;

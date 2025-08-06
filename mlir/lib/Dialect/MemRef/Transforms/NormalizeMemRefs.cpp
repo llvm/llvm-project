@@ -11,12 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Debug.h"
 
 namespace mlir {
@@ -278,8 +276,8 @@ void NormalizeMemRefs::updateFunctionSignature(func::FuncOp funcOp,
     if (!callOp)
       continue;
     Operation *newCallOp =
-        builder.create<func::CallOp>(userOp->getLoc(), callOp.getCalleeAttr(),
-                                     resultTypes, userOp->getOperands());
+        func::CallOp::create(builder, userOp->getLoc(), callOp.getCalleeAttr(),
+                             resultTypes, userOp->getOperands());
     bool replacingMemRefUsesFailed = false;
     bool returnTypeChanged = false;
     for (unsigned resIndex : llvm::seq<unsigned>(0, userOp->getNumResults())) {

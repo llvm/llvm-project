@@ -121,10 +121,10 @@ static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
   return std::make_unique<ARMElfTargetObjectFile>();
 }
 
-static std::string computeDataLayout(const Triple &TT, StringRef CPU,
+static std::string computeDataLayout(const Triple &TT,
                                      const TargetOptions &Options,
                                      bool isLittle) {
-  auto ABI = ARM::computeTargetABI(TT, CPU, Options.MCOptions.ABIName);
+  auto ABI = ARM::computeTargetABI(TT, Options.MCOptions.ABIName);
   std::string Ret;
 
   if (isLittle)
@@ -166,9 +166,8 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   // Integer registers are 32 bits.
   Ret += "-n32";
 
-  // The stack is 128 bit aligned on NaCl, 64 bit aligned on AAPCS and 32 bit
-  // aligned everywhere else.
-  if (TT.isOSNaCl() || ABI == ARM::ARM_ABI_AAPCS16)
+  // The stack is 64 bit aligned on AAPCS and 32 bit aligned everywhere else.
+  if (ABI == ARM::ARM_ABI_AAPCS16)
     Ret += "-S128";
   else if (ABI == ARM::ARM_ABI_AAPCS)
     Ret += "-S64";
@@ -203,11 +202,10 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
                                            std::optional<Reloc::Model> RM,
                                            std::optional<CodeModel::Model> CM,
                                            CodeGenOptLevel OL, bool isLittle)
-    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, CPU, Options, isLittle),
-                               TT, CPU, FS, Options,
-                               getEffectiveRelocModel(TT, RM),
+    : CodeGenTargetMachineImpl(T, computeDataLayout(TT, Options, isLittle), TT,
+                               CPU, FS, Options, getEffectiveRelocModel(TT, RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TargetABI(ARM::computeTargetABI(TT, CPU, Options.MCOptions.ABIName)),
+      TargetABI(ARM::computeTargetABI(TT, Options.MCOptions.ABIName)),
       TLOF(createTLOF(getTargetTriple())), isLittle(isLittle) {
 
   // Default to triple-appropriate float ABI

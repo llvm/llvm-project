@@ -162,7 +162,7 @@ entry:
 define void @load_zext(i1 %cond, ptr %b, ptr %p) {
 ; CHECK-LABEL: load_zext:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    cfcmovnew (%rsi), %ax
 ; CHECK-NEXT:    movzwl %ax, %eax
 ; CHECK-NEXT:    cfcmovnel %eax, (%rdx)
@@ -180,7 +180,7 @@ entry:
 define void @load_sext(i1 %cond, ptr %b, ptr %p) {
 ; CHECK-LABEL: load_sext:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andb $1, %dil
+; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    cfcmovnel (%rsi), %eax
 ; CHECK-NEXT:    cltq
 ; CHECK-NEXT:    cfcmovneq %rax, (%rdx)
@@ -192,5 +192,40 @@ entry:
   %zext = sext i32 %2 to i64
   %3 = bitcast i64 %zext to <1 x i64>
   call void @llvm.masked.store.v1i64.p0(<1 x i64> %3, ptr %p, i32 4, <1 x i1> %0)
+  ret void
+}
+
+define void @sink_gep(ptr %p, i1 %cond) {
+; CHECK-LABEL: sink_gep:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    cfcmovnel %eax, 112(%rdi)
+; CHECK-NEXT:    cfcmovnel 112(%rdi), %eax
+; CHECK-NEXT:    movl %eax, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = getelementptr i8, ptr %p, i64 112
+  br label %next
+
+next:
+  %1 = bitcast i1 %cond to <1 x i1>
+  call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr %0, i32 1, <1 x i1> %1)
+  %2 = call <1 x i32> @llvm.masked.load.v1i32.p0(ptr %0, i32 1, <1 x i1> %1, <1 x i32> zeroinitializer)
+  store <1 x i32> %2, ptr %p, align 4
+  ret void
+}
+
+define void @xor_cond(ptr %p, i1 %cond) {
+; CHECK-LABEL: xor_cond:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    cfcmovel %eax, (%rdi)
+; CHECK-NEXT:    retq
+entry:
+  %0 = xor i1 %cond, true
+  %1 = insertelement <1 x i1> zeroinitializer, i1 %0, i64 0
+  call void @llvm.masked.store.v1i32.p0(<1 x i32> zeroinitializer, ptr %p, i32 1, <1 x i1> %1)
   ret void
 }

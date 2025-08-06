@@ -828,6 +828,8 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
          "Invalid array element type");
   SPIRVType *SpvTypeInt32 = getOrCreateSPIRVIntegerType(32, MIRBuilder);
   SPIRVType *ArrayType = nullptr;
+  const SPIRVSubtarget &ST =
+      cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget());
   if (NumElems != 0) {
     Register NumElementsVReg =
         buildConstantInt(NumElems, MIRBuilder, SpvTypeInt32, EmitIR);
@@ -838,6 +840,10 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(NumElementsVReg);
     });
   } else {
+    assert(ST.isShader() && "Runtime arrays are not allowed in non-shader "
+                            "SPIR-V modules.");
+    if (!ST.isShader())
+      return nullptr;
     ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
       return MIRBuilder.buildInstr(SPIRV::OpTypeRuntimeArray)
           .addDef(createTypeVReg(MIRBuilder))
@@ -1404,6 +1410,40 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateLayoutType(
       ST, MIRBuilder, SPIRV::AccessQualifier::None, Decorator, EmitIr);
   add(Key, SPIRVStructType);
   return SPIRVStructType;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getImageType(
+    const TargetExtType *ExtensionType,
+    const SPIRV::AccessQualifier::AccessQualifier Qualifier,
+    MachineIRBuilder &MIRBuilder) {
+  assert(ExtensionType->getNumTypeParameters() == 1 &&
+         "SPIR-V image builtin type must have sampled type parameter!");
+  const SPIRVType *SampledType =
+      getOrCreateSPIRVType(ExtensionType->getTypeParameter(0), MIRBuilder,
+                           SPIRV::AccessQualifier::ReadWrite, true);
+  assert((ExtensionType->getNumIntParameters() == 7 ||
+          ExtensionType->getNumIntParameters() == 6) &&
+         "Invalid number of parameters for SPIR-V image builtin!");
+
+  SPIRV::AccessQualifier::AccessQualifier accessQualifier =
+      SPIRV::AccessQualifier::None;
+  if (ExtensionType->getNumIntParameters() == 7) {
+    accessQualifier = Qualifier == SPIRV::AccessQualifier::WriteOnly
+                          ? SPIRV::AccessQualifier::WriteOnly
+                          : SPIRV::AccessQualifier::AccessQualifier(
+                                ExtensionType->getIntParameter(6));
+  }
+
+  // Create or get an existing type from GlobalRegistry.
+  SPIRVType *R = getOrCreateOpTypeImage(
+      MIRBuilder, SampledType,
+      SPIRV::Dim::Dim(ExtensionType->getIntParameter(0)),
+      ExtensionType->getIntParameter(1), ExtensionType->getIntParameter(2),
+      ExtensionType->getIntParameter(3), ExtensionType->getIntParameter(4),
+      SPIRV::ImageFormat::ImageFormat(ExtensionType->getIntParameter(5)),
+      accessQualifier);
+  SPIRVToLLVMType[R] = ExtensionType;
+  return R;
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypeImage(

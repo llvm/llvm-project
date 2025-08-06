@@ -2087,11 +2087,10 @@ void VectorLegalizer::ExpandSETCC(SDNode *Node,
     // Otherwise, SETCC for the given comparison type must be completely
     // illegal; expand it into a SELECT_CC.
     EVT VT = Node->getValueType(0);
-    LHS =
-        DAG.getNode(ISD::SELECT_CC, dl, VT, LHS, RHS,
-                    DAG.getBoolConstant(true, dl, VT, LHS.getValueType()),
-                    DAG.getBoolConstant(false, dl, VT, LHS.getValueType()), CC);
-    LHS->setFlags(Node->getFlags());
+    LHS = DAG.getNode(ISD::SELECT_CC, dl, VT, LHS, RHS,
+                      DAG.getBoolConstant(true, dl, VT, LHS.getValueType()),
+                      DAG.getBoolConstant(false, dl, VT, LHS.getValueType()),
+                      CC, Node->getFlags());
   }
 
   Results.push_back(LHS);

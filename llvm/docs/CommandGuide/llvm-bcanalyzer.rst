@@ -14,7 +14,7 @@ DESCRIPTION
 The :program:`llvm-bcanalyzer` command is a small utility for analyzing bitcode
 files.  The tool reads a bitcode file (such as generated with the
 :program:`llvm-as` tool) and produces a statistical report on the contents of
-the bitcode file.  The tool can also dump a low level but human readable
+the bitcode file.  The tool can also dump a low level but human-readable
 version of the bitcode file.  This tool is probably not of much interest or
 utility except for those working directly with the bitcode file format.  Most
 LLVM users can just ignore this tool.
@@ -30,7 +30,7 @@ OPTIONS
 
 .. option:: --dump
 
- Causes :program:`llvm-bcanalyzer` to dump the bitcode in a human readable
+ Causes :program:`llvm-bcanalyzer` to dump the bitcode in a human-readable
  format.  This format is significantly different from LLVM assembly and
  provides details about the encoding of the bitcode file.
 

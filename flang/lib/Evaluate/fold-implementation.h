@@ -2192,7 +2192,14 @@ Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
       }
       return Expr<T>{Constant<T>{power.power}};
     } else {
-      if (auto callable{GetHostRuntimeWrapper<T, T, T>("pow")}) {
+      if (folded->first.IsZero()) {
+        if (folded->second.IsZero()) {
+          context.messages().Say(common::UsageWarning::FoldingException,
+              "REAL/COMPLEX 0**0 is not defined"_warn_en_US);
+        } else {
+          return Expr<T>(Constant<T>{folded->first}); // 0. ** nonzero -> 0.
+        }
+      } else if (auto callable{GetHostRuntimeWrapper<T, T, T>("pow")}) {
         return Expr<T>{
             Constant<T>{(*callable)(context, folded->first, folded->second)}};
       } else if (context.languageFeatures().ShouldWarn(

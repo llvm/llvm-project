@@ -7,10 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/IR/IRMapping.h"
-#include "mlir/IR/Iterators.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/IR/RegionKindInterface.h"
 #include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;

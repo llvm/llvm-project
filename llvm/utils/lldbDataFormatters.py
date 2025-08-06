@@ -94,6 +94,11 @@ def __lldb_init_module(debugger, internal_dict):
         f"-l {__name__}.ExpectedSynthetic "
         '-x "^llvm::Expected<.+>$"'
     )
+    debugger.HandleCommand(
+        "type summary add -w llvm "
+        f"-F {__name__}.SmallBitVectorSummary "
+        "llvm::SmallBitVector"
+    )
 
 
 # Pretty printer for llvm::SmallVector/llvm::SmallVectorImpl
@@ -448,3 +453,28 @@ class ExpectedSynthetic:
         if idx == 0:
             return self.stored_value
         return lldb.SBValue()
+
+
+def SmallBitVectorSummary(valobj, _):
+    underlyingValue = valobj.GetChildMemberWithName("X").unsigned
+    numBaseBits = valobj.target.addr_size * 8
+    smallNumRawBits = numBaseBits - 1
+    smallNumSizeBits = None
+    if numBaseBits == 32:
+        smallNumSizeBits = 5
+    elif numBaseBits == 64:
+        smallNumSizeBits = 6
+    else:
+        smallNumSizeBits = smallNumRawBits
+    smallNumDataBits = smallNumRawBits - smallNumSizeBits
+
+    # If our underlying value is not small, print we can not dump large values.
+    isSmallMask = 1
+    if underlyingValue & isSmallMask == 0:
+        return "<can not read large SmallBitVector>"
+
+    smallRawBits = underlyingValue >> 1
+    smallSize = smallRawBits >> smallNumDataBits
+    bits = smallRawBits & ((1 << (smallSize + 1)) - 1)
+    # format `bits` in binary (b), with 0 padding, of width `smallSize`, and left aligned (>)
+    return f"[{bits:0>{smallSize}b}]"

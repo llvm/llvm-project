@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define __CLC_FUNCTION dot
+#ifndef __CLC_OPENCL_GEOMETRIC_DOT_H__
+#define __CLC_OPENCL_GEOMETRIC_DOT_H__
+
+#define FUNCTION dot
 #define __CLC_BODY <clc/geometric/binary_decl.inc>
 
 #include <clc/math/gentype.inc>
 
-#undef __CLC_FUNCTION
+#undef FUNCTION
+
+#endif // __CLC_OPENCL_GEOMETRIC_DOT_H__

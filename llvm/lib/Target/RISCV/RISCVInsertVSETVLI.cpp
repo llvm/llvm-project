@@ -421,10 +421,12 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // * We can't modify SEW here since the slide amount is in units of SEW.
     // * VL=1 is special only because we have existing support for zero vs
     //   non-zero VL.  We could generalize this if we had a VL > C predicate.
-    // * The LMUL1 restriction is for machines whose latency may depend on VL.
+    // * The LMUL1 restriction is for machines whose latency may depend on LMUL.
     // * As above, this is only legal for tail "undefined" not "agnostic".
+    // * We avoid increasing vl if the subtarget has +vl-dependent-latency
     if (RISCVInstrInfo::isVSlideInstr(MI) && VLOp.isImm() &&
-        VLOp.getImm() == 1 && hasUndefinedPassthru(MI)) {
+        VLOp.getImm() == 1 && hasUndefinedPassthru(MI) &&
+        !ST->hasVLDependentLatency()) {
       Res.VLAny = false;
       Res.VLZeroness = true;
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
@@ -438,7 +440,8 @@ DemandedFields getDemanded(const MachineInstr &MI, const RISCVSubtarget *ST) {
     // careful to not increase the number of active vector registers (unlike for
     // vmv.s.x.)
     if (RISCVInstrInfo::isScalarSplatInstr(MI) && VLOp.isImm() &&
-        VLOp.getImm() == 1 && hasUndefinedPassthru(MI)) {
+        VLOp.getImm() == 1 && hasUndefinedPassthru(MI) &&
+        !ST->hasVLDependentLatency()) {
       Res.LMUL = DemandedFields::LMULLessThanOrEqualToM1;
       Res.SEWLMULRatio = false;
       Res.VLAny = false;
@@ -1768,8 +1771,9 @@ void RISCVInsertVSETVLI::insertReadVL(MachineBasicBlock &MBB) {
           SlotIndex NewDefSI =
               LIS->InsertMachineInstrInMaps(*ReadVLMI).getRegSlot();
           LiveInterval &DefLI = LIS->getInterval(VLOutput);
-          VNInfo *DefVNI = DefLI.getVNInfoAt(DefLI.beginIndex());
-          DefLI.removeSegment(DefLI.beginIndex(), NewDefSI);
+          LiveRange::Segment *DefSeg = DefLI.getSegmentContaining(NewDefSI);
+          VNInfo *DefVNI = DefLI.getVNInfoAt(DefSeg->start);
+          DefLI.removeSegment(DefSeg->start, NewDefSI);
           DefVNI->def = NewDefSI;
         }
       }

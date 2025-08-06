@@ -1940,6 +1940,18 @@ func.func @bitcastPoisonFPtoI() -> i32 {
 
 // -----
 
+// CHECK-LABEL: func @bitcastChain(
+//  CHECK-SAME:     %[[arg:.*]]: i16)
+//       CHECK:   %[[cast:.*]] = arith.bitcast %[[arg]] : i16 to f16
+//       CHECK:   return %[[cast]]
+func.func @bitcastChain(%arg: i16) -> f16 {
+  %0 = arith.bitcast %arg : i16 to bf16
+  %1 = arith.bitcast %0 : bf16 to f16
+  return %1 : f16
+}
+
+// -----
+
 // CHECK-LABEL: test_maxsi
 // CHECK-DAG: %[[C0:.+]] = arith.constant 42
 // CHECK-DAG: %[[MAX_INT_CST:.+]] = arith.constant 127

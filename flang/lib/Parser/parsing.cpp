@@ -285,6 +285,8 @@ void Parsing::Parse(llvm::raw_ostream &out) {
       .set_log(&log_);
   ParseState parseState{cooked()};
   parseState.set_inFixedForm(options_.isFixedForm).set_userState(&userState);
+  // Don't bother managing message buffers when parsing module files.
+  parseState.set_deferMessages(options_.isModuleFile);
   parseTree_ = program.Parse(parseState);
   CHECK(
       !parseState.anyErrorRecovery() || parseState.messages().AnyFatalError());

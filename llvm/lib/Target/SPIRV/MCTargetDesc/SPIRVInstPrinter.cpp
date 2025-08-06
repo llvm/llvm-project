@@ -19,7 +19,6 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
@@ -376,7 +375,7 @@ void SPIRVInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (Op.isReg())
       O << '%' << (getIDFromRegister(Op.getReg().id()) + 1);
     else if (Op.isImm())
-      O << formatImm((int64_t)Op.getImm());
+      O << formatImm(Op.getImm());
     else if (Op.isDFPImm())
       O << formatImm((double)Op.getDFPImm());
     else if (Op.isExpr())

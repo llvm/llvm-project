@@ -563,9 +563,8 @@ CrossTranslationUnitContext::ASTLoader::loadFromDump(StringRef ASTDumpPath) {
   auto DiagOpts = std::make_shared<DiagnosticOptions>();
   TextDiagnosticPrinter *DiagClient =
       new TextDiagnosticPrinter(llvm::errs(), *DiagOpts);
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine(DiagID, *DiagOpts, DiagClient));
+  auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+      DiagnosticIDs::create(), *DiagOpts, DiagClient);
   return ASTUnit::LoadFromASTFile(
       ASTDumpPath, CI.getPCHContainerOperations()->getRawReader(),
       ASTUnit::LoadEverything, DiagOpts, Diags, CI.getFileSystemOpts(),
@@ -607,8 +606,8 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   auto *DiagClient = new ForwardingDiagnosticConsumer{CI.getDiagnosticClient()};
   IntrusiveRefCntPtr<DiagnosticIDs> DiagID{
       CI.getDiagnostics().getDiagnosticIDs()};
-  IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
-      new DiagnosticsEngine{DiagID, *DiagOpts, DiagClient});
+  auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagID, *DiagOpts,
+                                                            DiagClient);
 
   return ASTUnit::LoadFromCommandLine(
       CommandLineArgs.begin(), (CommandLineArgs.end()),

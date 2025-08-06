@@ -1733,7 +1733,7 @@ void ASTStmtReader::VisitMSDependentExistsStmt(MSDependentExistsStmt *S) {
 void ASTStmtReader::VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
   VisitCallExpr(E);
   E->CXXOperatorCallExprBits.OperatorKind = Record.readInt();
-  E->Range = Record.readSourceRange();
+  E->BeginLoc = Record.readSourceLocation();
 }
 
 void ASTStmtReader::VisitCXXRewrittenBinaryOperator(
@@ -2086,13 +2086,12 @@ void ASTStmtReader::VisitOverloadExpr(OverloadExpr *E) {
   assert((E->hasTemplateKWAndArgsInfo() == HasTemplateKWAndArgsInfo) &&
          "Wrong HasTemplateKWAndArgsInfo!");
 
+  unsigned NumTemplateArgs = 0;
   if (HasTemplateKWAndArgsInfo) {
-    unsigned NumTemplateArgs = Record.readInt();
+    NumTemplateArgs = Record.readInt();
     ReadTemplateKWAndArgsInfo(*E->getTrailingASTTemplateKWAndArgsInfo(),
                               E->getTrailingTemplateArgumentLoc(),
                               NumTemplateArgs);
-    assert((E->getNumTemplateArgs() == NumTemplateArgs) &&
-           "Wrong NumTemplateArgs!");
   }
 
   UnresolvedSet<8> Decls;
@@ -2107,6 +2106,9 @@ void ASTStmtReader::VisitOverloadExpr(OverloadExpr *E) {
   for (unsigned I = 0; I != NumResults; ++I) {
     Results[I] = (Iter + I).getPair();
   }
+
+  assert((E->getNumTemplateArgs() == NumTemplateArgs) &&
+         "Wrong NumTemplateArgs!");
 
   E->NameInfo = Record.readDeclarationNameInfo();
   E->QualifierLoc = Record.readNestedNameSpecifierLoc();

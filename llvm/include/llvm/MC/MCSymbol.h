@@ -16,7 +16,7 @@
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCExpr.h"
-#include "llvm/MC/MCFragment.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbolTableEntry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -41,23 +41,9 @@ class raw_ostream;
 /// it is a reference to an external entity, it has a null section.
 class MCSymbol {
 protected:
-  /// The kind of the symbol.  If it is any value other than unset then this
-  /// class is actually one of the appropriate subclasses of MCSymbol.
-  enum SymbolKind {
-    SymbolKindUnset,
-    SymbolKindCOFF,
-    SymbolKindELF,
-    SymbolKindGOFF,
-    SymbolKindMachO,
-    SymbolKindWasm,
-    SymbolKindXCOFF,
-  };
-
-  /// A symbol can contain an Offset, or Value, or be Common, but never more
-  /// than one of these.
+  // A symbol can be regular, equated to an expression, or a common symbol.
   enum Contents : uint8_t {
     SymContentsUnset,
-    SymContentsOffset,
     SymContentsVariable,
     SymContentsCommon,
     SymContentsTargetCommon, // Index stores the section index
@@ -102,10 +88,6 @@ protected:
 
   /// This symbol is weak external.
   mutable unsigned IsWeakExternal : 1;
-
-  /// LLVM RTTI discriminator. This is actually a SymbolKind enumerator, but is
-  /// unsigned to avoid sign extension and achieve better bitpacking with MSVC.
-  unsigned Kind : 3;
 
   /// True if we have created a relocation that uses this symbol.
   mutable unsigned IsUsedInReloc : 1;
@@ -162,11 +144,11 @@ protected:
     uint64_t AlignmentPadding;
   };
 
-  MCSymbol(SymbolKind Kind, const MCSymbolTableEntry *Name, bool isTemporary)
+  MCSymbol(const MCSymbolTableEntry *Name, bool isTemporary)
       : IsTemporary(isTemporary), IsRedefinable(false), IsRegistered(false),
         IsExternal(false), IsPrivateExtern(false), IsWeakExternal(false),
-        Kind(Kind), IsUsedInReloc(false), IsResolving(0),
-        SymbolContents(SymContentsUnset), CommonAlignLog2(0), Flags(0) {
+        IsUsedInReloc(false), IsResolving(0), SymbolContents(SymContentsUnset),
+        CommonAlignLog2(0), Flags(0) {
     Offset = 0;
     HasName = !!Name;
     if (Name)
@@ -281,18 +263,6 @@ public:
   /// Mark the symbol as undefined.
   void setUndefined() { Fragment = nullptr; }
 
-  bool isELF() const { return Kind == SymbolKindELF; }
-
-  bool isCOFF() const { return Kind == SymbolKindCOFF; }
-
-  bool isGOFF() const { return Kind == SymbolKindGOFF; }
-
-  bool isMachO() const { return Kind == SymbolKindMachO; }
-
-  bool isWasm() const { return Kind == SymbolKindWasm; }
-
-  bool isXCOFF() const { return Kind == SymbolKindXCOFF; }
-
   /// @}
   /// \name Variable Symbols
   /// @{
@@ -322,20 +292,15 @@ public:
     Index = Value;
   }
 
-  bool isUnset() const { return SymbolContents == SymContentsUnset; }
-
   uint64_t getOffset() const {
-    assert((SymbolContents == SymContentsUnset ||
-            SymbolContents == SymContentsOffset) &&
+    assert(SymbolContents == SymContentsUnset &&
            "Cannot get offset for a common/variable symbol");
     return Offset;
   }
   void setOffset(uint64_t Value) {
-    assert((SymbolContents == SymContentsUnset ||
-            SymbolContents == SymContentsOffset) &&
+    assert(SymbolContents == SymContentsUnset &&
            "Cannot set offset for a common/variable symbol");
     Offset = Value;
-    SymbolContents = SymContentsOffset;
   }
 
   /// Return the size of a 'common' symbol.

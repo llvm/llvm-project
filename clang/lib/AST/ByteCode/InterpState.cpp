@@ -11,6 +11,8 @@
 #include "InterpStack.h"
 #include "Program.h"
 #include "State.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -52,7 +54,7 @@ void InterpState::cleanup() {
   // As a last resort, make sure all pointers still pointing to a dead block
   // don't point to it anymore.
   for (DeadBlock *DB = DeadBlocks; DB; DB = DB->Next) {
-    for (Pointer *P = DB->B.Pointers; P; P = P->Next) {
+    for (Pointer *P = DB->B.Pointers; P; P = P->asBlockPointer().Next) {
       P->PointeeStorage.BS.Pointee = nullptr;
     }
   }
@@ -77,27 +79,27 @@ void InterpState::deallocate(Block *B) {
   const Descriptor *Desc = B->getDescriptor();
   assert(Desc);
 
+  // The block might have a pointer saved in a field in its data
+  // that points to the block itself. We call the dtor first,
+  // which will destroy all the data but leave InlineDescriptors
+  // intact. If the block THEN still has pointers, we create a
+  // DeadBlock for it.
+  if (B->IsInitialized)
+    B->invokeDtor();
+
   if (B->hasPointers()) {
     size_t Size = B->getSize();
-
     // Allocate a new block, transferring over pointers.
     char *Memory =
         reinterpret_cast<char *>(std::malloc(sizeof(DeadBlock) + Size));
     auto *D = new (Memory) DeadBlock(DeadBlocks, B);
-    std::memset(D->B.rawData(), 0, D->B.getSize());
-
-    // Move data and metadata from the old block to the new (dead)block.
-    if (B->IsInitialized && Desc->MoveFn) {
-      Desc->MoveFn(B, B->data(), D->data(), Desc);
-      if (Desc->getMetadataSize() > 0)
-        std::memcpy(D->rawData(), B->rawData(), Desc->getMetadataSize());
-    }
+    // Since the block doesn't hold any actual data anymore, we can just
+    // memcpy() everything over.
+    std::memcpy(D->rawData(), B->rawData(), Desc->getAllocSize());
     D->B.IsInitialized = B->IsInitialized;
 
     // We moved the contents over to the DeadBlock.
     B->IsInitialized = false;
-  } else if (B->IsInitialized) {
-    B->invokeDtor();
   }
 }
 
