@@ -109,6 +109,8 @@ C23 Feature Support
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
+- `__builtin_elementwise_abs` can be used in constexpr.
+
 - Added ``__builtin_elementwise_minnumnum`` and ``__builtin_elementwise_maxnumnum``.
 
 - Trapping UBSan (e.g. ``-fsanitize-trap=undefined``) now emits a string describing the reason for 
