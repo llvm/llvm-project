@@ -5997,6 +5997,23 @@ bool Compiler<Emitter>::checkLiteralType(const Expr *E) {
   return this->emitCheckLiteralType(E->getType().getTypePtr(), E);
 }
 
+static bool initNeedsOverridenLoc(const CXXCtorInitializer *Init) {
+  const Expr *InitExpr = Init->getInit();
+
+  if (!Init->isWritten() && !Init->isInClassMemberInitializer() &&
+      !isa<CXXConstructExpr>(InitExpr))
+    return true;
+
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(InitExpr)) {
+    const CXXConstructorDecl *Ctor = CE->getConstructor();
+    if (Ctor->isDefaulted() && Ctor->isCopyOrMoveConstructor() &&
+        Ctor->isTrivial())
+      return true;
+  }
+
+  return false;
+}
+
 template <class Emitter>
 bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
   assert(!ReturnType);
@@ -6071,10 +6088,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       const Record::Field *F = R->getField(Member);
 
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
-                                    !Init->isWritten() &&
-                                        !Init->isInClassMemberInitializer() &&
-                                        (!isa<CXXConstructExpr>(InitExpr) ||
-                                         Member->isAnonymousStructOrUnion()));
+                                    initNeedsOverridenLoc(Init));
       if (!emitFieldInitializer(F, F->Offset, InitExpr, IsUnion))
         return false;
     } else if (const Type *Base = Init->getBaseClass()) {
@@ -6104,10 +6118,7 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         return false;
     } else if (const IndirectFieldDecl *IFD = Init->getIndirectMember()) {
       LocOverrideScope<Emitter> LOS(this, SourceInfo{},
-                                    !Init->isWritten() &&
-                                        !Init->isInClassMemberInitializer() &&
-                                        !isa<CXXConstructExpr>(InitExpr));
-
+                                    initNeedsOverridenLoc(Init));
       assert(IFD->getChainingSize() >= 2);
 
       unsigned NestedFieldOffset = 0;
