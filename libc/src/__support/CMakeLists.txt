@@ -1,5 +1,7 @@
+add_subdirectory(annex_k)
 add_subdirectory(CPP)
 add_subdirectory(macros)
+add_subdirectory(stdio)
 
 add_header_library(
   libc_errno

@@ -17,6 +17,8 @@ types:
   - type_name: lldiv_t
   - type_name: locale_t
   - type_name: size_t
+  - type_name: errno_t
+  - type_name: constraint_handler_t
 enums: []
 objects: []
 functions:
@@ -180,6 +182,12 @@ functions:
     return_type: int
     arguments:
       - type: void
+  - name: set_constraint_handler_s
+    standards:
+      - stdc
+    return_type: constraint_handler_t
+    arguments:
+      - type: constraint_handler_t
   - name: srand
     standards:
       - stdc

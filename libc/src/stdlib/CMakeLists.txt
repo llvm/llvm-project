@@ -652,3 +652,15 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
+
+add_entrypoint_object(
+  set_constraint_handler_s
+  SRCS
+    set_constraint_handler_s.cpp
+  HDRS
+    set_constraint_handler_s.h
+  DEPENDS
+    libc.src.__support.annex_k.abort_handler_s
+    libc.src.__support.annex_k.libc_constraint_handler
+    libc.src.__support.macros.config
+)

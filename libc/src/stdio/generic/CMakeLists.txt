@@ -162,9 +162,19 @@ add_generic_entrypoint_object(
   HDRS
     ../fopen.h
   DEPENDS
-    libc.hdr.types.FILE
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
+    libc.src.__support.stdio.fopen
+)
+
+add_generic_entrypoint_object(
+  fopen_s
+  SRCS
+    fopen_s.cpp
+  HDRS
+    ../fopen_s.h
+  DEPENDS
+    libc.src.__support.stdio.fopen
+    libc.src.__support.macros.config
+    libc.src.__support.annex_k.helper_macros
 )
 
 add_generic_entrypoint_object(

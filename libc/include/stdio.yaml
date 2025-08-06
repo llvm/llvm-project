@@ -11,6 +11,7 @@ macros:
     macro_value: stderr
 types:
   - type_name: size_t
+  - type_name: errno_t
   - type_name: off_t
   - type_name: cookie_io_functions_t
   - type_name: FILE
@@ -125,6 +126,14 @@ functions:
     arguments:
       - type: const char *
       - type: const char *
+  - name: fopen_s
+    standards:
+      - stdc
+    return_type: errno_t
+    arguments:
+      - type: FILE *__restrict *__restrict
+      - type: const char *__restrict
+      - type: const char *__restrict
   - name: fopencookie
     standards:
       - GNUExtensions

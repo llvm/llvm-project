@@ -204,6 +204,14 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.fdopen
 )
 
+add_entrypoint_object(
+  fopen_s
+  HDRS
+    fopen_s.h
+  DEPENDS
+    .generic.fopen_s
+)
+
 # These entrypoints have multiple potential implementations.
 add_stdio_entrypoint_object(feof)
 add_stdio_entrypoint_object(feof_unlocked)
