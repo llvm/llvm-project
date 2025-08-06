@@ -63,13 +63,7 @@ public:
       if (!src_elements_read.has_value())
         return Error(src_elements_read.error());
 
-      size_t size;
-      if constexpr (cpp::is_same_v<CharType, char8_t>)
-        size = cr.sizeAsUTF8();
-      else
-        size = cr.sizeAsUTF32();
-
-      if (size > num_to_write) {
+      if (cr.sizeAs<CharType>() > num_to_write) {
         cr.clear();
         return Error(-1);
       }

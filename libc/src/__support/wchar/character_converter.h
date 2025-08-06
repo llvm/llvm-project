@@ -32,8 +32,12 @@ public:
   bool isEmpty();
   bool isValidState();
 
-  size_t sizeAsUTF32();
-  size_t sizeAsUTF8();
+  template <typename CharType> size_t sizeAs() {
+    if constexpr (cpp::is_same_v<CharType, char8_t>)
+      return state->total_bytes;
+    else        // char32_t
+      return 1; // every character fits in a single char32_t
+  }
 
   int push(char8_t utf8_byte);
   int push(char32_t utf32);
