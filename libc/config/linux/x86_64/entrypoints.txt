@@ -893,7 +893,6 @@ if(LIBC_TYPES_HAS_FLOAT128)
   )
 endif()
 
-
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.ceilbf16
