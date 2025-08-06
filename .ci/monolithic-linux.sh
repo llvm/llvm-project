@@ -13,49 +13,14 @@
 # run only the relevant tests.
 #
 
-set -ex
-set -o pipefail
+source .ci/utils.sh
 
-MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
-BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
 INSTALL_DIR="${BUILD_DIR}/install"
-rm -rf "${BUILD_DIR}"
-
-sccache --zero-stats
 
 mkdir -p artifacts/reproducers
 
-# Make sure any clang reproducers will end up as artifacts.
+# Make sure any clang reproducers will end up as artifacts
 export CLANG_CRASH_DIAGNOSTICS_DIR=`realpath artifacts/reproducers`
-
-function at-exit {
-  retcode=$?
-
-  sccache --show-stats > artifacts/sccache_stats.txt
-  cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
-  cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
-
-  # If building fails there will be no results files.
-  shopt -s nullglob
-  
-  if [[ "$GITHUB_STEP_SUMMARY" != "" ]]; then
-    python3 "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
-      $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
-  fi
-}
-trap at-exit EXIT
-
-function start-group {
-  groupname=$1
-  if [[ "$GITHUB_ACTIONS" != "" ]]; then
-    echo "::endgroup"
-    echo "::group::$groupname"
-  elif [[ "$POSTCOMMIT_CI" != "" ]]; then
-    echo "@@@$STEP@@@"
-  else
-    echo "Starting $groupname"
-  fi
-}
 
 projects="${1}"
 targets="${2}"
