@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
+#include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/TransformOps/GPUHeuristics.h"
@@ -27,6 +28,7 @@
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Utils/Utils.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -1985,14 +1987,19 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
 
     // Convert the padding values to attributes.
     SmallVector<Attribute> paddingValues;
-    for (auto const &it :
+    for (auto const &[untypedAttr, elementOrTensorType] :
          llvm::zip(getPaddingValues(), linalgTarget->getOperandTypes())) {
-      auto attr = dyn_cast<TypedAttr>(std::get<0>(it));
+
+      if (isa<ub::PoisonAttr>(untypedAttr)) {
+        paddingValues.push_back(untypedAttr);
+        continue;
+      }
+      auto attr = dyn_cast<TypedAttr>(untypedAttr);
       if (!attr) {
-        emitOpError("expects padding values to be typed attributes");
+        emitOpError("expects padding values to be typed attributes or poison");
         return DiagnosedSilenceableFailure::definiteFailure();
       }
-      Type elementType = getElementTypeOrSelf(std::get<1>(it));
+      Type elementType = getElementTypeOrSelf(elementOrTensorType);
       // Try to parse string attributes to obtain an attribute of element type.
       if (auto stringAttr = dyn_cast<StringAttr>(attr)) {
         auto parsedAttr = dyn_cast_if_present<TypedAttr>(parseAttribute(
@@ -2000,7 +2007,7 @@ transform::PadOp::apply(transform::TransformRewriter &rewriter,
             /*numRead=*/nullptr, /*isKnownNullTerminated=*/true));
         if (!parsedAttr || parsedAttr.getType() != elementType) {
           auto diag = this->emitOpError("expects a padding that parses to ")
-                      << elementType << ", got " << std::get<0>(it);
+                      << elementType << ", got " << untypedAttr;
           diag.attachNote(linalgTarget.getLoc()) << "when applied to this op";
           return DiagnosedSilenceableFailure::definiteFailure();
         }
@@ -2235,8 +2242,13 @@ transform::PadTilingInterfaceOp::apply(transform::TransformRewriter &rewriter,
          llvm::zip(getPaddingValues(), targetOp->getOperandTypes())) {
       auto attr = dyn_cast<TypedAttr>(untypedAttr);
       Type elementType = getElementTypeOrSelf(elementOrTensorType);
+
+      if (isa<ub::PoisonAttr>(untypedAttr)) {
+        paddingValues.push_back(untypedAttr);
+        continue;
+      }
       if (!attr) {
-        emitOpError("expects padding values to be typed attributes");
+        emitOpError("expects padding values to be typed attributes or poison");
         return DiagnosedSilenceableFailure::definiteFailure();
       }
       // Try to parse string attributes to obtain an attribute of element type.
