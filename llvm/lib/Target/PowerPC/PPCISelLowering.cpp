@@ -3925,9 +3925,6 @@ SDValue PPCTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue PPCTargetLowering::LowerADJUST_TRAMPOLINE(SDValue Op,
                                                   SelectionDAG &DAG) const {
-  if (Subtarget.isAIXABI())
-    report_fatal_error("ADJUST_TRAMPOLINE operation is not supported on AIX.");
-
   return Op.getOperand(0);
 }
 
@@ -3984,9 +3981,6 @@ SDValue PPCTargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  if (Subtarget.isAIXABI())
-    report_fatal_error("INIT_TRAMPOLINE operation is not supported on AIX.");
-
   SDValue Chain = Op.getOperand(0);
   SDValue Trmp = Op.getOperand(1); // trampoline
   SDValue FPtr = Op.getOperand(2); // nested function
@@ -3994,6 +3988,65 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   SDLoc dl(Op);
 
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  if (Subtarget.isAIXABI()) {
+    // On AIX we create a trampoline descriptor by combining the
+    // entry point and TOC from the global descriptor (FPtr) with the
+    // nest argument as the environment pointer.
+    uint64_t PointerSize = Subtarget.isPPC64() ? 8 : 4;
+    MaybeAlign PointerAlign(PointerSize);
+    auto MMOFlags = Subtarget.hasInvariantFunctionDescriptors()
+                        ? (MachineMemOperand::MODereferenceable |
+                           MachineMemOperand::MOInvariant)
+                        : MachineMemOperand::MONone;
+
+    uint64_t TOCPointerOffset = 1 * PointerSize;
+    uint64_t EnvPointerOffset = 2 * PointerSize;
+    SDValue SDTOCPtrOffset = DAG.getConstant(TOCPointerOffset, dl, PtrVT);
+    SDValue SDEnvPtrOffset = DAG.getConstant(EnvPointerOffset, dl, PtrVT);
+
+    const Value *TrampolineAddr =
+        cast<SrcValueSDNode>(Op.getOperand(4))->getValue();
+    const Function *Func =
+        cast<Function>(cast<SrcValueSDNode>(Op.getOperand(5))->getValue());
+
+    SDValue OutChains[3];
+
+    // Copy the entry point address from the global descriptor to the
+    // trampoline buffer.
+    SDValue LoadEntryPoint =
+        DAG.getLoad(PtrVT, dl, Chain, FPtr, MachinePointerInfo(Func, 0),
+                    PointerAlign, MMOFlags);
+    SDValue EPLoadChain = LoadEntryPoint.getValue(1);
+    OutChains[0] = DAG.getStore(EPLoadChain, dl, LoadEntryPoint, Trmp,
+                                MachinePointerInfo(TrampolineAddr, 0));
+
+    // Copy the TOC pointer from the global descriptor to the trampoline
+    // buffer.
+    SDValue TOCFromDescriptorPtr =
+        DAG.getNode(ISD::ADD, dl, PtrVT, FPtr, SDTOCPtrOffset);
+    SDValue TOCReg = DAG.getLoad(PtrVT, dl, Chain, TOCFromDescriptorPtr,
+                                 MachinePointerInfo(Func, TOCPointerOffset),
+                                 PointerAlign, MMOFlags);
+    SDValue TrampolineTOCPointer =
+        DAG.getNode(ISD::ADD, dl, PtrVT, Trmp, SDTOCPtrOffset);
+    SDValue TOCLoadChain = TOCReg.getValue(1);
+    OutChains[1] =
+        DAG.getStore(TOCLoadChain, dl, TOCReg, TrampolineTOCPointer,
+                     MachinePointerInfo(TrampolineAddr, TOCPointerOffset));
+
+    // Store the nest argument into the environment pointer in the trampoline
+    // buffer.
+    SDValue EnvPointer = DAG.getNode(ISD::ADD, dl, PtrVT, Trmp, SDEnvPtrOffset);
+    OutChains[2] =
+        DAG.getStore(Chain, dl, Nest, EnvPointer,
+                     MachinePointerInfo(TrampolineAddr, EnvPointerOffset));
+
+    SDValue TokenFactor =
+        DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
+    return TokenFactor;
+  }
+
   bool isPPC64 = (PtrVT == MVT::i64);
   Type *IntPtrTy = DAG.getDataLayout().getIntPtrType(*DAG.getContext());
 
@@ -6865,9 +6918,6 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
   if (ValVT == MVT::f128)
     report_fatal_error("f128 is unimplemented on AIX.");
 
-  if (ArgFlags.isNest())
-    report_fatal_error("Nest arguments are unimplemented.");
-
   static const MCPhysReg GPR_32[] = {// 32-bit registers.
                                      PPC::R3, PPC::R4, PPC::R5, PPC::R6,
                                      PPC::R7, PPC::R8, PPC::R9, PPC::R10};
@@ -6881,6 +6931,14 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
                                  PPC::V10, PPC::V11, PPC::V12, PPC::V13};
 
   const ArrayRef<MCPhysReg> GPRs = IsPPC64 ? GPR_64 : GPR_32;
+
+  if (ArgFlags.isNest()) {
+    MCRegister EnvReg = State.AllocateReg(IsPPC64 ? PPC::X11 : PPC::R11);
+    if (!EnvReg)
+      report_fatal_error("More then one nest argument.");
+    State.addLoc(CCValAssign::getReg(ValNo, ValVT, EnvReg, RegVT, LocInfo));
+    return false;
+  }
 
   if (ArgFlags.isByVal()) {
     const Align ByValAlign(ArgFlags.getNonZeroByValAlign());
