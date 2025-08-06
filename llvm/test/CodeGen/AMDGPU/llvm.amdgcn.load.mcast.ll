@@ -933,6 +933,7 @@ entry:
   ret void
 }
 
+; DDS instructions don't support scale_offset, ensure it isn't generated.
 define void @load_mcast_monitor_b32_saddr_scale_offset_distributed(ptr addrspace(11) inreg %addr, ptr addrspace(1) %use, i32 inreg %mask, i32 %idx) "amdgpu-wavegroup-enable" {
 ; CHECK-LABEL: load_mcast_monitor_b32_saddr_scale_offset_distributed:
 ; CHECK:       ; %bb.0: ; %entry
@@ -941,14 +942,15 @@ define void @load_mcast_monitor_b32_saddr_scale_offset_distributed(ptr addrspace
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_rtscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 2, v2
 ; CHECK-NEXT:    s_mov_b32 m0, s1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    dds_load_mcast_b32 g1[0], v2, s0 scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    global_store_b32 v[0:1], g1[0], off
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b32 g1[0], v2, s0 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b32 v[0:1], g1[0], off
 ; CHECK-NEXT:    s_mov_b32 s33, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
@@ -1052,14 +1054,15 @@ define void @load_mcast_monitor_b64_saddr_scale_offset_distributed(ptr addrspace
 ; CHECK-NEXT:    s_wait_samplecnt 0x0
 ; CHECK-NEXT:    s_wait_rtscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
+; CHECK-NEXT:    v_lshlrev_b32_e32 v2, 3, v2
 ; CHECK-NEXT:    s_mov_b32 m0, s1
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
-; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    dds_load_mcast_b64 g1[0:1], v2, s0 scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
-; CHECK-NEXT:    s_wait_loadcnt 0x0
-; CHECK-NEXT:    global_store_b64 v[0:1], g1[0:1], off
 ; CHECK-NEXT:    s_mov_b32 s2, s33
 ; CHECK-NEXT:    s_mov_b32 s33, s32
+; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
+; CHECK-NEXT:    dds_load_mcast_b64 g1[0:1], v2, s0 th:TH_LOAD_BYPASS scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_loadcnt 0x0
+; CHECK-NEXT:    global_store_b64 v[0:1], g1[0:1], off
 ; CHECK-NEXT:    s_mov_b32 s33, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
