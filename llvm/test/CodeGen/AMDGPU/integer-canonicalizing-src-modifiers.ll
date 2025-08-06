@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
 
-; Ensure that the conversion of bitmasks affecting the sign bit on integers to srcmods
+; Demonstrate that the conversion of bitmasks affecting the sign bit on integers to srcmods
 ; does not apply to canonicalizing instructions.
 
 define double @v_uitofp_i32_to_f64_abs(i32 %arg0) nounwind {
@@ -41,6 +41,46 @@ define double @v_uitofp_i32_to_f64_neg(i32 %arg0) nounwind {
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x80000000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_f64_u32_e32 v[0:1], v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %arg0.neg = and i32 %arg0, u0x80000000
+  %cvt = uitofp i32 %arg0.neg to double
+  ret double %cvt
+}
+
+define double @s_uitofp_i32_to_f64_abs(i32 inreg %arg0) nounwind {
+; GCN-LABEL: s_uitofp_i32_to_f64_abs:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_bitset0_b32 s16, 31
+; GCN-NEXT:    v_cvt_f64_u32_e32 v[0:1], s16
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_uitofp_i32_to_f64_abs:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_bitset0_b32 s0, 31
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+  %arg0.abs = and i32 %arg0, u0x7fffffff
+  %cvt = uitofp i32 %arg0.abs to double
+  ret double %cvt
+}
+
+define double @s_uitofp_i32_to_f64_neg(i32 inreg %arg0) nounwind {
+; GCN-LABEL: s_uitofp_i32_to_f64_neg:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_and_b32 s4, s16, 0x80000000
+; GCN-NEXT:    v_cvt_f64_u32_e32 v[0:1], s4
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: s_uitofp_i32_to_f64_neg:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_and_b32 s0, s0, 0x80000000
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_cvt_f64_u32_e32 v[0:1], s0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %arg0.neg = and i32 %arg0, u0x80000000
   %cvt = uitofp i32 %arg0.neg to double
