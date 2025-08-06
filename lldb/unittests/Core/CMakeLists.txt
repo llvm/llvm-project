@@ -1,3 +1,11 @@
+set(SWIFT_SOURCES
+  SwiftDemanglingPartsTest.cpp
+)
+
+set(LLVM_OPTIONAL_SOURCES ${SWIFT_SOURCES})
+if (NOT LLDB_ENABLE_SWIFT_SUPPORT)
+  unset(SWIFT_SOURCES)
+endif()
 
 add_lldb_unittest(LLDBCoreTests
   DebuggerTest.cpp
@@ -14,8 +22,9 @@ add_lldb_unittest(LLDBCoreTests
   SourceLocationSpecTest.cpp
   SourceManagerTest.cpp
   TelemetryTest.cpp
-  SwiftDemanglingPartsTest.cpp
   UniqueCStringMapTest.cpp
+
+  ${SWIFT_SOURCES}
 
   LINK_COMPONENTS
     Support
