@@ -273,8 +273,9 @@ using ZeroOpVPInstruction_match = ZeroOpRecipe_match<Opcode, VPInstruction>;
 
 template <typename Op0_t, unsigned Opcode>
 using AllUnaryRecipe_match =
-    Recipe_match<std::tuple<Op0_t>, Opcode, /*Commutative*/ false, VPWidenRecipe, VPReplicateRecipe,
-                 VPWidenCastRecipe, VPInstruction>;
+    Recipe_match<std::tuple<Op0_t>, Opcode, /*Commutative*/ false,
+                 VPWidenRecipe, VPReplicateRecipe, VPWidenCastRecipe,
+                 VPInstruction>;
 
 template <typename Op0_t, typename Op1_t, unsigned Opcode, bool Commutative,
           typename... RecipeTys>
@@ -294,12 +295,12 @@ inline ZeroOpVPInstruction_match<VPInstruction::BuildVector> m_BuildVector() {
 }
 
 template <unsigned Opcode, typename... OpTys>
-using VPInstruction_match =
-    Recipe_match<std::tuple<OpTys...>, Opcode, /*Commutative*/ false, VPInstruction>;
+using VPInstruction_match = Recipe_match<std::tuple<OpTys...>, Opcode,
+                                         /*Commutative*/ false, VPInstruction>;
 
 template <unsigned Opcode, typename... OpTys>
 inline VPInstruction_match<Opcode, OpTys...>
-m_VPInstruction(const OpTys &... Ops) {
+m_VPInstruction(const OpTys &...Ops) {
   return VPInstruction_match<Opcode, OpTys...>(Ops...);
 }
 
@@ -456,8 +457,8 @@ m_LogicalOr(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
-using VPScalarIVSteps_match =
-    Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0, false, VPScalarIVStepsRecipe>;
+using VPScalarIVSteps_match = Recipe_match<std::tuple<Op0_t, Op1_t, Op2_t>, 0,
+                                           false, VPScalarIVStepsRecipe>;
 
 template <typename Op0_t, typename Op1_t, typename Op2_t>
 inline VPScalarIVSteps_match<Op0_t, Op1_t, Op2_t>
