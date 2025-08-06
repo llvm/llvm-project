@@ -1388,7 +1388,7 @@ __tree<_Tp, _Compare, _Allocator>& __tree<_Tp, _Compare, _Allocator>::operator=(
     if (__root())
       __root()->__parent_ = __end_node();
   }
-  __begin_node_ = static_cast<__end_node_pointer>(std::__tree_min(__end_node()->__left_));
+  __begin_node_ = static_cast<__end_node_pointer>(std::__tree_min(static_cast<__node_base_pointer>(__end_node())));
   __size_       = __t.size();
 
   return *this;
