@@ -146,6 +146,8 @@ Improvements to Clang's diagnostics
 - Fixed fix-it hint for fold expressions. Clang now correctly places the suggested right 
   parenthesis when diagnosing malformed fold expressions. (#GH151787)
 
+- ``-Wimplicit-fallthrough`` was added to ``-Wextra`` for GCC compatibility.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
