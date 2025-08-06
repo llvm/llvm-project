@@ -4,9 +4,8 @@ define i1 @sext_add_cmp_to_add_cmp(i16 noundef %x) {
 ; CHECK-LABEL: define i1 @sext_add_cmp_to_add_cmp(
 ; CHECK-SAME: i16 noundef [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[X]] to i128
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i128 [[CONV]], 128
-; CHECK-NEXT:    [[OR_COND_I:%.*]] = icmp ult i128 [[ADD]], 256
+; CHECK-NEXT:    [[TMP0:%.*]] = add i16 [[X]], 128
+; CHECK-NEXT:    [[OR_COND_I:%.*]] = icmp ult i16 [[TMP0]], 256
 ; CHECK-NEXT:    ret i1 [[OR_COND_I]]
 ;
 entry:
