@@ -62,15 +62,15 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
                SymbolTableOffset, (uint64_t)SymbolTable.size())
      << '\n';
 
-  llvm::DenseMap<uint32_t, decltype(ConstantPoolVectors)::const_pointer>
-      CuVectorMap(ConstantPoolVectors.size());
-  for (const auto& [Offset, CUVector] : ConstantPoolVectors)
-    CuVectorMap.try_emplace(Offset, &CUVector);
+  llvm::DenseMap<uint32_t, uint32_t> OffsetToIdMap(ConstantPoolVectors.size());
+  for (uint32_t Id = 0; Id < ConstantPoolVectors.size(); ++Id)
+    OffsetToIdMap[ConstantPoolVectors[Id].first] = Id;
 
-  const auto FindCuVector =[&](uint32_t VecOffset) {
-        const auto It = CuVectorMap.find(VecOffset);
-        return It != CuVectorMap.end() ? It->second : ConstantPoolVectors.end();
-      };
+  const auto FindCuVectorId = [&](uint32_t VecOffset) {
+    const auto It = OffsetToIdMap.find(VecOffset);
+    assert(It != OffsetToIdMap.end() && "Invalid symbol table");
+    return It->second;
+  };
 
   uint32_t I = -1;
   for (const SymTableEntry &E : SymbolTable) {
@@ -84,9 +84,7 @@ void DWARFGdbIndex::dumpSymbolTable(raw_ostream &OS) const {
     StringRef Name = ConstantPoolStrings.substr(
         ConstantPoolOffset - StringPoolOffset + E.NameOffset);
 
-    const auto* CuVector = FindCuVector(E.VecOffset);
-    assert(CuVector != ConstantPoolVectors.end() && "Invalid symbol table");
-    uint32_t CuVectorId = CuVector - ConstantPoolVectors.begin();
+    const uint32_t CuVectorId = FindCuVectorId(E.VecOffset);
     OS << format("      String name: %s, CU vector index: %d\n", Name.data(),
                  CuVectorId);
   }
