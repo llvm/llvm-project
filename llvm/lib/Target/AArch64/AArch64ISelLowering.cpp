@@ -8537,7 +8537,7 @@ static void analyzeCallOperands(const AArch64TargetLowering &TLI,
       if (IsCalleeWin64) {
         UseVarArgCC = true;
       } else {
-        UseVarArgCC = !Outs[i].IsFixed;
+        UseVarArgCC = ArgFlags.isVarArg();
       }
     }
 
@@ -8982,7 +8982,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     unsigned NumArgs = Outs.size();
 
     for (unsigned i = 0; i != NumArgs; ++i) {
-      if (!Outs[i].IsFixed && Outs[i].VT.isScalableVector())
+      if (Outs[i].Flags.isVarArg() && Outs[i].VT.isScalableVector())
         report_fatal_error("Passing SVE types to variadic functions is "
                            "currently not supported");
     }
