@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/Host.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -167,35 +169,10 @@ StringRef sys::detail::getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent) {
       .Default(generic);
 }
 
-StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
-  // The cpuid register on arm is not accessible from user space. On Linux,
-  // it is exposed through the /proc/cpuinfo file.
-
-  // Read 32 lines from /proc/cpuinfo, which should contain the CPU part line
-  // in all cases.
-  SmallVector<StringRef, 32> Lines;
-  ProcCpuinfoContent.split(Lines, '\n');
-
-  // Look for the CPU implementer and hardware lines, and store the CPU part
-  // numbers found.
-  StringRef Implementer;
-  StringRef Hardware;
-  SmallVector<StringRef, 32> Parts;
-  for (StringRef Line : Lines) {
-    if (Line.consume_front("CPU implementer"))
-      Implementer = Line.ltrim("\t :");
-    else if (Line.consume_front("Hardware"))
-      Hardware = Line.ltrim("\t :");
-    else if (Line.consume_front("CPU part"))
-      Parts.emplace_back(Line.ltrim("\t :"));
-  }
-
-  // Last `Part' seen, in case we don't analyse all `Parts' parsed.
-  StringRef Part = Parts.empty() ? StringRef() : Parts.back();
-
-  // Remove duplicate `Parts'.
-  llvm::sort(Parts);
-  Parts.erase(llvm::unique(Parts), Parts.end());
+StringRef
+getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
+                                   StringRef Part, ArrayRef<StringRef> Parts,
+                                   function_ref<unsigned()> GetVariant) {
 
   auto MatchBigLittle = [](auto const &Parts, StringRef Big, StringRef Little) {
     if (Parts.size() == 2)
@@ -343,21 +320,17 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   if (Implementer == "0x53") { // Samsung Electronics Co., Ltd.
     // The Exynos chips have a convoluted ID scheme that doesn't seem to follow
     // any predictive pattern across variants and parts.
-    unsigned Variant = 0, Part = 0;
 
     // Look for the CPU variant line, whose value is a 1 digit hexadecimal
     // number, corresponding to the Variant bits in the CP15/C0 register.
-    for (auto I : Lines)
-      if (I.consume_front("CPU variant"))
-        I.ltrim("\t :").getAsInteger(0, Variant);
+    unsigned Variant = GetVariant();
 
-    // Look for the CPU part line, whose value is a 3 digit hexadecimal
-    // number, corresponding to the PartNum bits in the CP15/C0 register.
-    for (auto I : Lines)
-      if (I.consume_front("CPU part"))
-        I.ltrim("\t :").getAsInteger(0, Part);
+    // Convert the CPU part line, whose value is a 3 digit hexadecimal number,
+    // corresponding to the PartNum bits in the CP15/C0 register.
+    unsigned PartAsInt;
+    Part.getAsInteger(0, PartAsInt);
 
-    unsigned Exynos = (Variant << 12) | Part;
+    unsigned Exynos = (Variant << 12) | PartAsInt;
     switch (Exynos) {
     default:
       // Default by falling through to Exynos M3.
@@ -414,6 +387,86 @@ StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
   }
 
   return "generic";
+}
+
+StringRef sys::detail::getHostCPUNameForARM(StringRef ProcCpuinfoContent) {
+  // The cpuid register on arm is not accessible from user space. On Linux,
+  // it is exposed through the /proc/cpuinfo file.
+
+  // Read 32 lines from /proc/cpuinfo, which should contain the CPU part line
+  // in all cases.
+  SmallVector<StringRef, 32> Lines;
+  ProcCpuinfoContent.split(Lines, '\n');
+
+  // Look for the CPU implementer and hardware lines, and store the CPU part
+  // numbers found.
+  StringRef Implementer;
+  StringRef Hardware;
+  SmallVector<StringRef, 32> Parts;
+  for (StringRef Line : Lines) {
+    if (Line.consume_front("CPU implementer"))
+      Implementer = Line.ltrim("\t :");
+    else if (Line.consume_front("Hardware"))
+      Hardware = Line.ltrim("\t :");
+    else if (Line.consume_front("CPU part"))
+      Parts.emplace_back(Line.ltrim("\t :"));
+  }
+
+  // Last `Part' seen, in case we don't analyse all `Parts' parsed.
+  StringRef Part = Parts.empty() ? StringRef() : Parts.back();
+
+  // Remove duplicate `Parts'.
+  llvm::sort(Parts);
+  Parts.erase(llvm::unique(Parts), Parts.end());
+
+  auto GetVariant = [&]() {
+    unsigned Variant = 0;
+    for (auto I : Lines)
+      if (I.consume_front("CPU variant"))
+        I.ltrim("\t :").getAsInteger(0, Variant);
+    return Variant;
+  };
+
+  return getHostCPUNameForARMFromComponents(Implementer, Hardware, Part, Parts,
+                                            GetVariant);
+}
+
+StringRef sys::detail::getHostCPUNameForARM(uint64_t PrimaryCpuInfo,
+                                            ArrayRef<uint64_t> UniqueCpuInfos) {
+  // On Windows, the registry provides cached copied of the MIDR_EL1 register.
+  union MIDR_EL1 {
+    uint64_t Raw;
+    struct _Components {
+      uint64_t Revision : 4;
+      uint64_t Partnum : 12;
+      uint64_t Architecture : 4;
+      uint64_t Variant : 4;
+      uint64_t Implementer : 8;
+      uint64_t Reserved : 32;
+    } Components;
+  };
+
+  SmallVector<std::string> PartsHolder;
+  PartsHolder.reserve(UniqueCpuInfos.size());
+  for (auto Info : UniqueCpuInfos)
+    PartsHolder.push_back("0x" + utohexstr(MIDR_EL1{Info}.Components.Partnum,
+                                           /*LowerCase*/ true,
+                                           /*Width*/ 3));
+
+  SmallVector<StringRef> Parts;
+  Parts.reserve(PartsHolder.size());
+  for (const auto &Part : PartsHolder)
+    Parts.push_back(Part);
+
+  return getHostCPUNameForARMFromComponents(
+      "0x" + utohexstr(MIDR_EL1{PrimaryCpuInfo}.Components.Implementer,
+                       /*LowerCase*/ true,
+                       /*Width*/ 2),
+      /*Hardware*/ "",
+      "0x" + utohexstr(MIDR_EL1{PrimaryCpuInfo}.Components.Partnum,
+                       /*LowerCase*/ true,
+                       /*Width*/ 3),
+      Parts, [=]() { return MIDR_EL1{PrimaryCpuInfo}.Components.Variant; });
 }
 
 namespace {
@@ -1448,6 +1501,75 @@ StringRef sys::getHostCPUName() {
     return CPU;
 
   return "generic";
+}
+
+#elif defined(_M_ARM64) || defined(_M_ARM64EC)
+
+StringRef sys::getHostCPUName() {
+  constexpr char CentralProcessorKeyName[] =
+      "HARDWARE\\DESCRIPTION\\System\\CentralProcessor";
+  // Sub keys names are simple numbers ("0", "1", etc.) so 10 chars should be
+  // enough for the slash and name.
+  constexpr size_t SubKeyNameMaxSize = ARRAYSIZE(CentralProcessorKeyName) + 10;
+
+  SmallVector<uint64_t> Values;
+  uint64_t PrimaryCpuInfo;
+  char PrimaryPartKeyName[SubKeyNameMaxSize];
+  DWORD PrimaryPartKeyNameSize = 0;
+  HKEY CentralProcessorKey;
+  if (RegOpenKeyExA(HKEY_LOCAL_MACHINE, CentralProcessorKeyName, 0, KEY_READ,
+                    &CentralProcessorKey) == ERROR_SUCCESS) {
+    for (unsigned Index = 0; Index < UINT32_MAX; ++Index) {
+      char SubKeyName[SubKeyNameMaxSize];
+      DWORD SubKeySize = SubKeyNameMaxSize;
+      HKEY SubKey;
+      if ((RegEnumKeyExA(CentralProcessorKey, Index, SubKeyName, &SubKeySize,
+                         nullptr, nullptr, nullptr,
+                         nullptr) == ERROR_SUCCESS) &&
+          (RegOpenKeyExA(CentralProcessorKey, SubKeyName, 0, KEY_READ,
+                         &SubKey) == ERROR_SUCCESS)) {
+        // The "CP 4000" registry key contains a cached copy of the MIDR_EL1
+        // register.
+        uint64_t RegValue;
+        DWORD ActualType;
+        DWORD RegValueSize = sizeof(RegValue);
+        if ((RegQueryValueExA(SubKey, "CP 4000", nullptr, &ActualType,
+                              (PBYTE)&RegValue,
+                              &RegValueSize) == ERROR_SUCCESS) &&
+            (ActualType == REG_QWORD) && RegValueSize == sizeof(RegValue)) {
+          // Assume that the part with the "highest" reg key name is the primary
+          // part (to match the way that Linux's cpuinfo is written). Win32
+          // makes no guarantees about the order of sub keys, so we have to
+          // compare the names.
+          if (PrimaryPartKeyNameSize < SubKeySize ||
+              (PrimaryPartKeyNameSize == SubKeySize &&
+               ::memcmp(SubKeyName, PrimaryPartKeyName, SubKeySize) > 0)) {
+            PrimaryCpuInfo = RegValue;
+            ::memcpy(PrimaryPartKeyName, SubKeyName, SubKeySize + 1);
+            PrimaryPartKeyNameSize = SubKeySize;
+          }
+          if (!llvm::is_contained(Values, RegValue)) {
+            Values.push_back(RegValue);
+          }
+        }
+        RegCloseKey(SubKey);
+      } else {
+        // No more sub keys.
+        break;
+      }
+    }
+    RegCloseKey(CentralProcessorKey);
+  }
+
+  if (Values.empty()) {
+    return "generic";
+  }
+
+  // Win32 makes no guarantees about the order of sub keys, so sort to ensure
+  // reproducibility.
+  llvm::sort(Values);
+
+  return detail::getHostCPUNameForARM(PrimaryCpuInfo, Values);
 }
 
 #elif defined(__APPLE__) && defined(__powerpc__)
