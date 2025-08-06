@@ -3553,6 +3553,11 @@ public:
     return Libcalls.getLibcallName(Call);
   }
 
+  /// Get the libcall routine name for the specified libcall implementation
+  const char *getLibcallImplName(RTLIB::LibcallImpl Call) const {
+    return Libcalls.getLibcallImplName(Call);
+  }
+
   const char *getMemcpyName() const { return Libcalls.getMemcpyName(); }
 
   /// Get the comparison predicate that's to be used to test the result of the
