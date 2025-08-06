@@ -405,10 +405,21 @@ struct ScopedSetTracerPID {
 
 // This detects whether ptrace is blocked (e.g., by seccomp), by forking and
 // then attempting ptrace.
-// This separate check is necessary because StopTheWorld() creates a child
-// process with a shared virtual address space and shared TLS, and therefore
+// This separate check is necessary because StopTheWorld() creates a thread
+// with a shared virtual address space and shared TLS, and therefore
 // cannot use waitpid() due to the shared errno.
 static void TestPTrace() {
+#  if SANITIZER_SPARC
+  // internal_fork() on SPARC actually calls __fork(). We can't safely fork,
+  // because it's possible seccomp has been configured to disallow fork() but
+  // allow clone().
+  Report("WARNING: skipping TestPTrace() because this is SPARC\n");
+  Report(
+      "If seccomp blocks ptrace, LeakSanitizer may hang without further "
+      "notice\n");
+  Report(
+      "If seccomp does not block ptrace, you can safely ignore this warning\n");
+#  else
   // Heuristic: only check the first time this is called. This is not always
   // correct (e.g., user manually triggers leak detection, then updates
   // seccomp, then leak detection is triggered again).
@@ -417,35 +428,46 @@ static void TestPTrace() {
     return;
   checked = true;
 
-  // We hope that fork() is not too expensive, because of copy-on-write.
+  // Hopefully internal_fork() is not too expensive, thanks to copy-on-write.
   // Besides, this is only called the first time.
+  // Note that internal_fork() on non-SPARC Linux actually calls
+  // SYSCALL(clone); thus, it is reasonable to use it because if seccomp kills
+  // TestPTrace(), it would have killed StopTheWorld() anyway.
   int pid = internal_fork();
 
   if (pid < 0) {
     int rverrno;
-    if (internal_iserror(pid, &rverrno)) {
+    if (internal_iserror(pid, &rverrno))
       Report("WARNING: TestPTrace() failed to fork (errno %d)\n", rverrno);
-    }
-    internal__exit(-1);
+
+    // We don't abort the sanitizer - it's still worth letting the sanitizer
+    // try.
+    return;
   }
 
   if (pid == 0) {
     // Child subprocess
+
+    // TODO: consider checking return value of internal_ptrace, to handle
+    //       SCMP_ACT_ERRNO. However, be careful not to consume too many
+    //       resources performing a proper ptrace.
     internal_ptrace(PTRACE_ATTACH, 0, nullptr, nullptr);
     internal__exit(0);
   } else {
     int wstatus;
     internal_waitpid(pid, &wstatus, 0);
 
+    // Handle SCMP_ACT_KILL
     if (WIFSIGNALED(wstatus)) {
       VReport(0,
-              "Warning: ptrace appears to be blocked (is seccomp enabled?). "
+              "WARNING: ptrace appears to be blocked (is seccomp enabled?). "
               "LeakSanitizer may hang.\n");
       VReport(0, "Child exited with signal %d.\n", WTERMSIG(wstatus));
       // We don't abort the sanitizer - it's still worth letting the sanitizer
       // try.
     }
   }
+#  endif
 }
 
 void StopTheWorld(StopTheWorldCallback callback, void *argument) {

@@ -4989,6 +4989,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":BitWriter",
         ":Core",
+        ":IPO",
         ":IRPrinter",
         ":IRReader",
         ":MC",
