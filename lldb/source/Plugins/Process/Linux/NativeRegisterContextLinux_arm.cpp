@@ -329,7 +329,8 @@ NativeRegisterContextLinux_arm::WriteHardwareDebugRegs(DREGType hwbType) {
                    ? m_hwp_regs
                    : m_hbp_regs;
   return arm64::WriteHardwareDebugRegs(hwbType, m_thread.GetID(), max_supported,
-                                       regs).ToError();
+                                       regs)
+      .ToError();
 #endif // ifdef __arm__
 }
 
