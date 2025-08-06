@@ -10,10 +10,10 @@
 ; LOOP-UNROLL-LABEL: Loop Unroll: F[pragma_unroll] Loop %for.body
 ; LOOP-UNROLL-NEXT: Loop Size = 9
 ; LOOP-UNROLL-NEXT: runtime unrolling with count: 8
-; LOOP-UNROLL-NEXT: Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
 ; LOOP-UNROLL-NEXT: Trying runtime unrolling on Loop:
 ; LOOP-UNROLL-NEXT: Loop at depth 1 containing: %for.body<header><latch><exiting>
 ; LOOP-UNROLL-NEXT: Using epilog remainder.
+; LOOP-UNROLL-NEXT: Exiting block %for.body: TripCount=0, TripMultiple=8, BreakoutTrip=8
 ; LOOP-UNROLL-NEXT: UNROLLING loop %for.body by 8 with run-time trip count!
 
 ; LOOP-UNROLL-FULL-LABEL: Loop Unroll: F[pragma_unroll] Loop %for.body
@@ -49,10 +49,10 @@ for.body:                                         ; preds = %for.body.preheader,
 
 ; LOOP-UNROLL-LABEL: Loop Unroll: F[pragma_unroll_count1] Loop %for.body
 ; LOOP-UNROLL-NEXT: Loop Size = 9
-; LOOP-UNROLL-NEXT: Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
 ; LOOP-UNROLL-NEXT: Trying runtime unrolling on Loop:
 ; LOOP-UNROLL-NEXT: Loop at depth 1 containing: %for.body<header><latch><exiting>
 ; LOOP-UNROLL-NEXT: Using epilog remainder.
+; LOOP-UNROLL-NEXT: Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
 ; LOOP-UNROLL-NEXT: UNROLLING loop %for.body by 5 with run-time trip count!
 
 ; LOOP-UNROLL-FULL-LABEL: Loop Unroll: F[pragma_unroll_count1] Loop %for.body
