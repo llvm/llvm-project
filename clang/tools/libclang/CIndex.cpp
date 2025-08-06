@@ -2895,8 +2895,10 @@ void OpenACCClauseEnqueue::VisitDeviceClause(const OpenACCDeviceClause &C) {
 void OpenACCClauseEnqueue::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
   VisitVarList(C);
-  for (VarDecl *V : C.getInitRecipes())
-    Visitor.AddDecl(V);
+  for (const OpenACCFirstPrivateRecipe &R : C.getInitRecipes()) {
+    Visitor.AddDecl(R.RecipeDecl);
+    Visitor.AddDecl(R.InitFromTemporary);
+  }
 }
 
 void OpenACCClauseEnqueue::VisitPresentClause(const OpenACCPresentClause &C) {
