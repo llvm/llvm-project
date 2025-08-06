@@ -317,17 +317,19 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
                     parentDimStr);
                 continue;
               }
-            } else
+            } else {
               invalid = true;
+            }
           } else if (parentClause == llvm::acc::Clause::ACCC_worker &&
               (cl == llvm::acc::Clause::ACCC_gang ||
-                  cl == llvm::acc::Clause::ACCC_worker))
+                  cl == llvm::acc::Clause::ACCC_worker)) {
             invalid = true;
-          else if (parentClause == llvm::acc::Clause::ACCC_vector &&
+          } else if (parentClause == llvm::acc::Clause::ACCC_vector &&
               (cl == llvm::acc::Clause::ACCC_gang ||
                   cl == llvm::acc::Clause::ACCC_worker ||
-                  cl == llvm::acc::Clause::ACCC_vector))
+                  cl == llvm::acc::Clause::ACCC_vector)) {
             invalid = true;
+          }
           if (invalid)
             context_.Say(GetContext().clauseSource,
                 "%s clause is not allowed in the region of a loop with the %s clause"_err_en_US,
