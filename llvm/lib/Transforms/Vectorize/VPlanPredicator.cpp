@@ -20,6 +20,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 
 using namespace llvm;
+using namespace VPlanPatternMatch;
 
 namespace {
 class VPPredicator {
@@ -232,7 +233,6 @@ void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
 }
 
 VPValue *VPPredicator::findCommonEdgeMask(const VPWidenPHIRecipe *PhiR) const {
-  using namespace llvm::VPlanPatternMatch;
   VPValue *EdgeMask = getEdgeMask(PhiR->getIncomingBlock(0), PhiR->getParent());
   VPValue *CommonEdgeMask;
   if (!EdgeMask ||
@@ -272,7 +272,6 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
 
       // If all incoming blocks share a common edge, remove it from the mask.
       if (CommonEdgeMask) {
-        using namespace llvm::VPlanPatternMatch;
         VPValue *X;
         if (match(EdgeMask,
                   m_LogicalAnd(m_Specific(CommonEdgeMask), m_VPValue(X))))
