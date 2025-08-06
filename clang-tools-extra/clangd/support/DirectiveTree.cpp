@@ -385,8 +385,11 @@ public:
       }
       Last = B.first.Tokens.Begin;
     }
-    Range = {Last, C.End.Tokens.Begin};
-    Ranges.push_back(Range);
+
+    if (C.End.Kind != tok::pp_not_keyword) {
+        Range = {Last, C.End.Tokens.Begin};
+        Ranges.push_back(Range);
+    }
 
     for (const auto &B : C.Branches)
       walk(B.second);
