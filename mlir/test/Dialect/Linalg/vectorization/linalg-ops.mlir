@@ -940,31 +940,100 @@ module attributes {transform.with_named_sequence} {
 ///----------------------------------------------------------------------------------------
 
 // CHECK-LABEL: func @test_vectorize_dynamic_shapes_unpack
-// CHECK-SAME:      %[[ARG_0:.*]]: tensor<?x?xf32>,
-// CHECK-SAME:      %[[ARG_1:.*]]: tensor<?x?x16x2xf32>
-func.func @test_vectorize_dynamic_shapes_unpack(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?x16x2xf32>) -> tensor<?x?xf32> {
-// CHECK: %[[C0:.*]] = arith.constant 0
-// CHECK: %[[C01:.*]] = arith.constant 0
-// CHECK: %[[C02:.*]] = arith.constant 0
-// CHECK: %[[DIM_0:.*]] = tensor.dim %[[ARG_1]], %[[C02]] : tensor<?x?x16x2xf32>
-// CHECK: %[[C1:.*]] = arith.constant 1
-// CHECK: %[[DIM6:.*]] = tensor.dim %[[ARG_1]], %[[C1]] : tensor<?x?x16x2xf32>
-// CHECK: %[[CNST16:.*]] = arith.constant 16 : index
-// CHECK: %[[CNST2:.*]] = arith.constant 2 : index
-// CHECK: %[[readMsk0:.*]] = vector.create_mask %[[DIM_0]], %[[DIM6]], %[[CNST16]], %[[CNST2]] : vector<2x1x16x2xi1>
-// CHECK: %[[read0:.*]] = vector.mask %[[readMsk0]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x16x2xf32>, vector<2x1x16x2xf32> } : vector<2x1x16x2xi1> -> vector<2x1x16x2xf32>
-// CHECK: %[[trans0:.*]] = vector.transpose %[[read0]], [0, 3, 1, 2] : vector<2x1x16x2xf32> to vector<2x2x1x16xf32>
-// CHECK: %[[sc0:.*]] = vector.shape_cast %[[trans0]] : vector<2x2x1x16xf32> to vector<4x16xf32>
-// CHECK: %[[writeMsk0:.*]] = vector.create_mask {{.*}} : vector<4x16xi1>
-// CHECK: %[[write0:.*]] = vector.mask %[[writeMsk0:.*]] {{.*}} vector.transfer_write %[[sc0]], %[[ARG_0]]
-// CHECK: return %[[write0]]
- %ret = linalg.unpack %arg1 inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %arg0 : tensor<?x?x16x2xf32> -> tensor<?x?xf32>
- return %ret : tensor<?x?xf32>
+// CHECK-SAME:      %[[DEST:.*]]: tensor<?x?xf32>,
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x?x16x2xf32>
+func.func @test_vectorize_dynamic_shapes_unpack(%dest: tensor<?x?xf32>, %src: tensor<?x?x16x2xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK: %[[C0_1:.*]] = arith.constant 0 : index
+  // CHECK: %[[DIM_0:.*]] = tensor.dim %[[SRC]], %[[C0_1]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[C1:.*]] = arith.constant 1
+  // CHECK: %[[DIM6:.*]] = tensor.dim %[[SRC]], %[[C1]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[CNST16:.*]] = arith.constant 16 : index
+  // CHECK: %[[CNST2:.*]] = arith.constant 2 : index
+  // CHECK: %[[MASK_READ:.*]] = vector.create_mask %[[DIM_0]], %[[DIM6]], %[[CNST16]], %[[CNST2]] : vector<2x1x16x2xi1>
+  // CHECK: %[[READ:.*]] = vector.mask %[[MASK_READ]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x16x2xf32>, vector<2x1x16x2xf32> } : vector<2x1x16x2xi1> -> vector<2x1x16x2xf32>
+  // CHECK: %[[TR:.*]] = vector.transpose %[[READ]], [0, 3, 1, 2] : vector<2x1x16x2xf32> to vector<2x2x1x16xf32>
+  // CHECK: %[[SC:.*]] = vector.shape_cast %[[TR]] : vector<2x2x1x16xf32> to vector<4x16xf32>
+  // CHECK: %[[MASK_WRITE:.*]] = vector.create_mask {{.*}} : vector<4x16xi1>
+  // CHECK: %[[WRITE:.*]] = vector.mask %[[MASK_WRITE:.*]] {{.*}} vector.transfer_write %[[SC]], %[[DEST]]
+  // CHECK: return %[[WRITE]]
+  %ret = linalg.unpack %src inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %dest : tensor<?x?x16x2xf32> -> tensor<?x?xf32>
+  return %ret : tensor<?x?xf32>
 }
 module attributes {transform.with_named_sequence} {
  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
    %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [4, 16] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [2, 1, 16, 2] : !transform.any_op
+   transform.yield
+ }
+}
+
+// -----
+
+// CHECK-LABEL: func @test_vectorize_dynamic_shapes_unpack_scalable_vec
+// CHECK-SAME:      %[[DEST:.*]]: tensor<?x?xf32>,
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x?x16x2xf32>
+func.func @test_vectorize_dynamic_shapes_unpack_scalable_vec(%dest: tensor<?x?xf32>, %src: tensor<?x?x16x2xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00
+  // CHECK: %[[C01:.*]] = arith.constant 0
+  // CHECK: %[[C02:.*]] = arith.constant 0
+  // CHECK: %[[DIM4:.*]] = tensor.dim %[[SRC]], %[[C02]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[CNST14:.*]] = arith.constant 1
+  // CHECK: %[[DIM6:.*]] = tensor.dim %[[SRC]], %[[CNST14]] : tensor<?x?x16x2xf32>
+  // CHECK: %[[CNST16:.*]] = arith.constant 16 : index
+  // CHECK: %[[CNST2:.*]] = arith.constant 2 : index
+  // CHECK: %[[MASK_READ:.*]] = vector.create_mask %[[DIM4]], %[[DIM6]], %[[CNST16]], %[[CNST2]] : vector<2x1x[16]x2xi1>
+  // CHECK: %[[READ:.*]] = vector.mask %[[MASK_READ]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x16x2xf32>, vector<2x1x[16]x2xf32> } : vector<2x1x[16]x2xi1> -> vector<2x1x[16]x2xf32>
+  // CHECK: %[[TR:.*]] = vector.transpose %[[READ]], [0, 3, 1, 2] : vector<2x1x[16]x2xf32> to vector<2x2x1x[16]xf32>
+  // CHECK: %[[SC:.*]] = vector.shape_cast %[[TR]] : vector<2x2x1x[16]xf32> to vector<4x[16]xf32>
+  // CHECK: %[[MASK_WRITE:.*]] = vector.create_mask {{.*}} : vector<4x[16]xi1>
+  // CHECK: %[[WRITE:.*]] = vector.mask %[[MASK_WRITE:.*]] {{.*}} vector.transfer_write %[[SC]], %[[DEST]]
+  // CHECK: return %[[WRITE]]
+  %ret = linalg.unpack %src inner_dims_pos = [1, 0] inner_tiles = [16, 2] into %dest : tensor<?x?x16x2xf32> -> tensor<?x?xf32>
+  return %ret : tensor<?x?xf32>
+}
+module attributes {transform.with_named_sequence} {
+ transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+   %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [2, 1, [16], 2] : !transform.any_op
+   transform.yield
+ }
+}
+
+// -----
+
+// CHECK-LABEL: func @test_vectorize_dynamic_shapes_unpack_scalable_vec_and_tile_size
+// CHECK-SAME:      %[[DEST:.*]]: tensor<?x?xf32>,
+// CHECK-SAME:      %[[SRC:.*]]: tensor<?x?x?x2xf32>
+func.func @test_vectorize_dynamic_shapes_unpack_scalable_vec_and_tile_size(%dest: tensor<?x?xf32>, %src: tensor<?x?x?x2xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[CST:.*]] = arith.constant 0.000000e+00
+  // CHECK: %[[C01:.*]] = arith.constant 0
+  // CHECK: %[[C02:.*]] = arith.constant 0
+  // CHECK: %[[DIM4:.*]] = tensor.dim %[[SRC]], %[[C02]] : tensor<?x?x?x2xf32>
+  // CHECK: %[[C1_2:.*]] = arith.constant 1
+  // CHECK: %[[DIM6:.*]] = tensor.dim %[[SRC]], %[[C1_2]] : tensor<?x?x?x2xf32>
+  // CHECK: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK: %[[DIM_2:.*]] = tensor.dim %[[SRC]], %[[C2]] : tensor<?x?x?x2xf32>
+  // CHECK: %[[C2_1:.*]] = arith.constant 2 : index
+  // CHECK: %[[MASK_READ:.*]] = vector.create_mask %[[DIM4]], %[[DIM6]], %[[DIM_2]], %[[C2_1]] : vector<2x1x[16]x2xi1>
+  // CHECK: %[[READ:.*]] = vector.mask %[[MASK_READ]] {{.*}} vector.transfer_read %{{.*}} : tensor<?x?x?x2xf32>, vector<2x1x[16]x2xf32> } : vector<2x1x[16]x2xi1> -> vector<2x1x[16]x2xf32>
+  // CHECK: %[[TR:.*]] = vector.transpose %[[READ]], [0, 3, 1, 2] : vector<2x1x[16]x2xf32> to vector<2x2x1x[16]xf32>
+  // CHECK: %[[SC:.*]] = vector.shape_cast %[[TR]] : vector<2x2x1x[16]xf32> to vector<4x[16]xf32>
+  // CHECK: %[[MASK_WRITE:.*]] = vector.create_mask {{.*}} : vector<4x[16]xi1>
+  // CHECK: %[[WRITE:.*]] = vector.mask %[[MASK_WRITE:.*]] {{.*}} vector.transfer_write %[[SC]], %[[DEST]]
+  // CHECK: return %[[WRITE]]
+
+  %vs = vector.vscale
+  %c16 = arith.constant 16 : index
+  %tile_size = arith.muli %vs, %c16 : index
+
+  %ret = linalg.unpack %src inner_dims_pos = [1, 0] inner_tiles = [%tile_size, 2] into %dest : tensor<?x?x?x2xf32> -> tensor<?x?xf32>
+  return %ret : tensor<?x?xf32>
+}
+module attributes {transform.with_named_sequence} {
+ transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+   %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [2, 1, [16], 2] : !transform.any_op
    transform.yield
  }
 }
@@ -997,7 +1066,7 @@ func.func @test_vectorize_unpack(%source: tensor<8x8x32x16xf32>, %dest: tensor<2
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [512, 128] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [16, 8, 32, 16] : !transform.any_op
     transform.yield
   }
 }
@@ -1022,7 +1091,7 @@ func.func @test_vectorize_unpack_no_masks(%source: tensor<8x8x32x16xf32>, %dest:
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [256, 128] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [8, 8, 32, 16] : !transform.any_op
     transform.yield
   }
  }
@@ -1047,7 +1116,7 @@ func.func @test_vectorize_unpack_no_masks(%source: tensor<8x8x32x16xf32>, %dest:
  module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.unpack"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-   transform.structured.vectorize %0 vector_sizes [256, 128] : !transform.any_op
+   transform.structured.vectorize %0 vector_sizes [8, 8, 32, 16] : !transform.any_op
     transform.yield
   }
 }
