@@ -780,7 +780,6 @@ set(files
   __tree
   __tuple/find_index.h
   __tuple/ignore.h
-  __tuple/is_applicable.h
   __tuple/make_tuple_types.h
   __tuple/sfinae_helpers.h
   __tuple/tuple_element.h
@@ -820,6 +819,7 @@ set(files
   __type_traits/is_aggregate.h
   __type_traits/is_allocator.h
   __type_traits/is_always_bitcastable.h
+  __type_traits/is_applicable.h
   __type_traits/is_arithmetic.h
   __type_traits/is_array.h
   __type_traits/is_assignable.h

@@ -572,7 +572,7 @@ namespace std
 #  endif
 
 #  if _LIBCPP_STD_VER >= 26
-#    include <__tuple/is_applicable.h>
+#    include <__type_traits/is_applicable.h>
 #  endif
 
 #  include <version>
