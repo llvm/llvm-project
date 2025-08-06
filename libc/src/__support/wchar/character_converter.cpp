@@ -132,12 +132,6 @@ ErrorOr<char32_t> CharacterConverter::pop_utf32() {
   return utf32;
 }
 
-size_t CharacterConverter::sizeAsUTF32() {
-  return 1; // a single utf-32 value can fit an entire character
-}
-
-size_t CharacterConverter::sizeAsUTF8() { return state->total_bytes; }
-
 ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   if (isEmpty())
     return Error(-1);
