@@ -9860,11 +9860,15 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (Value.isInt()) {
       unsigned Size = Info.Ctx.getTypeSize(E->getType());
       uint64_t N = Value.getInt().extOrTrunc(Size).getZExtValue();
-      Result.Base = (Expr*)nullptr;
-      Result.InvalidBase = false;
-      Result.Offset = CharUnits::fromQuantity(N);
-      Result.Designator.setInvalid();
-      Result.IsNullPtr = false;
+      if (N == Info.Ctx.getTargetNullPointerValue(E->getType())) {
+        Result.setNull(Info.Ctx, E->getType());
+      } else {
+        Result.Base = (Expr *)nullptr;
+        Result.InvalidBase = false;
+        Result.Offset = CharUnits::fromQuantity(N);
+        Result.Designator.setInvalid();
+        Result.IsNullPtr = false;
+      }
       return true;
     } else {
       // In rare instances, the value isn't an lvalue.
