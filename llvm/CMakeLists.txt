@@ -140,7 +140,7 @@ endif()
 
 if ("openmp" IN_LIST LLVM_ENABLE_PROJECTS)
   message(FATAL_ERROR "
-Support for the LLVM_ENABLE_PROJECTS=openmp build mode has been removed. Switch to the bootstrapping build
+Support for the LLVM_ENABLE_PROJECTS=openmp build mode has been removed. Please switch to the bootstrapping build
     cmake -S <llvm-project>/llvm -B build -DLLVM_ENABLE_PROJECTS=clang -DLLVM_ENABLE_RUNTIMES=openmp
 or to the runtimes default build
     cmake -S <llvm-project>/runtimes -B build -DLLVM_ENABLE_RUNTIMES=openmp
