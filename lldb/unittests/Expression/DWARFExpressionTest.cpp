@@ -125,8 +125,8 @@ public:
   }
 
 private:
-  RegisterInfo m_reg_info;
-  RegisterValue m_reg_value;
+  RegisterInfo m_reg_info{};
+  RegisterValue m_reg_value{};
 };
 } // namespace
 
