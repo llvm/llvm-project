@@ -11390,13 +11390,18 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     //   select_cc lhs, rhs, sub(rhs, lhs), sub(lhs, rhs), cc ->
     //   select_cc lhs, rhs, neg(sub(lhs, rhs)), sub(lhs, rhs), cc
     // The second forms can be matched into subs+cneg.
+    // NOTE: Drop poison generating flags from the negated operand to avoid
+    // inadvertently propagating poison after the canonicalisation.
     if (TVal.getOpcode() == ISD::SUB && FVal.getOpcode() == ISD::SUB) {
       if (TVal.getOperand(0) == LHS && TVal.getOperand(1) == RHS &&
-          FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS)
+          FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS) {
+        TVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
         FVal = DAG.getNegative(TVal, DL, TVal.getValueType());
-      else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
-               FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS)
+      } else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
+                 FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS) {
+        FVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
         TVal = DAG.getNegative(FVal, DL, FVal.getValueType());
+      }
     }
 
     unsigned Opcode = AArch64ISD::CSEL;
