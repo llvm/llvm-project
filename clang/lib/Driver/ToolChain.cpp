@@ -855,7 +855,11 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
 
 void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
                                              ArgStringList &CmdArgs) const {
-  auto AddLibrarySearchPath = [&](const Twine &Path) {
+  auto AddLibSearchPathIfExists = [&](const Twine &Path) {
+    // Linker may emit warnings about non-existing directories
+    if (!llvm::sys::fs::is_directory(Path))
+      return;
+
     if (getTriple().isKnownWindowsMSVCEnvironment())
       CmdArgs.push_back(Args.MakeArgString("-libpath:" + Path));
     else
@@ -866,15 +870,15 @@ void ToolChain::addFortranRuntimeLibraryPath(const llvm::opt::ArgList &Args,
   // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=0. On most platforms, flang_rt is
   // located at the path returned by getRuntimePath() which is already added to
   // the library search path. This exception is for Apple-Darwin.
-  AddLibrarySearchPath(getCompilerRTPath());
+  AddLibSearchPathIfExists(getCompilerRTPath());
 
   // Fall back to the non-resource directory <driver-path>/../lib. We will
-  // probably have to re-fine this in the future. In particular, on some
+  // probably have to refine this in the future. In particular, on some
   // platforms, we may need to use lib64 instead of lib.
   SmallString<256> DefaultLibPath =
       llvm::sys::path::parent_path(getDriver().Dir);
   llvm::sys::path::append(DefaultLibPath, "lib");
-  AddLibrarySearchPath(DefaultLibPath);
+  AddLibSearchPathIfExists(DefaultLibPath);
 }
 
 void ToolChain::addFlangRTLibPath(const ArgList &Args,
