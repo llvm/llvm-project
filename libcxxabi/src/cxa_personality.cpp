@@ -605,7 +605,7 @@ template <typename PtrType>
   *u.as_pointer = out;
 }
 
-static const landing_pad_ptr_t& get_landing_pad_as_ptr(const scan_results& results) {
+[[maybe_unused]] static const landing_pad_ptr_t& get_landing_pad_as_ptr(const scan_results& results) {
   union {
     const landing_pad_t* as_landing_pad;
     const landing_pad_ptr_t* as_pointer;
