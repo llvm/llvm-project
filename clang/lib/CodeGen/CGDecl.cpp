@@ -599,11 +599,11 @@ namespace {
     llvm::Constant *CleanupFn;
     const CGFunctionInfo &FnInfo;
     const VarDecl &Var;
-    SourceLocation Loc;
+    const CleanupAttr *Attribute;
 
     CallCleanupFunction(llvm::Constant *CleanupFn, const CGFunctionInfo *Info,
-                        const VarDecl *Var, SourceLocation Location)
-        : CleanupFn(CleanupFn), FnInfo(*Info), Var(*Var), Loc(Location) {}
+                        const VarDecl *Var, const CleanupAttr *Attr)
+        : CleanupFn(CleanupFn), FnInfo(*Info), Var(*Var), Attribute(Attr) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       DeclRefExpr DRE(CGF.getContext(), const_cast<VarDecl *>(&Var), false,
@@ -625,13 +625,11 @@ namespace {
       CallArgList Args;
       Args.add(RValue::get(Arg),
                CGF.getContext().getPointerType(Var.getType()));
-      bool HasCleanupAttr = Var.hasAttr<CleanupAttr>();
-      GlobalDecl GD = HasCleanupAttr
-                          ? (Var.getAttr<CleanupAttr>()->getFunctionDecl())
-                          : GlobalDecl();
+      GlobalDecl GD = GlobalDecl(Attribute->getFunctionDecl());
       auto Callee = CGCallee::forDirect(CleanupFn, CGCalleeInfo(GD));
       CGF.EmitCall(FnInfo, Callee, ReturnValueSlot(), Args,
-                   /*callOrInvoke*/ nullptr, /*IsMustTail*/ false, Loc);
+                   /*callOrInvoke*/ nullptr, /*IsMustTail*/ false,
+                   Attribute->getLoc());
     }
   };
 } // end anonymous namespace
@@ -2238,7 +2236,7 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
 
     const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
     EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D,
-                                             CA->getLoc());
+                                             CA);
   }
 
   // If this is a block variable, call _Block_object_destroy
