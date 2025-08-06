@@ -258,9 +258,10 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
     trackRootSigDescBinding(Builder, *RSD, Visibility);
     bool HasOverlap = false;
     hlsl::BindingInfo Info = Builder.calculateBindingInfo(
-        [&M, &HasOverlap](const llvm::hlsl::BindingInfoBuilder &Builder,
-             const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
-              HasOverlap = true;
+        [&M, &HasOverlap](
+            const llvm::hlsl::BindingInfoBuilder &Builder,
+            const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
+          HasOverlap = true;
           const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
               Builder.findOverlapping(ReportedBinding);
           reportOverlappingRegisters(M, ReportedBinding, Overlaping);
@@ -268,12 +269,13 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
     // Next checks require that the root signature definition is valid.
     if (!HasOverlap){
       for (const auto &ResList :
-          {std::make_pair(ResourceClass::SRV, DRM.srvs()),
+           {std::make_pair(ResourceClass::SRV, DRM.srvs()),
             std::make_pair(ResourceClass::UAV, DRM.uavs()),
             std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
             std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
         for (auto Res : ResList.second) {
-          llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
+          llvm::dxil::ResourceInfo::ResourceBinding ResBinding =
+              Res.getBinding();
           llvm::hlsl::BindingInfo::BindingRange ResRange(
               ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
 
