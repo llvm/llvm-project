@@ -120,7 +120,7 @@ SymbolFileDWARFDwo::GetForwardDeclCompilerTypeToDIE() {
 
 void SymbolFileDWARFDwo::GetObjCMethods(
     lldb_private::ConstString class_name,
-    llvm::function_ref<bool(DWARFDIE die)> callback) {
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   GetBaseSymbolFile().GetObjCMethods(class_name, callback);
 }
 

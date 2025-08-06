@@ -1,0 +1,58 @@
+# Test handing of the dwarf val_offset() rule which can be used to reconstruct
+# the value of a register that is neither in a live register or saved on the
+# stack but is computable with CFA + offset.
+
+# UNSUPPORTED: system-windows, ld_new-bug
+# REQUIRES: target-x86_64, native
+
+# RUN: %clang_host %p/Inputs/call-asm.c %p/Inputs/eh-frame-dwarf-unwind-val-offset.s -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+breakpoint set -n asm_main
+# CHECK: Breakpoint 1: where = {{.*}}`asm_main
+
+breakpoint set -n bar
+# CHECK: Breakpoint 2: where = {{.*}}`bar
+
+process launch
+# CHECK: stop reason = breakpoint 1.1
+
+stepi
+stepi
+stepi
+register read -G x r12
+# CHECK: r12 = 0x[[#%.16x,R12:]]{{$}}
+
+continue
+# CHECK: stop reason = breakpoint 2.1
+
+thread backtrace
+# CHECK: frame #0: {{.*}}`bar
+# CHECK: frame #1: {{.*}}`foo + 12
+# CHECK: frame #2: {{.*}}`asm_main + 29
+
+target modules show-unwind -n bar
+# CHECK: eh_frame UnwindPlan:
+# CHECK: row[0]:  0: CFA=rsp +8 => rip=[CFA-8]
+
+target modules show-unwind -n foo
+# CHECK: eh_frame UnwindPlan:
+# CHECK: row[0]: 0: CFA=rsp +8 => r12=CFA+32 rip=DW_OP_lit8, DW_OP_minus, DW_OP_deref, DW_OP_const1u 0x47, DW_OP_minus
+
+target modules show-unwind -n asm_main
+# CHECK: eh_frame UnwindPlan:
+# CHECK: row[0]:  0: CFA=rsp +8 => rip=[CFA-8]
+# CHECK: row[1]:  1: CFA=rsp+16 => rbp=[CFA-16] rip=[CFA-8]
+# CHECK: row[2]: 11: CFA=rbp+16 => rbp=[CFA-16] rip=[CFA-8]
+# CHECK: row[3]: 30: CFA=rsp +8 => rbp=[CFA-16] rip=[CFA-8]
+
+register read -G x r12
+# CHECK: r12 = 0x0000000000000456
+
+frame select 1
+register read -G x r12
+# CHECK: r12 = 0x0000000000000456
+
+frame select 2
+register read -G x r12
+# CHECK: r12 = 0x[[#R12 + 32]]

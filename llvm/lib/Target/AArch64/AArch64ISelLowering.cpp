@@ -11390,13 +11390,18 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
     //   select_cc lhs, rhs, sub(rhs, lhs), sub(lhs, rhs), cc ->
     //   select_cc lhs, rhs, neg(sub(lhs, rhs)), sub(lhs, rhs), cc
     // The second forms can be matched into subs+cneg.
+    // NOTE: Drop poison generating flags from the negated operand to avoid
+    // inadvertently propagating poison after the canonicalisation.
     if (TVal.getOpcode() == ISD::SUB && FVal.getOpcode() == ISD::SUB) {
       if (TVal.getOperand(0) == LHS && TVal.getOperand(1) == RHS &&
-          FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS)
+          FVal.getOperand(0) == RHS && FVal.getOperand(1) == LHS) {
+        TVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
         FVal = DAG.getNegative(TVal, DL, TVal.getValueType());
-      else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
-               FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS)
+      } else if (TVal.getOperand(0) == RHS && TVal.getOperand(1) == LHS &&
+                 FVal.getOperand(0) == LHS && FVal.getOperand(1) == RHS) {
+        FVal->dropFlags(SDNodeFlags::PoisonGeneratingFlags);
         TVal = DAG.getNegative(FVal, DL, FVal.getValueType());
+      }
     }
 
     unsigned Opcode = AArch64ISD::CSEL;
@@ -28609,14 +28614,16 @@ Value *AArch64TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
 
 void AArch64TargetLowering::insertSSPDeclarations(Module &M) const {
   // MSVC CRT provides functionalities for stack protection.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment()) {
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
     M.getOrInsertGlobal("__security_cookie",
                         PointerType::getUnqual(M.getContext()));
 
     // MSVC CRT has a function to validate security cookie.
     FunctionCallee SecurityCheckCookie =
-        M.getOrInsertFunction(Subtarget->getSecurityCheckCookieName(),
+        M.getOrInsertFunction(getLibcallImplName(SecurityCheckCookieLibcall),
                               Type::getVoidTy(M.getContext()),
                               PointerType::getUnqual(M.getContext()));
     if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee())) {
@@ -28637,8 +28644,10 @@ Value *AArch64TargetLowering::getSDagStackGuard(const Module &M) const {
 
 Function *AArch64TargetLowering::getSSPStackGuardCheck(const Module &M) const {
   // MSVC CRT has a function to validate security cookie.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
-    return M.getFunction(Subtarget->getSecurityCheckCookieName());
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported)
+    return M.getFunction(getLibcallImplName(SecurityCheckCookieLibcall));
   return TargetLowering::getSSPStackGuardCheck(M);
 }
 

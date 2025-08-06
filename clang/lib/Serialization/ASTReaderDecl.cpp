@@ -2742,6 +2742,7 @@ void ASTDeclReader::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
 
 void ASTDeclReader::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
   VisitTemplateDecl(D);
+  D->ParameterKind = static_cast<TemplateNameKind>(Record.readInt());
   D->setDeclaredWithTypename(Record.readBool());
   // TemplateParmPosition.
   D->setDepth(Record.readInt());
