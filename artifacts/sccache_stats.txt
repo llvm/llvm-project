@@ -1,0 +1,24 @@
+Compile requests                   2727
+Compile requests executed          2727
+Cache hits                            0
+Cache misses                       2727
+Cache misses (C/C++)               2727
+Cache timeouts                        0
+Cache read errors                     0
+Forced recaches                       0
+Cache write errors                    0
+Compilation failures                  0
+Cache errors                          0
+Non-cacheable compilations            0
+Non-cacheable calls                   0
+Non-compilation calls                 0
+Unsupported compiler calls            0
+Average cache write               0.012 s
+Average compiler                  3.578 s
+Average cache read hit            0.000 s
+Failed distributed compilations       0
+Cache location                  Local disk: "/home/gha/.cache/sccache"
+Use direct/preprocessor mode?   yes
+Version (client)                0.7.6
+Cache size                          189 MiB
+Max cache size                       10 GiB
