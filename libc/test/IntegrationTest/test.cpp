@@ -63,34 +63,22 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 // which just hands out continuous blocks from a statically allocated chunk of
 // memory.
 
-static constexpr uint64_t MEMORY_SIZE = 16384;
-static uint8_t memory[MEMORY_SIZE];
-
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-static size_t used = 0;
-#else
-static LIBC_NAMESPACE::cpp::Atomic<size_t> used = 0;
-#endif
+static constexpr uint64_t ALIGNMENT = alignof(long double);
+static constexpr uint64_t MEMORY_SIZE = 65336;
+alignas(ALIGNMENT) static uint8_t memory[MEMORY_SIZE];
+static size_t ptr = 0;
 
 extern "C" {
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
-void *malloc(size_t s) {
-  void *mem = ptr;
-  ptr += s;
-  return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
+void *malloc(size_t size) {
+  LIBC_NAMESPACE::cpp::AtomicRef<size_t> ref(ptr);
+  size = (size + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+  size_t old_ptr =
+      ref.fetch_add(size, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
+  if (static_cast<size_t>(old_ptr + size) > MEMORY_SIZE)
+    return nullptr;
+  return &memory[old_ptr];
 }
-#else
-void *malloc(size_t s) {
-  // Emulate the alignment of std::max_align_t.
-  constexpr size_t DEFAULT_ALIGNMENT = alignof(long double);
-  s += (-s) & (DEFAULT_ALIGNMENT - 1); // Align to default alignment.
-  auto res = used.fetch_add(s, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
-  if (res + s > MEMORY_SIZE)
-    return nullptr; // Out of memory.
-  return &memory[res];
-}
-#endif
 
 void free(void *) {}
 
