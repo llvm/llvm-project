@@ -1352,7 +1352,7 @@ inline bool ConstFloat(InterpState &S, CodePtr OpPC, const Floating &F) {
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
   const Pointer &Ptr = S.Current->getLocalPointer(I);
-  if (!CheckLoad(S, OpPC, Ptr))
+  if (!CheckLocalLoad(S, OpPC, Ptr))
     return false;
   S.Stk.push<T>(Ptr.deref<T>());
   return true;

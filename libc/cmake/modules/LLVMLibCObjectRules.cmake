@@ -1,4 +1,33 @@
 set(OBJECT_LIBRARY_TARGET_TYPE "OBJECT_LIBRARY")
+set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
+set(ENTRYPOINT_EXT_TARGET_TYPE "ENTRYPOINT_EXT")
+
+# Rule to check if a list of dependencies contains any entrypoint objects. Returns a list in entrypoint_deps.
+function(check_entrypoint_deps entrypoint_deps)
+  set(PUBLIC_DEPS "")
+  set(fq_deps_list "")
+  list(APPEND fq_deps_list ${ARGN})
+
+  #don't warn for deps that are allowed, such as errno
+  set(ALLOWED_DEPS
+    "libc.src.errno.errno"
+    "libc.src.setjmp.longjmp"
+  )
+  list(REMOVE_ITEM fq_deps_list ${ALLOWED_DEPS})
+
+  foreach(dep IN LISTS fq_deps_list)
+    if(NOT TARGET ${dep})
+      continue()
+    endif()
+
+    get_target_property(target_type ${dep} "TARGET_TYPE")
+    if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
+      list(APPEND PUBLIC_DEPS ${dep})
+    endif()
+  endforeach()
+  set(${entrypoint_deps} ${PUBLIC_DEPS} PARENT_SCOPE)
+endfunction()
+
 
 # Rule which is essentially a wrapper over add_library to compile a set of
 # sources to object files.
@@ -65,6 +94,18 @@ function(create_object_library fq_target_name)
   target_include_directories(${fq_target_name} PRIVATE ${LIBC_SOURCE_DIR})
   target_compile_options(${fq_target_name} PRIVATE ${compile_options})
 
+  #loop through the deps, check if any have the TARGET_TYPE of ENTRYPOINT_OBJ_TARGET_TYPE, and print a warning if they do.
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    set(entrypoint_deps "")
+    if(NOT "${fq_deps_list}" STREQUAL "")
+      check_entrypoint_deps(entrypoint_deps ${fq_deps_list})
+    endif()
+    if(NOT "${entrypoint_deps}" STREQUAL "")
+      message(WARNING "Object ${fq_target_name} depends on public entrypoint(s) ${entrypoint_deps}.
+      Depending on public entrypoints is not allowed in internal code.")
+    endif()
+  endif()
+
   if(SHOW_INTERMEDIATE_OBJECTS)
     message(STATUS "Adding object library ${fq_target_name}")
     if(${SHOW_INTERMEDIATE_OBJECTS} STREQUAL "DEPS")
@@ -110,7 +151,6 @@ function(add_object_library target_name)
     ${ARGN})
 endfunction(add_object_library)
 
-set(ENTRYPOINT_OBJ_TARGET_TYPE "ENTRYPOINT_OBJ")
 
 # A rule for entrypoint object targets.
 # Usage:
@@ -179,7 +219,6 @@ function(create_entrypoint_object fq_target_name)
 
     get_target_property(obj_type ${fq_dep_name} "TARGET_TYPE")
     if((NOT obj_type) OR (NOT ${obj_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}))
-                              
       message(FATAL_ERROR "The aliasee of an entrypoint alias should be an entrypoint.")
     endif()
 
@@ -230,6 +269,19 @@ function(create_entrypoint_object fq_target_name)
   _get_common_compile_options(common_compile_options "${ADD_ENTRYPOINT_OBJ_FLAGS}")
   list(APPEND common_compile_options ${ADD_ENTRYPOINT_OBJ_COMPILE_OPTIONS})
   get_fq_deps_list(fq_deps_list ${ADD_ENTRYPOINT_OBJ_DEPENDS})
+
+  #loop through the deps, check if any have the TARGET_TYPE of entrypoint_target_type, and print a warning if they do.
+  if(LIBC_CMAKE_VERBOSE_LOGGING)
+    set(entrypoint_deps "")
+    if(NOT "${fq_deps_list}" STREQUAL "")
+      check_entrypoint_deps(entrypoint_deps ${fq_deps_list})
+    endif()
+    if(NOT "${entrypoint_deps}" STREQUAL "")
+      message(WARNING "Entrypoint ${fq_target_name} depends on public entrypoint(s) ${entrypoint_deps}.
+      Depending on public entrypoints is not allowed in internal code.")
+    endif()
+  endif()
+
   set(full_deps_list ${fq_deps_list} libc.src.__support.common)
 
   if(SHOW_INTERMEDIATE_OBJECTS)
@@ -389,8 +441,6 @@ function(add_entrypoint_object target_name)
     ${ADD_ENTRYPOINT_OBJ_UNPARSED_ARGUMENTS}
   )
 endfunction(add_entrypoint_object)
-
-set(ENTRYPOINT_EXT_TARGET_TYPE "ENTRYPOINT_EXT")
 
 # A rule for external entrypoint targets.
 # Usage:
