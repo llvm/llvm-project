@@ -6,44 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-def immFloat0 : PatLeaf<(fpimm), [{
-    float f = (float)N->getValueAPF().convertToFloat();
-    return (f==0.0f);
-}]>;
-
-def immFloat1 : PatLeaf<(fpimm), [{
-    float f = (float)N->getValueAPF().convertToFloat();
-    return (f==1.0f);
-}]>;
-
-def immDouble0 : PatLeaf<(fpimm), [{
-    double d = (double)N->getValueAPF().convertToDouble();
-    return (d==0.0);
-}]>;
-
-def immDouble1 : PatLeaf<(fpimm), [{
-    double d = (double)N->getValueAPF().convertToDouble();
-    return (d==1.0);
-}]>;
-
 def AS_match {
   code generic = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GENERIC);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_GENERIC;
   }];
   code shared = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_SHARED;
   }];
   code shared_cluster = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_SHARED_CLUSTER);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_SHARED_CLUSTER;
   }];
   code global = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_GLOBAL);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_GLOBAL;
   }];
   code const = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_CONST);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_CONST;
   }];
   code param = [{
-   return ChkMemSDNodeAddressSpace(N, llvm::ADDRESS_SPACE_PARAM);
+   return cast<MemSDNode>(N)->getAddressSpace() == llvm::ADDRESS_SPACE_PARAM;
   }];
 }
 
@@ -1112,30 +1092,30 @@ let Predicates = [hasPTX<70>, hasSM<80>] in {
 // max(0.0, min(x, 1.0)) is 1.0 while sat(x) is 0.
 // Same story for fmax, fmin.
 
-def : Pat<(int_nvvm_fmin_f immFloat1,
-            (int_nvvm_fmax_f immFloat0, f32:$a)),
+def : Pat<(int_nvvm_fmin_f fpimm_1,
+            (int_nvvm_fmax_f fpimm_0, f32:$a)),
           (CVT_f32_f32 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_f immFloat1,
-            (int_nvvm_fmax_f f32:$a, immFloat0)),
-          (CVT_f32_f32 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f immFloat0, f32:$a), immFloat1),
+def : Pat<(int_nvvm_fmin_f fpimm_1,
+            (int_nvvm_fmax_f f32:$a, fpimm_0)),
           (CVT_f32_f32 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_f
-            (int_nvvm_fmax_f f32:$a, immFloat0), immFloat1),
+            (int_nvvm_fmax_f fpimm_0, f32:$a), fpimm_1),
+          (CVT_f32_f32 $a, CvtSAT)>;
+def : Pat<(int_nvvm_fmin_f
+            (int_nvvm_fmax_f f32:$a, fpimm_0), fpimm_1),
           (CVT_f32_f32 $a, CvtSAT)>;
 
-def : Pat<(int_nvvm_fmin_d immDouble1,
-            (int_nvvm_fmax_d immDouble0, f64:$a)),
+def : Pat<(int_nvvm_fmin_d fpimm_1,
+            (int_nvvm_fmax_d fpimm_0, f64:$a)),
           (CVT_f64_f64 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_d immDouble1,
-            (int_nvvm_fmax_d f64:$a, immDouble0)),
-          (CVT_f64_f64 $a, CvtSAT)>;
-def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d immDouble0, f64:$a), immDouble1),
+def : Pat<(int_nvvm_fmin_d fpimm_1,
+            (int_nvvm_fmax_d f64:$a, fpimm_0)),
           (CVT_f64_f64 $a, CvtSAT)>;
 def : Pat<(int_nvvm_fmin_d
-            (int_nvvm_fmax_d f64:$a, immDouble0), immDouble1),
+            (int_nvvm_fmax_d fpimm_0, f64:$a), fpimm_1),
+          (CVT_f64_f64 $a, CvtSAT)>;
+def : Pat<(int_nvvm_fmin_d
+            (int_nvvm_fmax_d f64:$a, fpimm_0), fpimm_1),
           (CVT_f64_f64 $a, CvtSAT)>;
 
 
@@ -1663,13 +1643,13 @@ def : Pat<(int_nvvm_rsqrt_approx_d f64:$a), (RSQRT_APPROX_f64 $a, NoFTZ)>;
 
 // 1.0f / sqrt_approx -> rsqrt_approx
 let Predicates = [doRsqrtOpt] in {
-  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_f f32:$a)),
+  def : Pat<(fdiv fpimm_1, (int_nvvm_sqrt_approx_f f32:$a)),
           (RSQRT_APPROX_f32 $a, NoFTZ)>;
-  def : Pat<(fdiv f32imm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
+  def : Pat<(fdiv fpimm_1, (int_nvvm_sqrt_approx_ftz_f f32:$a)),
           (RSQRT_APPROX_f32 $a, FTZ)>;
 
   // same for int_nvvm_sqrt_f when non-precision sqrt is requested
-  def : Pat<(fdiv f32imm_1, (fsqrt_approx f32:$a)),
+  def : Pat<(fdiv fpimm_1, (fsqrt_approx f32:$a)),
           (RSQRT_APPROX_f32 $a)>;
 }
 //
