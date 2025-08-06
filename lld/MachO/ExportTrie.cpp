@@ -296,13 +296,14 @@ namespace {
 // Parse a serialized trie and invoke a callback for each entry.
 class TrieParser {
 public:
-  TrieParser(const uint8_t *buf, size_t size, const TrieEntryCallback &callback)
-      : start(buf), end(start + size), callback(callback) {}
+  TrieParser(const std::string &fileName, const uint8_t *buf, size_t size, const TrieEntryCallback &callback)
+      : fileName(fileName), start(buf), end(start + size), callback(callback) {}
 
   void parse(const uint8_t *buf, const Twine &cumulativeString);
 
   void parse() { parse(start, ""); }
 
+  const std::string fileName;
   const uint8_t *start;
   const uint8_t *end;
   const TrieEntryCallback &callback;
@@ -312,7 +313,7 @@ public:
 
 void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString) {
   if (buf >= end)
-    fatal("Node offset points outside export section");
+    fatal(fileName + ": export trie node offset points outside export section");
 
   unsigned ulebSize;
   uint64_t terminalSize = decodeULEB128(buf, &ulebSize);
@@ -331,14 +332,17 @@ void TrieParser::parse(const uint8_t *buf, const Twine &cumulativeString) {
     buf += substring.size() + 1;
     offset = decodeULEB128(buf, &ulebSize);
     buf += ulebSize;
+    if (start + offset < buf)
+      fatal(fileName + ": export trie child node offset points before parent node");
     parse(start + offset, cumulativeString + substring);
   }
 }
 
-void macho::parseTrie(const uint8_t *buf, size_t size,
+void macho::parseTrie(const std::string &fileName,
+                      const uint8_t *buf, size_t size,
                       const TrieEntryCallback &callback) {
   if (size == 0)
     return;
 
-  TrieParser(buf, size, callback).parse();
+  TrieParser(fileName, buf, size, callback).parse();
 }
