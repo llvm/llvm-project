@@ -266,11 +266,13 @@ define void @safe_load_store_distance_not_pow_of_2(i64 %N) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[UMIN]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 8
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i64 [[TMP3]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 8
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i64 8, i64 [[N_MOD_VF]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul i64 [[N_VEC]], 3
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -283,8 +285,7 @@ define void @safe_load_store_distance_not_pow_of_2(i64 %N) {
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP3]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-NEXT:    br label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP6]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -296,7 +297,7 @@ define void @safe_load_store_distance_not_pow_of_2(i64 %N) {
 ; CHECK-NEXT:    store i16 0, ptr [[GEP_OFF]], align 2
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 3
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT]], !llvm.loop [[LOOP12:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]], !llvm.loop [[LOOP12:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
