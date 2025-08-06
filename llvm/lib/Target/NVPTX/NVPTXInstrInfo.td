@@ -151,6 +151,8 @@ class OneUse2<SDPatternOperator operator>
 class fpimm_pos_inf<ValueType vt>
     : FPImmLeaf<vt, [{ return Imm.isPosInfinity(); }]>;
 
+class zeroinitializer<ValueType vt> : 
+  PatLeaf<(vt (bitconvert (!cast<ValueType>("i" # vt.Size) 0)))>;
 
 
 // Operands which can hold a Register or an Immediate.
@@ -789,6 +791,23 @@ def UMAX16x2 : I16x2<"max.u", umax>;
 def SMIN16x2 : I16x2<"min.s", smin>;
 def UMIN16x2 : I16x2<"min.u", umin>;
 
+let Predicates = [hasPTX<80>, hasSM<90>] in {
+
+  def MIN_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+                     "min.relu.s32",
+                     [(set i32:$dst, (smax (smin i32:$a, i32:$b), 0))]>;
+  def MAX_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+                     "max.relu.s32",
+                     [(set i32:$dst, (smax (smax i32:$a, i32:$b), 0))]>;
+  def MIN_RELU_S16x2 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+                     "min.relu.s16x2",
+                     [(set v2i16:$dst, (smax (smin v2i16:$a, v2i16:$b),
+                                             zeroinitializer<v2i16>))]>;
+  def MAX_RELU_S16x2 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+                     "max.relu.s16x2",
+                     [(set v2i16:$dst, (smax (smax v2i16:$a, v2i16:$b),
+                                             zeroinitializer<v2i16>))]>;
+}
 
 //
 // Wide multiplication
@@ -1602,8 +1621,6 @@ foreach is_convergent = [0, 1] in {
   }
 
   defvar call_inst = !cast<NVPTXInst>("CALL" # convergent_suffix);
-  def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, globaladdr:$addr, imm:$proto),
-            (call_inst (to_tglobaladdr $addr), imm:$rets, imm:$params, imm:$proto)>;
   def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i32:$addr, imm:$proto),
             (call_inst $addr, imm:$rets, imm:$params, imm:$proto)>;
   def : Pat<(call is_convergent, 1, imm:$rets, imm:$params, i64:$addr, imm:$proto),
@@ -1612,10 +1629,6 @@ foreach is_convergent = [0, 1] in {
   defvar call_uni_inst = !cast<NVPTXInst>("CALL_UNI" # convergent_suffix);
   def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, globaladdr:$addr, 0),
             (call_uni_inst (to_tglobaladdr $addr), imm:$rets, imm:$params)>;
-  def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, i32:$addr, 0),
-            (call_uni_inst $addr, imm:$rets, imm:$params)>;
-  def : Pat<(call is_convergent, 0, imm:$rets, imm:$params, i64:$addr, 0),
-            (call_uni_inst $addr, imm:$rets, imm:$params)>;
 }
 
 def DECLARE_PARAM_array :
@@ -2385,9 +2398,6 @@ def fpimm_any_zero : FPImmLeaf<fAny, [{
   return Imm.isZero();
 }]>;
 
-def fpimm_positive_zero_v2f16 : PatFrag<(ops), (v2f16 (bitconvert (i32 0)))>;
-def fpimm_positive_zero_v2bf16 : PatFrag<(ops), (v2bf16 (bitconvert (i32 0)))>;
-
 // Perform substitution if fma only has one use, and also if instruction has
 // nnan instruction flag or if the TM has NoNaNsFPMath
 def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
@@ -2410,10 +2420,10 @@ class FMARELUInst<RegTyInfo t, bit allow_ftz, PatFrag zero_pat>
 
 let Predicates = [useFP16Math, hasPTX<70>, hasSM<80>] in {
   def FMARELU_F16 : FMARELUInst<F16RT, true, fpimm_any_zero>;
-  def FMARELU_F16X2 : FMARELUInst<F16X2RT, true, fpimm_positive_zero_v2f16>;
+  def FMARELU_F16X2 : FMARELUInst<F16X2RT, true, zeroinitializer<v2f16>>;
 }
 
 let Predicates = [hasBF16Math, hasPTX<70>, hasSM<80>] in {
   def FMARELU_BF16 : FMARELUInst<BF16RT, false, fpimm_any_zero>;
-  def FMARELU_BF16X2 : FMARELUInst<BF16X2RT, false, fpimm_positive_zero_v2bf16>;
+  def FMARELU_BF16X2 : FMARELUInst<BF16X2RT, false, zeroinitializer<v2bf16>>;
 }

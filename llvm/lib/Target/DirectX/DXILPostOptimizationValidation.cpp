@@ -154,6 +154,33 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   }
 }
 
+std::optional<mcdxbc::RootSignatureDesc>
+getRootSignature(RootSignatureBindingInfo &RSBI,
+                 dxil::ModuleMetadataInfo &MMI) {
+  if (MMI.EntryPropertyVec.size() == 0)
+    return std::nullopt;
+  std::optional<mcdxbc::RootSignatureDesc> RootSigDesc =
+      RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
+  if (!RootSigDesc)
+    return std::nullopt;
+  return RootSigDesc;
+}
+
+static void reportOverlappingRegisters(
+    Module &M, const llvm::hlsl::BindingInfoBuilder::Binding &Reported,
+    const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "register " << getResourceClassName(Reported.RC)
+     << " (space=" << Reported.Space << ", register=" << Reported.LowerBound
+     << ")" << " is overlapping with" << " register "
+     << getResourceClassName(Overlaping.RC) << " (space=" << Overlaping.Space
+     << ", register=" << Overlaping.LowerBound << ")"
+     << ", verify your root signature definition.";
+
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
 static void trackRootSigDescBinding(hlsl::BindingInfoBuilder &Builder,
                                     const mcdxbc::RootSignatureDesc &RSD,
                                     dxbc::ShaderVisibility Visibility) {
@@ -173,8 +200,7 @@ static void trackRootSigDescBinding(hlsl::BindingInfoBuilder &Builder,
           RSD.ParametersContainer.getConstant(Loc);
       Builder.trackBinding(dxil::ResourceClass::CBuffer, Const.RegisterSpace,
                            Const.ShaderRegister,
-                           Const.ShaderRegister + Const.Num32BitValues,
-                           nullptr);
+                           Const.ShaderRegister + Const.Num32BitValues, &Const);
       break;
     }
 
@@ -184,7 +210,7 @@ static void trackRootSigDescBinding(hlsl::BindingInfoBuilder &Builder,
       dxbc::RTS0::v2::RootDescriptor Desc =
           RSD.ParametersContainer.getRootDescriptor(Loc);
       Builder.trackBinding(ParameterToResourceClass(Type), Desc.RegisterSpace,
-                           Desc.ShaderRegister, Desc.ShaderRegister, nullptr);
+                           Desc.ShaderRegister, Desc.ShaderRegister, &Desc);
 
       break;
     }
@@ -195,25 +221,21 @@ static void trackRootSigDescBinding(hlsl::BindingInfoBuilder &Builder,
       for (const dxbc::RTS0::v2::DescriptorRange &Range : Table.Ranges) {
         Builder.trackBinding(RangeToResourceClass(Range.RangeType),
                              Range.RegisterSpace, Range.BaseShaderRegister,
-                             Range.BaseShaderRegister + Range.NumDescriptors,
-                             nullptr);
+                             Range.NumDescriptors == ~0U
+                                 ? Range.NumDescriptors
+                                 : Range.BaseShaderRegister +
+                                       Range.NumDescriptors,
+                             &Range);
       }
       break;
     }
     }
   }
-}
 
-std::optional<mcdxbc::RootSignatureDesc>
-getRootSignature(RootSignatureBindingInfo &RSBI,
-                 dxil::ModuleMetadataInfo &MMI) {
-  if (MMI.EntryPropertyVec.size() == 0)
-    return std::nullopt;
-  std::optional<mcdxbc::RootSignatureDesc> RootSigDesc =
-      RSBI.getDescForFunction(MMI.EntryPropertyVec[0].Entry);
-  if (!RootSigDesc)
-    return std::nullopt;
-  return RootSigDesc;
+  for (auto &S : RSD.StaticSamplers) {
+    Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
+                         S.ShaderRegister, S.ShaderRegister, &S);
+  }
 }
 
 static void reportErrors(Module &M, DXILResourceMap &DRM,
@@ -234,22 +256,30 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
     hlsl::BindingInfoBuilder Builder;
     dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
     trackRootSigDescBinding(Builder, *RSD, Visibility);
+    bool HasOverlap = false;
+    hlsl::BindingInfo Info = Builder.calculateBindingInfo(
+        [&M, &HasOverlap](const llvm::hlsl::BindingInfoBuilder &Builder,
+             const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
+              HasOverlap = true;
+          const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
+              Builder.findOverlapping(ReportedBinding);
+          reportOverlappingRegisters(M, ReportedBinding, Overlaping);
+        });
+    // Next checks require that the root signature definition is valid.
+    if (!HasOverlap){
+      for (const auto &ResList :
+          {std::make_pair(ResourceClass::SRV, DRM.srvs()),
+            std::make_pair(ResourceClass::UAV, DRM.uavs()),
+            std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
+            std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
+        for (auto Res : ResList.second) {
+          llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
+          llvm::hlsl::BindingInfo::BindingRange ResRange(
+              ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
 
-    bool HasOverlap;
-    hlsl::BindingInfo Info = Builder.calculateBindingInfo(HasOverlap);
-
-    for (const auto &ResList :
-         {std::make_pair(ResourceClass::SRV, DRM.srvs()),
-          std::make_pair(ResourceClass::UAV, DRM.uavs()),
-          std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
-          std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
-      for (auto Res : ResList.second) {
-        llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
-        llvm::hlsl::BindingInfo::BindingRange ResRange(
-            ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
-
-        if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
-          reportRegNotBound(M, ResList.first, ResBinding);
+          if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
+            reportRegNotBound(M, ResList.first, ResBinding);
+        }
       }
     }
   }

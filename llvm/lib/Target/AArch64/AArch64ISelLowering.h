@@ -887,6 +887,10 @@ private:
   bool shouldScalarizeBinop(SDValue VecOp) const override {
     return VecOp.getOpcode() == ISD::SETCC;
   }
+
+  bool hasMultipleConditionRegisters(EVT VT) const override {
+    return VT.isScalableVector();
+  }
 };
 
 namespace AArch64 {
