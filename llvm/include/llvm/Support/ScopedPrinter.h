@@ -107,6 +107,9 @@ std::string enumToString(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   return utohexstr(Value, true);
 }
 
+/// Retrieves the Value's enum name.
+///
+/// Returns an empty StringRef when an invalid value is provided.
 template <typename T, typename TEnum>
 StringRef enumToStringRef(T Value, ArrayRef<EnumEntry<TEnum>> EnumValues) {
   for (const EnumEntry<TEnum> &EnumItem : EnumValues)
