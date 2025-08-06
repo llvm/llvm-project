@@ -24,8 +24,6 @@ define i64 @shl_i64_i32(i64 %v, i32 %x) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 63
-; CHECK-NEXT:    i32.and
 ; CHECK-NEXT:    i64.extend_i32_u
 ; CHECK-NEXT:    i64.shl
 ; CHECK-NEXT:    # fallthrough-return
