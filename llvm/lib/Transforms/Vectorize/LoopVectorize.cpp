@@ -2076,8 +2076,10 @@ static bool useActiveLaneMaskForControlFlow(TailFoldingStyle Style) {
          Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
 }
 
-static bool useSafeEltsMask(TailFoldingStyle TFStyle, RTCheckStyle Style) {
-  return useActiveLaneMask(TFStyle) && Style == RTCheckStyle::UseSafeEltsMask;
+static bool useSafeEltsMask(TailFoldingStyle TFStyle, RTCheckStyle Style,
+                            ElementCount VF, const TargetTransformInfo &TTI) {
+  return useActiveLaneMask(TFStyle) && Style == RTCheckStyle::UseSafeEltsMask &&
+         TTI.useSafeEltsMask(VF);
 }
 
 // Return true if \p OuterLp is an outer loop annotated with hints for explicit
@@ -2287,56 +2289,6 @@ static bool useMaskedInterleavedAccesses(const TargetTransformInfo &TTI) {
     return EnableMaskedInterleavedMemAccesses;
 
   return TTI.enableMaskedInterleavedAccessVectorization();
-}
-
-Value *
-InnerLoopVectorizer::getOrCreateVectorTripCount(BasicBlock *InsertBlock) {
-  if (VectorTripCount)
-    return VectorTripCount;
-
-  Value *TC = getTripCount();
-  IRBuilder<> Builder(InsertBlock->getTerminator());
-
-  Type *Ty = TC->getType();
-  // This is where we can make the step a runtime constant.
-  Value *Step = createStepForVF(Builder, Ty, VF, UF);
-
-  // If the tail is to be folded by masking, round the number of iterations N
-  // up to a multiple of Step instead of rounding down. This is done by first
-  // adding Step-1 and then rounding down. Note that it's ok if this addition
-  // overflows: the vector induction variable will eventually wrap to zero given
-  // that it starts at zero and its Step is a power of two; the loop will then
-  // exit, with the last early-exit vector comparison also producing all-true.
-  // For scalable vectors the VF is not guaranteed to be a power of 2, but this
-  // is accounted for in emitIterationCountCheck that adds an overflow check.
-  if (Cost->foldTailByMasking()) {
-    assert(isPowerOf2_32(VF.getKnownMinValue() * UF) &&
-           "VF*UF must be a power of 2 when folding tail by masking");
-    TC = Builder.CreateAdd(TC, Builder.CreateSub(Step, ConstantInt::get(Ty, 1)),
-                           "n.rnd.up");
-  }
-
-  // Now we need to generate the expression for the part of the loop that the
-  // vectorized body will execute. This is equal to N - (N % Step) if scalar
-  // iterations are not required for correctness, or N - Step, otherwise. Step
-  // is equal to the vectorization factor (number of SIMD elements) times the
-  // unroll factor (number of SIMD instructions).
-  Value *R = Builder.CreateURem(TC, Step, "n.mod.vf");
-
-  // There are cases where we *must* run at least one iteration in the remainder
-  // loop.  See the cost model for when this can happen.  If the step evenly
-  // divides the trip count, we set the remainder to be equal to the step. If
-  // the step does not evenly divide the trip count, no adjustment is necessary
-  // since there will already be scalar iterations. Note that the minimum
-  // iterations check ensures that N >= Step.
-  if (Cost->requiresScalarEpilogue(VF.isVector())) {
-    auto *IsZero = Builder.CreateICmpEQ(R, ConstantInt::get(R->getType(), 0));
-    R = Builder.CreateSelect(IsZero, Step, R);
-  }
-
-  VectorTripCount = Builder.CreateSub(TC, R, "n.vec");
-
-  return VectorTripCount;
 }
 
 void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
@@ -6778,7 +6730,7 @@ void LoopVectorizationPlanner::plan(
   ArrayRef<PointerDiffInfo> DiffChecks;
   auto TFStyle = CM.getTailFoldingStyle();
   if (RTChecks.has_value() &&
-      useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle)))
+      useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle), UserVF, TTI))
     DiffChecks = *RTChecks;
 
   // Invalidate interleave groups if all blocks of loop will be predicated.
@@ -10197,7 +10149,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     if (VF.Width.isVector() || SelectedIC > 1) {
       TailFoldingStyle TFStyle = CM.getTailFoldingStyle();
       bool UseSafeEltsMask =
-          useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle));
+          useSafeEltsMask(TFStyle, CM.getRTCheckStyle(TFStyle), VF.Width, *TTI);
       if (UseSafeEltsMask)
         LoopsAliasMasked++;
       Checks.create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,

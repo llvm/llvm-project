@@ -660,6 +660,8 @@ public:
     return InstructionCost::getInvalid();
   }
 
+  virtual bool useSafeEltsMask(ElementCount VF) const { return false; }
+
   virtual unsigned getMaxInterleaveFactor(ElementCount VF) const { return 1; }
 
   virtual InstructionCost getArithmeticInstrCost(
