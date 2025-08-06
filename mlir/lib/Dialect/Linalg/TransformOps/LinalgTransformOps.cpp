@@ -4133,9 +4133,8 @@ DiagnosedSilenceableFailure doit(RewriterBase &rewriter, OpTy target,
   Value extracted = tensor::ExtractSliceOp::create(
       rewriter, target.getLoc(), target.getDest(), target.getMixedOffsets(),
       target.getMixedSizes(), target.getMixedStrides());
-  Value copied = rewriter
-                     .create<linalg::CopyOp>(target.getLoc(),
-                                             target.getSource(), extracted)
+  Value copied = linalg::CopyOp::create(rewriter, target.getLoc(),
+                                        target.getSource(), extracted)
                      .getResult(0);
   // Reset the insertion point.
   rewriter.setInsertionPoint(target);

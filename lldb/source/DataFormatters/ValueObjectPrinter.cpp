@@ -16,6 +16,7 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
+#include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -62,10 +63,9 @@ void ValueObjectPrinter::Init(
   m_summary.assign("");
   m_error.assign("");
   m_val_summary_ok = false;
-  m_printed_instance_pointers =
-      printed_instance_pointers
-          ? printed_instance_pointers
-          : InstancePointersSetSP(new InstancePointersSet());
+  m_printed_instance_pointers = printed_instance_pointers
+                                    ? printed_instance_pointers
+                                    : std::make_shared<InstancePointersSet>();
   SetupMostSpecializedValue();
 }
 

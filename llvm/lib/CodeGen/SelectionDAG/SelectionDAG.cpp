@@ -784,10 +784,6 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
   case ISD::TargetFrameIndex:
     ID.AddInteger(cast<FrameIndexSDNode>(N)->getIndex());
     break;
-  case ISD::LIFETIME_START:
-  case ISD::LIFETIME_END:
-    ID.AddInteger(cast<LifetimeSDNode>(N)->getSize());
-    break;
   case ISD::PSEUDO_PROBE:
     ID.AddInteger(cast<PseudoProbeSDNode>(N)->getGuid());
     ID.AddInteger(cast<PseudoProbeSDNode>(N)->getIndex());
@@ -839,6 +835,14 @@ static void AddNodeIDCustom(FoldingSetNodeID &ID, const SDNode *N) {
     ID.AddInteger(ELD->getRawSubclassData());
     ID.AddInteger(ELD->getPointerInfo().getAddrSpace());
     ID.AddInteger(ELD->getMemOperand()->getFlags());
+    break;
+  }
+  case ISD::VP_LOAD_FF: {
+    const auto *LD = cast<VPLoadFFSDNode>(N);
+    ID.AddInteger(LD->getMemoryVT().getRawBits());
+    ID.AddInteger(LD->getRawSubclassData());
+    ID.AddInteger(LD->getPointerInfo().getAddrSpace());
+    ID.AddInteger(LD->getMemOperand()->getFlags());
     break;
   }
   case ISD::VP_STORE: {
@@ -6355,8 +6359,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     break;
   case ISD::FREEZE:
     assert(VT == N1.getValueType() && "Unexpected VT!");
-    if (isGuaranteedNotToBeUndefOrPoison(N1, /*PoisonOnly*/ false,
-                                         /*Depth*/ 1))
+    if (isGuaranteedNotToBeUndefOrPoison(N1, /*PoisonOnly=*/false))
       return N1;
     break;
   case ISD::TokenFactor:
@@ -7847,20 +7850,43 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   }
   }
 
-  // Perform trivial constant folding.
-  if (SDValue SV = FoldConstantArithmetic(Opcode, DL, VT, {N1, N2}, Flags))
-    return SV;
+  if (N1.getOpcode() == ISD::POISON || N2.getOpcode() == ISD::POISON) {
+    switch (Opcode) {
+    case ISD::XOR:
+    case ISD::ADD:
+    case ISD::PTRADD:
+    case ISD::SUB:
+    case ISD::SIGN_EXTEND_INREG:
+    case ISD::UDIV:
+    case ISD::SDIV:
+    case ISD::UREM:
+    case ISD::SREM:
+    case ISD::MUL:
+    case ISD::AND:
+    case ISD::SSUBSAT:
+    case ISD::USUBSAT:
+    case ISD::UMIN:
+    case ISD::OR:
+    case ISD::SADDSAT:
+    case ISD::UADDSAT:
+    case ISD::UMAX:
+    case ISD::SMAX:
+    case ISD::SMIN:
+      // fold op(arg1, poison) -> poison, fold op(poison, arg2) -> poison.
+      return N2.getOpcode() == ISD::POISON ? N2 : N1;
+    }
+  }
 
   // Canonicalize an UNDEF to the RHS, even over a constant.
-  if (N1.isUndef()) {
+  if (N1.getOpcode() == ISD::UNDEF && N2.getOpcode() != ISD::UNDEF) {
     if (TLI->isCommutativeBinOp(Opcode)) {
       std::swap(N1, N2);
     } else {
       switch (Opcode) {
       case ISD::PTRADD:
       case ISD::SUB:
-        // fold op(undef, arg2) -> undef, fold op(poison, arg2) ->poison.
-        return N1.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
+        // fold op(undef, non_undef_arg2) -> undef.
+        return N1;
       case ISD::SIGN_EXTEND_INREG:
       case ISD::UDIV:
       case ISD::SDIV:
@@ -7868,18 +7894,17 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       case ISD::SREM:
       case ISD::SSUBSAT:
       case ISD::USUBSAT:
-        // fold op(undef, arg2) -> 0, fold op(poison, arg2) -> poison.
-        return N1.getOpcode() == ISD::POISON ? getPOISON(VT)
-                                             : getConstant(0, DL, VT);
+        // fold op(undef, non_undef_arg2) -> 0.
+        return getConstant(0, DL, VT);
       }
     }
   }
 
   // Fold a bunch of operators when the RHS is undef.
-  if (N2.isUndef()) {
+  if (N2.getOpcode() == ISD::UNDEF) {
     switch (Opcode) {
     case ISD::XOR:
-      if (N1.isUndef())
+      if (N1.getOpcode() == ISD::UNDEF)
         // Handle undef ^ undef -> 0 special case. This is a common
         // idiom (misuse).
         return getConstant(0, DL, VT);
@@ -7887,28 +7912,47 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     case ISD::ADD:
     case ISD::PTRADD:
     case ISD::SUB:
+      // fold op(arg1, undef) -> undef.
+      return N2;
     case ISD::UDIV:
     case ISD::SDIV:
     case ISD::UREM:
     case ISD::SREM:
-      // fold op(arg1, undef) -> undef, fold op(arg1, poison) -> poison.
-      return N2.getOpcode() == ISD::POISON ? getPOISON(VT) : getUNDEF(VT);
+      // fold op(arg1, undef) -> poison.
+      return getPOISON(VT);
     case ISD::MUL:
     case ISD::AND:
     case ISD::SSUBSAT:
     case ISD::USUBSAT:
-      // fold op(arg1, undef) -> 0, fold op(arg1, poison) -> poison.
-      return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
-                                           : getConstant(0, DL, VT);
+    case ISD::UMIN:
+      // fold op(undef, undef) -> undef, fold op(arg1, undef) -> 0.
+      return N1.getOpcode() == ISD::UNDEF ? N2 : getConstant(0, DL, VT);
     case ISD::OR:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
-      // fold op(arg1, undef) -> an all-ones constant, fold op(arg1, poison) ->
-      // poison.
-      return N2.getOpcode() == ISD::POISON ? getPOISON(VT)
-                                           : getAllOnesConstant(DL, VT);
+    case ISD::UMAX:
+      // fold op(undef, undef) -> undef, fold op(arg1, undef) -> -1.
+      return N1.getOpcode() == ISD::UNDEF ? N2 : getAllOnesConstant(DL, VT);
+    case ISD::SMAX:
+      // fold op(undef, undef) -> undef, fold op(arg1, undef) -> MAX_INT.
+      return N1.getOpcode() == ISD::UNDEF
+                 ? N2
+                 : getConstant(
+                       APInt::getSignedMaxValue(VT.getScalarSizeInBits()), DL,
+                       VT);
+    case ISD::SMIN:
+      // fold op(undef, undef) -> undef, fold op(arg1, undef) -> MIN_INT.
+      return N1.getOpcode() == ISD::UNDEF
+                 ? N2
+                 : getConstant(
+                       APInt::getSignedMinValue(VT.getScalarSizeInBits()), DL,
+                       VT);
     }
   }
+
+  // Perform trivial constant folding.
+  if (SDValue SV = FoldConstantArithmetic(Opcode, DL, VT, {N1, N2}, Flags))
+    return SV;
 
   // Memoize this node if possible.
   SDNode *N;
@@ -9360,8 +9404,7 @@ SDValue SelectionDAG::getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
 }
 
 SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
-                                      SDValue Chain, int FrameIndex,
-                                      int64_t Size) {
+                                      SDValue Chain, int FrameIndex) {
   const unsigned Opcode = IsStart ? ISD::LIFETIME_START : ISD::LIFETIME_END;
   const auto VTs = getVTList(MVT::Other);
   SDValue Ops[2] = {
@@ -9373,13 +9416,12 @@ SDValue SelectionDAG::getLifetimeNode(bool IsStart, const SDLoc &dl,
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opcode, VTs, Ops);
   ID.AddInteger(FrameIndex);
-  ID.AddInteger(Size);
   void *IP = nullptr;
   if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP))
     return SDValue(E, 0);
 
-  LifetimeSDNode *N = newSDNode<LifetimeSDNode>(Opcode, dl.getIROrder(),
-                                                dl.getDebugLoc(), VTs, Size);
+  LifetimeSDNode *N =
+      newSDNode<LifetimeSDNode>(Opcode, dl.getIROrder(), dl.getDebugLoc(), VTs);
   createOperands(N, Ops);
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
@@ -10391,6 +10433,34 @@ SDValue SelectionDAG::getMaskedHistogram(SDVTList VTs, EVT MemVT,
          N->getScale()->getAsAPIntVal().isPowerOf2() &&
          "Scale should be a constant power of 2");
   assert(N->getInc().getValueType().isInteger() && "Non integer update value");
+
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+  SDValue V(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
+}
+
+SDValue SelectionDAG::getLoadFFVP(EVT VT, const SDLoc &DL, SDValue Chain,
+                                  SDValue Ptr, SDValue Mask, SDValue EVL,
+                                  MachineMemOperand *MMO) {
+  SDVTList VTs = getVTList(VT, EVL.getValueType(), MVT::Other);
+  SDValue Ops[] = {Chain, Ptr, Mask, EVL};
+  FoldingSetNodeID ID;
+  AddNodeIDNode(ID, ISD::VP_LOAD_FF, VTs, Ops);
+  ID.AddInteger(VT.getRawBits());
+  ID.AddInteger(getSyntheticNodeSubclassData<VPLoadFFSDNode>(DL.getIROrder(),
+                                                             VTs, VT, MMO));
+  ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
+  ID.AddInteger(MMO->getFlags());
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, DL, IP)) {
+    cast<VPLoadFFSDNode>(E)->refineAlignment(MMO);
+    return SDValue(E, 0);
+  }
+  auto *N = newSDNode<VPLoadFFSDNode>(DL.getIROrder(), DL.getDebugLoc(), VTs,
+                                      VT, MMO);
+  createOperands(N, Ops);
 
   CSEMap.InsertNode(N, IP);
   InsertNode(N);
@@ -12747,7 +12817,7 @@ bool SDNode::areOnlyUsersOf(ArrayRef<const SDNode *> Nodes, const SDNode *N) {
   return Seen;
 }
 
-/// isOperand - Return true if this node is an operand of N.
+/// Return true if the referenced return value is an operand of N.
 bool SDValue::isOperandOf(const SDNode *N) const {
   return is_contained(N->op_values(), *this);
 }

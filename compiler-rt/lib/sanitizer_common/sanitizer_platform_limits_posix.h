@@ -1338,12 +1338,8 @@ extern unsigned IOCTL_SNDCTL_COPR_SENDMSG;
 extern unsigned IOCTL_SNDCTL_COPR_WCODE;
 extern unsigned IOCTL_SNDCTL_COPR_WDATA;
 extern unsigned IOCTL_TCFLSH;
-extern unsigned IOCTL_TCGETA;
 extern unsigned IOCTL_TCSBRK;
 extern unsigned IOCTL_TCSBRKP;
-extern unsigned IOCTL_TCSETA;
-extern unsigned IOCTL_TCSETAF;
-extern unsigned IOCTL_TCSETAW;
 #    if SANITIZER_TERMIOS_IOCTL_CONSTANTS
 extern unsigned IOCTL_TCGETS;
 extern unsigned IOCTL_TCSETS;

@@ -991,6 +991,17 @@ class BinOpSameOpcodeHelper {
         return Candidate & OrBIT;
       case Instruction::Xor:
         return Candidate & XorBIT;
+      case Instruction::LShr:
+      case Instruction::FAdd:
+      case Instruction::FSub:
+      case Instruction::FMul:
+      case Instruction::SDiv:
+      case Instruction::UDiv:
+      case Instruction::FDiv:
+      case Instruction::SRem:
+      case Instruction::URem:
+      case Instruction::FRem:
+        return false;
       default:
         break;
       }
@@ -1238,6 +1249,12 @@ public:
     BinOpSameOpcodeHelper Converter(MainOp);
     if (!Converter.add(I) || !Converter.add(MainOp))
       return nullptr;
+    if (isAltShuffle() && !Converter.hasCandidateOpcode(MainOp->getOpcode())) {
+      BinOpSameOpcodeHelper AltConverter(AltOp);
+      if (AltConverter.add(I) && AltConverter.add(AltOp) &&
+          AltConverter.hasCandidateOpcode(AltOp->getOpcode()))
+        return AltOp;
+    }
     if (Converter.hasAltOp() && !isAltShuffle())
       return nullptr;
     return Converter.hasAltOp() ? AltOp : MainOp;
@@ -1329,7 +1346,7 @@ public:
                 // If the copyable instructions comes after MainOp
                 // (non-schedulable, but used in the block) - cannot vectorize
                 // it, will possibly generate use before def.
-                (isVectorLikeInstWithConstOps(I) || !MainOp->comesBefore(I)));
+                !MainOp->comesBefore(I));
       };
 
       return IsNonSchedulableCopyableElement(V);
@@ -10802,7 +10819,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   }
 
   // Postpone vectorization, if the node is not profitable because of the
-  // external uses.
+  // external uses of the user node, which will be represented as original
+  // scalars, not extracts. In this case, their operands must be kept scalar.
   if (!isProfitableToVectorizeWithNonVecUsers(S, UserTreeIdx, VL,
                                               ReuseShuffleIndices)) {
     PostponedNodesWithNonVecUsers.insert(VectorizableTree.size());
@@ -19039,8 +19057,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!UseIntrinsic) {
         VFShape Shape =
             VFShape::get(CI->getFunctionType(),
-                         ElementCount::getFixed(
-                             static_cast<unsigned>(VecTy->getNumElements())),
+                         ElementCount::getFixed(VecTy->getNumElements()),
                          false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {
