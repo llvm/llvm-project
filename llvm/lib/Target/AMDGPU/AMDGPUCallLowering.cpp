@@ -1464,22 +1464,9 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    CallLoweringInfo &Info) const {
   if (Function *F = Info.CB->getCalledFunction())
     if (F->isIntrinsic()) {
-      switch (F->getIntrinsicID()) {
-      case Intrinsic::amdgcn_cs_chain:
-        return lowerChainCall(MIRBuilder, Info);
-      case Intrinsic::amdgcn_call_whole_wave:
-        Info.CallConv = CallingConv::AMDGPU_Gfx_WholeWave;
-
-        // Get the callee from the original instruction, so it doesn't look like
-        // this is an indirect call.
-        Info.Callee = MachineOperand::CreateGA(
-            cast<GlobalValue>(Info.CB->getOperand(0)), /*Offset=*/0);
-        Info.OrigArgs.erase(Info.OrigArgs.begin());
-        Info.IsVarArg = false;
-        break;
-      default:
-        llvm_unreachable("Unexpected intrinsic call");
-      }
+      assert(F->getIntrinsicID() == Intrinsic::amdgcn_cs_chain &&
+             "Unexpected intrinsic");
+      return lowerChainCall(MIRBuilder, Info);
     }
 
   if (Info.IsVarArg) {
