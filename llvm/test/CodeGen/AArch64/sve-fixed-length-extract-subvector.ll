@@ -5,6 +5,12 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
+; Note that both the vector.extract intrinsics and SK_ExtractSubvector
+; shufflevector instructions get detected as a extract_subvector ISD node in
+; SelectionDAG. We'll test both cases for the sake of completeness, even though
+; vector.extract intrinsics should get lowered into shufflevector by the time we
+; reach the backend.
+
 ; i8
 
 ; Don't use SVE for 64-bit vectors.
@@ -40,6 +46,67 @@ define void @extract_subvector_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
   ret void
 }
 
+define void @extract_v32i8_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v32i8_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    str q1, [x1]
+; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <32 x i8>, ptr %in
+  %hi = shufflevector <32 x i8> %b, <32 x i8> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  store <16 x i8> %hi, ptr %out
+  %lo = shufflevector <32 x i8> %b, <32 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x i8> %lo, ptr %out2
+  ret void
+}
+
+define void @extract_v32i8_half_unaligned(ptr %in, ptr %out) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v32i8_half_unaligned:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #4
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <32 x i8>, ptr %in
+  %d = shufflevector <32 x i8> %b, <32 x i8> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19>
+  store <16 x i8> %d, ptr %out
+  ret void
+}
+
+define void @extract_v32i8_quarters(ptr %in, ptr %out, ptr %out2, ptr %out3, ptr %out4) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v32i8_quarters:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #24
+; CHECK-NEXT:    str d1, [x1]
+; CHECK-NEXT:    str d2, [x2]
+; CHECK-NEXT:    str d0, [x3]
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    str d0, [x4]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <32 x i8>, ptr %in
+  %hilo = shufflevector <32 x i8> %b, <32 x i8> poison, <8 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
+  store <8 x i8> %hilo, ptr %out
+  %hihi = shufflevector <32 x i8> %b, <32 x i8> poison, <8 x i32> <i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  store <8 x i8> %hihi, ptr %out2
+  %lolo = shufflevector <32 x i8> %b, <32 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x i8> %lolo, ptr %out3
+  %lohi = shufflevector <32 x i8> %b, <32 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <8 x i8> %lohi, ptr %out4
+  ret void
+}
+
 define void @extract_subvector_v64i8(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: extract_subvector_v64i8:
 ; CHECK:       // %bb.0:
@@ -51,6 +118,25 @@ define void @extract_subvector_v64i8(ptr %a, ptr %b) #0 {
   %op = load <64 x i8>, ptr %a
   %ret = call <32 x i8> @llvm.vector.extract.v32i8.v64i8(<64 x i8> %op, i64 32)
   store <32 x i8> %ret, ptr %b
+  ret void
+}
+
+define void @extract_v64i8_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(4,4) {
+; CHECK-LABEL: extract_v64i8_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ptrue p0.b, vl32
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
+; CHECK-NEXT:    st1b { z1.b }, p0, [x1]
+; CHECK-NEXT:    st1b { z0.b }, p0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <64 x i8>, ptr %in
+  %hi = shufflevector <64 x i8> %b, <64 x i8> poison, <32 x i32> <i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
+  store <32 x i8> %hi, ptr %out
+  %lo = shufflevector <64 x i8> %b, <64 x i8> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  store <32 x i8> %lo, ptr %out2
   ret void
 }
 
@@ -117,6 +203,24 @@ define void @extract_subvector_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
   ret void
 }
 
+define void @extract_v16i16_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v16i16_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    str q1, [x1]
+; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <16 x i16>, ptr %in
+  %hi = shufflevector <16 x i16> %b, <16 x i16> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <8 x i16> %hi, ptr %out
+  %lo = shufflevector <16 x i16> %b, <16 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x i16> %lo, ptr %out2
+  ret void
+}
+
 define void @extract_subvector_v32i16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: extract_subvector_v32i16:
 ; CHECK:       // %bb.0:
@@ -128,6 +232,25 @@ define void @extract_subvector_v32i16(ptr %a, ptr %b) #0 {
   %op = load <32 x i16>, ptr %a
   %ret = call <16 x i16> @llvm.vector.extract.v16i16.v32i16(<32 x i16> %op, i64 16)
   store <16 x i16> %ret, ptr %b
+  ret void
+}
+
+define void @extract_v32i16_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(4,4) {
+; CHECK-LABEL: extract_v32i16_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <32 x i16>, ptr %in
+  %hi = shufflevector <32 x i16> %b, <32 x i16> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  store <16 x i16> %hi, ptr %out
+  %lo = shufflevector <32 x i16> %b, <32 x i16> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x i16> %lo, ptr %out2
   ret void
 }
 
@@ -195,6 +318,24 @@ define void @extract_subvector_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
   ret void
 }
 
+define void @extract_v8i32_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v8i32_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    str q1, [x1]
+; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <8 x i32>, ptr %in
+  %hi = shufflevector <8 x i32> %b, <8 x i32> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  store <4 x i32> %hi, ptr %out
+  %lo = shufflevector <8 x i32> %b, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i32> %lo, ptr %out2
+  ret void
+}
+
 define void @extract_subvector_v16i32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: extract_subvector_v16i32:
 ; CHECK:       // %bb.0:
@@ -206,6 +347,25 @@ define void @extract_subvector_v16i32(ptr %a, ptr %b) #0 {
   %op = load <16 x i32>, ptr %a
   %ret = call <8 x i32> @llvm.vector.extract.v8i32.v16i32(<16 x i32> %op, i64 8)
   store <8 x i32> %ret, ptr %b
+  ret void
+}
+
+define void @extract_v16i32_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(4,4) {
+; CHECK-LABEL: extract_v16i32_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
+; CHECK-NEXT:    st1w { z1.s }, p0, [x1]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <16 x i32>, ptr %in
+  %hi = shufflevector <16 x i32> %b, <16 x i32> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <8 x i32> %hi, ptr %out
+  %lo = shufflevector <16 x i32> %b, <16 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x i32> %lo, ptr %out2
   ret void
 }
 
@@ -262,6 +422,24 @@ define void @extract_subvector_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
   ret void
 }
 
+define void @extract_v4i64_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v4i64_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    str q1, [x1]
+; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <4 x i64>, ptr %in
+  %hi = shufflevector <4 x i64> %b, <4 x i64> poison, <2 x i32> <i32 2, i32 3>
+  store <2 x i64> %hi, ptr %out
+  %lo = shufflevector <4 x i64> %b, <4 x i64> poison, <2 x i32> <i32 0, i32 1>
+  store <2 x i64> %lo, ptr %out2
+  ret void
+}
+
 define void @extract_subvector_v8i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: extract_subvector_v8i64:
 ; CHECK:       // %bb.0:
@@ -273,6 +451,25 @@ define void @extract_subvector_v8i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
   %op = load <8 x i64>, ptr %a
   %ret = call <4 x i64> @llvm.vector.extract.v4i64.v8i64(<8 x i64> %op, i64 4)
   store <4 x i64> %ret, ptr %b
+  ret void
+}
+
+define void @extract_v8i64_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(4,4) {
+; CHECK-LABEL: extract_v8i64_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
+; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <8 x i64>, ptr %in
+  %hi = shufflevector <8 x i64> %b, <8 x i64> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  store <4 x i64> %hi, ptr %out
+  %lo = shufflevector <8 x i64> %b, <8 x i64> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x i64> %lo, ptr %out2
   ret void
 }
 
@@ -352,6 +549,24 @@ define void @extract_subvector_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
   ret void
 }
 
+define void @extract_v16half_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v16half_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    str q1, [x1]
+; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <16 x half>, ptr %in
+  %hi = shufflevector <16 x half> %b, <16 x half> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <8 x half> %hi, ptr %out
+  %lo = shufflevector <16 x half> %b, <16 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x half> %lo, ptr %out2
+  ret void
+}
+
 define void @extract_subvector_v32f16(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: extract_subvector_v32f16:
 ; CHECK:       // %bb.0:
@@ -363,6 +578,25 @@ define void @extract_subvector_v32f16(ptr %a, ptr %b) #0 {
   %op = load <32 x half>, ptr %a
   %ret = call <16 x half> @llvm.vector.extract.v16f16.v32f16(<32 x half> %op, i64 16)
   store <16 x half> %ret, ptr %b
+  ret void
+}
+
+define void @extract_v32half_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(4,4) {
+; CHECK-LABEL: extract_v32half_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
+; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <32 x half>, ptr %in
+  %hi = shufflevector <32 x half> %b, <32 x half> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  store <16 x half> %hi, ptr %out
+  %lo = shufflevector <32 x half> %b, <32 x half> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x half> %lo, ptr %out2
   ret void
 }
 
@@ -430,6 +664,24 @@ define void @extract_subvector_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
   ret void
 }
 
+define void @extract_v8float_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v8float_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    str q1, [x1]
+; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <8 x float>, ptr %in
+  %hi = shufflevector <8 x float> %b, <8 x float> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  store <4 x float> %hi, ptr %out
+  %lo = shufflevector <8 x float> %b, <8 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x float> %lo, ptr %out2
+  ret void
+}
+
 define void @extract_subvector_v16f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: extract_subvector_v16f32:
 ; CHECK:       // %bb.0:
@@ -441,6 +693,25 @@ define void @extract_subvector_v16f32(ptr %a, ptr %b) #0 {
   %op = load <16 x float>, ptr %a
   %ret = call <8 x float> @llvm.vector.extract.v8f32.v16f32(<16 x float> %op, i64 8)
   store <8 x float> %ret, ptr %b
+  ret void
+}
+
+define void @extract_v16float_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(4,4) {
+; CHECK-LABEL: extract_v16float_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl8
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
+; CHECK-NEXT:    st1w { z1.s }, p0, [x1]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <16 x float>, ptr %in
+  %hi = shufflevector <16 x float> %b, <16 x float> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <8 x float> %hi, ptr %out
+  %lo = shufflevector <16 x float> %b, <16 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x float> %lo, ptr %out2
   ret void
 }
 
@@ -497,6 +768,24 @@ define void @extract_subvector_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
   ret void
 }
 
+define void @extract_v4double_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v4double_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    str q1, [x1]
+; CHECK-NEXT:    str q0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <4 x double>, ptr %in
+  %hi = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 2, i32 3>
+  store <2 x double> %hi, ptr %out
+  %lo = shufflevector <4 x double> %b, <4 x double> poison, <2 x i32> <i32 0, i32 1>
+  store <2 x double> %lo, ptr %out2
+  ret void
+}
+
 define void @extract_subvector_v8f64(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: extract_subvector_v8f64:
 ; CHECK:       // %bb.0:
@@ -508,6 +797,25 @@ define void @extract_subvector_v8f64(ptr %a, ptr %b) #0 {
   %op = load <8 x double>, ptr %a
   %ret = call <4 x double> @llvm.vector.extract.v4f64.v8f64(<8 x double> %op, i64 4)
   store <4 x double> %ret, ptr %b
+  ret void
+}
+
+define void @extract_v8double_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(4,4) {
+; CHECK-LABEL: extract_v8double_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    ptrue p0.d, vl4
+; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
+; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <8 x double>, ptr %in
+  %hi = shufflevector <8 x double> %b, <8 x double> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  store <4 x double> %hi, ptr %out
+  %lo = shufflevector <8 x double> %b, <8 x double> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x double> %lo, ptr %out2
   ret void
 }
 
@@ -539,13 +847,65 @@ define void @extract_subvector_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
   ret void
 }
 
+; bf16
+
+define void @extract_v8bfloat_halves(ptr %in, ptr %out, ptr %out2) #0 {
+; CHECK-LABEL: extract_v8bfloat_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr q0, [x0]
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    str d1, [x1]
+; CHECK-NEXT:    str d0, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <8 x bfloat>, ptr %in
+  %hi = shufflevector <8 x bfloat> %b, <8 x bfloat> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  store <4 x bfloat> %hi, ptr %out
+  %lo = shufflevector <8 x bfloat> %b, <8 x bfloat> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  store <4 x bfloat> %lo, ptr %out2
+  ret void
+}
+
+define void @extract_v16bfloat_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(2,2) {
+; CHECK-LABEL: extract_v16bfloat_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    str q0, [x1]
+; CHECK-NEXT:    str q1, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <16 x bfloat>, ptr %in
+  %hi = shufflevector <16 x bfloat> %b, <16 x bfloat> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <8 x bfloat> %hi, ptr %out
+  %lo = shufflevector <16 x bfloat> %b, <16 x bfloat> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  store <8 x bfloat> %lo, ptr %out2
+  ret void
+}
+
+define void @extract_v32bfloat_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(4,4) {
+; CHECK-LABEL: extract_v32bfloat_halves:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldp q0, q1, [x0, #32]
+; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    stp q0, q1, [x1]
+; CHECK-NEXT:    stp q3, q2, [x2]
+; CHECK-NEXT:    ret
+entry:
+  %b = load <32 x bfloat>, ptr %in
+  %hi = shufflevector <32 x bfloat> %b, <32 x bfloat> poison, <16 x i32> <i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  store <16 x bfloat> %hi, ptr %out
+  %lo = shufflevector <32 x bfloat> %b, <32 x bfloat> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  store <16 x bfloat> %lo, ptr %out2
+  ret void
+}
+
 ; Test for infinite loop due to fold:
 ; extract_subvector(insert_subvector(x,y,c1),c2)--> extract_subvector(y,c2-c1)
 define void @extract_subvector_legalization_v8i32() vscale_range(2,2) #0 {
 ; CHECK-LABEL: extract_subvector_legalization_v8i32:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    adrp x8, .LCPI40_0
-; CHECK-NEXT:    add x8, x8, :lo12:.LCPI40_0
+; CHECK-NEXT:    adrp x8, .LCPI59_0
+; CHECK-NEXT:    add x8, x8, :lo12:.LCPI59_0
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ldr z0, [x8]
 ; CHECK-NEXT:    mov z1.d, z0.d
@@ -556,11 +916,11 @@ define void @extract_subvector_legalization_v8i32() vscale_range(2,2) #0 {
 ; CHECK-NEXT:    sunpklo z1.d, z1.s
 ; CHECK-NEXT:    cmpne p0.d, p1/z, z1.d, #0
 ; CHECK-NEXT:    cmpne p1.d, p1/z, z0.d, #0
-; CHECK-NEXT:  .LBB40_1: // %body
+; CHECK-NEXT:  .LBB59_1: // %body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    st1d { z0.d }, p1, [x8]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x8]
-; CHECK-NEXT:    b .LBB40_1
+; CHECK-NEXT:    b .LBB59_1
 entry:
   %splat = shufflevector <8 x i32> poison, <8 x i32> poison, <8 x i32> zeroinitializer
   br label %body
