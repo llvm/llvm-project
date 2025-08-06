@@ -37,12 +37,10 @@ static cl::opt<int> OptBisectLimit("opt-bisect-limit", cl::Hidden,
                                    }),
                                    cl::desc("Maximum optimization to perform"));
 
-static cl::opt<int> OptBisectSkip("opt-bisect-skip", cl::Hidden,
-  cl::init(OptBisect::Disabled), cl::Optional,
-  cl::cb<void, int>([](int PassNum) {
-    getOptBisector().addSkip(PassNum);
-  }),
-  cl::desc("Skip pass at the given index in the optimization pipeline"));
+static cl::opt<int> OptBisectSkip(
+    "opt-bisect-skip", cl::Hidden, cl::init(OptBisect::Disabled), cl::Optional,
+    cl::cb<void, int>([](int PassNum) { getOptBisector().addSkip(PassNum); }),
+    cl::desc("Skip pass at the given index in the optimization pipeline"));
 
 static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
@@ -73,7 +71,10 @@ bool OptBisect::shouldRunPass(StringRef PassName,
   assert(isEnabled());
 
   int CurBisectNum = ++LastBisectNum;
-  bool ShouldRun = (BisectLimit == -1 || BisectLimit == Disabled || CurBisectNum <= BisectLimit) && !BisectSkipNumbers.contains(CurBisectNum);  if (OptBisectVerbose)
+  bool ShouldRun = (BisectLimit == -1 || BisectLimit == Disabled ||
+                    CurBisectNum <= BisectLimit) &&
+                   !BisectSkipNumbers.contains(CurBisectNum);
+  if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
   return ShouldRun;
 }

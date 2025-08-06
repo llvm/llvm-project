@@ -68,11 +68,11 @@ public:
                      StringRef IRDescription) const override;
 
   /// isEnabled() should return true before calling shouldRunPass().
-  bool isEnabled() const override { return BisectLimit != Disabled || !BisectSkipNumbers.empty(); }
-
-  void addSkip(int SkipNumber) {
-    BisectSkipNumbers.insert(SkipNumber);
+  bool isEnabled() const override {
+    return BisectLimit != Disabled || !BisectSkipNumbers.empty();
   }
+
+  void addSkip(int SkipNumber) { BisectSkipNumbers.insert(SkipNumber); }
 
   /// Set the new optimization limit and reset the counter. Passing
   /// OptBisect::Disabled disables the limiting.
