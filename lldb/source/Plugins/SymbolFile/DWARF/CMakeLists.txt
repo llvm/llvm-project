@@ -41,6 +41,7 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   SymbolFileDWARF.cpp
   SymbolFileDWARFDwo.cpp
   SymbolFileDWARFDebugMap.cpp
+  SymbolFileWasm.cpp
   UniqueDWARFASTType.cpp
   ${SWIFT_SOURCES}
 
