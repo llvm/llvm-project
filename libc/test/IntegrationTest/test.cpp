@@ -65,11 +65,22 @@ int atexit(void (*func)(void)) { return LIBC_NAMESPACE::atexit(func); }
 
 static constexpr uint64_t MEMORY_SIZE = 16384;
 static uint8_t memory[MEMORY_SIZE];
+
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+static size_t used = 0;
+#else
 static LIBC_NAMESPACE::cpp::Atomic<size_t> used = 0;
+#endif
 
 extern "C" {
 
-// For simple test purposes.
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+void *malloc(size_t s) {
+  void *mem = ptr;
+  ptr += s;
+  return static_cast<uint64_t>(ptr - memory) >= MEMORY_SIZE ? nullptr : mem;
+}
+#else
 void *malloc(size_t s) {
   // Emulate the alignment of std::max_align_t.
   constexpr size_t DEFAULT_ALIGNMENT = alignof(long double);
@@ -79,6 +90,7 @@ void *malloc(size_t s) {
     return nullptr; // Out of memory.
   return &memory[res];
 }
+#endif
 
 void free(void *) {}
 
