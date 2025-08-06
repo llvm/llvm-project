@@ -1100,12 +1100,26 @@ private:
   ControlFusionFn controlFoldingReshapes;
 };
 
-/// Pattern to fold a tensor.expand_shape op with its producer tensor.pad op
+/// Pattern to move a tensor.expand_shape op with its producer tensor.pad op
 /// by bubbling the expand_shape before the pad.
-struct FoldReshapeWithProducerPadOpByExpansion
+///
+/// ```
+/// BEFORE:
+/// %padded = tensor.pad %input low[0, 1, 1] high[0, 1, 1]
+///     tensor<512x256x256xf32> to tensor<512x258x258xf32>
+/// %expanded = tensor.expand_shape %padded [[0, 1], [2], [3]]
+///     tensor<512x258x258xf32> to tensor<32x16x258x258xf32>
+///
+/// AFTER:
+/// %expanded = tensor.expand_shape %input [[0, 1], [2], [3]]
+///     tensor<512x256x256xf32> to tensor<32x16x256x256xf32>
+/// %padded = tensor.pad %expanded low[0, 0, 1, 1] high[0, 0, 1, 1]
+///     tensor<32x16x256x256xf32> to tensor<32x16x258x258xf32>
+/// ```
+struct MoveReshapeWithProducerPadOpByExpansion
     : public OpRewritePattern<tensor::ExpandShapeOp> {
 
-  FoldReshapeWithProducerPadOpByExpansion(MLIRContext *context,
+  MoveReshapeWithProducerPadOpByExpansion(MLIRContext *context,
                                           ControlFusionFn foldReshapes,
                                           PatternBenefit benefit = 1)
       : OpRewritePattern<tensor::ExpandShapeOp>(context, benefit),
@@ -1181,12 +1195,26 @@ private:
   ControlFusionFn controlFoldingReshapes;
 };
 
-/// Pattern to fold a tensor.collapse_shape op with its producer tensor.pad op
+/// Pattern to move a tensor.collapse_shape op with its producer tensor.pad op
 /// by bubbling the collapse_shape before the pad.
-struct FoldReshapeWithProducerPadOpByCollapsing
+///
+/// ```
+/// BEFORE:
+/// %padded = tensor.pad %input low[1, 1, 0] high[1, 1, 0]
+///     tensor<32x16x256xf32> to tensor<34x18x256xf32>
+/// %collapsed = tensor.collapse_shape %padded [[0, 1], [2]]
+///     tensor<34x18x256xf32> to tensor<612x256xf32>
+///
+/// AFTER:
+/// %collapsed = tensor.collapse_shape %input [[0, 1], [2]]
+///     tensor<32x16x256xf32> to tensor<512x256xf32>
+/// %padded = tensor.pad %collapsed low[1, 0] high[1, 0]
+///     tensor<512x256xf32> to tensor<514x256xf32>
+/// ```
+struct MoveReshapeWithProducerPadOpByCollapsing
     : public OpRewritePattern<tensor::CollapseShapeOp> {
 
-  FoldReshapeWithProducerPadOpByCollapsing(MLIRContext *context,
+  MoveReshapeWithProducerPadOpByCollapsing(MLIRContext *context,
                                            ControlFusionFn foldReshapes,
                                            PatternBenefit benefit = 1)
       : OpRewritePattern<tensor::CollapseShapeOp>(context, benefit),
@@ -2394,7 +2422,7 @@ void mlir::linalg::populateFoldReshapeOpsByExpansionPatterns(
                                                     controlFoldingReshapes);
   patterns.add<FoldPadWithProducerReshapeOpByExpansion>(patterns.getContext(),
                                                         controlFoldingReshapes);
-  patterns.add<FoldReshapeWithProducerPadOpByExpansion>(patterns.getContext(),
+  patterns.add<MoveReshapeWithProducerPadOpByExpansion>(patterns.getContext(),
                                                         controlFoldingReshapes);
   patterns.add<FoldWithProducerReshapeOpByExpansion>(patterns.getContext(),
                                                      controlFoldingReshapes);
@@ -2407,10 +2435,7 @@ void mlir::linalg::populateFoldReshapeOpsByCollapsingPatterns(
                                                       controlFoldingReshapes);
   patterns.add<FoldPadWithProducerReshapeOpByCollapsing>(
       patterns.getContext(), controlFoldingReshapes);
-  patterns.add<FoldReshapeWithProducerPadOpByCollapsing>(
-      patterns.getContext(), controlFoldingReshapes);
-
-  patterns.add<FoldReshapeWithProducerPadOpByCollapsing>(
+  patterns.add<MoveReshapeWithProducerPadOpByCollapsing>(
       patterns.getContext(), controlFoldingReshapes);
   patterns.add<FoldReshapeWithGenericOpByCollapsing>(patterns.getContext(),
                                                      controlFoldingReshapes);
