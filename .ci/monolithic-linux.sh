@@ -100,12 +100,12 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
 start-group "ninja"
 
 # Targets are not escaped as they are passed as separate arguments.
-ninja -C "${BUILD_DIR}" -k 0 ${targets}
+ninja -C "${BUILD_DIR}" -k 0 ${targets} | tee ninja.log
 
 if [[ "${runtime_targets}" != "" ]]; then
   start-group "ninja Runtimes"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets}
+  ninja -C "${BUILD_DIR}" ${runtime_targets} | tee ninja_runtimes.log
 fi
 
 # Compiling runtimes with just-built Clang and running their tests
@@ -120,7 +120,8 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   start-group "ninja Runtimes C++26"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
+    | tee ninja_runtimes_needs_reconfig1.log
 
   start-group "CMake Runtimes Clang Modules"
 
@@ -131,5 +132,6 @@ if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
 
   start-group "ninja Runtimes Clang Modules"
 
-  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig}
+  ninja -C "${BUILD_DIR}" ${runtime_targets_needs_reconfig} \
+    | tee ninja_runtimes_needs_reconfig2.log
 fi
