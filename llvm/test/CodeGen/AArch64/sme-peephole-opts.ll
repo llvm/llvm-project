@@ -314,6 +314,88 @@ define void @test9() "aarch64_pstate_sm_body" {
   ret void
 }
 
+; test that if the 'smstart' and 'smtop' are entirely removed in a locally
+; streaming function, we use addvl (not addsvl) for setting up the SVE stack.
+define aarch64_sve_vector_pcs void @test9_1() "aarch64_pstate_sm_body" {
+; CHECK-LABEL: test9_1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-18
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z20, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z19, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z18, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z17, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z16, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z15, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z14, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z13, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z12, [sp, #13, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z11, [sp, #14, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0a, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x11, 0x90, 0x01, 0x1e, 0x22 // sp + 16 + 144 * VG
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x78, 0x1e, 0x22, 0x40, 0x1c // $d8 @ cfa - 8 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x70, 0x1e, 0x22, 0x40, 0x1c // $d9 @ cfa - 16 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x68, 0x1e, 0x22, 0x40, 0x1c // $d10 @ cfa - 24 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x60, 0x1e, 0x22, 0x40, 0x1c // $d11 @ cfa - 32 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x58, 0x1e, 0x22, 0x40, 0x1c // $d12 @ cfa - 40 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x50, 0x1e, 0x22, 0x40, 0x1c // $d13 @ cfa - 48 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x48, 0x1e, 0x22, 0x40, 0x1c // $d14 @ cfa - 56 * VG - 16
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x09, 0x92, 0x2e, 0x00, 0x11, 0x40, 0x1e, 0x22, 0x40, 0x1c // $d15 @ cfa - 64 * VG - 16
+; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #18
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  call void @callee()
+  ret void
+}
+
 ; similar to above, but in this case only the first
 ; 'smstart, smstop' pair can be removed and the code required
 ; for the CFI is still needed.

@@ -6147,9 +6147,13 @@ void llvm::emitFrameOffset(MachineBasicBlock &MBB,
   // vscale in the prologue/epilogue is different the runtime value of vscale
   // in the function's body. To avoid having to consider multiple vscales,
   // we can use `addsvl` to allocate any scalable stack-slots, which under
-  // most circumstances will be only locals, not callee-save slots.
-  const Function &F = MBB.getParent()->getFunction();
-  bool UseSVL = F.hasFnAttribute("aarch64_pstate_sm_body");
+  // most circumstances will be only locals, not callee-save slots. Note: We
+  // check "hasStreamingModeChanges" here as it is possible for the
+  // SMEPeepeholeOpt pass to optimize out the streaming-mode changes (removing
+  // the streaming body).
+  auto &AFI = *MBB.getParent()->getInfo<AArch64FunctionInfo>();
+  bool UseSVL =
+      AFI.hasStreamingModeChanges() && AFI.getSMEFnAttrs().hasStreamingBody();
 
   int64_t Bytes, NumPredicateVectors, NumDataVectors;
   AArch64InstrInfo::decomposeStackOffsetForFrameOffsets(
