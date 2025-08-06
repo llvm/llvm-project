@@ -22953,11 +22953,10 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Use software guarded branch for large code model non-indirect calls
   // Tail call to external symbol will have a null CLI.CB and we need another
   // way to determine the callsite type
-  bool NeedSWGuarded = false;
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      Subtarget.hasStdExtZicfilp() &&
-      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
-    NeedSWGuarded = true;
+  const bool NeedSWGuarded =
+      getTargetMachine().getCodeModel() == CodeModel::Large &&
+      Subtarget.hasZicfilpCFI() &&
+      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol);
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
