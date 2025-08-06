@@ -56,8 +56,9 @@ public:
       this, "Method should return an owned object",
       "Object with a +0 retain count returned to caller where a +1 (owning) "
       "retain count is expected"};
-  // For these two bug types the report message is generated dynamically
-  // so the empty string data member will be unused.
+  // For these two bug types the report message will be generated dynamically
+  // by `RefLeakReport::createDescription` so the empty string taken from the
+  // BugType will be ignored (overwritten).
   const RefCountBug LeakWithinFunction{this, "Leak", /*ReportMsg=*/"",
                                        /*SuppressOnSink=*/true};
   const RefCountBug LeakAtReturn{this, "Leak of returned object",
