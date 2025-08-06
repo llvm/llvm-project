@@ -82,6 +82,9 @@ define spir_func void @_Z5foo11v(%struct.S1 addrspace(4)* noalias nocapture sret
 }
 
 declare void @llvm.memset.p4i8.i32(i8 addrspace(4)* nocapture, i8, i32, i1)
+
 declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1)
+
 declare void @llvm.memset.p3i8.i32(i8 addrspace(3)*, i8, i32, i1)
+
 declare void @llvm.memset.p1i8.i64(i8 addrspace(1)*, i8, i64, i1)
