@@ -533,9 +533,9 @@ module std [system] {
     module iter_swap                              { header "__algorithm/iter_swap.h" }
     module iterator_operations {
       header "__algorithm/iterator_operations.h"
+      export std_core.iterator_core.iter_move
       export std.iterator.advance
       export std.iterator.distance
-      export std.iterator.iter_move
       export std.iterator.iter_swap
       export std.iterator.next
       export std.iterator.prev
