@@ -722,8 +722,8 @@ static Instruction *combineLoadToOperationType(InstCombinerImpl &IC,
 // If aggregate load has invariant.load metadata, add it to the
 // unpacked loads as well.
 static void copyInvariantLoadMetadata(LoadInst &LI, LoadInst *NewLoad) {
-  if (MDNode *MD = LI.getMetadata("invariant.load"))
-    NewLoad->setMetadata("invariant.load", MD);
+  if (MDNode *MD = LI.getMetadata(LLVMContext::MD_invariant_load))
+    NewLoad->setMetadata(LLVMContext::MD_invariant_load, MD);
 }
 
 static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
