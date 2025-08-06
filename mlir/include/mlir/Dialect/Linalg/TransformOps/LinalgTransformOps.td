@@ -2349,7 +2349,8 @@ def VectorizeChildrenAndApplyPatternsOp :
 
     This transformation supports the following attributes:
     - `fold_type_extensions_into_contract`: a `UnitAttr` to enable the folding of
-      cast operations into vector.contract with mixed precision.
+      type extension operations into `vector.contract` to create a mixed precision
+      operation.
     - `vectorize_padding`: a `UnitAttr` to activate the vectorization of
       `tensor.pad` ops. Different pipelines may prefer to lower such ops to
       loops.
