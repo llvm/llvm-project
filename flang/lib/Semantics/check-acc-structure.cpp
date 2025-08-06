@@ -139,12 +139,10 @@ void AccStructureChecker::CheckNotInComputeConstruct() {
 }
 
 bool AccStructureChecker::IsInsideParallelConstruct() const {
-  if (auto directive = getParentComputeConstruct()) {
+  if (auto directive = getParentComputeConstruct())
     if (*directive == llvm::acc::ACCD_parallel ||
-        *directive == llvm::acc::ACCD_parallel_loop) {
+        *directive == llvm::acc::ACCD_parallel_loop)
       return true;
-    }
-  }
   return false;
 }
 
@@ -275,19 +273,15 @@ std::optional<std::int64_t> AccStructureChecker::getGangDimensionSize(
   for (auto it : dirContext.clauseInfo) {
     const auto *clause{it.second};
     if (const auto *gangClause{
-            std::get_if<parser::AccClause::Gang>(&clause->u)}) {
+            std::get_if<parser::AccClause::Gang>(&clause->u)})
       if (gangClause->v) {
         const Fortran::parser::AccGangArgList &x{*gangClause->v};
-        for (const Fortran::parser::AccGangArg &gangArg : x.v) {
+        for (const Fortran::parser::AccGangArg &gangArg : x.v)
           if (const auto *dim{
-                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)}) {
-            if (const auto v{EvaluateInt64(context_, dim->v)}) {
+                  std::get_if<Fortran::parser::AccGangArg::Dim>(&gangArg.u)})
+            if (const auto v{EvaluateInt64(context_, dim->v)})
               return *v;
-            }
-          }
-        }
       }
-    }
   }
   return std::nullopt;
 }
@@ -305,20 +299,16 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
               auto parentDim = getGangDimensionSize(parent);
               auto currentDim = getGangDimensionSize(GetContext());
               std::int64_t parentDimNum = 1, currentDimNum = 1;
-              if (parentDim) {
+              if (parentDim)
                 parentDimNum = *parentDim;
-              }
-              if (currentDim) {
+              if (currentDim)
                 currentDimNum = *currentDim;
-              }
               if (parentDimNum <= currentDimNum) {
                 std::string parentDimStr, currentDimStr;
-                if (parentDim) {
+                if (parentDim)
                   parentDimStr = "(dim:" + std::to_string(parentDimNum) + ")";
-                }
-                if (currentDim) {
+                if (currentDim)
                   currentDimStr = "(dim:" + std::to_string(currentDimNum) + ")";
-                }
                 context_.Say(GetContext().clauseSource,
                     "%s%s clause is not allowed in the region of a loop with the %s%s clause"_err_en_US,
                     parser::ToUpperCaseLetters(
@@ -353,9 +343,8 @@ void AccStructureChecker::CheckNotInSameOrSubLevelLoopConstruct() {
         }
       }
     }
-    if (IsComputeConstruct(parent.directive)) {
+    if (IsComputeConstruct(parent.directive))
       break;
-    }
   }
 }
 
