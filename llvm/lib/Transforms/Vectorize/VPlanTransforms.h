@@ -252,9 +252,15 @@ struct VPlanTransforms {
 
   // Materialize vector trip counts for constants early if it can simply be
   // computed as (Original TC / VF * UF) * VF * UF.
-  static void materializeVectorTripCount(VPlan &Plan, ElementCount BestVF,
-                                         unsigned BestUF,
-                                         PredicatedScalarEvolution &PSE);
+  static void
+  materializeConstantVectorTripCount(VPlan &Plan, ElementCount BestVF,
+                                     unsigned BestUF,
+                                     PredicatedScalarEvolution &PSE);
+
+  /// Materialize the backedge-taken count to be computed explicitly using
+  /// VPInstructions.
+  static void materializeBackedgeTakenCount(VPlan &Plan,
+                                            VPBasicBlock *VectorPH);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
