@@ -348,11 +348,7 @@ TEST_F(HeadersTest, ShortenIncludesInSearchPathBracketedFilterByFullPath) {
   // The filter receives the full path of the header, so it is able to filter by
   // the parent directory, even if it is part of the include search path
   AngledHeaders.push_back([](auto Path) {
-#if defined(_WIN32)
-    llvm::Regex Pattern("sub\\.*");
-#else
     llvm::Regex Pattern("sub/.*");
-#endif
     return Pattern.match(Path);
   });
   std::string BarHeader = testPath("sub/bar.h");
