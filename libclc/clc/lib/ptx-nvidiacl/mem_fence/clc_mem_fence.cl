@@ -6,13 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef __CLC_OPENCL_SYNCHRONIZATION_CL_MEM_FENCE_FLAGS_H__
-#define __CLC_OPENCL_SYNCHRONIZATION_CL_MEM_FENCE_FLAGS_H__
+#include <clc/mem_fence/clc_mem_fence.h>
 
-typedef uint cl_mem_fence_flags;
-
-#define CLK_LOCAL_MEM_FENCE 1
-#define CLK_GLOBAL_MEM_FENCE 2
-#define CLK_IMAGE_MEM_FENCE 4
-
-#endif // __CLC_OPENCL_SYNCHRONIZATION_CL_MEM_FENCE_FLAGS_H__
+_CLC_OVERLOAD _CLC_DEF void __clc_mem_fence(int memory_scope,
+                                            int memory_order) {
+  if (memory_scope & (__MEMORY_SCOPE_DEVICE | __MEMORY_SCOPE_WRKGRP))
+    __nvvm_membar_cta();
+}
