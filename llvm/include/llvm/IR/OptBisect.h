@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_OPTBISECT_H
 #define LLVM_IR_OPTBISECT_H
 
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Compiler.h"
@@ -67,7 +68,11 @@ public:
                      StringRef IRDescription) const override;
 
   /// isEnabled() should return true before calling shouldRunPass().
-  bool isEnabled() const override { return BisectLimit != Disabled; }
+  bool isEnabled() const override { return BisectLimit != Disabled || !BisectSkipNumbers.empty(); }
+
+  void addSkip(int SkipNumber) {
+    BisectSkipNumbers.insert(SkipNumber);
+  }
 
   /// Set the new optimization limit and reset the counter. Passing
   /// OptBisect::Disabled disables the limiting.
@@ -81,6 +86,7 @@ public:
 private:
   int BisectLimit = Disabled;
   mutable int LastBisectNum = 0;
+  SmallSet<int, 4> BisectSkipNumbers;
 };
 
 /// This class implements a mechanism to disable passes and individual
