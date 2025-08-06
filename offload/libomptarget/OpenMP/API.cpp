@@ -726,6 +726,11 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
   if (!DeviceOrErr)
     FATAL_MESSAGE(DeviceNum, "%s", toString(DeviceOrErr.takeError()).c_str());
 
+  if (DeviceOrErr->isPinnedPtr(const_cast<void *>(Ptr))) {
+    DP("Call to omp_target_is_accessible with HostPtr in pinned memory, returning "
+       "true\n");
+    return true;
+  }
   // TODO: How does the spec intend for the Size=0 case to be handled?
   // Currently, for the case where arr[N:M] is mapped, we return true for any
   // address within arr[0:N+M].  However, Size>1 returns true only for arr[N:M].
@@ -734,9 +739,9 @@ EXTERN int omp_target_is_accessible(const void *Ptr, size_t Size,
   // changes, keep comments for omp_get_accessible_buffer in omp.h.var in sync.
   TargetPointerResultTy TPR =
       DeviceOrErr->getMappingInfo().getTgtPtrBegin(const_cast<void *>(Ptr), Size,
-                                                   /*UpdateRefCount=*/false,
-                                                   /*UseHoldRefCount=*/false);
-  int Rc = (TPR.isContained() || TPR.isHostPointer());
+                                                   /*UpdateRefCount=*/false, /*UseHoldRefCount=*/false, 
+                                                   /*MustContain=*/true);
+  int Rc = (TPR.isPresent() || TPR.isHostPointer());
   DP("Call to omp_target_is_accessible returns %d\n", Rc);
   return Rc;
 }
