@@ -6,23 +6,51 @@
 
 // RUN: lldb-test symbols --find=function --name=main --function-flags=full %t.exe \
 // RUN:     | FileCheck %s --check-prefix=FIND-MAIN
+// RUN: lldb-test symbols --find=function --name=main --function-flags=method %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-NO-FUNCTION
+// RUN: lldb-test symbols --find=function --name=main --function-flags=base %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-MAIN
 
 // RUN: lldb-test symbols --find=function --name=static_fn --function-flags=full %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-STATIC
+// RUN: lldb-test symbols --find=function --name=static_fn --function-flags=method %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-NO-FUNCTION
+// RUN: lldb-test symbols --find=function --name=static_fn --function-flags=base %t.exe \
 // RUN:     | FileCheck %s --check-prefix=FIND-STATIC
 
 // RUN: lldb-test symbols --find=function --name=varargs_fn --function-flags=full %t.exe \
 // RUN:     | FileCheck %s --check-prefix=FIND-VAR
+// RUN: lldb-test symbols --find=function --name=varargs_fn --function-flags=method %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-NO-FUNCTION
+// RUN: lldb-test symbols --find=function --name=varargs_fn --function-flags=base %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-VAR
 
 // RUN: lldb-test symbols --find=function --name=Struct::simple_method --function-flags=full %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-SIMPLE
+// RUN: lldb-test symbols --find=function --name=Struct::simple_method --function-flags=method %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-SIMPLE
+// RUN: lldb-test symbols --find=function --name=Struct::simple_method --function-flags=base %t.exe \
 // RUN:     | FileCheck %s --check-prefix=FIND-SIMPLE
 
 // RUN: lldb-test symbols --find=function --name=Struct::virtual_method --function-flags=full %t.exe \
 // RUN:     | FileCheck %s --check-prefix=FIND-VIRTUAL
+// RUN: lldb-test symbols --find=function --name=Struct::virtual_method --function-flags=method %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-VIRTUAL
+// RUN: lldb-test symbols --find=function --name=Struct::virtual_method --function-flags=base %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-VIRTUAL
 
 // RUN: lldb-test symbols --find=function --name=Struct::static_method --function-flags=full %t.exe \
 // RUN:     | FileCheck %s --check-prefix=FIND-STATIC-METHOD
+// RUN: lldb-test symbols --find=function --name=Struct::static_method --function-flags=method %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-NO-FUNCTION
+// RUN: lldb-test symbols --find=function --name=Struct::static_method --function-flags=base %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-STATIC-METHOD
 
 // RUN: lldb-test symbols --find=function --name=Struct::overloaded_method --function-flags=full %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-OVERLOAD
+// RUN: lldb-test symbols --find=function --name=Struct::overloaded_method --function-flags=method %t.exe \
+// RUN:     | FileCheck %s --check-prefix=FIND-OVERLOAD-METHOD
+// RUN: lldb-test symbols --find=function --name=Struct::overloaded_method --function-flags=base %t.exe \
 // RUN:     | FileCheck %s --check-prefix=FIND-OVERLOAD
 
 struct Struct {
@@ -69,6 +97,8 @@ int main(int argc, char **argv) {
 // FIND-MAIN:      Function: id = {{.*}}, name = "main"
 // FIND-MAIN-NEXT: FuncType: id = {{.*}}, compiler_type = "int (int, char **)"
 
+// FIND-NO-FUNCTION: Found 0 functions
+
 // FIND-STATIC:      Function: id = {{.*}}, name = "{{.*}}static_fn{{.*}}"
 // FIND-STATIC-NEXT: FuncType: id = {{.*}}, compiler_type = "int (void)"
 
@@ -88,3 +118,7 @@ int main(int argc, char **argv) {
 // FIND-OVERLOAD: FuncType: id = {{.*}}, compiler_type = "int (void)"
 // FIND-OVERLOAD: FuncType: id = {{.*}}, compiler_type = "int (char)"
 // FIND-OVERLOAD: FuncType: id = {{.*}}, compiler_type = "int (char, int, ...)"
+
+// FIND-OVERLOAD-METHOD: Function: id = {{.*}}, name = "{{.*}}Struct::overloaded_method{{.*}}"
+// FIND-OVERLOAD-METHOD: FuncType: id = {{.*}}, compiler_type = "int (void)"
+// FIND-OVERLOAD-METHOD: FuncType: id = {{.*}}, compiler_type = "int (char)"
