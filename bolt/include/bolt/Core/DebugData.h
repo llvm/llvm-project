@@ -867,7 +867,7 @@ public:
   }
 
   template <typename T> void populate(const T Vec) {
-    assert(Vec.size() == Size && "");
+    assert(Vec.size() == Size && "Sizes must match");
     DebugLineTableRowRef *CurRawPtr = beginPtr();
     for (DebugLineTableRowRef RowRef : Vec) {
       *CurRawPtr = RowRef;

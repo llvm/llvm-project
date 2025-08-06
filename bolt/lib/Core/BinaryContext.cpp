@@ -1700,11 +1700,9 @@ void BinaryContext::preprocessDebugInfo() {
 
     // Go forward and add all units from ranges that cover the function
     while (++It != AllRanges.end()) {
-      if (It->LowPC <= FunctionAddress && FunctionAddress < It->HighPC) {
-        Function.addDWARFUnit(It->Unit);
-      } else {
+      if (It->LowPC > FunctionAddress || FunctionAddress >= It->HighPC)
         break;
-      }
+      Function.addDWARFUnit(It->Unit);
     }
   }
 
@@ -1712,7 +1710,7 @@ void BinaryContext::preprocessDebugInfo() {
   for (const auto &KV : BinaryFunctions) {
     const BinaryFunction &BF = KV.second;
     if (shouldEmit(BF) && !BF.getDWARFUnits().empty())
-      for (const DWARFUnit *Unit : BF.getDWARFUnits())
+      for (const auto &[_, Unit] : BF.getDWARFUnits())
         ProcessedCUs.insert(Unit);
   }
   // Clear debug info for functions from units that we are not going to process.
@@ -1720,7 +1718,7 @@ void BinaryContext::preprocessDebugInfo() {
     BinaryFunction &BF = KV.second;
     // Collect units to remove to avoid iterator invalidation
     SmallVector<DWARFUnit *, 1> UnitsToRemove;
-    for (auto *Unit : BF.getDWARFUnits()) {
+    for (const auto &[_, Unit] : BF.getDWARFUnits()) {
       if (!ProcessedCUs.count(Unit))
         UnitsToRemove.push_back(Unit);
     }
