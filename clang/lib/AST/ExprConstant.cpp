@@ -11610,6 +11610,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   switch (E->getBuiltinCallee()) {
   default:
     return false;
+  case Builtin::BI__builtin_elementwise_abs:
   case Builtin::BI__builtin_elementwise_popcount:
   case Builtin::BI__builtin_elementwise_bitreverse: {
     APValue Source;
@@ -11634,11 +11635,18 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             APValue(APSInt(Elt.reverseBits(),
                            DestEltTy->isUnsignedIntegerOrEnumerationType())));
         break;
+      case Builtin::BI__builtin_elementwise_abs: {
+        APInt Val = Source.getVectorElt(EltNum).getInt().abs();
+        ResultElements.push_back(APValue(
+            APSInt(Val, DestEltTy->isUnsignedIntegerOrEnumerationType())));
+        break;
+      }
       }
     }
 
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
+
   case Builtin::BI__builtin_elementwise_add_sat:
   case Builtin::BI__builtin_elementwise_sub_sat:
   case clang::X86::BI__builtin_ia32_pmulhuw128:
@@ -13385,6 +13393,14 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     int Operand = E->getArg(0)->EvaluateKnownConstInt(Info.Ctx).getZExtValue();
     Operand = Info.Ctx.getTargetInfo().getEHDataRegisterNumber(Operand);
     return Success(Operand, E);
+  }
+
+  case Builtin::BI__builtin_elementwise_abs: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+
+    return Success(Val.abs(), E);
   }
 
   case Builtin::BI__builtin_expect:

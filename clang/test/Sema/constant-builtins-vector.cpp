@@ -876,3 +876,9 @@ static_assert(__builtin_elementwise_min(~0U, 0U) == 0U);
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4char){1, -2, 3, -4}, (vector4char){4, -3, 2, -1})) == (LITTLE_END ? 0xFC02FD01 : 0x01FD02FC));
 static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_min((vector4uchar){1, 2, 3, 4}, (vector4uchar){4, 3, 2, 1})) == 0x01020201U);
 static_assert(__builtin_bit_cast(unsigned long long, __builtin_elementwise_min((vector4short){1, -2, 3, -4}, (vector4short){4, -3, 2, -1})) == (LITTLE_END ? 0xFFFC0002FFFD0001 : 0x0001FFFD0002FFFC));
+
+static_assert(__builtin_elementwise_abs(10) == 10);
+static_assert(__builtin_elementwise_abs(-10) == 10);
+static_assert(__builtin_bit_cast(unsigned, __builtin_elementwise_abs((vector4char){-1, -2, -3, 4})) == (LITTLE_END ? 0x04030201 : 0x01020304));
+// the absolute value of the most negative integer remains the most negative integer
+static_assert(__builtin_elementwise_abs((int)(-2147483648)) == (int)(-2147483648));
