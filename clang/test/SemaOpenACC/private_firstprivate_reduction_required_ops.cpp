@@ -37,10 +37,12 @@ struct ImplicitDelDtor {
 };
 
 struct DeletedCopy {
+  DeletedCopy();
   DeletedCopy(const DeletedCopy&) = delete;
 };
 
 struct DefaultedCopy {
+  DefaultedCopy();
   DefaultedCopy(const DefaultedCopy&) = default;
 };
 struct UserCopy {
