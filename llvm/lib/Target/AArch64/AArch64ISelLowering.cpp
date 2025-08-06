@@ -16289,9 +16289,8 @@ AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
     Chain = SP.getValue(1);
     SP = DAG.getNode(ISD::SUB, DL, MVT::i64, SP, Size);
     if (Align)
-      SP =
-          DAG.getNode(ISD::AND, DL, VT, SP.getValue(0),
-                      DAG.getSignedConstant(-(uint64_t)Align->value(), DL, VT));
+      SP = DAG.getNode(ISD::AND, DL, VT, SP.getValue(0),
+                       DAG.getSignedConstant(-Align->value(), DL, VT));
     Chain = DAG.getCopyToReg(Chain, DL, AArch64::SP, SP);
     SDValue Ops[2] = {SP, Chain};
     return DAG.getMergeValues(Ops, DL);
@@ -16328,7 +16327,7 @@ AArch64TargetLowering::LowerWindowsDYNAMIC_STACKALLOC(SDValue Op,
   SP = DAG.getNode(ISD::SUB, DL, MVT::i64, SP, Size);
   if (Align)
     SP = DAG.getNode(ISD::AND, DL, VT, SP.getValue(0),
-                     DAG.getSignedConstant(-(uint64_t)Align->value(), DL, VT));
+                     DAG.getSignedConstant(-Align->value(), DL, VT));
   Chain = DAG.getCopyToReg(Chain, DL, AArch64::SP, SP);
 
   Chain = DAG.getCALLSEQ_END(Chain, 0, 0, SDValue(), DL);
@@ -16356,7 +16355,7 @@ AArch64TargetLowering::LowerInlineDYNAMIC_STACKALLOC(SDValue Op,
   SP = DAG.getNode(ISD::SUB, DL, MVT::i64, SP, Size);
   if (Align)
     SP = DAG.getNode(ISD::AND, DL, VT, SP.getValue(0),
-                     DAG.getSignedConstant(-(uint64_t)Align->value(), DL, VT));
+                     DAG.getSignedConstant(-Align->value(), DL, VT));
 
   // Set the real SP to the new value with a probing loop.
   Chain = DAG.getNode(AArch64ISD::PROBED_ALLOCA, DL, MVT::Other, Chain, SP);
