@@ -894,10 +894,9 @@ private:
 
   void RemoveFromMap(const Module *module_ptr, bool if_orphaned = false) {
     ConstString name = module_ptr->GetFileSpec().GetFilename();
-    auto it = m_name_to_modules.find(name);
-    if (it == m_name_to_modules.end())
+    if (m_name_to_modules.contains(name))
       return;
-    llvm::SmallVectorImpl<ModuleSP> &vec = it->second;
+    llvm::SmallVectorImpl<ModuleSP> &vec = m_name_to_modules[name];
     for (auto *it = vec.begin(); it != vec.end(); ++it) {
       if (it->get() == module_ptr) {
         // use_count == 2 means only held by map and list (orphaned)
@@ -930,12 +929,9 @@ private:
         module_sp->GetPlatformFileSpec();
 
     llvm::SmallVectorImpl<ModuleSP> &vec = it->second;
-    // Iterate backwards to minimize element shifting during removal.
-    for (int i = vec.size() - 1; i >= 0; --i) {
-      auto *it = vec.begin() + i;
-      if ((*it)->MatchesModuleSpec(equivalent_module_spec))
-        vec.erase(it);
-    }
+    llvm::erase_if(vec, [&equivalent_module_spec](ModuleSP &element) {
+      return element->MatchesModuleSpec(equivalent_module_spec);
+    });
   }
 
   /// Remove orphans from the vector.
