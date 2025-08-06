@@ -175,7 +175,7 @@ Introduction
 ------------
 
 Unlike most parts of the LLVM project, libc++ uses a pre-commit CI [#]_. Some of
-this CI is hosted on `Buildkite<https://buildkite.com/llvm-project/libcxx-ci>`__,
+this CI is hosted on `Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__,
 but some has migrated to the LLVM CI infrastructure. The build results are
 visible in the review on GitHub. Please make sure the CI is green before
 committing a patch.
@@ -248,8 +248,8 @@ Infrastructure
 --------------
 
 The files for the CI infrastructure are split between the llvm-project
-and the llvm-zorg repositories.  All files of the CI infrastructure in
-the llvm-project are in the directory ``libcxx/utils/ci``.  Note that
+and the llvm-zorg repositories. All files of the CI infrastructure in
+the llvm-project are in the directory ``libcxx/utils/ci``. Note that
 quite a bit of this infrastructure is heavily Linux focused. This is
 the platform used by most of libc++'s Buildkite runners and
 developers.
@@ -259,7 +259,7 @@ Dockerfile/Container Images
 
 Contains the Docker image for the Ubuntu CI. Because the same Docker image is
 used for the ``main`` and ``release`` branch, it should contain no hard-coded
-versions.  It contains the used versions of Clang, various clang-tools,
+versions. It contains the used versions of Clang, various clang-tools,
 GCC, and CMake.
 
 .. note:: This image is pulled from Docker hub and not rebuild when changing
@@ -306,7 +306,7 @@ to be a modified version of one of the libcxx runner variable images from
 https://github.com/llvm/llvm-zorg/blob/main/premerge/premerge_resources/variables.tf,
 as follows: Find the libcxx runner image name you want to use from the
 variables.tf file. The name will be something like
-``ghcr.io/llvm/libcxx-linux-builder:<some-commit-SHA>``.  Replace
+``ghcr.io/llvm/libcxx-linux-builder:<some-commit-SHA>``. Replace
 ``libcxx-linux-builder`` with ``libcxx-linux-builder-base``. Use this new image
 name as the value you assign to ``ACTIONS_BASE_IMAGE``.
 
@@ -318,7 +318,7 @@ in ``libcxx/utils/ci/Dockerfile`` and update the date to be the current date.
 
 Once you have created and merged a PR with those changes, a new image
 will be created, and a link to it can be found at
-https://github.com/llvm/llvm-project/pkgs/container/libcxx-linux-builder.,
+https://github.com/llvm/llvm-project/pkgs/container/libcxx-linux-builder,
 where the actual image name should be
 ``ghcr.io/llvm/libcxx-linux-builder:<SHA-of-committed-change-from-PR>``.
 
