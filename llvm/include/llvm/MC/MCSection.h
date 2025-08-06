@@ -150,23 +150,6 @@ public:
   MCFragment(const MCFragment &) = delete;
   MCFragment &operator=(const MCFragment &) = delete;
 
-  bool isEncoded() const {
-    MCFragment::FragmentType Kind = getKind();
-    switch (Kind) {
-    default:
-      return false;
-    case MCFragment::FT_Relaxable:
-    case MCFragment::FT_Data:
-    case MCFragment::FT_Align:
-    case MCFragment::FT_Dwarf:
-    case MCFragment::FT_DwarfFrame:
-    case MCFragment::FT_LEB:
-    case MCFragment::FT_CVInlineLines:
-    case MCFragment::FT_CVDefRange:
-      return true;
-    }
-  }
-
   MCFragment *getNext() const { return Next; }
 
   FragmentType getKind() const { return Kind; }
@@ -220,7 +203,7 @@ public:
   MutableArrayRef<char> getContents();
   ArrayRef<char> getContents() const;
 
-  void setVarContents(ArrayRef<char> Contents);
+  LLVM_ABI void setVarContents(ArrayRef<char> Contents);
   void clearVarContents() { setVarContents({}); }
   MutableArrayRef<char> getVarContents();
   ArrayRef<char> getVarContents() const;
@@ -241,7 +224,7 @@ public:
 
   // Source fixup offsets are relative to the variable part's start.
   // Stored fixup offsets are relative to the fixed part's start.
-  void setVarFixups(ArrayRef<MCFixup> Fixups);
+  LLVM_ABI void setVarFixups(ArrayRef<MCFixup> Fixups);
   void clearVarFixups() { setVarFixups({}); }
   MutableArrayRef<MCFixup> getVarFixups();
   ArrayRef<MCFixup> getVarFixups() const;

@@ -732,7 +732,14 @@ bool isGenericAtomic(unsigned Opc) {
 }
 
 bool isAsyncStore(unsigned Opc) {
-  return false; // placeholder before async store implementation.
+  return Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx1250 ||
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1250;
 }
 
 bool isTensorStore(unsigned Opc) {
@@ -2652,6 +2659,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -3016,6 +3024,8 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
+    return false;
   default:
     llvm_unreachable("bad packed operand type");
   }

@@ -707,6 +707,7 @@ define amdgpu_kernel void @workgroup_one_as_release() #0 {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 16240
+  ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
@@ -714,6 +715,7 @@ define amdgpu_kernel void @workgroup_one_as_release() #0 {
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
+  ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_one_as_release
@@ -752,6 +754,7 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel() #0 {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 16240
+  ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
@@ -760,6 +763,7 @@ define amdgpu_kernel void @workgroup_one_as_acq_rel() #0 {
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
+  ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_one_as_acq_rel
@@ -799,6 +803,7 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst() #0 {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 16240
+  ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
@@ -807,6 +812,7 @@ define amdgpu_kernel void @workgroup_one_as_seq_cst() #0 {
   ; GFX10CU: bb.0.entry:
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
+  ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_one_as_seq_cst
@@ -1695,6 +1701,7 @@ define amdgpu_kernel void @workgroup_release() #0 {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 112
+  ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   S_ENDPGM 0
   ;
@@ -1703,6 +1710,7 @@ define amdgpu_kernel void @workgroup_release() #0 {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 49279
+  ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_release
@@ -1744,6 +1752,7 @@ define amdgpu_kernel void @workgroup_acq_rel() #0 {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 112
+  ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
@@ -1753,6 +1762,7 @@ define amdgpu_kernel void @workgroup_acq_rel() #0 {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 49279
+  ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_acq_rel
@@ -1795,6 +1805,7 @@ define amdgpu_kernel void @workgroup_seq_cst() #0 {
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10WGP-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10WGP-NEXT:   S_WAITCNT_soft 112
+  ; GFX10WGP-NEXT:   S_WAITCNT_lds_direct
   ; GFX10WGP-NEXT:   S_WAITCNT_VSCNT_soft undef $sgpr_null, 0
   ; GFX10WGP-NEXT:   BUFFER_GL0_INV implicit $exec
   ; GFX10WGP-NEXT:   S_ENDPGM 0
@@ -1804,6 +1815,7 @@ define amdgpu_kernel void @workgroup_seq_cst() #0 {
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION escape 0x0f, 0x04, 0x30, 0x36, 0xe9, 0x02
   ; GFX10CU-NEXT:   frame-setup CFI_INSTRUCTION undefined $pc_reg
   ; GFX10CU-NEXT:   S_WAITCNT_soft 49279
+  ; GFX10CU-NEXT:   S_WAITCNT_lds_direct
   ; GFX10CU-NEXT:   S_ENDPGM 0
   ;
   ; GFX11WGP-LABEL: name: workgroup_seq_cst
