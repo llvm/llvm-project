@@ -148,11 +148,14 @@ class OneUse2<SDPatternOperator operator>
     : PatFrag<(ops node:$A, node:$B), (operator node:$A, node:$B), [{ return N->hasOneUse(); }]>;
 
 
-class fpimm_pos_inf<ValueType vt>
-    : FPImmLeaf<vt, [{ return Imm.isPosInfinity(); }]>;
-
 class zeroinitializer<ValueType vt> : 
   PatLeaf<(vt (bitconvert (!cast<ValueType>("i" # vt.Size) 0)))>;
+
+
+def fpimm_pos_inf : FPImmLeaf<fAny, [{ return Imm.isPosInfinity(); }]>;
+def fpimm_0 : FPImmLeaf<fAny, [{ return Imm.isZero(); }]>;
+def fpimm_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(1.0); }]>;
+def fpimm_neg_1 : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(-1.0); }]>;
 
 
 // Operands which can hold a Register or an Immediate.
@@ -761,10 +764,10 @@ def fabs_oneuse : OneUse1<fabs>;
 
 def TESTINF_f32r : BasicNVPTXInst<(outs B1:$p), (ins B32:$a),
                              "testp.infinite.f32",
-                             [(set i1:$p, (seteq (fabs_oneuse f32:$a), fpimm_pos_inf<f32>))]>;
+                             [(set i1:$p, (seteq (fabs_oneuse f32:$a), fpimm_pos_inf))]>;
 def TESTINF_f64r : BasicNVPTXInst<(outs B1:$p), (ins B64:$a),
                              "testp.infinite.f64",
-                             [(set i1:$p, (seteq (fabs_oneuse f64:$a), fpimm_pos_inf<f64>))]>;
+                             [(set i1:$p, (seteq (fabs_oneuse f64:$a), fpimm_pos_inf))]>;
 
 //-----------------------------------
 // Integer Arithmetic
@@ -905,22 +908,6 @@ let Predicates = [hasOptEnabled] in {
 // Floating Point Arithmetic
 //-----------------------------------
 
-// Constant 1.0f
-def f32imm_1 : FPImmLeaf<f32, [{
-  return &Imm.getSemantics() == &llvm::APFloat::IEEEsingle() &&
-         Imm.convertToFloat() == 1.0f;
-}]>;
-// Constant 1.0 (double)
-def f64imm_1 : FPImmLeaf<f64, [{
-  return &Imm.getSemantics() == &llvm::APFloat::IEEEdouble() &&
-         Imm.convertToDouble() == 1.0;
-}]>;
-// Constant -1.0 (double)
-def f64imm_neg1 : FPImmLeaf<f64, [{
-  return &Imm.getSemantics() == &llvm::APFloat::IEEEdouble() &&
-         Imm.convertToDouble() == -1.0;
-}]>;
-
 defm FADD : F3_fma_component<"add", fadd>;
 defm FSUB : F3_fma_component<"sub", fsub>;
 defm FMUL : F3_fma_component<"mul", fmul>;
@@ -994,7 +981,7 @@ def FRCP64r :
   BasicNVPTXInst<(outs B64:$dst),
                  (ins B64:$b),
                  "rcp.rn.f64",
-                 [(set f64:$dst, (fdiv f64imm_1, f64:$b))]>;
+                 [(set f64:$dst, (fdiv fpimm_1, f64:$b))]>;
 def FDIV64rr :
   BasicNVPTXInst<(outs B64:$dst),
                  (ins B64:$a, B64:$b),
@@ -1008,7 +995,7 @@ def FDIV64ri :
 
 // fdiv will be converted to rcp
 // fneg (fdiv 1.0, X) => fneg (rcp.rn X)
-def : Pat<(fdiv f64imm_neg1, f64:$b),
+def : Pat<(fdiv fpimm_neg_1, f64:$b),
           (FNEGf64 (FRCP64r $b))>;
 
 //
@@ -1025,7 +1012,7 @@ def RCP_APPROX_F32_r :
   BasicFlagsNVPTXInst<(outs B32:$dst),
                  (ins B32:$b), (ins FTZFlag:$ftz),
                  "rcp.approx$ftz.f32",
-                 [(set f32:$dst, (fdiv_approx f32imm_1, f32:$b))]>;
+                 [(set f32:$dst, (fdiv_approx fpimm_1, f32:$b))]>;
 
 //
 // F32 Approximate division
@@ -1052,7 +1039,7 @@ def fdiv_full : PatFrag<(ops node:$a, node:$b),
 }]>;
 
 
-def : Pat<(fdiv_full f32imm_1, f32:$b),
+def : Pat<(fdiv_full fpimm_1, f32:$b),
           (RCP_APPROX_F32_r $b)>;
 
 //
@@ -1081,7 +1068,7 @@ def FRCP32r_prec :
   BasicFlagsNVPTXInst<(outs B32:$dst),
                  (ins B32:$b), (ins FTZFlag:$ftz),
                  "rcp.rn$ftz.f32",
-                 [(set f32:$dst, (fdiv_ftz f32imm_1, f32:$b))]>;
+                 [(set f32:$dst, (fdiv_ftz fpimm_1, f32:$b))]>;
 //
 // F32 Accurate division
 //
@@ -1096,7 +1083,7 @@ def FDIV32ri_prec :
                  "div.rn$ftz.f32",
                  [(set f32:$dst, (fdiv_ftz f32:$a, fpimm:$b))]>;
 
-def : Pat<(fdiv f32imm_1, f32:$b), (FRCP32r_prec $b, NoFTZ)>;
+def : Pat<(fdiv fpimm_1, f32:$b), (FRCP32r_prec $b, NoFTZ)>;
 def : Pat<(fdiv f32:$a, f32:$b), (FDIV32rr_prec $a, $b, NoFTZ)>;
 def : Pat<(fdiv f32:$a, fpimm:$b), (FDIV32ri_prec $a, fpimm:$b, NoFTZ)>;
 
@@ -2418,10 +2405,6 @@ foreach scope = ["sys", "gpu", "cluster", "cta"] in {
   def atomic_thread_fence_release_#scope: NVPTXFenceInst<scope, "release", hasPTX<87>>;
 }
 
-def fpimm_any_zero : FPImmLeaf<fAny, [{
-  return Imm.isZero();
-}]>;
-
 // Perform substitution if fma only has one use, and also if instruction has
 // nnan instruction flag or if the TM has NoNaNsFPMath
 def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
@@ -2443,11 +2426,11 @@ class FMARELUInst<RegTyInfo t, bit allow_ftz, PatFrag zero_pat>
                    [(set t.Ty:$dst, (NVPTX_fmaxnum_nsz (NVPTX_fma_oneuse_and_nnan t.Ty:$a, t.Ty:$b, t.Ty:$c), zero_pat))]>;
 
 let Predicates = [useFP16Math, hasPTX<70>, hasSM<80>] in {
-  def FMARELU_F16 : FMARELUInst<F16RT, true, fpimm_any_zero>;
+  def FMARELU_F16 : FMARELUInst<F16RT, true, fpimm_0>;
   def FMARELU_F16X2 : FMARELUInst<F16X2RT, true, zeroinitializer<v2f16>>;
 }
 
 let Predicates = [hasBF16Math, hasPTX<70>, hasSM<80>] in {
-  def FMARELU_BF16 : FMARELUInst<BF16RT, false, fpimm_any_zero>;
+  def FMARELU_BF16 : FMARELUInst<BF16RT, false, fpimm_0>;
   def FMARELU_BF16X2 : FMARELUInst<BF16X2RT, false, zeroinitializer<v2bf16>>;
 }
