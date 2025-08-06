@@ -1343,6 +1343,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::StaticAssert:
   case Decl::TypeAliasTemplate:
   case Decl::UsingShadow:
+  case Decl::VarTemplate:
+  case Decl::VarTemplatePartialSpecialization:
     break;
 
   case Decl::CXXConstructor:
