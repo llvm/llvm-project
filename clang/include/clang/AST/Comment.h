@@ -401,7 +401,7 @@ public:
     return Args[Idx].Range;
   }
 
-  CommandMarkerKind getCommandMarker() const LLVM_READONLY {
+  CommandMarkerKind getCommandMarker() const {
     return static_cast<CommandMarkerKind>(
         InlineCommandCommentBits.CommandMarker);
   }

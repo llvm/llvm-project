@@ -4542,6 +4542,25 @@ TEST(Hover, FunctionParameters) {
        },
        "### param `b`\n\n---\nType: `T`\n\nthis is doc for "
        "`b`\n\n---\n```cpp\n// In foo\nT b\n```"},
+      {R"cpp(/// Function doc
+      /// @param b this is <b>doc</b> <html-tag attribute/> <another-html-tag attribute="value">for</another-html-tag> \p b
+      void foo(int a, int [[^b]]);
+    )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "b";
+         HI.Kind = index::SymbolKind::Parameter;
+         HI.NamespaceScope = "";
+         HI.LocalScope = "foo::";
+         HI.Type = "int";
+         HI.Definition = "int b";
+         HI.Documentation =
+             "this is <b>doc</b> <html-tag attribute/> <another-html-tag "
+             "attribute=\"value\">for</another-html-tag> \\p b";
+       },
+       "### param `b`\n\n---\nType: `int`\n\nthis is \\<b>doc\\</b> "
+       "\\<html-tag attribute/> \\<another-html-tag "
+       "attribute=\"value\">for\\</another-html-tag> "
+       "`b`\n\n---\n```cpp\n// In foo\nint b\n```"},
   };
 
   // Create a tiny index, so tests above can verify documentation is fetched.

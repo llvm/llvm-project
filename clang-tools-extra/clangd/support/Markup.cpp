@@ -364,7 +364,7 @@ public:
     std::string Marker = getMarkerForCodeBlock(Contents);
     // No need to pad from previous blocks, as they should end with a new line.
     OS << Marker << Language << '\n' << Contents;
-    if (Contents.back() != '\n')
+    if (!Contents.empty() && Contents.back() != '\n')
       OS << '\n';
     // Always end with an empty line to separate code blocks from following
     // paragraphs.

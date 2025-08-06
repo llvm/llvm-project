@@ -17,18 +17,28 @@
 
 namespace clang {
 namespace clangd {
+namespace {
+
+std::string commandMarkerAsString(comments::CommandMarkerKind CommandMarker) {
+  switch (CommandMarker) {
+  case comments::CommandMarkerKind::CMK_At:
+    return "@";
+  case comments::CommandMarkerKind::CMK_Backslash:
+    return "\\";
+  }
+  llvm_unreachable("Unknown command marker kind");
+}
 
 void commandToMarkup(markup::Paragraph &Out, StringRef Command,
                      comments::CommandMarkerKind CommandMarker,
                      StringRef Args) {
-  Out.appendBoldText(
-      (CommandMarker == (comments::CommandMarkerKind::CMK_At) ? "@" : "\\") +
-      Command.str());
+  Out.appendBoldText(commandMarkerAsString(CommandMarker) + Command.str());
   if (!Args.empty()) {
     Out.appendSpace();
     Out.appendEmphasizedText(Args.str());
   }
 }
+} // namespace
 
 class ParagraphToMarkupDocument
     : public comments::ConstCommentVisitor<ParagraphToMarkupDocument> {
@@ -145,27 +155,23 @@ public:
   void visitTextComment(const comments::TextComment *C) { Out << C->getText(); }
 
   void visitInlineCommandComment(const comments::InlineCommandComment *C) {
-    Out << (C->getCommandMarker() == comments::CommandMarkerKind::CMK_At
-                ? "@"
-                : "\\");
+    Out << commandMarkerAsString(C->getCommandMarker());
     Out << C->getCommandName(Traits);
     if (C->getNumArgs() > 0) {
-      Out << " ";
-      for (unsigned I = 0; I < C->getNumArgs(); ++I) {
-        if (I > 0)
-          Out << " ";
-        Out << C->getArgText(I);
-      }
+      for (unsigned I = 0; I < C->getNumArgs(); ++I)
+        Out << " " << C->getArgText(I);
     }
     Out << " ";
   }
 
   void visitHTMLStartTagComment(const comments::HTMLStartTagComment *STC) {
-    Out << "<" + STC->getTagName().str();
+    Out << "<" << STC->getTagName().str();
 
     for (unsigned I = 0; I < STC->getNumAttrs(); ++I) {
       const comments::HTMLStartTagComment::Attribute &Attr = STC->getAttr(I);
-      Out << " " + Attr.Name.str() + "=\"" + Attr.Value.str() + "\"";
+      Out << " " << Attr.Name.str();
+      if (!Attr.Value.str().empty())
+        Out << "=\"" << Attr.Value.str() << "\"";
     }
 
     if (STC->isSelfClosing())
@@ -176,8 +182,8 @@ public:
   }
 
   void visitHTMLEndTagComment(const comments::HTMLEndTagComment *ETC) {
-    Out << "</" + ETC->getTagName().str() + ">" +
-               (ETC->hasTrailingNewline() ? "\n" : "");
+    Out << "</" << ETC->getTagName().str() << ">"
+        << (ETC->hasTrailingNewline() ? "\n" : "");
   }
 
 private:

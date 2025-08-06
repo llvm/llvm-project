@@ -1393,6 +1393,93 @@ static std::string formatOffset(uint64_t OffsetInBits) {
   return Offset;
 }
 
+void HoverInfo::calleeArgInfoToMarkupParagraph(markup::Paragraph &P) const {
+  assert(CallPassType);
+  std::string Buffer;
+  llvm::raw_string_ostream OS(Buffer);
+  OS << "Passed ";
+  if (CallPassType->PassBy != HoverInfo::PassType::Value) {
+    OS << "by ";
+    if (CallPassType->PassBy == HoverInfo::PassType::ConstRef)
+      OS << "const ";
+    OS << "reference ";
+  }
+  if (CalleeArgInfo->Name)
+    OS << "as " << CalleeArgInfo->Name;
+  else if (CallPassType->PassBy == HoverInfo::PassType::Value)
+    OS << "by value";
+  if (CallPassType->Converted && CalleeArgInfo->Type)
+    OS << " (converted to " << CalleeArgInfo->Type->Type << ")";
+  P.appendText(OS.str());
+}
+
+void HoverInfo::usedSymbolNamesToMarkup(markup::Document &Output) const {
+  markup::Paragraph &P = Output.addParagraph();
+  P.appendText("provides ");
+
+  const std::vector<std::string>::size_type SymbolNamesLimit = 5;
+  auto Front = llvm::ArrayRef(UsedSymbolNames).take_front(SymbolNamesLimit);
+
+  llvm::interleave(
+      Front, [&](llvm::StringRef Sym) { P.appendCode(Sym); },
+      [&] { P.appendText(", "); });
+  if (UsedSymbolNames.size() > Front.size()) {
+    P.appendText(" and ");
+    P.appendText(std::to_string(UsedSymbolNames.size() - Front.size()));
+    P.appendText(" more");
+  }
+}
+
+void HoverInfo::providerToMarkupParagraph(markup::Document &Output) const {
+  markup::Paragraph &DI = Output.addParagraph();
+  DI.appendText("provided by");
+  DI.appendSpace();
+  DI.appendCode(Provider);
+}
+
+void HoverInfo::definitionScopeToMarkup(markup::Document &Output) const {
+  std::string Buffer;
+
+  // Append scope comment, dropping trailing "::".
+  // Note that we don't print anything for global namespace, to not annoy
+  // non-c++ projects or projects that are not making use of namespaces.
+  if (!LocalScope.empty()) {
+    // Container name, e.g. class, method, function.
+    // We might want to propagate some info about container type to print
+    // function foo, class X, method X::bar, etc.
+    Buffer += "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
+  } else if (NamespaceScope && !NamespaceScope->empty()) {
+    Buffer += "// In namespace " +
+              llvm::StringRef(*NamespaceScope).rtrim(':').str() + '\n';
+  }
+
+  if (!AccessSpecifier.empty()) {
+    Buffer += AccessSpecifier + ": ";
+  }
+
+  Buffer += Definition;
+
+  Output.addCodeBlock(Buffer, DefinitionLanguage);
+}
+
+void HoverInfo::valueToMarkupParagraph(markup::Paragraph &P) const {
+  P.appendText("Value = ");
+  P.appendCode(*Value);
+}
+
+void HoverInfo::offsetToMarkupParagraph(markup::Paragraph &P) const {
+  P.appendText("Offset: " + formatOffset(*Offset));
+}
+
+void HoverInfo::sizeToMarkupParagraph(markup::Paragraph &P) const {
+  P.appendText("Size: " + formatSize(*Size));
+  if (Padding && *Padding != 0) {
+    P.appendText(llvm::formatv(" (+{0} padding)", formatSize(*Padding)).str());
+  }
+  if (Align)
+    P.appendText(", alignment " + formatSize(*Align));
+}
+
 markup::Document HoverInfo::presentDoxygen() const {
   // NOTE: this function is currently almost identical to presentDefault().
   // This is to have a minimal change when introducing the doxygen parser.
@@ -1420,11 +1507,7 @@ markup::Document HoverInfo::presentDoxygen() const {
   Header.appendCode(Name);
 
   if (!Provider.empty()) {
-    markup::Paragraph &DI = Output.addParagraph();
-    DI.appendText("provided by");
-    DI.appendSpace();
-    DI.appendCode(Provider);
-    Output.addRuler();
+    providerToMarkupParagraph(Output);
   }
 
   // Put a linebreak after header to increase readability.
@@ -1463,91 +1546,31 @@ markup::Document HoverInfo::presentDoxygen() const {
         llvm::to_string(*Type));
 
   if (Value) {
-    markup::Paragraph &P = Output.addParagraph();
-    P.appendText("Value = ");
-    P.appendCode(*Value);
+    valueToMarkupParagraph(Output.addParagraph());
   }
 
   if (Offset)
-    Output.addParagraph().appendText("Offset: " + formatOffset(*Offset));
+    offsetToMarkupParagraph(Output.addParagraph());
   if (Size) {
-    auto &P = Output.addParagraph().appendText("Size: " + formatSize(*Size));
-    if (Padding && *Padding != 0) {
-      P.appendText(
-          llvm::formatv(" (+{0} padding)", formatSize(*Padding)).str());
-    }
-    if (Align)
-      P.appendText(", alignment " + formatSize(*Align));
+    sizeToMarkupParagraph(Output.addParagraph());
   }
 
   if (CalleeArgInfo) {
-    assert(CallPassType);
-    std::string Buffer;
-    llvm::raw_string_ostream OS(Buffer);
-    OS << "Passed ";
-    if (CallPassType->PassBy != HoverInfo::PassType::Value) {
-      OS << "by ";
-      if (CallPassType->PassBy == HoverInfo::PassType::ConstRef)
-        OS << "const ";
-      OS << "reference ";
-    }
-    if (CalleeArgInfo->Name)
-      OS << "as " << CalleeArgInfo->Name;
-    else if (CallPassType->PassBy == HoverInfo::PassType::Value)
-      OS << "by value";
-    if (CallPassType->Converted && CalleeArgInfo->Type)
-      OS << " (converted to " << CalleeArgInfo->Type->Type << ")";
-    Output.addParagraph().appendText(OS.str());
+    calleeArgInfoToMarkupParagraph(Output.addParagraph());
   }
 
   SymbolDoc.docToMarkup(Output);
 
   if (!Definition.empty()) {
     Output.addRuler();
-    std::string Buffer;
-
-    if (!Definition.empty()) {
-      // Append scope comment, dropping trailing "::".
-      // Note that we don't print anything for global namespace, to not annoy
-      // non-c++ projects or projects that are not making use of namespaces.
-      if (!LocalScope.empty()) {
-        // Container name, e.g. class, method, function.
-        // We might want to propagate some info about container type to print
-        // function foo, class X, method X::bar, etc.
-        Buffer +=
-            "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
-      } else if (NamespaceScope && !NamespaceScope->empty()) {
-        Buffer += "// In namespace " +
-                  llvm::StringRef(*NamespaceScope).rtrim(':').str() + '\n';
-      }
-
-      if (!AccessSpecifier.empty()) {
-        Buffer += AccessSpecifier + ": ";
-      }
-
-      Buffer += Definition;
-    }
-
-    Output.addCodeBlock(Buffer, DefinitionLanguage);
+    definitionScopeToMarkup(Output);
   }
 
   if (!UsedSymbolNames.empty()) {
     Output.addRuler();
-    markup::Paragraph &P = Output.addParagraph();
-    P.appendText("provides ");
-
-    const std::vector<std::string>::size_type SymbolNamesLimit = 5;
-    auto Front = llvm::ArrayRef(UsedSymbolNames).take_front(SymbolNamesLimit);
-
-    llvm::interleave(
-        Front, [&](llvm::StringRef Sym) { P.appendCode(Sym); },
-        [&] { P.appendText(", "); });
-    if (UsedSymbolNames.size() > Front.size()) {
-      P.appendText(" and ");
-      P.appendText(std::to_string(UsedSymbolNames.size() - Front.size()));
-      P.appendText(" more");
-    }
+    usedSymbolNamesToMarkup(Output);
   }
+
   return Output;
 }
 
@@ -1572,11 +1595,7 @@ markup::Document HoverInfo::presentDefault() const {
   Header.appendCode(Name);
 
   if (!Provider.empty()) {
-    markup::Paragraph &DI = Output.addParagraph();
-    DI.appendText("provided by");
-    DI.appendSpace();
-    DI.appendCode(Provider);
-    Output.addRuler();
+    providerToMarkupParagraph(Output);
   }
 
   // Put a linebreak after header to increase readability.
@@ -1607,41 +1626,17 @@ markup::Document HoverInfo::presentDefault() const {
         llvm::to_string(*Type));
 
   if (Value) {
-    markup::Paragraph &P = Output.addParagraph();
-    P.appendText("Value = ");
-    P.appendCode(*Value);
+    valueToMarkupParagraph(Output.addParagraph());
   }
 
   if (Offset)
-    Output.addParagraph().appendText("Offset: " + formatOffset(*Offset));
+    offsetToMarkupParagraph(Output.addParagraph());
   if (Size) {
-    auto &P = Output.addParagraph().appendText("Size: " + formatSize(*Size));
-    if (Padding && *Padding != 0) {
-      P.appendText(
-          llvm::formatv(" (+{0} padding)", formatSize(*Padding)).str());
-    }
-    if (Align)
-      P.appendText(", alignment " + formatSize(*Align));
+    sizeToMarkupParagraph(Output.addParagraph());
   }
 
   if (CalleeArgInfo) {
-    assert(CallPassType);
-    std::string Buffer;
-    llvm::raw_string_ostream OS(Buffer);
-    OS << "Passed ";
-    if (CallPassType->PassBy != HoverInfo::PassType::Value) {
-      OS << "by ";
-      if (CallPassType->PassBy == HoverInfo::PassType::ConstRef)
-        OS << "const ";
-      OS << "reference ";
-    }
-    if (CalleeArgInfo->Name)
-      OS << "as " << CalleeArgInfo->Name;
-    else if (CallPassType->PassBy == HoverInfo::PassType::Value)
-      OS << "by value";
-    if (CallPassType->Converted && CalleeArgInfo->Type)
-      OS << " (converted to " << CalleeArgInfo->Type->Type << ")";
-    Output.addParagraph().appendText(OS.str());
+    calleeArgInfoToMarkupParagraph(Output.addParagraph());
   }
 
   if (!Documentation.empty())
@@ -1649,49 +1644,12 @@ markup::Document HoverInfo::presentDefault() const {
 
   if (!Definition.empty()) {
     Output.addRuler();
-    std::string Buffer;
-
-    if (!Definition.empty()) {
-      // Append scope comment, dropping trailing "::".
-      // Note that we don't print anything for global namespace, to not annoy
-      // non-c++ projects or projects that are not making use of namespaces.
-      if (!LocalScope.empty()) {
-        // Container name, e.g. class, method, function.
-        // We might want to propagate some info about container type to print
-        // function foo, class X, method X::bar, etc.
-        Buffer +=
-            "// In " + llvm::StringRef(LocalScope).rtrim(':').str() + '\n';
-      } else if (NamespaceScope && !NamespaceScope->empty()) {
-        Buffer += "// In namespace " +
-                  llvm::StringRef(*NamespaceScope).rtrim(':').str() + '\n';
-      }
-
-      if (!AccessSpecifier.empty()) {
-        Buffer += AccessSpecifier + ": ";
-      }
-
-      Buffer += Definition;
-    }
-
-    Output.addCodeBlock(Buffer, DefinitionLanguage);
+    definitionScopeToMarkup(Output);
   }
 
   if (!UsedSymbolNames.empty()) {
     Output.addRuler();
-    markup::Paragraph &P = Output.addParagraph();
-    P.appendText("provides ");
-
-    const std::vector<std::string>::size_type SymbolNamesLimit = 5;
-    auto Front = llvm::ArrayRef(UsedSymbolNames).take_front(SymbolNamesLimit);
-
-    llvm::interleave(
-        Front, [&](llvm::StringRef Sym) { P.appendCode(Sym); },
-        [&] { P.appendText(", "); });
-    if (UsedSymbolNames.size() > Front.size()) {
-      P.appendText(" and ");
-      P.appendText(std::to_string(UsedSymbolNames.size() - Front.size()));
-      P.appendText(" more");
-    }
+    usedSymbolNamesToMarkup(Output);
   }
 
   return Output;

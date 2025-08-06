@@ -124,6 +124,14 @@ struct HoverInfo {
   std::string present(MarkupKind Kind) const;
 
 private:
+  void usedSymbolNamesToMarkup(markup::Document &Output) const;
+  void providerToMarkupParagraph(markup::Document &Output) const;
+  void definitionScopeToMarkup(markup::Document &Output) const;
+  void calleeArgInfoToMarkupParagraph(markup::Paragraph &P) const;
+  void valueToMarkupParagraph(markup::Paragraph &P) const;
+  void offsetToMarkupParagraph(markup::Paragraph &P) const;
+  void sizeToMarkupParagraph(markup::Paragraph &P) const;
+
   /// Parse and render the hover information as Doxygen documentation.
   markup::Document presentDoxygen() const;
 
