@@ -50,9 +50,8 @@ static void format_msg(const char *kind, uintptr_t caller,
   *buf = '\0';
 }
 
-SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_minimal_report_error,
-                             const char *kind, uintptr_t caller,
-                             const uintptr_t *address) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error, const char *kind,
+                             uintptr_t caller, const uintptr_t *address) {
   if (caller == 0)
     return;
   while (true) {
@@ -90,11 +89,10 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_minimal_report_error,
   }
 }
 
-SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_minimal_report_error_fatal,
-                             const char *kind, uintptr_t caller,
-                             const uintptr_t *address) {
+SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
+                             uintptr_t caller, const uintptr_t *address) {
   // Use another handlers, in case it's already overriden.
-  __ubsan_minimal_report_error(kind, caller, address);
+  __ubsan_report_error(kind, caller, address);
 }
 
 #if defined(__ANDROID__)
@@ -127,13 +125,13 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define HANDLER_RECOVER(name, kind)                                            \
   INTERFACE void __ubsan_handle_##name##_minimal() {                           \
-    __ubsan_minimal_report_error(kind, GET_CALLER_PC(), nullptr);              \
+    __ubsan_report_error(kind, GET_CALLER_PC(), nullptr);                      \
   }
 
 #define HANDLER_NORECOVER(name, kind)                                          \
   INTERFACE void __ubsan_handle_##name##_minimal_abort() {                     \
     uintptr_t caller = GET_CALLER_PC();                                        \
-    __ubsan_minimal_report_error_fatal(kind, caller, nullptr);                 \
+    __ubsan_report_error_fatal(kind, caller, nullptr);                         \
     abort_with_message(kind, caller);                                          \
   }
 
@@ -143,14 +141,14 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
 
 #define HANDLER_RECOVER_PTR(name, kind)                                        \
   INTERFACE void __ubsan_handle_##name##_minimal(const uintptr_t address) {    \
-    __ubsan_minimal_report_error(kind, GET_CALLER_PC(), &address);             \
+    __ubsan_report_error(kind, GET_CALLER_PC(), &address);                     \
   }
 
 #define HANDLER_NORECOVER_PTR(name, kind)                                      \
   INTERFACE void __ubsan_handle_##name##_minimal_abort(                        \
       const uintptr_t address) {                                               \
     uintptr_t caller = GET_CALLER_PC();                                        \
-    __ubsan_minimal_report_error_fatal(kind, caller, &address);                \
+    __ubsan_report_error_fatal(kind, caller, &address);                        \
     abort_with_message(kind, caller);                                          \
   }
 

@@ -3717,33 +3717,6 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
   }
 }
 
-// Adapts the arguments to the handler function.
-// It is expected that {StaticArgs..., DynamicArgs...} sequence matches the
-// corresponding XxxData type from the ubsan_handlers.h file.
-// Minimal hadler can use a subset of the arguments.
-static void
-AdaptArgsToHandler(CodeGenModule &CGM, SanitizerHandler CheckHandler,
-                   ArrayRef<llvm::Constant *> StaticArgs,
-                   ArrayRef<llvm::Value *> DynamicArgs,
-                   SmallVectorImpl<llvm::Constant *> &HandlerStaticArgs,
-                   SmallVectorImpl<llvm::Value *> &HandlerDynamicArgs) {
-  if (!CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
-    HandlerStaticArgs.assign(StaticArgs.begin(), StaticArgs.end());
-    HandlerDynamicArgs.assign(DynamicArgs.begin(), DynamicArgs.end());
-    return;
-  }
-
-  switch (CheckHandler) {
-  case SanitizerHandler::TypeMismatch:
-    // Pass value pointer only. It adds minimal overhead.
-    HandlerDynamicArgs.assign(DynamicArgs.begin(), DynamicArgs.end());
-    break;
-  default:
-    // No arguments for other checks.
-    break;
-  }
-}
-
 void CodeGenFunction::EmitCheck(
     ArrayRef<std::pair<llvm::Value *, SanitizerKind::SanitizerOrdinal>> Checked,
     SanitizerHandler CheckHandler, ArrayRef<llvm::Constant *> StaticArgs,
@@ -3816,32 +3789,40 @@ void CodeGenFunction::EmitCheck(
   Branch->setMetadata(llvm::LLVMContext::MD_prof, Node);
   EmitBlock(Handlers);
 
+  // Clear arguments for the MinimalRuntime handler.
+  if (CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
+    switch (CheckHandler) {
+    case SanitizerHandler::TypeMismatch:
+      // Pass value pointer only. It adds minimal overhead.
+      StaticArgs = {};
+      assert(DynamicArgs.size() == 1);
+      break;
+    default:
+      // No arguments for other checks.
+      StaticArgs = {};
+      DynamicArgs = {};
+      break;
+    }
+  }
+
   // Handler functions take an i8* pointing to the (handler-specific) static
   // information block, followed by a sequence of intptr_t arguments
   // representing operand values.
   SmallVector<llvm::Value *, 4> Args;
   SmallVector<llvm::Type *, 4> ArgTypes;
 
-  SmallVector<llvm::Constant *, 4> HandlerStaticArgs;
-  SmallVector<llvm::Value *, 4> HandlerDynamicArgs;
-  AdaptArgsToHandler(CGM, CheckHandler, StaticArgs, DynamicArgs,
-                     HandlerStaticArgs, HandlerDynamicArgs);
-
-  Args.reserve(HandlerDynamicArgs.size() + 1);
-  ArgTypes.reserve(HandlerDynamicArgs.size() + 1);
+  Args.reserve(DynamicArgs.size() + 1);
+  ArgTypes.reserve(DynamicArgs.size() + 1);
 
   // Emit handler arguments and create handler function type.
-  if (!HandlerStaticArgs.empty()) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(HandlerStaticArgs);
+  if (!StaticArgs.empty()) {
+    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
     auto *InfoPtr = new llvm::GlobalVariable(
         CGM.getModule(), Info->getType(),
-        // Non-constant global is used in non-minimal handler to deduplicate
-        // reports. Minimal handler stores history statically.
-        // TODO: make it constant for non-minimal handler.
-        /*isConstant=*/
-        CGM.getCodeGenOpts().SanitizeMinimalRuntime,
-        llvm::GlobalVariable::PrivateLinkage, Info, "", nullptr,
-        llvm::GlobalVariable::NotThreadLocal,
+        // Non-constant global is used in a handler to deduplicate reports.
+        // TODO: change deduplication logic and make it constant.
+        /*isConstant=*/false, llvm::GlobalVariable::PrivateLinkage, Info, "",
+        nullptr, llvm::GlobalVariable::NotThreadLocal,
         CGM.getDataLayout().getDefaultGlobalsAddressSpace());
     InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
     CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
@@ -3849,7 +3830,7 @@ void CodeGenFunction::EmitCheck(
     ArgTypes.push_back(Args.back()->getType());
   }
 
-  for (llvm::Value *DynamicArg : HandlerDynamicArgs) {
+  for (llvm::Value *DynamicArg : DynamicArgs) {
     Args.push_back(EmitCheckValue(DynamicArg));
     ArgTypes.push_back(IntPtrTy);
   }
