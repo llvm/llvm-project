@@ -36,9 +36,9 @@ int func3() {
   (&A::bar)
 }
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-3):10 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC3 %s
-// CHECK-CC3: COMPLETION: foo : [#void#]foo<<#class self:auto#>>(<#int arg#>)
+// CHECK-CC3: COMPLETION: foo : [#void#]foo(<#auto &&self#>, <#int arg#>)
 // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-4):10 -std=c++23 %s | FileCheck -check-prefix=CHECK-CC4 %s
-// CHECK-CC4: COMPLETION: bar : [#void#]bar(<#int arg#>)
+// CHECK-CC4: COMPLETION: bar : [#void#]bar(<#A self#>, <#int arg#>)
 
 int func4() {
   // TODO (&A::foo)(
