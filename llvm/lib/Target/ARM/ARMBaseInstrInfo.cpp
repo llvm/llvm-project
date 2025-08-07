@@ -215,7 +215,24 @@ bool ARMBaseInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
       // to clean up any instructions at the tail of the basic block.
       CantAnalyze = true;
     } else if (isUncondBranchOpcode(I->getOpcode())) {
+      // Record the fall-through target.
       TBB = I->getOperand(0).getMBB();
+      if (AllowModify && !isPredicated(*I) && TBB &&
+          MBB.isLayoutSuccessor(TBB)) {
+        // Remove the fall-through unconditional branch and continue the
+        // backward scan from the previous instruction. The normal scanning
+        // logic will classify whatever remains (including fall-through
+        // conditional branches) consistently with the rest of this function.
+        auto After = I;
+        if (After == MBB.instr_begin()) {
+          I->eraseFromParent();
+          return false; // Empty of terminators: falls through.
+        }
+        auto Prev = std::prev(After);
+        I->eraseFromParent();
+        I = Prev;
+        continue;
+      }
     } else if (isCondBranchOpcode(I->getOpcode())) {
       // Bail out if we encounter multiple conditional branches.
       if (!Cond.empty())

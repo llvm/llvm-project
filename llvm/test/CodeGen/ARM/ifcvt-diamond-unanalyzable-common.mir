@@ -33,7 +33,6 @@ body:             |
   ; CHECK-NEXT:   t2CMPri $sp, 34, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-NEXT:   t2Bcc %bb.2, 1 /* CC::ne */, $cpsr
   ; CHECK-NEXT:   t2Bcc %bb.2, 2 /* CC::hs */, killed $cpsr
-  ; CHECK-NEXT:   t2B %bb.1, 14 /* CC::al */, $noreg
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */
