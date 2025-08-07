@@ -4,25 +4,18 @@
 define signext i16 @f(ptr %bp, ptr %ss)   {
 ; CHECK-LABEL: f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
-; CHECK-NEXT:    .cfi_offset %esi, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movb $1, %cl
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %cond_next127
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl (%eax), %edx
-; CHECK-NEXT:    movl (%ecx), %esi
 ; CHECK-NEXT:    andl $15, %edx
-; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    addl %esi, (%ecx)
-; CHECK-NEXT:    cmpl $63, %edx
-; CHECK-NEXT:    jb .LBB0_1
+; CHECK-NEXT:    addl %edx, (%eax)
+; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 4
 ; CHECK-NEXT:    retl
 entry:
 	br label %cond_next127
