@@ -3772,13 +3772,12 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
     return V;
 
   const APInt *C;
-  if (match(RHS, m_APIntAllowPoison(C))) {
-    if (Pred == ICmpInst::ICMP_UGE && C->isOne()) {
-      Pred = ICmpInst::ICMP_NE;
-      RHS = ConstantInt::get(RHS->getType(), 0);
-    } else if (Pred == ICmpInst::ICMP_SLE && C->isAllOnes()) {
-      Pred = ICmpInst::ICMP_SLT;
-      RHS = ConstantInt::get(RHS->getType(), 0);
+  if (match(RHS, m_APIntAllowPoison(C)) &&
+      ICmpInst::isNonStrictPredicate(Pred) && !C->isZero()) {
+    if (auto Flipped = getFlippedStrictnessPredicateAndConstant(
+            Pred, ConstantInt::get(LHS->getType(), *C))) {
+      Pred = Flipped->first;
+      RHS = Flipped->second;
     }
   }
 
