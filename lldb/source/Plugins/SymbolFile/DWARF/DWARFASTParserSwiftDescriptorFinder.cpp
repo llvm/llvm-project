@@ -30,7 +30,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
 
 /// Given a die to a substituted generic Swift type, return the analogous
@@ -214,7 +213,7 @@ public:
     std::vector<std::unique_ptr<swift::reflection::FieldRecordBase>> fields;
     for (DWARFDIE child_die : die.children()) {
       auto tag = child_die.Tag();
-      if (tag != DW_TAG_member)
+      if (tag != llvm::dwarf::DW_TAG_member)
         continue;
       const auto *member_field_name =
           child_die.GetAttributeValueAsString(llvm::dwarf::DW_AT_name, "");
@@ -310,20 +309,20 @@ DWARFASTParserSwift::getBuiltinTypeDescriptor(
       return nullptr;
   }
 
-  auto byte_size =
-      die.GetAttributeValueAsUnsigned(DW_AT_byte_size, LLDB_INVALID_ADDRESS);
+  auto byte_size = die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_byte_size,
+                                                   LLDB_INVALID_ADDRESS);
   if (byte_size == LLDB_INVALID_ADDRESS)
     return {};
 
-  auto alignment = die.GetAttributeValueAsUnsigned(DW_AT_alignment,
+  auto alignment = die.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_alignment,
                                                    byte_size ? byte_size : 8);
 
   // TODO: this seems simple to calculate but maybe we should encode the stride
   // in DWARF? That's what reflection metadata does.
   unsigned stride = ((byte_size + alignment - 1) & ~(alignment - 1));
 
-  auto num_extra_inhabitants =
-      die.GetAttributeValueAsUnsigned(DW_AT_LLVM_num_extra_inhabitants, 0);
+  auto num_extra_inhabitants = die.GetAttributeValueAsUnsigned(
+      llvm::dwarf::DW_AT_LLVM_num_extra_inhabitants, 0);
 
   auto is_bitwise_takable = true; // TODO: encode it in DWARF
 
