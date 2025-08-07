@@ -48,40 +48,14 @@ entry:
 define <vscale x 8 x double> @simple_symmetric_muladd4(<vscale x 8 x double> %a, <vscale x 8 x double> %b) {
 ; CHECK-LABEL: simple_symmetric_muladd4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp2 z24.d, z2.d, z3.d
-; CHECK-NEXT:    uzp2 z25.d, z0.d, z1.d
+; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI2_0
-; CHECK-NEXT:    uzp1 z2.d, z2.d, z3.d
-; CHECK-NEXT:    uzp1 z0.d, z0.d, z1.d
-; CHECK-NEXT:    uzp2 z1.d, z6.d, z7.d
-; CHECK-NEXT:    uzp2 z3.d, z4.d, z5.d
-; CHECK-NEXT:    uzp1 z6.d, z6.d, z7.d
-; CHECK-NEXT:    uzp1 z4.d, z4.d, z5.d
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uzp2 z5.d, z25.d, z24.d
-; CHECK-NEXT:    uzp1 z7.d, z25.d, z24.d
-; CHECK-NEXT:    uzp1 z24.d, z0.d, z2.d
-; CHECK-NEXT:    uzp2 z0.d, z0.d, z2.d
-; CHECK-NEXT:    ld1rd { z25.d }, p0/z, [x8]
-; CHECK-NEXT:    uzp1 z26.d, z3.d, z1.d
-; CHECK-NEXT:    uzp2 z1.d, z3.d, z1.d
-; CHECK-NEXT:    uzp1 z27.d, z4.d, z6.d
-; CHECK-NEXT:    uzp2 z2.d, z4.d, z6.d
-; CHECK-NEXT:    movprfx z4, z26
-; CHECK-NEXT:    fmla z4.d, p0/m, z7.d, z25.d
-; CHECK-NEXT:    fmla z1.d, p0/m, z5.d, z25.d
-; CHECK-NEXT:    movprfx z3, z27
-; CHECK-NEXT:    fmla z3.d, p0/m, z24.d, z25.d
-; CHECK-NEXT:    fmad z0.d, p0/m, z25.d, z2.d
-; CHECK-NEXT:    zip1 z2.d, z4.d, z1.d
-; CHECK-NEXT:    zip2 z4.d, z4.d, z1.d
-; CHECK-NEXT:    zip1 z5.d, z3.d, z0.d
-; CHECK-NEXT:    zip2 z3.d, z3.d, z0.d
-; CHECK-NEXT:    zip1 z0.d, z5.d, z2.d
-; CHECK-NEXT:    zip2 z1.d, z5.d, z2.d
-; CHECK-NEXT:    zip1 z2.d, z3.d, z4.d
-; CHECK-NEXT:    zip2 z3.d, z3.d, z4.d
+; CHECK-NEXT:    ld1rd { z24.d }, p0/z, [x8]
+; CHECK-NEXT:    fmad z0.d, p0/m, z24.d, z4.d
+; CHECK-NEXT:    fmad z1.d, p0/m, z24.d, z5.d
+; CHECK-NEXT:    fmad z2.d, p0/m, z24.d, z6.d
+; CHECK-NEXT:    fmad z3.d, p0/m, z24.d, z7.d
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave4.nxv8f64(<vscale x 8 x double> %a)
@@ -110,28 +84,11 @@ entry:
 define <vscale x 8 x double> @simple_symmetric_unary4(<vscale x 8 x double> %a) {
 ; CHECK-LABEL: simple_symmetric_unary4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uzp1 z4.d, z2.d, z3.d
-; CHECK-NEXT:    uzp1 z5.d, z0.d, z1.d
-; CHECK-NEXT:    uzp2 z2.d, z2.d, z3.d
-; CHECK-NEXT:    uzp2 z0.d, z0.d, z1.d
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    uzp1 z1.d, z5.d, z4.d
-; CHECK-NEXT:    uzp2 z4.d, z5.d, z4.d
-; CHECK-NEXT:    uzp2 z3.d, z0.d, z2.d
-; CHECK-NEXT:    uzp1 z0.d, z0.d, z2.d
-; CHECK-NEXT:    fneg z1.d, p0/m, z1.d
-; CHECK-NEXT:    movprfx z2, z4
-; CHECK-NEXT:    fneg z2.d, p0/m, z4.d
 ; CHECK-NEXT:    fneg z0.d, p0/m, z0.d
+; CHECK-NEXT:    fneg z1.d, p0/m, z1.d
+; CHECK-NEXT:    fneg z2.d, p0/m, z2.d
 ; CHECK-NEXT:    fneg z3.d, p0/m, z3.d
-; CHECK-NEXT:    zip1 z5.d, z1.d, z2.d
-; CHECK-NEXT:    zip2 z6.d, z1.d, z2.d
-; CHECK-NEXT:    zip1 z4.d, z0.d, z3.d
-; CHECK-NEXT:    zip2 z3.d, z0.d, z3.d
-; CHECK-NEXT:    zip1 z0.d, z5.d, z4.d
-; CHECK-NEXT:    zip2 z1.d, z5.d, z4.d
-; CHECK-NEXT:    zip1 z2.d, z6.d, z3.d
-; CHECK-NEXT:    zip2 z3.d, z6.d, z3.d
 ; CHECK-NEXT:    ret
 entry:
   %strided.vec = tail call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave4.nxv8f64(<vscale x 8 x double> %a)
