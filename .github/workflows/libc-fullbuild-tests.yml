@@ -20,36 +20,30 @@ jobs:
         include:
           - os: ubuntu-24.04
             build_type: Debug
-            ccache-variant: sccache
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
             build_type: Release
-            ccache-variant: sccache
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
             build_type: MinSizeRel
-            ccache-variant: sccache
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-linux-llvm
             include_scudo: ON
-          # TODO: remove ccache logic when https://github.com/hendrikmuhs/ccache-action/issues/279 is resolved.
           - os: ubuntu-24.04-arm
             build_type: Debug
-            ccache-variant: ccache
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: aarch64-unknown-linux-llvm
             include_scudo: ON
           - os: ubuntu-24.04
             build_type: Debug
-            ccache-variant: ccache
             c_compiler: clang-22
             cpp_compiler: clang++-22
             target: x86_64-unknown-uefi-llvm
@@ -71,7 +65,7 @@ jobs:
       with:
         max-size: 1G
         key: libc_fullbuild_${{ matrix.c_compiler }}
-        variant: ${{ matrix.ccache-variant }}
+        variant: sccache
     
     # Notice:
     # - MPFR is required by some of the mathlib tests.
@@ -112,8 +106,8 @@ jobs:
         -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }} \
         -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-        -DCMAKE_C_COMPILER_LAUNCHER=${{ matrix.ccache-variant }} \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=${{ matrix.ccache-variant }} \
+        -DCMAKE_C_COMPILER_LAUNCHER=sccache \
+        -DCMAKE_CXX_COMPILER_LAUNCHER=sccache \
         -DCMAKE_INSTALL_PREFIX=${{ steps.strings.outputs.build-install-dir }} \
         -DLLVM_RUNTIME_TARGETS=${{ matrix.target }} \
         -DLLVM_ENABLE_RUNTIMES="$RUNTIMES" \

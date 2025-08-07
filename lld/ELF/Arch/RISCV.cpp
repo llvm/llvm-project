@@ -46,12 +46,14 @@ public:
   void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
   template <class ELFT, class RelTy>
-  bool synthesizeAlignOne(uint64_t &dot, InputSection *sec, Relocs<RelTy> rels);
+  bool synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                               Relocs<RelTy> rels);
   template <class ELFT, class RelTy>
-  void synthesizeAlignEnd(uint64_t &dot, InputSection *sec, Relocs<RelTy> rels);
+  void finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                Relocs<RelTy> rels);
   template <class ELFT>
   bool synthesizeAlignAux(uint64_t &dot, InputSection *sec);
-  bool maybeSynthesizeAlign(uint64_t &dot, InputSection *sec) override;
+  bool synthesizeAlign(uint64_t &dot, InputSection *sec) override;
   void finalizeRelax(int passes) const override;
 
   // The following two variables are used by synthesized ALIGN relocations.
@@ -954,9 +956,6 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 // relaxation pass.
 bool RISCV::relaxOnce(int pass) const {
   llvm::TimeTraceScope timeScope("RISC-V relaxOnce");
-  if (ctx.arg.relocatable)
-    return false;
-
   if (pass == 0)
     initSymbolAnchors(ctx);
 
@@ -974,8 +973,8 @@ bool RISCV::relaxOnce(int pass) const {
 // If the section alignment is >= 4, advance `dot` to insert NOPs and synthesize
 // an ALIGN relocation. Otherwise, return false to use default handling.
 template <class ELFT, class RelTy>
-bool RISCV::synthesizeAlignOne(uint64_t &dot, InputSection *sec,
-                               Relocs<RelTy> rels) {
+bool RISCV::synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
+                                    Relocs<RelTy> rels) {
   if (!baseSec) {
     // Record the first input section with RELAX relocations. We will synthesize
     // ALIGN relocations here.
@@ -1004,8 +1003,8 @@ bool RISCV::synthesizeAlignOne(uint64_t &dot, InputSection *sec,
 // Finalize the relocation section by appending synthesized ALIGN relocations
 // after processing all input sections.
 template <class ELFT, class RelTy>
-void RISCV::synthesizeAlignEnd(uint64_t &dot, InputSection *sec,
-                               Relocs<RelTy> rels) {
+void RISCV::finalizeSynthesizeAligns(uint64_t &dot, InputSection *sec,
+                                     Relocs<RelTy> rels) {
   auto *f = cast<ObjFile<ELFT>>(baseSec->file);
   auto shdr = f->template getELFShdrs<ELFT>()[baseSec->relSecIdx];
   // Create a copy of InputSection.
@@ -1054,9 +1053,9 @@ template <class ELFT>
 bool RISCV::synthesizeAlignAux(uint64_t &dot, InputSection *sec) {
   bool ret = false;
   if (sec) {
-    invokeOnRelocs(*sec, ret = synthesizeAlignOne<ELFT>, dot, sec);
+    invokeOnRelocs(*sec, ret = synthesizeAlignForInput<ELFT>, dot, sec);
   } else if (baseSec) {
-    invokeOnRelocs(*baseSec, synthesizeAlignEnd<ELFT>, dot, sec);
+    invokeOnRelocs(*baseSec, finalizeSynthesizeAligns<ELFT>, dot, sec);
   }
   return ret;
 }
@@ -1074,7 +1073,7 @@ bool RISCV::synthesizeAlignAux(uint64_t &dot, InputSection *sec) {
 // When called after all input sections are processed (`sec` is null): The
 // output relocation section is updated with all the newly synthesized ALIGN
 // relocations.
-bool RISCV::maybeSynthesizeAlign(uint64_t &dot, InputSection *sec) {
+bool RISCV::synthesizeAlign(uint64_t &dot, InputSection *sec) {
   assert(ctx.arg.relocatable);
   if (ctx.arg.is64)
     return synthesizeAlignAux<ELF64LE>(dot, sec);

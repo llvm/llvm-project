@@ -96,7 +96,7 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
-  virtual bool maybeSynthesizeAlign(uint64_t &dot, InputSection *sec) {
+  virtual bool synthesizeAlign(uint64_t &dot, InputSection *sec) {
     return false;
   }
   // Do finalize relaxation after collecting relaxation infos.

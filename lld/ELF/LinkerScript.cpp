@@ -1265,7 +1265,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
       const uint64_t pos = dot;
       // If synthesized ALIGN may be needed, call maybeSynthesizeAlign and
       // disable the default handling if the return value is true.
-      if (!(synthesizeAlign && ctx.target->maybeSynthesizeAlign(dot, isec)))
+      if (!(synthesizeAlign && ctx.target->synthesizeAlign(dot, isec)))
         dot = alignToPowerOf2(dot, isec->addralign);
       isec->outSecOff = dot - sec->addr;
       dot += isec->getSize();
@@ -1284,7 +1284,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
 
   if (synthesizeAlign) {
     const uint64_t pos = dot;
-    ctx.target->maybeSynthesizeAlign(dot, nullptr);
+    ctx.target->synthesizeAlign(dot, nullptr);
     expandOutputSection(dot - pos);
   }
 
