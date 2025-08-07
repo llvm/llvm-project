@@ -2309,28 +2309,22 @@ reportNewIrLegalizationFatalError(const Pattern &pattern,
                                   const SetVector<Operation *> &newOps,
                                   const SetVector<Operation *> &modifiedOps,
                                   const SetVector<Block *> &insertedBlocks) {
+  auto newOpNames = llvm::map_range(
+      newOps, [](Operation *op) { return op->getName().getStringRef(); });
+  auto modifiedOpNames = llvm::map_range(
+      modifiedOps, [](Operation *op) { return op->getName().getStringRef(); });
   StringRef detachedBlockStr = "(detached block)";
-  std::string newOpNames = llvm::join(
-      llvm::map_range(
-          newOps, [](Operation *op) { return op->getName().getStringRef(); }),
-      ", ");
-  std::string modifiedOpNames = llvm::join(
-      llvm::map_range(
-          modifiedOps, [](Operation *op) { return op->getName().getStringRef(); }),
-      ", ");
-  std::string insertedBlockNames = llvm::join(
-      llvm::map_range(insertedBlocks,
-                      [&](Block *block) {
-                        if (block->getParentOp())
-                          return block->getParentOp()->getName().getStringRef();
-                        return detachedBlockStr;
-                      }),
-      ", ");
+  auto insertedBlockNames = llvm::map_range(insertedBlocks, [&](Block *block) {
+    if (block->getParentOp())
+      return block->getParentOp()->getName().getStringRef();
+    return detachedBlockStr;
+  });
   llvm::report_fatal_error(
       "pattern '" + pattern.getDebugName() +
       "' produced IR that could not be legalized. " + "new ops: {" +
-      newOpNames + "}, " + "modified ops: {" + modifiedOpNames + "}, " +
-      "inserted block into ops: {" + insertedBlockNames + "}");
+      llvm::join(newOpNames, ", ") + "}, " + "modified ops: {" +
+      llvm::join(modifiedOpNames, ", ") + "}, " + "inserted block into ops: {" +
+      llvm::join(insertedBlockNames, ", ") + "}");
 }
 
 LogicalResult
