@@ -15,23 +15,11 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
-#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/ExecutionEngine/Orc/LinkGraphLinkingLayer.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Memory.h"
-#include "llvm/Support/MemoryBufferRef.h"
-#include "llvm/TargetParser/Triple.h"
-
-#include <functional>
-#include <map>
-#include <memory>
-#include <mutex>
 
 namespace llvm {
 namespace orc {
-
-class DebugObject;
 
 /// Creates and manages DebugObjects for JITLink artifacts.
 ///
@@ -46,11 +34,10 @@ class DebugObject;
 /// DebugObjectRegistrar is notified. Ownership of DebugObjects remains with the
 /// plugin.
 ///
-class LLVM_ABI DebugObjectManagerPlugin : public ObjectLinkingLayer::Plugin {
+class DebugObjectManagerPlugin : public LinkGraphLinkingLayer::Plugin {
 public:
   // DEPRECATED - Please specify options explicitly
-  DebugObjectManagerPlugin(ExecutionSession &ES,
-                           std::unique_ptr<DebugObjectRegistrar> Target);
+  DebugObjectManagerPlugin(ExecutionSession &ES);
 
   /// Create the plugin to submit DebugObjects for JITLink artifacts. For all
   /// options the recommended setting is true.
@@ -67,39 +54,31 @@ public:
   ///   sequence. When turning this off, the user has to issue the call to
   ///   __jit_debug_register_code() on the executor side manually.
   ///
-  DebugObjectManagerPlugin(ExecutionSession &ES,
-                           std::unique_ptr<DebugObjectRegistrar> Target,
+  DebugObjectManagerPlugin(ExecutorSymbolDef RegisterDebugObject,
+                           ExecutorSymbolDef DeregisterDebugObject,
                            bool RequireDebugSections, bool AutoRegisterCode);
   ~DebugObjectManagerPlugin();
 
-  void notifyMaterializing(MaterializationResponsibility &MR,
-                           jitlink::LinkGraph &G, jitlink::JITLinkContext &Ctx,
-                           MemoryBufferRef InputObject) override;
+  Error fixUpDebugObject(jitlink::LinkGraph &LG);
 
-  Error notifyEmitted(MaterializationResponsibility &MR) override;
-  Error notifyFailed(MaterializationResponsibility &MR) override;
-  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override;
+  Error notifyFailed(MaterializationResponsibility &MR) override {
+    return Error::success();
+  }
+
+  Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
+    return Error::success();
+  }
 
   void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
-                                   ResourceKey SrcKey) override;
+                                   ResourceKey SrcKey) override {}
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &LG,
                         jitlink::PassConfiguration &PassConfig) override;
 
 private:
-  ExecutionSession &ES;
-
-  using OwnedDebugObject = std::unique_ptr<DebugObject>;
-  std::map<MaterializationResponsibility *, OwnedDebugObject> PendingObjs;
-  std::map<ResourceKey, std::vector<OwnedDebugObject>> RegisteredObjs;
-
-  std::mutex PendingObjsLock;
-  std::mutex RegisteredObjsLock;
-
-  std::unique_ptr<DebugObjectRegistrar> Target;
-  bool RequireDebugSections;
-  bool AutoRegisterCode;
+  ExecutorSymbolDef RegisterDebugObject;
+  ExecutorSymbolDef DeregisterDebugObject;
 };
 
 } // namespace orc
