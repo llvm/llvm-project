@@ -353,8 +353,8 @@ add_fp_unittest(
   HDRS
     TruncTest.h
   DEPENDS
-    libc.src.__support.FPUtil.bfloat16
     libc.src.math.truncbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -565,8 +565,8 @@ add_fp_unittest(
   HDRS
     CeilTest.h
   DEPENDS
-    libc.src.__support.FPUtil.bfloat16
     libc.src.math.ceilbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -698,8 +698,8 @@ add_fp_unittest(
   HDRS
     FloorTest.h
   DEPENDS
-    libc.src.__support.FPUtil.bfloat16
     libc.src.math.floorbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -775,8 +775,8 @@ add_fp_unittest(
   HDRS
     RoundTest.h
   DEPENDS
-    libc.src.__support.FPUtil.bfloat16
     libc.src.math.roundbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
@@ -852,8 +852,8 @@ add_fp_unittest(
   HDRS
     RoundEvenTest.h
   DEPENDS
-    libc.src.__support.FPUtil.bfloat16
     libc.src.math.roundevenbf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(
