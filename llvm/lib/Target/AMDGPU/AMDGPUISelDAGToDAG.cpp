@@ -3231,7 +3231,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
       (VT != MVT::i32 && VT != MVT::i64))
     return true;
 
-  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>((Src->getOperand(1)));
+  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Src->getOperand(1));
   if (!CRHS)
     return true;
 
