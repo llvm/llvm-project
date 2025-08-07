@@ -2129,6 +2129,9 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ExtVectorType:
     OS << "ext_vector_type";
     break;
+  case attr::NoPointerFieldProtection:
+    OS << "no_field_protection";
+    break;
   }
   OS << "))";
 }

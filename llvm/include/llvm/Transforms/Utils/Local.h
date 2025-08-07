@@ -182,6 +182,11 @@ LLVM_ABI bool EliminateDuplicatePHINodes(BasicBlock *BB);
 LLVM_ABI bool EliminateDuplicatePHINodes(BasicBlock *BB,
                                          SmallPtrSetImpl<PHINode *> &ToRemove);
 
+/// Returns whether it is allowed and beneficial for optimizations to fold this
+/// operand through a phi, for example when transforming phi(load(ptr)) into
+/// load(phi(ptr)).
+bool shouldFoldOperandThroughPhi(const Value *Ptr);
+
 /// This function is used to do simplification of a CFG.  For example, it
 /// adjusts branches to branches to eliminate the extra hop, it eliminates
 /// unreachable basic blocks, and does other peephole optimization of the CFG.

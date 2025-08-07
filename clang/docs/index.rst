@@ -47,6 +47,7 @@ Using Clang as a Compiler
    LTOVisibility
    SafeStack
    ShadowCallStack
+   StructureProtection
    SourceBasedCodeCoverage
    StandardCPlusPlusModules
    Modules
