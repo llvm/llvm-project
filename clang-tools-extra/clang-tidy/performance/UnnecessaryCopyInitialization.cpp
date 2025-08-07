@@ -283,7 +283,8 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
       LocalVarCopiedFrom(
           memberExpr(hasObjectExpression(anyOf(hasDescendant(DeclRefToConstVar),
                                                DeclRefToConstVar)),
-                     member(fieldDecl().bind("fieldDecl")))),
+                     member(fieldDecl()))
+              .bind("memExpr")),
       this);
 }
 
@@ -306,7 +307,7 @@ void UnnecessaryCopyInitialization::check(
       IssueFix, IsVarUnused, IsVarOnlyUsedAsConst};
   const auto *OldVar = Result.Nodes.getNodeAs<VarDecl>(OldVarDeclId);
   const auto *ObjectArg = Result.Nodes.getNodeAs<VarDecl>(ObjectArgId);
-  const auto *FD = Result.Nodes.getNodeAs<FieldDecl>("fieldDecl");
+  const auto *ME = Result.Nodes.getNodeAs<MemberExpr>("memExpr");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctorCall");
 
   TraversalKindScope RAII(*Result.Context, TK_AsIs);
@@ -331,12 +332,12 @@ void UnnecessaryCopyInitialization::check(
   if (OldVar == nullptr) {
     // `auto NewVar = functionCall();`
     handleCopyFromMethodReturn(Context, ObjectArg);
-  } else if (FD == nullptr) {
+  } else if (ME == nullptr) {
     // `auto NewVar = OldVar;`
     handleCopyFromLocalVar(Context, *OldVar);
   } else {
     // `auto NewVar = OldVar.FD;`
-    handleCopyFromConstLocalVarMember(Context, *OldVar, *FD);
+    handleCopyFromConstVarMember(Context, *OldVar, *ME);
   }
 }
 
@@ -361,9 +362,9 @@ void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
   diagnoseCopyFromLocalVar(Ctx, OldVar);
 }
 
-void UnnecessaryCopyInitialization::handleCopyFromConstLocalVarMember(
-    const CheckContext &Ctx, const VarDecl &OldVar, const FieldDecl &FD) {
-  diagnoseCopyFromConstLocalVarMember(Ctx, OldVar, FD);
+void UnnecessaryCopyInitialization::handleCopyFromConstVarMember(
+    const CheckContext &Ctx, const VarDecl &OldVar, const MemberExpr &ME) {
+  diagnoseCopyFromConstVarMember(Ctx, OldVar, ME);
 }
 
 void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
@@ -392,15 +393,18 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
-void UnnecessaryCopyInitialization::diagnoseCopyFromConstLocalVarMember(
-    const CheckContext &Ctx, const VarDecl &OldVar, const FieldDecl &FD) {
+void UnnecessaryCopyInitialization::diagnoseCopyFromConstVarMember(
+    const CheckContext &Ctx, const VarDecl &OldVar, const MemberExpr &ME) {
+  std::string MEStr(Lexer::getSourceText(
+      CharSourceRange::getTokenRange(ME.getSourceRange()),
+      Ctx.ASTCtx.getSourceManager(), Ctx.ASTCtx.getLangOpts()));
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
-           "local copy %0 of the field %1 of type %2 in object %3 is never "
+           "local copy %0 of the subobject '%1' of type %2 is never "
            "modified%select{"
            "| and never used}4; consider %select{avoiding the copy|removing "
            "the statement}4")
-      << &Ctx.Var << &FD << Ctx.Var.getType() << &OldVar << Ctx.IsVarUnused;
+      << &Ctx.Var << MEStr << Ctx.Var.getType() << &OldVar << Ctx.IsVarUnused;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
