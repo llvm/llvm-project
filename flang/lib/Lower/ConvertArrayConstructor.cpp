@@ -795,7 +795,7 @@ hlfir::EntityWithAttributes Fortran::lower::ArrayConstructorBuilder<T>::gen(
   // Insert the clean-up for the created hlfir.expr.
   fir::FirOpBuilder *bldr = &builder;
   stmtCtx.attachCleanup(
-      [=]() { bldr->create<hlfir::DestroyOp>(loc, hlfirExpr); });
+      [=]() { hlfir::DestroyOp::create(*bldr, loc, hlfirExpr); });
   return hlfir::EntityWithAttributes{hlfirExpr};
 }
 

@@ -67,28 +67,6 @@ define void @test_lifetime_end() {
   ret void
 }
 
-; Lifetime of %ptr2 does not end, because of size mismatch.
-define void @test_lifetime_not_end() {
-; CHECK-LABEL: define {{[^@]+}}@test_lifetime_not_end() {
-; CHECK-NEXT:    [[PTR1:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    [[PTR2:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[PTR2]])
-; CHECK-NEXT:    call void @foo(ptr [[PTR2]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr [[PTR1]], ptr [[PTR2]], i32 1, i1 false)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 0, ptr [[PTR2]])
-; CHECK-NEXT:    call void @foo(ptr [[PTR1]])
-; CHECK-NEXT:    ret void
-;
-  %ptr1 = alloca i8
-  %ptr2 = alloca i8
-  call void @llvm.lifetime.start.p0(i64 1, ptr %ptr2)
-  call void @foo(ptr %ptr2)
-  call void @llvm.memcpy.p0.p0.i32(ptr %ptr1, ptr %ptr2, i32 1, i1 false)
-  call void @llvm.lifetime.end.p0(i64 0, ptr %ptr2)
-  call void @foo(ptr %ptr1)
-  ret void
-}
-
 ; Lifetime of %ptr2 ends before any potential use of the capture because we
 ; return from the function.
 define void @test_function_end() {

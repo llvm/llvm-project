@@ -1169,11 +1169,18 @@ void SIFoldOperandsImpl::foldOperand(
     // Grab the use operands first
     SmallVector<MachineOperand *, 4> UsesToProcess(
         llvm::make_pointer_range(MRI->use_nodbg_operands(RegSeqDstReg)));
-    for (auto *RSUse : UsesToProcess) {
+    for (unsigned I = 0; I != UsesToProcess.size(); ++I) {
+      MachineOperand *RSUse = UsesToProcess[I];
       MachineInstr *RSUseMI = RSUse->getParent();
       unsigned OpNo = RSUseMI->getOperandNo(RSUse);
 
       if (SplatRC) {
+        if (RSUseMI->isCopy()) {
+          Register DstReg = RSUseMI->getOperand(0).getReg();
+          append_range(UsesToProcess,
+                       make_pointer_range(MRI->use_nodbg_operands(DstReg)));
+          continue;
+        }
         if (tryFoldRegSeqSplat(RSUseMI, OpNo, SplatVal, SplatRC)) {
           FoldableDef SplatDef(SplatVal, SplatRC);
           appendFoldCandidate(FoldList, RSUseMI, OpNo, SplatDef);

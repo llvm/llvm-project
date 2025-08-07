@@ -166,3 +166,63 @@ void expect_prob(int x, int y) {
 // LLVM-NEXT:    %[[Y_LONG:.+]] = sext i32 %[[Y]] to i64
 // LLVM-NEXT:    %{{.+}} = call i64 @llvm.expect.with.probability.i64(i64 %[[X_LONG]], i64 %[[Y_LONG]], double 2.500000e-01)
 // LLVM:       }
+
+void unreachable() {
+  __builtin_unreachable();
+}
+
+// CIR-LABEL: @_Z11unreachablev
+// CIR:         cir.unreachable
+// CIR:       }
+
+// LLVM-LABEL: @_Z11unreachablev
+// LLVM:         unreachable
+// LLVM:       }
+
+void f1();
+void unreachable2() {
+  __builtin_unreachable();
+  f1();
+}
+
+// CIR-LABEL: @_Z12unreachable2v
+// CIR:         cir.unreachable
+// CIR-NEXT:  ^{{.+}}:
+// CIR-NEXT:    cir.call @_Z2f1v() : () -> ()
+// CIR:       }
+
+// LLVM-LABEL: @_Z12unreachable2v
+// LLVM:         unreachable
+// LLVM:       {{.+}}:
+// LLVM-NEXT:    call void @_Z2f1v()
+// LLVM:       }
+
+void trap() {
+  __builtin_trap();
+}
+
+// CIR-LABEL: @_Z4trapv
+// CIR:         cir.trap
+// CIR:       }
+
+// LLVM-LABEL: @_Z4trapv
+// LLVM:         call void @llvm.trap()
+// LLVM:       }
+
+void trap2() {
+  __builtin_trap();
+  f1();
+}
+
+// CIR-LABEL: @_Z5trap2v
+// CIR:         cir.trap
+// CIR-NEXT:  ^{{.+}}:
+// CIR-NEXT:    cir.call @_Z2f1v() : () -> ()
+// CIR:       }
+
+// LLVM-LABEL: @_Z5trap2v
+// LLVM:         call void @llvm.trap()
+// LLVM-NEXT:    unreachable
+// LLVM:       {{.+}}:
+// LLVM-NEXT:    call void @_Z2f1v()
+// LLVM:       }

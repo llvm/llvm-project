@@ -84,6 +84,9 @@ def SAR : SRReg<3, "sar", ["SAR","3"]>;
 // Boolean Register
 def BREG : SRReg<4, "br", ["BR","4"]>;
 
+// Expected data value for S32C1I operation
+def SCOMPARE1 : SRReg<12, "scompare1", ["SCOMPARE1", "12"]>;
+
 // Literal base
 def LITBASE : SRReg<5, "litbase", ["LITBASE", "5"]>;
 
@@ -96,6 +99,9 @@ def IBREAKENABLE : SRReg<96, "ibreakenable", ["IBREAKENABLE", "96"]>;
 
 // Memory Control Register
 def MEMCTL : SRReg<97, "memctl", ["MEMCTL", "97"]>;
+
+// Atomic Operation Control
+def ATOMCTL : SRReg<99, "atomctl", ["ATOMCTL", "99"]>;
 
 def DDR : SRReg<104, "ddr", ["DDR", "104"]>;
 
@@ -218,8 +224,8 @@ def MR23 :  RegisterClass<"Xtensa", [i32], 32, (add M2, M3)>;
 def MR   :  RegisterClass<"Xtensa", [i32], 32, (add MR01, MR23)>;
 
 def SR :  RegisterClass<"Xtensa", [i32], 32, (add
-  LBEG, LEND, LCOUNT, SAR, BREG, LITBASE, ACCLO, ACCHI, MR,
-  WINDOWBASE, WINDOWSTART, IBREAKENABLE, MEMCTL, DDR, IBREAKA0, IBREAKA1,
+  LBEG, LEND, LCOUNT, SAR, BREG, SCOMPARE1, LITBASE, ACCLO, ACCHI, MR,
+  WINDOWBASE, WINDOWSTART, IBREAKENABLE, MEMCTL, ATOMCTL, DDR, IBREAKA0, IBREAKA1,
   DBREAKA0, DBREAKA1, DBREAKC0, DBREAKC1, CONFIGID0, EPC1, EPC2, EPC3, EPC4, EPC5,
   EPC6, EPC7, DEPC, EPS2, EPS3, EPS4, EPS5, EPS6, EPS7, CONFIGID1, EXCSAVE1, EXCSAVE2,
   EXCSAVE3, EXCSAVE4, EXCSAVE5, EXCSAVE6, EXCSAVE7, CPENABLE, INTERRUPT, INTSET, INTCLEAR, INTENABLE,

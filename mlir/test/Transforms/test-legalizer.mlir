@@ -415,3 +415,20 @@ func.func @test_multiple_1_to_n_replacement() {
   %0 = "test.multiple_1_to_n_replacement"() : () -> (f16)
   "test.invalid"(%0) : (f16) -> ()
 }
+
+// -----
+
+// CHECK-LABEL: func @test_lookup_without_converter
+//       CHECK:   %[[producer:.*]] = "test.valid_producer"() : () -> i16
+//       CHECK:   %[[cast:.*]] = "test.cast"(%[[producer]]) : (i16) -> f64
+//       CHECK:   "test.valid_consumer"(%[[cast]]) : (f64) -> ()
+//       CHECK:   "test.valid_consumer"(%[[producer]]) : (i16) -> ()
+func.func @test_lookup_without_converter() {
+  %0 = "test.replace_with_valid_producer"() {type = i16} : () -> (i64)
+  "test.replace_with_valid_consumer"(%0) {with_converter} : (i64) -> ()
+  // Make sure that the second "replace_with_valid_consumer" lowering does not
+  // lookup the materialization that was created for the above op.
+  "test.replace_with_valid_consumer"(%0) : (i64) -> ()
+  // expected-remark@+1 {{op 'func.return' is not legalizable}}
+  return
+}

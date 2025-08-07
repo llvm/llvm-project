@@ -59,7 +59,7 @@ define void @tail_fold_switch(ptr %dst, i32 %0) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    switch i32 [[TMP0]], label %[[LOOP_LATCH]] [
 ; CHECK-NEXT:      i32 0, label %[[LOOP_LATCH]]
 ; CHECK-NEXT:      i32 1, label %[[IF_THEN:.*]]

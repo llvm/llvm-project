@@ -1038,21 +1038,6 @@ void VPlan::execute(VPTransformState *State) {
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
 
-    if (auto *WidenPhi = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
-      assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-             "recipe generating only scalars should have been replaced");
-      auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-      PHINode *Phi = cast<PHINode>(GEP->getPointerOperand());
-
-      Phi->setIncomingBlock(1, VectorLatchBB);
-
-      // Move the last step to the end of the latch block. This ensures
-      // consistent placement of all induction updates.
-      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
-      continue;
-    }
-
     auto *PhiR = cast<VPSingleDefRecipe>(&R);
     // VPInstructions currently model scalar Phis only.
     bool NeedsScalar = isa<VPInstruction>(PhiR) ||

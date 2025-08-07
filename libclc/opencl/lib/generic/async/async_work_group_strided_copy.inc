@@ -8,8 +8,8 @@
 
 #define STRIDED_COPY(dst, src, num_gentypes, dst_stride, src_stride)           \
   size_t size = get_local_size(0) * get_local_size(1) * get_local_size(2);     \
-  size_t id = (get_local_size(1) * get_local_size(2) * get_local_id(0)) +      \
-              (get_local_size(2) * get_local_id(1)) + get_local_id(2);         \
+  size_t id = (get_local_size(0) * get_local_size(1) * get_local_id(2)) +      \
+              (get_local_size(0) * get_local_id(1)) + get_local_id(0);         \
   size_t i;                                                                    \
                                                                                \
   for (i = id; i < num_gentypes; i += size) {                                  \

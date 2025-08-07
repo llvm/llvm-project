@@ -43,6 +43,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <functional>
@@ -118,11 +119,13 @@ private:
   /// Where it was acquired.
   SourceLocation AcquireLoc;
 
+protected:
+  ~FactEntry() = default;
+
 public:
   FactEntry(FactEntryKind FK, const CapabilityExpr &CE, LockKind LK,
             SourceLocation Loc, SourceKind Src)
       : CapabilityExpr(CE), Kind(FK), LKind(LK), Source(Src), AcquireLoc(Loc) {}
-  virtual ~FactEntry() = default;
 
   LockKind kind() const { return LKind;      }
   SourceLocation loc() const { return AcquireLoc; }
@@ -156,11 +159,20 @@ using FactID = unsigned short;
 /// the analysis of a single routine.
 class FactManager {
 private:
-  std::vector<std::unique_ptr<const FactEntry>> Facts;
+  llvm::BumpPtrAllocator &Alloc;
+  std::vector<const FactEntry *> Facts;
 
 public:
-  FactID newFact(std::unique_ptr<FactEntry> Entry) {
-    Facts.push_back(std::move(Entry));
+  FactManager(llvm::BumpPtrAllocator &Alloc) : Alloc(Alloc) {}
+
+  template <typename T, typename... ArgTypes>
+  T *createFact(ArgTypes &&...Args) {
+    static_assert(std::is_trivially_destructible_v<T>);
+    return T::create(Alloc, std::forward<ArgTypes>(Args)...);
+  }
+
+  FactID newFact(const FactEntry *Entry) {
+    Facts.push_back(Entry);
     assert(Facts.size() - 1 <= std::numeric_limits<FactID>::max() &&
            "FactID space exhausted");
     return static_cast<unsigned short>(Facts.size() - 1);
@@ -205,8 +217,8 @@ public:
 
   void addLockByID(FactID ID) { FactIDs.push_back(ID); }
 
-  FactID addLock(FactManager &FM, std::unique_ptr<FactEntry> Entry) {
-    FactID F = FM.newFact(std::move(Entry));
+  FactID addLock(FactManager &FM, const FactEntry *Entry) {
+    FactID F = FM.newFact(Entry);
     FactIDs.push_back(F);
     return F;
   }
@@ -231,17 +243,17 @@ public:
   }
 
   std::optional<FactID> replaceLock(FactManager &FM, iterator It,
-                                    std::unique_ptr<FactEntry> Entry) {
+                                    const FactEntry *Entry) {
     if (It == end())
       return std::nullopt;
-    FactID F = FM.newFact(std::move(Entry));
+    FactID F = FM.newFact(Entry);
     *It = F;
     return F;
   }
 
   std::optional<FactID> replaceLock(FactManager &FM, const CapabilityExpr &CapE,
-                                    std::unique_ptr<FactEntry> Entry) {
-    return replaceLock(FM, findLockIter(FM, CapE), std::move(Entry));
+                                    const FactEntry *Entry) {
+    return replaceLock(FM, findLockIter(FM, CapE), Entry);
   }
 
   iterator findLockIter(FactManager &FM, const CapabilityExpr &CapE) {
@@ -863,17 +875,29 @@ static void findBlockLocations(CFG *CFGraph,
 
 namespace {
 
-class LockableFactEntry : public FactEntry {
+class LockableFactEntry final : public FactEntry {
 private:
   /// Reentrancy depth: incremented when a capability has been acquired
   /// reentrantly (after initial acquisition). Always 0 for non-reentrant
   /// capabilities.
   unsigned int ReentrancyDepth = 0;
 
-public:
   LockableFactEntry(const CapabilityExpr &CE, LockKind LK, SourceLocation Loc,
-                    SourceKind Src = Acquired)
+                    SourceKind Src)
       : FactEntry(Lockable, CE, LK, Loc, Src) {}
+
+public:
+  static LockableFactEntry *create(llvm::BumpPtrAllocator &Alloc,
+                                   const LockableFactEntry &Other) {
+    return new (Alloc) LockableFactEntry(Other);
+  }
+
+  static LockableFactEntry *create(llvm::BumpPtrAllocator &Alloc,
+                                   const CapabilityExpr &CE, LockKind LK,
+                                   SourceLocation Loc,
+                                   SourceKind Src = Acquired) {
+    return new (Alloc) LockableFactEntry(CE, LK, Loc, Src);
+  }
 
   unsigned int getReentrancyDepth() const { return ReentrancyDepth; }
 
@@ -889,9 +913,9 @@ public:
 
   void handleLock(FactSet &FSet, FactManager &FactMan, const FactEntry &entry,
                   ThreadSafetyHandler &Handler) const override {
-    if (std::unique_ptr<FactEntry> RFact = tryReenter(entry.kind())) {
+    if (const FactEntry *RFact = tryReenter(FactMan, entry.kind())) {
       // This capability has been reentrantly acquired.
-      FSet.replaceLock(FactMan, entry, std::move(RFact));
+      FSet.replaceLock(FactMan, entry, RFact);
     } else {
       Handler.handleDoubleLock(entry.getKind(), entry.toString(), loc(),
                                entry.loc());
@@ -904,34 +928,35 @@ public:
                     ThreadSafetyHandler &Handler) const override {
     FSet.removeLock(FactMan, Cp);
 
-    if (std::unique_ptr<FactEntry> RFact = leaveReentrant()) {
+    if (const FactEntry *RFact = leaveReentrant(FactMan)) {
       // This capability remains reentrantly acquired.
-      FSet.addLock(FactMan, std::move(RFact));
+      FSet.addLock(FactMan, RFact);
     } else if (!Cp.negative()) {
-      FSet.addLock(FactMan, std::make_unique<LockableFactEntry>(
+      FSet.addLock(FactMan, FactMan.createFact<LockableFactEntry>(
                                 !Cp, LK_Exclusive, UnlockLoc));
     }
   }
 
   // Return an updated FactEntry if we can acquire this capability reentrant,
   // nullptr otherwise.
-  std::unique_ptr<LockableFactEntry> tryReenter(LockKind ReenterKind) const {
+  const FactEntry *tryReenter(FactManager &FactMan,
+                              LockKind ReenterKind) const {
     if (!reentrant())
       return nullptr;
     if (kind() != ReenterKind)
       return nullptr;
-    auto NewFact = std::make_unique<LockableFactEntry>(*this);
+    auto *NewFact = FactMan.createFact<LockableFactEntry>(*this);
     NewFact->ReentrancyDepth++;
     return NewFact;
   }
 
   // Return an updated FactEntry if we are releasing a capability previously
   // acquired reentrant, nullptr otherwise.
-  std::unique_ptr<LockableFactEntry> leaveReentrant() const {
+  const FactEntry *leaveReentrant(FactManager &FactMan) const {
     if (!ReentrancyDepth)
       return nullptr;
     assert(reentrant());
-    auto NewFact = std::make_unique<LockableFactEntry>(*this);
+    auto *NewFact = FactMan.createFact<LockableFactEntry>(*this);
     NewFact->ReentrancyDepth--;
     return NewFact;
   }
@@ -941,44 +966,74 @@ public:
   }
 };
 
-class ScopedLockableFactEntry : public FactEntry {
+enum UnderlyingCapabilityKind {
+  UCK_Acquired,          ///< Any kind of acquired capability.
+  UCK_ReleasedShared,    ///< Shared capability that was released.
+  UCK_ReleasedExclusive, ///< Exclusive capability that was released.
+};
+
+struct UnderlyingCapability {
+  CapabilityExpr Cap;
+  UnderlyingCapabilityKind Kind;
+};
+
+class ScopedLockableFactEntry final
+    : public FactEntry,
+      private llvm::TrailingObjects<ScopedLockableFactEntry,
+                                    UnderlyingCapability> {
+  friend TrailingObjects;
+
 private:
-  enum UnderlyingCapabilityKind {
-    UCK_Acquired,          ///< Any kind of acquired capability.
-    UCK_ReleasedShared,    ///< Shared capability that was released.
-    UCK_ReleasedExclusive, ///< Exclusive capability that was released.
-  };
+  const unsigned ManagedCapacity;
+  unsigned ManagedSize = 0;
 
-  struct UnderlyingCapability {
-    CapabilityExpr Cap;
-    UnderlyingCapabilityKind Kind;
-  };
+  ScopedLockableFactEntry(const CapabilityExpr &CE, SourceLocation Loc,
+                          SourceKind Src, unsigned ManagedCapacity)
+      : FactEntry(ScopedLockable, CE, LK_Exclusive, Loc, Src),
+        ManagedCapacity(ManagedCapacity) {}
 
-  SmallVector<UnderlyingCapability, 2> UnderlyingMutexes;
+  void addManaged(const CapabilityExpr &M, UnderlyingCapabilityKind UCK) {
+    assert(ManagedSize < ManagedCapacity);
+    new (getTrailingObjects() + ManagedSize) UnderlyingCapability{M, UCK};
+    ++ManagedSize;
+  }
+
+  ArrayRef<UnderlyingCapability> getManaged() const {
+    return getTrailingObjects(ManagedSize);
+  }
 
 public:
-  ScopedLockableFactEntry(const CapabilityExpr &CE, SourceLocation Loc,
-                          SourceKind Src)
-      : FactEntry(ScopedLockable, CE, LK_Exclusive, Loc, Src) {}
+  static ScopedLockableFactEntry *create(llvm::BumpPtrAllocator &Alloc,
+                                         const CapabilityExpr &CE,
+                                         SourceLocation Loc, SourceKind Src,
+                                         unsigned ManagedCapacity) {
+    void *Storage =
+        Alloc.Allocate(totalSizeToAlloc<UnderlyingCapability>(ManagedCapacity),
+                       alignof(ScopedLockableFactEntry));
+    return new (Storage) ScopedLockableFactEntry(CE, Loc, Src, ManagedCapacity);
+  }
 
   CapExprSet getUnderlyingMutexes() const {
     CapExprSet UnderlyingMutexesSet;
-    for (const UnderlyingCapability &UnderlyingMutex : UnderlyingMutexes)
+    for (const UnderlyingCapability &UnderlyingMutex : getManaged())
       UnderlyingMutexesSet.push_back(UnderlyingMutex.Cap);
     return UnderlyingMutexesSet;
   }
 
-  void addLock(const CapabilityExpr &M) {
-    UnderlyingMutexes.push_back(UnderlyingCapability{M, UCK_Acquired});
-  }
+  /// \name Adding managed locks
+  /// Capacity for managed locks must have been allocated via \ref create.
+  /// There is no reallocation in case the capacity is exceeded!
+  /// \{
+  void addLock(const CapabilityExpr &M) { addManaged(M, UCK_Acquired); }
 
   void addExclusiveUnlock(const CapabilityExpr &M) {
-    UnderlyingMutexes.push_back(UnderlyingCapability{M, UCK_ReleasedExclusive});
+    addManaged(M, UCK_ReleasedExclusive);
   }
 
   void addSharedUnlock(const CapabilityExpr &M) {
-    UnderlyingMutexes.push_back(UnderlyingCapability{M, UCK_ReleasedShared});
+    addManaged(M, UCK_ReleasedShared);
   }
+  /// \}
 
   void
   handleRemovalFromIntersection(const FactSet &FSet, FactManager &FactMan,
@@ -987,7 +1042,7 @@ public:
     if (LEK == LEK_LockedAtEndOfFunction || LEK == LEK_NotLockedAtEndOfFunction)
       return;
 
-    for (const auto &UnderlyingMutex : UnderlyingMutexes) {
+    for (const auto &UnderlyingMutex : getManaged()) {
       const auto *Entry = FSet.findLock(FactMan, UnderlyingMutex.Cap);
       if ((UnderlyingMutex.Kind == UCK_Acquired && Entry) ||
           (UnderlyingMutex.Kind != UCK_Acquired && !Entry)) {
@@ -1002,7 +1057,7 @@ public:
 
   void handleLock(FactSet &FSet, FactManager &FactMan, const FactEntry &entry,
                   ThreadSafetyHandler &Handler) const override {
-    for (const auto &UnderlyingMutex : UnderlyingMutexes) {
+    for (const auto &UnderlyingMutex : getManaged()) {
       if (UnderlyingMutex.Kind == UCK_Acquired)
         lock(FSet, FactMan, UnderlyingMutex.Cap, entry.kind(), entry.loc(),
              &Handler);
@@ -1016,7 +1071,7 @@ public:
                     bool FullyRemove,
                     ThreadSafetyHandler &Handler) const override {
     assert(!Cp.negative() && "Managing object cannot be negative.");
-    for (const auto &UnderlyingMutex : UnderlyingMutexes) {
+    for (const auto &UnderlyingMutex : getManaged()) {
       // Remove/lock the underlying mutex if it exists/is still unlocked; warn
       // on double unlocking/locking if we're not destroying the scoped object.
       ThreadSafetyHandler *TSHandler = FullyRemove ? nullptr : &Handler;
@@ -1043,16 +1098,16 @@ private:
             ThreadSafetyHandler *Handler) const {
     if (const auto It = FSet.findLockIter(FactMan, Cp); It != FSet.end()) {
       const auto &Fact = cast<LockableFactEntry>(FactMan[*It]);
-      if (std::unique_ptr<FactEntry> RFact = Fact.tryReenter(kind)) {
+      if (const FactEntry *RFact = Fact.tryReenter(FactMan, kind)) {
         // This capability has been reentrantly acquired.
-        FSet.replaceLock(FactMan, It, std::move(RFact));
+        FSet.replaceLock(FactMan, It, RFact);
       } else if (Handler) {
         Handler->handleDoubleLock(Cp.getKind(), Cp.toString(), Fact.loc(), loc);
       }
     } else {
       FSet.removeLock(FactMan, !Cp);
-      FSet.addLock(FactMan,
-                   std::make_unique<LockableFactEntry>(Cp, kind, loc, Managed));
+      FSet.addLock(FactMan, FactMan.createFact<LockableFactEntry>(Cp, kind, loc,
+                                                                  Managed));
     }
   }
 
@@ -1060,15 +1115,15 @@ private:
               SourceLocation loc, ThreadSafetyHandler *Handler) const {
     if (const auto It = FSet.findLockIter(FactMan, Cp); It != FSet.end()) {
       const auto &Fact = cast<LockableFactEntry>(FactMan[*It]);
-      if (std::unique_ptr<FactEntry> RFact = Fact.leaveReentrant()) {
+      if (const FactEntry *RFact = Fact.leaveReentrant(FactMan)) {
         // This capability remains reentrantly acquired.
-        FSet.replaceLock(FactMan, It, std::move(RFact));
+        FSet.replaceLock(FactMan, It, RFact);
         return;
       }
 
       FSet.replaceLock(
           FactMan, It,
-          std::make_unique<LockableFactEntry>(!Cp, LK_Exclusive, loc));
+          FactMan.createFact<LockableFactEntry>(!Cp, LK_Exclusive, loc));
     } else if (Handler) {
       SourceLocation PrevLoc;
       if (const FactEntry *Neg = FSet.findLock(FactMan, !Cp))
@@ -1098,13 +1153,13 @@ class ThreadSafetyAnalyzer {
   BeforeSet *GlobalBeforeSet;
 
 public:
-  ThreadSafetyAnalyzer(ThreadSafetyHandler &H, BeforeSet* Bset)
-      : Arena(&Bpa), SxBuilder(Arena), Handler(H), GlobalBeforeSet(Bset) {}
+  ThreadSafetyAnalyzer(ThreadSafetyHandler &H, BeforeSet *Bset)
+      : Arena(&Bpa), SxBuilder(Arena), Handler(H), FactMan(Bpa),
+        GlobalBeforeSet(Bset) {}
 
   bool inCurrentScope(const CapabilityExpr &CapE);
 
-  void addLock(FactSet &FSet, std::unique_ptr<FactEntry> Entry,
-               bool ReqAttr = false);
+  void addLock(FactSet &FSet, const FactEntry *Entry, bool ReqAttr = false);
   void removeLock(FactSet &FSet, const CapabilityExpr &CapE,
                   SourceLocation UnlockLoc, bool FullyRemove, LockKind Kind);
 
@@ -1317,8 +1372,7 @@ bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
 
 /// Add a new lock to the lockset, warning if the lock is already there.
 /// \param ReqAttr -- true if this is part of an initial Requires attribute.
-void ThreadSafetyAnalyzer::addLock(FactSet &FSet,
-                                   std::unique_ptr<FactEntry> Entry,
+void ThreadSafetyAnalyzer::addLock(FactSet &FSet, const FactEntry *Entry,
                                    bool ReqAttr) {
   if (Entry->shouldIgnore())
     return;
@@ -1348,7 +1402,7 @@ void ThreadSafetyAnalyzer::addLock(FactSet &FSet,
     if (!Entry->asserted())
       Cp->handleLock(FSet, FactMan, *Entry, Handler);
   } else {
-    FSet.addLock(FactMan, std::move(Entry));
+    FSet.addLock(FactMan, Entry);
   }
 }
 
@@ -1563,11 +1617,11 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
   // Add and remove locks.
   SourceLocation Loc = Exp->getExprLoc();
   for (const auto &ExclusiveLockToAdd : ExclusiveLocksToAdd)
-    addLock(Result, std::make_unique<LockableFactEntry>(ExclusiveLockToAdd,
-                                                        LK_Exclusive, Loc));
+    addLock(Result, FactMan.createFact<LockableFactEntry>(ExclusiveLockToAdd,
+                                                          LK_Exclusive, Loc));
   for (const auto &SharedLockToAdd : SharedLocksToAdd)
-    addLock(Result, std::make_unique<LockableFactEntry>(SharedLockToAdd,
-                                                        LK_Shared, Loc));
+    addLock(Result, FactMan.createFact<LockableFactEntry>(SharedLockToAdd,
+                                                          LK_Shared, Loc));
 }
 
 namespace {
@@ -1903,10 +1957,10 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
         CapExprSet AssertLocks;
         Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
         for (const auto &AssertLock : AssertLocks)
-          Analyzer->addLock(FSet, std::make_unique<LockableFactEntry>(
-                                      AssertLock,
-                                      A->isShared() ? LK_Shared : LK_Exclusive,
-                                      Loc, FactEntry::Asserted));
+          Analyzer->addLock(
+              FSet, Analyzer->FactMan.createFact<LockableFactEntry>(
+                        AssertLock, A->isShared() ? LK_Shared : LK_Exclusive,
+                        Loc, FactEntry::Asserted));
         break;
       }
 
@@ -2063,16 +2117,19 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
   FactEntry::SourceKind Source =
       !Scp.shouldIgnore() ? FactEntry::Managed : FactEntry::Acquired;
   for (const auto &M : ExclusiveLocksToAdd)
-    Analyzer->addLock(FSet, std::make_unique<LockableFactEntry>(M, LK_Exclusive,
-                                                                Loc, Source));
+    Analyzer->addLock(FSet, Analyzer->FactMan.createFact<LockableFactEntry>(
+                                M, LK_Exclusive, Loc, Source));
   for (const auto &M : SharedLocksToAdd)
-    Analyzer->addLock(
-        FSet, std::make_unique<LockableFactEntry>(M, LK_Shared, Loc, Source));
+    Analyzer->addLock(FSet, Analyzer->FactMan.createFact<LockableFactEntry>(
+                                M, LK_Shared, Loc, Source));
 
   if (!Scp.shouldIgnore()) {
     // Add the managing object as a dummy mutex, mapped to the underlying mutex.
-    auto ScopedEntry = std::make_unique<ScopedLockableFactEntry>(
-        Scp, Loc, FactEntry::Acquired);
+    auto *ScopedEntry = Analyzer->FactMan.createFact<ScopedLockableFactEntry>(
+        Scp, Loc, FactEntry::Acquired,
+        ExclusiveLocksToAdd.size() + SharedLocksToAdd.size() +
+            ScopedReqsAndExcludes.size() + ExclusiveLocksToRemove.size() +
+            SharedLocksToRemove.size());
     for (const auto &M : ExclusiveLocksToAdd)
       ScopedEntry->addLock(M);
     for (const auto &M : SharedLocksToAdd)
@@ -2083,7 +2140,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       ScopedEntry->addExclusiveUnlock(M);
     for (const auto &M : SharedLocksToRemove)
       ScopedEntry->addSharedUnlock(M);
-    Analyzer->addLock(FSet, std::move(ScopedEntry));
+    Analyzer->addLock(FSet, ScopedEntry);
   }
 }
 
@@ -2547,23 +2604,24 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         continue;
       CapabilityExpr Cp(SxBuilder.createVariable(Param), StringRef(),
                         /*Neg=*/false, /*Reentrant=*/false);
-      auto ScopedEntry = std::make_unique<ScopedLockableFactEntry>(
-          Cp, Param->getLocation(), FactEntry::Declared);
+      auto *ScopedEntry = FactMan.createFact<ScopedLockableFactEntry>(
+          Cp, Param->getLocation(), FactEntry::Declared,
+          UnderlyingLocks.size());
       for (const CapabilityExpr &M : UnderlyingLocks)
         ScopedEntry->addLock(M);
-      addLock(InitialLockset, std::move(ScopedEntry), true);
+      addLock(InitialLockset, ScopedEntry, true);
     }
 
     // FIXME -- Loc can be wrong here.
     for (const auto &Mu : ExclusiveLocksToAdd) {
-      auto Entry = std::make_unique<LockableFactEntry>(Mu, LK_Exclusive, Loc,
-                                                       FactEntry::Declared);
-      addLock(InitialLockset, std::move(Entry), true);
+      const auto *Entry = FactMan.createFact<LockableFactEntry>(
+          Mu, LK_Exclusive, Loc, FactEntry::Declared);
+      addLock(InitialLockset, Entry, true);
     }
     for (const auto &Mu : SharedLocksToAdd) {
-      auto Entry = std::make_unique<LockableFactEntry>(Mu, LK_Shared, Loc,
-                                                       FactEntry::Declared);
-      addLock(InitialLockset, std::move(Entry), true);
+      const auto *Entry = FactMan.createFact<LockableFactEntry>(
+          Mu, LK_Shared, Loc, FactEntry::Declared);
+      addLock(InitialLockset, Entry, true);
     }
   }
 
@@ -2577,12 +2635,12 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
   // FIXME: the location here is not quite right.
   for (const auto &Lock : ExclusiveLocksAcquired)
     ExpectedFunctionExitSet.addLock(
-        FactMan, std::make_unique<LockableFactEntry>(Lock, LK_Exclusive,
-                                                     D->getLocation()));
+        FactMan, FactMan.createFact<LockableFactEntry>(Lock, LK_Exclusive,
+                                                       D->getLocation()));
   for (const auto &Lock : SharedLocksAcquired)
     ExpectedFunctionExitSet.addLock(
-        FactMan,
-        std::make_unique<LockableFactEntry>(Lock, LK_Shared, D->getLocation()));
+        FactMan, FactMan.createFact<LockableFactEntry>(Lock, LK_Shared,
+                                                       D->getLocation()));
   for (const auto &Lock : LocksReleased)
     ExpectedFunctionExitSet.removeLock(FactMan, Lock);
 

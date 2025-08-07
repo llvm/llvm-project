@@ -4326,9 +4326,8 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_undef_hi(ptr addrspace(
 ;
 ; GFX12-GISEL-TRUE16-LABEL: global_load_saddr_i16_d16hi_undef_hi:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
-; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3]
+; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v0, s[2:3]
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: global_load_saddr_i16_d16hi_undef_hi:
@@ -4366,9 +4365,8 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_undef_hi_immneg128(ptr 
 ;
 ; GFX12-GISEL-TRUE16-LABEL: global_load_saddr_i16_d16hi_undef_hi_immneg128:
 ; GFX12-GISEL-TRUE16:       ; %bb.0:
-; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_b16 v0, v0, s[2:3] offset:-128
+; GFX12-GISEL-TRUE16-NEXT:    global_load_d16_hi_b16 v0, v0, s[2:3] offset:-128
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX12-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX12-GISEL-FAKE16-LABEL: global_load_saddr_i16_d16hi_undef_hi_immneg128:

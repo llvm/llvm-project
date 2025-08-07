@@ -2168,7 +2168,10 @@ module std [system] {
     module is_valid_range             { header "__utility/is_valid_range.h" }
     module move                       { header "__utility/move.h" }
     module no_destroy                 { header "__utility/no_destroy.h" }
-    module pair                       { header "__utility/pair.h" }
+    module pair                       {
+      header "__utility/pair.h"
+      export std.utility.piecewise_construct
+    }
     module piecewise_construct        { header "__utility/piecewise_construct.h" }
     module priority_tag               { header "__utility/priority_tag.h" }
     module private_constructor_tag    { header "__utility/private_constructor_tag.h" }
