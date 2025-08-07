@@ -38,4 +38,3 @@ TEST_F(LlvmLibcAtanpif16Test, NegativeRange) {
                                    LIBC_NAMESPACE::atanpif16(x), 0.5);
   }
 }
-
