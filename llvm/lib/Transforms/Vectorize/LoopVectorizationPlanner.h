@@ -479,7 +479,11 @@ public:
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
   /// interleaving should be avoided up-front, no plans are generated.
-  void plan(ElementCount UserVF, unsigned UserIC);
+  /// DiffChecks is a list of pointer pairs that should be checked for aliasing,
+  /// combining the resulting predicate with an active lane mask if one is in
+  /// use.
+  void plan(ElementCount UserVF, unsigned UserIC,
+            std::optional<ArrayRef<PointerDiffInfo>> DiffChecks);
 
   /// Use the VPlan-native path to plan how to best vectorize, return the best
   /// VF and its cost.
@@ -564,13 +568,21 @@ private:
   /// set the largest included VF to the maximum VF for which no plan could be
   /// built. Each VPlan is built starting from a copy of \p InitialPlan, which
   /// is a plain CFG VPlan wrapping the original scalar loop.
+  /// RTChecks is a list of pointer pairs that should be checked for aliasing,
+  /// combining the resulting predicate with an active lane mask if one is in
+  /// use.
   VPlanPtr tryToBuildVPlanWithVPRecipes(VPlanPtr InitialPlan, VFRange &Range,
-                                        LoopVersioning *LVer);
+                                        LoopVersioning *LVer,
+                                        ArrayRef<PointerDiffInfo> RTChecks);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
   /// according to the information gathered by Legal when it checked if it is
   /// legal to vectorize the loop. This method creates VPlans using VPRecipes.
-  void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF);
+  /// RTChecks is a list of pointer pairs that should be checked for aliasing,
+  /// combining the resulting predicate with an active lane mask if one is in
+  /// use.
+  void buildVPlansWithVPRecipes(ElementCount MinVF, ElementCount MaxVF,
+                                ArrayRef<PointerDiffInfo> RTChecks);
 
   // Adjust the recipes for reductions. For in-loop reductions the chain of
   // instructions leading from the loop exit instr to the phi need to be

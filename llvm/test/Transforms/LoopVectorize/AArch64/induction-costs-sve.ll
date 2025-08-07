@@ -90,14 +90,14 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-LABEL: define void @iv_casts(
 ; PRED-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PRED-NEXT:  [[ENTRY:.*]]:
-; PRED-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; PRED-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; PRED-NEXT:    [[SRC3:%.*]] = ptrtoint ptr [[SRC]] to i64
+; PRED-NEXT:    [[DST2:%.*]] = ptrtoint ptr [[DST]] to i64
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; PRED-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul nuw i64 [[TMP1]], 16
-; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[DST1]], [[SRC2]]
+; PRED-NEXT:    [[TMP3:%.*]] = sub i64 [[DST2]], [[SRC3]]
 ; PRED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP3]], [[TMP2]]
 ; PRED-NEXT:    br i1 [[DIFF_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; PRED:       [[VECTOR_PH]]:
