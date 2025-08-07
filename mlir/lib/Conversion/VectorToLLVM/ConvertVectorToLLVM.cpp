@@ -248,7 +248,8 @@ public:
 
     // Resolve alignment.
     unsigned align = loadOrStoreOp.getAlignment().value_or(0);
-    if (!align && failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
+    if (!align &&
+        failed(getVectorToLLVMAlignment(*this->getTypeConverter(), vectorTy,
                                         memRefTy, align, useVectorAlignment)))
       return rewriter.notifyMatchFailure(loadOrStoreOp,
                                          "could not resolve alignment");
