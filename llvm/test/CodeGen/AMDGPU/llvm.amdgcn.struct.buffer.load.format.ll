@@ -738,6 +738,48 @@ main_body:
   ret float %fdata
 }
 
+define amdgpu_ps i32 @buffer_load_x_i32__vgpr_rsrc__vgpr_soffset(ptr addrspace(1) %in) {
+; GFX13-LABEL: struct_buffer_load_format_i32__vgpr_rsrc__vgpr_soffset:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_clause 0x1
+; GFX13-NEXT:    global_load_b32 v4, v[0:1], off offset:16
+; GFX13-NEXT:    global_load_b128 v[0:3], v[0:1], off
+; GFX13-NEXT:    v_mov_b32_e32 v5, 0
+; GFX13-NEXT:    s_mov_b32 s2, exec_lo
+; GFX13-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX13-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX13-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX13-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX13-NEXT:    v_readfirstlane_b32 s3, v4
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX13-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX13-NEXT:    v_cmp_eq_u32_e64 s1, s3, v4
+; GFX13-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX13-NEXT:    s_and_b32 s0, s0, s1
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX13-NEXT:    buffer_load_format_x v6, v5, s[4:7], s3 idxen
+; GFX13-NEXT:                                        ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX13-NEXT:                                        ; implicit-def: $vgpr4
+; GFX13-NEXT:                                        ; implicit-def: $vgpr5
+; GFX13-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX13-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX13-NEXT:  ; %bb.2:
+; GFX13-NEXT:    s_mov_b32 exec_lo, s2
+; GFX13-NEXT:    s_wait_loadcnt 0x0
+; GFX13-NEXT:    v_readfirstlane_b32 s0, v6
+; GFX13-NEXT:    ; return to shader part epilog
+  %vgpr = load <5 x i32>, ptr addrspace(1) %in, align 4
+  %offset = extractelement <5 x i32> %vgpr, i64 4
+  %rsrc = shufflevector <5 x i32> %vgpr, <5 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %val = call i32 @llvm.amdgcn.struct.buffer.load.format.i32.v4i32(<4 x i32> %rsrc, i32 0, i32 0, i32 %offset, i32 0)
+  ret i32 %val
+}
+
 define amdgpu_ps <2 x float> @buffer_load_xy(<4 x i32> inreg %rsrc) {
 ; GFX6-LABEL: buffer_load_xy:
 ; GFX6:       ; %bb.0: ; %main_body
@@ -1349,6 +1391,7 @@ declare float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32>, i32, i32, i3
 declare <2 x float> @llvm.amdgcn.struct.buffer.load.format.v2f32(<4 x i32>, i32, i32, i32, i32) #0
 declare <4 x float> @llvm.amdgcn.struct.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32, i32) #0
 declare i32 @llvm.amdgcn.struct.buffer.load.format.i32(<4 x i32>, i32, i32, i32, i32) #0
+declare i32 @llvm.amdgcn.struct.buffer.load.format.i32.v4i32(<4 x i32>, i32, i32, i32, i32 immarg) #0
 declare { <4 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
 declare { <4 x float>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v4f32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0
 declare { <3 x i32>, i32 } @llvm.amdgcn.struct.buffer.load.format.sl_v3i32i32s(<4 x i32>, i32, i32, i32, i32 immarg) #0

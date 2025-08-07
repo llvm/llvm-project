@@ -40,8 +40,8 @@ define amdgpu_kernel void @signal_next_prev() "amdgpu-cluster-dims"="4,1,1" "amd
 ; CHECK-NEXT:    s_mul_i32 s33, s0, s8
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx0, s1
 ; CHECK-NEXT:    ; sched_barrier mask(0x00000000)
-; CHECK-NEXT:    v_send_vgpr_next_b32 off, off, off sema_id:2 sema_wave_id:1 sema_id_refl:1 sema_wave_id_refl:1 wait_va_vdst:0
-; CHECK-NEXT:    v_send_vgpr_prev_b32 off, off, off sema_id:2 sema_wave_id:1 sema_id_refl:1 sema_wave_id_refl:1 wait_va_vdst:0
+; CHECK-NEXT:    v_send_vgpr_next_b32 off, off, off sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
+; CHECK-NEXT:    v_send_vgpr_prev_b32 off, off, off sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
 ; CHECK-NEXT:    s_endpgm
 entry:
   call void @llvm.amdgcn.spatial.cluster.signal.next(ptr addrspace(3) @sem, ptr addrspace(3) @sem2)
@@ -73,8 +73,8 @@ define amdgpu_kernel void @send_next_prev(i32 %i1, ptr addrspace(1) %p) "amdgpu-
 ; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s2
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_id:2 sema_wave_id:1 sema_id_refl:1 sema_wave_id_refl:1 wait_va_vdst:0
-; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_id:2 sema_wave_id:1 sema_id_refl:1 sema_wave_id_refl:1 wait_va_vdst:0
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
+; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
 ; CHECK-NEXT:    global_store_b32 v1, g1[0], s[0:1] scale_offset
 ; CHECK-NEXT:    s_endpgm
 entry:
@@ -146,9 +146,9 @@ define void @send_next_prev_non_kernel(i32 %i1, ptr addrspace(1) %p) {
 ; CHECK-NEXT:    s_set_gpr_idx_u32 idx1, 0
 ; CHECK-NEXT:    s_or_b32 s0, s0, s1
 ; CHECK-NEXT:    s_set_vgpr_frames 0x44 ; vsrc0_idx=0 vsrc1_idx=1 vsrc2_idx=0 vdst_idx=1 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
-; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_id:2 sema_wave_id:1 sema_id_refl:1 sema_wave_id_refl:1 wait_va_vdst:0
+; CHECK-NEXT:    v_send_vgpr_next_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
 ; CHECK-NEXT:    s_ashr_i32 s1, s0, 31
-; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_id:2 sema_wave_id:1 sema_id_refl:1 sema_wave_id_refl:1 wait_va_vdst:0
+; CHECK-NEXT:    v_send_vgpr_prev_b32 g1[0], g1[1], v0 sema_id:1 sema_wave_id:1 sema_id_refl:2 sema_wave_id_refl:1 wait_va_vdst:0
 ; CHECK-NEXT:    s_lshl_b64 s[0:1], s[0:1], 2
 ; CHECK-NEXT:    s_set_vgpr_frames 0 ; vsrc0_idx=0 vsrc1_idx=0 vsrc2_idx=0 vdst_idx=0 vsrc0_msb=0 vsrc1_msb=0 vsrc2_msb=0 vdst_msb=0
 ; CHECK-NEXT:    v_add_co_u32 v1, vcc_lo, v1, s0

@@ -953,43 +953,65 @@ public:
     return NewGV;
   }
 
+  /// Assigns an absolute address for special kinds of GVs like semaphores and
+  /// barriers. Does this in two rounds: first by assigning a module-absolute
+  /// address for any GV that is indirectly used by more than one kernel, and
+  /// second by computing a kernel relative assignment for any GVs remaining.
   bool lowerSpecialLDSVariables(
       Module &M, LDSUsesInfoTy &LDSUsesInfo,
       VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
     bool Changed = false;
-    constexpr unsigned NumScopes =
-        static_cast<unsigned>(Barrier::Scope::NUM_SCOPES);
     const DataLayout &DL = M.getDataLayout();
+
+    unsigned NumSemAbsolutes[MAX_WAVES_PER_WAVEGROUP] = {0};
+    constexpr unsigned NumBarScopes =
+        static_cast<unsigned>(Barrier::Scope::NUM_SCOPES);
+    unsigned NumBarAbsolutes[NumBarScopes] = {0};
+
     // The 1st round: give module-absolute assignments
-    unsigned NumAbsolutes[NumScopes] = {0};
     std::vector<GlobalVariable *> OrderedGVs;
     for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
       GlobalVariable *GV = K.first;
-      if (!isNamedBarrier(*GV))
+      if (!(isNamedBarrier(*GV) || isLDSSemaphore(*GV)))
         continue;
-      // give a module-absolute assignment if it is indirectly accessed by
+
+      // Give a module-absolute assignment if it is indirectly accessed by
       // multiple kernels. This is not precise, but we don't want to duplicate
       // a function when it is called by multiple kernels.
       if (LDSToKernelsThatNeedToAccessItIndirectly[GV].size() > 1) {
         OrderedGVs.push_back(GV);
       } else {
-        // leave it to the 2nd round, which will give a kernel-relative
-        // assignment if it is only indirectly accessed by one kernel
+        // Leave it to the 2nd round, which will give a kernel-relative
+        // assignment if it is only indirectly accessed by one kernel.
         LDSUsesInfo.direct_access[*K.second.begin()].insert(GV);
       }
       LDSToKernelsThatNeedToAccessItIndirectly.erase(GV);
     }
     OrderedGVs = sortByName(std::move(OrderedGVs));
     for (GlobalVariable *GV : OrderedGVs) {
-      TargetExtType *ExtTy = isNamedBarrier(*GV);
-      unsigned BarrierScope = ExtTy->getIntParameter(0);
-      unsigned BarId = NumAbsolutes[BarrierScope] + 1;
-      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
-      NumAbsolutes[BarrierScope] += BarCnt;
+      unsigned Offset;
+      if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
+        unsigned BarrierScope = ExtTy->getIntParameter(0);
+        unsigned BarId = NumBarAbsolutes[BarrierScope] + 1;
+        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        NumBarAbsolutes[BarrierScope] += BarCnt;
 
-      // 4 bits for alignment, 5 bits for the barrier num,
-      // 3 bits for the barrier scope
-      unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+        // 4 bits for alignment, 5 bits for the barrier num,
+        // 3 bits for the barrier scope
+        Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+
+      } else if (TargetExtType *ExtTy = isLDSSemaphore(*GV)) {
+        unsigned OwningRank = ExtTy->getIntParameter(0);
+        assert(OwningRank < MAX_WAVES_PER_WAVEGROUP); 
+        unsigned Num = ++NumSemAbsolutes[OwningRank];
+
+        // 4 bits for alignment, 4 bits for the semaphore num,
+        // 4 bits for the owning rank
+        Offset = 0x801000u | OwningRank << 8 | Num << 4;
+
+      } else
+        llvm_unreachable("Unhandled special variable type.");
+
       recordLDSAbsoluteAddress(&M, GV, Offset);
     }
     OrderedGVs.clear();
@@ -1005,32 +1027,52 @@ public:
     }
     OrderedKernels = sortByName(std::move(OrderedKernels));
 
-    DenseMap<Function *, unsigned> Kernel2BarId[NumScopes];
+    DenseMap<Function *, unsigned> Kernel2BarId[NumBarScopes];
+    DenseMap<Function *, unsigned> Kernel2SemRelative[MAX_WAVES_PER_WAVEGROUP];
     for (Function *F : OrderedKernels) {
+
+      // Collect all globals for each kernel.
       for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
-        if (!isNamedBarrier(*GV))
+        if (!(isNamedBarrier(*GV) || isLDSSemaphore(*GV)))
           continue;
 
         LDSUsesInfo.direct_access[F].erase(GV);
         if (GV->isAbsoluteSymbolRef()) {
-          // already assigned
+          // Already assigned.
           continue;
         }
         OrderedGVs.push_back(GV);
       }
+
       OrderedGVs = sortByName(std::move(OrderedGVs));
       for (GlobalVariable *GV : OrderedGVs) {
         // GV could also be used directly by other kernels. If so, we need to
         // create a new GV used only by this kernel and its function.
         auto NewGV = uniquifyGVPerKernel(M, GV, F);
         Changed |= (NewGV != GV);
-        TargetExtType *ExtTy = isNamedBarrier(*GV);
-        unsigned BarrierScope = ExtTy->getIntParameter(0);
-        unsigned BarId = Kernel2BarId[BarrierScope][F];
-        BarId += NumAbsolutes[BarrierScope] + 1;
-        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
-        Kernel2BarId[BarrierScope][F] += BarCnt;
-        unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+        unsigned Offset;
+        if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
+          // Place each barrier in the next open slot above the module-relative
+          // and already assigned kernel-relative barriers.
+          unsigned BarrierScope = ExtTy->getIntParameter(0);
+          unsigned BarId = Kernel2BarId[BarrierScope][F];
+          BarId += NumBarAbsolutes[BarrierScope] + 1;
+          unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+          Kernel2BarId[BarrierScope][F] += BarCnt;
+          Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+
+        } else if (TargetExtType *ExtTy = isLDSSemaphore(*GV)) {
+          // Determine which semaphore GVs were already assigned, and for the
+          // remaining ones assign the semaphore nums above.
+          unsigned OwningRank =
+              ExtTy->getIntParameter(0) % MAX_WAVES_PER_WAVEGROUP;
+          unsigned Num = NumSemAbsolutes[OwningRank];
+          Kernel2SemRelative[OwningRank][F]++;
+          Num += Kernel2SemRelative[OwningRank][F];
+          Offset = 0x801000u | OwningRank << 8 | Num << 4;
+
+        } else
+          llvm_unreachable("Unhandled special variable type.");
         recordLDSAbsoluteAddress(&M, NewGV, Offset);
       }
       OrderedGVs.clear();
@@ -1039,7 +1081,7 @@ public:
     for (auto &K : LDSUsesInfo.indirect_access) {
       assert(isKernelLDS(K.first));
       for (GlobalVariable *GV : K.second) {
-        if (isNamedBarrier(*GV))
+        if (isNamedBarrier(*GV) || isLDSSemaphore(*GV))
           K.second.erase(GV);
       }
     }

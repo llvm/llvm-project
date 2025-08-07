@@ -7373,6 +7373,17 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
+  bool isSoffsetLegal = true;
+  int SoffsetIdx =
+      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::soffset);
+  if (SoffsetIdx != -1) {
+    MachineOperand *Soffset = &MI.getOperand(SoffsetIdx);
+    if (Soffset->isReg() && Soffset->getReg().isVirtual() &&
+        !RI.isSGPRClass(MRI.getRegClass(Soffset->getReg()))) {
+      isSoffsetLegal = false;
+    }
+  }
+
   // Legalize MIMG/VIMAGE/VSAMPLE and MUBUF/MTBUF for shaders.
   //
   // Shaders only generate MUBUF/MTBUF instructions via intrinsics or via
@@ -7384,8 +7395,15 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
                                     ? AMDGPU::OpName::rsrc
                                     : AMDGPU::OpName::srsrc;
     MachineOperand *SRsrc = getNamedOperand(MI, RSrcOpName);
-    if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg())))
-      CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SRsrc}, MDT);
+    if (SRsrc && !RI.isSGPRClass(MRI.getRegClass(SRsrc->getReg()))) {
+      if (isSoffsetLegal) {
+        CreatedBB = loadMBUFScalarOperandsFromVGPR(*this, MI, {SRsrc}, MDT);
+      } else {
+        MachineOperand *Soffset = getNamedOperand(MI, AMDGPU::OpName::soffset);
+        CreatedBB =
+            loadMBUFScalarOperandsFromVGPR(*this, MI, {SRsrc, Soffset}, MDT);
+      }
+    }
 
     AMDGPU::OpName SampOpName =
         isMIMG(MI) ? AMDGPU::OpName::ssamp : AMDGPU::OpName::samp;
@@ -7593,17 +7611,6 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   }
 
   // Legalize MUBUF instructions.
-  bool isSoffsetLegal = true;
-  int SoffsetIdx =
-      AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::soffset);
-  if (SoffsetIdx != -1) {
-    MachineOperand *Soffset = &MI.getOperand(SoffsetIdx);
-    if (Soffset->isReg() && Soffset->getReg().isVirtual() &&
-        !RI.isSGPRClass(MRI.getRegClass(Soffset->getReg()))) {
-      isSoffsetLegal = false;
-    }
-  }
-
   bool isRsrcLegal = true;
   int RsrcIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::srsrc);

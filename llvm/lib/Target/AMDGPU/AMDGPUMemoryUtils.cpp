@@ -87,8 +87,6 @@ bool isLDSVariableToLower(const GlobalVariable &GV) {
   if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
     return false;
   }
-  if (isLDSSemaphore(GV))
-    return false;
   if (isDynamicLDS(GV)) {
     return true;
   }
@@ -295,7 +293,7 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
             AMDGPU::isDynamicLDS(*GV) && DirectMapKernel.contains(Fn);
         if (IsDirectMapDynLDSGV)
           continue;
-        if (isNamedBarrier(*GV)) {
+        if (isNamedBarrier(*GV) || isLDSSemaphore(*GV)) {
           HasSpecialGVs = true;
           continue;
         }

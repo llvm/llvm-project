@@ -11,18 +11,18 @@ define amdgpu_kernel void @test_sema(i32 %arg) {
 ; GFX13-LABEL: test_sema:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    s_load_b32 s0, s[4:5], 0x24
-; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0
-; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0xbc614e
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0xbc614e
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), s0
-; GFX13-NEXT:    s_sema_set_limit 0x4000
 ; GFX13-NEXT:    s_sema_set_limit 0x2000
+; GFX13-NEXT:    s_sema_set_limit 0x4000
 ; GFX13-NEXT:    s_sema_set_limit 0x2003
-; GFX13-NEXT:    s_sema_signal 2
 ; GFX13-NEXT:    s_sema_signal 1
+; GFX13-NEXT:    s_sema_signal 2
 ; GFX13-NEXT:    s_sema_signal 49
-; GFX13-NEXT:    s_sema_wait 2
 ; GFX13-NEXT:    s_sema_wait 1
+; GFX13-NEXT:    s_sema_wait 2
 ; GFX13-NEXT:    s_sema_wait 1
 ; GFX13-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem, i32 0)
@@ -48,17 +48,17 @@ define void @test_sema_non_kernel(i32 inreg %arg) {
 ; GFX13-NEXT:    s_wait_samplecnt 0x0
 ; GFX13-NEXT:    s_wait_rtscnt 0x0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
-; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0
-; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0xbc614e
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0xbc614e
 ; GFX13-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), s0
-; GFX13-NEXT:    s_sema_set_limit 0x4000
 ; GFX13-NEXT:    s_sema_set_limit 0x2000
+; GFX13-NEXT:    s_sema_set_limit 0x4000
 ; GFX13-NEXT:    s_sema_set_limit 0x2003
-; GFX13-NEXT:    s_sema_signal 2
 ; GFX13-NEXT:    s_sema_signal 1
+; GFX13-NEXT:    s_sema_signal 2
 ; GFX13-NEXT:    s_sema_signal 49
-; GFX13-NEXT:    s_sema_wait 2
 ; GFX13-NEXT:    s_sema_wait 1
+; GFX13-NEXT:    s_sema_wait 2
 ; GFX13-NEXT:    s_sema_wait 1
 ; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem, i32 0)
@@ -76,13 +76,89 @@ define void @test_sema_non_kernel(i32 inreg %arg) {
   ret void
 }
 
+define void @test_sema_callee_func() {
+; GFX13-LABEL: test_sema_callee_func:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA2_STATE), 0x43
+; GFX13-NEXT:    s_sema_set_limit 0x4012
+; GFX13-NEXT:    s_sema_signal 2
+; GFX13-NEXT:    s_sema_wait 1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
+  call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem2, i32 67)
+  call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem2, i32 18)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem2)
+  call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem)
+  ret void
+}
+
+define amdgpu_kernel void @test_sema_calling_kernel_1(i32 %arg) {
+; GFX13-LABEL: test_sema_calling_kernel_1:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_mov_b32 s32, 0
+; GFX13-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX13-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), 0x63
+; GFX13-NEXT:    s_get_pc_i64 s[6:7]
+; GFX13-NEXT:    s_add_nc_u64 s[6:7], s[6:7], test_sema_callee_func@gotpcrel+4
+; GFX13-NEXT:    v_mov_b32_e32 v31, v0
+; GFX13-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
+; GFX13-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 40
+; GFX13-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX13-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX13-NEXT:    s_sema_set_limit 0x2000
+; GFX13-NEXT:    s_sema_signal 49
+; GFX13-NEXT:    s_sema_wait 1
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
+; GFX13-NEXT:    s_endpgm
+  call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem, i32 99)
+  call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem, i32 0)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3)
+  call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem)
+  call void @test_sema_callee_func()
+  ret void
+}
+
+define amdgpu_kernel void @test_sema_calling_kernel_2(i32 %arg) {
+; GFX13-LABEL: test_sema_calling_kernel_2:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_mov_b64 s[10:11], s[6:7]
+; GFX13-NEXT:    s_load_b32 s6, s[4:5], 0x24
+; GFX13-NEXT:    s_mov_b32 s32, 0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_setreg_b32 hwreg(HW_REG_WAVE_SEMA1_STATE), s6
+; GFX13-NEXT:    s_get_pc_i64 s[6:7]
+; GFX13-NEXT:    s_add_nc_u64 s[6:7], s[6:7], test_sema_callee_func@gotpcrel+4
+; GFX13-NEXT:    v_mov_b32_e32 v31, v0
+; GFX13-NEXT:    s_load_b64 s[12:13], s[6:7], 0x0
+; GFX13-NEXT:    s_add_nc_u64 s[8:9], s[4:5], 40
+; GFX13-NEXT:    s_mov_b64 s[4:5], s[0:1]
+; GFX13-NEXT:    s_mov_b64 s[6:7], s[2:3]
+; GFX13-NEXT:    s_sema_set_limit 0x2003
+; GFX13-NEXT:    s_sema_signal 49
+; GFX13-NEXT:    s_sema_wait 2
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    s_swap_pc_i64 s[30:31], s[12:13]
+; GFX13-NEXT:    s_endpgm
+  call void @llvm.amdgcn.s.sema.set.state(ptr addrspace(3) @sem3, i32 %arg)
+  call void @llvm.amdgcn.s.sema.set.limit(ptr addrspace(3) @sem3, i32 3)
+  call void @llvm.amdgcn.s.sema.signal(ptr addrspace(3) @sem3)
+  call void @llvm.amdgcn.s.sema.wait(ptr addrspace(3) @sem2)
+  call void @test_sema_callee_func()
+  ret void
+}
+
 ; Regression test for generating illegal MIR.
 define amdgpu_ps <2 x half> @test_sema_tensor() {
 ; GFX13-LABEL: test_sema_tensor:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX13-NEXT:    s_sema_wait 0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX13-NEXT:    v_dual_mov_b32 v1, v0 :: v_dual_mov_b32 v2, v0
 ; GFX13-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX13-NEXT:    v_cvt_to_tensor_f16_f32 v0, v1, v[0:3], 0 aux_data:3

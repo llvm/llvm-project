@@ -2143,6 +2143,21 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoScaleOffsetM0(
+    SDNode *N, SDValue Addr, SDValue &SAddr, SDValue &VOffset, SDValue &Offset,
+    SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset, true,
+                         false))
+    return false;
+
+  // We are assuming CPol is second from last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 2) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(PassedCPol, SDLoc(), MVT::i32);
+  return true;
+}
+
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetScaleOffsetM0(
     SDNode *N, SDValue Addr, SDValue &SAddr, SDValue &VOffset,
     SDValue &CPol) const {
@@ -3182,8 +3197,9 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
   }
   case AMDGPUAS::DISTRIBUTED: {
     // Choose best addressing mode
-    if (SelectGlobalSAddrCPolM0(N, N->getOperand(3) /*Addr*/, V0 /*SAddr*/,
-                                V1 /*VOffset*/, V2 /*Offset*/, V3 /*CPol*/)) {
+    if (SelectGlobalSAddrNoScaleOffsetM0(N, N->getOperand(3) /*Addr*/,
+                                         V0 /*SAddr*/, V1 /*VOffset*/,
+                                         V2 /*Offset*/, V3 /*CPol*/)) {
       MCastOps.push_back(V0);
       MCastOps.push_back(V1);
       MCastOps.push_back(V2);

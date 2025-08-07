@@ -182,6 +182,9 @@ private:
                                   SDValue &VOffset, SDValue &CPol) const;
   bool SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr, SDValue &SAddr,
                                     SDValue &VOffset, SDValue &CPol) const;
+  bool SelectGlobalSAddrNoScaleOffsetM0(SDNode *N, SDValue Addr, SDValue &SAddr,
+                                        SDValue &VOffset, SDValue &Offset,
+                                        SDValue &CPol) const;
   bool SelectGlobalSAddrNoScaleOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
                                       SDValue &VOffset, SDValue &Offset,
                                       SDValue &CPol) const;
