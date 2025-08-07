@@ -1,3 +1,5 @@
+// REQUIRES: system-linux
+
 // RUN: %clang -E -fvisibility=hidden -flto -fno-sanitize-ignorelist -fsanitize=cfi -c %s -o - | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang -E -fvisibility=hidden -flto -fno-sanitize-ignorelist -fsanitize=cfi -fsanitize-cfi-cross-dso -c %s -o - | FileCheck %s --check-prefix=CHECK-CFI
 // RUN: %clang -E -fvisibility=hidden -flto -fno-sanitize-ignorelist -fsanitize=cfi -fno-sanitize=cfi-nvcall,cfi-vcall,cfi-mfcall,cfi-icall -c %s -o - | FileCheck %s --check-prefix=CHECK-CFI
