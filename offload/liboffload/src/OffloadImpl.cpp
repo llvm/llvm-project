@@ -530,6 +530,12 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
   switch (PropName) {
   case OL_QUEUE_INFO_DEVICE:
     return Info.write<ol_device_handle_t>(Queue->Device);
+  case OL_QUEUE_INFO_EMPTY: {
+    auto Pending = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
+    if (auto Err = Pending.takeError())
+      return Err;
+    return Info.write<bool>(!*Pending);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetQueueInfo enum '%i' is invalid", PropName);
