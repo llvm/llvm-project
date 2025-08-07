@@ -444,3 +444,15 @@ subroutine sub23(n)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub23
+
+subroutine sub24()
+  real, managed :: m
+  real, device :: d(4)
+  m = d(1)
+end
+
+! CHECK-LABEL: func.func @_QPsub24()
+! CHECK: %[[D:.*]]:2 = hlfir.declare %1(%2) {data_attr = #cuf.cuda<device>, uniq_name = "_QFsub24Ed"} : (!fir.ref<!fir.array<4xf32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<4xf32>>, !fir.ref<!fir.array<4xf32>>)
+! CHECK: %[[M:.*]]:2 = hlfir.declare %4 {data_attr = #cuf.cuda<managed>, uniq_name = "_QFsub24Em"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+! CHECK: %[[D1:.*]] = hlfir.designate %[[D]]#0 (%c1{{.*}})  : (!fir.ref<!fir.array<4xf32>>, index) -> !fir.ref<f32>
+! CHECK: cuf.data_transfer %[[D1]] to %[[M]]#0 {transfer_kind = #cuf.cuda_transfer<device_device>} : !fir.ref<f32>, !fir.ref<f32>
