@@ -659,6 +659,7 @@ bool ARMTargetInfo::hasFeature(StringRef Feature) const {
       .Case("hwdiv", HWDiv & HWDivThumb)
       .Case("hwdiv-arm", HWDiv & HWDivARM)
       .Case("mve", hasMVE())
+      .Case("ctselect", true)
       .Default(false);
 }
 
