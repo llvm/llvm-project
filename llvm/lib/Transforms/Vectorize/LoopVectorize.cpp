@@ -8451,11 +8451,9 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                                  *Plan, CM.getMinimalBitwidths());
       VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
       // TODO: try to put it close to addActiveLaneMask().
-      // Discard the plan if it is not EVL-compatible
-      if (CM.foldTailWithEVL() && !HasScalarVF &&
-          !VPlanTransforms::runPass(VPlanTransforms::tryAddExplicitVectorLength,
-                                    *Plan, CM.getMaxSafeElements()))
-        break;
+      if (CM.foldTailWithEVL() && !HasScalarVF)
+        VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
+                                 *Plan, CM.getMaxSafeElements());
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
