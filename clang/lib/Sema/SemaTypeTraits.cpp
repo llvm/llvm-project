@@ -2596,9 +2596,79 @@ static void DiagnoseNonStandardLayoutReason(Sema &SemaRef, SourceLocation Loc,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
+static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
+                                       const CXXRecordDecl *D) {
+  for (const CXXConstructorDecl *Ctor : D->ctors()) {
+    if (Ctor->isUserProvided())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::UserDeclaredCtr;
+    if (Ctor->isInheritingConstructor())
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::InheritedCtr;
+  }
+
+  for (const FieldDecl *Field : D->fields()) {
+    switch (Field->getAccess()) {
+    case AS_private:
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::PrivateDirectDataMember;
+      break;
+    case AS_protected:
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::ProtectedDirectDataMember;
+      break;
+    default:
+      break;
+    }
+  }
+
+  for (const CXXBaseSpecifier &B : D->bases()) {
+    if (B.isVirtual()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VBase << B.getType()
+          << B.getSourceRange();
+      continue;
+    }
+    switch (B.getAccessSpecifier()) {
+    case AS_private:
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::PrivateDirectBase;
+      break;
+    case AS_protected:
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::ProtectedDirectBase;
+      break;
+    default:
+      break;
+    }
+  }
+
+  for (const CXXMethodDecl *Method : D->methods()) {
+    if (Method->isVirtual()) {
+      SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+          << diag::TraitNotSatisfiedReason::VirtualFunction << Method
+          << Method->getSourceRange();
+    }
+  }
+
+  SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
+}
+
 static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc, QualType T) {
   SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
       << T << diag::TraitName::Aggregate;
+
+  if (T->isVoidType())
+    SemaRef.Diag(Loc, diag::note_unsatisfied_trait_reason)
+        << diag::TraitNotSatisfiedReason::CVVoidType;
+
+  T = T.getNonReferenceType();
+  const CXXRecordDecl *D = T->getAsCXXRecordDecl();
+  if (!D || D->isInvalidDecl())
+    return;
+
+  if (D->hasDefinition())
+    DiagnoseNonAggregateReason(SemaRef, Loc, D);
 }
 
 void Sema::DiagnoseTypeTraitDetails(const Expr *E) {
