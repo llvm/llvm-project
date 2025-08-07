@@ -1363,9 +1363,11 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     if (!match(Masked, m_OneUse(m_And(m_Value(X), m_APInt(C)))))
       return nullptr;
 
-    Value *V2, *Trunc;
-    if (!match(ZExtSel, m_ZExt(m_OneUse(m_Select(m_Specific(Cond), m_Value(V2),
-                                                 m_Value(Trunc))))))
+    const APInt *V2;
+    Value *Trunc;
+    if (!match(ZExtSel,
+               m_ZExt(m_OneUse(m_Select(m_Specific(Cond), m_APInt(V2),
+                                        m_Value(Trunc))))))
       return nullptr;
 
     if (*C != APInt::getBitsSetFrom(X->getType()->getScalarSizeInBits(),
@@ -1376,8 +1378,10 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
     if (!match(Trunc, m_Trunc(m_Specific(X))))
       return nullptr;
 
-    Value *ZExtTrue = Builder.CreateZExt(V2, V1->getType());
-    Value *True = simplifyBinOp(Opcode, V1, ZExtTrue, FMF, Q);
+    unsigned V1Width = V1->getType()->getScalarSizeInBits();
+    APInt ZextV2 = V2->zext(V1Width);
+    Value *True = simplifyBinOp(
+        Opcode, V1, ConstantInt::get(V1->getType(), ZextV2), FMF, Q);
     if (!True)
       return nullptr;
 
