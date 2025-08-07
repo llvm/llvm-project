@@ -38,6 +38,23 @@ define <4 x i32> @dot_sext_2(<8 x i16> %a, <8 x i16> %b) {
   ret <4 x i32> %res
 }
 
+define <4 x i32> @dot_sext_self(<8 x i16> %v) {
+; CHECK-LABEL: dot_sext_self:
+; CHECK:         .functype dot_sext_self (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.dot_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+  %sext = sext <8 x i16> %v to <8 x i32>
+  %mul = mul <8 x i32> %sext, %sext
+  %shuffle1 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %shuffle2 = shufflevector <8 x i32> %mul, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %res = add <4 x i32> %shuffle1, %shuffle2
+  ret <4 x i32> %res
+}
+
+; INFO: Negative test
 define <4 x i32> @dot_zext(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: dot_zext:
 ; CHECK:         .functype dot_zext (v128, v128) -> (v128)
@@ -66,6 +83,7 @@ define <4 x i32> @dot_zext(<8 x i16> %a, <8 x i16> %b) {
   ret <4 x i32> %res
 }
 
+; INFO: Negative test
 define <4 x i32> @dot_wrong_shuffle(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: dot_wrong_shuffle:
 ; CHECK:         .functype dot_wrong_shuffle (v128, v128) -> (v128)
