@@ -48,7 +48,7 @@ public:
     __data_._DoFree = true;
   }
 
-  exception(exception const&) _NOEXCEPT {}
+  exception(exception const&) _NOEXCEPT : __data_() {}
 
   exception& operator=(exception const&) _NOEXCEPT { return *this; }
 
