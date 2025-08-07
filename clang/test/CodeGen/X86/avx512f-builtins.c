@@ -10296,6 +10296,9 @@ __m512i test_mm512_set_epi8(char e63, char e62, char e61, char e60, char e59,
       e25, e24, e23, e22, e21, e20, e19, e18, e17, e16, e15, e14, e13, e12,
       e11, e10, e9, e8, e7, e6, e5, e4, e3, e2, e1, e0);
 }
+TEST_CONSTEXPR(match_v64qi(_mm512_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                                          32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63), 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+                                          32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63));
 
 __m512i test_mm512_set_epi16(short e31, short e30, short e29, short e28,
     short e27, short e26, short e25, short e24, short e23, short e22,
@@ -10339,8 +10342,9 @@ __m512i test_mm512_set_epi16(short e31, short e30, short e29, short e28,
   return _mm512_set_epi16(e31, e30, e29, e28, e27, e26, e25, e24, e23, e22,
       e21, e20, e19, e18, e17, e16, e15, e14, e13, e12, e11, e10, e9, e8, e7,
       e6, e5, e4, e3, e2, e1, e0);
-
 }
+TEST_CONSTEXPR(match_v32hi(_mm512_set_epi16(0, -1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13, 14, -15, 16, -17, 18, -19, 20, -21, 22, -23, 24, -25, 26, -27, 28, -29, 30, -31), 0, -1, 2, -3, 4, -5, 6, -7, 8, -9, 10, -11, 12, -13, 14, -15, 16, -17, 18, -19, 20, -21, 22, -23, 24, -25, 26, -27, 28, -29, 30, -31));
+
 __m512i test_mm512_set_epi32 (int __A, int __B, int __C, int __D,
                int __E, int __F, int __G, int __H,
                int __I, int __J, int __K, int __L,
@@ -10366,6 +10370,7 @@ __m512i test_mm512_set_epi32 (int __A, int __B, int __C, int __D,
  return _mm512_set_epi32( __A, __B, __C, __D,__E, __F, __G, __H,
               __I, __J, __K, __L,__M, __N, __O, __P);
 }
+TEST_CONSTEXPR(match_v16si(_mm512_set_epi32(0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15), 0, -1, -2, -3, -4, -5, -6, -7, -8, -9, -10, -11, -12, -13, -14, -15));
 
 __m512i test_mm512_setr_epi32 (int __A, int __B, int __C, int __D,
                int __E, int __F, int __G, int __H,
@@ -10408,6 +10413,7 @@ __m512i test_mm512_setr_epi32 (int __A, int __B, int __C, int __D,
  return _mm512_setr_epi32( __A, __B, __C, __D,__E, __F, __G, __H,
               __I, __J, __K, __L,__M, __N, __O, __P);
 }
+TEST_CONSTEXPR(match_v16si(_mm512_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15), 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15));
 
 __m512i test_mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
 {
@@ -10455,6 +10461,7 @@ __m512i test_mm512_set_epi64 (long long __A, long long __B, long long __C,
     //CHECK: insertelement{{.*}}i32 7
   return _mm512_set_epi64(__A, __B, __C, __D, __E, __F, __G, __H );
 }
+TEST_CONSTEXPR(match_v8di(_mm512_set_epi64(1, -3, 5, -7, 9, -11, 13, -15), 1, -3, 5, -7, 9, -11, 13, -15));
 
 __m512i test_mm512_setr_epi64 (long long __A, long long __B, long long __C,
                               long long __D, long long __E, long long __F,
@@ -10479,6 +10486,7 @@ __m512i test_mm512_setr_epi64 (long long __A, long long __B, long long __C,
     //CHECK: insertelement{{.*}}i32 7
   return _mm512_setr_epi64(__A, __B, __C, __D, __E, __F, __G, __H );
 }
+TEST_CONSTEXPR(match_v8di(_mm512_setr_epi64(-1, 3, -5, 7, -9, 11, -13, 15), -1, 3, -5, 7, -9, 11, -13, 15));
 
 __m512d test_mm512_set_pd (double __A, double __B, double __C, double __D,
                            double __E, double __F, double __G, double __H)
@@ -10494,6 +10502,7 @@ __m512d test_mm512_set_pd (double __A, double __B, double __C, double __D,
     //CHECK: insertelement{{.*}}i32 7
   return _mm512_set_pd( __A, __B, __C, __D, __E, __F, __G, __H);
 }
+TEST_CONSTEXPR(match_m512d(_mm512_set_pd(200, 400, 600, 800, 1000, 1200, 1400, 1600), 200, 400, 600, 800, 1000, 1200, 1400, 1600));
 
 __m512d test_mm512_setr_pd (double __A, double __B, double __C, double __D,
                            double __E, double __F, double __G, double __H)
@@ -10517,6 +10526,7 @@ __m512d test_mm512_setr_pd (double __A, double __B, double __C, double __D,
     //CHECK: insertelement{{.*}}i32 7
   return _mm512_setr_pd( __A, __B, __C, __D, __E, __F, __G, __H);
 }
+TEST_CONSTEXPR(match_m512d(_mm512_setr_pd(-20, 40, -60, 80, -100, 120, -140, 160), -20, 40, -60, 80, -100, 120, -140, 160));
 
 __m512 test_mm512_set_ps (float __A, float __B, float __C, float __D,
                           float __E, float __F, float __G, float __H,
@@ -10543,6 +10553,7 @@ __m512 test_mm512_set_ps (float __A, float __B, float __C, float __D,
     return _mm512_set_ps( __A, __B, __C, __D, __E, __F, __G, __H,
                           __I, __J, __K, __L, __M, __N, __O, __P);
 }
+TEST_CONSTEXPR(match_m512(_mm512_set_ps(1.0f, -2.0f, 3.0f, -4.0f, 5.0f, -6.0f, 7.0f, -8.0f, 9.0f, -10.0f, 11.0f, -12.0f, 13.0f, -14.0f, 15.0f, -16.0f), 1.0f, -2.0f, 3.0f, -4.0f, 5.0f, -6.0f, 7.0f, -8.0f, 9.0f, -10.0f, 11.0f, -12.0f, 13.0f, -14.0f, 15.0f, -16.0f));
 
 __m512i test_mm512_mask_abs_epi64 (__m512i __W, __mmask8 __U, __m512i __A)
 {
@@ -10621,6 +10632,7 @@ __m512 test_mm512_setr_ps (float __A, float __B, float __C, float __D,
     return _mm512_setr_ps( __A, __B, __C, __D, __E, __F, __G, __H,
                           __I, __J, __K, __L, __M, __N, __O, __P);
 }
+TEST_CONSTEXPR(match_m512(_mm512_setr_ps(-1.0f, 2.0f, -3.0f, 4.0f, -5.0f, 6.0f, -7.0f, 8.0f, -9.0f, 10.0f, -11.0f, 12.0f, -13.0f, 14.0f, -15.0f, 16.0f), -1.0f, 2.0f, -3.0f, 4.0f, -5.0f, 6.0f, -7.0f, 8.0f, -9.0f, 10.0f, -11.0f, 12.0f, -13.0f, 14.0f, -15.0f, 16.0f));
 
 int test_mm_cvtss_i32(__m128 A) {
   // CHECK-LABEL: test_mm_cvtss_i32
