@@ -2054,7 +2054,9 @@ def Vector_GatherOp :
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$pass_thru)>,
+               AnyVectorOfNonZeroRank:$pass_thru,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
 
   let summary = [{
@@ -2111,6 +2113,31 @@ def Vector_GatherOp :
     "`into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$index_vec,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+      return build($_builder, $_state, resultType, base, indices, index_vec, mask, passthrough,
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                                    nullptr);
+    }]>,
+    OpBuilder<(ins "TypeRange":$resultTypes,
+                   "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$index_vec,
+                   "Value":$mask,
+                   "Value":$passthrough,
+                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+      return build($_builder, $_state, resultTypes, base, indices, index_vec, mask, passthrough,
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ScatterOp :
