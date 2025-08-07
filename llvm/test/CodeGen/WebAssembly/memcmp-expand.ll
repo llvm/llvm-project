@@ -127,7 +127,6 @@ define i1 @memcmp_expand_8(ptr %a, ptr %b) {
   ret i1 %res
 }
 
-; TODO: Should be using a single load i64x2 or equivalent in bitsizes
 define i1 @memcmp_expand_16(ptr %a, ptr %b) {
 ; CHECK-LABEL: memcmp_expand_16:
 ; CHECK:         .functype memcmp_expand_16 (i32, i32) -> (i32)

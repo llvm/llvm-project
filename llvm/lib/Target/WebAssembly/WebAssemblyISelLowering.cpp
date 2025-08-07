@@ -19,6 +19,7 @@
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
@@ -3394,7 +3395,13 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   EVT OpVT = X.getValueType();
 
   ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  if (!isIntEqualitySetCC(CC))
+    return SDValue();
+
   SelectionDAG &DAG = DCI.DAG;
+  if (DCI.DAG.getMachineFunction().getFunction().hasFnAttribute(
+          Attribute::NoImplicitFloat))
+    return SDValue();
   // We're looking for an oversized integer equality comparison.
   if (!OpVT.isScalarInteger() || !OpVT.isByteSized() || OpVT != MVT::i128 ||
       !Subtarget->hasSIMD128())
@@ -3413,7 +3420,6 @@ combineVectorSizedSetCCEquality(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   SDValue VecX = DAG.getBitcast(VecVT, X);
   SDValue VecY = DAG.getBitcast(VecVT, Y);
-
   SDValue Cmp = DAG.getSetCC(DL, VecVT, VecX, VecY, CC);
 
   SDValue AllTrue = DAG.getNode(
