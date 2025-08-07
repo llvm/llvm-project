@@ -2273,9 +2273,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
           Flags.setNoExt();
 
         for (unsigned i = 0; i < NumParts; ++i) {
-          Outs.push_back(ISD::OutputArg(Flags,
-                                        Parts[i].getValueType().getSimpleVT(),
-                                        VT, /*isfixed=*/true, 0, 0));
+          Outs.push_back(ISD::OutputArg(
+              Flags, Parts[i].getValueType().getSimpleVT(), VT, 0, 0));
           OutVals.push_back(Parts[i]);
         }
       }
@@ -2291,9 +2290,9 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     assert(SwiftError.getFunctionArg() && "Need a swift error argument");
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
     Flags.setSwiftError();
-    Outs.push_back(ISD::OutputArg(
-        Flags, /*vt=*/TLI.getPointerTy(DL), /*argvt=*/EVT(TLI.getPointerTy(DL)),
-        /*isfixed=*/true, /*origidx=*/1, /*partOffs=*/0));
+    Outs.push_back(ISD::OutputArg(Flags, /*vt=*/TLI.getPointerTy(DL),
+                                  /*argvt=*/EVT(TLI.getPointerTy(DL)),
+                                  /*origidx=*/1, /*partOffs=*/0));
     // Create SDNode for the swifterror virtual register.
     OutVals.push_back(
         DAG.getRegister(SwiftError.getOrCreateVRegUseAt(
@@ -11124,6 +11123,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       const Align OriginalAlignment(getABIAlignmentForCallingConv(ArgTy, DL));
       Flags.setOrigAlign(OriginalAlignment);
 
+      if (i >= CLI.NumFixedArgs)
+        Flags.setVarArg();
       if (Args[i].Ty->isPointerTy()) {
         Flags.setPointer();
         Flags.setPointerAddrSpace(
@@ -11246,8 +11247,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // For scalable vectors the scalable part is currently handled
         // by individual targets, so we just use the known minimum size here.
         ISD::OutputArg MyFlags(
-            Flags, Parts[j].getValueType().getSimpleVT(), VT,
-            i < CLI.NumFixedArgs, i,
+            Flags, Parts[j].getValueType().getSimpleVT(), VT, i,
             j * Parts[j].getValueType().getStoreSize().getKnownMinValue());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();

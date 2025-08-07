@@ -54,6 +54,8 @@ namespace ISD {
     unsigned IsInConsecutiveRegs : 1;
     unsigned IsCopyElisionCandidate : 1; ///< Argument copy elision candidate
     unsigned IsPointer : 1;
+    /// Whether this is part of a variable argument list (non-fixed).
+    unsigned IsVarArg : 1;
 
     unsigned ByValOrByRefSize = 0; ///< Byval or byref struct size
 
@@ -67,7 +69,7 @@ namespace ISD {
           IsSwiftError(0), IsCFGuardTarget(0), IsHva(0), IsHvaStart(0),
           IsSecArgPass(0), MemAlign(0), OrigAlign(0),
           IsInConsecutiveRegsLast(0), IsInConsecutiveRegs(0),
-          IsCopyElisionCandidate(0), IsPointer(0) {
+          IsCopyElisionCandidate(0), IsPointer(0), IsVarArg(0) {
       static_assert(sizeof(*this) == 4 * sizeof(unsigned), "flags are too big");
     }
 
@@ -144,6 +146,9 @@ namespace ISD {
 
     bool isPointer()  const { return IsPointer; }
     void setPointer() { IsPointer = 1; }
+
+    bool isVarArg() const { return IsVarArg; }
+    void setVarArg() { IsVarArg = 1; }
 
     Align getNonZeroMemAlign() const {
       return decodeMaybeAlign(MemAlign).valueOrOne();
@@ -239,9 +244,6 @@ namespace ISD {
     MVT VT;
     EVT ArgVT;
 
-    /// IsFixed - Is this a "fixed" value, ie not passed through a vararg "...".
-    bool IsFixed = false;
-
     /// Index original Function's argument.
     unsigned OrigArgIndex;
 
@@ -251,10 +253,9 @@ namespace ISD {
     unsigned PartOffset;
 
     OutputArg() = default;
-    OutputArg(ArgFlagsTy flags, MVT vt, EVT argvt, bool isfixed,
-              unsigned origIdx, unsigned partOffs)
-        : Flags(flags), IsFixed(isfixed), OrigArgIndex(origIdx),
-          PartOffset(partOffs) {
+    OutputArg(ArgFlagsTy flags, MVT vt, EVT argvt, unsigned origIdx,
+              unsigned partOffs)
+        : Flags(flags), OrigArgIndex(origIdx), PartOffset(partOffs) {
       VT = vt;
       ArgVT = argvt;
     }

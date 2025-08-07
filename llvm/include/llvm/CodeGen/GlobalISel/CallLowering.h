@@ -50,14 +50,12 @@ public:
   struct BaseArgInfo {
     Type *Ty;
     SmallVector<ISD::ArgFlagsTy, 4> Flags;
-    bool IsFixed;
 
     BaseArgInfo(Type *Ty,
-                ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-                bool IsFixed = true)
-        : Ty(Ty), Flags(Flags), IsFixed(IsFixed) {}
+                ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>())
+        : Ty(Ty), Flags(Flags) {}
 
-    BaseArgInfo() : Ty(nullptr), IsFixed(false) {}
+    BaseArgInfo() : Ty(nullptr) {}
   };
 
   struct ArgInfo : public BaseArgInfo {
@@ -81,8 +79,8 @@ public:
 
     ArgInfo(ArrayRef<Register> Regs, Type *Ty, unsigned OrigIndex,
             ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-            bool IsFixed = true, const Value *OrigValue = nullptr)
-        : BaseArgInfo(Ty, Flags, IsFixed), Regs(Regs), OrigValue(OrigValue),
+            const Value *OrigValue = nullptr)
+        : BaseArgInfo(Ty, Flags), Regs(Regs), OrigValue(OrigValue),
           OrigArgIndex(OrigIndex) {
       if (!Regs.empty() && Flags.empty())
         this->Flags.push_back(ISD::ArgFlagsTy());
@@ -93,9 +91,8 @@ public:
     }
 
     ArgInfo(ArrayRef<Register> Regs, const Value &OrigValue, unsigned OrigIndex,
-            ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>(),
-            bool IsFixed = true)
-      : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, IsFixed, &OrigValue) {}
+            ArrayRef<ISD::ArgFlagsTy> Flags = ArrayRef<ISD::ArgFlagsTy>())
+        : ArgInfo(Regs, OrigValue.getType(), OrigIndex, Flags, &OrigValue) {}
 
     ArgInfo() = default;
   };
