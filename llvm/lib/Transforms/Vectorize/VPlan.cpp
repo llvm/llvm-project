@@ -1017,16 +1017,6 @@ void VPlan::execute(VPTransformState *State) {
     Block->execute(State);
 
   State->CFG.DTU.flush();
-  auto *ScalarPH = getScalarPreheader();
-
-  // Set the underlying value of the vector trip count VPValue to the generated
-  // vector trip count by accessing the incoming value from the resume phi.
-  // TODO: This is needed, as the epilogue skeleton generation code needs to
-  // access the IR value. Remove once skeleton is modeled completely in VPlan.
-  if (!getVectorTripCount().getLiveInIRValue() &&
-      ScalarPH->getNumPredecessors() > 0)
-    getVectorTripCount().setUnderlyingValue(
-        State->get(cast<VPPhi>(&*ScalarPH->begin())->getOperand(0), true));
 
   VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
   if (!Header)
@@ -1041,21 +1031,6 @@ void VPlan::execute(VPTransformState *State) {
     // Skip phi-like recipes that generate their backedege values themselves.
     if (isa<VPWidenPHIRecipe>(&R))
       continue;
-
-    if (auto *WidenPhi = dyn_cast<VPWidenPointerInductionRecipe>(&R)) {
-      assert(!WidenPhi->onlyScalarsGenerated(State->VF.isScalable()) &&
-             "recipe generating only scalars should have been replaced");
-      auto *GEP = cast<GetElementPtrInst>(State->get(WidenPhi));
-      PHINode *Phi = cast<PHINode>(GEP->getPointerOperand());
-
-      Phi->setIncomingBlock(1, VectorLatchBB);
-
-      // Move the last step to the end of the latch block. This ensures
-      // consistent placement of all induction updates.
-      Instruction *Inc = cast<Instruction>(Phi->getIncomingValue(1));
-      Inc->moveBefore(std::prev(VectorLatchBB->getTerminator()->getIterator()));
-      continue;
-    }
 
     auto *PhiR = cast<VPSingleDefRecipe>(&R);
     // VPInstructions currently model scalar Phis only.

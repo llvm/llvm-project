@@ -221,7 +221,7 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[ENTRY]] ]
 ; VF8UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF1:       [[LOOP]]:
-; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF8UF1-NEXT:    [[GEP_DST:%.*]] = getelementptr i16, ptr [[DST]], i64 [[IV]]
 ; VF8UF1-NEXT:    store i16 0, ptr [[GEP_DST]], align 2
 ; VF8UF1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -362,7 +362,7 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[ENTRY]] ]
 ; VF8UF2-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF2:       [[LOOP]]:
-; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF8UF2-NEXT:    [[GEP_DST:%.*]] = getelementptr i16, ptr [[DST]], i64 [[IV]]
 ; VF8UF2-NEXT:    store i16 0, ptr [[GEP_DST]], align 2
 ; VF8UF2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -502,7 +502,7 @@ define void @remove_loop_region_with_replicate_recipe(ptr %dst, i64 range(i64 5,
 ; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 2, %[[ENTRY]] ]
 ; VF16UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF16UF1:       [[LOOP]]:
-; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ 2, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF16UF1-NEXT:    [[GEP_DST:%.*]] = getelementptr i16, ptr [[DST]], i64 [[IV]]
 ; VF16UF1-NEXT:    store i16 0, ptr [[GEP_DST]], align 2
 ; VF16UF1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -785,7 +785,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF1:       [[LOOP]]:
-; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF8UF1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF8UF1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[STEP]]
 ; VF8UF1-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_NEXT]]
 ; VF8UF1-NEXT:    store i8 0, ptr [[GEP_DST]], align 1
@@ -979,7 +979,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF8UF2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF8UF2-NEXT:    br label %[[LOOP:.*]]
 ; VF8UF2:       [[LOOP]]:
-; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF8UF2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF8UF2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[STEP]]
 ; VF8UF2-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_NEXT]]
 ; VF8UF2-NEXT:    store i8 0, ptr [[GEP_DST]], align 1
@@ -1172,7 +1172,7 @@ define void @scev_expand_step(i64 %x, ptr %dst) {
 ; VF16UF1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; VF16UF1-NEXT:    br label %[[LOOP:.*]]
 ; VF16UF1:       [[LOOP]]:
-; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; VF16UF1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; VF16UF1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], [[STEP]]
 ; VF16UF1-NEXT:    [[GEP_DST:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV_NEXT]]
 ; VF16UF1-NEXT:    store i8 0, ptr [[GEP_DST]], align 1

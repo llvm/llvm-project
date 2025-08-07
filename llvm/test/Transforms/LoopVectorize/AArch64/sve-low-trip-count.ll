@@ -34,7 +34,7 @@ define void @trip7_i64(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_06:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_06:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[I_06]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = shl nsw i64 [[TMP8]], 1
