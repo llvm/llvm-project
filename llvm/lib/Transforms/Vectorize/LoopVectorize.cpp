@@ -354,6 +354,10 @@ static cl::opt<bool> PreferPredicatedReductionSelect(
     cl::desc(
         "Prefer predicating a reduction operation over an after loop select."));
 
+static cl::opt<bool> PreferControlFlow(
+    "prefer-control-flow", cl::init(false), cl::Hidden,
+    cl::desc("Generate control flow inside the vector region."));
+
 cl::opt<bool> llvm::EnableVPlanNativePath(
     "enable-vplan-native-path", cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
@@ -8456,6 +8460,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
           !VPlanTransforms::runPass(VPlanTransforms::tryAddExplicitVectorLength,
                                     *Plan, CM.getMaxSafeElements()))
         break;
+      if (PreferControlFlow || TTI.preferControlFlow())
+        VPlanTransforms::optimizeConditionalVPBB(*Plan);
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
     }
