@@ -3283,8 +3283,10 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
                                                  bool TailByMasking,
                                                  bool RequiresScalarEpilogue) {
   VPValue &VectorTC = Plan.getVectorTripCount();
-  if (VectorTC.getNumUsers() == 0 ||
-      (VectorTC.isLiveIn() && VectorTC.getLiveInIRValue()))
+  assert(VectorTC.isLiveIn() && "vector-trip-count must be a live-in");
+  // There's nothing to do if there are no users of the vector trip count or its
+  // IR value has already been set.
+  if (VectorTC.getNumUsers() == 0 || VectorTC.getLiveInIRValue())
     return;
   VPValue *TC = Plan.getTripCount();
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(TC);
@@ -3306,7 +3308,7 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
         {TC, Builder.createNaryOp(
                  Instruction::Sub,
                  {Step, Plan.getOrAddLiveIn(ConstantInt::get(TCTy, 1))})},
-        DebugLoc::getUnknown(), "n.rnd.up");
+        DebugLoc::getCompilerGenerated(), "n.rnd.up");
   }
 
   // Now we need to generate the expression for the part of the loop that the
@@ -3314,8 +3316,9 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   // iterations are not required for correctness, or N - Step, otherwise. Step
   // is equal to the vectorization factor (number of SIMD elements) times the
   // unroll factor (number of SIMD instructions).
-  VPValue *R = Builder.createNaryOp(Instruction::URem, {TC, Step},
-                                    DebugLoc::getUnknown(), "n.mod.vf");
+  VPValue *R =
+      Builder.createNaryOp(Instruction::URem, {TC, Step},
+                           DebugLoc::getCompilerGenerated(), "n.mod.vf");
 
   // There are cases where we *must* run at least one iteration in the remainder
   // loop.  See the cost model for when this can happen.  If the step evenly
@@ -3330,7 +3333,7 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   }
 
   auto Res = Builder.createNaryOp(Instruction::Sub, {TC, R},
-                                  DebugLoc::getUnknown(), "n.vec");
+                                  DebugLoc::getCompilerGenerated(), "n.vec");
   Plan.getVectorTripCount().replaceAllUsesWith(Res);
 }
 

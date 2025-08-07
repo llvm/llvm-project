@@ -599,7 +599,6 @@ protected:
   /// vector elements.
   ElementCount VF;
 
-public:
   ElementCount MinProfitableTripCount;
 
   /// The vectorization unroll factor to use. Each scalar is vectorized to this
