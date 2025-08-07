@@ -350,7 +350,6 @@ void ProcedureRef::DetermineCopyInOut() {
       DetermineCopyInOutArgument(
           *procInfo, *actual, procInfo->dummyArguments[index], sc);
     }
-
     ++index;
   }
 }
