@@ -598,6 +598,16 @@ Interpreter::Visit(const ScalarLiteralNode *node) {
     auto type = PickLiteralType(type_system, m_exe_ctx_scope, node);
     if (type) {
       Scalar scalar = node->GetValue();
+      // APInt from StringRef::getAsInteger comes with just enough bitwidth to
+      // hold the value. This adjusts APInt bitwidth to match the compiler type.
+      if (scalar.GetType() == scalar.e_int) {
+        auto apsint = scalar.GetAPSInt();
+        auto type_bitsize = type->GetBitSize(m_exe_ctx_scope.get());
+        if (type_bitsize) {
+          llvm::APInt adjusted = apsint.zextOrTrunc(*type_bitsize);
+          scalar = Scalar(adjusted);
+        }
+      }
       return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
                                                       "result");
     } else
