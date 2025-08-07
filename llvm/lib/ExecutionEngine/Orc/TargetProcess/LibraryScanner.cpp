@@ -51,26 +51,27 @@ void handleError(Error Err, StringRef context = "") {
   }));
 }
 
-template <typename T>
-T handleErrorAndReturn(Error Err, T ReturnValue, StringRef context = "") {
-  handleError(std::move(Err), context);
-  return ReturnValue;
-}
-
-template <typename T>
-T handleExpectedAndReturn(Expected<T> &&ValOrErr, T ReturnValue,
-                          StringRef context = "") {
-  if (!ValOrErr)
-    return handleErrorAndReturn(ValOrErr.takeError(), ReturnValue, context);
-  return *ValOrErr;
-}
-
 bool ObjectFileLoader::isArchitectureCompatible(const object::ObjectFile &Obj) {
   Triple HostTriple(sys::getDefaultTargetTriple());
-  auto HostArch = HostTriple.getArch();
   Triple ObjTriple = Obj.makeTriple();
 
-  return HostArch == ObjTriple.getArch();
+  LLVM_DEBUG({
+    dbgs() << "Host triple: " << HostTriple.str()
+           << ", Object triple: " << ObjTriple.str() << "\n";
+  });
+
+  if (HostTriple.getArch() != ObjTriple.getArch())
+    return false;
+
+  if (ObjTriple.getOS() != Triple::UnknownOS &&
+      HostTriple.getOS() != ObjTriple.getOS())
+    return false;
+
+  if (ObjTriple.getEnvironment() != Triple::UnknownEnvironment &&
+      HostTriple.getEnvironment() != ObjTriple.getEnvironment())
+    return false;
+
+  return true;
 }
 
 Expected<object::OwningBinary<object::ObjectFile>>
@@ -159,7 +160,21 @@ ObjectFileLoader::loadObjectFileWithOwnership(StringRef FilePath) {
 
 template <class ELFT>
 bool isELFSharedLibrary(const object::ELFFile<ELFT> &ELFObj) {
-  return ELFObj.getHeader().e_type == ELF::ET_DYN;
+  if (ELFObj.getHeader().e_type != ELF::ET_DYN)
+    return false;
+
+  auto PHOrErr = ELFObj.program_headers();
+  if (!PHOrErr) {
+    consumeError(PHOrErr.takeError());
+    return true;
+  }
+
+  for (auto Phdr : *PHOrErr) {
+    if (Phdr.p_type == ELF::PT_INTERP)
+      return false;
+  }
+
+  return true;
 }
 
 bool isSharedLibraryObject(object::ObjectFile &Obj) {
@@ -211,23 +226,56 @@ bool DylibPathValidator::isSharedLibrary(StringRef Path) {
     return false;
   }
 
-  ObjectFileLoader ObjLoader(Path);
+  file_magic MagicCode;
+  identify_magic(Path, MagicCode);
 
-  auto ObjOrErr = ObjLoader.getObjectFile();
-
-  if (!ObjOrErr) {
-    consumeError(ObjOrErr.takeError());
+  // Skip archives.
+  if (MagicCode == file_magic::archive)
     return false;
+
+    // Universal binary handling.
+#if defined(__APPLE__)
+  if (MagicCode == file_magic::macho_universal_binary) {
+    ObjectFileLoader ObjLoader(Path);
+    auto ObjOrErr = ObjLoader.getObjectFile();
+    if (!ObjOrErr) {
+      consumeError(ObjOrErr.takeError());
+      return false;
+    }
+    return isSharedLibraryObject(ObjOrErr.get());
   }
+#endif
 
-  object::ObjectFile &Obj = ObjOrErr.get();
+  // Object file inspection for PE/COFF, ELF, and Mach-O
+  bool NeedsObjectInspection =
+#if defined(_WIN32)
+      (MagicCode == file_magic::pecoff_executable);
+#elif defined(__APPLE__)
+      (MagicCode == file_magic::macho_fixed_virtual_memory_shared_lib ||
+       MagicCode == file_magic::macho_dynamically_linked_shared_lib ||
+       MagicCode == file_magic::macho_dynamically_linked_shared_lib_stub);
+#elif defined(LLVM_ON_UNIX)
+#ifdef __CYGWIN__
+      (MagicCode == file_magic::pecoff_executable);
+#else
+      (MagicCode == file_magic::elf_shared_object);
+#endif
+#else
+#error "Unsupported platform."
+#endif
 
-  if (isSharedLibraryObject(Obj))
-    return true;
+  if (NeedsObjectInspection) {
+    ObjectFileLoader ObjLoader(Path);
+    auto ObjOrErr = ObjLoader.getObjectFile();
+    if (!ObjOrErr) {
+      consumeError(ObjOrErr.takeError());
+      return false;
+    }
+    return isSharedLibraryObject(ObjOrErr.get());
+  }
 
   LLVM_DEBUG(dbgs() << "Path is not identified as a shared library: " << Path
                     << "\n";);
-
   return false;
 }
 
@@ -849,11 +897,7 @@ Expected<LibraryDepsInfo> LibraryScanner::extractDeps(StringRef filePath) {
   auto ObjOrErr = ObjLoader.getObjectFile();
   if (!ObjOrErr) {
     LLVM_DEBUG(dbgs() << "extractDeps: Failed to open " << filePath << "\n";);
-    return handleErrorAndReturn(ObjOrErr.takeError(),
-                                createStringError(std::errc::file_exists,
-                                                  "Failed to open %s",
-                                                  filePath.str().c_str()),
-                                "LibraryScanner::extractDeps");
+    return ObjOrErr.takeError();
   }
 
   object::ObjectFile *Obj = &ObjOrErr.get();
