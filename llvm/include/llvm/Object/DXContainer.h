@@ -603,6 +603,10 @@ private:
   }
 
 public:
+  const DXContainer &getDXContainer() const {
+    return Container;
+  }
+
   static bool classof(const Binary *v) { return v->isDXContainer(); }
 
   Expected<StringRef> getSymbolName(DataRefImpl) const override;
