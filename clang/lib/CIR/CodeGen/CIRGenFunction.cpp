@@ -28,8 +28,6 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder) {
   ehStack.setCGF(this);
-  currentCleanupStackDepth = 0;
-  assert(ehStack.getStackDepth() == 0);
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -409,6 +407,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
 
+  prologueCleanupDepth = ehStack.stable_begin();
+
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
 
@@ -475,11 +475,11 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
   // TODO(cir): Use prologueCleanupDepth here.
-  bool hasCleanups = ehStack.getStackDepth() != currentCleanupStackDepth;
+  bool hasCleanups = ehStack.stable_begin() != prologueCleanupDepth;
   if (hasCleanups) {
     assert(!cir::MissingFeatures::generateDebugInfo());
     // FIXME(cir): should we clearInsertionPoint? breaks many testcases
-    popCleanupBlocks(currentCleanupStackDepth);
+    popCleanupBlocks(prologueCleanupDepth);
   }
 }
 

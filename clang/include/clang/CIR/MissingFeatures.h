@@ -199,6 +199,7 @@ struct MissingFeatures {
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool deferredCXXGlobalInit() { return false; }
   static bool ehCleanupFlags() { return false; }
+  static bool ehCleanupScope() { return false; }
   static bool ehstackBranches() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
