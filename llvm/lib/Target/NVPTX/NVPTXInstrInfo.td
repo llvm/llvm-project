@@ -151,6 +151,8 @@ class OneUse2<SDPatternOperator operator>
 class fpimm_pos_inf<ValueType vt>
     : FPImmLeaf<vt, [{ return Imm.isPosInfinity(); }]>;
 
+class zeroinitializer<ValueType vt> : 
+  PatLeaf<(vt (bitconvert (!cast<ValueType>("i" # vt.Size) 0)))>;
 
 
 // Operands which can hold a Register or an Immediate.
@@ -343,6 +345,36 @@ multiclass FMINIMUMMAXIMUM<string OpcStr, bit NaN, SDNode OpNode> {
                OpcStr # nan_str # ".bf16x2",
                [(set v2bf16:$dst, (OpNode v2bf16:$a, v2bf16:$b))]>,
                Requires<[hasBF16Math, hasSM<80>, hasPTX<70>]>;
+}
+
+// Template for 3-input minimum/maximum instructions
+// (sm_100+/PTX 8.8 and f32 only)
+//
+// Also defines ftz (flush subnormal inputs and results to sign-preserving
+// zero) variants for fp32 functions.
+multiclass FMINIMUMMAXIMUM3<string OpcStr, bit NaN, SDNode OpNode> {
+  defvar nan_str = !if(NaN, ".NaN", "");
+   def f32rrr :
+     BasicFlagsNVPTXInst<(outs B32:$dst),
+               (ins B32:$a, B32:$b, B32:$c),
+               (ins FTZFlag:$ftz),
+               OpcStr # "$ftz" # nan_str # ".f32",
+               [(set f32:$dst, (OpNode f32:$a, f32:$b, f32:$c))]>,
+               Requires<[hasPTX<88>, hasSM<100>]>;
+   def f32rri :
+     BasicFlagsNVPTXInst<(outs B32:$dst),
+               (ins B32:$a, B32:$b, f32imm:$c),
+               (ins FTZFlag:$ftz),
+               OpcStr # "$ftz" # nan_str # ".f32",
+               [(set f32:$dst, (OpNode f32:$a, f32:$b, fpimm:$c))]>,
+               Requires<[hasPTX<88>, hasSM<100>]>;
+   def f32rii :
+     BasicFlagsNVPTXInst<(outs B32:$dst),
+               (ins B32:$a, f32imm:$b, f32imm:$c),
+               (ins FTZFlag:$ftz),
+               OpcStr # "$ftz" # nan_str # ".f32",
+               [(set f32:$dst, (OpNode f32:$a, fpimm:$b, fpimm:$c))]>,
+               Requires<[hasPTX<88>, hasSM<100>]>;
 }
 
 // Template for instructions which take three FP args.  The
@@ -789,6 +821,23 @@ def UMAX16x2 : I16x2<"max.u", umax>;
 def SMIN16x2 : I16x2<"min.s", smin>;
 def UMIN16x2 : I16x2<"min.u", umin>;
 
+let Predicates = [hasPTX<80>, hasSM<90>] in {
+
+  def MIN_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+                     "min.relu.s32",
+                     [(set i32:$dst, (smax (smin i32:$a, i32:$b), 0))]>;
+  def MAX_RELU_S32 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+                     "max.relu.s32",
+                     [(set i32:$dst, (smax (smax i32:$a, i32:$b), 0))]>;
+  def MIN_RELU_S16x2 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+                     "min.relu.s16x2",
+                     [(set v2i16:$dst, (smax (smin v2i16:$a, v2i16:$b),
+                                             zeroinitializer<v2i16>))]>;
+  def MAX_RELU_S16x2 : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+                     "max.relu.s16x2",
+                     [(set v2i16:$dst, (smax (smax v2i16:$a, v2i16:$b),
+                                             zeroinitializer<v2i16>))]>;
+}
 
 //
 // Wide multiplication
@@ -880,6 +929,20 @@ defm MIN : FMINIMUMMAXIMUM<"min", /* NaN */ false, fminnum>;
 defm MAX : FMINIMUMMAXIMUM<"max", /* NaN */ false, fmaxnum>;
 defm MIN_NAN : FMINIMUMMAXIMUM<"min", /* NaN */ true, fminimum>;
 defm MAX_NAN : FMINIMUMMAXIMUM<"max", /* NaN */ true, fmaximum>;
+
+def nvptx_fminnum3 : SDNode<"NVPTXISD::FMINNUM3", SDTFPTernaryOp,
+                            [SDNPCommutative]>;
+def nvptx_fmaxnum3 : SDNode<"NVPTXISD::FMAXNUM3", SDTFPTernaryOp,
+                             [SDNPCommutative]>;
+def nvptx_fminimum3 : SDNode<"NVPTXISD::FMINIMUM3", SDTFPTernaryOp,
+                             [SDNPCommutative]>;
+def nvptx_fmaximum3 : SDNode<"NVPTXISD::FMAXIMUM3", SDTFPTernaryOp,
+                             [SDNPCommutative]>;
+
+defm FMIN3 : FMINIMUMMAXIMUM3<"min", /* NaN */ false, nvptx_fminnum3>;
+defm FMAX3 : FMINIMUMMAXIMUM3<"max", /* NaN */ false, nvptx_fmaxnum3>;
+defm FMINNAN3 : FMINIMUMMAXIMUM3<"min", /* NaN */ true, nvptx_fminimum3>;
+defm FMAXNAN3 : FMINIMUMMAXIMUM3<"max", /* NaN */ true, nvptx_fmaximum3>;
 
 defm FABS  : F2<"abs", fabs>;
 defm FNEG  : F2<"neg", fneg>;
@@ -1540,18 +1603,6 @@ def : Pat<(setcc (i16 (sext_inreg (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel
           (SETP_i32rr (PRMT_B32rii i32:$a, 0, (to_sign_extend_selector $sel_a), PrmtNONE),
                       (PRMT_B32rii i32:$b, 0, (to_sign_extend_selector $sel_b), PrmtNONE),
                       (cond2cc $cc))>;
-
-// A 16-bit comparison of truncated byte extracts can be be converted to 32-bit
-// comparison because we know that the truncate is just trancating off zeros
-// and that the most-significant byte is also zeros so the meaning of signed and
-// unsigned comparisons will not be changed.
-def : Pat<(setcc (i16 (trunc (prmt i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE))),
-                 (i16 (trunc (prmt i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE))),
-                 cond:$cc),
-          (SETP_i32rr (PRMT_B32rii i32:$a, 0, byte_extract_prmt:$sel_a, PrmtNONE),
-                      (PRMT_B32rii i32:$b, 0, byte_extract_prmt:$sel_b, PrmtNONE),
-                      (cond2cc $cc))>;
-
 
 def SDTDeclareArrayParam :
   SDTypeProfile<0, 3, [SDTCisVT<0, i32>, SDTCisVT<1, i32>, SDTCisVT<2, i32>]>;
@@ -2379,9 +2430,6 @@ def fpimm_any_zero : FPImmLeaf<fAny, [{
   return Imm.isZero();
 }]>;
 
-def fpimm_positive_zero_v2f16 : PatFrag<(ops), (v2f16 (bitconvert (i32 0)))>;
-def fpimm_positive_zero_v2bf16 : PatFrag<(ops), (v2bf16 (bitconvert (i32 0)))>;
-
 // Perform substitution if fma only has one use, and also if instruction has
 // nnan instruction flag or if the TM has NoNaNsFPMath
 def NVPTX_fma_oneuse_and_nnan : PatFrag<(ops node:$a, node:$b, node:$c),
@@ -2404,10 +2452,10 @@ class FMARELUInst<RegTyInfo t, bit allow_ftz, PatFrag zero_pat>
 
 let Predicates = [useFP16Math, hasPTX<70>, hasSM<80>] in {
   def FMARELU_F16 : FMARELUInst<F16RT, true, fpimm_any_zero>;
-  def FMARELU_F16X2 : FMARELUInst<F16X2RT, true, fpimm_positive_zero_v2f16>;
+  def FMARELU_F16X2 : FMARELUInst<F16X2RT, true, zeroinitializer<v2f16>>;
 }
 
 let Predicates = [hasBF16Math, hasPTX<70>, hasSM<80>] in {
   def FMARELU_BF16 : FMARELUInst<BF16RT, false, fpimm_any_zero>;
-  def FMARELU_BF16X2 : FMARELUInst<BF16X2RT, false, fpimm_positive_zero_v2bf16>;
+  def FMARELU_BF16X2 : FMARELUInst<BF16X2RT, false, zeroinitializer<v2bf16>>;
 }
