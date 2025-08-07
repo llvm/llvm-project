@@ -1947,9 +1947,9 @@ def Vector_MaskedLoadOp :
                    "ValueRange":$indices,
                    "Value":$mask,
                    "Value":$passthrough,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, mask, passthrough,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
                                     nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
@@ -1957,9 +1957,9 @@ def Vector_MaskedLoadOp :
                    "ValueRange":$indices,
                    "Value":$mask,
                    "Value":$passthrough,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, mask, passthrough,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
                                     nullptr);
     }]>
   ];
@@ -2037,9 +2037,9 @@ def Vector_MaskedStoreOp :
                    "ValueRange":$indices,
                    "Value":$mask,
                    "Value":$valueToStore,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
       return build($_builder, $_state, base, indices, mask, valueToStore,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
                                     nullptr);
     }]>
   ];
