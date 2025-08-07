@@ -42,7 +42,7 @@ public:
                                                       StringRef inputFormat);
 
 protected:
-  XeVMTargetAttr target;
+  XeVMTargetAttr xeTarget;
   /// List of LLVM bitcode to link into after translation to LLVM IR.
   /// The attributes can be StringAttr pointing to a file path, or
   /// a Resource blob pointing to the LLVM bitcode in-memory.

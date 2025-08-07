@@ -76,16 +76,16 @@ void mlir::xevm::registerXeVMTargetInterfaceExternalModels(
 }
 
 SerializeGPUModuleBase::SerializeGPUModuleBase(
-    Operation &module, XeVMTargetAttr target,
+    Operation &module, XeVMTargetAttr xeTarget,
     const gpu::TargetOptions &targetOptions)
-    : ModuleToObject(module, target.getTriple(), "", {}, target.getO()),
-      target(target), librariesToLink(targetOptions.getLibrariesToLink()) {
-  if (target.getLinkFiles())
-    librariesToLink.append(target.getLinkFiles().begin(),
-                           target.getLinkFiles().end());
+    : ModuleToObject(module, xeTarget.getTriple(), "", {}, xeTarget.getO()),
+      xeTarget(xeTarget), librariesToLink(targetOptions.getLibrariesToLink()) {
+  if (xeTarget.getLinkFiles())
+    librariesToLink.append(xeTarget.getLinkFiles().begin(),
+                           xeTarget.getLinkFiles().end());
 }
 
-XeVMTargetAttr SerializeGPUModuleBase::getTarget() const { return target; }
+XeVMTargetAttr SerializeGPUModuleBase::getTarget() const { return xeTarget; }
 
 std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
 SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module) {
@@ -236,9 +236,9 @@ std::optional<std::string> SerializeGPUModuleBase::findTool(StringRef tool) {
 namespace {
 class SpirSerializer : public SerializeGPUModuleBase {
 public:
-  SpirSerializer(Operation &module, XeVMTargetAttr target,
+  SpirSerializer(Operation &module, XeVMTargetAttr xeTarget,
                  const gpu::TargetOptions &targetOptions)
-      : SerializeGPUModuleBase(module, target, targetOptions) {}
+      : SerializeGPUModuleBase(module, xeTarget, targetOptions) {}
 
   static void init();
 
@@ -362,8 +362,8 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
     module->emitError("expected to be a gpu.module op");
     return std::nullopt;
   }
-  auto target = cast<XeVMTargetAttr>(attribute);
-  if (target.getTriple().starts_with("spir")) {
+  auto xeTarget = cast<XeVMTargetAttr>(attribute);
+  if (xeTarget.getTriple().starts_with("spir")) {
     gpuMod.walk([&](LLVM::LLVMFuncOp funcOp) {
       if (funcOp->hasAttr(gpu::GPUDialect::getKernelFuncAttrName())) {
         funcOp.setIntelReqdSubGroupSize(16);
@@ -383,7 +383,7 @@ XeVMTargetAttrImpl::serializeToObject(Attribute attribute, Operation *module,
 
     return serializer.run();
   }
-  module->emitError("Unsupported XeVM target triple: ") << target.getTriple();
+  module->emitError("Unsupported XeVM target triple: ") << xeTarget.getTriple();
   return std::nullopt;
 }
 
@@ -393,11 +393,11 @@ XeVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
                                  const gpu::TargetOptions &options) const {
   Builder builder(attribute.getContext());
   gpu::CompilationTarget format = options.getCompilationTarget();
-  auto target = cast<XeVMTargetAttr>(attribute);
+  auto xeTarget = cast<XeVMTargetAttr>(attribute);
   SmallVector<NamedAttribute, 2> properties;
   if (format == gpu::CompilationTarget::Assembly)
     properties.push_back(
-        builder.getNamedAttr("O", builder.getI32IntegerAttr(target.getO())));
+        builder.getNamedAttr("O", builder.getI32IntegerAttr(xeTarget.getO())));
 
   DictionaryAttr objectProps;
   if (!properties.empty())
