@@ -95,6 +95,8 @@ STATISTIC(NumOnly1PreRA,
           "Number of scheduling units chosen for Only1 heuristic pre-RA");
 STATISTIC(NumPhysRegPreRA,
           "Number of scheduling units chosen for PhysReg heuristic pre-RA");
+STATISTIC(NumLiveReducePreRA,
+          "Number of scheduling units chosen for LiveReduce heuristic pre-RA");
 STATISTIC(NumRegExcessPreRA,
           "Number of scheduling units chosen for RegExcess heuristic pre-RA");
 STATISTIC(NumRegCriticalPreRA,
@@ -140,6 +142,8 @@ STATISTIC(NumOnly1PostRA,
           "Number of scheduling units chosen for Only1 heuristic post-RA");
 STATISTIC(NumPhysRegPostRA,
           "Number of scheduling units chosen for PhysReg heuristic post-RA");
+STATISTIC(NumLiveReducePostRA,
+          "Number of scheduling units chosen for LiveReduce heuristic post-RA");
 STATISTIC(NumRegExcessPostRA,
           "Number of scheduling units chosen for RegExcess heuristic post-RA");
 STATISTIC(
@@ -3538,6 +3542,9 @@ static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
     case GenericScheduler::PhysReg:
       NumPhysRegPostRA++;
       return;
+    case GenericScheduler::LivenessReduce:
+      NumLiveReducePostRA++;
+      return;
     case GenericScheduler::RegExcess:
       NumRegExcessPostRA++;
       return;
@@ -3596,6 +3603,9 @@ static void tracePick(GenericSchedulerBase::CandReason Reason, bool IsTop,
       return;
     case GenericScheduler::PhysReg:
       NumPhysRegPreRA++;
+      return;
+    case GenericScheduler::LivenessReduce:
+      NumLiveReducePreRA++;
       return;
     case GenericScheduler::RegExcess:
       NumRegExcessPreRA++;

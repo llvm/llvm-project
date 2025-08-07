@@ -34,7 +34,7 @@
 
 namespace llvm {
 
-/// A MachineSchedStrategy implementation for SystemZ pre RA  scheduling.
+/// A MachineSchedStrategy implementation for SystemZ pre RA scheduling.
 class SystemZPreRASchedStrategy : public GenericScheduler {
   // The FP/Vector registers are prioritized during scheduling.
   std::set<unsigned> PrioRegClasses;

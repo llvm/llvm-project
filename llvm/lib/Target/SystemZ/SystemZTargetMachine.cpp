@@ -222,10 +222,7 @@ SystemZTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
       !C->MF->getSubtarget().getSchedModel().hasInstrSchedModel())
     return nullptr;
 
-  ScheduleDAGMILive *DAG =
-      new ScheduleDAGMILive(C, std::make_unique<SystemZPreRASchedStrategy>(C));
-  DAG->addMutation(createCopyConstrainDAGMutation(DAG->TII, DAG->TRI));
-  return DAG;
+  return createSchedLive<SystemZPreRASchedStrategy>(C);
 }
 
 ScheduleDAGInstrs *
