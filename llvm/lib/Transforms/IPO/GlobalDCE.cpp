@@ -42,9 +42,8 @@ public:
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
-    // Note: GlobalDCEPass does not use MAM. That
-    // means we can get away with init and pass
-    // as arg.
+    // Note: GlobalDCEPass does not use any analyses, so we're safe to call the
+    // new-pm style pass with a default-initialized analysis manager here
     ModuleAnalysisManager MAM;
     auto PA = Impl.run(M, MAM);
     return !PA.areAllPreserved();
