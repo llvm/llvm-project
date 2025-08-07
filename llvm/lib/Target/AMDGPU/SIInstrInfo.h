@@ -210,8 +210,7 @@ protected:
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     const MachineOperand *fromMO, unsigned toIdx,
-                     const MachineOperand *toMO) const;
+                     unsigned toIdx) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -711,6 +710,12 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
+  /// SCRATCH_ memory operands.
+  /// Conservatively correct; will return true if \p MI cannot be proven
+  /// to not hit scratch.
+  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
@@ -727,12 +732,6 @@ public:
   }
 
 #if LLPC_BUILD_NPI
-  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
-  /// SCRATCH_ memory operands.
-  /// Conservatively correct; will return true if \p MI cannot be proven
-  /// to not hit scratch.
-  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
-
   static bool isVLdStIdx(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::V_LOAD_IDX:
@@ -955,8 +954,11 @@ public:
     case AMDGPU::CLUSTER_LOAD_B128_SADDR:
     case AMDGPU::CLUSTER_LOAD_B128_LANESHARED_SADDR:
     case AMDGPU::DS_LOAD_MCAST_B32:
+    case AMDGPU::DS_LOAD_MCAST_B32_LANESHARED:
     case AMDGPU::DS_LOAD_MCAST_B64:
+    case AMDGPU::DS_LOAD_MCAST_B64_LANESHARED:
     case AMDGPU::DS_LOAD_MCAST_B128:
+    case AMDGPU::DS_LOAD_MCAST_B128_LANESHARED:
     case AMDGPU::DDS_LOAD_MCAST_B32:
     case AMDGPU::DDS_LOAD_MCAST_B32_LANESHARED:
     case AMDGPU::DDS_LOAD_MCAST_B32_SADDR:

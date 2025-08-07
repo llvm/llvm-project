@@ -190,6 +190,36 @@ private:
   /// Emit comments in assembly output if this is true.
   bool VerboseAsm;
 
+  /// Store symbols and type identifiers used to create callgraph section
+  /// entries related to a function.
+  struct FunctionInfo {
+    /// Numeric type identifier used in callgraph section for indirect calls
+    /// and targets.
+    using CGTypeId = uint64_t;
+
+    /// Enumeration of function kinds, and their mapping to function kind values
+    /// stored in callgraph section entries.
+    /// Must match the enum in llvm/tools/llvm-objdump/llvm-objdump.cpp.
+    enum class FunctionKind : uint64_t {
+      /// Function cannot be target to indirect calls.
+      NOT_INDIRECT_TARGET = 0,
+
+      /// Function may be target to indirect calls but its type id is unknown.
+      INDIRECT_TARGET_UNKNOWN_TID = 1,
+
+      /// Function may be target to indirect calls and its type id is known.
+      INDIRECT_TARGET_KNOWN_TID = 2,
+    };
+
+    /// Map type identifiers to callsite labels. Labels are generated for each
+    /// indirect callsite in the function.
+    SmallVector<std::pair<CGTypeId, MCSymbol *>> CallSiteLabels;
+  };
+
+  enum CallGraphSectionFormatVersion : uint64_t {
+    V_0 = 0,
+  };
+
   /// Output stream for the stack usage file (i.e., .su file).
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
 
@@ -355,6 +385,13 @@ public:
   /// are available. Returns empty string otherwise.
   StringRef getConstantSectionSuffix(const Constant *C) const;
 
+  /// Generate and emit labels for callees of the indirect callsites which will
+  /// be used to populate the .callgraph section.
+  void emitIndirectCalleeLabels(
+      FunctionInfo &FuncInfo,
+      const MachineFunction::CallSiteInfoMap &CallSitesInfoMap,
+      const MachineInstr &MI);
+
   //===------------------------------------------------------------------===//
   // XRay instrumentation implementation.
   //===------------------------------------------------------------------===//
@@ -441,6 +478,8 @@ public:
 
   void emitKCFITrapEntry(const MachineFunction &MF, const MCSymbol *Symbol);
   virtual void emitKCFITypeId(const MachineFunction &MF);
+
+  void emitCallGraphSection(const MachineFunction &MF, FunctionInfo &FuncInfo);
 
   void emitPseudoProbe(const MachineInstr &MI);
 

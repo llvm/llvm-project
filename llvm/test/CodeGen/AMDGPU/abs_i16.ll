@@ -8,6 +8,7 @@
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1100 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-TRUE16 %s
 ; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX12,GFX12-FAKE16 %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=gfx1300 < %s | FileCheck -check-prefix=GFX13 %s
 
 define i16 @abs_i16(i16 %arg) {
 ; GFX6-LABEL: abs_i16:
@@ -86,6 +87,18 @@ define i16 @abs_i16(i16 %arg) {
 ; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-FAKE16-NEXT:    v_max_i16 v0, v0, v1
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: abs_i16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_sub_nc_u16 v1, 0, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_max_i16 v0, v0, v1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %res = call i16 @llvm.abs.i16(i16 %arg, i1 false)
   ret i16 %res
 }
@@ -161,6 +174,18 @@ define <2 x i16> @v_abs_v2i16(<2 x i16> %arg) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_pk_max_i16 v0, v0, v1
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: v_abs_v2i16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_pk_sub_i16 v1, 0, v0
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-NEXT:    v_pk_max_i16 v0, v0, v1
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <2 x i16> @llvm.abs.v2i16(<2 x i16> %arg, i1 false)
   ret <2 x i16> %res
 }
@@ -254,6 +279,20 @@ define <3 x i16> @v_abs_v3i16(<3 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_max_i16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_max_i16 v1, v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: v_abs_v3i16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_pk_sub_i16 v2, 0, v0
+; GFX13-NEXT:    v_pk_sub_i16 v3, 0, v1
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_pk_max_i16 v0, v0, v2
+; GFX13-NEXT:    v_pk_max_i16 v1, v1, v3
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <3 x i16> @llvm.abs.v3i16(<3 x i16> %arg, i1 false)
   ret <3 x i16> %res
 }
@@ -362,6 +401,20 @@ define <4 x i16> @v_abs_v4i16(<4 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_max_i16 v0, v0, v2
 ; GFX12-NEXT:    v_pk_max_i16 v1, v1, v3
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: v_abs_v4i16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_pk_sub_i16 v2, 0, v0
+; GFX13-NEXT:    v_pk_sub_i16 v3, 0, v1
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-NEXT:    v_pk_max_i16 v0, v0, v2
+; GFX13-NEXT:    v_pk_max_i16 v1, v1, v3
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <4 x i16> @llvm.abs.v4i16(<4 x i16> %arg, i1 false)
   ret <4 x i16> %res
 }
@@ -501,6 +554,34 @@ define <6 x i16> @v_abs_v6i16(<6 x i16> %arg) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-NEXT:    v_pk_max_i16 v2, v2, v5
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: v_abs_v6i16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_dual_lshrrev_b32 v3, 16, v2 :: v_dual_lshrrev_b32 v4, 16, v1
+; GFX13-NEXT:    v_lshrrev_b32_e32 v5, 16, v0
+; GFX13-NEXT:    v_sub_nc_u16 v6, 0, v2
+; GFX13-NEXT:    v_sub_nc_u16 v7, 0, v1
+; GFX13-NEXT:    v_sub_nc_u16 v8, 0, v0
+; GFX13-NEXT:    v_sub_nc_u16 v9, 0, v3
+; GFX13-NEXT:    v_sub_nc_u16 v10, 0, v5
+; GFX13-NEXT:    v_sub_nc_u16 v11, 0, v4
+; GFX13-NEXT:    v_max_i16 v2, v2, v6
+; GFX13-NEXT:    v_max_i16 v1, v1, v7
+; GFX13-NEXT:    v_max_i16 v0, v0, v8
+; GFX13-NEXT:    v_max_i16 v5, v5, v10
+; GFX13-NEXT:    v_max_i16 v4, v4, v11
+; GFX13-NEXT:    v_max_i16 v3, v3, v9
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX13-NEXT:    v_perm_b32 v0, v5, v0, 0x5040100
+; GFX13-NEXT:    v_perm_b32 v1, v4, v1, 0x5040100
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX13-NEXT:    v_perm_b32 v2, v3, v2, 0x5040100
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <6 x i16> @llvm.abs.v6i16(<6 x i16> %arg, i1 false)
   ret <6 x i16> %res
 }
@@ -673,6 +754,25 @@ define <8 x i16> @v_abs_v8i16(<8 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_max_i16 v2, v2, v6
 ; GFX12-NEXT:    v_pk_max_i16 v3, v3, v7
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: v_abs_v8i16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_pk_sub_i16 v4, 0, v0
+; GFX13-NEXT:    v_pk_sub_i16 v5, 0, v1
+; GFX13-NEXT:    v_pk_sub_i16 v6, 0, v2
+; GFX13-NEXT:    v_pk_sub_i16 v7, 0, v3
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_pk_max_i16 v0, v0, v4
+; GFX13-NEXT:    v_pk_max_i16 v1, v1, v5
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX13-NEXT:    v_pk_max_i16 v2, v2, v6
+; GFX13-NEXT:    v_pk_max_i16 v3, v3, v7
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <8 x i16> @llvm.abs.v8i16(<8 x i16> %arg, i1 false)
   ret <8 x i16> %res
 }
@@ -966,6 +1066,31 @@ define <16 x i16> @v_abs_v16i16(<16 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_max_i16 v4, v4, v9
 ; GFX12-NEXT:    v_pk_max_i16 v5, v5, v10
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: v_abs_v16i16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_pk_sub_i16 v8, 0, v0
+; GFX13-NEXT:    v_pk_sub_i16 v9, 0, v1
+; GFX13-NEXT:    v_pk_sub_i16 v10, 0, v2
+; GFX13-NEXT:    v_pk_sub_i16 v11, 0, v6
+; GFX13-NEXT:    v_pk_sub_i16 v12, 0, v7
+; GFX13-NEXT:    v_pk_max_i16 v0, v0, v8
+; GFX13-NEXT:    v_pk_max_i16 v1, v1, v9
+; GFX13-NEXT:    v_pk_max_i16 v2, v2, v10
+; GFX13-NEXT:    v_pk_sub_i16 v8, 0, v3
+; GFX13-NEXT:    v_pk_sub_i16 v9, 0, v4
+; GFX13-NEXT:    v_pk_sub_i16 v10, 0, v5
+; GFX13-NEXT:    v_pk_max_i16 v6, v6, v11
+; GFX13-NEXT:    v_pk_max_i16 v7, v7, v12
+; GFX13-NEXT:    v_pk_max_i16 v3, v3, v8
+; GFX13-NEXT:    v_pk_max_i16 v4, v4, v9
+; GFX13-NEXT:    v_pk_max_i16 v5, v5, v10
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <16 x i16> @llvm.abs.v16i16(<16 x i16> %arg, i1 false)
   ret <16 x i16> %res
 }
@@ -1510,6 +1635,47 @@ define <32 x i16> @v_abs_v32i16(<32 x i16> %arg) {
 ; GFX12-NEXT:    v_pk_max_i16 v14, v14, v19
 ; GFX12-NEXT:    v_pk_max_i16 v15, v15, v20
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX13-LABEL: v_abs_v32i16:
+; GFX13:       ; %bb.0:
+; GFX13-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-NEXT:    s_wait_expcnt 0x0
+; GFX13-NEXT:    s_wait_samplecnt 0x0
+; GFX13-NEXT:    s_wait_rtscnt 0x0
+; GFX13-NEXT:    s_wait_kmcnt 0x0
+; GFX13-NEXT:    v_pk_sub_i16 v16, 0, v0
+; GFX13-NEXT:    v_pk_sub_i16 v17, 0, v2
+; GFX13-NEXT:    v_pk_sub_i16 v18, 0, v3
+; GFX13-NEXT:    v_pk_sub_i16 v19, 0, v4
+; GFX13-NEXT:    v_pk_sub_i16 v20, 0, v5
+; GFX13-NEXT:    v_pk_max_i16 v0, v0, v16
+; GFX13-NEXT:    v_pk_sub_i16 v16, 0, v1
+; GFX13-NEXT:    v_pk_max_i16 v2, v2, v17
+; GFX13-NEXT:    v_pk_max_i16 v3, v3, v18
+; GFX13-NEXT:    v_pk_max_i16 v4, v4, v19
+; GFX13-NEXT:    v_pk_max_i16 v5, v5, v20
+; GFX13-NEXT:    v_pk_max_i16 v1, v1, v16
+; GFX13-NEXT:    v_pk_sub_i16 v16, 0, v6
+; GFX13-NEXT:    v_pk_sub_i16 v17, 0, v7
+; GFX13-NEXT:    v_pk_sub_i16 v18, 0, v8
+; GFX13-NEXT:    v_pk_sub_i16 v19, 0, v9
+; GFX13-NEXT:    v_pk_sub_i16 v20, 0, v10
+; GFX13-NEXT:    v_pk_max_i16 v6, v6, v16
+; GFX13-NEXT:    v_pk_max_i16 v7, v7, v17
+; GFX13-NEXT:    v_pk_max_i16 v8, v8, v18
+; GFX13-NEXT:    v_pk_max_i16 v9, v9, v19
+; GFX13-NEXT:    v_pk_max_i16 v10, v10, v20
+; GFX13-NEXT:    v_pk_sub_i16 v16, 0, v11
+; GFX13-NEXT:    v_pk_sub_i16 v17, 0, v12
+; GFX13-NEXT:    v_pk_sub_i16 v18, 0, v13
+; GFX13-NEXT:    v_pk_sub_i16 v19, 0, v14
+; GFX13-NEXT:    v_pk_sub_i16 v20, 0, v15
+; GFX13-NEXT:    v_pk_max_i16 v11, v11, v16
+; GFX13-NEXT:    v_pk_max_i16 v12, v12, v17
+; GFX13-NEXT:    v_pk_max_i16 v13, v13, v18
+; GFX13-NEXT:    v_pk_max_i16 v14, v14, v19
+; GFX13-NEXT:    v_pk_max_i16 v15, v15, v20
+; GFX13-NEXT:    s_set_pc_i64 s[30:31]
   %res = call <32 x i16> @llvm.abs.v32i16(<32 x i16> %arg, i1 false)
   ret <32 x i16> %res
 }

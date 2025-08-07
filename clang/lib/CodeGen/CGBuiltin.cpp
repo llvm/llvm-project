@@ -1148,7 +1148,8 @@ llvm::Value *CodeGenFunction::emitCountedByPointerSize(
   assert(E->getCastKind() == CK_LValueToRValue &&
          "must be an LValue to RValue cast");
 
-  const MemberExpr *ME = dyn_cast<MemberExpr>(E->getSubExpr());
+  const MemberExpr *ME =
+      dyn_cast<MemberExpr>(E->getSubExpr()->IgnoreParenNoopCasts(getContext()));
   if (!ME)
     return nullptr;
 
@@ -3732,6 +3733,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_trap:
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
+#if LLPC_BUILD_NPI
+  case Builtin::BI__builtin_experimental_provenance_begin:{
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    SmallVector<Value *, 2> Args;
+    for (int i = 0, e = E->getNumArgs(); i != e; ++i)
+      Args.push_back(EmitScalarExpr(E->getArg(i)));
+    Function *F = CGM.getIntrinsic(Intrinsic::experimental_provenance_begin, {ConvertType(E->getType()), Ptr->getType()});
+    return RValue::get(Builder.CreateCall(F, {Args}));
+  }
+  case Builtin::BI__builtin_experimental_provenance_end:{
+    Value *Ptr = EmitScalarExpr(E->getArg(0));
+    Function *F = CGM.getIntrinsic(Intrinsic::experimental_provenance_end, Ptr->getType());
+    Builder.CreateCall(F, {Ptr});
+    return RValue::get(nullptr);
+  }
+#endif /* LLPC_BUILD_NPI */
   case Builtin::BI__builtin_verbose_trap: {
     llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
     if (getDebugInfo()) {
@@ -4105,6 +4122,22 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Result = Builder.CreateBinaryIntrinsic(Intrinsic::minimum, Op0, Op1,
                                                   nullptr, "elt.minimum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_maximumnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(
+        Intrinsic::maximumnum, Op0, Op1, nullptr, "elt.maximumnum");
+    return RValue::get(Result);
+  }
+
+  case Builtin::BI__builtin_elementwise_minimumnum: {
+    Value *Op0 = EmitScalarExpr(E->getArg(0));
+    Value *Op1 = EmitScalarExpr(E->getArg(1));
+    Value *Result = Builder.CreateBinaryIntrinsic(
+        Intrinsic::minimumnum, Op0, Op1, nullptr, "elt.minimumnum");
     return RValue::get(Result);
   }
 

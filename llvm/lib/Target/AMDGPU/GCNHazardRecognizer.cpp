@@ -1215,6 +1215,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
     fixDsAtomicAsyncBarrierArriveB64(MI);
   if (ST.hasScratchBaseForwardingHazard())
     fixScratchBaseForwardingHazard(MI);
+  if (ST.setRegModeNeedsVNOPs())
+    fixSetRegMode(MI);
 #endif /* LLPC_BUILD_NPI */
 }
 
@@ -3586,6 +3588,16 @@ bool GCNHazardRecognizer::fixScratchBaseForwardingHazard(MachineInstr *MI) {
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(AMDGPU::DepCtr::encodeFieldVaSdst(
           AMDGPU::DepCtr::encodeFieldSaSdst(0), 0));
+  return true;
+}
+
+bool GCNHazardRecognizer::fixSetRegMode(MachineInstr *MI) {
+  if (!isSSetReg(MI->getOpcode()) ||
+      MI->getOperand(1).getImm() != AMDGPU::Hwreg::ID_MODE)
+    return false;
+
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
+  BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII.get(AMDGPU::V_NOP_e32));
 #endif /* LLPC_BUILD_NPI */
   return true;
 }

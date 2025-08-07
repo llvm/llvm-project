@@ -23,3 +23,9 @@ struct EscapableType { int value; };
 struct RefCountedTypeWithDefaultConvention {};
 inline void retain(RefCountedType *x) {}
 inline void release(RefCountedType *x) {}
+
+struct OpaqueRefCountedType;
+struct OpaqueRefCountedType; // redeclaration
+
+inline void ORCRetain(struct OpaqueRefCountedType *x);
+inline void ORCRelease(struct OpaqueRefCountedType *x);

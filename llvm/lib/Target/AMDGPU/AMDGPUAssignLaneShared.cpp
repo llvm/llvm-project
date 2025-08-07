@@ -48,7 +48,8 @@ public:
 // to VGPRs. In the latter case, all optional arguments must be specified.
 static void assignAbsoluteAddresses(
     SmallVectorImpl<GlobalVariable *> &GVs,
-    const VariableFunctionMap &GV2Kernels, uint32_t EndAddress = 1u << 28,
+    const VariableFunctionMap &GV2Kernels, CallGraph &CG,
+    uint32_t EndAddress = 1u << 28,
     SmallVectorImpl<GlobalVariable *> *GVsInOverflow = nullptr,
     DenseMap<GlobalVariable *, DenseSet<Value *>> *VGPRPtrSets = nullptr) {
   if (GVs.empty())
@@ -131,10 +132,45 @@ static void assignAbsoluteAddresses(
   for (auto K : Kernel2Offset) {
     Function *Kernel = K.first;
     unsigned Offset = alignTo(K.second, 4);
-    Kernel->setMetadata(
-        MDKindID, MDNode::get(M.getContext(),
-                              {ConstantAsMetadata::get(ConstantInt::get(
-                                  Type::getInt32Ty(M.getContext()), Offset))}));
+    MDTuple *MDOffset = MDNode::get(
+        M.getContext(), {ConstantAsMetadata::get(ConstantInt::get(
+                            Type::getInt32Ty(M.getContext()), Offset))});
+    Kernel->setMetadata(MDKindID, MDOffset);
+
+    if (!IsVGPRs)
+      continue; // No need to propagate scratch metadata.
+
+    // Add the same metadata to all the functions that are called by this
+    // kernel directly or indirectly because we need this info to know how
+    // many VGPRs are left for wave-private usage.
+    DenseSet<Function *> Seen; // catches cycles
+    SmallVector<Function *, 4> WorkList = {Kernel};
+    while (!WorkList.empty()) {
+      Function *F = WorkList.pop_back_val();
+      if (!Seen.insert(F).second)
+        continue; // Already seen this function.
+
+      unsigned ExistingSize = 0;
+      if (auto *MD = F->getMetadata(MDKindID)) {
+        ExistingSize =
+            cast<ConstantInt>(
+                cast<ConstantAsMetadata>(MD->getOperand(0))->getValue())
+                ->getZExtValue();
+      }
+      // Update the metadata only if the new size is larger.
+      if (ExistingSize < Offset) {
+
+        F->setMetadata(MDKindID, MDOffset);
+
+        for (const CallGraphNode::CallRecord &R : *CG[F]) {
+          if (Function *Ith = R.second->getFunction()) {
+            if (!Seen.contains(Ith)) {
+              WorkList.push_back(Ith);
+            }
+          }
+        }
+      }
+    }
   }
 }
 
@@ -151,14 +187,14 @@ static Function *findUseFunction(User *U) {
 
 bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
   // Validate spatial cluster kernels.
-  for (auto& F : M.functions()) {
+  for (auto &F : M.functions()) {
     if (getSpatialClusterEnable(F)) {
       if (!getWavegroupEnable(F))
         report_fatal_error("Spatial cluster kernel is not wavegroup kernel");
       AMDGPU::ClusterDimsAttr ClusterDims = AMDGPU::ClusterDimsAttr::get(F);
       if (!ClusterDims.isFixedDims())
         report_fatal_error("Spatial cluster kernel has non fixed cluster dims");
-      auto& Dims = ClusterDims.getDims();
+      auto &Dims = ClusterDims.getDims();
       if (Dims[1] != 1 || Dims[2] != 1)
         report_fatal_error("Spatial cluster kernel is not 1D");
     }
@@ -183,7 +219,7 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
     if (F.isDeclaration())
       continue;
     if (isKernel(F.getCallingConv()) && getWavegroupEnable(F) &&
-         !getWavegroupRankFunction(F))
+        !getWavegroupRankFunction(F))
       WavegroupKernels.insert(&F);
   }
   if (WavegroupKernels.empty())
@@ -235,33 +271,21 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
     if (!F.isDeclaration() && FunctionMakesUnknownCall(&F))
       set_union(Func2GVs[&F], FuzzyUsedGVs);
   }
-  // For each GV, find the set of wavegroup kernel that uses it directly or
+  // For each GV, find the set of wavegroup kernels that use it directly or
   // indirectly.
   VariableFunctionMap GV2Kernels;
   for (Function *Kernel : WavegroupKernels) {
-    DenseSet<Function *> Seen; // catches cycles
+
+    DenseSet<Function *> Seen;
     SmallVector<Function *, 4> WorkList = {Kernel};
     while (!WorkList.empty()) {
       Function *F = WorkList.pop_back_val();
-      for (GlobalVariable *GV : Func2GVs[F]) {
+      for (GlobalVariable *GV : Func2GVs[F])
         GV2Kernels[GV].insert(Kernel);
-      }
-
+      
       for (const CallGraphNode::CallRecord &R : *CG[F]) {
-        Function *Ith = R.second->getFunction();
-        if (Ith) {
-          if (Ith->isIntrinsic()) {
-            if (Ith->getIntrinsicID() == Intrinsic::amdgcn_wavegroup_rank) {
-              assert(R.first);
-              if (CallInst *CI = dyn_cast<CallInst>(*R.first)) {
-                if (auto *Callee = dyn_cast<Function>(CI->getArgOperand(1));
-                    Callee && !Seen.contains(Callee)) {
-                  Seen.insert(Callee);
-                  WorkList.push_back(Callee);
-                }
-              }
-            }
-          } else if (!Seen.contains(Ith)) {
+        if (Function *Ith = R.second->getFunction()) {
+          if (!Seen.contains(Ith)) {
             Seen.insert(Ith);
             WorkList.push_back(Ith);
           }
@@ -294,11 +318,11 @@ bool AMDGPUAssignLaneShared::runOnModule(Module &M) {
 
   // Assign VGPRs to GVs and record related metadata. This also records GVs that
   // overflow the available space and must be assigned to scratch.
-  assignAbsoluteAddresses(GVsInVGPR, GV2Kernels, MaxLaneSharedVGPRs * 4,
+  assignAbsoluteAddresses(GVsInVGPR, GV2Kernels, CG, MaxLaneSharedVGPRs * 4,
                           &GVsInScratch, &GVPtrSets);
 
   // Assign remaining GVs to scratch.
-  assignAbsoluteAddresses(GVsInScratch, GV2Kernels);
+  assignAbsoluteAddresses(GVsInScratch, GV2Kernels, CG);
 
   return true;
 }

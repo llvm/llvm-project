@@ -153,14 +153,12 @@ def FeatureFmaMixInsts : SubtargetFeature<"fma-mix-insts",
   "Has v_fma_mix_f32, v_fma_mixlo_f16, v_fma_mixhi_f16 instructions"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureFmaMixBF16Insts : SubtargetFeature<"fma-mix-bf16-insts",
   "HasFmaMixBF16Insts",
   "true",
   "Has v_fma_mix_f32_bf16, v_fma_mixlo_bf16, v_fma_mixhi_bf16 instructions"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeatureIEEEMinimumMaximumInsts : SubtargetFeature<"ieee-minimum-maximum-insts",
   "HasIEEEMinimumMaximumInsts",
   "true",
@@ -179,14 +177,12 @@ def FeatureMinimum3Maximum3F16 : SubtargetFeature<"minimum3-maximum3-f16",
   "Has v_minimum3_f16 and v_maximum3_f16 instructions"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureMin3Max3PKF16 : SubtargetFeature<"min3-max3-pkf16",
   "HasMin3Max3PKF16",
   "true",
   "Has v_pk_min3_num_f16 and v_pk_max3_num_f16 instructions"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeatureMinimum3Maximum3PKF16 : SubtargetFeature<"minimum3-maximum3-pkf16",
   "HasMinimum3Maximum3PKF16",
   "true",
@@ -276,21 +272,18 @@ def FeatureInstFwdPrefetchBug : SubtargetFeature<"inst-fwd-prefetch-bug",
   "S_INST_PREFETCH instruction causes shader to hang"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureVmemPrefInsts : SubtargetFeature<"vmem-pref-insts",
   "HasVmemPrefInsts",
   "true",
   "Has flat_prefect_b8 and global_prefetch_b8 instructions"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
   "HasSafeSmemPrefetch",
   "true",
   "SMEM prefetches do not fail on illegal address"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
   "HasSafeCUPrefetch",
   "true",
@@ -300,10 +293,9 @@ def FeatureSafeCUPrefetch : SubtargetFeature<"safe-cu-prefetch",
 def FeatureCUStores : SubtargetFeature<"cu-stores",
   "HasCUStores",
   "true",
-  "Whether SCOPE_CU stores can be used on GFX1250+."
+  "Whether SCOPE_CU stores can be used on GFX12.5"
 >;
 
-#endif /* LLPC_BUILD_NPI */
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",
   "HasVcmpxExecWARHazard",
   "true",
@@ -609,13 +601,13 @@ def FeatureBF16ConversionInsts : SubtargetFeature<"bf16-cvt-insts",
   "Has bf16 conversion instructions"
 >;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureBF16PackedInsts : SubtargetFeature<"bf16-pk-insts",
   "HasBF16PackedInsts",
   "true",
   "Has bf16 packed instructions (fma, add, mul, max, min)"
 >;
 
+#ifdef LLPC_BUILD_NPI
 def FeatureMLMathInsts : SubtargetFeature<"ml-math-insts",
   "HasMLMathInsts",
   "true",
@@ -1532,7 +1524,6 @@ def FeatureLshlAddU64Inst
     : SubtargetFeature<"lshl-add-u64-inst", "HasLshlAddU64Inst", "true",
                        "Has v_lshl_add_u64 instruction">;
 
-#ifdef LLPC_BUILD_NPI
 def FeatureAddSubU64Insts
     : SubtargetFeature<"add-sub-u64-insts", "HasAddSubU64Insts", "true",
                        "Has v_add_u64 and v_sub_u64 instructions">;
@@ -1540,7 +1531,6 @@ def FeatureAddSubU64Insts
 def FeatureMadU32Inst : SubtargetFeature<"mad-u32-inst", "HasMadU32Inst",
                                          "true", "Has v_mad_u32 instruction">;
 
-#endif /* LLPC_BUILD_NPI */
 def FeatureMemToLDSLoad : SubtargetFeature<"vmem-to-lds-load-insts",
   "HasVMemToLDSLoad",
   "true",
@@ -2198,8 +2188,8 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_50 : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
-#ifdef LLPC_BUILD_NPI
    FeatureCUStores,
+#ifdef LLPC_BUILD_NPI
    FeatureAddressableLocalMemorySize327680,
 #endif /* LLPC_BUILD_NPI */
    FeatureCuMode,
@@ -2243,14 +2233,10 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureTransposeLoadF4F6Insts,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
-#ifdef LLPC_BUILD_NPI
    FeatureBF16PackedInsts,
-#endif /* LLPC_BUILD_NPI */
    FeatureCvtPkF16F32Inst,
-#ifdef LLPC_BUILD_NPI
    FeatureFmaMixBF16Insts,
    FeatureMin3Max3PKF16,
-#endif /* LLPC_BUILD_NPI */
    FeatureMinimum3Maximum3PKF16,
    FeaturePrngInst,
    FeaturePermlane16Swap,
@@ -2267,14 +2253,10 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureGloballyAddressableScratch,
 #endif /* LLPC_BUILD_NPI */
    FeatureKernargPreload,
-#ifdef LLPC_BUILD_NPI
    FeatureVmemPrefInsts,
-#endif /* LLPC_BUILD_NPI */
    FeatureLshlAddU64Inst,
-#ifdef LLPC_BUILD_NPI
    FeatureAddSubU64Insts,
    FeatureMadU32Inst,
-#endif /* LLPC_BUILD_NPI */
    FeatureLdsBarrierArriveAtomic,
    FeatureSetPrioIncWgInst,
 ]>;
@@ -2771,12 +2753,10 @@ def HasMinimum3Maximum3F16 :
   Predicate<"Subtarget->hasMinimum3Maximum3F16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3F16)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasMin3Max3PKF16 :
   Predicate<"Subtarget->hasMin3Max3PKF16()">,
   AssemblerPredicate<(all_of FeatureMin3Max3PKF16)>;
 
-#endif /* LLPC_BUILD_NPI */
 def HasMinimum3Maximum3PKF16 :
   Predicate<"Subtarget->hasMinimum3Maximum3PKF16()">,
   AssemblerPredicate<(all_of FeatureMinimum3Maximum3PKF16)>;
@@ -2807,11 +2787,7 @@ def HasAtomicFMinFMaxF64FlatInsts :
 
 def HasLdsAtomicAddF64 :
   Predicate<"Subtarget->hasLdsAtomicAddF64()">,
-#ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(any_of FeatureGFX90AInsts, FeatureGFX1250Insts)>;
-#else /* LLPC_BUILD_NPI */
-  AssemblerPredicate<(any_of FeatureGFX90AInsts)>;
-#endif /* LLPC_BUILD_NPI */
 
 def HasFlatGlobalInsts : Predicate<"Subtarget->hasFlatGlobalInsts()">,
   AssemblerPredicate<(all_of FeatureFlatGlobalInsts)>;
@@ -2920,11 +2896,9 @@ def HasBF16TransInsts : Predicate<"Subtarget->hasBF16TransInsts()">,
 def HasBF16ConversionInsts : Predicate<"Subtarget->hasBF16ConversionInsts()">,
   AssemblerPredicate<(all_of FeatureBF16ConversionInsts)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasBF16PackedInsts : Predicate<"Subtarget->hasBF16PackedInsts()">,
   AssemblerPredicate<(all_of FeatureBF16PackedInsts)>;
 
-#endif /* LLPC_BUILD_NPI */
 def HasVOP3PInsts : Predicate<"Subtarget->hasVOP3PInsts()">,
   AssemblerPredicate<(all_of FeatureVOP3P)>;
 
@@ -2972,24 +2946,34 @@ def HasFmaakFmamkF64Insts :
   Predicate<"Subtarget->hasFmaakFmamkF64Insts()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasAddMinMaxInsts :
   Predicate<"Subtarget->hasAddMinMaxInsts()">,
+#ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
+#else /* LLPC_BUILD_NPI */
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+#endif /* LLPC_BUILD_NPI */
 
 def HasPkAddMinMaxInsts :
   Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
+#ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
+#else /* LLPC_BUILD_NPI */
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
+#endif /* LLPC_BUILD_NPI */
 
 def HasPkMinMax3Insts :
   Predicate<"Subtarget->hasPkMinMax3Insts()">,
+#ifdef LLPC_BUILD_NPI
   AssemblerPredicate<(all_of FeatureGFX1250Insts, (not FeatureGFX13Insts))>;
 
 def HasSGetShaderCyclesInst :
   Predicate<"Subtarget->hasSGetShaderCyclesInst()">,
   AssemblerPredicate<(any_of FeatureGFX1250Insts, FeatureGFX13Insts)>;
-
+#else /* LLPC_BUILD_NPI */
+  AssemblerPredicate<(any_of FeatureGFX1250Insts)>;
 #endif /* LLPC_BUILD_NPI */
+
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
 
@@ -3036,11 +3020,9 @@ def HasMovrel : Predicate<"Subtarget->hasMovrel()">,
 def HasFmaMixInsts : Predicate<"Subtarget->hasFmaMixInsts()">,
   AssemblerPredicate<(all_of FeatureFmaMixInsts)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasFmaMixBF16Insts : Predicate<"Subtarget->hasFmaMixBF16Insts()">,
   AssemblerPredicate<(all_of FeatureFmaMixBF16Insts)>;
 
-#endif /* LLPC_BUILD_NPI */
 def HasDLInsts : Predicate<"Subtarget->hasDLInsts()">,
   AssemblerPredicate<(all_of FeatureDLInsts)>;
 
@@ -3273,21 +3255,19 @@ def HasScalarDwordx3Loads : Predicate<"Subtarget->hasScalarDwordx3Loads()">;
 def HasXF32Insts : Predicate<"Subtarget->hasXF32Insts()">,
    AssemblerPredicate<(all_of FeatureXF32Insts)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasVmemPrefInsts : Predicate<"Subtarget->hasVmemPrefInsts()">,
   AssemblerPredicate<(all_of FeatureVmemPrefInsts)>;
 
-#endif /* LLPC_BUILD_NPI */
 def HasAshrPkInsts : Predicate<"Subtarget->hasAshrPkInsts()">,
   AssemblerPredicate<(all_of FeatureAshrPkInsts)>;
 
 def HasLshlAddU64Inst : Predicate<"Subtarget->hasLshlAddU64Inst()">,
                         AssemblerPredicate<(all_of FeatureLshlAddU64Inst)>;
 
-#ifdef LLPC_BUILD_NPI
 def HasAddSubU64Insts : Predicate<"Subtarget->hasAddSubU64Insts()">,
                         AssemblerPredicate<(all_of FeatureAddSubU64Insts)>;
 
+#ifdef LLPC_BUILD_NPI
 def HasExclusiveScanInsts : Predicate<"Subtarget->hasExclusiveScanInsts()">,
   AssemblerPredicate<(all_of FeatureExclusiveScanInsts)>;
 
@@ -3309,10 +3289,10 @@ def HasAtomicMinMaxWithPayload : Predicate<"Subtarget->hasAtomicMinMaxWithPayloa
 def HasParallelBitInsts : Predicate<"Subtarget->hasParallelBitInsts()">,
   AssemblerPredicate<(all_of FeatureParallelBitInsts)>;
 
+#endif /* LLPC_BUILD_NPI */
 def HasMadU32Inst : Predicate<"Subtarget->hasMadU32Inst()">,
                     AssemblerPredicate<(all_of FeatureMadU32Inst)>;
 
-#endif /* LLPC_BUILD_NPI */
 def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic()">,
   AssemblerPredicate<(all_of FeatureLdsBarrierArriveAtomic)>;
 

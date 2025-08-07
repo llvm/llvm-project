@@ -211,6 +211,8 @@ private:
   selectVOP3PModsDOT(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   selectVOP3PModsNeg(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3PModsNegs(MachineOperand &Root) const;
@@ -218,6 +220,7 @@ private:
   selectVOP3PModsNegAbs(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+#endif /* LLPC_BUILD_NPI */
   selectWMMAOpSelVOP3PMods(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
@@ -243,16 +246,10 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
-#if LLPC_BUILD_NPI
   bool selectScaleOffset(MachineOperand &Root, Register &Offset,
                          bool IsSigned) const;
-#endif /* LLPC_BUILD_NPI */
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
-#if LLPC_BUILD_NPI
                         int64_t *Offset, bool *ScaleOffset) const;
-#else /* LLPC_BUILD_NPI */
-                        int64_t *Offset) const;
-#endif /* LLPC_BUILD_NPI */
   InstructionSelector::ComplexRendererFns
   selectSmrdImm(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
@@ -273,27 +270,29 @@ private:
   selectScratchOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
-#if LLPC_BUILD_NPI
   selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits,
+#if LLPC_BUILD_NPI
                     bool NeedIOffset = true, bool NeedScaleOffset = true) const;
 #else /* LLPC_BUILD_NPI */
-  selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits) const;
+                    bool NeedIOffset = true) const;
 #endif /* LLPC_BUILD_NPI */
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddr(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
-#if LLPC_BUILD_NPI
   selectGlobalSAddrCPol(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
+#if LLPC_BUILD_NPI
   selectGlobalSAddrCPolM0(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
 #endif /* LLPC_BUILD_NPI */
   selectGlobalSAddrGLC(MachineOperand &Root) const;
-#if LLPC_BUILD_NPI
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffset(MachineOperand &Root) const;
+#if LLPC_BUILD_NPI
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffsetScaleOffset(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrNoIOffsetScaleOffsetM0(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectGlobalSAddrNoIOffsetM0(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
@@ -453,10 +452,17 @@ private:
                        int OpIdx) const;
 #if LLPC_BUILD_NPI
 
+  void renderVOP3PModsNeg(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                          int OpIdx) const;
+  void renderVOP3PModsNegs(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                           int OpIdx) const;
+  void renderVOP3PModsNegAbs(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                             int OpIdx) const;
+#endif /* LLPC_BUILD_NPI */
+
   void renderPrefetchLoc(MachineInstrBuilder &MIB, const MachineInstr &MI,
                          int OpIdx) const;
 
-#endif /* LLPC_BUILD_NPI */
   void renderScaledMAIIntrinsicOperand(MachineInstrBuilder &MIB,
                                        const MachineInstr &MI, int OpIdx) const;
 
@@ -467,7 +473,6 @@ private:
   // shift amount operand's `ShAmtBits` bits is unneeded.
   bool isUnneededShiftMask(const MachineInstr &MI, unsigned ShAmtBits) const;
 
-#if LLPC_BUILD_NPI
   /// Match a zero extend from a 32-bit value to 64-bits.
   Register matchZeroExtendFromS32(Register Reg) const;
   /// Match a sign extend from a 32-bit value to 64-bits.
@@ -481,7 +486,6 @@ private:
   /// Match either sign or zero extend depending on the \p IsSigned from a
   /// 32-bit value to 64-bits, or \p Reg itself if it is 32-bit.
   Register matchExtendFromS32OrS32(Register Reg, bool IsSigned) const;
-#endif /* LLPC_BUILD_NPI */
   /// Match an any extend from a 32-bit value to 64-bit.
   Register matchAnyExtendFromS32(Register Reg) const;
 

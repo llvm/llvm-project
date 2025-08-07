@@ -476,9 +476,7 @@ bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
-#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
-#endif /* LLPC_BUILD_NPI */
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
@@ -887,6 +885,11 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
       // Make sure to get the 32-bit version of the commuted opcode.
       unsigned MaybeCommutedOpc = MI->getOpcode();
       Op32 = AMDGPU::getVOPe32(MaybeCommutedOpc);
+#if LLPC_BUILD_NPI
+
+      if (TII->pseudoToMCOpcode(Op32) == -1)
+        Op32 = -1;
+#endif /* LLPC_BUILD_NPI */
     }
 
     appendFoldCandidate(FoldList, MI, CommuteOpNo, OpToFold, /*Commuted=*/true,
@@ -1082,9 +1085,13 @@ bool SIFoldOperandsImpl::tryFoldRegSeqSplat(
     switch (OpTy) {
     case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
     case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP32:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0);
       break;
     case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_FP64:
+    case AMDGPU::OPERAND_REG_INLINE_C_INT64:
       OpRC = TRI->getSubRegisterClass(OpRC, AMDGPU::sub0_sub1);
       break;
     default:

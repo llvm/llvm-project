@@ -436,8 +436,12 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
   if (FD->hasAttr<AMDGPUSpatialClusterKernelAttr>())
     F->addFnAttr("amdgpu-spatial-cluster");
 
-  if (const auto *Attr = FD->getAttr<AMDGPUNoRankSpecializationAttr>()) {
+  if (FD->getAttr<AMDGPUNoRankSpecializationAttr>()) {
     F->addFnAttr("amdgpu-no-rank-specialization");
+  }
+
+  if (const auto *Attr = FD->getAttr<AMDGPUEnableWaspAttr>()) {
+    F->addFnAttr("amdgpu-enable-wasp");
   }
 
   if (auto *Attr = FD->getAttr<CUDAClusterDimsAttr>()) {

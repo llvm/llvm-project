@@ -258,8 +258,8 @@ if.end13:                                         ; preds = %for.body5, %if.else
   br i1 %exitcond28, label %for.cond.cleanup, label %for.body
 }
 
-declare void @dummy_ranks567_a()
-declare void @dummy_ranks01234_a()
+declare void @dummy_ranks57_a()
+declare void @dummy_ranks012346_a()
 
 ; The test case below does not trigger the pass because the current implementation doesn't
 ; handle the %tobool arg of %or.cond. TODO: Explore handling this more complex case.
@@ -282,13 +282,13 @@ for.body:                                         ; preds = %entry, %if.end13
 
 for.body5:                                        ; preds = %for.body, %for.body5
   %j.026 = phi i32 [ %inc, %for.body5 ], [ 0, %for.body ]
-  call void @dummy_ranks567_a()
+  call void @dummy_ranks57_a()
   %inc = add nuw nsw i32 %j.026, 1
   %exitcond = icmp eq i32 %inc, 5
   br i1 %exitcond, label %if.end13, label %for.body5
 
 if.else:                                          ; preds = %for.body
-  call void @dummy_ranks01234_a()
+  call void @dummy_ranks012346_a()
   br i1 %tobool, label %if.end13, label %if.then8
 
 if.then8:                                         ; preds = %if.else
@@ -353,6 +353,9 @@ end:
 ; This test case is similar to test_case_4, but the binary op (%or.cond1 in this case) feeds
 ; another binary op rather than a conditional branch.
 
+declare void @dummy_ranks17_a()
+declare void @dummy_ranks023456_a()
+
 define amdgpu_kernel void @test_kernel_8() local_unnamed_addr "amdgpu-wavegroup-enable" {
 entry:
   %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
@@ -366,16 +369,76 @@ for.body:                                         ; preds = %entry, %if.end13
   %lt.2 = icmp ult i32 %0, 2
   %gt.5 = icmp ugt i32 %0, 5
   %or.cond1 = or i1 %lt.2, %gt.5
-  %or.cond2 = and i1 %or.cond1, 1
-  %tobool = icmp ne i1 %or.cond2, 1
-  br i1 %tobool, label %for.body5, label %if.else
+  %odds = and i32 %0, 1
+  %as_i1 = icmp ne i32 %odds, 0
+  %or.cond2 = and i1 %or.cond1, %as_i1
+  br i1 %or.cond2, label %for.body5, label %if.else
 
 for.body5:                                        ; preds = %for.body
-  call void @dummy_ranks2345_a()
+  call void @dummy_ranks17_a()
   br label %if.end13
 
 if.else:                                          ; preds = %for.body
-  call void @dummy_ranks0167_a()
+  call void @dummy_ranks023456_a()
+  br label %if.end13
+
+if.end13:                                         ; preds = %for.body5, %if.else
+  call void @dummy_common()
+  %inc15 = add nuw nsw i32 %i.027, 1
+  %exitcond28 = icmp eq i32 %inc15, 10
+  br i1 %exitcond28, label %for.cond.cleanup, label %for.body
+}
+
+declare void @dummy_ranks23_a()
+declare void @dummy_ranks014567_a()
+
+define amdgpu_kernel void @test_kernel_9(i32* %base) "amdgpu-wavegroup-enable" {
+entry:
+  %wid = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
+  %cmp1 = icmp uge i32 %wid, 2
+  %mulwid = udiv i32 %wid, 4
+  %and = icmp eq i32 %mulwid, 1
+  %xor = xor i1 %cmp1, %and
+  br i1 %xor, label %if, label %else
+
+if:
+  call i32 @dummy_ranks23_a()
+  br label %end
+
+else:
+  call i32 @dummy_ranks014567_a()
+  br label %end
+
+end:
+  call i32 (i1, ...) @dummy_common(i1 %xor)
+  ret void
+}
+
+declare void @dummy_ranks0123_a()
+declare void @dummy_ranks4567_a()
+
+define amdgpu_kernel void @test_kernel_10() local_unnamed_addr "amdgpu-wavegroup-enable" {
+entry:
+  %0 = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %if.end13
+  ret void
+
+for.body:                                         ; preds = %entry, %if.end13
+  %i.027 = phi i32 [ 0, %entry ], [ %inc15, %if.end13 ]
+  %f0 = sitofp i32 %0 to float
+  %div = fdiv float %f0, 4.0
+  %div_int = fptosi float %div to i32
+  %bool = icmp ne i32 %div_int, 0
+  br i1 %bool, label %for.body5, label %if.else
+
+for.body5:                                        ; preds = %for.body
+  call void @dummy_ranks0123_a()
+  br label %if.end13
+
+if.else:                                          ; preds = %for.body
+  call void @dummy_ranks4567_a()
   br label %if.end13
 
 if.end13:                                         ; preds = %for.body5, %if.else
@@ -388,23 +451,15 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_1(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[COND]], label %[[BB_RANK_1:.*]], label %[[BB_RANK_0_2_3_4_5_6_7:.*]]
-; CHECK:       [[COMMON_RET:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[BB_RANK_0_2_3_4_5_6_7]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_1.rank_1)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_1.rank_0_2_3_4_5_6_7)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_1]]:
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_1.rank_1)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_1_disabled(
@@ -439,183 +494,125 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_2(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-; CHECK-NEXT:    switch i32 [[TMP0]], label %[[BB_RANK_2_3_4_5_7:.*]] [
-; CHECK-NEXT:      i32 0, label %[[BB_RANK_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[BB_RANK_1:.*]]
-; CHECK-NEXT:      i32 6, label %[[BB_RANK_6:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[COMMON_RET:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[BB_RANK_2_3_4_5_7]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_2.rank_0)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_2.rank_1)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_6]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_2.rank_6)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_1]]:
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_2.rank_1)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_0]]:
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_2.rank_0)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_2.rank_2_3_4_5_7)
+; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_3(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-; CHECK-NEXT:    switch i32 [[TMP0]], label %[[BB_RANK_2_4_5_7:.*]] [
-; CHECK-NEXT:      i32 0, label %[[BB_RANK_0:.*]]
-; CHECK-NEXT:      i32 1, label %[[BB_RANK_1:.*]]
-; CHECK-NEXT:      i32 6, label %[[BB_RANK_6:.*]]
-; CHECK-NEXT:      i32 3, label %[[BB_RANK_3:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[COMMON_RET:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[BB_RANK_2_4_5_7]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_3.rank_0)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_3.rank_1)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_3.rank_2_4_5_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_3.rank_3)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_3.rank_2_4_5_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_3.rank_2_4_5_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_3.rank_2_4_5_7)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_3]]:
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_3.rank_3)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_6]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_3.rank_6)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_1]]:
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_3.rank_1)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_0]]:
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_3.rank_0)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_3.rank_2_4_5_7)
+; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_4(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-; CHECK-NEXT:    switch i32 [[TMP0]], label %[[BB_RANK_2_3_4_5:.*]] [
-; CHECK-NEXT:      i32 7, label %[[BB_RANK_0_1_6_7:.*]]
-; CHECK-NEXT:      i32 6, label %[[BB_RANK_0_1_6_7]]
-; CHECK-NEXT:      i32 1, label %[[BB_RANK_0_1_6_7]]
-; CHECK-NEXT:      i32 0, label %[[BB_RANK_0_1_6_7]]
-; CHECK-NEXT:    ]
-; CHECK:       [[COMMON_RET:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[BB_RANK_2_3_4_5]]:
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_4.rank_0_1_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_4.rank_0_1_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_4.rank_2_3_4_5)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_4.rank_2_3_4_5)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_4.rank_2_3_4_5)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_4.rank_2_3_4_5)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_0_1_6_7]]:
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_4.rank_0_1_6_7)
-; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_4.rank_0_1_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_4.rank_0_1_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_4.rank_0_1_6_7)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_5(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_5.rank_0_2_4_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_5.rank_1_3)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_5.rank_0_2_4_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_5.rank_1_3)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_5.rank_0_2_4_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_5.rank_5_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_5.rank_0_2_4_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_5.rank_5_7)
 ; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_027:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC15:%.*]], %[[IF_END13:.*]] ]
-; CHECK-NEXT:    [[REM:%.*]] = and i32 [[TMP0]], 1
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[REM]], 0
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 [[TMP0]], 4
-; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP1]], [[TOBOOL]]
-; CHECK-NEXT:    br i1 [[OR_COND]], label %[[FOR_BODY5:.*]], label %[[IF_ELSE:.*]]
-; CHECK:       [[FOR_BODY5]]:
-; CHECK-NEXT:    [[J_026:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY5]] ], [ 0, %[[FOR_BODY]] ]
-; CHECK-NEXT:    call void @dummy_ranks567_a()
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[J_026]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 5
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[IF_END13]], label %[[FOR_BODY5]]
-; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    call void @dummy_ranks01234_a()
-; CHECK-NEXT:    br label %[[IF_END13]]
-; CHECK:       [[IF_END13]]:
-; CHECK-NEXT:    call void @dummy_common()
-; CHECK-NEXT:    [[INC15]] = add nuw nsw i32 [[I_027]], 1
-; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_6(
 ; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    [[SELPTR_IDX:%.*]] = select i1 [[COND]], i64 0, i64 16
+; CHECK-NEXT:    [[WID:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[WID]], 0
+; CHECK-NEXT:    [[SELPTR_IDX:%.*]] = select i1 [[CMP]], i64 0, i64 16
 ; CHECK-NEXT:    [[SELPTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 [[SELPTR_IDX]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[SELPTR]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @dummy_common(ptr nonnull @.str, i32 [[VAL]])
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 (ptr, ...) @dummy_common(ptr nonnull @.str, i32 [[VAL]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_7(
 ; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-; CHECK-NEXT:    switch i32 [[TMP0]], label %[[BB_RANK_0_1:.*]] [
-; CHECK-NEXT:      i32 7, label %[[BB_RANK_2_3_4_5_6_7:.*]]
-; CHECK-NEXT:      i32 6, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:      i32 2, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:      i32 3, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:      i32 4, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:      i32 5, label %[[BB_RANK_2_3_4_5_6_7]]
-; CHECK-NEXT:    ]
-; CHECK:       [[COMMON_RET:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[BB_RANK_0_1]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_7.rank_0_1)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_7.rank_0_1)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[BB_RANK_2_3_4_5_6_7]]:
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_7.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_7.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_7.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_7.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_7.rank_2_3_4_5_6_7)
 ; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_7.rank_2_3_4_5_6_7)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define amdgpu_kernel void @test_kernel_8(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_8.rank_0_2_3_4_5_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_8.rank_1_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_8.rank_0_2_3_4_5_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_8.rank_0_2_3_4_5_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_8.rank_0_2_3_4_5_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_8.rank_0_2_3_4_5_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_8.rank_0_2_3_4_5_6)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_8.rank_1_7)
 ; CHECK-NEXT:    ret void
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_027:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC15:%.*]], %[[IF_END13:.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0]], -2
-; CHECK-NEXT:    [[OR_COND1:%.*]] = icmp ult i32 [[TMP1]], 4
-; CHECK-NEXT:    br i1 [[OR_COND1]], label %[[FOR_BODY5:.*]], label %[[IF_ELSE:.*]]
-; CHECK:       [[FOR_BODY5]]:
-; CHECK-NEXT:    call void @dummy_ranks2345_a()
-; CHECK-NEXT:    br label %[[IF_END13]]
-; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    call void @dummy_ranks0167_a()
-; CHECK-NEXT:    br label %[[IF_END13]]
-; CHECK:       [[IF_END13]]:
-; CHECK-NEXT:    call void @dummy_common()
-; CHECK-NEXT:    [[INC15]] = add nuw nsw i32 [[I_027]], 1
-; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
-; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+;
+; CHECK-LABEL: define amdgpu_kernel void @test_kernel_9(
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_9.rank_0_1_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_9.rank_0_1_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_9.rank_2_3)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_9.rank_2_3)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_9.rank_0_1_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_9.rank_0_1_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_9.rank_0_1_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_9.rank_0_1_4_5_6_7)
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: define amdgpu_kernel void @test_kernel_10(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 0, ptr nonnull @test_kernel_10.rank_0_1_2_3)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 1, ptr nonnull @test_kernel_10.rank_0_1_2_3)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 2, ptr nonnull @test_kernel_10.rank_0_1_2_3)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 3, ptr nonnull @test_kernel_10.rank_0_1_2_3)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 4, ptr nonnull @test_kernel_10.rank_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 5, ptr nonnull @test_kernel_10.rank_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 6, ptr nonnull @test_kernel_10.rank_4_5_6_7)
+; CHECK-NEXT:    call void @llvm.amdgcn.wavegroup.rank.p0(i32 7, ptr nonnull @test_kernel_10.rank_4_5_6_7)
+; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_1.rank_0_2_3_4_5_6_7(
@@ -945,6 +942,58 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;
 ;
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_5.rank_0_2_4_6(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_027:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC15:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    call void @dummy_ranks012346_a()
+; CHECK-NEXT:    call void @dummy_common()
+; CHECK-NEXT:    [[INC15]] = add nuw nsw i32 [[I_027]], 1
+; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
+; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+;
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_5.rank_1_3(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_027:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC15:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    call void @dummy_ranks012346_a()
+; CHECK-NEXT:    call void @dummy_common()
+; CHECK-NEXT:    [[INC15]] = add nuw nsw i32 [[I_027]], 1
+; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
+; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+;
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_5.rank_5_7(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_027:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC15:%.*]], %[[IF_END13:.*]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY5:.*]]
+; CHECK:       [[FOR_BODY5]]:
+; CHECK-NEXT:    [[J_026:%.*]] = phi i32 [ [[INC:%.*]], %[[FOR_BODY5]] ], [ 0, %[[FOR_BODY]] ]
+; CHECK-NEXT:    call void @dummy_ranks57_a()
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[J_026]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INC]], 5
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[IF_END13]], label %[[FOR_BODY5]]
+; CHECK:       [[IF_END13]]:
+; CHECK-NEXT:    call void @dummy_common()
+; CHECK-NEXT:    [[INC15]] = add nuw nsw i32 [[I_027]], 1
+; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
+; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+;
 ; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_7.rank_0_1(
 ; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -962,8 +1011,87 @@ if.end13:                                         ; preds = %for.body5, %if.else
 ; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @dummy_ranks234567_a()
-; CHECK-NEXT:    [[PTR4:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 16
-; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[PTR4]], align 4
+; CHECK-NEXT:    [[WID:%.*]] = call i32 @llvm.amdgcn.wave.id.in.wavegroup()
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[WID]], 0
+; CHECK-NEXT:    [[SELPTR_IDX:%.*]] = select i1 [[CMP2]], i64 0, i64 16
+; CHECK-NEXT:    [[SELPTR:%.*]] = getelementptr inbounds nuw i8, ptr [[BASE]], i64 [[SELPTR_IDX]]
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[SELPTR]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @dummy_common(ptr nonnull @.str, i32 [[VAL]])
 ; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_8.rank_0_2_3_4_5_6(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_027:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC15:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    call void @dummy_ranks023456_a()
+; CHECK-NEXT:    call void @dummy_common()
+; CHECK-NEXT:    [[INC15]] = add nuw nsw i32 [[I_027]], 1
+; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
+; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+;
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_8.rank_1_7(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_027:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC15:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    call void @dummy_ranks17_a()
+; CHECK-NEXT:    call void @dummy_common()
+; CHECK-NEXT:    [[INC15]] = add nuw nsw i32 [[I_027]], 1
+; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
+; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+;
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_9.rank_0_1_4_5_6_7(
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @dummy_ranks014567_a()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i1, ...) @dummy_common(i1 false)
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_9.rank_2_3(
+; CHECK-SAME: ptr [[BASE:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @dummy_ranks23_a()
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (i1, ...) @dummy_common(i1 true)
+; CHECK-NEXT:    ret void
+;
+;
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_10.rank_0_1_2_3(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_027:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC15:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    call void @dummy_ranks4567_a()
+; CHECK-NEXT:    call void @dummy_common()
+; CHECK-NEXT:    [[INC15]] = add nuw nsw i32 [[I_027]], 1
+; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
+; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
+;
+;
+; CHECK-LABEL: define internal amdgpu_kernel void @test_kernel_10.rank_4_5_6_7(
+; CHECK-SAME: ) local_unnamed_addr #[[ATTR3]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_COND_CLEANUP:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[I_027:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC15:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    call void @dummy_ranks0123_a()
+; CHECK-NEXT:    call void @dummy_common()
+; CHECK-NEXT:    [[INC15]] = add nuw nsw i32 [[I_027]], 1
+; CHECK-NEXT:    [[EXITCOND28:%.*]] = icmp eq i32 [[INC15]], 10
+; CHECK-NEXT:    br i1 [[EXITCOND28]], label %[[FOR_COND_CLEANUP]], label %[[FOR_BODY]]
 ;

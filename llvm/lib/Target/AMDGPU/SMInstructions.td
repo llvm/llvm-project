@@ -863,31 +863,18 @@ def smrd_sextloadi16 : SMRDLoadPat<sextloadi16>;
 
 def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                              (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
-#ifdef LLPC_BUILD_NPI
                              [{ return !N->getOperand(1)->isDivergent() && Subtarget->hasSafeSmemPrefetch();}]> {
-#else /* LLPC_BUILD_NPI */
-                             [{ return !N->getOperand(1)->isDivergent();}]> {
-#endif /* LLPC_BUILD_NPI */
   let GISelPredicateCode = [{
-#ifdef LLPC_BUILD_NPI
     return isInstrUniform(MI) && Subtarget->hasSafeSmemPrefetch();
-#else /* LLPC_BUILD_NPI */
-    return isInstrUniform(MI);
-#endif /* LLPC_BUILD_NPI */
   }];
 }
 
 def SMRDImm         : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
 def SMRDImm32       : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
-#ifdef LLPC_BUILD_NPI
 let WantsRoot = true in {
   def SMRDSgpr        : ComplexPattern<iPTR, 3, "SelectSMRDSgpr", [], [], -3>;
   def SMRDSgprImm     : ComplexPattern<iPTR, 4, "SelectSMRDSgprImm", [], []>;
 }
-#else /* LLPC_BUILD_NPI */
-def SMRDSgpr        : ComplexPattern<iPTR, 2, "SelectSMRDSgpr">;
-def SMRDSgprImm     : ComplexPattern<iPTR, 3, "SelectSMRDSgprImm">;
-#endif /* LLPC_BUILD_NPI */
 def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
@@ -928,25 +915,15 @@ multiclass SMRD_Patterns <string Instr, ValueType vt, PatFrag frag,
     let SubtargetPredicate = isNotGFX9Plus;
   }
   def : GCNPat <
-#ifdef LLPC_BUILD_NPI
     (frag (SMRDSgpr i64:$sbase, i32:$soffset, CPol:$cpol)),
     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, 0, $cpol))> {
-#else /* LLPC_BUILD_NPI */
-    (frag (SMRDSgpr i64:$sbase, i32:$soffset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, 0, 0))> {
-#endif /* LLPC_BUILD_NPI */
     let SubtargetPredicate = isGFX9Plus;
   }
 
   // 4. SGPR+IMM offset
   def : GCNPat <
-#ifdef LLPC_BUILD_NPI
     (frag (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset, CPol:$cpol)),
     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, $offset, $cpol))> {
-#else /* LLPC_BUILD_NPI */
-    (frag (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM"#suffix) $sbase, $soffset, $offset, 0))> {
-#endif /* LLPC_BUILD_NPI */
     let SubtargetPredicate = isGFX9Plus;
   }
 
@@ -1021,25 +998,15 @@ multiclass ScalarLoadWithExtensionPat <string Instr, SDPatternOperator node, Val
 
    // 2. SGPR offset
    def : GCNPat <
-#ifdef LLPC_BUILD_NPI
      (node (SMRDSgpr i64:$sbase, i32:$soffset, CPol:$cpol)),
      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, $cpol))>{
-#else /* LLPC_BUILD_NPI */
-     (node (SMRDSgpr i64:$sbase, i32:$soffset)),
-     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))>{
-#endif /* LLPC_BUILD_NPI */
        let SubtargetPredicate = isGFX12Plus;
    }
 
    // 3. SGPR+IMM offset
    def : GCNPat <
-#ifdef LLPC_BUILD_NPI
      (node (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset, CPol:$cpol)),
      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, $cpol))>{
-#else /* LLPC_BUILD_NPI */
-     (node (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))>{
-#endif /* LLPC_BUILD_NPI */
        let SubtargetPredicate = isGFX12Plus;
    }
 
@@ -1192,9 +1159,7 @@ multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
 }
 
 defm : SMPrefetchPat<"INST", i32imm_zero>;
-#ifdef LLPC_BUILD_NPI
 let AddedComplexity = 12 in // Prefer scalar prefetch over global for r/o case.
-#endif /* LLPC_BUILD_NPI */
 defm : SMPrefetchPat<"DATA", i32imm_one>;
 
 let SubtargetPredicate = isGFX12Plus in {

@@ -919,10 +919,21 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
 }
 
 #ifdef LLPC_BUILD_NPI
+multiclass DS_LOAD_MCAST<string opName, RegisterClass rc = VGPR_32> {
+  def "" : DS_1A_RET<opName, rc>;
+  def _LANESHARED : DS_1A_RET<opName#"_LANESHARED", rc> {
+    let OutOperandList = (outs);
+    defvar BasicIns = (ins VGPRSrc_32:$addr, Offset:$offset, gds:$gds);
+    defvar V_STORE_IDX_Ins = (ins VGPR_IDX_IDX_OP:$idx, i32imm:$dyn_offset);
+    let InOperandList = !con(BasicIns, V_STORE_IDX_Ins);
+    let mayStore = 1;
+  }
+}
+
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
-  def DS_LOAD_MCAST_B32  : DS_1A_RET<"ds_load_mcast_b32">;
-  def DS_LOAD_MCAST_B64  : DS_1A_RET<"ds_load_mcast_b64", VReg_64>;
-  def DS_LOAD_MCAST_B128 : DS_1A_RET<"ds_load_mcast_b128", VReg_128>;
+  defm DS_LOAD_MCAST_B32  : DS_LOAD_MCAST<"ds_load_mcast_b32">;
+  defm DS_LOAD_MCAST_B64  : DS_LOAD_MCAST<"ds_load_mcast_b64", VReg_64>;
+  defm DS_LOAD_MCAST_B128 : DS_LOAD_MCAST<"ds_load_mcast_b128", VReg_128>;
 }
 
 #endif /* LLPC_BUILD_NPI */
@@ -1591,8 +1602,11 @@ defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 #ifdef LLPC_BUILD_NPI
 defm DS_ADD_F64     : DS_Real_gfx12_gfx13<0x054>;
 defm DS_ADD_RTN_F64 : DS_Real_gfx12_gfx13<0x074>;
-
+#else /* LLPC_BUILD_NPI */
+defm DS_ADD_F64     : DS_Real_gfx12<0x054>;
+defm DS_ADD_RTN_F64 : DS_Real_gfx12<0x074>;
 #endif /* LLPC_BUILD_NPI */
+
 let AssemblerPredicate = HasLdsBarrierArriveAtomic in {
 #ifdef LLPC_BUILD_NPI
 defm DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_Real_gfx12_gfx13<0x056>;

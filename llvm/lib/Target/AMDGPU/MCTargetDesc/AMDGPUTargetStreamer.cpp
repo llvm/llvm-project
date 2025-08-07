@@ -506,11 +506,13 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
       ".amdhsa_user_sgpr_private_segment_size");
 #if LLPC_BUILD_NPI
   if (isGFX1250Only(STI))
+#else /* LLPC_BUILD_NPI */
+  if (isGFX1250(STI))
+#endif /* LLPC_BUILD_NPI */
     PrintField(KD.kernel_code_properties,
                amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES_SHIFT,
                amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES,
                ".amdhsa_uses_cu_stores");
-#endif /* LLPC_BUILD_NPI */
   if (IVersion.Major >= 10)
     PrintField(KD.kernel_code_properties,
                amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32_SHIFT,

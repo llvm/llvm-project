@@ -65,6 +65,11 @@ private:
 void buildReadAnyLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
                       const RegisterBankInfo &RBI);
 #if LLPC_BUILD_NPI
+
+#endif /* LLPC_BUILD_NPI */
+void buildReadFirstLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
+                        const RegisterBankInfo &RBI);
+#if LLPC_BUILD_NPI
 } // namespace AMDGPU
 } // namespace llvm
 #else /* LLPC_BUILD_NPI */

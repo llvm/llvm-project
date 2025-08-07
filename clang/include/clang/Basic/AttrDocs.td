@@ -3337,6 +3337,18 @@ rank.
   }];
 }
 
+def AMDGPUEnableWaspDocs : Documentation {
+  let Category = DocCatAMDGPUAttributes;
+  let Content = [{
+Kernels marked with this attribute will have the AMDGPU Wasp (wave specialization) optimization applied to them. 
+
+Clang supports the
+``__attribute__((amdgpu_enable_wasp()))``
+attribute for the AMDGPU target when compiling for a GFX13 target. This attribute may be attached
+to HIP kernel function definitions to enable amdgpu-wasp optimization.
+  }];
+}
+
 #endif /* LLPC_BUILD_NPI */
 def DocCatCallingConvs : DocumentationCategory<"Calling Conventions"> {
   let Content = [{
@@ -9479,9 +9491,9 @@ def NonStringDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``nonstring`` attribute can be applied to the declaration of a variable or
-a field whose type is a character array to specify that the character array is
-not intended to behave like a null-terminated string. This will silence
-diagnostics with code like:
+a field whose type is a character pointer or character array to specify that
+the buffer is not intended to behave like a null-terminated string. This will
+silence diagnostics with code like:
 
 .. code-block:: c
 

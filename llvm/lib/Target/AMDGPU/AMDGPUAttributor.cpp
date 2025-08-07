@@ -13,7 +13,6 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/Target/TargetMachine.h"
@@ -1546,9 +1545,9 @@ static bool runImpl(Module &M, AnalysisGetter &AG, TargetMachine &TM,
        &AACallEdges::ID, &AAPointerInfo::ID, &AAPotentialConstantValues::ID,
        &AAUnderlyingObjects::ID, &AANoAliasAddrSpace::ID, &AAAddressSpace::ID,
 #if LLPC_BUILD_NPI
-       &AAIndirectCallInfo::ID, &AAInstanceInfo::ID, &AAAMDGPUClusterDims::ID});
+       &AAIndirectCallInfo::ID, &AAAMDGPUClusterDims::ID});
 #else /* LLPC_BUILD_NPI */
-       &AAIndirectCallInfo::ID, &AAInstanceInfo::ID});
+       &AAIndirectCallInfo::ID});
 #endif /* LLPC_BUILD_NPI */
 
   AttributorConfig AC(CGUpdater);

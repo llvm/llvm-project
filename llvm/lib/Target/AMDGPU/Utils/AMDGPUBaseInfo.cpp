@@ -690,12 +690,16 @@ const MFMA_F8F6F4_Info *getWMMA_F8F6F4_WithFormatArgs(unsigned FmtA,
 }
 
 unsigned getVOPDEncodingFamily(const MCSubtargetInfo &ST) {
+#if LLPC_BUILD_NPI
+  if (ST.hasFeature(AMDGPU::FeatureGFX13Insts))
+    return SIEncodingFamily::GFX13;
+#endif /* LLPC_BUILD_NPI */
   if (ST.hasFeature(AMDGPU::FeatureGFX1250Insts))
     return SIEncodingFamily::GFX1250;
   if (ST.hasFeature(AMDGPU::FeatureGFX12Insts))
     return SIEncodingFamily::GFX12;
   if (ST.hasFeature(AMDGPU::FeatureGFX11Insts))
-    return SIEncodingFamily::GFX11;
+    return isGFX1170(ST) ? SIEncodingFamily::GFX1170 : SIEncodingFamily::GFX11;
   llvm_unreachable("Subtarget generation does not support VOPD!");
 }
 
@@ -709,9 +713,24 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
     // TODO: This can be optimized by creating tables of supported VOPDY
     // opcodes per encoding.
     unsigned VOPDMov = AMDGPU::getVOPDOpcode(AMDGPU::V_MOV_B32_e32, VOPD3);
+#if LLPC_BUILD_NPI
+    bool CanBeVOPDX;
+    if (VOPD3) {
+      CanBeVOPDX = getVOPDFull(AMDGPU::getVOPDOpcode(Opc, VOPD3), VOPDMov,
+                               EncodingFamily, VOPD3) != -1;
+    } else {
+      // The list of VOPDX opcodes is currently the same in all encoding
+      // families, so we do not need a family-specific check.
+      CanBeVOPDX = Info->CanBeVOPDX;
+    }
+#endif /* LLPC_BUILD_NPI */
     bool CanBeVOPDY = getVOPDFull(VOPDMov, AMDGPU::getVOPDOpcode(Opc, VOPD3),
                                   EncodingFamily, VOPD3) != -1;
+#if LLPC_BUILD_NPI
+    return {CanBeVOPDX, CanBeVOPDY};
+#else /* LLPC_BUILD_NPI */
     return {VOPD3 ? Info->CanBeVOPD3X : Info->CanBeVOPDX, CanBeVOPDY};
+#endif /* LLPC_BUILD_NPI */
   }
 
   return {false, false};
@@ -827,25 +846,37 @@ bool isGenericAtomic(unsigned Opc) {
 }
 
 bool isAsyncStore(unsigned Opc) {
-#if LLPC_BUILD_NPI
   return Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx1250 ||
+#if LLPC_BUILD_NPI
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx1250 ||
+#if LLPC_BUILD_NPI
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx1250 ||
+#if LLPC_BUILD_NPI
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx1250 ||
+#if LLPC_BUILD_NPI
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx1250 ||
+#if LLPC_BUILD_NPI
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B8_SADDR_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx1250 ||
+#if LLPC_BUILD_NPI
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B32_SADDR_gfx13 ||
+#endif /* LLPC_BUILD_NPI */
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx1250 ||
+#if LLPC_BUILD_NPI
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B64_SADDR_gfx13 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1250 ||
          Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx13;
 #else /* LLPC_BUILD_NPI */
-  return false; // placeholder before async store implementation.
+         Opc == GLOBAL_STORE_ASYNC_FROM_LDS_B128_SADDR_gfx1250;
 #endif /* LLPC_BUILD_NPI */
 }
 
@@ -2997,9 +3028,7 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_IMM_FP64:
   case AMDGPU::OPERAND_REG_IMM_FP16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
-#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
-#endif /* LLPC_BUILD_NPI */
   case AMDGPU::OPERAND_REG_INLINE_C_FP32:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
@@ -3528,10 +3557,8 @@ bool isInlinableLiteralV216(uint32_t Literal, uint8_t OpType) {
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     return isInlinableLiteralV2BF16(Literal);
-#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     return false;
-#endif /* LLPC_BUILD_NPI */
   default:
     llvm_unreachable("bad packed operand type");
   }
@@ -3935,12 +3962,12 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   return hasNamedOperand(Opcode, OpName::vaddr) &&
 #if LLPC_BUILD_NPI
          hasNamedOperand(Opcode, OpName::saddr) && !isVDDS(Opcode);
-
-  return false;
-}
 #else /* LLPC_BUILD_NPI */
          hasNamedOperand(Opcode, OpName::saddr);
 #endif /* LLPC_BUILD_NPI */
+
+  return false;
+}
 
 #if LLPC_BUILD_NPI
 bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
@@ -3968,10 +3995,10 @@ bool isLegalDPALU_DPPControl(const MCSubtargetInfo &ST, unsigned Opcode,
     return DC >= DPP::ROW_SHARE_FIRST && DC <= DPP::ROW_SHARE_LAST;
   if (isGFX90A(ST))
     return DC >= DPP::ROW_NEWBCAST_FIRST && DC <= DPP::ROW_NEWBCAST_LAST;
-#endif /* LLPC_BUILD_NPI */
   return false;
 }
 
+#endif /* LLPC_BUILD_NPI */
 bool hasAny64BitVGPROperands(const MCInstrDesc &OpDesc) {
   for (auto OpName : {OpName::vdst, OpName::src0, OpName::src1, OpName::src2}) {
     int Idx = getNamedOperandIdx(OpDesc.getOpcode(), OpName);

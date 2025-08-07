@@ -64,9 +64,7 @@ protected:
   bool EnableRealTrue16Insts = false;
   bool HasBF16TransInsts = false;
   bool HasBF16ConversionInsts = false;
-#if LLPC_BUILD_NPI
   bool HasBF16PackedInsts = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasMadMixInsts = false;
   bool HasMadMacF32Insts = false;
   bool HasDsSrc2Insts = false;
@@ -221,10 +219,8 @@ public:
     return HasBF16ConversionInsts;
   }
 
-#if LLPC_BUILD_NPI
   bool hasBF16PackedInsts() const { return HasBF16PackedInsts; }
 
-#endif /* LLPC_BUILD_NPI */
   bool hasMadMixInsts() const {
     return HasMadMixInsts;
   }

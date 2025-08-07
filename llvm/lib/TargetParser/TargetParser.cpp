@@ -537,8 +537,8 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
 #endif /* LLPC_BUILD_NPI */
       Features["transpose-load-f4f6-insts"] = true;
       Features["bf16-trans-insts"] = true;
-#if LLPC_BUILD_NPI
       Features["bf16-cvt-insts"] = true;
+#if LLPC_BUILD_NPI
       Features["bf16-pk-insts"] = true;
 #endif /* LLPC_BUILD_NPI */
       Features["fp8-conversion-insts"] = true;
@@ -546,9 +546,7 @@ void AMDGPU::fillAMDGPUFeatureMap(StringRef GPU, const Triple &T,
       Features["permlane16-swap"] = true;
       Features["ashr-pk-insts"] = true;
       Features["atomic-buffer-pk-add-bf16-inst"] = true;
-#if LLPC_BUILD_NPI
       Features["vmem-pref-insts"] = true;
-#endif /* LLPC_BUILD_NPI */
       Features["atomic-fadd-rtn-insts"] = true;
       Features["atomic-buffer-global-pk-add-f16-insts"] = true;
       Features["atomic-flat-pk-add-16-insts"] = true;

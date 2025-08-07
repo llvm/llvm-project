@@ -115,6 +115,7 @@ private:
   bool fixGetRegWaitIdle(MachineInstr *MI);
   bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
   bool fixScratchBaseForwardingHazard(MachineInstr *MI);
+  bool fixSetRegMode(MachineInstr *MI);
 #endif /* LLPC_BUILD_NPI */
 
   int checkMAIHazards(MachineInstr *MI);

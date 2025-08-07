@@ -2993,9 +2993,11 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
                     KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE);
 #if LLPC_BUILD_NPI
     if (isGFX1250Only())
+#else /* LLPC_BUILD_NPI */
+    if (isGFX1250())
+#endif /* LLPC_BUILD_NPI */
       PRINT_DIRECTIVE(".amdhsa_uses_cu_stores",
                       KERNEL_CODE_PROPERTY_USES_CU_STORES);
-#endif /* LLPC_BUILD_NPI */
 
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED0)
       return createReservedKDBitsError(KERNEL_CODE_PROPERTY_RESERVED0,

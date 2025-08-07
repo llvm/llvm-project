@@ -425,10 +425,8 @@ public:
   /// FIXME: This takes a MI because iterators aren't handled properly. When
   /// this is called, they often point to entirely different insts. Thus we back
   /// up the inst early and pass it here instead.
-  virtual bool finalizeStore(MachineInstr &MI, bool Atomic) const {
-#else /* LLPC_BUILD_NPI */
-  virtual bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const {
 #endif /* LLPC_BUILD_NPI */
+  virtual bool finalizeStore(MachineInstr &MI, bool Atomic) const {
     return false;
   };
 
@@ -737,14 +735,12 @@ public:
                                       bool IsVolatile, bool IsNonTemporal,
                                       bool IsLastUse) const override;
 
-#if LLPC_BUILD_NPI
   bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
 
+#if LLPC_BUILD_NPI
   virtual bool handleCooperativeAtomic(MachineInstr &MI) const override;
-#else /* LLPC_BUILD_NPI */
-  bool expandSystemScopeStore(MachineBasicBlock::iterator &MI) const override;
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
                      Position Pos) const override;
@@ -861,16 +857,16 @@ void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
       DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
 }
 
-/// Reads \p MI's MMRAs to parse the "amdgpu-as" MMRA.
-/// If this tag isn't present, or if it has no meaningful values, returns \p
-/// Default. Otherwise returns all the address spaces concerned by the MMRA.
-static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
-                                               SIAtomicAddrSpace Default) {
-  static constexpr StringLiteral FenceASPrefix = "amdgpu-as";
+/// Reads \p MI's MMRAs to parse the "amdgpu-synchronize-as" MMRA.
+/// If this tag isn't present, or if it has no meaningful values, returns
+/// \p none, otherwise returns the address spaces specified by the MD.
+static std::optional<SIAtomicAddrSpace>
+getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
+  static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
 
   auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
   if (!MMRA)
-    return Default;
+    return std::nullopt;
 
   SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
   for (const auto &[Prefix, Suffix] : MMRA) {
@@ -883,7 +879,10 @@ static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
       diagnoseUnknownMMRAASName(MI, Suffix);
   }
 
-  return (Result != SIAtomicAddrSpace::NONE) ? Result : Default;
+  if (Result == SIAtomicAddrSpace::NONE)
+    return std::nullopt;
+
+  return Result;
 }
 
 } // end anonymous namespace
@@ -1142,11 +1141,18 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
       *ScopeOrNone;
 
-  if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
-      ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace)) {
+  if (OrderingAddrSpace != SIAtomicAddrSpace::ATOMIC) {
+    // We currently expect refineOrderingAS to be the only place that
+    // can refine the AS ordered by the fence.
+    // If that changes, we need to review the semantics of that function
+    // in case it needs to preserve certain address spaces.
     reportUnsupported(MI, "Unsupported atomic address space");
     return std::nullopt;
   }
+
+  auto SynchronizeAS = getSynchronizeAddrSpaceMD(*MI);
+  if (SynchronizeAS)
+    OrderingAddrSpace = *SynchronizeAS;
 
 #if LLPC_BUILD_NPI
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
@@ -1418,6 +1424,16 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                             LGKMCnt ? 0 : getLgkmcntBitMask(IV));
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
         .addImm(WaitCntImmediate);
+    Changed = true;
+  }
+
+  // On architectures that support direct loads to LDS, emit an unknown waitcnt
+  // at workgroup-scoped release operations that specify the LDS address space.
+  // SIInsertWaitcnts will later replace this with a vmcnt().
+  if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
+      Scope == SIAtomicScope::WORKGROUP &&
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
     Changed = true;
   }
 
@@ -2329,6 +2345,16 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
+  // On architectures that support direct loads to LDS, emit an unknown waitcnt
+  // at workgroup-scoped release operations that specify the LDS address space.
+  // SIInsertWaitcnts will later replace this with a vmcnt().
+  if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
+      Scope == SIAtomicScope::WORKGROUP &&
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+    Changed = true;
+  }
+
   if (VSCnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
@@ -2884,12 +2910,6 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   if (IsVolatile) {
     Changed |= setScope(MI, AMDGPU::CPol::SCOPE_SYS);
 
-#if LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
-    if (Op == SIMemOp::STORE)
-      Changed |= insertWaitsBeforeSystemScopeStore(MI);
-
-#endif /* LLPC_BUILD_NPI */
     // Ensure operation has completed at system scope to cause all volatile
     // operations to be visible outside the program in a global order. Do not
     // request cross address space as only the global address space can be
@@ -2902,8 +2922,8 @@ bool SIGfx12CacheControl::enableVolatileAndOrNonTemporal(
   return Changed;
 }
 
-#if LLPC_BUILD_NPI
 bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
+#if LLPC_BUILD_NPI
   // Only required on gfx120x.
   auto CoreMI = &MI;
   if (MI.isBundle()) {
@@ -2914,10 +2934,15 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   assert(MI.mayStore() && "Not a Store inst");
   const bool IsRMW = (MI.mayLoad() && MI.mayStore());
   bool Changed = false;
+#else /* LLPC_BUILD_NPI */
+  MachineOperand *CPol = TII->getNamedOperand(MI, OpName::cpol);
+  if (!CPol)
+    return false;
+#endif /* LLPC_BUILD_NPI */
 
-  // GFX125x only: xcnt wait is needed before atomics stores/rmw
-  if (Atomic && ST.hasWaitXCnt()) {
-    // TODO: add isAtomic once I figured out this bug.
+#if LLPC_BUILD_NPI
+  // GFX125x only: xcnt wait is needed before flat and global atomics stores/rmw
+  if (Atomic && ST.requiresWaitXCntBeforeAtomicStores() && TII->isFLAT(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
     Changed = true;
@@ -2930,35 +2955,48 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   MachineOperand *CPol = TII->getNamedOperand(MI, OpName::cpol);
   if (!CPol) // Some vmem operations do not have a scope and are not concerned.
     return Changed;
+#endif /* LLPC_BUILD_NPI */
   const unsigned Scope = CPol->getImm() & CPol::SCOPE;
 
+#if LLPC_BUILD_NPI
   // GFX120x only: Extra waits needed before non-atomic system scope stores.
+#else /* LLPC_BUILD_NPI */
+  // GFX12.0 only: Extra waits needed before system scope stores.
+#endif /* LLPC_BUILD_NPI */
   if (!ST.hasGFX1250Insts()) {
     if (!Atomic && Scope == CPol::SCOPE_SYS)
+#if LLPC_BUILD_NPI
       Changed |= insertWaitsBeforeSystemScopeStore(MI.getIterator());
     return Changed;
+#else /* LLPC_BUILD_NPI */
+      return insertWaitsBeforeSystemScopeStore(MI);
+    return false;
+#endif /* LLPC_BUILD_NPI */
   }
 
+#if LLPC_BUILD_NPI
   // GFX125x only: Require SCOPE_SE on stores that may hit the scratch address
   // space, or if the "cu-stores" target feature is disabled.
+#else /* LLPC_BUILD_NPI */
+  // GFX12.5 only: Require SCOPE_SE on stores that may hit the scratch address
+  // space.
+  // We also require SCOPE_SE minimum if we not have the "cu-stores" feature.
+#endif /* LLPC_BUILD_NPI */
   if (Scope == CPol::SCOPE_CU &&
       (!ST.hasCUStores() || TII->mayAccessScratchThroughFlat(MI)))
+#if LLPC_BUILD_NPI
     Changed |= setScope(MI, CPol::SCOPE_SE);
   return Changed;
 }
-
-bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
-  if (!ST.hasGFX1250Insts())
-    return false;
 #else /* LLPC_BUILD_NPI */
-bool SIGfx12CacheControl::expandSystemScopeStore(
-    MachineBasicBlock::iterator &MI) const {
-  MachineOperand *CPol = TII->getNamedOperand(*MI, OpName::cpol);
-  if (CPol && ((CPol->getImm() & CPol::SCOPE) == CPol::SCOPE_SYS))
-    return insertWaitsBeforeSystemScopeStore(MI);
+    return setScope(MI, CPol::SCOPE_SE);
 #endif /* LLPC_BUILD_NPI */
 
 #if LLPC_BUILD_NPI
+bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
+  if (!ST.hasGFX1250Insts())
+    return false;
+
   // Cooperative atomics need to be SCOPE_DEV or higher.
   MachineOperand *CPol = TII->getNamedOperand(MI, OpName::cpol);
   assert(CPol && "No CPol operand?");
@@ -3118,9 +3156,8 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
 #endif /* LLPC_BUILD_NPI */
 
   bool Changed = false;
-#if LLPC_BUILD_NPI
+  // FIXME: Necessary hack because iterator can lose track of the store.
   MachineInstr &StoreMI = *MI;
-#endif /* LLPC_BUILD_NPI */
 
   if (MOI.isAtomic()) {
     if (MOI.getOrdering() == AtomicOrdering::Monotonic ||
@@ -3144,9 +3181,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                    MOI.getIsCrossAddressSpaceOrdering(),
                                    Position::BEFORE);
 
-#if LLPC_BUILD_NPI
     Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/true);
-#endif /* LLPC_BUILD_NPI */
     return Changed;
   }
 
@@ -3157,14 +3192,12 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::STORE, MOI.isVolatile(),
       MOI.isNonTemporal());
 
-#if LLPC_BUILD_NPI
-  Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/false);
-
-  Changed |= CC->setCFS(MI, MOI.getCFS());
-#else /* LLPC_BUILD_NPI */
   // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
   // instruction field, do not confuse it with atomic scope.
-  Changed |= CC->expandSystemScopeStore(MI);
+  Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/false);
+#if LLPC_BUILD_NPI
+
+  Changed |= CC->setCFS(MI, MOI.getCFS());
 #endif /* LLPC_BUILD_NPI */
   return Changed;
 }
@@ -3179,11 +3212,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
-  // Refine fenced address space based on MMRAs.
-  //
-  // TODO: Should we support this MMRA on other atomic operations?
-  auto OrderingAddrSpace =
-      getFenceAddrSpaceMMRA(*MI, MOI.getOrderingAddrSpace());
+  const SIAtomicAddrSpace OrderingAddrSpace = MOI.getOrderingAddrSpace();
 
   if (MOI.isAtomic()) {
     const AtomicOrdering Order = MOI.getOrdering();

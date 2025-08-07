@@ -126,9 +126,7 @@ protected:
   bool HasSMemRealTime = false;
   bool HasIntClamp = false;
   bool HasFmaMixInsts = false;
-#if LLPC_BUILD_NPI
   bool HasFmaMixBF16Insts = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasMovrel = false;
   bool HasVGPRIndexMode = false;
   bool HasScalarDwordx3Loads = false;
@@ -268,14 +266,10 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
-#if LLPC_BUILD_NPI
   bool HasVmemPrefInsts = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasSafeSmemPrefetch = false;
-#if LLPC_BUILD_NPI
   bool HasSafeCUPrefetch = false;
   bool HasCUStores = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -302,20 +296,18 @@ protected:
   bool HasIEEEMinimumMaximumInsts = false;
   bool HasMinimum3Maximum3F32 = false;
   bool HasMinimum3Maximum3F16 = false;
-#if LLPC_BUILD_NPI
   bool HasMin3Max3PKF16 = false;
-#endif /* LLPC_BUILD_NPI */
   bool HasMinimum3Maximum3PKF16 = false;
   bool HasLshlAddU64Inst = false;
-#if LLPC_BUILD_NPI
   bool HasAddSubU64Insts = false;
+#if LLPC_BUILD_NPI
   bool HasVNBREncoding = false;
   bool HasSWC = false;
   bool HasIndexedResources = false;
   bool HasSGPRVMEM = false;
   bool HasParallelBitInsts = false;
-  bool HasMadU32Inst = false;
 #endif /* LLPC_BUILD_NPI */
+  bool HasMadU32Inst = false;
   bool HasPointSampleAccel = false;
   bool HasLdsBarrierArriveAtomic = false;
   bool HasSetPrioIncWgInst = false;
@@ -523,10 +515,8 @@ public:
     return HasFmaMixInsts;
   }
 
-#if LLPC_BUILD_NPI
   bool hasFmaMixBF16Insts() const { return HasFmaMixBF16Insts; }
 
-#endif /* LLPC_BUILD_NPI */
   bool hasCARRY() const {
     return true;
   }
@@ -794,13 +784,9 @@ public:
 #endif /* LLPC_BUILD_NPI */
 
   // DS_ADD_F64/DS_ADD_RTN_F64
-#if LLPC_BUILD_NPI
   bool hasLdsAtomicAddF64() const {
     return hasGFX90AInsts() || hasGFX1250Insts();
   }
-#else /* LLPC_BUILD_NPI */
-  bool hasLdsAtomicAddF64() const { return hasGFX90AInsts(); }
-#endif /* LLPC_BUILD_NPI */
 
   bool hasMultiDwordFlatScratchAddressing() const {
     return getGeneration() >= GFX9;
@@ -1100,18 +1086,14 @@ public:
 
   bool hasPrefetch() const { return GFX12Insts; }
 
-#if LLPC_BUILD_NPI
   bool hasVmemPrefInsts() const { return HasVmemPrefInsts; }
 
-#endif /* LLPC_BUILD_NPI */
   bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
-#if LLPC_BUILD_NPI
   bool hasSafeCUPrefetch() const { return HasSafeCUPrefetch; }
 
   bool hasCUStores() const { return HasCUStores; }
 
-#endif /* LLPC_BUILD_NPI */
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }
 
@@ -1310,11 +1292,9 @@ public:
 
   bool hasFlatGVSMode() const { return FlatGVSMode; }
 
-#if LLPC_BUILD_NPI
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return GFX1250Insts; }
 
-#endif /* LLPC_BUILD_NPI */
   bool enableSIScheduler() const {
     return EnableSIScheduler;
   }
@@ -1457,16 +1437,18 @@ public:
 #endif /* LLPC_BUILD_NPI */
   bool hasVALUMaskWriteHazard() const { return getGeneration() == GFX11; }
 
-#if LLPC_BUILD_NPI
   bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
+
+#if LLPC_BUILD_NPI
+  bool setRegModeNeedsVNOPs() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
 
   bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
 
   bool hasMLMathInsts() const { return HasMLMathInsts; }
-#else /* LLPC_BUILD_NPI */
-  bool hasVALUReadSGPRHazard() const { return getGeneration() == GFX12; }
-#endif /* LLPC_BUILD_NPI */
 
+#endif /* LLPC_BUILD_NPI */
   /// Return if operations acting on VGPR tuples require even alignment.
 #if LLPC_BUILD_NPI
   bool needsAlignedVGPRs() const {
@@ -1556,10 +1538,8 @@ public:
     return HasMinimum3Maximum3F16;
   }
 
-#if LLPC_BUILD_NPI
   bool hasMin3Max3PKF16() const { return HasMin3Max3PKF16; }
 
-#endif /* LLPC_BUILD_NPI */
   bool hasTanhInsts() const { return HasTanhInsts; }
 
 #if LLPC_BUILD_NPI
@@ -1703,7 +1683,6 @@ public:
 #endif /* LLPC_BUILD_NPI */
   bool hasVOPD3() const { return GFX1250Insts; }
 
-#if LLPC_BUILD_NPI
   // \returns true if the target has V_ADD_U64/V_SUB_U64 instructions.
   bool hasAddSubU64Insts() const { return HasAddSubU64Insts; }
 
@@ -1711,28 +1690,51 @@ public:
   bool hasMadU32Inst() const { return HasMadU32Inst; }
 
   // \returns true if the target has V_MUL_U64/V_MUL_I64 instructions.
+#if LLPC_BUILD_NPI
   bool hasVectorMulU64() const { return GFX1250Insts && !GFX13Insts; }
+#else /* LLPC_BUILD_NPI */
+  bool hasVectorMulU64() const { return GFX1250Insts; }
+#endif /* LLPC_BUILD_NPI */
 
   // \returns true if the target has V_MAD_NC_U64_U32/V_MAD_NC_I64_I32
   // instructions.
+#if LLPC_BUILD_NPI
   bool hasMadU64U32NoCarry() const { return GFX1250Insts && !GFX13Insts; }
+#else /* LLPC_BUILD_NPI */
+  bool hasMadU64U32NoCarry() const { return GFX1250Insts; }
+#endif /* LLPC_BUILD_NPI */
 
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
+#if LLPC_BUILD_NPI
   bool hasIntMinMax64() const { return GFX1250Insts && !GFX13Insts; }
+#else /* LLPC_BUILD_NPI */
+  bool hasIntMinMax64() const { return GFX1250Insts; }
+#endif /* LLPC_BUILD_NPI */
 
   // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
+#if LLPC_BUILD_NPI
   bool hasAddMinMaxInsts() const { return GFX1250Insts && !GFX13Insts; }
+#else /* LLPC_BUILD_NPI */
+  bool hasAddMinMaxInsts() const { return GFX1250Insts; }
+#endif /* LLPC_BUILD_NPI */
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
+#if LLPC_BUILD_NPI
   bool hasPkAddMinMaxInsts() const { return GFX1250Insts && !GFX13Insts; }
+#else /* LLPC_BUILD_NPI */
+  bool hasPkAddMinMaxInsts() const { return GFX1250Insts; }
+#endif /* LLPC_BUILD_NPI */
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
+#if LLPC_BUILD_NPI
   bool hasPkMinMax3Insts() const { return GFX1250Insts && !GFX13Insts; }
 
   // \returns ture if target has S_GET_SHADER_CYCLES_U64 instruction.
   bool hasSGetShaderCyclesInst() const { return GFX1250Insts; }
-
+#else /* LLPC_BUILD_NPI */
+  bool hasPkMinMax3Insts() const { return GFX1250Insts; }
 #endif /* LLPC_BUILD_NPI */
+
   // \returns true if target has S_SETPRIO_INC_WG instruction.
   bool hasSetPrioIncWgInst() const { return HasSetPrioIncWgInst; }
 
@@ -1907,6 +1909,10 @@ public:
     return getMaxNumVGPRs(F);
   }
 
+  /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
+  /// of waves per execution unit required for the function \p MF.
+  std::pair<unsigned, unsigned> getMaxNumVectorRegs(const Function &F) const;
+
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p MF, or number of VGPRs explicitly
   /// requested using "amdgpu-num-vgpr" attribute attached to function \p MF.
@@ -2046,6 +2052,10 @@ public:
 
   /// \returns true if s_barrier_init increments KMcnt.
   bool hasSBarrierInitKmCnt() const { return getGeneration() >= GFX13; }
+
+  /// \returns true if the subtarget requires a wait for xcnt before atomic
+  /// flat/global stores & rmw.
+  bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts && !GFX13Insts; }
 #endif /* LLPC_BUILD_NPI */
 };
 

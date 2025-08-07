@@ -557,6 +557,79 @@ unsigned GCNSubtarget::getLdsSpillLimitDwords(const MachineFunction &MF) const {
   return F.getFnAttributeAsParsedInteger("amdgpu-lds-spill-limit-dwords", 0);
 }
 
+std::pair<unsigned, unsigned>
+GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
+  const unsigned MaxVectorRegs = getMaxNumVGPRs(F);
+
+  unsigned MaxNumVGPRs = MaxVectorRegs;
+  unsigned MaxNumAGPRs = 0;
+#if LLPC_BUILD_NPI
+  unsigned NumArchVGPRs = has1024AddressableVGPRs() ? 1024 : 256;
+#endif /* LLPC_BUILD_NPI */
+
+  // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
+  // a wave may have up to 512 total vector registers combining together both
+  // VGPRs and AGPRs. Hence, in an entry function without calls and without
+  // AGPRs used within it, it is possible to use the whole vector register
+  // budget for VGPRs.
+  //
+  // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
+  //       register file accordingly.
+  if (hasGFX90AInsts()) {
+    unsigned MinNumAGPRs = 0;
+    const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
+    const unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+#endif /* LLPC_BUILD_NPI */
+
+    const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
+
+    // TODO: The lower bound should probably force the number of required
+    // registers up, overriding amdgpu-waves-per-eu.
+    std::tie(MinNumAGPRs, MaxNumAGPRs) =
+        AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", DefaultNumAGPR,
+                                        /*OnlyFirstRequired=*/true);
+
+    if (MinNumAGPRs == DefaultNumAGPR.first) {
+      // Default to splitting half the registers if AGPRs are required.
+      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
+    } else {
+      // Align to accum_offset's allocation granularity.
+      MinNumAGPRs = alignTo(MinNumAGPRs, 4);
+
+      MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
+    }
+
+    // Clamp values to be inbounds of our limits, and ensure min <= max.
+
+    MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
+    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
+
+#if LLPC_BUILD_NPI
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
+#else /* LLPC_BUILD_NPI */
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, TotalNumVGPRs);
+#endif /* LLPC_BUILD_NPI */
+    MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
+
+#if LLPC_BUILD_NPI
+    assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= NumArchVGPRs &&
+           "invalid register counts");
+#else /* LLPC_BUILD_NPI */
+    assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= TotalNumVGPRs &&
+           "invalid register counts");
+#endif /* LLPC_BUILD_NPI */
+  } else if (hasMAIInsts()) {
+    // On gfx908 the number of AGPRs always equals the number of VGPRs.
+    MaxNumAGPRs = MaxNumVGPRs = MaxVectorRegs;
+  }
+
+  return std::pair(MaxNumVGPRs, MaxNumAGPRs);
+}
+
 void GCNSubtarget::adjustSchedDependency(
     SUnit *Def, int DefOpIdx, SUnit *Use, int UseOpIdx, SDep &Dep,
     const TargetSchedModel *SchedModel) const {

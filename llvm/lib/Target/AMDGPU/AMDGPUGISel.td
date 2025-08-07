@@ -58,6 +58,8 @@ def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
 
+#ifdef LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
 def gi_vop3pmodsneg :
     GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
     GIComplexPatternEquiv<VOP3PModsNeg>;
@@ -70,6 +72,7 @@ def gi_dotiuvop3pmodsnegabs :
     GIComplexOperandMatcher<s32, "selectVOP3PModsNegAbs">,
     GIComplexPatternEquiv<VOP3PModsNegAbs>;
 
+#endif /* LLPC_BUILD_NPI */
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -148,9 +151,11 @@ def gi_global_saddr :
 def gi_global_saddr_no_scale_offset :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrNoScaleOffset">,
     GIComplexPatternEquiv<GlobalSAddrNoScaleOffset>;
+#endif /* LLPC_BUILD_NPI */
 def gi_global_saddr_cpol :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrCPol">,
     GIComplexPatternEquiv<GlobalSAddrCPol>;
+#ifdef LLPC_BUILD_NPI
 def gi_global_saddr_cpol_m0 :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrCPolM0">,
     GIComplexPatternEquiv<GlobalSAddrCPolM0>;
@@ -158,16 +163,19 @@ def gi_global_saddr_cpol_m0 :
 def gi_global_saddr_glc :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrGLC">,
     GIComplexPatternEquiv<GlobalSAddrGLC>;
-#ifdef LLPC_BUILD_NPI
 def gi_global_saddr_no_ioffset :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffset">,
     GIComplexPatternEquiv<GlobalSAddrNoIOffset>;
+#ifdef LLPC_BUILD_NPI
 def gi_global_saddr_no_ioffset_scale_offset :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffsetScaleOffset">,
     GIComplexPatternEquiv<GlobalSAddrNoIOffsetScaleOffset>;
 def gi_global_saddr_no_ioffset_m0 :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffsetM0">,
     GIComplexPatternEquiv<GlobalSAddrNoIOffsetM0>;
+def gi_global_saddr_no_ioffset_scale_offset_m0 :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffsetScaleOffsetM0">,
+    GIComplexPatternEquiv<GlobalSAddrNoIOffsetScaleOffsetM0>;
 #endif /* LLPC_BUILD_NPI */
 
 def gi_mubuf_scratch_offset :
@@ -482,9 +490,16 @@ def gi_as_hw_round_mode : GICustomOperandRenderer<"renderRoundMode">,
   GISDNodeXFormEquiv<as_hw_round_mode>;
 #ifdef LLPC_BUILD_NPI
 
+def gi_VOP3PModsNeg : GICustomOperandRenderer<"renderVOP3PModsNeg">,
+  GISDNodeXFormEquiv<VOP3PModsNeg>;
+def gi_VOP3PModsNegs : GICustomOperandRenderer<"renderVOP3PModsNegs">,
+  GISDNodeXFormEquiv<VOP3PModsNegs>;
+def gi_VOP3PModsNegAbs : GICustomOperandRenderer<"renderVOP3PModsNegAbs">,
+  GISDNodeXFormEquiv<VOP3PModsNegAbs>;
+#endif /* LLPC_BUILD_NPI */
+
 def gi_prefetch_loc : GICustomOperandRenderer<"renderPrefetchLoc">,
   GISDNodeXFormEquiv<PrefetchLoc>;
-#endif /* LLPC_BUILD_NPI */
 
 def gi_MFMALdScaleModifierOp : GICustomOperandRenderer<"renderScaledMAIIntrinsicOperand">,
   GISDNodeXFormEquiv<MFMALdScaleXForm>;

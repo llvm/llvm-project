@@ -3261,9 +3261,7 @@ multiclass VBUFFER_MTBUF_Real_gfx13<bits<8> op, string real_name> {
   }
 }
 
-#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
-#ifdef LLPC_BUILD_NPI
 // VBUFFER (MUBUF) - GFX13.
 //===----------------------------------------------------------------------===//
 
@@ -3315,11 +3313,9 @@ defm BUFFER_DISCARD_B32         : MUBUF_Real_Discard_gfx13<0x04c>;
 defm BUFFER_DISCARD_B128        : MUBUF_Real_Discard_gfx13<0x04d>;
 defm BUFFER_DISCARD_B1024       : MUBUF_Real_Discard_gfx13<0x04e>;
 
+#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // MUBUF - GFX11, GFX12, GFX1250.
-#else /* LLPC_BUILD_NPI */
-// MUBUF - GFX11, GFX12.
-#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 
 // gfx11 instruction that accept both old and new assembler name.
@@ -3438,14 +3434,12 @@ multiclass MUBUF_Real_Atomic_gfx11_gfx12<bits<8> op,
     def : Mnem_gfx12<gfx11_name, gfx12_name>;
 }
 
-#ifdef LLPC_BUILD_NPI
 multiclass MUBUF_Real_Atomic_gfx12_Renamed<bits<8> op, string real_name> :
   MUBUF_Real_Atomic_gfx12_impl<op, 0, real_name>,
   MUBUF_Real_Atomic_gfx12_impl<op, 1, real_name> {
   def : Mnem_gfx12<get_BUF_ps<NAME>.Mnemonic, real_name>;
 }
 
-#endif /* LLPC_BUILD_NPI */
 defm BUFFER_GL0_INV               : MUBUF_Real_gfx11<0x02B>;
 defm BUFFER_GL1_INV               : MUBUF_Real_gfx11<0x02C>;
 
@@ -3524,12 +3518,10 @@ defm BUFFER_ATOMIC_XOR_X2         : MUBUF_Real_Atomic_gfx11_gfx12<0x04B, "buffer
 defm BUFFER_ATOMIC_PK_ADD_F16     : MUBUF_Real_Atomic_gfx12<0x059>;
 defm BUFFER_ATOMIC_PK_ADD_BF16    : MUBUF_Real_Atomic_gfx12<0x05a>;
 
-#ifdef LLPC_BUILD_NPI
 defm BUFFER_ATOMIC_ADD_F64 : MUBUF_Real_Atomic_gfx12<0x055>;
 defm BUFFER_ATOMIC_MIN_F64 : MUBUF_Real_Atomic_gfx12_Renamed<0x05b, "buffer_atomic_min_num_f64">;
 defm BUFFER_ATOMIC_MAX_F64 : MUBUF_Real_Atomic_gfx12_Renamed<0x05c, "buffer_atomic_max_num_f64">;
 
-#endif /* LLPC_BUILD_NPI */
 //===----------------------------------------------------------------------===//
 // MUBUF - GFX10.
 //===----------------------------------------------------------------------===//

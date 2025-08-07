@@ -961,7 +961,6 @@ let isAdd = 1 in {
   defm V_ADDC_U32 : VOP2bInst <"v_addc_u32", VOP2b_I32_I1_I32_I32_I1, null_frag, "v_addc_u32">;
 }
 
-#ifdef LLPC_BUILD_NPI
 let isReMaterializable = 1 in {
 let SubtargetPredicate = HasAddSubU64Insts, SchedRW = [Write64Bit] in {
 defm V_ADD_U64 : VOP2Inst <"v_add_nc_u64", VOP_I64_I64_I64_ARITH>;
@@ -973,7 +972,6 @@ let SubtargetPredicate = isGFX1250Plus, SchedRW = [WriteDouble] in
 defm V_MUL_U64 : VOP2Inst <"v_mul_u64", VOP_I64_I64_I64, DivergentBinFrag<mul>>;
 } // End isReMaterializable = 1
 
-#endif /* LLPC_BUILD_NPI */
 } // End isCommutable = 1
 
 // These are special and do not read the exec mask.
@@ -1392,6 +1390,8 @@ def V_FMAAK_F64 : VOP2_Pseudo<"v_fmaak_f64", VOP_MADAK_F64, [], "">;
 } // End SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1, FixedSize = 1, Size = 12, SchedRW = [Write64Bit]
 
 let SubtargetPredicate = HasPkFmacF16Inst in {
+// FIXME: V_PK_FMAC_F16 is currently not used in instruction selection.
+// If this changes, ensure the DPP variant is not used for GFX11+.
 defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
 } // End SubtargetPredicate = HasPkFmacF16Inst
 
@@ -1871,10 +1871,10 @@ multiclass VOP2_Real_FULL_with_name<GFXGen Gen, bits<6> op, string opName,
   VOP2_Realtriple_e64_with_name<Gen, op, opName, asmName>,
   VOP2_Real_NO_VOP3_with_name<Gen, op, opName, asmName>;
 
-#ifdef LLPC_BUILD_NPI
 multiclass VOP2_Real_NO_DPP<GFXGen Gen, bits<6> op> :
   VOP2_Real_e32<Gen, op>, VOP2_Real_e64<Gen, op>;
 
+#ifdef LLPC_BUILD_NPI
 multiclass VOP2_Real_NO_DPP_gfx1250_gfx13<bits<6> gfx1250Op, bits<6> op> :
   VOP2_Real_NO_DPP<GFX1250Gen, gfx1250Op>,
   VOP2_Real_NO_DPP<GFX13Gen, op>;
@@ -2000,17 +2000,17 @@ multiclass VOP2_Real_NO_DPP_with_name_gfx12<bits<6> op, string opName,
 #else /* LLPC_BUILD_NPI */
 multiclass VOP2_Real_NO_DPP_with_alias_gfx12<bits<6> op, string alias> :
   VOP2_Real_NO_DPP_with_alias<GFX12Gen, op, alias>;
-
-defm V_ADD_F64     : VOP2_Real_NO_DPP_with_name_gfx12<0x002, "V_ADD_F64_pseudo", "v_add_f64">;
-defm V_MUL_F64     : VOP2_Real_NO_DPP_with_name_gfx12<0x006, "V_MUL_F64_pseudo", "v_mul_f64">;
-defm V_LSHLREV_B64 : VOP2_Real_NO_DPP_with_name_gfx12<0x01f, "V_LSHLREV_B64_pseudo", "v_lshlrev_b64">;
-defm V_MIN_NUM_F64 : VOP2_Real_NO_DPP_with_alias_gfx12<0x00d, "v_min_f64">;
-defm V_MAX_NUM_F64 : VOP2_Real_NO_DPP_with_alias_gfx12<0x00e, "v_max_f64">;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
 defm V_CNDMASK_B32 : VOP2e_Real_gfx12_gfx13<0x001, "V_CNDMASK_B32", "v_cndmask_b32">;
 #else /* LLPC_BUILD_NPI */
+defm V_ADD_F64     : VOP2_Real_NO_DPP_with_name_gfx12<0x002, "V_ADD_F64_pseudo", "v_add_f64">;
+defm V_MUL_F64     : VOP2_Real_NO_DPP_with_name_gfx12<0x006, "V_MUL_F64_pseudo", "v_mul_f64">;
+defm V_LSHLREV_B64 : VOP2_Real_NO_DPP_with_name_gfx12<0x01f, "V_LSHLREV_B64_pseudo", "v_lshlrev_b64">;
+defm V_MIN_NUM_F64 : VOP2_Real_NO_DPP_with_alias_gfx12<0x00d, "v_min_f64">;
+defm V_MAX_NUM_F64 : VOP2_Real_NO_DPP_with_alias_gfx12<0x00e, "v_max_f64">;
+
 defm V_CNDMASK_B32 : VOP2e_Real_gfx12<0x001, "V_CNDMASK_B32", "v_cndmask_b32">;
 #endif /* LLPC_BUILD_NPI */
 defm V_ADD_CO_CI_U32 :
@@ -2084,11 +2084,13 @@ defm V_FMAMK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x23, 0x20>;
 defm V_FMAAK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x24, 0x21>;
 defm V_ADD_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x28, 0x23>;
 defm V_SUB_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x29, 0x24>;
-defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX1250Gen, 0x2a>;
 #else /* LLPC_BUILD_NPI */
 defm V_FMAMK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x23>;
 defm V_FMAAK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x24>;
+defm V_ADD_U64 : VOP2_Real_FULL<GFX1250Gen, 0x28>;
+defm V_SUB_U64 : VOP2_Real_FULL<GFX1250Gen, 0x29>;
 #endif /* LLPC_BUILD_NPI */
+defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX1250Gen, 0x2a>;
 
 //===----------------------------------------------------------------------===//
 #ifdef LLPC_BUILD_NPI
@@ -2171,8 +2173,8 @@ multiclass VOP2_Real_FULL_with_name_gfx11_gfx12<bits<6> op, string opName,
   VOP2_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
 
 multiclass VOP2_Real_e32_gfx11_gfx12_gfx13<bits<6> op> :
-  VOP2Only_Real<GFX11Gen, op>, VOP2Only_Real<GFX12Gen, op>,
-  VOP2Only_Real<GFX13Gen, op>;
+  VOP2Only_Real_e32<GFX11Gen, op>, VOP2Only_Real_e32<GFX12Gen, op>,
+  VOP2Only_Real_e32<GFX13Gen, op>;
 #else /* LLPC_BUILD_NPI */
   VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
 #endif /* LLPC_BUILD_NPI */
@@ -2188,6 +2190,11 @@ multiclass VOP3Only_Realtriple_gfx11_gfx12_gfx13<
   VOP3Only_Realtriple<GFX12Gen, preGFX13Op>,
   VOP3Only_Realtriple<GFX13Gen, op>;
 
+#endif /* LLPC_BUILD_NPI */
+multiclass VOP2_Real_e32_gfx11_gfx12<bits<6> op> :
+  VOP2Only_Real_e32<GFX11Gen, op>, VOP2Only_Real_e32<GFX12Gen, op>;
+
+#ifdef LLPC_BUILD_NPI
 multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string OpName = NAME> :
   VOP3_Realtriple_t16_gfx11<preGFX13Op, asmName, OpName, "", /*IsSingle*/1>,
   VOP3_Realtriple_t16_gfx12<preGFX13Op, asmName, OpName, "", /*IsSingle*/1>,
@@ -2203,21 +2210,18 @@ multiclass VOP3beOnly_Realtriple_gfx11_gfx12_gfx13<bits<10> preGFX13Op, bits<10>
   VOP3beOnly_Realtriple<GFX12Gen, preGFX13Op>,
   VOP3beOnly_Realtriple<GFX13Gen, op>;
 #else /* LLPC_BUILD_NPI */
-multiclass VOP2_Real_e32_gfx11_gfx12<bits<6> op> :
-  VOP2Only_Real<GFX11Gen, op>, VOP2Only_Real<GFX12Gen, op>;
-
 multiclass VOP3Only_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3Only_Realtriple<GFX11Gen, op>, VOP3Only_Realtriple<GFX12Gen, op>;
+
+multiclass VOP3Only_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> :
+  VOP3_Realtriple_t16_gfx11<op, asmName, OpName, "", /*IsSingle*/1>,
+  VOP3_Realtriple_t16_gfx12<op, asmName, OpName, "", /*IsSingle*/1>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
 multiclass VOP2Only_Real_MADK_t16_gfx11_gfx12_gfx13<
     bits<6> op, string asmName, string opName = NAME> :
 #else /* LLPC_BUILD_NPI */
-multiclass VOP3Only_Realtriple_t16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> :
-  VOP3_Realtriple_t16_gfx11<op, asmName, OpName, "", /*IsSingle*/1>,
-  VOP3_Realtriple_t16_gfx12<op, asmName, OpName, "", /*IsSingle*/1>;
-
 multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string asmName, string OpName = NAME> {
   defm _t16: VOP3Only_Realtriple_t16_gfx11_gfx12<op, asmName, OpName#"_t16">;
   defm _fake16: VOP3Only_Realtriple_t16_gfx11_gfx12<op, asmName, OpName#"_fake16">;

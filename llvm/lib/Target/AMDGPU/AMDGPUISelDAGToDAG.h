@@ -19,9 +19,7 @@
 #include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
-#if LLPC_BUILD_NPI
 #include "llvm/Support/AMDGPUAddrSpace.h"
-#endif /* LLPC_BUILD_NPI */
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -165,20 +163,20 @@ private:
   bool SelectScratchOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
                            SDValue &Offset) const;
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
-#if LLPC_BUILD_NPI
                          SDValue &VOffset, SDValue &Offset, bool &ScaleOffset,
+#if LLPC_BUILD_NPI
                          bool NeedIOffset = true,
                          bool NeedScaleOffset = true) const;
 #else /* LLPC_BUILD_NPI */
-                         SDValue &VOffset, SDValue &Offset) const;
+                         bool NeedIOffset = true) const;
 #endif /* LLPC_BUILD_NPI */
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                          SDValue &VOffset, SDValue &Offset,
                          SDValue &CPol) const;
-#if LLPC_BUILD_NPI
   bool SelectGlobalSAddrCPol(SDNode *N, SDValue Addr, SDValue &SAddr,
                              SDValue &VOffset, SDValue &Offset,
                              SDValue &CPol) const;
+#if LLPC_BUILD_NPI
   bool SelectGlobalSAddrCPolM0(SDNode *N, SDValue Addr, SDValue &SAddr,
                                SDValue &VOffset, SDValue &Offset,
                                SDValue &CPol) const;
@@ -186,44 +184,37 @@ private:
   bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
                             SDValue &VOffset, SDValue &Offset,
                             SDValue &CPol) const;
-#if LLPC_BUILD_NPI
   bool SelectGlobalSAddrNoIOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
                                   SDValue &VOffset, SDValue &CPol) const;
+#if LLPC_BUILD_NPI
   bool SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr, SDValue &SAddr,
                                     SDValue &VOffset, SDValue &CPol) const;
+  bool SelectGlobalSAddrNoScaleOffsetM0(SDNode *N, SDValue Addr, SDValue &SAddr,
+                                        SDValue &VOffset, SDValue &Offset,
+                                        SDValue &CPol) const;
   bool SelectGlobalSAddrNoScaleOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
                                       SDValue &VOffset, SDValue &Offset,
                                       SDValue &CPol) const;
   bool SelectGlobalSAddrNoIOffsetScaleOffset(SDNode *N, SDValue Addr, SDValue &SAddr,
                                   SDValue &VOffset, SDValue &CPol) const;
+  bool SelectGlobalSAddrNoIOffsetScaleOffsetM0(SDNode *N, SDValue Addr,
+                                               SDValue &SAddr, SDValue &VOffset,
+                                               SDValue &CPol) const;
 #endif /* LLPC_BUILD_NPI */
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
   bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,
                                      uint64_t ImmOffset) const;
   bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
-#if LLPC_BUILD_NPI
                            SDValue &SAddr, SDValue &Offset,
                            SDValue &CPol) const;
-#else /* LLPC_BUILD_NPI */
-                           SDValue &SAddr, SDValue &Offset) const;
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
   bool SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode, SDValue *SOffset,
-#else /* LLPC_BUILD_NPI */
-  bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue *SOffset,
-#endif /* LLPC_BUILD_NPI */
                         SDValue *Offset, bool Imm32Only = false,
                         bool IsBuffer = false, bool HasSOffset = false,
-#if LLPC_BUILD_NPI
                         int64_t ImmOffset = 0,
                         bool *ScaleOffset = nullptr) const;
-#else /* LLPC_BUILD_NPI */
-                        int64_t ImmOffset = 0) const;
-#endif /* LLPC_BUILD_NPI */
   SDValue Expand32BitAddress(SDValue Addr) const;
-#if LLPC_BUILD_NPI
   bool SelectSMRDBaseOffset(SDNode *N, SDValue Addr, SDValue &SBase,
                             SDValue *SOffset, SDValue *Offset,
                             bool Imm32Only = false, bool IsBuffer = false,
@@ -232,28 +223,14 @@ private:
   bool SelectSMRD(SDNode *N, SDValue Addr, SDValue &SBase, SDValue *SOffset,
                   SDValue *Offset, bool Imm32Only = false,
                   bool *ScaleOffset = nullptr) const;
-#else /* LLPC_BUILD_NPI */
-  bool SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase, SDValue *SOffset,
-                            SDValue *Offset, bool Imm32Only = false,
-                            bool IsBuffer = false, bool HasSOffset = false,
-                            int64_t ImmOffset = 0) const;
-  bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue *SOffset,
-                  SDValue *Offset, bool Imm32Only = false) const;
-#endif /* LLPC_BUILD_NPI */
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDImm32(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
-#if LLPC_BUILD_NPI
   bool SelectScaleOffset(SDNode *N, SDValue &Offset, bool IsSigned) const;
   bool SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase, SDValue &SOffset,
                       SDValue &CPol) const;
   bool SelectSMRDSgprImm(SDNode *N, SDValue Addr, SDValue &SBase,
                          SDValue &SOffset, SDValue &Offset,
                          SDValue &CPol) const;
-#else /* LLPC_BUILD_NPI */
-  bool SelectSMRDSgpr(SDValue Addr, SDValue &SBase, SDValue &SOffset) const;
-  bool SelectSMRDSgprImm(SDValue Addr, SDValue &SBase, SDValue &SOffset,
-                         SDValue &Offset) const;
-#endif /* LLPC_BUILD_NPI */
   bool SelectSMRDBufferImm(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferImm32(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
@@ -289,9 +266,12 @@ private:
                        bool IsDOT = false) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
+#if LLPC_BUILD_NPI
+#else /* LLPC_BUILD_NPI */
   bool SelectVOP3PModsNeg(SDValue In, SDValue &Src) const;
   bool SelectVOP3PModsNegs(SDValue In, SDValue &Src) const;
   bool SelectVOP3PModsNegAbs(SDValue In, SDValue &Src) const;
+#endif /* LLPC_BUILD_NPI */
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 
   bool SelectWMMAModsF32NegAbs(SDValue In, SDValue &Src,
@@ -308,22 +288,15 @@ private:
   bool SelectVOP3OpSel(SDValue In, SDValue &Src, SDValue &SrcMods) const;
 
   bool SelectVOP3OpSelMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
-#if LLPC_BUILD_NPI
   bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src, unsigned &Mods,
                                  MVT VT) const;
-#else /* LLPC_BUILD_NPI */
-  bool SelectVOP3PMadMixModsImpl(SDValue In, SDValue &Src,
-                                 unsigned &Mods) const;
-#endif /* LLPC_BUILD_NPI */
   bool SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,
                                 SDValue &SrcMods) const;
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
-#if LLPC_BUILD_NPI
   bool SelectVOP3PMadMixBF16ModsExt(SDValue In, SDValue &Src,
                                     SDValue &SrcMods) const;
   bool SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
                                  SDValue &SrcMods) const;
-#endif /* LLPC_BUILD_NPI */
 
   bool SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1, SDValue &Src2,
                    SDValue &Tbl) const;

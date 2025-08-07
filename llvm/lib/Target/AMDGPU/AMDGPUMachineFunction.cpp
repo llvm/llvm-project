@@ -127,13 +127,15 @@ unsigned AMDGPUMachineFunction::allocateLDSGlobal(const DataLayout &DL,
 
 #if LLPC_BUILD_NPI
     if (TargetExtType *TTy = AMDGPU::isLDSSemaphore(GV)) {
-      unsigned OwningRank = TTy->getIntParameter(0) % MAX_WAVES_PER_WAVEGROUP;
-      unsigned Num = ++NumSemaphores[OwningRank];
-      Offset = 0x801000u | OwningRank << 8 | Num << 4;
       // TODO-GFX13: Diagnose trying to allocate more than the 5 semaphores
       // supported by hardware.
-      Entry.first->second = Offset;
-      return Offset;
+      std::optional<unsigned> SemAddr =
+          getAbsoluteAddress(GV, AMDGPUAS::LOCAL_ADDRESS);
+      if (!SemAddr)
+        llvm_unreachable("Semaphore should have an assigned address");
+      Entry.first->second = SemAddr.value();
+      recordNumSemaphores(SemAddr.value());
+      return SemAddr.value();
     }
 
     std::optional<uint32_t> MaybeAbs =

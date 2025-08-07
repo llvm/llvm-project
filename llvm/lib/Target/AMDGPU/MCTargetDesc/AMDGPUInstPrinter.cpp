@@ -760,10 +760,8 @@ void AMDGPUInstPrinter::printImmediateV216(uint32_t Imm, uint8_t OpType,
         printImmediateBFloat16(static_cast<uint16_t>(Imm), STI, O))
       return;
     break;
-#if LLPC_BUILD_NPI
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     break;
-#endif /* LLPC_BUILD_NPI */
   default:
     llvm_unreachable("bad operand type");
   }
@@ -1014,9 +1012,7 @@ void AMDGPUInstPrinter::printRegularOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_V2INT16:
     case AMDGPU::OPERAND_REG_IMM_V2BF16:
     case AMDGPU::OPERAND_REG_IMM_V2FP16:
-#if LLPC_BUILD_NPI
     case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
-#endif /* LLPC_BUILD_NPI */
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2BF16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
@@ -2153,7 +2149,6 @@ void AMDGPUInstPrinter::printBitOp3(const MCInst *MI, unsigned OpNo,
     O << formatDec(Imm);
   else
     O << formatHex(static_cast<uint64_t>(Imm));
-#if LLPC_BUILD_NPI
 }
 
 void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
@@ -2164,6 +2159,7 @@ void AMDGPUInstPrinter::printScaleSel(const MCInst *MI, unsigned OpNo,
     return;
 
   O << " scale_sel:" << formatDec(Imm);
+#if LLPC_BUILD_NPI
 }
 
 void AMDGPUInstPrinter::printSema(const MCInst *MI, unsigned OpNo,
@@ -2187,6 +2183,12 @@ void AMDGPUInstPrinter::printGVGPR(const MCInst *MI, unsigned OpNo,
     if (IdxLoc >= VGPRLoweringOperandTableNumOps)
       IdxLoc = OpNo;
     unsigned IdxReg = (MI->getOperand(OpIdxs).getImm() >> (IdxLoc * 4)) & 0xf;
+    modifyVGPRNameUsingIndex(OpndStr, IdxReg);
+  } else if (isVNBR(Opc)) {
+    unsigned IdxReg = 0;
+    if (MIA)
+      IdxReg = getIdxFromMIA(OpNo, MII.get(Opc),
+                             *static_cast<const AMDGPUMCInstrAnalysis *>(MIA));
     modifyVGPRNameUsingIndex(OpndStr, IdxReg);
   }
 

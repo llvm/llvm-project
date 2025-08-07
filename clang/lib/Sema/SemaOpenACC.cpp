@@ -699,11 +699,19 @@ ExprResult SemaOpenACC::ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
   // OpenACC3.3 2.13:
   // A 'var' in a 'declare' directive must be a variable or array name.
   if ((CK == OpenACCClauseKind::UseDevice ||
-       DK == OpenACCDirectiveKind::Declare) &&
-      isa<ArraySectionExpr, ArraySubscriptExpr>(CurVarExpr)) {
-    Diag(VarExpr->getExprLoc(), diag::err_acc_not_a_var_ref_use_device_declare)
-        << (DK == OpenACCDirectiveKind::Declare);
-    return ExprError();
+       DK == OpenACCDirectiveKind::Declare)) {
+    if (isa<ArraySubscriptExpr>(CurVarExpr)) {
+      Diag(VarExpr->getExprLoc(),
+           diag::err_acc_not_a_var_ref_use_device_declare)
+          << (DK == OpenACCDirectiveKind::Declare);
+      return ExprError();
+    }
+    // As an extension, we allow 'array sections'/'sub-arrays'  here, as that is
+    // effectively defining an array, and are in common use.
+    if (isa<ArraySectionExpr>(CurVarExpr))
+      Diag(VarExpr->getExprLoc(),
+           diag::ext_acc_array_section_use_device_declare)
+          << (DK == OpenACCDirectiveKind::Declare);
   }
 
   // Sub-arrays/subscript-exprs are fine as long as the base is a

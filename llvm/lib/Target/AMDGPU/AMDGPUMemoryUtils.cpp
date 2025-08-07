@@ -114,10 +114,6 @@ bool isLDSVariableToLower(const GlobalVariable &GV) {
   if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
     return false;
   }
-#if LLPC_BUILD_NPI
-  if (isLDSSemaphore(GV))
-    return false;
-#endif /* LLPC_BUILD_NPI */
   if (isDynamicLDS(GV)) {
     return true;
   }
@@ -177,7 +173,11 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
 }
 
 bool isKernelLDS(const Function *F) {
+#if LLPC_BUILD_NPI
+  return AMDGPU::isKernel(F->getCallingConv()) && !getWavegroupRankFunction(*F);
+#else /* LLPC_BUILD_NPI */
   return AMDGPU::isKernel(F->getCallingConv());
+#endif /* LLPC_BUILD_NPI */
 }
 
 LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
@@ -324,7 +324,11 @@ LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {
             AMDGPU::isDynamicLDS(*GV) && DirectMapKernel.contains(Fn);
         if (IsDirectMapDynLDSGV)
           continue;
+#if LLPC_BUILD_NPI
+        if (isNamedBarrier(*GV) || isLDSSemaphore(*GV)) {
+#else /* LLPC_BUILD_NPI */
         if (isNamedBarrier(*GV)) {
+#endif /* LLPC_BUILD_NPI */
           HasSpecialGVs = true;
           continue;
         }

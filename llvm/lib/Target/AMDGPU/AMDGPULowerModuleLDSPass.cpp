@@ -953,34 +953,57 @@ public:
     return NewGV;
   }
 
+#if LLPC_BUILD_NPI
+  /// Assigns an absolute address for special kinds of GVs like semaphores and
+  /// barriers. Does this in two rounds: first by assigning a module-absolute
+  /// address for any GV that is indirectly used by more than one kernel, and
+  /// second by computing a kernel relative assignment for any GVs remaining.
+#endif /* LLPC_BUILD_NPI */
   bool lowerSpecialLDSVariables(
       Module &M, LDSUsesInfoTy &LDSUsesInfo,
       VariableFunctionMap &LDSToKernelsThatNeedToAccessItIndirectly) {
     bool Changed = false;
 #if LLPC_BUILD_NPI
-    constexpr unsigned NumScopes =
-        static_cast<unsigned>(Barrier::Scope::NUM_SCOPES);
     const DataLayout &DL = M.getDataLayout();
+
+    unsigned NumSemAbsolutes[MAX_WAVES_PER_WAVEGROUP] = {0};
+    constexpr unsigned NumBarScopes =
+        static_cast<unsigned>(Barrier::Scope::NUM_SCOPES);
+    unsigned NumBarAbsolutes[NumBarScopes] = {0};
+
 #endif /* LLPC_BUILD_NPI */
     // The 1st round: give module-absolute assignments
 #if LLPC_BUILD_NPI
-    unsigned NumAbsolutes[NumScopes] = {0};
 #else /* LLPC_BUILD_NPI */
     int NumAbsolutes = 0;
 #endif /* LLPC_BUILD_NPI */
     std::vector<GlobalVariable *> OrderedGVs;
     for (auto &K : LDSToKernelsThatNeedToAccessItIndirectly) {
       GlobalVariable *GV = K.first;
+#if LLPC_BUILD_NPI
+      if (!(isNamedBarrier(*GV) || isLDSSemaphore(*GV)))
+#else /* LLPC_BUILD_NPI */
       if (!isNamedBarrier(*GV))
+#endif /* LLPC_BUILD_NPI */
         continue;
+#if LLPC_BUILD_NPI
+
+      // Give a module-absolute assignment if it is indirectly accessed by
+#else /* LLPC_BUILD_NPI */
       // give a module-absolute assignment if it is indirectly accessed by
+#endif /* LLPC_BUILD_NPI */
       // multiple kernels. This is not precise, but we don't want to duplicate
       // a function when it is called by multiple kernels.
       if (LDSToKernelsThatNeedToAccessItIndirectly[GV].size() > 1) {
         OrderedGVs.push_back(GV);
       } else {
+#if LLPC_BUILD_NPI
+        // Leave it to the 2nd round, which will give a kernel-relative
+        // assignment if it is only indirectly accessed by one kernel.
+#else /* LLPC_BUILD_NPI */
         // leave it to the 2nd round, which will give a kernel-relative
         // assignment if it is only indirectly accessed by one kernel
+#endif /* LLPC_BUILD_NPI */
         LDSUsesInfo.direct_access[*K.second.begin()].insert(GV);
       }
       LDSToKernelsThatNeedToAccessItIndirectly.erase(GV);
@@ -988,19 +1011,36 @@ public:
     OrderedGVs = sortByName(std::move(OrderedGVs));
     for (GlobalVariable *GV : OrderedGVs) {
 #if LLPC_BUILD_NPI
-      TargetExtType *ExtTy = isNamedBarrier(*GV);
-      unsigned BarrierScope = ExtTy->getIntParameter(0);
-      unsigned BarId = NumAbsolutes[BarrierScope] + 1;
-      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
-      NumAbsolutes[BarrierScope] += BarCnt;
+      unsigned Offset;
+      if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
+        unsigned BarrierScope = ExtTy->getIntParameter(0);
+        unsigned BarId = NumBarAbsolutes[BarrierScope] + 1;
+        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+        NumBarAbsolutes[BarrierScope] += BarCnt;
+
+        // 4 bits for alignment, 5 bits for the barrier num,
+        // 3 bits for the barrier scope
+        Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+
+      } else if (TargetExtType *ExtTy = isLDSSemaphore(*GV)) {
+        unsigned OwningRank = ExtTy->getIntParameter(0);
+        assert(OwningRank < MAX_WAVES_PER_WAVEGROUP); 
+        unsigned Num = ++NumSemAbsolutes[OwningRank];
+
+        // 4 bits for alignment, 4 bits for the semaphore num,
+        // 4 bits for the owning rank
+        Offset = 0x801000u | OwningRank << 8 | Num << 4;
+
+      } else
+        llvm_unreachable("Unhandled special variable type.");
 
 #else /* LLPC_BUILD_NPI */
       int BarId = ++NumAbsolutes;
       unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
-#endif /* LLPC_BUILD_NPI */
       // 4 bits for alignment, 5 bits for the barrier num,
       // 3 bits for the barrier scope
       unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+#endif /* LLPC_BUILD_NPI */
       recordLDSAbsoluteAddress(&M, GV, Offset);
     }
     OrderedGVs.clear();
@@ -1017,22 +1057,38 @@ public:
     OrderedKernels = sortByName(std::move(OrderedKernels));
 
 #if LLPC_BUILD_NPI
-    DenseMap<Function *, unsigned> Kernel2BarId[NumScopes];
+    DenseMap<Function *, unsigned> Kernel2BarId[NumBarScopes];
+    DenseMap<Function *, unsigned> Kernel2SemRelative[MAX_WAVES_PER_WAVEGROUP];
 #else /* LLPC_BUILD_NPI */
     llvm::DenseMap<Function *, uint32_t> Kernel2BarId;
 #endif /* LLPC_BUILD_NPI */
     for (Function *F : OrderedKernels) {
+#if LLPC_BUILD_NPI
+
+      // Collect all globals for each kernel.
+#endif /* LLPC_BUILD_NPI */
       for (GlobalVariable *GV : LDSUsesInfo.direct_access[F]) {
+#if LLPC_BUILD_NPI
+        if (!(isNamedBarrier(*GV) || isLDSSemaphore(*GV)))
+#else /* LLPC_BUILD_NPI */
         if (!isNamedBarrier(*GV))
+#endif /* LLPC_BUILD_NPI */
           continue;
 
         LDSUsesInfo.direct_access[F].erase(GV);
         if (GV->isAbsoluteSymbolRef()) {
+#if LLPC_BUILD_NPI
+          // Already assigned.
+#else /* LLPC_BUILD_NPI */
           // already assigned
+#endif /* LLPC_BUILD_NPI */
           continue;
         }
         OrderedGVs.push_back(GV);
       }
+#if LLPC_BUILD_NPI
+
+#endif /* LLPC_BUILD_NPI */
       OrderedGVs = sortByName(std::move(OrderedGVs));
       for (GlobalVariable *GV : OrderedGVs) {
         // GV could also be used directly by other kernels. If so, we need to
@@ -1040,12 +1096,29 @@ public:
         auto NewGV = uniquifyGVPerKernel(M, GV, F);
         Changed |= (NewGV != GV);
 #if LLPC_BUILD_NPI
-        TargetExtType *ExtTy = isNamedBarrier(*GV);
-        unsigned BarrierScope = ExtTy->getIntParameter(0);
-        unsigned BarId = Kernel2BarId[BarrierScope][F];
-        BarId += NumAbsolutes[BarrierScope] + 1;
-        unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
-        Kernel2BarId[BarrierScope][F] += BarCnt;
+        unsigned Offset;
+        if (TargetExtType *ExtTy = isNamedBarrier(*GV)) {
+          // Place each barrier in the next open slot above the module-relative
+          // and already assigned kernel-relative barriers.
+          unsigned BarrierScope = ExtTy->getIntParameter(0);
+          unsigned BarId = Kernel2BarId[BarrierScope][F];
+          BarId += NumBarAbsolutes[BarrierScope] + 1;
+          unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+          Kernel2BarId[BarrierScope][F] += BarCnt;
+          Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+
+        } else if (TargetExtType *ExtTy = isLDSSemaphore(*GV)) {
+          // Determine which semaphore GVs were already assigned, and for the
+          // remaining ones assign the semaphore nums above.
+          unsigned OwningRank =
+              ExtTy->getIntParameter(0) % MAX_WAVES_PER_WAVEGROUP;
+          unsigned Num = NumSemAbsolutes[OwningRank];
+          Kernel2SemRelative[OwningRank][F]++;
+          Num += Kernel2SemRelative[OwningRank][F];
+          Offset = 0x801000u | OwningRank << 8 | Num << 4;
+
+        } else
+          llvm_unreachable("Unhandled special variable type.");
 #else /* LLPC_BUILD_NPI */
         int BarId = (NumAbsolutes + 1);
         if (Kernel2BarId.contains(F)) {
@@ -1053,8 +1126,8 @@ public:
         }
         Kernel2BarId[F] = BarId;
         unsigned BarrierScope = llvm::AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
-#endif /* LLPC_BUILD_NPI */
         unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
+#endif /* LLPC_BUILD_NPI */
         recordLDSAbsoluteAddress(&M, NewGV, Offset);
       }
       OrderedGVs.clear();
@@ -1063,13 +1136,40 @@ public:
     for (auto &K : LDSUsesInfo.indirect_access) {
       assert(isKernelLDS(K.first));
       for (GlobalVariable *GV : K.second) {
+#if LLPC_BUILD_NPI
+        if (isNamedBarrier(*GV) || isLDSSemaphore(*GV))
+#else /* LLPC_BUILD_NPI */
         if (isNamedBarrier(*GV))
+#endif /* LLPC_BUILD_NPI */
           K.second.erase(GV);
       }
     }
     return Changed;
   }
 
+#if LLPC_BUILD_NPI
+  // Search the CallGraph for each function in the set looking for calls to
+  // wavegroup rank functions, and return the discovered mapping.
+  static DenseMap<Function *, SmallDenseSet<Function *>>
+  getEntryFunctionToRankSpecializationMap(
+      const CallGraph &CG,
+      const DenseMap<Function *, LDSVariableReplacement> &KernelToReplacement) {
+
+    DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap;
+    for (Function *Func : KernelToReplacement.keys()) {
+      if (Func->isDeclaration() || !isKernelLDS(Func))
+        continue;
+      for (const CallGraphNode::CallRecord &R : *CG[Func]) {
+        Function *Ith = R.second->getFunction();
+        if (Ith && getWavegroupRankFunction(*Ith))
+          RankFuncMap[Func].insert(Ith);
+      }
+      
+    }
+    return RankFuncMap;
+  }
+
+#endif /* LLPC_BUILD_NPI */
   bool runOnModule(Module &M) {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
@@ -1179,6 +1279,16 @@ public:
       for (Function *F : *KernelSet)
         removeFnAttrFromReachable(CG, F, {"amdgpu-no-lds-kernel-id"});
 
+#if LLPC_BUILD_NPI
+    // This pass treats rank specialization groups (entry kernel + all
+    // specializations) as one logical kernel with respect to LDS GV lowering,
+    // treating each specialization similarly to how the pass treats function
+    // calls. Here we collect the mapping of entry kernels to rank
+    // specializations.
+    DenseMap<Function *, SmallDenseSet<Function *>> RankFuncMap =
+        getEntryFunctionToRankSpecializationMap(CG, KernelToReplacement);
+
+#endif /* LLPC_BUILD_NPI */
     // All kernel frames have been allocated. Calculate and record the
     // addresses.
     {
@@ -1251,6 +1361,13 @@ public:
             SS << format(",%u", Offset);
 
           Func.addFnAttr("amdgpu-lds-size", Buffer);
+#if LLPC_BUILD_NPI
+
+          // If Func is a rank specialization group entry kernel, propogate LDS
+          // size to its group.
+          for (auto &F : RankFuncMap[&Func])
+            F->addFnAttr("amdgpu-lds-size", Buffer);
+#endif /* LLPC_BUILD_NPI */
         }
       }
     }

@@ -85,10 +85,12 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     return checkMovDPPFunctionCall(TheCall, 5, 1);
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
     return checkMovDPPFunctionCall(TheCall, 2, 1);
-  case AMDGPU::BI__builtin_amdgcn_update_dpp: {
-    return checkMovDPPFunctionCall(TheCall, 6, 2);
-  }
 #if LLPC_BUILD_NPI
+  case AMDGPU::BI__builtin_amdgcn_update_dpp:
+#else /* LLPC_BUILD_NPI */
+  case AMDGPU::BI__builtin_amdgcn_update_dpp: {
+#endif /* LLPC_BUILD_NPI */
+    return checkMovDPPFunctionCall(TheCall, 6, 2);
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_fp8:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_bf16_fp8:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f16_bf8:
@@ -98,24 +100,23 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp8:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_bf8:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk8_f32_fp4:
+#if LLPC_BUILD_NPI
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f16_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f16_bf6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_bf16_bf6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_fp6:
   case AMDGPU::BI__builtin_amdgcn_cvt_scale_pk16_f32_bf6:
+#endif /* LLPC_BUILD_NPI */
     return SemaRef.BuiltinConstantArgRange(TheCall, 2, 0, 7);
+#if LLPC_BUILD_NPI
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x8B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x16B:
     return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/false);
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x4B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x8B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x16B:
     return checkCoopAtomicFunctionCall(TheCall, /*IsStore=*/true);
   case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x2:
   case AMDGPU::BI__builtin_amdgcn_convolve_bf16_bf16_4x4:
@@ -155,6 +156,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_convolve_i32_iu8_4x2:
     // TODO-GFX13: Add diagnostics.
     return false;
+#else /* LLPC_BUILD_NPI */
+  }
 #endif /* LLPC_BUILD_NPI */
   default:
     return false;
@@ -553,6 +556,12 @@ void SemaAMDGPU::handleAMDGPUNoRankSpecializationAttr(Decl *D,
                                                       const ParsedAttr &AL) {
   auto *Addr = ::new (getASTContext())
       AMDGPUNoRankSpecializationAttr(getASTContext(), AL);
+  D->addAttr(Addr);
+}
+
+void SemaAMDGPU::handleAMDGPUEnableWaspAttr(Decl *D, const ParsedAttr &AL) {
+  auto *Addr =
+      ::new (getASTContext()) AMDGPUEnableWaspAttr(getASTContext(), AL);
   D->addAttr(Addr);
 #endif /* LLPC_BUILD_NPI */
 }

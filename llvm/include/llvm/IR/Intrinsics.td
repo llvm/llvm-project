@@ -1678,6 +1678,17 @@ def int_invariant_end   : DefaultAttrsIntrinsic<[],
                                     [IntrArgMemOnly,
                                      NoCapture<ArgIndex<2>>,
                                      ImmArg<ArgIndex<1>>]>;
+#ifdef LLPC_BUILD_NPI
+
+def int_experimental_provenance_begin : Intrinsic<
+                                    [llvm_anyptr_ty], [llvm_anyptr_ty],
+                                    [IntrArgMemOnly, NoAlias<RetIndex>]>,
+                                    ClangBuiltin<"__builtin_experimental_provenance_begin">;
+
+def int_experimental_provenance_end : Intrinsic<
+                                    [], [llvm_anyptr_ty], []>,
+                                    ClangBuiltin<"__builtin_experimental_provenance_end">;
+#endif /* LLPC_BUILD_NPI */
 
 // launder.invariant.group can't be marked with 'readnone' (IntrNoMem),
 // because it would cause CSE of two barriers with the same argument.

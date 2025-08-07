@@ -3923,11 +3923,15 @@ void SelectionDAGBuilder::visitFPTrunc(const User &I) {
   // FPTrunc is never a no-op cast, no need to check
   SDValue N = getValue(I.getOperand(0));
   SDLoc dl = getCurSDLoc();
+  SDNodeFlags Flags;
+  if (auto *TruncInst = dyn_cast<FPMathOperator>(&I))
+    Flags.copyFMF(*TruncInst);
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
   setValue(&I, DAG.getNode(ISD::FP_ROUND, dl, DestVT, N,
                            DAG.getTargetConstant(
-                               0, dl, TLI.getPointerTy(DAG.getDataLayout()))));
+                               0, dl, TLI.getPointerTy(DAG.getDataLayout())),
+                           Flags));
 }
 
 void SelectionDAGBuilder::visitFPExt(const User &I) {
@@ -6088,16 +6092,7 @@ bool SelectionDAGBuilder::EmitFuncArgumentDbgValue(
           /* isKill */ false, /* isDead */ false,
           /* isUndef */ false, /* isEarlyClobber */ false,
           /* SubReg */ 0, /* isDebug */ true)});
-
-      auto *NewDIExpr = FragExpr;
-      // We don't have an "Indirect" field in DBG_INSTR_REF, fold that into
-      // the DIExpression.
-      if (Indirect)
-        NewDIExpr = DIExpression::prepend(FragExpr, DIExpression::DerefBefore);
-      if (NewDIExpr->holdsOldElements()) {
-        SmallVector<uint64_t, 2> Ops({dwarf::DW_OP_LLVM_arg, 0});
-        NewDIExpr = DIExpression::prependOpcodes(NewDIExpr, Ops);
-      }
+      auto *NewDIExpr = DIExpression::convertForInstrRef(FragExpr, Indirect);
       return BuildMI(MF, DL, Inst, false, MOs, Variable, NewDIExpr);
     } else {
       // Create a completely standard DBG_VALUE.
@@ -7596,8 +7591,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (TM.getOptLevel() == CodeGenOptLevel::None)
       return;
 
-    const int64_t ObjectSize =
-        cast<ConstantInt>(I.getArgOperand(0))->getSExtValue();
     const AllocaInst *LifetimeObject = cast<AllocaInst>(I.getArgOperand(1));
 
     // First check that the Alloca is static, otherwise it won't have a
@@ -7607,7 +7600,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       return;
 
     const int FrameIndex = SI->second;
-    Res = DAG.getLifetimeNode(IsStart, sdl, getRoot(), FrameIndex, ObjectSize);
+    Res = DAG.getLifetimeNode(IsStart, sdl, getRoot(), FrameIndex);
     DAG.setRoot(Res);
     return;
   }
