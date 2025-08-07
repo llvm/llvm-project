@@ -1,9 +1,5 @@
 ; RUN: opt -S -dxil-cbuffer-access -mtriple=dxil--shadermodel6.3-library %s | FileCheck %s
 
-; TODO: Remove datalayout.
-; This hack forces dxil-compatible alignment of 3-element 32- and 64-bit vectors
-target datalayout = "e-m:e-p:32:32-i1:32-i8:8-i16:16-i32:32-i64:64-f16:16-f32:32-f64:64-n8:16:32:64-v96:32:32-v192:64:64"
-
 ; cbuffer CB {
 ;   float3 a1;     // offset   0, size 12 (+4)
 ;   double3 a2;    // offset  16, size 24
