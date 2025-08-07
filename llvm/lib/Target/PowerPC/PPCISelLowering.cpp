@@ -68,7 +68,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
-#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -12815,11 +12814,6 @@ Value *PPCTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   Value *Call = Builder.CreateIntrinsic(IntID, {Addr, Val},
                                         /*FMFSource=*/nullptr, "stcx");
   return Builder.CreateXor(Call, Builder.getInt32(1));
-}
-
-MDNode *PPCTargetLowering::getTrueBranchHintWeightForAtomicCmpXchg(
-    LLVMContext &Ctx) const {
-  return MDBuilder(Ctx).createLikelyBranchWeights();
 }
 
 // The mappings for emitLeading/TrailingFence is taken from

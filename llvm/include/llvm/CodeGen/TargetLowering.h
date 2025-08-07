@@ -2332,12 +2332,6 @@ public:
   virtual Instruction *emitTrailingFence(IRBuilderBase &Builder,
                                          Instruction *Inst,
                                          AtomicOrdering Ord) const;
-
-  virtual MDNode *
-  getTrueBranchHintWeightForAtomicCmpXchg(LLVMContext &Ctx) const {
-    return nullptr;
-  }
-
   /// @}
 
   // Emits code that executes when the comparison result in the ll/sc
