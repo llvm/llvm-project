@@ -1795,9 +1795,8 @@ void SourceManager::associateFileChunkWithMacroArgExp(
     // spelling range and if one is itself a macro argument expansion, recurse
     // and associate the file chunk that it represents.
 
-    FileID SpellFID; // Current FileID in the spelling range.
-    unsigned SpellRelativeOffs;
-    std::tie(SpellFID, SpellRelativeOffs) = getDecomposedLoc(SpellLoc);
+    // Current FileID in the spelling range.
+    auto [SpellFID, SpellRelativeOffs] = getDecomposedLoc(SpellLoc);
     while (true) {
       const SLocEntry &Entry = getSLocEntry(SpellFID);
       SourceLocation::UIntTy SpellFIDBeginOffs = Entry.getOffset();
@@ -1879,9 +1878,7 @@ SourceManager::getMacroArgExpandedLocation(SourceLocation Loc) const {
   if (Loc.isInvalid() || !Loc.isFileID())
     return Loc;
 
-  FileID FID;
-  unsigned Offset;
-  std::tie(FID, Offset) = getDecomposedLoc(Loc);
+  auto [FID, Offset] = getDecomposedLoc(Loc);
   if (FID.isInvalid())
     return Loc;
 
@@ -2369,23 +2366,21 @@ size_t SourceManager::getDataStructureSizes() const {
 
 SourceManagerForFile::SourceManagerForFile(StringRef FileName,
                                            StringRef Content) {
-  // This is referenced by `FileMgr` and will be released by `FileMgr` when it
-  // is deleted.
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFileSystem->addFile(
       FileName, 0,
       llvm::MemoryBuffer::getMemBuffer(Content, FileName,
                                        /*RequiresNullTerminator=*/false));
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // in `Environment` so that `FileMgr` can out-live this function scope.
-  FileMgr =
-      std::make_unique<FileManager>(FileSystemOptions(), InMemoryFileSystem);
+  FileMgr = std::make_unique<FileManager>(FileSystemOptions(),
+                                          std::move(InMemoryFileSystem));
   DiagOpts = std::make_unique<DiagnosticOptions>();
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // by `Environment` due to the same reason above.
-  Diagnostics = std::make_unique<DiagnosticsEngine>(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), *DiagOpts);
+  Diagnostics =
+      std::make_unique<DiagnosticsEngine>(DiagnosticIDs::create(), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID =

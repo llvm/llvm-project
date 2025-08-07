@@ -1317,6 +1317,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
       VarDeclBits.addBits(0, /*Width=*/3);
 
     VarDeclBits.addBit(D->isObjCForDecl());
+    VarDeclBits.addBit(D->isCXXForRangeImplicitVar());
   }
 
   Record.push_back(VarDeclBits);
@@ -2149,6 +2150,7 @@ void ASTDeclWriter::VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
     Record.push_back(D->getNumExpansionTemplateParameters());
 
   VisitTemplateDecl(D);
+  Record.push_back(D->templateParameterKind());
   Record.push_back(D->wasDeclaredWithTypename());
   // TemplateParmPosition.
   Record.push_back(D->getDepth());
@@ -2739,6 +2741,7 @@ void ASTWriter::WriteDeclAbbrevs() {
             // isInline, isInlineSpecified, isConstexpr,
             // isInitCapture, isPrevDeclInSameScope, hasInitWithSideEffects,
             // EscapingByref, HasDeducedType, ImplicitParamKind, isObjCForDecl
+            // IsCXXForRangeImplicitVar
   Abv->Add(BitCodeAbbrevOp(0));                         // VarKind (local enum)
   // Type Source Info
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Array));
