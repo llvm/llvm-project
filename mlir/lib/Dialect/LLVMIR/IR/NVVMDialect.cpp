@@ -189,6 +189,24 @@ LogicalResult BulkStoreOp::verify() {
   return success();
 }
 
+LogicalResult PMEventOp::verify() {
+  if (!getMaskedEventId() && !getEventId()) {
+    return emitOpError() << "either `id` or `mask` must be set";
+  }
+
+  if (getMaskedEventId() && getEventId()) {
+    return emitOpError() << "`id` and `mask` cannot be set at the same time";
+  }
+
+  if (getEventId()) {
+    if (getEventId() < 0 || getEventId() > 15) {
+      return emitOpError() << "`id` must be between 0 and 15";
+    }
+  }
+
+  return llvm::success();
+}
+
 // Given the element type of an operand and whether or not it is an accumulator,
 // this function returns the PTX type (`NVVM::MMATypes`) that corresponds to the
 // operand's element type.
