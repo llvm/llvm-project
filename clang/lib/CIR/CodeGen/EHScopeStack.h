@@ -42,7 +42,47 @@ enum CleanupKind : unsigned {
 /// A stack of scopes which respond to exceptions, including cleanups
 /// and catch blocks.
 class EHScopeStack {
+  friend class CIRGenFunction;
+
 public:
+  // TODO(ogcg): Switch to alignof(uint64_t) instead of 8
+  enum { ScopeStackAlignment = 8 };
+
+  /// A saved depth on the scope stack.  This is necessary because
+  /// pushing scopes onto the stack invalidates iterators.
+  class stable_iterator {
+    friend class EHScopeStack;
+
+    /// Offset from startOfData to endOfBuffer.
+    ptrdiff_t size = -1;
+
+    explicit stable_iterator(ptrdiff_t size) : size(size) {}
+
+  public:
+    static stable_iterator invalid() { return stable_iterator(-1); }
+    stable_iterator() = default;
+
+    bool isValid() const { return size >= 0; }
+
+    /// Returns true if this scope encloses I.
+    /// Returns false if I is invalid.
+    /// This scope must be valid.
+    bool encloses(stable_iterator other) const { return size <= other.size; }
+
+    /// Returns true if this scope strictly encloses I: that is,
+    /// if it encloses I and is not I.
+    /// Returns false is I is invalid.
+    /// This scope must be valid.
+    bool strictlyEncloses(stable_iterator I) const { return size < I.size; }
+
+    friend bool operator==(stable_iterator A, stable_iterator B) {
+      return A.size == B.size;
+    }
+    friend bool operator!=(stable_iterator A, stable_iterator B) {
+      return A.size != B.size;
+    }
+  };
+
   /// Information for lazily generating a cleanup.  Subclasses must be
   /// POD-like: cleanups will not be destructed, and they will be
   /// allocated on the cleanup stack and freely copied and moved
@@ -68,17 +108,38 @@ public:
     ///
     // \param flags cleanup kind.
     virtual void emit(CIRGenFunction &cgf) = 0;
+
+    // This is a placeholder until EHScope is implemented.
+    virtual size_t getSize() const = 0;
   };
 
-  // Classic codegen has a finely tuned custom allocator and a complex stack
-  // management scheme. We'll probably eventually want to find a way to share
-  // that implementation. For now, we will use a very simplified implementation
-  // to get cleanups working.
-  llvm::SmallVector<std::unique_ptr<Cleanup>, 8> cleanupStack;
-
 private:
+  // The implementation for this class is in CIRGenCleanup.h and
+  // CIRGenCleanup.cpp; the definition is here because it's used as a
+  // member of CIRGenFunction.
+
+  /// The start of the scope-stack buffer, i.e. the allocated pointer
+  /// for the buffer.  All of these pointers are either simultaneously
+  /// null or simultaneously valid.
+  std::unique_ptr<char[]> startOfBuffer;
+
+  /// The end of the buffer.
+  char *endOfBuffer = nullptr;
+
+  /// The first valid entry in the buffer.
+  char *startOfData = nullptr;
+
   /// The CGF this Stack belong to
   CIRGenFunction *cgf = nullptr;
+
+  // This class uses a custom allocator for maximum efficiency because cleanups
+  // are allocated and freed very frequently. It's basically a bump pointer
+  // allocator, but we can't use LLVM's BumpPtrAllocator because we use offsets
+  // into the buffer as stable iterators.
+  char *allocate(size_t size);
+  void deallocate(size_t size);
+
+  void *pushCleanup(CleanupKind kind, size_t dataSize);
 
 public:
   EHScopeStack() = default;
@@ -86,12 +147,36 @@ public:
 
   /// Push a lazily-created cleanup on the stack.
   template <class T, class... As> void pushCleanup(CleanupKind kind, As... a) {
-    cleanupStack.push_back(std::make_unique<T>(a...));
+    static_assert(alignof(T) <= ScopeStackAlignment,
+                  "Cleanup's alignment is too large.");
+    void *buffer = pushCleanup(kind, sizeof(T));
+    [[maybe_unused]] Cleanup *obj = new (buffer) T(a...);
   }
 
   void setCGF(CIRGenFunction *inCGF) { cgf = inCGF; }
 
-  size_t getStackDepth() const { return cleanupStack.size(); }
+  /// Pops a cleanup scope off the stack.  This is private to CIRGenCleanup.cpp.
+  void popCleanup();
+
+  /// Determines whether the exception-scopes stack is empty.
+  bool empty() const { return startOfData == endOfBuffer; }
+
+  /// An unstable reference to a scope-stack depth.  Invalidated by
+  /// pushes but not pops.
+  class iterator;
+
+  /// Returns an iterator pointing to the innermost EH scope.
+  iterator begin() const;
+
+  /// Create a stable reference to the top of the EH stack.  The
+  /// returned reference is valid until that scope is popped off the
+  /// stack.
+  stable_iterator stable_begin() const {
+    return stable_iterator(endOfBuffer - startOfData);
+  }
+
+  /// Create a stable reference to the bottom of the EH stack.
+  static stable_iterator stable_end() { return stable_iterator(0); }
 };
 
 } // namespace clang::CIRGen

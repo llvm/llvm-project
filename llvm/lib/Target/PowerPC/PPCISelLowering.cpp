@@ -6089,7 +6089,7 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
       ISD::ArgFlagsTy ArgFlags = Outs[i].Flags;
       bool Result;
 
-      if (Outs[i].IsFixed) {
+      if (!ArgFlags.isVarArg()) {
         Result = CC_PPC32_SVR4(i, ArgVT, ArgVT, CCValAssign::Full, ArgFlags,
                                CCInfo);
       } else {
@@ -6905,8 +6905,7 @@ static bool isGPRShadowAligned(MCPhysReg Reg, Align RequiredAlign) {
 
 static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                   CCState &S) {
-  AIXCCState &State = static_cast<AIXCCState &>(S);
+                   CCState &State) {
   const PPCSubtarget &Subtarget = static_cast<const PPCSubtarget &>(
       State.getMachineFunction().getSubtarget());
   const bool IsPPC64 = Subtarget.isPPC64();
@@ -7090,7 +7089,7 @@ static bool CC_AIX(unsigned ValNo, MVT ValVT, MVT LocVT,
     // They are passed in VRs if any are available (unlike arguments passed
     // through ellipses) and shadow GPRs (unlike arguments to non-vaarg
     // functions)
-    if (State.isFixed(ValNo)) {
+    if (!ArgFlags.isVarArg()) {
       if (MCRegister VReg = State.AllocateReg(VR)) {
         State.addLoc(CCValAssign::getReg(ValNo, ValVT, VReg, LocVT, LocInfo));
         // Shadow allocate GPRs and stack space even though we pass in a VR.
@@ -7278,7 +7277,7 @@ SDValue PPCTargetLowering::LowerFormalArguments_AIX(
   MachineFunction &MF = DAG.getMachineFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   PPCFunctionInfo *FuncInfo = MF.getInfo<PPCFunctionInfo>();
-  AIXCCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
+  CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
 
   const EVT PtrVT = getPointerTy(MF.getDataLayout());
   // Reserve space for the linkage area on the stack.
@@ -7625,8 +7624,8 @@ SDValue PPCTargetLowering::LowerCall_AIX(
 
   MachineFunction &MF = DAG.getMachineFunction();
   SmallVector<CCValAssign, 16> ArgLocs;
-  AIXCCState CCInfo(CFlags.CallConv, CFlags.IsVarArg, MF, ArgLocs,
-                    *DAG.getContext());
+  CCState CCInfo(CFlags.CallConv, CFlags.IsVarArg, MF, ArgLocs,
+                 *DAG.getContext());
 
   // Reserve space for the linkage save area (LSA) on the stack.
   // In both PPC32 and PPC64 there are 6 reserved slots in the LSA:

@@ -34,6 +34,7 @@
 #include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
 #include "flang/Support/OpenMP-utils.h"
@@ -3820,18 +3821,29 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
                    semantics::SemanticsContext &semaCtx,
                    lower::pft::Evaluation &eval,
                    const parser::OpenMPCriticalConstruct &criticalConstruct) {
-  const auto &cd = std::get<parser::OmpCriticalDirective>(criticalConstruct.t);
-  List<Clause> clauses =
-      makeClauses(std::get<parser::OmpClauseList>(cd.t), semaCtx);
+  const parser::OmpDirectiveSpecification &beginSpec =
+      criticalConstruct.BeginDir();
+  List<Clause> clauses = makeClauses(beginSpec.Clauses(), semaCtx);
 
   ConstructQueue queue{buildConstructQueue(
-      converter.getFirOpBuilder().getModule(), semaCtx, eval, cd.source,
+      converter.getFirOpBuilder().getModule(), semaCtx, eval, beginSpec.source,
       llvm::omp::Directive::OMPD_critical, clauses)};
 
-  const auto &name = std::get<std::optional<parser::Name>>(cd.t);
+  std::optional<parser::Name> critName;
+  const parser::OmpArgumentList &args = beginSpec.Arguments();
+  if (!args.v.empty()) {
+    // All of these things should be guaranteed to exist after semantic checks.
+    auto *object = parser::Unwrap<parser::OmpObject>(args.v.front());
+    assert(object && "Expecting object as argument");
+    auto *designator = semantics::omp::GetDesignatorFromObj(*object);
+    assert(designator && "Expecting desginator in argument");
+    auto *name = semantics::getDesignatorNameIfDataRef(*designator);
+    assert(name && "Expecting dataref in designator");
+    critName = *name;
+  }
   mlir::Location currentLocation = converter.getCurrentLocation();
   genCriticalOp(converter, symTable, semaCtx, eval, currentLocation, queue,
-                queue.begin(), name);
+                queue.begin(), critName);
 }
 
 static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
