@@ -40,6 +40,27 @@ void f4() {
 }
 
 void f5() {
+  defer { // expected-note {{jump enters a defer statement}}
+    l2:
+  }
+  goto l2; // expected-error {{cannot jump from this goto statement to its label}}
+}
+
+void f6() {
+  goto b; // expected-error {{cannot jump from this goto statement to its label}}
+  {
+    defer {} // expected-note {{jump bypasses defer statement}}
+    b:
+  }
+
+  {
+    defer {} // expected-note {{jump bypasses defer statement}}
+    b2:
+  }
+  goto b2; // expected-error {{cannot jump from this goto statement to its label}}
+}
+
+void f7() {
   defer { // expected-note {{jump bypasses defer statement}}
     goto cross1; // expected-error {{cannot jump from this goto statement to its label}}
     cross2:
@@ -50,7 +71,7 @@ void f5() {
   }
 }
 
-void f6() {
+void f8() {
   defer {
     return; // expected-error {{cannot return from a defer statement}}
   }
@@ -80,6 +101,21 @@ void f6() {
   }
 
   switch (1) {
+    defer {} // expected-note {{jump bypasses defer statement}}
+  default: // expected-error {{cannot jump from switch statement to this case label}}
+    defer {}
+    break;
+  }
+
+  switch (1) {
+    case 1: {
+      defer { // expected-note {{jump enters a defer statement}}
+        case 2: {} // expected-error {{cannot jump from switch statement to this case label}}
+      }
+    }
+  }
+
+  switch (1) {
     case 1: defer {
       switch (2) { case 2: break; }
     }
@@ -92,4 +128,30 @@ void f6() {
   for (;;) {
     defer { for (;;) continue; }
   }
+}
+
+void f9() {
+  {
+    defer {}
+    goto l1;
+  }
+  l1:
+
+  {
+    goto l2;
+    defer {}
+  }
+  l2:
+
+  {
+    { defer {} }
+    goto l3;
+  }
+  l3:
+
+  {
+    defer {}
+    { goto l4; }
+  }
+  l4:
 }

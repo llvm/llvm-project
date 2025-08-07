@@ -46,11 +46,11 @@ void f3(bool ret) {
   // CHECK:   store i32 1, ptr %cleanup.dest.slot, align 4
   // CHECK:   br label %cleanup
   // CHECK: if.end:
-  // CHECK:   call void @x(i32 noundef 1)
+  // CHECK:   call void @x(i32 {{.*}} 1)
   // CHECK:   store i32 0, ptr %cleanup.dest.slot, align 4
   // CHECK:   br label %cleanup
   // CHECK: cleanup:
-  // CHECK:   call void @x(i32 noundef 2)
+  // CHECK:   call void @x(i32 {{.*}} 2)
   // CHECK:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
   // CHECK:   switch i32 %cleanup.dest, label %unreachable [
   // CHECK:     i32 0, label %cleanup.cont
@@ -63,4 +63,236 @@ void f3(bool ret) {
   defer x(2);
   if (ret) return;
   defer x(1);
+}
+
+// CHECK-LABEL: define {{.*}} void @ts_g()
+void ts_g() {
+  // CHECK-NEXT: entry:
+  // CHECK-NEXT:   ret void
+  // CHECK-NEXT: }
+  return;
+  defer x(42);
+}
+
+// CHECK-LABEL: define {{.*}} void @ts_h()
+void ts_h() {
+  // CHECK-NEXT: entry:
+  // CHECK-NEXT:   br label %b
+  // CHECK-EMPTY:
+  goto b;
+  {
+    defer x(42);
+  }
+
+  // CHECK-NEXT: b:
+  // CHECK-NEXT:   ret void
+  // CHECK-NEXT: }
+  b:
+}
+
+// CHECK-LABEL: define {{.*}} void @ts_i()
+void ts_i() {
+  // CHECK: entry:
+  // CHECK:   %cleanup.dest.slot = alloca i32, align 4
+  // CHECK:   store i32 2, ptr %cleanup.dest.slot, align 4
+  // CHECK:   call void @x(i32 {{.*}} 42)
+  // CHECK:   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
+  // CHECK:   switch i32 %cleanup.dest, label %unreachable [
+  // CHECK:     i32 2, label %b
+  // CHECK:   ]
+  // CHECK: b:
+  // CHECK:   ret void
+  // CHECK: unreachable:
+  // CHECK:   unreachable
+  {
+    defer { x(42); }
+    goto b;
+  }
+  b:
+}
+
+
+// CHECK-LABEL: define {{.*}} void @ts_m()
+void ts_m() {
+  // CHECK: entry:
+  // CHECK:   br label %b
+  // CHECK: b:
+  // CHECK:   call void @x(i32 {{.*}} 1)
+  // CHECK:   ret void
+  goto b;
+  {
+    b:
+    defer x(1);
+  }
+}
+
+// CHECK-LABEL: define {{.*}} void @ts_p()
+void ts_p() {
+  // CHECK: entry:
+  // CHECK:   br label %b
+  // CHECK: b:
+  // CHECK:   ret void
+  {
+    goto b;
+    defer x(42);
+  }
+  b:
+}
+
+// CHECK-LABEL: define {{.*}} void @ts_r()
+void ts_r() {
+  // CHECK: entry:
+  // CHECK:   br label %b
+  // CHECK: b:
+  // CHECK:   call void @x(i32 {{.*}} 42)
+  // CHECK:   br label %b
+  {
+    b:
+    defer x(42);
+  }
+  goto b;
+}
+
+// CHECK-LABEL: define {{.*}} i32 @return_value()
+int return_value() {
+  // CHECK: entry:
+  // CHECK:   %r = alloca i32, align 4
+  // CHECK:   %p = alloca ptr, align 8
+  // CHECK:   store i32 4, ptr %r, align 4
+  // CHECK:   store ptr %r, ptr %p, align 8
+  // CHECK:   %0 = load ptr, ptr %p, align 8
+  // CHECK:   %1 = load i32, ptr %0, align 4
+  // CHECK:   %2 = load ptr, ptr %p, align 8
+  // CHECK:   store i32 5, ptr %2, align 4
+  // CHECK:   ret i32 %1
+  int r = 4;
+  int* p = &r;
+  defer { *p = 5; }
+  return *p;
+}
+
+void* malloc(__SIZE_TYPE__ size);
+void free(void* ptr);
+int use_buffer(__SIZE_TYPE__ size, void* ptr);
+
+// CHECK-LABEL: define {{.*}} i32 @malloc_free_example()
+int malloc_free_example() {
+  // CHECK: entry:
+  // CHECK:   %size = alloca i32, align 4
+  // CHECK:   %buf = alloca ptr, align 8
+  // CHECK:   store i32 20, ptr %size, align 4
+  // CHECK:   %call = call ptr @malloc(i64 {{.*}} 20)
+  // CHECK:   store ptr %call, ptr %buf, align 8
+  // CHECK:   %0 = load ptr, ptr %buf, align 8
+  // CHECK:   %call1 = call i32 @use_buffer(i64 {{.*}} 20, ptr {{.*}} %0)
+  // CHECK:   %1 = load ptr, ptr %buf, align 8
+  // CHECK:   call void @free(ptr {{.*}} %1)
+  // CHECK:   ret i32 %call1
+  const int size = 20;
+  void* buf = malloc(size);
+  defer { free(buf); }
+  return use_buffer(size, buf);
+}
+
+// CHECK-LABEL: define {{.*}} void @sequencing_1()
+void sequencing_1() {
+  // CHECK: entry:
+  // CHECK:   call void @x(i32 {{.*}} 1)
+  // CHECK:   call void @x(i32 {{.*}} 2)
+  // CHECK:   call void @x(i32 {{.*}} 3)
+  // CHECK:   ret void
+  {
+    defer {
+      x(3);
+    }
+    if (true)
+      defer x(1);
+    x(2);
+  }
+}
+
+// CHECK-LABEL: define {{.*}} void @sequencing_2()
+void sequencing_2() {
+  // CHECK: entry:
+  // CHECK:   %arr = alloca [3 x i32], align 4
+  // CHECK:   %i = alloca i32, align 4
+  // CHECK:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %arr, ptr align 4 @__const.sequencing_2.arr, i64 12, i1 false)
+  // CHECK:   store i32 0, ptr %i, align 4
+  // CHECK:   br label %for.cond
+  // CHECK: for.cond:
+  // CHECK:   %0 = load i32, ptr %i, align 4
+  // CHECK:   %cmp = icmp ult i32 %0, 3
+  // CHECK:   br i1 %cmp, label %for.body, label %for.end
+  // CHECK: for.body:
+  // CHECK:   %1 = load i32, ptr %i, align 4
+  // CHECK:   %idxprom = zext i32 %1 to i64
+  // CHECK:   %arrayidx = getelementptr inbounds nuw [3 x i32], ptr %arr, i64 0, i64 %idxprom
+  // CHECK:   %2 = load i32, ptr %arrayidx, align 4
+  // CHECK:   call void @x(i32 {{.*}} %2)
+  // CHECK:   br label %for.inc
+  // CHECK: for.inc:
+  // CHECK:   %3 = load i32, ptr %i, align 4
+  // CHECK:   %inc = add i32 %3, 1
+  // CHECK:   store i32 %inc, ptr %i, align 4
+  // CHECK:   br label %for.cond
+  // CHECK: for.end:
+  // CHECK:   call void @x(i32 {{.*}} 4)
+  // CHECK:   call void @x(i32 {{.*}} 5)
+  // CHECK:   ret void
+  {
+    int arr[] = {1, 2, 3};
+    defer {
+      x(5);
+    }
+    for (unsigned i = 0; i < 3; ++i)
+      defer x(arr[i]);
+    x(4);
+  }
+}
+
+// CHECK-LABEL: define {{.*}} void @sequencing_3()
+void sequencing_3() {
+  // CHECK: entry:
+  // CHECK:   %r = alloca i32, align 4
+  // CHECK:   store i32 0, ptr %r, align 4
+  // CHECK:   %0 = load i32, ptr %r, align 4
+  // CHECK:   %add = add nsw i32 %0, 1
+  // CHECK:   store i32 %add, ptr %r, align 4
+  // CHECK:   %1 = load i32, ptr %r, align 4
+  // CHECK:   %mul = mul nsw i32 %1, 2
+  // CHECK:   store i32 %mul, ptr %r, align 4
+  // CHECK:   %2 = load i32, ptr %r, align 4
+  // CHECK:   %add1 = add nsw i32 %2, 3
+  // CHECK:   store i32 %add1, ptr %r, align 4
+  // CHECK:   %3 = load i32, ptr %r, align 4
+  // CHECK:   %mul2 = mul nsw i32 %3, 4
+  // CHECK:   store i32 %mul2, ptr %r, align 4
+  // CHECK:   ret void
+  int r = 0;
+  {
+    defer {
+      defer r *= 4;
+      r *= 2;
+      defer {
+        r += 3;
+      }
+    }
+    defer r += 1;
+  }
+}
+
+// CHECK-LABEL: define {{.*}} void @defer_stmt(i32 {{.*}} %q)
+void defer_stmt(int q) {
+  // CHECK: entry:
+  // CHECK:   %q.addr = alloca i32, align 4
+  // CHECK:   store i32 %q, ptr %q.addr, align 4
+  // CHECK:   %0 = load i32, ptr %q.addr, align 4
+  // CHECK:   %cmp = icmp eq i32 %0, 3
+  // CHECK:   br i1 %cmp, label %if.then, label %if.end
+  // CHECK: if.then:
+  // CHECK:   call void @x(i32 {{.*}} 42)
+  // CHECK:   br label %if.end
+  // CHECK: if.end:
+  // CHECK:   ret void
+  defer if (q == 3) x(42);
 }
