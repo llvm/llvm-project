@@ -2842,7 +2842,7 @@ LogicalResult BroadcastOp::verify() {
 }
 
 // Return the broadcasted dimensions. Including broadcasts in the leading
-// dimensions and broadcasts through unit dimension (i.e. dim-1).
+// dimensions and broadcasts through unit dimension.
 static BitVector getBroadcastedDims(ArrayRef<int64_t> srcShape,
                                     ArrayRef<int64_t> destShape) {
   assert(destShape.size() >= srcShape.size());
@@ -2855,7 +2855,8 @@ static BitVector getBroadcastedDims(ArrayRef<int64_t> srcShape,
 }
 
 // Fold broadcast(shape_cast(x)) into broadcast(x) if x's type is compatible
-// with broadcast's result type and the broadcasted dimensions are the same.
+// with broadcast's result type and shape_cast only adds or removes ones in the
+// leading dimensions.
 static LogicalResult foldBroadcastOfShapeCast(BroadcastOp broadcastOp) {
   auto srcShapeCast = broadcastOp.getSource().getDefiningOp<ShapeCastOp>();
   if (!srcShapeCast)
@@ -2868,21 +2869,21 @@ static LogicalResult foldBroadcastOfShapeCast(BroadcastOp broadcastOp) {
       BroadcastableToResult::Success)
     return failure();
 
-  // Given
-  // ```
-  // %s = shape_cast(%x)
-  // %b = broadcast(%s)
-  // ```
-  // If we want to fold %x into %b, the broadcasted dimensions from %x to
-  // %b has to be the same as that of from %s to %b.
+  ArrayRef<int64_t> srcShape = srcType.getShape();
   ArrayRef<int64_t> shapecastShape =
       srcShapeCast.getResultVectorType().getShape();
-  ArrayRef<int64_t> srcShape = srcType.getShape();
-  ArrayRef<int64_t> destShape = destType.getShape();
-  BitVector origBroadcastedDims = getBroadcastedDims(shapecastShape, destShape);
-  BitVector newBroadcastedDims = getBroadcastedDims(srcShape, destShape);
-  if (newBroadcastedDims != origBroadcastedDims)
+  // Trailing dimensions should be the same if shape_cast only alters the
+  // leading dimensions.
+  unsigned numTrailingDims = std::min(srcShape.size(), shapecastShape.size());
+  if (!llvm::equal(srcShape.take_back(numTrailingDims),
+                   shapecastShape.take_back(numTrailingDims)))
     return failure();
+
+  assert(all_of(srcShape.drop_back(numTrailingDims),
+                [](int64_t E) { return E == 1; }) &&
+         all_of(shapecastShape.drop_back(numTrailingDims),
+                [](int64_t E) { return E == 1; }) &&
+         "ill-formed shape_cast");
 
   broadcastOp.getSourceMutable().assign(srcShapeCast.getSource());
   return success();
