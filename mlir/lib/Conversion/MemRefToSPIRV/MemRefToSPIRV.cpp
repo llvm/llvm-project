@@ -468,8 +468,7 @@ struct MemoryRequirements {
 static FailureOr<MemoryRequirements>
 calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
                             uint64_t preferredAlignment) {
-
-  if (std::numeric_limits<uint32_t>::max() < preferredAlignment) {
+  if (preferredAlignment >= std::numeric_limits<uint32_t>::max()) {
     return failure();
   }
 
