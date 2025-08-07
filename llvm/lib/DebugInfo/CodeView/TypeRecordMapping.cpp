@@ -752,3 +752,10 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
   error(IO.mapInteger(EndPrecomp.Signature, "Signature"));
   return Error::success();
 }
+
+Error TypeRecordMapping::visitKnownRecord(CVType &CVR, AliasRecord &Alias) {
+  error(IO.mapInteger(Alias.UnderlyingType, "UnderlyingType"));
+  error(IO.mapStringZ(Alias.Name, "Name"));
+
+  return Error::success();
+}

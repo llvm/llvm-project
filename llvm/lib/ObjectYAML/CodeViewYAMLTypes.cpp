@@ -614,6 +614,11 @@ template <> void LeafRecordImpl<EndPrecompRecord>::map(IO &IO) {
   IO.mapRequired("Signature", Record.Signature);
 }
 
+template <> void LeafRecordImpl<AliasRecord>::map(IO &IO) {
+  IO.mapRequired("UnderlyingType", Record.UnderlyingType);
+  IO.mapRequired("Name", Record.Name);
+}
+
 template <> void MemberRecordImpl<OneMethodRecord>::map(IO &IO) {
   MappingTraits<OneMethodRecord>::mapping(IO, Record);
 }
