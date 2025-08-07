@@ -281,6 +281,18 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
       new TargetLibraryInfoImpl(TM->getTargetTriple()));
   if (Conf.Freestanding)
     TLII->disableAllFunctions();
+
+  TargetLibraryInfo TLI(*TLII);
+  for (unsigned I = 0, E = static_cast<unsigned>(LibFunc::NumLibFuncs);
+       I != E; ++I) {
+    LibFunc F = static_cast<LibFunc>(I);
+    GlobalValue *Val = Mod.getNamedValue(TLI.getName(F));
+    // TODO: Non-lto functions should not be disabled, nor should functions that
+    // are somewhere in a ThinLTO link (just not imported in this module).
+    if (!Val || Val->isDeclaration())
+      TLII->setUnavailable(F);
+  }
+
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
 
   // Parse a custom AA pipeline if asked to.
