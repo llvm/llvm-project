@@ -2840,58 +2840,65 @@ public:
         Handler->ignoreUnsafeBufferInLibcCall(Stmt->getBeginLoc()))
       return false;
 
-    const CallExpr *Call = dyn_cast<CallExpr>(Stmt);
-
-    if (!Call)
+    auto *CE = dyn_cast<CallExpr>(Stmt);
+    if (!CE || !CE->getDirectCallee())
+      return false;
+    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    if (!FD)
       return false;
 
-    const FunctionDecl *CalleeDecl =
-        dyn_cast_or_null<FunctionDecl>(Call->getCalleeDecl());
+    bool IsGlobalAndNotInAnyNamespace =
+        FD->isGlobal() && !FD->getEnclosingNamespaceContext()->isNamespace();
 
-    if (!CalleeDecl)
+    // A libc function must either be in the std:: namespace or a global
+    // function that is not in any namespace:
+    if (!FD->isInStdNamespace() && !IsGlobalAndNotInAnyNamespace)
       return false;
+
+    // TO_UPSTREAM(BoundsSafety) ON
     // If the call has a sole null-terminated argument, e.g., strlen,
     //  printf, atoi, we consider it safe:
-    if (hasNumArgs(Call, 1) && isNullTermPointer(Call->getArg(0), Ctx))
+    if (hasNumArgs(CE, 1) && isNullTermPointer(CE->getArg(0), Ctx))
       return false;
-    if (!hasAnyBoundsAttributes(CalleeDecl)) {
+    if (!hasAnyBoundsAttributes(FD)) {
       // Match a predefined unsafe libc function:
-      if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*CalleeDecl)) {
-        Result.addNode(Tag, DynTypedNode::create(*Call));
+      if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*FD)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
         return true;
       }
     } // v*printf and sprintf functions are always unsafe regardless of whether
       // they have bounds annotations
+    // TO_UPSTREAM(BoundsSafety) OFF
 
     // Match a call to one of the `v*printf` functions  taking va-list, which
     // cannot be checked at compile-time:
-    if (libc_func_matchers::isUnsafeVaListPrintfFunc(*CalleeDecl)) {
-      Result.addNode(UnsafeVaListTag, DynTypedNode::create(*CalleeDecl));
-      Result.addNode(Tag, DynTypedNode::create(*Call));
+    if (libc_func_matchers::isUnsafeVaListPrintfFunc(*FD)) {
+      Result.addNode(Tag, DynTypedNode::create(*CE));
+      Result.addNode(UnsafeVaListTag, DynTypedNode::create(*FD));
       return true;
     }
 
     // Match a call to a `sprintf` function, which is never safe:
-    if (libc_func_matchers::isUnsafeSprintfFunc(*CalleeDecl)) {
-      Result.addNode(UnsafeSprintfTag, DynTypedNode::create(*CalleeDecl));
-      Result.addNode(Tag, DynTypedNode::create(*Call));
+    if (libc_func_matchers::isUnsafeSprintfFunc(*FD)) {
+      Result.addNode(Tag, DynTypedNode::create(*CE));
+      Result.addNode(UnsafeSprintfTag, DynTypedNode::create(*FD));
       return true;
     }
 
-    if (libc_func_matchers::isNormalPrintfFunc(*CalleeDecl)) {
+    if (libc_func_matchers::isNormalPrintfFunc(*FD)) {
       // Match a call to an `snprintf` function. And first two arguments of the
       // call (that describe a buffer) are not in safe patterns:
-      if (!hasAnyBoundsAttributes(CalleeDecl) &&
-          libc_func_matchers::hasUnsafeSnprintfBuffer(*Call, Ctx)) {
-        Result.addNode(UnsafeSizedByTag, DynTypedNode::create(*Call));
-        Result.addNode(Tag, DynTypedNode::create(*Call));
+      if (!hasAnyBoundsAttributes(FD) &&
+          libc_func_matchers::hasUnsafeSnprintfBuffer(*CE, Ctx)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        Result.addNode(UnsafeSizedByTag, DynTypedNode::create(*CE));
         return true;
       }
       // Match a call to a `printf` function, which can be safe if
       // all arguments are null-terminated:
-      if (libc_func_matchers::hasUnsafePrintfStringArg(*Call, Ctx, Result,
+      if (libc_func_matchers::hasUnsafePrintfStringArg(*CE, Ctx, Result,
                                                        UnsafeStringTag)) {
-        Result.addNode(Tag, DynTypedNode::create(*Call));
+        Result.addNode(Tag, DynTypedNode::create(*CE));
         return true;
       }
     }
