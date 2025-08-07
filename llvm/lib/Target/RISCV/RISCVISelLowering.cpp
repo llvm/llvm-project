@@ -8528,10 +8528,7 @@ SDValue RISCVTargetLowering::lowerINIT_TRAMPOLINE(SDValue Op,
   //     28: <FunctionAddressOffset>
   //     36:
 
-  const bool HasCFBranch =
-      Subtarget.hasStdExtZicfilp() &&
-      DAG.getMachineFunction().getFunction().getParent()->getModuleFlag(
-          "cf-protection-branch");
+  const bool HasCFBranch = Subtarget.hasZicfilpCFI();
   const unsigned StaticChainIdx = HasCFBranch ? 5 : 4;
   const unsigned StaticChainOffset = StaticChainIdx * 4;
   const unsigned FunctionAddressOffset = StaticChainOffset + 8;
