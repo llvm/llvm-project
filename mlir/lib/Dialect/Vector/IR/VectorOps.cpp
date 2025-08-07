@@ -2841,19 +2841,6 @@ LogicalResult BroadcastOp::verify() {
   llvm_unreachable("unexpected vector.broadcast op error");
 }
 
-// Return the broadcasted dimensions. Including broadcasts in the leading
-// dimensions and broadcasts through unit dimension.
-static BitVector getBroadcastedDims(ArrayRef<int64_t> srcShape,
-                                    ArrayRef<int64_t> destShape) {
-  assert(destShape.size() >= srcShape.size());
-  BitVector broadcastedDims(destShape.size());
-  broadcastedDims.set(0, destShape.size() - srcShape.size());
-  auto unitDims = computeBroadcastedUnitDims(srcShape, destShape);
-  for (int64_t dim : unitDims)
-    broadcastedDims.set(dim);
-  return broadcastedDims;
-}
-
 // Fold broadcast(shape_cast(x)) into broadcast(x) if x's type is compatible
 // with broadcast's result type and shape_cast only adds or removes ones in the
 // leading dimensions.
