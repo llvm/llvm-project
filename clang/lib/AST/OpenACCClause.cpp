@@ -329,10 +329,11 @@ OpenACCPrivateClause::Create(const ASTContext &C, SourceLocation BeginLoc,
 
 OpenACCFirstPrivateClause *OpenACCFirstPrivateClause::Create(
     const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-    ArrayRef<Expr *> VarList, ArrayRef<VarDecl *> InitRecipes,
+    ArrayRef<Expr *> VarList, ArrayRef<OpenACCFirstPrivateRecipe> InitRecipes,
     SourceLocation EndLoc) {
-  void *Mem =
-      C.Allocate(OpenACCFirstPrivateClause::totalSizeToAlloc<Expr *, VarDecl *>(
+  void *Mem = C.Allocate(
+      OpenACCFirstPrivateClause::totalSizeToAlloc<Expr *,
+                                                  OpenACCFirstPrivateRecipe>(
           VarList.size(), InitRecipes.size()));
   return new (Mem) OpenACCFirstPrivateClause(BeginLoc, LParenLoc, VarList,
                                              InitRecipes, EndLoc);

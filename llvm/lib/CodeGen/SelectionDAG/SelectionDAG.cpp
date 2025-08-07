@@ -5630,6 +5630,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::FDIV:
   case ISD::FREM:
   case ISD::FCOPYSIGN:
+  case ISD::FP_EXTEND:
     // No poison except from flags (which is handled above)
     return false;
 
@@ -6422,6 +6423,20 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.isUndef())
       // sext(undef) = 0, because the top bits will all be the same.
       return getConstant(0, DL, VT);
+
+    // Skip unnecessary sext_inreg pattern:
+    // (sext (trunc x)) -> x iff the upper bits are all signbits.
+    if (OpOpcode == ISD::TRUNCATE) {
+      SDValue OpOp = N1.getOperand(0);
+      if (OpOp.getValueType() == VT) {
+        unsigned NumSignExtBits =
+            VT.getScalarSizeInBits() - N1.getScalarValueSizeInBits();
+        if (ComputeNumSignBits(OpOp) > NumSignExtBits) {
+          transferDbgValues(N1, OpOp);
+          return OpOp;
+        }
+      }
+    }
     break;
   case ISD::ZERO_EXTEND:
     assert(VT.isInteger() && N1.getValueType().isInteger() &&
@@ -8872,6 +8887,44 @@ static void checkAddrSpaceIsValidForLibcall(const TargetLowering *TLI,
     report_fatal_error("cannot lower memory intrinsic in address space " +
                        Twine(AS));
   }
+}
+
+std::pair<SDValue, SDValue>
+SelectionDAG::getMemcmp(SDValue Chain, const SDLoc &dl, SDValue Mem0,
+                        SDValue Mem1, SDValue Size, const CallInst *CI) {
+  const char *LibCallName = TLI->getLibcallName(RTLIB::MEMCMP);
+  if (!LibCallName)
+    return {};
+
+  // Emit a library call.
+  auto GetEntry = [](Type *Ty, SDValue &SDV) {
+    TargetLowering::ArgListEntry E;
+    E.Ty = Ty;
+    E.Node = SDV;
+    return E;
+  };
+
+  PointerType *PT = PointerType::getUnqual(*getContext());
+  TargetLowering::ArgListTy Args = {
+      GetEntry(PT, Mem0), GetEntry(PT, Mem1),
+      GetEntry(getDataLayout().getIntPtrType(*getContext()), Size)};
+
+  TargetLowering::CallLoweringInfo CLI(*this);
+  bool IsTailCall = false;
+  bool ReturnsFirstArg = CI && funcReturnsFirstArgOfCall(*CI);
+  IsTailCall = CI && CI->isTailCall() &&
+               isInTailCallPosition(*CI, getTarget(), ReturnsFirstArg);
+
+  CLI.setDebugLoc(dl)
+      .setChain(Chain)
+      .setLibCallee(
+          TLI->getLibcallCallingConv(RTLIB::MEMCMP),
+          Type::getInt32Ty(*getContext()),
+          getExternalSymbol(LibCallName, TLI->getPointerTy(getDataLayout())),
+          std::move(Args))
+      .setTailCall(IsTailCall);
+
+  return TLI->LowerCallTo(CLI);
 }
 
 SDValue SelectionDAG::getMemcpy(

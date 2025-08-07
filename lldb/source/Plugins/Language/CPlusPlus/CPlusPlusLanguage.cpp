@@ -392,13 +392,16 @@ GetDemangledScope(const SymbolContext &sc) {
   return CPlusPlusLanguage::GetDemangledScope(demangled_name, info);
 }
 
-/// Handles anything printed after the FunctionEncoding ItaniumDemangle
-/// node. Most notably the DotSuffix node.
-///
-/// FIXME: the suffix should also have an associated
-/// CPlusPlusLanguage::GetDemangledFunctionSuffix
-/// once we start setting the `DemangledNameInfo::SuffixRange`
-/// from inside the `TrackingOutputBuffer`.
+llvm::Expected<llvm::StringRef>
+CPlusPlusLanguage::GetDemangledFunctionSuffix(llvm::StringRef demangled,
+                                              const DemangledNameInfo &info) {
+  if (!info.hasSuffix())
+    return llvm::createStringError("Suffix range for '%s' is invalid.",
+                                   demangled.data());
+
+  return demangled.slice(info.SuffixRange.first, info.SuffixRange.second);
+}
+
 static llvm::Expected<llvm::StringRef>
 GetDemangledFunctionSuffix(const SymbolContext &sc) {
   auto info_or_err = GetAndValidateInfo(sc);
@@ -407,11 +410,7 @@ GetDemangledFunctionSuffix(const SymbolContext &sc) {
 
   auto [demangled_name, info] = *info_or_err;
 
-  if (!info.hasSuffix())
-    return llvm::createStringError("Suffix range for '%s' is invalid.",
-                                   demangled_name.data());
-
-  return demangled_name.slice(info.SuffixRange.first, info.SuffixRange.second);
+  return CPlusPlusLanguage::GetDemangledFunctionSuffix(demangled_name, info);
 }
 
 llvm::Expected<llvm::StringRef>
@@ -2424,7 +2423,7 @@ bool CPlusPlusLanguage::HandleFrameFormatVariable(
     return true;
   }
   case FormatEntity::Entry::Type::FunctionSuffix: {
-    auto suffix_or_err = GetDemangledFunctionSuffix(sc);
+    auto suffix_or_err = ::GetDemangledFunctionSuffix(sc);
     if (!suffix_or_err) {
       LLDB_LOG_ERROR(
           GetLog(LLDBLog::Language), suffix_or_err.takeError(),
