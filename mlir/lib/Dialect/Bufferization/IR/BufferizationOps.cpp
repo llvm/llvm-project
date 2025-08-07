@@ -805,10 +805,16 @@ struct ToBufferOfCast : public OpRewritePattern<ToBufferOp> {
         tensorCastOperand.getOperand().getType());
     if (!srcTensorType)
       return failure();
-    auto memrefType = MemRefType::get(srcTensorType.getShape(),
-                                      srcTensorType.getElementType());
+    auto currentOutputMemRefType =
+        dyn_cast<BaseMemRefType>(toBuffer.getResult().getType());
+    if (!currentOutputMemRefType)
+      return failure();
+
+    auto memrefType = currentOutputMemRefType.cloneWith(
+        srcTensorType.getShape(), srcTensorType.getElementType());
     Value memref = ToBufferOp::create(rewriter, toBuffer.getLoc(), memrefType,
-                                      tensorCastOperand.getOperand());
+                                      tensorCastOperand.getOperand(),
+                                      toBuffer.getReadOnly());
     rewriter.replaceOpWithNewOp<memref::CastOp>(toBuffer, toBuffer.getType(),
                                                 memref);
     return success();

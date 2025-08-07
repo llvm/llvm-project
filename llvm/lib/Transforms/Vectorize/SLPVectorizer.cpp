@@ -991,6 +991,17 @@ class BinOpSameOpcodeHelper {
         return Candidate & OrBIT;
       case Instruction::Xor:
         return Candidate & XorBIT;
+      case Instruction::LShr:
+      case Instruction::FAdd:
+      case Instruction::FSub:
+      case Instruction::FMul:
+      case Instruction::SDiv:
+      case Instruction::UDiv:
+      case Instruction::FDiv:
+      case Instruction::SRem:
+      case Instruction::URem:
+      case Instruction::FRem:
+        return false;
       default:
         break;
       }
@@ -1238,6 +1249,12 @@ public:
     BinOpSameOpcodeHelper Converter(MainOp);
     if (!Converter.add(I) || !Converter.add(MainOp))
       return nullptr;
+    if (isAltShuffle() && !Converter.hasCandidateOpcode(MainOp->getOpcode())) {
+      BinOpSameOpcodeHelper AltConverter(AltOp);
+      if (AltConverter.add(I) && AltConverter.add(AltOp) &&
+          AltConverter.hasCandidateOpcode(AltOp->getOpcode()))
+        return AltOp;
+    }
     if (Converter.hasAltOp() && !isAltShuffle())
       return nullptr;
     return Converter.hasAltOp() ? AltOp : MainOp;
@@ -1329,7 +1346,7 @@ public:
                 // If the copyable instructions comes after MainOp
                 // (non-schedulable, but used in the block) - cannot vectorize
                 // it, will possibly generate use before def.
-                (isVectorLikeInstWithConstOps(I) || !MainOp->comesBefore(I)));
+                !MainOp->comesBefore(I));
       };
 
       return IsNonSchedulableCopyableElement(V);
@@ -7175,7 +7192,8 @@ bool BoUpSLP::isProfitableToReorder() const {
     // other nodes are phis or geps/binops, combined with phis, and/or single
     // gather load node
     bool HasPhis = false;
-    if (VectorizableTree.front()->getOpcode() == Instruction::PHI &&
+    if (VectorizableTree.front()->hasState() &&
+        VectorizableTree.front()->getOpcode() == Instruction::PHI &&
         VectorizableTree.front()->Scalars.size() == TinyVF &&
         VectorizableTree.front()->getNumOperands() > PhiOpsLimit)
       return false;
@@ -7999,7 +8017,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
 }
 
 Instruction *BoUpSLP::getRootEntryInstruction(const TreeEntry &Entry) const {
-  if ((Entry.getOpcode() == Instruction::Store ||
+  if (Entry.hasState() &&
+      (Entry.getOpcode() == Instruction::Store ||
        Entry.getOpcode() == Instruction::Load) &&
       Entry.State == TreeEntry::StridedVectorize &&
       !Entry.ReorderIndices.empty() && isReverseOrder(Entry.ReorderIndices))
@@ -10231,6 +10250,15 @@ public:
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
     if (CopyableNum < VL.size() / 2)
       return S;
+    // Too many phi copyables - exit.
+    const unsigned Limit = VL.size() / 24;
+    if ((CopyableNum >= VL.size() - Limit ||
+         (CopyableNum >= VL.size() - 1 && VL.size() > 4) ||
+         CopyableNum >= MaxPHINumOperands) &&
+        all_of(VL, [&](Value *V) {
+          return isa<PHINode>(V) || !S.isCopyableElement(V);
+        }))
+      return InstructionsState::invalid();
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
     if (isCommutative(MainOp)) {
@@ -14483,7 +14511,8 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
 
   // If the tree contains only phis, buildvectors, split nodes and
   // small nodes with reuses, we can skip it.
-  unsigned SingleStoreLoadNode = 0;
+  SmallVector<const TreeEntry *> StoreLoadNodes;
+  unsigned NumGathers = 0;
   constexpr int LimitTreeSize = 36;
   if (!ForReduction && !SLPCostThreshold.getNumOccurrences() &&
       all_of(VectorizableTree,
@@ -14491,9 +14520,11 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                if (!TE->isGather() && TE->hasState() &&
                    (TE->getOpcode() == Instruction::Load ||
                     TE->getOpcode() == Instruction::Store)) {
-                 ++SingleStoreLoadNode;
+                 StoreLoadNodes.push_back(TE.get());
                  return true;
                }
+               if (TE->isGather())
+                 ++NumGathers;
                return TE->State == TreeEntry::SplitVectorize ||
                       (TE->Idx == 0 && TE->Scalars.size() == 2 &&
                        TE->hasState() && TE->getOpcode() == Instruction::ICmp &&
@@ -14510,8 +14541,15 @@ bool BoUpSLP::isTreeTinyAndNotFullyVectorizable(bool ForReduction) const {
                           !TE->ReorderIndices.empty() || TE->isAltShuffle()) &&
                          TE->Scalars.size() == 2)));
              }) &&
-      (!SingleStoreLoadNode ||
-       VectorizableTree.size() > LimitTreeSize * SingleStoreLoadNode))
+      (StoreLoadNodes.empty() ||
+       (VectorizableTree.size() > LimitTreeSize * StoreLoadNodes.size() &&
+        (NumGathers > 0 || none_of(StoreLoadNodes, [&](const TreeEntry *TE) {
+           return TE->getOpcode() == Instruction::Store ||
+                  all_of(TE->Scalars, [&](Value *V) {
+                    return !isa<LoadInst>(V) ||
+                           areAllUsersVectorized(cast<Instruction>(V));
+                  });
+         })))))
     return true;
 
   // We can vectorize the tree if its size is greater than or equal to the
@@ -15059,7 +15097,8 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
   for (ExternalUser &EU : ExternalUses) {
     LLVM_DEBUG(dbgs() << "SLP: Computing cost for external use of TreeEntry "
                       << EU.E.Idx << " in lane " << EU.Lane << "\n");
-    LLVM_DEBUG(dbgs() << "  User:" << *EU.User << "\n");
+    LLVM_DEBUG(if (EU.User) dbgs() << "  User:" << *EU.User << "\n";
+               else dbgs() << "  User: nullptr\n");
     LLVM_DEBUG(dbgs() << "  Use: " << EU.Scalar->getNameOrAsOperand() << "\n");
 
     // Uses by ephemeral values are free (because the ephemeral value will be
@@ -15254,6 +15293,7 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals,
         bool IsProfitablePHIUser =
             (KeepScalar || (ScalarCost - ExtraCost <= TTI::TCC_Basic &&
                             VectorizableTree.front()->Scalars.size() > 2)) &&
+            VectorizableTree.front()->hasState() &&
             VectorizableTree.front()->getOpcode() == Instruction::PHI &&
             !Inst->hasNUsesOrMore(UsesLimit) &&
             none_of(Inst->users(),
@@ -18865,8 +18905,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!UseIntrinsic) {
         VFShape Shape =
             VFShape::get(CI->getFunctionType(),
-                         ElementCount::getFixed(
-                             static_cast<unsigned>(VecTy->getNumElements())),
+                         ElementCount::getFixed(VecTy->getNumElements()),
                          false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {

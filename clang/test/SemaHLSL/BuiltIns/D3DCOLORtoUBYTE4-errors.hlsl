@@ -25,5 +25,5 @@ struct S {
 int4 struct_arg(S v) {
     return D3DCOLORtoUBYTE4(v);
     // expected-error@-1 {{no matching function for call to 'D3DCOLORtoUBYTE4'}}
-    // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: no known conversion from 'S' to 'vector<float, 4>' (vector of 4 'float' values) for 1st argument}}
+    // expected-note@hlsl/hlsl_intrinsics.h:* {{candidate function not viable: no known conversion from 'S' to 'float4' (aka 'vector<float, 4>') for 1st argument}}
 }

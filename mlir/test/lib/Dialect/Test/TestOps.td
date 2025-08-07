@@ -119,9 +119,25 @@ def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
                        OptionalAttr<StrAttr>:$sym_visibility);
 }
 
+def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
+  DeclareOpInterfaceMethods<Symbol, ["getVisibility", "setVisibility"]>,
+]> {
+  let summary =  "operation overridden symbol visibility accessors";
+  let arguments = (ins StrAttr:$sym_name);
+}
+
 def SymbolScopeOp : TEST_Op<"symbol_scope",
     [SymbolTable, SingleBlockImplicitTerminator<"TerminatorOp">]> {
   let summary =  "operation which defines a new symbol table";
+  let regions = (region SizedRegion<1>:$region);
+}
+
+def SymbolScopeIsolatedOp
+    : TEST_Op<"symbol_scope_isolated", [IsolatedFromAbove, SymbolTable,
+                                        SingleBlockImplicitTerminator<
+                                            "TerminatorOp">]> {
+  let summary =
+      "operation which defines a new symbol table that is IsolatedFromAbove";
   let regions = (region SizedRegion<1>:$region);
 }
 
@@ -2035,7 +2051,7 @@ def IllegalOpWithRegion : TEST_Op<"illegal_op_with_region"> {
        OpBuilder::InsertionGuard g($_builder);
        Block *body = $_builder.createBlock(bodyRegion);
        $_builder.setInsertionPointToEnd(body);
-       $_builder.create<IllegalOpTerminator>($_state.location);
+       IllegalOpTerminator::create($_builder,$_state.location);
     }]>];
 }
 def IllegalOpWithRegionAnchor : TEST_Op<"illegal_op_with_region_anchor">;
@@ -2088,6 +2104,10 @@ def TestInvalidOp : TEST_Op<"invalid", [Terminator]>,
   Arguments<(ins Variadic<AnyType>)>;
 def TestTypeProducerOp : TEST_Op<"type_producer">,
   Results<(outs AnyType)>;
+def TestValidProducerOp : TEST_Op<"valid_producer">,
+  Results<(outs AnyType)>;
+def TestValidConsumerOp : TEST_Op<"valid_consumer">,
+  Arguments<(ins AnyType)>;
 def TestAnotherTypeProducerOp : TEST_Op<"another_type_producer">,
   Results<(outs AnyType)>;
 def TestTypeConsumerOp : TEST_Op<"type_consumer">,
@@ -2738,7 +2758,7 @@ def TestLinalgConvOp :
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
                               mlir::ArrayRef<mlir::NamedAttribute> attrs,
                               llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
-      b.create<mlir::linalg::YieldOp>(block.getArguments().back());
+      mlir::linalg::YieldOp::create(b,block.getArguments().back());
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
@@ -2801,7 +2821,7 @@ def TestLinalgFillOp :
     static void regionBuilder(mlir::ImplicitLocOpBuilder &b, mlir::Block &block,
                               mlir::ArrayRef<mlir::NamedAttribute> attrs,
                               llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
-      b.create<mlir::linalg::YieldOp>(block.getArguments().back());
+      mlir::linalg::YieldOp::create(b,block.getArguments().back());
     }
 
     static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
