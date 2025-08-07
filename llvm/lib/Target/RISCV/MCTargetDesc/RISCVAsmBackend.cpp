@@ -803,6 +803,40 @@ void RISCVAsmBackend::maybeAddVendorReloc(const MCFragment &F,
   Asm->getWriter().recordRelocation(F, VendorFixup, VendorTarget, VendorValue);
 }
 
+static bool fixupGetsRelaxRelocation(const MCFixupKind Kind) {
+  switch (Kind) {
+  default:
+    break;
+  case RISCV::fixup_riscv_lo12_i:
+  case RISCV::fixup_riscv_lo12_s:
+  case RISCV::fixup_riscv_hi20:
+  case RISCV::fixup_riscv_pcrel_lo12_i:
+  case RISCV::fixup_riscv_pcrel_lo12_s:
+  case RISCV::fixup_riscv_pcrel_hi20:
+  case RISCV::fixup_riscv_call_plt:
+  case RISCV::fixup_riscv_qc_abs20_u:
+  case RISCV::fixup_riscv_qc_e_32:
+  case RISCV::fixup_riscv_qc_e_call_plt:
+  case ELF::R_RISCV_TPREL_LO12_I:
+  case ELF::R_RISCV_TPREL_LO12_S:
+  case ELF::R_RISCV_TPREL_HI20:
+    return true;
+  }
+  return false;
+}
+
+void RISCVAsmBackend::maybeAddRelaxReloc(const MCFragment &F,
+                                         const MCFixup &Fixup) {
+  if (!Fixup.isLinkerRelaxable() || !fixupGetsRelaxRelocation(Fixup.getKind()))
+    return;
+
+  MCFixup RelaxFixup =
+      MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
+  MCValue RelaxTarget = MCValue::get(nullptr);
+  uint64_t RelaxValue;
+  Asm->getWriter().recordRelocation(F, RelaxFixup, RelaxTarget, RelaxValue);
+}
+
 bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
                                const MCValue &Target, uint64_t &FixedValue,
                                bool IsResolved) {
@@ -845,25 +879,24 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
     return false;
   }
 
-  // If linker relaxation is enabled and supported by the current relocation,
-  // generate a relocation and then append a RELAX.
-  if (Fixup.isLinkerRelaxable())
+  // If linker relaxation is enabled and supported by the current fixup, then we
+  // always want to generate a relocation.
+  if (Fixup.isLinkerRelaxable() && fixupGetsRelaxRelocation(Fixup.getKind()))
     IsResolved = false;
+
   if (IsResolved && Fixup.isPCRel())
     IsResolved = isPCRelFixupResolved(Target.getAddSym(), F);
 
   if (!IsResolved) {
-    // Some Fixups require a vendor relocation, record it (directly) before we
+    // Some Fixups require a VENDOR relocation, record it (directly) before we
     // add the relocation.
     maybeAddVendorReloc(F, Fixup);
 
     Asm->getWriter().recordRelocation(F, Fixup, Target, FixedValue);
-  }
 
-  if (Fixup.isLinkerRelaxable()) {
-    auto FA = MCFixup::create(Fixup.getOffset(), nullptr, ELF::R_RISCV_RELAX);
-    Asm->getWriter().recordRelocation(F, FA, MCValue::get(nullptr),
-                                      FixedValueA);
+    // Some Fixups may get a RELAX relocation, record it (directly) after we
+    // add the relocation.
+    maybeAddRelaxReloc(F, Fixup);
   }
 
   return false;

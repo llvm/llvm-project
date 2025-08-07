@@ -461,11 +461,21 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   getAssembler().getEmitter().encodeInstruction(Inst, Data, Fixups, STI);
 
   F->Kind = MCFragment::FT_Relaxable;
-  F->STI = &STI;
-  F->HasInstructions = true;
+  F->setHasInstructions(STI);
+
   F->setVarContents(Data);
-  F->setVarFixups(Fixups);
   F->setInst(Inst);
+
+  for (auto &Fixup : Fixups) {
+    if (!Fixup.isLinkerRelaxable())
+      continue;
+    auto *Sec = F->getParent();
+    if (!Sec->isLinkerRelaxable())
+      Sec->setLinkerRelaxable();
+    F->setLinkerRelaxable();
+  }
+  F->setVarFixups(Fixups);
+
   newFragment();
 }
 
