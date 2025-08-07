@@ -222,9 +222,6 @@ add_mlir_dialect_library(MLIRXeVMTarget
 
   OBJECT
 
-  ADDITIONAL_HEADER_DIRS
-  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
-
   LINK_COMPONENTS
   ${SPIRV_LIBS}
 
@@ -235,10 +232,4 @@ add_mlir_dialect_library(MLIRXeVMTarget
   MLIRGPUDialect
   MLIRTargetLLVM
   MLIRXeVMToLLVMIRTranslation
-)
-
-# Ensure SPIRV headers are included. Warning: references build directory!
-target_include_directories(MLIRXeVMTarget PRIVATE
-  ${LLVM_MAIN_SRC_DIR}/lib/Target/SPIRV
-  ${LLVM_BINARY_DIR}/lib/Target/SPIRV
 )
