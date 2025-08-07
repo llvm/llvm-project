@@ -252,6 +252,8 @@ static Symbol parseExtendedSymbol(Parser &p, AsmParserState *asmState,
     if (cacheIt != cache.end()) {
       return cacheIt->second;
     }
+    cache[symbolData] = createSymbol(dialectName, symbolData, loc);
+    return cache[symbolData];
   }
   return createSymbol(dialectName, symbolData, loc);
 }
@@ -371,12 +373,10 @@ static T parseSymbol(StringRef inputStr, MLIRContext *context,
     return T();
 
   if constexpr (std::is_same_v<T, Attribute>) {
-    // Cache key is the symbol data without the dialect prefix.
-    StringRef cacheKey = inputStr.split('.').second;
-    if (attributesCache && !cacheKey.empty()) {
-      (*attributesCache)[cacheKey] = symbol;
-    }
+    if (attributesCache)
+      *attributesCache = state.symbols.attributesCache;
   }
+
   // Provide the number of bytes that were read.
   Token endTok = parser.getToken();
   size_t numRead =
