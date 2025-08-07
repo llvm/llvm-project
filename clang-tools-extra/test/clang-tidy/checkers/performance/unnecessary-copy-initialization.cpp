@@ -939,12 +939,12 @@ template<typename T> bool OperatorWithNoDirectCallee(T t) {
   return a1 == t;
 }
 
-bool CopiedFromConstRefParmVar(const Struct &crs, const Struct cs, Struct &rs, Struct s) {
+bool CopiedFromParmVarField(const Struct &crs, const Struct cs, Struct &rs, Struct s) {
   const auto m1 = crs.Member;
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the field of the variable 'crs' is never modified; consider avoiding the copy
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the field 'Member' of type 'const ExpensiveToCopyType' in object 'crs' is never modified; consider avoiding the copy
   // CHECK-FIXES: const auto& m1 = crs.Member;
   const auto m2 = cs.Member;
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm2' of the field of the variable 'cs' is never modified; consider avoiding the copy
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm2' of the field 'Member' of type 'const ExpensiveToCopyType' in object 'cs' is never modified; consider avoiding the copy
   // CHECK-FIXES: const auto& m2 = cs.Member;
   const auto m3 = rs.Member;
   const auto m4 = s.Member;
@@ -952,15 +952,45 @@ bool CopiedFromConstRefParmVar(const Struct &crs, const Struct cs, Struct &rs, S
 }
 
 const Struct GlobalS;
-bool CopiedFromConstLocalVar() {
+bool CopiedFromVarField() {
   const Struct crs;
   Struct s;
   const auto m1 = crs.Member;
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the field of the variable 'crs' is never modified; consider avoiding the copy
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the field 'Member' of type 'const ExpensiveToCopyType' in object 'crs' is never modified; consider avoiding the copy
   // CHECK-FIXES: const auto& m1 = crs.Member;
   const auto m2 = s.Member;
   const auto m3 = GlobalS.Member;
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm3' of the field of the variable 'GlobalS' is never modified; consider avoiding the copy
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm3' of the field 'Member' of type 'const ExpensiveToCopyType' in object 'GlobalS' is never modified; consider avoiding the copy
   // CHECK-FIXES: const auto& m3 = GlobalS.Member;
+  return m1 == m2 || m2 == m3;
+}
+
+struct NestedStruct {
+  Struct s;
+};
+
+bool CopiedFromParmVarNestedField(const NestedStruct &ncrs, const NestedStruct ncs, NestedStruct &nrs, NestedStruct ns) {
+  const auto m1 = ncrs.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the field 'Member' of type 'const ExpensiveToCopyType' in object 'ncrs' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = ncrs.s.Member;
+  const auto m2 = ncs.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm2' of the field 'Member' of type 'const ExpensiveToCopyType' in object 'ncs' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m2 = ncs.s.Member;
+  const auto m3 = nrs.s.Member;
+  const auto m4 = ns.s.Member;
+  return m1 == m2 || m3 == m4;
+}
+
+const NestedStruct GlobalNS;
+bool CopiedFromVarNestedField() {
+  const NestedStruct ncrs;
+  NestedStruct ns;
+  const auto m1 = ncrs.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the field 'Member' of type 'const ExpensiveToCopyType' in object 'ncrs' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m1 = ncrs.s.Member;
+  const auto m2 = ns.s.Member;
+  const auto m3 = GlobalNS.s.Member;
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm3' of the field 'Member' of type 'const ExpensiveToCopyType' in object 'GlobalNS' is never modified; consider avoiding the copy
+  // CHECK-FIXES: const auto& m3 = GlobalNS.s.Member;
   return m1 == m2 || m2 == m3;
 }
