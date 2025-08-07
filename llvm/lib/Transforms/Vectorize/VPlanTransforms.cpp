@@ -3288,10 +3288,10 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   // IR value has already been set.
   if (VectorTC.getNumUsers() == 0 || VectorTC.getLiveInIRValue())
     return;
+
   VPValue *TC = Plan.getTripCount();
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(TC);
   VPBuilder Builder(VectorPHVPBB, VectorPHVPBB->begin());
-
   VPValue *Step = &Plan.getVFxUF();
 
   // If the tail is to be folded by masking, round the number of iterations N
@@ -3327,14 +3327,14 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   // since there will already be scalar iterations. Note that the minimum
   // iterations check ensures that N >= Step.
   if (RequiresScalarEpilogue) {
-    auto *IsZero = Builder.createICmp(
+    VPValue *IsZero = Builder.createICmp(
         CmpInst::ICMP_EQ, R, Plan.getOrAddLiveIn(ConstantInt::get(TCTy, 0)));
     R = Builder.createSelect(IsZero, Step, R);
   }
 
-  auto Res = Builder.createNaryOp(Instruction::Sub, {TC, R},
-                                  DebugLoc::getCompilerGenerated(), "n.vec");
-  Plan.getVectorTripCount().replaceAllUsesWith(Res);
+  VPValue *Res = Builder.createNaryOp(
+      Instruction::Sub, {TC, R}, DebugLoc::getCompilerGenerated(), "n.vec");
+  VectorTC.replaceAllUsesWith(Res);
 }
 
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
