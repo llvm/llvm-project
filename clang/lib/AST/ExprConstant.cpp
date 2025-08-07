@@ -465,7 +465,7 @@ namespace {
     void diagnosePointerArithmetic(EvalInfo &Info, const Expr *E,
                                    const APSInt &N);
     /// Add N to the address of this subobject.
-    void adjustIndex(EvalInfo &Info, const Expr *E, APSInt N, LValue &LV);
+    void adjustIndex(EvalInfo &Info, const Expr *E, APSInt N, const LValue &LV);
   };
 
   /// A scope at the end of which an object can need to be destroyed.
@@ -1866,7 +1866,7 @@ namespace {
 }
 
 void SubobjectDesignator::adjustIndex(EvalInfo &Info, const Expr *E, APSInt N,
-                                      LValue &LV) {
+                                      const LValue &LV) {
   if (Invalid || !N)
     return;
   uint64_t TruncatedN = N.extOrTrunc(64).getZExtValue();

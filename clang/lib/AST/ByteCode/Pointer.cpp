@@ -563,12 +563,6 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   if (A.isTypeidPointer() && B.isTypeidPointer())
     return true;
 
-  if (A.isIntegralPointer() || B.isIntegralPointer()) {
-    if (A.isTypeidPointer() || B.isTypeidPointer())
-      return false;
-    return A.getSource() == B.getSource();
-  }
-
   if (A.StorageKind != B.StorageKind)
     return false;
 
