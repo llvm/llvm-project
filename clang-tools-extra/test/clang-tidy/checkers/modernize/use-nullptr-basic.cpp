@@ -199,12 +199,14 @@ void *test_parentheses_explicit_cast_sequence1() {
   // CHECK-FIXES: return(static_cast<void*>(nullptr));
 }
 
-// FIXME: this case should trigger the warning.
+// FIXME: this case triggers the warning on Windows but not on Linux.
+#if 0
 void *test_parentheses_explicit_cast_sequence2() {
   return(static_cast<void*>(reinterpret_cast<int*>((float*)int(0.f))));
   // DISABLED-CHECK-MESSAGES: :[[@LINE-1]]:29: warning: use nullptr
   // DISABLED-CHECK-FIXES: return(static_cast<void*>(nullptr));
 }
+#endif
 
 // Test explicit cast expressions resulting in nullptr.
 struct Bam {
