@@ -135,11 +135,10 @@ class TestComputeProjects(unittest.TestCase):
             "clang;lld",
         )
         self.assertEqual(
-            env_variables["project_check_targets"],"",
+            env_variables["project_check_targets"],
+            "",
         )
-        self.assertEqual(
-            env_variables["runtimes_to_build"], "compiler-rt"
-        )
+        self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
         self.assertEqual(
             env_variables["runtimes_check_targets"],
             "check-compiler-rt",
