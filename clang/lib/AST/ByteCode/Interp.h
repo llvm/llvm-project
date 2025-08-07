@@ -3201,6 +3201,9 @@ inline bool GetMemberPtr(InterpState &S, CodePtr OpPC, const ValueDecl *D) {
 inline bool GetMemberPtrBase(InterpState &S, CodePtr OpPC) {
   const auto &MP = S.Stk.pop<MemberPointer>();
 
+  if (!MP.isBaseCastPossible())
+    return false;
+
   S.Stk.push<Pointer>(MP.getBase());
   return true;
 }
