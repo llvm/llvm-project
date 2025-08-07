@@ -149,7 +149,7 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
       const uintptr_t address) {                                               \
     uintptr_t caller = GET_CALLER_PC();                                        \
     __ubsan_report_error_fatal(kind, caller, &address);                        \
-    abort_with_message(kind, caller, nullptr);                                 \
+    abort_with_message(kind, caller, &address);                                \
   }
 
 // A version of a handler that takes a pointer to a value.
