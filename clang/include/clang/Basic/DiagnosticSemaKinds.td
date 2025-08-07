@@ -6833,6 +6833,7 @@ def err_jump_out_of_defer_stmt
             "%Return{return from a}|"
             "%SEHLeave{__leave a}"
             "}0 defer statement">;
+def err_defer_invalid_sjlj : Error<"cannot use %0 inside a defer statement">;
 
 def err_func_returning_qualified_void : ExtWarn<
   "function cannot return qualified void type %0">,
