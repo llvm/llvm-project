@@ -112,7 +112,7 @@ void TrackingOutputBuffer::finalizeEnd() {
     NameInfo.ScopeRange.second = NameInfo.ScopeRange.first;
   NameInfo.BasenameRange.first = NameInfo.ScopeRange.second;
 
-  // We call anything past the FunctionEncoding is the suffix.
+  // We call anything past the FunctionEncoding the "suffix".
   // In practice this would be nodes like `DotSuffix` that wrap
   // a FunctionEncoding.
   NameInfo.SuffixRange.first = getCurrentPosition();
@@ -144,7 +144,7 @@ void TrackingOutputBuffer::printLeft(const Node &N) {
     OutputBuffer::printLeft(N);
   }
 
-  // Keeps updating suffix until we reach the end.
+  // Keep updating suffix until we reach the end.
   NameInfo.SuffixRange.second = getCurrentPosition();
 }
 
@@ -160,7 +160,7 @@ void TrackingOutputBuffer::printRight(const Node &N) {
     OutputBuffer::printRight(N);
   }
 
-  // Keeps updating suffix until we reach the end.
+  // Keep updating suffix until we reach the end.
   NameInfo.SuffixRange.second = getCurrentPosition();
 }
 
