@@ -10138,8 +10138,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   ElementCount UserVF = Hints.getWidth();
   unsigned UserIC = Hints.getInterleave();
 
+  unsigned SafeUserIC = CM.Legal->isSafeForAnyVectorWidth() ? UserIC : 0;
+
   // Plan how to best vectorize.
-  LVP.plan(UserVF, UserIC);
+  LVP.plan(UserVF, SafeUserIC);
   VectorizationFactor VF = LVP.computeBestVF();
   unsigned IC = 1;
 
@@ -10151,7 +10153,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Select the interleave count.
     IC = LVP.selectInterleaveCount(LVP.getPlanFor(VF.Width), VF.Width, VF.Cost);
 
-    unsigned SelectedIC = std::max(IC, UserIC);
+    unsigned SelectedIC = std::max(IC, SafeUserIC);
+
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
     if (VF.Width.isVector() || SelectedIC > 1) {
@@ -10201,7 +10204,14 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     VectorizeLoop = false;
   }
 
-  if (!LVP.hasPlanWithVF(VF.Width) && UserIC > 1) {
+  if (UserIC > 0 && UserIC != SafeUserIC) {
+    LLVM_DEBUG(dbgs() << "LV: Disabling interleaving as user-specified "
+                         "interleave count is unsafe.\n");
+    IntDiagMsg = {"InterleavingUnsafe",
+                  "User-specified interleave count is not safe, interleave "
+                  "count is set to 1."};
+    InterleaveLoop = false;
+  } else if (!LVP.hasPlanWithVF(VF.Width) && SafeUserIC > 1) {
     // Tell the user interleaving was avoided up-front, despite being explicitly
     // requested.
     LLVM_DEBUG(dbgs() << "LV: Ignoring UserIC, because vectorization and "
@@ -10209,7 +10219,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     IntDiagMsg = {"InterleavingAvoided",
                   "Ignoring UserIC, because interleaving was avoided up front"};
     InterleaveLoop = false;
-  } else if (IC == 1 && UserIC <= 1) {
+  } else if (IC == 1 && SafeUserIC <= 1) {
     // Tell the user interleaving is not beneficial.
     LLVM_DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
     IntDiagMsg = {
@@ -10221,7 +10231,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       IntDiagMsg.second +=
           " and is explicitly disabled or interleave count is set to 1";
     }
-  } else if (IC > 1 && UserIC == 1) {
+  } else if (IC > 1 && SafeUserIC == 1) {
     // Tell the user interleaving is beneficial, but it explicitly disabled.
     LLVM_DEBUG(
         dbgs() << "LV: Interleaving is beneficial but is explicitly disabled.");
@@ -10245,7 +10255,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   }
 
   // Override IC if user provided an interleave count.
-  IC = UserIC > 0 ? UserIC : IC;
+  IC = SafeUserIC > 0 ? SafeUserIC : IC;
 
   // Emit diagnostic messages, if any.
   const char *VAPassName = Hints.vectorizeAnalysisPassName();
