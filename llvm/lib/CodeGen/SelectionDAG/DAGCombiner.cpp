@@ -16300,37 +16300,28 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
         TLI.isOperationLegal(N0.getOpcode(), VT)) {
       SDValue X = N0.getOperand(0);
       SDValue Y = N0.getOperand(1);
-
-      KnownBits KnownX = DAG.computeKnownBits(X);
-      KnownBits KnownY = DAG.computeKnownBits(Y);
-
       unsigned SrcBits = X.getScalarValueSizeInBits();
       unsigned DstBits = VT.getScalarSizeInBits();
-      unsigned NeededLeadingZeros = SrcBits - DstBits + 1;
-
-      if (KnownX.countMinLeadingZeros() >= NeededLeadingZeros &&
-          KnownY.countMinLeadingZeros() >= NeededLeadingZeros) {
+      unsigned MaxBitsX = DAG.ComputeMaxSignificantBits(X);
+      unsigned MaxBitsY = DAG.ComputeMaxSignificantBits(Y);
+      if (MaxBitsX <= DstBits && MaxBitsY <= DstBits) {
         SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
         SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
         return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
       }
     }
     break;
-
   case ISD::AVGCEILS:
   case ISD::AVGFLOORS:
     if (!LegalOperations && N0.hasOneUse() &&
         TLI.isOperationLegal(N0.getOpcode(), VT)) {
       SDValue X = N0.getOperand(0);
       SDValue Y = N0.getOperand(1);
-
       unsigned SignBitsX = DAG.ComputeNumSignBits(X);
       unsigned SignBitsY = DAG.ComputeNumSignBits(Y);
-
       unsigned SrcBits = X.getScalarValueSizeInBits();
       unsigned DstBits = VT.getScalarSizeInBits();
       unsigned NeededSignBits = SrcBits - DstBits + 1;
-
       if (SignBitsX >= NeededSignBits && SignBitsY >= NeededSignBits) {
         SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
         SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
@@ -16338,7 +16329,6 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       }
     }
     break;
-
   case ISD::ADD:
   case ISD::SUB:
   case ISD::MUL:
