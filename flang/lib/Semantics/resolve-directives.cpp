@@ -10,7 +10,6 @@
 
 #include "check-acc-structure.h"
 #include "check-omp-structure.h"
-#include "openmp-utils.h"
 #include "resolve-names-utils.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/fold.h"
@@ -22,6 +21,7 @@
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/openmp-dsa.h"
 #include "flang/Semantics/openmp-modifiers.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Flags.h"
@@ -2139,18 +2139,9 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPSectionConstruct &x) {
 }
 
 bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
-  const auto &beginCriticalDir{std::get<parser::OmpCriticalDirective>(x.t)};
-  const auto &endCriticalDir{std::get<parser::OmpEndCriticalDirective>(x.t)};
-  PushContext(beginCriticalDir.source, llvm::omp::Directive::OMPD_critical);
+  const parser::OmpBeginDirective &beginSpec{x.BeginDir()};
+  PushContext(beginSpec.DirName().source, beginSpec.DirName().v);
   GetContext().withinConstruct = true;
-  if (const auto &criticalName{
-          std::get<std::optional<parser::Name>>(beginCriticalDir.t)}) {
-    ResolveOmpName(*criticalName, Symbol::Flag::OmpCriticalLock);
-  }
-  if (const auto &endCriticalName{
-          std::get<std::optional<parser::Name>>(endCriticalDir.t)}) {
-    ResolveOmpName(*endCriticalName, Symbol::Flag::OmpCriticalLock);
-  }
   return true;
 }
 

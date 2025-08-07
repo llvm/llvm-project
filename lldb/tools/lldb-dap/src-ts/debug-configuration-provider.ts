@@ -76,7 +76,29 @@ export class LLDBDapConfigurationProvider
     private readonly server: LLDBDapServer,
     private readonly logger: vscode.LogOutputChannel,
     private readonly logFilePath: LogFilePathProvider,
-  ) {}
+  ) {
+    vscode.commands.registerCommand(
+      "lldb-dap.resolveDebugConfiguration",
+      (
+        folder: vscode.WorkspaceFolder | undefined,
+        debugConfiguration: vscode.DebugConfiguration,
+        token?: vscode.CancellationToken,
+      ) => this.resolveDebugConfiguration(folder, debugConfiguration, token),
+    );
+    vscode.commands.registerCommand(
+      "lldb-dap.resolveDebugConfigurationWithSubstitutedVariables",
+      (
+        folder: vscode.WorkspaceFolder | undefined,
+        debugConfiguration: vscode.DebugConfiguration,
+        token?: vscode.CancellationToken,
+      ) =>
+        this.resolveDebugConfigurationWithSubstitutedVariables(
+          folder,
+          debugConfiguration,
+          token,
+        ),
+    );
+  }
 
   async resolveDebugConfiguration(
     folder: vscode.WorkspaceFolder | undefined,
