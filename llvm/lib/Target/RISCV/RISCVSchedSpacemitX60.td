@@ -46,18 +46,23 @@ class GetLMULValue<list<int> Values, string LMUL> {
 //   MF8->2, MF4->2, MF2->2, M1->4, M2->8, M4->16, M8->32
 // This is useful for modeling scheduling parameters that scale with LMUL.
 class ConstValueUntilLMULThenDoubleBase<string startLMUL, int BaseValue, int Value, string currentLMUL> {
-  assert !le(BaseValue, Value), "BaseValue must be le to Value";
+  assert !le(BaseValue, Value), "BaseValue must be less-equal to Value";
   defvar startPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], startLMUL>.c;
   defvar currentPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], currentLMUL>.c;
 
   // Calculate the difference in positions
   defvar posDiff = !sub(currentPos, startPos);
 
-  // Calculate Value * (2^posDiff) using shift left
+  // Calculate Value * (2^posDiff)
   int c = !cond(
-    !lt(posDiff, 0) : BaseValue,
     !eq(posDiff, 0) : Value,
-    true: !mul(Value, !shl(1, posDiff))
+    !eq(posDiff, 1) : !mul(Value, 2),
+    !eq(posDiff, 2) : !mul(Value, 4),
+    !eq(posDiff, 3) : !mul(Value, 8),
+    !eq(posDiff, 4) : !mul(Value, 16),
+    !eq(posDiff, 5) : !mul(Value, 32),
+    !eq(posDiff, 6) : !mul(Value, 64),
+    true : BaseValue
   );
 }
 
