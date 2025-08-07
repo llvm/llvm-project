@@ -69,7 +69,6 @@ class TestFrameVarDILArraySubscript(TestBase):
             substrs=["expected 'r_square', got: <'.'"],
         )
 
-
         # Test accessing bits in scalar types.
         self.expect_var_path("idx_1[0]", value="1")
         self.expect_var_path("idx_1[1]", value="0")
