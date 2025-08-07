@@ -96,6 +96,7 @@ __m128i test_mm_and_si128(__m128i A, __m128i B) {
   // CHECK: and <2 x i64>
   return _mm_and_si128(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_and_si128((__m128i)(__v4si){0, -1, 0, -1}, (__m128i)(__v4si){0, 0, -1, -1}), 0, 0, 0, -1));
 
 __m128d test_mm_andnot_pd(__m128d A, __m128d B) {
   // CHECK-LABEL: test_mm_andnot_pd
@@ -111,6 +112,7 @@ __m128i test_mm_andnot_si128(__m128i A, __m128i B) {
   // CHECK: and <2 x i64>
   return _mm_andnot_si128(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_andnot_si128((__m128i)(__v4si){0, -1, 0, -1}, (__m128i)(__v4si){0, 0, -1, -1}), 0, 0, -1, 0));
 
 __m128i test_mm_avg_epu8(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_avg_epu8
@@ -963,6 +965,7 @@ __m128i test_mm_or_si128(__m128i A, __m128i B) {
   // CHECK: or <2 x i64> %{{.*}}, %{{.*}}
   return _mm_or_si128(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_or_si128((__m128i)(__v4si){0, -1, 0, -1}, (__m128i)(__v4si){0, 0, -1, -1}), 0, -1, -1, -1));
 
 __m128i test_mm_packs_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_packs_epi16
@@ -1831,3 +1834,4 @@ __m128i test_mm_xor_si128(__m128i A, __m128i B) {
   // CHECK: xor <2 x i64> %{{.*}}, %{{.*}}
   return _mm_xor_si128(A, B);
 }
+TEST_CONSTEXPR(match_v4si(_mm_xor_si128((__m128i)(__v4si){0, -1, 0, -1}, (__m128i)(__v4si){0, 0, -1, -1}), 0, -1, -1, 0));

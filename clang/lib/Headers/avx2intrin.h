@@ -31,6 +31,14 @@
                  __min_vector_width__(128)))
 #endif
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#else
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#endif
+
 /* SSE4 Multiple Packed Sums of Absolute Difference.  */
 /// Computes sixteen sum of absolute difference (SAD) operations on sets of
 ///    four unsigned 8-bit integers from the 256-bit integer vectors \a X and
@@ -460,7 +468,7 @@ _mm256_adds_epu16(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_and_si256(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v4du)__a & (__v4du)__b);
@@ -478,7 +486,7 @@ _mm256_and_si256(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_andnot_si256(__m256i __a, __m256i __b)
 {
   return (__m256i)(~(__v4du)__a & (__v4du)__b);
@@ -1822,7 +1830,7 @@ _mm256_mul_epu32(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_or_si256(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v4du)__a | (__v4du)__b);
@@ -2974,7 +2982,7 @@ _mm256_unpacklo_epi64(__m256i __a, __m256i __b)
 /// \param __b
 ///    A 256-bit integer vector.
 /// \returns A 256-bit integer vector containing the result.
-static __inline__ __m256i __DEFAULT_FN_ATTRS256
+static __inline__ __m256i __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_xor_si256(__m256i __a, __m256i __b)
 {
   return (__m256i)((__v4du)__a ^ (__v4du)__b);
@@ -5289,5 +5297,7 @@ _mm_srlv_epi64(__m128i __X, __m128i __Y)
 
 #undef __DEFAULT_FN_ATTRS256
 #undef __DEFAULT_FN_ATTRS128
+#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
 
 #endif /* __AVX2INTRIN_H */
