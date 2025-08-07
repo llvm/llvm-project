@@ -11,11 +11,11 @@
 
 // The memory or address space to which the memory ordering is applied.
 typedef enum MemorySemantic {
-  MEMORY_PRIVATE = 0x1,
-  MEMORY_LOCAL = 0x2,
-  MEMORY_GLOBAL = 0x4,
-  MEMORY_CONSTANT = 0x8,
-  MEMORY_GENERIC = 0x10
+  MEMORY_PRIVATE = 1 << 0,
+  MEMORY_GLOBAL = 1 << 1,
+  MEMORY_CONSTANT = 1 << 2,
+  MEMORY_LOCAL = 1 << 3,
+  MEMORY_GENERIC = 1 << 4,
 } MemorySemantic;
 
 #endif // __CLC_MEM_FENCE_CLC_MEM_SEMANTIC_H__
