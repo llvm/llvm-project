@@ -171,6 +171,10 @@ public:
   mlir::Value VisitBinSubAssign(const CompoundAssignOperator *e) {
     return emitCompoundAssign(e, &ComplexExprEmitter::emitBinSub);
   }
+
+  mlir::Value VisitBinMulAssign(const CompoundAssignOperator *e) {
+    return emitCompoundAssign(e, &ComplexExprEmitter::emitBinMul);
+  }
 };
 } // namespace
 
@@ -813,7 +817,7 @@ using CompoundFunc =
 static CompoundFunc getComplexOp(BinaryOperatorKind op) {
   switch (op) {
   case BO_MulAssign:
-    llvm_unreachable("getComplexOp: BO_MulAssign");
+    return &ComplexExprEmitter::emitBinMul;
   case BO_DivAssign:
     llvm_unreachable("getComplexOp: BO_DivAssign");
   case BO_SubAssign:
