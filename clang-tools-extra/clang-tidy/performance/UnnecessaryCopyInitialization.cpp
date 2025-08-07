@@ -275,13 +275,15 @@ void UnnecessaryCopyInitialization::registerMatchers(MatchFinder *Finder) {
                          to(varDecl(hasLocalStorage()).bind(OldVarDeclId)))),
                      this);
 
+  auto DeclRefToConstVar =
+      declRefExpr(to(varDecl(anyOf(hasType(isConstQualified()),
+                                   hasType(references(isConstQualified()))))
+                         .bind(OldVarDeclId)));
   Finder->addMatcher(
-      LocalVarCopiedFrom(memberExpr(
-          hasObjectExpression(expr(ignoringParenImpCasts(declRefExpr(
-              to(varDecl(anyOf(hasType(isConstQualified()),
-                               hasType(references(isConstQualified()))))
-                     .bind(OldVarDeclId)))))),
-          member(fieldDecl().bind("fieldDecl")))),
+      LocalVarCopiedFrom(
+          memberExpr(hasObjectExpression(anyOf(hasDescendant(DeclRefToConstVar),
+                                               DeclRefToConstVar)),
+                     member(fieldDecl().bind("fieldDecl")))),
       this);
 }
 
@@ -334,7 +336,7 @@ void UnnecessaryCopyInitialization::check(
     handleCopyFromLocalVar(Context, *OldVar);
   } else {
     // `auto NewVar = OldVar.FD;`
-    handleCopyFromConstLocalVarMember(Context, *OldVar);
+    handleCopyFromConstLocalVarMember(Context, *OldVar, *FD);
   }
 }
 
@@ -360,8 +362,8 @@ void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
 }
 
 void UnnecessaryCopyInitialization::handleCopyFromConstLocalVarMember(
-    const CheckContext &Ctx, const VarDecl &OldVar) {
-  diagnoseCopyFromConstLocalVarMember(Ctx, OldVar);
+    const CheckContext &Ctx, const VarDecl &OldVar, const FieldDecl &FD) {
+  diagnoseCopyFromConstLocalVarMember(Ctx, OldVar, FD);
 }
 
 void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
@@ -391,14 +393,14 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
 }
 
 void UnnecessaryCopyInitialization::diagnoseCopyFromConstLocalVarMember(
-    const CheckContext &Ctx, const VarDecl &OldVar) {
+    const CheckContext &Ctx, const VarDecl &OldVar, const FieldDecl &FD) {
   auto Diagnostic =
       diag(Ctx.Var.getLocation(),
-           "local copy %1 of the field of the variable %0 is never "
+           "local copy %0 of the field %1 of type %2 in object %3 is never "
            "modified%select{"
-           "| and never used}2; consider %select{avoiding the copy|removing "
-           "the statement}2")
-      << &OldVar << &Ctx.Var << Ctx.IsVarUnused;
+           "| and never used}4; consider %select{avoiding the copy|removing "
+           "the statement}4")
+      << &Ctx.Var << &FD << Ctx.Var.getType() << &OldVar << Ctx.IsVarUnused;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 
