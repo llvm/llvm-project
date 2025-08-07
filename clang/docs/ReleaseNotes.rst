@@ -161,6 +161,8 @@ Bug Fixes in This Version
   targets that treat ``_Float16``/``__fp16`` as native scalar types. Previously
   the warning was silently lost because the operands differed only by an implicit
   cast chain. (#GH149967).
+- Correct the continue and break scope for while statements to be after the
+  condition is evaluated.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
