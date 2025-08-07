@@ -44,7 +44,7 @@ define void @test(ptr noundef align 8 dereferenceable_or_null(16) %arr) #0 {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 99, [[BB5:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       loop.header:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 99, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[IV]], 1
 ; CHECK-NEXT:    [[ICMP17:%.*]] = icmp eq i64 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[ICMP17]], label [[BB18:%.*]], label [[LOOP_LATCH]], !prof [[PROF5:![0-9]+]]

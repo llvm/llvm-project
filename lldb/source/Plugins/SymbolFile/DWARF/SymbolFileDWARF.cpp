@@ -1663,7 +1663,8 @@ SymbolFileDWARF::GetCompUnitForDWARFCompUnit(DWARFCompileUnit &dwarf_cu) {
 }
 
 void SymbolFileDWARF::GetObjCMethods(
-    ConstString class_name, llvm::function_ref<bool(DWARFDIE die)> callback) {
+    ConstString class_name,
+    llvm::function_ref<IterationAction(DWARFDIE die)> callback) {
   m_index->GetObjCMethods(class_name, callback);
 }
 
@@ -2349,11 +2350,11 @@ void SymbolFileDWARF::FindGlobalVariables(
     assert(sc.module_sp);
 
     if (die.Tag() != DW_TAG_variable && die.Tag() != DW_TAG_member)
-      return true;
+      return IterationAction::Continue;
 
     auto *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
     if (!dwarf_cu)
-      return true;
+      return IterationAction::Continue;
     sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
 
     if (parent_decl_ctx) {
@@ -2368,7 +2369,7 @@ void SymbolFileDWARF::FindGlobalVariables(
         if (!actual_parent_decl_ctx ||
             (actual_parent_decl_ctx != parent_decl_ctx &&
              !parent_decl_ctx.IsContainedInLookup(actual_parent_decl_ctx)))
-          return true;
+          return IterationAction::Continue;
       }
     }
 
@@ -2382,7 +2383,10 @@ void SymbolFileDWARF::FindGlobalVariables(
         variables.RemoveVariableAtIndex(pruned_idx);
     }
 
-    return variables.GetSize() - original_size < max_matches;
+    if (variables.GetSize() - original_size < max_matches)
+      return IterationAction::Continue;
+
+    return IterationAction::Stop;
   });
 
   // Return the number of variable that were appended to the list
@@ -2422,12 +2426,15 @@ void SymbolFileDWARF::FindGlobalVariables(const RegularExpression &regex,
 
     DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(die.GetCU());
     if (!dwarf_cu)
-      return true;
+      return IterationAction::Continue;
     sc.comp_unit = GetCompUnitForDWARFCompUnit(*dwarf_cu);
 
     ParseAndAppendGlobalVariable(sc, die, variables);
 
-    return variables.GetSize() - original_size < max_matches;
+    if (variables.GetSize() - original_size < max_matches)
+      return IterationAction::Continue;
+
+    return IterationAction::Stop;
   });
 }
 
@@ -2753,12 +2760,15 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
         auto CompilerTypeBasename =
             matching_type->GetForwardCompilerType().GetTypeName(true);
         if (CompilerTypeBasename != query.GetTypeBasename())
-          return true; // Keep iterating over index types, basename mismatch.
+          return IterationAction::Continue;
       }
       have_index_match = true;
       results.InsertUnique(matching_type->shared_from_this());
     }
-    return !results.Done(query); // Keep iterating if we aren't done.
+    if (!results.Done(query))
+      return IterationAction::Continue;
+
+    return IterationAction::Stop;
   });
 
   if (results.Done(query)) {
@@ -2794,7 +2804,10 @@ void SymbolFileDWARF::FindTypes(const TypeQuery &query, TypeResults &results) {
         if (query.ContextMatches(qualified_context))
           if (Type *matching_type = ResolveType(die, true, true))
             results.InsertUnique(matching_type->shared_from_this());
-        return !results.Done(query); // Keep iterating if we aren't done.
+        if (!results.Done(query))
+          return IterationAction::Continue;
+
+        return IterationAction::Stop;
       });
       if (results.Done(query)) {
         if (log) {
@@ -2847,14 +2860,17 @@ SymbolFileDWARF::FindNamespace(ConstString name,
 
   m_index->GetNamespacesWithParents(name, parent_decl_ctx, [&](DWARFDIE die) {
     if (!DIEInDeclContext(parent_decl_ctx, die, only_root_namespaces))
-      return true; // The containing decl contexts don't match
+      return IterationAction::Continue;
 
     DWARFASTParser *dwarf_ast = GetDWARFParser(*die.GetCU());
     if (!dwarf_ast)
-      return true;
+      return IterationAction::Continue;
 
     namespace_decl_ctx = dwarf_ast->GetDeclContextForUIDFromDWARF(die);
-    return !namespace_decl_ctx.IsValid();
+    if (namespace_decl_ctx.IsValid())
+      return IterationAction::Stop;
+
+    return IterationAction::Continue;
   });
 
   if (log && namespace_decl_ctx) {
@@ -2984,18 +3000,18 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
         // Don't try and resolve the DIE we are looking for with the DIE
         // itself!
         if (type_die == die || !IsStructOrClassTag(type_die.Tag()))
-          return true;
+          return IterationAction::Continue;
 
         if (must_be_implementation) {
           const bool try_resolving_type = type_die.GetAttributeValueAsUnsigned(
               DW_AT_APPLE_objc_complete_type, 0);
           if (!try_resolving_type)
-            return true;
+            return IterationAction::Continue;
         }
 
         Type *resolved_type = ResolveType(type_die, false, true);
         if (!resolved_type || resolved_type == DIE_IS_BEING_PARSED)
-          return true;
+          return IterationAction::Continue;
 
         DEBUG_PRINTF(
             "resolved 0x%8.8" PRIx64 " from %s to 0x%8.8" PRIx64
@@ -3007,7 +3023,7 @@ TypeSP SymbolFileDWARF::FindCompleteObjCDefinitionTypeForDIE(
         if (die)
           GetDIEToType()[die.GetDIE()] = resolved_type;
         type_sp = resolved_type->shared_from_this();
-        return false;
+        return IterationAction::Stop;
       });
   return type_sp;
 }
@@ -3098,7 +3114,7 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
     // are looking for a "Foo" type for C, C++, ObjC, or ObjC++.
     if (type_system &&
         !type_system->SupportsLanguage(GetLanguage(*type_die.GetCU())))
-      return true;
+      return IterationAction::Continue;
 
     if (!die_matches(type_die)) {
       if (log) {
@@ -3109,7 +3125,7 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
             DW_TAG_value_to_name(tag), tag, name, type_die.GetOffset(),
             type_die.GetName());
       }
-      return true;
+      return IterationAction::Continue;
     }
 
     if (log) {
@@ -3123,7 +3139,7 @@ SymbolFileDWARF::FindDefinitionDIE(const DWARFDIE &die) {
     }
 
     result = type_die;
-    return false;
+    return IterationAction::Stop;
   });
   return result;
 }
@@ -3295,7 +3311,7 @@ size_t SymbolFileDWARF::ParseVariablesForContext(const SymbolContext &sc) {
             variables->AddVariableIfUnique(var_sp);
             ++vars_added;
           }
-          return true;
+          return IterationAction::Continue;
         });
       }
       return vars_added;

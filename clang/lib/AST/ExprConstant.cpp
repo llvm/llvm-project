@@ -5035,6 +5035,9 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
     // This is a member of some derived class. Truncate LV appropriately.
     // The end of the derived-to-base path for the base object must match the
     // derived-to-base path for the member pointer.
+    // C++23 [expr.mptr.oper]p4:
+    //   If the result of E1 is an object [...] whose most derived object does
+    //   not contain the member to which E2 refers, the behavior is undefined.
     if (LV.Designator.MostDerivedPathLength + MemPtr.Path.size() >
         LV.Designator.Entries.size()) {
       Info.FFDiag(RHS);
@@ -5050,6 +5053,24 @@ static const ValueDecl *HandleMemberPointerAccess(EvalInfo &Info,
         Info.FFDiag(RHS);
         return nullptr;
       }
+    }
+    // MemPtr.Path only contains the base classes of the class directly
+    // containing the member E2. It is still necessary to check that the class
+    // directly containing the member E2 lies on the derived-to-base path of E1
+    // to avoid incorrectly permitting member pointer access into a sibling
+    // class of the class containing the member E2. If this class would
+    // correspond to the most-derived class of E1, it either isn't contained in
+    // LV.Designator.Entries or the corresponding entry refers to an array
+    // element instead. Therefore get the most derived class directly in this
+    // case. Otherwise the previous entry should correpond to this class.
+    const CXXRecordDecl *LastLVDecl =
+        (PathLengthToMember > LV.Designator.MostDerivedPathLength)
+            ? getAsBaseClass(LV.Designator.Entries[PathLengthToMember - 1])
+            : LV.Designator.MostDerivedType->getAsCXXRecordDecl();
+    const CXXRecordDecl *LastMPDecl = MemPtr.getContainingRecord();
+    if (LastLVDecl->getCanonicalDecl() != LastMPDecl->getCanonicalDecl()) {
+      Info.FFDiag(RHS);
+      return nullptr;
     }
 
     // Truncate the lvalue to the appropriate derived class.
@@ -8436,7 +8457,7 @@ public:
         // doesn't have an implicit argument passed in.
         const CXXRecordDecl *ClosureClass = MD->getParent();
         assert(
-            ClosureClass->captures_begin() == ClosureClass->captures_end() &&
+            ClosureClass->captures().empty() &&
             "Number of captures must be zero for conversion to function-ptr");
 
         const CXXMethodDecl *LambdaCallOp =
@@ -9839,11 +9860,15 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (Value.isInt()) {
       unsigned Size = Info.Ctx.getTypeSize(E->getType());
       uint64_t N = Value.getInt().extOrTrunc(Size).getZExtValue();
-      Result.Base = (Expr*)nullptr;
-      Result.InvalidBase = false;
-      Result.Offset = CharUnits::fromQuantity(N);
-      Result.Designator.setInvalid();
-      Result.IsNullPtr = false;
+      if (N == Info.Ctx.getTargetNullPointerValue(E->getType())) {
+        Result.setNull(Info.Ctx, E->getType());
+      } else {
+        Result.Base = (Expr *)nullptr;
+        Result.InvalidBase = false;
+        Result.Offset = CharUnits::fromQuantity(N);
+        Result.Designator.setInvalid();
+        Result.IsNullPtr = false;
+      }
       return true;
     } else {
       // In rare instances, the value isn't an lvalue.
@@ -16858,31 +16883,31 @@ static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result) {
          CheckMemoryLeaks(Info);
 }
 
-static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
+static bool FastEvaluateAsRValue(const Expr *Exp, APValue &Result,
                                  const ASTContext &Ctx, bool &IsConst) {
   // Fast-path evaluations of integer literals, since we sometimes see files
   // containing vast quantities of these.
   if (const auto *L = dyn_cast<IntegerLiteral>(Exp)) {
-    Result.Val = APValue(APSInt(L->getValue(),
-                                L->getType()->isUnsignedIntegerType()));
+    Result =
+        APValue(APSInt(L->getValue(), L->getType()->isUnsignedIntegerType()));
     IsConst = true;
     return true;
   }
 
   if (const auto *L = dyn_cast<CXXBoolLiteralExpr>(Exp)) {
-    Result.Val = APValue(APSInt(APInt(1, L->getValue())));
+    Result = APValue(APSInt(APInt(1, L->getValue())));
     IsConst = true;
     return true;
   }
 
   if (const auto *FL = dyn_cast<FloatingLiteral>(Exp)) {
-    Result.Val = APValue(FL->getValue());
+    Result = APValue(FL->getValue());
     IsConst = true;
     return true;
   }
 
   if (const auto *L = dyn_cast<CharacterLiteral>(Exp)) {
-    Result.Val = APValue(Ctx.MakeIntValue(L->getValue(), L->getType()));
+    Result = APValue(Ctx.MakeIntValue(L->getValue(), L->getType()));
     IsConst = true;
     return true;
   }
@@ -16891,7 +16916,7 @@ static bool FastEvaluateAsRValue(const Expr *Exp, Expr::EvalResult &Result,
     if (CE->hasAPValueResult()) {
       APValue APV = CE->getAPValueResult();
       if (!APV.isLValue()) {
-        Result.Val = std::move(APV);
+        Result = std::move(APV);
         IsConst = true;
         return true;
       }
@@ -16921,7 +16946,7 @@ static bool EvaluateAsRValue(const Expr *E, Expr::EvalResult &Result,
                              const ASTContext &Ctx, EvalInfo &Info) {
   assert(!E->isValueDependent());
   bool IsConst;
-  if (FastEvaluateAsRValue(E, Result, Ctx, IsConst))
+  if (FastEvaluateAsRValue(E, Result.Val, Ctx, IsConst))
     return IsConst;
 
   return EvaluateAsRValue(Info, E, Result.Val);
@@ -17078,7 +17103,8 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   bool IsConst;
-  if (FastEvaluateAsRValue(this, Result, Ctx, IsConst) && Result.Val.hasValue())
+  if (FastEvaluateAsRValue(this, Result.Val, Ctx, IsConst) &&
+      Result.Val.hasValue())
     return true;
 
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateAsConstantExpr");
@@ -17293,7 +17319,7 @@ void Expr::EvaluateForOverflow(const ASTContext &Ctx) const {
   ExprTimeTraceScope TimeScope(this, Ctx, "EvaluateForOverflow");
   bool IsConst;
   EvalResult EVResult;
-  if (!FastEvaluateAsRValue(this, EVResult, Ctx, IsConst)) {
+  if (!FastEvaluateAsRValue(this, EVResult.Val, Ctx, IsConst)) {
     EvalInfo Info(Ctx, EVResult, EvalInfo::EM_IgnoreSideEffects);
     Info.CheckingForUndefinedBehavior = true;
     (void)::EvaluateAsRValue(Info, this, EVResult.Val);
@@ -17813,9 +17839,8 @@ Expr::getIntegerConstantExpr(const ASTContext &Ctx) const {
     return std::nullopt;
   }
 
-  APSInt Value;
-
   if (Ctx.getLangOpts().CPlusPlus11) {
+    APSInt Value;
     if (EvaluateCPlusPlus11IntegralConstantExpr(Ctx, this, &Value))
       return Value;
     return std::nullopt;
@@ -17854,13 +17879,20 @@ bool Expr::isCXX11ConstantExpr(const ASTContext &Ctx, APValue *Result) const {
   // issues.
   assert(Ctx.getLangOpts().CPlusPlus);
 
+  bool IsConst;
+  APValue Scratch;
+  if (FastEvaluateAsRValue(this, Scratch, Ctx, IsConst) && Scratch.hasValue()) {
+    if (Result)
+      *Result = Scratch;
+    return true;
+  }
+
   // Build evaluation settings.
   Expr::EvalStatus Status;
   SmallVector<PartialDiagnosticAt, 8> Diags;
   Status.Diag = &Diags;
   EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
 
-  APValue Scratch;
   bool IsConstExpr =
       ::EvaluateAsRValue(Info, this, Result ? *Result : Scratch) &&
       // FIXME: We don't produce a diagnostic for this, but the callers that
