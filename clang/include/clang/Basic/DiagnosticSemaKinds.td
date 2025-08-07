@@ -13234,9 +13234,9 @@ def err_wasm_builtin_arg_must_match_table_element_type : Error <
   "%ordinal0 argument must match the element type of the WebAssembly table in the %ordinal1 argument">;
 def err_wasm_builtin_arg_must_be_integer_type : Error <
   "%ordinal0 argument must be an integer">;
-def err_wasm_builtin_test_fp_sig_cannot_include_reference_type
-    : Error<"not supported for "
-            "function pointers with a reference type %select{return "
+def err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union
+    : Error<"not supported with the multivalue ABI for "
+            "function pointers with a struct/union as %select{return "
             "value|parameter}0">;
 
 // OpenACC diagnostics.
