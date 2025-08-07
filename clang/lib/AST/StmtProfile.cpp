@@ -2644,6 +2644,11 @@ void OpenACCClauseProfiler::VisitPrivateClause(
 void OpenACCClauseProfiler::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &Clause) {
   VisitClauseWithVarList(Clause);
+
+  for (auto &Recipe : Clause.getInitRecipes()) {
+    Profiler.VisitDecl(Recipe.RecipeDecl);
+    Profiler.VisitDecl(Recipe.InitFromTemporary);
+  }
 }
 
 void OpenACCClauseProfiler::VisitAttachClause(
