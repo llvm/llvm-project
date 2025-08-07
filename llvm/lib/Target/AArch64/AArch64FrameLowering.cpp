@@ -339,10 +339,10 @@ static bool requiresSaveVG(const MachineFunction &MF);
 // on the stack. This function is safe to be called before callee-saves or
 // object offsets have been determined.
 static bool isLikelyToHaveSVEStack(MachineFunction &MF) {
-  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
-  if (AFI->isSVECC())
+  if (MF.getFunction().getCallingConv() == CallingConv::AArch64_SVE_VectorCall)
     return true;
 
+  auto *AFI = MF.getInfo<AArch64FunctionInfo>();
   if (AFI->hasCalculatedStackSizeSVE())
     return bool(getSVEStackSize(MF));
 
@@ -3121,12 +3121,14 @@ static unsigned getPrologueDeath(MachineFunction &MF, unsigned Reg) {
 static bool produceCompactUnwindFrame(MachineFunction &MF) {
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   AttributeList Attrs = MF.getFunction().getAttributes();
-  AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
   return Subtarget.isTargetMachO() &&
          !(Subtarget.getTargetLowering()->supportSwiftError() &&
            Attrs.hasAttrSomewhere(Attribute::SwiftError)) &&
          MF.getFunction().getCallingConv() != CallingConv::SwiftTail &&
-         !requiresSaveVG(MF) && !AFI->isSVECC();
+         MF.getFunction().getCallingConv() !=
+             CallingConv::AArch64_SVE_VectorCall &&
+
+         !requiresSaveVG(MF);
 }
 
 static bool invalidateWindowsRegisterPairing(unsigned Reg1, unsigned Reg2,

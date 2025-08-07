@@ -24,6 +24,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
@@ -7837,7 +7838,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  const Function &F = MF.getFunction();
+  Function &F = MF.getFunction();
   MachineFrameInfo &MFI = MF.getFrameInfo();
   bool IsWin64 =
       Subtarget->isCallingConvWin64(F.getCallingConv(), F.isVarArg());
@@ -7845,15 +7846,35 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
                     (isVarArg && Subtarget->isWindowsArm64EC());
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
 
-  SmallVector<ISD::OutputArg, 4> Outs;
-  GetReturnInfo(CallConv, F.getReturnType(), F.getAttributes(), Outs,
-                DAG.getTargetLoweringInfo(), MF.getDataLayout());
-  if (any_of(Outs, [](ISD::OutputArg &Out){ return Out.VT.isScalableVector(); }))
-    FuncInfo->setIsSVECC(true);
-
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
+
+  // This logic is consistent with AArch64TargetLowering::LowerCall.
+  // The `ShouldUpgradeToSVECC` flag can be when analyzing arguments.
+  bool ShouldUpgradeToSVECC = false;
+  auto _ = make_scope_exit([&] {
+    if (CallConv != CallingConv::C && CallConv != CallingConv::Fast)
+      return;
+
+    if (!ShouldUpgradeToSVECC) {
+      // If the flag was not set, check if the return value requires the SVE CC.
+      SmallVector<ISD::OutputArg, 4> Outs;
+      GetReturnInfo(CallConv, F.getReturnType(), F.getAttributes(), Outs,
+                    DAG.getTargetLoweringInfo(), MF.getDataLayout());
+      ShouldUpgradeToSVECC = any_of(
+          Outs, [](ISD::OutputArg &Out) { return Out.VT.isScalableVector(); });
+    }
+
+    if (!ShouldUpgradeToSVECC)
+      return;
+
+    if (isVarArg)
+      report_fatal_error("Passing/returning SVE types to variadic functions "
+                         "is currently not supported");
+
+    F.setCallingConv(CallingConv::AArch64_SVE_VectorCall);
+  });
 
   // At this point, Ins[].VT may already be promoted to i32. To correctly
   // handle passing i8 as i8 instead of i32 on stack, we pass in both i32 and
@@ -7942,14 +7963,14 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
         RC = &AArch64::FPR128RegClass;
       else if (RegVT.isScalableVector() &&
                RegVT.getVectorElementType() == MVT::i1) {
-        FuncInfo->setIsSVECC(true);
         RC = &AArch64::PPRRegClass;
+        ShouldUpgradeToSVECC = true;
       } else if (RegVT == MVT::aarch64svcount) {
-        FuncInfo->setIsSVECC(true);
         RC = &AArch64::PPRRegClass;
+        ShouldUpgradeToSVECC = true;
       } else if (RegVT.isScalableVector()) {
-        FuncInfo->setIsSVECC(true);
         RC = &AArch64::ZPRRegClass;
+        ShouldUpgradeToSVECC = true;
       } else
         llvm_unreachable("RegVT not supported by FORMAL_ARGUMENTS Lowering");
 
@@ -8596,14 +8617,6 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
       CallAttrs.requiresPreservingAllZAState() ||
       CallAttrs.caller().hasStreamingBody())
     return false;
-
-  // Functions using the C or Fast calling convention that have an SVE signature
-  // preserve more registers and should assume the SVE_VectorCall CC.
-  // The check for matching callee-saved regs will determine whether it is
-  // eligible for TCO.
-  if ((CallerCC == CallingConv::C || CallerCC == CallingConv::Fast) &&
-      MF.getInfo<AArch64FunctionInfo>()->isSVECC())
-    CallerCC = CallingConv::AArch64_SVE_VectorCall;
 
   bool CCMatch = CallerCC == CalleeCC;
 

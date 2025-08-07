@@ -209,10 +209,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   bool IsMTETagged = false;
 
-  /// The function has Scalable Vector or Scalable Predicate register argument
-  /// or return type
-  bool IsSVECC = false;
-
   /// The frame-index for the TPIDR2 object used for lazy saves.
   TPIDR2Object TPIDR2;
 
@@ -279,9 +275,6 @@ public:
 
   int64_t getStreamingVGIdx() const { return StreamingVGIdx; };
   void setStreamingVGIdx(unsigned FrameIdx) { StreamingVGIdx = FrameIdx; };
-
-  bool isSVECC() const { return IsSVECC; };
-  void setIsSVECC(bool s) { IsSVECC = s; };
 
   TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 

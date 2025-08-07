@@ -1356,8 +1356,7 @@ void AArch64AsmPrinter::emitFunctionEntryLabel() {
   if (TT.isOSBinFormatELF() &&
       (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall ||
        MF->getFunction().getCallingConv() ==
-           CallingConv::AArch64_SVE_VectorCall ||
-       MF->getInfo<AArch64FunctionInfo>()->isSVECC())) {
+           CallingConv::AArch64_SVE_VectorCall)) {
     auto *TS =
         static_cast<AArch64TargetStreamer *>(OutStreamer->getTargetStreamer());
     TS->emitDirectiveVariantPCS(CurrentFnSym);
