@@ -55,8 +55,8 @@ int main() {
 // Verify that SYCL kernel caller functions are not emitted during host
 // compilation.
 //
-// CHECK-HOST-NOT: _ZTS26single_purpose_kernel_name
-// CHECK-HOST-NOT: _ZTSZ4mainE18lambda_kernel_name
+// CHECK-HOST-NOT: define {{.*}} @_ZTS26single_purpose_kernel_name
+// CHECK-HOST-NOT: define {{.*}} @_ZTSZ4mainE18lambda_kernel_name
 
 // Verify that sycl_kernel_entry_point attributed functions are not emitted
 // during device compilation.
@@ -64,13 +64,13 @@ int main() {
 // CHECK-DEVICE-NOT: single_purpose_kernel_task
 // CHECK-DEVICE-NOT: kernel_single_task
 
-// Verify that no code is generated for the bodies of sycl_kernel_entry_point
-// attributed functions during host compilation. ODR-use of these functions may
-// require them to be emitted, but they have no effect if called.
+// Verify that kernel launch code is generated for sycl_kernel_entry_point
+// attributed functions during host compilation.
 //
 // CHECK-HOST-LINUX:      define dso_local void @_Z26single_purpose_kernel_task21single_purpose_kernel() #{{[0-9]+}} {
 // CHECK-HOST-LINUX-NEXT: entry:
 // CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %struct.single_purpose_kernel, align 1
+// CHECK-HOST-LINUX-NEXT:   store ptr @.str, ptr @kernel_name, align 8
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
@@ -79,6 +79,7 @@ int main() {
 // CHECK-HOST-LINUX-NEXT:   %kernelFunc = alloca %class.anon, align 4
 // CHECK-HOST-LINUX-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %kernelFunc, i32 0, i32 0
 // CHECK-HOST-LINUX-NEXT:   store i32 %kernelFunc.coerce, ptr %coerce.dive, align 4
+// CHECK-HOST-LINUX-NEXT:   store ptr @.str.1, ptr @kernel_name, align 8
 // CHECK-HOST-LINUX-NEXT:   ret void
 // CHECK-HOST-LINUX-NEXT: }
 //
@@ -87,6 +88,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   %kernelFunc = alloca %struct.single_purpose_kernel, align 1
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %struct.single_purpose_kernel, ptr %kernelFunc, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   store i8 %kernelFunc.coerce, ptr %coerce.dive, align 1
+// CHECK-HOST-WINDOWS-NEXT:   store ptr @"??_C@_0CB@KFIJOMLB@_ZTS26single_purpose_kernel_name@", ptr @"?kernel_name@?0??single_purpose_kernel_task@@YAXUsingle_purpose_kernel@@@Z@3PEBDEB", align 8
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 //
@@ -95,6 +97,7 @@ int main() {
 // CHECK-HOST-WINDOWS-NEXT:   %kernelFunc = alloca %class.anon, align 4
 // CHECK-HOST-WINDOWS-NEXT:   %coerce.dive = getelementptr inbounds nuw %class.anon, ptr %kernelFunc, i32 0, i32 0
 // CHECK-HOST-WINDOWS-NEXT:   store i32 %kernelFunc.coerce, ptr %coerce.dive, align 4
+// CHECK-HOST-WINDOWS-NEXT:   store ptr @"??_C@_0BC@NHCDOLAA@_ZTSZ4mainEUlT_E_?$AA@", ptr @"?kernel_name@?0???$kernel_single_task@V<lambda_1>@?0??main@@9@V1?0??2@9@@@YAXV<lambda_1>@?0??main@@9@@Z@3PEBDEB", align 8
 // CHECK-HOST-WINDOWS-NEXT:   ret void
 // CHECK-HOST-WINDOWS-NEXT: }
 

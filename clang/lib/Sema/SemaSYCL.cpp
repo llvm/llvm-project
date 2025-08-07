@@ -315,12 +315,15 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
     }
   }
 
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-    if (!MD->isStatic()) {
-      Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
-          << SKEPAttr << diag::InvalidSKEPReason::NonStaticMemberFn;
-      SKEPAttr->setInvalidAttr();
-    }
+  if (isa<CXXConstructorDecl>(FD)) {
+    Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+        << SKEPAttr << diag::InvalidSKEPReason::Constructor;
+    SKEPAttr->setInvalidAttr();
+  }
+  if (isa<CXXDestructorDecl>(FD)) {
+    Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
+        << SKEPAttr << diag::InvalidSKEPReason::Destructor;
+    SKEPAttr->setInvalidAttr();
   }
 
   if (FD->isVariadic()) {
@@ -389,6 +392,67 @@ void SemaSYCL::CheckSYCLEntryPointFunctionDecl(FunctionDecl *FD) {
 
 namespace {
 
+CompoundStmt *BuildSYCLKernelLaunchStmt(Sema &SemaRef, FunctionDecl *FD,
+                                        const std::string &KernelName) {
+  ASTContext &Ctx = SemaRef.getASTContext();
+  SmallVector<Stmt *> Stmts;
+
+  // Prepare a string literal that contains the kernel name in the ordinary
+  // literal encoding.
+  // FIXME: transcode the contents of KernelName from UTF-8 to the
+  // ordinary literal encoding.
+  QualType KernelNameCharTy = Ctx.CharTy.withConst();
+  llvm::APInt KernelNameSize(Ctx.getTypeSize(Ctx.getSizeType()),
+                             KernelName.size() + 1);
+  QualType KernelNameArrayTy = Ctx.getConstantArrayType(
+      KernelNameCharTy, KernelNameSize, nullptr, ArraySizeModifier::Normal, 0);
+  StringLiteral *KernelNameExpr = StringLiteral::Create(
+      Ctx, KernelName, StringLiteralKind::Ordinary,
+      /*Pascal*/ false, KernelNameArrayTy, SourceLocation());
+
+  // FIXME: An extern variable declaration with assignment to the kernel
+  // name expression is added to Stmts as a temporary measure to see results.
+  // reflected in tests. The kernel name expression will need to be passed as
+  // the first function argument in a call to sycl_enqueue_kernel_launch.
+  QualType ExternVarType = Ctx.getPointerType(Ctx.CharTy.withConst());
+  const IdentifierInfo *ExternVarName =
+      SemaRef.getPreprocessor().getIdentifierInfo("kernel_name");
+  VarDecl *ExternVarDecl = VarDecl::Create(
+      Ctx, FD, SourceLocation(), SourceLocation(), ExternVarName, ExternVarType,
+      /*TInfo*/ nullptr, SC_Extern);
+  DeclStmt *ExternVarDeclStmt = new (Ctx)
+      DeclStmt(DeclGroupRef(ExternVarDecl), SourceLocation(), SourceLocation());
+  Stmts.push_back(ExternVarDeclStmt);
+  DeclRefExpr *ExternVarDeclRef = new (Ctx) DeclRefExpr(
+      Ctx, ExternVarDecl, /*RefersToEnclosingVariableOrCapture*/ false,
+      ExternVarType, VK_LValue, SourceLocation());
+  ImplicitCastExpr *KernelNameArrayDecayExpr = new (Ctx) ImplicitCastExpr(
+      ImplicitCastExpr::OnStack, ExternVarType, CK_ArrayToPointerDecay,
+      KernelNameExpr, VK_PRValue, FPOptionsOverride());
+  BinaryOperator *AssignmentExpr = BinaryOperator::Create(
+      Ctx, ExternVarDeclRef, KernelNameArrayDecayExpr, BO_Assign, ExternVarType,
+      VK_LValue, OK_Ordinary, SourceLocation(), FPOptionsOverride());
+  Stmts.push_back(AssignmentExpr);
+
+  // Perform overload resolution for a call to an accessible (member) function
+  // template named 'sycl_enqueue_kernel_launch' from within the definition of
+  // FD where:
+  // - The kernel name type is passed as the first template argument.
+  // - Any remaining template parameters are deduced from the function arguments
+  //   or assigned by default template arguments.
+  // - 'this' is passed as the implicit function argument if 'FD' is a
+  //   non-static member function.
+  // - The name of the kernel, expressed as a string literal, is passed as the
+  //   first function argument.
+  // - The parameters of FD are forwarded as-if by 'std::forward()' as the
+  //   remaining explicit function arguments.
+  // - Any remaining function arguments are initialized by default arguments.
+  CompoundStmt *LaunchStmt = CompoundStmt::Create(
+      Ctx, Stmts, FPOptionsOverride(), SourceLocation(), SourceLocation());
+
+  return LaunchStmt;
+}
+
 // The body of a function declared with the [[sycl_kernel_entry_point]]
 // attribute is cloned and transformed to substitute references to the original
 // function parameters with references to replacement variables that stand in
@@ -432,6 +496,36 @@ private:
   ParmDeclMap &MapRef;
 };
 
+OutlinedFunctionDecl *BuildSYCLKernelEntryPointOutline(Sema &SemaRef,
+                                                       FunctionDecl *FD,
+                                                       CompoundStmt *Body) {
+  using ParmDeclMap = OutlinedFunctionDeclBodyInstantiator::ParmDeclMap;
+  ParmDeclMap ParmMap;
+
+  OutlinedFunctionDecl *OFD = OutlinedFunctionDecl::Create(
+      SemaRef.getASTContext(), FD, FD->getNumParams());
+  unsigned i = 0;
+  for (ParmVarDecl *PVD : FD->parameters()) {
+    ImplicitParamDecl *IPD = ImplicitParamDecl::Create(
+        SemaRef.getASTContext(), OFD, SourceLocation(), PVD->getIdentifier(),
+        PVD->getType(), ImplicitParamKind::Other);
+    OFD->setParam(i, IPD);
+    ParmMap[PVD] = IPD;
+    ++i;
+  }
+
+  // FIXME: Diagnose (implicit or explicit) use of CXXThisExpr in potentially
+  // evaluated contexts in the function body. This is not necessarily the
+  // right place to add such a diagnostic.
+
+  OutlinedFunctionDeclBodyInstantiator OFDBodyInstantiator(SemaRef, ParmMap);
+  Stmt *OFDBody = OFDBodyInstantiator.TransformStmt(Body).get();
+  OFD->setBody(OFDBody);
+  OFD->setNothrow();
+
+  return OFD;
+}
+
 } // unnamed namespace
 
 StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
@@ -439,6 +533,11 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
   assert(!FD->isInvalidDecl());
   assert(!FD->isTemplated());
   assert(FD->hasPrototype());
+
+  // The current context must be the function definition context to ensure
+  // that name lookup and parameter and local variable creation are performed
+  // within the correct scope.
+  assert(SemaRef.CurContext == FD);
 
   const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
   assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
@@ -451,29 +550,19 @@ StmtResult SemaSYCL::BuildSYCLKernelCallStmt(FunctionDecl *FD,
       getASTContext().getSYCLKernelInfo(SKEPAttr->getKernelName());
   assert(declaresSameEntity(SKI.getKernelEntryPointDecl(), FD) &&
          "SYCL kernel name conflict");
-  (void)SKI;
 
-  using ParmDeclMap = OutlinedFunctionDeclBodyInstantiator::ParmDeclMap;
-  ParmDeclMap ParmMap;
+  // Build the kernel launch statement.
+  Stmt *LaunchStmt =
+      BuildSYCLKernelLaunchStmt(SemaRef, FD, SKI.GetKernelName());
+  assert(LaunchStmt);
 
-  assert(SemaRef.CurContext == FD);
+  // Build the outline of the synthesized device entry point function.
   OutlinedFunctionDecl *OFD =
-      OutlinedFunctionDecl::Create(getASTContext(), FD, FD->getNumParams());
-  unsigned i = 0;
-  for (ParmVarDecl *PVD : FD->parameters()) {
-    ImplicitParamDecl *IPD = ImplicitParamDecl::Create(
-        getASTContext(), OFD, SourceLocation(), PVD->getIdentifier(),
-        PVD->getType(), ImplicitParamKind::Other);
-    OFD->setParam(i, IPD);
-    ParmMap[PVD] = IPD;
-    ++i;
-  }
+      BuildSYCLKernelEntryPointOutline(SemaRef, FD, Body);
+  assert(OFD);
 
-  OutlinedFunctionDeclBodyInstantiator OFDBodyInstantiator(SemaRef, ParmMap);
-  Stmt *OFDBody = OFDBodyInstantiator.TransformStmt(Body).get();
-  OFD->setBody(OFDBody);
-  OFD->setNothrow();
-  Stmt *NewBody = new (getASTContext()) SYCLKernelCallStmt(Body, OFD);
+  Stmt *NewBody =
+      new (getASTContext()) SYCLKernelCallStmt(Body, LaunchStmt, OFD);
 
   return NewBody;
 }

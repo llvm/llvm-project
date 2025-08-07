@@ -3032,6 +3032,7 @@ DEF_TRAVERSE_STMT(CapturedStmt, { TRY_TO(TraverseDecl(S->getCapturedDecl())); })
 DEF_TRAVERSE_STMT(SYCLKernelCallStmt, {
   if (getDerived().shouldVisitImplicitCode()) {
     TRY_TO(TraverseStmt(S->getOriginalStmt()));
+    TRY_TO(TraverseStmt(S->getKernelLaunchStmt()));
     TRY_TO(TraverseDecl(S->getOutlinedFunctionDecl()));
     ShouldVisitChildren = false;
   }

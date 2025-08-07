@@ -28,34 +28,44 @@ namespace clang {
 /// of such a function specifies the statements to be executed on a SYCL device
 /// to invoke a SYCL kernel with a particular set of kernel arguments. The
 /// SYCLKernelCallStmt associates an original statement (the compound statement
-/// that is the function body) with an OutlinedFunctionDecl that holds the
-/// kernel parameters and the transformed body. During code generation, the
-/// OutlinedFunctionDecl is used to emit an offload kernel entry point suitable
-/// for invocation from a SYCL library implementation. If executed, the
-/// SYCLKernelCallStmt behaves as a no-op; no code generation is performed for
-/// it.
+/// that is the function body) with a kernel launch statement to execute on a
+/// SYCL host and an OutlinedFunctionDecl that holds the kernel parameters and
+/// the transformed body to execute on a SYCL device. During code generation,
+/// the OutlinedFunctionDecl is used to emit an offload kernel entry point
+/// suitable for invocation from a SYCL library implementation.
 class SYCLKernelCallStmt : public Stmt {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
 
 private:
   Stmt *OriginalStmt = nullptr;
+  Stmt *KernelLaunchStmt = nullptr;
   OutlinedFunctionDecl *OFDecl = nullptr;
 
 public:
   /// Construct a SYCL kernel call statement.
-  SYCLKernelCallStmt(CompoundStmt *CS, OutlinedFunctionDecl *OFD)
-      : Stmt(SYCLKernelCallStmtClass), OriginalStmt(CS), OFDecl(OFD) {}
+  SYCLKernelCallStmt(CompoundStmt *CS, Stmt *S, OutlinedFunctionDecl *OFD)
+      : Stmt(SYCLKernelCallStmtClass), OriginalStmt(CS), KernelLaunchStmt(S),
+        OFDecl(OFD) {}
 
   /// Construct an empty SYCL kernel call statement.
   SYCLKernelCallStmt(EmptyShell Empty) : Stmt(SYCLKernelCallStmtClass, Empty) {}
 
-  /// Retrieve the model statement.
+  /// Retrieve the original statement.
   CompoundStmt *getOriginalStmt() { return cast<CompoundStmt>(OriginalStmt); }
   const CompoundStmt *getOriginalStmt() const {
     return cast<CompoundStmt>(OriginalStmt);
   }
+
+  /// Set the original statement.
   void setOriginalStmt(CompoundStmt *CS) { OriginalStmt = CS; }
+
+  /// Retrieve the kernel launch statement.
+  Stmt *getKernelLaunchStmt() { return KernelLaunchStmt; }
+  const Stmt *getKernelLaunchStmt() const { return KernelLaunchStmt; }
+
+  /// Set the kernel launch statement.
+  void setKernelLaunchStmt(Stmt *S) { KernelLaunchStmt = S; }
 
   /// Retrieve the outlined function declaration.
   OutlinedFunctionDecl *getOutlinedFunctionDecl() { return OFDecl; }

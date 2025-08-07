@@ -15087,6 +15087,10 @@ static SYCLKernelInfo BuildSYCLKernelInfo(ASTContext &Context,
   MC->mangleCanonicalTypeName(KernelNameType, Out);
   std::string KernelName = Out.str();
 
+  // FIXME: Diagnose kernel names that are not representable in the ordinary
+  // literal encoding. This is not necessarily the right place to add such
+  // a diagnostic.
+
   return {KernelNameType, FD, KernelName};
 }
 
