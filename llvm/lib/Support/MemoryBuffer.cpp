@@ -501,8 +501,15 @@ getOpenFileImpl(sys::fs::file_t FD, const Twine &Filename, uint64_t FileSize,
     std::unique_ptr<MB> Result(
         new (NamedBufferAlloc(Filename)) MemoryBufferMMapFile<MB>(
             RequiresNullTerminator, FD, MapSize, Offset, EC));
-    if (!EC)
-      return std::move(Result);
+    if (!EC) {
+#ifdef __linux__
+      // On Linux, mmap may return pages from the page cache that are not
+      // properly filled with trailing zeroes, if some prior user of the page
+      // wrote non-zero bytes. Detect this and don't use mmap in that case.
+      if (!RequiresNullTerminator || *Result->getBufferEnd() == '\0')
+#endif
+        return std::move(Result);
+    }
   }
 
 #ifdef __MVS__
