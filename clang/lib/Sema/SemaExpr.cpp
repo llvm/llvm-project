@@ -6840,18 +6840,18 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
 
   auto IsSJLJ = [&] {
     switch (BuiltinID) {
-      case Builtin::BI__builtin_longjmp:
-      case Builtin::BI__builtin_setjmp:
-      case Builtin::BI__sigsetjmp:
-      case Builtin::BI_longjmp:
-      case Builtin::BI_setjmp:
-      case Builtin::BIlongjmp:
-      case Builtin::BIsetjmp:
-      case Builtin::BIsiglongjmp:
-      case Builtin::BIsigsetjmp:
-        return true;
-      default:
-        return false;
+    case Builtin::BI__builtin_longjmp:
+    case Builtin::BI__builtin_setjmp:
+    case Builtin::BI__sigsetjmp:
+    case Builtin::BI_longjmp:
+    case Builtin::BI_setjmp:
+    case Builtin::BIlongjmp:
+    case Builtin::BIsetjmp:
+    case Builtin::BIsiglongjmp:
+    case Builtin::BIsigsetjmp:
+      return true;
+    default:
+      return false;
     }
   };
 
