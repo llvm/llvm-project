@@ -31,6 +31,13 @@ class IsHandleType<string Type> {
                 !ne(!find(Type, "_handle_t", !sub(!size(Type), 9)), -1));
 }
 
+// Does the type end with '_cb_t'?
+class IsCallbackType<string Type> {
+  // size("_cb_t") == 5
+  bit ret = !if(!lt(!size(Type), 5), 0,
+                !ne(!find(Type, "_cb_t", !sub(!size(Type), 5)), -1));
+}
+
 // Does the type end with '*'?
 class IsPointerType<string Type> {
   bit ret = !ne(!find(Type, "*", !sub(!size(Type), 1)), -1);
@@ -58,6 +65,7 @@ class Param<string Type, string Name, string Desc, bits<3> Flags = 0> {
   TypeInfo type_info = TypeInfo<"", "">;
   bit IsHandle = IsHandleType<type>.ret;
   bit IsPointer = IsPointerType<type>.ret;
+  bit IsCallback = IsCallbackType<type>.ret;
 }
 
 // A parameter whose range is described by other parameters in the function.
@@ -81,7 +89,7 @@ class ShouldCheckHandle<Param P> {
 }
 
 class ShouldCheckPointer<Param P> {
-  bit ret = !and(P.IsPointer, !eq(!and(PARAM_OPTIONAL, P.flags), 0));
+  bit ret = !and(!or(P.IsPointer, P.IsCallback), !eq(!and(PARAM_OPTIONAL, P.flags), 0));
 }
 
 // For a list of returns that contains a specific return code, find and append
