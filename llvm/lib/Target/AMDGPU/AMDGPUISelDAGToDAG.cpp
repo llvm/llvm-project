@@ -3212,6 +3212,44 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
     Src = Src.getOperand(0);
   }
 
+  if (Mods != SISrcMods::NONE)
+    return true;
+
+  // Convert various sign-bit masks on integers to src mods. Currently disabled
+  // for 16-bit types as the codegen replaces the operand without adding a
+  // srcmod. This is intentionally finding the cases where we are performing
+  // float neg and abs on int types, the goal is not to obtain two's complement
+  // neg or abs. Limit converison to select operands via the nonCanonalizing
+  // pattern.
+  // TODO: Add 16-bit support.
+  if (IsCanonicalizing)
+    return true;
+
+  unsigned Opc = Src->getOpcode();
+  EVT VT = Src.getValueType();
+  if ((Opc != ISD::AND && Opc != ISD::OR && Opc != ISD::XOR) ||
+      (VT != MVT::i32 && VT != MVT::i64))
+    return true;
+
+  ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(Src->getOperand(1));
+  if (!CRHS)
+    return true;
+
+  // Recognise (xor a, 0x80000000) as NEG SrcMod.
+  // Recognise (and a, 0x7fffffff) as ABS SrcMod.
+  // Recognise (or a, 0x80000000) as NEG+ABS SrcModifiers.
+  if (Opc == ISD::XOR && CRHS->getAPIntValue().isSignMask()) {
+    Mods |= SISrcMods::NEG;
+    Src = Src.getOperand(0);
+  } else if (Opc == ISD::AND && AllowAbs &&
+             CRHS->getAPIntValue().isMaxSignedValue()) {
+    Mods |= SISrcMods::ABS;
+    Src = Src.getOperand(0);
+  } else if (Opc == ISD::OR && AllowAbs && CRHS->getAPIntValue().isSignMask()) {
+    Mods |= SISrcMods::ABS | SISrcMods::NEG;
+    Src = Src.getOperand(0);
+  }
+
   return true;
 }
 
