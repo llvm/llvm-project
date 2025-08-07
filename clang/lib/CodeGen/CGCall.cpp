@@ -3538,6 +3538,13 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           if (SrcSize > DstSize) {
             Builder.CreateMemCpy(Ptr, AddrToStoreInto, DstSize);
           }
+
+          // Structures with PFP fields require a coerced store to add any
+          // pointer signatures.
+          if (getContext().hasPFPFields(Ty)) {
+            llvm::Value *Struct = Builder.CreateLoad(Ptr);
+            CreatePFPCoercedStore(Struct, Ty, Ptr, *this);
+          }
         }
       } else {
         // Simple case, just do a coerced store of the argument into the alloca.
@@ -5717,15 +5724,25 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         } else {
           uint64_t SrcSize = SrcTypeSize.getFixedValue();
           uint64_t DstSize = DstTypeSize.getFixedValue();
+          bool HasPFPFields = getContext().hasPFPFields(I->Ty);
 
           // If the source type is smaller than the destination type of the
           // coerce-to logic, copy the source value into a temp alloca the size
           // of the destination type to allow loading all of it. The bits past
           // the source value are left undef.
-          if (SrcSize < DstSize) {
+          if (HasPFPFields || SrcSize < DstSize) {
             Address TempAlloca = CreateTempAlloca(STy, Src.getAlignment(),
                                                   Src.getName() + ".coerce");
-            Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
+            if (HasPFPFields) {
+              // Structures with PFP fields require a coerced load to remove any
+              // pointer signatures.
+              Builder.CreateStore(
+                  CreatePFPCoercedLoad(Src, I->Ty, ArgInfo.getCoerceToType(),
+                                       *this),
+                  TempAlloca);
+            } else {
+              Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
+            }
             Src = TempAlloca;
           } else {
             Src = Src.withElementType(STy);
