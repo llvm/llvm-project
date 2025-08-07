@@ -219,11 +219,11 @@ define <4 x float> @sqrt_v4f32_check_denorms_ieee_ninf(<4 x float> %x) #7 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
-; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vmulps %xmm3, %xmm2, %xmm3
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm4 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm4 = (xmm2 * xmm1) + xmm4
+; AVX512-NEXT:    vmulps %xmm4, %xmm3, %xmm1
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
@@ -270,11 +270,11 @@ define <4 x float> @sqrt_v4f32_check_denorms_dynamic_ninf(<4 x float> %x) #8 {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %xmm0, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm3 = (xmm2 * xmm1) + xmm3
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; AVX512-NEXT:    vmulps %xmm1, %xmm2, %xmm1
-; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vmulps %xmm3, %xmm2, %xmm3
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm4 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm4 = (xmm2 * xmm1) + xmm4
+; AVX512-NEXT:    vmulps %xmm4, %xmm3, %xmm1
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]

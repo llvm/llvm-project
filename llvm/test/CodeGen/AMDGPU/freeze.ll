@@ -13340,7 +13340,10 @@ define void @freeze_v2i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX6-SDAG-NEXT:    s_mov_b32 s5, s6
 ; GFX6-SDAG-NEXT:    buffer_load_ubyte v0, v[0:1], s[4:7], 0 addr64
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX6-SDAG-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX6-SDAG-NEXT:    v_bfe_u32 v1, v0, 1, 1
+; GFX6-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX6-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
+; GFX6-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX6-SDAG-NEXT:    buffer_store_byte v0, v[2:3], s[4:7], 0 addr64
 ; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -13372,7 +13375,10 @@ define void @freeze_v2i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX7-SDAG-NEXT:    s_mov_b32 s5, s6
 ; GFX7-SDAG-NEXT:    buffer_load_ubyte v0, v[0:1], s[4:7], 0 addr64
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-SDAG-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX7-SDAG-NEXT:    v_bfe_u32 v1, v0, 1, 1
+; GFX7-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX7-SDAG-NEXT:    v_lshlrev_b32_e32 v1, 1, v1
+; GFX7-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX7-SDAG-NEXT:    buffer_store_byte v0, v[2:3], s[4:7], 0 addr64
 ; GFX7-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -13430,7 +13436,11 @@ define void @freeze_v2i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-SDAG-NEXT:    global_load_ubyte v0, v[0:1], off
 ; GFX10-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-SDAG-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX10-SDAG-NEXT:    v_lshrrev_b16 v1, 1, v0
+; GFX10-SDAG-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX10-SDAG-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX10-SDAG-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX10-SDAG-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX10-SDAG-NEXT:    global_store_byte v[2:3], v0, off
 ; GFX10-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -13453,7 +13463,11 @@ define void @freeze_v2i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-TRUE16-NEXT:    global_load_d16_u8 v0, v[0:1], off
 ; GFX11-SDAG-TRUE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 3
+; GFX11-SDAG-TRUE16-NEXT:    v_lshrrev_b16 v0.h, 1, v0.l
+; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.l, v0.l, 1
+; GFX11-SDAG-TRUE16-NEXT:    v_and_b16 v0.h, v0.h, 1
+; GFX11-SDAG-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 1, v0.h
+; GFX11-SDAG-TRUE16-NEXT:    v_or_b16 v0.l, v0.l, v0.h
 ; GFX11-SDAG-TRUE16-NEXT:    global_store_b8 v[2:3], v0, off
 ; GFX11-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -13462,7 +13476,11 @@ define void @freeze_v2i1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SDAG-FAKE16-NEXT:    global_load_u8 v0, v[0:1], off
 ; GFX11-SDAG-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 3, v0
+; GFX11-SDAG-FAKE16-NEXT:    v_lshrrev_b16 v1, 1, v0
+; GFX11-SDAG-FAKE16-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-SDAG-FAKE16-NEXT:    v_and_b32_e32 v1, 1, v1
+; GFX11-SDAG-FAKE16-NEXT:    v_lshlrev_b16 v1, 1, v1
+; GFX11-SDAG-FAKE16-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX11-SDAG-FAKE16-NEXT:    global_store_b8 v[2:3], v0, off
 ; GFX11-SDAG-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;

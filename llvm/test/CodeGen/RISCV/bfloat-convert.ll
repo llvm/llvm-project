@@ -480,12 +480,12 @@ define i64 @fcvt_l_bf16_sat(bfloat %a) nounwind {
 ; RV32IZFBFMIN-NEXT:    addi a2, a3, -1
 ; RV32IZFBFMIN-NEXT:  .LBB10_4: # %start
 ; RV32IZFBFMIN-NEXT:    feq.s a3, fs0, fs0
-; RV32IZFBFMIN-NEXT:    neg a4, a1
-; RV32IZFBFMIN-NEXT:    neg a1, s0
+; RV32IZFBFMIN-NEXT:    neg a4, s0
+; RV32IZFBFMIN-NEXT:    neg a5, a1
 ; RV32IZFBFMIN-NEXT:    neg a3, a3
-; RV32IZFBFMIN-NEXT:    and a0, a1, a0
+; RV32IZFBFMIN-NEXT:    and a0, a4, a0
 ; RV32IZFBFMIN-NEXT:    and a1, a3, a2
-; RV32IZFBFMIN-NEXT:    or a0, a4, a0
+; RV32IZFBFMIN-NEXT:    or a0, a5, a0
 ; RV32IZFBFMIN-NEXT:    and a0, a3, a0
 ; RV32IZFBFMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFBFMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -519,12 +519,12 @@ define i64 @fcvt_l_bf16_sat(bfloat %a) nounwind {
 ; R32IDZFBFMIN-NEXT:    addi a2, a3, -1
 ; R32IDZFBFMIN-NEXT:  .LBB10_4: # %start
 ; R32IDZFBFMIN-NEXT:    feq.s a3, fs0, fs0
-; R32IDZFBFMIN-NEXT:    neg a4, a1
-; R32IDZFBFMIN-NEXT:    neg a1, s0
+; R32IDZFBFMIN-NEXT:    neg a4, s0
+; R32IDZFBFMIN-NEXT:    neg a5, a1
 ; R32IDZFBFMIN-NEXT:    neg a3, a3
-; R32IDZFBFMIN-NEXT:    and a0, a1, a0
+; R32IDZFBFMIN-NEXT:    and a0, a4, a0
 ; R32IDZFBFMIN-NEXT:    and a1, a3, a2
-; R32IDZFBFMIN-NEXT:    or a0, a4, a0
+; R32IDZFBFMIN-NEXT:    or a0, a5, a0
 ; R32IDZFBFMIN-NEXT:    and a0, a3, a0
 ; R32IDZFBFMIN-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; R32IDZFBFMIN-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -560,12 +560,12 @@ define i64 @fcvt_l_bf16_sat(bfloat %a) nounwind {
 ; RV32ID-NEXT:    addi a2, a3, -1
 ; RV32ID-NEXT:  .LBB10_4: # %start
 ; RV32ID-NEXT:    feq.s a3, fs0, fs0
-; RV32ID-NEXT:    neg a4, a1
-; RV32ID-NEXT:    neg a1, s0
+; RV32ID-NEXT:    neg a4, s0
+; RV32ID-NEXT:    neg a5, a1
 ; RV32ID-NEXT:    neg a3, a3
-; RV32ID-NEXT:    and a0, a1, a0
+; RV32ID-NEXT:    and a0, a4, a0
 ; RV32ID-NEXT:    and a1, a3, a2
-; RV32ID-NEXT:    or a0, a4, a0
+; RV32ID-NEXT:    or a0, a5, a0
 ; RV32ID-NEXT:    and a0, a3, a0
 ; RV32ID-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ID-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
