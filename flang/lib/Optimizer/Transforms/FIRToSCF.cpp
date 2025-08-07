@@ -88,10 +88,95 @@ struct DoLoopConversion : public mlir::OpRewritePattern<fir::DoLoopOp> {
   }
 };
 
-void copyBlockAndTransformResult(mlir::PatternRewriter &rewriter,
-                                 mlir::Block &srcBlock, mlir::Block &dstBlock) {
-  mlir::Operation *srcTerminator = srcBlock.getTerminator();
-  auto resultOp = mlir::cast<fir::ResultOp>(srcTerminator);
+struct IterWhileConversion : public OpRewritePattern<fir::IterWhileOp> {
+  using OpRewritePattern<fir::IterWhileOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(fir::IterWhileOp iterWhileOp,
+                                PatternRewriter &rewriter) const override {
+
+    Location loc = iterWhileOp.getLoc();
+    Value lowerBound = iterWhileOp.getLowerBound();
+    Value upperBound = iterWhileOp.getUpperBound();
+    Value step = iterWhileOp.getStep();
+
+    Value okInit = iterWhileOp.getIterateIn();
+    ValueRange iterArgs = iterWhileOp.getInitArgs();
+
+    SmallVector<Value> initVals;
+    initVals.push_back(lowerBound);
+    initVals.push_back(okInit);
+    initVals.append(iterArgs.begin(), iterArgs.end());
+
+    SmallVector<Type> loopTypes;
+    loopTypes.push_back(lowerBound.getType());
+    loopTypes.push_back(okInit.getType());
+    for (auto val : iterArgs)
+      loopTypes.push_back(val.getType());
+
+    auto scfWhileOp = scf::WhileOp::create(rewriter, loc, loopTypes, initVals);
+    rewriter.createBlock(&scfWhileOp.getBefore(), scfWhileOp.getBefore().end(),
+                         loopTypes,
+                         SmallVector<Location>(loopTypes.size(), loc));
+
+    rewriter.createBlock(&scfWhileOp.getAfter(), scfWhileOp.getAfter().end(),
+                         loopTypes,
+                         SmallVector<Location>(loopTypes.size(), loc));
+
+    {
+      rewriter.setInsertionPointToStart(&scfWhileOp.getBefore().front());
+      auto args = scfWhileOp.getBefore().getArguments();
+      auto iv = args[0];
+      auto ok = args[1];
+
+      Value inductionCmp = mlir::arith::CmpIOp::create(
+          rewriter, loc, mlir::arith::CmpIPredicate::sle, iv, upperBound);
+      Value cmp = mlir::arith::AndIOp::create(rewriter, loc, inductionCmp, ok);
+
+      mlir::scf::ConditionOp::create(rewriter, loc, cmp, args);
+    }
+
+    {
+      rewriter.setInsertionPointToStart(&scfWhileOp.getAfter().front());
+      auto args = scfWhileOp.getAfter().getArguments();
+      auto iv = args[0];
+
+      mlir::IRMapping mapping;
+      for (auto [oldArg, newVal] :
+           llvm::zip(iterWhileOp.getBody()->getArguments(), args))
+        mapping.map(oldArg, newVal);
+
+      for (auto &op : iterWhileOp.getBody()->without_terminator())
+        rewriter.clone(op, mapping);
+
+      auto resultOp =
+          cast<fir::ResultOp>(iterWhileOp.getBody()->getTerminator());
+      auto results = resultOp.getResults();
+
+      SmallVector<Value> yieldedVals;
+
+      Value nextIv = mlir::arith::AddIOp::create(rewriter, loc, iv, step);
+      yieldedVals.push_back(nextIv);
+
+      for (auto val : results.drop_front()) {
+        if (mapping.contains(val)) {
+          yieldedVals.push_back(mapping.lookup(val));
+        } else {
+          yieldedVals.push_back(val);
+        }
+      }
+
+      mlir::scf::YieldOp::create(rewriter, loc, yieldedVals);
+    }
+
+    rewriter.replaceOp(iterWhileOp, scfWhileOp);
+    return success();
+  }
+};
+
+void copyBlockAndTransformResult(PatternRewriter &rewriter, Block &srcBlock,
+                                 Block &dstBlock) {
+  Operation *srcTerminator = srcBlock.getTerminator();
+  auto resultOp = cast<fir::ResultOp>(srcTerminator);
 
   dstBlock.getOperations().splice(dstBlock.begin(), srcBlock.getOperations(),
                                   srcBlock.begin(), std::prev(srcBlock.end()));
@@ -131,11 +216,12 @@ struct IfConversion : public mlir::OpRewritePattern<fir::IfOp> {
 } // namespace
 
 void FIRToSCFPass::runOnOperation() {
-  mlir::RewritePatternSet patterns(&getContext());
-  patterns.add<DoLoopConversion, IfConversion>(patterns.getContext());
-  mlir::ConversionTarget target(getContext());
-  target.addIllegalOp<fir::DoLoopOp, fir::IfOp>();
-  target.markUnknownOpDynamicallyLegal([](mlir::Operation *) { return true; });
+  RewritePatternSet patterns(&getContext());
+  patterns.add<DoLoopConversion, IterWhileConversion, IfConversion>(
+      patterns.getContext());
+  ConversionTarget target(getContext());
+  target.addIllegalOp<fir::DoLoopOp, fir::IterWhileOp, fir::IfOp>();
+  target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     signalPassFailure();
