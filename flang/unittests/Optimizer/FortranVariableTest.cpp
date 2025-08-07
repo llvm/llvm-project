@@ -19,10 +19,10 @@ public:
 
     // Set up a Module with a dummy function operation inside.
     // Set the insertion point in the function entry block.
-    moduleOp = builder->create<mlir::ModuleOp>(loc);
+    moduleOp = mlir::ModuleOp::create(*builder, loc);
     builder->setInsertionPointToStart(moduleOp->getBody());
-    mlir::func::FuncOp func = builder->create<mlir::func::FuncOp>(
-        loc, "fortran_variable_tests", builder->getFunctionType({}, {}));
+    mlir::func::FuncOp func = mlir::func::FuncOp::create(*builder, loc,
+        "fortran_variable_tests", builder->getFunctionType({}, {}));
     auto *entryBlock = func.addEntryBlock();
     builder->setInsertionPointToStart(entryBlock);
   }
@@ -30,8 +30,8 @@ public:
   mlir::Location getLoc() { return builder->getUnknownLoc(); }
   mlir::Value createConstant(std::int64_t cst) {
     mlir::Type indexType = builder->getIndexType();
-    return builder->create<mlir::arith::ConstantOp>(
-        getLoc(), indexType, builder->getIntegerAttr(indexType, cst));
+    return mlir::arith::ConstantOp::create(
+        *builder, getLoc(), indexType, builder->getIntegerAttr(indexType, cst));
   }
 
   mlir::Value createShape(llvm::ArrayRef<mlir::Value> extents) {
