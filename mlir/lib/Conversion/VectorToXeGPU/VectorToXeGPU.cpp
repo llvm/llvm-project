@@ -152,6 +152,37 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
   return ndDesc;
 }
 
+static LogicalResult
+extraCheckForScatteredLoadStore(VectorTransferOpInterface xferOp,
+                                PatternRewriter &rewriter) {
+  // 1. it must be inbound access by checking in_bounds attributes, like
+  // {in_bounds = [false, true]}
+  if (xferOp.hasOutOfBoundsDim())
+    return rewriter.notifyMatchFailure(xferOp,
+                                       "Out-of-bounds access is not supported "
+                                       "for scatter load/store lowering");
+  // 2. if the memref has static shape, its lower rank must exactly match with
+  // vector shape.
+  if (auto memrefType = dyn_cast<MemRefType>(xferOp.getShapedType())) {
+    if (memrefType.hasStaticShape()) {
+      ArrayRef<int64_t> memrefShape = memrefType.getShape();
+      ArrayRef<int64_t> vectorShape = xferOp.getVectorType().getShape();
+      size_t memrefRank = memrefShape.size();
+      size_t vectorRank = vectorShape.size();
+      if (vectorRank > memrefRank)
+        return rewriter.notifyMatchFailure(
+            xferOp, "Vector rank cannot exceed memref rank");
+      // Compare the last vectorRank dimensions of memref with vector shape
+      for (size_t i = 0; i < vectorRank; ++i) {
+        if (memrefShape[memrefRank - vectorRank + i] <= vectorShape[i])
+          return rewriter.notifyMatchFailure(
+              xferOp, "Memref lower dimensions must match vector shape");
+      }
+    }
+  }
+  return success();
+}
+
 static LogicalResult adjustStridesForPermutation(
     Operation *op, PatternRewriter &rewriter, MemRefType memrefType,
     AffineMap permMap, VectorType vecType, SmallVectorImpl<Value> &strides) {
@@ -237,41 +268,34 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
   return strides;
 }
 
-// This function lowers vector.transfer_read to XeGPU load operation.
-  // Example:
-  //   %0 = vector.transfer_read %expand_shape[%block_id_y, %c0, %c0, %c0, %c0], 
-  //               %cst {in_bounds = [true, true, true, true]}>} : 
-  //               memref<8x4x2x6x32xbf16>, vector<4x2x6x32xbf16>
-  // 
-  //   %6 = vector.step: vector<4xindex> 
-  //   %7 = vector.step: vector<2xindex> 
-  //   %8 = vector.step: vector<6xindex> 
-  //   %9 = vector.step: vector<32xindex> 
-  //   %10 = arith.mul %6, 384
-  //   %11 = arith.mul %7, 192
-  //   %12 = arith.mul %8, 32
-  //   %13 = arith.mul %9, 1
-  //   %14 = vector.shape_cast %10: vector<4xindex> -> vector<4x1x1x1xbf16>
-  //   %15 = vector.shape_cast %11: vector<2xindex> -> vector<1x2x1x1xbf16>
-  //   %16 = vector.shape_cast %12: vector<6xindex> -> vector<1x1x6x1xbf16>
-  //   %17 = vector.shape_cast %13: vector<32xindex> -> vector<1x1x1x32xbf16>
-  //   %18 = vector.broadcast %14: vector<4x1x1x1xbf16> -> vector<4x2x6x32xindex>  
-  //   %19 = vector.broadcast %15: vector<1x2x1x1xbf16> -> vector<4x2x6x32xindex>  
-  //   %20 = vector.broadcast %16: vector<1x1x6x1xbf16> -> vector<4x2x6x32xindex>  
-  //   %21 = vector.broadcast %17: vector<1x1x1x32xbf16> -> vector<4x2x6x32xindex>  
-  //   %22 = arith.add %18, %19
-  //   %23 = arith.add %20, %21
-  //   %local_offsets = arith.add %22, %23
-  //   %orig_offset = %block_id_y * 4x2x6x32 // consider using affine map
-  //   %offsets =  orig_offset + local_offsets
-
-//   %expand_shape1 = memref.collapseshape %expand_shape:
-//   memref<8x4x2x6x32xbf16> -> memref<?bf16>
-
-//   %vec = xegpu.load_gather %expand_shape1[%offsets]:memref<?xbf16>,
-//                           vector<4x2x6x32xindex> -> vector<4x2x6x32xbf16>
-
-// Compute localOffsets for load_gather and store_scatter
+// This function compute the vectors of localOffsets for scattered load/stores.
+// It is used in the lowering of vector.transfer_read/write to
+// load_gather/store_scatter Example:
+//   %0 = vector.transfer_read %expand_shape[%block_id_y, %c0, %c0, %c0, %c0],
+//               %cst {in_bounds = [true, true, true, true]}>} :
+//               memref<8x4x2x6x32xbf16>, vector<4x2x6x32xbf16>
+//
+//   %6 = vector.step: vector<4xindex>
+//   %7 = vector.step: vector<2xindex>
+//   %8 = vector.step: vector<6xindex>
+//   %9 = vector.step: vector<32xindex>
+//   %10 = arith.mul %6, 384
+//   %11 = arith.mul %7, 192
+//   %12 = arith.mul %8, 32
+//   %13 = arith.mul %9, 1
+//   %14 = vector.shape_cast %10: vector<4xindex> -> vector<4x1x1x1xbf16>
+//   %15 = vector.shape_cast %11: vector<2xindex> -> vector<1x2x1x1xbf16>
+//   %16 = vector.shape_cast %12: vector<6xindex> -> vector<1x1x6x1xbf16>
+//   %17 = vector.shape_cast %13: vector<32xindex> -> vector<1x1x1x32xbf16>
+//   %18 = vector.broadcast %14: vector<4x1x1x1xbf16> -> vector<4x2x6x32xindex>
+//   %19 = vector.broadcast %15: vector<1x2x1x1xbf16> -> vector<4x2x6x32xindex>
+//   %20 = vector.broadcast %16: vector<1x1x6x1xbf16> -> vector<4x2x6x32xindex>
+//   %21 = vector.broadcast %17: vector<1x1x1x32xbf16> -> vector<4x2x6x32xindex>
+//   %22 = arith.add %18, %19
+//   %23 = arith.add %20, %21
+//   %local_offsets = arith.add %22, %23
+//   %orig_offset = %block_id_y * 4x2x6x32 // consider using affine map
+//   %offsets =  orig_offset + local_offsets
 static Value computeGatherOffsets(VectorTransferOpInterface xferOp,
                                   PatternRewriter &rewriter,
                                   ArrayRef<Value> strides) {
@@ -460,37 +484,6 @@ LogicalResult lowerTransferWriteToStoreOp(vector::TransferWriteOp writeOp,
 
   return createStoreScatter(writeOp, rewriter, writeOp.getVector(), flatMemref,
                             localOffsets);
-}
-
-static LogicalResult
-extraCheckForScatteredLoadStore(VectorTransferOpInterface xferOp,
-                                PatternRewriter &rewriter) {
-  // 1. it must be inbound access by checking in_bounds attributes, like
-  // {in_bounds = [false, true]}
-  if (xferOp.hasOutOfBoundsDim())
-    return rewriter.notifyMatchFailure(xferOp,
-                                       "Out-of-bounds access is not supported "
-                                       "for scatter load/store lowering");
-  // 2. if the memref has static shape, its lower rank must exactly match with
-  // vector shape.
-  if (auto memrefType = dyn_cast<MemRefType>(xferOp.getShapedType())) {
-    if (memrefType.hasStaticShape()) {
-      ArrayRef<int64_t> memrefShape = memrefType.getShape();
-      ArrayRef<int64_t> vectorShape = xferOp.getVectorType().getShape();
-      size_t memrefRank = memrefShape.size();
-      size_t vectorRank = vectorShape.size();
-      if (vectorRank > memrefRank)
-        return rewriter.notifyMatchFailure(
-            xferOp, "Vector rank cannot exceed memref rank");
-      // Compare the last vectorRank dimensions of memref with vector shape
-      for (size_t i = 0; i < vectorRank; ++i) {
-        if (memrefShape[memrefRank - vectorRank + i] <= vectorShape[i])
-          return rewriter.notifyMatchFailure(
-              xferOp, "Memref lower dimensions must match vector shape");
-      }
-    }
-  }
-  return success();
 }
 
 struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
