@@ -798,6 +798,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Cases("ls64", "ls64_v", "ls64_accdata", HasLS64)
       .Case("wfxt", HasWFxT)
       .Case("rcpc3", HasRCPC3)
+      .Case("ctselect", true)
       .Default(false);
 }
 
