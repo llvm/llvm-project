@@ -372,9 +372,8 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt(half %
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-GFX11-TRUE16-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
-; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; SDAG-GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
-; SDAG-GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; SDAG-GFX11-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.h, v0
 ; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; SDAG-GFX11-FAKE16-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt:

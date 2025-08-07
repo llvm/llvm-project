@@ -656,8 +656,6 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
 
 void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
                                            bool isTentative) {
-  const QualType astTy = vd->getType();
-
   if (getLangOpts().OpenCL || getLangOpts().OpenMPIsTargetDevice) {
     errorNYI(vd->getSourceRange(), "emit OpenCL/OpenMP global variable");
     return;
@@ -701,7 +699,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     // never attempt to emit a tentative definition if a real one
     // exists. A use may still exists, however, so we still may need
     // to do a RAUW.
-    assert(!astTy->isIncompleteType() && "Unexpected incomplete type");
+    assert(!vd->getType()->isIncompleteType() && "Unexpected incomplete type");
     init = builder.getZeroInitAttr(convertType(vd->getType()));
   } else {
     emitter.emplace(*this);
@@ -1309,7 +1307,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   }
 
   case Decl::Var:
-  case Decl::Decomposition: {
+  case Decl::Decomposition:
+  case Decl::VarTemplateSpecialization: {
     auto *vd = cast<VarDecl>(decl);
     if (isa<DecompositionDecl>(decl)) {
       errorNYI(decl->getSourceRange(), "global variable decompositions");
@@ -1344,6 +1343,8 @@ void CIRGenModule::emitTopLevelDecl(Decl *decl) {
   case Decl::StaticAssert:
   case Decl::TypeAliasTemplate:
   case Decl::UsingShadow:
+  case Decl::VarTemplate:
+  case Decl::VarTemplatePartialSpecialization:
     break;
 
   case Decl::CXXConstructor:

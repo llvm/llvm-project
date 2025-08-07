@@ -1484,18 +1484,18 @@ public:
   }
   bool Pre(const parser::OpenMPBlockConstruct &);
   void Post(const parser::OpenMPBlockConstruct &);
-  bool Pre(const parser::OmpBeginBlockDirective &x) {
+  bool Pre(const parser::OmpBeginDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
-  void Post(const parser::OmpBeginBlockDirective &) {
+  void Post(const parser::OmpBeginDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
-  bool Pre(const parser::OmpEndBlockDirective &x) {
+  bool Pre(const parser::OmpEndDirective &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
-  void Post(const parser::OmpEndBlockDirective &) {
+  void Post(const parser::OmpEndDirective &) {
     messageHandler().set_currStmtSource(std::nullopt);
   }
 
@@ -1593,6 +1593,14 @@ public:
   }
   bool Pre(const parser::OmpCriticalDirective &x) {
     AddOmpSourceRange(x.source);
+    // Manually resolve names in CRITICAL directives. This is because these
+    // names do not denote Fortran objects, and the CRITICAL directive causes
+    // them to be "auto-declared", i.e. inserted into the global scope.
+    // More specifically, they are not expected to have explicit declarations,
+    // and if they do the behavior is unspeficied.
+    if (auto &maybeName{std::get<std::optional<parser::Name>>(x.t)}) {
+      ResolveCriticalName(*maybeName);
+    }
     return true;
   }
   void Post(const parser::OmpCriticalDirective &) {
@@ -1600,6 +1608,10 @@ public:
   }
   bool Pre(const parser::OmpEndCriticalDirective &x) {
     AddOmpSourceRange(x.source);
+    // Manually resolve names in CRITICAL directives.
+    if (auto &maybeName{std::get<std::optional<parser::Name>>(x.t)}) {
+      ResolveCriticalName(*maybeName);
+    }
     return true;
   }
   void Post(const parser::OmpEndCriticalDirective &) {
@@ -1720,14 +1732,14 @@ private:
       const std::optional<parser::OmpClauseList> &clauses,
       const T &wholeConstruct);
 
+  void ResolveCriticalName(const parser::Name &name);
+
   int metaLevel_{0};
   const parser::OmpMetadirectiveDirective *metaDirective_{nullptr};
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
-  const auto &beginBlockDir{std::get<parser::OmpBeginBlockDirective>(x.t)};
-  const auto &beginDir{std::get<parser::OmpBlockDirective>(beginBlockDir.t)};
-  switch (beginDir.v) {
+  switch (x.BeginDir().DirId()) {
   case llvm::omp::Directive::OMPD_master:
   case llvm::omp::Directive::OMPD_ordered:
     return false;
@@ -1946,6 +1958,28 @@ void OmpVisitor::ProcessReductionSpecifier(
   }
   if (name) {
     name->symbol = symbol;
+  }
+}
+
+void OmpVisitor::ResolveCriticalName(const parser::Name &name) {
+  auto &globalScope{[&]() -> Scope & {
+    for (Scope *s{&currScope()};; s = &s->parent()) {
+      if (s->IsTopLevel()) {
+        return *s;
+      }
+    }
+    llvm_unreachable("Cannot find global scope");
+  }()};
+
+  if (auto *symbol{FindInScope(globalScope, name)}) {
+    if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
+      SayWithDecl(name, *symbol,
+          "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
+          name.ToString());
+    }
+  } else {
+    name.symbol = &MakeSymbol(globalScope, name.source, Attrs{});
+    name.symbol->set(Symbol::Flag::OmpCriticalLock);
   }
 }
 
