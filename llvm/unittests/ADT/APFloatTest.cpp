@@ -5799,6 +5799,359 @@ TEST_P(PPCDoubleDoubleRoundToIntegralValueTest,
   }
 }
 
+namespace PPCDoubleDoubleConvertToIntegerTestDetails {
+// Define the rounding modes for easier readability.
+static constexpr auto RNE = APFloat::rmNearestTiesToEven;
+static constexpr auto RNA = APFloat::rmNearestTiesToAway;
+static constexpr auto RTZ = APFloat::rmTowardZero;
+static constexpr auto RTP = APFloat::rmTowardPositive;
+static constexpr auto RTN = APFloat::rmTowardNegative;
+
+struct TestCase {
+  // Structure to hold the expected result of a conversion
+  struct ExpectedConversion {
+    // The expected integer value represented as a string (decimal).
+    // We use a string to easily represent arbitrary precision values in
+    // constexpr. The test runner should parse this into an APSInt matching the
+    // test configuration.
+    const char *ExpectedIntStr;
+    APFloat::opStatus Status;
+  };
+
+  DD Input;
+  unsigned IntegerWidth;
+  bool IsSigned;
+  // Array indexed by the rounding mode enum value.
+  std::array<ExpectedConversion, 5> Rounded = {};
+
+  // Helper to define the expected results for a specific rounding mode.
+  constexpr TestCase &with(APFloat::roundingMode RM, const char *ExpectedStr,
+                           APFloat::opStatus Status) {
+    Rounded[static_cast<std::underlying_type_t<APFloat::roundingMode>>(RM)] = {
+        ExpectedStr,
+        Status,
+    };
+    return *this;
+  }
+
+  // Helper to define the same result for all rounding modes.
+  constexpr TestCase &withAll(const char *ExpectedStr,
+                              APFloat::opStatus Status) {
+    return with(RNE, ExpectedStr, Status)
+        .with(RNA, ExpectedStr, Status)
+        .with(RTZ, ExpectedStr, Status)
+        .with(RTP, ExpectedStr, Status)
+        .with(RTN, ExpectedStr, Status);
+  }
+};
+
+auto testCases() {
+  // Define the status codes.
+  constexpr auto OK = llvm::APFloat::opOK;
+  constexpr auto Inexact = llvm::APFloat::opInexact;
+  // The API specifies opInvalidOp for out-of-range (overflow/underflow) and
+  // NaN.
+  constexpr auto Invalid = llvm::APFloat::opInvalidOp;
+
+  // Helper constants for constructing specific DD values.
+  constexpr double Infinity = std::numeric_limits<double>::infinity();
+  constexpr double NaN = std::numeric_limits<double>::quiet_NaN();
+  constexpr double DMAX = std::numeric_limits<double>::max();
+
+  // Powers of 2
+  constexpr double P53 = 0x1p53;
+  constexpr double P63 = 0x1p63;
+  constexpr double P64 = 0x1p64;
+  // 2^-100 (A very small delta demonstrating extended precision)
+  constexpr double PM100 = 0x1p-100;
+
+  static constexpr auto ConvertToIntegerTestCases = std::array{
+      // 1. Zeros, NaNs, and Infinities (Target: 64-bit Signed)
+      // INT64_MAX = 9223372036854775807
+      // INT64_MIN = -9223372036854775808
+
+      // Input: Positive Zero (0.0, 0.0)
+      TestCase{{0.0, 0.0}, 64, true}.withAll("0", OK),
+
+      // Input: Negative Zero (-0.0, 0.0)
+      TestCase{{-0.0, 0.0}, 64, true}.withAll("0", OK),
+
+      // Input: NaN. Expected behavior: Invalid, deterministic result of 0.
+      TestCase{{NaN, 0.0}, 64, true}.withAll("0", Invalid),
+
+      // Input: +Infinity. Expected behavior: Invalid, deterministic result of
+      // INT64_MAX.
+      TestCase{{Infinity, 0.0}, 64, true}.withAll("9223372036854775807",
+                                                  Invalid),
+
+      // Input: -Infinity. Expected behavior: Invalid, deterministic result of
+      // INT64_MIN.
+      TestCase{{-Infinity, 0.0}, 64, true}.withAll("-9223372036854775808",
+                                                   Invalid),
+
+      // 2. Basic Rounding and Tie-Breaking (Target: 32-bit Signed)
+
+      // Input: 2.5 (Tie, preceding integer is Even)
+      TestCase{{2.5, 0.0}, 32, true}
+          .with(RTZ, "2", Inexact)
+          .with(RTN, "2", Inexact)
+          .with(RTP, "3", Inexact)
+          .with(RNA, "3", Inexact)
+          .with(RNE, "2", Inexact),
+
+      // Input: 3.5 (Tie, preceding integer is Odd)
+      TestCase{{3.5, 0.0}, 32, true}
+          .with(RTZ, "3", Inexact)
+          .with(RTN, "3", Inexact)
+          .with(RTP, "4", Inexact)
+          .with(RNA, "4", Inexact)
+          .with(RNE, "4", Inexact),
+
+      // Input: -2.5 (Tie, preceding integer is Even)
+      TestCase{{-2.5, 0.0}, 32, true}
+          .with(RTZ, "-2", Inexact)
+          .with(RTN, "-3", Inexact)
+          .with(RTP, "-2", Inexact)
+          .with(RNA, "-3", Inexact)
+          .with(RNE, "-2", Inexact),
+
+      // 3. Double-Double Precision (The role of 'lo')
+      // Testing how extended precision affects rounding decisions.
+
+      // Input: 2.5 + Epsilon (Slightly above tie)
+      TestCase{{2.5, PM100}, 32, true}
+          .with(RTZ, "2", Inexact)
+          .with(RTN, "2", Inexact)
+          .with(RTP, "3", Inexact)
+          .with(RNA, "3", Inexact)
+          .with(RNE, "3", Inexact),
+
+      // Input: 2.5 - Epsilon (Slightly below tie)
+      TestCase{{2.5, -PM100}, 32, true}
+          .with(RTZ, "2", Inexact)
+          .with(RTN, "2", Inexact)
+          .with(RTP, "3", Inexact)
+          .with(RNA, "2", Inexact)
+          .with(RNE, "2", Inexact),
+
+      // Input: 1.0 + Epsilon (Just above 1.0, e.g., 1.00...1)
+      TestCase{{1.0, PM100}, 32, true}
+          .with(RTZ, "1", Inexact)
+          .with(RTN, "1", Inexact)
+          .with(RTP, "2", Inexact)
+          .with(RNA, "1", Inexact)
+          .with(RNE, "1", Inexact),
+
+      // Input: 1.0 - Epsilon (Just below 1.0, e.g. 0.999...)
+      TestCase{{1.0, -PM100}, 32, true}
+          .with(RTZ, "0", Inexact)
+          .with(RTN, "0", Inexact)
+          .with(RTP, "1", Inexact)
+          .with(RNA, "1", Inexact)
+          .with(RNE, "1", Inexact),
+
+      // Input: Large number tie-breaking (Crucial test for DD implementation)
+      // Input: 2^53 + 1.5.
+      // A standard double(2^53 + 1.5) rounds to 2^53 + 2.0.
+      // The DD representation must precisely hold 2^53 + 1.5.
+      // The canonical DD representation is {2^53 + 2.0, -0.5}.
+      // Value is 9007199254740993.5
+      TestCase{{P53 + 2.0, -0.5}, 64, true}
+          .with(RTZ, "9007199254740993", Inexact)
+          .with(RTN, "9007199254740993", Inexact)
+          .with(RTP, "9007199254740994", Inexact)
+          .with(RNA, "9007199254740994", Inexact)
+          .with(RNE, "9007199254740994", Inexact),
+
+      // 4. Overflow Boundaries (Signed)
+
+      // Input: Exactly INT64_MAX. (2^63 - 1)
+      // Represented precisely as (2^63, -1.0)
+      TestCase{{P63, -1.0}, 64, true}.withAll("9223372036854775807", OK),
+
+      // Input: INT64_MAX + 0.3.
+      // Represented as (2^63, -0.7)
+      TestCase{{P63, -0.7}, 64, true}
+          .with(RTZ, "9223372036854775807", Inexact)
+          .with(RTN, "9223372036854775807", Inexact)
+          .with(RNA, "9223372036854775807", Inexact)
+          .with(RNE, "9223372036854775807", Inexact)
+          .with(RTP, "9223372036854775807", Invalid),
+
+      // Input: INT64_MAX + 0.5 (Tie at the boundary)
+      // Represented as (2^63, -0.5). Target integers are MAX (odd) and 2^63
+      // (even).
+      TestCase{{P63, -0.5}, 64, true}
+          .with(RTZ, "9223372036854775807", Inexact)
+          .with(RTN, "9223372036854775807", Inexact)
+          .with(RTP, "9223372036854775807", Invalid)
+          .with(RNA, "9223372036854775807", Invalid)
+          .with(RNE, "9223372036854775807", Invalid),
+
+      // Input: 2^55 - 2^1 - 2^-52 to signed integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-1).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.8p0}, 56, true}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RTN, "36028797018963965", Inexact)
+          .with(RTP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: 2^55 - 2^1 - 2^-52 to signed integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-52).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.fffffffffffffp0}, 56, true}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RTN, "36028797018963965", Inexact)
+          .with(RTP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: Exactly 2^63 (One past INT64_MAX)
+      TestCase{{P63, 0.0}, 64, true}.withAll("9223372036854775807", Invalid),
+
+      // Input: Exactly INT64_MIN (-2^63)
+      TestCase{{-P63, 0.0}, 64, true}.withAll("-9223372036854775808", OK),
+
+      // Input: INT64_MIN - 0.5 (Tie at the lower boundary)
+      // Target integers are -2^63-1 (odd) and MIN (even).
+      TestCase{{-P63, -0.5}, 64, true}
+          .with(RTZ, "-9223372036854775808", Inexact)
+          .with(RTP, "-9223372036854775808", Inexact)
+          // RTN rounds down, causing overflow.
+          .with(RTN, "-9223372036854775808", Invalid)
+          // RNA rounds away (down), causing overflow.
+          .with(RNA, "-9223372036854775808", Invalid)
+          // RNE rounds to even (up to -2^63), which is OK.
+          .with(RNE, "-9223372036854775808", Inexact),
+
+      // 5. Overflow Boundaries (Unsigned)
+      // UINT64_MAX = 18446744073709551615 (2^64 - 1)
+
+      // Input: Exactly UINT64_MAX. (2^64 - 1)
+      // Represented precisely as (2^64, -1.0)
+      TestCase{{P64, -1.0}, 64, false}.withAll("18446744073709551615", OK),
+
+      // Input: UINT64_MAX + 0.5 (Tie at the boundary)
+      // Represented as (2^64, -0.5)
+      TestCase{{P64, -0.5}, 64, false}
+          .with(RTZ, "18446744073709551615", Inexact)
+          .with(RTN, "18446744073709551615", Inexact)
+          // RTP rounds up (2^64), causing overflow.
+          .with(RTP, "18446744073709551615", Invalid)
+          // RNA rounds away (up), causing overflow.
+          .with(RNA, "18446744073709551615", Invalid)
+          // RNE rounds to even (up to 2^64), causing overflow.
+          .with(RNE, "18446744073709551615", Invalid),
+
+      // Input: 2^55 - 2^1 - 2^-52 to unsigned integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-1).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.8p0}, 55, false}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RTN, "36028797018963965", Inexact)
+          .with(RTP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: 2^55 - 2^1 - 2^-52 to unsigned integer.
+      // Represented as (2^55 - 2^2, 2^1 - 2^-52).
+      TestCase{{0x1.fffffffffffffp+54, 0x1.fffffffffffffp0}, 55, false}
+          .with(RTZ, "36028797018963965", Inexact)
+          .with(RTN, "36028797018963965", Inexact)
+          .with(RTP, "36028797018963966", Inexact)
+          .with(RNA, "36028797018963966", Inexact)
+          .with(RNE, "36028797018963966", Inexact),
+
+      // Input: -0.3 (Slightly below zero)
+      TestCase{{-0.3, 0.0}, 64, false}
+          .with(RTZ, "0", Inexact)
+          .with(RTP, "0", Inexact)
+          .with(RNA, "0", Inexact)
+          .with(RNE, "0", Inexact)
+          .with(RTN, "0", Invalid),
+
+      // Input: -0.5 (Tie at zero)
+      TestCase{{-0.5, 0.0}, 64, false}
+          .with(RTZ, "0", Inexact)
+          .with(RTP, "0", Inexact)
+          // RNE rounds to even (0).
+          .with(RNE, "0", Inexact)
+          .with(RTN, "0", Invalid)
+          // RNA rounds away (-1), causing overflow.
+          .with(RNA, "0", Invalid),
+
+      // Input: -1.0 (Negative integer)
+      TestCase{{-1.0, 0.0}, 64, false}.withAll("0", Invalid),
+
+      // 6. High Precision Integers (Target: 128-bit Signed)
+      // INT128_MAX = 170141183460469231731687303715884105727
+
+      // Input: 2^100 (Exactly representable in DD)
+      // 2^100 = 1267650600228229401496703205376.0
+      TestCase{{1267650600228229401496703205376.0, 0.0}, 128, true}.withAll(
+          "1267650600228229401496703205376", OK),
+
+      // Input: DMAX. (Approx 1.8e308).
+      // This is vastly larger than INT128_MAX (Approx 1.7e38).
+      TestCase{{DMAX, 0.0}, 128, true}.withAll(
+          "170141183460469231731687303715884105727", Invalid),
+
+      // 7. Round to negative -0
+      TestCase{{-PM100, 0.0}, 32, true}
+          .with(RTZ, "0", Inexact)
+          .with(RTP, "0", Inexact)
+          .with(RNA, "0", Inexact)
+          .with(RNE, "0", Inexact)
+          .with(RTN, "-1", Inexact),
+  };
+  return ConvertToIntegerTestCases;
+}
+} // namespace PPCDoubleDoubleConvertToIntegerTestDetails
+
+class PPCDoubleDoubleConvertToIntegerValueTest
+    : public testing::Test,
+      public ::testing::WithParamInterface<
+          PPCDoubleDoubleConvertToIntegerTestDetails::TestCase> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PPCDoubleDoubleConvertToIntegerValueParamTests,
+    PPCDoubleDoubleConvertToIntegerValueTest,
+    ::testing::ValuesIn(
+        PPCDoubleDoubleConvertToIntegerTestDetails::testCases()));
+
+TEST_P(PPCDoubleDoubleConvertToIntegerValueTest,
+       PPCDoubleDoubleConvertToInteger) {
+  const PPCDoubleDoubleConvertToIntegerTestDetails::TestCase Params =
+      GetParam();
+  const APFloat Input = makeDoubleAPFloat(Params.Input);
+  EXPECT_FALSE(Input.isDenormal())
+      << Params.Input.Hi << " + " << Params.Input.Lo;
+
+  for (size_t I = 0, E = std::size(Params.Rounded); I != E; ++I) {
+    const auto RM = static_cast<APFloat::roundingMode>(I);
+    const auto &Expected = Params.Rounded[I];
+    APSInt ActualInteger(Params.IntegerWidth, /*isUnsigned=*/!Params.IsSigned);
+
+    APSInt ExpectedInteger{Expected.ExpectedIntStr};
+    EXPECT_LE(ExpectedInteger.getBitWidth(), Params.IntegerWidth);
+    ExpectedInteger = ExpectedInteger.extend(Params.IntegerWidth);
+    if (ExpectedInteger.isUnsigned() && Params.IsSigned) {
+      ExpectedInteger.setIsSigned(Params.IsSigned);
+      EXPECT_FALSE(ExpectedInteger.isNegative());
+    }
+
+    const bool NegativeUnderflow =
+        ExpectedInteger.isZero() && Input.isNegative();
+    const bool ExpectedIsExact =
+        Expected.Status == APFloat::opOK && !NegativeUnderflow;
+    bool ActualIsExact;
+    const auto ActualStatus =
+        Input.convertToInteger(ActualInteger, RM, &ActualIsExact);
+    EXPECT_EQ(ActualStatus, Expected.Status);
+    EXPECT_EQ(ActualIsExact, ExpectedIsExact);
+    EXPECT_EQ(ActualInteger, ExpectedInteger);
+  }
+}
+
 TEST(APFloatTest, PPCDoubleDoubleCompare) {
   using DataType =
       std::tuple<uint64_t, uint64_t, uint64_t, uint64_t, APFloat::cmpResult>;
@@ -8259,13 +8612,8 @@ TEST(APFloatTest, getExactLog2) {
       continue;
 
     APFloat One(Semantics, "1.0");
-
-    if (I == APFloat::S_PPCDoubleDouble) {
-      // Not implemented
-      EXPECT_EQ(INT_MIN, One.getExactLog2());
-      EXPECT_EQ(INT_MIN, One.getExactLog2Abs());
-      continue;
-    }
+    APFloat Smallest = APFloat::getSmallest(Semantics);
+    APFloat Largest = APFloat::getLargest(Semantics);
 
     int MinExp = APFloat::semanticsMinExponent(Semantics);
     int MaxExp = APFloat::semanticsMaxExponent(Semantics);
@@ -8312,16 +8660,15 @@ TEST(APFloatTest, getExactLog2) {
       EXPECT_EQ(INT_MIN, APFloat::getNaN(Semantics, true).getExactLog2Abs());
     }
 
-    EXPECT_EQ(INT_MIN,
-              scalbn(One, MinExp - Precision - 1, APFloat::rmNearestTiesToEven)
-                  .getExactLog2());
-    EXPECT_EQ(INT_MIN,
-              scalbn(One, MinExp - Precision, APFloat::rmNearestTiesToEven)
-                  .getExactLog2());
-
     EXPECT_EQ(
         INT_MIN,
-        scalbn(One, MaxExp + 1, APFloat::rmNearestTiesToEven).getExactLog2());
+        scalbn(Smallest, -2, APFloat::rmNearestTiesToEven).getExactLog2());
+    EXPECT_EQ(
+        INT_MIN,
+        scalbn(Smallest, -1, APFloat::rmNearestTiesToEven).getExactLog2());
+
+    EXPECT_EQ(INT_MIN,
+              scalbn(Largest, 1, APFloat::rmNearestTiesToEven).getExactLog2());
 
     for (int i = MinExp - Precision + 1; i <= MaxExp; ++i) {
       EXPECT_EQ(i, scalbn(One, i, APFloat::rmNearestTiesToEven).getExactLog2());
