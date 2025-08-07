@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-DAG: r5:4 = combine(#6,#5)
 ; CHECK-DAG: r3:2 = combine(#4,#3)
 ; CHECK-DAG: r1:0 = combine(#2,#1)

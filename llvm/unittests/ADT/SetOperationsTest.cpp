@@ -273,4 +273,21 @@ TEST(SetOperationsTest, SetIsSubset) {
   EXPECT_FALSE(set_is_subset(Set1, Set2));
 }
 
+TEST(SetOperationsTest, SetIntersects) {
+  std::set<int> Set1 = {1, 2, 3, 4};
+  std::set<int> Set2 = {3, 4, 5};
+  EXPECT_TRUE(set_intersects(Set1, Set2));
+  EXPECT_TRUE(set_intersects(Set2, Set1));
+
+  Set2 = {5, 6, 7};
+  EXPECT_FALSE(set_intersects(Set1, Set2));
+  EXPECT_FALSE(set_intersects(Set2, Set1));
+
+  // Check that intersecting with a null set returns false.
+  Set1.clear();
+  EXPECT_FALSE(set_intersects(Set1, Set2));
+  EXPECT_FALSE(set_intersects(Set2, Set1));
+  EXPECT_FALSE(set_intersects(Set1, Set1));
+}
+
 } // namespace

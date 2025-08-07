@@ -17,26 +17,26 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
 #include <memory>
 #include <optional>
 
 namespace llvm {
 
-class ARMBaseTargetMachine : public LLVMTargetMachine {
+class ARMBaseTargetMachine : public CodeGenTargetMachineImpl {
 public:
-  enum ARMABI {
-    ARM_ABI_UNKNOWN,
-    ARM_ABI_APCS,
-    ARM_ABI_AAPCS, // ARM EABI
-    ARM_ABI_AAPCS16
-  } TargetABI;
+  ARM::ARMABI TargetABI;
 
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool isLittle;
   mutable StringMap<std::unique_ptr<ARMSubtarget>> SubtargetMap;
+
+  /// Reset internal state.
+  void reset() override;
 
 public:
   ARMBaseTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -62,6 +62,21 @@ public:
     return TLOF.get();
   }
 
+  bool isAPCS_ABI() const {
+    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
+    return TargetABI == ARM::ARM_ABI_APCS;
+  }
+
+  bool isAAPCS_ABI() const {
+    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
+    return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
+  }
+
+  bool isAAPCS16_ABI() const {
+    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
+    return TargetABI == ARM::ARM_ABI_AAPCS16;
+  }
+
   bool isTargetHardFloat() const {
     return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
            TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
@@ -69,8 +84,7 @@ public:
            TargetTriple.getEnvironment() == Triple::EABIHF ||
            (TargetTriple.isOSBinFormatMachO() &&
             TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
-           TargetTriple.isOSWindows() ||
-           TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
+           TargetTriple.isOSWindows() || TargetABI == ARM::ARM_ABI_AAPCS16;
   }
 
   bool targetSchedulesPostRAScheduling() const override { return true; };
@@ -92,6 +106,10 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 /// ARM/Thumb little endian target machine.

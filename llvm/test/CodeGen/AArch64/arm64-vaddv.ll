@@ -267,7 +267,6 @@ define <1 x i64> @test_vaddv_u64_to_vec(<2 x i64> %a1) {
 ; CHECK-LABEL: test_vaddv_u64_to_vec:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    addp d0, v0.2d
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
 entry:
   %vaddv.i = tail call i64 @llvm.aarch64.neon.uaddv.i64.v2i64(<2 x i64> %a1)

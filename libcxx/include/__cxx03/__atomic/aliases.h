@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___ATOMIC_ALIASES_H
-#define _LIBCPP___ATOMIC_ALIASES_H
+#ifndef _LIBCPP___CXX03___ATOMIC_ALIASES_H
+#define _LIBCPP___CXX03___ATOMIC_ALIASES_H
 
-#include <__atomic/atomic.h>
-#include <__atomic/atomic_lock_free.h>
-#include <__atomic/contention_t.h>
-#include <__atomic/is_always_lock_free.h>
-#include <__config>
-#include <__type_traits/conditional.h>
-#include <__type_traits/make_unsigned.h>
-#include <cstddef>
-#include <cstdint>
+#include <__cxx03/__atomic/atomic.h>
+#include <__cxx03/__atomic/atomic_lock_free.h>
+#include <__cxx03/__atomic/contention_t.h>
+#include <__cxx03/__atomic/is_always_lock_free.h>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/conditional.h>
+#include <__cxx03/__type_traits/make_unsigned.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -80,31 +80,6 @@ using atomic_ptrdiff_t = atomic<ptrdiff_t>;
 using atomic_intmax_t  = atomic<intmax_t>;
 using atomic_uintmax_t = atomic<uintmax_t>;
 
-// C++20 atomic_{signed,unsigned}_lock_free: prefer the contention type most highly, then the largest lock-free type
-#if _LIBCPP_STD_VER >= 20
-#  if ATOMIC_LLONG_LOCK_FREE == 2
-using __largest_lock_free_type = long long;
-#  elif ATOMIC_INT_LOCK_FREE == 2
-using __largest_lock_free_type = int;
-#  elif ATOMIC_SHORT_LOCK_FREE == 2
-using __largest_lock_free_type = short;
-#  elif ATOMIC_CHAR_LOCK_FREE == 2
-using __largest_lock_free_type = char;
-#  else
-#    define _LIBCPP_NO_LOCK_FREE_TYPES // There are no lockfree types (this can happen on unusual platforms)
-#  endif
-
-#  ifndef _LIBCPP_NO_LOCK_FREE_TYPES
-using __contention_t_or_largest =
-    __conditional_t<__libcpp_is_always_lock_free<__cxx_contention_t>::__value,
-                    __cxx_contention_t,
-                    __largest_lock_free_type>;
-
-using atomic_signed_lock_free   = atomic<__contention_t_or_largest>;
-using atomic_unsigned_lock_free = atomic<make_unsigned_t<__contention_t_or_largest>>;
-#  endif // !_LIBCPP_NO_LOCK_FREE_TYPES
-#endif   // C++20
-
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___ATOMIC_ALIASES_H
+#endif // _LIBCPP___CXX03___ATOMIC_ALIASES_H

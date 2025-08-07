@@ -49,20 +49,22 @@ define void @vid_passthru(ptr %p, <vscale x 8 x i64> %v) {
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vl8re64.v v16, (a0)
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v16, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
 ; CHECK-NEXT:    vl8re64.v v0, (a0)
 ; CHECK-NEXT:    vl8re64.v v16, (a0)
 ; CHECK-NEXT:    vs8r.v v16, (a0)
 ; CHECK-NEXT:    vs8r.v v0, (a0)
 ; CHECK-NEXT:    vs8r.v v24, (a0)
-; CHECK-NEXT:    vl8r.v v16, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v16, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vs8r.v v16, (a0)
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vid = call <vscale x 8 x i64> @llvm.riscv.vid.nxv8i64(<vscale x 8 x i64> %v, i64 1)
   store volatile <vscale x 8 x i64> %vid, ptr %p
@@ -125,7 +127,7 @@ define void @vmv.v.x_needs_extended(ptr %p, i64 %x) {
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v8, a1
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; CHECK-NEXT:    vs8r.v v8, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    vl8re64.v v16, (a0)
 ; CHECK-NEXT:    vl8re64.v v24, (a0)
@@ -135,12 +137,14 @@ define void @vmv.v.x_needs_extended(ptr %p, i64 %x) {
 ; CHECK-NEXT:    vs8r.v v0, (a0)
 ; CHECK-NEXT:    vs8r.v v24, (a0)
 ; CHECK-NEXT:    vs8r.v v16, (a0)
-; CHECK-NEXT:    vl8r.v v8, (a1) # Unknown-size Folded Reload
+; CHECK-NEXT:    vl8r.v v8, (a1) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vs8r.v v8, (a0)
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa sp, 16
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
   %vmv.v.x = call <vscale x 8 x i64> @llvm.riscv.vmv.v.x.nxv8i64(<vscale x 8 x i64> poison, i64 %x, i64 -1)
   store volatile <vscale x 8 x i64> %vmv.v.x, ptr %p

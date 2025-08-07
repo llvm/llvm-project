@@ -79,7 +79,7 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
     }
     if (xbits.is_neg() && !xbits.is_nan()) {
       fputil::set_errno_if_required(EDOM);
-      fputil::raise_except(FE_INVALID);
+      fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
     if (xbits.is_inf_or_nan()) {
@@ -97,11 +97,11 @@ LLVM_LIBC_FUNCTION(float, log2f, (float x)) {
 
   float u = xbits.get_val();
   double v;
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   v = static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.
 #else
   v = fputil::multiply_add(static_cast<double>(u), RD[index], -1.0); // Exact
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
   double extra_factor = static_cast<double>(m) + LOG2_R[index];
 

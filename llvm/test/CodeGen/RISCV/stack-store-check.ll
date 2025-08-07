@@ -266,13 +266,13 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    lw a4, 156(sp)
 ; CHECK-NEXT:    lw a5, 160(sp)
 ; CHECK-NEXT:    lw a6, 164(sp)
-; CHECK-NEXT:    lui a0, 786400
+; CHECK-NEXT:    lui a2, 786400
+; CHECK-NEXT:    addi a0, sp, 104
+; CHECK-NEXT:    addi a1, sp, 88
 ; CHECK-NEXT:    sw zero, 72(sp)
 ; CHECK-NEXT:    sw zero, 76(sp)
 ; CHECK-NEXT:    sw zero, 80(sp)
-; CHECK-NEXT:    sw a0, 84(sp)
-; CHECK-NEXT:    addi a0, sp, 104
-; CHECK-NEXT:    addi a1, sp, 88
+; CHECK-NEXT:    sw a2, 84(sp)
 ; CHECK-NEXT:    addi a2, sp, 72
 ; CHECK-NEXT:    sw a3, 88(sp)
 ; CHECK-NEXT:    sw a4, 92(sp)

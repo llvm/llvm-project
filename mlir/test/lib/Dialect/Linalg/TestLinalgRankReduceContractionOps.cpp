@@ -49,10 +49,8 @@ struct TestLinalgRankReduceContractionOps
 
     RewritePatternSet patterns(context);
     linalg::populateContractionOpRankReducingPatterns(patterns);
-    if (failed(applyPatternsAndFoldGreedily(funcOp.getBody(),
-                                            std::move(patterns))))
+    if (failed(applyPatternsGreedily(funcOp.getBody(), std::move(patterns))))
       return signalPassFailure();
-    return;
   }
 };
 

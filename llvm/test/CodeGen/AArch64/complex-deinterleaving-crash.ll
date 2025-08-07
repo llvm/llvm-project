@@ -29,3 +29,92 @@ bb193:                                            ; preds = %bb173
   store volatile i32 0, ptr null, align 4
   unreachable
 }
+
+; Check that the deinterleaving pass doesn't try to transform isolated patterns without a relevant deinterleaving pattern
+define i32 @check_deinterleaving_has_deinterleave(ptr %a) {
+; CHECK-LABEL: check_deinterleaving_has_deinterleave:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    add x8, x0, #16
+; CHECK-NEXT:    movi v3.2d, #0000000000000000
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    mov w9, #32 // =0x20
+; CHECK-NEXT:    movi v4.2d, #0000000000000000
+; CHECK-NEXT:    movi v5.2d, #0000000000000000
+; CHECK-NEXT:    movi v7.2d, #0000000000000000
+; CHECK-NEXT:    movi v6.2d, #0000000000000000
+; CHECK-NEXT:    movi v16.2d, #0000000000000000
+; CHECK-NEXT:  .LBB1_1: // %vector.body
+; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    ldp q17, q18, [x8, #-16]
+; CHECK-NEXT:    subs x9, x9, #32
+; CHECK-NEXT:    add x8, x8, #32
+; CHECK-NEXT:    cmeq v17.16b, v17.16b, #0
+; CHECK-NEXT:    cmeq v18.16b, v18.16b, #0
+; CHECK-NEXT:    ushll2 v19.8h, v17.16b, #0
+; CHECK-NEXT:    ushll v17.8h, v17.8b, #0
+; CHECK-NEXT:    ushll2 v20.8h, v18.16b, #0
+; CHECK-NEXT:    ushll v18.8h, v18.8b, #0
+; CHECK-NEXT:    ushll v21.4s, v19.4h, #0
+; CHECK-NEXT:    ushll2 v19.4s, v19.8h, #0
+; CHECK-NEXT:    ushll v22.4s, v17.4h, #0
+; CHECK-NEXT:    ushll2 v17.4s, v17.8h, #0
+; CHECK-NEXT:    ushll2 v23.4s, v20.8h, #0
+; CHECK-NEXT:    ushll v24.4s, v18.4h, #0
+; CHECK-NEXT:    ushll2 v18.4s, v18.8h, #0
+; CHECK-NEXT:    ushll v20.4s, v20.4h, #0
+; CHECK-NEXT:    and v21.16b, v21.16b, v1.16b
+; CHECK-NEXT:    and v19.16b, v19.16b, v1.16b
+; CHECK-NEXT:    and v22.16b, v22.16b, v1.16b
+; CHECK-NEXT:    and v17.16b, v17.16b, v1.16b
+; CHECK-NEXT:    and v23.16b, v23.16b, v1.16b
+; CHECK-NEXT:    and v24.16b, v24.16b, v1.16b
+; CHECK-NEXT:    and v18.16b, v18.16b, v1.16b
+; CHECK-NEXT:    and v20.16b, v20.16b, v1.16b
+; CHECK-NEXT:    add v4.4s, v4.4s, v19.4s
+; CHECK-NEXT:    add v2.4s, v2.4s, v21.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v22.4s
+; CHECK-NEXT:    add v3.4s, v3.4s, v17.4s
+; CHECK-NEXT:    add v16.4s, v16.4s, v23.4s
+; CHECK-NEXT:    add v5.4s, v5.4s, v24.4s
+; CHECK-NEXT:    add v6.4s, v6.4s, v20.4s
+; CHECK-NEXT:    add v7.4s, v7.4s, v18.4s
+; CHECK-NEXT:    b.ne .LBB1_1
+; CHECK-NEXT:  // %bb.2: // %middle.block
+; CHECK-NEXT:    add v1.4s, v7.4s, v3.4s
+; CHECK-NEXT:    add v3.4s, v16.4s, v4.4s
+; CHECK-NEXT:    add v0.4s, v5.4s, v0.4s
+; CHECK-NEXT:    add v2.4s, v6.4s, v2.4s
+; CHECK-NEXT:    add v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    addv s0, v0.4s
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+    br label %vector.body
+
+vector.body:                                      ; preds = %vector.body, %entry
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.phi = phi <16 x i32> [ zeroinitializer, %entry ], [ %9, %vector.body ]
+  %vec.phi50 = phi <16 x i32> [ zeroinitializer, %entry ], [ %10, %vector.body ]
+  %next.gep = getelementptr i8, ptr %a, i64 %index
+  %4 = getelementptr i8, ptr %next.gep, i64 16
+  %wide.load = load <16 x i8>, ptr %next.gep, align 1
+  %wide.load51 = load <16 x i8>, ptr %4, align 1
+  %5 = icmp eq <16 x i8> %wide.load, zeroinitializer
+  %6 = icmp eq <16 x i8> %wide.load51, zeroinitializer
+  %7 = zext <16 x i1> %5 to <16 x i32>
+  %8 = zext <16 x i1> %6 to <16 x i32>
+  %9 = add <16 x i32> %vec.phi, %7
+  %10 = add <16 x i32> %vec.phi50, %8
+  %index.next = add nuw i64 %index, 32
+  %11 = icmp eq i64 %index.next, 32
+  br i1 %11, label %middle.block, label %vector.body
+
+middle.block:
+  %bin.rdx = add <16 x i32> %10, %9
+  %12 = tail call i32 @llvm.vector.reduce.add.v16i32(<16 x i32> %bin.rdx)
+  ret i32 %12
+}

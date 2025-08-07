@@ -3,14 +3,14 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @fn1() {
+define void @fn1(i1 %arg) {
 ; CHECK-LABEL: @fn1(
 entry:
   br label %for.cond.loopexit
 
 for.cond.loopexit:                                ; preds = %for.inc7, %for.cond.loopexit, %entry
   %c.1.lcssa = phi i32 [ %inc8, %for.inc7 ], [ 0, %for.cond.loopexit ], [ 0, %entry ]
-  br i1 undef, label %for.cond.loopexit, label %for.cond4.preheader
+  br i1 %arg, label %for.cond.loopexit, label %for.cond4.preheader
 
 for.cond4.preheader:                              ; preds = %for.inc7, %for.cond.loopexit
   %c.17 = phi i32 [ %inc8, %for.inc7 ], [ 0, %for.cond.loopexit ]

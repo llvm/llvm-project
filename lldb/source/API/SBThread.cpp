@@ -172,6 +172,7 @@ size_t SBThread::GetStopReasonDataCount() {
         case eStopReasonInstrumentation:
         case eStopReasonProcessorTrace:
         case eStopReasonVForkDone:
+        case eStopReasonHistoryBoundary:
           // There is no data for these stop reasons.
           return 0;
 
@@ -233,6 +234,7 @@ uint64_t SBThread::GetStopReasonDataAtIndex(uint32_t idx) {
         case eStopReasonInstrumentation:
         case eStopReasonProcessorTrace:
         case eStopReasonVForkDone:
+        case eStopReasonHistoryBoundary:
           // There is no data for these stop reasons.
           return 0;
 
@@ -493,21 +495,14 @@ bool SBThread::GetInfoItemByPathAsString(const char *path, SBStream &strm) {
   return success;
 }
 
-SBError SBThread::ResumeNewPlan(ExecutionContext &exe_ctx,
-                                ThreadPlan *new_plan) {
-  SBError sb_error;
-
+static Status ResumeNewPlan(ExecutionContext &exe_ctx, ThreadPlan *new_plan) {
   Process *process = exe_ctx.GetProcessPtr();
-  if (!process) {
-    sb_error = Status::FromErrorString("No process in SBThread::ResumeNewPlan");
-    return sb_error;
-  }
+  if (!process)
+    return Status::FromErrorString("No process in SBThread::ResumeNewPlan");
 
   Thread *thread = exe_ctx.GetThreadPtr();
-  if (!thread) {
-    sb_error = Status::FromErrorString("No thread in SBThread::ResumeNewPlan");
-    return sb_error;
-  }
+  if (!thread)
+    return Status::FromErrorString("No thread in SBThread::ResumeNewPlan");
 
   // User level plans should be Controlling Plans so they can be interrupted,
   // other plans executed, and then a "continue" will resume the plan.
@@ -520,11 +515,8 @@ SBError SBThread::ResumeNewPlan(ExecutionContext &exe_ctx,
   process->GetThreadList().SetSelectedThreadByID(thread->GetID());
 
   if (process->GetTarget().GetDebugger().GetAsyncExecution())
-    sb_error.ref() = process->Resume();
-  else
-    sb_error.ref() = process->ResumeSynchronous(nullptr);
-
-  return sb_error;
+    return process->Resume();
+  return process->ResumeSynchronous(nullptr);
 }
 
 void SBThread::StepOver(lldb::RunMode stop_other_threads) {
@@ -842,7 +834,6 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     // appropriate error message.
 
     bool all_in_function = true;
-    AddressRange fun_range = frame_sc.function->GetAddressRange();
 
     std::vector<addr_t> step_over_until_addrs;
     const bool abort_other_plans = false;
@@ -859,7 +850,9 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
       addr_t step_addr =
           sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
       if (step_addr != LLDB_INVALID_ADDRESS) {
-        if (fun_range.ContainsLoadAddress(step_addr, target))
+        AddressRange unused_range;
+        if (frame_sc.function->GetRangeContainingLoadAddress(step_addr, *target,
+                                                             unused_range))
           step_over_until_addrs.push_back(step_addr);
         else
           all_in_function = false;

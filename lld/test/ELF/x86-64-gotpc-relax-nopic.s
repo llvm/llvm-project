@@ -134,7 +134,7 @@ _start:
   xorq    bar@GOTPCREL(%rip), %r8
   testq   %r15, bar@GOTPCREL(%rip)
 
-## R_X86_64_REX2_GOTPCRELX
+## R_X86_64_CODE_4_GOTPCRELX
   adcq    bar@GOTPCREL(%rip), %r16
   addq    bar@GOTPCREL(%rip), %r17
   andq    bar@GOTPCREL(%rip), %r18

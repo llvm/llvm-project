@@ -56,7 +56,7 @@ Sections:
         Flags:           [  ]
 ...
 
-# SHARED-UNALIGNED: maximum memory must be 65536-byte aligned{{$}}
+# SHARED-UNALIGNED: maximum memory must be aligned to the page size (65536 bytes)
 
 # SHARED-NO-ATOMICS: 'atomics' feature must be used in order to use shared memory
 

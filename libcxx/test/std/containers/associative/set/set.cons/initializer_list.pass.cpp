@@ -20,9 +20,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::set<int> C;
     typedef C::value_type V;
     C m = {1, 2, 3, 4, 5, 6};
@@ -35,8 +34,8 @@ int main(int, char**)
     assert(*++i == V(4));
     assert(*++i == V(5));
     assert(*++i == V(6));
-    }
-    {
+  }
+  {
     typedef std::set<int, std::less<int>, min_allocator<int>> C;
     typedef C::value_type V;
     C m = {1, 2, 3, 4, 5, 6};
@@ -49,7 +48,7 @@ int main(int, char**)
     assert(*++i == V(4));
     assert(*++i == V(5));
     assert(*++i == V(6));
-    }
+  }
 
   return 0;
 }

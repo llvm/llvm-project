@@ -11,13 +11,14 @@
 /// code mode.
 #ifndef _WIN32
 
-#include "ModulesBuilder.h"
-#include "ScanningProjectModules.h"
 #include "Annotations.h"
 #include "CodeComplete.h"
 #include "Compiler.h"
+#include "ModulesBuilder.h"
+#include "ScanningProjectModules.h"
 #include "TestTU.h"
 #include "support/ThreadsafeFS.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
@@ -26,12 +27,41 @@
 namespace clang::clangd {
 namespace {
 
+class GlobalScanningCounterProjectModules : public ProjectModules {
+public:
+  GlobalScanningCounterProjectModules(
+      std::unique_ptr<ProjectModules> Underlying, std::atomic<unsigned> &Count)
+      : Underlying(std::move(Underlying)), Count(Count) {}
+
+  std::vector<std::string> getRequiredModules(PathRef File) override {
+    return Underlying->getRequiredModules(File);
+  }
+
+  std::string getModuleNameForSource(PathRef File) override {
+    return Underlying->getModuleNameForSource(File);
+  }
+
+  void setCommandMangler(CommandMangler Mangler) override {
+    Underlying->setCommandMangler(std::move(Mangler));
+  }
+
+  std::string getSourceForModuleName(llvm::StringRef ModuleName,
+                                     PathRef RequiredSrcFile) override {
+    Count++;
+    return Underlying->getSourceForModuleName(ModuleName, RequiredSrcFile);
+  }
+
+private:
+  std::unique_ptr<ProjectModules> Underlying;
+  std::atomic<unsigned> &Count;
+};
+
 class MockDirectoryCompilationDatabase : public MockCompilationDatabase {
 public:
   MockDirectoryCompilationDatabase(StringRef TestDir, const ThreadsafeFS &TFS)
       : MockCompilationDatabase(TestDir),
         MockedCDBPtr(std::make_shared<MockClangCompilationDatabase>(*this)),
-        TFS(TFS) {
+        TFS(TFS), GlobalScanningCount(0) {
     this->ExtraClangFlags.push_back("-std=c++20");
     this->ExtraClangFlags.push_back("-c");
   }
@@ -39,8 +69,11 @@ public:
   void addFile(llvm::StringRef Path, llvm::StringRef Contents);
 
   std::unique_ptr<ProjectModules> getProjectModules(PathRef) const override {
-    return scanningProjectModules(MockedCDBPtr, TFS);
+    return std::make_unique<GlobalScanningCounterProjectModules>(
+        scanningProjectModules(MockedCDBPtr, TFS), GlobalScanningCount);
   }
+
+  unsigned getGlobalScanningCount() const { return GlobalScanningCount; }
 
 private:
   class MockClangCompilationDatabase : public tooling::CompilationDatabase {
@@ -67,6 +100,8 @@ private:
 
   std::shared_ptr<MockClangCompilationDatabase> MockedCDBPtr;
   const ThreadsafeFS &TFS;
+
+  mutable std::atomic<unsigned> GlobalScanningCount;
 };
 
 // Add files to the working testing directory and the compilation database.
@@ -189,6 +224,39 @@ export module M;
   auto Invocation =
       buildCompilerInvocation(getInputs("M.cppm", CDB), DiagConsumer);
   EXPECT_TRUE(MInfo->canReuse(*Invocation, FS.view(TestDir)));
+}
+
+TEST_F(PrerequisiteModulesTests, ModuleWithArgumentPatch) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.ExtraClangFlags.push_back("-invalid-unknown-flag");
+
+  CDB.addFile("Dep.cppm", R"cpp(
+export module Dep;
+  )cpp");
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+import Dep;
+  )cpp");
+
+  // An invalid flag will break the module compilation and the
+  // getRequiredModules would return an empty array
+  auto ProjectModules = CDB.getProjectModules(getFullPath("M.cppm"));
+  EXPECT_TRUE(
+      ProjectModules->getRequiredModules(getFullPath("M.cppm")).empty());
+
+  // Set the mangler to filter out the invalid flag
+  ProjectModules->setCommandMangler([](tooling::CompileCommand &Command,
+                                       PathRef) {
+    auto const It = llvm::find(Command.CommandLine, "-invalid-unknown-flag");
+    Command.CommandLine.erase(It);
+  });
+
+  // And now it returns a non-empty list of required modules since the
+  // compilation succeeded
+  EXPECT_FALSE(
+      ProjectModules->getRequiredModules(getFullPath("M.cppm")).empty());
 }
 
 TEST_F(PrerequisiteModulesTests, ModuleWithDepTest) {
@@ -435,7 +503,7 @@ void func() {
                     /*Callback=*/nullptr);
   EXPECT_TRUE(Preamble);
   EXPECT_TRUE(Preamble->RequiredModules);
-  
+
   auto Result = codeComplete(getFullPath("Use.cpp"), Test.point(),
                              Preamble.get(), Use, {});
   EXPECT_FALSE(Result.Completions.empty());
@@ -474,12 +542,106 @@ void func() {
                     /*Callback=*/nullptr);
   EXPECT_TRUE(Preamble);
   EXPECT_TRUE(Preamble->RequiredModules);
-  
-  auto Result = signatureHelp(getFullPath("Use.cpp"), Test.point(),
-                              *Preamble.get(), Use, MarkupKind::PlainText);
+
+  auto Result = signatureHelp(getFullPath("Use.cpp"), Test.point(), *Preamble,
+                              Use, MarkupKind::PlainText);
   EXPECT_FALSE(Result.signatures.empty());
   EXPECT_EQ(Result.signatures[0].label, "printA(int a) -> void");
   EXPECT_EQ(Result.signatures[0].parameters[0].labelString, "int a");
+}
+
+TEST_F(PrerequisiteModulesTests, ReusablePrerequisiteModulesTest) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export int M = 43;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+export int A = 43 + M;
+  )cpp");
+  CDB.addFile("B.cppm", R"cpp(
+export module B;
+import M;
+export int B = 44 + M;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  auto AInfo = Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  EXPECT_TRUE(AInfo);
+  auto BInfo = Builder.buildPrerequisiteModulesFor(getFullPath("B.cppm"), FS);
+  EXPECT_TRUE(BInfo);
+  HeaderSearchOptions HSOptsA(TestDir);
+  HeaderSearchOptions HSOptsB(TestDir);
+  AInfo->adjustHeaderSearchOptions(HSOptsA);
+  BInfo->adjustHeaderSearchOptions(HSOptsB);
+
+  EXPECT_FALSE(HSOptsA.PrebuiltModuleFiles.empty());
+  EXPECT_FALSE(HSOptsB.PrebuiltModuleFiles.empty());
+
+  // Check that we're reusing the module files.
+  EXPECT_EQ(HSOptsA.PrebuiltModuleFiles, HSOptsB.PrebuiltModuleFiles);
+
+  // Update M.cppm to check if the modules builder can update correctly.
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export constexpr int M = 43;
+  )cpp");
+
+  ParseInputs AUse = getInputs("A.cppm", CDB);
+  AUse.ModulesManager = &Builder;
+  std::unique_ptr<CompilerInvocation> AInvocation =
+      buildCompilerInvocation(AUse, DiagConsumer);
+  EXPECT_FALSE(AInfo->canReuse(*AInvocation, FS.view(TestDir)));
+
+  ParseInputs BUse = getInputs("B.cppm", CDB);
+  AUse.ModulesManager = &Builder;
+  std::unique_ptr<CompilerInvocation> BInvocation =
+      buildCompilerInvocation(BUse, DiagConsumer);
+  EXPECT_FALSE(BInfo->canReuse(*BInvocation, FS.view(TestDir)));
+
+  auto NewAInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  auto NewBInfo =
+      Builder.buildPrerequisiteModulesFor(getFullPath("B.cppm"), FS);
+  EXPECT_TRUE(NewAInfo);
+  EXPECT_TRUE(NewBInfo);
+  HeaderSearchOptions NewHSOptsA(TestDir);
+  HeaderSearchOptions NewHSOptsB(TestDir);
+  NewAInfo->adjustHeaderSearchOptions(NewHSOptsA);
+  NewBInfo->adjustHeaderSearchOptions(NewHSOptsB);
+
+  EXPECT_FALSE(NewHSOptsA.PrebuiltModuleFiles.empty());
+  EXPECT_FALSE(NewHSOptsB.PrebuiltModuleFiles.empty());
+
+  EXPECT_EQ(NewHSOptsA.PrebuiltModuleFiles, NewHSOptsB.PrebuiltModuleFiles);
+  // Check that we didn't reuse the old and stale module files.
+  EXPECT_NE(NewHSOptsA.PrebuiltModuleFiles, HSOptsA.PrebuiltModuleFiles);
+}
+
+TEST_F(PrerequisiteModulesTests, ScanningCacheTest) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+  )cpp");
+  CDB.addFile("A.cppm", R"cpp(
+export module A;
+import M;
+  )cpp");
+  CDB.addFile("B.cppm", R"cpp(
+export module B;
+import M;
+  )cpp");
+
+  ModulesBuilder Builder(CDB);
+
+  Builder.buildPrerequisiteModulesFor(getFullPath("A.cppm"), FS);
+  Builder.buildPrerequisiteModulesFor(getFullPath("B.cppm"), FS);
+  EXPECT_EQ(CDB.getGlobalScanningCount(), 1u);
 }
 
 } // namespace

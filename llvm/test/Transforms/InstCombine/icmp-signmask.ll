@@ -45,7 +45,7 @@ define <2 x i1> @cmp_x_and_negp2_with_ne_or_z(<2 x i8> %x) {
 define <2 x i1> @cmp_x_and_negp2_with_ne_fail_not_p2(<2 x i8> %x) {
 ; CHECK-LABEL: @cmp_x_and_negp2_with_ne_fail_not_p2(
 ; CHECK-NEXT:    [[ANDX:%.*]] = and <2 x i8> [[X:%.*]], <i8 -8, i8 -15>
-; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[ANDX]], <i8 -128, i8 -128>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[ANDX]], splat (i8 -128)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %andx = and <2 x i8> %x, <i8 -8, i8 -15>

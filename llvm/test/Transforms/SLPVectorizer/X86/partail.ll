@@ -2,12 +2,12 @@
 ; RUN: opt -passes=slp-vectorizer -S -mtriple=x86_64-unknown-linux-gnu -mcpu=bdver2 < %s | FileCheck %s
 
 ; Function Attrs: nounwind uwtable
-define void @get_block(i32 %y_pos) local_unnamed_addr #0 {
+define void @get_block(i32 %y_pos, i1 %arg) local_unnamed_addr #0 {
 ; CHECK-LABEL: @get_block(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LAND_LHS_TRUE:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    br i1 undef, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br i1 %arg, label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end:
@@ -43,7 +43,7 @@ entry:
   br label %land.lhs.true
 
 land.lhs.true:                                    ; preds = %entry
-  br i1 undef, label %if.then, label %if.end
+  br i1 %arg, label %if.then, label %if.end
 
 if.then:                                          ; preds = %land.lhs.true
   unreachable

@@ -108,14 +108,15 @@ def ClauseRequiresAttr : OpenMP_EnumAttr<ClauseRequires, "clause_requires">;
 def ClauseTaskDependIn : I32EnumAttrCase<"taskdependin", 0>;
 def ClauseTaskDependOut : I32EnumAttrCase<"taskdependout", 1>;
 def ClauseTaskDependInOut : I32EnumAttrCase<"taskdependinout", 2>;
+def ClauseTaskDependMutexInOutSet
+    : I32EnumAttrCase<"taskdependmutexinoutset", 3>;
+def ClauseTaskDependInOutSet : I32EnumAttrCase<"taskdependinoutset", 4>;
 
-def ClauseTaskDepend : OpenMP_I32EnumAttr<
-    "ClauseTaskDepend",
-    "depend clause in a target or task construct", [
-      ClauseTaskDependIn,
-      ClauseTaskDependOut,
-      ClauseTaskDependInOut
-    ]>;
+def ClauseTaskDepend
+    : OpenMP_I32EnumAttr<
+          "ClauseTaskDepend", "depend clause in a target or task construct",
+          [ClauseTaskDependIn, ClauseTaskDependOut, ClauseTaskDependInOut,
+           ClauseTaskDependMutexInOutSet, ClauseTaskDependInOutSet]>;
 
 def ClauseTaskDependAttr : OpenMP_EnumAttr<ClauseTaskDepend,
                                            "clause_task_depend"> {
@@ -179,6 +180,27 @@ def OrderModifierAttr : EnumAttr<OpenMP_Dialect, OrderModifier,
                                     "order_mod">;
 
 //===----------------------------------------------------------------------===//
+// reduction_modifier enum.
+//===----------------------------------------------------------------------===//
+
+def ReductionModifierDefault : I32EnumAttrCase<"defaultmod", 0>;
+def ReductionModifierInscan : I32EnumAttrCase<"inscan", 1>;
+def ReductionModifierTask : I32EnumAttrCase<"task", 2>;
+
+def ReductionModifier : OpenMP_I32EnumAttr<
+    "ReductionModifier",
+    "reduction modifier", [
+      ReductionModifierDefault,
+      ReductionModifierInscan,
+      ReductionModifierTask
+    ]>;
+
+def ReductionModifierAttr : OpenMP_EnumAttr<ReductionModifier,
+                                            "reduction_modifier"> {
+  let assemblyFormat = "`(` $value `)`";
+}
+
+//===----------------------------------------------------------------------===//
 // sched_mod enum.
 //===----------------------------------------------------------------------===//
 
@@ -199,6 +221,24 @@ def ScheduleModifier : OpenMP_I32EnumAttr<
     ]>;
 
 def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
+
+//===----------------------------------------------------------------------===//
+// target_region_flags enum.
+//===----------------------------------------------------------------------===//
+
+def TargetRegionFlagsNone : I32BitEnumAttrCaseNone<"none">;
+def TargetRegionFlagsGeneric : I32BitEnumAttrCaseBit<"generic", 0>;
+def TargetRegionFlagsSpmd : I32BitEnumAttrCaseBit<"spmd", 1>;
+def TargetRegionFlagsTripCount : I32BitEnumAttrCaseBit<"trip_count", 2>;
+
+def TargetRegionFlags : OpenMP_BitEnumAttr<
+    "TargetRegionFlags",
+    "target region property flags", [
+      TargetRegionFlagsNone,
+      TargetRegionFlagsGeneric,
+      TargetRegionFlagsSpmd,
+      TargetRegionFlagsTripCount
+    ]>;
 
 //===----------------------------------------------------------------------===//
 // variable_capture_kind enum.
@@ -223,4 +263,34 @@ def VariableCaptureKindAttr : OpenMP_EnumAttr<VariableCaptureKind,
   let assemblyFormat = "`(` $value `)`";
 }
 
+
+//===----------------------------------------------------------------------===//
+// allocator_handle enum.
+//===----------------------------------------------------------------------===//
+
+def OpenMP_AllocatorHandleNullAllocator : I32EnumAttrCase<"omp_null_allocator", 0>;
+def OpenMP_AllocatorHandleDefaultMemAlloc : I32EnumAttrCase<"omp_default_mem_alloc", 1>;
+def OpenMP_AllocatorHandleLargeCapMemAlloc : I32EnumAttrCase<"omp_large_cap_mem_alloc", 2>;
+def OpenMP_AllocatorHandleConstMemAlloc : I32EnumAttrCase<"omp_const_mem_alloc", 3>;
+def OpenMP_AllocatorHandleHighBwMemAlloc : I32EnumAttrCase<"omp_high_bw_mem_alloc", 4>;
+def OpenMP_AllocatorHandleLowLatMemAlloc : I32EnumAttrCase<"omp_low_lat_mem_alloc", 5>;
+def OpenMP_AllocatorHandleCgroupMemAlloc : I32EnumAttrCase<"omp_cgroup_mem_alloc", 6>;
+def OpenMP_AllocatorHandlePteamMemAlloc : I32EnumAttrCase<"omp_pteam_mem_alloc", 7>;
+def OpenMP_AllocatorHandlethreadMemAlloc : I32EnumAttrCase<"omp_thread_mem_alloc", 8>;
+
+def AllocatorHandle : OpenMP_I32EnumAttr<
+    "AllocatorHandle",
+    "OpenMP allocator_handle", [
+      OpenMP_AllocatorHandleNullAllocator,
+      OpenMP_AllocatorHandleDefaultMemAlloc,
+      OpenMP_AllocatorHandleLargeCapMemAlloc,
+      OpenMP_AllocatorHandleConstMemAlloc,
+      OpenMP_AllocatorHandleHighBwMemAlloc,
+      OpenMP_AllocatorHandleLowLatMemAlloc,
+      OpenMP_AllocatorHandleCgroupMemAlloc,
+      OpenMP_AllocatorHandlePteamMemAlloc,
+      OpenMP_AllocatorHandlethreadMemAlloc
+    ]>;
+
+def AllocatorHandleAttr : OpenMP_EnumAttr<AllocatorHandle, "allocator_handle">;
 #endif // OPENMP_ENUMS

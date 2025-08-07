@@ -8,13 +8,64 @@
 ## (4) early calls to a dylib stub use a thunk, and later calls the stub
 ##     directly
 ## (5) Thunks are created for all sections in the text segment with branches.
+## (6) Thunks are in the linker map file.
 ## Notes:
 ## 0x4000000 = 64 Mi = half the magnitude of the forward-branch range
 
 # RUN: rm -rf %t; mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t/input.o
-# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -o %t/thunk %t/input.o
+## Use --icf=safe_thunks to test that branch extension algo is compatible
+## with safe_thunks ICF.
+# RUN: %lld -arch arm64 -dead_strip -lSystem -U _extern_sym -map %t/thunk.map -o %t/thunk %t/input.o --icf=safe_thunks
 # RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t/thunk | FileCheck %s
+# RUN: llvm-objdump --macho --section-headers %t/thunk > %t/headers.txt
+# RUN: llvm-otool -vs __DATA __objc_selrefs %t/thunk >> %t/headers.txt
+# RUN: llvm-otool -vs __TEXT __objc_stubs %t/thunk >> %t/headers.txt
+# RUN: FileCheck %s --check-prefix=OBJC < %t/headers.txt
+
+# RUN: FileCheck %s --input-file %t/thunk.map --check-prefix=MAP
+
+# OBJC: Sections:
+# OBJC: __text
+# OBJC-NEXT: __lcxx_override
+# OBJC-NEXT: __stubs
+# OBJC-NEXT: __stub_helper
+# OBJC-NEXT: __objc_stubs
+
+# OBJC: Contents of (__DATA,__objc_selrefs) section
+# OBJC-NEXT: {{[0-9a-f]*}}  __TEXT:__objc_methname:foo
+# OBJC-NEXT: {{[0-9a-f]*}}  __TEXT:__objc_methname:bar
+
+# OBJC: Contents of (__TEXT,__objc_stubs) section
+# OBJC: _objc_msgSend$bar:
+# OBJC: _objc_msgSend$foo:
+
+# MAP:      0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _a
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _g.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _h.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} ___nan.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _g
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _a.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _b.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _h
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _main
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_high_addr
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _c.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _d.thunk.1
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _e.thunk.1
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _f.thunk.1
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _fold_func_low_addr.thunk.0
+# MAP-NEXT: 0x{{[[:xdigit:]]+}} {{.*}} _z
+
 
 # CHECK: Disassembly of section __TEXT,__text:
 
@@ -173,8 +224,37 @@
 
 # CHECK: [[#%x, NAN_PAGE + NAN_OFFSET]] <__stubs>:
 
-.subsections_via_symbols
+.section  __TEXT,__objc_methname,cstring_literals
+lselref1:
+  .asciz  "foo"
+lselref2:
+  .asciz  "bar"
+
+.section  __DATA,__objc_selrefs,literal_pointers,no_dead_strip
+.p2align  3
+.quad lselref1
+.quad lselref2
+
 .text
+.globl _objc_msgSend
+_objc_msgSend:
+  ret
+
+.subsections_via_symbols
+
+.addrsig
+.addrsig_sym _fold_func_low_addr
+.addrsig_sym _fold_func_high_addr
+
+.text
+
+.globl _fold_func_low_addr
+.p2align 2
+_fold_func_low_addr:
+  add x0, x0, x0
+  add x1, x0, x1
+  add x2, x0, x2
+  ret
 
 .globl _a
 .p2align 2
@@ -303,11 +383,29 @@ _main:
   bl _f
   bl _g
   bl _h
+  bl _fold_func_low_addr
+  bl _fold_func_high_addr
   bl ___nan
+  bl _objc_msgSend$foo
+  bl _objc_msgSend$bar
   ret
 
+.globl _fold_func_high_addr
+.p2align 2
+_fold_func_high_addr:
+  add x0, x0, x0
+  add x1, x0, x1
+  add x2, x0, x2
+  ret
+
+
 .section __TEXT,__cstring
-  .space 0x4000000
+  # The .space below has to be composed of non-zero characters. Otherwise, the
+  # linker will create a symbol for every '0' in the section, leading to
+  # dramatic memory usage and a huge linker map file
+  .space 0x4000000, 'A'
+  .byte 0
+
 
 .section __TEXT,__lcxx_override,regular,pure_instructions
 

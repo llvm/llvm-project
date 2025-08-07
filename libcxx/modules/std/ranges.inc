@@ -125,18 +125,18 @@ export namespace std {
     } // namespace views
 #endif // _LIBCPP_STD_VER >= 23
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
     // [range.istream], istream view
     using std::ranges::basic_istream_view;
     using std::ranges::istream_view;
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
     using std::ranges::wistream_view;
 #  endif
 
     namespace views {
       using std::ranges::views::istream;
     }
-#endif // _LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 
     // Note: This declaration not in the synopsis or explicitly in the wording.
     // However it is needed for the range adaptors.
@@ -223,13 +223,16 @@ export namespace std {
     namespace views {
       using std::ranges::views::join;
     } // namespace views
-#if 0
+
+#if _LIBCPP_STD_VER >= 23
+    // [range.join.with]
     using std::ranges::join_with_view;
 
     namespace views {
       using std::ranges::views::join_with;
     } // namespace views
-#endif
+#endif // _LIBCPP_STD_VER >= 23
+
     using std::ranges::lazy_split_view;
 
     // [range.split], split view
@@ -286,16 +289,16 @@ export namespace std {
     namespace views {
       using std::ranges::views::zip;
     } // namespace views
-#endif // _LIBCPP_STD_VER >= 23
 
-#if 0
     // [range.zip.transform], zip transform view
     using std::ranges::zip_transform_view;
 
     namespace views {
       using std::ranges::views::zip_transform;
     }
+#endif // _LIBCPP_STD_VER >= 23
 
+#if 0
     using std::ranges::adjacent_view;
 
     namespace views {

@@ -383,26 +383,22 @@ TEST(KnownBitsTest, BinaryExhaustive) {
       "sadd_sat", KnownBits::sadd_sat,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         return N1.sadd_sat(N2);
-      },
-      /*CheckOptimality=*/false);
+      });
   testBinaryOpExhaustive(
       "uadd_sat", KnownBits::uadd_sat,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         return N1.uadd_sat(N2);
-      },
-      /*CheckOptimality=*/false);
+      });
   testBinaryOpExhaustive(
       "ssub_sat", KnownBits::ssub_sat,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         return N1.ssub_sat(N2);
-      },
-      /*CheckOptimality=*/false);
+      });
   testBinaryOpExhaustive(
       "usub_sat", KnownBits::usub_sat,
       [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
         return N1.usub_sat(N2);
-      },
-      /*CheckOptimality=*/false);
+      });
   testBinaryOpExhaustive(
       "shl",
       [](const KnownBits &Known1, const KnownBits &Known2) {

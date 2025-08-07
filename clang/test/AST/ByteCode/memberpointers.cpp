@@ -226,3 +226,44 @@ namespace IndirectFields {
   constexpr I i{12};
   static_assert(ReadField<I, &I::a>(i) == 12, "");
 }
+
+namespace CallExprTypeMismatch {
+  /// The call expression's getType() returns just S, not S&.
+  struct S {
+    constexpr S(int i_) : i(i_) {}
+    constexpr const S& identity() const { return *this; }
+    int i;
+  };
+
+  template<typename T, typename U>
+  constexpr void Call(T t, U u) {
+    ((&u)->*t)();
+  }
+
+  constexpr bool test() {
+    const S s{12};
+
+    Call(&S::identity, s);
+
+    return true;
+  }
+  static_assert(test(), "");
+}
+
+namespace CastMemberPtrPtrFailed{
+  struct S {
+    constexpr S() {}
+    constexpr int f() const;
+    constexpr int g() const;
+  };
+  struct T : S {
+    constexpr T(int n) : S(), n(n) {}
+    int n;
+  };
+
+  constexpr int S::g() const {
+    return this->*(int(S::*))&T::n; // both-note {{subexpression}}
+  }
+  static_assert(S().g(), ""); // both-error {{constant expression}} \
+                              // both-note {{in call to 'S().g()'}}
+}

@@ -14,10 +14,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 DumpValueObjectOptions::DumpValueObjectOptions()
-    : m_summary_sp(), m_root_valobj_name(),
-      m_max_ptr_depth(PointerDepth{PointerDepth::Mode::Default, 0}),
-      m_decl_printing_helper(), m_child_printing_decider(),
-      m_pointer_as_array(), m_use_synthetic(true),
+    : m_summary_sp(), m_root_valobj_name(), m_decl_printing_helper(),
+      m_child_printing_decider(), m_pointer_as_array(), m_use_synthetic(true),
       m_scope_already_checked(false), m_flat_output(false), m_ignore_cap(false),
       m_show_types(false), m_show_location(false), m_use_objc(false),
       m_hide_root_type(false), m_hide_root_name(false), m_hide_name(false),
@@ -33,8 +31,8 @@ DumpValueObjectOptions::DumpValueObjectOptions(ValueObject &valobj)
 }
 
 DumpValueObjectOptions &
-DumpValueObjectOptions::SetMaximumPointerDepth(PointerDepth depth) {
-  m_max_ptr_depth = depth;
+DumpValueObjectOptions::SetMaximumPointerDepth(uint32_t depth) {
+  m_max_ptr_depth = {depth};
   return *this;
 }
 
@@ -198,6 +196,12 @@ DumpValueObjectOptions::SetAllowOnelinerMode(bool oneliner) {
 DumpValueObjectOptions &
 DumpValueObjectOptions::SetRevealEmptyAggregates(bool reveal) {
   m_reveal_empty_aggregates = reveal;
+  return *this;
+}
+
+DumpValueObjectOptions &
+DumpValueObjectOptions::SetExpandPointerTypeFlags(unsigned flags) {
+  m_expand_ptr_type_flags = flags;
   return *this;
 }
 

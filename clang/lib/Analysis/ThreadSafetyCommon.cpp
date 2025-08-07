@@ -28,7 +28,6 @@
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
 #include <algorithm>
 #include <cassert>
 #include <string>
@@ -67,6 +66,40 @@ static bool isIncompletePhi(const til::SExpr *E) {
   return false;
 }
 
+static constexpr std::pair<StringRef, bool> ClassifyCapabilityFallback{
+    /*Kind=*/StringRef("mutex"),
+    /*Reentrant=*/false};
+
+// Returns pair (Kind, Reentrant).
+static std::pair<StringRef, bool> classifyCapability(const TypeDecl &TD) {
+  if (const auto *CA = TD.getAttr<CapabilityAttr>())
+    return {CA->getName(), TD.hasAttr<ReentrantCapabilityAttr>()};
+
+  return ClassifyCapabilityFallback;
+}
+
+// Returns pair (Kind, Reentrant).
+static std::pair<StringRef, bool> classifyCapability(QualType QT) {
+  // We need to look at the declaration of the type of the value to determine
+  // which it is. The type should either be a record or a typedef, or a pointer
+  // or reference thereof.
+  if (const auto *RT = QT->getAs<RecordType>()) {
+    if (const auto *RD = RT->getDecl())
+      return classifyCapability(*RD);
+  } else if (const auto *TT = QT->getAs<TypedefType>()) {
+    if (const auto *TD = TT->getDecl())
+      return classifyCapability(*TD);
+  } else if (QT->isPointerOrReferenceType())
+    return classifyCapability(QT->getPointeeType());
+
+  return ClassifyCapabilityFallback;
+}
+
+CapabilityExpr::CapabilityExpr(const til::SExpr *E, QualType QT, bool Neg) {
+  const auto &[Kind, Reentrant] = classifyCapability(QT);
+  *this = CapabilityExpr(E, Kind, Neg, Reentrant);
+}
+
 using CallingContext = SExprBuilder::CallingContext;
 
 til::SExpr *SExprBuilder::lookupStmt(const Stmt *S) { return SMap.lookup(S); }
@@ -79,28 +112,6 @@ til::SCFG *SExprBuilder::buildCFG(CFGWalker &Walker) {
 static bool isCalleeArrow(const Expr *E) {
   const auto *ME = dyn_cast<MemberExpr>(E->IgnoreParenCasts());
   return ME ? ME->isArrow() : false;
-}
-
-static StringRef ClassifyDiagnostic(const CapabilityAttr *A) {
-  return A->getName();
-}
-
-static StringRef ClassifyDiagnostic(QualType VDT) {
-  // We need to look at the declaration of the type of the value to determine
-  // which it is. The type should either be a record or a typedef, or a pointer
-  // or reference thereof.
-  if (const auto *RT = VDT->getAs<RecordType>()) {
-    if (const auto *RD = RT->getDecl())
-      if (const auto *CA = RD->getAttr<CapabilityAttr>())
-        return ClassifyDiagnostic(CA);
-  } else if (const auto *TT = VDT->getAs<TypedefType>()) {
-    if (const auto *TD = TT->getDecl())
-      if (const auto *CA = TD->getAttr<CapabilityAttr>())
-        return ClassifyDiagnostic(CA);
-  } else if (VDT->isPointerOrReferenceType())
-    return ClassifyDiagnostic(VDT->getPointeeType());
-
-  return "mutex";
 }
 
 /// Translate a clang expression in an attribute to a til::SExpr.
@@ -135,13 +146,29 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     Ctx.NumArgs   = CE->getNumArgs();
     Ctx.FunArgs   = CE->getArgs();
   } else if (const auto *CE = dyn_cast<CallExpr>(DeclExp)) {
-    Ctx.NumArgs = CE->getNumArgs();
-    Ctx.FunArgs = CE->getArgs();
+    // Calls to operators that are members need to be treated like member calls.
+    if (isa<CXXOperatorCallExpr>(CE) && isa<CXXMethodDecl>(D)) {
+      Ctx.SelfArg = CE->getArg(0);
+      Ctx.SelfArrow = false;
+      Ctx.NumArgs = CE->getNumArgs() - 1;
+      Ctx.FunArgs = CE->getArgs() + 1;
+    } else {
+      Ctx.NumArgs = CE->getNumArgs();
+      Ctx.FunArgs = CE->getArgs();
+    }
   } else if (const auto *CE = dyn_cast<CXXConstructExpr>(DeclExp)) {
     Ctx.SelfArg = nullptr;  // Will be set below
     Ctx.NumArgs = CE->getNumArgs();
     Ctx.FunArgs = CE->getArgs();
   }
+
+  // Usually we want to substitute the self-argument for "this", but lambdas
+  // are an exception: "this" on or in a lambda call operator doesn't refer
+  // to the lambda, but to captured "this" in the context it was created in.
+  // This can happen for operator calls and member calls, so fix it up here.
+  if (const auto *CMD = dyn_cast<CXXMethodDecl>(D))
+    if (CMD->getParent()->isLambda())
+      Ctx.SelfArg = nullptr;
 
   if (Self) {
     assert(!Ctx.SelfArg && "Ambiguous self argument");
@@ -154,9 +181,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     // If the attribute has no arguments, then assume the argument is "this".
     if (!AttrExp)
       return CapabilityExpr(
-          Self,
-          ClassifyDiagnostic(
-              cast<CXXMethodDecl>(D)->getFunctionObjectParameterType()),
+          Self, cast<CXXMethodDecl>(D)->getFunctionObjectParameterType(),
           false);
     else  // For most attributes.
       return translateAttrExpr(AttrExp, &Ctx);
@@ -181,7 +206,7 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
       // The "*" expr is a universal lock, which essentially turns off
       // checks until it is removed from the lockset.
       return CapabilityExpr(new (Arena) til::Wildcard(), StringRef("wildcard"),
-                            false);
+                            /*Neg=*/false, /*Reentrant=*/false);
     else
       // Ignore other string literals for now.
       return CapabilityExpr();
@@ -201,31 +226,23 @@ CapabilityExpr SExprBuilder::translateAttrExpr(const Expr *AttrExp,
     }
   }
 
-  til::SExpr *E = translate(AttrExp, Ctx);
+  const til::SExpr *E = translate(AttrExp, Ctx);
 
   // Trap mutex expressions like nullptr, or 0.
   // Any literal value is nonsense.
   if (!E || isa<til::Literal>(E))
     return CapabilityExpr();
 
-  StringRef Kind = ClassifyDiagnostic(AttrExp->getType());
-
   // Hack to deal with smart pointers -- strip off top-level pointer casts.
   if (const auto *CE = dyn_cast<til::Cast>(E)) {
     if (CE->castOpcode() == til::CAST_objToPtr)
-      return CapabilityExpr(CE->expr(), Kind, Neg);
+      E = CE->expr();
   }
-  return CapabilityExpr(E, Kind, Neg);
+  return CapabilityExpr(E, AttrExp->getType(), Neg);
 }
 
 til::LiteralPtr *SExprBuilder::createVariable(const VarDecl *VD) {
   return new (Arena) til::LiteralPtr(VD);
-}
-
-std::pair<til::LiteralPtr *, StringRef>
-SExprBuilder::createThisPlaceholder(const Expr *Exp) {
-  return {new (Arena) til::LiteralPtr(nullptr),
-          ClassifyDiagnostic(Exp->getType())};
 }
 
 // Translate a clang statement or expression to a TIL expression.
@@ -320,13 +337,13 @@ til::SExpr *SExprBuilder::translateDeclRefExpr(const DeclRefExpr *DRE,
               : (cast<ObjCMethodDecl>(D)->getCanonicalDecl() == Canonical)) {
         // Substitute call arguments for references to function parameters
         if (const Expr *const *FunArgs =
-                Ctx->FunArgs.dyn_cast<const Expr *const *>()) {
+                dyn_cast<const Expr *const *>(Ctx->FunArgs)) {
           assert(I < Ctx->NumArgs);
           return translate(FunArgs[I], Ctx->Prev);
         }
 
         assert(I == 0);
-        return Ctx->FunArgs.get<til::SExpr *>();
+        return cast<til::SExpr *>(Ctx->FunArgs);
       }
     }
     // Map the param back to the param of the original function declaration

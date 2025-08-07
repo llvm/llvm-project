@@ -14,6 +14,7 @@ from __future__ import print_function
 
 import re
 import gdb
+import gdb.printing
 
 # One under-documented feature of the gdb pretty-printer API
 # is that clients can call any other member of the API
@@ -62,16 +63,6 @@ def _remove_generics(typename):
 
     match = re.match("^([^<]+)", typename)
     return match.group(1)
-
-
-def _cc_field(node):
-    """Previous versions of libcxx had inconsistent field naming naming. Handle
-    both types.
-    """
-    try:
-        return node["__value_"]["__cc_"]
-    except:
-        return node["__value_"]["__cc"]
 
 
 def _data_field(node):
@@ -446,10 +437,13 @@ class StdDequePrinter(object):
         num_emitted = 0
         current_addr = self.start_ptr
         start_index = self.first_block_start_index
+        i = 0
         while num_emitted < self.size:
             end_index = min(start_index + self.size - num_emitted, self.block_size)
             for _, elem in self._bucket_it(current_addr, start_index, end_index):
-                yield "", elem
+                key_name = "[%d]" % i
+                i += 1
+                yield key_name, elem
             num_emitted += end_index - start_index
             current_addr = gdb.Value(addr_as_long(current_addr) + _pointer_size).cast(
                 self.node_type
@@ -494,8 +488,8 @@ class StdListPrinter(object):
 
     def _list_iter(self):
         current_node = self.first_node
-        for _ in range(self.size):
-            yield "", current_node.cast(self.nodetype).dereference()["__value_"]
+        for i in range(self.size):
+            yield "[%d]" % i, current_node.cast(self.nodetype).dereference()["__value_"]
             current_node = current_node.dereference()["__next_"]
 
     def __iter__(self):
@@ -512,15 +506,14 @@ class StdQueueOrStackPrinter(object):
     """Print a std::queue or std::stack."""
 
     def __init__(self, val):
-        self.val = val
-        self.underlying = val["c"]
+        self.typename = _remove_generics(_prettify_typename(val.type))
+        self.visualizer = gdb.default_visualizer(val["c"])
 
     def to_string(self):
-        typename = _remove_generics(_prettify_typename(self.val.type))
-        return "%s wrapping" % typename
+        return "%s wrapping: %s" % (self.typename, self.visualizer.to_string())
 
     def children(self):
-        return iter([("", self.underlying)])
+        return self.visualizer.children()
 
     def display_hint(self):
         return "array"
@@ -530,19 +523,18 @@ class StdPriorityQueuePrinter(object):
     """Print a std::priority_queue."""
 
     def __init__(self, val):
-        self.val = val
-        self.underlying = val["c"]
+        self.typename = _remove_generics(_prettify_typename(val.type))
+        self.visualizer = gdb.default_visualizer(val["c"])
 
     def to_string(self):
         # TODO(tamur): It would be nice to print the top element. The technical
         # difficulty is that, the implementation refers to the underlying
         # container, which is a generic class. libstdcxx pretty printers do not
         # print the top element.
-        typename = _remove_generics(_prettify_typename(self.val.type))
-        return "%s wrapping" % typename
+        return "%s wrapping: %s" % (self.typename, self.visualizer.to_string())
 
     def children(self):
-        return iter([("", self.underlying)])
+        return self.visualizer.children()
 
     def display_hint(self):
         return "array"
@@ -622,13 +614,16 @@ class AbstractRBTreePrinter(object):
         """Traverses the binary search tree in order."""
         current = self.util.root
         skip_left_child = False
+        i = 0
         while True:
             if not skip_left_child and self.util.left_child(current):
                 current = self.util.left_child(current)
                 continue
             skip_left_child = False
             for key_value in self._get_key_value(current):
-                yield "", key_value
+                key_name = "[%d]" % i
+                i += 1
+                yield key_name, key_value
             right_child = self.util.right_child(current)
             if right_child:
                 current = right_child
@@ -669,7 +664,7 @@ class StdMapPrinter(AbstractRBTreePrinter):
         return "map"
 
     def _get_key_value(self, node):
-        key_value = _cc_field(node.cast(self.util.cast_type).dereference())
+        key_value = node.cast(self.util.cast_type).dereference()["__value_"]
         return [key_value["first"], key_value["second"]]
 
 
@@ -734,7 +729,7 @@ class MapIteratorPrinter(AbstractRBTreeIteratorPrinter):
         self._initialize(val["__i_"], _remove_generics(_prettify_typename(val.type)))
 
     def _get_node_value(self, node):
-        return _cc_field(node)
+        return node["__value_"]
 
 
 class SetIteratorPrinter(AbstractRBTreeIteratorPrinter):
@@ -784,10 +779,13 @@ class AbstractUnorderedCollectionPrinter(object):
 
     def _list_it(self, sentinel_ptr):
         next_ptr = sentinel_ptr["__next_"]
+        i = 0
         while str(next_ptr.cast(_void_pointer_type)) != "0x0":
             next_val = next_ptr.cast(self.cast_type).dereference()
             for key_value in self._get_key_value(next_val):
-                yield "", key_value
+                key_name = "[%d]" % i
+                i += 1
+                yield key_name, key_value
             next_ptr = next_val["__next_"]
 
     def to_string(self):
@@ -821,7 +819,7 @@ class StdUnorderedMapPrinter(AbstractUnorderedCollectionPrinter):
     """Print a std::unordered_(multi)map."""
 
     def _get_key_value(self, node):
-        key_value = _cc_field(node)
+        key_value = node["__value_"]
         return [key_value["first"], key_value["second"]]
 
     def display_hint(self):
@@ -851,8 +849,8 @@ class AbstractHashMapIteratorPrinter(object):
         return self if self.addr else iter(())
 
     def __iter__(self):
-        for key_value in self._get_key_value():
-            yield "", key_value
+        for i, key_value in enumerate(self._get_key_value()):
+            yield "[%d]" % i, key_value
 
 
 class StdUnorderedSetIteratorPrinter(AbstractHashMapIteratorPrinter):
@@ -877,7 +875,7 @@ class StdUnorderedMapIteratorPrinter(AbstractHashMapIteratorPrinter):
         self._initialize(val, val["__i_"]["__node_"])
 
     def _get_key_value(self):
-        key_value = _cc_field(self.node)
+        key_value = self.node["__value_"]
         return [key_value["first"], key_value["second"]]
 
     def display_hint(self):

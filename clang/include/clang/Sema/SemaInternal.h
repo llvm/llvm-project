@@ -15,6 +15,7 @@
 #define LLVM_CLANG_SEMA_SEMAINTERNAL_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -72,10 +73,10 @@ inline std::pair<unsigned, unsigned> getDepthAndIndex(const NamedDecl *ND) {
 /// Retrieve the depth and index of an unexpanded parameter pack.
 inline std::pair<unsigned, unsigned>
 getDepthAndIndex(UnexpandedParameterPack UPP) {
-  if (const auto *TTP = UPP.first.dyn_cast<const TemplateTypeParmType *>())
+  if (const auto *TTP = dyn_cast<const TemplateTypeParmType *>(UPP.first))
     return std::make_pair(TTP->getDepth(), TTP->getIndex());
 
-  return getDepthAndIndex(UPP.first.get<NamedDecl *>());
+  return getDepthAndIndex(cast<NamedDecl *>(UPP.first));
 }
 
 class TypoCorrectionConsumer : public VisibleDeclConsumer {
@@ -313,20 +314,6 @@ private:
   bool EnteringContext;
   bool SearchNamespaces;
 };
-
-inline Sema::TypoExprState::TypoExprState() {}
-
-inline Sema::TypoExprState::TypoExprState(TypoExprState &&other) noexcept {
-  *this = std::move(other);
-}
-
-inline Sema::TypoExprState &Sema::TypoExprState::
-operator=(Sema::TypoExprState &&other) noexcept {
-  Consumer = std::move(other.Consumer);
-  DiagHandler = std::move(other.DiagHandler);
-  RecoveryHandler = std::move(other.RecoveryHandler);
-  return *this;
-}
 
 } // end namespace clang
 

@@ -2,7 +2,7 @@
 ;This is a negative test. The constant value given for the constraint (J)
 ;is non-zero (3).
 ;
-; RUN: not llc -march=mipsel < %s  2> %t
+; RUN: not llc -mtriple=mipsel < %s  2> %t
 ; RUN: FileCheck --check-prefix=CHECK-ERRORS < %t %s
 
 define i32 @main() nounwind {

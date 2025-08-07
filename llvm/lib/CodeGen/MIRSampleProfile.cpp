@@ -46,8 +46,9 @@ static cl::opt<bool> ShowFSBranchProb(
     cl::desc("Print setting flow sensitive branch probabilities"));
 static cl::opt<unsigned> FSProfileDebugProbDiffThreshold(
     "fs-profile-debug-prob-diff-threshold", cl::init(10),
-    cl::desc("Only show debug message if the branch probility is greater than "
-             "this value (in percentage)."));
+    cl::desc(
+        "Only show debug message if the branch probability is greater than "
+        "this value (in percentage)."));
 
 static cl::opt<unsigned> FSProfileDebugBWThreshold(
     "fs-profile-debug-bw-threshold", cl::init(10000),

@@ -272,12 +272,12 @@ void ValistChecker::reportLeakedVALists(const RegionVector &LeakedVALists,
     if (!BT_leakedvalist) {
       // FIXME: maybe creating a new check name for this type of bug is a better
       // solution.
-      BT_leakedvalist.reset(
-          new BugType(CheckNames[CK_Unterminated].getName().empty()
-                          ? CheckNames[CK_Uninitialized]
-                          : CheckNames[CK_Unterminated],
-                      "Leaked va_list", categories::MemoryError,
-                      /*SuppressOnSink=*/true));
+      BT_leakedvalist.reset(new BugType(
+          static_cast<StringRef>(CheckNames[CK_Unterminated]).empty()
+              ? CheckNames[CK_Uninitialized]
+              : CheckNames[CK_Unterminated],
+          "Leaked va_list", categories::MemoryError,
+          /*SuppressOnSink=*/true));
     }
 
     const ExplodedNode *StartNode = getStartCallSite(N, Reg);

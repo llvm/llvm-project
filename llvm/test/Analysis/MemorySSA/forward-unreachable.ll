@@ -1,9 +1,9 @@
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>,verify<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-define void @test() {
+define void @test(i1 %arg) {
 entry:
-  br i1 undef, label %split1, label %split2
+  br i1 %arg, label %split1, label %split2
 
 split1:
   store i16 undef, ptr undef, align 2

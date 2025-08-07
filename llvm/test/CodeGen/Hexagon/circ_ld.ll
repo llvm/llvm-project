@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; Testing for these 6 variants of circular load:
 ;   Q6_circ_load_update_B(inputLR, pDelay, -1, nConvLength, 4);
 ;   Q6_circ_load_update_D(inputLR, pDelay, -1, nConvLength, 4);

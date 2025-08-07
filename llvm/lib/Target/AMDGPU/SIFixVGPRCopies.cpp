@@ -11,6 +11,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "SIFixVGPRCopies.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -22,13 +23,12 @@ using namespace llvm;
 
 namespace {
 
-class SIFixVGPRCopies : public MachineFunctionPass {
+class SIFixVGPRCopiesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-public:
-  SIFixVGPRCopies() : MachineFunctionPass(ID) {
-    initializeSIFixVGPRCopiesPass(*PassRegistry::getPassRegistry());
+  SIFixVGPRCopiesLegacy() : MachineFunctionPass(ID) {
+    initializeSIFixVGPRCopiesLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -41,15 +41,31 @@ public:
   StringRef getPassName() const override { return "SI Fix VGPR copies"; }
 };
 
+class SIFixVGPRCopies {
+public:
+  bool run(MachineFunction &MF);
+};
+
 } // End anonymous namespace.
 
-INITIALIZE_PASS(SIFixVGPRCopies, DEBUG_TYPE, "SI Fix VGPR copies", false, false)
+INITIALIZE_PASS(SIFixVGPRCopiesLegacy, DEBUG_TYPE, "SI Fix VGPR copies", false,
+                false)
 
-char SIFixVGPRCopies::ID = 0;
+char SIFixVGPRCopiesLegacy::ID = 0;
 
-char &llvm::SIFixVGPRCopiesID = SIFixVGPRCopies::ID;
+char &llvm::SIFixVGPRCopiesID = SIFixVGPRCopiesLegacy::ID;
 
-bool SIFixVGPRCopies::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses SIFixVGPRCopiesPass::run(MachineFunction &MF,
+                                           MachineFunctionAnalysisManager &) {
+  SIFixVGPRCopies().run(MF);
+  return PreservedAnalyses::all();
+}
+
+bool SIFixVGPRCopiesLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return SIFixVGPRCopies().run(MF);
+}
+
+bool SIFixVGPRCopies::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();

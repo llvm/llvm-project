@@ -33,8 +33,6 @@
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
-#include "lld/Common/CommonLinkerContext.h"
-#include "lld/Common/Strings.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
@@ -393,14 +391,14 @@ public:
 };
 
 Patch843419Section::Patch843419Section(Ctx &ctx, InputSection *p, uint64_t off)
-    : SyntheticSection(ctx, SHF_ALLOC | SHF_EXECINSTR, SHT_PROGBITS, 4,
-                       ".text.patch"),
+    : SyntheticSection(ctx, ".text.patch", SHT_PROGBITS,
+                       SHF_ALLOC | SHF_EXECINSTR, 4),
       patchee(p), patcheeOffset(off) {
   this->parent = p->getParent();
   patchSym = addSyntheticLocal(
-      ctx, saver().save("__CortexA53843419_" + utohexstr(getLDSTAddr())),
+      ctx, ctx.saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())),
       STT_FUNC, 0, getSize(), *this);
-  addSyntheticLocal(ctx, saver().save("$x"), STT_NOTYPE, 0, 0, *this);
+  addSyntheticLocal(ctx, ctx.saver.save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
 uint64_t Patch843419Section::getLDSTAddr() const {
@@ -461,12 +459,12 @@ void AArch64Err843419Patcher::init() {
     llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
       return a->value < b->value;
     });
-    mapSyms.erase(
-        std::unique(mapSyms.begin(), mapSyms.end(),
-                    [=](const Defined *a, const Defined *b) {
-                      return isCodeMapSymbol(a) == isCodeMapSymbol(b);
-                    }),
-        mapSyms.end());
+    mapSyms.erase(llvm::unique(mapSyms,
+                               [=](const Defined *a, const Defined *b) {
+                                 return isCodeMapSymbol(a) ==
+                                        isCodeMapSymbol(b);
+                               }),
+                  mapSyms.end());
     // Always start with a Code Mapping Symbol.
     if (!mapSyms.empty() && !isCodeMapSymbol(mapSyms.front()))
       mapSyms.erase(mapSyms.begin());
@@ -553,8 +551,8 @@ static void implementPatch(Ctx &ctx, uint64_t adrpAddr, uint64_t patcheeOffset,
       (relIt->type == R_AARCH64_JUMP26 || relIt->expr == R_RELAX_TLS_IE_TO_LE))
     return;
 
-  log("detected cortex-a53-843419 erratum sequence starting at " +
-      utohexstr(adrpAddr) + " in unpatched output.");
+  Log(ctx) << "detected cortex-a53-843419 erratum sequence starting at " <<
+      utohexstr(adrpAddr) << " in unpatched output.";
 
   auto *ps = make<Patch843419Section>(ctx, isec, patcheeOffset);
   patches.push_back(ps);

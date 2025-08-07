@@ -3,7 +3,7 @@
 // check conversion of complex type of different size. Both fir and mlir
 // variants are checked.
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   func.func @test1(%x : complex<f32>) -> complex<f64> {
   %1 = fir.convert %x : (complex<f32>) -> complex<f64>
   return %1 : complex<f64>

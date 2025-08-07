@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <vector>
 
@@ -32,7 +33,7 @@ class AllocaInst;
 /// Callee saved reg can also be saved to a different register rather than
 /// on the stack by setting DstReg instead of FrameIdx.
 class CalleeSavedInfo {
-  Register Reg;
+  MCRegister Reg;
   union {
     int FrameIdx;
     unsigned DstReg;
@@ -55,18 +56,19 @@ class CalleeSavedInfo {
   bool SpilledToReg = false;
 
 public:
-  explicit CalleeSavedInfo(unsigned R, int FI = 0) : Reg(R), FrameIdx(FI) {}
+  explicit CalleeSavedInfo(MCRegister R, int FI = 0) : Reg(R), FrameIdx(FI) {}
 
   // Accessors.
-  Register getReg()                        const { return Reg; }
+  MCRegister getReg()                      const { return Reg; }
   int getFrameIdx()                        const { return FrameIdx; }
-  unsigned getDstReg()                     const { return DstReg; }
+  MCRegister getDstReg()                   const { return DstReg; }
+  void setReg(MCRegister R) { Reg = R; }
   void setFrameIdx(int FI) {
     FrameIdx = FI;
     SpilledToReg = false;
   }
-  void setDstReg(Register SpillReg) {
-    DstReg = SpillReg;
+  void setDstReg(MCRegister SpillReg) {
+    DstReg = SpillReg.id();
     SpilledToReg = true;
   }
   bool isRestored()                        const { return Restored; }
@@ -590,7 +592,7 @@ public:
   void setStackSize(uint64_t Size) { StackSize = Size; }
 
   /// Estimate and return the size of the stack frame.
-  uint64_t estimateStackSize(const MachineFunction &MF) const;
+  LLVM_ABI uint64_t estimateStackSize(const MachineFunction &MF) const;
 
   /// Return the correction for frame offsets.
   int64_t getOffsetAdjustment() const { return OffsetAdjustment; }
@@ -603,7 +605,7 @@ public:
   Align getMaxAlign() const { return MaxAlignment; }
 
   /// Make sure the function is at least Align bytes aligned.
-  void ensureMaxAlignment(Align Alignment);
+  LLVM_ABI void ensureMaxAlignment(Align Alignment);
 
   /// Return true if stack realignment is forced by function attributes or if
   /// the stack alignment.
@@ -654,7 +656,7 @@ public:
   /// targets may call this to compute it earlier.
   /// If FrameSDOps is passed, the frame instructions in the MF will be
   /// inserted into it.
-  void computeMaxCallFrameSize(
+  LLVM_ABI void computeMaxCallFrameSize(
       MachineFunction &MF,
       std::vector<MachineBasicBlock::iterator> *FrameSDOps = nullptr);
 
@@ -688,13 +690,13 @@ public:
   /// All fixed objects should be created before other objects are created for
   /// efficiency. By default, fixed objects are not pointed to by LLVM IR
   /// values. This returns an index with a negative value.
-  int CreateFixedObject(uint64_t Size, int64_t SPOffset, bool IsImmutable,
-                        bool isAliased = false);
+  LLVM_ABI int CreateFixedObject(uint64_t Size, int64_t SPOffset,
+                                 bool IsImmutable, bool isAliased = false);
 
   /// Create a spill slot at a fixed location on the stack.
   /// Returns an index with a negative value.
-  int CreateFixedSpillStackObject(uint64_t Size, int64_t SPOffset,
-                                  bool IsImmutable = false);
+  LLVM_ABI int CreateFixedSpillStackObject(uint64_t Size, int64_t SPOffset,
+                                           bool IsImmutable = false);
 
   /// Returns true if the specified index corresponds to a fixed stack object.
   bool isFixedObjectIndex(int ObjectIdx) const {
@@ -784,12 +786,14 @@ public:
 
   /// Create a new statically sized stack object, returning
   /// a nonnegative identifier to represent it.
-  int CreateStackObject(uint64_t Size, Align Alignment, bool isSpillSlot,
-                        const AllocaInst *Alloca = nullptr, uint8_t ID = 0);
+  LLVM_ABI int CreateStackObject(uint64_t Size, Align Alignment,
+                                 bool isSpillSlot,
+                                 const AllocaInst *Alloca = nullptr,
+                                 uint8_t ID = 0);
 
   /// Create a new statically sized stack object that represents a spill slot,
   /// returning a nonnegative identifier to represent it.
-  int CreateSpillStackObject(uint64_t Size, Align Alignment);
+  LLVM_ABI int CreateSpillStackObject(uint64_t Size, Align Alignment);
 
   /// Remove or mark dead a statically sized stack object.
   void RemoveStackObject(int ObjectIdx) {
@@ -800,7 +804,8 @@ public:
   /// Notify the MachineFrameInfo object that a variable sized object has been
   /// created.  This must be created whenever a variable sized object is
   /// created, whether or not the index returned is actually used.
-  int CreateVariableSizedObject(Align Alignment, const AllocaInst *Alloca);
+  LLVM_ABI int CreateVariableSizedObject(Align Alignment,
+                                         const AllocaInst *Alloca);
 
   /// Returns a reference to call saved info vector for the current function.
   const std::vector<CalleeSavedInfo> &getCalleeSavedInfo() const {
@@ -836,14 +841,14 @@ public:
   ///
   /// Before the PrologueEpilogueInserter has placed the CSR spill code, this
   /// method always returns an empty set.
-  BitVector getPristineRegs(const MachineFunction &MF) const;
+  LLVM_ABI BitVector getPristineRegs(const MachineFunction &MF) const;
 
   /// Used by the MachineFunction printer to print information about
   /// stack objects. Implemented in MachineFunction.cpp.
-  void print(const MachineFunction &MF, raw_ostream &OS) const;
+  LLVM_ABI void print(const MachineFunction &MF, raw_ostream &OS) const;
 
   /// dump - Print the function to stderr.
-  void dump(const MachineFunction &MF) const;
+  LLVM_ABI void dump(const MachineFunction &MF) const;
 };
 
 } // End llvm namespace

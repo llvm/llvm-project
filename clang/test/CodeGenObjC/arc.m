@@ -577,8 +577,7 @@ void test21(unsigned n) {
 @implementation Test26 @end
 // CHECK:    define internal void @"\01-[Test26 .cxx_destruct]"(
 // CHECK:      [[SELF:%.*]] = load ptr, ptr
-// CHECK-NEXT: [[OFFSET:%.*]] = load i64, ptr @"OBJC_IVAR_$_Test26.x"
-// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, ptr [[SELF]], i64 [[OFFSET]]
+// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, ptr [[SELF]], i64 0
 // CHECK-NEXT: [[BEGIN:%.*]] = getelementptr inbounds [4 x ptr], ptr [[T1]], i32 0, i32 0
 // CHECK-NEXT: [[END:%.*]] = getelementptr inbounds ptr, ptr [[BEGIN]], i64 4
 // CHECK-NEXT: br label
@@ -616,8 +615,7 @@ void test21(unsigned n) {
 @end
 // CHECK:    define internal void @"\01-[Test28 .cxx_destruct]"
 // CHECK:      [[SELF:%.*]] = load ptr, ptr
-// CHECK-NEXT: [[OFFSET:%.*]] = load i64, ptr @"OBJC_IVAR_$_Test28.prop"
-// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, ptr [[SELF]], i64 [[OFFSET]]
+// CHECK-NEXT: [[T1:%.*]] = getelementptr inbounds i8, ptr [[SELF]], i64 0
 // CHECK-NEXT: call void @llvm.objc.storeStrong(ptr [[T1]], ptr null)
 // CHECK-NEXT: ret void
 
@@ -738,8 +736,7 @@ char *helper;
 
 // Assignment.
 // CHECK-NEXT: [[T1:%.*]] = load ptr, ptr [[SELF]]
-// CHECK-NEXT: [[IVAR:%.*]] = load i64, ptr @"OBJC_IVAR_$_Test30.helper"
-// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T1]], i64 [[IVAR]]
+// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T1]], i64 0
 // CHECK-NEXT#: [[T5:%.*]] = load ptr, ptr [[T3]]
 // CHECK-NEXT#: [[T6:%.*]] = call ptr @llvm.objc.retain(ptr [[CALL]])
 // CHECK-NEXT#: call void @llvm.objc.release(ptr [[T5]])
@@ -1137,23 +1134,20 @@ void test56_test(void) {
 @end
 // CHECK: define internal ptr @"\01-[Test57 strong]"(
 // CHECK:      [[T0:%.*]] = load ptr, ptr {{%.*}}
-// CHECK-NEXT: [[T1:%.*]] = load i64, ptr @"OBJC_IVAR_$_Test57.strong"
-// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T0]], i64 [[T1]]
+// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T0]], i64 0
 // CHECK-NEXT: [[T5:%.*]] = load ptr, ptr [[T3]]
 // CHECK-NEXT: ret ptr [[T5]]
 
 // CHECK: define internal ptr @"\01-[Test57 weak]"(
 // CHECK:      [[T0:%.*]] = load ptr, ptr {{%.*}}
-// CHECK-NEXT: [[T1:%.*]] = load i64, ptr @"OBJC_IVAR_$_Test57.weak"
-// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T0]], i64 [[T1]]
+// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T0]], i64 8
 // CHECK-NEXT: [[T5:%.*]] = call ptr @llvm.objc.loadWeakRetained(ptr [[T3]])
 // CHECK-NEXT: [[T6:%.*]] = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr [[T5]])
 // CHECK-NEXT: ret ptr [[T6]]
 
 // CHECK: define internal ptr @"\01-[Test57 unsafe]"(
 // CHECK:      [[T0:%.*]] = load ptr, ptr {{%.*}}
-// CHECK-NEXT: [[T1:%.*]] = load i64, ptr @"OBJC_IVAR_$_Test57.unsafe"
-// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T0]], i64 [[T1]]
+// CHECK-NEXT: [[T3:%.*]] = getelementptr inbounds i8, ptr [[T0]], i64 16
 // CHECK-NEXT: [[T5:%.*]] = load ptr, ptr [[T3]]
 // CHECK-NEXT: ret ptr [[T5]]
 
@@ -1377,13 +1371,13 @@ void test71(void) {
 // CHECK: %[[T:.*]] = alloca [2 x ptr], align 16
 // CHECK: %[[V0:.*]] = call ptr @llvm.objc.retain(ptr %[[A]])
 // CHECK: %[[V1:.*]] = call ptr @llvm.objc.retain(ptr %[[B]]) #2
-// CHECK: %[[V3:.*]] = load ptr, ptr %[[A_ADDR]], align 8, !tbaa !7
+// CHECK: %[[V3:.*]] = load ptr, ptr %[[A_ADDR]], align 8, !tbaa !{{[0-9]+}}
 // CHECK: %[[V4:.*]] = call ptr @llvm.objc.retain(ptr %[[V3]]) #2
-// CHECK: store ptr %[[V4]], ptr %[[T]], align 8, !tbaa !7
+// CHECK: store ptr %[[V4]], ptr %[[T]], align 8, !tbaa !{{[0-9]+}}
 // CHECK: %[[ARRAYINIT_ELEMENT:.*]] = getelementptr inbounds ptr, ptr %[[T]], i64 1
-// CHECK: %[[V5:.*]] = load ptr, ptr %[[B_ADDR]], align 8, !tbaa !7
+// CHECK: %[[V5:.*]] = load ptr, ptr %[[B_ADDR]], align 8, !tbaa !{{[0-9]+}}
 // CHECK: %[[V6:.*]] = call ptr @llvm.objc.retain(ptr %[[V5]]) #2
-// CHECK: store ptr %[[V6]], ptr %[[ARRAYINIT_ELEMENT]], align 8, !tbaa !7
+// CHECK: store ptr %[[V6]], ptr %[[ARRAYINIT_ELEMENT]], align 8, !tbaa !{{[0-9]+}}
 // CHECK: %[[ARRAY_BEGIN:.*]] = getelementptr inbounds [2 x ptr], ptr %[[T]], i32 0, i32 0
 // CHECK: %[[V7:.*]] = getelementptr inbounds ptr, ptr %[[ARRAY_BEGIN]], i64 2
 

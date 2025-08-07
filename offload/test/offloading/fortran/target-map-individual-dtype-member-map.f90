@@ -1,6 +1,5 @@
-! Offloading test checking interaction of an
-! single explicit member map from a single
-! derived type.
+! Offloading test checking interaction of an single explicit member map from a
+! single derived type.
 ! REQUIRES: flang, amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic

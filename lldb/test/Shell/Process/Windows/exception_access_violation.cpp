@@ -1,6 +1,6 @@
 // clang-format off
 
-// REQUIRES: system-windows
+// REQUIRES: target-windows
 // RUN: %build --compiler=clang-cl -o %t.exe -- %s
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -o "run" -- write | FileCheck --check-prefix=WRITE %s
 // RUN: env LLDB_USE_NATIVE_PDB_READER=1 %lldb -f %t.exe -o "run" -- read | FileCheck --check-prefix=READ %s

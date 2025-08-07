@@ -235,7 +235,7 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
   });
 
   DenseMap<const InputSectionBase *, int> orderMap;
-  int curOrder = 1;
+  int curOrder = -clusters.size();
   for (int leader : sorted) {
     for (int i = leader;;) {
       orderMap[sections[i]] = curOrder++;
@@ -248,7 +248,8 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
     std::error_code ec;
     raw_fd_ostream os(ctx.arg.printSymbolOrder, ec, sys::fs::OF_None);
     if (ec) {
-      error("cannot open " + ctx.arg.printSymbolOrder + ": " + ec.message());
+      ErrAlways(ctx) << "cannot open " << ctx.arg.printSymbolOrder << ": "
+                     << ec.message();
       return orderMap;
     }
 
@@ -275,8 +276,8 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
 // Sort sections by the profile data using the Cache-Directed Sort algorithm.
 // The placement is done by optimizing the locality by co-locating frequently
 // executed code sections together.
-DenseMap<const InputSectionBase *, int>
-elf::computeCacheDirectedSortOrder(Ctx &ctx) {
+static DenseMap<const InputSectionBase *, int>
+computeCacheDirectedSortOrder(Ctx &ctx) {
   SmallVector<uint64_t, 0> funcSizes;
   SmallVector<uint64_t, 0> funcCounts;
   SmallVector<codelayout::EdgeCount, 0> callCounts;
@@ -327,7 +328,7 @@ elf::computeCacheDirectedSortOrder(Ctx &ctx) {
 
   // Create the final order.
   DenseMap<const InputSectionBase *, int> orderMap;
-  int curOrder = 1;
+  int curOrder = -sortedSections.size();
   for (uint64_t secIdx : sortedSections)
     orderMap[sections[secIdx]] = curOrder++;
 

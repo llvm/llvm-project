@@ -21,8 +21,8 @@ int f3() __attribute__((no_sanitize("address")));
 
 // DUMP-LABEL: FunctionDecl {{.*}} f4
 // DUMP: NoSanitizeAttr {{.*}} hwaddress
-// PRINT: {{\[\[}}clang::no_sanitize("hwaddress")]] int f4()
-[[clang::no_sanitize("hwaddress")]] int f4();
+// PRINT: {{\[\[}}gnu::no_sanitize("hwaddress")]] int f4()
+[[gnu::no_sanitize("hwaddress")]] int f4();
 
 // DUMP-LABEL: FunctionDecl {{.*}} f5
 // DUMP: NoSanitizeAttr {{.*}} address thread hwaddress

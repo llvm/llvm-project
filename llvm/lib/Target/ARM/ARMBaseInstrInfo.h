@@ -125,9 +125,6 @@ public:
   // if there is not such an opcode.
   virtual unsigned getUnindexedOpcode(unsigned Opc) const = 0;
 
-  MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
-                                      LiveIntervals *LIS) const override;
-
   virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
   const ARMSubtarget &getSubtarget() const { return Subtarget; }
 
@@ -201,29 +198,28 @@ public:
                                     int &FrameIndex) const override;
 
   void copyToCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                  unsigned SrcReg, bool KillSrc,
+                  MCRegister SrcReg, bool KillSrc,
                   const ARMSubtarget &Subtarget) const;
   void copyFromCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    unsigned DestReg, bool KillSrc,
+                    MCRegister DestReg, bool KillSrc,
                     const ARMSubtarget &Subtarget) const;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, Register SrcReg,
-                           bool isKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+      Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
+      const TargetRegisterInfo *TRI, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -410,16 +406,6 @@ private:
                           MachineBasicBlock::iterator It, bool CFI,
                           bool Auth) const;
 
-  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
-  /// for the case when the LR is saved in the register \p Reg.
-  void emitCFIForLRSaveToReg(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator It,
-                             Register Reg) const;
-
-  /// Emit CFI instructions into the MachineBasicBlock \p MBB at position \p It,
-  /// after the LR is was restored from a register.
-  void emitCFIForLRRestoreFromReg(MachineBasicBlock &MBB,
-                                  MachineBasicBlock::iterator It) const;
   /// \brief Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///
@@ -972,6 +958,34 @@ inline bool isGatherScatter(IntrinsicInst *IntInst) {
 unsigned getBLXOpcode(const MachineFunction &MF);
 unsigned gettBLXrOpcode(const MachineFunction &MF);
 unsigned getBLXpredOpcode(const MachineFunction &MF);
+
+inline bool isMVEVectorInstruction(const MachineInstr *MI) {
+  // This attempts to remove non-mve instructions (scalar shifts), which
+  // are just DPU CX instruction.
+  switch (MI->getOpcode()) {
+  case ARM::MVE_SQSHL:
+  case ARM::MVE_SRSHR:
+  case ARM::MVE_UQSHL:
+  case ARM::MVE_URSHR:
+  case ARM::MVE_SQRSHR:
+  case ARM::MVE_UQRSHL:
+  case ARM::MVE_ASRLr:
+  case ARM::MVE_ASRLi:
+  case ARM::MVE_LSLLr:
+  case ARM::MVE_LSLLi:
+  case ARM::MVE_LSRL:
+  case ARM::MVE_SQRSHRL:
+  case ARM::MVE_SQSHLL:
+  case ARM::MVE_SRSHRL:
+  case ARM::MVE_UQRSHLL:
+  case ARM::MVE_UQSHLL:
+  case ARM::MVE_URSHRL:
+    return false;
+  }
+  const MCInstrDesc &MCID = MI->getDesc();
+  uint64_t Flags = MCID.TSFlags;
+  return (Flags & ARMII::DomainMask) == ARMII::DomainMVE;
+}
 
 } // end namespace llvm
 

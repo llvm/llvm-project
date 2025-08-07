@@ -12,12 +12,13 @@
 
 #include <__config>
 
-#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#if _LIBCPP_HAS_LOCALIZATION
 
 #  include <__chrono/calendar.h>
 #  include <__chrono/day.h>
 #  include <__chrono/duration.h>
 #  include <__chrono/file_clock.h>
+#  include <__chrono/gps_clock.h>
 #  include <__chrono/hh_mm_ss.h>
 #  include <__chrono/local_info.h>
 #  include <__chrono/month.h>
@@ -26,6 +27,8 @@
 #  include <__chrono/statically_widen.h>
 #  include <__chrono/sys_info.h>
 #  include <__chrono/system_clock.h>
+#  include <__chrono/tai_clock.h>
+#  include <__chrono/utc_clock.h>
 #  include <__chrono/weekday.h>
 #  include <__chrono/year.h>
 #  include <__chrono/year_month.h>
@@ -61,6 +64,30 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const sys_days& __dp) {
   return __os << year_month_day{__dp};
 }
 
+#    if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
+#      if _LIBCPP_HAS_EXPERIMENTAL_TZDB
+
+template <class _CharT, class _Traits, class _Duration>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const utc_time<_Duration>& __tp) {
+  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+}
+
+template <class _CharT, class _Traits, class _Duration>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const tai_time<_Duration>& __tp) {
+  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+}
+
+template <class _CharT, class _Traits, class _Duration>
+_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, const gps_time<_Duration>& __tp) {
+  return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T}"), __tp);
+}
+
+#      endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
+#    endif   // _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
+
 template <class _CharT, class _Traits, class _Duration>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const file_time<_Duration> __tp) {
@@ -86,7 +113,7 @@ _LIBCPP_HIDE_FROM_ABI auto __units_suffix() {
   else if constexpr (same_as<typename _Period::type, nano>)
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "ns");
   else if constexpr (same_as<typename _Period::type, micro>)
-#    ifndef _LIBCPP_HAS_NO_UNICODE
+#    if _LIBCPP_HAS_UNICODE
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "\u00b5s");
 #    else
     return _LIBCPP_STATICALLY_WIDEN(_CharT, "us");
@@ -269,7 +296,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const hh_mm_ss<_Duration> __hms
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%T}"), __hms);
 }
 
-#    if !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    if _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 template <class _CharT, class _Traits>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
@@ -307,14 +334,14 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const local_info& __info) {
              _LIBCPP_STATICALLY_WIDEN(_CharT, "{}: {{{}, {}}}"), __result(), __info.first, __info.second);
 }
 
-#      if !defined(_LIBCPP_HAS_NO_TIME_ZONE_DATABASE) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
+#      if _LIBCPP_HAS_TIME_ZONE_DATABASE && _LIBCPP_HAS_FILESYSTEM
 template <class _CharT, class _Traits, class _Duration, class _TimeZonePtr>
 _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _TimeZonePtr>& __tp) {
   return __os << std::format(__os.getloc(), _LIBCPP_STATICALLY_WIDEN(_CharT, "{:L%F %T %Z}"), __tp);
 }
 #      endif
-#    endif // !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_TZDB)
+#    endif // _LIBCPP_HAS_EXPERIMENTAL_TZDB
 
 } // namespace chrono
 
@@ -322,6 +349,6 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const zoned_time<_Duration, _Ti
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !_LIBCPP_HAS_NO_LOCALIZATION
+#endif // _LIBCPP_HAS_LOCALIZATION
 
 #endif // _LIBCPP___CHRONO_OSTREAM_H

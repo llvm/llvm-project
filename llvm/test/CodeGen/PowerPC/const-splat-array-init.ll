@@ -45,8 +45,8 @@ define dso_local void @foo1(ptr nocapture noundef writeonly %a) local_unnamed_ad
 ; P8-LE-NEXT:    addi 4, 4, .LCPI0_0@toc@l
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    li 4, 3333
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    sth 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo1:
@@ -109,8 +109,8 @@ define dso_local void @foo2(ptr nocapture noundef writeonly %a) local_unnamed_ad
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 3333
 ; P8-LE-NEXT:    ori 4, 4, 3333
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo2:
@@ -182,9 +182,9 @@ define dso_local void @foo3(ptr nocapture noundef writeonly %a) local_unnamed_ad
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 3333
 ; P8-LE-NEXT:    ori 4, 4, 3333
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
 ; P8-LE-NEXT:    li 4, 3333
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    sth 4, 20(3)
 ; P8-LE-NEXT:    blr
 ;
@@ -334,8 +334,8 @@ define dso_local void @foo5(ptr nocapture noundef writeonly %a) local_unnamed_ad
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 5
 ; P8-LE-NEXT:    ori 4, 4, 5653
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo5:
@@ -473,8 +473,8 @@ define dso_local void @foo7(ptr nocapture noundef writeonly %a) local_unnamed_ad
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 508
 ; P8-LE-NEXT:    ori 4, 4, 41045
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    std 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo7:
@@ -539,8 +539,8 @@ define dso_local void @foo8(ptr nocapture noundef writeonly %a) local_unnamed_ad
 ; P8-LE-NEXT:    lxvd2x 0, 0, 4
 ; P8-LE-NEXT:    lis 4, 16469
 ; P8-LE-NEXT:    ori 4, 4, 7864
-; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    stw 4, 16(3)
+; P8-LE-NEXT:    stxvd2x 0, 0, 3
 ; P8-LE-NEXT:    blr
 ;
 ; P9-LE-LABEL: foo8:

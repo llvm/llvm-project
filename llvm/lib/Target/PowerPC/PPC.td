@@ -411,7 +411,6 @@ def ProcessorFeatures {
      FeatureP8Altivec,
      FeatureP8Vector,
      FeatureP8Crypto,
-     FeatureHTM,
      FeatureDirectMove,
      FeatureICBT,
      FeaturePartwordAtomic,
@@ -422,6 +421,7 @@ def ProcessorFeatures {
     ];
 
   list<SubtargetFeature> P8SpecificFeatures = [FeatureAddiLoadFusion,
+                                               FeatureHTM,
                                                FeatureAddisLoadFusion];
   list<SubtargetFeature> P8InheritableFeatures =
     !listconcat(P7InheritableFeatures, P8AdditionalFeatures);
@@ -435,8 +435,7 @@ def ProcessorFeatures {
      FeatureP9Vector,
      FeaturePPCPreRASched,
      FeaturePPCPostRASched,
-     FeatureISA3_0,
-     FeaturePredictableSelectIsExpensive
+     FeatureISA3_0
     ];
 
   // Some features are unique to Power9 and there is no reason to assume
@@ -444,7 +443,7 @@ def ProcessorFeatures {
   // dispatch for vector operations than scalar ones. For the time being,
   // this list also includes scheduling-related features since we do not have
   // enough info to create custom scheduling strategies for future CPUs.
-  list<SubtargetFeature> P9SpecificFeatures = [FeatureVectorsUseTwoUnits];
+  list<SubtargetFeature> P9SpecificFeatures = [FeatureVectorsUseTwoUnits, FeatureHTM];
   list<SubtargetFeature> P9InheritableFeatures =
     !listconcat(P8InheritableFeatures, P9AdditionalFeatures);
   list<SubtargetFeature> P9Features =
@@ -483,7 +482,8 @@ def ProcessorFeatures {
   // Future
   // For future CPU we assume that all of the existing features from Power11
   // still exist with the exception of those we know are Power11 specific.
-  list<SubtargetFeature> FutureAdditionalFeatures = [FeatureISAFuture];
+  list<SubtargetFeature> FutureAdditionalFeatures = [DirectivePwrFuture,
+                                                     FeatureISAFuture];
   list<SubtargetFeature> FutureSpecificFeatures = [];
   list<SubtargetFeature> FutureInheritableFeatures =
     !listconcat(P11InheritableFeatures, FutureAdditionalFeatures);
@@ -549,6 +549,18 @@ def getAltVSXFMAOpcode : InstrMapping {
   // The key column are the (default) addend-killing instructions.
   let KeyCol = ["0"];
   // Value columns IsVSXFMAAlt=1
+  let ValueCols = [["1"]];
+}
+
+def get64BitInstrFromSignedExt32BitInstr : InstrMapping {
+  let FilterClass = "SExt32To64";
+  // Instructions with the same opcode.
+  let RowFields = ["Inst"];
+  // Instructions with the same Interpretation64Bit value form a column.
+  let ColFields = ["Interpretation64Bit"];
+  // The key column are not the Interpretation64Bit-form instructions.
+  let KeyCol = ["0"];
+  // Value columns are the Interpretation64Bit-form instructions.
   let ValueCols = [["1"]];
 }
 

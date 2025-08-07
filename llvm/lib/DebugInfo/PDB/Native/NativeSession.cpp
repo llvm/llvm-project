@@ -10,7 +10,6 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Magic.h"
-#include "llvm/DebugInfo/MSF/MSFCommon.h"
 #include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
@@ -39,7 +38,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
-#include <algorithm>
 #include <cassert>
 #include <memory>
 #include <utility>

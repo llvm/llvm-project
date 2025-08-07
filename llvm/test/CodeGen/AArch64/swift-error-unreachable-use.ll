@@ -33,7 +33,7 @@ thirtythree:
   br i1 false, label %UelOc2l.exit, label %thirtythree
 
 thirtyeight:
-  br i1 undef, label %thirtyeight, label %thirtythree
+  br i1 poison, label %thirtyeight, label %thirtythree
 }
 
 attributes #0 = { noinline optnone }

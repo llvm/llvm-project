@@ -55,15 +55,16 @@ private:
     }
 
     size_t size() const { return Allocations.size(); }
+    bool empty() const { return Allocations.empty(); }
   };
 
 public:
   DynamicAllocator() = default;
+  DynamicAllocator(DynamicAllocator &) = delete;
+  DynamicAllocator(DynamicAllocator &&) = delete;
   ~DynamicAllocator();
 
   void cleanup();
-
-  unsigned getNumAllocations() const { return AllocationSites.size(); }
 
   /// Allocate ONE element of the given descriptor.
   Block *allocate(const Descriptor *D, unsigned EvalID, Form AllocForm);
@@ -94,10 +95,12 @@ public:
     return llvm::make_range(AllocationSites.begin(), AllocationSites.end());
   }
 
+  bool hasAllocations() const { return !AllocationSites.empty(); }
+
 private:
   llvm::DenseMap<const Expr *, AllocationSite> AllocationSites;
 
-  using PoolAllocTy = llvm::BumpPtrAllocatorImpl<llvm::MallocAllocator>;
+  using PoolAllocTy = llvm::BumpPtrAllocator;
   PoolAllocTy DescAllocator;
 
   /// Allocates a new descriptor.

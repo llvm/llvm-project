@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMIRFormatter.h"
-#include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
 
 using namespace llvm;

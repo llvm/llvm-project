@@ -13,8 +13,11 @@
 #include <vector>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
-template <class T, class Iterator = random_access_iterator<T*>, class ConstIterator = random_access_iterator<const T*>>
+template <class T,
+          class Iterator      = three_way_random_access_iterator<T*>,
+          class ConstIterator = three_way_random_access_iterator<const T*>>
 struct MinSequenceContainer {
   using value_type      = T;
   using difference_type = int;
@@ -24,42 +27,60 @@ struct MinSequenceContainer {
 
   explicit MinSequenceContainer() = default;
   template <class It>
-  explicit MinSequenceContainer(It first, It last) : data_(first, last) {}
-  MinSequenceContainer(std::initializer_list<T> il) : data_(il) {}
-  iterator begin() { return iterator(data_.data()); }
-  const_iterator begin() const { return const_iterator(data_.data()); }
-  const_iterator cbegin() const { return const_iterator(data_.data()); }
-  iterator end() { return begin() + size(); }
-  const_iterator end() const { return begin() + size(); }
-  size_type size() const { return data_.size(); }
-  bool empty() const { return data_.empty(); }
-
-  void clear() { data_.clear(); }
+  explicit TEST_CONSTEXPR_CXX20 MinSequenceContainer(It first, It last) : data_(first, last) {}
+  TEST_CONSTEXPR_CXX20 MinSequenceContainer(std::initializer_list<T> il) : data_(il) {}
 
   template <class It>
-  iterator insert(const_iterator p, It first, It last) {
+  TEST_CONSTEXPR_CXX20 void assign(It first, It last) {
+    data_.assign(first, last);
+  }
+  TEST_CONSTEXPR_CXX20 void assign(std::initializer_list<T> il) { data_.assign(il); }
+  TEST_CONSTEXPR_CXX20 void assign(size_type n, value_type t) { data_.assign(n, t); }
+  TEST_CONSTEXPR_CXX20 iterator begin() { return iterator(data_.data()); }
+  TEST_CONSTEXPR_CXX20 const_iterator begin() const { return const_iterator(data_.data()); }
+  TEST_CONSTEXPR_CXX20 const_iterator cbegin() const { return const_iterator(data_.data()); }
+  TEST_CONSTEXPR_CXX20 iterator end() { return begin() + size(); }
+  TEST_CONSTEXPR_CXX20 const_iterator end() const { return begin() + size(); }
+  TEST_CONSTEXPR_CXX20 size_type size() const { return static_cast<size_type>(data_.size()); }
+  TEST_CONSTEXPR_CXX20 bool empty() const { return data_.empty(); }
+
+  TEST_CONSTEXPR_CXX20 void clear() { data_.clear(); }
+
+  template <class It>
+  TEST_CONSTEXPR_CXX20 iterator insert(const_iterator p, It first, It last) {
     return from_vector_iterator(data_.insert(to_vector_iterator(p), first, last));
   }
 
-  iterator insert(const_iterator p, T value) {
+  TEST_CONSTEXPR_CXX20 iterator insert(const_iterator p, T value) {
     return from_vector_iterator(data_.insert(to_vector_iterator(p), std::move(value)));
   }
 
-  iterator erase(const_iterator first, const_iterator last) {
+  template <class Range>
+  TEST_CONSTEXPR_CXX20 iterator insert_range(const_iterator p, Range&& rg) {
+    return from_vector_iterator(data_.insert_range(to_vector_iterator(p), std::forward<Range>(rg)));
+  }
+
+  TEST_CONSTEXPR_CXX20 iterator erase(const_iterator first, const_iterator last) {
     return from_vector_iterator(data_.erase(to_vector_iterator(first), to_vector_iterator(last)));
   }
 
-  iterator erase(const_iterator iter) { return from_vector_iterator(data_.erase(to_vector_iterator(iter))); }
+  TEST_CONSTEXPR_CXX20 iterator erase(const_iterator iter) {
+    return from_vector_iterator(data_.erase(to_vector_iterator(iter)));
+  }
 
   template <class... Args>
-  iterator emplace(const_iterator pos, Args&&... args) {
+  TEST_CONSTEXPR_CXX20 iterator emplace(const_iterator pos, Args&&... args) {
     return from_vector_iterator(data_.emplace(to_vector_iterator(pos), std::forward<Args>(args)...));
   }
 
 private:
-  std::vector<T>::const_iterator to_vector_iterator(const_iterator cit) const { return cit - cbegin() + data_.begin(); }
+  TEST_CONSTEXPR_CXX20 std::vector<T>::const_iterator to_vector_iterator(const_iterator cit) const {
+    return cit - cbegin() + data_.begin();
+  }
 
-  iterator from_vector_iterator(std::vector<T>::iterator it) { return it - data_.begin() + begin(); }
+  TEST_CONSTEXPR_CXX20 iterator from_vector_iterator(std::vector<T>::iterator it) {
+    return it - data_.begin() + begin();
+  }
 
   std::vector<T> data_;
 };

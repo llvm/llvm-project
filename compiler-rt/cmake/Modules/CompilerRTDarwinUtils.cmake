@@ -1,4 +1,3 @@
-include(CMakeParseArguments)
 include(CompilerRTUtils)
 include(BuiltinTests)
 
@@ -136,14 +135,13 @@ function(darwin_test_archs os valid_archs)
 
   # The simple program will build for x86_64h on the simulator because it is
   # compatible with x86_64 libraries (mostly), but since x86_64h isn't actually
-  # a valid or useful architecture for the iOS simulator we should drop it.
+  # a valid or useful architecture for the simulators. We should drop it.
   if(${os} MATCHES "^(iossim|tvossim|watchossim)$")
     list(REMOVE_ITEM archs "x86_64h")
-  endif()
-
-  if(${os} MATCHES "iossim")
-    message(STATUS "Disabling i386 slice for iossim")
-    list(REMOVE_ITEM archs "i386")
+    if ("i386" IN_LIST archs)
+      list(REMOVE_ITEM archs "i386")
+      message(STATUS "Disabling i386 slice for simulator")
+    endif()
   endif()
 
   if(${os} MATCHES "^ios$")

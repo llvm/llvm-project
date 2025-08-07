@@ -20,6 +20,11 @@
 // `__USE_FORTIFY_LEVEL`, which will be temporarily disabled
 // with `_FORTIFY_SOURCE`.
 
+#ifdef _FORTIFY_SOURCE
+#define LIBC_OLD_FORTIFY_SOURCE _FORTIFY_SOURCE
+#undef _FORTIFY_SOURCE
+#endif
+
 #ifdef __USE_FORTIFY_LEVEL
 #define LIBC_OLD_USE_FORTIFY_LEVEL __USE_FORTIFY_LEVEL
 #undef __USE_FORTIFY_LEVEL
@@ -27,6 +32,11 @@
 #endif
 
 #include <fcntl.h>
+
+#ifdef LIBC_OLD_FORTIFY_SOURCE
+#define _FORTIFY_SOURCE LIBC_OLD_FORTIFY_SOURCE
+#undef LIBC_OLD_FORTIFY_SOURCE
+#endif
 
 #ifdef LIBC_OLD_USE_FORTIFY_LEVEL
 #undef __USE_FORTIFY_LEVEL

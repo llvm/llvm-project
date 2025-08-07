@@ -32,7 +32,7 @@ struct ConditionInfo {
   /// ICmp instruction with this condition
   ICmpInst *ICmp = nullptr;
   /// Preciate info
-  ICmpInst::Predicate Pred = ICmpInst::BAD_ICMP_PREDICATE;
+  CmpPredicate Pred = ICmpInst::BAD_ICMP_PREDICATE;
   /// AddRec llvm value
   Value *AddRecValue = nullptr;
   /// Non PHI AddRec llvm value

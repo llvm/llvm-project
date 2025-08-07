@@ -4,7 +4,7 @@
 define <8 x bfloat> @fma_123_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z) {
 ; CHECK-LABEL: fma_123_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd213bf16 %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z)
   ret <8 x bfloat> %a
@@ -13,7 +13,7 @@ define <8 x bfloat> @fma_123_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloa
 define <8 x bfloat> @fma_213_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z) {
 ; CHECK-LABEL: fma_213_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm2, %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd213bf16 %xmm2, %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %x, <8 x bfloat> %z)
   ret <8 x bfloat> %a
@@ -22,7 +22,7 @@ define <8 x bfloat> @fma_213_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloa
 define <8 x bfloat> @fma_231_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z) {
 ; CHECK-LABEL: fma_231_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vfmadd231bf16 %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %z, <8 x bfloat> %x)
   ret <8 x bfloat> %a
@@ -31,7 +31,7 @@ define <8 x bfloat> @fma_231_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloa
 define <8 x bfloat> @fma_321_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z) {
 ; CHECK-LABEL: fma_321_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vfmadd231bf16 %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %y, <8 x bfloat> %x)
   ret <8 x bfloat> %a
@@ -40,7 +40,7 @@ define <8 x bfloat> @fma_321_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloa
 define <8 x bfloat> @fma_132_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z) {
 ; CHECK-LABEL: fma_132_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vfmadd213bf16 %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %z, <8 x bfloat> %y)
   ret <8 x bfloat> %a
@@ -49,7 +49,7 @@ define <8 x bfloat> @fma_132_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloa
 define <8 x bfloat> @fma_312_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z) {
 ; CHECK-LABEL: fma_312_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm1, %xmm2, %xmm0
+; CHECK-NEXT:    vfmadd213bf16 %xmm1, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %x, <8 x bfloat> %y)
   ret <8 x bfloat> %a
@@ -58,7 +58,7 @@ define <8 x bfloat> @fma_312_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloa
 define <8 x bfloat> @fma_load_123_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_123_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z)
@@ -68,7 +68,7 @@ define <8 x bfloat> @fma_load_123_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %
 define <8 x bfloat> @fma_load_213_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_213_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %x, <8 x bfloat> %z)
@@ -78,7 +78,7 @@ define <8 x bfloat> @fma_load_213_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %
 define <8 x bfloat> @fma_load_231_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_231_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %z, <8 x bfloat> %x)
@@ -88,7 +88,7 @@ define <8 x bfloat> @fma_load_231_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %
 define <8 x bfloat> @fma_load_321_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_321_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %y, <8 x bfloat> %x)
@@ -98,7 +98,7 @@ define <8 x bfloat> @fma_load_321_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %
 define <8 x bfloat> @fma_load_132_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_132_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %z, <8 x bfloat> %y)
@@ -108,7 +108,7 @@ define <8 x bfloat> @fma_load_132_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %
 define <8 x bfloat> @fma_load_312_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_312_v8bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %xmm1, %xmm0
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %x, <8 x bfloat> %y)
@@ -119,7 +119,7 @@ define <8 x bfloat> @fma_mask_123_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x 
 ; CHECK-LABEL: fma_mask_123_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 %xmm1, %xmm2, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 %xmm1, %xmm2, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z)
   %b = bitcast i8 %mask to <8 x i1>
@@ -131,7 +131,7 @@ define <8 x bfloat> @fma_mask_213_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x 
 ; CHECK-LABEL: fma_mask_213_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm2, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %x, <8 x bfloat> %z)
   %b = bitcast i8 %mask to <8 x i1>
@@ -143,7 +143,7 @@ define <8 x bfloat> @fma_mask_231_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x 
 ; CHECK-LABEL: fma_mask_231_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %xmm2, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %z, <8 x bfloat> %x)
   %b = bitcast i8 %mask to <8 x i1>
@@ -155,7 +155,7 @@ define <8 x bfloat> @fma_mask_321_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x 
 ; CHECK-LABEL: fma_mask_321_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %xmm1, %xmm2, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 %xmm1, %xmm2, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %y, <8 x bfloat> %x)
   %b = bitcast i8 %mask to <8 x i1>
@@ -167,7 +167,7 @@ define <8 x bfloat> @fma_mask_132_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x 
 ; CHECK-LABEL: fma_mask_132_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 %xmm2, %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 %xmm2, %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %z, <8 x bfloat> %y)
   %b = bitcast i8 %mask to <8 x i1>
@@ -179,7 +179,7 @@ define <8 x bfloat> @fma_mask_312_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x 
 ; CHECK-LABEL: fma_mask_312_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm1, %xmm2, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 %xmm1, %xmm2, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %x, <8 x bfloat> %y)
   %b = bitcast i8 %mask to <8 x i1>
@@ -191,7 +191,7 @@ define <8 x bfloat> @fma_maskz_123_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x
 ; CHECK-LABEL: fma_maskz_123_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm2, %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z)
   %b = bitcast i8 %mask to <8 x i1>
@@ -203,7 +203,7 @@ define <8 x bfloat> @fma_maskz_213_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x
 ; CHECK-LABEL: fma_maskz_213_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm2, %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %xmm2, %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %x, <8 x bfloat> %z)
   %b = bitcast i8 %mask to <8 x i1>
@@ -215,7 +215,7 @@ define <8 x bfloat> @fma_maskz_231_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x
 ; CHECK-LABEL: fma_maskz_231_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %xmm1, %xmm2, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 %xmm1, %xmm2, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %z, <8 x bfloat> %x)
   %b = bitcast i8 %mask to <8 x i1>
@@ -227,7 +227,7 @@ define <8 x bfloat> @fma_maskz_321_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x
 ; CHECK-LABEL: fma_maskz_321_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %xmm1, %xmm2, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 %xmm1, %xmm2, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %y, <8 x bfloat> %x)
   %b = bitcast i8 %mask to <8 x i1>
@@ -239,7 +239,7 @@ define <8 x bfloat> @fma_maskz_132_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x
 ; CHECK-LABEL: fma_maskz_132_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm1, %xmm2, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %xmm1, %xmm2, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %z, <8 x bfloat> %y)
   %b = bitcast i8 %mask to <8 x i1>
@@ -251,7 +251,7 @@ define <8 x bfloat> @fma_maskz_312_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x
 ; CHECK-LABEL: fma_maskz_312_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %xmm1, %xmm2, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %xmm1, %xmm2, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %x, <8 x bfloat> %y)
   %b = bitcast i8 %mask to <8 x i1>
@@ -263,7 +263,7 @@ define <8 x bfloat> @fma_mask_load_123_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, 
 ; CHECK-LABEL: fma_mask_load_123_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z)
@@ -276,7 +276,7 @@ define <8 x bfloat> @fma_mask_load_213_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, 
 ; CHECK-LABEL: fma_mask_load_213_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %x, <8 x bfloat> %z)
@@ -289,7 +289,7 @@ define <8 x bfloat> @fma_mask_load_231_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, 
 ; CHECK-LABEL: fma_mask_load_231_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %z, <8 x bfloat> %x)
@@ -302,7 +302,7 @@ define <8 x bfloat> @fma_mask_load_321_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, 
 ; CHECK-LABEL: fma_mask_load_321_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %y, <8 x bfloat> %x)
@@ -315,7 +315,7 @@ define <8 x bfloat> @fma_mask_load_132_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, 
 ; CHECK-LABEL: fma_mask_load_132_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %z, <8 x bfloat> %y)
@@ -328,7 +328,7 @@ define <8 x bfloat> @fma_mask_load_312_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, 
 ; CHECK-LABEL: fma_mask_load_312_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %xmm1, %xmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %x, <8 x bfloat> %y)
@@ -341,7 +341,7 @@ define <8 x bfloat> @fma_maskz_load_123_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y,
 ; CHECK-LABEL: fma_maskz_load_123_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %y, <8 x bfloat> %z)
@@ -354,7 +354,7 @@ define <8 x bfloat> @fma_maskz_load_213_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y,
 ; CHECK-LABEL: fma_maskz_load_213_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %x, <8 x bfloat> %z)
@@ -367,7 +367,7 @@ define <8 x bfloat> @fma_maskz_load_231_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y,
 ; CHECK-LABEL: fma_maskz_load_231_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %y, <8 x bfloat> %z, <8 x bfloat> %x)
@@ -380,7 +380,7 @@ define <8 x bfloat> @fma_maskz_load_321_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y,
 ; CHECK-LABEL: fma_maskz_load_321_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %y, <8 x bfloat> %x)
@@ -393,7 +393,7 @@ define <8 x bfloat> @fma_maskz_load_132_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y,
 ; CHECK-LABEL: fma_maskz_load_132_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %x, <8 x bfloat> %z, <8 x bfloat> %y)
@@ -406,7 +406,7 @@ define <8 x bfloat> @fma_maskz_load_312_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y,
 ; CHECK-LABEL: fma_maskz_load_312_v8bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %xmm1, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <8 x bfloat>, ptr %zp
   %a = call <8 x bfloat> @llvm.fma.v8bf16(<8 x bfloat> %z, <8 x bfloat> %x, <8 x bfloat> %y)
@@ -418,7 +418,7 @@ define <8 x bfloat> @fma_maskz_load_312_v8bf16(<8 x bfloat> %x, <8 x bfloat> %y,
 define <16 x bfloat> @fma_123_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z) {
 ; CHECK-LABEL: fma_123_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm2, %ymm1, %ymm0
+; CHECK-NEXT:    vfmadd213bf16 %ymm2, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z)
   ret <16 x bfloat> %a
@@ -427,7 +427,7 @@ define <16 x bfloat> @fma_123_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x 
 define <16 x bfloat> @fma_213_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z) {
 ; CHECK-LABEL: fma_213_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm2, %ymm1, %ymm0
+; CHECK-NEXT:    vfmadd213bf16 %ymm2, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %x, <16 x bfloat> %z)
   ret <16 x bfloat> %a
@@ -436,7 +436,7 @@ define <16 x bfloat> @fma_213_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x 
 define <16 x bfloat> @fma_231_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z) {
 ; CHECK-LABEL: fma_231_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 %ymm1, %ymm2, %ymm0
+; CHECK-NEXT:    vfmadd231bf16 %ymm1, %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %z, <16 x bfloat> %x)
   ret <16 x bfloat> %a
@@ -445,7 +445,7 @@ define <16 x bfloat> @fma_231_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x 
 define <16 x bfloat> @fma_321_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z) {
 ; CHECK-LABEL: fma_321_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 %ymm1, %ymm2, %ymm0
+; CHECK-NEXT:    vfmadd231bf16 %ymm1, %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %y, <16 x bfloat> %x)
   ret <16 x bfloat> %a
@@ -454,7 +454,7 @@ define <16 x bfloat> @fma_321_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x 
 define <16 x bfloat> @fma_132_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z) {
 ; CHECK-LABEL: fma_132_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm1, %ymm2, %ymm0
+; CHECK-NEXT:    vfmadd213bf16 %ymm1, %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %z, <16 x bfloat> %y)
   ret <16 x bfloat> %a
@@ -463,7 +463,7 @@ define <16 x bfloat> @fma_132_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x 
 define <16 x bfloat> @fma_312_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z) {
 ; CHECK-LABEL: fma_312_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm1, %ymm2, %ymm0
+; CHECK-NEXT:    vfmadd213bf16 %ymm1, %ymm2, %ymm0
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %x, <16 x bfloat> %y)
   ret <16 x bfloat> %a
@@ -472,7 +472,7 @@ define <16 x bfloat> @fma_312_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x 
 define <16 x bfloat> @fma_load_123_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_123_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %ymm1, %ymm0
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z)
@@ -482,7 +482,7 @@ define <16 x bfloat> @fma_load_123_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, p
 define <16 x bfloat> @fma_load_213_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_213_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %ymm1, %ymm0
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %x, <16 x bfloat> %z)
@@ -492,7 +492,7 @@ define <16 x bfloat> @fma_load_213_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, p
 define <16 x bfloat> @fma_load_231_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_231_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %ymm1, %ymm0
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %z, <16 x bfloat> %x)
@@ -502,7 +502,7 @@ define <16 x bfloat> @fma_load_231_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, p
 define <16 x bfloat> @fma_load_321_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_321_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %ymm1, %ymm0
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %y, <16 x bfloat> %x)
@@ -512,7 +512,7 @@ define <16 x bfloat> @fma_load_321_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, p
 define <16 x bfloat> @fma_load_132_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_132_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %ymm1, %ymm0
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %z, <16 x bfloat> %y)
@@ -522,7 +522,7 @@ define <16 x bfloat> @fma_load_132_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, p
 define <16 x bfloat> @fma_load_312_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_312_v16bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %ymm1, %ymm0
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %ymm1, %ymm0
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %x, <16 x bfloat> %y)
@@ -533,7 +533,7 @@ define <16 x bfloat> @fma_mask_123_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_123_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 %ymm1, %ymm2, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 %ymm1, %ymm2, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z)
   %b = bitcast i16 %mask to <16 x i1>
@@ -545,7 +545,7 @@ define <16 x bfloat> @fma_mask_213_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_213_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm2, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 %ymm2, %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %x, <16 x bfloat> %z)
   %b = bitcast i16 %mask to <16 x i1>
@@ -557,7 +557,7 @@ define <16 x bfloat> @fma_mask_231_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_231_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %ymm2, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 %ymm2, %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %z, <16 x bfloat> %x)
   %b = bitcast i16 %mask to <16 x i1>
@@ -569,7 +569,7 @@ define <16 x bfloat> @fma_mask_321_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_321_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %ymm1, %ymm2, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 %ymm1, %ymm2, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %y, <16 x bfloat> %x)
   %b = bitcast i16 %mask to <16 x i1>
@@ -581,7 +581,7 @@ define <16 x bfloat> @fma_mask_132_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_132_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 %ymm2, %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 %ymm2, %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %z, <16 x bfloat> %y)
   %b = bitcast i16 %mask to <16 x i1>
@@ -593,7 +593,7 @@ define <16 x bfloat> @fma_mask_312_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_312_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm1, %ymm2, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 %ymm1, %ymm2, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %x, <16 x bfloat> %y)
   %b = bitcast i16 %mask to <16 x i1>
@@ -605,7 +605,7 @@ define <16 x bfloat> @fma_maskz_123_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_123_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm2, %ymm1, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %ymm2, %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z)
   %b = bitcast i16 %mask to <16 x i1>
@@ -617,7 +617,7 @@ define <16 x bfloat> @fma_maskz_213_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_213_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm2, %ymm1, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %ymm2, %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %x, <16 x bfloat> %z)
   %b = bitcast i16 %mask to <16 x i1>
@@ -629,7 +629,7 @@ define <16 x bfloat> @fma_maskz_231_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_231_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %ymm1, %ymm2, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 %ymm1, %ymm2, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %z, <16 x bfloat> %x)
   %b = bitcast i16 %mask to <16 x i1>
@@ -641,7 +641,7 @@ define <16 x bfloat> @fma_maskz_321_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_321_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %ymm1, %ymm2, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 %ymm1, %ymm2, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %y, <16 x bfloat> %x)
   %b = bitcast i16 %mask to <16 x i1>
@@ -653,7 +653,7 @@ define <16 x bfloat> @fma_maskz_132_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_132_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm1, %ymm2, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %ymm1, %ymm2, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %z, <16 x bfloat> %y)
   %b = bitcast i16 %mask to <16 x i1>
@@ -665,7 +665,7 @@ define <16 x bfloat> @fma_maskz_312_v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_312_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %ymm1, %ymm2, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %ymm1, %ymm2, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %x, <16 x bfloat> %y)
   %b = bitcast i16 %mask to <16 x i1>
@@ -677,7 +677,7 @@ define <16 x bfloat> @fma_mask_load_123_v16bf16(<16 x bfloat> %x, <16 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_123_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z)
@@ -690,7 +690,7 @@ define <16 x bfloat> @fma_mask_load_213_v16bf16(<16 x bfloat> %x, <16 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_213_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %x, <16 x bfloat> %z)
@@ -703,7 +703,7 @@ define <16 x bfloat> @fma_mask_load_231_v16bf16(<16 x bfloat> %x, <16 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_231_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %z, <16 x bfloat> %x)
@@ -716,7 +716,7 @@ define <16 x bfloat> @fma_mask_load_321_v16bf16(<16 x bfloat> %x, <16 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_321_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %y, <16 x bfloat> %x)
@@ -729,7 +729,7 @@ define <16 x bfloat> @fma_mask_load_132_v16bf16(<16 x bfloat> %x, <16 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_132_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %z, <16 x bfloat> %y)
@@ -742,7 +742,7 @@ define <16 x bfloat> @fma_mask_load_312_v16bf16(<16 x bfloat> %x, <16 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_312_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %ymm1, %ymm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %ymm1, %ymm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %x, <16 x bfloat> %y)
@@ -755,7 +755,7 @@ define <16 x bfloat> @fma_maskz_load_123_v16bf16(<16 x bfloat> %x, <16 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_123_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %y, <16 x bfloat> %z)
@@ -768,7 +768,7 @@ define <16 x bfloat> @fma_maskz_load_213_v16bf16(<16 x bfloat> %x, <16 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_213_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %x, <16 x bfloat> %z)
@@ -781,7 +781,7 @@ define <16 x bfloat> @fma_maskz_load_231_v16bf16(<16 x bfloat> %x, <16 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_231_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %y, <16 x bfloat> %z, <16 x bfloat> %x)
@@ -794,7 +794,7 @@ define <16 x bfloat> @fma_maskz_load_321_v16bf16(<16 x bfloat> %x, <16 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_321_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %y, <16 x bfloat> %x)
@@ -807,7 +807,7 @@ define <16 x bfloat> @fma_maskz_load_132_v16bf16(<16 x bfloat> %x, <16 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_132_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %x, <16 x bfloat> %z, <16 x bfloat> %y)
@@ -820,7 +820,7 @@ define <16 x bfloat> @fma_maskz_load_312_v16bf16(<16 x bfloat> %x, <16 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_312_v16bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %ymm1, %ymm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <16 x bfloat>, ptr %zp
   %a = call <16 x bfloat> @llvm.fma.v16bf16(<16 x bfloat> %z, <16 x bfloat> %x, <16 x bfloat> %y)
@@ -832,7 +832,7 @@ define <16 x bfloat> @fma_maskz_load_312_v16bf16(<16 x bfloat> %x, <16 x bfloat>
 define <32 x bfloat> @fma_123_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z) {
 ; CHECK-LABEL: fma_123_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd213bf16 %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z)
   ret <32 x bfloat> %a
@@ -841,7 +841,7 @@ define <32 x bfloat> @fma_123_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x 
 define <32 x bfloat> @fma_213_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z) {
 ; CHECK-LABEL: fma_213_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm2, %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd213bf16 %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %x, <32 x bfloat> %z)
   ret <32 x bfloat> %a
@@ -850,7 +850,7 @@ define <32 x bfloat> @fma_213_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x 
 define <32 x bfloat> @fma_231_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z) {
 ; CHECK-LABEL: fma_231_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 %zmm1, %zmm2, %zmm0
+; CHECK-NEXT:    vfmadd231bf16 %zmm1, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %z, <32 x bfloat> %x)
   ret <32 x bfloat> %a
@@ -859,7 +859,7 @@ define <32 x bfloat> @fma_231_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x 
 define <32 x bfloat> @fma_321_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z) {
 ; CHECK-LABEL: fma_321_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 %zmm1, %zmm2, %zmm0
+; CHECK-NEXT:    vfmadd231bf16 %zmm1, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %y, <32 x bfloat> %x)
   ret <32 x bfloat> %a
@@ -868,7 +868,7 @@ define <32 x bfloat> @fma_321_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x 
 define <32 x bfloat> @fma_132_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z) {
 ; CHECK-LABEL: fma_132_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm1, %zmm2, %zmm0
+; CHECK-NEXT:    vfmadd213bf16 %zmm1, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %z, <32 x bfloat> %y)
   ret <32 x bfloat> %a
@@ -877,7 +877,7 @@ define <32 x bfloat> @fma_132_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x 
 define <32 x bfloat> @fma_312_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z) {
 ; CHECK-LABEL: fma_312_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm1, %zmm2, %zmm0
+; CHECK-NEXT:    vfmadd213bf16 %zmm1, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %x, <32 x bfloat> %y)
   ret <32 x bfloat> %a
@@ -886,7 +886,7 @@ define <32 x bfloat> @fma_312_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x 
 define <32 x bfloat> @fma_load_123_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_123_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z)
@@ -896,7 +896,7 @@ define <32 x bfloat> @fma_load_123_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, p
 define <32 x bfloat> @fma_load_213_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_213_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %x, <32 x bfloat> %z)
@@ -906,7 +906,7 @@ define <32 x bfloat> @fma_load_213_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, p
 define <32 x bfloat> @fma_load_231_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_231_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %z, <32 x bfloat> %x)
@@ -916,7 +916,7 @@ define <32 x bfloat> @fma_load_231_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, p
 define <32 x bfloat> @fma_load_321_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_321_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %y, <32 x bfloat> %x)
@@ -926,7 +926,7 @@ define <32 x bfloat> @fma_load_321_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, p
 define <32 x bfloat> @fma_load_132_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_132_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %z, <32 x bfloat> %y)
@@ -936,7 +936,7 @@ define <32 x bfloat> @fma_load_132_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, p
 define <32 x bfloat> @fma_load_312_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, ptr %zp) {
 ; CHECK-LABEL: fma_load_312_v32bf16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %zmm1, %zmm0
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %x, <32 x bfloat> %y)
@@ -947,7 +947,7 @@ define <32 x bfloat> @fma_mask_123_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_123_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 %zmm1, %zmm2, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z)
   %b = bitcast i32 %mask to <32 x i1>
@@ -959,7 +959,7 @@ define <32 x bfloat> @fma_mask_213_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_213_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %x, <32 x bfloat> %z)
   %b = bitcast i32 %mask to <32 x i1>
@@ -971,7 +971,7 @@ define <32 x bfloat> @fma_mask_231_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_231_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %z, <32 x bfloat> %x)
   %b = bitcast i32 %mask to <32 x i1>
@@ -983,7 +983,7 @@ define <32 x bfloat> @fma_mask_321_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_321_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %zmm1, %zmm2, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %y, <32 x bfloat> %x)
   %b = bitcast i32 %mask to <32 x i1>
@@ -995,7 +995,7 @@ define <32 x bfloat> @fma_mask_132_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_132_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 %zmm2, %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 %zmm2, %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %z, <32 x bfloat> %y)
   %b = bitcast i32 %mask to <32 x i1>
@@ -1007,7 +1007,7 @@ define <32 x bfloat> @fma_mask_312_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <
 ; CHECK-LABEL: fma_mask_312_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm1, %zmm2, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 %zmm1, %zmm2, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %x, <32 x bfloat> %y)
   %b = bitcast i32 %mask to <32 x i1>
@@ -1019,7 +1019,7 @@ define <32 x bfloat> @fma_maskz_123_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_123_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z)
   %b = bitcast i32 %mask to <32 x i1>
@@ -1031,7 +1031,7 @@ define <32 x bfloat> @fma_maskz_213_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_213_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm2, %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %zmm2, %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %x, <32 x bfloat> %z)
   %b = bitcast i32 %mask to <32 x i1>
@@ -1043,7 +1043,7 @@ define <32 x bfloat> @fma_maskz_231_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_231_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %zmm1, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 %zmm1, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %z, <32 x bfloat> %x)
   %b = bitcast i32 %mask to <32 x i1>
@@ -1055,7 +1055,7 @@ define <32 x bfloat> @fma_maskz_321_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_321_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 %zmm1, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 %zmm1, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %y, <32 x bfloat> %x)
   %b = bitcast i32 %mask to <32 x i1>
@@ -1067,7 +1067,7 @@ define <32 x bfloat> @fma_maskz_132_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_132_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm1, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %zmm1, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %z, <32 x bfloat> %y)
   %b = bitcast i32 %mask to <32 x i1>
@@ -1079,7 +1079,7 @@ define <32 x bfloat> @fma_maskz_312_v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, 
 ; CHECK-LABEL: fma_maskz_312_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %edi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 %zmm1, %zmm2, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 %zmm1, %zmm2, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %x, <32 x bfloat> %y)
   %b = bitcast i32 %mask to <32 x i1>
@@ -1091,7 +1091,7 @@ define <32 x bfloat> @fma_mask_load_123_v32bf16(<32 x bfloat> %x, <32 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_123_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z)
@@ -1104,7 +1104,7 @@ define <32 x bfloat> @fma_mask_load_213_v32bf16(<32 x bfloat> %x, <32 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_213_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %x, <32 x bfloat> %z)
@@ -1117,7 +1117,7 @@ define <32 x bfloat> @fma_mask_load_231_v32bf16(<32 x bfloat> %x, <32 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_231_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %z, <32 x bfloat> %x)
@@ -1130,7 +1130,7 @@ define <32 x bfloat> @fma_mask_load_321_v32bf16(<32 x bfloat> %x, <32 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_321_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %y, <32 x bfloat> %x)
@@ -1143,7 +1143,7 @@ define <32 x bfloat> @fma_mask_load_132_v32bf16(<32 x bfloat> %x, <32 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_132_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %z, <32 x bfloat> %y)
@@ -1156,7 +1156,7 @@ define <32 x bfloat> @fma_mask_load_312_v32bf16(<32 x bfloat> %x, <32 x bfloat> 
 ; CHECK-LABEL: fma_mask_load_312_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %zmm1, %zmm0 {%k1}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %x, <32 x bfloat> %y)
@@ -1169,7 +1169,7 @@ define <32 x bfloat> @fma_maskz_load_123_v32bf16(<32 x bfloat> %x, <32 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_123_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %y, <32 x bfloat> %z)
@@ -1182,7 +1182,7 @@ define <32 x bfloat> @fma_maskz_load_213_v32bf16(<32 x bfloat> %x, <32 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_213_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd213nepbf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd213bf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %x, <32 x bfloat> %z)
@@ -1195,7 +1195,7 @@ define <32 x bfloat> @fma_maskz_load_231_v32bf16(<32 x bfloat> %x, <32 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_231_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %y, <32 x bfloat> %z, <32 x bfloat> %x)
@@ -1208,7 +1208,7 @@ define <32 x bfloat> @fma_maskz_load_321_v32bf16(<32 x bfloat> %x, <32 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_321_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd231nepbf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd231bf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %y, <32 x bfloat> %x)
@@ -1221,7 +1221,7 @@ define <32 x bfloat> @fma_maskz_load_132_v32bf16(<32 x bfloat> %x, <32 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_132_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %x, <32 x bfloat> %z, <32 x bfloat> %y)
@@ -1234,7 +1234,7 @@ define <32 x bfloat> @fma_maskz_load_312_v32bf16(<32 x bfloat> %x, <32 x bfloat>
 ; CHECK-LABEL: fma_maskz_load_312_v32bf16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
-; CHECK-NEXT:    vfmadd132nepbf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vfmadd132bf16 (%rdi), %zmm1, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %z = load <32 x bfloat>, ptr %zp
   %a = call <32 x bfloat> @llvm.fma.v32bf16(<32 x bfloat> %z, <32 x bfloat> %x, <32 x bfloat> %y)

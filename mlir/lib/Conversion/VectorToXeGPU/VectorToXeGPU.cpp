@@ -14,11 +14,11 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <algorithm>
@@ -76,12 +76,15 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
   int64_t offset;
-  if (failed(getStridesAndOffset(srcTy, strides, offset)) ||
-      strides.back() != 1)
+  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
     return rewriter.notifyMatchFailure(
         xferOp, "Buffer must be contiguous in the innermost dimension");
 
   unsigned vecRank = vecTy.getRank();
+  if (xferOp.hasOutOfBoundsDim() && vecRank < 2)
+    return rewriter.notifyMatchFailure(
+        xferOp, "Boundary check is available only for block instructions.");
+
   AffineMap map = xferOp.getPermutationMap();
   if (!map.isProjectedPermutation(/*allowZeroInResults=*/false))
     return rewriter.notifyMatchFailure(xferOp, "Unsupported permutation map");
@@ -101,19 +104,19 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
                    xegpu::TensorDescType descType, TypedValue<MemRefType> src,
                    Operation::operand_range offsets) {
   MemRefType srcTy = src.getType();
-  auto [strides, offset] = getStridesAndOffset(srcTy);
+  auto [strides, offset] = srcTy.getStridesAndOffset();
 
   xegpu::CreateNdDescOp ndDesc;
   if (srcTy.hasStaticShape()) {
-    ndDesc = rewriter.create<xegpu::CreateNdDescOp>(loc, descType, src,
-                                                    getAsOpFoldResult(offsets));
+    ndDesc = xegpu::CreateNdDescOp::create(rewriter, loc, descType, src,
+                                           getAsOpFoldResult(offsets));
   } else {
     // In case of any dynamic shapes, source's shape and strides have to be
     // explicitly provided.
     SmallVector<Value> sourceDims;
     unsigned srcRank = srcTy.getRank();
     for (unsigned i = 0; i < srcRank; ++i)
-      sourceDims.push_back(rewriter.create<memref::DimOp>(loc, src, i));
+      sourceDims.push_back(memref::DimOp::create(rewriter, loc, src, i));
 
     SmallVector<int64_t> constOffsets;
     SmallVector<Value> dynOffsets;
@@ -132,18 +135,18 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
 
     // Compute strides in reverse order.
     SmallVector<Value> dynStrides;
-    Value accStride = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    Value accStride = arith::ConstantIndexOp::create(rewriter, loc, 1);
     // Last stride is guaranteed to be static and unit.
     for (int i = static_cast<int>(strides.size()) - 2; i >= 0; --i) {
       accStride =
-          rewriter.create<arith::MulIOp>(loc, accStride, sourceDims[i + 1]);
+          arith::MulIOp::create(rewriter, loc, accStride, sourceDims[i + 1]);
       if (strides[i] == ShapedType::kDynamic)
         dynStrides.push_back(accStride);
     }
     std::reverse(dynStrides.begin(), dynStrides.end());
 
-    ndDesc = rewriter.create<xegpu::CreateNdDescOp>(
-        loc, descType, src, dynOffsets, dynShapes, dynStrides,
+    ndDesc = xegpu::CreateNdDescOp::create(
+        rewriter, loc, descType, src, dynOffsets, dynShapes, dynStrides,
         DenseI64ArrayAttr::get(rewriter.getContext(), constOffsets),
         DenseI64ArrayAttr::get(rewriter.getContext(), srcTy.getShape()),
         DenseI64ArrayAttr::get(rewriter.getContext(), strides));
@@ -176,10 +179,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (isTransposeLoad &&
         elementType.getIntOrFloatBitWidth() < minTransposeBitWidth)
       return rewriter.notifyMatchFailure(
-          readOp, "Unsupported data type for tranposition");
+          readOp, "Unsupported data type for transposition");
 
     // If load is transposed, get the base shape for the tensor descriptor.
-    SmallVector<int64_t> descShape{vecTy.getShape()};
+    SmallVector<int64_t> descShape(vecTy.getShape());
     if (isTransposeLoad)
       std::reverse(descShape.begin(), descShape.end());
     auto descType = xegpu::TensorDescType::get(
@@ -188,7 +191,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
 
     xegpu::CreateNdDescOp ndDesc =
         createNdDescriptor(rewriter, loc, descType,
-                           dyn_cast<TypedValue<MemRefType>>(readOp.getSource()),
+                           dyn_cast<TypedValue<MemRefType>>(readOp.getBase()),
                            readOp.getIndices());
 
     DenseI64ArrayAttr transposeAttr =
@@ -197,10 +200,10 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
                                                   ArrayRef<int64_t>{1, 0});
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    auto loadOp = rewriter.create<xegpu::LoadNdOp>(
-        loc, vecTy, ndDesc, /*packed=*/nullptr, transposeAttr,
-        /*l1_hint=*/hint,
-        /*l2_hint=*/hint, /*l3_hint=*/hint);
+    auto loadOp = xegpu::LoadNdOp::create(rewriter, loc, vecTy, ndDesc,
+                                          /*packed=*/nullptr, transposeAttr,
+                                          /*l1_hint=*/hint,
+                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(readOp, loadOp);
 
     return success();
@@ -227,17 +230,17 @@ struct TransferWriteLowering
         vecTy.getShape(), vecTy.getElementType(),
         /*array_length=*/1, /*boundary_check=*/writeOp.hasOutOfBoundsDim(),
         xegpu::MemorySpace::Global);
-    xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
-        rewriter, loc, descType,
-        dyn_cast<TypedValue<MemRefType>>(writeOp.getSource()),
-        writeOp.getIndices());
+    xegpu::CreateNdDescOp ndDesc =
+        createNdDescriptor(rewriter, loc, descType,
+                           dyn_cast<TypedValue<MemRefType>>(writeOp.getBase()),
+                           writeOp.getIndices());
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
     auto storeOp =
-        rewriter.create<xegpu::StoreNdOp>(loc, writeOp.getVector(), ndDesc,
-                                          /*l1_hint=*/hint,
-                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
+        xegpu::StoreNdOp::create(rewriter, loc, writeOp.getVector(), ndDesc,
+                                 /*l1_hint=*/hint,
+                                 /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(writeOp, storeOp);
 
     return success();
@@ -255,16 +258,19 @@ struct LoadLowering : public OpRewritePattern<vector::LoadOp> {
     if (failed(storeLoadPreconditions(rewriter, loadOp, vecTy)))
       return failure();
 
+    // Boundary check is available only for block instructions.
+    bool boundaryCheck = vecTy.getRank() > 1;
+
     auto descType = xegpu::TensorDescType::get(
         vecTy.getShape(), vecTy.getElementType(), /*array_length=*/1,
-        /*boundary_check=*/true, xegpu::MemorySpace::Global);
+        boundaryCheck, xegpu::MemorySpace::Global);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType, loadOp.getBase(), loadOp.getIndices());
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
-    auto loadNdOp = rewriter.create<xegpu::LoadNdOp>(
-        loc, vecTy, ndDesc, /*packed=*/nullptr, /*transpose=*/nullptr,
+    auto loadNdOp = xegpu::LoadNdOp::create(
+        rewriter, loc, vecTy, ndDesc, /*packed=*/nullptr, /*transpose=*/nullptr,
         /*l1_hint=*/hint,
         /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(loadOp, loadNdOp);
@@ -285,20 +291,58 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
     if (failed(storeLoadPreconditions(rewriter, storeOp, vecTy)))
       return failure();
 
-    auto descType =
-        xegpu::TensorDescType::get(vecTy.getShape(), vecTy.getElementType(),
-                                   /*array_length=*/1, /*boundary_check=*/true,
-                                   xegpu::MemorySpace::Global);
+    // Boundary check is available only for block instructions.
+    bool boundaryCheck = vecTy.getRank() > 1;
+
+    auto descType = xegpu::TensorDescType::get(
+        vecTy.getShape(), vecTy.getElementType(),
+        /*array_length=*/1, boundaryCheck, xegpu::MemorySpace::Global);
     xegpu::CreateNdDescOp ndDesc = createNdDescriptor(
         rewriter, loc, descType, storeOp.getBase(), storeOp.getIndices());
 
     // By default, no specific caching policy is assigned.
     xegpu::CachePolicyAttr hint = nullptr;
     auto storeNdOp =
-        rewriter.create<xegpu::StoreNdOp>(loc, vector, ndDesc,
-                                          /*l1_hint=*/hint,
-                                          /*l2_hint=*/hint, /*l3_hint=*/hint);
+        xegpu::StoreNdOp::create(rewriter, loc, vector, ndDesc,
+                                 /*l1_hint=*/hint,
+                                 /*l2_hint=*/hint, /*l3_hint=*/hint);
     rewriter.replaceOp(storeOp, storeNdOp);
+
+    return success();
+  }
+};
+
+struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
+  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = contractOp.getLoc();
+
+    if (contractOp.getKind() != vector::CombiningKind::ADD)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Expects add combining kind");
+
+    TypedValue<Type> acc = contractOp.getAcc();
+    VectorType accType = dyn_cast<VectorType>(acc.getType());
+    if (!accType || accType.getRank() != 2)
+      return rewriter.notifyMatchFailure(contractOp, "Expects acc 2D vector");
+
+    // Accept only plain 2D data layout.
+    // VNNI packing is applied to DPAS as a separate lowering step.
+    TypedValue<VectorType> lhs = contractOp.getLhs();
+    TypedValue<VectorType> rhs = contractOp.getRhs();
+    if (lhs.getType().getRank() != 2 || rhs.getType().getRank() != 2)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Expects lhs and rhs 2D vectors");
+
+    if (!isRowMajorMatmul(contractOp.getIndexingMapsAttr()))
+      return rewriter.notifyMatchFailure(contractOp, "Invalid indexing maps");
+
+    auto dpasOp = xegpu::DpasOp::create(rewriter, loc,
+                                        TypeRange{contractOp.getResultType()},
+                                        ValueRange{lhs, rhs, acc});
+    rewriter.replaceOp(contractOp, dpasOp);
 
     return success();
   }
@@ -309,8 +353,7 @@ struct ConvertVectorToXeGPUPass
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);
-    if (failed(
-            applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
 };
@@ -320,9 +363,5 @@ struct ConvertVectorToXeGPUPass
 void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
   patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
-               StoreLowering>(patterns.getContext());
-}
-
-std::unique_ptr<Pass> mlir::createConvertVectorToXeGPUPass() {
-  return std::make_unique<ConvertVectorToXeGPUPass>();
+               StoreLowering, ContractionLowering>(patterns.getContext());
 }

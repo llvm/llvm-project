@@ -107,10 +107,6 @@ bool DWARFBaseDIE::HasChildren() const {
   return m_die && m_die->HasChildren();
 }
 
-bool DWARFBaseDIE::Supports_DW_AT_APPLE_objc_complete_type() const {
-  return IsValid() && GetDWARF()->Supports_DW_AT_APPLE_objc_complete_type(m_cu);
-}
-
 DWARFAttributes DWARFBaseDIE::GetAttributes(Recurse recurse) const {
   if (IsValid())
     return m_die->GetAttributes(m_cu, recurse);

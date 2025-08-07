@@ -6,24 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANDOM_DISCRETE_DISTRIBUTION_H
-#define _LIBCPP___RANDOM_DISCRETE_DISTRIBUTION_H
+#ifndef _LIBCPP___CXX03___RANDOM_DISCRETE_DISTRIBUTION_H
+#define _LIBCPP___CXX03___RANDOM_DISCRETE_DISTRIBUTION_H
 
-#include <__algorithm/upper_bound.h>
-#include <__config>
-#include <__random/is_valid.h>
-#include <__random/uniform_real_distribution.h>
-#include <cstddef>
-#include <iosfwd>
-#include <numeric>
-#include <vector>
+#include <__cxx03/__algorithm/upper_bound.h>
+#include <__cxx03/__config>
+#include <__cxx03/__random/is_valid.h>
+#include <__cxx03/__random/uniform_real_distribution.h>
+#include <__cxx03/cstddef>
+#include <__cxx03/iosfwd>
+#include <__cxx03/numeric>
+#include <__cxx03/vector>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#include <__cxx03/__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -46,9 +46,6 @@ public:
     _LIBCPP_HIDE_FROM_ABI param_type(_InputIterator __f, _InputIterator __l) : __p_(__f, __l) {
       __init();
     }
-#ifndef _LIBCPP_CXX03_LANG
-    _LIBCPP_HIDE_FROM_ABI param_type(initializer_list<double> __wl) : __p_(__wl.begin(), __wl.end()) { __init(); }
-#endif // _LIBCPP_CXX03_LANG
     template <class _UnaryOperation>
     _LIBCPP_HIDE_FROM_ABI param_type(size_t __nw, double __xmin, double __xmax, _UnaryOperation __fw);
 
@@ -81,9 +78,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI discrete_distribution() {}
   template <class _InputIterator>
   _LIBCPP_HIDE_FROM_ABI discrete_distribution(_InputIterator __f, _InputIterator __l) : __p_(__f, __l) {}
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI discrete_distribution(initializer_list<double> __wl) : __p_(__wl) {}
-#endif // _LIBCPP_CXX03_LANG
   template <class _UnaryOperation>
   _LIBCPP_HIDE_FROM_ABI discrete_distribution(size_t __nw, double __xmin, double __xmax, _UnaryOperation __fw)
       : __p_(__nw, __xmin, __xmax, __fw) {}
@@ -209,4 +203,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___RANDOM_DISCRETE_DISTRIBUTION_H
+#endif // _LIBCPP___CXX03___RANDOM_DISCRETE_DISTRIBUTION_H

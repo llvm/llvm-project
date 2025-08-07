@@ -24,12 +24,12 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    movl $10, %ecx
-; ENABLE-NEXT:    #APP
-; ENABLE-NEXT:    movl $1, %edx
-; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    .p2align 4
 ; ENABLE-NEXT:  .LBB0_2: # %for.body
 ; ENABLE-NEXT:    # =>This Inner Loop Header: Depth=1
+; ENABLE-NEXT:    #APP
+; ENABLE-NEXT:    movl $1, %edx
+; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    addl %edx, %eax
 ; ENABLE-NEXT:    decl %ecx
 ; ENABLE-NEXT:    jne .LBB0_2
@@ -38,12 +38,16 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    shll $3, %eax
+; ENABLE-NEXT:    .seh_startepilogue
 ; ENABLE-NEXT:    popq %rbx
+; ENABLE-NEXT:    .seh_endepilogue
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:  .LBB0_5: # %if.else
 ; ENABLE-NEXT:    movl %edx, %eax
 ; ENABLE-NEXT:    addl %edx, %eax
+; ENABLE-NEXT:    .seh_startepilogue
 ; ENABLE-NEXT:    popq %rbx
+; ENABLE-NEXT:    .seh_endepilogue
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:    .seh_endproc
 ;
@@ -60,12 +64,12 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    movl $10, %ecx
-; DISABLE-NEXT:    #APP
-; DISABLE-NEXT:    movl $1, %edx
-; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    .p2align 4
 ; DISABLE-NEXT:  .LBB0_2: # %for.body
 ; DISABLE-NEXT:    # =>This Inner Loop Header: Depth=1
+; DISABLE-NEXT:    #APP
+; DISABLE-NEXT:    movl $1, %edx
+; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    addl %edx, %eax
 ; DISABLE-NEXT:    decl %ecx
 ; DISABLE-NEXT:    jne .LBB0_2
@@ -74,12 +78,16 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) #0 {
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    shll $3, %eax
+; DISABLE-NEXT:    .seh_startepilogue
 ; DISABLE-NEXT:    popq %rbx
+; DISABLE-NEXT:    .seh_endepilogue
 ; DISABLE-NEXT:    retq
 ; DISABLE-NEXT:  .LBB0_5: # %if.else
 ; DISABLE-NEXT:    movl %edx, %eax
 ; DISABLE-NEXT:    addl %edx, %eax
+; DISABLE-NEXT:    .seh_startepilogue
 ; DISABLE-NEXT:    popq %rbx
+; DISABLE-NEXT:    .seh_endepilogue
 ; DISABLE-NEXT:    retq
 ; DISABLE-NEXT:    .seh_endproc
 entry:
@@ -143,7 +151,9 @@ define i32 @loopInfoSaveOutsideLoop2(i32 %cond, i32 %N) #0 {
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
 ; ENABLE-NEXT:    shll $3, %eax
+; ENABLE-NEXT:    .seh_startepilogue
 ; ENABLE-NEXT:    popq %rbx
+; ENABLE-NEXT:    .seh_endepilogue
 ; ENABLE-NEXT:    retq
 ; ENABLE-NEXT:  .LBB1_4: # %if.else
 ; ENABLE-NEXT:    addl %edx, %edx
@@ -178,12 +188,16 @@ define i32 @loopInfoSaveOutsideLoop2(i32 %cond, i32 %N) #0 {
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
 ; DISABLE-NEXT:    shll $3, %eax
+; DISABLE-NEXT:    .seh_startepilogue
 ; DISABLE-NEXT:    popq %rbx
+; DISABLE-NEXT:    .seh_endepilogue
 ; DISABLE-NEXT:    retq
 ; DISABLE-NEXT:  .LBB1_5: # %if.else
 ; DISABLE-NEXT:    addl %edx, %edx
 ; DISABLE-NEXT:    movl %edx, %eax
+; DISABLE-NEXT:    .seh_startepilogue
 ; DISABLE-NEXT:    popq %rbx
+; DISABLE-NEXT:    .seh_endepilogue
 ; DISABLE-NEXT:    retq
 ; DISABLE-NEXT:    .seh_endproc
 entry:

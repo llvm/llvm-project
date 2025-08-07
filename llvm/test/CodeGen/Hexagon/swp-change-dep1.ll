@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -enable-pipeliner -pipeliner-max-stages=1 < %s -pipeliner-experimental-cg=true | FileCheck %s
+; RUN: llc -mtriple=hexagon -enable-pipeliner -pipeliner-max-stages=1 < %s -pipeliner-experimental-cg=true | FileCheck %s
 
 ; Test that we update the offset correctly for loads that are
 ; moved past stores. In these cases, we change the dependences

@@ -7,10 +7,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___VERBOSE_ABORT
-#define _LIBCPP___VERBOSE_ABORT
+#ifndef _LIBCPP___CXX03___VERBOSE_ABORT
+#define _LIBCPP___CXX03___VERBOSE_ABORT
 
-#include <__config>
+#include <__cxx03/__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -49,4 +49,4 @@ void __use(const char*, ...);
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___VERBOSE_ABORT
+#endif // _LIBCPP___CXX03___VERBOSE_ABORT

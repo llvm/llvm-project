@@ -1384,6 +1384,7 @@ define <2 x i64> @vnmsac_vx_nxv2i64(<2 x i64> %a, i64 %b, <2 x i64> %c,  <2 x i1
 ; RV32-NEXT:    vnmsac.vv v9, v8, v10, v0.t
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsac_vx_nxv2i64:
@@ -1414,6 +1415,7 @@ define <2 x i64> @vnmsac_vx_nxv2i64_unmasked(<2 x i64> %a, i64 %b, <2 x i64> %c,
 ; RV32-NEXT:    vnmsac.vv v9, v8, v10
 ; RV32-NEXT:    vmv1r.v v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsac_vx_nxv2i64_unmasked:
@@ -1457,6 +1459,7 @@ define <2 x i64> @vnmsac_vx_nxv2i64_ta(<2 x i64> %a, i64 %b, <2 x i64> %c,  <2 x
 ; RV32-NEXT:    vnmsac.vv v9, v8, v10, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsac_vx_nxv2i64_ta:
@@ -1518,6 +1521,7 @@ define <4 x i64> @vnmsac_vx_nxv4i64(<4 x i64> %a, i64 %b, <4 x i64> %c,  <4 x i1
 ; RV32-NEXT:    vnmsac.vv v10, v8, v12, v0.t
 ; RV32-NEXT:    vmv2r.v v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsac_vx_nxv4i64:
@@ -1548,6 +1552,7 @@ define <4 x i64> @vnmsac_vx_nxv4i64_unmasked(<4 x i64> %a, i64 %b, <4 x i64> %c,
 ; RV32-NEXT:    vnmsac.vv v10, v8, v12
 ; RV32-NEXT:    vmv2r.v v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsac_vx_nxv4i64_unmasked:
@@ -1591,6 +1596,7 @@ define <4 x i64> @vnmsac_vx_nxv4i64_ta(<4 x i64> %a, i64 %b, <4 x i64> %c,  <4 x
 ; RV32-NEXT:    vnmsac.vv v10, v8, v12, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsac_vx_nxv4i64_ta:
@@ -1652,6 +1658,7 @@ define <8 x i64> @vnmsac_vx_nxv8i64(<8 x i64> %a, i64 %b, <8 x i64> %c,  <8 x i1
 ; RV32-NEXT:    vnmsac.vv v12, v8, v16, v0.t
 ; RV32-NEXT:    vmv4r.v v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsac_vx_nxv8i64:
@@ -1682,6 +1689,7 @@ define <8 x i64> @vnmsac_vx_nxv8i64_unmasked(<8 x i64> %a, i64 %b, <8 x i64> %c,
 ; RV32-NEXT:    vnmsac.vv v12, v8, v16
 ; RV32-NEXT:    vmv4r.v v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsac_vx_nxv8i64_unmasked:
@@ -1725,6 +1733,7 @@ define <8 x i64> @vnmsac_vx_nxv8i64_ta(<8 x i64> %a, i64 %b, <8 x i64> %c,  <8 x
 ; RV32-NEXT:    vnmsac.vv v12, v8, v16, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vnmsac_vx_nxv8i64_ta:

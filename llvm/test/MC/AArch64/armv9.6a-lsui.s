@@ -212,10 +212,10 @@ _func:
 //------------------------------------------------------------------------------
 
   ldtadd     w7, wzr, [x5]
-// CHECK: ldtadd	w7, wzr, [x5]                   // encoding: [0xbf,0x04,0x27,0x19]
+// CHECK: sttadd	w7, [x5]                   // encoding: [0xbf,0x04,0x27,0x19]
 // ERROR: instruction requires: lsui
   ldtadd     x9, xzr, [sp]
-// CHECK: ldtadd	x9, xzr, [sp]                   // encoding: [0xff,0x07,0x29,0x59]
+// CHECK: sttadd	x9, [sp]                   // encoding: [0xff,0x07,0x29,0x59]
 // ERROR: instruction requires: lsui
 
   ldtadda    w7, wzr, [x5]
@@ -226,10 +226,10 @@ _func:
 // ERROR: instruction requires: lsui
 
   ldtaddl    w7, wzr, [x5]
-// CHECK: ldtaddl	w7, wzr, [x5]                   // encoding: [0xbf,0x04,0x67,0x19]
+// CHECK: sttaddl	w7, [x5]                   // encoding: [0xbf,0x04,0x67,0x19]
 // ERROR: instruction requires: lsui
   ldtaddl    x9, xzr, [sp]
-// CHECK: ldtaddl	x9, xzr, [sp]                   // encoding: [0xff,0x07,0x69,0x59]
+// CHECK: sttaddl	x9, [sp]                   // encoding: [0xff,0x07,0x69,0x59]
 // ERROR: instruction requires: lsui
 
   ldtaddal   w7, wzr, [x5]
@@ -240,17 +240,17 @@ _func:
 // ERROR: instruction requires: lsui
 
   ldtclr     w7, wzr, [x5]
-// CHECK: ldtclr	w7, wzr, [x5]                   // encoding: [0xbf,0x14,0x27,0x19]
+// CHECK: sttclr	w7, [x5]                   // encoding: [0xbf,0x14,0x27,0x19]
 // ERROR: instruction requires: lsui
   ldtclr     x9, xzr, [sp]
-// CHECK: ldtclr	x9, xzr, [sp]                   // encoding: [0xff,0x17,0x29,0x59]
+// CHECK: sttclr	x9, [sp]                   // encoding: [0xff,0x17,0x29,0x59]
 // ERROR: instruction requires: lsui
 
   ldtclrl    w7, wzr, [x5]
-// CHECK: ldtclrl	w7, wzr, [x5]                   // encoding: [0xbf,0x14,0x67,0x19]
+// CHECK: sttclrl	w7, [x5]                   // encoding: [0xbf,0x14,0x67,0x19]
 // ERROR: instruction requires: lsui
   ldtclrl    x9, xzr, [sp]
-// CHECK: ldtclrl	x9, xzr, [sp]                   // encoding: [0xff,0x17,0x69,0x59]
+// CHECK: sttclrl	x9, [sp]                   // encoding: [0xff,0x17,0x69,0x59]
 // ERROR: instruction requires: lsui
 
   ldtclra    w7, wzr, [x5]
@@ -268,17 +268,17 @@ _func:
 // ERROR: instruction requires: lsui
 
   ldtset     w7, wzr, [x5]
-// CHECK: ldtset	w7, wzr, [x5]                   // encoding: [0xbf,0x34,0x27,0x19]
+// CHECK: sttset	w7, [x5]                   // encoding: [0xbf,0x34,0x27,0x19]
 // ERROR: instruction requires: lsui
   ldtset     x9, xzr, [sp]
-// CHECK: ldtset	x9, xzr, [sp]                   // encoding: [0xff,0x37,0x29,0x59]
+// CHECK: sttset	x9, [sp]                   // encoding: [0xff,0x37,0x29,0x59]
 // ERROR: instruction requires: lsui
 
   ldtsetl    w7, wzr, [x5]
-// CHECK: ldtsetl	w7, wzr, [x5]                   // encoding: [0xbf,0x34,0x67,0x19]
+// CHECK: sttsetl	w7, [x5]                   // encoding: [0xbf,0x34,0x67,0x19]
 // ERROR: instruction requires: lsui
   ldtsetl    x9, xzr, [sp]
-// CHECK: ldtsetl	x9, xzr, [sp]                   // encoding: [0xff,0x37,0x69,0x59]
+// CHECK: sttsetl	x9, [sp]                   // encoding: [0xff,0x37,0x69,0x59]
 // ERROR: instruction requires: lsui
 
   ldtseta    w7, wzr, [x5]
@@ -300,159 +300,81 @@ _func:
 //------------------------------------------------------------------------------
 
   sttadd     w0, [x2]
-// CHECK: ldtadd	w0, wzr, [x2]                   // encoding: [0x5f,0x04,0x20,0x19]
+// CHECK: sttadd	w0, [x2]                   // encoding: [0x5f,0x04,0x20,0x19]
 // ERROR: instruction requires: lsui
   sttadd     w2, [sp]
-// CHECK: ldtadd	w2, wzr, [sp]                   // encoding: [0xff,0x07,0x22,0x19]
+// CHECK: sttadd	w2, [sp]                   // encoding: [0xff,0x07,0x22,0x19]
 // ERROR: instruction requires: lsui
   sttadd     x0, [x2]
-// CHECK: ldtadd	x0, xzr, [x2]                   // encoding: [0x5f,0x04,0x20,0x59]
+// CHECK: sttadd	x0, [x2]                   // encoding: [0x5f,0x04,0x20,0x59]
 // ERROR: instruction requires: lsui
   sttadd     x2, [sp]
-// CHECK: ldtadd	x2, xzr, [sp]                   // encoding: [0xff,0x07,0x22,0x59]
+// CHECK: sttadd	x2, [sp]                   // encoding: [0xff,0x07,0x22,0x59]
 // ERROR: instruction requires: lsui
 
   sttaddl    w0, [x2]
-// CHECK: ldtadd	w0, wzr, [x2]                   // encoding: [0x5f,0x04,0x20,0x19]
+// CHECK: sttaddl	w0, [x2]                   // encoding: [0x5f,0x04,0x60,0x19]
 // ERROR: instruction requires: lsui
   sttaddl    w2, [sp]
-// CHECK: ldtadd	w2, wzr, [sp]                   // encoding: [0xff,0x07,0x22,0x19]
+// CHECK: sttaddl	w2, [sp]                   // encoding: [0xff,0x07,0x62,0x19]
 // ERROR: instruction requires: lsui
   sttaddl    x0, [x2]
-// CHECK: ldtadd	x0, xzr, [x2]                   // encoding: [0x5f,0x04,0x20,0x59]
+// CHECK: sttaddl	x0, [x2]                   // encoding: [0x5f,0x04,0x60,0x59]
 // ERROR: instruction requires: lsui
   sttaddl    x2, [sp]
-// CHECK: ldtadd	x2, xzr, [sp]                   // encoding: [0xff,0x07,0x22,0x59]
-// ERROR: instruction requires: lsui
-
-  sttadda    w0, [x2]
-// CHECK: ldtadd	w0, wzr, [x2]                   // encoding: [0x5f,0x04,0x20,0x19]
-// ERROR: instruction requires: lsui
-  sttadda    w2, [sp]
-// CHECK: ldtadd	w2, wzr, [sp]                   // encoding: [0xff,0x07,0x22,0x19]
-// ERROR: instruction requires: lsui
-  sttadda    x0, [x2]
-// CHECK: ldtadd	x0, xzr, [x2]                   // encoding: [0x5f,0x04,0x20,0x59]
-// ERROR: instruction requires: lsui
-  sttadda    x2, [sp]
-// CHECK: ldtadd	x2, xzr, [sp]                   // encoding: [0xff,0x07,0x22,0x59]
-// ERROR: instruction requires: lsui
-
-  sttaddal   w0, [x2]
-// CHECK: ldtadd	w0, wzr, [x2]                   // encoding: [0x5f,0x04,0x20,0x19]
-// ERROR: instruction requires: lsui
-  sttaddal   w2, [sp]
-// CHECK: ldtadd	w2, wzr, [sp]                   // encoding: [0xff,0x07,0x22,0x19]
-// ERROR: instruction requires: lsui
-  sttaddal   x0, [x2]
-// CHECK: ldtadd	x0, xzr, [x2]                   // encoding: [0x5f,0x04,0x20,0x59]
-// ERROR: instruction requires: lsui
-  sttaddal   x2, [sp]
-// CHECK: ldtadd	x2, xzr, [sp]                   // encoding: [0xff,0x07,0x22,0x59]
+// CHECK: sttaddl	x2, [sp]                   // encoding: [0xff,0x07,0x62,0x59]
 // ERROR: instruction requires: lsui
 
   sttclr     w0, [x2]
-// CHECK: ldtclr	w0, wzr, [x2]                   // encoding: [0x5f,0x14,0x20,0x19]
+// CHECK: sttclr	w0, [x2]                   // encoding: [0x5f,0x14,0x20,0x19]
 // ERROR: instruction requires: lsui
   sttclr     w2, [sp]
-// CHECK: ldtclr	w2, wzr, [sp]                   // encoding: [0xff,0x17,0x22,0x19]
+// CHECK: sttclr	w2, [sp]                   // encoding: [0xff,0x17,0x22,0x19]
 // ERROR: instruction requires: lsui
   sttclr     x0, [x2]
-// CHECK: ldtclr	x0, xzr, [x2]                   // encoding: [0x5f,0x14,0x20,0x59]
+// CHECK: sttclr	x0, [x2]                   // encoding: [0x5f,0x14,0x20,0x59]
 // ERROR: instruction requires: lsui
   sttclr     x2, [sp]
-// CHECK: ldtclr	x2, xzr, [sp]                   // encoding: [0xff,0x17,0x22,0x59]
-// ERROR: instruction requires: lsui
-
-  sttclra    w0, [x2]
-// CHECK: ldtclr	w0, wzr, [x2]                   // encoding: [0x5f,0x14,0x20,0x19]
-// ERROR: instruction requires: lsui
-  sttclra    w2, [sp]
-// CHECK: ldtclr	w2, wzr, [sp]                   // encoding: [0xff,0x17,0x22,0x19]
-// ERROR: instruction requires: lsui
-  sttclra    x0, [x2]
-// CHECK: ldtclr	x0, xzr, [x2]                   // encoding: [0x5f,0x14,0x20,0x59]
-// ERROR: instruction requires: lsui
-  sttclra    x2, [sp]
-// CHECK: ldtclr	x2, xzr, [sp]                   // encoding: [0xff,0x17,0x22,0x59]
+// CHECK: sttclr	x2, [sp]                   // encoding: [0xff,0x17,0x22,0x59]
 // ERROR: instruction requires: lsui
 
   sttclrl    w0, [x2]
-// CHECK: ldtclr	w0, wzr, [x2]                   // encoding: [0x5f,0x14,0x20,0x19]
+// CHECK: sttclrl	w0, [x2]                   // encoding: [0x5f,0x14,0x60,0x19]
 // ERROR: instruction requires: lsui
   sttclrl    w2, [sp]
-// CHECK: ldtclr	w2, wzr, [sp]                   // encoding: [0xff,0x17,0x22,0x19]
+// CHECK: sttclrl	w2, [sp]                   // encoding: [0xff,0x17,0x62,0x19]
 // ERROR: instruction requires: lsui
   sttclrl    x0, [x2]
-// CHECK: ldtclr	x0, xzr, [x2]                   // encoding: [0x5f,0x14,0x20,0x59]
+// CHECK: sttclrl	x0, [x2]                   // encoding: [0x5f,0x14,0x60,0x59]
 // ERROR: instruction requires: lsui
   sttclrl    x2, [sp]
-// CHECK: ldtclr	x2, xzr, [sp]                   // encoding: [0xff,0x17,0x22,0x59]
-// ERROR: instruction requires: lsui
-
-  sttclral   w0, [x2]
-// CHECK: ldtclr	w0, wzr, [x2]                   // encoding: [0x5f,0x14,0x20,0x19]
-// ERROR: instruction requires: lsui
-  sttclral   x2, [sp]
-// CHECK: ldtclr	x2, xzr, [sp]                   // encoding: [0xff,0x17,0x22,0x59]
-// ERROR: instruction requires: lsui
-  sttclral   x0, [x2]
-// CHECK: ldtclr	x0, xzr, [x2]                   // encoding: [0x5f,0x14,0x20,0x59]
-// ERROR: instruction requires: lsui
-  sttclral   x2, [sp]
-// CHECK: ldtclr	x2, xzr, [sp]                   // encoding: [0xff,0x17,0x22,0x59]
+// CHECK: sttclrl	x2, [sp]                   // encoding: [0xff,0x17,0x62,0x59]
 // ERROR: instruction requires: lsui
 
   sttset     w0, [x2]
-// CHECK: ldtset	w0, wzr, [x2]                   // encoding: [0x5f,0x34,0x20,0x19]
+// CHECK: sttset	w0, [x2]                   // encoding: [0x5f,0x34,0x20,0x19]
 // ERROR: instruction requires: lsui
   sttset     w2, [sp]
-// CHECK: ldtset	w2, wzr, [sp]                   // encoding: [0xff,0x37,0x22,0x19]
+// CHECK: sttset	w2, [sp]                   // encoding: [0xff,0x37,0x22,0x19]
 // ERROR: instruction requires: lsui
   sttset     x0, [x2]
-// CHECK: ldtset	x0, xzr, [x2]                   // encoding: [0x5f,0x34,0x20,0x59]
+// CHECK: sttset	x0, [x2]                   // encoding: [0x5f,0x34,0x20,0x59]
 // ERROR: instruction requires: lsui
   sttset     x2, [sp]
-// CHECK: ldtset	x2, xzr, [sp]                   // encoding: [0xff,0x37,0x22,0x59]
-// ERROR: instruction requires: lsui
-
-  sttseta    w0, [x2]
-// CHECK: ldtset	w0, wzr, [x2]                   // encoding: [0x5f,0x34,0x20,0x19]
-// ERROR: instruction requires: lsui
-  sttseta    w2, [sp]
-// CHECK: ldtset	w2, wzr, [sp]                   // encoding: [0xff,0x37,0x22,0x19]
-// ERROR: instruction requires: lsui
-  sttseta    x0, [x2]
-// CHECK: ldtset	x0, xzr, [x2]                   // encoding: [0x5f,0x34,0x20,0x59]
-// ERROR: instruction requires: lsui
-  sttseta    x2, [sp]
-// CHECK: ldtset	x2, xzr, [sp]                   // encoding: [0xff,0x37,0x22,0x59]
+// CHECK: sttset	x2, [sp]                   // encoding: [0xff,0x37,0x22,0x59]
 // ERROR: instruction requires: lsui
 
   sttsetl    w0, [x2]
-// CHECK: ldtset	w0, wzr, [x2]                   // encoding: [0x5f,0x34,0x20,0x19]
+// CHECK: sttsetl	w0, [x2]                   // encoding: [0x5f,0x34,0x60,0x19]
 // ERROR: instruction requires: lsui
   sttsetl    w2, [sp]
-// CHECK: ldtset	w2, wzr, [sp]                   // encoding: [0xff,0x37,0x22,0x19]
+// CHECK: sttsetl	w2, [sp]                   // encoding: [0xff,0x37,0x62,0x19]
 // ERROR: instruction requires: lsui
   sttsetl    x0, [x2]
-// CHECK: ldtset	x0, xzr, [x2]                   // encoding: [0x5f,0x34,0x20,0x59]
+// CHECK: sttsetl	x0, [x2]                   // encoding: [0x5f,0x34,0x60,0x59]
 // ERROR: instruction requires: lsui
   sttsetl    x2, [sp]
-// CHECK: ldtset	x2, xzr, [sp]                   // encoding: [0xff,0x37,0x22,0x59]
-// ERROR: instruction requires: lsui
-
-  sttsetal   w0, [x2]
-// CHECK: ldtset	w0, wzr, [x2]                   // encoding: [0x5f,0x34,0x20,0x19]
-// ERROR: instruction requires: lsui
-  sttsetal   x2, [sp]
-// CHECK: ldtset	x2, xzr, [sp]                   // encoding: [0xff,0x37,0x22,0x59]
-// ERROR: instruction requires: lsui
-  sttsetal   x0, [x2]
-// CHECK: ldtset	x0, xzr, [x2]                   // encoding: [0x5f,0x34,0x20,0x59]
-// ERROR: instruction requires: lsui
-  sttsetal   x2, [sp]
-// CHECK: ldtset	x2, xzr, [sp]                   // encoding: [0xff,0x37,0x22,0x59]
+// CHECK: sttsetl	x2, [sp]                   // encoding: [0xff,0x37,0x62,0x59]
 // ERROR: instruction requires: lsui
 
 //------------------------------------------------------------------------------

@@ -4,52 +4,26 @@
 // RUN: ld.lld -shared %t2.o -soname=t2.so -o %t2.so
 // RUN: ld.lld -shared %t.o %t2.so -o %t.so
 // RUN: ld.lld %t.o %t2.so -o %t.exe
-// RUN: llvm-readobj -S -r %t.so | FileCheck --check-prefix=CHECKDSO %s
+// RUN: llvm-readelf -S -r %t.so | FileCheck --check-prefix=CHECKDSO %s
 // RUN: llvm-objdump -s --section=.got.plt %t.so | FileCheck --check-prefix=DUMPDSO %s
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t.so | FileCheck --check-prefix=DISASMDSO %s
-// RUN: llvm-readobj -S -r %t.exe | FileCheck --check-prefix=CHECKEXE %s
+// RUN: llvm-readelf -S -r %t.exe | FileCheck --check-prefix=CHECKEXE %s
 // RUN: llvm-objdump -s --section=.got.plt %t.exe | FileCheck --check-prefix=DUMPEXE %s
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t.exe | FileCheck --check-prefix=DISASMEXE %s
 
-// CHECKDSO:     Name: .plt
-// CHECKDSO-NEXT:     Type: SHT_PROGBITS
-// CHECKDSO-NEXT:     Flags [
-// CHECKDSO-NEXT:       SHF_ALLOC
-// CHECKDSO-NEXT:       SHF_EXECINSTR
-// CHECKDSO-NEXT:     ]
-// CHECKDSO-NEXT:     Address: 0x10340
-// CHECKDSO-NEXT:     Offset:
-// CHECKDSO-NEXT:     Size: 80
-// CHECKDSO-NEXT:     Link:
-// CHECKDSO-NEXT:     Info:
-// CHECKDSO-NEXT:     AddressAlignment: 16
+// CHECKDSO-LABEL: Section Headers:
+///          Name     Type     Address          Off    Size   ES Flg Lk Inf Al
+// CHECKDSO: .plt     PROGBITS 0000000000010340 000340 000050 00 AXy  0   0 16
+// CHECKDSO: .got.plt PROGBITS 0000000000030450 000450 000030 00  WA  0   0  8
 
-// CHECKDSO:     Name: .got.plt
-// CHECKDSO-NEXT:     Type: SHT_PROGBITS
-// CHECKDSO-NEXT:     Flags [
-// CHECKDSO-NEXT:       SHF_ALLOC
-// CHECKDSO-NEXT:       SHF_WRITE
-// CHECKDSO-NEXT:     ]
-// CHECKDSO-NEXT:     Address: 0x30450
-// CHECKDSO-NEXT:     Offset:
-// CHECKDSO-NEXT:     Size: 48
-// CHECKDSO-NEXT:     Link:
-// CHECKDSO-NEXT:     Info:
-// CHECKDSO-NEXT:     AddressAlignment: 8
-
-// CHECKDSO: Relocations [
-// CHECKDSO-NEXT:   Section ({{.*}}) .rela.plt {
-
-// &(.got.plt[3]) = 0x30450 + 3 * 8 = 0x30468
-// CHECKDSO-NEXT:     0x30468 R_AARCH64_JUMP_SLOT foo
-
-// &(.got.plt[4]) = 0x30450 + 4 * 8 = 0x30470
-// CHECKDSO-NEXT:     0x30470 R_AARCH64_JUMP_SLOT bar
-
-// &(.got.plt[5]) = 0x30000 + 5 * 8 = 0x30470
-// CHECKDSO-NEXT:     0x30478 R_AARCH64_JUMP_SLOT weak
-// CHECKDSO-NEXT:   }
-// CHECKDSO-NEXT: ]
+// CHECKDSO-LABEL: Relocation section '.rela.plt' at offset 0x2e8 contains 3 entries:
+// CHECKDSO-NEXT:      Offset             Info             Type            Symbol's Value  Symbol's Name + Addend
+/// &(.got.plt[3]) = 0x30450 + 3 * 8 = 0x30468
+// CHECKDSO-NEXT:  0000000000030468  0000000400000402 R_AARCH64_JUMP_SLOT 000000000001033c foo + 0
+/// &(.got.plt[4]) = 0x30450 + 4 * 8 = 0x30470
+// CHECKDSO-NEXT:  0000000000030470  0000000100000402 R_AARCH64_JUMP_SLOT 0000000000000000 bar + 0
+/// &(.got.plt[5]) = 0x30000 + 5 * 8 = 0x30478
+// CHECKDSO-NEXT:  0000000000030478  0000000200000402 R_AARCH64_JUMP_SLOT 0000000000000000 weak + 0
 
 // DUMPDSO: Contents of section .got.plt:
 // .got.plt[0..2] = 0 (reserved)
@@ -106,42 +80,17 @@
 // DISASMDSO-NEXT:     10388: add     x16, x16, #0x478
 // DISASMDSO-NEXT:     1038c: br      x17
 
-// CHECKEXE:     Name: .plt
-// CHECKEXE-NEXT:     Type: SHT_PROGBITS
-// CHECKEXE-NEXT:     Flags [
-// CHECKEXE-NEXT:       SHF_ALLOC
-// CHECKEXE-NEXT:       SHF_EXECINSTR
-// CHECKEXE-NEXT:     ]
-// CHECKEXE-NEXT:     Address: 0x2102E0
-// CHECKEXE-NEXT:     Offset:
-// CHECKEXE-NEXT:     Size: 64
-// CHECKEXE-NEXT:     Link:
-// CHECKEXE-NEXT:     Info:
-// CHECKEXE-NEXT:     AddressAlignment: 16
+// CHECKEXE-LABEL: Section Headers:
+///          Name     Type     Address          Off    Size   ES Flg Lk Inf Al
+// CHECKEXE: .plt     PROGBITS 00000000002102e0 0002e0 000040 00 AXy  0   0 16
+// CHECKEXE: .got.plt PROGBITS 00000000002303f0 0003f0 000028 00  WA  0   0  8
 
-// CHECKEXE:     Name: .got.plt
-// CHECKEXE-NEXT:     Type: SHT_PROGBITS
-// CHECKEXE-NEXT:     Flags [
-// CHECKEXE-NEXT:       SHF_ALLOC
-// CHECKEXE-NEXT:       SHF_WRITE
-// CHECKEXE-NEXT:     ]
-// CHECKEXE-NEXT:     Address: 0x2303F0
-// CHECKEXE-NEXT:     Offset:
-// CHECKEXE-NEXT:     Size: 40
-// CHECKEXE-NEXT:     Link:
-// CHECKEXE-NEXT:     Info:
-// CHECKEXE-NEXT:     AddressAlignment: 8
-
-// CHECKEXE: Relocations [
-// CHECKEXE-NEXT:   Section ({{.*}}) .rela.plt {
-
-// &(.got.plt[3]) = 0x2303f0 + 3 * 8 = 0x230408
-// CHECKEXE-NEXT:     0x230408 R_AARCH64_JUMP_SLOT bar 0x0
-
-// &(.got.plt[4]) = 0x2303f0 + 4 * 8 = 0x230410
-// CHECKEXE-NEXT:     0x230410 R_AARCH64_JUMP_SLOT weak 0x0
-// CHECKEXE-NEXT:   }
-// CHECKEXE-NEXT: ]
+// CHECKEXE-LABEL: Relocation section '.rela.plt' at offset 0x298 contains 2 entries:
+// CHECKEXE-NEXT:      Offset             Info             Type               Symbol's Value  Symbol's Name + Addend
+/// &(.got.plt[3]) = 0x2303f0 + 3 * 8 = 0x230408
+// CHECKEXE-NEXT:  0000000000230408  0000000100000402 R_AARCH64_JUMP_SLOT    0000000000000000 bar + 0
+/// &(.got.plt[4]) = 0x2303f0 + 4 * 8 = 0x230410
+// CHECKEXE-NEXT:  0000000000230410  0000000200000402 R_AARCH64_JUMP_SLOT    0000000000000000 weak + 0
 
 // DUMPEXE: Contents of section .got.plt:
 // .got.plt[0..2] = 0 (reserved)

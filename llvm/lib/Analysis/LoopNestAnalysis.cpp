@@ -346,7 +346,7 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
   // "guarded" inner loop which contains "only" Phi nodes corresponding to the
   // LCSSA Phi nodes in the exit block.
   auto IsExtraPhiBlock = [&](const BasicBlock &BB) {
-    return BB.getFirstNonPHI() == BB.getTerminator() &&
+    return &*BB.getFirstNonPHIIt() == BB.getTerminator() &&
            all_of(BB.phis(), [&](const PHINode &PN) {
              return all_of(PN.blocks(), [&](const BasicBlock *IncomingBlock) {
                return IncomingBlock == InnerLoopExit ||

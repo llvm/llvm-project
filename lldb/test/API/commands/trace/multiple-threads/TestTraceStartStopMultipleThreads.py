@@ -6,6 +6,7 @@ from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 
 
+@skipIfNoIntelPT
 class TestTraceStartStopMultipleThreads(TraceIntelPTTestCaseBase):
     @skipIf(oslist=no_match(["linux"]), archs=no_match(["i386", "x86_64"]))
     @testSBAPIAndCommands

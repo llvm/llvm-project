@@ -31,7 +31,7 @@ define i32 @p(i32 %x, i32 %y, i32 %m) {
 
 define <2 x i32> @p_splatvec(<2 x i32> %x, <2 x i32> %y, <2 x i32> %m) {
 ; CHECK-LABEL: @p_splatvec(
-; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[M:%.*]], <i32 -1, i32 -1>
+; CHECK-NEXT:    [[NEG:%.*]] = xor <2 x i32> [[M:%.*]], splat (i32 -1)
 ; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[X:%.*]], [[NEG]]
 ; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i32> [[Y:%.*]], [[M]]
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[OR]], [[OR1]]
@@ -78,8 +78,8 @@ define i32 @p_constmask(i32 %x, i32 %y) {
 
 define <2 x i32> @p_constmask_splatvec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @p_constmask_splatvec(
-; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[X:%.*]], <i32 -65281, i32 -65281>
-; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i32> [[Y:%.*]], <i32 65280, i32 65280>
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i32> [[X:%.*]], splat (i32 -65281)
+; CHECK-NEXT:    [[OR1:%.*]] = or <2 x i32> [[Y:%.*]], splat (i32 65280)
 ; CHECK-NEXT:    [[RET:%.*]] = and <2 x i32> [[OR]], [[OR1]]
 ; CHECK-NEXT:    ret <2 x i32> [[RET]]
 ;

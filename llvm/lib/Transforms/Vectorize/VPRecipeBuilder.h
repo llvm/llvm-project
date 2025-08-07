@@ -12,16 +12,36 @@
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/IR/IRBuilder.h"
 
 namespace llvm {
 
 class LoopVectorizationLegality;
 class LoopVectorizationCostModel;
 class TargetLibraryInfo;
+class TargetTransformInfo;
 struct HistogramInfo;
+struct VFRange;
+
+/// A chain of instructions that form a partial reduction.
+/// Designed to match either:
+///   reduction_bin_op (extend (A), accumulator), or
+///   reduction_bin_op (bin_op (extend (A), (extend (B))), accumulator).
+struct PartialReductionChain {
+  PartialReductionChain(Instruction *Reduction, Instruction *ExtendA,
+                        Instruction *ExtendB, Instruction *ExtendUser)
+      : Reduction(Reduction), ExtendA(ExtendA), ExtendB(ExtendB),
+        ExtendUser(ExtendUser) {}
+  /// The top-level binary operation that forms the reduction to a scalar
+  /// after the loop body.
+  Instruction *Reduction;
+  /// The extension of each of the inner binary operation's operands.
+  Instruction *ExtendA;
+  Instruction *ExtendB;
+
+  /// The user of the extends that is then reduced.
+  Instruction *ExtendUser;
+};
 
 /// Helper class to create VPRecipies from IR instructions.
 class VPRecipeBuilder {
@@ -34,6 +54,9 @@ class VPRecipeBuilder {
   /// Target Library Info.
   const TargetLibraryInfo *TLI;
 
+  // Target Transform Info.
+  const TargetTransformInfo *TTI;
+
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
@@ -44,15 +67,10 @@ class VPRecipeBuilder {
 
   VPBuilder &Builder;
 
-  /// When we if-convert we need to create edge masks. We have to cache values
-  /// so that we don't end up with exponential recursion/IR. Note that
-  /// if-conversion currently takes place during VPlan-construction, so these
-  /// caches are only used at that stage.
-  using EdgeMaskCacheTy =
-      DenseMap<std::pair<BasicBlock *, BasicBlock *>, VPValue *>;
-  using BlockMaskCacheTy = DenseMap<BasicBlock *, VPValue *>;
-  EdgeMaskCacheTy EdgeMaskCache;
-  BlockMaskCacheTy BlockMaskCache;
+  /// The mask of each VPBB, generated earlier and used for predicating recipes
+  /// in VPBB.
+  /// TODO: remove by applying predication when generating the masks.
+  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache;
 
   // VPlan construction support: Hold a mapping from ingredients to
   // their recipe.
@@ -62,6 +80,13 @@ class VPRecipeBuilder {
   /// to add the incoming value from the backedge after all recipes have been
   /// created.
   SmallVector<VPHeaderPHIRecipe *, 4> PhisToFix;
+
+  /// A mapping of partial reduction exit instructions to their scaling factor.
+  DenseMap<const Instruction *, unsigned> ScaledReductionMap;
+
+  /// Loop versioning instance for getting noalias metadata guaranteed by
+  /// runtime checks.
+  LoopVersioning *LVer;
 
   /// Check if \p I can be widened at the start of \p Range and possibly
   /// decrease the range such that the returned value holds for the entire \p
@@ -87,11 +112,6 @@ class VPRecipeBuilder {
   tryToOptimizeInductionTruncate(TruncInst *I, ArrayRef<VPValue *> Operands,
                                  VFRange &Range);
 
-  /// Handle non-loop phi nodes. Return a new VPBlendRecipe otherwise. Currently
-  /// all such phi nodes are turned into a sequence of select instructions as
-  /// the vectorizer currently performs full if-conversion.
-  VPBlendRecipe *tryToBlend(PHINode *Phi, ArrayRef<VPValue *> Operands);
-
   /// Handle call instructions. If \p CI can be widened for \p Range.Start,
   /// return a new VPWidenCallRecipe or VPWidenIntrinsicRecipe. Range.End may be
   /// decreased to ensure same decision from \p Range.Start to \p Range.End.
@@ -101,8 +121,7 @@ class VPRecipeBuilder {
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
-                            VPBasicBlock *VPBB);
+  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands);
 
   /// Makes Histogram count operations safe for vectorization, by emitting a
   /// llvm.experimental.vector.histogram.add intrinsic in place of the
@@ -111,19 +130,50 @@ class VPRecipeBuilder {
   VPHistogramRecipe *tryToWidenHistogram(const HistogramInfo *HI,
                                          ArrayRef<VPValue *> Operands);
 
+  /// Examines reduction operations to see if the target can use a cheaper
+  /// operation with a wider per-iteration input VF and narrower PHI VF.
+  /// Each element within Chains is a pair with a struct containing reduction
+  /// information and the scaling factor between the number of elements in
+  /// the input and output.
+  /// Recursively calls itself to identify chained scaled reductions.
+  /// Returns true if this invocation added an entry to Chains, otherwise false.
+  /// i.e. returns false in the case that a subcall adds an entry to Chains,
+  /// but the top-level call does not.
+  bool getScaledReductions(
+      Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
+      SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains);
+
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
+                  const TargetTransformInfo *TTI,
                   LoopVectorizationLegality *Legal,
                   LoopVectorizationCostModel &CM,
-                  PredicatedScalarEvolution &PSE, VPBuilder &Builder)
-      : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), Legal(Legal), CM(CM),
-        PSE(PSE), Builder(Builder) {}
+                  PredicatedScalarEvolution &PSE, VPBuilder &Builder,
+                  DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
+                  LoopVersioning *LVer)
+      : Plan(Plan), OrigLoop(OrigLoop), TLI(TLI), TTI(TTI), Legal(Legal),
+        CM(CM), PSE(PSE), Builder(Builder), BlockMaskCache(BlockMaskCache),
+        LVer(LVer) {}
 
-  /// Create and return a widened recipe for \p I if one can be created within
+  std::optional<unsigned> getScalingForReduction(const Instruction *ExitInst) {
+    auto It = ScaledReductionMap.find(ExitInst);
+    return It == ScaledReductionMap.end() ? std::nullopt
+                                          : std::make_optional(It->second);
+  }
+
+  /// Find all possible partial reductions in the loop and track all of those
+  /// that are valid so recipes can be formed later.
+  void collectScaledReductions(VFRange &Range);
+
+  /// Create and return a widened recipe for \p R if one can be created within
   /// the given VF \p Range.
-  VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
-                                       ArrayRef<VPValue *> Operands,
-                                       VFRange &Range, VPBasicBlock *VPBB);
+  VPRecipeBase *tryToCreateWidenRecipe(VPSingleDefRecipe *R, VFRange &Range);
+
+  /// Create and return a partial reduction recipe for a reduction instruction
+  /// along with binary operation and reduction phi operands.
+  VPRecipeBase *tryToCreatePartialReduction(Instruction *Reduction,
+                                            ArrayRef<VPValue *> Operands,
+                                            unsigned ScaleFactor);
 
   /// Set the recipe created for given ingredient.
   void setRecipe(Instruction *I, VPRecipeBase *R) {
@@ -132,27 +182,11 @@ public:
     Ingredient2Recipe[I] = R;
   }
 
-  /// Create the mask for the vector loop header block.
-  void createHeaderMask();
-
-  /// A helper function that computes the predicate of the block BB, assuming
-  /// that the header block of the loop is set to True or the loop mask when
-  /// tail folding.
-  void createBlockInMask(BasicBlock *BB);
-
-  /// Returns the *entry* mask for the block \p BB.
-  VPValue *getBlockInMask(BasicBlock *BB) const;
-
-  /// Create an edge mask for every destination of cases and/or default.
-  void createSwitchEdgeMasks(SwitchInst *SI);
-
-  /// A helper function that computes the predicate of the edge between SRC
-  /// and DST.
-  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst);
-
-  /// A helper that returns the previously computed predicate of the edge
-  /// between SRC and DST.
-  VPValue *getEdgeMask(BasicBlock *Src, BasicBlock *Dst) const;
+  /// Returns the *entry* mask for block \p VPBB or null if the mask is
+  /// all-true.
+  VPValue *getBlockInMask(VPBasicBlock *VPBB) const {
+    return BlockMaskCache.lookup(VPBB);
+  }
 
   /// Return the recipe created for given ingredient.
   VPRecipeBase *getRecipe(Instruction *I) {
@@ -163,19 +197,12 @@ public:
     return Ingredient2Recipe[I];
   }
 
-  /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
-  /// last operand. Range.End may be decreased to ensure same recipe behavior
-  /// from \p Range.Start to \p Range.End.
-  VPReplicateRecipe *handleReplication(Instruction *I, VFRange &Range);
-
-  /// Add the incoming values from the backedge to reduction & first-order
-  /// recurrence cross-iteration phis.
-  void fixHeaderPhis();
-
-  /// Returns a range mapping the values of the range \p Operands to their
-  /// corresponding VPValues.
-  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
-  mapToVPValues(User::op_range Operands);
+  /// Build a VPReplicationRecipe for \p I using \p Operands. If it is
+  /// predicated, add the mask as last operand. Range.End may be decreased to
+  /// ensure same recipe behavior from \p Range.Start to \p Range.End.
+  VPReplicateRecipe *handleReplication(Instruction *I,
+                                       ArrayRef<VPValue *> Operands,
+                                       VFRange &Range);
 
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {
@@ -183,6 +210,15 @@ public:
         return R->getVPSingleValue();
     }
     return Plan.getOrAddLiveIn(V);
+  }
+
+  void updateBlockMaskCache(DenseMap<VPValue *, VPValue *> &Old2New) {
+    for (auto &[_, V] : BlockMaskCache) {
+      if (auto *New = Old2New.lookup(V)) {
+        V->replaceAllUsesWith(New);
+        V = New;
+      }
+    }
   }
 };
 } // end namespace llvm

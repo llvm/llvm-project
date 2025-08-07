@@ -5,11 +5,7 @@ define void @raw_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset_
 ; CHECK-LABEL: raw_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s11, s17
-; CHECK-NEXT:    s_mov_b32 s10, s16
-; CHECK-NEXT:    s_mov_b32 s9, s7
-; CHECK-NEXT:    s_mov_b32 s8, s6
-; CHECK-NEXT:    buffer_atomic_add_f32 v0, v1, s[8:11], s18 offen offset:24
+; CHECK-NEXT:    buffer_atomic_add_f32 v0, v1, s[16:19], s20 offen offset:24
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %voffset.add = add i32 %voffset, 24
@@ -21,11 +17,7 @@ define void @raw_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__0_voffset__sg
 ; CHECK-LABEL: raw_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s11, s17
-; CHECK-NEXT:    s_mov_b32 s10, s16
-; CHECK-NEXT:    s_mov_b32 s9, s7
-; CHECK-NEXT:    s_mov_b32 s8, s6
-; CHECK-NEXT:    buffer_atomic_add_f32 v0, off, s[8:11], s18
+; CHECK-NEXT:    buffer_atomic_add_f32 v0, off, s[16:19], s20
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 0, i32 %soffset, i32 0)
@@ -36,11 +28,7 @@ define void @raw_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__vgpr_voffse
 ; CHECK-LABEL: raw_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s11, s17
-; CHECK-NEXT:    s_mov_b32 s10, s16
-; CHECK-NEXT:    s_mov_b32 s9, s7
-; CHECK-NEXT:    s_mov_b32 s8, s6
-; CHECK-NEXT:    buffer_atomic_pk_add_f16 v0, v1, s[8:11], s18 offen
+; CHECK-NEXT:    buffer_atomic_pk_add_f16 v0, v1, s[16:19], s20 offen
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x half> @llvm.amdgcn.raw.buffer.atomic.fadd.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 0)
@@ -51,11 +39,7 @@ define void @raw_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__0_voffset__
 ; CHECK-LABEL: raw_buffer_atomic_add_v2f16_noret__vgpr_val__sgpr_rsrc__0_voffset__sgpr_soffset:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s11, s17
-; CHECK-NEXT:    s_mov_b32 s10, s16
-; CHECK-NEXT:    s_mov_b32 s9, s7
-; CHECK-NEXT:    s_mov_b32 s8, s6
-; CHECK-NEXT:    buffer_atomic_pk_add_f16 v0, off, s[8:11], s18 offset:92
+; CHECK-NEXT:    buffer_atomic_pk_add_f16 v0, off, s[16:19], s20 offset:92
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %ret = call <2 x half> @llvm.amdgcn.raw.buffer.atomic.fadd.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 92, i32 %soffset, i32 0)
@@ -66,11 +50,7 @@ define void @raw_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset_
 ; CHECK-LABEL: raw_buffer_atomic_add_f32_noret__vgpr_val__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_mov_b32 s11, s17
-; CHECK-NEXT:    s_mov_b32 s10, s16
-; CHECK-NEXT:    s_mov_b32 s9, s7
-; CHECK-NEXT:    s_mov_b32 s8, s6
-; CHECK-NEXT:    buffer_atomic_add_f32 v0, v1, s[8:11], s18 offen slc
+; CHECK-NEXT:    buffer_atomic_add_f32 v0, v1, s[16:19], s20 offen slc
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %ret = call float @llvm.amdgcn.raw.buffer.atomic.fadd.f32(float %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 2)

@@ -653,4 +653,24 @@ body:             |
     S_ENDPGM 0
 ...
 
-
+---
+name:            test_remat_s_mov_b64_imm_pseudo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: test_remat_s_mov_b64_imm_pseudo
+    ; GCN: renamable $sgpr0_sgpr1 = S_MOV_B64_IMM_PSEUDO 1
+    ; GCN-NEXT: renamable $sgpr2_sgpr3 = S_MOV_B64_IMM_PSEUDO 2
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr2_sgpr3
+    ; GCN-NEXT: renamable $sgpr0_sgpr1 = S_MOV_B64_IMM_PSEUDO 3
+    ; GCN-NEXT: S_NOP 0, implicit killed renamable $sgpr0_sgpr1
+    ; GCN-NEXT: S_ENDPGM 0
+    %0:sgpr_64 = S_MOV_B64_IMM_PSEUDO 1
+    %1:sgpr_64 = S_MOV_B64_IMM_PSEUDO 2
+    %2:sgpr_64 = S_MOV_B64_IMM_PSEUDO 3
+    S_NOP 0, implicit %0
+    S_NOP 0, implicit %1
+    S_NOP 0, implicit %2
+    S_ENDPGM 0
+...

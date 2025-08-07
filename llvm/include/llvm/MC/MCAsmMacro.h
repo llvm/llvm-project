@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SMLoc.h"
 #include <vector>
@@ -52,14 +53,6 @@ public:
     Amp, AmpAmp, Exclaim, ExclaimEqual, Percent, Hash,
     Less, LessEqual, LessLess, LessGreater,
     Greater, GreaterEqual, GreaterGreater, At, MinusGreater,
-
-    // MIPS unary expression operators such as %neg.
-    PercentCall16, PercentCall_Hi, PercentCall_Lo, PercentDtprel_Hi,
-    PercentDtprel_Lo, PercentGot, PercentGot_Disp, PercentGot_Hi, PercentGot_Lo,
-    PercentGot_Ofst, PercentGot_Page, PercentGottprel, PercentGp_Rel, PercentHi,
-    PercentHigher, PercentHighest, PercentLo, PercentNeg, PercentPcrel_Hi,
-    PercentPcrel_Lo, PercentTlsgd, PercentTlsldm, PercentTprel_Hi,
-    PercentTprel_Lo
   };
 
 private:
@@ -82,9 +75,9 @@ public:
   bool is(TokenKind K) const { return Kind == K; }
   bool isNot(TokenKind K) const { return Kind != K; }
 
-  SMLoc getLoc() const;
-  SMLoc getEndLoc() const;
-  SMRange getLocRange() const;
+  LLVM_ABI SMLoc getLoc() const;
+  LLVM_ABI SMLoc getEndLoc() const;
+  LLVM_ABI SMRange getLocRange() const;
 
   /// Get the contents of a string token (without quotes).
   StringRef getStringContents() const {
@@ -123,7 +116,7 @@ public:
     return IntVal;
   }
 
-  void dump(raw_ostream &OS) const;
+  LLVM_ABI void dump(raw_ostream &OS) const;
 };
 
 struct MCAsmMacroParameter {

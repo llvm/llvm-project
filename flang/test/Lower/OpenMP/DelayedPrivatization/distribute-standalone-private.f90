@@ -1,6 +1,6 @@
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization-staging \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging \
 ! RUN:   -o - %s 2>&1 | FileCheck %s
-! RUN: bbc -emit-hlfir -fopenmp --openmp-enable-delayed-privatization-staging -o - %s 2>&1 \
+! RUN: bbc -emit-hlfir -fopenmp --enable-delayed-privatization-staging -o - %s 2>&1 \
 ! RUN:   | FileCheck %s
 
 subroutine standalone_distribute
@@ -16,8 +16,8 @@ subroutine standalone_distribute
     !$omp end teams
 end subroutine standalone_distribute
 
-! CHECK: omp.private {type = private} @[[I_PRIVATIZER_SYM:.*]] : !fir.ref<i32>
-! CHECK: omp.private {type = private} @[[VAR_PRIVATIZER_SYM:.*]] : !fir.ref<i32>
+! CHECK: omp.private {type = private} @[[I_PRIVATIZER_SYM:.*]] : i32
+! CHECK: omp.private {type = private} @[[VAR_PRIVATIZER_SYM:.*]] : i32
 
 
 ! CHECK-LABEL: func.func @_QPstandalone_distribute() {
@@ -31,7 +31,7 @@ end subroutine standalone_distribute
 ! CHECK:               %[[VAR_PRIV_DECL:.*]]:2 = hlfir.declare %[[VAR_ARG]]
 ! CHECK:               %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_ARG]]
 
-! CHECK:               fir.store %{{.*}} to %[[I_PRIV_DECL]]#1 : !fir.ref<i32>
+! CHECK:               hlfir.assign %{{.*}} to %[[I_PRIV_DECL]]#0 : i32, !fir.ref<i32>
 ! CHECK:               %{{.*}} = fir.load %[[VAR_PRIV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               %{{.*}} = fir.load %[[I_PRIV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               arith.addi %{{.*}}, %{{.*}} : i32

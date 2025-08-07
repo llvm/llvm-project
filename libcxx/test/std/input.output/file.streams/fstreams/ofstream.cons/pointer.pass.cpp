@@ -18,6 +18,8 @@
 
 // XFAIL: LIBCXX-AIX-FIXME
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <fstream>
 #include <cassert>
 #include <ios>

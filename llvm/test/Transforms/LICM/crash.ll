@@ -42,10 +42,10 @@ for.body:                                         ; preds = %for.body, %entry
 }
 
 ; PR8102
-define void @test3() {
+define void @test3(i1 %arg) {
 entry:
   %__first = alloca { ptr }
-  br i1 undef, label %for.cond, label %for.end
+  br i1 %arg, label %for.cond, label %for.end
 
 for.cond:                                         ; preds = %for.cond, %entry
   %tmp2 = load ptr, ptr %__first, align 4

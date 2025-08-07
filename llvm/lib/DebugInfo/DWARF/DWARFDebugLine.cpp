@@ -340,8 +340,8 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
           return createStringError(
               errc::invalid_argument,
               "failed to parse file entry because the MD5 hash is invalid");
-        std::uninitialized_copy_n(Value.getAsBlock()->begin(), 16,
-                                  FileEntry.Checksum.begin());
+        llvm::uninitialized_copy(*Value.getAsBlock(),
+                                 FileEntry.Checksum.begin());
         break;
       default:
         break;
@@ -531,6 +531,7 @@ void DWARFDebugLine::Sequence::reset() {
   FirstRowIndex = 0;
   LastRowIndex = 0;
   Empty = true;
+  StmtSeqOffset = UINT64_MAX;
 }
 
 DWARFDebugLine::LineTable::LineTable() { clear(); }
@@ -561,13 +562,12 @@ void DWARFDebugLine::LineTable::clear() {
 DWARFDebugLine::ParsingState::ParsingState(
     struct LineTable *LT, uint64_t TableOffset,
     function_ref<void(Error)> ErrorHandler)
-    : LineTable(LT), LineTableOffset(TableOffset), ErrorHandler(ErrorHandler) {
-  resetRowAndSequence();
-}
+    : LineTable(LT), LineTableOffset(TableOffset), ErrorHandler(ErrorHandler) {}
 
-void DWARFDebugLine::ParsingState::resetRowAndSequence() {
+void DWARFDebugLine::ParsingState::resetRowAndSequence(uint64_t Offset) {
   Row.reset(LineTable->Prologue.DefaultIsStmt);
   Sequence.reset();
+  Sequence.StmtSeqOffset = Offset;
 }
 
 void DWARFDebugLine::ParsingState::appendRowToMatrix() {
@@ -848,6 +848,10 @@ Error DWARFDebugLine::LineTable::parse(
     *OS << '\n';
     Row::dumpTableHeader(*OS, /*Indent=*/Verbose ? 12 : 0);
   }
+  // *OffsetPtr points to the end of the prologue - i.e. the start of the first
+  // sequence. So initialize the first sequence offset accordingly.
+  State.resetRowAndSequence(*OffsetPtr);
+
   bool TombstonedAddress = false;
   auto EmitRow = [&] {
     if (!TombstonedAddress) {
@@ -912,7 +916,9 @@ Error DWARFDebugLine::LineTable::parse(
         // into this code path - if it were invalid, the default case would be
         // followed.
         EmitRow();
-        State.resetRowAndSequence();
+        // Cursor now points to right after the end_sequence opcode - so points
+        // to the start of the next sequence - if one exists.
+        State.resetRowAndSequence(Cursor.tell());
         break;
 
       case DW_LNE_set_address:
@@ -1268,13 +1274,14 @@ Error DWARFDebugLine::LineTable::parse(
 
   // Sort all sequences so that address lookup will work faster.
   if (!Sequences.empty()) {
-    llvm::sort(Sequences, Sequence::orderByHighPC);
+    llvm::stable_sort(Sequences, Sequence::orderByHighPC);
     // Note: actually, instruction address ranges of sequences should not
     // overlap (in shared objects and executables). If they do, the address
     // lookup would still work, though, but result would be ambiguous.
     // We don't report warning in this case. For example,
     // sometimes .so compiled from multiple object files contains a few
     // rudimentary sequences for address ranges [0x0, 0xsomething).
+    // Address ranges may also overlap when using ICF.
   }
 
   // Terminate the table with a final blank line to clearly delineate it from
@@ -1364,10 +1371,11 @@ DWARFDebugLine::LineTable::lookupAddressImpl(object::SectionedAddress Address,
 
 bool DWARFDebugLine::LineTable::lookupAddressRange(
     object::SectionedAddress Address, uint64_t Size,
-    std::vector<uint32_t> &Result) const {
+    std::vector<uint32_t> &Result,
+    std::optional<uint64_t> StmtSequenceOffset) const {
 
   // Search for relocatable addresses
-  if (lookupAddressRangeImpl(Address, Size, Result))
+  if (lookupAddressRangeImpl(Address, Size, Result, StmtSequenceOffset))
     return true;
 
   if (Address.SectionIndex == object::SectionedAddress::UndefSection)
@@ -1375,12 +1383,13 @@ bool DWARFDebugLine::LineTable::lookupAddressRange(
 
   // Search for absolute addresses
   Address.SectionIndex = object::SectionedAddress::UndefSection;
-  return lookupAddressRangeImpl(Address, Size, Result);
+  return lookupAddressRangeImpl(Address, Size, Result, StmtSequenceOffset);
 }
 
 bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
     object::SectionedAddress Address, uint64_t Size,
-    std::vector<uint32_t> &Result) const {
+    std::vector<uint32_t> &Result,
+    std::optional<uint64_t> StmtSequenceOffset) const {
   if (Sequences.empty())
     return false;
   uint64_t EndAddr = Address.Address + Size;
@@ -1389,16 +1398,38 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
   Sequence.SectionIndex = Address.SectionIndex;
   Sequence.HighPC = Address.Address;
   SequenceIter LastSeq = Sequences.end();
-  SequenceIter SeqPos = llvm::upper_bound(
-      Sequences, Sequence, DWARFDebugLine::Sequence::orderByHighPC);
-  if (SeqPos == LastSeq || !SeqPos->containsPC(Address))
+  SequenceIter SeqPos;
+
+  if (StmtSequenceOffset) {
+    // If we have a statement sequence offset, find the specific sequence.
+    // Linear search for sequence with matching StmtSeqOffset
+    SeqPos = std::find_if(Sequences.begin(), LastSeq,
+                          [&](const DWARFDebugLine::Sequence &S) {
+                            return S.StmtSeqOffset == *StmtSequenceOffset;
+                          });
+
+    // If sequence not found, return false
+    if (SeqPos == LastSeq)
+      return false;
+
+    // Set LastSeq to the next sequence since we only want the one matching
+    // sequence (sequences are guaranteed to have unique StmtSeqOffset)
+    LastSeq = SeqPos + 1;
+  } else {
+    // No specific sequence requested, find first sequence containing address
+    SeqPos = std::upper_bound(Sequences.begin(), LastSeq, Sequence,
+                              DWARFDebugLine::Sequence::orderByHighPC);
+    if (SeqPos == LastSeq)
+      return false;
+  }
+
+  // If the start sequence doesn't contain the address, nothing to do
+  if (!SeqPos->containsPC(Address))
     return false;
 
   SequenceIter StartPos = SeqPos;
 
-  // Add the rows from the first sequence to the vector, starting with the
-  // index we just calculated
-
+  // Process sequences that overlap with the desired range
   while (SeqPos != LastSeq && SeqPos->LowPC < EndAddr) {
     const DWARFDebugLine::Sequence &CurSeq = *SeqPos;
     // For the first sequence, we need to find which row in the sequence is the

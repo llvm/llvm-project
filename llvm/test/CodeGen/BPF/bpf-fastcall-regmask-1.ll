@@ -1,4 +1,4 @@
-; RUN: llc -O2 --march=bpfel \
+; RUN: llc -O2 --mtriple=bpfel \
 ; RUN:   -print-after=stack-slot-coloring %s \
 ; RUN:   -o /dev/null 2>&1 | FileCheck %s
 

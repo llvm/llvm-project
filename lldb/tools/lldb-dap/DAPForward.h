@@ -9,13 +9,19 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_DAPFORWARD_H
 #define LLDB_TOOLS_LLDB_DAP_DAPFORWARD_H
 
+// IWYU pragma: begin_exports
+
 namespace lldb_dap {
-struct BreakpointBase;
-struct ExceptionBreakpoint;
-struct FunctionBreakpoint;
-struct SourceBreakpoint;
-struct Watchpoint;
-struct InstructionBreakpoint;
+class BaseRequestHandler;
+class BreakpointBase;
+class ExceptionBreakpoint;
+class FunctionBreakpoint;
+class InstructionBreakpoint;
+class Log;
+class ResponseHandler;
+class SourceBreakpoint;
+class Watchpoint;
+struct DAP;
 } // namespace lldb_dap
 
 namespace lldb {
@@ -35,6 +41,7 @@ class SBLanguageRuntime;
 class SBLaunchInfo;
 class SBLineEntry;
 class SBListener;
+class SBModule;
 class SBProcess;
 class SBStream;
 class SBStringList;
@@ -43,5 +50,13 @@ class SBThread;
 class SBValue;
 class SBWatchpoint;
 } // namespace lldb
+
+namespace llvm {
+namespace json {
+class Object;
+} // namespace json
+} // namespace llvm
+
+// IWYU pragma: end_exports
 
 #endif

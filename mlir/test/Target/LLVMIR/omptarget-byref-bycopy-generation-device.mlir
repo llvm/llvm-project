@@ -1,6 +1,6 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
-module attributes {omp.is_target_device = true} {
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true} {
   llvm.func @_QQmain() attributes {fir.bindc_name = "main"} {
     %0 = llvm.mlir.addressof @_QFEi : !llvm.ptr
     %1 = llvm.mlir.addressof @_QFEsp : !llvm.ptr
@@ -23,19 +23,24 @@ module attributes {omp.is_target_device = true} {
   }
 }
 
-// CHECK: define {{.*}} void @__omp_offloading_{{.*}}_{{.*}}__QQmain_l{{.*}}(ptr %[[DYN_PTR:.*]], ptr %[[ARG_BYREF:.*]], ptr %[[ARG_BYCOPY:.*]]) {
+// CHECK: define {{.*}} void @__omp_offloading_{{.*}}_{{.*}}__QQmain_l{{.*}}(ptr %[[DYN_PTR:.*]], ptr %[[ARG_BYREF:.*]], ptr %[[ARG_BYCOPY:.*]]) #{{[0-9]+}} {
 
 // CHECK: entry:
-// CHECK: %[[ALLOCA_BYREF:.*]] = alloca ptr, align 8
-// CHECK: store ptr %[[ARG_BYREF]], ptr %[[ALLOCA_BYREF]], align 8
-// CHECK: %[[ALLOCA_BYCOPY:.*]] = alloca ptr, align 8
-// CHECK: store ptr %[[ARG_BYCOPY]], ptr %[[ALLOCA_BYCOPY]], align 8
+// CHECK: %[[ALLOCA_BYREF:.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK: %[[ALLOCA_ASCAST:.*]] = addrspacecast ptr addrspace(5) %[[ALLOCA_BYREF]] to ptr
+// CHECK: store ptr %[[ARG_BYREF]], ptr %[[ALLOCA_ASCAST]], align 8
+// CHECK: %[[ALLOCA_BYCOPY:.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK: %[[ALLOCA_ASCAST2:.*]] = addrspacecast ptr addrspace(5) %[[ALLOCA_BYCOPY]] to ptr
+// CHECK: store ptr %[[ARG_BYCOPY]], ptr %[[ALLOCA_ASCAST2]], align 8
 
 // CHECK: user_code.entry:                                  ; preds = %entry
-// CHECK: %[[LOAD_BYREF:.*]] = load ptr, ptr %[[ALLOCA_BYREF]], align 8
+// CHECK: %[[LOAD_BYREF:.*]] = load ptr, ptr %[[ALLOCA_ASCAST]], align 8
+// CHECK: br label %outlined.body
+
+// CHECK: outlined.body:
 // CHECK: br label %omp.target
 
-// CHECK: omp.target:                                       ; preds = %user_code.entry
-// CHECK:  %[[VAL_LOAD_BYCOPY:.*]] = load i32, ptr %[[ALLOCA_BYCOPY]], align 4
+// CHECK: omp.target:
+// CHECK:  %[[VAL_LOAD_BYCOPY:.*]] = load i32, ptr %[[ALLOCA_ASCAST2]], align 4
 // CHECK:  store i32 %[[VAL_LOAD_BYCOPY]], ptr %[[LOAD_BYREF]], align 4
 // CHECK: br label %omp.region.cont

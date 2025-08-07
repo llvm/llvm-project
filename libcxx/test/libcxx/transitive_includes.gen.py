@@ -73,7 +73,7 @@ else:
 {lit_header_restrictions.get(header, '')}
 
 // TODO: Fix this test to make it work with localization or wide characters disabled
-// UNSUPPORTED: no-localization, no-wide-characters, no-threads, no-filesystem, libcpp-has-no-experimental-tzdb, no-tzdb
+// UNSUPPORTED: no-localization, no-wide-characters, no-threads, no-filesystem, libcpp-has-no-experimental-tzdb
 
 // When built with modules, this test doesn't work because --trace-includes doesn't
 // report the stack of includes correctly.
@@ -89,6 +89,8 @@ else:
 
 // TODO: Figure out why <stdatomic.h> doesn't work on FreeBSD
 // UNSUPPORTED: LIBCXX-FREEBSD-FIXME
+
+// UNSUPPORTED: FROZEN-CXX03-HEADERS-FIXME
 
 // RUN: mkdir %t
 // RUN: %{{cxx}} %s %{{flags}} %{{compile_flags}} --trace-includes -fshow-skipped-includes --preprocess > /dev/null 2> %t/trace-includes.txt

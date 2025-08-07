@@ -18,6 +18,7 @@
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Compiler.h"
 
 using namespace llvm;
 
@@ -46,8 +47,8 @@ static MCDisassembler *createSparcDisassembler(const Target &T,
   return new SparcDisassembler(STI, Ctx);
 }
 
-
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeSparcDisassembler() {
   // Register the disassembler.
   TargetRegistry::RegisterMCDisassembler(getTheSparcTarget(),
                                          createSparcDisassembler);
@@ -261,9 +262,14 @@ DecodeCoprocPairRegisterClass(MCInst &Inst, unsigned RegNo, uint64_t Address,
 
 static DecodeStatus DecodeCall(MCInst &Inst, unsigned insn, uint64_t Address,
                                const MCDisassembler *Decoder);
+static DecodeStatus DecodeSIMM5(MCInst &Inst, unsigned insn, uint64_t Address,
+                                const MCDisassembler *Decoder);
 static DecodeStatus DecodeSIMM13(MCInst &Inst, unsigned insn, uint64_t Address,
                                  const MCDisassembler *Decoder);
-
+template <unsigned N>
+constexpr static DecodeStatus DecodeDisp(MCInst &MI, uint32_t ImmVal,
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder);
 #include "SparcGenDisassemblerTables.inc"
 
 /// Read four bytes from the ArrayRef and return 32 bit word.
@@ -276,6 +282,7 @@ static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
     return MCDisassembler::Fail;
   }
 
+  Size = 4;
   Insn = IsLittleEndian
              ? (Bytes[0] << 0) | (Bytes[1] << 8) | (Bytes[2] << 16) |
                    (Bytes[3] << 24)
@@ -306,20 +313,13 @@ DecodeStatus SparcDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   {
     Result = decodeInstruction(DecoderTableSparcV832, Instr, Insn, Address, this, STI);
   }
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
+  if (Result != MCDisassembler::Fail)
     return Result;
-  }
 
   Result =
       decodeInstruction(DecoderTableSparc32, Instr, Insn, Address, this, STI);
 
-  if (Result != MCDisassembler::Fail) {
-    Size = 4;
-    return Result;
-  }
-
-  return MCDisassembler::Fail;
+  return Result;
 }
 
 static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
@@ -332,11 +332,17 @@ static bool tryAddingSymbolicOperand(int64_t Value, bool isBranch,
 
 static DecodeStatus DecodeCall(MCInst &MI, unsigned insn, uint64_t Address,
                                const MCDisassembler *Decoder) {
-  unsigned tgt = fieldFromInstruction(insn, 0, 30);
-  tgt <<= 2;
-  if (!tryAddingSymbolicOperand(tgt+Address, false, Address,
-                                0, 30, MI, Decoder))
-    MI.addOperand(MCOperand::createImm(tgt));
+  int64_t CallOffset = SignExtend64(fieldFromInstruction(insn, 0, 30), 30) * 4;
+  if (!tryAddingSymbolicOperand(Address + CallOffset, false, Address, 0, 30, MI,
+                                Decoder))
+    MI.addOperand(MCOperand::createImm(CallOffset));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus DecodeSIMM5(MCInst &MI, unsigned insn, uint64_t Address,
+                                const MCDisassembler *Decoder) {
+  assert(isUInt<5>(insn));
+  MI.addOperand(MCOperand::createImm(SignExtend64<5>(insn)));
   return MCDisassembler::Success;
 }
 
@@ -344,5 +350,16 @@ static DecodeStatus DecodeSIMM13(MCInst &MI, unsigned insn, uint64_t Address,
                                  const MCDisassembler *Decoder) {
   assert(isUInt<13>(insn));
   MI.addOperand(MCOperand::createImm(SignExtend64<13>(insn)));
+  return MCDisassembler::Success;
+}
+
+template <unsigned N>
+constexpr static DecodeStatus DecodeDisp(MCInst &MI, uint32_t ImmVal,
+                                         uint64_t Address,
+                                         const MCDisassembler *Decoder) {
+  int64_t BranchOffset = SignExtend64(ImmVal, N) * 4;
+  if (!tryAddingSymbolicOperand(Address + BranchOffset, true, Address, 0, N, MI,
+                                Decoder))
+    MI.addOperand(MCOperand::createImm(BranchOffset));
   return MCDisassembler::Success;
 }

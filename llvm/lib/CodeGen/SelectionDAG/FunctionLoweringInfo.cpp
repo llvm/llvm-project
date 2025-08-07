@@ -32,7 +32,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -100,7 +99,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   GetReturnInfo(CC, Fn->getReturnType(), Fn->getAttributes(), Outs, *TLI,
                 mf.getDataLayout());
   CanLowerReturn =
-      TLI->CanLowerReturn(CC, *MF, Fn->isVarArg(), Outs, Fn->getContext());
+      TLI->CanLowerReturn(CC, *MF, Fn->isVarArg(), Outs, Fn->getContext(), Fn->getReturnType());
 
   // If this personality uses funclets, we need to do a bit more work.
   DenseMap<const AllocaInst *, TinyPtrVector<int *>> CatchObjects;
@@ -251,7 +250,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     // Don't create MachineBasicBlocks for imaginary EH pad blocks. These blocks
     // are really data, and no instructions can live here.
     if (BB.isEHPad()) {
-      const Instruction *PadInst = BB.getFirstNonPHI();
+      BasicBlock::const_iterator PadInst = BB.getFirstNonPHIIt();
       // If this is a non-landingpad EH pad, mark this function as using
       // funclets.
       // FIXME: SEH catchpads do not create EH scope/funclets, so we could avoid
@@ -262,13 +261,13 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         MF->getFrameInfo().setHasOpaqueSPAdjustment(true);
       }
       if (isa<CatchSwitchInst>(PadInst)) {
-        assert(&*BB.begin() == PadInst &&
+        assert(BB.begin() == PadInst &&
                "WinEHPrepare failed to remove PHIs from imaginary BBs");
         continue;
       }
       if (isa<FuncletPadInst>(PadInst) &&
           Personality != EHPersonality::Wasm_CXX)
-        assert(&*BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
+        assert(BB.begin() == PadInst && "WinEHPrepare failed to demote PHIs");
     }
 
     MachineBasicBlock *MBB = mf.CreateMachineBasicBlock(&BB);
@@ -296,7 +295,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         continue;
 
       DebugLoc DL = PN.getDebugLoc();
-      unsigned PHIReg = ValueMap[&PN];
+      Register PHIReg = ValueMap[&PN];
       assert(PHIReg && "PHI node does not have an assigned virtual register!");
 
       SmallVector<EVT, 4> ValueVTs;
@@ -344,9 +343,9 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
     for (auto &KV : EHInfo.UnwindDestToSrcs) {
       const auto *Dest = cast<const BasicBlock *>(KV.first);
       MachineBasicBlock *DestMBB = getMBB(Dest);
-      UnwindDestToSrcs[DestMBB] = SmallPtrSet<BBOrMBB, 4>();
+      auto &Srcs = UnwindDestToSrcs[DestMBB];
       for (const auto P : KV.second)
-        UnwindDestToSrcs[DestMBB].insert(getMBB(cast<const BasicBlock *>(P)));
+        Srcs.insert(getMBB(cast<const BasicBlock *>(P)));
     }
     EHInfo.UnwindDestToSrcs = std::move(UnwindDestToSrcs);
   }
@@ -370,7 +369,6 @@ void FunctionLoweringInfo::clear() {
   StatepointStackSlots.clear();
   StatepointRelocationMaps.clear();
   PreferredExtendType.clear();
-  PreprocessedDbgDeclares.clear();
   PreprocessedDVRDeclares.clear();
 }
 
@@ -579,7 +577,7 @@ FunctionLoweringInfo::getValueFromVirtualReg(Register Vreg) {
       ValueVTs.clear();
       ComputeValueVTs(*TLI, Fn->getDataLayout(),
                       P.first->getType(), ValueVTs);
-      unsigned Reg = P.second;
+      Register Reg = P.second;
       for (EVT VT : ValueVTs) {
         unsigned NumRegisters = TLI->getNumRegisters(Fn->getContext(), VT);
         for (unsigned i = 0, e = NumRegisters; i != e; ++i)

@@ -10,7 +10,6 @@
 #define _LIBCPP___MEMORY_ALIGNED_ALLOC_H
 
 #include <__config>
-#include <cstddef>
 #include <cstdlib>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -108,7 +108,7 @@ void PR8694(int* e) // expected-note {{passing argument to parameter 'e' here}}
 {
 }
 
-void crash(enum E* e) // expected-warning {{declaration of 'enum E' will not be visible outside of this function}} \
+void crash(enum E *e) // expected-warning {{declaration of 'enum E' will not be visible outside of this function}} \
                       // expected-warning {{ISO C forbids forward references to 'enum' types}}
 {
         PR8694(e); // expected-warning {{incompatible pointer types passing 'enum E *' to parameter of type 'int *'}}
@@ -120,6 +120,21 @@ int NegativeShortTest[NegativeShort == -1 ? 1 : -1];
 // PR24610
 enum Color { Red, Green, Blue }; // expected-note{{previous use is here}}
 typedef struct Color NewColor; // expected-error {{use of 'Color' with tag type that does not match previous declaration}}
+
+// Enumerations with a fixed underlying type. 
+// https://github.com/llvm/llvm-project/issues/116880
+#if __STDC_VERSION__ >= 202311L
+  static_assert(__has_feature(c_fixed_enum));
+  static_assert(__has_extension(c_fixed_enum)); // Matches behavior for c_alignas, etc
+#else
+  _Static_assert(__has_extension(c_fixed_enum), "");
+  _Static_assert(!__has_feature(c_fixed_enum), "");
+#if __STDC_VERSION__ < 201112L
+  // expected-warning@-3 {{'_Static_assert' is a C11 extension}}
+  // expected-warning@-3 {{'_Static_assert' is a C11 extension}}
+#endif
+#endif
+typedef enum : unsigned char { Pink, Black, Cyan } Color; // pre-c23-warning {{enumeration types with a fixed underlying type are a C23 extension}}
 
 // PR28903
 // In C it is valid to define tags inside enums.

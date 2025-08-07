@@ -24,8 +24,7 @@ static void reduceMasksInFunction(Oracle &O, MachineFunction &MF) {
 
   // Track predefined/named regmasks which we ignore.
   const unsigned NumRegs = TRI->getNumRegs();
-  for (const uint32_t *Mask : TRI->getRegMasks())
-    ConstRegisterMasks.insert(Mask);
+  ConstRegisterMasks.insert_range(TRI->getRegMasks());
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
@@ -61,13 +60,10 @@ static void reduceMasksInFunction(Oracle &O, MachineFunction &MF) {
   }
 }
 
-static void reduceMasksInModule(Oracle &O, ReducerWorkItem &WorkItem) {
+void llvm::reduceRegisterMasksMIRDeltaPass(Oracle &O,
+                                           ReducerWorkItem &WorkItem) {
   for (const Function &F : WorkItem.getModule()) {
     if (auto *MF = WorkItem.MMI->getMachineFunction(F))
       reduceMasksInFunction(O, *MF);
   }
-}
-
-void llvm::reduceRegisterMasksMIRDeltaPass(TestRunner &Test) {
-  runDeltaPass(Test, reduceMasksInModule, "Reducing register masks");
 }

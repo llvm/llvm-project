@@ -17,7 +17,7 @@ define i1 @lshr_eq_msb_low_last_zero(i8 %a) {
 
 define <2 x i1> @lshr_eq_msb_low_last_zero_vec(<2 x i8> %a) {
 ; CHECK-LABEL: @lshr_eq_msb_low_last_zero_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[A:%.*]], <i8 6, i8 6>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[A:%.*]], splat (i8 6)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shr = lshr <2 x i8> <i8 127, i8 127>, %a
@@ -1358,7 +1358,7 @@ define i1 @exactly_one_set_signbit_use1(i8 %x, i8 %y) {
 define <2 x i1> @same_signbit(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @same_signbit(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[R1]]
 ;
   %xsign = lshr <2 x i8> %x, <i8 7, i8 7>
@@ -1519,7 +1519,7 @@ define i1 @exactly_one_set_signbit_use1_signed(i8 %x, i8 %y) {
 define <2 x i1> @same_signbit_signed(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @same_signbit_signed(
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i8> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], <i8 -1, i8 -1>
+; CHECK-NEXT:    [[R1:%.*]] = icmp sgt <2 x i8> [[TMP1]], splat (i8 -1)
 ; CHECK-NEXT:    ret <2 x i1> [[R1]]
 ;
   %xsign = ashr <2 x i8> %x, <i8 7, i8 7>

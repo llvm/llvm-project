@@ -22,11 +22,12 @@
 #include "integer.h"
 #include "logical.h"
 #include "real.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/real.h"
 #include "flang/Common/template.h"
+#include "flang/Common/type-kinds.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <cinttypes>
 #include <optional>
 #include <string>
@@ -62,27 +63,6 @@ using LogicalResult = Type<TypeCategory::Logical, 4>;
 using LargestReal = Type<TypeCategory::Real, 16>;
 using Ascii = Type<TypeCategory::Character, 1>;
 
-// A predicate that is true when a kind value is a kind that could possibly
-// be supported for an intrinsic type category on some target instruction
-// set architecture.
-static constexpr bool IsValidKindOfIntrinsicType(
-    TypeCategory category, std::int64_t kind) {
-  switch (category) {
-  case TypeCategory::Integer:
-    return kind == 1 || kind == 2 || kind == 4 || kind == 8 || kind == 16;
-  case TypeCategory::Real:
-  case TypeCategory::Complex:
-    return kind == 2 || kind == 3 || kind == 4 || kind == 8 || kind == 10 ||
-        kind == 16;
-  case TypeCategory::Character:
-    return kind == 1 || kind == 2 || kind == 4;
-  case TypeCategory::Logical:
-    return kind == 1 || kind == 2 || kind == 4 || kind == 8;
-  default:
-    return false;
-  }
-}
-
 // DynamicType is meant to be suitable for use as the result type for
 // GetType() functions and member functions; consequently, it must be
 // capable of being used in a constexpr context.  So it does *not*
@@ -94,7 +74,7 @@ static constexpr bool IsValidKindOfIntrinsicType(
 class DynamicType {
 public:
   constexpr DynamicType(TypeCategory cat, int k) : category_{cat}, kind_{k} {
-    CHECK(IsValidKindOfIntrinsicType(category_, kind_));
+    CHECK(common::IsValidKindOfIntrinsicType(category_, kind_));
   }
   DynamicType(int charKind, const semantics::ParamValue &len);
   // When a known length is presented, resolve it to its effective
@@ -102,7 +82,7 @@ public:
   constexpr DynamicType(int k, std::int64_t len)
       : category_{TypeCategory::Character}, kind_{k}, knownLength_{
                                                           len >= 0 ? len : 0} {
-    CHECK(IsValidKindOfIntrinsicType(category_, kind_));
+    CHECK(common::IsValidKindOfIntrinsicType(category_, kind_));
   }
   explicit constexpr DynamicType(
       const semantics::DerivedTypeSpec &dt, bool poly = false)
@@ -288,6 +268,13 @@ public:
 };
 
 template <int KIND>
+class Type<TypeCategory::Unsigned, KIND>
+    : public TypeBase<TypeCategory::Unsigned, KIND> {
+public:
+  using Scalar = value::Integer<8 * KIND>;
+};
+
+template <int KIND>
 class Type<TypeCategory::Real, KIND>
     : public TypeBase<TypeCategory::Real, KIND> {
 public:
@@ -352,7 +339,7 @@ using IndirectSubscriptIntegerExpr =
 // category that could possibly be supported on any target.
 template <TypeCategory CATEGORY, int KIND>
 using CategoryKindTuple =
-    std::conditional_t<IsValidKindOfIntrinsicType(CATEGORY, KIND),
+    std::conditional_t<common::IsValidKindOfIntrinsicType(CATEGORY, KIND),
         std::tuple<Type<CATEGORY, KIND>>, std::tuple<>>;
 
 template <TypeCategory CATEGORY, int... KINDS>
@@ -367,11 +354,13 @@ using RealTypes = CategoryTypes<TypeCategory::Real>;
 using ComplexTypes = CategoryTypes<TypeCategory::Complex>;
 using CharacterTypes = CategoryTypes<TypeCategory::Character>;
 using LogicalTypes = CategoryTypes<TypeCategory::Logical>;
+using UnsignedTypes = CategoryTypes<TypeCategory::Unsigned>;
 
 using FloatingTypes = common::CombineTuples<RealTypes, ComplexTypes>;
-using NumericTypes = common::CombineTuples<IntegerTypes, FloatingTypes>;
-using RelationalTypes =
-    common::CombineTuples<IntegerTypes, RealTypes, CharacterTypes>;
+using NumericTypes =
+    common::CombineTuples<IntegerTypes, FloatingTypes, UnsignedTypes>;
+using RelationalTypes = common::CombineTuples<IntegerTypes, RealTypes,
+    CharacterTypes, UnsignedTypes>;
 using AllIntrinsicTypes =
     common::CombineTuples<NumericTypes, CharacterTypes, LogicalTypes>;
 using LengthlessIntrinsicTypes =
@@ -397,11 +386,13 @@ template <TypeCategory CATEGORY> struct SomeKind {
   }
 };
 
-using NumericCategoryTypes = std::tuple<SomeKind<TypeCategory::Integer>,
-    SomeKind<TypeCategory::Real>, SomeKind<TypeCategory::Complex>>;
-using AllIntrinsicCategoryTypes = std::tuple<SomeKind<TypeCategory::Integer>,
-    SomeKind<TypeCategory::Real>, SomeKind<TypeCategory::Complex>,
-    SomeKind<TypeCategory::Character>, SomeKind<TypeCategory::Logical>>;
+using NumericCategoryTypes =
+    std::tuple<SomeKind<TypeCategory::Integer>, SomeKind<TypeCategory::Real>,
+        SomeKind<TypeCategory::Complex>, SomeKind<TypeCategory::Unsigned>>;
+using AllIntrinsicCategoryTypes =
+    std::tuple<SomeKind<TypeCategory::Integer>, SomeKind<TypeCategory::Real>,
+        SomeKind<TypeCategory::Complex>, SomeKind<TypeCategory::Character>,
+        SomeKind<TypeCategory::Logical>, SomeKind<TypeCategory::Unsigned>>;
 
 // Represents a completely generic type (or, for Expr<SomeType>, a typeless
 // value like a BOZ literal or NULL() pointer).
@@ -448,9 +439,10 @@ using SomeReal = SomeKind<TypeCategory::Real>;
 using SomeComplex = SomeKind<TypeCategory::Complex>;
 using SomeCharacter = SomeKind<TypeCategory::Character>;
 using SomeLogical = SomeKind<TypeCategory::Logical>;
+using SomeUnsigned = SomeKind<TypeCategory::Unsigned>;
 using SomeDerived = SomeKind<TypeCategory::Derived>;
 using SomeCategory = std::tuple<SomeInteger, SomeReal, SomeComplex,
-    SomeCharacter, SomeLogical, SomeDerived>;
+    SomeCharacter, SomeLogical, SomeUnsigned, SomeDerived>;
 
 using AllTypes =
     common::CombineTuples<AllIntrinsicTypes, std::tuple<SomeDerived>>;
@@ -497,6 +489,8 @@ bool AreSameDerivedType(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 bool AreSameDerivedTypeIgnoringTypeParameters(
     const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
+bool AreSameDerivedTypeIgnoringSequence(
+    const semantics::DerivedTypeSpec &, const semantics::DerivedTypeSpec &);
 
 // For generating "[extern] template class", &c. boilerplate
 #define EXPAND_FOR_EACH_INTEGER_KIND(M, P, S) \
@@ -507,6 +501,7 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
 #define EXPAND_FOR_EACH_CHARACTER_KIND(M, P, S) M(P, S, 1) M(P, S, 2) M(P, S, 4)
 #define EXPAND_FOR_EACH_LOGICAL_KIND(M, P, S) \
   M(P, S, 1) M(P, S, 2) M(P, S, 4) M(P, S, 8)
+#define EXPAND_FOR_EACH_UNSIGNED_KIND EXPAND_FOR_EACH_INTEGER_KIND
 
 #define FOR_EACH_INTEGER_KIND_HELP(PREFIX, SUFFIX, K) \
   PREFIX<Type<TypeCategory::Integer, K>> SUFFIX;
@@ -518,6 +513,8 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
   PREFIX<Type<TypeCategory::Character, K>> SUFFIX;
 #define FOR_EACH_LOGICAL_KIND_HELP(PREFIX, SUFFIX, K) \
   PREFIX<Type<TypeCategory::Logical, K>> SUFFIX;
+#define FOR_EACH_UNSIGNED_KIND_HELP(PREFIX, SUFFIX, K) \
+  PREFIX<Type<TypeCategory::Unsigned, K>> SUFFIX;
 
 #define FOR_EACH_INTEGER_KIND(PREFIX, SUFFIX) \
   EXPAND_FOR_EACH_INTEGER_KIND(FOR_EACH_INTEGER_KIND_HELP, PREFIX, SUFFIX)
@@ -529,12 +526,15 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
   EXPAND_FOR_EACH_CHARACTER_KIND(FOR_EACH_CHARACTER_KIND_HELP, PREFIX, SUFFIX)
 #define FOR_EACH_LOGICAL_KIND(PREFIX, SUFFIX) \
   EXPAND_FOR_EACH_LOGICAL_KIND(FOR_EACH_LOGICAL_KIND_HELP, PREFIX, SUFFIX)
+#define FOR_EACH_UNSIGNED_KIND(PREFIX, SUFFIX) \
+  EXPAND_FOR_EACH_UNSIGNED_KIND(FOR_EACH_UNSIGNED_KIND_HELP, PREFIX, SUFFIX)
 
 #define FOR_EACH_LENGTHLESS_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_INTEGER_KIND(PREFIX, SUFFIX) \
   FOR_EACH_REAL_KIND(PREFIX, SUFFIX) \
   FOR_EACH_COMPLEX_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_LOGICAL_KIND(PREFIX, SUFFIX)
+  FOR_EACH_LOGICAL_KIND(PREFIX, SUFFIX) \
+  FOR_EACH_UNSIGNED_KIND(PREFIX, SUFFIX)
 #define FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_LENGTHLESS_INTRINSIC_KIND(PREFIX, SUFFIX) \
   FOR_EACH_CHARACTER_KIND(PREFIX, SUFFIX)
@@ -548,6 +548,7 @@ bool AreSameDerivedTypeIgnoringTypeParameters(
   PREFIX<SomeComplex> SUFFIX; \
   PREFIX<SomeCharacter> SUFFIX; \
   PREFIX<SomeLogical> SUFFIX; \
+  PREFIX<SomeUnsigned> SUFFIX; \
   PREFIX<SomeDerived> SUFFIX; \
   PREFIX<SomeType> SUFFIX;
 #define FOR_EACH_TYPE_AND_KIND(PREFIX, SUFFIX) \

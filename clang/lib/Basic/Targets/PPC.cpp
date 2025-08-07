@@ -15,19 +15,27 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/TargetParser/PPCTargetParser.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
+static constexpr int NumBuiltins =
+    clang::PPC::LastTSBuiltin - Builtin::FirstTSBuiltin;
+
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsPPC.def"
-};
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define LIBBUILTIN CLANG_LIBBUILTIN_ENTRY
+#include "clang/Basic/BuiltinsPPC.def"
+});
 
 /// handleTargetFeatures - Perform initialization based on the user
 /// configured set of features.
@@ -39,18 +47,10 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAltivec = true;
     } else if (Feature == "+vsx") {
       HasVSX = true;
-    } else if (Feature == "+crbits") {
-      UseCRBits = true;
-    } else if (Feature == "+bpermd") {
-      HasBPERMD = true;
-    } else if (Feature == "+extdiv") {
-      HasExtDiv = true;
     } else if (Feature == "+power8-vector") {
       HasP8Vector = true;
     } else if (Feature == "+crypto") {
       HasP8Crypto = true;
-    } else if (Feature == "+direct-move") {
-      HasDirectMove = true;
     } else if (Feature == "+htm") {
       HasHTM = true;
     } else if (Feature == "+float128") {
@@ -61,8 +61,6 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasP10Vector = true;
     } else if (Feature == "+pcrelative-memops") {
       HasPCRelativeMemops = true;
-    } else if (Feature == "+prefix-instrs") {
-      HasPrefixInstrs = true;
     } else if (Feature == "+spe" || Feature == "+efpu2") {
       HasStrictFP = false;
       HasSPE = true;
@@ -74,30 +72,12 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasFrsqrtes = true;
     } else if (Feature == "-hard-float") {
       FloatABI = SoftFloat;
-    } else if (Feature == "+paired-vector-memops") {
-      PairedVectorMemops = true;
     } else if (Feature == "+mma") {
       HasMMA = true;
     } else if (Feature == "+rop-protect") {
       HasROPProtect = true;
-    } else if (Feature == "+privileged") {
-      HasPrivileged = true;
-    } else if (Feature == "+aix-small-local-exec-tls") {
-      HasAIXSmallLocalExecTLS = true;
-    } else if (Feature == "+aix-small-local-dynamic-tls") {
-      HasAIXSmallLocalDynamicTLS = true;
-    } else if (Feature == "+isa-v206-instructions") {
-      IsISA2_06 = true;
-    } else if (Feature == "+isa-v207-instructions") {
-      IsISA2_07 = true;
-    } else if (Feature == "+isa-v30-instructions") {
-      IsISA3_0 = true;
-    } else if (Feature == "+isa-v31-instructions") {
-      IsISA3_1 = true;
     } else if (Feature == "+quadword-atomics") {
       HasQuadwordAtomics = true;
-    } else if (Feature == "+aix-shared-lib-tls-model-opt") {
-      HasAIXShLibTLSModelOpt = true;
     } else if (Feature == "+longcall") {
       UseLongCalls = true;
     }
@@ -109,6 +89,12 @@ bool PPCTargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 }
 
 static void defineXLCompatMacros(MacroBuilder &Builder) {
+  Builder.defineMacro("__builtin_national2packed",
+                      "__builtin_ppc_national2packed");
+  Builder.defineMacro("__builtin_packed2national",
+                      "__builtin_ppc_packed2national");
+  Builder.defineMacro("__builtin_packed2zoned", "__builtin_ppc_packed2zoned");
+  Builder.defineMacro("__builtin_zoned2packed", "__builtin_ppc_zoned2packed");
   Builder.defineMacro("__cdtbcd", "__builtin_ppc_cdtbcd");
   Builder.defineMacro("__cbcdtd", "__builtin_ppc_cbcdtd");
   Builder.defineMacro("__addg6s", "__builtin_ppc_addg6s");
@@ -537,127 +523,14 @@ static bool ppcUserFeaturesCheck(DiagnosticsEngine &Diags,
 bool PPCTargetInfo::initFeatureMap(
     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
     const std::vector<std::string> &FeaturesVec) const {
-  Features["altivec"] = llvm::StringSwitch<bool>(CPU)
-                            .Case("7400", true)
-                            .Case("g4", true)
-                            .Case("7450", true)
-                            .Case("g4+", true)
-                            .Case("970", true)
-                            .Case("g5", true)
-                            .Case("pwr6", true)
-                            .Case("pwr7", true)
-                            .Case("pwr8", true)
-                            .Case("pwr9", true)
-                            .Case("ppc64", true)
-                            .Case("ppc64le", true)
-                            .Default(false);
 
-  Features["power9-vector"] = (CPU == "pwr9");
-  Features["crypto"] = llvm::StringSwitch<bool>(CPU)
-                           .Case("ppc64le", true)
-                           .Case("pwr9", true)
-                           .Case("pwr8", true)
-                           .Default(false);
-  Features["power8-vector"] = llvm::StringSwitch<bool>(CPU)
-                                  .Case("ppc64le", true)
-                                  .Case("pwr9", true)
-                                  .Case("pwr8", true)
-                                  .Default(false);
-  Features["bpermd"] = llvm::StringSwitch<bool>(CPU)
-                           .Case("ppc64le", true)
-                           .Case("pwr9", true)
-                           .Case("pwr8", true)
-                           .Case("pwr7", true)
-                           .Default(false);
-  Features["extdiv"] = llvm::StringSwitch<bool>(CPU)
-                           .Case("ppc64le", true)
-                           .Case("pwr9", true)
-                           .Case("pwr8", true)
-                           .Case("pwr7", true)
-                           .Default(false);
-  Features["direct-move"] = llvm::StringSwitch<bool>(CPU)
-                                .Case("ppc64le", true)
-                                .Case("pwr9", true)
-                                .Case("pwr8", true)
-                                .Default(false);
-  Features["crbits"] = llvm::StringSwitch<bool>(CPU)
-                                .Case("ppc64le", true)
-                                .Case("pwr9", true)
-                                .Case("pwr8", true)
-                                .Default(false);
-  Features["vsx"] = llvm::StringSwitch<bool>(CPU)
-                        .Case("ppc64le", true)
-                        .Case("pwr9", true)
-                        .Case("pwr8", true)
-                        .Case("pwr7", true)
-                        .Default(false);
-  Features["htm"] = llvm::StringSwitch<bool>(CPU)
-                        .Case("ppc64le", true)
-                        .Case("pwr9", true)
-                        .Case("pwr8", true)
-                        .Default(false);
+  const llvm::Triple &TheTriple = getTriple();
 
-  // ROP Protect is off by default.
-  Features["rop-protect"] = false;
-  // Privileged instructions are off by default.
-  Features["privileged"] = false;
-
-  // The code generated by the -maix-small-local-[exec|dynamic]-tls option is
-  // turned off by default.
-  Features["aix-small-local-exec-tls"] = false;
-  Features["aix-small-local-dynamic-tls"] = false;
-
-  // Turn off TLS model opt by default.
-  Features["aix-shared-lib-tls-model-opt"] = false;
-
-  Features["spe"] = llvm::StringSwitch<bool>(CPU)
-                        .Case("8548", true)
-                        .Case("e500", true)
-                        .Default(false);
-
-  Features["isa-v206-instructions"] = llvm::StringSwitch<bool>(CPU)
-                                          .Case("ppc64le", true)
-                                          .Case("pwr9", true)
-                                          .Case("pwr8", true)
-                                          .Case("pwr7", true)
-                                          .Case("a2", true)
-                                          .Default(false);
-
-  Features["isa-v207-instructions"] = llvm::StringSwitch<bool>(CPU)
-                                          .Case("ppc64le", true)
-                                          .Case("pwr9", true)
-                                          .Case("pwr8", true)
-                                          .Default(false);
-
-  Features["isa-v30-instructions"] =
-      llvm::StringSwitch<bool>(CPU).Case("pwr9", true).Default(false);
-
-  Features["quadword-atomics"] =
-      getTriple().isArch64Bit() && llvm::StringSwitch<bool>(CPU)
-                                       .Case("pwr9", true)
-                                       .Case("pwr8", true)
-                                       .Default(false);
-
-  // Power10 includes all the same features as Power9 plus any features specific
-  // to the Power10 core.
-  if (CPU == "pwr10" || CPU == "power10") {
-    initFeatureMap(Features, Diags, "pwr9", FeaturesVec);
-    addP10SpecificFeatures(Features);
-  }
-
-  // Power11 includes all the same features as Power10 plus any features
-  // specific to the Power11 core.
-  if (CPU == "pwr11" || CPU == "power11") {
-    initFeatureMap(Features, Diags, "pwr10", FeaturesVec);
-    addP11SpecificFeatures(Features);
-  }
-
-  // Future CPU should include all of the features of Power 11 as well as any
-  // additional features (yet to be determined) specific to it.
-  if (CPU == "future") {
-    initFeatureMap(Features, Diags, "pwr11", FeaturesVec);
-    addFutureSpecificFeatures(Features);
-  }
+  std::optional<llvm::StringMap<bool>> FeaturesOpt =
+      llvm::PPC::getPPCDefaultTargetFeatures(TheTriple,
+                                             llvm::PPC::normalizeCPUName(CPU));
+  if (FeaturesOpt)
+    Features = FeaturesOpt.value();
 
   if (!ppcUserFeaturesCheck(Diags, FeaturesVec))
     return false;
@@ -698,11 +571,17 @@ bool PPCTargetInfo::initFeatureMap(
     }
   }
 
-  if (!(ArchDefs & ArchDefinePwr8) &&
-      llvm::is_contained(FeaturesVec, "+rop-protect")) {
-    // We can turn on ROP Protect on Power 8 and above.
-    Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
-    return false;
+  if (llvm::is_contained(FeaturesVec, "+rop-protect")) {
+    if (PointerWidth == 32) {
+      Diags.Report(diag::err_opt_not_valid_on_target) << "-mrop-protect";
+      return false;
+    }
+
+    if (!(ArchDefs & ArchDefinePwr8)) {
+      // We can turn on ROP Protect on Power 8 and above.
+      Diags.Report(diag::err_opt_not_valid_with_opt) << "-mrop-protect" << CPU;
+      return false;
+    }
   }
 
   if (!(ArchDefs & ArchDefinePwr8) &&
@@ -713,56 +592,22 @@ bool PPCTargetInfo::initFeatureMap(
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
 }
 
-// Add any Power10 specific features.
-void PPCTargetInfo::addP10SpecificFeatures(
-    llvm::StringMap<bool> &Features) const {
-  Features["htm"] = false; // HTM was removed for P10.
-  Features["paired-vector-memops"] = true;
-  Features["mma"] = true;
-  Features["power10-vector"] = true;
-  Features["pcrelative-memops"] = true;
-  Features["prefix-instrs"] = true;
-  Features["isa-v31-instructions"] = true;
-}
-
-// Add any Power11 specific features.
-void PPCTargetInfo::addP11SpecificFeatures(
-    llvm::StringMap<bool> &Features) const {}
-
-// Add features specific to the "Future" CPU.
-void PPCTargetInfo::addFutureSpecificFeatures(
-    llvm::StringMap<bool> &Features) const {}
-
 bool PPCTargetInfo::hasFeature(StringRef Feature) const {
   return llvm::StringSwitch<bool>(Feature)
       .Case("powerpc", true)
       .Case("altivec", HasAltivec)
       .Case("vsx", HasVSX)
-      .Case("crbits", UseCRBits)
       .Case("power8-vector", HasP8Vector)
       .Case("crypto", HasP8Crypto)
-      .Case("direct-move", HasDirectMove)
       .Case("htm", HasHTM)
-      .Case("bpermd", HasBPERMD)
-      .Case("extdiv", HasExtDiv)
       .Case("float128", HasFloat128)
       .Case("power9-vector", HasP9Vector)
-      .Case("paired-vector-memops", PairedVectorMemops)
       .Case("power10-vector", HasP10Vector)
       .Case("pcrelative-memops", HasPCRelativeMemops)
-      .Case("prefix-instrs", HasPrefixInstrs)
       .Case("spe", HasSPE)
       .Case("mma", HasMMA)
       .Case("rop-protect", HasROPProtect)
-      .Case("privileged", HasPrivileged)
-      .Case("aix-small-local-exec-tls", HasAIXSmallLocalExecTLS)
-      .Case("aix-small-local-dynamic-tls", HasAIXSmallLocalDynamicTLS)
-      .Case("isa-v206-instructions", IsISA2_06)
-      .Case("isa-v207-instructions", IsISA2_07)
-      .Case("isa-v30-instructions", IsISA3_0)
-      .Case("isa-v31-instructions", IsISA3_1)
       .Case("quadword-atomics", HasQuadwordAtomics)
-      .Case("aix-shared-lib-tls-model-opt", HasAIXShLibTLSModelOpt)
       .Case("longcall", UseLongCalls)
       .Default(false);
 }
@@ -913,10 +758,11 @@ void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   llvm::PPC::fillValidCPUList(Values);
 }
 
-void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
+void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
+                           const TargetInfo *Aux) {
   if (HasAltivec)
     Opts.AltiVec = 1;
-  TargetInfo::adjust(Diags, Opts);
+  TargetInfo::adjust(Diags, Opts, Aux);
   if (LongDoubleFormat != &llvm::APFloat::IEEEdouble())
     LongDoubleFormat = Opts.PPCIEEELongDouble
                            ? &llvm::APFloat::IEEEquad()
@@ -927,9 +773,9 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
     MaxAtomicInlineWidth = 128;
 }
 
-ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo,
-                        clang::PPC::LastTSBuiltin - Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+PPCTargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }
 
 bool PPCTargetInfo::validateCpuSupports(StringRef FeatureStr) const {

@@ -139,7 +139,7 @@ wording a diagnostic.
       you mean %1?``.
 
 * Appropriately capitalize proper nouns like ``Clang``, ``OpenCL``, ``GCC``,
-  ``Objective-C``, etc and language standard versions like ``C11`` or ``C++11``.
+  ``Objective-C``, etc. and language standard versions like ``C11`` or ``C++11``.
 * The wording should be succinct. If necessary, use a semicolon to combine
   sentence fragments instead of using complete sentences. e.g., prefer wording
   like ``'%0' is deprecated; it will be removed in a future release of Clang``
@@ -160,6 +160,10 @@ wording a diagnostic.
   named in a diagnostic message. e.g., prefer wording like ``'this' pointer
   cannot be null in well-defined C++ code`` over wording like ``this pointer
   cannot be null in well-defined C++ code``.
+* Prefer diagnostic wording without contractions whenever possible. The single
+  quote in a contraction can be visually distracting due to its use with
+  syntactic constructs and contractions can be harder to understand for non-
+  native English speakers.
 
 The Format String
 ^^^^^^^^^^^^^^^^^
@@ -272,6 +276,21 @@ Description:
   diagnostic instead of having to do things textually.  The selected string
   does undergo formatting.
 
+**"enum_select" format**
+
+Example:
+  ``unknown frobbling of a %enum_select<FrobbleKind>{%VarDecl{variable declaration}|%FuncDecl{function declaration}}0 when blarging``
+Class:
+  Integers
+Description:
+  This format specifier is used exactly like a ``select`` specifier, except it
+  additionally generates a namespace, enumeration, and enumerator list based on
+  the format string given. In the above case, a namespace is generated named
+  ``FrobbleKind`` that has an unscoped enumeration with the enumerators
+  ``VarDecl`` and ``FuncDecl`` which correspond to the values 0 and 1. This
+  permits a clearer use of the ``Diag`` in source code, as the above could be
+  called as: ``Diag(Loc, diag::frobble) << diag::FrobbleKind::VarDecl``.
+
 **"plural" format**
 
 Example:
@@ -293,7 +312,7 @@ Description:
   * number: A simple decimal number matches if the argument is the same as the
     number.  Example: ``"%plural{1:mouse|:mice}0"``
   * range: A range in square brackets matches if the argument is within the
-    range.  Then range is inclusive on both ends.  Example:
+    range.  The range is inclusive on both ends.  Example:
     ``"%plural{0:none|1:one|[2,5]:some|:many}0"``
   * modulo: A modulo operator is followed by a number, and equals sign and
     either a number or a range.  The tests are the same as for plain numbers
@@ -314,6 +333,17 @@ Description:
   value ``1`` becomes ``1st``, ``3`` becomes ``3rd``, and so on.  Values less
   than ``1`` are not supported.  This formatter is currently hard-coded to use
   English ordinals.
+
+**"human" format**
+
+Example:
+  ``"total size is %human0 bytes"``
+Class:
+  Integers
+Description:
+  This is a formatter which represents the argument number in a human-readable
+  format: the value ``123`` stays ``123``, ``12345`` becomes ``12.34k``,
+  ``6666666` becomes ``6.67M``, and so on for 'G' and 'T'.
 
 **"objcclass" format**
 
@@ -385,6 +415,17 @@ Description:
   record. The substitution must specify all arguments used by the substitution,
   and the modifier indexes in the substitution are re-numbered accordingly. The
   substituted text must itself be a valid format string before substitution.
+
+**"quoted" format**
+
+Example:
+  ``"expression %quoted0 evaluates to 0"``
+Class:
+  ``String``
+Description:
+  This is a simple formatter which adds quotes around the given string.
+  This is useful when the argument could be a string in some cases, but
+  another class in other cases, and it needs to be quoted consistently.
 
 .. _internals-producing-diag:
 
@@ -520,7 +561,7 @@ documentation for the ``-verify`` mode can be found at
 
 There are many other possible implementations of this interface, and this is
 why we prefer diagnostics to pass down rich structured information in
-arguments.  For example, an HTML output might want declaration names be
+arguments.  For example, an HTML output might want declaration names to be
 linkified to where they come from in the source.  Another example is that a GUI
 might let you click on typedefs to expand them.  This application would want to
 pass significantly more information about types through to the GUI than a
@@ -805,7 +846,7 @@ Option Marshalling Infrastructure
 The option marshalling infrastructure automates the parsing of the Clang
 ``-cc1`` frontend command line arguments into ``CompilerInvocation`` and their
 generation from ``CompilerInvocation``. The system replaces lots of repetitive
-C++ code with simple, declarative tablegen annotations and it's being used for
+C++ code with simple, declarative tablegen annotations and is being used for
 the majority of the ``-cc1`` command line interface. This section provides an
 overview of the system.
 
@@ -845,7 +886,7 @@ a string that the tablegen backend uses as a prefix to the
   LANG_OPTION_WITH_MARSHALLING([...], LangOpts->IgnoreExceptions, [...])
   #endif // LANG_OPTION_WITH_MARSHALLING
 
-Such definition can be used used in the function for parsing and generating
+Such definition can be used in the function for parsing and generating
 command line:
 
 .. code-block:: c++
@@ -945,7 +986,7 @@ line.
     NegFlag<SetFalse, [], [], "Use the new pass manager in LLVM">,
     BothFlags<[], [ClangOption, CC1Option]>>;
 
-With most such pair of flags, the ``-cc1`` frontend accepts only the flag that
+With most such pairs of flags, the ``-cc1`` frontend accepts only the flag that
 changes the default key path value. The Clang driver is responsible for
 accepting both and either forwarding the changing flag or discarding the flag
 that would just set the key path to its default.
@@ -1001,8 +1042,8 @@ and the result is assigned to the key path on success.
 The key path defaults to the value specified in ``MarshallingInfoEnum`` prefixed
 by the contents of ``NormalizedValuesScope`` and ``::``. This ensures correct
 reference to an enum case is formed even if the enum resides in different
-namespace or is an enum class. If the value present on command line does not
-match any of the comma-separated values from ``Values``, an error diagnostics is
+namespace or is an enum class. If the value present on the command line does not
+match any of the comma-separated values from ``Values``, an error diagnostic is
 issued. Otherwise, the corresponding element from ``NormalizedValues`` at the
 same index is assigned to the key path (also correctly scoped). The number of
 comma-separated string values and elements of the array within
@@ -1070,7 +1111,7 @@ The Token class
 ---------------
 
 The ``Token`` class is used to represent a single lexed token.  Tokens are
-intended to be used by the lexer/preprocess and parser libraries, but are not
+intended to be used by the lexer/preprocessor and parser libraries, but are not
 intended to live beyond them (for example, they should not live in the ASTs).
 
 Tokens most often live on the stack (or some other location that is efficient
@@ -1212,7 +1253,7 @@ In order to do this, whenever the parser expects a ``tok::identifier`` or
 ``tok::coloncolon``, it should call the ``TryAnnotateTypeOrScopeToken`` or
 ``TryAnnotateCXXScopeToken`` methods to form the annotation token.  These
 methods will maximally form the specified annotation tokens and replace the
-current token with them, if applicable.  If the current tokens is not valid for
+current token with them, if applicable.  If the current token is not valid for
 an annotation token, it will remain an identifier or "``::``" token.
 
 .. _Lexer:
@@ -1235,7 +1276,7 @@ The lexer has a couple of interesting modal features:
   This mode is used for lexing within an "``#if 0``" block, for example.
 * The lexer can capture and return comments as tokens.  This is required to
   support the ``-C`` preprocessor mode, which passes comments through, and is
-  used by the diagnostic checker to identifier expect-error annotations.
+  used by the diagnostic checker to identify expect-error annotations.
 * The lexer can be in ``ParsingFilename`` mode, which happens when
   preprocessing after reading a ``#include`` directive.  This mode changes the
   parsing of "``<``" to return an "angled string" instead of a bunch of tokens
@@ -1267,7 +1308,7 @@ The ``TokenLexer`` class
 ------------------------
 
 The ``TokenLexer`` class is a token provider that returns tokens from a list of
-tokens that came from somewhere else.  It typically used for two things: 1)
+tokens that came from somewhere else.  It is typically used for two things: 1)
 returning tokens from a macro definition as it is being expanded 2) returning
 tokens from an arbitrary buffer of tokens.  The later use is used by
 ``_Pragma`` and will most likely be used to handle unbounded look-ahead for the
@@ -1468,7 +1509,7 @@ type checker must verify that the operand has a pointer type.  It would not be
 correct to check that with "``isa<PointerType>(SubExpr->getType())``", because
 this predicate would fail if the subexpression had a typedef type.
 
-The solution to this problem are a set of helper methods on ``Type``, used to
+The solution to this problem is a set of helper methods on ``Type``, used to
 check their properties.  In this case, it would be correct to use
 "``SubExpr->getType()->isPointerType()``" to do the check.  This predicate will
 return true if the *canonical type is a pointer*, which is true any time the
@@ -1591,7 +1632,7 @@ the names are inside the ``DeclarationName`` class).
 
 ``CXXLiteralOperatorName``
 
-  The name is a C++11 user defined literal operator.  User defined
+  The name is a C++11 user-defined literal operator.  User-defined
   Literal operators are named according to the suffix they define,
   e.g., "``_foo``" for "``operator "" _foo``".  Use
   ``N.getCXXLiteralIdentifier()`` to retrieve the corresponding
@@ -1704,7 +1745,7 @@ will be found by the lookup, since it effectively replaces the first
 declaration of "``f``".
 
 (Note that because ``f`` can be redeclared at block scope, or in a friend
-declaration, etc. it is possible that the declaration of ``f`` found by name
+declaration, etc., it is possible that the declaration of ``f`` found by name
 lookup will not be the most recent one.)
 
 In the semantics-centric view, overloading of functions is represented
@@ -1904,7 +1945,7 @@ range of iterators over declarations of "``f``".
 function ``DeclContext::getPrimaryContext`` retrieves the "primary" context for
 a given ``DeclContext`` instance, which is the ``DeclContext`` responsible for
 maintaining the lookup table used for the semantics-centric view.  Given a
-DeclContext, one can obtain the set of declaration contexts that are
+``DeclContext``, one can obtain the set of declaration contexts that are
 semantically connected to this declaration context, in source order, including
 this context (which will be the only result, for non-namespace contexts) via
 ``DeclContext::collectAllContexts``. Note that these functions are used
@@ -1944,7 +1985,7 @@ broken code in the AST:
   errors, the Decl node is marked as invalid.
 - dropping invalid node: this often happens for errors that we don’t have
   graceful recovery. Prior to Recovery AST, a mismatched-argument function call
-  expression was dropped though a CallExpr was created for semantic analysis.
+  expression was dropped though a ``CallExpr`` was created for semantic analysis.
 
 With these strategies, clang surfaces better diagnostics, and provides AST
 consumers a rich AST reflecting the written source code as much as possible even
@@ -2174,7 +2215,7 @@ Consequently, we must either set the virtual flag for the definition (but then
 we create a malformed AST which the parser would never create), or we import
 the whole redeclaration chain of the function. The most recent version of the
 ``ASTImporter`` uses the latter mechanism. We do import all function
-declarations - regardless if they are definitions or prototypes - in the order
+declarations - regardless of whether they are definitions or prototypes - in the order
 as they appear in the "from" context.
 
 .. One definition
@@ -2297,7 +2338,7 @@ library receive an Error object, which they must check.
 During import of a specific declaration, it may happen that some AST nodes had
 already been created before we recognize an error. In this case, we signal back
 the error to the caller, but the "to" context remains polluted with those nodes
-which had been created. Ideally, those nodes should not had been created, but
+which had been created. Ideally, those nodes should not have been created, but
 that time we did not know about the error, the error happened later. Since the
 AST is immutable (most of the cases we can't remove existing nodes) we choose
 to mark these nodes as erroneous.
@@ -2538,7 +2579,7 @@ that there are global declarations which collide with declarations from other
 translation units, but they are not referenced outside from their translation
 unit. These declarations should be in an unnamed namespace ideally. If we treat
 these collisions liberally then CTU analysis can find more results. Note, the
-feature be able to choose between name conflict handling strategies is still an
+feature to be able to choose between name conflict handling strategies is still an
 ongoing work.
 
 .. _CFG:
@@ -3519,7 +3560,7 @@ For example:
 
   // expected-note {{{evaluates to '{{2, 3, 4}} == {0, 3, 4}'}}}
 
-The intent is to allow the delimeter to be wider than the longest `{` or `}`
+The intent is to allow the delimiter to be wider than the longest `{` or `}`
 brace sequence in the content, so that if your expected text contains `{{{`
 (three braces) it may be delimited with `{{{{` (four braces), and so on.
 

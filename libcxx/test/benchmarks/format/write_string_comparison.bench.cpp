@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// Don't warn about std::sprintf
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
+
 #include <array>
 #include <concepts>
 #include <cstdio>
@@ -135,7 +140,7 @@ std::string_view string_view_6000_characters = c_string_6000_characters;
 static void BM_sprintf(benchmark::State& state, const char* value) {
   std::array<char, 10'000> output;
   for (auto _ : state)
-    benchmark::DoNotOptimize(sprintf(output.data(), "%s", value));
+    benchmark::DoNotOptimize(std::sprintf(output.data(), "%s", value));
 }
 
 template <class T>
@@ -190,18 +195,6 @@ static void BM_format_to_iterator(benchmark::State& state, const T& value, F&& f
                     }));                                                                                               \
                                                                                                                        \
   /* */
-
-// Verify these types have an iterator that format has optimizations for.
-LIBCPP_STATIC_ASSERT(std::same_as<std::array<char, 1>::iterator, char*> || // the type depends on an ABI flag
-                     std::same_as<std::array<char, 1>::iterator, std::__wrap_iter<char*>>);
-LIBCPP_STATIC_ASSERT(std::same_as<std::string::iterator, std::__wrap_iter<char*>>);
-LIBCPP_STATIC_ASSERT(std::same_as<std::vector<char>::iterator, std::__wrap_iter<char*>>);
-
-// Verify these types have an iterator that format does not optimize for
-LIBCPP_STATIC_ASSERT(!std::same_as<std::deque<char>::iterator, char*> &&
-                     !std::same_as<std::deque<char>::iterator, std::__wrap_iter<char*>>);
-LIBCPP_STATIC_ASSERT(!std::same_as<std::list<char>::iterator, char*> &&
-                     !std::same_as<std::list<char>::iterator, std::__wrap_iter<char*>>);
 
 BENCHMARK_CAPTURE(BM_sprintf, C_string_len_6, c_string_6_characters);
 FORMAT_BENCHMARKS(C_string_len_6, c_string_6_characters)

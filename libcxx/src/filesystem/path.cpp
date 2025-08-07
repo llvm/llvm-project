@@ -24,7 +24,10 @@ using parser::string_view_t;
 //                            path definitions
 ///////////////////////////////////////////////////////////////////////////////
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wdeprecated")
 constexpr path::value_type path::preferred_separator;
+_LIBCPP_DIAGNOSTIC_POP
 
 path& path::replace_extension(path const& replacement) {
   path p = extension();

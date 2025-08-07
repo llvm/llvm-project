@@ -48,9 +48,9 @@ int main() {
   // THREADS: {{^}}[[MASTER_ID]]: ompt_event_parallel_begin
   // THREADS-SAME: parent_task_id=[[PARENT_TASK_ID:[0-9]+]]
   // THREADS-SAME: parent_task_frame.exit=[[NULL]]
-  // THREADS-SAME: parent_task_frame.reenter={{0x[0-f]+}}
+  // THREADS-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}}
   // THREADS-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]], requested_team_size=4
-  // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS:0x[0-f]+]]{{[0-f][0-f]}}
+  // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS:(0x)?[0-f]+]]{{[0-f][0-f]}}
 
   // THREADS: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin
   // THREADS-SAME: parallel_id=[[PARALLEL_ID]]

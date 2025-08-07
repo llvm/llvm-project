@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+zfbfmin -riscv-no-aliases \
+# RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+zfbfmin -M no-aliases \
 # RUN:     | FileCheck -check-prefixes=CHECK-INST %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+d,+zfh,+zfbfmin \
 # RUN:     | FileCheck -check-prefixes=CHECK-ALIAS %s

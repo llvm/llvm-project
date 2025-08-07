@@ -75,6 +75,12 @@ if (NOT APPLE) # On Apple platforms, we always use -nostdlib++ so we don't need 
   add_library_flags_if(LIBCXXABI_HAS_C_LIB c)
 endif()
 
+if (FUCHSIA)
+    # TODO: Use CMAKE_LINK_LIBRARY_USING_FEATURE once our minimum CMake is at least 3.24
+    # https://cmake.org/cmake/help/latest/variable/CMAKE_LINK_LIBRARY_USING_FEATURE.html
+    add_link_flags("-Wl,--push-state,--as-needed,-lzircon,--pop-state")
+endif()
+
 if (NOT LIBCXXABI_USE_COMPILER_RT)
   add_library_flags_if(LIBCXXABI_HAS_GCC_LIB gcc)
 endif()
@@ -166,11 +172,12 @@ if (LIBCXXABI_USE_LLVM_UNWINDER)
     target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared)
   endif()
 endif()
-target_link_libraries(cxxabi_shared_objects PRIVATE cxx-headers ${LIBCXXABI_LIBRARIES})
+target_link_libraries(cxxabi_shared_objects
+  PUBLIC cxxabi-headers
+  PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_LIBRARIES})
 if (NOT CXX_SUPPORTS_NOSTDLIBXX_FLAG)
   target_link_libraries(cxxabi_shared_objects PRIVATE ${LIBCXXABI_BUILTINS_LIBRARY})
 endif()
-target_link_libraries(cxxabi_shared_objects PUBLIC cxxabi-headers)
 set_target_properties(cxxabi_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -183,6 +190,10 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
   set_target_properties(cxxabi_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
 endif()
 target_compile_options(cxxabi_shared_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
+
+# Build with -fsized-deallocation, which is default in recent versions of Clang.
+# TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+target_add_compile_flags_if_supported(cxxabi_shared_objects PRIVATE -fsized-deallocation)
 
 add_library(cxxabi_shared SHARED)
 set_target_properties(cxxabi_shared
@@ -205,7 +216,7 @@ if (ZOS)
 endif ()
 
 target_link_libraries(cxxabi_shared
-  PUBLIC cxxabi_shared_objects
+  PUBLIC cxxabi_shared_objects runtimes-libc-shared
   PRIVATE ${LIBCXXABI_LIBRARIES})
 
 if (LIBCXXABI_ENABLE_SHARED)
@@ -264,8 +275,9 @@ if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC
   target_link_libraries(cxxabi_static_objects PUBLIC unwind_static_objects) # propagate usage requirements
   target_sources(cxxabi_static_objects PUBLIC $<TARGET_OBJECTS:unwind_static_objects>)
 endif()
-target_link_libraries(cxxabi_static_objects PRIVATE cxx-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
-target_link_libraries(cxxabi_static_objects PUBLIC cxxabi-headers)
+target_link_libraries(cxxabi_static_objects
+  PUBLIC cxxabi-headers
+  PRIVATE cxx-headers runtimes-libc-headers ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
 set_target_properties(cxxabi_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
@@ -274,6 +286,10 @@ set_target_properties(cxxabi_static_objects
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
 )
 target_compile_options(cxxabi_static_objects PRIVATE "${LIBCXXABI_ADDITIONAL_COMPILE_FLAGS}")
+
+# Build with -fsized-deallocation, which is default in recent versions of Clang.
+# TODO(LLVM 21): This can be dropped once we only support Clang >= 19.
+target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fsized-deallocation)
 
 if(LIBCXXABI_HERMETIC_STATIC_LIBRARY)
   target_add_compile_flags_if_supported(cxxabi_static_objects PRIVATE -fvisibility=hidden)
@@ -297,7 +313,7 @@ endif()
 
 add_library(cxxabi_static STATIC)
 if (LIBCXXABI_USE_LLVM_UNWINDER AND NOT LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
-  target_link_libraries(cxxabi_static PUBLIC unwind_static)
+  target_link_libraries(cxxabi_static PUBLIC unwind_static runtimes-libc-static)
 endif()
 set_target_properties(cxxabi_static
   PROPERTIES

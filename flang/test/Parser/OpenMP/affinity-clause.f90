@@ -15,8 +15,8 @@ end
 !UNPARSE: !$OMP END TASK
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = task
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Affinity -> OmpAffinityClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> Name = 'x'
 
@@ -34,8 +34,8 @@ end
 !UNPARSE: !$OMP END TASK
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = task
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Affinity -> OmpAffinityClause
 !PARSE-TREE: | | OmpObjectList -> OmpObject -> Designator -> DataRef -> ArrayElement
 !PARSE-TREE: | | | DataRef -> Name = 'x'
@@ -55,15 +55,15 @@ end
 
 !UNPARSE: SUBROUTINE f02 (x)
 !UNPARSE:  INTEGER x(10_4)
-!UNPARSE: !$OMP TASK  AFFINITY(ITERATOR(INTEGER i = 1_4:3_4):x(i))
+!UNPARSE: !$OMP TASK  AFFINITY(ITERATOR(INTEGER i = 1_4:3_4): x(i))
 !UNPARSE:   x=x+1_4
 !UNPARSE: !$OMP END TASK
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginBlockDirective
-!PARSE-TREE: | OmpBlockDirective -> llvm::omp::Directive = task
+!PARSE-TREE: OmpBeginDirective
+!PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = task
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Affinity -> OmpAffinityClause
-!PARSE-TREE: | | OmpIteratorModifier -> OmpIteratorSpecifier
+!PARSE-TREE: | | Modifier -> OmpIterator -> OmpIteratorSpecifier
 !PARSE-TREE: | | | TypeDeclarationStmt
 !PARSE-TREE: | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> IntegerTypeSpec ->
 !PARSE-TREE: | | | | EntityDecl

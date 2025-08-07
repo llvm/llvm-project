@@ -161,7 +161,7 @@ define i8 @extract_element_binop_splat_variable_index(<4 x i8> %x, i32 %y) {
 define i8 @extract_element_binop_splat_variable_index_may_trap(<4 x i8> %x, <4 x i8> %y, i32 %z) {
 ;
 ; CHECK-LABEL: @extract_element_binop_splat_variable_index_may_trap(
-; CHECK-NEXT:    [[B:%.*]] = sdiv <4 x i8> <i8 42, i8 42, i8 42, i8 42>, [[Y:%.*]]
+; CHECK-NEXT:    [[B:%.*]] = sdiv <4 x i8> splat (i8 42), [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = extractelement <4 x i8> [[B]], i32 [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;

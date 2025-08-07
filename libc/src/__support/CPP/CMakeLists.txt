@@ -17,6 +17,7 @@ add_header_library(
   DEPENDS
     .limits
     .type_traits
+    libc.hdr.stdint_proxy
     libc.src.__support.macros.attributes
     libc.src.__support.macros.sanitizer
 )
@@ -39,6 +40,8 @@ add_header_library(
   functional
   HDRS
     functional.h
+  DEPENDS
+    libc.hdr.stdint_proxy
 )
 
 add_header_library(
@@ -80,8 +83,10 @@ add_header_library(
   HDRS
     string.h
   DEPENDS
-    libc.include.stdlib
     .string_view
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc
     libc.src.__support.common
     libc.src.__support.integer_to_string
     libc.src.string.memory_utils.inline_memcpy
@@ -199,7 +204,9 @@ add_object_library(
   HDRS
     new.h
   DEPENDS
-    libc.include.stdlib
+    libc.hdr.func.free
+    libc.hdr.func.malloc
+    libc.hdr.func.aligned_alloc
     libc.src.__support.common
     libc.src.__support.macros.properties.os
 )

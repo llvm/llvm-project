@@ -1,7 +1,5 @@
 ; RUN: opt -passes=mldst-motion -S %s -o - \
 ; RUN: | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators -passes=mldst-motion -S %s -o - \
-; RUN: | FileCheck %s
 
 ;; $ cat test.cpp
 ;; int cond;

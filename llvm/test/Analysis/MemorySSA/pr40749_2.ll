@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=licm,simple-loop-unswitch -verify-memoryssa %s | FileCheck %s
+; RUN: opt -S -passes="loop-mssa(licm,simple-loop-unswitch)" -verify-memoryssa %s | FileCheck %s
 ; REQUIRES: asserts
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"
 target triple = "s390x-ibm-linux"
@@ -7,7 +7,7 @@ target triple = "s390x-ibm-linux"
 @g_993 = external dso_local local_unnamed_addr global i32, align 4
 
 ; CHECK-LABEL: @ff6
-define dso_local fastcc void @ff6(i16 %arg1) unnamed_addr #0 {
+define dso_local fastcc void @ff6(i16 %arg1, i1 %arg2) unnamed_addr #0 {
 bb:
   %tmp6.i = icmp sgt i16 %arg1, 0
   br label %bb10
@@ -50,7 +50,7 @@ bb67:                                             ; preds = %bb27
   br label %bb75
 
 bb75:                                             ; preds = %bb67, %bb67.us.loopexit
-  br i1 undef, label %bb24.preheader, label %bb84.loopexit
+  br i1 %arg2, label %bb24.preheader, label %bb84.loopexit
 
 bb81.loopexit:                                    ; preds = %bb61.us
   br label %bb10

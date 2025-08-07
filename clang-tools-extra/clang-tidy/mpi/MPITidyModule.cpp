@@ -31,6 +31,6 @@ static ClangTidyModuleRegistry::Add<mpi::MPIModule>
 
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the MPIModule.
-volatile int MPIModuleAnchorSource = 0;
+volatile int MPIModuleAnchorSource = 0; // NOLINT(misc-use-internal-linkage)
 
 } // namespace clang::tidy

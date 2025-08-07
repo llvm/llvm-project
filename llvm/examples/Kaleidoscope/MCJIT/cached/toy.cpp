@@ -31,15 +31,15 @@ using namespace llvm;
 // Command-line options
 //===----------------------------------------------------------------------===//
 
-cl::opt<std::string>
-InputIR("input-IR",
-        cl::desc("Specify the name of an IR file to load for function definitions"),
-        cl::value_desc("input IR file name"));
+static cl::opt<std::string> InputIR(
+    "input-IR",
+    cl::desc("Specify the name of an IR file to load for function definitions"),
+    cl::value_desc("input IR file name"));
 
-cl::opt<bool>
-UseObjectCache("use-object-cache",
-               cl::desc("Enable use of the MCJIT object caching"),
-               cl::init(false));
+static cl::opt<bool>
+    UseObjectCache("use-object-cache",
+                   cl::desc("Enable use of the MCJIT object caching"),
+                   cl::init(false));
 
 //===----------------------------------------------------------------------===//
 // Lexer

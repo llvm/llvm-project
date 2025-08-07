@@ -16,7 +16,6 @@ add_clang_library(clangTidyCppCoreGuidelinesModule STATIC
   MacroUsageCheck.cpp
   MisleadingCaptureDefaultByValueCheck.cpp
   MissingStdForwardCheck.cpp
-  NarrowingConversionsCheck.cpp
   NoMallocCheck.cpp
   NoSuspendWithLockCheck.cpp
   OwningMemoryCheck.cpp
@@ -34,10 +33,12 @@ add_clang_library(clangTidyCppCoreGuidelinesModule STATIC
   RvalueReferenceParamNotMovedCheck.cpp
   SlicingCheck.cpp
   SpecialMemberFunctionsCheck.cpp
+  UseEnumClassCheck.cpp
   VirtualClassDestructorCheck.cpp
 
   LINK_LIBS
   clangTidy
+  clangTidyBugproneModule
   clangTidyMiscModule
   clangTidyModernizeModule
   clangTidyPerformanceModule

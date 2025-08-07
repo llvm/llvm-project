@@ -20,10 +20,10 @@ define i1 @fabs_sqrt_src_maybe_nan(double %arg0, double %arg1) {
 
 define i1 @select_maybe_nan_lhs(i1 %cond, double %lhs, double %arg1) {
 ; CHECK-LABEL: @select_maybe_nan_lhs(
-; CHECK-NEXT:    [[RHS:%.*]] = fadd nnan double [[ARG1:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], double [[LHS:%.*]], double [[RHS]]
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NOT_COND:%.*]] = xor i1 [[COND:%.*]], true
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[NOT_COND]], i1 true, i1 [[TMP]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %rhs = fadd nnan double %arg1, 1.0
   %op = select i1 %cond, double %lhs, double %rhs
@@ -33,10 +33,9 @@ define i1 @select_maybe_nan_lhs(i1 %cond, double %lhs, double %arg1) {
 
 define i1 @select_maybe_nan_rhs(i1 %cond, double %arg0, double %rhs) {
 ; CHECK-LABEL: @select_maybe_nan_rhs(
-; CHECK-NEXT:    [[LHS:%.*]] = fadd nnan double [[ARG0:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], double [[LHS]], double [[RHS:%.*]]
-; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP]], 0.000000e+00
-; CHECK-NEXT:    ret i1 [[TMP]]
+; CHECK-NEXT:    [[TMP:%.*]] = fcmp ord double [[OP:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i1 true, i1 [[TMP]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %lhs = fadd nnan double %arg0, 1.0
   %op = select i1 %cond, double %lhs, double %rhs

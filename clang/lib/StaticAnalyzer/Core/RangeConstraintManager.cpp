@@ -1471,7 +1471,7 @@ private:
     return getRangeForNegatedExpr(
         [SSE, State = this->State]() -> SymbolRef {
           if (SSE->getOpcode() == BO_Sub)
-            return State->getSymbolManager().getSymSymExpr(
+            return State->getSymbolManager().acquire<SymSymExpr>(
                 SSE->getRHS(), BO_Sub, SSE->getLHS(), SSE->getType());
           return nullptr;
         },
@@ -1481,8 +1481,8 @@ private:
   std::optional<RangeSet> getRangeForNegatedSym(SymbolRef Sym) {
     return getRangeForNegatedExpr(
         [Sym, State = this->State]() {
-          return State->getSymbolManager().getUnarySymExpr(Sym, UO_Minus,
-                                                           Sym->getType());
+          return State->getSymbolManager().acquire<UnarySymExpr>(
+              Sym, UO_Minus, Sym->getType());
         },
         Sym->getType());
   }
@@ -1495,7 +1495,7 @@ private:
     if (!IsCommutative)
       return std::nullopt;
 
-    SymbolRef Commuted = State->getSymbolManager().getSymSymExpr(
+    SymbolRef Commuted = State->getSymbolManager().acquire<SymSymExpr>(
         SSE->getRHS(), Op, SSE->getLHS(), SSE->getType());
     if (const RangeSet *Range = getConstraint(State, Commuted))
       return *Range;
@@ -1540,7 +1540,8 @@ private:
 
       // Let's find an expression e.g. (x < y).
       BinaryOperatorKind QueriedOP = OperatorRelationsTable::getOpFromIndex(i);
-      const SymSymExpr *SymSym = SymMgr.getSymSymExpr(LHS, QueriedOP, RHS, T);
+      const SymSymExpr *SymSym =
+          SymMgr.acquire<SymSymExpr>(LHS, QueriedOP, RHS, T);
       const RangeSet *QueriedRangeSet = getConstraint(State, SymSym);
 
       // If ranges were not previously found,
@@ -1548,7 +1549,7 @@ private:
       if (!QueriedRangeSet) {
         const BinaryOperatorKind ROP =
             BinaryOperator::reverseComparisonOp(QueriedOP);
-        SymSym = SymMgr.getSymSymExpr(RHS, ROP, LHS, T);
+        SymSym = SymMgr.acquire<SymSymExpr>(RHS, ROP, LHS, T);
         QueriedRangeSet = getConstraint(State, SymSym);
       }
 

@@ -36,17 +36,12 @@ define <2 x half> @test_pown_reduced_fast_v2f16_known_odd(<2 x half> %x, <2 x i3
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX9-NEXT:    v_and_b32_e32 v3, 0x7fff7fff, v0
-; GFX9-NEXT:    s_movk_i32 s4, 0x7fff
+; GFX9-NEXT:    s_mov_b32 s4, 0x7fff7fff
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; GFX9-NEXT:    v_cvt_f16_f32_e32 v1, v1
 ; GFX9-NEXT:    v_pack_b32_f16 v1, v1, v2
 ; GFX9-NEXT:    v_pk_mul_f16 v1, v3, v1
-; GFX9-NEXT:    v_bfi_b32 v2, s4, v1, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v1, v0
-; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
-; GFX9-NEXT:    v_perm_b32 v0, v0, v2, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %y = or <2 x i32> %y.arg, <i32 1, i32 1>
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %x)
@@ -131,8 +126,8 @@ define <2 x double> @test_pown_reduced_fast_v2f64_known_odd(<2 x double> %x, <2 
 ; GFX9-LABEL: test_pown_reduced_fast_v2f64_known_odd:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_or_b32_e32 v6, 1, v5
 ; GFX9-NEXT:    v_or_b32_e32 v4, 1, v4
+; GFX9-NEXT:    v_or_b32_e32 v6, 1, v5
 ; GFX9-NEXT:    v_cvt_f64_i32_e32 v[4:5], v4
 ; GFX9-NEXT:    v_cvt_f64_i32_e32 v[6:7], v6
 ; GFX9-NEXT:    s_brev_b32 s4, -2
@@ -337,9 +332,8 @@ define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x800000
 ; GFX9-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; GFX9-NEXT:    v_mov_b32_e32 v3, 0x4f800000
-; GFX9-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
-; GFX9-NEXT:    v_mul_f32_e64 v3, |v0|, v3
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, 32, vcc
+; GFX9-NEXT:    v_ldexp_f32 v3, |v0|, v3
 ; GFX9-NEXT:    v_log_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0x42000000
@@ -353,10 +347,10 @@ define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; GFX9-NEXT:    v_fma_f32 v2, v2, v1, v3
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_exp_f32_e32 v2, v2
-; GFX9-NEXT:    v_mov_b32_e32 v3, 0x1f800000
-; GFX9-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
+; GFX9-NEXT:    v_not_b32_e32 v3, 63
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
-; GFX9-NEXT:    v_mul_f32_e32 v2, v2, v3
+; GFX9-NEXT:    v_ldexp_f32 v2, v2, v3
 ; GFX9-NEXT:    v_and_b32_e32 v0, v1, v0
 ; GFX9-NEXT:    s_brev_b32 s4, -2
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v2, v0

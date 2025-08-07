@@ -2,7 +2,7 @@
 
 ! RUN: split-file %s %t && cd %t
 
-! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --openmp-enable-delayed-privatization \
+! RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization \
 ! RUN:   -o - test.f90 2>&1 | \
 ! RUN: fir-opt --cfg-conversion -o test.cfg-conv.mlir
 ! RUN: FileCheck --input-file=test.cfg-conv.mlir %s --check-prefix="CFGConv"
@@ -21,34 +21,27 @@ subroutine delayed_privatization_allocatable
 end subroutine
 
 ! CFGConv-LABEL: omp.private {type = private}
-! CFGConv-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]] alloc {
+! CFGConv-SAME: @[[PRIVATIZER_SYM:.*]] : [[BOX_TYPE:!fir.box<!fir.heap<i32>>]] init {
 
-! CFGConv-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-
-! CFGConv-NEXT:   %[[PRIV_ALLOC:.*]] = fir.alloca !fir.box<!fir.heap<i32>> {bindc_name = "var1", pinned, uniq_name = "_QFdelayed_privatization_allocatableEvar1"}
+! CFGConv-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE:!fir.ref<!fir.box<!fir.heap<i32>>>]], %[[PRIV_ALLOC:.*]]: [[TYPE]]):
 
 ! CFGConv-NEXT:   %[[PRIV_ARG_VAL:.*]] = fir.load %[[PRIV_ARG]] : !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CFGConv-NEXT:   %[[PRIV_ARG_BOX:.*]] = fir.box_addr %[[PRIV_ARG_VAL]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 ! CFGConv-NEXT:   %[[PRIV_ARG_ADDR:.*]] = fir.convert %[[PRIV_ARG_BOX]] : (!fir.heap<i32>) -> i64
 ! CFGConv-NEXT:   %[[C0:.*]] = arith.constant 0 : i64
-! CFGConv-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi ne, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
-! CFGConv-NEXT:   cf.cond_br %[[ALLOC_COND]], ^[[ALLOC_MEM_BB:.*]], ^[[ZERO_MEM_BB:.*]]
-! CFGConv-NEXT: ^[[ALLOC_MEM_BB]]:
+! CFGConv-NEXT:   %[[ALLOC_COND:.*]] = arith.cmpi eq, %[[PRIV_ARG_ADDR]], %[[C0]] : i64
+! CFGConv-NEXT:   cf.cond_br %[[ALLOC_COND]], ^[[ZERO_MEM_BB:.*]], ^[[ALLOC_MEM_BB:.*]]
+! CFGConv-NEXT: ^[[ZERO_MEM_BB]]:
+! CFGConv:        cf.br ^[[DECL_BB:.*]]
+! CFGConv:      ^[[ALLOC_MEM_BB]]:
 ! CFGConv:        fir.allocmem
 ! CFGConv:        cf.br ^[[DECL_BB:.*]]
-! CFGConv:      ^[[ZERO_MEM_BB]]:
-! CFGConv-NEXT:   fir.zero_bits
-! CFGConv:        cf.br ^[[DECL_BB:.*]]
 ! CFGConv-NEXT: ^[[DECL_BB]]:
-! CFGConv-NEXT:   hlfir.declare
 ! CFGConv-NEXT:   omp.yield
 
 
 ! LLVMDialect-LABEL: omp.private {type = private}
-! LLVMDialect-SAME: @[[PRIVATIZER_SYM:.*]] : [[TYPE:!llvm.ptr]] alloc {
-
-! LLVMDialect-NEXT: ^bb0(%[[PRIV_ARG:.*]]: [[TYPE]]):
-! LLVMDialect:        llvm.alloca
+! LLVMDialect-SAME: @[[PRIVATIZER_SYM:.*]] : !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)> init {
+! LLVMDialect-NEXT: ^bb0(%[[PRIV_ARG:.*]]: !llvm.ptr, %[[PRIV_ALLOC:.*]]: !llvm.ptr):
 ! LLVMDialect:        llvm.call @malloc
-
 ! LLVMDialect-NOT:    hlfir.declare

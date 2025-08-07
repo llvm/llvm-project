@@ -1,0 +1,81 @@
+# UNSUPPORTED: system-windows
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabi -mfpu=none --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-DEFAULT %s
+
+# CHECK-DEFAULT:      "-cc1" "-triple" "thumbv8m.main-unknown-none-eabi"
+# CHECK-DEFAULT-SAME: "-internal-isystem" "[[SYSROOT:[^"]*]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/nofp/include"
+# CHECK-DEFAULT-NEXT: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/nofp/lib"
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabi -mfpu=none -fmultilib-flag=no-multithreaded --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-NOMULTI %s
+
+# CHECK-NOMULTI:      "-cc1" "-triple" "thumbv8m.main-unknown-none-eabi"
+# CHECK-NOMULTI-SAME: "-internal-isystem" "[[SYSROOT:[^"]*]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/nofp/include"
+# CHECK-NOMULTI-NEXT: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/nofp/lib"
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabi -mfpu=none -fmultilib-flag=multithreaded --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-MULTI %s
+
+# CHECK-MULTI:      "-cc1" "-triple" "thumbv8m.main-unknown-none-eabi"
+# CHECK-MULTI-SAME: "-internal-isystem" "[[SYSROOT:[^"]*]]/bin/../lib/clang-runtimes/arm-none-eabi/multithreaded/thumb/v8-m.main/nofp/include"
+# CHECK-MULTI-NEXT: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/multithreaded/thumb/v8-m.main/nofp/lib"
+
+# RUN: not %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabi -mfpu=none -fmultilib-flag=singlethreaded -fmultilib-flag=no-io --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-ERROR %s
+# CHECK-ERROR-DAG: error: unsupported option '-fmultilib-flag=singlethreaded'
+# CHECK-ERROR-DAG: error: unsupported option '-fmultilib-flag=no-io'; did you mean '-fmultilib-flag=io-none'?
+
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c %s -### -o /dev/null 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabi -mfpu=none -print-multi-lib --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-PRINT-MULTI-LIB %s
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/thumb/v8-m.main/nofp;@-target=thumbv8m.main-unknown-none-eabi@mfpu=none@fmultilib-flag=no-multithreaded
+# CHECK-PRINT-MULTI-LIB: arm-none-eabi/multithreaded/thumb/v8-m.main/nofp;@-target=thumbv8m.main-unknown-none-eabi@mfpu=none@fmultilib-flag=multithreaded
+
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%s -x c %s -fmultilib-flag=no-multithreaded -### -o /dev/null 2>&1 \
+# RUN: | FileCheck --check-prefix=CHECK-MACRODEFINES-NOMULTI %s
+# CHECK-MACRODEFINES-NOMULTI:        "-D" "__SINGLE_THREAD__"
+
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%s -x c %s -fmultilib-flag=io-semihosting -### -o /dev/null 2>&1 \
+# RUN: | FileCheck --check-prefix=CHECK-MACRODEFINES-IO-SEMIHOSTING %s
+# CHECK-MACRODEFINES-IO-SEMIHOSTING: "-D" "SEMIHOSTING"
+
+# RUN: %clang --target=arm-none-eabi --multi-lib-config=%s -x c %s -fmultilib-flag=io-linux-syscalls -### -o /dev/null 2>&1 \
+# RUN: | FileCheck --check-prefix=CHECK-MACRODEFINES-IO-LINUX %s
+# CHECK-MACRODEFINES-IO-LINUX:  "-D" "LINUX_SYSCALLS"
+# CHECK-MACRODEFINES-IO-LINUX-SAME:  "-D" "HOSTED"
+
+---
+MultilibVersion: 1.0
+
+Groups:
+- Name: stdlib
+  Type: Exclusive
+
+Variants:
+- Dir: arm-none-eabi/thumb/v8-m.main/nofp
+  Flags: [--target=thumbv8m.main-unknown-none-eabi, -mfpu=none, -fmultilib-flag=no-multithreaded]
+  Group: stdlib
+- Dir: arm-none-eabi/multithreaded/thumb/v8-m.main/nofp
+  Flags: [--target=thumbv8m.main-unknown-none-eabi, -mfpu=none, -fmultilib-flag=multithreaded]
+  Group: stdlib
+
+Flags:
+  - Name: multithreading
+    Values:
+    - Name: no-multithreaded
+      MacroDefines: [__SINGLE_THREAD__]
+    - Name: multithreaded
+    Default: no-multithreaded
+  - Name: io
+    Values:
+    - Name: io-none
+    - Name: io-semihosting
+      MacroDefines: [SEMIHOSTING]
+    - Name: io-linux-syscalls
+      MacroDefines: [LINUX_SYSCALLS, HOSTED]
+    Default: io-none

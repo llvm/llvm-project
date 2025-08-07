@@ -42,8 +42,8 @@ struct ExampleAttrInfo : public ParsedAttrInfo {
                             const Decl *D) const override {
     // This attribute appertains to functions only.
     if (!isa<FunctionDecl>(D)) {
-      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-          << Attr << Attr.isRegularKeywordAttribute() << "functions";
+      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << Attr << Attr.isRegularKeywordAttribute() << ExpectedFunction;
       return false;
     }
     return true;
@@ -99,8 +99,9 @@ struct ExampleAttrInfo : public ParsedAttrInfo {
                             const Stmt *St) const override {
     // This attribute appertains to for loop statements only.
     if (!isa<ForStmt>(St)) {
-      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type_str)
-          << Attr << Attr.isRegularKeywordAttribute() << "for loop statements";
+      S.Diag(Attr.getLoc(), diag::warn_attribute_wrong_decl_type)
+          << Attr << Attr.isRegularKeywordAttribute()
+          << ExpectedForLoopStatement;
       return false;
     }
     return true;

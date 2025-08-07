@@ -21,6 +21,36 @@ long test_InterlockedAdd_constant(long volatile *Addend) {
 // CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd'
 
+long test_InterlockedAdd_acq(long volatile *Addend, long Value) {
+  return _InterlockedAdd_acq(Addend, Value);
+}
+
+// CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd_acq(ptr %Addend, i32 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i32 %2 acquire, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_acq'
+
+long test_InterlockedAdd_nf(long volatile *Addend, long Value) {
+  return _InterlockedAdd_nf(Addend, Value);
+}
+
+// CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd_nf(ptr %Addend, i32 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i32 %2 monotonic, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_nf'
+
+long test_InterlockedAdd_rel(long volatile *Addend, long Value) {
+  return _InterlockedAdd_rel(Addend, Value);
+}
+
+// CHECK-LABEL: define {{.*}} i32 @test_InterlockedAdd_rel(ptr %Addend, i32 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i32 %2 release, align 4
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i32 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: ret i32 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd_rel'
+
 __int64 test_InterlockedAdd64(__int64 volatile *Addend, __int64 Value) {
   return _InterlockedAdd64(Addend, Value);
 }
@@ -35,61 +65,35 @@ __int64 test_InterlockedAdd64_constant(__int64 volatile *Addend) {
 // CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
 // CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64'
 
-void check__dmb(void) {
-  __dmb(0);
+__int64 test_InterlockedAdd64_acq(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64_acq(Addend, Value);
 }
 
-// CHECK-MSVC: @llvm.aarch64.dmb(i32 0)
-// CHECK-LINUX: error: call to undeclared function '__dmb'
+// CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64_acq(ptr %Addend, i64 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i64 %2 acquire, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64_acq'
 
-void check__dsb(void) {
-  __dsb(0);
+__int64 test_InterlockedAdd64_nf(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64_nf(Addend, Value);
 }
 
-// CHECK-MSVC: @llvm.aarch64.dsb(i32 0)
-// CHECK-LINUX: error: call to undeclared function '__dsb'
+// CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64_nf(ptr %Addend, i64 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i64 %2 monotonic, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64_nf'
 
-void check__isb(void) {
-  __isb(0);
+__int64 test_InterlockedAdd64_rel(__int64 volatile *Addend, __int64 Value) {
+  return _InterlockedAdd64_rel(Addend, Value);
 }
 
-// CHECK-MSVC: @llvm.aarch64.isb(i32 0)
-// CHECK-LINUX: error: call to undeclared function '__isb'
-
-void check__yield(void) {
-  __yield();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 1)
-// CHECK-LINUX: error: call to undeclared function '__yield'
-
-void check__wfe(void) {
-  __wfe();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 2)
-// CHECK-LINUX: error: call to undeclared function '__wfe'
-
-void check__wfi(void) {
-  __wfi();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 3)
-// CHECK-LINUX: error: call to undeclared function '__wfi'
-
-void check__sev(void) {
-  __sev();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 4)
-// CHECK-LINUX: error: call to undeclared function '__sev'
-
-void check__sevl(void) {
-  __sevl();
-}
-
-// CHECK-MSVC: @llvm.aarch64.hint(i32 5)
-// CHECK-LINUX: error: call to undeclared function '__sevl'
+// CHECK-LABEL: define {{.*}} i64 @test_InterlockedAdd64_rel(ptr %Addend, i64 %Value) {{.*}} {
+// CHECK-MSVC: %[[OLDVAL:[0-9]+]] = atomicrmw add ptr %1, i64 %2 release, align 8
+// CHECK-MSVC: %[[NEWVAL:[0-9]+]] = add i64 %[[OLDVAL:[0-9]+]], %2
+// CHECK-MSVC: ret i64 %[[NEWVAL:[0-9]+]]
+// CHECK-LINUX: error: call to undeclared function '_InterlockedAdd64_rel'
 
 void check_ReadWriteBarrier(void) {
   _ReadWriteBarrier();
@@ -164,12 +168,12 @@ void check__writex18byte(unsigned LONG offset, unsigned char data) {
 // CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
 // CHECK-MSCOMPAT: store i8 %data, ptr %[[DATA_ADDR]], align 1
 // CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[DATA:.*]] = load i8, ptr %[[DATA_ADDR]], align 1
 // CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
 // CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
-// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
 // CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
-// CHECK-MSCOMPAT: %[[DATA:.*]] = load i8, ptr %[[DATA_ADDR]], align 1
 // CHECK-MSCOMPAT: store i8 %[[DATA]], ptr %[[PTR]], align 1
 
 #ifdef __LP64__
@@ -184,12 +188,12 @@ void check__writex18word(unsigned LONG offset, unsigned short data) {
 // CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
 // CHECK-MSCOMPAT: store i16 %data, ptr %[[DATA_ADDR]], align 2
 // CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[DATA:.*]] = load i16, ptr %[[DATA_ADDR]], align 2
 // CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
 // CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
-// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
 // CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
-// CHECK-MSCOMPAT: %[[DATA:.*]] = load i16, ptr %[[DATA_ADDR]], align 2
 // CHECK-MSCOMPAT: store i16 %[[DATA]], ptr %[[PTR]], align 1
 
 #ifdef __LP64__
@@ -204,12 +208,12 @@ void check__writex18dword(unsigned LONG offset, unsigned LONG data) {
 // CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
 // CHECK-MSCOMPAT: store i32 %data, ptr %[[DATA_ADDR]], align 4
 // CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[DATA:.*]] = load i32, ptr %[[DATA_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
 // CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
-// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
 // CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
-// CHECK-MSCOMPAT: %[[DATA:.*]] = load i32, ptr %[[DATA_ADDR]], align 4
 // CHECK-MSCOMPAT: store i32 %[[DATA]], ptr %[[PTR]], align 1
 
 #ifdef __LP64__
@@ -224,12 +228,12 @@ void check__writex18qword(unsigned LONG offset, unsigned __int64 data) {
 // CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
 // CHECK-MSCOMPAT: store i64 %data, ptr %[[DATA_ADDR]], align 8
 // CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[DATA:.*]] = load i64, ptr %[[DATA_ADDR]], align 8
 // CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
 // CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
-// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
 // CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
-// CHECK-MSCOMPAT: %[[DATA:.*]] = load i64, ptr %[[DATA_ADDR]], align 8
 // CHECK-MSCOMPAT: store i64 %[[DATA]], ptr %[[PTR]], align 1
 
 unsigned char check__readx18byte(unsigned LONG offset) {
@@ -238,9 +242,9 @@ unsigned char check__readx18byte(unsigned LONG offset) {
 
 // CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
 // CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
 // CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
-// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
 // CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
 // CHECK-MSCOMPAT: %[[RETVAL:.*]] = load i8, ptr %[[PTR]], align 1
@@ -252,9 +256,9 @@ unsigned short check__readx18word(unsigned LONG offset) {
 
 // CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
 // CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
 // CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
-// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
 // CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
 // CHECK-MSCOMPAT: %[[RETVAL:.*]] = load i16, ptr %[[PTR]], align 1
@@ -266,9 +270,9 @@ unsigned LONG check__readx18dword(unsigned LONG offset) {
 
 // CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
 // CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
 // CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
-// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
 // CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
 // CHECK-MSCOMPAT: %[[RETVAL:.*]] = load i32, ptr %[[PTR]], align 1
@@ -280,13 +284,161 @@ unsigned __int64 check__readx18qword(unsigned LONG offset) {
 
 // CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
 // CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
 // CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
-// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
 // CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
 // CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
 // CHECK-MSCOMPAT: %[[RETVAL:.*]] = load i64, ptr %[[PTR]], align 1
 // CHECK-MSCOMPAT: ret i64 %[[RETVAL]]
+
+#ifdef __LP64__
+void check__addx18byte(unsigned char data, unsigned LONG offset) {
+#else
+void check__addx18byte(unsigned LONG offset, unsigned char data) {
+#endif
+  __addx18byte(offset, data);
+}
+
+// CHECK-MSCOMPAT: %[[DATA_ADDR:.*]] = alloca i8, align 1
+// CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSCOMPAT: store i8 %data, ptr %[[DATA_ADDR]], align 1
+// CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[DATA:.*]] = load i8, ptr %[[DATA_ADDR]], align 1
+// CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
+// CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSCOMPAT: %[[ORIG_VAL:.*]] = load i8, ptr %[[PTR]], align 1
+// CHECK-MSCOMPAT: %[[SUM:.*]] = add i8 %[[ORIG_VAL]], %[[DATA]]
+// CHECK-MSCOMPAT: store i8 %[[SUM]], ptr %[[PTR]], align 1
+
+#ifdef __LP64__
+void check__addx18word(unsigned short data, unsigned LONG offset) {
+#else
+void check__addx18word(unsigned LONG offset, unsigned short data) {
+#endif
+  __addx18word(offset, data);
+}
+
+// CHECK-MSCOMPAT: %[[DATA_ADDR:.*]] = alloca i16, align 2
+// CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSCOMPAT: store i16 %data, ptr %[[DATA_ADDR]], align 2
+// CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[DATA:.*]] = load i16, ptr %[[DATA_ADDR]], align 2
+// CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
+// CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSCOMPAT: %[[ORIG_VAL:.*]] = load i16, ptr %[[PTR]], align 1
+// CHECK-MSCOMPAT: %[[SUM:.*]] = add i16 %[[ORIG_VAL]], %[[DATA]]
+// CHECK-MSCOMPAT: store i16 %[[SUM]], ptr %[[PTR]], align 1
+
+#ifdef __LP64__
+void check__addx18dword(unsigned LONG data, unsigned LONG offset) {
+#else
+void check__addx18dword(unsigned LONG offset, unsigned LONG data) {
+#endif
+  __addx18dword(offset, data);
+}
+
+// CHECK-MSCOMPAT: %[[DATA_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %data, ptr %[[DATA_ADDR]], align 4
+// CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[DATA:.*]] = load i32, ptr %[[DATA_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
+// CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSCOMPAT: %[[ORIG_VAL:.*]] = load i32, ptr %[[PTR]], align 1
+// CHECK-MSCOMPAT: %[[SUM:.*]] = add i32 %[[ORIG_VAL]], %[[DATA]]
+// CHECK-MSCOMPAT: store i32 %[[SUM]], ptr %[[PTR]], align 1
+
+#ifdef __LP64__
+void check__addx18qword(unsigned __int64 data, unsigned LONG offset) {
+#else
+void check__addx18qword(unsigned LONG offset, unsigned __int64 data) {
+#endif
+  __addx18qword(offset, data);
+}
+
+// CHECK-MSCOMPAT: %[[DATA_ADDR:.*]] = alloca i64, align 8
+// CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSCOMPAT: store i64 %data, ptr %[[DATA_ADDR]], align 8
+// CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[DATA:.*]] = load i64, ptr %[[DATA_ADDR]], align 8
+// CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
+// CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSCOMPAT: %[[ORIG_VAL:.*]] = load i64, ptr %[[PTR]], align 1
+// CHECK-MSCOMPAT: %[[SUM:.*]] = add i64 %[[ORIG_VAL]], %[[DATA]]
+// CHECK-MSCOMPAT: store i64 %[[SUM]], ptr %[[PTR]], align 1
+
+void check__incx18byte(unsigned LONG offset) {
+  __incx18byte(offset);
+}
+
+// CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
+// CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSCOMPAT: %[[ORIG_VAL:.*]] = load i8, ptr %[[PTR]], align 1
+// CHECK-MSCOMPAT: %[[SUM:.*]] = add i8 %[[ORIG_VAL]], 1
+// CHECK-MSCOMPAT: store i8 %[[SUM]], ptr %[[PTR]], align 1
+
+void check__incx18word(unsigned LONG offset) {
+  __incx18word(offset);
+}
+
+// CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
+// CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSCOMPAT: %[[ORIG_VAL:.*]] = load i16, ptr %[[PTR]], align 1
+// CHECK-MSCOMPAT: %[[SUM:.*]] = add i16 %[[ORIG_VAL]], 1
+// CHECK-MSCOMPAT: store i16 %[[SUM]], ptr %[[PTR]], align 1
+
+void check__incx18dword(unsigned LONG offset) {
+  __incx18dword(offset);
+}
+
+// CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
+// CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSCOMPAT: %[[ORIG_VAL:.*]] = load i32, ptr %[[PTR]], align 1
+// CHECK-MSCOMPAT: %[[SUM:.*]] = add i32 %[[ORIG_VAL]], 1
+// CHECK-MSCOMPAT: store i32 %[[SUM]], ptr %[[PTR]], align 1
+
+void check__incx18qword(unsigned LONG offset) {
+  __incx18qword(offset);
+}
+
+// CHECK-MSCOMPAT: %[[OFFSET_ADDR:.*]] = alloca i32, align 4
+// CHECK-MSCOMPAT: store i32 %offset, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[OFFSET:.*]] = load i32, ptr %[[OFFSET_ADDR]], align 4
+// CHECK-MSCOMPAT: %[[X18:.*]] = call i64 @llvm.read_register.i64(metadata ![[MD2]])
+// CHECK-MSCOMPAT: %[[X18_AS_PTR:.*]] = inttoptr i64 %[[X18]] to ptr
+// CHECK-MSCOMPAT: %[[ZEXT_OFFSET:.*]] = zext i32 %[[OFFSET]] to i64
+// CHECK-MSCOMPAT: %[[PTR:.*]] = getelementptr i8, ptr %[[X18_AS_PTR]], i64 %[[ZEXT_OFFSET]]
+// CHECK-MSCOMPAT: %[[ORIG_VAL:.*]] = load i64, ptr %[[PTR]], align 1
+// CHECK-MSCOMPAT: %[[SUM:.*]] = add i64 %[[ORIG_VAL]], 1
+// CHECK-MSCOMPAT: store i64 %[[SUM]], ptr %[[PTR]], align 1
 
 double check__CopyDoubleFromInt64(__int64 arg1) {
   return _CopyDoubleFromInt64(arg1);

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_PRIORITY_TAG_H
-#define _LIBCPP___UTILITY_PRIORITY_TAG_H
+#ifndef _LIBCPP___CXX03___UTILITY_PRIORITY_TAG_H
+#define _LIBCPP___CXX03___UTILITY_PRIORITY_TAG_H
 
-#include <__config>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,4 +25,4 @@ struct __priority_tag<0> {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_PRIORITY_TAG_H
+#endif // _LIBCPP___CXX03___UTILITY_PRIORITY_TAG_H

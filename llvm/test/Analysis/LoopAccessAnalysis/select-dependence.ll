@@ -39,3 +39,49 @@ loop:
 exit:
    ret void
 }
+
+; Same as previous test, but with selects replaced by phis in the same block.
+define void @test_phi(ptr noalias %x, ptr noalias %y, ptr noalias %z) {
+; CHECK-LABEL: 'test_phi'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            %load = load double, ptr %gep.sel, align 8 ->
+; CHECK-NEXT:            store double %load, ptr %gep.sel2, align 8
+; CHECK-EMPTY:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+   %gep.y = getelementptr double, ptr %y, i64 -32
+   br label %loop
+
+loop:
+   %iv = phi i64 [ %iv.next, %latch ], [ 0, %entry ]
+   %icmp = icmp ule i64 %iv, 32
+   br i1 %icmp, label %if, label %latch
+
+if:
+   br label %latch
+
+latch:
+   %sel = phi ptr [ %x, %if ], [ %gep.y, %loop ]
+   %sel2 = phi ptr [ %y, %if ], [ %z, %loop ]
+   %gep.sel = getelementptr inbounds double, ptr %sel, i64 %iv
+   %load = load double, ptr %gep.sel, align 8
+   %gep.sel2 = getelementptr inbounds double, ptr %sel2, i64 %iv
+   store double %load, ptr %gep.sel2, align 8
+   %iv.next = add nuw nsw i64 %iv, 1
+   %exit.cond = icmp eq i64 %iv, 94
+   br i1 %exit.cond, label %exit, label %loop
+
+exit:
+   ret void
+}

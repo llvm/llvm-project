@@ -99,7 +99,7 @@ define i1 @test4(i32 %length.i, i32 %i) {
 ; A ==> A for vectors
 define <4 x i1> @test5(<4 x i1> %vec) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    ret <4 x i1> <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    ret <4 x i1> splat (i1 true)
 ;
   %res = icmp ule <4 x i1> %vec, %vec
   ret <4 x i1> %res

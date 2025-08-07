@@ -54,7 +54,7 @@ struct CastGEPCast {
     unsigned AS = OuterCast->getDestAddressSpace();
     auto *NewGEP = cast<GetElementPtrInst>(GEP->clone());
     NewGEP->setName(GEP->getName());
-    NewGEP->insertAfter(OuterCast);
+    NewGEP->insertAfter(OuterCast->getIterator());
     NewGEP->setOperand(0, InnerCast->getPointerOperand());
     auto *GEPTy = cast<PointerType>(GEP->getType());
     NewGEP->mutateType(changeAddressSpace(GEPTy, AS));

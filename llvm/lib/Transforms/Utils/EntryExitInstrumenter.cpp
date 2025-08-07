@@ -48,6 +48,26 @@ static void insertCall(Function &CurFn, StringRef Func,
                                                   /*isVarArg=*/false)),
           {GV}, "", InsertionPt);
       Call->setDebugLoc(DL);
+    } else if (TargetTriple.isRISCV() || TargetTriple.isAArch64() ||
+               TargetTriple.isLoongArch()) {
+      // On RISC-V, AArch64, and LoongArch, the `_mcount` function takes
+      // `__builtin_return_address(0)` as an argument since
+      // `__builtin_return_address(1)` is not available on these platforms.
+      Instruction *RetAddr = CallInst::Create(
+          Intrinsic::getOrInsertDeclaration(&M, Intrinsic::returnaddress),
+          ConstantInt::get(Type::getInt32Ty(C), 0), "", InsertionPt);
+      RetAddr->setDebugLoc(DL);
+
+      FunctionCallee Fn = M.getOrInsertFunction(
+          Func, FunctionType::get(Type::getVoidTy(C), PointerType::getUnqual(C),
+                                  false));
+      CallInst *Call = CallInst::Create(Fn, RetAddr, "", InsertionPt);
+      Call->setDebugLoc(DL);
+    } else if (TargetTriple.isSystemZ()) {
+      // skip insertion for `mcount` on SystemZ. This will be handled later in
+      // `emitPrologue`. Add custom attribute to denote this.
+      CurFn.addFnAttr(
+          llvm::Attribute::get(C, "systemz-instrument-function-entry", Func));
     } else {
       FunctionCallee Fn = M.getOrInsertFunction(Func, Type::getVoidTy(C));
       CallInst *Call = CallInst::Create(Fn, "", InsertionPt);
@@ -86,6 +106,12 @@ static bool runOnFunction(Function &F, bool PostInlining) {
   // function call will clobber these registers. Simply skip naked functions for
   // all targets.
   if (F.hasFnAttribute(Attribute::Naked))
+    return false;
+
+  // available_externally functions may not have definitions external to the
+  // module (e.g. gnu::always_inline). Instrumenting them might lead to linker
+  // errors if they are optimized out. Skip them like GCC.
+  if (F.hasAvailableExternallyLinkage())
     return false;
 
   StringRef EntryAttr = PostInlining ? "instrument-function-entry-inlined"

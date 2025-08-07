@@ -10,11 +10,11 @@
 #include "R600InstPrinter.h"
 #include "AMDGPUInstPrinter.h"
 #include "R600MCTargetDesc.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 
@@ -99,7 +99,8 @@ void R600InstPrinter::printLiteral(const MCInst *MI, unsigned OpNo,
     O << Imm << '(' << llvm::bit_cast<float>(static_cast<uint32_t>(Imm)) << ')';
   }
   if (Op.isExpr()) {
-    Op.getExpr()->print(O << '@', &MAI);
+    O << '@';
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -161,7 +162,7 @@ void R600InstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     }
   } else if (Op.isExpr()) {
     const MCExpr *Exp = Op.getExpr();
-    Exp->print(O, &MAI);
+    MAI.printExpr(O, *Exp);
   } else {
     O << "/*INV_OP*/";
   }

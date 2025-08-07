@@ -45,7 +45,14 @@ dsymutil = None
 sdkroot = None
 make_path = None
 
+# Allow specifying a triple for cross compilation.
+triple = None
+
 # The overriden dwarf verison.
+# Don't use this to test the current compiler's
+# DWARF version, as this won't be set if the
+# version isn't overridden.
+# Use lldbplatformutils.getDwarfVersion() instead.
 dwarf_version = 0
 
 # Any overridden settings.
@@ -99,6 +106,7 @@ failed = False
 lldb_platform_name = None
 lldb_platform_url = None
 lldb_platform_working_dir = None
+lldb_platform_available_ports = None
 
 # Apple SDK
 apple_sdk = None
@@ -131,6 +139,10 @@ libcxx_library_dir = None
 
 # A plugin whose tests will be enabled, like intel-pt.
 enabled_plugins = []
+
+# the build type of lldb
+# Typical values include Debug, Release, RelWithDebInfo and MinSizeRel
+cmake_build_type = None
 
 
 def shouldSkipBecauseOfCategories(test_categories):

@@ -21,7 +21,9 @@ define void @call() {
 ; WIN64-NEXT:    movw $4, %r9w
 ; WIN64-NEXT:    callq manyargs
 ; WIN64-NEXT:    nop
+; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    addq $56, %rsp
+; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
 ;

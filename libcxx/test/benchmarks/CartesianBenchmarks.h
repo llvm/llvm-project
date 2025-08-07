@@ -27,11 +27,11 @@ constexpr auto makeEnumValueTuple(std::index_sequence<Idxs...>) {
 }
 
 template <class B>
-static auto skip(const B& Bench, int) -> decltype(Bench.skip()) {
+auto skip(const B& Bench, int) -> decltype(Bench.skip()) {
   return Bench.skip();
 }
 template <class B>
-static auto skip(const B& Bench, char) {
+auto skip(const B&, char) {
   return false;
 }
 
@@ -51,7 +51,7 @@ void makeBenchmarkFromValues(const std::vector<std::tuple<Args...> >& A) {
 }
 
 template <template <class...> class B, class Args, class... U>
-void makeBenchmarkImpl(const Args& A, std::tuple<U...> t) {
+void makeBenchmarkImpl(const Args& A, std::tuple<U...>) {
   makeBenchmarkFromValues<B<U...> >(A);
 }
 

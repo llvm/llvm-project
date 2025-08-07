@@ -30,7 +30,7 @@ because the naming and other conventions are dictated by the C++ standard.
 
 There are some conventions that are not uniformly followed in the code base
 (e.g. the naming convention).  This is because they are relatively new, and a
-lot of code was written before they were put in place.  Our long term goal is
+lot of code was written before they were put in place.  Our long-term goal is
 for the entire codebase to follow the convention, but we explicitly *do not*
 want patches that do large-scale reformatting of existing code.  On the other
 hand, it is reasonable to rename the methods of a class if you're about to
@@ -50,7 +50,7 @@ code imported into the tree. Generally, our preference is for standards
 conforming, modern, and portable C++ code as the implementation language of
 choice.
 
-For automation, build-systems and utility scripts Python is preferred and
+For automation, build-systems, and utility scripts, Python is preferred and
 is widely used in the LLVM repository already.
 
 C++ Standard Versions
@@ -92,7 +92,7 @@ LLVM support libraries (for example, `ADT
 <https://github.com/llvm/llvm-project/tree/main/llvm/include/llvm/ADT>`_)
 implement specialized data structures or functionality missing in the standard
 library. Such libraries are usually implemented in the ``llvm`` namespace and
-follow the expected standard interface, when there is one.
+follow the expected standard interface when there is one.
 
 When both C++ and the LLVM support libraries provide similar functionality, and
 there isn't a specific reason to favor the C++ implementation, it is generally
@@ -177,7 +177,7 @@ the file. The standard header looks like this:
 
 .. code-block:: c++
 
-  //===-- llvm/Instruction.h - Instruction class definition -------*- C++ -*-===//
+  //===----------------------------------------------------------------------===//
   //
   // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
   // See https://llvm.org/LICENSE.txt for license information.
@@ -191,17 +191,7 @@ the file. The standard header looks like this:
   ///
   //===----------------------------------------------------------------------===//
 
-A few things to note about this particular format: The "``-*- C++ -*-``" string
-on the first line is there to tell Emacs that the source file is a C++ file, not
-a C file (Emacs assumes ``.h`` files are C files by default).
-
-.. note::
-
-    This tag is not necessary in ``.cpp`` files.  The name of the file is also
-    on the first line, along with a very short description of the purpose of the
-    file.
-
-The next section in the file is a concise note that defines the license that the
+The first section in the file is a concise note that defines the license that the
 file is released under.  This makes it perfectly clear what terms the source
 code can be distributed under and should not be modified in any way.
 
@@ -335,8 +325,8 @@ implementation file.  In any case, implementation files can include additional
 comments (not necessarily in Doxygen markup) to explain implementation details
 as needed.
 
-Don't duplicate function or class name at the beginning of the comment.
-For humans it is obvious which function or class is being documented;
+Don't duplicate the function or class name at the beginning of the comment.
+For humans, it is obvious which function or class is being documented;
 automatic documentation processing tools are smart enough to bind the comment
 to the correct declaration.
 
@@ -379,7 +369,7 @@ lower-case letter, and finish the last sentence without a period, if it would
 end in one otherwise. Sentences which end with different punctuation, such as
 "did you forget ';'?", should still do so.
 
-For example this is a good error message:
+For example, this is a good error message:
 
 .. code-block:: none
 
@@ -453,7 +443,7 @@ Write your code to fit within 80 columns.
 There must be some limit to the width of the code in
 order to allow developers to have multiple files side-by-side in
 windows on a modest display.  If you are going to pick a width limit, it is
-somewhat arbitrary but you might as well pick something standard.  Going with 90
+somewhat arbitrary, but you might as well pick something standard.  Going with 90
 columns (for example) instead of 80 columns wouldn't add any significant value
 and would be detrimental to printing out code.  Also many other projects have
 standardized on 80 columns, so some people have already configured their editors
@@ -530,7 +520,7 @@ within each other and within function calls in order to build up aggregates
 The historically common formatting of braced initialization of aggregate
 variables does not mix cleanly with deep nesting, general expression contexts,
 function arguments, and lambdas. We suggest new code use a simple rule for
-formatting braced initialization lists: act as-if the braces were parentheses
+formatting braced initialization lists: act as if the braces were parentheses
 in a function call. The formatting rules exactly match those already well
 understood for formatting nested function calls. Examples:
 
@@ -601,6 +591,8 @@ rather than C-style casts. There are two exceptions to this:
 
 * When casting to ``void`` to suppress warnings about unused variables (as an
   alternative to ``[[maybe_unused]]``). Prefer C-style casts in this instance.
+  Note that if the variable is unused because it's used only in ``assert``, use
+  ``[[maybe_unused]]`` instead of a C-style void cast.
 
 * When casting between integral types (including enums that are not strongly-
   typed), functional-style casts are permitted as an alternative to
@@ -615,11 +607,11 @@ Static constructors and destructors (e.g., global variables whose types have a
 constructor or destructor) should not be added to the code base, and should be
 removed wherever possible.
 
-Globals in different source files are initialized in `arbitrary order
+Globals in different source files are initialized in an `arbitrary order
 <https://yosefk.com/c++fqa/ctors.html#fqa-10.12>`_, making the code more
 difficult to reason about.
 
-Static constructors have negative impact on launch time of programs that use
+Static constructors have a negative impact on the launch time of programs that use
 LLVM as a library. We would really like for there to be zero cost for linking
 in an additional LLVM target or other library into an application, but static
 constructors undermine this goal.
@@ -692,7 +684,7 @@ something notionally equivalent. Examples:
   };
 
   // The Foo constructor call is reading a file, don't use braces to call it.
-  std::fill(foo.begin(), foo.end(), Foo("name"));
+  llvm::fill(foo, Foo("name"));
 
   // The pair is being constructed like an aggregate, use braces.
   bar_map.insert({my_key, my_value});
@@ -706,7 +698,7 @@ If you use a braced initializer list when initializing a variable, use an equals
 Use ``auto`` Type Deduction to Make Code More Readable
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Some are advocating a policy of "almost always ``auto``" in C++11, however LLVM
+Some are advocating a policy of "almost always ``auto``" in C++11; however, LLVM
 uses a more moderate stance. Use ``auto`` if and only if it makes the code more
 readable or easier to maintain. Don't "almost always" use ``auto``, but do use
 ``auto`` with initializers like ``cast<Foo>(...)`` or other places where the
@@ -791,14 +783,14 @@ guards, and might not include their prerequisites. Name such files with the
 
 In general, a header should be implemented by one or more ``.cpp`` files.  Each
 of these ``.cpp`` files should include the header that defines their interface
-first.  This ensures that all of the dependences of the header have been
+first.  This ensures that all of the dependencies of the header have been
 properly added to the header itself, and are not implicit.  System headers
 should be included after user headers for a translation unit.
 
 Library Layering
 ^^^^^^^^^^^^^^^^
 
-A directory of header files (for example ``include/llvm/Foo``) defines a
+A directory of header files (for example, ``include/llvm/Foo``) defines a
 library (``Foo``). One library (both
 its headers and implementation) should only use things from the libraries
 listed in its dependencies.
@@ -830,7 +822,7 @@ especially in header files.
 
 But wait! Sometimes you need to have the definition of a class to use it, or to
 inherit from it.  In these cases go ahead and ``#include`` that header file.  Be
-aware however that there are many cases where you don't need to have the full
+aware, however, that there are many cases where you don't need to have the full
 definition of a class.  If you are using a pointer or reference to a class, you
 don't need the header file.  If you are simply returning a class instance from a
 prototyped function or method, you don't need it.  In fact, for most cases, you
@@ -978,7 +970,7 @@ loops.  A silly example is something like this:
 When you have very, very small loops, this sort of structure is fine. But if it
 exceeds more than 10-15 lines, it becomes difficult for people to read and
 understand at a glance. The problem with this sort of code is that it gets very
-nested very quickly. Meaning that the reader of the code has to keep a lot of
+nested very quickly. This means that the reader of the code has to keep a lot of
 context in their brain to remember what is going immediately on in the loop,
 because they don't know if/when the ``if`` conditions will have ``else``\s etc.
 It is strongly preferred to structure the loop like this:
@@ -996,7 +988,7 @@ It is strongly preferred to structure the loop like this:
     ...
   }
 
-This has all the benefits of using early exits for functions: it reduces nesting
+This has all the benefits of using early exits for functions: it reduces the nesting
 of the loop, it makes it easier to describe why the conditions are true, and it
 makes it obvious to the reader that there is no ``else`` coming up that they
 have to push context into their brain for.  If a loop is large, this can be a
@@ -1157,12 +1149,12 @@ In general, names should be in camel case (e.g. ``TextFileReader`` and
   nouns and start with an upper-case letter (e.g. ``TextFileReader``).
 
 * **Variable names** should be nouns (as they represent state).  The name should
-  be camel case, and start with an upper case letter (e.g. ``Leader`` or
+  be camel case, and start with an upper-case letter (e.g. ``Leader`` or
   ``Boats``).
 
 * **Function names** should be verb phrases (as they represent actions), and
   command-like function should be imperative.  The name should be camel case,
-  and start with a lower case letter (e.g. ``openFile()`` or ``isFoo()``).
+  and start with a lower-case letter (e.g. ``openFile()`` or ``isFoo()``).
 
 * **Enum declarations** (e.g. ``enum Foo {...}``) are types, so they should
   follow the naming conventions for types.  A common use for enums is as a
@@ -1215,7 +1207,7 @@ Assert Liberally
 ^^^^^^^^^^^^^^^^
 
 Use the "``assert``" macro to its fullest.  Check all of your preconditions and
-assumptions, you never know when a bug (not necessarily even yours) might be
+assumptions.  You never know when a bug (not necessarily even yours) might be
 caught early by an assertion, which reduces debugging time dramatically.  The
 "``<cassert>``" header file is probably already included by the header files you
 are using, so it doesn't cost anything to use it.
@@ -1298,16 +1290,25 @@ These are two interesting different cases. In the first case, the call to
 ``V.size()`` is only useful for the assert, and we don't want it executed when
 assertions are disabled.  Code like this should move the call into the assert
 itself.  In the second case, the side effects of the call must happen whether
-the assert is enabled or not.  In this case, the value should be cast to void to
-disable the warning.  To be specific, it is preferred to write the code like
-this:
+the assert is enabled or not. In this case, the value should be defined using
+the ``[[maybe_unused]]`` attribute to suppress the warning. To be specific, it is
+preferred to write the code like this:
 
 .. code-block:: c++
 
   assert(V.size() > 42 && "Vector smaller than it should be");
 
-  bool NewToSet = Myset.insert(Value); (void)NewToSet;
+  [[maybe_unused]] bool NewToSet = Myset.insert(Value);
   assert(NewToSet && "The value shouldn't be in the set yet");
+
+In C code where ``[[maybe_unused]]`` is not supported, use ``void`` cast to
+suppress an unused variable warning as follows:
+
+.. code-block:: c
+
+    LLVMValueRef Value = LLVMMetadataAsValue(Context, NodeMD);
+    assert(LLVMIsAValueAsMetadata(Value) != NULL);
+    (void)Value;
 
 Do Not Use ``using namespace std``
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1545,7 +1546,7 @@ whenever possible.
 The semantics of postincrement include making a copy of the value being
 incremented, returning it, and then preincrementing the "work value".  For
 primitive types, this isn't a big deal. But for iterators, it can be a huge
-issue (for example, some iterators contains stack and set objects in them...
+issue (for example, some iterators contain stack and set objects in them...
 copying an iterator could invoke the copy ctor's of these as well).  In general,
 get in the habit of always using preincrement, and you won't have a problem.
 
@@ -1589,17 +1590,29 @@ clarification.
 
 .. _static:
 
-Anonymous Namespaces
-^^^^^^^^^^^^^^^^^^^^
+Restrict Visibility
+^^^^^^^^^^^^^^^^^^^
 
-After talking about namespaces in general, you may be wondering about anonymous
-namespaces in particular.  Anonymous namespaces are a great language feature
-that tells the C++ compiler that the contents of the namespace are only visible
-within the current translation unit, allowing more aggressive optimization and
-eliminating the possibility of symbol name collisions.  Anonymous namespaces are
-to C++ as "static" is to C functions and global variables.  While "``static``"
-is available in C++, anonymous namespaces are more general: they can make entire
-classes private to a file.
+Functions and variables should have the most restricted visibility possible.
+
+For class members, that means using appropriate ``private``, ``protected``, or
+``public`` keyword to restrict their access.
+
+For non-member functions, variables, and classes, that means restricting
+visibility to a single ``.cpp`` file if it is not referenced outside that file.
+
+Visibility of file-scope non-member variables and functions can be restricted to
+the current translation unit by using either the ``static`` keyword or an anonymous
+namespace.
+
+Anonymous namespaces are a great language feature that tells the C++
+compiler that the contents of the namespace are only visible within the current
+translation unit, allowing more aggressive optimization and eliminating the
+possibility of symbol name collisions.
+
+Anonymous namespaces are to C++ as ``static`` is to C functions and global
+variables.  While ``static`` is available in C++, anonymous namespaces are more
+general: they can make entire classes private to a file.
 
 The problem with anonymous namespaces is that they naturally want to encourage
 indentation of their body, and they reduce locality of reference: if you see a
@@ -1645,17 +1658,24 @@ Avoid putting declarations other than classes into anonymous namespaces:
 
   } // namespace
 
-When you are looking at "``runHelper``" in the middle of a large C++ file,
-you have no immediate way to tell if this function is local to the file.  In
-contrast, when the function is marked static, you don't need to cross-reference
-faraway places in the file to tell that the function is local.
+When you are looking at ``runHelper`` in the middle of a large C++ file,
+you have no immediate way to tell if this function is local to the file.
+
+In contrast, when the function is marked static, you don't need to cross-reference
+faraway places in the file to tell that the function is local:
+
+.. code-block:: c++
+
+  static void runHelper() {
+    ...
+  }
 
 Don't Use Braces on Simple Single-Statement Bodies of if/else/loop Statements
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 When writing the body of an ``if``, ``else``, or for/while loop statement, we
 prefer to omit the braces to avoid unnecessary line noise. However, braces
-should be used in cases where the omission of braces harm the readability and
+should be used in cases where the omission of braces harms the readability and
 maintainability of the code.
 
 We consider that readability is harmed when omitting the brace in the presence
@@ -1755,7 +1775,7 @@ would help to avoid running into a "dangling else" situation.
         handleAttrOnDecl(D, A, i);
   }
 
-  // Use braces on the outer block because of a nested `if`; otherwise the
+  // Use braces on the outer block because of a nested `if`; otherwise, the
   // compiler would warn: `add explicit braces to avoid dangling else`
   if (auto *D = dyn_cast<FunctionDecl>(D)) {
     if (shouldProcess(D))

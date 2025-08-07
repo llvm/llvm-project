@@ -28,7 +28,6 @@ static_library("cppcoreguidelines") {
     "MacroUsageCheck.cpp",
     "MisleadingCaptureDefaultByValueCheck.cpp",
     "MissingStdForwardCheck.cpp",
-    "NarrowingConversionsCheck.cpp",
     "NoMallocCheck.cpp",
     "NoSuspendWithLockCheck.cpp",
     "OwningMemoryCheck.cpp",
@@ -46,6 +45,7 @@ static_library("cppcoreguidelines") {
     "RvalueReferenceParamNotMovedCheck.cpp",
     "SlicingCheck.cpp",
     "SpecialMemberFunctionsCheck.cpp",
+    "UseEnumClassCheck.cpp",
     "VirtualClassDestructorCheck.cpp",
   ]
 }

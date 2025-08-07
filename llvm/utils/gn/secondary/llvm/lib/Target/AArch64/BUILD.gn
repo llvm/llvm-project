@@ -72,6 +72,16 @@ tablegen("AArch64GenRegisterBank") {
   td_file = "AArch64.td"
 }
 
+tablegen("AArch64GenSDNodeInfo") {
+  visibility = [
+    ":LLVMAArch64CodeGen",
+    "//bolt/unittests/Core:CoreTests",
+    "//llvm/unittests/Target/AArch64:AArch64Tests",
+  ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "AArch64.td"
+}
+
 static_library("LLVMAArch64CodeGen") {
   deps = [
     ":AArch64GenCallingConv",
@@ -84,6 +94,7 @@ static_library("LLVMAArch64CodeGen") {
     ":AArch64GenPostLegalizeGILowering",
     ":AArch64GenPreLegalizeGICombiner",
     ":AArch64GenRegisterBank",
+    ":AArch64GenSDNodeInfo",
 
     # See https://reviews.llvm.org/D69130
     "AsmParser:AArch64GenAsmMatcher",
@@ -126,7 +137,6 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64FalkorHWPFFix.cpp",
     "AArch64FastISel.cpp",
     "AArch64FrameLowering.cpp",
-    "AArch64GlobalsTagging.cpp",
     "AArch64ISelDAGToDAG.cpp",
     "AArch64ISelLowering.cpp",
     "AArch64InstrInfo.cpp",

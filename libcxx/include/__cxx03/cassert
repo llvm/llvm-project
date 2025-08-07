@@ -16,7 +16,7 @@ Macros:
 
 */
 
-#include <__config>
+#include <__cxx03/__config>
 
 // <assert.h> is not provided by libc++
 #if __has_include(<assert.h>)

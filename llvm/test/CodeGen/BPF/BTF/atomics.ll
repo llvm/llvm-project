@@ -1,4 +1,4 @@
-; RUN: llc -march=bpfel -mcpu=v3 -filetype=obj -o %t1 %s
+; RUN: llc -mtriple=bpfel -mcpu=v3 -filetype=obj -o %t1 %s
 ; RUN: llvm-objcopy --dump-section='.BTF'=%t2 %t1
 ; RUN: %python %p/print_btf.py %t2 | FileCheck -check-prefixes=CHECK %s
 ;

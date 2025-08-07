@@ -191,10 +191,10 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32-NEXT:    mv s0, a0
+; RV32-NEXT:    mv s0, a2
+; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    lw a4, 0(a0)
 ; RV32-NEXT:    lw a5, 4(a0)
-; RV32-NEXT:    mv s1, a2
 ; RV32-NEXT:    mv s2, a1
 ; RV32-NEXT:    j .LBB11_2
 ; RV32-NEXT:  .LBB11_1: # %atomicrmw.start
@@ -204,17 +204,17 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
-; RV32-NEXT:    mv a0, s0
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __atomic_compare_exchange_8
 ; RV32-NEXT:    lw a4, 8(sp)
 ; RV32-NEXT:    lw a5, 12(sp)
 ; RV32-NEXT:    bnez a0, .LBB11_6
 ; RV32-NEXT:  .LBB11_2: # %atomicrmw.start
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    beq a5, s1, .LBB11_4
+; RV32-NEXT:    beq a5, s0, .LBB11_4
 ; RV32-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB11_2 Depth=1
-; RV32-NEXT:    slt a0, s1, a5
+; RV32-NEXT:    slt a0, s0, a5
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    mv a3, a5
 ; RV32-NEXT:    bnez a0, .LBB11_1
@@ -227,7 +227,7 @@ define void @amomax_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:  .LBB11_5: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB11_2 Depth=1
 ; RV32-NEXT:    mv a2, s2
-; RV32-NEXT:    mv a3, s1
+; RV32-NEXT:    mv a3, s0
 ; RV32-NEXT:    j .LBB11_1
 ; RV32-NEXT:  .LBB11_6: # %atomicrmw.end
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -267,10 +267,10 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32-NEXT:    mv s0, a0
+; RV32-NEXT:    mv s0, a2
+; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    lw a4, 0(a0)
 ; RV32-NEXT:    lw a5, 4(a0)
-; RV32-NEXT:    mv s1, a2
 ; RV32-NEXT:    mv s2, a1
 ; RV32-NEXT:    j .LBB13_2
 ; RV32-NEXT:  .LBB13_1: # %atomicrmw.start
@@ -280,17 +280,17 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
-; RV32-NEXT:    mv a0, s0
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __atomic_compare_exchange_8
 ; RV32-NEXT:    lw a4, 8(sp)
 ; RV32-NEXT:    lw a5, 12(sp)
 ; RV32-NEXT:    bnez a0, .LBB13_6
 ; RV32-NEXT:  .LBB13_2: # %atomicrmw.start
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    beq a5, s1, .LBB13_4
+; RV32-NEXT:    beq a5, s0, .LBB13_4
 ; RV32-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB13_2 Depth=1
-; RV32-NEXT:    sltu a0, s1, a5
+; RV32-NEXT:    sltu a0, s0, a5
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    mv a3, a5
 ; RV32-NEXT:    bnez a0, .LBB13_1
@@ -303,7 +303,7 @@ define void @amomaxu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:  .LBB13_5: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB13_2 Depth=1
 ; RV32-NEXT:    mv a2, s2
-; RV32-NEXT:    mv a3, s1
+; RV32-NEXT:    mv a3, s0
 ; RV32-NEXT:    j .LBB13_1
 ; RV32-NEXT:  .LBB13_6: # %atomicrmw.end
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -343,10 +343,10 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32-NEXT:    mv s0, a0
+; RV32-NEXT:    mv s0, a2
+; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    lw a4, 0(a0)
 ; RV32-NEXT:    lw a5, 4(a0)
-; RV32-NEXT:    mv s1, a2
 ; RV32-NEXT:    mv s2, a1
 ; RV32-NEXT:    j .LBB15_2
 ; RV32-NEXT:  .LBB15_1: # %atomicrmw.start
@@ -356,17 +356,17 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
-; RV32-NEXT:    mv a0, s0
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __atomic_compare_exchange_8
 ; RV32-NEXT:    lw a4, 8(sp)
 ; RV32-NEXT:    lw a5, 12(sp)
 ; RV32-NEXT:    bnez a0, .LBB15_6
 ; RV32-NEXT:  .LBB15_2: # %atomicrmw.start
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    beq a5, s1, .LBB15_4
+; RV32-NEXT:    beq a5, s0, .LBB15_4
 ; RV32-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB15_2 Depth=1
-; RV32-NEXT:    slt a0, s1, a5
+; RV32-NEXT:    slt a0, s0, a5
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    mv a3, a5
 ; RV32-NEXT:    beqz a0, .LBB15_1
@@ -379,7 +379,7 @@ define void @amomin_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:  .LBB15_5: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB15_2 Depth=1
 ; RV32-NEXT:    mv a2, s2
-; RV32-NEXT:    mv a3, s1
+; RV32-NEXT:    mv a3, s0
 ; RV32-NEXT:    j .LBB15_1
 ; RV32-NEXT:  .LBB15_6: # %atomicrmw.end
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
@@ -419,10 +419,10 @@ define void @amominu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s1, 20(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    sw s2, 16(sp) # 4-byte Folded Spill
-; RV32-NEXT:    mv s0, a0
+; RV32-NEXT:    mv s0, a2
+; RV32-NEXT:    mv s1, a0
 ; RV32-NEXT:    lw a4, 0(a0)
 ; RV32-NEXT:    lw a5, 4(a0)
-; RV32-NEXT:    mv s1, a2
 ; RV32-NEXT:    mv s2, a1
 ; RV32-NEXT:    j .LBB17_2
 ; RV32-NEXT:  .LBB17_1: # %atomicrmw.start
@@ -432,17 +432,17 @@ define void @amominu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    li a4, 5
 ; RV32-NEXT:    li a5, 5
-; RV32-NEXT:    mv a0, s0
+; RV32-NEXT:    mv a0, s1
 ; RV32-NEXT:    call __atomic_compare_exchange_8
 ; RV32-NEXT:    lw a4, 8(sp)
 ; RV32-NEXT:    lw a5, 12(sp)
 ; RV32-NEXT:    bnez a0, .LBB17_6
 ; RV32-NEXT:  .LBB17_2: # %atomicrmw.start
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    beq a5, s1, .LBB17_4
+; RV32-NEXT:    beq a5, s0, .LBB17_4
 ; RV32-NEXT:  # %bb.3: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB17_2 Depth=1
-; RV32-NEXT:    sltu a0, s1, a5
+; RV32-NEXT:    sltu a0, s0, a5
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:    mv a3, a5
 ; RV32-NEXT:    beqz a0, .LBB17_1
@@ -455,7 +455,7 @@ define void @amominu_d_discard(ptr %a, i64 %b) nounwind {
 ; RV32-NEXT:  .LBB17_5: # %atomicrmw.start
 ; RV32-NEXT:    # in Loop: Header=BB17_2 Depth=1
 ; RV32-NEXT:    mv a2, s2
-; RV32-NEXT:    mv a3, s1
+; RV32-NEXT:    mv a3, s0
 ; RV32-NEXT:    j .LBB17_1
 ; RV32-NEXT:  .LBB17_6: # %atomicrmw.end
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload

@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___MEMORY_DESTRUCT_N_H
-#define _LIBCPP___MEMORY_DESTRUCT_N_H
+#ifndef _LIBCPP___CXX03___MEMORY_DESTRUCT_N_H
+#define _LIBCPP___CXX03___MEMORY_DESTRUCT_N_H
 
-#include <__config>
-#include <__type_traits/integral_constant.h>
-#include <__type_traits/is_trivially_destructible.h>
-#include <cstddef>
+#include <__cxx03/__config>
+#include <__cxx03/__type_traits/integral_constant.h>
+#include <__cxx03/__type_traits/is_trivially_destructible.h>
+#include <__cxx03/cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -60,4 +60,4 @@ public:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___MEMORY_DESTRUCT_N_H
+#endif // _LIBCPP___CXX03___MEMORY_DESTRUCT_N_H

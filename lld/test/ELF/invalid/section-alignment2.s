@@ -1,5 +1,6 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: not ld.lld %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: ld.lld %t.o -o /dev/null --noinhibit-exec
 
 # CHECK: error: {{.*}}.o:(.text): sh_addralign is not a power of 2
 
