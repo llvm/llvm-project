@@ -182,7 +182,7 @@ public:
     return SDValue(Node, R);
   }
 
-  /// Return true if this node is an operand of N.
+  /// Return true if the referenced return value is an operand of N.
   LLVM_ABI bool isOperandOf(const SDNode *N) const;
 
   /// Return the ValueType of the referenced return value.
@@ -3096,6 +3096,23 @@ public:
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM;
+  }
+};
+
+class VPLoadFFSDNode : public MemSDNode {
+public:
+  friend class SelectionDAG;
+
+  VPLoadFFSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs, EVT MemVT,
+                 MachineMemOperand *MMO)
+      : MemSDNode(ISD::VP_LOAD_FF, Order, DL, VTs, MemVT, MMO) {}
+
+  const SDValue &getBasePtr() const { return getOperand(1); }
+  const SDValue &getMask() const { return getOperand(2); }
+  const SDValue &getVectorLength() const { return getOperand(3); }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::VP_LOAD_FF;
   }
 };
 
