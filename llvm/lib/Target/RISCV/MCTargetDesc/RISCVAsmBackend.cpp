@@ -820,6 +820,7 @@ static bool fixupGetsRelaxRelocation(const MCFixupKind Kind) {
   case ELF::R_RISCV_TPREL_LO12_I:
   case ELF::R_RISCV_TPREL_LO12_S:
   case ELF::R_RISCV_TPREL_HI20:
+  case ELF::R_RISCV_TPREL_ADD:
     return true;
   }
   return false;
