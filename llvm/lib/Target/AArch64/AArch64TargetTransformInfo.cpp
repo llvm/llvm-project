@@ -3979,8 +3979,9 @@ std::optional<InstructionCost> AArch64TTIImpl::getFP16BF16PromoteCost(
     Type *Ty, TTI::TargetCostKind CostKind, TTI::OperandValueInfo Op1Info,
     TTI::OperandValueInfo Op2Info, bool IncludeTrunc,
     std::function<InstructionCost(Type *)> InstCost) const {
-  if ((ST->hasFullFP16() || !Ty->getScalarType()->isHalfTy()) &&
-      !Ty->getScalarType()->isBFloatTy())
+  if (!Ty->getScalarType()->isHalfTy() && !Ty->getScalarType()->isBFloatTy())
+    return std::nullopt;
+  if (Ty->getScalarType()->isHalfTy() && ST->hasFullFP16())
     return std::nullopt;
 
   Type *PromotedTy = Ty->getWithNewType(Type::getFloatTy(Ty->getContext()));
