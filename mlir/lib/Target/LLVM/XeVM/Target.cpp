@@ -248,6 +248,8 @@ public:
   moduleToObject(llvm::Module &llvmModule) override;
 
 private:
+  /// Translates the LLVM module to SPIR-V binary using LLVM's
+  /// SPIR-V target.
   std::optional<std::string>
   translateToSPIRVBinary(llvm::Module &llvmModule,
                          llvm::TargetMachine &targetMachine);
@@ -320,6 +322,11 @@ SpirSerializer::moduleToObject(llvm::Module &llvmModule) {
     return SmallVector<char, 0>(bin.begin(), bin.end());
   }
 
+  // Level zero runtime is set up to accept SPIR-V binary
+  // translateToSPIRVBinary translates the LLVM module to SPIR-V binary
+  // using LLVM's SPIRV target.
+  // compileToBinary can be used in the future if level zero runtime
+  // implementation switches to native XeVM binary format.
   std::optional<std::string> serializedSPIRVBinary =
       translateToSPIRVBinary(llvmModule, **targetMachine);
   if (!serializedSPIRVBinary) {
