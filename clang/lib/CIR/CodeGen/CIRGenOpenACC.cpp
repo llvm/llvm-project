@@ -119,6 +119,7 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
 
   if (const auto *memExpr = dyn_cast<MemberExpr>(curVarExpr))
     return {exprLoc, emitMemberExpr(memExpr).getPointer(), exprString,
+            curVarExpr->getType().getNonReferenceType().getUnqualifiedType(),
             std::move(bounds)};
 
   // Sema has made sure that only 4 types of things can get here, array
@@ -127,5 +128,6 @@ CIRGenFunction::getOpenACCDataOperandInfo(const Expr *e) {
   // right.
   const auto *dre = cast<DeclRefExpr>(curVarExpr);
   return {exprLoc, emitDeclRefLValue(dre).getPointer(), exprString,
+          curVarExpr->getType().getNonReferenceType().getUnqualifiedType(),
           std::move(bounds)};
 }

@@ -176,10 +176,6 @@ private:
 
     void checkFor();
 
-    //  void checkRangeFor(); ?? ERICH
-    //  const ValueDecl *checkInit();
-    //  void checkCond(const ValueDecl *Init);
-    //  void checkInc(const ValueDecl *Init);
   public:
     // Checking for non-instantiation version of a Range-for.
     ForStmtBeginChecker(SemaOpenACC &SemaRef, SourceLocation ForLoc,
@@ -240,6 +236,15 @@ public:
   bool DiagnoseExclusiveClauses(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
                                 SourceLocation ClauseLoc,
                                 ArrayRef<const OpenACCClause *> Clauses);
+
+  // Creates a VarDecl with a proper default init for the purposes of a
+  // `private`/'firstprivate'/'reduction' clause, so it can be used to generate
+  // a recipe later.
+  //  The first entry is the recipe itself, the second is any required
+  //  'temporary' created for the init (in the case of a copy), such as with
+  //  firstprivate.
+  std::pair<VarDecl *, VarDecl *> CreateInitRecipe(OpenACCClauseKind CK,
+                                                   const Expr *VarExpr);
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {

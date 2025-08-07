@@ -1621,6 +1621,13 @@ let OtherPredicates = [HasImageInsts] in {
   def S_WAIT_KMCNT_soft : SOPP_Pseudo <"s_soft_wait_kmcnt", (ins s16imm:$simm16), "$simm16">;
 }
 
+// Represents the point at which a wave must wait for all outstanding direct loads to LDS.
+// Typically inserted by the memory legalizer and consumed by SIInsertWaitcnts.
+
+def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
+   let hasSideEffects = 0;
+}
+
 def S_SETHALT : SOPP_Pseudo <"s_sethalt" , (ins i32imm:$simm16), "$simm16",
     [(int_amdgcn_s_sethalt timm:$simm16)]>;
 def S_SETKILL : SOPP_Pseudo <"s_setkill" , (ins i16imm:$simm16), "$simm16">;
@@ -1644,6 +1651,12 @@ def S_SETPRIO : SOPP_Pseudo <"s_setprio", (ins i16imm:$simm16), "$simm16",
 def S_SETPRIO_INC_WG : SOPP_Pseudo <"s_setprio_inc_wg", (ins i16imm:$simm16), "$simm16",
   [(int_amdgcn_s_setprio_inc_wg timm:$simm16)]> {
   let SubtargetPredicate = HasSetPrioIncWgInst;
+}
+
+def S_GET_SHADER_CYCLES_U64 : SOP1_64_0 <"s_get_shader_cycles_u64",
+  [(set i64:$sdst, (readcyclecounter))]> {
+  let SubtargetPredicate = HasSGetShaderCyclesInst;
+  let hasSideEffects = 1;
 }
 
 let Uses = [EXEC, M0] in {
@@ -2138,6 +2151,7 @@ defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
 defm S_SLEEP_VAR                  : SOP1_IMM_Real_gfx12<0x058>;
 
 // GFX1250
+defm S_GET_SHADER_CYCLES_U64      : SOP1_Real_gfx12<0x06>;
 defm S_ADD_PC_I64                 : SOP1_Real_gfx12<0x04b>;
 
 //===----------------------------------------------------------------------===//

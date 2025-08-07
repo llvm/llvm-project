@@ -4805,10 +4805,10 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
 
 static void handleNonStringAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // This only applies to fields and variable declarations which have an array
-  // type.
+  // type or pointer type, with character elements.
   QualType QT = cast<ValueDecl>(D)->getType();
-  if (!QT->isArrayType() ||
-      !QT->getBaseElementTypeUnsafe()->isAnyCharacterType()) {
+  if ((!QT->isArrayType() && !QT->isPointerType()) ||
+      !QT->getPointeeOrArrayElementType()->isAnyCharacterType()) {
     S.Diag(D->getBeginLoc(), diag::warn_attribute_non_character_array)
         << AL << AL.isRegularKeywordAttribute() << QT << AL.getRange();
     return;
@@ -7440,6 +7440,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_HLSLVkConstantId:
     S.HLSL().handleVkConstantIdAttr(D, AL);
+    break;
+  case ParsedAttr::AT_HLSLVkBinding:
+    S.HLSL().handleVkBindingAttr(D, AL);
     break;
   case ParsedAttr::AT_HLSLSV_GroupThreadID:
     S.HLSL().handleSV_GroupThreadIDAttr(D, AL);
