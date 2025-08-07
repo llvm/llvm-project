@@ -3606,6 +3606,7 @@ public:
   void EmitDefaultStmt(const DefaultStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmt(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmtRange(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
+  void EmitDeferStmt(const DeferStmt &S);
   void EmitAsmStmt(const AsmStmt &S);
 
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);

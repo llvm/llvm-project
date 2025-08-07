@@ -537,6 +537,9 @@ bool CodeGenFunction::EmitSimpleStmt(const Stmt *S,
   case Stmt::CaseStmtClass:
     EmitCaseStmt(cast<CaseStmt>(*S), Attrs);
     break;
+  case Stmt::DeferStmtClass:
+    EmitDeferStmt(cast<DeferStmt>(*S));
+    break;
   case Stmt::SEHLeaveStmtClass:
     EmitSEHLeaveStmt(cast<SEHLeaveStmt>(*S));
     break;
@@ -1982,6 +1985,21 @@ void CodeGenFunction::EmitDefaultStmt(const DefaultStmt &S,
   EmitBlockWithFallThrough(DefaultBlock, &S);
 
   EmitStmt(S.getSubStmt());
+}
+
+namespace {
+struct EmitDeferredStatement final : EHScopeStack::Cleanup {
+  const DeferStmt &Stmt;
+  EmitDeferredStatement(const DeferStmt *Stmt) : Stmt(*Stmt) {}
+
+  void Emit(CodeGenFunction &CGF, Flags flags) override {
+    CGF.EmitStmt(Stmt.getBody());
+  }
+};
+} // namespace
+
+void CodeGenFunction::EmitDeferStmt(const DeferStmt &S) {
+  EHStack.pushCleanup<EmitDeferredStatement>(NormalAndEHCleanup, &S);
 }
 
 /// CollectStatementsForCase - Given the body of a 'switch' statement and a
