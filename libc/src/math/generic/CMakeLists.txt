@@ -167,6 +167,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
   FLAGS
     ROUND_OPT
 )
@@ -827,6 +828,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
   FLAGS
     ROUND_OPT
 )
@@ -902,6 +904,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
   FLAGS
     ROUND_OPT
 )
@@ -977,6 +980,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
   FLAGS
     ROUND_OPT
 )
@@ -1052,6 +1056,7 @@ add_entrypoint_object(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
   FLAGS
     ROUND_OPT
 )

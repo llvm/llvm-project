@@ -767,6 +767,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  roundbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    roundbf16_test.cpp
+  HDRS
+    RoundTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.math.roundbf16
+)
+
+add_fp_unittest(
   roundeven_test
   SUITE
     libc-math-smoke-tests
@@ -921,19 +934,6 @@ add_fp_unittest(
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
-)
-
-add_fp_unittest(
-  roundbf16_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    roundbf16_test.cpp
-  HDRS
-    RoundTest.h
-  DEPENDS
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.math.roundbf16
 )
 
 add_fp_unittest(
