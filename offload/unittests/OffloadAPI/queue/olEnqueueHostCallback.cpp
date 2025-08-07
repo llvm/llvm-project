@@ -9,9 +9,13 @@
 #include "../common/Fixtures.hpp"
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
+#include <thread>
 
 struct olEnqueueHostCallbackTest : OffloadQueueTest {};
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olEnqueueHostCallbackTest);
+
+struct olEnqueueHostCallbackKernelTest : OffloadKernelTest {};
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olEnqueueHostCallbackKernelTest);
 
 TEST_P(olEnqueueHostCallbackTest, Success) {
   ASSERT_SUCCESS(olEnqueueHostCallback(Queue, [](void *) {}, nullptr));
@@ -35,6 +39,60 @@ TEST_P(olEnqueueHostCallbackTest, SuccessSequence) {
   for (uint32_t i = 2; i < 16; i++) {
     ASSERT_EQ(Buff[i], Buff[i - 1] + Buff[i - 2]);
   }
+}
+
+TEST_P(olEnqueueHostCallbackKernelTest, SuccessBlocking) {
+  // Verify that a host kernel can block execution - A host task is created that
+  // only resolves when Block is set to false.
+  ol_kernel_launch_size_args_t LaunchArgs;
+  LaunchArgs.Dimensions = 1;
+  LaunchArgs.GroupSize = {64, 1, 1};
+  LaunchArgs.NumGroups = {1, 1, 1};
+  LaunchArgs.DynSharedMemory = 0;
+
+  ol_queue_handle_t Queue;
+  ASSERT_SUCCESS(olCreateQueue(Device, &Queue));
+
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < 64; i++) {
+    Data[i] = 0;
+  }
+
+  volatile bool Block = true;
+  ASSERT_SUCCESS(olEnqueueHostCallback(
+      Queue,
+      [](void *Ptr) {
+        volatile bool *Block =
+            reinterpret_cast<volatile bool *>(reinterpret_cast<bool *>(Ptr));
+
+        while (*Block)
+          std::this_thread::yield();
+      },
+      const_cast<bool *>(&Block)));
+
+  struct {
+    void *Mem;
+  } Args{Mem};
+  ASSERT_SUCCESS(
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  for (uint32_t i = 0; i < 64; i++) {
+    ASSERT_EQ(Data[i], 0);
+  }
+
+  Block = false;
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  for (uint32_t i = 0; i < 64; i++) {
+    ASSERT_EQ(Data[i], i);
+  }
+
+  ASSERT_SUCCESS(olMemFree(Mem));
 }
 
 TEST_P(olEnqueueHostCallbackTest, InvalidNullCallback) {
