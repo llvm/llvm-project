@@ -18,6 +18,7 @@
 #include "llvm/IR/IntrinsicsDirectX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 
 #define DEBUG_TYPE "dxil-post-optimization-validation"
 

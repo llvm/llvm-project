@@ -3,7 +3,8 @@
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
-
+namespace llvm {
+namespace dxil {
 StringRef getResourceClassName(dxil::ResourceClass RC) {
   switch (RC) {
   case dxil::ResourceClass::SRV:
@@ -17,3 +18,5 @@ StringRef getResourceClassName(dxil::ResourceClass RC) {
   }
   llvm_unreachable("Unhandled ResourceClass");
 }
+} // namespace dxil
+} // namespace llvm
