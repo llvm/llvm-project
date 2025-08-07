@@ -334,36 +334,44 @@ public:
 // This code forces the page-ins on multiple threads so
 // the process is not stalled waiting on disk buffer i/o.
 void multiThreadedPageInBackground(DeferredFiles &deferred) {
-  using namespace std::chrono;
   static const size_t pageSize = Process::getPageSizeEstimate();
   static const size_t largeArchive = 10 * 1024 * 1024;
-  std::atomic_int index = 0;
 #ifndef NDEBUG
+  using namespace std::chrono;
   std::atomic_int numDeferedFilesTouched = 0;
   static std::atomic_uint64_t totalBytes = 0;
   auto t0 = high_resolution_clock::now();
 #endif
 
-  parallelFor(0, config->readThreads, [&](size_t I) {
-    while (true) {
-      int localIndex = index.fetch_add(1);
-      if (localIndex >= (int)deferred.size())
-        break;
-      const StringRef &buff = deferred[localIndex].buffer.getBuffer();
-      if (buff.size() > largeArchive)
-        continue;
+  auto preloadDeferredFile = [&](const DeferredFile &deferredFile) {
+    const StringRef &buff = deferredFile.buffer.getBuffer();
+    if (buff.size() > largeArchive)
+      return;
 #ifndef NDEBUG
-      totalBytes += buff.size();
-      numDeferedFilesTouched += 1;
+    totalBytes += buff.size();
+    numDeferedFilesTouched += 1;
 #endif
 
-      // Reference all file's mmap'd pages to load them into memory.
-      for (const char *page = buff.data(), *end = page + buff.size();
-           page < end; page += pageSize)
-        LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
-    }
-  });
-
+    // Reference all file's mmap'd pages to load them into memory.
+    for (const char *page = buff.data(), *end = page + buff.size(); page < end;
+         page += pageSize)
+      LLVM_ATTRIBUTE_UNUSED volatile char t = *page;
+  };
+#if LLVM_ENABLE_THREADS
+  { // Create scope for waiting for the taskGroup
+    std::atomic_size_t index = 0;
+    llvm::parallel::TaskGroup taskGroup;
+    for (int w = 0; w < config->readWorkers; w++)
+      taskGroup.spawn([&index, &preloadDeferredFile, &deferred]() {
+        while (true) {
+          size_t localIndex = index.fetch_add(1);
+          if (localIndex >= deferred.size())
+            break;
+          preloadDeferredFile(deferred[localIndex]);
+        }
+      });
+  }
+#endif
 #ifndef NDEBUG
   auto dt = high_resolution_clock::now() - t0;
   if (Process::GetEnv("LLD_MULTI_THREAD_PAGE"))
@@ -556,7 +564,7 @@ static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
-  if (config->readThreads)
+  if (config->readWorkers)
     deferred.push_back({path, isLazy, *buffer});
   else
     processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
@@ -1420,7 +1428,7 @@ static void createFiles(const InputArgList &args) {
     }
   }
 
-  if (config->readThreads) {
+  if (config->readWorkers) {
     multiThreadedPageIn(deferredFiles);
 
     DeferredFiles archiveContents;
@@ -1829,13 +1837,13 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
   }
 
-  if (auto *arg = args.getLastArg(OPT_read_threads)) {
+  if (auto *arg = args.getLastArg(OPT_read_workers)) {
     StringRef v(arg->getValue());
     unsigned threads = 0;
     if (!llvm::to_integer(v, threads, 0) || threads < 0)
       error(arg->getSpelling() + ": expected a positive integer, but got '" +
             arg->getValue() + "'");
-    config->readThreads = threads;
+    config->readWorkers = threads;
   }
   if (auto *arg = args.getLastArg(OPT_threads_eq)) {
     StringRef v(arg->getValue());

@@ -396,8 +396,8 @@ def dead_strip : Flag<["-"], "dead_strip">,
 def interposable : Flag<["-"], "interposable">,
     HelpText<"Indirects access to all exported symbols in an image">,
     Group<grp_opts>;
-def read_threads : Joined<["--"], "read-threads=">,
-    HelpText<"Approximate number of threads to use to eagerly preload input files content into memory. Use 0 to disable this feature. Default is disabled.">,
+def read_workers : Joined<["--"], "read-workers=">,
+    HelpText<"Approximate number of workers to use to eagerly preload input files content into memory. Use 0 to disable this feature. Default is disabled.">,
     Group<grp_lld>;
 def order_file : Separate<["-"], "order_file">,
     MetaVarName<"<file>">,
