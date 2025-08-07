@@ -1,17 +1,11 @@
-; RUN: opt -S -passes='dxil-finalize-linkage,globaldce' -mtriple=dxil-unknown-shadermodel6.5-compute %s | FileCheck %s
+; RUN: opt -S -dxil-finalize-linkage -mtriple=dxil-unknown-shadermodel6.5-compute %s | FileCheck %s
 ; RUN: llc %s --filetype=asm -o - | FileCheck %s --check-prefixes=CHECK-LLC
 
 target triple = "dxilv1.5-pc-shadermodel6.5-compute"
 
 ; DXILFinalizeLinkage changes linkage of all functions that are hidden to
-; internal, converts private global variables to internal linkage, and removes
-; unused global variables.
-
-; CHECK-NOT: @aTile
-@aTile = hidden addrspace(3) global [4 x [1 x i32]] zeroinitializer, align 4
-
-; CHECK-NOT: @bTile
-@bTile = hidden addrspace(3) global [1 x <1 x i32>] zeroinitializer, align 4
+; internal, converts private globals to internal linkage, and converts external globals 
+; with no usage to internal linkage.
 
 ; CHECK: @switch.table = internal unnamed_addr constant [4 x i32]
 @switch.table = private unnamed_addr constant [4 x i32] [i32 1, i32 257, i32 65793, i32 16843009], align 4
@@ -33,6 +27,16 @@ target triple = "dxilv1.5-pc-shadermodel6.5-compute"
 ; Hidden global should remain hidden
 ; CHECK: @hidden_var = hidden global i32
 @hidden_var = hidden global i32 1, align 4
+
+; Running the whole pipeline should remove unused global variables
+
+; CHECK: @aTile = internal addrspace(3) global
+; CHECK-LLC-NOT: @aTile
+@aTile = hidden addrspace(3) global [4 x [1 x i32]] zeroinitializer, align 4
+
+; CHECK: @bTile = internal addrspace(3) global
+; CHECK-LLC-NOT: @bTile
+@bTile = hidden addrspace(3) global [1 x [1 x i32]] zeroinitializer, align 4
 
 define void @anchor_function() #0 {
 entry:
