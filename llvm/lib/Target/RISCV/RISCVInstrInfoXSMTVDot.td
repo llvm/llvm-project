@@ -61,7 +61,7 @@ def SMT_VDot_Slide3 : SMTVEncoding2<0b10>;
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 // Base vector dot product (no slide) format.
 class RVInstSMTVDot<SMTVEncoding2 sign, string opcodestr, string argstr>
-    : RVInst<(outs VR:$vd), (ins VR:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
+    : RVInst<(outs VREven:$vd), (ins VR:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
   bits<5> vd;
   bits<5> vs1;
   bits<5> vs2;
@@ -78,7 +78,7 @@ class RVInstSMTVDot<SMTVEncoding2 sign, string opcodestr, string argstr>
 
 // Sliding-window vector dot product format.
 class RVInstSMTVDotSlide<SMTVEncoding2 funct2, SMTVEncoding2 sign, string opcodestr, string argstr>
-    : RVInst<(outs VR:$vd), (ins VR:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
+    : RVInst<(outs VREven:$vd), (ins VREven:$vs1, VR:$vs2), opcodestr, argstr, [], InstFormatR> {
   bits<5> vd;
   bits<5> vs1;
   bits<5> vs2;
@@ -104,7 +104,6 @@ let Predicates = [HasVendorXSMTVDot] in {
 // Base vector dot product (no slide) instructions
 // NOTE: Destination registers (vd) MUST be even-numbered (v0, v2, ..., v30)
 //       due to hardware alignment constraints. Using odd registers may cause undefined behavior.
-// TODO: Enforce even-numbered vd.
 def VMADOT   : RVInstSMTVDot<SMT_VDot_SS, "smt.vmadot",   "$vd, $vs1, $vs2">;
 def VMADOTU  : RVInstSMTVDot<SMT_VDot_UU, "smt.vmadotu",  "$vd, $vs1, $vs2">;
 def VMADOTSU : RVInstSMTVDot<SMT_VDot_SU, "smt.vmadotsu", "$vd, $vs1, $vs2">;
@@ -124,7 +123,6 @@ def VMADOTUU : RVInstSMTVDot<SMT_VDot_US, "smt.vmadotus", "$vd, $vs1, $vs2">;
 // NOTE: Destination registers (vd) and first source register (vs1) MUST be
 //       even-numbered (v0, v2, ..., v30) due to hardware alignment constraints.
 //       Using odd registers may cause undefined behavior.
-// TODO: Enforce even-numbered vd.
 def VMADOT1   : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_SS, "smt.vmadot1",   "$vd, $vs1, $vs2">;
 def VMADOT1U  : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_UU, "smt.vmadot1u",  "$vd, $vs1, $vs2">;
 def VMADOT1SU : RVInstSMTVDotSlide<SMT_VDot_Slide1, SMT_VDot_SU, "smt.vmadot1su", "$vd, $vs1, $vs2">;
