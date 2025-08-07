@@ -2308,9 +2308,8 @@ _mm_maskz_div_sd(__mmask8 __U,__m128d __A, __m128d __B) {
                                             (__v2df)_mm_setzero_pd(), \
                                             (__mmask8)(U), (int)(R)))
 
-static __inline __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
-_mm512_div_pd(__m512d __a, __m512d __b)
-{
+static __inline __m512d
+    __DEFAULT_FN_ATTRS512_CONSTEXPR _mm512_div_pd(__m512d __a, __m512d __b) {
   return (__m512d)((__v8df)__a/(__v8df)__b);
 }
 
@@ -2329,8 +2328,7 @@ _mm512_maskz_div_pd(__mmask8 __U, __m512d __A, __m512d __B) {
 }
 
 static __inline __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
-_mm512_div_ps(__m512 __a, __m512 __b)
-{
+_mm512_div_ps(__m512 __a, __m512 __b) {
   return (__m512)((__v16sf)__a/(__v16sf)__b);
 }
 
