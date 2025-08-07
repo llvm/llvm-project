@@ -692,13 +692,17 @@ void TypeLocWriter::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
 void TypeLocWriter::VisitPipeTypeLoc(PipeTypeLoc TL) {
   addSourceLocation(TL.getKWLoc());
 }
-
 void TypeLocWriter::VisitBitIntTypeLoc(clang::BitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
 }
 void TypeLocWriter::VisitDependentBitIntTypeLoc(
     clang::DependentBitIntTypeLoc TL) {
   addSourceLocation(TL.getNameLoc());
+}
+
+void TypeLocWriter::VisitPredefinedSugarTypeLoc(
+    clang::PredefinedSugarTypeLoc TL) {
+  // Nothing to do.
 }
 
 void ASTWriter::WriteTypeAbbrevs() {
@@ -5457,11 +5461,6 @@ ASTWriter::WriteAST(llvm::PointerUnion<Sema *, Preprocessor *> Subject,
 
   WritingAST = false;
 
-  if (WritingModule && PPRef.getHeaderSearchInfo()
-                           .getHeaderSearchOpts()
-                           .ModulesValidateOncePerBuildSession)
-    ModCache.updateModuleTimestamp(OutputFile);
-
   if (ShouldCacheASTInMemory) {
     // Construct MemoryBuffer and update buffer manager.
     ModCache.getInMemoryModuleCache().addBuiltPCM(
@@ -5614,6 +5613,8 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
                      PREDEF_DECL_BUILTIN_MS_VA_LIST_ID);
   RegisterPredefDecl(Context.MSGuidTagDecl,
                      PREDEF_DECL_BUILTIN_MS_GUID_ID);
+  RegisterPredefDecl(Context.MSTypeInfoTagDecl,
+                     PREDEF_DECL_BUILTIN_MS_TYPE_INFO_TAG_ID);
   RegisterPredefDecl(Context.ExternCContext, PREDEF_DECL_EXTERN_C_CONTEXT_ID);
   RegisterPredefDecl(Context.CFConstantStringTypeDecl,
                      PREDEF_DECL_CF_CONSTANT_STRING_ID);
@@ -7090,11 +7091,6 @@ void ASTRecordWriter::AddNestedNameSpecifierLoc(NestedNameSpecifierLoc NNS) {
 
     case NestedNameSpecifier::Namespace:
       AddDeclRef(NNS.getNestedNameSpecifier()->getAsNamespace());
-      AddSourceRange(NNS.getLocalSourceRange());
-      break;
-
-    case NestedNameSpecifier::NamespaceAlias:
-      AddDeclRef(NNS.getNestedNameSpecifier()->getAsNamespaceAlias());
       AddSourceRange(NNS.getLocalSourceRange());
       break;
 
@@ -8739,6 +8735,9 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *PC = cast<OpenACCPrivateClause>(C);
     writeSourceLocation(PC->getLParenLoc());
     writeOpenACCVarList(PC);
+
+    for (VarDecl *VD : PC->getInitRecipes())
+      AddDeclRef(VD);
     return;
   }
   case OpenACCClauseKind::Host: {
@@ -8757,6 +8756,11 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     const auto *FPC = cast<OpenACCFirstPrivateClause>(C);
     writeSourceLocation(FPC->getLParenLoc());
     writeOpenACCVarList(FPC);
+
+    for (const OpenACCFirstPrivateRecipe &R : FPC->getInitRecipes()) {
+      AddDeclRef(R.RecipeDecl);
+      AddDeclRef(R.InitFromTemporary);
+    }
     return;
   }
   case OpenACCClauseKind::Attach: {

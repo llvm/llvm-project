@@ -985,6 +985,12 @@ const Init *UnOpInit::Fold(const Record *CurRec, bool IsFinal) const {
     }
     break;
 
+  case GETDAGOPNAME:
+    if (const auto *Dag = dyn_cast<DagInit>(LHS)) {
+      return Dag->getName();
+    }
+    break;
+
   case LOG2:
     if (const auto *LHSi = dyn_cast_or_null<IntInit>(
             LHS->convertInitializerTo(IntRecTy::get(RK)))) {
@@ -1050,6 +1056,9 @@ std::string UnOpInit::getAsString() const {
   case SIZE: Result = "!size"; break;
   case EMPTY: Result = "!empty"; break;
   case GETDAGOP: Result = "!getdagop"; break;
+  case GETDAGOPNAME:
+    Result = "!getdagopname";
+    break;
   case LOG2 : Result = "!logtwo"; break;
   case LISTFLATTEN:
     Result = "!listflatten";
@@ -1310,7 +1319,11 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       SmallVector<std::pair<const Init *, const StringInit *>, 8> Args;
       llvm::append_range(Args, LHSs->getArgAndNames());
       llvm::append_range(Args, RHSs->getArgAndNames());
-      return DagInit::get(Op, Args);
+      // Use the name of the LHS DAG if it's set, otherwise the name of the RHS.
+      const auto *NameInit = LHSs->getName();
+      if (!NameInit)
+        NameInit = RHSs->getName();
+      return DagInit::get(Op, NameInit, Args);
     }
     break;
   }
@@ -1508,6 +1521,14 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
       return DagInit::get(Op, Dag->getArgs(), Dag->getArgNames());
     break;
   }
+  case SETDAGOPNAME: {
+    const auto *Dag = dyn_cast<DagInit>(LHS);
+    const auto *Op = dyn_cast<StringInit>(RHS);
+    if (Dag && Op)
+      return DagInit::get(Dag->getOperator(), Op, Dag->getArgs(),
+                          Dag->getArgNames());
+    break;
+  }
   case ADD:
   case SUB:
   case MUL:
@@ -1620,6 +1641,9 @@ std::string BinOpInit::getAsString() const {
   case STRCONCAT: Result = "!strconcat"; break;
   case INTERLEAVE: Result = "!interleave"; break;
   case SETDAGOP: Result = "!setdagop"; break;
+  case SETDAGOPNAME:
+    Result = "!setdagopname";
+    break;
   case GETDAGARG:
     Result = "!getdagarg<" + getType()->getAsString() + ">";
     break;

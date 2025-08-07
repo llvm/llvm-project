@@ -194,6 +194,7 @@ def IsExact     : MIFlagEnum<"IsExact">;
 def NoSWrap     : MIFlagEnum<"NoSWrap">;
 def NoUWrap     : MIFlagEnum<"NoUWrap">;
 def NonNeg      : MIFlagEnum<"NonNeg">;
+def InBounds    : MIFlagEnum<"InBounds">;
 
 def MIFlags;
 // def not; -> Already defined as a SDNode
@@ -1132,14 +1133,14 @@ def form_bitfield_extract : GICombineGroup<[bitfield_extract_from_sext_inreg,
 def udiv_by_const : GICombineRule<
   (defs root:$root),
   (match (G_UDIV $dst, $x, $y):$root,
-   [{ return Helper.matchUDivorURemByConst(*${root}); }]),
-  (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
+   [{ return Helper.matchUDivOrURemByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivOrURemByConst(*${root}); }])>;
 
 def sdiv_by_const : GICombineRule<
   (defs root:$root),
   (match (G_SDIV $dst, $x, $y):$root,
-   [{ return Helper.matchSDivByConst(*${root}); }]),
-  (apply [{ Helper.applySDivByConst(*${root}); }])>;
+   [{ return Helper.matchSDivOrSRemByConst(*${root}); }]),
+  (apply [{ Helper.applySDivOrSRemByConst(*${root}); }])>;
 
 def sdiv_by_pow2 : GICombineRule<
   (defs root:$root),
@@ -1159,10 +1160,16 @@ def intdiv_combines : GICombineGroup<[udiv_by_pow2, sdiv_by_pow2,
 def urem_by_const : GICombineRule<
   (defs root:$root),
   (match (G_UREM $dst, $x, $y):$root,
-   [{ return Helper.matchUDivorURemByConst(*${root}); }]),
-  (apply [{ Helper.applyUDivorURemByConst(*${root}); }])>;
+   [{ return Helper.matchUDivOrURemByConst(*${root}); }]),
+  (apply [{ Helper.applyUDivOrURemByConst(*${root}); }])>;
 
-def intrem_combines : GICombineGroup<[urem_by_const]>;
+def srem_by_const : GICombineRule<
+  (defs root:$root),
+  (match (G_SREM $dst, $x, $y):$root,
+   [{ return Helper.matchSDivOrSRemByConst(*${root}); }]),
+  (apply [{ Helper.applySDivOrSRemByConst(*${root}); }])>;
+
+def intrem_combines : GICombineGroup<[urem_by_const, srem_by_const]>;
 
 def reassoc_ptradd : GICombineRule<
   (defs root:$root, build_fn_matchinfo:$matchinfo),

@@ -371,7 +371,7 @@ OPTIONS
   * Prints an address's debug-data discriminator when it is non-zero. One way to
     produce discriminators is to compile with clang's -fdebug-info-for-profiling.
 
-  ``JSON`` style provides a machine readable output in JSON. If addresses are
+  ``JSON`` style provides a machine-readable output in JSON. If addresses are
     supplied via stdin, the output JSON will be a series of individual objects.
     Otherwise, all results will be contained in a single array.
 
@@ -444,7 +444,7 @@ OPTIONS
 
 .. option:: --pretty-print, -p
 
-  Print human readable output. If :option:`--inlining` is specified, the
+  Print human-readable output. If :option:`--inlining` is specified, the
   enclosing scope is prefixed by (inlined by).
   For JSON output, the option will cause JSON to be indented and split over
   new lines. Otherwise, the JSON output will be printed in a compact form.

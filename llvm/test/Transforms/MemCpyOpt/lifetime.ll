@@ -116,22 +116,3 @@ define i32 @call_slot_clobber_before_lifetime_start() {
   %v = load i32, ptr %dst
   ret i32 %v
 }
-
-define void @call_slot_lifetime_bitcast(ptr %ptr) {
-; CHECK-LABEL: @call_slot_lifetime_bitcast(
-; CHECK-NEXT:    [[TMP1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[TMP2]], ptr align 4 [[PTR:%.*]], i64 4, i1 false)
-; CHECK-NEXT:    [[TMP1_CAST:%.*]] = bitcast ptr [[TMP1]] to ptr
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TMP1_CAST]])
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP1]], ptr align 4 [[PTR]], i64 4, i1 false)
-; CHECK-NEXT:    ret void
-;
-  %tmp1 = alloca i32
-  %tmp2 = alloca i32
-  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp2, ptr align 4 %ptr, i64 4, i1 false)
-  %tmp1.cast = bitcast ptr %tmp1 to ptr
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %tmp1.cast)
-  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %tmp1.cast, ptr align 4 %tmp2, i64 4, i1 false)
-  ret void
-}

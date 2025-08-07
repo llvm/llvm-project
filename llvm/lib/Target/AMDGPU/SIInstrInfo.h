@@ -33,6 +33,7 @@ class LiveVariables;
 class MachineDominatorTree;
 class MachineRegisterInfo;
 class RegScavenger;
+class SIMachineFunctionInfo;
 class TargetRegisterClass;
 class ScheduleHazardRecognizer;
 
@@ -196,8 +197,7 @@ protected:
                            AMDGPU::OpName Src0OpName, MachineOperand &Src1,
                            AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
-                     const MachineOperand *fromMO, unsigned toIdx,
-                     const MachineOperand *toMO) const;
+                     unsigned toIdx) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -286,6 +286,15 @@ public:
 
   bool getConstValDefinedInReg(const MachineInstr &MI, const Register Reg,
                                int64_t &ImmVal) const override;
+
+  unsigned getVectorRegSpillSaveOpcode(Register Reg,
+                                       const TargetRegisterClass *RC,
+                                       unsigned Size,
+                                       const SIMachineFunctionInfo &MFI) const;
+  unsigned
+  getVectorRegSpillRestoreOpcode(Register Reg, const TargetRegisterClass *RC,
+                                 unsigned Size,
+                                 const SIMachineFunctionInfo &MFI) const;
 
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
@@ -669,6 +678,12 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;
   }
 
+  /// \returns true for SCRATCH_ instructions, or FLAT_ instructions with
+  /// SCRATCH_ memory operands.
+  /// Conservatively correct; will return true if \p MI cannot be proven
+  /// to not hit scratch.
+  bool mayAccessScratchThroughFlat(const MachineInstr &MI) const;
+
   static bool isBlockLoadStore(uint16_t Opcode) {
     switch (Opcode) {
     case AMDGPU::SI_BLOCK_SPILL_V1024_SAVE:
@@ -866,6 +881,8 @@ public:
   bool isDOT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
+
+  bool isXDLWMMA(const MachineInstr &MI) const;
 
   bool isXDL(const MachineInstr &MI) const;
 
@@ -1101,7 +1118,6 @@ public:
   // that will not require an additional 4-bytes; this function assumes that it
   // will.
   bool isInlineConstant(const MachineOperand &MO, uint8_t OperandType) const {
-    assert(!MO.isReg() && "isInlineConstant called on register operand!");
     if (!MO.isImm())
       return false;
     return isInlineConstant(MO.getImm(), OperandType);
@@ -1203,6 +1219,8 @@ public:
   void restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                    Register Reg, SlotIndexes *Indexes = nullptr) const;
+
+  MachineInstr *getWholeWaveFunctionSetup(MachineFunction &MF) const;
 
   /// Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined

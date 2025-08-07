@@ -13,6 +13,25 @@
 using namespace clang;
 using namespace clang::interp;
 
+// FIXME: There is a peculiar problem with the way we track pointers
+// to blocks and the way we allocate dynamic memory.
+//
+// When we have code like this:
+// while (true) {
+//   char *buffer = new char[1024];
+//   delete[] buffer;
+// }
+//
+// We have a local variable 'buffer' pointing to the heap allocated memory.
+// When deallocating the memory via delete[], that local variable still
+// points to the memory, which means we will create a DeadBlock for it and move
+// it over to that block, essentially duplicating the allocation. Moving
+// the data is also slow.
+//
+// However, when we actually try to access the allocation after it has been
+// freed, we need the block to still exist (alive or dead) so we can tell
+// that it's a dynamic allocation.
+
 DynamicAllocator::~DynamicAllocator() { cleanup(); }
 
 void DynamicAllocator::cleanup() {
@@ -27,7 +46,7 @@ void DynamicAllocator::cleanup() {
       B->invokeDtor();
       if (B->hasPointers()) {
         while (B->Pointers) {
-          Pointer *Next = B->Pointers->Next;
+          Pointer *Next = B->Pointers->asBlockPointer().Next;
           B->Pointers->PointeeStorage.BS.Pointee = nullptr;
           B->Pointers = Next;
         }
@@ -109,7 +128,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
     return false;
 
   auto &Site = It->second;
-  assert(Site.size() > 0);
+  assert(!Site.empty());
 
   // Find the Block to delete.
   auto AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
@@ -125,7 +144,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   S.deallocate(B);
   Site.Allocations.erase(AllocIt);
 
-  if (Site.size() == 0)
+  if (Site.empty())
     AllocationSites.erase(It);
 
   return true;

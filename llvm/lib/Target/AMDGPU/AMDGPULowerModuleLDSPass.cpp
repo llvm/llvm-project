@@ -236,7 +236,7 @@ cl::opt<LoweringKind> LoweringKindLoc(
                    "Lower via mixture of above strategies")));
 
 template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
-  llvm::sort(V.begin(), V.end(), [](const auto *L, const auto *R) {
+  llvm::sort(V, [](const auto *L, const auto *R) {
     return L->getName() < R->getName();
   });
   return {std::move(V)};

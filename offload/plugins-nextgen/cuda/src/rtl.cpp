@@ -916,6 +916,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamWaitEvent: %s");
   }
 
+  // TODO: This should be implementable on CUDA
+  Expected<bool> hasPendingWorkImpl(AsyncInfoWrapperTy &AsyncInfo) override {
+    return true;
+  }
+
   /// Synchronize the current thread with the event.
   Error syncEventImpl(void *EventPtr) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
@@ -935,15 +940,16 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Res == CUDA_SUCCESS)
       // For consistency with other drivers, store the version as a string
       // rather than an integer
-      Info.add("CUDA Driver Version", std::to_string(TmpInt));
+      Info.add("CUDA Driver Version", std::to_string(TmpInt), "",
+               DeviceInfo::DRIVER_VERSION);
 
     Info.add("CUDA OpenMP Device Number", DeviceId);
 
     Res = cuDeviceGetName(TmpChar, 1000, Device);
     if (Res == CUDA_SUCCESS)
-      Info.add("Device Name", TmpChar);
+      Info.add("Device Name", TmpChar, "", DeviceInfo::NAME);
 
-    Info.add("Vendor Name", "NVIDIA");
+    Info.add("Vendor Name", "NVIDIA", "", DeviceInfo::VENDOR);
 
     Res = cuDeviceTotalMem(&TmpSt, Device);
     if (Res == CUDA_SUCCESS)
@@ -976,9 +982,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_BLOCK, TmpInt);
     if (Res == CUDA_SUCCESS)
-      Info.add("Maximum Threads per Block", TmpInt);
+      Info.add("Maximum Threads per Block", TmpInt, "",
+               DeviceInfo::MAX_WORK_GROUP_SIZE);
 
-    auto &MaxBlock = *Info.add("Maximum Block Dimensions", "");
+    auto &MaxBlock = *Info.add("Maximum Block Dimensions", std::monostate{}, "",
+                               DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
     Res = getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_MAX_BLOCK_DIM_X, TmpInt);
     if (Res == CUDA_SUCCESS)
       MaxBlock.add("x", TmpInt);
@@ -1442,7 +1450,11 @@ struct CUDAPluginTy final : public GenericPluginTy {
       return ElfOrErr.takeError();
 
     // Get the numeric value for the image's `sm_` value.
-    auto SM = ElfOrErr->getPlatformFlags() & ELF::EF_CUDA_SM;
+    const auto Header = ElfOrErr->getELFFile().getHeader();
+    unsigned SM =
+        Header.e_ident[ELF::EI_ABIVERSION] == ELF::ELFABIVERSION_CUDA_V1
+            ? Header.e_flags & ELF::EF_CUDA_SM
+            : (Header.e_flags & ELF::EF_CUDA_SM_MASK) >> 8;
 
     CUdevice Device;
     CUresult Res = cuDeviceGet(&Device, DeviceId);
