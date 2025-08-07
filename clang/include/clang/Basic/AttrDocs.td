@@ -532,13 +532,13 @@ The following examples demonstrate the use of this attribute:
 def SYCLKernelEntryPointDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``sycl_kernel_entry_point`` attribute facilitates the generation of an
-offload kernel entry point, sometimes called a SYCL kernel caller function,
-suitable for invoking a SYCL kernel on an offload device. The attribute is
-intended for use in the implementation of SYCL kernel invocation functions
-like the ``single_task`` and ``parallel_for`` member functions of the
-``sycl::handler`` class specified in section 4.9.4, "Command group ``handler``
-class", of the SYCL 2020 specification.
+The ``sycl_kernel_entry_point`` attribute facilitates the launch of a SYCL
+kernel and the generation of an offload kernel entry point, sometimes called
+a SYCL kernel caller function, suitable for invoking a SYCL kernel on an
+offload device. The attribute is intended for use in the implementation of
+SYCL kernel invocation functions like the ``single_task`` and ``parallel_for``
+member functions of the ``sycl::handler`` class specified in section 4.9.4,
+"Command group ``handler`` class", of the SYCL 2020 specification.
 
 The attribute requires a single type argument that specifies a class type that
 meets the requirements for a SYCL kernel name as described in section 5.2,
@@ -550,7 +550,7 @@ The attribute only appertains to functions and only those that meet the
 following requirements.
 
 * Has a non-deduced ``void`` return type.
-* Is not a non-static member function, constructor, or destructor.
+* Is not a constructor or destructor.
 * Is not a C variadic function.
 * Is not a coroutine.
 * Is not defined as deleted or as defaulted.
@@ -565,39 +565,43 @@ follows.
 
   namespace sycl {
   class handler {
+    template<typename KernelNameType, typename... Ts>
+    void sycl_enqueue_kernel_launch(const char *KernelName, Ts...) {
+      // Call functions appropriate for the desired offload backend
+      // (OpenCL, CUDA, HIP, Level Zero, etc...) to enqueue kernel invocation.
+    }
+
     template<typename KernelNameType, typename KernelType>
     [[ clang::sycl_kernel_entry_point(KernelNameType) ]]
-    static void kernel_entry_point(KernelType kernel) {
-      kernel();
+    void kernel_entry_point(KernelType Kernel) {
+      Kernel();
     }
 
   public:
     template<typename KernelNameType, typename KernelType>
-    void single_task(KernelType kernel) {
-      // Call kernel_entry_point() to trigger generation of an offload
-      // kernel entry point.
-      kernel_entry_point<KernelNameType>(kernel);
-      // Call functions appropriate for the desired offload backend
-      // (OpenCL, CUDA, HIP, Level Zero, etc...).
+    void single_task(KernelType Kernel) {
+      // Call kernel_entry_point() to launch the kernel and to trigger
+      // generation of an offload kernel entry point.
+      kernel_entry_point<KernelNameType>(Kernel);
     }
   };
   } // namespace sycl
 
-A SYCL kernel is a callable object of class type that is constructed on a host,
-often via a lambda expression, and then passed to a SYCL kernel invocation
-function to be executed on an offload device. A SYCL kernel invocation function
-is responsible for copying the provided SYCL kernel object to an offload
-device and initiating a call to it. The SYCL kernel object and its data members
-constitute the parameters of an offload kernel.
+A SYCL kernel object is a callable object of class type that is constructed on
+a host, often via a lambda expression, and then passed to a SYCL kernel
+invocation function to be executed on an offload device. A SYCL kernel
+invocation function is responsible for copying the provided SYCL kernel object
+to an offload device and initiating a call to it. The SYCL kernel object and
+its data members constitute the parameters of an offload kernel.
 
-A SYCL kernel type is required to satisfy the device copyability requirements
-specified in section 3.13.1, "Device copyable", of the SYCL 2020 specification.
-Additionally, any data members of the kernel object type are required to satisfy
-section 4.12.4, "Rules for parameter passing to kernels". For most types, these
-rules require that the type is trivially copyable.  However, the SYCL
-specification mandates that certain special SYCL types, such as
-``sycl::accessor`` and ``sycl::stream`` be device copyable even if they are not
-trivially copyable. These types require special handling because they cannot
+A SYCL kernel object type is required to satisfy the device copyability
+requirements specified in section 3.13.1, "Device copyable", of the SYCL 2020
+specification. Additionally, any data members of the kernel object type are
+required to satisfy section 4.12.4, "Rules for parameter passing to kernels".
+For most types, these rules require that the type is trivially copyable.
+However, the SYCL specification mandates that certain special SYCL types, such
+as ``sycl::accessor`` and ``sycl::stream`` be device copyable even if they are
+not trivially copyable. These types require special handling because they cannot
 be copied to device memory as if by ``memcpy()``. Additionally, some offload
 backends, OpenCL for example, require objects of some of these types to be
 passed as individual arguments to the offload kernel.
@@ -612,7 +616,7 @@ like OpenCL):
 
 #. Identifying the offload kernel entry point to be used for the SYCL kernel.
 
-#. Deconstructing the SYCL kernel object, if necessary, to produce the set of
+#. Decomposing the SYCL kernel object, if necessary, to produce the set of
    offload kernel arguments required by the offload kernel entry point.
 
 #. Copying the offload kernel arguments to device memory.
@@ -621,17 +625,23 @@ like OpenCL):
 
 The offload kernel entry point for a SYCL kernel performs the following tasks:
 
-#. Reconstituting the SYCL kernel object, if necessary, using the offload
+#. Reconstructing the SYCL kernel object, if necessary, using the offload
    kernel parameters.
 
-#. Calling the ``operator()`` member function of the (reconstituted) SYCL kernel
+#. Calling the ``operator()`` member function of the (reconstructed) SYCL kernel
    object.
 
-The ``sycl_kernel_entry_point`` attribute automates generation of an offload
-kernel entry point that performs those latter tasks. The parameters and body of
-a function declared with the ``sycl_kernel_entry_point`` attribute specify a
-pattern from which the parameters and body of the entry point function are
-derived. Consider the following call to a SYCL kernel invocation function.
+The ``sycl_kernel_entry_point`` attribute facilitates or automates these tasks
+by generating the offload kernel entry point, generating a unique symbol name
+for it, synthesizing code for kernel argument decomposition and reconstruction,
+and synthesizing a call to a ``sycl_enqueue_kernel_launch`` function template
+with the kernel name type, kernel symbol name, and (decomposed) kernel arguments
+passed as template or function arguments.
+
+A function declared with the ``sycl_kernel_entry_point`` attribute specifies
+the parameters and body of the offload entry point function. Consider the
+following call to the ``single_task()`` SYCL kernel invocation function assuming
+an implementation similar to the one shown above.
 
 .. code-block:: c++
 
@@ -645,31 +655,33 @@ derived. Consider the following call to a SYCL kernel invocation function.
 The SYCL kernel object is the result of the lambda expression. It has two
 data members corresponding to the captures of ``sout`` and ``s``. Since one
 of these data members corresponds to a special SYCL type that must be passed
-individually as an offload kernel parameter, it is necessary to decompose the
-SYCL kernel object into its constituent parts; the offload kernel will have
-two kernel parameters. Given a SYCL implementation that uses a
-``sycl_kernel_entry_point`` attributed function like the one shown above, an
+individually as an offload kernel argument, it is necessary to decompose the
+SYCL kernel object into its constituent parts and pass them individually. An
 offload kernel entry point function will be generated that looks approximately
 as follows.
 
 .. code-block:: c++
 
   void sycl-kernel-caller-for-KN(sycl::stream sout, S s) {
-    kernel-type kernel = { sout, s );
-    kernel();
+    kernel-type Kernel = { sout, s );
+    Kernel();
   }
 
 There are a few items worthy of note:
 
 #. The name of the generated function incorporates the SYCL kernel name,
    ``KN``, that was passed as the ``KernelNameType`` template parameter to
-   ``kernel_entry_point()`` and provided as the argument to the
+   ``single_task()`` and eventually provided as the argument to the
    ``sycl_kernel_entry_point`` attribute. There is a one-to-one correspondence
    between SYCL kernel names and offload kernel entry points.
 
+#. The parameters and the call to ``Kernel()`` correspond to the definition of
+   ``kernel_entry_point()`` called by ``single_task()`` with the SYCL kernel
+   object argument decomposed and reconstructed.
+
 #. The SYCL kernel is a lambda closure type and therefore has no name;
    ``kernel-type`` is substituted above and corresponds to the ``KernelType``
-   template parameter deduced in the call to ``kernel_entry_point()``.
+   template parameter deduced in the call to ``single_task()``.
    Lambda types cannot be declared and initialized using the aggregate
    initialization syntax used above, but the intended behavior should be clear.
 
@@ -683,24 +695,55 @@ There are a few items worthy of note:
    or more parameters depending on how the SYCL library implementation defines
    these types.
 
-#. The call to ``kernel_entry_point()`` has no effect other than to trigger
-   emission of the entry point function. The statments that make up the body
-   of the function are not executed when the function is called; they are
-   only used in the generation of the entry point function.
+The call to ``kernel_entry_point()`` by ``single_task()`` is effectively
+replaced with synthesized code that looks approximately as follows.
+
+.. code-block:: c++
+
+  sycl::stream sout = Kernel.sout;
+  S s = Kernel.s;
+  sycl_enqueue_kernel_launch<KN>("kernel-symbol-name", sout, s);
+
+There are a few items worthy of note:
+
+#. The SYCL kernel object is a lambda closure type and its captures do not
+   have formal names and cannot be accessed using the member access syntax used
+   above, but the intended behavior should be clear.
+
+#. ``kernel-symbol-name`` is substituted for the actual symbol name that would
+   be generated; these names are implementation details subject to change.
+
+#. Lookup for the ``sycl_enqueue_kernel_launch()`` function template is
+   performed from the (possibly instantiated) location of the definition of
+   ``kernel_entry_point()``. If overload resolution fails, the program is
+   ill-formed. If the selected overload is a non-static member function, then
+   ``this`` is passed for the implicit object parameter.
+
+#. Function arguments passed to ``sycl_enqueue_kernel_launch()`` are passed
+   as if by ``std::forward<X>(x)``.
+
+#. The ``sycl_enqueue_kernel_launch()`` function is expected to be provided by
+   the SYCL library implementation. It is responsible for scheduling execution
+   of the generated offload kernel entry point identified by
+   ``kernel-symbol-name`` and copying the (decomposed) kernel arguments to
+   device memory, presumably via an offload backend such as OpenCL.
 
 It is not necessary for a function declared with the ``sycl_kernel_entry_point``
 attribute to be called for the offload kernel entry point to be emitted. For
 inline functions and function templates, any ODR-use will suffice. For other
 functions, an ODR-use is not required; the offload kernel entry point will be
-emitted if the function is defined.
+emitted if the function is defined. In any case, a call to the function is
+required for the synthesized call to ``sycl_enqueue_kernel_launch()`` to occur.
 
 Functions declared with the ``sycl_kernel_entry_point`` attribute are not
 limited to the simple example shown above. They may have additional template
 parameters, declare additional function parameters, and have complex control
-flow in the function body. Function parameter decomposition and reconstitution
+flow in the function body. Function parameter decomposition and reconstruction
 is performed for all function parameters. The function must abide by the
 language feature restrictions described in section 5.4, "Language restrictions
-for device functions" in the SYCL 2020 specification.
+for device functions" in the SYCL 2020 specification. If the function is a
+non-static member function, ``this`` shall not be used in a potentially
+evaluated expression.
   }];
 }
 
