@@ -1693,17 +1693,17 @@ struct ArgumentExtractor
       // to int(kind=4) for example.
       return (*this)(x.template operand<0>());
     } else {
-      return std::make_pair(operation::OperationCode(x),
+      return std::make_pair(operation::OperationCode(x.derived()),
           OperationArgs(x, std::index_sequence_for<Os...>{}));
     }
   }
 
   template <typename T> Result operator()(const Designator<T> &x) const {
-    return {operation::Operator::Identity, {AsSomeExpr(x)}};
+    return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
   template <typename T> Result operator()(const Constant<T> &x) const {
-    return {operation::Operator::Identity, {AsSomeExpr(x)}};
+    return {operation::OperationCode(x), {AsSomeExpr(x)}};
   }
 
   template <typename... Rs>
@@ -1791,6 +1791,10 @@ std::string operation::ToString(operation::Operator op) {
     return ".TRUE.";
   }
   llvm_unreachable("Unhandler operator");
+}
+
+operation::Operator operation::OperationCode(const Relational<SomeType> &op) {
+  return common::visit([](auto &&s) { return OperationCode(s); }, op.u);
 }
 
 operation::Operator operation::OperationCode(const ProcedureDesignator &proc) {

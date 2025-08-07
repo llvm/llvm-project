@@ -84,7 +84,7 @@ define void @bottom_tested(ptr %p, i32 %n) {
 ; TAILFOLD-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; TAILFOLD-NEXT:    br label [[FOR_COND:%.*]]
 ; TAILFOLD:       for.cond:
-; TAILFOLD-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_COND]] ]
+; TAILFOLD-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_COND]] ]
 ; TAILFOLD-NEXT:    [[IPROM:%.*]] = sext i32 [[I]] to i64
 ; TAILFOLD-NEXT:    [[B:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 [[IPROM]]
 ; TAILFOLD-NEXT:    store i16 0, ptr [[B]], align 4
