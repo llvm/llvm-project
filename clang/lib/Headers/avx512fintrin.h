@@ -5303,7 +5303,7 @@ _mm512_mask_store_epi64 (void *__P, __mmask8 __U, __m512i __A)
           (__mmask8) __U);
 }
 
-static __inline__ __m512d __DEFAULT_FN_ATTRS512
+static __inline__ __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_movedup_pd (__m512d __A)
 {
   return (__m512d)__builtin_shufflevector((__v8df)__A, (__v8df)__A,
@@ -8665,7 +8665,7 @@ _mm512_mask_testn_epi64_mask (__mmask8 __U, __m512i __A, __m512i __B)
                                        _mm512_setzero_si512());
 }
 
-static __inline__ __m512 __DEFAULT_FN_ATTRS512
+static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_movehdup_ps (__m512 __A)
 {
   return (__m512)__builtin_shufflevector((__v16sf)__A, (__v16sf)__A,
@@ -8688,7 +8688,7 @@ _mm512_maskz_movehdup_ps (__mmask16 __U, __m512 __A)
                                              (__v16sf)_mm512_setzero_ps());
 }
 
-static __inline__ __m512 __DEFAULT_FN_ATTRS512
+static __inline__ __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_moveldup_ps (__m512 __A)
 {
   return (__m512)__builtin_shufflevector((__v16sf)__A, (__v16sf)__A,
