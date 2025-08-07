@@ -2146,7 +2146,9 @@ def Vector_ScatterOp :
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[AnyInteger, Index]>:$index_vec,
                VectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                   [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = [{
     scatters elements from a vector into memory as defined by an index vector
@@ -2204,6 +2206,19 @@ def Vector_ScatterOp :
       "type($index_vec)  `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$index_vec,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::Align", "llvm::Align()">: $alignment), [{
+      return build($_builder, $_state, base, indices, index_vec, mask, valueToStore,
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ExpandLoadOp :
