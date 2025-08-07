@@ -664,13 +664,15 @@ uint64_t RISCVMCCodeEmitter::getImmOpValue(const MCInst &MI, unsigned OpNo,
       AsmRelaxToLinkerRelaxableWithFeature(RISCV::FeatureVendorXqcilb);
     } else if (MIFrm == RISCVII::InstFormatB) {
       FixupKind = RISCV::fixup_riscv_branch;
-      AsmRelaxToLinkerRelaxable();
+      // This might be assembler relaxed to `b<cc>; jal` but we cannot relax
+      // the `jal` again in the assembler.
     } else if (MIFrm == RISCVII::InstFormatCJ) {
       FixupKind = RISCV::fixup_riscv_rvc_jump;
       AsmRelaxToLinkerRelaxableWithFeature(RISCV::FeatureVendorXqcilb);
     } else if (MIFrm == RISCVII::InstFormatCB) {
       FixupKind = RISCV::fixup_riscv_rvc_branch;
-      AsmRelaxToLinkerRelaxable();
+      // This might be assembler relaxed to `b<cc>; jal` but we cannot relax
+      // the `jal` again in the assembler.
     } else if (MIFrm == RISCVII::InstFormatCI) {
       FixupKind = RISCV::fixup_riscv_rvc_imm;
     } else if (MIFrm == RISCVII::InstFormatI) {
