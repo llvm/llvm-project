@@ -360,9 +360,11 @@ public:
              std::tie(RHS.RecordID, RHS.Space, RHS.LowerBound, RHS.Size);
     }
     bool overlapsWith(const ResourceBinding &RHS) const {
+      if (Space != RHS.Space)
+        return false;
       if (Size == UINT32_MAX)
         return LowerBound < RHS.LowerBound;
-      return Space == RHS.Space && LowerBound + Size - 1 >= RHS.LowerBound;
+      return LowerBound + Size - 1 >= RHS.LowerBound;
     }
   };
 
@@ -649,8 +651,8 @@ public:
   bool hasOverlappingBinding() const { return HasOverlappingBinding; }
   void setHasOverlappingBinding(bool Value) { HasOverlappingBinding = Value; }
 
-  LLVM_ABI std::optional<uint32_t>
-  findAvailableBinding(dxil::ResourceClass RC, uint32_t Space, int32_t Size) {
+  std::optional<uint32_t> findAvailableBinding(dxil::ResourceClass RC,
+                                               uint32_t Space, int32_t Size) {
     return Bindings.findAvailableBinding(RC, Space, Size);
   }
 

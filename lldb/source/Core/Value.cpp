@@ -347,15 +347,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     else
       data.SetAddressByteSize(sizeof(void *));
 
-    uint32_t limit_byte_size = UINT32_MAX;
-
-    if (type_size)
-      limit_byte_size = *type_size;
-
-    if (limit_byte_size <= m_value.GetByteSize()) {
-      if (m_value.GetData(data, limit_byte_size))
-        return error; // Success;
-    }
+    uint32_t result_byte_size = *type_size;
+    if (m_value.GetData(data, result_byte_size))
+      return error; // Success;
 
     error = Status::FromErrorString("extracting data from value failed");
     break;
