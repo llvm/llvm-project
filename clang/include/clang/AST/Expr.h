@@ -3582,9 +3582,7 @@ public:
       return Init->getBeginLoc();
     return LParenLoc;
   }
-  SourceLocation getEndLoc() const LLVM_READONLY {
-    return Init->getEndLoc();
-  }
+  SourceLocation getEndLoc() const LLVM_READONLY { return Init->getEndLoc(); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == CompoundLiteralExprClass;
