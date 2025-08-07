@@ -2654,7 +2654,8 @@ static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
   SemaRef.Diag(D->getLocation(), diag::note_defined_here) << D;
 }
 
-static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc, QualType T) {
+static void DiagnoseNonAggregateReason(Sema &SemaRef, SourceLocation Loc,
+                                       QualType T) {
   SemaRef.Diag(Loc, diag::note_unsatisfied_trait)
       << T << diag::TraitName::Aggregate;
 
