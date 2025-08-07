@@ -351,9 +351,8 @@ getResourceArrayHandleType(VarDecl *VD) {
   assert(VD->getType()->isHLSLResourceRecordArray() &&
          "expected array of resource records");
   const Type *Ty = VD->getType()->getUnqualifiedDesugaredType();
-  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty)) {
+  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
     Ty = CAT->getArrayElementTypeNoTypeQual()->getUnqualifiedDesugaredType();
-  }
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty);
 }
 
