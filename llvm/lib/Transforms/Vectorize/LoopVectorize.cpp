@@ -7530,9 +7530,6 @@ BasicBlock *EpilogueVectorizerMainLoop::createEpilogueVectorizedLoopSkeleton() {
   EPI.MainLoopIterationCountCheck =
       emitIterationCountCheck(LoopScalarPreHeader, false);
 
-  // Generate the induction variable.
-  EPI.VectorTripCount = getOrCreateVectorTripCount(LoopVectorPreHeader);
-
   replaceVPBBWithIRVPBB(Plan.getScalarPreheader(), LoopScalarPreHeader);
   return LoopVectorPreHeader;
 }
@@ -9808,7 +9805,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
 static void
 preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
                                  const SCEV2ValueTy &ExpandedSCEVs,
-                                 const EpilogueLoopVectorizationInfo &EPI) {
+                                 EpilogueLoopVectorizationInfo &EPI) {
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = VectorLoop->getEntryBasicBlock();
   Header->setName("vec.epilog.vector.body");
@@ -9826,30 +9823,13 @@ preparePlanForEpilogueVectorLoop(VPlan &Plan, Loop *L,
       // loop.
       using namespace llvm::PatternMatch;
       PHINode *EPResumeVal = &*L->getLoopPreheader()->phis().begin();
-      assert(EPResumeVal->getType() == IV->getScalarType() &&
-             match(EPResumeVal->getIncomingValueForBlock(
-                       EPI.MainLoopIterationCountCheck),
-                   m_SpecificInt(0)) &&
-             EPResumeVal ==
-                 find_singleton<PHINode>(
-                     L->getLoopPreheader()->phis(),
-                     [&EPI, IV](PHINode &P, bool) -> PHINode * {
-                       if (P.getType() == IV->getScalarType() &&
-                           match(P.getIncomingValueForBlock(
-                                     EPI.MainLoopIterationCountCheck),
-                                 m_SpecificInt(0)) &&
-                           any_of(P.incoming_values(),
-                                  [&EPI](Value *Inc) {
-                                    return Inc == EPI.VectorTripCount;
-                                  }) &&
-                           all_of(P.incoming_values(), [&EPI](Value *Inc) {
-                             return Inc == EPI.VectorTripCount ||
-                                    match(Inc, m_SpecificInt(0));
-                           }))
-                         return &P;
-                       return nullptr;
-                     }) &&
-             "Epilogue resume phis do not match!");
+      for (Value *Inc : EPResumeVal->incoming_values()) {
+        if (match(Inc, m_SpecificInt(0)))
+          continue;
+        assert(!EPI.VectorTripCount &&
+               "Must only have a single non-zero incoming value");
+        EPI.VectorTripCount = Inc;
+      }
       VPValue *VPV = Plan.getOrAddLiveIn(EPResumeVal);
       assert(all_of(IV->users(),
                     [](const VPUser *U) {
