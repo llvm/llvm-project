@@ -1,3 +1,4 @@
+// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -9,9 +10,21 @@
 #ifndef _LIBCPP_STACKTRACE_IMAGES_H
 #define _LIBCPP_STACKTRACE_IMAGES_H
 
-#include <__stacktrace/memory.h>
-#include <array>
-#include <cstdint>
+#include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
+#if _LIBCPP_STD_VER >= 23
+
+#  include <__stacktrace/memory.h>
+#  include <__stacktrace/stacktrace_entry.h>
+#  include <array>
+#  include <cstdint>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __stacktrace {
@@ -20,15 +33,13 @@ struct image;
 struct images;
 
 struct image {
-  constexpr static size_t __max_string_len = 1024;
-
   uintptr_t loaded_at_{};
   uintptr_t slide_{};
-  fixed_str<__max_string_len> name_{};
+  fixed_str<entry_base::__max_file_len> name_{};
   bool is_main_prog_{};
 
   bool operator<(image const& __rhs) const { return loaded_at_ < __rhs.loaded_at_; }
-  operator bool() const { return name_[0]; }
+  operator bool() const { return !name_.empty(); }
 };
 
 /**
@@ -40,7 +51,7 @@ struct image {
  * After construction, images_ and count_ look like:
  *  [0]             [1]             [2]             [3]       ...     [count_ - 1]
  *  (sentinel)      foo.exe         libc++so.1      libc.so.6         (sentinel)
- *  0x000000000000  0x000100000000  0x7def00000000  0x7c0300000000    0xffffffffffff
+ *  0x000000000000  0x000100000000  0x633b00000000  0x7c5500000000    0xffffffffffff
  */
 struct _LIBCPP_EXPORTED_FROM_ABI images {
   constexpr static size_t k_max_images = 256;
@@ -93,5 +104,9 @@ struct _LIBCPP_EXPORTED_FROM_ABI images {
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 23
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_STACKTRACE_IMAGES_H

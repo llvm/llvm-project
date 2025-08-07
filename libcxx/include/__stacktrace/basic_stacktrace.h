@@ -10,7 +10,6 @@
 #ifndef _LIBCPP_STACKTRACE_BASIC
 #define _LIBCPP_STACKTRACE_BASIC
 
-#include "memory.h"
 #include <__config>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
