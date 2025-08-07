@@ -2094,6 +2094,7 @@ stack utility
 stack variant
 stack vector
 stack version
+stacktrace version
 stdexcept cstddef
 stdexcept cstdint
 stdexcept cstdlib

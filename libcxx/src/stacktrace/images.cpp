@@ -11,6 +11,7 @@
 //
 
 #include "__config"
+
 #if defined(__APPLE__)
 // MacOS-specific: use the `dyld` loader to access info about loaded Mach-O images.
 #  include <__stacktrace/images.h>
@@ -47,6 +48,7 @@ _LIBCPP_END_NAMESPACE_STD
 // Non-MacOS and non-Windows, including Linux: assume environment has these headers.
 #  include <__stacktrace/images.h>
 #  include <__stacktrace/memory.h>
+#  include <__stacktrace/stacktrace_entry.h>
 #  include <algorithm>
 #  include <cstdlib>
 #  include <dlfcn.h>
@@ -74,7 +76,7 @@ int add_image(dl_phdr_info* info, size_t, void* images_v) {
   // `dl_iterate_phdr` gives us the main program image first
   image.is_main_prog_ = is_first;
   if (image.name_.empty() && is_first) {
-    char buf[PATH_MAX + 1];
+    char buf[entry_base::__max_file_len];
     // Disregards errno, but leaves `name_` empty
     auto len = readlink("/proc/self/exe", buf, sizeof(buf));
     if (len != -1 && unsigned(len) < sizeof(buf) - 1) {

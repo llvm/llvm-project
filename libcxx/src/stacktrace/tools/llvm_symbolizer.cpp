@@ -38,8 +38,7 @@ bool llvm_symbolizer::build_argv() {
   while (it != end) {
     auto& entry = *(entry_base*)(it++);
     if (entry.__image_ && !entry.__image_->name_.empty()) {
-      fixed_str<PATH_MAX> image_path = entry.__image_->name_;
-      push_arg("FILE:%s %p", image_path.data(), (void*)entry.adjusted_addr());
+      push_arg("FILE:%s %p", entry.__image_->name_.data(), (void*)entry.adjusted_addr());
     } else {
       push_arg("%p", (void*)entry.adjusted_addr());
     }
@@ -89,7 +88,7 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<llvm_symbolizer>(base& base
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  fixed_str<PATH_MAX * 2> line;                 // our read buffer
+  str line;                                     // our read buffer
   auto* entry_iter = base.entries_begin() - 1;  // "before first" entry
   while (spawner.stream_.good()) {              // loop until we get EOF from tool stdout
     std::getline(spawner.stream_, line);        // consume a line from stdout

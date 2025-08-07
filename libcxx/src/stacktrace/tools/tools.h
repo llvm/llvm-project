@@ -117,7 +117,7 @@ struct file_actions {
   optional<posix_spawn_file_actions_t> fa_{};
   fd stdout_read_;  // read end of subprocess's stdout, IFF redir_stdout used
   fd stdout_write_; // write end of subprocess's stdout, IFF redir_stdout used
-  errno_t errno_{}; // set to nonzero if any of these C calls failed
+  int errno_{};     // set to nonzero if any of these C calls failed
 
   bool failed() const { return errno_; }
 
@@ -223,8 +223,8 @@ struct sigchld_enable {
 
 struct pid_waiter {
   pid_t pid_{};
-  int status_{};    // value is valid iff wait() completed
-  errno_t errno_{}; // set to nonzero if any of these C calls failed
+  int status_{}; // value is valid iff wait() completed
+  int errno_{};  // set to nonzero if any of these C calls failed
   bool done_{};
 
   operator pid_t() const { return pid_; }
@@ -266,12 +266,12 @@ struct spawner {
   tool_base& tool_;
   base& base_;
   file_actions fa_{};          // redirects stdout for us
-  char cbuf_[PATH_MAX + 512];  // buffer space for the streambuf:
+  char cbuf_[4 << 10];         // buffer space for the streambuf:
   fd::streambuf sbuf_;         // streambuf interface for the istream:
   fd::istream stream_;         // istream interface from which we can `getline`
   sigchld_enable chld_enable_; // temporarily enables SIGCHLD so `waitpid` works
   pid_waiter pid_{0};          // set during successful `spawn`, can `waitpid` automatically
-  errno_t errno_{};            // set to nonzero if any of these C calls failed
+  int errno_{};                // set to nonzero if any of these C calls failed
 
   bool failed() const { return errno_; }
 
@@ -346,7 +346,7 @@ template <>
 bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<atos>(base&, arena&);
 
 struct llvm_symbolizer : tool_base {
-  constexpr static char const* __default_prog_name = "llvm_symbolizer";
+  constexpr static char const* __default_prog_name = "llvm-symbolizer";
   constexpr static char const* __override_prog_env = "LIBCXX_STACKTRACE_FORCE_LLVM_SYMBOLIZER_PATH";
 
   llvm_symbolizer(base& base, arena& arena) : tool_base{base, arena, __executable_name<llvm_symbolizer>::get()} {}

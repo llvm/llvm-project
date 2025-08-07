@@ -37,8 +37,14 @@ namespace __stacktrace {
 struct _LIBCPP_HIDE_FROM_ABI image;
 
 struct _LIBCPP_EXPORTED_FROM_ABI entry_base {
-  constexpr static size_t __max_sym_len  = 512;
+  constexpr static size_t __max_sym_len = 512;
+#  if defined(PATH_MAX)
   constexpr static size_t __max_file_len = PATH_MAX;
+#  elif defined(MAX_PATH)
+  constexpr static size_t __max_file_len = MAX_PATH;
+#  else
+  constexpr static size_t __max_file_len = (1 << 10);
+#  endif
 
   uintptr_t __addr_{};
   fixed_str<__max_sym_len> __desc_;

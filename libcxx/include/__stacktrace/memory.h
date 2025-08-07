@@ -38,16 +38,11 @@ A few memory-related utilities:
     Uses the caller's provided allocator, so none of these involve heap allocations
     "outside of" the caller-provided allocator.
   * A `str` class, inheriting from `std::string`, ensuring allocations happen via `arena`
-  * A `fixed_str` class, not related to the arena, but instead backed by a `char[n]`
-    array within that same struct, so it doesn't perform any [de]allocations; it only
-    uses its own character array.
 
 A small amount of glue / hacks are done here to allow the rest of the stacktrace-related
 code to use familiar string etc. operations, while encapsulating away the details of where
 memory might come from, since we need to be careful about unexpected allocations.
 */
-
-// clang-format off
 
 struct byte_pool final {
   byte* ptr_;
@@ -55,21 +50,23 @@ struct byte_pool final {
   byte_pool* link_;
   byte* end_;
 
-  byte_pool(byte* __bytes,
-            size_t __size,
-            function<void()> __destroy = [] {},
-            byte_pool* __link = nullptr) noexcept
-    : ptr_(__bytes), destroy_(__destroy), link_(__link), end_(__bytes + __size) {}
+  byte_pool(
+      byte* __bytes, size_t __size, function<void()> __destroy = [] {}, byte_pool* __link = nullptr) noexcept
+      : ptr_(__bytes), destroy_(__destroy), link_(__link), end_(__bytes + __size) {}
 
   byte* operator()(size_t __sz, size_t __align) noexcept {
-    auto __ptr = uintptr_t(ptr_);                         // convert curr ptr to integer, to do math
-    auto __misalign = __ptr % __align;                    // if current ptr not aligned,
-    if (__misalign) { __ptr += (__align - __misalign); }  // waste a few bytes to ensure alignment
-    auto __ret = __ptr;                                   // we would return this aligned position
-    __ptr += __sz;                                        // next object will start here
-    if (__ptr > uintptr_t(end_)) { return nullptr; }      // if this exceeds our space, then fail
-    ptr_ = (byte*) __ptr;                                 // otherwise update current position
-    return (byte*) __ret;                                 // returned aligned position as byte ptr
+    auto __ptr      = uintptr_t(ptr_); // convert curr ptr to integer, to do math
+    auto __misalign = __ptr % __align; // if current ptr not aligned,
+    if (__misalign) {
+      __ptr += (__align - __misalign);
+    } // waste a few bytes to ensure alignment
+    auto __ret = __ptr; // we would return this aligned position
+    __ptr += __sz;      // next object will start here
+    if (__ptr > uintptr_t(end_)) {
+      return nullptr;
+    } // if this exceeds our space, then fail
+    ptr_ = (byte*)__ptr; // otherwise update current position
+    return (byte*)__ret; // returned aligned position as byte ptr
   }
 };
 
@@ -77,21 +74,23 @@ template <size_t _Sz>
 struct stack_bytes final {
   byte bytes_[_Sz];
 
-  ~stack_bytes() = default;
-  stack_bytes() noexcept = default;
+  ~stack_bytes()                  = default;
+  stack_bytes() noexcept          = default;
   stack_bytes(const stack_bytes&) = delete;
-  stack_bytes(stack_bytes&&) = delete;
+  stack_bytes(stack_bytes&&)      = delete;
 
-  byte_pool pool() { return {bytes_, _Sz, []{}, nullptr}; }
+  byte_pool pool() {
+    return {bytes_, _Sz, [] {}, nullptr};
+  }
 };
 
 struct arena {
-  function<byte*(size_t)> new_bytes_;         // new byte-array factory
-  function<void(void*, size_t)> del_bytes_;   // byte-array destroyer
-  byte_pool* curr_pool_;                      // byte pool currently "in effect"
-  byte_pool* next_pool_;                      // allocated (from curr_pool_) but not initialized
-  size_t allocs_ {};                          // number of successful allocations
-  size_t deallocs_ {};                        // incremented on each dealloc; dtor ensures these are equal!
+  function<byte*(size_t)> new_bytes_;       // new byte-array factory
+  function<void(void*, size_t)> del_bytes_; // byte-array destroyer
+  byte_pool* curr_pool_;                    // byte pool currently "in effect"
+  byte_pool* next_pool_;                    // allocated (from curr_pool_) but not initialized
+  size_t allocs_{};                         // number of successful allocations
+  size_t deallocs_{};                       // incremented on each dealloc; dtor ensures these are equal!
 
   // An arena is scoped to a `basic_stacktrace::current` invocation, so this is usable by only one thread.
   // Additionally, it's used internally throughout many function calls, so for convenience, store it here.
@@ -108,11 +107,14 @@ struct arena {
     _LIBCPP_ASSERT(active_arena_ptr_ == this, "different arena unexpectively set as the active one");
     active_arena_ptr_ = nullptr;
     _LIBCPP_ASSERT(deallocs_ == allocs_, "destructed arena still has live objects");
-    while (curr_pool_) { curr_pool_->destroy_(); curr_pool_ = curr_pool_->link_; }
+    while (curr_pool_) {
+      curr_pool_->destroy_();
+      curr_pool_ = curr_pool_->link_;
+    }
   }
 
   arena(auto&& __new_bytes, auto&& __del_bytes, byte_pool& __initial_pool) noexcept
-    : new_bytes_(__new_bytes), del_bytes_(__del_bytes), curr_pool_(&__initial_pool) {
+      : new_bytes_(__new_bytes), del_bytes_(__del_bytes), curr_pool_(&__initial_pool) {
     prep_next_pool();
     _LIBCPP_ASSERT(!active_arena_ptr_, "already an active arena");
     active_arena_ptr_ = this;
@@ -125,10 +127,11 @@ struct arena {
 
   template <class _UA>
   arena(byte_pool& __initial_pool, _UA const& __user_alloc)
-    : arena(
-      [&__user_alloc] (size_t __sz) { return as_byte_alloc(__user_alloc).allocate(__sz); },
-      [&__user_alloc] (void* __ptr, size_t __sz) { return as_byte_alloc(__user_alloc).deallocate((byte*)__ptr, __sz); },
-      __initial_pool) {}
+      : arena([&__user_alloc](size_t __sz) { return as_byte_alloc(__user_alloc).allocate(__sz); },
+              [&__user_alloc](void* __ptr, size_t __sz) {
+                return as_byte_alloc(__user_alloc).deallocate((byte*)__ptr, __sz);
+              },
+              __initial_pool) {}
 
   arena(arena const&)            = delete;
   arena& operator=(arena const&) = delete;
@@ -136,13 +139,13 @@ struct arena {
   void prep_next_pool() noexcept {
     // Allocate (via current pool) a new byte_pool record, while we have enough space.
     // When the current pool runs out of space, this one will be ready to use.
-    next_pool_ = (byte_pool*) (*curr_pool_)(sizeof(byte_pool), alignof(byte_pool));
+    next_pool_ = (byte_pool*)(*curr_pool_)(sizeof(byte_pool), alignof(byte_pool));
     _LIBCPP_ASSERT(next_pool_, "could not allocate next pool");
   }
 
   void expand(size_t __atleast) noexcept {
     constexpr static size_t __k_default_new_pool = 1 << 12;
-    auto __size = max(__atleast, __k_default_new_pool);
+    auto __size                                  = max(__atleast, __k_default_new_pool);
     // "next_pool_" was already allocated, just need to initialize it
     auto* __bytes = new_bytes_(__size);
     _LIBCPP_ASSERT(__bytes, "could not allocate more bytes for arena");
@@ -155,12 +158,14 @@ struct arena {
 
   std::byte* alloc(size_t __size, size_t __align) noexcept {
     auto* __ret = (*curr_pool_)(__size, __align);
-    if (__ret) [[likely]] { goto success; }
+    if (__ret) [[likely]] {
+      goto success;
+    }
     // Need a new pool to accommodate this request + internal structs
     expand(__size + __align + sizeof(byte_pool) + alignof(byte_pool)); // upper bound
     __ret = (*curr_pool_)(__size, __align);
     _LIBCPP_ASSERT(__ret, "arena failed to allocate");
-success:
+  success:
     ++allocs_;
     return __ret;
   }
@@ -179,31 +184,6 @@ struct alloc {
     auto& __arena = arena::get_active();
     __arena.dealloc((std::byte*)__ptr, __n * sizeof(_Tp));
   }
-};
-
-template <typename _Tp, size_t _Sz>
-struct fixed_buf {
-  using value_type = _Tp;
-  template <typename _Up> struct rebind { using other = fixed_buf<_Up, _Sz>; };
-
-  _Tp __buf_[_Sz];
-  size_t __size_;
-  void deallocate(_Tp*, size_t) {}
-  _Tp* allocate(size_t) { return __buf_; }
-};
-
-template <size_t _Sz>
-struct fixed_str : std::basic_string<char, std::char_traits<char>, fixed_buf<char, _Sz>> {
-  using _Base _LIBCPP_NODEBUG = std::basic_string<char, std::char_traits<char>, fixed_buf<char, _Sz>>;
-  using _Base::operator=;
-
-  fixed_buf<char, _Sz> __fb_;
-  fixed_str() : _Base(__fb_) {
-    this->resize(_Sz - 1);
-    this->resize(0);
-  }
-  fixed_str(fixed_str const& __rhs) : fixed_str() { _Base::operator=(__rhs); }
-  fixed_str& operator=(fixed_str const& __rhs) = default;
 };
 
 struct str : std::basic_string<char, std::char_traits<char>, alloc<char>> {
@@ -236,7 +216,47 @@ struct str : std::basic_string<char, std::char_traits<char>, alloc<char>> {
   }
 };
 
-// clang-format on
+/** A string that contains its own fixed-size, fixed-location buffer. */
+template <size_t _Sz>
+struct fixed_str final {
+  size_t __size_{0};
+  char __buf_[_Sz]{0};
+
+  ~fixed_str() = default;
+  fixed_str()  = default;
+
+  size_t size() const { return __size_; }
+  bool empty() const { return !size(); }
+  auto* data(this auto& __self) { return __self.__buf_; }
+  operator std::string_view() const { return {__buf_, __size_}; }
+
+  fixed_str& operator=(std::string_view __sv) {
+    strncpy(__buf_, __sv.data(), std::min(_Sz, __sv.size() + 1));
+    __size_         = __sv.size();
+    __buf_[__size_] = 0;
+    return *this;
+  }
+
+  fixed_str(auto const& __rhs) : fixed_str() { *this = __rhs; }
+  fixed_str& operator=(auto const& __rhs) { return (*this = std::string_view(__rhs)); }
+
+  template <size_t _S2>
+    requires requires { _S2 <= _Sz; }
+  fixed_str& operator=(fixed_str<_S2> const& __rhs) {
+    return (*this = std::string_view(__rhs));
+  }
+
+  template <size_t _S2>
+    requires requires { _S2 <= _Sz; }
+  fixed_str(fixed_str<_S2> const& __rhs) {
+    *this = std::string_view(__rhs);
+  }
+
+  fixed_str(fixed_str const& __rhs) { *this = std::string_view(__rhs); }
+  fixed_str& operator=(fixed_str const& __rhs) { return (*this = std::string_view(__rhs)); }
+
+  friend std::ostream& operator<<(std::ostream& __os, fixed_str const& __f) { return __os << std::string_view(__f); }
+};
 
 } // namespace __stacktrace
 _LIBCPP_END_NAMESPACE_STD

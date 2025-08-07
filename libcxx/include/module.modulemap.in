@@ -2012,6 +2012,7 @@ module std [system] {
 
   module stacktrace {
     module basic_stacktrace       { header "__stacktrace/basic_stacktrace.h" }
+    module images                 { header "__stacktrace/images.h" }
     module memory                 { header "__stacktrace/memory.h" }
     module stacktrace_entry       { header "__stacktrace/stacktrace_entry.h" }
 
