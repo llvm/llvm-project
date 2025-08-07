@@ -1105,7 +1105,7 @@ G_TRAP, G_DEBUGTRAP, G_UBSANTRAP
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Represents :ref:`llvm.trap <llvm.trap>`, :ref:`llvm.debugtrap <llvm.debugtrap>`
-and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target dependent
+and :ref:`llvm.ubsantrap <llvm.ubsantrap>` that generate a target-dependent
 trap instructions.
 
 .. code-block:: none

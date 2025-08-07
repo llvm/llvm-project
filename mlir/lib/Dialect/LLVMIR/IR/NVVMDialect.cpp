@@ -813,14 +813,25 @@ LogicalResult NVVM::LdMatrixOp::verify() {
 }
 
 LogicalResult NVVM::StMatrixOp::verify() {
-  unsigned addressSpace =
-      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
-  if (addressSpace != NVVM::kSharedMemorySpace)
-    return emitOpError("expected source pointer in memory space 3");
-
   int numMatrix = getSources().size();
   if (numMatrix != 1 && numMatrix != 2 && numMatrix != 4)
     return emitOpError("expected num attribute to be 1, 2 or 4");
+
+  int m = getShape().getM(), n = getShape().getN();
+  if (m == 8 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B16) {
+      return emitOpError("expected element type to be B16 for 8x8 matrix");
+    }
+  } else if (m == 16 && n == 8) {
+    if (getEltType() != NVVM::LdStMatrixEltType::B8) {
+      return emitOpError("expected element type to be B8 for 16x8 matrix");
+    }
+    if (getLayout() != NVVM::MMALayout::col) {
+      return emitOpError("expected layout to be col for 16x8 matrix");
+    }
+  } else {
+    return emitOpError("expected shape to be 8x8 or 16x8");
+  }
 
   return success();
 }

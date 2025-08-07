@@ -72,6 +72,8 @@ struct ol_queue_impl_t {
 struct ol_event_impl_t {
   ol_event_impl_t(void *EventInfo, ol_queue_handle_t Queue)
       : EventInfo(EventInfo), Queue(Queue) {}
+  // EventInfo may be null, in which case the event should be considered always
+  // complete
   void *EventInfo;
   ol_queue_handle_t Queue;
 };
@@ -326,6 +328,18 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   }
 
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE: {
+    // Uint32 values
+    if (!std::holds_alternative<uint64_t>(Entry->Value))
+      return makeError(ErrorCode::BACKEND_FAILURE,
+                       "plugin returned incorrect type");
+    auto Value = std::get<uint64_t>(Entry->Value);
+    if (Value > std::numeric_limits<uint32_t>::max())
+      return makeError(ErrorCode::BACKEND_FAILURE,
+                       "plugin returned out of range device info");
+    return Info.write(static_cast<uint32_t>(Value));
+  }
+
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION: {
     // {x, y, z} triples
     ol_dimensions_t Out{0, 0, 0};
 
@@ -375,6 +389,8 @@ Error olGetDeviceInfoImplDetailHost(ol_device_handle_t Device,
   case OL_DEVICE_INFO_DRIVER_VERSION:
     return Info.writeString(LLVM_VERSION_STRING);
   case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE:
+    return Info.write<uint64_t>(1);
+  case OL_DEVICE_INFO_MAX_WORK_GROUP_SIZE_PER_DIMENSION:
     return Info.write<ol_dimensions_t>(ol_dimensions_t{1, 1, 1});
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
@@ -495,8 +511,8 @@ Error olWaitEvents_impl(ol_queue_handle_t Queue, ol_event_handle_t *Events,
       return Plugin::error(ErrorCode::INVALID_NULL_HANDLE,
                            "olWaitEvents asked to wait on a NULL event");
 
-    // Do nothing if the event is for this queue
-    if (Event->Queue == Queue)
+    // Do nothing if the event is for this queue or the event is always complete
+    if (Event->Queue == Queue || !Event->EventInfo)
       continue;
 
     if (auto Err = Device->waitEvent(Event->EventInfo, Queue->AsyncInfo))
@@ -534,6 +550,10 @@ Error olGetQueueInfoSize_impl(ol_queue_handle_t Queue, ol_queue_info_t PropName,
 }
 
 Error olSyncEvent_impl(ol_event_handle_t Event) {
+  if (!Event->EventInfo)
+    // Event always complete
+    return Plugin::success();
+
   if (auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo))
     return Res;
 
@@ -541,8 +561,9 @@ Error olSyncEvent_impl(ol_event_handle_t Event) {
 }
 
 Error olDestroyEvent_impl(ol_event_handle_t Event) {
-  if (auto Res = Event->Queue->Device->Device->destroyEvent(Event->EventInfo))
-    return Res;
+  if (Event->EventInfo)
+    if (auto Res = Event->Queue->Device->Device->destroyEvent(Event->EventInfo))
+      return Res;
 
   return olDestroy(Event);
 }
@@ -576,7 +597,16 @@ Error olGetEventInfoSize_impl(ol_event_handle_t Event, ol_event_info_t PropName,
 }
 
 Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_handle_t *EventOut) {
+  auto Pending = Queue->Device->Device->hasPendingWork(Queue->AsyncInfo);
+  if (auto Err = Pending.takeError())
+    return Err;
+
   *EventOut = new ol_event_impl_t(nullptr, Queue);
+  if (!*Pending)
+    // Queue is empty, don't record an event and consider the event always
+    // complete
+    return Plugin::success();
+
   if (auto Res = Queue->Device->Device->createEvent(&(*EventOut)->EventInfo))
     return Res;
 
