@@ -19,7 +19,7 @@ set(OFFLOAD_UNITTESTS_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 function(add_offload_test_device_code test_filename test_name)
   cmake_parse_arguments(
-    "ARGS" "WITH_DEVICE_MATH_LIBS" "" "" ${ARGN})
+    "OFFLOAD_TESTS" "WITH_DEVICE_MATH_LIBS" "" "" ${ARGN})
 
   set(SRC_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${test_filename})
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
@@ -40,9 +40,9 @@ function(add_offload_test_device_code test_filename test_name)
     endif()
 
     if(nvptx_arch AND CUDAToolkit_FOUND)
-      set(nvptx_compile_flags ${ARGS_UNPARSED_ARGUMENTS})
+      set(nvptx_compile_flags ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
 
-      if(ARGS_WITH_DEVICE_MATH_LIBS)
+      if(OFFLOAD_TESTS_WITH_DEVICE_MATH_LIBS)
         file(GLOB libdevice_paths "${CUDAToolkit_LIBRARY_ROOT}/nvvm/libdevice/libdevice.*.bc")
         if(libdevice_paths)
           list(GET libdevice_paths 0 libdevice_path)
@@ -77,9 +77,9 @@ function(add_offload_test_device_code test_filename test_name)
     endif()
 
     if(amdgpu_arch)
-      set(amdgpu_compile_flags ${ARGS_UNPARSED_ARGUMENTS})
+      set(amdgpu_compile_flags ${OFFLOAD_TESTS_UNPARSED_ARGUMENTS})
 
-      if(ARGS_WITH_DEVICE_MATH_LIBS)
+      if(OFFLOAD_TESTS_WITH_DEVICE_MATH_LIBS)
         find_package(AMDDeviceLibs QUIET HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
         if(AMDDeviceLibs_FOUND)
           get_target_property(ocml_path ocml IMPORTED_LOCATION)
