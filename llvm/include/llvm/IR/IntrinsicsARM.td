@@ -299,13 +299,12 @@ def int_arm_ldaexd : Intrinsic<[llvm_i32_ty, llvm_i32_ty], [llvm_ptr_ty]>;
 //===----------------------------------------------------------------------===//
 // Data barrier instructions
 
-// TODO: Add applicable default attributes.
 def int_arm_dmb : ClangBuiltin<"__builtin_arm_dmb">, MSBuiltin<"__dmb">,
-                  Intrinsic<[], [llvm_i32_ty]>;
+                  Intrinsic<[], [llvm_i32_ty], [IntrNoFree, IntrWillReturn]>;
 def int_arm_dsb : ClangBuiltin<"__builtin_arm_dsb">, MSBuiltin<"__dsb">,
-                  Intrinsic<[], [llvm_i32_ty]>;
+                  Intrinsic<[], [llvm_i32_ty], [IntrNoFree, IntrWillReturn]>;
 def int_arm_isb : ClangBuiltin<"__builtin_arm_isb">, MSBuiltin<"__isb">,
-                  Intrinsic<[], [llvm_i32_ty]>;
+                  Intrinsic<[], [llvm_i32_ty], [IntrNoFree, IntrWillReturn]>;
 
 //===----------------------------------------------------------------------===//
 // VFP
