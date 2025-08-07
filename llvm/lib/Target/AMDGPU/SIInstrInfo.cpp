@@ -4272,8 +4272,8 @@ bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
     unsigned AS = Memop->getAddrSpace();
     if (AS == AMDGPUAS::FLAT_ADDRESS) {
       const MDNode *MD = Memop->getAAInfo().NoAliasAddrSpace;
-      return !(MD && AMDGPU::hasValueInRangeLikeMetadata(
-                         *MD, AMDGPUAS::PRIVATE_ADDRESS));
+      return !MD || !AMDGPU::hasValueInRangeLikeMetadata(
+                        *MD, AMDGPUAS::PRIVATE_ADDRESS);
     }
     return AS == AMDGPUAS::PRIVATE_ADDRESS;
   });
