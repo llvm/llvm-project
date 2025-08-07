@@ -99,6 +99,7 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
               SPIRVType *ExtType = GR->getOrCreateSPIRVType(
                   Const->getType(), MIB, SPIRV::AccessQualifier::ReadWrite,
                   true);
+              assert(SrcMI && "Expected source instruction to be valid");
               SrcMI->setDesc(STI.getInstrInfo()->get(SPIRV::OpConstantNull));
               SrcMI->addOperand(MachineOperand::CreateReg(
                   GR->getSPIRVTypeID(ExtType), false));

@@ -12,6 +12,7 @@
 #include "hdr/types/char32_t.h"
 #include "hdr/types/char8_t.h"
 #include "hdr/types/size_t.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/wchar/character_converter.h"
@@ -53,9 +54,7 @@ public:
                   size_t srclen = SIZE_MAX)
       : cr(ps), src(s), src_len(srclen), src_idx(0), num_to_write(dstlen) {}
 
-  // TODO: following functions are almost identical
-  // look into templating CharacterConverter pop functions
-  ErrorOr<char32_t> popUTF32() {
+  template <typename CharType> ErrorOr<CharType> pop() {
     if (num_to_write == 0)
       return Error(-1);
 
@@ -64,7 +63,7 @@ public:
       if (!src_elements_read.has_value())
         return Error(src_elements_read.error());
 
-      if (cr.sizeAsUTF32() > num_to_write) {
+      if (cr.sizeAs<CharType>() > num_to_write) {
         cr.clear();
         return Error(-1);
       }
@@ -72,34 +71,9 @@ public:
       src_idx += src_elements_read.value();
     }
 
-    auto out = cr.pop_utf32();
-    if (out.has_value() && out.value() == L'\0')
-      src_len = src_idx;
-
-    num_to_write--;
-
-    return out;
-  }
-
-  ErrorOr<char8_t> popUTF8() {
-    if (num_to_write == 0)
-      return Error(-1);
-
-    if (cr.isEmpty() || src_idx == 0) {
-      auto src_elements_read = pushFullCharacter();
-      if (!src_elements_read.has_value())
-        return Error(src_elements_read.error());
-
-      if (cr.sizeAsUTF8() > num_to_write) {
-        cr.clear();
-        return Error(-1);
-      }
-
-      src_idx += src_elements_read.value();
-    }
-
-    auto out = cr.pop_utf8();
-    if (out.has_value() && out.value() == '\0')
+    ErrorOr<CharType> out = cr.pop<CharType>();
+    // if out isn't null terminator or an error
+    if (out.has_value() && out.value() == 0)
       src_len = src_idx;
 
     num_to_write--;
