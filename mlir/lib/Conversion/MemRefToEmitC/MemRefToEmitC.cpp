@@ -20,6 +20,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
@@ -316,36 +317,26 @@ struct ConvertReinterpretCastOp final
 
       return ptr;
     };
-    auto [strides, offset] = targetMemRefType.getStridesAndOffset();
-    // Value offsetValue = rewriter.create<emitc::ConstantOp>(
-    //     loc, rewriter.getIndexType(), rewriter.getIndexAttr(offset));
 
     auto srcPtr = createPointerFromEmitcArray(srcArrayValue);
-    // emitc::PointerType targetPointerType =
-    //     emitc::PointerType::get(srcArrayValue.getType().getElementType());
+    // 1. Create a TypeAttr for the target type.
+    TypeAttr targetTypeAttr =
+        TypeAttr::get(emitc::PointerType::get(targetInEmitC));
+    IntegerAttr resty = rewriter.getIndexAttr(0);
 
-    auto dimensions = targetMemRefType.getShape();
-    std::string reinterpretCastName = llvm::formatv(
-        "reinterpret_cast<{0}(*)", srcArrayValue.getType().getElementType());
-    std::string dimensionsStr;
-    for (auto dim : dimensions) {
-      dimensionsStr += llvm::formatv("[{0}]", dim);
-    }
-    reinterpretCastName += llvm::formatv("{0}>", dimensionsStr);
-    reinterpretCastName += ">";
+    // 2. Create an ArrayAttr with the TypeAttr. This will be the
+    // templateArgsAttr.
+    ArrayAttr templateArgsAttr = rewriter.getArrayAttr({targetTypeAttr});
 
-    reinterpretCastName += llvm::formatv("{0}", srcPtr->getResult(0));
+    auto reinterpretCastCall = rewriter.create<emitc::CallOpaqueOp>(
+        loc,
+        /*result types=*/TypeRange{emitc::PointerType::get(targetInEmitC)},
+        /*callee=*/"reinterpret_cast",
+        /*args*/ rewriter.getArrayAttr({resty}),
+        /*template_args=*/templateArgsAttr,
+        /*operands=*/ValueRange{srcPtr.getResult()});
 
-    std::string outputStr = llvm::formatv(
-        "{0}(*){1}", srcArrayValue.getType().getElementType(), dimensionsStr);
-    auto outputType = emitc::PointerType::get(
-        emitc::OpaqueType::get(rewriter.getContext(), outputStr));
-
-    emitc::ConstantOp reinterpretOp = rewriter.create<emitc::ConstantOp>(
-        loc, outputType,
-        emitc::OpaqueAttr::get(rewriter.getContext(), reinterpretCastName));
-
-    rewriter.replaceOp(castOp, reinterpretOp.getResult());
+    rewriter.replaceOp(castOp, reinterpretCastCall.getResults());
     return success();
   }
 };

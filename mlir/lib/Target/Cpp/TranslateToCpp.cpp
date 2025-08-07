@@ -1848,8 +1848,17 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
   if (auto lType = dyn_cast<emitc::LValueType>(type))
     return emitType(loc, lType.getValueType());
   if (auto pType = dyn_cast<emitc::PointerType>(type)) {
-    if (isa<ArrayType>(pType.getPointee()))
-      return emitError(loc, "cannot emit pointer to array type ") << type;
+    // Check if the pointee is an array type.
+    if (auto aType = dyn_cast<emitc::ArrayType>(pType.getPointee())) {
+      // Handle pointer to array: `element_type (*)[dim]`.
+      if (failed(emitType(loc, aType.getElementType())))
+        return failure();
+      os << "(*)";
+      for (auto dim : aType.getShape())
+        os << "[" << dim << "]";
+      return success();
+    }
+    // Handle standard pointer: `element_type*`.
     if (failed(emitType(loc, pType.getPointee())))
       return failure();
     os << "*";
