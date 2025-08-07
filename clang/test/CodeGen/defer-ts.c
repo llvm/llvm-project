@@ -296,3 +296,19 @@ void defer_stmt(int q) {
   // CHECK:   ret void
   defer if (q == 3) x(42);
 }
+
+// CHECK-LABEL: define {{.*}} void @defer_defer()
+void defer_defer() {
+  // CHECK: entry:
+  // CHECK:   call void @x(i32 {{.*}} 0)
+  // CHECK:   call void @x(i32 {{.*}} 1)
+  // CHECK:   call void @x(i32 {{.*}} 2)
+  // CHECK:   call void @x(i32 {{.*}} 3)
+  // CHECK:   call void @x(i32 {{.*}} 4)
+  // CHECK:   ret void
+  defer x(4);
+  defer defer x(3);
+  defer defer defer x(2);
+  defer defer defer defer x(1);
+  x(0);
+}
