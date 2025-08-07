@@ -125,7 +125,7 @@ struct AArch64OutgoingValueAssigner
     bool UseVarArgsCCForFixed = IsCalleeWin && State.isVarArg();
 
     bool Res;
-    if (Info.IsFixed && !UseVarArgsCCForFixed) {
+    if (!Flags.isVarArg() && !UseVarArgsCCForFixed) {
       if (!IsReturn)
         applyStackPassedSmallTypeDAGHack(OrigVT, ValVT, LocVT);
       Res = AssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State);
@@ -361,7 +361,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     unsigned MaxSize = MemTy.getSizeInBytes() * 8;
     // For varargs, we always want to extend them to 8 bytes, in which case
     // we disable setting a max.
-    if (!Arg.IsFixed)
+    if (Arg.Flags[0].isVarArg())
       MaxSize = 0;
 
     Register ValVReg = Arg.Regs[RegIndex];
