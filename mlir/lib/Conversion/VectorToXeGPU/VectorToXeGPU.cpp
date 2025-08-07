@@ -296,9 +296,9 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
 //   %local_offsets = arith.add %22, %23
 //   %orig_offset = %block_id_y * 4x2x6x32 // consider using affine map
 //   %offsets =  orig_offset + local_offsets
-static Value computeGatherOffsets(VectorTransferOpInterface xferOp,
-                                  PatternRewriter &rewriter,
-                                  ArrayRef<Value> strides) {
+static Value computeOffsets(VectorTransferOpInterface xferOp,
+                            PatternRewriter &rewriter,
+                            ArrayRef<Value> strides) {
   Location loc = xferOp.getLoc();
   VectorType vectorType = xferOp.getVectorType();
   SmallVector<Value> indices(xferOp.getIndices().begin(),
@@ -462,7 +462,7 @@ LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
   if (strides.empty())
     return rewriter.notifyMatchFailure(readOp, "Failed to compute strides");
 
-  Value localOffsets = computeGatherOffsets(readOp, rewriter, strides);
+  Value localOffsets = computeOffsets(readOp, rewriter, strides);
 
   Value flatMemref = collapseMemrefTo1D(readOp, rewriter);
 
@@ -478,7 +478,7 @@ LogicalResult lowerTransferWriteToStoreOp(vector::TransferWriteOp writeOp,
 
   SmallVector<Value> strides = computeStrides(writeOp, rewriter);
 
-  Value localOffsets = computeGatherOffsets(writeOp, rewriter, strides);
+  Value localOffsets = computeOffsets(writeOp, rewriter, strides);
 
   Value flatMemref = collapseMemrefTo1D(writeOp, rewriter);
 
