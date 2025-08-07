@@ -6348,6 +6348,7 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::ICmp:
   case Instruction::FCmp: {
     Type *ValTy = I->getOperand(0)->getType();
+    InstructionCost Cost = 0;
 
     if (canTruncateToMinimalBitwidth(I, VF)) {
       [[maybe_unused]] Instruction *Op0AsInstruction =
@@ -6359,11 +6360,22 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       ValTy = IntegerType::get(ValTy->getContext(), MinBWs[I]);
     }
 
+    // If the Cmp instruction has multiple uses in the loop, it
+    // will generate a scalar Cmp for latch and a vector Cmp for other uses.
+    if (I == TheLoop->getLatchCmpInst() && !I->hasOneUse())
+      Cost += TTI.getCmpSelInstrCost(I->getOpcode(), ValTy,
+                                     CmpInst::makeCmpResultType(ValTy),
+                                     cast<CmpInst>(I)->getPredicate(), CostKind,
+                                     {TTI::OK_AnyValue, TTI::OP_None},
+                                     {TTI::OK_AnyValue, TTI::OP_None}, I);
+
     VectorTy = toVectorTy(ValTy, VF);
-    return TTI.getCmpSelInstrCost(
-        I->getOpcode(), VectorTy, CmpInst::makeCmpResultType(VectorTy),
-        cast<CmpInst>(I)->getPredicate(), CostKind,
-        {TTI::OK_AnyValue, TTI::OP_None}, {TTI::OK_AnyValue, TTI::OP_None}, I);
+    return Cost + TTI.getCmpSelInstrCost(I->getOpcode(), VectorTy,
+                                         CmpInst::makeCmpResultType(VectorTy),
+                                         cast<CmpInst>(I)->getPredicate(),
+                                         CostKind,
+                                         {TTI::OK_AnyValue, TTI::OP_None},
+                                         {TTI::OK_AnyValue, TTI::OP_None}, I);
   }
   case Instruction::Store:
   case Instruction::Load: {
@@ -6903,46 +6915,6 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
       });
       Cost += InductionCost;
       CostCtx.SkipCostComputation.insert(IVInst);
-    }
-  }
-
-  /// Compute the cost of all exiting conditions of the loop using the legacy
-  /// cost model. This is to match the legacy behavior, which adds the cost of
-  /// all exit conditions. Note that this over-estimates the cost, as there will
-  /// be a single condition to control the vector loop.
-  SmallVector<BasicBlock *> Exiting;
-  CM.TheLoop->getExitingBlocks(Exiting);
-  SetVector<Instruction *> ExitInstrs;
-  // Collect all exit conditions.
-  for (BasicBlock *EB : Exiting) {
-    auto *Term = dyn_cast<BranchInst>(EB->getTerminator());
-    if (!Term || CostCtx.skipCostComputation(Term, VF.isVector()))
-      continue;
-    if (auto *CondI = dyn_cast<Instruction>(Term->getOperand(0))) {
-      ExitInstrs.insert(CondI);
-    }
-  }
-  // Compute the cost of all instructions only feeding the exit conditions.
-  for (unsigned I = 0; I != ExitInstrs.size(); ++I) {
-    Instruction *CondI = ExitInstrs[I];
-    if (!OrigLoop->contains(CondI) ||
-        !CostCtx.SkipCostComputation.insert(CondI).second)
-      continue;
-    InstructionCost CondICost = CostCtx.getLegacyCost(CondI, VF);
-    LLVM_DEBUG({
-      dbgs() << "Cost of " << CondICost << " for VF " << VF
-             << ": exit condition instruction " << *CondI << "\n";
-    });
-    Cost += CondICost;
-    for (Value *Op : CondI->operands()) {
-      auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI || CostCtx.skipCostComputation(OpI, VF.isVector()) ||
-          any_of(OpI->users(), [&ExitInstrs, this](User *U) {
-            return OrigLoop->contains(cast<Instruction>(U)->getParent()) &&
-                   !ExitInstrs.contains(cast<Instruction>(U));
-          }))
-        continue;
-      ExitInstrs.insert(OpI);
     }
   }
 

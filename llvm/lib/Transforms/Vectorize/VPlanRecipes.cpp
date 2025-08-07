@@ -1027,6 +1027,36 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
+  case VPInstruction::BranchOnCount: {
+    Type *ValTy = Ctx.Types.inferScalarType(getOperand(0));
+
+    // If the vector loop only executed once (VF == original trip count), ignore
+    // the cost of cmp.
+    // TODO: We can remove this after hoist `unrollByUF` and
+    // `optimizeForVFandUF` which will optimize BranchOnCount out.
+    auto TC = dyn_cast_if_present<ConstantInt>(
+        getParent()->getPlan()->getTripCount()->getUnderlyingValue());
+    if (TC && VF.isFixed() && TC->getZExtValue() == VF.getFixedValue())
+      return 0;
+
+    // BranchOnCount will generate icmp_eq + br instructions and the cost of
+    // branch will be calculated in VPRegionBlock.
+    return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ValTy, nullptr,
+                                      CmpInst::ICMP_EQ, Ctx.CostKind);
+  }
+  case VPInstruction::BranchOnCond: {
+    // BranchOnCond is free since the branch cost is already calculated by VPBB.
+    if (vputils::onlyFirstLaneUsed(getOperand(0)))
+      return 0;
+
+    // Otherwise, BranchOnCond will generate `extractelement` to extract the
+    // condition from vector type.
+    return Ctx.TTI.getVectorInstrCost(
+        Instruction::ExtractElement,
+        cast<VectorType>(
+            toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF)),
+        Ctx.CostKind, 0, nullptr, nullptr);
+  }
   case VPInstruction::FirstActiveLane: {
     Type *ScalarTy = Ctx.Types.inferScalarType(getOperand(0));
     if (VF.isScalar())
@@ -1098,6 +1128,27 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
                                   VectorTy, /*Mask=*/{}, Ctx.CostKind,
                                   /*Index=*/0);
+  }
+  case VPInstruction::Not: {
+    Type *RetTy = Ctx.Types.inferScalarType(getOperand(0));
+    if (!vputils::onlyFirstLaneUsed(this))
+      RetTy = toVectorTy(RetTy, VF);
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Xor, RetTy,
+                                          Ctx.CostKind);
+  }
+  case Instruction::ICmp:
+  case Instruction::FCmp: {
+    Instruction *CtxI = dyn_cast_or_null<Instruction>(getUnderlyingValue());
+    Type *SrcTy = Ctx.Types.inferScalarType(getOperand(0));
+    Type *RetTy = Ctx.Types.inferScalarType(this);
+    if (!vputils::onlyFirstLaneUsed(this)) {
+      SrcTy = toVectorTy(SrcTy, VF);
+      RetTy = toVectorTy(RetTy, VF);
+    }
+    return Ctx.TTI.getCmpSelInstrCost(Opcode, SrcTy, RetTy, getPredicate(),
+                                      Ctx.CostKind,
+                                      {TTI::OK_AnyValue, TTI::OP_None},
+                                      {TTI::OK_AnyValue, TTI::OP_None}, CtxI);
   }
   case VPInstruction::ExtractLastLane: {
     // Add on the cost of extracting the element.
