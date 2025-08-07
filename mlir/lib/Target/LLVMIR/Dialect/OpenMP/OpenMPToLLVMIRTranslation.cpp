@@ -3205,6 +3205,23 @@ llvm::AtomicRMWInst::BinOp convertBinOpToAtomic(Operation &op) {
       .Default(llvm::AtomicRMWInst::BinOp::BAD_BINOP);
 }
 
+void extractAtomicControlFlags(omp::AtomicUpdateOp atomicUpdateOp,
+                               bool &isIgnoreDenormalMode,
+                               bool &isFineGrainedMemory,
+                               bool &isRemoteMemory) {
+  isIgnoreDenormalMode = false;
+  isFineGrainedMemory = false;
+  isRemoteMemory = false;
+  if (atomicUpdateOp &&
+      atomicUpdateOp->hasAttr(atomicUpdateOp.getAtomicControlAttrName())) {
+    mlir::omp::AtomicControlAttr atomicControlAttr =
+        atomicUpdateOp.getAtomicControlAttr();
+    isIgnoreDenormalMode = atomicControlAttr.getIgnoreDenormalMode();
+    isFineGrainedMemory = atomicControlAttr.getFineGrainedMemory();
+    isRemoteMemory = atomicControlAttr.getRemoteMemory();
+  }
+}
+
 /// Converts an OpenMP atomic update operation using OpenMPIRBuilder.
 static LogicalResult
 convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
@@ -3269,17 +3286,11 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
     return moduleTranslation.lookupValue(yieldop.getResults()[0]);
   };
 
-  bool isIgnoreDenormalMode = false;
-  bool isFineGrainedMemory = false;
-  bool isRemoteMemory = false;
-  if (opInst->hasAttr(opInst.getAtomicControlAttrName())) {
-    mlir::omp::AtomicControlAttr atomicControlAttr =
-        opInst.getAtomicControlAttr();
-    isIgnoreDenormalMode = atomicControlAttr.getIgnoreDenormalMode();
-    isFineGrainedMemory = atomicControlAttr.getFineGrainedMemory();
-    isRemoteMemory = atomicControlAttr.getRemoteMemory();
-  }
-
+  bool isIgnoreDenormalMode;
+  bool isFineGrainedMemory;
+  bool isRemoteMemory;
+  extractAtomicControlFlags(opInst, isIgnoreDenormalMode, isFineGrainedMemory,
+                            isRemoteMemory);
   // Handle ambiguous alloca, if any.
   auto allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
@@ -3376,18 +3387,11 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     return moduleTranslation.lookupValue(yieldop.getResults()[0]);
   };
 
-  bool isIgnoreDenormalMode = false;
-  bool isFineGrainedMemory = false;
-  bool isRemoteMemory = false;
-  if (atomicUpdateOp &&
-      atomicUpdateOp->hasAttr(atomicUpdateOp.getAtomicControlAttrName())) {
-    mlir::omp::AtomicControlAttr atomicControlAttr =
-        atomicUpdateOp.getAtomicControlAttr();
-    isIgnoreDenormalMode = atomicControlAttr.getIgnoreDenormalMode();
-    isFineGrainedMemory = atomicControlAttr.getFineGrainedMemory();
-    isRemoteMemory = atomicControlAttr.getRemoteMemory();
-  }
-
+  bool isIgnoreDenormalMode;
+  bool isFineGrainedMemory;
+  bool isRemoteMemory;
+  extractAtomicControlFlags(atomicUpdateOp, isIgnoreDenormalMode,
+                            isFineGrainedMemory, isRemoteMemory);
   // Handle ambiguous alloca, if any.
   auto allocaIP = findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
