@@ -13,35 +13,12 @@
 # run only the relevant tests.
 #
 
-set -ex
-set -o pipefail
-
-MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
-BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
-
-rm -rf "${BUILD_DIR}"
-
-sccache --zero-stats
-function at-exit {
-  retcode=$?
-
-  mkdir -p artifacts
-  sccache --show-stats >> artifacts/sccache_stats.txt
-  cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
-  cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
-
-  # If building fails there will be no results files.
-  shopt -s nullglob
-    
-  python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py ":window: Windows x64 Test Results" \
-    $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
-}
-trap at-exit EXIT
+source .ci/utils.sh
 
 projects="${1}"
 targets="${2}"
 
-echo "::group::cmake"
+start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
 export CC=cl
@@ -71,10 +48,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO"
 
-echo "::endgroup::"
-echo "::group::ninja"
+start-group "ninja"
 
 # Targets are not escaped as they are passed as separate arguments.
 ninja -C "${BUILD_DIR}" -k 0 ${targets}
-
-echo "::endgroup"

@@ -117,7 +117,7 @@ define void @uniform_load(ptr noalias nocapture %a, ptr noalias nocapture %b, i6
 ; TF-SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; TF-SCALABLE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TF-SCALABLE:       [[FOR_BODY]]:
-; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; TF-SCALABLE-NEXT:    [[V:%.*]] = load i64, ptr [[B]], align 8
 ; TF-SCALABLE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; TF-SCALABLE-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
@@ -439,7 +439,7 @@ define void @conditional_uniform_load(ptr noalias nocapture %a, ptr noalias noca
 ; TF-SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; TF-SCALABLE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TF-SCALABLE:       [[FOR_BODY]]:
-; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
 ; TF-SCALABLE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[IV]], 10
 ; TF-SCALABLE-NEXT:    br i1 [[CMP]], label %[[DO_LOAD:.*]], label %[[LATCH]]
 ; TF-SCALABLE:       [[DO_LOAD]]:
@@ -589,7 +589,7 @@ define void @uniform_load_unaligned(ptr noalias nocapture %a, ptr noalias nocapt
 ; TF-SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; TF-SCALABLE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TF-SCALABLE:       [[FOR_BODY]]:
-; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; TF-SCALABLE-NEXT:    [[V:%.*]] = load i64, ptr [[B]], align 1
 ; TF-SCALABLE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; TF-SCALABLE-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
@@ -726,7 +726,7 @@ define void @uniform_store(ptr noalias nocapture %a, ptr noalias nocapture %b, i
 ; TF-SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; TF-SCALABLE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TF-SCALABLE:       [[FOR_BODY]]:
-; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; TF-SCALABLE-NEXT:    store i64 [[V]], ptr [[B]], align 8
 ; TF-SCALABLE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; TF-SCALABLE-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
@@ -890,7 +890,7 @@ define void @uniform_store_of_loop_varying(ptr noalias nocapture %a, ptr noalias
 ; TF-SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; TF-SCALABLE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TF-SCALABLE:       [[FOR_BODY]]:
-; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; TF-SCALABLE-NEXT:    store i64 [[IV]], ptr [[B]], align 8
 ; TF-SCALABLE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; TF-SCALABLE-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
@@ -1068,7 +1068,7 @@ define void @conditional_uniform_store(ptr noalias nocapture %a, ptr noalias noc
 ; TF-SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; TF-SCALABLE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TF-SCALABLE:       [[FOR_BODY]]:
-; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
 ; TF-SCALABLE-NEXT:    [[CMP:%.*]] = icmp ugt i64 [[IV]], 10
 ; TF-SCALABLE-NEXT:    br i1 [[CMP]], label %[[DO_STORE:.*]], label %[[LATCH]]
 ; TF-SCALABLE:       [[DO_STORE]]:
@@ -1216,7 +1216,7 @@ define void @uniform_store_unaligned(ptr noalias nocapture %a, ptr noalias nocap
 ; TF-SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; TF-SCALABLE-NEXT:    br label %[[FOR_BODY:.*]]
 ; TF-SCALABLE:       [[FOR_BODY]]:
-; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; TF-SCALABLE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; TF-SCALABLE-NEXT:    store i64 [[V]], ptr [[B]], align 1
 ; TF-SCALABLE-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; TF-SCALABLE-NEXT:    store i64 [[V]], ptr [[ARRAYIDX]], align 8
