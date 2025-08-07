@@ -13659,35 +13659,6 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
-  // Fold the fneg of a vselect into the v2 vselect operands.
-  // xor (vselect c, a, b), 0x80000000 ->
-  //   bitcast (vselect c, (fneg (bitcast a)), (fneg (bitcast b)))
-  if (VT == MVT::v2i32 && LHS.getNumOperands() > 1) {
-
-    const ConstantSDNode *CRHS0 = dyn_cast<ConstantSDNode>(RHS.getOperand(0));
-    const ConstantSDNode *CRHS1 = dyn_cast<ConstantSDNode>(RHS.getOperand(1));
-    SDValue LHS_0 = LHS.getOperand(0);
-    SDValue LHS_1 = LHS.getOperand(1);
-
-    if (LHS.getOpcode() == ISD::VSELECT && CRHS0 &&
-        CRHS0->getAPIntValue().isSignMask() &&
-        shouldFoldFNegIntoSrc(N, LHS_0) && CRHS1 &&
-        CRHS1->getAPIntValue().isSignMask() &&
-        shouldFoldFNegIntoSrc(N, LHS_1)) {
-
-      SDLoc DL(N);
-      SDValue CastLHS =
-          DAG.getNode(ISD::BITCAST, DL, MVT::v2f32, LHS->getOperand(1));
-      SDValue CastRHS =
-          DAG.getNode(ISD::BITCAST, DL, MVT::v2f32, LHS->getOperand(2));
-      SDValue FNegLHS = DAG.getNode(ISD::FNEG, DL, MVT::v2f32, CastLHS);
-      SDValue FNegRHS = DAG.getNode(ISD::FNEG, DL, MVT::v2f32, CastRHS);
-      SDValue NewSelect = DAG.getNode(ISD::VSELECT, DL, MVT::v2f32,
-                                      LHS->getOperand(0), FNegLHS, FNegRHS);
-      return DAG.getNode(ISD::BITCAST, DL, VT, NewSelect);
-    }
-  }
-
   const ConstantSDNode *CRHS = dyn_cast<ConstantSDNode>(RHS);
 
   if (CRHS && VT == MVT::i64) {
@@ -13698,24 +13669,24 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
 
   // Make sure to apply the 64-bit constant splitting fold before trying to fold
   // fneg-like xors into 64-bit select.
-  if (LHS.getOpcode() == ISD::SELECT && VT == MVT::i32) {
-    // This looks like an fneg, try to fold as a source modifier.
-    if (CRHS && CRHS->getAPIntValue().isSignMask() &&
-        shouldFoldFNegIntoSrc(N, LHS)) {
-      // xor (select c, a, b), 0x80000000 ->
-      //   bitcast (select c, (fneg (bitcast a)), (fneg (bitcast b)))
-      SDLoc DL(N);
-      SDValue CastLHS =
-          DAG.getNode(ISD::BITCAST, DL, MVT::f32, LHS->getOperand(1));
-      SDValue CastRHS =
-          DAG.getNode(ISD::BITCAST, DL, MVT::f32, LHS->getOperand(2));
-      SDValue FNegLHS = DAG.getNode(ISD::FNEG, DL, MVT::f32, CastLHS);
-      SDValue FNegRHS = DAG.getNode(ISD::FNEG, DL, MVT::f32, CastRHS);
-      SDValue NewSelect = DAG.getNode(ISD::SELECT, DL, MVT::f32,
-                                      LHS->getOperand(0), FNegLHS, FNegRHS);
-      return DAG.getNode(ISD::BITCAST, DL, VT, NewSelect);
-    }
-  }
+  // if (LHS.getOpcode() == ISD::SELECT && VT == MVT::i32) {
+  //   // This looks like an fneg, try to fold as a source modifier.
+  //   if (CRHS && CRHS->getAPIntValue().isSignMask() &&
+  //       shouldFoldFNegIntoSrc(N, LHS)) {
+  //     // xor (select c, a, b), 0x80000000 ->
+  //     //   bitcast (select c, (fneg (bitcast a)), (fneg (bitcast b)))
+  //     SDLoc DL(N);
+  //     SDValue CastLHS =
+  //         DAG.getNode(ISD::BITCAST, DL, MVT::f32, LHS->getOperand(1));
+  //     SDValue CastRHS =
+  //         DAG.getNode(ISD::BITCAST, DL, MVT::f32, LHS->getOperand(2));
+  //     SDValue FNegLHS = DAG.getNode(ISD::FNEG, DL, MVT::f32, CastLHS);
+  //     SDValue FNegRHS = DAG.getNode(ISD::FNEG, DL, MVT::f32, CastRHS);
+  //     SDValue NewSelect = DAG.getNode(ISD::SELECT, DL, MVT::f32,
+  //                                     LHS->getOperand(0), FNegLHS, FNegRHS);
+  //     return DAG.getNode(ISD::BITCAST, DL, VT, NewSelect);
+  //   }
+  // }
 
   return SDValue();
 }
