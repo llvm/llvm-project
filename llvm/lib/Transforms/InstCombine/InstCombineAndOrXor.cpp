@@ -59,18 +59,6 @@ static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
                                        Value *Op1, Value *Op2, Value *Root,
                                        IRBuilderBase &Builder, bool HasOneUse) {
   uint8_t TruthValue = Table.to_ulong();
-
-  // Skip transformation if expression is already simple (at most 2 levels
-  // deep).
-  if (Root->hasOneUse() && isa<BinaryOperator>(Root)) {
-    if (auto *BO = dyn_cast<BinaryOperator>(Root)) {
-      bool IsSimple = !isa<BinaryOperator>(BO->getOperand(0)) ||
-                      !isa<BinaryOperator>(BO->getOperand(1));
-      if (IsSimple)
-        return nullptr;
-    }
-  }
-
   auto FoldConstant = [&](bool Val) {
     Constant *Res = Val ? Builder.getTrue() : Builder.getFalse();
     if (Op0->getType()->isVectorTy())
@@ -229,6 +217,17 @@ static Value *foldThreeVarBoolExpr(Value *Root,
   // Only proceed if this is a "complex" expression.
   if (!isa<BinaryOperator>(Root))
     return nullptr;
+
+  // Skip transformation if expression is already simple (at most 2 levels
+  // deep).
+  if (Root->hasOneUse() && isa<BinaryOperator>(Root)) {
+    if (auto *BO = dyn_cast<BinaryOperator>(Root)) {
+      bool IsSimple = !isa<BinaryOperator>(BO->getOperand(0)) ||
+                      !isa<BinaryOperator>(BO->getOperand(1));
+      if (IsSimple)
+        return nullptr;
+    }
+  }
 
   auto [Op0, Op1, Op2] = extractThreeVariables(Root);
   if (!Op0 || !Op1 || !Op2)
