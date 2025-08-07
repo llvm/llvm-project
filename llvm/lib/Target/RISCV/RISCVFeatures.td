@@ -1644,7 +1644,7 @@ def HasVendorXAndesVDot
 
 def FeatureVendorXSMTVDot
     : RISCVExtension<1, 0, "SpacemiT Vector Dot Product Extension",
-                     [FeatureStdExtV]>;
+                     [FeatureStdExtZve32f]>;
 def HasVendorXSMTVDot
     : Predicate<"Subtarget->hasVendorXSMTVDot()">,
       AssemblerPredicate<(all_of FeatureVendorXSMTVDot),
