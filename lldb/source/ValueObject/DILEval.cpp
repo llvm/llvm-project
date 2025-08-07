@@ -21,71 +21,153 @@
 
 namespace lldb_private::dil {
 
-static CompilerType GetBasicTypeFromCU(std::shared_ptr<StackFrame> ctx,
-                                       lldb::BasicType basic_type) {
+static llvm::Expected<lldb::TypeSystemSP>
+GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
   SymbolContext symbol_context =
       ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  auto language = symbol_context.comp_unit->GetLanguage();
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
 
   symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  auto type_system =
-      symbol_context.module_sp->GetTypeSystemForLanguage(language);
+  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
+}
 
+static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
+                                 lldb::BasicType basic_type) {
   if (type_system)
-    if (auto compiler_type = type_system.get()->GetBasicTypeFromAST(basic_type))
-      return compiler_type;
+    return type_system.get()->GetBasicTypeFromAST(basic_type);
 
   return CompilerType();
 }
 
-static CompilerType GetIntCompilerTypeForSize(uint32_t size, bool is_signed,
-                                              lldb::TypeSystemSP type_system,
-                                              std::shared_ptr<StackFrame> ctx) {
-  lldb::BasicType promote_types[] = {
-      // lldb::eBasicTypeChar,     lldb::eBasicTypeUnsignedChar,
-      // lldb::eBasicTypeShort,    lldb::eBasicTypeUnsignedShort,
-      lldb::eBasicTypeInt,      lldb::eBasicTypeUnsignedInt,
-      lldb::eBasicTypeLong,     lldb::eBasicTypeUnsignedLong,
-      lldb::eBasicTypeLongLong, lldb::eBasicTypeUnsignedLongLong,
-  };
-  for (auto &basic_type : promote_types) {
-    uint64_t byte_size = 0;
-    CompilerType type = GetBasicType(type_system, basic_type);
-    if (auto temp = type.GetByteSize(ctx.get()))
-      byte_size = *temp;
-    if (size < byte_size ||
-        (size == byte_size &&
-         is_signed == (bool)(type.GetTypeInfo() & lldb::eTypeIsSigned))) {
-      return type;
+static llvm::Expected<CompilerType>
+DoIntegralPromotion(CompilerType from, lldb::TypeSystemSP type_system,
+                    std::shared_ptr<StackFrame> ctx) {
+  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
+    return from;
+
+  if (!from.IsPromotableIntegerType())
+    return from;
+
+  if (from.IsUnscopedEnumerationType())
+    // TODO: fix this by creating CompilerType::GetEnumerationPromotionType()
+    return DoIntegralPromotion(from.GetEnumerationIntegerType(), type_system,
+                               ctx);
+  lldb::BasicType builtin_type =
+      from.GetCanonicalType().GetBasicTypeEnumeration();
+
+  uint64_t from_size = 0;
+  if (builtin_type == lldb::eBasicTypeWChar ||
+      builtin_type == lldb::eBasicTypeSignedWChar ||
+      builtin_type == lldb::eBasicTypeUnsignedWChar ||
+      builtin_type == lldb::eBasicTypeChar16 ||
+      builtin_type == lldb::eBasicTypeChar32) {
+    // Find the type that can hold the entire range of values for our type.
+    bool is_signed = from.IsSigned();
+    llvm::Expected<uint64_t> from_size = from.GetByteSize(ctx.get());
+    if (!from_size)
+      return from_size.takeError();
+
+    CompilerType promote_types[] = {
+        GetBasicType(type_system, lldb::eBasicTypeInt),
+        GetBasicType(type_system, lldb::eBasicTypeUnsignedInt),
+        GetBasicType(type_system, lldb::eBasicTypeLong),
+        GetBasicType(type_system, lldb::eBasicTypeUnsignedLong),
+        GetBasicType(type_system, lldb::eBasicTypeLongLong),
+        GetBasicType(type_system, lldb::eBasicTypeUnsignedLongLong),
+    };
+    for (CompilerType &type : promote_types) {
+      llvm::Expected<uint64_t> byte_size = type.GetByteSize(ctx.get());
+      if (!byte_size)
+        return byte_size.takeError();
+      if (*from_size < *byte_size ||
+          (*from_size == *byte_size && is_signed == type.IsSigned())) {
+        return type;
+      }
+    }
+    llvm_unreachable("char type should fit into long long");
+  }
+
+  // Here we can promote only to "int" or "unsigned int".
+  CompilerType int_type = GetBasicType(type_system, lldb::eBasicTypeInt);
+  llvm::Expected<uint64_t> int_byte_size = int_type.GetByteSize(ctx.get());
+  if (!int_byte_size)
+    return int_byte_size.takeError();
+
+  // Signed integer types can be safely promoted to "int".
+  if (from.IsSigned()) {
+    return int_type;
+  }
+  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
+  // their entire value range.
+  return (from_size == *int_byte_size)
+             ? GetBasicType(type_system, lldb::eBasicTypeUnsignedInt)
+             : int_type;
+}
+
+static lldb::ValueObjectSP
+ArrayToPointerConversion(lldb::ValueObjectSP valobj,
+                         std::shared_ptr<StackFrame> ctx) {
+  assert(valobj->IsArrayType() &&
+         "an argument to array-to-pointer conversion must be an array");
+
+  uint64_t addr = valobj->GetLoadAddress();
+  ExecutionContext exe_ctx;
+  ctx->CalculateExecutionContext(exe_ctx);
+  return ValueObject::CreateValueObjectFromAddress(
+      "result", addr, exe_ctx,
+      valobj->GetCompilerType().GetArrayElementType(ctx.get()).GetPointerType(),
+      /* do_deref */ false);
+}
+
+static llvm::Expected<lldb::ValueObjectSP>
+UnaryConversion(lldb::ValueObjectSP valobj, std::shared_ptr<StackFrame> ctx) {
+  // Perform usual conversions for unary operators. At the moment this includes
+  // array-to-pointer and the integral promotion for eligible types.
+  llvm::Expected<lldb::TypeSystemSP> type_system = GetTypeSystemFromCU(ctx);
+  if (!type_system)
+    return type_system.takeError();
+  CompilerType in_type = valobj->GetCompilerType();
+  CompilerType result_type;
+  if (valobj->IsBitfield()) {
+    // Promote bitfields. If `int` can represent the bitfield value, it is
+    // converted to `int`. Otherwise, if `unsigned int` can represent it, it
+    // is converted to `unsigned int`. Otherwise, it is treated as its
+    // underlying type.
+    uint32_t bitfield_size = valobj->GetBitfieldBitSize();
+    // Some bitfields have undefined size (e.g. result of ternary operation).
+    // The AST's `bitfield_size` of those is 0, and no promotion takes place.
+    if (bitfield_size > 0 && in_type.IsInteger()) {
+      CompilerType int_type = GetBasicType(*type_system, lldb::eBasicTypeInt);
+      CompilerType uint_type =
+          GetBasicType(*type_system, lldb::eBasicTypeUnsignedInt);
+      llvm::Expected<uint64_t> int_bit_size = int_type.GetBitSize(ctx.get());
+      if (!int_bit_size)
+        return int_bit_size.takeError();
+      llvm::Expected<uint64_t> uint_bit_size = uint_type.GetBitSize(ctx.get());
+      if (!uint_bit_size)
+        return int_bit_size.takeError();
+      if (bitfield_size < *int_bit_size ||
+          (in_type.IsSigned() && bitfield_size == *int_bit_size))
+        valobj = valobj->CastToBasicType(int_type);
+      else if (bitfield_size <= *uint_bit_size)
+        valobj = valobj->CastToBasicType(uint_type);
     }
   }
 
-  llvm_unreachable("size could not fit into long long");
-  return CompilerType();
-}
+  if (in_type.IsArrayType())
+    valobj = ArrayToPointerConversion(valobj, ctx);
 
-static llvm::Expected<Scalar>
-GetScalarFromValueObject(lldb::ValueObjectSP valobj,
-                         std::shared_ptr<StackFrame> ctx) {
-  auto type = valobj->GetCompilerType();
-  Scalar scalar;
-  bool resolved = valobj->ResolveValue(scalar);
-  if (resolved) {
-    if (scalar.GetType() == scalar.e_int) {
-      auto apsint = scalar.GetAPSInt();
-      auto type_bitsize = type.GetBitSize(ctx.get());
-      if (type_bitsize) {
-        llvm::APSInt adjusted;
-        if (type.IsSigned())
-          adjusted = apsint.sextOrTrunc(*type_bitsize);
-        else
-          adjusted = apsint.zextOrTrunc(*type_bitsize);
-        return Scalar(adjusted);
-      }
-    } else
-      return scalar;
+  if (valobj->GetCompilerType().IsInteger() ||
+      valobj->GetCompilerType().IsUnscopedEnumerationType()) {
+    llvm::Expected<CompilerType> promoted_type =
+        DoIntegralPromotion(valobj->GetCompilerType(), *type_system, ctx);
+    if (!promoted_type)
+      return promoted_type.takeError();
+    if (!promoted_type->CompareTypes(valobj->GetCompilerType()))
+      return valobj->CastToBasicType(*promoted_type);
   }
-  return Scalar();
+
+  return valobj;
 }
 
 static lldb::VariableSP DILFindVariable(ConstString name,
@@ -277,7 +359,12 @@ Interpreter::Visit(const UnaryOpNode *node) {
     return value;
   }
   case UnaryOpKind::Minus: {
-    auto operand_type = operand->GetCompilerType();
+    llvm::Expected<lldb::ValueObjectSP> conv_op =
+        UnaryConversion(operand, m_exe_ctx_scope);
+    if (!conv_op)
+      return conv_op;
+    operand = *conv_op;
+    CompilerType operand_type = operand->GetCompilerType();
     if (!operand_type.IsScalarType()) {
       std::string errMsg =
           llvm::formatv("invalid argument type '{0}' to unary expression",
@@ -285,58 +372,34 @@ Interpreter::Visit(const UnaryOpNode *node) {
       return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                   node->GetLocation());
     }
-    auto scalar = GetScalarFromValueObject(operand, m_exe_ctx_scope);
-    if (!scalar)
+    Scalar scalar;
+    bool resolved = operand->ResolveValue(scalar);
+    if (!resolved)
       break;
 
-    bool negated = scalar->UnaryNegate();
-    if (scalar->GetType() == Scalar::e_int) {
-      auto promo_type = GetIntCompilerTypeForSize(
-          scalar->GetByteSize(), scalar->IsSigned(),
-          operand_type.GetTypeSystem().GetSharedPointer(), m_exe_ctx_scope);
-      auto type_bitsize = promo_type.GetBitSize(m_exe_ctx_scope.get());
-
-      if (type_bitsize && negated) {
-        scalar->IntegralPromote(*type_bitsize, promo_type.IsSigned());
-        return ValueObject::CreateValueObjectFromScalar(m_target, *scalar,
-                                                        promo_type, "result");
-      }
-    } else
-      return ValueObject::CreateValueObjectFromScalar(m_target, *scalar,
-                                                      operand_type, "result");
+    bool negated = scalar.UnaryNegate();
+    if (negated)
+      return ValueObject::CreateValueObjectFromScalar(
+          m_target, scalar, operand->GetCompilerType(), "result");
     break;
   }
   case UnaryOpKind::Plus: {
-    auto operand_type = operand->GetCompilerType();
-    // Unary plus is allowed for pointers.
-    if (operand_type.IsPointerType())
-      return operand;
-    if (!operand_type.IsScalarType()) {
+    llvm::Expected<lldb::ValueObjectSP> conv_op =
+        UnaryConversion(operand, m_exe_ctx_scope);
+    if (!conv_op)
+      return conv_op;
+    operand = *conv_op;
+    CompilerType operand_type = operand->GetCompilerType();
+    if (!operand_type.IsScalarType() &&
+        // Unary plus is allowed for pointers.
+        !operand_type.IsPointerType()) {
       std::string errMsg =
           llvm::formatv("invalid argument type '{0}' to unary expression",
                         operand_type.GetTypeName());
       return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
                                                   node->GetLocation());
     }
-    auto scalar = GetScalarFromValueObject(operand, m_exe_ctx_scope);
-    if (!scalar)
-      break;
-
-    if (scalar->GetType() == Scalar::e_int) {
-      auto promo_type = GetIntCompilerTypeForSize(
-          scalar->GetByteSize(), scalar->IsSigned(),
-          operand_type.GetTypeSystem().GetSharedPointer(), m_exe_ctx_scope);
-      auto type_bitsize = promo_type.GetBitSize(m_exe_ctx_scope.get());
-
-      if (type_bitsize) {
-        scalar->IntegralPromote(*type_bitsize, promo_type.IsSigned());
-        return ValueObject::CreateValueObjectFromScalar(m_target, *scalar,
-                                                        promo_type, "result");
-      }
-    } else
-      return ValueObject::CreateValueObjectFromScalar(m_target, *scalar,
-                                                      operand_type, "result");
-    break;
+    return operand;
   }
   }
   return llvm::make_error<DILDiagnosticError>(m_expr, "invalid unary operation",
@@ -624,24 +687,6 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
                                                 node->GetLocation());
   }
   return child_valobj_sp;
-}
-
-static llvm::Expected<lldb::TypeSystemSP>
-GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
-  SymbolContext symbol_context =
-      ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
-
-  symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  return symbol_context.module_sp->GetTypeSystemForLanguage(language);
-}
-
-static CompilerType GetBasicType(lldb::TypeSystemSP type_system,
-                                 lldb::BasicType basic_type) {
-  if (type_system)
-    return type_system.get()->GetBasicTypeFromAST(basic_type);
-
-  return CompilerType();
 }
 
 llvm::Expected<CompilerType>
