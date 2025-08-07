@@ -235,56 +235,46 @@ public:
 };
 
 class RetainCountChecker
-  : public Checker< check::Bind,
-                    check::DeadSymbols,
-                    check::BeginFunction,
-                    check::EndFunction,
-                    check::PostStmt<BlockExpr>,
-                    check::PostStmt<CastExpr>,
-                    check::PostStmt<ObjCArrayLiteral>,
-                    check::PostStmt<ObjCDictionaryLiteral>,
-                    check::PostStmt<ObjCBoxedExpr>,
-                    check::PostStmt<ObjCIvarRefExpr>,
-                    check::PostCall,
-                    check::RegionChanges,
-                    eval::Assume,
-                    eval::Call > {
+    : public CheckerFamily<
+          check::Bind, check::DeadSymbols, check::BeginFunction,
+          check::EndFunction, check::PostStmt<BlockExpr>,
+          check::PostStmt<CastExpr>, check::PostStmt<ObjCArrayLiteral>,
+          check::PostStmt<ObjCDictionaryLiteral>,
+          check::PostStmt<ObjCBoxedExpr>, check::PostStmt<ObjCIvarRefExpr>,
+          check::PostCall, check::RegionChanges, eval::Assume, eval::Call> {
 
 public:
-  std::unique_ptr<RefCountBug> UseAfterRelease;
-  std::unique_ptr<RefCountBug> ReleaseNotOwned;
-  std::unique_ptr<RefCountBug> DeallocNotOwned;
-  std::unique_ptr<RefCountBug> FreeNotOwned;
-  std::unique_ptr<RefCountBug> OverAutorelease;
-  std::unique_ptr<RefCountBug> ReturnNotOwnedForOwned;
-  std::unique_ptr<RefCountBug> LeakWithinFunction;
-  std::unique_ptr<RefCountBug> LeakAtReturn;
+  RefCountFrontend RetainCount;
+  RefCountFrontend OSObjectRetainCount;
 
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
 
   static std::unique_ptr<SimpleProgramPointTag> DeallocSentTag;
   static std::unique_ptr<SimpleProgramPointTag> CastFailTag;
 
-  /// Track Objective-C and CoreFoundation objects.
-  bool TrackObjCAndCFObjects = false;
-
-  /// Track sublcasses of OSObject.
-  bool TrackOSObjects = false;
-
   /// Track initial parameters (for the entry point) for NS/CF objects.
   bool TrackNSCFStartParam = false;
 
-  RetainCountChecker() {};
+  StringRef getDebugTag() const override { return "RetainCountChecker"; }
 
   RetainSummaryManager &getSummaryManager(ASTContext &Ctx) const {
     if (!Summaries)
-      Summaries.reset(
-          new RetainSummaryManager(Ctx, TrackObjCAndCFObjects, TrackOSObjects));
+      Summaries = std::make_unique<RetainSummaryManager>(
+          Ctx, RetainCount.isEnabled(), OSObjectRetainCount.isEnabled());
     return *Summaries;
   }
 
   RetainSummaryManager &getSummaryManager(CheckerContext &C) const {
     return getSummaryManager(C.getASTContext());
+  }
+
+  const RefCountFrontend &getPreferredFrontend() const {
+    // FIXME: The two frontends of this checker family are in an unusual
+    // relationship: if they are both enabled, then all bug reports are
+    // reported by RetainCount (i.e. `osx.cocoa.RetainCount`), even the bugs
+    // that "belong to" OSObjectRetainCount (i.e. `osx.OSObjectRetainCount`).
+    // This is counter-intuitive and should be fixed to avoid confusion.
+    return RetainCount.isEnabled() ? RetainCount : OSObjectRetainCount;
   }
 
   void printState(raw_ostream &Out, ProgramStateRef State,
@@ -336,6 +326,8 @@ public:
 
   const RefCountBug &errorKindToBugKind(RefVal::Kind ErrorKind,
                                         SymbolRef Sym) const;
+
+  bool isReleaseUnownedError(RefVal::Kind ErrorKind) const;
 
   void processNonLeakError(ProgramStateRef St, SourceRange ErrorRange,
                            RefVal::Kind ErrorKind, SymbolRef Sym,
