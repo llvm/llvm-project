@@ -1,0 +1,243 @@
+name: Restart Preempted Libc++ Workflow
+
+# The libc++ builders run on preemptable VMs, which can be shutdown at any time.
+# This workflow identifies when a workflow run was canceled due to the VM being preempted,
+# and restarts the workflow run.
+
+# We identify a canceled workflow run by checking the annotations of the check runs in the check suite,
+# which should contain the message "The runner has received a shutdown signal."
+
+# Note: If a job is both preempted and also contains a non-preemption failure, we do not restart the workflow.
+
+on:
+  workflow_run:
+    workflows: [Build and Test libc\+\+]
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  restart:
+    if: github.repository_owner == 'llvm' && (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled')
+    name: "Restart Job"
+    permissions:
+      statuses: read
+      checks: write
+      actions: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Restart Job"
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+        with:
+          script: |
+            const failure_regex = /Process completed with exit code 1./
+            const preemption_regex = /The runner has received a shutdown signal/
+
+            const wf_run = context.payload.workflow_run
+            core.notice(`Running on "${wf_run.display_title}" by @${wf_run.actor.login} (event: ${wf_run.event})\nWorkflow run URL: ${wf_run.html_url}`)
+
+
+            async function create_check_run(conclusion, message) {
+                // Create a check run on the given workflow run to indicate if
+                // we are restarting the workflow or not.
+                if (conclusion != 'success' && conclusion != 'skipped' && conclusion != 'neutral') {
+                  core.setFailed('Invalid conclusion: ' + conclusion)
+                }
+                await github.rest.checks.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    name: 'Restart Preempted Job',
+                    head_sha: wf_run.head_sha,
+                    status: 'completed',
+                    conclusion: conclusion,
+                    output: {
+                      title: 'Restarted Preempted Job',
+                      summary: message
+                    }
+                })
+            }
+
+            console.log('Listing check runs for suite')
+            const check_suites = await github.rest.checks.listForSuite({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_suite_id: context.payload.workflow_run.check_suite_id,
+              per_page: 100 // FIXME: We don't have 100 check runs yet, but we should handle this better.
+            })
+
+            check_run_ids = [];
+            for (check_run of check_suites.data.check_runs) {
+              console.log('Checking check run: ' + check_run.id);
+              if (check_run.status != 'completed') {
+                console.log('Check run was not completed. Skipping.');
+                continue;
+              }
+              if (check_run.conclusion != 'failure' && check_run.conclusion != 'cancelled') {
+                console.log('Check run had conclusion: ' + check_run.conclusion + '. Skipping.');
+                continue;
+              }
+              check_run_ids.push(check_run.id);
+            }
+
+            has_preempted_job = false;
+
+            for (check_run_id of check_run_ids) {
+              console.log('Listing annotations for check run: ' + check_run_id);
+
+              annotations = await github.rest.checks.listAnnotations({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                check_run_id: check_run_id
+              })
+
+              // For temporary debugging purposes to see the structure of the annotations.
+              console.log(annotations);
+
+              has_failed_job = false;
+              saved_failure_message = null;
+
+              for (annotation of annotations.data) {
+                if (annotation.annotation_level != 'failure') {
+                  continue;
+                }
+
+                const preemption_match = annotation.message.match(preemption_regex);
+
+                if (preemption_match != null) {
+                  console.log('Found preemption message: ' + annotation.message);
+                  has_preempted_job = true;
+                }
+
+                const failure_match = annotation.message.match(failure_regex);
+                if (failure_match != null) {
+                  has_failed_job = true;
+                  saved_failure_message = annotation.message;
+                }
+              }
+              if (has_failed_job && (! has_preempted_job)) {
+                // We only want to restart the workflow if all of the failures were due to preemption.
+                // We don't want to restart the workflow if there were other failures.
+                //
+                // However, libcxx runners running inside docker containers produce both a preemption message and failure message.
+                //
+                // The desired approach is to ignore failure messages which appear on the same job as a preemption message
+                // (An job is a single run with a specific configuration, ex generic-gcc, gcc-14).
+                //
+                // However, it's unclear that this code achieves the desired approach, and it may ignore all failures
+                // if a preemption message is found at all on any run.
+                //
+                // For now, it's more important to restart preempted workflows than to avoid restarting workflows with
+                // non-preemption failures.
+                //
+                // TODO Figure this out.
+                core.notice('Choosing not to rerun workflow because we found a non-preemption failure' +
+                  'Failure message: "' + saved_failure_message + '"');
+                await create_check_run('skipped', 'Choosing not to rerun workflow because we found a non-preemption failure\n'
+                    + 'Failure message: ' + saved_failure_message)
+                return;
+              }
+            }
+
+            if (!has_preempted_job) {
+              core.notice('No preempted jobs found. Not restarting workflow.');
+              await create_check_run('neutral', 'No preempted jobs found. Not restarting workflow.')
+              return;
+            }
+
+            core.notice("Restarted workflow: " + context.payload.workflow_run.id);
+            await github.rest.actions.reRunWorkflowFailedJobs({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: context.payload.workflow_run.id
+              })
+            await create_check_run('success', 'Restarted workflow run due to preempted job')
+
+  restart-test:
+    if: github.repository_owner == 'llvm' && (github.event.workflow_run.conclusion == 'failure' || github.event.workflow_run.conclusion == 'cancelled') && github.event.actor.login == 'ldionne' # TESTING ONLY
+    name: "Restart Job (test)"
+    permissions:
+      statuses: read
+      checks: write
+      actions: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Restart Job (test)"
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea #v7.0.1
+        with:
+          script: |
+            const FAILURE_REGEX = /Process completed with exit code 1./
+            const PREEMPTION_REGEX = /(The runner has received a shutdown signal)|(The operation was canceled)/
+
+            function log(msg) {
+              core.notice(msg)
+            }
+
+            const wf_run = context.payload.workflow_run
+            log(`Running on "${wf_run.display_title}" by @${wf_run.actor.login} (event: ${wf_run.event})\nWorkflow run URL: ${wf_run.html_url}`)
+
+            log('Listing check runs for suite')
+            const check_suites = await github.rest.checks.listForSuite({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              check_suite_id: context.payload.workflow_run.check_suite_id,
+              per_page: 100 // FIXME: We don't have 100 check runs yet, but we should handle this better.
+            })
+
+            preemptions = [];
+            legitimate_failures = [];
+            for (check_run of check_suites.data.check_runs) {
+              log(`Checking check run: ${check_run.id}`);
+              if (check_run.status != 'completed') {
+                log('Check run was not completed. Skipping.');
+                continue;
+              }
+
+              if (check_run.conclusion != 'failure' && check_run.conclusion != 'cancelled') {
+                log(`Check run had conclusion: ${check_run.conclusion}. Skipping.`);
+                continue;
+              }
+
+              annotations = await github.rest.checks.listAnnotations({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                check_run_id: check_run.id
+              })
+
+              preemption_annotation = annotations.data.find(function(annotation) {
+                return annotation.annotation_level == 'failure' &&
+                       annotation.message.match(PREEMPTION_REGEX) != null;
+              });
+              if (preemption_annotation != null) {
+                log(`Found preemption message: ${preemption_annotation.message}`);
+                preemptions.push(check_run);
+                break;
+              }
+
+              failure_annotation = annotations.data.find(function(annotation) {
+                return annotation.annotation_level == 'failure' &&
+                       annotation.message.match(FAILURE_REGEX) != null;
+              });
+              if (failure_annotation != null) {
+                log(`Found legitimate failure annotation: ${failure_annotation.message}`);
+                legitimate_failures.push(check_run);
+                break;
+              }
+            }
+
+            if (preemptions) {
+              log('Found some preempted jobs');
+              if (legitimate_failures) {
+                log('Also found some legitimate failures, so not restarting the workflow.');
+              } else {
+                log('Did not find any legitimate failures. Restarting workflow.');
+                await github.rest.actions.reRunWorkflowFailedJobs({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  run_id: context.payload.workflow_run.id
+                })
+              }
+            } else {
+              log('Did not find any preempted jobs. Not restarting the workflow.');
+            }

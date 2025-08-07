@@ -1,0 +1,16 @@
+# To regenerate has-cet.exe
+# $ echo int main() { return 0; } > has-cet.c
+# $ cl has-cet.c /link /cetcompat
+RUN: llvm-readobj --coff-debug-directory %p/Inputs/has-cet.exe | FileCheck %s
+
+CHECK:  DebugEntry {
+CHECK:    Characteristics: 0x0
+CHECK:    Type: ExtendedDLLCharacteristics (0x14)
+CHECK:    ExtendedCharacteristics [ (0x1)
+CHECK:      IMAGE_DLL_CHARACTERISTICS_EX_CET_COMPAT (0x1)
+CHECK:    ]
+CHECK:    RawData (
+CHECK:      0000: 01000000                             |....|
+CHECK:    )
+CHECK:  }
+
