@@ -251,17 +251,39 @@ void ProcedureRef::Deleter(ProcedureRef *p) { delete p; }
 // We don't know the dummy argument info (e.g., procedure with implicit
 // interface
 static void DetermineCopyInOutArgument(
-    const characteristics::Procedure &procInfo, ActualArgument &actual) {
-
-  // Only check that actual argument is contiguous
-  // For non-contiguous, do copy-in
+    const characteristics::Procedure &procInfo, ActualArgument &actual,
+    semantics::SemanticsContext &sc) {
+  if (actual.isAlternateReturn()) {
+    return;
+  }
+  if (!evaluate::IsVariable(actual)) {
+    // Actual argument expressions that aren’t variables are copy-in, but
+    // not copy-out.
+    actual.set_mayNeedCopyIn();
+  }
+  else if (!IsSimplyContiguous(actual, sc.foldingContext())) {
+    // Actual arguments that are variables are copy-in when non-contiguous.
+    // They are copy-out when don't have vector subscripts
+    actual.set_mayNeedCopyIn();
+    if (!HasVectorSubscript(actual)) {
+      actual.set_mayNeedCopyOut();
+    }
+  }
+  else if (ExtractCoarrayRef(actual)) {
+    // Coindexed actual args need copy-in and copy-out
+    actual.set_mayNeedCopyIn();
+    actual.set_mayNeedCopyOut();
+  }
 }
 
 static void DetermineCopyInOutArgument(
     const characteristics::Procedure &procInfo, ActualArgument &actual,
-    characteristics::DummyArgument &dummy) {
-
-  // TODO: assert? procInfo.HasExplicitInterface()
+    characteristics::DummyArgument &dummy, semantics::SemanticsContext &sc) {
+  assert(procInfo.HasExplicitInterface() && "expect explicit interface proc");
+  if (actual.isAlternateReturn()) {
+    return;
+  }
+  // TODO
 }
 
 void ProcedureRef::DetermineCopyInOut() {
@@ -269,7 +291,8 @@ void ProcedureRef::DetermineCopyInOut() {
     return;
   }
   // Get folding context of the call site owner
-  FoldingContext &fc{proc_.GetSymbol()->owner().context().foldingContext()};
+  semantics::SemanticsContext &sc{proc_.GetSymbol()->owner().context()};
+  FoldingContext &fc{sc.foldingContext()};
   auto procInfo{
       characteristics::Procedure::Characterize(proc_, fc, /*emitError=*/true)};
   if (!procInfo) {
@@ -280,7 +303,7 @@ void ProcedureRef::DetermineCopyInOut() {
       if (!actual) {
         continue;
       }
-      DetermineCopyInOutArgument(*procInfo, *actual);
+      DetermineCopyInOutArgument(*procInfo, *actual, sc);
     }
     return;
   }
@@ -315,7 +338,7 @@ void ProcedureRef::DetermineCopyInOut() {
                   return dummy.name == actualName;
                 });
             it != procInfo->dummyArguments.end()) {
-          DetermineCopyInOutArgument(*procInfo, *actual, *it);
+          DetermineCopyInOutArgument(*procInfo, *actual, *it, sc);
         }
       }
     } else if (seenKeyword) {
@@ -325,7 +348,7 @@ void ProcedureRef::DetermineCopyInOut() {
     } else {
       // Positional argument processing
       DetermineCopyInOutArgument(
-          *procInfo, *actual, procInfo->dummyArguments[index]);
+          *procInfo, *actual, procInfo->dummyArguments[index], sc);
     }
 
     ++index;

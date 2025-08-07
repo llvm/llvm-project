@@ -1198,7 +1198,18 @@ std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
   }
 }
 
+std::optional<bool> IsContiguous(const ActualArgument &actual,
+    FoldingContext &fc, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1) {
+  auto *expr{actual.UnwrapExpr()};
+  return expr && IsContiguous(*expr, fc, namedConstantSectionsAreContiguous,
+  firstDimensionStride1);
+}
+
 template std::optional<bool> IsContiguous(const Expr<SomeType> &,
+    FoldingContext &, bool namedConstantSectionsAreContiguous,
+    bool firstDimensionStride1);
+template std::optional<bool> IsContiguous(const ActualArgument &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
