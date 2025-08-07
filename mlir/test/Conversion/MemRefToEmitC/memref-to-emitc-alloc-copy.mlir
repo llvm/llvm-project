@@ -14,7 +14,7 @@ func.func @alloc_copy(%arg0: memref<999xi32>) {
 
 // CPP: module {
 // CPP-NEXT:  emitc.include <"cstring">
-// CHECK-NEXT: emitc.include <"cstdlib">
+// CPP-NEXT:  emitc.include <"cstdlib">
 // CHECK-LABEL: alloc_copy
 // CHECK-SAME: %[[arg0:.*]]: memref<999xi32>
 // CHECK-NEXT:  %0 = builtin.unrealized_conversion_cast %arg0 : memref<999xi32> to !emitc.array<999xi32> 
