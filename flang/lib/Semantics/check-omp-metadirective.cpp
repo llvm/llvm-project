@@ -12,8 +12,6 @@
 
 #include "check-omp-structure.h"
 
-#include "openmp-utils.h"
-
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Common/visit.h"
@@ -21,6 +19,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-modifiers.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/tools.h"
 
 #include "llvm/Frontend/OpenMP/OMP.h"
