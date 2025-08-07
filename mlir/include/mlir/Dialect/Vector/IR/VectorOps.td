@@ -2295,7 +2295,9 @@ def Vector_CompressStoreOp :
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                FixedVectorOfNonZeroRankOf<[I1]>:$mask,
-               AnyVectorOfNonZeroRank:$valueToStore)> {
+               AnyVectorOfNonZeroRank:$valueToStore,
+               ConfinedAttr<OptionalAttr<I64Attr>,
+                            [AllAttrOf<[IntPositive, IntPowerOf2]>]>:$alignment)> {
 
   let summary = "writes elements selectively from a vector as defined by a mask";
 
@@ -2354,6 +2356,17 @@ def Vector_CompressStoreOp :
       "type($base) `,` type($mask) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$base,
+                   "ValueRange":$indices,
+                   "Value":$mask,
+                   "Value":$valueToStore,
+                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+      return build($_builder, $_state, base, indices, valueToStore, mask,
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                                    nullptr);
+    }]>
+  ];
 }
 
 def Vector_ShapeCastOp :
