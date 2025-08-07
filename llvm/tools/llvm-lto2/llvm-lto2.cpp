@@ -234,6 +234,10 @@ static cl::opt<bool>
     AllVtablesHaveTypeInfos("all-vtables-have-type-infos", cl::Hidden,
                             cl::desc("All vtables have type infos"));
 
+static cl::list<std::string>
+    BitcodeLibFuncs("bitcode-libfuncs", cl::Hidden,
+                    cl::desc("set of libfuncs implemented in bitcode"));
+
 static cl::opt<bool> TimeTrace("time-trace", cl::desc("Record time trace"));
 
 static cl::opt<unsigned> TimeTraceGranularity(
@@ -495,6 +499,9 @@ static int run(int argc, char **argv) {
   }
   if (HasErrors)
     return 1;
+
+  Lto.setBitcodeLibFuncs(
+      SmallVector<StringRef>(BitcodeLibFuncs.begin(), BitcodeLibFuncs.end()));
 
   auto AddStream =
       [&](size_t Task,

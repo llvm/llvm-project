@@ -1,0 +1,41 @@
+; REQUIRES: x86
+
+; RUN: rm -rf %t && split-file %s %t && cd %t
+; RUN: llvm-as main.ll -o main.o
+; RUN: llvm-as bcmp.ll -o bcmp.o
+; RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux-gnu memcmp.s -o memcmp.o
+; RUN: llvm-ar rc libc.a bcmp.o memcmp.o
+
+;; Ensure that no memcmp->bcmp translation occurs during LTO because bcmp is in
+;; bitcode, but was not brought into the link. This would fail the link by
+;; extracting bitcode after LTO.
+; RUN: ld.lld -o out main.o -L. -lc
+; RUN: llvm-nm out | FileCheck %s
+
+;--- bcmp.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define i32 @bcmp(ptr %0, ptr %1, i64 %2) {
+  ret i32 0
+}
+
+;--- memcmp.s
+.globl memcmp
+memcmp:
+  ret
+
+;--- main.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-unknown-linux-gnu"
+
+define i1 @_start(ptr %0, ptr %1, i64 %2) {
+  %cmp = call i32 @memcmp(ptr %0, ptr %1, i64 %2)
+  %eq = icmp eq i32 %cmp, 0
+  ret i1 %eq
+}
+
+; CHECK-NOT: bcmp
+; CHECK: memcmp
+declare i32 @memcmp(ptr, ptr, i64)
+

@@ -2703,15 +2703,30 @@ static void markBuffersAsDontNeed(Ctx &ctx, bool skipLinkedOutput) {
 template <class ELFT>
 void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
   llvm::TimeTraceScope timeScope("LTO");
+  // Capture the triple before moving the bitcode into the bitcode compiler.
+  std::optional<llvm::Triple> tt;
+  if (!ctx.bitcodeFiles.empty())
+    tt = llvm::Triple(ctx.bitcodeFiles.front()->obj->getTargetTriple());
   // Compile bitcode files and replace bitcode symbols.
   lto.reset(new BitcodeCompiler(ctx));
   for (BitcodeFile *file : ctx.bitcodeFiles)
     lto->add(*file);
 
-  if (!ctx.bitcodeFiles.empty())
+  llvm::BumpPtrAllocator alloc;
+  llvm::StringSaver saver(alloc);
+  SmallVector<StringRef> bitcodeLibFuncs;
+  if (!ctx.bitcodeFiles.empty()) {
     markBuffersAsDontNeed(ctx, skipLinkedOutput);
+    for (StringRef libFunc : lto::LTO::getLibFuncSymbols(*tt, saver)) {
+      Symbol *sym = ctx.symtab->find(libFunc);
+      if (!sym)
+        continue;
+      if (isa<BitcodeFile>(sym->file))
+        bitcodeLibFuncs.push_back(libFunc);
+    }
+  }
 
-  ltoObjectFiles = lto->compile();
+  ltoObjectFiles = lto->compile(bitcodeLibFuncs);
   for (auto &file : ltoObjectFiles) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
