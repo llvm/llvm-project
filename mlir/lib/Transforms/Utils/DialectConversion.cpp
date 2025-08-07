@@ -2316,7 +2316,7 @@ reportNewIrLegalizationFatalError(const Pattern &pattern,
       ", ");
   std::string modifiedOpNames = llvm::join(
       llvm::map_range(
-          newOps, [](Operation *op) { return op->getName().getStringRef(); }),
+          modifiedOps, [](Operation *op) { return op->getName().getStringRef(); }),
       ", ");
   std::string insertedBlockNames = llvm::join(
       llvm::map_range(insertedBlocks,
