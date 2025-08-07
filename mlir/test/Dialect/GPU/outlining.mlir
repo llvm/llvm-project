@@ -523,10 +523,11 @@ func.func @testKernelAttributes() {
   %bDimZ = arith.constant 8 : index
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
-             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             module(@test_module) function(@test_kernel_func) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {module = @test_module, function = @test_kernel_func}
+  }
   return
 }
 
@@ -556,10 +557,11 @@ func.func @testExistingModule() {
   %bDimZ = arith.constant 8 : index
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
-             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             module(@existing_module) function(@test_kernel_func) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {module = @existing_module, function = @test_kernel_func}
+  }
   return
 }
 
@@ -578,10 +580,11 @@ func.func @testKernelModuleOnly() {
   %bDimZ = arith.constant 8 : index
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
-             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             module(@test_module) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {module = @test_module}
+  }
   return
 }
 
@@ -601,10 +604,11 @@ func.func @testKernelFuncOnly() {
   %bDimZ = arith.constant 8 : index
 
   gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %gDimX, %grid_y = %gDimY, %grid_z = %gDimZ)
-             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ) {
+             threads(%tx, %ty, %tz) in (%block_x = %bDimX, %block_y = %bDimY, %block_z = %bDimZ)
+             function(@test_kernel_func) {
     "some_op"(%bx, %tx) : (index, index) -> ()
     gpu.terminator
-  } {function = @test_kernel_func}
+  }
   return
 }
 
