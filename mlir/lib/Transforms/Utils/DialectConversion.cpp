@@ -2356,6 +2356,31 @@ OperationLegalizer::legalizeWithFold(Operation *op,
   return success();
 }
 
+/// Report a fatal error indicating that newly produced or modified IR could
+/// not be legalized.
+static void
+reportNewIrLegalizationFatalError(const Pattern &pattern,
+                                  const SetVector<Operation *> &newOps,
+                                  const SetVector<Operation *> &modifiedOps,
+                                  const SetVector<Block *> &insertedBlocks) {
+  auto newOpNames = llvm::map_range(
+      newOps, [](Operation *op) { return op->getName().getStringRef(); });
+  auto modifiedOpNames = llvm::map_range(
+      modifiedOps, [](Operation *op) { return op->getName().getStringRef(); });
+  StringRef detachedBlockStr = "(detached block)";
+  auto insertedBlockNames = llvm::map_range(insertedBlocks, [&](Block *block) {
+    if (block->getParentOp())
+      return block->getParentOp()->getName().getStringRef();
+    return detachedBlockStr;
+  });
+  llvm::report_fatal_error(
+      "pattern '" + pattern.getDebugName() +
+      "' produced IR that could not be legalized. " + "new ops: {" +
+      llvm::join(newOpNames, ", ") + "}, " + "modified ops: {" +
+      llvm::join(modifiedOpNames, ", ") + "}, " + "inserted block into ops: {" +
+      llvm::join(insertedBlockNames, ", ") + "}");
+}
+
 LogicalResult
 OperationLegalizer::legalizeWithPattern(Operation *op,
                                         ConversionPatternRewriter &rewriter) {
@@ -2444,8 +2469,8 @@ OperationLegalizer::legalizeWithPattern(Operation *op,
     appliedPatterns.erase(&pattern);
     if (failed(result)) {
       if (!rewriterImpl.config.allowPatternRollback)
-        llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
-                                 "' produced IR that could not be legalized");
+        reportNewIrLegalizationFatalError(pattern, newOps, modifiedOps,
+                                          insertedBlocks);
       rewriterImpl.resetState(curState, pattern.getDebugName());
     }
     if (config.listener)
