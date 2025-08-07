@@ -1,4 +1,4 @@
-//===------- Offload API tests - olEnqueueHostCallback --------------------===//
+//===------- Offload API tests - olLaunchHostFunction ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,21 +11,21 @@
 #include <gtest/gtest.h>
 #include <thread>
 
-struct olEnqueueHostCallbackTest : OffloadQueueTest {};
-OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olEnqueueHostCallbackTest);
+struct olLaunchHostFunctionTest : OffloadQueueTest {};
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionTest);
 
-struct olEnqueueHostCallbackKernelTest : OffloadKernelTest {};
-OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olEnqueueHostCallbackKernelTest);
+struct olLaunchHostFunctionKernelTest : OffloadKernelTest {};
+OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionKernelTest);
 
-TEST_P(olEnqueueHostCallbackTest, Success) {
-  ASSERT_SUCCESS(olEnqueueHostCallback(Queue, [](void *) {}, nullptr));
+TEST_P(olLaunchHostFunctionTest, Success) {
+  ASSERT_SUCCESS(olLaunchHostFunction(Queue, [](void *) {}, nullptr));
 }
 
-TEST_P(olEnqueueHostCallbackTest, SuccessSequence) {
+TEST_P(olLaunchHostFunctionTest, SuccessSequence) {
   uint32_t Buff[16] = {1, 1};
 
   for (auto BuffPtr = &Buff[2]; BuffPtr != &Buff[16]; BuffPtr++) {
-    ASSERT_SUCCESS(olEnqueueHostCallback(
+    ASSERT_SUCCESS(olLaunchHostFunction(
         Queue,
         [](void *BuffPtr) {
           uint32_t *AsU32 = reinterpret_cast<uint32_t *>(BuffPtr);
@@ -41,7 +41,7 @@ TEST_P(olEnqueueHostCallbackTest, SuccessSequence) {
   }
 }
 
-TEST_P(olEnqueueHostCallbackKernelTest, SuccessBlocking) {
+TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
   // Verify that a host kernel can block execution - A host task is created that
   // only resolves when Block is set to false.
   ol_kernel_launch_size_args_t LaunchArgs;
@@ -63,7 +63,7 @@ TEST_P(olEnqueueHostCallbackKernelTest, SuccessBlocking) {
   }
 
   volatile bool Block = true;
-  ASSERT_SUCCESS(olEnqueueHostCallback(
+  ASSERT_SUCCESS(olLaunchHostFunction(
       Queue,
       [](void *Ptr) {
         volatile bool *Block =
@@ -95,12 +95,12 @@ TEST_P(olEnqueueHostCallbackKernelTest, SuccessBlocking) {
   ASSERT_SUCCESS(olMemFree(Mem));
 }
 
-TEST_P(olEnqueueHostCallbackTest, InvalidNullCallback) {
+TEST_P(olLaunchHostFunctionTest, InvalidNullCallback) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
-               olEnqueueHostCallback(Queue, nullptr, nullptr));
+               olLaunchHostFunction(Queue, nullptr, nullptr));
 }
 
-TEST_P(olEnqueueHostCallbackTest, InvalidNullQueue) {
+TEST_P(olLaunchHostFunctionTest, InvalidNullQueue) {
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_HANDLE,
-               olEnqueueHostCallback(nullptr, [](void *) {}, nullptr));
+               olLaunchHostFunction(nullptr, [](void *) {}, nullptr));
 }
