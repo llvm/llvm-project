@@ -12033,7 +12033,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   if (!CheckForContractable(Operands.front()))
     return InstructionCost::getInvalid();
   // Compare the costs.
-  InstructionCost FMulPlusFaddCost = 0;
+  InstructionCost FMulPlusFAddCost = 0;
   InstructionCost FMACost = 0;
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   FastMathFlags FMF;
@@ -12044,8 +12044,9 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
       continue;
     if (auto *FPCI = dyn_cast<FPMathOperator>(I))
       FMF &= FPCI->getFastMathFlags();
-    FMulPlusFaddCost += TTI.getInstructionCost(I, CostKind);
+    FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
   }
+  unsigned NumOps = 0;
   for (auto [V, Op] : zip(VL, Operands.front())) {
     auto *I = dyn_cast<Instruction>(Op);
     if (!I || !I->hasOneUse()) {
@@ -12054,19 +12055,15 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
         FMACost += TTI.getInstructionCost(I, CostKind);
       continue;
     }
+    ++NumOps;
     if (auto *FPCI = dyn_cast<FPMathOperator>(I))
       FMF &= FPCI->getFastMathFlags();
-    FMulPlusFaddCost += TTI.getInstructionCost(I, CostKind);
+    FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
   }
-  const unsigned NumOps =
-      count_if(zip(VL, Operands.front()), [](const auto &P) {
-        return isa<Instruction>(std::get<0>(P)) &&
-               isa<Instruction>(std::get<1>(P));
-      });
   Type *Ty = VL.front()->getType();
   IntrinsicCostAttributes ICA(Intrinsic::fmuladd, Ty, {Ty, Ty, Ty}, FMF);
   FMACost += NumOps * TTI.getIntrinsicInstrCost(ICA, CostKind);
-  return FMACost < FMulPlusFaddCost ? FMACost : InstructionCost::getInvalid();
+  return FMACost < FMulPlusFAddCost ? FMACost : InstructionCost::getInvalid();
 }
 
 void BoUpSLP::transformNodes() {
@@ -13689,9 +13686,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     return IntrinsicCost;
   };
   auto GetFMulAddCost = [&, &TTI = *TTI](const InstructionsState &S,
-                                         Instruction *VI = nullptr) {
-    InstructionCost Cost = canConvertToFMA(VI ? ArrayRef<Value *>(VI) : VL, S,
-                                           *DT, *DL, TTI, *TLI);
+                                         Instruction *VI) {
+    InstructionCost Cost = canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI);
     return Cost;
   };
   switch (ShuffleOrOp) {
