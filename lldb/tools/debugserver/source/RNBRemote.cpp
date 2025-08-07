@@ -22,7 +22,7 @@
 #include <mach/mach_vm.h>
 #include <mach/task_info.h>
 #include <memory>
-#if __has_include(<os/security_config.h>) // macOS 26.1
+#if __has_include(<os/security_config.h>)
 #include <os/security_config.h>
 #endif
 #include <pwd.h>
@@ -6247,18 +6247,8 @@ GetCPUTypesFromHost(nub_process_t pid) {
   return {cputype, cpusubtype};
 }
 
-#if !__has_include(<os/security_config.h>) // macOS 26.1
-extern "C" {
-using os_security_config_t = uint64_t;
-#define OS_SECURITY_CONFIG_MTE 0x4
-
-API_AVAILABLE(macos(26.0), ios(26.0), tvos(26.0), watchos(26.0), visionos(26.0),
-              driverkit(25.0))
-OS_EXPORT OS_NOTHROW OS_NONNULL_ALL int
-os_security_config_get_for_proc(pid_t pid, os_security_config_t *config);
-}
-#endif
 static bool ProcessRunningWithMemoryTagging(pid_t pid) {
+#if __has_include(<os/security_config.h>)
   if (__builtin_available(macOS 26.0, iOS 26.0, tvOS 26.0, watchOS 26.0,
                           visionOS 26.0, driverkit 25.0, *)) {
     os_security_config_t config;
@@ -6268,6 +6258,7 @@ static bool ProcessRunningWithMemoryTagging(pid_t pid) {
 
     return (config & OS_SECURITY_CONFIG_MTE);
   }
+#endif
   return false;
 }
 
