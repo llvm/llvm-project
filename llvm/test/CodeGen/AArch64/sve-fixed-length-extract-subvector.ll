@@ -50,7 +50,7 @@ define void @extract_v32i8_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(
 ; CHECK-LABEL: extract_v32i8_halves:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    str q0, [x2]
@@ -68,7 +68,7 @@ define void @extract_v32i8_half_unaligned(ptr %in, ptr %out) #0 vscale_range(2,2
 ; CHECK-LABEL: extract_v32i8_half_unaligned:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v1.16b, #4
 ; CHECK-NEXT:    str q0, [x1]
@@ -84,15 +84,16 @@ define void @extract_v32i8_quarters(ptr %in, ptr %out, ptr %out2, ptr %out3, ptr
 ; CHECK-LABEL: extract_v32i8_quarters:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
-; CHECK-NEXT:    mov z2.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
+; CHECK-NEXT:    movprfx z2, z0
 ; CHECK-NEXT:    ext z2.b, z2.b, z0.b, #24
+; CHECK-NEXT:    movprfx z3, z0
+; CHECK-NEXT:    ext z3.b, z3.b, z0.b, #8
 ; CHECK-NEXT:    str d1, [x1]
 ; CHECK-NEXT:    str d2, [x2]
 ; CHECK-NEXT:    str d0, [x3]
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
-; CHECK-NEXT:    str d0, [x4]
+; CHECK-NEXT:    str d3, [x4]
 ; CHECK-NEXT:    ret
 entry:
   %b = load <32 x i8>, ptr %in
@@ -126,7 +127,7 @@ define void @extract_v64i8_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.b, vl32
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
 ; CHECK-NEXT:    st1b { z1.b }, p0, [x1]
 ; CHECK-NEXT:    st1b { z0.b }, p0, [x2]
@@ -207,7 +208,7 @@ define void @extract_v16i16_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range
 ; CHECK-LABEL: extract_v16i16_halves:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    str q0, [x2]
@@ -240,7 +241,7 @@ define void @extract_v32i16_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
@@ -322,7 +323,7 @@ define void @extract_v8i32_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(
 ; CHECK-LABEL: extract_v8i32_halves:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    str q0, [x2]
@@ -355,7 +356,7 @@ define void @extract_v16i32_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x1]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
@@ -426,7 +427,7 @@ define void @extract_v4i64_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(
 ; CHECK-LABEL: extract_v4i64_halves:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    str q0, [x2]
@@ -459,7 +460,7 @@ define void @extract_v8i64_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_range(
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
@@ -553,7 +554,7 @@ define void @extract_v16half_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_rang
 ; CHECK-LABEL: extract_v16half_halves:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    str q0, [x2]
@@ -586,7 +587,7 @@ define void @extract_v32half_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_rang
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.h, vl16
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
 ; CHECK-NEXT:    st1h { z1.h }, p0, [x1]
 ; CHECK-NEXT:    st1h { z0.h }, p0, [x2]
@@ -668,7 +669,7 @@ define void @extract_v8float_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_rang
 ; CHECK-LABEL: extract_v8float_halves:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    str q0, [x2]
@@ -701,7 +702,7 @@ define void @extract_v16float_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_ran
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.s, vl8
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
 ; CHECK-NEXT:    st1w { z1.s }, p0, [x1]
 ; CHECK-NEXT:    st1w { z0.s }, p0, [x2]
@@ -772,7 +773,7 @@ define void @extract_v4double_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_ran
 ; CHECK-LABEL: extract_v4double_halves:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    str q1, [x1]
 ; CHECK-NEXT:    str q0, [x2]
@@ -805,7 +806,7 @@ define void @extract_v8double_halves(ptr %in, ptr %out, ptr %out2) #0 vscale_ran
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ptrue p0.d, vl4
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #32
 ; CHECK-NEXT:    st1d { z1.d }, p0, [x1]
 ; CHECK-NEXT:    st1d { z0.d }, p0, [x2]
@@ -908,7 +909,7 @@ define void @extract_subvector_legalization_v8i32() vscale_range(2,2) #0 {
 ; CHECK-NEXT:    add x8, x8, :lo12:.LCPI59_0
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    ldr z0, [x8]
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #16
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    cmeq v1.4s, v1.4s, #0

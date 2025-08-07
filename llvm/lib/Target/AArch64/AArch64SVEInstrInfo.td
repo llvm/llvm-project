@@ -2135,19 +2135,19 @@ let Predicates = [HasSVE_or_SME] in {
   // Splice with lane bigger or equal to 0
   foreach VT = [nxv16i8] in
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_255 i32:$index)))),
-              (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+              (EXT_ZZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
 
   foreach VT = [nxv8i16, nxv8f16, nxv8bf16] in
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_127 i32:$index)))),
-              (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+              (EXT_ZZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
 
   foreach VT = [nxv4i32, nxv4f16, nxv4f32, nxv4bf16] in
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_63 i32:$index)))),
-              (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+              (EXT_ZZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
 
   foreach VT = [nxv2i64, nxv2f16, nxv2f32, nxv2f64, nxv2bf16] in
     def : Pat<(VT (vector_splice VT:$Z1, VT:$Z2, (i64 (sve_ext_imm_0_31 i32:$index)))),
-              (EXT_ZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
+              (EXT_ZZZI  ZPR:$Z1, ZPR:$Z2, imm0_255:$index)>;
 
   defm CMPHS_PPzZZ : sve_int_cmp_0<0b000, "cmphs", SETUGE, SETULE>;
   defm CMPHI_PPzZZ : sve_int_cmp_0<0b001, "cmphi", SETUGT, SETULT>;

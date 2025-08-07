@@ -53,10 +53,6 @@ bool AArch64PostCoalescer::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
 
-  AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();
-  if (!FuncInfo->hasStreamingModeChanges())
-    return false;
-
   MRI = &MF.getRegInfo();
   LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   bool Changed = false;
@@ -86,6 +82,13 @@ bool AArch64PostCoalescer::runOnMachineFunction(MachineFunction &MF) {
         Changed = true;
         break;
       }
+      case AArch64::EXT_ZZZI:
+        Register DstReg = MI.getOperand(0).getReg();
+        Register SrcReg1 = MI.getOperand(1).getReg();
+        if (SrcReg1 != DstReg) {
+          MRI->setRegAllocationHint(DstReg, 0, SrcReg1);
+        }
+        break;
       }
     }
   }
