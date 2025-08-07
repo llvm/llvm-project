@@ -582,15 +582,17 @@ struct AllSwitchPaths {
     VisitedBlocks VB;
     // Get paths from the determinator BBs to SwitchPhiDefBB
     std::vector<ThreadingPath> PathsToPhiDef =
-        getPathsFromStateDefMap(StateDef, SwitchPhi, VB);
+        getPathsFromStateDefMap(StateDef, SwitchPhi, VB, MaxNumPaths);
     if (SwitchPhiDefBB == SwitchBlock) {
       TPaths = std::move(PathsToPhiDef);
       return;
     }
 
+    assert(MaxNumPaths >= PathsToPhiDef.size());
+    auto PathsLimit = MaxNumPaths / PathsToPhiDef.size();
     // Find and append paths from SwitchPhiDefBB to SwitchBlock.
     PathsType PathsToSwitchBB =
-        paths(SwitchPhiDefBB, SwitchBlock, VB, /* PathDepth = */ 1);
+        paths(SwitchPhiDefBB, SwitchBlock, VB, /* PathDepth = */ 1, PathsLimit);
     if (PathsToSwitchBB.empty())
       return;
 
@@ -611,13 +613,16 @@ private:
   typedef DenseMap<const BasicBlock *, const PHINode *> StateDefMap;
   std::vector<ThreadingPath> getPathsFromStateDefMap(StateDefMap &StateDef,
                                                      PHINode *Phi,
-                                                     VisitedBlocks &VB) {
+                                                     VisitedBlocks &VB,
+                                                     unsigned PathsLimit) {
     std::vector<ThreadingPath> Res;
     auto *PhiBB = Phi->getParent();
     VB.insert(PhiBB);
 
     VisitedBlocks UniqueBlocks;
     for (auto *IncomingBB : Phi->blocks()) {
+      if (Res.size() >= PathsLimit)
+        break;
       if (!UniqueBlocks.insert(IncomingBB).second)
         continue;
       if (!SwitchOuterLoop->contains(IncomingBB))
@@ -653,8 +658,9 @@ private:
 
       // Direct predecessor, just add to the path.
       if (IncomingPhiDefBB == IncomingBB) {
-        std::vector<ThreadingPath> PredPaths =
-            getPathsFromStateDefMap(StateDef, IncomingPhi, VB);
+        assert(PathsLimit > Res.size());
+        std::vector<ThreadingPath> PredPaths = getPathsFromStateDefMap(
+            StateDef, IncomingPhi, VB, PathsLimit - Res.size());
         for (ThreadingPath &Path : PredPaths) {
           Path.push_back(PhiBB);
           Res.push_back(std::move(Path));
@@ -667,13 +673,17 @@ private:
         continue;
 
       PathsType IntermediatePaths;
-      IntermediatePaths =
-          paths(IncomingPhiDefBB, IncomingBB, VB, /* PathDepth = */ 1);
+      assert(PathsLimit > Res.size());
+      auto InterPathLimit = PathsLimit - Res.size();
+      IntermediatePaths = paths(IncomingPhiDefBB, IncomingBB, VB,
+                                /* PathDepth = */ 1, InterPathLimit);
       if (IntermediatePaths.empty())
         continue;
 
+      assert(InterPathLimit >= IntermediatePaths.size());
+      auto PredPathLimit = InterPathLimit / IntermediatePaths.size();
       std::vector<ThreadingPath> PredPaths =
-          getPathsFromStateDefMap(StateDef, IncomingPhi, VB);
+          getPathsFromStateDefMap(StateDef, IncomingPhi, VB, PredPathLimit);
       for (const ThreadingPath &Path : PredPaths) {
         for (const PathType &IPath : IntermediatePaths) {
           ThreadingPath NewPath(Path);
@@ -688,7 +698,7 @@ private:
   }
 
   PathsType paths(BasicBlock *BB, BasicBlock *ToBB, VisitedBlocks &Visited,
-                  unsigned PathDepth) {
+                  unsigned PathDepth, unsigned PathsLimit) {
     PathsType Res;
 
     // Stop exploring paths after visiting MaxPathLength blocks
@@ -715,6 +725,8 @@ private:
     // is used to prevent a duplicate path from being generated
     SmallSet<BasicBlock *, 4> Successors;
     for (BasicBlock *Succ : successors(BB)) {
+      if (Res.size() >= PathsLimit)
+        break;
       if (!Successors.insert(Succ).second)
         continue;
 
@@ -736,14 +748,12 @@ private:
       // coverage and compile time.
       if (LI->getLoopFor(Succ) != CurrLoop)
         continue;
-
-      PathsType SuccPaths = paths(Succ, ToBB, Visited, PathDepth + 1);
+      assert(PathsLimit > Res.size());
+      PathsType SuccPaths =
+          paths(Succ, ToBB, Visited, PathDepth + 1, PathsLimit - Res.size());
       for (PathType &Path : SuccPaths) {
         Path.push_front(BB);
         Res.push_back(Path);
-        if (Res.size() >= MaxNumPaths) {
-          return Res;
-        }
       }
     }
     // This block could now be visited again from a different predecessor. Note
