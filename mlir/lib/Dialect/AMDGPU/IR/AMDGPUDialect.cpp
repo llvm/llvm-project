@@ -518,8 +518,8 @@ LogicalResult GatherToLDSOp::verify() {
   MemRefType srcType = cast<MemRefType>(getSrc().getType());
   MemRefType dstType = cast<MemRefType>(getDst().getType());
 
-  if (!dstType.areTrailingDimsContiguous(dstType.getRank()))
-    return emitOpError("destination types must be contiguous");
+  if (!dstType.areTrailingDimsContiguous(1))
+    return emitOpError("destination type inner most dim must be contiguous");
 
   auto elemType = srcType.getElementType();
   // Check $src and $dst element types are the same.
