@@ -12945,9 +12945,10 @@ def err_sycl_special_type_num_init_method : Error<
 // SYCL kernel entry point diagnostics
 def err_sycl_entry_point_invalid : Error<
   "the %0 attribute cannot be applied to a"
-  " %select{non-static member function|variadic function|deleted function|"
-           "defaulted function|constexpr function|consteval function|"
-           "function declared with the 'noreturn' attribute|coroutine|"
+  " %select{variadic function|deleted function|defaulted function|"
+           "constructor|destructor|coroutine|"
+           "constexpr function|consteval function|"
+           "function declared with the 'noreturn' attribute|"
            "function defined with a function try block}1">;
 def err_sycl_entry_point_invalid_redeclaration : Error<
   "the %0 kernel name argument does not match prior"
