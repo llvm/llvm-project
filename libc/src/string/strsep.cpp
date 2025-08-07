@@ -12,6 +12,8 @@
 #include "src/__support/macros/null_check.h"
 #include "src/string/string_utils.h"
 
+#include "src/__support/common.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(char *, strsep,

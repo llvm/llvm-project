@@ -1,4 +1,4 @@
-# ALLOW_RETRIES: 3
+# ALLOW_RETRIES: 10
 # RUN: "%python" "%s" "%counter"
 
 import sys

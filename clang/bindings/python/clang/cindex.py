@@ -2481,6 +2481,7 @@ class TypeKind(BaseEnumeration):
     OBJCSEL = 29
     FLOAT128 = 30
     HALF = 31
+    FLOAT16 = 32
     IBM128 = 40
     COMPLEX = 100
     POINTER = 101

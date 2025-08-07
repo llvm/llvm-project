@@ -261,8 +261,8 @@ func.func @_QPreshape5(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>> {fir
 // CHECK:           %[[VAL_25:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_26:.*]]:3 = fir.box_dims %[[VAL_25]], %[[VAL_4]] : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_27:.*]] = fir.shift %[[VAL_26]]#0 : (index) -> !fir.shift<1>
-// CHECK:           %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_25]](%[[VAL_27]]) {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.shift<1>) -> (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>)
-// CHECK:           %[[VAL_29:.*]] = hlfir.as_expr %[[VAL_28]]#0 move %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1) -> !hlfir.expr<?x!fir.type<_QMtypesTt>>
+// CHECK:           %[[VAL_28:.*]]:2 = hlfir.declare %[[VAL_25]](%[[VAL_27]]) {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.shift<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>)
+// CHECK:           %[[VAL_29:.*]] = hlfir.as_expr %[[VAL_28]]#0 move %[[VAL_2]] : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, i1) -> !hlfir.expr<?x!fir.type<_QMtypesTt>>
 // CHECK:           hlfir.assign %[[VAL_29]] to %[[VAL_8]]#0 : !hlfir.expr<?x!fir.type<_QMtypesTt>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>
 // CHECK:           hlfir.destroy %[[VAL_29]] : !hlfir.expr<?x!fir.type<_QMtypesTt>>
 // CHECK:           return
@@ -318,8 +318,8 @@ func.func @_QPreshape6(%arg0: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.ty
 // CHECK:           %[[VAL_26:.*]] = fir.load %[[VAL_6]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_27:.*]]:3 = fir.box_dims %[[VAL_26]], %[[VAL_4]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_28:.*]] = fir.shift %[[VAL_27]]#0 : (index) -> !fir.shift<1>
-// CHECK:           %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_26]](%[[VAL_28]]) {uniq_name = ".tmp.intrinsic_result"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.shift<1>) -> (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>)
-// CHECK:           %[[VAL_30:.*]] = hlfir.as_expr %[[VAL_29]]#0 move %[[VAL_2]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?>
+// CHECK:           %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_26]](%[[VAL_28]]) {uniq_name = ".tmp.intrinsic_result"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.shift<1>) -> (!fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>, !fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>)
+// CHECK:           %[[VAL_30:.*]] = hlfir.as_expr %[[VAL_29]]#0 move %[[VAL_2]] : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>, i1) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?>
 // CHECK:           hlfir.assign %[[VAL_30]] to %[[VAL_8]]#0 realloc : !hlfir.expr<?x!fir.type<_QMtypesTt>?>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           hlfir.destroy %[[VAL_30]] : !hlfir.expr<?x!fir.type<_QMtypesTt>?>
 // CHECK:           return
@@ -375,8 +375,8 @@ func.func @_QPreshape7(%arg0: !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>> {fir
 // CHECK:           %[[VAL_26:.*]] = fir.load %[[VAL_7]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_27:.*]]:3 = fir.box_dims %[[VAL_26]], %[[VAL_5]] : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_28:.*]] = fir.shift %[[VAL_27]]#0 : (index) -> !fir.shift<1>
-// CHECK:           %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_26]](%[[VAL_28]]) {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.shift<1>) -> (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>)
-// CHECK:           %[[VAL_30:.*]] = hlfir.as_expr %[[VAL_29]]#0 move %[[VAL_3]] : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1) -> !hlfir.expr<?x!fir.type<_QMtypesTt>>
+// CHECK:           %[[VAL_29:.*]]:2 = hlfir.declare %[[VAL_26]](%[[VAL_28]]) {uniq_name = ".tmp.intrinsic_result"} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.shift<1>) -> (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>)
+// CHECK:           %[[VAL_30:.*]] = hlfir.as_expr %[[VAL_29]]#0 move %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>, i1) -> !hlfir.expr<?x!fir.type<_QMtypesTt>>
 // CHECK:           hlfir.assign %[[VAL_30]] to %[[VAL_10]]#0 : !hlfir.expr<?x!fir.type<_QMtypesTt>>, !fir.box<!fir.array<?x!fir.type<_QMtypesTt>>>
 // CHECK:           hlfir.destroy %[[VAL_30]] : !hlfir.expr<?x!fir.type<_QMtypesTt>>
 // CHECK:           return
@@ -435,8 +435,8 @@ func.func @_QPreshape8(%arg0: !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.ty
 // CHECK:           %[[VAL_27:.*]] = fir.load %[[VAL_7]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           %[[VAL_28:.*]]:3 = fir.box_dims %[[VAL_27]], %[[VAL_5]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, index) -> (index, index, index)
 // CHECK:           %[[VAL_29:.*]] = fir.shift %[[VAL_28]]#0 : (index) -> !fir.shift<1>
-// CHECK:           %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_27]](%[[VAL_29]]) {uniq_name = ".tmp.intrinsic_result"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.shift<1>) -> (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>)
-// CHECK:           %[[VAL_31:.*]] = hlfir.as_expr %[[VAL_30]]#0 move %[[VAL_3]] : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, i1) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?>
+// CHECK:           %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_27]](%[[VAL_29]]) {uniq_name = ".tmp.intrinsic_result"} : (!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>, !fir.shift<1>) -> (!fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>, !fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>)
+// CHECK:           %[[VAL_31:.*]] = hlfir.as_expr %[[VAL_30]]#0 move %[[VAL_3]] : (!fir.class<!fir.array<?x!fir.type<_QMtypesTt>>>, i1) -> !hlfir.expr<?x!fir.type<_QMtypesTt>?>
 // CHECK:           hlfir.assign %[[VAL_31]] to %[[VAL_10]]#0 realloc : !hlfir.expr<?x!fir.type<_QMtypesTt>?>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x!fir.type<_QMtypesTt>>>>>
 // CHECK:           hlfir.destroy %[[VAL_31]] : !hlfir.expr<?x!fir.type<_QMtypesTt>?>
 // CHECK:           return

@@ -356,6 +356,11 @@ The timing data is stored in the `test_exec_root` in a file named
   primary purpose is to suppress an ``XPASS`` result without modifying a test
   case that uses the ``XFAIL`` directive.
 
+.. option:: --exclude-xfail
+
+  ``XFAIL`` tests won't be run, unless they are listed in the ``--xfail-not``
+  (or ``LIT_XFAIL_NOT``) lists.
+
 .. option:: --num-shards M
 
  Divide the set of selected tests into ``M`` equal-sized subsets or
@@ -687,6 +692,14 @@ newline.
 
 The ``<progress info>`` field can be used to report progress information such
 as (1/300) or can be empty, but even when empty the parentheses are required.
+
+Should a test be allowed retries (see ``ALLOW_RETRIES:`` annotation) and it
+needed more than one attempt to succeed, then ``<progress info>`` is extended
+by this information:
+
+.. code-block:: none
+
+  , <num_attempts_made> of <max_allowed_attempts> attempts
 
 Each test result may include additional (multiline) log information in the
 following format:

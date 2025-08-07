@@ -140,6 +140,7 @@ endif()
 set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the MLIR CUDA runner")
 set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the MLIR ROCm runner")
 set(MLIR_ENABLE_SYCL_RUNNER 0 CACHE BOOL "Enable building the MLIR SYCL runner")
+set(MLIR_ENABLE_LEVELZERO_RUNNER 0 CACHE BOOL "Enable building the MLIR LevelZero runner")
 set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the MLIR SPIR-V cpu runner")
 set(MLIR_ENABLE_VULKAN_RUNNER 0 CACHE BOOL "Enable building the MLIR Vulkan runner")
 set(MLIR_ENABLE_NVPTXCOMPILER 0 CACHE BOOL
@@ -184,6 +185,8 @@ set(MLIR_BINDINGS_PYTHON_NB_DOMAIN "mlir"
   CACHE STRING "nanobind domain for MLIR python bindings.")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
+set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/mlir_core/mlir" CACHE STRING
+       "Prefix under install directory to place python bindings")
 set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL
        "Prime the python detection by searching for a full 'Development' \
        component first (temporary while diagnosing environment specific Python \

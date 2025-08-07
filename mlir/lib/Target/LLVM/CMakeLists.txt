@@ -8,6 +8,7 @@ add_mlir_library(MLIRTargetLLVM
   intrinsics_gen
 
   LINK_COMPONENTS
+  BitWriter
   Core
   IPO
   IRReader
@@ -59,7 +60,7 @@ if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
     # See: https://gitlab.kitware.com/cmake/cmake/-/issues/24858
     # TODO: Bump the MLIR CMake version to 3.26.4 and switch to
     # ${CUDAToolkit_LIBRARY_ROOT}
-    if(NOT DEFINED ${CUDAToolkit_LIBRARY_ROOT})
+    if(NOT DEFINED CUDAToolkit_LIBRARY_ROOT)
       get_filename_component(MLIR_CUDAToolkit_ROOT ${CUDAToolkit_BIN_DIR}
                              DIRECTORY ABSOLUTE)
     else()

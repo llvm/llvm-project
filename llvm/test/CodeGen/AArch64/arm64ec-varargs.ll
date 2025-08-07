@@ -45,9 +45,9 @@ define void @varargs_caller() nounwind {
 ; CHECK-NEXT:    stp x9, x8, [sp]
 ; CHECK-NEXT:    str xzr, [sp, #16]
 ; CHECK-NEXT:    .weak_anti_dep varargs_callee
-; CHECK-NEXT:  .set varargs_callee, "#varargs_callee"
+; CHECK-NEXT:  varargs_callee = "#varargs_callee"
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_callee"
-; CHECK-NEXT:  .set "#varargs_callee", varargs_callee
+; CHECK-NEXT:  "#varargs_callee" = varargs_callee
 ; CHECK-NEXT:    bl "#varargs_callee"
 ; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #48
@@ -86,9 +86,9 @@ define void @varargs_many_argscalleer() nounwind {
 ; CHECK-NEXT:    stp x9, x8, [sp]
 ; CHECK-NEXT:    stp q0, q0, [sp, #16]
 ; CHECK-NEXT:    .weak_anti_dep varargs_many_argscallee
-; CHECK-NEXT:  .set varargs_many_argscallee, "#varargs_many_argscallee"
+; CHECK-NEXT:  varargs_many_argscallee = "#varargs_many_argscallee"
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_many_argscallee"
-; CHECK-NEXT:  .set "#varargs_many_argscallee", varargs_many_argscallee
+; CHECK-NEXT:  "#varargs_many_argscallee" = varargs_many_argscallee
 ; CHECK-NEXT:    bl "#varargs_many_argscallee"
 ; CHECK-NEXT:    ldr x30, [sp, #48] // 8-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #64
@@ -116,9 +116,9 @@ define void @varargs_caller_tail() nounwind {
 ; CHECK-NEXT:    stp x9, x8, [sp]
 ; CHECK-NEXT:    str xzr, [sp, #16]
 ; CHECK-NEXT:    .weak_anti_dep varargs_callee
-; CHECK-NEXT:  .set varargs_callee, "#varargs_callee"
+; CHECK-NEXT:  varargs_callee = "#varargs_callee"
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_callee"
-; CHECK-NEXT:  .set "#varargs_callee", varargs_callee
+; CHECK-NEXT:  "#varargs_callee" = varargs_callee
 ; CHECK-NEXT:    bl "#varargs_callee"
 ; CHECK-NEXT:    ldr x30, [sp, #32] // 8-byte Folded Reload
 ; CHECK-NEXT:    add x4, sp, #48
@@ -129,9 +129,9 @@ define void @varargs_caller_tail() nounwind {
 ; CHECK-NEXT:    mov x5, xzr
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    .weak_anti_dep varargs_callee
-; CHECK-NEXT:  .set varargs_callee, "#varargs_callee"
+; CHECK-NEXT:  varargs_callee = "#varargs_callee"
 ; CHECK-NEXT:    .weak_anti_dep "#varargs_callee"
-; CHECK-NEXT:  .set "#varargs_callee", varargs_callee
+; CHECK-NEXT:  "#varargs_callee" = varargs_callee
 ; CHECK-NEXT:    b "#varargs_callee"
   call void (double, ...) @varargs_callee(double 1.0, i32 2, double 3.0, i32 4, double 5.0, <2 x double> <double 0.0, double 0.0>)
   tail call void (double, ...) @varargs_callee(double 1.0, i32 4, i32 3, i32 2)

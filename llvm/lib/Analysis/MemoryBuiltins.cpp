@@ -428,6 +428,9 @@ llvm::getAllocSize(const CallBase *CB, const TargetLibraryInfo *TLI,
 Constant *llvm::getInitialValueOfAllocation(const Value *V,
                                             const TargetLibraryInfo *TLI,
                                             Type *Ty) {
+  if (isa<AllocaInst>(V))
+    return UndefValue::get(Ty);
+
   auto *Alloc = dyn_cast<CallBase>(V);
   if (!Alloc)
     return nullptr;

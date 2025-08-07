@@ -43,6 +43,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/AMDHSAKernelDescriptor.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/TargetParser.h"
@@ -83,7 +84,8 @@ createAMDGPUAsmPrinterPass(TargetMachine &tm,
   return new AMDGPUAsmPrinter(tm, std::move(Streamer));
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmPrinter() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeAMDGPUAsmPrinter() {
   TargetRegistry::RegisterAsmPrinter(getTheR600Target(),
                                      llvm::createR600AsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
@@ -348,7 +350,7 @@ bool AMDGPUAsmPrinter::doInitialization(Module &M) {
       HSAMetadataStream = std::make_unique<HSAMD::MetadataStreamerMsgPackV6>();
       break;
     default:
-      report_fatal_error("Unexpected code object version");
+      reportFatalUsageError("unsupported code object version");
     }
   }
 
@@ -450,15 +452,17 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
       unsigned MaxWaves = MFI.getMaxWavesPerEU();
       uint64_t TotalNumVgpr =
           getTotalNumVGPRs(STM.hasGFX90AInsts(), NumAgpr, NumVgpr);
-      uint64_t NumVGPRsForWavesPerEU = std::max(
-          {TotalNumVgpr, (uint64_t)1, (uint64_t)STM.getMinNumVGPRs(MaxWaves)});
+      uint64_t NumVGPRsForWavesPerEU =
+          std::max({TotalNumVgpr, (uint64_t)1,
+                    (uint64_t)STM.getMinNumVGPRs(
+                        MaxWaves, MFI.getDynamicVGPRBlockSize())});
       uint64_t NumSGPRsForWavesPerEU = std::max(
           {NumSgpr, (uint64_t)1, (uint64_t)STM.getMinNumSGPRs(MaxWaves)});
       const MCExpr *OccupancyExpr = AMDGPUMCExpr::createOccupancy(
           STM.getOccupancyWithWorkGroupSizes(*MF).second,
           MCConstantExpr::create(NumSGPRsForWavesPerEU, OutContext),
-          MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext), STM,
-          OutContext);
+          MCConstantExpr::create(NumVGPRsForWavesPerEU, OutContext),
+          MFI.getDynamicVGPRBlockSize(), STM, OutContext);
       uint64_t Occupancy;
 
       const auto [MinWEU, MaxWEU] = AMDGPU::getIntegerPairAttribute(
@@ -482,12 +486,16 @@ bool AMDGPUAsmPrinter::doFinalization(Module &M) {
   // Pad with s_code_end to help tools and guard against instruction prefetch
   // causing stale data in caches. Arguably this should be done by the linker,
   // which is why this isn't done for Mesa.
+  // Don't do it if there is no code.
   const MCSubtargetInfo &STI = *getGlobalSTI();
   if ((AMDGPU::isGFX10Plus(STI) || AMDGPU::isGFX90A(STI)) &&
       (STI.getTargetTriple().getOS() == Triple::AMDHSA ||
        STI.getTargetTriple().getOS() == Triple::AMDPAL)) {
-    OutStreamer->switchSection(getObjFileLowering().getTextSection());
-    getTargetStreamer()->EmitCodeEnd(STI);
+    MCSection *TextSect = getObjFileLowering().getTextSection();
+    if (TextSect->hasInstructions()) {
+      OutStreamer->switchSection(TextSect);
+      getTargetStreamer()->EmitCodeEnd(STI);
+    }
   }
 
   // Assign expressions which can only be resolved when all other functions are
@@ -548,6 +556,7 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
   MCContext &Ctx = MF.getContext();
   uint16_t KernelCodeProperties = 0;
   const GCNUserSGPRUsageInfo &UserSGPRInfo = MFI.getUserSGPRInfo();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
   if (UserSGPRInfo.hasPrivateSegmentBuffer()) {
     KernelCodeProperties |=
@@ -577,9 +586,12 @@ const MCExpr *AMDGPUAsmPrinter::getAmdhsaKernelCodeProperties(
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_SGPR_PRIVATE_SEGMENT_SIZE;
   }
-  if (MF.getSubtarget<GCNSubtarget>().isWave32()) {
+  if (ST.isWave32()) {
     KernelCodeProperties |=
         amdhsa::KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32;
+  }
+  if (isGFX1250(ST) && ST.hasCUStores()) {
+    KernelCodeProperties |= amdhsa::KERNEL_CODE_PROPERTY_USES_CU_STORES;
   }
 
   // CurrentProgramInfo.DynamicCallStack is a MCExpr and could be
@@ -642,7 +654,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(*MF.getFunction().getParent());
 
-  ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysis>();
+  ResourceUsage =
+      &getAnalysis<AMDGPUResourceUsageAnalysisWrapperPass>().getResourceInfo();
   CurrentProgramInfo.reset(MF);
 
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
@@ -664,9 +677,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->switchSection(ConfigSection);
   }
 
-  const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
-      ResourceUsage->getResourceInfo();
-  RI.gatherResourceInfo(MF, Info, OutContext);
+  RI.gatherResourceInfo(MF, *ResourceUsage, OutContext);
 
   if (MFI->isModuleEntryFunction()) {
     getSIProgramInfo(CurrentProgramInfo, MF);
@@ -989,7 +1000,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // dispatch registers are function args.
   unsigned WaveDispatchNumSGPR = 0, WaveDispatchNumVGPR = 0;
 
-  if (isShader(F.getCallingConv()) && isEntryFunctionCC(F.getCallingConv())) {
+  if (isShader(F.getCallingConv())) {
     bool IsPixelShader =
         F.getCallingConv() == CallingConv::AMDGPU_PS && !STM.isAmdHsaOS();
 
@@ -1060,6 +1071,15 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
     ProgInfo.NumVGPR = AMDGPUMCExpr::createTotalNumVGPR(
         ProgInfo.NumAccVGPR, ProgInfo.NumArchVGPR, Ctx);
+  } else if (isKernel(F.getCallingConv()) &&
+             MFI->getNumKernargPreloadedSGPRs()) {
+    // Consider cases where the total number of UserSGPRs with trailing
+    // allocated preload SGPRs, is greater than the number of explicitly
+    // referenced SGPRs.
+    const MCExpr *UserPlusExtraSGPRs = MCBinaryExpr::createAdd(
+        CreateExpr(MFI->getNumUserSGPRs()), ExtraSGPRs, Ctx);
+    ProgInfo.NumSGPR =
+        AMDGPUMCExpr::createMax({ProgInfo.NumSGPR, UserPlusExtraSGPRs}, Ctx);
   }
 
   // Adjust number of registers used to meet default/requested minimum/maximum
@@ -1071,7 +1091,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                               Ctx);
   ProgInfo.NumVGPRsForWavesPerEU =
       AMDGPUMCExpr::createMax({ProgInfo.NumVGPR, CreateExpr(1ul),
-                               CreateExpr(STM.getMinNumVGPRs(MaxWaves))},
+                               CreateExpr(STM.getMinNumVGPRs(
+                                   MaxWaves, MFI->getDynamicVGPRBlockSize()))},
                               Ctx);
 
   if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
@@ -1245,7 +1266,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.Occupancy = AMDGPUMCExpr::createOccupancy(
       STM.computeOccupancy(F, ProgInfo.LDSSize).second,
-      ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU, STM, Ctx);
+      ProgInfo.NumSGPRsForWavesPerEU, ProgInfo.NumVGPRsForWavesPerEU,
+      MFI->getDynamicVGPRBlockSize(), STM, Ctx);
 
   const auto [MinWEU, MaxWEU] =
       AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", {0, 0}, true);
@@ -1394,19 +1416,21 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
 // Helper function to add common PAL Metadata 3.0+
 static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
                                   const SIProgramInfo &CurrentProgramInfo,
-                                  CallingConv::ID CC, const GCNSubtarget &ST) {
+                                  CallingConv::ID CC, const GCNSubtarget &ST,
+                                  unsigned DynamicVGPRBlockSize) {
   if (ST.hasIEEEMode())
     MD->setHwStage(CC, ".ieee_mode", (bool)CurrentProgramInfo.IEEEMode);
 
   MD->setHwStage(CC, ".wgp_mode", (bool)CurrentProgramInfo.WgpMode);
   MD->setHwStage(CC, ".mem_ordered", (bool)CurrentProgramInfo.MemOrdered);
+  MD->setHwStage(CC, ".forward_progress", (bool)CurrentProgramInfo.FwdProgress);
 
   if (AMDGPU::isCompute(CC)) {
     MD->setHwStage(CC, ".trap_present",
                    (bool)CurrentProgramInfo.TrapHandlerEnable);
     MD->setHwStage(CC, ".excp_en", CurrentProgramInfo.EXCPEnable);
 
-    if (ST.isDynamicVGPREnabled())
+    if (DynamicVGPRBlockSize != 0)
       MD->setComputeRegisters(".dynamic_vgpr_en", true);
   }
 
@@ -1433,7 +1457,7 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
   // For targets that support dynamic VGPRs, set the number of saved dynamic
   // VGPRs (if any) in the PAL metadata.
   const GCNSubtarget &STM = MF.getSubtarget<GCNSubtarget>();
-  if (STM.isDynamicVGPREnabled() &&
+  if (MFI->isDynamicVGPREnabled() &&
       MFI->getScratchReservedForDynamicVGPRs() > 0)
     MD->setHwStage(CC, ".dynamic_vgpr_saved_count",
                    MFI->getScratchReservedForDynamicVGPRs() / 4);
@@ -1459,7 +1483,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
     MD->setHwStage(CC, ".debug_mode", (bool)CurrentProgramInfo.DebugMode);
     MD->setHwStage(CC, ".scratch_en", msgpack::Type::Boolean,
                    CurrentProgramInfo.ScratchEnable);
-    EmitPALMetadataCommon(MD, CurrentProgramInfo, CC, STM);
+    EmitPALMetadataCommon(MD, CurrentProgramInfo, CC, STM,
+                          MFI->getDynamicVGPRBlockSize());
   }
 
   // ScratchSize is in bytes, 16 aligned.
@@ -1530,7 +1555,9 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
     MD->setRsrc2(CallingConv::AMDGPU_CS,
                  CurrentProgramInfo.getComputePGMRSrc2(Ctx), Ctx);
   } else {
-    EmitPALMetadataCommon(MD, CurrentProgramInfo, CallingConv::AMDGPU_CS, ST);
+    EmitPALMetadataCommon(
+        MD, CurrentProgramInfo, CallingConv::AMDGPU_CS, ST,
+        MF.getInfo<SIMachineFunctionInfo>()->getDynamicVGPRBlockSize());
   }
 
   // Set optional info
@@ -1658,8 +1685,8 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<AMDGPUResourceUsageAnalysis>();
-  AU.addPreserved<AMDGPUResourceUsageAnalysis>();
+  AU.addRequired<AMDGPUResourceUsageAnalysisWrapperPass>();
+  AU.addPreserved<AMDGPUResourceUsageAnalysisWrapperPass>();
   AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addPreserved<MachineModuleInfoWrapperPass>();
   AsmPrinter::getAnalysisUsage(AU);

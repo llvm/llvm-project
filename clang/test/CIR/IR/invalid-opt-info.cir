@@ -1,0 +1,13 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+module attributes {
+  // expected-error @below {{optimization level must be between 0 and 3 inclusive}}
+  cir.opt_info = #cir.opt_info<level = 4, size = 0>
+} {}
+
+// -----
+
+module attributes {
+  // expected-error @below {{size optimization level must be between 0 and 2 inclusive}}
+  cir.opt_info = #cir.opt_info<level = 0, size = 3>
+} {}

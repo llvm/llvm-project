@@ -510,3 +510,64 @@ module {
 // CHECK: %[[yield:.*]] = arith.addf %{{.*}}, %{{.*}} : f32
 // CHECK: linalg.yield %[[yield]] : f32
 // CHECK-NOT: arith.subf
+
+
+// -----
+
+// check that ops with zero operands are correctly handled
+
+module {
+  func.func @test_zero_operands(%I: memref<10xindex>, %I2: memref<10xf32>) {
+    %v0 = arith.constant 0 : index
+    %result = memref.alloca_scope -> index {
+      %c = arith.addi %v0, %v0 : index
+      memref.store %c, %I[%v0] : memref<10xindex>
+      memref.alloca_scope.return %c: index
+    }
+    func.return
+  }
+}
+
+// CHECK-LABEL: func @test_zero_operands
+// CHECK: memref.alloca_scope
+// CHECK: memref.store
+// CHECK-NOT: memref.alloca_scope.return
+
+// -----
+
+// CHECK-LABEL: func.func @test_atomic_yield
+func.func @test_atomic_yield(%I: memref<10xf32>, %idx : index) {
+  // CHECK: memref.generic_atomic_rmw
+  %x = memref.generic_atomic_rmw %I[%idx] : memref<10xf32> {
+  ^bb0(%current_value : f32):
+    // CHECK: arith.constant
+    %c1 = arith.constant 1.0 : f32
+    // CHECK: memref.atomic_yield
+    memref.atomic_yield %c1 : f32
+  }
+  func.return
+}
+
+// -----
+
+// CHECK-LABEL: module @return_void_with_unused_argument
+module @return_void_with_unused_argument {
+  // CHECK-LABEL: func.func private @fn_return_void_with_unused_argument
+  // CHECK-SAME: (%[[ARG0_FN:.*]]: i32)
+  func.func private @fn_return_void_with_unused_argument(%arg0: i32, %arg1: memref<4xi32>) -> () {
+    %sum = arith.addi %arg0, %arg0 : i32
+    %c0 = arith.constant 0 : index
+    %buf = memref.alloc() : memref<1xi32>
+    memref.store %sum, %buf[%c0] : memref<1xi32>
+    return
+  }
+  // CHECK-LABEL: func.func @main
+  // CHECK-SAME: (%[[ARG0_MAIN:.*]]: i32)
+  // CHECK: call @fn_return_void_with_unused_argument(%[[ARG0_MAIN]]) : (i32) -> ()
+  func.func @main(%arg0: i32) -> memref<4xi32> {
+    %unused = memref.alloc() : memref<4xi32>
+    call @fn_return_void_with_unused_argument(%arg0, %unused) : (i32, memref<4xi32>) -> ()
+    return %unused : memref<4xi32>
+  }
+}
+

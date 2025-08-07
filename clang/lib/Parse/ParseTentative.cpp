@@ -735,10 +735,12 @@ bool Parser::TrySkipAttributes() {
                      tok::kw_alignas) ||
          Tok.isRegularKeywordAttribute()) {
     if (Tok.is(tok::l_square)) {
+      if (!NextToken().is(tok::l_square))
+        return true;
+
       ConsumeBracket();
-      if (Tok.isNot(tok::l_square))
-        return false;
       ConsumeBracket();
+
       if (!SkipUntil(tok::r_square) || Tok.isNot(tok::r_square))
         return false;
       // Note that explicitly checking for `[[` and `]]` allows to fail as
@@ -1171,7 +1173,6 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::kw_inline:
   case tok::kw_virtual:
   case tok::kw_explicit:
-  case tok::kw__Noreturn:
 
     // Modules
   case tok::kw___module_private__:
@@ -1226,7 +1227,6 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
     // GNU
   case tok::kw_restrict:
   case tok::kw__Complex:
-  case tok::kw__Imaginary:
   case tok::kw___attribute:
   case tok::kw___auto_type:
     return TPResult::True;
@@ -1376,7 +1376,7 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
               // If we annotated then the current token should not still be ::
               // FIXME we may want to also check for tok::annot_typename but
               // currently don't have a test case.
-              if (Tok.isNot(tok::annot_cxxscope))
+              if (Tok.isNot(tok::annot_cxxscope) && Tok.isNot(tok::identifier))
                 break;
             }
 

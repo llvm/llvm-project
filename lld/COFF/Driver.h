@@ -173,6 +173,7 @@ private:
                  bool lazy);
   void addArchiveBuffer(MemoryBufferRef mbref, StringRef symName,
                         StringRef parentName, uint64_t offsetInArchive);
+  void addThinArchiveBuffer(MemoryBufferRef mbref, StringRef symName);
 
   void enqueueTask(std::function<void()> task);
   bool run();
@@ -212,6 +213,8 @@ private:
   void parseMerge(StringRef);
   void parsePDBPageSize(StringRef);
   void parseSection(StringRef);
+
+  void parseSameAddress(StringRef);
 
   // Parses a MS-DOS stub file
   void parseDosStub(StringRef path);
