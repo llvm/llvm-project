@@ -32,6 +32,7 @@ class Value;
 class DXILResourceTypeMap;
 
 namespace dxil {
+
 // Returns the resource name from dx_resource_handlefrombinding or
 // dx_resource_handlefromimplicitbinding call
 LLVM_ABI StringRef getResourceNameFromBindingCall(CallInst *CI);
