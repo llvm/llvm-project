@@ -113,6 +113,18 @@ class SizeClassAllocator64 {
   // ~(uptr)0.
   void Init(s32 release_to_os_interval_ms, uptr heap_start = 0) {
     uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
+
+    uptr MaxAddr = GetMaxUserVirtualAddress();
+    // VReport does not call the sanitizer allocator.
+    VReport(3, "Max user virtual address: 0x%zx\n", MaxAddr);
+    VReport(3, "Total space size for primary allocator: 0x%zx\n",
+            TotalSpaceSize);
+    if (TotalSpaceSize >= MaxAddr)
+      VReport(0, "Error: heap size %zx exceeds max user virtual address %zx\n",
+              TotalSpaceSize, MaxAddr);
+    // We can't easily adjust the requested heap size, because kSpaceSize is
+    // const (for optimization) and used throughout the code.
+
     PremappedHeap = heap_start != 0;
     if (PremappedHeap) {
       CHECK(!kUsingConstantSpaceBeg);
