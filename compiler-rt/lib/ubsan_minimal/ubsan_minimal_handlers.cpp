@@ -97,15 +97,19 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
 
 #if defined(__ANDROID__)
 extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
-static void abort_with_message(const char *kind, uintptr_t caller) {
+static void abort_with_message(const char *kind, uintptr_t caller,
+                               const uintptr_t *address) {
   char msg_buf[128];
-  format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
+  format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf), address);
   if (&android_set_abort_message)
     android_set_abort_message(msg_buf);
   abort();
 }
 #else
-static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
+static void abort_with_message(const char *kind, uintptr_t caller,
+                               const uintptr_t *address) {
+  abort();
+}
 #endif
 
 #if SANITIZER_DEBUG
