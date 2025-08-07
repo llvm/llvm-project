@@ -95,11 +95,11 @@ bool inferAlignment(Function &F, AssumptionCache &AC, DominatorTree &DT) {
 
   for (BasicBlock &BB : F) {
     // We need to reset the map for each block because alignment information
-    // can't be propagated across blocks. This is because control flow could
-    // be dependent on the address at runtime, making an alignment assumption
-    // within one block not true in another. Some sort of dominator tree
-    // approach could be better, but restricting within a basic block is correct
-    // too.
+    // can only be propagated from instruction A to B if A dominates B.
+    // This is because control flow (and exception throwing) could be dependent
+    // on the address (and its alignment) at runtime. Some sort of dominator
+    // tree approach could be better, but doing a simple forward pass through a
+    // single basic block is correct too.
     BestBasePointerAligns.clear();
 
     for (Instruction &I : BB) {
