@@ -2825,7 +2825,7 @@ void PPCAIXAsmPrinter::emitGlobalVariableHelper(const GlobalVariable *GV) {
     // Map the global variable to its CSECT.
     SectionKind ProfCKind = getObjFileLowering().getKindForGlobal(GV, TM);
 
-    MCSectionXCOFF *ProfCCsect = cast<MCSectionXCOFF>(
+    MCSectionXCOFF *ProfCCsect = static_cast<MCSectionXCOFF *>(
         getObjFileLowering().SectionForGlobal(ProfCGV, ProfCKind, TM));
 
     ProfGenSubSections.push_back({Csect, ProfCCsect});
