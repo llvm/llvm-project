@@ -195,11 +195,6 @@ Changes in existing checks
   <clang-tidy/checks/readability/qualified-auto>` check by adding the option
   `IgnoreAliasing`, that allows not looking at underlying types of type aliases.
 
-- Improved :doc:`performance-unnecessary-value-param
-  <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
-  tolerating fix-it breaking compilation when functions is used as pointers 
-  to avoid matching usage of functions within the current compilation unit.
-
 Removed checks
 ^^^^^^^^^^^^^^
 
