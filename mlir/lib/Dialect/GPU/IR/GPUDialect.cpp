@@ -1013,7 +1013,7 @@ parseSizeAssignment(OpAsmParser &parser,
 ///       `clusters` `(` ssa-id-list `)` `in` ssa-reassignment (Optional)
 ///       `blocks` `(` ssa-id-list `)` `in` ssa-reassignment
 ///       `threads` `(` ssa-id-list `)` `in` ssa-reassignment
-///       (`dynamic_shared_memory_size` ssa-id)?
+///       (`dynamic_shared_memory_size` ssa-use)?
 ///       (`module(` symbol-ref-id `)`)?
 ///       (`function(` symbol-ref-id `)`)?
 ///       memory-attribution
