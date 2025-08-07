@@ -407,8 +407,9 @@ define { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x 
 define <vscale x 8 x i8> @vector_deinterleave_load_factor4_oneactive(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_factor4_oneactive:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg4e8.v v8, (a0)
+; CHECK-NEXT:    li a1, 4
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 32 x i8>, ptr %p
   %d0 = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave4(<vscale x 32 x i8> %vec)
@@ -419,8 +420,10 @@ define <vscale x 8 x i8> @vector_deinterleave_load_factor4_oneactive(ptr %p) {
 define <vscale x 8 x i8> @vector_deinterleave_load_factor4_oneactive2(ptr %p) {
 ; CHECK-LABEL: vector_deinterleave_load_factor4_oneactive2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg4e8.v v5, (a0)
+; CHECK-NEXT:    addi a0, a0, 3
+; CHECK-NEXT:    li a1, 4
+; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-NEXT:    ret
   %vec = load <vscale x 32 x i8>, ptr %p
   %d0 = call { <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i8> } @llvm.vector.deinterleave4(<vscale x 32 x i8> %vec)

@@ -61,8 +61,8 @@ unsigned LoongArchELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case ELF::R_LARCH_TLS_LD_PCREL20_S2:
   case ELF::R_LARCH_TLS_GD_PCREL20_S2:
   case ELF::R_LARCH_TLS_DESC_PCREL20_S2:
-    if (auto *SA = Target.getAddSym())
-      cast<MCSymbolELF>(SA)->setType(ELF::STT_TLS);
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
     break;
   default:
     break;

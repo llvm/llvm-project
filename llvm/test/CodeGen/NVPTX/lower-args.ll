@@ -31,7 +31,7 @@ define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %
 ; PTX-LABEL: load_alignment(
 ; PTX:       {
 ; PTX-NEXT:    .reg .b32 %r<4>;
-; PTX-NEXT:    .reg .b64 %rd<7>;
+; PTX-NEXT:    .reg .b64 %rd<6>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
 ; PTX-NEXT:    mov.b64 %rd1, load_alignment_param_0;
@@ -45,10 +45,9 @@ define void @load_alignment(ptr nocapture readonly byval(%class.outer) align 8 %
 ; PTX-NEXT:    st.b32 [%rd3], %r3;
 ; PTX-NEXT:    { // callseq 0, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0], %rd5;
 ; PTX-NEXT:    .param .b64 retval0;
+; PTX-NEXT:    st.param.b64 [param0], %rd5;
 ; PTX-NEXT:    call.uni (retval0), escape, (param0);
-; PTX-NEXT:    ld.param.b64 %rd6, [retval0];
 ; PTX-NEXT:    } // callseq 0
 ; PTX-NEXT:    ret;
 entry:
@@ -76,17 +75,16 @@ define void @load_padding(ptr nocapture readonly byval(%class.padded) %arg) {
 ;
 ; PTX-LABEL: load_padding(
 ; PTX:       {
-; PTX-NEXT:    .reg .b64 %rd<4>;
+; PTX-NEXT:    .reg .b64 %rd<3>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0:
 ; PTX-NEXT:    mov.b64 %rd1, load_padding_param_0;
 ; PTX-NEXT:    cvta.local.u64 %rd2, %rd1;
 ; PTX-NEXT:    { // callseq 1, 0
 ; PTX-NEXT:    .param .b64 param0;
-; PTX-NEXT:    st.param.b64 [param0], %rd2;
 ; PTX-NEXT:    .param .b64 retval0;
+; PTX-NEXT:    st.param.b64 [param0], %rd2;
 ; PTX-NEXT:    call.uni (retval0), escape, (param0);
-; PTX-NEXT:    ld.param.b64 %rd3, [retval0];
 ; PTX-NEXT:    } // callseq 1
 ; PTX-NEXT:    ret;
   %tmp = call ptr @escape(ptr nonnull align 16 %arg)
