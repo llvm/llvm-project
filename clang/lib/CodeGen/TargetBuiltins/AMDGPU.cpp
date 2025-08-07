@@ -277,7 +277,7 @@ llvm::Value *CodeGenFunction::EmitScalarOrConstFoldImmArg(unsigned ICEArguments,
 
 void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
                                                      const CallExpr *E) {
-  constexpr const char *Tag = "amdgpu-as";
+  constexpr const char *Tag = "amdgpu-synchronize-as";
 
   LLVMContext &Ctx = Inst->getContext();
   SmallVector<MMRAMetadata::TagT, 3> MMRAs;
@@ -949,11 +949,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x8B:
   case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_8x16B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x8B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x8B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x16B:
-  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x16B: {
+  case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B: {
     Intrinsic::ID IID;
     switch (BuiltinID) {
     case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x4B:
@@ -973,18 +969,6 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       break;
     case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_8x16B:
       IID = Intrinsic::amdgcn_cooperative_atomic_store_8x16B;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_32x8B:
-      IID = Intrinsic::amdgcn_cooperative_atomic_load_32x8B;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_32x8B:
-      IID = Intrinsic::amdgcn_cooperative_atomic_store_32x8B;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_load_16x16B:
-      IID = Intrinsic::amdgcn_cooperative_atomic_load_16x16B;
-      break;
-    case AMDGPU::BI__builtin_amdgcn_cooperative_atomic_store_16x16B:
-      IID = Intrinsic::amdgcn_cooperative_atomic_store_16x16B;
       break;
     }
 

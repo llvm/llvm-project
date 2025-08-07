@@ -1336,6 +1336,10 @@ void MachineMemOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
     OS << ", !noalias ";
     AAInfo.NoAlias->printAsOperand(OS, MST);
   }
+  if (AAInfo.NoAliasAddrSpace) {
+    OS << ", !noalias.addrspace ";
+    AAInfo.NoAliasAddrSpace->printAsOperand(OS, MST);
+  }
   if (getRanges()) {
     OS << ", !range ";
     getRanges()->printAsOperand(OS, MST);

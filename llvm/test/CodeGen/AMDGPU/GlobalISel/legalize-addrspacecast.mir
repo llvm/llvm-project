@@ -144,7 +144,7 @@ body: |
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p5)
     ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
     ; SIVI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
-    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C]](s64)
+    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY2]], [[C]](s64)
     ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
     ; SIVI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; SIVI-NEXT: [[C1:%[0-9]+]]:_(p5) = G_CONSTANT i32 -1
@@ -213,7 +213,7 @@ body: |
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[COPY1]](p3)
     ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
     ; SIVI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C]](s64)
+    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY2]], [[C]](s64)
     ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), align 64, addrspace 4)
     ; SIVI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; SIVI-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
@@ -357,7 +357,7 @@ body: |
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV]](p3)
     ; SIVI-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
     ; SIVI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
-    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY2]], [[C]](s64)
+    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY2]], [[C]](s64)
     ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), align 64, addrspace 4)
     ; SIVI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; SIVI-NEXT: [[C1:%[0-9]+]]:_(p3) = G_CONSTANT i32 -1
@@ -366,7 +366,7 @@ body: |
     ; SIVI-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[MV]], [[C2]]
     ; SIVI-NEXT: [[PTRTOINT1:%[0-9]+]]:_(s32) = G_PTRTOINT [[UV1]](p3)
     ; SIVI-NEXT: [[COPY3:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
-    ; SIVI-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY3]], [[C]](s64)
+    ; SIVI-NEXT: [[PTR_ADD1:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY3]], [[C]](s64)
     ; SIVI-NEXT: [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD1]](p4) :: (dereferenceable invariant load (s32), align 64, addrspace 4)
     ; SIVI-NEXT: [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT1]](s32), [[LOAD1]](s32)
     ; SIVI-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](p3), [[C1]]
@@ -509,7 +509,7 @@ body: |
     ; SIVI-NEXT: [[PTRTOINT:%[0-9]+]]:_(s32) = G_PTRTOINT [[FRAME_INDEX]](p5)
     ; SIVI-NEXT: [[COPY1:%[0-9]+]]:_(p4) = COPY [[COPY]](p4)
     ; SIVI-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 68
-    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = G_PTR_ADD [[COPY1]], [[C]](s64)
+    ; SIVI-NEXT: [[PTR_ADD:%[0-9]+]]:_(p4) = nuw inbounds G_PTR_ADD [[COPY1]], [[C]](s64)
     ; SIVI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[PTR_ADD]](p4) :: (dereferenceable invariant load (s32), addrspace 4)
     ; SIVI-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[PTRTOINT]](s32), [[LOAD]](s32)
     ; SIVI-NEXT: $vgpr0_vgpr1 = COPY [[MV]](p0)

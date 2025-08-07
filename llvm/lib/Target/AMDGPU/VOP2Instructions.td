@@ -1354,6 +1354,8 @@ def V_FMAAK_F64 : VOP2_Pseudo<"v_fmaak_f64", VOP_MADAK_F64, [], "">;
 } // End SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1, FixedSize = 1, Size = 12, SchedRW = [Write64Bit]
 
 let SubtargetPredicate = HasPkFmacF16Inst in {
+// FIXME: V_PK_FMAC_F16 is currently not used in instruction selection.
+// If this changes, ensure the DPP variant is not used for GFX11+.
 defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
 } // End SubtargetPredicate = HasPkFmacF16Inst
 
@@ -1967,8 +1969,8 @@ multiclass VOP2_Real_FULL_with_name_gfx11_gfx12_gfx13<
   VOP2_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
 
 multiclass VOP2_Real_e32_gfx11_gfx12_gfx13<bits<6> op> :
-  VOP2Only_Real<GFX11Gen, op>, VOP2Only_Real<GFX12Gen, op>,
-  VOP2Only_Real<GFX13Gen, op>;
+  VOP2Only_Real_e32<GFX11Gen, op>, VOP2Only_Real_e32<GFX12Gen, op>,
+  VOP2Only_Real_e32<GFX13Gen, op>;
 
 multiclass VOP2_Real_FULL_with_name_gfx1170<bits<6> op, string opName,
                                                 string asmName> :
@@ -1979,6 +1981,9 @@ multiclass VOP3Only_Realtriple_gfx11_gfx12_gfx13<
   VOP3Only_Realtriple<GFX11Gen, preGFX13Op>,
   VOP3Only_Realtriple<GFX12Gen, preGFX13Op>,
   VOP3Only_Realtriple<GFX13Gen, op>;
+
+multiclass VOP2_Real_e32_gfx11_gfx12<bits<6> op> :
+  VOP2Only_Real_e32<GFX11Gen, op>, VOP2Only_Real_e32<GFX12Gen, op>;
 
 multiclass VOP3Only_Realtriple_t16_gfx11_gfx12_gfx13<bits<10> preGFX13Op, bits<10> op, string asmName, string OpName = NAME> :
   VOP3_Realtriple_t16_gfx11<preGFX13Op, asmName, OpName, "", /*IsSingle*/1>,

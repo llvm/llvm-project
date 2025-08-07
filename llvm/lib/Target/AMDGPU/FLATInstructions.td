@@ -15,6 +15,7 @@ let WantsRoot = true in {
   def GlobalSAddrNoIOffsetM0 : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffsetM0", [], [], -3>;
   def GlobalSAddrNoScaleOffset : ComplexPattern<iPTR, 4, "SelectGlobalSAddrNoScaleOffset", [], [], -3>;
   def GlobalSAddrNoIOffsetScaleOffset : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffsetScaleOffset", [], [], -3>;
+  def GlobalSAddrNoIOffsetScaleOffsetM0 : ComplexPattern<iPTR, 3, "SelectGlobalSAddrNoIOffsetScaleOffsetM0", [], [], -3>;
   def GlobalSAddr : ComplexPattern<iPTR, 4, "SelectGlobalSAddr", [], [], -10>;
   def GlobalSAddrGLC : ComplexPattern<iPTR, 4, "SelectGlobalSAddrGLC", [], [], -10>;
   def GlobalSAddrCPol : ComplexPattern<iPTR, 4, "SelectGlobalSAddrCPol", [], [], -10>;
@@ -107,7 +108,6 @@ class FLAT_Real <bits<7> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
-  let WaveSizePredicate    = ps.WaveSizePredicate;
   let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
@@ -1685,8 +1685,8 @@ class FlatSignedLoadPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, Value
 >;
 
 class GlobalLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset), vt:$in)),
-  (inst $saddr, $voffset, $offset, 0, $in)
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol), vt:$in)),
+  (inst $saddr, $voffset, $offset, $cpol, $in)
 >;
 
 class FlatLoadSaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
@@ -1699,13 +1699,16 @@ class FlatLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueT
   (inst $saddr, $voffset, $offset, $cpol)
 >;
 
-class FlatLoadLDSSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (i64 VReg_64:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol), M0),
+class FlatLoadLDSSignedPat_M0 <FLAT_Pseudo inst, SDPatternOperator node,
+                               ValueType vaddr_vt = i64, DAGOperand vaddr_rc = getVregSrcForVT<vaddr_vt>.ret> : GCNPat <
+  (node (vaddr_vt vaddr_rc:$vaddr), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm:$cpol), M0),
   (inst $dsaddr, $vaddr, $offset, $cpol)
 >;
 
-class GlobalLoadLDSSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node (GlobalSAddrNoIOffsetM0 (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), CPol:$cpol), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm), M0),
+class GlobalLoadLDSSaddrPat_M0 <FLAT_Pseudo inst, SDPatternOperator node,
+                                ValueType saddr_vt = i64, ComplexPattern pat = GlobalSAddrNoIOffsetM0,
+                                RegisterClass saddr_rc = getSRegForVT<saddr_vt>.ret> : GCNPat <
+  (node (pat (saddr_vt saddr_rc:$saddr), (i32 VGPR_32:$voffset), CPol:$cpol), (i32 VGPR_32:$dsaddr), (i32 timm:$offset), (i32 timm), M0),
   (inst $dsaddr, $saddr, $voffset, $offset, $cpol)
 >;
 
@@ -1732,8 +1735,8 @@ class GlobalStoreLDSSaddrPat <FLAT_Pseudo inst, SDPatternOperator node> : GCNPat
 >;
 
 class GlobalLoadSaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset))),
-  (inst $saddr, $voffset, $offset, (i32 0))
+  (vt (node (GlobalSAddr (i64 SReg_64:$saddr), (i32 VGPR_32:$voffset), i32:$offset, CPol:$cpol))),
+  (inst $saddr, $voffset, $offset, $cpol)
 >;
 
 class FlatLoadSignedPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
@@ -1955,8 +1958,8 @@ class ScratchLoadSVaddrPat_D16 <FLAT_Pseudo inst, SDPatternOperator node, ValueT
 >;
 
 class ScratchLoadSVaddrPat_D16_t16 <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
-  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset))),
-  (inst $vaddr, $saddr, $offset, 0)
+  (vt (node (ScratchSVAddr (i32 VGPR_32:$vaddr), (i32 SGPR_32:$saddr), i32:$offset, CPol:$cpol))),
+  (inst $vaddr, $saddr, $offset, $cpol)
 >;
 
 multiclass GlobalLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
@@ -1965,6 +1968,16 @@ multiclass GlobalLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
   }
 
   def : GlobalLoadLDSSaddrPat_M0<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node> {
+    let AddedComplexity = 11;
+  }
+}
+
+multiclass DDSLoadLDSPats_M0<FLAT_Pseudo inst, SDPatternOperator node> {
+  def : FlatLoadLDSSignedPat_M0 <inst, node, i32> {
+    let AddedComplexity = 10;
+  }
+
+  def : GlobalLoadLDSSaddrPat_M0<!cast<FLAT_Pseudo>(!cast<string>(inst)#"_SADDR"), node, i32, GlobalSAddrNoIOffsetScaleOffsetM0> {
     let AddedComplexity = 11;
   }
 }
@@ -2615,6 +2628,10 @@ let OtherPredicates = [isGFX1250Plus] in {
 }
 
 let OtherPredicates = [isGFX13Plus] in {
+  defm : DDSLoadLDSPats_M0 <DDS_LOAD_ASYNC_MCAST_TO_LDS_B32,  int_amdgcn_dds_load_async_mcast_to_lds_b32>;
+  defm : DDSLoadLDSPats_M0 <DDS_LOAD_ASYNC_MCAST_TO_LDS_B64,  int_amdgcn_dds_load_async_mcast_to_lds_b64>;
+  defm : DDSLoadLDSPats_M0 <DDS_LOAD_ASYNC_MCAST_TO_LDS_B128, int_amdgcn_dds_load_async_mcast_to_lds_b128>;
+
   defm : DDSLoadLDSPats  <DDS_LOAD_ASYNC_TO_LDS_B32,     int_amdgcn_dds_load_async_to_lds_b32>;
   defm : DDSLoadLDSPats  <DDS_LOAD_ASYNC_TO_LDS_B64,     int_amdgcn_dds_load_async_to_lds_b64>;
   defm : DDSLoadLDSPats  <DDS_LOAD_ASYNC_TO_LDS_B128,    int_amdgcn_dds_load_async_to_lds_b128>;

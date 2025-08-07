@@ -187,6 +187,8 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
   default:
     break;
   case AMDGPU::V_READFIRSTLANE_B32:
+  case AMDGPU::V_LOAD_IDX:
+  case AMDGPU::V_STORE_IDX:
     return true;
   }
 
@@ -2881,49 +2883,47 @@ static MachineInstr *swapImmOperands(MachineInstr &MI,
 }
 
 bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, unsigned OpIdx0,
-                                const MachineOperand *MO0, unsigned OpIdx1,
-                                const MachineOperand *MO1) const {
+                                unsigned OpIdx1) const {
   const MCInstrDesc &InstDesc = MI.getDesc();
   const MCOperandInfo &OpInfo0 = InstDesc.operands()[OpIdx0];
   const MCOperandInfo &OpInfo1 = InstDesc.operands()[OpIdx1];
-  const TargetRegisterClass *DefinedRC1 =
-      OpInfo1.RegClass != -1 ? RI.getRegClass(OpInfo1.RegClass) : nullptr;
-  const TargetRegisterClass *DefinedRC0 =
-      OpInfo1.RegClass != -1 ? RI.getRegClass(OpInfo0.RegClass) : nullptr;
 
   unsigned Opc = MI.getOpcode();
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+
+  const MachineOperand &MO0 = MI.getOperand(OpIdx0);
+  const MachineOperand &MO1 = MI.getOperand(OpIdx1);
 
   // Swap doesn't breach constant bus or literal limits
   // It may move literal to position other than src0, this is not allowed
   // pre-gfx10 However, most test cases need literals in Src0 for VOP
   // FIXME: After gfx9, literal can be in place other than Src0
   if (isVALU(MI)) {
-    if ((int)OpIdx0 == Src0Idx && !MO0->isReg() &&
-        !isInlineConstant(*MO0, OpInfo1))
+    if ((int)OpIdx0 == Src0Idx && !MO0.isReg() &&
+        !isInlineConstant(MO0, OpInfo1))
       return false;
-    if ((int)OpIdx1 == Src0Idx && !MO1->isReg() &&
-        !isInlineConstant(*MO1, OpInfo0))
+    if ((int)OpIdx1 == Src0Idx && !MO1.isReg() &&
+        !isInlineConstant(MO1, OpInfo0))
       return false;
   }
 
-  if ((int)OpIdx1 != Src0Idx && MO0->isReg()) {
-    if (!DefinedRC1)
+  if ((int)OpIdx1 != Src0Idx && MO0.isReg()) {
+    if (OpInfo1.RegClass == -1)
       return OpInfo1.OperandType == MCOI::OPERAND_UNKNOWN;
-    return isLegalRegOperand(MI, OpIdx1, *MO0) &&
-           (!MO1->isReg() || isLegalRegOperand(MI, OpIdx0, *MO1));
+    return isLegalRegOperand(MI, OpIdx1, MO0) &&
+           (!MO1.isReg() || isLegalRegOperand(MI, OpIdx0, MO1));
   }
-  if ((int)OpIdx0 != Src0Idx && MO1->isReg()) {
-    if (!DefinedRC0)
+  if ((int)OpIdx0 != Src0Idx && MO1.isReg()) {
+    if (OpInfo0.RegClass == -1)
       return OpInfo0.OperandType == MCOI::OPERAND_UNKNOWN;
-    return (!MO0->isReg() || isLegalRegOperand(MI, OpIdx1, *MO0)) &&
-           isLegalRegOperand(MI, OpIdx0, *MO1);
+    return (!MO0.isReg() || isLegalRegOperand(MI, OpIdx1, MO0)) &&
+           isLegalRegOperand(MI, OpIdx0, MO1);
   }
 
   // No need to check 64-bit literals since swapping does not bring new
   // 64-bit literals into current instruction to fold to 32-bit
 
-  return isImmOperandLegal(MI, OpIdx1, *MO0);
+  return isImmOperandLegal(MI, OpIdx1, MO0);
 }
 
 MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
@@ -2945,12 +2945,12 @@ MachineInstr *SIInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
            static_cast<int>(Src1Idx) &&
          "inconsistency with findCommutedOpIndices");
 
+  if (!isLegalToSwap(MI, Src0Idx, Src1Idx))
+    return nullptr;
+
+  MachineInstr *CommutedMI = nullptr;
   MachineOperand &Src0 = MI.getOperand(Src0Idx);
   MachineOperand &Src1 = MI.getOperand(Src1Idx);
-  if (!isLegalToSwap(MI, Src0Idx, &Src0, Src1Idx, &Src1)) {
-    return nullptr;
-  }
-  MachineInstr *CommutedMI = nullptr;
   if (Src0.isReg() && Src1.isReg()) {
     // Be sure to copy the source modifiers to the right place.
     CommutedMI =
@@ -4397,8 +4397,10 @@ bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
   if (!isFLAT(MI) || isFLATGlobal(MI))
     return false;
 
-  // If scratch is not initialized, we can never access it.
-  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
+  // If scratch is not initialized, we can never access it unless the target has
+  // the ability to access scratch outside its own thread.
+  if (!ST.hasGloballyAddressableScratch() &&
+      MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
     return false;
 
   // SCRATCH instructions always access scratch.
@@ -4409,6 +4411,8 @@ bool SIInstrInfo::mayAccessScratchThroughFlat(const MachineInstr &MI) const {
   // operation may access scratch.
   if (MI.memoperands_empty())
     return true;
+
+  // TODO (?): Does this need to be taught how to read noalias.addrspace ?
 
   // See if any memory operand specifies an address space that involves scratch.
   return any_of(MI.memoperands(), [](const MachineMemOperand *Memop) {
@@ -7214,6 +7218,9 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     case AMDGPU::CLUSTER_LOAD_B32_LANESHARED_SADDR:
     case AMDGPU::CLUSTER_LOAD_B64_LANESHARED_SADDR:
     case AMDGPU::CLUSTER_LOAD_B128_LANESHARED_SADDR:
+    case AMDGPU::DS_LOAD_MCAST_B32_LANESHARED:
+    case AMDGPU::DS_LOAD_MCAST_B64_LANESHARED:
+    case AMDGPU::DS_LOAD_MCAST_B128_LANESHARED:
     case AMDGPU::DDS_LOAD_MCAST_B32_LANESHARED:
     case AMDGPU::DDS_LOAD_MCAST_B64_LANESHARED:
     case AMDGPU::DDS_LOAD_MCAST_B128_LANESHARED:
@@ -9816,6 +9823,16 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   default:
     if (MI.isMetaInstruction())
       return 0;
+
+    // If D16 Pseudo inst, get correct MC code size
+    const auto *D16Info = AMDGPU::getT16D16Helper(Opc);
+    if (D16Info) {
+      // Assume d16_lo/hi inst are always in same size
+      unsigned LoInstOpcode = D16Info->LoOp;
+      const MCInstrDesc &Desc = getMCOpcodeFromPseudo(LoInstOpcode);
+      DescSize = Desc.getSize();
+    }
+
     return DescSize;
   }
 }

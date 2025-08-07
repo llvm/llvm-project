@@ -392,6 +392,25 @@ class VOP3DotOpSel_gfx11_gfx12<bits<10> op, VOPProfile p> :
   let Inst{14} = !if(!and(p.HasDst, p.HasSrc0Mods),  src0_modifiers{3}, 0);
 }
 
+// NB: For V_INTERP* opcodes, src0 is encoded as src1 and vice versa
+class VOP3Interp_vi <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
+  bits<2> attrchan;
+  bits<6> attr;
+  bits<1> high;
+
+  let Inst{8}     = 0; // No modifiers for src0
+  let Inst{61}    = 0;
+
+  let Inst{9}     = !if(P.HasSrc0Mods, src0_modifiers{1}, 0);
+  let Inst{62}    = !if(P.HasSrc0Mods, src0_modifiers{0}, 0);
+
+  let Inst{37-32} = attr;
+  let Inst{39-38} = attrchan;
+  let Inst{40}    = !if(P.HasHigh, high, 0);
+
+  let Inst{49-41} = src0;
+}
+
 class VOP3a_BITOP3_gfx12<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx12<op, p> {
   bits<8> bitop3;
 
@@ -410,25 +429,6 @@ class VOP3a_ScaleSel_gfx1250_gfx13<bits<10> op, VOPProfile p> : VOP3e_gfx11_gfx1
 
   let Inst{13-11} = scale_sel;
   let Inst{14} = 0;
-}
-
-// NB: For V_INTERP* opcodes, src0 is encoded as src1 and vice versa
-class VOP3Interp_vi <bits<10> op, VOPProfile P> : VOP3e_vi <op, P> {
-  bits<2> attrchan;
-  bits<6> attr;
-  bits<1> high;
-
-  let Inst{8}     = 0; // No modifiers for src0
-  let Inst{61}    = 0;
-
-  let Inst{9}     = !if(P.HasSrc0Mods, src0_modifiers{1}, 0);
-  let Inst{62}    = !if(P.HasSrc0Mods, src0_modifiers{0}, 0);
-
-  let Inst{37-32} = attr;
-  let Inst{39-38} = attrchan;
-  let Inst{40}    = !if(P.HasHigh, high, 0);
-
-  let Inst{49-41} = src0;
 }
 
 class VOP3Interp_gfx10<bits<10> op, VOPProfile p> : VOP3e_gfx10<op, p> {

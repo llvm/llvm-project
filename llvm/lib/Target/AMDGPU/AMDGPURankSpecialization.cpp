@@ -38,38 +38,79 @@ using namespace llvm;
 
 namespace {
 
-// Evaluate an ICmp predicate between a concrete LHS and RHS.
-// Returns true if `LHS pred RHS` holds, unsigned predicates are
-// interpreted on the bit-width of `LHS` and `RHS`.
-static bool evaluateCmp(CmpInst::Predicate Pred, int64_t LHS, int64_t RHS) {
-  switch (Pred) {
-  case CmpInst::ICMP_EQ:
-    return LHS == RHS;
-  case CmpInst::ICMP_NE:
-    return LHS != RHS;
-  case CmpInst::ICMP_UGT:
-    return (uint64_t)LHS > (uint64_t)RHS;
-  case CmpInst::ICMP_UGE:
-    return (uint64_t)LHS >= (uint64_t)RHS;
-  case CmpInst::ICMP_ULT:
-    return (uint64_t)LHS < (uint64_t)RHS;
-  case CmpInst::ICMP_ULE:
-    return (uint64_t)LHS <= (uint64_t)RHS;
-  case CmpInst::ICMP_SGT:
-    return LHS > RHS;
-  case CmpInst::ICMP_SGE:
-    return LHS >= RHS;
-  case CmpInst::ICMP_SLT:
-    return LHS < RHS;
-  case CmpInst::ICMP_SLE:
-    return LHS <= RHS;
-  default:
-    llvm_unreachable("Unsupported ICmp predicate.");
+// Evaluate the Instruction using constant folding, with Op0 as LHS and (for two
+// operand instructions) Op1 as RHS. This is intended to be used on wave-ID and
+// its derived/downstream values.
+static Constant*
+evaluateWaveIDDerivative(const Instruction *Instruction, Constant *Op0,
+                         Constant *Op1) {
+  Constant *Folded;
+  if (auto *Cast = dyn_cast<CastInst>(Instruction))
+    Folded =
+        ConstantFoldCastInstruction(Cast->getOpcode(), Op0, Cast->getType());
+  else if (auto *Cmp = dyn_cast<ICmpInst>(Instruction)) {
+    Folded = ConstantFoldCompareInstruction(Cmp->getPredicate(), Op0, Op1);
+
+    // Result of an ICmp should be a binary valued 0 or 1.
+    if (ConstantInt *CI = dyn_cast<ConstantInt>(Folded)) {
+      int64_t V = CmpInst::isSigned(Cmp->getPredicate()) ? CI->getSExtValue()
+                                                         : CI->getZExtValue();
+      if (V == 0 || V == 1)
+        return CI;
+    }
+    return {};
+  } else if (auto *BinOp = dyn_cast<BinaryOperator>(Instruction))
+    Folded = ConstantFoldBinaryInstruction(BinOp->getOpcode(), Op0, Op1);
+  else {
+    Folded = nullptr;
+    llvm_unreachable("Unexpected instruction type during analyzeWaveIDUsers()");
   }
+
+  // During worklist processing, only store if the result is convertible
+  // to a ConstantFP or ConstantInt
+  if (!isa<ConstantInt, ConstantFP>(Folded))
+    return nullptr;
+  return Folded;
 }
 
-// Represents a set of wave-IDs for specialization.
 using RankMask = Bitset<MAX_WAVES_PER_WAVEGROUP>;
+
+// Class to help keep track of the value (or derived value) of a wave-ID at an
+// arbitrary point in the program.
+class RankTracker {
+private:
+  std::array<Constant *, MAX_WAVES_PER_WAVEGROUP> Values;
+
+public:
+  RankTracker() {};
+  explicit RankTracker(LLVMContext &Context) {
+    for (unsigned i = 0; i < MAX_WAVES_PER_WAVEGROUP; i++)
+      Values[i] = ConstantInt::get(Type::getInt32Ty(Context), APInt(32, i));
+  }
+  explicit RankTracker(Constant *C) { Values.fill(C); }
+
+  // Convert the vector of values to a RankMask. Expects all elements of Values
+  // to be 0 or 1.
+  RankMask toRankMask() const {
+    RankMask RM;
+    for (unsigned i = 0; i < MAX_WAVES_PER_WAVEGROUP; i++) {
+      if (auto *CI = dyn_cast<ConstantInt>(Values[i])) {
+        uint64_t V = CI->getZExtValue();
+        assert((V == 0 || V == 1) && "Expected Values to be binary valued "
+                                     "when calling toRankMask()");
+        if (V)
+          RM.set(i);
+        else
+          RM.reset(i);
+      } else
+        llvm_unreachable(
+            "Expected Values to be integer when calling toRankMask()");
+    }
+    return RM;
+  }
+
+  Constant *&operator[](unsigned I) { return Values[I]; }
+};
 
 static std::string getRankMaskSuffix(RankMask Mask) {
   std::string S;
@@ -165,8 +206,13 @@ public:
 class AMDGPURankSpecializationImpl {
   Value *WaveID = nullptr;
 
-  // The set of I1s/BinaryOps we will replace by constant with when cloning.
+  // The set of I1s/BinaryOps/CastInsts we will replace by constant with when
+  // cloning.
   DenseMap<Value *, RankMask> I1Masks;
+
+  // Keep track of the (possibly derived) wave-ID values after processing by
+  // BinaryOps and ICmps.
+  DenseMap<Value *, RankTracker> DerivedValues;
 
   // The disjoint set of masks we will create clones from.
   DisjointMaskSet DisjointMasks;
@@ -180,11 +226,14 @@ public:
   bool run(Module &M);
 };
 
+// Build clones of Kernel and in each, set wave-ID to the pre-determined value
+// represented in the disjoint set. After cloning, create an entry kernel which
+// routes waves to their corresponding specialization using the intrinsic.
 void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
-  // Create the clones
+
   SmallVector<Function *> Specializations;
   ValueToValueMapTy VMap;
-
+  SmallDenseMap<unsigned, Function *> RankToSpecialization;
   for (unsigned i = 0; i != DisjointMasks.size(); ++i) {
     RankMask Mask = DisjointMasks[i];
 
@@ -198,14 +247,6 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
 
     Specializations.push_back(Specialization);
 
-    Specialization->copyAttributesFrom(&Kernel);
-    Specialization->copyMetadata(&Kernel, 0);
-    Specialization->setVisibility(GlobalValue::DefaultVisibility);
-    Specialization->setLinkage(GlobalValue::InternalLinkage);
-    Specialization->setDSOLocal(true); // for internal linkage
-    Specialization->addFnAttr("amdgpu-wavegroup-enable");
-    Specialization->addFnAttr("amdgpu-wavegroup-rank-function");
-
     // Loop over the arguments, copying the names of the mapped arguments over...
     Function::arg_iterator DestI = Specialization->arg_begin();
     for (const Argument &I : Kernel.args()) {
@@ -213,29 +254,32 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
       VMap[&I] = &*DestI++;        // Add mapping to VMap
     }
 
-    const bool IsClone = i + 1 < DisjointMasks.size();
-    if (IsClone) {
-      SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
-      CloneFunctionBodyInto(*Specialization, Kernel, VMap, RF_NoModuleLevelChanges,
-                            Returns);
-    } else {
-      // For the last clone, we can just move the contents of the original function.
-      Specialization->splice(Specialization->begin(), &Kernel);
+    SmallVector<ReturnInst *, 8> Returns; // Ignore returns cloned.
+    CloneFunctionInto(Specialization, &Kernel, VMap,
+                      CloneFunctionChangeType::GlobalChanges, Returns);
 
-      SmallVector<BasicBlock *> BBs;
-      // Remap instructions in Specialization to point at new values.
-      for (BasicBlock &BB : *Specialization)
-        BBs.push_back(&BB);
-      remapInstructionsInBlocks(BBs, VMap);
+    // Specialization should have wavegroup attr copied from Kernel during
+    // CloneFunctionInto.
+    assert(Specialization->hasFnAttribute("amdgpu-wavegroup-enable"));
+    if (DISubprogram *SP = Specialization->getSubprogram()) {
+      assert(SP != Kernel.getSubprogram() && SP->isDistinct());
+      MDString *NewLinkageName =
+          MDString::get(Kernel.getContext(), Specialization->getName());
+      SP->replaceLinkageName(NewLinkageName);
     }
 
+    Specialization->addFnAttr("amdgpu-wavegroup-rank-function");
+    Specialization->setVisibility(GlobalValue::DefaultVisibility);
+    Specialization->setLinkage(GlobalValue::InternalLinkage);
+    Specialization->setDSOLocal(true);
+
     // Bake our knowledge of the WaveID into the clone.
-    Value *CloneWaveID = IsClone ? &*VMap.lookup(WaveID) : WaveID;
+    Value *CloneWaveID = &*VMap.lookup(WaveID);
     if (auto UniqueRank = isSingleRank(Mask))
       CloneWaveID->replaceAllUsesWith(ConstantInt::get(WaveID->getType(), *UniqueRank));
 
     for (const auto &Entry : I1Masks) {
-      Value *I1Value = IsClone ? &*VMap.lookup(Entry.first) : Entry.first;
+      Value *I1Value = &*VMap.lookup(Entry.first);
       bool Value = (Entry.second & Mask).any();
       if (Value && (Entry.second & Mask) != Mask)
         continue;
@@ -250,87 +294,79 @@ void AMDGPURankSpecializationImpl::buildSpecializations(Function &Kernel) {
       if (Switch->getCondition() == CloneWaveID)
         Switch->setCondition(ConstantInt::get(WaveID->getType(), *getFirstRank(Mask)));
     }
+
+    // Keep track of which rank gets mapped to which specialization.
+    for (unsigned r = 0; r < MAX_WAVES_PER_WAVEGROUP; r++)
+      if (Mask.test(r))
+        RankToSpecialization[r] = Specialization;
   }
+
+  // Kernel was already cloned for each specialization, so clear its body to use
+  // as the entry/jump kernel.
+  for (BasicBlock &BB : Kernel)
+    BB.dropAllReferences();
+  while (Kernel.size() > 0)
+    Kernel.begin()->eraseFromParent();
 
   // Create the jump table in the entry kernel.
   IRBuilder<> Builder(Kernel.getContext());
   BasicBlock *Entry = BasicBlock::Create(Kernel.getContext(), "entry", &Kernel);
-  SmallVector<BasicBlock *> Cases;
-  SmallVector<Value *> Args;
-  for (Value &Arg : Kernel.args())
-    Args.push_back(&Arg);
-
-  for (unsigned i = 0; i != DisjointMasks.size(); ++i) {
-    RankMask Mask = DisjointMasks[i];
-    BasicBlock *BB = BasicBlock::Create(
-        Kernel.getContext(), "bb" + getRankMaskSuffix(Mask), &Kernel);
-    Builder.SetInsertPoint(BB);
-
-    for (unsigned Rank = 0; Rank < MAX_WAVES_PER_WAVEGROUP; Rank++)
-      if (Mask[Rank]) {
-        // Intrinsic handles proper set up of calls to rank funcs.
-        auto *Callee = Builder.CreateIntrinsic(
-            Builder.getVoidTy(), Intrinsic::amdgcn_wavegroup_rank,
-            {ConstantInt::get(Builder.getInt32Ty(), Rank), Specializations[i]});
-
-        // Callback metadata is necessary for propagating intrinsic call through
-        // call graph.
-        auto *WGRFIntrinsic = Callee->getCalledFunction();
-        if (!WGRFIntrinsic->hasMetadata(LLVMContext::MD_callback)) {
-          LLVMContext &Ctx = WGRFIntrinsic->getContext();
-          MDBuilder MDB(Ctx);
-          WGRFIntrinsic->addMetadata(
-              LLVMContext::MD_callback,
-              *MDNode::get(Ctx, {MDB.createCallbackEncoding(
-                                    1, {},
-                                    /* VarArgsArePassed */ false)}));
-        }
-      }
-    Builder.CreateRetVoid();
-    Cases.push_back(BB);
-  }
 
   Builder.SetInsertPoint(Entry);
-  WaveID = Builder.CreateIntrinsic(Intrinsic::amdgcn_wave_id_in_wavegroup, {});
-  SwitchInst *Switch = Builder.CreateSwitch(WaveID, Cases[0], MAX_WAVES_PER_WAVEGROUP);
 
-  for (unsigned i = 0; i != DisjointMasks.size(); ++i) {
-    RankMask Mask = DisjointMasks[i];
-    for (int Rank = 0; Rank != MAX_WAVES_PER_WAVEGROUP; ++Rank) {
-      if (Mask[Rank])
-        Switch->addCase(ConstantInt::get(Builder.getInt32Ty(), Rank), Cases[i]);
+  for (unsigned r = 0; r < MAX_WAVES_PER_WAVEGROUP; r++) {
+    // Intrinsic handles proper set up of calls to rank funcs.
+    auto *Callee = Builder.CreateIntrinsic(
+        Builder.getVoidTy(), Intrinsic::amdgcn_wavegroup_rank,
+        {ConstantInt::get(Builder.getInt32Ty(), r), RankToSpecialization[r]});
+
+    // Callback metadata is necessary for propagating intrinsic call through
+    // call graph.
+    auto *WGRFIntrinsic = Callee->getCalledFunction();
+    if (!WGRFIntrinsic->hasMetadata(LLVMContext::MD_callback)) {
+      LLVMContext &Ctx = WGRFIntrinsic->getContext();
+      MDBuilder MDB(Ctx);
+      WGRFIntrinsic->addMetadata(
+          LLVMContext::MD_callback,
+          *MDNode::get(
+              Ctx, {MDB.createCallbackEncoding(1, {},
+                                               /* VarArgsArePassed */ false)}));
     }
   }
+
+  Builder.CreateRetVoid();
 }
 
 // Analyze all users of WaveID to:
-//  * compute a map from i1 values to the mask of wave IDs for which they are
-//    true, for values that are fully determined by the wave ID;
+//  * compute a map of instruction Value*'s to the derived values of wave-ID
 //  * build a set of disjoint masks that will become the specializations
 void AMDGPURankSpecializationImpl::analyzeWaveIDUsers() {
-  // Search through users of wave-ID, and log all instances where wave-ID
-  // directly feeds a switch or directly feeds the condition of a conditional
-  // branch.
-  SmallVector<Value *> I1Worklist;
 
+  SmallVector<Value *> Worklist;
+
+  // Define a helper to facilitate the folding. If folding fails, return a
+  // nullopt to indicate to worklist processing that we should skip that
+  // instruction.
+  auto tryFold = [&](Instruction *Inst, RankTracker &LHS,
+                     RankTracker &RHS) -> std::optional<RankTracker> {
+    LLVMContext &Ctx = Inst->getContext();
+    RankTracker RT(Ctx);
+
+    for (unsigned i = 0; i < MAX_WAVES_PER_WAVEGROUP; ++i) {
+      Constant* PossibleFoldedConstant = evaluateWaveIDDerivative(Inst, LHS[i], RHS[i]);
+      if (!PossibleFoldedConstant) // Bail if the fold fails.
+        return std::nullopt;
+      RT[i] = PossibleFoldedConstant;
+    }
+
+    return RT;
+  };
+
+  // Switches on wave-ID are simpler than the other cases, handle separately
+  // first.
   for (User *U : WaveID->users()) {
-    if (auto *Cmp = dyn_cast<ICmpInst>(U)) {
-      if (auto *CI = dyn_cast<ConstantInt>(Cmp->getOperand(1))) {
-        assert(Cmp->getOperand(0) == WaveID);
-        RankMask M;
-        int64_t C = CI->getSExtValue();
-        // Evaluate the predicate for each possible wave-index.
-        for (unsigned i = 0; i < MAX_WAVES_PER_WAVEGROUP; ++i) {
-          if (evaluateCmp(Cmp->getPredicate(), /*LHS=*/i, /*RHS=*/C))
-            M.set(i);
-          else
-            M.reset(i);
-        }
-        I1Masks.try_emplace(Cmp, M);
+    if (auto *Switch = dyn_cast<SwitchInst>(U)) {
 
-        I1Worklist.push_back(Cmp);
-      }
-    } else if (auto *Switch = dyn_cast<SwitchInst>(U)) {
       // Build a map from possible destination basic blocks to masks of ranks
       // that branch there.
       MapVector<BasicBlock *, RankMask> DestMasks;
@@ -354,46 +390,83 @@ void AMDGPURankSpecializationImpl::analyzeWaveIDUsers() {
     }
   }
 
-  while (!I1Worklist.empty()) {
-    Value *I1 = I1Worklist.pop_back_val();
+  // Handle BinaryOps, ICmps, and CastInsts. Only add to DisjointMasks when the
+  // chains feed a branch.
 
-    for (User *U : I1->users()) {
-      if (auto *BinOp = dyn_cast<BinaryOperator>(U)) {
+  RankTracker Seed(WaveID->getContext());
+  DerivedValues.try_emplace(WaveID, Seed);
+  Worklist.push_back(WaveID);
+
+  while (!Worklist.empty()) {
+    Value *I = Worklist.pop_back_val();
+
+    for (User *U : I->users()) {
+      if (ICmpInst *Cmp = dyn_cast<ICmpInst>(U)) {
+        if (Constant *C = dyn_cast<Constant>(Cmp->getOperand(1))) {
+
+          Value *Op0 = Cmp->getOperand(0);
+          assert(Op0 == I);
+
+          // Evaluate the current Worklist item on the derived values.
+          DenseMapIterator<Value *, RankTracker> It0 = DerivedValues.find(Op0);
+          RankTracker RT0 = It0->second;
+
+          RankTracker RT1 = RankTracker(C);
+          std::optional<RankTracker> PossibleResultRT = tryFold(Cmp, RT0, RT1);
+          if (PossibleResultRT.has_value() &&
+              DerivedValues.try_emplace(Cmp, PossibleResultRT.value()).second)
+            Worklist.push_back(Cmp);
+        }
+
+      } else if (BinaryOperator *BinOp = dyn_cast<BinaryOperator>(U)) {
         Value *Op0 = BinOp->getOperand(0);
         Value *Op1 = BinOp->getOperand(1);
 
-        // Check if we know the masks for both operands
-        auto It0 = I1Masks.find(Op0);
-        auto It1 = I1Masks.find(Op1);
-        if (It0 == I1Masks.end() || It1 == I1Masks.end())
+        Constant *Op1Constant = dyn_cast<Constant>(Op1);
+
+        // Check if we know the masks for both operands.
+        auto It0 = DerivedValues.find(Op0);
+        auto It1 = DerivedValues.find(Op1);
+
+        // If It1 is a Constant, we can still evaluate that on each wave-ID.
+        if (It0 == DerivedValues.end() ||
+            (It1 == DerivedValues.end() && !Op1Constant))
           continue;
 
-        RankMask Op0Mask = It0->second;
-        RankMask Op1Mask = It1->second;
-        RankMask ResultMask;
+        RankTracker RT0 = It0->second;
+        RankTracker RT1 = Op1Constant ? RankTracker(Op1Constant) : It1->second;
 
-        switch (BinOp->getOpcode()) {
-        case Instruction::And:
-          ResultMask = Op0Mask & Op1Mask;
-          break;
-        case Instruction::Or:
-          ResultMask = Op0Mask | Op1Mask;
-          break;
-        case Instruction::Xor:
-          ResultMask = Op0Mask ^ Op1Mask;
-          break;
-        default:
-          continue; // Skip other binary operations
-        }
+        std::optional<RankTracker> PossibleResultRT = tryFold(BinOp, RT0, RT1);
+        if (PossibleResultRT.has_value() &&
+            DerivedValues.try_emplace(BinOp, PossibleResultRT.value()).second)
+          Worklist.push_back(BinOp);
 
-        // Only add to worklist if this is a new i1 value we haven't seen
-        if (I1Masks.try_emplace(BinOp, ResultMask).second) {
-          I1Worklist.push_back(BinOp);
-        }
-      } else if (auto *Br = dyn_cast<BranchInst>(U)) {
-        if (Br->isConditional() && Br->getCondition() == I1) {
-          DisjointMasks.uncross(I1Masks[I1]);
-          DisjointMasks.uncross(~I1Masks[I1]);
+      } else if (CastInst *Cast = dyn_cast<CastInst>(U)) {
+
+        Value *Op0 = Cast->getOperand(0);
+        auto It0 = DerivedValues.find(Op0);
+
+        // CastInsts only have 1 src operand so it should already by in
+        // DerivedValues.
+        if (It0 == DerivedValues.end())
+          continue;
+
+        RankTracker RT0 = It0->second;
+        RankTracker RT1 = RankTracker(Cast->getContext()); // Used as a dummy.
+
+        std::optional<RankTracker> PossibleResultRT = tryFold(Cast, RT0, RT1);
+        if (PossibleResultRT.has_value() &&
+            DerivedValues.try_emplace(Cast, PossibleResultRT.value()).second)
+          Worklist.push_back(Cast);
+
+      } else if (BranchInst *Br = dyn_cast<BranchInst>(U)) {
+        // If I is feeding a branch, it must be an I1 and we can convert it to a
+        // RankMask.
+        if (Br->isConditional() && Br->getCondition() == I) {
+          RankMask RM = DerivedValues[I].toRankMask();
+          I1Masks[I] = RM;
+          DisjointMasks.uncross(RM);
+          DisjointMasks.uncross(~RM);
         }
       }
     }

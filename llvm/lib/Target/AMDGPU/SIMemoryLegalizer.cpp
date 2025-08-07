@@ -756,16 +756,16 @@ void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
       DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
 }
 
-/// Reads \p MI's MMRAs to parse the "amdgpu-as" MMRA.
-/// If this tag isn't present, or if it has no meaningful values, returns \p
-/// Default. Otherwise returns all the address spaces concerned by the MMRA.
-static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
-                                               SIAtomicAddrSpace Default) {
-  static constexpr StringLiteral FenceASPrefix = "amdgpu-as";
+/// Reads \p MI's MMRAs to parse the "amdgpu-synchronize-as" MMRA.
+/// If this tag isn't present, or if it has no meaningful values, returns
+/// \p none, otherwise returns the address spaces specified by the MD.
+static std::optional<SIAtomicAddrSpace>
+getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
+  static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
 
   auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
   if (!MMRA)
-    return Default;
+    return std::nullopt;
 
   SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
   for (const auto &[Prefix, Suffix] : MMRA) {
@@ -778,7 +778,10 @@ static SIAtomicAddrSpace getFenceAddrSpaceMMRA(const MachineInstr &MI,
       diagnoseUnknownMMRAASName(MI, Suffix);
   }
 
-  return (Result != SIAtomicAddrSpace::NONE) ? Result : Default;
+  if (Result == SIAtomicAddrSpace::NONE)
+    return std::nullopt;
+
+  return Result;
 }
 
 } // end anonymous namespace
@@ -968,11 +971,18 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineInstr *MI) const {
   std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
       *ScopeOrNone;
 
-  if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
-      ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace)) {
+  if (OrderingAddrSpace != SIAtomicAddrSpace::ATOMIC) {
+    // We currently expect refineOrderingAS to be the only place that
+    // can refine the AS ordered by the fence.
+    // If that changes, we need to review the semantics of that function
+    // in case it needs to preserve certain address spaces.
     reportUnsupported(MI, "Unsupported atomic address space");
     return std::nullopt;
   }
+
+  auto SynchronizeAS = getSynchronizeAddrSpaceMD(*MI);
+  if (SynchronizeAS)
+    OrderingAddrSpace = *SynchronizeAS;
 
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
                      SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
@@ -1226,6 +1236,16 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
                             LGKMCnt ? 0 : getLgkmcntBitMask(IV));
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_soft))
         .addImm(WaitCntImmediate);
+    Changed = true;
+  }
+
+  // On architectures that support direct loads to LDS, emit an unknown waitcnt
+  // at workgroup-scoped release operations that specify the LDS address space.
+  // SIInsertWaitcnts will later replace this with a vmcnt().
+  if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
+      Scope == SIAtomicScope::WORKGROUP &&
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
     Changed = true;
   }
 
@@ -2137,6 +2157,16 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     Changed = true;
   }
 
+  // On architectures that support direct loads to LDS, emit an unknown waitcnt
+  // at workgroup-scoped release operations that specify the LDS address space.
+  // SIInsertWaitcnts will later replace this with a vmcnt().
+  if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
+      Scope == SIAtomicScope::WORKGROUP &&
+      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
+    Changed = true;
+  }
+
   if (VSCnt) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_VSCNT_soft))
         .addReg(AMDGPU::SGPR_NULL, RegState::Undef)
@@ -2660,9 +2690,8 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   const bool IsRMW = (MI.mayLoad() && MI.mayStore());
   bool Changed = false;
 
-  // GFX125x only: xcnt wait is needed before atomics stores/rmw
-  if (Atomic && ST.hasWaitXCnt()) {
-    // TODO: add isAtomic once I figured out this bug.
+  // GFX125x only: xcnt wait is needed before flat and global atomics stores/rmw
+  if (Atomic && ST.requiresWaitXCntBeforeAtomicStores() && TII->isFLAT(MI)) {
     MachineBasicBlock &MBB = *MI.getParent();
     BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(S_WAIT_XCNT_soft)).addImm(0);
     Changed = true;
@@ -2834,6 +2863,7 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                     MachineBasicBlock::iterator &MI) {
 
   bool Changed = false;
+  // FIXME: Necessary hack because iterator can lose track of the store.
   MachineInstr &StoreMI = *MI;
 
   if (MOI.isAtomic()) {
@@ -2867,6 +2897,8 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::STORE, MOI.isVolatile(),
       MOI.isNonTemporal());
 
+  // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
+  // instruction field, do not confuse it with atomic scope.
   Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/false);
 
   Changed |= CC->setCFS(MI, MOI.getCFS());
@@ -2878,11 +2910,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
-  // Refine fenced address space based on MMRAs.
-  //
-  // TODO: Should we support this MMRA on other atomic operations?
-  auto OrderingAddrSpace =
-      getFenceAddrSpaceMMRA(*MI, MOI.getOrderingAddrSpace());
+  const SIAtomicAddrSpace OrderingAddrSpace = MOI.getOrderingAddrSpace();
 
   if (MOI.isAtomic()) {
     const AtomicOrdering Order = MOI.getOrdering();

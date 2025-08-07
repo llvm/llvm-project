@@ -1379,6 +1379,10 @@ public:
 
   bool hasVALUReadSGPRHazard() const { return GFX12Insts && !GFX1250Insts; }
 
+  bool setRegModeNeedsVNOPs() const {
+    return GFX1250Insts && getGeneration() == GFX12;
+  }
+
   bool hasForceVALUThrottle() const { return HasForceVALUThrottle; }
 
   bool hasMLMathInsts() const { return HasMLMathInsts; }
@@ -1784,6 +1788,10 @@ public:
     return getMaxNumVGPRs(F);
   }
 
+  /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
+  /// of waves per execution unit required for the function \p MF.
+  std::pair<unsigned, unsigned> getMaxNumVectorRegs(const Function &F) const;
+
   /// \returns Maximum number of VGPRs that meets number of waves per execution
   /// unit requirement for function \p MF, or number of VGPRs explicitly
   /// requested using "amdgpu-num-vgpr" attribute attached to function \p MF.
@@ -1912,6 +1920,10 @@ public:
 
   /// \returns true if s_barrier_init increments KMcnt.
   bool hasSBarrierInitKmCnt() const { return getGeneration() >= GFX13; }
+
+  /// \returns true if the subtarget requires a wait for xcnt before atomic
+  /// flat/global stores & rmw.
+  bool requiresWaitXCntBeforeAtomicStores() const { return GFX1250Insts && !GFX13Insts; }
 };
 
 class GCNUserSGPRUsageInfo {

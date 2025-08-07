@@ -607,7 +607,7 @@ genAtomicUpdate(lower::AbstractConverter &converter,
   // This must exist by now.
   semantics::SomeExpr rhs = assign.rhs;
   semantics::SomeExpr input = *evaluate::GetConvertInput(rhs);
-  auto [opcode, args] = evaluate::GetTopLevelOperation(input);
+  auto [opcode, args] = evaluate::GetTopLevelOperationIgnoreResizing(input);
   assert(!args.empty() && "Update operation without arguments");
 
   // Pass args as an argument to avoid capturing a structured binding.
@@ -625,7 +625,8 @@ genAtomicUpdate(lower::AbstractConverter &converter,
     // operations with exactly two (non-optional) arguments.
     rhs = genReducedMinMax(rhs, atomArg, args);
     input = *evaluate::GetConvertInput(rhs);
-    std::tie(opcode, args) = evaluate::GetTopLevelOperation(input);
+    std::tie(opcode, args) =
+        evaluate::GetTopLevelOperationIgnoreResizing(input);
     atomArg = nullptr; // No longer valid.
   }
   for (auto &arg : args) {
@@ -635,9 +636,16 @@ genAtomicUpdate(lower::AbstractConverter &converter,
     }
   }
 
+  mlir::ModuleOp module = builder.getModule();
+  mlir::omp::AtomicControlAttr atomicControlAttr =
+      mlir::omp::AtomicControlAttr::get(
+          builder.getContext(), fir::getAtomicIgnoreDenormalMode(module),
+          fir::getAtomicFineGrainedMemory(module),
+          fir::getAtomicRemoteMemory(module));
   builder.restoreInsertionPoint(atomicAt);
   auto updateOp = mlir::omp::AtomicUpdateOp::create(
-      builder, loc, atomAddr, hint, makeMemOrderAttr(converter, memOrder));
+      builder, loc, atomAddr, atomicControlAttr, hint,
+      makeMemOrderAttr(converter, memOrder));
 
   mlir::Region &region = updateOp->getRegion(0);
   mlir::Block *block = builder.createBlock(&region, {}, {atomType}, {loc});

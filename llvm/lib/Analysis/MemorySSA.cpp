@@ -300,6 +300,7 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
     case Intrinsic::assume:
     case Intrinsic::experimental_noalias_scope_decl:
     case Intrinsic::pseudoprobe:
+    case Intrinsic::experimental_provenance_end:
       return false;
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_label:

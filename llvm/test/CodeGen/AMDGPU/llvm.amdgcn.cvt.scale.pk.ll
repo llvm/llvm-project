@@ -11,12 +11,15 @@ declare <8 x bfloat> @llvm.amdgcn.cvt.scale.pk8.bf16.fp4(i32 %src, i32 %scale, i
 declare <8 x float> @llvm.amdgcn.cvt.scale.pk8.f32.fp8(<2 x i32> %src, i32 %scale, i32 %scale_sel)
 declare <8 x float> @llvm.amdgcn.cvt.scale.pk8.f32.bf8(<2 x i32> %src, i32 %scale, i32 %scale_sel)
 declare <8 x float> @llvm.amdgcn.cvt.scale.pk8.f32.fp4(i32 %src, i32 %scale, i32 %scale_sel)
+
 declare <16 x half> @llvm.amdgcn.cvt.scale.pk16.f16.fp6(<3 x i32> %src, i32 %scale, i32 %scale_sel)
 declare <16 x bfloat> @llvm.amdgcn.cvt.scale.pk16.bf16.fp6(<3 x i32> %src, i32 %scale, i32 %scale_sel)
 declare <16 x half> @llvm.amdgcn.cvt.scale.pk16.f16.bf6(<3 x i32> %src, i32 %scale, i32 %scale_sel)
 declare <16 x bfloat> @llvm.amdgcn.cvt.scale.pk16.bf16.bf6(<3 x i32> %src, i32 %scale, i32 %scale_sel)
 declare <16 x float> @llvm.amdgcn.cvt.scale.pk16.f32.fp6(<3 x i32> %src, i32 %scale, i32 %scale_sel)
 declare <16 x float> @llvm.amdgcn.cvt.scale.pk16.f32.bf6(<3 x i32> %src, i32 %scale, i32 %scale_sel)
+
+
 
 define amdgpu_ps void @test_cvt_scale_pk8_f16_fp8_vv(<2 x i32> %src, i32 %scale, ptr addrspace(1) %out) {
 ; GFX1250-SDAG-LABEL: test_cvt_scale_pk8_f16_fp8_vv:
@@ -168,6 +171,7 @@ define amdgpu_ps void @test_cvt_scale_pk8_f32_fp4_vv(i32 %src, i32 %scale, ptr a
   store <8 x float> %cvt, ptr addrspace(1) %out, align 32
   ret void
 }
+
 
 define amdgpu_ps void @test_cvt_scale_pk16_f16_fp6_vv(<3 x i32> %src, i32 %scale, ptr addrspace(1) %out) {
 ; GFX1250-SDAG-LABEL: test_cvt_scale_pk16_f16_fp6_vv:
@@ -372,3 +376,5 @@ define amdgpu_ps void @test_cvt_scale_pk16_f32_bf6_vv(<3 x i32> %src, i32 %scale
   store <16 x float> %cvt, ptr addrspace(1) %out, align 16
   ret void
 }
+
+

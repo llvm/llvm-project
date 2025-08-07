@@ -1666,7 +1666,7 @@ def DeviceKernel : DeclOrTypeAttr {
 }
 
 def SYCLKernelEntryPoint : InheritableAttr {
-  let Spellings = [Clang<"sycl_kernel_entry_point">];
+  let Spellings = [CXX11<"clang", "sycl_kernel_entry_point">];
   let Args = [
     // KernelName is required and specifies the kernel name type.
     TypeArgument<"KernelName">,
@@ -2484,6 +2484,12 @@ def AMDGPUSpatialClusterKernel : InheritableAttr {
 def AMDGPUNoRankSpecialization : InheritableAttr {
   let Spellings = [Clang<"amdgpu_no_rank_specialization", 0>];
   let Documentation = [AMDGPUNoRankSpecializationDocs];
+  let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
+}
+
+def AMDGPUEnableWasp : InheritableAttr {
+  let Spellings = [Clang<"amdgpu_enable_wasp", 0>];
+  let Documentation = [AMDGPUEnableWaspDocs];
   let Subjects = SubjectList<[Function], ErrorDiag, "kernel functions">;
 }
 

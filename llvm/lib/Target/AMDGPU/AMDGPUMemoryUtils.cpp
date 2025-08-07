@@ -148,7 +148,7 @@ void getUsesOfLDSByFunction(const CallGraph &CG, Module &M,
 }
 
 bool isKernelLDS(const Function *F) {
-  return AMDGPU::isKernel(F->getCallingConv());
+  return AMDGPU::isKernel(F->getCallingConv()) && !getWavegroupRankFunction(*F);
 }
 
 LDSUsesInfoTy getTransitiveUsesOfLDS(const CallGraph &CG, Module &M) {

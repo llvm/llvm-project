@@ -824,6 +824,7 @@ bool isNoopIntrinsic(Instruction *I) {
     case Intrinsic::invariant_end:
     case Intrinsic::launder_invariant_group:
     case Intrinsic::assume:
+    case Intrinsic::experimental_provenance_end:
       return true;
     case Intrinsic::dbg_declare:
     case Intrinsic::dbg_label:
@@ -1360,13 +1361,10 @@ struct DSEState {
   /// indicating whether \p I is a free-like call.
   std::optional<std::pair<MemoryLocation, bool>>
   getLocForTerminator(Instruction *I) const {
-    uint64_t Len;
-    Value *Ptr;
-    if (match(I, m_Intrinsic<Intrinsic::lifetime_end>(m_ConstantInt(Len),
-                                                      m_Value(Ptr))))
-      return {std::make_pair(MemoryLocation(Ptr, Len), false)};
-
     if (auto *CB = dyn_cast<CallBase>(I)) {
+      if (CB->getIntrinsicID() == Intrinsic::lifetime_end)
+        return {
+            std::make_pair(MemoryLocation::getForArgument(CB, 1, &TLI), false)};
       if (Value *FreedOp = getFreedOperand(CB, &TLI))
         return {std::make_pair(MemoryLocation::getAfter(FreedOp), true)};
     }

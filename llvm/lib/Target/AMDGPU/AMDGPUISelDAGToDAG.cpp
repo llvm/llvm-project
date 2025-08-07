@@ -2143,6 +2143,22 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetM0(SDNode *N, SDValue Addr,
   return true;
 }
 
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrNoIOffsetScaleOffsetM0(
+    SDNode *N, SDValue Addr, SDValue &SAddr, SDValue &VOffset,
+    SDValue &CPol) const {
+  bool ScaleOffset;
+  SDValue DummyOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, DummyOffset, ScaleOffset,
+                         false, false))
+    return false;
+
+  // We are assuming CPol is second from last operand of the intrinsic.
+  auto PassedCPol =
+      N->getConstantOperandVal(N->getNumOperands() - 2) & ~AMDGPU::CPol::SCAL;
+  CPol = CurDAG->getTargetConstant(PassedCPol, SDLoc(), MVT::i32);
+  return true;
+}
+
 static SDValue SelectSAddrFI(SelectionDAG *CurDAG, SDValue SAddr) {
   if (auto *FI = dyn_cast<FrameIndexSDNode>(SAddr)) {
     SAddr = CurDAG->getTargetFrameIndex(FI->getIndex(), FI->getValueType(0));
@@ -3152,11 +3168,11 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
       MCastOps.push_back(
           CurDAG->getTargetConstant(0, SL, MVT::i1)); // isGDS bit
       if (Size == 32)
-        Opcode = AMDGPU::DS_LOAD_MCAST_B32;
+        Opcode = AMDGPU::DS_LOAD_MCAST_B32_LANESHARED;
       else if (Size == 64)
-        Opcode = AMDGPU::DS_LOAD_MCAST_B64;
+        Opcode = AMDGPU::DS_LOAD_MCAST_B64_LANESHARED;
       else if (Size == 128)
-        Opcode = AMDGPU::DS_LOAD_MCAST_B128;
+        Opcode = AMDGPU::DS_LOAD_MCAST_B128_LANESHARED;
       else
         llvm_unreachable("Unsupported size for multicast load");
       break;
@@ -3205,58 +3221,22 @@ void AMDGPUDAGToDAGISel::SelectLOAD_MCAST(MemIntrinsicSDNode *N,
     return;
   }
 
+  // V_STORE_IDX operands are in units of dwords.
+  SDNode *Shift =
+      CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
+                             {N->getOperand(2), // offset
+                              CurDAG->getTargetConstant(2, SL, MVT::i32)});
+  MCastOps.push_back(SDValue(Shift, 0));                          // dst
+  MCastOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32)); // 0 offset?
+
+  glueCopyToM0(N, N->getOperand(N->getNumOperands() - 1));
+  // N has new chain and glued m0 now
+  MCastOps.push_back(N->getOperand(0));                       // Chain
+  MCastOps.push_back(N->getOperand(N->getNumOperands() - 1)); // Glue
+  SDNode *MCast = CurDAG->SelectNodeTo(N, Opcode, MVT::Other, MCastOps);
+
   MachineMemOperand *LoadMMO = N->getMemOperand();
-
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::DISTRIBUTED) {
-    // V_STORE_IDX operands are in units of dwords.
-    SDNode *Shift =
-        CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
-                               {N->getOperand(2), // offset
-                                CurDAG->getTargetConstant(2, SL, MVT::i32)});
-    MCastOps.push_back(SDValue(Shift, 0));                          // dst
-    MCastOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32)); // 0 offset?
-
-    glueCopyToM0(N, N->getOperand(N->getNumOperands() - 1));
-    // N has new chain and glued m0 now
-    MCastOps.push_back(N->getOperand(0));                       // Chain
-    MCastOps.push_back(N->getOperand(N->getNumOperands() - 1)); // Glue
-    SDNode *MCast = CurDAG->SelectNodeTo(N, Opcode, MVT::Other, MCastOps);
-    CurDAG->setNodeMemRefs(cast<MachineSDNode>(MCast), {LoadMMO});
-
-  } else {
-    // Two code paths for now, remove this one when all laneshared pseudos are
-    // implemented
-    glueCopyToM0(N, N->getOperand(N->getNumOperands() - 1));
-    // N has new chain and glued m0 now
-    MCastOps.push_back(N->getOperand(0));                       // Chain
-    MCastOps.push_back(N->getOperand(N->getNumOperands() - 1)); // Glue
-    MachineSDNode *MCast = CurDAG->getMachineNode(
-        Opcode, SL, MVT::getIntegerVT(Size), MVT::Other, MCastOps);
-    CurDAG->setNodeMemRefs(MCast, {LoadMMO});
-
-    // V_STORE_IDX operands are in units of dwords.
-    SDNode *Shift =
-        CurDAG->getMachineNode(AMDGPU::S_LSHR_B32, SL, MVT::i32,
-                               {N->getOperand(2), // offset
-                                CurDAG->getTargetConstant(2, SL, MVT::i32)});
-    SmallVector<SDValue, 4> StoreOps;
-    StoreOps.push_back(SDValue(MCast, 0));
-    StoreOps.push_back(SDValue(Shift, 0)); // dst
-    StoreOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
-    StoreOps.push_back(SDValue(MCast, 1)); // Chain
-    SDNode *Selected =
-        CurDAG->SelectNodeTo(N, AMDGPU::V_STORE_IDX, MVT::Other, StoreOps);
-
-    // Synthesize MMO for V_STORE_IDX.
-    MachinePointerInfo StorePtrI = MachinePointerInfo(AMDGPUAS::LANE_SHARED);
-    auto F = LoadMMO->getFlags() &
-             ~(MachineMemOperand::MOStore | MachineMemOperand::MOLoad);
-    MachineFunction &MF = CurDAG->getMachineFunction();
-    MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
-        StorePtrI, F | MachineMemOperand::MOStore, LoadMMO->getSize(),
-        LoadMMO->getBaseAlign(), LoadMMO->getAAInfo());
-    CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {StoreMMO});
-  }
+  CurDAG->setNodeMemRefs(cast<MachineSDNode>(MCast), {LoadMMO});
 }
 
 void AMDGPUDAGToDAGISel::SelectInterpP1F16(SDNode *N) {
@@ -4087,7 +4067,7 @@ void AMDGPUDAGToDAGISel::SelectSpatialClusterVNBR(SDNode *N, unsigned IntrID) {
     SendOps.push_back(SDValue(ShiftRefl, 0));
     SendOps.push_back(CurDAG->getTargetConstant(0, SL, MVT::i32));
     SendOps.push_back(N->getOperand(0));
-    SDNode *Selected = CurDAG->SelectNodeTo(N, Opcode, MVT::Other, SendOps);
+    CurDAG->SelectNodeTo(N, Opcode, MVT::Other, SendOps);
   } else {
     CurDAG->SelectNodeTo(
         N, Opcode, N->getVTList(),
@@ -4437,63 +4417,6 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
 bool AMDGPUDAGToDAGISel::SelectVOP3PModsDOT(SDValue In, SDValue &Src,
                                             SDValue &SrcMods) const {
   return SelectVOP3PMods(In, Src, SrcMods, true);
-}
-
-// Select neg_lo from the i1 immediate operand.
-bool AMDGPUDAGToDAGISel::SelectVOP3PModsNeg(SDValue In, SDValue &Src) const {
-  const ConstantSDNode *C = cast<ConstantSDNode>(In);
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // 1 promotes packed values to signed, 0 treats them as unsigned.
-  assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
-
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcSign = C->getZExtValue();
-  if (SrcSign == 1)
-    Mods ^= SISrcMods::NEG;
-
-  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
-}
-
-// Select both neg_lo and neg_hi from the i1 immediate operand. This is
-// specifically for F16/BF16 operands in WMMA instructions, where neg_lo applies
-// to matrix's even k elements, and neg_hi applies to matrix's odd k elements.
-bool AMDGPUDAGToDAGISel::SelectVOP3PModsNegs(SDValue In, SDValue &Src) const {
-  const ConstantSDNode *C = cast<ConstantSDNode>(In);
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // 1 promotes packed values to signed, 0 treats them as unsigned.
-  assert(C->getAPIntValue().getBitWidth() == 1 && "expected i1 value");
-
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcSign = C->getZExtValue();
-  if (SrcSign == 1)
-    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
-
-  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
-}
-
-// Select neg, abs, or both neg and abs from the i16 immediate operans.
-bool AMDGPUDAGToDAGISel::SelectVOP3PModsNegAbs(SDValue In, SDValue &Src) const {
-  const ConstantSDNode *C = cast<ConstantSDNode>(In);
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  unsigned SrcMod = C->getZExtValue();
-  switch (SrcMod) {
-  default: // Any other value will be silently ignored (considered as 0).
-    break;
-  case 1:
-    Mods ^= SISrcMods::NEG;
-    break;
-  case 2:
-    Mods ^= SISrcMods::ABS;
-    break;
-  case 3:
-    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
-    break;
-  }
-
-  Src = CurDAG->getTargetConstant(Mods, SDLoc(In), MVT::i32);
-  return true;
 }
 
 bool AMDGPUDAGToDAGISel::SelectWMMAOpSelVOP3PMods(SDValue In,

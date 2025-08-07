@@ -119,7 +119,6 @@ LLVM_ABI void initializeExpandVariadicsPass(PassRegistry &);
 LLVM_ABI void initializeExternalAAWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeFEntryInserterLegacyPass(PassRegistry &);
 LLVM_ABI void initializeFinalizeISelPass(PassRegistry &);
-LLVM_ABI void initializeFinalizeMachineBundlesPass(PassRegistry &);
 LLVM_ABI void initializeFixIrreduciblePass(PassRegistry &);
 LLVM_ABI void initializeFixupStatepointCallerSavedLegacyPass(PassRegistry &);
 LLVM_ABI void initializeFlattenCFGLegacyPassPass(PassRegistry &);

@@ -838,10 +838,21 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
   defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", VReg_96>;
 }
 
+multiclass DS_LOAD_MCAST<string opName, RegisterClass rc = VGPR_32> {
+  def "" : DS_1A_RET<opName, rc>;
+  def _LANESHARED : DS_1A_RET<opName#"_LANESHARED", rc> {
+    let OutOperandList = (outs);
+    defvar BasicIns = (ins VGPRSrc_32:$addr, Offset:$offset, gds:$gds);
+    defvar V_STORE_IDX_Ins = (ins VGPR_IDX_IDX_OP:$idx, i32imm:$dyn_offset);
+    let InOperandList = !con(BasicIns, V_STORE_IDX_Ins);
+    let mayStore = 1;
+  }
+}
+
 let WaveSizePredicate = isWave32, SubtargetPredicate = isGFX13Plus in {
-  def DS_LOAD_MCAST_B32  : DS_1A_RET<"ds_load_mcast_b32">;
-  def DS_LOAD_MCAST_B64  : DS_1A_RET<"ds_load_mcast_b64", VReg_64>;
-  def DS_LOAD_MCAST_B128 : DS_1A_RET<"ds_load_mcast_b128", VReg_128>;
+  defm DS_LOAD_MCAST_B32  : DS_LOAD_MCAST<"ds_load_mcast_b32">;
+  defm DS_LOAD_MCAST_B64  : DS_LOAD_MCAST<"ds_load_mcast_b64", VReg_64>;
+  defm DS_LOAD_MCAST_B128 : DS_LOAD_MCAST<"ds_load_mcast_b128", VReg_128>;
 }
 
 //===----------------------------------------------------------------------===//

@@ -56,18 +56,6 @@ def gi_vop3pmodsdot :
     GIComplexOperandMatcher<s32, "selectVOP3PModsDOT">,
     GIComplexPatternEquiv<VOP3PModsDOT>;
 
-def gi_vop3pmodsneg :
-    GIComplexOperandMatcher<s32, "selectVOP3PModsNeg">,
-    GIComplexPatternEquiv<VOP3PModsNeg>;
-
-def gi_vop3pmodsnegs :
-    GIComplexOperandMatcher<s32, "selectVOP3PModsNegs">,
-    GIComplexPatternEquiv<VOP3PModsNegs>;
-
-def gi_dotiuvop3pmodsnegabs :
-    GIComplexOperandMatcher<s32, "selectVOP3PModsNegAbs">,
-    GIComplexPatternEquiv<VOP3PModsNegAbs>;
-
 def gi_wmmaopselvop3pmods :
     GIComplexOperandMatcher<s32, "selectWMMAOpSelVOP3PMods">,
     GIComplexPatternEquiv<WMMAOpSelVOP3PMods>;
@@ -163,6 +151,9 @@ def gi_global_saddr_no_ioffset_scale_offset :
 def gi_global_saddr_no_ioffset_m0 :
     GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffsetM0">,
     GIComplexPatternEquiv<GlobalSAddrNoIOffsetM0>;
+def gi_global_saddr_no_ioffset_scale_offset_m0 :
+    GIComplexOperandMatcher<s64, "selectGlobalSAddrNoIOffsetScaleOffsetM0">,
+    GIComplexPatternEquiv<GlobalSAddrNoIOffsetScaleOffsetM0>;
 
 def gi_mubuf_scratch_offset :
     GIComplexOperandMatcher<s32, "selectMUBUFScratchOffset">,
@@ -472,6 +463,13 @@ def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
 
 def gi_as_hw_round_mode : GICustomOperandRenderer<"renderRoundMode">,
   GISDNodeXFormEquiv<as_hw_round_mode>;
+
+def gi_VOP3PModsNeg : GICustomOperandRenderer<"renderVOP3PModsNeg">,
+  GISDNodeXFormEquiv<VOP3PModsNeg>;
+def gi_VOP3PModsNegs : GICustomOperandRenderer<"renderVOP3PModsNegs">,
+  GISDNodeXFormEquiv<VOP3PModsNegs>;
+def gi_VOP3PModsNegAbs : GICustomOperandRenderer<"renderVOP3PModsNegAbs">,
+  GISDNodeXFormEquiv<VOP3PModsNegAbs>;
 
 def gi_prefetch_loc : GICustomOperandRenderer<"renderPrefetchLoc">,
   GISDNodeXFormEquiv<PrefetchLoc>;

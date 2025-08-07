@@ -554,7 +554,7 @@ struct ClampClampOptimization : public OpRewritePattern<tosa::ClampOp> {
     Value input = op.getInput();
 
     // Check the input to the CLAMP op is itself a CLAMP.
-    auto clampOp = dyn_cast_if_present<tosa::ClampOp>(input.getDefiningOp());
+    auto clampOp = input.getDefiningOp<tosa::ClampOp>();
     if (!clampOp)
       return failure();
 
@@ -707,9 +707,8 @@ struct ConcatSliceOptimization : public OpRewritePattern<tosa::SliceOp> {
         auto size_op =
             getTosaConstShape(rewriter, sliceOp.getLoc(), sliceSizes);
         replaceWithSlice =
-            rewriter
-                .create<tosa::SliceOp>(sliceOp.getLoc(), sliceOp.getType(),
-                                       input, start_op, size_op)
+            tosa::SliceOp::create(rewriter, sliceOp.getLoc(), sliceOp.getType(),
+                                  input, start_op, size_op)
                 .getResult();
         break;
       }
@@ -1302,9 +1301,11 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
       auto intVal = operand.getSplatValue<APInt>();
       auto bitwidth = outETy.getIntOrFloatBitWidth();
 
-      if (trunc) {
+      // i1 types are boolean in TOSA
+      if (outETy.isInteger(1)) {
+        intVal = APInt(bitwidth, intVal.isZero() ? 0 : 1);
+      } else if (trunc) {
         intVal = intVal.trunc(bitwidth);
-        // i1 types are boolean in TOSA
       } else if (unsignIn || inIntType.isInteger(1)) {
         intVal = intVal.zext(bitwidth);
       } else {
@@ -1634,7 +1635,7 @@ OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
   for (Value operand : getOperands()) {
     concatOperands.emplace_back(operand);
 
-    auto producer = dyn_cast_or_null<ConcatOp>(operand.getDefiningOp());
+    auto producer = operand.getDefiningOp<ConcatOp>();
     if (!producer)
       continue;
 
