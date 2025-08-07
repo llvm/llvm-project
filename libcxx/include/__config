@@ -1027,8 +1027,12 @@ typedef __char32_t char32_t;
 #    else
 #      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
 #    endif
-#  else
-#    define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
+#  elif defined (_LIBCPP_PICOLIBC_PREREQ)
+#    if _LIBCPP_PICOLIBC_PREREQ(1, 8, 9) && defined(__cpp_char8_t)
+#      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 1
+#    else
+#      define _LIBCPP_HAS_C8RTOMB_MBRTOC8 0
+#    endif
 #  endif
 
 // There are a handful of public standard library types that are intended to
