@@ -910,7 +910,7 @@ foreach vti = AllIntegerVectors in {
 foreach vti = I64IntegerVectors in {
   let Predicates = [HasVInstructionsI64] in {
     def : Pat<(add (vti.Vector vti.RegClass:$rs1),
-                   (vti.Vector (SplatPat_imm64_neg i64:$rs2))),
+                   (vti.Vector (SplatPat_imm64_neg (i64 GPR:$rs2)))),
               (!cast<Instruction>("PseudoVSUB_VX_"#vti.LMul.MX)
                    (vti.Vector (IMPLICIT_DEF)),
                    vti.RegClass:$rs1,
