@@ -189,7 +189,7 @@ def ROCDL_BallotOp :
   let assemblyFormat = "$pred attr-dict `:` type($res)";
 }
 
-def ROCDL_ReadfirstlaneOp : ROCDL_IntrOp<"readfirstlane", [], [0], [AllTypesMatch<["res", "src"]>, Pure], 1>,
+def ROCDL_ReadfirstlaneOp : ROCDL_IntrOp<"readfirstlane", [], [0], [AllTypesMatch<["res", "src"]>], 1>,
   Arguments<(ins LLVM_Type:$src)> {
   let results = (outs LLVM_Type:$res);
   let summary = "Get the value in first active lane.";
