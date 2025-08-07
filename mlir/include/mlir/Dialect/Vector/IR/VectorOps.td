@@ -1729,7 +1729,7 @@ def Vector_LoadOp : Vector_Op<"load", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"AlignmentBytes", "AlignmentBytes()">: $alignment), [{
+                   CArg<"uint64_t", "0">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
                                     nullptr);
@@ -1738,7 +1738,7 @@ def Vector_LoadOp : Vector_Op<"load", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"AlignmentBytes", "AlignmentBytes()">: $alignment), [{
+                   CArg<"uint64_t", "0">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, nontemporal,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
                                     nullptr);
@@ -2037,7 +2037,7 @@ def Vector_MaskedStoreOp :
                    "ValueRange":$indices,
                    "Value":$mask,
                    "Value":$valueToStore,
-                   CArg<"AlignmentBytes", "AlignmentBytes()">: $alignment), [{
+                   CArg<"uint64_t", "0">:$alignment), [{
       return build($_builder, $_state, base, indices, mask, valueToStore,
                    alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
                                     nullptr);
