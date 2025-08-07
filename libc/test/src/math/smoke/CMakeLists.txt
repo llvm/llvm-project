@@ -135,6 +135,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanpif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tanpif_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.tanpif
+)
+
+add_fp_unittest(
   tanpif16_test
   SUITE
     libc-math-smoke-tests
@@ -207,6 +218,19 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.fabsf128
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  fabsbf16_test
+  SUITE
+  libc-math-smoke-tests
+  SRCS
+    fabsbf16_test.cpp
+  HDRS
+    FAbsTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.math.fabsbf16
 )
 
 add_fp_unittest(
@@ -3122,6 +3146,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  hypotf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    hypotf16_test.cpp
+  HDRS
+    HypotTest.h
+  DEPENDS
+    libc.src.math.hypotf16
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   hypot_test
   SUITE
     libc-math-smoke-tests
@@ -3145,7 +3182,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanf
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3161,7 +3197,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nan
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3177,7 +3212,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanl
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3193,7 +3227,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanf16
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3209,7 +3242,6 @@ add_fp_unittest(
     libc.hdr.signal_macros
     libc.src.math.nanf128
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.sanitizer
   # FIXME: The nan tests currently have death tests, which aren't supported for
   # hermetic tests.
   UNIT_TEST_ONLY
@@ -3935,6 +3967,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atanhf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atanhf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.atanhf16
+    libc.src.__support.FPUtil.cast
+)
+
+add_fp_unittest(
   asinhf_test
   SUITE
     libc-math-smoke-tests
@@ -3944,6 +3988,17 @@ add_fp_unittest(
     libc.src.errno.errno
     libc.src.math.asinhf
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  asinhf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinhf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.asinhf16
 )
 
 add_fp_unittest(
@@ -3983,6 +4038,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asin_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asin_test.cpp
+  DEPENDS
+    libc.src.math.asin
+)
+
+add_fp_unittest(
   asinf16_test
   SUITE
     libc-math-smoke-tests
@@ -4006,6 +4071,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acos_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acos_test.cpp
+  DEPENDS
+    libc.hdr.fenv_macros
+    libc.src.errno.errno
+    libc.src.math.acos
+)
+
+add_fp_unittest(
   acosf16_test
   SUITE
     libc-math-smoke-tests
@@ -4014,6 +4091,17 @@ add_fp_unittest(
   DEPENDS
     libc.src.errno.errno
     libc.src.math.acosf16  
+)
+
+add_fp_unittest(
+  acospif16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    acospif16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.acospif16  
 )
 
 add_fp_unittest(
@@ -4039,6 +4127,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  atanf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atanf16_test.cpp
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.atanf16
+)
+
+add_fp_unittest(
   atan2f_test
   SUITE
     libc-math-smoke-tests
@@ -4058,6 +4157,16 @@ add_fp_unittest(
     atan2_test.cpp
   DEPENDS
     libc.src.math.atan2
+)
+
+add_fp_unittest(
+  atan2f128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    atan2f128_test.cpp
+  DEPENDS
+    libc.src.math.atan2f128
 )
 
 add_fp_unittest(
@@ -4228,6 +4337,7 @@ add_fp_unittest(
   SRCS
     pow_test.cpp
   DEPENDS
+    libc.src.errno.errno
     libc.hdr.fenv_macros
     libc.src.math.pow
 )
@@ -5194,6 +5304,69 @@ add_fp_unittest(
     DivTest.h
   DEPENDS
     libc.src.math.ddivf128
+)
+
+add_fp_unittest(
+  bfloat16_add_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_add_test.cpp
+  HDRS
+    AddTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.os
+    libc.src.__support.macros.properties.types
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
+  bfloat16_div_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_div_test.cpp
+  HDRS
+    DivTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
+  bfloat16_mul_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_mul_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+)
+
+add_fp_unittest(
+  bfloat16_sub_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    bfloat16_sub_test.cpp
+  HDRS
+    SubTest.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.properties.os
+    libc.src.__support.macros.properties.types
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
 )
 
 add_fp_unittest(

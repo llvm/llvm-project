@@ -2,9 +2,21 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare i32 @llvm.s390.tdc.f16(half, i64)
 declare i32 @llvm.s390.tdc.f32(float, i64)
 declare i32 @llvm.s390.tdc.f64(double, i64)
 declare i32 @llvm.s390.tdc.f128(fp128, i64)
+
+; Check using as i32 - f16
+define i32 @f0(half %x) {
+; CHECK-LABEL: f0
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: tceb %f0, 123
+; CHECK: ipm %r2
+; CHECK: srl %r2, 28
+  %res = call i32 @llvm.s390.tdc.f16(half %x, i64 123)
+  ret i32 %res
+}
 
 ; Check using as i32 - f32
 define i32 @f1(float %x) {

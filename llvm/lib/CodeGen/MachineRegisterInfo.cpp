@@ -432,21 +432,15 @@ bool MachineRegisterInfo::hasOneNonDBGUser(Register RegNo) const {
   return hasSingleElement(use_nodbg_instructions(RegNo));
 }
 
+MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
+  auto RegNoDbgUsers = use_nodbg_instructions(RegNo);
+  return hasSingleElement(RegNoDbgUsers) ? &*RegNoDbgUsers.begin() : nullptr;
+}
+
 bool MachineRegisterInfo::hasAtMostUserInstrs(Register Reg,
                                               unsigned MaxUsers) const {
   return hasNItemsOrLess(use_instr_nodbg_begin(Reg), use_instr_nodbg_end(),
                          MaxUsers);
-}
-
-MachineOperand *MachineRegisterInfo::getOneNonDBGUse(Register RegNo) const {
-  auto RegNoDbgOperands = use_nodbg_operands(RegNo);
-  return hasSingleElement(RegNoDbgOperands) ? &*RegNoDbgOperands.begin()
-                                            : nullptr;
-}
-
-MachineInstr *MachineRegisterInfo::getOneNonDBGUser(Register RegNo) const {
-  auto RegNoDbgUsers = use_nodbg_instructions(RegNo);
-  return hasSingleElement(RegNoDbgUsers) ? &*RegNoDbgUsers.begin() : nullptr;
 }
 
 /// clearKillFlags - Iterate over all the uses of the given register and

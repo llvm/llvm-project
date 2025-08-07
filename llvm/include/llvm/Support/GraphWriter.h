@@ -25,6 +25,7 @@
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
@@ -37,11 +38,11 @@ namespace llvm {
 
 namespace DOT {  // Private functions...
 
-std::string EscapeString(const std::string &Label);
+LLVM_ABI std::string EscapeString(const std::string &Label);
 
 /// Get a color string for this node number. Simply round-robin selects
 /// from a reasonable number of colors.
-StringRef getColorString(unsigned NodeNumber);
+LLVM_ABI StringRef getColorString(unsigned NodeNumber);
 
 } // end namespace DOT
 
@@ -57,8 +58,8 @@ enum Name {
 
 } // end namespace GraphProgram
 
-bool DisplayGraph(StringRef Filename, bool wait = true,
-                  GraphProgram::Name program = GraphProgram::DOT);
+LLVM_ABI bool DisplayGraph(StringRef Filename, bool wait = true,
+                           GraphProgram::Name program = GraphProgram::DOT);
 
 template<typename GraphType>
 class GraphWriter {
@@ -199,8 +200,9 @@ public:
       O << "<<table border=\"0\" cellborder=\"1\" cellspacing=\"0\""
         << " cellpadding=\"0\"><tr><td align=\"text\" colspan=\"" << ColSpan
         << "\">";
-    } else
+    } else {
       O << "\"{";
+    }
 
     if (!DTraits.renderGraphFromBottomUp()) {
       if (RenderUsingHTML)
@@ -368,7 +370,7 @@ raw_ostream &WriteGraph(raw_ostream &O, const GraphType &G,
   return O;
 }
 
-std::string createGraphFilename(const Twine &Name, int &FD);
+LLVM_ABI std::string createGraphFilename(const Twine &Name, int &FD);
 
 /// Writes graph into a provided @c Filename.
 /// If @c Filename is empty, generates a random one.

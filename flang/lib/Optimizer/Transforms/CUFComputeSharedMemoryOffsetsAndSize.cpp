@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Runtime/CUDA/registration.h"
 #include "flang/Runtime/entry-names.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Value.h"
@@ -92,10 +93,11 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           mlir::Value dynSize =
               builder.createIntegerConstant(loc, idxTy, tySize);
           for (auto extent : sharedOp.getShape())
-            dynSize = builder.create<mlir::arith::MulIOp>(loc, dynSize, extent);
+            dynSize =
+                mlir::arith::MulIOp::create(builder, loc, dynSize, extent);
           if (crtDynOffset)
-            crtDynOffset =
-                builder.create<mlir::arith::AddIOp>(loc, crtDynOffset, dynSize);
+            crtDynOffset = mlir::arith::AddIOp::create(builder, loc,
+                                                       crtDynOffset, dynSize);
           else
             crtDynOffset = dynSize;
 
@@ -111,6 +113,10 @@ struct CUFComputeSharedMemoryOffsetsAndSize
             llvm::alignTo(sharedMemSize, align) + llvm::alignTo(size, align);
         alignment = std::max(alignment, align);
       }
+
+      if (nbDynamicSharedVariables == 0 && nbStaticSharedVariables == 0)
+        continue;
+
       if (nbDynamicSharedVariables > 0 && nbStaticSharedVariables > 0)
         mlir::emitError(
             funcOp.getLoc(),
@@ -137,9 +143,9 @@ struct CUFComputeSharedMemoryOffsetsAndSize
           fir::GlobalOp::getDataAttrAttrName(globalOpName),
           cuf::DataAttributeAttr::get(gpuMod.getContext(),
                                       cuf::DataAttribute::Shared)));
-      auto sharedMem = builder.create<fir::GlobalOp>(
-          funcOp.getLoc(), sharedMemGlobalName, false, false, sharedMemType,
-          init, linkage, attrs);
+      auto sharedMem = fir::GlobalOp::create(
+          builder, funcOp.getLoc(), sharedMemGlobalName, false, false,
+          sharedMemType, init, linkage, attrs);
       sharedMem.setAlignment(alignment);
     }
   }

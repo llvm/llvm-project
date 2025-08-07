@@ -20,6 +20,7 @@
 #include "mlir/Analysis/Presburger/PresburgerSpace.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/DynamicAPInt.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
 #include <optional>
@@ -266,6 +267,13 @@ public:
   /// Return the index at Which the specified kind of vars ends.
   unsigned getVarKindEnd(VarKind kind) const {
     return space.getVarKindEnd(kind);
+  }
+
+  /// Return an interator over the variables of the specified kind
+  /// starting at the relevant offset. The return type is auto in
+  /// keeping with the convention for iterators.
+  auto iterVarKind(VarKind kind) {
+    return llvm::seq(getVarKindOffset(kind), getVarKindEnd(kind));
   }
 
   /// Get the number of elements of the specified kind in the range
@@ -706,6 +714,19 @@ public:
   /// Formally, R1.applyRange(R2) is the same as R1.compose(R2) but we provide
   /// this for uniformity with `applyDomain`.
   void applyRange(const IntegerRelation &rel);
+
+  /// Let the relation `this` be R1, and the relation `rel` be R2. Requires
+  /// R1 and R2 to have the same domain.
+  ///
+  /// Let R3 be the rangeProduct of R1 and R2. Then x R3 (y, z) iff
+  /// (x R1 y and x R2 z).
+  ///
+  /// Example:
+  ///
+  /// R1: (i, j) -> k : f(i, j, k) = 0
+  /// R2: (i, j) -> l : g(i, j, l) = 0
+  /// R1.rangeProduct(R2): (i, j) -> (k, l) : f(i, j, k) = 0 and g(i, j, l) = 0
+  IntegerRelation rangeProduct(const IntegerRelation &rel);
 
   /// Given a relation `other: (A -> B)`, this operation merges the symbol and
   /// local variables and then takes the composition of `other` on `this: (B ->

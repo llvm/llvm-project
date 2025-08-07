@@ -124,7 +124,6 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
     return Result;
   }
   std::string getKind(const TypeLoc &TL) {
-    std::string Result;
     if (TL.getTypeLocClass() == TypeLoc::Qualified)
       return "Qualified";
     return TL.getType()->getTypeClassName();
@@ -157,10 +156,8 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       NNS_KIND(Identifier);
       NNS_KIND(Namespace);
       NNS_KIND(TypeSpec);
-      NNS_KIND(TypeSpecWithTemplate);
       NNS_KIND(Global);
       NNS_KIND(Super);
-      NNS_KIND(NamespaceAlias);
 #undef NNS_KIND
     }
     llvm_unreachable("Unhandled SpecifierKind enum");
@@ -283,8 +280,6 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
       return NNS.getAsIdentifier()->getName().str() + "::";
     case NestedNameSpecifier::Namespace:
       return NNS.getAsNamespace()->getNameAsString() + "::";
-    case NestedNameSpecifier::NamespaceAlias:
-      return NNS.getAsNamespaceAlias()->getNameAsString() + "::";
     default:
       return "";
     }

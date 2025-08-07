@@ -84,19 +84,19 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X86_64-NEXT:  .Ltmp0:
 ; X86_64-NEXT:    callq throw
+; X86_64-NEXT:    nop
 ; X86_64-NEXT:  .Ltmp1:
 ; X86_64-NEXT:  # %bb.1: # %bb14
 ; X86_64-NEXT:  .LBB0_3: # Block address taken
 ; X86_64-NEXT:    # %exit
 ; X86_64-NEXT:  $ehgcr_0_3:
-; X86_64-NEXT:    nop
 ; X86_64-NEXT:    .seh_startepilogue
 ; X86_64-NEXT:    addq $64, %rsp
 ; X86_64-NEXT:    popq %rbp
 ; X86_64-NEXT:    .seh_endepilogue
 ; X86_64-NEXT:    retq
 ; X86_64-NEXT:    .seh_handlerdata
-; X86_64-NEXT:    .long ($cppxdata$pr66984)@IMGREL
+; X86_64-NEXT:    .long $cppxdata$pr66984@IMGREL
 ; X86_64-NEXT:    .text
 ; X86_64-NEXT:    .seh_endproc
 ; X86_64-NEXT:    .def "?catch$2@?0?pr66984@4HA";
@@ -124,7 +124,7 @@ define void @pr66984(ptr %arg) personality ptr @__CxxFrameHandler3 {
 ; X86_64-NEXT:    .seh_endepilogue
 ; X86_64-NEXT:    retq # CATCHRET
 ; X86_64-NEXT:    .seh_handlerdata
-; X86_64-NEXT:    .long ($cppxdata$pr66984)@IMGREL
+; X86_64-NEXT:    .long $cppxdata$pr66984@IMGREL
 ; X86_64-NEXT:    .text
 ; X86_64-NEXT:    .seh_endproc
 ; X86_64-NEXT:    .def "?dtor$4@?0?pr66984@4HA";

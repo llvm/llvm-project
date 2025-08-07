@@ -252,7 +252,7 @@ void IntrinsicEmitter::EmitIntrinsicToNameTable(
 
 )";
 
-  Table.EmitStringTableDef(OS, "IntrinsicNameTable", /*Indent=*/"");
+  Table.EmitStringTableDef(OS, "IntrinsicNameTable");
 
   OS << R"(
 static constexpr unsigned IntrinsicNameOffsetTable[] = {
@@ -301,7 +301,7 @@ static TypeSigTy ComputeTypeSignature(const CodeGenIntrinsic &Int) {
   const Record *TypeInfo = Int.TheDef->getValueAsDef("TypeInfo");
   const ListInit *TypeList = TypeInfo->getValueAsListInit("TypeSig");
 
-  for (const auto *TypeListEntry : TypeList->getValues())
+  for (const auto *TypeListEntry : TypeList->getElements())
     TypeSig.emplace_back(cast<IntInit>(TypeListEntry)->getValue());
   return TypeSig;
 }
@@ -493,6 +493,8 @@ static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
     return "Alignment";
   case CodeGenIntrinsic::Dereferenceable:
     return "Dereferenceable";
+  case CodeGenIntrinsic::Range:
+    return "Range";
   }
   llvm_unreachable("Unknown CodeGenIntrinsic::ArgAttrKind enum");
 }
@@ -502,7 +504,9 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
                                       raw_ostream &OS) {
   OS << R"(// Add parameter attributes that are not common to all intrinsics.
 #ifdef GET_INTRINSIC_ATTRIBUTES
-static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID) {
+static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID,
+                                                Type *ArgType) {
+  unsigned BitWidth = ArgType->getScalarSizeInBits();
   switch (ID) {
   default: llvm_unreachable("Invalid attribute set number");)";
   // Compute unique argument attribute sets.
@@ -535,6 +539,17 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID) {
             Attr.Kind == CodeGenIntrinsic::Dereferenceable)
           OS << formatv("      Attribute::get(C, Attribute::{}, {}),\n",
                         AttrName, Attr.Value);
+        else if (Attr.Kind == CodeGenIntrinsic::Range)
+          // This allows implicitTrunc because the range may only fit the
+          // type based on rules implemented in the IR verifier. E.g. the
+          // [-1, 1] range for ucmp/scmp intrinsics requires a minimum i2 type.
+          // Give the verifier a chance to diagnose this instead of asserting
+          // here.
+          OS << formatv("      Attribute::get(C, Attribute::{}, "
+                        "ConstantRange(APInt(BitWidth, {}, /*isSigned=*/true, "
+                        "/*implicitTrunc=*/true), APInt(BitWidth, {}, "
+                        "/*isSigned=*/true, /*implicitTrunc=*/true))),\n",
+                        AttrName, (int64_t)Attr.Value, (int64_t)Attr.Value2);
         else
           OS << formatv("      Attribute::get(C, Attribute::{}),\n", AttrName);
       }
@@ -635,7 +650,18 @@ static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
   OS << R"(
 };
 
-AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {)";
+AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
+                                       FunctionType *FT) {)";
+  // Find the max number of attributes to create the local array.
+  unsigned MaxNumAttrs = 0;
+  for (const auto [IntPtr, UniqueID] : UniqAttributes) {
+    const CodeGenIntrinsic &Int = *IntPtr;
+    unsigned NumAttrs =
+        llvm::count_if(Int.ArgumentAttributes,
+                       [](const auto &Attrs) { return !Attrs.empty(); });
+    NumAttrs += hasFnAttributes(Int);
+    MaxNumAttrs = std::max(MaxNumAttrs, NumAttrs);
+  }
 
   OS << formatv(R"(
   if (id == 0)
@@ -643,45 +669,44 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id) {)";
 
   uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
   uint8_t FnAttrID = PackedID >> 8;
+  std::pair<unsigned, AttributeSet> AS[{}];
+  unsigned NumAttrs = 0;
+  bool HasFnAttr = false;
   switch(PackedID & 0xFF) {{
     default: llvm_unreachable("Invalid attribute number");
-)");
+)",
+                MaxNumAttrs);
 
   for (const auto [IntPtr, UniqueID] : UniqAttributes) {
     OS << formatv("  case {}:\n", UniqueID);
     const CodeGenIntrinsic &Int = *IntPtr;
 
-    // Keep track of the number of attributes we're writing out.
-    unsigned NumAttrs =
-        llvm::count_if(Int.ArgumentAttributes,
-                       [](const auto &Attrs) { return !Attrs.empty(); });
-    NumAttrs += hasFnAttributes(Int);
-    if (NumAttrs == 0) {
-      OS << "    return AttributeList();\n";
-      continue;
-    }
+    unsigned NumAttrs = 0;
 
-    OS << "    return AttributeList::get(C, {\n";
-    ListSeparator LS(",\n");
     for (const auto &[AttrIdx, Attrs] : enumerate(Int.ArgumentAttributes)) {
       if (Attrs.empty())
         continue;
 
       unsigned ArgAttrID = UniqArgAttributes.find(Attrs)->second;
-      OS << LS
-         << formatv("      {{{}, getIntrinsicArgAttributeSet(C, {})}", AttrIdx,
-                    ArgAttrID);
+      OS << formatv("    AS[{}] = {{{}, getIntrinsicArgAttributeSet(C, {}, "
+                    "FT->getContainedType({}))};\n",
+                    NumAttrs++, AttrIdx, ArgAttrID, AttrIdx);
     }
 
-    if (hasFnAttributes(Int)) {
-      OS << LS
-         << "      {AttributeList::FunctionIndex, "
-            "getIntrinsicFnAttributeSet(C, FnAttrID)}";
-    }
-    OS << "\n    });\n";
+    if (hasFnAttributes(Int))
+      OS << "    HasFnAttr = true;\n";
+
+    if (NumAttrs)
+      OS << formatv("    NumAttrs = {};\n", NumAttrs);
+    OS << "    break;\n";
   }
 
   OS << R"(  }
+  if (HasFnAttr) {
+    AS[NumAttrs++] = {AttributeList::FunctionIndex,
+                      getIntrinsicFnAttributeSet(C, FnAttrID)};
+  }
+  return AttributeList::get(C, ArrayRef(AS, NumAttrs));
 }
 #endif // GET_INTRINSIC_ATTRIBUTES
 
@@ -711,7 +736,7 @@ void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
     // Get the map for this target prefix.
     auto &[Map, CommonPrefix] = BuiltinMap[Int.TargetPrefix];
 
-    if (!Map.insert({BuiltinName, Int.EnumName}).second)
+    if (!Map.try_emplace(BuiltinName, Int.EnumName).second)
       PrintFatalError(Int.TheDef->getLoc(),
                       "Intrinsic '" + Int.TheDef->getName() + "': duplicate " +
                           CompilerName + " builtin name!");

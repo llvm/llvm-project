@@ -283,7 +283,7 @@ bool NativeRegisterContextDBReg::ClearHardwareWatchpoint(uint32_t wp_index) {
     LLDB_LOG_ERROR(
         log, std::move(error),
         "unable to set watchpoint: failed to read debug registers: {0}");
-    return LLDB_INVALID_INDEX32;
+    return false;
   }
 
   if (wp_index >= m_max_hwp_supported)

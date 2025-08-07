@@ -206,15 +206,15 @@ define i32 @reorder_indices_1(float %0) {
 ; POW2-ONLY-SAME: float [[TMP0:%.*]]) {
 ; POW2-ONLY-NEXT:  entry:
 ; POW2-ONLY-NEXT:    [[NOR1:%.*]] = alloca [0 x [3 x float]], i32 0, align 4
+; POW2-ONLY-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr float, ptr [[NOR1]], i64 1
 ; POW2-ONLY-NEXT:    [[ARRAYIDX2_I265:%.*]] = getelementptr float, ptr [[NOR1]], i64 2
 ; POW2-ONLY-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX2_I265]], align 4
+; POW2-ONLY-NEXT:    [[TMP7:%.*]] = load <2 x float>, ptr [[ARRAYIDX_I]], align 4
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[NOR1]], align 4
 ; POW2-ONLY-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
 ; POW2-ONLY-NEXT:    [[TMP4:%.*]] = fneg float [[TMP3]]
 ; POW2-ONLY-NEXT:    [[NEG11_I:%.*]] = fmul float [[TMP4]], [[TMP0]]
 ; POW2-ONLY-NEXT:    [[TMP5:%.*]] = call float @llvm.fmuladd.f32(float [[TMP1]], float 0.000000e+00, float [[NEG11_I]])
-; POW2-ONLY-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> <i32 1, i32 poison>
-; POW2-ONLY-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> [[TMP6]], float [[TMP1]], i32 1
 ; POW2-ONLY-NEXT:    [[TMP8:%.*]] = fneg <2 x float> [[TMP7]]
 ; POW2-ONLY-NEXT:    [[TMP9:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
 ; POW2-ONLY-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP9]], <2 x float> poison, <2 x i32> zeroinitializer

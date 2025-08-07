@@ -733,8 +733,7 @@ bool RegBankSelect::checkFunctionIsLegal(MachineFunction &MF) const {
 
 bool RegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   // If the ISel pipeline failed, do not bother running that pass.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   LLVM_DEBUG(dbgs() << "Assign register banks for: " << MF.getName() << '\n');

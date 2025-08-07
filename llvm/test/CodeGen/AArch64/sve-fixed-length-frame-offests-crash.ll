@@ -11,67 +11,64 @@ target triple = "aarch64-unknown-linux-gnu"
 define dso_local void @func1(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v6, ptr %v7, ptr %v8,
 ; CHECK-LABEL: func1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-48]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x22, x21, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
-; CHECK-NEXT:    .cfi_offset w22, -32
-; CHECK-NEXT:    .cfi_offset w29, -48
+; CHECK-NEXT:    sub sp, sp, #368
+; CHECK-NEXT:    stp x29, x30, [sp, #336] // 16-byte Folded Spill
+; CHECK-NEXT:    str x28, [sp, #352] // 8-byte Folded Spill
+; CHECK-NEXT:    add x29, sp, #336
+; CHECK-NEXT:    .cfi_def_cfa w29, 32
+; CHECK-NEXT:    .cfi_offset w28, -16
+; CHECK-NEXT:    .cfi_offset w30, -24
+; CHECK-NEXT:    .cfi_offset w29, -32
+; CHECK-NEXT:    add x8, x29, #32
+; CHECK-NEXT:    add x9, x29, #72
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    add x10, sp, #176
-; CHECK-NEXT:    add x8, sp, #48
-; CHECK-NEXT:    add x9, sp, #144
-; CHECK-NEXT:    add x20, sp, #176
-; CHECK-NEXT:    ldr x15, [sp, #104]
-; CHECK-NEXT:    ld1d { z3.d }, p0/z, [x10]
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; CHECK-NEXT:    add x8, sp, #112
-; CHECK-NEXT:    ld1d { z2.d }, p0/z, [x9]
-; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x8]
-; CHECK-NEXT:    ldur q4, [sp, #88]
-; CHECK-NEXT:    ldp x9, x8, [sp, #328]
-; CHECK-NEXT:    ldr x19, [sp, #272]
-; CHECK-NEXT:    ldp x11, x10, [sp, #312]
-; CHECK-NEXT:    ldp x13, x12, [sp, #296]
-; CHECK-NEXT:    ldp x18, x14, [sp, #280]
-; CHECK-NEXT:    ldp x16, x17, [sp, #208]
-; CHECK-NEXT:    ldp x21, x22, [sp, #352]
-; CHECK-NEXT:    st1d { z3.d }, p0, [x20]
-; CHECK-NEXT:    add x20, sp, #144
-; CHECK-NEXT:    st1d { z2.d }, p0, [x20]
-; CHECK-NEXT:    add x20, sp, #112
-; CHECK-NEXT:    st1d { z1.d }, p0, [x20]
-; CHECK-NEXT:    add x20, sp, #48
-; CHECK-NEXT:    st1d { z0.d }, p0, [x20]
-; CHECK-NEXT:    stp x21, x22, [sp, #352]
-; CHECK-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    stp x19, x18, [sp, #272]
-; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    stp x16, x17, [sp, #208]
-; CHECK-NEXT:    stur q4, [sp, #88]
-; CHECK-NEXT:    str x15, [sp, #104]
-; CHECK-NEXT:    stp x14, x13, [sp, #288]
-; CHECK-NEXT:    stp x12, x11, [sp, #304]
-; CHECK-NEXT:    stp x10, x9, [sp, #320]
-; CHECK-NEXT:    str x8, [sp, #336]
-; CHECK-NEXT:    ldr x29, [sp], #48 // 8-byte Folded Reload
-; CHECK-NEXT:    b func2
+; CHECK-NEXT:    ldr z0, [x8]
+; CHECK-NEXT:    add x8, x29, #256
+; CHECK-NEXT:    ldr z3, [x9]
+; CHECK-NEXT:    ldr z1, [x8]
+; CHECK-NEXT:    add x8, x29, #288
+; CHECK-NEXT:    add x9, x29, #168
+; CHECK-NEXT:    ldr z2, [x8]
+; CHECK-NEXT:    add x8, x29, #104
+; CHECK-NEXT:    ldr z6, [x9]
+; CHECK-NEXT:    ldr z4, [x8]
+; CHECK-NEXT:    add x8, x29, #136
+; CHECK-NEXT:    mov x12, #17 // =0x11
+; CHECK-NEXT:    ldr z5, [x8]
+; CHECK-NEXT:    ldp x10, x11, [x29, #336]
+; CHECK-NEXT:    st1d { z6.d }, p0, [sp, x12, lsl #3]
+; CHECK-NEXT:    mov x12, #13 // =0xd
+; CHECK-NEXT:    ldr x8, [x29, #200]
+; CHECK-NEXT:    ldr x9, [x29, #320]
+; CHECK-NEXT:    st1d { z5.d }, p0, [sp, x12, lsl #3]
+; CHECK-NEXT:    mov x12, #9 // =0x9
+; CHECK-NEXT:    st1d { z4.d }, p0, [sp, x12, lsl #3]
+; CHECK-NEXT:    mov x12, #5 // =0x5
+; CHECK-NEXT:    st1d { z3.d }, p0, [sp, x12, lsl #3]
+; CHECK-NEXT:    stp x10, x11, [sp, #304]
+; CHECK-NEXT:    str x9, [sp, #288]
+; CHECK-NEXT:    str z2, [sp, #8, mul vl]
+; CHECK-NEXT:    str z1, [sp, #7, mul vl]
+; CHECK-NEXT:    str x8, [sp, #168]
+; CHECK-NEXT:    str z0, [sp]
+; CHECK-NEXT:    bl func2
+; CHECK-NEXT:    ldp x29, x30, [sp, #336] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x28, [sp, #352] // 8-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #368
+; CHECK-NEXT:    ret
                              ptr %v9, ptr %v10, ptr %v11, ptr %v12, ptr %v13, ptr %v14,  ptr %v15, ptr %v16,
                              ptr %v17, ptr %v18, ptr %v19, ptr %v20, ptr %v21, ptr %v22, ptr %v23, ptr %v24,
                              ptr %v25, ptr %v26, ptr %v27, ptr %v28, ptr %v29, ptr %v30, ptr %v31, ptr %v32,
                              ptr %v33, ptr %v34, ptr %v35, ptr %v36, ptr %v37, ptr %v38, ptr %v39, ptr %v40,
                              ptr %v41, ptr %v42, ptr %v43, ptr %v44, ptr %v45, ptr %v46, ptr %v47, ptr %v48,
                              i64 %v49) #0 {
-  tail call void @func2(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v6, ptr %v7, ptr %v8,
-                        ptr %v9, ptr %v10, ptr %v11, ptr %v12, ptr undef, ptr %v14, ptr %v15, ptr %v16,
-                        ptr %v17, ptr %v18, ptr %v19, ptr %v20, ptr %v21, ptr %v22, ptr %v23, ptr %v24,
-                        ptr %v25, ptr %v26, ptr %v27, ptr %v28, ptr %v29, ptr %v30, ptr undef, ptr undef,
-                        ptr undef, ptr undef, ptr undef, ptr undef, ptr %v37, ptr %v38, ptr %v39, ptr %v40,
-                        ptr %v41, ptr %v42, ptr %v43, ptr %v44, ptr %v45, ptr undef, ptr %v47, ptr %v48,
-                        i64 undef)
+  call void @func2(ptr %v1, ptr %v2, ptr %v3, ptr %v4, ptr %v5, ptr %v6, ptr %v7, ptr %v8,
+                   ptr %v9, ptr %v10, ptr %v11, ptr %v12, ptr undef, ptr %v14, ptr %v15, ptr %v16,
+                   ptr %v17, ptr %v18, ptr %v19, ptr %v20, ptr %v21, ptr %v22, ptr %v23, ptr %v24,
+                   ptr %v25, ptr %v26, ptr %v27, ptr %v28, ptr %v29, ptr %v30, ptr undef, ptr undef,
+                   ptr undef, ptr undef, ptr undef, ptr undef, ptr %v37, ptr %v38, ptr %v39, ptr %v40,
+                   ptr %v41, ptr %v42, ptr %v43, ptr %v44, ptr %v45, ptr undef, ptr %v47, ptr %v48,
+                   i64 undef)
   ret void
 }
 

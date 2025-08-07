@@ -1,6 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
-module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
+module {
   fir.global @_QMhelperEstr1 : !fir.char<1,40> {
     %0 = fir.zero_bits !fir.char<1,40>
     fir.has_value %0 : !fir.char<1,40>

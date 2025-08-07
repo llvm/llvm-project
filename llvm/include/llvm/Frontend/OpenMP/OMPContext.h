@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Triple;
@@ -49,69 +50,73 @@ enum class TraitProperty {
 };
 
 /// Parse \p Str and return the trait set it matches or TraitSet::invalid.
-TraitSet getOpenMPContextTraitSetKind(StringRef Str);
+LLVM_ABI TraitSet getOpenMPContextTraitSetKind(StringRef Str);
 
 /// Return the trait set for which \p Selector is a selector.
-TraitSet getOpenMPContextTraitSetForSelector(TraitSelector Selector);
+LLVM_ABI TraitSet getOpenMPContextTraitSetForSelector(TraitSelector Selector);
 
 /// Return the trait set for which \p Property is a property.
-TraitSet getOpenMPContextTraitSetForProperty(TraitProperty Property);
+LLVM_ABI TraitSet getOpenMPContextTraitSetForProperty(TraitProperty Property);
 
 /// Return a textual representation of the trait set \p Kind.
-StringRef getOpenMPContextTraitSetName(TraitSet Kind);
+LLVM_ABI StringRef getOpenMPContextTraitSetName(TraitSet Kind);
 
 /// Parse \p Str and return the trait set it matches or
 /// TraitSelector::invalid.
-TraitSelector getOpenMPContextTraitSelectorKind(StringRef Str, TraitSet Set);
+LLVM_ABI TraitSelector getOpenMPContextTraitSelectorKind(StringRef Str,
+                                                         TraitSet Set);
 
 /// Return the trait selector for which \p Property is a property.
-TraitSelector getOpenMPContextTraitSelectorForProperty(TraitProperty Property);
+LLVM_ABI TraitSelector
+getOpenMPContextTraitSelectorForProperty(TraitProperty Property);
 
 /// Return a textual representation of the trait selector \p Kind.
-StringRef getOpenMPContextTraitSelectorName(TraitSelector Kind);
+LLVM_ABI StringRef getOpenMPContextTraitSelectorName(TraitSelector Kind);
 
 /// Parse \p Str and return the trait property it matches in the set \p Set and
 /// selector \p Selector or TraitProperty::invalid.
-TraitProperty getOpenMPContextTraitPropertyKind(TraitSet Set,
-                                                TraitSelector Selector,
-                                                StringRef Str);
+LLVM_ABI TraitProperty getOpenMPContextTraitPropertyKind(TraitSet Set,
+                                                         TraitSelector Selector,
+                                                         StringRef Str);
 
 /// Return the trait property for a singleton selector \p Selector.
-TraitProperty getOpenMPContextTraitPropertyForSelector(TraitSelector Selector);
+LLVM_ABI TraitProperty
+getOpenMPContextTraitPropertyForSelector(TraitSelector Selector);
 
 /// Return a textual representation of the trait property \p Kind, which might
 /// be the raw string we parsed (\p RawString) if we do not translate the
 /// property into a (distinct) enum.
-StringRef getOpenMPContextTraitPropertyName(TraitProperty Kind,
-                                            StringRef RawString);
+LLVM_ABI StringRef getOpenMPContextTraitPropertyName(TraitProperty Kind,
+                                                     StringRef RawString);
 
 /// Return a textual representation of the trait property \p Kind with selector
 /// and set name included.
-StringRef getOpenMPContextTraitPropertyFullName(TraitProperty Kind);
+LLVM_ABI StringRef getOpenMPContextTraitPropertyFullName(TraitProperty Kind);
 
 /// Return a string listing all trait sets.
-std::string listOpenMPContextTraitSets();
+LLVM_ABI std::string listOpenMPContextTraitSets();
 
 /// Return a string listing all trait selectors for \p Set.
-std::string listOpenMPContextTraitSelectors(TraitSet Set);
+LLVM_ABI std::string listOpenMPContextTraitSelectors(TraitSet Set);
 
 /// Return a string listing all trait properties for \p Set and \p Selector.
-std::string listOpenMPContextTraitProperties(TraitSet Set,
-                                             TraitSelector Selector);
+LLVM_ABI std::string listOpenMPContextTraitProperties(TraitSet Set,
+                                                      TraitSelector Selector);
 ///}
 
 /// Return true if \p Selector can be nested in \p Set. Also sets
 /// \p AllowsTraitScore and \p RequiresProperty to true/false if the user can
 /// specify a score for properties in \p Selector and if the \p Selector
 /// requires at least one property.
-bool isValidTraitSelectorForTraitSet(TraitSelector Selector, TraitSet Set,
-                                     bool &AllowsTraitScore,
-                                     bool &RequiresProperty);
+LLVM_ABI bool isValidTraitSelectorForTraitSet(TraitSelector Selector,
+                                              TraitSet Set,
+                                              bool &AllowsTraitScore,
+                                              bool &RequiresProperty);
 
 /// Return true if \p Property can be nested in \p Selector and \p Set.
-bool isValidTraitPropertyForTraitSetAndSelector(TraitProperty Property,
-                                                TraitSelector Selector,
-                                                TraitSet Set);
+LLVM_ABI bool isValidTraitPropertyForTraitSetAndSelector(TraitProperty Property,
+                                                         TraitSelector Selector,
+                                                         TraitSet Set);
 
 /// Variant match information describes the required traits and how they are
 /// scored (via the ScoresMap). In addition, the required consturct nesting is
@@ -157,8 +162,8 @@ struct VariantMatchInfo {
 /// e.g., device={kind(host)}, and constructs traits which describe the nesting
 /// in OpenMP constructs at the location.
 struct OMPContext {
-  OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
-             Triple TargetOffloadTriple, int DeviceNum);
+  LLVM_ABI OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
+                      Triple TargetOffloadTriple, int DeviceNum);
   virtual ~OMPContext() = default;
 
   void addTrait(TraitProperty Property) {
@@ -180,17 +185,19 @@ struct OMPContext {
 };
 
 /// Return true if \p VMI is applicable in \p Ctx, that is, all traits required
-/// by \p VMI are available in the OpenMP context \p Ctx. If \p DeviceSetOnly is
-/// true, only the device selector set, if present, are checked. Note that we
-/// still honor extension traits provided by the user.
-bool isVariantApplicableInContext(const VariantMatchInfo &VMI,
-                                  const OMPContext &Ctx,
-                                  bool DeviceSetOnly = false);
+/// by \p VMI are available in the OpenMP context \p Ctx. If
+/// \p DeviceOrImplementationSetOnly is true, only the device and implementation
+/// selector set, if present, are checked. Note that we still honor extension
+/// traits provided by the user.
+LLVM_ABI bool
+isVariantApplicableInContext(const VariantMatchInfo &VMI, const OMPContext &Ctx,
+                             bool DeviceOrImplementationSetOnly = false);
 
 /// Return the index (into \p VMIs) of the variant with the highest score
 /// from the ones applicable in \p Ctx. See llvm::isVariantApplicableInContext.
-int getBestVariantMatchForContext(const SmallVectorImpl<VariantMatchInfo> &VMIs,
-                                  const OMPContext &Ctx);
+LLVM_ABI int
+getBestVariantMatchForContext(const SmallVectorImpl<VariantMatchInfo> &VMIs,
+                              const OMPContext &Ctx);
 
 } // namespace omp
 

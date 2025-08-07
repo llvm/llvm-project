@@ -18,9 +18,11 @@ target_link_libraries(fir-opt PRIVATE
   FIRSupport
   FIRTransforms
   FIRCodeGen
+  FIRCodeGenDialect
   HLFIRDialect
   HLFIRTransforms
   FIROpenACCSupport
+  FIROpenMPSupport
   FlangOpenMPTransforms
   FIRAnalysis
   ${test_libs}

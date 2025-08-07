@@ -92,6 +92,7 @@
   using ::llvm::BitmaskEnumDetail::operator^=;                                 \
   using ::llvm::BitmaskEnumDetail::operator<<=;                                \
   using ::llvm::BitmaskEnumDetail::operator>>=;                                \
+  using ::llvm::BitmaskEnumDetail::operator!;                                  \
   /* Force a semicolon at the end of this macro. */                            \
   using ::llvm::BitmaskEnumDetail::any
 
@@ -139,6 +140,11 @@ template <typename E> constexpr std::underlying_type_t<E> Underlying(E Val) {
 
 constexpr unsigned bitWidth(uint64_t Value) {
   return Value ? 1 + bitWidth(Value >> 1) : 0;
+}
+
+template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
+constexpr bool operator!(E Val) {
+  return Val == static_cast<E>(0);
 }
 
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>

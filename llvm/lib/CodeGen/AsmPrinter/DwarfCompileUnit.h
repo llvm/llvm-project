@@ -82,6 +82,10 @@ class DwarfCompileUnit final : public DwarfUnit {
   // List of abstract local scopes (either DISubprogram or DILexicalBlock).
   DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
 
+  // List of inlined lexical block scopes that belong to subprograms within this
+  // CU.
+  DenseMap<const DILocalScope *, SmallVector<DIE *, 2>> InlinedLocalScopeDIEs;
+
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
 
   /// DWO ID for correlating skeleton and split units.
@@ -285,7 +289,8 @@ public:
   /// the \p CallReg is set to 0.
   DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram *CalleeSP,
                                  bool IsTail, const MCSymbol *PCAddr,
-                                 const MCSymbol *CallAddr, unsigned CallReg);
+                                 const MCSymbol *CallAddr, unsigned CallReg,
+                                 DIType *AllocSiteTy);
   /// Construct call site parameter DIEs for the \p CallSiteDIE. The \p Params
   /// were collected by the \ref collectCallSiteParameters.
   /// Note: The order of parameters does not matter, since debuggers recognize
@@ -299,6 +304,7 @@ public:
 
   void finishSubprogramDefinition(const DISubprogram *SP);
   void finishEntityDefinition(const DbgEntity *Entity);
+  void attachLexicalScopesAbstractOrigins();
 
   /// Find abstract variable associated with Var.
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;

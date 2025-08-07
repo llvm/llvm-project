@@ -8,15 +8,16 @@
 
 // <list>
 
-// void resize(size_type sz);
+// void resize(size_type sz); // constexpr since C++26
 
 #include <list>
 #include <cassert>
+
 #include "test_macros.h"
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::list<int> l(5, 2);
     l.resize(2);
@@ -33,17 +34,31 @@ int main(int, char**) {
     assert(l.back() == 0);
   }
 #if TEST_STD_VER >= 11
-  {
-    std::list<DefaultOnly> l(10);
-    l.resize(5);
-    assert(l.size() == 5);
-    assert(std::distance(l.begin(), l.end()) == 5);
-  }
-  {
-    std::list<DefaultOnly> l(10);
-    l.resize(20);
-    assert(l.size() == 20);
-    assert(std::distance(l.begin(), l.end()) == 20);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    {
+      std::list<DefaultOnly> l(10);
+      l.resize(5);
+      assert(l.size() == 5);
+      assert(std::distance(l.begin(), l.end()) == 5);
+    }
+    {
+      std::list<DefaultOnly> l(10);
+      l.resize(20);
+      assert(l.size() == 20);
+      assert(std::distance(l.begin(), l.end()) == 20);
+    }
+    {
+      std::list<DefaultOnly, min_allocator<DefaultOnly>> l(10);
+      l.resize(5);
+      assert(l.size() == 5);
+      assert(std::distance(l.begin(), l.end()) == 5);
+    }
+    {
+      std::list<DefaultOnly, min_allocator<DefaultOnly>> l(10);
+      l.resize(20);
+      assert(l.size() == 20);
+      assert(std::distance(l.begin(), l.end()) == 20);
+    }
   }
   {
     std::list<int, min_allocator<int>> l(5, 2);
@@ -60,18 +75,15 @@ int main(int, char**) {
     assert(l.front() == 2);
     assert(l.back() == 0);
   }
-  {
-    std::list<DefaultOnly, min_allocator<DefaultOnly>> l(10);
-    l.resize(5);
-    assert(l.size() == 5);
-    assert(std::distance(l.begin(), l.end()) == 5);
-  }
-  {
-    std::list<DefaultOnly, min_allocator<DefaultOnly>> l(10);
-    l.resize(20);
-    assert(l.size() == 20);
-    assert(std::distance(l.begin(), l.end()) == 20);
-  }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;
