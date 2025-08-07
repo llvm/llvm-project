@@ -20,7 +20,6 @@
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <bitset>
-#include <map>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -115,77 +114,109 @@ static Value *createLogicFromTable3Var(const std::bitset<8> &Table, Value *Op0,
 
 static std::tuple<Value *, Value *, Value *>
 extractThreeVariables(Value *Root) {
-  std::set<Value *> Variables;
+  SmallPtrSet<Value *, 3> Variables;
   unsigned NodeCount = 0;
-  const unsigned MaxNodes =
-      50; // To prevent exponential blowup (see bitwise-hang.ll)
+  const unsigned MaxNodes = 50; // To prevent exponential blowup with loop
+                                // unrolling(see bitreverse-hang.ll)
 
-  std::function<void(Value *)> Collect = [&](Value *V) {
-    if (++NodeCount > MaxNodes)
-      return;
+  SmallVector<Value *> Worklist;
+  Worklist.push_back(Root);
+
+  while (!Worklist.empty() && NodeCount <= MaxNodes) {
+    Value *V = Worklist.pop_back_val();
+    ++NodeCount;
+
+    if (NodeCount > MaxNodes)
+      break;
 
     Value *NotV;
     if (match(V, m_Not(m_Value(NotV)))) {
-      Collect(NotV);
-      return;
+      Worklist.push_back(NotV);
+      continue;
     }
     if (auto *BO = dyn_cast<BinaryOperator>(V)) {
-      Collect(BO->getOperand(0));
-      Collect(BO->getOperand(1));
+      Worklist.push_back(BO->getOperand(0));
+      Worklist.push_back(BO->getOperand(1));
     } else if (isa<Argument>(V) || isa<Instruction>(V)) {
       if (!isa<Constant>(V) && V != Root) {
         Variables.insert(V);
       }
     }
-  };
-
-  Collect(Root);
+  }
 
   // Bail if we hit the node limit
   if (NodeCount > MaxNodes)
     return {nullptr, nullptr, nullptr};
 
   if (Variables.size() == 3) {
-    auto It = Variables.begin();
-    Value *Op0 = *It++;
-    Value *Op1 = *It++;
-    Value *Op2 = *It;
-    return {Op0, Op1, Op2};
+    // Sort variables by pointer value to ensure deterministic ordering
+    SmallVector<Value *, 3> SortedVars(Variables.begin(), Variables.end());
+    llvm::sort(SortedVars, [](Value *A, Value *B) { return A < B; });
+    return {SortedVars[0], SortedVars[1], SortedVars[2]};
   }
   return {nullptr, nullptr, nullptr};
 }
 
 /// Evaluate a boolean expression with concrete variable values.
 static std::optional<bool>
-evaluateBooleanExpression(Value *Expr, const std::map<Value *, bool> &Values) {
-  if (auto It = Values.find(Expr); It != Values.end()) {
-    return It->second;
-  }
-  Value *NotExpr;
-  if (match(Expr, m_Not(m_Value(NotExpr)))) {
-    auto Operand = evaluateBooleanExpression(NotExpr, Values);
-    if (Operand)
-      return !*Operand;
-    return std::nullopt;
-  }
-  if (auto *BO = dyn_cast<BinaryOperator>(Expr)) {
-    auto LHS = evaluateBooleanExpression(BO->getOperand(0), Values);
-    auto RHS = evaluateBooleanExpression(BO->getOperand(1), Values);
-    if (!LHS || !RHS)
-      return std::nullopt;
+evaluateBooleanExpression(Value *Expr,
+                          const SmallMapVector<Value *, bool, 4> &Values) {
 
-    switch (BO->getOpcode()) {
-    case Instruction::And:
-      return *LHS && *RHS;
-    case Instruction::Or:
-      return *LHS || *RHS;
-    case Instruction::Xor:
-      return *LHS != *RHS;
-    default:
-      return std::nullopt;
+  // Post-order traversal of the expression tree
+  SmallVector<Instruction *> Instructions;
+  SmallVector<Value *> ToVisit;
+  SmallPtrSet<Instruction *, 8> Seen;
+
+  ToVisit.push_back(Expr);
+  while (!ToVisit.empty()) {
+    Value *V = ToVisit.pop_back_val();
+    if (auto *I = dyn_cast<Instruction>(V)) {
+      if (Seen.insert(I).second) {
+        Instructions.push_back(I);
+        for (Value *Op : I->operands()) {
+          ToVisit.push_back(Op);
+        }
+      }
     }
   }
-  return std::nullopt;
+
+  llvm::sort(Instructions,
+             [](Instruction *A, Instruction *B) { return A->comesBefore(B); });
+
+  //  Now in topological order we can evaluate the expression
+  SmallDenseMap<Value *, bool> Computed(Values.begin(), Values.end());
+
+  for (Instruction *I : Instructions) {
+    Value *NotV;
+    if (match(I, m_Not(m_Value(NotV)))) {
+      auto It = Computed.find(NotV);
+      if (It == Computed.end())
+        return std::nullopt;
+      Computed[I] = !It->second;
+    } else if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+      auto LHSIt = Computed.find(BO->getOperand(0));
+      auto RHSIt = Computed.find(BO->getOperand(1));
+      if (LHSIt == Computed.end() || RHSIt == Computed.end())
+        return std::nullopt;
+
+      switch (BO->getOpcode()) {
+      case Instruction::And:
+        Computed[I] = LHSIt->second && RHSIt->second;
+        break;
+      case Instruction::Or:
+        Computed[I] = LHSIt->second || RHSIt->second;
+        break;
+      case Instruction::Xor:
+        Computed[I] = LHSIt->second != RHSIt->second;
+        break;
+      default:
+        return std::nullopt;
+      }
+    }
+  }
+
+  auto It = Computed.find(Expr);
+  return It != Computed.end() ? std::optional<bool>(It->second) : std::nullopt;
 }
 
 /// Extracts the truth table from a 3-variable boolean expression.
@@ -202,7 +233,10 @@ extractThreeBitTruthTable(Value *Expr, Value *Op0, Value *Op1, Value *Op2) {
     bool Val0 = (I >> 2) & 1;
     bool Val1 = (I >> 1) & 1;
     bool Val2 = I & 1;
-    std::map<Value *, bool> Values = {{Op0, Val0}, {Op1, Val1}, {Op2, Val2}};
+    SmallMapVector<Value *, bool, 4> Values;
+    Values[Op0] = Val0;
+    Values[Op1] = Val1;
+    Values[Op2] = Val2;
     auto Result = evaluateBooleanExpression(Expr, Values);
     if (!Result)
       return std::nullopt;
