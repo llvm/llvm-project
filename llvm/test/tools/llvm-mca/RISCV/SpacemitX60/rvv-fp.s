@@ -2731,33 +2731,33 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFMSUB_VF                  vfmsub.vf	v8, fs0, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      5     5.00                         5     SMX60_VFP[5]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m8, tu, mu
 # CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      5     5.00                         5     SMX60_VFP[5]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m8, tu, mu
 # CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  1      5     1.00                         5     SMX60_VFP                                  VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      5     5.00                         5     SMX60_VFP[5]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      5     5.00                         5     SMX60_VFP[5]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  1      5     5.00                         5     SMX60_VFP[5]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFMUL_VV                   vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
@@ -3571,77 +3571,77 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFSGNJX_VV                 vfabs.v	v8, v8
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFWADD_VF                  vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VFP                                  VFWADD_VF                  vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWADD_VF                  vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWADD_VF                  vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWADD_VF                  vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWADD_VF                  vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWADD_VF                  vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFWADD_VV                  vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VFP                                  VFWADD_VV                  vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWADD_VV                  vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWADD_VV                  vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWADD_VV                  vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWADD_VV                  vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWADD_VV                  vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFWADD_WF                  vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VFP                                  VFWADD_WF                  vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWADD_WF                  vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWADD_WF                  vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWADD_WF                  vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWADD_WF                  vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWADD_WF                  vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFWADD_WV                  vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VFP                                  VFWADD_WV                  vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWADD_WV                  vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWADD_WV                  vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWADD_WV                  vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWADD_WV                  vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWADD_WV                  vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFWMUL_VF                  vfwmul.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
@@ -3679,77 +3679,77 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
 # CHECK-NEXT:  1      5     5.00                         5     SMX60_VFP[5]                               VFWMUL_VV                  vfwmul.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VFP                                  VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWSUB_VF                  vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFWSUB_VV                  vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VFP                                  VFWSUB_VV                  vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWSUB_VV                  vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWSUB_VV                  vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWSUB_VV                  vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWSUB_VV                  vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWSUB_VV                  vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VFP                                  VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWSUB_WF                  vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  1      4     1.00                         4     SMX60_VFP                                  VFWSUB_WV                  vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     1.00                         5     SMX60_VFP                                  VFWSUB_WV                  vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWSUB_WV                  vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWSUB_WV                  vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  1      4     2.00                         4     SMX60_VFP[2]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     2.00                         5     SMX60_VFP[2]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  1      4     4.00                         4     SMX60_VFP[4]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      5     4.00                         5     SMX60_VFP[4]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  1      8     8.00                         8     SMX60_VFP[8]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      9     8.00                         9     SMX60_VFP[8]                               VFWSUB_WV                  vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  1      1     1.00                  U      1     SMX60_IEU,SMX60_IEUA                       VSETVLI                    vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  1      16    16.00                        16    SMX60_VFP[16]                              VFWSUB_WV                  vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  1      17    17.00                        17    SMX60_VFP[17]                              VFWSUB_WV                  vfwsub.wv	v8, v16, v24
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SMX60_FP
@@ -3763,7 +3763,7 @@ vfwsub.wv v8, v16, v24
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]
-# CHECK-NEXT:  -     915.00  -      -      -     8843.00 30.00  -
+# CHECK-NEXT:  -     915.00  -      -      -     8888.00 30.00  -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3.0]  [3.1]  [4]    [5]    [6]    Instructions:
@@ -4578,33 +4578,33 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfmsub.vf	v8, fs0, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmul.vv	v8, v8, v8
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmul.vv	v8, v8, v8
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmul.vv	v8, v8, v8
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfmul.vv	v8, v8, v8
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m1, tu, mu
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -     5.00    -      -     vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmul.vv	v8, v8, v8
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmul.vv	v8, v8, v8
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfmul.vv	v8, v8, v8
-# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
+# CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
+# CHECK-NEXT:  -      -      -      -      -     5.00    -      -     vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m1, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     5.00    -      -     vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m2, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     5.00    -      -     vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     4.00    -      -     vfmul.vv	v8, v8, v8
+# CHECK-NEXT:  -      -      -      -      -     5.00    -      -     vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e64, m8, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfmul.vv	v8, v8, v8
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
@@ -5426,7 +5426,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
@@ -5434,7 +5434,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwadd.vf	v8, v16, ft0
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwadd.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5444,7 +5444,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
@@ -5452,7 +5452,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwadd.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwadd.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5462,7 +5462,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
@@ -5470,7 +5470,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwadd.wf	v8, v16, ft0
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwadd.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5480,7 +5480,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
@@ -5488,7 +5488,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwadd.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwadd.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     1.00    -      -     vfwmul.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5534,7 +5534,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
@@ -5542,7 +5542,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwsub.vf	v8, v16, ft0
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwsub.vf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5552,7 +5552,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
@@ -5560,7 +5560,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwsub.vv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwsub.vv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5570,7 +5570,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
@@ -5578,7 +5578,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwsub.wf	v8, v16, ft0
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwsub.wf	v8, v16, ft0
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, mf4, tu, mu
@@ -5588,7 +5588,7 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e16, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, mf2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     2.00    -      -     vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m1, tu, mu
@@ -5596,4 +5596,4 @@ vfwsub.wv v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m2, tu, mu
 # CHECK-NEXT:  -      -      -      -      -     8.00    -      -     vfwsub.wv	v8, v16, v24
 # CHECK-NEXT:  -     1.00    -      -      -      -      -      -     vsetvli	t3, zero, e32, m4, tu, mu
-# CHECK-NEXT:  -      -      -      -      -     16.00   -      -     vfwsub.wv	v8, v16, v24
+# CHECK-NEXT:  -      -      -      -      -     17.00   -      -     vfwsub.wv	v8, v16, v24
