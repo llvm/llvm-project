@@ -1118,6 +1118,8 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     report_fatal_error("Do not know how to split the result of this "
                        "operator!\n");
 
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK: SplitVecRes_LOOP_DEPENDENCE_MASK(N, Lo, Hi); break;
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::AssertZext:   SplitVecRes_AssertZext(N, Lo, Hi); break;
   case ISD::VSELECT:
@@ -1609,6 +1611,21 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
     std::swap(Lo, Hi);
   Lo = DAG.getNode(ISD::BITCAST, dl, LoVT, Lo);
   Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, Hi);
+}
+
+void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo, SDValue &Hi) {
+    SDLoc DL(N);
+    EVT LoVT, HiVT;
+    std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+    SDValue PtrA = N->getOperand(0);
+    SDValue PtrB = N->getOperand(1);
+    Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
+    Lo.dumpr();
+
+    PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, DAG.getConstant(HiVT.getStoreSizeInBits(), DL, MVT::i64));
+    PtrB = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrB, DAG.getConstant(HiVT.getStoreSizeInBits(), DL, MVT::i64));
+    Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
+    Hi.dumpr();
 }
 
 void DAGTypeLegalizer::SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo,
