@@ -183,7 +183,7 @@ Changes in existing checks
   avoid false positives on pure virtual member functions.
 
 - Improved :doc:`readability-container-size-empty
-  <clang-tidy/checks/portability/container-size-empty>` check by correctly
+  <clang-tidy/checks/readability/container-size-empty>` check by correctly
   generating fix hints when size method is inherited from parent class.
 
 - Improved :doc:`readability-identifier-naming
