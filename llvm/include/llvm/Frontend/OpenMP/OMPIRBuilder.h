@@ -3286,7 +3286,8 @@ private:
   emitAtomicUpdate(InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
                    AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
                    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX,
-                   bool IsXBinopExpr);
+                   bool IsXBinopExpr, bool IsIgnoreDenormalMode,
+                   bool IsFineGrainedMemory, bool IsRemoteMemory);
 
   /// Emit the binary op. described by \p RMWOp, using \p Src1 and \p Src2 .
   ///
@@ -3359,7 +3360,9 @@ public:
   LLVM_ABI InsertPointOrErrorTy createAtomicUpdate(
       const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
       Value *Expr, AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
-      AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr);
+      AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr,
+      bool IsIgnoreDenormalMode = false, bool IsFineGrainedMemory = false,
+      bool IsRemoteMemory = false);
 
   /// Emit atomic update for constructs: --- Only Scalar data types
   /// V = X; X = X BinOp Expr ,
@@ -3394,7 +3397,9 @@ public:
       const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
       AtomicOpValue &V, Value *Expr, AtomicOrdering AO,
       AtomicRMWInst::BinOp RMWOp, AtomicUpdateCallbackTy &UpdateOp,
-      bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr);
+      bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr,
+      bool IsIgnoreDenormalMode = false, bool IsFineGrainedMemory = false,
+      bool IsRemoteMemory = false);
 
   /// Emit atomic compare for constructs: --- Only scalar data types
   /// cond-expr-stmt:
