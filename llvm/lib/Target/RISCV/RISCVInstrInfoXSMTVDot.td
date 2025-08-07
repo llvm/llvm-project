@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file describes the xsmtvdot vendor extensions defined by SpacemiT.
+// NOTE: This extension instructions only support cases where LMUL is less than
+//       or equal to 1
 //
 //===----------------------------------------------------------------------===//
 
