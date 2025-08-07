@@ -1,3 +1,6 @@
+; TODO: Remove this test once we've updated the frontend to use explicit
+; padding. The cbuffer-metadata.ll test covers the newer logic.
+
 ; RUN: opt -S -dxil-translate-metadata < %s | FileCheck %s
 ; RUN: opt -S --passes="dxil-pretty-printer" < %s 2>&1 | FileCheck %s --check-prefix=PRINT
 ; RUN: llc %s --filetype=asm -o - < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,PRINT
