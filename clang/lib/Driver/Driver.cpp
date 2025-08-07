@@ -1012,6 +1012,7 @@ inferOffloadToolchains(Compilation &C, Action::OffloadKind Kind) {
     Arg *A = new Arg(Opt, C.getArgs().getArgString(Index), Index,
                      C.getArgs().MakeArgString(Triple.split("-").first),
                      C.getArgs().MakeArgString("--offload-arch=" + Arch));
+    A->claim();
     C.getArgs().append(A);
     C.getArgs().AddSynthesizedArg(A);
     Triples.insert(Triple);
@@ -3606,7 +3607,7 @@ class OffloadingActionBuilder final {
           if (!CompileDeviceOnly) {
             C.getDriver().Diag(diag::err_opt_not_valid_without_opt)
                 << "-fhip-emit-relocatable"
-                << "--cuda-device-only";
+                << "--offload-device-only";
           }
         }
       }
@@ -4774,6 +4775,21 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
       C.isOffloadingHostKind(Action::OFK_HIP) &&
       !Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false);
 
+  bool HIPRelocatableObj =
+      C.isOffloadingHostKind(Action::OFK_HIP) &&
+      Args.hasFlag(options::OPT_fhip_emit_relocatable,
+                   options::OPT_fno_hip_emit_relocatable, false);
+
+  if (!HIPNoRDC && HIPRelocatableObj)
+    C.getDriver().Diag(diag::err_opt_not_valid_with_opt)
+        << "-fhip-emit-relocatable"
+        << "-fgpu-rdc";
+
+  if (!offloadDeviceOnly() && HIPRelocatableObj)
+    C.getDriver().Diag(diag::err_opt_not_valid_without_opt)
+        << "-fhip-emit-relocatable"
+        << "--offload-device-only";
+
   // For HIP non-rdc non-device-only compilation, create a linker wrapper
   // action for each host object to link, bundle and wrap device files in
   // it.
@@ -4894,7 +4910,7 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
                            A->getOffloadingToolChain()->getTriple().isSPIRV();
       if ((A->getType() != types::TY_Object && !IsAMDGCNSPIRV &&
            A->getType() != types::TY_LTO_BC) ||
-          !HIPNoRDC || !offloadDeviceOnly())
+          HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly())
         continue;
       ActionList LinkerInput = {A};
       A = C.MakeAction<LinkJobAction>(LinkerInput, types::TY_Image);

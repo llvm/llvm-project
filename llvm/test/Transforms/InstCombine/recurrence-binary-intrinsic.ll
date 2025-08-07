@@ -8,12 +8,11 @@ define i8 @simple_recurrence_intrinsic_smax(i8 %n, i8 %a, i8 %b) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[SMAX_ACC:%.*]] = phi i8 [ [[SMAX:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[SMAX]] = call i8 @llvm.smax.i8(i8 [[SMAX_ACC]], i8 [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SMAX:%.*]] = call i8 @llvm.smax.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[SMAX]]
 ;
 entry:
@@ -38,12 +37,11 @@ define i8 @simple_recurrence_intrinsic_smin(i8 %n, i8 %a, i8 %b) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[SMIN_ACC:%.*]] = phi i8 [ [[SMIN:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[SMIN]] = call i8 @llvm.smin.i8(i8 [[SMIN_ACC]], i8 [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[SMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[SMIN]]
 ;
 entry:
@@ -68,12 +66,11 @@ define i8 @simple_recurrence_intrinsic_umax(i8 %n, i8 %a, i8 %b) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[UMAX_ACC:%.*]] = phi i8 [ [[UMAX:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[UMAX]] = call i8 @llvm.umax.i8(i8 [[UMAX_ACC]], i8 [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[UMAX:%.*]] = call i8 @llvm.umax.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[UMAX]]
 ;
 entry:
@@ -98,12 +95,11 @@ define i8 @simple_recurrence_intrinsic_umin(i8 %n, i8 %a, i8 %b) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[UMIN_ACC:%.*]] = phi i8 [ [[UMIN:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[UMIN]] = call i8 @llvm.umin.i8(i8 [[UMIN_ACC]], i8 [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[UMIN]]
 ;
 entry:
@@ -128,12 +124,11 @@ define float @simple_recurrence_intrinsic_maxnum(i32 %n, float %a, float %b) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMAX_ACC:%.*]] = phi float [ [[FMAX:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMAX]] = call float @llvm.maxnum.f32(float [[FMAX_ACC]], float [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[FMAX:%.*]] = call float @llvm.maxnum.f32(float [[A]], float [[B]])
 ; CHECK-NEXT:    ret float [[FMAX]]
 ;
 entry:
@@ -157,12 +152,11 @@ define float @simple_recurrence_intrinsic_minnum(i32 %n, float %a, float %b) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMIN_ACC:%.*]] = phi float [ [[FMIN:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMIN]] = call float @llvm.minnum.f32(float [[FMIN_ACC]], float [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[FMIN:%.*]] = call float @llvm.minnum.f32(float [[A]], float [[B]])
 ; CHECK-NEXT:    ret float [[FMIN]]
 ;
 entry:
@@ -186,12 +180,11 @@ define float @simple_recurrence_intrinsic_maximum(i32 %n, float %a, float %b) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMAX_ACC:%.*]] = phi float [ [[FMAX:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMAX]] = call nnan float @llvm.maximum.f32(float [[FMAX_ACC]], float [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[FMAX:%.*]] = call nnan float @llvm.maximum.f32(float [[A]], float [[B]])
 ; CHECK-NEXT:    ret float [[FMAX]]
 ;
 entry:
@@ -215,12 +208,11 @@ define float @simple_recurrence_intrinsic_minimum(i32 %n, float %a, float %b) {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMIN_ACC:%.*]] = phi float [ [[FMIN:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMIN]] = call nnan float @llvm.minimum.f32(float [[FMIN_ACC]], float [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[FMIN:%.*]] = call nnan float @llvm.minimum.f32(float [[A]], float [[B]])
 ; CHECK-NEXT:    ret float [[FMIN]]
 ;
 entry:

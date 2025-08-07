@@ -35,6 +35,7 @@ config.gpu_compilation_format = "@MLIR_GPU_COMPILATION_TEST_FORMAT@"
 config.rocm_test_chipset = "@ROCM_TEST_CHIPSET@"
 config.run_xevm_tests = @MLIR_ENABLE_XEVM_CONVERSIONS@
 config.enable_sycl_runner = @MLIR_ENABLE_SYCL_RUNNER@
+config.enable_levelzero_runner = @MLIR_ENABLE_LEVELZERO_RUNNER@
 config.enable_spirv_cpu_runner = @MLIR_ENABLE_SPIRV_CPU_RUNNER@
 config.enable_vulkan_runner = @MLIR_ENABLE_VULKAN_RUNNER@
 config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
