@@ -87,17 +87,50 @@ static bool forwardHandleAccesses(Function &F, DominatorTree &DT) {
 
   for (LoadInst *LI : LoadsToProcess) {
     Value *V = LI->getPointerOperand();
-    auto *GV = dyn_cast<GlobalVariable>(LI->getPointerOperand());
+    auto *GV = dyn_cast<GlobalVariable>(V);
 
     // If we didn't find the global, we may need to walk through a level of
     // indirection. This generally happens at -O0.
-    if (!GV)
+    if (!GV) {
       if (auto *NestedLI = dyn_cast<LoadInst>(V)) {
         BasicBlock::iterator BBI(NestedLI);
         Value *Loaded = FindAvailableLoadedValue(
             NestedLI, NestedLI->getParent(), BBI, 0, nullptr, nullptr);
         GV = dyn_cast_or_null<GlobalVariable>(Loaded);
+      } else if (auto *NestedAlloca = dyn_cast<AllocaInst>(V)) {
+        for (auto &Use : NestedAlloca->uses()) {
+          auto *Store = dyn_cast<StoreInst>(Use.getUser());
+          if (!Store)
+            continue;
+
+          Value *StoredVal = Store->getValueOperand();
+          if (!StoredVal)
+            continue;
+
+          // Try direct global match
+          GV = dyn_cast<GlobalVariable>(StoredVal);
+          if (GV)
+            break;
+
+          // If it's a load, check its source
+          if (auto *Load = dyn_cast<LoadInst>(StoredVal)) {
+            GV = dyn_cast<GlobalVariable>(Load->getPointerOperand());
+            if (GV)
+              break;
+
+            // If loading from an unmodified stack copy of the global, reuse the
+            // global's value. Note: we are just repeating what we are doing for
+            // the load case for the alloca store pattern.
+            BasicBlock::iterator BBI(Load);
+            Value *Loaded = FindAvailableLoadedValue(Load, Load->getParent(),
+                                                     BBI, 0, nullptr, nullptr);
+            GV = dyn_cast<GlobalVariable>(Loaded);
+            if (GV)
+              break;
+          }
+        }
       }
+    }
 
     auto It = HandleMap.find(GV);
     if (It == HandleMap.end()) {
