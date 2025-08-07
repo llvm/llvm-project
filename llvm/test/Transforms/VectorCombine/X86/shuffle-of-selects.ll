@@ -314,12 +314,28 @@ define <4 x double> @src_v2tov4_double(<2 x i1> %a, <2 x i1> %b, <2 x double> %x
 ; There should be no issues when the mask elements are in the following range
 ; DestVectorSize * 2 < MaskEls < SrcVectorSize * 2
 define <2 x float> @test_mask0(<4 x i1> %c, <4 x float> %x, <4 x float> %y, <4 x float> %z) {
-; CHECK-LABEL: define <2 x float> @test_mask0(
-; CHECK-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SELECT_XY:%.*]] = select <4 x i1> [[C]], <4 x float> [[X]], <4 x float> [[Y]]
-; CHECK-NEXT:    [[SELECT_YZ:%.*]] = select <4 x i1> [[C]], <4 x float> [[Y]], <4 x float> [[Z]]
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[SELECT_XY]], <4 x float> [[SELECT_YZ]], <2 x i32> <i32 4, i32 7>
-; CHECK-NEXT:    ret <2 x float> [[RES]]
+; SSE-LABEL: define <2 x float> @test_mask0(
+; SSE-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[C]], <4 x i1> [[C]], <2 x i32> <i32 4, i32 7>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Y]], <2 x i32> <i32 4, i32 7>
+; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <2 x i32> <i32 4, i32 7>
+; SSE-NEXT:    [[RES:%.*]] = select <2 x i1> [[TMP1]], <2 x float> [[TMP2]], <2 x float> [[TMP3]]
+; SSE-NEXT:    ret <2 x float> [[RES]]
+;
+; AVX2-LABEL: define <2 x float> @test_mask0(
+; AVX2-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[C]], <4 x i1> [[C]], <2 x i32> <i32 4, i32 7>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Y]], <2 x i32> <i32 4, i32 7>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <2 x i32> <i32 4, i32 7>
+; AVX2-NEXT:    [[RES:%.*]] = select <2 x i1> [[TMP1]], <2 x float> [[TMP2]], <2 x float> [[TMP3]]
+; AVX2-NEXT:    ret <2 x float> [[RES]]
+;
+; AVX512-LABEL: define <2 x float> @test_mask0(
+; AVX512-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SELECT_XY:%.*]] = select <4 x i1> [[C]], <4 x float> [[X]], <4 x float> [[Y]]
+; AVX512-NEXT:    [[SELECT_YZ:%.*]] = select <4 x i1> [[C]], <4 x float> [[Y]], <4 x float> [[Z]]
+; AVX512-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[SELECT_XY]], <4 x float> [[SELECT_YZ]], <2 x i32> <i32 4, i32 7>
+; AVX512-NEXT:    ret <2 x float> [[RES]]
 ;
   %select.xy = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
   %select.yz = select <4 x i1> %c, <4 x float> %y, <4 x float> %z
@@ -328,12 +344,28 @@ define <2 x float> @test_mask0(<4 x i1> %c, <4 x float> %x, <4 x float> %y, <4 x
 }
 
 define <2 x float> @test_mask1(<4 x i1> %c, <4 x float> %x, <4 x float> %y, <4 x float> %z) {
-; CHECK-LABEL: define <2 x float> @test_mask1(
-; CHECK-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[SELECT_XY:%.*]] = select <4 x i1> [[C]], <4 x float> [[X]], <4 x float> [[Y]]
-; CHECK-NEXT:    [[SELECT_YZ:%.*]] = select <4 x i1> [[C]], <4 x float> [[Y]], <4 x float> [[Z]]
-; CHECK-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[SELECT_XY]], <4 x float> [[SELECT_YZ]], <2 x i32> <i32 7, i32 4>
-; CHECK-NEXT:    ret <2 x float> [[RES]]
+; SSE-LABEL: define <2 x float> @test_mask1(
+; SSE-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; SSE-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[C]], <4 x i1> [[C]], <2 x i32> <i32 7, i32 4>
+; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Y]], <2 x i32> <i32 7, i32 4>
+; SSE-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <2 x i32> <i32 7, i32 4>
+; SSE-NEXT:    [[RES:%.*]] = select <2 x i1> [[TMP1]], <2 x float> [[TMP2]], <2 x float> [[TMP3]]
+; SSE-NEXT:    ret <2 x float> [[RES]]
+;
+; AVX2-LABEL: define <2 x float> @test_mask1(
+; AVX2-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; AVX2-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i1> [[C]], <4 x i1> [[C]], <2 x i32> <i32 7, i32 4>
+; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[X]], <4 x float> [[Y]], <2 x i32> <i32 7, i32 4>
+; AVX2-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[Y]], <4 x float> [[Z]], <2 x i32> <i32 7, i32 4>
+; AVX2-NEXT:    [[RES:%.*]] = select <2 x i1> [[TMP1]], <2 x float> [[TMP2]], <2 x float> [[TMP3]]
+; AVX2-NEXT:    ret <2 x float> [[RES]]
+;
+; AVX512-LABEL: define <2 x float> @test_mask1(
+; AVX512-SAME: <4 x i1> [[C:%.*]], <4 x float> [[X:%.*]], <4 x float> [[Y:%.*]], <4 x float> [[Z:%.*]]) #[[ATTR0]] {
+; AVX512-NEXT:    [[SELECT_XY:%.*]] = select <4 x i1> [[C]], <4 x float> [[X]], <4 x float> [[Y]]
+; AVX512-NEXT:    [[SELECT_YZ:%.*]] = select <4 x i1> [[C]], <4 x float> [[Y]], <4 x float> [[Z]]
+; AVX512-NEXT:    [[RES:%.*]] = shufflevector <4 x float> [[SELECT_XY]], <4 x float> [[SELECT_YZ]], <2 x i32> <i32 7, i32 4>
+; AVX512-NEXT:    ret <2 x float> [[RES]]
 ;
   %select.xy = select <4 x i1> %c, <4 x float> %x, <4 x float> %y
   %select.yz = select <4 x i1> %c, <4 x float> %y, <4 x float> %z

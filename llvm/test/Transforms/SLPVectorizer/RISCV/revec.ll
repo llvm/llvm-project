@@ -44,17 +44,7 @@ sw.bb509.i:                                       ; preds = %if.then458.i, %if.e
 define void @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr null, i64 132
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr null, i64 200
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr null, i64 300
-; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x float>, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load <16 x float>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x float> [[TMP4]], <8 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <32 x float> [[TMP6]], <32 x float> [[TMP7]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <16 x float> [[TMP5]], <16 x float> poison, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <32 x float> [[TMP10]], <32 x float> [[TMP11]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47>
+; CHECK-NEXT:    [[TMP8:%.*]] = call <32 x float> @llvm.masked.gather.v32f32.v32p0(<32 x ptr> getelementptr (float, <32 x ptr> <ptr inttoptr (i64 300 to ptr), ptr inttoptr (i64 300 to ptr), ptr inttoptr (i64 300 to ptr), ptr inttoptr (i64 300 to ptr), ptr inttoptr (i64 300 to ptr), ptr inttoptr (i64 300 to ptr), ptr inttoptr (i64 300 to ptr), ptr inttoptr (i64 300 to ptr), ptr inttoptr (i64 200 to ptr), ptr inttoptr (i64 200 to ptr), ptr inttoptr (i64 200 to ptr), ptr inttoptr (i64 200 to ptr), ptr inttoptr (i64 200 to ptr), ptr inttoptr (i64 200 to ptr), ptr inttoptr (i64 200 to ptr), ptr inttoptr (i64 200 to ptr), ptr inttoptr (i64 164 to ptr), ptr inttoptr (i64 164 to ptr), ptr inttoptr (i64 164 to ptr), ptr inttoptr (i64 164 to ptr), ptr inttoptr (i64 164 to ptr), ptr inttoptr (i64 164 to ptr), ptr inttoptr (i64 164 to ptr), ptr inttoptr (i64 164 to ptr), ptr inttoptr (i64 132 to ptr), ptr inttoptr (i64 132 to ptr), ptr inttoptr (i64 132 to ptr), ptr inttoptr (i64 132 to ptr), ptr inttoptr (i64 132 to ptr), ptr inttoptr (i64 132 to ptr), ptr inttoptr (i64 132 to ptr), ptr inttoptr (i64 132 to ptr)>, <32 x i64> <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>), i32 4, <32 x i1> splat (i1 true), <32 x float> poison)
 ; CHECK-NEXT:    [[TMP9:%.*]] = fpext <32 x float> [[TMP8]] to <32 x double>
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd <32 x double> zeroinitializer, [[TMP9]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fptrunc <32 x double> [[TMP14]] to <32 x float>
@@ -147,8 +137,8 @@ define ptr @test4() {
 ; POWEROF2-NEXT:    [[TMP13:%.*]] = fmul <2 x float> [[TMP12]], zeroinitializer
 ; POWEROF2-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP10]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
 ; POWEROF2-NEXT:    [[TMP15:%.*]] = fmul <2 x float> zeroinitializer, [[TMP14]]
-; POWEROF2-NEXT:    [[TMP16:%.*]] = extractelement <2 x float> [[TMP9]], i32 0
-; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP16]]
+; POWEROF2-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP9]], i32 0
+; POWEROF2-NEXT:    [[TMP17:%.*]] = fmul float 0.000000e+00, [[TMP30]]
 ; POWEROF2-NEXT:    [[TMP18:%.*]] = extractelement <2 x float> [[TMP9]], i32 1
 ; POWEROF2-NEXT:    [[TMP19:%.*]] = fmul float [[TMP18]], 0.000000e+00
 ; POWEROF2-NEXT:    [[TMP20:%.*]] = extractelement <2 x float> [[TMP13]], i32 0

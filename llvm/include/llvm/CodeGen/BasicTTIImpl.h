@@ -1105,53 +1105,64 @@ public:
                                               VectorType *&SubTy) const {
     if (Mask.empty())
       return Kind;
+
     int NumDstElts = Mask.size();
     int NumSrcElts = SrcTy->getElementCount().getKnownMinValue();
-    switch (Kind) {
-    case TTI::SK_PermuteSingleSrc: {
-      if (ShuffleVectorInst::isReverseMask(Mask, NumSrcElts))
-        return TTI::SK_Reverse;
-      if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
-        return TTI::SK_Broadcast;
-      if (isSplatMask(Mask, NumSrcElts, Index))
-        return TTI::SK_Broadcast;
+
+    // Bail out on undef/identity/widening masks
+    if (all_of(Mask, [](int M) { return M < 0; }))
+        return Kind;
+
+    // Identity with padding.
+    if (NumDstElts >= NumSrcElts &&
+        ShuffleVectorInst::isIdentityMask(Mask.slice(0, NumSrcElts),
+                                          NumSrcElts) &&
+        all_of(Mask.drop_front(NumSrcElts), [](int M) { return M < 0; }))
+      return Kind;
+
+    // TODO: Add more length changing analysis.
+    if (NumDstElts <= NumSrcElts) {
       if (ShuffleVectorInst::isExtractSubvectorMask(Mask, NumSrcElts, Index) &&
           (Index + NumDstElts) <= NumSrcElts) {
         SubTy = FixedVectorType::get(SrcTy->getElementType(), NumDstElts);
         return TTI::SK_ExtractSubvector;
       }
-      break;
     }
-    case TTI::SK_PermuteTwoSrc: {
-      if (all_of(Mask, [NumSrcElts](int M) { return M < NumSrcElts; }))
-        return improveShuffleKindFromMask(TTI::SK_PermuteSingleSrc, Mask, SrcTy,
-                                          Index, SubTy);
-      int NumSubElts;
-      if (NumDstElts > 2 && ShuffleVectorInst::isInsertSubvectorMask(
-                                Mask, NumSrcElts, NumSubElts, Index)) {
-        if (Index + NumSubElts > NumSrcElts)
-          return Kind;
-        SubTy = FixedVectorType::get(SrcTy->getElementType(), NumSubElts);
-        return TTI::SK_InsertSubvector;
-      }
-      if (ShuffleVectorInst::isSelectMask(Mask, NumSrcElts))
-        return TTI::SK_Select;
-      if (ShuffleVectorInst::isTransposeMask(Mask, NumSrcElts))
-        return TTI::SK_Transpose;
-      if (ShuffleVectorInst::isSpliceMask(Mask, NumSrcElts, Index))
-        return TTI::SK_Splice;
-      break;
+
+    if (ShuffleVectorInst::isReverseMask(Mask, NumSrcElts))
+      return TTI::SK_Reverse;
+
+    if (ShuffleVectorInst::isTransposeMask(Mask, NumSrcElts))
+      return TTI::SK_Transpose;
+
+    if (ShuffleVectorInst::isZeroEltSplatMask(Mask, NumSrcElts))
+      return TTI::SK_Broadcast;
+
+    if (isSplatMask(Mask, NumSrcElts, Index))
+      return TTI::SK_Broadcast;
+
+    if (ShuffleVectorInst::isSingleSourceMask(Mask, NumSrcElts))
+      return TTI::SK_PermuteSingleSrc;
+
+    // Match SK_InsertSubvector before SK_Select as we shuffle costs can easily
+    // fallback from SK_InsertSubvector to SK_Select, but not the other way
+    // around.
+    int NumSubElts;
+    if (ShuffleVectorInst::isInsertSubvectorMask(Mask, NumSrcElts, NumSubElts,
+                                                 Index)) {
+      if (Index + NumSubElts > NumSrcElts)
+        return Kind;
+      SubTy = FixedVectorType::get(SrcTy->getElementType(), NumSubElts);
+      return TTI::SK_InsertSubvector;
     }
-    case TTI::SK_Select:
-    case TTI::SK_Reverse:
-    case TTI::SK_Broadcast:
-    case TTI::SK_Transpose:
-    case TTI::SK_InsertSubvector:
-    case TTI::SK_ExtractSubvector:
-    case TTI::SK_Splice:
-      break;
-    }
-    return Kind;
+
+    if (ShuffleVectorInst::isSelectMask(Mask, NumSrcElts))
+      return TTI::SK_Select;
+
+    if (ShuffleVectorInst::isSpliceMask(Mask, NumSrcElts, Index))
+      return TTI::SK_Splice;
+
+    return TTI::SK_PermuteTwoSrc;
   }
 
   InstructionCost
