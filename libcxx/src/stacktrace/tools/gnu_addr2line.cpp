@@ -106,7 +106,7 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<addr2line>(base& base, aren
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  fixed_str<PATH_MAX * 2> line;               // our read buffer
+  str line                    ;               // our read buffer
   auto* entry_iter = base.entries_begin();    // position at first entry
   while (spawner.stream_.good()) {            // loop until we get EOF from tool stdout
     std::string_view view;

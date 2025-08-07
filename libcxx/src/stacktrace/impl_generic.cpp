@@ -101,11 +101,10 @@ _LIBCPP_EXPORTED_FROM_ABI void base::find_symbols(arena& arena) {}
 
 _LIBCPP_EXPORTED_FROM_ABI void base::find_source_locs(arena& arena) {
 #  if __has_include(<spawn.h>) && _LIBCPP_STACKTRACE_ALLOW_TOOLS_AT_RUNTIME
-  (void)(false                                        //
-         || __run_tool<atos>(*this, arena)            // preferred on MacOS
-         || __run_tool<llvm_symbolizer>(*this, arena) // prefer this in other (non-MacOS, non-Windows)
-         || __run_tool<addr2line>(*this, arena)       // a good fallback; dev machines tend to have gcc if not llvm
-  );
+  (void)(false                                                                                         //
+         || (__has_working_executable<atos>() && __run_tool<atos>(*this, arena))                       //
+         || (__has_working_executable<llvm_symbolizer>() && __run_tool<llvm_symbolizer>(*this, arena)) //
+         || (__has_working_executable<addr2line>() && __run_tool<addr2line>(*this, arena)));           //
 #  endif
 }
 

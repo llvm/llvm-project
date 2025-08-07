@@ -71,7 +71,7 @@ template<> bool _LIBCPP_EXPORTED_FROM_ABI __run_tool<atos>(base& base, arena& ar
   spawner spawner{tool, base};
   if (spawner.errno_) { return false; }
 
-  fixed_str<PATH_MAX * 2> line;               // our read buffer
+  str line;                                   // our read buffer
   auto* entry_iter = base.entries_begin();    // position at first entry
   while (spawner.stream_.good()) {            // loop until we get EOF from tool stdout
     std::getline(spawner.stream_, line);      // consume a line from stdout

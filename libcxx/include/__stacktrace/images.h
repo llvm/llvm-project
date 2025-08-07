@@ -20,15 +20,13 @@ struct image;
 struct images;
 
 struct image {
-  constexpr static size_t __max_string_len = 1024;
-
   uintptr_t loaded_at_{};
   uintptr_t slide_{};
-  fixed_str<__max_string_len> name_{};
+  fixed_str<PATH_MAX> name_{};
   bool is_main_prog_{};
 
   bool operator<(image const& __rhs) const { return loaded_at_ < __rhs.loaded_at_; }
-  operator bool() const { return name_[0]; }
+  operator bool() const { return !name_.empty(); }
 };
 
 /**
