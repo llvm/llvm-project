@@ -103,21 +103,19 @@ llvm::remarks::Type RemarkBase::getRemarkType() const {
   llvm_unreachable("Unknown remark kind");
 }
 
-llvm::remarks::RemarkLocation RemarkBase::getRemarkLocation() const {
-  if (auto flc = dyn_cast<FileLineColLoc>(getLocation())) {
-    auto *buf = new std::string("./" + flc.getFilename().str());
-    return {*buf, flc.getLine(), flc.getColumn()};
-  }
-  return {"<unknown file>", 0, 0};
-}
-
 llvm::remarks::Remark RemarkBase::generateRemark() const {
+  auto locLambda = [&]() -> llvm::remarks::RemarkLocation {
+    if (auto flc = dyn_cast<FileLineColLoc>(getLocation()))
+      return {flc.getFilename(), flc.getLine(), flc.getColumn()};
+    return {"<unknown file>", 0, 0};
+  };
+
   llvm::remarks::Remark r; // The result.
   r.RemarkType = getRemarkType();
   r.PassName = getPassName();
   r.RemarkName = getRemarkName();
   r.FunctionName = getFunction();
-  r.Loc = getRemarkLocation();
+  r.Loc = locLambda();
   for (const RemarkBase::RemarkKeyValue &arg : getArgs()) {
     r.Args.emplace_back();
     r.Args.back().Key = arg.key;

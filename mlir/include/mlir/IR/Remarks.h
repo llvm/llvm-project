@@ -82,7 +82,6 @@ public:
 
   virtual bool isEnabled() const = 0;
   Location getLocation() const { return loc; }
-  llvm::remarks::RemarkLocation getRemarkLocation() const;
   /// Diagnostic -> Remark
   llvm::remarks::Remark generateRemark() const;
 

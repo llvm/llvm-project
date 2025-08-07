@@ -33,8 +33,12 @@ TEST(Remark, TestOutputOptimizationRemark) {
   std::string myPassname1("myPass1");
   std::string myPassname2("myPass2");
   std::string funcName("myFunc");
-  std::string yamlFile = "/tmp/remarks.yaml";
-
+  SmallString<64> tmpPathStorage;
+  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                            /*MakeAbsolute=*/true);
+  std::string yamlFile =
+      std::string(tmpPathStorage.data(), tmpPathStorage.size());
+  ASSERT_FALSE(yamlFile.empty());
   Location loc = UnknownLoc::get(context);
 
   // Setup the remark engine
@@ -77,14 +81,17 @@ TEST(Remark, TestOutputOptimizationRemark) {
 
 TEST(Remark, TestNoOutputOptimizationRemark) {
   const auto *pass1Msg = "My message";
-
   auto *context = new MLIRContext();
 
   std::string categoryFailName("myImportantCategory");
   std::string myPassname1("myPass1");
   std::string funcName("myFunc");
-  std::string yamlFile = "/tmp/remarks.yaml";
-
+  SmallString<64> tmpPathStorage;
+  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                            /*MakeAbsolute=*/true);
+  std::string yamlFile =
+      std::string(tmpPathStorage.data(), tmpPathStorage.size());
+  ASSERT_FALSE(yamlFile.empty());
   std::error_code ec =
       llvm::sys::fs::remove(yamlFile, /*IgnoreNonExisting=*/true);
   if (ec) {
