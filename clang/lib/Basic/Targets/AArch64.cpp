@@ -872,6 +872,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("ssve-fp8fma", HasSSVE_FP8FMA)
       .Case("sme-f8f32", HasSME_F8F32)
       .Case("sme-f8f16", HasSME_F8F16)
+      .Case("ctselect", true)
       .Default(false);
 }
 

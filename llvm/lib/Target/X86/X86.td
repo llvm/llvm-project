@@ -41,9 +41,6 @@ def FeatureNOPL    : SubtargetFeature<"nopl", "HasNOPL", "true",
 def FeatureCMOV    : SubtargetFeature<"cmov","HasCMOV", "true",
                                       "Enable conditional move instructions">;
 
-def FeatureCtSelect : SubtargetFeature<"ctselect", "HasCtSelect", "true",
-                                       "Enable feature to implement constant-time select">;
-
 def FeatureCX8     : SubtargetFeature<"cx8", "HasCX8", "true",
                                       "Support CMPXCHG8B instructions">;
 
@@ -831,9 +828,10 @@ include "X86SchedSapphireRapids.td"
 
 def ProcessorFeatures {
   // x86-64 micro-architecture levels: x86-64 and x86-64-v[234]
-  list<SubtargetFeature> X86_64V1Features = [
-    FeatureX87, FeatureCX8, FeatureCMOV, FeatureMMX, FeatureSSE2,
-    FeatureFXSR, FeatureNOPL, FeatureX86_64, FeatureCtSelect, 
+  list<SubtargetFeature> X86_64V1Features = [FeatureX87, FeatureCX8,
+                                             FeatureCMOV, FeatureMMX,
+                                             FeatureSSE2, FeatureFXSR,
+                                             FeatureNOPL, FeatureX86_64,
   ];
   list<SubtargetFeature> X86_64V1Tuning = [
     TuningMacroFusion,

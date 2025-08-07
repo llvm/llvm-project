@@ -1298,6 +1298,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("cf", HasCF)
       .Case("zu", HasZU)
       .Case("branch-hint", HasBranchHint)
+      .Case("ctselect", true)
       .Default(false);
 }
 

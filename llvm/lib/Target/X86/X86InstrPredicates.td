@@ -49,7 +49,6 @@ def HasZU        : Predicate<"Subtarget->hasZU()">;
 def HasCF        : Predicate<"Subtarget->hasCF()">;
 def HasCMOV      : Predicate<"Subtarget->canUseCMOV()">;
 def NoCMOV       : Predicate<"!Subtarget->canUseCMOV()">;
-def HasCtSelect  : Predicate<"Subtarget->hasCtSelect()">;
 def HasNOPL      : Predicate<"Subtarget->hasNOPL()">;
 def HasMMX       : Predicate<"Subtarget->hasMMX()">;
 def HasSSE1      : Predicate<"Subtarget->hasSSE1()">;
