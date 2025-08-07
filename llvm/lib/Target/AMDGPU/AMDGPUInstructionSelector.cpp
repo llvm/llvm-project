@@ -116,13 +116,14 @@ bool AMDGPUInstructionSelector::constrainCopyLikeIntrin(MachineInstr &MI,
   if (!DstRC || DstRC != SrcRC)
     return false;
 
-  auto result = RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI) &&
-                RBI.constrainGenericRegister(Src.getReg(), *SrcRC, *MRI);
+  if (!RBI.constrainGenericRegister(Dst.getReg(), *DstRC, *MRI) ||
+      !RBI.constrainGenericRegister(Src.getReg(), *SrcRC, *MRI))
+    return false;
   const MCInstrDesc &MCID = MI.getDesc();
   if (MCID.getOperandConstraint(0, MCOI::EARLY_CLOBBER) != -1) {
     MI.getOperand(0).setIsEarlyClobber(true);
   }
-  return result;
+  return true;
 }
 
 bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {

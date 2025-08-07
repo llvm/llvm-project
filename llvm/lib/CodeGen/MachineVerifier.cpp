@@ -2325,15 +2325,6 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       report("Missing mayStore flag", MI);
   }
 
-  // Verify earlyClobber def operand
-  for (unsigned i = 0; i < MI->getNumOperands(); i++)
-    if (MCID.getOperandConstraint(i, MCOI::EARLY_CLOBBER) != -1) {
-      const MachineOperand &Op = MI->getOperand(i);
-      if (!Op.isReg())
-        report("Early clobber must be a register", MI);
-      if (!Op.isEarlyClobber())
-        report("Missing earlyClobber flag", MI);
-    }
   // Debug values must not have a slot index.
   // Other instructions must have one, unless they are inside a bundle.
   if (LiveInts) {
@@ -2581,6 +2572,14 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     // ARM adds %reg0 operands to indicate predicates. We'll allow that.
     if (!MO->isValidExcessOperand())
       report("Extra explicit operand on non-variadic instruction", MO, MONum);
+  }
+
+  // Verify earlyClobber def operand
+  if (MCID.getOperandConstraint(MONum, MCOI::EARLY_CLOBBER) != -1) {
+    if (!MO->isReg())
+      report("Early clobber must be a register", MI);
+    if (!MO->isEarlyClobber())
+      report("Missing earlyClobber flag", MI);
   }
 
   switch (MO->getType()) {
