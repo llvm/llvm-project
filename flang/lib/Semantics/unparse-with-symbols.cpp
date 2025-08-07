@@ -70,6 +70,33 @@ public:
     currStmt_ = std::nullopt;
   }
 
+  bool Pre(const parser::OmpCriticalDirective &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OmpCriticalDirective &) { currStmt_ = std::nullopt; }
+
+  bool Pre(const parser::OmpEndCriticalDirective &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OmpEndCriticalDirective &) {
+    currStmt_ = std::nullopt;
+  }
+
+  // Directive arguments can be objects with symbols.
+  bool Pre(const parser::OmpBeginDirective &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OmpBeginDirective &) { currStmt_ = std::nullopt; }
+
+  bool Pre(const parser::OmpEndDirective &x) {
+    currStmt_ = x.source;
+    return true;
+  }
+  void Post(const parser::OmpEndDirective &) { currStmt_ = std::nullopt; }
+
 private:
   std::optional<SourceName> currStmt_; // current statement we are processing
   std::multimap<const char *, const Symbol *> symbols_; // location to symbol

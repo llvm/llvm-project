@@ -2859,9 +2859,6 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         case RISCVOp::OPERAND_UIMM16_NONZERO:
           Ok = isUInt<16>(Imm) && (Imm != 0);
           break;
-        case RISCVOp::OPERAND_ZERO:
-          Ok = Imm == 0;
-          break;
         case RISCVOp::OPERAND_THREE:
           Ok = Imm == 3;
           break;
@@ -4811,6 +4808,8 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
       LHS.getReg() == RHS.getReg())
     return true;
   if (RHS.isImm() && RHS.getImm() == RISCV::VLMaxSentinel)
+    return true;
+  if (LHS.isImm() && LHS.getImm() == 0)
     return true;
   if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
     return false;
