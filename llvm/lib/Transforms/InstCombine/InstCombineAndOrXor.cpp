@@ -252,15 +252,18 @@ static Value *foldThreeVarBoolExpr(Value *Root,
   if (!isa<BinaryOperator>(Root))
     return nullptr;
 
+  // Early bailout for expressions with too many uses (avoid expensive analysis
+  // andorxor.ll)
+  if (!Root->hasOneUse())
+    return nullptr;
+
   // Skip transformation if expression is already simple (at most 2 levels
   // deep).
-  if (Root->hasOneUse() && isa<BinaryOperator>(Root)) {
-    if (auto *BO = dyn_cast<BinaryOperator>(Root)) {
-      bool IsSimple = !isa<BinaryOperator>(BO->getOperand(0)) ||
-                      !isa<BinaryOperator>(BO->getOperand(1));
-      if (IsSimple)
-        return nullptr;
-    }
+  if (auto *BO = dyn_cast<BinaryOperator>(Root)) {
+    bool IsSimple = !isa<BinaryOperator>(BO->getOperand(0)) ||
+                    !isa<BinaryOperator>(BO->getOperand(1));
+    if (IsSimple)
+      return nullptr;
   }
 
   auto [Op0, Op1, Op2] = extractThreeVariables(Root);
@@ -269,10 +272,6 @@ static Value *foldThreeVarBoolExpr(Value *Root,
 
   auto Table = extractThreeBitTruthTable(Root, Op0, Op1, Op2);
   if (!Table)
-    return nullptr;
-
-  // Only transform expressions with single use to avoid code growth.
-  if (!Root->hasOneUse())
     return nullptr;
 
   return createLogicFromTable3Var(*Table, Op0, Op1, Op2, Root, Builder, true);
@@ -2628,6 +2627,9 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
+  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
+    return replaceInstUsesWith(I, Canonical);
+
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
   if (SimplifyDemandedInstructionBits(I))
@@ -3985,6 +3987,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
+  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
+    return replaceInstUsesWith(I, Canonical);
+
   // See if we can simplify any instructions used by the instruction whose sole
   // purpose is to compute bits we don't care about.
   if (SimplifyDemandedInstructionBits(I))
@@ -4007,9 +4012,6 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-
-  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
-    return replaceInstUsesWith(I, Canonical);
 
   Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1)) {
@@ -5136,6 +5138,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Phi = foldBinopWithPhiOperands(I))
     return Phi;
 
+  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
+    return replaceInstUsesWith(I, Canonical);
+
   if (Instruction *NewXor = foldXorToXor(I, Builder))
     return NewXor;
 
@@ -5416,9 +5421,6 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
       return SelectInst::Create(A, NotB, C);
     }
   }
-
-  if (Value *Canonical = foldThreeVarBoolExpr(&I, Builder))
-    return replaceInstUsesWith(I, Canonical);
 
   if (auto *LHS = dyn_cast<ICmpInst>(I.getOperand(0)))
     if (auto *RHS = dyn_cast<ICmpInst>(I.getOperand(1)))
