@@ -131,3 +131,12 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK:        ParamCommandComment{{.*}} [in] implicitly Param="..."
 // CHECK-NEXT:     ParagraphComment
 // CHECK-NEXT:       TextComment{{.*}} Text=" More arguments"
+
+/// \param[out] Aaa <summary>Short summary</summary>
+int Test_HTMLSummaryTag(int Aaa);
+// CHECK:     FunctionDecl{{.*}}Test_HTMLSummaryTag
+// CHECK:       ParamCommandComment{{.*}} [out] explicitly Param="Aaa"
+// CHECK-NEXT:    ParagraphComment
+// CHECK:           HTMLStartTagComment{{.*}} Name="summary"
+// CHECK-NEXT:        TextComment{{.*}} Text="Short summary"
+// CHECK-NEXT:        HTMLEndTagComment{{.*}} Name="summary"

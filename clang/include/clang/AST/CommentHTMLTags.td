@@ -51,6 +51,7 @@ def Col     : Tag<"col"> { let EndTagForbidden = 1; }
 def Tr      : Tag<"tr"> { let EndTagOptional = 1; }
 def Th      : Tag<"th"> { let EndTagOptional = 1; }
 def Td      : Tag<"td"> { let EndTagOptional = 1; }
+def Summary : Tag<"summary">;
 
 // Define a list of attributes that are not safe to pass through to HTML
 // output if the input is untrusted.
