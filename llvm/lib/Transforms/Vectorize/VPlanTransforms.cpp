@@ -63,17 +63,20 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
 
       VPRecipeBase *NewRecipe = nullptr;
-      if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
-        auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
+      if (auto *PhiR = dyn_cast<VPPhi>(&Ingredient)) {
+        auto *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
         const auto *II = GetIntOrFpInductionDescriptor(Phi);
-        if (!II)
-          continue;
-
-        VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
-        VPValue *Step =
-            vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-        NewRecipe = new VPWidenIntOrFpInductionRecipe(
-            Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
+        if (!II) {
+          NewRecipe = new VPWidenPHIRecipe(Phi, nullptr, PhiR->getDebugLoc());
+          for (VPValue *Op : PhiR->operands())
+            NewRecipe->addOperand(Op);
+        } else {
+          VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
+          VPValue *Step =
+              vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(
+              Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
+        }
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
@@ -1161,6 +1164,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (auto *Phi = dyn_cast<VPPhi>(Def)) {
+    if (Phi->getNumOperands() == 1)
+      Phi->replaceAllUsesWith(Phi->getOperand(0));
+    return;
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
@@ -1382,11 +1391,10 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
 
     // Currently only handle cases where the single user is a header-mask
     // comparison with the backedge-taken-count.
-    if (!match(
-            *WideIV->user_begin(),
-            m_Binary<Instruction::ICmp>(
-                m_Specific(WideIV),
-                m_Broadcast(m_Specific(Plan.getOrCreateBackedgeTakenCount())))))
+    if (!match(*WideIV->user_begin(),
+               m_ICmp(m_Specific(WideIV),
+                      m_Broadcast(
+                          m_Specific(Plan.getOrCreateBackedgeTakenCount())))))
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
@@ -1419,11 +1427,9 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
     });
 
   auto *CanIV = Plan.getCanonicalIV();
-  if (!match(Cond, m_Binary<Instruction::ICmp>(
-                       m_Specific(CanIV->getBackedgeValue()),
-                       m_Specific(&Plan.getVectorTripCount()))) ||
-      cast<VPRecipeWithIRFlags>(Cond->getDefiningRecipe())->getPredicate() !=
-          CmpInst::ICMP_EQ)
+  if (!match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ,
+                                  m_Specific(CanIV->getBackedgeValue()),
+                                  m_Specific(&Plan.getVectorTripCount()))))
     return false;
 
   // The compare checks CanIV + VFxUF == vector trip count. The vector trip
@@ -1832,7 +1838,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         VPW->dropPoisonGeneratingFlags();
 
       if (OldResSizeInBits != NewResSizeInBits &&
-          !match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()))) {
+          !match(&R, m_ICmp(m_VPValue(), m_VPValue()))) {
         // Extend result to original width.
         auto *Ext =
             new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
@@ -1841,9 +1847,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         Ext->setOperand(0, ResultVPV);
         assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
       } else {
-        assert(
-            match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) &&
-            "Only ICmps should not need extending the result.");
+        assert(match(&R, m_ICmp(m_VPValue(), m_VPValue())) &&
+               "Only ICmps should not need extending the result.");
       }
 
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
@@ -3222,7 +3227,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::materializeVectorTripCount(
+void VPlanTransforms::materializeConstantVectorTripCount(
     VPlan &Plan, ElementCount BestVF, unsigned BestUF,
     PredicatedScalarEvolution &PSE) {
   assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
@@ -3230,19 +3235,26 @@ void VPlanTransforms::materializeVectorTripCount(
 
   VPValue *TC = Plan.getTripCount();
   // Skip cases for which the trip count may be non-trivial to materialize.
+  // I.e., when a scalar tail is absent - due to tail folding, or when a scalar
+  // tail is required.
   if (!Plan.hasScalarTail() ||
       Plan.getMiddleBlock()->getSingleSuccessor() ==
           Plan.getScalarPreheader() ||
       !TC->isLiveIn())
     return;
+
   // Materialize vector trip counts for constants early if it can simply
   // be computed as (Original TC / VF * UF) * VF * UF.
+  // TODO: Compute vector trip counts for loops requiring a scalar epilogue and
+  // tail-folded loops.
   ScalarEvolution &SE = *PSE.getSE();
   auto *TCScev = SE.getSCEV(TC->getLiveInIRValue());
+  if (!isa<SCEVConstant>(TCScev))
+    return;
   const SCEV *VFxUF = SE.getElementCount(TCScev->getType(), BestVF * BestUF);
   auto VecTCScev = SE.getMulExpr(SE.getUDivExpr(TCScev, VFxUF), VFxUF);
-  if (auto *NewC = dyn_cast<SCEVConstant>(VecTCScev))
-    Plan.getVectorTripCount().setUnderlyingValue(NewC->getValue());
+  if (auto *ConstVecTC = dyn_cast<SCEVConstant>(VecTCScev))
+    Plan.getVectorTripCount().setUnderlyingValue(ConstVecTC->getValue());
 }
 
 void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
