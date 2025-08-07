@@ -203,7 +203,7 @@ def ROCDL_ReadfirstlaneOp : ROCDL_IntrOp<"readfirstlane", [], [0], [AllTypesMatc
   }];
 }
 
-def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", "src0"]>, Pure], 1>,
+def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", "src0"]>], 1>,
   Arguments<(ins LLVM_Type:$src0,
                  I32:$src1)> {
   let results = (outs LLVM_Type:$res);
