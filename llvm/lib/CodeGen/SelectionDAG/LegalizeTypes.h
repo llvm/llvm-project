@@ -1072,6 +1072,7 @@ private:
   SDValue WidenVecRes_ADDRSPACECAST(SDNode *N);
   SDValue WidenVecRes_AssertZext(SDNode* N);
   SDValue WidenVecRes_BITCAST(SDNode* N);
+  SDValue WidenVecRes_LOOP_DEPENDENCE_MASK(SDNode *N);
   SDValue WidenVecRes_BUILD_VECTOR(SDNode* N);
   SDValue WidenVecRes_CONCAT_VECTORS(SDNode* N);
   SDValue WidenVecRes_EXTEND_VECTOR_INREG(SDNode* N);

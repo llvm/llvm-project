@@ -1119,7 +1119,9 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
                        "operator!\n");
 
   case ISD::LOOP_DEPENDENCE_RAW_MASK:
-  case ISD::LOOP_DEPENDENCE_WAR_MASK: SplitVecRes_LOOP_DEPENDENCE_MASK(N, Lo, Hi); break;
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+    SplitVecRes_LOOP_DEPENDENCE_MASK(N, Lo, Hi);
+    break;
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::AssertZext:   SplitVecRes_AssertZext(N, Lo, Hi); break;
   case ISD::VSELECT:
@@ -1613,19 +1615,40 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
   Hi = DAG.getNode(ISD::BITCAST, dl, HiVT, Hi);
 }
 
-void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo, SDValue &Hi) {
-    SDLoc DL(N);
-    EVT LoVT, HiVT;
-    std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
-    SDValue PtrA = N->getOperand(0);
-    SDValue PtrB = N->getOperand(1);
-    Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
-    Lo.dumpr();
+void DAGTypeLegalizer::SplitVecRes_LOOP_DEPENDENCE_MASK(SDNode *N, SDValue &Lo,
+                                                        SDValue &Hi) {
+  EVT EltVT;
+  switch (N->getConstantOperandVal(2)) {
+  case 1:
+    EltVT = MVT::i8;
+    break;
+  case 2:
+    EltVT = MVT::i16;
+    break;
+  case 4:
+    EltVT = MVT::i32;
+    break;
+  case 8:
+    EltVT = MVT::i64;
+    break;
+  }
+  SDLoc DL(N);
+  EVT LoVT, HiVT;
+  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(N->getValueType(0));
+  SDValue PtrA = N->getOperand(0);
+  SDValue PtrB = N->getOperand(1);
+  Lo = DAG.getNode(N->getOpcode(), DL, LoVT, PtrA, PtrB, N->getOperand(2));
 
-    PtrA = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrA, DAG.getConstant(HiVT.getStoreSizeInBits(), DL, MVT::i64));
-    PtrB = DAG.getNode(ISD::ADD, DL, MVT::i64, PtrB, DAG.getConstant(HiVT.getStoreSizeInBits(), DL, MVT::i64));
-    Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
-    Hi.dumpr();
+  EVT StoreVT =
+      EVT::getVectorVT(*DAG.getContext(), EltVT, HiVT.getVectorMinNumElements(),
+                       HiVT.isScalableVT());
+  PtrA = DAG.getNode(
+      ISD::ADD, DL, MVT::i64, PtrA,
+      DAG.getConstant(StoreVT.getStoreSizeInBits() / 8, DL, MVT::i64));
+  PtrB = DAG.getNode(
+      ISD::ADD, DL, MVT::i64, PtrB,
+      DAG.getConstant(StoreVT.getStoreSizeInBits() / 8, DL, MVT::i64));
+  Hi = DAG.getNode(N->getOpcode(), DL, HiVT, PtrA, PtrB, N->getOperand(2));
 }
 
 void DAGTypeLegalizer::SplitVecRes_BUILD_VECTOR(SDNode *N, SDValue &Lo,
@@ -4728,6 +4751,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
 #endif
     report_fatal_error("Do not know how to widen the result of this operator!");
 
+  case ISD::LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::LOOP_DEPENDENCE_WAR_MASK:
+    Res = WidenVecRes_LOOP_DEPENDENCE_MASK(N);
+    break;
   case ISD::MERGE_VALUES:      Res = WidenVecRes_MERGE_VALUES(N, ResNo); break;
   case ISD::ADDRSPACECAST:
     Res = WidenVecRes_ADDRSPACECAST(N);
@@ -5928,6 +5955,13 @@ SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {
   }
 
   return CreateStackStoreLoad(InOp, WidenVT);
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_LOOP_DEPENDENCE_MASK(SDNode *N) {
+  return DAG.getNode(
+      N->getOpcode(), SDLoc(N),
+      TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0)),
+      N->getOperand(0), N->getOperand(1), N->getOperand(2));
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_BUILD_VECTOR(SDNode *N) {
