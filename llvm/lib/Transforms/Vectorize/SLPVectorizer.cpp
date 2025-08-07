@@ -991,6 +991,17 @@ class BinOpSameOpcodeHelper {
         return Candidate & OrBIT;
       case Instruction::Xor:
         return Candidate & XorBIT;
+      case Instruction::LShr:
+      case Instruction::FAdd:
+      case Instruction::FSub:
+      case Instruction::FMul:
+      case Instruction::SDiv:
+      case Instruction::UDiv:
+      case Instruction::FDiv:
+      case Instruction::SRem:
+      case Instruction::URem:
+      case Instruction::FRem:
+        return false;
       default:
         break;
       }
@@ -1238,6 +1249,12 @@ public:
     BinOpSameOpcodeHelper Converter(MainOp);
     if (!Converter.add(I) || !Converter.add(MainOp))
       return nullptr;
+    if (isAltShuffle() && !Converter.hasCandidateOpcode(MainOp->getOpcode())) {
+      BinOpSameOpcodeHelper AltConverter(AltOp);
+      if (AltConverter.add(I) && AltConverter.add(AltOp) &&
+          AltConverter.hasCandidateOpcode(AltOp->getOpcode()))
+        return AltOp;
+    }
     if (Converter.hasAltOp() && !isAltShuffle())
       return nullptr;
     return Converter.hasAltOp() ? AltOp : MainOp;
@@ -1329,7 +1346,7 @@ public:
                 // If the copyable instructions comes after MainOp
                 // (non-schedulable, but used in the block) - cannot vectorize
                 // it, will possibly generate use before def.
-                (isVectorLikeInstWithConstOps(I) || !MainOp->comesBefore(I)));
+                !MainOp->comesBefore(I));
       };
 
       return IsNonSchedulableCopyableElement(V);
@@ -3882,6 +3899,7 @@ private:
     enum CombinedOpcode {
       NotCombinedOp = -1,
       MinMax = Instruction::OtherOpsEnd + 1,
+      FMulAdd,
     };
     CombinedOpcode CombinedOp = NotCombinedOp;
 
@@ -4031,6 +4049,9 @@ private:
 
     /// Returns true if any scalar in the list is a copyable element.
     bool hasCopyableElements() const { return !CopyableElements.empty(); }
+
+    /// Returns the state of the operations.
+    const InstructionsState &getOperations() const { return S; }
 
     /// When ReuseReorderShuffleIndices is empty it just returns position of \p
     /// V within vector of Scalars. Otherwise, try to remap on its reuse index.
@@ -9704,13 +9725,7 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
       UniqueValues.emplace_back(V);
   }
 
-  // Easy case: VL has unique values and a "natural" size
-  size_t NumUniqueScalarValues = UniqueValues.size();
-  if (NumUniqueScalarValues == VL.size()) {
-    ReuseShuffleIndices.clear();
-    return true;
-  }
-  bool AreAllValuesNonConst = UniquePositions.size() == NumUniqueScalarValues;
+  bool AreAllValuesNonConst = UniquePositions.size() == UniqueValues.size();
 
   // Check if we need to schedule the scalars. If no, can keep original scalars
   // and avoid extra shuffles.
@@ -9725,7 +9740,12 @@ static bool tryToFindDuplicates(SmallVectorImpl<Value *> &VL,
                     IsaPred<PoisonValue>);
     assert(EndIt != UniqueValues.rend() && "Expected at least one non-poison.");
     UniqueValues.erase(EndIt.base(), UniqueValues.end());
-    NumUniqueScalarValues = UniqueValues.size();
+  }
+  // Easy case: VL has unique values and a "natural" size
+  size_t NumUniqueScalarValues = UniqueValues.size();
+  if (NumUniqueScalarValues == VL.size()) {
+    ReuseShuffleIndices.clear();
+    return true;
   }
 
   // Checks if unique inserts + shuffle is more profitable than just inserts or
@@ -12034,6 +12054,81 @@ void BoUpSLP::reorderGatherNode(TreeEntry &TE) {
   }
 }
 
+static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
+                                       const InstructionsState &S,
+                                       DominatorTree &DT, const DataLayout &DL,
+                                       TargetTransformInfo &TTI,
+                                       const TargetLibraryInfo &TLI) {
+  assert(all_of(VL,
+                [](Value *V) {
+                  return V->getType()->getScalarType()->isFloatingPointTy();
+                }) &&
+         "Can only convert to FMA for floating point types");
+  assert(S.isAddSubLikeOp() && "Can only convert to FMA for add/sub");
+
+  auto CheckForContractable = [&](ArrayRef<Value *> VL) {
+    FastMathFlags FMF;
+    FMF.set();
+    for (Value *V : VL) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I)
+        continue;
+      // TODO: support for copyable elements.
+      Instruction *MatchingI = S.getMatchingMainOpOrAltOp(I);
+      if (S.getMainOp() != MatchingI && S.getAltOp() != MatchingI)
+        continue;
+      if (auto *FPCI = dyn_cast<FPMathOperator>(I))
+        FMF &= FPCI->getFastMathFlags();
+    }
+    return FMF.allowContract();
+  };
+  if (!CheckForContractable(VL))
+    return InstructionCost::getInvalid();
+  // fmul also should be contractable
+  InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
+  SmallVector<BoUpSLP::ValueList> Operands = Analysis.buildOperands(S, VL);
+
+  InstructionsState OpS = getSameOpcode(Operands.front(), TLI);
+  if (!OpS.valid())
+    return InstructionCost::getInvalid();
+  if (OpS.isAltShuffle() || OpS.getOpcode() != Instruction::FMul)
+    return InstructionCost::getInvalid();
+  if (!CheckForContractable(Operands.front()))
+    return InstructionCost::getInvalid();
+  // Compare the costs.
+  InstructionCost FMulPlusFAddCost = 0;
+  InstructionCost FMACost = 0;
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  FastMathFlags FMF;
+  FMF.set();
+  for (Value *V : VL) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      continue;
+    if (auto *FPCI = dyn_cast<FPMathOperator>(I))
+      FMF &= FPCI->getFastMathFlags();
+    FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
+  }
+  unsigned NumOps = 0;
+  for (auto [V, Op] : zip(VL, Operands.front())) {
+    auto *I = dyn_cast<Instruction>(Op);
+    if (!I || !I->hasOneUse()) {
+      FMACost += TTI.getInstructionCost(cast<Instruction>(V), CostKind);
+      if (I)
+        FMACost += TTI.getInstructionCost(I, CostKind);
+      continue;
+    }
+    ++NumOps;
+    if (auto *FPCI = dyn_cast<FPMathOperator>(I))
+      FMF &= FPCI->getFastMathFlags();
+    FMulPlusFAddCost += TTI.getInstructionCost(I, CostKind);
+  }
+  Type *Ty = VL.front()->getType();
+  IntrinsicCostAttributes ICA(Intrinsic::fmuladd, Ty, {Ty, Ty, Ty}, FMF);
+  FMACost += NumOps * TTI.getIntrinsicInstrCost(ICA, CostKind);
+  return FMACost < FMulPlusFAddCost ? FMACost : InstructionCost::getInvalid();
+}
+
 void BoUpSLP::transformNodes() {
   constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   BaseGraphSize = VectorizableTree.size();
@@ -12400,6 +12495,25 @@ void BoUpSLP::transformNodes() {
           CondEntry->State == TreeEntry::Vectorize) {
         // The condition node is part of the combined minmax node.
         CondEntry->State = TreeEntry::CombinedVectorize;
+      }
+      break;
+    }
+    case Instruction::FSub:
+    case Instruction::FAdd: {
+      // Check if possible to convert (a*b)+c to fma.
+      if (E.State != TreeEntry::Vectorize ||
+          !E.getOperations().isAddSubLikeOp())
+        break;
+      if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI)
+               .isValid())
+        break;
+      // This node is a fmuladd node.
+      E.CombinedOp = TreeEntry::FMulAdd;
+      TreeEntry *FMulEntry = getOperandEntry(&E, 0);
+      if (FMulEntry->UserTreeIndex &&
+          FMulEntry->State == TreeEntry::Vectorize) {
+        // The FMul node is part of the combined fmuladd node.
+        FMulEntry->State = TreeEntry::CombinedVectorize;
       }
       break;
     }
@@ -13635,6 +13749,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     }
     return IntrinsicCost;
   };
+  auto GetFMulAddCost = [&, &TTI = *TTI](const InstructionsState &S,
+                                         Instruction *VI) {
+    InstructionCost Cost = canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI);
+    return Cost;
+  };
   switch (ShuffleOrOp) {
   case Instruction::PHI: {
     // Count reused scalars.
@@ -13975,6 +14094,30 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
+  case TreeEntry::FMulAdd: {
+    auto GetScalarCost = [&](unsigned Idx) {
+      if (isa<PoisonValue>(UniqueValues[Idx]))
+        return InstructionCost(TTI::TCC_Free);
+      return GetFMulAddCost(E->getOperations(),
+                            cast<Instruction>(UniqueValues[Idx]));
+    };
+    auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
+      FastMathFlags FMF;
+      FMF.set();
+      for (Value *V : E->Scalars) {
+        if (auto *FPCI = dyn_cast<FPMathOperator>(V)) {
+          FMF &= FPCI->getFastMathFlags();
+          if (auto *FPCIOp = dyn_cast<FPMathOperator>(FPCI->getOperand(0)))
+            FMF &= FPCIOp->getFastMathFlags();
+        }
+      }
+      IntrinsicCostAttributes ICA(Intrinsic::fmuladd, VecTy,
+                                  {VecTy, VecTy, VecTy}, FMF);
+      InstructionCost VecCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
+      return VecCost + CommonCost;
+    };
+    return GetCostDiff(GetScalarCost, GetVectorCost);
+  }
   case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::FAdd:
@@ -14012,8 +14155,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(Op1);
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(Op2);
-      return TTI->getArithmeticInstrCost(ShuffleOrOp, OrigScalarTy, CostKind,
-                                         Op1Info, Op2Info, Operands);
+      InstructionCost ScalarCost = TTI->getArithmeticInstrCost(
+          ShuffleOrOp, OrigScalarTy, CostKind, Op1Info, Op2Info, Operands);
+      if (auto *I = dyn_cast<Instruction>(UniqueValues[Idx]);
+          I && (ShuffleOrOp == Instruction::FAdd ||
+                ShuffleOrOp == Instruction::FSub)) {
+        InstructionCost IntrinsicCost = GetFMulAddCost(E->getOperations(), I);
+        if (IntrinsicCost.isValid())
+          ScalarCost = IntrinsicCost;
+      }
+      return ScalarCost;
     };
     auto GetVectorCost = [=](InstructionCost CommonCost) {
       if (ShuffleOrOp == Instruction::And && It != MinBWs.end()) {
@@ -18963,8 +19114,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!UseIntrinsic) {
         VFShape Shape =
             VFShape::get(CI->getFunctionType(),
-                         ElementCount::getFixed(
-                             static_cast<unsigned>(VecTy->getNumElements())),
+                         ElementCount::getFixed(VecTy->getNumElements()),
                          false /*HasGlobalPred*/);
         CF = VFDatabase(*CI).getVectorizedFunction(Shape);
       } else {
@@ -22667,9 +22817,19 @@ public:
   /// Try to find a reduction tree.
   bool matchAssociativeReduction(BoUpSLP &R, Instruction *Root,
                                  ScalarEvolution &SE, const DataLayout &DL,
-                                 const TargetLibraryInfo &TLI) {
+                                 const TargetLibraryInfo &TLI,
+                                 DominatorTree &DT, TargetTransformInfo &TTI) {
     RdxKind = HorizontalReduction::getRdxKind(Root);
     if (!isVectorizable(RdxKind, Root))
+      return false;
+
+    // FMA reduction root - skip.
+    auto CheckForFMA = [&](Instruction *I) {
+      return RdxKind == RecurKind::FAdd &&
+             canConvertToFMA(I, getSameOpcode(I, TLI), DT, DL, TTI, TLI)
+                 .isValid();
+    };
+    if (CheckForFMA(Root))
       return false;
 
     // Analyze "regular" integer/FP types for reductions - no target-specific
@@ -22709,7 +22869,7 @@ public:
         // Also, do not try to reduce const values, if the operation is not
         // foldable.
         if (!EdgeInst || Level > RecursionMaxDepth ||
-            getRdxKind(EdgeInst) != RdxKind ||
+            getRdxKind(EdgeInst) != RdxKind || CheckForFMA(EdgeInst) ||
             IsCmpSelMinMax != isCmpSelMinMax(EdgeInst) ||
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst) ||
             !isVectorizable(RdxKind, EdgeInst) ||
@@ -24278,13 +24438,13 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   Stack.emplace(SelectRoot(), 0);
   SmallPtrSet<Value *, 8> VisitedInstrs;
   bool Res = false;
-  auto &&TryToReduce = [this, &R](Instruction *Inst) -> Value * {
+  auto TryToReduce = [this, &R, TTI = TTI](Instruction *Inst) -> Value * {
     if (R.isAnalyzedReductionRoot(Inst))
       return nullptr;
     if (!isReductionCandidate(Inst))
       return nullptr;
     HorizontalReduction HorRdx;
-    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI))
+    if (!HorRdx.matchAssociativeReduction(R, Inst, *SE, *DL, *TLI, *DT, *TTI))
       return nullptr;
     return HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC);
   };
@@ -24349,6 +24509,12 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
     return false;
 
   if (!isa<BinaryOperator, CmpInst>(I) || isa<VectorType>(I->getType()))
+    return false;
+  // Skip potential FMA candidates.
+  if ((I->getOpcode() == Instruction::FAdd ||
+       I->getOpcode() == Instruction::FSub) &&
+      canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI)
+          .isValid())
     return false;
 
   Value *P = I->getParent();

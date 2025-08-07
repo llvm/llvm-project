@@ -25,9 +25,8 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 2
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[AVL:%.*]] = sub i64 [[TMP0]], [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[TMP0]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[SPEC_SELECT]], [[EVL_BASED_IV]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub nuw nsw i64 1, [[OFFSET_IDX]]
@@ -42,8 +41,8 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_REVERSE]], ptr align 8 [[TMP19]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP20]], [[EVL_BASED_IV]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP9]]
-; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP20]]
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[TMP0]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
@@ -51,7 +50,7 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ [[SPEC_SELECT]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = sub nuw nsw i64 1, [[IV1]]
 ; CHECK-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP22]]
 ; CHECK-NEXT:    store i64 0, ptr [[ARRAYIDX14]], align 8

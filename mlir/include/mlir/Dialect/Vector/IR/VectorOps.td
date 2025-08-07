@@ -1729,18 +1729,18 @@ def Vector_LoadOp : Vector_Op<"load", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
                                     nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
                                     nullptr);
     }]>
   ];
@@ -1847,9 +1847,9 @@ def Vector_StoreOp : Vector_Op<"store", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"uint64_t", "0">:$alignment), [{
+                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
       return build($_builder, $_state, valueToStore, base, indices, nontemporal,
-                   alignment != 0 ? $_builder.getI64IntegerAttr(alignment) :
+                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
                                     nullptr);
     }]>
   ];
@@ -2595,6 +2595,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
 
 def Vector_TransposeOp :
   Vector_Op<"transpose", [Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]> {
@@ -2779,6 +2780,10 @@ def Vector_SplatOp : Vector_Op<"splat", [
   let assemblyFormat = "$input attr-dict `:` type($aggregate)";
 
   let hasFolder = 1;
+
+  // vector.splat is deprecated, and vector.broadcast should be used instead.
+  // Canonicalize vector.splat to vector.broadcast.
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2876,7 +2881,10 @@ def Vector_ScanOp :
 // VectorStepOp
 //===----------------------------------------------------------------------===//
 
-def Vector_StepOp : Vector_Op<"step", [Pure]> {
+def Vector_StepOp : Vector_Op<"step", [
+    Pure,
+    DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
+  ]> {
   let summary = "A linear sequence of values from 0 to N";
   let description = [{
     A `step` operation produces an index vector, i.e. a 1-D vector of values of
