@@ -1802,8 +1802,13 @@ void SymbolFileNativePDB::FindFunctions(
       SymbolContext sc;
 
       sc.comp_unit = GetOrCreateCompileUnit(cci).get();
+      if (!sc.comp_unit)
+        continue;
+
       PdbCompilandSymId func_id(proc.modi(), proc.SymOffset);
       sc.function = GetOrCreateFunction(func_id, *sc.comp_unit).get();
+      if (!sc.function)
+        continue;
 
       sc_list.Append(sc);
     }
