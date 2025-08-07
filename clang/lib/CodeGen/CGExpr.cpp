@@ -85,6 +85,17 @@ enum VariableTypeDescriptorKind : uint16_t {
 //                        Miscellaneous Helper Methods
 //===--------------------------------------------------------------------===//
 
+static llvm::StringRef GetUBSanTrapForHandler(SanitizerHandler ID) {
+  switch (ID) {
+#define SANITIZER_CHECK(Enum, Name, Version, Msg)                              \
+  case SanitizerHandler::Enum:                                                 \
+    return Msg;
+    LIST_SANITIZER_CHECKS
+#undef SANITIZER_CHECK
+  }
+  llvm_unreachable("unhandled switch case");
+}
+
 /// CreateTempAlloca - This creates a alloca and inserts it into the entry
 /// block.
 RawAddress
@@ -3649,7 +3660,7 @@ struct SanitizerHandlerInfo {
 }
 
 const SanitizerHandlerInfo SanitizerHandlers[] = {
-#define SANITIZER_CHECK(Enum, Name, Version) {#Name, Version},
+#define SANITIZER_CHECK(Enum, Name, Version, Msg) {#Name, Version},
     LIST_SANITIZER_CHECKS
 #undef SANITIZER_CHECK
 };
@@ -3778,33 +3789,50 @@ void CodeGenFunction::EmitCheck(
   Branch->setMetadata(llvm::LLVMContext::MD_prof, Node);
   EmitBlock(Handlers);
 
+  // Clear arguments for the MinimalRuntime handler.
+  if (CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
+    switch (CheckHandler) {
+    case SanitizerHandler::TypeMismatch:
+      // Pass value pointer only. It adds minimal overhead.
+      StaticArgs = {};
+      assert(DynamicArgs.size() == 1);
+      break;
+    default:
+      // No arguments for other checks.
+      StaticArgs = {};
+      DynamicArgs = {};
+      break;
+    }
+  }
+
   // Handler functions take an i8* pointing to the (handler-specific) static
   // information block, followed by a sequence of intptr_t arguments
   // representing operand values.
   SmallVector<llvm::Value *, 4> Args;
   SmallVector<llvm::Type *, 4> ArgTypes;
-  if (!CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
-    Args.reserve(DynamicArgs.size() + 1);
-    ArgTypes.reserve(DynamicArgs.size() + 1);
 
-    // Emit handler arguments and create handler function type.
-    if (!StaticArgs.empty()) {
-      llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-      auto *InfoPtr = new llvm::GlobalVariable(
-          CGM.getModule(), Info->getType(), false,
-          llvm::GlobalVariable::PrivateLinkage, Info, "", nullptr,
-          llvm::GlobalVariable::NotThreadLocal,
-          CGM.getDataLayout().getDefaultGlobalsAddressSpace());
-      InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-      Args.push_back(InfoPtr);
-      ArgTypes.push_back(Args.back()->getType());
-    }
+  Args.reserve(DynamicArgs.size() + 1);
+  ArgTypes.reserve(DynamicArgs.size() + 1);
 
-    for (llvm::Value *DynamicArg : DynamicArgs) {
-      Args.push_back(EmitCheckValue(DynamicArg));
-      ArgTypes.push_back(IntPtrTy);
-    }
+  // Emit handler arguments and create handler function type.
+  if (!StaticArgs.empty()) {
+    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
+    auto *InfoPtr = new llvm::GlobalVariable(
+        CGM.getModule(), Info->getType(),
+        // Non-constant global is used in a handler to deduplicate reports.
+        // TODO: change deduplication logic and make it constant.
+        /*isConstant=*/false, llvm::GlobalVariable::PrivateLinkage, Info, "",
+        nullptr, llvm::GlobalVariable::NotThreadLocal,
+        CGM.getDataLayout().getDefaultGlobalsAddressSpace());
+    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+    Args.push_back(InfoPtr);
+    ArgTypes.push_back(Args.back()->getType());
+  }
+
+  for (llvm::Value *DynamicArg : DynamicArgs) {
+    Args.push_back(EmitCheckValue(DynamicArg));
+    ArgTypes.push_back(IntPtrTy);
   }
 
   llvm::FunctionType *FnType =
@@ -3954,6 +3982,8 @@ void CodeGenFunction::EmitCfiCheckFail() {
   StartFunction(GlobalDecl(), CGM.getContext().VoidTy, F, FI, Args,
                 SourceLocation());
 
+  ApplyDebugLocation ADL = ApplyDebugLocation::CreateArtificial(*this);
+
   // This function is not affected by NoSanitizeList. This function does
   // not have a source location, but "src:*" would still apply. Revert any
   // changes to SanOpts made in StartFunction.
@@ -4051,6 +4081,15 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
 
   llvm::BasicBlock *&TrapBB = TrapBBs[CheckHandlerID];
 
+  llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+  llvm::StringRef TrapMessage = GetUBSanTrapForHandler(CheckHandlerID);
+
+  if (getDebugInfo() && !TrapMessage.empty() &&
+      CGM.getCodeGenOpts().SanitizeDebugTrapReasons && TrapLocation) {
+    TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
+        TrapLocation, "Undefined Behavior Sanitizer", TrapMessage);
+  }
+
   NoMerge = NoMerge || !CGM.getCodeGenOpts().OptimizationLevel ||
             (CurCodeDecl && CurCodeDecl->hasAttr<OptimizeNoneAttr>());
 
@@ -4059,8 +4098,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     auto Call = TrapBB->begin();
     assert(isa<llvm::CallInst>(Call) && "Expected call in trap BB");
 
-    Call->applyMergedLocation(Call->getDebugLoc(),
-                              Builder.getCurrentDebugLocation());
+    Call->applyMergedLocation(Call->getDebugLoc(), TrapLocation);
+
     Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
   } else {
@@ -4068,6 +4107,8 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
     Builder.CreateCondBr(Checked, Cont, TrapBB,
                          MDHelper.createLikelyBranchWeights());
     EmitBlock(TrapBB);
+
+    ApplyDebugLocation applyTrapDI(*this, TrapLocation);
 
     llvm::CallInst *TrapCall =
         Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::ubsantrap),

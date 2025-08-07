@@ -2445,3 +2445,39 @@ struct {
 size_t test36() {
   return __builtin_dynamic_object_size(&x.dev_addr[4], 1);
 }
+
+// SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -8589934592, 8589934589) i64 @test37(
+// SANITIZE-WITH-ATTR-SAME: ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// SANITIZE-WITH-ATTR-NEXT:  entry:
+// SANITIZE-WITH-ATTR-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
+// SANITIZE-WITH-ATTR-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
+// SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
+// SANITIZE-WITH-ATTR-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT]], 2
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[COUNTED_BY_LOAD]], -1
+// SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
+// SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP1]]
+//
+// NO-SANITIZE-WITH-ATTR-LABEL: define dso_local range(i64 -8589934592, 8589934589) i64 @test37(
+// NO-SANITIZE-WITH-ATTR-SAME: ptr noundef readonly captures(none) [[PTR:%.*]]) local_unnamed_addr #[[ATTR2]] {
+// NO-SANITIZE-WITH-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNTED_BY_GEP:%.*]] = getelementptr inbounds nuw i8, ptr [[PTR]], i64 8
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNTED_BY_LOAD:%.*]] = load i32, ptr [[COUNTED_BY_GEP]], align 4
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = sext i32 [[COUNTED_BY_LOAD]] to i64
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[FLEXIBLE_ARRAY_MEMBER_SIZE:%.*]] = shl nsw i64 [[COUNT]], 2
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = icmp sgt i32 [[COUNTED_BY_LOAD]], -1
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i64 [[FLEXIBLE_ARRAY_MEMBER_SIZE]], i64 0
+// NO-SANITIZE-WITH-ATTR-NEXT:    ret i64 [[TMP1]]
+//
+// SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i64 @test37(
+// SANITIZE-WITHOUT-ATTR-SAME: ptr noundef [[PTR:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// SANITIZE-WITHOUT-ATTR-NEXT:    ret i64 -1
+//
+// NO-SANITIZE-WITHOUT-ATTR-LABEL: define dso_local i64 @test37(
+// NO-SANITIZE-WITHOUT-ATTR-SAME: ptr noundef readnone [[PTR:%.*]]) local_unnamed_addr #[[ATTR1]] {
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:  entry:
+// NO-SANITIZE-WITHOUT-ATTR-NEXT:    ret i64 -1
+//
+size_t test37(struct annotated *ptr) {
+  return __builtin_dynamic_object_size((1, 2, (4, 5, (7, 8, 9, (10, ptr->array)))), 1);
+}

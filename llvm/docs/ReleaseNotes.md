@@ -73,6 +73,7 @@ Changes to Vectorizers
 
 * Added initial support for copyable elements in SLP, which models copyable
   elements as add <element>, 0, i.e. uses identity constants for missing lanes.
+* SLP vectorizer supports initial recognition of FMA/FMAD pattern
 
 Changes to the AArch64 Backend
 ------------------------------
@@ -103,6 +104,10 @@ Changes to the PowerPC Backend
 
 Changes to the RISC-V Backend
 -----------------------------
+
+* `llvm-objdump` now has basic support for switching between disassembling code
+  and data using mapping symbols such as `$x` and `$d`. Switching architectures
+  using `$x` with an architecture string suffix is not yet supported.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -136,6 +141,9 @@ Changes to the LLVM tools
 
 Changes to LLDB
 ---------------------------------
+
+* LLDB can now set breakpoints, show backtraces, and display variables when
+  debugging Wasm with supported runtimes (WAMR and V8).
 
 Changes to BOLT
 ---------------------------------
