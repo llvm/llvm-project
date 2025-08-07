@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -std=gnu23 -fexperimental-defer-ts -fsyntax-only -fblocks -verify %s
 
-typedef long jmp_buf[100];
-typedef long sigjmp_buf[100];
+typedef void** jmp_buf;
+typedef void** sigjmp_buf;
 
 int setjmp(jmp_buf env);
 int _setjmp(jmp_buf env);
@@ -13,9 +13,10 @@ void siglongjmp(sigjmp_buf env, int val);
 
 jmp_buf x;
 sigjmp_buf y;
-
 void f() {
     defer {
+        __builtin_setjmp(x); // expected-error {{cannot use '__builtin_setjmp' inside a defer statement}}
+        __builtin_longjmp(x, 1); // expected-error {{cannot use '__builtin_longjmp' inside a defer statement}}
         setjmp(x); // expected-error {{cannot use 'setjmp' inside a defer statement}}
         _setjmp(x); // expected-error {{cannot use '_setjmp' inside a defer statement}}
         sigsetjmp(y, 0); // expected-error {{cannot use 'sigsetjmp' inside a defer statement}}
@@ -25,6 +26,8 @@ void f() {
         siglongjmp(y, 0); // expected-error {{cannot use 'siglongjmp' inside a defer statement}}
 
         (void) ^{
+            __builtin_setjmp(x);
+            __builtin_longjmp(x, 1);
             setjmp(x);
             _setjmp(x);
             sigsetjmp(y, 0);
@@ -34,6 +37,8 @@ void f() {
             siglongjmp(y, 0);
 
             defer {
+                __builtin_setjmp(x); // expected-error {{cannot use '__builtin_setjmp' inside a defer statement}}
+                __builtin_longjmp(x, 1); // expected-error {{cannot use '__builtin_longjmp' inside a defer statement}}
                 setjmp(x); // expected-error {{cannot use 'setjmp' inside a defer statement}}
                 _setjmp(x); // expected-error {{cannot use '_setjmp' inside a defer statement}}
                 sigsetjmp(y, 0); // expected-error {{cannot use 'sigsetjmp' inside a defer statement}}
