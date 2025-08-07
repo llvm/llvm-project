@@ -338,63 +338,17 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
   CompilerType base_type = base->GetCompilerType().GetNonReferenceType();
   base->GetExpressionPath(var_expr_path_strm);
   if (base_type.IsPointerType()) {
-    bool is_objc_pointer = true;
-    if (base->GetCompilerType().GetMinimumLanguage() != lldb::eLanguageTypeObjC)
-      is_objc_pointer = false;
-    else if (!base_type.IsPointerType())
-      is_objc_pointer = false;
-
-    if (is_objc_pointer && !m_use_synthetic) {
-      std::string errMsg =
-          llvm::formatv("\"(({0}) {1}\" is an Objective-C pointer, and cannot "
-                        "be subscripted",
+    child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
+    if (!child_valobj_sp) {
+      std::string err_msg =
+          llvm::formatv("failed to use pointer as array for index {0} for "
+                        "\"({1}) {2}\"", child_idx,
                         base->GetTypeName().AsCString("<invalid type>"),
-                        base->GetName());
-      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+                        var_expr_path_strm.GetData());
+      if (base_type.IsPointerToVoid())
+        err_msg = "subscript of pointer to incomplete type 'void'";
+      return llvm::make_error<DILDiagnosticError>(m_expr, err_msg,
                                                   node->GetLocation());
-    } else if (is_objc_pointer) {
-      lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
-      if (!synthetic || synthetic == base) {
-        std::string errMsg =
-            llvm::formatv("\"({0}) {1}\" is not an array type",
-                          base->GetTypeName().AsCString("<invalid type>"),
-                          base->GetName());
-        return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                    node->GetLocation());
-      } else if (static_cast<uint32_t>(child_idx) >=
-                 synthetic->GetNumChildrenIgnoringErrors()) {
-        std::string errMsg =
-            llvm::formatv("array index {0} is not valid for \"({1}) {2}\"",
-                          child_idx,
-                          base->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-        return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                    node->GetLocation());
-      } else {
-        child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
-        if (!child_valobj_sp) {
-          std::string errMsg =
-              llvm::formatv("array index {0} is not valid for \"({1}) {2}\"",
-                            child_idx,
-                            base->GetTypeName().AsCString("<invalid type>"),
-                            var_expr_path_strm.GetData());
-          return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                      node->GetLocation());
-        }
-      }
-    } else { // it's not an objc pointer
-      child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
-      if (!child_valobj_sp) {
-        std::string errMsg =
-            llvm::formatv("failed to use pointer as array for index {0} for "
-                          "\"({1}) {2}\"", child_idx,
-                          base->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-        if (base_type.IsPointerToVoid())
-          errMsg = "subscript of pointer to incomplete type 'void'";
-        return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                    node->GetLocation());
-      }
     }
   } else if (base_type.IsArrayType(
       nullptr, nullptr, &is_incomplete_array)) {
@@ -402,54 +356,54 @@ Interpreter::Visit(const ArraySubscriptNode *node) {
     if (!child_valobj_sp && (is_incomplete_array || m_use_synthetic))
       child_valobj_sp = base->GetSyntheticArrayMember(child_idx, true);
     if (!child_valobj_sp) {
-      std::string errMsg =
+      std::string err_msg =
           llvm::formatv("array index {0} is not valid for \"({1}) {2}\"",
                         child_idx,
                         base->GetTypeName().AsCString("<invalid type>"),
                         var_expr_path_strm.GetData());
-      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+      return llvm::make_error<DILDiagnosticError>(m_expr, err_msg,
                                                   node->GetLocation());
     }
   } else if (base_type.IsScalarType()) {
     child_valobj_sp =
         base->GetSyntheticBitFieldChild(child_idx, child_idx, true);
     if (!child_valobj_sp) {
-      std::string errMsg =
+      std::string err_msg =
           llvm::formatv("bitfield range {0}-{1} is not valid for \"({2}) {3}\"",
                         child_idx, child_idx,
                         base->GetTypeName().AsCString("<invalid type>"),
                         var_expr_path_strm.GetData());
-      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+      return llvm::make_error<DILDiagnosticError>(m_expr, err_msg,
                                                   node->GetLocation(), 1);
     }
   } else {
     lldb::ValueObjectSP synthetic = base->GetSyntheticValue();
     if (!m_use_synthetic || !synthetic || synthetic == base) {
-      std::string errMsg =
+      std::string err_msg =
           llvm::formatv("\"{0}\" is not an array type",
                         base->GetTypeName().AsCString("<invalid type>"));
-      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+      return llvm::make_error<DILDiagnosticError>(m_expr, err_msg,
                                                   node->GetLocation(), 1);
-    } else if (static_cast<uint32_t>(child_idx) >=
-               synthetic->GetNumChildrenIgnoringErrors()) {
-      std::string errMsg =
+    }
+    if (static_cast<uint32_t>(child_idx) >=
+        synthetic->GetNumChildrenIgnoringErrors(child_idx+1)) {
+      std::string err_msg =
           llvm::formatv("array index {0} is not valid for \"({1}) {2}\"",
                         child_idx,
                         base->GetTypeName().AsCString("<invalid type>"),
                         var_expr_path_strm.GetData());
-      return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
+      return llvm::make_error<DILDiagnosticError>(m_expr, err_msg,
                                                   node->GetLocation(), 1);
-    } else {
-      child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
-      if (!child_valobj_sp) {
-        std::string errMsg =
-            llvm::formatv("array index {0} is not valid for \"({1}) {2}\"",
-                          child_idx,
-                          base->GetTypeName().AsCString("<invalid type>"),
-                          var_expr_path_strm.GetData());
-        return llvm::make_error<DILDiagnosticError>(m_expr, errMsg,
-                                                    node->GetLocation(), 1);
-      }
+    }
+    child_valobj_sp = synthetic->GetChildAtIndex(child_idx);
+    if (!child_valobj_sp) {
+      std::string err_msg =
+          llvm::formatv("array index {0} is not valid for \"({1}) {2}\"",
+                        child_idx,
+                        base->GetTypeName().AsCString("<invalid type>"),
+                        var_expr_path_strm.GetData());
+      return llvm::make_error<DILDiagnosticError>(m_expr, err_msg,
+                                                  node->GetLocation(), 1);
     }
   }
 

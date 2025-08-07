@@ -74,7 +74,7 @@ class TestFrameVarDILArraySubscript(TestBase):
         self.expect_var_path("idx_1[0]", value="1")
         self.expect_var_path("idx_1[1]", value="0")
 
-        # Bit acess not valid for a reference.
+        # Bit adcess not valid for a reference.
         self.expect(
             "frame var 'idx_1_ref[0]'",
             error=True,
