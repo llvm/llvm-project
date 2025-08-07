@@ -143,21 +143,31 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeRISCVTarget() {
 
 static std::string computeDataLayout(const Triple &TT,
                                      const TargetOptions &Opts) {
-  const bool IsLittle = TT.isLittleEndian();
-  StringRef ABI = Opts.MCOptions.getABIName();
-  std::string DL;
+  std::string Endianness = TT.isLittleEndian() ? "e" : "E";
+
+  std::string PointerAndIntegerLayout;
+  std::string NativeIntegerWidths;
 
   if (TT.isArch64Bit()) {
-    DL = (Twine(IsLittle ? "e" : "E") + "-m:e-p:64:64-i64:64-i128:128-n32:64-" +
-          (ABI == "lp64e" ? "S64" : "S128"))
-             .str();
+    PointerAndIntegerLayout = "p:64:64-i64:64-i128:128";
+    NativeIntegerWidths = "n32:64";
   } else {
     assert(TT.isArch32Bit() && "only RV32 and RV64 are currently supported");
-    DL = (Twine(IsLittle ? "e" : "E") + "-m:e-p:32:32-i64:64-n32-" +
-          (ABI == "ilp32e" ? "S32" : "S128"))
-             .str();
+    PointerAndIntegerLayout = "p:32:32-i64:64";
+    NativeIntegerWidths = "n32";
   }
-  return DL;
+
+  StringRef ABI = Opts.MCOptions.getABIName();
+  std::string StackAlignment;
+
+  if (TT.isArch64Bit()) {
+    StackAlignment = (ABI == "lp64e") ? "S64" : "S128";
+  } else {
+    StackAlignment = (ABI == "ilp32e") ? "S32" : "S128";
+  }
+
+  return Endianness + "-m:e-" + PointerAndIntegerLayout + "-" +
+         NativeIntegerWidths + "-" + StackAlignment;
 }
 
 static Reloc::Model getEffectiveRelocModel(const Triple &TT,

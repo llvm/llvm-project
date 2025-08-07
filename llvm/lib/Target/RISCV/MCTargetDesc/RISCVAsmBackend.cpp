@@ -970,7 +970,7 @@ void RISCVAsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
   // For big endian cores, data fixup should be swapped.
-  bool SwapValue = (Endian == llvm::endianness::big) && isDataFixup(Kind);
+  bool SwapValue = Endian == llvm::endianness::big && isDataFixup(Kind);
   for (unsigned i = 0; i != NumBytes; ++i) {
     unsigned Idx = SwapValue ? (NumBytes - 1 - i) : i;
     Data[Idx] |= uint8_t((Value >> (i * 8)) & 0xff);
