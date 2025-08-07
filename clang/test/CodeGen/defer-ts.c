@@ -312,3 +312,16 @@ void defer_defer() {
   defer defer defer defer x(1);
   x(0);
 }
+
+// CHECK-LABEL: define {{.*}} i32 @main()
+int main() {
+  // CHECK: entry:
+  // CHECK:   %retval = alloca i32, align 4
+  // CHECK:   store i32 0, ptr %retval, align 4
+  // CHECK:   store i32 5, ptr %retval, align 4
+  // CHECK:   call void @x(i32 noundef 42)
+  // CHECK:   %0 = load i32, ptr %retval, align 4
+  // CHECK:   ret i32 %0
+  defer x(42);
+  return 5;
+}
