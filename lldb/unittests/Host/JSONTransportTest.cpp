@@ -11,15 +11,18 @@
 #include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
-#include "llvm/ADT/FunctionExtras.h"
+#include "lldb/Utility/Log.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <chrono>
 #include <cstddef>
-#include <future>
 #include <memory>
 #include <string>
 
@@ -28,22 +31,119 @@ using namespace lldb_private;
 
 namespace {
 
-struct JSONTestType {
-  std::string str;
+namespace test_protocol {
+
+struct Req {
+  std::string name;
 };
-
-json::Value toJSON(const JSONTestType &T) {
-  return json::Object{{"str", T.str}};
-}
-
-bool fromJSON(const json::Value &V, JSONTestType &T, json::Path P) {
+json::Value toJSON(const Req &T) { return json::Object{{"req", T.name}}; }
+bool fromJSON(const json::Value &V, Req &T, json::Path P) {
   json::ObjectMapper O(V, P);
-  return O && O.map("str", T.str);
+  return O && O.map("req", T.name);
+}
+bool operator==(const Req &a, const Req &b) { return a.name == b.name; }
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Req &V) {
+  OS << toJSON(V);
+  return OS;
+}
+void PrintTo(const Req &message, std::ostream *os) {
+  std::string O;
+  llvm::raw_string_ostream OS(O);
+  OS << message;
+  *os << O;
 }
 
-template <typename T> class JSONTransportTest : public PipePairTest {
+struct Resp {
+  std::string name;
+};
+json::Value toJSON(const Resp &T) { return json::Object{{"resp", T.name}}; }
+bool fromJSON(const json::Value &V, Resp &T, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("resp", T.name);
+}
+bool operator==(const Resp &a, const Resp &b) { return a.name == b.name; }
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Resp &V) {
+  OS << toJSON(V);
+  return OS;
+}
+void PrintTo(const Resp &message, std::ostream *os) {
+  std::string O;
+  llvm::raw_string_ostream OS(O);
+  OS << message;
+  *os << O;
+}
+
+struct Evt {
+  std::string name;
+};
+json::Value toJSON(const Evt &T) { return json::Object{{"evt", T.name}}; }
+bool fromJSON(const json::Value &V, Evt &T, json::Path P) {
+  json::ObjectMapper O(V, P);
+  return O && O.map("evt", T.name);
+}
+bool operator==(const Evt &a, const Evt &b) { return a.name == b.name; }
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Evt &V) {
+  OS << toJSON(V);
+  return OS;
+}
+void PrintTo(const Evt &message, std::ostream *os) {
+  std::string O;
+  llvm::raw_string_ostream OS(O);
+  OS << message;
+  *os << O;
+}
+
+using Message = std::variant<Req, Resp, Evt>;
+json::Value toJSON(const Message &T) {
+  if (const Req *req = std::get_if<Req>(&T))
+    return toJSON(*req);
+  if (const Resp *resp = std::get_if<Resp>(&T))
+    return toJSON(*resp);
+  if (const Evt *evt = std::get_if<Evt>(&T))
+    return toJSON(*evt);
+  llvm_unreachable("unknown message type");
+}
+bool fromJSON(const json::Value &V, Message &T, json::Path P) {
+  const json::Object *O = V.getAsObject();
+  if (!O) {
+    P.report("expected object");
+    return false;
+  }
+  if (O->get("req")) {
+    Req R;
+    if (!fromJSON(V, R, P))
+      return false;
+
+    T = std::move(R);
+    return true;
+  }
+  if (O->get("resp")) {
+    Resp R;
+    if (!fromJSON(V, R, P))
+      return false;
+
+    T = std::move(R);
+    return true;
+  }
+  if (O->get("evt")) {
+    Evt E;
+    if (!fromJSON(V, E, P))
+      return false;
+
+    T = std::move(E);
+    return true;
+  }
+  P.report("unknown message type");
+  return false;
+}
+
+} // namespace test_protocol
+
+template <typename T, typename Req, typename Resp, typename Evt>
+class JSONTransportTest : public PipePairTest {
+
 protected:
-  std::unique_ptr<JSONTransport> transport;
+  std::unique_ptr<T> transport;
   MainLoop loop;
 
   void SetUp() override {
@@ -57,53 +157,59 @@ protected:
                                      NativeFile::Unowned));
   }
 
-  template <typename P>
-  Expected<P>
-  RunOnce(std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
-    std::promise<Expected<P>> promised_message;
-    std::future<Expected<P>> future_message = promised_message.get_future();
-    RunUntil<P>(
-        [&promised_message](Expected<P> message) mutable -> bool {
-          promised_message.set_value(std::move(message));
-          return /*keep_going*/ false;
-        },
-        timeout);
-    return future_message.get();
+  class MessageCollector final
+      : public Transport<Req, Resp, Evt>::MessageHandler {
+  public:
+    std::vector<typename T::Message> messages;
+    void OnEvent(const Evt &V) override { messages.emplace_back(V); }
+    void OnRequest(const Req &V) override { messages.emplace_back(V); }
+    void OnResponse(const Resp &V) override { messages.emplace_back(V); }
+  };
+
+  /// Run the transport MainLoop and return any messages received.
+  Expected<std::vector<typename T::Message>>
+  Run(std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) {
+    MessageCollector collector;
+    loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                     timeout);
+    if (auto error = transport->Run(loop, collector))
+      return error;
+    return std::move(collector.messages);
   }
 
-  /// RunUntil runs the event loop until the callback returns `false` or a
-  /// timeout has occurred.
-  template <typename P>
-  void RunUntil(std::function<bool(Expected<P>)> callback,
-                std::chrono::milliseconds timeout = std::chrono::seconds(1)) {
-    auto handle = transport->RegisterReadObject<P>(
-        loop, [&callback](MainLoopBase &loop, Expected<P> message) mutable {
-          bool keep_going = callback(std::move(message));
-          if (!keep_going)
-            loop.RequestTermination();
-        });
-    loop.AddCallback(
-        [&callback](MainLoopBase &loop) mutable {
-          loop.RequestTermination();
-          callback(createStringError("timeout"));
-        },
-        timeout);
-    EXPECT_THAT_EXPECTED(handle, Succeeded());
-    EXPECT_THAT_ERROR(loop.Run().takeError(), Succeeded());
-  }
-
-  template <typename... Ts> llvm::Expected<size_t> Write(Ts... args) {
+  template <typename... Ts> void Write(Ts... args) {
     std::string message;
     for (const auto &arg : {args...})
       message += Encode(arg);
-    return input.Write(message.data(), message.size());
+    EXPECT_THAT_EXPECTED(input.Write(message.data(), message.size()),
+                         Succeeded());
+  }
+
+  template <typename... Ts> void WriteAndCloseInput(Ts... args) {
+    Write<Ts...>(std::forward<Ts>(args)...);
+    input.CloseWriteFileDescriptor();
   }
 
   virtual std::string Encode(const json::Value &) = 0;
 };
 
+class TestHTTPDelimitedJSONTransport final
+    : public HTTPDelimitedJSONTransport<test_protocol::Req, test_protocol::Resp,
+                                        test_protocol::Evt> {
+public:
+  using HTTPDelimitedJSONTransport::HTTPDelimitedJSONTransport;
+
+  void Log(llvm::StringRef message) override {
+    log_messages.emplace_back(message);
+  }
+
+  std::vector<std::string> log_messages;
+};
+
 class HTTPDelimitedJSONTransportTest
-    : public JSONTransportTest<HTTPDelimitedJSONTransport> {
+    : public JSONTransportTest<TestHTTPDelimitedJSONTransport,
+                               test_protocol::Req, test_protocol::Resp,
+                               test_protocol::Evt> {
 public:
   using JSONTransportTest::JSONTransportTest;
 
@@ -118,7 +224,22 @@ public:
   }
 };
 
-class JSONRPCTransportTest : public JSONTransportTest<JSONRPCTransport> {
+class TestJSONRPCTransport final
+    : public JSONRPCTransport<test_protocol::Req, test_protocol::Resp,
+                              test_protocol::Evt> {
+public:
+  using JSONRPCTransport::JSONRPCTransport;
+
+  void Log(llvm::StringRef message) override {
+    log_messages.emplace_back(message);
+  }
+
+  std::vector<std::string> log_messages;
+};
+
+class JSONRPCTransportTest
+    : public JSONTransportTest<TestJSONRPCTransport, test_protocol::Req,
+                               test_protocol::Resp, test_protocol::Evt> {
 public:
   using JSONTransportTest::JSONTransportTest;
 
@@ -134,6 +255,7 @@ public:
 
 // Failing on Windows, see https://github.com/llvm/llvm-project/issues/153446.
 #ifndef _WIN32
+using namespace test_protocol;
 
 TEST_F(HTTPDelimitedJSONTransportTest, MalformedRequests) {
   std::string malformed_header =
@@ -141,84 +263,65 @@ TEST_F(HTTPDelimitedJSONTransportTest, MalformedRequests) {
   ASSERT_THAT_EXPECTED(
       input.Write(malformed_header.data(), malformed_header.size()),
       Succeeded());
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       FailedWithMessage("invalid content length: -1"));
+  ASSERT_THAT_EXPECTED(Run(), FailedWithMessage("invalid content length: -1"));
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, Read) {
-  ASSERT_THAT_EXPECTED(Write(JSONTestType{"foo"}), Succeeded());
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       HasValue(testing::FieldsAre(/*str=*/"foo")));
+  WriteAndCloseInput(Req{"foo"});
+  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(Req{"foo"})));
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReadMultipleMessagesInSingleWrite) {
-  ASSERT_THAT_EXPECTED(Write(JSONTestType{"one"}, JSONTestType{"two"}),
-                       Succeeded());
-  unsigned count = 0;
-  RunUntil<JSONTestType>([&](Expected<JSONTestType> message) -> bool {
-    if (count == 0) {
-      EXPECT_THAT_EXPECTED(message,
-                           HasValue(testing::FieldsAre(/*str=*/"one")));
-    } else if (count == 1) {
-      EXPECT_THAT_EXPECTED(message,
-                           HasValue(testing::FieldsAre(/*str=*/"two")));
-    }
-
-    count++;
-    return count < 2;
-  });
+  WriteAndCloseInput(Message{Req{"one"}}, Message{Resp{"two"}},
+                     Message{Evt{"three"}});
+  EXPECT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(
+                                  Req{"one"}, Resp{"two"}, Evt{"three"})));
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReadAcrossMultipleChunks) {
   std::string long_str = std::string(2048, 'x');
-  ASSERT_THAT_EXPECTED(Write(JSONTestType{long_str}), Succeeded());
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       HasValue(testing::FieldsAre(/*str=*/long_str)));
+  WriteAndCloseInput(Req{long_str});
+  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(Req{long_str})));
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReadPartialMessage) {
-  std::string message = Encode(JSONTestType{"foo"});
-  std::string part1 = message.substr(0, 28);
-  std::string part2 = message.substr(28);
+  std::string message = Encode(Req{"foo"});
+  auto split_at = message.size() / 2;
+  std::string part1 = message.substr(0, split_at);
+  std::string part2 = message.substr(split_at);
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
-
-  ASSERT_THAT_EXPECTED(
-      RunOnce<JSONTestType>(/*timeout=*/std::chrono::milliseconds(10)),
-      FailedWithMessage("timeout"));
+  ASSERT_THAT_EXPECTED(Run(/*timeout=*/std::chrono::milliseconds(10)),
+                       HasValue(testing::IsEmpty()));
 
   ASSERT_THAT_EXPECTED(input.Write(part2.data(), part2.size()), Succeeded());
-
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       HasValue(testing::FieldsAre(/*str=*/"foo")));
+  input.CloseWriteFileDescriptor();
+  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(Req{"foo"})));
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReadWithZeroByteWrites) {
-  std::string message = Encode(JSONTestType{"foo"});
-  std::string part1 = message.substr(0, 28);
-  std::string part2 = message.substr(28);
+  std::string message = Encode(Req{"foo"});
+  auto split_at = message.size() / 2;
+  std::string part1 = message.substr(0, split_at);
+  std::string part2 = message.substr(split_at);
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
-  ASSERT_THAT_EXPECTED(
-      RunOnce<JSONTestType>(/*timeout=*/std::chrono::milliseconds(10)),
-      FailedWithMessage("timeout"));
+  ASSERT_THAT_EXPECTED(Run(/*timeout=*/std::chrono::milliseconds(10)),
+                       HasValue(testing::IsEmpty()));
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), 0),
                        Succeeded()); // zero-byte write.
-
-  ASSERT_THAT_EXPECTED(
-      RunOnce<JSONTestType>(/*timeout=*/std::chrono::milliseconds(10)),
-      FailedWithMessage("timeout"));
+  ASSERT_THAT_EXPECTED(Run(/*timeout=*/std::chrono::milliseconds(10)),
+                       HasValue(testing::IsEmpty()));
 
   ASSERT_THAT_EXPECTED(input.Write(part2.data(), part2.size()), Succeeded());
-
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       HasValue(testing::FieldsAre(/*str=*/"foo")));
+  input.CloseWriteFileDescriptor();
+  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(Req{"foo"})));
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReadWithEOF) {
   input.CloseWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(), Failed<TransportEOFError>());
+  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::IsEmpty()));
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, ReaderWithUnhandledData) {
@@ -231,32 +334,35 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReaderWithUnhandledData) {
   ASSERT_THAT_EXPECTED(input.Write(message.data(), message.size() - 1),
                        Succeeded());
   input.CloseWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       Failed<TransportUnhandledContentsError>());
+  ASSERT_THAT_EXPECTED(Run(), Failed<TransportUnhandledContentsError>());
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, NoDataTimeout) {
-  ASSERT_THAT_EXPECTED(
-      RunOnce<JSONTestType>(/*timeout=*/std::chrono::milliseconds(10)),
-      FailedWithMessage("timeout"));
+  ASSERT_THAT_EXPECTED(Run(/*timeout=*/std::chrono::milliseconds(10)),
+                       HasValue(testing::IsEmpty()));
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, InvalidTransport) {
-  transport = std::make_unique<HTTPDelimitedJSONTransport>(nullptr, nullptr);
-  auto handle = transport->RegisterReadObject<JSONTestType>(
-      loop, [&](MainLoopBase &, llvm::Expected<JSONTestType>) {});
-  ASSERT_THAT_EXPECTED(handle, FailedWithMessage("IO object is not valid."));
+  transport =
+      std::make_unique<TestHTTPDelimitedJSONTransport>(nullptr, nullptr);
+  ASSERT_THAT_EXPECTED(Run(), FailedWithMessage("IO object is not valid."));
 }
 
 TEST_F(HTTPDelimitedJSONTransportTest, Write) {
-  ASSERT_THAT_ERROR(transport->Write(JSONTestType{"foo"}), Succeeded());
+  transport->Request(Req{"foo"});
+  transport->Response(Resp{"bar"});
+  transport->Event(Evt{"baz"});
   output.CloseWriteFileDescriptor();
   char buf[1024];
   Expected<size_t> bytes_read =
       output.Read(buf, sizeof(buf), std::chrono::milliseconds(1));
   ASSERT_THAT_EXPECTED(bytes_read, Succeeded());
   ASSERT_EQ(StringRef(buf, *bytes_read), StringRef("Content-Length: 13\r\n\r\n"
-                                                   R"json({"str":"foo"})json"));
+                                                   R"({"req":"foo"})"
+                                                   "Content-Length: 14\r\n\r\n"
+                                                   R"({"resp":"bar"})"
+                                                   "Content-Length: 13\r\n\r\n"
+                                                   R"({"evt":"baz"})"));
 }
 
 TEST_F(JSONRPCTransportTest, MalformedRequests) {
@@ -264,80 +370,80 @@ TEST_F(JSONRPCTransportTest, MalformedRequests) {
   ASSERT_THAT_EXPECTED(
       input.Write(malformed_header.data(), malformed_header.size()),
       Succeeded());
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(), llvm::Failed());
+  ASSERT_THAT_EXPECTED(
+      Run(), FailedWithMessage("[1:2, byte=2]: Invalid JSON value (null?)"));
 }
 
 TEST_F(JSONRPCTransportTest, Read) {
-  ASSERT_THAT_EXPECTED(Write(JSONTestType{"foo"}), Succeeded());
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       HasValue(testing::FieldsAre(/*str=*/"foo")));
+  WriteAndCloseInput(Message{Req{"foo"}}, Message{Resp{"bar"}},
+                     Message{Evt{"baz"}});
+  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(
+                                  Req{"foo"}, Resp{"bar"}, Evt{"baz"})));
 }
 
 TEST_F(JSONRPCTransportTest, ReadAcrossMultipleChunks) {
-  std::string long_str = std::string(2048, 'x');
-  std::string message = Encode(JSONTestType{long_str});
-  ASSERT_THAT_EXPECTED(input.Write(message.data(), message.size()),
-                       Succeeded());
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       HasValue(testing::FieldsAre(/*str=*/long_str)));
+  // Use a string longer than the chunk size to ensure we split the message
+  // across the chunk boundary.
+  std::string long_str =
+      std::string(JSONTransport<Req, Resp, Evt>::kReadBufferSize + 10, 'x');
+  WriteAndCloseInput(Req{long_str});
+  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(Req{long_str})));
 }
 
 TEST_F(JSONRPCTransportTest, ReadPartialMessage) {
-  std::string message = R"({"str": "foo"})"
+  std::string message = R"({"req": "foo"})"
                         "\n";
   std::string part1 = message.substr(0, 7);
   std::string part2 = message.substr(7);
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
-
-  ASSERT_THAT_EXPECTED(
-      RunOnce<JSONTestType>(/*timeout=*/std::chrono::milliseconds(10)),
-      FailedWithMessage("timeout"));
+  ASSERT_THAT_EXPECTED(Run(std::chrono::milliseconds(10)),
+                       HasValue(testing::IsEmpty()));
 
   ASSERT_THAT_EXPECTED(input.Write(part2.data(), part2.size()), Succeeded());
-
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       HasValue(testing::FieldsAre(/*str=*/"foo")));
+  input.CloseWriteFileDescriptor();
+  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::ElementsAre(Req{"foo"})));
 }
 
 TEST_F(JSONRPCTransportTest, ReadWithEOF) {
   input.CloseWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(), Failed<TransportEOFError>());
+  ASSERT_THAT_EXPECTED(Run(), HasValue(testing::IsEmpty()));
 }
 
 TEST_F(JSONRPCTransportTest, ReaderWithUnhandledData) {
-  std::string message = R"json({"str": "foo"})json"
-                        "\n";
+  std::string message = R"json({"req": "foo")json";
   // Write an incomplete message and close the handle.
-  ASSERT_THAT_EXPECTED(input.Write(message.data(), message.size() - 1),
+  ASSERT_THAT_EXPECTED(input.Write(message.data(), message.size()),
                        Succeeded());
   input.CloseWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(RunOnce<JSONTestType>(),
-                       Failed<TransportUnhandledContentsError>());
+  EXPECT_THAT_EXPECTED(Run(), Failed<TransportUnhandledContentsError>());
 }
 
 TEST_F(JSONRPCTransportTest, Write) {
-  ASSERT_THAT_ERROR(transport->Write(JSONTestType{"foo"}), Succeeded());
+  transport->Request(Req{"foo"});
+  transport->Response(Resp{"bar"});
+  transport->Event(Evt{"baz"});
   output.CloseWriteFileDescriptor();
   char buf[1024];
   Expected<size_t> bytes_read =
       output.Read(buf, sizeof(buf), std::chrono::milliseconds(1));
   ASSERT_THAT_EXPECTED(bytes_read, Succeeded());
-  ASSERT_EQ(StringRef(buf, *bytes_read), StringRef(R"json({"str":"foo"})json"
+  ASSERT_EQ(StringRef(buf, *bytes_read), StringRef(R"({"req":"foo"})"
+                                                   "\n"
+                                                   R"({"resp":"bar"})"
+                                                   "\n"
+                                                   R"({"evt":"baz"})"
                                                    "\n"));
 }
 
 TEST_F(JSONRPCTransportTest, InvalidTransport) {
-  transport = std::make_unique<JSONRPCTransport>(nullptr, nullptr);
-  auto handle = transport->RegisterReadObject<JSONTestType>(
-      loop, [&](MainLoopBase &, llvm::Expected<JSONTestType>) {});
-  ASSERT_THAT_EXPECTED(handle, FailedWithMessage("IO object is not valid."));
+  transport = std::make_unique<TestJSONRPCTransport>(nullptr, nullptr);
+  ASSERT_THAT_EXPECTED(Run(), FailedWithMessage("IO object is not valid."));
 }
 
 TEST_F(JSONRPCTransportTest, NoDataTimeout) {
-  ASSERT_THAT_EXPECTED(
-      RunOnce<JSONTestType>(/*timeout=*/std::chrono::milliseconds(10)),
-      FailedWithMessage("timeout"));
+  ASSERT_THAT_EXPECTED(Run(/*timeout=*/std::chrono::milliseconds(10)),
+                       HasValue(testing::ElementsAre()));
 }
 
 #endif

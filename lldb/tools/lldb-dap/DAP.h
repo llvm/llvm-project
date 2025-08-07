@@ -78,12 +78,16 @@ enum DAPBroadcasterBits {
 
 enum class ReplMode { Variable = 0, Command, Auto };
 
-struct DAP {
+using DAPTransport =
+    lldb_private::Transport<protocol::Request, protocol::Response,
+                            protocol::Event>;
+
+struct DAP final : private DAPTransport::MessageHandler {
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 
   Log *log;
-  Transport &transport;
+  DAPTransport &transport;
   lldb::SBFile in;
   OutputRedirector out;
   OutputRedirector err;
@@ -177,8 +181,11 @@ struct DAP {
   ///     allocated.
   /// \param[in] transport
   ///     Transport for this debug session.
+  /// \param[in] loop
+  ///     Main loop associated with this instance.
   DAP(Log *log, const ReplMode default_repl_mode,
-      std::vector<std::string> pre_init_commands, Transport &transport);
+      std::vector<std::string> pre_init_commands, llvm::StringRef client_name,
+      DAPTransport &transport, lldb_private::MainLoop &loop);
 
   ~DAP();
 
@@ -317,7 +324,7 @@ struct DAP {
   lldb::SBTarget CreateTarget(lldb::SBError &error);
 
   /// Set given target object as a current target for lldb-dap and start
-  /// listeing for its breakpoint events.
+  /// listening for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
   bool HandleObject(const protocol::Message &M);
@@ -420,13 +427,17 @@ struct DAP {
       const std::optional<std::vector<protocol::SourceBreakpoint>>
           &breakpoints);
 
+  void OnEvent(const protocol::Event &) override;
+  void OnRequest(const protocol::Request &) override;
+  void OnResponse(const protocol::Response &) override;
+
 private:
   std::vector<protocol::Breakpoint> SetSourceBreakpoints(
       const protocol::Source &source,
       const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
       SourceBreakpointMap &existing_breakpoints);
 
-  lldb_private::Status TransportHandler();
+  void TransportHandler(llvm::Error *);
 
   /// Registration of request handler.
   /// @{
@@ -446,6 +457,8 @@ private:
   std::thread progress_event_thread;
   /// @}
 
+  const llvm::StringRef m_client_name;
+
   /// List of addresses mapped by sourceReference.
   std::vector<lldb::addr_t> m_source_references;
   std::mutex m_source_references_mutex;
@@ -456,7 +469,7 @@ private:
   std::condition_variable m_queue_cv;
 
   // Loop for managing reading from the client.
-  lldb_private::MainLoop m_loop;
+  lldb_private::MainLoop &m_loop;
 
   std::mutex m_cancelled_requests_mutex;
   llvm::SmallSet<int64_t, 4> m_cancelled_requests;

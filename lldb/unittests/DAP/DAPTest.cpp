@@ -11,7 +11,6 @@
 #include "TestBase.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
-#include <memory>
 #include <optional>
 
 using namespace llvm;
@@ -27,12 +26,15 @@ TEST_F(DAPTest, SendProtocolMessages) {
       /*log=*/nullptr,
       /*default_repl_mode=*/ReplMode::Auto,
       /*pre_init_commands=*/{},
-      /*transport=*/*to_dap,
+      /*client_name=*/"test_client",
+      /*transport=*/*transport,
+      loop,
   };
   dap.Send(Event{/*event=*/"my-event", /*body=*/std::nullopt});
-  RunOnce<protocol::Message>([&](llvm::Expected<protocol::Message> message) {
-    ASSERT_THAT_EXPECTED(
-        message, HasValue(testing::VariantWith<Event>(testing::FieldsAre(
-                     /*event=*/"my-event", /*body=*/std::nullopt))));
-  });
+  loop.AddPendingCallback(
+      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  ASSERT_THAT_ERROR(dap.Loop(), llvm::Succeeded());
+  ASSERT_THAT(from_dap,
+              ElementsAre(testing::VariantWith<Event>(testing::FieldsAre(
+                  /*event=*/"my-event", /*body=*/std::nullopt))));
 }
