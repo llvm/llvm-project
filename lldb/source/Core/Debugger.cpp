@@ -1005,7 +1005,7 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (log_callback)
     m_callback_handler_sp =
         std::make_shared<CallbackLogHandler>(log_callback, baton);
-  m_command_interpreter_up->Initialize();
+
   // Always add our default platform to the platform list
   PlatformSP default_platform_sp(Platform::GetHostPlatform());
   assert(default_platform_sp);
@@ -1022,6 +1022,8 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
         new Target(*this, arch, default_platform_sp, is_dummy_target));
   }
   assert(m_dummy_target_sp.get() && "Couldn't construct dummy target?");
+
+  m_command_interpreter_up->Initialize();
 
   OptionValueUInt64 *term_width =
       m_collection_sp->GetPropertyAtIndexAsOptionValueUInt64(
@@ -1221,8 +1223,8 @@ void Debugger::RedrawStatusline(bool update) {
 }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
-  bool adopt_selected = true;
-  ExecutionContextRef exe_ctx_ref(GetSelectedTarget().get(), adopt_selected);
+  ExecutionContextRef exe_ctx_ref(&GetSelectedOrDummyTarget(),
+                                  /*adopt_selected=*/true);
   return ExecutionContext(exe_ctx_ref);
 }
 
