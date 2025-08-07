@@ -2678,8 +2678,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_subs_epu16(__m128i __a,
 ///    A 128-bit integer vector containing one of the source operands.
 /// \returns A 128-bit integer vector containing the bitwise AND of the values
 ///    in both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_and_si128(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_and_si128(__m128i __a, __m128i __b) {
   return (__m128i)((__v2du)__a & (__v2du)__b);
 }
 
@@ -2697,8 +2697,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_and_si128(__m128i __a,
 ///    A 128-bit vector containing the right source operand.
 /// \returns A 128-bit integer vector containing the bitwise AND of the one's
 ///    complement of the first operand and the values in the second operand.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_andnot_si128(__m128i __a,
-                                                              __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_andnot_si128(__m128i __a, __m128i __b) {
   return (__m128i)(~(__v2du)__a & (__v2du)__b);
 }
 /// Performs a bitwise OR of two 128-bit integer vectors.
@@ -2713,8 +2713,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_andnot_si128(__m128i __a,
 ///    A 128-bit integer vector containing one of the source operands.
 /// \returns A 128-bit integer vector containing the bitwise OR of the values
 ///    in both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_or_si128(__m128i __a,
-                                                          __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_or_si128(__m128i __a, __m128i __b) {
   return (__m128i)((__v2du)__a | (__v2du)__b);
 }
 
@@ -2730,8 +2730,8 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_or_si128(__m128i __a,
 ///    A 128-bit integer vector containing one of the source operands.
 /// \returns A 128-bit integer vector containing the bitwise exclusive OR of the
 ///    values in both operands.
-static __inline__ __m128i __DEFAULT_FN_ATTRS _mm_xor_si128(__m128i __a,
-                                                           __m128i __b) {
+static __inline__ __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm_xor_si128(__m128i __a, __m128i __b) {
   return (__m128i)((__v2du)__a ^ (__v2du)__b);
 }
 
