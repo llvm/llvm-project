@@ -29,7 +29,7 @@ runtime_targets="${4}"
 runtime_targets_needs_reconfig="${5}"
 enable_cir="${6}"
 
-lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests"
+lit_args="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct"
 
 start-group "CMake"
 export PIP_BREAK_SYSTEM_PACKAGES=1
