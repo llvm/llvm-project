@@ -644,8 +644,7 @@ SymbolFileNativePDB::CreateClassStructUnion(PdbTypeSymId type_id,
 
   std::string uname = GetUnqualifiedTypeName(record);
 
-  // FIXME: Search IPI stream for LF_UDT_MOD_SRC_LINE.
-  Declaration decl;
+  Declaration decl = ResolveUdtDeclaration(type_id);
   return MakeType(toOpaqueUid(type_id), ConstString(uname), size, nullptr,
                   LLDB_INVALID_UID, Type::eEncodingIsUID, decl, ct,
                   Type::ResolveState::Forward);
@@ -668,7 +667,7 @@ lldb::TypeSP SymbolFileNativePDB::CreateTagType(PdbTypeSymId type_id,
                                                 CompilerType ct) {
   std::string uname = GetUnqualifiedTypeName(er);
 
-  Declaration decl;
+  Declaration decl = ResolveUdtDeclaration(type_id);
   TypeSP underlying_type = GetOrCreateType(er.UnderlyingType);
 
   return MakeType(
@@ -2555,4 +2554,56 @@ SymbolFileNativePDB::GetContextForType(TypeIndex ti) {
     break;
   }
   return ctx;
+}
+
+void SymbolFileNativePDB::CacheUdtDeclarations() {
+  if (m_has_cached_udt_declatations)
+    return;
+  m_has_cached_udt_declatations = true;
+
+  for (CVType cvt : m_index->ipi().typeArray()) {
+    if (cvt.kind() != LF_UDT_MOD_SRC_LINE)
+      continue;
+
+    UdtModSourceLineRecord udt_mod_src;
+    llvm::cantFail(TypeDeserializer::deserializeAs(cvt, udt_mod_src));
+    // Some types might be contributed by multiple modules. We assume that they
+    // all point to the same file and line because we can only provide one
+    // location.
+    m_udt_declarations.try_emplace(udt_mod_src.UDT,
+                                   udt_mod_src.SourceFile.getIndex(),
+                                   udt_mod_src.LineNumber);
+  }
+}
+
+Declaration SymbolFileNativePDB::ResolveUdtDeclaration(PdbTypeSymId type_id) {
+  CacheUdtDeclarations();
+  auto it = m_udt_declarations.find(type_id.index);
+  if (it == m_udt_declarations.end())
+    return Declaration();
+
+  auto [file_index, line] = it->second;
+  auto string_table = m_index->pdb().getStringTable();
+  if (!string_table) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), string_table.takeError(),
+                   "Failed to get string table: {0}");
+    return Declaration();
+  }
+
+  llvm::Expected<llvm::StringRef> file_name =
+      string_table->getStringTable().getString(file_index);
+  if (!file_name) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), file_name.takeError(),
+                   "Failed to get string with id {1}: {0}", file_index);
+    return Declaration();
+  }
+
+  // rustc sets the filename to "<unknown>" for some files
+  if (*file_name == "\\<unknown>")
+    return Declaration();
+
+  FileSpec::Style style = file_name->starts_with("/")
+                              ? FileSpec::Style::posix
+                              : FileSpec::Style::windows;
+  return Declaration(FileSpec(*file_name, style), line);
 }
