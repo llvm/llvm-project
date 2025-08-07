@@ -16231,10 +16231,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
     SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc) {
   OMPClause *Res = nullptr;
   switch (Kind) {
-  case OMPC_default:
-    Res = ActOnOpenMPDefaultClause(static_cast<DefaultKind>(Argument),
-                                   ArgumentLoc, StartLoc, LParenLoc, EndLoc);
-    break;
   case OMPC_proc_bind:
     Res = ActOnOpenMPProcBindClause(static_cast<ProcBindKind>(Argument),
                                     ArgumentLoc, StartLoc, LParenLoc, EndLoc);
@@ -16315,6 +16311,7 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
   case OMPC_num_tasks:
   case OMPC_hint:
   case OMPC_dist_schedule:
+  case OMPC_default:
   case OMPC_defaultmap:
   case OMPC_unknown:
   case OMPC_uniform:
@@ -16348,38 +16345,41 @@ OMPClause *SemaOpenMP::ActOnOpenMPSimpleClause(
   return Res;
 }
 
-OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(DefaultKind Kind,
-                                                SourceLocation KindKwLoc,
-                                                SourceLocation StartLoc,
-                                                SourceLocation LParenLoc,
-                                                SourceLocation EndLoc) {
-  if (Kind == OMP_DEFAULT_unknown) {
-    Diag(KindKwLoc, diag::err_omp_unexpected_clause_value)
+OMPClause *SemaOpenMP::ActOnOpenMPDefaultClause(
+    llvm::omp::DefaultKind M, SourceLocation MLoc,
+    OpenMPDefaultClauseVariableCategory VCKind, SourceLocation VCKindLoc,
+    SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc) {
+  if (M == OMP_DEFAULT_unknown) {
+    Diag(MLoc, diag::err_omp_unexpected_clause_value)
         << getListOfPossibleValues(OMPC_default, /*First=*/0,
                                    /*Last=*/unsigned(OMP_DEFAULT_unknown))
         << getOpenMPClauseNameForDiag(OMPC_default);
     return nullptr;
   }
 
-  switch (Kind) {
+  switch (M) {
   case OMP_DEFAULT_none:
-    DSAStack->setDefaultDSANone(KindKwLoc);
+    DSAStack->setDefaultDSANone(MLoc);
     break;
   case OMP_DEFAULT_shared:
-    DSAStack->setDefaultDSAShared(KindKwLoc);
+    DSAStack->setDefaultDSAShared(MLoc);
     break;
   case OMP_DEFAULT_firstprivate:
-    DSAStack->setDefaultDSAFirstPrivate(KindKwLoc);
+    DSAStack->setDefaultDSAFirstPrivate(MLoc);
     break;
   case OMP_DEFAULT_private:
-    DSAStack->setDefaultDSAPrivate(KindKwLoc);
+    DSAStack->setDefaultDSAPrivate(MLoc);
     break;
   default:
     llvm_unreachable("DSA unexpected in OpenMP default clause");
   }
 
+  if (VCKind < 0 || VCKind >= OMPC_DEFAULT_VC_unknown) {
+     Diag(VCKindLoc, diag::err_omp_default_vc) << getOpenMPSimpleClauseTypeName(OMPC_default, unsigned(M));
+  }
+
   return new (getASTContext())
-      OMPDefaultClause(Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
+      OMPDefaultClause(M, MLoc, VCKind, VCKindLoc, StartLoc, LParenLoc, EndLoc);
 }
 
 OMPClause *SemaOpenMP::ActOnOpenMPProcBindClause(ProcBindKind Kind,
@@ -16685,6 +16685,15 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
         static_cast<OpenMPDistScheduleClauseKind>(Argument.back()), Expr,
         StartLoc, LParenLoc, ArgumentLoc.back(), DelimLoc, EndLoc);
     break;
+  case OMPC_default:
+    enum { DefaultModifier, DefaultVarCategory };
+    Res = ActOnOpenMPDefaultClause(
+        static_cast<llvm::omp::DefaultKind>(Argument[DefaultModifier]),
+        ArgumentLoc[DefaultModifier],
+        static_cast<OpenMPDefaultClauseVariableCategory>(Argument[DefaultVarCategory]),
+        ArgumentLoc[DefaultVarCategory],
+        StartLoc, LParenLoc, EndLoc);
+    break;
   case OMPC_defaultmap:
     enum { Modifier, DefaultmapKind };
     Res = ActOnOpenMPDefaultmapClause(
@@ -16733,7 +16742,6 @@ OMPClause *SemaOpenMP::ActOnOpenMPSingleExprWithArgClause(
   case OMPC_sizes:
   case OMPC_allocator:
   case OMPC_collapse:
-  case OMPC_default:
   case OMPC_proc_bind:
   case OMPC_private:
   case OMPC_firstprivate:

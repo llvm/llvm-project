@@ -20,6 +20,14 @@
 using namespace clang;
 using namespace llvm::omp;
 
+unsigned clang::getOpenMPDefaultVariableCategory(StringRef Str, const LangOptions &LangOpts) {
+  unsigned VC = llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_DEFAULT_VARIABLE_CATEGORY(Name) .Case(#Name, OMPC_DEFAULT_VC_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+	  .Default(OMPC_DEFAULT_VC_unknown);
+  return VC;
+}
+
 unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
                                           const LangOptions &LangOpts) {
   switch (Kind) {
@@ -92,6 +100,8 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
         .Default(OMPC_DIST_SCHEDULE_unknown);
   case OMPC_defaultmap:
     return llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_DEFAULT_VARIABLE_CATEGORY(Name)                                 \
+  .Case(#Name, static_cast<unsigned>(OMPC_DEFAULT_VC_##Name))
 #define OPENMP_DEFAULTMAP_KIND(Name)                                           \
   .Case(#Name, static_cast<unsigned>(OMPC_DEFAULTMAP_##Name))
 #define OPENMP_DEFAULTMAP_MODIFIER(Name)                                       \
