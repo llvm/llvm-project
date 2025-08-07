@@ -1010,8 +1010,6 @@ class VectorType;
     MachineBasicBlock *EmitLowered__dbzchk(MachineInstr &MI,
                                            MachineBasicBlock *MBB) const;
 
-    MachineBasicBlock *EmitLoweredCtSelect(MachineInstr &MI,
-                                           MachineBasicBlock *MBB) const;
     void addMVEVectorTypes(bool HasMVEFP);
     void addAllExtLoads(const MVT From, const MVT To, LegalizeAction Action);
     void setAllExpand(MVT VT);
