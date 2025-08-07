@@ -6,4 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef _CLC_NOT_CNFN
+_CLC_CNFN
+#endif
 _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(__CLC_GENTYPE x);
