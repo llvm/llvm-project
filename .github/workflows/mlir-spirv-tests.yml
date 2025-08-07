@@ -9,6 +9,7 @@ on:
     paths:
       - 'mlir/include/mlir/Dialect/SPIRV/**'
       - 'mlir/lib/Dialect/SPIRV/**'
+      - 'mlir/include/mlir/Target/SPIRV/**'
       - 'mlir/lib/Target/SPIRV/**'
       - 'mlir/test/Target/SPIRV/**'
       - '.github/workflows/mlir-spirv-tests.yml'
