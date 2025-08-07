@@ -126,6 +126,32 @@ class TestComputeProjects(unittest.TestCase):
         )
         self.assertEqual(env_variables["enable_cir"], "OFF")
 
+    def test_compiler_rt(self):
+        env_variables = compute_projects.get_env_variables(
+            ["compiler-rt/lib/asan/asan_allocator.cpp"], "Linux"
+        )
+        self.assertEqual(
+            env_variables["projects_to_build"],
+            "clang;lld",
+        )
+        self.assertEqual(
+            env_variables["project_check_targets"],
+            "",
+        )
+        self.assertEqual(env_variables["runtimes_to_build"], "compiler-rt")
+        self.assertEqual(
+            env_variables["runtimes_check_targets"],
+            "check-compiler-rt",
+        )
+        self.assertEqual(
+            env_variables["runtimes_check_targets_needs_reconfig"],
+            "",
+        )
+        self.assertEqual(
+            env_variables["enable_cir"],
+            "OFF",
+        )
+
     def test_cir(self):
         env_variables = compute_projects.get_env_variables(
             ["clang/lib/CIR/CMakeLists.txt"], "Linux"
