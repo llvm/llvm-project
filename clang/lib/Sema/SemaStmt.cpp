@@ -3274,6 +3274,7 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
   return new (Context) IndirectGotoStmt(GotoLoc, StarLoc, E);
 }
 
+// TODO: Also check for 'defer' here.
 static void CheckJumpOutOfSEHFinally(Sema &S, SourceLocation Loc,
                                      const Scope &DestScope) {
   if (!S.CurrentSEHFinally.empty() &&

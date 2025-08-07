@@ -6765,6 +6765,7 @@ def note_protected_by_objc_weak_init : Note<
   "jump bypasses initialization of __weak variable">;
 def note_protected_by_non_trivial_c_struct_init : Note<
   "jump bypasses initialization of variable of non-trivial C struct type">;
+def note_protected_by_defer_stmt : Note<"jump bypasses defer statement">;
 def note_enters_block_captures_cxx_obj : Note<
   "jump enters lifetime of block which captures a destructible C++ object">;
 def note_enters_block_captures_strong : Note<
@@ -6778,6 +6779,7 @@ def note_enters_compound_literal_scope : Note<
   "jump enters lifetime of a compound literal that is non-trivial to destruct">;
 def note_enters_statement_expression : Note<
   "jump enters a statement expression">;
+def note_enters_defer_stmt : Note<"jump enters a defer statement">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;
@@ -6823,6 +6825,7 @@ def note_exits_block_captures_non_trivial_c_struct : Note<
   "to destroy">;
 def note_exits_compound_literal_scope : Note<
   "jump exits lifetime of a compound literal that is non-trivial to destruct">;
+def note_exits_defer_stmt : Note<"jump exits a defer statement">;
 
 def err_func_returning_qualified_void : ExtWarn<
   "function cannot return qualified void type %0">,
