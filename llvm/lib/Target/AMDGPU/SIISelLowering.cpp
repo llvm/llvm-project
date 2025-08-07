@@ -6106,6 +6106,7 @@ bool SITargetLowering::isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
   case MVT::f64:
     return true;
   case MVT::f16:
+  case MVT::bf16:
     return Subtarget->has16BitInsts() && !denormalModeIsFlushAllF64F16(MF);
   default:
     break;
