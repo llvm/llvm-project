@@ -166,7 +166,6 @@ attributes #0 = { "target-cpu"="knl" }
 ; CHECK:     LV: Found uniform instruction:   {{%.*}} = icmp eq i32 {{%.*}}, 0
 ; CHECK-NOT: LV: Found uniform instruction:   {{%.*}} = load i32, ptr {{%.*}}, align 1
 ; CHECK:     LV: Found not uniform due to requiring predication:  {{%.*}} = load i32, ptr {{%.*}}, align 1
-; CHECK:     LV: Found scalar instruction:   {{%.*}} = getelementptr inbounds [3 x i32], ptr @a, i32 0, i32 {{%.*}}
 ;
 ;
 @a = internal constant [3 x i32] [i32 7, i32 7, i32 0], align 1
@@ -175,14 +174,33 @@ attributes #0 = { "target-cpu"="knl" }
 define void @PR40816() #1 {
 ; CHECK-LABEL: define void @PR40816(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    store i32 [[TMP0]], ptr @b, align 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 2
-; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[RETURN:.*]], label %[[FOR_BODY]]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    store i32 0, ptr @b, align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; CHECK:       [[PRED_STORE_IF1]]:
+; CHECK-NEXT:    store i32 1, ptr @b, align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; CHECK:       [[PRED_STORE_CONTINUE2]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[RETURN1:.*]]
+; CHECK:       [[PRED_STORE_IF3]]:
+; CHECK-NEXT:    store i32 2, ptr @b, align 1
+; CHECK-NEXT:    br label %[[RETURN1]]
+; CHECK:       [[RETURN1]]:
+; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; CHECK:       [[PRED_STORE_IF5]]:
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; CHECK:       [[PRED_STORE_CONTINUE6]]:
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[RETURN:.*]]
 ; CHECK:       [[RETURN]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -215,8 +233,9 @@ define void @PR40816() #1 {
 ; FORCE-NEXT:    [[TMP15:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; FORCE-NEXT:    br i1 [[TMP15]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; FORCE:       [[MIDDLE_BLOCK]]:
-; FORCE-NEXT:    br [[RETURN:label %.*]]
-; FORCE:       [[SCALAR_PH:.*:]]
+; FORCE-NEXT:    br label %[[RETURN:.*]]
+; FORCE:       [[RETURN]]:
+; FORCE-NEXT:    ret void
 ;
 entry:
   br label %for.body
