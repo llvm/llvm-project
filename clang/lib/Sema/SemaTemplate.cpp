@@ -367,7 +367,7 @@ bool Sema::DiagnoseUnknownTemplateName(const IdentifierInfo &II,
 
   // The code is missing a 'template' keyword prior to the dependent template
   // name.
-  NestedNameSpecifier *Qualifier = (NestedNameSpecifier *)SS->getScopeRep();
+  NestedNameSpecifier *Qualifier = SS->getScopeRep();
   SuggestedTemplate = TemplateTy::make(Context.getDependentTemplateName(
       {Qualifier, &II, /*HasTemplateKeyword=*/false}));
   Diag(IILoc, diag::err_template_kw_missing)
