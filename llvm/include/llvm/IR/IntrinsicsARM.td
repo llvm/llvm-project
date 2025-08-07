@@ -409,8 +409,8 @@ def int_arm_cmse_ttat : ClangBuiltin<"__builtin_arm_cmse_TTAT">,
 //===----------------------------------------------------------------------===//
 // HINT
 
+def int_arm_hint : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 // TODO: Add applicable default attributes.
-def int_arm_hint : Intrinsic<[], [llvm_i32_ty]>;
 def int_arm_dbg : Intrinsic<[], [llvm_i32_ty]>;
 
 //===----------------------------------------------------------------------===//
