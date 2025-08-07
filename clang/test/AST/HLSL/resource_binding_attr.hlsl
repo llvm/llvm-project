@@ -20,21 +20,21 @@ export float foo() {
   return a + b;
 }
 
-// CHECK: VarDecl {{.*}} UAV 'RWBuffer<float>':'hlsl::RWBuffer<float>' static
+// CHECK: VarDecl {{.*}} UAV 'RWBuffer<float>':'hlsl::RWBuffer<float>'
 // CHECK: HLSLResourceBindingAttr {{.*}} "u3" "space0"
 RWBuffer<float> UAV : register(u3);
 
-// CHECK: VarDecl {{.*}} UAV1 'RWBuffer<float>':'hlsl::RWBuffer<float>' static
+// CHECK: VarDecl {{.*}} UAV1 'RWBuffer<float>':'hlsl::RWBuffer<float>'
 // CHECK: HLSLResourceBindingAttr {{.*}} "u2" "space0"
-// CHECK: VarDecl {{.*}} UAV2 'RWBuffer<float>':'hlsl::RWBuffer<float>' static
+// CHECK: VarDecl {{.*}} UAV2 'RWBuffer<float>':'hlsl::RWBuffer<float>'
 // CHECK: HLSLResourceBindingAttr {{.*}} "u4" "space0"
 RWBuffer<float> UAV1 : register(u2), UAV2 : register(u4);
 
-// CHECK: VarDecl {{.*}} UAV3 'RWBuffer<float>':'hlsl::RWBuffer<float>' static
+// CHECK: VarDecl {{.*}} UAV3 'RWBuffer<float>':'hlsl::RWBuffer<float>'
 // CHECK: HLSLResourceBindingAttr {{.*}} "" "space5"
 RWBuffer<float> UAV3 : register(space5);
 
-// CHECK: VarDecl {{.*}} UAV_Array 'RWBuffer<float>[10]' static
+// CHECK: VarDecl {{.*}} UAV_Array 'RWBuffer<float>[10]'
 // CHECK: HLSLResourceBindingAttr {{.*}} "u10" "space6"
 RWBuffer<float> UAV_Array[10] : register(u10, space6);
 
@@ -73,6 +73,6 @@ cbuffer CB2 {
 }
 
 // Resource arrays should have implicit binding attribute added by SemaHLSL
-// CHECK: VarDecl {{.*}} SB 'StructuredBuffer<float>[10]' static
+// CHECK: VarDecl {{.*}} SB 'StructuredBuffer<float>[10]'
 // CHECK: HLSLResourceBindingAttr {{.*}} Implicit "" "0"
 StructuredBuffer<float> SB[10];
