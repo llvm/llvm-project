@@ -54,7 +54,7 @@ define internal void @caller_not_avx2() {
   ret void
 }
 
-; Should be inlined, as caller_avx4 is ABI compatible. The fact that we don't
+; Should be inlined, as caller_avx7 is ABI compatible. The fact that we don't
 ; know anything about callee_unknown doesn't matter, as it is the caller that
 ; determines the ABI as far as target features are concerned.
 define void @caller_avx6() "target-features"="+avx" {
