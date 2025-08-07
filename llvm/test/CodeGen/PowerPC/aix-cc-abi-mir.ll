@@ -37,9 +37,9 @@ define signext i8 @test_chars(i8 signext %c1, i8 signext %c2, i8 signext %c3, i8
   ; 32BIT: bb.0.entry:
   ; 32BIT-NEXT:   liveins: $r3, $r4, $r5, $r6
   ; 32BIT-NEXT: {{  $}}
-  ; 32BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r4
-  ; 32BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r5
-  ; 32BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r6
+  ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r4
+  ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r5
+  ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r6
   ; 32BIT-NEXT:   renamable $r3 = EXTSB killed renamable $r3
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
   ;
@@ -47,9 +47,9 @@ define signext i8 @test_chars(i8 signext %c1, i8 signext %c2, i8 signext %c3, i8
   ; 64BIT: bb.0.entry:
   ; 64BIT-NEXT:   liveins: $x3, $x4, $x5, $x6
   ; 64BIT-NEXT: {{  $}}
-  ; 64BIT-NEXT:   renamable $r3 = ADD4 renamable $r3, renamable $r4, implicit killed $x4, implicit killed $x3
-  ; 64BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, renamable $r5, implicit killed $x5
-  ; 64BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, renamable $r6, implicit killed $x6, implicit-def $x3
+  ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 renamable $r3, renamable $r4, implicit killed $x4, implicit killed $x3
+  ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, renamable $r5, implicit killed $x5
+  ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, renamable $r6, implicit killed $x6, implicit-def $x3
   ; 64BIT-NEXT:   renamable $x3 = EXTSB8 killed renamable $x3
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:
@@ -96,9 +96,9 @@ define signext i8 @test_chars_mix(i8 signext %c1, i8 zeroext %c2, i8 zeroext %c3
   ; 32BIT: bb.0.entry:
   ; 32BIT-NEXT:   liveins: $r3, $r4, $r5, $r6
   ; 32BIT-NEXT: {{  $}}
-  ; 32BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r4
-  ; 32BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r5
-  ; 32BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, killed renamable $r6
+  ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r4
+  ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r5
+  ; 32BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, killed renamable $r6
   ; 32BIT-NEXT:   renamable $r3 = EXTSB killed renamable $r3
   ; 32BIT-NEXT:   BLR implicit $lr, implicit $rm, implicit $r3
   ;
@@ -106,9 +106,9 @@ define signext i8 @test_chars_mix(i8 signext %c1, i8 zeroext %c2, i8 zeroext %c3
   ; 64BIT: bb.0.entry:
   ; 64BIT-NEXT:   liveins: $x3, $x4, $x5, $x6
   ; 64BIT-NEXT: {{  $}}
-  ; 64BIT-NEXT:   renamable $r3 = ADD4 renamable $r3, renamable $r4, implicit killed $x4, implicit killed $x3
-  ; 64BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, renamable $r5, implicit killed $x5
-  ; 64BIT-NEXT:   renamable $r3 = ADD4 killed renamable $r3, renamable $r6, implicit killed $x6, implicit-def $x3
+  ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 renamable $r3, renamable $r4, implicit killed $x4, implicit killed $x3
+  ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, renamable $r5, implicit killed $x5
+  ; 64BIT-NEXT:   renamable $r3 = nsw ADD4 killed renamable $r3, renamable $r6, implicit killed $x6, implicit-def $x3
   ; 64BIT-NEXT:   renamable $x3 = EXTSB8 killed renamable $x3
   ; 64BIT-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
 entry:

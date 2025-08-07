@@ -217,7 +217,15 @@ export class LLDBDapDescriptorFactory
   constructor(
     private readonly logger: vscode.LogOutputChannel,
     private logFilePath: LogFilePathProvider,
-  ) {}
+  ) {
+    vscode.commands.registerCommand(
+      "lldb-dap.createDebugAdapterDescriptor",
+      (
+        session: vscode.DebugSession,
+        executable: vscode.DebugAdapterExecutable | undefined,
+      ) => this.createDebugAdapterDescriptor(session, executable),
+    );
+  }
 
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,

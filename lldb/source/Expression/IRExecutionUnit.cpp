@@ -737,8 +737,9 @@ public:
       // If that didn't work, try the function.
       if (load_address == LLDB_INVALID_ADDRESS && candidate_sc.function) {
         Address addr = candidate_sc.function->GetAddress();
-        load_address = m_target.GetProcessSP() ? addr.GetLoadAddress(&m_target)
-                                               : addr.GetFileAddress();
+        load_address = m_target.GetProcessSP()
+                           ? addr.GetCallableLoadAddress(&m_target)
+                           : addr.GetFileAddress();
       }
 
       // We found a load address.

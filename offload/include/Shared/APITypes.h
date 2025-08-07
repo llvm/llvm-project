@@ -36,6 +36,7 @@ struct __tgt_device_image {
 struct __tgt_device_info {
   void *Context = nullptr;
   void *Device = nullptr;
+  void *Platform = nullptr;
 };
 
 /// This struct is a record of all the host code that may be offloaded to a

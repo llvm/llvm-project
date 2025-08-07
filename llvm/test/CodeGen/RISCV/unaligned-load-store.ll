@@ -204,18 +204,16 @@ define i64 @load_i64(ptr %p) {
 ; RV64IZBKB-NEXT:    lbu a2, 5(a0)
 ; RV64IZBKB-NEXT:    lbu a3, 6(a0)
 ; RV64IZBKB-NEXT:    lbu a4, 7(a0)
-; RV64IZBKB-NEXT:    lbu a5, 0(a0)
-; RV64IZBKB-NEXT:    lbu a6, 1(a0)
-; RV64IZBKB-NEXT:    lbu a7, 2(a0)
-; RV64IZBKB-NEXT:    lbu a0, 3(a0)
+; RV64IZBKB-NEXT:    lbu a5, 1(a0)
+; RV64IZBKB-NEXT:    lbu a6, 2(a0)
+; RV64IZBKB-NEXT:    lbu a7, 3(a0)
+; RV64IZBKB-NEXT:    lbu a0, 0(a0)
+; RV64IZBKB-NEXT:    packh a3, a3, a4
 ; RV64IZBKB-NEXT:    packh a1, a1, a2
-; RV64IZBKB-NEXT:    packh a2, a3, a4
-; RV64IZBKB-NEXT:    packh a3, a5, a6
-; RV64IZBKB-NEXT:    packh a0, a7, a0
-; RV64IZBKB-NEXT:    slli a2, a2, 16
-; RV64IZBKB-NEXT:    slli a0, a0, 16
-; RV64IZBKB-NEXT:    or a1, a2, a1
-; RV64IZBKB-NEXT:    or a0, a0, a3
+; RV64IZBKB-NEXT:    packh a2, a6, a7
+; RV64IZBKB-NEXT:    packh a0, a0, a5
+; RV64IZBKB-NEXT:    packw a1, a1, a3
+; RV64IZBKB-NEXT:    packw a0, a0, a2
 ; RV64IZBKB-NEXT:    pack a0, a0, a1
 ; RV64IZBKB-NEXT:    ret
 ;

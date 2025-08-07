@@ -4898,7 +4898,6 @@ private:
 
     // device = device
     if (lhsIsDevice && rhsIsDevice) {
-      assert(rhs.isVariable() && "CUDA Fortran assignment rhs is not legal");
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceDevice);
       cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,

@@ -48,8 +48,8 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[RED_NEXT]] = add i32 [[RED]], [[VAL]]
@@ -101,8 +101,8 @@ define i32 @add_reduction_i32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-IN-LOOP-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-IN-LOOP:       while.body:
-; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-IN-LOOP-NEXT:    [[RED:%.*]] = phi i32 [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-IN-LOOP-NEXT:    [[RED:%.*]] = phi i32 [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-IN-LOOP-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-IN-LOOP-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-IN-LOOP-NEXT:    [[RED_NEXT]] = add i32 [[RED]], [[VAL]]
@@ -171,8 +171,8 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK:       while.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[VAL:%.*]] = load float, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[RED_NEXT]] = fadd float [[RED]], [[VAL]]
@@ -223,8 +223,8 @@ define float @add_reduction_f32(ptr %ptr, i64 %n) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-IN-LOOP-NEXT:    br label [[WHILE_BODY:%.*]]
 ; CHECK-IN-LOOP:       while.body:
-; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-IN-LOOP-NEXT:    [[RED:%.*]] = phi float [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-IN-LOOP-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[WHILE_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-IN-LOOP-NEXT:    [[RED:%.*]] = phi float [ [[RED_NEXT:%.*]], [[WHILE_BODY]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
 ; CHECK-IN-LOOP-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[PTR]], i64 [[INDEX]]
 ; CHECK-IN-LOOP-NEXT:    [[VAL:%.*]] = load float, ptr [[GEP]], align 4
 ; CHECK-IN-LOOP-NEXT:    [[RED_NEXT]] = fadd float [[RED]], [[VAL]]
@@ -298,8 +298,8 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 7, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RES:%.*]], [[FOR_INC]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i32 [ 7, [[SCALAR_PH]] ], [ [[RES:%.*]], [[FOR_INC]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP26]], 5
@@ -362,8 +362,8 @@ define i32 @cond_xor_reduction(ptr noalias %a, ptr noalias %cond, i64 %N) #0 {
 ; CHECK-IN-LOOP-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 7, [[ENTRY]] ]
 ; CHECK-IN-LOOP-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-IN-LOOP:       for.body:
-; CHECK-IN-LOOP-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-IN-LOOP-NEXT:    [[RDX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RES:%.*]], [[FOR_INC]] ]
+; CHECK-IN-LOOP-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-IN-LOOP-NEXT:    [[RDX:%.*]] = phi i32 [ 7, [[SCALAR_PH]] ], [ [[RES:%.*]], [[FOR_INC]] ]
 ; CHECK-IN-LOOP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[COND]], i64 [[IV]]
 ; CHECK-IN-LOOP-NEXT:    [[TMP24:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-IN-LOOP-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP24]], 5

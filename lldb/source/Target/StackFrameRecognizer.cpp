@@ -152,7 +152,7 @@ StackFrameRecognizerManager::GetRecognizerForFrame(StackFrameSP frame) {
   Address start_addr = symbol->GetAddress();
   Address current_addr = frame->GetFrameCodeAddress();
 
-  for (auto entry : m_recognizers) {
+  for (const auto &entry : m_recognizers) {
     if (!entry.enabled)
       continue;
 

@@ -203,8 +203,10 @@ LTOModule::makeLTOModule(MemoryBufferRef Buffer, const TargetOptions &options,
   // find machine architecture for this module
   std::string errMsg;
   const Target *march = TargetRegistry::lookupTarget(Triple, errMsg);
-  if (!march)
+  if (!march) {
+    Context.emitError(errMsg);
     return make_error_code(object::object_error::arch_not_found);
+  }
 
   // construct LTOModule, hand over ownership of module and target
   SubtargetFeatures Features;

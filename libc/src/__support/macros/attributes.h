@@ -28,7 +28,32 @@
 #define LIBC_INLINE_ASM __asm__ __volatile__
 #define LIBC_UNUSED __attribute__((unused))
 
-#ifdef LIBC_TARGET_ARCH_IS_GPU
+// Uses the platform specific specialization
+#define LIBC_THREAD_MODE_PLATFORM 0
+
+// Mutex guards nothing, used in single-threaded implementations
+#define LIBC_THREAD_MODE_SINGLE 1
+
+// Vendor provides implementation
+#define LIBC_THREAD_MODE_EXTERNAL 2
+
+// libcxx doesn't define LIBC_THREAD_MODE, unless that is passed in the command
+// line in the CMake invocation. This defaults to the original implementation
+// (before changes in https://github.com/llvm/llvm-project/pull/145358)
+#ifndef LIBC_THREAD_MODE
+#define LIBC_THREAD_MODE LIBC_THREAD_MODE_PLATFORM
+#endif // LIBC_THREAD_MODE
+
+#if LIBC_THREAD_MODE != LIBC_THREAD_MODE_PLATFORM &&                           \
+    LIBC_THREAD_MODE != LIBC_THREAD_MODE_SINGLE &&                             \
+    LIBC_THREAD_MODE != LIBC_THREAD_MODE_EXTERNAL
+#error LIBC_THREAD_MODE must be one of the following values: \
+LIBC_THREAD_MODE_PLATFORM, \
+LIBC_THREAD_MODE_SINGLE, \
+LIBC_THREAD_MODE_EXTERNAL.
+#endif
+
+#if LIBC_THREAD_MODE == LIBC_THREAD_MODE_SINGLE
 #define LIBC_THREAD_LOCAL
 #else
 #define LIBC_THREAD_LOCAL thread_local

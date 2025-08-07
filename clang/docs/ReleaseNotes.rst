@@ -172,6 +172,8 @@ Bug Fixes to Attribute Support
 
 - ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
   (#GH141504)
+- Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
+  ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -180,6 +182,8 @@ Bug Fixes to C++ Support
 - Fix a crash when deleting a pointer to an incomplete array (#GH150359).
 - Fix an assertion failure when expression in assumption attribute
   (``[[assume(expr)]]``) creates temporary objects.
+- Fix the dynamic_cast to final class optimization to correctly handle
+  casts that are guaranteed to fail (#GH137518).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

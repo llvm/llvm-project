@@ -42,7 +42,8 @@ namespace llvm {
 class MachineDominatorTree;
 // Implementation in LoopInfoImpl.h
 class MachineLoop;
-extern template class LoopBase<MachineBasicBlock, MachineLoop>;
+extern template class LLVM_TEMPLATE_ABI
+    LoopBase<MachineBasicBlock, MachineLoop>;
 
 class MachineLoop : public LoopBase<MachineBasicBlock, MachineLoop> {
 public:

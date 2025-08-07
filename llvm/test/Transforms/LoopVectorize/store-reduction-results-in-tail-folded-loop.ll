@@ -47,8 +47,8 @@ define void @pr75298_store_reduction_value_in_folded_loop(i64 %iv.start) optsize
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[PH]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_START]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr @c, align 4
 ; CHECK-NEXT:    [[RED_NEXT]] = xor i32 [[RED]], [[L]]
 ; CHECK-NEXT:    store i32 [[RED_NEXT]], ptr @a, align 4

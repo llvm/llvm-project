@@ -459,7 +459,7 @@ define void @latch_branch_cost(ptr %dst) {
 ; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
 ; PRED-NEXT:    store i8 0, ptr [[GEP]], align 1
 ; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -738,8 +738,8 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; PRED-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[DST]], %[[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[L:%.*]] = load i16, ptr [[SRC]], align 2
 ; PRED-NEXT:    [[O:%.*]] = or i16 [[L]], 1
 ; PRED-NEXT:    [[CONV:%.*]] = uitofp i16 [[O]] to double
@@ -865,7 +865,7 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; DEFAULT-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; DEFAULT-NEXT:    br label %[[LOOP:.*]]
 ; DEFAULT:       [[LOOP]]:
-; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; DEFAULT-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; DEFAULT-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i8
 ; DEFAULT-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
 ; DEFAULT-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
@@ -967,7 +967,7 @@ define void @low_trip_count_fold_tail_scalarized_store(ptr %dst) {
 ; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i8
 ; PRED-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[DST]], i64 [[IV]]
 ; PRED-NEXT:    store i8 [[IV_TRUNC]], ptr [[GEP]], align 1
@@ -1554,7 +1554,7 @@ define void @redundant_branch_and_tail_folding(ptr %dst, i1 %c) {
 ; PRED-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; PRED:       [[LOOP_HEADER]]:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; PRED-NEXT:    br i1 [[C]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
 ; PRED:       [[THEN]]:
 ; PRED-NEXT:    br label %[[LOOP_LATCH]]

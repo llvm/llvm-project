@@ -255,12 +255,11 @@ define i64 @scalar_i64_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 define i16 @scalar_i16_signed_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; CHECK-LABEL: scalar_i16_signed_reg_reg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxth w9, w1
-; CHECK-NEXT:    sxth w10, w0
+; CHECK-NEXT:    sxth w9, w0
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    subs w9, w10, w9
-; CHECK-NEXT:    cneg w9, w9, mi
+; CHECK-NEXT:    subs w9, w9, w1, sxth
 ; CHECK-NEXT:    cneg w8, w8, le
+; CHECK-NEXT:    cneg w9, w9, mi
 ; CHECK-NEXT:    lsr w9, w9, #1
 ; CHECK-NEXT:    madd w0, w9, w8, w0
 ; CHECK-NEXT:    ret
@@ -278,12 +277,11 @@ define i16 @scalar_i16_signed_reg_reg(i16 %a1, i16 %a2) nounwind {
 define i16 @scalar_i16_unsigned_reg_reg(i16 %a1, i16 %a2) nounwind {
 ; CHECK-LABEL: scalar_i16_unsigned_reg_reg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w9, w1, #0xffff
-; CHECK-NEXT:    and w10, w0, #0xffff
+; CHECK-NEXT:    and w9, w0, #0xffff
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    subs w9, w10, w9
-; CHECK-NEXT:    cneg w9, w9, mi
+; CHECK-NEXT:    subs w9, w9, w1, uxth
 ; CHECK-NEXT:    cneg w8, w8, ls
+; CHECK-NEXT:    cneg w9, w9, mi
 ; CHECK-NEXT:    lsr w9, w9, #1
 ; CHECK-NEXT:    madd w0, w9, w8, w0
 ; CHECK-NEXT:    ret
@@ -303,14 +301,13 @@ define i16 @scalar_i16_unsigned_reg_reg(i16 %a1, i16 %a2) nounwind {
 define i16 @scalar_i16_signed_mem_reg(ptr %a1_addr, i16 %a2) nounwind {
 ; CHECK-LABEL: scalar_i16_signed_mem_reg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxth w9, w1
-; CHECK-NEXT:    ldrsh w10, [x0]
+; CHECK-NEXT:    ldrsh w9, [x0]
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    subs w9, w10, w9
-; CHECK-NEXT:    cneg w9, w9, mi
+; CHECK-NEXT:    subs w10, w9, w1, sxth
 ; CHECK-NEXT:    cneg w8, w8, le
-; CHECK-NEXT:    lsr w9, w9, #1
-; CHECK-NEXT:    madd w0, w9, w8, w10
+; CHECK-NEXT:    cneg w10, w10, mi
+; CHECK-NEXT:    lsr w10, w10, #1
+; CHECK-NEXT:    madd w0, w10, w8, w9
 ; CHECK-NEXT:    ret
   %a1 = load i16, ptr %a1_addr
   %t3 = icmp sgt i16 %a1, %a2 ; signed
@@ -382,12 +379,11 @@ define i16 @scalar_i16_signed_mem_mem(ptr %a1_addr, ptr %a2_addr) nounwind {
 define i8 @scalar_i8_signed_reg_reg(i8 %a1, i8 %a2) nounwind {
 ; CHECK-LABEL: scalar_i8_signed_reg_reg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxtb w9, w1
-; CHECK-NEXT:    sxtb w10, w0
+; CHECK-NEXT:    sxtb w9, w0
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    subs w9, w10, w9
-; CHECK-NEXT:    cneg w9, w9, mi
+; CHECK-NEXT:    subs w9, w9, w1, sxtb
 ; CHECK-NEXT:    cneg w8, w8, le
+; CHECK-NEXT:    cneg w9, w9, mi
 ; CHECK-NEXT:    lsr w9, w9, #1
 ; CHECK-NEXT:    madd w0, w9, w8, w0
 ; CHECK-NEXT:    ret
@@ -405,12 +401,11 @@ define i8 @scalar_i8_signed_reg_reg(i8 %a1, i8 %a2) nounwind {
 define i8 @scalar_i8_unsigned_reg_reg(i8 %a1, i8 %a2) nounwind {
 ; CHECK-LABEL: scalar_i8_unsigned_reg_reg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w9, w1, #0xff
-; CHECK-NEXT:    and w10, w0, #0xff
+; CHECK-NEXT:    and w9, w0, #0xff
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    subs w9, w10, w9
-; CHECK-NEXT:    cneg w9, w9, mi
+; CHECK-NEXT:    subs w9, w9, w1, uxtb
 ; CHECK-NEXT:    cneg w8, w8, ls
+; CHECK-NEXT:    cneg w9, w9, mi
 ; CHECK-NEXT:    lsr w9, w9, #1
 ; CHECK-NEXT:    madd w0, w9, w8, w0
 ; CHECK-NEXT:    ret
@@ -430,14 +425,13 @@ define i8 @scalar_i8_unsigned_reg_reg(i8 %a1, i8 %a2) nounwind {
 define i8 @scalar_i8_signed_mem_reg(ptr %a1_addr, i8 %a2) nounwind {
 ; CHECK-LABEL: scalar_i8_signed_mem_reg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxtb w9, w1
-; CHECK-NEXT:    ldrsb w10, [x0]
+; CHECK-NEXT:    ldrsb w9, [x0]
 ; CHECK-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-NEXT:    subs w9, w10, w9
-; CHECK-NEXT:    cneg w9, w9, mi
+; CHECK-NEXT:    subs w10, w9, w1, sxtb
 ; CHECK-NEXT:    cneg w8, w8, le
-; CHECK-NEXT:    lsr w9, w9, #1
-; CHECK-NEXT:    madd w0, w9, w8, w10
+; CHECK-NEXT:    cneg w10, w10, mi
+; CHECK-NEXT:    lsr w10, w10, #1
+; CHECK-NEXT:    madd w0, w10, w8, w9
 ; CHECK-NEXT:    ret
   %a1 = load i8, ptr %a1_addr
   %t3 = icmp sgt i8 %a1, %a2 ; signed

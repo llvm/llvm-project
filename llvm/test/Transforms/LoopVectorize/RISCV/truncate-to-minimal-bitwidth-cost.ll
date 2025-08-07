@@ -179,7 +179,7 @@ define void @truncate_to_i1_used_by_branch(i8 %x, ptr %dst) #0 {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[F_039:%.*]] = phi i8 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[F_039:%.*]] = phi i8 [ 0, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i8 23, [[X]]
 ; CHECK-NEXT:    [[EXTRACT_T:%.*]] = trunc i8 [[TMP4]] to i1
 ; CHECK-NEXT:    br i1 [[EXTRACT_T]], label %[[THEN:.*]], label %[[LOOP_LATCH]]

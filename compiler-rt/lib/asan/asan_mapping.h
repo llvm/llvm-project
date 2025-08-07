@@ -83,18 +83,29 @@
 // || `[0x0000000000, 0x0d5554ffff]` || LowMem     ||
 //
 // Default Linux/AArch64 (39-bit VMA) mapping:
-// || `[0x2000000000, 0x7fffffffff]` || highmem    ||
-// || `[0x1400000000, 0x1fffffffff]` || highshadow ||
-// || `[0x1200000000, 0x13ffffffff]` || shadowgap  ||
-// || `[0x1000000000, 0x11ffffffff]` || lowshadow  ||
-// || `[0x0000000000, 0x0fffffffff]` || lowmem     ||
+// TODO: this mapping is ok, but the allocator size is too large on non-Android
+//       AArch64 platforms (see asan_allocator.h)
+// || `[0x2000000000, 0x7fffffffff]` || highmem    || 384GB
+// || `[0x1400000000, 0x1fffffffff]` || highshadow || 48GB
+// || `[0x1200000000, 0x13ffffffff]` || shadowgap  || 8GB
+// || `[0x1000000000, 0x11ffffffff]` || lowshadow  || 8GB
+// || `[0x0000000000, 0x0fffffffff]` || lowmem     || 64GB
 //
 // Default Linux/AArch64 (42-bit VMA) mapping:
-// || `[0x10000000000, 0x3ffffffffff]` || highmem    ||
-// || `[0x0a000000000, 0x0ffffffffff]` || highshadow ||
-// || `[0x09000000000, 0x09fffffffff]` || shadowgap  ||
-// || `[0x08000000000, 0x08fffffffff]` || lowshadow  ||
-// || `[0x00000000000, 0x07fffffffff]` || lowmem     ||
+// TODO: this mapping is ok, but the allocator size is too large on non-Android
+//       AArch64 platforms (see asan_allocator.h)
+// || `[0x09000000000, 0x03ffffffffff]` || highmem    || 3520GB
+// || `[0x02200000000, 0x008fffffffff]` || highshadow || 440GB
+// || `[0x01200000000, 0x0021ffffffff]` || shadowgap  || 64GB
+// || `[0x01000000000, 0x0011ffffffff]` || lowshadow  || 8GB
+// || `[0x00000000000, 0x000fffffffff]` || lowmem     || 64GB
+//
+// Default Linux/AArch64 (48-bit VMA) mapping:
+// || `[0x201000000000, 0xffffffffffff]` || HighMem    || 229312GB
+// || `[0x041200000000, 0x200fffffffff]` || HighShadow || 28664GB
+// || `[0x001200000000, 0x0411ffffffff]` || ShadowGap  || 4096GB
+// || `[0x001000000000, 0x0011ffffffff]` || LowShadow  || 8GB
+// || `[0x000000000000, 0x000fffffffff]` || LowMem     || 64GB
 //
 // Default Linux/S390 mapping:
 // || `[0x30000000, 0x7fffffff]` || HighMem    ||

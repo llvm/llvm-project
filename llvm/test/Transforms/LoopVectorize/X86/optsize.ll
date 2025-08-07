@@ -35,7 +35,7 @@ define i32 @foo_optsize() #0 {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
@@ -72,7 +72,7 @@ define i32 @foo_optsize() #0 {
 ; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; AUTOVF-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTOVF:       for.body:
-; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; AUTOVF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
 ; AUTOVF-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; AUTOVF-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
@@ -131,7 +131,7 @@ define i32 @foo_minsize() #1 {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
@@ -168,7 +168,7 @@ define i32 @foo_minsize() #1 {
 ; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; AUTOVF-NEXT:    br label [[FOR_BODY:%.*]]
 ; AUTOVF:       for.body:
-; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; AUTOVF-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; AUTOVF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr @tab, i32 0, i32 [[I_08]]
 ; AUTOVF-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; AUTOVF-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP7]], 0
@@ -379,7 +379,7 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[START]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i64 -72
 ; CHECK-NEXT:    store ptr null, ptr [[PTR_IV]], align 8
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]
@@ -423,7 +423,7 @@ define void @tail_folded_store_avx512(ptr %start, ptr %end) #3 {
 ; AUTOVF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[START]], [[ENTRY:%.*]] ]
 ; AUTOVF-NEXT:    br label [[LOOP:%.*]]
 ; AUTOVF:       loop:
-; AUTOVF-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
+; AUTOVF-NEXT:    [[PTR_IV:%.*]] = phi ptr [ [[START]], [[SCALAR_PH]] ], [ [[PTR_IV_NEXT:%.*]], [[LOOP]] ]
 ; AUTOVF-NEXT:    [[PTR_IV_NEXT]] = getelementptr nusw i8, ptr [[PTR_IV]], i64 -72
 ; AUTOVF-NEXT:    store ptr null, ptr [[PTR_IV]], align 8
 ; AUTOVF-NEXT:    [[EC:%.*]] = icmp eq ptr [[PTR_IV_NEXT]], [[END]]

@@ -29,8 +29,8 @@ define float @pr70988() {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[RDX_NEXT]] = fadd contract float [[RDX]], 1.000000e+00
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[INDEX_NEXT]], 1021
@@ -64,8 +64,8 @@ define float @pr70988() {
 ; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ALM-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-ALM:       loop:
-; CHECK-ALM-NEXT:    [[INDEX:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
-; CHECK-ALM-NEXT:    [[RDX:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-ALM-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INDEX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-ALM-NEXT:    [[RDX:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-ALM-NEXT:    [[RDX_NEXT]] = fadd contract float [[RDX]], 1.000000e+00
 ; CHECK-ALM-NEXT:    [[INDEX_NEXT]] = add nuw nsw i32 [[INDEX]], 1
 ; CHECK-ALM-NEXT:    [[COND:%.*]] = icmp ult i32 [[INDEX_NEXT]], 1021
@@ -133,8 +133,8 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NARROW:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[NARROW:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[NARROW]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[SRC]], i32 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
@@ -185,8 +185,8 @@ define float @pr72720reduction_using_active_lane_mask(ptr %src) {
 ; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ALM-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-ALM:       loop:
-; CHECK-ALM-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NARROW:%.*]], [[LOOP]] ]
-; CHECK-ALM-NEXT:    [[RDX:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], [[LOOP]] ]
+; CHECK-ALM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[NARROW:%.*]], [[LOOP]] ]
+; CHECK-ALM-NEXT:    [[RDX:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[RDX_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-ALM-NEXT:    [[NARROW]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-ALM-NEXT:    [[GEP:%.*]] = getelementptr float, ptr [[SRC]], i32 [[IV]]
 ; CHECK-ALM-NEXT:    [[L:%.*]] = load float, ptr [[GEP]], align 4
@@ -243,8 +243,8 @@ define float @fadd_reduction_with_live_in(float %inc) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SUM_NEXT]] = fadd float [[SUM]], [[INC]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1000
@@ -279,8 +279,8 @@ define float @fadd_reduction_with_live_in(float %inc) {
 ; CHECK-ALM-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ALM-NEXT:    br label [[LOOP:%.*]]
 ; CHECK-ALM:       loop:
-; CHECK-ALM-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-ALM-NEXT:    [[SUM:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
+; CHECK-ALM-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-ALM-NEXT:    [[SUM:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-ALM-NEXT:    [[SUM_NEXT]] = fadd float [[SUM]], [[INC]]
 ; CHECK-ALM-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
 ; CHECK-ALM-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV]], 1000

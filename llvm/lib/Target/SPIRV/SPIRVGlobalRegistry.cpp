@@ -87,7 +87,7 @@ storageClassRequiresExplictLayout(SPIRV::StorageClass::StorageClass SC) {
 }
 
 SPIRVGlobalRegistry::SPIRVGlobalRegistry(unsigned PointerSize)
-    : PointerSize(PointerSize), Bound(0) {}
+    : PointerSize(PointerSize), Bound(0), CurMF(nullptr) {}
 
 SPIRVType *SPIRVGlobalRegistry::assignIntTypeToVReg(unsigned BitWidth,
                                                     Register VReg,
@@ -474,8 +474,8 @@ Register SPIRVGlobalRegistry::getOrCreateBaseRegister(
   }
   if (Type->getOpcode() == SPIRV::OpTypeFloat) {
     SPIRVType *SpvBaseType = getOrCreateSPIRVFloatType(BitWidth, I, TII);
-    return getOrCreateConstFP(dyn_cast<ConstantFP>(Val)->getValue(), I,
-                              SpvBaseType, TII, ZeroAsNull);
+    return getOrCreateConstFP(cast<ConstantFP>(Val)->getValue(), I, SpvBaseType,
+                              TII, ZeroAsNull);
   }
   assert(Type->getOpcode() == SPIRV::OpTypeInt);
   SPIRVType *SpvBaseType = getOrCreateSPIRVIntegerType(BitWidth, I, TII);
@@ -1069,7 +1069,8 @@ SPIRVType *SPIRVGlobalRegistry::createSPIRVType(
                                    MIRBuilder);
       };
     }
-    return getOpTypeStruct(SType, MIRBuilder, AccQual, Decorator, EmitIR);
+    return getOpTypeStruct(SType, MIRBuilder, AccQual, std::move(Decorator),
+                           EmitIR);
   }
   if (auto FType = dyn_cast<FunctionType>(Ty)) {
     SPIRVType *RetTy = findSPIRVType(FType->getReturnType(), MIRBuilder,
@@ -1406,8 +1407,9 @@ SPIRVType *SPIRVGlobalRegistry::getOrCreateLayoutType(
   // We need a new OpTypeStruct instruction because decorations will be
   // different from a struct with an explicit layout created from a different
   // entry point.
-  SPIRVType *SPIRVStructType = getOpTypeStruct(
-      ST, MIRBuilder, SPIRV::AccessQualifier::None, Decorator, EmitIr);
+  SPIRVType *SPIRVStructType =
+      getOpTypeStruct(ST, MIRBuilder, SPIRV::AccessQualifier::None,
+                      std::move(Decorator), EmitIr);
   add(Key, SPIRVStructType);
   return SPIRVStructType;
 }

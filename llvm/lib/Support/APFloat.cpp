@@ -4949,6 +4949,21 @@ DoubleAPFloat &DoubleAPFloat::operator=(const DoubleAPFloat &RHS) {
   return *this;
 }
 
+// Returns a result such that:
+// 1. abs(Lo) <= ulp(Hi)/2
+// 2. Hi == RTNE(Hi + Lo)
+// 3. Hi + Lo == X + Y
+//
+// Requires that log2(X) >= log2(Y).
+static std::pair<APFloat, APFloat> fastTwoSum(APFloat X, APFloat Y) {
+  if (!X.isFinite())
+    return {X, APFloat::getZero(X.getSemantics(), /*Negative=*/false)};
+  APFloat Hi = X + Y;
+  APFloat Delta = Hi - X;
+  APFloat Lo = Y - Delta;
+  return {Hi, Lo};
+}
+
 // Implement addition, subtraction, multiplication and division based on:
 // "Software for Doubled-Precision Floating-Point Computations",
 // by Seppo Linnainmaa, ACM TOMS vol 7 no 3, September 1981, pages 272-283.
@@ -5218,10 +5233,78 @@ DoubleAPFloat::fusedMultiplyAdd(const DoubleAPFloat &Multiplicand,
 
 APFloat::opStatus DoubleAPFloat::roundToIntegral(APFloat::roundingMode RM) {
   assert(Semantics == &semPPCDoubleDouble && "Unexpected Semantics");
-  APFloat Tmp(semPPCDoubleDoubleLegacy, bitcastToAPInt());
-  auto Ret = Tmp.roundToIntegral(RM);
-  *this = DoubleAPFloat(semPPCDoubleDouble, Tmp.bitcastToAPInt());
-  return Ret;
+  const APFloat &Hi = getFirst();
+  const APFloat &Lo = getSecond();
+
+  APFloat RoundedHi = Hi;
+  const opStatus HiStatus = RoundedHi.roundToIntegral(RM);
+
+  // We can reduce the problem to just the high part if the input:
+  // 1. Represents a non-finite value.
+  // 2. Has a component which is zero.
+  if (!Hi.isFiniteNonZero() || Lo.isZero()) {
+    Floats[0] = std::move(RoundedHi);
+    Floats[1].makeZero(/*Neg=*/false);
+    return HiStatus;
+  }
+
+  // Adjust `Rounded` in the direction of `TieBreaker` if `ToRound` was at a
+  // halfway point.
+  auto RoundToNearestHelper = [](APFloat ToRound, APFloat Rounded,
+                                 APFloat TieBreaker) {
+    // RoundingError tells us which direction we rounded:
+    //   - RoundingError > 0: we rounded up.
+    //   - RoundingError < 0: we rounded down.
+    // Sterbenz' lemma ensures that RoundingError is exact.
+    const APFloat RoundingError = Rounded - ToRound;
+    if (TieBreaker.isNonZero() &&
+        TieBreaker.isNegative() != RoundingError.isNegative() &&
+        abs(RoundingError).isExactlyValue(0.5))
+      Rounded.add(
+          APFloat::getOne(Rounded.getSemantics(), TieBreaker.isNegative()),
+          rmNearestTiesToEven);
+    return Rounded;
+  };
+
+  // Case 1: Hi is not an integer.
+  // Special cases are for rounding modes that are sensitive to ties.
+  if (RoundedHi != Hi) {
+    // We need to consider the case where Hi was between two integers and the
+    // rounding mode broke the tie when, in fact, Lo may have had a different
+    // sign than Hi.
+    if (RM == rmNearestTiesToAway || RM == rmNearestTiesToEven)
+      RoundedHi = RoundToNearestHelper(Hi, RoundedHi, Lo);
+
+    Floats[0] = std::move(RoundedHi);
+    Floats[1].makeZero(/*Neg=*/false);
+    return HiStatus;
+  }
+
+  // Case 2: Hi is an integer.
+  // Special cases are for rounding modes which are rounding towards or away from zero.
+  RoundingMode LoRoundingMode;
+  if (RM == rmTowardZero)
+    // When our input is positive, we want the Lo component rounded toward
+    // negative infinity to get the smallest result magnitude. Likewise,
+    // negative inputs want the Lo component rounded toward positive infinity.
+    LoRoundingMode = isNegative() ? rmTowardPositive : rmTowardNegative;
+  else
+    LoRoundingMode = RM;
+
+  APFloat RoundedLo = Lo;
+  const opStatus LoStatus = RoundedLo.roundToIntegral(LoRoundingMode);
+  if (LoRoundingMode == rmNearestTiesToAway)
+    // We need to consider the case where Lo was between two integers and the
+    // rounding mode broke the tie when, in fact, Hi may have had a different
+    // sign than Lo.
+    RoundedLo = RoundToNearestHelper(Lo, RoundedLo, Hi);
+
+  // We must ensure that the final result has no overlap between the two APFloat values.
+  std::tie(RoundedHi, RoundedLo) = fastTwoSum(RoundedHi, RoundedLo);
+
+  Floats[0] = std::move(RoundedHi);
+  Floats[1] = std::move(RoundedLo);
+  return LoStatus;
 }
 
 void DoubleAPFloat::changeSign() {

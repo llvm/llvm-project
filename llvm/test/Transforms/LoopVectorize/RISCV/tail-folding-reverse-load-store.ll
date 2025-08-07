@@ -57,8 +57,8 @@ define void @reverse_load_store(i64 %startval, ptr noalias %ptr, ptr noalias %pt
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[STARTVAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ADD]] = add i64 [[ADD_PHI]], -1
 ; IF-EVL-NEXT:    [[GEPL:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 [[ADD]]
 ; IF-EVL-NEXT:    [[TMP:%.*]] = load i32, ptr [[GEPL]], align 4
@@ -205,8 +205,8 @@ define void @reverse_load_store_masked(i64 %startval, ptr noalias %ptr, ptr noal
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
-; IF-EVL-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC]] ]
+; IF-EVL-NEXT:    [[ADD_PHI:%.*]] = phi i64 [ [[STARTVAL]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_INC:%.*]] ]
+; IF-EVL-NEXT:    [[I:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_INC]] ]
 ; IF-EVL-NEXT:    [[ADD]] = add i64 [[ADD_PHI]], -1
 ; IF-EVL-NEXT:    [[GEPL:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i32 [[I]]
 ; IF-EVL-NEXT:    [[TMP:%.*]] = load i32, ptr [[GEPL]], align 4
@@ -388,7 +388,7 @@ define void @multiple_reverse_vector_pointer(ptr noalias %a, ptr noalias %b, ptr
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1024, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 1024, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; IF-EVL-NEXT:    [[GEP_A:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[X:%.*]] = load i8, ptr [[GEP_A]], align 1
 ; IF-EVL-NEXT:    [[GEP_B:%.*]] = getelementptr i8, ptr [[B]], i8 [[X]]

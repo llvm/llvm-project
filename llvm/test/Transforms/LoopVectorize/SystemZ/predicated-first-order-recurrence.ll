@@ -69,8 +69,8 @@ define void @func_21() {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[LV:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[LV:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[A_PTR:%.*]] = getelementptr inbounds [5 x i32], ptr @A, i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[LV]] = load i32, ptr [[A_PTR]], align 4
 ; CHECK-NEXT:    [[B_PTR:%.*]] = getelementptr inbounds [5 x i32], ptr @B, i64 0, i64 [[INDVARS_IV]]

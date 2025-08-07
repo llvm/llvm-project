@@ -2,7 +2,7 @@
 // RUN: rm -rf %t.dir/clang-tidy/export-relpath
 // RUN: mkdir -p %t.dir/clang-tidy/export-relpath/subdir
 // RUN: cp %s %t.dir/clang-tidy/export-relpath/subdir/source.cpp
-// RUN: echo '[{ "directory": "%/t.dir/clang-tidy/export-relpath/subdir", "command": "clang++ source.cpp", "file": "%/T/clang-tidy/export-relpath/subdir/source.cpp"}]' > %t.dir/clang-tidy/export-relpath/subdir/compile_commands.json
+// RUN: echo '[{ "directory": "%/t.dir/clang-tidy/export-relpath/subdir", "command": "clang++ source.cpp", "file": "%/t.dir/clang-tidy/export-relpath/subdir/source.cpp"}]' > %t.dir/clang-tidy/export-relpath/subdir/compile_commands.json
 //
 // Check that running clang-tidy in './subdir' and storing results
 // in './fixes.yaml' works as expected.

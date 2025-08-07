@@ -44,7 +44,7 @@ define void @test(ptr %p) {
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; IF-EVL-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 8
 ; IF-EVL-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 200
@@ -375,7 +375,7 @@ define void @trivial_due_max_vscale(ptr %p) {
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; IF-EVL-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
 ; IF-EVL-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 8192
@@ -483,7 +483,7 @@ define void @no_high_lmul_or_interleave(ptr %p) {
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; IF-EVL-NEXT:    br label [[LOOP:%.*]]
 ; IF-EVL:       loop:
-; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; IF-EVL-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; IF-EVL-NEXT:    [[A1:%.*]] = getelementptr i64, ptr [[P]], i64 [[IV]]
 ; IF-EVL-NEXT:    [[V:%.*]] = load i64, ptr [[A1]], align 32
 ; IF-EVL-NEXT:    [[OFFSET:%.*]] = add i64 [[IV]], 1024

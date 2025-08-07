@@ -139,9 +139,8 @@ define <2 x ptr> @test_v2p0(<2 x ptr> %a, <2 x ptr> %b) {
 define <16 x i8> @reverse_vector_s8x16b(<16 x i8> noundef %x) {
 ; CHECK-SD-LABEL: reverse_vector_s8x16b:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev64 v1.16b, v0.16b
-; CHECK-SD-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: reverse_vector_s8x16b:
@@ -161,9 +160,8 @@ entry:
 define <8 x i16> @reverse_vector_s16x8b(<8 x i16> noundef %x) {
 ; CHECK-SD-LABEL: reverse_vector_s16x8b:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    rev64 v1.8h, v0.8h
-; CHECK-SD-NEXT:    ext v0.16b, v1.16b, v1.16b, #8
-; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: reverse_vector_s16x8b:

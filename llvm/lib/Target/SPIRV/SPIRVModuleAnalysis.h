@@ -54,8 +54,8 @@ struct Requirements {
                std::optional<Capability::Capability> Cap = {},
                ExtensionList Exts = {}, VersionTuple MinVer = VersionTuple(),
                VersionTuple MaxVer = VersionTuple())
-      : IsSatisfiable(IsSatisfiable), Cap(Cap), Exts(Exts), MinVer(MinVer),
-        MaxVer(MaxVer) {}
+      : IsSatisfiable(IsSatisfiable), Cap(Cap), Exts(std::move(Exts)),
+        MinVer(MinVer), MaxVer(MaxVer) {}
   Requirements(Capability::Capability Cap) : Requirements(true, {Cap}) {}
 };
 
@@ -217,7 +217,8 @@ struct SPIRVModuleAnalysis : public ModulePass {
   static char ID;
 
 public:
-  SPIRVModuleAnalysis() : ModulePass(ID) {}
+  SPIRVModuleAnalysis()
+      : ModulePass(ID), ST(nullptr), GR(nullptr), TII(nullptr), MMI(nullptr) {}
 
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;

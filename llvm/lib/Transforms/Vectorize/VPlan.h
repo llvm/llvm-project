@@ -1242,12 +1242,24 @@ struct LLVM_ABI_FOR_TEST VPPhi : public VPInstruction, public VPPhiAccessors {
       : VPInstruction(Instruction::PHI, Operands, DL, Name) {}
 
   static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPInstruction>(U);
-    return R && R->getOpcode() == Instruction::PHI;
+    auto *VPI = dyn_cast<VPInstruction>(U);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
+  }
+
+  static inline bool classof(const VPValue *V) {
+    auto *VPI = dyn_cast<VPInstruction>(V);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
+  }
+
+  static inline bool classof(const VPSingleDefRecipe *SDR) {
+    auto *VPI = dyn_cast<VPInstruction>(SDR);
+    return VPI && VPI->getOpcode() == Instruction::PHI;
   }
 
   VPPhi *clone() override {
-    return new VPPhi(operands(), getDebugLoc(), getName());
+    auto *PhiR = new VPPhi(operands(), getDebugLoc(), getName());
+    PhiR->setUnderlyingValue(getUnderlyingValue());
+    return PhiR;
   }
 
   void execute(VPTransformState &State) override;
@@ -1279,7 +1291,7 @@ public:
 
   /// Create a new VPIRPhi for \p \I, if it is a PHINode, otherwise create a
   /// VPIRInstruction.
-  static VPIRInstruction *create(Instruction &I);
+  LLVM_ABI_FOR_TEST static VPIRInstruction *create(Instruction &I);
 
   VP_CLASSOF_IMPL(VPDef::VPIRInstructionSC)
 
@@ -1293,8 +1305,8 @@ public:
   void execute(VPTransformState &State) override;
 
   /// Return the cost of this VPIRInstruction.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
+  LLVM_ABI_FOR_TEST InstructionCost
+  computeCost(ElementCount VF, VPCostContext &Ctx) const override;
 
   Instruction &getInstruction() const { return I; }
 
@@ -1332,7 +1344,8 @@ public:
 /// cast/dyn_cast/isa and execute() implementation. A single VPValue operand is
 /// allowed, and it is used to add a new incoming value for the single
 /// predecessor VPBB.
-struct VPIRPhi : public VPIRInstruction, public VPPhiAccessors {
+struct LLVM_ABI_FOR_TEST VPIRPhi : public VPIRInstruction,
+                                   public VPPhiAccessors {
   VPIRPhi(PHINode &PN) : VPIRInstruction(PN) {}
 
   static inline bool classof(const VPRecipeBase *U) {

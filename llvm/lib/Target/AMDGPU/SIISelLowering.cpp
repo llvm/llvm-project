@@ -17695,6 +17695,8 @@ static bool globalMemoryFPAtomicIsLegal(const GCNSubtarget &Subtarget,
     if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics() &&
         RMW->hasMetadata("amdgpu.no.remote.memory"))
       return true;
+    if (Subtarget.hasEmulatedSystemScopeAtomics())
+      return true;
   } else if (Subtarget.supportsAgentScopeFineGrainedRemoteMemoryAtomics())
     return true;
 
@@ -17942,8 +17944,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::UMax: {
     if (AMDGPU::isFlatGlobalAddrSpace(AS) ||
         AS == AMDGPUAS::BUFFER_FAT_POINTER) {
-      // Always expand system scope min/max atomics.
-      if (HasSystemScope)
+      if (HasSystemScope && !Subtarget->hasEmulatedSystemScopeAtomics())
         return AtomicExpansionKind::CmpXChg;
     }
 

@@ -146,7 +146,7 @@ define void @trip8_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP15]], 1
@@ -379,8 +379,8 @@ define i8 @mul_non_pow_2_low_trip_count(ptr noalias %a) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i8 [ 2, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[RDX:%.*]] = phi i8 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[MUL:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[RDX:%.*]] = phi i8 [ 2, [[SCALAR_PH]] ], [ [[MUL:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[MUL]] = mul i8 [[TMP5]], [[RDX]]

@@ -60,6 +60,12 @@ static llvm::Expected<bool> *g_fcxx_modules_workaround [[maybe_unused]];
 // with a version of Python we don't support.
 static_assert(PY_VERSION_HEX >= LLDB_MINIMUM_PYTHON_VERSION,
               "LLDB requires at least Python 3.8");
+
+// PyMemoryView_FromMemory is part of stable ABI but the flag constants are not.
+// See https://github.com/python/cpython/issues/98680
+#ifndef PyBUF_READ
+#define PyBUF_READ 0x100
+#endif
 #endif
 
 #endif // LLDB_PLUGINS_SCRIPTINTERPRETER_PYTHON_LLDB_PYTHON_H

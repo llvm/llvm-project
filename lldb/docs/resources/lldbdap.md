@@ -170,3 +170,26 @@ This is also very simple, just run:
 ```bash
 npm run format
 ```
+
+## Working with the VS Code extension from another extension
+
+The VS Code extension exposes the following [VS Code
+commands](https://code.visualstudio.com/api/extension-guides/command),
+which can be invoked by other debugger extensions to leverage this extension's
+settings and logic. The commands help resolve configuration, create adapter
+descriptor, and get the lldb-dap process for state tracking, additional
+interaction, and telemetry.
+
+```
+// Resolve debug configuration
+const resolvedConfiguration = await vscode.commands.executeCommand("lldb-dap.resolveDebugConfiguration", folder, configuration, token);
+
+// Resolve debug configuration with substituted variables
+const resolvedConfigurationWithSubstitutedVariables = await vscode.commands.executeCommand("lldb-dap.resolveDebugConfigurationWithSubstitutedVariables", folder, configuration, token);
+
+// Create debug adapter descriptor
+const adapterDescriptor = await vscode.commands.executeCommand("lldb-dap.createDebugAdapterDescriptor", session, executable);
+
+// Get DAP server process
+const process = await vscode.commands.executeCommand("lldb-dap.getServerProcess");
+```

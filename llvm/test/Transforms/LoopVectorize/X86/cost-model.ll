@@ -1055,8 +1055,8 @@ define i64 @live_in_known_1_via_scev() {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 3, [[PH]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[RED_MUL:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i64 [ 3, [[SCALAR_PH]] ], [ [[RED_MUL:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[RED_MUL]] = mul nsw i64 [[RED]], [[P_EXT]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]

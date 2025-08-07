@@ -44,7 +44,7 @@ define void @trip_count_max_1024(ptr %p, i64 %tc) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[P]], i64 [[I]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[Y:%.*]] = add i64 [[X]], 1
@@ -113,7 +113,7 @@ define void @overflow_at_0(ptr %p, i64 %tc) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[P]], i64 [[I]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[Y:%.*]] = add i64 [[X]], 1
@@ -182,7 +182,7 @@ define void @no_overflow_at_0(ptr %p, i64 %tc) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[P]], i64 [[I]]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[Y:%.*]] = add i64 [[X]], 1

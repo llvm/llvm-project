@@ -53,8 +53,8 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 33, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
-; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP24:%.*]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i32 [ 33, %[[SCALAR_PH]] ], [ [[TMP24:%.*]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDVARS]]
 ; IF-EVL-NEXT:    [[TMP24]] = load i32, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[FOR1]], [[TMP24]]
@@ -192,9 +192,9 @@ define void @second_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT3:%.*]] = phi i32 [ 22, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
-; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP31:%.*]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT3]], %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i32 [ 33, %[[SCALAR_PH]] ], [ [[TMP31:%.*]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ 22, %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDVARS]]
 ; IF-EVL-NEXT:    [[TMP31]] = load i32, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[FOR1]], [[FOR2]]
@@ -353,10 +353,10 @@ define void @third_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT6:%.*]] = phi i32 [ 11, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
-; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP38:%.*]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT5]], %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR3:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT6]], %[[SCALAR_PH]] ], [ [[FOR2]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[INDVARS:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_NEXT:%.*]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i32 [ 33, %[[SCALAR_PH]] ], [ [[TMP38:%.*]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR2:%.*]] = phi i32 [ 22, %[[SCALAR_PH]] ], [ [[FOR1]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR3:%.*]] = phi i32 [ 11, %[[SCALAR_PH]] ], [ [[FOR2]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[INDVARS]]
 ; IF-EVL-NEXT:    [[TMP38]] = load i32, ptr [[ARRAYIDX]], align 4
 ; IF-EVL-NEXT:    [[ADD:%.*]] = add nsw i32 [[FOR2]], [[FOR3]]
@@ -666,8 +666,8 @@ define void @first_order_recurrence_indvar(ptr noalias %A, i64 %TC) {
 ; IF-EVL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i64 [ 33, %[[ENTRY]] ]
 ; IF-EVL-NEXT:    br label %[[FOR_BODY:.*]]
 ; IF-EVL:       [[FOR_BODY]]:
-; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV1_NEXT:%.*]], %[[FOR_BODY]] ]
-; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i64 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP14:%.*]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV1_NEXT:%.*]], %[[FOR_BODY]] ]
+; IF-EVL-NEXT:    [[FOR1:%.*]] = phi i64 [ 33, %[[SCALAR_PH]] ], [ [[TMP14:%.*]], %[[FOR_BODY]] ]
 ; IF-EVL-NEXT:    [[TMP14]] = add i64 [[IV1]], 42
 ; IF-EVL-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[IV1]]
 ; IF-EVL-NEXT:    store i64 [[FOR1]], ptr [[ARRAYIDX]], align 8

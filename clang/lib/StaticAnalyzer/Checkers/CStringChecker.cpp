@@ -97,10 +97,6 @@ public:
   CheckerFrontendWithBugType UninitializedRead{
       "Accessing unitialized/garbage values"};
 
-  // FIXME: This bug type should be removed because it is only emitted in a
-  // situation that is practically impossible.
-  const BugType AdditionOverflow{&OutOfBounds, "API"};
-
   StringRef getDebugTag() const override { return "MallocChecker"; }
 
   static void *getTag() { static int tag; return &tag; }
@@ -330,7 +326,6 @@ public:
                           const Stmt *S, StringRef WarningMsg) const;
   void emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
                          const Stmt *S, StringRef WarningMsg) const;
-  void emitAdditionOverflowBug(CheckerContext &C, ProgramStateRef State) const;
   void emitUninitializedReadBug(CheckerContext &C, ProgramStateRef State,
                                 const Expr *E, const MemRegion *R,
                                 StringRef Msg) const;
@@ -843,22 +838,6 @@ void CStringChecker::emitNotCStringBug(CheckerContext &C, ProgramStateRef State,
   }
 }
 
-void CStringChecker::emitAdditionOverflowBug(CheckerContext &C,
-                                             ProgramStateRef State) const {
-  if (ExplodedNode *N = C.generateErrorNode(State)) {
-    // This isn't a great error message, but this should never occur in real
-    // code anyway -- you'd have to create a buffer longer than a size_t can
-    // represent, which is sort of a contradiction.
-    const char *WarningMsg =
-        "This expression will create a string whose length is too big to "
-        "be represented as a size_t";
-
-    auto Report = std::make_unique<PathSensitiveBugReport>(AdditionOverflow,
-                                                           WarningMsg, N);
-    C.emitReport(std::move(Report));
-  }
-}
-
 ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
                                                      ProgramStateRef state,
                                                      NonLoc left,
@@ -896,19 +875,22 @@ ProgramStateRef CStringChecker::checkAdditionOverflow(CheckerContext &C,
     SVal willOverflow = svalBuilder.evalBinOpNN(state, BO_GT, left,
                                                 *maxMinusRightNL, cmpTy);
 
-    ProgramStateRef stateOverflow, stateOkay;
-    std::tie(stateOverflow, stateOkay) =
-      state->assume(willOverflow.castAs<DefinedOrUnknownSVal>());
+    auto [StateOverflow, StateOkay] =
+        state->assume(willOverflow.castAs<DefinedOrUnknownSVal>());
 
-    if (stateOverflow && !stateOkay) {
-      // We have an overflow. Emit a bug report.
-      emitAdditionOverflowBug(C, stateOverflow);
+    if (StateOverflow && !StateOkay) {
+      // On this path the analyzer is convinced that the addition of these two
+      // values would overflow `size_t` which must be caused by the inaccuracy
+      // of our modeling because this method is called in situations where the
+      // summands are size/length values which are much less than SIZE_MAX. To
+      // avoid false positives let's just sink this invalid path.
+      C.addSink(StateOverflow);
       return nullptr;
     }
 
     // From now on, assume an overflow didn't occur.
-    assert(stateOkay);
-    state = stateOkay;
+    assert(StateOkay);
+    state = StateOkay;
   }
 
   return state;

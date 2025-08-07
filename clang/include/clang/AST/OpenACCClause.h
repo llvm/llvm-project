@@ -876,21 +876,32 @@ public:
   }
 };
 
+// A 'pair' to stand in for the recipe.  RecipeDecl is the main declaration, and
+// InitFromTemporary is the 'temp' declaration we put in to be 'copied from'.
+struct OpenACCFirstPrivateRecipe {
+  VarDecl *RecipeDecl, *InitFromTemporary;
+  OpenACCFirstPrivateRecipe(VarDecl *R, VarDecl *T)
+      : RecipeDecl(R), InitFromTemporary(T) {}
+  OpenACCFirstPrivateRecipe(std::pair<VarDecl *, VarDecl *> p)
+      : RecipeDecl(p.first), InitFromTemporary(p.second) {}
+};
+
 class OpenACCFirstPrivateClause final
     : public OpenACCClauseWithVarList,
       private llvm::TrailingObjects<OpenACCFirstPrivateClause, Expr *,
-                                    VarDecl *> {
+                                    OpenACCFirstPrivateRecipe> {
   friend TrailingObjects;
 
   OpenACCFirstPrivateClause(SourceLocation BeginLoc, SourceLocation LParenLoc,
                             ArrayRef<Expr *> VarList,
-                            ArrayRef<VarDecl *> InitRecipes,
+                            ArrayRef<OpenACCFirstPrivateRecipe> InitRecipes,
                             SourceLocation EndLoc)
       : OpenACCClauseWithVarList(OpenACCClauseKind::FirstPrivate, BeginLoc,
                                  LParenLoc, EndLoc) {
     assert(VarList.size() == InitRecipes.size());
     setExprs(getTrailingObjects<Expr *>(VarList.size()), VarList);
-    llvm::uninitialized_copy(InitRecipes, getTrailingObjects<VarDecl *>());
+    llvm::uninitialized_copy(InitRecipes,
+                             getTrailingObjects<OpenACCFirstPrivateRecipe>());
   }
 
 public:
@@ -900,19 +911,20 @@ public:
 
   // Gets a list of 'made up' `VarDecl` objects that can be used by codegen to
   // ensure that we properly initialize each of these variables.
-  ArrayRef<VarDecl *> getInitRecipes() {
-    return ArrayRef<VarDecl *>{getTrailingObjects<VarDecl *>(),
-                               getExprs().size()};
+  ArrayRef<OpenACCFirstPrivateRecipe> getInitRecipes() {
+    return ArrayRef<OpenACCFirstPrivateRecipe>{
+        getTrailingObjects<OpenACCFirstPrivateRecipe>(), getExprs().size()};
   }
 
-  ArrayRef<VarDecl *> getInitRecipes() const {
-    return ArrayRef<VarDecl *>{getTrailingObjects<VarDecl *>(),
-                               getExprs().size()};
+  ArrayRef<OpenACCFirstPrivateRecipe> getInitRecipes() const {
+    return ArrayRef<OpenACCFirstPrivateRecipe>{
+        getTrailingObjects<OpenACCFirstPrivateRecipe>(), getExprs().size()};
   }
 
   static OpenACCFirstPrivateClause *
   Create(const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
-         ArrayRef<Expr *> VarList, ArrayRef<VarDecl *> InitRecipes,
+         ArrayRef<Expr *> VarList,
+         ArrayRef<OpenACCFirstPrivateRecipe> InitRecipes,
          SourceLocation EndLoc);
 
   size_t numTrailingObjects(OverloadToken<Expr *>) const {

@@ -1955,6 +1955,29 @@ mlir::Value CIRGenFunction::emitScalarConversion(mlir::Value src,
       .emitScalarConversion(src, srcTy, dstTy, loc);
 }
 
+mlir::Value CIRGenFunction::emitComplexToScalarConversion(mlir::Value src,
+                                                          QualType srcTy,
+                                                          QualType dstTy,
+                                                          SourceLocation loc) {
+  assert(srcTy->isAnyComplexType() && hasScalarEvaluationKind(dstTy) &&
+         "Invalid complex -> scalar conversion");
+
+  QualType complexElemTy = srcTy->castAs<ComplexType>()->getElementType();
+  if (dstTy->isBooleanType()) {
+    auto kind = complexElemTy->isFloatingType()
+                    ? cir::CastKind::float_complex_to_bool
+                    : cir::CastKind::int_complex_to_bool;
+    return builder.createCast(getLoc(loc), kind, src, convertType(dstTy));
+  }
+
+  auto kind = complexElemTy->isFloatingType()
+                  ? cir::CastKind::float_complex_to_real
+                  : cir::CastKind::int_complex_to_real;
+  mlir::Value real =
+      builder.createCast(getLoc(loc), kind, src, convertType(complexElemTy));
+  return emitScalarConversion(real, complexElemTy, dstTy, loc);
+}
+
 mlir::Value ScalarExprEmitter::VisitUnaryLNot(const UnaryOperator *e) {
   // Perform vector logical not on comparison with zero vector.
   if (e->getType()->isVectorType() &&
