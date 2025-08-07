@@ -6857,7 +6857,8 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
 
   // Forbid any call to setjmp/longjmp and friends inside a 'defer' statement.
   if (!CurrentDefer.empty() && IsSJLJ()) {
-    assert(!LangOpts.CPlusPlus);
+    // Note: If we ever start supporting 'defer' in C++ we'll have to check
+    // for more than just blocks (e.g. lambdas, nested classes...).
     Scope *DeferParent = CurrentDefer.back().first;
     Scope *Block = CurScope->getBlockParent();
     if (DeferParent->Contains(*CurScope) &&
