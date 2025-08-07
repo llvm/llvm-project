@@ -413,9 +413,9 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
 #if defined(Py_LIMITED_API) && (Py_LIMITED_API < 0x030a0000)
   PyObject *py_bytes = PyUnicode_AsUTF8String(m_py_obj);
   if (!py_bytes)
-      return exception();
+    return exception();
   auto release_py_str =
-        llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
   Py_ssize_t size = PyBytes_Size(py_bytes);
   const char *str = PyBytes_AsString(py_bytes);
 
