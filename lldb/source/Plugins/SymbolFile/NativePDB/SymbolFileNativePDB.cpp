@@ -1779,7 +1779,7 @@ void SymbolFileNativePDB::FindFunctions(
       return;
 
     for (uint32_t id : ids) {
-      if (resolved_ids.find(id) != resolved_ids.end())
+      if (!resolved_ids.insert(id).second)
         continue;
 
       PdbGlobalSymId global{id, false};
@@ -1806,7 +1806,6 @@ void SymbolFileNativePDB::FindFunctions(
       sc.function = GetOrCreateFunction(func_id, *sc.comp_unit).get();
 
       sc_list.Append(sc);
-      resolved_ids.insert(id);
     }
   };
 
