@@ -365,12 +365,14 @@ __m64 test_mm_mulhi_pi16(__m64 a, __m64 b) {
   // CHECK: call <8 x i16> @llvm.x86.sse2.pmulh.w(
   return _mm_mulhi_pi16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_mulhi_pi16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-10, +8, +6, -4}), -1, -1, 0, 0));
 
 __m64 test_mm_mulhi_pu16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mulhi_pu16
   // CHECK: call <8 x i16> @llvm.x86.sse2.pmulhu.w(
   return _mm_mulhi_pu16(a, b);
 }
+TEST_CONSTEXPR(match_v4hi(_mm_mulhi_pu16((__m64)(__v4hi){+1, -2, +3, -4}, (__m64)(__v4hi){-10, +8, +6, -4}), 0, 7, 0, -8));
 
 __m64 test_mm_mulhrs_pi16(__m64 a, __m64 b) {
   // CHECK-LABEL: test_mm_mulhrs_pi16

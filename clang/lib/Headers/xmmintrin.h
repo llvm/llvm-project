@@ -2447,11 +2447,11 @@ _mm_movemask_pi8(__m64 __a)
 /// \param __b
 ///    A 64-bit integer vector containing one of the source operands.
 /// \returns A 64-bit integer vector containing the products of both operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_mulhi_pu16(__m64 __a, __m64 __b)
 {
-  return __trunc64(__builtin_ia32_pmulhuw128((__v8hi)__anyext128(__a),
-                                             (__v8hi)__anyext128(__b)));
+  return __trunc64(__builtin_ia32_pmulhuw128((__v8hi)__zext128(__a),
+                                             (__v8hi)__zext128(__b)));
 }
 
 /// Shuffles the 4 16-bit integers from a 64-bit integer vector to the
