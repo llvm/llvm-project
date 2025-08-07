@@ -27,6 +27,14 @@ struct SerializationOptions {
   bool emitSymbolName = true;
   /// Whether to emit `OpLine` location information for SPIR-V ops.
   bool emitDebugInfo = false;
+  /// Whether to store a module to an additional file during
+  /// serialization. This is used to store the SPIR-V module to the
+  /// file in addition to writing it to `os` passed from the calling
+  /// tool. This saved file is later used for validation.
+  bool saveModuleForValidation = false;
+  /// A prefix prepended to the file used when `saveModuleForValidation`
+  /// is set to `true`.
+  std::string validationFilePrefix = "";
 };
 
 /// Serializes the given SPIR-V `module` and writes to `binary`. On failure,

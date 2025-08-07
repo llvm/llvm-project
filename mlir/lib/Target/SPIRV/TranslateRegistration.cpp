@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/ToolOutputFile.h"
 
 using namespace mlir;
 
@@ -76,24 +77,57 @@ void registerFromSPIRVTranslation() {
 // Serialization registration
 //===----------------------------------------------------------------------===//
 
-static LogicalResult serializeModule(spirv::ModuleOp module,
-                                     raw_ostream &output) {
+// Static variable is probably not ideal, but it lets us have unique files names
+// without taking additional parameters from `mlir-translate`.
+static size_t validationFileCounter = 0;
+
+static LogicalResult
+serializeModule(spirv::ModuleOp module, raw_ostream &output,
+                const spirv::SerializationOptions &options) {
+
   SmallVector<uint32_t, 0> binary;
   if (failed(spirv::serialize(module, binary)))
     return failure();
 
-  output.write(reinterpret_cast<char *>(binary.data()),
-               binary.size() * sizeof(uint32_t));
+  size_t sizeInBytes = binary.size() * sizeof(uint32_t);
+
+  output.write(reinterpret_cast<char *>(binary.data()), sizeInBytes);
+
+  if (options.saveModuleForValidation) {
+    std::string errorMessage;
+    std::string filename =
+        options.validationFilePrefix + std::to_string(validationFileCounter++);
+    auto validationOutput = openOutputFile(filename, &errorMessage);
+    if (!validationOutput) {
+      llvm::errs() << errorMessage << "\n";
+      return failure();
+    }
+    validationOutput->os().write(reinterpret_cast<char *>(binary.data()),
+                                 sizeInBytes);
+    validationOutput->keep();
+  }
 
   return mlir::success();
 }
 
 namespace mlir {
 void registerToSPIRVTranslation() {
+  static llvm::cl::opt<std::string> validationFilesPrefix(
+      "spirv-save-validation-files-with-prefix",
+      llvm::cl::desc(
+          "When non-empty string is passed each serialized SPIR-V module is "
+          "saved to an additional file that starts with the given prefix. This "
+          "is used to generate separate binaries for validation, where "
+          "`--split-input-file` normally combines all outputs into one. The "
+          "one combined output (`-o`) is still written."),
+      llvm::cl::init(""));
+
   TranslateFromMLIRRegistration toBinary(
       "serialize-spirv", "serialize SPIR-V dialect",
       [](spirv::ModuleOp module, raw_ostream &output) {
-        return serializeModule(module, output);
+        return serializeModule(module, output,
+                               {true, false, (validationFilesPrefix != ""),
+                                validationFilesPrefix});
       },
       [](DialectRegistry &registry) {
         registry.insert<spirv::SPIRVDialect>();
