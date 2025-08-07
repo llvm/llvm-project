@@ -12817,7 +12817,7 @@ Value *PPCTargetLowering::emitStoreConditional(IRBuilderBase &Builder,
   return Builder.CreateXor(Call, Builder.getInt32(1));
 }
 
-MDNode *PPCTargetLowering::getTrueBranchHintWeightForAtomicCmpXchgg(
+MDNode *PPCTargetLowering::getTrueBranchHintWeightForAtomicCmpXchg(
     LLVMContext &Ctx) const {
   return MDBuilder(Ctx).createLikelyBranchWeights();
 }

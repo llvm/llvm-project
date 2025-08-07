@@ -1456,7 +1456,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   // jump straight past that fence instruction (if it exists).
   Builder.CreateCondBr(
       ShouldStore, ReleasingStoreBB, NoStoreBB,
-      TLI->getTrueBranchHintWeightForAtomicCmpXchgg(F->getContext()));
+      TLI->getTrueBranchHintWeightForAtomicCmpXchg(F->getContext()));
 
   Builder.SetInsertPoint(ReleasingStoreBB);
   if (ShouldInsertFencesForAtomic && !UseUnconditionalReleaseBarrier)
@@ -1476,7 +1476,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
   BasicBlock *RetryBB = HasReleasedLoadBB ? ReleasedLoadBB : StartBB;
   Builder.CreateCondBr(
       StoreSuccess, SuccessBB, CI->isWeak() ? FailureBB : RetryBB,
-      TLI->getTrueBranchHintWeightForAtomicCmpXchgg(F->getContext()));
+      TLI->getTrueBranchHintWeightForAtomicCmpXchg(F->getContext()));
 
   Builder.SetInsertPoint(ReleasedLoadBB);
   Value *SecondLoad;
@@ -1491,7 +1491,7 @@ bool AtomicExpandImpl::expandAtomicCmpXchg(AtomicCmpXchgInst *CI) {
     // jump straight past that fence instruction (if it exists).
     Builder.CreateCondBr(
         ShouldStore, TryStoreBB, NoStoreBB,
-        TLI->getTrueBranchHintWeightForAtomicCmpXchgg(F->getContext()));
+        TLI->getTrueBranchHintWeightForAtomicCmpXchg(F->getContext()));
     // Update PHI node in TryStoreBB.
     LoadedTryStore->addIncoming(SecondLoad, ReleasedLoadBB);
   } else

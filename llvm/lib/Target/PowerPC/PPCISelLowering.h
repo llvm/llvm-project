@@ -939,7 +939,7 @@ namespace llvm {
                                    AtomicOrdering Ord) const override;
 
     virtual MDNode *
-    getTrueBranchHintWeightForAtomicCmpXchgg(LLVMContext &Ctx) const override;
+    getTrueBranchHintWeightForAtomicCmpXchg(LLVMContext &Ctx) const override;
     bool shouldInlineQuadwordAtomics() const;
 
     TargetLowering::AtomicExpansionKind

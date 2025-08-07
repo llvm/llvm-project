@@ -2334,7 +2334,7 @@ public:
                                          AtomicOrdering Ord) const;
 
   virtual MDNode *
-  getTrueBranchHintWeightForAtomicCmpXchgg(LLVMContext &Ctx) const {
+  getTrueBranchHintWeightForAtomicCmpXchg(LLVMContext &Ctx) const {
     return nullptr;
   }
 
