@@ -8956,7 +8956,8 @@ OpenMPIRBuilder::createAtomicWrite(const LocationDescription &Loc,
 OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
     const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
     Value *Expr, AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
-    AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr) {
+    AtomicUpdateCallbackTy &UpdateOp, bool IsXBinopExpr,
+    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
   assert(!isConflictIP(Loc.IP, AllocaIP) && "IPs must not be ambiguous");
   if (!updateToLocation(Loc))
     return Loc.IP;
@@ -8974,9 +8975,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicUpdate(
            "OpenMP atomic does not support LT or GT operations");
   });
 
-  Expected<std::pair<Value *, Value *>> AtomicResult =
-      emitAtomicUpdate(AllocaIP, X.Var, X.ElemTy, Expr, AO, RMWOp, UpdateOp,
-                       X.IsVolatile, IsXBinopExpr);
+  Expected<std::pair<Value *, Value *>> AtomicResult = emitAtomicUpdate(
+      AllocaIP, X.Var, X.ElemTy, Expr, AO, RMWOp, UpdateOp, X.IsVolatile,
+      IsXBinopExpr, IsIgnoreDenormalMode, IsFineGrainedMemory, IsRemoteMemory);
   if (!AtomicResult)
     return AtomicResult.takeError();
   checkAndEmitFlushAfterAtomic(Loc, AO, AtomicKind::Update);
@@ -9023,7 +9024,8 @@ Value *OpenMPIRBuilder::emitRMWOpAsInstruction(Value *Src1, Value *Src2,
 Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
     InsertPointTy AllocaIP, Value *X, Type *XElemTy, Value *Expr,
     AtomicOrdering AO, AtomicRMWInst::BinOp RMWOp,
-    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX, bool IsXBinopExpr) {
+    AtomicUpdateCallbackTy &UpdateOp, bool VolatileX, bool IsXBinopExpr,
+    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
   // TODO: handle the case where XElemTy is not byte-sized or not a power of 2
   // or a complex datatype.
   bool emitRMWOp = false;
@@ -9046,7 +9048,20 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
 
   std::pair<Value *, Value *> Res;
   if (emitRMWOp) {
-    Res.first = Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
+    AtomicRMWInst *RMWInst =
+        Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
+    if (T.isAMDGPU()) {
+      if (IsIgnoreDenormalMode)
+        RMWInst->setMetadata("amdgpu.ignore.denormal.mode",
+                             llvm::MDNode::get(Builder.getContext(), {}));
+      if (!IsFineGrainedMemory)
+        RMWInst->setMetadata("amdgpu.no.fine.grained.memory",
+                             llvm::MDNode::get(Builder.getContext(), {}));
+      if (!IsRemoteMemory)
+        RMWInst->setMetadata("amdgpu.no.remote.memory",
+                             llvm::MDNode::get(Builder.getContext(), {}));
+    }
+    Res.first = RMWInst;
     // not needed except in case of postfix captures. Generate anyway for
     // consistency with the else part. Will be removed with any DCE pass.
     // AtomicRMWInst::Xchg does not have a coressponding instruction.
@@ -9178,7 +9193,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
     const LocationDescription &Loc, InsertPointTy AllocaIP, AtomicOpValue &X,
     AtomicOpValue &V, Value *Expr, AtomicOrdering AO,
     AtomicRMWInst::BinOp RMWOp, AtomicUpdateCallbackTy &UpdateOp,
-    bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr) {
+    bool UpdateExpr, bool IsPostfixUpdate, bool IsXBinopExpr,
+    bool IsIgnoreDenormalMode, bool IsFineGrainedMemory, bool IsRemoteMemory) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
@@ -9197,9 +9213,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createAtomicCapture(
   // If UpdateExpr is 'x' updated with some `expr` not based on 'x',
   // 'x' is simply atomically rewritten with 'expr'.
   AtomicRMWInst::BinOp AtomicOp = (UpdateExpr ? RMWOp : AtomicRMWInst::Xchg);
-  Expected<std::pair<Value *, Value *>> AtomicResult =
-      emitAtomicUpdate(AllocaIP, X.Var, X.ElemTy, Expr, AO, AtomicOp, UpdateOp,
-                       X.IsVolatile, IsXBinopExpr);
+  Expected<std::pair<Value *, Value *>> AtomicResult = emitAtomicUpdate(
+      AllocaIP, X.Var, X.ElemTy, Expr, AO, AtomicOp, UpdateOp, X.IsVolatile,
+      IsXBinopExpr, IsIgnoreDenormalMode, IsFineGrainedMemory, IsRemoteMemory);
   if (!AtomicResult)
     return AtomicResult.takeError();
   Value *CapturedVal =
