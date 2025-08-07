@@ -11,13 +11,12 @@ define i32 @test_01(i32 %start, i32 %x) {
 ; CHECK-NEXT:    [[START_GW_FR:%.*]] = freeze i32 [[START:%.*]]
 ; CHECK-NEXT:    [[X_GW_FR:%.*]] = freeze i32 [[X:%.*]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[START_GW_FR]], [[X_GW_FR]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 true, [[COND]]
 ; CHECK-NEXT:    [[WC1:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[WIDE_CHECK:%.*]] = and i1 [[COND]], [[WC1]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START_GW_FR]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = and i1 [[WIDE_CHK]], [[WC1]]
-; CHECK-NEXT:    br i1 [[TMP0]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
+; CHECK-NEXT:    br i1 [[WIDE_CHECK]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
 ; CHECK:       exit_by_wc:
 ; CHECK-NEXT:    [[RVAL1:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 [[IV]]) ]
 ; CHECK-NEXT:    ret i32 [[RVAL1]]
@@ -132,12 +131,12 @@ define i32 @test_03(i32 %start, i32 %x, i1 %c) {
 ; CHECK-NEXT:    [[START_GW_FR:%.*]] = freeze i32 [[START:%.*]]
 ; CHECK-NEXT:    [[X_GW_FR:%.*]] = freeze i32 [[X:%.*]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[START_GW_FR]], [[X_GW_FR]]
-; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[C:%.*]], [[COND]]
 ; CHECK-NEXT:    [[WC1:%.*]] = call i1 @llvm.experimental.widenable.condition()
+; CHECK-NEXT:    [[WIDE_CHECK:%.*]] = and i1 [[COND]], [[WC1]]
+; CHECK-NEXT:    [[INVARIANT:%.*]] = and i1 [[C:%.*]], [[WIDE_CHECK]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START_GW_FR]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
-; CHECK-NEXT:    [[INVARIANT:%.*]] = and i1 [[WIDE_CHK]], [[WC1]]
 ; CHECK-NEXT:    br i1 [[INVARIANT]], label [[GUARD_BLOCK:%.*]], label [[EXIT_BY_WC:%.*]]
 ; CHECK:       exit_by_wc:
 ; CHECK-NEXT:    [[RVAL1:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32() [ "deopt"(i32 [[IV]]) ]
