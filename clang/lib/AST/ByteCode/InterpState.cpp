@@ -76,9 +76,6 @@ bool InterpState::reportOverflow(const Expr *E, const llvm::APSInt &Value) {
 
 void InterpState::deallocate(Block *B) {
   assert(B);
-  const Descriptor *Desc = B->getDescriptor();
-  assert(Desc);
-
   // The block might have a pointer saved in a field in its data
   // that points to the block itself. We call the dtor first,
   // which will destroy all the data but leave InlineDescriptors
@@ -95,7 +92,7 @@ void InterpState::deallocate(Block *B) {
     auto *D = new (Memory) DeadBlock(DeadBlocks, B);
     // Since the block doesn't hold any actual data anymore, we can just
     // memcpy() everything over.
-    std::memcpy(D->rawData(), B->rawData(), Desc->getAllocSize());
+    std::memcpy(D->rawData(), B->rawData(), B->getSize());
     D->B.IsInitialized = B->IsInitialized;
 
     // We moved the contents over to the DeadBlock.
