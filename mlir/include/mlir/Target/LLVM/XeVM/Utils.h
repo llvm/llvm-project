@@ -28,12 +28,18 @@ public:
   SerializeGPUModuleBase(Operation &module, XeVMTargetAttr target,
                          const gpu::TargetOptions &targetOptions = {});
 
-  static void init();
   XeVMTargetAttr getTarget() const;
 
   /// Loads the bitcode files in `librariesToLink`.
   std::optional<SmallVector<std::unique_ptr<llvm::Module>>>
   loadBitcodeFiles(llvm::Module &module) override;
+
+  /// Returns the gpu module being serialized.
+  gpu::GPUModuleOp getGPUModuleOp();
+
+  /// Compiles to native code using `ocloc`.
+  std::optional<SmallVector<char, 0>> compileToBinary(const std::string &asmStr,
+                                                      StringRef inputFormat);
 
 protected:
   XeVMTargetAttr target;
@@ -41,6 +47,11 @@ protected:
   /// The attributes can be StringAttr pointing to a file path, or
   /// a Resource blob pointing to the LLVM bitcode in-memory.
   SmallVector<Attribute> librariesToLink;
+
+  /// Returns the path to the tool used for serialization.
+  std::optional<std::string> findTool(StringRef tool);
+
+  gpu::TargetOptions targetOptions;
 };
 } // namespace xevm
 } // namespace mlir
