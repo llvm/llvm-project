@@ -13654,13 +13654,13 @@ SDValue SITargetLowering::performXorCombine(SDNode *N,
   if (SDValue RV = reassociateScalarOps(N, DCI.DAG))
     return RV;
 
-  SelectionDAG &DAG = DCI.DAG;
-  EVT VT = N->getValueType(0);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
 
   const ConstantSDNode *CRHS = isConstOrConstSplat(RHS);
+  SelectionDAG &DAG = DCI.DAG;
 
+  EVT VT = N->getValueType(0);                                          
   if (CRHS && VT == MVT::i64) {
     if (SDValue Split =
             splitBinaryBitConstantOp(DCI, SDLoc(N), ISD::XOR, LHS, CRHS))
