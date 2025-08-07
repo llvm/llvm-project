@@ -160,7 +160,7 @@ _start:
   .byte 0
 .section .bss.hot.b,"aw"
   .byte 0
-.section .bss.unlikely.c.,"aw"
+.section .bss.unlikely.c,"aw"
   .byte 0
 .section .bss.split.d,"aw"
   .byte 0
