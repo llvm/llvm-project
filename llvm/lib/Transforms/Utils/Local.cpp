@@ -2059,9 +2059,8 @@ void llvm::salvageDebugInfoForDbgValues(Instruction &I,
     bool StackValue =
         DVR->getType() != DbgVariableRecord::LocationType::Declare;
     auto DVRLocation = DVR->location_ops();
-    assert(
-        is_contained(DVRLocation, &I) &&
-        "DbgVariableIntrinsic must use salvaged instruction as its location");
+    assert(is_contained(DVRLocation, &I) &&
+           "DbgRecord must use salvaged instruction as its location");
     SmallVector<Value *, 4> AdditionalValues;
     // 'I' may appear more than once in DVR's location ops, and each use of 'I'
     // must be updated in the DIExpression and potentially have additional
