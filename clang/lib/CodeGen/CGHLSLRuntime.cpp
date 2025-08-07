@@ -164,15 +164,29 @@ static void createResourceCtorArgs(CodeGenModule &CGM, CXXConstructorDecl *CD,
                                    llvm::Value *ThisPtr, llvm::Value *Range,
                                    llvm::Value *Index, StringRef Name,
                                    HLSLResourceBindingAttr *RBA,
+                                   HLSLVkBindingAttr *VkBinding,
                                    CallArgList &Args) {
+  assert((VkBinding || RBA) && "at least one a binding attribute expected");
+
+  std::optional<uint32_t> RegisterSlot;
+  uint32_t SpaceNo = 0;
+  if (VkBinding) {
+    RegisterSlot = VkBinding->getBinding();
+    SpaceNo = VkBinding->getSet();
+  } else if (RBA) {
+    if (RBA->hasRegisterSlot())
+      RegisterSlot = RBA->getSlotNumber();
+    SpaceNo = RBA->getSpaceNumber();
+  }
+
   ASTContext &AST = CD->getASTContext();
   Value *NameStr = buildNameForResource(Name, CGM);
-  Value *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
+  Value *Space = llvm::ConstantInt::get(CGM.IntTy, SpaceNo);
 
   Args.add(RValue::get(ThisPtr), CD->getThisType());
-  if (RBA->hasRegisterSlot()) {
+  if (RegisterSlot.has_value()) {
     // explicit binding
-    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RBA->getSlotNumber());
+    auto *RegSlot = llvm::ConstantInt::get(CGM.IntTy, RegisterSlot.value());
     Args.add(RValue::get(RegSlot), AST.UnsignedIntTy);
     Args.add(RValue::get(Space), AST.UnsignedIntTy);
     Args.add(RValue::get(Range), AST.IntTy);
@@ -696,13 +710,6 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   CGM.AddCXXGlobalInit(InitResFunc);
 }
 
-static Value *buildNameForResource(llvm::StringRef BaseName,
-                                   CodeGenModule &CGM) {
-  std::string Str(BaseName);
-  std::string GlobalName(Str + ".str");
-  return CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
-}
-
 void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
                                                 llvm::GlobalVariable *GV,
                                                 HLSLVkBindingAttr *VkBinding) {
@@ -730,16 +737,12 @@ void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
   auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
   auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
   auto *Space = llvm::ConstantInt::get(CGM.IntTy, RBA->getSpaceNumber());
-  Value *Name = nullptr;
+  Value *Name = buildNameForResource(BufDecl->getName(), CGM);
 
   llvm::Intrinsic::ID IntrinsicID =
       RBA->hasRegisterSlot()
           ? CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic()
           : CGM.getHLSLRuntime().getCreateHandleFromImplicitBindingIntrinsic();
-
-  std::string Str(BufDecl->getName());
-  std::string GlobalName(Str + ".str");
-  Name = CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
 
   // buffer with explicit binding
   if (RBA->hasRegisterSlot()) {
@@ -854,15 +857,16 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   }
 
   // find binding info for the resource array
-  // (for implicit binding it should have been by SemaHLSL)
+  // (for implicit binding an HLSLResourceBindingAttr should have been added by SemaHLSL)
   QualType ResourceTy = ArraySubsExpr->getType();
+  HLSLVkBindingAttr *VkBinding = ArrayDecl->getAttr<HLSLVkBindingAttr>();
   HLSLResourceBindingAttr *RBA = ArrayDecl->getAttr<HLSLResourceBindingAttr>();
-  assert(RBA && "resource array is missing HLSLResourceBindingAttr attribute");
+  assert((VkBinding || RBA) && "resource array must have a binding attribute");
 
   // lookup the resource class constructor based on the resource type and
   // binding
   CXXConstructorDecl *CD = findResourceConstructorDecl(
-      ArrayDecl->getASTContext(), ResourceTy, RBA->hasRegisterSlot());
+      ArrayDecl->getASTContext(), ResourceTy, VkBinding || RBA->hasRegisterSlot());
 
   // create a temporary variable for the resource class instance (we need to
   // return an LValue)
@@ -885,7 +889,7 @@ std::optional<LValue> CGHLSLRuntime::emitResourceArraySubscriptExpr(
   // assemble the constructor parameters
   CallArgList Args;
   createResourceCtorArgs(CGM, CD, ThisPtr, Range, Index, ArrayDecl->getName(),
-                         RBA, Args);
+                         RBA, VkBinding, Args);
 
   // call the constructor
   CGF.EmitCXXConstructorCall(CD, Ctor_Complete, false, false, ThisAddress, Args,

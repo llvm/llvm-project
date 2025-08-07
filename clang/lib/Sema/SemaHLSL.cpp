@@ -3661,15 +3661,17 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
       // If the resource array does not have an explicit binding attribute,
       // create an implicit one. It will be used to transfer implicit binding
       // order_ID to codegen.
-      HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
-      if (!RBA || !RBA->hasRegisterSlot()) {
-        uint32_t OrderID = getNextImplicitBindingOrderID();
-        if (RBA)
-          RBA->setImplicitBindingOrderID(OrderID);
-        else
-          addImplicitBindingAttrToDecl(
-              SemaRef, VD, getRegisterType(getResourceArrayHandleType(VD)),
-              OrderID);
+      if (!VD->hasAttr<HLSLVkBindingAttr>()) {
+        HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
+        if (!RBA || !RBA->hasRegisterSlot()) {
+          uint32_t OrderID = getNextImplicitBindingOrderID();
+          if (RBA)
+            RBA->setImplicitBindingOrderID(OrderID);
+          else
+            addImplicitBindingAttrToDecl(
+                SemaRef, VD, getRegisterType(getResourceArrayHandleType(VD)),
+                OrderID);
+        }
       }
     }
 
@@ -3745,9 +3747,12 @@ void SemaHLSL::createResourceRecordCtorArgs(const Type *ResourceTy,
     Args.append({RegSlot, Space, RangeSize, Index, Name});
   } else {
     // resource with implicit binding
+    uint32_t OrderID = (RBA && RBA->hasImplicitBindingOrderID())
+                           ? RBA->getImplicitBindingOrderID()
+                           : getNextImplicitBindingOrderID();
     IntegerLiteral *OrderId = IntegerLiteral::Create(
-        AST, llvm::APInt(UIntTySize, getNextImplicitBindingOrderID()),
-        AST.UnsignedIntTy, SourceLocation());
+        AST, llvm::APInt(UIntTySize, OrderID), AST.UnsignedIntTy,
+        SourceLocation());
     Args.append({Space, RangeSize, Index, OrderId, Name});
   }
 }
