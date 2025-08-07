@@ -39,13 +39,15 @@ LLVM_ABI bool opt(const Config &Conf, TargetMachine *TM, unsigned Task,
                   Module &Mod, bool IsThinLTO,
                   ModuleSummaryIndex *ExportSummary,
                   const ModuleSummaryIndex *ImportSummary,
-                  const std::vector<uint8_t> &CmdArgs);
+                  const std::vector<uint8_t> &CmdArgs,
+                  const SmallVector<StringRef> &BitcodeLibFuncs);
 
 /// Runs a regular LTO backend. The regular LTO backend can also act as the
 /// regular LTO phase of ThinLTO, which may need to access the combined index.
 LLVM_ABI Error backend(const Config &C, AddStreamFn AddStream,
                        unsigned ParallelCodeGenParallelismLevel, Module &M,
-                       ModuleSummaryIndex &CombinedIndex);
+                       ModuleSummaryIndex &CombinedIndex,
+                       const SmallVector<StringRef> &BitcodeLibFuncs);
 
 /// Runs a ThinLTO backend.
 /// If \p ModuleMap is not nullptr, all the module files to be imported have
@@ -62,6 +64,7 @@ thinBackend(const Config &C, unsigned Task, AddStreamFn AddStream, Module &M,
             const FunctionImporter::ImportMapTy &ImportList,
             const GVSummaryMapTy &DefinedGlobals,
             MapVector<StringRef, BitcodeModule> *ModuleMap, bool CodeGenOnly,
+            const SmallVector<StringRef> &BitcodeLibFuncs,
             AddStreamFn IRAddStream = nullptr,
             const std::vector<uint8_t> &CmdArgs = std::vector<uint8_t>());
 

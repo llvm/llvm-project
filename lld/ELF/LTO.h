@@ -42,7 +42,8 @@ public:
   ~BitcodeCompiler();
 
   void add(BitcodeFile &f);
-  SmallVector<std::unique_ptr<InputFile>, 0> compile();
+  SmallVector<std::unique_ptr<InputFile>, 0>
+  compile(const SmallVector<StringRef> &bitcodeLibFuncs);
 
 private:
   Ctx &ctx;
