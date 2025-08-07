@@ -1008,7 +1008,7 @@ unsigned TargetLoweringBase::getBitWidthForCttzElements(
     CR = CR.subtract(APInt(64, 1));
 
   unsigned EltWidth = RetTy->getScalarSizeInBits();
-  EltWidth = std::min(EltWidth, (unsigned)CR.getActiveBits());
+  EltWidth = std::min(EltWidth, CR.getActiveBits());
   EltWidth = std::max(llvm::bit_ceil(EltWidth), (unsigned)8);
 
   return EltWidth;
