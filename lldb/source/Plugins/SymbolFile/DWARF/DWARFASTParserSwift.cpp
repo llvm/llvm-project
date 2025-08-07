@@ -38,7 +38,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
 
 DWARFASTParserSwift::DWARFASTParserSwift(
@@ -49,9 +48,10 @@ DWARFASTParserSwift::DWARFASTParserSwift(
 DWARFASTParserSwift::~DWARFASTParserSwift() {}
 
 static llvm::StringRef GetTypedefName(const DWARFDIE &die) {
-  if (die.Tag() != DW_TAG_typedef)
+  if (die.Tag() != llvm::dwarf::DW_TAG_typedef)
     return {};
-  DWARFDIE type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type);
+  DWARFDIE type_die =
+      die.GetAttributeValueAsReferenceDIE(llvm::dwarf::DW_AT_type);
   if (!type_die.IsValid())
     return {};
   if (!type_die.GetName())
@@ -85,30 +85,31 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       DWARFFormValue form_value;
       if (attributes.ExtractFormValueAtIndex(i, form_value)) {
         switch (attr) {
-        case DW_AT_decl_file:
+        case llvm::dwarf::DW_AT_decl_file:
           decl.SetFile(sc.comp_unit->GetSupportFiles().GetFileSpecAtIndex(
               form_value.Unsigned()));
           break;
-        case DW_AT_decl_line:
+        case llvm::dwarf::DW_AT_decl_line:
           decl.SetLine(form_value.Unsigned());
           break;
-        case DW_AT_decl_column:
+        case llvm::dwarf::DW_AT_decl_column:
           decl.SetColumn(form_value.Unsigned());
           break;
-        case DW_AT_name:
+        case llvm::dwarf::DW_AT_name:
           name.SetCString(form_value.AsCString());
           break;
-        case DW_AT_specification:
+        case llvm::dwarf::DW_AT_specification:
           has_specification_of = true;
           break;
-        case DW_AT_linkage_name:
-        case DW_AT_MIPS_linkage_name: {
+        case llvm::dwarf::DW_AT_linkage_name:
+        case llvm::dwarf::DW_AT_MIPS_linkage_name: {
           mangled_name.SetCString(form_value.AsCString());
           auto HasSpecificationOf = [&](){
             if (has_specification_of)
               return true;
             for (uint32_t j = i+1; j < num_attributes; ++j)
-              if (attributes.AttributeAtIndex(j) == DW_AT_specification)
+              if (attributes.AttributeAtIndex(j) ==
+                  llvm::dwarf::DW_AT_specification)
                 return true;
             return false;
           };
@@ -118,24 +119,25 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
           // type. The child contains the linkage name of the
           // specialized type.  We should define appropriate DWARF for
           // this instead of relying on this heuristic.
-          if (die.Tag() == DW_TAG_structure_type && die.HasChildren() &&
-              HasSpecificationOf()) {
+          if (die.Tag() == llvm::dwarf::DW_TAG_structure_type &&
+              die.HasChildren() && HasSpecificationOf()) {
             DWARFDIE member_die = die.GetFirstChild();
-            if (member_die.Tag() != DW_TAG_member || member_die.GetName())
+            if (member_die.Tag() != llvm::dwarf::DW_TAG_member ||
+                member_die.GetName())
               break;
             if (DWARFDIE inner_type_die =
-                    member_die.GetAttributeValueAsReferenceDIE(DW_AT_type))
+                    member_die.GetAttributeValueAsReferenceDIE(
+                        llvm::dwarf::DW_AT_type))
               if (const char *s = inner_type_die.GetAttributeValueAsString(
-                      DW_AT_name, nullptr))
+                      llvm::dwarf::DW_AT_name, nullptr))
                 mangled_name.SetCString(s);
           }
-          }
-          break;
-        case DW_AT_byte_size:
+        } break;
+        case llvm::dwarf::DW_AT_byte_size:
           dwarf_byte_size = form_value.Unsigned();
           break;
-        case DW_AT_type:
-          if (die.Tag() == DW_TAG_const_type)
+        case llvm::dwarf::DW_AT_type:
+          if (die.Tag() == llvm::dwarf::DW_TAG_const_type)
             // This is how let bindings are represented. This doesn't
             // change the underlying Swift type.
             return ParseTypeFromDWARF(sc, form_value.Reference(),
@@ -150,12 +152,14 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
 
   // Helper to retrieve the DW_AT_type as a lldb::TypeSP.
   auto get_type = [&](DWARFDIE die) -> TypeSP {
-    if (DWARFDIE type_die = die.GetAttributeValueAsReferenceDIE(DW_AT_type))
+    if (DWARFDIE type_die =
+            die.GetAttributeValueAsReferenceDIE(llvm::dwarf::DW_AT_type))
       return ParseTypeFromDWARF(sc, type_die, type_is_new_ptr);
     return {};
   };
 
-  if (!name && !mangled_name && die.Tag() == DW_TAG_structure_type) {
+  if (!name && !mangled_name &&
+      die.Tag() == llvm::dwarf::DW_TAG_structure_type) {
     // This is a sized container for a bound generic.
     return get_type(die.GetFirstChild());
   }
@@ -171,7 +175,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
     }
     if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetStringRef())) {
       mangled_name = name;
-      if (die.Tag() == DW_TAG_typedef)
+      if (die.Tag() == llvm::dwarf::DW_TAG_typedef)
         if (TypeSP desugared_type = get_type(die)) {
           // For a typedef, store the once desugared type as the name.
           CompilerType type = desugared_type->GetForwardCompilerType();
@@ -198,7 +202,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
           m_swift_typesystem.GetTypeFromMangledTypename(mangled_name);
   }
 
-  if (!compiler_type && die.Tag() == DW_TAG_typedef) {
+  if (!compiler_type && die.Tag() == llvm::dwarf::DW_TAG_typedef) {
     // Handle Archetypes, which are typedefs to RawPointerType.
     llvm::StringRef typedef_name = GetTypedefName(die);
     if (typedef_name.starts_with("$sBp")) {
@@ -215,9 +219,9 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
   }
 
   switch (die.Tag()) {
-  case DW_TAG_inlined_subroutine:
-  case DW_TAG_subprogram:
-  case DW_TAG_subroutine_type:
+  case llvm::dwarf::DW_TAG_inlined_subroutine:
+  case llvm::dwarf::DW_TAG_subprogram:
+  case llvm::dwarf::DW_TAG_subroutine_type:
     if (!compiler_type || !compiler_type.IsFunctionType()) {
       // Make sure we at least have some function type. The mangling for
       // the "top_level_code" is returning the empty tuple type "()",
@@ -268,7 +272,7 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
   std::optional<int> call_column = 0;
   DWARFExpressionList frame_base;
 
-  if (die.Tag() != DW_TAG_subprogram)
+  if (die.Tag() != llvm::dwarf::DW_TAG_subprogram)
     return NULL;
 
   if (die.GetDIENamesAndRanges(name, mangled, unused_ranges, decl_file,
@@ -293,7 +297,7 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
 
     DWARFDebugInfoEntry *child(die.GetFirstChild().GetDIE());
     while (child) {
-      if (child->Tag() == DW_TAG_thrown_type) {
+      if (child->Tag() == llvm::dwarf::DW_TAG_thrown_type) {
         can_throw = true;
         break;
       }
