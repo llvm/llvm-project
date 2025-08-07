@@ -152,43 +152,40 @@ createNdDescriptor(PatternRewriter &rewriter, Location loc,
   return ndDesc;
 }
 
-static void adjustStridesForPermutation(Operation *op,
-                                        PatternRewriter &rewriter,
-                                        MemRefType memrefType,
-                                        AffineMap permMap, VectorType vecType,
-                                        SmallVectorImpl<Value> &strides) {
+static LogicalResult adjustStridesForPermutation(
+    Operation *op, PatternRewriter &rewriter, MemRefType memrefType,
+    AffineMap permMap, VectorType vecType, SmallVectorImpl<Value> &strides) {
   unsigned vecRank;
   unsigned memrefRank = memrefType.getRank();
 
-  if (!permMap.isMinorIdentity()) {
-    vecRank = vecType.getRank();
-    // Only adjust the last vecRank strides according to the permutation
-    ArrayRef<Value> relevantStrides =
-        ArrayRef<Value>(strides).take_back(vecRank);
-    SmallVector<Value> adjustedStrides(vecRank);
-    // For each output dimension in the permutation map, find which input dim it
-    // refers to, and assign the corresponding stride.
-    for (unsigned outIdx = 0; outIdx < vecRank; ++outIdx) {
-      AffineExpr expr = permMap.getResult(outIdx);
-      auto dimExpr = dyn_cast<AffineDimExpr>(expr);
-      if (!dimExpr) {
-        rewriter.notifyMatchFailure(op, "Unsupported permutation expr");
-        return;
-      }
-      unsigned pos = dimExpr.getPosition();
-      // Map permutation to the relevant strides (innermost dims)
-      if (pos < memrefRank - vecRank) {
-        rewriter.notifyMatchFailure(op, "Permutation out of bounds");
-        return;
-      }
-      // The stride for output dimension outIdx is the stride of input dimension
-      // pos
-      adjustedStrides[outIdx] = relevantStrides[pos - (memrefRank - vecRank)];
+  if (permMap.isMinorIdentity())
+    return success();
+  vecRank = vecType.getRank();
+  // Only adjust the last vecRank strides according to the permutation
+  ArrayRef<Value> relevantStrides = ArrayRef<Value>(strides).take_back(vecRank);
+  SmallVector<Value> adjustedStrides(vecRank);
+  // For each output dimension in the permutation map, find which input dim it
+  // refers to, and assign the corresponding stride.
+  for (unsigned outIdx = 0; outIdx < vecRank; ++outIdx) {
+    AffineExpr expr = permMap.getResult(outIdx);
+    auto dimExpr = dyn_cast<AffineDimExpr>(expr);
+    if (!dimExpr) {
+      return rewriter.notifyMatchFailure(op, "Unsupported permutation expr");
     }
-    // Replace the last vecRank strides with the adjusted ones
-    for (unsigned i = 0; i < vecRank; ++i)
-      strides[memrefRank - vecRank + i] = adjustedStrides[i];
+    unsigned pos = dimExpr.getPosition();
+    // Map permutation to the relevant strides (innermost dims)
+    if (pos < memrefRank - vecRank) {
+      return rewriter.notifyMatchFailure(op, "Permutation out of bounds");
+    }
+    // The stride for output dimension outIdx is the stride of input dimension
+    // pos
+    adjustedStrides[outIdx] = relevantStrides[pos - (memrefRank - vecRank)];
   }
+  // Replace the last vecRank strides with the adjusted ones
+  for (unsigned i = 0; i < vecRank; ++i)
+    strides[memrefRank - vecRank + i] = adjustedStrides[i];
+
+  return success();
 }
 
 SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
@@ -204,7 +201,6 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
     int64_t offset;
     SmallVector<int64_t> intStrides;
     if (failed(memrefType.getStridesAndOffset(intStrides, offset))) {
-      rewriter.notifyMatchFailure(xferOp, "Failed to get memref strides");
       return {};
     }
     // Wrap static strides as MLIR values
@@ -234,8 +230,10 @@ SmallVector<Value> computeStrides(VectorTransferOpInterface xferOp,
     strides.append(meta.getStrides().begin(), meta.getStrides().end());
   }
   // Adjust strides according to the permutation map (e.g., for transpose)
-  adjustStridesForPermutation(xferOp, rewriter, memrefType, permMap, vectorType,
-                              strides);
+  if (failed(adjustStridesForPermutation(xferOp, rewriter, memrefType, permMap,
+                                         vectorType, strides))) {
+    return {};
+  }
   return strides;
 }
 
@@ -437,6 +435,8 @@ LogicalResult lowerTransferReadToLoadOp(vector::TransferReadOp readOp,
     return rewriter.notifyMatchFailure(readOp, "Expected memref source");
 
   SmallVector<Value> strides = computeStrides(readOp, rewriter);
+  if (strides.empty())
+    return rewriter.notifyMatchFailure(readOp, "Failed to compute strides");
 
   Value localOffsets = computeGatherOffsets(readOp, rewriter, strides);
 
@@ -463,30 +463,30 @@ LogicalResult lowerTransferWriteToStoreOp(vector::TransferWriteOp writeOp,
 }
 
 static LogicalResult
-extraCheckForScatteredLoadStore(vector::TransferReadOp readOp,
+extraCheckForScatteredLoadStore(VectorTransferOpInterface xferOp,
                                 PatternRewriter &rewriter) {
   // 1. it must be inbound access by checking in_bounds attributes, like
   // {in_bounds = [false, true]}
-  if (readOp.hasOutOfBoundsDim())
-    return rewriter.notifyMatchFailure(readOp,
+  if (xferOp.hasOutOfBoundsDim())
+    return rewriter.notifyMatchFailure(xferOp,
                                        "Out-of-bounds access is not supported "
                                        "for scatter load/store lowering");
   // 2. if the memref has static shape, its lower rank must exactly match with
   // vector shape.
-  if (auto memrefType = dyn_cast<MemRefType>(readOp.getShapedType())) {
+  if (auto memrefType = dyn_cast<MemRefType>(xferOp.getShapedType())) {
     if (memrefType.hasStaticShape()) {
       ArrayRef<int64_t> memrefShape = memrefType.getShape();
-      ArrayRef<int64_t> vectorShape = readOp.getVectorType().getShape();
+      ArrayRef<int64_t> vectorShape = xferOp.getVectorType().getShape();
       size_t memrefRank = memrefShape.size();
       size_t vectorRank = vectorShape.size();
       if (vectorRank > memrefRank)
         return rewriter.notifyMatchFailure(
-            readOp, "Vector rank cannot exceed memref rank");
+            xferOp, "Vector rank cannot exceed memref rank");
       // Compare the last vectorRank dimensions of memref with vector shape
       for (size_t i = 0; i < vectorRank; ++i) {
         if (memrefShape[memrefRank - vectorRank + i] <= vectorShape[i])
           return rewriter.notifyMatchFailure(
-              readOp, "Memref lower dimensions must match vector shape");
+              xferOp, "Memref lower dimensions must match vector shape");
       }
     }
   }
@@ -574,9 +574,13 @@ struct TransferWriteLowering
 
     auto chip = xegpu::getXeGPUChipStr(writeOp);
     if (chip != "pvc" && chip != "bmg") {
+      // perform additional checks -
+      if (failed(extraCheckForScatteredLoadStore(writeOp, rewriter)))
+        return failure();
       // calling another function that lower TransferWriteOp to regular StoreOp
       return lowerTransferWriteToStoreOp(writeOp, rewriter);
     }
+
     // Perform common data transfer checks.
     VectorType vecTy = writeOp.getVectorType();
     if (failed(storeLoadPreconditions(rewriter, writeOp, vecTy)))
