@@ -275,3 +275,20 @@ void firstprivate_arrays() {
 #pragma acc parallel firstprivate(UDCopyArr)
   ;
 }
+
+template<unsigned I>
+void non_const_array_templ() {
+  int CArr[I];
+
+#pragma acc parallel firstprivate(CArr)
+  ;
+}
+
+void non_const_arrays(int I) {
+  non_const_array_templ<5>();
+
+  int NCArr[I];
+  // expected-warning@+1{{variable of array type 'int[I]' referenced in OpenACC 'firstprivate' clause does not have constant bounds; initialization will happen after decay to pointer}}
+#pragma acc parallel firstprivate(NCArr)
+  ;
+}
