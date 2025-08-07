@@ -296,6 +296,9 @@ void SystemZPreRASchedStrategy::initPolicy(MachineBasicBlock::iterator Begin,
   // These heuristics has so far seemed to work better without adding a
   // top-down boundary.
   RegionPolicy.OnlyBottomUp = true;
+
+  BotIdx = NumRegionInstrs - 1;
+  this->NumRegionInstrs = NumRegionInstrs;
 }
 
 void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
