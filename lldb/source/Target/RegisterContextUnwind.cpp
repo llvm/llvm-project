@@ -426,9 +426,12 @@ void RegisterContextUnwind::InitializeNonZerothFrame() {
       }
     }
 
-    if (abi_sp) {
-      m_fast_unwind_plan_sp.reset();
+    m_fast_unwind_plan_sp.reset();
+    m_full_unwind_plan_sp.reset();
+    if (abi_sp)
       m_full_unwind_plan_sp = abi_sp->CreateDefaultUnwindPlan();
+
+    if (m_full_unwind_plan_sp) {
       if (m_frame_type != eSkipFrame) // don't override eSkipFrame
       {
         m_frame_type = eNormalFrame;
