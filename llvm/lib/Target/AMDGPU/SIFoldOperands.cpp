@@ -2081,7 +2081,9 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
   case AMDGPU::V_MAX_F16_fake16_e64:
   case AMDGPU::V_MAX_F64_e64:
   case AMDGPU::V_MAX_NUM_F64_e64:
-  case AMDGPU::V_PK_MAX_F16: {
+  case AMDGPU::V_PK_MAX_F16:
+  case AMDGPU::V_MAX_BF16_PSEUDO_e64:
+  case AMDGPU::V_PK_MAX_NUM_BF16: {
     if (MI.mayRaiseFPException())
       return nullptr;
 
@@ -2108,8 +2110,10 @@ SIFoldOperandsImpl::isClamp(const MachineInstr &MI) const {
 
     // Having a 0 op_sel_hi would require swizzling the output in the source
     // instruction, which we can't do.
-    unsigned UnsetMods = (Op == AMDGPU::V_PK_MAX_F16) ? SISrcMods::OP_SEL_1
-                                                      : 0u;
+    unsigned UnsetMods =
+        (Op == AMDGPU::V_PK_MAX_F16 || Op == AMDGPU::V_PK_MAX_NUM_BF16)
+            ? SISrcMods::OP_SEL_1
+            : 0u;
     if (Src0Mods != UnsetMods && Src1Mods != UnsetMods)
       return nullptr;
     return Src0;
