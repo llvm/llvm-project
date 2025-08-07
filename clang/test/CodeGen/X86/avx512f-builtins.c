@@ -154,6 +154,7 @@ __m512 test_mm512_add_ps(__m512 a, __m512 b)
   // CHECK: fadd <16 x float>
   return _mm512_add_ps(a, b);
 }
+TEST_CONSTEXPR(match_m512(_mm512_add_ps((__m512){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f, +1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}, (__m512){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f, +1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}), -2.0f, -4.0f, -6.0f, -8.0f, -10.0f, -12.0f, -14.0f, -16.0f, +2.0f, +4.0f, +6.0f, +8.0f, +10.0f, +12.0f, +14.0f, +16.0f));
 
 __m512d test_mm512_add_pd(__m512d a, __m512d b)
 {
@@ -161,6 +162,7 @@ __m512d test_mm512_add_pd(__m512d a, __m512d b)
   // CHECK: fadd <8 x double>
   return _mm512_add_pd(a, b);
 }
+TEST_CONSTEXPR(match_m512d(_mm512_add_pd((__m512d){-1.0, -2.0, -3.0, -4.0, +1.0, +2.0, +3.0, +4.0}, (__m512d){-1.0, -2.0, -3.0, -4.0, +1.0, +2.0, +3.0, +4.0}), -2.0, -4.0, -6.0, -8.0, +2.0, +4.0, +6.0, +8.0));
 
 __m512 test_mm512_mul_ps(__m512 a, __m512 b)
 {
@@ -168,6 +170,7 @@ __m512 test_mm512_mul_ps(__m512 a, __m512 b)
   // CHECK: fmul <16 x float>
   return _mm512_mul_ps(a, b);
 }
+TEST_CONSTEXPR(match_m512(_mm512_mul_ps((__m512){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f, +1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}, (__m512){-1.0f, -2.0f, -3.0f, -4.0f, -5.0f, -6.0f, -7.0f, -8.0f, +1.0f, +2.0f, +3.0f, +4.0f, +5.0f, +6.0f, +7.0f, +8.0f}), +1.0f, +4.0f, +9.0f, +16.0f, +25.0f, +36.0f, +49.0f, +64.0f, +1.0f, +4.0f, +9.0f, +16.0f, +25.0f, +36.0f, +49.0f, +64.0f));
 
 __m512d test_mm512_mul_pd(__m512d a, __m512d b)
 {
@@ -175,6 +178,7 @@ __m512d test_mm512_mul_pd(__m512d a, __m512d b)
   // CHECK: fmul <8 x double>
   return _mm512_mul_pd(a, b);
 }
+TEST_CONSTEXPR(match_m512d(_mm512_mul_pd((__m512d){-1.0, -2.0, -3.0, -4.0, +1.0, +2.0, +3.0, +4.0}, (__m512d){-1.0, -2.0, -3.0, -4.0, +1.0, +2.0, +3.0, +4.0}), +1.0, +4.0, +9.0, +16.0, +1.0, +4.0, +9.0, +16.0));
 
 void test_mm512_storeu_si512 (void *__P, __m512i __A)
 {
@@ -1261,6 +1265,7 @@ __m512d test_mm512_unpackhi_pd(__m512d a, __m512d b)
   // CHECK: shufflevector <8 x double> {{.*}} <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
   return _mm512_unpackhi_pd(a, b);
 }
+TEST_CONSTEXPR(match_m512d(_mm512_unpackhi_pd((__m512d){1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, (__m512d){9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0}), +2.0, +10.0, +4.0, +12.0, +6.0, +14.0, +8.0, +16.0));
 
 __m512d test_mm512_unpacklo_pd(__m512d a, __m512d b)
 {
@@ -1268,6 +1273,7 @@ __m512d test_mm512_unpacklo_pd(__m512d a, __m512d b)
   // CHECK: shufflevector <8 x double> {{.*}} <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
   return _mm512_unpacklo_pd(a, b);
 }
+TEST_CONSTEXPR(match_m512d(_mm512_unpacklo_pd((__m512d){1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0}, (__m512d){9.0, 10.0, 11.0, 12.0, 13.0, 14.0, 15.0, 16.0}), +1.0, +9.0, +3.0, +11.0, +5.0, +13.0, +7.0, +15.0));
 
 __m512 test_mm512_unpackhi_ps(__m512 a, __m512 b)
 {
@@ -1275,6 +1281,7 @@ __m512 test_mm512_unpackhi_ps(__m512 a, __m512 b)
   // CHECK: shufflevector <16 x float> {{.*}} <i32 2, i32 18, i32 3, i32 19, i32 6, i32 22, i32 7, i32 23, i32 10, i32 26, i32 11, i32 27, i32 14, i32 30, i32 15, i32 31>
   return _mm512_unpackhi_ps(a, b);
 }
+TEST_CONSTEXPR(match_m512(_mm512_unpackhi_ps((__m512){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f}, (__m512){16.0f, 17.0f, 18.0f, 19.0f, 20.0f, 21.0f, 22.0f, 23.0f, 24.0f, 25.0f, 26.0f, 27.0f, 28.0f, 29.0f, 30.0f, 31.0f}), +2.0f, +18.0f, +3.0f, +19.0f, +6.0f, +22.0f, +7.0f, +23.0f, +10.0f, +26.0f, +11.0f, +27.0f, +14.0f, +30.0f, +15.0f, +31.0f));
 
 __m512 test_mm512_unpacklo_ps(__m512 a, __m512 b)
 {
@@ -1282,6 +1289,7 @@ __m512 test_mm512_unpacklo_ps(__m512 a, __m512 b)
   // CHECK: shufflevector <16 x float> {{.*}} <i32 0, i32 16, i32 1, i32 17, i32 4, i32 20, i32 5, i32 21, i32 8, i32 24, i32 9, i32 25, i32 12, i32 28, i32 13, i32 29>
   return _mm512_unpacklo_ps(a, b);
 }
+TEST_CONSTEXPR(match_m512(_mm512_unpacklo_ps((__m512){0.0f, 1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 13.0f, 14.0f, 15.0f}, (__m512){16.0f, 17.0f, 18.0f, 19.0f, 20.0f, 21.0f, 22.0f, 23.0f, 24.0f, 25.0f, 26.0f, 27.0f, 28.0f, 29.0f, 30.0f, 31.0f}), +0.0f, +16.0f, +1.0f, +17.0f, +4.0f, +20.0f, +5.0f, +21.0f, +8.0f, +24.0f, +9.0f, +25.0f, +12.0f, +28.0f, +13.0f, +29.0f));
 
 __mmask16 test_mm512_cmp_round_ps_mask(__m512 a, __m512 b) {
   // CHECK-LABEL: test_mm512_cmp_round_ps_mask
@@ -3551,6 +3559,7 @@ __m512d test_mm512_div_pd(__m512d __a, __m512d __b) {
   // CHECK: fdiv <8 x double>
   return _mm512_div_pd(__a,__b); 
 }
+TEST_CONSTEXPR(match_m512d(_mm512_div_pd((__m512d){+8.0, +6.0, +4.0, +2.0, -8.0, -6.0, -4.0, -2.0}, (__m512d){+2.0, +2.0, +2.0, +2.0, -2.0, -2.0, -2.0, -2.0}), +4.0, +3.0, +2.0, +1.0, +4.0, +3.0, +2.0, +1.0));
 __m512d test_mm512_mask_div_pd(__m512d __w, __mmask8 __u, __m512d __a, __m512d __b) {
   // CHECK-LABEL: test_mm512_mask_div_pd
   // CHECK: fdiv <8 x double> %{{.*}}, %{{.*}}
@@ -3585,6 +3594,7 @@ __m512 test_mm512_div_ps(__m512 __A, __m512 __B) {
   // CHECK: fdiv <16 x float>
   return _mm512_div_ps(__A,__B); 
 }
+TEST_CONSTEXPR(match_m512(_mm512_div_ps((__m512){+16.0f, +14.0f, +12.0f, +10.0f, +8.0f, +6.0f, +4.0f, +2.0f, -16.0f, -14.0f, -12.0f, -10.0f, -8.0f, -6.0f, -4.0f, -2.0f}, (__m512){+2.0f, +2.0f, +2.0f, +2.0f, +2.0f, +2.0f, +2.0f, +2.0f, -2.0f, -2.0f, -2.0f, -2.0f, -2.0f, -2.0f, -2.0f, -2.0f}), +8.0f, +7.0f, +6.0f, +5.0f, +4.0f, +3.0f, +2.0f, +1.0f, +8.0f, +7.0f, +6.0f, +5.0f, +4.0f, +3.0f, +2.0f, +1.0f));
 __m512 test_mm512_mask_div_ps(__m512 __W, __mmask16 __U, __m512 __A, __m512 __B) {
   // CHECK-LABEL: test_mm512_mask_div_ps
   // CHECK: fdiv <16 x float> %{{.*}}, %{{.*}}
