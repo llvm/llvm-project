@@ -260,16 +260,14 @@ static void DetermineCopyInOutArgument(
     // Actual argument expressions that aren’t variables are copy-in, but
     // not copy-out.
     actual.set_mayNeedCopyIn();
-  }
-  else if (!IsSimplyContiguous(actual, sc.foldingContext())) {
+  } else if (!IsSimplyContiguous(actual, sc.foldingContext())) {
     // Actual arguments that are variables are copy-in when non-contiguous.
     // They are copy-out when don't have vector subscripts
     actual.set_mayNeedCopyIn();
     if (!HasVectorSubscript(actual)) {
       actual.set_mayNeedCopyOut();
     }
-  }
-  else if (ExtractCoarrayRef(actual)) {
+  } else if (ExtractCoarrayRef(actual)) {
     // Coindexed actual args need copy-in and copy-out
     actual.set_mayNeedCopyIn();
     actual.set_mayNeedCopyOut();
