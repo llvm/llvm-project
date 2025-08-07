@@ -2295,6 +2295,18 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
                  CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy) &&
                  !getLangOpts().PointerAuthCalls;
 
+  std::optional<CGCXXABI::ExactDynamicCastInfo> ExactCastInfo;
+  if (IsExact) {
+    ExactCastInfo = CGM.getCXXABI().getExactDynamicCastInfo(SrcRecordTy, DestTy,
+                                                            DestRecordTy);
+    if (!ExactCastInfo) {
+      llvm::Value *NullValue = EmitDynamicCastToNull(*this, DestTy);
+      if (!Builder.GetInsertBlock())
+        EmitBlock(createBasicBlock("dynamic_cast.unreachable"));
+      return NullValue;
+    }
+  }
+
   // C++ [expr.dynamic.cast]p4:
   //   If the value of v is a null pointer value in the pointer case, the result
   //   is the null pointer value of type T.
@@ -2322,7 +2334,8 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
     // If the destination type is effectively final, this pointer points to the
     // right type if and only if its vptr has the right value.
     Value = CGM.getCXXABI().emitExactDynamicCast(
-        *this, ThisAddr, SrcRecordTy, DestTy, DestRecordTy, CastEnd, CastNull);
+        *this, ThisAddr, SrcRecordTy, DestTy, DestRecordTy, *ExactCastInfo,
+        CastEnd, CastNull);
   } else {
     assert(DestRecordTy->isRecordType() &&
            "destination type must be a record type!");

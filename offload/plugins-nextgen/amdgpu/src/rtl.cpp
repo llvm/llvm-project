@@ -2945,6 +2945,40 @@ private:
     return Plugin::success();
   }
 
+  bool checkIfCoarseGrainMemoryNearOrAbove64GB() {
+    for (AMDGPUMemoryPoolTy *Pool : AllMemoryPools) {
+      if (!Pool->isGlobal() || !Pool->isCoarseGrained())
+        continue;
+      uint64_t Value;
+      hsa_status_t Status =
+          Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_SIZE, Value);
+      if (Status != HSA_STATUS_SUCCESS)
+        continue;
+      constexpr uint64_t Almost64Gig = 0xFF0000000;
+      if (Value >= Almost64Gig)
+        return true;
+    }
+    return false; // CoarseGrain pool w/ 64GB or more capacity not found
+  }
+
+  size_t getMemoryManagerSizeThreshold() override {
+    // Targeting high memory capacity GPUs such as
+    // data center GPUs.
+    if (checkIfCoarseGrainMemoryNearOrAbove64GB()) {
+      // Set GenericDeviceTy::MemoryManager's Threshold to 3GiB,
+      // if threshold is not already set by ENV var
+      // LIBOMPTARGET_MEMORY_MANAGER_THRESHOLD.
+      // This MemoryManager is used for omp_target_alloc(), OpenMP
+      // (non-usm) map clause, etc.
+      //
+      // Ideally, this kind of pooling is best performed at
+      // a common level (e.g, user side of HSA) between OpenMP and HIP
+      // but that feature does not exist (yet).
+      return 3ul * 1024 * 1024 * 1024 /* 3 GiB */;
+    }
+    return 0;
+  }
+
   /// Envar for controlling the number of HSA queues per device. High number of
   /// queues may degrade performance.
   UInt32Envar OMPX_NumQueues;

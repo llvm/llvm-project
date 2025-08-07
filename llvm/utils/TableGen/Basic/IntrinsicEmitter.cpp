@@ -652,6 +652,16 @@ static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
 
 AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
                                        FunctionType *FT) {)";
+  // Find the max number of attributes to create the local array.
+  unsigned MaxNumAttrs = 0;
+  for (const auto [IntPtr, UniqueID] : UniqAttributes) {
+    const CodeGenIntrinsic &Int = *IntPtr;
+    unsigned NumAttrs =
+        llvm::count_if(Int.ArgumentAttributes,
+                       [](const auto &Attrs) { return !Attrs.empty(); });
+    NumAttrs += hasFnAttributes(Int);
+    MaxNumAttrs = std::max(MaxNumAttrs, NumAttrs);
+  }
 
   OS << formatv(R"(
   if (id == 0)
@@ -659,46 +669,44 @@ AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
 
   uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
   uint8_t FnAttrID = PackedID >> 8;
+  std::pair<unsigned, AttributeSet> AS[{}];
+  unsigned NumAttrs = 0;
+  bool HasFnAttr = false;
   switch(PackedID & 0xFF) {{
     default: llvm_unreachable("Invalid attribute number");
-)");
+)",
+                MaxNumAttrs);
 
   for (const auto [IntPtr, UniqueID] : UniqAttributes) {
     OS << formatv("  case {}:\n", UniqueID);
     const CodeGenIntrinsic &Int = *IntPtr;
 
-    // Keep track of the number of attributes we're writing out.
-    unsigned NumAttrs =
-        llvm::count_if(Int.ArgumentAttributes,
-                       [](const auto &Attrs) { return !Attrs.empty(); });
-    NumAttrs += hasFnAttributes(Int);
-    if (NumAttrs == 0) {
-      OS << "    return AttributeList();\n";
-      continue;
-    }
+    unsigned NumAttrs = 0;
 
-    OS << "    return AttributeList::get(C, {\n";
-    ListSeparator LS(",\n");
     for (const auto &[AttrIdx, Attrs] : enumerate(Int.ArgumentAttributes)) {
       if (Attrs.empty())
         continue;
 
       unsigned ArgAttrID = UniqArgAttributes.find(Attrs)->second;
-      OS << LS
-         << formatv("      {{{}, getIntrinsicArgAttributeSet(C, {}, "
-                    "FT->getContainedType({}))}",
-                    AttrIdx, ArgAttrID, AttrIdx);
+      OS << formatv("    AS[{}] = {{{}, getIntrinsicArgAttributeSet(C, {}, "
+                    "FT->getContainedType({}))};\n",
+                    NumAttrs++, AttrIdx, ArgAttrID, AttrIdx);
     }
 
-    if (hasFnAttributes(Int)) {
-      OS << LS
-         << "      {AttributeList::FunctionIndex, "
-            "getIntrinsicFnAttributeSet(C, FnAttrID)}";
-    }
-    OS << "\n    });\n";
+    if (hasFnAttributes(Int))
+      OS << "    HasFnAttr = true;\n";
+
+    if (NumAttrs)
+      OS << formatv("    NumAttrs = {};\n", NumAttrs);
+    OS << "    break;\n";
   }
 
   OS << R"(  }
+  if (HasFnAttr) {
+    AS[NumAttrs++] = {AttributeList::FunctionIndex,
+                      getIntrinsicFnAttributeSet(C, FnAttrID)};
+  }
+  return AttributeList::get(C, ArrayRef(AS, NumAttrs));
 }
 #endif // GET_INTRINSIC_ATTRIBUTES
 

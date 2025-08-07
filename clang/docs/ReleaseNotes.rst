@@ -182,6 +182,8 @@ Bug Fixes to C++ Support
 - Fix a crash when deleting a pointer to an incomplete array (#GH150359).
 - Fix an assertion failure when expression in assumption attribute
   (``[[assume(expr)]]``) creates temporary objects.
+- Fix the dynamic_cast to final class optimization to correctly handle
+  casts that are guaranteed to fail (#GH137518).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

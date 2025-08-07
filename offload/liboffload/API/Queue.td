@@ -24,7 +24,9 @@ def : Function {
 def : Function {
     let name = "olDestroyQueue";
     let desc = "Destroy the queue and free all underlying resources.";
-    let details = [];
+    let details = [
+      "Any work previously enqueued to the queue is still performed and any events generated for this queue remain valid."
+    ];
     let params = [
         Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
     ];

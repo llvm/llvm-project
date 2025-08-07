@@ -59,9 +59,12 @@ RUN apt-get update && \
     sudo \
     # These are needed by the premerge pipeline. Pip is used to install
     # dependent python packages. File and tzdata are used for tests.
+    # Having a symlink from python to python3 enables code sharing between
+    # the Linux and Windows pipelines.
     python3-pip \
     file \
-    tzdata && \
+    tzdata \
+    python-is-python3 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

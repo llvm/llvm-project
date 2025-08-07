@@ -27,3 +27,28 @@ s_mov_b64 s[0:1], src_shared_limit
 
 s_getreg_b32 s1, hwreg(33)
 // GFX1250: encoding: [0x21,0xf8,0x81,0xb8]
+
+s_getreg_b32 s1, hwreg(HW_REG_XNACK_STATE_PRIV)
+// GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
+// GFX1250: encoding: [0x21,0xf8,0x81,0xb8]
+
+s_getreg_b32 s1, hwreg(34)
+// GFX1250: encoding: [0x22,0xf8,0x81,0xb8]
+
+s_getreg_b32 s1, hwreg(HW_REG_XNACK_MASK)
+// GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
+// GFX1250: encoding: [0x22,0xf8,0x81,0xb8]
+
+s_setreg_b32 hwreg(33), s1
+// GFX1250: encoding: [0x21,0xf8,0x01,0xb9]
+
+s_setreg_b32 hwreg(HW_REG_XNACK_STATE_PRIV), s1
+// GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
+// GFX1250: encoding: [0x21,0xf8,0x01,0xb9]
+
+s_setreg_b32 hwreg(34), s1
+// GFX1250: encoding: [0x22,0xf8,0x01,0xb9]
+
+s_setreg_b32 hwreg(HW_REG_XNACK_MASK), s1
+// GFX1200-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU
+// GFX1250: encoding: [0x22,0xf8,0x01,0xb9]

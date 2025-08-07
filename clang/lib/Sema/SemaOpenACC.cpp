@@ -646,8 +646,17 @@ ExprResult CheckVarType(SemaOpenACC &S, OpenACCClauseKind CK, Expr *VarExpr,
   if (auto *RefTy = InnerTy->getAs<ReferenceType>())
     InnerTy = RefTy->getPointeeType();
 
-  if (auto *ArrTy = InnerTy->getAsArrayTypeUnsafe())
+  if (auto *ArrTy = InnerTy->getAsArrayTypeUnsafe()) {
+    // Non constant arrays decay to 'pointer', so warn and return that we're
+    // successful.
+    if (!ArrTy->isConstantArrayType()) {
+      S.Diag(InnerLoc, clang::diag::warn_acc_var_referenced_non_const_array)
+          << InnerTy << CK;
+      return VarExpr;
+    }
+
     return CheckVarType(S, CK, VarExpr, InnerLoc, ArrTy->getElementType());
+  }
 
   auto *RD = InnerTy->getAsCXXRecordDecl();
 
@@ -2575,8 +2584,8 @@ SemaOpenACC::ActOnOpenACCAsteriskSizeExpr(SourceLocation AsteriskLoc) {
   return BuildOpenACCAsteriskSizeExpr(AsteriskLoc);
 }
 
-VarDecl *SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
-                                       const Expr *VarExpr) {
+std::pair<VarDecl *, VarDecl *>
+SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK, const Expr *VarExpr) {
   // Strip off any array subscripts/array section exprs to get to the type of
   // the variable.
   while (isa_and_present<ArraySectionExpr, ArraySubscriptExpr>(VarExpr)) {
@@ -2590,7 +2599,7 @@ VarDecl *SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
   // fill in with nullptr.  We'll count on TreeTransform to make this if
   // necessary.
   if (!VarExpr || VarExpr->getType()->isDependentType())
-    return nullptr;
+    return {nullptr, nullptr};
 
   QualType VarTy =
       VarExpr->getType().getNonReferenceType().getUnqualifiedType();
@@ -2602,6 +2611,7 @@ VarDecl *SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
       getASTContext().getTrivialTypeSourceInfo(VarTy), SC_Auto);
 
   ExprResult Init;
+  VarDecl *Temporary = nullptr;
 
   if (CK == OpenACCClauseKind::Private) {
     // Trap errors so we don't get weird ones here. If we can't init, we'll just
@@ -2626,5 +2636,5 @@ VarDecl *SemaOpenACC::CreateInitRecipe(OpenACCClauseKind CK,
     Recipe->setInitStyle(VarDecl::CallInit);
   }
 
-  return Recipe;
+  return {Recipe, Temporary};
 }

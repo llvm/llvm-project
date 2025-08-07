@@ -574,13 +574,11 @@ void SystemZELFFrameLowering::emitPrologue(MachineFunction &MF,
 
     // Call mcount (Regmask from CC AnyReg since mcount preserves all normal
     // argument registers).
-    FunctionCallee FC = MF.getFunction().getParent()->getOrInsertFunction(
-        "mcount", Type::getVoidTy(MF.getFunction().getContext()));
     const uint32_t *Mask = MF.getSubtarget<SystemZSubtarget>()
                                .getSpecialRegisters()
                                ->getCallPreservedMask(MF, CallingConv::AnyReg);
     BuildMI(MBB, MBBI, DL, ZII->get(SystemZ::CallBRASL))
-        .addGlobalAddress(dyn_cast<Function>(FC.getCallee()))
+        .addExternalSymbol("mcount")
         .addRegMask(Mask);
 
     // Reload return address from 8 bytes above stack pointer.

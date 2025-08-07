@@ -536,6 +536,10 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
   ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
   ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
+
+  // GFX1250
+  ID_XNACK_STATE_PRIV = 33,
+  ID_XNACK_MASK_gfx1250 = 34,
 };
 
 enum Offset : unsigned { // Offset, (5) [10:6]

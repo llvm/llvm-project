@@ -800,7 +800,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitPrivateClause(
   // Assemble the recipes list.
   for (const Expr *VarExpr : Clause.getVarList())
     InitRecipes.push_back(
-        SemaRef.CreateInitRecipe(OpenACCClauseKind::Private, VarExpr));
+        SemaRef.CreateInitRecipe(OpenACCClauseKind::Private, VarExpr).first);
 
   return OpenACCPrivateClause::Create(
       Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(), Clause.getVarList(),
@@ -813,7 +813,7 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitFirstPrivateClause(
   // really isn't anything to do here. GCC does some duplicate-finding, though
   // it isn't apparent in the standard where this is justified.
 
-  llvm::SmallVector<VarDecl *> InitRecipes;
+  llvm::SmallVector<OpenACCFirstPrivateRecipe> InitRecipes;
 
   // Assemble the recipes list.
   for (const Expr *VarExpr : Clause.getVarList())

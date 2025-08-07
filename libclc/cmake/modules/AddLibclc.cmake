@@ -409,7 +409,10 @@ function(add_libclc_builtin_set)
 
   # Add a 'prepare' target
   add_custom_target( prepare-${obj_suffix} ALL DEPENDS ${libclc_builtins_lib} )
-  set_target_properties( "prepare-${obj_suffix}" PROPERTIES FOLDER "libclc/Device IR/Prepare" )
+  set_target_properties( "prepare-${obj_suffix}" PROPERTIES
+    TARGET_FILE ${libclc_builtins_lib}
+    FOLDER "libclc/Device IR/Prepare"
+  )
 
   # Also add a 'prepare' target for the triple. Since a triple may have
   # multiple devices, ensure we only try to create the triple target once. The

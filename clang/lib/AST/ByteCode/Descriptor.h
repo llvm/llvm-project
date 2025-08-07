@@ -41,14 +41,6 @@ using BlockCtorFn = void (*)(Block *Storage, std::byte *FieldPtr, bool IsConst,
 using BlockDtorFn = void (*)(Block *Storage, std::byte *FieldPtr,
                              const Descriptor *FieldDesc);
 
-/// Invoked when a block with pointers referencing it goes out of scope. Such
-/// blocks are persisted: the move function copies all inline descriptors and
-/// non-trivial fields, as existing pointers might need to reference those
-/// descriptors. Data is not copied since it cannot be legally read.
-using BlockMoveFn = void (*)(Block *Storage, std::byte *SrcFieldPtr,
-                             std::byte *DstFieldPtr,
-                             const Descriptor *FieldDesc);
-
 enum class GlobalInitState {
   Initialized,
   NoInitializer,
@@ -181,7 +173,6 @@ public:
   /// Storage management methods.
   const BlockCtorFn CtorFn = nullptr;
   const BlockDtorFn DtorFn = nullptr;
-  const BlockMoveFn MoveFn = nullptr;
 
   /// Allocates a descriptor for a primitive.
   Descriptor(const DeclTy &D, const Type *SourceTy, PrimType Type,
