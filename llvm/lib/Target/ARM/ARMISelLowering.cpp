@@ -370,6 +370,11 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
       setOperationAction(ISD::FMINNUM, VT, Legal);
       setOperationAction(ISD::FMAXNUM, VT, Legal);
       setOperationAction(ISD::FROUND, VT, Legal);
+      setOperationAction(ISD::FROUNDEVEN, VT, Legal);
+      setOperationAction(ISD::FRINT, VT, Legal);
+      setOperationAction(ISD::FTRUNC, VT, Legal);
+      setOperationAction(ISD::FFLOOR, VT, Legal);
+      setOperationAction(ISD::FCEIL, VT, Legal);
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMUL, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
@@ -664,13 +669,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
       // Integer division functions
       // RTABI chapter 4.3.1
-      { RTLIB::SDIV_I8,  RTLIB::__aeabi_idiv__i8 },
-      { RTLIB::SDIV_I16, RTLIB::__aeabi_idiv__i16 },
-      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv__i32},
+      { RTLIB::SDIV_I32, RTLIB::__aeabi_idiv },
       { RTLIB::SDIV_I64, RTLIB::__aeabi_ldivmod },
-      { RTLIB::UDIV_I8,  RTLIB::__aeabi_uidiv__i8 },
-      { RTLIB::UDIV_I16, RTLIB::__aeabi_uidiv__i16 },
-      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv__i32 },
+      { RTLIB::UDIV_I32, RTLIB::__aeabi_uidiv },
       { RTLIB::UDIV_I64, RTLIB::__aeabi_uldivmod },
     };
     // clang-format on
@@ -736,7 +737,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       const RTLIB::LibcallImpl Impl;
     } LibraryCalls[] = {
         {RTLIB::FPROUND_F32_F16, RTLIB::__aeabi_f2h},
-        {RTLIB::FPROUND_F64_F16, RTLIB::__aeabi_d2h},
         {RTLIB::FPEXT_F16_F32, RTLIB::__aeabi_h2f},
     };
 
@@ -1507,6 +1507,12 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::FLOG2, MVT::f16, Promote);
 
     setOperationAction(ISD::FROUND, MVT::f16, Legal);
+    setOperationAction(ISD::FROUNDEVEN, MVT::f16, Legal);
+    setOperationAction(ISD::FTRUNC, MVT::f16, Legal);
+    setOperationAction(ISD::FNEARBYINT, MVT::f16, Legal);
+    setOperationAction(ISD::FRINT, MVT::f16, Legal);
+    setOperationAction(ISD::FFLOOR, MVT::f16, Legal);
+    setOperationAction(ISD::FCEIL, MVT::f16, Legal);
   }
 
   if (Subtarget->hasNEON()) {
@@ -2412,6 +2418,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CallingConv::ID CallConv              = CLI.CallConv;
   bool doesNotRet                       = CLI.DoesNotReturn;
   bool isVarArg                         = CLI.IsVarArg;
+  const CallBase *CB = CLI.CB;
 
   MachineFunction &MF = DAG.getMachineFunction();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
@@ -2434,6 +2441,10 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   if (CLI.CB && CLI.CB->getAttributes().hasFnAttr(Attribute::ReturnsTwice) &&
       !Subtarget->noBTIAtReturnTwice())
     GuardWithBTI = AFI->branchTargetEnforcement();
+
+  // Set type id for call site info.
+  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
+    CSInfo = MachineFunction::CallSiteInfo(*CB);
 
   // Determine whether this is a non-secure function call.
   if (CLI.CB && CLI.CB->getAttributes().hasFnAttr("cmse_nonsecure_call"))
@@ -5505,18 +5516,6 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   ConstantSDNode *CTVal = dyn_cast<ConstantSDNode>(TrueVal);
   ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS);
   if (Op.getValueType().isInteger()) {
-    // Check for sign pattern (SELECT_CC setgt, iN lhs, -1, 1, -1) and transform
-    // into (OR (ASR lhs, N-1), 1), which requires less instructions for the
-    // supported types.
-    if (CC == ISD::SETGT && RHSC && RHSC->isAllOnes() && CTVal && CFVal &&
-        CTVal->isOne() && CFVal->isAllOnes() &&
-        LHS.getValueType() == TrueVal.getValueType()) {
-      EVT VT = LHS.getValueType();
-      SDValue Shift =
-          DAG.getNode(ISD::SRA, dl, VT, LHS,
-                      DAG.getConstant(VT.getSizeInBits() - 1, dl, VT));
-      return DAG.getNode(ISD::OR, dl, VT, Shift, DAG.getConstant(1, dl, VT));
-    }
 
     // Check for SMAX(lhs, 0) and SMIN(lhs, 0) patterns.
     // (SELECT_CC setgt, lhs, 0, lhs, 0) -> (BIC lhs, (SRA lhs, typesize-1))
@@ -20351,7 +20350,8 @@ static bool isIncompatibleReg(const MCPhysReg &PR, MVT VT) {
   if (PR == 0 || VT == MVT::Other)
     return false;
   return (ARM::SPRRegClass.contains(PR) && VT != MVT::f32 && VT != MVT::i32) ||
-         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64);
+         (ARM::DPRRegClass.contains(PR) && VT != MVT::f64 &&
+          !VT.is64BitVector());
 }
 
 using RCPair = std::pair<unsigned, const TargetRegisterClass *>;
@@ -20784,9 +20784,8 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
     Chain = SP.getValue(1);
     SP = DAG.getNode(ISD::SUB, DL, MVT::i32, SP, Size);
     if (Align)
-      SP = DAG.getNode(
-          ISD::AND, DL, MVT::i32, SP.getValue(0),
-          DAG.getSignedConstant(-(uint64_t)Align->value(), DL, MVT::i32));
+      SP = DAG.getNode(ISD::AND, DL, MVT::i32, SP.getValue(0),
+                       DAG.getSignedConstant(-Align->value(), DL, MVT::i32));
     Chain = DAG.getCopyToReg(Chain, DL, ARM::SP, SP);
     SDValue Ops[2] = { SP, Chain };
     return DAG.getMergeValues(Ops, DL);
@@ -21359,7 +21358,9 @@ bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
 }
 
 void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
-  if (!Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookieLibcall == RTLIB::Unsupported)
     return TargetLowering::insertSSPDeclarations(M);
 
   // MSVC CRT has a global variable holding security cookie.
@@ -21368,23 +21369,32 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
 
   // MSVC CRT has a function to validate security cookie.
   FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
-      "__security_check_cookie", Type::getVoidTy(M.getContext()),
-      PointerType::getUnqual(M.getContext()));
+      getLibcallImplName(SecurityCheckCookieLibcall),
+      Type::getVoidTy(M.getContext()), PointerType::getUnqual(M.getContext()));
   if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
     F->addParamAttr(0, Attribute::AttrKind::InReg);
 }
 
 Value *ARMTargetLowering::getSDagStackGuard(const Module &M) const {
-  // MSVC CRT has a global variable holding security cookie.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
+  RTLIB::LibcallImpl SecurityCheckCookieLibcall =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookieLibcall != RTLIB::Unsupported) {
+    // MSVC CRT has a global variable holding security cookie.
+    //
+    // FIXME: We have a libcall entry for the correlated check function, but not
+    // the global name.
     return M.getGlobalVariable("__security_cookie");
+  }
+
   return TargetLowering::getSDagStackGuard(M);
 }
 
 Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
   // MSVC CRT has a function to validate security cookie.
-  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
-    return M.getFunction("__security_check_cookie");
+  RTLIB::LibcallImpl SecurityCheckCookie =
+      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+  if (SecurityCheckCookie != RTLIB::Unsupported)
+    return M.getFunction(getLibcallImplName(SecurityCheckCookie));
   return TargetLowering::getSSPStackGuardCheck(M);
 }
 

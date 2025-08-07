@@ -714,21 +714,6 @@ Error RewriteInstance::run() {
 
   preprocessProfileData();
 
-  // Skip disassembling if we have a translation table and we are running an
-  // aggregation job.
-  if (opts::AggregateOnly && BAT->enabledFor(InputFile)) {
-    // YAML profile in BAT mode requires CFG for .bolt.org.text functions
-    if (!opts::SaveProfile.empty() ||
-        opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
-      selectFunctionsToProcess();
-      disassembleFunctions();
-      processMetadataPreCFG();
-      buildFunctionsCFG();
-    }
-    processProfileData();
-    return Error::success();
-  }
-
   selectFunctionsToProcess();
 
   readDebugInfo();
@@ -911,6 +896,20 @@ void RewriteInstance::discoverFileObjects() {
         continue;
 
       MarkerSymType MarkerType = BC->getMarkerType(SymInfo.Symbol);
+
+      // Treat ST_Function as code.
+      Expected<object::SymbolRef::Type> TypeOrError = SymInfo.Symbol.getType();
+      consumeError(TypeOrError.takeError());
+      if (TypeOrError && *TypeOrError == SymbolRef::ST_Function) {
+        if (IsData) {
+          Expected<StringRef> NameOrError = SymInfo.Symbol.getName();
+          consumeError(NameOrError.takeError());
+          BC->errs() << "BOLT-WARNING: function symbol " << *NameOrError
+                     << " lacks code marker\n";
+        }
+        MarkerType = MarkerSymType::CODE;
+      }
+
       if (MarkerType != MarkerSymType::NONE) {
         SortedMarkerSymbols.push_back(MarkerSym{SymInfo.Address, MarkerType});
         LastAddr = SymInfo.Address;

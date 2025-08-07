@@ -20,19 +20,24 @@
 // LMUL values map to array indices as follows:
 //   MF8 -> Values[0], MF4 -> Values[1], MF2 -> Values[2], M1 -> Values[3],
 //   M2 -> Values[4], M4 -> Values[5], M8 -> Values[6]
-// The !ge size checks ensure we don't access beyond the array bounds, for cases
-// where M8 is not set (e.g., widening operations)
-// TableGen will error if an invalid LMUL is passed or if the array is too short
+// Shorter lists are allowed, e.g., widening instructions don't work on M8
 class GetLMULValue<list<int> Values, string LMUL> {
-  int c = !cond(
-    !and(!eq(LMUL, "MF8"), !ge(!size(Values), 1)) : Values[0],
-    !and(!eq(LMUL, "MF4"), !ge(!size(Values), 2)) : Values[1],
-    !and(!eq(LMUL, "MF2"), !ge(!size(Values), 3)) : Values[2],
-    !and(!eq(LMUL, "M1"),  !ge(!size(Values), 4)) : Values[3],
-    !and(!eq(LMUL, "M2"),  !ge(!size(Values), 5)) : Values[4],
-    !and(!eq(LMUL, "M4"),  !ge(!size(Values), 6)) : Values[5],
-    !and(!eq(LMUL, "M8"),  !ge(!size(Values), 7)) : Values[6]
+  defvar Index = !cond(
+    !eq(LMUL, "MF8"): 0,
+    !eq(LMUL, "MF4"): 1,
+    !eq(LMUL, "MF2"): 2,
+    !eq(LMUL, "M1"):  3,
+    !eq(LMUL, "M2"):  4,
+    !eq(LMUL, "M4"):  5,
+    !eq(LMUL, "M8"):  6,
   );
+
+  assert !lt(Index, !size(Values)),
+    "Missing LMUL value for '" # LMUL # "'. " #
+    "Expected at least " # !add(Index, 1) # " elements, but got " #
+    !size(Values) # ".";
+
+  int c = Values[Index];
 }
 
 // Returns BaseValue for LMUL values before startLMUL, Value for startLMUL,
@@ -41,18 +46,23 @@ class GetLMULValue<list<int> Values, string LMUL> {
 //   MF8->2, MF4->2, MF2->2, M1->4, M2->8, M4->16, M8->32
 // This is useful for modeling scheduling parameters that scale with LMUL.
 class ConstValueUntilLMULThenDoubleBase<string startLMUL, int BaseValue, int Value, string currentLMUL> {
-  assert !le(BaseValue, Value), "BaseValue must be le to Value";
-  int startPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], startLMUL>.c;
-  int currentPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], currentLMUL>.c;
+  assert !le(BaseValue, Value), "BaseValue must be less-equal to Value";
+  defvar startPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], startLMUL>.c;
+  defvar currentPos = GetLMULValue<[0, 1, 2, 3, 4, 5, 6], currentLMUL>.c;
 
   // Calculate the difference in positions
-  int posDiff = !sub(currentPos, startPos);
+  defvar posDiff = !sub(currentPos, startPos);
 
-  // Calculate Value * (2^posDiff) using shift left
+  // Calculate Value * (2^posDiff)
   int c = !cond(
-    !lt(posDiff, 0) : BaseValue,
     !eq(posDiff, 0) : Value,
-    true: !mul(Value, !shl(1, posDiff))
+    !eq(posDiff, 1) : !mul(Value, 2),
+    !eq(posDiff, 2) : !mul(Value, 4),
+    !eq(posDiff, 3) : !mul(Value, 8),
+    !eq(posDiff, 4) : !mul(Value, 16),
+    !eq(posDiff, 5) : !mul(Value, 32),
+    !eq(posDiff, 6) : !mul(Value, 64),
+    true : BaseValue
   );
 }
 

@@ -310,6 +310,16 @@ class CollectUnexpandedParameterPacksVisitor
       return DynamicRecursiveASTVisitor::TraverseLambdaCapture(Lambda, C, Init);
     }
 
+    bool TraverseUnresolvedLookupExpr(UnresolvedLookupExpr *E) override {
+      if (E->getNumDecls() == 1) {
+        NamedDecl *ND = *E->decls_begin();
+        if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(ND);
+            TTP && TTP->isParameterPack())
+          addUnexpanded(ND, E->getBeginLoc());
+      }
+      return DynamicRecursiveASTVisitor::TraverseUnresolvedLookupExpr(E);
+    }
+
 #ifndef NDEBUG
     bool TraverseFunctionParmPackExpr(FunctionParmPackExpr *) override {
       ContainsIntermediatePacks = true;
@@ -1387,7 +1397,8 @@ static void CheckFoldOperand(Sema &S, Expr *E) {
     S.Diag(E->getExprLoc(), diag::err_fold_expression_bad_operand)
         << E->getSourceRange()
         << FixItHint::CreateInsertion(E->getBeginLoc(), "(")
-        << FixItHint::CreateInsertion(E->getEndLoc(), ")");
+        << FixItHint::CreateInsertion(S.getLocForEndOfToken(E->getEndLoc()),
+                                      ")");
   }
 }
 
