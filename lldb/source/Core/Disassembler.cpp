@@ -379,6 +379,82 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
     }
   }
 
+  // Add rich variable location annotations to the disassembly output.
+  //
+  // For each instruction, this block attempts to resolve in-scope variables
+  // and determine if the current PC falls within their
+  // DWARF location entry. If so, it prints a simplified annotation using the
+  // variable name and its resolved location (e.g., "var = reg; " ).
+  //
+  // Annotations are only included if the variable has a valid DWARF location
+  // entry, and the location string is non-empty after filtering. Decoding
+  // errors and DWARF opcodes are intentionally omitted to keep the output
+  // concise and user-friendly.
+  //
+  // The goal is to give users helpful live variable hints alongside the
+  // disassembled instruction stream, similar to how debug information
+  // enhances source-level debugging.
+  
+  auto annotate_variables = [&](Instruction &inst) -> std::vector<std::string> {
+    std::vector<std::string> annotations;
+
+    StackFrame *frame = exe_ctx.GetFramePtr();
+    TargetSP target_sp = exe_ctx.GetTargetSP();
+    if (!frame || !target_sp)
+      return annotations;
+
+    addr_t current_pc = inst.GetAddress().GetLoadAddress(target_sp.get());
+    addr_t original_pc = frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
+
+    if (!frame->ChangePC(current_pc))
+      return annotations;
+
+    VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
+    if (!var_list_sp)
+      return annotations;
+
+    SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
+    addr_t func_load_addr = sc.function
+                              ? sc.function->GetAddress().GetLoadAddress(target_sp.get())
+                              : LLDB_INVALID_ADDRESS;
+
+    for (const VariableSP &var_sp : *var_list_sp) {
+      if (!var_sp)
+        continue;
+
+      const char *name = var_sp->GetName().AsCString();
+      auto &expr_list = var_sp->LocationExpressionList();
+      if (!expr_list.IsValid())
+        continue;
+
+      if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(func_load_addr, current_pc)) {
+        auto entry = *entryOrErr;
+
+        if (!entry.file_range ||
+            entry.file_range->ContainsFileAddress(
+              (current_pc - func_load_addr) + expr_list.GetFuncFileAddress())) {
+
+          StreamString loc_str;
+          ABI *abi = exe_ctx.GetProcessPtr()->GetABI().get();
+          llvm::DIDumpOptions opts;
+          opts.ShowAddresses = false;
+          opts.PrintRegisterOnly = true;
+
+          entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi, opts);
+
+          llvm::StringRef loc_clean = llvm::StringRef(loc_str.GetString()).trim();
+          if (!loc_clean.empty()) {
+            annotations.push_back(llvm::formatv("{0} = {1}", name, loc_clean));
+          }
+        }
+      }
+    }
+
+    frame->ChangePC(original_pc);
+    return annotations;
+  };
+
+
   previous_symbol = nullptr;
   SourceLine previous_line;
   for (size_t i = 0; i < num_instructions_found; ++i) {
@@ -543,10 +619,25 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
       const bool show_bytes = (options & eOptionShowBytes) != 0;
       const bool show_control_flow_kind =
           (options & eOptionShowControlFlowKind) != 0;
-      inst->Dump(&strm, max_opcode_byte_size, true, show_bytes,
-                 show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
-                 address_text_size);
+
+      StreamString inst_line;
+
+      inst->Dump(&inst_line, max_opcode_byte_size, true, show_bytes,
+                show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
+                address_text_size);
+
+      std::vector<std::string> annotations = annotate_variables(*inst);
+      if (!annotations.empty()) {
+        const size_t annotation_column = 100;
+        inst_line.FillLastLineToColumn(annotation_column, ' ');
+        inst_line.PutCString("; ");
+        inst_line.PutCString(llvm::join(annotations, ", "));
+      }
+
+      strm.PutCString(inst_line.GetString());
       strm.EOL();
+
+
     } else {
       break;
     }
@@ -706,104 +797,6 @@ void Instruction::Dump(lldb_private::Stream *s, uint32_t max_opcode_byte_size,
   ss.PutCString(opcode_name);
   ss.FillLastLineToColumn(opcode_pos + opcode_column_width, ' ');
   ss.PutCString(mnemonics);
-
-  // Add rich variable location annotations to the disassembly output.
-  //
-  // For each instruction, this block attempts to resolve in-scope variables
-  // and determine if the current PC falls within their
-  // DWARF location entry. If so, it prints a simplified annotation using the
-  // variable name and its resolved location (e.g., "var = reg; " ).
-  //
-  // Annotations are only included if the variable has a valid DWARF location
-  // entry, and the location string is non-empty after filtering. Decoding
-  // errors and DWARF opcodes are intentionally omitted to keep the output
-  // concise and user-friendly.
-  //
-  // The goal is to give users helpful live variable hints alongside the
-  // disassembled instruction stream, similar to how debug information
-  // enhances source-level debugging.
-
-  const size_t annotation_column = 150;
-
-  auto annotate_variables = [&]() {
-    StackFrame *frame = exe_ctx->GetFramePtr();
-    TargetSP target_sp = exe_ctx->GetTargetSP();
-    if (!frame || !target_sp)
-      return;
-
-    addr_t current_pc = m_address.GetLoadAddress(target_sp.get());
-    addr_t original_pc =
-        frame->GetFrameCodeAddress().GetLoadAddress(target_sp.get());
-
-    if (!frame->ChangePC(current_pc))
-      return;
-
-    VariableListSP var_list_sp = frame->GetInScopeVariableList(true);
-    if (!var_list_sp)
-      return;
-
-    SymbolContext sc = frame->GetSymbolContext(eSymbolContextFunction);
-    addr_t func_load_addr = LLDB_INVALID_ADDRESS;
-    if (sc.function)
-      func_load_addr =
-          sc.function->GetAddress().GetLoadAddress(target_sp.get());
-
-    // Only annotate if the current disassembly line is short enough
-    // to keep annotations aligned past the desired annotation_column.
-    if (ss.GetSizeOfLastLine() >= annotation_column)
-      return;
-
-    std::vector<std::string> annotations;
-
-    for (const VariableSP &var_sp : *var_list_sp) {
-      if (!var_sp)
-        continue;
-
-      const char *name = var_sp->GetName().AsCString();
-      auto &expr_list = var_sp->LocationExpressionList();
-      if (!expr_list.IsValid())
-        continue;
-
-      // Handle std::optional<DWARFExpressionEntry>.
-      if (auto entryOrErr = expr_list.GetExpressionEntryAtAddress(
-              func_load_addr, current_pc)) {
-        auto entry = *entryOrErr;
-        // Check if entry has a file_range, and filter on address if so.
-        if (!entry.file_range || entry.file_range->ContainsFileAddress(
-                                     (current_pc - func_load_addr) +
-                                     expr_list.GetFuncFileAddress())) {
-
-          StreamString loc_str;
-          ABI *abi = exe_ctx->GetProcessPtr()->GetABI().get();
-          llvm::DIDumpOptions opts;
-          opts.ShowAddresses = false;
-          opts.PrintRegisterOnly =
-              true; // <-- important: suppress DW_OP_... annotations, etc.
-
-          entry.expr->DumpLocation(&loc_str, eDescriptionLevelBrief, abi, opts);
-
-          // Only include if not empty.
-          llvm::StringRef loc_clean =
-              llvm::StringRef(loc_str.GetString()).trim();
-          if (!loc_clean.empty()) {
-            annotations.push_back(llvm::formatv("{0} = {1}", name, loc_clean));
-          }
-        }
-      }
-    }
-
-    if (!annotations.empty()) {
-      ss.FillLastLineToColumn(annotation_column, ' ');
-      ss.PutCString(" ; ");
-      ss.PutCString(llvm::join(annotations, ", "));
-    }
-
-    frame->ChangePC(original_pc);
-  };
-
-  if (exe_ctx && exe_ctx->GetFramePtr()) {
-    annotate_variables();
-  }
 
   if (!m_comment.empty()) {
     ss.FillLastLineToColumn(
