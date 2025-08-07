@@ -28,6 +28,7 @@
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/TypoCorrection.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include <optional>
 
 using namespace clang;
@@ -2343,6 +2344,9 @@ StmtResult Parser::ParseReturnStatement() {
 StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_defer));
   SourceLocation DeferLoc = ConsumeToken();
+  Actions.ActOnStartOfDeferStmt(DeferLoc, getCurScope());
+  auto OnError = llvm::make_scope_exit(
+      [&] { Actions.ActOnDeferStmtError(getCurScope()); });
 
   StmtResult Res = ParseStatement(TrailingElseLoc);
   if (!Res.isUsable())
@@ -2360,7 +2364,8 @@ StmtResult Parser::ParseDeferStatement(SourceLocation *TrailingElseLoc) {
     return StmtError();
   }
 
-  return Actions.ActOnDeferStmt(DeferLoc, Res.get(), getCurScope());
+  OnError.release();
+  return Actions.ActOnEndOfDeferStmt(Res.get(), getCurScope());
 }
 
 StmtResult Parser::ParsePragmaLoopHint(StmtVector &Stmts,

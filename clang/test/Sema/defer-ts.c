@@ -49,3 +49,47 @@ void f5() {
     cross1:
   }
 }
+
+void f6() {
+  defer {
+    return; // expected-error {{cannot return from a defer statement}}
+  }
+
+  {
+    defer {
+      return; // expected-error {{cannot return from a defer statement}}
+    }
+  }
+
+  switch (1) {
+    case 1: defer {
+      break; // expected-error {{cannot break out of a defer statement}}
+    }
+  }
+
+  for (;;) {
+    defer {
+      break; // expected-error {{cannot break out of a defer statement}}
+    }
+  }
+
+  for (;;) {
+    defer {
+      continue; // expected-error {{cannot continue loop outside of enclosing defer statement}}
+    }
+  }
+
+  switch (1) {
+    case 1: defer {
+      switch (2) { case 2: break; }
+    }
+  }
+
+  for (;;) {
+    defer { for (;;) break; }
+  }
+
+  for (;;) {
+    defer { for (;;) continue; }
+  }
+}

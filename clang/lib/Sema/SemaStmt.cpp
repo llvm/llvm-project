@@ -3274,12 +3274,21 @@ Sema::ActOnIndirectGotoStmt(SourceLocation GotoLoc, SourceLocation StarLoc,
   return new (Context) IndirectGotoStmt(GotoLoc, StarLoc, E);
 }
 
-// TODO: Also check for 'defer' here.
-static void CheckJumpOutOfSEHFinally(Sema &S, SourceLocation Loc,
-                                     const Scope &DestScope) {
+static void CheckJumpOutOfSEHFinallyOrDefer(Sema &S, SourceLocation Loc,
+                                            const Scope &DestScope,
+                                            unsigned DeferJumpKind) {
   if (!S.CurrentSEHFinally.empty() &&
       DestScope.Contains(*S.CurrentSEHFinally.back())) {
     S.Diag(Loc, diag::warn_jump_out_of_seh_finally);
+  }
+
+  if (!S.CurrentDefer.empty()) {
+    Scope *Parent = S.CurrentDefer.back().first;
+
+    // Note: We don't create a new scope for defer statements, so 'Parent'
+    // is actually the scope that contains the 'defer'.
+    if (DestScope.Contains(*Parent) || &DestScope == Parent)
+      S.Diag(Loc, diag::err_jump_out_of_defer_stmt) << DeferJumpKind;
   }
 }
 
@@ -3305,7 +3314,8 @@ Sema::ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope) {
         Diag(ContinueLoc, diag::err_acc_branch_in_out_compute_construct)
         << /*branch*/ 0 << /*out of */ 0);
 
-  CheckJumpOutOfSEHFinally(*this, ContinueLoc, *S);
+  CheckJumpOutOfSEHFinallyOrDefer(*this, ContinueLoc, *S,
+                                  diag::DeferJumpKind::Continue);
 
   return new (Context) ContinueStmt(ContinueLoc);
 }
@@ -3335,7 +3345,8 @@ Sema::ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope) {
         Diag(BreakLoc, diag::err_acc_branch_in_out_compute_construct)
         << /*branch*/ 0 << /*out of */ 0);
 
-  CheckJumpOutOfSEHFinally(*this, BreakLoc, *S);
+  CheckJumpOutOfSEHFinallyOrDefer(*this, BreakLoc, *S,
+                                  diag::DeferJumpKind::Break);
 
   return new (Context) BreakStmt(BreakLoc);
 }
@@ -3875,12 +3886,25 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
 
   CurScope->updateNRVOCandidate(VD);
 
-  CheckJumpOutOfSEHFinally(*this, ReturnLoc, *CurScope->getFnParent());
+  CheckJumpOutOfSEHFinallyOrDefer(*this, ReturnLoc, *CurScope->getFnParent(),
+                                  diag::DeferJumpKind::Return);
 
   return R;
 }
 
-StmtResult Sema::ActOnDeferStmt(SourceLocation DeferLoc, Stmt *Body, Scope *) {
+void Sema::ActOnStartOfDeferStmt(SourceLocation DeferLoc, Scope *CurScope) {
+  CurrentDefer.emplace_back(CurScope, DeferLoc);
+}
+
+void Sema::ActOnDeferStmtError([[maybe_unused]] Scope *CurScope) {
+  assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
+  CurrentDefer.pop_back();
+}
+
+StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body,
+                                     [[maybe_unused]] Scope *CurScope) {
+  assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
+  SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
   setFunctionHasBranchProtectedScope();
   return new (Context) DeferStmt(DeferLoc, Body);
@@ -4503,7 +4527,8 @@ Sema::ActOnSEHLeaveStmt(SourceLocation Loc, Scope *CurScope) {
     SEHTryParent = SEHTryParent->getParent();
   if (!SEHTryParent)
     return StmtError(Diag(Loc, diag::err_ms___leave_not_in___try));
-  CheckJumpOutOfSEHFinally(*this, Loc, *SEHTryParent);
+  CheckJumpOutOfSEHFinallyOrDefer(*this, Loc, *SEHTryParent,
+                                  diag::DeferJumpKind::SEHLeave);
 
   return new (Context) SEHLeaveStmt(Loc);
 }

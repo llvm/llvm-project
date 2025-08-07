@@ -10892,6 +10892,10 @@ public:
   /// Stack of active SEH __finally scopes.  Can be empty.
   SmallVector<Scope *, 2> CurrentSEHFinally;
 
+  /// Stack of 'defer' statements that are currently being parsed, as well
+  /// as the locations of their 'defer' keywords. Can be empty.
+  SmallVector<std::pair<Scope *, SourceLocation>, 2> CurrentDefer;
+
   StmtResult ActOnExprStmt(ExprResult Arg, bool DiscardedValue = true);
   StmtResult ActOnExprStmtError();
 
@@ -11035,8 +11039,9 @@ public:
                                    SourceLocation StarLoc, Expr *DestExp);
   StmtResult ActOnContinueStmt(SourceLocation ContinueLoc, Scope *CurScope);
   StmtResult ActOnBreakStmt(SourceLocation BreakLoc, Scope *CurScope);
-  StmtResult ActOnDeferStmt(SourceLocation DeferLoc, Stmt *Body,
-                            Scope *CurScope);
+  void ActOnStartOfDeferStmt(SourceLocation DeferLoc, Scope *CurScope);
+  void ActOnDeferStmtError(Scope *CurScope);
+  StmtResult ActOnEndOfDeferStmt(Stmt *Body, Scope *CurScope);
 
   struct NamedReturnInfo {
     const VarDecl *Candidate;

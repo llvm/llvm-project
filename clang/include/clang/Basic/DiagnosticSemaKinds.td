@@ -6826,6 +6826,13 @@ def note_exits_block_captures_non_trivial_c_struct : Note<
 def note_exits_compound_literal_scope : Note<
   "jump exits lifetime of a compound literal that is non-trivial to destruct">;
 def note_exits_defer_stmt : Note<"jump exits a defer statement">;
+def err_jump_out_of_defer_stmt
+    : Error<"cannot %enum_select<DeferJumpKind>{"
+            "%Break{break out of a}|"
+            "%Continue{continue loop outside of enclosing}|"
+            "%Return{return from a}|"
+            "%SEHLeave{__leave a}"
+            "}0 defer statement">;
 
 def err_func_returning_qualified_void : ExtWarn<
   "function cannot return qualified void type %0">,
