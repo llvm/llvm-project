@@ -644,11 +644,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   if (EnableConstraintElimination)
     FPM.addPass(ConstraintEliminationPass());
 
-  // FIXME: This may not be the right place in the pipeline.
-  // We need to have the data to support the right place.
-  if (PTO.LoopFusion)
-    FPM.addPass(LoopFusePass());
-
   // Add the primary loop simplification pipeline.
   // FIXME: Currently this is split into two loop pass pipelines because we run
   // some function passes in between them. These can and should be removed
@@ -1558,6 +1553,11 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
 
   if (PTO.LoopInterchange)
     LPM.addPass(LoopInterchangePass());
+
+  // FIXME: This may not be the right place in the pipeline.
+  // We need to have the data to support the right place.
+  if (PTO.LoopFusion)
+    OptimizePM.addPass(LoopFusePass());
 
   OptimizePM.addPass(createFunctionToLoopPassAdaptor(
       std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
