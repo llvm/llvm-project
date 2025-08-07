@@ -15,6 +15,7 @@
 #include "mlir/Target/Wasm/WasmImporter.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/DebugLog.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/LEB128.h"
 
@@ -322,17 +323,16 @@ public:
   }
 
   FailureOr<StringRef> consumeNBytes(size_t nBytes) {
-    LLVM_DEBUG(llvm::dbgs() << "Consume " << nBytes << " bytes\n");
-    LLVM_DEBUG(llvm::dbgs() << "  Bytes remaining: " << size() << "\n");
-    LLVM_DEBUG(llvm::dbgs() << "  Current offset: " << offset << "\n");
+    LDBG() << "Consume " << nBytes << " bytes";
+    LDBG() << "  Bytes remaining: " << size();
+    LDBG() << "  Current offset: " << offset;
     if (nBytes > size())
       return emitError(getLocation(), "trying to extract ")
              << nBytes << "bytes when only " << size() << "are avilables";
 
     StringRef res = head.slice(offset, offset + nBytes);
     offset += nBytes;
-    LLVM_DEBUG(llvm::dbgs()
-               << "  Updated offset (+" << nBytes << "): " << offset << "\n");
+    LDBG() << "  Updated offset (+" << nBytes << "): " << offset;
     return res;
   }
 
@@ -660,10 +660,9 @@ void ValueStack::dump() const {
 #endif
 
 parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
-  LLVM_DEBUG(llvm::dbgs() << "Popping from ValueStack\n");
-  LLVM_DEBUG(llvm::dbgs() << "  Elements(s) to pop: " << operandTypes.size()
-                          << "\n");
-  LLVM_DEBUG(llvm::dbgs() << "  Current stack size: " << values.size() << "\n");
+  LDBG() << "Popping from ValueStack\n"
+         << "  Elements(s) to pop: " << operandTypes.size() << "\n"
+         << "  Current stack size: " << values.size();
   if (operandTypes.size() > values.size())
     return emitError(*opLoc,
                      "stack doesn't contain enough values. Trying to get ")
@@ -679,28 +678,27 @@ parsed_inst_t ValueStack::popOperands(TypeRange operandTypes, Location *opLoc) {
       return emitError(*opLoc, "invalid operand type on stack. Expecting ")
              << operandTypes[i] << ", value on stack is of type " << stackType
              << ".";
-    LLVM_DEBUG(llvm::dbgs() << "    POP: " << operand << "\n");
+    LDBG() << "    POP: " << operand;
     res.push_back(operand);
   }
   values.resize(values.size() - operandTypes.size());
-  LLVM_DEBUG(llvm::dbgs() << "  Updated stack size: " << values.size() << "\n");
+  LDBG() << "  Updated stack size: " << values.size();
   return res;
 }
 
 LogicalResult ValueStack::pushResults(ValueRange results, Location *opLoc) {
-  LLVM_DEBUG(llvm::dbgs() << "Pushing to ValueStack\n");
-  LLVM_DEBUG(llvm::dbgs() << "  Elements(s) to push: " << results.size()
-                          << "\n");
-  LLVM_DEBUG(llvm::dbgs() << "  Current stack size: " << values.size() << "\n");
+  LDBG() << "Pushing to ValueStack\n"
+         << "  Elements(s) to push: " << results.size() << "\n"
+         << "  Current stack size: " << values.size();
   for (Value val : results) {
     if (!isWasmValueType(val.getType()))
       return emitError(*opLoc, "invalid value type on stack: ")
              << val.getType();
-    LLVM_DEBUG(llvm::dbgs() << "    PUSH: " << val << "\n");
+    LDBG() << "    PUSH: " << val;
     values.push_back(val);
   }
 
-  LLVM_DEBUG(llvm::dbgs() << "  Updated stack size: " << values.size() << "\n");
+  LDBG() << "  Updated stack size: " << values.size();
   return success();
 }
 
@@ -913,7 +911,7 @@ private:
     };
     auto secContent = registry.getContentForSection<section>();
     if (!secContent) {
-      LLVM_DEBUG(llvm::dbgs() << secName << " section is not present in file.");
+      LDBG() << secName << " section is not present in file.";
       return success();
     }
 
@@ -923,8 +921,8 @@ private:
     if (failed(nElemsParsed))
       return failure();
     uint32_t nElems = *nElemsParsed;
-    LLVM_DEBUG(llvm::dbgs() << "Starting to parse " << nElems
-                            << " items for section " << secName << ".\n");
+    LDBG() << "Starting to parse " << nElems << " items for section "
+           << secName;
     for (size_t i = 0; i < nElems; ++i) {
       if (failed(parseSectionItem<section>(ph, i)))
         return failure();
@@ -984,9 +982,18 @@ private:
     return giOp.verify();
   }
 
+  // Detect occurence of errors
+  LogicalResult peekDiag(Diagnostic &diag) {
+    if (diag.getSeverity() == DiagnosticSeverity::Error)
+      isValid = false;
+    return failure();
+  }
+
 public:
   WasmBinaryParser(llvm::SourceMgr &sourceMgr, MLIRContext *ctx)
       : builder{ctx}, ctx{ctx} {
+    ctx->getDiagEngine().registerHandler(
+        [this](Diagnostic &diag) { return peekDiag(diag); });
     ctx->loadAllAvailableDialects();
     if (sourceMgr.getNumBuffers() != 1) {
       emitError(UnknownLoc::get(ctx), "one source file should be provided");
@@ -1055,7 +1062,11 @@ public:
     numTableSectionItems = symbols.tableSymbols.size();
   }
 
-  ModuleOp getModule() { return mOp; }
+  ModuleOp getModule() {
+    if (isValid)
+      return mOp;
+    return ModuleOp{};
+  }
 
 private:
   mlir::StringAttr srcName;
@@ -1065,6 +1076,7 @@ private:
   ModuleOp mOp;
   SectionRegistry registry;
   size_t firstInternalFuncID{0};
+  bool isValid{true};
 };
 
 template <>
@@ -1168,8 +1180,7 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::TABLE>(ParserHead &ph,
   FailureOr<TableType> tableType = ph.parseTableType(ctx);
   if (failed(tableType))
     return failure();
-  LLVM_DEBUG(llvm::dbgs() << "  Parsed table description: " << *tableType
-                          << '\n');
+  LDBG() << "  Parsed table description: " << *tableType;
   StringAttr symbol = builder.getStringAttr(symbols.getNewTableSymbolName());
   auto tableOp =
       builder.create<TableOp>(opLocation, symbol.strref(), *tableType);
@@ -1209,7 +1220,7 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::TYPE>(ParserHead &ph,
   FailureOr<FunctionType> funcType = ph.parseFunctionType(ctx);
   if (failed(funcType))
     return failure();
-  LLVM_DEBUG(llvm::dbgs() << "Parsed function type " << *funcType << '\n');
+  LDBG() << "Parsed function type " << *funcType;
   symbols.moduleFuncTypes.push_back(*funcType);
   return success();
 }
@@ -1223,7 +1234,7 @@ WasmBinaryParser::parseSectionItem<WasmSectionType::MEMORY>(ParserHead &ph,
   if (failed(memory))
     return failure();
 
-  LLVM_DEBUG(llvm::dbgs() << "  Registering memory " << *memory << '\n');
+  LDBG() << "  Registering memory " << *memory;
   std::string symbol = symbols.getNewMemorySymbolName();
   auto memOp = builder.create<MemOp>(opLocation, symbol, *memory);
   symbols.memSymbols.push_back({SymbolRefAttr::get(memOp)});
