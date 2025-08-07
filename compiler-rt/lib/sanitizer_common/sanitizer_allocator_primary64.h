@@ -119,12 +119,14 @@ class SizeClassAllocator64 {
     VReport(3, "Max user virtual address: 0x%zx\n", MaxAddr);
     VReport(3, "Total space size for primary allocator: 0x%zx\n",
             TotalSpaceSize);
-    if (TotalSpaceSize >= MaxAddr)
+    if (TotalSpaceSize >= MaxAddr) {
+      // We can't easily adjust the requested heap size, because kSpaceSize is
+      // const (for optimization) and used throughout the code.
       VReport(0, "Error: heap size %zx exceeds max user virtual address %zx\n",
               TotalSpaceSize, MaxAddr);
-    // We can't easily adjust the requested heap size, because kSpaceSize is
-    // const (for optimization) and used throughout the code.
-
+      VReport(
+          0, "Try using a kernel that allows a larger virtual address space\n");
+    }
     PremappedHeap = heap_start != 0;
     if (PremappedHeap) {
       CHECK(!kUsingConstantSpaceBeg);
