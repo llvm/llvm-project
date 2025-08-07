@@ -157,6 +157,19 @@ public:
     return create<cir::ComplexImagOp>(loc, operandTy.getElementType(), operand);
   }
 
+  cir::LoadOp createLoad(mlir::Location loc, mlir::Value ptr,
+                         uint64_t alignment = 0) {
+    mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
+    assert(!cir::MissingFeatures::opLoadStoreVolatile());
+    assert(!cir::MissingFeatures::opLoadStoreMemOrder());
+    return create<cir::LoadOp>(loc, ptr, /*isDeref=*/false, alignmentAttr);
+  }
+
+  mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
+                                uint64_t alignment) {
+    return createLoad(loc, ptr, alignment);
+  }
+
   mlir::Value createNot(mlir::Value value) {
     return create<cir::UnaryOp>(value.getLoc(), value.getType(),
                                 cir::UnaryOpKind::Not, value);
