@@ -244,8 +244,9 @@ define i32 @test_v64i32_load_store(ptr addrspace(1) %ptr, i32 %idx, ptr addrspac
 ; GCN-GISEL-NEXT:    global_load_b128 v[60:63], v[0:1], off offset:16
 ; GCN-GISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:240
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x0
-; GCN-GISEL-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:64 scope:SCOPE_SE ; 16-byte Folded Spill
-; GCN-GISEL-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:80 th:TH_LOAD_LU ; 16-byte Folded Reload
+; GCN-GISEL-NEXT:    s_clause 0x1
+; GCN-GISEL-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:64 scope:SCOPE_SE
+; GCN-GISEL-NEXT:    scratch_load_b128 v[0:3], off, s32 offset:80 th:TH_LOAD_LU
 ; GCN-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GCN-GISEL-NEXT:    s_clause 0xe
 ; GCN-GISEL-NEXT:    global_store_b128 v[46:47], v[0:3], off offset:32
