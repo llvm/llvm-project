@@ -1179,7 +1179,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
 }
 
 bool ClauseProcessor::processLink(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::Link>(
       [&](const omp::clause::Link &clause, const parser::CharBlock &) {
         // Case: declare target link(var1, var2)...
@@ -1508,7 +1508,7 @@ bool ClauseProcessor::processTaskReduction(
 }
 
 bool ClauseProcessor::processTo(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::To>(
       [&](const omp::clause::To &clause, const parser::CharBlock &) {
         // Case: declare target to(func, var1, var2)...
@@ -1519,7 +1519,7 @@ bool ClauseProcessor::processTo(
 }
 
 bool ClauseProcessor::processEnter(
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const {
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const {
   return findRepeatableClause<omp::clause::Enter>(
       [&](const omp::clause::Enter &clause, const parser::CharBlock &source) {
         mlir::Location currentLocation = converter.genLocation(source);

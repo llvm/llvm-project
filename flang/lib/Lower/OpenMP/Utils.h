@@ -42,12 +42,12 @@ class AbstractConverter;
 
 namespace omp {
 
-struct DeclareTargetCapturePair {
+struct DeclareTargetCaptureInfo {
   mlir::omp::DeclareTargetCaptureClause clause;
   bool automap = false;
   const semantics::Symbol &symbol;
 
-  DeclareTargetCapturePair(mlir::omp::DeclareTargetCaptureClause c,
+  DeclareTargetCaptureInfo(mlir::omp::DeclareTargetCaptureClause c,
                            const semantics::Symbol &s, bool a = false)
       : clause(c), automap(a), symbol(s) {}
 };
@@ -157,7 +157,7 @@ getIterationVariableSymbol(const lower::pft::Evaluation &eval);
 
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause,
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause,
     bool automap = false);
 
 int64_t getCollapseValue(const List<Clause> &clauses);

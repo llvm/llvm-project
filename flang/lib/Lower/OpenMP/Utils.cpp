@@ -102,7 +102,7 @@ getIterationVariableSymbol(const lower::pft::Evaluation &eval) {
 
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause,
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause,
     bool automap) {
   for (const Object &object : objects)
     symbolAndClause.emplace_back(clause, *object.sym(), automap);
