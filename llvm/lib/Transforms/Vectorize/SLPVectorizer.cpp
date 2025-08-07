@@ -23698,6 +23698,7 @@ private:
           // res = vv
           break;
         case RecurKind::Sub:
+        case RecurKind::AddChainWithSubs:
         case RecurKind::Mul:
         case RecurKind::FMul:
         case RecurKind::FMulAdd:
@@ -23838,6 +23839,7 @@ private:
       // res = vv
       return VectorizedValue;
     case RecurKind::Sub:
+    case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
@@ -23943,6 +23945,7 @@ private:
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
     case RecurKind::Sub:
+    case RecurKind::AddChainWithSubs:
     case RecurKind::Mul:
     case RecurKind::FMul:
     case RecurKind::FMulAdd:
@@ -24349,6 +24352,7 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
       break;
     }
     case RecurKind::Sub:
+    case RecurKind::AddChainWithSubs:
       llvm_unreachable("Unexpected recurrence kind.");
     default:
       return false;

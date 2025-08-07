@@ -914,6 +914,7 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
   switch (RK) {
   default:
     llvm_unreachable("Unexpected recurrence kind");
+  case RecurKind::AddChainWithSubs:
   case RecurKind::Sub:
   case RecurKind::Add:
     return Intrinsic::vector_reduce_add;
@@ -1302,6 +1303,7 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
                                  Builder.getFastMathFlags());
   };
   switch (RdxKind) {
+  case RecurKind::AddChainWithSubs:
   case RecurKind::Sub:
   case RecurKind::Add:
   case RecurKind::Mul:
