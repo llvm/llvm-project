@@ -74,16 +74,50 @@ define void @test_wide_ptr_induction(ptr noalias %a, ptr noalias %b, i64 %N) {
 ; CHECK-LABEL: define void @test_wide_ptr_induction(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK:       vector.ph:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], 1
+; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N]], [[TMP2]]
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 2
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK:       vector.body:
+; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[B]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], [[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <vscale x 2 x i64> [[TMP5]], splat (i64 8)
+; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <vscale x 2 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 2, i1 true)
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[EVL_BASED_IV]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv2p0.p0(<vscale x 2 x ptr> [[VECTOR_GEP]], ptr align 8 [[TMP8]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP7]] to i64
+; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP9]], [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP7]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 8, [[TMP10]]
+; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP11]]
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK:       middle.block:
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       scalar.ph:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi ptr [ [[B]], [[ENTRY]] ]
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, [[VECTOR_PH:%.*]] ], [ [[INDEX_EVL_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[VECTOR_BODY]] ], [ [[B]], [[VECTOR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ADDR:%.*]] = phi ptr [ [[INCDEC_PTR:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR]] = getelementptr inbounds i8, ptr [[ADDR]], i64 8
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[EVL_BASED_IV]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    store ptr [[ADDR]], ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw nsw i64 [[EVL_BASED_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[VECTOR_BODY]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;
@@ -109,4 +143,6 @@ for.cond.cleanup:
 ; CHECK: [[META2]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
 ; CHECK: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]], [[META1]]}
 ;.

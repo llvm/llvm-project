@@ -96,17 +96,17 @@ define void @integer_induction_wraps_scev_predicate_known(i32 %x, ptr %call, ptr
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[START]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP0]], 4
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i64> [[DOTSPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[DOTSPLAT]]
-; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> [[TMP4]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = mul <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[VECTOR_GEP:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 30, [[DOTCAST]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[OFFSET_IDX]]
-; CHECK-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr ptr, ptr [[CALL]], i32 [[OFFSET_IDX]]
+; CHECK-NEXT:    store <4 x ptr> [[VECTOR_GEP]], ptr [[TMP4]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[TMP0]], 4
+; CHECK-NEXT:    [[PTR_IND]] = getelementptr i8, ptr [[POINTER_PHI]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
