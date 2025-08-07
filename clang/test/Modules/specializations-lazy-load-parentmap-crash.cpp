@@ -8,10 +8,7 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-module-interface -o %t/mod_a.pcm %t/mod_a.cppm -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -emit-module-interface -o %t/mod_b.pcm %t/mod_b.cppm -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a=%t/mod_a.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm
 
-// Below are two examples to trigger the construction of the parent map (which is necessary to trigger the bug this regression test is for).
-// Using ArrayBoundV2 checker:
-// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -analyze -analyzer-checker=security,alpha.security -analyzer-output=text %t/test-array-bound-v2.cpp -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a=%t/mod_a.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm -fmodule-file=mod_b=%t/mod_b.pcm
-// Using a sanitized build:
+// Trigger the construction of the parent map (which is necessary to trigger the bug this regression test is for) using a sanitized build:
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fsanitize=unsigned-integer-overflow -fsanitize-undefined-ignore-overflow-pattern=all -emit-llvm -o %t/ignored %t/test-sanitized-build.cpp -fmodule-file=mod_a:part2=%t/mod_a-part2.pcm -fmodule-file=mod_a=%t/mod_a.pcm -fmodule-file=mod_a:part1=%t/mod_a-part1.pcm -fmodule-file=mod_b=%t/mod_b.pcm
 
 //--- mod_a-part1.cppm
@@ -73,18 +70,6 @@ import mod_a;
 void a() {
   mod_a::instantiate1();
   mod_a::instantiate2<42>();
-}
-
-//--- test-array-bound-v2.cpp
-import mod_b;
-
-extern void someFunc(char* first, char* last);
-void triggerParentMapContextCreationThroughArrayBoundV2() {
-  // This code currently causes the ArrayBoundV2 checker to create the ParentMapContext.
-  // Once it detects an access to buf[100], the checker looks through the parents to find '&' operator.
-  // (this is needed since taking the address of past-the-end pointer is allowed by the checker)
-  char buf[100];
-  someFunc(&buf[0], &buf[100]);
 }
 
 //--- test-sanitized-build.cpp
