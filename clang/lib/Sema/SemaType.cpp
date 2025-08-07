@@ -6583,7 +6583,6 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       Attr.setInvalid();
       return;
     }
-      
 
     if (DiagnoseMultipleAddrSpaceAttributes(S, Type.getAddressSpace(), ASIdx,
                                             Attr.getLoc())) {
