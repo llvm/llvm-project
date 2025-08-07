@@ -180,8 +180,8 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
   for (inst_iterator SrcI = inst_begin(F), SrcE = inst_end(F); SrcI != SrcE;
        ++SrcI) {
     if (SrcI->mayReadOrWriteMemory()) {
-      for (inst_iterator DstI = SrcI, DstE = inst_end(F);
-           DstI != DstE; ++DstI) {
+      for (inst_iterator DstI = SrcI, DstE = inst_end(F); DstI != DstE;
+           ++DstI) {
         if (DstI->mayReadOrWriteMemory()) {
           OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
           OS << "  da analyze - ";
@@ -203,7 +203,7 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
 
             // Normalize negative direction vectors if required by clients.
             if (NormalizeResults && D->normalize(&SE))
-                OS << "normalized - ";
+              OS << "normalized - ";
             D->dump(OS);
             for (unsigned Level = 1; Level <= D->getLevels(); Level++) {
               if (D->isSplitable(Level)) {
@@ -227,8 +227,8 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
 
 void DependenceAnalysisWrapperPass::print(raw_ostream &OS,
                                           const Module *) const {
-  dumpExampleDependence(OS, info.get(),
-                        getAnalysis<ScalarEvolutionWrapperPass>().getSE(), false);
+  dumpExampleDependence(
+      OS, info.get(), getAnalysis<ScalarEvolutionWrapperPass>().getSE(), false);
 }
 
 PreservedAnalyses
@@ -249,33 +249,26 @@ bool Dependence::isInput() const {
   return Src->mayReadFromMemory() && Dst->mayReadFromMemory();
 }
 
-
 // Returns true if this is an output dependence.
 bool Dependence::isOutput() const {
   return Src->mayWriteToMemory() && Dst->mayWriteToMemory();
 }
-
 
 // Returns true if this is an flow (aka true)  dependence.
 bool Dependence::isFlow() const {
   return Src->mayWriteToMemory() && Dst->mayReadFromMemory();
 }
 
-
 // Returns true if this is an anti dependence.
 bool Dependence::isAnti() const {
   return Src->mayReadFromMemory() && Dst->mayWriteToMemory();
 }
 
-
 // Returns true if a particular level is scalar; that is,
 // if no subscript in the source or destination mention the induction
 // variable associated with the loop at this level.
 // Leave this out of line, so it will serve as a virtual method anchor
-bool Dependence::isScalar(unsigned level) const {
-  return false;
-}
-
+bool Dependence::isScalar(unsigned level) const { return false; }
 
 //===----------------------------------------------------------------------===//
 // FullDependence methods
@@ -338,8 +331,7 @@ bool FullDependence::normalize(ScalarEvolution *SE) {
     DV[Level - 1].Direction = RevDirection;
     // Reverse the dependence distance as well.
     if (DV[Level - 1].Distance != nullptr)
-      DV[Level - 1].Distance =
-          SE->getNegativeSCEV(DV[Level - 1].Distance);
+      DV[Level - 1].Distance = SE->getNegativeSCEV(DV[Level - 1].Distance);
   }
 
   LLVM_DEBUG(dbgs() << "After normalizing negative direction vectors:\n";
@@ -355,13 +347,11 @@ unsigned FullDependence::getDirection(unsigned Level) const {
   return DV[Level - 1].Direction;
 }
 
-
 // Returns the distance (or NULL) associated with a particular level.
 const SCEV *FullDependence::getDistance(unsigned Level) const {
   assert(0 < Level && Level <= Levels && "Level out of range");
   return DV[Level - 1].Distance;
 }
-
 
 // Returns true if a particular level is scalar; that is,
 // if no subscript in the source or destination mention the induction
@@ -371,14 +361,12 @@ bool FullDependence::isScalar(unsigned Level) const {
   return DV[Level - 1].Scalar;
 }
 
-
 // Returns true if peeling the first iteration from this loop
 // will break this dependence.
 bool FullDependence::isPeelFirst(unsigned Level) const {
   assert(0 < Level && Level <= Levels && "Level out of range");
   return DV[Level - 1].PeelFirst;
 }
-
 
 // Returns true if peeling the last iteration from this loop
 // will break this dependence.
@@ -387,13 +375,11 @@ bool FullDependence::isPeelLast(unsigned Level) const {
   return DV[Level - 1].PeelLast;
 }
 
-
 // Returns true if splitting this loop will break the dependence.
 bool FullDependence::isSplitable(unsigned Level) const {
   assert(0 < Level && Level <= Levels && "Level out of range");
   return DV[Level - 1].Splitable;
 }
-
 
 //===----------------------------------------------------------------------===//
 // DependenceInfo::Constraint methods
@@ -405,14 +391,12 @@ const SCEV *DependenceInfo::Constraint::getX() const {
   return A;
 }
 
-
 // If constraint is a point <X, Y>, returns Y.
 // Otherwise assert.
 const SCEV *DependenceInfo::Constraint::getY() const {
   assert(Kind == Point && "Kind should be Point");
   return B;
 }
-
 
 // If constraint is a line AX + BY = C, returns A.
 // Otherwise assert.
@@ -422,7 +406,6 @@ const SCEV *DependenceInfo::Constraint::getA() const {
   return A;
 }
 
-
 // If constraint is a line AX + BY = C, returns B.
 // Otherwise assert.
 const SCEV *DependenceInfo::Constraint::getB() const {
@@ -430,7 +413,6 @@ const SCEV *DependenceInfo::Constraint::getB() const {
          "Kind should be Line (or Distance)");
   return B;
 }
-
 
 // If constraint is a line AX + BY = C, returns C.
 // Otherwise assert.
@@ -440,14 +422,12 @@ const SCEV *DependenceInfo::Constraint::getC() const {
   return C;
 }
 
-
 // If constraint is a distance, returns D.
 // Otherwise assert.
 const SCEV *DependenceInfo::Constraint::getD() const {
   assert(Kind == Distance && "Kind should be Distance");
   return SE->getNegativeSCEV(C);
 }
-
 
 // Returns the loop associated with this constraint.
 const Loop *DependenceInfo::Constraint::getAssociatedLoop() const {
@@ -499,16 +479,15 @@ LLVM_DUMP_METHOD void DependenceInfo::Constraint::dump(raw_ostream &OS) const {
   else if (isPoint())
     OS << " Point is <" << *getX() << ", " << *getY() << ">\n";
   else if (isDistance())
-    OS << " Distance is " << *getD() <<
-      " (" << *getA() << "*X + " << *getB() << "*Y = " << *getC() << ")\n";
+    OS << " Distance is " << *getD() << " (" << *getA() << "*X + " << *getB()
+       << "*Y = " << *getC() << ")\n";
   else if (isLine())
-    OS << " Line is " << *getA() << "*X + " <<
-      *getB() << "*Y = " << *getC() << "\n";
+    OS << " Line is " << *getA() << "*X + " << *getB() << "*Y = " << *getC()
+       << "\n";
   else
     llvm_unreachable("unknown constraint type in Constraint::dump");
 }
 #endif
-
 
 // Updates X with the intersection
 // of the Constraints X and Y. Returns true if X has changed.
@@ -591,15 +570,14 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
       const SCEV *A1B2 = SE->getMulExpr(X->getA(), Y->getB());
       const SCEV *A2B1 = SE->getMulExpr(Y->getA(), X->getB());
       const SCEVConstant *C1A2_C2A1 =
-        dyn_cast<SCEVConstant>(SE->getMinusSCEV(C1A2, C2A1));
+          dyn_cast<SCEVConstant>(SE->getMinusSCEV(C1A2, C2A1));
       const SCEVConstant *C1B2_C2B1 =
-        dyn_cast<SCEVConstant>(SE->getMinusSCEV(C1B2, C2B1));
+          dyn_cast<SCEVConstant>(SE->getMinusSCEV(C1B2, C2B1));
       const SCEVConstant *A1B2_A2B1 =
-        dyn_cast<SCEVConstant>(SE->getMinusSCEV(A1B2, A2B1));
+          dyn_cast<SCEVConstant>(SE->getMinusSCEV(A1B2, A2B1));
       const SCEVConstant *A2B1_A1B2 =
-        dyn_cast<SCEVConstant>(SE->getMinusSCEV(A2B1, A1B2));
-      if (!C1B2_C2B1 || !C1A2_C2A1 ||
-          !A1B2_A2B1 || !A2B1_A1B2)
+          dyn_cast<SCEVConstant>(SE->getMinusSCEV(A2B1, A1B2));
+      if (!C1B2_C2B1 || !C1A2_C2A1 || !A1B2_A2B1 || !A2B1_A1B2)
         return false;
       APInt Xtop = C1B2_C2B1->getAPInt();
       APInt Xbot = A1B2_A2B1->getAPInt();
@@ -626,8 +604,8 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
         ++DeltaSuccesses;
         return true;
       }
-      if (const SCEVConstant *CUB =
-          collectConstantUpperBound(X->getAssociatedLoop(), Prod1->getType())) {
+      if (const SCEVConstant *CUB = collectConstantUpperBound(
+              X->getAssociatedLoop(), Prod1->getType())) {
         const APInt &UpperBound = CUB->getAPInt();
         LLVM_DEBUG(dbgs() << "\t\tupper bound = " << UpperBound << "\n");
         if (Xq.sgt(UpperBound) || Yq.sgt(UpperBound)) {
@@ -636,8 +614,7 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
           return true;
         }
       }
-      X->setPoint(SE->getConstant(Xq),
-                  SE->getConstant(Yq),
+      X->setPoint(SE->getConstant(Xq), SE->getConstant(Yq),
                   X->getAssociatedLoop());
       ++DeltaSuccesses;
       return true;
@@ -666,7 +643,6 @@ bool DependenceInfo::intersectConstraints(Constraint *X, const Constraint *Y) {
   llvm_unreachable("shouldn't reach the end of Constraint intersection");
   return false;
 }
-
 
 //===----------------------------------------------------------------------===//
 // DependenceInfo methods
@@ -737,8 +713,7 @@ void Dependence::dump(raw_ostream &OS) const {
 // tbaa, non-overlapping regions etc), then it is known there is no dependecy.
 // Otherwise the underlying objects are checked to see if they point to
 // different identifiable objects.
-static AliasResult underlyingObjectsAlias(AAResults *AA,
-                                          const DataLayout &DL,
+static AliasResult underlyingObjectsAlias(AAResults *AA, const DataLayout &DL,
                                           const MemoryLocation &LocA,
                                           const MemoryLocation &LocB) {
   // Check the original locations (minus size) for noalias, which can happen for
@@ -773,15 +748,13 @@ static AliasResult underlyingObjectsAlias(AAResults *AA,
 
 // Returns true if the load or store can be analyzed. Atomic and volatile
 // operations have properties which this analysis does not understand.
-static
-bool isLoadOrStore(const Instruction *I) {
+static bool isLoadOrStore(const Instruction *I) {
   if (const LoadInst *LI = dyn_cast<LoadInst>(I))
     return LI->isUnordered();
   else if (const StoreInst *SI = dyn_cast<StoreInst>(I))
     return SI->isUnordered();
   return false;
 }
-
 
 // Examines the loop nesting of the Src and Dst
 // instructions and establishes their shared loops. Sets the variables
@@ -860,13 +833,11 @@ void DependenceInfo::establishNestingLevels(const Instruction *Src,
   MaxLevels -= CommonLevels;
 }
 
-
 // Given one of the loops containing the source, return
 // its level index in our numbering scheme.
 unsigned DependenceInfo::mapSrcLoop(const Loop *SrcLoop) const {
   return SrcLoop->getLoopDepth();
 }
-
 
 // Given one of the loops containing the destination,
 // return its level index in our numbering scheme.
@@ -879,7 +850,6 @@ unsigned DependenceInfo::mapDstLoop(const Loop *DstLoop) const {
   else
     return D;
 }
-
 
 // Returns true if Expression is loop invariant in LoopNest.
 bool DependenceInfo::isLoopInvariant(const SCEV *Expression,
@@ -895,8 +865,6 @@ bool DependenceInfo::isLoopInvariant(const SCEV *Expression,
   // is invariant anywhere in the loop nest.
   return SE->isLoopInvariant(Expression, LoopNest->getOutermostLoop());
 }
-
-
 
 // Finds the set of loops from the LoopNest that
 // have a level <= CommonLevels and are referred to by the SCEV Expression.
@@ -924,9 +892,9 @@ void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
     IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
     IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
     if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy && "This function only unify integer types and "
-             "expect Src and Dst share the same type "
-             "otherwise.");
+      assert(SrcTy == DstTy &&
+             "This function only unify integer types and "
+             "expect Src and Dst share the same type otherwise.");
       continue;
     }
     if (SrcTy->getBitWidth() > widestWidthSeen) {
@@ -939,7 +907,6 @@ void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
     }
   }
 
-
   assert(widestWidthSeen > 0);
 
   // Now extend each pair to the widest seen.
@@ -949,9 +916,9 @@ void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
     IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
     IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
     if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy && "This function only unify integer types and "
-             "expect Src and Dst share the same type "
-             "otherwise.");
+      assert(SrcTy == DstTy &&
+             "This function only unify integer types and "
+             "expect Src and Dst share the same type otherwise.");
       continue;
     }
     if (SrcTy->getBitWidth() < widestWidthSeen)
@@ -1028,7 +995,6 @@ bool DependenceInfo::checkDstSubscript(const SCEV *Dst, const Loop *LoopNest,
   return checkSubscript(Dst, LoopNest, Loops, false);
 }
 
-
 // Examines the subscript pair (the Src and Dst SCEVs)
 // and classifies it as either ZIV, SIV, RDIV, MIV, or Nonlinear.
 // Collects the associated loops in a set.
@@ -1049,13 +1015,11 @@ DependenceInfo::classifyPair(const SCEV *Src, const Loop *SrcLoopNest,
     return Subscript::ZIV;
   if (N == 1)
     return Subscript::SIV;
-  if (N == 2 && (SrcLoops.count() == 0 ||
-                 DstLoops.count() == 0 ||
+  if (N == 2 && (SrcLoops.count() == 0 || DstLoops.count() == 0 ||
                  (SrcLoops.count() == 1 && DstLoops.count() == 1)))
     return Subscript::RDIV;
   return Subscript::MIV;
 }
-
 
 // A wrapper around SCEV::isKnownPredicate.
 // Looks for cases where we're interested in comparing for equality.
@@ -1069,12 +1033,9 @@ DependenceInfo::classifyPair(const SCEV *Src, const Loop *SrcLoopNest,
 // involving symbolics.
 bool DependenceInfo::isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
                                       const SCEV *Y) const {
-  if (Pred == CmpInst::ICMP_EQ ||
-      Pred == CmpInst::ICMP_NE) {
-    if ((isa<SCEVSignExtendExpr>(X) &&
-         isa<SCEVSignExtendExpr>(Y)) ||
-        (isa<SCEVZeroExtendExpr>(X) &&
-         isa<SCEVZeroExtendExpr>(Y))) {
+  if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) {
+    if ((isa<SCEVSignExtendExpr>(X) && isa<SCEVSignExtendExpr>(Y)) ||
+        (isa<SCEVZeroExtendExpr>(X) && isa<SCEVZeroExtendExpr>(Y))) {
       const SCEVIntegralCastExpr *CX = cast<SCEVIntegralCastExpr>(X);
       const SCEVIntegralCastExpr *CY = cast<SCEVIntegralCastExpr>(Y);
       const SCEV *Xop = CX->getOperand();
@@ -1111,7 +1072,10 @@ bool DependenceInfo::isKnownPredicate(ICmpInst::Predicate Pred, const SCEV *X,
   }
 }
 
-/// Compare to see if S is less than Size, using isKnownNegative(S - max(Size, 1))
+/// Compare to see if S is less than Size, using
+///
+///    isKnownNegative(S - max(Size, 1))
+///
 /// with some extra checking if S is an AddRec and we can prove less-than using
 /// the loop bounds.
 bool DependenceInfo::isKnownLessThan(const SCEV *S, const SCEV *Size) const {
@@ -1178,7 +1142,6 @@ const SCEV *DependenceInfo::collectUpperBound(const Loop *L, Type *T) const {
   return nullptr;
 }
 
-
 // Calls collectUpperBound(), then attempts to cast it to SCEVConstant.
 // If the cast fails, returns NULL.
 const SCEVConstant *DependenceInfo::collectConstantUpperBound(const Loop *L,
@@ -1187,7 +1150,6 @@ const SCEVConstant *DependenceInfo::collectConstantUpperBound(const Loop *L,
     return dyn_cast<SCEVConstant>(UB);
   return nullptr;
 }
-
 
 // testZIV -
 // When we have a pair of subscripts of the form [c1] and [c2],
@@ -1217,7 +1179,6 @@ bool DependenceInfo::testZIV(const SCEV *Src, const SCEV *Dst,
   Result.Consistent = false;
   return false; // possibly dependent
 }
-
 
 // strongSIVtest -
 // From the paper, Practical Dependence Testing, Section 4.2.1
@@ -1270,9 +1231,9 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
     LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
     const SCEV *AbsDelta =
-      SE->isKnownNonNegative(Delta) ? Delta : SE->getNegativeSCEV(Delta);
+        SE->isKnownNonNegative(Delta) ? Delta : SE->getNegativeSCEV(Delta);
     const SCEV *AbsCoeff =
-      SE->isKnownNonNegative(Coeff) ? Coeff : SE->getNegativeSCEV(Coeff);
+        SE->isKnownNonNegative(Coeff) ? Coeff : SE->getNegativeSCEV(Coeff);
     const SCEV *Product = SE->getMulExpr(UpperBound, AbsCoeff);
     if (isKnownPredicate(CmpInst::ICMP_SGT, AbsDelta, Product)) {
       // Distance greater than trip count - no dependence
@@ -1286,7 +1247,7 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   if (isa<SCEVConstant>(Delta) && isa<SCEVConstant>(Coeff)) {
     APInt ConstDelta = cast<SCEVConstant>(Delta)->getAPInt();
     APInt ConstCoeff = cast<SCEVConstant>(Coeff)->getAPInt();
-    APInt Distance  = ConstDelta; // these need to be initialized
+    APInt Distance = ConstDelta; // these need to be initialized
     APInt Remainder = ConstDelta;
     APInt::sdivrem(ConstDelta, ConstCoeff, Distance, Remainder);
     LLVM_DEBUG(dbgs() << "\t    Distance = " << Distance << "\n");
@@ -1307,29 +1268,25 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
     else
       Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
     ++StrongSIVsuccesses;
-  }
-  else if (Delta->isZero()) {
+  } else if (Delta->isZero()) {
     // since 0/X == 0
     Result.DV[Level].Distance = Delta;
     NewConstraint.setDistance(Delta, CurLoop);
     Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
     ++StrongSIVsuccesses;
-  }
-  else {
+  } else {
     if (Coeff->isOne()) {
       LLVM_DEBUG(dbgs() << "\t    Distance = " << *Delta << "\n");
       Result.DV[Level].Distance = Delta; // since X/1 == X
       NewConstraint.setDistance(Delta, CurLoop);
-    }
-    else {
+    } else {
       Result.Consistent = false;
-      NewConstraint.setLine(Coeff,
-                            SE->getNegativeSCEV(Coeff),
+      NewConstraint.setLine(Coeff, SE->getNegativeSCEV(Coeff),
                             SE->getNegativeSCEV(Delta), CurLoop);
     }
 
     // maybe we can get a useful direction
-    bool DeltaMaybeZero     = !SE->isKnownNonZero(Delta);
+    bool DeltaMaybeZero = !SE->isKnownNonZero(Delta);
     bool DeltaMaybePositive = !SE->isKnownNonPositive(Delta);
     bool DeltaMaybeNegative = !SE->isKnownNonNegative(Delta);
     bool CoeffMaybePositive = !SE->isKnownNonPositive(Coeff);
@@ -1352,7 +1309,6 @@ bool DependenceInfo::strongSIVtest(const SCEV *Coeff, const SCEV *SrcConst,
   }
   return false;
 }
-
 
 // weakCrossingSIVtest -
 // From the paper, Practical Dependence Testing, Section 4.2.2
@@ -1447,8 +1403,8 @@ bool DependenceInfo::weakCrossingSIVtest(
   if (const SCEV *UpperBound = collectUpperBound(CurLoop, Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *ConstantTwo = SE->getConstant(UpperBound->getType(), 2);
-    const SCEV *ML = SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound),
-                                    ConstantTwo);
+    const SCEV *ML =
+        SE->getMulExpr(SE->getMulExpr(ConstCoeff, UpperBound), ConstantTwo);
     LLVM_DEBUG(dbgs() << "\t    ML = " << *ML << "\n");
     if (isKnownPredicate(CmpInst::ICMP_SGT, Delta, ML)) {
       // Delta too big, no dependence
@@ -1498,7 +1454,6 @@ bool DependenceInfo::weakCrossingSIVtest(
   return false;
 }
 
-
 // Kirch's algorithm, from
 //
 //        Optimizing Supercompilers for Supercomputers
@@ -1519,9 +1474,11 @@ static bool findGCD(unsigned Bits, const APInt &AM, const APInt &BM,
   APInt R = G0;
   APInt::sdivrem(G0, G1, Q, R);
   while (R != 0) {
+    // clang-format off
     APInt A2 = A0 - Q*A1; A0 = A1; A1 = A2;
     APInt B2 = B0 - Q*B1; B0 = B1; B1 = B2;
     G0 = G1; G1 = R;
+    // clang-format on
     APInt::sdivrem(G0, G1, Q, R);
   }
   G = G1;
@@ -1543,8 +1500,7 @@ static APInt floorOfQuotient(const APInt &A, const APInt &B) {
   APInt::sdivrem(A, B, Q, R);
   if (R == 0)
     return Q;
-  if ((A.sgt(0) && B.sgt(0)) ||
-      (A.slt(0) && B.slt(0)))
+  if ((A.sgt(0) && B.sgt(0)) || (A.slt(0) && B.slt(0)))
     return Q;
   else
     return Q - 1;
@@ -1556,8 +1512,7 @@ static APInt ceilingOfQuotient(const APInt &A, const APInt &B) {
   APInt::sdivrem(A, B, Q, R);
   if (R == 0)
     return Q;
-  if ((A.sgt(0) && B.sgt(0)) ||
-      (A.slt(0) && B.slt(0)))
+  if ((A.sgt(0) && B.sgt(0)) || (A.slt(0) && B.slt(0)))
     return Q + 1;
   else
     return Q;
@@ -1733,16 +1688,13 @@ bool DependenceInfo::exactSIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   return Result.DV[Level].Direction == Dependence::DVEntry::NONE;
 }
 
-
 // Return true if the divisor evenly divides the dividend.
-static
-bool isRemainderZero(const SCEVConstant *Dividend,
-                     const SCEVConstant *Divisor) {
+static bool isRemainderZero(const SCEVConstant *Dividend,
+                            const SCEVConstant *Divisor) {
   const APInt &ConstDividend = Dividend->getAPInt();
   const APInt &ConstDivisor = Divisor->getAPInt();
   return ConstDividend.srem(ConstDivisor) == 0;
 }
-
 
 // weakZeroSrcSIVtest -
 // From the paper, Practical Dependence Testing, Section 4.2.2
@@ -1807,11 +1759,11 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(DstCoeff);
   if (!ConstCoeff)
     return false;
-  const SCEV *AbsCoeff =
-    SE->isKnownNegative(ConstCoeff) ?
-    SE->getNegativeSCEV(ConstCoeff) : ConstCoeff;
+  const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
+                             ? SE->getNegativeSCEV(ConstCoeff)
+                             : ConstCoeff;
   const SCEV *NewDelta =
-    SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
+      SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
 
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
@@ -1852,7 +1804,6 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   }
   return false;
 }
-
 
 // weakZeroDstSIVtest -
 // From the paper, Practical Dependence Testing, Section 4.2.2
@@ -1916,11 +1867,11 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   const SCEVConstant *ConstCoeff = dyn_cast<SCEVConstant>(SrcCoeff);
   if (!ConstCoeff)
     return false;
-  const SCEV *AbsCoeff =
-    SE->isKnownNegative(ConstCoeff) ?
-    SE->getNegativeSCEV(ConstCoeff) : ConstCoeff;
+  const SCEV *AbsCoeff = SE->isKnownNegative(ConstCoeff)
+                             ? SE->getNegativeSCEV(ConstCoeff)
+                             : ConstCoeff;
   const SCEV *NewDelta =
-    SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
+      SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
 
   // check that Delta/SrcCoeff < iteration count
   // really check NewDelta < count*AbsCoeff
@@ -1961,7 +1912,6 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   }
   return false;
 }
-
 
 // exactRDIVtest - Tests the RDIV subscript pair for dependence.
 // Things of the form [c1 + a*i] and [c2 + b*j],
@@ -2084,7 +2034,6 @@ bool DependenceInfo::exactRDIVtest(const SCEV *SrcCoeff, const SCEV *DstCoeff,
   return TL.sgt(TU);
 }
 
-
 // symbolicRDIVtest -
 // In Section 4.5 of the Practical Dependence Testing paper,the authors
 // introduce a special case of Banerjee's Inequalities (also called the
@@ -2167,8 +2116,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
           return true;
         }
       }
-    }
-    else if (SE->isKnownNonPositive(A2)) {
+    } else if (SE->isKnownNonPositive(A2)) {
       // a1 >= 0 && a2 <= 0
       if (N1 && N2) {
         // make sure that c2 - c1 <= a1*N1 - a2*N2
@@ -2187,8 +2135,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         return true;
       }
     }
-  }
-  else if (SE->isKnownNonPositive(A1)) {
+  } else if (SE->isKnownNonPositive(A1)) {
     if (SE->isKnownNonNegative(A2)) {
       // a1 <= 0 && a2 >= 0
       if (N1 && N2) {
@@ -2207,8 +2154,7 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
         ++SymbolicRDIVindependence;
         return true;
       }
-    }
-    else if (SE->isKnownNonPositive(A2)) {
+    } else if (SE->isKnownNonPositive(A2)) {
       // a1 <= 0 && a2 <= 0
       if (N1) {
         // make sure that a1*N1 <= c2 - c1
@@ -2232,7 +2178,6 @@ bool DependenceInfo::symbolicRDIVtest(const SCEV *A1, const SCEV *A2,
   }
   return false;
 }
-
 
 // testSIV -
 // When we have a pair of subscripts of the form [c1 + a1*i] and [c2 - a2*i]
@@ -2260,17 +2205,17 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     Level = mapSrcLoop(CurLoop);
     bool disproven;
     if (SrcCoeff == DstCoeff)
-      disproven = strongSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop,
-                                Level, Result, NewConstraint);
+      disproven = strongSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop, Level,
+                                Result, NewConstraint);
     else if (SrcCoeff == SE->getNegativeSCEV(DstCoeff))
       disproven = weakCrossingSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop,
                                       Level, Result, NewConstraint, SplitIter);
     else
       disproven = exactSIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurLoop,
                                Level, Result, NewConstraint);
-    return disproven ||
-      gcdMIVtest(Src, Dst, Result) ||
-      symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurLoop, CurLoop);
+    return disproven || gcdMIVtest(Src, Dst, Result) ||
+           symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, CurLoop,
+                            CurLoop);
   }
   if (SrcAddRec) {
     const SCEV *SrcConst = SrcAddRec->getStart();
@@ -2278,9 +2223,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     const SCEV *DstConst = Dst;
     const Loop *CurLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurLoop);
-    return weakZeroDstSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop,
-                              Level, Result, NewConstraint) ||
-      gcdMIVtest(Src, Dst, Result);
+    return weakZeroDstSIVtest(SrcCoeff, SrcConst, DstConst, CurLoop, Level,
+                              Result, NewConstraint) ||
+           gcdMIVtest(Src, Dst, Result);
   }
   if (DstAddRec) {
     const SCEV *DstConst = DstAddRec->getStart();
@@ -2288,14 +2233,13 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
     const SCEV *SrcConst = Src;
     const Loop *CurLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurLoop);
-    return weakZeroSrcSIVtest(DstCoeff, SrcConst, DstConst,
-                              CurLoop, Level, Result, NewConstraint) ||
-      gcdMIVtest(Src, Dst, Result);
+    return weakZeroSrcSIVtest(DstCoeff, SrcConst, DstConst, CurLoop, Level,
+                              Result, NewConstraint) ||
+           gcdMIVtest(Src, Dst, Result);
   }
   llvm_unreachable("SIV test expected at least one AddRec");
   return false;
 }
-
 
 // testRDIV -
 // When we have a pair of subscripts of the form [c1 + a1*i] and [c2 + a2*j]
@@ -2333,45 +2277,36 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
     DstConst = DstAddRec->getStart();
     DstCoeff = DstAddRec->getStepRecurrence(*SE);
     DstLoop = DstAddRec->getLoop();
-  }
-  else if (SrcAddRec) {
+  } else if (SrcAddRec) {
     if (const SCEVAddRecExpr *tmpAddRec =
-        dyn_cast<SCEVAddRecExpr>(SrcAddRec->getStart())) {
+            dyn_cast<SCEVAddRecExpr>(SrcAddRec->getStart())) {
       SrcConst = tmpAddRec->getStart();
       SrcCoeff = tmpAddRec->getStepRecurrence(*SE);
       SrcLoop = tmpAddRec->getLoop();
       DstConst = Dst;
       DstCoeff = SE->getNegativeSCEV(SrcAddRec->getStepRecurrence(*SE));
       DstLoop = SrcAddRec->getLoop();
-    }
-    else
+    } else
       llvm_unreachable("RDIV reached by surprising SCEVs");
-  }
-  else if (DstAddRec) {
+  } else if (DstAddRec) {
     if (const SCEVAddRecExpr *tmpAddRec =
-        dyn_cast<SCEVAddRecExpr>(DstAddRec->getStart())) {
+            dyn_cast<SCEVAddRecExpr>(DstAddRec->getStart())) {
       DstConst = tmpAddRec->getStart();
       DstCoeff = tmpAddRec->getStepRecurrence(*SE);
       DstLoop = tmpAddRec->getLoop();
       SrcConst = Src;
       SrcCoeff = SE->getNegativeSCEV(DstAddRec->getStepRecurrence(*SE));
       SrcLoop = DstAddRec->getLoop();
-    }
-    else
+    } else
       llvm_unreachable("RDIV reached by surprising SCEVs");
-  }
-  else
+  } else
     llvm_unreachable("RDIV expected at least one AddRec");
-  return exactRDIVtest(SrcCoeff, DstCoeff,
-                       SrcConst, DstConst,
-                       SrcLoop, DstLoop,
+  return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
                        Result) ||
-    gcdMIVtest(Src, Dst, Result) ||
-    symbolicRDIVtest(SrcCoeff, DstCoeff,
-                     SrcConst, DstConst,
-                     SrcLoop, DstLoop);
+         gcdMIVtest(Src, Dst, Result) ||
+         symbolicRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop,
+                          DstLoop);
 }
-
 
 // Tests the single-subscript MIV pair (Src and Dst) for dependence.
 // Return true if dependence disproved.
@@ -2383,7 +2318,7 @@ bool DependenceInfo::testMIV(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "    dst = " << *Dst << "\n");
   Result.Consistent = false;
   return gcdMIVtest(Src, Dst, Result) ||
-    banerjeeMIVtest(Src, Dst, Loops, Result);
+         banerjeeMIVtest(Src, Dst, Loops, Result);
 }
 
 // Given a product, e.g., 10*X*Y, returns the first constant operand,
@@ -2428,7 +2363,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   // we can't quit the loop just because the GCD == 1.
   const SCEV *Coefficients = Src;
   while (const SCEVAddRecExpr *AddRec =
-         dyn_cast<SCEVAddRecExpr>(Coefficients)) {
+             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
@@ -2446,7 +2381,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   // we can't quit the loop just because the GCD == 1.
   Coefficients = Dst;
   while (const SCEVAddRecExpr *AddRec =
-         dyn_cast<SCEVAddRecExpr>(Coefficients)) {
+             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     const SCEV *Coeff = AddRec->getStepRecurrence(*SE);
     // If the coefficient is the product of a constant and other stuff,
     // we can use the constant in the GCD computation.
@@ -2468,16 +2403,14 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
       if (isa<SCEVConstant>(Operand)) {
         assert(!Constant && "Surprised to find multiple constants");
         Constant = cast<SCEVConstant>(Operand);
-      }
-      else if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Operand)) {
+      } else if (const SCEVMulExpr *Product = dyn_cast<SCEVMulExpr>(Operand)) {
         // Search for constant operand to participate in GCD;
         // If none found; return false.
         std::optional<APInt> ConstOp = getConstantPart(Product);
         if (!ConstOp)
           return false;
         ExtraGCD = APIntOps::GreatestCommonDivisor(ExtraGCD, ConstOp->abs());
-      }
-      else
+      } else
         return false;
     }
   }
@@ -2512,7 +2445,7 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   bool Improved = false;
   Coefficients = Src;
   while (const SCEVAddRecExpr *AddRec =
-         dyn_cast<SCEVAddRecExpr>(Coefficients)) {
+             dyn_cast<SCEVAddRecExpr>(Coefficients)) {
     Coefficients = AddRec->getStart();
     const Loop *CurLoop = AddRec->getLoop();
     RunningGCD = ExtraGCD;
@@ -2577,7 +2510,6 @@ bool DependenceInfo::gcdMIVtest(const SCEV *Src, const SCEV *Dst,
   LLVM_DEBUG(dbgs() << "all done\n");
   return false;
 }
-
 
 //===----------------------------------------------------------------------===//
 // banerjeeMIVtest -
@@ -2652,8 +2584,8 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
   if (testBounds(Dependence::DVEntry::ALL, 0, Bound, Delta)) {
     // Explore the direction vector hierarchy.
     unsigned DepthExpanded = 0;
-    unsigned NewDeps = exploreDirections(1, A, B, Bound,
-                                         Loops, DepthExpanded, Delta);
+    unsigned NewDeps =
+        exploreDirections(1, A, B, Bound, Loops, DepthExpanded, Delta);
     if (NewDeps > 0) {
       bool Improved = false;
       for (unsigned K = 1; K <= CommonLevels; ++K) {
@@ -2670,22 +2602,19 @@ bool DependenceInfo::banerjeeMIVtest(const SCEV *Src, const SCEV *Dst,
       }
       if (Improved)
         ++BanerjeeSuccesses;
-    }
-    else {
+    } else {
       ++BanerjeeIndependence;
       Disproved = true;
     }
-  }
-  else {
+  } else {
     ++BanerjeeIndependence;
     Disproved = true;
   }
-  delete [] Bound;
-  delete [] A;
-  delete [] B;
+  delete[] Bound;
+  delete[] A;
+  delete[] B;
   return Disproved;
 }
-
 
 // Hierarchically expands the direction vector
 // search space, combining the directions of discovered dependences
@@ -2788,26 +2717,25 @@ unsigned DependenceInfo::exploreDirections(unsigned Level, CoefficientInfo *A,
 
     // test bounds for <, *, *, ...
     if (testBounds(Dependence::DVEntry::LT, Level, Bound, Delta))
-      NewDeps += exploreDirections(Level + 1, A, B, Bound,
-                                   Loops, DepthExpanded, Delta);
+      NewDeps += exploreDirections(Level + 1, A, B, Bound, Loops, DepthExpanded,
+                                   Delta);
 
     // Test bounds for =, *, *, ...
     if (testBounds(Dependence::DVEntry::EQ, Level, Bound, Delta))
-      NewDeps += exploreDirections(Level + 1, A, B, Bound,
-                                   Loops, DepthExpanded, Delta);
+      NewDeps += exploreDirections(Level + 1, A, B, Bound, Loops, DepthExpanded,
+                                   Delta);
 
     // test bounds for >, *, *, ...
     if (testBounds(Dependence::DVEntry::GT, Level, Bound, Delta))
-      NewDeps += exploreDirections(Level + 1, A, B, Bound,
-                                   Loops, DepthExpanded, Delta);
+      NewDeps += exploreDirections(Level + 1, A, B, Bound, Loops, DepthExpanded,
+                                   Delta);
 
     Bound[Level].Direction = Dependence::DVEntry::ALL;
     return NewDeps;
-  }
-  else
-    return exploreDirections(Level + 1, A, B, Bound, Loops, DepthExpanded, Delta);
+  } else
+    return exploreDirections(Level + 1, A, B, Bound, Loops, DepthExpanded,
+                             Delta);
 }
-
 
 // Returns true iff the current bounds are plausible.
 bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
@@ -2821,7 +2749,6 @@ bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
       return false;
   return true;
 }
-
 
 // Computes the upper and lower bounds for level K
 // using the * direction. Records them in Bound.
@@ -2840,17 +2767,16 @@ bool DependenceInfo::testBounds(unsigned char DirKind, unsigned Level,
 // and the upper bound is always >= 0.
 void DependenceInfo::findBoundsALL(CoefficientInfo *A, CoefficientInfo *B,
                                    BoundInfo *Bound, unsigned K) const {
-  Bound[K].Lower[Dependence::DVEntry::ALL] = nullptr; // Default value = -infinity.
-  Bound[K].Upper[Dependence::DVEntry::ALL] = nullptr; // Default value = +infinity.
+  Bound[K].Lower[Dependence::DVEntry::ALL] =
+      nullptr; // Default value = -infinity.
+  Bound[K].Upper[Dependence::DVEntry::ALL] =
+      nullptr; // Default value = +infinity.
   if (Bound[K].Iterations) {
-    Bound[K].Lower[Dependence::DVEntry::ALL] =
-      SE->getMulExpr(SE->getMinusSCEV(A[K].NegPart, B[K].PosPart),
-                     Bound[K].Iterations);
-    Bound[K].Upper[Dependence::DVEntry::ALL] =
-      SE->getMulExpr(SE->getMinusSCEV(A[K].PosPart, B[K].NegPart),
-                     Bound[K].Iterations);
-  }
-  else {
+    Bound[K].Lower[Dependence::DVEntry::ALL] = SE->getMulExpr(
+        SE->getMinusSCEV(A[K].NegPart, B[K].PosPart), Bound[K].Iterations);
+    Bound[K].Upper[Dependence::DVEntry::ALL] = SE->getMulExpr(
+        SE->getMinusSCEV(A[K].PosPart, B[K].NegPart), Bound[K].Iterations);
+  } else {
     // If the difference is 0, we won't need to know the number of iterations.
     if (isKnownPredicate(CmpInst::ICMP_EQ, A[K].NegPart, B[K].PosPart))
       Bound[K].Lower[Dependence::DVEntry::ALL] =
@@ -2860,7 +2786,6 @@ void DependenceInfo::findBoundsALL(CoefficientInfo *A, CoefficientInfo *B,
           SE->getZero(A[K].Coeff->getType());
   }
 }
-
 
 // Computes the upper and lower bounds for level K
 // using the = direction. Records them in Bound.
@@ -2879,18 +2804,19 @@ void DependenceInfo::findBoundsALL(CoefficientInfo *A, CoefficientInfo *B,
 // and the upper bound is always >= 0.
 void DependenceInfo::findBoundsEQ(CoefficientInfo *A, CoefficientInfo *B,
                                   BoundInfo *Bound, unsigned K) const {
-  Bound[K].Lower[Dependence::DVEntry::EQ] = nullptr; // Default value = -infinity.
-  Bound[K].Upper[Dependence::DVEntry::EQ] = nullptr; // Default value = +infinity.
+  Bound[K].Lower[Dependence::DVEntry::EQ] =
+      nullptr; // Default value = -infinity.
+  Bound[K].Upper[Dependence::DVEntry::EQ] =
+      nullptr; // Default value = +infinity.
   if (Bound[K].Iterations) {
     const SCEV *Delta = SE->getMinusSCEV(A[K].Coeff, B[K].Coeff);
     const SCEV *NegativePart = getNegativePart(Delta);
     Bound[K].Lower[Dependence::DVEntry::EQ] =
-      SE->getMulExpr(NegativePart, Bound[K].Iterations);
+        SE->getMulExpr(NegativePart, Bound[K].Iterations);
     const SCEV *PositivePart = getPositivePart(Delta);
     Bound[K].Upper[Dependence::DVEntry::EQ] =
-      SE->getMulExpr(PositivePart, Bound[K].Iterations);
-  }
-  else {
+        SE->getMulExpr(PositivePart, Bound[K].Iterations);
+  } else {
     // If the positive/negative part of the difference is 0,
     // we won't need to know the number of iterations.
     const SCEV *Delta = SE->getMinusSCEV(A[K].Coeff, B[K].Coeff);
@@ -2902,7 +2828,6 @@ void DependenceInfo::findBoundsEQ(CoefficientInfo *A, CoefficientInfo *B,
       Bound[K].Upper[Dependence::DVEntry::EQ] = PositivePart; // Zero
   }
 }
-
 
 // Computes the upper and lower bounds for level K
 // using the < direction. Records them in Bound.
@@ -2919,34 +2844,34 @@ void DependenceInfo::findBoundsEQ(CoefficientInfo *A, CoefficientInfo *B,
 // We must be careful to handle the case where the upper bound is unknown.
 void DependenceInfo::findBoundsLT(CoefficientInfo *A, CoefficientInfo *B,
                                   BoundInfo *Bound, unsigned K) const {
-  Bound[K].Lower[Dependence::DVEntry::LT] = nullptr; // Default value = -infinity.
-  Bound[K].Upper[Dependence::DVEntry::LT] = nullptr; // Default value = +infinity.
+  Bound[K].Lower[Dependence::DVEntry::LT] =
+      nullptr; // Default value = -infinity.
+  Bound[K].Upper[Dependence::DVEntry::LT] =
+      nullptr; // Default value = +infinity.
   if (Bound[K].Iterations) {
     const SCEV *Iter_1 = SE->getMinusSCEV(
         Bound[K].Iterations, SE->getOne(Bound[K].Iterations->getType()));
     const SCEV *NegPart =
-      getNegativePart(SE->getMinusSCEV(A[K].NegPart, B[K].Coeff));
+        getNegativePart(SE->getMinusSCEV(A[K].NegPart, B[K].Coeff));
     Bound[K].Lower[Dependence::DVEntry::LT] =
-      SE->getMinusSCEV(SE->getMulExpr(NegPart, Iter_1), B[K].Coeff);
+        SE->getMinusSCEV(SE->getMulExpr(NegPart, Iter_1), B[K].Coeff);
     const SCEV *PosPart =
-      getPositivePart(SE->getMinusSCEV(A[K].PosPart, B[K].Coeff));
+        getPositivePart(SE->getMinusSCEV(A[K].PosPart, B[K].Coeff));
     Bound[K].Upper[Dependence::DVEntry::LT] =
-      SE->getMinusSCEV(SE->getMulExpr(PosPart, Iter_1), B[K].Coeff);
-  }
-  else {
+        SE->getMinusSCEV(SE->getMulExpr(PosPart, Iter_1), B[K].Coeff);
+  } else {
     // If the positive/negative part of the difference is 0,
     // we won't need to know the number of iterations.
     const SCEV *NegPart =
-      getNegativePart(SE->getMinusSCEV(A[K].NegPart, B[K].Coeff));
+        getNegativePart(SE->getMinusSCEV(A[K].NegPart, B[K].Coeff));
     if (NegPart->isZero())
       Bound[K].Lower[Dependence::DVEntry::LT] = SE->getNegativeSCEV(B[K].Coeff);
     const SCEV *PosPart =
-      getPositivePart(SE->getMinusSCEV(A[K].PosPart, B[K].Coeff));
+        getPositivePart(SE->getMinusSCEV(A[K].PosPart, B[K].Coeff));
     if (PosPart->isZero())
       Bound[K].Upper[Dependence::DVEntry::LT] = SE->getNegativeSCEV(B[K].Coeff);
   }
 }
-
 
 // Computes the upper and lower bounds for level K
 // using the > direction. Records them in Bound.
@@ -2963,44 +2888,44 @@ void DependenceInfo::findBoundsLT(CoefficientInfo *A, CoefficientInfo *B,
 // We must be careful to handle the case where the upper bound is unknown.
 void DependenceInfo::findBoundsGT(CoefficientInfo *A, CoefficientInfo *B,
                                   BoundInfo *Bound, unsigned K) const {
-  Bound[K].Lower[Dependence::DVEntry::GT] = nullptr; // Default value = -infinity.
-  Bound[K].Upper[Dependence::DVEntry::GT] = nullptr; // Default value = +infinity.
+  Bound[K].Lower[Dependence::DVEntry::GT] =
+      nullptr; // Default value = -infinity.
+  Bound[K].Upper[Dependence::DVEntry::GT] =
+      nullptr; // Default value = +infinity.
   if (Bound[K].Iterations) {
     const SCEV *Iter_1 = SE->getMinusSCEV(
         Bound[K].Iterations, SE->getOne(Bound[K].Iterations->getType()));
     const SCEV *NegPart =
-      getNegativePart(SE->getMinusSCEV(A[K].Coeff, B[K].PosPart));
+        getNegativePart(SE->getMinusSCEV(A[K].Coeff, B[K].PosPart));
     Bound[K].Lower[Dependence::DVEntry::GT] =
-      SE->getAddExpr(SE->getMulExpr(NegPart, Iter_1), A[K].Coeff);
+        SE->getAddExpr(SE->getMulExpr(NegPart, Iter_1), A[K].Coeff);
     const SCEV *PosPart =
-      getPositivePart(SE->getMinusSCEV(A[K].Coeff, B[K].NegPart));
+        getPositivePart(SE->getMinusSCEV(A[K].Coeff, B[K].NegPart));
     Bound[K].Upper[Dependence::DVEntry::GT] =
-      SE->getAddExpr(SE->getMulExpr(PosPart, Iter_1), A[K].Coeff);
-  }
-  else {
+        SE->getAddExpr(SE->getMulExpr(PosPart, Iter_1), A[K].Coeff);
+  } else {
     // If the positive/negative part of the difference is 0,
     // we won't need to know the number of iterations.
-    const SCEV *NegPart = getNegativePart(SE->getMinusSCEV(A[K].Coeff, B[K].PosPart));
+    const SCEV *NegPart =
+        getNegativePart(SE->getMinusSCEV(A[K].Coeff, B[K].PosPart));
     if (NegPart->isZero())
       Bound[K].Lower[Dependence::DVEntry::GT] = A[K].Coeff;
-    const SCEV *PosPart = getPositivePart(SE->getMinusSCEV(A[K].Coeff, B[K].NegPart));
+    const SCEV *PosPart =
+        getPositivePart(SE->getMinusSCEV(A[K].Coeff, B[K].NegPart));
     if (PosPart->isZero())
       Bound[K].Upper[Dependence::DVEntry::GT] = A[K].Coeff;
   }
 }
-
 
 // X^+ = max(X, 0)
 const SCEV *DependenceInfo::getPositivePart(const SCEV *X) const {
   return SE->getSMaxExpr(X, SE->getZero(X->getType()));
 }
 
-
 // X^- = min(X, 0)
 const SCEV *DependenceInfo::getNegativePart(const SCEV *X) const {
   return SE->getSMinExpr(X, SE->getZero(X->getType()));
 }
-
 
 // Walks through the subscript,
 // collecting each coefficient, the associated loop bounds,
@@ -3046,7 +2971,6 @@ DependenceInfo::collectCoeffInfo(const SCEV *Subscript, bool SrcFlag,
   return CI;
 }
 
-
 // Looks through all the bounds info and
 // computes the lower bound given the current direction settings
 // at each level. If the lower bound for any level is -inf,
@@ -3062,7 +2986,6 @@ const SCEV *DependenceInfo::getLowerBound(BoundInfo *Bound) const {
   return Sum;
 }
 
-
 // Looks through all the bounds info and
 // computes the upper bound given the current direction settings
 // at each level. If the upper bound at any level is +inf,
@@ -3077,7 +3000,6 @@ const SCEV *DependenceInfo::getUpperBound(BoundInfo *Bound) const {
   }
   return Sum;
 }
-
 
 //===----------------------------------------------------------------------===//
 // Constraint manipulation for Delta test.
@@ -3098,7 +3020,6 @@ const SCEV *DependenceInfo::findCoefficient(const SCEV *Expr,
   return findCoefficient(AddRec->getStart(), TargetLoop);
 }
 
-
 // Given a linear SCEV,
 // return the SCEV given by zeroing out the coefficient
 // corresponding to the specified loop.
@@ -3112,11 +3033,9 @@ const SCEV *DependenceInfo::zeroCoefficient(const SCEV *Expr,
   if (AddRec->getLoop() == TargetLoop)
     return AddRec->getStart();
   return SE->getAddRecExpr(zeroCoefficient(AddRec->getStart(), TargetLoop),
-                           AddRec->getStepRecurrence(*SE),
-                           AddRec->getLoop(),
+                           AddRec->getStepRecurrence(*SE), AddRec->getLoop(),
                            AddRec->getNoWrapFlags());
 }
-
 
 // Given a linear SCEV Expr,
 // return the SCEV given by adding some Value to the
@@ -3128,17 +3047,13 @@ const SCEV *DependenceInfo::addToCoefficient(const SCEV *Expr,
                                              const SCEV *Value) const {
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Expr);
   if (!AddRec) // create a new addRec
-    return SE->getAddRecExpr(Expr,
-                             Value,
-                             TargetLoop,
+    return SE->getAddRecExpr(Expr, Value, TargetLoop,
                              SCEV::FlagAnyWrap); // Worst case, with no info.
   if (AddRec->getLoop() == TargetLoop) {
     const SCEV *Sum = SE->getAddExpr(AddRec->getStepRecurrence(*SE), Value);
     if (Sum->isZero())
       return AddRec->getStart();
-    return SE->getAddRecExpr(AddRec->getStart(),
-                             Sum,
-                             AddRec->getLoop(),
+    return SE->getAddRecExpr(AddRec->getStart(), Sum, AddRec->getLoop(),
                              AddRec->getNoWrapFlags());
   }
   if (SE->isLoopInvariant(AddRec, TargetLoop))
@@ -3148,7 +3063,6 @@ const SCEV *DependenceInfo::addToCoefficient(const SCEV *Expr,
       AddRec->getStepRecurrence(*SE), AddRec->getLoop(),
       AddRec->getNoWrapFlags());
 }
-
 
 // Review the constraints, looking for opportunities
 // to simplify a subscript pair (Src and Dst).
@@ -3178,7 +3092,6 @@ bool DependenceInfo::propagate(const SCEV *&Src, const SCEV *&Dst,
   return Result;
 }
 
-
 // Attempt to propagate a distance
 // constraint into a subscript pair (Src and Dst).
 // Return true if some simplification occurs.
@@ -3204,7 +3117,6 @@ bool DependenceInfo::propagateDistance(const SCEV *&Src, const SCEV *&Dst,
   return true;
 }
 
-
 // Attempt to propagate a line
 // constraint into a subscript pair (Src and Dst).
 // Return true if some simplification occurs.
@@ -3224,22 +3136,22 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
   if (A->isZero()) {
     const SCEVConstant *Bconst = dyn_cast<SCEVConstant>(B);
     const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
-    if (!Bconst || !Cconst) return false;
+    if (!Bconst || !Cconst)
+      return false;
     APInt Beta = Bconst->getAPInt();
     APInt Charlie = Cconst->getAPInt();
     APInt CdivB = Charlie.sdiv(Beta);
     assert(Charlie.srem(Beta) == 0 && "C should be evenly divisible by B");
     const SCEV *AP_K = findCoefficient(Dst, CurLoop);
-    //    Src = SE->getAddExpr(Src, SE->getMulExpr(AP_K, SE->getConstant(CdivB)));
     Src = SE->getMinusSCEV(Src, SE->getMulExpr(AP_K, SE->getConstant(CdivB)));
     Dst = zeroCoefficient(Dst, CurLoop);
     if (!findCoefficient(Src, CurLoop)->isZero())
       Consistent = false;
-  }
-  else if (B->isZero()) {
+  } else if (B->isZero()) {
     const SCEVConstant *Aconst = dyn_cast<SCEVConstant>(A);
     const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
-    if (!Aconst || !Cconst) return false;
+    if (!Aconst || !Cconst)
+      return false;
     APInt Alpha = Aconst->getAPInt();
     APInt Charlie = Cconst->getAPInt();
     APInt CdivA = Charlie.sdiv(Alpha);
@@ -3249,11 +3161,11 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
     Src = zeroCoefficient(Src, CurLoop);
     if (!findCoefficient(Dst, CurLoop)->isZero())
       Consistent = false;
-  }
-  else if (isKnownPredicate(CmpInst::ICMP_EQ, A, B)) {
+  } else if (isKnownPredicate(CmpInst::ICMP_EQ, A, B)) {
     const SCEVConstant *Aconst = dyn_cast<SCEVConstant>(A);
     const SCEVConstant *Cconst = dyn_cast<SCEVConstant>(C);
-    if (!Aconst || !Cconst) return false;
+    if (!Aconst || !Cconst)
+      return false;
     APInt Alpha = Aconst->getAPInt();
     APInt Charlie = Cconst->getAPInt();
     APInt CdivA = Charlie.sdiv(Alpha);
@@ -3264,8 +3176,7 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
     Dst = addToCoefficient(Dst, CurLoop, A_K);
     if (!findCoefficient(Dst, CurLoop)->isZero())
       Consistent = false;
-  }
-  else {
+  } else {
     // paper is incorrect here, or perhaps just misleading
     const SCEV *A_K = findCoefficient(Src, CurLoop);
     Src = SE->getMulExpr(Src, A);
@@ -3280,7 +3191,6 @@ bool DependenceInfo::propagateLine(const SCEV *&Src, const SCEV *&Dst,
   LLVM_DEBUG(dbgs() << "\t\tnew Dst = " << *Dst << "\n");
   return true;
 }
-
 
 // Attempt to propagate a point
 // constraint into a subscript pair (Src and Dst).
@@ -3302,7 +3212,6 @@ bool DependenceInfo::propagatePoint(const SCEV *&Src, const SCEV *&Dst,
   return true;
 }
 
-
 // Update direction vector entry based on the current constraint.
 void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
                                      const Constraint &CurConstraint) const {
@@ -3322,34 +3231,28 @@ void DependenceInfo::updateDirection(Dependence::DVEntry &Level,
     if (!SE->isKnownNonNegative(Level.Distance)) // if may be negative
       NewDirection |= Dependence::DVEntry::GT;
     Level.Direction &= NewDirection;
-  }
-  else if (CurConstraint.isLine()) {
+  } else if (CurConstraint.isLine()) {
     Level.Scalar = false;
     Level.Distance = nullptr;
     // direction should be accurate
-  }
-  else if (CurConstraint.isPoint()) {
+  } else if (CurConstraint.isPoint()) {
     Level.Scalar = false;
     Level.Distance = nullptr;
     unsigned NewDirection = Dependence::DVEntry::NONE;
-    if (!isKnownPredicate(CmpInst::ICMP_NE,
-                          CurConstraint.getY(),
+    if (!isKnownPredicate(CmpInst::ICMP_NE, CurConstraint.getY(),
                           CurConstraint.getX()))
       // if X may be = Y
       NewDirection |= Dependence::DVEntry::EQ;
-    if (!isKnownPredicate(CmpInst::ICMP_SLE,
-                          CurConstraint.getY(),
+    if (!isKnownPredicate(CmpInst::ICMP_SLE, CurConstraint.getY(),
                           CurConstraint.getX()))
       // if Y may be > X
       NewDirection |= Dependence::DVEntry::LT;
-    if (!isKnownPredicate(CmpInst::ICMP_SGE,
-                          CurConstraint.getY(),
+    if (!isKnownPredicate(CmpInst::ICMP_SGE, CurConstraint.getY(),
                           CurConstraint.getX()))
       // if Y may be < X
       NewDirection |= Dependence::DVEntry::GT;
     Level.Direction &= NewDirection;
-  }
-  else
+  } else
     llvm_unreachable("constraint has unexpected kind");
 }
 
@@ -3425,7 +3328,7 @@ bool DependenceInfo::tryDelinearizeFixedSize(
         dyn_cast<SCEVUnknown>(SE->getPointerBase(DstAccessFn));
     assert(SrcBase && DstBase && SrcBase == DstBase &&
            "expected src and dst scev unknowns to be equal");
-    });
+  });
 
   SmallVector<int, 4> SrcSizes;
   SmallVector<int, 4> DstSizes;
@@ -3737,9 +3640,8 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     Pair[P].Group.resize(Pairs);
     removeMatchingExtensions(&Pair[P]);
     Pair[P].Classification =
-      classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()),
-                   Pair[P].Dst, LI->getLoopFor(Dst->getParent()),
-                   Pair[P].Loops);
+        classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
+                     LI->getLoopFor(Dst->getParent()), Pair[P].Loops);
     Pair[P].GroupLoops = Pair[P].Loops;
     Pair[P].Group.set(P);
     LLVM_DEBUG(dbgs() << "    subscript " << P << "\n");
@@ -3814,18 +3716,15 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     if (Pair[SI].Classification == Subscript::NonLinear) {
       // ignore these, but collect loops for later
       ++NonlinearSubscriptPairs;
-      collectCommonLoops(Pair[SI].Src,
-                         LI->getLoopFor(Src->getParent()),
+      collectCommonLoops(Pair[SI].Src, LI->getLoopFor(Src->getParent()),
                          Pair[SI].Loops);
-      collectCommonLoops(Pair[SI].Dst,
-                         LI->getLoopFor(Dst->getParent()),
+      collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
                          Pair[SI].Loops);
       Result.Consistent = false;
     } else if (Pair[SI].Classification == Subscript::ZIV) {
       // always separable
       Separable.set(SI);
-    }
-    else {
+    } else {
       // SIV, RDIV, or MIV, so check for coupled group
       bool Done = true;
       for (unsigned SJ = SI + 1; SJ < Pairs; ++SJ) {
@@ -3843,8 +3742,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         if (Pair[SI].Group.count() == 1) {
           Separable.set(SI);
           ++SeparableSubscriptPairs;
-        }
-        else {
+        } else {
           Coupled.set(SI);
           ++CoupledSubscriptPairs;
         }
@@ -3950,10 +3848,9 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
                           Constraints, Result.Consistent)) {
               LLVM_DEBUG(dbgs() << "\t    Changed\n");
               ++DeltaPropagations;
-              Pair[SJ].Classification =
-                classifyPair(Pair[SJ].Src, LI->getLoopFor(Src->getParent()),
-                             Pair[SJ].Dst, LI->getLoopFor(Dst->getParent()),
-                             Pair[SJ].Loops);
+              Pair[SJ].Classification = classifyPair(
+                  Pair[SJ].Src, LI->getLoopFor(Src->getParent()), Pair[SJ].Dst,
+                  LI->getLoopFor(Dst->getParent()), Pair[SJ].Loops);
               switch (Pair[SJ].Classification) {
               case Subscript::ZIV:
                 LLVM_DEBUG(dbgs() << "ZIV\n");
@@ -3995,8 +3892,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
           LLVM_DEBUG(dbgs() << "MIV test\n");
           if (testMIV(Pair[SJ].Src, Pair[SJ].Dst, Pair[SJ].Loops, Result))
             return nullptr;
-        }
-        else
+        } else
           llvm_unreachable("expected only MIV subscripts at this point");
       }
 
@@ -4052,8 +3948,7 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
         break;
       }
     }
-  }
-  else {
+  } else {
     // On the other hand, if all directions are equal and there's no
     // loop-independent dependence possible, then no dependence exists.
     bool AllEqual = true;
@@ -4158,9 +4053,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
     Pair[P].Group.resize(Pairs);
     removeMatchingExtensions(&Pair[P]);
     Pair[P].Classification =
-      classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()),
-                   Pair[P].Dst, LI->getLoopFor(Dst->getParent()),
-                   Pair[P].Loops);
+        classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
+                     LI->getLoopFor(Dst->getParent()), Pair[P].Loops);
     Pair[P].GroupLoops = Pair[P].Loops;
     Pair[P].Group.set(P);
   }
@@ -4172,15 +4066,12 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
   for (unsigned SI = 0; SI < Pairs; ++SI) {
     if (Pair[SI].Classification == Subscript::NonLinear) {
       // ignore these, but collect loops for later
-      collectCommonLoops(Pair[SI].Src,
-                         LI->getLoopFor(Src->getParent()),
+      collectCommonLoops(Pair[SI].Src, LI->getLoopFor(Src->getParent()),
                          Pair[SI].Loops);
-      collectCommonLoops(Pair[SI].Dst,
-                         LI->getLoopFor(Dst->getParent()),
+      collectCommonLoops(Pair[SI].Dst, LI->getLoopFor(Dst->getParent()),
                          Pair[SI].Loops);
       Result.Consistent = false;
-    }
-    else if (Pair[SI].Classification == Subscript::ZIV)
+    } else if (Pair[SI].Classification == Subscript::ZIV)
       Separable.set(SI);
     else {
       // SIV, RDIV, or MIV, so check for coupled group
@@ -4214,8 +4105,8 @@ const SCEV *DependenceInfo::getSplitIteration(const Dependence &Dep,
     case Subscript::SIV: {
       unsigned Level;
       const SCEV *SplitIter = nullptr;
-      (void) testSIV(Pair[SI].Src, Pair[SI].Dst, Level,
-                     Result, NewConstraint, SplitIter);
+      (void)testSIV(Pair[SI].Src, Pair[SI].Dst, Level, Result, NewConstraint,
+                    SplitIter);
       if (Level == SplitLevel) {
         assert(SplitIter != nullptr);
         return SplitIter;
