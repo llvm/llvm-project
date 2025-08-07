@@ -38,31 +38,29 @@ void EHScopeStack::Cleanup::anchor() {}
 char *EHScopeStack::allocate(size_t size) {
   size = llvm::alignTo(size, ScopeStackAlignment);
   if (!startOfBuffer) {
-    unsigned capacity = 1024;
-    while (capacity < size)
-      capacity *= 2;
-    startOfBuffer = new char[capacity];
-    startOfData = endOfBuffer = startOfBuffer + capacity;
-  } else if (static_cast<size_t>(startOfData - startOfBuffer) < size) {
-    unsigned currentCapacity = endOfBuffer - startOfBuffer;
-    unsigned usedCapacity = currentCapacity - (startOfData - startOfBuffer);
+    unsigned capacity = llvm::PowerOf2Ceil(std::max(size, 1024ul));
+    startOfBuffer = std::make_unique<char[]>(capacity);
+    startOfData = endOfBuffer = startOfBuffer.get() + capacity;
+  } else if (static_cast<size_t>(startOfData - startOfBuffer.get()) < size) {
+    unsigned currentCapacity = endOfBuffer - startOfBuffer.get();
+    unsigned usedCapacity =
+        currentCapacity - (startOfData - startOfBuffer.get());
+    unsigned requiredCapacity = usedCapacity + size;
+    // We know from the 'else if' condition that requiredCapacity is greater
+    // than currentCapacity.
+    unsigned newCapacity = llvm::PowerOf2Ceil(requiredCapacity);
 
-    unsigned newCapacity = currentCapacity;
-    do {
-      newCapacity *= 2;
-    } while (newCapacity < usedCapacity + size);
-
-    char *newStartOfBuffer = new char[newCapacity];
-    char *newEndOfBuffer = newStartOfBuffer + newCapacity;
+    std::unique_ptr<char[]> newStartOfBuffer =
+        std::make_unique<char[]>(newCapacity);
+    char *newEndOfBuffer = newStartOfBuffer.get() + newCapacity;
     char *newStartOfData = newEndOfBuffer - usedCapacity;
     memcpy(newStartOfData, startOfData, usedCapacity);
-    delete[] startOfBuffer;
-    startOfBuffer = newStartOfBuffer;
+    startOfBuffer.swap(newStartOfBuffer);
     endOfBuffer = newEndOfBuffer;
     startOfData = newStartOfData;
   }
 
-  assert(startOfBuffer + size <= startOfData);
+  assert(startOfBuffer.get() + size <= startOfData);
   startOfData -= size;
   return startOfData;
 }

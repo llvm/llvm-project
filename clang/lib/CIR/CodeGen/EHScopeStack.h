@@ -54,13 +54,13 @@ public:
     friend class EHScopeStack;
 
     /// Offset from startOfData to endOfBuffer.
-    ptrdiff_t size;
+    ptrdiff_t size = -1;
 
-    stable_iterator(ptrdiff_t size) : size(size) {}
+    explicit stable_iterator(ptrdiff_t size) : size(size) {}
 
   public:
     static stable_iterator invalid() { return stable_iterator(-1); }
-    stable_iterator() : size(-1) {}
+    stable_iterator() = default;
 
     bool isValid() const { return size >= 0; }
 
@@ -121,7 +121,7 @@ private:
   /// The start of the scope-stack buffer, i.e. the allocated pointer
   /// for the buffer.  All of these pointers are either simultaneously
   /// null or simultaneously valid.
-  char *startOfBuffer = nullptr;
+  std::unique_ptr<char[]> startOfBuffer;
 
   /// The end of the buffer.
   char *endOfBuffer = nullptr;
@@ -143,7 +143,7 @@ private:
 
 public:
   EHScopeStack() = default;
-  ~EHScopeStack() { delete[] startOfBuffer; }
+  ~EHScopeStack() = default;
 
   /// Push a lazily-created cleanup on the stack.
   template <class T, class... As> void pushCleanup(CleanupKind kind, As... a) {

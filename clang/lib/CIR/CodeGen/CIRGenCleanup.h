@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef CLANG_LIB_CIR_CODEGEN_CGCLEANUP_H
-#define CLANG_LIB_CIR_CODEGEN_CGCLEANUP_H
+#ifndef CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H
+#define CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H
 
 #include "EHScopeStack.h"
 
@@ -20,13 +20,13 @@ namespace clang::CIRGen {
 
 /// A non-stable pointer into the scope stack.
 class EHScopeStack::iterator {
-  char *ptr;
+  char *ptr = nullptr;
 
   friend class EHScopeStack;
   explicit iterator(char *ptr) : ptr(ptr) {}
 
 public:
-  iterator() : ptr(nullptr) {}
+  iterator() = default;
 
   EHScopeStack::Cleanup *get() const {
     return reinterpret_cast<EHScopeStack::Cleanup *>(ptr);
@@ -40,4 +40,4 @@ inline EHScopeStack::iterator EHScopeStack::begin() const {
 }
 
 } // namespace clang::CIRGen
-#endif // CLANG_LIB_CIR_CODEGEN_CGCLEANUP_H
+#endif // CLANG_LIB_CIR_CODEGEN_CIRGENCLEANUP_H
