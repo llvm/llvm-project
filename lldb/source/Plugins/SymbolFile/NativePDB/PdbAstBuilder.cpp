@@ -805,6 +805,20 @@ clang::QualType PdbAstBuilder::CreateType(PdbTypeSymId type) {
     return CreateFunctionType(mfr.ArgumentList, mfr.ReturnType, mfr.CallConv);
   }
 
+  if (cvt.kind() == LF_ALIAS) {
+    AliasRecord ar;
+    llvm::cantFail(TypeDeserializer::deserializeAs<AliasRecord>(cvt, ar));
+
+    auto underlying_type = ToCompilerType(GetOrCreateType(ar.UnderlyingType));
+
+    std::string name = std::string(DropNameScope(ar.Name));
+
+    CompilerType ct = underlying_type.CreateTypedef(
+        name.c_str(), CompilerDeclContext(), 0);
+
+    return m_clang.GetQualType(ct.GetOpaqueQualType());
+  }
+
   return {};
 }
 

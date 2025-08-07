@@ -709,6 +709,15 @@ TypeSP SymbolFileNativePDB::CreateProcedureType(PdbTypeSymId type_id,
                   ct, lldb_private::Type::ResolveState::Full);
 }
 
+TypeSP SymbolFileNativePDB::CreateAliasType(PdbTypeSymId type_id,
+                                            const AliasRecord &ar,
+                                            CompilerType ct) {
+
+  return MakeType(toOpaqueUid(type_id), ct.GetTypeName(), llvm::expectedToOptional(ct.GetByteSize(nullptr)), nullptr, LLDB_INVALID_UID,
+                  lldb_private::Type::eEncodingIsUID, Declaration(), ct,
+                  lldb_private::Type::ResolveState::Full);
+}
+
 TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
   if (type_id.index.isSimple())
     return CreateSimpleType(type_id.index, ct);
@@ -763,6 +772,12 @@ TypeSP SymbolFileNativePDB::CreateType(PdbTypeSymId type_id, CompilerType ct) {
     MemberFunctionRecord mfr;
     llvm::cantFail(TypeDeserializer::deserializeAs<MemberFunctionRecord>(cvt, mfr));
     return CreateFunctionType(type_id, mfr, ct);
+  }
+
+  if (cvt.kind() == LF_ALIAS) {
+    AliasRecord ar;
+    llvm::cantFail(TypeDeserializer::deserializeAs<AliasRecord>(cvt, ar));
+    return CreateAliasType(type_id, ar, ct);
   }
 
   return nullptr;

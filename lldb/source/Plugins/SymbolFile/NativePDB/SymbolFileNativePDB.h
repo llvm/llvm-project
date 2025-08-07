@@ -216,6 +216,9 @@ private:
   lldb::TypeSP CreateProcedureType(PdbTypeSymId type_id,
                                    const llvm::codeview::ProcedureRecord &pr,
                                    CompilerType ct);
+  lldb::TypeSP CreateAliasType(PdbTypeSymId type_id,
+                               const llvm::codeview::AliasRecord &ar,
+                               CompilerType ct);
   lldb::TypeSP CreateClassStructUnion(PdbTypeSymId type_id,
                                       const llvm::codeview::TagRecord &record,
                                       size_t size, CompilerType ct);
