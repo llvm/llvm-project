@@ -629,7 +629,7 @@ TargetInfo::getCallingConvKind(bool ClangABICompat4) const {
 bool TargetInfo::callGlobalDeleteInDeletingDtor(
     const LangOptions &LangOpts) const {
   if (getCXXABI() == TargetCXXABI::Microsoft &&
-      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver20)
+      LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver21)
     return true;
   return false;
 }

@@ -11122,10 +11122,6 @@ bool Sema::CheckDestructor(CXXDestructorDecl *Destructor) {
       MarkFunctionReferenced(Loc, OperatorDelete);
       Destructor->setOperatorDelete(OperatorDelete, ThisArg);
 
-      // Clang 20 calls global operator delete after dtor call. Clang 21 and
-      // newer call global operator delete inside of dtor body, as MSVC does.
-      // So we don't really need to fetch global operator delete for Clang 20
-      // ABI.
       if (isa<CXXMethodDecl>(OperatorDelete) &&
           Context.getTargetInfo().callGlobalDeleteInDeletingDtor(
               Context.getLangOpts())) {
