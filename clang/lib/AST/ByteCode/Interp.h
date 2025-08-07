@@ -51,8 +51,7 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK);
 
 /// Checks if a pointer is a dummy pointer.
-bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                AccessKinds AK);
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Block *B, AccessKinds AK);
 
 /// Checks if a pointer is null.
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -89,11 +88,14 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                AccessKinds AK = AK_Read);
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
-bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                      AccessKinds AK);
+bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                           AccessKinds AK);
+bool DiagnoseUninitialized(InterpState &S, CodePtr OpPC, bool Extern,
+                           const Descriptor *Desc, AccessKinds AK);
+
 /// Checks a direct load of a primitive value from a global or local variable.
-bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
-bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B);
+bool CheckLocalLoad(InterpState &S, CodePtr OpPC, const Block *B);
 
 /// Checks if a value can be stored in a block.
 bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
@@ -1351,10 +1353,10 @@ inline bool ConstFloat(InterpState &S, CodePtr OpPC, const Floating &F) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const Pointer &Ptr = S.Current->getLocalPointer(I);
-  if (!CheckLocalLoad(S, OpPC, Ptr))
+  const Block *B = S.Current->getLocalBlock(I);
+  if (!CheckLocalLoad(S, OpPC, B))
     return false;
-  S.Stk.push<T>(Ptr.deref<T>());
+  S.Stk.push<T>(B->deref<T>());
   return true;
 }
 
@@ -1465,22 +1467,26 @@ bool SetThisField(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const Pointer &Ptr = S.P.getPtrGlobal(I);
+  const Block *B = S.P.getGlobal(I);
 
-  if (!CheckGlobalLoad(S, OpPC, Ptr))
+  if (!CheckGlobalLoad(S, OpPC, B))
     return false;
 
-  S.Stk.push<T>(Ptr.deref<T>());
+  S.Stk.push<T>(B->deref<T>());
   return true;
 }
 
 /// Same as GetGlobal, but without the checks.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool GetGlobalUnchecked(InterpState &S, CodePtr OpPC, uint32_t I) {
-  const Pointer &Ptr = S.P.getPtrGlobal(I);
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Read))
-    return false;
-  S.Stk.push<T>(Ptr.deref<T>());
+  const Block *B = S.P.getGlobal(I);
+  const auto &Desc =
+      *reinterpret_cast<const GlobalInlineDescriptor *>(B->rawData());
+  if (Desc.InitState != GlobalInitState::Initialized)
+    return DiagnoseUninitialized(S, OpPC, B->isExtern(), B->getDescriptor(),
+                                 AK_Read);
+
+  S.Stk.push<T>(B->deref<T>());
   return true;
 }
 
@@ -2351,8 +2357,8 @@ static inline bool IncDecPtrHelper(InterpState &S, CodePtr OpPC,
 static inline bool IncPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Increment))
-    return false;
+  if (!Ptr.isInitialized())
+    return DiagnoseUninitialized(S, OpPC, Ptr, AK_Increment);
 
   return IncDecPtrHelper<ArithOp::Add>(S, OpPC, Ptr);
 }
@@ -2360,8 +2366,8 @@ static inline bool IncPtr(InterpState &S, CodePtr OpPC) {
 static inline bool DecPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
 
-  if (!CheckInitialized(S, OpPC, Ptr, AK_Decrement))
-    return false;
+  if (!Ptr.isInitialized())
+    return DiagnoseUninitialized(S, OpPC, Ptr, AK_Decrement);
 
   return IncDecPtrHelper<ArithOp::Sub>(S, OpPC, Ptr);
 }
