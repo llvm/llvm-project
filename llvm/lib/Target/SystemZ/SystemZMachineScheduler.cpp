@@ -305,63 +305,63 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
   GenericScheduler::initialize(dag);
 
   TinyRegion = DAG->SUnits.size() <= TinyRegionLim;
-  // const SystemZInstrInfo *TII = static_cast<const SystemZInstrInfo *>(DAG->TII);
-  // if (TinyRegion) {
-  //   // A tiny region with long latency instructions is better handled using
-  //   // normal heuristics, except in regions that have COPYs of a physreg both
-  //   // ways and/or have a compare-0 likely to be eliminated.
-  //   const SUnit *CmpZeroSU = nullptr;
-  //   const SUnit *CmpSrcSU = nullptr;
-  //   Register CmpSrcReg = 0;
-  //   bool OtherCCClob = false;
-  //   unsigned MaxLat = 0;
-  //   std::set<Register> PRegs;
-  //   bool CopysPRegDep = false;
-  //   for (unsigned Idx = DAG->SUnits.size() - 1; Idx + 1 != 0; --Idx) {
-  //     const SUnit *SU = &DAG->SUnits[Idx];
-  //     const MachineInstr *MI = SU->getInstr();
+  const SystemZInstrInfo *TII = static_cast<const SystemZInstrInfo *>(DAG->TII);
+  if (TinyRegion) {
+    // A tiny region with long latency instructions is better handled using
+    // normal heuristics, except in regions that have COPYs of a physreg both
+    // ways and/or have a compare-0 likely to be eliminated.
+    const SUnit *CmpZeroSU = nullptr;
+    const SUnit *CmpSrcSU = nullptr;
+    Register CmpSrcReg = 0;
+    bool OtherCCClob = false;
+    unsigned MaxLat = 0;
+    std::set<Register> PRegs;
+    bool CopysPRegDep = false;
+    for (unsigned Idx = DAG->SUnits.size() - 1; Idx + 1 != 0; --Idx) {
+      const SUnit *SU = &DAG->SUnits[Idx];
+      const MachineInstr *MI = SU->getInstr();
 
-  //     // Check for a (likely) eliminable compare-0.
-  //     if (TII->isCompareZero(*MI)) {
-  //       CmpZeroSU = SU;
-  //       CmpSrcReg = TII->getCompareSourceReg(*MI);
-  //       continue;
-  //     }
-  //     if (MI->getNumOperands()) {
-  //       const MachineOperand &DefMO = MI->getOperand(0);
-  //       // Doing this instead of SU data preds happens to also handle the
-  //       // case where CmpSrcReg is redefined.
-  //       if (isVirtRegDef(DefMO) && DefMO.getReg() == CmpSrcReg &&
-  //           MI->getDesc().hasImplicitDefOfPhysReg(SystemZ::CC))
-  //         CmpSrcSU = SU;
-  //     }
-  //     if (SU != CmpZeroSU && SU != CmpSrcSU &&
-  //         MI->getDesc().hasImplicitDefOfPhysReg(SystemZ::CC))
-  //       OtherCCClob = true;
+      // Check for a (likely) eliminable compare-0.
+      if (TII->isCompareZero(*MI)) {
+        CmpZeroSU = SU;
+        CmpSrcReg = TII->getCompareSourceReg(*MI);
+        continue;
+      }
+      if (MI->getNumOperands()) {
+        const MachineOperand &DefMO = MI->getOperand(0);
+        // Doing this instead of SU data preds happens to also handle the
+        // case where CmpSrcReg is redefined.
+        if (isVirtRegDef(DefMO) && DefMO.getReg() == CmpSrcReg &&
+            MI->getDesc().hasImplicitDefOfPhysReg(SystemZ::CC))
+          CmpSrcSU = SU;
+      }
+      if (SU != CmpZeroSU && SU != CmpSrcSU &&
+          MI->getDesc().hasImplicitDefOfPhysReg(SystemZ::CC))
+        OtherCCClob = true;
 
-  //     // Check for long latency instructions.
-  //     MaxLat = std::max(MaxLat, unsigned(SU->Latency));
+      // Check for long latency instructions.
+      MaxLat = std::max(MaxLat, unsigned(SU->Latency));
 
-  //     // Check for COPYs of pregs both in and out of the region.
-  //     if (MI->isCopy()) {
-  //       Register DstReg = MI->getOperand(0).getReg();
-  //       Register SrcReg = MI->getOperand(1).getReg();
-  //       if (DstReg.isPhysical() && DAG->MRI.isAllocatable(DstReg) &&
-  //           SrcReg.isVirtual())
-  //         PRegs.insert(DstReg);
-  //       else if (SrcReg.isPhysical() && DAG->MRI.isAllocatable(SrcReg) &&
-  //                DstReg.isVirtual()) {
-  //         if (!PRegs.insert(SrcReg).second)
-  //           CopysPRegDep = true;
-  //       }
-  //     }
-  //   }
-  //   bool CmpElimRegion = CmpZeroSU && CmpSrcSU && OtherCCClob;
+      // Check for COPYs of pregs both in and out of the region.
+      if (MI->isCopy()) {
+        Register DstReg = MI->getOperand(0).getReg();
+        Register SrcReg = MI->getOperand(1).getReg();
+        if (DstReg.isPhysical() && DAG->MRI.isAllocatable(DstReg) &&
+            SrcReg.isVirtual())
+          PRegs.insert(DstReg);
+        else if (SrcReg.isPhysical() && DAG->MRI.isAllocatable(SrcReg) &&
+                 DstReg.isVirtual()) {
+          if (!PRegs.insert(SrcReg).second)
+            CopysPRegDep = true;
+        }
+      }
+    }
+    bool CmpElimRegion = CmpZeroSU && CmpSrcSU && OtherCCClob;
 
-  //   if (DAG->SUnits.size() > 6 && MaxLat >= 6 && !CopysPRegDep &&
-  //       !CmpElimRegion)
-  //     TinyRegion = false;
-  // }
+    if (DAG->SUnits.size() > 6 && MaxLat >= 6 && !CopysPRegDep &&
+        !CmpElimRegion)
+      TinyRegion = false;
+  }
   LLVM_DEBUG(dbgs() << "Region is" << (TinyRegion ? "" : " not") << " tiny.\n");
   if (TinyRegion)
     return;
