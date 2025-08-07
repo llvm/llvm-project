@@ -217,6 +217,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("nneg", MIToken::kw_nneg)
       .Case("disjoint", MIToken::kw_disjoint)
       .Case("samesign", MIToken::kw_samesign)
+      .Case("inbounds", MIToken::kw_inbounds)
       .Case("nofpexcept", MIToken::kw_nofpexcept)
       .Case("unpredictable", MIToken::kw_unpredictable)
       .Case("debug-location", MIToken::kw_debug_location)
@@ -616,6 +617,7 @@ static MIToken::TokenKind getMetadataKeywordKind(StringRef Identifier) {
       .Case("!range", MIToken::md_range)
       .Case("!DIExpression", MIToken::md_diexpr)
       .Case("!DILocation", MIToken::md_dilocation)
+      .Case("!noalias.addrspace", MIToken::md_noalias_addrspace)
       .Default(MIToken::Error);
 }
 
