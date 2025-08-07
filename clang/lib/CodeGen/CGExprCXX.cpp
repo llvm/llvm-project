@@ -1798,7 +1798,7 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   SkippedChecks.set(SanitizerKind::Null, nullCheck);
   EmitTypeCheck(CodeGenFunction::TCK_ConstructorCall,
                 E->getAllocatedTypeSourceInfo()->getTypeLoc().getBeginLoc(),
-                result, allocType, result.getAlignment(), SkippedChecks,
+                result, allocType, allocAlign, SkippedChecks,
                 numElements);
 
   EmitNewInitializer(*this, E, allocType, elementTy, result, numElements,
