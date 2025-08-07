@@ -21,7 +21,7 @@
 
 namespace lldb_protocol::mcp {
 
-static llvm::StringLiteral kVersion = "2024-11-05";
+static llvm::StringLiteral kProtocolVersion = "2024-11-05";
 
 /// A request that expects a response.
 struct Request {
