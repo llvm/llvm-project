@@ -893,7 +893,8 @@ let Features = "fma|fma4", Attributes = [NoThrow, Const, RequiredVectorWidth<128
   def vfmaddsubpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>)">;
 }
 
-let Features = "fma|fma4", Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
+let Features = "fma|fma4",
+    Attributes = [NoThrow, Const, RequiredVectorWidth<256>] in {
   def vfmaddsubps256 : X86Builtin<"_Vector<8, float>(_Vector<8, float>, _Vector<8, float>, _Vector<8, float>)">;
   def vfmaddsubpd256 : X86Builtin<"_Vector<4, double>(_Vector<4, double>, _Vector<4, double>, _Vector<4, double>)">;
 }

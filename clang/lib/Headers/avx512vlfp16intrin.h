@@ -1420,7 +1420,7 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_fmadd_ph(__m128h __A,
                                                              __m128h __B,
                                                              __m128h __C) {
   return (__m128h)__builtin_elementwise_fma((__v8hf)__A, (__v8hf)__B,
-                                          (__v8hf)__C);
+                                            (__v8hf)__C);
 }
 
 static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_fmadd_ph(__m128h __A,
@@ -1453,7 +1453,7 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_fmsub_ph(__m128h __A,
                                                              __m128h __B,
                                                              __m128h __C) {
   return (__m128h)__builtin_elementwise_fma((__v8hf)__A, (__v8hf)__B,
-                                          -(__v8hf)__C);
+                                            -(__v8hf)__C);
 }
 
 static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_mask_fmsub_ph(__m128h __A,
@@ -1500,7 +1500,7 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_fmadd_ph(__m256h __A,
                                                                 __m256h __B,
                                                                 __m256h __C) {
   return (__m256h)__builtin_elementwise_fma((__v16hf)__A, (__v16hf)__B,
-                                             (__v16hf)__C);
+                                            (__v16hf)__C);
 }
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
@@ -1531,7 +1531,7 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_fmsub_ph(__m256h __A,
                                                                 __m256h __B,
                                                                 __m256h __C) {
   return (__m256h)__builtin_elementwise_fma((__v16hf)__A, (__v16hf)__B,
-                                             -(__v16hf)__C);
+                                            -(__v16hf)__C);
 }
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
@@ -1716,7 +1716,7 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_fnmadd_ph(__m128h __A,
                                                               __m128h __B,
                                                               __m128h __C) {
   return (__m128h)__builtin_elementwise_fma((__v8hf)__A, -(__v8hf)__B,
-                                          (__v8hf)__C);
+                                            (__v8hf)__C);
 }
 
 static __inline__ __m128h __DEFAULT_FN_ATTRS128
@@ -1731,7 +1731,7 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_fnmadd_ph(__m256h __A,
                                                                  __m256h __B,
                                                                  __m256h __C) {
   return (__m256h)__builtin_elementwise_fma((__v16hf)__A, -(__v16hf)__B,
-                                             (__v16hf)__C);
+                                            (__v16hf)__C);
 }
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
@@ -1746,7 +1746,7 @@ static __inline__ __m128h __DEFAULT_FN_ATTRS128 _mm_fnmsub_ph(__m128h __A,
                                                               __m128h __B,
                                                               __m128h __C) {
   return (__m128h)__builtin_elementwise_fma((__v8hf)__A, -(__v8hf)__B,
-                                          -(__v8hf)__C);
+                                            -(__v8hf)__C);
 }
 
 static __inline__ __m128h __DEFAULT_FN_ATTRS128
@@ -1769,7 +1769,7 @@ static __inline__ __m256h __DEFAULT_FN_ATTRS256 _mm256_fnmsub_ph(__m256h __A,
                                                                  __m256h __B,
                                                                  __m256h __C) {
   return (__m256h)__builtin_elementwise_fma((__v16hf)__A, -(__v16hf)__B,
-                                             -(__v16hf)__C);
+                                            -(__v16hf)__C);
 }
 
 static __inline__ __m256h __DEFAULT_FN_ATTRS256
