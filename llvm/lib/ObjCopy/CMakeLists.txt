@@ -16,6 +16,9 @@ source_group("Header Files\\wasm" REGULAR_EXPRESSION
 source_group("Header Files\\XCOFF" REGULAR_EXPRESSION
   XCOFF/.*[.]h
 )
+source_group("Header Files\\DXContainer" REGULAR_EXPRESSION
+  DXContainer/.*[.]h
+)
 source_group("Source Files" REGULAR_EXPRESSION
   .*[.]cpp
 )
@@ -34,9 +37,15 @@ source_group("Source Files\\wasm" REGULAR_EXPRESSION
 source_group("Source Files\\XCOFF" REGULAR_EXPRESSION
   XCOFF/.*[.]cpp
 )
+source_group("Source Files\\DXContainer" REGULAR_EXPRESSION
+  DXContainer/.*[.]cpp
+)
 
 add_llvm_component_library(LLVMObjCopy
   Archive.cpp
+  DXContainer/DXContainerObjcopy.cpp
+  DXContainer/DXContainerReader.cpp
+  DXContainer/DXContainerWriter.cpp
   CommonConfig.cpp
   ObjCopy.cpp
   ConfigManager.cpp
@@ -62,11 +71,13 @@ add_llvm_component_library(LLVMObjCopy
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ObjCopy
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ObjCopy/COFF
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/ObjCopy/DXContainer
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ObjCopy/ELF
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ObjCopy/MachO
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ObjCopy/wasm
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ObjCopy/XCOFF
   COFF
+  DXContainer
   ELF
   MachO
   wasm
