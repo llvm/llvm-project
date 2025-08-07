@@ -32,6 +32,7 @@ class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
 class RegisteredOperationName;
+class RemarkEngine;
 class StorageUniquer;
 class IRUnit;
 
@@ -212,6 +213,9 @@ public:
   /// Returns the diagnostic engine for this context.
   DiagnosticEngine &getDiagEngine();
 
+  /// Returns the remark engine for this context.
+  std::unique_ptr<RemarkEngine> &getRemarkEngine();
+
   /// Returns the storage uniquer used for creating affine constructs.
   StorageUniquer &getAffineUniquer();
 
@@ -244,6 +248,14 @@ public:
   /// context registry correlates to loaded dialects and their entities
   /// (attributes, operations, types, etc.).
   llvm::hash_code getRegistryHash();
+
+  /// Set up optimization remarks for the context.
+  void setupOptimizationRemarks(
+      StringRef outputPath, StringRef outputFormat, bool printAsEmitRemarks,
+      const std::optional<std::string> &categoryPassName = std::nullopt,
+      const std::optional<std::string> &categoryMissName = std::nullopt,
+      const std::optional<std::string> &categoryAnalysisName = std::nullopt,
+      const std::optional<std::string> &categoryFailedName = std::nullopt);
 
   //===--------------------------------------------------------------------===//
   // Action API
@@ -281,6 +293,9 @@ public:
   }
 
 private:
+  /// Set the remark engine for this context.
+  void setRemarkEngine(std::unique_ptr<RemarkEngine> engine);
+
   /// Return true if the given dialect is currently loading.
   bool isDialectLoading(StringRef dialectNamespace);
 

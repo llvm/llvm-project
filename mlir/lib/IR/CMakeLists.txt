@@ -33,6 +33,7 @@ add_mlir_library(MLIRIR
   PatternMatch.cpp
   Region.cpp
   RegionKindInterface.cpp
+  Remarks.cpp
   SymbolTable.cpp
   TensorEncoding.cpp
   Types.cpp
@@ -69,5 +70,10 @@ add_mlir_library(MLIRIR
 
   LINK_LIBS PUBLIC
   MLIRSupport
+  
+  LINK_COMPONENTS
+    Remarks
+    Core
+    BitstreamReader  
   )
 
