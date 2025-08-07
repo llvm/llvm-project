@@ -49,6 +49,7 @@
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 8
+# FULL-NEXT:  maxArchVGPRPressure: 0
 # FULL-NEXT:  vgprForAGPRCopy: ''
 # FULL-NEXT:  sgprForEXECCopy: ''
 # FULL-NEXT:  longBranchReservedReg: ''
@@ -157,6 +158,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  maxArchVGPRPressure: 0
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
@@ -236,6 +238,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  maxArchVGPRPressure: 0
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
@@ -316,6 +319,7 @@ body:             |
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
 # FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  maxArchVGPRPressure: 0
 # FULL-NEXT: vgprForAGPRCopy: ''
 # FULL-NEXT: sgprForEXECCopy: ''
 # FULL-NEXT: longBranchReservedReg: ''
