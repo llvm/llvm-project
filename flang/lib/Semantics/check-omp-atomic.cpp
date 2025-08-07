@@ -11,13 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-omp-structure.h"
-#include "openmp-utils.h"
 
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
 #include "flang/Semantics/type.h"

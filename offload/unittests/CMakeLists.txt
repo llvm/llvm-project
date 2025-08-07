@@ -104,11 +104,6 @@ function(add_conformance_test test_name)
 
   list(TRANSFORM ARGN PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE files)
 
-  if(NOT TARGET libc)
-    message(WARNING "Cannot run conformance tests without the LLVM C library")
-    return()
-  endif()
-
   add_executable(${target_name} ${files})
   add_dependencies(${target_name} conformance_device_binaries)
   target_compile_definitions(${target_name}
