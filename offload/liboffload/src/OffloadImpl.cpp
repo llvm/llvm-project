@@ -833,9 +833,9 @@ Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
   return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
 }
 
-Error olEnqueueHostCallback_impl(ol_queue_handle_t Queue,
-                                 ol_queue_callback_cb_t Callback,
-                                 void *UserData) {
+Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
+                                ol_host_function_cb_t Callback,
+                                void *UserData) {
   return Queue->Device->Device->enqueueHostCallback(Callback, UserData,
                                                     Queue->AsyncInfo);
 }
