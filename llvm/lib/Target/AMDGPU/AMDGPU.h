@@ -231,6 +231,9 @@ extern char &AMDGPUPerfHintAnalysisLegacyID;
 void initializeGCNRegPressurePrinterPass(PassRegistry &);
 extern char &GCNRegPressurePrinterID;
 
+void initializeAMDGPULoopAlignLegacyPass(PassRegistry &);
+extern char &AMDGPULoopAlignLegacyID;
+
 void initializeAMDGPUPreloadKernArgPrologLegacyPass(PassRegistry &);
 extern char &AMDGPUPreloadKernArgPrologLegacyID;
 
