@@ -5,7 +5,7 @@
 
 func.func @transfer_write16_inbounds_1d(%A : memref<?xf32>, %base: index) {
   %f = arith.constant 16.0 : f32
-  %v = vector.splat %f : vector<16xf32>
+  %v = vector.broadcast %f : f32 to vector<16xf32>
   vector.transfer_write %v, %A[%base]
     {permutation_map = affine_map<(d0) -> (d0)>, in_bounds = [true]}
     : vector<16xf32>, memref<?xf32>
@@ -14,7 +14,7 @@ func.func @transfer_write16_inbounds_1d(%A : memref<?xf32>, %base: index) {
 
 func.func @transfer_write13_1d(%A : memref<?xf32>, %base: index) {
   %f = arith.constant 13.0 : f32
-  %v = vector.splat %f : vector<13xf32>
+  %v = vector.broadcast %f : f32 to vector<13xf32>
   vector.transfer_write %v, %A[%base]
     {permutation_map = affine_map<(d0) -> (d0)>}
     : vector<13xf32>, memref<?xf32>
@@ -23,7 +23,7 @@ func.func @transfer_write13_1d(%A : memref<?xf32>, %base: index) {
 
 func.func @transfer_write17_1d(%A : memref<?xf32>, %base: index) {
   %f = arith.constant 17.0 : f32
-  %v = vector.splat %f : vector<17xf32>
+  %v = vector.broadcast %f : f32 to vector<17xf32>
   vector.transfer_write %v, %A[%base]
     {permutation_map = affine_map<(d0) -> (d0)>}
     : vector<17xf32>, memref<?xf32>
@@ -42,7 +42,7 @@ func.func @transfer_read_1d(%A : memref<?xf32>) -> vector<32xf32> {
 func.func @transfer_write_inbounds_3d(%A : memref<4x4x4xf32>) {
   %c0 = arith.constant 0: index
   %f = arith.constant 0.0 : f32
-  %v0 = vector.splat %f : vector<2x3x4xf32>
+  %v0 = vector.broadcast %f : f32 to vector<2x3x4xf32>
   %f1 = arith.constant 1.0 : f32
   %f2 = arith.constant 2.0 : f32
   %f3 = arith.constant 3.0 : f32
