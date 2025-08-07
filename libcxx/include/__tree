@@ -1076,11 +1076,13 @@ public:
       // __node_traits::construct(__na, std::addressof(__lhs), std::move(__tmp));
       key_type __kk;
       // new (std::addressof(__kk))(key_type)(__value.first);
+      // todo: this is wrong
       __node_traits::construct(__na, std::addressof(__kk), std::move(__value.first));
       // __node_holder __h = __construct_node(std::forward<_Args>(__args)...);?
       // __node_holder __h = __construct_node(__value);?
       __emplace_hint_unique(__p, std::move(__kk), std::move(__value.second));
-    } else {
+    } else 
+    {
       __emplace_hint_unique(__p, const_cast<key_type&&>(__value.first), std::move(__value.second));
     }
   }
