@@ -42,14 +42,14 @@ static RT_API_ATTRS void TransferImpl(Descriptor &result,
   source.GetLowerBounds(sourceAt);
   while (resultBytes > 0 && sourceElements > 0) {
     std::size_t toMove{std::min(resultBytes, sourceElementBytes)};
-    std::memcpy(to, source.Element<char>(sourceAt), toMove);
+    runtime::memcpy(to, source.Element<char>(sourceAt), toMove);
     to += toMove;
     resultBytes -= toMove;
     --sourceElements;
     source.IncrementSubscripts(sourceAt);
   }
   if (resultBytes > 0) {
-    std::memset(to, 0, resultBytes);
+    runtime::memset(to, 0, resultBytes);
   }
 }
 
