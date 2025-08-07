@@ -2408,11 +2408,11 @@ public:
     // TODO: extend the masked interleaved-group support to reversed access.
     assert((!Mask || !IG->isReverse()) &&
            "Reversed masked interleave-group not supported.");
-    for (unsigned i = 0; i < IG->getFactor(); ++i)
-      if (Instruction *I = IG->getMember(i)) {
-        if (I->getType()->isVoidTy())
+    for (unsigned I = 0; I < IG->getFactor(); ++I)
+      if (Instruction *Inst = IG->getMember(I)) {
+        if (Inst->getType()->isVoidTy())
           continue;
-        new VPValue(I, this);
+        new VPValue(Inst, this);
       }
 
     for (auto *SV : StoredValues)
