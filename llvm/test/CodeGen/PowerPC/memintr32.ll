@@ -11,7 +11,7 @@ define i32 @memcmp_test(ptr nocapture noundef readonly %ptr1, ptr nocapture noun
 ; CHECK-AIX-32-P9-NEXT:    mflr r0
 ; CHECK-AIX-32-P9-NEXT:    stwu r1, -64(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r0, 72(r1)
-; CHECK-AIX-32-P9-NEXT:    bl .memcmp[PR]
+; CHECK-AIX-32-P9-NEXT:    bl .___memcmp[PR]
 ; CHECK-AIX-32-P9-NEXT:    nop
 ; CHECK-AIX-32-P9-NEXT:    addi r1, r1, 64
 ; CHECK-AIX-32-P9-NEXT:    lwz r0, 8(r1)
