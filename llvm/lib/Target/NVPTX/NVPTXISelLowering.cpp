@@ -900,6 +900,17 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   if (STI.allowFP16Math() || STI.hasBF16Math())
     setTargetDAGCombine(ISD::SETCC);
 
+  // Vector reduction operations. These may be turned into shuffle or tree
+  // reductions depending on what instructions are available for each type.
+  for (MVT VT : MVT::fixedlen_vector_valuetypes()) {
+    MVT EltVT = VT.getVectorElementType();
+    if (EltVT == MVT::f32 || EltVT == MVT::f64) {
+      setOperationAction({ISD::VECREDUCE_FMAX, ISD::VECREDUCE_FMIN,
+                          ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM},
+                         VT, Custom);
+    }
+  }
+
   // Promote fp16 arithmetic if fp16 hardware isn't available or the
   // user passed --nvptx-no-fp16-math. The flag is useful because,
   // although sm_53+ GPUs have some sort of FP16 support in
@@ -1143,6 +1154,10 @@ const char *NVPTXTargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(NVPTXISD::BFI)
     MAKE_CASE(NVPTXISD::PRMT)
     MAKE_CASE(NVPTXISD::FCOPYSIGN)
+    MAKE_CASE(NVPTXISD::FMAXNUM3)
+    MAKE_CASE(NVPTXISD::FMINNUM3)
+    MAKE_CASE(NVPTXISD::FMAXIMUM3)
+    MAKE_CASE(NVPTXISD::FMINIMUM3)
     MAKE_CASE(NVPTXISD::DYNAMIC_STACKALLOC)
     MAKE_CASE(NVPTXISD::STACKRESTORE)
     MAKE_CASE(NVPTXISD::STACKSAVE)
@@ -1927,6 +1942,124 @@ static SDValue getPRMT(SDValue A, SDValue B, uint64_t Selector, SDLoc DL,
                        SelectionDAG &DAG,
                        unsigned Mode = NVPTX::PTXPrmtMode::NONE) {
   return getPRMT(A, B, DAG.getConstant(Selector, DL, MVT::i32), DL, DAG, Mode);
+}
+
+/// Reduces the elements using the scalar operations provided. The operations
+/// are sorted descending in number of inputs they take. The flags on the
+/// original reduction operation will be propagated to each scalar operation.
+/// Nearby elements are grouped in tree reduction, unlike the shuffle reduction
+/// used in ExpandReductions and SelectionDAG.
+static SDValue buildTreeReduction(
+    const SmallVector<SDValue> &Elements, EVT EltTy,
+    ArrayRef<std::pair<unsigned /*NodeType*/, unsigned /*NumInputs*/>> Ops,
+    const SDLoc &DL, const SDNodeFlags Flags, SelectionDAG &DAG) {
+  // Build the reduction tree at each level, starting with all the elements.
+  SmallVector<SDValue> Level = Elements;
+
+  unsigned OpIdx = 0;
+  while (Level.size() > 1) {
+    // Try to reduce this level using the current operator.
+    const auto [Op, NumInputs] = Ops[OpIdx];
+
+    // Build the next level by partially reducing all elements.
+    SmallVector<SDValue> ReducedLevel;
+    unsigned I = 0, E = Level.size();
+    for (; I + NumInputs <= E; I += NumInputs) {
+      // Reduce elements in groups of [NumInputs], as much as possible.
+      ReducedLevel.push_back(DAG.getNode(
+          Op, DL, EltTy, ArrayRef<SDValue>(Level).slice(I, NumInputs), Flags));
+    }
+
+    if (I < E) {
+      // Handle leftover elements.
+
+      if (ReducedLevel.empty()) {
+        // We didn't reduce anything at this level. We need to pick a smaller
+        // operator.
+        ++OpIdx;
+        assert(OpIdx < Ops.size() && "no smaller operators for reduction");
+        continue;
+      }
+
+      // We reduced some things but there's still more left, meaning the
+      // operator's number of inputs doesn't evenly divide this level size. Move
+      // these elements to the next level.
+      for (; I < E; ++I)
+        ReducedLevel.push_back(Level[I]);
+    }
+
+    // Process the next level.
+    Level = ReducedLevel;
+  }
+
+  return *Level.begin();
+}
+
+// Get scalar reduction opcode
+static ISD::NodeType getScalarOpcodeForReduction(unsigned ReductionOpcode) {
+  switch (ReductionOpcode) {
+  case ISD::VECREDUCE_FMAX:
+    return ISD::FMAXNUM;
+  case ISD::VECREDUCE_FMIN:
+    return ISD::FMINNUM;
+  case ISD::VECREDUCE_FMAXIMUM:
+    return ISD::FMAXIMUM;
+  case ISD::VECREDUCE_FMINIMUM:
+    return ISD::FMINIMUM;
+  default:
+    llvm_unreachable("unhandled reduction opcode");
+  }
+}
+
+/// Get 3-input scalar reduction opcode
+static std::optional<NVPTXISD::NodeType>
+getScalar3OpcodeForReduction(unsigned ReductionOpcode) {
+  switch (ReductionOpcode) {
+  case ISD::VECREDUCE_FMAX:
+    return NVPTXISD::FMAXNUM3;
+  case ISD::VECREDUCE_FMIN:
+    return NVPTXISD::FMINNUM3;
+  case ISD::VECREDUCE_FMAXIMUM:
+    return NVPTXISD::FMAXIMUM3;
+  case ISD::VECREDUCE_FMINIMUM:
+    return NVPTXISD::FMINIMUM3;
+  default:
+    return std::nullopt;
+  }
+}
+
+/// Lower reductions to either a sequence of operations or a tree if
+/// reassociations are allowed. This method will use larger operations like
+/// max3/min3 when the target supports them.
+SDValue NVPTXTargetLowering::LowerVECREDUCE(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  const SDNodeFlags Flags = Op->getFlags();
+  SDValue Vector = Op.getOperand(0);
+
+  const unsigned Opcode = Op->getOpcode();
+  const EVT EltTy = Vector.getValueType().getVectorElementType();
+
+  // Whether we can use 3-input min/max when expanding the reduction.
+  const bool CanUseMinMax3 =
+      EltTy == MVT::f32 && STI.getSmVersion() >= 100 &&
+      STI.getPTXVersion() >= 88 &&
+      (Opcode == ISD::VECREDUCE_FMAX || Opcode == ISD::VECREDUCE_FMIN ||
+       Opcode == ISD::VECREDUCE_FMAXIMUM || Opcode == ISD::VECREDUCE_FMINIMUM);
+
+  // A list of SDNode opcodes with equivalent semantics, sorted descending by
+  // number of inputs they take.
+  SmallVector<std::pair<unsigned /*Op*/, unsigned /*NumIn*/>, 2> ScalarOps;
+
+  if (auto Opcode3Elem = getScalar3OpcodeForReduction(Opcode);
+      CanUseMinMax3 && Opcode3Elem)
+    ScalarOps.push_back({*Opcode3Elem, 3});
+  ScalarOps.push_back({getScalarOpcodeForReduction(Opcode), 2});
+
+  SmallVector<SDValue> Elements;
+  DAG.ExtractVectorElements(Vector, Elements);
+
+  return buildTreeReduction(Elements, EltTy, ScalarOps, DL, Flags, DAG);
 }
 
 SDValue NVPTXTargetLowering::LowerBITCAST(SDValue Op, SelectionDAG &DAG) const {
@@ -2808,6 +2941,11 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::CONCAT_VECTORS:
     return LowerCONCAT_VECTORS(Op, DAG);
+  case ISD::VECREDUCE_FMAX:
+  case ISD::VECREDUCE_FMIN:
+  case ISD::VECREDUCE_FMAXIMUM:
+  case ISD::VECREDUCE_FMINIMUM:
+    return LowerVECREDUCE(Op, DAG);
   case ISD::STORE:
     return LowerSTORE(Op, DAG);
   case ISD::LOAD:
