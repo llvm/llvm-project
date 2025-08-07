@@ -596,8 +596,8 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     {
       // Disallow jumps over defer statements.
       unsigned NewParentScope = Scopes.size();
-      Scopes.emplace_back(ParentScope, diag::note_protected_by_defer_stmt,
-                          diag::note_exits_defer_stmt, D->getDeferLoc());
+      Scopes.emplace_back(ParentScope, diag::note_protected_by_defer_stmt, 0,
+                          D->getDeferLoc());
       origParentScope = NewParentScope;
     }
 
