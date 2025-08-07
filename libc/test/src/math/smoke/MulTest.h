@@ -53,10 +53,12 @@ public:
     EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, func(in.zero, in.neg_zero));
     EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, func(in.neg_zero, in.zero));
 
-    EXPECT_FP_EQ_ALL_ROUNDING(OutType(1.0), func(1.0, 1.0));
-    EXPECT_FP_EQ_ALL_ROUNDING(OutType(15.0), func(3.0, 5.0));
-    EXPECT_FP_EQ_ALL_ROUNDING(OutType(0x1.0p-13), func(0x1.0p+1, 0x1.0p-14));
-    EXPECT_FP_EQ_ALL_ROUNDING(OutType(0x1.0p-10), func(0x1.0p+2, 0x1.0p-12));
+    EXPECT_FP_EQ_ALL_ROUNDING(InType(1.0), func(InType(1.0), InType(1.0)));
+    EXPECT_FP_EQ_ALL_ROUNDING(InType(15.0), func(InType(3.0), InType(5.0)));
+    EXPECT_FP_EQ_ALL_ROUNDING(OutType(0x1.0p-13),
+                              func(InType(0x1.0p+1), InType(0x1.0p-14)));
+    EXPECT_FP_EQ_ALL_ROUNDING(OutType(0x1.0p-10),
+                              func(InType(0x1.0p+2), InType(0x1.0p-12)));
   }
 
   void test_invalid_operations(MulFunc func) {

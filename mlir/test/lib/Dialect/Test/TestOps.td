@@ -119,9 +119,25 @@ def SymbolOp : TEST_Op<"symbol", [NoMemoryEffect, Symbol]> {
                        OptionalAttr<StrAttr>:$sym_visibility);
 }
 
+def OverriddenSymbolVisibilityOp : TEST_Op<"overridden_symbol_visibility", [
+  DeclareOpInterfaceMethods<Symbol, ["getVisibility", "setVisibility"]>,
+]> {
+  let summary =  "operation overridden symbol visibility accessors";
+  let arguments = (ins StrAttr:$sym_name);
+}
+
 def SymbolScopeOp : TEST_Op<"symbol_scope",
     [SymbolTable, SingleBlockImplicitTerminator<"TerminatorOp">]> {
   let summary =  "operation which defines a new symbol table";
+  let regions = (region SizedRegion<1>:$region);
+}
+
+def SymbolScopeIsolatedOp
+    : TEST_Op<"symbol_scope_isolated", [IsolatedFromAbove, SymbolTable,
+                                        SingleBlockImplicitTerminator<
+                                            "TerminatorOp">]> {
+  let summary =
+      "operation which defines a new symbol table that is IsolatedFromAbove";
   let regions = (region SizedRegion<1>:$region);
 }
 
@@ -2088,6 +2104,10 @@ def TestInvalidOp : TEST_Op<"invalid", [Terminator]>,
   Arguments<(ins Variadic<AnyType>)>;
 def TestTypeProducerOp : TEST_Op<"type_producer">,
   Results<(outs AnyType)>;
+def TestValidProducerOp : TEST_Op<"valid_producer">,
+  Results<(outs AnyType)>;
+def TestValidConsumerOp : TEST_Op<"valid_consumer">,
+  Arguments<(ins AnyType)>;
 def TestAnotherTypeProducerOp : TEST_Op<"another_type_producer">,
   Results<(outs AnyType)>;
 def TestTypeConsumerOp : TEST_Op<"type_consumer">,

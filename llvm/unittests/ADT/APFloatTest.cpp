@@ -16,9 +16,11 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "gtest/gtest.h"
 #include <cmath>
+#include <limits>
 #include <ostream>
 #include <string>
 #include <tuple>
+#include <type_traits>
 
 using namespace llvm;
 
@@ -2659,6 +2661,39 @@ TEST(APFloatTest, Float8UZConvert) {
     EXPECT_FALSE(losesInfo);
     EXPECT_EQ(0x0, test.bitcastToAPInt());
   }
+}
+
+struct DD {
+  double Hi;
+  double Lo;
+};
+
+template <typename T, typename U>
+static APFloat makeDoubleAPFloat(T Hi, U Lo) {
+  APFloat HiFloat{APFloat::IEEEdouble(), APFloat::uninitialized};
+  if constexpr (std::is_same_v<decltype(Hi), APFloat>) {
+    HiFloat = Hi;
+  } else if constexpr (std::is_same_v<decltype(Hi), double>) {
+    HiFloat = APFloat{Hi};
+  } else {
+    HiFloat = {APFloat::IEEEdouble(), Hi};
+  }
+
+  APFloat LoFloat{APFloat::IEEEdouble(), APFloat::uninitialized};
+  if constexpr (std::is_same_v<decltype(Lo), APFloat>) {
+    LoFloat = Lo;
+  } else if constexpr (std::is_same_v<decltype(Lo), double>) {
+    LoFloat = APFloat{Lo};
+  } else {
+    LoFloat = {APFloat::IEEEdouble(), Lo};
+  }
+
+  APInt Bits = LoFloat.bitcastToAPInt().concat(HiFloat.bitcastToAPInt());
+  return APFloat(APFloat::PPCDoubleDouble(), Bits);
+}
+
+static APFloat makeDoubleAPFloat(DD X) {
+  return makeDoubleAPFloat(X.Hi, X.Lo);
 }
 
 TEST(APFloatTest, PPCDoubleDouble) {
@@ -5315,18 +5350,452 @@ TEST(APFloatTest, PPCDoubleDoubleFMA) {
             APFloat(APFloat::PPCDoubleDouble(), "10").compare(A));
 }
 
-TEST(APFloatTest, PPCDoubleDoubleRoundToIntegral) {
-  {
-    APFloat A(APFloat::PPCDoubleDouble(), "1.5");
-    A.roundToIntegral(APFloat::rmNearestTiesToEven);
-    EXPECT_EQ(APFloat::cmpEqual,
-              APFloat(APFloat::PPCDoubleDouble(), "2").compare(A));
+struct PPCDoubleDoubleRoundToIntegralTestCase {
+  DD Input;
+  DD Rounded[5] = {};
+  constexpr PPCDoubleDoubleRoundToIntegralTestCase &
+  withRounded(DD R, APFloat::roundingMode RM) {
+    Rounded[static_cast<std::underlying_type_t<APFloat::roundingMode>>(RM)] = R;
+    return *this;
   }
-  {
-    APFloat A(APFloat::PPCDoubleDouble(), "2.5");
-    A.roundToIntegral(APFloat::rmNearestTiesToEven);
-    EXPECT_EQ(APFloat::cmpEqual,
-              APFloat(APFloat::PPCDoubleDouble(), "2").compare(A));
+};
+
+auto ppcDoubleDoubleRoundToIntegralTests() {
+  constexpr double Eps = std::numeric_limits<double>::epsilon();
+  constexpr double HalfEps = Eps / 2.0;
+  constexpr double QuarterEps = Eps / 4.0;
+  constexpr double SmallestNormal = std::numeric_limits<double>::min();
+  constexpr double EvenIntegerThreshold{uint64_t{1}
+                                        << std::numeric_limits<double>::digits};
+  constexpr double Inf = std::numeric_limits<double>::infinity();
+  constexpr double QNaN = std::numeric_limits<double>::quiet_NaN();
+  using TestCase = PPCDoubleDoubleRoundToIntegralTestCase;
+  static constexpr auto TestCases = std::array{
+      // 1. Zeros and Basic Integers
+      // Input: Positive Zero (0.0, 0.0)
+      TestCase({{0.0, 0.0}})
+          .withRounded({0.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({0.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({0.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({0.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({0.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Negative Zero (-0.0, 0.0)
+      TestCase({{-0.0, 0.0}})
+          .withRounded({-0.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-0.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-0.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-0.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-0.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Positive Even (2.0, 0.0)
+      TestCase({{2.0, 0.0}})
+          .withRounded({2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Positive Odd (3.0, 0.0)
+      TestCase({{3.0, 0.0}})
+          .withRounded({3.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({3.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({3.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({3.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({3.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Negative Even (-2.0, 0.0)
+      TestCase({{-2.0, 0.0}})
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // 2. General Fractions (Non-Ties)
+      // Input: 2.3
+      TestCase({{2.3, 0.0}})
+          .withRounded({2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({3.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: 2.7
+      TestCase({{2.7, 0.0}})
+          .withRounded({2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({3.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({3.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({3.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: -2.3
+      TestCase({{-2.3, 0.0}})
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-3.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: -2.7
+      TestCase({{-2.7, 0.0}})
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-3.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-3.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-3.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: 2.3 + Tiny
+      TestCase({{2.3, SmallestNormal}})
+          .withRounded({2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({3.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // 3. Exact Midpoints (Ties at N.5)
+      // Input: 0.5
+      TestCase({{0.5, 0.0}})
+          .withRounded({0.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({0.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({1.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({1.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({0.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: 1.5 (Odd base)
+      TestCase({{1.5, 0.0}})
+          .withRounded({1.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({1.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: 2.5 (Even base)
+      TestCase({{2.5, 0.0}})
+          .withRounded({2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({3.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({3.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: -0.5
+      TestCase({{-0.5, 0.0}})
+          .withRounded({-0.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-1.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-0.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-1.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-0.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: -1.5 (Odd base)
+      TestCase({{-1.5, 0.0}})
+          .withRounded({-1.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-1.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: -2.5 (Even base)
+      TestCase({{-2.5, 0.0}})
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-3.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-3.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // 4. Near Midpoints (lo breaks the tie)
+      // Input: Slightly > 2.5
+      TestCase({{2.5, SmallestNormal}})
+          .withRounded({2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({3.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({3.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({3.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly < 2.5
+      TestCase({{2.5, -SmallestNormal}})
+          .withRounded({2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({3.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly > 1.5
+      TestCase({{1.5, SmallestNormal}})
+          .withRounded({1.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({1.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly < 1.5
+      TestCase({{1.5, -SmallestNormal}})
+          .withRounded({1.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({1.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({1.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({1.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly > -2.5 (closer to 0)
+      TestCase({{-2.5, SmallestNormal}})
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-3.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly < -2.5 (further from 0)
+      TestCase({{-2.5, -SmallestNormal}})
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-3.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-3.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-3.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // 5. Near Integers (lo crosses the integer boundary)
+      // Input: Slightly > 2.0
+      TestCase({{2.0, SmallestNormal}})
+          .withRounded({2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({3.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly < 2.0 (1.99...)
+      TestCase({{2.0, -SmallestNormal}})
+          .withRounded({1.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({1.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly > -2.0 (-1.99...)
+      TestCase({{-2.0, SmallestNormal}})
+          .withRounded({-1.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-1.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly < -2.0
+      TestCase({{-2.0, -SmallestNormal}})
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-3.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-2.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly > 0.0
+      TestCase({{SmallestNormal, 0.0}})
+          .withRounded({0.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({0.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({1.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({0.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({0.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: Slightly < 0.0
+      TestCase({{-SmallestNormal, 0.0}})
+          .withRounded({-0.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-1.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-0.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-0.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-0.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // 6. Boundary of Canonicalization (Maximum lo)
+      // Input: 1.0 + Max lo (1 + 2^-53)
+      TestCase({{1.0, HalfEps}})
+          .withRounded({1.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({1.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({2.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({1.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({1.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: 1.0 - Max lo (1 - 2^-54)
+      TestCase({{1.0, -QuarterEps}})
+          .withRounded({0.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({0.0, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({1.0, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({1.0, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({1.0, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // 7. Large Magnitudes (Beyond 2^53). N = EvenIntegerThreshold (Even)
+      // Input: EvenIntegerThreshold (Exact)
+      TestCase({{EvenIntegerThreshold, 0.0}})
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold, 0.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold, 0.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Input: EvenIntegerThreshold+1 (Exact)
+      TestCase({{EvenIntegerThreshold, 1.0}})
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold, 1.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold, 1.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Fractions
+      // Input: EvenIntegerThreshold+0.25
+      TestCase({{EvenIntegerThreshold, 0.25}})
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold, 0.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold, 0.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Input: EvenIntegerThreshold+0.75
+      TestCase({{EvenIntegerThreshold, 0.75}})
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold, 1.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold, 1.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Ties (Midpoints)
+      // Input: EvenIntegerThreshold-0.5
+      TestCase({{EvenIntegerThreshold, -0.5}})
+          .withRounded({EvenIntegerThreshold - 1.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold - 1.0, 0.0},
+                       APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold, 0.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold, 0.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Input: EvenIntegerThreshold+0.5
+      TestCase({{EvenIntegerThreshold, 0.5}})
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold, 1.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold, 0.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Input: EvenIntegerThreshold+1.5
+      TestCase({{EvenIntegerThreshold + 2.0, -0.5}})
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold + 2.0, 0.0},
+                       APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold + 2.0, 0.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold + 2.0, 0.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Input: EvenIntegerThreshold+2.5
+      TestCase({{EvenIntegerThreshold + 2.0, 0.5}})
+          .withRounded({EvenIntegerThreshold + 2.0, 0.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold + 2.0, 0.0},
+                       APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold + 4.0, -1.0},
+                       APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold + 4.0, -1.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold + 2.0, 0.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Near Ties
+      // Input: EvenIntegerThreshold+0.5+HalfEps
+      TestCase({{EvenIntegerThreshold, 0.5 + HalfEps}})
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold, 1.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold, 1.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Input: EvenIntegerThreshold+0.5-QuarterEps
+      TestCase({{EvenIntegerThreshold, 0.5 - QuarterEps}})
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold, 0.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold, 0.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // Canonical Boundary (Max lo for EvenIntegerThreshold is 1.0)
+      // Input: EvenIntegerThreshold+1.0
+      TestCase({{EvenIntegerThreshold, 1.0}})
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardZero)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardNegative)
+          .withRounded({EvenIntegerThreshold, 1.0}, APFloat::rmTowardPositive)
+          .withRounded({EvenIntegerThreshold, 1.0},
+                       APFloat::rmNearestTiesToAway)
+          .withRounded({EvenIntegerThreshold, 1.0},
+                       APFloat::rmNearestTiesToEven),
+
+      // 8. Special Values
+      // Input: +Inf
+      TestCase({{Inf, 0.0}})
+          .withRounded({Inf, 0.0}, APFloat::rmTowardZero)
+          .withRounded({Inf, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({Inf, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({Inf, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({Inf, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: -Inf
+      TestCase({{-Inf, 0.0}})
+          .withRounded({-Inf, 0.0}, APFloat::rmTowardZero)
+          .withRounded({-Inf, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({-Inf, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({-Inf, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({-Inf, 0.0}, APFloat::rmNearestTiesToEven),
+
+      // Input: NaN input hi. Expected output canonical (NaN, 0.0).
+      TestCase({{QNaN, 0.0}})
+          .withRounded({QNaN, 0.0}, APFloat::rmTowardZero)
+          .withRounded({QNaN, 0.0}, APFloat::rmTowardNegative)
+          .withRounded({QNaN, 0.0}, APFloat::rmTowardPositive)
+          .withRounded({QNaN, 0.0}, APFloat::rmNearestTiesToAway)
+          .withRounded({QNaN, 0.0}, APFloat::rmNearestTiesToEven),
+  };
+  return TestCases;
+}
+
+class PPCDoubleDoubleRoundToIntegralValueTest
+    : public testing::Test,
+      public ::testing::WithParamInterface<
+          PPCDoubleDoubleRoundToIntegralTestCase> {};
+
+INSTANTIATE_TEST_SUITE_P(
+    PPCDoubleDoubleRoundToIntegralValueParamTests,
+    PPCDoubleDoubleRoundToIntegralValueTest,
+    ::testing::ValuesIn(ppcDoubleDoubleRoundToIntegralTests()));
+
+TEST_P(PPCDoubleDoubleRoundToIntegralValueTest,
+       PPCDoubleDoubleRoundToIntegral) {
+  const PPCDoubleDoubleRoundToIntegralTestCase TestCase = GetParam();
+  const APFloat Input = makeDoubleAPFloat(TestCase.Input);
+  EXPECT_FALSE(Input.isDenormal())
+      << TestCase.Input.Hi << " + " << TestCase.Input.Lo;
+  for (size_t I = 0, E = std::size(TestCase.Rounded); I != E; ++I) {
+    const auto RM = static_cast<APFloat::roundingMode>(I);
+    const APFloat Expected = makeDoubleAPFloat(TestCase.Rounded[I]);
+    EXPECT_FALSE(Expected.isDenormal())
+        << TestCase.Rounded[I].Hi << " + " << TestCase.Input.Lo;
+    APFloat Actual = Input;
+    Actual.roundToIntegral(RM);
+    if (Actual.isNaN())
+      EXPECT_TRUE(Actual.isNaN());
+    else
+      EXPECT_EQ(Actual.compare(Expected), APFloat::cmpEqual)
+          << "RM: " << RM << " Input.Hi: " << TestCase.Input.Hi
+          << " Input.Lo: " << TestCase.Input.Lo << " Actual: " << Actual
+          << " Expected.Hi: " << TestCase.Rounded[I].Hi
+          << " Expected.Lo: " << TestCase.Rounded[I].Lo
+          << " Expected: " << Expected;
   }
 }
 
@@ -5538,6 +6007,265 @@ TEST(APFloatTest, PPCDoubleDoubleFrexp) {
   EXPECT_EQ(2, Exp);
   EXPECT_EQ(0x3fe8000000000000ull, Result.bitcastToAPInt().getRawData()[0]);
   EXPECT_EQ(0x3c98000000000000ull, Result.bitcastToAPInt().getRawData()[1]);
+}
+
+TEST(APFloatTest, PPCDoubleDoubleNext) {
+  auto NextUp = [](APFloat X) {
+    X.next(/*nextDown=*/false);
+    return X;
+  };
+
+  auto NextDown = [](APFloat X) {
+    X.next(/*nextDown=*/true);
+    return X;
+  };
+
+  auto Zero = [] { return APFloat::getZero(APFloat::IEEEdouble()); };
+
+  auto One = [] { return APFloat::getOne(APFloat::IEEEdouble()); };
+
+  // 0x1p-1074
+  auto MinSubnormal = [] {
+    return APFloat::getSmallest(APFloat::IEEEdouble());
+  };
+
+  // 2^-52
+  auto Eps = [&] {
+    const fltSemantics &Sem = APFloat::IEEEdouble();
+    return scalbn(One(), 1 - APFloat::semanticsPrecision(Sem),
+                  APFloat::rmNearestTiesToEven);
+  };
+
+  // 2^-53
+  auto EpsNeg = [&] { return scalbn(Eps(), -1, APFloat::rmNearestTiesToEven); };
+
+  APFloat Test(APFloat::PPCDoubleDouble(), APFloat::uninitialized);
+  APFloat Expected(APFloat::PPCDoubleDouble(), APFloat::uninitialized);
+
+  // 1. Test Special Cases Values.
+  //
+  // Test all special values for nextUp and nextDown prescribed by IEEE-754R
+  // 2008. These are:
+  //   1.  +inf
+  //   2.  -inf
+  //   3.  getLargest()
+  //   4.  -getLargest()
+  //   5.  getSmallest()
+  //   6.  -getSmallest()
+  //   7.  qNaN
+  //   8.  sNaN
+  //   9.  +0
+  //   10. -0
+
+  // nextUp(+inf) = +inf.
+  Test = APFloat::getInf(APFloat::PPCDoubleDouble(), false);
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.isPosInfinity());
+  EXPECT_TRUE(!Test.isNegative());
+
+  // nextDown(+inf) = -nextUp(-inf) = -(-getLargest()) = getLargest()
+  Test = APFloat::getInf(APFloat::PPCDoubleDouble(), false);
+  EXPECT_EQ(Test.next(true), APFloat::opOK);
+  EXPECT_FALSE(Test.isNegative());
+  EXPECT_TRUE(Test.isLargest());
+
+  // nextUp(-inf) = -getLargest()
+  Test = APFloat::getInf(APFloat::PPCDoubleDouble(), true);
+  Expected = APFloat::getLargest(APFloat::PPCDoubleDouble(), true);
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.isNegative());
+  EXPECT_TRUE(Test.isLargest());
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // nextDown(-inf) = -nextUp(+inf) = -(+inf) = -inf.
+  Test = APFloat::getInf(APFloat::PPCDoubleDouble(), true);
+  Expected = APFloat::getInf(APFloat::PPCDoubleDouble(), true);
+  EXPECT_EQ(Test.next(true), APFloat::opOK);
+  EXPECT_TRUE(Test.isNegInfinity());
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // nextUp(getLargest()) = +inf
+  Test = APFloat::getLargest(APFloat::PPCDoubleDouble(), false);
+  Expected = APFloat::getInf(APFloat::PPCDoubleDouble(), false);
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.isPosInfinity());
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // nextUp(-getSmallest()) = -0.
+  Test = APFloat::getSmallest(Test.getSemantics(), /*Neg=*/true);
+  Expected = APFloat::getZero(APFloat::PPCDoubleDouble(), true);
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.isNegZero());
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // nextDown(getSmallest()) = -nextUp(-getSmallest()) = -(-0) = +0.
+  Test = APFloat::getSmallest(Test.getSemantics(), /*Neg=*/false);
+  EXPECT_EQ(Test.next(true), APFloat::opOK);
+  EXPECT_TRUE(Test.isPosZero());
+
+  // nextDown(-getLargest()) = -nextUp(getLargest()) = -(inf) = -inf.
+  Test = APFloat::getLargest(APFloat::PPCDoubleDouble(), true);
+  EXPECT_EQ(Test.next(true), APFloat::opOK);
+  EXPECT_TRUE(Test.isNegInfinity());
+
+  // nextUp(qNaN) = qNaN
+  Test = APFloat::getQNaN(APFloat::PPCDoubleDouble(), false);
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.isNaN());
+  EXPECT_FALSE(Test.isSignaling());
+
+  // nextDown(qNaN) = qNaN
+  Test = APFloat::getQNaN(APFloat::PPCDoubleDouble(), false);
+  EXPECT_EQ(Test.next(true), APFloat::opOK);
+  EXPECT_TRUE(Test.isNaN());
+  EXPECT_FALSE(Test.isSignaling());
+
+  // nextUp(sNaN) = qNaN
+  Test = APFloat::getSNaN(APFloat::PPCDoubleDouble(), false);
+  EXPECT_EQ(Test.next(false), APFloat::opInvalidOp);
+  EXPECT_TRUE(Test.isNaN());
+  EXPECT_FALSE(Test.isSignaling());
+
+  // nextDown(sNaN) = qNaN
+  Test = APFloat::getSNaN(APFloat::PPCDoubleDouble(), false);
+  EXPECT_EQ(Test.next(true), APFloat::opInvalidOp);
+  EXPECT_TRUE(Test.isNaN());
+  EXPECT_FALSE(Test.isSignaling());
+
+  // nextUp(+0) = +getSmallest()
+  Test = APFloat::getZero(APFloat::PPCDoubleDouble(), false);
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_FALSE(Test.isNegative());
+  EXPECT_TRUE(Test.isSmallest());
+
+  // nextDown(+0) = -nextUp(-0) = -getSmallest()
+  Test = APFloat::getZero(APFloat::PPCDoubleDouble(), false);
+  EXPECT_EQ(Test.next(true), APFloat::opOK);
+  EXPECT_TRUE(Test.isNegative());
+  EXPECT_TRUE(Test.isSmallest());
+
+  // nextUp(-0) = +getSmallest()
+  Test = APFloat::getZero(APFloat::PPCDoubleDouble(), true);
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_FALSE(Test.isNegative());
+  EXPECT_TRUE(Test.isSmallest());
+
+  // nextDown(-0) = -nextUp(0) = -getSmallest()
+  Test = APFloat::getZero(APFloat::PPCDoubleDouble(), true);
+  EXPECT_EQ(Test.next(true), APFloat::opOK);
+  EXPECT_TRUE(Test.isNegative());
+  EXPECT_TRUE(Test.isSmallest());
+
+  // 2. Cases where the lo APFloat is zero.
+
+  // 2a. |hi| < 2*DBL_MIN_NORMAL (DD precision == D precision)
+  Test = APFloat(APFloat::PPCDoubleDouble(), "0x1.fffffffffffffp-1022");
+  Expected = APFloat(APFloat::PPCDoubleDouble(), "0x1p-1021");
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_EQ(Test.compare(Expected), APFloat::cmpEqual);
+
+  // 2b. |hi| >= 2*DBL_MIN_NORMAL (DD precision > D precision)
+  // Test at hi = 1.0, lo = 0.
+  Test = makeDoubleAPFloat(One(), Zero());
+  Expected = makeDoubleAPFloat(One(), MinSubnormal());
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // Test at hi = -1.0. delta = 2^-1074 (positive, moving towards +Inf).
+  Test = makeDoubleAPFloat(-One(), Zero());
+  Expected = makeDoubleAPFloat(-One(), MinSubnormal());
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // Testing the boundary where calculated delta equals DBL_TRUE_MIN.
+  // Requires ilogb(hi) = E = -968.
+  // delta = 2^(-968 - 106) = 2^-1074 = DBL_TRUE_MIN.
+  Test = makeDoubleAPFloat("0x1p-968", Zero());
+  Expected = makeDoubleAPFloat("0x1p-968", MinSubnormal());
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // Testing below the boundary (E < -968). Delta clamps to DBL_TRUE_MIN.
+  Test = makeDoubleAPFloat("0x1p-969", Zero());
+  Expected = makeDoubleAPFloat("0x1p-969", MinSubnormal());
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // 3. Standard Increment (No rollover)
+  // hi=1.0, lo=2^-1074.
+  Test = makeDoubleAPFloat(One(), MinSubnormal());
+  Expected = makeDoubleAPFloat(One(), NextUp(MinSubnormal()));
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // Incrementing negative lo.
+  Test = makeDoubleAPFloat(One(), -MinSubnormal());
+  Expected = makeDoubleAPFloat(One(), Zero());
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_EQ(Test.compare(Expected), APFloat::cmpEqual);
+
+  // Crossing lo=0.
+  Test = makeDoubleAPFloat(One(), -MinSubnormal());
+  Expected = makeDoubleAPFloat(One(), Zero());
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_EQ(Test.compare(Expected), APFloat::cmpEqual);
+
+  // 4. Rollover Cases around 1.0 (Positive hi)
+  // hi=1.0, lo=nextDown(2^-53).
+  Test = makeDoubleAPFloat(One(), NextDown(EpsNeg()));
+  EXPECT_FALSE(Test.isDenormal());
+  Expected = makeDoubleAPFloat(One(), EpsNeg());
+  EXPECT_FALSE(Test.isDenormal());
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+
+  // Input: (1, ulp(1)/2). nextUp(lo)=next(H). V>Midpoint. Rollover occurs
+  // Can't naively increment lo:
+  //   RTNE(0x1p+0 + 0x1.0000000000001p-53) == 0x1.0000000000001p+0.
+  // Can't naively TwoSum(0x1p+0, nextUp(0x1p-53)):
+  //   It gives {nextUp(0x1p+0), nextUp(nextUp(-0x1p-53))} but the next
+  //   number should be {nextUp(0x1p+0), nextUp(-0x1p-53)}.
+  Test = makeDoubleAPFloat(One(), EpsNeg());
+  EXPECT_FALSE(Test.isDenormal());
+  Expected = makeDoubleAPFloat(NextUp(One()), NextUp(-EpsNeg()));
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+  EXPECT_FALSE(Test.isDenormal());
+
+  // hi = nextDown(1), lo = nextDown(0x1p-54)
+  Test = makeDoubleAPFloat(NextDown(One()), NextDown(APFloat(0x1p-54)));
+  EXPECT_FALSE(Test.isDenormal());
+  Expected = makeDoubleAPFloat(One(), APFloat(-0x1p-54));
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+  EXPECT_FALSE(Test.isDenormal());
+
+  // 5. Negative Rollover (Moving towards Zero / +Inf)
+
+  // hi = -1, lo = nextDown(0x1p-54)
+  Test = makeDoubleAPFloat(APFloat(-1.0), NextDown(APFloat(0x1p-54)));
+  EXPECT_FALSE(Test.isDenormal());
+  Expected = makeDoubleAPFloat(APFloat(-1.0), APFloat(0x1p-54));
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+  EXPECT_FALSE(Test.isDenormal());
+
+  // hi = -1, lo = 0x1p-54
+  Test = makeDoubleAPFloat(APFloat(-1.0), APFloat(0x1p-54));
+  EXPECT_FALSE(Test.isDenormal());
+  Expected =
+      makeDoubleAPFloat(NextUp(APFloat(-1.0)), NextUp(APFloat(-0x1p-54)));
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+  EXPECT_FALSE(Test.isDenormal());
+
+  // 6. Rollover across Power of 2 boundary (Exponent change)
+  Test = makeDoubleAPFloat(NextDown(APFloat(2.0)), NextDown(EpsNeg()));
+  EXPECT_FALSE(Test.isDenormal());
+  Expected = makeDoubleAPFloat(APFloat(2.0), -EpsNeg());
+  EXPECT_EQ(Test.next(false), APFloat::opOK);
+  EXPECT_TRUE(Test.bitwiseIsEqual(Expected));
+  EXPECT_FALSE(Test.isDenormal());
 }
 
 TEST(APFloatTest, x87Largest) {
