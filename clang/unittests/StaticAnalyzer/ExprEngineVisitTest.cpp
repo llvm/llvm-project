@@ -152,4 +152,23 @@ TEST(ExprEngineVisitTest, checkLocationAndBind) {
   EXPECT_TRUE(LocPos > BindPos);
 }
 
+TEST(ExprEngineVisitTest, checkLocationAndBindInitialization) {
+  std::string Diags;
+  EXPECT_TRUE(runCheckerOnCode<addMemAccessChecker>(R"(
+    class MyClass{
+    public:
+      int Value;
+    };
+    extern MyClass MyClassRead;
+    void top() {
+      MyClass MyClassWrite = MyClassRead;
+    }
+  )",
+                                                    Diags));
+
+  // Look for any occurrence of AtDeclInit = true
+  std::size_t BindPos = Diags.find("AtDeclInit = true");
+  EXPECT_NE(BindPos, std::string::npos);
+}
+
 } // namespace
