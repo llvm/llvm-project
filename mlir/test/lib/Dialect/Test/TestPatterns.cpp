@@ -1198,6 +1198,47 @@ public:
   }
 };
 
+/// Pattern that replaces test.replace_with_valid_producer with
+/// test.valid_producer and the specified type.
+class TestReplaceWithValidProducer : public ConversionPattern {
+public:
+  TestReplaceWithValidProducer(MLIRContext *ctx)
+      : ConversionPattern("test.replace_with_valid_producer", 1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto attr = op->getAttrOfType<TypeAttr>("type");
+    if (!attr)
+      return failure();
+    rewriter.replaceOpWithNewOp<TestValidProducerOp>(op, attr.getValue());
+    return success();
+  }
+};
+
+/// Pattern that replaces test.replace_with_valid_consumer with
+/// test.valid_consumer. Can be used with and without a type converter.
+class TestReplaceWithValidConsumer : public ConversionPattern {
+public:
+  TestReplaceWithValidConsumer(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter, "test.replace_with_valid_consumer", 1,
+                          ctx) {}
+  TestReplaceWithValidConsumer(MLIRContext *ctx)
+      : ConversionPattern("test.replace_with_valid_consumer", 1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // with_converter present: pattern must have been initialized with a type
+    // converter.
+    // with_converter absent: pattern must have been initialized without a type
+    // converter.
+    if (op->hasAttr("with_converter") != static_cast<bool>(getTypeConverter()))
+      return failure();
+    rewriter.replaceOpWithNewOp<TestValidConsumerOp>(op, operands[0]);
+    return success();
+  }
+};
+
 /// This pattern matches a test.convert_block_args op. It either:
 /// a) Duplicates all block arguments,
 /// b) or: drops all block arguments and replaces each with 2x the first
@@ -1314,6 +1355,7 @@ struct TestTypeConverter : public TypeConverter {
   TestTypeConverter() {
     addConversion(convertType);
     addSourceMaterialization(materializeCast);
+    addTargetMaterialization(materializeCast);
   }
 
   static LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) {
@@ -1389,10 +1431,12 @@ struct TestLegalizePatternDriver
         TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
         TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
         TestUndoPropertiesModification, TestEraseOp,
+        TestReplaceWithValidProducer, TestReplaceWithValidConsumer,
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
-                 TestBlockArgReplace>(&getContext(), converter);
+                 TestBlockArgReplace, TestReplaceWithValidConsumer>(
+        &getContext(), converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -1402,7 +1446,8 @@ struct TestLegalizePatternDriver
     ConversionTarget target(getContext());
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<LegalOpA, LegalOpB, LegalOpC, TestCastOp, TestValidOp,
-                      TerminatorOp, OneRegionOp>();
+                      TerminatorOp, OneRegionOp, TestValidProducerOp,
+                      TestValidConsumerOp>();
     target.addLegalOp(OperationName("test.legal_op", &getContext()));
     target
         .addIllegalOp<ILLegalOpF, TestRegionBuilderOp, TestOpWithRegionFold>();
