@@ -382,6 +382,37 @@ int vla(int* p, int x) {
 	return 7;
 }
 
+[[noreturn]] void exit();
+[[noreturn]] void _Exit();
+[[noreturn]] void foobar();
+
+// CHECK-LABEL: define {{.*}} i32 @call_exit()
+int call_exit() {
+    // CHECK: entry:
+    // CHECK:   call void @exit()
+    // CHECK:   unreachable
+    defer x(1);
+    exit();
+}
+
+// CHECK-LABEL: define {{.*}} i32 @call__Exit()
+int call__Exit() {
+    // CHECK: entry:
+    // CHECK:   call void @_Exit()
+    // CHECK:   unreachable
+    defer x(1);
+    _Exit();
+}
+
+// CHECK-LABEL: define {{.*}} i32 @call_foobar()
+int call_foobar() {
+    // CHECK: entry:
+    // CHECK:   call void @foobar()
+    // CHECK:   unreachable
+    defer x(1);
+    foobar();
+}
+
 // CHECK-LABEL: define {{.*}} i32 @main()
 int main() {
   // CHECK: entry:
