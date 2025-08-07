@@ -1,7 +1,8 @@
 REQUIRES: target-windows, msvc
-RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%T/TypeQualsTest.cpp.obj %S/Inputs/TypeQualsTest.cpp
-RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%T/TypeQualsTest.cpp.exe %T/TypeQualsTest.cpp.obj
-RUN: lldb-test symbols %T/TypeQualsTest.cpp.exe | FileCheck %s
+RUN: mkdir -p %t.dir
+RUN: %build --compiler=clang-cl --mode=compile --arch=32 --nodefaultlib --output=%t.dir/TypeQualsTest.cpp.obj %S/Inputs/TypeQualsTest.cpp
+RUN: %build --compiler=msvc --mode=link --arch=32 --nodefaultlib --output=%t.dir/TypeQualsTest.cpp.exe %t.dir/TypeQualsTest.cpp.obj
+RUN: lldb-test symbols %t.dir/TypeQualsTest.cpp.exe | FileCheck %s
 
 CHECK: Module [[MOD:.*]]
 CHECK-DAG: SymbolFile pdb ([[MOD]])

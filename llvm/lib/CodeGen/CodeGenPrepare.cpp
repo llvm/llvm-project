@@ -1834,7 +1834,7 @@ bool CodeGenPrepare::unfoldPowerOf2Test(CmpInst *Cmp) {
 ///
 /// Return true if any changes are made.
 static bool sinkCmpExpression(CmpInst *Cmp, const TargetLowering &TLI) {
-  if (TLI.hasMultipleConditionRegisters())
+  if (TLI.hasMultipleConditionRegisters(EVT::getEVT(Cmp->getType())))
     return false;
 
   // Avoid sinking soft-FP comparisons, since this can move them into a loop.
@@ -2093,6 +2093,10 @@ static bool isRemOfLoopIncrementWithLoopInvariant(
 
   // Only works if the remainder amount is a loop invaraint
   if (!L->isLoopInvariant(RemAmt))
+    return false;
+
+  // Only works if the AddOffset is a loop invaraint
+  if (AddOffset && !L->isLoopInvariant(AddOffset))
     return false;
 
   // Is the PHI a loop increment?
@@ -2765,6 +2769,29 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       return optimizeGatherScatterInst(II, II->getArgOperand(0));
     case Intrinsic::masked_scatter:
       return optimizeGatherScatterInst(II, II->getArgOperand(1));
+    case Intrinsic::masked_load:
+      // Treat v1X masked load as load X type.
+      if (auto *VT = dyn_cast<FixedVectorType>(II->getType())) {
+        if (VT->getNumElements() == 1) {
+          Value *PtrVal = II->getArgOperand(0);
+          unsigned AS = PtrVal->getType()->getPointerAddressSpace();
+          if (optimizeMemoryInst(II, PtrVal, VT->getElementType(), AS))
+            return true;
+        }
+      }
+      return false;
+    case Intrinsic::masked_store:
+      // Treat v1X masked store as store X type.
+      if (auto *VT =
+              dyn_cast<FixedVectorType>(II->getArgOperand(0)->getType())) {
+        if (VT->getNumElements() == 1) {
+          Value *PtrVal = II->getArgOperand(1);
+          unsigned AS = PtrVal->getType()->getPointerAddressSpace();
+          if (optimizeMemoryInst(II, PtrVal, VT->getElementType(), AS))
+            return true;
+        }
+      }
+      return false;
     }
 
     SmallVector<Value *, 2> PtrOps;

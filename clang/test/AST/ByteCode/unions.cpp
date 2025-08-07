@@ -79,10 +79,9 @@ namespace DefaultInit {
 
   constexpr U1 u1; /// OK.
 
-  constexpr int foo() { // expected-error {{never produces a constant expression}}
+  constexpr int foo() {
     U1 u;
-    return u.a; // both-note {{read of member 'a' of union with active member 'b'}} \
-                // expected-note {{read of member 'a' of union with active member 'b'}}
+    return u.a; // both-note {{read of member 'a' of union with active member 'b'}}
   }
   static_assert(foo() == 42); // both-error {{not an integral constant expression}} \
                               // both-note {{in call to}}
@@ -850,14 +849,14 @@ namespace Activation2 {
 
 namespace CopyCtorMutable {
   struct E {
-    union { // expected-note {{read of mutable member 'b'}}
+    union {
       int a;
       mutable int b; // both-note {{here}}
     };
   };
   constexpr E e1 = {{1}};
   constexpr E e2 = e1; // both-error {{constant}} \
-                       // ref-note {{read of mutable member 'b'}} \
+                       // both-note {{read of mutable member 'b'}} \
                        // both-note {{in call}}
 }
 
@@ -914,6 +913,18 @@ namespace NonTrivialCtor {
   static_assert(test(3)); // both-error {{not an integral constant expression}} \
                           // both-note {{in call}}
 
+}
+
+namespace PrimitiveFieldInitActivates {
+  /// The initializer of a needs the field to be active _before_ it's visited.
+  template<int> struct X {};
+  union V {
+    int a, b;
+    constexpr V(X<0>) : a(a = 1) {} // ok
+    constexpr V(X<2>) : a() { b = 1; } // ok
+  };
+  constinit V v0 = X<0>();
+  constinit V v2 = X<2>();
 }
 
 #endif

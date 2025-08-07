@@ -2011,10 +2011,9 @@ def LdStMatrixEltTypeAttr : EnumAttr<NVVM_Dialect, LdStMatrixEltType, "ld_st_mat
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">, 
-  Arguments<(ins LLVM_PointerShared:$ptr, 
-                 Variadic<I32>:$sources, 
-                 MMALayoutAttr:$layout)> {
+def NVVM_StMatrixOp: NVVM_Op<"stmatrix">,
+  Arguments<(ins LLVM_PointerShared: $ptr, Variadic<I32>:$sources, MMALayoutAttr:$layout,
+             LdStMatrixShapeAttr:$shape, LdStMatrixEltTypeAttr:$eltType)> {
   let summary = "cooperative matrix store";
   let description = [{
     Collectively store one or more matrices across all threads in a warp to the
@@ -2022,21 +2021,12 @@ def NVVM_StMatrixOp: NVVM_PTXBuilder_Op<"stmatrix">,
     
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#warp-level-matrix-store-instruction-stmatrix)
   }];
-  
-  let assemblyFormat = "$ptr `,` $sources attr-dict `:` type(operands)";
-  let extraClassDefinition = [{
-    std::string $cppClass::getPtx() {
-      int d = getSources().size();
-      std::string ptx = "stmatrix.sync.aligned";
-      ptx += ".x" + std::to_string(d);
-      if (getLayout() == NVVM::MMALayout::col)
-        ptx += ".trans";
-      if(d == 1) ptx += ".m8n8.shared.b16 [%0], {%1};";
-      if(d == 2) ptx += ".m8n8.shared.b16 [%0], {%1, %2};";
-      if(d == 4) ptx += ".m8n8.shared.b16 [%0], {%1, %2, %3, %4};";
-      return ptx;
-    }
+  string llvmBuilder = [{
+      auto operands = moduleTranslation.lookupValues(opInst.getOperands());
+      auto intId = getStMatrixIntrinsicId($layout, $sources.size(), $shape, $eltType);
+      createIntrinsicCall(builder, intId, operands, operands[0]->getType());
   }];
+  let assemblyFormat = "$ptr `,` $sources attr-dict `:` type(operands)";
   let hasVerifier = 1;
 }
 

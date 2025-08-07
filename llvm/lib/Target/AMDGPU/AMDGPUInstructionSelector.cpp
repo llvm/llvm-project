@@ -574,13 +574,22 @@ bool AMDGPUInstructionSelector::selectG_AMDGPU_MAD_64_32(
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
   const bool IsUnsigned = I.getOpcode() == AMDGPU::G_AMDGPU_MAD_U64_U32;
+  bool UseNoCarry = Subtarget->hasMadU64U32NoCarry() &&
+                    MRI->use_nodbg_empty(I.getOperand(1).getReg());
 
   unsigned Opc;
   if (Subtarget->hasMADIntraFwdBug())
     Opc = IsUnsigned ? AMDGPU::V_MAD_U64_U32_gfx11_e64
                      : AMDGPU::V_MAD_I64_I32_gfx11_e64;
+  else if (UseNoCarry)
+    Opc = IsUnsigned ? AMDGPU::V_MAD_NC_U64_U32_e64
+                     : AMDGPU::V_MAD_NC_I64_I32_e64;
   else
     Opc = IsUnsigned ? AMDGPU::V_MAD_U64_U32_e64 : AMDGPU::V_MAD_I64_I32_e64;
+
+  if (UseNoCarry)
+    I.removeOperand(1);
+
   I.setDesc(TII.get(Opc));
   I.addOperand(*MF, MachineOperand::CreateImm(0));
   I.addImplicitDefUseOperands(*MF);
@@ -3995,6 +4004,9 @@ bool AMDGPUInstructionSelector::selectBITOP3(MachineInstr &MI) const {
   }
 
   unsigned Opc = IsB32 ? AMDGPU::V_BITOP3_B32_e64 : AMDGPU::V_BITOP3_B16_e64;
+  if (!IsB32 && STI.hasTrue16BitInsts())
+    Opc = STI.useRealTrue16Insts() ? AMDGPU::V_BITOP3_B16_gfx1250_t16_e64
+                                   : AMDGPU::V_BITOP3_B16_gfx1250_fake16_e64;
   unsigned CBL = STI.getConstantBusLimit(Opc);
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
@@ -4976,66 +4988,6 @@ AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
   return selectVOP3PRetHelper(Root, true);
 }
 
-// Select neg_lo from the i1 immediate operand.
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectVOP3PModsNeg(MachineOperand &Root) const {
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // Value is in Imm operand as i1 sign extended to int64_t.
-  // 1(-1) promotes packed values to signed, 0 treats them as unsigned.
-  assert((Root.isImm() && (Root.getImm() == -1 || Root.getImm() == 0)) &&
-         "expected i1 value");
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  if (Root.getImm() == -1)
-    Mods ^= SISrcMods::NEG;
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-  }};
-}
-
-// Select both neg_lo and neg_hi from the i1 immediate operand. This is
-// specifically for F16/BF16 operands in WMMA instructions, where neg_lo applies
-// to matrix's even k elements, and neg_hi applies to matrix's odd k elements.
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectVOP3PModsNegs(MachineOperand &Root) const {
-  // Literal i1 value set in intrinsic, represents SrcMods for the next operand.
-  // Value is in Imm operand as i1 sign extended to int64_t.
-  // 1(-1) promotes packed values to signed, 0 treats them as unsigned.
-  assert((Root.isImm() && (Root.getImm() == -1 || Root.getImm() == 0)) &&
-         "expected i1 value");
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  if (Root.getImm() == -1)
-    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-  }};
-}
-
-// Select neg, abs, or both neg and abs from the i16 immediate operans.
-InstructionSelector::ComplexRendererFns
-AMDGPUInstructionSelector::selectVOP3PModsNegAbs(MachineOperand &Root) const {
-
-  assert(Root.isImm() && "Modifier for C must be an immediate");
-
-  unsigned Mods = SISrcMods::OP_SEL_1;
-  switch (Root.getImm()) {
-  default: // Any other value will be silently ignored (considered as 0).
-    break;
-  case 1:
-    Mods ^= SISrcMods::NEG;
-    break;
-  case 2:
-    Mods ^= SISrcMods::ABS;
-    break;
-  case 3:
-    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
-    break;
-  }
-
-  return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); } // src_mods
-  }};
-}
-
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectWMMAOpSelVOP3PMods(
     MachineOperand &Root) const {
@@ -5774,8 +5726,29 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrCPol(MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 1).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol);
+}
+
+InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectGlobalSAddrGLC(MachineOperand &Root) const {
   return selectGlobalSAddr(Root, AMDGPU::CPol::GLC);
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectGlobalSAddrNoIOffset(
+    MachineOperand &Root) const {
+  const MachineInstr &I = *Root.getParent();
+
+  // We are assuming CPol is always the last operand of the intrinsic.
+  auto PassedCPol =
+      I.getOperand(I.getNumOperands() - 1).getImm() & ~AMDGPU::CPol::SCAL;
+  return selectGlobalSAddr(Root, PassedCPol, false);
 }
 
 InstructionSelector::ComplexRendererFns
@@ -6961,13 +6934,13 @@ void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_0_0(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
   MIB.addImm(
-      (MI.getOperand(OpIdx).getImm() & 0x2) ? (int64_t)SISrcMods::OP_SEL_0 : 0);
+      (MI.getOperand(OpIdx).getImm() & 0x1) ? (int64_t)SISrcMods::OP_SEL_0 : 0);
 }
 
 void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_0_1(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
-  MIB.addImm((MI.getOperand(OpIdx).getImm() & 0x2)
+  MIB.addImm((MI.getOperand(OpIdx).getImm() & 0x1)
                  ? (int64_t)(SISrcMods::OP_SEL_0 | SISrcMods::DST_OP_SEL)
                  : (int64_t)SISrcMods::DST_OP_SEL);
 }
@@ -6976,13 +6949,13 @@ void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_1_0(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
   MIB.addImm(
-      (MI.getOperand(OpIdx).getImm() & 0x1) ? (int64_t)SISrcMods::OP_SEL_0 : 0);
+      (MI.getOperand(OpIdx).getImm() & 0x2) ? (int64_t)SISrcMods::OP_SEL_0 : 0);
 }
 
 void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_1_1(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
-  MIB.addImm((MI.getOperand(OpIdx).getImm() & 0x1)
+  MIB.addImm((MI.getOperand(OpIdx).getImm() & 0x2)
                  ? (int64_t)(SISrcMods::OP_SEL_0)
                  : 0);
 }
@@ -7011,8 +6984,9 @@ void AMDGPUInstructionSelector::renderSrcAndDstSelToOpSelXForm_2_0(
 void AMDGPUInstructionSelector::renderDstSelToOpSel3XFormXForm(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
   assert(OpIdx >= 0 && "expected to match an immediate operand");
-  MIB.addImm(
-      (MI.getOperand(OpIdx).getImm() & 0x2) ? (int64_t)SISrcMods::DST_OP_SEL  : 0);
+  MIB.addImm((MI.getOperand(OpIdx).getImm() & 0x2)
+                 ? (int64_t)SISrcMods::DST_OP_SEL
+                 : 0);
 }
 
 void AMDGPUInstructionSelector::renderExtractCPol(MachineInstrBuilder &MIB,
@@ -7066,6 +7040,49 @@ void AMDGPUInstructionSelector::renderRoundMode(MachineInstrBuilder &MIB,
   // "round.upward"     -> TowardPositive 2    -> FP_ROUND_ROUND_TO_INF 1
   // "round.downward    -> TowardNegative 3    -> FP_ROUND_ROUND_TO_NEGINF 2
   MIB.addImm((MI.getOperand(OpIdx).getImm() + 3) % 4);
+}
+
+void AMDGPUInstructionSelector::renderVOP3PModsNeg(MachineInstrBuilder &MIB,
+                                                   const MachineInstr &MI,
+                                                   int OpIdx) const {
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (MI.getOperand(OpIdx).getImm())
+    Mods ^= SISrcMods::NEG;
+  MIB.addImm((int64_t)Mods);
+}
+
+void AMDGPUInstructionSelector::renderVOP3PModsNegs(MachineInstrBuilder &MIB,
+                                                    const MachineInstr &MI,
+                                                    int OpIdx) const {
+  unsigned Mods = SISrcMods::OP_SEL_1;
+  if (MI.getOperand(OpIdx).getImm())
+    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+  MIB.addImm((int64_t)Mods);
+}
+
+void AMDGPUInstructionSelector::renderVOP3PModsNegAbs(MachineInstrBuilder &MIB,
+                                                      const MachineInstr &MI,
+                                                      int OpIdx) const {
+  unsigned Val = MI.getOperand(OpIdx).getImm();
+  unsigned Mods = SISrcMods::OP_SEL_1; // default: none
+  if (Val == 1) // neg
+    Mods ^= SISrcMods::NEG;
+  if (Val == 2) // abs
+    Mods ^= SISrcMods::ABS;
+  if (Val == 3) // neg and abs
+    Mods ^= (SISrcMods::NEG | SISrcMods::ABS);
+  MIB.addImm((int64_t)Mods);
+}
+
+void AMDGPUInstructionSelector::renderPrefetchLoc(MachineInstrBuilder &MIB,
+                                                  const MachineInstr &MI,
+                                                  int OpIdx) const {
+  uint32_t V = MI.getOperand(2).getImm();
+  V = (AMDGPU::CPol::SCOPE_MASK - (V & AMDGPU::CPol::SCOPE_MASK))
+      << AMDGPU::CPol::SCOPE_SHIFT;
+  if (!Subtarget->hasSafeCUPrefetch())
+    V = std::max(V, (uint32_t)AMDGPU::CPol::SCOPE_SE); // CU scope is unsafe
+  MIB.addImm(V);
 }
 
 /// Convert from 2-bit value to enum values used for op_sel* source modifiers.
