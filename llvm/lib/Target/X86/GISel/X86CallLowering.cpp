@@ -75,7 +75,7 @@ public:
     static const MCPhysReg XMMArgRegs[] = {X86::XMM0, X86::XMM1, X86::XMM2,
                                            X86::XMM3, X86::XMM4, X86::XMM5,
                                            X86::XMM6, X86::XMM7};
-    if (!Info.IsFixed)
+    if (Flags.isVarArg())
       NumXMMRegs = State.getFirstUnallocated(XMMArgRegs);
 
     return Res;
@@ -363,7 +363,8 @@ bool X86CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                      Info.CallConv, Info.IsVarArg))
     return false;
 
-  bool IsFixed = Info.OrigArgs.empty() ? true : Info.OrigArgs.back().IsFixed;
+  bool IsFixed =
+      Info.OrigArgs.empty() ? true : !Info.OrigArgs.back().Flags[0].isVarArg();
   if (STI.is64Bit() && !IsFixed && !STI.isCallingConvWin64(Info.CallConv)) {
     // From AMD64 ABI document:
     // For calls that may call functions that use varargs or stdargs
