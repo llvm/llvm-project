@@ -1,4 +1,4 @@
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s
+;\ RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s
 
 ; Make sure resource table is created correctly.
 ; CHECK: Resources:
@@ -14,7 +14,7 @@ define void @main() #0 {
 ; CHECK:          Kind:            CBuffer
 ; CHECK:          Flags:
 ; CHECK:            UsedByAtomic64:  false
-  %cbuf = call target("dx.CBuffer", target("dx.Layout", {float}, 4, 0))
+  %cbuf = call target("dx.CBuffer", <{ float }>)
       @llvm.dx.resource.handlefrombinding(i32 3, i32 2, i32 1, i32 0, ptr null)
 
   ; ByteAddressBuffer Buf : register(t8, space1)
