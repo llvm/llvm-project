@@ -2392,7 +2392,7 @@ _mm256_cvtss_f32(__m256 __a)
 ///    return value.
 /// \returns A 256-bit vector of [8 x float] containing the moved and duplicated
 ///    values.
-static __inline __m256 __DEFAULT_FN_ATTRS
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_movehdup_ps(__m256 __a)
 {
   return __builtin_shufflevector((__v8sf)__a, (__v8sf)__a, 1, 1, 3, 3, 5, 5, 7, 7);
@@ -2417,7 +2417,7 @@ _mm256_movehdup_ps(__m256 __a)
 ///    return value.
 /// \returns A 256-bit vector of [8 x float] containing the moved and duplicated
 ///    values.
-static __inline __m256 __DEFAULT_FN_ATTRS
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_moveldup_ps(__m256 __a)
 {
   return __builtin_shufflevector((__v8sf)__a, (__v8sf)__a, 0, 0, 2, 2, 4, 4, 6, 6);
@@ -2439,7 +2439,7 @@ _mm256_moveldup_ps(__m256 __a)
 ///    the return value.
 /// \returns A 256-bit vector of [4 x double] containing the moved and
 ///    duplicated values.
-static __inline __m256d __DEFAULT_FN_ATTRS
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_movedup_pd(__m256d __a)
 {
   return __builtin_shufflevector((__v4df)__a, (__v4df)__a, 0, 0, 2, 2);
