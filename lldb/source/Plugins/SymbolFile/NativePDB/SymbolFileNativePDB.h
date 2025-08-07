@@ -285,11 +285,11 @@ private:
 
   lldb_private::UniqueCStringMap<uint32_t> m_type_base_names;
 
-  /// Global ID -> mangled name/full function name
+  /// mangled name/full function name -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_full_names;
-  /// Global ID -> basename
+  /// basename -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;
-  /// Global ID -> method basename
+  /// method basename -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
 };
 
