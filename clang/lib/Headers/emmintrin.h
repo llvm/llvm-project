@@ -2127,8 +2127,9 @@ _mm_add_epi32(__m128i __a, __m128i __b) {
 /// \param __b
 ///    A 64-bit integer.
 /// \returns A 64-bit integer containing the sum of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_add_si64(__m64 __a, __m64 __b) {
-  return (__m64)(((unsigned long long)__a) + ((unsigned long long)__b));
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_add_si64(__m64 __a,
+                                                                  __m64 __b) {
+  return (__m64)(((__v1du)__a)[0] + ((__v1du)__b)[0]);
 }
 
 /// Adds the corresponding elements of two 128-bit vectors of [2 x i64],
@@ -2557,8 +2558,9 @@ _mm_sub_epi32(__m128i __a, __m128i __b) {
 ///    A 64-bit integer vector containing the subtrahend.
 /// \returns A 64-bit integer vector containing the difference of the values in
 ///    the operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS _mm_sub_si64(__m64 __a, __m64 __b) {
-  return (__m64)((unsigned long long)__a - (unsigned long long)__b);
+static __inline__ __m64 __DEFAULT_FN_ATTRS_CONSTEXPR _mm_sub_si64(__m64 __a,
+                                                                  __m64 __b) {
+  return (__m64)(((__v1du)__a)[0] - ((__v1du)__b)[0]);
 }
 
 /// Subtracts the corresponding elements of two [2 x i64] vectors.
