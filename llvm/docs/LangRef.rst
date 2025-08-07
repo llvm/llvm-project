@@ -24210,7 +24210,8 @@ Semantics:
 The intrinsic returns ``poison`` if the distance between ``%prtA`` and ``%ptrB``
 is smaller than ``VF * %elementsize`` and either ``%ptrA + VF * %elementSize``
 or ``%ptrB + VF * %elementSize`` wrap.
-The element of the result mask is active when no read-after-write hazard occurs, meaning that:
+The element of the result mask is active when no read-after-write hazard occurs,
+meaning that:
 
   abs(ptrB - ptrA) >= elementSize * lane (guarantees that the store of this lane
   is committed before loading from this address)
