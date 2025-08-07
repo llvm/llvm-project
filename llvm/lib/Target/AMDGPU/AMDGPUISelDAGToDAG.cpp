@@ -3319,8 +3319,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
       (VT != MVT::i32 && VT != MVT::v2i32 && VT != MVT::i64))
     return true;
 
-  ConstantSDNode *CRHS =
-      isConstOrConstSplat(PeekSrc ? PeekSrc->getOperand(1) : Src->getOperand(1));
+  ConstantSDNode *CRHS = isConstOrConstSplat(PeekSrc ? PeekSrc->getOperand(1)
+                                                     : Src->getOperand(1));
   if (!CRHS)
     return true;
 
@@ -3329,7 +3329,7 @@ bool AMDGPUDAGToDAGISel::SelectVOP3ModsImpl(SDValue In, SDValue &Src,
       SDValue LHS = PeekSrc->getOperand(0);
       SDValue Index = Src->getOperand(1);
       return CurDAG->getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Src),
-                                   Src.getValueType(), LHS, Index);
+                             Src.getValueType(), LHS, Index);
     }
     return PeekSrc.getOperand(0);
   };
