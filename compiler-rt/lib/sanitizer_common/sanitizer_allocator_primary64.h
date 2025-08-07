@@ -122,7 +122,7 @@ class SizeClassAllocator64 {
     // TODO: hypothetical edge case: on >48-bit VMA systems, Linux by default
     //       maps as if it was a 48-bit VMA, but a sanitizer could
     //       theoretically map beyond the 48-bit limit (N.B. 2**48 == 256TB).
-    if (TotalSpaceSize >= MaxAddr) {
+    if (heap_start + TotalSpaceSize >= MaxAddr) {
       // We can't easily adjust the requested heap size, because kSpaceSize is
       // const (for optimization) and used throughout the code.
       VReport(0, "Error: heap size %zx exceeds max user virtual address %zx\n",
