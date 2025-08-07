@@ -20,19 +20,14 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
-#include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SystemZ/zOSSupport.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <memory>
 #include <string>
@@ -59,12 +54,6 @@
 
 namespace llvm {
 namespace exegesis {
-
-static cl::opt<int> PrintGenAssembly(
-    "print-gen-assembly", cl::Optional, cl::init(0),
-    cl::desc("Print generated assembly snippets. -1 prints all lines, "
-             "positive N prints first N lines with truncated middle part"),
-    cl::cat(BenchmarkOptions));
 
 BenchmarkRunner::BenchmarkRunner(const LLVMState &State, Benchmark::ModeE Mode,
                                  BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
@@ -613,25 +602,25 @@ struct InstructionInfo {
 void printInstructions(const std::vector<InstructionInfo> &Instructions,
                        int InitialLinesCount, int LastLinesCount) {
   int N = Instructions.size();
-  outs() << "Generated assembly snippet:\n```\n";
+  dbgs() << "Generated assembly snippet:\n```\n";
 
   // Print initial lines
   for (int i = 0; i < InitialLinesCount; ++i)
-    outs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
+    dbgs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
            << Instructions[i].HexBytes << Instructions[i].Text << '\n';
 
   // Show truncation message if needed
   int SkippedInstructions = N - InitialLinesCount - LastLinesCount;
   if (SkippedInstructions > 0)
-    outs() << "...\t(" << SkippedInstructions << " more instructions)\n";
+    dbgs() << "...\t(" << SkippedInstructions << " more instructions)\n";
 
   // Print last min(PreviewLast, N - PreviewFirst) lines
   int LastLinesToPrint = std::min(
       LastLinesCount, N > InitialLinesCount ? N - InitialLinesCount : 0);
   for (int i = N - LastLinesToPrint; i < N; ++i)
-    outs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
+    dbgs() << format_hex_no_prefix(Instructions[i].Address, 0) << ":\t"
            << Instructions[i].HexBytes << Instructions[i].Text << '\n';
-  outs() << "```\n";
+  dbgs() << "```\n";
 }
 
 // Function to extract and print assembly from snippet
@@ -675,15 +664,13 @@ Error printAssembledSnippet(const LLVMState &State,
     Address += Size;
   }
 
-  if (PrintGenAssembly == 0 || PrintGenAssembly < -1)
-    return Error::success();
-
-  int InitialLinesCount = PrintGenAssembly;
-  int LastLinesCount = 3;
-  if (PrintGenAssembly == -1 ||
-      PrintGenAssembly > static_cast<int>(Instructions.size()))
-    InitialLinesCount = Instructions.size() - LastLinesCount;
-  printInstructions(Instructions, InitialLinesCount, LastLinesCount);
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "preview-gen-assembly"
+  LLVM_DEBUG(printInstructions(Instructions, 10, 3));
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "print-gen-assembly"
+  LLVM_DEBUG(printInstructions(Instructions, Instructions.size(), 0));
+#undef DEBUG_TYPE
   return Error::success();
 }
 } // namespace
