@@ -733,7 +733,8 @@ public:
     }
     case Instruction::PtrToAddr: {
       unsigned DstSize = Dst->getScalarSizeInBits();
-      if (DL.isLegalInteger(DstSize) && DstSize >= DL.getAddressSizeInBits(Src))
+      assert(DstSize == DL.getAddressSizeInBits(Src));
+      if (DL.isLegalInteger(DstSize))
         return 0;
       break;
     }
@@ -1150,6 +1151,8 @@ public:
   virtual void collectKernelLaunchBounds(
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const {}
+
+  virtual bool allowVectorElementIndexingUsingGEP() const { return true; }
 
 protected:
   // Obtain the minimum required size to hold the value (without the sign)
