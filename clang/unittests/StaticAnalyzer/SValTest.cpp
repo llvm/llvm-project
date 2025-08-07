@@ -61,7 +61,7 @@ using SVals = llvm::StringMap<SVal>;
 /// can test whatever we gathered.
 class SValCollector : public Checker<check::Bind, check::EndAnalysis> {
 public:
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool atDeclInit,
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
                  CheckerContext &C) const {
     // Skip instantly if we finished testing.
     // Also, we care only for binds happening in variable initializations.

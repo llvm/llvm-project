@@ -55,13 +55,13 @@ public:
                         ", Stmt = " + S->getStmtClassName());
   }
 
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool atDeclInit,
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
                  CheckerContext &C) const {
     emitErrorReport(C, Bug,
                     "checkBind: Loc = " + dumpToString(Loc) +
                         ", Val = " + dumpToString(Val) +
                         ", Stmt = " + S->getStmtClassName() +
-                        ", atDeclInit = " + (atDeclInit ? "true" : "false"));
+                        ", AtDeclInit = " + (AtDeclInit ? "true" : "false"));
   }
 
 private:
@@ -142,7 +142,7 @@ TEST(ExprEngineVisitTest, checkLocationAndBind) {
                        "Stmt = ImplicitCastExpr";
   std::string BindMsg =
       "checkBind: Loc = &MyClassWrite, Val = lazyCompoundVal{0x0,MyClassRead}, "
-      "Stmt = CXXOperatorCallExpr, atDeclInit = false";
+      "Stmt = CXXOperatorCallExpr, AtDeclInit = false";
   std::size_t LocPos = Diags.find(LocMsg);
   std::size_t BindPos = Diags.find(BindMsg);
   EXPECT_NE(LocPos, std::string::npos);

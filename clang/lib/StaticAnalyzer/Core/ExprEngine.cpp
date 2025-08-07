@@ -3716,7 +3716,7 @@ ExprEngine::notifyCheckersOfPointerEscape(ProgramStateRef State,
 void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
                           ExplodedNode *Pred,
                           SVal location, SVal Val,
-                          bool atDeclInit, const ProgramPoint *PP) {
+                          bool AtDeclInit, const ProgramPoint *PP) {
   const LocationContext *LC = Pred->getLocationContext();
   PostStmt PS(StoreE, LC);
   if (!PP)
@@ -3725,7 +3725,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
   // Do a previsit of the bind.
   ExplodedNodeSet CheckedSet;
   getCheckerManager().runCheckersForBind(CheckedSet, Pred, location, Val,
-                                         StoreE, atDeclInit, *this, *PP);
+                                         StoreE, AtDeclInit, *this, *PP);
 
   StmtNodeBuilder Bldr(CheckedSet, Dst, *currBldrCtx);
 
@@ -3749,7 +3749,7 @@ void ExprEngine::evalBind(ExplodedNodeSet &Dst, const Stmt *StoreE,
     // For initializations, we do not need to inform clients of region
     // changes.
     state = state->bindLoc(location.castAs<Loc>(),
-                           Val, LC, /* notifyChanges = */ !atDeclInit);
+                           Val, LC, /* notifyChanges = */ !AtDeclInit);
 
     const MemRegion *LocReg = nullptr;
     if (std::optional<loc::MemRegionVal> LocRegVal =

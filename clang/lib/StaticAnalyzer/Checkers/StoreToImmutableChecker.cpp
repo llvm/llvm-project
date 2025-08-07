@@ -26,7 +26,7 @@ class StoreToImmutableChecker : public Checker<check::Bind> {
   const BugType BT{this, "Write to immutable memory", "CERT Environment (ENV)"};
 
 public:
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool atDeclInit,
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
                  CheckerContext &C) const;
 };
 } // end anonymous namespace
@@ -86,7 +86,7 @@ getInnermostEnclosingConstDeclRegion(const MemRegion *MR, CheckerContext &C) {
 }
 
 void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
-                                        bool atDeclInit,
+                                        bool AtDeclInit,
                                         CheckerContext &C) const {
   // We are only interested in stores to memory regions
   const MemRegion *MR = Loc.getAsRegion();
@@ -95,7 +95,7 @@ void StoreToImmutableChecker::checkBind(SVal Loc, SVal Val, const Stmt *S,
 
   // Skip variable declarations and initializations - we only want to catch
   // actual writes
-  if (atDeclInit)
+  if (AtDeclInit)
     return;
 
   // Check if the region is in the global immutable space

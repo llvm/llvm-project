@@ -209,8 +209,8 @@ public:
 class Bind {
   template <typename CHECKER>
   static void _checkBind(void *checker, SVal location, SVal val, const Stmt *S,
-                         bool atDeclInit, CheckerContext &C) {
-    ((const CHECKER *)checker)->checkBind(location, val, S, atDeclInit, C);
+                         bool AtDeclInit, CheckerContext &C) {
+    ((const CHECKER *)checker)->checkBind(location, val, S, AtDeclInit, C);
   }
 
 public:

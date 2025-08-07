@@ -379,10 +379,10 @@ namespace {
     bool AtDeclInit;
 
     CheckBindContext(const CheckersTy &checkers, SVal loc, SVal val,
-                     const Stmt *s, bool atDeclInit, ExprEngine &eng,
+                     const Stmt *s, bool AtDeclInit, ExprEngine &eng,
                      const ProgramPoint &pp)
         : Checkers(checkers), Loc(loc), Val(val), S(s), Eng(eng), PP(pp),
-          AtDeclInit(atDeclInit) {}
+          AtDeclInit(AtDeclInit) {}
 
     CheckersTy::const_iterator checkers_begin() { return Checkers.begin(); }
     CheckersTy::const_iterator checkers_end() { return Checkers.end(); }
@@ -411,9 +411,9 @@ namespace {
 void CheckerManager::runCheckersForBind(ExplodedNodeSet &Dst,
                                         const ExplodedNodeSet &Src,
                                         SVal location, SVal val, const Stmt *S,
-                                        bool atDeclInit, ExprEngine &Eng,
+                                        bool AtDeclInit, ExprEngine &Eng,
                                         const ProgramPoint &PP) {
-  CheckBindContext C(BindCheckers, location, val, S, atDeclInit, Eng, PP);
+  CheckBindContext C(BindCheckers, location, val, S, AtDeclInit, Eng, PP);
   llvm::TimeTraceScope TimeScope{
       "CheckerManager::runCheckersForBind",
       [&val]() { return getTimeTraceBindMetadata(val); }};

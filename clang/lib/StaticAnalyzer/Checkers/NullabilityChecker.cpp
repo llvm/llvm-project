@@ -97,7 +97,7 @@ public:
   // libraries.
   bool NoDiagnoseCallsToSystemHeaders = false;
 
-  void checkBind(SVal L, SVal V, const Stmt *S, bool atDeclInit,
+  void checkBind(SVal L, SVal V, const Stmt *S, bool AtDeclInit,
                  CheckerContext &C) const;
   void checkPostStmt(const ExplicitCastExpr *CE, CheckerContext &C) const;
   void checkPreStmt(const ReturnStmt *S, CheckerContext &C) const;
@@ -1251,7 +1251,7 @@ static bool isARCNilInitializedLocal(CheckerContext &C, const Stmt *S) {
 /// Propagate the nullability information through binds and warn when nullable
 /// pointer or null symbol is assigned to a pointer with a nonnull type.
 void NullabilityChecker::checkBind(SVal L, SVal V, const Stmt *S,
-                                   bool atDeclInit, CheckerContext &C) const {
+                                   bool AtDeclInit, CheckerContext &C) const {
   const TypedValueRegion *TVR =
       dyn_cast_or_null<TypedValueRegion>(L.getAsRegion());
   if (!TVR)

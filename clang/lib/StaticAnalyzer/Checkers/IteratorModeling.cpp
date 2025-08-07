@@ -150,7 +150,7 @@ public:
   IteratorModeling() = default;
 
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool atDeclInit,
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
                  CheckerContext &C) const;
   void checkPostStmt(const UnaryOperator *UO, CheckerContext &C) const;
   void checkPostStmt(const BinaryOperator *BO, CheckerContext &C) const;
@@ -235,7 +235,7 @@ void IteratorModeling::checkPostCall(const CallEvent &Call,
 }
 
 void IteratorModeling::checkBind(SVal Loc, SVal Val, const Stmt *S,
-                                 bool atDeclInit, CheckerContext &C) const {
+                                 bool AtDeclInit, CheckerContext &C) const {
   auto State = C.getState();
   const auto *Pos = getIteratorPosition(State, Val);
   if (Pos) {

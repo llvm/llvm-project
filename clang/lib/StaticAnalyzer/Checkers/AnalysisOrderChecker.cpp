@@ -183,7 +183,7 @@ public:
       llvm::errs() << "NewAllocator\n";
   }
 
-  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool atDeclInit,
+  void checkBind(SVal Loc, SVal Val, const Stmt *S, bool AtDeclInit,
                  CheckerContext &C) const {
     if (isCallbackEnabled(C, "Bind"))
       llvm::errs() << "Bind\n";
