@@ -626,6 +626,7 @@ define i32 @pr45526_pgso() !prof !14 {
 ; NPGSO-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
 ; NPGSO:       [[MIDDLE_BLOCK]]:
 ; NPGSO-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 3
+; NPGSO-NEXT:    br label %[[SCALAR_PH]]
 ; NPGSO:       [[SCALAR_PH]]:
 ; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 508, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; NPGSO-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ [[VECTOR_RECUR_EXTRACT]], %[[MIDDLE_BLOCK]] ], [ 5, %[[ENTRY]] ]
@@ -698,7 +699,7 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[MULB:%.*]] = mul nsw i32 [[IV]], [[BSTRIDE]]
 ; CHECK-NEXT:    [[GEPOFB:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[MULB]]
 ; CHECK-NEXT:    store i16 42, ptr [[GEPOFB]], align 4
@@ -747,7 +748,7 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; PGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; PGSO-NEXT:    br label %[[FOR_BODY:.*]]
 ; PGSO:       [[FOR_BODY]]:
-; PGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; PGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
 ; PGSO-NEXT:    [[MULB:%.*]] = mul nsw i32 [[IV]], [[BSTRIDE]]
 ; PGSO-NEXT:    [[GEPOFB:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[MULB]]
 ; PGSO-NEXT:    store i16 42, ptr [[GEPOFB]], align 4
@@ -796,7 +797,7 @@ define void @stride1(ptr noalias %B, i32 %BStride) optsize {
 ; NPGSO-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; NPGSO-NEXT:    br label %[[FOR_BODY:.*]]
 ; NPGSO:       [[FOR_BODY]]:
-; NPGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; NPGSO-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ], [ 0, %[[SCALAR_PH]] ]
 ; NPGSO-NEXT:    [[MULB:%.*]] = mul nsw i32 [[IV]], [[BSTRIDE]]
 ; NPGSO-NEXT:    [[GEPOFB:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[MULB]]
 ; NPGSO-NEXT:    store i16 42, ptr [[GEPOFB]], align 4

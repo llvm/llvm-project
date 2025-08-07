@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/Platform/MacOSX/PlatformRemoteMacOSX.h"
-#include "Plugins/Protocol/MCP/MCPError.h"
 #include "Plugins/Protocol/MCP/ProtocolServerMCP.h"
 #include "TestingSupport/SubsystemRAII.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/ProtocolServer.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
@@ -18,6 +18,7 @@
 #include "lldb/Host/MainLoopBase.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/common/TCPSocket.h"
+#include "lldb/Protocol/MCP/MCPError.h"
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
@@ -50,9 +51,9 @@ public:
 };
 
 /// Test tool that returns it argument as text.
-class TestTool : public mcp::Tool {
+class TestTool : public Tool {
 public:
-  using mcp::Tool::Tool;
+  using Tool::Tool;
 
   virtual llvm::Expected<TextResult> Call(const ToolArguments &args) override {
     std::string argument;
@@ -69,8 +70,8 @@ public:
   }
 };
 
-class TestResourceProvider : public mcp::ResourceProvider {
-  using mcp::ResourceProvider::ResourceProvider;
+class TestResourceProvider : public ResourceProvider {
+  using ResourceProvider::ResourceProvider;
 
   virtual std::vector<Resource> GetResources() const override {
     std::vector<Resource> resources;
@@ -88,7 +89,7 @@ class TestResourceProvider : public mcp::ResourceProvider {
   virtual llvm::Expected<ResourceResult>
   ReadResource(llvm::StringRef uri) const override {
     if (uri != "lldb://foo/bar")
-      return llvm::make_error<mcp::UnsupportedURI>(uri.str());
+      return llvm::make_error<UnsupportedURI>(uri.str());
 
     ResourceContents contents;
     contents.uri = "lldb://foo/bar";
@@ -102,9 +103,9 @@ class TestResourceProvider : public mcp::ResourceProvider {
 };
 
 /// Test tool that returns an error.
-class ErrorTool : public mcp::Tool {
+class ErrorTool : public Tool {
 public:
-  using mcp::Tool::Tool;
+  using Tool::Tool;
 
   virtual llvm::Expected<TextResult> Call(const ToolArguments &args) override {
     return llvm::createStringError("error");
@@ -112,9 +113,9 @@ public:
 };
 
 /// Test tool that fails but doesn't return an error.
-class FailTool : public mcp::Tool {
+class FailTool : public Tool {
 public:
-  using mcp::Tool::Tool;
+  using Tool::Tool;
 
   virtual llvm::Expected<TextResult> Call(const ToolArguments &args) override {
     TextResult text_result;
