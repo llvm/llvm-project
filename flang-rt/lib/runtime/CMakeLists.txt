@@ -183,6 +183,9 @@ endif ()
 
 
 if (NOT WIN32)
+  add_definitions(-U_GLIBCXX_ASSERTIONS -D_GLIBCXX_NO_ASSERTIONS)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>)
+
   add_flangrt_library(flang_rt.runtime STATIC SHARED
     ${sources}
     LINK_LIBRARIES ${Backtrace_LIBRARY}
