@@ -46,8 +46,7 @@ def ARMv7a    : Architecture<"armv7-a",   "ARMv7a",   [HasV7Ops,
                                                        FeatureDB,
                                                        FeatureDSP,
                                                        FeatureAClass,
-                                                       FeaturePerfMon,
-                                                       FeatureCtSelect]>;
+                                                       FeaturePerfMon]>;
 
 def ARMv7ve   : Architecture<"armv7ve",   "ARMv7ve",  [HasV7Ops,
                                                        FeatureNEON,
@@ -57,16 +56,14 @@ def ARMv7ve   : Architecture<"armv7ve",   "ARMv7ve",  [HasV7Ops,
                                                        FeatureMP,
                                                        FeatureVirtualization,
                                                        FeatureAClass,
-                                                       FeaturePerfMon,
-                                                       FeatureCtSelect]>;
+                                                       FeaturePerfMon]>;
 
 def ARMv7r    : Architecture<"armv7-r",   "ARMv7r",   [HasV7Ops,
                                                        FeatureDB,
                                                        FeatureDSP,
                                                        FeatureHWDivThumb,
                                                        FeatureRClass,
-                                                       FeaturePerfMon,
-                                                       FeatureCtSelect]>;
+                                                       FeaturePerfMon]>;
 
 def ARMv7m    : Architecture<"armv7-m",   "ARMv7m",   [HasV7Ops,
                                                        FeatureThumb2,
@@ -74,8 +71,7 @@ def ARMv7m    : Architecture<"armv7-m",   "ARMv7m",   [HasV7Ops,
                                                        ModeThumb,
                                                        FeatureDB,
                                                        FeatureHWDivThumb,
-                                                       FeatureMClass,
-                                                       FeatureCtSelect]>;
+                                                       FeatureMClass]>;
 
 def ARMv7em   : Architecture<"armv7e-m",  "ARMv7em",  [HasV7Ops,
                                                        FeatureThumb2,
@@ -84,8 +80,7 @@ def ARMv7em   : Architecture<"armv7e-m",  "ARMv7em",  [HasV7Ops,
                                                        FeatureDB,
                                                        FeatureHWDivThumb,
                                                        FeatureMClass,
-                                                       FeatureDSP,
-                                                       FeatureCtSelect]>;
+                                                       FeatureDSP]>;
 
 def ARMv8a    : Architecture<"armv8-a",   "ARMv8a",   [HasV8Ops,
                                                        FeatureAClass,
