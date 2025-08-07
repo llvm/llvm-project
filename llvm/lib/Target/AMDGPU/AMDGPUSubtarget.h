@@ -100,6 +100,12 @@ public:
   /// be converted to integer, or violate subtarget's specifications.
   std::pair<unsigned, unsigned> getFlatWorkGroupSizes(const Function &F) const;
 
+  /// \returns The required size of workgroups that will be used to execute \p F
+  /// in the \p Dim dimension, if it is known (from `!reqd_work_group_size`
+  /// metadata. Otherwise, returns std::nullopt.
+  std::optional<unsigned> getReqdWorkGroupSize(const Function &F,
+                                               unsigned Dim) const;
+
   /// \returns Subtarget's default pair of minimum/maximum number of waves per
   /// execution unit for function \p F, or minimum/maximum number of waves per
   /// execution unit explicitly requested using "amdgpu-waves-per-eu" attribute

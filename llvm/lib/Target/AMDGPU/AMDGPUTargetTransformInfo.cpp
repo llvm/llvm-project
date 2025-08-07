@@ -22,6 +22,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1003,6 +1004,21 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
              DstAS == AMDGPUAS::FLAT_ADDRESS &&
              ST->hasGloballyAddressableScratch();
     }
+    case Intrinsic::amdgcn_workitem_id_y:
+    case Intrinsic::amdgcn_workitem_id_z: {
+      // If the X dimension is guaranteed to launch with a size that is a power
+      // of 2
+      // >= the wavefront size, then the Y and Z dimensions are uniform.
+      // Similarly, if the dimension has size 1, it is also uniform.
+      const Function *F = Intrinsic->getFunction();
+      std::optional<unsigned> ReqdXDimSize = ST->getReqdWorkGroupSize(*F, 0);
+      if (ReqdXDimSize.has_value() && isPowerOf2_32(*ReqdXDimSize) &&
+          *ReqdXDimSize >= ST->getWavefrontSize())
+        return false;
+      std::optional<unsigned> ThisDimSize = ST->getReqdWorkGroupSize(
+          *F, IID == Intrinsic::amdgcn_workitem_id_y ? 1 : 2);
+      return !(ThisDimSize.has_value() && *ThisDimSize == 1);
+    }
     default:
       return AMDGPU::isIntrinsicSourceOfDivergence(IID);
     }
@@ -1049,28 +1065,35 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   // packed into a same wave which gives 1 and 0 after the division by 64
   // respectively.
   //
-  // FIXME: limit it to 1D kernels only, although that shall be possible
-  // to perform this optimization is the size of the X dimension is a power
-  // of 2, we just do not currently have infrastructure to query it.
+  // The X dimension doesn't reset within a wave if either both the Y
+  // and Z dimensions are of length 1, or if the X dimension's required
+  // size is a power of 2. Note, however, if the X dimension's maximum
+  // size is a power of 2 < the wavefront size, division by the wavefront
+  // size is guaranteed to yield 0, so this is also a no-reset case.
+  bool XDimDoesntResetWithinWaves = false;
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    const Function *F = I->getFunction();
+    std::optional<unsigned> ReqdXDimSize = ST->getReqdWorkGroupSize(*F, 0);
+    XDimDoesntResetWithinWaves =
+        ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
+    if (ReqdXDimSize.has_value() && isPowerOf2_32(*ReqdXDimSize))
+      XDimDoesntResetWithinWaves = true;
+  }
   using namespace llvm::PatternMatch;
   uint64_t C;
   if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                       m_ConstantInt(C))) ||
       match(V, m_AShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                       m_ConstantInt(C)))) {
-    const Function *F = cast<Instruction>(V)->getFunction();
-    return C >= ST->getWavefrontSizeLog2() &&
-           ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
+    return C >= ST->getWavefrontSizeLog2() && XDimDoesntResetWithinWaves;
   }
 
   Value *Mask;
   if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
                        m_Value(Mask)))) {
-    const Function *F = cast<Instruction>(V)->getFunction();
-    const DataLayout &DL = F->getDataLayout();
     return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
                ST->getWavefrontSizeLog2() &&
-           ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
+           XDimDoesntResetWithinWaves;
   }
 
   const ExtractValueInst *ExtValue = dyn_cast<ExtractValueInst>(V);
