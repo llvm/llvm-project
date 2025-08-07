@@ -27,12 +27,12 @@
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/Host.h"
 
+#include "llvm/TargetParser/Host.h"
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
-
-llvm::ExitOnError ExitOnError;
 
 int Global = 42;
 // JIT reports symbol not found on Windows without the visibility attribute.
@@ -65,116 +65,12 @@ createInterpreter(const Args &ExtraArgs = {},
   return cantFail(clang::Interpreter::create(std::move(CI)));
 }
 
-static std::string getExecutorPath() {
-  llvm::SmallString<256> ExecutorPath(llvm::sys::fs::getMainExecutable(
-      nullptr, reinterpret_cast<void *>(&getExecutorPath)));
-  llvm::sys::path::remove_filename(ExecutorPath);
-
-  llvm::sys::path::remove_filename(ExecutorPath); // Remove "Interpreter"
-  llvm::sys::path::remove_filename(ExecutorPath); // Remove "unittests"
-  llvm::sys::path::remove_filename(ExecutorPath); // Remove "clang"
-  llvm::sys::path::remove_filename(ExecutorPath); // Remove "tools"
-
-  llvm::sys::path::append(ExecutorPath, "bin", "llvm-jitlink-executor");
-  return ExecutorPath.str().str();
-}
-
-static std::string getOrcRuntimePath() {
-  llvm::SmallString<256> RuntimePath(llvm::sys::fs::getMainExecutable(
-      nullptr, reinterpret_cast<void *>(&getOrcRuntimePath)));
-
-  llvm::sys::path::remove_filename(RuntimePath);
-
-  llvm::sys::path::remove_filename(RuntimePath); // Remove "Interpreter"
-  llvm::sys::path::remove_filename(RuntimePath); // Remove "unittests"
-  llvm::sys::path::remove_filename(RuntimePath); // Remove "clang"
-  llvm::sys::path::remove_filename(RuntimePath); // Remove "tools"
-
-  llvm::sys::path::append(RuntimePath, CLANG_INSTALL_LIBDIR_BASENAME, "clang",
-                          CLANG_VERSION_MAJOR_STRING, "lib");
-
-  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
-  if (SystemTriple.isOSBinFormatMachO()) {
-    llvm::sys::path::append(RuntimePath, "darwin", "liborc_rt_osx.a");
-  } else if (SystemTriple.isOSBinFormatELF()) {
-    llvm::sys::path::append(RuntimePath, "x86_64-unknown-linux-gnu",
-                            "liborc_rt.a");
-  }
-
-  return RuntimePath.str().str();
-}
-
-static std::unique_ptr<Interpreter>
-createInterpreterWithRemoteExecution(const Args &ExtraArgs = {},
-                                     DiagnosticConsumer *Client = nullptr) {
-  Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
-  llvm::append_range(ClangArgs, ExtraArgs);
-  auto CB = clang::IncrementalCompilerBuilder();
-  CB.SetCompilerArgs(ClangArgs);
-  auto CI = cantFail(CB.CreateCpp());
-  if (Client)
-    CI->getDiagnostics().setClient(Client, /*ShouldOwnClient=*/false);
-
-  std::unique_ptr<llvm::orc::LLJITBuilder> JB;
-
-  llvm::Triple SystemTriple(llvm::sys::getProcessTriple());
-
-  if ((SystemTriple.isOSBinFormatELF() || SystemTriple.isOSBinFormatMachO())) {
-    std::string OOPExecutor = getExecutorPath();
-    std::string OrcRuntimePath = getOrcRuntimePath();
-    bool UseSharedMemory = false;
-    std::string SlabAllocateSizeString = "";
-    std::unique_ptr<llvm::orc::ExecutorProcessControl> EPC;
-    EPC = ExitOnError(launchExecutor(OOPExecutor, UseSharedMemory,
-                                     SlabAllocateSizeString,
-                                     [=] { // Lambda defined inline
-                                       auto redirect = [](int from, int to) {
-                                         if (from != to) {
-                                           dup2(from, to);
-                                           close(from);
-                                         }
-                                       };
-
-                                       redirect(0, STDIN_FILENO);
-                                       redirect(1, STDOUT_FILENO);
-                                       redirect(2, STDERR_FILENO);
-
-                                       setvbuf(stdout, nullptr, _IONBF, 0);
-                                       setvbuf(stderr, nullptr, _IONBF, 0);
-                                     }));
-    if (EPC) {
-      CB.SetTargetTriple(EPC->getTargetTriple().getTriple());
-      JB = ExitOnError(clang::Interpreter::createLLJITBuilder(std::move(EPC),
-                                                              OrcRuntimePath));
-    }
-  }
-
-  return cantFail(clang::Interpreter::create(std::move(CI), std::move(JB)));
-}
-
 static size_t DeclsSize(TranslationUnitDecl *PTUDecl) {
   return std::distance(PTUDecl->decls().begin(), PTUDecl->decls().end());
 }
 
 TEST_F(InterpreterTest, Sanity) {
   std::unique_ptr<Interpreter> Interp = createInterpreter();
-
-  using PTU = PartialTranslationUnit;
-
-  PTU &R1(cantFail(Interp->Parse("void g(); void g() {}")));
-  EXPECT_EQ(2U, DeclsSize(R1.TUPart));
-
-  PTU &R2(cantFail(Interp->Parse("int i;")));
-  EXPECT_EQ(1U, DeclsSize(R2.TUPart));
-}
-
-TEST_F(InterpreterTest, SanityWithRemoteExecution) {
-  if (!HostSupportsJIT())
-    GTEST_SKIP();
-
-  std::string OrcRuntimePath = getOrcRuntimePath();
-
-  std::unique_ptr<Interpreter> Interp = createInterpreterWithRemoteExecution();
 
   using PTU = PartialTranslationUnit;
 
@@ -275,12 +171,12 @@ TEST_F(InterpreterTest, UndoCommand) {
 
   // Fail to undo.
   auto Err1 = Interp->Undo();
-  EXPECT_EQ("Operation failed. Too many undos",
+  EXPECT_EQ("Operation failed. No input left to undo",
             llvm::toString(std::move(Err1)));
   auto Err2 = Interp->Parse("int foo = 42;");
   EXPECT_TRUE(!!Err2);
   auto Err3 = Interp->Undo(2);
-  EXPECT_EQ("Operation failed. Too many undos",
+  EXPECT_EQ("Operation failed. Wanted to undo 2 inputs, only have 1.",
             llvm::toString(std::move(Err3)));
 
   // Succeed to undo.
@@ -506,6 +402,26 @@ TEST_F(InterpreterTest, Value) {
   EXPECT_TRUE(V9.getType()->isMemberFunctionPointerType());
   EXPECT_EQ(V9.getKind(), Value::K_PtrOrObj);
   EXPECT_TRUE(V9.isManuallyAlloc());
+
+  Value V10;
+  llvm::cantFail(Interp->ParseAndExecute(
+      "enum D : unsigned int {Zero = 0, One}; One", &V10));
+
+  std::string prettyType;
+  llvm::raw_string_ostream OSType(prettyType);
+  V10.printType(OSType);
+  EXPECT_STREQ(prettyType.c_str(), "D");
+
+  // FIXME: We should print only the value or the constant not the type.
+  std::string prettyData;
+  llvm::raw_string_ostream OSData(prettyData);
+  V10.printData(OSData);
+  EXPECT_STREQ(prettyData.c_str(), "(One) : unsigned int 1");
+
+  std::string prettyPrint;
+  llvm::raw_string_ostream OSPrint(prettyPrint);
+  V10.print(OSPrint);
+  EXPECT_STREQ(prettyPrint.c_str(), "(D) (One) : unsigned int 1\n");
 }
 
 TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {

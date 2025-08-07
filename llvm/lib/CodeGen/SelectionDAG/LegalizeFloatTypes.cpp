@@ -794,7 +794,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
   return ReturnVal;
 }
 
-SDValue DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
+bool DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
     SDNode *N, RTLIB::Libcall LC, std::optional<unsigned> CallRetResNo) {
   assert(!N->isStrictFPOpcode() && "strictfp not implemented");
   EVT VT = N->getValueType(0);
@@ -803,7 +803,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
          "expected both return values to have the same type");
 
   if (!TLI.getLibcallName(LC))
-    return SDValue();
+    return false;
 
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
 
@@ -849,17 +849,46 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_UnaryWithTwoFPResults(
     SetSoftenedFloat(SDValue(N, ResNum), CreateStackLoad(SlackSlot));
   }
 
-  return SDValue();
+  return true;
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FSINCOS(SDNode *N) {
-  return SoftenFloatRes_UnaryWithTwoFPResults(
-      N, RTLIB::getSINCOS(N->getValueType(0)));
+  EVT VT = N->getValueType(0);
+  if (SoftenFloatRes_UnaryWithTwoFPResults(N, RTLIB::getSINCOS(VT)))
+    return SDValue();
+
+  // Fall back on softening the separate sin and cos calls if available.
+  RTLIB::Libcall SinLC = RTLIB::getSIN(VT);
+  RTLIB::Libcall CosLC = RTLIB::getCOS(VT);
+
+  SDValue SoftSin, SoftCos;
+  if (!TLI.getLibcallName(SinLC) || !TLI.getLibcallName(CosLC)) {
+    DAG.getContext()->emitError("do not know how to soften fsincos");
+
+    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+    SoftSin = SoftCos = DAG.getPOISON(NVT);
+  } else {
+    SoftSin = SoftenFloatRes_Unary(N, SinLC);
+    SoftCos = SoftenFloatRes_Unary(N, CosLC);
+  }
+
+  SetSoftenedFloat(SDValue(N, 0), SoftSin);
+  SetSoftenedFloat(SDValue(N, 1), SoftCos);
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMODF(SDNode *N) {
-  return SoftenFloatRes_UnaryWithTwoFPResults(
-      N, RTLIB::getMODF(N->getValueType(0)), /*CallRetResNo=*/0);
+  EVT VT = N->getValueType(0);
+  if (SoftenFloatRes_UnaryWithTwoFPResults(N, RTLIB::getMODF(VT),
+                                           /*CallRetResNo=*/0))
+    return SDValue();
+
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  DAG.getContext()->emitError("do not know how to soften fmodf");
+  SDValue Poison = DAG.getPOISON(NVT);
+  SetSoftenedFloat(SDValue(N, 0), Poison);
+  SetSoftenedFloat(SDValue(N, 1), Poison);
+  return SDValue();
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREM(SDNode *N) {

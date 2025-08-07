@@ -537,10 +537,20 @@ struct ControlDropUnitDims {
     return SmallVector<unsigned>{};
   };
 };
+
 struct DropUnitDimsResult {
-  linalg::GenericOp resultOp;
+  IndexingMapOpInterface resultOp;
   SmallVector<Value> replacements;
 };
+using DroppedUnitDimsBuilder = std::function<IndexingMapOpInterface(
+    Location loc, OpBuilder &, IndexingMapOpInterface,
+    ArrayRef<Value> newOperands, ArrayRef<AffineMap> newIndexingMaps,
+    const llvm::SmallDenseSet<unsigned> &droppedDims)>;
+
+FailureOr<DropUnitDimsResult>
+dropUnitDims(RewriterBase &rewriter, IndexingMapOpInterface op,
+             const DroppedUnitDimsBuilder &droppedUnitDimsBuilder,
+             const ControlDropUnitDims &options);
 FailureOr<DropUnitDimsResult> dropUnitDims(RewriterBase &rewriter,
                                            GenericOp genericOp,
                                            const ControlDropUnitDims &options);
@@ -601,6 +611,13 @@ LogicalResult rewriteAsPaddedOp(RewriterBase &rewriter, LinalgOp opToPad,
 /// affine.apply operations.
 /// The `indexingMap` + `indexingSizes` encoding suits StructuredOps and
 /// provides a gentle portability path for Linalg-like ops with affine maps.
+/// The padded shape is computed by evaluating the maximum accessed index per
+/// dimension, which may involve multiplying by constant factors derived from
+/// the affine indexing expressions. Currently, only a limited set of projected
+/// permuation indexing maps are supported, such as
+/// - affine_map<(d0, d1, d2) -> (d0, d1)>
+/// - affine_map<(d0, d1, d2) -> (d0, d1 + d2)>
+/// - affine_map<(d0, d1) -> (d0 * 3 + d1)>
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
 SmallVector<OpFoldResult>
@@ -876,11 +893,15 @@ struct VectorizationResult {
 /// greater than or equal to their counterpart iteration space sizes, if static.
 /// `inputVectorShapes` also allows the vectorization of operations with dynamic
 /// shapes.
+/// Optionally, `createNamedContraction` can force compatible contractions to be
+/// vectorized directly to vector.contract operation.
 FailureOr<VectorizationResult>
 vectorize(RewriterBase &rewriter, Operation *op,
           ArrayRef<int64_t> inputVectorSizes = {},
           ArrayRef<bool> inputScalableVecDims = {},
-          bool vectorizeNDExtract = false, bool flatten1DDepthwiseConv = false);
+          bool vectorizeNDExtract = false, bool flatten1DDepthwiseConv = false,
+          bool assumeDynamicDimsMatchVecSizes = false,
+          bool createNamedContraction = false);
 
 /// Emit a suitable vector form for a Copy op with fully static shape.
 LogicalResult vectorizeCopy(RewriterBase &builder, memref::CopyOp copyOp);

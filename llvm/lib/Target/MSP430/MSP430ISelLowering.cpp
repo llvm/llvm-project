@@ -208,8 +208,6 @@ MSP430TargetLowering::MSP430TargetLowering(const TargetMachine &TM,
     for (const auto &LC : LibraryCalls) {
       setLibcallImpl(LC.Op, LC.Impl);
     }
-    setLibcallImplCallingConv(RTLIB::__mspabi_mpyll,
-                              CallingConv::MSP430_BUILTIN);
   }
 
   setMinFunctionAlignment(Align(2));

@@ -13,6 +13,10 @@
 ; CHECK-NEXT:   conditional-cmv-fusion           - Enable branch+c.mv fusion.
 ; CHECK-NEXT:   d                                - 'D' (Double-Precision Floating-Point).
 ; CHECK-NEXT:   disable-latency-sched-heuristic  - Disable latency scheduling heuristic.
+; CHECK-NEXT:   disable-misched-load-clustering  - Disable load clustering in the machine scheduler.
+; CHECK-NEXT:   disable-misched-store-clustering - Disable store clustering in the machine scheduler.
+; CHECK-NEXT:   disable-postmisched-load-clustering  - Disable PostRA load clustering in the machine scheduler.
+; CHECK-NEXT:   disable-postmisched-store-clustering - Disable PostRA store clustering in the machine scheduler.
 ; CHECK-NEXT:   dlen-factor-2                    - Vector unit DLEN(data path width) is half of VLEN.
 ; CHECK-NEXT:   e                                - 'E' (Embedded Instruction Set with 16 GPRs).
 ; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
@@ -171,7 +175,9 @@
 ; CHECK-NEXT:   use-postra-scheduler             - Schedule again after register allocation.
 ; CHECK-NEXT:   v                                - 'V' (Vector Extension for Application Processors).
 ; CHECK-NEXT:   ventana-veyron                   - Ventana Veyron-Series processors.
+; CHECK-NEXT:   vl-dependent-latency             - Latency of vector instructions is dependent on the dynamic value of vl.
 ; CHECK-NEXT:   vxrm-pipeline-flush              - VXRM writes causes pipeline flush.
+; CHECK-NEXT:   xandesbfhcvt                     - 'XAndesBFHCvt' (Andes Scalar BFLOAT16 Conversion Extension).
 ; CHECK-NEXT:   xandesperf                       - 'XAndesPerf' (Andes Performance Extension).
 ; CHECK-NEXT:   xandesvbfhcvt                    - 'XAndesVBFHCvt' (Andes Vector BFLOAT16 Conversion Extension).
 ; CHECK-NEXT:   xandesvdot                       - 'XAndesVDot' (Andes Vector Dot Product Extension).

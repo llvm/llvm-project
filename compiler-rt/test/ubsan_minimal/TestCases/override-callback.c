@@ -1,6 +1,6 @@
-// RUN: %clang -fsanitize=implicit-integer-sign-change                                        %s -o %t &&             %run %t 2>&1 | FileCheck %s
-// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=all              %s -o %t && not --crash %run %t 2>&1 | FileCheck %s
-// RUN: %clang -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=all -DOVERRIDE=1 %s -o %t && not --crash %run %t 2>&1 | FileCheck %s --check-prefixes=FATAL
+// RUN: %clang_min_runtime -fsanitize=implicit-integer-sign-change                                        %s -o %t &&             %run %t 2>&1 | FileCheck %s
+// RUN: %clang_min_runtime -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=all              %s -o %t && not --crash %run %t 2>&1 | FileCheck %s
+// RUN: %clang_min_runtime -fsanitize=implicit-integer-sign-change -fno-sanitize-recover=all -DOVERRIDE=1 %s -o %t && not --crash %run %t 2>&1 | FileCheck %s --check-prefixes=FATAL
 
 #include <stdint.h>
 #include <stdio.h>

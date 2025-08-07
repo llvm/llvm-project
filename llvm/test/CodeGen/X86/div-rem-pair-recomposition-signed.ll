@@ -152,17 +152,17 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
 ; X86-NEXT:    subl $176, %esp
-; X86-NEXT:    movl 20(%ebp), %edx
-; X86-NEXT:    movl 24(%ebp), %ecx
+; X86-NEXT:    movl 32(%ebp), %edx
+; X86-NEXT:    movl 36(%ebp), %ecx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    sarl $31, %eax
 ; X86-NEXT:    xorl %eax, %ecx
 ; X86-NEXT:    movl %ecx, %edi
 ; X86-NEXT:    xorl %eax, %edx
 ; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    movl 16(%ebp), %edx
+; X86-NEXT:    movl 28(%ebp), %edx
 ; X86-NEXT:    xorl %eax, %edx
-; X86-NEXT:    movl 12(%ebp), %ecx
+; X86-NEXT:    movl 24(%ebp), %ecx
 ; X86-NEXT:    xorl %eax, %ecx
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -172,16 +172,15 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    sbbl %eax, %edi
 ; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 40(%ebp), %ecx
-; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    movl 52(%ebp), %esi
+; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    sarl $31, %edx
-; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    xorl %edx, %esi
-; X86-NEXT:    movl 36(%ebp), %ecx
+; X86-NEXT:    movl 48(%ebp), %ecx
 ; X86-NEXT:    xorl %edx, %ecx
-; X86-NEXT:    movl 32(%ebp), %ebx
+; X86-NEXT:    movl 44(%ebp), %ebx
 ; X86-NEXT:    xorl %edx, %ebx
-; X86-NEXT:    movl 28(%ebp), %edi
+; X86-NEXT:    movl 40(%ebp), %edi
 ; X86-NEXT:    xorl %edx, %edi
 ; X86-NEXT:    subl %edx, %edi
 ; X86-NEXT:    sbbl %edx, %ebx
@@ -204,45 +203,45 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    orb %cl, %al
 ; X86-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    bsrl %eax, %edx
+; X86-NEXT:    bsrl %esi, %edx
 ; X86-NEXT:    xorl $31, %edx
-; X86-NEXT:    addl $32, %edx
-; X86-NEXT:    bsrl %esi, %ecx
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    bsrl %eax, %ecx
 ; X86-NEXT:    xorl $31, %ecx
+; X86-NEXT:    orl $32, %ecx
 ; X86-NEXT:    testl %esi, %esi
-; X86-NEXT:    cmovel %edx, %ecx
+; X86-NEXT:    cmovnel %edx, %ecx
 ; X86-NEXT:    bsrl %ebx, %edx
 ; X86-NEXT:    xorl $31, %edx
 ; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    bsrl %edi, %edi
 ; X86-NEXT:    xorl $31, %edi
-; X86-NEXT:    addl $32, %edi
+; X86-NEXT:    orl $32, %edi
 ; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    testl %ebx, %ebx
 ; X86-NEXT:    cmovnel %edx, %edi
-; X86-NEXT:    addl $64, %edi
+; X86-NEXT:    orl $64, %edi
 ; X86-NEXT:    movl %eax, %edx
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    orl %esi, %edx
 ; X86-NEXT:    cmovnel %ecx, %edi
-; X86-NEXT:    bsrl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
-; X86-NEXT:    xorl $31, %edx
-; X86-NEXT:    addl $32, %edx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    bsrl %eax, %ecx
+; X86-NEXT:    bsrl %eax, %edx
+; X86-NEXT:    xorl $31, %edx
+; X86-NEXT:    bsrl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    xorl $31, %ecx
+; X86-NEXT:    orl $32, %ecx
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    cmovel %edx, %ecx
+; X86-NEXT:    cmovnel %edx, %ecx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; X86-NEXT:    bsrl %ebx, %esi
 ; X86-NEXT:    xorl $31, %esi
 ; X86-NEXT:    bsrl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
 ; X86-NEXT:    xorl $31, %edx
-; X86-NEXT:    addl $32, %edx
+; X86-NEXT:    orl $32, %edx
 ; X86-NEXT:    testl %ebx, %ebx
 ; X86-NEXT:    cmovnel %esi, %edx
-; X86-NEXT:    addl $64, %edx
+; X86-NEXT:    orl $64, %edx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    orl %eax, %esi
 ; X86-NEXT:    cmovnel %ecx, %edx
@@ -380,9 +379,9 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    adcl $-1, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    adcl $-1, %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NEXT:    adcl $-1, %ecx
+; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-NEXT:    adcl $-1, %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -488,13 +487,13 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    sbbl %ecx, %ebx
 ; X86-NEXT:    sbbl %ecx, %esi
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 44(%ebp), %ecx
+; X86-NEXT:    movl 56(%ebp), %ecx
 ; X86-NEXT:    movl %edx, (%ecx)
 ; X86-NEXT:    movl %eax, 4(%ecx)
 ; X86-NEXT:    movl %ebx, 8(%ecx)
 ; X86-NEXT:    movl %esi, 12(%ecx)
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl 28(%ebp), %ecx
+; X86-NEXT:    movl 40(%ebp), %ecx
 ; X86-NEXT:    movl %ebx, %edi
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -508,7 +507,7 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    adcl $0, %ebx
 ; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    movl 32(%ebp), %esi
+; X86-NEXT:    movl 44(%ebp), %esi
 ; X86-NEXT:    mull %esi
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
@@ -523,17 +522,17 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    adcl %eax, %edx
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; X86-NEXT:    movl 28(%ebp), %eax
+; X86-NEXT:    movl 40(%ebp), %eax
 ; X86-NEXT:    imull %eax, %ebx
 ; X86-NEXT:    mull %edi
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    imull %esi, %edi
 ; X86-NEXT:    addl %edx, %edi
 ; X86-NEXT:    addl %ebx, %edi
-; X86-NEXT:    movl 36(%ebp), %eax
+; X86-NEXT:    movl 48(%ebp), %eax
 ; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    imull {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
-; X86-NEXT:    movl 40(%ebp), %ebx
+; X86-NEXT:    movl 52(%ebp), %ebx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
 ; X86-NEXT:    imull %edx, %ebx
 ; X86-NEXT:    mull %edx
@@ -543,13 +542,13 @@ define i128 @scalar_i128(i128 %x, i128 %y, ptr %divdst) nounwind {
 ; X86-NEXT:    adcl %edi, %ebx
 ; X86-NEXT:    addl %ecx, %eax
 ; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Folded Reload
-; X86-NEXT:    movl 12(%ebp), %edx
+; X86-NEXT:    movl 24(%ebp), %edx
 ; X86-NEXT:    subl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
-; X86-NEXT:    movl 16(%ebp), %ecx
+; X86-NEXT:    movl 28(%ebp), %ecx
 ; X86-NEXT:    sbbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; X86-NEXT:    movl 20(%ebp), %edi
+; X86-NEXT:    movl 32(%ebp), %edi
 ; X86-NEXT:    sbbl %eax, %edi
-; X86-NEXT:    movl 24(%ebp), %esi
+; X86-NEXT:    movl 36(%ebp), %esi
 ; X86-NEXT:    sbbl %ebx, %esi
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl %edx, (%eax)

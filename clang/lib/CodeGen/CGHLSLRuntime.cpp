@@ -273,10 +273,14 @@ void CGHLSLRuntime::addBuffer(const HLSLBufferDecl *BufDecl) {
   emitBufferGlobalsAndMetadata(BufDecl, BufGV);
 
   // Initialize cbuffer from binding (implicit or explicit)
-  HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
-  assert(RBA &&
-         "cbuffer/tbuffer should always have resource binding attribute");
-  initializeBufferFromBinding(BufDecl, BufGV, RBA);
+  if (HLSLVkBindingAttr *VkBinding = BufDecl->getAttr<HLSLVkBindingAttr>()) {
+    initializeBufferFromBinding(BufDecl, BufGV, VkBinding);
+  } else {
+    HLSLResourceBindingAttr *RBA = BufDecl->getAttr<HLSLResourceBindingAttr>();
+    assert(RBA &&
+           "cbuffer/tbuffer should always have resource binding attribute");
+    initializeBufferFromBinding(BufDecl, BufGV, RBA);
+  }
 }
 
 llvm::TargetExtType *
@@ -393,17 +397,27 @@ llvm::Value *CGHLSLRuntime::emitInputSemantic(IRBuilder<> &B,
     return B.CreateCall(FunctionCallee(GroupIndex));
   }
   if (D.hasAttr<HLSLSV_DispatchThreadIDAttr>()) {
+    llvm::Intrinsic::ID IntrinID = getThreadIdIntrinsic();
     llvm::Function *ThreadIDIntrinsic =
-        CGM.getIntrinsic(getThreadIdIntrinsic());
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, ThreadIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_GroupThreadIDAttr>()) {
+    llvm::Intrinsic::ID IntrinID = getGroupThreadIdIntrinsic();
     llvm::Function *GroupThreadIDIntrinsic =
-        CGM.getIntrinsic(getGroupThreadIdIntrinsic());
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupThreadIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_GroupIDAttr>()) {
-    llvm::Function *GroupIDIntrinsic = CGM.getIntrinsic(getGroupIdIntrinsic());
+    llvm::Intrinsic::ID IntrinID = getGroupIdIntrinsic();
+    llvm::Function *GroupIDIntrinsic =
+        llvm::Intrinsic::isOverloaded(IntrinID)
+            ? CGM.getIntrinsic(IntrinID, {CGM.Int32Ty})
+            : CGM.getIntrinsic(IntrinID);
     return buildVectorInput(B, GroupIDIntrinsic, Ty);
   }
   if (D.hasAttr<HLSLSV_PositionAttr>()) {
@@ -581,6 +595,31 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
   Builder.CreateRetVoid();
 
   CGM.AddCXXGlobalInit(InitResFunc);
+}
+
+static Value *buildNameForResource(llvm::StringRef BaseName,
+                                   CodeGenModule &CGM) {
+  std::string Str(BaseName);
+  std::string GlobalName(Str + ".str");
+  return CGM.GetAddrOfConstantCString(Str, GlobalName.c_str()).getPointer();
+}
+
+void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
+                                                llvm::GlobalVariable *GV,
+                                                HLSLVkBindingAttr *VkBinding) {
+  assert(VkBinding && "expect a nonnull binding attribute");
+  llvm::Type *Int1Ty = llvm::Type::getInt1Ty(CGM.getLLVMContext());
+  auto *NonUniform = llvm::ConstantInt::get(Int1Ty, false);
+  auto *Index = llvm::ConstantInt::get(CGM.IntTy, 0);
+  auto *RangeSize = llvm::ConstantInt::get(CGM.IntTy, 1);
+  auto *Set = llvm::ConstantInt::get(CGM.IntTy, VkBinding->getSet());
+  auto *Binding = llvm::ConstantInt::get(CGM.IntTy, VkBinding->getBinding());
+  Value *Name = buildNameForResource(BufDecl->getName(), CGM);
+  llvm::Intrinsic::ID IntrinsicID =
+      CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic();
+
+  SmallVector<Value *> Args{Set, Binding, RangeSize, Index, NonUniform, Name};
+  initializeBuffer(CGM, GV, IntrinsicID, Args);
 }
 
 void CGHLSLRuntime::initializeBufferFromBinding(const HLSLBufferDecl *BufDecl,
