@@ -512,7 +512,6 @@ public:
       return allocaInst;
     }
   };
-
   /// Initialize the internal state, this will put structures types and
   /// potentially other helpers into the underlying module. Must be called
   /// before any other method and only once! This internal state includes types
@@ -782,8 +781,8 @@ public:
   ///                  at the outermost loop of a loop nest. If not set,
   ///                  defaults to the preheader of the generated loop.
   /// \param Name      Base name used to derive BB and instruction names.
-  /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
-  /// `ScanInfoInitialize`.
+  /// \param ScanRedInfo Pointer to the ScanInfo objected created using
+  ///                  `ScanInfoInitialize`.
   ///
   /// \returns A vector containing Loop Info of Input Loop and Scan Loop.
   Expected<SmallVector<llvm::CanonicalLoopInfo *>> createCanonicalScanLoops(
@@ -861,7 +860,7 @@ public:
   /// \param Name      Base name used to derive BB and instruction names.
   /// \param InScan    Whether loop has a scan reduction specified.
   /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
-  /// `ScanInfoInitialize`.
+  ///                  `ScanInfoInitialize`.
   ///
   /// \returns An object representing the created control flow structure which
   ///          can be used for loop-associated directives.
@@ -1604,9 +1603,9 @@ private:
   /// Helper function for CreateCanonicalScanLoops to create InputLoop
   /// in the firstGen and Scan Loop in the SecondGen
   /// \param InputLoopGen Callback for generating the loop for input phase
-  /// \param ScanLoopGen Callback for generating the loop for scan phase
+  /// \param ScanLoopGen  Callback for generating the loop for scan phase
   /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
-  /// `ScanInfoInitialize`.
+  ///                     `ScanInfoInitialize`.
   ///
   /// \return error if any produced, else return success.
   Error emitScanBasedDirectiveIR(
@@ -1615,15 +1614,16 @@ private:
       ScanInfo *ScanRedInfo);
 
   /// Creates the basic blocks required for scan reduction.
-  /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
-  /// `ScanInfoInitialize`.
+  /// \param ScanRedInfo Pointer to the ScanInfo objected created using
+  ///                    `ScanInfoInitialize`.
   void createScanBBs(ScanInfo *ScanRedInfo);
 
   /// Dynamically allocates the buffer needed for scan reduction.
-  /// \param AllocaIP The IP where possibly-shared pointer of buffer needs to be
-  /// declared. \param ScanVars Scan Variables.
-  /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
-  /// `ScanInfoInitialize`.
+  /// \param AllocaIP    The IP where possibly-shared pointer of buffer needs to
+  ///                    be declared.
+  /// \param ScanVars    Scan Variables.
+  /// \param ScanRedInfo Pointer to the ScanInfo objected created using
+  ///                    `ScanInfoInitialize`.
   ///
   /// \return error if any produced, else return success.
   Error emitScanBasedDirectiveDeclsIR(InsertPointTy AllocaIP,
@@ -1633,8 +1633,8 @@ private:
 
   /// Copies the result back to the reduction variable.
   /// \param ReductionInfos Array type containing the ReductionOps.
-  /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
-  /// `ScanInfoInitialize`.
+  /// \param ScanRedInfo    Pointer to the ScanInfo objected created using
+  ///                       `ScanInfoInitialize`.
   ///
   /// \return error if any produced, else return success.
   Error emitScanBasedDirectiveFinalsIR(
@@ -2268,6 +2268,8 @@ public:
   /// Collection of owned canonical loop objects that eventually need to be
   /// free'd.
   std::forward_list<CanonicalLoopInfo> LoopInfos;
+
+  /// Collection of owned ScanInfo objects that eventually need to be free'd.
   std::forward_list<ScanInfo> ScanInfos;
 
   /// Add a new region that will be outlined later.
@@ -2730,16 +2732,17 @@ public:
   /// and scan loop returned by `CreateCanonicalScanLoops`. The following
   /// is the code that is generated, `buffer` and `span` are expected to be
   /// populated before executing the generated code.
-  ///
-  ///  for (int k = 0; k != ceil(log2(span)); ++k) {
-  ///    i=pow(2,k)
-  ///    for (size cnt = last_iter; cnt >= i; --cnt)
-  ///      buffer[cnt] op= buffer[cnt-i];
-  ///  }
+  /// \code{c}
+  /// for (int k = 0; k != ceil(log2(span)); ++k) {
+  ///   i=pow(2,k)
+  ///   for (size cnt = last_iter; cnt >= i; --cnt)
+  ///     buffer[cnt] op= buffer[cnt-i];
+  /// }
+  /// \endcode
   /// \param Loc The insert and source location description.
   /// \param ReductionInfos Array type containing the ReductionOps.
-  /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
-  /// `ScanInfoInitialize`.
+  /// \param ScanRedInfo    Pointer to the ScanInfo objected created using
+  ///                       `ScanInfoInitialize`.
   ///
   /// \returns The insertion position *after* the masked.
   InsertPointOrErrorTy emitScanReduction(
@@ -2752,12 +2755,12 @@ public:
   ///  is executed, 2. whether exclusive or inclusive scan is used.
   ///
   /// \param Loc The insert and source location description.
-  /// \param AllocaIP The IP where the temporary buffer for scan reduction
-  //                  needs to be allocated.
-  /// \param ScanVars Scan Variables.
+  /// \param AllocaIP    The IP where the temporary buffer for scan reduction
+  //                     needs to be allocated.
+  /// \param ScanVars    Scan Variables.
   /// \param IsInclusive Whether it is an inclusive or exclusive scan.
-  /// \param ScanRedInfo  Pointer to the ScanInfo objected created using
-  /// `ScanInfoInitialize`.
+  /// \param ScanRedInfo Pointer to the ScanInfo objected created using
+  ///                    `ScanInfoInitialize`.
   ///
   /// \returns The insertion position *after* the scan.
   InsertPointOrErrorTy createScan(const LocationDescription &Loc,
@@ -2765,6 +2768,7 @@ public:
                                   ArrayRef<llvm::Value *> ScanVars,
                                   ArrayRef<llvm::Type *> ScanVarsType,
                                   bool IsInclusive, ScanInfo *ScanRedInfo);
+
   /// Generator for '#omp critical'
   ///
   /// \param Loc The insert and source location description.

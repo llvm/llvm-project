@@ -1,4 +1,3 @@
-
 //===- OpenMPIRBuilder.cpp - Builder for LLVM-IR for OpenMP directives ----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -60,8 +59,6 @@
 #include "llvm/Transforms/Utils/LoopPeel.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 
-#include <cassert>
-#include <cstddef>
 #include <cstdint>
 #include <optional>
 
@@ -4024,10 +4021,10 @@ OpenMPIRBuilder::createMasked(const LocationDescription &Loc,
                               /*Conditional*/ true, /*hasFinalize*/ true);
 }
 
-llvm::CallInst *emitNoUnwindRuntimeCall(IRBuilder<> &Builder,
-                                        llvm::FunctionCallee Callee,
-                                        ArrayRef<llvm::Value *> Args,
-                                        const llvm::Twine &Name) {
+static llvm::CallInst *emitNoUnwindRuntimeCall(IRBuilder<> &Builder,
+                                               llvm::FunctionCallee Callee,
+                                               ArrayRef<llvm::Value *> Args,
+                                               const llvm::Twine &Name) {
   llvm::CallInst *Call = Builder.CreateCall(
       Callee, Args, SmallVector<llvm::OperandBundleDef, 1>(), Name);
   Call->setDoesNotThrow();
