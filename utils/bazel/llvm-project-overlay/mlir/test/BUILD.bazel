@@ -382,6 +382,7 @@ cc_library(
         "//mlir:BufferizationInterfaces",
         "//mlir:BytecodeOpInterface",
         "//mlir:CallOpInterfaces",
+        "//mlir:CommonFolders",
         "//mlir:ControlFlowInterfaces",
         "//mlir:CopyOpInterface",
         "//mlir:DLTIDialect",
