@@ -92,6 +92,7 @@ TEST_P(olLaunchHostFunctionKernelTest, SuccessBlocking) {
     ASSERT_EQ(Data[i], i);
   }
 
+  ASSERT_SUCCESS(olDestroyQueue(Queue));
   ASSERT_SUCCESS(olMemFree(Mem));
 }
 
