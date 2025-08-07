@@ -91,6 +91,14 @@ LLVM_ABI bool isDereferenceableReadOnlyLoop(
     Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
     SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
+/// Return true if the loop \p L cannot fault on any iteration and only
+/// contains read-only memory accesses. Also collect loads that are not
+/// guaranteed to be dereferenceable.
+LLVM_ABI bool isReadOnlyLoopWithSafeOrSpeculativeLoads(
+    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+    SmallVectorImpl<LoadInst *> *SpeculativeLoads,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
+
 /// Return true if we know that executing a load from this value cannot trap.
 ///
 /// If DT and ScanFrom are specified this method performs context-sensitive

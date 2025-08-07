@@ -10041,6 +10041,13 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
+  if (!LVL.getSpeculativeLoads().empty()) {
+    reportVectorizationFailure("Auto-vectorization of loops with speculative "
+                               "load is not supported",
+                               "SpeculativeLoadsNotSupported", ORE, L);
+    return false;
+  }
+
   // Entrance to the VPlan-native vectorization path. Outer loops are processed
   // here. They may require CFG and instruction level transformations before
   // even evaluating whether vectorization is profitable. Since we cannot modify

@@ -110,6 +110,9 @@ public:
   bool supportsScalableVectors() const override {
     return ST->hasVInstructions();
   }
+  bool supportsSpeculativeLoads() const override {
+    return ST->hasVInstructions();
+  }
   bool enableOrderedReductions() const override { return true; }
   bool enableScalableVectorization() const override {
     return ST->hasVInstructions();

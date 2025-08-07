@@ -870,3 +870,19 @@ bool llvm::isDereferenceableReadOnlyLoop(
   }
   return true;
 }
+
+bool llvm::isReadOnlyLoopWithSafeOrSpeculativeLoads(
+    Loop *L, ScalarEvolution *SE, DominatorTree *DT, AssumptionCache *AC,
+    SmallVectorImpl<LoadInst *> *SpeculativeLoads,
+    SmallVectorImpl<const SCEVPredicate *> *Predicates) {
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : *BB) {
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        if (!isDereferenceableAndAlignedInLoop(LI, L, *SE, *DT, AC, Predicates))
+          SpeculativeLoads->push_back(LI);
+      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
+        return false;
+    }
+  }
+  return true;
+}
