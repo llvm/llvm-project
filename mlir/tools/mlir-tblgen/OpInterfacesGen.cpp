@@ -96,9 +96,9 @@ protected:
   void emitConceptDecl(const Interface &interface);
   void emitModelDecl(const Interface &interface);
   void emitModelMethodsDef(const Interface &interface);
-  void emitTraitDecl(const Interface &interface, StringRef interfaceName,
-                     StringRef interfaceTraitsName);
+  void forwardDeclareInterface(const Interface &interface);
   void emitInterfaceDecl(const Interface &interface);
+  void emitInterfaceTraitDecl(const Interface &interface);
 
   /// The set of interface records to emit.
   std::vector<const Record *> defs;
@@ -445,9 +445,16 @@ void InterfaceGenerator::emitModelMethodsDef(const Interface &interface) {
     os << "} // namespace " << ns << "\n";
 }
 
-void InterfaceGenerator::emitTraitDecl(const Interface &interface,
-                                       StringRef interfaceName,
-                                       StringRef interfaceTraitsName) {
+void InterfaceGenerator::emitInterfaceTraitDecl(const Interface &interface) {
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
+  for (StringRef ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
+  os << "namespace detail {\n";
+
+  StringRef interfaceName = interface.getName();
+  auto interfaceTraitsName = (interfaceName + "InterfaceTraits").str();
   os << llvm::formatv("  template <typename {3}>\n"
                       "  struct {0}Trait : public ::mlir::{2}<{0},"
                       " detail::{1}>::Trait<{3}> {{\n",
@@ -494,6 +501,10 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
     os << tblgen::tgfmt(*extraTraitDecls, &traitMethodFmt) << "\n";
 
   os << "  };\n";
+  os << "}// namespace detail\n";
+
+  for (StringRef ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
 }
 
 static void emitInterfaceDeclMethods(const Interface &interface,
@@ -517,6 +528,27 @@ static void emitInterfaceDeclMethods(const Interface &interface,
     os << tblgen::tgfmt(extraDecls->rtrim(), &extraDeclsFmt) << "\n";
 }
 
+void InterfaceGenerator::forwardDeclareInterface(const Interface &interface) {
+  llvm::SmallVector<StringRef, 2> namespaces;
+  llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
+  for (StringRef ns : namespaces)
+    os << "namespace " << ns << " {\n";
+
+  // Emit a forward declaration of the interface class so that it becomes usable
+  // in the signature of its methods.
+  std::string comments = tblgen::emitSummaryAndDescComments(
+      "", interface.getDescription().value_or(""));
+  if (!comments.empty()) {
+    os << comments << "\n";
+  }
+
+  StringRef interfaceName = interface.getName();
+  os << "class " << interfaceName << ";\n";
+
+  for (StringRef ns : llvm::reverse(namespaces))
+    os << "} // namespace " << ns << "\n";
+}
+
 void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   llvm::SmallVector<StringRef, 2> namespaces;
   llvm::SplitString(interface.getCppNamespace(), namespaces, "::");
@@ -533,7 +565,6 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   if (!comments.empty()) {
     os << comments << "\n";
   }
-  os << "class " << interfaceName << ";\n";
 
   // Emit the traits struct containing the concept and model declarations.
   os << "namespace detail {\n"
@@ -603,10 +634,6 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
 
   os << "};\n";
 
-  os << "namespace detail {\n";
-  emitTraitDecl(interface, interfaceName, interfaceTraitsName);
-  os << "}// namespace detail\n";
-
   for (StringRef ns : llvm::reverse(namespaces))
     os << "} // namespace " << ns << "\n";
 }
@@ -620,9 +647,14 @@ bool InterfaceGenerator::emitInterfaceDecls() {
     return lhs->getID() < rhs->getID();
   });
   for (const Record *def : sortedDefs)
+    forwardDeclareInterface(Interface(def));
+  for (const Record *def : sortedDefs)
     emitInterfaceDecl(Interface(def));
   for (const Record *def : sortedDefs)
+    emitInterfaceTraitDecl(Interface(def));
+  for (const Record *def : sortedDefs)
     emitModelMethodsDef(Interface(def));
+
   return false;
 }
 
