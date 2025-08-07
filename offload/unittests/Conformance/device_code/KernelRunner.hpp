@@ -7,21 +7,19 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file contains common utilities for defining device kernel wrappers to
-/// math functions.
+/// This file contains the definition of the runKernelBody, a template helper
+/// that executes the per-thread logic of a math function's kernel wrapper.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef CONFORMANCE_DEVICE_CODE_COMMON_HPP
-#define CONFORMANCE_DEVICE_CODE_COMMON_HPP
+#ifndef CONFORMANCE_DEVICE_CODE_KERNELRUNNER_HPP
+#define CONFORMANCE_DEVICE_CODE_KERNELRUNNER_HPP
 
 #include <gpuintrin.h>
 #include <stddef.h>
 #include <stdint.h>
 
-namespace common {
-
-typedef _Float16 float16;
+namespace kernels {
 
 template <auto Func, typename OutType, typename... InTypes>
 void runKernelBody(size_t NumElements, OutType *Out, const InTypes *...Ins) {
@@ -32,6 +30,6 @@ void runKernelBody(size_t NumElements, OutType *Out, const InTypes *...Ins) {
     Out[Index] = Func(Ins[Index]...);
   }
 }
-} // namespace common
+} // namespace kernels
 
-#endif // CONFORMANCE_DEVICE_CODE_COMMON_HPP
+#endif // CONFORMANCE_DEVICE_CODE_KERNELRUNNER_HPP
