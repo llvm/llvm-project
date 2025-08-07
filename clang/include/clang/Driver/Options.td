@@ -1643,9 +1643,9 @@ def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>, Alias<
   HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
 // C 'defer' TS
-defm defer_ts
+defm experimental_defer_ts
     : BoolFOption<
-          "defer-ts", LangOpts<"DeferTS">, DefaultFalse,
+          "experimental-defer-ts", LangOpts<"DeferTS">, DefaultFalse,
           PosFlag<SetTrue, [], [ClangOption, CC1Option],
                   "Enable support for the C 'defer' Technical Specification">,
           NegFlag<SetFalse>>;

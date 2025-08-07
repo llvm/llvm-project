@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c23 -fdefer-ts -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -std=c23 -fexperimental-defer-ts -emit-llvm %s -o - | FileCheck %s
 
 void a();
 void b();
@@ -313,13 +313,82 @@ void defer_defer() {
   x(0);
 }
 
+// CHECK-LABEL: define {{.*}} i32 @vla(ptr {{.*}} %p, i32 {{.*}} %x)
+int vla(int* p, int x) {
+    // CHECK: entry:
+    // CHECK:   %retval = alloca i32, align 4
+    // CHECK:   %p.addr = alloca ptr, align 8
+    // CHECK:   %x.addr = alloca i32, align 4
+    // CHECK:   %cleanup.dest.slot = alloca i32, align 4
+    // CHECK:   %saved_stack = alloca ptr, align 8
+    // CHECK:   %__vla_expr0 = alloca i64, align 8
+    // CHECK:   %saved_stack2 = alloca ptr, align 8
+    // CHECK:   %__vla_expr1 = alloca i64, align 8
+    // CHECK:   store ptr %p, ptr %p.addr, align 8
+    // CHECK:   store i32 %x, ptr %x.addr, align 4
+    // CHECK:   %0 = load i32, ptr %x.addr, align 4
+    // CHECK:   %cmp = icmp slt i32 %0, 5
+    // CHECK:   br i1 %cmp, label %if.then, label %if.end
+    // CHECK: if.then:
+    // CHECK:   store i32 10, ptr %retval, align 4
+    // CHECK:   store i32 1, ptr %cleanup.dest.slot, align 4
+    // CHECK:   br label %cleanup
+    // CHECK: if.end:
+    // CHECK:   store i32 7, ptr %retval, align 4
+    // CHECK:   store i32 1, ptr %cleanup.dest.slot, align 4
+    // CHECK:   %1 = load i32, ptr %x.addr, align 4
+    // CHECK:   %2 = zext i32 %1 to i64
+    // CHECK:   %3 = call ptr @llvm.stacksave.p0()
+    // CHECK:   store ptr %3, ptr %saved_stack, align 8
+    // CHECK:   %vla = alloca i32, i64 %2, align 16
+    // CHECK:   store i64 %2, ptr %__vla_expr0, align 8
+    // CHECK:   %arrayidx = getelementptr inbounds i32, ptr %vla, i64 2
+    // CHECK:   store i32 4, ptr %arrayidx, align 8
+    // CHECK:   %arrayidx1 = getelementptr inbounds i32, ptr %vla, i64 2
+    // CHECK:   %4 = load i32, ptr %arrayidx1, align 8
+    // CHECK:   %5 = load ptr, ptr %p.addr, align 8
+    // CHECK:   store i32 %4, ptr %5, align 4
+    // CHECK:   %6 = load ptr, ptr %saved_stack, align 8
+    // CHECK:   call void @llvm.stackrestore.p0(ptr %6)
+    // CHECK:   br label %cleanup
+    // CHECK: cleanup:
+    // CHECK:   %7 = load i32, ptr %x.addr, align 4
+    // CHECK:   %8 = zext i32 %7 to i64
+    // CHECK:   %9 = call ptr @llvm.stacksave.p0()
+    // CHECK:   store ptr %9, ptr %saved_stack2, align 8
+    // CHECK:   %vla3 = alloca i32, i64 %8, align 16
+    // CHECK:   store i64 %8, ptr %__vla_expr1, align 8
+    // CHECK:   %arrayidx4 = getelementptr inbounds i32, ptr %vla3, i64 2
+    // CHECK:   store i32 3, ptr %arrayidx4, align 8
+    // CHECK:   %arrayidx5 = getelementptr inbounds i32, ptr %vla3, i64 2
+    // CHECK:   %10 = load i32, ptr %arrayidx5, align 8
+    // CHECK:   %11 = load ptr, ptr %p.addr, align 8
+    // CHECK:   store i32 %10, ptr %11, align 4
+    // CHECK:   %12 = load ptr, ptr %saved_stack2, align 8
+    // CHECK:   call void @llvm.stackrestore.p0(ptr %12)
+    // CHECK:   %13 = load i32, ptr %retval, align 4
+    // CHECK:   ret i32 %13
+	defer {
+		int a[x];
+		a[2] = 3;
+		*p = a[2];
+	}
+	if (x < 5) { return 10; }
+	defer {
+		int b[x];
+		b[2] = 4;
+		*p = b[2];
+	}
+	return 7;
+}
+
 // CHECK-LABEL: define {{.*}} i32 @main()
 int main() {
   // CHECK: entry:
   // CHECK:   %retval = alloca i32, align 4
   // CHECK:   store i32 0, ptr %retval, align 4
   // CHECK:   store i32 5, ptr %retval, align 4
-  // CHECK:   call void @x(i32 noundef 42)
+  // CHECK:   call void @x(i32 {{.*}} 42)
   // CHECK:   %0 = load i32, ptr %retval, align 4
   // CHECK:   ret i32 %0
   defer x(42);
