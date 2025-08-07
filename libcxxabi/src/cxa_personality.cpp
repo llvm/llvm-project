@@ -21,7 +21,6 @@
 #include "cxa_handlers.h"
 #include "private_typeinfo.h"
 #include "unwind.h"
-#include "libunwind.h"
 
 #if __has_include(<ptrauth.h>)
 #  include <ptrauth.h>
