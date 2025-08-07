@@ -1,18 +1,21 @@
 // RUN: %clang_cc1 -ffreestanding %s -O0 -triple=x86_64-apple-darwin -target-cpu skylake-avx512 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 long long test_mm512_reduce_max_epi64(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_max_epi64(
 // CHECK:    call i64 @llvm.vector.reduce.smax.v8i64(<8 x i64> %{{.*}})
   return _mm512_reduce_max_epi64(__W);
 }
+TEST_CONSTEXPR(_mm512_reduce_max_epi64((__m512i)(__v8di){-4, -3, -2, -1, 0, 1, 2, 3}) == 3);
 
 unsigned long long test_mm512_reduce_max_epu64(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_max_epu64(
 // CHECK:    call i64 @llvm.vector.reduce.umax.v8i64(<8 x i64> %{{.*}})
   return _mm512_reduce_max_epu64(__W);
 }
+TEST_CONSTEXPR(_mm512_reduce_max_epu64((__m512i)(__v8du){0, 1, 2, 3, 4, 5, 6, 7}) == 7);
 
 double test_mm512_reduce_max_pd(__m512d __W, double ExtraAddOp){
 // CHECK-LABEL: @test_mm512_reduce_max_pd(
@@ -27,12 +30,14 @@ long long test_mm512_reduce_min_epi64(__m512i __W){
 // CHECK:    call i64 @llvm.vector.reduce.smin.v8i64(<8 x i64> %{{.*}})
   return _mm512_reduce_min_epi64(__W);
 }
+TEST_CONSTEXPR(_mm512_reduce_min_epi64((__m512i)(__v8di){-4, -3, -2, -1, 0, 1, 2, 3}) == -4);
 
 unsigned long long test_mm512_reduce_min_epu64(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_min_epu64(
 // CHECK:    call i64 @llvm.vector.reduce.umin.v8i64(<8 x i64> %{{.*}})
   return _mm512_reduce_min_epu64(__W);
 }
+TEST_CONSTEXPR(_mm512_reduce_min_epu64((__m512i)(__v8du){0, 1, 2, 3, 4, 5, 6, 7}) == 0);
 
 double test_mm512_reduce_min_pd(__m512d __W, double ExtraMulOp){
 // CHECK-LABEL: @test_mm512_reduce_min_pd(
@@ -89,12 +94,14 @@ int test_mm512_reduce_max_epi32(__m512i __W){
 // CHECK:    call i32 @llvm.vector.reduce.smax.v16i32(<16 x i32> %{{.*}})
   return _mm512_reduce_max_epi32(__W);
 }
+TEST_CONSTEXPR(_mm512_reduce_max_epi32((__m512i)(__v16si){-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7}) == 7);
 
 unsigned int test_mm512_reduce_max_epu32(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_max_epu32(
 // CHECK:    call i32 @llvm.vector.reduce.umax.v16i32(<16 x i32> %{{.*}})
   return _mm512_reduce_max_epu32(__W);
 }
+TEST_CONSTEXPR(_mm512_reduce_max_epu32((__m512i)(__v16su){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}) == 15);
 
 float test_mm512_reduce_max_ps(__m512 __W){
 // CHECK-LABEL: @test_mm512_reduce_max_ps(
@@ -107,12 +114,14 @@ int test_mm512_reduce_min_epi32(__m512i __W){
 // CHECK:    call i32 @llvm.vector.reduce.smin.v16i32(<16 x i32> %{{.*}})
   return _mm512_reduce_min_epi32(__W);
 }
+TEST_CONSTEXPR(_mm512_reduce_min_epi32((__m512i)(__v16si){-8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7}) == -8);
 
 unsigned int test_mm512_reduce_min_epu32(__m512i __W){
 // CHECK-LABEL: @test_mm512_reduce_min_epu32(
 // CHECK:    call i32 @llvm.vector.reduce.umin.v16i32(<16 x i32> %{{.*}})
   return _mm512_reduce_min_epu32(__W);
 }
+TEST_CONSTEXPR(_mm512_reduce_min_epu32((__m512i)(__v16su){0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15}) == 0);
 
 float test_mm512_reduce_min_ps(__m512 __W){
 // CHECK-LABEL: @test_mm512_reduce_min_ps(
