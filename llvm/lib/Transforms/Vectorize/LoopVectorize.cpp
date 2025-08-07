@@ -690,9 +690,12 @@ public:
       const TargetTransformInfo *TTI, AssumptionCache *AC,
       OptimizationRemarkEmitter *ORE, EpilogueLoopVectorizationInfo &EPI,
       LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
-      ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan)
+      ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan,
+      bool ForMainLoop)
       : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                            EPI.MainLoopVF, EPI.MainLoopVF, EPI.MainLoopUF, CM,
+                            ForMainLoop ? EPI.MainLoopVF : EPI.EpilogueVF,
+                            ForMainLoop ? EPI.MainLoopVF : EPI.EpilogueVF,
+                            ForMainLoop ? EPI.MainLoopUF : EPI.EpilogueUF, CM,
                             BFI, PSI, Checks, Plan),
         EPI(EPI) {}
 
@@ -729,7 +732,8 @@ public:
       LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI, GeneratedRTChecks &Check, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, CM, BFI, PSI, Check, Plan) {}
+                                       EPI, CM, BFI, PSI, Check, Plan,
+                                       /*ForMainLoop=*/true) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *main loop* strategy (ie the first pass of vplan execution).
   BasicBlock *createEpilogueVectorizedLoopSkeleton() final;
@@ -756,7 +760,8 @@ public:
       LoopVectorizationCostModel *CM, BlockFrequencyInfo *BFI,
       ProfileSummaryInfo *PSI, GeneratedRTChecks &Checks, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE,
-                                       EPI, CM, BFI, PSI, Checks, Plan) {
+                                       EPI, CM, BFI, PSI, Checks, Plan,
+                                       /*ForMainLoop=*/false) {
     TripCount = EPI.TripCount;
   }
   /// Implements the interface for creating a vectorized skeleton using the
@@ -7690,9 +7695,7 @@ EpilogueVectorizerEpilogueLoop::emitMinimumVectorEpilogueIterCountCheck(
   BranchInst &BI =
       *BranchInst::Create(Bypass, LoopVectorPreHeader, CheckMinIters);
   if (hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())) {
-    // FIXME: See test Transforms/LoopVectorize/branch-weights.ll. I don't
-    // think the MainLoopStep is correct.
-    unsigned MainLoopStep = UF * VF.getKnownMinValue();
+    unsigned MainLoopStep = EPI.MainLoopUF * EPI.MainLoopVF.getKnownMinValue();
     unsigned EpilogueLoopStep =
         EPI.EpilogueUF * EPI.EpilogueVF.getKnownMinValue();
     // We assume the remaining `Count` is equally distributed in
@@ -10339,8 +10342,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
         // Second pass vectorizes the epilogue and adjusts the control flow
         // edges from the first pass.
-        EPI.MainLoopVF = EPI.EpilogueVF;
-        EPI.MainLoopUF = EPI.EpilogueUF;
         EpilogueVectorizerEpilogueLoop EpilogILV(L, PSE, LI, DT, TLI, TTI, AC,
                                                  ORE, EPI, &CM, BFI, PSI,
                                                  Checks, BestEpiPlan);
