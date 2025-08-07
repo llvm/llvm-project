@@ -10877,6 +10877,13 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   }
 }
 
+// Return whether the operation has NoUnsignedWrap property.
+static bool isNoUnsignedWrap(SDValue Addr) {
+  return (Addr.getOpcode() == ISD::ADD &&
+          Addr->getFlags().hasNoUnsignedWrap()) ||
+         Addr->getOpcode() == ISD::OR;
+}
+
 bool SITargetLowering::shouldPreservePtrArith(const Function &F,
                                               EVT PtrVT) const {
   return UseSelectionDAGPTRADD && PtrVT == MVT::i64;
@@ -10898,8 +10905,14 @@ SITargetLowering::splitBufferOffsets(SDValue Offset, SelectionDAG &DAG) const {
   if ((C1 = dyn_cast<ConstantSDNode>(N0)))
     N0 = SDValue();
   else if (DAG.isBaseWithConstantOffset(N0)) {
-    C1 = cast<ConstantSDNode>(N0.getOperand(1));
-    N0 = N0.getOperand(0);
+    // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
+    // being added, so we can only safely match a 32-bit addition with no
+    // unsigned overflow.
+    bool CheckNUW = AMDGPU::isGFX1250(*Subtarget);
+    if (!CheckNUW || isNoUnsignedWrap(N0)) {
+      C1 = cast<ConstantSDNode>(N0.getOperand(1));
+      N0 = N0.getOperand(0);
+    }
   }
 
   if (C1) {
