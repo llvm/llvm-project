@@ -26,15 +26,15 @@ func.func @add(%A : tensor<16x8xf32>, %B: tensor<16x8xf32>, %C : tensor<16x8xf32
 
 // ----
 
-// CHECK: @sub(%[[A:.+]]: memref<16x8xf32>, %[[B:.+]]: memref<16x8xf32>, %[[C:.+]]: memref<16x8xf32>) {
-// CHECK:      linalg.elementwise
+// CHECK: @sub(%[[A:.+]]: tensor<16x8xf32>, %[[B:.+]]: tensor<16x8xf32>, %[[C:.+]]: tensor<16x8xf32>) -> tensor<16x8xf32> {
+// CHECK: {{.*}} = linalg.elementwise
 // CHECK-SAME:       kind=#linalg.elementwise_kind<sub>
-// CHECK-SAME:       ins(%[[A]], %[[B]] : memref<16x8xf32>, memref<16x8xf32>)
-// CHECK-SAME:       outs(%[[C]] : memref<16x8xf32>)
+// CHECK-SAME:       ins(%[[A]], %[[B]] : tensor<16x8xf32>, tensor<16x8xf32>)
+// CHECK-SAME:       outs(%[[C]] : tensor<16x8xf32>)
 //
-func.func @sub(%A : memref<16x8xf32>, %B: memref<16x8xf32>, %C : memref<16x8xf32>) {
-  linalg.sub ins(%A, %B : memref<16x8xf32>, memref<16x8xf32>) outs(%C :  memref<16x8xf32>)
-  return
+func.func @sub(%A : tensor<16x8xf32>, %B: tensor<16x8xf32>, %C : tensor<16x8xf32>) -> tensor<16x8xf32> {
+  %sub = linalg.sub ins(%A, %B : tensor<16x8xf32>, tensor<16x8xf32>) outs(%C :  tensor<16x8xf32>) -> tensor<16x8xf32>
+  return %sub : tensor<16x8xf32>
 }
 
 // ----
