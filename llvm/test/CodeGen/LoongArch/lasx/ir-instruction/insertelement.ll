@@ -5,7 +5,9 @@ define void @insert_32xi8(ptr %src, ptr %dst, i8 %in) nounwind {
 ; CHECK-LABEL: insert_32xi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.b $vr0, $a2, 1
+; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
+; CHECK-NEXT:    xvextrins.b $xr0, $xr1, 17
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <32 x i8>, ptr %src
@@ -18,9 +20,9 @@ define void @insert_32xi8_upper(ptr %src, ptr %dst, i8 %in) nounwind {
 ; CHECK-LABEL: insert_32xi8_upper:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
-; CHECK-NEXT:    vinsgr2vr.b $vr1, $a2, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvreplgr2vr.b $xr1, $a2
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 48
+; CHECK-NEXT:    xvextrins.b $xr0, $xr1, 0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <32 x i8>, ptr %src
@@ -33,7 +35,9 @@ define void @insert_16xi16(ptr %src, ptr %dst, i16 %in) nounwind {
 ; CHECK-LABEL: insert_16xi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a2, 1
+; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 18
+; CHECK-NEXT:    xvextrins.h $xr0, $xr1, 17
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <16 x i16>, ptr %src
@@ -46,9 +50,9 @@ define void @insert_16xi16_upper(ptr %src, ptr %dst, i16 %in) nounwind {
 ; CHECK-LABEL: insert_16xi16_upper:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xvld $xr0, $a0, 0
-; CHECK-NEXT:    xvpermi.d $xr1, $xr0, 14
-; CHECK-NEXT:    vinsgr2vr.h $vr1, $a2, 0
-; CHECK-NEXT:    xvpermi.q $xr0, $xr1, 2
+; CHECK-NEXT:    xvreplgr2vr.h $xr1, $a2
+; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 48
+; CHECK-NEXT:    xvextrins.h $xr0, $xr1, 0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    ret
   %v = load volatile <16 x i16>, ptr %src
