@@ -63,17 +63,20 @@ bool VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
 
       VPRecipeBase *NewRecipe = nullptr;
-      if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
-        auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
+      if (auto *PhiR = dyn_cast<VPPhi>(&Ingredient)) {
+        auto *Phi = cast<PHINode>(PhiR->getUnderlyingValue());
         const auto *II = GetIntOrFpInductionDescriptor(Phi);
-        if (!II)
-          continue;
-
-        VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
-        VPValue *Step =
-            vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-        NewRecipe = new VPWidenIntOrFpInductionRecipe(
-            Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
+        if (!II) {
+          NewRecipe = new VPWidenPHIRecipe(Phi, nullptr, PhiR->getDebugLoc());
+          for (VPValue *Op : PhiR->operands())
+            NewRecipe->addOperand(Op);
+        } else {
+          VPValue *Start = Plan->getOrAddLiveIn(II->getStartValue());
+          VPValue *Step =
+              vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(
+              Phi, Start, Step, &Plan->getVF(), *II, Ingredient.getDebugLoc());
+        }
       } else {
         assert(isa<VPInstruction>(&Ingredient) &&
                "only VPInstructions expected here");
@@ -1161,6 +1164,12 @@ static void simplifyRecipe(VPRecipeBase &R, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  if (auto *Phi = dyn_cast<VPPhi>(Def)) {
+    if (Phi->getNumOperands() == 1)
+      Phi->replaceAllUsesWith(Phi->getOperand(0));
+    return;
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
@@ -1382,11 +1391,10 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
 
     // Currently only handle cases where the single user is a header-mask
     // comparison with the backedge-taken-count.
-    if (!match(
-            *WideIV->user_begin(),
-            m_Binary<Instruction::ICmp>(
-                m_Specific(WideIV),
-                m_Broadcast(m_Specific(Plan.getOrCreateBackedgeTakenCount())))))
+    if (!match(*WideIV->user_begin(),
+               m_ICmp(m_Specific(WideIV),
+                      m_Broadcast(
+                          m_Specific(Plan.getOrCreateBackedgeTakenCount())))))
       continue;
 
     // Update IV operands and comparison bound to use new narrower type.
@@ -1419,11 +1427,9 @@ static bool isConditionTrueViaVFAndUF(VPValue *Cond, VPlan &Plan,
     });
 
   auto *CanIV = Plan.getCanonicalIV();
-  if (!match(Cond, m_Binary<Instruction::ICmp>(
-                       m_Specific(CanIV->getBackedgeValue()),
-                       m_Specific(&Plan.getVectorTripCount()))) ||
-      cast<VPRecipeWithIRFlags>(Cond->getDefiningRecipe())->getPredicate() !=
-          CmpInst::ICMP_EQ)
+  if (!match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ,
+                                  m_Specific(CanIV->getBackedgeValue()),
+                                  m_Specific(&Plan.getVectorTripCount()))))
     return false;
 
   // The compare checks CanIV + VFxUF == vector trip count. The vector trip
@@ -1832,7 +1838,7 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         VPW->dropPoisonGeneratingFlags();
 
       if (OldResSizeInBits != NewResSizeInBits &&
-          !match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue()))) {
+          !match(&R, m_ICmp(m_VPValue(), m_VPValue()))) {
         // Extend result to original width.
         auto *Ext =
             new VPWidenCastRecipe(Instruction::ZExt, ResultVPV, OldResTy);
@@ -1841,9 +1847,8 @@ void VPlanTransforms::truncateToMinimalBitwidths(
         Ext->setOperand(0, ResultVPV);
         assert(OldResSizeInBits > NewResSizeInBits && "Nothing to shrink?");
       } else {
-        assert(
-            match(&R, m_Binary<Instruction::ICmp>(m_VPValue(), m_VPValue())) &&
-            "Only ICmps should not need extending the result.");
+        assert(match(&R, m_ICmp(m_VPValue(), m_VPValue())) &&
+               "Only ICmps should not need extending the result.");
       }
 
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
@@ -2180,6 +2185,21 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
          "User of VF that we can't transform to EVL.");
   Plan.getVF().replaceAllUsesWith(&EVL);
 
+  assert(all_of(Plan.getVFxUF().users(),
+                [&Plan](VPUser *U) {
+                  return match(U, m_c_Binary<Instruction::Add>(
+                                      m_Specific(Plan.getCanonicalIV()),
+                                      m_Specific(&Plan.getVFxUF()))) ||
+                         isa<VPWidenPointerInductionRecipe>(U);
+                }) &&
+         "Only users of VFxUF should be VPWidenPointerInductionRecipe and the "
+         "increment of the canonical induction.");
+  Plan.getVFxUF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
+    // Only replace uses in VPWidenPointerInductionRecipe; The increment of the
+    // canonical induction must not be updated.
+    return isa<VPWidenPointerInductionRecipe>(U);
+  });
+
   // Defer erasing recipes till the end so that we don't invalidate the
   // VPTypeAnalysis cache.
   SmallVector<VPRecipeBase *> ToErase;
@@ -2315,16 +2335,9 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// %NextAVL = sub IVSize nuw %AVL, %OpEVL
 /// ...
 ///
-bool VPlanTransforms::tryAddExplicitVectorLength(
+void VPlanTransforms::addExplicitVectorLength(
     VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  // The transform updates all users of inductions to work based on EVL, instead
-  // of the VF directly. At the moment, widened pointer inductions cannot be
-  // updated, so bail out if the plan contains any.
-  bool ContainsWidenPointerInductions =
-      any_of(Header->phis(), IsaPred<VPWidenPointerInductionRecipe>);
-  if (ContainsWidenPointerInductions)
-    return false;
 
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
   auto *CanIVTy = CanonicalIVPHI->getScalarType();
@@ -2379,7 +2392,6 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   CanonicalIVIncrement->setOperand(0, CanonicalIVPHI);
   // TODO: support unroll factor > 1.
   Plan.setUF(1);
-  return true;
 }
 
 void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
@@ -2803,13 +2815,12 @@ static void expandVPWidenPointerInduction(VPWidenPointerInductionRecipe *R,
   R->replaceAllUsesWith(PtrAdd);
 
   // Create the backedge value for the scalar pointer phi.
-  Builder.setInsertPoint(R->getParent(), R->getParent()->getFirstNonPhi());
+  VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
+  Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
   VF = Builder.createScalarZExtOrTrunc(VF, StepTy, TypeInfo.inferScalarType(VF),
                                        DL);
   VPValue *Inc = Builder.createNaryOp(Instruction::Mul, {Step, VF});
 
-  VPBasicBlock *ExitingBB = Plan->getVectorLoopRegion()->getExitingBasicBlock();
-  Builder.setInsertPoint(ExitingBB, ExitingBB->getTerminator()->getIterator());
   VPValue *InductionGEP =
       Builder.createPtrAdd(ScalarPtrPhi, Inc, DL, "ptr.ind");
   ScalarPtrPhi->addOperand(InductionGEP);

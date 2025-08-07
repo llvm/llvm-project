@@ -35,8 +35,8 @@ define float @s311(float %a_0, float %s311_sum) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[S311_SUM]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi float [ [[S311_SUM]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[RED_NEXT]] = fadd float [[A_0]], [[RED]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], 1200

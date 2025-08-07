@@ -146,7 +146,7 @@ define void @trip8_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture 
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[TMP9]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP15]], 1
@@ -208,7 +208,7 @@ define void @trip16_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP7]], 1
@@ -271,7 +271,7 @@ define void @trip32_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[TMP1]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP7]], 1
@@ -333,7 +333,7 @@ define void @trip24_i8(ptr noalias nocapture noundef %dst, ptr noalias nocapture
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[I_08]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP8]], 1

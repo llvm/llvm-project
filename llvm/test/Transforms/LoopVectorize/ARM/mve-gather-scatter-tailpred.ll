@@ -30,7 +30,7 @@ define void @test_stride1_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_023:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[I_023:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[I_023]], 1
 ; CHECK-NEXT:    [[ADD5:%.*]] = add nuw nsw i32 [[MUL]], 2
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i32 [[ADD5]]
@@ -218,7 +218,7 @@ define void @test_stride3_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_023:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[I_023:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[I_023]], 3
 ; CHECK-NEXT:    [[ADD5:%.*]] = add nuw nsw i32 [[MUL]], 2
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i32 [[ADD5]]
@@ -280,7 +280,7 @@ define void @test_stride4_4i32(ptr readonly %data, ptr noalias nocapture %dst, i
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[I_023:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[I_023:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i32 [[I_023]], 4
 ; CHECK-NEXT:    [[ADD5:%.*]] = add nuw nsw i32 [[MUL]], 2
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i32 [[ADD5]]

@@ -42,8 +42,8 @@ define i32 @add(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 2, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = add nsw i32 [[TMP10]], [[SUM_07]]
@@ -110,8 +110,8 @@ define i32 @or(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 2, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[OR:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[OR:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[OR]] = or i32 [[TMP10]], [[SUM_07]]
@@ -178,8 +178,8 @@ define i32 @and(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 2, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[AND:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[AND:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[AND]] = and i32 [[TMP10]], [[SUM_07]]
@@ -246,8 +246,8 @@ define i32 @xor(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 2, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[XOR]] = xor i32 [[TMP10]], [[SUM_07]]
@@ -315,8 +315,8 @@ define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 2, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_010:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_010:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[TMP11]], [[SUM_010]]
@@ -386,8 +386,8 @@ define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 2, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_010:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_010:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp ugt i32 [[TMP11]], [[SUM_010]]
@@ -456,8 +456,8 @@ define float @fadd_fast(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = fadd fast float [[TMP10]], [[SUM_07]]
@@ -522,8 +522,8 @@ define half @fadd_fast_half_zvfh(ptr noalias nocapture readonly %a, i64 %n) "tar
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi half [ 0xH0000, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ 0xH0000, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds half, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load half, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD]] = fadd fast half [[TMP10]], [[SUM_07]]
@@ -715,8 +715,8 @@ define float @fmin_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt float [[TMP11]], [[SUM_07]]
@@ -784,8 +784,8 @@ define half @fmin_fast_half_zvfhmin(ptr noalias nocapture readonly %a, i64 %n) #
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi half [ 0xH0000, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ 0xH0000, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds half, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load half, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt half [[TMP11]], [[SUM_07]]
@@ -853,8 +853,8 @@ define bfloat @fmin_fast_bfloat_zvfbfmin(ptr noalias nocapture readonly %a, i64 
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi bfloat [ 0xR0000, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi bfloat [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi bfloat [ 0xR0000, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds bfloat, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load bfloat, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp olt bfloat [[TMP11]], [[SUM_07]]
@@ -924,8 +924,8 @@ define float @fmax_fast(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast ogt float [[TMP11]], [[SUM_07]]
@@ -993,8 +993,8 @@ define half @fmax_fast_half_zvfhmin(ptr noalias nocapture readonly %a, i64 %n) #
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi half [ 0xH0000, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ 0xH0000, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds half, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load half, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast ogt half [[TMP11]], [[SUM_07]]
@@ -1062,8 +1062,8 @@ define bfloat @fmax_fast_bfloat_zvfbfmin(ptr noalias nocapture readonly %a, i64 
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi bfloat [ 0xR0000, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi bfloat [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi bfloat [ 0xR0000, %[[SCALAR_PH]] ], [ [[DOTSROA_SPECULATED:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds bfloat, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load bfloat, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP_I:%.*]] = fcmp fast ogt bfloat [[TMP11]], [[SUM_07]]
@@ -1274,8 +1274,8 @@ define float @fmuladd(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MULADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, %[[SCALAR_PH]] ], [ [[MULADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
@@ -1346,8 +1346,8 @@ define half @fmuladd_f16_zvfh(ptr %a, ptr %b, i64 %n) "target-features"="+zvfh" 
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi half [ 0xH0000, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MULADD:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_07:%.*]] = phi half [ 0xH0000, %[[SCALAR_PH]] ], [ [[MULADD:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds half, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = load half, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds half, ptr [[B]], i64 [[IV]]

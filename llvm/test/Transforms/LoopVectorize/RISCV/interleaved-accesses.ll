@@ -48,7 +48,7 @@ define void @load_store_factor2_i32(ptr %p) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
@@ -152,7 +152,7 @@ define void @load_store_factor2_i32(ptr %p) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
@@ -238,7 +238,7 @@ define void @load_store_factor2_i64(ptr %p) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -342,7 +342,7 @@ define void @load_store_factor2_i64(ptr %p) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -430,7 +430,7 @@ define void @load_store_factor3_i32(ptr %p) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
@@ -550,7 +550,7 @@ define void @load_store_factor3_i32(ptr %p) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
@@ -649,7 +649,7 @@ define void @load_store_factor3_i64(ptr %p) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -769,7 +769,7 @@ define void @load_store_factor3_i64(ptr %p) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 3
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -870,7 +870,7 @@ define void @load_store_factor4(ptr %p) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 4
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -1004,7 +1004,7 @@ define void @load_store_factor4(ptr %p) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 4
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -1116,7 +1116,7 @@ define void @load_store_factor5(ptr %p) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 5
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -1264,7 +1264,7 @@ define void @load_store_factor5(ptr %p) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 5
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -1389,7 +1389,7 @@ define void @load_store_factor6(ptr %p) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 6
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -1552,7 +1552,7 @@ define void @load_store_factor6(ptr %p) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 6
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -1690,7 +1690,7 @@ define void @load_store_factor7(ptr %p) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 7
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -1869,7 +1869,7 @@ define void @load_store_factor7(ptr %p) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = mul i64 [[I]], 7
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -2020,7 +2020,7 @@ define void @load_store_factor8(ptr %p) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 3
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -2212,7 +2212,7 @@ define void @load_store_factor8(ptr %p) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 3
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -2362,7 +2362,7 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
@@ -2460,7 +2460,7 @@ define void @combine_load_factor2_i32(ptr noalias %p, ptr noalias %q) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i32, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i32, ptr [[Q0]], align 4
@@ -2544,7 +2544,7 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; CHECK-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; CHECK-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8
@@ -2642,7 +2642,7 @@ define void @combine_load_factor2_i64(ptr noalias %p, ptr noalias %q) {
 ; SCALABLE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; SCALABLE-NEXT:    br label [[LOOP:%.*]]
 ; SCALABLE:       loop:
-; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
+; SCALABLE-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[NEXTI:%.*]], [[LOOP]] ]
 ; SCALABLE-NEXT:    [[OFFSET0:%.*]] = shl i64 [[I]], 1
 ; SCALABLE-NEXT:    [[Q0:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET0]]
 ; SCALABLE-NEXT:    [[X0:%.*]] = load i64, ptr [[Q0]], align 8

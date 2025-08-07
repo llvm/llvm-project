@@ -45,7 +45,7 @@ define void @vector_add(ptr noalias nocapture %a, i64 %v) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[ELEM]], [[V]]
@@ -109,8 +109,8 @@ define i64 @vector_add_reduce(ptr noalias nocapture %a) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[ELEM:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1

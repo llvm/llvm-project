@@ -49,8 +49,8 @@ define void @block_with_dead_inst_1(ptr %src, i64 %N) #0 {
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ 1, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[XOR]] = xor i16 0, 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
@@ -135,8 +135,8 @@ define void @block_with_dead_inst_2(ptr %src) #0 {
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[XOR]] = xor i16 0, 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
@@ -221,8 +221,8 @@ define void @multiple_blocks_with_dead_insts_3(ptr %src) #0 {
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[XOR]] = xor i16 0, 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
@@ -317,8 +317,8 @@ define void @multiple_blocks_with_dead_insts_4(ptr %src, i64 %N) #0 {
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ 1, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[XOR]] = xor i16 0, 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
@@ -415,8 +415,8 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_5(ptr %src) #0 {
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ 1, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[XOR]] = xor i16 0, 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
@@ -537,8 +537,8 @@ define void @multiple_blocks_with_dead_inst_multiple_successors_6(ptr %src, i1 %
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i16 [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[XOR1315:%.*]] = phi i16 [ 1, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[XOR]] = xor i16 0, 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
@@ -639,8 +639,8 @@ define void @empty_block_with_phi_1(ptr %src, i64 %N) #0 {
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[XOR1315:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[XOR1315:%.*]] = phi i32 [ 1, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[XOR]] = xor i32 0, 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
@@ -724,8 +724,8 @@ define void @empty_block_with_phi_2(ptr %src, i64 %N) #0 {
 ; CHECK-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 1, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[XOR1315:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[XOR1315:%.*]] = phi i32 [ 1, %[[SCALAR_PH]] ], [ [[XOR:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[XOR]] = xor i32 0, 0
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2

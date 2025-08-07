@@ -57,7 +57,7 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFBFMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; ZVFBFMIN-NEXT:    br label %[[LOOP:.*]]
 ; ZVFBFMIN:       [[LOOP]]:
-; ZVFBFMIN-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; ZVFBFMIN-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; ZVFBFMIN-NEXT:    [[A_GEP:%.*]] = getelementptr bfloat, ptr [[A]], i64 [[I]]
 ; ZVFBFMIN-NEXT:    [[B_GEP:%.*]] = getelementptr bfloat, ptr [[B]], i64 [[I]]
 ; ZVFBFMIN-NEXT:    [[X:%.*]] = load bfloat, ptr [[A_GEP]], align 2
@@ -175,7 +175,7 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; ZVFBFMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; ZVFBFMIN-NEXT:    br label %[[LOOP:.*]]
 ; ZVFBFMIN:       [[LOOP]]:
-; ZVFBFMIN-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; ZVFBFMIN-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; ZVFBFMIN-NEXT:    [[A_GEP:%.*]] = getelementptr bfloat, ptr [[A]], i64 [[I]]
 ; ZVFBFMIN-NEXT:    [[B_GEP:%.*]] = getelementptr bfloat, ptr [[B]], i64 [[I]]
 ; ZVFBFMIN-NEXT:    [[C_GEP:%.*]] = getelementptr float, ptr [[C]], i64 [[I]]

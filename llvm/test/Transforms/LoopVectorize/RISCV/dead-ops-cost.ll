@@ -57,7 +57,7 @@ define void @dead_load(ptr %p, i16 %start) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[START_EXT]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START_EXT]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[P]], i64 [[IV]]
 ; CHECK-NEXT:    store i16 0, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
@@ -363,7 +363,7 @@ define void @test_phi_in_latch_redundant(ptr %dst, i32 %a) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    br i1 false, label %[[LOOP_LATCH]], label %[[THEN:.*]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[NOT_A:%.*]] = xor i32 [[A]], -1
@@ -459,7 +459,7 @@ define void @gather_interleave_group_with_dead_insert_pos(i64 %N, ptr noalias %s
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[GEP_SRC_0:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_DEAD:%.*]] = load i8, ptr [[GEP_SRC_0]], align 1
 ; CHECK-NEXT:    [[IV_1:%.*]] = add i64 [[IV]], 1

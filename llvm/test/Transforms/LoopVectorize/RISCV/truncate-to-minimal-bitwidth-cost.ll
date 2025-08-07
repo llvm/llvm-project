@@ -43,7 +43,7 @@ define void @test_pr98413_zext_removed(ptr %src, ptr noalias %dst, i64 %x) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP_SRC]], align 8
 ; CHECK-NEXT:    [[EXT_L:%.*]] = zext i16 [[L]] to i64
@@ -116,7 +116,7 @@ define void @test_pr98413_sext_removed(ptr %src, ptr noalias %dst, i64 %x) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i16, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[GEP_SRC]], align 8
 ; CHECK-NEXT:    [[EXT_L:%.*]] = sext i16 [[L]] to i64
@@ -183,7 +183,7 @@ define void @truncate_to_i1_used_by_branch(i8 %x, ptr %dst) #0 {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[F_039:%.*]] = phi i8 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[F_039:%.*]] = phi i8 [ 0, %[[SCALAR_PH]] ], [ [[ADD:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = or i8 23, [[X]]
 ; CHECK-NEXT:    [[EXTRACT_T:%.*]] = trunc i8 [[TMP4]] to i1
 ; CHECK-NEXT:    br i1 [[EXTRACT_T]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
@@ -303,7 +303,7 @@ define void @icmp_only_first_op_truncated(ptr noalias %dst, i32 %x, i64 %N, i64 
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[T1:%.*]] = trunc i64 [[N]] to i32
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[T1]], [[T]]
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]

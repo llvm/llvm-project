@@ -30,7 +30,7 @@ target_link_libraries(bbc PRIVATE
   flangFrontend
   flangPasses
   FlangOpenMPTransforms
-  FortranCommon
+  FortranSupport
   FortranParser
   FortranEvaluate
   FortranSemantics

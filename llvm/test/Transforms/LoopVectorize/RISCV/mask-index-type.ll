@@ -60,7 +60,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; VLENUNK-NEXT:    br label [[FOR_BODY:%.*]]
 ; VLENUNK:       for.body:
-; VLENUNK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; VLENUNK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; VLENUNK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[IV]], 512
 ; VLENUNK-NEXT:    br i1 [[ICMP]], label [[DO_LOAD:%.*]], label [[LATCH]]
 ; VLENUNK:       do_load:

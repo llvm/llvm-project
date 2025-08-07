@@ -57,7 +57,7 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
 ; ZVFHMIN-NEXT:    br label %[[LOOP:.*]]
 ; ZVFHMIN:       [[LOOP]]:
-; ZVFHMIN-NEXT:    [[I:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
+; ZVFHMIN-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; ZVFHMIN-NEXT:    [[A_GEP:%.*]] = getelementptr half, ptr [[A]], i64 [[I]]
 ; ZVFHMIN-NEXT:    [[B_GEP:%.*]] = getelementptr half, ptr [[B]], i64 [[I]]
 ; ZVFHMIN-NEXT:    [[X:%.*]] = load half, ptr [[A_GEP]], align 2

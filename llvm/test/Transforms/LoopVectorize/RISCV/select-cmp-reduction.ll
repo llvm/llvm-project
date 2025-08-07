@@ -42,8 +42,8 @@ define i32 @select_icmp(i32 %x, i32 %y, ptr nocapture readonly %c, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[C]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i32 [[TMP12]], [[X]]
@@ -114,8 +114,8 @@ define i32 @select_fcmp(float %x, i32 %y, ptr nocapture readonly %c, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[A:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[COND:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp fast olt float [[TMP12]], [[X]]
@@ -184,8 +184,8 @@ define i32 @select_const_i32_from_icmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 3, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[TMP18:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[TMP17:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[TMP18:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ 3, %[[SCALAR_PH]] ], [ [[TMP17:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 3
@@ -254,8 +254,8 @@ define i32 @select_i32_from_icmp(ptr nocapture readonly %v, i32 %a, i32 %b, i64 
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[A]], %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[TMP18:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[TMP17:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[TMP18:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[A]], %[[SCALAR_PH]] ], [ [[TMP17:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[V]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[TMP15]], 3
@@ -324,8 +324,8 @@ define i32 @select_const_i32_from_fcmp(ptr nocapture readonly %v, i64 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 2, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[TMP18:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[TMP17:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[TMP18:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ 2, %[[SCALAR_PH]] ], [ [[TMP17:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[V]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = load float, ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = fcmp fast ueq float [[TMP15]], 3.000000e+00
@@ -441,8 +441,8 @@ define i32 @pred_select_const_i32_from_icmp(ptr noalias nocapture readonly %src1
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[I_013:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_INC:.*]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[R_012:%.*]] = phi i32 [ [[R_1:%.*]], %[[FOR_INC]] ], [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[I_013:%.*]] = phi i64 [ [[INC:%.*]], %[[FOR_INC:.*]] ], [ 0, %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[R_012:%.*]] = phi i32 [ [[R_1:%.*]], %[[FOR_INC]] ], [ 0, %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[SRC1]], i64 [[I_013]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP14]], 35

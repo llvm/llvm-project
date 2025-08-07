@@ -76,7 +76,7 @@ define void @load_store(ptr %p) {
 ; LMUL2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; LMUL2-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL2:       for.body:
-; LMUL2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; LMUL2-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; LMUL2-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV]]
 ; LMUL2-NEXT:    [[V:%.*]] = load i64, ptr [[Q]], align 8
 ; LMUL2-NEXT:    [[W:%.*]] = add i64 [[V]], 1
@@ -119,7 +119,7 @@ define void @load_store(ptr %p) {
 ; LMUL4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; LMUL4-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL4:       for.body:
-; LMUL4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; LMUL4-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; LMUL4-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV]]
 ; LMUL4-NEXT:    [[V:%.*]] = load i64, ptr [[Q]], align 8
 ; LMUL4-NEXT:    [[W:%.*]] = add i64 [[V]], 1
@@ -162,7 +162,7 @@ define void @load_store(ptr %p) {
 ; LMUL8-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ]
 ; LMUL8-NEXT:    br label [[FOR_BODY:%.*]]
 ; LMUL8:       for.body:
-; LMUL8-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; LMUL8-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; LMUL8-NEXT:    [[Q:%.*]] = getelementptr inbounds i64, ptr [[P]], i64 [[IV]]
 ; LMUL8-NEXT:    [[V:%.*]] = load i64, ptr [[Q]], align 8
 ; LMUL8-NEXT:    [[W:%.*]] = add i64 [[V]], 1
