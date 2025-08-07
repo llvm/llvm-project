@@ -2186,20 +2186,34 @@ protected:
     unsigned PackIndex : 15;
   };
 
-  class SubstTemplateTypeParmPackTypeBitfields {
-    friend class SubstTemplateTypeParmPackType;
+  class SubstPackTypeBitfields {
+    friend class SubstPackType;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
-
-    // The index of the template parameter this substitution represents.
-    unsigned Index : 16;
 
     /// The number of template arguments in \c Arguments, which is
     /// expected to be able to hold at least 1024 according to [implimits].
     /// However as this limit is somewhat easy to hit with template
     /// metaprogramming we'd prefer to keep it as large as possible.
     unsigned NumArgs : 16;
+  };
+  // FIXME: idiomatically, we want to have exact numbers, but that
+  //        ends up generating incorrect code (writes to
+  //        SubstTemplateTypeParmPackTypeBitfields.Index also update
+  //        bits in NumArgs).
+  // enum { NumSubstPackTypeBits = NumTypeBits + 16 };
+  static_assert(NumTypeBits + 16 <= 48);
+  enum { NumSubstPackTypeBits = 48 };
+
+  class SubstTemplateTypeParmPackTypeBitfields {
+    friend class SubstTemplateTypeParmPackType;
+
+    LLVM_PREFERRED_TYPE(SubstPackTypeBitfields)
+    unsigned : NumSubstPackTypeBits;
+
+    // The index of the template parameter this substitution represents.
+    unsigned Index : 16;
   };
 
   class TemplateSpecializationTypeBitfields {
@@ -2315,6 +2329,7 @@ protected:
     VectorTypeBitfields VectorTypeBits;
     TemplateTypeParmTypeBitfields TemplateTypeParmTypeBits;
     SubstTemplateTypeParmTypeBitfields SubstTemplateTypeParmTypeBits;
+    SubstPackTypeBitfields SubstPackTypeBits;
     SubstTemplateTypeParmPackTypeBitfields SubstTemplateTypeParmPackTypeBits;
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     DependentTemplateSpecializationTypeBitfields
@@ -6654,6 +6669,56 @@ public:
   }
 };
 
+/// Represents the result of substituting a set of types as a template argument
+/// that needs to be expanded later.
+///
+/// These types are always dependent and produced depending on the situations:
+/// - SubstTemplateTypeParmPack is an expansion that had to be delayed,
+/// - SubstBuiltinTemplatePackType is an expansion from a builtin.
+class SubstPackType : public Type, public llvm::FoldingSetNode {
+  friend class ASTContext;
+
+  /// A pointer to the set of template arguments that this
+  /// parameter pack is instantiated with.
+  const TemplateArgument *Arguments;
+
+protected:
+  SubstPackType(TypeClass Derived, QualType Canon,
+                const TemplateArgument &ArgPack);
+
+public:
+  unsigned getNumArgs() const { return SubstPackTypeBits.NumArgs; }
+
+  TemplateArgument getArgumentPack() const;
+
+  void Profile(llvm::FoldingSetNodeID &ID);
+  static void Profile(llvm::FoldingSetNodeID &ID,
+                      const TemplateArgument &ArgPack);
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == SubstTemplateTypeParmPack ||
+           T->getTypeClass() == SubstBuiltinTemplatePack;
+  }
+};
+
+/// Represents the result of substituting a builtin template as a pack.
+class SubstBuiltinTemplatePackType : public SubstPackType {
+  friend class ASTContext;
+
+  SubstBuiltinTemplatePackType(QualType Canon, const TemplateArgument &ArgPack);
+
+public:
+  bool isSugared() const { return false; }
+  QualType desugar() const { return QualType(this, 0); }
+
+  /// Mark that we reuse the Profile. We do not introduce new fields.
+  using SubstPackType::Profile;
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == SubstBuiltinTemplatePack;
+  }
+};
+
 /// Represents the result of substituting a set of types for a template
 /// type parameter pack.
 ///
@@ -6666,7 +6731,7 @@ public:
 /// that pack expansion (e.g., when all template parameters have corresponding
 /// arguments), this type will be replaced with the \c SubstTemplateTypeParmType
 /// at the current pack substitution index.
-class SubstTemplateTypeParmPackType : public Type, public llvm::FoldingSetNode {
+class SubstTemplateTypeParmPackType : public SubstPackType {
   friend class ASTContext;
 
   /// A pointer to the set of template arguments that this
@@ -6698,14 +6763,8 @@ public:
   // sugared: it doesn't need to be resugared later.
   bool getFinal() const;
 
-  unsigned getNumArgs() const {
-    return SubstTemplateTypeParmPackTypeBits.NumArgs;
-  }
-
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
-
-  TemplateArgument getArgumentPack() const;
 
   void Profile(llvm::FoldingSetNodeID &ID);
   static void Profile(llvm::FoldingSetNodeID &ID, const Decl *AssociatedDecl,
@@ -6936,9 +6995,7 @@ public:
             TemplateSpecializationTypeBits.NumArgs};
   }
 
-  bool isSugared() const {
-    return !isDependentType() || isCurrentInstantiation() || isTypeAlias();
-  }
+  bool isSugared() const;
 
   QualType desugar() const {
     return isTypeAlias() ? getAliasedType() : getCanonicalTypeInternal();
