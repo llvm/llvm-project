@@ -966,6 +966,37 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
+  case VPInstruction::BranchOnCount: {
+    Type *ValTy = Ctx.Types.inferScalarType(getOperand(0));
+
+    // If the vector loop only executed once (VF == original trip count), ignore
+    // the cost of cmp.
+    // TODO: We can remove this after hoist `unrollByUF` and
+    // `optimizeForVFandUF` which will optimize BranchOnCount out.
+    auto TC = dyn_cast_if_present<ConstantInt>(
+        getParent()->getPlan()->getTripCount()->getUnderlyingValue());
+    if (TC && VF.isFixed() && TC->getSExtValue() == VF.getFixedValue())
+      return 0;
+
+    // BranchOnCount will generate icmp_eq + br instructions and the
+    // cost of branch will be calculated in VPRegionBlock.
+    return Ctx.TTI.getCmpSelInstrCost(Instruction::ICmp, ValTy, nullptr,
+                                      CmpInst::ICMP_EQ, Ctx.CostKind);
+  }
+  case VPInstruction::BranchOnCond: {
+    // BranchOnCond is free since the branch cost is already
+    // calculated by VPBB.
+    if (vputils::onlyFirstLaneUsed(getOperand(0)))
+      return 0;
+
+    // Otherwise, BranchOnCond will generate `extractelement` to extract the
+    // condition from vector type.
+    return Ctx.TTI.getVectorInstrCost(
+        Instruction::ExtractElement,
+        cast<VectorType>(
+            toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF)),
+        Ctx.CostKind, 0, nullptr, nullptr);
+  }
   case VPInstruction::FirstActiveLane: {
     // Calculate the cost of determining the lane index.
     auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
