@@ -18,6 +18,7 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -772,6 +773,57 @@ bool RISCVDAGToDAGISel::trySignedBitfieldInsertInSign(SDNode *Node) {
   return false;
 }
 
+// (xor X, (and (xor X, C1), C2))
+// -> (qc.insbi X, (C1 >> ShAmt), Width, ShAmt)
+// where C2 is a shifted mask with width=Width and shift=ShAmt
+bool RISCVDAGToDAGISel::tryBitfieldInsertOpFromXor(SDNode *Node) {
+
+  if (!Subtarget->hasVendorXqcibm())
+    return false;
+
+  using namespace SDPatternMatch;
+
+  SDValue X;
+  APInt CImm, CMask;
+  if (!sd_match(
+          Node,
+          m_Xor(m_Value(X),
+                m_OneUse(m_And(m_OneUse(m_Xor(m_Deferred(X), m_ConstInt(CImm))),
+                               m_ConstInt(CMask))))))
+    return false;
+
+  unsigned Width, ShAmt;
+  if (!CMask.isShiftedMask(ShAmt, Width))
+    return false;
+
+  // Width must be in 1..32(inclusive).
+  if (Width > 32 || Width == 0)
+    return false;
+
+  if (!isUInt<5>(ShAmt))
+    return false;
+
+  int64_t Imm = CImm.getSExtValue();
+  Imm >>= ShAmt;
+  if (!isInt<32>(Imm))
+    return false;
+
+  SDLoc DL(Node);
+  auto Opc = RISCV::QC_INSB;
+  SDValue getImm = selectImm(CurDAG, DL, MVT::i32, Imm, *Subtarget);
+
+  if (isInt<5>(Imm)) {
+    Opc = RISCV::QC_INSBI;
+    getImm = CurDAG->getSignedTargetConstant(Imm, DL, MVT::i32);
+  }
+
+  SDValue Ops[] = {X, getImm, CurDAG->getTargetConstant(Width, DL, MVT::i32),
+                   CurDAG->getTargetConstant(ShAmt, DL, MVT::i32)};
+  ReplaceNode(Node, CurDAG->getMachineNode(Opc, DL, MVT::i32, Ops));
+
+  return true;
+}
+
 bool RISCVDAGToDAGISel::tryUnsignedBitfieldExtract(SDNode *Node,
                                                    const SDLoc &DL, MVT VT,
                                                    SDValue X, unsigned Msb,
@@ -1347,6 +1399,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   }
   case ISD::XOR:
     if (tryShrinkShlLogicImm(Node))
+      return;
+
+    if (tryBitfieldInsertOpFromXor(Node))
       return;
 
     break;
