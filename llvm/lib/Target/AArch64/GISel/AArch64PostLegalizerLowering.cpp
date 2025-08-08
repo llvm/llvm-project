@@ -561,6 +561,30 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.eraseFromParent();
 }
 
+bool isLegalCmpImmed(APInt C) {
+  // Works for negative immediates too, as it can be written as an ADDS
+  // instruction with a negated immediate.
+  return isLegalArithImmed(C.abs().getZExtValue());
+}
+
+bool shouldBeAdjustedToZero(MachineInstr *LHS, APInt C, CmpInst::Predicate &P) {
+  // Only works for ANDS and AND.
+  if (LHS->getOpcode() != TargetOpcode::G_AND)
+    return false;
+
+  if (C.isOne() && (P == CmpInst::ICMP_SLT || P == CmpInst::ICMP_SGE)) {
+    P = (P == CmpInst::ICMP_SLT) ? CmpInst::ICMP_SLE : CmpInst::ICMP_SGT;
+    return true;
+  }
+
+  if (C.isAllOnes() && (P == CmpInst::ICMP_SLE || P == CmpInst::ICMP_SGT)) {
+    P = (P == CmpInst::ICMP_SLE) ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE;
+    return true;
+  }
+
+  return false;
+}
+
 /// Determine if it is possible to modify the \p RHS and predicate \p P of a
 /// G_ICMP instruction such that the right-hand side is an arithmetic immediate.
 ///
@@ -569,7 +593,7 @@ void applyVAshrLshrImm(MachineInstr &MI, MachineRegisterInfo &MRI,
 ///
 /// \note This assumes that the comparison has been legalized.
 std::optional<std::pair<uint64_t, CmpInst::Predicate>>
-tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
+tryAdjustICmpImmAndPred(Register LHS, Register RHS, CmpInst::Predicate P,
                         const MachineRegisterInfo &MRI) {
   const auto &Ty = MRI.getType(RHS);
   if (Ty.isVector())
@@ -582,9 +606,17 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   auto ValAndVReg = getIConstantVRegValWithLookThrough(RHS, MRI);
   if (!ValAndVReg)
     return std::nullopt;
-  uint64_t OriginalC = ValAndVReg->Value.getZExtValue();
-  uint64_t C = OriginalC;
-  if (isLegalArithImmed(C))
+
+  APInt C = ValAndVReg->Value;
+  uint64_t OriginalC = C.getZExtValue();
+  MachineInstr *LHSDef = getDefIgnoringCopies(LHS, MRI);
+
+  if (shouldBeAdjustedToZero(LHSDef, C, P)) {
+    // Predicate is already adjusted.
+    return {{0, P}};
+  }
+
+  if (isLegalCmpImmed(C))
     return std::nullopt;
 
   // We have a non-arithmetic immediate. Check if adjusting the immediate and
@@ -600,11 +632,10 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x sge c => x sgt c - 1
     //
     // When c is not the smallest possible negative number.
-    if ((Size == 64 && static_cast<int64_t>(C) == INT64_MIN) ||
-        (Size == 32 && static_cast<int32_t>(C) == INT32_MIN))
+    if (C.isMinSignedValue())
       return std::nullopt;
     P = (P == CmpInst::ICMP_SLT) ? CmpInst::ICMP_SLE : CmpInst::ICMP_SGT;
-    C -= 1;
+    C = C - 1;
     break;
   case CmpInst::ICMP_ULT:
   case CmpInst::ICMP_UGE:
@@ -613,11 +644,9 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x ult c => x ule c - 1
     // x uge c => x ugt c - 1
     //
-    // When c is not zero.
-    if (C == 0)
-      return std::nullopt;
+    // C is already not 0 because 0 is a legal immediate.
     P = (P == CmpInst::ICMP_ULT) ? CmpInst::ICMP_ULE : CmpInst::ICMP_UGT;
-    C -= 1;
+    C = C - 1;
     break;
   case CmpInst::ICMP_SLE:
   case CmpInst::ICMP_SGT:
@@ -627,11 +656,10 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x sgt c => s sge c + 1
     //
     // When c is not the largest possible signed integer.
-    if ((Size == 32 && static_cast<int32_t>(C) == INT32_MAX) ||
-        (Size == 64 && static_cast<int64_t>(C) == INT64_MAX))
+    if (C.isMaxSignedValue())
       return std::nullopt;
     P = (P == CmpInst::ICMP_SLE) ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE;
-    C += 1;
+    C = C + 1;
     break;
   case CmpInst::ICMP_ULE:
   case CmpInst::ICMP_UGT:
@@ -640,21 +668,17 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     // x ule c => x ult c + 1
     // x ugt c => s uge c + 1
     //
-    // When c is not the largest possible unsigned integer.
-    if ((Size == 32 && static_cast<uint32_t>(C) == UINT32_MAX) ||
-        (Size == 64 && C == UINT64_MAX))
-      return std::nullopt;
+    // -1 is a valid icmp immediate, so it cannot happen here.
     P = (P == CmpInst::ICMP_ULE) ? CmpInst::ICMP_ULT : CmpInst::ICMP_UGE;
-    C += 1;
+    C = C + 1;
     break;
   }
 
   // Check if the new constant is valid, and return the updated constant and
   // predicate if it is.
-  if (Size == 32)
-    C = static_cast<uint32_t>(C);
-  if (isLegalArithImmed(C))
-    return {{C, P}};
+  uint64_t NewC = C.getZExtValue();
+  if (isLegalCmpImmed(C))
+    return {{NewC, P}};
 
   auto IsMaterializableInSingleInstruction = [=](uint64_t Imm) {
     SmallVector<AArch64_IMM::ImmInsnModel> Insn;
@@ -663,8 +687,8 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
   };
 
   if (!IsMaterializableInSingleInstruction(OriginalC) &&
-      IsMaterializableInSingleInstruction(C))
-    return {{C, P}};
+      IsMaterializableInSingleInstruction(NewC))
+    return {{NewC, P}};
 
   return std::nullopt;
 }
@@ -681,9 +705,10 @@ bool matchAdjustICmpImmAndPred(
     MachineInstr &MI, const MachineRegisterInfo &MRI,
     std::pair<uint64_t, CmpInst::Predicate> &MatchInfo) {
   assert(MI.getOpcode() == TargetOpcode::G_ICMP);
+  Register LHS = MI.getOperand(2).getReg();
   Register RHS = MI.getOperand(3).getReg();
   auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
-  if (auto MaybeNewImmAndPred = tryAdjustICmpImmAndPred(RHS, Pred, MRI)) {
+  if (auto MaybeNewImmAndPred = tryAdjustICmpImmAndPred(LHS, RHS, Pred, MRI)) {
     MatchInfo = *MaybeNewImmAndPred;
     return true;
   }

@@ -25,8 +25,8 @@ define i64 @selecti64i64(i64 %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov x8, #-2147483648 // =0xffffffff80000000
 ; CHECK-GI-NEXT:    mov w9, #2147483647 // =0x7fffffff
-; CHECK-GI-NEXT:    cmp x0, #0
-; CHECK-GI-NEXT:    csel x0, x9, x8, ge
+; CHECK-GI-NEXT:    cmn x0, #1
+; CHECK-GI-NEXT:    csel x0, x9, x8, gt
 ; CHECK-GI-NEXT:    ret
   %c = icmp sgt i64 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -42,9 +42,9 @@ define i32 @selecti64i32(i64 %a) {
 ;
 ; CHECK-GI-LABEL: selecti64i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp x0, #0
+; CHECK-GI-NEXT:    cmn x0, #1
 ; CHECK-GI-NEXT:    mov w9, #-2147483648 // =0x80000000
-; CHECK-GI-NEXT:    cset w8, ge
+; CHECK-GI-NEXT:    cset w8, gt
 ; CHECK-GI-NEXT:    sbfx w8, w8, #0, #1
 ; CHECK-GI-NEXT:    add w0, w8, w9
 ; CHECK-GI-NEXT:    ret
@@ -65,8 +65,8 @@ define i64 @selecti32i64(i32 %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov x8, #-2147483648 // =0xffffffff80000000
 ; CHECK-GI-NEXT:    mov w9, #2147483647 // =0x7fffffff
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel x0, x9, x8, ge
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    csel x0, x9, x8, gt
 ; CHECK-GI-NEXT:    ret
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i64 2147483647, i64 -2147483648
@@ -98,8 +98,8 @@ define i32 @selecti32i32(i32 %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #-85 // =0xffffffab
 ; CHECK-GI-NEXT:    mov w9, #84 // =0x54
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w9, w8, ge
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    csel w0, w9, w8, gt
 ; CHECK-GI-NEXT:    ret
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i32 84, i32 -85
@@ -117,8 +117,8 @@ define i8 @selecti32i8(i32 %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #84 // =0x54
 ; CHECK-GI-NEXT:    mov w9, #-85 // =0xffffffab
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w8, w9, ge
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    csel w0, w8, w9, gt
 ; CHECK-GI-NEXT:    ret
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i8 84, i8 -85
@@ -135,11 +135,11 @@ define i32 @selecti8i32(i8 %a) {
 ;
 ; CHECK-GI-LABEL: selecti8i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sxtb w8, w0
+; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
 ; CHECK-GI-NEXT:    mov w9, #-85 // =0xffffffab
 ; CHECK-GI-NEXT:    mov w10, #84 // =0x54
-; CHECK-GI-NEXT:    cmp w8, #0
-; CHECK-GI-NEXT:    csel w0, w10, w9, ge
+; CHECK-GI-NEXT:    cmp w8, w0, sxtb
+; CHECK-GI-NEXT:    csel w0, w10, w9, lt
 ; CHECK-GI-NEXT:    ret
   %c = icmp sgt i8 %a, -1
   %s = select i1 %c, i32 84, i32 -85
@@ -192,8 +192,8 @@ define i32 @selecti32i32_0(i32 %a) {
 ;
 ; CHECK-GI-LABEL: selecti32i32_0:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    cset w8, lt
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    cset w8, le
 ; CHECK-GI-NEXT:    sbfx w0, w8, #0, #1
 ; CHECK-GI-NEXT:    ret
   %c = icmp sgt i32 %a, -1
@@ -210,8 +210,8 @@ define i32 @selecti32i32_m1(i32 %a) {
 ;
 ; CHECK-GI-LABEL: selecti32i32_m1:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    cset w8, ge
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    cset w8, gt
 ; CHECK-GI-NEXT:    sbfx w0, w8, #0, #1
 ; CHECK-GI-NEXT:    ret
   %c = icmp sgt i32 %a, -1
@@ -229,8 +229,8 @@ define i32 @selecti32i32_1(i32 %a) {
 ; CHECK-GI-LABEL: selecti32i32_1:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #-2 // =0xfffffffe
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csinc w0, w8, wzr, lt
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    csinc w0, w8, wzr, le
 ; CHECK-GI-NEXT:    ret
   %c = icmp sgt i32 %a, -1
   %s = select i1 %c, i32 1, i32 -2
@@ -286,8 +286,8 @@ define i32 @selecti32i32_sle(i32 %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #12 // =0xc
 ; CHECK-GI-NEXT:    mov w9, #-13 // =0xfffffff3
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w9, w8, lt
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    csel w0, w9, w8, le
 ; CHECK-GI-NEXT:    ret
   %c = icmp sle i32 %a, -1
   %s = select i1 %c, i32 -13, i32 12
@@ -305,8 +305,8 @@ define i32 @selecti32i32_sgt(i32 %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #12 // =0xc
 ; CHECK-GI-NEXT:    mov w9, #-13 // =0xfffffff3
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w0, w9, w8, lt
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    csel w0, w9, w8, le
 ; CHECK-GI-NEXT:    ret
   %c = icmp sle i32 %a, -1
   %s = select i1 %c, i32 -13, i32 12
@@ -327,9 +327,9 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #127 // =0x7f
 ; CHECK-GI-NEXT:    mov w9, #-128 // =0xffffff80
-; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    csel w8, w9, w8, lt
-; CHECK-GI-NEXT:    csel w9, w2, w1, lt
+; CHECK-GI-NEXT:    cmn w0, #1
+; CHECK-GI-NEXT:    csel w8, w9, w8, le
+; CHECK-GI-NEXT:    csel w9, w2, w1, le
 ; CHECK-GI-NEXT:    add w0, w8, w9
 ; CHECK-GI-NEXT:    ret
   %c = icmp sle i32 %a, -1

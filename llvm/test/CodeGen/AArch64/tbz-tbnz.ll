@@ -61,18 +61,32 @@ if.end:
 }
 
 define void @test3(i32 %a) {
-; CHECK-LABEL: test3:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp w0, #12
-; CHECK-NEXT:    b.mi .LBB2_2
-; CHECK-NEXT:  // %bb.1: // %if.then
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl t
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB2_2: // %if.end
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test3:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    cmp w0, #12
+; CHECK-SD-NEXT:    b.mi .LBB2_2
+; CHECK-SD-NEXT:  // %bb.1: // %if.then
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl t
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:  .LBB2_2: // %if.end
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test3:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub w8, w0, #12
+; CHECK-GI-NEXT:    cmn w8, #1
+; CHECK-GI-NEXT:    b.le .LBB2_2
+; CHECK-GI-NEXT:  // %bb.1: // %if.then
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl t
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:  .LBB2_2: // %if.end
+; CHECK-GI-NEXT:    ret
 entry:
   %sub = add nsw i32 %a, -12
   %cmp = icmp sgt i32 %sub, -1
@@ -88,18 +102,32 @@ if.end:
 }
 
 define void @test4(i64 %a) {
-; CHECK-LABEL: test4:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cmp x0, #12
-; CHECK-NEXT:    b.mi .LBB3_2
-; CHECK-NEXT:  // %bb.1: // %if.then
-; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    bl t
-; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
-; CHECK-NEXT:  .LBB3_2: // %if.end
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test4:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    cmp x0, #12
+; CHECK-SD-NEXT:    b.mi .LBB3_2
+; CHECK-SD-NEXT:  // %bb.1: // %if.then
+; CHECK-SD-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    .cfi_offset w30, -16
+; CHECK-SD-NEXT:    bl t
+; CHECK-SD-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-SD-NEXT:  .LBB3_2: // %if.end
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test4:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub x8, x0, #12
+; CHECK-GI-NEXT:    cmn x8, #1
+; CHECK-GI-NEXT:    b.le .LBB3_2
+; CHECK-GI-NEXT:  // %bb.1: // %if.then
+; CHECK-GI-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -16
+; CHECK-GI-NEXT:    bl t
+; CHECK-GI-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; CHECK-GI-NEXT:  .LBB3_2: // %if.end
+; CHECK-GI-NEXT:    ret
 entry:
   %sub = add nsw i64 %a, -12
   %cmp = icmp sgt i64 %sub, -1
