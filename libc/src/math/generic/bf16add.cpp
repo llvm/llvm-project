@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/bf16add.h"
-
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/generic/add_sub.h"
 #include "src/__support/common.h"
