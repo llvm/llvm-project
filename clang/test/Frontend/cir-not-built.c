@@ -2,7 +2,7 @@
 // instead of crashing.
 
 // This test should only run when CIR support is NOT enabled
-// REQUIRES: !cir-support
+// UNSUPPORTED: cir-support
 
 // RUN: not %clang_cc1 -emit-cir %s 2>&1 | FileCheck %s
 // CHECK: error: clang IR support not available, rebuild clang with -DCLANG_ENABLE_CIR=ON
