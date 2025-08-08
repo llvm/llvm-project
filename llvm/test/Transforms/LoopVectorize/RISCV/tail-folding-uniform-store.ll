@@ -23,6 +23,7 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 2
+; CHECK-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.vector.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer)
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[EVL_BASED_IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -37,7 +38,6 @@ define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = mul i64 -1, [[TMP23]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i64, ptr [[ARRAYIDX13]], i64 [[TMP16]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i64, ptr [[TMP18]], i64 [[TMP17]]
-; CHECK-NEXT:    [[VP_REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.reverse.nxv2i64(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
 ; CHECK-NEXT:    call void @llvm.vp.store.nxv2i64.p0(<vscale x 2 x i64> [[VP_REVERSE]], ptr align 8 [[TMP19]], <vscale x 2 x i1> splat (i1 true), i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP11]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP20]], [[EVL_BASED_IV]]
