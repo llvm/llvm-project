@@ -10,7 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class AbiTagStructorsTestCase(TestBase):
-    def test_abi_tag_lookup(self):
+    def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "Break here", lldb.SBFileSpec("main.cpp", False)

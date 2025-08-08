@@ -22,6 +22,39 @@ using namespace lldb_private;
 using namespace lldb;
 using namespace lldb_private::plugin::dwarf;
 
+static bool IsUnifiedStructorLookup(const DWARFDIE &die) {
+  auto spec =
+      die.GetAttributeValueAsReferenceDIE(llvm::dwarf::DW_AT_specification);
+  if (!spec)
+    return false;
+
+  const char *spec_mangled_name =
+      spec.GetMangledName(/*substitute_name_allowed=*/false);
+  if (!spec_mangled_name)
+    return false;
+
+  const char *spec_name = spec.GetName();
+  if (!spec_name)
+    return false;
+
+  const char *ctx_name = spec.GetParent().GetName();
+  if (!ctx_name)
+    return false;
+
+  // We have a ctor.
+  if (::strcmp(ctx_name, spec_name) == 0)
+    return true;
+
+  if (spec_name[0] != '~')
+    return false;
+
+  // We have a dtor.
+  if (::strcmp(ctx_name, spec_name + 1) == 0)
+    return true;
+
+  return false;
+}
+
 DWARFIndex::~DWARFIndex() = default;
 
 IterationAction DWARFIndex::ProcessFunctionDIE(
@@ -60,7 +93,8 @@ IterationAction DWARFIndex::ProcessFunctionDIE(
     return IterationAction::Continue;
 
   // In case of a full match, we just insert everything we find.
-  if (name_type_mask & eFunctionNameTypeFull && die.GetMangledName() == name)
+  if (name_type_mask & eFunctionNameTypeFull &&
+      (die.GetMangledName() == name || IsUnifiedStructorLookup(die)))
     return callback(die);
 
   // If looking for ObjC selectors, we need to also check if the name is a

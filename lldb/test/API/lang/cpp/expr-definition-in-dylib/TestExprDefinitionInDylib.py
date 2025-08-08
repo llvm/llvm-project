@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class ExprDefinitionInDylibTestCase(TestBase):
-    NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows
     def test(self):
@@ -34,7 +33,6 @@ class ExprDefinitionInDylibTestCase(TestBase):
 
         self.expect_expr("Foo()", result_type="Foo")
 
-        # FIXME: mangled name lookup for ABI-tagged ctors fails because
-        # the debug-info AST doesn't have ABI-tag information.
-        self.expect(
-            "expr Bar()", error=True, substrs=["error: Couldn't look up symbols"]
+        self.expect_expr("Base()", result_type="Base")
+
+        self.expect_expr("Bar()", result_type="Bar")

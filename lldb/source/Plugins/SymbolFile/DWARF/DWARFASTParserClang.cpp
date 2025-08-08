@@ -251,41 +251,9 @@ static unsigned GetCXXMethodCVQuals(const DWARFDIE &subprogram,
   return cv_quals;
 }
 
-static const char *GetMangledOrStructorName(const DWARFDIE &die) {
-  const char *name = die.GetMangledName(/*substitute_name_allowed*/ false);
-  if (name)
-    return name;
-
-  name = die.GetName();
-  if (!name)
-    return nullptr;
-
-  DWARFDIE parent = die.GetParent();
-  if (!parent.IsStructUnionOrClass())
-    return nullptr;
-
-  const char *parent_name = parent.GetName();
-  if (!parent_name)
-    return nullptr;
-
-  // Constructor.
-  if (::strcmp(parent_name, name) == 0)
-    return name;
-
-  // Destructor.
-  if (name[0] == '~' && ::strcmp(parent_name, name + 1) == 0)
-    return name;
-
-  return nullptr;
-}
-
 static std::string MakeLLDBFuncAsmLabel(const DWARFDIE &die) {
-  char const *name = GetMangledOrStructorName(die);
+  const char *name = die.GetMangledName(/*substitute_name_allowed*/ false);
   if (!name)
-    return {};
-
-  auto *cu = die.GetCU();
-  if (!cu)
     return {};
 
   SymbolFileDWARF *dwarf = die.GetDWARF();

@@ -2492,6 +2492,8 @@ static int ClangToItaniumCtorKind(clang::CXXCtorType kind) {
     return 1;
   case clang::CXXCtorType::Ctor_Base:
     return 2;
+  case clang::CXXCtorType::Ctor_Unified:
+    return 4;
   case clang::CXXCtorType::Ctor_CopyingClosure:
   case clang::CXXCtorType::Ctor_DefaultClosure:
   case clang::CXXCtorType::Ctor_Comdat:
@@ -2507,6 +2509,8 @@ static int ClangToItaniumDtorKind(clang::CXXDtorType kind) {
     return 1;
   case clang::CXXDtorType::Dtor_Base:
     return 2;
+  case clang::CXXDtorType::Dtor_Unified:
+    return 4;
   case clang::CXXDtorType::Dtor_Comdat:
     llvm_unreachable("Unexpected destructor kind.");
   }
@@ -2523,14 +2527,14 @@ GetItaniumCtorDtorVariant(llvm::StringRef discriminator) {
     return std::nullopt;
 
   if (is_ctor) {
-    if (structor_kind > clang::CXXCtorType::Ctor_DefaultClosure)
+    if (structor_kind > clang::CXXCtorType::Ctor_Unified)
       return std::nullopt;
 
     return ClangToItaniumCtorKind(
         static_cast<clang::CXXCtorType>(structor_kind));
   }
 
-  if (structor_kind > clang::CXXDtorType::Dtor_Comdat)
+  if (structor_kind > clang::CXXDtorType::Dtor_Unified)
     return std::nullopt;
 
   return ClangToItaniumDtorKind(static_cast<clang::CXXDtorType>(structor_kind));
@@ -2542,23 +2546,12 @@ SymbolFileDWARF::FindFunctionDefinition(const FunctionCallLabel &label,
   DWARFDIE definition;
   llvm::DenseMap<int, DWARFDIE> structor_variant_to_die;
 
-  // eFunctionNameTypeFull for mangled name lookup.
-  // eFunctionNameTypeMethod is required for structor lookups (since we look
-  // those up by DW_AT_name).
   Module::LookupInfo info(ConstString(label.lookup_name),
-                          lldb::eFunctionNameTypeFull |
-                              lldb::eFunctionNameTypeMethod,
+                          lldb::eFunctionNameTypeFull,
                           lldb::eLanguageTypeUnknown);
 
   m_index->GetFunctions(info, *this, {}, [&](DWARFDIE entry) {
     if (entry.GetAttributeValueAsUnsigned(llvm::dwarf::DW_AT_declaration, 0))
-      return IterationAction::Continue;
-
-    auto spec = entry.GetAttributeValueAsReferenceDIE(DW_AT_specification);
-    if (!spec)
-      return IterationAction::Continue;
-
-    if (spec != declaration)
       return IterationAction::Continue;
 
     // We're not picking a specific structor variant DIE, so we're done here.
