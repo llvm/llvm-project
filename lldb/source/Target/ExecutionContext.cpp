@@ -154,12 +154,9 @@ lldb_private::GetStoppedExecutionContext(
         "ExecutionContext created with a null process");
 
   ProcessRunLock::ProcessRunLocker stop_locker;
-  if (!stop_locker.TryLock(&process_sp->GetRunLock())) {
-    auto *error_msg =
-        "Attempted to create an ExecutionContext with a running process";
-    LLDB_LOG(GetLog(LLDBLog::API), error_msg);
-    return llvm::createStringError(error_msg);
-  }
+  if (!stop_locker.TryLock(&process_sp->GetRunLock()))
+    return llvm::createStringError(
+        "Attempted to create an ExecutionContext with a running process");
 
   auto thread_sp = exe_ctx_ref_ptr->GetThreadSP();
   auto frame_sp = exe_ctx_ref_ptr->GetFrameSP();
