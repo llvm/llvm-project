@@ -54,6 +54,10 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
+// __hash_table implements a hash table that is built from a forward list. The __bucket_list_ points into that forward
+// list. Specifically, the pointers in the __bucket_list_ point to the element before the start of the bucket. This
+// makes it possible to insert elements into a bucket without having to iterate through the previous bucket.
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Key, class _Tp>
