@@ -122,6 +122,36 @@ constexpr bool match_v16si(__m512i _v, int a, int b, int c, int d, int e, int f,
   return v[0] == a && v[1] == b && v[2] == c && v[3] == d && v[4] == e && v[5] == f && v[6] == g && v[7] == h && v[8] == i && v[9] == j && v[10] == k && v[11] == l && v[12] == m && v[13] == n && v[14] == o && v[15] == p;
 }
 
+constexpr bool match_v32hi(__m512i _v, short __e00, short __e01, short __e02, short __e03, short __e04, short __e05, short __e06, short __e07,
+                                       short __e08, short __e09, short __e10, short __e11, short __e12, short __e13, short __e14, short __e15,
+                                       short __e16, short __e17, short __e18, short __e19, short __e20, short __e21, short __e22, short __e23,
+                                       short __e24, short __e25, short __e26, short __e27, short __e28, short __e29, short __e30, short __e31) {
+  __v32hi v = (__v32hi)_v;
+  return v[ 0] == __e00 && v[ 1] == __e01 && v[ 2] == __e02 && v[ 3] == __e03 && v[ 4] == __e04 && v[ 5] == __e05 && v[ 6] == __e06 && v[ 7] ==  __e07 &&
+         v[ 8] == __e08 && v[ 9] == __e09 && v[10] == __e10 && v[11] == __e11 && v[12] == __e12 && v[13] == __e13 && v[14] == __e14 && v[15] ==  __e15 &&
+         v[16] == __e16 && v[17] == __e17 && v[18] == __e18 && v[19] == __e19 && v[20] == __e20 && v[21] == __e21 && v[22] == __e22 && v[23] ==  __e23 &&
+         v[24] == __e24 && v[25] == __e25 && v[26] == __e26 && v[27] == __e27 && v[28] == __e28 && v[29] == __e29 && v[30] == __e30 && v[31] ==  __e31;
+}
+
+constexpr bool match_v64qi(__m512i _v, char __e00, char __e01, char __e02, char __e03, char __e04, char __e05, char __e06, char __e07,
+                                       char __e08, char __e09, char __e10, char __e11, char __e12, char __e13, char __e14, char __e15,
+                                       char __e16, char __e17, char __e18, char __e19, char __e20, char __e21, char __e22, char __e23,
+                                       char __e24, char __e25, char __e26, char __e27, char __e28, char __e29, char __e30, char __e31,
+                                       char __e32, char __e33, char __e34, char __e35, char __e36, char __e37, char __e38, char __e39,
+                                       char __e40, char __e41, char __e42, char __e43, char __e44, char __e45, char __e46, char __e47,
+                                       char __e48, char __e49, char __e50, char __e51, char __e52, char __e53, char __e54, char __e55,
+                                       char __e56, char __e57, char __e58, char __e59, char __e60, char __e61, char __e62, char __e63) {
+  __v64qi v = (__v64qi)_v;
+  return v[ 0] == __e00 && v[ 1] == __e01 && v[ 2] == __e02 && v[ 3] == __e03 && v[ 4] == __e04 && v[ 5] == __e05 && v[ 6] == __e06 && v[ 7] == __e07 &&
+         v[ 8] == __e08 && v[ 9] == __e09 && v[10] == __e10 && v[11] == __e11 && v[12] == __e12 && v[13] == __e13 && v[14] == __e14 && v[15] == __e15 &&
+         v[16] == __e16 && v[17] == __e17 && v[18] == __e18 && v[19] == __e19 && v[20] == __e20 && v[21] == __e21 && v[22] == __e22 && v[23] == __e23 &&
+         v[24] == __e24 && v[25] == __e25 && v[26] == __e26 && v[27] == __e27 && v[28] == __e28 && v[29] == __e29 && v[30] == __e30 && v[31] == __e31 &&
+         v[32] == __e32 && v[33] == __e33 && v[34] == __e34 && v[35] == __e35 && v[36] == __e36 && v[37] == __e37 && v[38] == __e38 && v[39] == __e39 &&
+         v[40] == __e40 && v[41] == __e41 && v[42] == __e42 && v[43] == __e43 && v[44] == __e44 && v[45] == __e45 && v[46] == __e46 && v[47] == __e47 &&
+         v[48] == __e48 && v[49] == __e49 && v[50] == __e50 && v[51] == __e51 && v[52] == __e52 && v[53] == __e53 && v[54] == __e54 && v[55] == __e55 &&
+         v[56] == __e56 && v[57] == __e57 && v[58] == __e58 && v[59] == __e59 && v[60] == __e60 && v[61] == __e61 && v[62] == __e62 && v[63] == __e63;
+}
+
 #define TEST_CONSTEXPR(...) static_assert(__VA_ARGS__)
 
 #else
