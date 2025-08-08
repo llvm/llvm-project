@@ -97,41 +97,31 @@ bool SBFrame::IsValid() const {
 }
 SBFrame::operator bool() const {
   LLDB_INSTRUMENT_VA(this);
-  if (!m_opaque_sp)
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return false;
-
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return false;
-
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    return GetFrameSP().get() != nullptr;
   }
 
-  // Without a target & process we can't have a valid stack frame.
-  return false;
+  return GetFrameSP().get() != nullptr;
 }
 
 SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
   LLDB_INSTRUMENT_VA(this, resolve_scope);
 
   SBSymbolContext sb_sym_ctx;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return sb_sym_ctx;
-  SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    if (StackFrame *frame = exe_ctx.GetFramePtr())
-      sb_sym_ctx = frame->GetSymbolContext(scope);
   }
+
+  SymbolContextItem scope = static_cast<SymbolContextItem>(resolve_scope);
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    sb_sym_ctx = frame->GetSymbolContext(scope);
 
   return sb_sym_ctx;
 }
@@ -139,193 +129,144 @@ SBSymbolContext SBFrame::GetSymbolContext(uint32_t resolve_scope) const {
 SBModule SBFrame::GetModule() const {
   LLDB_INSTRUMENT_VA(this);
 
-  SBModule sb_module;
-  ModuleSP module_sp;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return sb_module;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      module_sp = frame->GetSymbolContext(eSymbolContextModule).module_sp;
-      sb_module.SetSP(module_sp);
-    }
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBModule();
   }
 
+  ModuleSP module_sp;
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  if (!frame)
+    return SBModule();
+
+  SBModule sb_module;
+  module_sp = frame->GetSymbolContext(eSymbolContextModule).module_sp;
+  sb_module.SetSP(module_sp);
   return sb_module;
 }
 
 SBCompileUnit SBFrame::GetCompileUnit() const {
   LLDB_INSTRUMENT_VA(this);
 
-  SBCompileUnit sb_comp_unit;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return sb_comp_unit;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      sb_comp_unit.reset(
-          frame->GetSymbolContext(eSymbolContextCompUnit).comp_unit);
-    }
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBCompileUnit();
   }
 
-  return sb_comp_unit;
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return SBCompileUnit(
+        frame->GetSymbolContext(eSymbolContextCompUnit).comp_unit);
+  return SBCompileUnit();
 }
 
 SBFunction SBFrame::GetFunction() const {
   LLDB_INSTRUMENT_VA(this);
 
-  SBFunction sb_function;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return sb_function;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      sb_function.reset(
-          frame->GetSymbolContext(eSymbolContextFunction).function);
-    }
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBFunction();
   }
 
-  return sb_function;
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return SBFunction(frame->GetSymbolContext(eSymbolContextFunction).function);
+  return SBFunction();
 }
 
 SBSymbol SBFrame::GetSymbol() const {
   LLDB_INSTRUMENT_VA(this);
 
-  SBSymbol sb_symbol;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return sb_symbol;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      sb_symbol.reset(frame->GetSymbolContext(eSymbolContextSymbol).symbol);
-    }
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBSymbol();
   }
 
-  return sb_symbol;
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return SBSymbol(frame->GetSymbolContext(eSymbolContextSymbol).symbol);
+  return SBSymbol();
 }
 
 SBBlock SBFrame::GetBlock() const {
   LLDB_INSTRUMENT_VA(this);
 
-  SBBlock sb_block;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return sb_block;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame)
-      sb_block.SetPtr(frame->GetSymbolContext(eSymbolContextBlock).block);
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBBlock();
   }
-  return sb_block;
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return SBBlock(frame->GetSymbolContext(eSymbolContextBlock).block);
+  return SBBlock();
 }
 
 SBBlock SBFrame::GetFrameBlock() const {
   LLDB_INSTRUMENT_VA(this);
 
-  SBBlock sb_block;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return sb_block;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame)
-      sb_block.SetPtr(frame->GetFrameBlock());
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBBlock();
   }
-  return sb_block;
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return SBBlock(frame->GetFrameBlock());
+  return SBBlock();
 }
 
 SBLineEntry SBFrame::GetLineEntry() const {
   LLDB_INSTRUMENT_VA(this);
 
-  SBLineEntry sb_line_entry;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return sb_line_entry;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      sb_line_entry.SetLineEntry(
-          frame->GetSymbolContext(eSymbolContextLineEntry).line_entry);
-    }
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBLineEntry();
   }
-  return sb_line_entry;
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return SBLineEntry(
+        &frame->GetSymbolContext(eSymbolContextLineEntry).line_entry);
+  return SBLineEntry();
 }
 
 uint32_t SBFrame::GetFrameID() const {
   LLDB_INSTRUMENT_VA(this);
 
-  uint32_t frame_idx = UINT32_MAX;
+  constexpr uint32_t error_frame_idx = UINT32_MAX;
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return frame_idx;
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return error_frame_idx;
+  }
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame)
-    frame_idx = frame->GetFrameIndex();
-
-  return frame_idx;
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return frame->GetFrameIndex();
+  return error_frame_idx;
 }
 
 lldb::addr_t SBFrame::GetCFA() const {
   LLDB_INSTRUMENT_VA(this);
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return LLDB_INVALID_ADDRESS;
+  }
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  if (frame)
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
     return frame->GetStackID().GetCallFrameAddress();
   return LLDB_INVALID_ADDRESS;
 }
@@ -334,22 +275,17 @@ addr_t SBFrame::GetPC() const {
   LLDB_INSTRUMENT_VA(this);
 
   addr_t addr = LLDB_INVALID_ADDRESS;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return addr;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      addr = frame->GetFrameCodeAddress().GetOpcodeLoadAddress(
-          target, AddressClass::eCode);
-    }
   }
+
+  Target *target = exe_ctx->GetTargetPtr();
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return frame->GetFrameCodeAddress().GetOpcodeLoadAddress(
+        target, AddressClass::eCode);
 
   return addr;
 }
@@ -357,91 +293,68 @@ addr_t SBFrame::GetPC() const {
 bool SBFrame::SetPC(addr_t new_pc) {
   LLDB_INSTRUMENT_VA(this, new_pc);
 
-  bool ret_val = false;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return ret_val;
-
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    if (StackFrame *frame = exe_ctx.GetFramePtr()) {
-      if (RegisterContextSP reg_ctx_sp = frame->GetRegisterContext()) {
-        ret_val = reg_ctx_sp->SetPC(new_pc);
-      }
-    }
+  constexpr bool error_ret_val = false;
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return error_ret_val;
   }
 
-  return ret_val;
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    if (RegisterContextSP reg_ctx_sp = frame->GetRegisterContext())
+      return reg_ctx_sp->SetPC(new_pc);
+
+  return error_ret_val;
 }
 
 addr_t SBFrame::GetSP() const {
   LLDB_INSTRUMENT_VA(this);
 
-  addr_t addr = LLDB_INVALID_ADDRESS;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return addr;
-
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    if (StackFrame *frame = exe_ctx.GetFramePtr()) {
-      if (RegisterContextSP reg_ctx_sp = frame->GetRegisterContext()) {
-        addr = reg_ctx_sp->GetSP();
-      }
-    }
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return LLDB_INVALID_ADDRESS;
   }
 
-  return addr;
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    if (RegisterContextSP reg_ctx_sp = frame->GetRegisterContext())
+      return reg_ctx_sp->GetSP();
+
+  return LLDB_INVALID_ADDRESS;
 }
 
 addr_t SBFrame::GetFP() const {
   LLDB_INSTRUMENT_VA(this);
 
-  addr_t addr = LLDB_INVALID_ADDRESS;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return addr;
-
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    if (StackFrame *frame = exe_ctx.GetFramePtr()) {
-      if (RegisterContextSP reg_ctx_sp = frame->GetRegisterContext()) {
-        addr = reg_ctx_sp->GetFP();
-      }
-    }
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return LLDB_INVALID_ADDRESS;
   }
 
-  return addr;
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    if (RegisterContextSP reg_ctx_sp = frame->GetRegisterContext())
+      return reg_ctx_sp->GetFP();
+
+  return LLDB_INVALID_ADDRESS;
 }
 
 SBAddress SBFrame::GetPCAddress() const {
   LLDB_INSTRUMENT_VA(this);
 
-  SBAddress sb_addr;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return sb_addr;
-
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame)
-      sb_addr.SetAddress(frame->GetFrameCodeAddress());
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBAddress();
   }
-  return sb_addr;
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return SBAddress(frame->GetFrameCodeAddress());
+  return SBAddress();
 }
 
 void SBFrame::Clear() {
@@ -454,15 +367,14 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path) {
   LLDB_INSTRUMENT_VA(this, var_path);
 
   SBValue sb_value;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return sb_value;
+  }
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  Target *target = exe_ctx.GetTargetPtr();
-  if (frame && target) {
+  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
     lldb::DynamicValueType use_dynamic =
         frame->CalculateTarget()->GetPreferDynamicValue();
     sb_value = GetValueForVariablePath(var_path, use_dynamic);
@@ -479,27 +391,22 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
     return sb_value;
   }
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return sb_value;
+  }
 
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      VariableSP var_sp;
-      Status error;
-      ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
-          var_path, eNoDynamicValues,
-          StackFrame::eExpressionPathOptionCheckPtrVsMember |
-              StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
-          var_sp, error));
-      sb_value.SetSP(value_sp, use_dynamic);
-    }
+  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+    VariableSP var_sp;
+    Status error;
+    ValueObjectSP value_sp(frame->GetValueForVariableExpressionPath(
+        var_path, eNoDynamicValues,
+        StackFrame::eExpressionPathOptionCheckPtrVsMember |
+            StackFrame::eExpressionPathOptionsAllowDirectIVarAccess,
+        var_sp, error));
+    sb_value.SetSP(value_sp, use_dynamic);
   }
   return sb_value;
 }
@@ -507,21 +414,19 @@ lldb::SBValue SBFrame::GetValueForVariablePath(const char *var_path,
 SBValue SBFrame::FindVariable(const char *name) {
   LLDB_INSTRUMENT_VA(this, name);
 
-  SBValue value;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return value;
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBValue();
+  }
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  Target *target = exe_ctx.GetTargetPtr();
-  if (frame && target) {
+  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
     lldb::DynamicValueType use_dynamic =
         frame->CalculateTarget()->GetPreferDynamicValue();
-    value = FindVariable(name, use_dynamic);
+    return FindVariable(name, use_dynamic);
   }
-  return value;
+  return SBValue();
 }
 
 SBValue SBFrame::FindVariable(const char *name,
@@ -535,25 +440,16 @@ SBValue SBFrame::FindVariable(const char *name,
     return sb_value;
   }
 
-  ValueObjectSP value_sp;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return sb_value;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      value_sp = frame->FindVariable(ConstString(name));
-
-      if (value_sp)
-        sb_value.SetSP(value_sp, use_dynamic);
-    }
   }
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    if (ValueObjectSP value_sp = frame->FindVariable(ConstString(name)))
+      sb_value.SetSP(value_sp, use_dynamic);
 
   return sb_value;
 }
@@ -562,15 +458,14 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type) {
   LLDB_INSTRUMENT_VA(this, name, value_type);
 
   SBValue value;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return value;
+  }
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  Target *target = exe_ctx.GetTargetPtr();
-  if (frame && target) {
+  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
     lldb::DynamicValueType use_dynamic =
         frame->CalculateTarget()->GetPreferDynamicValue();
     value = FindValue(name, value_type, use_dynamic);
@@ -589,17 +484,17 @@ SBValue SBFrame::FindValue(const char *name, ValueType value_type,
   }
 
   ValueObjectSP value_sp;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
 
-  if (stop_locker.IsLocked()) {
-    StackFrame *frame = nullptr;
-    Target *target = exe_ctx.GetTargetPtr();
-    Process *process = exe_ctx.GetProcessPtr();
-    if (target && process) {
-      frame = exe_ctx.GetFramePtr();
-      if (frame) {
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return value_sp;
+  } else {
+    Target *target = exe_ctx->GetTargetPtr();
+    Process *process = exe_ctx->GetProcessPtr();
+    if (target && process) { // FIXME: this check is redundant.
+      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
         VariableList variable_list;
 
         switch (value_type) {
@@ -716,13 +611,14 @@ bool SBFrame::operator!=(const SBFrame &rhs) const {
 SBThread SBFrame::GetThread() const {
   LLDB_INSTRUMENT_VA(this);
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return SBThread();
+  }
 
-  ThreadSP thread_sp(exe_ctx.GetThreadSP());
+  ThreadSP thread_sp(exe_ctx->GetThreadSP());
   SBThread sb_thread(thread_sp);
 
   return sb_thread;
@@ -731,17 +627,14 @@ SBThread SBFrame::GetThread() const {
 const char *SBFrame::Disassemble() const {
   LLDB_INSTRUMENT_VA(this);
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (!target || !process)
-    return nullptr;
+  }
 
-  if (auto *frame = exe_ctx.GetFramePtr())
+  if (auto *frame = exe_ctx->GetFramePtr())
     return ConstString(frame->Disassemble()).GetCString();
 
   return nullptr;
@@ -752,15 +645,15 @@ SBValueList SBFrame::GetVariables(bool arguments, bool locals, bool statics,
   LLDB_INSTRUMENT_VA(this, arguments, locals, statics, in_scope_only);
 
   SBValueList value_list;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return value_list;
+  }
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  Target *target = exe_ctx.GetTargetPtr();
-  if (frame && target) {
+  if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+    Target *target = exe_ctx->GetTargetPtr();
     lldb::DynamicValueType use_dynamic =
         frame->CalculateTarget()->GetPreferDynamicValue();
     const bool include_runtime_support_values =
@@ -785,17 +678,16 @@ lldb::SBValueList SBFrame::GetVariables(bool arguments, bool locals,
   LLDB_INSTRUMENT_VA(this, arguments, locals, statics, in_scope_only,
                      use_dynamic);
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked()) {
-    SBValueList empty_list;
-    return empty_list;
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBValueList();
   }
 
-  Target *target = exe_ctx.GetTargetPtr();
+  Target *target = exe_ctx->GetTargetPtr();
   const bool include_runtime_support_values =
-      target ? target->GetDisplayRuntimeSupportValues() : false;
+      target->GetDisplayRuntimeSupportValues();
   SBVariablesOptions options;
   options.SetIncludeArguments(arguments);
   options.SetIncludeLocals(locals);
@@ -810,18 +702,16 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
   LLDB_INSTRUMENT_VA(this, options);
 
   SBValueList value_list;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (stop_locker.IsLocked()) {
-
-    StackFrame *frame = nullptr;
-    Target *target = exe_ctx.GetTargetPtr();
-
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBValueList();
+  } else {
     const bool statics = options.GetIncludeStatics();
     const bool arguments = options.GetIncludeArguments();
     const bool recognized_arguments =
-        options.GetIncludeRecognizedArguments(SBTarget(exe_ctx.GetTargetSP()));
+        options.GetIncludeRecognizedArguments(SBTarget(exe_ctx->GetTargetSP()));
     const bool locals = options.GetIncludeLocals();
     const bool in_scope_only = options.GetInScopeOnly();
     const bool include_runtime_support_values =
@@ -829,10 +719,9 @@ SBValueList SBFrame::GetVariables(const lldb::SBVariablesOptions &options) {
     const lldb::DynamicValueType use_dynamic = options.GetUseDynamic();
 
     std::set<VariableSP> variable_set;
-    Process *process = exe_ctx.GetProcessPtr();
-    if (target && process) {
-      frame = exe_ctx.GetFramePtr();
-      if (frame) {
+    Process *process = exe_ctx->GetProcessPtr();
+    if (process) { // FIXME: this check is redundant.
+      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
         Debugger &dbg = process->GetTarget().GetDebugger();
         VariableList *variable_list = nullptr;
         Status var_error;
@@ -920,17 +809,16 @@ SBValueList SBFrame::GetRegisters() {
   LLDB_INSTRUMENT_VA(this);
 
   SBValueList value_list;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (stop_locker.IsLocked()) {
-
-    StackFrame *frame = nullptr;
-    Target *target = exe_ctx.GetTargetPtr();
-    Process *process = exe_ctx.GetProcessPtr();
-    if (target && process) {
-      frame = exe_ctx.GetFramePtr();
-      if (frame) {
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBValueList();
+  } else {
+    Target *target = exe_ctx->GetTargetPtr();
+    Process *process = exe_ctx->GetProcessPtr();
+    if (target && process) { // FIXME: this check is redundant.
+      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
         RegisterContextSP reg_ctx(frame->GetRegisterContext());
         if (reg_ctx) {
           const uint32_t num_sets = reg_ctx->GetRegisterSetCount();
@@ -951,16 +839,16 @@ SBValue SBFrame::FindRegister(const char *name) {
 
   SBValue result;
   ValueObjectSP value_sp;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (stop_locker.IsLocked()) {
-    StackFrame *frame = nullptr;
-    Target *target = exe_ctx.GetTargetPtr();
-    Process *process = exe_ctx.GetProcessPtr();
-    if (target && process) {
-      frame = exe_ctx.GetFramePtr();
-      if (frame) {
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return SBValue();
+  } else {
+    Target *target = exe_ctx->GetTargetPtr();
+    Process *process = exe_ctx->GetProcessPtr();
+    if (target && process) { // FIXME: this check is redundant.
+      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
         RegisterContextSP reg_ctx(frame->GetRegisterContext());
         if (reg_ctx) {
           if (const RegisterInfo *reg_info =
@@ -980,15 +868,11 @@ SBError SBFrame::GetDescriptionWithFormat(const SBFormat &format,
                                           SBStream &output) {
   Stream &strm = output.ref();
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return "Process is not stopped";
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx)
+    return Status::FromError(exe_ctx.takeError());
 
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
   SBError error;
 
   if (!format) {
@@ -996,13 +880,9 @@ SBError SBFrame::GetDescriptionWithFormat(const SBFormat &format,
     return error;
   }
 
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame &&
-        frame->DumpUsingFormat(strm, format.GetFormatEntrySP().get())) {
-      return error;
-    }
-  }
+  if (StackFrame *frame = exe_ctx->GetFramePtr();
+      frame && frame->DumpUsingFormat(strm, format.GetFormatEntrySP().get()))
+    return error;
   error.SetErrorStringWithFormat(
       "It was not possible to generate a frame "
       "description with the given format string '%s'",
@@ -1015,24 +895,16 @@ bool SBFrame::GetDescription(SBStream &description) {
 
   Stream &strm = description.ref();
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked()) {
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     strm.PutCString("Error: process is not stopped.");
     return true;
   }
 
-  StackFrame *frame;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      frame->DumpUsingSettingsFormat(&strm);
-    }
-  } else
-    strm.PutCString("No value");
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    frame->DumpUsingSettingsFormat(&strm);
 
   return true;
 }
@@ -1040,25 +912,24 @@ bool SBFrame::GetDescription(SBStream &description) {
 SBValue SBFrame::EvaluateExpression(const char *expr) {
   LLDB_INSTRUMENT_VA(this, expr);
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return CreateProcessIsRunningExprEvalError();
+  }
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  Target *target = exe_ctx.GetTargetPtr();
   SBExpressionOptions options;
-  if (frame && target) {
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  if (frame) {
     lldb::DynamicValueType fetch_dynamic_value =
         frame->CalculateTarget()->GetPreferDynamicValue();
     options.SetFetchDynamicValue(fetch_dynamic_value);
   }
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
-  SourceLanguage language;
-  if (target)
-    language = target->GetLanguage();
+  Target *target = exe_ctx->GetTargetPtr();
+  SourceLanguage language = target->GetLanguage();
   if (!language && frame)
     language = frame->GetLanguage();
   options.SetLanguage((SBSourceLanguageName)language.name, language.version);
@@ -1074,17 +945,16 @@ SBFrame::EvaluateExpression(const char *expr,
   options.SetFetchDynamicValue(fetch_dynamic_value);
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return CreateProcessIsRunningExprEvalError();
+  }
 
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  Target *target = exe_ctx.GetTargetPtr();
-  SourceLanguage language;
-  if (target)
-    language = target->GetLanguage();
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  Target *target = exe_ctx->GetTargetPtr();
+  SourceLanguage language = target->GetLanguage();
   if (!language && frame)
     language = frame->GetLanguage();
   options.SetLanguage((SBSourceLanguageName)language.name, language.version);
@@ -1097,20 +967,19 @@ SBValue SBFrame::EvaluateExpression(const char *expr,
   LLDB_INSTRUMENT_VA(this, expr, fetch_dynamic_value, unwind_on_error);
 
   SBExpressionOptions options;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return CreateProcessIsRunningExprEvalError();
+  }
 
   options.SetFetchDynamicValue(fetch_dynamic_value);
   options.SetUnwindOnError(unwind_on_error);
   options.SetIgnoreBreakpoints(true);
-  StackFrame *frame = exe_ctx.GetFramePtr();
-  Target *target = exe_ctx.GetTargetPtr();
-  SourceLanguage language;
-  if (target)
-    language = target->GetLanguage();
+  StackFrame *frame = exe_ctx->GetFramePtr();
+  Target *target = exe_ctx->GetTargetPtr();
+  SourceLanguage language = target->GetLanguage();
   if (!language && frame)
     language = frame->GetLanguage();
   options.SetLanguage((SBSourceLanguageName)language.name, language.version);
@@ -1141,18 +1010,16 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
 
   ValueObjectSP expr_value_sp;
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (stop_locker.IsLocked()) {
-
-    StackFrame *frame = nullptr;
-    Target *target = exe_ctx.GetTargetPtr();
-    Process *process = exe_ctx.GetProcessPtr();
-
-    if (target && process) {
-      frame = exe_ctx.GetFramePtr();
-      if (frame) {
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    expr_result = CreateProcessIsRunningExprEvalError();
+  } else {
+    Target *target = exe_ctx->GetTargetPtr();
+    Process *process = exe_ctx->GetProcessPtr();
+    if (target && process) { // FIXME: this check is redundant.
+      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
         std::unique_ptr<llvm::PrettyStackTraceFormat> stack_trace;
         if (target->GetDisplayExpressionsInCrashlogs()) {
           StreamString frame_description;
@@ -1173,8 +1040,7 @@ lldb::SBValue SBFrame::EvaluateExpression(const char *expr,
       expr_value_sp = ValueObjectConstResult::Create(nullptr, std::move(error));
       expr_result.SetSP(expr_value_sp, false);
     }
-  } else
-    expr_result = CreateProcessIsRunningExprEvalError();
+  }
 
   if (expr_result.GetError().Success())
     LLDB_LOGF(expr_log,
@@ -1194,12 +1060,13 @@ SBStructuredData SBFrame::GetLanguageSpecificData() const {
   LLDB_INSTRUMENT_VA(this);
 
   SBStructuredData sb_data;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return sb_data;
-  StackFrame *frame = exe_ctx.GetFramePtr();
+  }
+  StackFrame *frame = exe_ctx->GetFramePtr();
   if (!frame)
     return sb_data;
 
@@ -1217,20 +1084,15 @@ bool SBFrame::IsInlined() {
 bool SBFrame::IsInlined() const {
   LLDB_INSTRUMENT_VA(this);
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return false;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame)
-      return frame->IsInlined();
   }
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return frame->IsInlined();
   return false;
 }
 
@@ -1243,13 +1105,14 @@ bool SBFrame::IsArtificial() {
 bool SBFrame::IsArtificial() const {
   LLDB_INSTRUMENT_VA(this);
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return false;
+  }
 
-  if (StackFrame *frame = exe_ctx.GetFramePtr())
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
     return frame->IsArtificial();
 
   return false;
@@ -1258,13 +1121,14 @@ bool SBFrame::IsArtificial() const {
 bool SBFrame::IsHidden() const {
   LLDB_INSTRUMENT_VA(this);
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return false;
+  }
 
-  if (StackFrame *frame = exe_ctx.GetFramePtr())
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
     return frame->IsHidden();
 
   return false;
@@ -1279,63 +1143,44 @@ const char *SBFrame::GetFunctionName() {
 lldb::LanguageType SBFrame::GuessLanguage() const {
   LLDB_INSTRUMENT_VA(this);
 
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
     return eLanguageTypeUnknown;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame) {
-      return frame->GuessLanguage().AsLanguageType();
-    }
   }
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return frame->GuessLanguage().AsLanguageType();
   return eLanguageTypeUnknown;
 }
 
 const char *SBFrame::GetFunctionName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return name;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame)
-      return frame->GetFunctionName();
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return nullptr;
   }
-  return name;
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return frame->GetFunctionName();
+  return nullptr;
 }
 
 const char *SBFrame::GetDisplayFunctionName() {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
-
-  std::unique_lock<std::recursive_mutex> lock;
-  Process::StopLocker stop_locker;
-  ExecutionContext exe_ctx(m_opaque_sp.get(), lock, stop_locker);
-  if (!stop_locker.IsLocked())
-    return name;
-
-  StackFrame *frame = nullptr;
-  Target *target = exe_ctx.GetTargetPtr();
-  Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    frame = exe_ctx.GetFramePtr();
-    if (frame)
-      return frame->GetDisplayFunctionName();
+  llvm::Expected<CompleteExecutionContext> exe_ctx =
+      GetCompleteExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    llvm::consumeError(exe_ctx.takeError());
+    return nullptr;
   }
-  return name;
+
+  if (StackFrame *frame = exe_ctx->GetFramePtr())
+    return frame->GetDisplayFunctionName();
+  return nullptr;
 }

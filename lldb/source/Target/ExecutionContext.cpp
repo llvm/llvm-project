@@ -14,6 +14,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/State.h"
+#include <mutex>
 
 using namespace lldb_private;
 
@@ -126,43 +127,51 @@ ExecutionContext::ExecutionContext(const ExecutionContextRef *exe_ctx_ref_ptr,
   }
 }
 
-ExecutionContext::ExecutionContext(
-    const ExecutionContextRef *exe_ctx_ref_ptr,
-    std::unique_lock<std::recursive_mutex> &api_lock,
-    ProcessRunLock::ProcessRunLocker &stop_locker, Status *status)
-    : m_target_sp(), m_process_sp(), m_thread_sp(), m_frame_sp() {
-  auto set_status = [&](const char *msg) {
-    if (status)
-      *status = Status::FromErrorString(msg);
-  };
+llvm::Expected<CompleteExecutionContext>
+lldb_private::GetCompleteExecutionContext(
+    const lldb::ExecutionContextRefSP &exe_ctx_ref_ptr) {
+  return GetCompleteExecutionContext(exe_ctx_ref_ptr.get());
+}
 
-  if (!exe_ctx_ref_ptr) {
-    set_status("ExecutionContext created with an empty ExecutionContextRef");
-    return;
+llvm::Expected<CompleteExecutionContext>
+lldb_private::GetCompleteExecutionContext(
+    const ExecutionContextRef *exe_ctx_ref_ptr) {
+  if (!exe_ctx_ref_ptr)
+    return llvm::createStringError(
+        "ExecutionContext created with an empty ExecutionContextRef");
+
+  lldb::TargetSP target_sp = exe_ctx_ref_ptr->GetTargetSP();
+  if (!target_sp)
+    return llvm::createStringError(
+        "ExecutionContext created with a null target");
+
+  auto api_lock =
+      std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+
+  auto process_sp = exe_ctx_ref_ptr->GetProcessSP();
+  if (!process_sp)
+    return llvm::createStringError(
+        "ExecutionContext created with a null process");
+
+  ProcessRunLock::ProcessRunLocker stop_locker;
+  if (!stop_locker.TryLock(&process_sp->GetRunLock())) {
+    auto *error_msg =
+        "Attempted to create an ExecutionContext with a running process";
+    LLDB_LOG(GetLog(LLDBLog::API), error_msg);
+    return llvm::createStringError(error_msg);
   }
 
-  m_target_sp = exe_ctx_ref_ptr->GetTargetSP();
-  if (!m_target_sp) {
-    set_status("ExecutionContext created with a null target");
-    return;
-  }
+  auto thread_sp = exe_ctx_ref_ptr->GetThreadSP();
+  auto frame_sp = exe_ctx_ref_ptr->GetFrameSP();
+  return CompleteExecutionContext(target_sp, process_sp, thread_sp, frame_sp,
+                                  std::move(api_lock), std::move(stop_locker));
+}
 
-  api_lock = std::unique_lock<std::recursive_mutex>(m_target_sp->GetAPIMutex());
-  m_process_sp = exe_ctx_ref_ptr->GetProcessSP();
-  if (!m_process_sp) {
-    set_status("ExecutionContext created with a null process");
-    return;
-  }
-
-  if (!stop_locker.TryLock(&m_process_sp->GetRunLock())) {
-    const char *msg = "ExecutionContext created with a running process";
-    set_status(msg);
-    LLDB_LOG(GetLog(LLDBLog::API), msg);
-    return;
-  }
-
-  m_thread_sp = exe_ctx_ref_ptr->GetThreadSP();
-  m_frame_sp = exe_ctx_ref_ptr->GetFrameSP();
+std::unique_lock<std::recursive_mutex>
+CompleteExecutionContext::ClearAndGetAPILock() {
+  Clear();
+  m_stop_locker = ProcessRunLock::ProcessRunLocker();
+  return std::move(m_api_lock);
 }
 
 ExecutionContext::ExecutionContext(ExecutionContextScope *exe_scope_ptr)
