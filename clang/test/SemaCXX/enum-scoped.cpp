@@ -128,7 +128,10 @@ namespace rdar9366066 {
 
   void f(X x) {
     x % X::value; // expected-error{{invalid operands to binary expression ('X' and 'rdar9366066::X')}}
+                  // expected-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
+                  // expected-note@-2{{no implicit conversion for scoped enum; consider casting to underlying type}}
     x % 8; // expected-error{{invalid operands to binary expression ('X' and 'int')}}
+           // expected-note@-1{{no implicit conversion for scoped enum; consider casting to underlying type}}
   }
 }
 
