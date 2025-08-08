@@ -18,6 +18,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
@@ -65,7 +66,13 @@ struct ConvertMemRefToEmitCPass
       return signalPassFailure();
 
     mlir::ModuleOp module = getOperation();
-    llvm::SmallVector<StringRef> requiredHeaders;
+    llvm::SmallSet<StringRef, 4> existingHeaders;
+    mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
+    module.walk([&](mlir::emitc::IncludeOp includeOp) {
+      if (includeOp.getIsStandardInclude())
+        existingHeaders.insert(includeOp.getInclude());
+    });
+
     module.walk([&](mlir::emitc::CallOpaqueOp callOp) {
       StringRef expectedHeader;
       if (callOp.getCallee() == alignedAllocFunctionName ||
@@ -77,21 +84,12 @@ struct ConvertMemRefToEmitCPass
             options.lowerToCpp ? cppStringLibraryHeader : cStringLibraryHeader;
       else
         return mlir::WalkResult::advance();
-      requiredHeaders.push_back(expectedHeader);
+      if (!existingHeaders.contains(expectedHeader)) {
+        addStandardHeader(builder, module, expectedHeader);
+        existingHeaders.insert(expectedHeader);
+      }
       return mlir::WalkResult::advance();
     });
-    for (StringRef expectedHeader : requiredHeaders) {
-      bool headerFound = llvm::any_of(*module.getBody(), [&](Operation &op) {
-        auto includeOp = dyn_cast<mlir::emitc::IncludeOp>(op);
-        return includeOp && includeOp.getIsStandardInclude() &&
-               (includeOp.getInclude() == expectedHeader);
-      });
-
-      if (!headerFound) {
-        mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
-        addStandardHeader(builder, module, expectedHeader);
-      }
-    }
   }
 };
 } // namespace

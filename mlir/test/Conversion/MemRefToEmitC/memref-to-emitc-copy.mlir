@@ -6,13 +6,12 @@ func.func @copying(%arg0 : memref<9x4x5x7xf32>, %arg1 : memref<9x4x5x7xf32>) {
   return
 }
 
-// NOCPP: module {
-// NOCPP-NEXT:  emitc.include <"string.h">
+// CHECK: module {
+// NOCPP:  emitc.include <"string.h">
 
+// CPP:  emitc.include <"cstring">
 
-// CPP: module {
-// CPP-NEXT:  emitc.include <"cstring">
-// CPP-LABEL:  copying
+// CHECK-LABEL:  copying
 // CHECK-SAME: %[[arg0:.*]]: memref<9x4x5x7xf32>, %[[arg1:.*]]: memref<9x4x5x7xf32>
 // CHECK-NEXT: %0 = builtin.unrealized_conversion_cast %arg1 : memref<9x4x5x7xf32> to !emitc.array<9x4x5x7xf32>
 // CHECK-NEXT: %1 = builtin.unrealized_conversion_cast %arg0 : memref<9x4x5x7xf32> to !emitc.array<9x4x5x7xf32>

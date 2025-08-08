@@ -23,6 +23,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <cstdint>
+#include <numeric>
 
 using namespace mlir;
 
@@ -98,8 +99,8 @@ Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
   return resultTy;
 }
 
-Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
-                                    OpBuilder &builder) {
+static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
+                                           OpBuilder &builder) {
   assert(isMemRefTypeLegalForEmitC(memrefType) &&
          "incompatible memref type for EmitC conversion");
   emitc::CallOpaqueOp elementSize = builder.create<emitc::CallOpaqueOp>(
@@ -109,10 +110,9 @@ Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
                      {TypeAttr::get(memrefType.getElementType())}));
 
   IndexType indexType = builder.getIndexType();
-  int64_t numElements = 1;
-  for (int64_t dimSize : memrefType.getShape()) {
-    numElements *= dimSize;
-  }
+  int64_t numElements = std::accumulate(memrefType.getShape().begin(),
+                                        memrefType.getShape().end(), int64_t{1},
+                                        std::multiplies<int64_t>());
   emitc::ConstantOp numElementsValue = builder.create<emitc::ConstantOp>(
       loc, indexType, builder.getIndexAttr(numElements));
 
@@ -211,10 +211,7 @@ struct ConvertCopy final : public OpConversionPattern<memref::CopyOp> {
         [loc, &rewriter, &zeroIndex](
             mlir::TypedValue<emitc::ArrayType> arrayValue) -> emitc::ApplyOp {
       int64_t rank = arrayValue.getType().getRank();
-      llvm::SmallVector<mlir::Value> indices;
-      for (int i = 0; i < rank; ++i) {
-        indices.push_back(zeroIndex);
-      }
+      llvm::SmallVector<mlir::Value> indices(rank, zeroIndex);
 
       emitc::SubscriptOp subPtr = rewriter.create<emitc::SubscriptOp>(
           loc, arrayValue, mlir::ValueRange(indices));
