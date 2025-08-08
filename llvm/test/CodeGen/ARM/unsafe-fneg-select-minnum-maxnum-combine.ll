@@ -138,8 +138,8 @@ define float @select_mul4_or_8_cmp_olt_mulneg4_8_f32(float %a, float %b) #0 {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #-4.000000e+00
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmov.f32 s6, #8.000000e+00
 ; CHECK-NEXT:    vmov.f32 s4, #4.000000e+00
+; CHECK-NEXT:    vmov.f32 s6, #8.000000e+00
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vmul.f32 s2, s2, s4
 ; CHECK-NEXT:    vcmp.f32 s6, s0
@@ -159,8 +159,8 @@ define float @select_mul4_or_neg8_cmp_olt_mulneg4_neg8_f32(float %a, float %b) #
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov.f32 s0, #-4.000000e+00
 ; CHECK-NEXT:    vmov s2, r0
-; CHECK-NEXT:    vmov.f32 s6, #-8.000000e+00
 ; CHECK-NEXT:    vmov.f32 s4, #4.000000e+00
+; CHECK-NEXT:    vmov.f32 s6, #-8.000000e+00
 ; CHECK-NEXT:    vmul.f32 s0, s2, s0
 ; CHECK-NEXT:    vmul.f32 s2, s2, s4
 ; CHECK-NEXT:    vcmp.f32 s6, s0

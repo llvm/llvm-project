@@ -1981,8 +1981,8 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-ENABLE-NEXT:    bl _pow
 ; ARM-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00
 ; ARM-ENABLE-NEXT:    mov r4, sp
-; ARM-ENABLE-NEXT:    vmov.f64 d17, d9
 ; ARM-ENABLE-NEXT:    vmov d16, r0, r1
+; ARM-ENABLE-NEXT:    vmov.f64 d17, d9
 ; ARM-ENABLE-NEXT:    vcmp.f32 s16, s0
 ; ARM-ENABLE-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARM-ENABLE-NEXT:    vadd.f64 d16, d16, d16
@@ -2032,8 +2032,8 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-DISABLE-NEXT:    vadd.f64 d10, d9, d16
 ; ARM-DISABLE-NEXT:    bl _pow
 ; ARM-DISABLE-NEXT:    vmov.f32 s0, #1.000000e+00
-; ARM-DISABLE-NEXT:    vmov.f64 d17, d9
 ; ARM-DISABLE-NEXT:    vmov d16, r0, r1
+; ARM-DISABLE-NEXT:    vmov.f64 d17, d9
 ; ARM-DISABLE-NEXT:    vcmp.f32 s16, s0
 ; ARM-DISABLE-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARM-DISABLE-NEXT:    vadd.f64 d16, d16, d16
@@ -2084,14 +2084,14 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-ENABLE-NEXT:    bl _pow
 ; THUMB-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00
 ; THUMB-ENABLE-NEXT:    mov r4, sp
-; THUMB-ENABLE-NEXT:    vmov.f64 d17, d9
 ; THUMB-ENABLE-NEXT:    vmov d16, r0, r1
+; THUMB-ENABLE-NEXT:    vmov.f64 d17, d9
 ; THUMB-ENABLE-NEXT:    vcmp.f32 s16, s0
 ; THUMB-ENABLE-NEXT:    vmrs APSR_nzcv, fpscr
 ; THUMB-ENABLE-NEXT:    it gt
 ; THUMB-ENABLE-NEXT:    vmovgt.f64 d17, d10
-; THUMB-ENABLE-NEXT:    vcmp.f64 d17, d9
 ; THUMB-ENABLE-NEXT:    vadd.f64 d16, d16, d16
+; THUMB-ENABLE-NEXT:    vcmp.f64 d17, d9
 ; THUMB-ENABLE-NEXT:    vmrs APSR_nzcv, fpscr
 ; THUMB-ENABLE-NEXT:    it ne
 ; THUMB-ENABLE-NEXT:    vmovne.f64 d9, d16
@@ -2138,14 +2138,14 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-DISABLE-NEXT:    vadd.f64 d10, d9, d16
 ; THUMB-DISABLE-NEXT:    bl _pow
 ; THUMB-DISABLE-NEXT:    vmov.f32 s0, #1.000000e+00
-; THUMB-DISABLE-NEXT:    vmov.f64 d17, d9
 ; THUMB-DISABLE-NEXT:    vmov d16, r0, r1
+; THUMB-DISABLE-NEXT:    vmov.f64 d17, d9
 ; THUMB-DISABLE-NEXT:    vcmp.f32 s16, s0
 ; THUMB-DISABLE-NEXT:    vmrs APSR_nzcv, fpscr
 ; THUMB-DISABLE-NEXT:    it gt
 ; THUMB-DISABLE-NEXT:    vmovgt.f64 d17, d10
-; THUMB-DISABLE-NEXT:    vcmp.f64 d17, d9
 ; THUMB-DISABLE-NEXT:    vadd.f64 d16, d16, d16
+; THUMB-DISABLE-NEXT:    vcmp.f64 d17, d9
 ; THUMB-DISABLE-NEXT:    vmrs APSR_nzcv, fpscr
 ; THUMB-DISABLE-NEXT:    it ne
 ; THUMB-DISABLE-NEXT:    vmovne.f64 d9, d16
