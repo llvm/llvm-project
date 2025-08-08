@@ -660,7 +660,49 @@ add_entrypoint_object(
   HDRS
     set_constraint_handler_s.h
   DEPENDS
-    libc.src.__support.annex_k.abort_handler_s
+    .abort_handler_s
     libc.src.__support.annex_k.libc_constraint_handler
     libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  abort_handler_s
+  SRCS
+    abort_handler_s.cpp
+  HDRS
+    abort_handler_s.h
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.types.errno_t
+    libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
+    libc.src.__support.File.file
+)
+
+add_header_library(
+  libc_constraint_handler
+  HDRS
+    libc_constraint_handler.h
+  DEPENDS
+    .abort_handler_s
+    libc.hdr.types.constraint_handler_t
+)
+
+add_header_library(
+  annex_k_helper_macros
+  HDRS
+    annex_k_helper_macros.h
+)
+
+add_entrypoint_object(
+  ignore_handler_s
+  HDRS
+    ignore_handler_s.h
+  SRCS
+    ignore_handler_s.cpp
+  DEPENDS
+    libc.hdr.types.errno_t
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.attributes
 )

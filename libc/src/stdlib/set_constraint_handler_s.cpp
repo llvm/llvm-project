@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "set_constraint_handler_s.h"
-#include "src/__support/annex_k/abort_handler_s.h"
+#include "abort_handler_s.h"
 #include "src/__support/annex_k/libc_constraint_handler.h"
 #include "src/__support/common.h"
 

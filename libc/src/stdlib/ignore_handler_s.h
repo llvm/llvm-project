@@ -6,18 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_ANNEX_K_IGNORE_HANDLER_S_H
-#define LLVM_LIBC_SRC___SUPPORT_ANNEX_K_IGNORE_HANDLER_S_H
+#ifndef LLVM_LIBC_SRC_STDLIB_IGNORE_HANDLER_S_H
+#define LLVM_LIBC_SRC_STDLIB_IGNORE_HANDLER_S_H
 
 #include "hdr/types/errno_t.h"
-#include "src/__support/macros/attributes.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE static void ignore_handler_s(const char *__restrict msg,
-                                         void *__restrict ptr, errno_t error) {}
+void ignore_handler_s(const char *__restrict msg, void *__restrict ptr,
+                      errno_t error);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_ANNEX_K_IGNORE_HANDLER_S_H
+#endif // LLVM_LIBC_SRC_STDLIB_IGNORE_HANDLER_S_H
