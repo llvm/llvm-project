@@ -1729,18 +1729,18 @@ def Vector_LoadOp : Vector_Op<"load", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, nontemporal,
-                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
                                     nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, nontemporal,
-                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
                                     nullptr);
     }]>
   ];
@@ -1847,9 +1847,9 @@ def Vector_StoreOp : Vector_Op<"store", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
-                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, valueToStore, base, indices, nontemporal,
-                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
                                     nullptr);
     }]>
   ];
@@ -1947,9 +1947,9 @@ def Vector_MaskedLoadOp :
                    "ValueRange":$indices,
                    "Value":$mask,
                    "Value":$passthrough,
-                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultType, base, indices, mask, passthrough,
-                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
                                     nullptr);
     }]>,
     OpBuilder<(ins "TypeRange":$resultTypes,
@@ -1957,9 +1957,9 @@ def Vector_MaskedLoadOp :
                    "ValueRange":$indices,
                    "Value":$mask,
                    "Value":$passthrough,
-                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, resultTypes, base, indices, mask, passthrough,
-                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
                                     nullptr);
     }]>
   ];
@@ -2037,9 +2037,9 @@ def Vector_MaskedStoreOp :
                    "ValueRange":$indices,
                    "Value":$mask,
                    "Value":$valueToStore,
-                   CArg<"llvm::Align", "llvm::Align()">:$alignment), [{
+                   CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
       return build($_builder, $_state, base, indices, mask, valueToStore,
-                   alignment != llvm::Align() ? $_builder.getI64IntegerAttr(alignment.value()) :
+                   alignment != llvm::MaybeAlign() ? $_builder.getI64IntegerAttr(alignment.valueOrOne().value()) :
                                     nullptr);
     }]>
   ];
