@@ -49,6 +49,16 @@ public:
     return *this;
   }
 
+  RCInt &operator*=(const RCInt &Rhs) {
+    std::tie(Val, Long) = std::make_pair(Val * Rhs.Val, Long | Rhs.Long);
+    return *this;
+  }
+
+  RCInt &operator/=(const RCInt &Rhs) {
+    std::tie(Val, Long) = std::make_pair(Val / Rhs.Val, Long | Rhs.Long);
+    return *this;
+  }
+
   RCInt &operator|=(const RCInt &Rhs) {
     std::tie(Val, Long) = std::make_pair(Val | Rhs.Val, Long | Rhs.Long);
     return *this;
@@ -94,6 +104,20 @@ public:
   IntWithNotMask &operator-=(const IntWithNotMask &Rhs) {
     Value &= ~Rhs.NotMask;
     Value -= Rhs.Value;
+    NotMask |= Rhs.NotMask;
+    return *this;
+  }
+
+  IntWithNotMask &operator*=(const IntWithNotMask &Rhs) {
+    Value &= ~Rhs.NotMask;
+    Value *= Rhs.Value;
+    NotMask |= Rhs.NotMask;
+    return *this;
+  }
+
+  IntWithNotMask &operator/=(const IntWithNotMask &Rhs) {
+    Value &= ~Rhs.NotMask;
+    Value /= Rhs.Value;
     NotMask |= Rhs.NotMask;
     return *this;
   }

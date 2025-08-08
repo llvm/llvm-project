@@ -143,6 +143,42 @@ debugging information influences optimization passes then it will be reported
 as a failure.  See :doc:`TestingGuide` for more information on LLVM test
 infrastructure and how to run various tests.
 
+.. _variables_and_variable_fragments:
+
+Variables and Variable Fragments
+================================
+
+In this document "variable" refers generally to any source language object
+which can have a value, including at least:
+
+- Variables
+- Constants
+- Formal parameters
+
+.. note::
+
+   There is no special provision for "true" constants in LLVM today, and
+   they are instead treated as local or global variables.
+
+A variable is represented by a `local variable <LangRef.html#dilocalvariable>`_
+or `global variable <LangRef.html#diglobalvariable>`_ metadata node.
+
+A "variable fragment" (or just "fragment") is a contiguous span of bits of a
+variable.
+
+A :ref:`debug record <debug_records>` which refers to a ``DIExpression`` ending
+with a ``DW_OP_LLVM_fragment`` operation describes a fragment of the variable
+it refers to.
+
+The operands of the ``DW_OP_LLVM_fragment`` operation encode the bit offset of
+the fragment relative to the start of the variable, and the size of the
+fragment in bits, respectively.
+
+.. note::
+
+   The ``DW_OP_LLVM_fragment`` operation acts only to encode the fragment
+   information, and does not have an effect on the semantics of the expression.
+
 .. _format:
 
 Debugging information format
@@ -510,10 +546,23 @@ values through compilation, when objects are promoted to SSA values a
 ``#dbg_value`` record is created for each assignment, recording the
 variable's new location. Compared with the ``#dbg_declare`` record:
 
-* A #dbg_value terminates the effect of any preceding #dbg_values for (any
-  overlapping fragments of) the specified variable.
-* The #dbg_value's position in the IR defines where in the instruction stream
-  the variable's value changes.
+* A ``#dbg_value`` terminates the effects that any preceding records have on
+  any common bits of a common variable.
+
+  .. note::
+
+    The current implementation generally terminates the effect of every
+    record in its entirety if any of its effects would be terminated, rather
+    than carrying forward the effect of previous records for non-overlapping
+    bits as it would be permitted to do by this definition. This is allowed
+    just as dropping any debug information at any point in the compilation is
+    allowed.
+
+    One exception to this is :doc:`AssignmentTracking` where certain
+    memory-based locations are carried forward partially in some situations.
+
+* The ``#dbg_value``'s position in the IR defines where in the instruction
+  stream the variable's value changes.
 * Operands can be constants, indicating the variable is assigned a
   constant value.
 

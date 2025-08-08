@@ -33,6 +33,8 @@ static bool isNegativeComparison(const Expr *ComparisonExpr) {
   return false;
 }
 
+namespace {
+
 struct NotLengthExprForStringNode {
   NotLengthExprForStringNode(std::string ID, DynTypedNode Node,
                              ASTContext *Context)
@@ -90,6 +92,8 @@ AST_MATCHER_P(Expr, lengthExprForStringNode, std::string, ID) {
   return Builder->removeBindings(NotLengthExprForStringNode(
       ID, DynTypedNode::create(Node), &(Finder->getASTContext())));
 }
+
+} // namespace
 
 UseStartsEndsWithCheck::UseStartsEndsWithCheck(StringRef Name,
                                                ClangTidyContext *Context)

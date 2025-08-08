@@ -142,10 +142,8 @@ class OpenACCComputeConstruct final
     // We cannot send the TrailingObjects storage to the base class (which holds
     // a reference to the data) until it is constructed, so we have to set it
     // separately here.
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCComputeConstruct(OpenACCDirectiveKind K, SourceLocation Start,
@@ -159,10 +157,9 @@ class OpenACCComputeConstruct final
            "represented by this type");
 
     // Initialize the trailing storage.
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
 
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
   void setStructuredBlock(Stmt *S) { setAssociatedStmt(S); }
@@ -254,10 +251,8 @@ class OpenACCCombinedConstruct final
             OpenACCCombinedConstructClass, OpenACCDirectiveKind::Invalid,
             SourceLocation{}, SourceLocation{}, SourceLocation{},
             /*AssociatedStmt=*/nullptr) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCCombinedConstruct(OpenACCDirectiveKind K, SourceLocation Start,
@@ -270,9 +265,8 @@ class OpenACCCombinedConstruct final
            "Only parallel loop, serial loop, and kernels loop constructs "
            "should be represented by this type");
 
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
   void setStructuredBlock(Stmt *S) { setAssociatedStmt(S); }
 
@@ -305,10 +299,8 @@ class OpenACCDataConstruct final
             OpenACCDataConstructClass, OpenACCDirectiveKind::Data,
             SourceLocation{}, SourceLocation{}, SourceLocation{},
             /*AssociatedStmt=*/nullptr) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCDataConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
@@ -318,9 +310,8 @@ class OpenACCDataConstruct final
       : OpenACCAssociatedStmtConstruct(OpenACCDataConstructClass,
                                        OpenACCDirectiveKind::Data, Start,
                                        DirectiveLoc, End, StructuredBlock) {
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
   void setStructuredBlock(Stmt *S) { setAssociatedStmt(S); }
 
@@ -351,10 +342,8 @@ class OpenACCEnterDataConstruct final
       : OpenACCConstructStmt(OpenACCEnterDataConstructClass,
                              OpenACCDirectiveKind::EnterData, SourceLocation{},
                              SourceLocation{}, SourceLocation{}) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
   OpenACCEnterDataConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
                             SourceLocation End,
@@ -362,9 +351,8 @@ class OpenACCEnterDataConstruct final
       : OpenACCConstructStmt(OpenACCEnterDataConstructClass,
                              OpenACCDirectiveKind::EnterData, Start,
                              DirectiveLoc, End) {
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
 public:
@@ -387,10 +375,8 @@ class OpenACCExitDataConstruct final
       : OpenACCConstructStmt(OpenACCExitDataConstructClass,
                              OpenACCDirectiveKind::ExitData, SourceLocation{},
                              SourceLocation{}, SourceLocation{}) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
   OpenACCExitDataConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
                            SourceLocation End,
@@ -398,9 +384,8 @@ class OpenACCExitDataConstruct final
       : OpenACCConstructStmt(OpenACCExitDataConstructClass,
                              OpenACCDirectiveKind::ExitData, Start,
                              DirectiveLoc, End) {
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
 public:
@@ -425,10 +410,8 @@ class OpenACCHostDataConstruct final
             OpenACCHostDataConstructClass, OpenACCDirectiveKind::HostData,
             SourceLocation{}, SourceLocation{}, SourceLocation{},
             /*AssociatedStmt=*/nullptr) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
   OpenACCHostDataConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
                            SourceLocation End,
@@ -437,9 +420,8 @@ class OpenACCHostDataConstruct final
       : OpenACCAssociatedStmtConstruct(OpenACCHostDataConstructClass,
                                        OpenACCDirectiveKind::HostData, Start,
                                        DirectiveLoc, End, StructuredBlock) {
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
   void setStructuredBlock(Stmt *S) { setAssociatedStmt(S); }
 
@@ -490,11 +472,9 @@ class OpenACCWaitConstruct final
     assert(NumExprs >= 1 &&
            "NumExprs should always be >= 1 because the 'devnum' "
            "expr is represented by a null if necessary");
-    std::uninitialized_value_construct(getExprPtr(),
-                                       getExprPtr() + NumExprs);
-    std::uninitialized_value_construct(getTrailingObjects<OpenACCClause *>(),
-                                       getTrailingObjects<OpenACCClause *>() +
-                                           NumClauses);
+    std::uninitialized_value_construct_n(getExprPtr(), NumExprs);
+    std::uninitialized_value_construct_n(getTrailingObjects<OpenACCClause *>(),
+                                         NumClauses);
     setClauseList(MutableArrayRef(const_cast<const OpenACCClause **>(
                                       getTrailingObjects<OpenACCClause *>()),
                                   NumClauses));
@@ -533,13 +513,9 @@ class OpenACCWaitConstruct final
     return const_cast<Expr**>(getTrailingObjects<Expr *>());
   }
 
-  llvm::ArrayRef<Expr *> getExprs() const {
-    return llvm::ArrayRef<Expr *>(getExprPtr(), NumExprs);
-  }
+  ArrayRef<Expr *> getExprs() const { return {getExprPtr(), NumExprs}; }
 
-  llvm::ArrayRef<Expr *> getExprs() {
-    return llvm::ArrayRef<Expr *>(getExprPtr(), NumExprs);
-  }
+  ArrayRef<Expr *> getExprs() { return {getExprPtr(), NumExprs}; }
 
 public:
   static bool classof(const Stmt *T) {
@@ -562,10 +538,8 @@ public:
 
   bool hasDevNumExpr() const { return getExprs()[0]; }
   Expr *getDevNumExpr() const { return getExprs()[0]; }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() { return getExprs().drop_front(); }
-  llvm::ArrayRef<Expr *> getQueueIdExprs() const {
-    return getExprs().drop_front();
-  }
+  ArrayRef<Expr *> getQueueIdExprs() { return getExprs().drop_front(); }
+  ArrayRef<Expr *> getQueueIdExprs() const { return getExprs().drop_front(); }
 
   child_range children() {
     Stmt **Begin = reinterpret_cast<Stmt **>(getExprPtr());
@@ -597,8 +571,7 @@ class OpenACCCacheConstruct final
                              OpenACCDirectiveKind::Cache, SourceLocation{},
                              SourceLocation{}, SourceLocation{}),
         NumVars(NumVars) {
-    std::uninitialized_value_construct(getVarListPtr(),
-                                       getVarListPtr() + NumVars);
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumVars);
   }
   OpenACCCacheConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
                         SourceLocation LParenLoc, SourceLocation ReadOnlyLoc,
@@ -610,21 +583,13 @@ class OpenACCCacheConstruct final
         ParensLoc(LParenLoc, RParenLoc), ReadOnlyLoc(ReadOnlyLoc),
         NumVars(VarList.size()) {
 
-    llvm::uninitialized_copy(VarList, getVarListPtr());
-  }
-
-  Expr **getVarListPtr() const {
-    return const_cast<Expr **>(getTrailingObjects<Expr *>());
+    llvm::uninitialized_copy(VarList, getTrailingObjects());
   }
 
 public:
-  llvm::ArrayRef<Expr *> getVarList() const {
-    return llvm::ArrayRef<Expr *>(getVarListPtr(), NumVars);
-  }
+  ArrayRef<Expr *> getVarList() const { return getTrailingObjects(NumVars); }
 
-  llvm::ArrayRef<Expr *> getVarList() {
-    return llvm::ArrayRef<Expr *>(getVarListPtr(), NumVars);
-  }
+  MutableArrayRef<Expr *> getVarList() { return getTrailingObjects(NumVars); }
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == OpenACCCacheConstructClass;
@@ -644,12 +609,12 @@ public:
   SourceLocation getReadOnlyLoc() const { return ReadOnlyLoc; }
 
   child_range children() {
-    Stmt **Begin = reinterpret_cast<Stmt **>(getVarListPtr());
+    Stmt **Begin = reinterpret_cast<Stmt **>(getTrailingObjects());
     return child_range(Begin, Begin + NumVars);
   }
 
   const_child_range children() const {
-    Stmt *const *Begin = reinterpret_cast<Stmt *const *>(getVarListPtr());
+    Stmt *const *Begin = reinterpret_cast<Stmt *const *>(getTrailingObjects());
     return const_child_range(Begin, Begin + NumVars);
   }
 };
@@ -664,10 +629,8 @@ class OpenACCInitConstruct final
       : OpenACCConstructStmt(OpenACCInitConstructClass,
                              OpenACCDirectiveKind::Init, SourceLocation{},
                              SourceLocation{}, SourceLocation{}) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
   OpenACCInitConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
                        SourceLocation End,
@@ -675,9 +638,8 @@ class OpenACCInitConstruct final
       : OpenACCConstructStmt(OpenACCInitConstructClass,
                              OpenACCDirectiveKind::Init, Start, DirectiveLoc,
                              End) {
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
 public:
@@ -702,10 +664,8 @@ class OpenACCShutdownConstruct final
       : OpenACCConstructStmt(OpenACCShutdownConstructClass,
                              OpenACCDirectiveKind::Shutdown, SourceLocation{},
                              SourceLocation{}, SourceLocation{}) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
   OpenACCShutdownConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
                            SourceLocation End,
@@ -713,9 +673,8 @@ class OpenACCShutdownConstruct final
       : OpenACCConstructStmt(OpenACCShutdownConstructClass,
                              OpenACCDirectiveKind::Shutdown, Start,
                              DirectiveLoc, End) {
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
 public:
@@ -739,10 +698,8 @@ class OpenACCSetConstruct final
       : OpenACCConstructStmt(OpenACCSetConstructClass,
                              OpenACCDirectiveKind::Set, SourceLocation{},
                              SourceLocation{}, SourceLocation{}) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCSetConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
@@ -751,9 +708,8 @@ class OpenACCSetConstruct final
       : OpenACCConstructStmt(OpenACCSetConstructClass,
                              OpenACCDirectiveKind::Set, Start, DirectiveLoc,
                              End) {
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
 public:
@@ -777,10 +733,8 @@ class OpenACCUpdateConstruct final
       : OpenACCConstructStmt(OpenACCUpdateConstructClass,
                              OpenACCDirectiveKind::Update, SourceLocation{},
                              SourceLocation{}, SourceLocation{}) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCUpdateConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
@@ -789,9 +743,8 @@ class OpenACCUpdateConstruct final
       : OpenACCConstructStmt(OpenACCUpdateConstructClass,
                              OpenACCDirectiveKind::Update, Start, DirectiveLoc,
                              End) {
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
 public:
@@ -821,10 +774,8 @@ class OpenACCAtomicConstruct final
             OpenACCAtomicConstructClass, OpenACCDirectiveKind::Atomic,
             SourceLocation{}, SourceLocation{}, SourceLocation{},
             /*AssociatedStmt=*/nullptr) {
-    std::uninitialized_value_construct(
-        getTrailingObjects<const OpenACCClause *>(),
-        getTrailingObjects<const OpenACCClause *>() + NumClauses);
-    setClauseList(getTrailingObjects<const OpenACCClause *>(NumClauses));
+    std::uninitialized_value_construct_n(getTrailingObjects(), NumClauses);
+    setClauseList(getTrailingObjects(NumClauses));
   }
 
   OpenACCAtomicConstruct(SourceLocation Start, SourceLocation DirectiveLoc,
@@ -836,10 +787,9 @@ class OpenACCAtomicConstruct final
                                        DirectiveLoc, End, AssociatedStmt),
         AtomicKind(AtKind) {
     // Initialize the trailing storage.
-    llvm::uninitialized_copy(Clauses,
-                             getTrailingObjects<const OpenACCClause *>());
+    llvm::uninitialized_copy(Clauses, getTrailingObjects());
 
-    setClauseList(getTrailingObjects<const OpenACCClause *>(Clauses.size()));
+    setClauseList(getTrailingObjects(Clauses.size()));
   }
 
   void setAssociatedStmt(Stmt *S) {

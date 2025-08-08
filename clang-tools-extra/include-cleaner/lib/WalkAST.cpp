@@ -140,7 +140,6 @@ public:
       return true;
     switch (Qual->getKind()) {
     case NestedNameSpecifier::Namespace:
-    case NestedNameSpecifier::NamespaceAlias:
     case NestedNameSpecifier::Global:
       return true;
     case NestedNameSpecifier::TypeSpec:
@@ -322,7 +321,7 @@ public:
   }
 
   bool VisitCleanupAttr(CleanupAttr *attr) {
-    report(attr->getLocation(), attr->getFunctionDecl());
+    report(attr->getArgLoc(), attr->getFunctionDecl());
     return true;
   }
 

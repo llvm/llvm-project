@@ -466,6 +466,24 @@ func.func @compose_collapse_of_collapse(%arg0 : memref<?x?x?x?x?xf32>)
 
 // -----
 
+func.func @compose_collapse_of_expand_partially_dynamic(%arg0: memref<?xf16>, %arg1: index, %arg2: index) -> memref<8x?x?xf16> {
+  %expanded = memref.expand_shape %arg0 [[0, 1, 2, 3, 4]] output_shape [4, 2, %arg1, %arg2, 32] : memref<?xf16> into memref<4x2x?x?x32xf16>
+  %collapsed = memref.collapse_shape %expanded [[0, 1], [2], [3, 4]] : memref<4x2x?x?x32xf16> into memref<8x?x?xf16>
+  return %collapsed : memref<8x?x?xf16>
+}
+//       CHECK: func @compose_collapse_of_expand_partially_dynamic
+//  CHECK-SAME:   %[[SRC:.[a-zA-Z0-9]+]]
+//  CHECK-SAME:   %[[ORIG_D2:.[a-zA-Z0-9]+]]
+//  CHECK-SAME:   %[[ORIG_D3:.[a-zA-Z0-9]+]]
+//   CHECK-DAG:   %[[C32:.+]] = arith.constant 32
+//       CHECK:   %[[COLLAPSED_D2:.+]] = arith.muli %[[ORIG_D3]], %[[C32]]
+//       CHECK:   %[[RESULT:.+]] = memref.expand_shape %[[SRC]]
+//  CHECK-SAME:     [0, 1, 2]
+//  CHECK-SAME:     output_shape [8, %[[ORIG_D2]], %[[COLLAPSED_D2]]]
+//       CHECK:   return %[[RESULT]]
+
+// -----
+
 func.func @do_not_compose_collapse_of_expand_non_identity_layout(
     %arg0: memref<?x?xf32, strided<[?, 1], offset: 0>>, %sz0: index, %sz1: index)
     -> memref<?xf32, strided<[?], offset: 0>> {
@@ -739,6 +757,8 @@ func.func @scopeMerge() {
 // CHECK:     "test.use"(%[[alloc]]) : (memref<?xi64>) -> ()
 // CHECK:     return
 
+// -----
+
 func.func @scopeMerge2() {
   "test.region"() ({
     memref.alloca_scope {
@@ -763,6 +783,8 @@ func.func @scopeMerge2() {
 // CHECK:     return
 // CHECK:   }
 
+// -----
+
 func.func @scopeMerge3() {
   %cnt = "test.count"() : () -> index
   "test.region"() ({
@@ -786,6 +808,8 @@ func.func @scopeMerge3() {
 // CHECK:     }) : () -> ()
 // CHECK:     return
 // CHECK:   }
+
+// -----
 
 func.func @scopeMerge4() {
   %cnt = "test.count"() : () -> index
@@ -813,6 +837,8 @@ func.func @scopeMerge4() {
 // CHECK:     return
 // CHECK:   }
 
+// -----
+
 func.func @scopeMerge5() {
   "test.region"() ({
     memref.alloca_scope {
@@ -839,6 +865,8 @@ func.func @scopeMerge5() {
 // CHECK:     return
 // CHECK:   }
 
+// -----
+
 func.func @scopeInline(%arg : memref<index>) {
   %cnt = "test.count"() : () -> index
   "test.region"() ({
@@ -852,6 +880,24 @@ func.func @scopeInline(%arg : memref<index>) {
 
 // CHECK:   func @scopeInline
 // CHECK-NOT:  memref.alloca_scope
+
+// -----
+
+// Ensure this case not crash.
+
+// CHECK-LABEL:   func.func @scope_merge_without_terminator() {
+// CHECK:           "test.region"()
+// CHECK:             memref.alloca_scope
+func.func @scope_merge_without_terminator() {
+  "test.region"() ({
+    memref.alloca_scope {
+      %cnt = "test.count"() : () -> index
+      %a = memref.alloca(%cnt) : memref<?xi64>
+      "test.use"(%a) : (memref<?xi64>) -> ()
+    }
+  }) : () -> ()
+  return
+}
 
 // -----
 
@@ -1148,4 +1194,38 @@ func.func @cannot_fold_transpose_cast(%arg0: memref<?x4xf32>) -> memref<?x?xf32,
     %transpose = memref.transpose %cast (d0, d1) -> (d1, d0) : memref<?x?xf32> to memref<?x?xf32, #transpose_map>
     // CHECK: return %[[TRANSPOSE]]
     return %transpose : memref<?x?xf32, #transpose_map>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_assume_alignment_chain
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]
+func.func @fold_assume_alignment_chain(%0: memref<128xf32>) -> memref<128xf32> {
+  // CHECK: %[[ALIGN:.+]] = memref.assume_alignment %[[ARG0]], 16
+  %1 = memref.assume_alignment %0, 16 : memref<128xf32>
+  // CHECK-NOT: memref.assume_alignment
+  %2 = memref.assume_alignment %1, 16 : memref<128xf32>
+  // CHECK: return %[[ALIGN]]
+  return %2 : memref<128xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_view_same_source_result_types
+func.func @fold_view_same_source_result_types(%0: memref<128xi8>) -> memref<128xi8> {
+  %c0 = arith.constant 0: index
+  // CHECK-NOT: memref.view
+  %res = memref.view %0[%c0][] : memref<128xi8> to memref<128xi8>
+  return %res : memref<128xi8>
+}
+
+// -----
+
+// CHECK-LABEL: func @non_fold_view_same_source_res_types
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9]+]]
+func.func @non_fold_view_same_source_res_types(%0: memref<?xi8>, %arg0 : index) -> memref<?xi8> {
+  %c0 = arith.constant 0: index
+  // CHECK: memref.view
+  %res = memref.view %0[%c0][%arg0] : memref<?xi8> to memref<?xi8>
+  return %res : memref<?xi8>
 }

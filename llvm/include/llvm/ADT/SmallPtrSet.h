@@ -18,6 +18,7 @@
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/EpochTracker.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/type_traits.h"
@@ -45,7 +46,7 @@ namespace llvm {
 /// sets are often small.  In this case, no memory allocation is used, and only
 /// light-weight and cache-efficient scanning is used.
 ///
-/// Large sets use a classic exponentially-probed hash table.  Empty buckets are
+/// Large sets use a classic quadratically-probed hash table.  Empty buckets are
 /// represented with an illegal pointer value (-1) to allow null pointers to be
 /// inserted.  Tombstones are represented with another illegal pointer value
 /// (-2), to allow deletion.  The hash table is resized when the table is 3/4 or
@@ -70,15 +71,16 @@ protected:
   bool IsSmall;
 
   // Helpers to copy and move construct a SmallPtrSet.
-  SmallPtrSetImplBase(const void **SmallStorage,
-                      const SmallPtrSetImplBase &that);
-  SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize,
-                      const void **RHSSmallStorage, SmallPtrSetImplBase &&that);
+  LLVM_ABI SmallPtrSetImplBase(const void **SmallStorage,
+                               const SmallPtrSetImplBase &that);
+  LLVM_ABI SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize,
+                               const void **RHSSmallStorage,
+                               SmallPtrSetImplBase &&that);
 
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
       : CurArray(SmallStorage), CurArraySize(SmallSize), NumNonEmpty(0),
         NumTombstones(0), IsSmall(true) {
-    assert(SmallSize && (SmallSize & (SmallSize-1)) == 0 &&
+    assert(llvm::has_single_bit(SmallSize) &&
            "Initial size must be a power of two!");
   }
 
@@ -235,24 +237,26 @@ protected:
   bool isSmall() const { return IsSmall; }
 
 private:
-  std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
+  LLVM_ABI std::pair<const void *const *, bool> insert_imp_big(const void *Ptr);
 
-  const void *const *doFind(const void *Ptr) const;
+  LLVM_ABI const void *const *doFind(const void *Ptr) const;
   const void * const *FindBucketFor(const void *Ptr) const;
-  void shrink_and_clear();
+  LLVM_ABI void shrink_and_clear();
 
   /// Grow - Allocate a larger backing store for the buckets and move it over.
-  void Grow(unsigned NewSize);
+  LLVM_ABI void Grow(unsigned NewSize);
 
 protected:
   /// swap - Swaps the elements of two sets.
   /// Note: This method assumes that both sets have the same small size.
-  void swap(const void **SmallStorage, const void **RHSSmallStorage,
-            SmallPtrSetImplBase &RHS);
+  LLVM_ABI void swap(const void **SmallStorage, const void **RHSSmallStorage,
+                     SmallPtrSetImplBase &RHS);
 
-  void copyFrom(const void **SmallStorage, const SmallPtrSetImplBase &RHS);
-  void moveFrom(const void **SmallStorage, unsigned SmallSize,
-                const void **RHSSmallStorage, SmallPtrSetImplBase &&RHS);
+  LLVM_ABI void copyFrom(const void **SmallStorage,
+                         const SmallPtrSetImplBase &RHS);
+  LLVM_ABI void moveFrom(const void **SmallStorage, unsigned SmallSize,
+                         const void **RHSSmallStorage,
+                         SmallPtrSetImplBase &&RHS);
 
 private:
   /// Code shared by moveFrom() and move constructor.

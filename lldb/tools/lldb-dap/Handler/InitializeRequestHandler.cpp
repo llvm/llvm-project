@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CommandPlugins.h"
 #include "DAP.h"
 #include "EventHelper.h"
 #include "JSONUtils.h"
@@ -53,20 +54,19 @@ llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
   if (llvm::Error err = dap.RunPreInitCommands())
     return err;
 
-  dap.PopulateExceptionBreakpoints();
   auto cmd = dap.debugger.GetCommandInterpreter().AddMultiwordCommand(
       "lldb-dap", "Commands for managing lldb-dap.");
   if (arguments.supportedFeatures.contains(
           eClientFeatureStartDebuggingRequest)) {
     cmd.AddCommand(
-        "start-debugging", new StartDebuggingRequestHandler(dap),
+        "start-debugging", new StartDebuggingCommand(dap),
         "Sends a startDebugging request from the debug adapter to the client "
         "to start a child debug session of the same type as the caller.");
   }
   cmd.AddCommand(
-      "repl-mode", new ReplModeRequestHandler(dap),
+      "repl-mode", new ReplModeCommand(dap),
       "Get or set the repl behavior of lldb-dap evaluation requests.");
-  cmd.AddCommand("send-event", new SendEventRequestHandler(dap),
+  cmd.AddCommand("send-event", new SendEventCommand(dap),
                  "Sends an DAP event to the client.");
 
   if (arguments.supportedFeatures.contains(eClientFeatureProgressReporting))
@@ -77,8 +77,4 @@ llvm::Expected<InitializeResponse> InitializeRequestHandler::Run(
   dap.StartEventThread();
 
   return dap.GetCapabilities();
-}
-
-void InitializeRequestHandler::PostRun() const {
-  dap.SendJSON(CreateEventObject("initialized"));
 }

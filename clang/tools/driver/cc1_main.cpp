@@ -217,7 +217,7 @@ static int PrintEnabledExtensions(const TargetOptions& TargetOpts) {
 int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   ensureSufficientStack();
 
-  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID = DiagnosticIDs::create();
 
   // Register the support for object-file-wrapped Clang modules.
   auto PCHOps = std::make_shared<PCHContainerOperations>();
@@ -232,9 +232,9 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Buffer diagnostics from argument parsing so that we can output them using a
   // well formed diagnostic object.
-  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  DiagnosticOptions DiagOpts;
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
-  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
+  DiagnosticsEngine Diags(DiagID, DiagOpts, DiagsBuffer);
 
   // Setup round-trip remarks for the DiagnosticsEngine used in CreateFromArgs.
   if (find(Argv, StringRef("-Rround-trip-cc1-args")) != Argv.end())
@@ -304,7 +304,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     *IOFile << "{\n";
     llvm::TimerGroup::printAllJSONValues(*IOFile, "");
     *IOFile << "\n}\n";
-  } else {
+  } else if (!Clang->getCodeGenOpts().TimePassesStatsFile) {
     llvm::TimerGroup::printAll(*IOFile);
   }
   llvm::TimerGroup::clearAll();

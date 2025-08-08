@@ -226,6 +226,10 @@ public:
     return hasUniqueVTablePointer(DestRecordTy);
   }
 
+  std::optional<ExactDynamicCastInfo>
+  getExactDynamicCastInfo(QualType SrcRecordTy, QualType DestTy,
+                          QualType DestRecordTy) override;
+
   llvm::Value *emitDynamicCastCall(CodeGenFunction &CGF, Address Value,
                                    QualType SrcRecordTy, QualType DestTy,
                                    QualType DestRecordTy,
@@ -234,6 +238,7 @@ public:
   llvm::Value *emitExactDynamicCast(CodeGenFunction &CGF, Address ThisAddr,
                                     QualType SrcRecordTy, QualType DestTy,
                                     QualType DestRecordTy,
+                                    const ExactDynamicCastInfo &CastInfo,
                                     llvm::BasicBlock *CastSuccess,
                                     llvm::BasicBlock *CastFail) override;
 
@@ -693,6 +698,17 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   llvm::Constant *CheckTypeDesc;
   bool ShouldEmitCFICheck = CGF.SanOpts.has(SanitizerKind::CFIMFCall) &&
                             CGM.HasHiddenLTOVisibility(RD);
+
+  if (ShouldEmitCFICheck) {
+    if (const auto *BinOp = dyn_cast<BinaryOperator>(E)) {
+      if (BinOp->isPtrMemOp() &&
+          BinOp->getRHS()
+              ->getType()
+              ->hasPointeeToToCFIUncheckedCalleeFunctionType())
+        ShouldEmitCFICheck = false;
+    }
+  }
+
   bool ShouldEmitVFEInfo = CGM.getCodeGenOpts().VirtualFunctionElimination &&
                            CGM.HasHiddenLTOVisibility(RD);
   bool ShouldEmitWPDInfo =
@@ -702,7 +718,10 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   llvm::Value *VirtualFn = nullptr;
 
   {
-    CodeGenFunction::SanitizerScope SanScope(&CGF);
+    auto CheckOrdinal = SanitizerKind::SO_CFIMFCall;
+    auto CheckHandler = SanitizerHandler::CFICheckFail;
+    SanitizerDebugLocation SanScope(&CGF, {CheckOrdinal}, CheckHandler);
+
     llvm::Value *TypeId = nullptr;
     llvm::Value *CheckResult = nullptr;
 
@@ -771,16 +790,15 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
       };
 
       if (CGM.getCodeGenOpts().SanitizeTrap.has(SanitizerKind::CFIMFCall)) {
-        CGF.EmitTrapCheck(CheckResult, SanitizerHandler::CFICheckFail);
+        CGF.EmitTrapCheck(CheckResult, CheckHandler);
       } else {
         llvm::Value *AllVtables = llvm::MetadataAsValue::get(
             CGM.getLLVMContext(),
             llvm::MDString::get(CGM.getLLVMContext(), "all-vtables"));
         llvm::Value *ValidVtable = Builder.CreateCall(
             CGM.getIntrinsic(llvm::Intrinsic::type_test), {VTable, AllVtables});
-        CGF.EmitCheck(std::make_pair(CheckResult, SanitizerKind::SO_CFIMFCall),
-                      SanitizerHandler::CFICheckFail, StaticData,
-                      {VTable, ValidVtable});
+        CGF.EmitCheck(std::make_pair(CheckResult, CheckOrdinal), CheckHandler,
+                      StaticData, {VTable, ValidVtable});
       }
 
       FnVirtual = Builder.GetInsertBlock();
@@ -799,7 +817,9 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   if (ShouldEmitCFICheck) {
     CXXRecordDecl *RD = MPT->getMostRecentCXXRecordDecl();
     if (RD->hasDefinition()) {
-      CodeGenFunction::SanitizerScope SanScope(&CGF);
+      auto CheckOrdinal = SanitizerKind::SO_CFIMFCall;
+      auto CheckHandler = SanitizerHandler::CFICheckFail;
+      SanitizerDebugLocation SanScope(&CGF, {CheckOrdinal}, CheckHandler);
 
       llvm::Constant *StaticData[] = {
           llvm::ConstantInt::get(CGF.Int8Ty, CodeGenFunction::CFITCK_NVMFCall),
@@ -822,8 +842,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
         Bit = Builder.CreateOr(Bit, TypeTest);
       }
 
-      CGF.EmitCheck(std::make_pair(Bit, SanitizerKind::SO_CFIMFCall),
-                    SanitizerHandler::CFICheckFail, StaticData,
+      CGF.EmitCheck(std::make_pair(Bit, CheckOrdinal), CheckHandler, StaticData,
                     {NonVirtualFn, llvm::UndefValue::get(CGF.IntPtrTy)});
 
       FnNonVirtual = Builder.GetInsertBlock();
@@ -1667,10 +1686,11 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
   return Value;
 }
 
-llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
-    CodeGenFunction &CGF, Address ThisAddr, QualType SrcRecordTy,
-    QualType DestTy, QualType DestRecordTy, llvm::BasicBlock *CastSuccess,
-    llvm::BasicBlock *CastFail) {
+std::optional<CGCXXABI::ExactDynamicCastInfo>
+ItaniumCXXABI::getExactDynamicCastInfo(QualType SrcRecordTy, QualType DestTy,
+                                       QualType DestRecordTy) {
+  assert(shouldEmitExactDynamicCast(DestRecordTy));
+
   ASTContext &Context = getContext();
 
   // Find all the inheritance paths.
@@ -1708,41 +1728,56 @@ llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
     if (!Offset)
       Offset = PathOffset;
     else if (Offset != PathOffset) {
-      // Base appears in at least two different places. Find the most-derived
-      // object and see if it's a DestDecl. Note that the most-derived object
-      // must be at least as aligned as this base class subobject, and must
-      // have a vptr at offset 0.
-      ThisAddr = Address(emitDynamicCastToVoid(CGF, ThisAddr, SrcRecordTy),
-                         CGF.VoidPtrTy, ThisAddr.getAlignment());
-      SrcDecl = DestDecl;
-      Offset = CharUnits::Zero();
-      break;
+      // Base appears in at least two different places.
+      return ExactDynamicCastInfo{/*RequiresCastToPrimaryBase=*/true,
+                                  CharUnits::Zero()};
     }
   }
+  if (!Offset)
+    return std::nullopt;
+  return ExactDynamicCastInfo{/*RequiresCastToPrimaryBase=*/false, *Offset};
+}
 
-  if (!Offset) {
-    // If there are no public inheritance paths, the cast always fails.
-    CGF.EmitBranch(CastFail);
-    return llvm::PoisonValue::get(CGF.VoidPtrTy);
-  }
+llvm::Value *ItaniumCXXABI::emitExactDynamicCast(
+    CodeGenFunction &CGF, Address ThisAddr, QualType SrcRecordTy,
+    QualType DestTy, QualType DestRecordTy,
+    const ExactDynamicCastInfo &ExactCastInfo, llvm::BasicBlock *CastSuccess,
+    llvm::BasicBlock *CastFail) {
+  const CXXRecordDecl *SrcDecl = SrcRecordTy->getAsCXXRecordDecl();
+  const CXXRecordDecl *DestDecl = DestRecordTy->getAsCXXRecordDecl();
+
+  llvm::Value *VTable = nullptr;
+  if (ExactCastInfo.RequiresCastToPrimaryBase) {
+    // Base appears in at least two different places. Find the most-derived
+    // object and see if it's a DestDecl. Note that the most-derived object
+    // must be at least as aligned as this base class subobject, and must
+    // have a vptr at offset 0.
+    llvm::Value *PrimaryBase =
+        emitDynamicCastToVoid(CGF, ThisAddr, SrcRecordTy);
+    ThisAddr = Address(PrimaryBase, CGF.VoidPtrTy, ThisAddr.getAlignment());
+    SrcDecl = DestDecl;
+    Address VTablePtrPtr = ThisAddr.withElementType(CGF.VoidPtrPtrTy);
+    VTable = CGF.Builder.CreateLoad(VTablePtrPtr, "vtable");
+  } else
+    VTable = CGF.GetVTablePtr(ThisAddr, CGF.UnqualPtrTy, SrcDecl);
 
   // Compare the vptr against the expected vptr for the destination type at
-  // this offset. Note that we do not know what type ThisAddr points to in
-  // the case where the derived class multiply inherits from the base class
-  // so we can't use GetVTablePtr, so we load the vptr directly instead.
-  llvm::Instruction *VPtr = CGF.Builder.CreateLoad(
-      ThisAddr.withElementType(CGF.VoidPtrPtrTy), "vtable");
-  CGM.DecorateInstructionWithTBAA(
-      VPtr, CGM.getTBAAVTablePtrAccessInfo(CGF.VoidPtrPtrTy));
-  llvm::Value *Success = CGF.Builder.CreateICmpEQ(
-      VPtr, getVTableAddressPoint(BaseSubobject(SrcDecl, *Offset), DestDecl));
-  llvm::Value *Result = ThisAddr.emitRawPointer(CGF);
-  if (!Offset->isZero())
-    Result = CGF.Builder.CreateInBoundsGEP(
-        CGF.CharTy, Result,
-        {llvm::ConstantInt::get(CGF.PtrDiffTy, -Offset->getQuantity())});
+  // this offset.
+  llvm::Constant *ExpectedVTable = getVTableAddressPoint(
+      BaseSubobject(SrcDecl, ExactCastInfo.Offset), DestDecl);
+  llvm::Value *Success = CGF.Builder.CreateICmpEQ(VTable, ExpectedVTable);
+  llvm::Value *AdjustedThisPtr = ThisAddr.emitRawPointer(CGF);
+
+  if (!ExactCastInfo.Offset.isZero()) {
+    CharUnits::QuantityType Offset = ExactCastInfo.Offset.getQuantity();
+    llvm::Constant *OffsetConstant =
+        llvm::ConstantInt::get(CGF.PtrDiffTy, -Offset);
+    AdjustedThisPtr = CGF.Builder.CreateInBoundsGEP(CGF.CharTy, AdjustedThisPtr,
+                                                    OffsetConstant);
+  }
+
   CGF.Builder.CreateCondBr(Success, CastSuccess, CastFail);
-  return Result;
+  return AdjustedThisPtr;
 }
 
 llvm::Value *ItaniumCXXABI::emitDynamicCastToVoid(CodeGenFunction &CGF,
@@ -2056,6 +2091,10 @@ void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
     if (!VTable->isDSOLocal())
       CGVT.GenerateRelativeVTableAlias(VTable, VTable->getName());
   }
+
+  // Emit symbol for debugger only if requested debug info.
+  if (CGDebugInfo *DI = CGM.getModuleDebugInfo())
+    DI->emitVTableSymbol(VTable, RD);
 }
 
 bool ItaniumCXXABI::isVirtualOffsetNeededForVTableField(
@@ -2161,10 +2200,7 @@ llvm::GlobalVariable *ItaniumCXXABI::getAddrOfVTable(const CXXRecordDecl *RD,
   // Use pointer to global alignment for the vtable. Otherwise we would align
   // them based on the size of the initializer which doesn't make sense as only
   // single values are read.
-  LangAS AS = CGM.GetGlobalVarAddressSpace(nullptr);
-  unsigned PAlign = CGM.getItaniumVTableContext().isRelativeLayout()
-                        ? 32
-                        : CGM.getTarget().getPointerAlign(AS);
+  unsigned PAlign = CGM.getVtableGlobalVarAlignment();
 
   VTable = CGM.CreateOrReplaceCXXRuntimeVariable(
       Name, VTableType, llvm::GlobalValue::ExternalLinkage,
@@ -2247,7 +2283,7 @@ llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
   auto *CE = dyn_cast<const CXXMemberCallExpr *>(E);
   auto *D = dyn_cast<const CXXDeleteExpr *>(E);
   assert((CE != nullptr) ^ (D != nullptr));
-  assert(CE == nullptr || CE->arg_begin() == CE->arg_end());
+  assert(CE == nullptr || CE->arguments().empty());
   assert(DtorType == Dtor_Deleting || DtorType == Dtor_Complete);
 
   GlobalDecl GD(Dtor, DtorType);
@@ -3641,7 +3677,7 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
     case BuiltinType::OCLReserveID:
 #define SVE_TYPE(Name, Id, SingletonId) \
     case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id:
 #include "clang/Basic/PPCTypes.def"
@@ -3754,7 +3790,7 @@ static bool ShouldUseExternalRTTIDescriptor(CodeGenModule &CGM,
     bool IsDLLImport = RD->hasAttr<DLLImportAttr>();
 
     // Don't import the RTTI but emit it locally.
-    if (CGM.getTriple().isWindowsGNUEnvironment())
+    if (CGM.getTriple().isOSCygMing())
       return false;
 
     if (CGM.getVTables().isVTableExternal(RD)) {
@@ -3957,6 +3993,7 @@ void ItaniumRTTIBuilder::BuildVTablePointer(const Type *Ty,
     break;
 
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("HLSL doesn't support virtual functions");
   }
 
@@ -4041,10 +4078,7 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
           return llvm::GlobalValue::ExternalLinkage;
       // MinGW always uses LinkOnceODRLinkage for type info.
       if (RD->isDynamicClass() &&
-          !CGM.getContext()
-               .getTargetInfo()
-               .getTriple()
-               .isWindowsGNUEnvironment())
+          !CGM.getContext().getTargetInfo().getTriple().isOSCygMing())
         return CGM.getVTableLinkage(RD);
     }
 
@@ -4235,6 +4269,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     break;
 
   case Type::HLSLAttributedResource:
+  case Type::HLSLInlineSpirv:
     llvm_unreachable("HLSL doesn't support RTTI");
   }
 
@@ -5053,7 +5088,11 @@ void ItaniumCXXABI::emitBeginCatch(CodeGenFunction &CGF,
 
   // Emit the local.
   CodeGenFunction::AutoVarEmission var = CGF.EmitAutoVarAlloca(*CatchParam);
-  InitCatchParam(CGF, *CatchParam, var.getObjectAddress(CGF), S->getBeginLoc());
+  {
+    ApplyAtomGroup Grp(CGF.getDebugInfo());
+    InitCatchParam(CGF, *CatchParam, var.getObjectAddress(CGF),
+                   S->getBeginLoc());
+  }
   CGF.EmitAutoVarCleanups(var);
 }
 

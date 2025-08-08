@@ -188,7 +188,6 @@
 ; GCN-O1-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-NEXT:    FunctionPass Manager
-; GCN-O1-NEXT:      Infer address spaces
 ; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Uniformity Analysis
@@ -330,6 +329,7 @@
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        SI Shrink Instructions
 ; GCN-O1-NEXT:        Register Usage Information Propagation
+; GCN-O1-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O1-NEXT:        Detect Dead Lanes
 ; GCN-O1-NEXT:        Remove dead machine instructions
 ; GCN-O1-NEXT:        Init Undef Pass
@@ -377,6 +377,7 @@
 ; GCN-O1-NEXT:        Live Register Matrix
 ; GCN-O1-NEXT:        Greedy Register Allocator
 ; GCN-O1-NEXT:        GCN NSA Reassign
+; GCN-O1-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O1-NEXT:        Virtual Register Rewriter
 ; GCN-O1-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-NEXT:        Stack Slot Coloring
@@ -471,7 +472,6 @@
 ; GCN-O1-OPTS-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
-; GCN-O1-OPTS-NEXT:      Infer address spaces
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
@@ -641,6 +641,7 @@
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        SI Shrink Instructions
 ; GCN-O1-OPTS-NEXT:        Register Usage Information Propagation
+; GCN-O1-OPTS-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O1-OPTS-NEXT:        Detect Dead Lanes
 ; GCN-O1-OPTS-NEXT:        Remove dead machine instructions
 ; GCN-O1-OPTS-NEXT:        Init Undef Pass
@@ -688,6 +689,7 @@
 ; GCN-O1-OPTS-NEXT:        Live Register Matrix
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
 ; GCN-O1-OPTS-NEXT:        GCN NSA Reassign
+; GCN-O1-OPTS-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
@@ -784,7 +786,6 @@
 ; GCN-O2-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O2-NEXT:    FunctionPass Manager
-; GCN-O2-NEXT:      Infer address spaces
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Uniformity Analysis
@@ -957,6 +958,7 @@
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        SI Shrink Instructions
 ; GCN-O2-NEXT:        Register Usage Information Propagation
+; GCN-O2-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O2-NEXT:        Detect Dead Lanes
 ; GCN-O2-NEXT:        Remove dead machine instructions
 ; GCN-O2-NEXT:        Init Undef Pass
@@ -1005,6 +1007,7 @@
 ; GCN-O2-NEXT:        Live Register Matrix
 ; GCN-O2-NEXT:        Greedy Register Allocator
 ; GCN-O2-NEXT:        GCN NSA Reassign
+; GCN-O2-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O2-NEXT:        Virtual Register Rewriter
 ; GCN-O2-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O2-NEXT:        Stack Slot Coloring
@@ -1101,7 +1104,6 @@
 ; GCN-O3-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
 ; GCN-O3-NEXT:    FunctionPass Manager
-; GCN-O3-NEXT:      Infer address spaces
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Uniformity Analysis
@@ -1287,6 +1289,7 @@
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        SI Shrink Instructions
 ; GCN-O3-NEXT:        Register Usage Information Propagation
+; GCN-O3-NEXT:        AMDGPU Prepare AGPR Alloc
 ; GCN-O3-NEXT:        Detect Dead Lanes
 ; GCN-O3-NEXT:        Remove dead machine instructions
 ; GCN-O3-NEXT:        Init Undef Pass
@@ -1335,6 +1338,7 @@
 ; GCN-O3-NEXT:        Live Register Matrix
 ; GCN-O3-NEXT:        Greedy Register Allocator
 ; GCN-O3-NEXT:        GCN NSA Reassign
+; GCN-O3-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        AMDGPU Mark Last Scratch Load
 ; GCN-O3-NEXT:        Stack Slot Coloring

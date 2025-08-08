@@ -121,7 +121,7 @@ define signext i32 @andi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
 define signext i32 @addi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
 ; CHECK-LABEL: addi_sub_cse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    sub a0, a0, a1
 ; CHECK-NEXT:    addiw a0, a0, -8
 ; CHECK-NEXT:    sw a0, 0(a2)
 ; CHECK-NEXT:    ret

@@ -300,16 +300,12 @@ void AggExprEmitter::withReturnValueSlot(
   Address RetAddr = Address::invalid();
 
   EHScopeStack::stable_iterator LifetimeEndBlock;
-  llvm::Value *LifetimeSizePtr = nullptr;
   llvm::IntrinsicInst *LifetimeStartInst = nullptr;
   if (!UseTemp) {
     RetAddr = Dest.getAddress();
   } else {
     RetAddr = CGF.CreateMemTempWithoutCast(RetTy, "tmp");
-    llvm::TypeSize Size =
-        CGF.CGM.getDataLayout().getTypeAllocSize(CGF.ConvertTypeForMem(RetTy));
-    LifetimeSizePtr = CGF.EmitLifetimeStart(Size, RetAddr.getBasePointer());
-    if (LifetimeSizePtr) {
+    if (CGF.EmitLifetimeStart(RetAddr.getBasePointer())) {
       LifetimeStartInst =
           cast<llvm::IntrinsicInst>(std::prev(Builder.GetInsertPoint()));
       assert(LifetimeStartInst->getIntrinsicID() ==
@@ -317,7 +313,7 @@ void AggExprEmitter::withReturnValueSlot(
              "Last insertion wasn't a lifetime.start?");
 
       CGF.pushFullExprCleanup<CodeGenFunction::CallLifetimeEnd>(
-          NormalEHLifetimeMarker, RetAddr, LifetimeSizePtr);
+          NormalEHLifetimeMarker, RetAddr);
       LifetimeEndBlock = CGF.EHStack.stable_begin();
     }
   }
@@ -338,7 +334,7 @@ void AggExprEmitter::withReturnValueSlot(
     // Since we're not guaranteed to be in an ExprWithCleanups, clean up
     // eagerly.
     CGF.DeactivateCleanupBlock(LifetimeEndBlock, LifetimeStartInst);
-    CGF.EmitLifetimeEnd(LifetimeSizePtr, RetAddr.getBasePointer());
+    CGF.EmitLifetimeEnd(RetAddr.getBasePointer());
   }
 }
 
@@ -548,7 +544,6 @@ static void EmitHLSLScalarFlatCast(CodeGenFunction &CGF, Address DestVal,
     }
     CGF.Builder.CreateStore(Cast, StoreGEPList[I].first);
   }
-  return;
 }
 
 // emit a flat cast where the RHS is an aggregate
@@ -1333,6 +1328,7 @@ static bool isBlockVarRef(const Expr *E) {
 }
 
 void AggExprEmitter::VisitBinAssign(const BinaryOperator *E) {
+  ApplyAtomGroup Grp(CGF.getDebugInfo());
   // For an assignment to work, the value on the right has
   // to be compatible with the value on the left.
   assert(CGF.getContext().hasSameUnqualifiedType(E->getLHS()->getType(),
@@ -2394,7 +2390,8 @@ void CodeGenFunction::EmitAggregateCopy(LValue Dest, LValue Src, QualType Ty,
     }
   }
 
-  auto Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
+  auto *Inst = Builder.CreateMemCpy(DestPtr, SrcPtr, SizeVal, isVolatile);
+  addInstToCurrentSourceAtom(Inst, nullptr);
 
   // Determine the metadata to describe the position of any padding in this
   // memcpy, as well as the TBAA tags for the members of the struct, in case

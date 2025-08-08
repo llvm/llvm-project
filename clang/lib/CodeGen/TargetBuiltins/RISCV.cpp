@@ -357,6 +357,12 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
     return Store;
   }
+  // Zihintpause
+  case RISCV::BI__builtin_riscv_pause: {
+    llvm::Function *Fn = CGM.getIntrinsic(llvm::Intrinsic::riscv_pause);
+    return Builder.CreateCall(Fn, {});
+  }
+
   // XCValu
   case RISCV::BI__builtin_riscv_cv_alu_addN:
     ID = Intrinsic::riscv_cv_alu_addN;
@@ -407,11 +413,20 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     ID = Intrinsic::riscv_cv_alu_subuRN;
     break;
 
+  // XAndesBFHCvt
+  case RISCV::BI__builtin_riscv_nds_fcvt_s_bf16:
+    return Builder.CreateFPExt(Ops[0], FloatTy);
+  case RISCV::BI__builtin_riscv_nds_fcvt_bf16_s:
+    return Builder.CreateFPTrunc(Ops[0], BFloatTy);
+
     // Vector builtins are handled from here.
 #include "clang/Basic/riscv_vector_builtin_cg.inc"
 
     // SiFive Vector builtins are handled from here.
 #include "clang/Basic/riscv_sifive_vector_builtin_cg.inc"
+
+    // Andes Vector builtins are handled from here.
+#include "clang/Basic/riscv_andes_vector_builtin_cg.inc"
   }
 
   assert(ID != Intrinsic::not_intrinsic);

@@ -178,7 +178,7 @@ public:
   const char *GetTargetTriple();
 
   void SetExternalSource(
-      llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> &ast_source_up);
+      llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> ast_source_sp);
 
   bool GetCompleteDecl(clang::Decl *decl) {
     return TypeSystemClang::GetCompleteDecl(&getASTContext(), decl);
@@ -477,12 +477,12 @@ public:
   clang::FunctionDecl *CreateFunctionDeclaration(
       clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
       llvm::StringRef name, const CompilerType &function_Type,
-      clang::StorageClass storage, bool is_inline);
+      clang::StorageClass storage, bool is_inline, llvm::StringRef asm_label);
 
   CompilerType
-  CreateFunctionType(const CompilerType &result_type, const CompilerType *args,
-                     unsigned num_args, bool is_variadic, unsigned type_quals,
-                     clang::CallingConv cc = clang::CC_C,
+  CreateFunctionType(const CompilerType &result_type,
+                     llvm::ArrayRef<CompilerType> args, bool is_variadic,
+                     unsigned type_quals, clang::CallingConv cc = clang::CC_C,
                      clang::RefQualifierKind ref_qual = clang::RQ_None);
 
   clang::ParmVarDecl *
@@ -687,9 +687,6 @@ public:
 
   static bool IsObjCClassType(const CompilerType &type);
 
-  static bool IsObjCClassTypeAndHasIVars(const CompilerType &type,
-                                         bool check_superclass);
-
   static bool IsObjCObjectOrInterfaceType(const CompilerType &type);
 
   static bool IsObjCObjectPointerType(const CompilerType &type,
@@ -826,7 +823,8 @@ public:
 
   // Exploring the type
 
-  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override;
+  const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size,
+                                                  lldb::Format format) override;
 
   llvm::Expected<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
                                        ExecutionContextScope *exe_scope) {
@@ -1004,7 +1002,7 @@ public:
 
   clang::CXXMethodDecl *AddMethodToCXXRecordType(
       lldb::opaque_compiler_type_t type, llvm::StringRef name,
-      const char *mangled_name, const CompilerType &method_type,
+      llvm::StringRef asm_label, const CompilerType &method_type,
       lldb::AccessType access, bool is_virtual, bool is_static, bool is_inline,
       bool is_explicit, bool is_attr_used, bool is_artificial);
 
@@ -1077,7 +1075,7 @@ public:
 #endif
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   /// Dump clang AST types from the symbol file.
   ///
@@ -1204,6 +1202,7 @@ private:
   std::unique_ptr<clang::LangOptions> m_language_options_up;
   std::unique_ptr<clang::FileManager> m_file_manager_up;
   std::unique_ptr<clang::SourceManager> m_source_manager_up;
+  std::unique_ptr<clang::DiagnosticOptions> m_diagnostic_options_up;
   std::unique_ptr<clang::DiagnosticsEngine> m_diagnostics_engine_up;
   std::unique_ptr<clang::DiagnosticConsumer> m_diagnostic_consumer_up;
   std::shared_ptr<clang::TargetOptions> m_target_options_rp;
@@ -1320,7 +1319,7 @@ public:
   }
 
   /// \see lldb_private::TypeSystem::Dump
-  void Dump(llvm::raw_ostream &output) override;
+  void Dump(llvm::raw_ostream &output, llvm::StringRef filter) override;
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
                                     llvm::StringRef prefix,

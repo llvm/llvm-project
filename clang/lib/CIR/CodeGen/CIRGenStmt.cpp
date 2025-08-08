@@ -26,7 +26,9 @@ using namespace cir;
 void CIRGenFunction::emitCompoundStmtWithoutScope(const CompoundStmt &s) {
   for (auto *curStmt : s.body()) {
     if (emitStmt(curStmt, /*useCurrentScope=*/false).failed())
-      getCIRGenModule().errorNYI(curStmt->getSourceRange(), "statement");
+      getCIRGenModule().errorNYI(curStmt->getSourceRange(),
+                                 std::string("emitCompoundStmtWithoutScope: ") +
+                                     curStmt->getStmtClassName());
   }
 }
 
@@ -77,14 +79,15 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
 #define EXPR(Type, Base) case Stmt::Type##Class:
 #include "clang/AST/StmtNodes.inc"
     {
-      // Remember the block we came in on.
-      mlir::Block *incoming = builder.getInsertionBlock();
-      assert(incoming && "expression emission must have an insertion point");
+      assert(builder.getInsertionBlock() &&
+             "expression emission must have an insertion point");
 
       emitIgnoredExpr(cast<Expr>(s));
 
-      mlir::Block *outgoing = builder.getInsertionBlock();
-      assert(outgoing && "expression emission cleared block!");
+      // Classic codegen has a check here to see if the emitter created a new
+      // block that isn't used (comparing the incoming and outgoing insertion
+      // points) and deletes the outgoing block if it's not used. In CIR, we
+      // will handle that during the cir.canonicalize pass.
       return mlir::success();
     }
   case Stmt::IfStmtClass:
@@ -361,8 +364,8 @@ mlir::LogicalResult CIRGenFunction::emitIfStmt(const IfStmt &s) {
 mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
   assert(builder.getInsertionBlock() && "expected valid insertion point");
 
-  for (const Decl *I : s.decls())
-    emitDecl(*I);
+  for (const Decl *i : s.decls())
+    emitDecl(*i, /*evaluateConditionDecl=*/true);
 
   return mlir::success();
 }
@@ -389,7 +392,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     // If this function returns a reference, take the address of the
     // expression rather than the value.
     RValue result = emitReferenceBindingToExpr(rv);
-    builder.createStore(loc, result.getScalarVal(), *fnRetAlloca);
+    builder.CIRBaseBuilderTy::createStore(loc, result.getValue(), *fnRetAlloca);
   } else {
     mlir::Value value = nullptr;
     switch (CIRGenFunction::getEvaluationKind(rv->getType())) {
@@ -407,7 +410,10 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   }
 
   auto *retBlock = curLexScope->getOrCreateRetBlock(*this, loc);
+  // This should emit a branch through the cleanup block if one exists.
   builder.create<cir::BrOp>(loc, retBlock);
+  if (ehStack.stable_begin() != currentCleanupStackDepth)
+    cgm.errorNYI(s.getSourceRange(), "return with cleanup stack");
   builder.createBlock(builder.getBlock()->getParent());
 
   return mlir::success();
@@ -531,12 +537,6 @@ mlir::LogicalResult CIRGenFunction::emitCaseStmt(const CaseStmt &s,
     value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal),
                                   cir::IntAttr::get(condType, endVal)});
     kind = cir::CaseOpKind::Range;
-
-    // We don't currently fold case range statements with other case statements.
-    // TODO(cir): Add this capability. Folding these cases is going to be
-    // implemented in CIRSimplify when it is upstreamed.
-    assert(!cir::MissingFeatures::foldRangeCase());
-    assert(!cir::MissingFeatures::foldCascadingCases());
   } else {
     value = builder.getArrayAttr({cir::IntAttr::get(condType, intVal)});
     kind = cir::CaseOpKind::Equal;
@@ -876,7 +876,7 @@ mlir::LogicalResult CIRGenFunction::emitSwitchStmt(const clang::SwitchStmt &s) {
         return mlir::failure();
 
     if (s.getConditionVariable())
-      emitDecl(*s.getConditionVariable());
+      emitDecl(*s.getConditionVariable(), /*evaluateConditionDecl=*/true);
 
     mlir::Value condV = emitScalarExpr(s.getCond());
 

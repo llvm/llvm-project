@@ -34,6 +34,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsX86.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -3316,6 +3317,11 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
     if (Flag.isSwiftError() || Flag.isPreallocated())
       return false;
 
+  // Can't handle import call optimization.
+  if (Is64Bit &&
+      MF->getFunction().getParent()->getModuleFlag("import-call-optimization"))
+    return false;
+
   SmallVector<MVT, 16> OutVTs;
   SmallVector<Register, 16> ArgRegs;
 
@@ -3666,6 +3672,12 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   CLI.ResultReg = ResultReg;
   CLI.NumResultRegs = RVLocs.size();
   CLI.Call = MIB;
+
+  // Add call site info for call graph section.
+  if (TM.Options.EmitCallGraphSection && CB && CB->isIndirectCall()) {
+    MachineFunction::CallSiteInfo CSInfo(*CB);
+    MF->addCallSiteInfo(CLI.Call, std::move(CSInfo));
+  }
 
   return true;
 }
@@ -4036,6 +4048,8 @@ bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
     MO.setReg(IndexReg);
   }
 
+  if (MI->isCall())
+    FuncInfo.MF->moveAdditionalCallInfo(MI, Result);
   Result->addMemOperand(*FuncInfo.MF, createMachineMemOperandFor(LI));
   Result->cloneInstrSymbols(*FuncInfo.MF, *MI);
   MachineBasicBlock::iterator I(MI);

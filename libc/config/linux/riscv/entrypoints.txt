@@ -246,6 +246,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/ioctl.h entrypoints
+    libc.src.sys.ioctl.ioctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.mincore
@@ -365,13 +368,16 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
 
+    # wctype.h entrypoints
+    libc.src.wctype.iswalpha
+
     # sys/uio.h entrypoints
     libc.src.sys.uio.writev
     libc.src.sys.uio.readv
 
     # sys/time.h entrypoints
-    # libc.src.sys.time.setitimer
-    # libc.src.sys.time.getitimer
+    libc.src.sys.time.setitimer
+    libc.src.sys.time.getitimer
 )
 
 if(LLVM_LIBC_INCLUDE_SCUDO)
@@ -632,6 +638,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.tan
     libc.src.math.tanf
     libc.src.math.tanhf
+    libc.src.math.tanpif
     libc.src.math.totalorder
     libc.src.math.totalorderf
     libc.src.math.totalorderl
@@ -853,6 +860,16 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.ufromfpxf128
   )
 endif()
+
+list(APPEND TARGET_LIBM_ENTRYPOINTS
+  # bfloat16 entrypoints
+  libc.src.math.ceilbf16
+  libc.src.math.fabsbf16
+  libc.src.math.floorbf16
+  libc.src.math.roundbf16
+  libc.src.math.roundevenbf16
+  libc.src.math.truncbf16
+)
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
   list(APPEND TARGET_LIBM_ENTRYPOINTS
@@ -1095,6 +1112,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.getc_unlocked
     libc.src.stdio.getchar
     libc.src.stdio.getchar_unlocked
+    libc.src.stdio.perror
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts

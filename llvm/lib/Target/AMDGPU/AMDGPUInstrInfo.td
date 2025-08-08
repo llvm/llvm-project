@@ -348,6 +348,17 @@ def AMDGPUfdot2_impl : SDNode<"AMDGPUISD::FDOT2",
 
 def AMDGPUperm_impl : SDNode<"AMDGPUISD::PERM", AMDGPUDTIntTernaryOp, []>;
 
+// Marks the entry into a whole wave function.
+def AMDGPUwhole_wave_setup : SDNode<
+  "AMDGPUISD::WHOLE_WAVE_SETUP", SDTypeProfile<1, 0, [SDTCisInt<0>]>,
+  [SDNPHasChain, SDNPSideEffect]>;
+
+// Marks the return from a whole wave function.
+def AMDGPUwhole_wave_return : SDNode<
+  "AMDGPUISD::WHOLE_WAVE_RETURN", SDTNone,
+  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]
+>;
+
 // SI+ export
 def AMDGPUExportOp : SDTypeProfile<0, 8, [
   SDTCisInt<0>,       // i8 tgt

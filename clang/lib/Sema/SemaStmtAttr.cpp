@@ -395,7 +395,7 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 template <typename LoopAttrT>
 static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
   auto FindFunc = [](const Attr *A) { return isa<const LoopAttrT>(A); };
-  const auto *FirstItr = std::find_if(Attrs.begin(), Attrs.end(), FindFunc);
+  const auto *FirstItr = llvm::find_if(Attrs, FindFunc);
 
   if (FirstItr == Attrs.end()) // no attributes found
     return;
@@ -428,7 +428,6 @@ static void CheckForDuplicateLoopAttrs(Sema &S, ArrayRef<const Attr *> Attrs) {
       S.Diag((*FirstItr)->getLocation(), diag::note_previous_attribute);
     }
   }
-  return;
 }
 
 static Attr *handleMSConstexprAttr(Sema &S, Stmt *St, const ParsedAttr &A,
@@ -673,12 +672,14 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
       !(A.existsInTarget(S.Context.getTargetInfo()) ||
         (S.Context.getLangOpts().SYCLIsDevice && Aux &&
          A.existsInTarget(*Aux)))) {
-    S.Diag(A.getLoc(), A.isRegularKeywordAttribute()
-                           ? (unsigned)diag::err_keyword_not_supported_on_target
-                       : A.isDeclspecAttribute()
-                           ? (unsigned)diag::warn_unhandled_ms_attribute_ignored
-                           : (unsigned)diag::warn_unknown_attribute_ignored)
-        << A << A.getRange();
+    if (A.isRegularKeywordAttribute() || A.isDeclspecAttribute()) {
+      S.Diag(A.getLoc(), A.isRegularKeywordAttribute()
+                             ? diag::err_keyword_not_supported_on_target
+                             : diag::warn_unhandled_ms_attribute_ignored)
+          << A << A.getRange();
+    } else {
+      S.DiagnoseUnknownAttribute(A);
+    }
     return nullptr;
   }
 
@@ -783,15 +784,18 @@ ExprResult Sema::ActOnCXXAssumeAttr(Stmt *St, const ParsedAttr &A,
 ExprResult Sema::BuildCXXAssumeExpr(Expr *Assumption,
                                     const IdentifierInfo *AttrName,
                                     SourceRange Range) {
-  ExprResult Res = CorrectDelayedTyposInExpr(Assumption);
-  if (Res.isInvalid())
+  if (!Assumption)
     return ExprError();
 
-  Res = CheckPlaceholderExpr(Res.get());
+  ExprResult Res = CheckPlaceholderExpr(Assumption);
   if (Res.isInvalid())
     return ExprError();
 
   Res = PerformContextuallyConvertToBool(Res.get());
+  if (Res.isInvalid())
+    return ExprError();
+
+  Res = ActOnFinishFullExpr(Res.get(), /*DiscardedValue=*/false);
   if (Res.isInvalid())
     return ExprError();
 

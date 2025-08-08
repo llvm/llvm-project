@@ -195,7 +195,7 @@ constexpr bool test() {
       std::string a[] = {str1, str1, str, str1, str1};
       auto whole =
           std::ranges::subrange(forward_iterator(std::move_iterator(a)), forward_iterator(std::move_iterator(a + 5)));
-      bool ret = std::ranges::contains(whole.begin(), whole.end(), "hello world", [&](const std::string i) {
+      bool ret = std::ranges::contains(whole.begin(), whole.end(), +"hello world", [&](const std::string i) {
         ++projection_count;
         return i;
       });
@@ -207,7 +207,7 @@ constexpr bool test() {
       std::string a[] = {str1, str1, str, str1, str1};
       auto whole =
           std::ranges::subrange(forward_iterator(std::move_iterator(a)), forward_iterator(std::move_iterator(a + 5)));
-      bool ret = std::ranges::contains(whole, "hello world", [&](const std::string i) {
+      bool ret = std::ranges::contains(whole, +"hello world", [&](const std::string i) {
         ++projection_count;
         return i;
       });

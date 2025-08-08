@@ -42,9 +42,18 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
   }];
 
   let parameters = (ins
-    OptionalParameter<"MemorySpaceAttr">: $memory_space,
-    OptionalParameter<"IntegerAttr", "1">: $array_length,
-    OptionalParameter<"BoolAttr", "true">: $boundary_check
+    DefaultValuedParameter<
+      "MemorySpaceAttr",
+      "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
+      "Data memory location">: $memory_space,
+    DefaultValuedParameter<
+      "IntegerAttr",
+      "IntegerAttr::get(IntegerType::get($_ctxt, 64), 1)",
+      "Number of continuous blocks to load">: $array_length,
+    DefaultValuedParameter<
+      "BoolAttr",
+      "BoolAttr::get($_ctxt, true)",
+      "Checking the out of boundary access">: $boundary_check
   );
 
   let builders = [
@@ -54,6 +63,12 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
       CArg<"bool", "true">: $boundary_check
     )>
   ];
+
+  let extraClassDeclaration = [{
+    // return true if all fields of the BlockTensorDescAttr are set with
+    // default values.
+    bool hasDefaultsOnly();
+  }];
 
 }
 
@@ -67,8 +82,8 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
         TensorDesc is located, `Global` device memory or `Shared` local memory.
         It is default to `Global`.
 
-    2.  `chunk_size`: indicates number of contiguous elements accessed for each
-        offset, default is 1. It is used with `scattered` attr only.
+    2. `chunk_size`: Specifies the number of contiguous elements accessed per offset.
+      The default value is 1.
   }];
 
   let parameters = (ins
@@ -90,6 +105,12 @@ def XeGPU_ScatterTensorDescAttr: XeGPU_TensorDescAttr<"ScatterTensorDesc", "scat
       CArg<"int", "1">: $chunk_size
     )>
   ];
+
+  let extraClassDeclaration = [{
+    int64_t getChunkSizeAsInt() {
+      return getChunkSize().getInt();
+    }
+  }];
 
   let genVerifyDecl = 1;
  }
@@ -295,17 +316,52 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout"> {
     }
 
     LayoutAttr dropSgLayoutAndData() {
+      // avoid every field of the attribute is nullptr, which may lead to segment fault
+      if (!getInstData() && !getLaneLayout())
+        return nullptr;
       return LayoutAttr::get(getContext(), nullptr, nullptr, getInstData(),
                              getLaneLayout(), getLaneData(), getOrder());
     }
 
     LayoutAttr dropInstData() {
+      // avoid every field of the attribute is nullptr, which may lead to segment fault
+      if (!getSgLayout() && !getLaneLayout())
+        return nullptr;
       return LayoutAttr::get(getContext(), getSgLayout(), getSgData(), nullptr,
                              getLaneLayout(), getLaneData(), getOrder());
     }
   }];
 
   let assemblyFormat = "`<` struct(params) `>`";
+  let genVerifyDecl = 1;
+}
+
+def XeGPU_RangeAttr : XeGPUAttr<"Range", "range"> {
+  let summary = [{Specifies a half-open range}];
+  let description = [{
+    `RangeAttr` is an attribute that defines a half-open range [start, end).
+    The range is inclusive of the start value and exclusive of the end value.
+    One usage of this attribute can be to specify the subgroup id range.
+    The subgroup id range can be specified using this attribute,
+    and it can be attached to a scf.if op like
+    ```mlir
+    scf.if %cond {
+      // some operations
+    } {sg_id_range = #xegpu.range<[2, 4]>}
+    ```
+    In this case, the scf.if op will only be executed for subgroup IDs 2 and 3.
+  }];
+
+  let parameters = (ins
+    "IntegerAttr": $start,
+    "IntegerAttr": $end
+  );
+
+  let builders = [
+    AttrBuilder<(ins "int":$start, "int":$end)>
+  ];
+
+  let assemblyFormat = "`<` `[`$start `,` $end `]` `>`";
   let genVerifyDecl = 1;
 }
 

@@ -36,6 +36,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
+#include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValues.h"
@@ -1510,16 +1511,18 @@ bool Target::IgnoreWatchpointByID(lldb::watch_id_t watch_id,
 }
 
 ModuleSP Target::GetExecutableModule() {
-  // search for the first executable in the module list
-  for (size_t i = 0; i < m_images.GetSize(); ++i) {
-    ModuleSP module_sp = m_images.GetModuleAtIndex(i);
+  std::lock_guard<std::recursive_mutex> lock(m_images.GetMutex());
+
+  // Search for the first executable in the module list.
+  for (ModuleSP module_sp : m_images.ModulesNoLocking()) {
     lldb_private::ObjectFile *obj = module_sp->GetObjectFile();
     if (obj == nullptr)
       continue;
     if (obj->GetType() == ObjectFile::Type::eTypeExecutable)
       return module_sp;
   }
-  // as fall back return the first module loaded
+
+  // If there is none, fall back return the first module loaded.
   return m_images.GetModuleAtIndex(0);
 }
 
@@ -1707,6 +1710,8 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
         if (PlatformSP arch_platform_sp =
                 GetDebugger().GetPlatformList().GetOrCreate(other, {},
                                                             &platform_arch)) {
+          arch_platform_sp->SetLocateModuleCallback(
+              platform_sp->GetLocateModuleCallback());
           SetPlatform(arch_platform_sp);
           if (platform_arch.IsValid())
             other = platform_arch;
@@ -1983,8 +1988,11 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
 
 size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
                           Status &error, bool force_live_memory,
-                          lldb::addr_t *load_addr_ptr) {
+                          lldb::addr_t *load_addr_ptr,
+                          bool *did_read_live_memory) {
   error.Clear();
+  if (did_read_live_memory)
+    *did_read_live_memory = false;
 
   Address fixed_addr = addr;
   if (ProcessIsValid())
@@ -2082,6 +2090,8 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
       if (bytes_read) {
         if (load_addr_ptr)
           *load_addr_ptr = load_addr;
+        if (did_read_live_memory)
+          *did_read_live_memory = true;
         return bytes_read;
       }
     }
@@ -2478,9 +2488,9 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
 
           ModuleList found_modules;
           m_images.FindModules(module_spec_copy, found_modules);
-          found_modules.ForEach([&](const ModuleSP &found_module) -> bool {
+          found_modules.ForEach([&](const ModuleSP &found_module) {
             old_modules.push_back(found_module);
-            return true;
+            return IterationAction::Continue;
           });
         }
 
@@ -3545,6 +3555,7 @@ llvm::Expected<TraceSP> Target::GetTraceOrCreate() {
 }
 
 Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
+  Progress attach_progress("Waiting to attach to process");
   m_stats.SetLaunchOrAttachTime();
   auto state = eStateInvalid;
   auto process_sp = GetProcessSP();

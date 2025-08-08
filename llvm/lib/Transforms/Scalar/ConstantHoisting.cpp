@@ -44,7 +44,6 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstrTypes.h"
@@ -381,7 +380,7 @@ void ConstantHoistingPass::collectConstantCandidates(
     ConstCandMapType::iterator Itr;
     bool Inserted;
     ConstPtrUnionType Cand = ConstInt;
-    std::tie(Itr, Inserted) = ConstCandMap.insert(std::make_pair(Cand, 0));
+    std::tie(Itr, Inserted) = ConstCandMap.try_emplace(Cand);
     if (Inserted) {
       ConstIntCandVec.push_back(ConstantCandidate(ConstInt));
       Itr->second = ConstIntCandVec.size() - 1;
@@ -439,7 +438,7 @@ void ConstantHoistingPass::collectConstantCandidates(
   ConstCandMapType::iterator Itr;
   bool Inserted;
   ConstPtrUnionType Cand = ConstExpr;
-  std::tie(Itr, Inserted) = ConstCandMap.insert(std::make_pair(Cand, 0));
+  std::tie(Itr, Inserted) = ConstCandMap.try_emplace(Cand);
   if (Inserted) {
     ExprCandVec.push_back(ConstantCandidate(
         ConstantInt::get(Type::getInt32Ty(*Ctx), Offset.getLimitedValue()),
@@ -883,7 +882,7 @@ bool ConstantHoistingPass::emitBaseConstants(GlobalVariable *BaseGV) {
         emitBaseConstants(Base, &R);
         ReBasesNum++;
         // Use the same debug location as the last user of the constant.
-        Base->setDebugLoc(DILocation::getMergedLocation(
+        Base->setDebugLoc(DebugLoc::getMergedLocation(
             Base->getDebugLoc(), R.User.Inst->getDebugLoc()));
       }
       assert(!Base->use_empty() && "The use list is empty!?");

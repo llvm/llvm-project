@@ -44,7 +44,7 @@ static llvm::ArrayRef<CppTy> unwrapList(size_t size, CTy *first,
       "incompatible C and C++ types");
 
   if (size == 0)
-    return std::nullopt;
+    return {};
 
   assert(storage.empty() && "expected to populate storage");
   storage.reserve(size);

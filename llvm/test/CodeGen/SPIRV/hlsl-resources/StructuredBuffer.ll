@@ -3,11 +3,8 @@
 
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
 
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32, i32, i32, i32, i1) #0
-
-; Function Attrs: mustprogress nocallback nofree nosync nounwind willreturn memory(none)
-declare target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32, i32, i32, i32, i1) #0
+@.str.b = private unnamed_addr constant [2 x i8] c"B\00", align 1
+@.str.rwb = private unnamed_addr constant [4 x i8] c"RWB\00", align 1
 
 ; CHECK: OpDecorate [[BufferVar:%.+]] DescriptorSet 0
 ; CHECK: OpDecorate [[BufferVar]] Binding 0
@@ -40,9 +37,9 @@ entry:
 ; CHECK-DAG: [[BufferHandle:%.+]] = OpCopyObject [[BufferPtrType]] [[BufferVar]]
 ; CHECK-DAG: [[BufferHandle2:%.+]] = OpCopyObject [[BufferPtrType]] [[BufferVar]]
 ; CHECK-DAG: [[RWBufferHandle:%.+]] = OpCopyObject [[RWBufferPtrType]] [[RWBufferVar]]
-  %BufferHandle = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
-  %BufferHandle2 = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false)
-  %RWBufferHandle = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 1, i32 1, i32 0, i1 false)
+  %BufferHandle = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str.b)
+  %BufferHandle2 = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_0t(i32 0, i32 0, i32 1, i32 0, i1 false, ptr nonnull @.str.b)
+  %RWBufferHandle = tail call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 1, i32 1, i32 0, i1 false, ptr nonnull @.str.rwb)
 
 ; CHECK: [[AC:%.+]] = OpAccessChain {{.*}} [[BufferHandle]] [[zero]] [[one]]
   %0 = tail call noundef nonnull align 4 dereferenceable(4) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_0t(target("spirv.VulkanBuffer", [0 x i32], 12, 0) %BufferHandle,  i32 1)

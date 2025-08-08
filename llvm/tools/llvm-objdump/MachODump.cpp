@@ -14,7 +14,6 @@
 
 #include "ObjdumpOptID.h"
 #include "llvm-objdump.h"
-#include "llvm-c/Disassembler.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -41,11 +40,8 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/TargetSelect.h"
-#include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
@@ -1753,7 +1749,7 @@ static void DumpLiteralPointerSection(MachOObjectFile *O,
 
     StringRef BytesStr = unwrapOrError(Sect->getContents(), O->getFileName());
 
-    const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
+    const char *Contents = BytesStr.data();
 
     switch (section_type) {
     case MachO::S_CSTRING_LITERALS:
@@ -1969,7 +1965,7 @@ static void DumpSectionContents(StringRef Filename, MachOObjectFile *O,
 
         StringRef BytesStr =
             unwrapOrError(Section.getContents(), O->getFileName());
-        const char *sect = reinterpret_cast<const char *>(BytesStr.data());
+        const char *sect = BytesStr.data();
         uint32_t sect_size = BytesStr.size();
         uint64_t sect_addr = Section.getAddress();
 
@@ -2053,7 +2049,7 @@ static void DumpInfoPlistSectionContents(StringRef Filename,
         outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
       StringRef BytesStr =
           unwrapOrError(Section.getContents(), O->getFileName());
-      const char *sect = reinterpret_cast<const char *>(BytesStr.data());
+      const char *sect = BytesStr.data();
       outs() << format("%.*s", BytesStr.size(), sect) << "\n";
       return;
     }
@@ -3241,7 +3237,7 @@ static const char *GuessCstringPointer(uint64_t ReferenceValue,
           uint64_t object_offset = Sec.offset + sect_offset;
           StringRef MachOContents = info->O->getData();
           uint64_t object_size = MachOContents.size();
-          const char *object_addr = (const char *)MachOContents.data();
+          const char *object_addr = MachOContents.data();
           if (object_offset < object_size) {
             const char *name = object_addr + object_offset;
             return name;
@@ -3262,7 +3258,7 @@ static const char *GuessCstringPointer(uint64_t ReferenceValue,
           uint64_t object_offset = Sec.offset + sect_offset;
           StringRef MachOContents = info->O->getData();
           uint64_t object_size = MachOContents.size();
-          const char *object_addr = (const char *)MachOContents.data();
+          const char *object_addr = MachOContents.data();
           if (object_offset < object_size) {
             const char *name = object_addr + object_offset;
             return name;
@@ -3451,7 +3447,7 @@ static uint64_t GuessPointerPointer(uint64_t ReferenceValue,
           uint64_t object_offset = Sec.offset + sect_offset;
           StringRef MachOContents = info->O->getData();
           uint64_t object_size = MachOContents.size();
-          const char *object_addr = (const char *)MachOContents.data();
+          const char *object_addr = MachOContents.data();
           if (object_offset < object_size) {
             uint64_t pointer_value;
             memcpy(&pointer_value, object_addr + object_offset,
@@ -4354,7 +4350,7 @@ walk_pointer_list_64(const char *listname, const SectionRef S,
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
 
   StringRef BytesStr = unwrapOrError(S.getContents(), O->getFileName());
-  const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
+  const char *Contents = BytesStr.data();
 
   for (uint32_t i = 0; i < S.getSize(); i += sizeof(uint64_t)) {
     uint32_t left = S.getSize() - i;
@@ -4403,7 +4399,7 @@ walk_pointer_list_32(const char *listname, const SectionRef S,
   outs() << "Contents of (" << SegName << "," << SectName << ") section\n";
 
   StringRef BytesStr = unwrapOrError(S.getContents(), O->getFileName());
-  const char *Contents = reinterpret_cast<const char *>(BytesStr.data());
+  const char *Contents = BytesStr.data();
 
   for (uint32_t i = 0; i < S.getSize(); i += sizeof(uint32_t)) {
     uint32_t left = S.getSize() - i;

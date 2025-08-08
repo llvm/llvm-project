@@ -11,7 +11,7 @@ module {
     }
     cir.return
   }
-// CHECK:  cir.func @foo() {
+// CHECK:  cir.func{{.*}} @foo() {
 // CHECK:    cir.br ^bb1
 // CHECK:  ^bb1:  // pred: ^bb0
 // CHECK:    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["a", init] {alignment = 4 : i64}
@@ -28,7 +28,7 @@ module {
     }
     cir.return
   }
-// CHECK:  cir.func @empty_scope() {
+// CHECK:  cir.func{{.*}} @empty_scope() {
 // CHECK:    cir.return
 // CHECK:  }
 
@@ -44,7 +44,7 @@ module {
     cir.return %1 : !u32i
   }
 
-// CHECK:  cir.func @scope_with_return() -> !u32i {
+// CHECK:  cir.func{{.*}} @scope_with_return() -> !u32i {
 // CHECK:    %0 = cir.alloca !u32i, !cir.ptr<!u32i>, ["__retval"] {alignment = 4 : i64}
 // CHECK:    cir.br ^bb1
 // CHECK:  ^bb1:  // pred: ^bb0

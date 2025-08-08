@@ -672,9 +672,13 @@ private:
   DynTypedMatcher Implementation;
 };  // class Matcher
 
-/// A convenient helper for creating a Matcher<T> without specifying
-/// the template type argument.
+// Deduction guide for Matcher.
+template <typename T> Matcher(MatcherInterface<T> *) -> Matcher<T>;
+
+// TODO: Remove in LLVM 23.
 template <typename T>
+[[deprecated(
+    "Use CTAD constructor instead, 'makeMatcher' will be removed in LLVM 23.")]]
 inline Matcher<T> makeMatcher(MatcherInterface<T> *Implementation) {
   return Matcher<T>(Implementation);
 }
@@ -1034,7 +1038,7 @@ private:
     // A SubstTemplateTypeParmType exists solely to mark a type substitution
     // on the instantiated template. As users usually want to match the
     // template parameter on the uninitialized template, we can always desugar
-    // one level without loss of expressivness.
+    // one level without loss of expressiveness.
     // For example, given:
     //   template<typename T> struct X { T t; } class A {}; X<A> a;
     // The following matcher will match, which otherwise would not:
@@ -2161,8 +2165,10 @@ inline const Expr *getSubExpr(const NodeType &Node) {
 template <>
 inline const Expr *
 getSubExpr<CXXOperatorCallExpr>(const CXXOperatorCallExpr &Node) {
-  if (!internal::equivalentUnaryOperator(Node))
+  if (!internal::equivalentUnaryOperator(Node) &&
+      Node.getOperator() != OO_Arrow) {
     return nullptr;
+  }
   return Node.getArg(0);
 }
 
@@ -2223,14 +2229,9 @@ inline StringRef getOpName(const CXXRewrittenBinaryOperator &Node) {
   return Node.getOpcodeStr();
 }
 inline std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
-  auto optBinaryOpcode = equivalentBinaryOperator(Node);
-  if (!optBinaryOpcode) {
-    auto optUnaryOpcode = equivalentUnaryOperator(Node);
-    if (!optUnaryOpcode)
-      return std::nullopt;
-    return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
-  }
-  return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+  if (const char *Str = getOperatorSpelling(Node.getOperator()))
+    return Str;
+  return std::nullopt;
 }
 inline StringRef getOpName(const CXXFoldExpr &Node) {
   return BinaryOperator::getOpcodeStr(Node.getOperator());
@@ -2271,14 +2272,9 @@ private:
     return Node.getOpcodeStr();
   }
   static std::optional<StringRef> getOpName(const CXXOperatorCallExpr &Node) {
-    auto optBinaryOpcode = equivalentBinaryOperator(Node);
-    if (!optBinaryOpcode) {
-      auto optUnaryOpcode = equivalentUnaryOperator(Node);
-      if (!optUnaryOpcode)
-        return std::nullopt;
-      return UnaryOperator::getOpcodeStr(*optUnaryOpcode);
-    }
-    return BinaryOperator::getOpcodeStr(*optBinaryOpcode);
+    if (const char *Str = getOperatorSpelling(Node.getOperator()))
+      return Str;
+    return std::nullopt;
   }
 
   std::vector<std::string> Names;

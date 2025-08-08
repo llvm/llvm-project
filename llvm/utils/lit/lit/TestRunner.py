@@ -2175,6 +2175,8 @@ def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     assert parsed["DEFINE:"] == script
     assert parsed["REDEFINE:"] == script
     test.xfails += parsed["XFAIL:"] or []
+    if test.exclude_xfail and test.isExpectedToFail():
+        return lit.Test.Result(Test.EXCLUDED, "excluding XFAIL tests")
     test.requires += parsed["REQUIRES:"] or []
     test.unsupported += parsed["UNSUPPORTED:"] or []
     if parsed["ALLOW_RETRIES:"]:
@@ -2292,7 +2294,9 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     if err:
         output += """Command Output (stderr):\n--\n%s\n--\n""" % (err,)
 
-    return lit.Test.Result(status, output)
+    return lit.Test.Result(
+        status, output, attempts=i + 1, max_allowed_attempts=attempts
+    )
 
 
 def executeShTest(

@@ -37,7 +37,7 @@ CompilerType ClangASTImporter::CopyType(TypeSystemClang &dst_ast,
                                         const CompilerType &src_type) {
   clang::ASTContext &dst_clang_ast = dst_ast.getASTContext();
 
-  auto src_ast = src_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto src_ast = src_type.GetTypeSystem<TypeSystemClang>();
   if (!src_ast)
     return CompilerType();
 
@@ -288,7 +288,7 @@ public:
     // Filter out decls that we can't complete later.
     if (!isa<TagDecl>(to) && !isa<ObjCInterfaceDecl>(to))
       return;
-    RecordDecl *from_record_decl = dyn_cast<RecordDecl>(from);
+    auto *from_record_decl = dyn_cast<CXXRecordDecl>(from);
     // We don't need to complete injected class name decls.
     if (from_record_decl && from_record_decl->isInjectedClassName())
       return;
@@ -307,7 +307,7 @@ CompilerType ClangASTImporter::DeportType(TypeSystemClang &dst,
                                           const CompilerType &src_type) {
   Log *log = GetLog(LLDBLog::Expressions);
 
-  auto src_ctxt = src_type.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>();
+  auto src_ctxt = src_type.GetTypeSystem<TypeSystemClang>();
   if (!src_ctxt)
     return {};
 
