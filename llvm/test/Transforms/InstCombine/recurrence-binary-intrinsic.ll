@@ -236,12 +236,11 @@ define float @simple_recurrence_intrinsic_maximumnum(i32 %n, float %a, float %b)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMAX_ACC:%.*]] = phi float [ [[FMAX:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMAX]] = call nnan float @llvm.maximumnum.f32(float [[FMAX_ACC]], float [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[FMAX:%.*]] = call nnan float @llvm.maximumnum.f32(float [[A]], float [[B]])
 ; CHECK-NEXT:    ret float [[FMAX]]
 ;
 entry:
@@ -265,12 +264,11 @@ define float @simple_recurrence_intrinsic_minimumnum(i32 %n, float %a, float %b)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMIN_ACC:%.*]] = phi float [ [[FMIN:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[FMIN]] = call nnan float @llvm.minimumnum.f32(float [[FMIN_ACC]], float [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[FMIN:%.*]] = call nnan float @llvm.minimumnum.f32(float [[A]], float [[B]])
 ; CHECK-NEXT:    ret float [[FMIN]]
 ;
 entry:
@@ -296,7 +294,7 @@ define i8 @simple_recurrence_intrinsic_multiuse_phi(i8 %n, i8 %a, i8 %b) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ [[IV_NEXT:%.*]], %[[LOOP]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    [[UMAX_ACC:%.*]] = phi i8 [ [[UMAX:%.*]], %[[LOOP]] ], [ [[A]], %[[ENTRY]] ]
 ; CHECK-NEXT:    call void @use(i8 [[UMAX_ACC]])
-; CHECK-NEXT:    [[UMAX]] = call i8 @llvm.umax.i8(i8 [[UMAX_ACC]], i8 [[B]])
+; CHECK-NEXT:    [[UMAX]] = call i8 @llvm.umax.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i8 [[IV]], 1
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
