@@ -16,87 +16,87 @@
 
 # CHECK-ASM-AND-OBJ: sspopchk ra
 # CHECK-ASM: encoding: [0x73,0xc0,0xc0,0xcd]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspopchk x1
 
 # CHECK-ASM-AND-OBJ: sspopchk ra
 # CHECK-ASM: encoding: [0x73,0xc0,0xc0,0xcd]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspopchk ra
 
 # CHECK-ASM-AND-OBJ: sspopchk t0
 # CHECK-ASM: encoding: [0x73,0xc0,0xc2,0xcd]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspopchk x5
 
 # CHECK-ASM-AND-OBJ: sspopchk t0
 # CHECK-ASM: encoding: [0x73,0xc0,0xc2,0xcd]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspopchk t0
 
 # CHECK-ASM-AND-OBJ: sspush ra
 # CHECK-ASM: encoding: [0x73,0x40,0x10,0xce]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspush x1
 
 # CHECK-ASM-AND-OBJ: sspush ra
 # CHECK-ASM: encoding: [0x73,0x40,0x10,0xce]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspush ra
 
 # check-asm-and-obj: sspush t0
 # check-asm: encoding: [0x73,0x40,0x50,0xce]
-# check-no-ext: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# check-no-ext: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspush x5
 
 # check-asm-and-obj: sspush t0
 # check-asm: encoding: [0x73,0x40,0x50,0xce]
-# check-no-ext: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# check-no-ext: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 sspush t0
 
 # CHECK-ASM-AND-OBJ: ssrdp ra
 # CHECK-ASM: encoding: [0xf3,0x40,0xc0,0xcd]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 ssrdp ra
 
 # CHECK-ASM-AND-OBJ: ssamoswap.w a4, ra, (s0)
 # CHECK-ASM: encoding: [0x2f,0x27,0x14,0x48]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 ssamoswap.w a4, ra, (s0)
 
 # CHECK-ASM-AND-OBJ: ssamoswap.w.aq a4, ra, (s0)
 # CHECK-ASM: encoding: [0x2f,0x27,0x14,0x4c]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 ssamoswap.w.aq a4, ra, (s0)
 
 # CHECK-ASM-AND-OBJ: ssamoswap.w.rl a4, ra, (s0)
 # CHECK-ASM: encoding: [0x2f,0x27,0x14,0x4a]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 ssamoswap.w.rl a4, ra, (s0)
 
 # CHECK-ASM-AND-OBJ: ssamoswap.w.aqrl a4, ra, (s0)
 # CHECK-ASM: encoding: [0x2f,0x27,0x14,0x4e]
-# CHECK-NO-EXT: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 ssamoswap.w.aqrl a4, ra, (s0)
 
 .ifdef RV64
 # CHECK-ASM-AND-OBJ-RV64: ssamoswap.d a4, ra, (s0)
 # CHECK-ASM-RV64: encoding: [0x2f,0x37,0x14,0x48]
-# CHECK-NO-EXT-RV64: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT-RV64: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 ssamoswap.d a4, ra, (s0)
 
 # CHECK-ASM-AND-OBJ-RV64: ssamoswap.d.aq a4, ra, (s0)
 # CHECK-ASM-RV64: encoding: [0x2f,0x37,0x14,0x4c]
-# CHECK-NO-EXT-RV64: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT-RV64: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 ssamoswap.d.aq a4, ra, (s0)
 
 # CHECK-ASM-AND-OBJ-RV64: ssamoswap.d.rl a4, ra, (s0)
 # CHECK-ASM-RV64: encoding: [0x2f,0x37,0x14,0x4a]
-# CHECK-NO-EXT-RV64: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT-RV64: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 ssamoswap.d.rl a4, ra, (s0)
 
 # CHECK-ASM-AND-OBJ-RV64: ssamoswap.d.aqrl a4, ra, (s0)
 # CHECK-ASM-RV64: encoding: [0x2f,0x37,0x14,0x4e]
-# CHECK-NO-EXT-RV64: error: instruction requires the following: 'Zicfiss' (Shadow stack)
+# CHECK-NO-EXT-RV64: error: instruction requires the following: 'Zimop' (May-Be-Operations){{$}}
 ssamoswap.d.aqrl a4, ra, (s0)
 .endif
