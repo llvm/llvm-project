@@ -2122,6 +2122,9 @@ private:
       }
     }
 
+    if (!doConcurrentLoopOp)
+      return;
+
     llvm::SmallVector<bool> reduceVarByRef;
     llvm::SmallVector<mlir::Attribute> reductionDeclSymbols;
     llvm::SmallVector<mlir::Attribute> nestReduceAttrs;
