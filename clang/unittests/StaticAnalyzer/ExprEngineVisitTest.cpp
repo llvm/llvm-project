@@ -165,9 +165,7 @@ TEST(ExprEngineVisitTest, checkLocationAndBindInitialization) {
   )",
                                                     Diags));
 
-  // Look for any occurrence of AtDeclInit = true
-  std::size_t BindPos = Diags.find("AtDeclInit = true");
-  EXPECT_NE(BindPos, std::string::npos);
+  EXPECT_TRUE(StringRef(Diags).contains("AtDeclInit = true"));
 }
 
 } // namespace
