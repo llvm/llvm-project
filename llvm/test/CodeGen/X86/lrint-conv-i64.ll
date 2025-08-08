@@ -5,11 +5,10 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx | FileCheck %s --check-prefixes=CHECK,AVX
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx512f | FileCheck %s --check-prefixes=CHECK,AVX
 
-; FIXME: crash
-; define i64 @test_lrint_i64_f16(half %x) nounwind {
-;   %conv = tail call i64 @llvm.lrint.i64.f16(half %x)
-;   ret i64 %conv
-; }
+define i64 @test_lrint_i64_f16(half %x) nounwind {
+  %conv = tail call i64 @llvm.lrint.i64.f16(half %x)
+  ret i64 %conv
+}
 
 define i64 @test_lrint_i64_f32(float %x) nounwind {
 ; X86-NOSSE-LABEL: test_lrint_i64_f32:
@@ -149,11 +148,10 @@ define i64 @test_lrint_i64_f128(fp128 %x) nounwind {
   ret i64 %conv
 }
 
-; FIXME: crash
-; define i64 @test_lrint_i64_f16_strict(half %x) nounwind {
-;   %conv = tail call i64 @llvm.experimental.constrained.lrint.i64.f16(half %x, metadata!"round.dynamic", metadata!"fpexcept.strict")
-;   ret i64 %conv
-; }
+define i64 @test_lrint_i64_f16_strict(half %x) nounwind {
+  %conv = tail call i64 @llvm.experimental.constrained.lrint.i64.f16(half %x, metadata!"round.dynamic", metadata!"fpexcept.strict")
+  ret i64 %conv
+}
 
 define i64 @test_lrint_i64_f32_strict(float %x) nounwind {
 ; X86-NOSSE-LABEL: test_lrint_i64_f32_strict:
