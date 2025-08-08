@@ -713,9 +713,9 @@ if config.target_os == "Linux":
         if config.android:
             return
 
-        from distutils.version import LooseVersion
+        from packaging.version import Version
 
-        ver = LooseVersion(ver_string)
+        ver = Version(ver_string)
         any_glibc = False
         for required in [
             "2.19",
@@ -727,7 +727,7 @@ if config.target_os == "Linux":
             "2.38",
             "2.40",
         ]:
-            if ver >= LooseVersion(required):
+            if ver >= Version(required):
                 config.available_features.add("glibc-" + required)
                 any_glibc = True
             if any_glibc:
