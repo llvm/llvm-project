@@ -971,7 +971,7 @@ struct NestedStruct {
 
 bool CopiedFromParmVarNestedField(const NestedStruct &ncrs, const NestedStruct ncs, NestedStruct &nrs, NestedStruct ns) {
   const auto m1 = ncrs.s.Member;
-  // CHECK-MESSAGES: [[@LINE-1]]:14: warning:  local copy 'm1' of the subobject 'ncrs.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
+  // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm1' of the subobject 'ncrs.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
   // CHECK-FIXES: const auto& m1 = ncrs.s.Member;
   const auto m2 = ncs.s.Member;
   // CHECK-MESSAGES: [[@LINE-1]]:14: warning: local copy 'm2' of the subobject 'ncs.s.Member' of type 'const ExpensiveToCopyType' is never modified; consider avoiding the copy
