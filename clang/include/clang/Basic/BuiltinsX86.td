@@ -768,7 +768,7 @@ let Features = "xsave", Attributes = [NoThrow] in {
 }
 
 let Header = "immintrin.h", Languages = "ALL_MS_LANGUAGES", Attributes = [NoThrow, RequireDeclaration] in {
-  def _xgetbv : X86LibBuiltin<"uint64_t(unsigned int)">;
+  def _xgetbv : X86LibBuiltin<"unsigned long long int(unsigned int)">;
 }
 
 let Features = "xsave", Attributes = [NoThrow] in {
@@ -776,7 +776,7 @@ let Features = "xsave", Attributes = [NoThrow] in {
 }
 
 let Header = "immintrin.h", Languages = "ALL_MS_LANGUAGES", Attributes = [NoThrow, RequireDeclaration] in {
-  def _xsetbv : X86LibBuiltin<"void(unsigned int, uint64_t)">;
+  def _xsetbv : X86LibBuiltin<"void(unsigned int, unsigned long long int)">;
 }
 
 let Features = "xsaveopt", Attributes = [NoThrow] in {
