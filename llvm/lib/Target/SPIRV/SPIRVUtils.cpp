@@ -1049,4 +1049,3 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB) {
 }
 
 } // namespace llvm
-
