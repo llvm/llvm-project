@@ -146,9 +146,8 @@ static Error readFRE(ArrayRef<uint8_t> Data, uint64_t &Offset,
   case sframe::FREOffset::B4:
     return readArray<sframe::detail::packed<int32_t, E>>(
         Data, FRE.Info.getOffsetCount(), Offset, FRE.Offsets);
-  default:
-    return createError("unsupported/unknown offset size");
   }
+  return createError("unsupported/unknown offset size");
 }
 
 template <endianness E> Error SFrameParser<E>::FallibleFREIterator::inc() {
@@ -162,9 +161,8 @@ template <endianness E> Error SFrameParser<E>::FallibleFREIterator::inc() {
     return readFRE<uint16_t, E>(Data, Offset, FRE);
   case sframe::FREType::Addr4:
     return readFRE<uint32_t, E>(Data, Offset, FRE);
-  default:
-    return createError("invalid/unsupported FRE type");
   }
+  return createError("invalid/unsupported FRE type");
 }
 
 template <endianness E>
@@ -220,7 +218,7 @@ SFrameParser<E>::getExtraOffsets(const FrameRowEntry &FRE) const {
   if (!usesFixedFPOffset())
     ++UsedOffsets;
   if (FRE.Offsets.size() > UsedOffsets)
-    return ArrayRef(FRE.Offsets).drop_front(UsedOffsets);
+    return ArrayRef<int32_t>(FRE.Offsets).drop_front(UsedOffsets);
   return {};
 }
 
