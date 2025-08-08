@@ -6951,7 +6951,8 @@ const ConstantRange &ScalarEvolution::getRangeRef(
           } else {
             if (!Op->getType()->isIntOrIntVectorTy())
               break;
-            SimplifyQuery SQ(DL, &DT, &AC, Phi, true);
+            SimplifyQuery SQ(DL, &DT, &AC,
+                             Phi->getIncomingBlock(Op)->getTerminator(), true);
             OpRange = computeConstantRangeIncludingKnownBits(
                 Op.get(), SignHint == HINT_RANGE_SIGNED, SQ);
           }
