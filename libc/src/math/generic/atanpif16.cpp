@@ -15,6 +15,7 @@
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/macros/optimization.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -78,21 +79,23 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
 
   if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
     if (xbits.is_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
       return x;
     }
     // atanpi(±∞) = ±0.5
     return signed_result(0.5);
   }
 
-  if (LIBC_UNLIKELY(xbits.is_zero())) {
+  if (LIBC_UNLIKELY(xbits.is_zero()))
     return x;
-  }
 
   double x_abs = fputil::cast<double>(xbits.abs().get_val());
 
-  if (LIBC_UNLIKELY(x_abs == 1.0)) {
+  if (LIBC_UNLIKELY(x_abs == 1.0))
     return signed_result(0.25);
-  }
 
   // polynomial coefficients for atan(x)/pi taylor series
   // generated using sympy: series(atan(x)/pi, x, 0, 17)
@@ -109,8 +112,8 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
 
   // evaluate atan(x)/pi using polynomial approximation, valid for |x| <= 0.5
   constexpr auto atanpi_eval = [](double x) -> double {
-    double xx = x * x;
-    return x * fputil::polyeval(xx, POLY_COEFFS[0], POLY_COEFFS[1],
+    double x_sq = x * x;
+    return x * fputil::polyeval(x_sq, POLY_COEFFS[0], POLY_COEFFS[1],
                                 POLY_COEFFS[2], POLY_COEFFS[3], POLY_COEFFS[4],
                                 POLY_COEFFS[5], POLY_COEFFS[6], POLY_COEFFS[7]);
   };
@@ -140,8 +143,8 @@ LLVM_LIBC_FUNCTION(float16, atanpif16, (float16 x)) {
 
   // if 1/|x| > 0.5, we need to apply Case 2 transformation to 1/|x|
   if (x_recip > 0.5) {
-    double xx_recip = x_recip * x_recip;
-    double sqrt_term = fputil::sqrt<double>(1.0 + xx_recip);
+    double x_sq_recip = x_recip * x_recip;
+    double sqrt_term = fputil::sqrt<double>(1.0 + x_sq_recip);
     double x_prime = x_recip / (1.0 + sqrt_term);
     result = fputil::multiply_add(-2.0, atanpi_eval(x_prime), 0.5);
   } else {

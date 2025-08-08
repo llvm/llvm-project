@@ -6,10 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
 #include "src/math/atanpif16.h"
 #include "test/UnitTest/FPMatcher.h"
 
+using LIBC_NAMESPACE::cpp::array;
 using LlvmLibcAtanpif16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 
 TEST_F(LlvmLibcAtanpif16Test, SpecialNumbers) {
@@ -21,8 +22,7 @@ TEST_F(LlvmLibcAtanpif16Test, SpecialNumbers) {
   EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
                LIBC_NAMESPACE::atanpif16(FPBits::quiet_nan().get_val()));
 
-  EXPECT_FP_EQ(FPBits::quiet_nan().get_val(),
-               LIBC_NAMESPACE::atanpif16(FPBits::signaling_nan().get_val()));
+  EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::atanpif16(aNaN));
 
   // infinity inputs -> should return +/-0.5
   EXPECT_FP_EQ(0.5f16, LIBC_NAMESPACE::atanpif16(inf));
@@ -49,12 +49,11 @@ TEST_F(LlvmLibcAtanpif16Test, SymmetryProperty) {
 
 TEST_F(LlvmLibcAtanpif16Test, MonotonicityProperty) {
   // Test that atanpi is monotonically increasing
-  constexpr float16 TEST_VALS[] = {-1000.0f16, -100.0f16, -10.0f16, -2.0f16,
-                                   -1.0f16,    -0.5f16,   -0.1f16,  0.0f16,
-                                   0.1f16,     0.5f16,    1.0f16,   2.0f16,
-                                   10.0f16,    100.0f16,  1000.0f16};
-
-  for (size_t i = 0; i < sizeof(TEST_VALS) / sizeof(TEST_VALS[0]) - 1; ++i) {
+  constexpr array<float16, 15> TEST_VALS = {
+      -1000.0f16, -100.0f16, -10.0f16, -2.0f16,  -1.0f16,
+      -0.5f16,    -0.1f16,   0.0f16,   0.1f16,   0.5f16,
+      1.0f16,     2.0f16,    10.0f16,  100.0f16, 1000.0f16};
+  for (size_t i = 0; i < TEST_VALS.size() - 1; ++i) {
     float16 x1 = TEST_VALS[i];
     float16 x2 = TEST_VALS[i + 1];
     float16 result1 = LIBC_NAMESPACE::atanpif16(x1);
@@ -63,4 +62,3 @@ TEST_F(LlvmLibcAtanpif16Test, MonotonicityProperty) {
     EXPECT_TRUE(result1 < result2);
   }
 }
-
