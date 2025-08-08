@@ -2361,6 +2361,21 @@ add_entrypoint_object(
     MISC_MATH_BASIC_OPS_OPT
 )
 
+add_entrypoint_object(
+  fminbf16
+  SRCS
+    fminbf16.cpp
+  HDRS
+    ../fminbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
 
 add_entrypoint_object(
   fmax
@@ -2416,6 +2431,22 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.macros.properties.types
     libc.src.__support.FPUtil.basic_operations
+  FLAGS
+    MISC_MATH_BASIC_OPS_OPT
+)
+
+add_entrypoint_object(
+  fmaxbf16
+  SRCS
+    fmaxbf16.cpp
+  HDRS
+    ../fmaxbf16.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
   FLAGS
     MISC_MATH_BASIC_OPS_OPT
 )

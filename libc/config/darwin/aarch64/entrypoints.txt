@@ -599,6 +599,8 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.ceilbf16
   libc.src.math.fabsbf16
   libc.src.math.floorbf16
+  libc.src.math.fmaxbf16
+  libc.src.math.fminbf16
   libc.src.math.roundbf16
   libc.src.math.roundevenbf16
   libc.src.math.truncbf16
