@@ -23,6 +23,14 @@
                  __target__("avx512vl,no-evex512"),                            \
                  __min_vector_width__(256)))
 
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128 constexpr
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256 constexpr
+#else
+#define __DEFAULT_FN_ATTRS128_CONSTEXPR __DEFAULT_FN_ATTRS128
+#define __DEFAULT_FN_ATTRS256_CONSTEXPR __DEFAULT_FN_ATTRS256
+#endif
+
 typedef short __v2hi __attribute__((__vector_size__(4)));
 typedef char __v4qi __attribute__((__vector_size__(4)));
 typedef char __v2qi __attribute__((__vector_size__(2)));
@@ -8258,7 +8266,7 @@ _mm256_maskz_moveldup_ps (__mmask8 __U, __m256 __A)
                                        (__v4si)_mm_shuffle_epi32((A), (I)), \
                                        (__v4si)_mm_setzero_si128()))
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_mov_pd (__m128d __W, __mmask8 __U, __m128d __A)
 {
   return (__m128d) __builtin_ia32_selectpd_128 ((__mmask8) __U,
@@ -8266,7 +8274,7 @@ _mm_mask_mov_pd (__m128d __W, __mmask8 __U, __m128d __A)
               (__v2df) __W);
 }
 
-static __inline__ __m128d __DEFAULT_FN_ATTRS128
+static __inline__ __m128d __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_mov_pd (__mmask8 __U, __m128d __A)
 {
   return (__m128d) __builtin_ia32_selectpd_128 ((__mmask8) __U,
@@ -8274,7 +8282,7 @@ _mm_maskz_mov_pd (__mmask8 __U, __m128d __A)
               (__v2df) _mm_setzero_pd ());
 }
 
-static __inline__ __m256d __DEFAULT_FN_ATTRS256
+static __inline__ __m256d __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_mov_pd (__m256d __W, __mmask8 __U, __m256d __A)
 {
   return (__m256d) __builtin_ia32_selectpd_256 ((__mmask8) __U,
@@ -8282,7 +8290,7 @@ _mm256_mask_mov_pd (__m256d __W, __mmask8 __U, __m256d __A)
               (__v4df) __W);
 }
 
-static __inline__ __m256d __DEFAULT_FN_ATTRS256
+static __inline__ __m256d __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_mov_pd (__mmask8 __U, __m256d __A)
 {
   return (__m256d) __builtin_ia32_selectpd_256 ((__mmask8) __U,
@@ -8290,7 +8298,7 @@ _mm256_maskz_mov_pd (__mmask8 __U, __m256d __A)
               (__v4df) _mm256_setzero_pd ());
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_mask_mov_ps (__m128 __W, __mmask8 __U, __m128 __A)
 {
   return (__m128) __builtin_ia32_selectps_128 ((__mmask8) __U,
@@ -8298,7 +8306,7 @@ _mm_mask_mov_ps (__m128 __W, __mmask8 __U, __m128 __A)
              (__v4sf) __W);
 }
 
-static __inline__ __m128 __DEFAULT_FN_ATTRS128
+static __inline__ __m128 __DEFAULT_FN_ATTRS128_CONSTEXPR
 _mm_maskz_mov_ps (__mmask8 __U, __m128 __A)
 {
   return (__m128) __builtin_ia32_selectps_128 ((__mmask8) __U,
@@ -8306,7 +8314,7 @@ _mm_maskz_mov_ps (__mmask8 __U, __m128 __A)
              (__v4sf) _mm_setzero_ps ());
 }
 
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_mask_mov_ps (__m256 __W, __mmask8 __U, __m256 __A)
 {
   return (__m256) __builtin_ia32_selectps_256 ((__mmask8) __U,
@@ -8314,7 +8322,7 @@ _mm256_mask_mov_ps (__m256 __W, __mmask8 __U, __m256 __A)
              (__v8sf) __W);
 }
 
-static __inline__ __m256 __DEFAULT_FN_ATTRS256
+static __inline__ __m256 __DEFAULT_FN_ATTRS256_CONSTEXPR
 _mm256_maskz_mov_ps (__mmask8 __U, __m256 __A)
 {
   return (__m256) __builtin_ia32_selectps_256 ((__mmask8) __U,
@@ -8382,8 +8390,9 @@ _mm256_maskz_cvtph_ps (__mmask8 __U, __m128i __A)
 #define _mm256_mask_cvtps_ph  _mm256_mask_cvt_roundps_ph
 #define _mm256_maskz_cvtps_ph _mm256_maskz_cvt_roundps_ph
 
-
 #undef __DEFAULT_FN_ATTRS128
 #undef __DEFAULT_FN_ATTRS256
+#undef __DEFAULT_FN_ATTRS128_CONSTEXPR
+#undef __DEFAULT_FN_ATTRS256_CONSTEXPR
 
 #endif /* __AVX512VLINTRIN_H */
