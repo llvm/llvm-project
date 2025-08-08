@@ -21,7 +21,7 @@ define i32 @foo(ptr nocapture %var1, ptr nocapture readnone %var2, ptr nocapture
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ], [ [[INDVAR_NEXT:%.*]], [[FOR_INC11:%.*]] ]
 ; CHECK-NEXT:    [[J_016:%.*]] = phi i32 [ [[J_1_LCSSA:%.*]], [[FOR_INC11]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I_015:%.*]] = phi i32 [ [[INC12:%.*]], [[FOR_INC11]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw nsw i64 [[INDVAR]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[INDVAR]], 2
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[VAR3:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[VAR3]], i64 [[TMP2]]

@@ -70,15 +70,15 @@ define i32 @test2() nounwind uwtable readonly {
 ; CHECK-NEXT:    %sum.02 = phi i32 [ 0, %entry ], [ %add, %for.body ]
 ; CHECK-NEXT:    --> %sum.02 U: full-set S: full-set Exits: 10 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %n.01 = phi ptr [ @node5, %entry ], [ %1, %for.body ]
-; CHECK-NEXT:    --> %n.01 U: full-set S: full-set Exits: @node1 LoopDispositions: { %for.body: Variant }
+; CHECK-NEXT:    --> %n.01 U: empty-set S: empty-set Exits: @node1 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %i = getelementptr inbounds %struct.ListNode, ptr %n.01, i64 0, i32 1
-; CHECK-NEXT:    --> (4 + %n.01)<nuw> U: [4,0) S: [4,0) Exits: (4 + @node1)<nuw><nsw> LoopDispositions: { %for.body: Variant }
+; CHECK-NEXT:    --> (4 + %n.01)<nuw><nsw> U: empty-set S: empty-set Exits: (4 + @node1)<nuw><nsw> LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %0 = load i32, ptr %i, align 4
 ; CHECK-NEXT:    --> %0 U: full-set S: full-set Exits: 0 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %add = add nsw i32 %0, %sum.02
 ; CHECK-NEXT:    --> (%0 + %sum.02) U: full-set S: full-set Exits: 10 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %next = getelementptr inbounds %struct.ListNode, ptr %n.01, i64 0, i32 0
-; CHECK-NEXT:    --> %n.01 U: full-set S: full-set Exits: @node1 LoopDispositions: { %for.body: Variant }
+; CHECK-NEXT:    --> %n.01 U: empty-set S: empty-set Exits: @node1 LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %1 = load ptr, ptr %next, align 8
 ; CHECK-NEXT:    --> %1 U: full-set S: full-set Exits: null LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test2

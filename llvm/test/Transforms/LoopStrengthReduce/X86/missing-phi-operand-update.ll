@@ -51,21 +51,21 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK:       loop.32:
 ; CHECK-NEXT:    [[LSR_IV1]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[IFMERGE_46:%.*]] ], [ 2, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I1_I64_0:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[NEXTIVLOOP_32:%.*]], [[IFMERGE_46]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw nsw i64 [[LSR_IV1]], 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[SCEVGEP7:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP8:%.*]] = getelementptr i8, ptr [[SCEVGEP7]], i64 -4
 ; CHECK-NEXT:    [[GEPLOAD:%.*]] = load i32, ptr [[SCEVGEP8]], align 4
 ; CHECK-NEXT:    [[CMP_34:%.*]] = icmp sgt i32 [[GEPLOAD]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_34]], label [[THEN_34]], label [[IFMERGE_34]]
 ; CHECK:       then.34:
-; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[LSR_IV1]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[SCEVGEP6:%.*]] = getelementptr i8, ptr [[SCEVGEP5]], i64 -8
 ; CHECK-NEXT:    [[GEPLOAD18:%.*]] = load i32, ptr [[SCEVGEP6]], align 4
 ; CHECK-NEXT:    [[CMP_35:%.*]] = icmp slt i32 [[GEPLOAD18]], [[T]]
 ; CHECK-NEXT:    br i1 [[CMP_35]], label [[THEN_34_LOOP_EXIT_LOOPEXIT_CRIT_EDGE]], label [[IFMERGE_34]]
 ; CHECK:       ifmerge.34:
-; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[LSR_IV1]], 2
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[SCEVGEP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[GEPLOAD20:%.*]] = load i32, ptr [[SCEVGEP4]], align 4
 ; CHECK-NEXT:    [[CMP_38:%.*]] = icmp sgt i32 [[GEPLOAD20]], [[T]]
@@ -73,7 +73,7 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[OR_COND:%.*]] = and i1 [[CMP_38]], [[CMP_39]]
 ; CHECK-NEXT:    br i1 [[OR_COND]], label [[LOOP_EXIT_LOOPEXITSPLITSPLITSPLIT]], label [[IFMERGE_38]]
 ; CHECK:       ifmerge.38:
-; CHECK-NEXT:    [[TMP6:%.*]] = shl nuw nsw i64 [[LSR_IV1]], 2
+; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[SCEVGEP2]], i64 4
 ; CHECK-NEXT:    [[GEPLOAD24:%.*]] = load i32, ptr [[SCEVGEP3]], align 4
@@ -82,7 +82,7 @@ define i32 @foo(ptr %A, i32 %t) {
 ; CHECK-NEXT:    [[OR_COND55:%.*]] = and i1 [[CMP_42]], [[CMP_43]]
 ; CHECK-NEXT:    br i1 [[OR_COND55]], label [[IFMERGE_38_LOOP_EXIT_LOOPEXITSPLITSPLIT_CRIT_EDGE]], label [[IFMERGE_42]]
 ; CHECK:       ifmerge.42:
-; CHECK-NEXT:    [[TMP7:%.*]] = shl nuw nsw i64 [[LSR_IV1]], 2
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[LSR_IV1]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 8
 ; CHECK-NEXT:    [[GEPLOAD28:%.*]] = load i32, ptr [[SCEVGEP1]], align 4

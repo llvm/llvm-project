@@ -478,7 +478,7 @@ define void @test10(ptr %X) nounwind ssp {
 ; CHECK:       bb.nph:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_INC10:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC12:%.*]], [[FOR_INC10]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i64 [[INDVAR]], 100
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDVAR]], 100
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr [[X]], i64 [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_BODY5:%.*]]
 ; CHECK:       for.body5:
@@ -896,7 +896,7 @@ define void @test19(ptr nocapture %X) {
 ; CHECK:       for.cond1.preheader:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ [[INDVAR_NEXT:%.*]], [[FOR_INC4:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I_06:%.*]] = phi i32 [ 99, [[ENTRY]] ], [ [[DEC5:%.*]], [[FOR_INC4]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[INDVAR]], -100
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDVAR]], -100
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 9900
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[X]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[I_06]], 100

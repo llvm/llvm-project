@@ -12,7 +12,7 @@ define void @test10(ptr addrspace(2) %X) nounwind ssp {
 ; CHECK-NEXT:    br label [[BB_NPH:%.*]]
 ; CHECK:       bb.nph:
 ; CHECK-NEXT:    [[I_04:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[INC12:%.*]], [[FOR_INC10:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i16 [[I_04]], 100
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i16 [[I_04]], 100
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr nuw i8, ptr addrspace(2) [[X]], i16 [[TMP0]]
 ; CHECK-NEXT:    br label [[FOR_BODY5:%.*]]
 ; CHECK:       for.body5:

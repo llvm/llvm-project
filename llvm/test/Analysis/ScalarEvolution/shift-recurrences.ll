@@ -167,7 +167,7 @@ define void @test_shl(i1 %arg) {
 ; CHECK-LABEL: 'test_shl'
 ; CHECK-NEXT:  Classifying expressions for: @test_shl
 ; CHECK-NEXT:    %iv.shl = phi i64 [ 8, %entry ], [ %iv.shl.next, %loop ]
-; CHECK-NEXT:    --> %iv.shl U: [0,-7) S: [-9223372036854775808,9223372036854775793) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.shl U: [0,-15) S: [-9223372036854775808,9223372036854775793) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.shl.next = shl i64 %iv.shl, 1
 ; CHECK-NEXT:    --> (2 * %iv.shl) U: [0,-15) S: [-9223372036854775808,9223372036854775793) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_shl
@@ -288,7 +288,7 @@ define void @test_shl5(i1 %arg) {
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,62) S: [0,62) Exits: 61 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl = phi i64 [ 4, %entry ], [ %iv.shl.next, %loop ]
-; CHECK-NEXT:    --> %iv.shl U: [0,-3) S: [-9223372036854775808,9223372036854775801) Exits: -9223372036854775808 LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %iv.shl U: [0,-7) S: [-9223372036854775808,9223372036854775801) Exits: -9223372036854775808 LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i64 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,63) S: [1,63) Exits: 62 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.shl.next = shl i64 %iv.shl, 1
@@ -442,7 +442,7 @@ define void @nonloop_recurrence() {
 ; CHECK-NEXT:    %tmp = phi i32 [ 2, %bb ], [ %tmp2, %bb3 ]
 ; CHECK-NEXT:    --> %tmp U: [1,-2147483648) S: [0,-2147483648)
 ; CHECK-NEXT:    %tmp2 = add nuw nsw i32 %tmp, 1
-; CHECK-NEXT:    --> (1 + %tmp)<nuw> U: [1,-2147483647) S: [1,-2147483647)
+; CHECK-NEXT:    --> (1 + %tmp)<nuw> U: [2,-2147483647) S: [1,-2147483647)
 ; CHECK-NEXT:  Determining loop execution counts for: @nonloop_recurrence
 ;
 bb:
@@ -466,7 +466,7 @@ define void @nonloop_recurrence_2() {
 ; CHECK-NEXT:    %tmp = phi i32 [ 2, %loop ], [ %tmp2, %bb3 ]
 ; CHECK-NEXT:    --> %tmp U: [1,-2147483648) S: [0,-2147483648) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %tmp2 = add nuw nsw i32 %tmp, 1
-; CHECK-NEXT:    --> (1 + %tmp)<nuw> U: [1,-2147483647) S: [1,-2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> (1 + %tmp)<nuw> U: [2,-2147483647) S: [1,-2147483647) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @nonloop_recurrence_2
 ; CHECK-NEXT:  Loop %loop: <multiple exits> Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
