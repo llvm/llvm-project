@@ -103,7 +103,8 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
         }
       }
     }
-
+    if (cur_pos > remainder.end())
+      cur_pos = remainder.end();
     llvm::StringRef number = remainder.substr(0, cur_pos - remainder.begin());
     if (remainder.consume_front(number))
       return number;
