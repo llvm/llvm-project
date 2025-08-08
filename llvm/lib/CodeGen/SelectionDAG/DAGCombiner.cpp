@@ -16365,7 +16365,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       } else {
         unsigned SignBitsA = DAG.ComputeNumSignBits(A);
         unsigned SignBitsB = DAG.ComputeNumSignBits(B);
-        CanFold = SignBitsA >= NeededBits && SignBitsB >= NeededBits;
+        CanFold = SignBitsA > NeededBits && SignBitsB > NeededBits;
       }
 
       if (CanFold && TLI.isOperationLegal(N0.getOpcode(), VT)) {
