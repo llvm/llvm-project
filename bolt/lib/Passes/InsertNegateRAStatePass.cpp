@@ -34,57 +34,35 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
     return;
   }
 
-  // If none is inserted, the function doesn't need more work.
-  if (!addNegateRAStateAfterPSignOrPAuth(BF))
-    return;
+  // Attach .cfi_negate_ra_state to the "trivial" cases first.
+  addNegateRAStateAfterPSignOrPAuth(BF);
 
   inferUnknownStates(BF);
 
-  // Support for function splitting:
-  // if two consecutive BBs with Signed state are going to end up in different
-  // functions (so are held by different FunctionFragments), we have to add a
-  // OpNegateRAState to the beginning of the newly split function, so it starts
-  // with a Signed state.
   for (FunctionFragment &FF : BF.getLayout().fragments()) {
-    // Find the first BB in the FF which has Instructions.
-    // BOLT can generate empty BBs at function splitting which are only used as
-    // target labels. We should add the negate-ra-state CFI to the first
-    // non-empty BB.
-    auto *FirstNonEmpty =
-        std::find_if(FF.begin(), FF.end(), [](BinaryBasicBlock *BB) {
-          // getFirstNonPseudo returns BB.end() if it does not find any
-          // Instructions.
-          return BB->getFirstNonPseudo() != BB->end();
-        });
-    if (BC.MIB->isRASigned(*((*FirstNonEmpty)->begin()))) {
-      BF.addCFIInstruction(*FirstNonEmpty, (*FirstNonEmpty)->begin(),
-                           MCCFIInstruction::createNegateRAState(nullptr));
-    }
-  }
-
-  bool FirstIter = true;
-  MCInst PrevInst;
-  for (BinaryBasicBlock &BB : BF) {
-    for (auto It = BB.begin(); It != BB.end(); ++It) {
-
-      MCInst &Inst = *It;
-      if (BC.MIB->isCFI(Inst))
-        continue;
-
-      if (!FirstIter) {
-        // Consecutive instructions with different RAState means we need to add
-        // a OpNegateRAState.
-        if ((BC.MIB->isRASigned(PrevInst) && BC.MIB->isRAUnsigned(Inst)) ||
-            (BC.MIB->isRAUnsigned(PrevInst) && BC.MIB->isRASigned(Inst))) {
-
-          It = BF.addCFIInstruction(
-              &BB, It, MCCFIInstruction::createNegateRAState(nullptr));
+    coverFunctionFragmentStart(BF, FF);
+    bool FirstIter = true;
+    MCInst PrevInst;
+    // As this pass runs after function splitting, we should only check
+    // consecutive instructions inside FunctionFragments.
+    for (BinaryBasicBlock *BB : FF) {
+      for (auto It = BB->begin(); It != BB->end(); ++It) {
+        MCInst &Inst = *It;
+        if (BC.MIB->isCFI(Inst))
+          continue;
+        if (!FirstIter) {
+          // Consecutive instructions with different RAState means we need to
+          // add a OpNegateRAState.
+          if ((BC.MIB->isRASigned(PrevInst) && BC.MIB->isRAUnsigned(Inst)) ||
+              (BC.MIB->isRAUnsigned(PrevInst) && BC.MIB->isRASigned(Inst))) {
+            It = BF.addCFIInstruction(
+                BB, It, MCCFIInstruction::createNegateRAState(nullptr));
+          }
+        } else {
+          FirstIter = false;
         }
-
-      } else {
-        FirstIter = false;
+        PrevInst = *It;
       }
-      PrevInst = *It;
     }
   }
 }
@@ -105,6 +83,29 @@ bool InsertNegateRAState::addNegateRAStateAfterPSignOrPAuth(
     }
   }
   return FoundAny;
+}
+
+void InsertNegateRAState::coverFunctionFragmentStart(BinaryFunction &BF,
+                                                     FunctionFragment &FF) {
+  BinaryContext &BC = BF.getBinaryContext();
+  if (FF.empty())
+    return;
+  // Find the first BB in the FF which has Instructions.
+  // BOLT can generate empty BBs at function splitting which are only used as
+  // target labels. We should add the negate-ra-state CFI to the first
+  // non-empty BB.
+  auto *FirstNonEmpty =
+      std::find_if(FF.begin(), FF.end(), [](BinaryBasicBlock *BB) {
+        // getFirstNonPseudo returns BB.end() if it does not find any
+        // Instructions.
+        return BB->getFirstNonPseudo() != BB->end();
+      });
+  // If a function is already split in the input, the first FF can also start
+  // with Signed state. This covers that scenario as well.
+  if (BC.MIB->isRASigned(*((*FirstNonEmpty)->begin()))) {
+    BF.addCFIInstruction(*FirstNonEmpty, (*FirstNonEmpty)->begin(),
+                         MCCFIInstruction::createNegateRAState(nullptr));
+  }
 }
 
 void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {

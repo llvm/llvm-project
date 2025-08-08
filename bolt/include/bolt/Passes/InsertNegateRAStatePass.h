@@ -41,6 +41,13 @@ private:
   /// newly inserted instructions do not have a state associated with them.
   /// New states are "inherited" from the last known state.
   void inferUnknownStates(BinaryFunction &BF);
+
+  /// Support for function splitting:
+  /// if two consecutive BBs with Signed state are going to end up in different
+  /// functions (so are held by different FunctionFragments), we have to add a
+  /// OpNegateRAState to the beginning of the newly split function, so it starts
+  /// with a Signed state.
+  void coverFunctionFragmentStart(BinaryFunction &BF, FunctionFragment &FF);
 };
 
 } // namespace bolt
