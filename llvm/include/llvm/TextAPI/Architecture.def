@@ -43,3 +43,8 @@ ARCHINFO(arm64e, arm64e, MachO::CPU_TYPE_ARM64, MachO::CPU_SUBTYPE_ARM64E, 64)
 /// ARM64_32 architectures sorted by cpu sub type id
 ///
 ARCHINFO(arm64_32, arm64_32, MachO::CPU_TYPE_ARM64_32, MachO::CPU_SUBTYPE_ARM64_32_V8, 32)
+
+///
+/// RISCV32 architectures sorted by cpu sub type id
+///
+ARCHINFO(riscv32, riscv32, MachO::CPU_TYPE_RISCV, MachO::CPU_SUBTYPE_RISCV_ALL, 32)

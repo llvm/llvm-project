@@ -1444,6 +1444,27 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// VTableAddrPointOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  StringRef name = getName();
+
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
+  auto op = symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
+  if (!op)
+    return emitOpError("'")
+           << name << "' does not reference a valid cir.global";
+  std::optional<mlir::Attribute> init = op.getInitialValue();
+  if (!init)
+    return success();
+  assert(!cir::MissingFeatures::vtableInitializer());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 

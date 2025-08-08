@@ -728,6 +728,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       MemoryBound(MFI.isMemoryBound()), WaveLimiter(MFI.needsWaveLimiter()),
       HasSpilledSGPRs(MFI.hasSpilledSGPRs()),
       HasSpilledVGPRs(MFI.hasSpilledVGPRs()),
+      NumWaveDispatchSGPRs(MFI.getNumWaveDispatchSGPRs()),
+      NumWaveDispatchVGPRs(MFI.getNumWaveDispatchVGPRs()),
       HighBitsOf32BitAddress(MFI.get32BitAddressHighBits()),
       Occupancy(MFI.getOccupancy()),
       ScratchRSrcReg(regToString(MFI.getScratchRSrcReg(), TRI)),
@@ -784,6 +786,8 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   WaveLimiter = YamlMFI.WaveLimiter;
   HasSpilledSGPRs = YamlMFI.HasSpilledSGPRs;
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
+  NumWaveDispatchSGPRs = YamlMFI.NumWaveDispatchSGPRs;
+  NumWaveDispatchVGPRs = YamlMFI.NumWaveDispatchVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
   IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;

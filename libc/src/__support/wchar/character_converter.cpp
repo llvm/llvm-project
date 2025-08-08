@@ -164,5 +164,13 @@ ErrorOr<char8_t> CharacterConverter::pop_utf8() {
   return static_cast<char8_t>(output);
 }
 
+template <> ErrorOr<char8_t> CharacterConverter::pop() { return pop_utf8(); }
+template <> ErrorOr<char32_t> CharacterConverter::pop() { return pop_utf32(); }
+
+template <> size_t CharacterConverter::sizeAs<char8_t>() {
+  return state->total_bytes;
+}
+template <> size_t CharacterConverter::sizeAs<char32_t>() { return 1; }
+
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL

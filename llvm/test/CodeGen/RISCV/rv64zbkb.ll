@@ -459,10 +459,46 @@ define void @pack_lo_packh_hi_packh_2(i8 zeroext %0, i8 zeroext %1, i8 zeroext %
   ret void
 }
 
+define void @pack_lo_packh_hi_packh_3(i8 %0, i8 %1, i8 %2, i8 %3, ptr %p) nounwind {
+; RV64I-LABEL: pack_lo_packh_hi_packh_3:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    zext.b a0, a0
+; RV64I-NEXT:    zext.b a1, a1
+; RV64I-NEXT:    zext.b a2, a2
+; RV64I-NEXT:    slli a3, a3, 24
+; RV64I-NEXT:    slli a1, a1, 8
+; RV64I-NEXT:    slli a2, a2, 16
+; RV64I-NEXT:    or a0, a3, a0
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    or a0, a2, a0
+; RV64I-NEXT:    sw a0, 0(a4)
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pack_lo_packh_hi_packh_3:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packh a0, a0, a1
+; RV64ZBKB-NEXT:    packh a1, a3, a2
+; RV64ZBKB-NEXT:    packw a0, a0, a1
+; RV64ZBKB-NEXT:    sw a0, 0(a4)
+; RV64ZBKB-NEXT:    ret
+  %a = zext i8 %0 to i32
+  %b = zext i8 %1 to i32
+  %c = zext i8 %2 to i32
+  %d = zext i8 %3 to i32
+  %e = shl i32 %b, 8
+  %f = shl i32 %c, 16
+  %g = shl i32 %d, 24
+  %h = or i32 %a, %e
+  %i = or i32 %g, %h
+  %j = or i32 %f, %i
+  store i32 %j, ptr %p
+  ret void
+}
+
 define void @pack_lo_zext_hi_packh(i16 zeroext %0, i8 zeroext %1, i8 zeroext %2, ptr %p) nounwind {
 ; RV64I-LABEL: pack_lo_zext_hi_packh:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a2, 16
+; RV64I-NEXT:    slli a1, a1, 16
 ; RV64I-NEXT:    slli a2, a2, 24
 ; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    or a0, a1, a0
@@ -471,7 +507,7 @@ define void @pack_lo_zext_hi_packh(i16 zeroext %0, i8 zeroext %1, i8 zeroext %2,
 ;
 ; RV64ZBKB-LABEL: pack_lo_zext_hi_packh:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    packh a1, a2, a2
+; RV64ZBKB-NEXT:    packh a1, a1, a2
 ; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    sw a0, 0(a3)
 ; RV64ZBKB-NEXT:    ret
@@ -479,7 +515,7 @@ define void @pack_lo_zext_hi_packh(i16 zeroext %0, i8 zeroext %1, i8 zeroext %2,
   %b = zext i8 %1 to i32
   %c = zext i8 %2 to i32
   %d = shl i32 %c, 8
-  %e = or i32 %c, %d
+  %e = or i32 %b, %d
   %f = shl i32 %e, 16
   %g = or i32 %f, %a
   store i32 %g, ptr %p
@@ -491,7 +527,7 @@ define void @pack_lo_zext_hi_packh(i16 zeroext %0, i8 zeroext %1, i8 zeroext %2,
 define void @pack_lo_noext_hi_packh(i32 %a, i8 zeroext %1, i8 zeroext %2, ptr %p) nounwind {
 ; RV64I-LABEL: pack_lo_noext_hi_packh:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a1, a2, 16
+; RV64I-NEXT:    slli a1, a1, 16
 ; RV64I-NEXT:    slli a2, a2, 24
 ; RV64I-NEXT:    or a1, a2, a1
 ; RV64I-NEXT:    or a0, a1, a0
@@ -500,7 +536,7 @@ define void @pack_lo_noext_hi_packh(i32 %a, i8 zeroext %1, i8 zeroext %2, ptr %p
 ;
 ; RV64ZBKB-LABEL: pack_lo_noext_hi_packh:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    packh a1, a2, a2
+; RV64ZBKB-NEXT:    packh a1, a1, a2
 ; RV64ZBKB-NEXT:    slli a1, a1, 16
 ; RV64ZBKB-NEXT:    or a0, a1, a0
 ; RV64ZBKB-NEXT:    sw a0, 0(a3)
@@ -508,9 +544,65 @@ define void @pack_lo_noext_hi_packh(i32 %a, i8 zeroext %1, i8 zeroext %2, ptr %p
   %b = zext i8 %1 to i32
   %c = zext i8 %2 to i32
   %d = shl i32 %c, 8
-  %e = or i32 %c, %d
+  %e = or i32 %b, %d
   %f = shl i32 %e, 16
   %g = or i32 %f, %a
   store i32 %g, ptr %p
   ret void
+}
+
+; Make sure we can match packh+slli without having the input bytes zero extended.
+define void @pack_i32_lo_noext_hi_packh_nozeroext(i32 %a, i8 %1, i8 %2, ptr %p) nounwind {
+; RV64I-LABEL: pack_i32_lo_noext_hi_packh_nozeroext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    zext.b a1, a1
+; RV64I-NEXT:    slli a2, a2, 24
+; RV64I-NEXT:    slli a1, a1, 16
+; RV64I-NEXT:    or a0, a2, a0
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    sw a0, 0(a3)
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pack_i32_lo_noext_hi_packh_nozeroext:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packh a1, a1, a2
+; RV64ZBKB-NEXT:    slli a1, a1, 16
+; RV64ZBKB-NEXT:    or a0, a1, a0
+; RV64ZBKB-NEXT:    sw a0, 0(a3)
+; RV64ZBKB-NEXT:    ret
+  %b = zext i8 %1 to i32
+  %c = zext i8 %2 to i32
+  %d = shl i32 %c, 8
+  %e = or i32 %b, %d
+  %f = shl i32 %e, 16
+  %g = or i32 %f, %a
+  store i32 %g, ptr %p
+  ret void
+}
+
+; Make sure we can match packh+slli without having the input bytes zero extended.
+define i64 @pack_i64_lo_noext_hi_packh_nozeroext(i64 %a, i8 %1, i8 %2, ptr %p) nounwind {
+; RV64I-LABEL: pack_i64_lo_noext_hi_packh_nozeroext:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    zext.b a1, a1
+; RV64I-NEXT:    zext.b a2, a2
+; RV64I-NEXT:    slli a1, a1, 16
+; RV64I-NEXT:    slli a2, a2, 24
+; RV64I-NEXT:    or a1, a2, a1
+; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBKB-LABEL: pack_i64_lo_noext_hi_packh_nozeroext:
+; RV64ZBKB:       # %bb.0:
+; RV64ZBKB-NEXT:    packh a1, a1, a2
+; RV64ZBKB-NEXT:    slli a1, a1, 16
+; RV64ZBKB-NEXT:    or a0, a1, a0
+; RV64ZBKB-NEXT:    ret
+  %b = zext i8 %1 to i64
+  %c = zext i8 %2 to i64
+  %d = shl i64 %c, 8
+  %e = or i64 %b, %d
+  %f = shl i64 %e, 16
+  %g = or i64 %f, %a
+  ret i64 %g
 }

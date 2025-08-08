@@ -1,4 +1,4 @@
-//===-- Lower/Cuda.h -- Cuda Fortran utilities ------------------*- C++ -*-===//
+//===-- Lower/CUDA.h -- CUDA Fortran utilities ------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,12 +14,22 @@
 #define FORTRAN_LOWER_CUDA_H
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Builder/MutableBox.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
+#include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
+namespace mlir {
+class Value;
+class Location;
+class MLIRContext;
+} // namespace mlir
+
 namespace Fortran::lower {
+
+class AbstractConverter;
 
 static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
   std::optional<Fortran::common::CUDADataAttr> cudaAttr =
@@ -36,6 +46,21 @@ static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
   }
   return kDefaultAllocator;
 }
+
+void initializeDeviceComponentAllocator(
+    Fortran::lower::AbstractConverter &converter,
+    const Fortran::semantics::Symbol &sym, const fir::MutableBoxValue &box);
+
+mlir::Type gatherDeviceComponentCoordinatesAndType(
+    fir::FirOpBuilder &builder, mlir::Location loc,
+    const Fortran::semantics::Symbol &sym, fir::RecordType recTy,
+    llvm::SmallVector<mlir::Value> &coordinates);
+
+/// Translate the CUDA Fortran attributes of \p sym into the FIR CUDA attribute
+/// representation.
+cuf::DataAttributeAttr
+translateSymbolCUFDataAttribute(mlir::MLIRContext *mlirContext,
+                                const Fortran::semantics::Symbol &sym);
 
 } // end namespace Fortran::lower
 

@@ -103,13 +103,6 @@ llvm::Triple::ArchType CGHLSLRuntime::getArch() {
   return CGM.getTarget().getTriple().getArch();
 }
 
-// Returns true if the type is an HLSL resource class or an array of them
-static bool isResourceRecordTypeOrArrayOf(const clang::Type *Ty) {
-  while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
-    Ty = CAT->getArrayElementTypeNoTypeQual();
-  return Ty->isHLSLResourceRecord();
-}
-
 // Emits constant global variables for buffer constants declarations
 // and creates metadata linking the constant globals with the buffer global.
 void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
@@ -146,7 +139,7 @@ void CGHLSLRuntime::emitBufferGlobalsAndMetadata(const HLSLBufferDecl *BufDecl,
     if (VDTy.getAddressSpace() != LangAS::hlsl_constant) {
       if (VD->getStorageClass() == SC_Static ||
           VDTy.getAddressSpace() == LangAS::hlsl_groupshared ||
-          isResourceRecordTypeOrArrayOf(VDTy.getTypePtr())) {
+          VDTy->isHLSLResourceRecord() || VDTy->isHLSLResourceRecordArray()) {
         // Emit static and groupshared variables and resource classes inside
         // cbuffer as regular globals
         CGM.EmitGlobal(VD);

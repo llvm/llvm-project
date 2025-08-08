@@ -138,6 +138,10 @@ public:
   GetDemangledFunctionArguments(llvm::StringRef demangled,
                                 const DemangledNameInfo &info);
 
+  static llvm::Expected<llvm::StringRef>
+  GetDemangledFunctionSuffix(llvm::StringRef demangled,
+                             const DemangledNameInfo &info);
+
   // Extract C++ context and identifier from a string using heuristic matching
   // (as opposed to
   // CPlusPlusLanguage::CxxMethodName which has to have a fully qualified C++
