@@ -363,7 +363,12 @@ public:
   void renderMarkdown(llvm::raw_ostream &OS) const override {
     std::string Marker = getMarkerForCodeBlock(Contents);
     // No need to pad from previous blocks, as they should end with a new line.
-    OS << Marker << Language << '\n' << Contents << '\n' << Marker << '\n';
+    OS << Marker << Language << '\n' << Contents;
+    if (!Contents.empty() && Contents.back() != '\n')
+      OS << '\n';
+    // Always end with an empty line to separate code blocks from following
+    // paragraphs.
+    OS << Marker << "\n\n";
   }
 
   void renderPlainText(llvm::raw_ostream &OS) const override {

@@ -681,3 +681,17 @@ llvm.func @ex2(%input : f32, %pred : i1) {
   %1 = nvvm.inline_ptx "ex2.approx.ftz.f32 $0, $1;" (%input), predicate = %pred  : f32, i1 -> f32
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @nvvm_pmevent
+llvm.func @nvvm_pmevent() {
+  // CHECK: %[[S0:.+]] = llvm.mlir.constant(10 : i32) : i32
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S0]] : (i32) -> ()
+  
+  nvvm.pmevent id = 10
+  // CHECK: %[[S1:.+]] = llvm.mlir.constant(4 : i32) : i32
+  // CHECK: llvm.inline_asm has_side_effects asm_dialect = att "pmevent $0;", "n" %[[S1]] : (i32) -> ()
+  nvvm.pmevent id = 4
+  llvm.return
+}

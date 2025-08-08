@@ -66,6 +66,30 @@
 // NOHOST-V3-DAG: hip-amdgcn-amd-amdhsa--gfx900
 // NOHOST-V3-DAG: hip-amdgcn-amd-amdhsa--gfx906
 
+// Check compression/decompression of offload bundle using version 2 format.
+//
+// RUN: env OFFLOAD_BUNDLER_COMPRESS=1 OFFLOAD_BUNDLER_VERBOSE=1 COMPRESSED_BUNDLE_FORMAT_VERSION=2 \
+// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -input=%t.tgt1 -input=%t.tgt2 -output=%t.hip.bundle.bc 2>&1 | \
+// RUN:   FileCheck -check-prefix=COMPRESS-V2 %s
+// RUN: clang-offload-bundler -type=bc -list -input=%t.hip.bundle.bc | FileCheck -check-prefix=NOHOST-V2 %s
+// RUN: env OFFLOAD_BUNDLER_VERBOSE=1 \
+// RUN:   clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
+// RUN:   -output=%t.res.tgt1 -output=%t.res.tgt2 -input=%t.hip.bundle.bc -unbundle 2>&1 | \
+// RUN:   FileCheck -check-prefix=DECOMPRESS-V2 %s
+// RUN: diff %t.tgt1 %t.res.tgt1
+// RUN: diff %t.tgt2 %t.res.tgt2
+//
+// COMPRESS-V2: Compressed bundle format version: 2
+// COMPRESS-V2: Compression method used: zlib
+// COMPRESS-V2: Compression level: 6
+// DECOMPRESS-V2: Compressed bundle format version: 2
+// DECOMPRESS-V2: Decompression method: zlib
+// DECOMPRESS-V2: Hashes match: Yes
+// NOHOST-V2-NOT: host-
+// NOHOST-V2-DAG: hip-amdgcn-amd-amdhsa--gfx900
+// NOHOST-V2-DAG: hip-amdgcn-amd-amdhsa--gfx906
+
 // Check -compression-level= option
 
 // RUN: clang-offload-bundler -type=bc -targets=hip-amdgcn-amd-amdhsa--gfx900,hip-amdgcn-amd-amdhsa--gfx906 \
