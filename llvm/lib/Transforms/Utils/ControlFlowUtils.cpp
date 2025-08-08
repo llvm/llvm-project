@@ -14,6 +14,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/ValueHandle.h"
@@ -282,7 +283,9 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
 
   for (auto [BB, Succ0, Succ1] : Branches) {
 #ifndef NDEBUG
-    assert(Incoming.insert(BB).second && "Duplicate entry for incoming block.");
+    assert(
+        (Incoming.insert(BB).second || isa<CallBrInst>(BB->getTerminator())) &&
+        "Duplicate entry for incoming block.");
 #endif
     if (Succ0)
       Outgoing.insert(Succ0);
@@ -341,4 +344,77 @@ std::pair<BasicBlock *, bool> ControlFlowHub::finalize(
   }
 
   return {FirstGuardBlock, true};
+}
+
+// Check if the given cycle is disjoint with the cycle of the given basic block.
+// If the basic block does not belong to any cycle, this is regarded as
+// disjoint, too.
+static bool disjointWithBlock(CycleInfo *CI, Cycle *C, BasicBlock *BB) {
+  Cycle *CC = CI->getCycle(BB);
+  if (!CC)
+    return true;
+  Cycle *CommonC = CI->getSmallestCommonCycle(C, CC);
+  return CommonC != C && CommonC != CC;
+}
+
+// Check if the given loop is disjoint with the loop of the given basic block.
+// If the basic block does not belong to any loop, this is regarded as
+// disjoint, too.
+static bool disjointWithBlock(LoopInfo *LI, Loop *L, BasicBlock *BB) {
+  Loop *LL = LI->getLoopFor(BB);
+  return LL && !L->contains(LL) && !LL->contains(L);
+}
+
+template <typename TI, typename T>
+static void updateCycleLoopInfo(TI *LCI, bool AttachToCallBr,
+                                BasicBlock *CallBrBlock,
+                                BasicBlock *CallBrTarget, BasicBlock *Succ) {
+  static_assert(std::is_same_v<TI, CycleInfo> || std::is_same_v<TI, LoopInfo>,
+                "type must be CycleInfo or LoopInfo");
+  if (!LCI)
+    return;
+
+  T *LC;
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LC = LCI->getCycle(AttachToCallBr ? CallBrBlock : Succ);
+  else
+    LC = LCI->getLoopFor(AttachToCallBr ? CallBrBlock : Succ);
+  if (!LC)
+    return;
+
+  // Check if the cycles/loops are disjoint. In that case, we do not add the
+  // intermediate target to any cycle/loop.
+  if (AttachToCallBr && disjointWithBlock(LCI, LC, Succ))
+    return;
+
+  if constexpr (std::is_same_v<TI, CycleInfo>)
+    LCI->addBlockToCycle(CallBrTarget, LC);
+  else
+    LC->addBasicBlockToLoop(CallBrTarget, *LCI);
+}
+
+BasicBlock *ControlFlowHub::createCallBrTarget(
+    CallBrInst *CallBr, BasicBlock *Succ, unsigned SuccIdx, bool AttachToCallBr,
+    CycleInfo *CI, DomTreeUpdater *DTU, LoopInfo *LI) {
+  BasicBlock *CallBrBlock = CallBr->getParent();
+  BasicBlock *CallBrTarget =
+      BasicBlock::Create(CallBrBlock->getContext(),
+                         CallBrBlock->getName() + ".target." + Succ->getName(),
+                         CallBrBlock->getParent());
+  // Rewire control flow from callbr to the new target block.
+  Succ->replacePhiUsesWith(CallBrBlock, CallBrTarget);
+  CallBr->setSuccessor(SuccIdx, CallBrTarget);
+  // Jump from the new target block to the original successor.
+  BranchInst::Create(Succ, CallBrTarget);
+  updateCycleLoopInfo<LoopInfo, Loop>(LI, AttachToCallBr, CallBrBlock,
+                                      CallBrTarget, Succ);
+  updateCycleLoopInfo<CycleInfo, Cycle>(CI, AttachToCallBr, CallBrBlock,
+                                        CallBrTarget, Succ);
+  if (DTU) {
+    DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
+    if (DTU->getDomTree().dominates(CallBrBlock, Succ))
+      DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ},
+                         {DominatorTree::Insert, CallBrTarget, Succ}});
+  }
+  return CallBrTarget;
 }
