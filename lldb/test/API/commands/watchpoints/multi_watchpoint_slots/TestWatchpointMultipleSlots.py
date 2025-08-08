@@ -9,6 +9,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchpointSlotsTestCase(TestBase):
@@ -27,7 +28,17 @@ class WatchpointSlotsTestCase(TestBase):
 
     # This is a arm and aarch64 specific test case. No other architectures tested.
     @skipIf(archs=no_match(["arm$", "aarch64"]))
-    def test_multiple_watchpoints_on_same_word(self):
+    def test_multiple_hardware_watchpoints_on_same_word(self):
+        self.do_multiple_watchpoints_on_same_word(
+            WatchpointType.MODIFY, lldb.eWatchpointModeHardware
+        )
+
+    def test_multiple_software_watchpoints_on_same_word(self):
+        self.do_multiple_watchpoints_on_same_word(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_multiple_watchpoints_on_same_word(self, wp_type, wp_mode):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
@@ -57,7 +68,7 @@ class WatchpointSlotsTestCase(TestBase):
 
         # Set a watchpoint at byteArray[0]
         self.expect(
-            "watchpoint set variable byteArray[0]",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} byteArray[0]",
             WATCHPOINT_CREATED,
             substrs=["Watchpoint created", "size = 1"],
         )
@@ -68,10 +79,11 @@ class WatchpointSlotsTestCase(TestBase):
 
         # debugserver on ios doesn't give an error, it creates another watchpoint,
         # only expect errors on non-darwin platforms.
-        if not self.platformIsDarwin():
+        # Additionally, there are no restrictions on software watchpoints in this case.
+        if wp_mode == lldb.eWatchpointModeHardware and (not self.platformIsDarwin()):
             # Try setting a watchpoint at byteArray[1]
             self.expect(
-                "watchpoint set variable byteArray[1]",
+                f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} byteArray[1]",
                 error=True,
                 substrs=["Watchpoint creation failed"],
             )
@@ -91,7 +103,7 @@ class WatchpointSlotsTestCase(TestBase):
 
         # Set a watchpoint at byteArray[3]
         self.expect(
-            "watchpoint set variable byteArray[3]",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} byteArray[3]",
             WATCHPOINT_CREATED,
             substrs=["Watchpoint created", "size = 1"],
         )
@@ -101,7 +113,7 @@ class WatchpointSlotsTestCase(TestBase):
 
         # We should be stopped due to the watchpoint.
         # The stop reason of the thread should be watchpoint.
-        if self.platformIsDarwin():
+        if wp_mode == lldb.eWatchpointModeSoftware or self.platformIsDarwin():
             # On darwin we'll hit byteArray[3] which is watchpoint 2
             self.expect(
                 "thread list",
