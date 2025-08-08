@@ -1,7 +1,7 @@
-.. title:: clang-tidy - misc-visibility-change-to-virtual-function
+.. title:: clang-tidy - misc-override-with-different-visibility
 
-misc-visibility-change-to-virtual-function
-==========================================
+misc-override-with-different-visibility
+=======================================
 
 Finds virtual function overrides with different visibility than the function
 in the base class. This includes for example if a virtual function declared as

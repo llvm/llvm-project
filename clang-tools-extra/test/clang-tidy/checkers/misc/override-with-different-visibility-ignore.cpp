@@ -1,5 +1,5 @@
-// RUN: %check_clang_tidy %s misc-visibility-change-to-virtual-function %t -- \
-// RUN:   -config="{CheckOptions: {misc-visibility-change-to-virtual-function.IgnoredFunctions: 'IgnoreAlways::.*;::a::IgnoreSelected::.*;IgnoreFunctions::f1;ignored_f'}}"
+// RUN: %check_clang_tidy %s misc-override-with-different-visibility %t -- \
+// RUN:   -config="{CheckOptions: {misc-override-with-different-visibility.IgnoredFunctions: 'IgnoreAlways::.*;::a::IgnoreSelected::.*;IgnoreFunctions::f1;ignored_f'}}"
 
 class IgnoreAlways {
   virtual void f();

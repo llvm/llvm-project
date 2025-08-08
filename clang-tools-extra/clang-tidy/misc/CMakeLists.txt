@@ -32,6 +32,7 @@ add_clang_library(clangTidyMiscModule STATIC
   NoRecursionCheck.cpp
   NonCopyableObjects.cpp
   NonPrivateMemberVariablesInClassesCheck.cpp
+  OverrideWithDifferentVisibilityCheck.cpp
   RedundantExpressionCheck.cpp
   StaticAssertCheck.cpp
   ThrowByValueCatchByReferenceCheck.cpp
@@ -42,7 +43,6 @@ add_clang_library(clangTidyMiscModule STATIC
   UnusedUsingDeclsCheck.cpp
   UseAnonymousNamespaceCheck.cpp
   UseInternalLinkageCheck.cpp
-  VisibilityChangeToVirtualFunctionCheck.cpp
 
   LINK_LIBS
   clangTidy

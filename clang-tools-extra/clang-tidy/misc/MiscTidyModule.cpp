@@ -22,6 +22,7 @@
 #include "NoRecursionCheck.h"
 #include "NonCopyableObjects.h"
 #include "NonPrivateMemberVariablesInClassesCheck.h"
+#include "OverrideWithDifferentVisibilityCheck.h"
 #include "RedundantExpressionCheck.h"
 #include "StaticAssertCheck.h"
 #include "ThrowByValueCatchByReferenceCheck.h"
@@ -32,7 +33,6 @@
 #include "UnusedUsingDeclsCheck.h"
 #include "UseAnonymousNamespaceCheck.h"
 #include "UseInternalLinkageCheck.h"
-#include "VisibilityChangeToVirtualFunctionCheck.h"
 
 namespace clang::tidy {
 namespace misc {
@@ -82,8 +82,8 @@ public:
         "misc-use-anonymous-namespace");
     CheckFactories.registerCheck<UseInternalLinkageCheck>(
         "misc-use-internal-linkage");
-    CheckFactories.registerCheck<VisibilityChangeToVirtualFunctionCheck>(
-        "misc-visibility-change-to-virtual-function");
+    CheckFactories.registerCheck<OverrideWithDifferentVisibilityCheck>(
+        "misc-override-with-different-visibility");
   }
 };
 
