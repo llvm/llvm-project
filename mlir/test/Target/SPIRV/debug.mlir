@@ -1,6 +1,6 @@
 // RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip-debug -mlir-print-debuginfo -mlir-print-local-scope %s | FileCheck %s
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_non_semantic_info]> attributes {spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Shader], [SPV_KHR_non_semantic_info]>, #spirv.resource_limits<>>} {
   // CHECK: loc({{".*debug.mlir"}}:5:3)
   spirv.GlobalVariable @var0 bind(0, 1) : !spirv.ptr<f32, Input>
   spirv.func @arithmetic(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
