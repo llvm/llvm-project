@@ -29,14 +29,14 @@ define i32 @f1(i64 %x, i64 %y) {
 ; CHECK-LE-LABEL: f1:
 ; CHECK-LE:       @ %bb.0:
 ; CHECK-LE-NEXT:    lsl r0, r0, r2
-; CHECK-LE-NEXT:    subs r1, r2, #32
+; CHECK-LE-NEXT:    cmp r2, #32
 ; CHECK-LE-NEXT:    movpl r0, #0
 ; CHECK-LE-NEXT:    mov pc, lr
 ;
 ; CHECK-BE-LABEL: f1:
 ; CHECK-BE:       @ %bb.0:
 ; CHECK-BE-NEXT:    lsl r0, r1, r3
-; CHECK-BE-NEXT:    subs r1, r3, #32
+; CHECK-BE-NEXT:    cmp r3, #32
 ; CHECK-BE-NEXT:    movpl r0, #0
 ; CHECK-BE-NEXT:    mov pc, lr
 
