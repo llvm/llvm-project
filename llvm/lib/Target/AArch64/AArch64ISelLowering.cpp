@@ -17359,7 +17359,7 @@ static Function *getStructuredStoreFunction(Module *M, unsigned Factor,
 ///        %vec1 = extractelement { <4 x i32>, <4 x i32> } %ld2, i32 1
 bool AArch64TargetLowering::lowerInterleavedLoad(
     Instruction *Load, Value *Mask, ArrayRef<ShuffleVectorInst *> Shuffles,
-    ArrayRef<unsigned> Indices, unsigned Factor) const {
+    ArrayRef<unsigned> Indices, unsigned Factor, unsigned MaskFactor) const {
   assert(Factor >= 2 && Factor <= getMaxSupportedInterleaveFactor() &&
          "Invalid interleave factor");
   assert(!Shuffles.empty() && "Empty shufflevector input");
@@ -17370,6 +17370,9 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   if (!LI)
     return false;
   assert(!Mask && "Unexpected mask on a load");
+
+  if (Factor != MaskFactor)
+    return false;
 
   const DataLayout &DL = LI->getDataLayout();
 
