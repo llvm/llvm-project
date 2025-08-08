@@ -89,6 +89,45 @@ def LinalgInlineScalarOperandsPass : Pass<"linalg-inline-scalar-operands"> {
   ];
 }
 
+def LinalgMorphOpsPass : Pass<"linalg-morph-ops"> {
+  let summary = "Convert named op to category ops or generic and vice-versa";
+
+  let description = [{
+    Convert a linalg op from one representation to another equivalent.
+    For example, a linalg named op `linalg.add` can also be written as an
+    category op `linalg.elementwise`, and can also be re-written as
+    a `linalg.generic`, giving the morphism:
+
+      named-op <--> category_op (elementwise, contraction, ..) <--> generic
+
+    Note that the set of `linalg.generic` subsumes named and category ops
+    and therefore not all `linalg.genric` can be converted to  named or
+    category op. Similarly, catgory ops subsume named ops.
+
+    Note:
+     Legacy converters:
+     `--linalg-generalize-named-ops` is the path `named-op --> generic-op`
+     `--linalg-specialize-generic-ops` is the path `named-op <-- generic-op`
+  }];
+  let dependentDialects = ["linalg::LinalgDialect"];
+
+  let options = [
+    // named-op <--> category <--> generic
+
+    // Lowering options
+    Option<"namedToCategory", "named-to-category", "bool", /*default=*/"false",
+           "convert named ops to category op e.g. `linalg.elementwise`">,
+    Option<"categoryToGeneric", "category-to-generic", "bool", /*default=*/"false",
+           "convert category ops e.g. `linalg.elementwise` to `linalg.generic`">,
+    Option<"namedToGeneric", "named-to-generic", "bool", /*default=*/"false",
+           "convert named ops e.g. `linalg.add` to `linalg.generic`">,
+
+    // Lifting options
+    //  TODOs: `generic-to-category`, `category-to-named`
+    Option<"genericToNamed", "generic-to-named", "bool", /*default=*/"false",
+           "convert linalg.generic to equivalent named ops"> ];
+}
+
 def LinalgGeneralizeNamedOpsPass : Pass<"linalg-generalize-named-ops"> {
   let summary = "Convert named ops into generic ops";
   let dependentDialects = ["linalg::LinalgDialect"];
