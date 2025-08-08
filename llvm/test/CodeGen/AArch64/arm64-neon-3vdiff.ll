@@ -70,6 +70,30 @@ entry:
   ret <2 x i64> %add.i
 }
 
+define void @test_commutable_vaddl_s8(<8 x i8> %a, <8 x i8> %b, ptr %c) {
+; CHECK-SD-LABEL: test_commutable_vaddl_s8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    saddl v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    stp q0, q0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_commutable_vaddl_s8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    saddl v2.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    saddl v0.8h, v1.8b, v0.8b
+; CHECK-GI-NEXT:    stp q2, q0, [x0]
+; CHECK-GI-NEXT:    ret
+entry:
+  %vmovl.i.i = sext <8 x i8> %a to <8 x i16>
+  %vmovl.i2.i = sext <8 x i8> %b to <8 x i16>
+  %add.i = add <8 x i16> %vmovl.i.i, %vmovl.i2.i
+  store <8 x i16> %add.i, ptr %c
+  %add.i2 = add <8 x i16> %vmovl.i2.i, %vmovl.i.i
+  %c.gep.1 = getelementptr i8, ptr %c, i64 16
+  store <8 x i16> %add.i2, ptr %c.gep.1
+  ret void
+}
+
 define <8 x i16> @test_vaddl_u8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: test_vaddl_u8:
 ; CHECK:       // %bb.0: // %entry
@@ -104,6 +128,30 @@ entry:
   %vmovl.i2.i = zext <2 x i32> %b to <2 x i64>
   %add.i = add <2 x i64> %vmovl.i.i, %vmovl.i2.i
   ret <2 x i64> %add.i
+}
+
+define void @test_commutable_vaddl_u8(<8 x i8> %a, <8 x i8> %b, ptr %c) {
+; CHECK-SD-LABEL: test_commutable_vaddl_u8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    uaddl v0.8h, v0.8b, v1.8b
+; CHECK-SD-NEXT:    stp q0, q0, [x0]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_commutable_vaddl_u8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    uaddl v2.8h, v0.8b, v1.8b
+; CHECK-GI-NEXT:    uaddl v0.8h, v1.8b, v0.8b
+; CHECK-GI-NEXT:    stp q2, q0, [x0]
+; CHECK-GI-NEXT:    ret
+entry:
+  %vmovl.i.i = zext <8 x i8> %a to <8 x i16>
+  %vmovl.i2.i = zext <8 x i8> %b to <8 x i16>
+  %add.i = add <8 x i16> %vmovl.i.i, %vmovl.i2.i
+  store <8 x i16> %add.i, ptr %c
+  %add.i2 = add <8 x i16> %vmovl.i2.i, %vmovl.i.i
+  %c.gep.1 = getelementptr i8, ptr %c, i64 16
+  store <8 x i16> %add.i2, ptr %c.gep.1
+  ret void
 }
 
 define <8 x i16> @test_vaddl_a8(<8 x i8> %a, <8 x i8> %b) {
@@ -2892,9 +2940,9 @@ define <8 x i16> @cmplx_mul_combined_re_im(<8 x i16> noundef %a, i64 %scale.coer
 ; CHECK-GI-LABEL: cmplx_mul_combined_re_im:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    lsr x9, x0, #16
-; CHECK-GI-NEXT:    adrp x8, .LCPI196_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI198_0
 ; CHECK-GI-NEXT:    rev32 v4.8h, v0.8h
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI196_0]
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI198_0]
 ; CHECK-GI-NEXT:    fmov d1, x9
 ; CHECK-GI-NEXT:    dup v2.8h, v1.h[0]
 ; CHECK-GI-NEXT:    sqneg v1.8h, v2.8h
