@@ -361,11 +361,11 @@ define i8 @atomicrmw_max_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -388,11 +388,11 @@ define i8 @atomicrmw_max_i8_acquire(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -415,11 +415,11 @@ define i8 @atomicrmw_max_i8_release(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -442,11 +442,11 @@ define i8 @atomicrmw_max_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -469,11 +469,11 @@ define i8 @atomicrmw_max_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -496,11 +496,11 @@ define i8 @atomicrmw_min_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -523,11 +523,11 @@ define i8 @atomicrmw_min_i8_acquire(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -550,11 +550,11 @@ define i8 @atomicrmw_min_i8_release(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -577,11 +577,11 @@ define i8 @atomicrmw_min_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -604,11 +604,11 @@ define i8 @atomicrmw_min_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -631,11 +631,11 @@ define i8 @atomicrmw_umax_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -658,11 +658,11 @@ define i8 @atomicrmw_umax_i8_acquire(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -685,11 +685,11 @@ define i8 @atomicrmw_umax_i8_release(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -712,11 +712,11 @@ define i8 @atomicrmw_umax_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -739,11 +739,11 @@ define i8 @atomicrmw_umax_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -766,11 +766,11 @@ define i8 @atomicrmw_umin_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -793,11 +793,11 @@ define i8 @atomicrmw_umin_i8_acquire(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -820,11 +820,11 @@ define i8 @atomicrmw_umin_i8_release(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -847,11 +847,11 @@ define i8 @atomicrmw_umin_i8_acq_rel(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -874,11 +874,11 @@ define i8 @atomicrmw_umin_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i8 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i8 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i8 [[LOADED]], i8 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i8 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_1(ptr [[A]], ptr [[TMP1]], i8 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i8, i1 } poison, i8 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i8, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i8, i1 } [[TMP7]], 1
@@ -1251,11 +1251,11 @@ define i16 @atomicrmw_max_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1278,11 +1278,11 @@ define i16 @atomicrmw_max_i16_acquire(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1305,11 +1305,11 @@ define i16 @atomicrmw_max_i16_release(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1332,11 +1332,11 @@ define i16 @atomicrmw_max_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1359,11 +1359,11 @@ define i16 @atomicrmw_max_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1386,11 +1386,11 @@ define i16 @atomicrmw_min_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1413,11 +1413,11 @@ define i16 @atomicrmw_min_i16_acquire(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1440,11 +1440,11 @@ define i16 @atomicrmw_min_i16_release(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1467,11 +1467,11 @@ define i16 @atomicrmw_min_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1494,11 +1494,11 @@ define i16 @atomicrmw_min_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1521,11 +1521,11 @@ define i16 @atomicrmw_umax_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1548,11 +1548,11 @@ define i16 @atomicrmw_umax_i16_acquire(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1575,11 +1575,11 @@ define i16 @atomicrmw_umax_i16_release(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1602,11 +1602,11 @@ define i16 @atomicrmw_umax_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1629,11 +1629,11 @@ define i16 @atomicrmw_umax_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1656,11 +1656,11 @@ define i16 @atomicrmw_umin_i16_monotonic(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1683,11 +1683,11 @@ define i16 @atomicrmw_umin_i16_acquire(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1710,11 +1710,11 @@ define i16 @atomicrmw_umin_i16_release(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1737,11 +1737,11 @@ define i16 @atomicrmw_umin_i16_acq_rel(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -1764,11 +1764,11 @@ define i16 @atomicrmw_umin_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i16 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i16 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i16 [[LOADED]], i16 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i16 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_2(ptr [[A]], ptr [[TMP1]], i16 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 2, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i16, i1 } poison, i16 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i16, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i16, i1 } [[TMP7]], 1
@@ -2112,11 +2112,11 @@ define i32 @atomicrmw_max_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2139,11 +2139,11 @@ define i32 @atomicrmw_max_i32_acquire(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2166,11 +2166,11 @@ define i32 @atomicrmw_max_i32_release(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2193,11 +2193,11 @@ define i32 @atomicrmw_max_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2220,11 +2220,11 @@ define i32 @atomicrmw_max_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2247,11 +2247,11 @@ define i32 @atomicrmw_min_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2274,11 +2274,11 @@ define i32 @atomicrmw_min_i32_acquire(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2301,11 +2301,11 @@ define i32 @atomicrmw_min_i32_release(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2328,11 +2328,11 @@ define i32 @atomicrmw_min_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2355,11 +2355,11 @@ define i32 @atomicrmw_min_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2382,11 +2382,11 @@ define i32 @atomicrmw_umax_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2409,11 +2409,11 @@ define i32 @atomicrmw_umax_i32_acquire(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2436,11 +2436,11 @@ define i32 @atomicrmw_umax_i32_release(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2463,11 +2463,11 @@ define i32 @atomicrmw_umax_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2490,11 +2490,11 @@ define i32 @atomicrmw_umax_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2517,11 +2517,11 @@ define i32 @atomicrmw_umin_i32_monotonic(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 0, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2544,11 +2544,11 @@ define i32 @atomicrmw_umin_i32_acquire(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 2, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2571,11 +2571,11 @@ define i32 @atomicrmw_umin_i32_release(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 3, i32 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2598,11 +2598,11 @@ define i32 @atomicrmw_umin_i32_acq_rel(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 4, i32 2)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1
@@ -2625,11 +2625,11 @@ define i32 @atomicrmw_umin_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP2]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], %[[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[LOADED]], [[B]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP3]], i32 [[LOADED]], i32 [[B]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    store i32 [[LOADED]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = call zeroext i1 @__atomic_compare_exchange_4(ptr [[A]], ptr [[TMP1]], i32 [[NEW]], i32 5, i32 5)
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP1]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[TMP1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[TMP1]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertvalue { i32, i1 } poison, i32 [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertvalue { i32, i1 } [[TMP6]], i1 [[TMP4]], 1
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP7]], 1

@@ -14,19 +14,19 @@ entry:
   %x = alloca i64, align 8
   %y = alloca i64, align 8
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK:  getelementptr i8, ptr %[[USP]], i32 -16
   call void @capture64(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK:  getelementptr i8, ptr %[[USP]], i32 -16
   call void @capture64(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
 
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @capture64(ptr)
