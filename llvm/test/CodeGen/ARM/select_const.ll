@@ -276,9 +276,8 @@ define i32 @select_neg1_or_0(i1 %cond) {
 ;
 ; THUMB-LABEL: select_neg1_or_0:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    movs r1, #1
-; THUMB-NEXT:    ands r1, r0
-; THUMB-NEXT:    rsbs r0, r1, #0
+; THUMB-NEXT:    lsls r0, r0, #31
+; THUMB-NEXT:    asrs r0, r0, #31
 ; THUMB-NEXT:    bx lr
   %sel = select i1 %cond, i32 -1, i32 0
   ret i32 %sel
