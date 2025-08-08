@@ -13,7 +13,7 @@ struct a {
 // CHECK-SAME: ptr noundef writeonly captures(none) initializes((8, 9)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[BLOCK:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 8
-// CHECK-NEXT:    store i8 0, ptr [[BLOCK]], align 1, !tbaa [[TBAA2:![0-9]+]]
+// CHECK-NEXT:    store i8 0, ptr [[BLOCK]], align 8, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
 void ptradd_0(struct a *ctx) {
@@ -24,7 +24,7 @@ void ptradd_0(struct a *ctx) {
 // CHECK-SAME: ptr noundef writeonly captures(none) initializes((12, 13)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 12
-// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 1, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void ptradd_4(struct a *ctx) {
@@ -35,7 +35,7 @@ void ptradd_4(struct a *ctx) {
 // CHECK-SAME: ptr noundef writeonly captures(none) initializes((16, 17)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 16
-// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 1, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void ptradd_8(struct a *ctx) {
@@ -46,7 +46,7 @@ void ptradd_8(struct a *ctx) {
 // CHECK-SAME: ptr noundef writeonly captures(none) initializes((16, 17)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 16
-// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 1, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 8, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void ptradd_8_commuted(struct a *ctx) {
@@ -57,7 +57,7 @@ void ptradd_8_commuted(struct a *ctx) {
 // CHECK-SAME: ptr noundef writeonly captures(none) initializes((8, 9)) [[CTX:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[CTX]], i64 8
-// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 1, !tbaa [[TBAA2]]
+// CHECK-NEXT:    store i8 0, ptr [[ADD_PTR]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    ret void
 //
 void ptrsub_4(struct a *ctx) {
