@@ -130,6 +130,18 @@ static void reportOverlappingRegisters(
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
+static void
+reportRegNotBound(Module &M, ResourceClass Class,
+                  llvm::dxil::ResourceInfo::ResourceBinding Unbound) {
+  SmallString<128> Message;
+  raw_svector_ostream OS(Message);
+  OS << "register " << getResourceClassName(Class)
+     << " (space=" << Unbound.Space << ", register=" << Unbound.LowerBound
+     << ")"
+     << " does not have a binding in the Root Signature";
+  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+}
+
 static dxbc::ShaderVisibility
 tripleToVisibility(llvm::Triple::EnvironmentType ET) {
   switch (ET) {
@@ -154,7 +166,8 @@ tripleToVisibility(llvm::Triple::EnvironmentType ET) {
 
 static void validateRootSignature(Module &M,
                                   const mcdxbc::RootSignatureDesc &RSD,
-                                  dxil::ModuleMetadataInfo &MMI) {
+                                  dxil::ModuleMetadataInfo &MMI,
+                                  DXILResourceMap &DRM) {
 
   hlsl::BindingInfoBuilder Builder;
   dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
@@ -213,14 +226,33 @@ static void validateRootSignature(Module &M,
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
                          S.ShaderRegister, S.ShaderRegister,
                          &IDs.emplace_back());
-
+  bool HasOverlap = false;
   hlsl::BindingInfo Info = Builder.calculateBindingInfo(
-      [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
-           const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
+      [&M, &HasOverlap](
+          const llvm::hlsl::BindingInfoBuilder &Builder,
+          const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
+        HasOverlap = true;
         const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
             Builder.findOverlapping(ReportedBinding);
         reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
+  // Next checks require that the root signature definition is valid.
+  if (!HasOverlap) {
+    for (const auto &ResList :
+         {std::make_pair(ResourceClass::SRV, DRM.srvs()),
+          std::make_pair(ResourceClass::UAV, DRM.uavs()),
+          std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
+          std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
+      for (auto Res : ResList.second) {
+        llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
+        llvm::hlsl::BindingInfo::BindingRange ResRange(
+            ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
+
+        if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
+          reportRegNotBound(M, ResList.first, ResBinding);
+      }
+    }
+  }
 }
 
 static mcdxbc::RootSignatureDesc *
@@ -245,7 +277,7 @@ static void reportErrors(Module &M, DXILResourceMap &DRM,
                                        "DXILResourceImplicitBinding pass");
 
   if (mcdxbc::RootSignatureDesc *RSD = getRootSignature(RSBI, MMI))
-    validateRootSignature(M, *RSD, MMI);
+    validateRootSignature(M, *RSD, MMI, DRM);
 }
 
 PreservedAnalyses
