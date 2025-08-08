@@ -1140,3 +1140,1274 @@ define <8 x iXLen> @lrint_v8f64(<8 x double> %x) {
   ret <8 x iXLen> %a
 }
 declare <8 x iXLen> @llvm.lrint.v8iXLen.v8f64(<8 x double>)
+
+define <1 x iXLen> @lrint_v1fp128(<1 x fp128> %x) {
+; X86-I32-LABEL: lrint_v1fp128:
+; X86-I32:       # %bb.0:
+; X86-I32-NEXT:    pushl %ebp
+; X86-I32-NEXT:    .cfi_def_cfa_offset 8
+; X86-I32-NEXT:    .cfi_offset %ebp, -8
+; X86-I32-NEXT:    movl %esp, %ebp
+; X86-I32-NEXT:    .cfi_def_cfa_register %ebp
+; X86-I32-NEXT:    andl $-16, %esp
+; X86-I32-NEXT:    subl $16, %esp
+; X86-I32-NEXT:    pushl 20(%ebp)
+; X86-I32-NEXT:    pushl 16(%ebp)
+; X86-I32-NEXT:    pushl 12(%ebp)
+; X86-I32-NEXT:    pushl 8(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %ebp, %esp
+; X86-I32-NEXT:    popl %ebp
+; X86-I32-NEXT:    .cfi_def_cfa %esp, 4
+; X86-I32-NEXT:    retl
+;
+; X86-I64-LABEL: lrint_v1fp128:
+; X86-I64:       # %bb.0:
+; X86-I64-NEXT:    pushl %ebp
+; X86-I64-NEXT:    .cfi_def_cfa_offset 8
+; X86-I64-NEXT:    .cfi_offset %ebp, -8
+; X86-I64-NEXT:    movl %esp, %ebp
+; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
+; X86-I64-NEXT:    andl $-16, %esp
+; X86-I64-NEXT:    subl $16, %esp
+; X86-I64-NEXT:    pushl 20(%ebp)
+; X86-I64-NEXT:    pushl 16(%ebp)
+; X86-I64-NEXT:    pushl 12(%ebp)
+; X86-I64-NEXT:    pushl 8(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %ebp, %esp
+; X86-I64-NEXT:    popl %ebp
+; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
+; X86-I64-NEXT:    retl
+;
+; X86-SSE2-LABEL: lrint_v1fp128:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
+; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
+; X86-SSE2-NEXT:    andl $-16, %esp
+; X86-SSE2-NEXT:    subl $16, %esp
+; X86-SSE2-NEXT:    pushl 20(%ebp)
+; X86-SSE2-NEXT:    pushl 16(%ebp)
+; X86-SSE2-NEXT:    pushl 12(%ebp)
+; X86-SSE2-NEXT:    pushl 8(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movl %ebp, %esp
+; X86-SSE2-NEXT:    popl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: lrint_v1fp128:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    pushl %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
+; X86-AVX-NEXT:    .cfi_offset %ebp, -8
+; X86-AVX-NEXT:    movl %esp, %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa_register %ebp
+; X86-AVX-NEXT:    andl $-16, %esp
+; X86-AVX-NEXT:    subl $32, %esp
+; X86-AVX-NEXT:    vmovups 8(%ebp), %xmm0
+; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX-NEXT:    calll lrintl
+; X86-AVX-NEXT:    movl %ebp, %esp
+; X86-AVX-NEXT:    popl %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa %esp, 4
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-i32-LABEL: lrint_v1fp128:
+; X64-AVX-i32:       # %bb.0:
+; X64-AVX-i32-NEXT:    pushq %rax
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
+; X64-AVX-i32-NEXT:    callq lrintl@PLT
+; X64-AVX-i32-NEXT:    popq %rcx
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX-i32-NEXT:    retq
+;
+; X64-AVX-i64-LABEL: lrint_v1fp128:
+; X64-AVX-i64:       # %bb.0:
+; X64-AVX-i64-NEXT:    pushq %rax
+; X64-AVX-i64-NEXT:    .cfi_def_cfa_offset 16
+; X64-AVX-i64-NEXT:    callq lrintl@PLT
+; X64-AVX-i64-NEXT:    popq %rcx
+; X64-AVX-i64-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX-i64-NEXT:    retq
+  %a = call <1 x iXLen> @llvm.lrint.v1iXLen.v1fp128(<1 x fp128> %x)
+  ret <1 x iXLen> %a
+}
+declare <1 x iXLen> @llvm.lrint.v1iXLen.v1fp128(<1 x fp128>)
+
+define <2 x iXLen> @lrint_v2fp128(<2 x fp128> %x) {
+; X86-I32-LABEL: lrint_v2fp128:
+; X86-I32:       # %bb.0:
+; X86-I32-NEXT:    pushl %ebp
+; X86-I32-NEXT:    .cfi_def_cfa_offset 8
+; X86-I32-NEXT:    .cfi_offset %ebp, -8
+; X86-I32-NEXT:    movl %esp, %ebp
+; X86-I32-NEXT:    .cfi_def_cfa_register %ebp
+; X86-I32-NEXT:    pushl %ebx
+; X86-I32-NEXT:    pushl %edi
+; X86-I32-NEXT:    pushl %esi
+; X86-I32-NEXT:    andl $-16, %esp
+; X86-I32-NEXT:    subl $16, %esp
+; X86-I32-NEXT:    .cfi_offset %esi, -20
+; X86-I32-NEXT:    .cfi_offset %edi, -16
+; X86-I32-NEXT:    .cfi_offset %ebx, -12
+; X86-I32-NEXT:    movl 32(%ebp), %edi
+; X86-I32-NEXT:    movl 36(%ebp), %ebx
+; X86-I32-NEXT:    pushl 20(%ebp)
+; X86-I32-NEXT:    pushl 16(%ebp)
+; X86-I32-NEXT:    pushl 12(%ebp)
+; X86-I32-NEXT:    pushl 8(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, %esi
+; X86-I32-NEXT:    pushl %ebx
+; X86-I32-NEXT:    pushl %edi
+; X86-I32-NEXT:    pushl 28(%ebp)
+; X86-I32-NEXT:    pushl 24(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, %edx
+; X86-I32-NEXT:    movl %esi, %eax
+; X86-I32-NEXT:    leal -12(%ebp), %esp
+; X86-I32-NEXT:    popl %esi
+; X86-I32-NEXT:    popl %edi
+; X86-I32-NEXT:    popl %ebx
+; X86-I32-NEXT:    popl %ebp
+; X86-I32-NEXT:    .cfi_def_cfa %esp, 4
+; X86-I32-NEXT:    retl
+;
+; X86-I64-LABEL: lrint_v2fp128:
+; X86-I64:       # %bb.0:
+; X86-I64-NEXT:    pushl %ebp
+; X86-I64-NEXT:    .cfi_def_cfa_offset 8
+; X86-I64-NEXT:    .cfi_offset %ebp, -8
+; X86-I64-NEXT:    movl %esp, %ebp
+; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
+; X86-I64-NEXT:    pushl %ebx
+; X86-I64-NEXT:    pushl %edi
+; X86-I64-NEXT:    pushl %esi
+; X86-I64-NEXT:    andl $-16, %esp
+; X86-I64-NEXT:    subl $16, %esp
+; X86-I64-NEXT:    .cfi_offset %esi, -20
+; X86-I64-NEXT:    .cfi_offset %edi, -16
+; X86-I64-NEXT:    .cfi_offset %ebx, -12
+; X86-I64-NEXT:    movl 8(%ebp), %esi
+; X86-I64-NEXT:    pushl 24(%ebp)
+; X86-I64-NEXT:    pushl 20(%ebp)
+; X86-I64-NEXT:    pushl 16(%ebp)
+; X86-I64-NEXT:    pushl 12(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, %edi
+; X86-I64-NEXT:    movl %edx, %ebx
+; X86-I64-NEXT:    pushl 40(%ebp)
+; X86-I64-NEXT:    pushl 36(%ebp)
+; X86-I64-NEXT:    pushl 32(%ebp)
+; X86-I64-NEXT:    pushl 28(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %edx, 12(%esi)
+; X86-I64-NEXT:    movl %eax, 8(%esi)
+; X86-I64-NEXT:    movl %ebx, 4(%esi)
+; X86-I64-NEXT:    movl %edi, (%esi)
+; X86-I64-NEXT:    movl %esi, %eax
+; X86-I64-NEXT:    leal -12(%ebp), %esp
+; X86-I64-NEXT:    popl %esi
+; X86-I64-NEXT:    popl %edi
+; X86-I64-NEXT:    popl %ebx
+; X86-I64-NEXT:    popl %ebp
+; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
+; X86-I64-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: lrint_v2fp128:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
+; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
+; X86-SSE2-NEXT:    pushl %ebx
+; X86-SSE2-NEXT:    pushl %edi
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    andl $-16, %esp
+; X86-SSE2-NEXT:    subl $32, %esp
+; X86-SSE2-NEXT:    .cfi_offset %esi, -20
+; X86-SSE2-NEXT:    .cfi_offset %edi, -16
+; X86-SSE2-NEXT:    .cfi_offset %ebx, -12
+; X86-SSE2-NEXT:    movl 12(%ebp), %edi
+; X86-SSE2-NEXT:    movl 16(%ebp), %ebx
+; X86-SSE2-NEXT:    movl 20(%ebp), %esi
+; X86-SSE2-NEXT:    pushl 36(%ebp)
+; X86-SSE2-NEXT:    pushl 32(%ebp)
+; X86-SSE2-NEXT:    pushl 28(%ebp)
+; X86-SSE2-NEXT:    pushl 24(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm0, (%esp) # 16-byte Spill
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    pushl %ebx
+; X86-SSE2-NEXT:    pushl %edi
+; X86-SSE2-NEXT:    pushl 8(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    punpckldq (%esp), %xmm0 # 16-byte Folded Reload
+; X86-SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; X86-SSE2-NEXT:    leal -12(%ebp), %esp
+; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    popl %edi
+; X86-SSE2-NEXT:    popl %ebx
+; X86-SSE2-NEXT:    popl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: lrint_v2fp128:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    pushl %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
+; X86-AVX-NEXT:    .cfi_offset %ebp, -8
+; X86-AVX-NEXT:    movl %esp, %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa_register %ebp
+; X86-AVX-NEXT:    andl $-16, %esp
+; X86-AVX-NEXT:    subl $48, %esp
+; X86-AVX-NEXT:    vmovups 8(%ebp), %xmm0
+; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX-NEXT:    calll lrintl
+; X86-AVX-NEXT:    vmovups 24(%ebp), %xmm0
+; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX-NEXT:    vmovd %eax, %xmm0
+; X86-AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-AVX-NEXT:    calll lrintl
+; X86-AVX-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-AVX-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X86-AVX-NEXT:    movl %ebp, %esp
+; X86-AVX-NEXT:    popl %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa %esp, 4
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-i32-LABEL: lrint_v2fp128:
+; X64-AVX-i32:       # %bb.0:
+; X64-AVX-i32-NEXT:    pushq %rbx
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
+; X64-AVX-i32-NEXT:    subq $16, %rsp
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 32
+; X64-AVX-i32-NEXT:    .cfi_offset %rbx, -16
+; X64-AVX-i32-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; X64-AVX-i32-NEXT:    vmovaps %xmm1, %xmm0
+; X64-AVX-i32-NEXT:    callq lrintl@PLT
+; X64-AVX-i32-NEXT:    movl %eax, %ebx
+; X64-AVX-i32-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; X64-AVX-i32-NEXT:    callq lrintl@PLT
+; X64-AVX-i32-NEXT:    vmovd %eax, %xmm0
+; X64-AVX-i32-NEXT:    vpinsrd $1, %ebx, %xmm0, %xmm0
+; X64-AVX-i32-NEXT:    addq $16, %rsp
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
+; X64-AVX-i32-NEXT:    popq %rbx
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX-i32-NEXT:    retq
+;
+; X64-AVX-i64-LABEL: lrint_v2fp128:
+; X64-AVX-i64:       # %bb.0:
+; X64-AVX-i64-NEXT:    subq $40, %rsp
+; X64-AVX-i64-NEXT:    .cfi_def_cfa_offset 48
+; X64-AVX-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX-i64-NEXT:    vmovaps %xmm1, %xmm0
+; X64-AVX-i64-NEXT:    callq lrintl@PLT
+; X64-AVX-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX-i64-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; X64-AVX-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX-i64-NEXT:    callq lrintl@PLT
+; X64-AVX-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX-i64-NEXT:    vpunpcklqdq (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; X64-AVX-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; X64-AVX-i64-NEXT:    addq $40, %rsp
+; X64-AVX-i64-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX-i64-NEXT:    retq
+  %a = call <2 x iXLen> @llvm.lrint.v2iXLen.v2fp128(<2 x fp128> %x)
+  ret <2 x iXLen> %a
+}
+declare <2 x iXLen> @llvm.lrint.v2iXLen.v2fp128(<2 x fp128>)
+
+define <4 x iXLen> @lrint_v4fp128(<4 x fp128> %x) {
+; X86-I32-LABEL: lrint_v4fp128:
+; X86-I32:       # %bb.0:
+; X86-I32-NEXT:    pushl %ebp
+; X86-I32-NEXT:    .cfi_def_cfa_offset 8
+; X86-I32-NEXT:    .cfi_offset %ebp, -8
+; X86-I32-NEXT:    movl %esp, %ebp
+; X86-I32-NEXT:    .cfi_def_cfa_register %ebp
+; X86-I32-NEXT:    pushl %ebx
+; X86-I32-NEXT:    pushl %edi
+; X86-I32-NEXT:    pushl %esi
+; X86-I32-NEXT:    andl $-16, %esp
+; X86-I32-NEXT:    subl $16, %esp
+; X86-I32-NEXT:    .cfi_offset %esi, -20
+; X86-I32-NEXT:    .cfi_offset %edi, -16
+; X86-I32-NEXT:    .cfi_offset %ebx, -12
+; X86-I32-NEXT:    movl 8(%ebp), %esi
+; X86-I32-NEXT:    movl 36(%ebp), %ebx
+; X86-I32-NEXT:    movl 40(%ebp), %edi
+; X86-I32-NEXT:    pushl 24(%ebp)
+; X86-I32-NEXT:    pushl 20(%ebp)
+; X86-I32-NEXT:    pushl 16(%ebp)
+; X86-I32-NEXT:    pushl 12(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I32-NEXT:    pushl %edi
+; X86-I32-NEXT:    pushl %ebx
+; X86-I32-NEXT:    pushl 32(%ebp)
+; X86-I32-NEXT:    pushl 28(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, %ebx
+; X86-I32-NEXT:    pushl 56(%ebp)
+; X86-I32-NEXT:    pushl 52(%ebp)
+; X86-I32-NEXT:    pushl 48(%ebp)
+; X86-I32-NEXT:    pushl 44(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, %edi
+; X86-I32-NEXT:    pushl 72(%ebp)
+; X86-I32-NEXT:    pushl 68(%ebp)
+; X86-I32-NEXT:    pushl 64(%ebp)
+; X86-I32-NEXT:    pushl 60(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, 12(%esi)
+; X86-I32-NEXT:    movl %edi, 8(%esi)
+; X86-I32-NEXT:    movl %ebx, 4(%esi)
+; X86-I32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I32-NEXT:    movl %eax, (%esi)
+; X86-I32-NEXT:    movl %esi, %eax
+; X86-I32-NEXT:    leal -12(%ebp), %esp
+; X86-I32-NEXT:    popl %esi
+; X86-I32-NEXT:    popl %edi
+; X86-I32-NEXT:    popl %ebx
+; X86-I32-NEXT:    popl %ebp
+; X86-I32-NEXT:    .cfi_def_cfa %esp, 4
+; X86-I32-NEXT:    retl $4
+;
+; X86-I64-LABEL: lrint_v4fp128:
+; X86-I64:       # %bb.0:
+; X86-I64-NEXT:    pushl %ebp
+; X86-I64-NEXT:    .cfi_def_cfa_offset 8
+; X86-I64-NEXT:    .cfi_offset %ebp, -8
+; X86-I64-NEXT:    movl %esp, %ebp
+; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
+; X86-I64-NEXT:    pushl %ebx
+; X86-I64-NEXT:    pushl %edi
+; X86-I64-NEXT:    pushl %esi
+; X86-I64-NEXT:    andl $-16, %esp
+; X86-I64-NEXT:    subl $32, %esp
+; X86-I64-NEXT:    .cfi_offset %esi, -20
+; X86-I64-NEXT:    .cfi_offset %edi, -16
+; X86-I64-NEXT:    .cfi_offset %ebx, -12
+; X86-I64-NEXT:    movl 8(%ebp), %esi
+; X86-I64-NEXT:    movl 36(%ebp), %edi
+; X86-I64-NEXT:    movl 40(%ebp), %ebx
+; X86-I64-NEXT:    pushl 24(%ebp)
+; X86-I64-NEXT:    pushl 20(%ebp)
+; X86-I64-NEXT:    pushl 16(%ebp)
+; X86-I64-NEXT:    pushl 12(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    pushl %ebx
+; X86-I64-NEXT:    pushl %edi
+; X86-I64-NEXT:    pushl 32(%ebp)
+; X86-I64-NEXT:    pushl 28(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    pushl 56(%ebp)
+; X86-I64-NEXT:    pushl 52(%ebp)
+; X86-I64-NEXT:    pushl 48(%ebp)
+; X86-I64-NEXT:    pushl 44(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, %edi
+; X86-I64-NEXT:    movl %edx, %ebx
+; X86-I64-NEXT:    pushl 72(%ebp)
+; X86-I64-NEXT:    pushl 68(%ebp)
+; X86-I64-NEXT:    pushl 64(%ebp)
+; X86-I64-NEXT:    pushl 60(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %edx, 28(%esi)
+; X86-I64-NEXT:    movl %eax, 24(%esi)
+; X86-I64-NEXT:    movl %ebx, 20(%esi)
+; X86-I64-NEXT:    movl %edi, 16(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 12(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 8(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 4(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, (%esi)
+; X86-I64-NEXT:    movl %esi, %eax
+; X86-I64-NEXT:    leal -12(%ebp), %esp
+; X86-I64-NEXT:    popl %esi
+; X86-I64-NEXT:    popl %edi
+; X86-I64-NEXT:    popl %ebx
+; X86-I64-NEXT:    popl %ebp
+; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
+; X86-I64-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: lrint_v4fp128:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
+; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
+; X86-SSE2-NEXT:    pushl %ebx
+; X86-SSE2-NEXT:    pushl %edi
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    andl $-16, %esp
+; X86-SSE2-NEXT:    subl $48, %esp
+; X86-SSE2-NEXT:    .cfi_offset %esi, -20
+; X86-SSE2-NEXT:    .cfi_offset %edi, -16
+; X86-SSE2-NEXT:    .cfi_offset %ebx, -12
+; X86-SSE2-NEXT:    movl 48(%ebp), %edi
+; X86-SSE2-NEXT:    movl 52(%ebp), %ebx
+; X86-SSE2-NEXT:    pushl 36(%ebp)
+; X86-SSE2-NEXT:    pushl 32(%ebp)
+; X86-SSE2-NEXT:    pushl 28(%ebp)
+; X86-SSE2-NEXT:    pushl 24(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movl %eax, %esi
+; X86-SSE2-NEXT:    pushl %ebx
+; X86-SSE2-NEXT:    pushl %edi
+; X86-SSE2-NEXT:    pushl 44(%ebp)
+; X86-SSE2-NEXT:    pushl 40(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movl %eax, %edi
+; X86-SSE2-NEXT:    pushl 68(%ebp)
+; X86-SSE2-NEXT:    pushl 64(%ebp)
+; X86-SSE2-NEXT:    pushl 60(%ebp)
+; X86-SSE2-NEXT:    pushl 56(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    movd %edi, %xmm1
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    movdqa %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    movd %esi, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm0, (%esp) # 16-byte Spill
+; X86-SSE2-NEXT:    pushl 20(%ebp)
+; X86-SSE2-NEXT:    pushl 16(%ebp)
+; X86-SSE2-NEXT:    pushl 12(%ebp)
+; X86-SSE2-NEXT:    pushl 8(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    punpckldq (%esp), %xmm0 # 16-byte Folded Reload
+; X86-SSE2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
+; X86-SSE2-NEXT:    punpcklqdq {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Folded Reload
+; X86-SSE2-NEXT:    # xmm0 = xmm0[0],mem[0]
+; X86-SSE2-NEXT:    leal -12(%ebp), %esp
+; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    popl %edi
+; X86-SSE2-NEXT:    popl %ebx
+; X86-SSE2-NEXT:    popl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX-LABEL: lrint_v4fp128:
+; X86-AVX:       # %bb.0:
+; X86-AVX-NEXT:    pushl %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa_offset 8
+; X86-AVX-NEXT:    .cfi_offset %ebp, -8
+; X86-AVX-NEXT:    movl %esp, %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa_register %ebp
+; X86-AVX-NEXT:    pushl %edi
+; X86-AVX-NEXT:    pushl %esi
+; X86-AVX-NEXT:    andl $-16, %esp
+; X86-AVX-NEXT:    subl $32, %esp
+; X86-AVX-NEXT:    .cfi_offset %esi, -16
+; X86-AVX-NEXT:    .cfi_offset %edi, -12
+; X86-AVX-NEXT:    vmovups 40(%ebp), %xmm0
+; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX-NEXT:    calll lrintl
+; X86-AVX-NEXT:    movl %eax, %esi
+; X86-AVX-NEXT:    vmovups 24(%ebp), %xmm0
+; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX-NEXT:    calll lrintl
+; X86-AVX-NEXT:    movl %eax, %edi
+; X86-AVX-NEXT:    vmovups 8(%ebp), %xmm0
+; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX-NEXT:    calll lrintl
+; X86-AVX-NEXT:    vmovups 56(%ebp), %xmm0
+; X86-AVX-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX-NEXT:    vmovd %eax, %xmm0
+; X86-AVX-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0
+; X86-AVX-NEXT:    vpinsrd $2, %esi, %xmm0, %xmm0
+; X86-AVX-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-AVX-NEXT:    calll lrintl
+; X86-AVX-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-AVX-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X86-AVX-NEXT:    leal -8(%ebp), %esp
+; X86-AVX-NEXT:    popl %esi
+; X86-AVX-NEXT:    popl %edi
+; X86-AVX-NEXT:    popl %ebp
+; X86-AVX-NEXT:    .cfi_def_cfa %esp, 4
+; X86-AVX-NEXT:    retl
+;
+; X64-AVX-i32-LABEL: lrint_v4fp128:
+; X64-AVX-i32:       # %bb.0:
+; X64-AVX-i32-NEXT:    pushq %rbx
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
+; X64-AVX-i32-NEXT:    subq $48, %rsp
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 64
+; X64-AVX-i32-NEXT:    .cfi_offset %rbx, -16
+; X64-AVX-i32-NEXT:    vmovaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX-i32-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX-i32-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; X64-AVX-i32-NEXT:    vmovaps %xmm1, %xmm0
+; X64-AVX-i32-NEXT:    callq lrintl@PLT
+; X64-AVX-i32-NEXT:    movl %eax, %ebx
+; X64-AVX-i32-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; X64-AVX-i32-NEXT:    callq lrintl@PLT
+; X64-AVX-i32-NEXT:    vmovd %eax, %xmm0
+; X64-AVX-i32-NEXT:    vpinsrd $1, %ebx, %xmm0, %xmm0
+; X64-AVX-i32-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; X64-AVX-i32-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX-i32-NEXT:    callq lrintl@PLT
+; X64-AVX-i32-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
+; X64-AVX-i32-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X64-AVX-i32-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX-i32-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX-i32-NEXT:    callq lrintl@PLT
+; X64-AVX-i32-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX-i32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X64-AVX-i32-NEXT:    addq $48, %rsp
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 16
+; X64-AVX-i32-NEXT:    popq %rbx
+; X64-AVX-i32-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX-i32-NEXT:    retq
+;
+; X64-AVX1-i64-LABEL: lrint_v4fp128:
+; X64-AVX1-i64:       # %bb.0:
+; X64-AVX1-i64-NEXT:    subq $72, %rsp
+; X64-AVX1-i64-NEXT:    .cfi_def_cfa_offset 80
+; X64-AVX1-i64-NEXT:    vmovaps %xmm2, (%rsp) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm3, %xmm0
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; X64-AVX1-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; X64-AVX1-i64-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; X64-AVX1-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; X64-AVX1-i64-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; X64-AVX1-i64-NEXT:    addq $72, %rsp
+; X64-AVX1-i64-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX1-i64-NEXT:    retq
+;
+; AVX512-i64-LABEL: lrint_v4fp128:
+; AVX512-i64:       # %bb.0:
+; AVX512-i64-NEXT:    subq $72, %rsp
+; AVX512-i64-NEXT:    .cfi_def_cfa_offset 80
+; AVX512-i64-NEXT:    vmovaps %xmm2, (%rsp) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm3, %xmm0
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512-i64-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512-i64-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; AVX512-i64-NEXT:    addq $72, %rsp
+; AVX512-i64-NEXT:    .cfi_def_cfa_offset 8
+; AVX512-i64-NEXT:    retq
+;
+; AVX512DQ-i64-LABEL: lrint_v4fp128:
+; AVX512DQ-i64:       # %bb.0:
+; AVX512DQ-i64-NEXT:    subq $72, %rsp
+; AVX512DQ-i64-NEXT:    .cfi_def_cfa_offset 80
+; AVX512DQ-i64-NEXT:    vmovaps %xmm2, (%rsp) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm3, %xmm0
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512DQ-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512DQ-i64-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512DQ-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512DQ-i64-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; AVX512DQ-i64-NEXT:    addq $72, %rsp
+; AVX512DQ-i64-NEXT:    .cfi_def_cfa_offset 8
+; AVX512DQ-i64-NEXT:    retq
+  %a = call <4 x iXLen> @llvm.lrint.v4iXLen.v4fp128(<4 x fp128> %x)
+  ret <4 x iXLen> %a
+}
+declare <4 x iXLen> @llvm.lrint.v4iXLen.v4fp128(<4 x fp128>)
+
+define <8 x iXLen> @lrint_v8fp128(<8 x fp128> %x) {
+; X86-I32-LABEL: lrint_v8fp128:
+; X86-I32:       # %bb.0:
+; X86-I32-NEXT:    pushl %ebp
+; X86-I32-NEXT:    .cfi_def_cfa_offset 8
+; X86-I32-NEXT:    .cfi_offset %ebp, -8
+; X86-I32-NEXT:    movl %esp, %ebp
+; X86-I32-NEXT:    .cfi_def_cfa_register %ebp
+; X86-I32-NEXT:    pushl %ebx
+; X86-I32-NEXT:    pushl %edi
+; X86-I32-NEXT:    pushl %esi
+; X86-I32-NEXT:    andl $-16, %esp
+; X86-I32-NEXT:    subl $32, %esp
+; X86-I32-NEXT:    .cfi_offset %esi, -20
+; X86-I32-NEXT:    .cfi_offset %edi, -16
+; X86-I32-NEXT:    .cfi_offset %ebx, -12
+; X86-I32-NEXT:    movl 8(%ebp), %esi
+; X86-I32-NEXT:    movl 36(%ebp), %ebx
+; X86-I32-NEXT:    movl 40(%ebp), %edi
+; X86-I32-NEXT:    pushl 24(%ebp)
+; X86-I32-NEXT:    pushl 20(%ebp)
+; X86-I32-NEXT:    pushl 16(%ebp)
+; X86-I32-NEXT:    pushl 12(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I32-NEXT:    pushl %edi
+; X86-I32-NEXT:    pushl %ebx
+; X86-I32-NEXT:    pushl 32(%ebp)
+; X86-I32-NEXT:    pushl 28(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I32-NEXT:    pushl 56(%ebp)
+; X86-I32-NEXT:    pushl 52(%ebp)
+; X86-I32-NEXT:    pushl 48(%ebp)
+; X86-I32-NEXT:    pushl 44(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I32-NEXT:    pushl 72(%ebp)
+; X86-I32-NEXT:    pushl 68(%ebp)
+; X86-I32-NEXT:    pushl 64(%ebp)
+; X86-I32-NEXT:    pushl 60(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I32-NEXT:    pushl 88(%ebp)
+; X86-I32-NEXT:    pushl 84(%ebp)
+; X86-I32-NEXT:    pushl 80(%ebp)
+; X86-I32-NEXT:    pushl 76(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I32-NEXT:    pushl 104(%ebp)
+; X86-I32-NEXT:    pushl 100(%ebp)
+; X86-I32-NEXT:    pushl 96(%ebp)
+; X86-I32-NEXT:    pushl 92(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, %ebx
+; X86-I32-NEXT:    pushl 120(%ebp)
+; X86-I32-NEXT:    pushl 116(%ebp)
+; X86-I32-NEXT:    pushl 112(%ebp)
+; X86-I32-NEXT:    pushl 108(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, %edi
+; X86-I32-NEXT:    pushl 136(%ebp)
+; X86-I32-NEXT:    pushl 132(%ebp)
+; X86-I32-NEXT:    pushl 128(%ebp)
+; X86-I32-NEXT:    pushl 124(%ebp)
+; X86-I32-NEXT:    calll lrintl
+; X86-I32-NEXT:    addl $16, %esp
+; X86-I32-NEXT:    movl %eax, 28(%esi)
+; X86-I32-NEXT:    movl %edi, 24(%esi)
+; X86-I32-NEXT:    movl %ebx, 20(%esi)
+; X86-I32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I32-NEXT:    movl %eax, 16(%esi)
+; X86-I32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I32-NEXT:    movl %eax, 12(%esi)
+; X86-I32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I32-NEXT:    movl %eax, 8(%esi)
+; X86-I32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I32-NEXT:    movl %eax, 4(%esi)
+; X86-I32-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I32-NEXT:    movl %eax, (%esi)
+; X86-I32-NEXT:    movl %esi, %eax
+; X86-I32-NEXT:    leal -12(%ebp), %esp
+; X86-I32-NEXT:    popl %esi
+; X86-I32-NEXT:    popl %edi
+; X86-I32-NEXT:    popl %ebx
+; X86-I32-NEXT:    popl %ebp
+; X86-I32-NEXT:    .cfi_def_cfa %esp, 4
+; X86-I32-NEXT:    retl $4
+;
+; X86-I64-LABEL: lrint_v8fp128:
+; X86-I64:       # %bb.0:
+; X86-I64-NEXT:    pushl %ebp
+; X86-I64-NEXT:    .cfi_def_cfa_offset 8
+; X86-I64-NEXT:    .cfi_offset %ebp, -8
+; X86-I64-NEXT:    movl %esp, %ebp
+; X86-I64-NEXT:    .cfi_def_cfa_register %ebp
+; X86-I64-NEXT:    pushl %ebx
+; X86-I64-NEXT:    pushl %edi
+; X86-I64-NEXT:    pushl %esi
+; X86-I64-NEXT:    andl $-16, %esp
+; X86-I64-NEXT:    subl $64, %esp
+; X86-I64-NEXT:    .cfi_offset %esi, -20
+; X86-I64-NEXT:    .cfi_offset %edi, -16
+; X86-I64-NEXT:    .cfi_offset %ebx, -12
+; X86-I64-NEXT:    movl 8(%ebp), %esi
+; X86-I64-NEXT:    movl 36(%ebp), %edi
+; X86-I64-NEXT:    movl 40(%ebp), %ebx
+; X86-I64-NEXT:    pushl 24(%ebp)
+; X86-I64-NEXT:    pushl 20(%ebp)
+; X86-I64-NEXT:    pushl 16(%ebp)
+; X86-I64-NEXT:    pushl 12(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    pushl %ebx
+; X86-I64-NEXT:    pushl %edi
+; X86-I64-NEXT:    pushl 32(%ebp)
+; X86-I64-NEXT:    pushl 28(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    pushl 56(%ebp)
+; X86-I64-NEXT:    pushl 52(%ebp)
+; X86-I64-NEXT:    pushl 48(%ebp)
+; X86-I64-NEXT:    pushl 44(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    pushl 72(%ebp)
+; X86-I64-NEXT:    pushl 68(%ebp)
+; X86-I64-NEXT:    pushl 64(%ebp)
+; X86-I64-NEXT:    pushl 60(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    pushl 88(%ebp)
+; X86-I64-NEXT:    pushl 84(%ebp)
+; X86-I64-NEXT:    pushl 80(%ebp)
+; X86-I64-NEXT:    pushl 76(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    pushl 104(%ebp)
+; X86-I64-NEXT:    pushl 100(%ebp)
+; X86-I64-NEXT:    pushl 96(%ebp)
+; X86-I64-NEXT:    pushl 92(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-I64-NEXT:    pushl 120(%ebp)
+; X86-I64-NEXT:    pushl 116(%ebp)
+; X86-I64-NEXT:    pushl 112(%ebp)
+; X86-I64-NEXT:    pushl 108(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %eax, %edi
+; X86-I64-NEXT:    movl %edx, %ebx
+; X86-I64-NEXT:    pushl 136(%ebp)
+; X86-I64-NEXT:    pushl 132(%ebp)
+; X86-I64-NEXT:    pushl 128(%ebp)
+; X86-I64-NEXT:    pushl 124(%ebp)
+; X86-I64-NEXT:    calll lrintl
+; X86-I64-NEXT:    addl $16, %esp
+; X86-I64-NEXT:    movl %edx, 60(%esi)
+; X86-I64-NEXT:    movl %eax, 56(%esi)
+; X86-I64-NEXT:    movl %ebx, 52(%esi)
+; X86-I64-NEXT:    movl %edi, 48(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 44(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 40(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 36(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 32(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 28(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 24(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 20(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 16(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 12(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 8(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, 4(%esi)
+; X86-I64-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-I64-NEXT:    movl %eax, (%esi)
+; X86-I64-NEXT:    movl %esi, %eax
+; X86-I64-NEXT:    leal -12(%ebp), %esp
+; X86-I64-NEXT:    popl %esi
+; X86-I64-NEXT:    popl %edi
+; X86-I64-NEXT:    popl %ebx
+; X86-I64-NEXT:    popl %ebp
+; X86-I64-NEXT:    .cfi_def_cfa %esp, 4
+; X86-I64-NEXT:    retl $4
+;
+; X86-SSE2-LABEL: lrint_v8fp128:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    pushl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_offset 8
+; X86-SSE2-NEXT:    .cfi_offset %ebp, -8
+; X86-SSE2-NEXT:    movl %esp, %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa_register %ebp
+; X86-SSE2-NEXT:    pushl %ebx
+; X86-SSE2-NEXT:    pushl %edi
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    andl $-16, %esp
+; X86-SSE2-NEXT:    subl $64, %esp
+; X86-SSE2-NEXT:    .cfi_offset %esi, -20
+; X86-SSE2-NEXT:    .cfi_offset %edi, -16
+; X86-SSE2-NEXT:    .cfi_offset %ebx, -12
+; X86-SSE2-NEXT:    movl 108(%ebp), %esi
+; X86-SSE2-NEXT:    movl 112(%ebp), %edi
+; X86-SSE2-NEXT:    movl 116(%ebp), %ebx
+; X86-SSE2-NEXT:    pushl 100(%ebp)
+; X86-SSE2-NEXT:    pushl 96(%ebp)
+; X86-SSE2-NEXT:    pushl 92(%ebp)
+; X86-SSE2-NEXT:    pushl 88(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    pushl %ebx
+; X86-SSE2-NEXT:    pushl %edi
+; X86-SSE2-NEXT:    pushl %esi
+; X86-SSE2-NEXT:    pushl 104(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE2-NEXT:    pushl 132(%ebp)
+; X86-SSE2-NEXT:    pushl 128(%ebp)
+; X86-SSE2-NEXT:    pushl 124(%ebp)
+; X86-SSE2-NEXT:    pushl 120(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X86-SSE2-NEXT:    pushl 20(%ebp)
+; X86-SSE2-NEXT:    pushl 16(%ebp)
+; X86-SSE2-NEXT:    pushl 12(%ebp)
+; X86-SSE2-NEXT:    pushl 8(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movl %eax, %esi
+; X86-SSE2-NEXT:    pushl 36(%ebp)
+; X86-SSE2-NEXT:    pushl 32(%ebp)
+; X86-SSE2-NEXT:    pushl 28(%ebp)
+; X86-SSE2-NEXT:    pushl 24(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movl %eax, %edi
+; X86-SSE2-NEXT:    pushl 52(%ebp)
+; X86-SSE2-NEXT:    pushl 48(%ebp)
+; X86-SSE2-NEXT:    pushl 44(%ebp)
+; X86-SSE2-NEXT:    pushl 40(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movl %eax, %ebx
+; X86-SSE2-NEXT:    pushl 68(%ebp)
+; X86-SSE2-NEXT:    pushl 64(%ebp)
+; X86-SSE2-NEXT:    pushl 60(%ebp)
+; X86-SSE2-NEXT:    pushl 56(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movd %eax, %xmm0
+; X86-SSE2-NEXT:    movd %ebx, %xmm1
+; X86-SSE2-NEXT:    movd %edi, %xmm2
+; X86-SSE2-NEXT:    movd %esi, %xmm4
+; X86-SSE2-NEXT:    movss (%esp), %xmm3 # 4-byte Reload
+; X86-SSE2-NEXT:    # xmm3 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm5 # 4-byte Reload
+; X86-SSE2-NEXT:    # xmm5 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm6 # 4-byte Reload
+; X86-SSE2-NEXT:    # xmm6 = mem[0],zero,zero,zero
+; X86-SSE2-NEXT:    movaps %xmm6, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
+; X86-SSE2-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
+; X86-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm4 = xmm4[0],xmm1[0]
+; X86-SSE2-NEXT:    movdqa %xmm4, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-SSE2-NEXT:    unpcklps {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
+; X86-SSE2-NEXT:    movaps %xmm5, (%esp) # 16-byte Spill
+; X86-SSE2-NEXT:    pushl 84(%ebp)
+; X86-SSE2-NEXT:    pushl 80(%ebp)
+; X86-SSE2-NEXT:    pushl 76(%ebp)
+; X86-SSE2-NEXT:    pushl 72(%ebp)
+; X86-SSE2-NEXT:    calll lrintl
+; X86-SSE2-NEXT:    addl $16, %esp
+; X86-SSE2-NEXT:    movd %eax, %xmm1
+; X86-SSE2-NEXT:    punpckldq {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Folded Reload
+; X86-SSE2-NEXT:    # xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
+; X86-SSE2-NEXT:    punpcklqdq (%esp), %xmm1 # 16-byte Folded Reload
+; X86-SSE2-NEXT:    # xmm1 = xmm1[0],mem[0]
+; X86-SSE2-NEXT:    movaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-SSE2-NEXT:    leal -12(%ebp), %esp
+; X86-SSE2-NEXT:    popl %esi
+; X86-SSE2-NEXT:    popl %edi
+; X86-SSE2-NEXT:    popl %ebx
+; X86-SSE2-NEXT:    popl %ebp
+; X86-SSE2-NEXT:    .cfi_def_cfa %esp, 4
+; X86-SSE2-NEXT:    retl
+;
+; X86-AVX1-LABEL: lrint_v8fp128:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    pushl %ebp
+; X86-AVX1-NEXT:    .cfi_def_cfa_offset 8
+; X86-AVX1-NEXT:    .cfi_offset %ebp, -8
+; X86-AVX1-NEXT:    movl %esp, %ebp
+; X86-AVX1-NEXT:    .cfi_def_cfa_register %ebp
+; X86-AVX1-NEXT:    pushl %ebx
+; X86-AVX1-NEXT:    pushl %edi
+; X86-AVX1-NEXT:    pushl %esi
+; X86-AVX1-NEXT:    andl $-16, %esp
+; X86-AVX1-NEXT:    subl $80, %esp
+; X86-AVX1-NEXT:    .cfi_offset %esi, -20
+; X86-AVX1-NEXT:    .cfi_offset %edi, -16
+; X86-AVX1-NEXT:    .cfi_offset %ebx, -12
+; X86-AVX1-NEXT:    vmovups 40(%ebp), %xmm0
+; X86-AVX1-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX1-NEXT:    calll lrintl
+; X86-AVX1-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-AVX1-NEXT:    vmovups 24(%ebp), %xmm0
+; X86-AVX1-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX1-NEXT:    calll lrintl
+; X86-AVX1-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-AVX1-NEXT:    vmovups 8(%ebp), %xmm0
+; X86-AVX1-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX1-NEXT:    calll lrintl
+; X86-AVX1-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-AVX1-NEXT:    vmovups 120(%ebp), %xmm0
+; X86-AVX1-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX1-NEXT:    calll lrintl
+; X86-AVX1-NEXT:    movl %eax, %esi
+; X86-AVX1-NEXT:    vmovups 104(%ebp), %xmm0
+; X86-AVX1-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX1-NEXT:    calll lrintl
+; X86-AVX1-NEXT:    movl %eax, %edi
+; X86-AVX1-NEXT:    vmovups 88(%ebp), %xmm0
+; X86-AVX1-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX1-NEXT:    calll lrintl
+; X86-AVX1-NEXT:    movl %eax, %ebx
+; X86-AVX1-NEXT:    vmovups 72(%ebp), %xmm0
+; X86-AVX1-NEXT:    vmovups %xmm0, (%esp)
+; X86-AVX1-NEXT:    calll lrintl
+; X86-AVX1-NEXT:    vmovd %eax, %xmm0
+; X86-AVX1-NEXT:    vpinsrd $1, %ebx, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpinsrd $2, %edi, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpinsrd $3, %esi, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-AVX1-NEXT:    vmovd {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; X86-AVX1-NEXT:    # xmm0 = mem[0],zero,zero,zero
+; X86-AVX1-NEXT:    vpinsrd $1, {{[-0-9]+}}(%e{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; X86-AVX1-NEXT:    vmovups 56(%ebp), %xmm1
+; X86-AVX1-NEXT:    vmovups %xmm1, (%esp)
+; X86-AVX1-NEXT:    vpinsrd $2, {{[-0-9]+}}(%e{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; X86-AVX1-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
+; X86-AVX1-NEXT:    calll lrintl
+; X86-AVX1-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
+; X86-AVX1-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X86-AVX1-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%e{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
+; X86-AVX1-NEXT:    leal -12(%ebp), %esp
+; X86-AVX1-NEXT:    popl %esi
+; X86-AVX1-NEXT:    popl %edi
+; X86-AVX1-NEXT:    popl %ebx
+; X86-AVX1-NEXT:    popl %ebp
+; X86-AVX1-NEXT:    .cfi_def_cfa %esp, 4
+; X86-AVX1-NEXT:    retl
+;
+; X64-AVX1-i32-LABEL: lrint_v8fp128:
+; X64-AVX1-i32:       # %bb.0:
+; X64-AVX1-i32-NEXT:    pushq %rbx
+; X64-AVX1-i32-NEXT:    .cfi_def_cfa_offset 16
+; X64-AVX1-i32-NEXT:    subq $112, %rsp
+; X64-AVX1-i32-NEXT:    .cfi_def_cfa_offset 128
+; X64-AVX1-i32-NEXT:    .cfi_offset %rbx, -16
+; X64-AVX1-i32-NEXT:    vmovaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps %xmm4, (%rsp) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps %xmm5, %xmm0
+; X64-AVX1-i32-NEXT:    callq lrintl@PLT
+; X64-AVX1-i32-NEXT:    movl %eax, %ebx
+; X64-AVX1-i32-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    callq lrintl@PLT
+; X64-AVX1-i32-NEXT:    vmovd %eax, %xmm0
+; X64-AVX1-i32-NEXT:    vpinsrd $1, %ebx, %xmm0, %xmm0
+; X64-AVX1-i32-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    callq lrintl@PLT
+; X64-AVX1-i32-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X64-AVX1-i32-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    callq lrintl@PLT
+; X64-AVX1-i32-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X64-AVX1-i32-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    callq lrintl@PLT
+; X64-AVX1-i32-NEXT:    movl %eax, %ebx
+; X64-AVX1-i32-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    callq lrintl@PLT
+; X64-AVX1-i32-NEXT:    vmovd %eax, %xmm0
+; X64-AVX1-i32-NEXT:    vpinsrd $1, %ebx, %xmm0, %xmm0
+; X64-AVX1-i32-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    callq lrintl@PLT
+; X64-AVX1-i32-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X64-AVX1-i32-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i32-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    callq lrintl@PLT
+; X64-AVX1-i32-NEXT:    vmovdqa {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i32-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X64-AVX1-i32-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
+; X64-AVX1-i32-NEXT:    addq $112, %rsp
+; X64-AVX1-i32-NEXT:    .cfi_def_cfa_offset 16
+; X64-AVX1-i32-NEXT:    popq %rbx
+; X64-AVX1-i32-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX1-i32-NEXT:    retq
+;
+; X64-AVX1-i64-LABEL: lrint_v8fp128:
+; X64-AVX1-i64:       # %bb.0:
+; X64-AVX1-i64-NEXT:    subq $152, %rsp
+; X64-AVX1-i64-NEXT:    .cfi_def_cfa_offset 160
+; X64-AVX1-i64-NEXT:    vmovaps %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm6, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm2, (%rsp) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps %xmm3, %xmm0
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; X64-AVX1-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; X64-AVX1-i64-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; X64-AVX1-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; X64-AVX1-i64-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; X64-AVX1-i64-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    vzeroupper
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; X64-AVX1-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; X64-AVX1-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-AVX1-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-AVX1-i64-NEXT:    callq lrintl@PLT
+; X64-AVX1-i64-NEXT:    vmovq %rax, %xmm0
+; X64-AVX1-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; X64-AVX1-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; X64-AVX1-i64-NEXT:    vinsertf128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm1 # 16-byte Folded Reload
+; X64-AVX1-i64-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; X64-AVX1-i64-NEXT:    addq $152, %rsp
+; X64-AVX1-i64-NEXT:    .cfi_def_cfa_offset 8
+; X64-AVX1-i64-NEXT:    retq
+;
+; AVX512-i64-LABEL: lrint_v8fp128:
+; AVX512-i64:       # %bb.0:
+; AVX512-i64-NEXT:    subq $152, %rsp
+; AVX512-i64-NEXT:    .cfi_def_cfa_offset 160
+; AVX512-i64-NEXT:    vmovaps %xmm6, (%rsp) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps %xmm7, %xmm0
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512-i64-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512-i64-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; AVX512-i64-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    vzeroupper
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512-i64-NEXT:    callq lrintl@PLT
+; AVX512-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512-i64-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
+; AVX512-i64-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
+; AVX512-i64-NEXT:    addq $152, %rsp
+; AVX512-i64-NEXT:    .cfi_def_cfa_offset 8
+; AVX512-i64-NEXT:    retq
+;
+; AVX512DQ-i64-LABEL: lrint_v8fp128:
+; AVX512DQ-i64:       # %bb.0:
+; AVX512DQ-i64-NEXT:    subq $152, %rsp
+; AVX512DQ-i64-NEXT:    .cfi_def_cfa_offset 160
+; AVX512DQ-i64-NEXT:    vmovaps %xmm6, (%rsp) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm5, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm4, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps %xmm7, %xmm0
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512DQ-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512DQ-i64-NEXT:    vmovdqa %xmm0, (%rsp) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512DQ-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512DQ-i64-NEXT:    vinserti128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
+; AVX512DQ-i64-NEXT:    vmovdqu %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    vzeroupper
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512DQ-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512DQ-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vmovdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; AVX512DQ-i64-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; AVX512DQ-i64-NEXT:    callq lrintl@PLT
+; AVX512DQ-i64-NEXT:    vmovq %rax, %xmm0
+; AVX512DQ-i64-NEXT:    vpunpcklqdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
+; AVX512DQ-i64-NEXT:    # xmm0 = xmm0[0],mem[0]
+; AVX512DQ-i64-NEXT:    vinserti128 $1, {{[-0-9]+}}(%r{{[sb]}}p), %ymm0, %ymm0 # 16-byte Folded Reload
+; AVX512DQ-i64-NEXT:    vinserti64x4 $1, {{[-0-9]+}}(%r{{[sb]}}p), %zmm0, %zmm0 # 32-byte Folded Reload
+; AVX512DQ-i64-NEXT:    addq $152, %rsp
+; AVX512DQ-i64-NEXT:    .cfi_def_cfa_offset 8
+; AVX512DQ-i64-NEXT:    retq
+  %a = call <8 x iXLen> @llvm.lrint.v8iXLen.v8fp128(<8 x fp128> %x)
+  ret <8 x iXLen> %a
+}
+declare <8 x iXLen> @llvm.lrint.v8iXLen.v8fp128(<8 x fp128>)

@@ -4836,3 +4836,599 @@ define <8 x i64> @llrint_v8i64_v8f64(<8 x double> %x) {
   ret <8 x i64> %a
 }
 declare <8 x i64> @llvm.llrint.v8i64.v8f64(<8 x double>)
+
+define <1 x i64> @llrint_v1i64_v1f128(<1 x fp128> %x) {
+; BE-LABEL: llrint_v1i64_v1f128:
+; BE:       # %bb.0:
+; BE-NEXT:    mflr r0
+; BE-NEXT:    stdu r1, -112(r1)
+; BE-NEXT:    std r0, 128(r1)
+; BE-NEXT:    .cfi_def_cfa_offset 112
+; BE-NEXT:    .cfi_offset lr, 16
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    addi r1, r1, 112
+; BE-NEXT:    ld r0, 16(r1)
+; BE-NEXT:    mtlr r0
+; BE-NEXT:    blr
+;
+; CHECK-LABEL: llrint_v1i64_v1f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -32(r1)
+; CHECK-NEXT:    std r0, 48(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    addi r1, r1, 32
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; FAST-LABEL: llrint_v1i64_v1f128:
+; FAST:       # %bb.0:
+; FAST-NEXT:    mflr r0
+; FAST-NEXT:    stdu r1, -32(r1)
+; FAST-NEXT:    std r0, 48(r1)
+; FAST-NEXT:    .cfi_def_cfa_offset 32
+; FAST-NEXT:    .cfi_offset lr, 16
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    addi r1, r1, 32
+; FAST-NEXT:    ld r0, 16(r1)
+; FAST-NEXT:    mtlr r0
+; FAST-NEXT:    blr
+  %a = call <1 x i64> @llvm.llrint.v1i64.v1f128(<1 x fp128> %x)
+  ret <1 x i64> %a
+}
+declare <1 x i64> @llvm.llrint.v1i64.v1f128(<1 x fp128>)
+
+define <2 x i64> @llrint_v2i64_v2f128(<2 x fp128> %x) {
+; BE-LABEL: llrint_v2i64_v2f128:
+; BE:       # %bb.0:
+; BE-NEXT:    mflr r0
+; BE-NEXT:    stdu r1, -160(r1)
+; BE-NEXT:    std r0, 176(r1)
+; BE-NEXT:    .cfi_def_cfa_offset 160
+; BE-NEXT:    .cfi_offset lr, 16
+; BE-NEXT:    .cfi_offset v31, -16
+; BE-NEXT:    li r3, 144
+; BE-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    vmr v31, v2
+; BE-NEXT:    vmr v2, v3
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v31
+; BE-NEXT:    std r3, 136(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    std r3, 128(r1)
+; BE-NEXT:    addi r3, r1, 128
+; BE-NEXT:    lxvd2x v2, 0, r3
+; BE-NEXT:    li r3, 144
+; BE-NEXT:    lxvd2x v31, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    addi r1, r1, 160
+; BE-NEXT:    ld r0, 16(r1)
+; BE-NEXT:    mtlr r0
+; BE-NEXT:    blr
+;
+; CHECK-LABEL: llrint_v2i64_v2f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -80(r1)
+; CHECK-NEXT:    std r0, 96(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset v30, -32
+; CHECK-NEXT:    .cfi_offset v31, -16
+; CHECK-NEXT:    li r3, 48
+; CHECK-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 64
+; CHECK-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    vmr v31, v3
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    vmr v2, v31
+; CHECK-NEXT:    mtvsrd v30, r3
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    li r3, 64
+; CHECK-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 48
+; CHECK-NEXT:    xxmrghd v2, vs0, v30
+; CHECK-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    addi r1, r1, 80
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; FAST-LABEL: llrint_v2i64_v2f128:
+; FAST:       # %bb.0:
+; FAST-NEXT:    mflr r0
+; FAST-NEXT:    stdu r1, -80(r1)
+; FAST-NEXT:    std r0, 96(r1)
+; FAST-NEXT:    .cfi_def_cfa_offset 80
+; FAST-NEXT:    .cfi_offset lr, 16
+; FAST-NEXT:    .cfi_offset v30, -32
+; FAST-NEXT:    .cfi_offset v31, -16
+; FAST-NEXT:    li r3, 48
+; FAST-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 64
+; FAST-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    vmr v31, v3
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    vmr v2, v31
+; FAST-NEXT:    mtvsrd v30, r3
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    mtfprd f0, r3
+; FAST-NEXT:    li r3, 64
+; FAST-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 48
+; FAST-NEXT:    xxmrghd v2, vs0, v30
+; FAST-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    addi r1, r1, 80
+; FAST-NEXT:    ld r0, 16(r1)
+; FAST-NEXT:    mtlr r0
+; FAST-NEXT:    blr
+  %a = call <2 x i64> @llvm.llrint.v2i64.v2f128(<2 x fp128> %x)
+  ret <2 x i64> %a
+}
+declare <2 x i64> @llvm.llrint.v2i64.v2f128(<2 x fp128>)
+
+define <4 x i64> @llrint_v4i64_v4f128(<4 x fp128> %x) {
+; BE-LABEL: llrint_v4i64_v4f128:
+; BE:       # %bb.0:
+; BE-NEXT:    mflr r0
+; BE-NEXT:    stdu r1, -208(r1)
+; BE-NEXT:    std r0, 224(r1)
+; BE-NEXT:    .cfi_def_cfa_offset 208
+; BE-NEXT:    .cfi_offset lr, 16
+; BE-NEXT:    .cfi_offset v29, -48
+; BE-NEXT:    .cfi_offset v30, -32
+; BE-NEXT:    .cfi_offset v31, -16
+; BE-NEXT:    li r3, 160
+; BE-NEXT:    stxvd2x v29, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    li r3, 176
+; BE-NEXT:    vmr v29, v2
+; BE-NEXT:    vmr v2, v3
+; BE-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    li r3, 192
+; BE-NEXT:    vmr v30, v4
+; BE-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    vmr v31, v5
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v29
+; BE-NEXT:    std r3, 136(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v31
+; BE-NEXT:    std r3, 128(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v30
+; BE-NEXT:    std r3, 152(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    std r3, 144(r1)
+; BE-NEXT:    addi r3, r1, 128
+; BE-NEXT:    lxvd2x v2, 0, r3
+; BE-NEXT:    addi r3, r1, 144
+; BE-NEXT:    lxvd2x v3, 0, r3
+; BE-NEXT:    li r3, 192
+; BE-NEXT:    lxvd2x v31, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    li r3, 176
+; BE-NEXT:    lxvd2x v30, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    li r3, 160
+; BE-NEXT:    lxvd2x v29, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    addi r1, r1, 208
+; BE-NEXT:    ld r0, 16(r1)
+; BE-NEXT:    mtlr r0
+; BE-NEXT:    blr
+;
+; CHECK-LABEL: llrint_v4i64_v4f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -112(r1)
+; CHECK-NEXT:    std r0, 128(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 112
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset v28, -64
+; CHECK-NEXT:    .cfi_offset v29, -48
+; CHECK-NEXT:    .cfi_offset v30, -32
+; CHECK-NEXT:    .cfi_offset v31, -16
+; CHECK-NEXT:    li r3, 48
+; CHECK-NEXT:    stvx v28, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 64
+; CHECK-NEXT:    stvx v29, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 80
+; CHECK-NEXT:    vmr v29, v3
+; CHECK-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 96
+; CHECK-NEXT:    vmr v30, v4
+; CHECK-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    vmr v31, v5
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    vmr v2, v29
+; CHECK-NEXT:    mtvsrd v28, r3
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    vmr v2, v30
+; CHECK-NEXT:    xxmrghd v29, vs0, v28
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    vmr v2, v31
+; CHECK-NEXT:    mtvsrd v30, r3
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    li r3, 96
+; CHECK-NEXT:    vmr v2, v29
+; CHECK-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 80
+; CHECK-NEXT:    xxmrghd v3, vs0, v30
+; CHECK-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 64
+; CHECK-NEXT:    lvx v29, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 48
+; CHECK-NEXT:    lvx v28, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    addi r1, r1, 112
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; FAST-LABEL: llrint_v4i64_v4f128:
+; FAST:       # %bb.0:
+; FAST-NEXT:    mflr r0
+; FAST-NEXT:    stdu r1, -112(r1)
+; FAST-NEXT:    std r0, 128(r1)
+; FAST-NEXT:    .cfi_def_cfa_offset 112
+; FAST-NEXT:    .cfi_offset lr, 16
+; FAST-NEXT:    .cfi_offset v28, -64
+; FAST-NEXT:    .cfi_offset v29, -48
+; FAST-NEXT:    .cfi_offset v30, -32
+; FAST-NEXT:    .cfi_offset v31, -16
+; FAST-NEXT:    li r3, 48
+; FAST-NEXT:    stvx v28, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 64
+; FAST-NEXT:    stvx v29, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 80
+; FAST-NEXT:    vmr v29, v3
+; FAST-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 96
+; FAST-NEXT:    vmr v30, v4
+; FAST-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    vmr v31, v5
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    vmr v2, v29
+; FAST-NEXT:    mtvsrd v28, r3
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    mtfprd f0, r3
+; FAST-NEXT:    vmr v2, v30
+; FAST-NEXT:    xxmrghd v29, vs0, v28
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    vmr v2, v31
+; FAST-NEXT:    mtvsrd v30, r3
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    mtfprd f0, r3
+; FAST-NEXT:    li r3, 96
+; FAST-NEXT:    vmr v2, v29
+; FAST-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 80
+; FAST-NEXT:    xxmrghd v3, vs0, v30
+; FAST-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 64
+; FAST-NEXT:    lvx v29, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 48
+; FAST-NEXT:    lvx v28, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    addi r1, r1, 112
+; FAST-NEXT:    ld r0, 16(r1)
+; FAST-NEXT:    mtlr r0
+; FAST-NEXT:    blr
+  %a = call <4 x i64> @llvm.llrint.v4i64.v4f128(<4 x fp128> %x)
+  ret <4 x i64> %a
+}
+declare <4 x i64> @llvm.llrint.v4i64.v4f128(<4 x fp128>)
+
+define <8 x i64> @llrint_v8i64_v8f128(<8 x fp128> %x) {
+; BE-LABEL: llrint_v8i64_v8f128:
+; BE:       # %bb.0:
+; BE-NEXT:    mflr r0
+; BE-NEXT:    stdu r1, -304(r1)
+; BE-NEXT:    std r0, 320(r1)
+; BE-NEXT:    .cfi_def_cfa_offset 304
+; BE-NEXT:    .cfi_offset lr, 16
+; BE-NEXT:    .cfi_offset v25, -112
+; BE-NEXT:    .cfi_offset v26, -96
+; BE-NEXT:    .cfi_offset v27, -80
+; BE-NEXT:    .cfi_offset v28, -64
+; BE-NEXT:    .cfi_offset v29, -48
+; BE-NEXT:    .cfi_offset v30, -32
+; BE-NEXT:    .cfi_offset v31, -16
+; BE-NEXT:    li r3, 192
+; BE-NEXT:    stxvd2x v25, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    li r3, 208
+; BE-NEXT:    vmr v25, v2
+; BE-NEXT:    vmr v2, v3
+; BE-NEXT:    stxvd2x v26, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    li r3, 224
+; BE-NEXT:    vmr v26, v4
+; BE-NEXT:    stxvd2x v27, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    li r3, 240
+; BE-NEXT:    vmr v27, v5
+; BE-NEXT:    stxvd2x v28, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    li r3, 256
+; BE-NEXT:    vmr v28, v6
+; BE-NEXT:    stxvd2x v29, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    li r3, 272
+; BE-NEXT:    vmr v29, v7
+; BE-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    li r3, 288
+; BE-NEXT:    vmr v30, v8
+; BE-NEXT:    stxvd2x v31, r1, r3 # 16-byte Folded Spill
+; BE-NEXT:    vmr v31, v9
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v25
+; BE-NEXT:    std r3, 136(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v27
+; BE-NEXT:    std r3, 128(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v26
+; BE-NEXT:    std r3, 152(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v29
+; BE-NEXT:    std r3, 144(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v28
+; BE-NEXT:    std r3, 168(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v31
+; BE-NEXT:    std r3, 160(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    vmr v2, v30
+; BE-NEXT:    std r3, 184(r1)
+; BE-NEXT:    bl llrintf128
+; BE-NEXT:    nop
+; BE-NEXT:    std r3, 176(r1)
+; BE-NEXT:    addi r3, r1, 128
+; BE-NEXT:    lxvd2x v2, 0, r3
+; BE-NEXT:    addi r3, r1, 144
+; BE-NEXT:    lxvd2x v3, 0, r3
+; BE-NEXT:    addi r3, r1, 160
+; BE-NEXT:    lxvd2x v4, 0, r3
+; BE-NEXT:    addi r3, r1, 176
+; BE-NEXT:    lxvd2x v5, 0, r3
+; BE-NEXT:    li r3, 288
+; BE-NEXT:    lxvd2x v31, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    li r3, 272
+; BE-NEXT:    lxvd2x v30, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    li r3, 256
+; BE-NEXT:    lxvd2x v29, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    li r3, 240
+; BE-NEXT:    lxvd2x v28, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    li r3, 224
+; BE-NEXT:    lxvd2x v27, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    li r3, 208
+; BE-NEXT:    lxvd2x v26, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    li r3, 192
+; BE-NEXT:    lxvd2x v25, r1, r3 # 16-byte Folded Reload
+; BE-NEXT:    addi r1, r1, 304
+; BE-NEXT:    ld r0, 16(r1)
+; BE-NEXT:    mtlr r0
+; BE-NEXT:    blr
+;
+; CHECK-LABEL: llrint_v8i64_v8f128:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -176(r1)
+; CHECK-NEXT:    std r0, 192(r1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 176
+; CHECK-NEXT:    .cfi_offset lr, 16
+; CHECK-NEXT:    .cfi_offset v24, -128
+; CHECK-NEXT:    .cfi_offset v25, -112
+; CHECK-NEXT:    .cfi_offset v26, -96
+; CHECK-NEXT:    .cfi_offset v27, -80
+; CHECK-NEXT:    .cfi_offset v28, -64
+; CHECK-NEXT:    .cfi_offset v29, -48
+; CHECK-NEXT:    .cfi_offset v30, -32
+; CHECK-NEXT:    .cfi_offset v31, -16
+; CHECK-NEXT:    li r3, 48
+; CHECK-NEXT:    stvx v24, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 64
+; CHECK-NEXT:    stvx v25, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 80
+; CHECK-NEXT:    vmr v25, v3
+; CHECK-NEXT:    stvx v26, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 96
+; CHECK-NEXT:    vmr v26, v4
+; CHECK-NEXT:    stvx v27, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 112
+; CHECK-NEXT:    vmr v27, v5
+; CHECK-NEXT:    stvx v28, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 128
+; CHECK-NEXT:    vmr v28, v6
+; CHECK-NEXT:    stvx v29, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 144
+; CHECK-NEXT:    vmr v29, v7
+; CHECK-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    li r3, 160
+; CHECK-NEXT:    vmr v30, v8
+; CHECK-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; CHECK-NEXT:    vmr v31, v9
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    vmr v2, v25
+; CHECK-NEXT:    mtvsrd v24, r3
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    vmr v2, v26
+; CHECK-NEXT:    xxmrghd v25, vs0, v24
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    vmr v2, v27
+; CHECK-NEXT:    mtvsrd v26, r3
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    vmr v2, v28
+; CHECK-NEXT:    xxmrghd v27, vs0, v26
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    vmr v2, v29
+; CHECK-NEXT:    mtvsrd v28, r3
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    vmr v2, v30
+; CHECK-NEXT:    xxmrghd v29, vs0, v28
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    vmr v2, v31
+; CHECK-NEXT:    mtvsrd v30, r3
+; CHECK-NEXT:    bl llrintf128
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    mtfprd f0, r3
+; CHECK-NEXT:    li r3, 160
+; CHECK-NEXT:    vmr v4, v29
+; CHECK-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 144
+; CHECK-NEXT:    vmr v3, v27
+; CHECK-NEXT:    vmr v2, v25
+; CHECK-NEXT:    xxmrghd v5, vs0, v30
+; CHECK-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 128
+; CHECK-NEXT:    lvx v29, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 112
+; CHECK-NEXT:    lvx v28, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 96
+; CHECK-NEXT:    lvx v27, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 80
+; CHECK-NEXT:    lvx v26, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 64
+; CHECK-NEXT:    lvx v25, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    li r3, 48
+; CHECK-NEXT:    lvx v24, r1, r3 # 16-byte Folded Reload
+; CHECK-NEXT:    addi r1, r1, 176
+; CHECK-NEXT:    ld r0, 16(r1)
+; CHECK-NEXT:    mtlr r0
+; CHECK-NEXT:    blr
+;
+; FAST-LABEL: llrint_v8i64_v8f128:
+; FAST:       # %bb.0:
+; FAST-NEXT:    mflr r0
+; FAST-NEXT:    stdu r1, -176(r1)
+; FAST-NEXT:    std r0, 192(r1)
+; FAST-NEXT:    .cfi_def_cfa_offset 176
+; FAST-NEXT:    .cfi_offset lr, 16
+; FAST-NEXT:    .cfi_offset v24, -128
+; FAST-NEXT:    .cfi_offset v25, -112
+; FAST-NEXT:    .cfi_offset v26, -96
+; FAST-NEXT:    .cfi_offset v27, -80
+; FAST-NEXT:    .cfi_offset v28, -64
+; FAST-NEXT:    .cfi_offset v29, -48
+; FAST-NEXT:    .cfi_offset v30, -32
+; FAST-NEXT:    .cfi_offset v31, -16
+; FAST-NEXT:    li r3, 48
+; FAST-NEXT:    stvx v24, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 64
+; FAST-NEXT:    stvx v25, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 80
+; FAST-NEXT:    vmr v25, v3
+; FAST-NEXT:    stvx v26, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 96
+; FAST-NEXT:    vmr v26, v4
+; FAST-NEXT:    stvx v27, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 112
+; FAST-NEXT:    vmr v27, v5
+; FAST-NEXT:    stvx v28, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 128
+; FAST-NEXT:    vmr v28, v6
+; FAST-NEXT:    stvx v29, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 144
+; FAST-NEXT:    vmr v29, v7
+; FAST-NEXT:    stvx v30, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    li r3, 160
+; FAST-NEXT:    vmr v30, v8
+; FAST-NEXT:    stvx v31, r1, r3 # 16-byte Folded Spill
+; FAST-NEXT:    vmr v31, v9
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    vmr v2, v25
+; FAST-NEXT:    mtvsrd v24, r3
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    mtfprd f0, r3
+; FAST-NEXT:    vmr v2, v26
+; FAST-NEXT:    xxmrghd v25, vs0, v24
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    vmr v2, v27
+; FAST-NEXT:    mtvsrd v26, r3
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    mtfprd f0, r3
+; FAST-NEXT:    vmr v2, v28
+; FAST-NEXT:    xxmrghd v27, vs0, v26
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    vmr v2, v29
+; FAST-NEXT:    mtvsrd v28, r3
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    mtfprd f0, r3
+; FAST-NEXT:    vmr v2, v30
+; FAST-NEXT:    xxmrghd v29, vs0, v28
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    vmr v2, v31
+; FAST-NEXT:    mtvsrd v30, r3
+; FAST-NEXT:    bl llrintf128
+; FAST-NEXT:    nop
+; FAST-NEXT:    mtfprd f0, r3
+; FAST-NEXT:    li r3, 160
+; FAST-NEXT:    vmr v4, v29
+; FAST-NEXT:    lvx v31, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 144
+; FAST-NEXT:    vmr v3, v27
+; FAST-NEXT:    vmr v2, v25
+; FAST-NEXT:    xxmrghd v5, vs0, v30
+; FAST-NEXT:    lvx v30, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 128
+; FAST-NEXT:    lvx v29, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 112
+; FAST-NEXT:    lvx v28, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 96
+; FAST-NEXT:    lvx v27, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 80
+; FAST-NEXT:    lvx v26, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 64
+; FAST-NEXT:    lvx v25, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    li r3, 48
+; FAST-NEXT:    lvx v24, r1, r3 # 16-byte Folded Reload
+; FAST-NEXT:    addi r1, r1, 176
+; FAST-NEXT:    ld r0, 16(r1)
+; FAST-NEXT:    mtlr r0
+; FAST-NEXT:    blr
+  %a = call <8 x i64> @llvm.llrint.v8i64.v8f128(<8 x fp128> %x)
+  ret <8 x i64> %a
+}
+declare <8 x i64> @llvm.llrint.v8i64.v8f128(<8 x fp128>)
