@@ -329,11 +329,11 @@ def WasmSSA_IfOp : WasmSSA_Op<"if", [Terminator,
 
      ```mlir
      // Runs the if clause is %a is non-zero
-     "wasmssa.if"(%a)[^bb1] ({
+     wasmssa.if %a {
         // Execute if %a is non-zero
-     },{
+     } else {
         // else clause
-     }) : (i32) -> ()
+     }
      ```
     }];
   let arguments = (ins I32:$condition, Variadic<WasmSSA_ValType>: $inputs);
@@ -359,6 +359,7 @@ def WasmSSA_IfOp : WasmSSA_Op<"if", [Terminator,
       return createBlock(getElse());
     }
   }];
+  let assemblyFormat = "$condition (`(`$inputs^`)` `:` type($inputs))? attr-dict  `:` $if custom<ElseRegion>($else) `>` $target";
 }
 
 def WasmSSA_LocalOp : WasmSSA_Op<"local", [
@@ -445,7 +446,7 @@ def WasmSSA_MemOp : WasmSSA_Op<"memory", [Symbol]> {
 
      ```mlir
      // Define the `mem_0` memory with defined bounds of 0 -> 65536
-     "wasmssa.memory"() <{limits = !wasmssa<limit[0:65536]>, sym_name = "mem_0"}> : () -> ()
+     wasmssa.memory @mem_0 !wasmssa<limit[0:65536]>
      ```
     }];
   let arguments = (ins SymbolNameAttr: $sym_name,
@@ -456,6 +457,8 @@ def WasmSSA_MemOp : WasmSSA_Op<"memory", [Symbol]> {
     "::llvm::StringRef":$symbol,
     "wasmssa::LimitType":$limit)>
   ];
+
+  let assemblyFormat = "$sym_name custom<WasmVisibility>($sym_visibility) $limits attr-dict";
 }
 
 def WasmSSA_MemImportOp : WasmSSA_Op<"import_mem", [Symbol, ImportOpInterface]> {
@@ -494,6 +497,7 @@ def WasmSSA_TableOp : WasmSSA_Op<"table", [Symbol]> {
   let builders = [OpBuilder<(ins
       "::llvm::StringRef":$symbol,
       "wasmssa::TableType":$type)>];
+  let assemblyFormat = "$sym_name custom<WasmVisibility>($sym_visibility) $type attr-dict";
 }
 
 def WasmSSA_TableImportOp : WasmSSA_Op<"import_table", [Symbol, ImportOpInterface]> {
