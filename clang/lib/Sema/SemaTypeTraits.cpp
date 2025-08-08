@@ -235,16 +235,16 @@ static bool IsEligibleForReplacement(Sema &SemaRef, const CXXRecordDecl *D) {
 
 static bool IsImplementationDefinedNonRelocatable(Sema &SemaRef,
                                                   const CXXRecordDecl *D) {
-  // FIXME: Should also check for polymorphic union members here if PAuth ABI is
-  // enabled.
+  // The implementation-defined carveout only exists for polymorphic types.
+  if (!D->isPolymorphic())
+    return false;
 
-  // FIXME: PFP should not affect trivial relocatability except in cases where a
-  // PFP field is a member of a union, instead it should affect the
-  // implementation of std::trivially_relocate. See:
-  // https://discourse.llvm.org/t/rfc-structure-protection-a-family-of-uaf-mitigation-techniques/85555/16?u=pcc
-  if (!SemaRef.Context.arePFPFieldsTriviallyRelocatable(D) &&
-      SemaRef.Context.hasPFPFields(QualType(D->getTypeForDecl(), 0)))
-    return true;
+  std::vector<PFPField> pfpFields;
+  SemaRef.Context.findPFPFields(QualType(D->getTypeForDecl(), 0),
+                                CharUnits::Zero(), pfpFields, true);
+  for (PFPField f : pfpFields)
+    if (f.isWithinUnion)
+      return true;
 
   return false;
 }

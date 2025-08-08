@@ -186,6 +186,7 @@ struct TypeInfoChars {
 struct PFPField {
   CharUnits offset;
   FieldDecl *field;
+  bool isWithinUnion;
 };
 
 /// Holds long-lived AST nodes (such as types and decls) that can be
@@ -3727,7 +3728,8 @@ public:
 
   bool isPFPStruct(const RecordDecl *rec) const;
   void findPFPFields(QualType Ty, CharUnits Offset,
-                     std::vector<PFPField> &Fields, bool IncludeVBases) const;
+                     std::vector<PFPField> &Fields, bool IncludeVBases,
+                     bool IsWithinUnion = false) const;
   bool hasPFPFields(QualType ty) const;
   bool isPFPField(const FieldDecl *field) const;
 
