@@ -27,8 +27,7 @@ class TestReports(unittest.TestCase):
                     "[2/5] test/2.stamp",
                     "[3/5] test/3.stamp",
                     "[4/5] test/4.stamp",
-                    "FAILED: test/4.stamp",
-                    "touch test/4.stamp",
+                    "FAILED: touch test/4.stamp",
                     "Wow! This system is really broken!",
                     "[5/5] test/5.stamp",
                 ],
@@ -41,8 +40,7 @@ class TestReports(unittest.TestCase):
                 "test/4.stamp",
                 dedent(
                     """\
-                    FAILED: test/4.stamp
-                    touch test/4.stamp
+                    FAILED: touch test/4.stamp
                     Wow! This system is really broken!"""
                 ),
             ),

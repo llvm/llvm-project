@@ -27,14 +27,16 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
             # We hit the end of the log without finding a build failure, go to
             # the next log.
             return failures
+        # index will point to the line that starts with Failed:. The progress
+        # indicator is the line before this and contains a pretty printed version
+        # of the target being built. We use this and remove the progress information
+        # to get a succinct name for the target.
         failing_action = ninja_log[index - 1].split("] ")[1]
         failure_log = []
         while (
             index < len(ninja_log)
             and not ninja_log[index].startswith("[")
-            and not ninja_log[index].startswith(
-                "ninja: build stopped: subcommand failed"
-            )
+            and not ninja_log[index].startswith("ninja: build stopped:")
             and len(failure_log) < NINJA_LOG_SIZE_THRESHOLD
         ):
             failure_log.append(ninja_log[index])
@@ -46,7 +48,7 @@ def _parse_ninja_log(ninja_log: list[str]) -> list[tuple[str, str]]:
 def find_failure_in_ninja_logs(ninja_logs: list[list[str]]) -> list[tuple[str, str]]:
     """Extracts failure messages from ninja output.
 
-    This patch takes stdout/stderr from ninja in the form of a list of files
+    This function takes stdout/stderr from ninja in the form of a list of files
     represented as a list of lines. This function then returns tuples containing
     the name of the target and the error message.
 
