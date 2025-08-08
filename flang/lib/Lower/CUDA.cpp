@@ -155,3 +155,12 @@ cuf::DataAttributeAttr Fortran::lower::translateSymbolCUFDataAttribute(
       Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
   return cuf::getDataAttribute(mlirContext, cudaAttr);
 }
+
+bool Fortran::lower::isTransferWithConversion(mlir::Value rhs) {
+  if (auto elOp = mlir::dyn_cast<hlfir::ElementalOp>(rhs.getDefiningOp()))
+    if (llvm::hasSingleElement(elOp.getBody()->getOps<hlfir::DesignateOp>()) &&
+        llvm::hasSingleElement(elOp.getBody()->getOps<fir::LoadOp>()) == 1 &&
+        llvm::hasSingleElement(elOp.getBody()->getOps<fir::ConvertOp>()) == 1)
+      return true;
+  return false;
+}
