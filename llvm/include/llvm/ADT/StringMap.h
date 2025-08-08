@@ -89,6 +89,10 @@ protected:
   /// setup the map as empty.
   LLVM_ABI void init(unsigned Size);
 
+  iterator_range<StringMapEntryBase **> buckets() {
+    return make_range(TheTable, TheTable + NumBuckets);
+  }
+
 public:
   static constexpr uintptr_t TombstoneIntVal =
       static_cast<uintptr_t>(-1)
@@ -198,8 +202,7 @@ public:
     // to default values.  This is a copy of clear(), but avoids unnecessary
     // work not required in the destructor.
     if (!empty()) {
-      for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
-        StringMapEntryBase *Bucket = TheTable[I];
+      for (StringMapEntryBase *Bucket : buckets()) {
         if (Bucket && Bucket != getTombstoneVal()) {
           static_cast<MapEntryTy *>(Bucket)->Destroy(getAllocator());
         }
@@ -398,8 +401,7 @@ public:
 
     // Zap all values, resetting the keys back to non-present (not tombstone),
     // which is safe because we're removing all elements.
-    for (unsigned I = 0, E = NumBuckets; I != E; ++I) {
-      StringMapEntryBase *&Bucket = TheTable[I];
+    for (StringMapEntryBase *&Bucket : buckets()) {
       if (Bucket && Bucket != getTombstoneVal()) {
         static_cast<MapEntryTy *>(Bucket)->Destroy(getAllocator());
       }
