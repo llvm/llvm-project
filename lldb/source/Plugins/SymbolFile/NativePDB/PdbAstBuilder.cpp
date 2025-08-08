@@ -89,8 +89,7 @@ struct CreateMethodDecl : public TypeVisitorCallbacks {
     bool is_artificial = (options & MethodOptions::CompilerGenerated) ==
                          MethodOptions::CompilerGenerated;
     function_decl = m_clang.AddMethodToCXXRecordType(
-        parent_ty, proc_name,
-        mangled_name, func_ct, /*access=*/access_type,
+        parent_ty, proc_name, mangled_name, func_ct, /*access=*/access_type,
         /*is_virtual=*/is_virtual, /*is_static=*/is_static,
         /*is_inline=*/false, /*is_explicit=*/false,
         /*is_attr_used=*/false, /*is_artificial=*/is_artificial);
@@ -912,8 +911,7 @@ PdbAstBuilder::CreateFunctionDecl(PdbCompilandSymId func_id,
 
     if (!function_decl) {
       function_decl = m_clang.AddMethodToCXXRecordType(
-          parent_opaque_ty, func_name,
-          mangled_name, func_ct,
+          parent_opaque_ty, func_name, mangled_name, func_ct,
           /*access=*/lldb::AccessType::eAccessPublic,
           /*is_virtual=*/false, /*is_static=*/false,
           /*is_inline=*/false, /*is_explicit=*/false,
