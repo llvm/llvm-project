@@ -232,3 +232,22 @@ end subroutine
 ! CHECK:   cf.br ^[[HEADER]]
 ! CHECK: ^[[EXIT]]:
 ! CHECK:   return
+
+subroutine unstructured_do_concurrent
+  logical :: success
+  do concurrent (i=1:10) local(success)
+    error stop "fail"
+  enddo
+end
+! CHECK-LABEL: func.func @_QPunstructured_do_concurrent
+! CHECK:         %[[ITER_VAR:.*]] = fir.alloca i32
+
+! CHECK:       ^[[HEADER]]:
+! CHECK:         %{{.*}} = fir.load %[[ITER_VAR]] : !fir.ref<i32>
+! CHECK:         cf.cond_br %{{.*}}, ^[[BODY:.*]], ^[[EXIT:.*]]
+
+! CHECK:       ^[[BODY]]:
+! CHECK-NEXT:    %{{.*}} = fir.alloca !fir.logical<4> {bindc_name = "success", {{.*}}}
+
+! CHECK:       ^[[EXIT]]:
+! CHECK-NEXT:    return
