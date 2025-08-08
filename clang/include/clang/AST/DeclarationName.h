@@ -682,6 +682,11 @@ public:
   DeclarationName getCXXLiteralOperatorName(const IdentifierInfo *II);
 };
 
+struct CXXOperatorSourceInfo {
+  SourceLocation BeginOpNameLoc;
+  SourceLocation EndOpNameLoc;
+};
+
 /// DeclarationNameLoc - Additional source/type location info
 /// for a declaration name. Needs a DeclarationName in order
 /// to be interpreted correctly.
@@ -698,8 +703,7 @@ class DeclarationNameLoc {
 
   // The location (if any) of the operator keyword is stored elsewhere.
   struct CXXOpName {
-    SourceLocation BeginOpNameLoc;
-    SourceLocation EndOpNameLoc;
+    CXXOperatorSourceInfo *OInfo;
   };
 
   // The location (if any) of the operator keyword is stored elsewhere.
@@ -719,11 +723,6 @@ class DeclarationNameLoc {
 
   void setNamedTypeLoc(TypeSourceInfo *TInfo) { NamedType.TInfo = TInfo; }
 
-  void setCXXOperatorNameRange(SourceRange Range) {
-    CXXOperatorName.BeginOpNameLoc = Range.getBegin();
-    CXXOperatorName.EndOpNameLoc = Range.getEnd();
-  }
-
   void setCXXLiteralOperatorNameLoc(SourceLocation Loc) {
     CXXLiteralOperatorName.OpNameLoc = Loc;
   }
@@ -739,12 +738,16 @@ public:
 
   /// Return the beginning location of the getCXXOperatorNameRange() range.
   SourceLocation getCXXOperatorNameBeginLoc() const {
-    return CXXOperatorName.BeginOpNameLoc;
+    if (!CXXOperatorName.OInfo)
+      return {};
+    return CXXOperatorName.OInfo->BeginOpNameLoc;
   }
 
   /// Return the end location of the getCXXOperatorNameRange() range.
   SourceLocation getCXXOperatorNameEndLoc() const {
-    return CXXOperatorName.EndOpNameLoc;
+    if (!CXXOperatorName.OInfo)
+      return {};
+    return CXXOperatorName.OInfo->EndOpNameLoc;
   }
 
   /// Return the range of the operator name (without the operator keyword).
@@ -771,15 +774,10 @@ public:
   }
 
   /// Construct location information for a non-literal C++ operator.
-  static DeclarationNameLoc makeCXXOperatorNameLoc(SourceLocation BeginLoc,
-                                                   SourceLocation EndLoc) {
-    return makeCXXOperatorNameLoc(SourceRange(BeginLoc, EndLoc));
-  }
-
-  /// Construct location information for a non-literal C++ operator.
-  static DeclarationNameLoc makeCXXOperatorNameLoc(SourceRange Range) {
+  static DeclarationNameLoc
+  makeCXXOperatorNameLoc(CXXOperatorSourceInfo *OInfo) {
     DeclarationNameLoc DNL;
-    DNL.setCXXOperatorNameRange(Range);
+    DNL.CXXOperatorName.OInfo = OInfo;
     return DNL;
   }
 
@@ -849,19 +847,19 @@ public:
     LocInfo = DeclarationNameLoc::makeNamedTypeLoc(TInfo);
   }
 
+  /// Sets the range of the operator name (without the operator keyword).
+  /// Assumes it is a C++ operator.
+  void setCXXOperatorNameInfo(CXXOperatorSourceInfo *OInfo) {
+    assert(Name.getNameKind() == DeclarationName::CXXOperatorName);
+    LocInfo = DeclarationNameLoc::makeCXXOperatorNameLoc(OInfo);
+  }
+
   /// getCXXOperatorNameRange - Gets the range of the operator name
   /// (without the operator keyword). Assumes it is a (non-literal) operator.
   SourceRange getCXXOperatorNameRange() const {
     if (Name.getNameKind() != DeclarationName::CXXOperatorName)
       return SourceRange();
     return LocInfo.getCXXOperatorNameRange();
-  }
-
-  /// setCXXOperatorNameRange - Sets the range of the operator name
-  /// (without the operator keyword). Assumes it is a C++ operator.
-  void setCXXOperatorNameRange(SourceRange R) {
-    assert(Name.getNameKind() == DeclarationName::CXXOperatorName);
-    LocInfo = DeclarationNameLoc::makeCXXOperatorNameLoc(R);
   }
 
   /// getCXXLiteralOperatorNameLoc - Returns the location of the literal

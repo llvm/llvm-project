@@ -744,10 +744,10 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// not have been loaded, so that value would be unknown.
   SourceLocation::UIntTy CurrentLoadedOffset;
 
-  /// The highest possible offset is 2^31-1 (2^63-1 for 64-bit source
-  /// locations), so CurrentLoadedOffset starts at 2^31 (2^63 resp.).
+  /// The highest possible offset is 2^(Bits-1)-1, so CurrentLoadedOffset starts
+  /// at 2^(Bits-1).
   static const SourceLocation::UIntTy MaxLoadedOffset =
-      1ULL << (8 * sizeof(SourceLocation::UIntTy) - 1);
+      1ULL << (SourceLocation::Bits - 1);
 
   /// A bitmap that indicates whether the entries of LoadedSLocEntryTable
   /// have already been loaded from the external source.
