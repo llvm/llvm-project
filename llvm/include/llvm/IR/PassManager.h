@@ -59,6 +59,7 @@ namespace llvm {
 
 class Function;
 class Module;
+class TargetMachine;
 
 // Forward declare the analysis manager template.
 template <typename IRUnitT, typename... ExtraArgTs> class AnalysisManager;
@@ -557,6 +558,13 @@ extern template class LLVM_TEMPLATE_ABI AnalysisManager<Module>;
 
 /// Convenience typedef for the Module analysis manager.
 using ModuleAnalysisManager = AnalysisManager<Module>;
+
+extern template class LLVM_TEMPLATE_ABI
+    AnalysisManager<Module, const TargetMachine *>;
+
+/// Separate typedef for ModuleSummaryAnalysisPass to pass TargetMachine to it.
+using ModuleSummaryIndexAnalysisManager =
+    AnalysisManager<Module, const TargetMachine *>;
 
 extern template class LLVM_TEMPLATE_ABI AnalysisManager<Function>;
 

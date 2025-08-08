@@ -11,21 +11,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeWriterPass.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/StackSafetyAnalysis.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 using namespace llvm;
 
-PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
+PreservedAnalyses
+BitcodeWriterPass::run(Module &M, ModuleSummaryIndexAnalysisManager &AM) {
   M.removeDebugIntrinsicDeclarations();
 
   const ModuleSummaryIndex *Index =
-      EmitSummaryIndex ? &(AM.getResult<ModuleSummaryIndexAnalysis>(M))
+      EmitSummaryIndex ? &(AM.getResult<ModuleSummaryIndexAnalysis>(M, TM))
                        : nullptr;
-  WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index, EmitModuleHash);
-
+  WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, Index, EmitModuleHash,
+                     /*ModHash=*/nullptr, TM);
   return PreservedAnalyses::all();
 }
 
@@ -33,6 +37,7 @@ namespace {
   class WriteBitcodePass : public ModulePass {
     raw_ostream &OS; // raw_ostream to print on
     bool ShouldPreserveUseListOrder;
+    const TargetMachine *TM;
 
   public:
     static char ID; // Pass identification, replacement for typeid
@@ -40,9 +45,10 @@ namespace {
       initializeWriteBitcodePassPass(*PassRegistry::getPassRegistry());
     }
 
-    explicit WriteBitcodePass(raw_ostream &o, bool ShouldPreserveUseListOrder)
+    explicit WriteBitcodePass(raw_ostream &o, bool ShouldPreserveUseListOrder,
+                              const TargetMachine *TM = nullptr)
         : ModulePass(ID), OS(o),
-          ShouldPreserveUseListOrder(ShouldPreserveUseListOrder) {
+          ShouldPreserveUseListOrder(ShouldPreserveUseListOrder), TM(TM) {
       initializeWriteBitcodePassPass(*PassRegistry::getPassRegistry());
     }
 
@@ -52,7 +58,7 @@ namespace {
       M.removeDebugIntrinsicDeclarations();
 
       WriteBitcodeToFile(M, OS, ShouldPreserveUseListOrder, /*Index=*/nullptr,
-                         /*EmitModuleHash=*/false);
+                         /*GenerateHash=*/false, /*ModHash=*/nullptr, TM);
 
       return false;
     }
@@ -70,8 +76,9 @@ INITIALIZE_PASS_END(WriteBitcodePass, "write-bitcode", "Write Bitcode", false,
                     true)
 
 ModulePass *llvm::createBitcodeWriterPass(raw_ostream &Str,
-                                          bool ShouldPreserveUseListOrder) {
-  return new WriteBitcodePass(Str, ShouldPreserveUseListOrder);
+                                          bool ShouldPreserveUseListOrder,
+                                          const TargetMachine *TM) {
+  return new WriteBitcodePass(Str, ShouldPreserveUseListOrder, TM);
 }
 
 bool llvm::isBitcodeWriterPass(Pass *P) {

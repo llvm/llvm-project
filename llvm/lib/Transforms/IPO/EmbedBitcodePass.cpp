@@ -22,7 +22,8 @@
 
 using namespace llvm;
 
-PreservedAnalyses EmbedBitcodePass::run(Module &M, ModuleAnalysisManager &AM) {
+PreservedAnalyses EmbedBitcodePass::run(Module &M,
+                                        ModuleSummaryIndexAnalysisManager &AM) {
   if (M.getGlobalVariable("llvm.embedded.module", /*AllowInternal=*/true))
     reportFatalUsageError("Can only embed the module once");
 
