@@ -190,16 +190,18 @@ LogicalResult BulkStoreOp::verify() {
 }
 
 LogicalResult PMEventOp::verify() {
-  if (!getMaskedEventId() && !getEventId()) {
+  auto eventId = getEventId();
+  auto maskedEventId = getMaskedEventId();
+  if (!maskedEventId && !eventId) {
     return emitOpError() << "either `id` or `mask` must be set";
   }
 
-  if (getMaskedEventId() && getEventId()) {
+  if (maskedEventId && eventId) {
     return emitOpError() << "`id` and `mask` cannot be set at the same time";
   }
 
-  if (getEventId()) {
-    if (getEventId() < 0 || getEventId() > 15) {
+  if (eventId) {
+    if (eventId < 0 || eventId > 15) {
       return emitOpError() << "`id` must be between 0 and 15";
     }
   }

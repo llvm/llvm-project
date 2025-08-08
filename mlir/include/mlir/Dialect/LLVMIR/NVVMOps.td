@@ -418,7 +418,7 @@ def NVVM_PMEventOp : NVVM_PTXBuilder_Op<"pmevent">,
     immediate operand a, in the range 0..15.
 
     With `mask` it triggers one or more of the performance monitor events. Each
-    bit in the 16-bit immediate operand a controls an event.
+    bit in the 16-bit immediate operand controls an event.
 
     [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#miscellaneous-instructions-pmevent)
   }];
@@ -431,7 +431,7 @@ def NVVM_PMEventOp : NVVM_PTXBuilder_Op<"pmevent">,
   let assemblyFormat = "attr-dict (`id` `=` $eventId^)? (`mask` `=` $maskedEventId^)?";
 
   let extraClassDeclaration = [{
-    bool hasIntrinsic() { if(getEventId()) return false; return true; }
+    bool hasIntrinsic() { return !getEventId(); }
   }];
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() { return std::string("pmevent %0;"); }
