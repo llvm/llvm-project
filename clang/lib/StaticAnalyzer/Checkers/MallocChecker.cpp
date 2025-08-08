@@ -52,9 +52,8 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/Type.h"
 #include "clang/AST/TemplateBase.h"
-
+#include "clang/AST/Type.h"
 
 #include "clang/AST/ParentMap.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -1102,19 +1101,22 @@ public:
   }
 };
 
-/// EscapeTrackedCallback - A SymbolVisitor that marks allocated symbols as escaped.
+/// EscapeTrackedCallback - A SymbolVisitor that marks allocated symbols as
+/// escaped.
 ///
-/// This visitor is used to suppress false positive leak reports when smart pointers
-/// are nested in temporary objects passed by value to functions. When the analyzer
-/// can't see the destructor calls for temporary objects, it may incorrectly report
-/// leaks for memory that will be properly freed by the smart pointer destructors.
+/// This visitor is used to suppress false positive leak reports when smart
+/// pointers are nested in temporary objects passed by value to functions. When
+/// the analyzer can't see the destructor calls for temporary objects, it may
+/// incorrectly report leaks for memory that will be properly freed by the smart
+/// pointer destructors.
 ///
 /// The visitor traverses reachable symbols from a given set of memory regions
 /// (typically smart pointer field regions) and marks any allocated symbols as
 /// escaped. Escaped symbols are not reported as leaks by checkDeadSymbols.
 ///
 /// Usage:
-///   auto Scan = State->scanReachableSymbols<EscapeTrackedCallback>(RootRegions);
+///   auto Scan =
+///   State->scanReachableSymbols<EscapeTrackedCallback>(RootRegions);
 ///   ProgramStateRef NewState = Scan.getState();
 ///   if (NewState != State) C.addTransition(NewState);
 class EscapeTrackedCallback final : public SymbolVisitor {
@@ -3123,24 +3125,27 @@ static bool isInStdNamespace(const DeclContext *DC) {
 // Start with unique_ptr and shared_ptr. (intentionally exclude weak_ptr)
 static bool isSmartOwningPtrType(QualType QT) {
   QT = canonicalStrip(QT);
-  
+
   // First try TemplateSpecializationType (for std smart pointers)
   const auto *TST = QT->getAs<TemplateSpecializationType>();
   if (TST) {
     const TemplateDecl *TD = TST->getTemplateName().getAsTemplateDecl();
-    if (!TD) return false;
-    
+    if (!TD)
+      return false;
+
     const auto *ND = dyn_cast_or_null<NamedDecl>(TD->getTemplatedDecl());
-    if (!ND) return false;
-    
+    if (!ND)
+      return false;
+
     // Check if it's in std namespace
     const DeclContext *DC = ND->getDeclContext();
-    if (!isInStdNamespace(DC)) return false;
-    
+    if (!isInStdNamespace(DC))
+      return false;
+
     StringRef Name = ND->getName();
     return Name == "unique_ptr" || Name == "shared_ptr";
   }
-  
+
   // Also try RecordType (for custom smart pointer implementations)
   const auto *RT = QT->getAs<RecordType>();
   if (RT) {
@@ -3153,17 +3158,18 @@ static bool isSmartOwningPtrType(QualType QT) {
       }
     }
   }
-  
+
   return false;
 }
 
-static void collectDirectSmartOwningPtrFieldRegions(const MemRegion *Base,
-                                                    QualType RecQT,
-                                                    CheckerContext &C,
-                                                    SmallVectorImpl<const MemRegion*> &Out) {
-  if (!Base) return;
+static void collectDirectSmartOwningPtrFieldRegions(
+    const MemRegion *Base, QualType RecQT, CheckerContext &C,
+    SmallVectorImpl<const MemRegion *> &Out) {
+  if (!Base)
+    return;
   const auto *CRD = RecQT->getAsCXXRecordDecl();
-  if (!CRD) return;
+  if (!CRD)
+    return;
 
   for (const FieldDecl *FD : CRD->fields()) {
     if (!isSmartOwningPtrType(FD->getType()))
@@ -3181,44 +3187,47 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
     (*PostFN)(this, C.getState(), Call, C);
   }
 
-  SmallVector<const MemRegion*, 8> SmartPtrFieldRoots;
-
-
+  SmallVector<const MemRegion *, 8> SmartPtrFieldRoots;
 
   for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
     const Expr *AE = Call.getArgExpr(I);
-    if (!AE) continue;
+    if (!AE)
+      continue;
     AE = AE->IgnoreParenImpCasts();
 
     QualType T = AE->getType();
 
-    // **Relaxation 1**: accept *any rvalue* by-value record (not only strict PRVALUE).
-    if (AE->isGLValue()) continue;
+    // **Relaxation 1**: accept *any rvalue* by-value record (not only strict
+    // PRVALUE).
+    if (AE->isGLValue())
+      continue;
 
     // By-value record only (no refs).
-    if (!T->isRecordType() || T->isReferenceType()) continue;
+    if (!T->isRecordType() || T->isReferenceType())
+      continue;
 
     // **Relaxation 2**: accept common temp/construct forms but don't overfit.
     const bool LooksLikeTemp =
-        isa<CXXTemporaryObjectExpr>(AE) ||
-        isa<MaterializeTemporaryExpr>(AE) ||
-        isa<CXXConstructExpr>(AE) ||
-        isa<InitListExpr>(AE) ||
-        isa<ImplicitCastExpr>(AE) || // handle common rvalue materializations
+        isa<CXXTemporaryObjectExpr>(AE) || isa<MaterializeTemporaryExpr>(AE) ||
+        isa<CXXConstructExpr>(AE) || isa<InitListExpr>(AE) ||
+        isa<ImplicitCastExpr>(AE) ||   // handle common rvalue materializations
         isa<CXXBindTemporaryExpr>(AE); // handle CXXBindTemporaryExpr
-    if (!LooksLikeTemp) continue;
+    if (!LooksLikeTemp)
+      continue;
 
     // Require at least one direct smart owning pointer field by type.
     const auto *CRD = T->getAsCXXRecordDecl();
-    if (!CRD) continue;
+    if (!CRD)
+      continue;
     bool HasSmartPtrField = false;
     for (const FieldDecl *FD : CRD->fields()) {
-      if (isSmartOwningPtrType(FD->getType())) { 
-        HasSmartPtrField = true; 
-        break; 
+      if (isSmartOwningPtrType(FD->getType())) {
+        HasSmartPtrField = true;
+        break;
       }
     }
-    if (!HasSmartPtrField) continue;
+    if (!HasSmartPtrField)
+      continue;
 
     // Find a region for the argument.
     SVal VCall = Call.getArgSVal(I);
@@ -3227,20 +3236,21 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
     const MemRegion *RExpr = VExpr.getAsRegion();
 
     const MemRegion *Base = RCall ? RCall : RExpr;
-    if (!Base) { 
-      // Fallback: if we have a by-value record with unique_ptr fields but no region,
-      // mark all allocated symbols as escaped
+    if (!Base) {
+      // Fallback: if we have a by-value record with unique_ptr fields but no
+      // region, mark all allocated symbols as escaped
       ProgramStateRef State = C.getState();
       RegionStateTy RS = State->get<RegionState>();
       ProgramStateRef NewState = State;
       for (auto [Sym, RefSt] : RS) {
         if (RefSt.isAllocated() || RefSt.isAllocatedOfSizeZero()) {
-          NewState = NewState->set<RegionState>(Sym, RefState::getEscaped(&RefSt));
+          NewState =
+              NewState->set<RegionState>(Sym, RefState::getEscaped(&RefSt));
         }
       }
       if (NewState != State)
         C.addTransition(NewState);
-      continue; 
+      continue;
     }
 
     // Push direct smart owning pointer field regions only (precise root set).
@@ -3250,32 +3260,36 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
   // Escape only from those field roots; do nothing if empty.
   if (!SmartPtrFieldRoots.empty()) {
     ProgramStateRef State = C.getState();
-    auto Scan = State->scanReachableSymbols<EscapeTrackedCallback>(SmartPtrFieldRoots);
+    auto Scan =
+        State->scanReachableSymbols<EscapeTrackedCallback>(SmartPtrFieldRoots);
     ProgramStateRef NewState = Scan.getState();
     if (NewState != State) {
       C.addTransition(NewState);
-      } else {
-      // Fallback: if we have by-value record arguments but no smart pointer fields detected,
-      // check if any of the arguments are by-value records with smart pointer fields
+    } else {
+      // Fallback: if we have by-value record arguments but no smart pointer
+      // fields detected, check if any of the arguments are by-value records
+      // with smart pointer fields
       bool hasByValueRecordWithSmartPtr = false;
       for (unsigned I = 0, E = Call.getNumArgs(); I != E; ++I) {
         const Expr *AE = Call.getArgExpr(I);
-        if (!AE) continue;
+        if (!AE)
+          continue;
         AE = AE->IgnoreParenImpCasts();
-        
-        if (AE->isGLValue()) continue;
+
+        if (AE->isGLValue())
+          continue;
         QualType T = AE->getType();
-        if (!T->isRecordType() || T->isReferenceType()) continue;
-        
+        if (!T->isRecordType() || T->isReferenceType())
+          continue;
+
         const bool LooksLikeTemp =
             isa<CXXTemporaryObjectExpr>(AE) ||
-            isa<MaterializeTemporaryExpr>(AE) ||
-            isa<CXXConstructExpr>(AE) ||
-            isa<InitListExpr>(AE) ||
-            isa<ImplicitCastExpr>(AE) ||
+            isa<MaterializeTemporaryExpr>(AE) || isa<CXXConstructExpr>(AE) ||
+            isa<InitListExpr>(AE) || isa<ImplicitCastExpr>(AE) ||
             isa<CXXBindTemporaryExpr>(AE);
-        if (!LooksLikeTemp) continue;
-        
+        if (!LooksLikeTemp)
+          continue;
+
         // Check if this record type has smart pointer fields
         const auto *CRD = T->getAsCXXRecordDecl();
         if (CRD) {
@@ -3286,16 +3300,18 @@ void MallocChecker::checkPostCall(const CallEvent &Call,
             }
           }
         }
-        if (hasByValueRecordWithSmartPtr) break;
+        if (hasByValueRecordWithSmartPtr)
+          break;
       }
-      
+
       if (hasByValueRecordWithSmartPtr) {
         ProgramStateRef State = C.getState();
         RegionStateTy RS = State->get<RegionState>();
         ProgramStateRef NewState = State;
         for (auto [Sym, RefSt] : RS) {
           if (RefSt.isAllocated() || RefSt.isAllocatedOfSizeZero()) {
-            NewState = NewState->set<RegionState>(Sym, RefState::getEscaped(&RefSt));
+            NewState =
+                NewState->set<RegionState>(Sym, RefState::getEscaped(&RefSt));
           }
         }
         if (NewState != State)
@@ -3366,8 +3382,6 @@ void MallocChecker::checkPreCall(const CallEvent &Call,
     const FunctionDecl *FD = FC->getDecl();
     if (!FD)
       return;
-
-
 
     // FIXME: I suspect we should remove `MallocChecker.isEnabled() &&` because
     // it's fishy that the enabled/disabled state of one frontend may influence
