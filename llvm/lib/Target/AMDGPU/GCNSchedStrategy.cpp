@@ -1086,7 +1086,8 @@ bool ClusteredLowOccStage::initGCNSchedStage() {
 }
 
 /// Allows to easily filter for this stage's debug output.
-#define REMAT_DEBUG(X) LLVM_DEBUG(dbgs() << "[PreRARemat] "; X;)
+#define REMAT_PREFIX "[PreRARemat] "
+#define REMAT_DEBUG(X) LLVM_DEBUG(dbgs() << REMAT_PREFIX; X;)
 
 bool PreRARematStage::initGCNSchedStage() {
   // FIXME: This pass will invalidate cached BBLiveInMap and MBBLiveIns for
@@ -1729,18 +1730,21 @@ bool PreRARematStage::canIncreaseOccupancyOrReduceSpill() {
     MF.getFunction().printAsOperand(dbgs(), false);
     dbgs() << ": ";
     if (OptRegions.empty()) {
-      LLVM_DEBUG(dbgs() << "no objective to achieve, occupancy is maximal at "
-                        << MFI.getMaxWavesPerEU() << "\n");
+      dbgs() << "no objective to achieve, occupancy is maximal at "
+             << MFI.getMaxWavesPerEU();
     } else if (!TargetOcc) {
-      LLVM_DEBUG(dbgs() << "reduce spilling (minimum target occupancy is "
-                        << MFI.getMinWavesPerEU() << ")\n");
+      dbgs() << "reduce spilling (minimum target occupancy is "
+             << MFI.getMinWavesPerEU() << ')';
     } else {
-      LLVM_DEBUG(dbgs() << "increase occupancy from " << DAG.MinOccupancy
-                        << " to " << TargetOcc << '\n');
+      dbgs() << "increase occupancy from " << DAG.MinOccupancy << " to "
+             << TargetOcc;
     }
+    dbgs() << '\n';
     for (unsigned I = 0, E = DAG.Regions.size(); I != E; ++I) {
-      if (auto OptIt = OptRegions.find(I); OptIt != OptRegions.end())
-        REMAT_DEBUG(dbgs() << "  [" << I << "] " << OptIt->getSecond() << '\n');
+      if (auto OptIt = OptRegions.find(I); OptIt != OptRegions.end()) {
+        dbgs() << REMAT_PREFIX << "  [" << I << "] " << OptIt->getSecond()
+               << '\n';
+      }
     }
   });
   if (OptRegions.empty())
