@@ -654,13 +654,6 @@ class TestReports(unittest.TestCase):
                         [5/5] test/5.stamp"""
                     )
                 )
-            test = generate_test_report_lib.generate_report_from_files(
-                "Foo", 1, [junit_xml_file, ninja_log_file]
-            )
-
-            print(test)
-            with open("/tmp/blah", "w") as handle2:
-                handle2.write(test)
             self.assertEqual(
                 generate_test_report_lib.generate_report_from_files(
                     "Foo", 1, [junit_xml_file, ninja_log_file]
