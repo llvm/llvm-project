@@ -15,12 +15,17 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/AST/Mangle.h"
+#include "clang/Basic/Version.h"
+#include "clang/Config/config.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Interpreter/Interpreter.h"
+#include "clang/Interpreter/RemoteJITUtils.h"
 #include "clang/Interpreter/Value.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Error.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "llvm/TargetParser/Host.h"
 
@@ -33,6 +38,12 @@ int Global = 42;
 // JIT reports symbol not found on Windows without the visibility attribute.
 REPL_EXTERNAL_VISIBILITY int getGlobal() { return Global; }
 REPL_EXTERNAL_VISIBILITY void setGlobal(int val) { Global = val; }
+
+#ifdef _WIN32
+#define STDIN_FILENO 0
+#define STDOUT_FILENO 1
+#define STDERR_FILENO 2
+#endif
 
 namespace {
 

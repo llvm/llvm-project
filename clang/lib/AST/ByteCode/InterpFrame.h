@@ -86,6 +86,7 @@ public:
 
   /// Returns a pointer to a local variables.
   Pointer getLocalPointer(unsigned Offset) const;
+  Block *getLocalBlock(unsigned Offset) const;
 
   /// Returns the value of an argument.
   template <typename T> const T &getParam(unsigned Offset) const {

@@ -1335,19 +1335,19 @@ genCUFAllocDescriptor(mlir::Location loc,
       RTNAME_STRING(CUFAllocDescriptor));
   auto funcFunc =
       mod.lookupSymbol<mlir::func::FuncOp>(RTNAME_STRING(CUFAllocDescriptor));
-  if (!llvmFunc && !funcFunc)
-    mlir::OpBuilder::atBlockEnd(mod.getBody())
-        .create<mlir::LLVM::LLVMFuncOp>(loc, RTNAME_STRING(CUFAllocDescriptor),
-                                        fctTy);
+  if (!llvmFunc && !funcFunc) {
+    auto builder = mlir::OpBuilder::atBlockEnd(mod.getBody());
+    mlir::LLVM::LLVMFuncOp::create(builder, loc,
+                                   RTNAME_STRING(CUFAllocDescriptor), fctTy);
+  }
 
   mlir::Type structTy = typeConverter.convertBoxTypeAsStruct(boxTy);
   std::size_t boxSize = dl->getTypeSizeInBits(structTy) / 8;
   mlir::Value sizeInBytes =
       genConstantIndex(loc, llvmIntPtrType, rewriter, boxSize);
   llvm::SmallVector args = {sizeInBytes, sourceFile, sourceLine};
-  return rewriter
-      .create<mlir::LLVM::CallOp>(loc, fctTy, RTNAME_STRING(CUFAllocDescriptor),
-                                  args)
+  return mlir::LLVM::CallOp::create(rewriter, loc, fctTy,
+                                    RTNAME_STRING(CUFAllocDescriptor), args)
       .getResult();
 }
 

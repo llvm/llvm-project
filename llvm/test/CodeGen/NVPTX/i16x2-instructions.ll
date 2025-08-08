@@ -642,10 +642,10 @@ define <2 x i16> @test_call(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-NEXT:    ld.param.b32 %r1, [test_call_param_0];
 ; COMMON-NEXT:    { // callseq 0, 0
 ; COMMON-NEXT:    .param .align 4 .b8 param0[4];
-; COMMON-NEXT:    st.param.b32 [param0], %r1;
 ; COMMON-NEXT:    .param .align 4 .b8 param1[4];
-; COMMON-NEXT:    st.param.b32 [param1], %r2;
 ; COMMON-NEXT:    .param .align 4 .b8 retval0[4];
+; COMMON-NEXT:    st.param.b32 [param1], %r2;
+; COMMON-NEXT:    st.param.b32 [param0], %r1;
 ; COMMON-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; COMMON-NEXT:    ld.param.b32 %r3, [retval0];
 ; COMMON-NEXT:    } // callseq 0
@@ -665,10 +665,10 @@ define <2 x i16> @test_call_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-NEXT:    ld.param.b32 %r1, [test_call_flipped_param_0];
 ; COMMON-NEXT:    { // callseq 1, 0
 ; COMMON-NEXT:    .param .align 4 .b8 param0[4];
-; COMMON-NEXT:    st.param.b32 [param0], %r2;
 ; COMMON-NEXT:    .param .align 4 .b8 param1[4];
-; COMMON-NEXT:    st.param.b32 [param1], %r1;
 ; COMMON-NEXT:    .param .align 4 .b8 retval0[4];
+; COMMON-NEXT:    st.param.b32 [param1], %r1;
+; COMMON-NEXT:    st.param.b32 [param0], %r2;
 ; COMMON-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; COMMON-NEXT:    ld.param.b32 %r3, [retval0];
 ; COMMON-NEXT:    } // callseq 1
@@ -688,10 +688,10 @@ define <2 x i16> @test_tailcall_flipped(<2 x i16> %a, <2 x i16> %b) #0 {
 ; COMMON-NEXT:    ld.param.b32 %r1, [test_tailcall_flipped_param_0];
 ; COMMON-NEXT:    { // callseq 2, 0
 ; COMMON-NEXT:    .param .align 4 .b8 param0[4];
-; COMMON-NEXT:    st.param.b32 [param0], %r2;
 ; COMMON-NEXT:    .param .align 4 .b8 param1[4];
-; COMMON-NEXT:    st.param.b32 [param1], %r1;
 ; COMMON-NEXT:    .param .align 4 .b8 retval0[4];
+; COMMON-NEXT:    st.param.b32 [param1], %r1;
+; COMMON-NEXT:    st.param.b32 [param0], %r2;
 ; COMMON-NEXT:    call.uni (retval0), test_callee, (param0, param1);
 ; COMMON-NEXT:    ld.param.b32 %r3, [retval0];
 ; COMMON-NEXT:    } // callseq 2

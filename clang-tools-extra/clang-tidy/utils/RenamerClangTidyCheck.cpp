@@ -432,6 +432,10 @@ RenamerClangTidyCheck::addUsage(
   if (FixLocation.isInvalid())
     return {NamingCheckFailures.end(), false};
 
+  // Skip if in system system header
+  if (SourceMgr.isInSystemHeader(FixLocation))
+    return {NamingCheckFailures.end(), false};
+
   auto EmplaceResult = NamingCheckFailures.try_emplace(FailureId);
   NamingCheckFailure &Failure = EmplaceResult.first->second;
 
@@ -455,6 +459,9 @@ RenamerClangTidyCheck::addUsage(
 void RenamerClangTidyCheck::addUsage(const NamedDecl *Decl,
                                      SourceRange UsageRange,
                                      const SourceManager &SourceMgr) {
+  if (SourceMgr.isInSystemHeader(Decl->getLocation()))
+    return;
+
   if (hasNoName(Decl))
     return;
 

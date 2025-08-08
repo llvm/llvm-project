@@ -606,7 +606,7 @@ static Value tryFoldCastChain(cir::CastOp op) {
     if (!isIntOrBoolCast(op))
       break;
     head = op;
-    op = dyn_cast_or_null<cir::CastOp>(head.getSrc().getDefiningOp());
+    op = head.getSrc().getDefiningOp<cir::CastOp>();
   }
 
   if (head == tail)
@@ -1444,6 +1444,27 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// VTableAddrPointOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+cir::VTableAddrPointOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
+  StringRef name = getName();
+
+  // Verify that the result type underlying pointer type matches the type of
+  // the referenced cir.global or cir.func op.
+  auto op = symbolTable.lookupNearestSymbolFrom<GlobalOp>(*this, getNameAttr());
+  if (!op)
+    return emitOpError("'")
+           << name << "' does not reference a valid cir.global";
+  std::optional<mlir::Attribute> init = op.getInitialValue();
+  if (!init)
+    return success();
+  assert(!cir::MissingFeatures::vtableInitializer());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // FuncOp
 //===----------------------------------------------------------------------===//
 
@@ -1470,9 +1491,13 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   llvm::SMLoc loc = parser.getCurrentLocation();
   mlir::Builder &builder = parser.getBuilder();
 
+  mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr visibilityNameAttr = getGlobalVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
+
+  if (parser.parseOptionalKeyword(noProtoNameAttr).succeeded())
+    state.addAttribute(noProtoNameAttr, parser.getBuilder().getUnitAttr());
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -1578,6 +1603,9 @@ mlir::Region *cir::FuncOp::getCallableRegion() {
 }
 
 void cir::FuncOp::print(OpAsmPrinter &p) {
+  if (getNoProto())
+    p << " no_proto";
+
   if (getComdat())
     p << " comdat";
 
@@ -1795,7 +1823,7 @@ OpFoldResult cir::UnaryOp::fold(FoldAdaptor adaptor) {
   }
 
   if (isBoolNot(*this))
-    if (auto previous = dyn_cast_or_null<UnaryOp>(getInput().getDefiningOp()))
+    if (auto previous = getInput().getDefiningOp<cir::UnaryOp>())
       if (isBoolNot(previous))
         return previous.getInput();
 
@@ -1826,7 +1854,7 @@ LogicalResult cir::GetMemberOp::verify() {
 
 OpFoldResult cir::VecCreateOp::fold(FoldAdaptor adaptor) {
   if (llvm::any_of(getElements(), [](mlir::Value value) {
-        return !mlir::isa<cir::ConstantOp>(value.getDefiningOp());
+        return !value.getDefiningOp<cir::ConstantOp>();
       }))
     return {};
 
@@ -2177,8 +2205,7 @@ LogicalResult cir::ComplexRealOp::verify() {
 }
 
 OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
-  if (auto complexCreateOp =
-          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+  if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(0);
 
   auto complex =
@@ -2199,8 +2226,7 @@ LogicalResult cir::ComplexImagOp::verify() {
 }
 
 OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
-  if (auto complexCreateOp =
-          dyn_cast_or_null<cir::ComplexCreateOp>(getOperand().getDefiningOp()))
+  if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(1);
 
   auto complex =
@@ -2293,6 +2319,15 @@ OpFoldResult BitCtzOp::fold(FoldAdaptor adaptor) {
                            inputValue.countTrailingZeros());
       },
       getPoisonZero());
+}
+
+OpFoldResult BitFfsOp::fold(FoldAdaptor adaptor) {
+  return foldUnaryBitOp(adaptor.getInput(), [](const llvm::APInt &inputValue) {
+    unsigned trailingZeros = inputValue.countTrailingZeros();
+    unsigned result =
+        trailingZeros == inputValue.getBitWidth() ? 0 : trailingZeros + 1;
+    return llvm::APInt(inputValue.getBitWidth(), result);
+  });
 }
 
 OpFoldResult BitParityOp::fold(FoldAdaptor adaptor) {

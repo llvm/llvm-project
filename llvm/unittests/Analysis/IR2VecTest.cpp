@@ -364,9 +364,9 @@ TEST_F(IR2VecTestFixture, GetFunctionVector) {
   EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 44.4)));
 }
 
-static constexpr unsigned MaxOpcodes = 67;
-static constexpr unsigned MaxTypeIDs = 21;
-static constexpr unsigned MaxOperands = 4;
+static constexpr unsigned MaxOpcodes = Vocabulary::MaxOpcodes;
+static constexpr unsigned MaxTypeIDs = Vocabulary::MaxTypeIDs;
+static constexpr unsigned MaxOperands = Vocabulary::MaxOperandKinds;
 
 TEST(IR2VecVocabularyTest, DummyVocabTest) {
   for (unsigned Dim = 1; Dim <= 10; ++Dim) {
