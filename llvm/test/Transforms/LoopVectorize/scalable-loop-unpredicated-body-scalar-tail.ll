@@ -12,8 +12,6 @@
 ; CHECKUF1-DAG:  %[[VSCALEX4:.*]] = shl nuw i64 %[[VSCALE]], 2
 ; CHECKUF1-DAG:  %n.mod.vf = urem i64 %wide.trip.count, %[[VSCALEX4]]
 ; CHECKUF1:      %n.vec = sub nsw i64 %wide.trip.count, %n.mod.vf
-; CHECKUF1: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
-; CHECKUF1: %[[VSCALEX4:.*]] = shl nuw i64 %[[VSCALE]], 2
 
 ; CHECKUF1: vector.body:
 ; CHECKUF1: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
@@ -41,8 +39,6 @@
 ; CHECKUF2-DAG:  %[[VSCALEX8:.*]] = shl nuw i64 %[[VSCALE]], 3
 ; CHECKUF2-DAG:  %n.mod.vf = urem i64 %wide.trip.count, %[[VSCALEX8]]
 ; CHECKUF2:      %n.vec = sub nsw i64 %wide.trip.count, %n.mod.vf
-; CHECKUF2: %[[VSCALE:.*]] = call i64 @llvm.vscale.i64()
-; CHECKUF2: %[[VSCALEX8:.*]] = shl nuw i64 %[[VSCALE]], 3
 
 ; CHECKUF2: vector.body:
 ; CHECKUF2: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
