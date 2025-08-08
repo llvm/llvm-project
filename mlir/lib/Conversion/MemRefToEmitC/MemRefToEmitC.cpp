@@ -319,24 +319,11 @@ struct ConvertReinterpretCastOp final
     };
 
     auto srcPtr = createPointerFromEmitcArray(srcArrayValue);
-    // 1. Create a TypeAttr for the target type.
-    TypeAttr targetTypeAttr =
-        TypeAttr::get(emitc::PointerType::get(targetInEmitC));
-    IntegerAttr resty = rewriter.getIndexAttr(0);
 
-    // 2. Create an ArrayAttr with the TypeAttr. This will be the
-    // templateArgsAttr.
-    ArrayAttr templateArgsAttr = rewriter.getArrayAttr({targetTypeAttr});
+    auto castCall = rewriter.create<emitc::CastOp>(
+        loc, emitc::PointerType::get(targetInEmitC), srcPtr.getResult());
 
-    auto reinterpretCastCall = rewriter.create<emitc::CallOpaqueOp>(
-        loc,
-        /*result types=*/TypeRange{emitc::PointerType::get(targetInEmitC)},
-        /*callee=*/"reinterpret_cast",
-        /*args*/ rewriter.getArrayAttr({resty}),
-        /*template_args=*/templateArgsAttr,
-        /*operands=*/ValueRange{srcPtr.getResult()});
-
-    rewriter.replaceOp(castOp, reinterpretCastCall.getResults());
+    rewriter.replaceOp(castOp, castCall);
     return success();
   }
 };
