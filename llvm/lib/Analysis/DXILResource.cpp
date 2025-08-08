@@ -20,6 +20,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/DXILABI.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <cstdint>
 #include <optional>
