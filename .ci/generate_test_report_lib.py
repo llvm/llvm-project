@@ -251,7 +251,19 @@ def generate_report(
     return report
 
 
-def generate_report_from_files(title, return_code, junit_files):
+def generate_report_from_files(title, return_code, build_log_files):
+    junit_files = [
+        junit_file for junit_file in build_log_files if junit_file.endswith(".xml")
+    ]
+    ninja_log_files = [
+        ninja_log for ninja_log in build_log_files if ninja_log.endswith(".log")
+    ]
+    ninja_logs = []
+    for ninja_log_file in ninja_log_files:
+        with open(ninja_log_file, "r") as ninja_log_file_handle:
+            ninja_logs.append(
+                [log_line.strip() for log_line in ninja_log_file_handle.readlines()]
+            )
     return generate_report(
-        title, return_code, [JUnitXml.fromfile(p) for p in junit_files], []
+        title, return_code, [JUnitXml.fromfile(p) for p in junit_files], ninja_logs
     )
