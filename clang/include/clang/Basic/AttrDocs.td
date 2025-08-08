@@ -9405,11 +9405,14 @@ flow as):
   }
 
 The benefits of this attribute are:
+
 - **Avoid heap allocations for coro frames**: Allocating short-circuiting
   coros on the stack makes code more predictable under memory pressure.
   Without this attribute, LLVM cannot elide heap allocation even when all
   awaiters are short-circuiting.
+
 - **Performance**: Significantly faster execution and smaller code size.
+
 - **Build time**: Faster compilation due to less IR being generated.
 
 Marking your ``await_suspend_destroy`` method as ``noexcept`` can sometimes
@@ -9436,11 +9439,13 @@ Here is a toy example of a portable short-circuiting awaiter:
 
 If all suspension points use (i) trivial or (ii) short-circuiting awaiters,
 then the coroutine optimizes more like a plain function, with 2 caveats:
+
 - **Behavior:** The coroutine promise provides an implicit exception boundary
   (as if wrapping the function in ``try {} catch { unhandled_exception(); }``).
   This exception handling behavior is usually desirable in robust,
   return-value-oriented programs that need short-circuiting coroutines.
   Otherwise, the promise can always re-throw.
+
 - **Speed:** As of 2025, there is still an optimization gap between a
   realistic short-circuiting coro, and the equivalent (but much more verbose)
   function.  For a guesstimate, expect 4-5ns per call on x86.  One idea for
