@@ -12,7 +12,6 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/optional.h"
-#include "src/__support/CPP/type_traits.h"
 #include "src/__support/aba_ptr.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -29,7 +28,7 @@ template <class T> class MPMCStack {
 public:
   static_assert(cpp::is_copy_constructible<T>::value,
                 "T must be copy constructible");
-  LIBC_INLINE MPMCStack() : head(nullptr) {}
+  LIBC_INLINE constexpr MPMCStack() : head(nullptr) {}
   LIBC_INLINE bool push(T value) {
     AllocChecker ac;
     Node *new_node = new (ac) Node(value);
@@ -38,6 +37,39 @@ public:
     head.transaction([new_node](Node *old_head) {
       new_node->next = old_head;
       return new_node;
+    });
+    return true;
+  }
+  LIBC_INLINE bool push_all(T values[], size_t count) {
+    struct Guard {
+      size_t count;
+      Node **allocated;
+      LIBC_INLINE Guard(Node *allocated[]) : count(0), allocated(allocated) {}
+      LIBC_INLINE ~Guard() {
+        for (size_t i = 0; i < count; ++i)
+          delete allocated[i];
+      }
+      LIBC_INLINE void add(Node *node) { allocated[count++] = node; }
+      LIBC_INLINE void clear() { count = 0; }
+    };
+    // Variable sized array is a GNU extension.
+    __extension__ Node *allocated[count];
+    {
+      Guard guard(allocated);
+      for (size_t i = 0; i < count; ++i) {
+        AllocChecker ac;
+        Node *new_node = new (ac) Node(values[i]);
+        if (!ac)
+          return false;
+        guard.add(new_node);
+        if (i != 0)
+          new_node->next = allocated[i - 1];
+      }
+      guard.clear();
+    }
+    head.transaction([&allocated, count](Node *old_head) {
+      allocated[0]->next = old_head;
+      return allocated[count - 1];
     });
     return true;
   }
