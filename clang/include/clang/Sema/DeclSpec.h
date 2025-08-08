@@ -382,6 +382,8 @@ private:
   unsigned FS_virtual_specified : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned FS_noreturn_specified : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExportSpecified : 1; // z/OS extension
 
   // friend-specifier
   LLVM_PREFERRED_TYPE(bool)
@@ -428,6 +430,7 @@ private:
   SourceLocation FS_forceinlineLoc;
   SourceLocation FriendLoc, ModulePrivateLoc, ConstexprLoc;
   SourceLocation TQ_pipeLoc;
+  SourceLocation ExportLoc;
 
   WrittenBuiltinSpecs writtenBS;
   void SaveWrittenBuiltinSpecs();
@@ -476,9 +479,9 @@ public:
         TypeSpecPipe(false), TypeSpecSat(false), ConstrainedAuto(false),
         TypeQualifiers(TQ_unspecified), FS_inline_specified(false),
         FS_forceinline_specified(false), FS_virtual_specified(false),
-        FS_noreturn_specified(false), FriendSpecifiedFirst(false),
-        ConstexprSpecifier(
-            static_cast<unsigned>(ConstexprSpecKind::Unspecified)),
+        FS_noreturn_specified(false), ExportSpecified(false),
+        FriendSpecifiedFirst(false), ConstexprSpecifier(static_cast<unsigned>(
+                                         ConstexprSpecKind::Unspecified)),
         Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
@@ -645,6 +648,9 @@ public:
   bool isNoreturnSpecified() const { return FS_noreturn_specified; }
   SourceLocation getNoreturnSpecLoc() const { return FS_noreturnLoc; }
 
+  bool isExportSpecified() const { return ExportSpecified; }
+  SourceLocation getExportSpecLoc() const { return ExportLoc; }
+
   void ClearFunctionSpecs() {
     FS_inline_specified = false;
     FS_inlineLoc = SourceLocation();
@@ -794,6 +800,8 @@ public:
                                SourceLocation CloseParenLoc);
   bool setFunctionSpecNoreturn(SourceLocation Loc, const char *&PrevSpec,
                                unsigned &DiagID);
+
+  bool setExportSpec(SourceLocation Loc);
 
   bool SetFriendSpec(SourceLocation Loc, const char *&PrevSpec,
                      unsigned &DiagID);
@@ -1940,6 +1948,10 @@ private:
   LLVM_PREFERRED_TYPE(bool)
   unsigned InlineStorageUsed : 1;
 
+  /// Indicates whether this is set as _Export.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ExportSpecified : 1; // z/OS extension
+
   /// Indicates whether this declarator has an initializer.
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasInitializer : 1;
@@ -1986,6 +1998,9 @@ private:
   /// this declarator as a parameter pack.
   SourceLocation EllipsisLoc;
 
+  /// The source location of the _Export keyword on this declarator.
+  SourceLocation ExportLoc;
+
   Expr *PackIndexingExpr;
 
   friend struct DeclaratorChunk;
@@ -2015,7 +2030,8 @@ public:
                                    FunctionDefinitionKind::Declaration)),
         Redeclaration(false), Extension(false), ObjCIvar(false),
         ObjCWeakProperty(false), InlineStorageUsed(false),
-        HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
+        ExportSpecified(false), HasInitializer(false),
+        Attrs(DS.getAttributePool().getFactory()),
         DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
         TrailingRequiresClause(nullptr),
         InventedTemplateParameterList(nullptr) {
@@ -2094,6 +2110,18 @@ public:
       Range.setEnd(SR.getEnd());
   }
 
+  /// Set this declarator as _Export.
+  void SetExport(SourceLocation Loc) {
+    ExportSpecified = true;
+    ExportLoc = Loc;
+  }
+
+  /// Whether this declarator is marked as _Export.
+  bool IsExport() const { return ExportSpecified; }
+
+  /// Get the location of the _Export keyword.
+  SourceLocation getExportLoc() const { return ExportLoc; }
+
   /// Reset the contents of this Declarator.
   void clear() {
     SS.clear();
@@ -2110,8 +2138,10 @@ public:
     HasInitializer = false;
     ObjCIvar = false;
     ObjCWeakProperty = false;
+    ExportSpecified = false;
     CommaLoc = SourceLocation();
     EllipsisLoc = SourceLocation();
+    ExportLoc = SourceLocation();
     PackIndexingExpr = nullptr;
   }
 
