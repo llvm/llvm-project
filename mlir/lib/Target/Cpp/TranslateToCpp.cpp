@@ -1756,6 +1756,20 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
 
 LogicalResult CppEmitter::emitVariableDeclaration(Location loc, Type type,
                                                   StringRef name) {
+  if (auto pType = dyn_cast<emitc::PointerType>(type)) {
+    if (auto aType = dyn_cast<emitc::ArrayType>(pType.getPointee())) {
+      if (failed(emitType(loc, aType.getElementType())))
+        return failure();
+      os << " (*" << name << ")";
+      for (auto dim : aType.getShape())
+        os << "[" << dim << "]";
+      return success();
+    }
+    if (failed(emitType(loc, pType.getPointee())))
+      return failure();
+    os << " *" << name;
+    return success();
+  }
   if (auto arrType = dyn_cast<emitc::ArrayType>(type)) {
     if (failed(emitType(loc, arrType.getElementType())))
       return failure();
@@ -1848,8 +1862,17 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
   if (auto lType = dyn_cast<emitc::LValueType>(type))
     return emitType(loc, lType.getValueType());
   if (auto pType = dyn_cast<emitc::PointerType>(type)) {
-    if (isa<ArrayType>(pType.getPointee()))
-      return emitError(loc, "cannot emit pointer to array type ") << type;
+    // Check if the pointee is an array type.
+    if (auto aType = dyn_cast<emitc::ArrayType>(pType.getPointee())) {
+      // Handle pointer to array: `element_type (*)[dim]`.
+      if (failed(emitType(loc, aType.getElementType())))
+        return failure();
+      os << "(*)";
+      for (auto dim : aType.getShape())
+        os << "[" << dim << "]";
+      return success();
+    }
+    // Handle standard pointer: `element_type*`.
     if (failed(emitType(loc, pType.getPointee())))
       return failure();
     os << "*";
