@@ -82,7 +82,7 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
     if (next_pos == remainder.end() || !IsDigit(*next_pos))
       return std::nullopt;
   }
-  if (IsDigit(*(cur_pos)) || *(cur_pos) == '.') {
+  if (IsDigit(*cur_pos) || *cur_pos == '.') {
     while (IsNumberBodyChar(*cur_pos))
       cur_pos++;
 
@@ -96,7 +96,7 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
       char prev_ch = *(cur_pos - 1);
       if (prev_ch == 'e' || prev_ch == 'E' || prev_ch == 'p' ||
           prev_ch == 'P') {
-        if (*(cur_pos) == '+' || *(cur_pos) == '-') {
+        if (*cur_pos == '+' || *cur_pos == '-') {
           cur_pos++;
           while (IsNumberBodyChar(*cur_pos))
             cur_pos++;

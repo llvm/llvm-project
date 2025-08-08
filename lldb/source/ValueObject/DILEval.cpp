@@ -502,10 +502,10 @@ Interpreter::Visit(const BitFieldExtractionNode *node) {
 static lldb::TypeSystemSP GetTypeSystemFromCU(std::shared_ptr<StackFrame> ctx) {
   SymbolContext symbol_context =
       ctx->GetSymbolContext(lldb::eSymbolContextCompUnit);
-  auto language = symbol_context.comp_unit->GetLanguage();
+  lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
 
   symbol_context = ctx->GetSymbolContext(lldb::eSymbolContextModule);
-  auto type_system =
+  llvm::Expected<lldb::TypeSystemSP> type_system =
       symbol_context.module_sp->GetTypeSystemForLanguage(language);
 
   if (type_system)
@@ -533,7 +533,8 @@ Interpreter::PickLiteralType(lldb::TypeSystemSP type_system,
     if (literal->IsFloat())
       return GetBasicType(type_system, lldb::eBasicTypeFloat);
     return GetBasicType(type_system, lldb::eBasicTypeDouble);
-  } else if (scalar.GetType() == Scalar::e_int) {
+  }
+  if (scalar.GetType() == Scalar::e_int) {
     // Binary, Octal, Hexadecimal and literals with a U suffix are allowed to be
     // an unsigned integer.
     bool unsigned_is_allowed =
@@ -594,27 +595,24 @@ Interpreter::PickLiteralType(lldb::TypeSystemSP type_system,
 llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const ScalarLiteralNode *node) {
   auto type_system = GetTypeSystemFromCU(m_exe_ctx_scope);
-  if (type_system) {
-    auto type = PickLiteralType(type_system, m_exe_ctx_scope, node);
-    if (type) {
-      Scalar scalar = node->GetValue();
-      // APInt from StringRef::getAsInteger comes with just enough bitwidth to
-      // hold the value. This adjusts APInt bitwidth to match the compiler type.
-      if (scalar.GetType() == scalar.e_int) {
-        auto apsint = scalar.GetAPSInt();
-        auto type_bitsize = type->GetBitSize(m_exe_ctx_scope.get());
-        if (type_bitsize) {
-          llvm::APInt adjusted = apsint.zextOrTrunc(*type_bitsize);
-          scalar = Scalar(adjusted);
-        }
-      }
-      return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
-                                                      "result");
-    } else
-      return type.takeError();
-  }
-  return llvm::make_error<DILDiagnosticError>(
-      m_expr, "unable to create a const literal", node->GetLocation());
+  if (!type_system)
+    return llvm::make_error<DILDiagnosticError>(
+        m_expr, "unable to create a const literal", node->GetLocation());
+
+  auto type = PickLiteralType(type_system, m_exe_ctx_scope, node);
+  if (type) {
+    Scalar scalar = node->GetValue();
+    // APInt from StringRef::getAsInteger comes with just enough bitwidth to
+    // hold the value. This adjusts APInt bitwidth to match the compiler type.
+    if (scalar.GetType() == scalar.e_int) {
+      auto type_bitsize = type->GetBitSize(m_exe_ctx_scope.get());
+      if (type_bitsize)
+        scalar.TruncOrExtendTo(*type_bitsize, false);
+    }
+    return ValueObject::CreateValueObjectFromScalar(m_target, scalar, *type,
+                                                    "result");
+  } else
+    return type.takeError();
 }
 
 } // namespace lldb_private::dil

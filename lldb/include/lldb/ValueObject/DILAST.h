@@ -193,7 +193,7 @@ public:
 
   llvm::Expected<lldb::ValueObjectSP> Accept(Visitor *v) const override;
 
-  Scalar GetValue() const & { return m_value; }
+  Scalar GetValue() const { return m_value; }
   uint32_t GetRadix() const { return m_radix; }
   bool IsUnsigned() const { return m_is_unsigned; }
   bool IsLong() const { return m_is_long; }
