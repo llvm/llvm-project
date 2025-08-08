@@ -2502,15 +2502,18 @@ bool SchedGroup::canAddSU(SUnit &SU) const {
     return canAddMI(MI);
 
   // Special case for bundled MIs.
-  const MachineBasicBlock *MBB = MI.getParent();
-  MachineBasicBlock::instr_iterator B = MI.getIterator(), E = ++B;
-  while (E != MBB->end() && E->isBundledWithPred())
-    ++E;
-
   // Return true if all of the bundled MIs can be added to this group.
-  return std::all_of(B, E, [this](MachineInstr &MI) {
-    return (MI.isMetaInstruction()) || canAddMI(MI);
-  });
+  // A meta instruction in a bundle is an exception.
+  const MachineBasicBlock *MBB = MI.getParent();
+  // Initially, iterator is on a bundler header.
+  MachineBasicBlock::instr_iterator B = std::next(MI.getIterator());
+  while (B != MBB->end() && B->isBundledWithPred()) {
+    if (!B->isMetaInstruction() && !canAddMI(*B))
+      return false;
+    ++B;
+  }
+
+  return true;
 }
 
 void SchedGroup::initSchedGroup() {
