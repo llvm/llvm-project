@@ -159,9 +159,8 @@ TEST(ExprEngineVisitTest, checkLocationAndBindInitialization) {
     public:
       int Value;
     };
-    extern MyClass MyClassRead;
-    void top() {
-      MyClass MyClassWrite = MyClassRead;
+    void top(MyClass param) {
+      MyClass MyClassWrite = param;
     }
   )",
                                                     Diags));
