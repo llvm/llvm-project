@@ -873,14 +873,14 @@ void ReportRace(ThreadState *thr, RawShadow *shadow_mem, Shadow cur, Shadow old,
 
 #if SANITIZER_APPLE
   }  // Close this scope to release the locks
-  OutputReport(thr, *rep);
-#else
+#endif
     OutputReport(thr, *rep);
+
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
+#if !SANITIZER_APPLE
   }
 #endif
-
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
 }
 
 void PrintCurrentStack(ThreadState *thr, uptr pc) {

@@ -70,13 +70,14 @@ static void ReportMutexMisuse(ThreadState *thr, uptr pc, ReportType typ,
     rep->AddLocation(addr, 1);
 #if SANITIZER_APPLE
   }  // Close this scope to release the locks
-  OutputReport(thr, *rep);
-#else
+#endif
     OutputReport(thr, *rep);
+
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
+#if !SANITIZER_APPLE
   }
 #endif
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
 }
 
 static void RecordMutexLock(ThreadState *thr, uptr pc, uptr addr,
@@ -571,13 +572,14 @@ void ReportDeadlock(ThreadState *thr, uptr pc, DDReport *r) {
     }
 #if SANITIZER_APPLE
   }  // Close this scope to release the locks
-  OutputReport(thr, *rep);
-#else
+#endif
     OutputReport(thr, *rep);
+
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
+#if !SANITIZER_APPLE
   }
 #endif
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
 }
 
 void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
@@ -608,13 +610,14 @@ void ReportDestroyLocked(ThreadState *thr, uptr pc, uptr addr,
     rep->AddLocation(addr, 1);
 #if SANITIZER_APPLE
   }  // Close this scope to release the locks
-  OutputReport(thr, *rep);
-#else
+#endif
     OutputReport(thr, *rep);
+
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
+#if !SANITIZER_APPLE
   }
 #endif
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
 }
 
 }  // namespace __tsan

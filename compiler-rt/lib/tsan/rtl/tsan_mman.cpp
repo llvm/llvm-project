@@ -192,13 +192,14 @@ static void SignalUnsafeCall(ThreadState *thr, uptr pc) {
     rep->AddStack(stack, true);
 #if SANITIZER_APPLE
   }  // Close this scope to release the locks
-  OutputReport(thr, *rep);
-#else
+#endif
     OutputReport(thr, *rep);
+
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
+#if !SANITIZER_APPLE
   }
 #endif
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
 }
 
 

@@ -2159,12 +2159,12 @@ static void ReportErrnoSpoiling(ThreadState *thr, uptr pc, int sig) {
 #endif
     if (!suppressed)
       OutputReport(thr, *rep);
+
+    // Need to manually destroy this because we used placement new to allocate
+    rep->~ScopedReport();
 #if !SANITIZER_APPLE
   }
 #endif
-
-  // Need to manually destroy this because we used placement new to allocate
-  rep->~ScopedReport();
 }
 
 static void CallUserSignalHandler(ThreadState *thr, bool sync, bool acquire,
