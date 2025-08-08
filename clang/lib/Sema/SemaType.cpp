@@ -6575,7 +6575,8 @@ static void HandleAddressSpaceTypeAttribute(QualType &Type,
       ASIdx = Attr.asHLSLLangAS();
 
     if (ASIdx == LangAS::Default) {
-      assert((S.getLangOpts().SYCLIsDevice || S.getLangOpts().HLSL) && "Unexpected language mode");
+      assert((S.getLangOpts().SYCLIsDevice || S.getLangOpts().HLSL) &&
+             "Unexpected language mode");
       S.Diag(Attr.getLoc(), diag::err_attribute_not_supported_in_lang)
           << Attr
           << (S.getLangOpts().SYCLIsDevice ? AttributeLangSupport::SYCLDevice
