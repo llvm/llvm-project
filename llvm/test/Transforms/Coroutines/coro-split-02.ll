@@ -27,10 +27,10 @@ entry:
 await.ready:
   %StrayCoroSave = call token @llvm.coro.save(ptr null)
   %val = load i32, ptr %ref.tmp7
-  call void @llvm.lifetime.start.p0(i64 4, ptr %testval)
+  call void @llvm.lifetime.start.p0(ptr %testval)
   %test = load i32, ptr %testval
   call void @print(i32 %test)
-  call void @llvm.lifetime.end.p0(i64 4, ptr  %testval)
+  call void @llvm.lifetime.end.p0(ptr  %testval)
   call void @print(i32 %val)
   br label %exit
 exit:
@@ -42,10 +42,10 @@ exit:
 ; CHECK:         %testval = alloca i32
 ; CHECK-NOT:     call token @llvm.coro.save(ptr null)
 ; CHECK:         %val = load i32, ptr %ref.tmp7
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr %testval)
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr %testval)
 ; CHECK-NEXT:    %test = load i32, ptr %testval
 ; CHECK-NEXT:    call void @print(i32 %test)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr %testval)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr %testval)
 ; CHECK-NEXT:    call void @print(i32 %val)
 ; CHECK-NEXT:    ret void
 
@@ -61,5 +61,5 @@ declare i8 @llvm.coro.suspend(token, i1) #3
 declare void @"\01??3@YAXPEAX@Z"(ptr) local_unnamed_addr #10
 declare ptr @llvm.coro.free(token, ptr nocapture readonly) #2
 declare i1 @llvm.coro.end(ptr, i1, token) #3
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #4
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #4
+declare void @llvm.lifetime.start.p0(ptr nocapture) #4
+declare void @llvm.lifetime.end.p0(ptr nocapture) #4

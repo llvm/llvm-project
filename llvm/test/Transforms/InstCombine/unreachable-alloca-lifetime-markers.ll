@@ -12,7 +12,7 @@ define void @pr150338(ptr %arg) {
   %a = alloca i32
   store ptr %a, ptr %arg
   store i1 true, ptr poison
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret void
 }
 
@@ -33,7 +33,7 @@ entry:
 
 bb1:
   %phi1 = phi ptr [ null, %entry ], [ %phi2, %bb2 ]
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   br label %bb2
 
 bb2:
@@ -45,7 +45,7 @@ define void @lifetime_poison() {
 ; CHECK-LABEL: define void @lifetime_poison() {
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.lifetime.start.p0(i64 4, ptr poison)
-  call void @llvm.lifetime.end.p0(i64 4, ptr poison)
+  call void @llvm.lifetime.start.p0(ptr poison)
+  call void @llvm.lifetime.end.p0(ptr poison)
   ret void
 }

@@ -944,16 +944,15 @@ void genDimInfoFromBox(fir::FirOpBuilder &builder, mlir::Location loc,
                        llvm::SmallVectorImpl<mlir::Value> *strides);
 
 /// Generate an LLVM dialect lifetime start marker at the current insertion
-/// point given an fir.alloca and its constant size in bytes. Returns the value
-/// to be passed to the lifetime end marker.
+/// point given an fir.alloca. Returns the value to be passed to the lifetime
+/// end marker.
 mlir::Value genLifetimeStart(mlir::OpBuilder &builder, mlir::Location loc,
-                             fir::AllocaOp alloc, int64_t size,
-                             const mlir::DataLayout *dl);
+                             fir::AllocaOp alloc, const mlir::DataLayout *dl);
 
 /// Generate an LLVM dialect lifetime end marker at the current insertion point
-/// given an llvm.ptr value and the constant size in bytes of its storage.
+/// given an llvm.ptr value.
 void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
-                    mlir::Value mem, int64_t size);
+                    mlir::Value mem);
 
 } // namespace fir::factory
 

@@ -5,10 +5,10 @@ target triple = "mips64--linux"
 
 define i32 @foo(i32 %guard, ...) {
   %vl = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.start.p0(ptr %vl)
   call void @llvm.va_start(ptr %vl)
   call void @llvm.va_end(ptr %vl)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.end.p0(ptr %vl)
   ret i32 0
 }
 
@@ -23,10 +23,10 @@ define i32 @foo(i32 %guard, ...) {
 ; CHECK: [[D:%.*]] = call i64 @llvm.umin.i64(i64 [[A]], i64 800)
 ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[C]], ptr align 8 @__msan_va_arg_tls, i64 [[D]], i1 false)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 declare void @llvm.va_start(ptr) #2
 declare void @llvm.va_end(ptr) #2
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 define i32 @bar() {
   %1 = call i32 (i32, ...) @foo(i32 0, i32 1, i64 2, double 3.000000e+00)

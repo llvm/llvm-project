@@ -78,13 +78,13 @@ sw.bb1:                                           ; preds = %entry
   br label %return
 
 while.body:                                       ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 4096, ptr nonnull %buf) #10
+  call void @llvm.lifetime.start.p0(ptr nonnull %buf) #10
   store ptr %buf, ptr @stackbuf, align 8
   ; may_jump may call longjmp, going back to the switch (and then the return),
   ; bypassing the lifetime.end. This is why we need to untag on the return,
   ; rather than the lifetime.end.
   call void @may_jump()
-  call void @llvm.lifetime.end.p0(i64 4096, ptr nonnull %buf) #10
+  call void @llvm.lifetime.end.p0(ptr nonnull %buf) #10
   br label %return
 
 return:                                           ; preds = %entry, %while.body, %sw.bb1
@@ -94,5 +94,5 @@ return:                                           ; preds = %entry, %while.body,
 
 declare i32 @setjmp(ptr noundef) returns_twice
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)

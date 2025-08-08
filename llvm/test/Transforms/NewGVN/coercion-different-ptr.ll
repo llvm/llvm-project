@@ -11,7 +11,7 @@ define void @foo(ptr %arg) {
 ; CHECK-SAME: ptr [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca i8, align 16
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr [[ALLOCA]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ALLOCA]])
 ; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[ARG]], align 8
 ; CHECK-NEXT:    [[LOAD1:%.*]] = load ptr, ptr [[LOAD]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = call ptr [[LOAD1]](ptr [[ALLOCA]])
@@ -19,14 +19,14 @@ define void @foo(ptr %arg) {
 ;
 bb:
   %alloca = alloca i8, align 16
-  call void @llvm.lifetime.start.p0(i64 1, ptr %alloca)
+  call void @llvm.lifetime.start.p0(ptr %alloca)
   %load = load ptr, ptr %arg, align 8
   %load1 = load ptr, ptr %load, align 8
   %call = call ptr %load1(ptr %alloca)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr captures(none)) #0
+declare void @llvm.lifetime.start.p0(ptr captures(none)) #0
 
 declare ptr @malloc(i64)
 

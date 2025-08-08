@@ -315,7 +315,7 @@ struct Fragment {
     /// AngledHeaders (i.e. a header matches a regex in both QuotedHeaders and
     /// AngledHeaders), system headers use <> and non-system headers use "".
     /// These can match any suffix of the header file in question.
-    /// Matching is performed against the header text, not its absolute path
+    /// Matching is performed against the absolute path of the header
     /// within the project.
     std::vector<Located<std::string>> QuotedHeaders;
     /// List of regexes for headers that should always be included with a
@@ -323,7 +323,7 @@ struct Fragment {
     /// AngledHeaders (i.e. a header matches a regex in both QuotedHeaders and
     /// AngledHeaders), system headers use <> and non-system headers use "".
     /// These can match any suffix of the header file in question.
-    /// Matching is performed against the header text, not its absolute path
+    /// Matching is performed against the absolute path of the header
     /// within the project.
     std::vector<Located<std::string>> AngledHeaders;
   };

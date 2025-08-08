@@ -75,7 +75,7 @@ entry:
   %ref.tmp7 = alloca %union.ElementWiseAccess, align 16
   %ref.tmp12 = alloca %union.ElementWiseAccess, align 16
   store ptr %V, ptr %V.addr, align 8
-  call void @llvm.lifetime.start.p0(i64 16, ptr %ref.tmp) #4
+  call void @llvm.lifetime.start.p0(ptr %ref.tmp) #4
   %0 = load ptr, ptr %V.addr, align 8
   %call = call { double, double } @castToElementWiseAccess_ByVal(ptr noundef nonnull align 16 dereferenceable(16) %0)
   %coerce.dive = getelementptr inbounds %union.ElementWiseAccess, ptr %ref.tmp, i32 0, i32 0
@@ -87,7 +87,7 @@ entry:
   store double %4, ptr %3, align 8
   %call1 = call noundef float @ElementWiseAccess5getAt(ptr noundef nonnull align 16 dereferenceable(16) %ref.tmp, i32 noundef 0)
   %vecinit = insertelement <4 x float> undef, float %call1, i32 0
-  call void @llvm.lifetime.start.p0(i64 16, ptr %ref.tmp2) #4
+  call void @llvm.lifetime.start.p0(ptr %ref.tmp2) #4
   %5 = load ptr, ptr %V.addr, align 8
   %call3 = call { double, double } @castToElementWiseAccess_ByVal(ptr noundef nonnull align 16 dereferenceable(16) %5)
   %coerce.dive4 = getelementptr inbounds %union.ElementWiseAccess, ptr %ref.tmp2, i32 0, i32 0
@@ -99,7 +99,7 @@ entry:
   store double %9, ptr %8, align 8
   %call5 = call noundef float @ElementWiseAccess5getAt(ptr noundef nonnull align 16 dereferenceable(16) %ref.tmp2, i32 noundef 1)
   %vecinit6 = insertelement <4 x float> %vecinit, float %call5, i32 1
-  call void @llvm.lifetime.start.p0(i64 16, ptr %ref.tmp7) #4
+  call void @llvm.lifetime.start.p0(ptr %ref.tmp7) #4
   %10 = load ptr, ptr %V.addr, align 8
   %call8 = call { double, double } @castToElementWiseAccess_ByVal(ptr noundef nonnull align 16 dereferenceable(16) %10)
   %coerce.dive9 = getelementptr inbounds %union.ElementWiseAccess, ptr %ref.tmp7, i32 0, i32 0
@@ -111,7 +111,7 @@ entry:
   store double %14, ptr %13, align 8
   %call10 = call noundef float @ElementWiseAccess5getAt(ptr noundef nonnull align 16 dereferenceable(16) %ref.tmp7, i32 noundef 2)
   %vecinit11 = insertelement <4 x float> %vecinit6, float %call10, i32 2
-  call void @llvm.lifetime.start.p0(i64 16, ptr %ref.tmp12) #4
+  call void @llvm.lifetime.start.p0(ptr %ref.tmp12) #4
   %15 = load ptr, ptr %V.addr, align 8
   %call13 = call { double, double } @castToElementWiseAccess_ByVal(ptr noundef nonnull align 16 dereferenceable(16) %15)
   %coerce.dive14 = getelementptr inbounds %union.ElementWiseAccess, ptr %ref.tmp12, i32 0, i32 0
@@ -125,10 +125,10 @@ entry:
   %vecinit16 = insertelement <4 x float> %vecinit11, float %call15, i32 3
   store <4 x float> %vecinit16, ptr %.compoundliteral, align 16
   %20 = load <4 x float>, ptr %.compoundliteral, align 16
-  call void @llvm.lifetime.end.p0(i64 16, ptr %ref.tmp12) #4
-  call void @llvm.lifetime.end.p0(i64 16, ptr %ref.tmp7) #4
-  call void @llvm.lifetime.end.p0(i64 16, ptr %ref.tmp2) #4
-  call void @llvm.lifetime.end.p0(i64 16, ptr %ref.tmp) #4
+  call void @llvm.lifetime.end.p0(ptr %ref.tmp12) #4
+  call void @llvm.lifetime.end.p0(ptr %ref.tmp7) #4
+  call void @llvm.lifetime.end.p0(ptr %ref.tmp2) #4
+  call void @llvm.lifetime.end.p0(ptr %ref.tmp) #4
   ret <4 x float> %20
 }
 
@@ -144,8 +144,8 @@ entry:
   ret { double, double } %1
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
+declare void @llvm.lifetime.start.p0(ptr nocapture) #2
+declare void @llvm.lifetime.end.p0(ptr nocapture) #2
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #3
 
 define internal noundef nonnull align 16 dereferenceable(16) ptr @castToElementWiseAccess_ByRef(ptr noundef nonnull align 16 dereferenceable(16) %0) #1 {

@@ -9,7 +9,7 @@ entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
   %alloc = call ptr @malloc(i64 16) #3
   %alloc.var = alloca i8
-  call void @llvm.lifetime.start.p0(i64 1, ptr %alloc.var)
+  call void @llvm.lifetime.start.p0(ptr %alloc.var)
   %vFrame = call noalias nonnull ptr @llvm.coro.begin(token %id, ptr %alloc)
 
   %save = call token @llvm.coro.save(ptr null)
@@ -29,7 +29,7 @@ await.suspend:
   ]
 await.ready:
   call void @consume(ptr %alloc.var)
-  call void @llvm.lifetime.end.p0(i64 1, ptr %alloc.var)
+  call void @llvm.lifetime.end.p0(ptr %alloc.var)
   br label %exit
 exit:
   call i1 @llvm.coro.end(ptr null, i1 false, token none)
@@ -53,8 +53,8 @@ declare i1 @llvm.coro.end(ptr, i1, token) #2
 declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #1
 declare ptr @malloc(i64)
 declare void @consume(ptr)
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare ptr @await_suspend_function(ptr %awaiter, ptr %hdl)
 
 attributes #0 = { presplitcoroutine }

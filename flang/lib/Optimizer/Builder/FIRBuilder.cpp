@@ -1947,17 +1947,17 @@ void fir::factory::genDimInfoFromBox(
 
 mlir::Value fir::factory::genLifetimeStart(mlir::OpBuilder &builder,
                                            mlir::Location loc,
-                                           fir::AllocaOp alloc, int64_t size,
+                                           fir::AllocaOp alloc,
                                            const mlir::DataLayout *dl) {
   mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(
       alloc.getContext(), getAllocaAddressSpace(dl));
   mlir::Value cast =
       fir::ConvertOp::create(builder, loc, ptrTy, alloc.getResult());
-  mlir::LLVM::LifetimeStartOp::create(builder, loc, size, cast);
+  mlir::LLVM::LifetimeStartOp::create(builder, loc, cast);
   return cast;
 }
 
 void fir::factory::genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
-                                  mlir::Value cast, int64_t size) {
-  mlir::LLVM::LifetimeEndOp::create(builder, loc, size, cast);
+                                  mlir::Value cast) {
+  mlir::LLVM::LifetimeEndOp::create(builder, loc, cast);
 }

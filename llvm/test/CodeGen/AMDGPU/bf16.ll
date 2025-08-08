@@ -24671,7 +24671,6 @@ define <32 x bfloat> @v_minnum_v32bf16(<32 x bfloat> %a, <32 x bfloat> %b) {
   ret <32 x bfloat> %op
 }
 
-
 declare bfloat @llvm.maxnum.bf16(bfloat, bfloat)
 declare <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat>, <2 x bfloat>)
 declare <3 x bfloat> @llvm.maxnum.v3bf16(<3 x bfloat>, <3 x bfloat>)
@@ -29672,7 +29671,6 @@ define { bfloat, i16 } @v_frexp_bf16_i16(bfloat %a) {
   %op = call { bfloat, i16 } @llvm.frexp.bf16.i16(bfloat %a)
   ret { bfloat, i16 } %op
 }
-
 
 declare bfloat @llvm.log.bf16(bfloat)
 declare bfloat @llvm.log2.bf16(bfloat)

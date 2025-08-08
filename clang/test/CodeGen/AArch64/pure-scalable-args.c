@@ -329,7 +329,7 @@ void test_pass_variadic(PST *p, PST *q) {
 // CHECK-AAPCS: call void (<vscale x 16 x i1>, <vscale x 2 x double>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 16 x i8>, <vscale x 16 x i1>, ...) @pass_variadic_callee(<vscale x 16 x i1> %1, <vscale x 2 x double> %cast.scalable1, <vscale x 4 x float> %cast.scalable2, <vscale x 4 x float> %cast.scalable3, <vscale x 16 x i8> %cast.scalable4, <vscale x 16 x i1> %12, ptr dead_on_return noundef nonnull %byval-temp)
 
 // CHECK-DARWIN: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(96) %byval-temp, ptr noundef nonnull align 16 dereferenceable(96) %p, i64 96, i1 false)
-// CHECK-DARWIN: call void @llvm.lifetime.start.p0(i64 96, ptr nonnull %byval-temp1)
+// CHECK-DARWIN: call void @llvm.lifetime.start.p0(ptr nonnull %byval-temp1)
 // CHECK-DARWIN: call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 16 dereferenceable(96) %byval-temp1, ptr noundef nonnull align 16 dereferenceable(96) %q, i64 96, i1 false)
 // CHECK-DARWIN: call void (ptr, ...) @pass_variadic_callee(ptr dead_on_return noundef nonnull %byval-temp, ptr dead_on_return noundef nonnull %byval-temp1)
 
@@ -392,7 +392,7 @@ void test_va_arg(int n, ...) {
 // CHECK-AAPCS: define dso_local void @test_va_arg(i32 noundef %n, ...)
 // CHECK-AAPCS-NEXT: entry:
 // CHECK-AAPCS-NEXT:   %ap = alloca %struct.__va_list, align 8
-// CHECK-AAPCS-NEXT:   call void @llvm.lifetime.start.p0(i64 32, ptr nonnull %ap)
+// CHECK-AAPCS-NEXT:   call void @llvm.lifetime.start.p0(ptr nonnull %ap)
 // CHECK-AAPCS-NEXT:   call void @llvm.va_start.p0(ptr nonnull %ap)
 // CHECK-AAPCS-NEXT:   %gr_offs_p = getelementptr inbounds nuw i8, ptr %ap, i64 24
 // CHECK-AAPCS-NEXT:   %gr_offs = load i32, ptr %gr_offs_p, align 8
@@ -435,14 +435,14 @@ void test_va_arg(int n, ...) {
 // CHECK-AAPCS-NEXT:   %3 = bitcast <vscale x 2 x i8> %cast.scalable to <vscale x 16 x i1>
 // CHECK-AAPCS-NEXT:   %cast.scalable2 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %v.sroa.43.0.copyload, i64 0)
 // CHECK-AAPCS-NEXT:   call void @use1(<vscale x 16 x i1> noundef %3, <vscale x 4 x float> noundef %cast.scalable2)
-// CHECK-AAPCS-NEXT:   call void @llvm.lifetime.end.p0(i64 32, ptr nonnull %ap)
+// CHECK-AAPCS-NEXT:   call void @llvm.lifetime.end.p0(ptr nonnull %ap)
 // CHECK-AAPCS-NEXT:   ret void
 // CHECK-AAPCS-NEXT: }
 
 // CHECK-DARWIN: define void @test_va_arg(i32 noundef %n, ...)
 // CHECK-DARWIN-NEXT: entry:
 // CHECK-DARWIN-NEXT:   %ap = alloca ptr, align 8
-// CHECK-DARWIN-NEXT:   call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ap)
+// CHECK-DARWIN-NEXT:   call void @llvm.lifetime.start.p0(ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   call void @llvm.va_start.p0(ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   %argp.cur = load ptr, ptr %ap, align 8
 // CHECK-DARWIN-NEXT:   %argp.next = getelementptr inbounds nuw i8, ptr %argp.cur, i64 8
@@ -456,7 +456,7 @@ void test_va_arg(int n, ...) {
 // CHECK-DARWIN-NEXT:   %1 = bitcast <vscale x 2 x i8> %cast.scalable to <vscale x 16 x i1>
 // CHECK-DARWIN-NEXT:   %cast.scalable2 = call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %v.sroa.43.0.copyload, i64 0)
 // CHECK-DARWIN-NEXT:   call void @use1(<vscale x 16 x i1> noundef %1, <vscale x 4 x float> noundef %cast.scalable2)
-// CHECK-DARWIN-NEXT:   call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ap)
+// CHECK-DARWIN-NEXT:   call void @llvm.lifetime.end.p0(ptr nonnull %ap)
 // CHECK-DARWIN-NEXT:   ret void
 // CHECK-DARWIN-NEXT: }
 

@@ -44,8 +44,8 @@ declare void @bar(ptr)
 
 define void @foo() {
   %p = alloca i32
-  call void @llvm.lifetime.start(i64 4, ptr %p)
+  call void @llvm.lifetime.start(ptr %p)
   call void @bar(ptr %p)
-  call void @llvm.lifetime.end(i64 4, ptr %p)
+  call void @llvm.lifetime.end(ptr %p)
   ret void
 }

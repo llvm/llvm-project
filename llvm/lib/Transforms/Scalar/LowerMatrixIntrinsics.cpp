@@ -2166,7 +2166,7 @@ public:
 
         // If the loads don't alias the lifetime.end, it won't interfere with
         // fusion.
-        MemoryLocation EndLoc = MemoryLocation::getForArgument(End, 1, nullptr);
+        MemoryLocation EndLoc = MemoryLocation::getForArgument(End, 0, nullptr);
         if (!EndLoc.Ptr)
           continue;
         if (AA->isNoAlias(Load0Loc, EndLoc) && AA->isNoAlias(Load1Loc, EndLoc))

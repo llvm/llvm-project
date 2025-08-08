@@ -43,7 +43,7 @@ entry:
   store ptr %pSrcB, ptr %pSrcB.addr, align 4
   store ptr %pDst, ptr %pDst.addr, align 4
   store i32 %blockSize, ptr %blockSize.addr, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %blkCnt)
+  call void @llvm.lifetime.start.p0(ptr %blkCnt)
   %0 = load i32, ptr %blockSize.addr, align 4
   store i32 %0, ptr %blkCnt, align 4
   br label %while.cond
@@ -78,7 +78,7 @@ while.body:                                       ; preds = %while.cond
   br label %while.cond
 
 while.end:                                        ; preds = %while.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %blkCnt)
+  call void @llvm.lifetime.end.p0(ptr %blkCnt)
   ret void
 }
 
@@ -102,13 +102,13 @@ land.lhs.true:                                    ; preds = %entry
   br i1 %cmp1, label %if.then, label %if.end10
 
 if.then:                                          ; preds = %land.lhs.true
-  call void @llvm.lifetime.start.p0(i64 4, ptr %max)
+  call void @llvm.lifetime.start.p0(ptr %max)
   %2 = load i32, ptr %sat.addr, align 4
   %sub = sub i32 %2, 1
   %shl = shl i32 1, %sub
   %sub2 = sub i32 %shl, 1
   store i32 %sub2, ptr %max, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %min)
+  call void @llvm.lifetime.start.p0(ptr %min)
   %3 = load i32, ptr %max, align 4
   %sub3 = sub nsw i32 -1, %3
   store i32 %sub3, ptr %min, align 4
@@ -143,8 +143,8 @@ if.end8:                                          ; preds = %if.end
   br label %cleanup
 
 cleanup:                                          ; preds = %if.end8, %if.then7, %if.then5
-  call void @llvm.lifetime.end.p0(i64 4, ptr %min)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %max)
+  call void @llvm.lifetime.end.p0(ptr %min)
+  call void @llvm.lifetime.end.p0(ptr %max)
   %cleanup.dest = load i32, ptr %cleanup.dest.slot, align 4
   switch i32 %cleanup.dest, label %unreachable [
   i32 0, label %cleanup.cont
@@ -167,8 +167,8 @@ unreachable:                                      ; preds = %cleanup
   unreachable
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp,-aes,-bf16,-cdecp0,-cdecp1,-cdecp2,-cdecp3,-cdecp4,-cdecp5,-cdecp6,-cdecp7,-crc,-crypto,-d32,-dotprod,-fp-armv8,-fp-armv8sp,-fp16fml,-hwdiv-arm,-i8mm,-neon,-sb,-sha2,-vfp3,-vfp3sp,-vfp4,-vfp4sp" "unsafe-fp-math"="true" }
 attributes #1 = { alwaysinline nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="cortex-m55" "target-features"="+armv8.1-m.main,+dsp,+fp-armv8d16,+fp-armv8d16sp,+fp16,+fp64,+fullfp16,+hwdiv,+lob,+mve,+mve.fp,+ras,+strict-align,+thumb-mode,+vfp2,+vfp2sp,+vfp3d16,+vfp3d16sp,+vfp4d16,+vfp4d16sp,-aes,-bf16,-cdecp0,-cdecp1,-cdecp2,-cdecp3,-cdecp4,-cdecp5,-cdecp6,-cdecp7,-crc,-crypto,-d32,-dotprod,-fp-armv8,-fp-armv8sp,-fp16fml,-hwdiv-arm,-i8mm,-neon,-sb,-sha2,-vfp3,-vfp3sp,-vfp4,-vfp4sp" "unsafe-fp-math"="true" }

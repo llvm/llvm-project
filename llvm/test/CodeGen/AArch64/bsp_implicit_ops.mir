@@ -96,3 +96,23 @@ body:             |
     $q25 = ORRv16i8 $q3, killed $q3
     RET_ReallyLR implicit $q22
 ...
+---
+name:            DoubleOp
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $q2
+
+    ; CHECK-LABEL: name: DoubleOp
+    ; CHECK: liveins: $q2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $q0 = MOVIv8i16 1, 0
+    ; CHECK-NEXT: renamable $q1 = ORRv16i8 renamable $q2, renamable $q2
+    ; CHECK-NEXT: renamable $q1 = BSLv16i8 killed renamable $q1, renamable $q2, renamable $q0
+    ; CHECK-NEXT: renamable $q0 = SQADDv8i16 killed renamable $q1, killed renamable $q0
+    ; CHECK-NEXT: RET undef $lr, implicit $q0
+    renamable $q0 = MOVIv8i16 1, 0
+    renamable $q1 = BSPv16i8 killed renamable $q2, renamable $q2, renamable $q0
+    renamable $q0 = SQADDv8i16 killed renamable $q1, killed renamable $q0
+    RET_ReallyLR implicit $q0
+...

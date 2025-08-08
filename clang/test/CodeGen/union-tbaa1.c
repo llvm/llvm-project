@@ -11,7 +11,7 @@ void bar(vect32 p[][2]);
 // CHECK-SAME: (i32 noundef [[NUM:%.*]], ptr noundef writeonly captures(none) initializes((0, 8)) [[VEC:%.*]], ptr noundef readonly captures(none) [[INDEX:%.*]], ptr noundef readonly captures(none) [[ARR:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP:%.*]] = alloca [4 x [2 x %union.vect32]], align 8
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 32, ptr nonnull [[TMP]]) #[[ATTR3:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[TMP]]) #[[ATTR3:[0-9]+]]
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[INDEX]], align 4, !tbaa [[TBAA2:![0-9]+]]
 // CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[ARR]], i32 [[TMP0]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
@@ -33,7 +33,7 @@ void bar(vect32 p[][2]);
 // CHECK-NEXT:    [[ARRAYIDX17:%.*]] = getelementptr inbounds nuw i8, ptr [[VEC]], i32 4
 // CHECK-NEXT:    store i32 [[CONV16]], ptr [[ARRAYIDX17]], align 4, !tbaa [[TBAA2]]
 // CHECK-NEXT:    call void @bar(ptr noundef nonnull [[TMP]]) #[[ATTR3]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 32, ptr nonnull [[TMP]]) #[[ATTR3]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[TMP]]) #[[ATTR3]]
 // CHECK-NEXT:    ret void
 //
 void fred(unsigned Num, int Vec[2], int *Index, int Arr[4][2]) {

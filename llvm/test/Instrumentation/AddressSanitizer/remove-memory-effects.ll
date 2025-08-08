@@ -10,9 +10,9 @@ declare void @foo(ptr writeonly) memory(argmem: write)
 define void @bar() sanitize_address {
 entry:
   %x = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
   call void @foo(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
   ret void
 }
 

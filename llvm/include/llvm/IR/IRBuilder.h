@@ -812,15 +812,10 @@ public:
   LLVM_ABI CallInst *CreateFPMinimumReduce(Value *Src);
 
   /// Create a lifetime.start intrinsic.
-  ///
-  /// If the pointer isn't i8* it will be converted.
-  LLVM_ABI CallInst *CreateLifetimeStart(Value *Ptr,
-                                         ConstantInt *Size = nullptr);
+  LLVM_ABI CallInst *CreateLifetimeStart(Value *Ptr);
 
   /// Create a lifetime.end intrinsic.
-  ///
-  /// If the pointer isn't i8* it will be converted.
-  LLVM_ABI CallInst *CreateLifetimeEnd(Value *Ptr, ConstantInt *Size = nullptr);
+  LLVM_ABI CallInst *CreateLifetimeEnd(Value *Ptr);
 
   /// Create a call to invariant.start intrinsic.
   ///

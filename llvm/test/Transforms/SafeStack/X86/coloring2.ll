@@ -14,21 +14,21 @@ entry:
   %y = alloca i32, align 4
   %z = alloca i32, align 4
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %x)
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %y)
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
   call void @capture32(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -8
   call void @capture32(ptr %z)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %z)
 
   ret void
 }
@@ -42,11 +42,11 @@ entry:
   %x = alloca i32, align 4
   %y = alloca i32, align 4
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -8
   call void @capture32(ptr %y)
@@ -65,21 +65,21 @@ entry:
   %y = alloca i32, align 4
   %z = alloca i64, align 4
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %y)
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -8
   call void @capture32(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %z)
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -8
   call void @capture64(ptr %z)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %z)
 
   ret void
 }
@@ -95,9 +95,9 @@ entry:
   %z = alloca i64, align 4
   %y = alloca i32, align 4
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %z)
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -16
   call void @capture32(ptr %x)
@@ -108,9 +108,9 @@ entry:
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -8
   call void @capture64(ptr %z)
 
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %z)
 
   ret void
 }
@@ -147,8 +147,8 @@ entry:
   %z = alloca i64, align 8
   %z1 = alloca i64, align 8
   %z2 = alloca i64, align 8
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x1)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x2)
+  call void @llvm.lifetime.start.p0(ptr %x1)
+  call void @llvm.lifetime.start.p0(ptr %x2)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -8
 ; CHECK:   call void @capture64(
   call void @capture64(ptr nonnull %x1)
@@ -158,62 +158,62 @@ entry:
   br i1 %a, label %if.then, label %if.else4
 
 if.then:                                          ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -24
 ; CHECK:   call void @capture64(
   call void @capture64(ptr nonnull %y)
   br i1 %b, label %if.then3, label %if.else
 
 if.then3:                                         ; preds = %if.then
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y1)
+  call void @llvm.lifetime.start.p0(ptr %y1)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -32
 ; CHECK:   call void @capture64(
   call void @capture64(ptr nonnull %y1)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y1)
+  call void @llvm.lifetime.end.p0(ptr %y1)
   br label %if.end
 
 if.else:                                          ; preds = %if.then
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y2)
+  call void @llvm.lifetime.start.p0(ptr %y2)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -32
 ; CHECK:   call void @capture64(
   call void @capture64(ptr nonnull %y2)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y2)
+  call void @llvm.lifetime.end.p0(ptr %y2)
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then3
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
   br label %if.end9
 
 if.else4:                                         ; preds = %entry
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.start.p0(ptr %z)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -24
 ; CHECK:   call void @capture64(
   call void @capture64(ptr nonnull %z)
   br i1 %b, label %if.then6, label %if.else7
 
 if.then6:                                         ; preds = %if.else4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z1)
+  call void @llvm.lifetime.start.p0(ptr %z1)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -32
 ; CHECK:   call void @capture64(
   call void @capture64(ptr nonnull %z1)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z1)
+  call void @llvm.lifetime.end.p0(ptr %z1)
   br label %if.end8
 
 if.else7:                                         ; preds = %if.else4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %z2)
+  call void @llvm.lifetime.start.p0(ptr %z2)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -32
 ; CHECK:   call void @capture64(
   call void @capture64(ptr nonnull %z2)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z2)
+  call void @llvm.lifetime.end.p0(ptr %z2)
   br label %if.end8
 
 if.end8:                                          ; preds = %if.else7, %if.then6
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %z)
+  call void @llvm.lifetime.end.p0(ptr %z)
   br label %if.end9
 
 if.end9:                                          ; preds = %if.end8, %if.end
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x2)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x1)
+  call void @llvm.lifetime.end.p0(ptr %x2)
+  call void @llvm.lifetime.end.p0(ptr %x1)
   ret void
 }
 
@@ -225,21 +225,21 @@ entry:
 ; CHECK-NEXT:   getelementptr i8, ptr %[[USP]], i32 -16
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %x)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -8
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %x)
   ret void
 bb3:
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
   ret void
 }
 
@@ -250,18 +250,18 @@ entry:
 ; CHECK-NEXT:   getelementptr i8, ptr %[[USP]], i32 -16
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %y)
   ret void
 bb3:
   ret void
@@ -275,14 +275,14 @@ entry:
 ; CHECK-NEXT:   getelementptr i8, ptr %[[USP]], i32 -16
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %y)
@@ -299,14 +299,14 @@ entry:
 ; CHECK-NEXT:   getelementptr i8, ptr %[[USP]], i32 -16
   %x = alloca i32, align 4
   %y = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %x)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %x)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.end.p0(ptr %x)
+  call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %y)
@@ -326,10 +326,10 @@ entry:
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %x)
+  call void @llvm.lifetime.end.p0(ptr %x)
   br i1 %d, label %bb2, label %bb3
 bb2:
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %y)
+  call void @llvm.lifetime.start.p0(ptr %y)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -8
 ; CHECK:   call void @capture32(
   call void @capture32(ptr %y)
@@ -347,26 +347,26 @@ entry:
   %B.i2 = alloca [100 x i32], align 4
   %A.i = alloca [100 x i32], align 4
   %B.i = alloca [100 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i)
+  call void @llvm.lifetime.start.p0(ptr %A.i)
+  call void @llvm.lifetime.start.p0(ptr %B.i)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -400
 ; CHECK:   call void @capture100x32(
   call void @capture100x32(ptr %A.i)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -800
 ; CHECK:   call void @capture100x32(
   call void @capture100x32(ptr %B.i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i1)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i2)
+  call void @llvm.lifetime.end.p0(ptr %A.i)
+  call void @llvm.lifetime.end.p0(ptr %B.i)
+  call void @llvm.lifetime.start.p0(ptr %A.i1)
+  call void @llvm.lifetime.start.p0(ptr %B.i2)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -400
 ; CHECK:   call void @capture100x32(
   call void @capture100x32(ptr %A.i1)
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -800
 ; CHECK:   call void @capture100x32(
   call void @capture100x32(ptr %B.i2)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i1)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i2)
+  call void @llvm.lifetime.end.p0(ptr %A.i1)
+  call void @llvm.lifetime.end.p0(ptr %B.i2)
   ret void
 }
 
@@ -378,11 +378,11 @@ entry:
   %buf1 = alloca i8, i32 100000, align 16
   %buf2 = alloca i8, i32 100000, align 16
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf1)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %buf1)
+  call void @llvm.lifetime.start.p0(ptr %buf1)
+  call void @llvm.lifetime.end.p0(ptr %buf1)
 
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf1)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %buf2)
+  call void @llvm.lifetime.start.p0(ptr %buf1)
+  call void @llvm.lifetime.start.p0(ptr %buf2)
   call void @capture8(ptr %buf1)
   call void @capture8(ptr %buf2)
   ret void
@@ -404,12 +404,12 @@ entry:
   %B.i2 = alloca [100 x i32], align 4
   %A.i = alloca [100 x i32], align 4
   %B.i = alloca [100 x i32], align 4
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %A.i) nounwind
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %B.i) nounwind
+  call void @llvm.lifetime.start.p0(ptr %A.i) nounwind
+  call void @llvm.lifetime.start.p0(ptr %B.i) nounwind
   call void @capture100x32(ptr %A.i)
   call void @capture100x32(ptr %B.i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %A.i) nounwind
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %B.i) nounwind
+  call void @llvm.lifetime.end.p0(ptr %A.i) nounwind
+  call void @llvm.lifetime.end.p0(ptr %B.i) nounwind
   br label %block2
 
 block2:
@@ -429,13 +429,13 @@ entry:
   %a.i = alloca [4 x %struct.Klass], align 16
   %b.i = alloca [4 x %struct.Klass], align 16
   ; I am used outside the lifetime zone below:
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %a.i)
-  call void @llvm.lifetime.start.p0(i64 -1, ptr %b.i)
+  call void @llvm.lifetime.start.p0(ptr %a.i)
+  call void @llvm.lifetime.start.p0(ptr %b.i)
   call void @capture8(ptr %a.i)
   call void @capture8(ptr %b.i)
   %z3 = load i32, ptr %a.i, align 16
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %a.i)
-  call void @llvm.lifetime.end.p0(i64 -1, ptr %b.i)
+  call void @llvm.lifetime.end.p0(ptr %a.i)
+  call void @llvm.lifetime.end.p0(ptr %b.i)
   ret i32 %z3
 }
 
@@ -445,12 +445,12 @@ entry:
 ; CHECK:        %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
 ; CHECK-NEXT:   getelementptr i8, ptr %[[USP]], i32 -16
   %x = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %x) nounwind
+  call void @llvm.lifetime.start.p0(ptr %x) nounwind
   br label %l2
 
 l2:
   call void @capture8(ptr %x)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %x) nounwind
+  call void @llvm.lifetime.end.p0(ptr %x) nounwind
   br label %l2
 }
 
@@ -463,25 +463,25 @@ entry:
 ; CHECK-NEXT:   getelementptr i8, ptr %[[USP]], i32 -16
   %x = alloca i8, align 4
   %y = alloca i8, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %x) nounwind
+  call void @llvm.lifetime.start.p0(ptr %x) nounwind
   br label %l2
 
 l2:
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %y) nounwind
+  call void @llvm.lifetime.start.p0(ptr %y) nounwind
   call void @capture8(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %y) nounwind
+  call void @llvm.lifetime.end.p0(ptr %y) nounwind
 
 ; CHECK:   getelementptr i8, ptr %[[USP]], i32 -4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %x) nounwind
+  call void @llvm.lifetime.start.p0(ptr %x) nounwind
   call void @capture8(ptr %x)
   br label %l2
 }
 
 attributes #0 = { safestack }
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 declare void @capture8(ptr)
 declare void @capture32(ptr)
 declare void @capture64(ptr)

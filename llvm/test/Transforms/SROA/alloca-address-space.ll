@@ -140,7 +140,7 @@ define void @addressspace_alloca_lifetime() {
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca i8, align 8, addrspace(2)
-  call void @llvm.lifetime.start(i64 2, ptr addrspace(2) %alloca)
+  call void @llvm.lifetime.start(ptr addrspace(2) %alloca)
   ret void
 }
 

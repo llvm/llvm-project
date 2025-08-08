@@ -1,0 +1,8 @@
+// Checks that non-fully supported passes on AArch64 are handled appropriately.
+
+// REQUIRES: system-linux,asserts,target=aarch64{{.*}}
+
+RUN: %clang %cflags %p/../Inputs/hello.c -o %t -Wl,-q
+RUN: not llvm-bolt %t -o %t.bolt --frame-opt=all 2>&1 | FileCheck %s
+
+CHECK: BOLT-ERROR: frame-optimizer is supported only on X86

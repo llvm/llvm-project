@@ -818,12 +818,12 @@ bool TypeSanitizer::instrumentMemInst(Value *V, Instruction *ShadowBase,
         }
       }
     } else if (auto *II = dyn_cast<LifetimeIntrinsic>(I)) {
-      auto *AI = dyn_cast<AllocaInst>(II->getArgOperand(1));
+      auto *AI = dyn_cast<AllocaInst>(II->getArgOperand(0));
       if (!AI)
         return false;
 
       Size = GetAllocaSize(AI);
-      Dest = II->getArgOperand(1);
+      Dest = II->getArgOperand(0);
     } else if (auto *AI = dyn_cast<AllocaInst>(I)) {
       // We need to clear the types for new stack allocations (or else we might
       // read stale type information from a previous function execution).

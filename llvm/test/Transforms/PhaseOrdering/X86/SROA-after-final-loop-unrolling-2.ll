@@ -60,9 +60,9 @@ bb:
   %i5 = alloca ptr, align 8
   store i32 %arg, ptr %i, align 4, !tbaa !5
   store ptr %arg1, ptr %i2, align 8, !tbaa !9
-  call void @llvm.lifetime.start.p0(i64 8, ptr %i3) #3
+  call void @llvm.lifetime.start.p0(ptr %i3) #3
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %i3, ptr align 4 @global, i64 8, i1 false)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i4) #3
+  call void @llvm.lifetime.start.p0(ptr %i4) #3
   store i32 0, ptr %i4, align 4, !tbaa !5
   br label %bb6
 
@@ -75,11 +75,11 @@ bb6:                                              ; preds = %bb22, %bb
   br i1 %i11, label %bb13, label %bb12
 
 bb12:                                             ; preds = %bb6
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i4) #3
+  call void @llvm.lifetime.end.p0(ptr %i4) #3
   br label %bb25
 
 bb13:                                             ; preds = %bb6
-  call void @llvm.lifetime.start.p0(i64 8, ptr %i5) #3
+  call void @llvm.lifetime.start.p0(ptr %i5) #3
   %i14 = load i32, ptr %i4, align 4, !tbaa !5
   %i15 = srem i32 %i14, 2
   %i16 = sext i32 %i15 to i64
@@ -90,7 +90,7 @@ bb13:                                             ; preds = %bb6
   %i20 = load i32, ptr %i19, align 4, !tbaa !5
   %i21 = mul nsw i32 %i20, %i18
   store i32 %i21, ptr %i19, align 4, !tbaa !5
-  call void @llvm.lifetime.end.p0(i64 8, ptr %i5) #3
+  call void @llvm.lifetime.end.p0(ptr %i5) #3
   br label %bb22
 
 bb22:                                             ; preds = %bb13
@@ -102,12 +102,12 @@ bb22:                                             ; preds = %bb13
 bb25:                                             ; preds = %bb12
   %i26 = load ptr, ptr %i2, align 8, !tbaa !9
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %i26, ptr align 4 %i3, i64 8, i1 false), !tbaa.struct !13
-  call void @llvm.lifetime.end.p0(i64 8, ptr %i3) #3
+  call void @llvm.lifetime.end.p0(ptr %i3) #3
   ret void
 }
 
 ; Function Attrs: argmemonly nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 ; Function Attrs: argmemonly nocallback nofree nounwind willreturn
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #2
@@ -126,7 +126,7 @@ bb:
 }
 
 ; Function Attrs: argmemonly nocallback nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 ; Function Attrs: mustprogress nounwind uwtable
 define linkonce_odr dso_local noundef nonnull align 4 dereferenceable(4) ptr @widget(ptr noundef nonnull align 4 dereferenceable(8) %arg, i64 noundef %arg1) #0 comdat($_ZNSt14__array_traitsIiLm2EE6_S_refERA2_Kim) align 2 {
