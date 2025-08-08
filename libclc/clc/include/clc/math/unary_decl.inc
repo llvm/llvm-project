@@ -6,7 +6,4 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _CLC_NOT_CONST
-_CLC_CONST
-#endif
-_CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(__CLC_GENTYPE x);
+_CLC_CONST _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(__CLC_GENTYPE x);
