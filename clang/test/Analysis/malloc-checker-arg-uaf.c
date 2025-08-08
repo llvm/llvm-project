@@ -11,13 +11,13 @@ void use(void *ptr);
 void test_direct_param_uaf() {
   int *p = (int *)malloc(sizeof(int));
   free(p);
-  use(p); // expected-warning{{Use of memory after it is freed}}
+  use(p); // expected-warning{{Use of memory after it is released}}
 }
 
 void test_struct_field_uaf() {
   struct Obj *o = (struct Obj *)malloc(sizeof(struct Obj));
   free(o);
-  use(&o->field); // expected-warning{{Use of memory after it is freed}}
+  use(&o->field); // expected-warning{{Use of memory after it is released}}
 }
 
 void test_no_warning_const_int() {
@@ -33,12 +33,12 @@ void test_nested_alloc() {
   struct Obj *o = (struct Obj *)malloc(sizeof(struct Obj));
   use(o);   // no-warning
   free(o);
-  use(o);   // expected-warning{{Use of memory after it is freed}}
+  use(o);   // expected-warning{{Use of memory after it is released}}
 }
 
 void test_nested_field() {
     struct Obj *o = (struct Obj *)malloc(sizeof(struct Obj));
     int *f = &o->field;
     free(o);
-    use(f); // expected-warning{{Use of memory after it is freed}}
+    use(f); // expected-warning{{Use of memory after it is released}}
 }
