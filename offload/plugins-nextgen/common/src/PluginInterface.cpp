@@ -1335,18 +1335,25 @@ Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
   return eraseEntry(*Entry);
 }
 
-Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo) {
-  if (!AsyncInfo || !AsyncInfo->Queue)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "invalid async info queue");
+Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
+                                   bool ReleaseQueue) {
+  SmallVector<void *> AllocsToDelete{};
+  {
+    std::lock_guard<std::mutex> AllocationGuard{AsyncInfo->Mutex};
 
-  if (auto Err = synchronizeImpl(*AsyncInfo))
-    return Err;
+    if (!AsyncInfo || !AsyncInfo->Queue)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "invalid async info queue");
 
-  for (auto *Ptr : AsyncInfo->AssociatedAllocations)
+    if (auto Err = synchronizeImpl(*AsyncInfo, ReleaseQueue))
+      return Err;
+
+    std::swap(AllocsToDelete, AsyncInfo->AssociatedAllocations);
+  }
+
+  for (auto *Ptr : AllocsToDelete)
     if (auto Err = dataDelete(Ptr, TargetAllocTy::TARGET_ALLOC_DEVICE))
       return Err;
-  AsyncInfo->AssociatedAllocations.clear();
 
   return Plugin::success();
 }
