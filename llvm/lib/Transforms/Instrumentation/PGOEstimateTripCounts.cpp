@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Instrumentation/PGOEstimateTripCounts.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -25,21 +26,21 @@ static bool runOnLoop(Loop *L) {
   return MadeChange;
 }
 
-PreservedAnalyses PGOEstimateTripCountsPass::run(Module &M,
-                                                 ModuleAnalysisManager &AM) {
-  FunctionAnalysisManager &FAM =
-      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+PreservedAnalyses PGOEstimateTripCountsPass::run(Function &F,
+                                                 FunctionAnalysisManager &FAM) {
   bool MadeChange = false;
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": start\n");
-  for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-    LoopInfo *LI = &FAM.getResult<LoopAnalysis>(F);
-    if (!LI)
-      continue;
-    for (Loop *L : *LI)
-      MadeChange |= runOnLoop(L);
-  }
+  LoopInfo *LI = &FAM.getResult<LoopAnalysis>(F);
+  if (!LI)
+    return PreservedAnalyses::all();
+  for (Loop *L : *LI)
+    MadeChange |= runOnLoop(L);
   LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": end\n");
-  return MadeChange ? PreservedAnalyses::none() : PreservedAnalyses::all();
+  if (MadeChange) {
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    PA.preserve<LazyCallGraphAnalysis>();
+    return PA;
+  }
+  return PreservedAnalyses::all();
 }

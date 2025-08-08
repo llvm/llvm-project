@@ -16,7 +16,7 @@ namespace llvm {
 struct PGOEstimateTripCountsPass
     : public PassInfoMixin<PGOEstimateTripCountsPass> {
   PGOEstimateTripCountsPass() {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm
