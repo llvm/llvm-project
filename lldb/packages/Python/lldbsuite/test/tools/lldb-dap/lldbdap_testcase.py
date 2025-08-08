@@ -59,24 +59,22 @@ class DAPTestCaseBase(TestBase):
         Each object in data is 1:1 mapping with the entry in lines.
         It contains optional location/hitCondition/logMessage parameters.
         """
-        response = self.dap_server.request_setBreakpoints(
-            Source(source_path), lines, data
+        return self.set_source_breakpoints_from_source(
+            Source(path=source_path), lines, data, wait_for_resolve
         )
-        if response is None or not response["success"]:
-            return []
-        breakpoints = response["body"]["breakpoints"]
-        breakpoint_ids = []
-        for breakpoint in breakpoints:
-            breakpoint_ids.append("%i" % (breakpoint["id"]))
-        if wait_for_resolve:
-            self.wait_for_breakpoints_to_resolve(breakpoint_ids)
-        return breakpoint_ids
 
     def set_source_breakpoints_assembly(
         self, source_reference, lines, data=None, wait_for_resolve=True
     ):
+        return self.set_source_breakpoints_from_source(
+            Source(source_reference=source_reference), lines, data, wait_for_resolve
+        )
+
+    def set_source_breakpoints_from_source(
+        self, source: Source, lines, data=None, wait_for_resolve=True
+    ):
         response = self.dap_server.request_setBreakpoints(
-            Source(source_reference=source_reference),
+            source,
             lines,
             data,
         )

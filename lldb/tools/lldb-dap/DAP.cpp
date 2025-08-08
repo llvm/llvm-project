@@ -1406,11 +1406,15 @@ void DAP::EventThread() {
             // avoids sending paths that should be source mapped. Note that
             // CreateBreakpoint doesn't apply source mapping and certain
             // implementation ignore the source part of this event anyway.
-            llvm::json::Value source_bp = bp.ToProtocolBreakpoint();
-            source_bp.getAsObject()->erase("source");
+            protocol::Breakpoint protocol_bp = bp.ToProtocolBreakpoint();
+
+            // "source" is not needed here, unless we add adapter data to be
+            // saved by the client.
+            if (protocol_bp.source && !protocol_bp.source->adapterData)
+              protocol_bp.source = std::nullopt;
 
             llvm::json::Object body;
-            body.try_emplace("breakpoint", source_bp);
+            body.try_emplace("breakpoint", protocol_bp);
             body.try_emplace("reason", "changed");
 
             llvm::json::Object bp_event = CreateEventObject("breakpoint");
@@ -1491,8 +1495,9 @@ std::vector<protocol::Breakpoint> DAP::SetSourceBreakpoints(
 
       protocol::Breakpoint response_breakpoint =
           iv->second.ToProtocolBreakpoint();
-      response_breakpoint.source = source;
 
+      if (!response_breakpoint.source)
+        response_breakpoint.source = source;
       if (!response_breakpoint.line &&
           src_bp.GetLine() != LLDB_INVALID_LINE_NUMBER)
         response_breakpoint.line = src_bp.GetLine();
