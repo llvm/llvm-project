@@ -3028,10 +3028,10 @@ def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
   string llvmBuilder = [{
     llvm::Intrinsic::ID id;
       switch ($kind) {
-        case NVVM::FDLKind::wait:
+        case NVVM::GridDepActionKind::wait:
           id = llvm::Intrinsic::nvvm_griddepcontrol_wait;
           break;
-        case NVVM::FDLKind::launch_dependents:
+        case NVVM::GridDepActionKind::launch_dependents:
           id = llvm::Intrinsic::nvvm_griddepcontrol_launch_dependents;
           break;
       }
