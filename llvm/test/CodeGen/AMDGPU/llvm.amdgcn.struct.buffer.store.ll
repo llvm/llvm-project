@@ -181,6 +181,7 @@ define amdgpu_ps void @buffer_store_wait(<4 x i32> inreg, <4 x float>, i32, i32,
 ;
 ; GFX12-LABEL: buffer_store_wait:
 ; GFX12:       ; %bb.0: ; %main_body
+; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    buffer_store_b128 v[0:3], v4, s[0:3], null idxen
 ; GFX12-NEXT:    buffer_load_b128 v[0:3], v5, s[0:3], null idxen
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
