@@ -159,8 +159,8 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP15:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-ORDERED-TF-NEXT:    [[ADD]] = fadd float [[TMP15]], [[SUM_07]]
@@ -420,8 +420,8 @@ define float @fadd_strict_unroll(ptr noalias nocapture readonly %a, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP45:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-ORDERED-TF-NEXT:    [[ADD]] = fadd float [[TMP45]], [[SUM_07]]
@@ -673,9 +673,9 @@ define void @fadd_strict_interleave(ptr noalias nocapture readonly %a, ptr noali
 ; CHECK-ORDERED-TF-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY]] ]
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[ADD_PHI1:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[ADD2:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[ADD_PHI2:%.*]] = phi float [ [[BC_MERGE_RDX2]], [[SCALAR_PH]] ], [ [[ADD1:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[ADD_PHI1:%.*]] = phi float [ [[A2]], [[SCALAR_PH]] ], [ [[ADD2:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[ADD_PHI2:%.*]] = phi float [ [[A1]], [[SCALAR_PH]] ], [ [[ADD1:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDXB1:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP22:%.*]] = load float, ptr [[ARRAYIDXB1]], align 4
 ; CHECK-ORDERED-TF-NEXT:    [[ADD1]] = fadd float [[TMP22]], [[ADD_PHI2]]
@@ -918,8 +918,8 @@ define float @fadd_of_sum(ptr noalias nocapture readonly %a, ptr noalias nocaptu
 ; CHECK-ORDERED-TF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[FOR_BODY_PREHEADER]] ]
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; CHECK-ORDERED-TF-NEXT:    [[RES_014:%.*]] = phi float [ [[RDX:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
+; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[SCALAR_PH]] ]
+; CHECK-ORDERED-TF-NEXT:    [[RES_014:%.*]] = phi float [ [[RDX:%.*]], [[FOR_BODY]] ], [ 0.000000e+00, [[SCALAR_PH]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP18:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
@@ -1148,8 +1148,8 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED-TF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 1.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; CHECK-ORDERED-TF-NEXT:    [[RES:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[FADD:%.*]], [[FOR_INC]] ]
+; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; CHECK-ORDERED-TF-NEXT:    [[RES:%.*]] = phi float [ 1.000000e+00, [[SCALAR_PH]] ], [ [[FADD:%.*]], [[FOR_INC]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP18:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-ORDERED-TF-NEXT:    [[TOBOOL:%.*]] = fcmp une float [[TMP18]], 0.000000e+00
@@ -1623,8 +1623,8 @@ define float @fmuladd_strict(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[MULADD:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[MULADD:%.*]], [[FOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP59:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
@@ -1945,8 +1945,8 @@ define float @fmuladd_strict_fmf(ptr %a, ptr %b, i64 %n) #0 {
 ; CHECK-ORDERED-TF-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-ORDERED-TF-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK-ORDERED-TF:       for.body:
-; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[MULADD:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-ORDERED-TF-NEXT:    [[SUM_07:%.*]] = phi float [ 0.000000e+00, [[SCALAR_PH]] ], [ [[MULADD:%.*]], [[FOR_BODY]] ]
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
 ; CHECK-ORDERED-TF-NEXT:    [[TMP59:%.*]] = load float, ptr [[ARRAYIDX]], align 4
 ; CHECK-ORDERED-TF-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]

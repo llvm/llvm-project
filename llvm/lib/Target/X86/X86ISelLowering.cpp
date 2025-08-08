@@ -54246,7 +54246,7 @@ static SDValue combineTruncatedArithmetic(SDNode *N, SelectionDAG &DAG,
 }
 
 // Try to form a MULHU or MULHS node by looking for
-// (trunc (srl (mul ext, ext), 16))
+// (trunc (srl (mul ext, ext), >= 16))
 // TODO: This is X86 specific because we want to be able to handle wide types
 // before type legalization. But we can only do it if the vector will be
 // legalized via widening/splitting. Type legalization can't handle promotion
@@ -54271,9 +54271,15 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
 
   // First instruction should be a right shift by 16 of a multiply.
   SDValue LHS, RHS;
+  APInt ShiftAmt;
   if (!sd_match(Src,
-                m_Srl(m_Mul(m_Value(LHS), m_Value(RHS)), m_SpecificInt(16))))
+                m_Srl(m_Mul(m_Value(LHS), m_Value(RHS)), m_ConstInt(ShiftAmt))))
     return SDValue();
+
+  if (ShiftAmt.ult(16) || ShiftAmt.uge(InVT.getScalarSizeInBits()))
+    return SDValue();
+
+  uint64_t AdditionalShift = ShiftAmt.getZExtValue() - 16;
 
   // Count leading sign/zero bits on both inputs - if there are enough then
   // truncation back to vXi16 will be cheap - either as a pack/shuffle
@@ -54312,7 +54318,9 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
                                 InVT.getSizeInBits() / 16);
     SDValue Res = DAG.getNode(ISD::MULHU, DL, BCVT, DAG.getBitcast(BCVT, LHS),
                               DAG.getBitcast(BCVT, RHS));
-    return DAG.getNode(ISD::TRUNCATE, DL, VT, DAG.getBitcast(InVT, Res));
+    Res = DAG.getNode(ISD::TRUNCATE, DL, VT, DAG.getBitcast(InVT, Res));
+    return DAG.getNode(ISD::SRL, DL, VT, Res,
+                       DAG.getShiftAmountConstant(AdditionalShift, VT, DL));
   }
 
   // Truncate back to source type.
@@ -54320,7 +54328,9 @@ static SDValue combinePMULH(SDValue Src, EVT VT, const SDLoc &DL,
   RHS = DAG.getNode(ISD::TRUNCATE, DL, VT, RHS);
 
   unsigned Opc = IsSigned ? ISD::MULHS : ISD::MULHU;
-  return DAG.getNode(Opc, DL, VT, LHS, RHS);
+  SDValue Res = DAG.getNode(Opc, DL, VT, LHS, RHS);
+  return DAG.getNode(ISD::SRL, DL, VT, Res,
+                     DAG.getShiftAmountConstant(AdditionalShift, VT, DL));
 }
 
 // Attempt to match PMADDUBSW, which multiplies corresponding unsigned bytes

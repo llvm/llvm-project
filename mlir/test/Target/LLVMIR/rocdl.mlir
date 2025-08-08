@@ -125,6 +125,23 @@ llvm.func @rocdl.ballot64(%pred : i1) -> i64 {
   llvm.return %0 : i64
 }
 
+llvm.func @rocdl.readfirstlane(%src0 : f32, %src1: f64, %src2: i32, %src3: vector<2 x f32>) -> f32 {
+  // CHECK-LABEL: rocdl.readfirstlane
+  // CHECK: call float @llvm.amdgcn.readfirstlane.f32(float %{{.*}})
+  %0 = rocdl.readfirstlane %src0 : f32
+
+  // CHECK: call double @llvm.amdgcn.readfirstlane.f64(double %{{.*}})
+  %1 = rocdl.readfirstlane %src1 : f64
+
+  // CHECK: call i32 @llvm.amdgcn.readfirstlane.i32(i32 %{{.*}})
+  %2 = rocdl.readfirstlane %src2 : i32
+
+  // CHECK: call <2 x float> @llvm.amdgcn.readfirstlane.v2f32(<2 x float> %{{.*}})
+  %3 = rocdl.readfirstlane %src3 : vector<2 x f32>
+
+  llvm.return %0 : f32
+}
+
 llvm.func @rocdl.readlane(%src0 : f32, %src1: f64, %src2: i32, %src3: vector<2 x f32>) -> f32 {
   %idx = llvm.mlir.constant(0 : i32) : i32
 

@@ -45,6 +45,26 @@ C++ Specific Potentially Breaking Changes
   regressions if your build system supports two-phase compilation model but haven't support
   reduced BMI or it is a compiler bug or a bug in users code.
 
+- Clang now correctly diagnoses during constant expression evaluation undefined behavior due to member
+  pointer access to a member which is not a direct or indirect member of the most-derived object
+  of the accessed object but is instead located directly in a sibling class to one of the classes
+  along the inheritance hierarchy of the most-derived object as ill-formed.
+  Other scenarios in which the member is not member of the most derived object were already
+  diagnosed previously. (#GH150709)
+
+  .. code-block:: c++
+
+    struct A {};
+    struct B : A {};
+    struct C : A { constexpr int foo() const { return 1; } };
+    constexpr A a;
+    constexpr B b;
+    constexpr C c;
+    constexpr auto mp = static_cast<int(A::*)() const>(&C::foo);
+    static_assert((a.*mp)() == 1); // continues to be rejected
+    static_assert((b.*mp)() == 1); // newly rejected
+    static_assert((c.*mp)() == 1); // accepted
+
 ABI Changes in This Version
 ---------------------------
 
@@ -152,6 +172,8 @@ Bug Fixes to Attribute Support
 
 - ``[[nodiscard]]`` is now respected on Objective-C and Objective-C++ methods.
   (#GH141504)
+- Using ``[[gnu::cleanup(some_func)]]`` where some_func is annotated with
+  ``[[gnu::error("some error")]]`` now correctly triggers an error. (#GH146520)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -160,6 +182,8 @@ Bug Fixes to C++ Support
 - Fix a crash when deleting a pointer to an incomplete array (#GH150359).
 - Fix an assertion failure when expression in assumption attribute
   (``[[assume(expr)]]``) creates temporary objects.
+- Fix the dynamic_cast to final class optimization to correctly handle
+  casts that are guaranteed to fail (#GH137518).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

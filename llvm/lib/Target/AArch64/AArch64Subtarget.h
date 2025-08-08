@@ -451,12 +451,6 @@ public:
     return "__chkstk";
   }
 
-  const char* getSecurityCheckCookieName() const {
-    if (isWindowsArm64EC())
-      return "#__security_check_cookie_arm64ec";
-    return "__security_check_cookie";
-  }
-
   /// Choose a method of checking LR before performing a tail call.
   AArch64PAuth::AuthCheckMethod
   getAuthenticatedLRCheckMethod(const MachineFunction &MF) const;

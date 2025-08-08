@@ -5246,6 +5246,15 @@ bool Type::isHLSLResourceRecord() const {
   return HLSLAttributedResourceType::findHandleTypeOnResource(this) != nullptr;
 }
 
+bool Type::isHLSLResourceRecordArray() const {
+  const Type *Ty = getUnqualifiedDesugaredType();
+  if (!Ty->isArrayType())
+    return false;
+  while (isa<ConstantArrayType>(Ty))
+    Ty = Ty->getArrayElementTypeNoTypeQual();
+  return Ty->isHLSLResourceRecord();
+}
+
 bool Type::isHLSLIntangibleType() const {
   const Type *Ty = getUnqualifiedDesugaredType();
 

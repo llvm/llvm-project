@@ -6729,8 +6729,7 @@ static bool CC_LoongArchAssign2GRLen(unsigned GRLen, CCState &State,
 static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
                          unsigned ValNo, MVT ValVT,
                          CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                         CCState &State, bool IsFixed, bool IsRet,
-                         Type *OrigTy) {
+                         CCState &State, bool IsRet, Type *OrigTy) {
   unsigned GRLen = DL.getLargestLegalIntTypeSizeInBits();
   assert((GRLen == 32 || GRLen == 64) && "Unspport GRLen");
   MVT GRLenVT = GRLen == 32 ? MVT::i32 : MVT::i64;
@@ -6752,7 +6751,7 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   case LoongArchABI::ABI_LP64F:
   case LoongArchABI::ABI_ILP32D:
   case LoongArchABI::ABI_LP64D:
-    UseGPRForFloat = !IsFixed;
+    UseGPRForFloat = ArgFlags.isVarArg();
     break;
   case LoongArchABI::ABI_ILP32S:
   case LoongArchABI::ABI_LP64S:
@@ -6766,7 +6765,8 @@ static bool CC_LoongArch(const DataLayout &DL, LoongArchABI::ABI ABI,
   // will not be passed by registers if the original type is larger than
   // 2*GRLen, so the register alignment rule does not apply.
   unsigned TwoGRLenInBytes = (2 * GRLen) / 8;
-  if (!IsFixed && ArgFlags.getNonZeroOrigAlign() == TwoGRLenInBytes &&
+  if (ArgFlags.isVarArg() &&
+      ArgFlags.getNonZeroOrigAlign() == TwoGRLenInBytes &&
       DL.getTypeAllocSize(OrigTy) == TwoGRLenInBytes) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
     // Skip 'odd' register if necessary.
@@ -6916,7 +6916,7 @@ void LoongArchTargetLowering::analyzeInputArgs(
     LoongArchABI::ABI ABI =
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Ins[i].Flags,
-           CCInfo, /*IsFixed=*/true, IsRet, ArgTy)) {
+           CCInfo, IsRet, ArgTy)) {
       LLVM_DEBUG(dbgs() << "InputArg #" << i << " has unhandled type " << ArgVT
                         << '\n');
       llvm_unreachable("");
@@ -6934,7 +6934,7 @@ void LoongArchTargetLowering::analyzeOutputArgs(
     LoongArchABI::ABI ABI =
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (Fn(MF.getDataLayout(), ABI, i, ArgVT, CCValAssign::Full, Outs[i].Flags,
-           CCInfo, Outs[i].IsFixed, IsRet, OrigTy)) {
+           CCInfo, IsRet, OrigTy)) {
       LLVM_DEBUG(dbgs() << "OutputArg #" << i << " has unhandled type " << ArgVT
                         << "\n");
       llvm_unreachable("");
@@ -7647,8 +7647,7 @@ bool LoongArchTargetLowering::CanLowerReturn(
     LoongArchABI::ABI ABI =
         MF.getSubtarget<LoongArchSubtarget>().getTargetABI();
     if (CC_LoongArch(MF.getDataLayout(), ABI, i, Outs[i].VT, CCValAssign::Full,
-                     Outs[i].Flags, CCInfo, /*IsFixed=*/true, /*IsRet=*/true,
-                     nullptr))
+                     Outs[i].Flags, CCInfo, /*IsRet=*/true, nullptr))
       return false;
   }
   return true;

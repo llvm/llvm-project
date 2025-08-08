@@ -55,6 +55,7 @@ private:
     }
 
     size_t size() const { return Allocations.size(); }
+    bool empty() const { return Allocations.empty(); }
   };
 
 public:
@@ -64,8 +65,6 @@ public:
   ~DynamicAllocator();
 
   void cleanup();
-
-  unsigned getNumAllocations() const { return AllocationSites.size(); }
 
   /// Allocate ONE element of the given descriptor.
   Block *allocate(const Descriptor *D, unsigned EvalID, Form AllocForm);
@@ -95,6 +94,8 @@ public:
   llvm::iterator_range<const_virtual_iter> allocation_sites() const {
     return llvm::make_range(AllocationSites.begin(), AllocationSites.end());
   }
+
+  bool hasAllocations() const { return !AllocationSites.empty(); }
 
 private:
   llvm::DenseMap<const Expr *, AllocationSite> AllocationSites;

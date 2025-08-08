@@ -102,9 +102,9 @@ define void @pr47390(ptr %a) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PRIMARY:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[PRIMARY_ADD:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[USE_PRIMARY:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], %[[SCALAR_PH]] ], [ [[PRIMARY]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SECONDARY:%.*]] = phi i32 [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ], [ [[SECONDARY_ADD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[PRIMARY:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[PRIMARY_ADD:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[USE_PRIMARY:%.*]] = phi i32 [ -1, %[[SCALAR_PH]] ], [ [[PRIMARY]], %[[LOOP]] ]
+; CHECK-NEXT:    [[SECONDARY:%.*]] = phi i32 [ 1, %[[SCALAR_PH]] ], [ [[SECONDARY_ADD:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[PRIMARY_ADD]] = add i32 [[PRIMARY]], 1
 ; CHECK-NEXT:    [[SECONDARY_ADD]] = add i32 [[SECONDARY]], 1
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[SECONDARY]]

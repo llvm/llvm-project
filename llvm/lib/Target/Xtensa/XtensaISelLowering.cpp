@@ -250,6 +250,15 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   // Floating-point truncation and stores need to be done separately.
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
 
+  if (Subtarget.hasS32C1I()) {
+    setMaxAtomicSizeInBitsSupported(32);
+    setMinCmpXchgSizeInBits(32);
+  } else if (Subtarget.hasForcedAtomics()) {
+    setMaxAtomicSizeInBitsSupported(32);
+  } else {
+    setMaxAtomicSizeInBitsSupported(0);
+  }
+
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
 }
@@ -1548,6 +1557,11 @@ const char *XtensaTargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
+TargetLowering::AtomicExpansionKind
+XtensaTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+  return AtomicExpansionKind::CmpXChg;
+}
+
 //===----------------------------------------------------------------------===//
 // Custom insertion
 //===----------------------------------------------------------------------===//
@@ -1694,6 +1708,23 @@ MachineBasicBlock *XtensaTargetLowering::EmitInstrWithCustomInserter(
         .addReg(NewSP.getReg());
     MI.eraseFromParent();
 
+    return MBB;
+  }
+  case Xtensa::ATOMIC_CMP_SWAP_32_P: {
+    MachineOperand &R = MI.getOperand(0);
+    MachineOperand &Addr = MI.getOperand(1);
+    MachineOperand &Cmp = MI.getOperand(2);
+    MachineOperand &Swap = MI.getOperand(3);
+
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::WSR), Xtensa::SCOMPARE1)
+        .addReg(Cmp.getReg());
+
+    BuildMI(*MBB, MI, DL, TII.get(Xtensa::S32C1I), R.getReg())
+        .addReg(Swap.getReg())
+        .addReg(Addr.getReg())
+        .addImm(0);
+
+    MI.eraseFromParent();
     return MBB;
   }
   default:
