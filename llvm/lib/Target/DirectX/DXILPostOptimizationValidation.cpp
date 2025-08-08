@@ -158,7 +158,7 @@ static void validateRootSignature(Module &M,
 
   hlsl::BindingInfoBuilder Builder;
   dxbc::ShaderVisibility Visibility = tripleToVisibility(MMI.ShaderProfile);
-
+  SmallVector<char> IDs;
   for (const mcdxbc::RootParameterInfo &ParamInfo : RSD.ParametersContainer) {
     dxbc::ShaderVisibility ParamVisibility =
         static_cast<dxbc::ShaderVisibility>(ParamInfo.Header.ShaderVisibility);
@@ -172,7 +172,8 @@ static void validateRootSignature(Module &M,
       dxbc::RTS0::v1::RootConstants Const =
           RSD.ParametersContainer.getConstant(ParamInfo.Location);
       Builder.trackBinding(dxil::ResourceClass::CBuffer, Const.RegisterSpace,
-                           Const.ShaderRegister, Const.ShaderRegister, nullptr);
+                           Const.ShaderRegister, Const.ShaderRegister,
+                           &IDs.emplace_back());
       break;
     }
 
@@ -184,7 +185,7 @@ static void validateRootSignature(Module &M,
       Builder.trackBinding(toResourceClass(static_cast<dxbc::RootParameterType>(
                                ParamInfo.Header.ParameterType)),
                            Desc.RegisterSpace, Desc.ShaderRegister,
-                           Desc.ShaderRegister, nullptr);
+                           Desc.ShaderRegister, &IDs.emplace_back());
 
       break;
     }
@@ -200,7 +201,8 @@ static void validateRootSignature(Module &M,
         Builder.trackBinding(
             toResourceClass(
                 static_cast<dxbc::DescriptorRangeType>(Range.RangeType)),
-            Range.RegisterSpace, Range.BaseShaderRegister, UpperBound, nullptr);
+            Range.RegisterSpace, Range.BaseShaderRegister, UpperBound,
+            &IDs.emplace_back());
       }
       break;
     }
@@ -209,7 +211,8 @@ static void validateRootSignature(Module &M,
 
   for (const dxbc::RTS0::v1::StaticSampler &S : RSD.StaticSamplers)
     Builder.trackBinding(dxil::ResourceClass::Sampler, S.RegisterSpace,
-                         S.ShaderRegister, S.ShaderRegister, nullptr);
+                         S.ShaderRegister, S.ShaderRegister,
+                         &IDs.emplace_back());
 
   hlsl::BindingInfo Info = Builder.calculateBindingInfo(
       [&M](const llvm::hlsl::BindingInfoBuilder &Builder,
