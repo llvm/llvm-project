@@ -1877,10 +1877,8 @@ Parser::ParseCXXCondition(StmtResult *InitStmt, SourceLocation Loc,
   struct ForConditionScopeRAII {
     Scope *S;
     void enter(bool IsConditionVariable) {
-      if (S) {
-        S->AddFlags(Scope::BreakScope | Scope::ContinueScope);
+      if (S)
         S->setIsConditionVarScope(IsConditionVariable);
-      }
     }
     ~ForConditionScopeRAII() {
       if (S)

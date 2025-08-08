@@ -1728,12 +1728,11 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   // while, for, and switch statements are local to the if, while, for, or
   // switch statement (including the controlled statement).
   //
-  unsigned ScopeFlags;
+  unsigned ScopeFlags = 0;
   if (C99orCXX)
-    ScopeFlags = Scope::BreakScope | Scope::ContinueScope |
-                 Scope::DeclScope  | Scope::ControlScope;
-  else
-    ScopeFlags = Scope::BreakScope | Scope::ContinueScope;
+    ScopeFlags = Scope::DeclScope  | Scope::ControlScope;
+
+  ParseScope WhileScope(this, ScopeFlags);
 
   // Parse the condition.
   Sema::ConditionResult Cond;
@@ -1743,7 +1742,7 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
                                 Sema::ConditionKind::Boolean, LParen, RParen))
     return StmtError();
 
-  ParseScope WhileScope(this, ScopeFlags);
+  getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
 
   // OpenACC Restricts a while-loop inside of certain construct/clause
   // combinations, so diagnose that here in OpenACC mode.
@@ -1839,6 +1838,8 @@ StmtResult Parser::ParseDoStatement() {
   // A do-while expression is not a condition, so can't have attributes.
   DiagnoseAndSkipCXX11Attributes();
 
+  DoScope.Exit();
+
   SourceLocation Start = Tok.getLocation();
   ExprResult Cond = ParseExpression();
   if (!Cond.isUsable()) {
@@ -1849,7 +1850,6 @@ StmtResult Parser::ParseDoStatement() {
         Actions.getASTContext().BoolTy);
   }
   T.consumeClose();
-  DoScope.Exit();
 
   if (Cond.isInvalid() || Body.isInvalid())
     return StmtError();
@@ -2124,9 +2124,6 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
         }
 
       } else {
-        // We permit 'continue' and 'break' in the condition of a for loop.
-        getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
-
         ExprResult SecondExpr = ParseExpression();
         if (SecondExpr.isInvalid())
           SecondPart = Sema::ConditionError();
@@ -2137,11 +2134,6 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       }
     }
   }
-
-  // Enter a break / continue scope, if we didn't already enter one while
-  // parsing the second part.
-  if (!getCurScope()->isContinueScope())
-    getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
 
   // Parse the third part of the for statement.
   if (!ForEach && !ForRangeInfo.ParsedForRangeDecl()) {
@@ -2164,6 +2156,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
   }
   // Match the ')'.
   T.consumeClose();
+
+  getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
 
   // C++ Coroutines [stmt.iter]:
   //   'co_await' can only be used for a range-based for statement.
