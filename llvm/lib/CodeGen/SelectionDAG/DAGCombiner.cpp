@@ -16342,6 +16342,38 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
                                  DAG, DL);
     }
     break;
+  case ISD::ABDU:
+  case ISD::ABDS:
+    // (trunc (abdu/abds a, b)) → (abdu/abds (trunc a), (trunc b))
+    if (!LegalOperations || N0.hasOneUse()) {
+      EVT SrcVT = N0.getValueType();
+      EVT TruncVT = VT;
+      unsigned SrcBits = SrcVT.getScalarSizeInBits();
+      unsigned TruncBits = TruncVT.getScalarSizeInBits();
+      unsigned NeededBits = SrcBits - TruncBits;
+
+      SDValue A = N0.getOperand(0);
+      SDValue B = N0.getOperand(1);
+      bool CanFold = false;
+
+      if (N0.getOpcode() == ISD::ABDU) {
+        KnownBits KnownA = DAG.computeKnownBits(A);
+        KnownBits KnownB = DAG.computeKnownBits(B);
+        CanFold = KnownA.countMinLeadingZeros() >= NeededBits &&
+                  KnownB.countMinLeadingZeros() >= NeededBits;
+      } else {
+        unsigned SignBitsA = DAG.ComputeNumSignBits(A);
+        unsigned SignBitsB = DAG.ComputeNumSignBits(B);
+        CanFold = SignBitsA > NeededBits && SignBitsB > NeededBits;
+      }
+
+      if (CanFold && TLI.isOperationLegal(N0.getOpcode(), VT)) {
+        SDValue NewA = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, A);
+        SDValue NewB = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, B);
+        return DAG.getNode(N0.getOpcode(), DL, TruncVT, NewA, NewB);
+      }
+    }
+    break;
   }
 
   return SDValue();
