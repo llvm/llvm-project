@@ -337,7 +337,7 @@ void UnnecessaryCopyInitialization::check(
     handleCopyFromLocalVar(Context, *OldVar);
   } else {
     // `auto NewVar = OldVar.FD;`
-    handleCopyFromConstVarMember(Context, *OldVar, *ME);
+    handleCopyFromConstVarMember(Context, *ME);
   }
 }
 
@@ -363,8 +363,8 @@ void UnnecessaryCopyInitialization::handleCopyFromLocalVar(
 }
 
 void UnnecessaryCopyInitialization::handleCopyFromConstVarMember(
-    const CheckContext &Ctx, const VarDecl &OldVar, const MemberExpr &ME) {
-  diagnoseCopyFromConstVarMember(Ctx, OldVar, ME);
+    const CheckContext &Ctx, const MemberExpr &ME) {
+  diagnoseCopyFromConstVarMember(Ctx, ME);
 }
 
 void UnnecessaryCopyInitialization::diagnoseCopyFromMethodReturn(
@@ -394,7 +394,7 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromLocalVar(
 }
 
 void UnnecessaryCopyInitialization::diagnoseCopyFromConstVarMember(
-    const CheckContext &Ctx, const VarDecl &OldVar, const MemberExpr &ME) {
+    const CheckContext &Ctx, const MemberExpr &ME) {
   std::string MEStr(Lexer::getSourceText(
       CharSourceRange::getTokenRange(ME.getSourceRange()),
       Ctx.ASTCtx.getSourceManager(), Ctx.ASTCtx.getLangOpts()));
@@ -402,9 +402,9 @@ void UnnecessaryCopyInitialization::diagnoseCopyFromConstVarMember(
       diag(Ctx.Var.getLocation(),
            "local copy %0 of the subobject '%1' of type %2 is never "
            "modified%select{"
-           "| and never used}4; consider %select{avoiding the copy|removing "
-           "the statement}4")
-      << &Ctx.Var << MEStr << Ctx.Var.getType() << &OldVar << Ctx.IsVarUnused;
+           "| and never used}3; consider %select{avoiding the copy|removing "
+           "the statement}3")
+      << &Ctx.Var << MEStr << Ctx.Var.getType() << Ctx.IsVarUnused;
   maybeIssueFixes(Ctx, Diagnostic);
 }
 

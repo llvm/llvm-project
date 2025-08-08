@@ -51,7 +51,6 @@ protected:
   virtual void diagnoseCopyFromLocalVar(const CheckContext &Ctx,
                                         const VarDecl &OldVar);
   virtual void diagnoseCopyFromConstVarMember(const CheckContext &Ctx,
-                                              const VarDecl &OldVar,
                                               const MemberExpr &ME);
 
 private:
@@ -60,7 +59,6 @@ private:
   void handleCopyFromLocalVar(const CheckContext &Ctx, const VarDecl &OldVar);
 
   void handleCopyFromConstVarMember(const CheckContext &Ctx,
-                                    const VarDecl &OldVar,
                                     const MemberExpr &ME);
 
   void maybeIssueFixes(const CheckContext &Ctx, DiagnosticBuilder &Diagnostic);
