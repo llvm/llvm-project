@@ -3713,7 +3713,7 @@ ValueDecl *InitializedEntity::getDecl() const {
   case EK_ParenAggInitMember:
   case EK_Binding:
   case EK_TemplateParameter:
-    return Variable.VariableOrMember;
+    return cast<ValueDecl>(Variable.VariableOrMember);
 
   case EK_Parameter:
   case EK_Parameter_CF_Audited:
@@ -4836,7 +4836,7 @@ static void TryReferenceListInitialization(Sema &S,
     }
 
     // Update the initializer if we've resolved an overloaded function.
-    if (Sequence.step_begin() != Sequence.step_end())
+    if (!Sequence.steps().empty())
       Sequence.RewrapReferenceInitList(cv1T1, InitList);
   }
   // Perform address space compatibility check.
