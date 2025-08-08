@@ -3327,6 +3327,8 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   // since there will already be scalar iterations. Note that the minimum
   // iterations check ensures that N >= Step.
   if (RequiresScalarEpilogue) {
+    assert(!TailByMasking &&
+           "requiring scalar epilogue is not supported with fail folding");
     VPValue *IsZero = Builder.createICmp(
         CmpInst::ICMP_EQ, R, Plan.getOrAddLiveIn(ConstantInt::get(TCTy, 0)));
     R = Builder.createSelect(IsZero, Step, R);

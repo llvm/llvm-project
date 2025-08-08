@@ -28,8 +28,30 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-NEXT:  [[ENTRY:.*]]:
 ; ZVFHMIN-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
-; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
+; ZVFHMIN-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
+; ZVFHMIN-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP12]], 8
+; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
+; ZVFHMIN:       [[VECTOR_BODY]]:
+; ZVFHMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVFHMIN-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVFHMIN-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; ZVFHMIN-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
+; ZVFHMIN-NEXT:    [[TMP2:%.*]] = getelementptr half, ptr [[B]], i64 [[INDEX]]
+; ZVFHMIN-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP1]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP6]])
+; ZVFHMIN-NEXT:    [[WIDE_LOAD1:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP2]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP6]])
+; ZVFHMIN-NEXT:    [[TMP11:%.*]] = fadd <vscale x 8 x half> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; ZVFHMIN-NEXT:    call void @llvm.vp.store.nxv8f16.p0(<vscale x 8 x half> [[TMP11]], ptr align 2 [[TMP1]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP6]])
+; ZVFHMIN-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP6]] to i64
+; ZVFHMIN-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[INDEX]]
+; ZVFHMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP13]]
+; ZVFHMIN-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
+; ZVFHMIN-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; ZVFHMIN:       [[MIDDLE_BLOCK]]:
+; ZVFHMIN-NEXT:    br label %[[EXIT:.*]]
+; ZVFHMIN:       [[SCALAR_PH]]:
+; ZVFHMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; ZVFHMIN-NEXT:    br label %[[LOOP:.*]]
+; ZVFHMIN:       [[LOOP]]:
 ; ZVFHMIN-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; ZVFHMIN-NEXT:    [[A_GEP:%.*]] = getelementptr half, ptr [[A]], i64 [[I]]
 ; ZVFHMIN-NEXT:    [[B_GEP:%.*]] = getelementptr half, ptr [[B]], i64 [[I]]

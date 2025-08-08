@@ -28,8 +28,25 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFBFMIN-NEXT:  [[ENTRY:.*]]:
 ; ZVFBFMIN-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVFBFMIN:       [[VECTOR_PH]]:
-; ZVFBFMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFBFMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
+; ZVFBFMIN-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
+; ZVFBFMIN-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP12]], 8
+; ZVFBFMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
+; ZVFBFMIN:       [[VECTOR_BODY]]:
+; ZVFBFMIN-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVFBFMIN-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVFBFMIN-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; ZVFBFMIN-NEXT:    [[TMP1:%.*]] = getelementptr bfloat, ptr [[A]], i64 [[TMP0]]
+; ZVFBFMIN-NEXT:    [[TMP2:%.*]] = getelementptr bfloat, ptr [[B]], i64 [[TMP0]]
+; ZVFBFMIN-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 8 x bfloat> @llvm.vp.load.nxv8bf16.p0(ptr align 2 [[TMP1]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP6]])
+; ZVFBFMIN-NEXT:    [[WIDE_LOAD1:%.*]] = call <vscale x 8 x bfloat> @llvm.vp.load.nxv8bf16.p0(ptr align 2 [[TMP2]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP6]])
+; ZVFBFMIN-NEXT:    [[TMP11:%.*]] = fadd <vscale x 8 x bfloat> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; ZVFBFMIN-NEXT:    call void @llvm.vp.store.nxv8bf16.p0(<vscale x 8 x bfloat> [[TMP11]], ptr align 2 [[TMP1]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP6]])
+; ZVFBFMIN-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP6]] to i64
+; ZVFBFMIN-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[TMP0]]
+; ZVFBFMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP13]]
+; ZVFBFMIN-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
+; ZVFBFMIN-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; ZVFBFMIN:       [[MIDDLE_BLOCK]]:
 ; ZVFBFMIN-NEXT:    br label %[[EXIT:.*]]
 ; ZVFBFMIN:       [[SCALAR_PH]]:
 ; ZVFBFMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
@@ -119,8 +136,10 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; ZVFBFMIN-NEXT:  [[ENTRY:.*]]:
 ; ZVFBFMIN-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; ZVFBFMIN:       [[VECTOR_PH]]:
-; ZVFBFMIN-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFBFMIN-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
+; ZVFBFMIN-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
+; ZVFBFMIN-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
+; ZVFBFMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
+; ZVFBFMIN:       [[VECTOR_BODY]]:
 ; ZVFBFMIN-NEXT:    [[TMP6:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; ZVFBFMIN-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; ZVFBFMIN-NEXT:    [[TMP11:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
@@ -133,6 +152,19 @@ define void @vfwmaccbf16.vv(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 
 ; ZVFBFMIN-NEXT:    [[TMP13:%.*]] = fpext <vscale x 4 x bfloat> [[WIDE_LOAD]] to <vscale x 4 x float>
 ; ZVFBFMIN-NEXT:    [[TMP14:%.*]] = fpext <vscale x 4 x bfloat> [[WIDE_LOAD1]] to <vscale x 4 x float>
 ; ZVFBFMIN-NEXT:    [[TMP15:%.*]] = call <vscale x 4 x float> @llvm.fmuladd.nxv4f32(<vscale x 4 x float> [[TMP13]], <vscale x 4 x float> [[TMP14]], <vscale x 4 x float> [[WIDE_LOAD2]])
+; ZVFBFMIN-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[TMP15]], ptr align 4 [[TMP9]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP11]])
+; ZVFBFMIN-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i64
+; ZVFBFMIN-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP12]], [[TMP6]]
+; ZVFBFMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP12]]
+; ZVFBFMIN-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], [[N]]
+; ZVFBFMIN-NEXT:    br i1 [[TMP16]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; ZVFBFMIN:       [[MIDDLE_BLOCK]]:
+; ZVFBFMIN-NEXT:    br label %[[EXIT:.*]]
+; ZVFBFMIN:       [[SCALAR_PH]]:
+; ZVFBFMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ]
+; ZVFBFMIN-NEXT:    br label %[[LOOP:.*]]
+; ZVFBFMIN:       [[LOOP]]:
+; ZVFBFMIN-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; ZVFBFMIN-NEXT:    [[A_GEP:%.*]] = getelementptr bfloat, ptr [[A]], i64 [[I]]
 ; ZVFBFMIN-NEXT:    [[B_GEP:%.*]] = getelementptr bfloat, ptr [[B]], i64 [[I]]
 ; ZVFBFMIN-NEXT:    [[C_GEP:%.*]] = getelementptr float, ptr [[C]], i64 [[I]]

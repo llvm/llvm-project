@@ -603,8 +603,27 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 8
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 4096, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP2]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP13]])
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP4]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP13]])
+; CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x half> @llvm.minimumnum.nxv8f16(<vscale x 8 x half> [[WIDE_LOAD]], <vscale x 8 x half> [[WIDE_LOAD5]])
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv8f16.p0(<vscale x 8 x half> [[TMP17]], ptr align 2 [[TMP7]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP13]])
+; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP13]] to i64
+; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP20]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP20]]
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 4096
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
@@ -642,8 +661,32 @@ define void @fmin16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; ZVFHMIN-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
-; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
+; ZVFHMIN-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
+; ZVFHMIN-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 8
+; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
+; ZVFHMIN:       [[VECTOR_BODY]]:
+; ZVFHMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVFHMIN-NEXT:    [[AVL:%.*]] = phi i64 [ 4096, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVFHMIN-NEXT:    [[TMP19:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; ZVFHMIN-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
+; ZVFHMIN-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP13]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP19]])
+; ZVFHMIN-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
+; ZVFHMIN-NEXT:    [[WIDE_LOAD5:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP15]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP19]])
+; ZVFHMIN-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x half> @llvm.minimumnum.nxv8f16(<vscale x 8 x half> [[WIDE_LOAD]], <vscale x 8 x half> [[WIDE_LOAD5]])
+; ZVFHMIN-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
+; ZVFHMIN-NEXT:    call void @llvm.vp.store.nxv8f16.p0(<vscale x 8 x half> [[TMP17]], ptr align 2 [[TMP18]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP19]])
+; ZVFHMIN-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP19]] to i64
+; ZVFHMIN-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP16]], [[INDEX]]
+; ZVFHMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP16]]
+; ZVFHMIN-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 4096
+; ZVFHMIN-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; ZVFHMIN:       [[MIDDLE_BLOCK]]:
+; ZVFHMIN-NEXT:    br label %[[EXIT:.*]]
+; ZVFHMIN:       [[SCALAR_PH]]:
+; ZVFHMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; ZVFHMIN-NEXT:    br label %[[FOR_BODY:.*]]
+; ZVFHMIN:       [[FOR_BODY]]:
+; ZVFHMIN-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; ZVFHMIN-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[IV]]
 ; ZVFHMIN-NEXT:    [[IN1:%.*]] = load half, ptr [[ARRAYIDX]], align 2
 ; ZVFHMIN-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[IV]]
@@ -699,9 +742,32 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 8
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 4096, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP2]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP13]])
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP4]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP13]])
+; CHECK-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x half> @llvm.maximumnum.nxv8f16(<vscale x 8 x half> [[WIDE_LOAD]], <vscale x 8 x half> [[WIDE_LOAD5]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
+; CHECK-NEXT:    call void @llvm.vp.store.nxv8f16.p0(<vscale x 8 x half> [[TMP17]], ptr align 2 [[TMP7]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP13]])
+; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP13]] to i64
+; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP20]], [[INDEX]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP20]]
+; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 4096
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
+; CHECK:       [[FOR_BODY]]:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[IN1:%.*]] = load half, ptr [[ARRAYIDX]], align 2
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[INDVARS_IV]]
@@ -734,8 +800,32 @@ define void @fmax16(ptr noundef readonly captures(none) %input1, ptr noundef rea
 ; ZVFHMIN-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[DIFF_CHECK]], [[DIFF_CHECK4]]
 ; ZVFHMIN-NEXT:    br i1 [[CONFLICT_RDX]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; ZVFHMIN:       [[VECTOR_PH]]:
-; ZVFHMIN-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
-; ZVFHMIN-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 8
+; ZVFHMIN-NEXT:    [[TMP11:%.*]] = call i64 @llvm.vscale.i64()
+; ZVFHMIN-NEXT:    [[TMP12:%.*]] = mul nuw i64 [[TMP11]], 8
+; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
+; ZVFHMIN:       [[VECTOR_BODY]]:
+; ZVFHMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVFHMIN-NEXT:    [[AVL:%.*]] = phi i64 [ 4096, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVFHMIN-NEXT:    [[TMP19:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
+; ZVFHMIN-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[INDEX]]
+; ZVFHMIN-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP13]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP19]])
+; ZVFHMIN-NEXT:    [[TMP15:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[INDEX]]
+; ZVFHMIN-NEXT:    [[WIDE_LOAD5:%.*]] = call <vscale x 8 x half> @llvm.vp.load.nxv8f16.p0(ptr align 2 [[TMP15]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP19]])
+; ZVFHMIN-NEXT:    [[TMP17:%.*]] = call <vscale x 8 x half> @llvm.maximumnum.nxv8f16(<vscale x 8 x half> [[WIDE_LOAD]], <vscale x 8 x half> [[WIDE_LOAD5]])
+; ZVFHMIN-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[OUTPUT]], i64 0, i64 [[INDEX]]
+; ZVFHMIN-NEXT:    call void @llvm.vp.store.nxv8f16.p0(<vscale x 8 x half> [[TMP17]], ptr align 2 [[TMP18]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP19]])
+; ZVFHMIN-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP19]] to i64
+; ZVFHMIN-NEXT:    [[INDEX_EVL_NEXT]] = add nuw i64 [[TMP16]], [[INDEX]]
+; ZVFHMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP16]]
+; ZVFHMIN-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_EVL_NEXT]], 4096
+; ZVFHMIN-NEXT:    br i1 [[TMP20]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; ZVFHMIN:       [[MIDDLE_BLOCK]]:
+; ZVFHMIN-NEXT:    br label %[[EXIT:.*]]
+; ZVFHMIN:       [[SCALAR_PH]]:
+; ZVFHMIN-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; ZVFHMIN-NEXT:    br label %[[FOR_BODY:.*]]
+; ZVFHMIN:       [[FOR_BODY]]:
+; ZVFHMIN-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[FOR_BODY]] ]
 ; ZVFHMIN-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT1]], i64 0, i64 [[IV]]
 ; ZVFHMIN-NEXT:    [[IN1:%.*]] = load half, ptr [[ARRAYIDX]], align 2
 ; ZVFHMIN-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds nuw [4096 x half], ptr [[INPUT2]], i64 0, i64 [[IV]]

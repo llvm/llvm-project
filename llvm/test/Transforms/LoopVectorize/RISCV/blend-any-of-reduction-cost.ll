@@ -62,6 +62,10 @@ define i32 @any_of_reduction_used_in_blend_with_multiple_phis(ptr %src, i64 %N, 
 ; CHECK-LABEL: define i32 @any_of_reduction_used_in_blend_with_multiple_phis(
 ; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]], i1 [[C_0:%.*]], i1 [[C_1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[ANY_OF_RED:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[ANY_OF_RED_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH]] ]
 ; CHECK-NEXT:    br i1 [[C_0]], label %[[X_1:.*]], label %[[ELSE_1:.*]]
 ; CHECK:       [[ELSE_1]]:
 ; CHECK-NEXT:    br i1 [[C_1]], label %[[X_1]], label %[[ELSE_2:.*]]
