@@ -85,16 +85,32 @@ inline unsigned promoteScalarArgumentSize(unsigned size) {
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM);
 
-inline bool Isv2x16VT(EVT VT) {
-  return (VT == MVT::v2f16 || VT == MVT::v2bf16 || VT == MVT::v2i16);
-}
-
 inline bool shouldPassAsArray(Type *Ty) {
   return Ty->isAggregateType() || Ty->isVectorTy() ||
          Ty->getScalarSizeInBits() == 128 || Ty->isHalfTy() || Ty->isBFloatTy();
 }
 
 namespace NVPTX {
+// Returns a list of vector types that we prefer to fit into a single PTX
+// register. NOTE: This must be kept in sync with the register classes
+// defined in NVPTXRegisterInfo.td.
+inline auto packed_types() {
+  static const auto PackedTypes = {MVT::v4i8, MVT::v2f16, MVT::v2bf16,
+                                   MVT::v2i16, MVT::v2f32};
+  return PackedTypes;
+}
+
+// Checks if the type VT can fit into a single register.
+inline bool isPackedVectorTy(EVT VT) {
+  return any_of(packed_types(), [VT](EVT OVT) { return OVT == VT; });
+}
+
+// Checks if two or more of the type ET can fit into a single register.
+inline bool isPackedElementTy(EVT ET) {
+  return any_of(packed_types(),
+                [ET](EVT OVT) { return OVT.getVectorElementType() == ET; });
+}
+
 inline std::string getValidPTXIdentifier(StringRef Name) {
   std::string ValidName;
   ValidName.reserve(Name.size() + 4);
@@ -149,6 +165,8 @@ inline std::string ScopeToString(Scope S) {
     return "Cluster";
   case Scope::Device:
     return "Device";
+  case Scope::DefaultDevice:
+    return "DefaultDevice";
   }
   report_fatal_error(formatv("Unknown NVPTX::Scope \"{}\".",
                              static_cast<ScopeUnderlyingType>(S)));

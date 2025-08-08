@@ -16,12 +16,12 @@
 define i32 @caller_no_gc() {
 ; CHECK-LABEL: define i32 @caller_no_gc() gc "example" {
 ; CHECK-NEXT:    [[ROOT_I:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[ROOT_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ROOT_I]])
 ; CHECK-NEXT:    call void @llvm.gcroot(ptr [[ROOT_I]], ptr null)
 ; CHECK-NEXT:    [[OBJ_I:%.*]] = call ptr @h()
 ; CHECK-NEXT:    store ptr [[OBJ_I]], ptr [[ROOT_I]], align 8
 ; CHECK-NEXT:    [[LENGTH_I:%.*]] = load i32, ptr [[OBJ_I]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[ROOT_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ROOT_I]])
 ; CHECK-NEXT:    ret i32 [[LENGTH_I]]
 ;
   %x = call i32 @callee_with_gc()
@@ -32,12 +32,12 @@ define i32 @caller_no_gc() {
 define i32 @caller_same_gc() gc "example" {
 ; CHECK-LABEL: define i32 @caller_same_gc() gc "example" {
 ; CHECK-NEXT:    [[ROOT_I:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[ROOT_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ROOT_I]])
 ; CHECK-NEXT:    call void @llvm.gcroot(ptr [[ROOT_I]], ptr null)
 ; CHECK-NEXT:    [[OBJ_I:%.*]] = call ptr @h()
 ; CHECK-NEXT:    store ptr [[OBJ_I]], ptr [[ROOT_I]], align 8
 ; CHECK-NEXT:    [[LENGTH_I:%.*]] = load i32, ptr [[OBJ_I]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[ROOT_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ROOT_I]])
 ; CHECK-NEXT:    ret i32 [[LENGTH_I]]
 ;
   %x = call i32 @callee_with_gc()
@@ -97,12 +97,12 @@ define i32 @callee_with_other_gc() gc "other-example" {
 define i32 @caller_inline_first_caller() {
 ; CHECK-LABEL: define i32 @caller_inline_first_caller() gc "example" {
 ; CHECK-NEXT:    [[ROOT_I:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[ROOT_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ROOT_I]])
 ; CHECK-NEXT:    call void @llvm.gcroot(ptr [[ROOT_I]], ptr null)
 ; CHECK-NEXT:    [[OBJ_I:%.*]] = call ptr @h()
 ; CHECK-NEXT:    store ptr [[OBJ_I]], ptr [[ROOT_I]], align 8
 ; CHECK-NEXT:    [[LENGTH_I:%.*]] = load i32, ptr [[OBJ_I]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[ROOT_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ROOT_I]])
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @callee_with_other_gc()
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LENGTH_I]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[ADD]]
@@ -118,12 +118,12 @@ define i32 @caller_inline_first_caller() {
 define i32 @caller_inline_second_caller() gc "example" {
 ; CHECK-LABEL: define i32 @caller_inline_second_caller() gc "example" {
 ; CHECK-NEXT:    [[ROOT_I:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[ROOT_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ROOT_I]])
 ; CHECK-NEXT:    call void @llvm.gcroot(ptr [[ROOT_I]], ptr null)
 ; CHECK-NEXT:    [[OBJ_I:%.*]] = call ptr @h()
 ; CHECK-NEXT:    store ptr [[OBJ_I]], ptr [[ROOT_I]], align 8
 ; CHECK-NEXT:    [[LENGTH_I:%.*]] = load i32, ptr [[OBJ_I]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 8, ptr [[ROOT_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ROOT_I]])
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @callee_with_other_gc()
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LENGTH_I]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[ADD]]

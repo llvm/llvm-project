@@ -322,11 +322,14 @@ size_t ProcessMinidump::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
 size_t ProcessMinidump::DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                      Status &error) {
 
-  llvm::ArrayRef<uint8_t> mem = m_minidump_parser->GetMemory(addr, size);
-  if (mem.empty()) {
-    error = Status::FromErrorString("could not parse memory info");
+  llvm::Expected<llvm::ArrayRef<uint8_t>> mem_maybe =
+      m_minidump_parser->GetMemory(addr, size);
+  if (!mem_maybe) {
+    error = Status::FromError(mem_maybe.takeError());
     return 0;
   }
+
+  llvm::ArrayRef<uint8_t> mem = *mem_maybe;
 
   std::memcpy(buf, mem.data(), mem.size());
   return mem.size();
@@ -405,7 +408,7 @@ void ProcessMinidump::BuildMemoryRegions() {
         to_add.back().SetName(module_sp->GetFileSpec().GetPath().c_str());
       }
     }
-    return true;
+    return IterationAction::Continue;
   });
   m_memory_regions->insert(m_memory_regions->end(), to_add.begin(),
                            to_add.end());

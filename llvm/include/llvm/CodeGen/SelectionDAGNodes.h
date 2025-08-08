@@ -182,7 +182,7 @@ public:
     return SDValue(Node, R);
   }
 
-  /// Return true if this node is an operand of N.
+  /// Return true if the referenced return value is an operand of N.
   LLVM_ABI bool isOperandOf(const SDNode *N) const;
 
   /// Return the ValueType of the referenced return value.
@@ -1999,29 +1999,17 @@ public:
   }
 };
 
-/// This SDNode is used for LIFETIME_START/LIFETIME_END values, which indicate
-/// the offet and size that are started/ended in the underlying FrameIndex.
+/// This SDNode is used for LIFETIME_START/LIFETIME_END values.
 class LifetimeSDNode : public SDNode {
   friend class SelectionDAG;
-  int64_t Size;
-  int64_t Offset; // -1 if offset is unknown.
 
   LifetimeSDNode(unsigned Opcode, unsigned Order, const DebugLoc &dl,
-                 SDVTList VTs, int64_t Size, int64_t Offset)
-      : SDNode(Opcode, Order, dl, VTs), Size(Size), Offset(Offset) {}
+                 SDVTList VTs)
+      : SDNode(Opcode, Order, dl, VTs) {}
+
 public:
   int64_t getFrameIndex() const {
     return cast<FrameIndexSDNode>(getOperand(1))->getIndex();
-  }
-
-  bool hasOffset() const { return Offset >= 0; }
-  int64_t getOffset() const {
-    assert(hasOffset() && "offset is unknown");
-    return Offset;
-  }
-  int64_t getSize() const {
-    assert(hasOffset() && "offset is unknown");
-    return Size;
   }
 
   // Methods to support isa and dyn_cast
@@ -3108,6 +3096,23 @@ public:
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM;
+  }
+};
+
+class VPLoadFFSDNode : public MemSDNode {
+public:
+  friend class SelectionDAG;
+
+  VPLoadFFSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs, EVT MemVT,
+                 MachineMemOperand *MMO)
+      : MemSDNode(ISD::VP_LOAD_FF, Order, DL, VTs, MemVT, MMO) {}
+
+  const SDValue &getBasePtr() const { return getOperand(1); }
+  const SDValue &getMask() const { return getOperand(2); }
+  const SDValue &getVectorLength() const { return getOperand(3); }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::VP_LOAD_FF;
   }
 };
 

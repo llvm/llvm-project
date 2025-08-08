@@ -85,7 +85,7 @@ _mm_empty(void) {
 ///    A 32-bit integer value.
 /// \returns A 64-bit integer vector. The lower 32 bits contain the value of the
 ///    parameter. The upper 32 bits are set to 0.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtsi32_si64(int __i)
 {
     return __extension__ (__m64)(__v2si){__i, 0};
@@ -102,7 +102,7 @@ _mm_cvtsi32_si64(int __i)
 ///    A 64-bit integer vector.
 /// \returns A 32-bit signed integer value containing the lower 32 bits of the
 ///    parameter.
-static __inline__ int __DEFAULT_FN_ATTRS_SSE2
+static __inline__ int __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtsi64_si32(__m64 __m)
 {
     return ((__v2si)__m)[0];
@@ -118,10 +118,10 @@ _mm_cvtsi64_si32(__m64 __m)
 ///    A 64-bit signed integer.
 /// \returns A 64-bit integer vector containing the same bitwise pattern as the
 ///    parameter.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtsi64_m64(long long __i)
 {
-    return (__m64)__i;
+    return __extension__ (__m64)(__v1di){__i};
 }
 
 /// Casts a 64-bit integer vector into a 64-bit signed integer value.
@@ -134,10 +134,10 @@ _mm_cvtsi64_m64(long long __i)
 ///    A 64-bit integer vector.
 /// \returns A 64-bit signed integer containing the same bitwise pattern as the
 ///    parameter.
-static __inline__ long long __DEFAULT_FN_ATTRS_SSE2
+static __inline__ long long __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cvtm64_si64(__m64 __m)
 {
-    return (long long)__m;
+    return ((__v1di)__m)[0];
 }
 
 /// Converts, with saturation, 16-bit signed integers from both 64-bit integer
@@ -379,7 +379,7 @@ _mm_unpacklo_pi32(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [8 x i8].
 /// \returns A 64-bit integer vector of [8 x i8] containing the sums of both
 ///    parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_add_pi8(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v8qu)__m1) + ((__v8qu)__m2));
@@ -400,7 +400,7 @@ _mm_add_pi8(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [4 x i16].
 /// \returns A 64-bit integer vector of [4 x i16] containing the sums of both
 ///    parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_add_pi16(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v4hu)__m1) + ((__v4hu)__m2));
@@ -421,7 +421,7 @@ _mm_add_pi16(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [2 x i32].
 /// \returns A 64-bit integer vector of [2 x i32] containing the sums of both
 ///    parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_add_pi32(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v2su)__m1) + ((__v2su)__m2));
@@ -536,7 +536,7 @@ _mm_adds_pu16(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [8 x i8] containing the subtrahends.
 /// \returns A 64-bit integer vector of [8 x i8] containing the differences of
 ///    both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_sub_pi8(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v8qu)__m1) - ((__v8qu)__m2));
@@ -557,7 +557,7 @@ _mm_sub_pi8(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [4 x i16] containing the subtrahends.
 /// \returns A 64-bit integer vector of [4 x i16] containing the differences of
 ///    both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_sub_pi16(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v4hu)__m1) - ((__v4hu)__m2));
@@ -578,7 +578,7 @@ _mm_sub_pi16(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [2 x i32] containing the subtrahends.
 /// \returns A 64-bit integer vector of [2 x i32] containing the differences of
 ///    both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_sub_pi32(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v2su)__m1) - ((__v2su)__m2));
@@ -745,7 +745,7 @@ _mm_mulhi_pi16(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [4 x i16].
 /// \returns A 64-bit integer vector of [4 x i16] containing the lower 16 bits
 ///    of the products of both parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_mullo_pi16(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v4hu)__m1) * ((__v4hu)__m2));
@@ -1134,7 +1134,7 @@ _mm_srli_si64(__m64 __m, int __count)
 ///    A 64-bit integer vector.
 /// \returns A 64-bit integer vector containing the bitwise AND of both
 ///    parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_and_si64(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v1du)__m1) & ((__v1du)__m2));
@@ -1155,7 +1155,7 @@ _mm_and_si64(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector.
 /// \returns A 64-bit integer vector containing the bitwise AND of the second
 ///    parameter and the one's complement of the first parameter.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_andnot_si64(__m64 __m1, __m64 __m2)
 {
     return (__m64)(~((__v1du)__m1) & ((__v1du)__m2));
@@ -1173,7 +1173,7 @@ _mm_andnot_si64(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector.
 /// \returns A 64-bit integer vector containing the bitwise OR of both
 ///    parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_or_si64(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v1du)__m1) | ((__v1du)__m2));
@@ -1191,7 +1191,7 @@ _mm_or_si64(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector.
 /// \returns A 64-bit integer vector containing the bitwise exclusive OR of both
 ///    parameters.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_xor_si64(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v1du)__m1) ^ ((__v1du)__m2));
@@ -1213,7 +1213,7 @@ _mm_xor_si64(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [8 x i8].
 /// \returns A 64-bit integer vector of [8 x i8] containing the comparison
 ///    results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cmpeq_pi8(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v8qi)__m1) == ((__v8qi)__m2));
@@ -1235,7 +1235,7 @@ _mm_cmpeq_pi8(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [4 x i16].
 /// \returns A 64-bit integer vector of [4 x i16] containing the comparison
 ///    results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cmpeq_pi16(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v4hi)__m1) == ((__v4hi)__m2));
@@ -1257,7 +1257,7 @@ _mm_cmpeq_pi16(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [2 x i32].
 /// \returns A 64-bit integer vector of [2 x i32] containing the comparison
 ///    results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cmpeq_pi32(__m64 __m1, __m64 __m2)
 {
     return (__m64)(((__v2si)__m1) == ((__v2si)__m2));
@@ -1279,7 +1279,7 @@ _mm_cmpeq_pi32(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [8 x i8].
 /// \returns A 64-bit integer vector of [8 x i8] containing the comparison
 ///    results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cmpgt_pi8(__m64 __m1, __m64 __m2)
 {
   /* This function always performs a signed comparison, but __v8qi is a char
@@ -1303,7 +1303,7 @@ _mm_cmpgt_pi8(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [4 x i16].
 /// \returns A 64-bit integer vector of [4 x i16] containing the comparison
 ///    results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cmpgt_pi16(__m64 __m1, __m64 __m2)
 {
     return (__m64)((__v4hi)__m1 > (__v4hi)__m2);
@@ -1325,7 +1325,7 @@ _mm_cmpgt_pi16(__m64 __m1, __m64 __m2)
 ///    A 64-bit integer vector of [2 x i32].
 /// \returns A 64-bit integer vector of [2 x i32] containing the comparison
 ///    results.
-static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2
+static __inline__ __m64 __DEFAULT_FN_ATTRS_SSE2_CONSTEXPR
 _mm_cmpgt_pi32(__m64 __m1, __m64 __m2)
 {
     return (__m64)((__v2si)__m1 > (__v2si)__m2);

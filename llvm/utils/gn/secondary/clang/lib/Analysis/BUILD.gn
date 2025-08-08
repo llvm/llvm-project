@@ -27,6 +27,7 @@ static_library("Analysis") {
     "FixitUtil.cpp",
     "IntervalPartition.cpp",
     "IssueHash.cpp",
+    "LifetimeSafety.cpp",
     "LiveVariables.cpp",
     "MacroExpansionContext.cpp",
     "ObjCNoReturn.cpp",

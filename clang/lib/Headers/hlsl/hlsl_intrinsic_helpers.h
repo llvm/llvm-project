@@ -12,7 +12,7 @@
 namespace hlsl {
 namespace __detail {
 
-constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
+constexpr int4 d3d_color_to_ubyte4_impl(float4 V) {
   // Use the same scaling factor used by FXC, and DXC for DXIL
   // (i.e., 255.001953)
   // https://github.com/microsoft/DirectXShaderCompiler/blob/070d0d5a2beacef9eeb51037a9b04665716fd6f3/lib/HLSL/HLOperationLower.cpp#L666C1-L697C2
@@ -69,6 +69,16 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
 #else
   return I - 2 * N * dot(I, N);
 #endif
+}
+
+template <typename T, typename U> constexpr T refract_impl(T I, T N, U Eta) {
+#if (__has_builtin(__builtin_spirv_refract))
+  return __builtin_spirv_refract(I, N, Eta);
+#endif
+  T Mul = dot(N, I);
+  T K = 1 - Eta * Eta * (1 - Mul * Mul);
+  T Result = (Eta * I - (Eta * Mul + sqrt(K)) * N);
+  return select<T>(K < 0, static_cast<T>(0), Result);
 }
 
 template <typename T> constexpr T fmod_impl(T X, T Y) {

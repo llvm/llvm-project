@@ -1,7 +1,7 @@
 {
   "name": "lldb-dap",
   "displayName": "LLDB DAP",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "publisher": "llvm-vs-code-extensions",
   "homepage": "https://lldb.llvm.org",
   "description": "Debugging with LLDB in Visual Studio Code",
@@ -45,7 +45,7 @@
     "vscode:prepublish": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "format": "npx prettier './src-ts/' --write",
-    "package": "vsce package --out ./out/lldb-dap.vsix",
+    "package": "rm -rf ./out/lldb-dap.vsix && vsce package --out ./out/lldb-dap.vsix",
     "publish": "vsce publish",
     "vscode-uninstall": "code --uninstall-extension llvm-vs-code-extensions.lldb-dap",
     "vscode-install": "code --install-extension ./out/lldb-dap.vsix"
@@ -81,10 +81,16 @@
             "description": "The path to the lldb-dap binary, e.g. /usr/local/bin/lldb-dap"
           },
           "lldb-dap.log-path": {
+            "scope": "machine-overridable",
+            "type": "string",
+            "description": "The log path for lldb-dap (if any)",
+            "markdownDeprecationMessage": "Use the `#lldb-dap.logFolder#` setting instead"
+          },
+          "lldb-dap.logFolder": {
             "order": 0,
             "scope": "machine-overridable",
             "type": "string",
-            "description": "The log path for lldb-dap (if any)"
+            "markdownDescription": "The folder to persist lldb-dap logs. If no value is provided, logs will be persisted in the [Extension Logs Folder](command:workbench.action.openExtensionLogsFolder)."
           },
           "lldb-dap.serverMode": {
             "order": 0,
@@ -110,6 +116,11 @@
             "additionalProperties": {
               "type": "string"
             }
+          },
+          "lldb-dap.captureSessionLogs": {
+            "type": "boolean",
+            "description": "When enabled, LLDB-DAP session logs will be written to the Extension's log folder if the `lldb-dap.log-path` setting is not explicitly set.",
+            "default": false
           }
         }
       },
@@ -528,7 +539,23 @@
               "runInTerminal": {
                 "type": "boolean",
                 "description": "Launch the program inside an integrated terminal in the IDE. Useful for debugging interactive command line programs",
-                "default": false
+                "default": false,
+                "deprecationMessage": "Attribute 'runInTerminal' is deprecated, use 'console' instead."
+              },
+              "console": {
+                "type": "string",
+                "enum": [
+                  "internalConsole",
+                  "integratedTerminal",
+                  "externalTerminal"
+                ],
+                "enumDescriptions": [
+                  "Use Debug Console for output (input is not supported).",
+                  "Launch the program inside an integrated terminal in the IDE.",
+                  "Launch the program inside an external terminal window."
+                ],
+                "description": "Specify where to launch the program: internal console, integrated terminal or external terminal.",
+                "default": "internalConsole"
               },
               "timeout": {
                 "type": "number",

@@ -55,6 +55,20 @@ class MapsForPrivatizedSymbolsPass
 
   omp::MapInfoOp createMapInfo(Location loc, Value var,
                                fir::FirOpBuilder &builder) {
+    // Check if a value of type `type` can be passed to the kernel by value.
+    // All kernel parameters are of pointer type, so if the value can be
+    // represented inside of a pointer, then it can be passed by value.
+    auto canPassByValue = [&](mlir::Type type) {
+      const mlir::DataLayout &dl = builder.getDataLayout();
+      mlir::Type ptrTy = mlir::LLVM::LLVMPointerType::get(builder.getContext());
+      uint64_t ptrSize = dl.getTypeSize(ptrTy);
+      uint64_t ptrAlign = dl.getTypePreferredAlignment(ptrTy);
+
+      auto [size, align] = fir::getTypeSizeAndAlignmentOrCrash(
+          loc, type, dl, builder.getKindMap());
+      return size <= ptrSize && align <= ptrAlign;
+    };
+
     uint64_t mapTypeTo = static_cast<
         std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
@@ -80,9 +94,9 @@ class MapsForPrivatizedSymbolsPass
       mlir::Block *allocaBlock = builder.getAllocaBlock();
       assert(allocaBlock && "No allocablock  found for a funcOp");
       builder.setInsertionPointToStart(allocaBlock);
-      auto alloca = builder.create<fir::AllocaOp>(loc, varPtr.getType());
+      auto alloca = fir::AllocaOp::create(builder, loc, varPtr.getType());
       builder.restoreInsertionPoint(savedInsPoint);
-      builder.create<fir::StoreOp>(loc, varPtr, alloca);
+      fir::StoreOp::create(builder, loc, varPtr, alloca);
       varPtr = alloca;
     }
     assert(mlir::isa<omp::PointerLikeType>(varPtr.getType()) &&
@@ -94,14 +108,22 @@ class MapsForPrivatizedSymbolsPass
     if (needsBoundsOps(varPtr))
       genBoundsOps(builder, varPtr, boundsOps);
 
-    return builder.create<omp::MapInfoOp>(
-        loc, varPtr.getType(), varPtr,
+    mlir::omp::VariableCaptureKind captureKind =
+        mlir::omp::VariableCaptureKind::ByRef;
+    if (fir::isa_trivial(fir::unwrapRefType(varPtr.getType())) ||
+        fir::isa_char(fir::unwrapRefType(varPtr.getType()))) {
+      if (canPassByValue(fir::unwrapRefType(varPtr.getType()))) {
+        captureKind = mlir::omp::VariableCaptureKind::ByCopy;
+      }
+    }
+
+    return omp::MapInfoOp::create(
+        builder, loc, varPtr.getType(), varPtr,
         TypeAttr::get(llvm::cast<omp::PointerLikeType>(varPtr.getType())
                           .getElementType()),
         builder.getIntegerAttr(builder.getIntegerType(64, /*isSigned=*/false),
                                mapTypeTo),
-        builder.getAttr<omp::VariableCaptureKindAttr>(
-            omp::VariableCaptureKind::ByRef),
+        builder.getAttr<omp::VariableCaptureKindAttr>(captureKind),
         /*varPtrPtr=*/Value{},
         /*members=*/SmallVector<Value>{},
         /*member_index=*/mlir::ArrayAttr{},

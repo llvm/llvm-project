@@ -8,6 +8,7 @@ static_library("Analysis") {
     "//llvm/include/llvm/Config:config",
     "//llvm/lib/BinaryFormat",
     "//llvm/lib/IR",
+    "//llvm/lib/Frontend/HLSL",
     "//llvm/lib/ProfileData",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",

@@ -31,6 +31,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorOr.h"
@@ -43,10 +44,10 @@ class Module;
 class BasicBlock;
 class Instruction;
 class Function;
-class Type;
 class Value;
 class raw_ostream;
 class LLVMContext;
+class IR2VecVocabAnalysis;
 
 /// IR2Vec computes two kinds of embeddings: Symbolic and Flow-aware.
 /// Symbolic embeddings capture the "syntactic" and "statistical correlation"
@@ -128,9 +129,106 @@ public:
 
 using InstEmbeddingsMap = DenseMap<const Instruction *, Embedding>;
 using BBEmbeddingsMap = DenseMap<const BasicBlock *, Embedding>;
-// FIXME: Current the keys are strings. This can be changed to
-// use integers for cheaper lookups.
-using Vocab = std::map<std::string, Embedding>;
+
+/// Class for storing and accessing the IR2Vec vocabulary.
+/// Encapsulates all vocabulary-related constants, logic, and access methods.
+class Vocabulary {
+  friend class llvm::IR2VecVocabAnalysis;
+  using VocabVector = std::vector<ir2vec::Embedding>;
+  VocabVector Vocab;
+  bool Valid = false;
+
+  /// Operand kinds supported by IR2Vec Vocabulary
+  enum class OperandKind : unsigned {
+    FunctionID,
+    PointerID,
+    ConstantID,
+    VariableID,
+    MaxOperandKind
+  };
+  /// String mappings for OperandKind values
+  static constexpr StringLiteral OperandKindNames[] = {"Function", "Pointer",
+                                                       "Constant", "Variable"};
+  static_assert(std::size(OperandKindNames) ==
+                    static_cast<unsigned>(OperandKind::MaxOperandKind),
+                "OperandKindNames array size must match MaxOperandKind");
+
+public:
+  /// Vocabulary layout constants
+#define LAST_OTHER_INST(NUM) static constexpr unsigned MaxOpcodes = NUM;
+#include "llvm/IR/Instruction.def"
+#undef LAST_OTHER_INST
+
+  static constexpr unsigned MaxTypeIDs = Type::TypeID::TargetExtTyID + 1;
+  static constexpr unsigned MaxOperandKinds =
+      static_cast<unsigned>(OperandKind::MaxOperandKind);
+
+  Vocabulary() = default;
+  LLVM_ABI Vocabulary(VocabVector &&Vocab);
+
+  LLVM_ABI bool isValid() const;
+  LLVM_ABI unsigned getDimension() const;
+  LLVM_ABI size_t size() const;
+
+  static size_t expectedSize() {
+    return MaxOpcodes + MaxTypeIDs + MaxOperandKinds;
+  }
+
+  /// Helper function to get vocabulary key for a given Opcode
+  LLVM_ABI static StringRef getVocabKeyForOpcode(unsigned Opcode);
+
+  /// Helper function to get vocabulary key for a given TypeID
+  LLVM_ABI static StringRef getVocabKeyForTypeID(Type::TypeID TypeID);
+
+  /// Helper function to get vocabulary key for a given OperandKind
+  LLVM_ABI static StringRef getVocabKeyForOperandKind(OperandKind Kind);
+
+  /// Helper function to classify an operand into OperandKind
+  LLVM_ABI static OperandKind getOperandKind(const Value *Op);
+
+  /// Helpers to return the IDs of a given Opcode, TypeID, or OperandKind
+  LLVM_ABI static unsigned getNumericID(unsigned Opcode);
+  LLVM_ABI static unsigned getNumericID(Type::TypeID TypeID);
+  LLVM_ABI static unsigned getNumericID(const Value *Op);
+
+  /// Accessors to get the embedding for a given entity.
+  LLVM_ABI const ir2vec::Embedding &operator[](unsigned Opcode) const;
+  LLVM_ABI const ir2vec::Embedding &operator[](Type::TypeID TypeId) const;
+  LLVM_ABI const ir2vec::Embedding &operator[](const Value *Arg) const;
+
+  /// Const Iterator type aliases
+  using const_iterator = VocabVector::const_iterator;
+  const_iterator begin() const {
+    assert(Valid && "IR2Vec Vocabulary is invalid");
+    return Vocab.begin();
+  }
+
+  const_iterator cbegin() const {
+    assert(Valid && "IR2Vec Vocabulary is invalid");
+    return Vocab.cbegin();
+  }
+
+  const_iterator end() const {
+    assert(Valid && "IR2Vec Vocabulary is invalid");
+    return Vocab.end();
+  }
+
+  const_iterator cend() const {
+    assert(Valid && "IR2Vec Vocabulary is invalid");
+    return Vocab.cend();
+  }
+
+  /// Returns the string key for a given index position in the vocabulary.
+  /// This is useful for debugging or printing the vocabulary. Do not use this
+  /// for embedding generation as string based lookups are inefficient.
+  LLVM_ABI static StringRef getStringKey(unsigned Pos);
+
+  /// Create a dummy vocabulary for testing purposes.
+  LLVM_ABI static VocabVector createDummyVocabForTest(unsigned Dim = 1);
+
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &Inv) const;
+};
 
 /// Embedder provides the interface to generate embeddings (vector
 /// representations) for instructions, basic blocks, and functions. The
@@ -141,7 +239,7 @@ using Vocab = std::map<std::string, Embedding>;
 class Embedder {
 protected:
   const Function &F;
-  const Vocab &Vocabulary;
+  const Vocabulary &Vocab;
 
   /// Dimension of the vector representation; captured from the input vocabulary
   const unsigned Dimension;
@@ -156,7 +254,7 @@ protected:
   mutable BBEmbeddingsMap BBVecMap;
   mutable InstEmbeddingsMap InstVecMap;
 
-  LLVM_ABI Embedder(const Function &F, const Vocab &Vocabulary);
+  LLVM_ABI Embedder(const Function &F, const Vocabulary &Vocab);
 
   /// Helper function to compute embeddings. It generates embeddings for all
   /// the instructions and basic blocks in the function F. Logic of computing
@@ -167,16 +265,12 @@ protected:
   /// Specific to the kind of embeddings being computed.
   virtual void computeEmbeddings(const BasicBlock &BB) const = 0;
 
-  /// Lookup vocabulary for a given Key. If the key is not found, it returns a
-  /// zero vector.
-  LLVM_ABI Embedding lookupVocab(const std::string &Key) const;
-
 public:
   virtual ~Embedder() = default;
 
   /// Factory method to create an Embedder object.
   LLVM_ABI static std::unique_ptr<Embedder>
-  create(IR2VecKind Mode, const Function &F, const Vocab &Vocabulary);
+  create(IR2VecKind Mode, const Function &F, const Vocabulary &Vocab);
 
   /// Returns a map containing instructions and the corresponding embeddings for
   /// the function F if it has been computed. If not, it computes the embeddings
@@ -202,56 +296,39 @@ public:
 /// representations obtained from the Vocabulary.
 class LLVM_ABI SymbolicEmbedder : public Embedder {
 private:
-  /// Utility function to compute the embedding for a given type.
-  Embedding getTypeEmbedding(const Type *Ty) const;
-
-  /// Utility function to compute the embedding for a given operand.
-  Embedding getOperandEmbedding(const Value *Op) const;
-
   void computeEmbeddings() const override;
   void computeEmbeddings(const BasicBlock &BB) const override;
 
 public:
-  SymbolicEmbedder(const Function &F, const Vocab &Vocabulary)
-      : Embedder(F, Vocabulary) {
+  SymbolicEmbedder(const Function &F, const Vocabulary &Vocab)
+      : Embedder(F, Vocab) {
     FuncVector = Embedding(Dimension, 0);
   }
 };
 
 } // namespace ir2vec
 
-/// Class for storing the result of the IR2VecVocabAnalysis.
-class IR2VecVocabResult {
-  ir2vec::Vocab Vocabulary;
-  bool Valid = false;
-
-public:
-  IR2VecVocabResult() = default;
-  LLVM_ABI IR2VecVocabResult(ir2vec::Vocab &&Vocabulary);
-
-  bool isValid() const { return Valid; }
-  LLVM_ABI const ir2vec::Vocab &getVocabulary() const;
-  LLVM_ABI unsigned getDimension() const;
-  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
-                           ModuleAnalysisManager::Invalidator &Inv) const;
-};
-
 /// This analysis provides the vocabulary for IR2Vec. The vocabulary provides a
 /// mapping between an entity of the IR (like opcode, type, argument, etc.) and
 /// its corresponding embedding.
 class IR2VecVocabAnalysis : public AnalysisInfoMixin<IR2VecVocabAnalysis> {
-  ir2vec::Vocab Vocabulary;
+  using VocabVector = std::vector<ir2vec::Embedding>;
+  using VocabMap = std::map<std::string, ir2vec::Embedding>;
+  VocabMap OpcVocab, TypeVocab, ArgVocab;
+  VocabVector Vocab;
+
   Error readVocabulary();
   Error parseVocabSection(StringRef Key, const json::Value &ParsedVocabValue,
-                          ir2vec::Vocab &TargetVocab, unsigned &Dim);
+                          VocabMap &TargetVocab, unsigned &Dim);
+  void generateNumMappedVocab();
   void emitError(Error Err, LLVMContext &Ctx);
 
 public:
   LLVM_ABI static AnalysisKey Key;
   IR2VecVocabAnalysis() = default;
-  LLVM_ABI explicit IR2VecVocabAnalysis(const ir2vec::Vocab &Vocab);
-  LLVM_ABI explicit IR2VecVocabAnalysis(ir2vec::Vocab &&Vocab);
-  using Result = IR2VecVocabResult;
+  LLVM_ABI explicit IR2VecVocabAnalysis(const VocabVector &Vocab);
+  LLVM_ABI explicit IR2VecVocabAnalysis(VocabVector &&Vocab);
+  using Result = ir2vec::Vocabulary;
   LLVM_ABI Result run(Module &M, ModuleAnalysisManager &MAM);
 };
 

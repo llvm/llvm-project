@@ -107,7 +107,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeULEB128(uint32_t(MO.getImm()), OS);
           break;
         case WebAssembly::OPERAND_I64IMM:
-          encodeSLEB128(int64_t(MO.getImm()), OS);
+          encodeSLEB128(MO.getImm(), OS);
           break;
         case WebAssembly::OPERAND_SIGNATURE:
         case WebAssembly::OPERAND_VEC_I8IMM:

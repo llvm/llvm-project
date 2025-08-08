@@ -29,12 +29,6 @@ class CCIfOrigArgWasFloat<CCAction A>
 class CCIfOrigArgWasF128<CCAction A>
     : CCIf<"static_cast<MipsCCState *>(&State)->WasOriginalArgF128(ValNo)", A>;
 
-/// Match if this specific argument is a vararg.
-/// This is slightly different fro CCIfIsVarArg which matches if any argument is
-/// a vararg.
-class CCIfArgIsVarArg<CCAction A>
-    : CCIf<"!static_cast<MipsCCState *>(&State)->IsCallOperandFixed(ValNo)", A>;
-
 /// Match if the return was a floating point vector.
 class CCIfOrigArgWasNotVectorFloat<CCAction A>
     : CCIf<"!static_cast<MipsCCState *>(&State)"
@@ -267,15 +261,8 @@ def CC_Mips_FastCC : CallingConv<[
 
   // Integer arguments are passed in integer registers. All scratch registers,
   // except for AT, V0 and T9, are available to be used as argument registers.
-  CCIfType<[i32], CCIfSubtargetNot<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>>,
-
-  // In NaCl, T6, T7 and T8 are reserved and not available as argument
-  // registers for fastcc.  T6 contains the mask for sandboxing control flow
-  // (indirect jumps and calls).  T7 contains the mask for sandboxing memory
-  // accesses (loads and stores).  T8 contains the thread pointer.
-  CCIfType<[i32], CCIfSubtarget<"isTargetNaCl()",
-      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, V1]>>>,
+  CCIfType<[i32],
+      CCAssignToReg<[A0, A1, A2, A3, T0, T1, T2, T3, T4, T5, T6, T7, T8, V1]>>,
 
   // f32 arguments are passed in single-precision floating pointer registers.
   CCIfType<[f32], CCIfSubtarget<"useOddSPReg()",
@@ -351,7 +338,7 @@ def CC_Mips_VarArg : CallingConv<[
 ]>;
 
 def CC_Mips : CallingConv<[
-  CCIfVarArg<CCIfArgIsVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
+  CCIfVarArg<CCIfArgVarArg<CCDelegateTo<CC_Mips_VarArg>>>,
   CCDelegateTo<CC_Mips_FixedArg>
 ]>;
 

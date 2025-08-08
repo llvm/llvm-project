@@ -117,7 +117,7 @@ struct StoreToLoadForwardingCandidate {
     if (std::abs(StrideLoad) != 1)
       return false;
 
-    unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
+    unsigned TypeByteSize = DL.getTypeAllocSize(LoadType);
 
     auto *LoadPtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(LoadPtr));
     auto *StorePtrSCEV = cast<SCEVAddRecExpr>(PSE.getSCEV(StorePtr));

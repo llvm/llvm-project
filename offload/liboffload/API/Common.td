@@ -44,21 +44,6 @@ def : Macro {
   let alt_value = "";
 }
 
-def : Macro {
-  let name = "OL_DLLEXPORT";
-  let desc = "Microsoft-specific dllexport storage-class attribute";
-  let condition = "defined(_WIN32)";
-  let value = "__declspec(dllexport)";
-}
-
-def : Macro {
-  let name = "OL_DLLEXPORT";
-  let desc = "GCC-specific dllexport storage-class attribute";
-  let condition = "__GNUC__ >= 4";
-  let value = "__attribute__ ((visibility (\"default\")))";
-  let alt_value = "";
-}
-
 def : Handle {
   let name = "ol_platform_handle_t";
   let desc = "Handle of a platform instance";
@@ -89,10 +74,9 @@ def : Handle {
   let desc = "Handle of program object";
 }
 
-def : Typedef {
-  let name = "ol_kernel_handle_t";
-  let desc = "Handle of kernel object";
-  let value = "void *";
+def : Handle {
+  let name = "ol_symbol_handle_t";
+  let desc = "Handle of an object in a device's memory for a specific program";
 }
 
 def ErrorCode : Enum {
@@ -127,6 +111,7 @@ def ErrorCode : Enum {
     Etor<"INVALID_DEVICE", "invalid device">,
     Etor<"INVALID_QUEUE", "invalid queue">,
     Etor<"INVALID_EVENT", "invalid event">,
+    Etor<"SYMBOL_KIND", "the operation does not support this symbol kind">,
   ];
 }
 

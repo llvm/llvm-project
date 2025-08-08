@@ -55,19 +55,18 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// ToyToLLVM RewritePatterns
+// ToyToLLVM Conversion Patterns
 //===----------------------------------------------------------------------===//
 
 namespace {
 /// Lowers `toy.print` to a loop nest calling `printf` on each of the individual
 /// elements of the array.
-class PrintOpLowering : public ConversionPattern {
+class PrintOpLowering : public OpConversionPattern<toy::PrintOp> {
 public:
-  explicit PrintOpLowering(MLIRContext *context)
-      : ConversionPattern(toy::PrintOp::getOperationName(), 1, context) {}
+  using OpConversionPattern<toy::PrintOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+  matchAndRewrite(toy::PrintOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto *context = rewriter.getContext();
     auto memRefType = llvm::cast<MemRefType>((*op->operand_type_begin()));
@@ -86,12 +85,12 @@ public:
     // Create a loop for each of the dimensions within the shape.
     SmallVector<Value, 4> loopIvs;
     for (unsigned i = 0, e = memRefShape.size(); i != e; ++i) {
-      auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+      auto lowerBound = arith::ConstantIndexOp::create(rewriter, loc, 0);
       auto upperBound =
-          rewriter.create<arith::ConstantIndexOp>(loc, memRefShape[i]);
-      auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+          arith::ConstantIndexOp::create(rewriter, loc, memRefShape[i]);
+      auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
       auto loop =
-          rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+          scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step);
       for (Operation &nested : make_early_inc_range(*loop.getBody()))
         rewriter.eraseOp(&nested);
       loopIvs.push_back(loop.getInductionVar());
@@ -101,19 +100,17 @@ public:
 
       // Insert a newline after each of the inner dimensions of the shape.
       if (i != e - 1)
-        rewriter.create<LLVM::CallOp>(loc, getPrintfType(context), printfRef,
-                                      newLineCst);
-      rewriter.create<scf::YieldOp>(loc);
+        LLVM::CallOp::create(rewriter, loc, getPrintfType(context), printfRef,
+                             newLineCst);
+      scf::YieldOp::create(rewriter, loc);
       rewriter.setInsertionPointToStart(loop.getBody());
     }
 
     // Generate a call to printf for the current element of the loop.
-    auto printOp = cast<toy::PrintOp>(op);
     auto elementLoad =
-        rewriter.create<memref::LoadOp>(loc, printOp.getInput(), loopIvs);
-    rewriter.create<LLVM::CallOp>(
-        loc, getPrintfType(context), printfRef,
-        ArrayRef<Value>({formatSpecifierCst, elementLoad}));
+        memref::LoadOp::create(rewriter, loc, op.getInput(), loopIvs);
+    LLVM::CallOp::create(rewriter, loc, getPrintfType(context), printfRef,
+                         ArrayRef<Value>({formatSpecifierCst, elementLoad}));
 
     // Notify the rewriter that this operation has been removed.
     rewriter.eraseOp(op);
@@ -142,8 +139,8 @@ private:
     // Insert the printf function into the body of the parent module.
     PatternRewriter::InsertionGuard insertGuard(rewriter);
     rewriter.setInsertionPointToStart(module.getBody());
-    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), "printf",
-                                      getPrintfType(context));
+    LLVM::LLVMFuncOp::create(rewriter, module.getLoc(), "printf",
+                             getPrintfType(context));
     return SymbolRefAttr::get(context, "printf");
   }
 
@@ -159,19 +156,19 @@ private:
       builder.setInsertionPointToStart(module.getBody());
       auto type = LLVM::LLVMArrayType::get(
           IntegerType::get(builder.getContext(), 8), value.size());
-      global = builder.create<LLVM::GlobalOp>(loc, type, /*isConstant=*/true,
-                                              LLVM::Linkage::Internal, name,
-                                              builder.getStringAttr(value),
-                                              /*alignment=*/0);
+      global = LLVM::GlobalOp::create(builder, loc, type, /*isConstant=*/true,
+                                      LLVM::Linkage::Internal, name,
+                                      builder.getStringAttr(value),
+                                      /*alignment=*/0);
     }
 
     // Get the pointer to the first character in the global string.
-    Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
-    Value cst0 = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
-                                                  builder.getIndexAttr(0));
-    return builder.create<LLVM::GEPOp>(
-        loc, LLVM::LLVMPointerType::get(builder.getContext()), global.getType(),
-        globalPtr, ArrayRef<Value>({cst0, cst0}));
+    Value globalPtr = LLVM::AddressOfOp::create(builder, loc, global);
+    Value cst0 = LLVM::ConstantOp::create(builder, loc, builder.getI64Type(),
+                                          builder.getIndexAttr(0));
+    return LLVM::GEPOp::create(
+        builder, loc, LLVM::LLVMPointerType::get(builder.getContext()),
+        global.getType(), globalPtr, ArrayRef<Value>({cst0, cst0}));
   }
 };
 } // namespace

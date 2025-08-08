@@ -950,6 +950,8 @@ void Preprocessor::Lex(Token &Result) {
     case tok::period:
       ModuleDeclState.handlePeriod();
       break;
+    case tok::eod:
+      break;
     case tok::identifier:
       // Check "import" and "module" when there is no open bracket. The two
       // identifiers are not meaningful with open brackets.

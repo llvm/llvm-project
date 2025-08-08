@@ -281,7 +281,8 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   Y->Header.Type = Obj.getHeader().e_type;
   if (Obj.getHeader().e_machine != 0)
     Y->Header.Machine = ELFYAML::ELF_EM(Obj.getHeader().e_machine);
-  Y->Header.Flags = Obj.getHeader().e_flags;
+  if (Obj.getHeader().e_flags != 0)
+    Y->Header.Flags = ELFYAML::ELF_EF(Obj.getHeader().e_flags);
   Y->Header.Entry = Obj.getHeader().e_entry;
 
   // Dump sections

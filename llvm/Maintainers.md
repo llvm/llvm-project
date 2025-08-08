@@ -263,6 +263,20 @@ amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitH
 
 #### PowerPC backend
 
+Amy Kwan (esp. release issues) \
+Amy.Kwan1@ibm.com (email), [amy-kwan](https://github.com/amy-kwan) (GitHub) \
+Lei Huang \
+lei@ca.ibm.com (email), [lei137](https://github.com/lei137) (GitHub) \
+Sean Fertile (esp. ABI/ELF/XCOFF) \
+sfertile@ca.ibm.com (email), [mandlebug](https://github.com/mandlebug) (GitHub) \
+Zhijian Lin \
+zhijian@ca.ibm.com (email), [diggerlin](https://github.com/diggerlin) (GitHub) \
+Maryam Moghadas \
+maryammo@ca.ibm.com (email), [maryammo](https://github.com/maryammo) (GitHub) \
+Roland Froese \
+froese@ca.ibm.com (email), [RolandF77](https://github.com/RolandF77) (GitHub) \
+llvmonpower \
+powerllvm@ca.ibm.com (email), [llvmonpower](https://github.com/llvmonpower) (GitHub)
 
 #### RISCV backend
 
@@ -468,7 +482,7 @@ Some subprojects maintain their own list of per-component maintainers.
 
 [Compiler-rt maintainers](https://github.com/llvm/llvm-project/blob/main/compiler-rt/Maintainers.md)
 
-[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.txt)
+[Flang maintainers](https://github.com/llvm/llvm-project/blob/main/flang/Maintainers.md)
 
 [libc++ maintainers](https://github.com/llvm/llvm-project/blob/main/libcxx/Maintainers.md)
 
@@ -518,7 +532,7 @@ Kostya Serebryany ([kcc](https://github.com/kcc)) -- Sanitizers \
 Michael Spencer (bigcheesegs@gmail.com), [Bigcheese](https://github.com/Bigcheese)) -- Windows support in object tools \
 Alexei Starovoitov (alexei.starovoitov@gmail.com, [4ast](https://github.com/4ast)) -- BPF backend \
 Evgeniy Stepanov ([eugenis](https://github.com/eugenis)) -- Sanitizers \
-Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend
+Zheng Chen (czhengsz@cn.ibm.com, [chenzheng1030](https://github.com/chenzheng1030)) -- PowerPC backend \
 Dan Gohman (llvm@sunfishcode.online, [sunfishcode](https://github.com/sunfishcode)) -- WebAssembly backend
 
 ### Former maintainers of removed components

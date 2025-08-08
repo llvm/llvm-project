@@ -495,11 +495,9 @@ public:
 class LLVM_ABI MCSpecifierExpr : public MCExpr {
 protected:
   const MCExpr *Expr;
-  // Target-specific relocation specifier code
-  const Spec specifier;
 
   explicit MCSpecifierExpr(const MCExpr *Expr, Spec S, SMLoc Loc = SMLoc())
-      : MCExpr(Specifier, Loc), Expr(Expr), specifier(S) {}
+      : MCExpr(Specifier, Loc, S), Expr(Expr) {}
 
 public:
   static const MCSpecifierExpr *create(const MCExpr *Expr, Spec S,
@@ -507,7 +505,7 @@ public:
   static const MCSpecifierExpr *create(const MCSymbol *Sym, Spec S,
                                        MCContext &Ctx, SMLoc Loc = SMLoc());
 
-  Spec getSpecifier() const { return specifier; }
+  Spec getSpecifier() const { return getSubclassData(); }
   const MCExpr *getSubExpr() const { return Expr; }
 
   static bool classof(const MCExpr *E) {

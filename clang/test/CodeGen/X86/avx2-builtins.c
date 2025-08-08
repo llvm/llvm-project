@@ -9,6 +9,7 @@
 
 
 #include <immintrin.h>
+#include "builtin_test_helpers.h"
 
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/avx2-intrinsics-fast-isel.ll
 
@@ -97,6 +98,7 @@ __m256i test_mm256_and_si256(__m256i a, __m256i b) {
   // CHECK: and <4 x i64>
   return _mm256_and_si256(a, b);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_and_si256((__m256i)(__v4di){0, -1, 0, -1}, (__m256i)(__v4di){0, 0, -1, -1}), 0, 0, 0, -1));
 
 __m256i test_mm256_andnot_si256(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_andnot_si256
@@ -104,6 +106,7 @@ __m256i test_mm256_andnot_si256(__m256i a, __m256i b) {
   // CHECK: and <4 x i64>
   return _mm256_andnot_si256(a, b);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_andnot_si256((__m256i)(__v4di){0, -1, 0, -1}, (__m256i)(__v4di){0, 0, -1, -1}), 0, 0, -1, 0));
 
 __m256i test_mm256_avg_epu8(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_avg_epu8
@@ -920,6 +923,7 @@ __m256i test_mm256_or_si256(__m256i a, __m256i b) {
   // CHECK: or <4 x i64>
   return _mm256_or_si256(a, b);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_or_si256((__m256i)(__v4di){0, -1, 0, -1}, (__m256i)(__v4di){0, 0, -1, -1}), 0, -1, -1, -1));
 
 __m256i test_mm256_packs_epi16(__m256i a, __m256i b) {
   // CHECK-LABEL: test_mm256_packs_epi16
@@ -1336,3 +1340,4 @@ __m256i test_mm256_xor_si256(__m256i a, __m256i b) {
   // CHECK: xor <4 x i64>
   return _mm256_xor_si256(a, b);
 }
+TEST_CONSTEXPR(match_v4di(_mm256_xor_si256((__m256i)(__v4di){0, -1, 0, -1}, (__m256i)(__v4di){0, 0, -1, -1}), 0, -1, -1, 0));

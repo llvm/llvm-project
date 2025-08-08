@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
-#define LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#ifndef CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
+#define CLANG_CIR_DIALECT_IR_CIRDIALECT_TD
 
 include "mlir/IR/OpBase.td"
 
@@ -40,6 +40,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
     static llvm::StringRef getSideEffectAttrName() { return "side_effect"; }
+    static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
 
     void registerAttributes();
     void registerTypes();
@@ -56,4 +57,4 @@ def CIR_Dialect : Dialect {
   }];
 }
 
-#endif // LLVM_CLANG_CIR_DIALECT_IR_CIRDIALECT
+#endif // CLANG_CIR_DIALECT_IR_CIRDIALECT_TD

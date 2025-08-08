@@ -9,6 +9,7 @@
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/DiagnosticOptions.h"
@@ -39,6 +40,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -82,17 +84,29 @@ public:
     if (!IsCollectingDecls)
       return;
     if (!D || isa<TranslationUnitDecl>(D) || isa<LinkageSpecDecl>(D) ||
-        isa<NamespaceDecl>(D)) {
+        isa<NamespaceDecl>(D) || isa<ExportDecl>(D)) {
       // These decls cover a lot of nested declarations that might not be used,
       // reducing the granularity and making the output less useful.
       return;
     }
-    if (auto *DC = D->getDeclContext(); !DC || !DC->isFileContext()) {
-      // We choose to work at namespace level to reduce complexity and the
-      // number of cases we care about.
+    if (isa<ParmVarDecl>(D)) {
+      // Parameters are covered by their functions.
       return;
     }
+    auto *DC = D->getLexicalDeclContext();
+    if (!DC || !shouldIncludeDeclsIn(DC))
+      return;
+
     PendingDecls.push_back(D);
+    for (; (isa<ExportDecl>(DC) || isa<NamespaceDecl>(DC)) &&
+           ProcessedDeclContexts.insert(DC).second;
+         DC = DC->getLexicalParent()) {
+      // Add any interesting decl contexts that we have not seen before.
+      // Note that we filter them out from DeclRead as that would include all
+      // redeclarations of namespaces, potentially those that do not have any
+      // imported declarations.
+      PendingDecls.push_back(cast<Decl>(DC));
+    }
   }
 
   struct Position {
@@ -141,23 +155,25 @@ public:
       OptionalFileEntryRef Ref;
     };
     llvm::DenseMap<const FileEntry *, FileData> FileToRanges;
+
     for (const Decl *D : PendingDecls) {
-      CharSourceRange R = SM.getExpansionRange(D->getSourceRange());
-      if (!R.isValid())
-        continue;
+      for (CharSourceRange R : getRangesToMark(D)) {
+        if (!R.isValid())
+          continue;
 
-      auto *F = SM.getFileEntryForID(SM.getFileID(R.getBegin()));
-      if (F != SM.getFileEntryForID(SM.getFileID(R.getEnd()))) {
-        // Such cases are rare and difficult to handle.
-        continue;
+        auto *F = SM.getFileEntryForID(SM.getFileID(R.getBegin()));
+        if (F != SM.getFileEntryForID(SM.getFileID(R.getEnd()))) {
+          // Such cases are rare and difficult to handle.
+          continue;
+        }
+
+        auto &Data = FileToRanges[F];
+        if (!Data.Ref)
+          Data.Ref = SM.getFileEntryRefForID(SM.getFileID(R.getBegin()));
+        Data.FromTo.push_back(
+            {Position::GetBeginSpelling(SM, R),
+             Position::GetEndSpelling(SM, R, D->getLangOpts())});
       }
-
-      auto &Data = FileToRanges[F];
-      if (!Data.Ref)
-        Data.Ref = SM.getFileEntryRefForID(SM.getFileID(R.getBegin()));
-      Data.FromTo.push_back(
-          {Position::GetBeginSpelling(SM, R),
-           Position::GetEndSpelling(SM, R, D->getLangOpts())});
     }
 
     // To simplify output, merge consecutive and intersecting ranges.
@@ -188,9 +204,64 @@ public:
 
 private:
   std::vector<const Decl *> PendingDecls;
+  llvm::SmallPtrSet<const DeclContext *, 0> ProcessedDeclContexts;
   bool IsCollectingDecls = true;
   const SourceManager &SM;
   std::unique_ptr<llvm::raw_ostream> OS;
+
+  static bool shouldIncludeDeclsIn(const DeclContext *DC) {
+    assert(DC && "DC is null");
+    // We choose to work at namespace level to reduce complexity and the number
+    // of cases we care about.
+    // We still need to carefully handle composite declarations like
+    // `ExportDecl`.
+    for (; DC; DC = DC->getLexicalParent()) {
+      if (DC->isFileContext())
+        return true;
+      if (isa<ExportDecl>(DC))
+        continue; // Depends on the parent.
+      return false;
+    }
+    llvm_unreachable("DeclContext chain must end with a translation unit");
+  }
+
+  llvm::SmallVector<CharSourceRange, 2> getRangesToMark(const Decl *D) {
+    if (auto *ED = dyn_cast<ExportDecl>(D)) {
+      if (!ED->hasBraces())
+        return {SM.getExpansionRange(ED->getExportLoc())};
+
+      return {SM.getExpansionRange(SourceRange(
+                  ED->getExportLoc(),
+                  lexForLBrace(ED->getExportLoc(), D->getLangOpts()))),
+              SM.getExpansionRange(ED->getRBraceLoc())};
+    }
+
+    auto *NS = dyn_cast<NamespaceDecl>(D);
+    if (!NS)
+      return {SM.getExpansionRange(D->getSourceRange())};
+
+    SourceLocation LBraceLoc;
+    if (NS->isAnonymousNamespace()) {
+      LBraceLoc = NS->getLocation();
+    } else {
+      // Start with the location of the identifier.
+      SourceLocation TokenBeforeLBrace = NS->getLocation();
+      if (NS->hasAttrs()) {
+        for (auto *A : NS->getAttrs()) {
+          // But attributes may go after it.
+          if (SM.isBeforeInTranslationUnit(TokenBeforeLBrace,
+                                           A->getRange().getEnd())) {
+            // Give up, the attributes are often coming from macros and we
+            // cannot skip them reliably.
+            return {};
+          }
+        }
+      }
+      LBraceLoc = lexForLBrace(TokenBeforeLBrace, D->getLangOpts());
+    }
+    return {SM.getExpansionRange(SourceRange(NS->getBeginLoc(), LBraceLoc)),
+            SM.getExpansionRange(NS->getRBraceLoc())};
+  }
 
   void printJson(llvm::ArrayRef<RequiredRanges> Result) {
     *OS << "{\n";
@@ -226,6 +297,22 @@ private:
     }
     *OS << "  ]\n";
     *OS << "}\n";
+
+    OS->flush();
+  }
+
+  SourceLocation lexForLBrace(SourceLocation TokenBeforeLBrace,
+                              const LangOptions &LangOpts) {
+    // Now skip one token, the next should be the lbrace.
+    Token Tok;
+    if (Lexer::getRawToken(TokenBeforeLBrace, Tok, SM, LangOpts, true) ||
+        Lexer::getRawToken(Tok.getEndLoc(), Tok, SM, LangOpts, true) ||
+        Tok.getKind() != tok::l_brace) {
+      // On error or if we did not find the token we expected, avoid marking
+      // everything inside the namespace as used.
+      return SourceLocation();
+    }
+    return Tok.getLocation();
   }
 };
 
@@ -763,11 +850,11 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // If we're replaying the build of an AST file, import it and set up
   // the initial state from its build.
   if (ReplayASTFile) {
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // The AST unit populates its own diagnostics engine rather than ours.
-    IntrusiveRefCntPtr<DiagnosticsEngine> ASTDiags(new DiagnosticsEngine(
-        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions()));
+    auto ASTDiags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(
+        Diags->getDiagnosticIDs(), Diags->getDiagnosticOptions());
     ASTDiags->setClient(Diags->getClient(), /*OwnsClient*/false);
 
     // FIXME: What if the input is a memory buffer?
@@ -787,7 +874,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
-    CI.setFileManager(&AST->getFileManager());
+    CI.setFileManager(AST->getFileManagerPtr());
     CI.createSourceManager(CI.getFileManager());
     CI.getSourceManager().initializeForReplay(AST->getSourceManager());
 
@@ -835,7 +922,7 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     assert(hasASTFileSupport() &&
            "This action does not have AST file support!");
 
-    IntrusiveRefCntPtr<DiagnosticsEngine> Diags(&CI.getDiagnostics());
+    IntrusiveRefCntPtr<DiagnosticsEngine> Diags = CI.getDiagnosticsPtr();
 
     // FIXME: What if the input is a memory buffer?
     StringRef InputFile = Input.getFile();
@@ -854,13 +941,13 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     // Set the shared objects, these are reset when we finish processing the
     // file, otherwise the CompilerInstance will happily destroy them.
-    CI.setFileManager(&AST->getFileManager());
-    CI.setSourceManager(&AST->getSourceManager());
+    CI.setFileManager(AST->getFileManagerPtr());
+    CI.setSourceManager(AST->getSourceManagerPtr());
     CI.setPreprocessor(AST->getPreprocessorPtr());
     Preprocessor &PP = CI.getPreprocessor();
     PP.getBuiltinInfo().initializeBuiltins(PP.getIdentifierTable(),
                                            PP.getLangOpts());
-    CI.setASTContext(&AST->getASTContext());
+    CI.setASTContext(AST->getASTContextPtr());
 
     setCurrentInput(Input, std::move(AST));
 
@@ -947,8 +1034,9 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
         if (ASTReader::isAcceptableASTFile(
                 Dir->path(), FileMgr, CI.getModuleCache(),
                 CI.getPCHContainerReader(), CI.getLangOpts(),
-                CI.getTargetOpts(), CI.getPreprocessorOpts(),
-                SpecificModuleCachePath, /*RequireStrictOptionMatches=*/true)) {
+                CI.getCodeGenOpts(), CI.getTargetOpts(),
+                CI.getPreprocessorOpts(), SpecificModuleCachePath,
+                /*RequireStrictOptionMatches=*/true)) {
           PPOpts.ImplicitPCHInclude = std::string(Dir->path());
           Found = true;
           break;
@@ -1113,11 +1201,12 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
 
     if (!CI.getPreprocessorOpts().ChainedIncludes.empty()) {
       // Convert headers to PCH and chain them.
-      IntrusiveRefCntPtr<ExternalSemaSource> source, FinalReader;
+      IntrusiveRefCntPtr<ExternalSemaSource> source;
+      IntrusiveRefCntPtr<ASTReader> FinalReader;
       source = createChainedIncludesSource(CI, FinalReader);
       if (!source)
         return false;
-      CI.setASTReader(static_cast<ASTReader *>(FinalReader.get()));
+      CI.setASTReader(FinalReader);
       CI.getASTContext().setExternalSource(source);
     } else if (CI.getLangOpts().Modules ||
                !CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
@@ -1193,23 +1282,21 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
   // provides the layouts from that file.
   if (!CI.getFrontendOpts().OverrideRecordLayoutsFile.empty() &&
       CI.hasASTContext() && !CI.getASTContext().getExternalSource()) {
-    IntrusiveRefCntPtr<ExternalASTSource>
-      Override(new LayoutOverrideSource(
-                     CI.getFrontendOpts().OverrideRecordLayoutsFile));
+    auto Override = llvm::makeIntrusiveRefCnt<LayoutOverrideSource>(
+        CI.getFrontendOpts().OverrideRecordLayoutsFile);
     CI.getASTContext().setExternalSource(Override);
   }
 
   // Setup HLSL External Sema Source
   if (CI.getLangOpts().HLSL && CI.hasASTContext()) {
-    IntrusiveRefCntPtr<ExternalSemaSource> HLSLSema(
-        new HLSLExternalSemaSource());
-    if (auto *SemaSource = dyn_cast_if_present<ExternalSemaSource>(
-            CI.getASTContext().getExternalSource())) {
-      IntrusiveRefCntPtr<ExternalSemaSource> MultiSema(
-          new MultiplexExternalSemaSource(SemaSource, HLSLSema.get()));
-      CI.getASTContext().setExternalSource(MultiSema);
+    auto HLSLSema = llvm::makeIntrusiveRefCnt<HLSLExternalSemaSource>();
+    if (auto SemaSource = dyn_cast_if_present<ExternalSemaSource>(
+            CI.getASTContext().getExternalSourcePtr())) {
+      auto MultiSema = llvm::makeIntrusiveRefCnt<MultiplexExternalSemaSource>(
+          std::move(SemaSource), std::move(HLSLSema));
+      CI.getASTContext().setExternalSource(std::move(MultiSema));
     } else
-      CI.getASTContext().setExternalSource(HLSLSema);
+      CI.getASTContext().setExternalSource(std::move(HLSLSema));
   }
 
   FailureCleanup.release();

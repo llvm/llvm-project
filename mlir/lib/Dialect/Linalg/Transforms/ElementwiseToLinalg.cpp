@@ -64,8 +64,8 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
       continue;
 
     // Extract static / dynamic shape mix from the first operand.
-    res.push_back(b.create<tensor::EmptyOp>(
-        loc, tensor::getMixedSizes(b, loc, operands.front()),
+    res.push_back(tensor::EmptyOp::create(
+        b, loc, tensor::getMixedSizes(b, loc, operands.front()),
         cast<RankedTensorType>(t).getElementType()));
   }
   return res;
@@ -104,7 +104,7 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
               builder.create(loc, op->getName().getIdentifier(),
                              regionArgs.take_front(op->getNumOperands()),
                              resultTypes, op->getAttrs());
-          builder.create<linalg::YieldOp>(loc, scalarOp->getResults());
+          linalg::YieldOp::create(builder, loc, scalarOp->getResults());
         });
     return success();
   }

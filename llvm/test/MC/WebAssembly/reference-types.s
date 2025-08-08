@@ -1,5 +1,5 @@
-# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+reference-types < %s | FileCheck %s
-# RUN: llvm-mc -show-encoding -triple=wasm64-unknown-unknown -mattr=+reference-types < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -triple=wasm32-unknown-unknown -mattr=+reference-types -mattr=+gc < %s | FileCheck %s
+# RUN: llvm-mc -show-encoding -triple=wasm64-unknown-unknown -mattr=+reference-types -mattr=+gc < %s | FileCheck %s
 
 # CHECK-LABEL:ref_is_null:
 # CHECK: ref.is_null     # encoding: [0xd1]

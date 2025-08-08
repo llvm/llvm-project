@@ -2366,99 +2366,25 @@ size_t SourceManager::getDataStructureSizes() const {
 
 SourceManagerForFile::SourceManagerForFile(StringRef FileName,
                                            StringRef Content) {
-  // This is referenced by `FileMgr` and will be released by `FileMgr` when it
-  // is deleted.
-  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
-      new llvm::vfs::InMemoryFileSystem);
+  auto InMemoryFileSystem =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   InMemoryFileSystem->addFile(
       FileName, 0,
       llvm::MemoryBuffer::getMemBuffer(Content, FileName,
                                        /*RequiresNullTerminator=*/false));
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // in `Environment` so that `FileMgr` can out-live this function scope.
-  FileMgr =
-      std::make_unique<FileManager>(FileSystemOptions(), InMemoryFileSystem);
+  FileMgr = std::make_unique<FileManager>(FileSystemOptions(),
+                                          std::move(InMemoryFileSystem));
   DiagOpts = std::make_unique<DiagnosticOptions>();
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // by `Environment` due to the same reason above.
-  Diagnostics = std::make_unique<DiagnosticsEngine>(
-      IntrusiveRefCntPtr<DiagnosticIDs>(new DiagnosticIDs), *DiagOpts);
+  Diagnostics =
+      std::make_unique<DiagnosticsEngine>(DiagnosticIDs::create(), *DiagOpts);
   SourceMgr = std::make_unique<SourceManager>(*Diagnostics, *FileMgr);
   FileEntryRef FE = llvm::cantFail(FileMgr->getFileRef(FileName));
   FileID ID =
       SourceMgr->createFileID(FE, SourceLocation(), clang::SrcMgr::C_User);
   assert(ID.isValid());
   SourceMgr->setMainFileID(ID);
-}
-
-StringRef
-SourceManager::getNameForDiagnostic(StringRef Filename,
-                                    const DiagnosticOptions &Opts) const {
-  OptionalFileEntryRef File = getFileManager().getOptionalFileRef(Filename);
-  if (!File)
-    return Filename;
-
-  bool SimplifyPath = [&] {
-    if (Opts.AbsolutePath)
-      return true;
-
-    // Try to simplify paths that contain '..' in any case since paths to
-    // standard library headers especially tend to get quite long otherwise.
-    // Only do that for local filesystems though to avoid slowing down
-    // compilation too much.
-    if (!File->getName().contains(".."))
-      return false;
-
-    // If we're not on Windows, check if we're on a network file system and
-    // avoid simplifying the path in that case since that can be slow. On
-    // Windows, the check for a local filesystem is already slow, so skip it.
-#ifndef _WIN32
-    if (!llvm::sys::fs::is_local(File->getName()))
-      return false;
-#endif
-
-    return true;
-  }();
-
-  if (!SimplifyPath)
-    return Filename;
-
-  // This may involve computing canonical names, so cache the result.
-  StringRef &CacheEntry = DiagNames[Filename];
-  if (!CacheEntry.empty())
-    return CacheEntry;
-
-  // We want to print a simplified absolute path, i. e. without "dots".
-  //
-  // The hardest part here are the paths like "<part1>/<link>/../<part2>".
-  // On Unix-like systems, we cannot just collapse "<link>/..", because
-  // paths are resolved sequentially, and, thereby, the path
-  // "<part1>/<part2>" may point to a different location. That is why
-  // we use FileManager::getCanonicalName(), which expands all indirections
-  // with llvm::sys::fs::real_path() and caches the result.
-  //
-  // On the other hand, it would be better to preserve as much of the
-  // original path as possible, because that helps a user to recognize it.
-  // real_path() expands all links, which sometimes too much. Luckily,
-  // on Windows we can just use llvm::sys::path::remove_dots(), because,
-  // on that system, both aforementioned paths point to the same place.
-  SmallString<256> TempBuf;
-#ifdef _WIN32
-  TempBuf = File->getName();
-  llvm::sys::fs::make_absolute(TempBuf);
-  llvm::sys::path::native(TempBuf);
-  llvm::sys::path::remove_dots(TempBuf, /* remove_dot_dot */ true);
-#else
-  TempBuf = getFileManager().getCanonicalName(*File);
-#endif
-
-  // In some cases, the resolved path may actually end up being longer (e.g.
-  // if it was originally a relative path), so just retain whichever one
-  // ends up being shorter.
-  if (!Opts.AbsolutePath && TempBuf.size() > Filename.size())
-    CacheEntry = Filename;
-  else
-    CacheEntry = TempBuf.str().copy(DiagNameAlloc);
-
-  return CacheEntry;
 }

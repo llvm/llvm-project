@@ -701,14 +701,12 @@ public:
     bool isRedundantBeforeReturn() override { return true; }
 
     llvm::Value *Addr;
-    llvm::Value *Size;
 
   public:
-    CallLifetimeEnd(RawAddress addr, llvm::Value *size)
-        : Addr(addr.getPointer()), Size(size) {}
+    CallLifetimeEnd(RawAddress addr) : Addr(addr.getPointer()) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
-      CGF.EmitLifetimeEnd(Size, Addr);
+      CGF.EmitLifetimeEnd(Addr);
     }
   };
 
@@ -3233,8 +3231,8 @@ public:
   void EmitSehTryScopeBegin();
   void EmitSehTryScopeEnd();
 
-  llvm::Value *EmitLifetimeStart(llvm::TypeSize Size, llvm::Value *Addr);
-  void EmitLifetimeEnd(llvm::Value *Size, llvm::Value *Addr);
+  bool EmitLifetimeStart(llvm::Value *Addr);
+  void EmitLifetimeEnd(llvm::Value *Addr);
 
   llvm::Value *EmitCXXNewExpr(const CXXNewExpr *E);
   void EmitCXXDeleteExpr(const CXXDeleteExpr *E);
@@ -3417,8 +3415,8 @@ public:
     /// initializer.
     bool IsConstantAggregate;
 
-    /// Non-null if we should use lifetime annotations.
-    llvm::Value *SizeForLifetimeMarkers;
+    /// True if lifetime markers should be used.
+    bool UseLifetimeMarkers;
 
     /// Address with original alloca instruction. Invalid if the variable was
     /// emitted as a global constant.
@@ -3432,20 +3430,14 @@ public:
     AutoVarEmission(const VarDecl &variable)
         : Variable(&variable), Addr(Address::invalid()), NRVOFlag(nullptr),
           IsEscapingByRef(false), IsConstantAggregate(false),
-          SizeForLifetimeMarkers(nullptr), AllocaAddr(RawAddress::invalid()) {}
+          UseLifetimeMarkers(false), AllocaAddr(RawAddress::invalid()) {}
 
     bool wasEmittedAsGlobal() const { return !Addr.isValid(); }
 
   public:
     static AutoVarEmission invalid() { return AutoVarEmission(Invalid()); }
 
-    bool useLifetimeMarkers() const {
-      return SizeForLifetimeMarkers != nullptr;
-    }
-    llvm::Value *getSizeForLifetimeMarkers() const {
-      assert(useLifetimeMarkers());
-      return SizeForLifetimeMarkers;
-    }
+    bool useLifetimeMarkers() const { return UseLifetimeMarkers; }
 
     /// Returns the raw, allocated address, which is not necessarily
     /// the address of the object itself. It is casted to default

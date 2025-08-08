@@ -16,5 +16,5 @@ void af2() {
   void *p = my_malloc(12);
   my_free(p);
   free(p);
-  // CHECK: warning: Attempt to free released memory [clang-analyzer-unix.Malloc]
+  // CHECK: warning: Attempt to release already released memory [clang-analyzer-unix.Malloc]
 }

@@ -15,7 +15,7 @@
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -164,7 +164,7 @@ TEST_F(LlvmLibcSinCosfTest, SpecialValues) {
   }
 }
 
-// SDCOMP-26094: check sinf in the cases for which the range reducer
+// SDCOMP-26094: check sincosf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
 TEST_F(LlvmLibcSinCosfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {

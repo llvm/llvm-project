@@ -899,6 +899,11 @@ math_test(
 )
 
 math_test(
+    name = "hypotf16",
+    hdrs = ["HypotTest.h"],
+)
+
+math_test(
     name = "ilogb",
     hdrs = ["ILogbTest.h"],
 )
@@ -1517,6 +1522,8 @@ math_test(name = "tan")
 math_test(name = "tanf")
 
 math_test(name = "tanhf")
+
+math_test(name = "tanpif")
 
 math_test(
     name = "totalorder",

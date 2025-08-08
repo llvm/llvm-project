@@ -57,12 +57,6 @@ def simm6nonzero : RISCVOp,
   }];
 }
 
-def immzero : RISCVOp,
-              ImmLeaf<XLenVT, [{return (Imm == 0);}]> {
-  let ParserMatchClass = ImmZeroAsmOperand;
-  let OperandType = "OPERAND_ZERO";
-}
-
 def CLUIImmAsmOperand : AsmOperandClass {
   let Name = "CLUIImm";
   let RenderMethod = "addImmOperands";
@@ -272,7 +266,7 @@ class Bcz<bits<3> funct3, string OpcodeStr>
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class Shift_right<bits<2> funct2, string OpcodeStr>
     : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
-                 (ins GPRC:$rs1, uimmlog2xlennonzero:$imm),
+                 (ins GPRC:$rs1, uimmlog2xlen:$imm),
                  OpcodeStr, "$rs1, $imm"> {
   let Constraints = "$rs1 = $rd";
   let Inst{12} = imm{5};
@@ -402,17 +396,19 @@ def C_NOP : RVInst16CI<0b000, 0b01, (outs), (ins), "c.nop", "">,
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 def C_ADDI : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
-                        (ins GPRNoX0:$rd, simm6nonzero:$imm),
+                        (ins GPRNoX0:$rd, simm6:$imm),
                         "c.addi", "$rd, $imm">,
              Sched<[WriteIALU, ReadIALU]> {
   let Constraints = "$rd = $rd_wb";
 }
 
-// Alternate syntax for c.nop. Converted to C_NOP by the assembler.
+// Alternate syntax for c.nop. Converted to C_NOP/C_NOP_HINT by the assembler.
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
-def PseudoC_ADDI_NOP : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, immzero:$imm),
-                              [], "c.addi", "$rd, $imm">;
+def PseudoC_ADDI_NOP : Pseudo<(outs GPRX0:$rd), (ins GPRX0:$rs1, simm6:$imm),
+                              [], "c.addi", "$rd, $imm"> {
+  let Constraints = "$rs1 = $rd";
+}
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCall = 1,
     DecoderNamespace = "RV32Only", Defs = [X1],
@@ -430,7 +426,7 @@ def C_ADDIW : RVInst16CI<0b001, 0b01, (outs GPRNoX0:$rd_wb),
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_LI : RVInst16CI<0b010, 0b01, (outs GPRNoX0:$rd), (ins simm6:$imm),
+def C_LI : RVInst16CI<0b010, 0b01, (outs GPR:$rd), (ins simm6:$imm),
                       "c.li", "$rd, $imm">,
            Sched<[WriteIALU]>;
 
@@ -449,7 +445,7 @@ def C_ADDI16SP : RVInst16CI<0b011, 0b01, (outs SP:$rd_wb),
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_LUI : RVInst16CI<0b011, 0b01, (outs GPRNoX0X2:$rd),
+def C_LUI : RVInst16CI<0b011, 0b01, (outs GPRNoX2:$rd),
                        (ins c_lui_imm:$imm),
                        "c.lui", "$rd, $imm">,
             Sched<[WriteIALU]>;
@@ -497,8 +493,8 @@ def C_BEQZ : Bcz<0b110, "c.beqz">, Sched<[WriteJmp, ReadJmp]>;
 def C_BNEZ : Bcz<0b111, "c.bnez">, Sched<[WriteJmp, ReadJmp]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPRNoX0:$rd_wb),
-                        (ins GPRNoX0:$rd, uimmlog2xlennonzero:$imm),
+def C_SLLI : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb),
+                        (ins GPR:$rd, uimmlog2xlen:$imm),
                         "c.slli", "$rd, $imm">,
              Sched<[WriteShiftImm, ReadShiftImm]> {
   let Constraints = "$rd = $rd_wb";
@@ -544,7 +540,7 @@ def C_JR : RVInst16CR<0b1000, 0b10, (outs), (ins GPRNoX0:$rs1),
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isMoveReg = 1,
     isAsCheapAsAMove = 1 in
-def C_MV : RVInst16CR<0b1000, 0b10, (outs GPRNoX0:$rs1), (ins GPRNoX0:$rs2),
+def C_MV : RVInst16CR<0b1000, 0b10, (outs GPR:$rs1), (ins GPRNoX0:$rs2),
                       "c.mv", "$rs1, $rs2">,
            Sched<[WriteIALU, ReadIALU]>;
 
@@ -557,8 +553,8 @@ def C_JALR : RVInst16CR<0b1001, 0b10, (outs), (ins GPRNoX0:$rs1),
                         "c.jalr", "$rs1">, Sched<[WriteJalr, ReadJalr]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-def C_ADD : RVInst16CR<0b1001, 0b10, (outs GPRNoX0:$rd),
-                       (ins GPRNoX0:$rs1, GPRNoX0:$rs2),
+def C_ADD : RVInst16CR<0b1001, 0b10, (outs GPR:$rd),
+                       (ins GPR:$rs1, GPRNoX0:$rs2),
                        "c.add", "$rs1, $rs2">,
             Sched<[WriteIALU, ReadIALU, ReadIALU]> {
   let Constraints = "$rs1 = $rd";
@@ -616,81 +612,6 @@ def C_NOP_HINT : RVInst16CI<0b000, 0b01, (outs), (ins simm6nonzero:$imm),
   let rd = 0;
 }
 
-def C_ADDI_HINT_IMM_ZERO : RVInst16CI<0b000, 0b01, (outs GPRNoX0:$rd_wb),
-                                      (ins GPRNoX0:$rd, immzero:$imm),
-                                      "c.addi", "$rd, $imm">,
-                           Sched<[WriteIALU, ReadIALU]> {
-  let Constraints = "$rd = $rd_wb";
-  let imm = 0;
-  let DecoderMethod = "decodeRVCInstrRdRs1ImmZero";
-}
-
-def C_LI_HINT : RVInst16CI<0b010, 0b01, (outs GPRX0:$rd), (ins simm6:$imm),
-                           "c.li", "$rd, $imm">,
-                Sched<[WriteIALU]> {
-  let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdSImm6";
-}
-
-def C_LUI_HINT : RVInst16CI<0b011, 0b01, (outs GPRX0:$rd),
-                            (ins c_lui_imm:$imm),
-                            "c.lui", "$rd, $imm">,
-                 Sched<[WriteIALU]> {
-  let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdCLUIImm";
-}
-
-def C_MV_HINT : RVInst16CR<0b1000, 0b10, (outs GPRX0:$rs1), (ins GPRNoX0:$rs2),
-                           "c.mv", "$rs1, $rs2">, Sched<[WriteIALU, ReadIALU]> {
-  let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdRs2";
-}
-
-def C_ADD_HINT : RVInst16CR<0b1001, 0b10, (outs GPRX0:$rd),
-                            (ins GPRX0:$rs1, GPRNoX0:$rs2),
-                            "c.add", "$rs1, $rs2">,
-                 Sched<[WriteIALU, ReadIALU, ReadIALU]> {
-  let Constraints = "$rs1 = $rd";
-  let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdRs1Rs2";
-}
-
-def C_SLLI_HINT : RVInst16CI<0b000, 0b10, (outs GPRX0:$rd_wb),
-                             (ins GPRX0:$rd, uimmlog2xlennonzero:$imm),
-                             "c.slli", "$rd, $imm">,
-                  Sched<[WriteShiftImm, ReadShiftImm]> {
-  let Constraints = "$rd = $rd_wb";
-  let Inst{11-7} = 0;
-  let DecoderMethod = "decodeRVCInstrRdRs1UImmLog2XLenNonZero";
-}
-
-def C_SLLI64_HINT : RVInst16CI<0b000, 0b10, (outs GPR:$rd_wb), (ins GPR:$rd),
-                               "c.slli64", "$rd">,
-                    Sched<[WriteShiftImm, ReadShiftImm]> {
-  let Constraints = "$rd = $rd_wb";
-  let imm = 0;
-}
-
-def C_SRLI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
-                               (ins GPRC:$rs1),
-                               "c.srli64", "$rs1">,
-                    Sched<[WriteShiftImm, ReadShiftImm]> {
-  let Constraints = "$rs1 = $rd";
-  let Inst{6-2} = 0;
-  let Inst{11-10} = 0b00;
-  let Inst{12} = 0;
-}
-
-def C_SRAI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
-                               (ins GPRC:$rs1),
-                               "c.srai64", "$rs1">,
-                    Sched<[WriteShiftImm, ReadShiftImm]> {
-  let Constraints = "$rs1 = $rd";
-  let Inst{6-2} = 0;
-  let Inst{11-10} = 0b01;
-  let Inst{12} = 0;
-}
-
 } // Predicates = [HasStdExtZca], hasSideEffects = 0, mayLoad = 0,
   // mayStore = 0
 
@@ -699,15 +620,17 @@ def C_SRAI64_HINT : RVInst16CB<0b100, 0b01, (outs GPRC:$rd),
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZca] in {
-// Just a different syntax for the c.nop hint: c.addi x0, simm6 vs c.nop simm6.
-def : InstAlias<"c.addi x0, $imm", (C_NOP_HINT simm6nonzero:$imm), 0>;
+// Legacy aliases.
+def : InstAlias<"c.slli64 $rd", (C_SLLI GPR:$rd, 0), 0>;
+def : InstAlias<"c.srli64 $rs1", (C_SRLI GPRC:$rs1, 0), 0>;
+def : InstAlias<"c.srai64 $rs1", (C_SRAI GPRC:$rs1, 0), 0>;
 }
 
 let Predicates = [HasStdExtC, HasStdExtZihintntl] in {
-def : InstAlias<"c.ntl.p1", (C_ADD_HINT X0, X2)>;
-def : InstAlias<"c.ntl.pall", (C_ADD_HINT X0, X3)>;
-def : InstAlias<"c.ntl.s1", (C_ADD_HINT X0, X4)>;
-def : InstAlias<"c.ntl.all", (C_ADD_HINT X0, X5)>;
+def : InstAlias<"c.ntl.p1", (C_ADD X0, X2)>;
+def : InstAlias<"c.ntl.pall", (C_ADD X0, X3)>;
+def : InstAlias<"c.ntl.s1", (C_ADD X0, X4)>;
+def : InstAlias<"c.ntl.all", (C_ADD X0, X5)>;
 } // Predicates = [HasStdExtC, HasStdExtZihintntl]
 
 let EmitPriority = 0 in {

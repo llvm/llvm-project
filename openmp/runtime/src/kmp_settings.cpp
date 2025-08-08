@@ -1158,7 +1158,6 @@ static void __kmp_parse_nested_num_threads(const char *var, const char *env,
   }
   if (!__kmp_dflt_max_active_levels_set && total > 1)
     __kmp_dflt_max_active_levels = KMP_MAX_ACTIVE_LEVELS_LIMIT;
-  KMP_DEBUG_ASSERT(total > 0);
   if (total <= 0) {
     KMP_WARNING(NthSyntaxError, var, env);
     return;
@@ -1248,8 +1247,11 @@ static void __kmp_stg_parse_num_threads(char const *name, char const *value,
   // TODO: Remove this option. OMP_NUM_THREADS is a list of positive integers!
   if (!__kmp_strcasecmp_with_sentinel("all", value, 0)) {
     // The array of 1 element
-    __kmp_nested_nth.nth = (int *)KMP_INTERNAL_MALLOC(sizeof(int));
-    __kmp_nested_nth.size = __kmp_nested_nth.used = 1;
+    if (!__kmp_nested_nth.nth) {
+      __kmp_nested_nth.nth = (int *)KMP_INTERNAL_MALLOC(sizeof(int));
+      __kmp_nested_nth.size = 1;
+    }
+    __kmp_nested_nth.used = 1;
     __kmp_nested_nth.nth[0] = __kmp_dflt_team_nth = __kmp_dflt_team_nth_ub =
         __kmp_xproc;
   } else {
@@ -1361,6 +1363,11 @@ static void __kmp_stg_parse_tasking(char const *name, char const *value,
                                     void *data) {
   __kmp_stg_parse_int(name, value, 0, (int)tskm_max,
                       (int *)&__kmp_tasking_mode);
+  // KMP_TASKING=1 (task barrier) doesn't work anymore, change to task_teams (2)
+  if (__kmp_tasking_mode == tskm_extra_barrier) {
+    KMP_WARNING(StgInvalidValue, name, value);
+    __kmp_tasking_mode = tskm_task_teams;
+  }
 } // __kmp_stg_parse_tasking
 
 static void __kmp_stg_print_tasking(kmp_str_buf_t *buffer, char const *name,
@@ -1501,7 +1508,6 @@ static void __kmp_stg_print_disp_buffers(kmp_str_buf_t *buffer,
   __kmp_stg_print_int(buffer, name, __kmp_dispatch_num_buffers);
 } // __kmp_stg_print_disp_buffers
 
-#if KMP_NESTED_HOT_TEAMS
 // -----------------------------------------------------------------------------
 // KMP_HOT_TEAMS_MAX_LEVEL, KMP_HOT_TEAMS_MODE
 
@@ -1511,8 +1517,8 @@ static void __kmp_stg_parse_hot_teams_level(char const *name, char const *value,
     KMP_WARNING(EnvParallelWarn, name);
     return;
   } // read value before first parallel only
-  __kmp_stg_parse_int(name, value, 0, KMP_MAX_ACTIVE_LEVELS_LIMIT,
-                      &__kmp_hot_teams_max_level);
+  __kmp_stg_parse_int(name, value, 0, 1024, &__kmp_hot_teams_max_level);
+
 } // __kmp_stg_parse_hot_teams_level
 
 static void __kmp_stg_print_hot_teams_level(kmp_str_buf_t *buffer,
@@ -1534,8 +1540,6 @@ static void __kmp_stg_print_hot_teams_mode(kmp_str_buf_t *buffer,
                                            char const *name, void *data) {
   __kmp_stg_print_int(buffer, name, __kmp_hot_teams_mode);
 } // __kmp_stg_print_hot_teams_mode
-
-#endif // KMP_NESTED_HOT_TEAMS
 
 // -----------------------------------------------------------------------------
 // KMP_HANDLE_SIGNALS
@@ -1678,6 +1682,11 @@ static void __kmp_stg_parse_align_alloc(char const *name, char const *value,
                                         void *data) {
   __kmp_stg_parse_size(name, value, CACHE_LINE, INT_MAX, NULL,
                        &__kmp_align_alloc, 1);
+  // Must be power of 2
+  if (__kmp_align_alloc == 0 || ((__kmp_align_alloc - 1) & __kmp_align_alloc)) {
+    KMP_WARNING(StgInvalidValue, name, value);
+    __kmp_align_alloc = CACHE_LINE;
+  }
 } // __kmp_stg_parse_align_alloc
 
 static void __kmp_stg_print_align_alloc(kmp_str_buf_t *buffer, char const *name,
@@ -1710,15 +1719,16 @@ static void __kmp_stg_parse_barrier_branch_bit(char const *name,
       } else {
         __kmp_barrier_release_branch_bits[i] =
             (kmp_uint32)__kmp_str_to_int(comma + 1, 0);
-
-        if (__kmp_barrier_release_branch_bits[i] > KMP_MAX_BRANCH_BITS) {
+        if (__kmp_barrier_release_branch_bits[i] == 0 ||
+            __kmp_barrier_release_branch_bits[i] > KMP_MAX_BRANCH_BITS) {
           __kmp_msg(kmp_ms_warning,
                     KMP_MSG(BarrReleaseValueInvalid, name, comma + 1),
                     __kmp_msg_null);
           __kmp_barrier_release_branch_bits[i] = __kmp_barrier_release_bb_dflt;
         }
       }
-      if (__kmp_barrier_gather_branch_bits[i] > KMP_MAX_BRANCH_BITS) {
+      if (__kmp_barrier_gather_branch_bits[i] == 0 ||
+          __kmp_barrier_gather_branch_bits[i] > KMP_MAX_BRANCH_BITS) {
         KMP_WARNING(BarrGatherValueInvalid, name, value);
         KMP_INFORM(Using_uint_Value, name, __kmp_barrier_gather_bb_dflt);
         __kmp_barrier_gather_branch_bits[i] = __kmp_barrier_gather_bb_dflt;
@@ -2198,7 +2208,7 @@ static int __kmp_parse_affinity_proc_id_list(const char *var, const char *env,
 
   {
     ptrdiff_t len = next - env;
-    char *retlist = (char *)__kmp_allocate((len + 1) * sizeof(char));
+    char *retlist = (char *)KMP_INTERNAL_MALLOC((len + 1) * sizeof(char));
     KMP_MEMCPY_S(retlist, (len + 1) * sizeof(char), env, len * sizeof(char));
     retlist[len] = '\0';
     *proclist = retlist;
@@ -3016,7 +3026,7 @@ static int __kmp_parse_place_list(const char *var, const char *env,
 
   {
     ptrdiff_t len = scan - env;
-    char *retlist = (char *)__kmp_allocate((len + 1) * sizeof(char));
+    char *retlist = (char *)KMP_INTERNAL_MALLOC((len + 1) * sizeof(char));
     KMP_MEMCPY_S(retlist, (len + 1) * sizeof(char), env, len * sizeof(char));
     retlist[len] = '\0';
     *place_list = retlist;
@@ -3486,18 +3496,8 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
 
   const char *buf = value;
   const char *next;
-  int num;
+
   SKIP_WS(buf);
-  if ((*buf >= '0') && (*buf <= '9')) {
-    next = buf;
-    SKIP_DIGITS(next);
-    num = __kmp_str_to_int(buf, *next);
-    KMP_ASSERT(num >= 0);
-    buf = next;
-    SKIP_WS(buf);
-  } else {
-    num = -1;
-  }
 
   next = buf;
   if (__kmp_match_str("disabled", buf, &next)) {
@@ -3508,8 +3508,7 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
 #endif /* KMP_AFFINITY_SUPPORTED */
     __kmp_nested_proc_bind.used = 1;
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
-  } else if ((num == (int)proc_bind_false) ||
-             __kmp_match_str("false", buf, &next)) {
+  } else if (__kmp_match_str("false", buf, &next)) {
     buf = next;
     SKIP_WS(buf);
 #if KMP_AFFINITY_SUPPORTED
@@ -3517,8 +3516,7 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
 #endif /* KMP_AFFINITY_SUPPORTED */
     __kmp_nested_proc_bind.used = 1;
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
-  } else if ((num == (int)proc_bind_true) ||
-             __kmp_match_str("true", buf, &next)) {
+  } else if (__kmp_match_str("true", buf, &next)) {
     buf = next;
     SKIP_WS(buf);
     __kmp_nested_proc_bind.used = 1;
@@ -3554,19 +3552,16 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
     for (;;) {
       enum kmp_proc_bind_t bind;
 
-      if ((num == (int)proc_bind_primary) ||
-          __kmp_match_str("master", buf, &next) ||
+      if (__kmp_match_str("master", buf, &next) ||
           __kmp_match_str("primary", buf, &next)) {
         buf = next;
         SKIP_WS(buf);
         bind = proc_bind_primary;
-      } else if ((num == (int)proc_bind_close) ||
-                 __kmp_match_str("close", buf, &next)) {
+      } else if (__kmp_match_str("close", buf, &next)) {
         buf = next;
         SKIP_WS(buf);
         bind = proc_bind_close;
-      } else if ((num == (int)proc_bind_spread) ||
-                 __kmp_match_str("spread", buf, &next)) {
+      } else if (__kmp_match_str("spread", buf, &next)) {
         buf = next;
         SKIP_WS(buf);
         bind = proc_bind_spread;
@@ -3581,21 +3576,13 @@ static void __kmp_stg_parse_proc_bind(char const *name, char const *value,
       if (i >= nelem) {
         break;
       }
-      KMP_DEBUG_ASSERT(*buf == ',');
+      if (*buf != ',') {
+        KMP_WARNING(ParseExtraCharsWarn, name, buf);
+        while (*buf != ',')
+          buf++;
+      }
       buf++;
       SKIP_WS(buf);
-
-      // Read next value if it was specified as an integer
-      if ((*buf >= '0') && (*buf <= '9')) {
-        next = buf;
-        SKIP_DIGITS(next);
-        num = __kmp_str_to_int(buf, *next);
-        KMP_ASSERT(num >= 0);
-        buf = next;
-        SKIP_WS(buf);
-      } else {
-        num = -1;
-      }
     }
     SKIP_WS(buf);
   }
@@ -4536,6 +4523,10 @@ static void __kmp_stg_print_atomic_mode(kmp_str_buf_t *buffer, char const *name,
 
 static void __kmp_stg_parse_consistency_check(char const *name,
                                               char const *value, void *data) {
+  if (TCR_4(__kmp_init_serial)) {
+    KMP_WARNING(EnvSerialWarn, name);
+    return;
+  } // read value before serial initialization only
   if (!__kmp_strcasecmp_with_sentinel("all", value, 0)) {
     // Note, this will not work from kmp_set_defaults because th_cons stack was
     // not allocated
@@ -4902,7 +4893,6 @@ static void __kmp_stg_parse_spin_backoff_params(const char *name,
       }
     }
   }
-  KMP_DEBUG_ASSERT(total > 0);
   if (total <= 0) {
     KMP_WARNING(EnvSyntaxError, name, value);
     return;
@@ -4998,7 +4988,6 @@ static void __kmp_stg_parse_adaptive_lock_props(const char *name,
       }
     }
   }
-  KMP_DEBUG_ASSERT(total > 0);
   if (total <= 0) {
     KMP_WARNING(EnvSyntaxError, name, value);
     return;
@@ -5569,12 +5558,10 @@ static kmp_setting_t __kmp_stg_table[] = {
      __kmp_stg_print_wait_policy, NULL, 0, 0},
     {"KMP_DISP_NUM_BUFFERS", __kmp_stg_parse_disp_buffers,
      __kmp_stg_print_disp_buffers, NULL, 0, 0},
-#if KMP_NESTED_HOT_TEAMS
     {"KMP_HOT_TEAMS_MAX_LEVEL", __kmp_stg_parse_hot_teams_level,
      __kmp_stg_print_hot_teams_level, NULL, 0, 0},
     {"KMP_HOT_TEAMS_MODE", __kmp_stg_parse_hot_teams_mode,
      __kmp_stg_print_hot_teams_mode, NULL, 0, 0},
-#endif // KMP_NESTED_HOT_TEAMS
 
 #if KMP_HANDLE_SIGNALS
     {"KMP_HANDLE_SIGNALS", __kmp_stg_parse_handle_signals,
@@ -5758,7 +5745,8 @@ static kmp_setting_t __kmp_stg_table[] = {
 #if OMPX_TASKGRAPH
     {"KMP_MAX_TDGS", __kmp_stg_parse_max_tdgs, __kmp_std_print_max_tdgs, NULL,
      0, 0},
-    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0, 0},
+    {"KMP_TDG_DOT", __kmp_stg_parse_tdg_dot, __kmp_stg_print_tdg_dot, NULL, 0,
+     0},
 #endif
 
 #if OMPT_SUPPORT

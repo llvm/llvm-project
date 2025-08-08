@@ -10,6 +10,7 @@
 #include "TestOps.h"
 #include "TestTypes.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -33,14 +34,14 @@ static Value chooseOperand(Value input1, Value input2, BoolAttr choice) {
 }
 
 static void createOpI(PatternRewriter &rewriter, Location loc, Value input) {
-  rewriter.create<OpI>(loc, input);
+  OpI::create(rewriter, loc, input);
 }
 
 static void handleNoResultOp(PatternRewriter &rewriter,
                              OpSymbolBindingNoResult op) {
   // Turn the no result op to a one-result op.
-  rewriter.create<OpSymbolBindingB>(op.getLoc(), op.getOperand().getType(),
-                                    op.getOperand());
+  OpSymbolBindingB::create(rewriter, op.getLoc(), op.getOperand().getType(),
+                           op.getOperand());
 }
 
 static bool getFirstI32Result(Operation *op, Value &value) {
@@ -120,8 +121,8 @@ public:
       return failure();
     rewriter.setInsertionPointToStart(op->getBlock());
 
-    auto constOp = rewriter.create<arith::ConstantOp>(
-        op.getLoc(), rewriter.getBoolAttr(true));
+    auto constOp = arith::ConstantOp::create(rewriter, op.getLoc(),
+                                             rewriter.getBoolAttr(true));
     rewriter.replaceOpWithNewOp<TestCastOp>(op, rewriter.getI32Type(),
                                             Value(constOp));
     return success();
@@ -139,8 +140,7 @@ public:
 
   LogicalResult matchAndRewrite(TestCommutative2Op op,
                                 PatternRewriter &rewriter) const override {
-    auto operand =
-        dyn_cast_or_null<TestCommutative2Op>(op->getOperand(0).getDefiningOp());
+    auto operand = op->getOperand(0).getDefiningOp<TestCommutative2Op>();
     if (!operand)
       return failure();
     Attribute constInput;
@@ -199,6 +199,66 @@ struct HoistEligibleOps : public OpRewritePattern<test::OneRegionOp> {
     if (!toBeHoisted->hasAttr("eligible"))
       return failure();
     rewriter.moveOpBefore(toBeHoisted, op);
+    return success();
+  }
+};
+
+struct FoldSignOpF32ToSI32 : public OpRewritePattern<test::SignOp> {
+  using OpRewritePattern<test::SignOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(test::SignOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumOperands() != 1 || op->getNumResults() != 1)
+      return failure();
+
+    TypedAttr operandAttr;
+    matchPattern(op->getOperand(0), m_Constant(&operandAttr));
+    if (!operandAttr)
+      return failure();
+
+    TypedAttr res = cast_or_null<TypedAttr>(
+        constFoldUnaryOp<FloatAttr, FloatAttr::ValueType, void, IntegerAttr>(
+            operandAttr, op.getType(), [](APFloat operand) -> APSInt {
+              static const APFloat zero(0.0f);
+              int operandSign = 0;
+              if (operand != zero)
+                operandSign = (operand < zero) ? -1 : +1;
+              return APSInt(APInt(32, operandSign), false);
+            }));
+    if (!res)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, res);
+    return success();
+  }
+};
+
+struct FoldLessThanOpF32ToI1 : public OpRewritePattern<test::LessThanOp> {
+  using OpRewritePattern<test::LessThanOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(test::LessThanOp op,
+                                PatternRewriter &rewriter) const override {
+    if (op->getNumOperands() != 2 || op->getNumResults() != 1)
+      return failure();
+
+    TypedAttr lhsAttr;
+    TypedAttr rhsAttr;
+    matchPattern(op->getOperand(0), m_Constant(&lhsAttr));
+    matchPattern(op->getOperand(1), m_Constant(&rhsAttr));
+
+    if (!lhsAttr || !rhsAttr)
+      return failure();
+
+    Attribute operandAttrs[2] = {lhsAttr, rhsAttr};
+    TypedAttr res = cast_or_null<TypedAttr>(
+        constFoldBinaryOp<FloatAttr, FloatAttr::ValueType, void, IntegerAttr>(
+            operandAttrs, op.getType(), [](APFloat lhs, APFloat rhs) -> APInt {
+              return APInt(1, lhs < rhs);
+            }));
+    if (!res)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, res);
     return success();
   }
 };
@@ -845,8 +905,8 @@ struct TestRegionRewriteUndo : public RewritePattern {
                             rewriter.getUnknownLoc());
 
     // Add an explicitly illegal operation to ensure the conversion fails.
-    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getIntegerType(32));
-    rewriter.create<TestValidOp>(op->getLoc(), ArrayRef<Value>());
+    ILLegalOpF::create(rewriter, op->getLoc(), rewriter.getIntegerType(32));
+    TestValidOp::create(rewriter, op->getLoc(), ArrayRef<Value>());
 
     // Drop this operation.
     rewriter.eraseOp(op);
@@ -865,7 +925,7 @@ struct TestCreateBlock : public RewritePattern {
     Type i32Type = rewriter.getIntegerType(32);
     Location loc = op->getLoc();
     rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
-    rewriter.create<TerminatorOp>(loc);
+    TerminatorOp::create(rewriter, loc);
     rewriter.eraseOp(op);
     return success();
   }
@@ -884,8 +944,8 @@ struct TestCreateIllegalBlock : public RewritePattern {
     Location loc = op->getLoc();
     rewriter.createBlock(&region, region.end(), {i32Type, i32Type}, {loc, loc});
     // Create an illegal op to ensure the conversion fails.
-    rewriter.create<ILLegalOpF>(loc, i32Type);
-    rewriter.create<TerminatorOp>(loc);
+    ILLegalOpF::create(rewriter, loc, i32Type);
+    TerminatorOp::create(rewriter, loc);
     rewriter.eraseOp(op);
     return success();
   }
@@ -940,7 +1000,7 @@ struct TestUndoBlockErase : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     Block *secondBlock = &*std::next(op->getRegion(0).begin());
     rewriter.setInsertionPointToStart(secondBlock);
-    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    ILLegalOpF::create(rewriter, op->getLoc(), rewriter.getF32Type());
     rewriter.eraseBlock(secondBlock);
     rewriter.modifyOpInPlace(op, [] {});
     return success();
@@ -1008,9 +1068,8 @@ struct TestPassthroughInvalidOp : public ConversionPattern {
       // This is a 1:N replacement. Insert a test.cast op. (That's what the
       // argument materialization used to do.)
       flattened.push_back(
-          rewriter
-              .create<TestCastOp>(op->getLoc(),
-                                  op->getOperand(it.index()).getType(), range)
+          TestCastOp::create(rewriter, op->getLoc(),
+                             op->getOperand(it.index()).getType(), range)
               .getResult());
     }
     rewriter.replaceOpWithNewOp<TestValidOp>(op, TypeRange(), flattened,
@@ -1115,8 +1174,8 @@ struct TestNonRootReplacement : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const final {
     auto resultType = *op->result_type_begin();
-    auto illegalOp = rewriter.create<ILLegalOpF>(op->getLoc(), resultType);
-    auto legalOp = rewriter.create<LegalOpB>(op->getLoc(), resultType);
+    auto illegalOp = ILLegalOpF::create(rewriter, op->getLoc(), resultType);
+    auto legalOp = LegalOpB::create(rewriter, op->getLoc(), resultType);
 
     rewriter.replaceOp(illegalOp, legalOp);
     rewriter.replaceOp(op, illegalOp);
@@ -1182,7 +1241,7 @@ struct TestCreateUnregisteredOp : public OpRewritePattern<ILLegalOpG> {
   LogicalResult matchAndRewrite(ILLegalOpG op,
                                 PatternRewriter &rewriter) const final {
     IntegerAttr attr = rewriter.getI32IntegerAttr(0);
-    Value val = rewriter.create<arith::ConstantOp>(op->getLoc(), attr);
+    Value val = arith::ConstantOp::create(rewriter, op->getLoc(), attr);
     rewriter.replaceOpWithNewOp<LegalOpC>(op, val);
     return success();
   };
@@ -1196,6 +1255,47 @@ public:
                   ConversionPatternRewriter &rewriter) const final {
     // Erase op without replacements.
     rewriter.eraseOp(op);
+    return success();
+  }
+};
+
+/// Pattern that replaces test.replace_with_valid_producer with
+/// test.valid_producer and the specified type.
+class TestReplaceWithValidProducer : public ConversionPattern {
+public:
+  TestReplaceWithValidProducer(MLIRContext *ctx)
+      : ConversionPattern("test.replace_with_valid_producer", 1, ctx) {}
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto attr = op->getAttrOfType<TypeAttr>("type");
+    if (!attr)
+      return failure();
+    rewriter.replaceOpWithNewOp<TestValidProducerOp>(op, attr.getValue());
+    return success();
+  }
+};
+
+/// Pattern that replaces test.replace_with_valid_consumer with
+/// test.valid_consumer. Can be used with and without a type converter.
+class TestReplaceWithValidConsumer : public ConversionPattern {
+public:
+  TestReplaceWithValidConsumer(MLIRContext *ctx, const TypeConverter &converter)
+      : ConversionPattern(converter, "test.replace_with_valid_consumer", 1,
+                          ctx) {}
+  TestReplaceWithValidConsumer(MLIRContext *ctx)
+      : ConversionPattern("test.replace_with_valid_consumer", 1, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // with_converter present: pattern must have been initialized with a type
+    // converter.
+    // with_converter absent: pattern must have been initialized without a type
+    // converter.
+    if (op->hasAttr("with_converter") != static_cast<bool>(getTypeConverter()))
+      return failure();
+    rewriter.replaceOpWithNewOp<TestValidConsumerOp>(op, operands[0]);
     return success();
   }
 };
@@ -1316,6 +1416,7 @@ struct TestTypeConverter : public TypeConverter {
   TestTypeConverter() {
     addConversion(convertType);
     addSourceMaterialization(materializeCast);
+    addTargetMaterialization(materializeCast);
   }
 
   static LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) {
@@ -1355,7 +1456,7 @@ struct TestTypeConverter : public TypeConverter {
   /// 1->N type mappings.
   static Value materializeCast(OpBuilder &builder, Type resultType,
                                ValueRange inputs, Location loc) {
-    return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+    return TestCastOp::create(builder, loc, resultType, inputs).getResult();
   }
 };
 
@@ -1363,14 +1464,16 @@ struct TestLegalizePatternDriver
     : public PassWrapper<TestLegalizePatternDriver, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestLegalizePatternDriver)
 
+  TestLegalizePatternDriver() = default;
+  TestLegalizePatternDriver(const TestLegalizePatternDriver &other)
+      : PassWrapper(other) {}
+
   StringRef getArgument() const final { return "test-legalize-patterns"; }
   StringRef getDescription() const final {
     return "Run test dialect legalization patterns";
   }
   /// The mode of conversion to use with the driver.
   enum class ConversionMode { Analysis, Full, Partial };
-
-  TestLegalizePatternDriver(ConversionMode mode) : mode(mode) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<func::FuncDialect, test::TestDialect>();
@@ -1389,10 +1492,12 @@ struct TestLegalizePatternDriver
         TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
         TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
         TestUndoPropertiesModification, TestEraseOp,
+        TestReplaceWithValidProducer, TestReplaceWithValidConsumer,
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
                  TestPassthroughInvalidOp, TestMultiple1ToNReplacement,
-                 TestBlockArgReplace>(&getContext(), converter);
+                 TestBlockArgReplace, TestReplaceWithValidConsumer>(
+        &getContext(), converter);
     patterns.add<TestConvertBlockArgs>(converter, &getContext());
     mlir::populateAnyFunctionOpInterfaceTypeConversionPattern(patterns,
                                                               converter);
@@ -1402,7 +1507,8 @@ struct TestLegalizePatternDriver
     ConversionTarget target(getContext());
     target.addLegalOp<ModuleOp>();
     target.addLegalOp<LegalOpA, LegalOpB, LegalOpC, TestCastOp, TestValidOp,
-                      TerminatorOp, OneRegionOp>();
+                      TerminatorOp, OneRegionOp, TestValidProducerOp,
+                      TestValidConsumerOp>();
     target.addLegalOp(OperationName("test.legal_op", &getContext()));
     target
         .addIllegalOp<ILLegalOpF, TestRegionBuilderOp, TestOpWithRegionFold>();
@@ -1500,23 +1606,18 @@ struct TestLegalizePatternDriver
       op->emitRemark() << "op '" << op->getName() << "' is legalizable";
   }
 
-  /// The mode of conversion to use.
-  ConversionMode mode;
+  Option<ConversionMode> mode{
+      *this, "test-legalize-mode",
+      llvm::cl::desc("The legalization mode to use with the test driver"),
+      llvm::cl::init(ConversionMode::Partial),
+      llvm::cl::values(
+          clEnumValN(ConversionMode::Analysis, "analysis",
+                     "Perform an analysis conversion"),
+          clEnumValN(ConversionMode::Full, "full", "Perform a full conversion"),
+          clEnumValN(ConversionMode::Partial, "partial",
+                     "Perform a partial conversion"))};
 };
 } // namespace
-
-static llvm::cl::opt<TestLegalizePatternDriver::ConversionMode>
-    legalizerConversionMode(
-        "test-legalize-mode",
-        llvm::cl::desc("The legalization mode to use with the test driver"),
-        llvm::cl::init(TestLegalizePatternDriver::ConversionMode::Partial),
-        llvm::cl::values(
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Analysis,
-                       "analysis", "Perform an analysis conversion"),
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Full, "full",
-                       "Perform a full conversion"),
-            clEnumValN(TestLegalizePatternDriver::ConversionMode::Partial,
-                       "partial", "Perform a partial conversion")));
 
 //===----------------------------------------------------------------------===//
 // ConversionPatternRewriter::getRemappedValue testing. This method is used
@@ -1917,15 +2018,15 @@ struct TestTypeConversionDriver
       // Allow casting from F64 back to F32.
       if (!resultType.isF16() && inputs.size() == 1 &&
           inputs[0].getType().isF64())
-        return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+        return TestCastOp::create(builder, loc, resultType, inputs).getResult();
       // Allow producing an i32 or i64 from nothing.
       if ((resultType.isInteger(32) || resultType.isInteger(64)) &&
           inputs.empty())
-        return builder.create<TestTypeProducerOp>(loc, resultType);
+        return TestTypeProducerOp::create(builder, loc, resultType);
       // Allow producing an i64 from an integer.
       if (isa<IntegerType>(resultType) && inputs.size() == 1 &&
           isa<IntegerType>(inputs[0].getType()))
-        return builder.create<TestCastOp>(loc, resultType, inputs).getResult();
+        return TestCastOp::create(builder, loc, resultType, inputs).getResult();
       // Otherwise, fail.
       return nullptr;
     });
@@ -2008,7 +2109,7 @@ struct TestTargetMaterializationWithNoUses
     });
     converter.addTargetMaterialization(
         [](OpBuilder &builder, Type type, ValueRange inputs, Location loc) {
-          return builder.create<TestCastOp>(loc, type, inputs).getResult();
+          return TestCastOp::create(builder, loc, type, inputs).getResult();
         });
 
     ConversionTarget target(getContext());
@@ -2059,7 +2160,7 @@ struct TestUndoBlocksMerge : public ConversionPattern {
     Operation *branchOp = firstBlock.getTerminator();
     Block *secondBlock = &*(std::next(op->getRegion(0).begin()));
     rewriter.setInsertionPointToStart(secondBlock);
-    rewriter.create<ILLegalOpF>(op->getLoc(), rewriter.getF32Type());
+    ILLegalOpF::create(rewriter, op->getLoc(), rewriter.getF32Type());
     auto succOperands = branchOp->getOperands();
     SmallVector<Value, 2> replacements(succOperands);
     rewriter.eraseOp(branchOp);
@@ -2114,7 +2215,7 @@ struct TestMergeBlocksPatternDriver
     /// Expect the op to have a single block after legalization.
     target.addDynamicallyLegalOp<TestMergeBlocksOp>(
         [&](TestMergeBlocksOp op) -> bool {
-          return llvm::hasSingleElement(op.getBody());
+          return op.getBody().hasOneBlock();
         });
 
     /// Only allow `test.br` within test.merge_blocks op.
@@ -2186,6 +2287,24 @@ struct TestSelectiveReplacementPatternDriver
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }
 };
+
+struct TestFoldTypeConvertingOp
+    : public PassWrapper<TestFoldTypeConvertingOp, OperationPass<>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestFoldTypeConvertingOp)
+
+  StringRef getArgument() const final { return "test-fold-type-converting-op"; }
+  StringRef getDescription() const final {
+    return "Test helper functions for folding ops whose input and output types "
+           "differ, e.g. float comparisons of the form `(f32, f32) -> i1`.";
+  }
+  void runOnOperation() override {
+    MLIRContext *context = &getContext();
+    mlir::RewritePatternSet patterns(context);
+    patterns.add<FoldSignOpF32ToSI32, FoldLessThanOpF32ToI1>(context);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      signalPassFailure();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -2203,9 +2322,7 @@ void registerPatternsTestPass() {
   PassRegistration<TestStrictPatternDriver>();
   PassRegistration<TestWalkPatternDriver>();
 
-  PassRegistration<TestLegalizePatternDriver>([] {
-    return std::make_unique<TestLegalizePatternDriver>(legalizerConversionMode);
-  });
+  PassRegistration<TestLegalizePatternDriver>();
 
   PassRegistration<TestRemappedValue>();
 
@@ -2218,6 +2335,8 @@ void registerPatternsTestPass() {
 
   PassRegistration<TestMergeBlocksPatternDriver>();
   PassRegistration<TestSelectiveReplacementPatternDriver>();
+
+  PassRegistration<TestFoldTypeConvertingOp>();
 }
 } // namespace test
 } // namespace mlir

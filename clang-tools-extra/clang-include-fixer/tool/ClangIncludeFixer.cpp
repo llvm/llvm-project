@@ -454,7 +454,7 @@ int includeFixerMain(int argc, const char **argv) {
 
   // Set up a new source manager for applying the resulting replacements.
   DiagnosticOptions DiagOpts;
-  DiagnosticsEngine Diagnostics(new DiagnosticIDs, DiagOpts);
+  DiagnosticsEngine Diagnostics(DiagnosticIDs::create(), DiagOpts);
   TextDiagnosticPrinter DiagnosticPrinter(outs(), DiagOpts);
   SourceManager SM(Diagnostics, tool.getFiles());
   Diagnostics.setClient(&DiagnosticPrinter, false);

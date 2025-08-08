@@ -55,6 +55,28 @@ getFullRankPaddingSizes(Builder &b, ArrayRef<OpFoldResult> indexingSizes,
   return paddingSizes;
 }
 
+/// Extracts the constant multiplier from an affine expression of the form
+/// `d * c` or `c * d`, where `d` is an AffineDimExpr and `c` is an
+/// AffineConstantExpr. Returns 1 if the expression is not a simple
+/// multiplication of a dimension and a constant.
+static int64_t extractConstantMultiplier(AffineExpr expr) {
+  if (auto binOp = dyn_cast<AffineBinaryOpExpr>(expr)) {
+    if (binOp.getKind() == AffineExprKind::Mul) {
+      auto lhsD = dyn_cast<AffineDimExpr>(binOp.getLHS());
+      auto rhsC = dyn_cast<AffineConstantExpr>(binOp.getRHS());
+      if (lhsD && rhsC) {
+        return rhsC.getValue();
+      }
+      auto lhsC = dyn_cast<AffineConstantExpr>(binOp.getLHS());
+      auto rhsD = dyn_cast<AffineDimExpr>(binOp.getRHS());
+      if (lhsC && rhsD) {
+        return lhsC.getValue();
+      }
+    }
+  }
+  return 1;
+}
+
 /// Compute the padded shape of the given value `v` of `RankedTensorType` given
 ///   - `indexingSizes` a list of OpFoldResult.
 ///   - an `indexingMap` that encodes how the shape of varies with increases
@@ -63,6 +85,13 @@ getFullRankPaddingSizes(Builder &b, ArrayRef<OpFoldResult> indexingSizes,
 /// The `indexingMap` + `indexingSizes` encoding suits StructuredOps.
 /// The implementaiton below iteratively combines increases from contributing
 /// dimensions using affine.apply operations.
+/// The padded shape is computed by evaluating the maximum accessed index per
+/// dimension, which may involve multiplying by constant factors derived from
+/// the affine indexing expressions. Currently, only a limited set of projected
+/// permutation indexing maps are supported, such as
+/// - affine_map<(d0, d1, d2) -> (d0, d1)>
+/// - affine_map<(d0, d1, d2) -> (d0, d1 + d2)>
+/// - affine_map<(d0, d1) -> (d0 * 3 + d1)>
 /// In the future, more general interfaces can be devised to encode similar
 /// shape evolutions and map between an op and its operands.
 SmallVector<OpFoldResult> linalg::computePaddedShape(
@@ -114,23 +143,32 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
                             /*compressDims=*/true);
 
       // If we are padding to the next multiple of, compose with ceil(sz) * sz.
+      OpFoldResult paddingDimOfr;
       if (options.padToMultipleOf) {
         AffineExpr d0, s0;
         bindDims(rewriter.getContext(), d0);
         bindSymbols(rewriter.getContext(), s0);
         AffineMap ceilMap = AffineMap::get(1, 1, d0.ceilDiv(s0) * s0);
         AffineMap composedMap = projectedMap.compose(ceilMap);
-        OpFoldResult paddingDimOfr = affine::makeComposedFoldedAffineApply(
+        paddingDimOfr = affine::makeComposedFoldedAffineApply(
             rewriter, loc, composedMap,
             {indexingSizes[paddingDim], paddingSize},
             /*composeAffineMin=*/true);
-        terms.push_back(paddingDimOfr);
       } else {
         // Otherwise just set to paddingSize.
-        OpFoldResult paddingDimOfr = affine::makeComposedFoldedAffineApply(
+        paddingDimOfr = affine::makeComposedFoldedAffineApply(
             rewriter, loc, projectedMap, paddingSize);
-        terms.push_back(paddingDimOfr);
       }
+
+      // Adjust for the maximum accessed index, which is (paddingSize - 1) *
+      // multiplier.
+      AffineExpr d0;
+      bindDims(rewriter.getContext(), d0);
+      int64_t multiplier = extractConstantMultiplier(projectedMap.getResult(0));
+      AffineMap subtractMap = AffineMap::get(1, 0, d0 - multiplier);
+      OpFoldResult maxAccessIdx = affine::makeComposedFoldedAffineApply(
+          rewriter, loc, subtractMap, {paddingDimOfr});
+      terms.push_back(maxAccessIdx);
 
       LLVM_DEBUG(DBGS() << "------new term: " << terms.back() << "\n");
     }
@@ -148,8 +186,9 @@ SmallVector<OpFoldResult> linalg::computePaddedShape(
     AffineExpr sumExpr = dims.front();
     for (unsigned i = 1; i < dims.size(); ++i)
       sumExpr = sumExpr + dims[i];
-    OpFoldResult paddedDimOfr =
-        affine::makeComposedFoldedAffineApply(rewriter, loc, sumExpr, terms);
+    // Add 1 to the maximum accessed index and get the final padded size.
+    OpFoldResult paddedDimOfr = affine::makeComposedFoldedAffineApply(
+        rewriter, loc, sumExpr + 1, terms);
     paddedShape[resultIndex] = paddedDimOfr;
   }
 
@@ -192,11 +231,11 @@ static Value padOperand(RewriterBase &rewriter, TilingInterface opToPad,
   if (auto complexTy =
           dyn_cast<ComplexType>(getElementTypeOrSelf(v.getType()))) {
     auto complexAttr = cast<ArrayAttr>(paddingValueAttr);
-    paddingValue = rewriter.create<complex::ConstantOp>(opToPad.getLoc(),
-                                                        complexTy, complexAttr);
+    paddingValue = complex::ConstantOp::create(rewriter, opToPad.getLoc(),
+                                               complexTy, complexAttr);
   } else {
-    paddingValue = rewriter.create<arith::ConstantOp>(
-        opToPad.getLoc(), cast<TypedAttr>(paddingValueAttr));
+    paddingValue = arith::ConstantOp::create(rewriter, opToPad.getLoc(),
+                                             cast<TypedAttr>(paddingValueAttr));
   }
 
   // Pad the operand to the bounding box defined by `paddedShape`.
@@ -323,8 +362,8 @@ linalg::rewriteAsPaddedOp(RewriterBase &rewriter, TilingInterface opToPad,
     int64_t rank = cast<RankedTensorType>(paddedResult.getType()).getRank();
     SmallVector<OpFoldResult> offsets(rank, rewriter.getIndexAttr(0));
     SmallVector<OpFoldResult> strides(rank, rewriter.getIndexAttr(1));
-    paddedSubtensorResults.push_back(rewriter.create<tensor::ExtractSliceOp>(
-        loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
+    paddedSubtensorResults.push_back(tensor::ExtractSliceOp::create(
+        rewriter, loc, paddedResult, offsets, reifiedResultShapes[resultNumber],
         strides));
   }
 

@@ -1636,3 +1636,49 @@ define <8 x half> @vector_interleave8_v8f16_v1f16(<1 x half> %a, <1 x half> %b, 
 	   %res = call <8 x half> @llvm.vector.interleave8.v8f16(<1 x half> %a, <1 x half> %b, <1 x half> %c, <1 x half> %d, <1 x half> %e, <1 x half> %f, <1 x half> %g, <1 x half> %h)
 	   ret <8 x half> %res
 }
+
+define <8 x i16> @interleave4_const_splat_v8i16(<2 x i16> %a) {
+; CHECK-LABEL: interleave4_const_splat_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v8, 3
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: interleave4_const_splat_v8i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVBB-NEXT:    vmv.v.i v8, 3
+; ZVBB-NEXT:    ret
+;
+; ZIP-LABEL: interleave4_const_splat_v8i16:
+; ZIP:       # %bb.0:
+; ZIP-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZIP-NEXT:    vmv.v.i v8, 3
+; ZIP-NEXT:    ret
+  %retval = call <8 x i16> @llvm.vector.interleave4.v8i16(<2 x i16> splat(i16 3), <2 x i16> splat(i16 3), <2 x i16> splat(i16 3), <2 x i16> splat(i16 3))
+  ret <8 x i16> %retval
+}
+
+define <8 x i16> @interleave4_same_nonconst_splat_v8i16(i16 %a) {
+; CHECK-LABEL: interleave4_same_nonconst_splat_v8i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v8, a0
+; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: interleave4_same_nonconst_splat_v8i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVBB-NEXT:    vmv.v.x v8, a0
+; ZVBB-NEXT:    ret
+;
+; ZIP-LABEL: interleave4_same_nonconst_splat_v8i16:
+; ZIP:       # %bb.0:
+; ZIP-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZIP-NEXT:    vmv.v.x v8, a0
+; ZIP-NEXT:    ret
+  %ins = insertelement <2 x i16> poison, i16 %a, i32 0
+  %splat = shufflevector <2 x i16> %ins, <2 x i16> poison, <2 x i32> zeroinitializer
+  %retval = call <8 x i16> @llvm.vector.interleave4.v8i16(<2 x i16> %splat, <2 x i16> %splat, <2 x i16> %splat, <2 x i16> %splat)
+  ret <8 x i16> %retval
+}

@@ -1,12 +1,13 @@
 REQUIRES: system-windows, msvc
-RUN: %build --compiler=clang-cl --mode=compile --arch=64 --nodefaultlib --output=%T/VariablesTest.cpp.obj %S/Inputs/VariablesTest.cpp
-RUN: %build --compiler=msvc --mode=link --arch=64 --nodefaultlib --output=%T/VariablesTest.cpp.exe %T/VariablesTest.cpp.obj
-RUN: lldb-test symbols %T/VariablesTest.cpp.exe > %T/VariablesTest.out
-RUN: FileCheck --check-prefix=GLOBALS --input-file=%T/VariablesTest.out %s
-RUN: FileCheck --check-prefix=FUNC-F --input-file=%T/VariablesTest.out %s
-RUN: FileCheck --check-prefix=FUNC-MAIN --input-file=%T/VariablesTest.out %s
-RUN: FileCheck --check-prefix=FUNC-CONSTRUCTOR --input-file=%T/VariablesTest.out %s
-RUN: FileCheck --check-prefix=FUNC-MEMBER --input-file=%T/VariablesTest.out %s
+RUN: mkdir -p %t.dir
+RUN: %build --compiler=clang-cl --mode=compile --arch=64 --nodefaultlib --output=%t.dir/VariablesTest.cpp.obj %S/Inputs/VariablesTest.cpp
+RUN: %build --compiler=msvc --mode=link --arch=64 --nodefaultlib --output=%t.dir/VariablesTest.cpp.exe %t.dir/VariablesTest.cpp.obj
+RUN: lldb-test symbols %t.dir/VariablesTest.cpp.exe > %t.dir/VariablesTest.out
+RUN: FileCheck --check-prefix=GLOBALS --input-file=%t.dir/VariablesTest.out %s
+RUN: FileCheck --check-prefix=FUNC-F --input-file=%t.dir/VariablesTest.out %s
+RUN: FileCheck --check-prefix=FUNC-MAIN --input-file=%t.dir/VariablesTest.out %s
+RUN: FileCheck --check-prefix=FUNC-CONSTRUCTOR --input-file=%t.dir/VariablesTest.out %s
+RUN: FileCheck --check-prefix=FUNC-MEMBER --input-file=%t.dir/VariablesTest.out %s
 
 GLOBALS: Module [[MOD:.*]]
 GLOBALS: SymbolFile pdb ([[MOD]])

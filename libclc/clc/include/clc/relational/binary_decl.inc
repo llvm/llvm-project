@@ -6,4 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_OVERLOAD _CLC_DECL __CLC_INTN FUNCTION(__CLC_FLOATN a, __CLC_FLOATN b);
+#if __CLC_VECSIZE_OR_1 == 1
+#define __RETTYPE __CLC_INTN
+#else
+#define __RETTYPE __CLC_BIT_INTN
+#endif
+
+_CLC_OVERLOAD _CLC_DECL __RETTYPE FUNCTION(__CLC_GENTYPE a, __CLC_GENTYPE b);
+
+#undef __RETTYPE

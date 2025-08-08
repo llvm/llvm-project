@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Testing/CommandLineArgs.h"
@@ -3215,6 +3216,102 @@ TEST_P(ImportExpr, UnresolvedMemberExpr) {
              Lang_CXX11, "", Lang_CXX11, Verifier,
              functionTemplateDecl(has(functionDecl(has(
                  compoundStmt(has(callExpr(has(unresolvedMemberExpr())))))))));
+}
+
+TEST_P(ImportExpr, ConceptNoRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<typename T>
+    struct is_int { static const bool value = false; };
+    template<> struct is_int<int> { static const bool value = true; };
+    template<typename T>
+    concept declToImport = is_int<T>::value;
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(unless(has(requiresExpr()))));
+}
+
+TEST_P(ImportExpr, ConceptSimpleRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  template <class T1, class T2>
+  concept declToImport = requires(T1 i, T2 j) {
+    i + j;
+  };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptCompoundNonTypeRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  template <class T1, class T2>
+  concept declToImport = requires(T1 i, T2 j) {
+    {i + j};
+  };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptCompoundTypeRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<typename T>
+    struct is_int { static const bool value = false; };
+    template<> struct is_int<int> { static const bool value = true; };
+
+    template<typename T>
+    concept type_is_int = is_int<T>::value;
+
+    template<typename T>
+    concept declToImport = requires(T x) {
+      {x * 1} -> type_is_int;
+    };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptTypeRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+  template <class T>
+  concept declToImport = requires {
+    typename T::value;
+  };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptNestedRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<typename T>
+    struct is_int { static const bool value = false; };
+    template<> struct is_int<int> { static const bool value = true; };
+
+    template<typename T>
+    concept declToImport = requires(T x) {
+      requires is_int<T>::value;
+    };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
+}
+
+TEST_P(ImportExpr, ConceptNestedNonInstantiationDependentRequirement) {
+  MatchVerifier<Decl> Verifier;
+  const char *Code = R"(
+    template<typename T>
+    concept declToImport = requires {
+      requires sizeof(long) == sizeof(int);
+    };
+  )";
+  testImport(Code, Lang_CXX20, "", Lang_CXX20, Verifier,
+             conceptDecl(has(requiresExpr(has(requiresExprBodyDecl())))));
 }
 
 class ImportImplicitMethods : public ASTImporterOptionSpecificTestBase {
@@ -6879,7 +6976,8 @@ TEST_P(LLDBLookupTest, ImporterShouldFindInTransparentContext) {
   // Set up DeclContextBits.HasLazyExternalLexicalLookups to true.
   ToTU->setMustBuildLookupTable();
   struct TestExternalASTSource : ExternalASTSource {};
-  ToTU->getASTContext().setExternalSource(new TestExternalASTSource());
+  ToTU->getASTContext().setExternalSource(
+      llvm::makeIntrusiveRefCnt<TestExternalASTSource>());
 
   Decl *FromTU = getTuDecl(
       R"(
@@ -8057,8 +8155,8 @@ TEST_P(ImportWithExternalSource, CompleteRecordBeforeImporting) {
 
   // Create and add the test ExternalASTSource.
   std::vector<clang::TagDecl *> CompletedTags;
-  IntrusiveRefCntPtr<ExternalASTSource> source =
-      new SourceWithCompletedTagList(CompletedTags);
+  auto source =
+      llvm::makeIntrusiveRefCnt<SourceWithCompletedTagList>(CompletedTags);
   clang::ASTContext &Context = FromTU->getASTContext();
   Context.setExternalSource(std::move(source));
 

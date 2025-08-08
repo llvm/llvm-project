@@ -1438,10 +1438,6 @@ bool CursorVisitor::VisitNestedNameSpecifier(NestedNameSpecifier *NNS,
     return Visit(
         MakeCursorNamespaceRef(NNS->getAsNamespace(), Range.getBegin(), TU));
 
-  case NestedNameSpecifier::NamespaceAlias:
-    return Visit(MakeCursorNamespaceRef(NNS->getAsNamespaceAlias(),
-                                        Range.getBegin(), TU));
-
   case NestedNameSpecifier::TypeSpec: {
     // If the type has a form where we know that the beginning of the source
     // range matches up with a reference cursor. Visit the appropriate reference
@@ -1478,13 +1474,6 @@ bool CursorVisitor::VisitNestedNameSpecifierLoc(
     switch (NNS->getKind()) {
     case NestedNameSpecifier::Namespace:
       if (Visit(MakeCursorNamespaceRef(NNS->getAsNamespace(),
-                                       Q.getLocalBeginLoc(), TU)))
-        return true;
-
-      break;
-
-    case NestedNameSpecifier::NamespaceAlias:
-      if (Visit(MakeCursorNamespaceRef(NNS->getAsNamespaceAlias(),
                                        Q.getLocalBeginLoc(), TU)))
         return true;
 
@@ -1681,6 +1670,10 @@ bool CursorVisitor::VisitBuiltinTypeLoc(BuiltinTypeLoc TL) {
 
 bool CursorVisitor::VisitTypedefTypeLoc(TypedefTypeLoc TL) {
   return Visit(MakeCursorTypeRef(TL.getTypedefNameDecl(), TL.getNameLoc(), TU));
+}
+
+bool CursorVisitor::VisitPredefinedSugarTypeLoc(PredefinedSugarTypeLoc TL) {
+  return false;
 }
 
 bool CursorVisitor::VisitUnresolvedUsingTypeLoc(UnresolvedUsingTypeLoc TL) {
@@ -2887,6 +2880,8 @@ void OpenACCClauseEnqueue::VisitTileClause(const OpenACCTileClause &C) {
 
 void OpenACCClauseEnqueue::VisitPrivateClause(const OpenACCPrivateClause &C) {
   VisitVarList(C);
+  for (VarDecl *V : C.getInitRecipes())
+    Visitor.AddDecl(V);
 }
 
 void OpenACCClauseEnqueue::VisitHostClause(const OpenACCHostClause &C) {
@@ -2900,6 +2895,10 @@ void OpenACCClauseEnqueue::VisitDeviceClause(const OpenACCDeviceClause &C) {
 void OpenACCClauseEnqueue::VisitFirstPrivateClause(
     const OpenACCFirstPrivateClause &C) {
   VisitVarList(C);
+  for (const OpenACCFirstPrivateRecipe &R : C.getInitRecipes()) {
+    Visitor.AddDecl(R.RecipeDecl);
+    Visitor.AddDecl(R.InitFromTemporary);
+  }
 }
 
 void OpenACCClauseEnqueue::VisitPresentClause(const OpenACCPresentClause &C) {
@@ -2979,9 +2978,7 @@ void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
 void OpenACCClauseEnqueue::VisitNoHostClause(const OpenACCNoHostClause &C) {}
-void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) {
-  assert(false && "TODO ERICH");
-}
+void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) { }
 void OpenACCClauseEnqueue::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
 }
 void OpenACCClauseEnqueue::VisitIfPresentClause(
@@ -4723,8 +4720,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
 
       std::string strRef(StrE->getString().str());
       result->EvalData.stringVal = new char[strRef.size() + 1];
-      strncpy((char *)result->EvalData.stringVal, strRef.c_str(),
-              strRef.size());
+      strncpy(result->EvalData.stringVal, strRef.c_str(), strRef.size());
       result->EvalData.stringVal[strRef.size()] = '\0';
       return result.release();
     }
@@ -4744,7 +4740,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
 
     std::string strRef(StrE->getString().str());
     result->EvalData.stringVal = new char[strRef.size() + 1];
-    strncpy((char *)result->EvalData.stringVal, strRef.c_str(), strRef.size());
+    strncpy(result->EvalData.stringVal, strRef.c_str(), strRef.size());
     result->EvalData.stringVal[strRef.size()] = '\0';
     return result.release();
   }
@@ -4763,7 +4759,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
         result->EvalType = CXEval_CFStr;
 
         result->EvalData.stringVal = new char[strLiteral.size() + 1];
-        strncpy((char *)result->EvalData.stringVal, strLiteral.c_str(),
+        strncpy(result->EvalData.stringVal, strLiteral.c_str(),
                 strLiteral.size());
         result->EvalData.stringVal[strLiteral.size()] = '\0';
         return result.release();
@@ -4788,7 +4784,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
         std::string strLiteral(S->getString().str());
         result->EvalType = CXEval_CFStr;
         result->EvalData.stringVal = new char[strLiteral.size() + 1];
-        strncpy((char *)result->EvalData.stringVal, strLiteral.c_str(),
+        strncpy(result->EvalData.stringVal, strLiteral.c_str(),
                 strLiteral.size());
         result->EvalData.stringVal[strLiteral.size()] = '\0';
         return result.release();

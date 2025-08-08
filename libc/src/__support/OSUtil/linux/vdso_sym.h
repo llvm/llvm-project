@@ -35,7 +35,8 @@ enum class VDSOSym {
   RTSigReturn,
   FlushICache,
   RiscvHwProbe,
-  VDSOSymCount
+  GetRandom,
+  VDSOSymCount,
 };
 
 template <VDSOSym sym> LIBC_INLINE constexpr auto dispatcher() {
@@ -60,6 +61,9 @@ template <VDSOSym sym> LIBC_INLINE constexpr auto dispatcher() {
   else if constexpr (sym == VDSOSym::RiscvHwProbe)
     return static_cast<int (*)(riscv_hwprobe *, size_t, size_t, cpu_set_t *,
                                unsigned)>(nullptr);
+  else if constexpr (sym == VDSOSym::GetRandom)
+    return static_cast<int (*)(void *, size_t, unsigned int, void *, size_t)>(
+        nullptr);
   else
     return static_cast<void *>(nullptr);
 }

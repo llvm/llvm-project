@@ -57,6 +57,11 @@ Enabling optimization remarks
 There are two modes that are supported for enabling optimization remarks in
 LLVM: through remark diagnostics, or through serialized remarks.
 
+See also the clang flags
+`-Rpass <https://clang.llvm.org/docs/UsersManual.html#options-to-emit-optimization-reports>`_
+and
+`-fsave-optimization-record <http://clang.llvm.org/docs/UsersManual.html#cmdoption-f-no-save-optimization-record>`_.
+
 Remark diagnostics
 ------------------
 
