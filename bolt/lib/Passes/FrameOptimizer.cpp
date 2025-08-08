@@ -225,7 +225,7 @@ Error FrameOptimizerPass::runOnFunctions(BinaryContext &BC) {
     return Error::success();
 
   if (!BC.isX86()) {
-    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86.\n";
+    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
     exit(1);
   }
 
