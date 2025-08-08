@@ -256,6 +256,12 @@ struct VPlanTransforms {
                                      unsigned BestUF,
                                      PredicatedScalarEvolution &PSE);
 
+  /// Materialize vector trip count computations to a set of VPInstructions.
+  static void materializeVectorTripCount(VPlan &Plan,
+                                         VPBasicBlock *VectorPHVPBB,
+                                         bool TailByMasking,
+                                         bool RequiresScalarEpilogue);
+
   /// Materialize the backedge-taken count to be computed explicitly using
   /// VPInstructions.
   static void materializeBackedgeTakenCount(VPlan &Plan,
