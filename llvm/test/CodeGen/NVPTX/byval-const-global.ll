@@ -13,12 +13,12 @@ define void @foo() {
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.global.b64 %rd1, [G];
-; CHECK-NEXT:    ld.global.b64 %rd2, [G+8];
 ; CHECK-NEXT:    { // callseq 0, 0
 ; CHECK-NEXT:    .param .align 8 .b8 param0[16];
-; CHECK-NEXT:    st.param.b64 [param0], %rd1;
-; CHECK-NEXT:    st.param.b64 [param0+8], %rd2;
+; CHECK-NEXT:    ld.global.b64 %rd1, [G+8];
+; CHECK-NEXT:    st.param.b64 [param0+8], %rd1;
+; CHECK-NEXT:    ld.global.b64 %rd2, [G];
+; CHECK-NEXT:    st.param.b64 [param0], %rd2;
 ; CHECK-NEXT:    call.uni bar, (param0);
 ; CHECK-NEXT:    } // callseq 0
 ; CHECK-NEXT:    ret;

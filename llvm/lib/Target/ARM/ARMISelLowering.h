@@ -607,6 +607,8 @@ class VectorType;
 
     bool preferZeroCompareBranch() const override { return true; }
 
+    bool shouldExpandCmpUsingSelects(EVT VT) const override;
+
     bool isMaskAndCmp0FoldingBeneficial(const Instruction &AndI) const override;
 
     bool hasAndNotCompare(SDValue V) const override {
@@ -685,7 +687,8 @@ class VectorType;
                               ArrayRef<ShuffleVectorInst *> Shuffles,
                               ArrayRef<unsigned> Indices,
                               unsigned Factor) const override;
-    bool lowerInterleavedStore(StoreInst *SI, ShuffleVectorInst *SVI,
+    bool lowerInterleavedStore(Instruction *Store, Value *Mask,
+                               ShuffleVectorInst *SVI,
                                unsigned Factor) const override;
 
     bool shouldInsertFencesForAtomic(const Instruction *I) const override;
@@ -903,6 +906,7 @@ class VectorType;
     void LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
                    SelectionDAG &DAG) const;
     SDValue LowerFP_TO_BF16(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerCMP(SDValue Op, SelectionDAG &DAG) const;
 
     Register getRegisterByName(const char* RegName, LLT VT,
                                const MachineFunction &MF) const override;

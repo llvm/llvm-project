@@ -223,6 +223,9 @@ struct Configuration {
   StringRef manifestUIAccess = "'false'";
   StringRef manifestFile;
 
+  // used for /arm64xsameaddress
+  std::vector<std::pair<Symbol *, Symbol *>> sameAddresses;
+
   // used for /dwodir
   StringRef dwoDir;
 
@@ -319,7 +322,7 @@ struct Configuration {
   bool warnDebugInfoUnusable = true;
   bool warnLongSectionNames = true;
   bool warnStdcallFixup = true;
-  bool warnExportedDllMain = true;
+  bool warnImportedDllMain = true;
   bool incremental = true;
   bool integrityCheck = false;
   bool killAt = false;

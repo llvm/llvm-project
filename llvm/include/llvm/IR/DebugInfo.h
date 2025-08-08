@@ -39,30 +39,26 @@ class DbgVariableRecord;
 class Instruction;
 class Module;
 
-/// Finds dbg.declare intrinsics declaring local variables as living in the
+/// Finds dbg.declare records declaring local variables as living in the
 /// memory that 'V' points to.
-LLVM_ABI TinyPtrVector<DbgDeclareInst *> findDbgDeclares(Value *V);
-/// As above, for DVRDeclares.
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRDeclares(Value *V);
 /// As above, for DVRValues.
 LLVM_ABI TinyPtrVector<DbgVariableRecord *> findDVRValues(Value *V);
 
-/// Finds the llvm.dbg.value intrinsics describing a value.
-LLVM_ABI void findDbgValues(
-    SmallVectorImpl<DbgValueInst *> &DbgValues, Value *V,
-    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords = nullptr);
-
-/// Finds the debug info intrinsics describing a value.
-LLVM_ABI void findDbgUsers(
-    SmallVectorImpl<DbgVariableIntrinsic *> &DbgInsts, Value *V,
-    SmallVectorImpl<DbgVariableRecord *> *DbgVariableRecords = nullptr);
+/// Finds the debug info records describing a value.
+LLVM_ABI void
+findDbgUsers(Value *V,
+             SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords);
+/// Finds the dbg.values describing a value.
+LLVM_ABI void
+findDbgValues(Value *V,
+              SmallVectorImpl<DbgVariableRecord *> &DbgVariableRecords);
 
 /// Find subprogram that is enclosing this scope.
 LLVM_ABI DISubprogram *getDISubprogram(const MDNode *Scope);
 
 /// Produce a DebugLoc to use for each dbg.declare that is promoted to a
 /// dbg.value.
-LLVM_ABI DebugLoc getDebugValueLoc(DbgVariableIntrinsic *DII);
 LLVM_ABI DebugLoc getDebugValueLoc(DbgVariableRecord *DVR);
 
 /// Strip debug info in the module if it exists.
@@ -192,13 +188,6 @@ using AssignmentInstRange =
 /// Iterators invalidated by adding or removing DIAssignID metadata to/from any
 /// instruction (including by deleting or cloning instructions).
 LLVM_ABI AssignmentInstRange getAssignmentInsts(DIAssignID *ID);
-/// Return a range of instructions (typically just one) that perform the
-/// assignment that \p DAI encodes.
-/// Iterators invalidated by adding or removing DIAssignID metadata to/from any
-/// instruction (including by deleting or cloning instructions).
-inline AssignmentInstRange getAssignmentInsts(const DbgAssignIntrinsic *DAI) {
-  return getAssignmentInsts(DAI->getAssignID());
-}
 
 inline AssignmentInstRange getAssignmentInsts(const DbgVariableRecord *DVR) {
   assert(DVR->isDbgAssign() &&

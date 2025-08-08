@@ -651,7 +651,7 @@ class NewGVN {
   BitVector TouchedInstructions;
 
   DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>> BlockInstRange;
-  mutable DenseMap<const IntrinsicInst *, const Value *> IntrinsicInstPred;
+  mutable DenseMap<const IntrinsicInst *, const Value *> PredicateSwapChoice;
 
 #ifndef NDEBUG
   // Debugging for how many times each block and instruction got processed.
@@ -840,7 +840,7 @@ private:
   // Ranking
   unsigned int getRank(const Value *) const;
   bool shouldSwapOperands(const Value *, const Value *) const;
-  bool shouldSwapOperandsForIntrinsic(const Value *, const Value *,
+  bool shouldSwapOperandsForPredicate(const Value *, const Value *,
                                       const IntrinsicInst *I) const;
 
   // Reachability handling.
@@ -1535,7 +1535,7 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
 
   if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-      auto *LifetimePtr = II->getOperand(1);
+      auto *LifetimePtr = II->getOperand(0);
       if (LoadPtr == lookupOperandLeader(LifetimePtr) ||
           AA->isMustAlias(LoadPtr, LifetimePtr))
         return createConstantExpression(UndefValue::get(LoadType));
@@ -1624,7 +1624,7 @@ NewGVN::performSymbolicPredicateInfoEvaluation(IntrinsicInst *I) const {
   Value *AdditionallyUsedValue = CmpOp0;
 
   // Sort the ops.
-  if (shouldSwapOperandsForIntrinsic(FirstOp, SecondOp, I)) {
+  if (shouldSwapOperandsForPredicate(FirstOp, SecondOp, I)) {
     std::swap(FirstOp, SecondOp);
     Predicate = CmpInst::getSwappedPredicate(Predicate);
     AdditionallyUsedValue = CmpOp1;
@@ -3024,7 +3024,7 @@ void NewGVN::cleanupTables() {
   PredicateToUsers.clear();
   MemoryToUsers.clear();
   RevisitOnReachabilityChange.clear();
-  IntrinsicInstPred.clear();
+  PredicateSwapChoice.clear();
 }
 
 // Assign local DFS number mapping to instructions, and leave space for Value
@@ -4078,12 +4078,9 @@ bool NewGVN::eliminateInstructions(Function &F) {
                 if (!match(DefI, m_Intrinsic<Intrinsic::ssa_copy>()))
                   patchReplacementInstruction(DefI, DominatingLeader);
 
-                SmallVector<DbgVariableIntrinsic *> DbgUsers;
                 SmallVector<DbgVariableRecord *> DVRUsers;
-                findDbgUsers(DbgUsers, DefI, &DVRUsers);
+                findDbgUsers(DefI, DVRUsers);
 
-                for (auto *DVI : DbgUsers)
-                  DVI->replaceVariableLocationOp(DefI, DominatingLeader);
                 for (auto *DVR : DVRUsers)
                   DVR->replaceVariableLocationOp(DefI, DominatingLeader);
 
@@ -4253,20 +4250,18 @@ bool NewGVN::shouldSwapOperands(const Value *A, const Value *B) const {
   return std::make_pair(getRank(A), A) > std::make_pair(getRank(B), B);
 }
 
-bool NewGVN::shouldSwapOperandsForIntrinsic(const Value *A, const Value *B,
+bool NewGVN::shouldSwapOperandsForPredicate(const Value *A, const Value *B,
                                             const IntrinsicInst *I) const {
-  auto LookupResult = IntrinsicInstPred.find(I);
   if (shouldSwapOperands(A, B)) {
-    if (LookupResult == IntrinsicInstPred.end())
-      IntrinsicInstPred.insert({I, B});
-    else
-      LookupResult->second = B;
+    PredicateSwapChoice[I] = B;
     return true;
   }
 
-  if (LookupResult != IntrinsicInstPred.end()) {
+  auto LookupResult = PredicateSwapChoice.find(I);
+  if (LookupResult != PredicateSwapChoice.end()) {
     auto *SeenPredicate = LookupResult->second;
     if (SeenPredicate) {
+      // We previously decided to swap B to the left. Keep that choice.
       if (SeenPredicate == B)
         return true;
       else

@@ -110,6 +110,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::BuildStructVector:
   case VPInstruction::BuildVector:
     return SetResultTyFromOp();
+  case VPInstruction::ExtractLane:
+    return inferScalarType(R->getOperand(1));
   case VPInstruction::FirstActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractLastElement:
@@ -126,6 +128,7 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return IntegerType::get(Ctx, 1);
   case VPInstruction::Broadcast:
   case VPInstruction::PtrAdd:
+  case VPInstruction::WidePtrAdd:
     // Return the type based on first operand.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::BranchOnCond:

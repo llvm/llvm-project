@@ -430,26 +430,32 @@ def UseWzrToVecMove : Predicate<"Subtarget->useWzrToVecMove()">;
 def SDTBinaryArithWithFlagsOut : SDTypeProfile<2, 2,
                                               [SDTCisSameAs<0, 2>,
                                                SDTCisSameAs<0, 3>,
-                                               SDTCisInt<0>, SDTCisVT<1, i32>]>;
+                                               SDTCisInt<0>,
+                                               SDTCisVT<1, FlagsVT>]>;
 
 // SDTBinaryArithWithFlagsIn - RES1, FLAGS = op LHS, RHS, FLAGS
 def SDTBinaryArithWithFlagsIn : SDTypeProfile<1, 3,
                                             [SDTCisSameAs<0, 1>,
                                              SDTCisSameAs<0, 2>,
                                              SDTCisInt<0>,
-                                             SDTCisVT<3, i32>]>;
+                                             SDTCisVT<3, FlagsVT>]>;
 
 // SDTBinaryArithWithFlagsInOut - RES1, FLAGS = op LHS, RHS, FLAGS
 def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                             [SDTCisSameAs<0, 2>,
                                              SDTCisSameAs<0, 3>,
                                              SDTCisInt<0>,
-                                             SDTCisVT<1, i32>,
-                                             SDTCisVT<4, i32>]>;
+                                             SDTCisVT<1, FlagsVT>,
+                                             SDTCisVT<4, FlagsVT>]>;
+
+// Value type used for condition codes.
+// Should be kept in sync with its C++ counterpart.
+defvar CondCodeVT = i32;
 
 def SDT_AArch64Brcond  : SDTypeProfile<0, 3,
-                                     [SDTCisVT<0, OtherVT>, SDTCisVT<1, i32>,
-                                      SDTCisVT<2, i32>]>;
+                                     [SDTCisVT<0, OtherVT>,
+                                      SDTCisVT<1, CondCodeVT>,
+                                      SDTCisVT<2, FlagsVT>]>;
 def SDT_AArch64cbz : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, OtherVT>]>;
 def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
                                         SDTCisVT<2, OtherVT>]>;
@@ -457,23 +463,23 @@ def SDT_AArch64tbz : SDTypeProfile<0, 3, [SDTCisInt<0>, SDTCisInt<1>,
 def SDT_AArch64CSel  : SDTypeProfile<1, 4,
                                    [SDTCisSameAs<0, 1>,
                                     SDTCisSameAs<0, 2>,
-                                    SDTCisInt<3>,
-                                    SDTCisVT<4, i32>]>;
+                                    SDTCisVT<3, CondCodeVT>,
+                                    SDTCisVT<4, FlagsVT>]>;
 def SDT_AArch64CCMP : SDTypeProfile<1, 5,
-                                    [SDTCisVT<0, i32>,
+                                    [SDTCisVT<0, FlagsVT>,
                                      SDTCisInt<1>,
                                      SDTCisSameAs<1, 2>,
                                      SDTCisInt<3>,
-                                     SDTCisInt<4>,
-                                     SDTCisVT<5, i32>]>;
+                                     SDTCisVT<4, CondCodeVT>,
+                                     SDTCisVT<5, FlagsVT>]>;
 def SDT_AArch64FCCMP : SDTypeProfile<1, 5,
-                                     [SDTCisVT<0, i32>,
+                                     [SDTCisVT<0, FlagsVT>,
                                       SDTCisFP<1>,
                                       SDTCisSameAs<1, 2>,
                                       SDTCisInt<3>,
-                                      SDTCisInt<4>,
-                                      SDTCisVT<5, i32>]>;
-def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
+                                      SDTCisVT<4, CondCodeVT>,
+                                      SDTCisVT<5, FlagsVT>]>;
+def SDT_AArch64FCmp  : SDTypeProfile<1, 2, [SDTCisVT<0, FlagsVT>,
                                             SDTCisFP<1>,
                                             SDTCisSameAs<2, 1>]>;
 def SDT_AArch64Rev : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>]>;
@@ -518,10 +524,10 @@ def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
 def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64ldiapp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stilp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v4i32>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 
 // Generates the general dynamic sequences, i.e.
 //  adrp  x0, :tlsdesc:var
@@ -545,7 +551,8 @@ def SDT_AArch64TBL : SDTypeProfile<1, 2, [
 ]>;
 
 def SDT_AArch64cb : SDTypeProfile<0, 4,
-                                  [SDTCisVT<0, i32>, SDTCisInt<1>, SDTCisInt<2>,
+                                  [SDTCisVT<0, CondCodeVT>,
+                                   SDTCisInt<1>, SDTCisInt<2>,
                                    SDTCisVT<3, OtherVT>]>;
 
 // non-extending masked load fragment.
@@ -1124,10 +1131,10 @@ def AArch64probedalloca
              SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>,
              [SDNPHasChain, SDNPMayStore]>;
 
-// MRS, also sets the flags via a glue.
+// MRS, also sets the flags.
 def AArch64mrs : SDNode<"AArch64ISD::MRS",
                         SDTypeProfile<2, 1, [SDTCisVT<0, i64>,
-                                             SDTCisVT<1, i32>,
+                                             SDTCisVT<1, FlagsVT>,
                                              SDTCisVT<2, i32>]>,
                         [SDNPHasChain]>;
 
@@ -2032,7 +2039,7 @@ let Predicates = [HasPAuth] in {
     def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
   }
 
-  defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
+  defm PAC : SignAuth<0b000, 0b010, "pac", null_frag>;
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
   def XPACI : ClearAuth<0, "xpaci">;
@@ -2151,6 +2158,26 @@ let Predicates = [HasPAuth] in {
     let Defs = [NZCV];
     let Uses = [];
   }
+
+  // PAC pseudo instruction. In AsmPrinter, it is expanded into an actual PAC*
+  // instruction immediately preceded by the discriminator computation.
+  // This enforces the expected immediate modifier is used for signing, even
+  // if an attacker is able to substitute AddrDisc.
+  def PAC : Pseudo<(outs GPR64:$SignedVal),
+                   (ins GPR64:$Val, i32imm:$Key, i64imm:$Disc, GPR64noip:$AddrDisc),
+                   [], "$SignedVal = $Val">, Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 0;
+    let mayStore = 0;
+    let mayLoad = 0;
+    let Size = 12;
+    let Defs = [X16, X17];
+    let usesCustomInserter = 1;
+  }
+
+  // A standalone pattern is used, so that literal 0 can be passed as $Disc.
+  def : Pat<(int_ptrauth_sign GPR64:$Val, timm:$Key, GPR64noip:$AddrDisc),
+            (PAC GPR64:$Val, $Key, 0, GPR64noip:$AddrDisc)>;
 
   // AUT and re-PAC a value, using different keys/data.
   // This directly manipulates x16/x17, which are the only registers that
@@ -3933,6 +3960,26 @@ defm LDRSW  : LoadUI<0b10, 0, 0b10, GPR64, uimm12s4, "ldrsw",
 // load zero-extended word
 def : Pat<(i64 (zextloadi32 (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))),
       (SUBREG_TO_REG (i64 0), (LDRWui GPR64sp:$Rn, uimm12s4:$offset), sub_32)>;
+
+// load zero-extended i32, bitcast to f64
+def : Pat <(f64 (bitconvert (i64 (zextloadi32 (am_indexed32 GPR64sp:$Rn, uimm12s4:$offset))))),
+       (SUBREG_TO_REG (i64 0), (LDRSui GPR64sp:$Rn, uimm12s4:$offset), ssub)>;
+
+// load zero-extended i16, bitcast to f64
+def : Pat <(f64 (bitconvert (i64 (zextloadi16 (am_indexed32 GPR64sp:$Rn, uimm12s2:$offset))))),
+           (SUBREG_TO_REG (i64 0), (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
+
+// load zero-extended i8, bitcast to f64
+def : Pat <(f64 (bitconvert (i64 (zextloadi8 (am_indexed32 GPR64sp:$Rn, uimm12s1:$offset))))),
+           (SUBREG_TO_REG (i64 0), (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
+
+// load zero-extended i16, bitcast to f32
+def : Pat <(f32 (bitconvert (i32 (zextloadi16 (am_indexed16 GPR64sp:$Rn, uimm12s2:$offset))))),
+           (SUBREG_TO_REG (i32 0), (LDRHui GPR64sp:$Rn, uimm12s2:$offset), hsub)>;
+
+// load zero-extended i8, bitcast to f32
+def : Pat <(f32 (bitconvert (i32 (zextloadi8 (am_indexed16 GPR64sp:$Rn, uimm12s1:$offset))))),
+           (SUBREG_TO_REG (i32 0), (LDRBui GPR64sp:$Rn, uimm12s1:$offset), bsub)>;
 
 // Pre-fetch.
 def PRFMui : PrefetchUI<0b11, 0, 0b10, "prfm",
@@ -6008,6 +6055,7 @@ defm MLA      : SIMDThreeSameVectorBHSTied<0, 0b10010, "mla", null_frag>;
 defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls", null_frag>;
 
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
+let isCommutable = 1 in
 defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
@@ -6627,6 +6675,15 @@ def : Pat<(f16 (any_uint_to_fp (i32 (any_fp_to_uint f16:$Rn)))),
           (UCVTFv1i16 (f16 (FCVTZUv1f16 f16:$Rn)))>;
 }
 
+def : Pat<(v4i32 (any_fp_to_sint (v4f32 (scalar_to_vector (f32 FPR32:$src))))),
+          (v4i32 (INSERT_SUBREG (IMPLICIT_DEF), (i32 (FCVTZSv1i32 (f32 FPR32:$src))), ssub))>;
+def : Pat<(v4i32 (any_fp_to_uint (v4f32 (scalar_to_vector (f32 FPR32:$src))))),
+          (v4i32 (INSERT_SUBREG (IMPLICIT_DEF), (i32 (FCVTZUv1i32 (f32 FPR32:$src))), ssub))>;
+def : Pat<(v2i64 (any_fp_to_sint (v2f64 (scalar_to_vector (f64 FPR64:$src))))),
+          (v2i64 (INSERT_SUBREG (IMPLICIT_DEF), (i64 (FCVTZSv1i64 (f64 FPR64:$src))), dsub))>;
+def : Pat<(v2i64 (any_fp_to_uint (v2f64 (scalar_to_vector (f64 FPR64:$src))))),
+          (v2i64 (INSERT_SUBREG (IMPLICIT_DEF), (i64 (FCVTZUv1i64 (f64 FPR64:$src))), dsub))>;
+
 // int -> float conversion of value in lane 0 of simd vector should use
 // correct cvtf variant to avoid costly fpr <-> gpr register transfers.
 def : Pat<(f32 (sint_to_fp (i32 (vector_extract (v4i32 FPR128:$Rn), (i64 0))))),
@@ -6750,6 +6807,7 @@ defm ADDHN  : SIMDNarrowThreeVectorBHS<0,0b0100,"addhn", int_aarch64_neon_addhn>
 defm SUBHN  : SIMDNarrowThreeVectorBHS<0,0b0110,"subhn", int_aarch64_neon_subhn>;
 defm RADDHN : SIMDNarrowThreeVectorBHS<1,0b0100,"raddhn",int_aarch64_neon_raddhn>;
 defm RSUBHN : SIMDNarrowThreeVectorBHS<1,0b0110,"rsubhn",int_aarch64_neon_rsubhn>;
+let isCommutable = 1 in
 defm PMULL  : SIMDDifferentThreeVectorBD<0,0b1110,"pmull", AArch64pmull>;
 defm SABAL  : SIMDLongThreeVectorTiedBHSabal<0,0b0101,"sabal", abds>;
 defm SABDL   : SIMDLongThreeVectorBHSabdl<0, 0b0111, "sabdl", abds>;
@@ -6766,6 +6824,7 @@ defm SQDMLAL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1001, "sqdmlal", saddsat>;
 defm SQDMLSL : SIMDLongThreeVectorSQDMLXTiedHS<0, 0b1011, "sqdmlsl", ssubsat>;
 defm SQDMULL : SIMDLongThreeVectorHS<0, 0b1101, "sqdmull",
                                      int_aarch64_neon_sqdmull>;
+let isCommutable = 0 in
 defm SSUBL   : SIMDLongThreeVectorBHS<0, 0b0010, "ssubl",
                  BinOpFrag<(sub (sext node:$LHS), (sext node:$RHS))>>;
 defm SSUBW   : SIMDWideThreeVectorBHS<0, 0b0011, "ssubw",
@@ -6780,6 +6839,7 @@ defm UMLAL   : SIMDLongThreeVectorTiedBHS<1, 0b1000, "umlal",
 defm UMLSL   : SIMDLongThreeVectorTiedBHS<1, 0b1010, "umlsl",
     TriOpFrag<(sub node:$LHS, (AArch64umull node:$MHS, node:$RHS))>>;
 defm UMULL   : SIMDLongThreeVectorBHS<1, 0b1100, "umull", AArch64umull>;
+let isCommutable = 0 in
 defm USUBL   : SIMDLongThreeVectorBHS<1, 0b0010, "usubl",
                  BinOpFrag<(sub (zanyext node:$LHS), (zanyext node:$RHS))>>;
 defm USUBW   : SIMDWideThreeVectorBHS<   1, 0b0011, "usubw",

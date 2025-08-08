@@ -42,7 +42,6 @@
 #include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/IR/PseudoProbe.h"
 #include "llvm/IR/Type.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAsmInfoDarwin.h"
@@ -403,8 +402,8 @@ void TargetLoweringObjectFileELF::emitPersonalityValue(
     const MachineModuleInfo *MMI) const {
   SmallString<64> NameData("DW.ref.");
   NameData += Sym->getName();
-  MCSymbolELF *Label =
-      cast<MCSymbolELF>(getContext().getOrCreateSymbol(NameData));
+  auto *Label =
+      static_cast<MCSymbolELF *>(getContext().getOrCreateSymbol(NameData));
   Streamer.emitSymbolAttribute(Label, MCSA_Hidden);
   Streamer.emitSymbolAttribute(Label, MCSA_Weak);
   unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_WRITE | ELF::SHF_GROUP;
@@ -582,7 +581,8 @@ static const MCSymbolELF *getLinkedToSymbol(const GlobalObject *GO,
 
   auto *VM = cast<ValueAsMetadata>(MD->getOperand(0).get());
   auto *OtherGV = dyn_cast<GlobalValue>(VM->getValue());
-  return OtherGV ? dyn_cast<MCSymbolELF>(TM.getSymbol(OtherGV)) : nullptr;
+  return OtherGV ? static_cast<const MCSymbolELF *>(TM.getSymbol(OtherGV))
+                 : nullptr;
 }
 
 static unsigned getEntrySizeForKind(SectionKind Kind) {
@@ -996,7 +996,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
   if (!LSDASection || (!F.hasComdat() && !TM.getFunctionSections()))
     return LSDASection;
 
-  const auto *LSDA = cast<MCSectionELF>(LSDASection);
+  const auto *LSDA = static_cast<const MCSectionELF *>(LSDASection);
   unsigned Flags = LSDA->getFlags();
   const MCSymbolELF *LinkedToSym = nullptr;
   StringRef Group;
@@ -1012,7 +1012,7 @@ MCSection *TargetLoweringObjectFileELF::getSectionForLSDA(
       (getContext().getAsmInfo()->useIntegratedAssembler() &&
        getContext().getAsmInfo()->binutilsIsAtLeast(2, 36))) {
     Flags |= ELF::SHF_LINK_ORDER;
-    LinkedToSym = cast<MCSymbolELF>(&FnSym);
+    LinkedToSym = static_cast<const MCSymbolELF *>(&FnSym);
   }
 
   // Append the function name as the suffix like GCC, assuming
@@ -1061,27 +1061,27 @@ MCSection *TargetLoweringObjectFileELF::getSectionForConstant(
 
   auto &Context = getContext();
   if (Kind.isMergeableConst4() && MergeableConst4Section)
-    return Context.getELFSection(".rodata.cst4." + SectionSuffix,
+    return Context.getELFSection(".rodata.cst4." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 4);
   if (Kind.isMergeableConst8() && MergeableConst8Section)
-    return Context.getELFSection(".rodata.cst8." + SectionSuffix,
+    return Context.getELFSection(".rodata.cst8." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 8);
   if (Kind.isMergeableConst16() && MergeableConst16Section)
-    return Context.getELFSection(".rodata.cst16." + SectionSuffix,
+    return Context.getELFSection(".rodata.cst16." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 16);
   if (Kind.isMergeableConst32() && MergeableConst32Section)
-    return Context.getELFSection(".rodata.cst32." + SectionSuffix,
+    return Context.getELFSection(".rodata.cst32." + SectionSuffix + ".",
                                  ELF::SHT_PROGBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_MERGE, 32);
   if (Kind.isReadOnly())
-    return Context.getELFSection(".rodata." + SectionSuffix, ELF::SHT_PROGBITS,
-                                 ELF::SHF_ALLOC);
+    return Context.getELFSection(".rodata." + SectionSuffix + ".",
+                                 ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
 
   assert(Kind.isReadOnlyWithRel() && "Unknown section kind");
-  return Context.getELFSection(".data.rel.ro." + SectionSuffix,
+  return Context.getELFSection(".data.rel.ro." + SectionSuffix + ".",
                                ELF::SHT_PROGBITS,
                                ELF::SHF_ALLOC | ELF::SHF_WRITE);
 }
@@ -1735,7 +1735,8 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
       Name == getInstrProfSectionName(IPSK_covdata, Triple::COFF,
                                       /*AddSegmentInfo=*/false) ||
       Name == getInstrProfSectionName(IPSK_covname, Triple::COFF,
-                                      /*AddSegmentInfo=*/false))
+                                      /*AddSegmentInfo=*/false) ||
+      Name == ".llvmbc" || Name == ".llvmcmd")
     Kind = SectionKind::getMetadata();
   int Selection = 0;
   unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
@@ -2055,14 +2056,14 @@ MCSection *TargetLoweringObjectFileCOFF::getStaticCtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
   return getCOFFStaticStructorSection(
       getContext(), getContext().getTargetTriple(), true, Priority, KeySym,
-      cast<MCSectionCOFF>(StaticCtorSection));
+      static_cast<MCSectionCOFF *>(StaticCtorSection));
 }
 
 MCSection *TargetLoweringObjectFileCOFF::getStaticDtorSection(
     unsigned Priority, const MCSymbol *KeySym) const {
   return getCOFFStaticStructorSection(
       getContext(), getContext().getTargetTriple(), false, Priority, KeySym,
-      cast<MCSectionCOFF>(StaticDtorSection));
+      static_cast<MCSectionCOFF *>(StaticDtorSection));
 }
 
 const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
@@ -2370,9 +2371,10 @@ bool TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(
 
 MCSymbol *
 TargetLoweringObjectFileXCOFF::getEHInfoTableSymbol(const MachineFunction *MF) {
-  MCSymbol *EHInfoSym = MF->getContext().getOrCreateSymbol(
-      "__ehinfo." + Twine(MF->getFunctionNumber()));
-  cast<MCSymbolXCOFF>(EHInfoSym)->setEHInfo();
+  auto *EHInfoSym =
+      static_cast<MCSymbolXCOFF *>(MF->getContext().getOrCreateSymbol(
+          "__ehinfo." + Twine(MF->getFunctionNumber())));
+  EHInfoSym->setEHInfo();
   return EHInfoSym;
 }
 
@@ -2389,23 +2391,25 @@ TargetLoweringObjectFileXCOFF::getTargetSymbol(const GlobalValue *GV,
   // here.
   if (const GlobalObject *GO = dyn_cast<GlobalObject>(GV)) {
     if (GO->isDeclarationForLinker())
-      return cast<MCSectionXCOFF>(getSectionForExternalReference(GO, TM))
+      return static_cast<const MCSectionXCOFF *>(
+                 getSectionForExternalReference(GO, TM))
           ->getQualNameSymbol();
 
     if (const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV))
       if (GVar->hasAttribute("toc-data"))
-        return cast<MCSectionXCOFF>(
+        return static_cast<const MCSectionXCOFF *>(
                    SectionForGlobal(GVar, SectionKind::getData(), TM))
             ->getQualNameSymbol();
 
     SectionKind GOKind = getKindForGlobal(GO, TM);
     if (GOKind.isText())
-      return cast<MCSectionXCOFF>(
+      return static_cast<const MCSectionXCOFF *>(
                  getSectionForFunctionDescriptor(cast<Function>(GO), TM))
           ->getQualNameSymbol();
     if ((TM.getDataSections() && !GO->hasSection()) || GO->hasCommonLinkage() ||
         GOKind.isBSSLocal() || GOKind.isThreadBSSLocal())
-      return cast<MCSectionXCOFF>(SectionForGlobal(GO, GOKind, TM))
+      return static_cast<const MCSectionXCOFF *>(
+                 SectionForGlobal(GO, GOKind, TM))
           ->getQualNameSymbol();
   }
 
@@ -2508,7 +2512,8 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
 
   if (Kind.isText()) {
     if (TM.getFunctionSections()) {
-      return cast<MCSymbolXCOFF>(getFunctionEntryPointSymbol(GO, TM))
+      return static_cast<const MCSymbolXCOFF *>(
+                 getFunctionEntryPointSymbol(GO, TM))
           ->getRepresentedCsect();
     }
     return TextSection;
@@ -2711,7 +2716,7 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
     const MCSymbol *Sym, const TargetMachine &TM) const {
   const XCOFF::StorageMappingClass SMC = [](const MCSymbol *Sym,
                                             const TargetMachine &TM) {
-    const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(Sym);
+    auto *XSym = static_cast<const MCSymbolXCOFF *>(Sym);
 
     // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC,
     // otherwise the AIX assembler will complain.
@@ -2735,13 +2740,13 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
   }(Sym, TM);
 
   return getContext().getXCOFFSection(
-      cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
-      XCOFF::CsectProperties(SMC, XCOFF::XTY_SD));
+      static_cast<const MCSymbolXCOFF *>(Sym)->getSymbolTableName(),
+      SectionKind::getData(), XCOFF::CsectProperties(SMC, XCOFF::XTY_SD));
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(
     const Function &F, const MCSymbol &FnSym, const TargetMachine &TM) const {
-  auto *LSDA = cast<MCSectionXCOFF>(LSDASection);
+  auto *LSDA = static_cast<MCSectionXCOFF *>(LSDASection);
   if (TM.getFunctionSections()) {
     // If option -ffunction-sections is on, append the function name to the
     // name of the LSDA csect so that each function has its own LSDA csect.

@@ -202,8 +202,7 @@ define float @fmaxnum_1(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[TMP4]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -270,8 +269,7 @@ define float @fmaxnum_2(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[TMP4]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -340,8 +338,7 @@ define float @fmaxnum_induction_starts_at_10(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = add i64 10, [[INDEX]]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -411,8 +408,7 @@ define float @fmaxnum_induction_starts_at_value(ptr %src, i64 %start, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ splat (float -1.000000e+07), %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = add i64 [[START]], [[INDEX]]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds nuw float, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[GEP_SRC]], i32 0
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[TMP3]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

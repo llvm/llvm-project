@@ -30,7 +30,7 @@ mlir::Value fir::runtime::genCommandArgumentCount(fir::FirOpBuilder &builder,
                                                   mlir::Location loc) {
   auto argumentCountFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(ArgumentCount)>(loc, builder);
-  return builder.create<fir::CallOp>(loc, argumentCountFunc).getResult(0);
+  return fir::CallOp::create(builder, loc, argumentCountFunc).getResult(0);
 }
 
 mlir::Value fir::runtime::genGetCommand(fir::FirOpBuilder &builder,
@@ -46,7 +46,7 @@ mlir::Value fir::runtime::genGetCommand(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args =
       fir::runtime::createArguments(builder, loc, runtimeFuncTy, command,
                                     length, errmsg, sourceFile, sourceLine);
-  return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
+  return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }
 
 mlir::Value fir::runtime::genGetPID(fir::FirOpBuilder &builder,
@@ -54,7 +54,7 @@ mlir::Value fir::runtime::genGetPID(fir::FirOpBuilder &builder,
   auto runtimeFunc =
       fir::runtime::getRuntimeFunc<mkRTKey(GetPID)>(loc, builder);
 
-  return builder.create<fir::CallOp>(loc, runtimeFunc).getResult(0);
+  return fir::CallOp::create(builder, loc, runtimeFunc).getResult(0);
 }
 
 mlir::Value fir::runtime::genGetCommandArgument(
@@ -69,7 +69,7 @@ mlir::Value fir::runtime::genGetCommandArgument(
   llvm::SmallVector<mlir::Value> args =
       fir::runtime::createArguments(builder, loc, runtimeFuncTy, number, value,
                                     length, errmsg, sourceFile, sourceLine);
-  return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
+  return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }
 
 mlir::Value fir::runtime::genGetEnvVariable(fir::FirOpBuilder &builder,
@@ -87,7 +87,7 @@ mlir::Value fir::runtime::genGetEnvVariable(fir::FirOpBuilder &builder,
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, name, value, length, trimName, errmsg,
       sourceFile, sourceLine);
-  return builder.create<fir::CallOp>(loc, runtimeFunc, args).getResult(0);
+  return fir::CallOp::create(builder, loc, runtimeFunc, args).getResult(0);
 }
 
 mlir::Value fir::runtime::genGetCwd(fir::FirOpBuilder &builder,
@@ -100,7 +100,7 @@ mlir::Value fir::runtime::genGetCwd(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, cwd, sourceFile, sourceLine);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 mlir::Value fir::runtime::genHostnm(fir::FirOpBuilder &builder,
@@ -113,7 +113,7 @@ mlir::Value fir::runtime::genHostnm(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(2));
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, res, sourceFile, sourceLine);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 void fir::runtime::genPerror(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -123,7 +123,7 @@ void fir::runtime::genPerror(fir::FirOpBuilder &builder, mlir::Location loc,
   mlir::FunctionType runtimeFuncTy = runtimeFunc.getFunctionType();
   llvm::SmallVector<mlir::Value> args =
       fir::runtime::createArguments(builder, loc, runtimeFuncTy, string);
-  builder.create<fir::CallOp>(loc, runtimeFunc, args);
+  fir::CallOp::create(builder, loc, runtimeFunc, args);
 }
 
 mlir::Value fir::runtime::genPutEnv(fir::FirOpBuilder &builder,
@@ -137,7 +137,7 @@ mlir::Value fir::runtime::genPutEnv(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(1));
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, str, strLength, sourceFile, sourceLine);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }
 
 mlir::Value fir::runtime::genUnlink(fir::FirOpBuilder &builder,
@@ -151,5 +151,5 @@ mlir::Value fir::runtime::genUnlink(fir::FirOpBuilder &builder,
       fir::factory::locationToLineNo(builder, loc, runtimeFuncTy.getInput(1));
   llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
       builder, loc, runtimeFuncTy, path, pathLength, sourceFile, sourceLine);
-  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
 }

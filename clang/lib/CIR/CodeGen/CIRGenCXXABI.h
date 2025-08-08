@@ -75,6 +75,11 @@ public:
   /// Emit dtor variants required by this ABI.
   virtual void emitCXXDestructors(const clang::CXXDestructorDecl *d) = 0;
 
+  virtual void emitDestructorCall(CIRGenFunction &cgf,
+                                  const CXXDestructorDecl *dd, CXXDtorType type,
+                                  bool forVirtualBase, bool delegating,
+                                  Address thisAddr, QualType thisTy) = 0;
+
   /// Returns true if the given destructor type should be emitted as a linkonce
   /// delegating thunk, regardless of whether the dtor is defined in this TU or
   /// not.

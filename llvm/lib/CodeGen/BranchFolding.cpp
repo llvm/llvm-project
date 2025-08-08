@@ -2098,8 +2098,14 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
         MBB->insert(Loc, &*DI);
         return;
       }
-
-      DI->setDebugValueUndef();
+      // Deleting a DBG_PHI results in an undef at the referenced DBG_INSTR_REF.
+      if (DI->isDebugPHI()) {
+        DI->eraseFromParent();
+        return;
+      }
+      // Move DBG_LABELs without modifying them. Set DBG_VALUEs undef.
+      if (!DI->isDebugLabel())
+        DI->setDebugValueUndef();
       DI->moveBefore(&*Loc);
     };
 
@@ -2112,12 +2118,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
       // Hoist and kill debug instructions from FBB. After this loop FI points
       // to the next non-debug instruction to hoist (checked in assert after the
       // TBB debug instruction handling code).
-      while (FI->isDebugInstr()) {
-        assert(FI != FE && "Unexpected end of FBB range");
-        MachineBasicBlock::iterator FINext = std::next(FI);
-        HoistAndKillDbgInstr(FI);
-        FI = FINext;
-      }
+      while (FI != FE && FI->isDebugInstr())
+        HoistAndKillDbgInstr(FI++);
 
       // Kill debug instructions before moving.
       if (TI->isDebugInstr()) {
@@ -2125,9 +2127,8 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
         continue;
       }
 
-      // If FI is a debug instruction, skip forward to the next non-debug
-      // instruction.
-      FI = skipDebugInstructionsForward(FI, FE, false);
+      // FI and TI now point to identical non-debug instructions.
+      assert(FI != FE && "Unexpected end of FBB range");
       // Pseudo probes are excluded from the range when identifying foldable
       // instructions, so we don't expect to see one now.
       assert(!TI->isPseudoProbe() && "Unexpected pseudo probe in range");
