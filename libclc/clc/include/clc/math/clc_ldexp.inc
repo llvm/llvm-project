@@ -6,5 +6,5 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_CONST _CLC_DECL _CLC_OVERLOAD __CLC_GENTYPE __clc_ldexp(__CLC_GENTYPE,
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_ldexp(__CLC_GENTYPE,
                                                              __CLC_INTN);

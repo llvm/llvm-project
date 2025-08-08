@@ -6,6 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-_CLC_CONST _CLC_OVERLOAD _CLC_DECL __CLC_GENTYPE FUNCTION(__CLC_GENTYPE a,
+_CLC_OVERLOAD _CLC_CONST _CLC_DECL __CLC_GENTYPE FUNCTION(__CLC_GENTYPE a,
                                                           __CLC_GENTYPE b,
                                                           __CLC_GENTYPE c);
