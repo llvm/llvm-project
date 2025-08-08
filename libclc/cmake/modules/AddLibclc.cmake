@@ -426,7 +426,7 @@ function(add_libclc_builtin_set)
   add_dependencies( ${ARG_PARENT_TARGET} prepare-${ARG_TRIPLE} )
 
   install(
-    FILES ${libclc_builtins_lib}
+    FILES $<TARGET_PROPERTY:prepare-${obj_suffix},TARGET_FILE>
     DESTINATION "${CMAKE_INSTALL_DATADIR}/clc"
   )
 
