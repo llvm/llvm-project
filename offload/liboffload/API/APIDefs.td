@@ -158,8 +158,20 @@ class Etor<string Name, string Desc> {
   string tagged_type;
 }
 
+class EtorTemplate<string Name, string Desc, list<string> TemplateValues> : Etor<Name, Desc> {
+  // Create Etor for every value in template_values by replacing the string
+  // "%TEMPLATE%" with the template value in the name and description
+  list<string> template_values = TemplateValues;
+}
+
 class TaggedEtor<string Name, string Type, string Desc> : Etor<Name, Desc> {
   let tagged_type = Type;
+}
+
+class TaggedEtorTemplate<string Name, string Type, string Desc, list<string> TemplateValues> : TaggedEtor<Name, Type, Desc> {
+  // Create TaggedEtor for every value in template_values by replacing the
+  // string "%TEMPLATE%" with the template value in the name and description
+  list<string> template_values = TemplateValues;
 }
 
 class Enum : APIObject {
@@ -167,6 +179,10 @@ class Enum : APIObject {
   // type for functions where this enum may be used as an output type. If set,
   // all Etor values must be TaggedEtor records
   bit is_typed = 0;
+
+  // This refers to whether the enumerator is used to name bits of a bit field,
+  // where consecutive values are bit-shifted rather than incremented.
+  bit is_bit_field = 0;
 
   list<Etor> etors = [];
 }

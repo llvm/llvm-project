@@ -63,15 +63,48 @@ private:
 
 class EnumValueRec {
 public:
-  explicit EnumValueRec(const Record *rec) : rec(rec) {}
+  explicit EnumValueRec(const Record *rec) : rec(rec) {
+    if (rec->getValue("template_values") == nullptr) {
+      TemplateValues = {};
+    } else {
+      TemplateValues = rec->getValueAsListOfStrings("template_values");
+    }
+  }
   std::string getName() const { return rec->getValueAsString("name").upper(); }
   StringRef getDesc() const { return rec->getValueAsString("desc"); }
   StringRef getTaggedType() const {
     return rec->getValueAsString("tagged_type");
   }
+  const std::vector<StringRef> &getTemplateValues() const {
+    return TemplateValues;
+  }
+  std::string getTemplateName(size_t index) const {
+    if (TemplateValues.empty())
+      return getName();
+
+    return replaceTemplate(getName(), "%TEMPLATE%",
+                           TemplateValues.at(index).upper());
+  }
+  std::string getTemplateDesc(size_t index) const {
+    if (TemplateValues.empty())
+      return getDesc().str();
+
+    return replaceTemplate(getDesc().str(), "%TEMPLATE%",
+                           TemplateValues.at(index));
+  }
 
 private:
   const Record *rec;
+  std::vector<StringRef> TemplateValues;
+  static std::string replaceTemplate(std::string s, StringRef old_token,
+                                     StringRef new_token) {
+    auto pos = s.find(old_token);
+    while (pos != std::string::npos) {
+      s.replace(pos, old_token.size(), new_token);
+      pos = s.find(old_token, pos + new_token.size());
+    }
+    return s;
+  }
 };
 
 class EnumRec {
@@ -91,6 +124,8 @@ public:
   }
 
   bool isTyped() const { return rec->getValueAsBit("is_typed"); }
+
+  bool isBitField() const { return rec->getValueAsBit("is_bit_field"); }
 
 private:
   const Record *rec;

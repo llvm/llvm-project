@@ -40,10 +40,15 @@ static void ProcessEnum(const EnumRec &Enum, raw_ostream &OS) {
                 Enum.getName());
 
   for (const auto &Val : Enum.getValues()) {
-    auto Name = Enum.getEnumValNamePrefix() + "_" + Val.getName();
-    OS << formatv(TAB_1 "case {0}:\n", Name);
-    OS << formatv(TAB_2 "os << \"{0}\";\n", Name);
-    OS << formatv(TAB_2 "break;\n");
+    for (size_t TemplateIndex{0};
+         TemplateIndex == 0 || TemplateIndex < Val.getTemplateValues().size();
+         ++TemplateIndex) {
+      std::string Name{Enum.getEnumValNamePrefix() + "_" +
+                       Val.getTemplateName(TemplateIndex)};
+      OS << formatv(TAB_1 "case {0}:\n", Name);
+      OS << formatv(TAB_2 "os << \"{0}\";\n", Name);
+      OS << formatv(TAB_2 "break;\n");
+    }
   }
 
   OS << TAB_1 "default:\n" TAB_2 "os << \"unknown enumerator\";\n" TAB_2
@@ -67,29 +72,34 @@ inline void printTagged(llvm::raw_ostream &os, const void *ptr, {0} value, size_
                 Enum.getName());
 
   for (const auto &Val : Enum.getValues()) {
-    auto Name = Enum.getEnumValNamePrefix() + "_" + Val.getName();
-    auto Type = Val.getTaggedType();
-    OS << formatv(TAB_1 "case {0}: {{\n", Name);
-    // Special case for strings
-    if (Type == "char[]") {
-      OS << formatv(TAB_2 "printPtr(os, (const char*) ptr);\n");
-    } else {
-      if (Type == "void *")
-        OS << formatv(TAB_2 "void * const * const tptr = (void * "
-                            "const * const)ptr;\n");
-      else
-        OS << formatv(
-            TAB_2 "const {0} * const tptr = (const {0} * const)ptr;\n", Type);
-      // TODO: Handle other cases here
-      OS << TAB_2 "os << (const void *)tptr << \" (\";\n";
-      if (Type.ends_with("*")) {
-        OS << TAB_2 "os << printPtr(os, tptr);\n";
+    for (size_t TemplateIndex{0};
+         TemplateIndex == 0 || TemplateIndex < Val.getTemplateValues().size();
+         ++TemplateIndex) {
+      std::string Name{Enum.getEnumValNamePrefix() + "_" +
+                       Val.getTemplateName(TemplateIndex)};
+      auto Type = Val.getTaggedType();
+      OS << formatv(TAB_1 "case {0}: {{\n", Name);
+      // Special case for strings
+      if (Type == "char[]") {
+        OS << formatv(TAB_2 "printPtr(os, (const char*) ptr);\n");
       } else {
-        OS << TAB_2 "os << *tptr;\n";
+        if (Type == "void *")
+          OS << formatv(TAB_2 "void * const * const tptr = (void * "
+                              "const * const)ptr;\n");
+        else
+          OS << formatv(
+              TAB_2 "const {0} * const tptr = (const {0} * const)ptr;\n", Type);
+        // TODO: Handle other cases here
+        OS << TAB_2 "os << (const void *)tptr << \" (\";\n";
+        if (Type.ends_with("*")) {
+          OS << TAB_2 "os << printPtr(os, tptr);\n";
+        } else {
+          OS << TAB_2 "os << *tptr;\n";
+        }
+        OS << TAB_2 "os << \")\";\n";
       }
-      OS << TAB_2 "os << \")\";\n";
+      OS << formatv(TAB_2 "break;\n" TAB_1 "}\n");
     }
-    OS << formatv(TAB_2 "break;\n" TAB_1 "}\n");
   }
 
   OS << TAB_1 "default:\n" TAB_2 "os << \"unknown enumerator\";\n" TAB_2
