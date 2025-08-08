@@ -9,6 +9,12 @@ add_header_library(
     utils.h
 )
 
+add_header_library(
+  fixedstack
+  HDRS
+    fixedstack.h
+)
+
 add_object_library(
   allocator
   SRCS
@@ -23,4 +29,5 @@ add_object_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.new
     .utils
+    .fixedstack
 )
