@@ -7597,7 +7597,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     if (TM.getOptLevel() == CodeGenOptLevel::None)
       return;
 
-    const AllocaInst *LifetimeObject = dyn_cast<AllocaInst>(I.getArgOperand(1));
+    const AllocaInst *LifetimeObject = dyn_cast<AllocaInst>(I.getArgOperand(0));
     if (!LifetimeObject)
       return;
 

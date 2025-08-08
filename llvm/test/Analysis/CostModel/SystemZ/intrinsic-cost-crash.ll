@@ -23,7 +23,7 @@
 %"class.llvm::Metadata.306.1758.9986.10470.10954.11438.11922.12406.12890.13374.13858.15310.15794.16278.17730.19182.21118.25958.26926.29346.29830.30314.30798.31282.31766.32250.32734.33702.36606.38058.41638" = type { i8, i8, i16, i32 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end(i64, ptr nocapture) #0
+declare void @llvm.lifetime.end(ptr nocapture) #0
 
 ; Function Attrs: nounwind ssp uwtable
 define hidden void @fun(ptr %N, i1 %arg) #1 align 2 {
@@ -42,7 +42,6 @@ for.cond.cleanup:                                 ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
   %indvars.iv190 = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next191, %for.body ]
-  call void @llvm.lifetime.end(i64 16, ptr nonnull null)
   %indvars.iv.next191 = add nuw nsw i64 %indvars.iv190, 1
   %exitcond193 = icmp eq i64 %indvars.iv.next191, %wide.trip.count192
   br i1 %exitcond193, label %for.cond.cleanup, label %for.body
