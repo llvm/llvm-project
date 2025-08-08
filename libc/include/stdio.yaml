@@ -9,6 +9,8 @@ macros:
     macro_value: stdin
   - macro_name: stderr
     macro_value: stderr
+  - macro_name: LIBC_HAS_ANNEX_K
+    macro_header: annex-k-macros.h
 types:
   - type_name: size_t
   - type_name: errno_t
@@ -127,6 +129,7 @@ functions:
       - type: const char *
       - type: const char *
   - name: fopen_s
+    guard: LIBC_HAS_ANNEX_K
     standards:
       - stdc
     return_type: errno_t
