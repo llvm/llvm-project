@@ -253,7 +253,5 @@ def generate_report(
 
 def generate_report_from_files(title, return_code, junit_files):
     return generate_report(
-        title,
-        return_code,
-        [JUnitXml.fromfile(p) for p in junit_files],
+        title, return_code, [JUnitXml.fromfile(p) for p in junit_files], []
     )
