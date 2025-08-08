@@ -1711,7 +1711,7 @@ void SymbolFileNativePDB::CacheFunctionNames() {
     PublicSym32 pub =
         llvm::cantFail(SymbolDeserializer::deserializeAs<PublicSym32>(sym));
     // We only care about mangled names - if the name isn't mangled, it's
-    // already in the full name map
+    // already in the full name map.
     if (!Mangled::IsMangledName(pub.Name))
       continue;
 
