@@ -348,15 +348,11 @@ def LLVM_PtrMaskOp
 // Memory marker intrinsics.
 //
 
-/// Base operation for lifetime markers. The LLVM intrinsics require the size
-/// operand to be an immediate. In MLIR it is encoded as an attribute.
-class LLVM_LifetimeBaseOp<string opName> : LLVM_ZeroResultIntrOp<opName, [1],
-    [DeclareOpInterfaceMethods<PromotableOpInterface>],
-    /*requiresAccessGroup=*/0, /*requiresAliasAnalysis=*/0,
-    /*requiresArgAndResultAttrs=*/0, /*requiresOpBundles=*/0,
-    /*immArgPositions=*/[0], /*immArgAttrNames=*/["size"]> {
-  let arguments = (ins I64Attr:$size, LLVM_AnyPointer:$ptr);
-  let assemblyFormat = "$size `,` $ptr attr-dict `:` qualified(type($ptr))";
+/// Base operation for lifetime markers.
+class LLVM_LifetimeBaseOp<string opName> : LLVM_ZeroResultIntrOp<opName, [0],
+    [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
+  let arguments = (ins LLVM_AnyPointer:$ptr);
+  let assemblyFormat = "$ptr attr-dict `:` qualified(type($ptr))";
 }
 
 def LLVM_LifetimeStartOp : LLVM_LifetimeBaseOp<"lifetime.start">;

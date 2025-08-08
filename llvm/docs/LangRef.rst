@@ -26784,7 +26784,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.start(i64 <size>, ptr captures(none) <ptr>)
+      declare void @llvm.lifetime.start(ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26795,11 +26795,8 @@ object's lifetime.
 Arguments:
 """"""""""
 
-The first argument is a constant integer, which is ignored and will be removed
-in the future.
-
-The second argument is either a pointer to an ``alloca`` instruction or
-a ``poison`` value.
+The argument is either a pointer to an ``alloca`` instruction or a ``poison``
+value.
 
 Semantics:
 """"""""""
@@ -26828,7 +26825,7 @@ Syntax:
 
 ::
 
-      declare void @llvm.lifetime.end(i64 <size>, ptr captures(none) <ptr>)
+      declare void @llvm.lifetime.end(ptr captures(none) <ptr>)
 
 Overview:
 """""""""
@@ -26839,11 +26836,8 @@ The '``llvm.lifetime.end``' intrinsic specifies the end of a
 Arguments:
 """"""""""
 
-The first argument is a constant integer, which is ignored and will be removed
-in the future.
-
-The second argument is either a pointer to an ``alloca`` instruction or
-a ``poison`` value.
+The argument is either a pointer to an ``alloca`` instruction or a ``poison``
+value.
 
 Semantics:
 """"""""""

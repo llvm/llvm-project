@@ -825,11 +825,9 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
   } else {
     switch (M->getStorageDuration()) {
     case SD_Automatic:
-      if (auto *Size = EmitLifetimeStart(
-              CGM.getDataLayout().getTypeAllocSize(Alloca.getElementType()),
-              Alloca.getPointer())) {
+      if (EmitLifetimeStart(Alloca.getPointer())) {
         pushCleanupAfterFullExpr<CallLifetimeEnd>(NormalEHLifetimeMarker,
-                                                  Alloca, Size);
+                                                  Alloca);
       }
       break;
 
@@ -860,11 +858,8 @@ EmitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *M) {
             Block, llvm::BasicBlock::iterator(Block->back())));
       }
 
-      if (auto *Size = EmitLifetimeStart(
-              CGM.getDataLayout().getTypeAllocSize(Alloca.getElementType()),
-              Alloca.getPointer())) {
-        pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, Alloca,
-                                             Size);
+      if (EmitLifetimeStart(Alloca.getPointer())) {
+        pushFullExprCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker, Alloca);
       }
 
       if (OldConditional) {
@@ -6531,13 +6526,10 @@ LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
   llvm::Value *Addr = TempLV.getAddress().getBasePointer();
   llvm::Type *ElTy = ConvertTypeForMem(TempLV.getType());
 
-  llvm::TypeSize Sz = CGM.getDataLayout().getTypeAllocSize(ElTy);
-
-  llvm::Value *LifetimeSize = EmitLifetimeStart(Sz, Addr);
+  EmitLifetimeStart(Addr);
 
   Address TmpAddr(Addr, ElTy, TempLV.getAlignment());
-  Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast(),
-                    LifetimeSize);
+  Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast());
   Args.add(RValue::get(TmpAddr, *this), Ty);
   return TempLV;
 }

@@ -29,11 +29,11 @@ define i32 @test1(ptr nocapture %foobie) nounwind noinline ssp uwtable {
 define void @test2(ptr sret(i8) noalias nocapture %out) nounwind noinline ssp uwtable {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[IN:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[IN]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[IN]])
 ; CHECK-NEXT:    ret void
 ;
   %in = alloca i64
-  call void @llvm.lifetime.start.p0(i64 8, ptr %in)
+  call void @llvm.lifetime.start.p0(ptr %in)
   call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %in, i64 8, i1 false)
   ret void
 }
@@ -42,12 +42,12 @@ define void @test2(ptr sret(i8) noalias nocapture %out) nounwind noinline ssp uw
 define void @test_lifetime_may_alias(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test_lifetime_may_alias(
 ; CHECK-NEXT:    [[LIFETIME:%.*]] = alloca i64, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 8, ptr [[LIFETIME]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LIFETIME]])
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %lifetime = alloca i64
-  call void @llvm.lifetime.start.p0(i64 8, ptr %lifetime)
+  call void @llvm.lifetime.start.p0(ptr %lifetime)
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 8, i1 false)
   ret void
 }
@@ -56,12 +56,12 @@ define void @test_lifetime_may_alias(ptr %src, ptr %dst) {
 define void @test_lifetime_partial_alias_1(ptr noalias %dst) {
 ; CHECK-LABEL: @test_lifetime_partial_alias_1(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]
-  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   %gep = getelementptr i8, ptr %a, i64 8
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %gep, i64 8, i1 false)
   ret void
@@ -71,12 +71,12 @@ define void @test_lifetime_partial_alias_1(ptr noalias %dst) {
 define void @test_lifetime_partial_alias_2(ptr noalias %dst) {
 ; CHECK-LABEL: @test_lifetime_partial_alias_2(
 ; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 16, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 8
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [16 x i8]
-  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   %gep = getelementptr i8, ptr %a, i64 8
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %gep, i64 16, i1 false)
   ret void
@@ -84,4 +84,4 @@ define void @test_lifetime_partial_alias_2(ptr noalias %dst) {
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
