@@ -312,7 +312,7 @@ public:
         break;
       }
 
-      if (Config::getQuarantineSize()) {
+      if (!Config::getQuarantineDisabled() && Config::getQuarantineSize()) {
         QuarantinePos =
             (QuarantinePos + 1) % Max(Config::getQuarantineSize(), 1u);
         if (!Quarantine[QuarantinePos].isValid()) {
@@ -508,14 +508,16 @@ public:
 
   void disableMemoryTagging() EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
-    for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
-      if (Quarantine[I].isValid()) {
-        MemMapT &MemMap = Quarantine[I].MemMap;
-        unmapCallBack(MemMap);
-        Quarantine[I].invalidate();
+    if (!Config::getQuarantineDisabled()) {
+      for (u32 I = 0; I != Config::getQuarantineSize(); ++I) {
+        if (Quarantine[I].isValid()) {
+          MemMapT &MemMap = Quarantine[I].MemMap;
+          unmapCallBack(MemMap);
+          Quarantine[I].invalidate();
+        }
       }
+      QuarantinePos = -1U;
     }
-    QuarantinePos = -1U;
 
     for (CachedBlock &Entry : LRUEntries)
       Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
@@ -575,8 +577,9 @@ private:
     if (!LRUEntries.size() || OldestTime == 0 || OldestTime > Time)
       return;
     OldestTime = 0;
-    for (uptr I = 0; I < Config::getQuarantineSize(); I++)
-      releaseIfOlderThan(Quarantine[I], Time);
+    if (!Config::getQuarantineDisabled())
+      for (uptr I = 0; I < Config::getQuarantineSize(); I++)
+        releaseIfOlderThan(Quarantine[I], Time);
     for (uptr I = 0; I < Config::getEntriesArraySize(); I++)
       releaseIfOlderThan(Entries[I], Time);
   }

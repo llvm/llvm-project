@@ -806,7 +806,7 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
                              ~NestedNameSpecifierDependence::Dependent);
   for (auto *D : E->decls()) {
     if (D->getDeclContext()->isDependentContext() ||
-        isa<UnresolvedUsingValueDecl>(D))
+        isa<UnresolvedUsingValueDecl>(D) || isa<TemplateTemplateParmDecl>(D))
       Deps |= ExprDependence::TypeValueInstantiation;
   }
   // If we have explicit template arguments, check for dependent

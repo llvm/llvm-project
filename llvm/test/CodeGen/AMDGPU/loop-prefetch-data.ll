@@ -77,7 +77,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX1250-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 16
 ; GFX1250-NEXT:    s_cmp_lg_u32 s6, 0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v0, v[2:5], s[0:1]
+; GFX1250-NEXT:    flat_store_b128 v0, v[2:5], s[0:1] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB0_2
@@ -400,9 +400,9 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_add_co_u32 v2, s1, s6, v0
+; GFX12-NEXT:    v_add_co_u32 v2, s1, v0, s6
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, s7, s1
 ; GFX12-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
@@ -438,9 +438,9 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-SPREFETCH-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, s1, s6, v0
+; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, s1, v0, s6
 ; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
+; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, s7, s1
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xf1ff
@@ -490,7 +490,7 @@ define amdgpu_kernel void @copy_flat_divergent(ptr nocapture %d, ptr nocapture r
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1250-NEXT:    flat_store_b128 v[0:1], v[4:7]
+; GFX1250-NEXT:    flat_store_b128 v[0:1], v[4:7] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[0:1], 16, v[0:1]
 ; GFX1250-NEXT:    s_cbranch_scc1 .LBB4_2
@@ -531,9 +531,9 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_add_co_u32 v2, s1, s6, v0
+; GFX12-NEXT:    v_add_co_u32 v2, s1, v0, s6
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
+; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, s7, s1
 ; GFX12-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
@@ -569,9 +569,9 @@ define amdgpu_kernel void @copy_global_divergent(ptr addrspace(1) nocapture %d, 
 ; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-SPREFETCH-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12-SPREFETCH-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, s1, s6, v0
+; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, s1, v0, s6
 ; GFX12-SPREFETCH-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, s7, 0, s1
+; GFX12-SPREFETCH-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, s7, s1
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v0, s1, s4, v0
 ; GFX12-SPREFETCH-NEXT:    v_add_co_u32 v2, vcc_lo, 0xb0, v2
 ; GFX12-SPREFETCH-NEXT:    s_wait_alu 0xf1ff

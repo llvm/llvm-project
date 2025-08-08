@@ -1950,6 +1950,10 @@ public:
       const Function &F,
       SmallVectorImpl<std::pair<StringRef, int64_t>> &LB) const;
 
+  /// Returns true if GEP should not be used to index into vectors for this
+  /// target.
+  LLVM_ABI bool allowVectorElementIndexingUsingGEP() const;
+
 private:
   std::unique_ptr<const TargetTransformInfoImplBase> TTIImpl;
 };

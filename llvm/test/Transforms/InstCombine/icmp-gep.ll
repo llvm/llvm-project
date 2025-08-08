@@ -286,8 +286,7 @@ define i1 @PR8882(i64 %i) {
 
 define i1 @test24_as1(i64 %i) {
 ; CHECK-LABEL: @test24_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[I:%.*]], 65535
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], 1000
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1:%.*]], 1000
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %p1 = getelementptr inbounds i32, ptr addrspace(1) @X_as1, i64 %i
@@ -449,9 +448,9 @@ define i1 @test_gep_eq_no_inbounds(ptr %foo, i64 %i, i64 %j) {
 
 define i1 @test60_as1(ptr addrspace(1) %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_as1(
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[I:%.*]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[I:%.*]] to i16
 ; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i16 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[J:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc nsw i64 [[J:%.*]] to i16
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[GEP1_IDX]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

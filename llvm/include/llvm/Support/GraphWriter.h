@@ -61,8 +61,7 @@ enum Name {
 LLVM_ABI bool DisplayGraph(StringRef Filename, bool wait = true,
                            GraphProgram::Name program = GraphProgram::DOT);
 
-template<typename GraphType>
-class GraphWriter {
+template <typename GraphType, typename Derived> class GraphWriterBase {
   raw_ostream &O;
   const GraphType &G;
   bool RenderUsingHTML = false;
@@ -75,9 +74,15 @@ class GraphWriter {
   DOTTraits DTraits;
 
   static_assert(std::is_pointer_v<NodeRef>,
-                "FIXME: Currently GraphWriter requires the NodeRef type to be "
-                "a pointer.\nThe pointer usage should be moved to "
-                "DOTGraphTraits, and removed from GraphWriter itself.");
+                "FIXME: Currently GraphWriterBase requires the NodeRef type to "
+                "be a pointer.\nThe pointer usage should be moved to "
+                "DOTGraphTraits, and removed from GraphWriterBase itself.");
+
+  // Cast the 'this' pointer to the derived type and return a reference.
+  Derived &getDerived() { return *static_cast<Derived *>(this); }
+  const Derived &getDerived() const {
+    return *static_cast<const Derived *>(this);
+  }
 
   // Writes the edge labels of the node to O and returns true if there are any
   // edge labels not equal to the empty string "".
@@ -118,23 +123,24 @@ class GraphWriter {
   }
 
 public:
-  GraphWriter(raw_ostream &o, const GraphType &g, bool SN) : O(o), G(g) {
+  GraphWriterBase(raw_ostream &o, const GraphType &g, bool SN) : O(o), G(g) {
     DTraits = DOTTraits(SN);
     RenderUsingHTML = DTraits.renderNodesUsingHTML();
   }
+  virtual ~GraphWriterBase() {}
 
   void writeGraph(const std::string &Title = "") {
     // Output the header for the graph...
-    writeHeader(Title);
+    getDerived().writeHeader(Title);
 
     // Emit all of the nodes in the graph...
-    writeNodes();
+    getDerived().writeNodes();
 
     // Output any customizations on the graph
-    DOTGraphTraits<GraphType>::addCustomGraphFeatures(G, *this);
+    DOTGraphTraits<GraphType>::addCustomGraphFeatures(G, getDerived());
 
     // Output the end of the graph
-    writeFooter();
+    getDerived().writeFooter();
   }
 
   void writeHeader(const std::string &Title) {
@@ -166,8 +172,8 @@ public:
   void writeNodes() {
     // Loop over the graph, printing it out...
     for (const auto Node : nodes<GraphType>(G))
-      if (!isNodeHidden(Node))
-        writeNode(Node);
+      if (!getDerived().isNodeHidden(Node))
+        getDerived().writeNode(Node);
   }
 
   bool isNodeHidden(NodeRef Node) { return DTraits.isNodeHidden(Node, G); }
@@ -302,9 +308,9 @@ public:
       if (DTraits.getEdgeSourceLabel(Node, EI).empty())
         edgeidx = -1;
 
-      emitEdge(static_cast<const void*>(Node), edgeidx,
-               static_cast<const void*>(TargetNode), DestPort,
-               DTraits.getEdgeAttributes(Node, EI, G));
+      getDerived().emitEdge(static_cast<const void *>(Node), edgeidx,
+                            static_cast<const void *>(TargetNode), DestPort,
+                            DTraits.getEdgeAttributes(Node, EI, G));
     }
   }
 
@@ -357,10 +363,17 @@ public:
   }
 };
 
-template<typename GraphType>
+template <typename GraphType>
+class GraphWriter : public GraphWriterBase<GraphType, GraphWriter<GraphType>> {
+public:
+  GraphWriter(raw_ostream &o, const GraphType &g, bool SN)
+      : GraphWriterBase<GraphType, GraphWriter<GraphType>>(o, g, SN) {}
+  ~GraphWriter() override {}
+};
+
+template <typename GraphType>
 raw_ostream &WriteGraph(raw_ostream &O, const GraphType &G,
-                        bool ShortNames = false,
-                        const Twine &Title = "") {
+                        bool ShortNames = false, const Twine &Title = "") {
   // Start the graph emission process...
   GraphWriter<GraphType> W(O, G, ShortNames);
 

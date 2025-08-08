@@ -317,29 +317,6 @@ void RuntimeLibcallEmitter::emitGetRuntimeLibcallEnum(raw_ostream &OS) const {
 
 void RuntimeLibcallEmitter::emitGetInitRuntimeLibcallNames(
     raw_ostream &OS) const {
-  OS << "const RTLIB::LibcallImpl "
-        "llvm::RTLIB::RuntimeLibcallsInfo::"
-        "DefaultLibcallImpls[RTLIB::UNKNOWN_LIBCALL + 1] = {\n";
-
-  for (const RuntimeLibcall &LibCall : RuntimeLibcallDefList) {
-    auto I = LibCallToDefaultImpl.find(&LibCall);
-    if (I == LibCallToDefaultImpl.end()) {
-      OS << "  RTLIB::Unsupported,";
-    } else {
-      const RuntimeLibcallImpl *LibCallImpl = I->second;
-      OS << "  ";
-      LibCallImpl->emitEnumEntry(OS);
-      OS << ',';
-    }
-
-    OS << " // ";
-    LibCall.emitEnumEntry(OS);
-    OS << '\n';
-  }
-
-  OS << "  RTLIB::Unsupported\n"
-        "};\n\n";
-
   // Emit the implementation names
   StringToOffsetTable Table(/*AppendZero=*/true,
                             "RTLIB::RuntimeLibcallsInfo::");
@@ -545,13 +522,11 @@ void RuntimeLibcallEmitter::emitSystemRuntimeLibrarySetCalls(
     TopLevelPredicate.emitEndIf(OS);
   }
 
-  // Fallback to the old default set for manual table entries.
-  //
-  // TODO: Remove this when targets have switched to using generated tables by
-  // default.
-  OS << "  initDefaultLibCallImpls();\n";
-
-  OS << "}\n\n";
+  // FIXME: This should be a fatal error. A few contexts are improperly relying
+  // on RuntimeLibcalls constructed with fully unknown triples.
+  OS << "  LLVM_DEBUG(dbgs() << \"no system runtime library applied to target "
+        "\\'\" << TT.str() << \"\\'\\n\");\n"
+        "}\n\n";
 }
 
 void RuntimeLibcallEmitter::run(raw_ostream &OS) {
