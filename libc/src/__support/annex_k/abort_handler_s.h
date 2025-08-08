@@ -14,9 +14,8 @@
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/fflush.h"
-#include "src/stdio/fprintf.h"
-#include "src/stdlib/abort.h"
+#include "src/__support/OSUtil/io.h"
+#include <stdlib.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -24,16 +23,18 @@ LIBC_INLINE static void abort_handler_s(const char *__restrict msg,
                                         [[maybe_unused]] void *__restrict ptr,
                                         errno_t error) {
   libc_errno = error;
-  fprintf(stderr, "abort_handler_s was called in response to a "
+  write_to_stderr("abort_handler_s was called in response to a "
                   "runtime-constraint violation.\n\n");
-  if (msg)
-    fprintf(stderr, "%s\n", msg);
-  fprintf(stderr,
+  if (msg) {
+    write_to_stderr(msg);
+    write_to_stderr("\n");
+  }
+
+  write_to_stderr(
           "\n\nNote to end users: This program was terminated as a result\
       of a bug present in the software. Please reach out to your  \
       software's vendor to get more help.\n");
 
-  fflush(stderr);
   abort();
 }
 

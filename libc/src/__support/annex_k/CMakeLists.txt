@@ -8,9 +8,7 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.macros.attributes
     libc.src.__support.File.file
-    libc.src.stdio.fprintf
-    libc.src.stdio.fflush
-    libc.src.stdlib.abort
+    libc.src.__support.OSUtil.io
 )
 
 add_header_library(
