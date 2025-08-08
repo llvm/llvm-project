@@ -555,7 +555,8 @@ void CommandObjectDisassemble::DoExecute(Args &command,
             cpu_string, features_string, m_exe_ctx, cur_range.GetBaseAddress(),
             limit, m_options.show_mixed,
             m_options.show_mixed ? m_options.num_lines_context : 0, options,
-            result.GetOutputStream(), /*enable_rich_annotations=*/m_options.enable_rich_annotations)) {
+            result.GetOutputStream(),
+            /*enable_rich_annotations=*/m_options.enable_rich_annotations)) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
       if (m_options.symbol_containing_addr != LLDB_INVALID_ADDRESS) {

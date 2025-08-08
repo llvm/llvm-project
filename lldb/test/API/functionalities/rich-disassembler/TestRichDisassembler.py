@@ -2,6 +2,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldb
 
+
 class TestRichDisassembler(TestBase):
     def test_d_original_example_O1(self):
         """

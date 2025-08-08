@@ -323,7 +323,6 @@ public:
   ///    C string with the assembly instructions for this function.
   const char *Disassemble(bool enable_rich_annotations = false);
 
-
   /// Print a description of this frame using the provided frame format.
   ///
   /// \param[out] strm

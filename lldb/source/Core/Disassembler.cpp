@@ -168,15 +168,12 @@ Disassembler::DisassembleBytes(const ArchSpec &arch, const char *plugin_name,
   return disasm_sp;
 }
 
-bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
-                               const char *plugin_name, const char *flavor,
-                               const char *cpu, const char *features,
-                               const ExecutionContext &exe_ctx,
-                               const Address &address, Limit limit,
-                               bool mixed_source_and_assembly,
-                               uint32_t num_mixed_context_lines,
-                               uint32_t options, Stream &strm,
-                               bool enable_rich_annotations) {
+bool Disassembler::Disassemble(
+    Debugger &debugger, const ArchSpec &arch, const char *plugin_name,
+    const char *flavor, const char *cpu, const char *features,
+    const ExecutionContext &exe_ctx, const Address &address, Limit limit,
+    bool mixed_source_and_assembly, uint32_t num_mixed_context_lines,
+    uint32_t options, Stream &strm, bool enable_rich_annotations) {
   if (!exe_ctx.GetTargetPtr())
     return false;
 
@@ -191,10 +188,10 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
   if (bytes_disassembled == 0)
     return false;
 
-  disasm_sp->PrintInstructions(debugger, arch, exe_ctx,
-                             mixed_source_and_assembly,
-                             num_mixed_context_lines, options, strm,
-                             /*enable_rich_annotations=*/enable_rich_annotations);
+  disasm_sp->PrintInstructions(
+      debugger, arch, exe_ctx, mixed_source_and_assembly,
+      num_mixed_context_lines, options, strm,
+      /*enable_rich_annotations=*/enable_rich_annotations);
   return true;
 }
 
@@ -548,8 +545,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
           (options & eOptionShowControlFlowKind) != 0;
       inst->Dump(&strm, max_opcode_byte_size, true, show_bytes,
                  show_control_flow_kind, &exe_ctx, &sc, &prev_sc, nullptr,
-                 address_text_size,
-                 enable_rich_annotations);
+                 address_text_size, enable_rich_annotations);
       strm.EOL();
     } else {
       break;
