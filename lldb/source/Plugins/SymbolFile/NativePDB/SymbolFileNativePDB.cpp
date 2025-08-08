@@ -1690,7 +1690,7 @@ void SymbolFileNativePDB::CacheFunctionNames() {
     m_func_base_names.Append(ConstString(basename), gid);
     m_func_full_names.Append(ConstString(proc.Name), gid);
 
-    // To see if this is a member function, check the type
+    // To see if this is a member function, check the type.
     auto type = m_index->tpi().getType(proc.FunctionType);
     if (type.kind() == LF_MFUNCTION) {
       MemberFunctionRecord mfr;
