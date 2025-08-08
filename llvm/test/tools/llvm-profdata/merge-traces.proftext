@@ -1,8 +1,8 @@
-# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s -o %t-2.profdata
-
 # RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s --text | FileCheck %s --check-prefixes=CHECK,SEEN1,SAMPLE1
 
+# Merge %s twice so it has two traces
 # RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s --text | FileCheck %s --check-prefixes=CHECK,SEEN2,SAMPLE2
+# RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s -o %t-2.profdata
 
 # RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %s %s %s --text | FileCheck %s --check-prefixes=CHECK,SEEN3,SAMPLE2
 # RUN: llvm-profdata merge --temporal-profile-trace-reservoir-size=2 %t-2.profdata %s --text | FileCheck %s --check-prefixes=CHECK,SEEN3,SAMPLE2
