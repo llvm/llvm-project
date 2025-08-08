@@ -85,8 +85,8 @@ define <8 x i8> @test_avgfloor_s(<8 x i16> %a, <8 x i16> %b) {
   ret <8 x i8> %res
 }
 
-declare <8 x i8> @llvm.aarch64.neon.uhadd.v8i8(<8 x i8>, <8 x i8>)
-declare <8 x i8> @llvm.aarch64.neon.shadd.v8i8(<8 x i8>, <8 x i8>)
+declare <8 x i16> @llvm.aarch64.neon.uhadd.v8i16(<8 x i16>, <8 x i16>)
+declare <8 x i16> @llvm.aarch64.neon.shadd.v8i16(<8 x i16>, <8 x i16>)
 declare <8 x i16> @llvm.smin.v8i16(<8 x i16>, <8 x i16>)
 declare <8 x i16> @llvm.smax.v8i16(<8 x i16>, <8 x i16>)
 
