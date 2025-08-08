@@ -39,30 +39,32 @@ void XeGPUDialect::initialize() {
 
 /// Generates instructions to compute offsets for a subgroup identified by
 /// its multidimensional indices (sgId), using the specified subgroup layout
-/// (sgLayout), subgroup data dimensions (sgShape), and the overall data
-/// dimensions (shape).
+/// (sgLayout), subgroup data dimensions (sizePerSg), and the overall data
+/// dimensions (sizePerWg).
 static SmallVector<SmallVector<Value>>
-genOffsetsComputations(OpBuilder &builder, Location loc,
-                       SmallVector<Value> sgId, ArrayRef<int64_t> sgLayout,
-                       ArrayRef<int64_t> sgShape, ArrayRef<int64_t> shape) {
+genOffsetsComputingInsts(OpBuilder &builder, Location loc,
+                         SmallVector<Value> sgId, ArrayRef<int64_t> sgLayout,
+                         ArrayRef<int64_t> sizePerSg,
+                         ArrayRef<int64_t> sizePerWg) {
 
   SmallVector<SmallVector<Value>> offsets;
 
-  // nd local offset, localOffset[i] = sgId[i] * sgShape[i]
+  // nd local offset, localOffset[i] = sgId[i] * sizePerSg[i]
   SmallVector<Value> localOffsets = llvm::map_to_vector(
-      llvm::zip(sgId, sgShape), [&](const auto &t) -> Value {
+      llvm::zip(sgId, sizePerSg), [&](const auto &t) -> Value {
         return builder.createOrFold<index::MulOp>(
             loc, std::get<0>(t),
             builder.createOrFold<arith::ConstantIndexOp>(loc, std::get<1>(t)));
       });
 
-  // distUnit[i] is the minimum value between shape[i] and
-  // sgLayout[i] * sgShape[i]
+  // distUnit[i] is the minimum value between sizePerWg[i] and
+  // sgLayout[i] * sizePerSg[i]
   SmallVector<int64_t> distUnit = llvm::map_to_vector(
-      llvm::zip_equal(shape, computeElementwiseMul(sgLayout, sgShape)),
+      llvm::zip_equal(sizePerWg, computeElementwiseMul(sgLayout, sizePerSg)),
       [](const auto &t) { return std::min(std::get<0>(t), std::get<1>(t)); });
 
-  for (SmallVector<int64_t> unitOffs : StaticTileOffsetRange(shape, distUnit)) {
+  for (SmallVector<int64_t> unitOffs :
+       StaticTileOffsetRange(sizePerWg, distUnit)) {
     SmallVector<Value> base =
         llvm::map_to_vector(unitOffs, [&](int64_t d) -> Value {
           return builder.create<arith::ConstantIndexOp>(loc, d);
@@ -75,7 +77,7 @@ genOffsetsComputations(OpBuilder &builder, Location loc,
         });
 
     SmallVector<Value> mods = llvm::map_to_vector(
-        llvm::zip_equal(adds, shape), [&](const auto &t) -> Value {
+        llvm::zip_equal(adds, sizePerWg), [&](const auto &t) -> Value {
           return builder.createOrFold<index::RemUOp>(
               loc, std::get<0>(t),
               builder.create<arith::ConstantIndexOp>(loc, std::get<1>(t)));
@@ -300,8 +302,8 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   SmallVector<int64_t> sgShape;
   if (auto maybeSgShape = getSgDataAsInt())
     sgShape = maybeSgShape.value();
-  else if (auto ratio = computeShapeRatio(shape, sgLayout))
-    sgShape = ratio.value();
+  else if (auto derivedShape = computeShapeRatio(shape, sgLayout))
+    sgShape = derivedShape.value();
   else
     return failure();
 
@@ -311,7 +313,8 @@ LayoutAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
     return failure();
   SmallVector<Value> sgIds = *maybeIds;
 
-  return genOffsetsComputations(builder, loc, sgIds, sgLayout, sgShape, shape);
+  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
+                                  shape);
 }
 
 //===----------------------------------------------------------------------===//
@@ -401,7 +404,8 @@ SliceAttr::getOffsets(OpBuilder &builder, Location loc, Value linearId,
   SmallVector<Value> sgIds =
       XeGPUDialect::slice(ArrayRef<Value>(*maybeIds), dims);
 
-  return genOffsetsComputations(builder, loc, sgIds, sgLayout, sgShape, shape);
+  return genOffsetsComputingInsts(builder, loc, sgIds, sgLayout, sgShape,
+                                  shape);
 }
 
 //===----------------------------------------------------------------------===//
