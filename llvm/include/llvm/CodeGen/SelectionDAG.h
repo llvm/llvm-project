@@ -1663,6 +1663,10 @@ public:
                                     MachineMemOperand *MMO,
                                     ISD::MemIndexType IndexType,
                                     bool IsTruncating = false);
+  LLVM_ABI SDValue getMaskedSpeculativeLoad(SDVTList VTs, EVT MemVT,
+                                            const SDLoc &dl,
+                                            ArrayRef<SDValue> Ops,
+                                            MachineMemOperand *MMO);
   LLVM_ABI SDValue getMaskedHistogram(SDVTList VTs, EVT MemVT, const SDLoc &dl,
                                       ArrayRef<SDValue> Ops,
                                       MachineMemOperand *MMO,

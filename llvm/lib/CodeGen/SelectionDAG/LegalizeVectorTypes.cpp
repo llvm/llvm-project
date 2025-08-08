@@ -1206,6 +1206,10 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_GATHER:
     SplitVecRes_Gather(cast<MemSDNode>(N), Lo, Hi, /*SplitSETCC*/ true);
     break;
+  case ISD::MASKED_SPECULATIVE_LOAD:
+    SplitVecRes_MASKED_SPECULATIVE_LOAD(cast<MaskedSpeculativeLoadSDNode>(N),
+                                        Lo, Hi);
+    break;
   case ISD::VECTOR_COMPRESS:
     SplitVecRes_VECTOR_COMPRESS(N, Lo, Hi);
     break;
@@ -2564,6 +2568,55 @@ void DAGTypeLegalizer::SplitVecRes_Gather(MemSDNode *N, SDValue &Lo,
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Ch);
+}
+
+void DAGTypeLegalizer::SplitVecRes_MASKED_SPECULATIVE_LOAD(
+    MaskedSpeculativeLoadSDNode *N, SDValue &Lo, SDValue &Hi) {
+
+  SDLoc dl(N);
+  auto [LoDVT, HiDVT] = DAG.GetSplitDestVTs(N->getValueType(0));
+  EVT MaskVT = N->getValueType(1);
+  auto [LoMVT, HiMVT] = DAG.GetSplitDestVTs(MaskVT);
+
+  SDValue Chain = N->getChain();
+  SDValue BasePtr = N->getBasePtr();
+  SDValue Mask = N->getMask();
+  Align Alignment = N->getBaseAlign();
+
+  // Split Mask operand
+  SDValue MaskLo, MaskHi;
+  if (getTypeAction(Mask.getValueType()) == TargetLowering::TypeSplitVector)
+    GetSplitVector(Mask, MaskLo, MaskHi);
+  else
+    std::tie(MaskLo, MaskHi) = DAG.SplitVector(Mask, dl);
+
+  EVT MemoryVT = N->getMemoryVT();
+  bool HiIsEmpty = false;
+  auto [LoMemVT, HiMemVT] =
+      DAG.GetDependentSplitDestVTs(MemoryVT, LoDVT, &HiIsEmpty);
+
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      N->getPointerInfo(), MachineMemOperand::MOLoad,
+      LocationSize::beforeOrAfterPointer(), Alignment, N->getAAInfo(),
+      N->getRanges());
+
+  Lo = DAG.getMaskedSpeculativeLoad(DAG.getVTList(LoDVT, LoMVT, MVT::Other),
+                                    LoMemVT, dl, {Chain, BasePtr, MaskLo}, MMO);
+
+  // Hi half can't just use another speculative load, since that would introduce
+  // a potentially faulting lane in the middle of the overall speculative load.
+  // So generate poison data and an all-false mask.
+  Hi = DAG.getSplat(HiDVT, dl, DAG.getPOISON(HiDVT.getVectorElementType()));
+  SDValue FalseMask = DAG.getSplat(
+      HiMVT, dl, DAG.getConstant(0, dl, HiMVT.getVectorElementType()));
+
+  // We need to combine the split output masks into one for the replacement.
+  SDValue OutMask =
+      DAG.getNode(ISD::CONCAT_VECTORS, dl, MaskVT, Lo.getValue(1), FalseMask);
+
+  // Update mask and chain outputs.
+  ReplaceValueWith(SDValue(N, 1), OutMask);
+  ReplaceValueWith(SDValue(N, 2), Lo.getValue(2));
 }
 
 void DAGTypeLegalizer::SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo,
@@ -4840,6 +4893,10 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::VP_GATHER:
     Res = WidenVecRes_VP_GATHER(cast<VPGatherSDNode>(N));
     break;
+  case ISD::MASKED_SPECULATIVE_LOAD:
+    Res = WidenVecRes_MASKED_SPECULATIVE_LOAD(
+        cast<MaskedSpeculativeLoadSDNode>(N));
+    break;
   case ISD::VECTOR_REVERSE:
     Res = WidenVecRes_VECTOR_REVERSE(N);
     break;
@@ -6464,6 +6521,30 @@ SDValue DAGTypeLegalizer::WidenVecRes_VP_GATHER(VPGatherSDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
   return Res;
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_MASKED_SPECULATIVE_LOAD(
+    MaskedSpeculativeLoadSDNode *N) {
+  EVT DataVT = N->getValueType(0);
+  EVT WideDataVT = TLI.getTypeToTransformTo(*DAG.getContext(), DataVT);
+  SDValue Mask = N->getMask();
+  EVT MaskVT = Mask.getValueType();
+  SDLoc dl(N);
+
+  EVT WideMaskVT =
+      EVT::getVectorVT(*DAG.getContext(), MaskVT.getVectorElementType(),
+                       WideDataVT.getVectorElementCount());
+
+  Mask = DAG.getInsertSubvector(dl, DAG.getPOISON(WideMaskVT), Mask, 0);
+  SDValue Load = DAG.getMaskedSpeculativeLoad(
+      DAG.getVTList(WideDataVT, WideMaskVT, MVT::Other), N->getMemoryVT(), dl,
+      {N->getChain(), N->getBasePtr(), N->getMask()}, N->getMemOperand());
+
+  // Update mask and chain outputs.
+  ReplaceValueWith(SDValue(N, 1), Load.getValue(1));
+  ReplaceValueWith(SDValue(N, 2), Load.getValue(2));
+
+  return Load;
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_ScalarOp(SDNode *N) {

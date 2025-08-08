@@ -585,6 +585,7 @@ BEGIN_TWO_BYTE_PACK()
     friend class MaskedLoadSDNode;
     friend class MaskedGatherSDNode;
     friend class VPGatherSDNode;
+    friend class MaskedSpeculativeLoadSDNode;
     friend class MaskedHistogramSDNode;
 
     uint16_t : NumLSBaseSDNodeBits;
@@ -3096,6 +3097,22 @@ public:
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::EXPERIMENTAL_VECTOR_HISTOGRAM;
+  }
+};
+
+class MaskedSpeculativeLoadSDNode : public MemSDNode {
+public:
+  friend class SelectionDAG;
+
+  MaskedSpeculativeLoadSDNode(unsigned Order, const DebugLoc &DL, SDVTList VTs,
+                              EVT MemVT, MachineMemOperand *MMO)
+      : MemSDNode(ISD::MASKED_SPECULATIVE_LOAD, Order, DL, VTs, MemVT, MMO) {}
+
+  const SDValue &getBasePtr() const { return getOperand(1); }
+  const SDValue &getMask() const { return getOperand(2); }
+
+  static bool classof(const SDNode *N) {
+    return N->getOpcode() == ISD::MASKED_SPECULATIVE_LOAD;
   }
 };
 

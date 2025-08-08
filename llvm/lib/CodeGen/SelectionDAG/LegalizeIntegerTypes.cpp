@@ -91,6 +91,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MGATHER:     Res = PromoteIntRes_MGATHER(cast<MaskedGatherSDNode>(N));
     break;
+  case ISD::MASKED_SPECULATIVE_LOAD:
+    Res = PromoteIntRes_MASKED_SPECULATIVE_LOAD(
+        cast<MaskedSpeculativeLoadSDNode>(N), ResNo);
+    break;
   case ISD::VECTOR_COMPRESS:
     Res = PromoteIntRes_VECTOR_COMPRESS(N);
     break;
@@ -1038,6 +1042,29 @@ SDValue DAGTypeLegalizer::PromoteIntRes_MGATHER(MaskedGatherSDNode *N) {
   // Legalize the chain result - switch anything that used the old chain to
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
+}
+
+SDValue DAGTypeLegalizer::PromoteIntRes_MASKED_SPECULATIVE_LOAD(
+    MaskedSpeculativeLoadSDNode *N, unsigned ResNo) {
+  EVT DataVT = N->getValueType(0);
+  EVT MaskVT = N->getValueType(1);
+
+  if (ResNo == 1)
+    MaskVT = TLI.getTypeToTransformTo(*DAG.getContext(), MaskVT);
+  else {
+    assert(ResNo == 0 && "Tried to legalize unexpected operand");
+    DataVT = TLI.getTypeToTransformTo(*DAG.getContext(), DataVT);
+  }
+
+  SDLoc dl(N);
+  SDValue Res = DAG.getMaskedSpeculativeLoad(
+      DAG.getVTList(DataVT, MaskVT, MVT::Other), N->getMemoryVT(), dl,
+      {N->getChain(), N->getBasePtr(), N->getMask()}, N->getMemOperand());
+
+  // Use the updated mask and chain values.
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  ReplaceValueWith(SDValue(N, 2), Res.getValue(2));
   return Res;
 }
 

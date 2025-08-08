@@ -1558,6 +1558,13 @@ enum NodeType {
   // bits conform to getBooleanContents similar to the SETCC operator.
   GET_ACTIVE_LANE_MASK,
 
+  /// Represents the llvm.masked.speculative.load intrinsic. Performs a load
+  /// where only the first lane may generate a fault; any subsequent lanes will
+  /// suppress the fault. Returns the loaded data and a mask to indicate which
+  /// lanes are valid. Invalid lanes are poison data.
+  /// Operands: Chain, Base, Mask
+  MASKED_SPECULATIVE_LOAD,
+
   // llvm.clear_cache intrinsic
   // Operands: Input Chain, Start Addres, End Address
   // Outputs: Output Chain

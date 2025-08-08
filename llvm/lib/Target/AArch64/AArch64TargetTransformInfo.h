@@ -341,6 +341,23 @@ public:
     return isLegalMaskedGatherScatter(DataType);
   }
 
+  bool isLegalMaskedSpeculativeLoad(Type *DataType, Align Alignment,
+                                    unsigned AddressSpace,
+                                    bool AllTrueMask) const override {
+    // FIXME: If the load is fully aligned to the size of the vector type and
+    //        the mask is all-true, we should be able to use a regular load,
+    //        unless the load is >16B in size and MTE is enabled.
+    // FIXME: Support FixedLength SVE masked loads.
+    // FIXME: Use legalization instead of hardcoding 128b?
+    StructType *RetTy = cast<StructType>(DataType);
+    Type *VecTy = RetTy->getElementType(0);
+    // TODO: Are FF/NF loads available for streaming SVE?
+    if (ST->isSVEAvailable() && VecTy->isScalableTy())
+      return is_contained<unsigned>(
+          {8, 16, 32, 64}, VecTy->getScalarType()->getScalarSizeInBits());
+    return false;
+  }
+
   bool isLegalBroadcastLoad(Type *ElementTy,
                             ElementCount NumElements) const override {
     // Return true if we can generate a `ld1r` splat load instruction.

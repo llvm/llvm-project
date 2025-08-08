@@ -5119,6 +5119,41 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
   setValue(&I, Gather);
 }
 
+void SelectionDAGBuilder::visitMaskedSpeculativeLoad(const CallInst &I) {
+  SDLoc sdl = getCurSDLoc();
+  Value *PtrVal = I.getArgOperand(0);
+  SDValue Ptr = getValue(PtrVal);
+  Align Alignment = cast<ConstantInt>(I.getArgOperand(1))->getAlignValue();
+  SDValue Mask = getValue(I.getArgOperand(2));
+
+  StructType *RetTy = cast<StructType>(I.getType());
+
+  EVT DataVT = EVT::getEVT(RetTy->getElementType(0));
+  EVT MaskVT = EVT::getEVT(RetTy->getElementType(1));
+  AAMDNodes AAInfo = I.getAAMetadata();
+  const MDNode *Ranges = getRangeMetadata(I);
+
+  MemoryLocation ML = MemoryLocation::getAfter(PtrVal, AAInfo);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
+
+  SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  auto MMOFlags = MachineMemOperand::MOLoad;
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrVal), MMOFlags,
+      LocationSize::beforeOrAfterPointer(), Alignment, AAInfo, Ranges);
+
+  const auto &TLI = DAG.getTargetLoweringInfo();
+  const auto &TTI =
+      TLI.getTargetMachine().getTargetTransformInfo(*I.getFunction());
+
+  SDValue Ops[3] = {InChain, Ptr, Mask};
+  SDValue Res = DAG.getMaskedSpeculativeLoad(
+      DAG.getVTList(DataVT, MaskVT, MVT::Other), DataVT, sdl, Ops, MMO);
+  if (AddToChain)
+    PendingLoads.push_back(Res.getValue(2));
+  setValue(&I, Res);
+}
+
 void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   SDLoc dl = getCurSDLoc();
   AtomicOrdering SuccessOrdering = I.getSuccessOrdering();
@@ -6768,6 +6803,9 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::masked_compressstore:
     visitMaskedStore(I, true /* IsCompressing */);
+    return;
+  case Intrinsic::masked_speculative_load:
+    visitMaskedSpeculativeLoad(I);
     return;
   case Intrinsic::powi:
     setValue(&I, ExpandPowI(sdl, getValue(I.getArgOperand(0)),

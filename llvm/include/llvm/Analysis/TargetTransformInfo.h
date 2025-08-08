@@ -840,6 +840,11 @@ public:
   /// Return true if the target supports masked expand load.
   LLVM_ABI bool isLegalMaskedExpandLoad(Type *DataType, Align Alignment) const;
 
+  /// Return true if the target supports masked speculative load.
+  LLVM_ABI bool isLegalMaskedSpeculativeLoad(Type *DataType, Align Alignment,
+                                             unsigned AddressSpace,
+                                             bool AllTrueMask) const;
+
   /// Return true if the target supports strided load.
   LLVM_ABI bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const;
 

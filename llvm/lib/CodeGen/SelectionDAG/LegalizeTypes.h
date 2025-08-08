@@ -341,6 +341,8 @@ private:
   SDValue PromoteIntRes_VP_LOAD(VPLoadSDNode *N);
   SDValue PromoteIntRes_MLOAD(MaskedLoadSDNode *N);
   SDValue PromoteIntRes_MGATHER(MaskedGatherSDNode *N);
+  SDValue PromoteIntRes_MASKED_SPECULATIVE_LOAD(MaskedSpeculativeLoadSDNode *N,
+                                                unsigned ResNo);
   SDValue PromoteIntRes_VECTOR_COMPRESS(SDNode *N);
   SDValue PromoteIntRes_Overflow(SDNode *N);
   SDValue PromoteIntRes_FFREXP(SDNode *N);
@@ -979,6 +981,8 @@ private:
   void SplitVecRes_MLOAD(MaskedLoadSDNode *MLD, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_Gather(MemSDNode *VPGT, SDValue &Lo, SDValue &Hi,
                           bool SplitSETCC = false);
+  void SplitVecRes_MASKED_SPECULATIVE_LOAD(MaskedSpeculativeLoadSDNode *N,
+                                           SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VECTOR_COMPRESS(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_ScalarOp(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitVecRes_VP_SPLAT(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -1084,6 +1088,7 @@ private:
   SDValue WidenVecRes_MLOAD(MaskedLoadSDNode* N);
   SDValue WidenVecRes_MGATHER(MaskedGatherSDNode* N);
   SDValue WidenVecRes_VP_GATHER(VPGatherSDNode* N);
+  SDValue WidenVecRes_MASKED_SPECULATIVE_LOAD(MaskedSpeculativeLoadSDNode *N);
   SDValue WidenVecRes_ScalarOp(SDNode* N);
   SDValue WidenVecRes_Select(SDNode *N);
   SDValue WidenVSELECTMask(SDNode *N);

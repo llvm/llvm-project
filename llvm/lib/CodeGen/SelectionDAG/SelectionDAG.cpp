@@ -10572,6 +10572,34 @@ SDValue SelectionDAG::getMaskedScatter(SDVTList VTs, EVT MemVT, const SDLoc &dl,
   return V;
 }
 
+SDValue SelectionDAG::getMaskedSpeculativeLoad(SDVTList VTs, EVT MemVT,
+                                               const SDLoc &dl,
+                                               ArrayRef<SDValue> Ops,
+                                               MachineMemOperand *MMO) {
+  // FIXME: Should we include extra addressing features like mload?
+  FoldingSetNodeID ID;
+  AddNodeIDNode(ID, ISD::MASKED_SPECULATIVE_LOAD, VTs, Ops);
+  ID.AddInteger(MemVT.getRawBits());
+  ID.AddInteger(getSyntheticNodeSubclassData<MaskedSpeculativeLoadSDNode>(
+      dl.getIROrder(), VTs, MemVT, MMO));
+  ID.AddInteger(MMO->getPointerInfo().getAddrSpace());
+  ID.AddInteger(MMO->getFlags());
+  void *IP = nullptr;
+  if (SDNode *E = FindNodeOrInsertPos(ID, dl, IP)) {
+    cast<MaskedSpeculativeLoadSDNode>(E)->refineAlignment(MMO);
+    return SDValue(E, 0);
+  }
+  auto *N = newSDNode<MaskedSpeculativeLoadSDNode>(
+      dl.getIROrder(), dl.getDebugLoc(), VTs, MemVT, MMO);
+  createOperands(N, Ops);
+
+  CSEMap.InsertNode(N, IP);
+  InsertNode(N);
+  SDValue V(N, 0);
+  NewSDValueDbgMsg(V, "Creating new node: ", this);
+  return V;
+}
+
 SDValue SelectionDAG::getMaskedHistogram(SDVTList VTs, EVT MemVT,
                                          const SDLoc &dl, ArrayRef<SDValue> Ops,
                                          MachineMemOperand *MMO,

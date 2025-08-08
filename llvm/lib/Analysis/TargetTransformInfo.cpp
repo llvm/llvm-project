@@ -526,6 +526,14 @@ bool TargetTransformInfo::isLegalMaskedExpandLoad(Type *DataType,
   return TTIImpl->isLegalMaskedExpandLoad(DataType, Alignment);
 }
 
+bool TargetTransformInfo::isLegalMaskedSpeculativeLoad(Type *DataType,
+                                                       Align Alignment,
+                                                       unsigned AddressSpace,
+                                                       bool AllTrueMask) const {
+  return TTIImpl->isLegalMaskedSpeculativeLoad(DataType, Alignment,
+                                               AddressSpace, AllTrueMask);
+}
+
 bool TargetTransformInfo::isLegalStridedLoadStore(Type *DataType,
                                                   Align Alignment) const {
   return TTIImpl->isLegalStridedLoadStore(DataType, Alignment);

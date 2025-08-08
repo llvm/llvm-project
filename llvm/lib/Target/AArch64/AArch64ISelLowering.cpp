@@ -1161,8 +1161,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                        ISD::INSERT_VECTOR_ELT, ISD::EXTRACT_VECTOR_ELT,
                        ISD::VECREDUCE_ADD, ISD::STEP_VECTOR});
 
-  setTargetDAGCombine(
-      {ISD::MGATHER, ISD::MSCATTER, ISD::EXPERIMENTAL_VECTOR_HISTOGRAM});
+  setTargetDAGCombine({ISD::MGATHER, ISD::MSCATTER,
+                       ISD::EXPERIMENTAL_VECTOR_HISTOGRAM,
+                       ISD::MASKED_SPECULATIVE_LOAD});
 
   setTargetDAGCombine(ISD::FP_EXTEND);
 
@@ -1929,6 +1930,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                     MVT::v4i32,    MVT::v1i64,   MVT::v2i64}) {
       setOperationAction(ISD::MGATHER, VT, Custom);
       setOperationAction(ISD::MSCATTER, VT, Custom);
+      setOperationAction(ISD::MASKED_SPECULATIVE_LOAD, VT, Custom);
     }
 
     for (auto VT : {MVT::nxv2f16, MVT::nxv4f16, MVT::nxv8f16, MVT::nxv2f32,
@@ -6860,6 +6862,44 @@ SDValue AArch64TargetLowering::LowerMLOAD(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getMergeValues({Result, Load.getValue(1)}, DL);
 }
 
+SDValue
+AArch64TargetLowering::LowerMASKED_SPECULATIVE_LOAD(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  auto *SpecLoad = cast<MaskedSpeculativeLoadSDNode>(Op);
+  assert(SpecLoad && "Expected custom lowering of a masked load node");
+  EVT DataVT = Op->getValueType(0);
+  EVT MaskVT = Op->getValueType(1);
+
+  assert(DataVT.isScalableVT() && MaskVT.isScalableVT() &&
+         "Implement fixed-length masked speculative load");
+
+  SDValue Chain = SpecLoad->getOperand(0);
+  SDValue BasePtr = SpecLoad->getOperand(1);
+  SDValue Mask = SpecLoad->getOperand(2);
+
+  // Set FFR to all-true.
+  SDValue SetFFR =
+      DAG.getNode(ISD::INTRINSIC_VOID, DL, MVT::Other, Chain,
+                  DAG.getConstant(Intrinsic::aarch64_sve_setffr, DL, MVT::i64));
+
+  // Perform first-faulting load.
+  SDVTList VTs = DAG.getVTList(DataVT, MVT::Other);
+  SDValue Ops[] = {SetFFR, Mask, BasePtr, DAG.getValueType(DataVT)};
+  SDValue FFLoad = DAG.getNode(AArch64ISD::LDFF1_MERGE_ZERO, DL, VTs, Ops);
+  SDValue FFChain = SDValue(FFLoad.getNode(), 1);
+
+  // Retrieve the FFR.
+  // FIXME: Should this be combined with the input mask here?
+  SDValue RdFF = DAG.getNode(
+      ISD::INTRINSIC_W_CHAIN, DL, {MaskVT, MVT::Other},
+      {FFChain, DAG.getConstant(Intrinsic::aarch64_sve_rdffr_z, DL, MVT::i64),
+       Mask});
+  SDValue RdFFChain = SDValue(RdFF.getNode(), 1);
+
+  return DAG.getMergeValues({FFLoad, RdFF, RdFFChain}, DL);
+}
+
 // Custom lower trunc store for v4i8 vectors, since it is promoted to v4i16.
 static SDValue LowerTruncateVectorStore(SDLoc DL, StoreSDNode *ST,
                                         EVT VT, EVT MemVT,
@@ -7641,6 +7681,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                      !Subtarget->isNeonAvailable()))
       return LowerFixedLengthVectorLoadToSVE(Op, DAG);
     return LowerLOAD(Op, DAG);
+  case ISD::MASKED_SPECULATIVE_LOAD:
+    return LowerMASKED_SPECULATIVE_LOAD(Op, DAG);
   case ISD::ADD:
   case ISD::AND:
   case ISD::SUB:

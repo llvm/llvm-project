@@ -603,6 +603,7 @@ private:
   SDValue LowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerMASKED_SPECULATIVE_LOAD(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerVECTOR_COMPRESS(SDValue Op, SelectionDAG &DAG) const;
 

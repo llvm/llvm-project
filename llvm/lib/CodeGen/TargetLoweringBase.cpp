@@ -784,6 +784,8 @@ void TargetLoweringBase::initActions() {
       setIndexedMaskedStoreAction(IM, VT, Expand);
     }
 
+    setOperationAction(ISD::MASKED_SPECULATIVE_LOAD, VT, Expand);
+
     // Most backends expect to see the node which just returns the value loaded.
     setOperationAction(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS, VT, Expand);
 

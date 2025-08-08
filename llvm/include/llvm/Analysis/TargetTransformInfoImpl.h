@@ -370,6 +370,12 @@ public:
     return false;
   }
 
+  virtual bool isLegalMaskedSpeculativeLoad(Type *DataType, Align Alignment,
+                                            unsigned AddressSpace,
+                                            bool AllTrueMask) const {
+    return false;
+  }
+
   virtual bool isLegalStridedLoadStore(Type *DataType, Align Alignment) const {
     return false;
   }
