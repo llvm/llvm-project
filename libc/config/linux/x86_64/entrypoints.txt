@@ -198,7 +198,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
-    libc.src.stdlib.set_constraint_handler_s
     libc.src.stdlib.srand
     libc.src.stdlib.strfromd
     libc.src.stdlib.strfromf
