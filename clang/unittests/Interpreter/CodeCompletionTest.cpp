@@ -29,8 +29,10 @@ public:
   std::unique_ptr<clang::Interpreter> Interp;
 
   void SetUp() override {
+#ifndef __EMSCRIPTEN__
     if (!HostSupportsJIT())
       GTEST_SKIP();
+#endif
     std::unique_ptr<CompilerInstance> CI = cantFail(CB.CreateCpp());
     this->Interp = cantFail(clang::Interpreter::create(std::move(CI)));
   }
