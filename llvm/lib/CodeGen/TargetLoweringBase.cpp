@@ -1893,6 +1893,7 @@ int TargetLoweringBase::InstructionOpcodeToISD(unsigned Opcode) const {
   case SIToFP:         return ISD::SINT_TO_FP;
   case FPTrunc:        return ISD::FP_ROUND;
   case FPExt:          return ISD::FP_EXTEND;
+  case PtrToAddr:      return ISD::BITCAST;
   case PtrToInt:       return ISD::BITCAST;
   case IntToPtr:       return ISD::BITCAST;
   case BitCast:        return ISD::BITCAST;

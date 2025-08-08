@@ -33,6 +33,10 @@ int main(int, char**) {
     typedef std::multimap<int, double, transparent_less_not_referenceable> M;
     assert(M().count(C2Int{5}) == 0);
   }
+  {
+    using M = std::multimap<int, double, transparent_less_nonempty>;
+    assert(M().count(C2Int{5}) == 0);
+  }
 
   return 0;
 }

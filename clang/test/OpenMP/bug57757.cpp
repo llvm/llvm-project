@@ -46,7 +46,7 @@ void foo() {
 // CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 52
 // CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP1]], i64 48
 // CHECK-NEXT:    [[TMP8:%.*]] = load ptr, ptr [[TMP5]], align 8, !tbaa [[TBAA19:![0-9]+]], !noalias [[META13]]
-// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 4, !tbaa [[TBAA16]], !noalias [[META13]]
+// CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[TMP7]], align 8, !tbaa [[TBAA16]], !noalias [[META13]]
 // CHECK-NEXT:    [[TMP10:%.*]] = load float, ptr [[TMP6]], align 4, !tbaa [[TBAA20:![0-9]+]], !noalias [[META13]]
 // CHECK-NEXT:    tail call void [[TMP8]](i32 noundef [[TMP9]], float noundef [[TMP10]]) #[[ATTR2:[0-9]+]], !noalias [[META13]]
 // CHECK-NEXT:    br label [[DOTOMP_OUTLINED__EXIT]]

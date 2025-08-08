@@ -928,6 +928,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   INSTKEYWORD(fptoui,      FPToUI);
   INSTKEYWORD(fptosi,      FPToSI);
   INSTKEYWORD(inttoptr,    IntToPtr);
+  INSTKEYWORD(ptrtoaddr,   PtrToAddr);
   INSTKEYWORD(ptrtoint,    PtrToInt);
   INSTKEYWORD(bitcast,     BitCast);
   INSTKEYWORD(addrspacecast, AddrSpaceCast);

@@ -817,6 +817,7 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case UIToFP:        return "uitofp";
   case SIToFP:        return "sitofp";
   case IntToPtr:      return "inttoptr";
+  case PtrToAddr:     return "ptrtoaddr";
   case PtrToInt:      return "ptrtoint";
   case BitCast:       return "bitcast";
   case AddrSpaceCast: return "addrspacecast";

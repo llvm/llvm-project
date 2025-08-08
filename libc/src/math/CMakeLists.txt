@@ -563,3 +563,13 @@ add_math_entrypoint_object(ufromfpxf)
 add_math_entrypoint_object(ufromfpxl)
 add_math_entrypoint_object(ufromfpxf16)
 add_math_entrypoint_object(ufromfpxf128)
+
+add_math_entrypoint_object(bf16add)
+add_math_entrypoint_object(bf16addf)
+add_math_entrypoint_object(bf16addl)
+add_math_entrypoint_object(bf16addf128)
+
+add_math_entrypoint_object(bf16sub)
+add_math_entrypoint_object(bf16subf)
+add_math_entrypoint_object(bf16subl)
+add_math_entrypoint_object(bf16subf128)

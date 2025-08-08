@@ -829,6 +829,7 @@ ConstantRange ConstantRange::castOp(Instruction::CastOps CastOp,
   case Instruction::FPTrunc:
   case Instruction::FPExt:
   case Instruction::IntToPtr:
+  case Instruction::PtrToAddr:
   case Instruction::PtrToInt:
   case Instruction::AddrSpaceCast:
     // Conservatively return getFull set.

@@ -731,6 +731,13 @@ public:
         return 0;
       break;
     }
+    case Instruction::PtrToAddr: {
+      unsigned DstSize = Dst->getScalarSizeInBits();
+      assert(DstSize == DL.getAddressSizeInBits(Src));
+      if (DL.isLegalInteger(DstSize))
+        return 0;
+      break;
+    }
     case Instruction::PtrToInt: {
       unsigned DstSize = Dst->getScalarSizeInBits();
       if (DL.isLegalInteger(DstSize) &&
@@ -1436,6 +1443,7 @@ public:
                                                Op2Info, Operands, I);
     }
     case Instruction::IntToPtr:
+    case Instruction::PtrToAddr:
     case Instruction::PtrToInt:
     case Instruction::SIToFP:
     case Instruction::UIToFP:

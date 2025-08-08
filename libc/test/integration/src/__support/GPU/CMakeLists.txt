@@ -27,3 +27,16 @@ add_integration_test(
   LOADER_ARGS
     --threads 64
 )
+
+add_libc_test(
+  fixedstack_test
+  SUITE
+    libc-support-gpu-tests
+  SRCS
+    fixedstack_test.cpp
+  DEPENDS
+    libc.src.__support.GPU.fixedstack
+  LOADER_ARGS
+    --threads 32
+    --blocks 16
+)

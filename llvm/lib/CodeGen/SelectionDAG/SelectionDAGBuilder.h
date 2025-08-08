@@ -574,6 +574,7 @@ private:
   void visitFPToSI(const User &I);
   void visitUIToFP(const User &I);
   void visitSIToFP(const User &I);
+  void visitPtrToAddr(const User &I);
   void visitPtrToInt(const User &I);
   void visitIntToPtr(const User &I);
   void visitBitCast(const User &I);
