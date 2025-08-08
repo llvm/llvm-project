@@ -508,11 +508,9 @@ define i32 @pack_lo_packh_hi_packh_4(i8 zeroext %0, i8 zeroext %1, i8 zeroext %2
 ;
 ; RV64ZBKB-LABEL: pack_lo_packh_hi_packh_4:
 ; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a2, a2, 16
-; RV64ZBKB-NEXT:    slliw a3, a3, 24
 ; RV64ZBKB-NEXT:    packh a0, a0, a1
-; RV64ZBKB-NEXT:    or a0, a0, a2
-; RV64ZBKB-NEXT:    or a0, a0, a3
+; RV64ZBKB-NEXT:    packh a1, a3, a2
+; RV64ZBKB-NEXT:    packw a0, a0, a1
 ; RV64ZBKB-NEXT:    ret
   %a = zext i8 %0 to i32
   %b = zext i8 %1 to i32
