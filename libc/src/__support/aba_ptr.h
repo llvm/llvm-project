@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_TAGGED_POINTER_H
 
 #include "hdr/types/size_t.h"
+#include "src/__support/CPP/atomic.h"
 #include "src/__support/common.h"
 #include "src/__support/threads/sleep.h"
 
@@ -40,24 +41,28 @@ template <class T, bool IsAtomic> struct AbaPtrImpl {
   template <class Op> LIBC_INLINE void transaction(Op &&op) {
     if constexpr (IsAtomic) {
       for (;;) {
+        cpp::AtomicRef<typename Impl::Atomic> ref(impl.atomic);
         typename Impl::Atomic snapshot, next;
-        __atomic_load(&impl.atomic, &snapshot, __ATOMIC_RELAXED);
+        snapshot = ref.load(cpp::MemoryOrder::RELAXED);
         next.ptr = op(snapshot.ptr);
         // Wrapping add for unsigned integers.
         next.tag = snapshot.tag + 1;
-        if (__atomic_compare_exchange(&impl.atomic, &snapshot, &next, true,
-                                      __ATOMIC_ACQ_REL, __ATOMIC_RELAXED))
+        // Redo transaction can be costly, so we use strong version.
+        if (ref.compare_exchange_strong(snapshot, next,
+                                        cpp::MemoryOrder::ACQ_REL,
+                                        cpp::MemoryOrder::RELAXED))
           return;
       }
     } else {
       // Acquire the lock.
-      while (__atomic_exchange_n(&impl.mutex.locked, true, __ATOMIC_ACQUIRE))
-        while (__atomic_load_n(&impl.mutex.locked, __ATOMIC_RELAXED))
+      cpp::AtomicRef<bool> ref(impl.mutex.locked);
+      while (ref.exchange(true, cpp::MemoryOrder::ACQUIRE))
+        while (ref.load(cpp::MemoryOrder::RELAXED))
           LIBC_NAMESPACE::sleep_briefly();
 
       impl.mutex.ptr = op(impl.mutex.ptr);
       // Release the lock.
-      __atomic_store_n(&impl.mutex.locked, false, __ATOMIC_RELEASE);
+      ref.store(false, cpp::MemoryOrder::RELEASE);
     }
   }
 
@@ -68,7 +73,8 @@ template <class T, bool IsAtomic> struct AbaPtrImpl {
       // implementations that uses racy read anyway, we still load the whole
       // word to avoid any complications.
       typename Impl::Atomic snapshot;
-      __atomic_load(&impl.atomic, &snapshot, __ATOMIC_RELAXED);
+      cpp::AtomicRef<typename Impl::Atomic> ref(impl.atomic);
+      snapshot = ref.load(cpp::MemoryOrder::RELAXED);
       return snapshot.ptr;
     } else {
       return impl.mutex.ptr;

@@ -405,6 +405,7 @@ add_header_library(
   DEPENDS
     libc.hdr.types.size_t
     libc.src.__support.common
+    libc.src.__support.CPP.atomic
     libc.src.__support.threads.sleep
 )
 

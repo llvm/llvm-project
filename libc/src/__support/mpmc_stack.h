@@ -42,34 +42,43 @@ public:
   }
   LIBC_INLINE bool push_all(T values[], size_t count) {
     struct Guard {
-      size_t count;
-      Node **allocated;
-      LIBC_INLINE Guard(Node *allocated[]) : count(0), allocated(allocated) {}
+      Node *cursor;
+      LIBC_INLINE Guard() : cursor(nullptr) {}
       LIBC_INLINE ~Guard() {
-        for (size_t i = 0; i < count; ++i)
-          delete allocated[i];
+        while (cursor) {
+          Node *next = cursor->next;
+          delete cursor;
+          cursor = next;
+        }
       }
-      LIBC_INLINE void add(Node *node) { allocated[count++] = node; }
-      LIBC_INLINE void clear() { count = 0; }
+      LIBC_INLINE void advance(Node *node) {
+        node->next = cursor;
+        cursor = node;
+      }
+      LIBC_INLINE Node *finish() {
+        Node *ret = cursor;
+        cursor = nullptr;
+        return ret;
+      }
     };
-    // Variable sized array is a GNU extension.
-    __extension__ Node *allocated[count];
+    Node *first = nullptr;
+    Node *last = nullptr;
     {
-      Guard guard(allocated);
+      Guard guard{};
       for (size_t i = 0; i < count; ++i) {
         AllocChecker ac;
         Node *new_node = new (ac) Node(values[i]);
         if (!ac)
           return false;
-        guard.add(new_node);
-        if (i != 0)
-          new_node->next = allocated[i - 1];
+        if (i == 0)
+          first = new_node;
+        guard.advance(new_node);
       }
-      guard.clear();
+      last = guard.finish();
     }
-    head.transaction([&allocated, count](Node *old_head) {
-      allocated[0]->next = old_head;
-      return allocated[count - 1];
+    head.transaction([first, last](Node *old_head) {
+      first->next = old_head;
+      return last;
     });
     return true;
   }
@@ -82,10 +91,10 @@ public:
         return nullptr;
       }
       node = current_head;
-      node->visitor.fetch_add(1);
+      node->visitor.fetch_add(1, cpp::MemoryOrder::ACQUIRE);
       res = cpp::optional<T>{node->value};
       Node *next = node->next;
-      node->visitor.fetch_sub(1);
+      node->visitor.fetch_sub(1, cpp::MemoryOrder::RELEASE);
       return next;
     });
     // On a successful transaction, a node is popped by us. So we must delete
@@ -95,7 +104,7 @@ public:
     // node.
     if (res) {
       // Spin until the node is no longer in use.
-      while (node->visitor.load() != 0)
+      while (node->visitor.load(cpp::MemoryOrder::RELAXED) != 0)
         LIBC_NAMESPACE::sleep_briefly();
       delete node;
     }
