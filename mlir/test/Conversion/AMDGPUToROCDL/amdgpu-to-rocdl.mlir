@@ -424,9 +424,8 @@ func.func @lds_barrier() {
   // GFX10-NEXT: rocdl.s.barrier
   // GFX11:  llvm.inline_asm has_side_effects asm_dialect = att
   // GFX11-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_waitcnt lgkmcnt(0)\0As_barrier"
-  // GFX12:  rocdl.s.wait.dscnt 0
-  // GFX12-NEXT: rocdl.s.barrier.signal -1
-  // GFX12-NEXT: rocdl.s.barrier.wait -1
+  // GFX12:  llvm.inline_asm has_side_effects asm_dialect = att
+  // GFX12-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_wait_dscnt 0x0\0As_barrier_signal -1\0As_barrier_wait -1"
   amdgpu.lds_barrier
   func.return
 }
