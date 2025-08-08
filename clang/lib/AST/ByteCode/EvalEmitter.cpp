@@ -292,7 +292,7 @@ bool EvalEmitter::emitGetLocal(uint32_t I, const SourceInfo &Info) {
 
   Block *B = getLocal(I);
 
-  if (!CheckLocalLoad(S, OpPC, Pointer(B)))
+  if (!CheckLocalLoad(S, OpPC, B))
     return false;
 
   S.Stk.push<T>(*reinterpret_cast<T *>(B->data()));
