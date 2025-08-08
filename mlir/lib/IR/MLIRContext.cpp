@@ -403,22 +403,25 @@ void MLIRContext::setRemarkEngine(std::unique_ptr<RemarkEngine> engine) {
   getImpl().remarkEngine = std::move(engine);
 }
 
-std::unique_ptr<RemarkEngine> &MLIRContext::getRemarkEngine() {
-  return getImpl().remarkEngine;
+RemarkEngine *MLIRContext::getRemarkEngine() {
+  return getImpl().remarkEngine.get();
 }
 
 void MLIRContext::setupOptimizationRemarks(
-    StringRef outputPath, StringRef outputFormat, bool printAsEmitRemarks,
-    const std::optional<std::string> &categoryPassName,
-    const std::optional<std::string> &categoryMissName,
+    StringRef outputPath, llvm::remarks::Format outputFormat,
+    bool printAsEmitRemarks,
+    const std::optional<std::string> &categoryPassedName,
+    const std::optional<std::string> &categoryMissedName,
     const std::optional<std::string> &categoryAnalysisName,
     const std::optional<std::string> &categoryFailedName) {
   auto engine = std::make_unique<RemarkEngine>(
-      printAsEmitRemarks, categoryPassName, categoryMissName,
+      printAsEmitRemarks, categoryPassedName, categoryMissedName,
       categoryAnalysisName, categoryFailedName);
-  llvm::Error e = engine->initialize(outputPath, outputFormat);
-  if (e)
-    llvm::report_fatal_error("Failed to initialize remark engine");
+  std::string errMsg;
+  if (failed(engine->initialize(outputPath, outputFormat, &errMsg))) {
+    llvm::report_fatal_error(
+        llvm::Twine("Failed to initialize remark engine. Error: ") + errMsg);
+  }
   setRemarkEngine(std::move(engine));
 }
 

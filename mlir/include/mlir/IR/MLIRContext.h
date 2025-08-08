@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Remarks/RemarkFormat.h"
 #include <functional>
 #include <memory>
 #include <vector>
@@ -214,7 +215,7 @@ public:
   DiagnosticEngine &getDiagEngine();
 
   /// Returns the remark engine for this context.
-  std::unique_ptr<RemarkEngine> &getRemarkEngine();
+  RemarkEngine *getRemarkEngine();
 
   /// Returns the storage uniquer used for creating affine constructs.
   StorageUniquer &getAffineUniquer();
@@ -249,11 +250,12 @@ public:
   /// (attributes, operations, types, etc.).
   llvm::hash_code getRegistryHash();
 
-  /// Set up optimization remarks for the context.
+  /// Setup optimization remarks for the context.
   void setupOptimizationRemarks(
-      StringRef outputPath, StringRef outputFormat, bool printAsEmitRemarks,
-      const std::optional<std::string> &categoryPassName = std::nullopt,
-      const std::optional<std::string> &categoryMissName = std::nullopt,
+      StringRef outputPath, llvm::remarks::Format outputFormat,
+      bool printAsEmitRemarks,
+      const std::optional<std::string> &categoryPassedName = std::nullopt,
+      const std::optional<std::string> &categoryMissedName = std::nullopt,
       const std::optional<std::string> &categoryAnalysisName = std::nullopt,
       const std::optional<std::string> &categoryFailedName = std::nullopt);
 

@@ -10,6 +10,7 @@
 #include "mlir/IR/Remarks.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/YAMLParser.h"
 #include "gtest/gtest.h"
@@ -26,8 +27,6 @@ TEST(Remark, TestOutputOptimizationRemark) {
   const auto *pass2Msg = "My another message";
   const auto *pass3Msg = "Do not show this message";
 
-  auto *context = new MLIRContext();
-
   std::string categoryLoopunroll("LoopUnroll");
   std::string categoryInline("Inliner");
   std::string myPassname1("myPass1");
@@ -39,21 +38,26 @@ TEST(Remark, TestOutputOptimizationRemark) {
   std::string yamlFile =
       std::string(tmpPathStorage.data(), tmpPathStorage.size());
   ASSERT_FALSE(yamlFile.empty());
-  Location loc = UnknownLoc::get(context);
 
-  // Setup the remark engine
-  context->setupOptimizationRemarks(yamlFile, "yaml", true, categoryLoopunroll,
-                                    std::nullopt, std::nullopt,
-                                    categoryLoopunroll);
+  {
+    MLIRContext context;
+    Location loc = UnknownLoc::get(&context);
 
-  // Remark 1: pass, category LoopUnroll
-  reportOptimizationPass(loc, categoryLoopunroll, myPassname1) << pass1Msg;
-  // Remark 2: failure, category LoopUnroll
-  reportOptimizationFail(loc, categoryLoopunroll, myPassname2) << pass2Msg;
-  // Remark 3: pass, category Inline (should not be printed)
-  reportOptimizationPass(loc, categoryInline, myPassname1) << pass3Msg;
+    context.printOpOnDiagnostic(true);
+    context.printStackTraceOnDiagnostic(true);
 
-  delete context;
+    // Setup the remark engine
+    context.setupOptimizationRemarks(yamlFile, llvm::remarks::Format::YAML,
+                                     true, categoryLoopunroll, std::nullopt,
+                                     std::nullopt, categoryLoopunroll);
+
+    // Remark 1: pass, category LoopUnroll
+    reportOptimizationPass(loc, categoryLoopunroll, myPassname1) << pass1Msg;
+    // Remark 2: failure, category LoopUnroll
+    reportOptimizationFail(loc, categoryLoopunroll, myPassname2) << pass2Msg;
+    // Remark 3: pass, category Inline (should not be printed)
+    reportOptimizationPass(loc, categoryInline, myPassname1) << pass3Msg;
+  }
 
   // Read the file
   auto bufferOrErr = MemoryBuffer::getFile(yamlFile);
@@ -81,7 +85,6 @@ TEST(Remark, TestOutputOptimizationRemark) {
 
 TEST(Remark, TestNoOutputOptimizationRemark) {
   const auto *pass1Msg = "My message";
-  auto *context = new MLIRContext();
 
   std::string categoryFailName("myImportantCategory");
   std::string myPassname1("myPass1");
@@ -97,17 +100,53 @@ TEST(Remark, TestNoOutputOptimizationRemark) {
   if (ec) {
     FAIL() << "Failed to remove file " << yamlFile << ": " << ec.message();
   }
-
-  Location loc = UnknownLoc::get(context);
-  reportOptimizationFail(loc, categoryFailName, myPassname1) << pass1Msg;
-
-  delete context;
-
+  {
+    MLIRContext context;
+    Location loc = UnknownLoc::get(&context);
+    reportOptimizationFail(loc, categoryFailName, myPassname1) << pass1Msg;
+  }
   // No setup, so no output file should be created
   // check!
   bool fileExists = llvm::sys::fs::exists(yamlFile);
   EXPECT_FALSE(fileExists)
       << "Expected no YAML file to be created without setupOptimizationRemarks";
+}
+
+TEST(Remark, TestOutputOptimizationRemarkDiagnostic) {
+  const auto *pass1Msg = "My message";
+
+  std::string categoryLoopunroll("LoopUnroll");
+  std::string myPassname1("myPass1");
+  std::string funcName("myFunc");
+  SmallString<64> tmpPathStorage;
+  sys::fs::createUniquePath("remarks-%%%%%%.yaml", tmpPathStorage,
+                            /*MakeAbsolute=*/true);
+  std::string yamlFile =
+      std::string(tmpPathStorage.data(), tmpPathStorage.size());
+  ASSERT_FALSE(yamlFile.empty());
+  std::string seenMsg;
+  {
+    MLIRContext context;
+    Location loc = UnknownLoc::get(&context);
+
+    context.printOpOnDiagnostic(true);
+    context.printStackTraceOnDiagnostic(true);
+
+    // Register a handler that captures the diagnostic.
+    ScopedDiagnosticHandler handler(&context, [&](Diagnostic &diag) {
+      seenMsg = diag.str();
+      return success();
+    });
+
+    // Setup the remark engine
+    context.setupOptimizationRemarks(yamlFile, llvm::remarks::Format::YAML,
+                                     true, categoryLoopunroll, std::nullopt,
+                                     std::nullopt, categoryLoopunroll);
+
+    // Remark 1: pass, category LoopUnroll
+    reportOptimizationPass(loc, categoryLoopunroll, myPassname1) << pass1Msg;
+  }
+  EXPECT_EQ(seenMsg, pass1Msg);
 }
 
 } // namespace

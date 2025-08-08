@@ -27,7 +27,7 @@ namespace mlir {
 /// Defines different remark kinds that can be used to categorize remarks.
 enum class RemarkKind {
   OptimizationRemarkUnknown = 0,
-  OptimizationRemarkPass,
+  OptimizationRemarkPassed,
   OptimizationRemarkMissed,
   OptimizationRemarkFailure,
   OptimizationRemarkAnalysis,
@@ -143,7 +143,7 @@ private:
     switch (remarkKind) {
     case RemarkKind::OptimizationRemarkUnknown:
       return llvm::DiagnosticKind::DK_Generic;
-    case RemarkKind::OptimizationRemarkPass:
+    case RemarkKind::OptimizationRemarkPassed:
       return llvm::DiagnosticKind::DK_OptimizationRemark;
     case RemarkKind::OptimizationRemarkMissed:
       return llvm::DiagnosticKind::DK_OptimizationRemarkMissed;
@@ -156,51 +156,19 @@ private:
   }
 };
 
-// clang-format off
-template <class RemarkT>
-decltype(auto) operator<<(
-    RemarkT &&r,
-    std::enable_if_t<std::is_base_of_v<RemarkBase,
-                                       std::remove_reference_t<RemarkT>>,
-                     StringRef>
-        s) {
+inline RemarkBase &operator<<(RemarkBase &r, StringRef s) {
   r.insert(s);
-  return std::forward<RemarkT>(r);
+  return r;
 }
-
-template <class RemarkT>
-decltype(auto) operator<<(
-    RemarkT &&r,
-    std::enable_if_t<std::is_base_of_v<RemarkBase,
-                                       std::remove_reference_t<RemarkT>>,
-                     RemarkBase::RemarkKeyValue>
-        a) {
-  r.insert(std::move(a));
-  return std::forward<RemarkT>(r);
+inline RemarkBase &&operator<<(RemarkBase &&r, StringRef s) {
+  r.insert(s);
+  return std::move(r);
 }
-
-template <class RemarkT>
-decltype(auto) operator<<(
-    RemarkT &&r,
-    std::enable_if_t<std::is_base_of_v<RemarkBase,
-                                       std::remove_reference_t<RemarkT>>,
-                     RemarkBase::SetIsVerbose>
-        v) {
-  r.insert(v);
-  return std::forward<RemarkT>(r);
+inline RemarkBase &operator<<(RemarkBase &r,
+                              const RemarkBase::RemarkKeyValue &kv) {
+  r.insert(kv);
+  return r;
 }
-
-template <class RemarkT>
-decltype(auto) operator<<(
-    RemarkT &&r,
-    std::enable_if_t<std::is_base_of_v<RemarkBase,
-                                       std::remove_reference_t<RemarkT>>,
-                     RemarkBase::SetExtraArgs>
-        ea) {
-  r.insert(ea);
-  return std::forward<RemarkT>(r);
-}
-// clang-format on
 
 //===----------------------------------------------------------------------===//
 // Shorthand aliases for different kinds of remarks.
@@ -209,8 +177,9 @@ decltype(auto) operator<<(
 template <RemarkKind K, DiagnosticSeverity S>
 class OptRemarkBase final : public RemarkBase {
 public:
-  explicit OptRemarkBase(Location loc, StringRef passName, StringRef remarkName)
-      : RemarkBase(K, S, passName.data(), remarkName, loc) {}
+  explicit OptRemarkBase(Location loc, StringRef passName,
+                         StringRef categoryName)
+      : RemarkBase(K, S, passName.data(), categoryName, loc) {}
 
   bool isEnabled() const override { return true; }
 };
@@ -218,7 +187,7 @@ public:
 using OptRemarkAnalysis = OptRemarkBase<RemarkKind::OptimizationRemarkAnalysis,
                                         DiagnosticSeverity::Remark>;
 
-using OptRemarkPass = OptRemarkBase<RemarkKind::OptimizationRemarkPass,
+using OptRemarkPass = OptRemarkBase<RemarkKind::OptimizationRemarkPassed,
                                     DiagnosticSeverity::Remark>;
 
 using OptRemarkMissed = OptRemarkBase<RemarkKind::OptimizationRemarkMissed,
@@ -241,8 +210,8 @@ class RemarkEngine;
 class InFlightRemark {
 public:
   explicit InFlightRemark(RemarkBase *diag) : remark(diag) {}
-  InFlightRemark(RemarkEngine &eng, RemarkBase *diag)
-      : owner(&eng), remark(diag) {}
+  InFlightRemark(RemarkEngine &eng, std::unique_ptr<RemarkBase> diag)
+      : owner(&eng), remark(std::move(diag)) {}
 
   InFlightRemark() = default; // empty ctor
 
@@ -287,7 +256,8 @@ public:
 
 class RemarkEngine {
 private:
-  /// The category for missed optimization remarks.
+  /// Regex that filters missed optimization remarks: only matching one are
+  /// reported.
   std::optional<llvm::Regex> missFilter;
   /// The category for passed optimization remarks.
   std::optional<llvm::Regex> passFilter;
@@ -299,16 +269,17 @@ private:
   std::unique_ptr<llvm::ToolOutputFile> remarksFile;
   /// The MLIR remark streamer that will be used to emit the remarks.
   std::unique_ptr<MLIRRemarkStreamer> remarkStreamer;
+  /// The LLVM remark streamer that will be used to emit the remarks.
   std::unique_ptr<llvm::remarks::RemarkStreamer> llvmRemarkStreamer;
   /// When is enabled, engine also prints remarks as mlir::emitRemarks.
-  bool printAsEmitRemarks;
+  bool printAsEmitRemarks = false;
+
   /// The main MLIR remark streamer that will be used to emit the remarks.
   MLIRRemarkStreamer *getLLVMRemarkStreamer() { return remarkStreamer.get(); }
   const MLIRRemarkStreamer *getLLVMRemarkStreamer() const {
     return remarkStreamer.get();
   }
-  void
-  setLLVMRemarkStreamer(std::unique_ptr<MLIRRemarkStreamer> remarkStreamer) {
+  void setRemarkStreamer(std::unique_ptr<MLIRRemarkStreamer> remarkStreamer) {
     this->remarkStreamer = std::move(remarkStreamer);
   }
 
@@ -361,8 +332,12 @@ private:
                 bool (RemarkEngine::*isEnabled)(StringRef) const);
 
 public:
+  /// Default constructor is deleted, use the other constructor.
   RemarkEngine() = delete;
-  /// Constructs Remark engine with optional category names
+
+  /// Constructs Remark engine with optional category names. If a category
+  /// name is not provided, it is not enabled. The category names are used to
+  /// filter the remarks that are emitted.
   RemarkEngine(bool printAsEmitRemarks,
                std::optional<std::string> categoryPassName = std::nullopt,
                std::optional<std::string> categoryMissName = std::nullopt,
@@ -374,7 +349,8 @@ public:
   ~RemarkEngine();
 
   /// Setup the remark engine with the given output path and format.
-  llvm::Error initialize(StringRef outputPath, StringRef outputFormat);
+  LogicalResult initialize(StringRef outputPath, llvm::remarks::Format fmt,
+                           std::string *errMsg);
 
   /// Report a diagnostic remark.
   void report(const RemarkBase &&diag);
@@ -406,14 +382,13 @@ using Suggestion = RemarkBase::RemarkKeyValue;
 inline Suggestion suggest(StringRef txt) { return {"Suggestion", txt}; }
 
 template <typename Fn, typename... Args>
-[[nodiscard]] inline InFlightRemark withEngine(Fn fn, Location loc,
-                                               Args &&...args) {
+inline InFlightRemark withEngine(Fn fn, Location loc, Args &&...args) {
   MLIRContext *ctx = loc->getContext();
 
-  auto &enginePtr = ctx->getRemarkEngine();
+  RemarkEngine *enginePtr = ctx->getRemarkEngine();
 
-  if (RemarkEngine *eng = enginePtr.get())
-    return (eng->*fn)(loc, std::forward<Args>(args)...);
+  if (enginePtr)
+    return (enginePtr->*fn)(loc, std::forward<Args>(args)...);
 
   return {};
 }

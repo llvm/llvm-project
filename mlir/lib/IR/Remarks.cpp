@@ -84,14 +84,14 @@ std::string RemarkBase::getMsg() const {
   for (const RemarkBase::RemarkKeyValue &arg :
        llvm::make_range(args.begin(), args.end()))
     rss << arg.val;
-  return str;
+  return rss.str();
 }
 
 llvm::remarks::Type RemarkBase::getRemarkType() const {
   switch (remarkKind) {
   case RemarkKind::OptimizationRemarkUnknown:
     return llvm::remarks::Type::Unknown;
-  case RemarkKind::OptimizationRemarkPass:
+  case RemarkKind::OptimizationRemarkPassed:
     return llvm::remarks::Type::Passed;
   case RemarkKind::OptimizationRemarkMissed:
     return llvm::remarks::Type::Missed;
@@ -129,10 +129,8 @@ llvm::remarks::Remark RemarkBase::generateRemark() const {
 //===----------------------------------------------------------------------===//
 
 InFlightRemark::~InFlightRemark() {
-  if (remark)
-    if (owner) {
-      owner->report(std::move(*remark));
-    }
+  if (remark && owner)
+    owner->report(std::move(*remark));
   owner = nullptr;
 }
 
@@ -142,16 +140,19 @@ InFlightRemark::~InFlightRemark() {
 
 template <typename RemarkT, typename... Args>
 InFlightRemark RemarkEngine::makeRemark(Args &&...args) {
-  return InFlightRemark(*this, new RemarkT(std::forward<Args>(args)...));
+  static_assert(std::is_base_of_v<RemarkBase, RemarkT>,
+                "RemarkT must derive from RemarkBase");
+  return InFlightRemark(*this,
+                        std::make_unique<RemarkT>(std::forward<Args>(args)...));
 }
 
 template <typename RemarkT>
 InFlightRemark
 RemarkEngine::emitIfEnabled(Location loc, StringRef passName,
-                            StringRef category,
+                            StringRef categoryName,
                             bool (RemarkEngine::*isEnabled)(StringRef) const) {
-  return (this->*isEnabled)(category)
-             ? makeRemark<RemarkT>(loc, category, passName)
+  return (this->*isEnabled)(categoryName)
+             ? makeRemark<RemarkT>(loc, categoryName, passName)
              : InFlightRemark{};
 }
 
@@ -173,30 +174,30 @@ bool RemarkEngine::isFailedOptRemarkEnabled(StringRef categoryName) const {
 
 InFlightRemark RemarkEngine::emitOptimizationRemark(Location loc,
                                                     StringRef passName,
-                                                    StringRef category) {
-  return emitIfEnabled<OptRemarkPass>(loc, passName, category,
+                                                    StringRef categoryName) {
+  return emitIfEnabled<OptRemarkPass>(loc, passName, categoryName,
                                       &RemarkEngine::isPassedOptRemarkEnabled);
 }
 
-InFlightRemark RemarkEngine::emitOptimizationRemarkMiss(Location loc,
-                                                        StringRef passName,
-                                                        StringRef category) {
+InFlightRemark
+RemarkEngine::emitOptimizationRemarkMiss(Location loc, StringRef passName,
+                                         StringRef categoryName) {
   return emitIfEnabled<OptRemarkMissed>(
-      loc, passName, category, &RemarkEngine::isMissedOptRemarkEnabled);
+      loc, passName, categoryName, &RemarkEngine::isMissedOptRemarkEnabled);
 }
 
-InFlightRemark RemarkEngine::emitOptimizationRemarkFailure(Location loc,
-                                                           StringRef passName,
-                                                           StringRef category) {
+InFlightRemark
+RemarkEngine::emitOptimizationRemarkFailure(Location loc, StringRef passName,
+                                            StringRef categoryName) {
   return emitIfEnabled<OptRemarkFailure>(
-      loc, passName, category, &RemarkEngine::isFailedOptRemarkEnabled);
+      loc, passName, categoryName, &RemarkEngine::isFailedOptRemarkEnabled);
 }
 
 InFlightRemark
 RemarkEngine::emitOptimizationRemarkAnalysis(Location loc, StringRef passName,
-                                             StringRef category) {
+                                             StringRef categoryName) {
   return emitIfEnabled<OptRemarkAnalysis>(
-      loc, passName, category, &RemarkEngine::isAnalysisOptRemarkEnabled);
+      loc, passName, categoryName, &RemarkEngine::isAnalysisOptRemarkEnabled);
 }
 
 //===----------------------------------------------------------------------===//
@@ -221,9 +222,8 @@ void RemarkEngine::report(const RemarkBase &&diag) {
     getLLVMRemarkStreamer()->streamOptimizationRemark(diag);
 
   // Print using MLIR's diagnostic
-  if (printAsEmitRemarks) {
+  if (printAsEmitRemarks)
     emitRemark(diag.getLocation(), diag.getMsg());
-  }
 }
 
 RemarkEngine::~RemarkEngine() {
@@ -232,49 +232,46 @@ RemarkEngine::~RemarkEngine() {
     remarksFile.reset();
   }
   setMainRemarkStreamer(nullptr);
-  setLLVMRemarkStreamer(nullptr);
+  setRemarkStreamer(nullptr);
 }
 
-llvm::Error RemarkEngine::initialize(StringRef outputPath,
-                                     StringRef outputFormat) {
-  if (remarksFile) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "RemarkEngine is already initialized with an output file");
+LogicalResult RemarkEngine::initialize(StringRef outputPath,
+                                       llvm::remarks::Format fmt,
+                                       std::string *errMsg) {
+  auto fail = [&](llvm::StringRef msg) {
+    if (errMsg)
+      *errMsg = msg.str();
+    return failure();
+  };
+
+  if (remarksFile)
+    return fail("RemarkEngine is already initialized with an output file.");
+
+  llvm::sys::fs::OpenFlags flags = (fmt == llvm::remarks::Format::YAML)
+                                       ? llvm::sys::fs::OF_Text
+                                       : llvm::sys::fs::OF_None;
+  std::error_code ec;
+  remarksFile = std::make_unique<llvm::ToolOutputFile>(outputPath, ec, flags);
+
+  if (ec) {
+    remarksFile.reset();
+    return fail(
+        ("Failed to open remarks file '" + outputPath + "': " + ec.message())
+            .str());
   }
 
-  auto fFormatOrErr = llvm::remarks::parseFormat(outputFormat);
-  if (!fFormatOrErr) {
-    return fFormatOrErr.takeError();
-  }
-  llvm::remarks::Format fFormat = *fFormatOrErr;
-  std::error_code errCode;
-  llvm::sys::fs::OpenFlags fFlags = (fFormat == llvm::remarks::Format::YAML)
-                                        ? llvm::sys::fs::OF_Text
-                                        : llvm::sys::fs::OF_None;
-
-  remarksFile =
-      std::make_unique<llvm::ToolOutputFile>(outputPath, errCode, fFlags);
-  if (errCode) {
-    remarksFile.reset(); // force an empty optional
-    return llvm::createStringError(errCode, "Failed to open remarks file");
+  auto serializer = llvm::remarks::createRemarkSerializer(
+      fmt, llvm::remarks::SerializerMode::Separate, remarksFile->os());
+  if (!serializer) {
+    remarksFile.reset();
+    return fail(llvm::toString(serializer.takeError()));
   }
 
-  auto remarkSerializer = llvm::remarks::createRemarkSerializer(
-      *fFormatOrErr, llvm::remarks::SerializerMode::Separate,
-      remarksFile->os());
-  if (llvm::Error err = remarkSerializer.takeError()) {
-    return err;
-  }
-
-  // Create the main remark streamer.
   setMainRemarkStreamer(std::make_unique<llvm::remarks::RemarkStreamer>(
-      std::move(*remarkSerializer), outputFormat));
-
-  setLLVMRemarkStreamer(
+      std::move(*serializer), outputPath));
+  setRemarkStreamer(
       std::make_unique<MLIRRemarkStreamer>(*getMainRemarkStreamer()));
-
-  return llvm::ErrorSuccess();
+  return success();
 }
 
 RemarkEngine::RemarkEngine(bool printAsEmitRemarks,
