@@ -63,7 +63,7 @@ template <class T, bool IsAtomic> struct AbaPtrImpl {
 
   LIBC_INLINE T *get() const {
     if constexpr (IsAtomic) {
-      // Weak micro-architectures typically reguards simultaneous partial word
+      // Weak micro-architectures typically regards simultaneous partial word
       // loading and full word loading as a race condition. While there are
       // implementations that uses racy read anyway, we still load the whole
       // word to avoid any complications.
