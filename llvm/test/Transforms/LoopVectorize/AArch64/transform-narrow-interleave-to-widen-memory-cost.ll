@@ -383,15 +383,15 @@ define void @single_fmul_used_by_each_member(ptr noalias %A, ptr noalias %B, ptr
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX24:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT25:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP45:%.*]] = getelementptr double, ptr [[A]], i64 [[INDEX24]]
-; CHECK-NEXT:    [[TMP47:%.*]] = load double, ptr [[TMP45]], align 8
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[TMP47]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x double> [[BROADCAST_SPLATINSERT]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = load <2 x double>, ptr [[TMP45]], align 8
 ; CHECK-NEXT:    [[TMP48:%.*]] = fmul <2 x double> [[BROADCAST_SPLAT]], splat (double 5.000000e+00)
 ; CHECK-NEXT:    [[TMP49:%.*]] = getelementptr { double, double }, ptr [[B]], i64 [[INDEX24]]
-; CHECK-NEXT:    store <2 x double> [[TMP48]], ptr [[TMP49]], align 8
+; CHECK-NEXT:    [[TMP52:%.*]] = shufflevector <2 x double> [[TMP48]], <2 x double> [[TMP48]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[INTERLEAVED_VEC26:%.*]] = shufflevector <4 x double> [[TMP52]], <4 x double> poison, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC26]], ptr [[TMP49]], align 8
 ; CHECK-NEXT:    [[TMP50:%.*]] = getelementptr { double, double }, ptr [[C]], i64 [[INDEX24]]
-; CHECK-NEXT:    store <2 x double> [[TMP48]], ptr [[TMP50]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT25]] = add nuw i64 [[INDEX24]], 1
+; CHECK-NEXT:    store <4 x double> [[INTERLEAVED_VEC26]], ptr [[TMP50]], align 8
+; CHECK-NEXT:    [[INDEX_NEXT25]] = add nuw i64 [[INDEX24]], 2
 ; CHECK-NEXT:    [[TMP51:%.*]] = icmp eq i64 [[INDEX_NEXT25]], [[N_VEC23]]
 ; CHECK-NEXT:    br i1 [[TMP51]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
