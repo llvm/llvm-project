@@ -2508,7 +2508,9 @@ bool SchedGroup::canAddSU(SUnit &SU) const {
     ++E;
 
   // Return true if all of the bundled MIs can be added to this group.
-  return std::all_of(B, E, [this](MachineInstr &MI) { return canAddMI(MI); });
+  return std::all_of(B, E, [this](MachineInstr &MI) {
+    return (MI.isMetaInstruction()) || canAddMI(MI);
+  });
 }
 
 void SchedGroup::initSchedGroup() {
