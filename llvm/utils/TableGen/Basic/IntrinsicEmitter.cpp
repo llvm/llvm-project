@@ -561,7 +561,8 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID,
 } // getIntrinsicArgAttributeSet
 )";
 
-  // Compute unique function attribute sets.
+  // Compute unique function attribute sets. Note that ID 255 will be used for
+  // intrinsics with no function attributes.
   std::map<const CodeGenIntrinsic *, unsigned, FnAttributeComparator>
       UniqFnAttributes;
   OS << R"(
@@ -570,6 +571,8 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
     default: llvm_unreachable("Invalid attribute set number");)";
 
   for (const CodeGenIntrinsic &Int : Ints) {
+    if (!hasFnAttributes(Int))
+      continue;
     unsigned ID = UniqFnAttributes.size();
     if (!UniqFnAttributes.try_emplace(&Int, ID).second)
       continue;
@@ -621,9 +624,7 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
 
 static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
 
-  // Compute the maximum number of attribute arguments and the map. For function
-  // attributes, we only consider whether the intrinsics has any function
-  // arguments or not.
+  // Compute unique argument attributes.
   std::map<const CodeGenIntrinsic *, unsigned, AttributeComparator>
       UniqAttributes;
   for (const CodeGenIntrinsic &Int : Ints) {
@@ -631,86 +632,153 @@ static constexpr uint16_t IntrinsicsToAttributesMap[] = {)";
     UniqAttributes.try_emplace(&Int, ID);
   }
 
-  // Emit an array of AttributeList.  Most intrinsics will have at least one
-  // entry, for the function itself (index ~1), which is usually nounwind.
-  for (const CodeGenIntrinsic &Int : Ints) {
-    uint16_t FnAttrIndex = UniqFnAttributes[&Int];
-    OS << formatv("\n    {} << 8 | {}, // {}", FnAttrIndex,
-                  UniqAttributes[&Int], Int.Name);
-  }
+  constexpr uint16_t NoFunctionAttrsID = 255;
+  if (UniqAttributes.size() > 256)
+    PrintFatalError("Too many unique argument attributes for table!");
+  // Note, ID 255 is used to indicate no function attributes.
+  if (UniqFnAttributes.size() > 255)
+    PrintFatalError("Too many unique function attributes for table!");
 
   // Assign a 16-bit packed ID for each intrinsic. The lower 8-bits will be its
   // "argument attribute ID" (index in UniqAttributes) and upper 8 bits will be
   // its "function attribute ID" (index in UniqFnAttributes).
-  if (UniqAttributes.size() > 256)
-    PrintFatalError("Too many unique argument attributes for table!");
-  if (UniqFnAttributes.size() > 256)
-    PrintFatalError("Too many unique function attributes for table!");
+  for (const CodeGenIntrinsic &Int : Ints) {
+    uint16_t FnAttrIndex =
+        hasFnAttributes(Int) ? UniqFnAttributes[&Int] : NoFunctionAttrsID;
+    OS << formatv("\n    {} << 8 | {}, // {}", FnAttrIndex,
+                  UniqAttributes[&Int], Int.Name);
+  }
 
   OS << R"(
-};
+}; // IntrinsicsToAttributesMap
+)";
 
-AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
-                                       FunctionType *FT) {)";
-  // Find the max number of attributes to create the local array.
+  // For a given intrinsic, its attributes are constructed by populating the
+  // local array `AS` below with its non-empty argument attributes followed by
+  // function attributes if any. Each argument attribute is constructed as:
+  //
+  //   getIntrinsicArgAttributeSet(C, ArgAttrID, FT->getContainedType(ArgNo));
+  //
+  // Create a table that records, for each argument attributes, the set of
+  // <ArgNo, ArgAttrID> pairs that are needed to construct its argument
+  // attributes. These tables for all intrinsics will be concatenated into one
+  // large table and then for each intrinsic, we remember the Staring index and
+  // number of size of its slice of entries (i.e., number of arguments with
+  // non-empty attributes), so that we can build the attribute list for an
+  // intrinsic without using a switch-case.
+
+  // Find the max number of attributes to create the local array and create
+  // a concatenated list of <ArgNo, AttrID> pairs.
+  struct ArgNoAttrIDPair {
+    uint16_t ArgNo, ArgAttrID;
+    ArgNoAttrIDPair(uint16_t ArgNo, uint16_t ArgAttrID)
+        : ArgNo(ArgNo), ArgAttrID(ArgAttrID) {}
+  };
+
+  // For each unique ID in UniqAttributes, reacord the starting index in the
+  // flattened ArgNoAttrIDPair table, and the number of non-empty arg
+  // attributes.
+  struct ArgAttributesInfo {
+    uint16_t StartIndex;
+    uint16_t NumAttrs;
+    ArgAttributesInfo(uint16_t StartIndex, uint16_t NumAttrs)
+        : StartIndex(StartIndex), NumAttrs(NumAttrs) {}
+  };
+  SmallVector<ArgNoAttrIDPair> ArgAttrIdTable;
+  SmallVector<ArgAttributesInfo> ArgAttributesInfoTable(UniqAttributes.size(),
+                                                        {0, 0});
+
   unsigned MaxNumAttrs = 0;
   for (const auto [IntPtr, UniqueID] : UniqAttributes) {
     const CodeGenIntrinsic &Int = *IntPtr;
-    unsigned NumAttrs =
-        llvm::count_if(Int.ArgumentAttributes,
-                       [](const auto &Attrs) { return !Attrs.empty(); });
+    unsigned NumAttrs = 0;
+    unsigned StartIndex = ArgAttrIdTable.size();
+
+    for (const auto &[ArgNo, Attrs] : enumerate(Int.ArgumentAttributes)) {
+      if (Attrs.empty())
+        continue;
+
+      uint16_t ArgAttrID = UniqArgAttributes.find(Attrs)->second;
+      ArgAttrIdTable.emplace_back((uint16_t)ArgNo, ArgAttrID);
+      ++NumAttrs;
+    }
+
+    // Record the start index and size of the list for this unique ID.
+    if (NumAttrs)
+      ArgAttributesInfoTable[UniqueID] =
+          ArgAttributesInfo(StartIndex, NumAttrs);
+
     NumAttrs += hasFnAttributes(Int);
     MaxNumAttrs = std::max(MaxNumAttrs, NumAttrs);
   }
 
+  if (ArgAttrIdTable.size() >= std::numeric_limits<uint16_t>::max())
+    PrintFatalError("Size of ArgAttrIdTable exceeds supported limit");
+
+  // Emit the 2 tables (flattened ArgNo, ArgAttrID) and ArgAttrIdTableIndex
+  OS << R"(
+namespace {
+struct ArgNoAttrIDPair {
+  uint16_t ArgNo, ArgAttrID;
+};
+} // namespace
+
+static constexpr ArgNoAttrIDPair ArgAttrIdTable[] = {
+)";
+  for (const auto &[ArgNo, ArgAttrID] : ArgAttrIdTable)
+    OS << formatv("  {{{}, {}},\n", ArgNo, ArgAttrID);
+  OS << R"(}; // ArgAttrIdTable
+
+namespace {
+struct ArgAttributesInfo {
+  uint16_t StartIndex;
+  uint16_t NumAttrs;
+};
+} // namespace
+ 
+static constexpr ArgAttributesInfo ArgAttributesInfoTable[] = {
+)";
+  for (const auto &[StartIndex, NumAttrs] : ArgAttributesInfoTable)
+    OS << formatv("  {{{}, {}},\n", StartIndex, NumAttrs);
+  OS << "}; // ArgAttributesInfoTable\n";
+
+  // Now emit the Intrinsic::getAttributes function. This will first map
+  // from intrinsic ID -> unique arg/function attr ID (using the
+  // IntrinsicsToAttributesMap) table. Then it will use the unique arg ID to
+  // construct all the argument attributes (using the ArgAttributesInfoTable and
+  // ArgAttrIdTable) and then add on the function attributes if any.
   OS << formatv(R"(
+AttributeList Intrinsic::getAttributes(LLVMContext &C, ID id,
+                                       FunctionType *FT) {{
   if (id == 0)
     return AttributeList();
 
   uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
   uint8_t FnAttrID = PackedID >> 8;
+  uint8_t ArgAttrID = PackedID & 0xFF;
   std::pair<unsigned, AttributeSet> AS[{}];
-  unsigned NumAttrs = 0;
-  bool HasFnAttr = false;
-  switch(PackedID & 0xFF) {{
-    default: llvm_unreachable("Invalid attribute number");
-)",
-                MaxNumAttrs);
 
-  for (const auto [IntPtr, UniqueID] : UniqAttributes) {
-    OS << formatv("  case {}:\n", UniqueID);
-    const CodeGenIntrinsic &Int = *IntPtr;
+  // Construct an ArrayRef for easier range checking.
+  ArrayRef<ArgAttributesInfo> ArgAttributesInfoTableAR(ArgAttributesInfoTable);
+  if (ArgAttrID >= ArgAttributesInfoTableAR.size())
+    llvm_unreachable("Invalid arguments attribute ID");
 
-    unsigned NumAttrs = 0;
-
-    for (const auto &[AttrIdx, Attrs] : enumerate(Int.ArgumentAttributes)) {
-      if (Attrs.empty())
-        continue;
-
-      unsigned ArgAttrID = UniqArgAttributes.find(Attrs)->second;
-      OS << formatv("    AS[{}] = {{{}, getIntrinsicArgAttributeSet(C, {}, "
-                    "FT->getContainedType({}))};\n",
-                    NumAttrs++, AttrIdx, ArgAttrID, AttrIdx);
-    }
-
-    if (hasFnAttributes(Int))
-      OS << "    HasFnAttr = true;\n";
-
-    if (NumAttrs)
-      OS << formatv("    NumAttrs = {};\n", NumAttrs);
-    OS << "    break;\n";
+  auto [StartIndex, NumAttrs] = ArgAttributesInfoTableAR[ArgAttrID];
+  for (unsigned Idx = 0; Idx < NumAttrs; ++Idx) {{
+    auto [ArgNo, ArgAttrID] = ArgAttrIdTable[StartIndex + Idx];
+    AS[Idx] = {{ArgNo,
+        getIntrinsicArgAttributeSet(C, ArgAttrID, FT->getContainedType(ArgNo))};
   }
-
-  OS << R"(  }
-  if (HasFnAttr) {
-    AS[NumAttrs++] = {AttributeList::FunctionIndex,
+  if (FnAttrID != {}) {
+    AS[NumAttrs++] = {{AttributeList::FunctionIndex,
                       getIntrinsicFnAttributeSet(C, FnAttrID)};
   }
   return AttributeList::get(C, ArrayRef(AS, NumAttrs));
 }
 #endif // GET_INTRINSIC_ATTRIBUTES
 
-)";
+)",
+                MaxNumAttrs, NoFunctionAttrsID);
 }
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
