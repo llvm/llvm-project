@@ -125,39 +125,6 @@ getSgShapeAndCount(ArrayRef<int64_t> shape, xegpu::LayoutAttr layout) {
 struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
 
-  // Calculate offset for each subgroup
-  static SmallVector<OpFoldResult>
-  calculateGlobalOffsets(ConversionPatternRewriter &rewriter, Location loc,
-                         const SmallVector<OpFoldResult> &originalOffsets,
-                         const SmallVector<Value> &localOffset,
-                         const SmallVector<int64_t> &distUnitBaseAddr,
-                         const SmallVector<int64_t> &distUnitShape) {
-    assert(localOffset.size() == distUnitBaseAddr.size() &&
-           "localOffset and distUnitBaseAddr must have the same rank");
-
-    SmallVector<OpFoldResult> globalOffsets(originalOffsets.begin(),
-                                            originalOffsets.end());
-    size_t rank = localOffset.size();
-    for (size_t i = 0; i < rank; ++i) {
-      size_t dimIdx = originalOffsets.size() - rank + i;
-      Value constOffset =
-          arith::ConstantIndexOp::create(rewriter, loc, distUnitBaseAddr[i]);
-      Value offset =
-          rewriter.createOrFold<index::AddOp>(loc, localOffset[i], constOffset);
-      Value modValue =
-          arith::ConstantIndexOp::create(rewriter, loc, distUnitShape[i]);
-      Value offsetMod =
-          rewriter.createOrFold<index::RemUOp>(loc, offset, modValue);
-      Value origOffset = getValueOrCreateConstantIndexOp(
-          rewriter, loc, originalOffsets[dimIdx]);
-      Value globalOffset =
-          rewriter.createOrFold<index::AddOp>(loc, origOffset, offsetMod);
-      globalOffsets[dimIdx] = globalOffset;
-    }
-
-    return globalOffsets;
-  }
-
   LogicalResult
   matchAndRewrite(xegpu::CreateNdDescOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
@@ -177,74 +144,56 @@ struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
       return rewriter.notifyMatchFailure(
           op, "sgLayout attribute is required in layout");
 
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
-
-    // TODO : Handle order attribute
     // Get the subgroup ID
-    auto linearSgId =
+    Value linearSgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-
-    // Create constants for layout dimensions
-    SmallVector<Value> sgLayoutDim(sgLayout.size());
-    SmallVector<Value> sgDataDim(sgShape.size());
-
-    for (size_t i = 0; i < sgLayout.size(); i++) {
-      sgLayoutDim[i] =
-          arith::ConstantIndexOp::create(rewriter, loc, sgLayout[i]);
-      sgDataDim[i] = arith::ConstantIndexOp::create(rewriter, loc, sgShape[i]);
-    }
 
     int64_t startOfRange = -1, endOfRange = -1;
     bool sgIdRangeSpecified =
         isSgIdRangeSpecified(op, startOfRange, endOfRange);
 
-    Value adjustedSgId = linearSgId;
     if (sgIdRangeSpecified) {
       int64_t sgCount = endOfRange - startOfRange;
       if (computeProduct(sgLayout) != sgCount)
         return rewriter.notifyMatchFailure(
             op, "sg_layout size must match the sg_id_range");
-      // Subtract startOfRange from the original subgroup id to get the adjusted
-      // sg id
+      // Subtract startOfRange from the original subgroup id to get
+      // the adjusted sg id
       Value startOfRangeVal =
-          arith::ConstantIndexOp::create(rewriter, loc, startOfRange);
-      adjustedSgId =
+          rewriter.create<arith::ConstantIndexOp>(loc, startOfRange);
+      linearSgId =
           rewriter.createOrFold<index::SubOp>(loc, linearSgId, startOfRangeVal);
     }
 
-    auto deLinearizeSgId =
-        affine::delinearizeIndex(rewriter, loc, adjustedSgId, sgLayoutDim);
-    if (failed(deLinearizeSgId))
+    auto maybeTdescOffsets =
+        layout.getOffsets(rewriter, loc, linearSgId, wgShape);
+    if (failed(maybeTdescOffsets))
       return failure();
-    SmallVector<Value> sgIds = *deLinearizeSgId;
 
-    // Calculate distribution unit shape and local offsets for subgroup
-    SmallVector<int64_t> distUnitShape(sgLayout.size());
-    SmallVector<Value> localOffset(sgLayout.size());
-    for (size_t i = 0; i < sgLayout.size(); i++) {
-      distUnitShape[i] = std::min(sgLayout[i] * sgShape[i], wgShape[i]);
-      localOffset[i] =
-          rewriter.createOrFold<index::MulOp>(loc, sgIds[i], sgDataDim[i]);
-    }
-
-    SmallVector<OpFoldResult> originalOffsets = op.getMixedOffsets();
-
+    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
     xegpu::TensorDescType newTdescTy =
         xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
                                    layout.dropSgLayoutAndData());
+
     SmallVector<Value> newCreateNdOps;
-    for (SmallVector<int64_t> distUnitBaseAddr :
-         StaticTileOffsetRange(wgShape, distUnitShape)) {
-      SmallVector<OpFoldResult> globalOffsets =
-          calculateGlobalOffsets(rewriter, loc, originalOffsets, localOffset,
-                                 distUnitBaseAddr, distUnitShape);
+    SmallVector<OpFoldResult> wgOffsets = op.getMixedOffsets();
 
-      auto newCreateNdOp = xegpu::CreateNdDescOp::create(
-          rewriter, loc, newTdescTy, op.getSource(), globalOffsets,
+    for (auto tdescOffsets : *maybeTdescOffsets) {
+      SmallVector<OpFoldResult> sgOffsets;
+      size_t rank = tdescOffsets.size();
+      for (size_t i = 0; i < rank; i++) {
+        size_t idx = wgOffsets.size() - rank + i;
+        Value add = rewriter.createOrFold<index::AddOp>(
+            loc, tdescOffsets[i],
+            getValueOrCreateConstantIndexOp(rewriter, loc, wgOffsets[idx]));
+        sgOffsets.push_back(add);
+      }
+
+      auto newOp = xegpu::CreateNdDescOp::create(
+          rewriter, loc, newTdescTy, op.getSource(), sgOffsets,
           op.getMixedSizes(), op.getMixedStrides());
-      newCreateNdOps.push_back(newCreateNdOp);
+      newCreateNdOps.push_back(newOp);
     }
-
     rewriter.replaceOpWithMultiple(op, {newCreateNdOps});
     return success();
   }
