@@ -1554,13 +1554,13 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (PTO.LoopInterchange)
     LPM.addPass(LoopInterchangePass());
 
+  OptimizePM.addPass(createFunctionToLoopPassAdaptor(
+      std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
+
   // FIXME: This may not be the right place in the pipeline.
   // We need to have the data to support the right place.
   if (PTO.LoopFusion)
     OptimizePM.addPass(LoopFusePass());
-
-  OptimizePM.addPass(createFunctionToLoopPassAdaptor(
-      std::move(LPM), /*UseMemorySSA=*/false, /*UseBlockFrequencyInfo=*/false));
 
   // Distribute loops to allow partial vectorization.  I.e. isolate dependences
   // into separate loop that would otherwise inhibit vectorization.  This is

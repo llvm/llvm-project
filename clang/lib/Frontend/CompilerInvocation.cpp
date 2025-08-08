@@ -1682,8 +1682,6 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
 
   if (Opts.FuseLoops)
     GenerateArg(Consumer, OPT_fexperimental_loop_fusion);
-  else
-    GenerateArg(Consumer, OPT_fno_experimental_loop_fusion);
 
   if (!Opts.BinutilsVersion.empty())
     GenerateArg(Consumer, OPT_fbinutils_version_EQ, Opts.BinutilsVersion);
