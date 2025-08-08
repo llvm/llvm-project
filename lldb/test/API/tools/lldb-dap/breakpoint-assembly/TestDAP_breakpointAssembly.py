@@ -83,3 +83,79 @@ class TestDAP_setBreakpointsAssembly(lldbdap_testcase.DAPTestCaseBase):
             break_point["message"],
             "Invalid sourceReference.",
         )
+
+    @skipIfWindows
+    def test_persistent_assembly_breakpoint(self):
+        """Tests that assembly breakpoints are working persistently across sessions"""
+        self.build()
+        program = self.getBuildArtifact("a.out")
+        self.create_debug_adapter()
+
+        # Run the first session and set a persistent assembly breakpoint
+        try:
+            self.dap_server.request_initialize()
+            self.dap_server.request_launch(program)
+
+            assmebly_func_breakpoints = self.set_function_breakpoints(["assembly_func"])
+            self.continue_to_breakpoints(assmebly_func_breakpoints)
+
+            assembly_func_frame = self.get_stackFrames()[0]
+            source_reference = assembly_func_frame["source"]["sourceReference"]
+
+            # Set an assembly breakpoint in the middle of the assembly function
+            persistent_breakpoint_line = 4
+            persistent_breakpoint_ids = self.set_source_breakpoints_assembly(
+                source_reference, [persistent_breakpoint_line]
+            )
+
+            self.assertEqual(
+                len(persistent_breakpoint_ids),
+                1,
+                "Expected one assembly breakpoint to be set",
+            )
+
+            persistent_breakpoint_source = self.dap_server.resolved_breakpoints[
+                persistent_breakpoint_ids[0]
+            ].source()
+            self.assertIn(
+                "adapterData",
+                persistent_breakpoint_source,
+                "Expected assembly breakpoint to have persistent information",
+            )
+            self.assertIn(
+                "persistenceData",
+                persistent_breakpoint_source["adapterData"],
+                "Expected assembly breakpoint to have persistent information",
+            )
+
+            self.continue_to_breakpoints(persistent_breakpoint_ids)
+        finally:
+            self.dap_server.request_disconnect(terminateDebuggee=True)
+            self.dap_server.terminate()
+
+        # Restart the session and verify the breakpoint is still there
+        self.create_debug_adapter()
+        try:
+            self.dap_server.request_initialize()
+            self.dap_server.request_launch(program)
+            new_session_breakpoints_ids = self.set_source_breakpoints_from_source(
+                Source(raw_dict=persistent_breakpoint_source),
+                [persistent_breakpoint_line],
+            )
+
+            self.assertEqual(
+                len(new_session_breakpoints_ids),
+                1,
+                "Expected one breakpoint to be set in the new session",
+            )
+
+            self.continue_to_breakpoints(new_session_breakpoints_ids)
+            current_line = self.get_stackFrames()[0]["line"]
+            self.assertEqual(
+                current_line,
+                persistent_breakpoint_line,
+                "Expected to hit the persistent assembly breakpoint at the same line",
+            )
+        finally:
+            self.dap_server.request_disconnect(terminateDebuggee=True)
+            self.dap_server.terminate()

@@ -108,8 +108,9 @@ TEST(ProtocolTypesTest, Breakpoint) {
   breakpoint.id = 42;
   breakpoint.verified = true;
   breakpoint.message = "Breakpoint set successfully";
-  breakpoint.source = Source{"test.cpp", "/path/to/test.cpp", 123,
-                             Source::eSourcePresentationHintNormal};
+  breakpoint.source =
+      Source{"test.cpp", "/path/to/test.cpp", 123,
+             Source::eSourcePresentationHintNormal, std::nullopt};
   breakpoint.line = 10;
   breakpoint.column = 5;
   breakpoint.endLine = 15;
@@ -567,8 +568,9 @@ TEST(ProtocolTypesTest, DisassembledInstruction) {
   instruction.instructionBytes = "0F 1F 00";
   instruction.instruction = "mov eax, ebx";
   instruction.symbol = "main";
-  instruction.location = Source{"test.cpp", "/path/to/test.cpp", 123,
-                                Source::eSourcePresentationHintNormal};
+  instruction.location =
+      Source{"test.cpp", "/path/to/test.cpp", 123,
+             Source::eSourcePresentationHintNormal, std::nullopt};
   instruction.line = 10;
   instruction.column = 5;
   instruction.endLine = 15;

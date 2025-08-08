@@ -405,15 +405,33 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
   if (!IsValid())
     return nullDeref();
 
-  Py_ssize_t size;
-  const char *data;
+  // PyUnicode_AsUTF8AndSize caches the UTF-8 representation of the string in
+  // the Unicode object, which makes it more efficient and ties the lifetime of
+  // the data to the Python string. However, it was only added to the Stable API
+  // in Python 3.10. Older versions that want to use the Stable API must use
+  // PyUnicode_AsUTF8String in combination with ConstString.
+#if defined(Py_LIMITED_API) && (Py_LIMITED_API < 0x030a0000)
+  PyObject *py_bytes = PyUnicode_AsUTF8String(m_py_obj);
+  if (!py_bytes)
+    return exception();
+  auto release_py_str =
+      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+  Py_ssize_t size = PyBytes_Size(py_bytes);
+  const char *str = PyBytes_AsString(py_bytes);
 
-  data = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
-
-  if (!data)
+  if (!str)
     return exception();
 
-  return llvm::StringRef(data, size);
+  return ConstString(str, size).GetStringRef();
+#else
+  Py_ssize_t size;
+  const char *str = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
+
+  if (!str)
+    return exception();
+
+  return llvm::StringRef(str, size);
+#endif
 }
 
 size_t PythonString::GetSize() const {

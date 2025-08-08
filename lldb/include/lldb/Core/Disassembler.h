@@ -291,6 +291,8 @@ public:
 
   size_t GetSize() const;
 
+  size_t GetTotalByteSize() const;
+
   uint32_t GetMaxOpcocdeByteSize() const;
 
   lldb::InstructionSP GetInstructionAtIndex(size_t idx) const;

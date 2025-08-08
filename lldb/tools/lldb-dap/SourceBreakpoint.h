@@ -11,6 +11,7 @@
 
 #include "Breakpoint.h"
 #include "DAPForward.h"
+#include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBError.h"
 #include "llvm/ADT/StringRef.h"
@@ -50,6 +51,12 @@ public:
   uint32_t GetColumn() const { return m_column; }
 
 protected:
+  void CreatePathBreakpoint(const protocol::Source &source);
+  llvm::Error
+  CreateAssemblyBreakpointWithSourceReference(int64_t source_reference);
+  llvm::Error CreateAssemblyBreakpointWithPersistenceData(
+      const protocol::PersistenceData &persistence_data);
+
   // logMessage part can be either a raw text or an expression.
   struct LogMessagePart {
     LogMessagePart(llvm::StringRef text, bool is_expr)

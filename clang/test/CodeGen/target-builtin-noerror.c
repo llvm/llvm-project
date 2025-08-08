@@ -32,15 +32,15 @@ int qq(void) {
 
 // Test that fma and fma4 are both separately and combined valid for an fma intrinsic.
 __m128 __attribute__((target("fma"))) fma_1(__m128 a, __m128 b, __m128 c) {
-  return __builtin_ia32_vfmaddps(a, b, c);
+  return __builtin_ia32_vfmaddsubps(a, b, c);
 }
 
 __m128 __attribute__((target("fma4"))) fma_2(__m128 a, __m128 b, __m128 c) {
-  return __builtin_ia32_vfmaddps(a, b, c);
+  return __builtin_ia32_vfmaddsubps(a, b, c);
 }
 
 __m128 __attribute__((target("fma,fma4"))) fma_3(__m128 a, __m128 b, __m128 c) {
-  return __builtin_ia32_vfmaddps(a, b, c);
+  return __builtin_ia32_vfmaddsubps(a, b, c);
 }
 
 void verifyfeaturestrings(void) {

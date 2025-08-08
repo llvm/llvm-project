@@ -107,17 +107,23 @@ def dump_dap_log(log_file):
 
 class Source(object):
     def __init__(
-        self, path: Optional[str] = None, source_reference: Optional[int] = None
+        self,
+        path: Optional[str] = None,
+        source_reference: Optional[int] = None,
+        raw_dict: Optional[dict[str, Any]] = None,
     ):
         self._name = None
         self._path = None
         self._source_reference = None
+        self._raw_dict = None
 
         if path is not None:
             self._name = os.path.basename(path)
             self._path = path
         elif source_reference is not None:
             self._source_reference = source_reference
+        elif raw_dict is not None:
+            self._raw_dict = raw_dict
         else:
             raise ValueError("Either path or source_reference must be provided")
 
@@ -125,6 +131,9 @@ class Source(object):
         return f"Source(name={self.name}, path={self.path}), source_reference={self.source_reference})"
 
     def as_dict(self):
+        if self._raw_dict is not None:
+            return self._raw_dict
+
         source_dict = {}
         if self._name is not None:
             source_dict["name"] = self._name
@@ -133,6 +142,19 @@ class Source(object):
         if self._source_reference is not None:
             source_dict["sourceReference"] = self._source_reference
         return source_dict
+
+
+class Breakpoint(object):
+    def __init__(self, obj):
+        self._breakpoint = obj
+
+    def is_verified(self):
+        """Check if the breakpoint is verified."""
+        return self._breakpoint.get("verified", False)
+
+    def source(self):
+        """Get the source of the breakpoint."""
+        return self._breakpoint.get("source", {})
 
 
 class NotSupportedError(KeyError):
@@ -170,7 +192,7 @@ class DebugCommunication(object):
         self.initialized = False
         self.frame_scopes = {}
         self.init_commands = init_commands
-        self.resolved_breakpoints = {}
+        self.resolved_breakpoints: dict[str, Breakpoint] = {}
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -326,8 +348,8 @@ class DebugCommunication(object):
     def _update_verified_breakpoints(self, breakpoints: list[Event]):
         for breakpoint in breakpoints:
             if "id" in breakpoint:
-                self.resolved_breakpoints[str(breakpoint["id"])] = breakpoint.get(
-                    "verified", False
+                self.resolved_breakpoints[str(breakpoint["id"])] = Breakpoint(
+                    breakpoint
                 )
 
     def send_packet(self, command_dict: Request, set_sequence=True):
@@ -484,7 +506,14 @@ class DebugCommunication(object):
             if breakpoint_event is None:
                 break
 
-        return [id for id in breakpoint_ids if id not in self.resolved_breakpoints]
+        return [
+            id
+            for id in breakpoint_ids
+            if (
+                id not in self.resolved_breakpoints
+                or not self.resolved_breakpoints[id].is_verified()
+            )
+        ]
 
     def wait_for_exited(self, timeout: Optional[float] = None):
         event_dict = self.wait_for_event("exited", timeout=timeout)

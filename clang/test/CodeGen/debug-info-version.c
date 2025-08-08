@@ -1,4 +1,4 @@
-// REQUIRES: !system-windows
+// REQUIRES: !system-windows, !system-cygwin
 // RUN: %clang -g -S -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang -S -emit-llvm -o - %s | FileCheck %s --check-prefix=NO_DEBUG
 int main (void) {

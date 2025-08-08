@@ -1,5 +1,5 @@
 /// This tests uses the PATH environment variable.
-// UNSUPPORTED: system-windows
+// UNSUPPORTED: system-windows, system-cygwin
 
 // RUN: cd %S
 

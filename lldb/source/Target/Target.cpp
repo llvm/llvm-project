@@ -558,10 +558,11 @@ BreakpointSP Target::CreateBreakpoint(lldb::addr_t addr, bool internal,
 
 BreakpointSP Target::CreateBreakpoint(const Address &addr, bool internal,
                                       bool hardware) {
-  SearchFilterSP filter_sp(
-      new SearchFilterForUnconstrainedSearches(shared_from_this()));
-  BreakpointResolverSP resolver_sp(
-      new BreakpointResolverAddress(nullptr, addr));
+  SearchFilterSP filter_sp =
+      std::make_shared<SearchFilterForUnconstrainedSearches>(
+          shared_from_this());
+  BreakpointResolverSP resolver_sp =
+      std::make_shared<BreakpointResolverAddress>(nullptr, addr);
   return CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, false);
 }
 
@@ -569,10 +570,12 @@ lldb::BreakpointSP
 Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
                                         const FileSpec &file_spec,
                                         bool request_hardware) {
-  SearchFilterSP filter_sp(
-      new SearchFilterForUnconstrainedSearches(shared_from_this()));
-  BreakpointResolverSP resolver_sp(new BreakpointResolverAddress(
-      nullptr, file_addr, file_spec));
+  SearchFilterSP filter_sp =
+      std::make_shared<SearchFilterForUnconstrainedSearches>(
+          shared_from_this());
+  BreakpointResolverSP resolver_sp =
+      std::make_shared<BreakpointResolverAddress>(nullptr, file_addr,
+                                                  file_spec);
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
 }
@@ -581,7 +584,8 @@ BreakpointSP Target::CreateBreakpoint(
     const FileSpecList *containingModules,
     const FileSpecList *containingSourceFiles, const char *func_name,
     FunctionNameType func_name_type_mask, LanguageType language,
-    lldb::addr_t offset, LazyBool skip_prologue, bool internal, bool hardware) {
+    lldb::addr_t offset, bool offset_is_insn_count, LazyBool skip_prologue,
+    bool internal, bool hardware) {
   BreakpointSP bp_sp;
   if (func_name) {
     SearchFilterSP filter_sp(GetSearchFilterForModuleAndCUList(
@@ -594,7 +598,7 @@ BreakpointSP Target::CreateBreakpoint(
 
     BreakpointResolverSP resolver_sp(new BreakpointResolverName(
         nullptr, func_name, func_name_type_mask, language, Breakpoint::Exact,
-        offset, skip_prologue));
+        offset, offset_is_insn_count, skip_prologue));
     bp_sp = CreateBreakpoint(filter_sp, resolver_sp, internal, hardware, true);
   }
   return bp_sp;
@@ -2994,6 +2998,38 @@ lldb::addr_t Target::GetOpcodeLoadAddress(lldb::addr_t load_addr,
 lldb::addr_t Target::GetBreakableLoadAddress(lldb::addr_t addr) {
   auto arch_plugin = GetArchitecturePlugin();
   return arch_plugin ? arch_plugin->GetBreakableLoadAddress(addr, *this) : addr;
+}
+
+llvm::Expected<lldb::DisassemblerSP>
+Target::ReadInstructions(const Address &start_addr, uint32_t count,
+                         const char *flavor_string) {
+  DataBufferHeap data(GetArchitecture().GetMaximumOpcodeByteSize() * count, 0);
+  bool force_live_memory = true;
+  lldb_private::Status error;
+  lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
+  const size_t bytes_read =
+      ReadMemory(start_addr, data.GetBytes(), data.GetByteSize(), error,
+                 force_live_memory, &load_addr);
+
+  if (error.Fail())
+    return llvm::createStringError(
+        error.AsCString("Target::ReadInstructions failed to read memory at %s"),
+        start_addr.GetLoadAddress(this));
+
+  const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
+  if (!flavor_string || flavor_string[0] == '\0') {
+    // FIXME - we don't have the mechanism in place to do per-architecture
+    // settings.  But since we know that for now we only support flavors on
+    // x86 & x86_64,
+    const llvm::Triple::ArchType arch = GetArchitecture().GetTriple().getArch();
+    if (arch == llvm::Triple::x86 || arch == llvm::Triple::x86_64)
+      flavor_string = GetDisassemblyFlavor();
+  }
+
+  return Disassembler::DisassembleBytes(
+      GetArchitecture(), nullptr, flavor_string, GetDisassemblyCPU(),
+      GetDisassemblyFeatures(), start_addr, data.GetBytes(), bytes_read, count,
+      data_from_file);
 }
 
 SourceManager &Target::GetSourceManager() {
