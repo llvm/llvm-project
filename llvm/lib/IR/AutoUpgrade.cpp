@@ -1314,12 +1314,12 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     if ((Name.starts_with("lifetime.start") ||
          Name.starts_with("lifetime.end")) &&
         F->arg_size() == 2) {
+      Intrinsic::ID IID = Name.starts_with("lifetime.start")
+                              ? Intrinsic::lifetime_start
+                              : Intrinsic::lifetime_end;
       rename(F);
-      NewFn = Intrinsic::getOrInsertDeclaration(
-          F->getParent(),
-          Name.starts_with("lifetime.start") ? Intrinsic::lifetime_start
-                                             : Intrinsic::lifetime_end,
-          F->getArg(0)->getType());
+      NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                F->getArg(0)->getType());
       return true;
     }
     break;
