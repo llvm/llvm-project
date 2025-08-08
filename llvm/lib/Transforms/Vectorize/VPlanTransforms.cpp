@@ -2398,18 +2398,42 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
   // There should be only one EVL PHI in the entire plan.
   VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
+  VPValue *AVLNext = nullptr;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getEntry())))
-    for (VPRecipeBase &R : VPBB->phis())
-      if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
+    for (VPRecipeBase &R : VPBB->phis()) {
+      auto *PhiR = dyn_cast<VPSingleDefRecipe>(&R);
+      if (!PhiR)
+        continue;
+      VPValue *Backedge;
+      if (auto *EVL = dyn_cast<VPEVLBasedIVPHIRecipe>(PhiR)) {
         assert(!EVLPhi && "Found multiple EVL PHIs. Only one expected");
-        EVLPhi = PhiR;
+        EVLPhi = EVL;
+        continue;
       }
+      if (match(PhiR,
+                m_VPInstruction<Instruction::PHI>(
+                    m_Specific(Plan.getTripCount()), m_VPValue(Backedge))) &&
+          match(Backedge,
+                m_VPInstruction<Instruction::Sub>(
+                    m_Specific(PhiR),
+                    m_ZExtOrSelf(
+                        m_VPInstruction<VPInstruction::ExplicitVectorLength>(
+                            m_CombineOr(
+                                m_Specific(PhiR),
+                                // The AVL may be capped to a safe distance.
+                                m_Select(m_VPValue(), m_Specific(PhiR),
+                                         m_VPValue()))))))) {
+        AVLNext = Backedge;
+      }
+    }
 
   // Early return if no EVL PHI is found.
   if (!EVLPhi)
     return;
+
+  assert(AVLNext && "Didn't find AVL backedge?");
 
   VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
   VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
@@ -2437,7 +2461,7 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
 
   // Replace the use of VectorTripCount in the latch-exiting block.
   // Before: (branch-on-count EVLIVInc, VectorTripCount)
-  // After: (branch-on-count EVLIVInc, TripCount)
+  // After: (branch-on-count AVLNext, 0)
 
   VPBasicBlock *LatchExiting =
       HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
@@ -2450,7 +2474,12 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
                m_BranchOnCount(m_VPValue(EVLIncrement),
                                m_Specific(&Plan.getVectorTripCount()))) &&
          "Unexpected terminator in EVL loop");
-  LatchExitingBr->setOperand(1, Plan.getTripCount());
+
+  Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
+
+  LatchExitingBr->setOperand(0, AVLNext);
+  LatchExitingBr->setOperand(
+      1, Plan.getOrAddLiveIn(ConstantInt::getNullValue(AVLTy)));
 }
 
 void VPlanTransforms::dropPoisonGeneratingRecipes(

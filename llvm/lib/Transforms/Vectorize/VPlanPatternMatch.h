@@ -231,9 +231,12 @@ struct Recipe_match {
     if ((!matchRecipeAndOpcode<RecipeTys>(R) && ...))
       return false;
 
-    assert(R->getNumOperands() == std::tuple_size<Ops_t>::value &&
-           "recipe with matched opcode does not have the expected number of "
-           "operands");
+    if (R->getNumOperands() != std::tuple_size<Ops_t>::value) {
+      assert(Opcode == Instruction::PHI &&
+             "non-variadic recipe with matched opcode does not have the "
+             "expected number of operands");
+      return false;
+    }
 
     auto IdxSeq = std::make_index_sequence<std::tuple_size<Ops_t>::value>();
     if (all_of_tuple_elements(IdxSeq, [R](auto Op, unsigned Idx) {
@@ -416,6 +419,12 @@ inline match_combine_or<AllUnaryRecipe_match<Op0_t, Instruction::ZExt>,
                         AllUnaryRecipe_match<Op0_t, Instruction::SExt>>
 m_ZExtOrSExt(const Op0_t &Op0) {
   return m_CombineOr(m_ZExt(Op0), m_SExt(Op0));
+}
+
+template <typename Op0_t>
+inline match_combine_or<AllUnaryRecipe_match<Op0_t, Instruction::ZExt>, Op0_t>
+m_ZExtOrSelf(const Op0_t &Op0) {
+  return m_CombineOr(m_ZExt(Op0), Op0);
 }
 
 template <unsigned Opcode, typename Op0_t, typename Op1_t,
