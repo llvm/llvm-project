@@ -481,7 +481,7 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
       return true;
 
     if (II->isLifetimeStartOrEnd()) {
-      auto *Arg = II->getArgOperand(1);
+      auto *Arg = II->getArgOperand(0);
       if (isa<PoisonValue>(Arg))
         return true;
 
