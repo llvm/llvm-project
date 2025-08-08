@@ -4367,7 +4367,7 @@ _mm256_setzero_si256(void) {
 ///    A 256-bit floating-point vector of [4 x double].
 /// \returns A 256-bit floating-point vector of [8 x float] containing the same
 ///    bitwise pattern as the parameter.
-static __inline __m256 __DEFAULT_FN_ATTRS
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_castpd_ps(__m256d __a)
 {
   return (__m256)__a;
@@ -4384,7 +4384,7 @@ _mm256_castpd_ps(__m256d __a)
 ///    A 256-bit floating-point vector of [4 x double].
 /// \returns A 256-bit integer vector containing the same bitwise pattern as the
 ///    parameter.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_castpd_si256(__m256d __a)
 {
   return (__m256i)__a;
@@ -4401,7 +4401,7 @@ _mm256_castpd_si256(__m256d __a)
 ///    A 256-bit floating-point vector of [8 x float].
 /// \returns A 256-bit floating-point vector of [4 x double] containing the same
 ///    bitwise pattern as the parameter.
-static __inline __m256d __DEFAULT_FN_ATTRS
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_castps_pd(__m256 __a)
 {
   return (__m256d)__a;
@@ -4418,7 +4418,7 @@ _mm256_castps_pd(__m256 __a)
 ///    A 256-bit floating-point vector of [8 x float].
 /// \returns A 256-bit integer vector containing the same bitwise pattern as the
 ///    parameter.
-static __inline __m256i __DEFAULT_FN_ATTRS
+static __inline __m256i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_castps_si256(__m256 __a)
 {
   return (__m256i)__a;
@@ -4435,7 +4435,7 @@ _mm256_castps_si256(__m256 __a)
 ///    A 256-bit integer vector.
 /// \returns A 256-bit floating-point vector of [8 x float] containing the same
 ///    bitwise pattern as the parameter.
-static __inline __m256 __DEFAULT_FN_ATTRS
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_castsi256_ps(__m256i __a)
 {
   return (__m256)__a;
@@ -4452,7 +4452,7 @@ _mm256_castsi256_ps(__m256i __a)
 ///    A 256-bit integer vector.
 /// \returns A 256-bit floating-point vector of [4 x double] containing the same
 ///    bitwise pattern as the parameter.
-static __inline __m256d __DEFAULT_FN_ATTRS
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_castsi256_pd(__m256i __a)
 {
   return (__m256d)__a;
@@ -4469,7 +4469,7 @@ _mm256_castsi256_pd(__m256i __a)
 ///    A 256-bit floating-point vector of [4 x double].
 /// \returns A 128-bit floating-point vector of [2 x double] containing the
 ///    lower 128 bits of the parameter.
-static __inline __m128d __DEFAULT_FN_ATTRS
+static __inline __m128d __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_castpd256_pd128(__m256d __a)
 {
   return __builtin_shufflevector((__v4df)__a, (__v4df)__a, 0, 1);
@@ -4486,7 +4486,7 @@ _mm256_castpd256_pd128(__m256d __a)
 ///    A 256-bit floating-point vector of [8 x float].
 /// \returns A 128-bit floating-point vector of [4 x float] containing the
 ///    lower 128 bits of the parameter.
-static __inline __m128 __DEFAULT_FN_ATTRS
+static __inline __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_castps256_ps128(__m256 __a)
 {
   return __builtin_shufflevector((__v8sf)__a, (__v8sf)__a, 0, 1, 2, 3);
@@ -4502,7 +4502,7 @@ _mm256_castps256_ps128(__m256 __a)
 ///    A 256-bit integer vector.
 /// \returns A 128-bit integer vector containing the lower 128 bits of the
 ///    parameter.
-static __inline __m128i __DEFAULT_FN_ATTRS
+static __inline __m128i __DEFAULT_FN_ATTRS_CONSTEXPR
 _mm256_castsi256_si128(__m256i __a)
 {
   return __builtin_shufflevector((__v4di)__a, (__v4di)__a, 0, 1);

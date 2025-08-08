@@ -5212,6 +5212,12 @@ public:
   /// operation is a subtraction.
   enum { NotSubtraction = false, IsSubtraction = true };
 
+  /// Emit pointer + index arithmetic.
+  llvm::Value *EmitPointerArithmetic(const BinaryOperator *BO,
+                                     Expr *pointerOperand, llvm::Value *pointer,
+                                     Expr *indexOperand, llvm::Value *index,
+                                     bool isSubtraction);
+
   /// Same as IRBuilder::CreateInBoundsGEP, but additionally emits a check to
   /// detect undefined behavior when the pointer overflow sanitizer is enabled.
   /// \p SignedIndices indicates whether any of the GEP indices are signed.

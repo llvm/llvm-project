@@ -277,20 +277,20 @@ _mm512_setzero_pd(void) {
   return __extension__(__m512d){0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 }
 
-static __inline __m512 __DEFAULT_FN_ATTRS512
+static __inline __m512 __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set1_ps(float __w)
 {
   return __extension__ (__m512){ __w, __w, __w, __w, __w, __w, __w, __w,
                                  __w, __w, __w, __w, __w, __w, __w, __w  };
 }
 
-static __inline __m512d __DEFAULT_FN_ATTRS512
+static __inline __m512d __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set1_pd(double __w)
 {
   return __extension__ (__m512d){ __w, __w, __w, __w, __w, __w, __w, __w };
 }
 
-static __inline __m512i __DEFAULT_FN_ATTRS512
+static __inline __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set1_epi8(char __w)
 {
   return __extension__ (__m512i)(__v64qi){
@@ -304,7 +304,7 @@ _mm512_set1_epi8(char __w)
     __w, __w, __w, __w, __w, __w, __w, __w  };
 }
 
-static __inline __m512i __DEFAULT_FN_ATTRS512
+static __inline __m512i __DEFAULT_FN_ATTRS512_CONSTEXPR
 _mm512_set1_epi16(short __w)
 {
   return __extension__ (__m512i)(__v32hi){

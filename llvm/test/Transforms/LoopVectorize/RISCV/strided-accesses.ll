@@ -8,12 +8,6 @@ define void @single_constant_stride_int_scaled(ptr %p) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH1:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul nuw i64 [[TMP6]], 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
@@ -81,12 +75,6 @@ define void @single_constant_stride_int_iv(ptr %p) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP3]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP10]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i64> @llvm.stepvector.nxv4i64()
@@ -157,12 +145,6 @@ define void @single_constant_stride_ptr_iv(ptr %p) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH1:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
-; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -231,12 +213,6 @@ define void @single_stride_int_scaled(ptr %p, i64 %stride) {
 ; NOSTRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE:%.*]], 1
 ; NOSTRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; NOSTRIDED:       vector.ph:
-; NOSTRIDED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
-; NOSTRIDED-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP4]], 1
-; NOSTRIDED-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP2]]
-; NOSTRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
-; NOSTRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; NOSTRIDED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -313,12 +289,6 @@ define void @single_stride_int_iv(ptr %p, i64 %stride) {
 ; NOSTRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE:%.*]], 1
 ; NOSTRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; NOSTRIDED:       vector.ph:
-; NOSTRIDED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
-; NOSTRIDED-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP4]], 1
-; NOSTRIDED-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP2]]
-; NOSTRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
-; NOSTRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; NOSTRIDED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -444,12 +414,6 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP6]], [[TMP5]]
 ; NOSTRIDED-NEXT:    br i1 [[DIFF_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; NOSTRIDED:       vector.ph:
-; NOSTRIDED-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP7]], 4
-; NOSTRIDED-NEXT:    [[TMP11:%.*]] = sub i64 [[TMP8]], 1
-; NOSTRIDED-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP11]]
-; NOSTRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP8]]
-; NOSTRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; NOSTRIDED-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-NEXT:    [[TMP10:%.*]] = mul nuw i64 [[TMP9]], 4
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -537,12 +501,6 @@ define void @double_stride_int_scaled(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; STRIDED-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; STRIDED-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 4
-; STRIDED-NEXT:    [[TMP42:%.*]] = sub i64 [[TMP9]], 1
-; STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP42]]
-; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP9]]
-; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; STRIDED-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
 ; STRIDED-NEXT:    [[TMP11:%.*]] = mul nuw i64 [[TMP10]], 4
 ; STRIDED-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i64> poison, i64 [[STRIDE]], i64 0
@@ -618,12 +576,6 @@ define void @double_stride_int_iv(ptr %p, ptr %p2, i64 %stride) {
 ; NOSTRIDED-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE:%.*]], 1
 ; NOSTRIDED-NEXT:    br i1 [[IDENT_CHECK]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; NOSTRIDED:       vector.ph:
-; NOSTRIDED-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
-; NOSTRIDED-NEXT:    [[TMP4:%.*]] = mul nuw i64 [[TMP3]], 4
-; NOSTRIDED-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP4]], 1
-; NOSTRIDED-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP2]]
-; NOSTRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP4]]
-; NOSTRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; NOSTRIDED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; NOSTRIDED-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], 4
 ; NOSTRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -740,12 +692,6 @@ define void @double_stride_ptr_iv(ptr %p, ptr %p2, i64 %stride) {
 ; STRIDED-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; STRIDED-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; STRIDED:       vector.ph:
-; STRIDED-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
-; STRIDED-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 4
-; STRIDED-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP9]], 1
-; STRIDED-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP10]]
-; STRIDED-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP9]]
-; STRIDED-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; STRIDED-NEXT:    [[TMP12:%.*]] = call i64 @llvm.vscale.i64()
 ; STRIDED-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[TMP12]], 4
 ; STRIDED-NEXT:    br label [[VECTOR_BODY:%.*]]
