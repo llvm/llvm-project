@@ -878,9 +878,6 @@ public:
     switch (ICA.getID()) {
     default:
       break;
-    case Intrinsic::experimental_vector_histogram_add:
-      // For now, we want explicit support from the target for histograms.
-      return InstructionCost::getInvalid();
     case Intrinsic::allow_runtime_check:
     case Intrinsic::allow_ubsan_check:
     case Intrinsic::annotation:
