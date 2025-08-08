@@ -40,6 +40,7 @@ Using Clang as a Compiler
    SanitizerCoverage
    SanitizerStats
    SanitizerSpecialCaseList
+   OverflowBehaviorTypes
    BoundsSafety
    BoundsSafetyAdoptionGuide
    BoundsSafetyImplPlans

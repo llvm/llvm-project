@@ -9776,6 +9776,16 @@ static void DiagnoseNarrowingInInitList(Sema &S,
 
   case NK_Constant_Narrowing: {
     // A constant value was narrowed.
+
+    // Overflow behavior destination types with a 'wrap' kind can elide
+    // narrowing diagnostics.
+    QualType DestType = EntityType.getNonReferenceType();
+    if (const auto *DestOBT = DestType->getAs<OverflowBehaviorType>()) {
+      if (DestOBT->isWrapKind()) {
+        return;
+      }
+    }
+
     MakeDiag(EntityType.getNonReferenceType() != EntityType,
              diag::ext_init_list_constant_narrowing,
              diag::ext_init_list_constant_narrowing_const_reference,

@@ -7665,6 +7665,13 @@ QualType TreeTransform<Derived>::TransformBTFTagAttributedType(
 }
 
 template <typename Derived>
+QualType TreeTransform<Derived>::TransformOverflowBehaviorType(
+    TypeLocBuilder &TLB, OverflowBehaviorTypeLoc TL) {
+  // The OverflowBehaviorType is available for C only.
+  llvm_unreachable("Unexpected TreeTransform for OverflowBehaviorType");
+}
+
+template <typename Derived>
 QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
     TypeLocBuilder &TLB, HLSLAttributedResourceTypeLoc TL) {
 
