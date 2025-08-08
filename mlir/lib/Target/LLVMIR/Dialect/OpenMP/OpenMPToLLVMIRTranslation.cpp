@@ -3542,6 +3542,8 @@ convertToCaptureClauseKind(
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryLink;
   case mlir::omp::DeclareTargetCaptureClause::enter:
     return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryEnter;
+  case mlir::omp::DeclareTargetCaptureClause::none:
+    return llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryNone;
   }
   llvm_unreachable("unhandled capture clause");
 }
@@ -3566,8 +3568,12 @@ getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
   return suffix;
 }
 
-static bool isDeclareTargetLink(mlir::Value value) {
-  if (auto addressOfOp = value.getDefiningOp<LLVM::AddressOfOp>()) {
+static bool isDeclareTargetLink(Value value) {
+  Operation *op = value.getDefiningOp();
+  if (auto addrCast = llvm::dyn_cast_if_present<LLVM::AddrSpaceCastOp>(op))
+    op = addrCast->getOperand(0).getDefiningOp();
+
+  if (auto addressOfOp = llvm::dyn_cast_if_present<LLVM::AddressOfOp>(op)) {
     auto modOp = addressOfOp->getParentOfType<mlir::ModuleOp>();
     Operation *gOp = modOp.lookupSymbol(addressOfOp.getGlobalName());
     if (auto declareTargetGlobal =
@@ -3575,6 +3581,26 @@ static bool isDeclareTargetLink(mlir::Value value) {
       if (declareTargetGlobal.getDeclareTargetCaptureClause() ==
           mlir::omp::DeclareTargetCaptureClause::link)
         return true;
+  }
+  return false;
+}
+
+static bool isDeclareTargetTo(Value value) {
+  Operation *op = value.getDefiningOp();
+  if (auto addrCast = llvm::dyn_cast_if_present<LLVM::AddrSpaceCastOp>(op))
+    op = addrCast->getOperand(0).getDefiningOp();
+
+  if (auto addressOfOp = llvm::dyn_cast_if_present<LLVM::AddressOfOp>(op)) {
+    auto modOp = addressOfOp->getParentOfType<mlir::ModuleOp>();
+    Operation *gOp = modOp.lookupSymbol(addressOfOp.getGlobalName());
+    if (auto declareTargetGlobal =
+            llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(gOp)) {
+      if (declareTargetGlobal.getDeclareTargetCaptureClause() ==
+              mlir::omp::DeclareTargetCaptureClause::to ||
+          declareTargetGlobal.getDeclareTargetCaptureClause() ==
+              mlir::omp::DeclareTargetCaptureClause::enter)
+        return true;
+    }
   }
   return false;
 }
@@ -3664,6 +3690,30 @@ struct MapInfoData : MapInfosTy {
     MapInfosTy::append(CurInfo);
   }
 };
+
+enum class TargetDirective : uint32_t {
+  None = 0,
+  Target = 1,
+  TargetData = 2,
+  TargetEnterData = 3,
+  TargetExitData = 4,
+  TargetUpdate = 5
+};
+
+static TargetDirective getTargetDirectiveFromOp(Operation *op) {
+  return llvm::TypeSwitch<Operation *, TargetDirective>(op)
+      .Case([](omp::TargetDataOp) { return TargetDirective::TargetData; })
+      .Case([](omp::TargetEnterDataOp) {
+        return TargetDirective::TargetEnterData;
+      })
+      .Case([&](omp::TargetExitDataOp) {
+        return TargetDirective::TargetExitData;
+      })
+      .Case([&](omp::TargetUpdateOp) { return TargetDirective::TargetUpdate; })
+      .Case([&](omp::TargetOp) { return TargetDirective::Target; })
+      .Default([&](Operation *op) { return TargetDirective::None; });
+}
+
 } // namespace
 
 uint64_t getArrayElementSizeInBits(LLVM::LLVMArrayType arrTy, DataLayout &dl) {
@@ -3763,10 +3813,12 @@ static void collectMapDataFromMapOperands(
     mapData.Pointers.push_back(mapData.OriginalValue.back());
 
     if (llvm::Value *refPtr =
-            getRefPtrIfDeclareTarget(offloadPtr,
-                                     moduleTranslation)) { // declare target
+            getRefPtrIfDeclareTarget(offloadPtr, moduleTranslation)) {
       mapData.IsDeclareTarget.push_back(true);
       mapData.BasePointers.push_back(refPtr);
+    } else if (isDeclareTargetTo(offloadPtr)) {
+      mapData.IsDeclareTarget.push_back(true);
+      mapData.BasePointers.push_back(mapData.OriginalValue.back());
     } else { // regular mapped variable
       mapData.IsDeclareTarget.push_back(false);
       mapData.BasePointers.push_back(mapData.OriginalValue.back());
@@ -4161,7 +4213,8 @@ mapParentWithMembers(LLVM::ModuleTranslation &moduleTranslation,
 
   // Map the first segment of our structure
   combinedInfo.Types.emplace_back(
-      isTargetParams
+      (targetDirective == TargetDirective::Target &&
+       !mapData.IsDeclareTarget[mapDataIndex])
           ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM
           : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE);
   combinedInfo.DevicePointers.emplace_back(
@@ -4358,8 +4411,15 @@ static void processMapMembersWithParent(
     mapFlag &= ~llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
     mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
-    if (checkIfPointerMap(memberClause))
+    bool isDeclTarTo = isDeclareTargetTo(parentClause.getVarPtr()
+                                             ? parentClause.getVarPtr()
+                                             : parentClause.getVarPtrPtr());
+    if (checkIfPointerMap(memberClause) &&
+        (!isDeclTarTo ||
+         (isDeclTarTo && targetDirective != TargetDirective::TargetUpdate &&
+          targetDirective != TargetDirective::TargetData))) {
       mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
+    }
 
     combinedInfo.Types.emplace_back(mapFlag);
     combinedInfo.DevicePointers.emplace_back(
@@ -4398,7 +4458,8 @@ static void processIndividualMap(MapInfoData &mapData, size_t mapDataIdx,
   if (isPtrTy)
     mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ;
 
-  if (isTargetParams && !mapData.IsDeclareTarget[mapDataIdx])
+  if (targetDirective == TargetDirective::Target &&
+      !mapData.IsDeclareTarget[mapDataIdx])
     mapFlag |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM;
 
   if (mapInfoOp.getMapCaptureType() == omp::VariableCaptureKind::ByCopy &&
@@ -4451,17 +4512,18 @@ static void processMapWithMembersOf(LLVM::ModuleTranslation &moduleTranslation,
     // Clang maps array without bounds as pointers (which we do not
     // currently do), whereas we treat them as arrays in all cases
     // currently.
-    processIndividualMap(mapData, memberDataIdx, combinedInfo, isTargetParams,
+    processIndividualMap(mapData, memberDataIdx, combinedInfo, targetDirective,
                          mapDataIndex);
     return;
   }
 
   llvm::omp::OpenMPOffloadMappingFlags memberOfParentFlag =
       mapParentWithMembers(moduleTranslation, builder, ompBuilder, dl,
-                           combinedInfo, mapData, mapDataIndex, isTargetParams);
+                           combinedInfo, mapData, mapDataIndex,
+                           targetDirective);
   processMapMembersWithParent(moduleTranslation, builder, ompBuilder, dl,
                               combinedInfo, mapData, mapDataIndex,
-                              memberOfParentFlag);
+                              memberOfParentFlag, targetDirective);
 }
 
 // This is a variation on Clang's GenerateOpenMPCapturedVars, which
@@ -4540,7 +4602,6 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
                         MapInfoData &mapData, TargetDirective targetDirective) {
   assert(!moduleTranslation.getOpenMPBuilder()->Config.isTargetDevice() &&
          "function only supported for host device codegen");
-
   // We wish to modify some of the methods in which arguments are
   // passed based on their capture type by the target region, this can
   // involve generating new loads and stores, which changes the
@@ -4570,11 +4631,11 @@ static void genMapInfos(llvm::IRBuilderBase &builder,
     auto mapInfoOp = dyn_cast<omp::MapInfoOp>(mapData.MapClause[i]);
     if (!mapInfoOp.getMembers().empty()) {
       processMapWithMembersOf(moduleTranslation, builder, *ompBuilder, dl,
-                              combinedInfo, mapData, i, isTargetParams);
+                              combinedInfo, mapData, i, targetDirective);
       continue;
     }
 
-    processIndividualMap(mapData, i, combinedInfo, isTargetParams);
+    processIndividualMap(mapData, i, combinedInfo, targetDirective);
   }
 }
 
@@ -4668,6 +4729,7 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   SmallVector<Value> useDeviceAddrVars;
   llvm::omp::RuntimeFunction RTLFn;
   DataLayout DL = DataLayout(op->getParentOfType<ModuleOp>());
+  TargetDirective targetDirective = getTargetDirectiveFromOp(op);
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::OpenMPIRBuilder::TargetDataInfo info(/*RequiresDevicePointerInfo=*/true,
@@ -4773,7 +4835,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   MapInfosTy combinedInfo;
   auto genMapInfoCB = [&](InsertPointTy codeGenIP) -> MapInfosTy & {
     builder.restoreIP(codeGenIP);
-    genMapInfos(builder, moduleTranslation, DL, combinedInfo, mapData);
+    genMapInfos(builder, moduleTranslation, DL, combinedInfo, mapData,
+                targetDirective);
     return combinedInfo;
   };
 
@@ -5150,11 +5213,17 @@ handleDeclareTargetMapVar(MapInfoData &mapData,
       for (llvm::User *user : userVec) {
         if (auto *insn = dyn_cast<llvm::Instruction>(user)) {
           if (insn->getFunction() == func) {
-            builder.SetCurrentDebugLocation(insn->getDebugLoc());
-            auto *load = builder.CreateLoad(mapData.BasePointers[i]->getType(),
-                                            mapData.BasePointers[i]);
-            load->moveBefore(insn->getIterator());
-            user->replaceUsesOfWith(mapData.OriginalValue[i], load);
+            auto mapOp = cast<omp::MapInfoOp>(mapData.MapClause[i]);
+            llvm::Value *substitute = mapData.BasePointers[i];
+            if (isDeclareTargetLink(mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr()
+                                                         : mapOp.getVarPtr())) {
+              builder.SetCurrentDebugLocation(insn->getDebugLoc());
+              auto *load = builder.CreateLoad(
+                  mapData.BasePointers[i]->getType(), mapData.BasePointers[i]);
+              load->moveBefore(insn);
+              substitute = load;
+            }
+            user->replaceUsesOfWith(mapData.OriginalValue[i], substitute);
           }
         }
       }
@@ -5652,6 +5721,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   ArrayRef<BlockArgument> mapBlockArgs = argIface.getMapBlockArgs();
   ArrayRef<BlockArgument> hdaBlockArgs = argIface.getHasDeviceAddrBlockArgs();
   llvm::Function *llvmOutlinedFn = nullptr;
+  TargetDirective targetDirective = getTargetDirectiveFromOp(&opInst);
 
   // TODO: It can also be false if a compile-time constant `false` IF clause is
   // specified.
@@ -5813,7 +5883,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   auto genMapInfoCB =
       [&](llvm::OpenMPIRBuilder::InsertPointTy codeGenIP) -> MapInfosTy & {
     builder.restoreIP(codeGenIP);
-    genMapInfos(builder, moduleTranslation, dl, combinedInfos, mapData, true);
+    genMapInfos(builder, moduleTranslation, dl, combinedInfos, mapData,
+                targetDirective);
     return combinedInfos;
   };
 
