@@ -56,8 +56,8 @@ static_library("Basic") {
   ]
   deps = [
     ":write_vcsversion",
-    "//clang/include/clang/Basic:AttributeSpellingList",
     "//clang/include/clang/Basic:AttrHasAttributeImpl",
+    "//clang/include/clang/Basic:AttributeSpellingList",
     "//clang/include/clang/Basic:CXX11AttributeInfo",
     "//clang/include/clang/Basic:DiagnosticAllCompatIDs",
     "//clang/include/clang/Basic:arm_fp16",
@@ -128,7 +128,6 @@ static_library("Basic") {
     "Targets/Mips.cpp",
     "Targets/NVPTX.cpp",
     "Targets/OSTargets.cpp",
-    "Targets/PNaCl.cpp",
     "Targets/PPC.cpp",
     "Targets/RISCV.cpp",
     "Targets/SPIR.cpp",

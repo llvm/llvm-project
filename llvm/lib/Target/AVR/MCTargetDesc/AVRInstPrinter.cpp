@@ -166,7 +166,7 @@ void AVRInstPrinter::printPCRelImm(const MCInst *MI, unsigned OpNo,
     O << Imm;
   } else {
     assert(Op.isExpr() && "Unknown pcrel immediate operand");
-    O << *Op.getExpr();
+    MAI.printExpr(O, *Op.getExpr());
   }
 }
 
@@ -189,7 +189,7 @@ void AVRInstPrinter::printMemri(const MCInst *MI, unsigned OpNo,
 
     O << Offset;
   } else if (OffsetOp.isExpr()) {
-    O << *OffsetOp.getExpr();
+    MAI.printExpr(O, *OffsetOp.getExpr());
   } else {
     llvm_unreachable("unknown type for offset");
   }

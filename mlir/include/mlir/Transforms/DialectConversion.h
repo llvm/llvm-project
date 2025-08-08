@@ -221,12 +221,13 @@ public:
   ///
   /// The conversion functions take a non-null Type or subclass of Type and a
   /// non-null Attribute (or subclass of Attribute), and returns a
-  /// `AttributeConversionResult`. This result can either contan an `Attribute`,
-  /// which may be `nullptr`, representing the conversion's success,
-  /// `AttributeConversionResult::na()` (the default empty value), indicating
-  /// that the conversion function did not apply and that further conversion
-  /// functions should be checked, or `AttributeConversionResult::abort()`
-  /// indicating that the conversion process should be aborted.
+  /// `AttributeConversionResult`. This result can either contain an
+  /// `Attribute`, which may be `nullptr`, representing the conversion's
+  /// success, `AttributeConversionResult::na()` (the default empty value),
+  /// indicating that the conversion function did not apply and that further
+  /// conversion functions should be checked, or
+  /// `AttributeConversionResult::abort()` indicating that the conversion
+  /// process should be aborted.
   ///
   /// Registered conversion functions are callled in the reverse of the order in
   /// which they were registered.
@@ -726,6 +727,9 @@ struct ConversionPatternRewriterImpl;
 class ConversionPatternRewriter final : public PatternRewriter {
 public:
   ~ConversionPatternRewriter() override;
+
+  /// Return the configuration of the current dialect conversion.
+  const ConversionConfig &getConfig() const;
 
   /// Apply a signature conversion to given block. This replaces the block with
   /// a new block containing the updated signature. The operations of the given

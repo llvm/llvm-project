@@ -169,8 +169,10 @@ static cl::opt<DwarfDebug::MinimizeAddrInV5> MinimizeAddrInV5Option(
                           "Stuff")),
     cl::init(DwarfDebug::MinimizeAddrInV5::Default));
 
-static cl::opt<bool> KeyInstructionsAreStmts("dwarf-use-key-instructions",
-                                             cl::Hidden, cl::init(false));
+/// Set to false to ignore Key Instructions metadata.
+static cl::opt<bool> KeyInstructionsAreStmts(
+    "dwarf-use-key-instructions", cl::Hidden, cl::init(true),
+    cl::desc("Set to false to ignore Key Instructions metadata"));
 
 static constexpr unsigned ULEB128PadSize = 4;
 
@@ -934,27 +936,38 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       if (MI.hasDelaySlot() && !delaySlotSupported(*&MI))
         return;
 
+      DIType *AllocSiteTy = dyn_cast_or_null<DIType>(MI.getHeapAllocMarker());
+
       // If this is a direct call, find the callee's subprogram.
       // In the case of an indirect call find the register that holds
       // the callee.
       const MachineOperand &CalleeOp = TII->getCalleeOperand(MI);
-      if (!CalleeOp.isGlobal() &&
-          (!CalleeOp.isReg() || !CalleeOp.getReg().isPhysical()))
-        continue;
+      bool PhysRegCalleeOperand =
+          CalleeOp.isReg() && CalleeOp.getReg().isPhysical();
+      // Hack: WebAssembly CALL instructions have MCInstrDesc that does not
+      // describe the call target operand.
+      if (CalleeOp.getOperandNo() < MI.getDesc().operands().size()) {
+        const MCOperandInfo &MCOI =
+            MI.getDesc().operands()[CalleeOp.getOperandNo()];
+        PhysRegCalleeOperand =
+            PhysRegCalleeOperand && MCOI.OperandType == MCOI::OPERAND_REGISTER;
+      }
 
       unsigned CallReg = 0;
       const DISubprogram *CalleeSP = nullptr;
       const Function *CalleeDecl = nullptr;
-      if (CalleeOp.isReg()) {
-        CallReg = CalleeOp.getReg();
-        if (!CallReg)
-          continue;
-      } else {
+      if (PhysRegCalleeOperand) {
+        CallReg = CalleeOp.getReg(); // might be zero
+      } else if (CalleeOp.isGlobal()) {
         CalleeDecl = dyn_cast<Function>(CalleeOp.getGlobal());
-        if (!CalleeDecl || !CalleeDecl->getSubprogram())
-          continue;
-        CalleeSP = CalleeDecl->getSubprogram();
+        if (CalleeDecl)
+          CalleeSP = CalleeDecl->getSubprogram(); // might be nullptr
       }
+
+      // Omit DIE if we can't tell where the call goes *and* we don't want to
+      // add metadata to it.
+      if (CalleeSP == nullptr && CallReg == 0 && AllocSiteTy == nullptr)
+        continue;
 
       // TODO: Omit call site entries for runtime calls (objc_msgSend, etc).
 
@@ -970,10 +983,9 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       // the call graph which could lead to some target function. For tail
       // calls, no return PC information is needed, unless tuning for GDB in
       // DWARF4 mode in which case we fake a return PC for compatibility.
-      const MCSymbol *PCAddr =
-          (!IsTail || CU.useGNUAnalogForDwarf5Feature())
-              ? const_cast<MCSymbol *>(getLabelAfterInsn(TopLevelCallMI))
-              : nullptr;
+      const MCSymbol *PCAddr = (!IsTail || CU.useGNUAnalogForDwarf5Feature())
+                                   ? getLabelAfterInsn(TopLevelCallMI)
+                                   : nullptr;
 
       // For tail calls, it's necessary to record the address of the branch
       // instruction so that the debugger can show where the tail call occurred.
@@ -990,7 +1002,7 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
                         << (IsTail ? " [IsTail]" : "") << "\n");
 
       DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
-          ScopeDIE, CalleeSP, IsTail, PCAddr, CallAddr, CallReg);
+          ScopeDIE, CalleeSP, IsTail, PCAddr, CallAddr, CallReg, AllocSiteTy);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
@@ -2077,8 +2089,17 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
   unsigned LastAsmLine =
       Asm->OutStreamer->getContext().getCurrentDwarfLoc().getLine();
 
+  // There may be a mixture of scopes using and not using Key Instructions.
+  // Not-Key-Instructions functions inlined into Key Instructions functions
+  // should use not-key is_stmt handling. Key Instructions functions inlined
+  // into Not-Key-Instructions functions should use Key Instructions is_stmt
+  // handling.
+  bool ScopeUsesKeyInstructions =
+      KeyInstructionsAreStmts && DL &&
+      DL->getScope()->getSubprogram()->getKeyInstructionsEnabled();
+
   bool IsKey = false;
-  if (KeyInstructionsAreStmts && DL && DL.getLine())
+  if (ScopeUsesKeyInstructions && DL && DL.getLine())
     IsKey = KeyInstructions.contains(MI);
 
   if (!DL && MI == PrologEndLoc) {
@@ -2158,7 +2179,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrologEndLoc = nullptr;
   }
 
-  if (KeyInstructionsAreStmts) {
+  if (ScopeUsesKeyInstructions) {
     if (IsKey)
       Flags |= DWARF2_FLAG_IS_STMT;
   } else {
@@ -2372,6 +2393,8 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
            std::pair<uint8_t, SmallVector<const MachineInstr *, 2>>>
       GroupCandidates;
 
+  const auto &TII = *MF->getSubtarget().getInstrInfo();
+
   // For each instruction:
   //   * Skip insts without DebugLoc, AtomGroup or AtomRank, and line zeros.
   //   * Check if insts in this group have been seen already in GroupCandidates.
@@ -2400,24 +2423,20 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
       if (MI.isMetaInstruction())
         continue;
 
-      if (!MI.getDebugLoc() || !MI.getDebugLoc().getLine())
+      const DILocation *Loc = MI.getDebugLoc().get();
+      if (!Loc || !Loc->getLine())
         continue;
 
       // Reset the Buoy to this instruction if it has a different line number.
-      if (!Buoy ||
-          Buoy->getDebugLoc().getLine() != MI.getDebugLoc().getLine()) {
+      if (!Buoy || Buoy->getDebugLoc().getLine() != Loc->getLine()) {
         Buoy = &MI;
         BuoyAtom = 0; // Set later when we know which atom the buoy is used by.
       }
 
       // Call instructions are handled specially - we always mark them as key
       // regardless of atom info.
-      const auto &TII =
-          *MI.getParent()->getParent()->getSubtarget().getInstrInfo();
       bool IsCallLike = MI.isCall() || TII.isTailCall(MI);
       if (IsCallLike) {
-        assert(MI.getDebugLoc() && "Unexpectedly missing DL");
-
         // Calls are always key. Put the buoy (may not be the call) into
         // KeyInstructions directly rather than the candidate map to avoid it
         // being erased (and we may not have a group number for the call).
@@ -2427,14 +2446,13 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         Buoy = nullptr;
         BuoyAtom = 0;
 
-        if (!MI.getDebugLoc()->getAtomGroup() ||
-            !MI.getDebugLoc()->getAtomRank())
+        if (!Loc->getAtomGroup() || !Loc->getAtomRank())
           continue;
       }
 
-      auto *InlinedAt = MI.getDebugLoc()->getInlinedAt();
-      uint64_t Group = MI.getDebugLoc()->getAtomGroup();
-      uint8_t Rank = MI.getDebugLoc()->getAtomRank();
+      auto *InlinedAt = Loc->getInlinedAt();
+      uint64_t Group = Loc->getAtomGroup();
+      uint8_t Rank = Loc->getAtomRank();
       if (!Group || !Rank)
         continue;
 
@@ -2476,8 +2494,8 @@ void DwarfDebug::computeKeyInstructions(const MachineFunction *MF) {
         CandidateInsts.push_back(Buoy);
         CandidateRank = Rank;
 
-        assert(!BuoyAtom || BuoyAtom == MI.getDebugLoc()->getAtomGroup());
-        BuoyAtom = MI.getDebugLoc()->getAtomGroup();
+        assert(!BuoyAtom || BuoyAtom == Loc->getAtomGroup());
+        BuoyAtom = Loc->getAtomGroup();
       } else {
         // Don't add calls, because they've been dealt with already. This means
         // CandidateInsts might now be empty - handle that.
@@ -2651,10 +2669,12 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
   PrologEndLoc = emitInitialLocDirective(
       *MF, Asm->OutStreamer->getContext().getDwarfCompileUnitID());
 
+  // Run both `findForceIsStmtInstrs` and `computeKeyInstructions` because
+  // Not-Key-Instructions functions may be inlined into Key Instructions
+  // functions and vice versa.
   if (KeyInstructionsAreStmts)
     computeKeyInstructions(MF);
-  else
-    findForceIsStmtInstrs(MF);
+  findForceIsStmtInstrs(MF);
 }
 
 unsigned

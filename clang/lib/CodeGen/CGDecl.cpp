@@ -599,10 +599,11 @@ namespace {
     llvm::Constant *CleanupFn;
     const CGFunctionInfo &FnInfo;
     const VarDecl &Var;
+    const CleanupAttr *Attribute;
 
     CallCleanupFunction(llvm::Constant *CleanupFn, const CGFunctionInfo *Info,
-                        const VarDecl *Var)
-      : CleanupFn(CleanupFn), FnInfo(*Info), Var(*Var) {}
+                        const VarDecl *Var, const CleanupAttr *Attr)
+        : CleanupFn(CleanupFn), FnInfo(*Info), Var(*Var), Attribute(Attr) {}
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       DeclRefExpr DRE(CGF.getContext(), const_cast<VarDecl *>(&Var), false,
@@ -624,8 +625,11 @@ namespace {
       CallArgList Args;
       Args.add(RValue::get(Arg),
                CGF.getContext().getPointerType(Var.getType()));
-      auto Callee = CGCallee::forDirect(CleanupFn);
-      CGF.EmitCall(FnInfo, Callee, ReturnValueSlot(), Args);
+      GlobalDecl GD = GlobalDecl(Attribute->getFunctionDecl());
+      auto Callee = CGCallee::forDirect(CleanupFn, CGCalleeInfo(GD));
+      CGF.EmitCall(FnInfo, Callee, ReturnValueSlot(), Args,
+                   /*callOrInvoke*/ nullptr, /*IsMustTail*/ false,
+                   Attribute->getLoc());
     }
   };
 } // end anonymous namespace
@@ -1347,30 +1351,27 @@ void CodeGenFunction::EmitAutoVarDecl(const VarDecl &D) {
 }
 
 /// Emit a lifetime.begin marker if some criteria are satisfied.
-/// \return a pointer to the temporary size Value if a marker was emitted, null
-/// otherwise
-llvm::Value *CodeGenFunction::EmitLifetimeStart(llvm::TypeSize Size,
-                                                llvm::Value *Addr) {
+/// \return whether the marker was emitted.
+bool CodeGenFunction::EmitLifetimeStart(llvm::Value *Addr) {
   if (!ShouldEmitLifetimeMarkers)
-    return nullptr;
+    return false;
 
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");
-  llvm::Value *SizeV = llvm::ConstantInt::get(
-      Int64Ty, Size.isScalable() ? -1 : Size.getFixedValue());
-  llvm::CallInst *C =
-      Builder.CreateCall(CGM.getLLVMLifetimeStartFn(), {SizeV, Addr});
+  llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeStartFn(), {Addr});
   C->setDoesNotThrow();
-  return SizeV;
+  return true;
 }
 
-void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Size, llvm::Value *Addr) {
+void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Addr) {
+  if (!ShouldEmitLifetimeMarkers)
+    return;
+
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");
-  llvm::CallInst *C =
-      Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Size, Addr});
+  llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Addr});
   C->setDoesNotThrow();
 }
 
@@ -1628,9 +1629,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         // is rare.
         if (!Bypasses.IsBypassed(&D) &&
             !(!getLangOpts().CPlusPlus && hasLabelBeenSeenInCurrentScope())) {
-          llvm::TypeSize Size = CGM.getDataLayout().getTypeAllocSize(allocaTy);
-          emission.SizeForLifetimeMarkers =
-              EmitLifetimeStart(Size, AllocaAddr.getPointer());
+          emission.UseLifetimeMarkers =
+              EmitLifetimeStart(AllocaAddr.getPointer());
         }
       } else {
         assert(!emission.useLifetimeMarkers());
@@ -1723,9 +1723,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
   // Make sure we call @llvm.lifetime.end.
   if (emission.useLifetimeMarkers())
-    EHStack.pushCleanup<CallLifetimeEnd>(NormalEHLifetimeMarker,
-                                         emission.getOriginalAllocatedAddress(),
-                                         emission.getSizeForLifetimeMarkers());
+    EHStack.pushCleanup<CallLifetimeEnd>(
+        NormalEHLifetimeMarker, emission.getOriginalAllocatedAddress());
 
   // Analogous to lifetime markers, we use a 'cleanup' to emit fake.use
   // calls for local variables. We are exempting volatile variables and
@@ -2231,7 +2230,8 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
     assert(F && "Could not find function!");
 
     const CGFunctionInfo &Info = CGM.getTypes().arrangeFunctionDeclaration(FD);
-    EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D);
+    EHStack.pushCleanup<CallCleanupFunction>(NormalAndEHCleanup, F, &Info, &D,
+                                             CA);
   }
 
   // If this is a block variable, call _Block_object_destroy

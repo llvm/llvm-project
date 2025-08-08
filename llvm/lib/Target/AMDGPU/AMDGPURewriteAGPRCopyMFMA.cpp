@@ -109,12 +109,17 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
     // Find AV_* registers assigned to AGPRs.
     const TargetRegisterClass *VirtRegRC = MRI.getRegClass(VReg);
-    if (!TRI.isVectorSuperClass(VirtRegRC))
+    if (!TRI.hasAGPRs(VirtRegRC))
       continue;
 
-    const TargetRegisterClass *AssignedRC = TRI.getPhysRegBaseClass(PhysReg);
-    if (!TRI.isAGPRClass(AssignedRC))
-      continue;
+    const TargetRegisterClass *AssignedRC = VirtRegRC;
+    if (TRI.hasVGPRs(VirtRegRC)) {
+      // If this is an AV register, we have to check if the actual assignment is
+      // to an AGPR
+      AssignedRC = TRI.getPhysRegBaseClass(PhysReg);
+      if (!TRI.isAGPRClass(AssignedRC))
+        continue;
+    }
 
     LiveInterval &LI = LIS.getInterval(VReg);
 
@@ -159,7 +164,8 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
       // If the inputs are tied and the same register, we can shortcut and
       // directly replace the register.
-      if (Src2->getReg() != CopySrcReg) {
+      if (!Src2->isReg() || Src2->getReg() != CopySrcReg ||
+          Src2->getSubReg() != DefMI->getOperand(1).getSubReg()) {
         LLVM_DEBUG(
             dbgs()
             << "Replacing untied VGPR MFMAs with AGPR form not yet handled\n");

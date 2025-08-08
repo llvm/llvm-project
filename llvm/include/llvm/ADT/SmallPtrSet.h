@@ -46,7 +46,7 @@ namespace llvm {
 /// sets are often small.  In this case, no memory allocation is used, and only
 /// light-weight and cache-efficient scanning is used.
 ///
-/// Large sets use a classic exponentially-probed hash table.  Empty buckets are
+/// Large sets use a classic quadratically-probed hash table.  Empty buckets are
 /// represented with an illegal pointer value (-1) to allow null pointers to be
 /// inserted.  Tombstones are represented with another illegal pointer value
 /// (-2), to allow deletion.  The hash table is resized when the table is 3/4 or
@@ -80,7 +80,7 @@ protected:
   explicit SmallPtrSetImplBase(const void **SmallStorage, unsigned SmallSize)
       : CurArray(SmallStorage), CurArraySize(SmallSize), NumNonEmpty(0),
         NumTombstones(0), IsSmall(true) {
-    assert(SmallSize && (SmallSize & (SmallSize-1)) == 0 &&
+    assert(llvm::has_single_bit(SmallSize) &&
            "Initial size must be a power of two!");
   }
 
