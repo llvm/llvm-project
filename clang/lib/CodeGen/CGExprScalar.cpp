@@ -4234,7 +4234,7 @@ llvm::Value *CodeGenFunction::EmitPointerArithmetic(
   //
   // Note that we do not suppress the pointer overflow check in this case.
   if (BinaryOperator::isNullPointerArithmeticExtension(
-          getContext(), BO->getOpcode(), BO->getLHS(), BO->getRHS())) {
+          getContext(), BO->getOpcode(), pointerOperand, indexOperand)) {
     llvm::Value *Ptr = Builder.CreateIntToPtr(index, pointer->getType());
     if (getLangOpts().PointerOverflowDefined ||
         !SanOpts.has(SanitizerKind::PointerOverflow) ||
