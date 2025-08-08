@@ -37,6 +37,7 @@ struct ModuleMetadataInfo {
   Triple::EnvironmentType ShaderProfile{Triple::UnknownEnvironment};
   VersionTuple ValidatorVersion{};
   SmallVector<EntryProperties> EntryPropertyVec{};
+  bool StripRootSignature{true};
   void print(raw_ostream &OS) const;
 };
 

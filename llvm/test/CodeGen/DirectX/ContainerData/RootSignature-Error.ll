@@ -14,5 +14,6 @@ entry:
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
 
-!dx.rootsignatures = !{!1} ; list of function/root signature pairs
+!dx.rootsignatures = !{!0, !1} ; list of function/root signature pairs
+!0 = !{i1 0} ; strip root signature
 !1= !{ !"RootFlags" } ; function, root signature

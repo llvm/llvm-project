@@ -13,7 +13,8 @@ entry:
 
 attributes #0 = { "hlsl.numthreads"="1,1,1" "hlsl.shader"="compute" }
 
-!dx.rootsignatures = !{!0}
-!0 = !{ ptr @main, !1, i32 2 }
-!1 = !{ !2 }
-!2 = !{ i32 0 }
+!dx.rootsignatures = !{!0, !1}
+!0 = !{i1 0} ; strip root signature
+!1 = !{ ptr @main, !2, i32 2 }
+!2 = !{ !3 }
+!3 = !{ i32 0 }

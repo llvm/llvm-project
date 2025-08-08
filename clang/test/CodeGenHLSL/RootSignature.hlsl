@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: !dx.rootsignatures = !{![[#EMPTY_ENTRY:]], ![[#DT_ENTRY:]],
+// CHECK: !dx.rootsignatures = !{![[#LOWER_INFO:]], ![[#EMPTY_ENTRY:]], ![[#DT_ENTRY:]],
 // CHECK-SAME: ![[#RF_ENTRY:]], ![[#RC_ENTRY:]], ![[#RD_ENTRY:]], ![[#SS_ENTRY:]]}
+
+// CHECK: ![[#LOWER_INFO]] = !{i1 false}
 
 // CHECK: ![[#EMPTY_ENTRY]] = !{ptr @EmptyEntry, ![[#EMPTY:]], i32 2}
 // CHECK: ![[#EMPTY]] = !{}
