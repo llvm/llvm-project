@@ -16,8 +16,6 @@ define void @widen_extractvalue(ptr %dst, {i64, i64} %sv) #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i32 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1000, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 1000, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vscale.i32()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i32 [[TMP4]], 2
 ; CHECK-NEXT:    [[EXTRACT0:%.*]] = extractvalue { i64, i64 } [[SV]], 0
 ; CHECK-NEXT:    [[DOTSPLATINSERT1:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[EXTRACT0]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
@@ -30,7 +28,7 @@ define void @widen_extractvalue(ptr %dst, {i64, i64} %sv) #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[DST]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <vscale x 2 x i64> [[TMP7]], ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

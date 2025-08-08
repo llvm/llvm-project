@@ -1129,7 +1129,7 @@ struct CollectCudaSymbolsHelper : public SetTraverse<CollectCudaSymbolsHelper,
   CollectCudaSymbolsHelper() : Base{*this} {}
   using Base::operator();
   semantics::UnorderedSymbolSet operator()(const Symbol &symbol) const {
-    return {symbol};
+    return {symbol.GetUltimate()};
   }
   // Overload some of the operator() to filter out the symbols that are not
   // of interest for CUDA data transfer logic.

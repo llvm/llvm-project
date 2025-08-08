@@ -26,7 +26,6 @@ llvm_canonicalize_cmake_booleans(
   PPC_LINUX_DEFAULT_IEEELONGDOUBLE
   LLVM_TOOL_LLVM_DRIVER_BUILD
   LLVM_INCLUDE_SPIRV_TOOLS_TESTS
-  LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
   )
 
 # Run tests requiring Z3 headers only if LLVM was built with Z3

@@ -65,9 +65,6 @@ public:
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                      const TargetTransformInfo::LSRCost &C2) const override;
 
-  bool areInlineCompatible(const Function *Caller,
-                           const Function *Callee) const override;
-
   /// @}
 
   /// \name Vector TTI Implementations

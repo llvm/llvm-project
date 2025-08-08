@@ -2105,6 +2105,10 @@ public:
     }
     case Intrinsic::get_active_lane_mask:
     case Intrinsic::experimental_vector_match:
+    case Intrinsic::experimental_vector_histogram_add:
+    case Intrinsic::experimental_vector_histogram_uadd_sat:
+    case Intrinsic::experimental_vector_histogram_umax:
+    case Intrinsic::experimental_vector_histogram_umin:
       return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
     case Intrinsic::modf:
     case Intrinsic::sincos:
@@ -2457,6 +2461,51 @@ public:
       return thisT()->getShuffleCost(TTI::SK_Reverse, cast<VectorType>(RetTy),
                                      cast<VectorType>(ICA.getArgTypes()[0]), {},
                                      CostKind, 0, cast<VectorType>(RetTy));
+    case Intrinsic::experimental_vector_histogram_add:
+    case Intrinsic::experimental_vector_histogram_uadd_sat:
+    case Intrinsic::experimental_vector_histogram_umax:
+    case Intrinsic::experimental_vector_histogram_umin: {
+      FixedVectorType *PtrsTy = dyn_cast<FixedVectorType>(ICA.getArgTypes()[0]);
+      Type *EltTy = ICA.getArgTypes()[1];
+
+      // Targets with scalable vectors must handle this on their own.
+      if (!PtrsTy)
+        return InstructionCost::getInvalid();
+
+      Align Alignment = thisT()->DL.getABITypeAlign(EltTy);
+      InstructionCost Cost = 0;
+      Cost += thisT()->getVectorInstrCost(Instruction::ExtractElement, PtrsTy,
+                                          CostKind, 1, nullptr, nullptr);
+      Cost += thisT()->getMemoryOpCost(Instruction::Load, EltTy, Alignment, 0,
+                                       CostKind);
+      switch (IID) {
+      default:
+        llvm_unreachable("Unhandled histogram update operation.");
+      case Intrinsic::experimental_vector_histogram_add:
+        Cost +=
+            thisT()->getArithmeticInstrCost(Instruction::Add, EltTy, CostKind);
+        break;
+      case Intrinsic::experimental_vector_histogram_uadd_sat: {
+        IntrinsicCostAttributes UAddSat(Intrinsic::uadd_sat, EltTy, {EltTy});
+        Cost += thisT()->getIntrinsicInstrCost(UAddSat, CostKind);
+        break;
+      }
+      case Intrinsic::experimental_vector_histogram_umax: {
+        IntrinsicCostAttributes UMax(Intrinsic::umax, EltTy, {EltTy});
+        Cost += thisT()->getIntrinsicInstrCost(UMax, CostKind);
+        break;
+      }
+      case Intrinsic::experimental_vector_histogram_umin: {
+        IntrinsicCostAttributes UMin(Intrinsic::umin, EltTy, {EltTy});
+        Cost += thisT()->getIntrinsicInstrCost(UMin, CostKind);
+        break;
+      }
+      }
+      Cost += thisT()->getMemoryOpCost(Instruction::Store, EltTy, Alignment, 0,
+                                       CostKind);
+      Cost *= PtrsTy->getNumElements();
+      return Cost;
+    }
     case Intrinsic::get_active_lane_mask: {
       Type *ArgTy = ICA.getArgTypes()[0];
       EVT ResVT = getTLI()->getValueType(DL, RetTy, true);

@@ -109,12 +109,17 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::run(MachineFunction &MF) const {
 
     // Find AV_* registers assigned to AGPRs.
     const TargetRegisterClass *VirtRegRC = MRI.getRegClass(VReg);
-    if (!TRI.isVectorSuperClass(VirtRegRC))
+    if (!TRI.hasAGPRs(VirtRegRC))
       continue;
 
-    const TargetRegisterClass *AssignedRC = TRI.getPhysRegBaseClass(PhysReg);
-    if (!TRI.isAGPRClass(AssignedRC))
-      continue;
+    const TargetRegisterClass *AssignedRC = VirtRegRC;
+    if (TRI.hasVGPRs(VirtRegRC)) {
+      // If this is an AV register, we have to check if the actual assignment is
+      // to an AGPR
+      AssignedRC = TRI.getPhysRegBaseClass(PhysReg);
+      if (!TRI.isAGPRClass(AssignedRC))
+        continue;
+    }
 
     LiveInterval &LI = LIS.getInterval(VReg);
 

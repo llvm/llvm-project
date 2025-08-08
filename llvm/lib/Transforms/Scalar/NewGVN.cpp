@@ -1535,7 +1535,7 @@ NewGVN::performSymbolicLoadCoercion(Type *LoadType, Value *LoadPtr,
 
   if (auto *II = dyn_cast<IntrinsicInst>(DepInst)) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
-      auto *LifetimePtr = II->getOperand(1);
+      auto *LifetimePtr = II->getOperand(0);
       if (LoadPtr == lookupOperandLeader(LifetimePtr) ||
           AA->isMustAlias(LoadPtr, LifetimePtr))
         return createConstantExpression(UndefValue::get(LoadType));

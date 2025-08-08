@@ -12,13 +12,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "Conformance/device_code/Common.hpp"
+#include "Conformance/device_code/DeviceAPIs.hpp"
+#include "Conformance/device_code/KernelRunner.hpp"
 
 #include <gpuintrin.h>
 #include <math.h>
 #include <stddef.h>
 
-using namespace common;
+using namespace kernels;
 
 //===----------------------------------------------------------------------===//
 // Helpers

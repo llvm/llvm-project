@@ -654,7 +654,7 @@ func.func @signExtendConstant() -> i16 {
 //       CHECK:   return %[[cres]]
 func.func @signExtendConstantSplat() -> vector<4xi16> {
   %c-2 = arith.constant -2 : i8
-  %splat = vector.splat %c-2 : vector<4xi8>
+  %splat = vector.broadcast %c-2 : i8 to vector<4xi8>
   %ext = arith.extsi %splat : vector<4xi8> to vector<4xi16>
   return %ext : vector<4xi16>
 }
@@ -682,7 +682,7 @@ func.func @unsignedExtendConstant() -> i16 {
 //       CHECK:   return %[[cres]]
 func.func @unsignedExtendConstantSplat() -> vector<4xi16> {
   %c2 = arith.constant 2 : i8
-  %splat = vector.splat %c2 : vector<4xi8>
+  %splat = vector.broadcast %c2 : i8 to vector<4xi8>
   %ext = arith.extui %splat : vector<4xi8> to vector<4xi16>
   return %ext : vector<4xi16>
 }
@@ -866,7 +866,7 @@ func.func @truncExtsiVector(%arg0: vector<2xi32>) -> vector<2xi16> {
 //       CHECK:   return %[[cres]]
 func.func @truncConstantSplat() -> vector<4xi8> {
   %c-2 = arith.constant -2 : i16
-  %splat = vector.splat %c-2 : vector<4xi16>
+  %splat = vector.broadcast %c-2 : i16 to vector<4xi16>
   %trunc = arith.trunci %splat : vector<4xi16> to vector<4xi8>
   return %trunc : vector<4xi8>
 }
@@ -2334,7 +2334,7 @@ func.func @constant_FPtoUI_splat() -> vector<4xi32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<2> : vector<4xi32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant 2.0 : f32
-  %splat = vector.splat %c0 : vector<4xf32>
+  %splat = vector.broadcast %c0 : f32 to vector<4xf32>
   %res = arith.fptoui %splat : vector<4xf32> to vector<4xi32>
   return %res : vector<4xi32>
 }
@@ -2374,7 +2374,7 @@ func.func @constant_FPtoSI_splat() -> vector<4xi32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<-2> : vector<4xi32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant -2.0 : f32
-  %splat = vector.splat %c0 : vector<4xf32>
+  %splat = vector.broadcast %c0 : f32 to vector<4xf32>
   %res = arith.fptosi %splat : vector<4xf32> to vector<4xi32>
   return %res : vector<4xi32>
 }
@@ -2413,7 +2413,7 @@ func.func @constant_SItoFP_splat() -> vector<4xf32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<2.000000e+00> : vector<4xf32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant 2 : i32
-  %splat = vector.splat %c0 : vector<4xi32>
+  %splat = vector.broadcast %c0 : i32 to vector<4xi32>
   %res = arith.sitofp %splat : vector<4xi32> to vector<4xf32>
   return %res : vector<4xf32>
 }
@@ -2442,7 +2442,7 @@ func.func @constant_UItoFP_splat() -> vector<4xf32> {
   // CHECK: %[[C0:.+]] = arith.constant dense<2.000000e+00> : vector<4xf32>
   // CHECK: return %[[C0]]
   %c0 = arith.constant 2 : i32
-  %splat = vector.splat %c0 : vector<4xi32>
+  %splat = vector.broadcast %c0 : i32 to vector<4xi32>
   %res = arith.uitofp %splat : vector<4xi32> to vector<4xf32>
   return %res : vector<4xf32>
 }

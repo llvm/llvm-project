@@ -167,7 +167,7 @@ public:
 
   lldb::SymbolType GetType() const { return (lldb::SymbolType)m_type; }
 
-  void SetType(lldb::SymbolType type) { m_type = (lldb::SymbolType)type; }
+  void SetType(lldb::SymbolType type) { m_type = type; }
 
   const char *GetTypeAsString() const;
 

@@ -942,9 +942,6 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
 // relaxation pass.
 bool RISCV::relaxOnce(int pass) const {
   llvm::TimeTraceScope timeScope("RISC-V relaxOnce");
-  if (ctx.arg.relocatable)
-    return false;
-
   if (pass == 0)
     initSymbolAnchors(ctx);
 

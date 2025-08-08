@@ -918,3 +918,14 @@ llvm.func @nvvm_dot_accumulate_2way(%a: vector<2xi16>, %b: vector<4xi8>, %c: i32
   %7 = nvvm.dot.accumulate.2way %a <signed>, %b <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
   llvm.return
 }
+
+// -----
+
+// CHECK-LABEL: @nvvm_pmevent
+llvm.func @nvvm_pmevent() {
+  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 15000)
+  nvvm.pmevent mask = 15000
+  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 4)
+  nvvm.pmevent mask = 4
+  llvm.return
+}

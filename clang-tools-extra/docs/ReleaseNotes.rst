@@ -134,6 +134,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/infinite-loop>` check by adding detection for
   variables introduced by structured bindings.
 
+- Improved :doc:`bugprone-narrowing-conversions
+  <clang-tidy/checks/bugprone/narrowing-conversions>` check by fixing
+  false positive from analysis of a conditional expression in C.
+
 - Improved :doc:`bugprone-reserved-identifier
   <clang-tidy/checks/bugprone/reserved-identifier>` check by ignoring
   declarations in system headers.

@@ -129,7 +129,6 @@ handleInlinedAllocas(Operation *call,
       OpBuilder::InsertionGuard insertionGuard(builder);
       builder.setInsertionPoint(allocaOp);
       LLVM::LifetimeStartOp::create(builder, allocaOp.getLoc(),
-                                    arraySize.getValue().getLimitedValue(),
                                     allocaOp.getResult());
     }
     allocaOp->moveAfter(newConstant);
@@ -147,7 +146,6 @@ handleInlinedAllocas(Operation *call,
     for (auto &[allocaOp, arraySize, shouldInsertLifetime] : allocasToMove) {
       if (shouldInsertLifetime)
         LLVM::LifetimeEndOp::create(builder, allocaOp.getLoc(),
-                                    arraySize.getValue().getLimitedValue(),
                                     allocaOp.getResult());
     }
   }

@@ -3004,31 +3004,11 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
       if (hasLifetimeMarkers(AI))
         continue;
 
-      // Try to determine the size of the allocation.
-      ConstantInt *AllocaSize = nullptr;
-      if (ConstantInt *AIArraySize =
-          dyn_cast<ConstantInt>(AI->getArraySize())) {
-        auto &DL = Caller->getDataLayout();
-        Type *AllocaType = AI->getAllocatedType();
-        TypeSize AllocaTypeSize = DL.getTypeAllocSize(AllocaType);
-        uint64_t AllocaArraySize = AIArraySize->getLimitedValue();
+      std::optional<TypeSize> Size = AI->getAllocationSize(AI->getDataLayout());
+      if (Size && Size->isZero())
+        continue;
 
-        // Don't add markers for zero-sized allocas.
-        if (AllocaArraySize == 0)
-          continue;
-
-        // Check that array size doesn't saturate uint64_t and doesn't
-        // overflow when it's multiplied by type size.
-        if (!AllocaTypeSize.isScalable() &&
-            AllocaArraySize != std::numeric_limits<uint64_t>::max() &&
-            std::numeric_limits<uint64_t>::max() / AllocaArraySize >=
-                AllocaTypeSize.getFixedValue()) {
-          AllocaSize = ConstantInt::get(Type::getInt64Ty(AI->getContext()),
-                                        AllocaArraySize * AllocaTypeSize);
-        }
-      }
-
-      builder.CreateLifetimeStart(AI, AllocaSize);
+      builder.CreateLifetimeStart(AI);
       for (ReturnInst *RI : Returns) {
         // Don't insert llvm.lifetime.end calls between a musttail or deoptimize
         // call and a return.  The return kills all local allocas.
@@ -3038,7 +3018,7 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
         if (InlinedDeoptimizeCalls &&
             RI->getParent()->getTerminatingDeoptimizeCall())
           continue;
-        IRBuilder<>(RI).CreateLifetimeEnd(AI, AllocaSize);
+        IRBuilder<>(RI).CreateLifetimeEnd(AI);
       }
     }
   }

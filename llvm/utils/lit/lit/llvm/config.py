@@ -107,6 +107,8 @@ class LLVMConfig(object):
             features.add("system-solaris")
         elif platform.system() == "OS/390":
             features.add("system-zos")
+        elif sys.platform == "cygwin":
+            features.add("system-cygwin")
 
         # Native compilation: host arch == default triple arch
         # Both of these values should probably be in every site config (e.g. as

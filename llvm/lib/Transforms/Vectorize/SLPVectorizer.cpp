@@ -12050,7 +12050,8 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   for (auto [V, Op] : zip(VL, Operands.front())) {
     auto *I = dyn_cast<Instruction>(Op);
     if (!I || !I->hasOneUse()) {
-      FMACost += TTI.getInstructionCost(cast<Instruction>(V), CostKind);
+      if (auto *OpI = dyn_cast<Instruction>(V))
+        FMACost += TTI.getInstructionCost(OpI, CostKind);
       if (I)
         FMACost += TTI.getInstructionCost(I, CostKind);
       continue;

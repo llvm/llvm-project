@@ -876,6 +876,9 @@ private:
 
   bool IsNestedInDirective(llvm::omp::Directive directive);
   void ResolveOmpObjectList(const parser::OmpObjectList &, Symbol::Flag);
+  void ResolveOmpDesignator(
+      const parser::Designator &designator, Symbol::Flag ompFlag);
+  void ResolveOmpCommonBlock(const parser::Name &name, Symbol::Flag ompFlag);
   void ResolveOmpObject(const parser::OmpObject &, Symbol::Flag);
   Symbol *ResolveOmp(const parser::Name &, Symbol::Flag, Scope &);
   Symbol *ResolveOmp(Symbol &, Symbol::Flag, Scope &);
@@ -2786,196 +2789,182 @@ static bool SymbolOrEquivalentIsInNamelist(const Symbol &symbol) {
   });
 }
 
+void OmpAttributeVisitor::ResolveOmpDesignator(
+    const parser::Designator &designator, Symbol::Flag ompFlag) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Directive directive{GetContext().directive};
+
+  const auto *name{semantics::getDesignatorNameIfDataRef(designator)};
+  if (!name) {
+    // Array sections to be changed to substrings as needed
+    if (AnalyzeExpr(context_, designator)) {
+      if (std::holds_alternative<parser::Substring>(designator.u)) {
+        context_.Say(designator.source,
+            "Substrings are not allowed on OpenMP directives or clauses"_err_en_US);
+      }
+    }
+    // other checks, more TBD
+    return;
+  }
+
+  if (auto *symbol{ResolveOmp(*name, ompFlag, currScope())}) {
+    auto checkExclusivelists{//
+        [&](const Symbol *symbol1, Symbol::Flag firstOmpFlag,
+            const Symbol *symbol2, Symbol::Flag secondOmpFlag) {
+          if ((symbol1->test(firstOmpFlag) && symbol2->test(secondOmpFlag)) ||
+              (symbol1->test(secondOmpFlag) && symbol2->test(firstOmpFlag))) {
+            context_.Say(designator.source,
+                "Variable '%s' may not appear on both %s and %s clauses on a %s construct"_err_en_US,
+                symbol2->name(), Symbol::OmpFlagToClauseName(firstOmpFlag),
+                Symbol::OmpFlagToClauseName(secondOmpFlag),
+                parser::ToUpperCaseLetters(
+                    llvm::omp::getOpenMPDirectiveName(directive, version)));
+          }
+        }};
+    if (dataCopyingAttributeFlags.test(ompFlag)) {
+      CheckDataCopyingClause(*name, *symbol, ompFlag);
+    } else {
+      AddToContextObjectWithExplicitDSA(*symbol, ompFlag);
+      if (dataSharingAttributeFlags.test(ompFlag)) {
+        CheckMultipleAppearances(*name, *symbol, ompFlag);
+      }
+      if (privateDataSharingAttributeFlags.test(ompFlag)) {
+        CheckObjectIsPrivatizable(*name, *symbol, ompFlag);
+      }
+
+      if (ompFlag == Symbol::Flag::OmpAllocate) {
+        AddAllocateName(name);
+      }
+    }
+    if (ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective &&
+        IsAllocatable(*symbol) &&
+        !IsNestedInDirective(llvm::omp::Directive::OMPD_allocate)) {
+      context_.Say(designator.source,
+          "List items specified in the ALLOCATE directive must not have the ALLOCATABLE attribute unless the directive is associated with an ALLOCATE statement"_err_en_US);
+    }
+    if ((ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective ||
+            ompFlag == Symbol::Flag::OmpExecutableAllocateDirective) &&
+        ResolveOmpObjectScope(name) == nullptr) {
+      context_.Say(designator.source, // 2.15.3
+          "List items must be declared in the same scoping unit in which the %s directive appears"_err_en_US,
+          parser::ToUpperCaseLetters(
+              llvm::omp::getOpenMPDirectiveName(directive, version)));
+    }
+    if (ompFlag == Symbol::Flag::OmpReduction) {
+      // Using variables inside of a namelist in OpenMP reductions
+      // is allowed by the standard, but is not allowed for
+      // privatisation. This looks like an oversight. If the
+      // namelist is hoisted to a global, we cannot apply the
+      // mapping for the reduction variable: resulting in incorrect
+      // results. Disabling this hoisting could make some real
+      // production code go slower. See discussion in #109303
+      if (SymbolOrEquivalentIsInNamelist(*symbol)) {
+        context_.Say(name->source,
+            "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
+            name->ToString());
+      }
+    }
+    if (ompFlag == Symbol::Flag::OmpInclusiveScan ||
+        ompFlag == Symbol::Flag::OmpExclusiveScan) {
+      if (!symbol->test(Symbol::Flag::OmpInScanReduction)) {
+        context_.Say(name->source,
+            "List item %s must appear in REDUCTION clause with the INSCAN modifier of the parent directive"_err_en_US,
+            name->ToString());
+      }
+    }
+    if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
+      if (symbol->IsFuncResult()) {
+        if (Symbol * func{currScope().symbol()}) {
+          CHECK(func->IsSubprogram());
+          func->set(ompFlag);
+          name->symbol = func;
+        }
+      }
+    }
+    if (directive == llvm::omp::Directive::OMPD_target_data) {
+      checkExclusivelists(symbol, Symbol::Flag::OmpUseDevicePtr, symbol,
+          Symbol::Flag::OmpUseDeviceAddr);
+    }
+    if (llvm::omp::allDistributeSet.test(directive)) {
+      checkExclusivelists(symbol, Symbol::Flag::OmpFirstPrivate, symbol,
+          Symbol::Flag::OmpLastPrivate);
+    }
+    if (llvm::omp::allTargetSet.test(directive)) {
+      checkExclusivelists(symbol, Symbol::Flag::OmpIsDevicePtr, symbol,
+          Symbol::Flag::OmpHasDeviceAddr);
+      const auto *hostAssocSym{symbol};
+      if (!symbol->test(Symbol::Flag::OmpIsDevicePtr) &&
+          !symbol->test(Symbol::Flag::OmpHasDeviceAddr)) {
+        if (const auto *details{symbol->detailsIf<HostAssocDetails>()}) {
+          hostAssocSym = &details->symbol();
+        }
+      }
+      static Symbol::Flag dataMappingAttributeFlags[] = {//
+          Symbol::Flag::OmpMapTo, Symbol::Flag::OmpMapFrom,
+          Symbol::Flag::OmpMapToFrom, Symbol::Flag::OmpMapStorage,
+          Symbol::Flag::OmpMapDelete, Symbol::Flag::OmpIsDevicePtr,
+          Symbol::Flag::OmpHasDeviceAddr};
+
+      static Symbol::Flag dataSharingAttributeFlags[] = {//
+          Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
+          Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpShared,
+          Symbol::Flag::OmpLinear};
+
+      // For OMP TARGET TEAMS directive some sharing attribute
+      // flags and mapping attribute flags can co-exist.
+      if (!llvm::omp::allTeamsSet.test(directive) &&
+          !llvm::omp::allParallelSet.test(directive)) {
+        for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
+          for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
+            if ((hostAssocSym->test(ompFlag2) &&
+                    hostAssocSym->test(Symbol::Flag::OmpExplicit)) ||
+                (symbol->test(ompFlag2) &&
+                    symbol->test(Symbol::Flag::OmpExplicit))) {
+              checkExclusivelists(hostAssocSym, ompFlag1, symbol, ompFlag2);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+void OmpAttributeVisitor::ResolveOmpCommonBlock(
+    const parser::Name &name, Symbol::Flag ompFlag) {
+  if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
+    if (!dataCopyingAttributeFlags.test(ompFlag)) {
+      CheckMultipleAppearances(name, *symbol, Symbol::Flag::OmpCommonBlock);
+    }
+    // 2.15.3 When a named common block appears in a list, it has the
+    // same meaning as if every explicit member of the common block
+    // appeared in the list
+    auto &details{symbol->get<CommonBlockDetails>()};
+    for (auto [index, object] : llvm::enumerate(details.objects())) {
+      if (auto *resolvedObject{ResolveOmp(*object, ompFlag, currScope())}) {
+        if (dataCopyingAttributeFlags.test(ompFlag)) {
+          CheckDataCopyingClause(name, *resolvedObject, ompFlag);
+        } else {
+          AddToContextObjectWithExplicitDSA(*resolvedObject, ompFlag);
+        }
+        details.replace_object(*resolvedObject, index);
+      }
+    }
+  } else {
+    context_.Say(name.source, // 2.15.3
+        "COMMON block must be declared in the same scoping unit in which the OpenMP directive or clause appears"_err_en_US);
+  }
+}
+
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
-  unsigned version{context_.langOptions().OpenMPVersion};
-  common::visit(
-      common::visitors{
-          [&](const parser::Designator &designator) {
-            if (const auto *name{
-                    semantics::getDesignatorNameIfDataRef(designator)}) {
-              if (auto *symbol{ResolveOmp(*name, ompFlag, currScope())}) {
-                auto checkExclusivelists =
-                    [&](const Symbol *symbol1, Symbol::Flag firstOmpFlag,
-                        const Symbol *symbol2, Symbol::Flag secondOmpFlag) {
-                      if ((symbol1->test(firstOmpFlag) &&
-                              symbol2->test(secondOmpFlag)) ||
-                          (symbol1->test(secondOmpFlag) &&
-                              symbol2->test(firstOmpFlag))) {
-                        context_.Say(designator.source,
-                            "Variable '%s' may not "
-                            "appear on both %s and %s "
-                            "clauses on a %s construct"_err_en_US,
-                            symbol2->name(),
-                            Symbol::OmpFlagToClauseName(firstOmpFlag),
-                            Symbol::OmpFlagToClauseName(secondOmpFlag),
-                            parser::ToUpperCaseLetters(
-                                llvm::omp::getOpenMPDirectiveName(
-                                    GetContext().directive, version)
-                                    .str()));
-                      }
-                    };
-                if (dataCopyingAttributeFlags.test(ompFlag)) {
-                  CheckDataCopyingClause(*name, *symbol, ompFlag);
-                } else {
-                  AddToContextObjectWithExplicitDSA(*symbol, ompFlag);
-                  if (dataSharingAttributeFlags.test(ompFlag)) {
-                    CheckMultipleAppearances(*name, *symbol, ompFlag);
-                  }
-                  if (privateDataSharingAttributeFlags.test(ompFlag)) {
-                    CheckObjectIsPrivatizable(*name, *symbol, ompFlag);
-                  }
-
-                  if (ompFlag == Symbol::Flag::OmpAllocate) {
-                    AddAllocateName(name);
-                  }
-                }
-                if (ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective &&
-                    IsAllocatable(*symbol) &&
-                    !IsNestedInDirective(llvm::omp::Directive::OMPD_allocate)) {
-                  context_.Say(designator.source,
-                      "List items specified in the ALLOCATE directive must not "
-                      "have the ALLOCATABLE attribute unless the directive is "
-                      "associated with an ALLOCATE statement"_err_en_US);
-                }
-                if ((ompFlag == Symbol::Flag::OmpDeclarativeAllocateDirective ||
-                        ompFlag ==
-                            Symbol::Flag::OmpExecutableAllocateDirective) &&
-                    ResolveOmpObjectScope(name) == nullptr) {
-                  context_.Say(designator.source, // 2.15.3
-                      "List items must be declared in the same scoping unit "
-                      "in which the %s directive appears"_err_en_US,
-                      parser::ToUpperCaseLetters(
-                          llvm::omp::getOpenMPDirectiveName(
-                              GetContext().directive, version)
-                              .str()));
-                }
-                if (ompFlag == Symbol::Flag::OmpReduction) {
-                  // Using variables inside of a namelist in OpenMP reductions
-                  // is allowed by the standard, but is not allowed for
-                  // privatisation. This looks like an oversight. If the
-                  // namelist is hoisted to a global, we cannot apply the
-                  // mapping for the reduction variable: resulting in incorrect
-                  // results. Disabling this hoisting could make some real
-                  // production code go slower. See discussion in #109303
-                  if (SymbolOrEquivalentIsInNamelist(*symbol)) {
-                    context_.Say(name->source,
-                        "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
-                        name->ToString());
-                  }
-                }
-                if (ompFlag == Symbol::Flag::OmpInclusiveScan ||
-                    ompFlag == Symbol::Flag::OmpExclusiveScan) {
-                  if (!symbol->test(Symbol::Flag::OmpInScanReduction)) {
-                    context_.Say(name->source,
-                        "List item %s must appear in REDUCTION clause "
-                        "with the INSCAN modifier of the parent "
-                        "directive"_err_en_US,
-                        name->ToString());
-                  }
-                }
-                if (ompFlag == Symbol::Flag::OmpDeclareTarget) {
-                  if (symbol->IsFuncResult()) {
-                    if (Symbol * func{currScope().symbol()}) {
-                      CHECK(func->IsSubprogram());
-                      func->set(ompFlag);
-                      name->symbol = func;
-                    }
-                  }
-                }
-                if (GetContext().directive ==
-                    llvm::omp::Directive::OMPD_target_data) {
-                  checkExclusivelists(symbol, Symbol::Flag::OmpUseDevicePtr,
-                      symbol, Symbol::Flag::OmpUseDeviceAddr);
-                }
-                if (llvm::omp::allDistributeSet.test(GetContext().directive)) {
-                  checkExclusivelists(symbol, Symbol::Flag::OmpFirstPrivate,
-                      symbol, Symbol::Flag::OmpLastPrivate);
-                }
-                if (llvm::omp::allTargetSet.test(GetContext().directive)) {
-                  checkExclusivelists(symbol, Symbol::Flag::OmpIsDevicePtr,
-                      symbol, Symbol::Flag::OmpHasDeviceAddr);
-                  const auto *hostAssocSym{symbol};
-                  if (!(symbol->test(Symbol::Flag::OmpIsDevicePtr) ||
-                          symbol->test(Symbol::Flag::OmpHasDeviceAddr))) {
-                    if (const auto *details{
-                            symbol->detailsIf<HostAssocDetails>()}) {
-                      hostAssocSym = &details->symbol();
-                    }
-                  }
-                  Symbol::Flag dataMappingAttributeFlags[] = {
-                      Symbol::Flag::OmpMapTo, Symbol::Flag::OmpMapFrom,
-                      Symbol::Flag::OmpMapToFrom, Symbol::Flag::OmpMapStorage,
-                      Symbol::Flag::OmpMapDelete, Symbol::Flag::OmpIsDevicePtr,
-                      Symbol::Flag::OmpHasDeviceAddr};
-
-                  Symbol::Flag dataSharingAttributeFlags[] = {
-                      Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
-                      Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpShared,
-                      Symbol::Flag::OmpLinear};
-
-                  // For OMP TARGET TEAMS directive some sharing attribute
-                  // flags and mapping attribute flags can co-exist.
-                  if (!(llvm::omp::allTeamsSet.test(GetContext().directive) ||
-                          llvm::omp::allParallelSet.test(
-                              GetContext().directive))) {
-                    for (Symbol::Flag ompFlag1 : dataMappingAttributeFlags) {
-                      for (Symbol::Flag ompFlag2 : dataSharingAttributeFlags) {
-                        if ((hostAssocSym->test(ompFlag2) &&
-                                hostAssocSym->test(
-                                    Symbol::Flag::OmpExplicit)) ||
-                            (symbol->test(ompFlag2) &&
-                                symbol->test(Symbol::Flag::OmpExplicit))) {
-                          checkExclusivelists(
-                              hostAssocSym, ompFlag1, symbol, ompFlag2);
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            } else {
-              // Array sections to be changed to substrings as needed
-              if (AnalyzeExpr(context_, designator)) {
-                if (std::holds_alternative<parser::Substring>(designator.u)) {
-                  context_.Say(designator.source,
-                      "Substrings are not allowed on OpenMP "
-                      "directives or clauses"_err_en_US);
-                }
-              }
-              // other checks, more TBD
-            }
-          },
-          [&](const parser::Name &name) { // common block
-            if (auto *symbol{ResolveOmpCommonBlockName(&name)}) {
-              if (!dataCopyingAttributeFlags.test(ompFlag)) {
-                CheckMultipleAppearances(
-                    name, *symbol, Symbol::Flag::OmpCommonBlock);
-              }
-              // 2.15.3 When a named common block appears in a list, it has the
-              // same meaning as if every explicit member of the common block
-              // appeared in the list
-              auto &details{symbol->get<CommonBlockDetails>()};
-              unsigned index{0};
-              for (auto &object : details.objects()) {
-                if (auto *resolvedObject{
-                        ResolveOmp(*object, ompFlag, currScope())}) {
-                  if (dataCopyingAttributeFlags.test(ompFlag)) {
-                    CheckDataCopyingClause(name, *resolvedObject, ompFlag);
-                  } else {
-                    AddToContextObjectWithExplicitDSA(*resolvedObject, ompFlag);
-                  }
-                  details.replace_object(*resolvedObject, index);
-                }
-                index++;
-              }
-            } else {
-              context_.Say(name.source, // 2.15.3
-                  "COMMON block must be declared in the same scoping unit "
-                  "in which the OpenMP directive or clause appears"_err_en_US);
-            }
-          },
-      },
+  common::visit(common::visitors{
+                    [&](const parser::Designator &designator) {
+                      ResolveOmpDesignator(designator, ompFlag);
+                    },
+                    [&](const parser::Name &name) { // common block
+                      ResolveOmpCommonBlock(name, ompFlag);
+                    },
+                },
       ompObject.u);
 }
 
