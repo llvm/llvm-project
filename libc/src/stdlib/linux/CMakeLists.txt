@@ -11,9 +11,9 @@ add_entrypoint_object(
 )
 
 add_header_library(
-  vsdo_rng
+  vdso_rng
   HDRS
-    vsdo_rng.h
+    vdso_rng.h
   DEPENDS
     libc.src.__support.threads.thread # For __cxa_thread_atexit_impl
     libc.src.__support.CPP.algorithm

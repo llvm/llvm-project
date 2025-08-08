@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_STDLIB_LINUX_VSDO_RNG_H
-#define LIBC_SRC_STDLIB_LINUX_VSDO_RNG_H
+#ifndef LIBC_SRC_STDLIB_LINUX_VDSO_RNG_H
+#define LIBC_SRC_STDLIB_LINUX_VDSO_RNG_H
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/mutex.h"
@@ -22,7 +22,7 @@
 #include "src/sys/auxv/getauxval.h"
 
 namespace LIBC_NAMESPACE_DECL {
-namespace vsdo_rng {
+namespace vdso_rng {
 extern "C" {
 using Destructor = void(void *);
 [[gnu::weak]] extern void *__dso_handle;
@@ -113,11 +113,11 @@ public:
             tls->state = nullptr;
             cpp::atomic_thread_fence(cpp::MemoryOrder::SEQ_CST);
             if (state)
-              LIBC_NAMESPACE::vsdo_rng::global_state.recycle(state);
+              LIBC_NAMESPACE::vdso_rng::global_state.recycle(state);
           },
           this, __dso_handle);
       if (register_res == 0)
-        state = LIBC_NAMESPACE::vsdo_rng::global_state.get();
+        state = LIBC_NAMESPACE::vdso_rng::global_state.get();
       if (!state)
         failed = true;
     }
@@ -274,7 +274,7 @@ LIBC_INLINE void LocalState::Guard::fill(void *buf, size_t size) const {
   }
 }
 
-} // namespace vsdo_rng
+} // namespace vdso_rng
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_SRC_STDLIB_LINUX_VSDO_RNG_H
+#endif // LIBC_SRC_STDLIB_LINUX_VDSO_RNG_H

@@ -1,4 +1,4 @@
-//===-- Test for vsdo_rng functionality ----------------------------------===//
+//===-- Test for vdso_rng functionality ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,14 +8,14 @@
 
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
-#include "src/stdlib/linux/vsdo_rng.h"
+#include "src/stdlib/linux/vdso_rng.h"
 #include "test/IntegrationTest/test.h"
 
 using namespace LIBC_NAMESPACE;
 
 void basic_test() {
   // Test basic functionality
-  vsdo_rng::LocalState &local_state = vsdo_rng::local_state;
+  vdso_rng::LocalState &local_state = vdso_rng::local_state;
 
   // Try to get a guard
   if (auto guard = local_state.get()) {
