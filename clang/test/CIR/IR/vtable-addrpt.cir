@@ -1,0 +1,23 @@
+// RUN: cir-opt %s | FileCheck %s
+
+// Test the parsing and printing of a constructor that uses a vtable addess_point op.
+
+!u32i = !cir.int<u, 32>
+!u8i = !cir.int<u, 8>
+!rec_anon_struct = !cir.record<struct  {!cir.array<!cir.ptr<!u8i> x 4>}>
+!rec_S = !cir.record<struct "S" {!cir.vptr}>
+
+module {
+  cir.global "private" external @_ZTV1S : !rec_anon_struct {alignment = 8 : i64}
+  cir.func @_ZN1SC2Ev(%arg0: !cir.ptr<!rec_S>) {
+    %0 = cir.alloca !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>, ["this", init] {alignment = 8 : i64}
+    cir.store %arg0, %0 : !cir.ptr<!rec_S>, !cir.ptr<!cir.ptr<!rec_S>>
+    %1 = cir.load %0 : !cir.ptr<!cir.ptr<!rec_S>>, !cir.ptr<!rec_S>
+    %2 = cir.vtable.address_point(@_ZTV1S, address_point = <index = 0, offset = 2>) : !cir.vptr
+    %3 = cir.cast(bitcast, %1 : !cir.ptr<!rec_S>), !cir.ptr<!cir.vptr>
+    cir.store align(8) %2, %3 : !cir.vptr, !cir.ptr<!cir.vptr>
+    cir.return
+  }
+}
+
+// CHECK: cir.vtable.address_point(@_ZTV1S, address_point = <index = 0, offset = 2>) : !cir.vptr
