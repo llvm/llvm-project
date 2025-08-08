@@ -92,7 +92,7 @@ int main() {
   // CHECK: {{^}}0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_initial_task_begin: parallel_id={{[0-9]+}}
-  // CHECK-SAME: task_id=[[INITIAL_TASK_ID:[0-9]+]], actual_parallelism=1, index=1, flags=1 
+  // CHECK-SAME: task_id=[[INITIAL_TASK_ID:[0-f]+]], actual_parallelism=1, index=1, flags=1 
 
   // CHECK-NOT: 0: parallel_data initially not null
 
@@ -113,7 +113,7 @@ int main() {
   // CHECK: {{^[0-9]+}}: ompt_event_task_create: parent_task_id={{[0-9]+}}
   // CHECK-SAME: parent_task_frame.exit={{(0x)?[0-f]+}}
   // CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}}
-  // CHECK-SAME: new_task_id=[[EXPLICIT_TASK_ID:[0-9]+]]
+  // CHECK-SAME: new_task_id=[[EXPLICIT_TASK_ID:[0-f]+]]
   // CHECK-SAME: codeptr_ra={{(0x)?[0-f]+}}
   // CHECK-SAME: task_type=ompt_task_explicit=4
   // CHECK-SAME: has_dependences=no
@@ -121,7 +121,7 @@ int main() {
   // CHECK: [[THREAD_ID_1:[0-9]+]]: ompt_event_task_schedule:
   // CHECK-SAME: second_task_id=[[EXPLICIT_TASK_ID]]
 
-  // CHECK: [[THREAD_ID_1]]: task level 0: parallel_id=[[PARALLEL_ID:[0-9]+]]
+  // CHECK: [[THREAD_ID_1]]: task level 0: parallel_id=[[PARALLEL_ID:[0-f]+]]
   // CHECK-SAME: task_id=[[EXPLICIT_TASK_ID]], exit_frame={{(0x)?[0-f]+}}
   // CHECK-SAME: reenter_frame=[[NULL]], task_type=ompt_task_explicit=4
   // CHECK-SAME: thread_num={{[01]}}
@@ -130,7 +130,7 @@ int main() {
   // CHECK: {{^[0-9]+}}: ompt_event_task_create: parent_task_id={{[0-9]+}}
   // CHECK-SAME: parent_task_frame.exit={{(0x)?[0-f]+}}
   // CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}}
-  // CHECK-SAME: new_task_id=[[EXPLICIT_UNDEFERRED_TASK_ID:[0-9]+]]
+  // CHECK-SAME: new_task_id=[[EXPLICIT_UNDEFERRED_TASK_ID:[0-f]+]]
   // CHECK-SAME: codeptr_ra={{(0x)?[0-f]+}}
   // CHECK-SAME: task_type=ompt_task_explicit|ompt_task_undeferred=134217732
   // CHECK-SAME: has_dependences=no
@@ -148,7 +148,7 @@ int main() {
   // CHECK: {{^[0-9]+}}: ompt_event_task_create: parent_task_id={{[0-9]+}}
   // CHECK-SAME: parent_task_frame.exit={{(0x)?[0-f]+}}
   // CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}}
-  // CHECK-SAME: new_task_id=[[EXPLICIT_UNTIED_TASK_ID:[0-9]+]]
+  // CHECK-SAME: new_task_id=[[EXPLICIT_UNTIED_TASK_ID:[0-f]+]]
   // CHECK-SAME: codeptr_ra={{(0x)?[0-f]+}}
   // CHECK-SAME: task_type=ompt_task_explicit|ompt_task_untied=268435460
   // CHECK-SAME: has_dependences=no
@@ -182,7 +182,7 @@ int main() {
   // CHECK: {{^[0-9]+}}: ompt_event_task_create: parent_task_id={{[0-9]+}}
   // CHECK-SAME: parent_task_frame.exit={{(0x)?[0-f]+}}
   // CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}}
-  // CHECK-SAME: new_task_id=[[EXPLICIT_FINAL_TASK_ID:[0-9]+]]
+  // CHECK-SAME: new_task_id=[[EXPLICIT_FINAL_TASK_ID:[0-f]+]]
   // CHECK-SAME: codeptr_ra={{(0x)?[0-f]+}}
   // CHECK-SAME: task_type=ompt_task_explicit|ompt_task_final=536870916
   // CHECK-SAME: has_dependences=no
@@ -200,7 +200,7 @@ int main() {
   // CHECK: {{^[0-9]+}}: ompt_event_task_create: parent_task_id={{[0-9]+}}
   // CHECK-SAME: parent_task_frame.exit={{(0x)?[0-f]+}}
   // CHECK-SAME: parent_task_frame.reenter={{(0x)?[0-f]+}}
-  // CHECK-SAME: new_task_id=[[NESTED_FINAL_UNDEFERRED_TASK_ID:[0-9]+]]
+  // CHECK-SAME: new_task_id=[[NESTED_FINAL_UNDEFERRED_TASK_ID:[0-f]+]]
   // CHECK-SAME: codeptr_ra={{(0x)?[0-f]+}}
   // CHECK-SAME: task_type=ompt_task_explicit|ompt_task_undeferred
   // CHECK-SAME:|ompt_task_final=671088644

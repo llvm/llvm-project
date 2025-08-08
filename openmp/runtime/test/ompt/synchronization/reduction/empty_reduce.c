@@ -23,9 +23,9 @@ int main() {
   // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 
   // CHECK: {{^}}[[MASTER_ID:[0-9]+]]: ompt_event_parallel_begin:
-  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]]
+  // CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]]
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_implicit_task_begin:
-  // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID:[0-9]+]]
+  // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID:[0-f]+]]
 
   // CHECK: {{^}}[[MASTER_ID]]: ompt_event_reduction_begin:
   // CHECK-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[TASK_ID]],

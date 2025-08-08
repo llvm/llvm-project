@@ -49,7 +49,7 @@ int main() {
 
 // CHECK: 0: NULL_POINTER=[[NULL:.*$]]
 // CHECK: {{^}}[[THREAD_ID0:[0-9]+]]: ompt_event_parallel_begin:
-// CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-9]+]]
+// CHECK-SAME: parallel_id=[[PARALLEL_ID:[0-f]+]]
 
 // Each thread should have at least one ws-loop-chunk-begin event for each
 // for loop.
