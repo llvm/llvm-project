@@ -132,7 +132,7 @@
 "`LWG4200 <https://wg21.link/LWG4200>`__","The ``operation_state`` concept can be simplified","2025-06 (Sofia)","","",""
 "`LWG4201 <https://wg21.link/LWG4201>`__","``with-await-transform::await_transform`` should not use a deduced return type","2025-06 (Sofia)","","",""
 "`LWG4217 <https://wg21.link/LWG4217>`__","Clarify ``mdspan`` layout mapping requirements for ``rank == 0``","2025-06 (Sofia)","","",""
-"`LWG4222 <https://wg21.link/LWG4222>`__","``expected`` constructor from a single value missing a constraint","2025-06 (Sofia)","","",""
+"`LWG4222 <https://wg21.link/LWG4222>`__","``expected`` constructor from a single value missing a constraint","2025-06 (Sofia)","|Complete|","22",""
 "`LWG4224 <https://wg21.link/LWG4224>`__","Philox engines should be freestanding","2025-06 (Sofia)","","",""
 "`LWG4227 <https://wg21.link/LWG4227>`__","Missing ``noexcept`` operator in [exec.when.all]","2025-06 (Sofia)","","",""
 "`LWG4231 <https://wg21.link/LWG4231>`__","``datapar::chunk<N>`` should use ``simd-size-type`` instead of ``size_t``","2025-06 (Sofia)","","",""
