@@ -5,11 +5,10 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X64
 
-; FIXME: crash
-; define i32 @test_lround_i32_f16(half %x) nounwind {
-;   %conv = tail call i32 @llvm.lround.i32.f16(half %x)
-;   ret i32 %conv
-; }
+define i32 @test_lround_i32_f16(half %x) nounwind {
+  %conv = tail call i32 @llvm.lround.i32.f16(half %x)
+  ret i32 %conv
+}
 
 define i32 @test_lround_i32_f32(float %x) nounwind {
 ; X86-LABEL: test_lround_i32_f32:
