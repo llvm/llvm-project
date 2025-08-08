@@ -1661,7 +1661,7 @@ void SymbolFileNativePDB::CacheFunctionNames() {
     if (ref.Name.empty())
       continue;
 
-    // Find the function this is referencing
+    // Find the function this is referencing.
     CompilandIndexItem &cci =
         m_index->compilands().GetOrCreateCompiland(ref.modi());
     auto iter = cci.m_debug_stream.getSymbolArray().at(ref.SymOffset);
