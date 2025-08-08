@@ -27,7 +27,9 @@
 
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
+#include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
@@ -36,6 +38,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -44,6 +47,9 @@
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
+
+#include <algorithm>
+#include <unordered_set>
 
 #define DEBUG_TYPE "amdgpu-promote-alloca"
 
@@ -99,6 +105,14 @@ private:
   unsigned MaxVGPRs;
   unsigned VGPRBudgetRatio;
   unsigned MaxVectorRegs;
+
+  std::unordered_map<BasicBlock *, std::unordered_set<Instruction *>>
+      SGPRLiveIns;
+  size_t getSGPRPressureEstimate(AllocaInst &I);
+
+  std::unordered_map<BasicBlock *, std::unordered_set<Instruction *>>
+      VGPRLiveIns;
+  size_t getVGPRPressureEstimate(AllocaInst &I);
 
   bool IsAMDGCN = false;
   bool IsAMDHSA = false;
@@ -1471,9 +1485,83 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   return true;
 }
 
+size_t AMDGPUPromoteAllocaImpl::getSGPRPressureEstimate(AllocaInst &I) {
+  Function &F = *I.getParent()->getParent();
+  size_t MaxLive = 0;
+  for (BasicBlock *BB : post_order(&F)) {
+    if (SGPRLiveIns.count(BB))
+      continue;
+
+    std::unordered_set<Instruction *> CurrentlyLive;
+    for (BasicBlock *SuccBB : successors(BB))
+      if (SGPRLiveIns.count(SuccBB))
+        for (const auto &R : SGPRLiveIns[SuccBB])
+          CurrentlyLive.insert(R);
+
+    for (auto RIt = BB->rbegin(); RIt != BB->rend(); RIt++) {
+      if (&*RIt == &I)
+        return (MaxLive + CurrentlyLive.size()) / 2;
+
+      MaxLive = std::max(MaxLive, CurrentlyLive.size());
+
+      for (auto &Op : RIt->operands())
+        if (!Op.get()->getType()->isVectorTy())
+          if (Instruction *U = dyn_cast<Instruction>(Op))
+            CurrentlyLive.insert(U);
+
+      if (!RIt->getType()->isVectorTy())
+        CurrentlyLive.erase(&*RIt);
+    }
+  }
+
+  llvm_unreachable("Woops, we fell off the edge of the world.  Bye bye.");
+}
+
+size_t AMDGPUPromoteAllocaImpl::getVGPRPressureEstimate(AllocaInst &I) {
+  Function &F = *I.getParent()->getParent();
+  size_t MaxLive = 0;
+  for (BasicBlock *BB : post_order(&F)) {
+    if (VGPRLiveIns.count(BB))
+      continue;
+
+    std::unordered_set<Instruction *> CurrentlyLive;
+    for (BasicBlock *SuccBB : successors(BB))
+      if (VGPRLiveIns.count(SuccBB))
+        for (const auto &R : VGPRLiveIns[SuccBB])
+          CurrentlyLive.insert(R);
+
+    for (auto RIt = BB->rbegin(); RIt != BB->rend(); RIt++) {
+      if (&*RIt == &I)
+        return (MaxLive + CurrentlyLive.size() / 2);
+
+      MaxLive = std::max(MaxLive, CurrentlyLive.size());
+
+      for (auto &Op : RIt->operands())
+        if (Op.get()->getType()->isVectorTy())
+          if (Instruction *U = dyn_cast<Instruction>(Op))
+            CurrentlyLive.insert(U);
+
+      if (RIt->getType()->isVectorTy())
+        CurrentlyLive.erase(&*RIt);
+    }
+  }
+
+  llvm_unreachable("Woops, we fell off the edge of the world.  Bye bye.");
+}
+
 // FIXME: Should try to pick the most likely to be profitable allocas first.
 bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(AllocaInst &I,
                                                     bool SufficientLDS) {
+  const unsigned SGPRPressureLimit = AMDGPU::SGPR_32RegClass.getNumRegs();
+  const unsigned VGPRPressureLimit = AMDGPU::VGPR_32RegClass.getNumRegs();
+
+  if (getSGPRPressureEstimate(I) < SGPRPressureLimit &&
+      getVGPRPressureEstimate(I) < VGPRPressureLimit) {
+    LLVM_DEBUG(dbgs() << "Declining to promote " << I
+                      << " to LDS since pressure is relatively low.\n");
+    return false;
+  }
+
   LLVM_DEBUG(dbgs() << "Trying to promote to LDS: " << I << '\n');
 
   if (DisablePromoteAllocaToLDS) {
