@@ -10,8 +10,8 @@ define <8 x i8> @test_avgceil_u(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-NEXT:    uhadd v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
 
-  %mask = insertelement <8 x i16> undef, i16 255, i32 0
-  %mask.splat = shufflevector <8 x i16> %mask, <8 x i16> undef, <8 x i32> zeroinitializer
+  %mask = insertelement <8 x i16> poison, i16 255, i32 0
+  %mask.splat = shufflevector <8 x i16> %mask, <8 x i16> poison, <8 x i32> zeroinitializer
   %ta16 = and <8 x i16> %a, %mask.splat
   %tb16 = and <8 x i16> %b, %mask.splat
   %ta8 = trunc <8 x i16> %ta16 to <8 x i8>
@@ -29,10 +29,10 @@ define <8 x i8> @test_avgceil_s(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-NEXT:    shadd v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
 
-  %smin = insertelement <8 x i16> undef, i16 -128, i32 0
-  %smax = insertelement <8 x i16> undef, i16 127, i32 0
-  %min = shufflevector <8 x i16> %smin, <8 x i16> undef, <8 x i32> zeroinitializer
-  %max = shufflevector <8 x i16> %smax, <8 x i16> undef, <8 x i32> zeroinitializer
+  %smin = insertelement <8 x i16> poison, i16 -128, i32 0
+  %smax = insertelement <8 x i16> poison, i16 127, i32 0
+  %min = shufflevector <8 x i16> %smin, <8 x i16> poison, <8 x i32> zeroinitializer
+  %max = shufflevector <8 x i16> %smax, <8 x i16> poison, <8 x i32> zeroinitializer
 
   %ta16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %a, <8 x i16> %max)
   %ta16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %ta16, <8 x i16> %min)
@@ -73,10 +73,10 @@ define <8 x i8> @test_avgfloor_s(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-NEXT:    srhadd v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
 
-  %smin = insertelement <8 x i16> undef, i16 -128, i32 0
-  %smax = insertelement <8 x i16> undef, i16 127, i32 0
-  %min = shufflevector <8 x i16> %smin, <8 x i16> undef, <8 x i32> zeroinitializer
-  %max = shufflevector <8 x i16> %smax, <8 x i16> undef, <8 x i32> zeroinitializer
+  %smin = insertelement <8 x i16> poison, i16 -128, i32 0
+  %smax = insertelement <8 x i16> poison, i16 127, i32 0
+  %min = shufflevector <8 x i16> %smin, <8 x i16> poison, <8 x i32> zeroinitializer
+  %max = shufflevector <8 x i16> %smax, <8 x i16> poison, <8 x i32> zeroinitializer
 
   %ta16 = call <8 x i16> @llvm.smin.v8i16(<8 x i16> %a, <8 x i16> %max)
   %ta16.clamped = call <8 x i16> @llvm.smax.v8i16(<8 x i16> %ta16, <8 x i16> %min)

@@ -16302,9 +16302,10 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       SDValue Y = N0.getOperand(1);
       unsigned SrcBits = X.getScalarValueSizeInBits();
       unsigned DstBits = VT.getScalarSizeInBits();
-      unsigned MaxBitsX = DAG.ComputeMaxSignificantBits(X);
-      unsigned MaxBitsY = DAG.ComputeMaxSignificantBits(Y);
-      if (MaxBitsX <= DstBits && MaxBitsY <= DstBits) {
+      KnownBits KnownX = DAG.computeKnownBits(X);
+      KnownBits KnownY = DAG.computeKnownBits(Y);
+      if (KnownX.countMinLeadingZeros() >= (SrcBits - DstBits) &&
+          KnownY.countMinLeadingZeros() >= (SrcBits - DstBits)) {
         SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
         SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
         return DAG.getNode(N0.getOpcode(), DL, VT, Tx, Ty);
@@ -16322,6 +16323,7 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
       unsigned SrcBits = X.getScalarValueSizeInBits();
       unsigned DstBits = VT.getScalarSizeInBits();
       unsigned NeededSignBits = SrcBits - DstBits + 1;
+
       if (SignBitsX >= NeededSignBits && SignBitsY >= NeededSignBits) {
         SDValue Tx = DAG.getNode(ISD::TRUNCATE, DL, VT, X);
         SDValue Ty = DAG.getNode(ISD::TRUNCATE, DL, VT, Y);
