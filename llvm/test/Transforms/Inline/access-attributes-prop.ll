@@ -410,9 +410,9 @@ define void @prop_fn_decl_fail_alloca(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_fn_decl_fail_alloca
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -425,9 +425,9 @@ define void @prop_cb_def_wr_fail_alloca(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_cb_def_wr_fail_alloca
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -440,10 +440,10 @@ define void @prop_fn_decl_partially_okay_alloca(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_fn_decl_partially_okay_alloca
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
@@ -456,10 +456,10 @@ define void @prop_cb_def_wr_partially_okay_alloca(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@prop_cb_def_wr_partially_okay_alloca
 ; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[A_I:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    call void @bar2(ptr [[P]], ptr [[A_I]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A_I]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A_I]])
 ; CHECK-NEXT:    call void @bar1(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;

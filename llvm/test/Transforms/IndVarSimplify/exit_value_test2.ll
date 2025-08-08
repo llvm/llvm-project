@@ -6,14 +6,14 @@
 ; udiv will be introduced by expand and the cost will be high.
 
 declare void @_Z3mixRjj(ptr dereferenceable(4), i32)
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define i32 @_Z3fooPKcjj(ptr nocapture readonly %s, i32 %len, i32 %c) {
 ; CHECK-LABEL: @_Z3fooPKcjj(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CHECK-NEXT:    store i32 -1640531527, ptr [[A]], align 4
 ; CHECK-NEXT:    [[CMP8:%.*]] = icmp ugt i32 [[LEN:%.*]], 11
 ; CHECK-NEXT:    br i1 [[CMP8]], label [[WHILE_BODY_LR_PH:%.*]], label [[WHILE_END:%.*]]
@@ -40,12 +40,12 @@ define i32 @_Z3fooPKcjj(ptr nocapture readonly %s, i32 %len, i32 %c) {
 ; CHECK-NEXT:    [[KEYLEN_0_LCSSA:%.*]] = phi i32 [ [[SUB_LCSSA]], [[WHILE_COND_WHILE_END_CRIT_EDGE]] ], [ [[LEN]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    call void @_Z3mixRjj(ptr dereferenceable(4) [[A]], i32 [[KEYLEN_0_LCSSA]])
 ; CHECK-NEXT:    [[T4:%.*]] = load i32, ptr [[A]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
 entry:
   %a = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   store i32 -1640531527, ptr %a, align 4
   %cmp8 = icmp ugt i32 %len, 11
   br i1 %cmp8, label %while.body.lr.ph, label %while.end
@@ -76,7 +76,7 @@ while.end:                                        ; preds = %while.cond.while.en
   %keylen.0.lcssa = phi i32 [ %sub.lcssa, %while.cond.while.end_crit_edge ], [ %len, %entry ]
   call void @_Z3mixRjj(ptr dereferenceable(4) %a, i32 %keylen.0.lcssa)
   %t4 = load i32, ptr %a, align 4
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret i32 %t4
 }
 

@@ -17,7 +17,7 @@ define void @_Z4testv() #0 personality ptr @__gxx_personality_v0 {
 
 entry:
   %sv = alloca %"class.llvm::SmallVector", align 16
-  call void @llvm.lifetime.start.p0(i64 64, ptr %sv) #1
+  call void @llvm.lifetime.start.p0(ptr %sv) #1
   %FirstEl.i.i.i.i.i.i = getelementptr inbounds %"class.llvm::SmallVector", ptr %sv, i64 0, i32 0, i32 0, i32 0, i32 0, i32 3
   store ptr %FirstEl.i.i.i.i.i.i, ptr %sv, align 16, !tbaa !4
   %EndX.i.i.i.i.i.i = getelementptr inbounds %"class.llvm::SmallVector", ptr %sv, i64 0, i32 0, i32 0, i32 0, i32 0, i32 1
@@ -86,7 +86,7 @@ if.then.i.i.i20:                                  ; preds = %invoke.cont3
   br label %_ZN4llvm11SmallVectorIiLj8EED1Ev.exit21
 
 _ZN4llvm11SmallVectorIiLj8EED1Ev.exit21:          ; preds = %invoke.cont3, %if.then.i.i.i20
-  call void @llvm.lifetime.end.p0(i64 64, ptr %sv) #1
+  call void @llvm.lifetime.end.p0(ptr %sv) #1
   ret void
 
 lpad:                                             ; preds = %if.end.i14, %if.end.i, %invoke.cont2
@@ -105,14 +105,14 @@ eh.resume:                                        ; preds = %if.then.i.i.i, %lpa
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(ptr nocapture) #1
 
 declare i32 @__gxx_personality_v0(...)
 
 declare void @_Z1gRN4llvm11SmallVectorIiLj8EEE(ptr) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.lifetime.end.p0(ptr nocapture) #1
 
 declare void @_ZN4llvm15SmallVectorBase8grow_podEmm(ptr, i64, i64) #2
 

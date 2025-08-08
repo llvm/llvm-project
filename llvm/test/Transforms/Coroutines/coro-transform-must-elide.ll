@@ -61,11 +61,11 @@ entry:
   ret ptr %task
   ; CHECK: %[[TASK:.+]] = alloca %struct.Task, align 8
   ; CHECK-NEXT: %[[FRAME:.+]] = alloca [32 x i8], align 8
-  ; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 8, ptr %[[TASK]])
+  ; CHECK-NEXT: call void @llvm.lifetime.start.p0(ptr %[[TASK]])
   ; CHECK-NEXT: %[[ID:.+]] = call token @llvm.coro.id(i32 0, ptr null, ptr @callee, ptr @callee.resumers)
   ; CHECK-NEXT: %[[HDL:.+]] = call ptr @llvm.coro.begin(token %[[ID]], ptr null)
   ; CHECK-NEXT: store ptr %[[HDL]], ptr %[[TASK]], align 8
-  ; CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 8, ptr %[[TASK]])
+  ; CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %[[TASK]])
   ; CHECK-NEXT: ret ptr %[[TASK]]
 }
 

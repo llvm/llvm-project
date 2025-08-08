@@ -16,10 +16,10 @@
 // LIFETIME-NEXT:    [[FOO:%.*]] = alloca i32, align 4
 // LIFETIME-NEXT:    [[FOO2:%.*]] = alloca i32, align 4
 // LIFETIME-NEXT:    store i32 0, ptr [[RETVAL]], align 4
-// LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[FOO]]) #[[ATTR2:[0-9]+]]
-// LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[FOO2]]) #[[ATTR2]]
-// LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[FOO2]]) #[[ATTR2]]
-// LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[FOO]]) #[[ATTR2]]
+// LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(ptr [[FOO]]) #[[ATTR2:[0-9]+]]
+// LIFETIME-NEXT:    call void @llvm.lifetime.start.p0(ptr [[FOO2]]) #[[ATTR2]]
+// LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(ptr [[FOO2]]) #[[ATTR2]]
+// LIFETIME-NEXT:    call void @llvm.lifetime.end.p0(ptr [[FOO]]) #[[ATTR2]]
 // LIFETIME-NEXT:    ret i32 0
 //
 int main() {
