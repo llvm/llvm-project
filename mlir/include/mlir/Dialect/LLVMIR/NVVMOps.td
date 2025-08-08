@@ -106,10 +106,9 @@ class NVVM_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 /// Base class that defines BasicPtxBuilderOpInterface. 
-class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> traits = []> :
-  LLVM_OpBase<NVVM_Dialect, mnemonic,
-  !listconcat(traits,
-      [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>])> {
+class NVVM_PTXBuilder_Op<string mnemonic, 
+  list<Trait> traits = [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> :
+  LLVM_OpBase<NVVM_Dialect, mnemonic, traits> {
 }
 
 //===----------------------------------------------------------------------===//
@@ -572,9 +571,8 @@ def NVVM_Barrier0Op : NVVM_Op<"barrier0", [Convergent]> {
   }];
 }
 
-def NVVM_BarrierOp : NVVM_Op<"barrier",
-  [Convergent, AttrSizedOperandSegments]> {
-  let arguments = (ins
+def NVVM_BarrierOp : NVVM_Op<"barrier", [AttrSizedOperandSegments]> {
+  let arguments = (ins     
     Optional<I32>:$barrierId,
     Optional<I32>:$numberOfThreads);
   string llvmBuilder = [{
@@ -601,7 +599,7 @@ def NVVM_BarrierOp : NVVM_Op<"barrier",
   ];
 }
 
-def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive", [Convergent]>
+def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive"> 
 {
   let arguments = (ins Optional<I32>:$barrierId, I32:$numberOfThreads);
 
@@ -627,7 +625,7 @@ def NVVM_BarrierArriveOp : NVVM_PTXBuilder_Op<"barrier.arrive", [Convergent]>
   }];
 }
 
-def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive", [Convergent]> {
+def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive"> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Arrive Op";
@@ -650,8 +648,7 @@ def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive", [Convergent]> {
   let assemblyFormat = "attr-dict";
 }
 
-def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed",
-  [Convergent, NVVMRequiresSM<90>]> {
+def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed", [NVVMRequiresSM<90>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Relaxed Arrive Op";
@@ -677,8 +674,7 @@ def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed",
   let assemblyFormat = "attr-dict";
 }
 
-def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait",
-  [Convergent, NVVMRequiresSM<90>]> {
+def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait", [NVVMRequiresSM<90>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Wait Op";
@@ -1059,8 +1055,7 @@ def NVVM_CpAsyncWaitGroupOp : NVVM_Op<"cp.async.wait.group">,
   let assemblyFormat = "$n attr-dict";
 }
 
-def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive",
-  [Convergent]> {
+def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive"> {
   let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive";
   let description = [{
     The `cp.async.mbarrier.arrive` Op makes the mbarrier object track
@@ -1085,8 +1080,7 @@ def NVVM_CpAsyncMBarrierArriveOp : NVVM_Op<"cp.async.mbarrier.arrive",
   }];
 }
 
-def NVVM_CpAsyncMBarrierArriveSharedOp : NVVM_Op<"cp.async.mbarrier.arrive.shared",
-  [Convergent]> {
+def NVVM_CpAsyncMBarrierArriveSharedOp : NVVM_Op<"cp.async.mbarrier.arrive.shared"> {
   let summary = "NVVM Dialect Op for cp.async.mbarrier.arrive.shared";
   let description = [{
     The `cp.async.mbarrier.arrive.shared` Op makes the mbarrier object
@@ -2813,8 +2807,7 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
 // NVVM Wgmma Ops
 //===----------------------------------------------------------------------===//
 
-def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned",
-  [Convergent, NVVMRequiresSMa<[90]>]> {
+def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMa<[90]>]> {
   let arguments = (ins);
   let description = [{
     Enforce an ordering of register accesses between warpgroup level matrix 
@@ -2828,8 +2821,7 @@ def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned",
   }];
 }
 
-def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned",
-  [Convergent, NVVMRequiresSMa<[90]>]> {
+def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", [NVVMRequiresSMa<[90]>]> {
   let assemblyFormat = "attr-dict";
   let description = [{
     Commits all prior uncommitted warpgroup level matrix multiplication operations.
@@ -2841,8 +2833,7 @@ def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned",
   }];
 }
 
-def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned",
-  [Convergent, NVVMRequiresSMa<[90]>]> {
+def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", [NVVMRequiresSMa<[90]>]> {
   let arguments = (ins I64Attr:$group);
   let assemblyFormat = "attr-dict $group";
   let description = [{
