@@ -648,12 +648,12 @@ bool CFIReaderWriter::fillCFIInfoFor(BinaryFunction &Function) const {
       // same id but mean different things. The latter is used in AArch64.
       if (Function.getBinaryContext().isAArch64()) {
         Function.setContainedNegateRAState();
-        // The location OpNegateRAState CFIs are needed
-        // depends on the order of BasicBlocks, which changes during
-        // optimizations. Instead of adding OpNegateRAState CFIs, an annotation
-        // is added to the instruction, to mark that the instruction modifies
-        // the RA State. The actual state for instructions are worked out in
-        // MarkRAStates based on these annotations.
+        // The location OpNegateRAState CFIs are needed depends on the order of
+        // BasicBlocks, which changes during optimizations. Instead of adding
+        // OpNegateRAState CFIs, an annotation is added to the instruction, to
+        // mark that the instruction modifies the RA State. The actual state for
+        // instructions are worked out in MarkRAStates based on these
+        // annotations.
         if (Offset != 0)
           Function.setInstModifiesRAState(DW_CFA_AARCH64_negate_ra_state,
                                           Offset);

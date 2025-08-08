@@ -22,12 +22,7 @@
 #include "bolt/Passes/MarkRAStates.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Utils/CommandLineOpts.h"
 #include <cstdlib>
-#include <fstream>
-#include <iterator>
-
-#include <iostream>
 #include <optional>
 #include <stack>
 
@@ -49,11 +44,9 @@ void MarkRAStates::runOnFunction(BinaryFunction &BF) {
       if ((BC.MIB->isPSignOnLR(Inst) ||
            (BC.MIB->isPAuthOnLR(Inst) && !BC.MIB->isPAuthAndRet(Inst))) &&
           !BC.MIB->hasNegateRAState(Inst)) {
-        // no .cfi_negate_ra_state attached to signing or authenticating instr
-        // means, that this is a function with handwritten assembly, which might
-        // not respect Clang's conventions (e.g. tailcalls are always
-        // authenticated, so functions always start with unsigned RAState when
-        // working with compiler-generated code)
+        // Not all functions have .cfi_negate_ra_state in them. But if one does,
+        // we expect psign/pauth instructions to have the hasNegateRAState
+        // annotation.
         BF.setIgnored();
         BC.outs() << "BOLT-INFO: inconsistent RAStates in function "
                   << BF.getPrintName() << "\n";

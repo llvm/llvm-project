@@ -13,7 +13,6 @@
 #define BOLT_PASSES_INSERT_NEGATE_RA_STATE_PASS
 
 #include "bolt/Passes/BinaryPasses.h"
-#include <stack>
 
 namespace llvm {
 namespace bolt {
@@ -31,14 +30,17 @@ public:
 private:
   /// Loops over all instructions and adds OpNegateRAState CFI
   /// after any pointer signing or authenticating instructions,
-  /// which operate on the LR, except fused ptrauth + ret instructions
-  /// (such as RETAA).
+  /// which operate on the LR, except fused pauth + ret instructions
+  /// (such as RETAA). Normal pauth and psign instructions are "special cases",
+  /// meaning they always need an OpNegateRAState CFI after them.
+  /// Fused pauth + ret instructions are not, they work as any other
+  /// instruction.
   /// Returns true, if any OpNegateRAState CFIs were added.
-  bool addNegateRAStateAfterPacOrAuth(BinaryFunction &BF);
+  bool addNegateRAStateAfterPSignOrPAuth(BinaryFunction &BF);
   /// Because states are tracked as MCAnnotations on individual instructions,
   /// newly inserted instructions do not have a state associated with them.
   /// New states are "inherited" from the last known state.
-  void fixUnknownStates(BinaryFunction &BF);
+  void inferUnknownStates(BinaryFunction &BF);
 };
 
 } // namespace bolt

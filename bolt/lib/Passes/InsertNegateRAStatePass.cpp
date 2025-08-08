@@ -14,10 +14,7 @@
 #include "bolt/Passes/InsertNegateRAStatePass.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/ParallelUtilities.h"
-#include "bolt/Utils/CommandLineOpts.h"
 #include <cstdlib>
-#include <fstream>
-#include <iterator>
 
 using namespace llvm;
 
@@ -38,10 +35,10 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   }
 
   // If none is inserted, the function doesn't need more work.
-  if (!addNegateRAStateAfterPacOrAuth(BF))
+  if (!addNegateRAStateAfterPSignOrPAuth(BF))
     return;
 
-  fixUnknownStates(BF);
+  inferUnknownStates(BF);
 
   // Support for function splitting:
   // if two consecutive BBs with Signed state are going to end up in different
@@ -53,7 +50,7 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
     // BOLT can generate empty BBs at function splitting which are only used as
     // target labels. We should add the negate-ra-state CFI to the first
     // non-empty BB.
-    auto FirstNonEmpty =
+    auto *FirstNonEmpty =
         std::find_if(FF.begin(), FF.end(), [](BinaryBasicBlock *BB) {
           // getFirstNonPseudo returns BB.end() if it does not find any
           // Instructions.
@@ -92,7 +89,8 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
   }
 }
 
-bool InsertNegateRAState::addNegateRAStateAfterPacOrAuth(BinaryFunction &BF) {
+bool InsertNegateRAState::addNegateRAStateAfterPSignOrPAuth(
+    BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   bool FoundAny = false;
   for (BinaryBasicBlock &BB : BF) {
@@ -109,7 +107,7 @@ bool InsertNegateRAState::addNegateRAStateAfterPacOrAuth(BinaryFunction &BF) {
   return FoundAny;
 }
 
-void InsertNegateRAState::fixUnknownStates(BinaryFunction &BF) {
+void InsertNegateRAState::inferUnknownStates(BinaryFunction &BF) {
   BinaryContext &BC = BF.getBinaryContext();
   bool FirstIter = true;
   MCInst PrevInst;
