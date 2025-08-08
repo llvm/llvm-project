@@ -1102,13 +1102,20 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
     SpillsKnownBit = true;
     break;
   default:
+    // When spilling a CR bit, the super register may not be explicitly defined
+    // (i.e. it can be defined by a CR-logical that only defines the subreg) so
+    // we state that the CR field is undef. Also, in order to preserve the kill
+    // flag on the CR bit, we add it as an implicit use.
+
     // On Power10, we can use SETNBC to spill all CR bits. SETNBC will set all
     // bits (specifically, it produces a -1 if the CR bit is set). Ultimately,
     // the bit that is of importance to us is bit 32 (bit 0 of a 32-bit
     // register), and SETNBC will set this.
     if (Subtarget.isISA3_1()) {
       BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::SETNBC8 : PPC::SETNBC), Reg)
-          .addReg(SrcReg, RegState::Undef);
+          .addReg(SrcReg, RegState::Undef)
+          .addReg(SrcReg, RegState::Implicit |
+                              getKillRegState(MI.getOperand(0).isKill()));
       break;
     }
 
@@ -1122,16 +1129,14 @@ void PPCRegisterInfo::lowerCRBitSpilling(MachineBasicBlock::iterator II,
           SrcReg == PPC::CR4LT || SrcReg == PPC::CR5LT ||
           SrcReg == PPC::CR6LT || SrcReg == PPC::CR7LT) {
         BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::SETB8 : PPC::SETB), Reg)
-          .addReg(getCRFromCRBit(SrcReg), RegState::Undef);
+            .addReg(getCRFromCRBit(SrcReg), RegState::Undef)
+            .addReg(SrcReg, RegState::Implicit |
+                                getKillRegState(MI.getOperand(0).isKill()));
         break;
       }
     }
 
     // We need to move the CR field that contains the CR bit we are spilling.
-    // The super register may not be explicitly defined (i.e. it can be defined
-    // by a CR-logical that only defines the subreg) so we state that the CR
-    // field is undef. Also, in order to preserve the kill flag on the CR bit,
-    // we add it as an implicit use.
     BuildMI(MBB, II, dl, TII.get(LP64 ? PPC::MFOCRF8 : PPC::MFOCRF), Reg)
       .addReg(getCRFromCRBit(SrcReg), RegState::Undef)
       .addReg(SrcReg,
