@@ -71,6 +71,7 @@ target_link_options(ClangReplInterpreterTests
 set_target_properties(ClangReplInterpreterTests PROPERTIES
   SUFFIX ".html"
 )
+endif()
 
 if(TARGET compiler-rt)
   add_dependencies(ClangReplInterpreterTests 
