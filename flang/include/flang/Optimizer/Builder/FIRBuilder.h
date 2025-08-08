@@ -954,6 +954,10 @@ mlir::Value genLifetimeStart(mlir::OpBuilder &builder, mlir::Location loc,
 void genLifetimeEnd(mlir::OpBuilder &builder, mlir::Location loc,
                     mlir::Value mem);
 
+uint64_t getGlobalAddressSpace(mlir::DataLayout *dataLayout);
+
+uint64_t getProgramAddressSpace(mlir::DataLayout *dataLayout);
+
 } // namespace fir::factory
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_FIRBUILDER_H

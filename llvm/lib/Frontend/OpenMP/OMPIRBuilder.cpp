@@ -7379,6 +7379,12 @@ static void FixupDebugInfoForOutlinedFunction(
   }
 }
 
+static Value *removeASCastIfPresent(Value *V) {
+  if (Operator::getOpcode(V) == Instruction::AddrSpaceCast)
+    return cast<Operator>(V)->getOperand(0);
+  return V;
+}
+
 static Expected<Function *> createOutlinedFunction(
     OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
     const OpenMPIRBuilder::TargetKernelDefaultAttrs &DefaultAttrs,
@@ -7542,7 +7548,9 @@ static Expected<Function *> createOutlinedFunction(
     // preceding mapped arguments that refer to the same global that may be
     // seperate segments. To prevent this, we defer global processing until all
     // other processing has been performed.
-    if (isa<GlobalValue>(Input)) {
+    if (llvm::isa<llvm::GlobalValue>(removeASCastIfPresent(Input)) ||
+        llvm::isa<llvm::GlobalObject>(removeASCastIfPresent(Input)) ||
+        llvm::isa<llvm::GlobalVariable>(removeASCastIfPresent(Input))) {
       DeferredReplacement.push_back(std::make_pair(Input, InputCopy));
       continue;
     }
