@@ -17,8 +17,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace stdio_internal {
 
-LIBC_INLINE static constexpr ::FILE *fopen(const char *__restrict name,
-                                           const char *__restrict mode) {
+LIBC_INLINE static ::FILE *fopen(const char *__restrict name,
+                                 const char *__restrict mode) {
   auto result = LIBC_NAMESPACE::openfile(name, mode);
   if (!result.has_value()) {
     libc_errno = result.error();
