@@ -1424,8 +1424,8 @@ void Writer::layoutSections() {
   for (size_t i = 0; i < ctx.outputSections.size(); ++i)
     originalOrder[ctx.outputSections[i]] = i;
 
-  std::stable_sort(
-      ctx.outputSections.begin(), ctx.outputSections.end(),
+  llvm::stable_sort(
+      ctx.outputSections,
       [this, &originalOrder](const OutputSection *a, const OutputSection *b) {
         auto itA = ctx.config.sectionLayout.find(a->name.str());
         auto itB = ctx.config.sectionLayout.find(b->name.str());
