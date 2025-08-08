@@ -17,6 +17,7 @@
 #include "AArch64PerfectShuffle.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
+#include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "Utils/AArch64SMEAttributes.h"
@@ -1996,6 +1997,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   for (ISD::NodeType Op : {ISD::FLDEXP, ISD::STRICT_FLDEXP, ISD::FFREXP})
     if (isOperationExpand(Op, MVT::f16))
       setOperationAction(Op, MVT::f16, Promote);
+}
+
+const AArch64TargetMachine &AArch64TargetLowering::getTM() const {
+  return static_cast<const AArch64TargetMachine &>(getTargetMachine());
 }
 
 void AArch64TargetLowering::addTypeForNEON(MVT VT) {
@@ -8284,7 +8289,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   if (Subtarget->hasCustomCallingConv())
     Subtarget->getRegisterInfo()->UpdateCustomCalleeSavedRegs(MF);
 
-  if (!Subtarget->useNewSMEABILowering() || Attrs.hasAgnosticZAInterface()) {
+  if (!getTM().useNewSMEABILowering() || Attrs.hasAgnosticZAInterface()) {
     // Old SME ABI lowering (deprecated):
     // Create a 16 Byte TPIDR2 object. The dynamic buffer
     // will be expanded and stored in the static object later using a
@@ -8348,7 +8353,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     }
   }
 
-  if (Subtarget->useNewSMEABILowering()) {
+  if (getTM().useNewSMEABILowering()) {
     // Clear new ZT0 state. TODO: Move this to the SME ABI pass.
     if (Attrs.isNewZT0())
       Chain = DAG.getNode(
@@ -9070,7 +9075,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   // Determine whether we need any streaming mode changes.
   SMECallAttrs CallAttrs = getSMECallAttrs(MF.getFunction(), *this, CLI);
-  bool UseNewSMEABILowering = Subtarget->useNewSMEABILowering();
+  bool UseNewSMEABILowering = getTM().useNewSMEABILowering();
   bool IsAgnosticZAFunction = CallAttrs.caller().hasAgnosticZAInterface();
   auto ZAMarkerNode = [&]() -> std::optional<unsigned> {
     // TODO: Handle agnostic ZA functions.

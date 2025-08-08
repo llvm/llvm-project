@@ -373,7 +373,8 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
           computeDefaultCPU(TT, CPU), FS, Options,
           getEffectiveRelocModel(TT, RM),
           getEffectiveAArch64CodeModel(TT, CM, JIT), OL),
-      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian) {
+      TLOF(createTLOF(getTargetTriple())), isLittle(LittleEndian),
+      UseNewSMEABILowering(EnableNewSMEABILowering) {
   initAsmInfo();
 
   if (TT.isOSBinFormatMachO()) {
@@ -484,8 +485,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
     resetTargetOptions(F);
     I = std::make_unique<AArch64Subtarget>(
         TargetTriple, CPU, TuneCPU, FS, *this, isLittle, MinSVEVectorSize,
-        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize,
-        EnableNewSMEABILowering);
+        MaxSVEVectorSize, IsStreaming, IsStreamingCompatible, HasMinSize);
   }
 
   if (IsStreaming && !I->hasSME())

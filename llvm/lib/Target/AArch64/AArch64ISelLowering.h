@@ -23,6 +23,8 @@
 
 namespace llvm {
 
+class AArch64TargetMachine;
+
 namespace AArch64 {
 /// Possible values of current rounding mode, which is specified in bits
 /// 23:22 of FPCR.
@@ -63,6 +65,8 @@ class AArch64TargetLowering : public TargetLowering {
 public:
   explicit AArch64TargetLowering(const TargetMachine &TM,
                                  const AArch64Subtarget &STI);
+
+  const AArch64TargetMachine &getTM() const;
 
   /// Control the following reassociation of operands: (op (op x, c1), y) -> (op
   /// (op x, y), c1) where N0 is (op x, c1) and N1 is y.
