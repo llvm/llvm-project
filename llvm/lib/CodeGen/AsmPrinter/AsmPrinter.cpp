@@ -2039,6 +2039,16 @@ void AsmPrinter::emitFunctionBody() {
         // This is only used to influence register allocation behavior, no
         // actual initialization is needed.
         break;
+      case TargetOpcode::RELOC_NONE: {
+        // Generate a temporary label for the current PC.
+        MCSymbol *Sym = OutContext.createTempSymbol("reloc_none");
+        OutStreamer->emitLabel(Sym);
+        const MCExpr *Dot = MCSymbolRefExpr::create(Sym, OutContext);
+        const MCExpr *Value = MCSymbolRefExpr::create(
+            getSymbol(MI.getOperand(0).getGlobal()), OutContext);
+        OutStreamer->emitRelocDirective(*Dot, "BFD_RELOC_NONE", Value, SMLoc());
+        break;
+      }
       default:
         emitInstruction(&MI);
 
