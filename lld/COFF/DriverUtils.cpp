@@ -222,6 +222,7 @@ void LinkerDriver::parseSectionLayout(StringRef path) {
       CHECK(MemoryBuffer::getFile(path), "could not open " + path);
   StringRef content = layoutFile->getBuffer();
   int index = 0;
+  std::set<std::string> seenSections;
 
   while (!content.empty()) {
     size_t pos = content.find_first_of("\r\n");
@@ -242,7 +243,15 @@ void LinkerDriver::parseSectionLayout(StringRef path) {
       continue;
 
     StringRef sectionName = line.split(' ').first;
-    ctx.config.sectionLayout[sectionName.str()] = index++;
+    std::string sectionNameStr = sectionName.str();
+    
+    if (seenSections.count(sectionNameStr)) {
+      Warn(ctx) << "duplicate section '" << sectionNameStr << "' in section layout file, ignoring";
+      continue;
+    }
+    
+    seenSections.insert(sectionNameStr);
+    ctx.config.sectionLayout[sectionNameStr] = index++;
   }
 }
 
