@@ -2083,6 +2083,10 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
 
     return mlir::LLVM::LLVMPointerType::get(type.getContext(), targetAS);
   });
+  converter.addConversion([&](cir::VPtrType type) -> mlir::Type {
+    assert(!cir::MissingFeatures::addressSpace());
+    return mlir::LLVM::LLVMPointerType::get(type.getContext());
+  });
   converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
     mlir::Type ty =
         convertTypeForMemory(converter, dataLayout, type.getElementType());
@@ -2314,6 +2318,7 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMSwitchFlatOpLowering,
                CIRToLLVMTrapOpLowering,
                CIRToLLVMUnaryOpLowering,
+               CIRToLLVMUnreachableOpLowering,
                CIRToLLVMVecCmpOpLowering,
                CIRToLLVMVecCreateOpLowering,
                CIRToLLVMVecExtractOpLowering,
@@ -2322,7 +2327,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
                CIRToLLVMVecShuffleOpLowering,
                CIRToLLVMVecSplatOpLowering,
                CIRToLLVMVecTernaryOpLowering,
-               CIRToLLVMUnreachableOpLowering
+               CIRToLLVMVTableAddrPointOpLowering
+      // clang-format on
       >(converter, patterns.getContext());
 
   processCIRAttrs(module);
@@ -2396,6 +2402,45 @@ mlir::LogicalResult CIRToLLVMTrapOpLowering::matchAndRewrite(
   // So we must emit an additional llvm.unreachable to terminate the current
   // block.
   rewriter.create<mlir::LLVM::UnreachableOp>(loc);
+
+  return mlir::success();
+}
+
+static mlir::Value
+getValueForVTableSymbol(mlir::Operation *op,
+                        mlir::ConversionPatternRewriter &rewriter,
+                        const mlir::TypeConverter *converter,
+                        mlir::FlatSymbolRefAttr nameAttr, mlir::Type &eltType) {
+  auto module = op->getParentOfType<mlir::ModuleOp>();
+  mlir::Operation *symbol = mlir::SymbolTable::lookupSymbolIn(module, nameAttr);
+  if (auto llvmSymbol = mlir::dyn_cast<mlir::LLVM::GlobalOp>(symbol))
+    eltType = llvmSymbol.getType();
+  else if (auto cirSymbol = mlir::dyn_cast<cir::GlobalOp>(symbol))
+    eltType = converter->convertType(cirSymbol.getSymType());
+
+  return mlir::LLVM::AddressOfOp::create(
+      rewriter, op->getLoc(),
+      mlir::LLVM::LLVMPointerType::get(op->getContext()), nameAttr.getValue());
+}
+
+mlir::LogicalResult CIRToLLVMVTableAddrPointOpLowering::matchAndRewrite(
+    cir::VTableAddrPointOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::TypeConverter *converter = getTypeConverter();
+  mlir::Type targetType = converter->convertType(op.getType());
+  llvm::SmallVector<mlir::LLVM::GEPArg> offsets;
+  mlir::Type eltType;
+  mlir::Value symAddr = getValueForVTableSymbol(op, rewriter, converter,
+                                                op.getNameAttr(), eltType);
+  offsets = llvm::SmallVector<mlir::LLVM::GEPArg>{
+      0, op.getAddressPointAttr().getIndex(),
+      op.getAddressPointAttr().getOffset()};
+
+  assert(eltType && "Shouldn't ever be missing an eltType here");
+  mlir::LLVM::GEPNoWrapFlags inboundsNuw =
+      mlir::LLVM::GEPNoWrapFlags::inbounds | mlir::LLVM::GEPNoWrapFlags::nuw;
+  rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(op, targetType, eltType,
+                                                 symAddr, offsets, inboundsNuw);
 
   return mlir::success();
 }
