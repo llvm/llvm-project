@@ -27677,6 +27677,67 @@ The '``llvm.masked.compressstore``' intrinsic is designed for compressing data i
 
 Other targets may support this intrinsic differently, for example, by lowering it into a sequence of branches that guard scalar store operations.
 
+.. _int_mloadff:
+
+'``llvm.masked.load.first.fault.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+This is an overloaded intrinsic. The loaded data is a vector of any integer,
+floating-point or pointer data type.
+
+::
+
+      declare { <16 x float>, <16 x i1> } @llvm.masked.load.first.fault.v16f32.p0(ptr <ptr>, i32 <alignment>, <16 x i1> <mask>)
+      declare { <2 x double>, <2 x i1> } @llvm.masked.load.first.fault.v2f64.p0(ptr <ptr>, i32 <alignment>, <2 x i1> <mask>)
+      ;; The data is a vector of pointers
+      declare { <8 x ptr>, <8 x i1> } @llvm.masked.load.first.fault.v8p0.p0(ptr <ptr>, i32 <alignment>, <8 x i1> <mask>)
+
+Overview:
+"""""""""
+
+Reads a vector from memory according to the provided mask, suppressing faults
+for any lane beyond the first. The mask holds a bit for each vector lane, and
+is used to prevent memory accesses to the masked-off lanes.
+
+Returns the loaded data and a mask indicating which lanes are valid, which may
+not be the same as the input mask depending on whether the processor encountered
+a reason to avoid loading from that address. Invalid lanes contain poison
+values.
+
+Arguments:
+""""""""""
+
+The first argument is the base pointer for the load. The second argument is the
+alignment of the source location. It must be a power of two constant integer
+value. The third argument, mask, is a vector of boolean values with the same
+number of elements as the return type.
+
+Semantics:
+""""""""""
+
+The '``llvm.masked.load.first.fault``' intrinsic is similar to the
+'``llvm.masked.load``' intrinsic, in that it conditionally loads values from
+memory into a vector based on a mask. However, it allows loading from addresses
+which may not be entirely safe. If the memory corresponding to the first element
+of the vector is inaccessible, then a fault will be raised as normal. For all
+subsequent lanes faults will be suppressed and the corresponding bit in the
+output mask will be marked inactive. The remaining elements in the output mask
+after a suppressed fault will also be marked inactive. All elements in the data
+result (first vector in the returned struct) with a corresponding element in the
+mask result (second vector in the returned struct) set to inactive contain
+poison values.
+
+Reasons for marking output elements inactive are processor dependent; it may be
+a genuine fault, e.g. if the range of the data being loaded spans a page
+boundary and the page at the higher address is not mapped. But a given
+processor may also mark elements as inactive for other reasons, such as a cache
+miss. Code using this intrinsic must take this into account and not assume that
+inactive lanes signal the end of accessible memory. If more data should be
+loaded based on the semantics of the user code, then the base pointer should be
+advanced to the address of the first inactive element and a new first fault load
+attempted.
 
 Memory Use Markers
 ------------------
