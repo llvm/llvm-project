@@ -1012,6 +1012,12 @@ bool isReadOnlySegment(const GlobalValue *GV);
 /// target triple \p TT, false otherwise.
 bool shouldEmitConstantsToTextSection(const Triple &TT);
 
+/// Returns a valid charcode or 0 in the first entry if this is a valid physical
+/// register constraint. Followed by the start register number, and the register
+/// width. Does not validate the number of registers exists in the class.
+std::tuple<char, unsigned, unsigned>
+parseAsmConstraintPhysReg(StringRef Constraint);
+
 /// \returns Integer value requested using \p F's \p Name attribute.
 ///
 /// \returns \p Default if attribute is not present.
@@ -1636,6 +1642,7 @@ inline unsigned getOperandSize(const MCOperandInfo &OpInfo) {
   case AMDGPU::OPERAND_REG_IMM_V2INT16:
   case AMDGPU::OPERAND_REG_IMM_V2BF16:
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
+  case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     return 2;
 
   default:
@@ -1701,6 +1708,8 @@ bool isValid32BitLiteral(uint64_t Val, bool IsFP64);
 bool isArgPassedInSGPR(const Argument *Arg);
 
 bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo);
+
+LLVM_READONLY bool isPackedFP32Inst(unsigned Opc);
 
 LLVM_READONLY
 bool isLegalSMRDEncodedUnsignedOffset(const MCSubtargetInfo &ST,

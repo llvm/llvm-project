@@ -56,9 +56,9 @@ static_assert(FragBlockSize >= sizeof(MCFragment) + NewFragHeadroom);
 MCFragment *MCObjectStreamer::allocFragSpace(size_t Headroom) {
   auto Size = std::max(FragBlockSize, sizeof(MCFragment) + Headroom);
   FragSpace = Size - sizeof(MCFragment);
-  auto Chunk = std::unique_ptr<char[]>(new char[Size]);
-  auto *F = reinterpret_cast<MCFragment *>(Chunk.get());
-  FragStorage.push_back(std::move(Chunk));
+  auto Block = std::unique_ptr<uint8_t[]>(new uint8_t[Size]);
+  auto *F = reinterpret_cast<MCFragment *>(Block.get());
+  FragStorage.push_back(std::move(Block));
   return F;
 }
 
@@ -84,9 +84,9 @@ void MCObjectStreamer::ensureHeadroom(size_t Headroom) {
   addFragment(F);
 }
 
-void MCObjectStreamer::insert(MCFragment *Frag) {
+void MCObjectStreamer::addSpecialFragment(MCFragment *Frag) {
   assert(Frag->getKind() != MCFragment::FT_Data &&
-         "F should have a variable-size tail");
+         "Frag should have a variable-size tail");
   // Frag is not connected to FragSpace. Before modifying CurFrag with
   // addFragment(Frag), allocate an empty fragment to maintain FragSpace
   // connectivity, potentially reusing CurFrag's associated space.
@@ -113,9 +113,9 @@ void MCObjectStreamer::appendContents(ArrayRef<char> Contents) {
   FragSpace -= Contents.size();
 }
 
-void MCObjectStreamer::appendContents(size_t Num, char Elt) {
+void MCObjectStreamer::appendContents(size_t Num, uint8_t Elt) {
   ensureHeadroom(Num);
-  MutableArrayRef<char> Data(getCurFragEnd(), Num);
+  MutableArrayRef<uint8_t> Data(getCurFragEnd(), Num);
   llvm::fill(Data, Elt);
   CurFrag->FixedSize += Num;
   FragSpace -= Num;
@@ -173,6 +173,7 @@ void MCObjectStreamer::reset() {
   EmitDebugFrame = false;
   FragStorage.clear();
   FragSpace = 0;
+  SpecialFragAllocator.Reset();
   MCStreamer::reset();
 }
 
@@ -442,7 +443,7 @@ void MCObjectStreamer::emitInstToData(const MCInst &Inst,
     // MCAssembler::relaxAlign.
     auto *Sec = F->getParent();
     if (!Sec->isLinkerRelaxable())
-      Sec->setLinkerRelaxable();
+      Sec->setFirstLinkerRelaxable(F->getLayoutOrder());
     // Do not add data after a linker-relaxable instruction. The difference
     // between a new label and a label at or before the linker-relaxable
     // instruction cannot be resolved at assemble-time.
@@ -649,7 +650,7 @@ void MCObjectStreamer::emitCodeAlignment(Align Alignment,
 void MCObjectStreamer::emitValueToOffset(const MCExpr *Offset,
                                          unsigned char Value,
                                          SMLoc Loc) {
-  insert(getContext().allocFragment<MCOrgFragment>(*Offset, Value, Loc));
+  newSpecialFragment<MCOrgFragment>(*Offset, Value, Loc);
 }
 
 void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
@@ -681,8 +682,7 @@ void MCObjectStreamer::emitRelocDirective(const MCExpr &Offset, StringRef Name,
 void MCObjectStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                                 SMLoc Loc) {
   assert(getCurrentSectionOnly() && "need a section");
-  insert(
-      getContext().allocFragment<MCFillFragment>(FillValue, 1, NumBytes, Loc));
+  newSpecialFragment<MCFillFragment>(FillValue, 1, NumBytes, Loc);
 }
 
 void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
@@ -709,15 +709,13 @@ void MCObjectStreamer::emitFill(const MCExpr &NumValues, int64_t Size,
 
   // Otherwise emit as fragment.
   assert(getCurrentSectionOnly() && "need a section");
-  insert(
-      getContext().allocFragment<MCFillFragment>(Expr, Size, NumValues, Loc));
+  newSpecialFragment<MCFillFragment>(Expr, Size, NumValues, Loc);
 }
 
 void MCObjectStreamer::emitNops(int64_t NumBytes, int64_t ControlledNopLength,
                                 SMLoc Loc, const MCSubtargetInfo &STI) {
   assert(getCurrentSectionOnly() && "need a section");
-  insert(getContext().allocFragment<MCNopsFragment>(
-      NumBytes, ControlledNopLength, Loc, STI));
+  newSpecialFragment<MCNopsFragment>(NumBytes, ControlledNopLength, Loc, STI);
 }
 
 void MCObjectStreamer::emitFileDirective(StringRef Filename) {

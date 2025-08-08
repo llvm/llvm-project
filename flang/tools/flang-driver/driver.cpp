@@ -123,15 +123,14 @@ int main(int argc, const char **argv) {
   // Create DiagnosticsEngine for the compiler driver
   std::unique_ptr<clang::DiagnosticOptions> diagOpts =
       createAndPopulateDiagOpts(args);
-  llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
-      new clang::DiagnosticIDs());
   Fortran::frontend::TextDiagnosticPrinter *diagClient =
       new Fortran::frontend::TextDiagnosticPrinter(llvm::errs(), *diagOpts);
 
   diagClient->setPrefix(
       std::string(llvm::sys::path::stem(getExecutablePath(args[0]))));
 
-  clang::DiagnosticsEngine diags(diagID, *diagOpts, diagClient);
+  clang::DiagnosticsEngine diags(clang::DiagnosticIDs::create(), *diagOpts,
+                                 diagClient);
 
   // Prepare the driver
   clang::driver::Driver theDriver(driverPath,

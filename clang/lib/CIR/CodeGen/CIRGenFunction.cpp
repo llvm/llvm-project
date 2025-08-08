@@ -28,8 +28,6 @@ CIRGenFunction::CIRGenFunction(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
     : CIRGenTypeCache(cgm), cgm{cgm}, builder(builder) {
   ehStack.setCGF(this);
-  currentCleanupStackDepth = 0;
-  assert(ehStack.getStackDepth() == 0);
 }
 
 CIRGenFunction::~CIRGenFunction() {}
@@ -216,11 +214,12 @@ void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
 void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
                              mlir::Location loc, CharUnits alignment,
                              bool isParam) {
-  const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
-  assert(namedVar && "Needs a named decl");
+  assert(isa<NamedDecl>(var) && "Needs a named decl");
   assert(!cir::MissingFeatures::cgfSymbolTable());
 
-  auto allocaOp = cast<cir::AllocaOp>(addrVal.getDefiningOp());
+  auto allocaOp = addrVal.getDefiningOp<cir::AllocaOp>();
+  assert(allocaOp && "expected cir::AllocaOp");
+
   if (isParam)
     allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
@@ -382,6 +381,7 @@ void CIRGenFunction::LexicalScope::emitImplicitReturn() {
         !mayDropFunctionReturn(fd->getASTContext(), fd->getReturnType());
 
     if (shouldEmitUnreachable) {
+      assert(!cir::MissingFeatures::sanitizers());
       if (cgf.cgm.getCodeGenOpts().OptimizationLevel == 0)
         builder.create<cir::TrapOp>(localScope->endLoc);
       else
@@ -406,6 +406,8 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   const Decl *d = gd.getDecl();
   const auto *fd = dyn_cast_or_null<FunctionDecl>(d);
   curFuncDecl = d->getNonClosureContext();
+
+  prologueCleanupDepth = ehStack.stable_begin();
 
   mlir::Block *entryBB = &fn.getBlocks().front();
   builder.setInsertionPointToStart(entryBB);
@@ -473,11 +475,11 @@ void CIRGenFunction::finishFunction(SourceLocation endLoc) {
   // important to do this before we enter the return block or return
   // edges will be *really* confused.
   // TODO(cir): Use prologueCleanupDepth here.
-  bool hasCleanups = ehStack.getStackDepth() != currentCleanupStackDepth;
+  bool hasCleanups = ehStack.stable_begin() != prologueCleanupDepth;
   if (hasCleanups) {
     assert(!cir::MissingFeatures::generateDebugInfo());
     // FIXME(cir): should we clearInsertionPoint? breaks many testcases
-    popCleanupBlocks(currentCleanupStackDepth);
+    popCleanupBlocks(prologueCleanupDepth);
   }
 }
 
@@ -783,9 +785,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     }
     if (!ty->isAnyComplexType())
       return emitCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
-    cgm.errorNYI(e->getSourceRange(),
-                 "CompoundAssignOperator with ComplexType");
-    return LValue();
+
+    return emitComplexCompoundAssignmentLValue(cast<CompoundAssignOperator>(e));
   }
   case Expr::CallExprClass:
   case Expr::CXXMemberCallExprClass:
@@ -801,6 +802,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   case Expr::CXXDynamicCastExprClass:
   case Expr::ImplicitCastExprClass:
     return emitCastLValue(cast<CastExpr>(e));
+  case Expr::MaterializeTemporaryExprClass:
+    return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
   }
 }
 
@@ -809,6 +812,10 @@ static std::string getVersionedTmpName(llvm::StringRef name, unsigned cnt) {
   llvm::raw_svector_ostream out(buffer);
   out << name << cnt;
   return std::string(out.str());
+}
+
+std::string CIRGenFunction::getCounterRefTmpAsString() {
+  return getVersionedTmpName("ref.tmp", counterRefTmp++);
 }
 
 std::string CIRGenFunction::getCounterAggTmpAsString() {
@@ -943,6 +950,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::HLSLInlineSpirv:
     case Type::PredefinedSugar:
       cgm.errorNYI("CIRGenFunction::emitVariablyModifiedType");
+      break;
 
 #define TYPE(Class, Base)
 #define ABSTRACT_TYPE(Class, Base)

@@ -218,6 +218,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.abort
     libc.src.stdlib.abs
     libc.src.stdlib.aligned_alloc
+    libc.src.stdlib.atexit
     libc.src.stdlib.atof
     libc.src.stdlib.atoi
     libc.src.stdlib.atol
@@ -759,7 +760,12 @@ endif()
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.ceilbf16
   libc.src.math.fabsbf16
+  libc.src.math.floorbf16
+  libc.src.math.roundbf16
+  libc.src.math.roundevenbf16
+  libc.src.math.truncbf16
 )
 
 if(LIBC_COMPILER_HAS_FIXED_POINT)
