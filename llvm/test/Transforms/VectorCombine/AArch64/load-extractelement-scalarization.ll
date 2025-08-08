@@ -206,7 +206,7 @@ define i32 @load_extract_idx_var_i64_known_valid_by_assume_in_non_dominating_blo
 ; CHECK-NEXT:    br i1 [[C_3]], label [[LOOP]], label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[R]], [[LOOP]] ], [ 0, [[ASSUME_CHECK]] ]
-; CHECK-NEXT:    ret i32 [[P]]
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   br i1 %c.1, label %assume_check, label %loop
@@ -225,7 +225,7 @@ loop:
 
 exit:
   %p = phi i32 [ %r, %loop ], [ 0, %assume_check ]
-  ret i32 %p
+  ret i32 0
 }
 
 define i32 @load_extract_idx_var_i64_not_known_valid_by_assume_after_load(ptr %x, i64 %idx) {
@@ -669,9 +669,9 @@ define i1 @load_with_non_power_of_2_element_type_2(ptr %x) {
 ; Scalarizing the load for multiple constant indices may not be profitable.
 define i32 @load_multiple_extracts_with_constant_idx(ptr %x) {
 ; CHECK-LABEL: @load_multiple_extracts_with_constant_idx(
-; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <4 x i32>, ptr [[X]], i32 0, i32 1
-; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x i32>, ptr [[TMP1]], i32 0, i32 1
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -686,9 +686,9 @@ define i32 @load_multiple_extracts_with_constant_idx(ptr %x) {
 ; because the vector large vector requires 2 vector registers.
 define i32 @load_multiple_extracts_with_constant_idx_profitable(ptr %x) {
 ; CHECK-LABEL: @load_multiple_extracts_with_constant_idx_profitable(
-; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[X:%.*]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <8 x i32>, ptr [[X]], i32 0, i32 6
-; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[E_0:%.*]] = load i32, ptr [[TMP1:%.*]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x i32>, ptr [[TMP1]], i32 0, i32 6
+; CHECK-NEXT:    [[E_1:%.*]] = load i32, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[E_0]], [[E_1]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
