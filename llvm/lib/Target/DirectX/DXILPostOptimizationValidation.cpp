@@ -228,31 +228,31 @@ static void validateRootSignature(Module &M,
                          &IDs.emplace_back());
   bool HasOverlap = false;
   hlsl::BindingInfo Info = Builder.calculateBindingInfo(
-      [&M, &HasOverlap](const llvm::hlsl::BindingInfoBuilder &Builder,
+      [&M, &HasOverlap](
+          const llvm::hlsl::BindingInfoBuilder &Builder,
           const llvm::hlsl::BindingInfoBuilder::Binding &ReportedBinding) {
-            HasOverlap = true;
-            const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
+        HasOverlap = true;
+        const llvm::hlsl::BindingInfoBuilder::Binding &Overlaping =
             Builder.findOverlapping(ReportedBinding);
-            reportOverlappingRegisters(M, ReportedBinding, Overlaping);
+        reportOverlappingRegisters(M, ReportedBinding, Overlaping);
       });
-    // Next checks require that the root signature definition is valid.
-    if (!HasOverlap) {
-      for (const auto &ResList :
-           {std::make_pair(ResourceClass::SRV, DRM.srvs()),
-            std::make_pair(ResourceClass::UAV, DRM.uavs()),
-            std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
-            std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
-        for (auto Res : ResList.second) {
-          llvm::dxil::ResourceInfo::ResourceBinding ResBinding =
-              Res.getBinding();
-          llvm::hlsl::BindingInfo::BindingRange ResRange(
-              ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
+  // Next checks require that the root signature definition is valid.
+  if (!HasOverlap) {
+    for (const auto &ResList :
+         {std::make_pair(ResourceClass::SRV, DRM.srvs()),
+          std::make_pair(ResourceClass::UAV, DRM.uavs()),
+          std::make_pair(ResourceClass::CBuffer, DRM.cbuffers()),
+          std::make_pair(ResourceClass::Sampler, DRM.samplers())}) {
+      for (auto Res : ResList.second) {
+        llvm::dxil::ResourceInfo::ResourceBinding ResBinding = Res.getBinding();
+        llvm::hlsl::BindingInfo::BindingRange ResRange(
+            ResBinding.LowerBound, ResBinding.LowerBound + ResBinding.Size);
 
-          if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
-            reportRegNotBound(M, ResList.first, ResBinding);
-        }
+        if (!Info.isBound(ResList.first, ResBinding.Space, ResRange))
+          reportRegNotBound(M, ResList.first, ResBinding);
       }
     }
+  }
 }
 
 static mcdxbc::RootSignatureDesc *
