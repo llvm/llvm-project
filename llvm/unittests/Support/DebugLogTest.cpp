@@ -6,11 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This macro is defined in the LLVM build system, but we undefine it here
-// so that we test at least once in-tree the case where __SHORT_FILE__ is not
-// defined.
-#undef __SHORT_FILE__
-
 #include "llvm/Support/DebugLog.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/Support/raw_ostream.h"

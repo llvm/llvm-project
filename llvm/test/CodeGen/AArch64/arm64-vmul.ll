@@ -3,6 +3,7 @@
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 ; CHECK-GI:       warning: Instruction selection used fallback path for pmull8h
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for commutable_pmull8h
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for sqdmulh_1s
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_2s
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_4s
@@ -78,6 +79,21 @@ define <2 x i64> @smull2d(ptr %A, ptr %B) nounwind {
   ret <2 x i64> %tmp3
 }
 
+define void @commutable_smull(<2 x i32> %A, <2 x i32> %B, ptr %C) {
+; CHECK-LABEL: commutable_smull:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    smull v2.2d, v0.2s, v1.2s
+; CHECK-NEXT:    smull v0.2d, v1.2s, v0.2s
+; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    ret
+  %1 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %A, <2 x i32> %B)
+  %2 = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %B, <2 x i32> %A)
+  store <2 x i64> %1, ptr %C
+  %3 = getelementptr i8, ptr %C, i64 16
+  store <2 x i64> %2, ptr %3
+  ret void
+}
+
 declare <8 x i16>  @llvm.aarch64.neon.smull.v8i16(<8 x i8>, <8 x i8>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16>, <4 x i16>) nounwind readnone
 declare <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32>, <2 x i32>) nounwind readnone
@@ -119,6 +135,21 @@ define <2 x i64> @umull2d(ptr %A, ptr %B) nounwind {
   %tmp2 = load <2 x i32>, ptr %B
   %tmp3 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %tmp1, <2 x i32> %tmp2)
   ret <2 x i64> %tmp3
+}
+
+define void @commutable_umull(<2 x i32> %A, <2 x i32> %B, ptr %C) {
+; CHECK-LABEL: commutable_umull:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    umull v2.2d, v0.2s, v1.2s
+; CHECK-NEXT:    umull v0.2d, v1.2s, v0.2s
+; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    ret
+  %1 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %A, <2 x i32> %B)
+  %2 = call <2 x i64> @llvm.aarch64.neon.umull.v2i64(<2 x i32> %B, <2 x i32> %A)
+  store <2 x i64> %1, ptr %C
+  %3 = getelementptr i8, ptr %C, i64 16
+  store <2 x i64> %2, ptr %3
+  ret void
 }
 
 declare <8 x i16>  @llvm.aarch64.neon.umull.v8i16(<8 x i8>, <8 x i8>) nounwind readnone
@@ -210,6 +241,21 @@ define <8 x i16> @pmull8h(ptr %A, ptr %B) nounwind {
   %tmp2 = load <8 x i8>, ptr %B
   %tmp3 = call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %tmp1, <8 x i8> %tmp2)
   ret <8 x i16> %tmp3
+}
+
+define void @commutable_pmull8h(<8 x i8> %A, <8 x i8> %B, ptr %C) {
+; CHECK-LABEL: commutable_pmull8h:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    pmull v2.8h, v0.8b, v1.8b
+; CHECK-NEXT:    pmull v0.8h, v1.8b, v0.8b
+; CHECK-NEXT:    stp q2, q0, [x0]
+; CHECK-NEXT:    ret
+  %1 = call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %A, <8 x i8> %B)
+  %2 = call <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8> %B, <8 x i8> %A)
+  store <8 x i16> %1, ptr %C
+  %3 = getelementptr i8, ptr %C, i8 16
+  store <8 x i16> %2, ptr %3
+  ret void
 }
 
 declare <8 x i16> @llvm.aarch64.neon.pmull.v8i16(<8 x i8>, <8 x i8>) nounwind readnone
@@ -487,10 +533,10 @@ define void @smlal2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2,
 ; CHECK-GI-LABEL: smlal2d_chain_with_constant:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mvn v3.8b, v2.8b
-; CHECK-GI-NEXT:    adrp x8, .LCPI27_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI30_0
 ; CHECK-GI-NEXT:    smull v1.2d, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    smlal v1.2d, v0.2s, v2.2s
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI27_0]
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI30_0]
 ; CHECK-GI-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -566,8 +612,8 @@ define void @smlsl2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2,
 ;
 ; CHECK-GI-LABEL: smlsl2d_chain_with_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI31_0
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI31_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI34_0
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI34_0]
 ; CHECK-GI-NEXT:    smlsl v3.2d, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    mvn v0.8b, v2.8b
 ; CHECK-GI-NEXT:    smlsl v3.2d, v1.2s, v0.2s
@@ -829,10 +875,10 @@ define void @umlal2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2,
 ; CHECK-GI-LABEL: umlal2d_chain_with_constant:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mvn v3.8b, v2.8b
-; CHECK-GI-NEXT:    adrp x8, .LCPI43_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI46_0
 ; CHECK-GI-NEXT:    umull v1.2d, v1.2s, v3.2s
 ; CHECK-GI-NEXT:    umlal v1.2d, v0.2s, v2.2s
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI43_0]
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI46_0]
 ; CHECK-GI-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -908,8 +954,8 @@ define void @umlsl2d_chain_with_constant(ptr %dst, <2 x i32> %v1, <2 x i32> %v2,
 ;
 ; CHECK-GI-LABEL: umlsl2d_chain_with_constant:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
-; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI47_0]
+; CHECK-GI-NEXT:    adrp x8, .LCPI50_0
+; CHECK-GI-NEXT:    ldr q3, [x8, :lo12:.LCPI50_0]
 ; CHECK-GI-NEXT:    umlsl v3.2d, v0.2s, v2.2s
 ; CHECK-GI-NEXT:    mvn v0.8b, v2.8b
 ; CHECK-GI-NEXT:    umlsl v3.2d, v1.2s, v0.2s
@@ -3220,6 +3266,21 @@ define <16 x i8> @test_pmull_high_64(<2 x i64> %l, <2 x i64> %r) nounwind {
   %r_hi = extractelement <2 x i64> %r, i32 1
   %val = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %l_hi, i64 %r_hi)
   ret <16 x i8> %val
+}
+
+define <16 x i8> @test_commutable_pmull_64(i64 %l, i64 %r) nounwind {
+; CHECK-LABEL: test_commutable_pmull_64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x1
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    pmull v2.1q, v1.1d, v0.1d
+; CHECK-NEXT:    pmull v0.1q, v0.1d, v1.1d
+; CHECK-NEXT:    add v0.16b, v2.16b, v0.16b
+; CHECK-NEXT:    ret
+  %1 = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %l, i64 %r)
+  %2 = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %r, i64 %l)
+  %3 = add <16 x i8> %1, %2
+  ret <16 x i8> %3
 }
 
 declare <16 x i8> @llvm.aarch64.neon.pmull64(i64, i64)
