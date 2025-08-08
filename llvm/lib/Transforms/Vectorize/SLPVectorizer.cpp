@@ -24351,9 +24351,6 @@ bool SLPVectorizerPass::tryToVectorize(Instruction *I, BoUpSLP &R) {
                                                CostKind);
       break;
     }
-    case RecurKind::Sub:
-    case RecurKind::AddChainWithSubs:
-      llvm_unreachable("Unexpected recurrence kind.");
     default:
       return false;
     }

@@ -899,21 +899,11 @@ RecurrenceDescriptor::InstDesc RecurrenceDescriptor::isRecurrenceInstr(
   case Instruction::PHI:
     return InstDesc(I, Prev.getRecKind(), Prev.getExactFPMathInst());
   case Instruction::Sub:
-    if ((Kind == RecurKind::AddChainWithSubs || Kind == RecurKind::Add) &&
-        Kind == Prev.getRecKind())
-      return InstDesc(I, RecurKind::AddChainWithSubs);
-    else if (Kind == RecurKind::Sub)
-      return InstDesc(I, Kind);
-    else
-      return InstDesc(false, I);
+    return InstDesc(
+        Kind == RecurKind::Sub || Kind == RecurKind::AddChainWithSubs, I);
   case Instruction::Add:
-    if ((Kind == RecurKind::AddChainWithSubs || Kind == RecurKind::Sub) &&
-        Kind == Prev.getRecKind())
-      return InstDesc(I, RecurKind::AddChainWithSubs);
-    else if (Kind == RecurKind::Add)
-      return InstDesc(I, Kind);
-    else
-      return InstDesc(false, I);
+    return InstDesc(
+        Kind == RecurKind::Add || Kind == RecurKind::AddChainWithSubs, I);
   case Instruction::Mul:
     return InstDesc(Kind == RecurKind::Mul, I);
   case Instruction::And:
@@ -1022,6 +1012,12 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
   if (AddReductionVar(Phi, RecurKind::Sub, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found a SUB reduction PHI." << *Phi << "\n");
+    return true;
+  }
+  if (AddReductionVar(Phi, RecurKind::AddChainWithSubs, TheLoop, FMF, RedDes,
+                      DB, AC, DT, SE)) {
+    LLVM_DEBUG(dbgs() << "Found a chained ADD-SUB reduction PHI." << *Phi
+                      << "\n");
     return true;
   }
   if (AddReductionVar(Phi, RecurKind::Mul, TheLoop, FMF, RedDes, DB, AC, DT,
@@ -1312,7 +1308,8 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
     if (isFMulAddIntrinsic(Cur))
       return true;
 
-    if (Cur->getOpcode() == Instruction::Sub && getOpcode() == Instruction::Add)
+    if (Cur->getOpcode() == Instruction::Sub &&
+        Kind == RecurKind::AddChainWithSubs)
       return true;
 
     return Cur->getOpcode() == getOpcode();
