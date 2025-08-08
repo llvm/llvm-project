@@ -22,8 +22,6 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 64
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 510, [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 510, [[N_MOD_VF]]
-; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP5:%.*]] = mul nuw i64 [[TMP4]], 64
 ; CHECK-NEXT:    [[INDEX_NEXT:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       vector.body:
@@ -61,7 +59,7 @@ define i64 @same_exit_block_pre_inc_use1() #0 {
 ; CHECK-NEXT:    [[TMP30:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD2]], [[WIDE_LOAD6]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD3]], [[WIDE_LOAD7]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_LOAD4]], [[WIDE_LOAD8]]
-; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], [[TMP5]]
+; CHECK-NEXT:    [[INDEX_NEXT3]] = add nuw i64 [[INDEX1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP34:%.*]] = or <vscale x 16 x i1> [[TMP32]], [[TMP30]]
 ; CHECK-NEXT:    [[TMP37:%.*]] = or <vscale x 16 x i1> [[TMP34]], [[TMP31]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = or <vscale x 16 x i1> [[TMP37]], [[TMP59]]

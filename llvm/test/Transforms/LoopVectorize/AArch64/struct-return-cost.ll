@@ -82,8 +82,8 @@ define void @struct_return_replicate(ptr noalias %in, ptr noalias writeonly %out
 ; CHECK:  [[ENTRY:.*:]]
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:  [[VECTOR_BODY:.*:]]
-; CHECK:    [[TMP4:%.*]] = tail call { half, half } @foo(half [[TMP3:%.*]]) #[[ATTR3:[0-9]+]]
-; CHECK:    [[TMP6:%.*]] = tail call { half, half } @foo(half [[TMP5:%.*]]) #[[ATTR3]]
+; CHECK:    [[TMP2:%.*]] = tail call { half, half } @foo(half [[TMP1:%.*]]) #[[ATTR3:[0-9]+]]
+; CHECK:    [[TMP4:%.*]] = tail call { half, half } @foo(half [[TMP3:%.*]]) #[[ATTR3]]
 ; CHECK:  [[MIDDLE_BLOCK:.*:]]
 ; CHECK:  [[SCALAR_PH:.*:]]
 ; CHECK:  [[FOR_BODY:.*:]]
@@ -149,10 +149,9 @@ exit:
 define void @struct_return_scalable(ptr noalias %in, ptr noalias writeonly %out_a, ptr noalias writeonly %out_b) #2 {
 ; CHECK-LABEL: define void @struct_return_scalable(
 ; CHECK-SAME: ptr noalias [[IN:%.*]], ptr noalias writeonly [[OUT_A:%.*]], ptr noalias writeonly [[OUT_B:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK:  [[ENTRY:.*:]]
-; CHECK:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK:  [[VECTOR_PH:.*:]]
 ; CHECK:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK:  [[VECTOR_PH1:.*:]]
 ; CHECK:    [[TMP4:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK:  [[VECTOR_BODY:.*:]]
 ; CHECK:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()

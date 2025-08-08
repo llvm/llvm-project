@@ -15,7 +15,6 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; LMUL1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
 ; LMUL1-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
-; LMUL1-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
 ; LMUL1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; LMUL1:       vector.body:
 ; LMUL1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -23,7 +22,7 @@ define void @load_store(ptr %p) {
 ; LMUL1-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 1 x i64>, ptr [[TMP3]], align 8
 ; LMUL1-NEXT:    [[TMP5:%.*]] = add <vscale x 1 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; LMUL1-NEXT:    store <vscale x 1 x i64> [[TMP5]], ptr [[TMP3]], align 8
-; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP6]]
+; LMUL1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; LMUL1-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; LMUL1-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; LMUL1:       middle.block:
@@ -48,12 +47,6 @@ define void @load_store(ptr %p) {
 ; LMUL2-NEXT:  entry:
 ; LMUL2-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL2:       vector.ph:
-; LMUL2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; LMUL2-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 2
-; LMUL2-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
-; LMUL2-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
-; LMUL2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; LMUL2-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; LMUL2-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; LMUL2-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 2
 ; LMUL2-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -91,12 +84,6 @@ define void @load_store(ptr %p) {
 ; LMUL4-NEXT:  entry:
 ; LMUL4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL4:       vector.ph:
-; LMUL4-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; LMUL4-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 4
-; LMUL4-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
-; LMUL4-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
-; LMUL4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; LMUL4-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; LMUL4-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; LMUL4-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 4
 ; LMUL4-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -134,12 +121,6 @@ define void @load_store(ptr %p) {
 ; LMUL8-NEXT:  entry:
 ; LMUL8-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; LMUL8:       vector.ph:
-; LMUL8-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
-; LMUL8-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP2]], 8
-; LMUL8-NEXT:    [[TMP4:%.*]] = sub i64 [[TMP3]], 1
-; LMUL8-NEXT:    [[N_RND_UP:%.*]] = add i64 1024, [[TMP4]]
-; LMUL8-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N_RND_UP]], [[TMP3]]
-; LMUL8-NEXT:    [[N_VEC:%.*]] = sub i64 [[N_RND_UP]], [[N_MOD_VF]]
 ; LMUL8-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
 ; LMUL8-NEXT:    [[TMP9:%.*]] = mul nuw i64 [[TMP8]], 8
 ; LMUL8-NEXT:    br label [[VECTOR_BODY:%.*]]
