@@ -14941,11 +14941,24 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
   FormatStyle DoNotMerge = getLLVMStyle();
   DoNotMerge.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
 
+  FormatStyle MergeBodyOnly = getLLVMStyle();
+  MergeBodyOnly.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
+  MergeBodyOnly.PutShortFunctionBodiesOnASingleLine = true;
+
+  FormatStyle MergeBodyIfPossible = getLLVMStyleWithColumns(20);
+  MergeBodyIfPossible.PutShortFunctionBodiesOnASingleLine = true;
+
   verifyFormat("void f() { return 42; }");
   verifyFormat("void f() {\n"
                "  return 42;\n"
                "}",
                DoNotMerge);
+  verifyFormat("void f()\n"
+               "{ return 42; }",
+               MergeBodyOnly);
+  verifyFormat("void long_function_name()\n"
+               "{ return 42; }",
+               MergeBodyIfPossible);
   verifyFormat("void f() {\n"
                "  // Comment\n"
                "}");
@@ -14966,6 +14979,23 @@ TEST_F(FormatTest, PullTrivialFunctionDefinitionsIntoSingleLine) {
                "  int a;\n"
                "} // comment",
                DoNotMerge);
+  verifyFormat("void f()\n"
+               "{} // comment",
+               MergeBodyOnly);
+  verifyFormat("void f()\n"
+               "{ int a; } // comment",
+               MergeBodyOnly);
+  verifyFormat("void long_function_name()\n"
+               "{} // comment",
+               MergeBodyIfPossible);
+  verifyFormat("void f() {\n"
+               "  int a;\n"
+               "} // comment",
+               MergeBodyIfPossible);
+  MergeBodyIfPossible.ColumnLimit = 21;
+  verifyFormat("void f()\n"
+               "{ int a; } // comment",
+               MergeBodyIfPossible);
   verifyFormat("void f() {\n"
                "} // comment",
                getLLVMStyleWithColumns(15));

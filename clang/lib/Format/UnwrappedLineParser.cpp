@@ -1921,6 +1921,10 @@ void UnwrappedLineParser::parseStructuralElement(
           }
         } else if (Style.BraceWrapping.AfterFunction) {
           addUnwrappedLine();
+        } else if (Style.PutShortFunctionBodiesOnASingleLine) {
+          // Wrap the left brace here; we'll try to merge it back
+          // later if needed.
+          addUnwrappedLine();
         }
         if (!Previous || Previous->isNot(TT_TypeDeclarationParen))
           FormatTok->setFinalizedType(TT_FunctionLBrace);

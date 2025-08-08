@@ -242,18 +242,24 @@ private:
     if (Style.ColumnLimit > 0 && Indent > Style.ColumnLimit)
       return 0;
 
-    unsigned Limit =
+    unsigned LimitStripIndent =
         Style.ColumnLimit == 0 ? UINT_MAX : Style.ColumnLimit - Indent;
     // If we already exceed the column limit, we set 'Limit' to 0. The different
     // tryMerge..() functions can then decide whether to still do merging.
-    Limit = TheLine->Last->TotalLength > Limit
-                ? 0
-                : Limit - TheLine->Last->TotalLength;
+    unsigned Limit = TheLine->Last->TotalLength > LimitStripIndent
+                         ? 0
+                         : LimitStripIndent - TheLine->Last->TotalLength;
 
     if (TheLine->Last->is(TT_FunctionLBrace) &&
         TheLine->First == TheLine->Last &&
         !Style.BraceWrapping.SplitEmptyFunction &&
         NextLine.First->is(tok::r_brace)) {
+      return tryMergeSimpleBlock(I, E, Limit);
+    }
+
+    if (TheLine->Last->is(TT_FunctionLBrace) &&
+        TheLine->First == TheLine->Last &&
+        Style.PutShortFunctionBodiesOnASingleLine) {
       return tryMergeSimpleBlock(I, E, Limit);
     }
 
@@ -532,6 +538,24 @@ private:
       }
       return MergedLines;
     }
+
+    // UnwrappedLineParser would move the left brace to a new line when
+    // PutShortFunctionBodiesOnASingleLine is enabled. However, if the
+    // function body cannot fit on a single line, and
+    // Style.BraceWrapping.AfterFunction is false, we should merge the
+    // function name and the left brace back onto the same line.
+    if (NextLine.First->is(TT_FunctionLBrace) &&
+        Style.PutShortFunctionBodiesOnASingleLine &&
+        !Style.BraceWrapping.AfterFunction) {
+      unsigned MergedLines = 0;
+      unsigned NextLineLimit =
+          NextLine.Last->TotalLength > LimitStripIndent
+              ? 0
+              : LimitStripIndent - NextLine.Last->TotalLength;
+      MergedLines = tryMergeSimpleBlock(I + 1, E, NextLineLimit);
+      return MergedLines > 0 ? 0 : 1;
+    }
+
     auto IsElseLine = [&TheLine]() -> bool {
       const FormatToken *First = TheLine->First;
       if (First->is(tok::kw_else))

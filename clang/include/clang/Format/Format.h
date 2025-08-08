@@ -3829,6 +3829,23 @@ struct FormatStyle {
   /// \version 13
   int PPIndentWidth;
 
+  /// Dependent on the value, function body can be put on a single line.
+  /// Automatically enabled when
+  /// `AllowShortFunctionsOnASingleLine` is set to `None` and
+  /// `AllowShortBlocksOnASingleLine` is set to `Always`.
+  /// \code
+  ///   true:
+  ///   int f()
+  ///   { return 0; }
+  ///
+  ///   false:
+  ///   int f() {
+  ///     return 0;
+  ///   }
+  /// \endcode
+  /// \version 20
+  bool PutShortFunctionBodiesOnASingleLine;
+
   /// Different specifiers and qualifiers alignment styles.
   enum QualifierAlignmentStyle : int8_t {
     /// Don't change specifiers/qualifiers to either Left or Right alignment
@@ -5461,6 +5478,8 @@ struct FormatStyle {
            PenaltyExcessCharacter == R.PenaltyExcessCharacter &&
            PenaltyReturnTypeOnItsOwnLine == R.PenaltyReturnTypeOnItsOwnLine &&
            PointerAlignment == R.PointerAlignment &&
+           PutShortFunctionBodiesOnASingleLine ==
+               R.PutShortFunctionBodiesOnASingleLine &&
            QualifierAlignment == R.QualifierAlignment &&
            QualifierOrder == R.QualifierOrder &&
            RawStringFormats == R.RawStringFormats &&
