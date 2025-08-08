@@ -594,7 +594,7 @@ struct StoppedExecutionContext : ExecutionContext {
   /// Clears this context, unlocking the ProcessRunLock and returning the
   /// locked API lock. Like after a move operation, this object is no longer
   /// usable.
-  [[nodiscard]] std::unique_lock<std::recursive_mutex> ClearAndGetAPILock();
+  [[nodiscard]] std::unique_lock<std::recursive_mutex> Destroy();
 
 private:
   std::unique_lock<std::recursive_mutex> m_api_lock;

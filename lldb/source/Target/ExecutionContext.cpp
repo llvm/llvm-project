@@ -164,8 +164,7 @@ lldb_private::GetStoppedExecutionContext(
                                  std::move(api_lock), std::move(stop_locker));
 }
 
-std::unique_lock<std::recursive_mutex>
-StoppedExecutionContext::ClearAndGetAPILock() {
+std::unique_lock<std::recursive_mutex> StoppedExecutionContext::Destroy() {
   Clear();
   m_stop_locker = ProcessRunLock::ProcessRunLocker();
   return std::move(m_api_lock);
