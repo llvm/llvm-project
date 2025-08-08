@@ -1110,3 +1110,6 @@ tablegen:
   - llvm/include/TableGen/**
   - llvm/lib/TableGen/**
   - llvm/utils/TableGen/**
+
+infrastructure:
+  - .ci/**
