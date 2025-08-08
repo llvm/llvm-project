@@ -518,7 +518,7 @@ bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
 bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 AccessKinds AK) {
-  if (!Ptr.isOnePastEnd())
+  if (!Ptr.isOnePastEnd() && !Ptr.isZeroSizeArray())
     return true;
   if (S.getLangOpts().CPlusPlus) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
@@ -828,8 +828,6 @@ bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (Ptr.isBlockPointer() && !CheckDummy(S, OpPC, Ptr.block(), AK_Read))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
-    return false;
-  if (!CheckRange(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckActive(S, OpPC, Ptr, AK_Read))
     return false;
@@ -1646,8 +1644,17 @@ bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func,
 
   const auto *StaticDecl = cast<CXXRecordDecl>(Func->getParentDecl());
   const auto *InitialFunction = cast<CXXMethodDecl>(Callee);
-  const CXXMethodDecl *Overrider = S.getContext().getOverridingFunction(
-      DynamicDecl, StaticDecl, InitialFunction);
+  const CXXMethodDecl *Overrider;
+
+  if (StaticDecl != DynamicDecl) {
+    if (!DynamicDecl->isDerivedFrom(StaticDecl))
+      return false;
+    Overrider = S.getContext().getOverridingFunction(DynamicDecl, StaticDecl,
+                                                     InitialFunction);
+
+  } else {
+    Overrider = InitialFunction;
+  }
 
   if (Overrider != InitialFunction) {
     // DR1872: An instantiated virtual constexpr function can't be called in a
