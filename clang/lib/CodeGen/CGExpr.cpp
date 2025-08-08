@@ -3789,33 +3789,50 @@ void CodeGenFunction::EmitCheck(
   Branch->setMetadata(llvm::LLVMContext::MD_prof, Node);
   EmitBlock(Handlers);
 
+  // Clear arguments for the MinimalRuntime handler.
+  if (CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
+    switch (CheckHandler) {
+    case SanitizerHandler::TypeMismatch:
+      // Pass value pointer only. It adds minimal overhead.
+      StaticArgs = {};
+      assert(DynamicArgs.size() == 1);
+      break;
+    default:
+      // No arguments for other checks.
+      StaticArgs = {};
+      DynamicArgs = {};
+      break;
+    }
+  }
+
   // Handler functions take an i8* pointing to the (handler-specific) static
   // information block, followed by a sequence of intptr_t arguments
   // representing operand values.
   SmallVector<llvm::Value *, 4> Args;
   SmallVector<llvm::Type *, 4> ArgTypes;
-  if (!CGM.getCodeGenOpts().SanitizeMinimalRuntime) {
-    Args.reserve(DynamicArgs.size() + 1);
-    ArgTypes.reserve(DynamicArgs.size() + 1);
 
-    // Emit handler arguments and create handler function type.
-    if (!StaticArgs.empty()) {
-      llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
-      auto *InfoPtr = new llvm::GlobalVariable(
-          CGM.getModule(), Info->getType(), false,
-          llvm::GlobalVariable::PrivateLinkage, Info, "", nullptr,
-          llvm::GlobalVariable::NotThreadLocal,
-          CGM.getDataLayout().getDefaultGlobalsAddressSpace());
-      InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
-      Args.push_back(InfoPtr);
-      ArgTypes.push_back(Args.back()->getType());
-    }
+  Args.reserve(DynamicArgs.size() + 1);
+  ArgTypes.reserve(DynamicArgs.size() + 1);
 
-    for (llvm::Value *DynamicArg : DynamicArgs) {
-      Args.push_back(EmitCheckValue(DynamicArg));
-      ArgTypes.push_back(IntPtrTy);
-    }
+  // Emit handler arguments and create handler function type.
+  if (!StaticArgs.empty()) {
+    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
+    auto *InfoPtr = new llvm::GlobalVariable(
+        CGM.getModule(), Info->getType(),
+        // Non-constant global is used in a handler to deduplicate reports.
+        // TODO: change deduplication logic and make it constant.
+        /*isConstant=*/false, llvm::GlobalVariable::PrivateLinkage, Info, "",
+        nullptr, llvm::GlobalVariable::NotThreadLocal,
+        CGM.getDataLayout().getDefaultGlobalsAddressSpace());
+    InfoPtr->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+    CGM.getSanitizerMetadata()->disableSanitizerForGlobal(InfoPtr);
+    Args.push_back(InfoPtr);
+    ArgTypes.push_back(Args.back()->getType());
+  }
+
+  for (llvm::Value *DynamicArg : DynamicArgs) {
+    Args.push_back(EmitCheckValue(DynamicArg));
+    ArgTypes.push_back(IntPtrTy);
   }
 
   llvm::FunctionType *FnType =

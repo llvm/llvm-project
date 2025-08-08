@@ -86,6 +86,8 @@ enums:
     standards:
       - gnu
     value: 11
+types:
+  - type_name: Dl_info
 functions:
   - name: dlclose
     standards:
@@ -120,3 +122,10 @@ functions:
       - type: void *__restrict
       - type: int
       - type: void *__restrict
+  - name: dladdr
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: const void *
+      - type: Dl_info *

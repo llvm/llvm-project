@@ -59,8 +59,8 @@ define i32 @pr70988(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[INDUC:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDUC_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[MAX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[TMP24:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[INDUC:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDUC_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[MAX:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[TMP24:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDUC]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = load ptr, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4

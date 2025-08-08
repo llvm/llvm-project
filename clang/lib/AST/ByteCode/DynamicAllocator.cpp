@@ -128,7 +128,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
     return false;
 
   auto &Site = It->second;
-  assert(Site.size() > 0);
+  assert(!Site.empty());
 
   // Find the Block to delete.
   auto AllocIt = llvm::find_if(Site.Allocations, [&](const Allocation &A) {
@@ -144,7 +144,7 @@ bool DynamicAllocator::deallocate(const Expr *Source,
   S.deallocate(B);
   Site.Allocations.erase(AllocIt);
 
-  if (Site.size() == 0)
+  if (Site.empty())
     AllocationSites.erase(It);
 
   return true;

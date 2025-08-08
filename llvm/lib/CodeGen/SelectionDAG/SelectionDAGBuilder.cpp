@@ -2273,9 +2273,8 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
           Flags.setNoExt();
 
         for (unsigned i = 0; i < NumParts; ++i) {
-          Outs.push_back(ISD::OutputArg(Flags,
-                                        Parts[i].getValueType().getSimpleVT(),
-                                        VT, /*isfixed=*/true, 0, 0));
+          Outs.push_back(ISD::OutputArg(
+              Flags, Parts[i].getValueType().getSimpleVT(), VT, 0, 0));
           OutVals.push_back(Parts[i]);
         }
       }
@@ -2291,9 +2290,9 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     assert(SwiftError.getFunctionArg() && "Need a swift error argument");
     ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy();
     Flags.setSwiftError();
-    Outs.push_back(ISD::OutputArg(
-        Flags, /*vt=*/TLI.getPointerTy(DL), /*argvt=*/EVT(TLI.getPointerTy(DL)),
-        /*isfixed=*/true, /*origidx=*/1, /*partOffs=*/0));
+    Outs.push_back(ISD::OutputArg(Flags, /*vt=*/TLI.getPointerTy(DL),
+                                  /*argvt=*/EVT(TLI.getPointerTy(DL)),
+                                  /*origidx=*/1, /*partOffs=*/0));
     // Create SDNode for the swifterror virtual register.
     OutVals.push_back(
         DAG.getRegister(SwiftError.getOrCreateVRegUseAt(
@@ -8442,6 +8441,34 @@ void SelectionDAGBuilder::visitVPLoad(
   setValue(&VPIntrin, LD);
 }
 
+void SelectionDAGBuilder::visitVPLoadFF(
+    const VPIntrinsic &VPIntrin, EVT VT, EVT EVLVT,
+    const SmallVectorImpl<SDValue> &OpValues) {
+  assert(OpValues.size() == 3 && "Unexpected number of operands");
+  SDLoc DL = getCurSDLoc();
+  Value *PtrOperand = VPIntrin.getArgOperand(0);
+  MaybeAlign Alignment = VPIntrin.getPointerAlignment();
+  AAMDNodes AAInfo = VPIntrin.getAAMetadata();
+  const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
+  SDValue LD;
+  // Do not serialize variable-length loads of constant memory with
+  // anything.
+  if (!Alignment)
+    Alignment = DAG.getEVTAlign(VT);
+  MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
+  bool AddToChain = !BatchAA || !BatchAA->pointsToConstantMemory(ML);
+  SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
+  MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
+      MachinePointerInfo(PtrOperand), MachineMemOperand::MOLoad,
+      LocationSize::beforeOrAfterPointer(), *Alignment, AAInfo, Ranges);
+  LD = DAG.getLoadFFVP(VT, DL, InChain, OpValues[0], OpValues[1], OpValues[2],
+                       MMO);
+  SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, EVLVT, LD.getValue(1));
+  if (AddToChain)
+    PendingLoads.push_back(LD.getValue(2));
+  setValue(&VPIntrin, DAG.getMergeValues({LD.getValue(0), Trunc}, DL));
+}
+
 void SelectionDAGBuilder::visitVPGather(
     const VPIntrinsic &VPIntrin, EVT VT,
     const SmallVectorImpl<SDValue> &OpValues) {
@@ -8674,6 +8701,9 @@ void SelectionDAGBuilder::visitVectorPredicationIntrinsic(
   }
   case ISD::VP_LOAD:
     visitVPLoad(VPIntrin, ValueVTs[0], OpValues);
+    break;
+  case ISD::VP_LOAD_FF:
+    visitVPLoadFF(VPIntrin, ValueVTs[0], ValueVTs[1], OpValues);
     break;
   case ISD::VP_GATHER:
     visitVPGather(VPIntrin, ValueVTs[0], OpValues);
@@ -9060,7 +9090,7 @@ bool SelectionDAGBuilder::visitMemCmpBCmpCall(const CallInst &I) {
   const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
   std::pair<SDValue, SDValue> Res = TSI.EmitTargetCodeForMemcmp(
       DAG, getCurSDLoc(), DAG.getRoot(), getValue(LHS), getValue(RHS),
-      getValue(Size), MachinePointerInfo(LHS), MachinePointerInfo(RHS));
+      getValue(Size), &I);
   if (Res.first.getNode()) {
     processIntegerCallValue(I, Res.first, true);
     PendingLoads.push_back(Res.second);
@@ -11093,6 +11123,8 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
       const Align OriginalAlignment(getABIAlignmentForCallingConv(ArgTy, DL));
       Flags.setOrigAlign(OriginalAlignment);
 
+      if (i >= CLI.NumFixedArgs)
+        Flags.setVarArg();
       if (Args[i].Ty->isPointerTy()) {
         Flags.setPointer();
         Flags.setPointerAddrSpace(
@@ -11215,8 +11247,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
         // For scalable vectors the scalable part is currently handled
         // by individual targets, so we just use the known minimum size here.
         ISD::OutputArg MyFlags(
-            Flags, Parts[j].getValueType().getSimpleVT(), VT,
-            i < CLI.NumFixedArgs, i,
+            Flags, Parts[j].getValueType().getSimpleVT(), VT, i,
             j * Parts[j].getValueType().getStoreSize().getKnownMinValue());
         if (NumParts > 1 && j == 0)
           MyFlags.Flags.setSplit();

@@ -51,7 +51,7 @@ define void @gather_scatter(ptr noalias %in, ptr noalias %out, ptr noalias %inde
 ; IF-EVL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY1:%.*]] ]
 ; IF-EVL-NEXT:    br label [[FOR_BODY1:%.*]]
 ; IF-EVL:       for.body:
-; IF-EVL-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT1:%.*]], [[FOR_BODY1]] ]
+; IF-EVL-NEXT:    [[INDVARS_IV1:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT1:%.*]], [[FOR_BODY1]] ]
 ; IF-EVL-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[INDEX]], i64 [[INDVARS_IV1]]
 ; IF-EVL-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX3]], align 8
 ; IF-EVL-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[TMP0]]

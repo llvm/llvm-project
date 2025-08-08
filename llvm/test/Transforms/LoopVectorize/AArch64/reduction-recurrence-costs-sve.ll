@@ -256,10 +256,10 @@ define i32 @chained_recurrences(i32 %x, i64 %y, ptr %src.1, i32 %z, ptr %src.2) 
 ; PRED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[TMP45:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], %[[SCALAR_PH]] ], [ [[TMP53:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[SCALAR_RECUR10:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT8]], %[[SCALAR_PH]] ], [ [[TMP45]], %[[LOOP]] ]
-; PRED-NEXT:    [[IV1:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[SUM_RED:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[TMP45:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[TMP53:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[SCALAR_RECUR10:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[TMP45]], %[[LOOP]] ]
+; PRED-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT1:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[SUM_RED:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[RED_2:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[TMP52:%.*]] = add i64 [[Y]], 1
 ; PRED-NEXT:    [[GEP_1:%.*]] = getelementptr i32, ptr [[SRC_1]], i64 [[TMP52]]
 ; PRED-NEXT:    [[TMP53]] = load i32, ptr [[GEP_1]], align 4
@@ -491,8 +491,8 @@ define i16 @reduce_udiv(ptr %src, i16 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i16 [ 0, %[[ENTRY]] ]
 ; PRED-NEXT:    br label %[[LOOP:.*]]
 ; PRED:       [[LOOP]]:
-; PRED-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; PRED-NEXT:    [[RED:%.*]] = phi i16 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; PRED-NEXT:    [[RED:%.*]] = phi i16 [ 0, %[[SCALAR_PH]] ], [ [[RED_NEXT:%.*]], %[[LOOP]] ]
 ; PRED-NEXT:    [[GEP:%.*]] = getelementptr i16, ptr [[SRC]], i64 [[IV]]
 ; PRED-NEXT:    [[L:%.*]] = load i16, ptr [[GEP]], align 2
 ; PRED-NEXT:    [[DIV:%.*]] = udiv i16 [[L]], [[X]]
