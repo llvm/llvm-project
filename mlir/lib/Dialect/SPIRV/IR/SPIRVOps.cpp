@@ -1174,12 +1174,6 @@ void spirv::GraphEntryPointARMOp::print(OpAsmPrinter &printer) {
   }
 }
 
-LogicalResult spirv::GraphEntryPointARMOp::verify() {
-  // Checks for fn and interface symbol reference are done in spirv::ModuleOp
-  // verification.
-  return success();
-}
-
 //===----------------------------------------------------------------------===//
 // spirv.GraphARM
 //===----------------------------------------------------------------------===//
@@ -1257,7 +1251,19 @@ LogicalResult spirv::GraphARMOp::verifyType() {
 }
 
 LogicalResult spirv::GraphARMOp::verifyBody() {
-  GraphType grType = getFunctionType();
+  for (auto [index, graphArgType] : llvm::enumerate(getArgumentTypes())) {
+    if (!isa<spirv::TensorArmType>(graphArgType)) {
+      return emitOpError("type of argument #")
+             << index << " must be a TensorArmType, but got " << graphArgType;
+    }
+  }
+  for (auto [index, graphResType] : llvm::enumerate(getResultTypes())) {
+    if (!isa<spirv::TensorArmType>(graphResType)) {
+      return emitOpError("type of result #")
+             << index << " must be a TensorArmType, but got " << graphResType;
+    }
+  }
+
   if (!isExternal()) {
     Block &entryBlock = front();
 
@@ -1277,15 +1283,17 @@ LogicalResult spirv::GraphARMOp::verifyBody() {
     }
   }
 
+  GraphType grType = getFunctionType();
   auto walkResult = walk([grType](Operation *op) -> WalkResult {
     if (auto graphOutputsARMOp = dyn_cast<spirv::GraphOutputsARMOp>(op)) {
       if (grType.getNumResults() != graphOutputsARMOp.getNumOperands())
-        return graphOutputsARMOp.emitOpError("has GraphOutputsARM returning ")
+        return graphOutputsARMOp.emitOpError("is returning ")
                << graphOutputsARMOp.getNumOperands()
-               << "value(s) but enclosing graph requires "
-               << grType.getNumResults() << " results";
+               << " value(s) but enclosing spirv.ARM.Graph requires "
+               << grType.getNumResults() << " result(s)";
 
-      auto graphOutputOperandTypes = graphOutputsARMOp.getValue().getType();
+      ValueTypeRange<OperandRange> graphOutputOperandTypes =
+          graphOutputsARMOp.getValue().getType();
       for (unsigned i = 0, size = graphOutputOperandTypes.size(); i < size;
            ++i) {
         Type graphOutputOperandType = graphOutputOperandTypes[i];
@@ -1341,15 +1349,15 @@ LogicalResult spirv::GraphOutputsARMOp::verify() {
   const ArrayRef<Type> &results = graph.getFunctionType().getResults();
   if (getNumOperands() != results.size())
     return emitOpError("has ")
-           << getNumOperands() << " operands, but enclosing graph (@"
+           << getNumOperands() << " operands, but enclosing  spirv.ARM.Graph (@"
            << graph.getName() << ") returns " << results.size();
 
   for (unsigned i = 0, size = results.size(); i < size; ++i)
     if (getOperand(i).getType() != results[i])
       return emitError() << "type of return operand " << i << " ("
                          << getOperand(i).getType()
-                         << ") doesn't match graph result type (" << results[i]
-                         << ")"
+                         << ") doesn't match  spirv.ARM.Graph result type ("
+                         << results[i] << ")"
                          << " in graph @" << graph.getName();
 
   return success();

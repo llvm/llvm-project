@@ -393,7 +393,6 @@ def FunctionType : Type<CPred<"::llvm::isa<::mlir::FunctionType>($_self)">,
 def GraphType : Type<CPred<"::llvm::isa<::mlir::GraphType>($_self)">,
                               "graph type", "::mlir::GraphType">;
 
-
 // A container type is a type that has another type embedded within it.
 class ContainerType<Type etype, Pred containerPred, code elementTypeCall,
                     string descr, string cppType = "::mlir::Type"> :

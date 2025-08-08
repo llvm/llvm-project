@@ -57,6 +57,14 @@ def SPIRV_GraphARMOp : SPIRV_GraphARMOp<"Graph", [
     spv-graph-arm-op ::= `spirv.ARM.Graph` function-signature
                         region
     ```
+
+    #### Example:
+
+    ```mlir
+    spirv.ARM.Graph @graph(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
+        spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<14x19xi16>
+    }
+    ```
   }];
 
   let arguments = (ins
@@ -114,6 +122,12 @@ def SPIRV_GraphConstantARMOp : SPIRV_GraphARMOp<"GraphConstant", [InGraphScope, 
     ```
     spv-graph-constant-arm-op ::= `spirv.ARM.GraphConstant` { graph_constant_id = 42 : i32 }
     ```
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.ARM.GraphConstant { graph_constant_id = 42 : i32 } : !spirv.arm.tensor<2x3xi16>
+    ```
   }];
 
   let arguments = (ins
@@ -157,6 +171,17 @@ def SPIRV_GraphEntryPointARMOp : SPIRV_GraphARMOp<"GraphEntryPoint", [InModuleSc
     entry-point-op ::= ssa-id `=` `spirv.ARM.GraphEntryPoint`
                        symbol-reference (`, ` symbol-reference)*
     ```
+
+    #### Example:
+
+    ```mlir
+    spirv.GlobalVariable @arg_0 bind(0, 0) : !spirv.ptr<!spirv.arm.tensor<14x19xi16>, UniformConstant>
+    spirv.GlobalVariable @res_0 bind(0, 1) : !spirv.ptr<!spirv.arm.tensor<14x19xi16>, UniformConstant>
+    spirv.ARM.GraphEntryPoint @graph, @arg_0, @res_0
+    spirv.ARM.Graph @graph(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
+        ...
+    }
+    ```
   }];
 
   let arguments = (ins
@@ -165,6 +190,9 @@ def SPIRV_GraphEntryPointARMOp : SPIRV_GraphARMOp<"GraphEntryPoint", [InModuleSc
   );
 
   let results = (outs);
+
+  // Checks for graph and interface symbol reference are done in spirv::ModuleOp verification.
+  let hasVerifier = 0;
 
   let autogenSerialization = 0;
 
@@ -188,6 +216,14 @@ def SPIRV_GraphOutputsARMOp : SPIRV_GraphARMOp<"GraphOutputs", [InGraphScope, Pu
 
     ```
     graph-output-op ::= `spirv.ARM.GraphOutputs` ssa-use `:` type-list-no-parens
+    ```
+
+    #### Example:
+
+    ```mlir
+    spirv.ARM.Graph @graph(%arg0 : !spirv.arm.tensor<14x19xi16>) -> !spirv.arm.tensor<14x19xi16> {
+        spirv.ARM.GraphOutputs %arg0 : !spirv.arm.tensor<14x19xi16>
+    }
     ```
   }];
 
