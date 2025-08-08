@@ -13,7 +13,6 @@
 #include "src/__support/CPP/mutex.h"
 #include "src/__support/OSUtil/linux/vdso.h"
 #include "src/__support/OSUtil/syscall.h"
-#include "src/__support/blockstore.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/mpmc_stack.h"
@@ -23,6 +22,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace vsdo_rng {
+extern "C" {
+using Destructor = void(void *);
+[[gnu::weak]] extern void *__dso_handle;
+int __cxa_thread_atexit_impl(Destructor *, void *, void *);
+}
 class GlobalState {
 public:
   struct VGetrandomOpaqueParams {
@@ -32,7 +36,6 @@ public:
     unsigned int reserved[13];
   };
 
-private:
   struct Config {
     size_t page_size;
     size_t pages_per_alloc;
@@ -41,12 +44,11 @@ private:
     VGetrandomOpaqueParams params;
   };
 
+private:
   // A lock-free stack of free opaque states.
   MPMCStack<void *> free_list{};
   // A mutex protecting the allocation of new pages.
   RawMutex allocation_mutex{};
-  // A block store of allocated pages.
-  BlockStore<void *, 16> allocations{};
 
   // Shared global configuration.
   static CallOnceFlag config_flag;
@@ -58,15 +60,79 @@ private:
 
   // Grow available states. This function can fail if the system is out of
   // memory.
-  LIBC_INLINE bool grow();
+  // - This routine assumes that the global config is valid.
+  // - On success, this routine returns one opaque state for direct use.
+  LIBC_INLINE void *grow();
 
 public:
   LIBC_INLINE constexpr GlobalState() {}
-  LIBC_INLINE static Config &get_config();
-  LIBC_INLINE ~GlobalState() {}
+  LIBC_INLINE static const Config &get_config();
+  LIBC_INLINE static const Config &get_config_unchecked() { return config; }
+  LIBC_INLINE void *get();
+  LIBC_INLINE void recycle(void *state);
 };
 
-class LocalState {};
+LIBC_INLINE_VAR GlobalState global_state{};
+
+class LocalState {
+  bool in_flight = false;
+  bool failed = false;
+  void *state = nullptr;
+
+public:
+  struct Guard {
+    LocalState *tls;
+    LIBC_INLINE Guard(LocalState *tls) : tls(tls) {
+      tls->in_flight = true;
+      cpp::atomic_thread_fence(cpp::MemoryOrder::SEQ_CST);
+    }
+    LIBC_INLINE Guard(Guard &&other) : tls(other.tls) { other.tls = nullptr; }
+    LIBC_INLINE ~Guard() {
+      cpp::atomic_thread_fence(cpp::MemoryOrder::SEQ_CST);
+      if (tls)
+        tls->in_flight = false;
+    }
+    LIBC_INLINE void fill(void *buf, size_t size) const;
+  };
+  LIBC_INLINE constexpr LocalState() {}
+  LIBC_INLINE cpp::optional<Guard> get() {
+    if (in_flight)
+      return cpp::nullopt;
+
+    Guard guard(this);
+
+    if (!failed && !state) {
+      int register_res = __cxa_thread_atexit_impl(
+          [](void *self) {
+            auto *tls = static_cast<LocalState *>(self);
+            // Reject all future attempts to get a state.
+            void *state = tls->state;
+            tls->in_flight = true;
+            tls->failed = true;
+            tls->state = nullptr;
+            cpp::atomic_thread_fence(cpp::MemoryOrder::SEQ_CST);
+            if (state)
+              LIBC_NAMESPACE::vsdo_rng::global_state.recycle(state);
+          },
+          this, __dso_handle);
+      if (register_res == 0)
+        state = LIBC_NAMESPACE::vsdo_rng::global_state.get();
+      if (!state)
+        failed = true;
+    }
+
+    if (!state)
+      return cpp::nullopt;
+
+    return cpp::move(guard);
+  }
+};
+
+LIBC_INLINE_VAR LIBC_THREAD_LOCAL LocalState local_state{};
+
+//===----------------------------------------------------------------------===//
+// Implementation
+//===----------------------------------------------------------------------===//
 
 LIBC_INLINE_VAR GlobalState::Config GlobalState::config{};
 LIBC_INLINE_VAR CallOnceFlag GlobalState::config_flag = 0;
@@ -87,7 +153,7 @@ LIBC_INLINE size_t GlobalState::cpu_count() {
   return count > 0 ? count : 1;
 }
 
-LIBC_INLINE GlobalState::Config &GlobalState::get_config() {
+LIBC_INLINE const GlobalState::Config &GlobalState::get_config() {
   callonce(&config_flag, []() {
     config.getrandom =
         LIBC_NAMESPACE::vdso::TypedSymbol<vdso::VDSOSym::GetRandom>{};
@@ -106,7 +172,7 @@ LIBC_INLINE GlobalState::Config &GlobalState::get_config() {
     if (!config.page_size)
       return;
 
-    size_t count = cpu_count();
+    size_t count = cpp::max(cpu_count(), size_t{4});
 
     config.states_per_page =
         config.page_size / config.params.size_of_opaque_states;
@@ -117,10 +183,94 @@ LIBC_INLINE GlobalState::Config &GlobalState::get_config() {
   return config;
 }
 
-LIBC_INLINE bool GlobalState::grow() {
-  // reserve a slot for the new page.
-  if (!allocations.push_back(nullptr))
-    return false;
+LIBC_INLINE void *GlobalState::grow() {
+  cpp::lock_guard guard(allocation_mutex);
+
+  // It is possible that when we finally grab the lock, other threads have
+  // successfully finished the allocation already. Hence, we first try if we
+  // can pop anything from the free list.
+  if (cpp::optional<void *> state = free_list.pop())
+    return *state;
+
+  long mmap_res = LIBC_NAMESPACE::syscall_impl<long>(
+      SYS_mmap, /*addr=*/nullptr,
+      /*length=*/config.page_size * config.pages_per_alloc,
+      /*prot=*/config.params.mmap_prot,
+      /*flags=*/config.params.mmap_flags,
+      /*fd=*/-1, /*offset=*/0);
+  if (mmap_res == -1 /* MAP_FAILED */)
+    return nullptr;
+
+  char *pages = reinterpret_cast<char *>(mmap_res);
+
+  // Initialize the page.
+  size_t total_states = config.pages_per_alloc * config.states_per_page;
+  size_t free_states = total_states - 1; // reserve one for direct use.
+  __extension__ void *opaque_states[total_states];
+  size_t index = 0;
+  for (size_t p = 0; p < config.pages_per_alloc; ++p) {
+    char *page = &pages[p * config.page_size];
+    for (size_t s = 0; s < config.states_per_page; ++s) {
+      void *state = &page[s * config.params.size_of_opaque_states];
+      opaque_states[index++] = state;
+    }
+  }
+
+  constexpr size_t RETRY_COUNT = 64;
+  for (size_t i = 0; i < RETRY_COUNT; ++i) {
+    if (free_list.push_all(opaque_states, free_states))
+      break;
+    // Abort if we are still short in memory after all these retries.
+    if (i + 1 == RETRY_COUNT) {
+      LIBC_NAMESPACE::syscall_impl<long>(
+          SYS_munmap, pages, config.page_size * config.pages_per_alloc);
+      return nullptr;
+    }
+  }
+
+  return opaque_states[free_states];
+}
+
+LIBC_INLINE void *GlobalState::get() {
+  const Config &config = get_config();
+  // If page size is not set, the global config is invalid. Early return.
+  if (!config.page_size)
+    return nullptr;
+
+  if (cpp::optional<void *> state = free_list.pop())
+    return *state;
+
+  // At this stage, we know that the config is valid.
+  return grow();
+}
+
+LIBC_INLINE void GlobalState::recycle(void *state) {
+  LIBC_ASSERT(state != nullptr);
+  constexpr size_t RETRY_COUNT = 64;
+  for (size_t i = 0; i < RETRY_COUNT; ++i)
+    if (free_list.push(state))
+      return;
+  // Otherwise, we just let it leak. It won't be too bad not to reuse the state
+  // since the OS can free the page if memory is tight.
+}
+
+//===----------------------------------------------------------------------===//
+// LocalState
+//===----------------------------------------------------------------------===//
+
+LIBC_INLINE void LocalState::Guard::fill(void *buf, size_t size) const {
+  LIBC_ASSERT(tls->state != nullptr);
+  char *cursor = reinterpret_cast<char *>(buf);
+  size_t remaining = size;
+  const auto &config = GlobalState::get_config_unchecked();
+  while (remaining > 0) {
+    int res = config.getrandom(cursor, remaining, /* default random flag */ 0,
+                               tls->state, config.params.size_of_opaque_states);
+    if (res < 0)
+      continue;
+    remaining -= static_cast<size_t>(res);
+    cursor += res;
+  }
 }
 
 } // namespace vsdo_rng
