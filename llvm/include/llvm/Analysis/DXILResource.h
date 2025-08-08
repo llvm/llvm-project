@@ -33,20 +33,6 @@ class DXILResourceTypeMap;
 
 namespace dxil {
 
-inline StringRef getResourceClassName(ResourceClass RC) {
-  switch (RC) {
-  case ResourceClass::SRV:
-    return "SRV";
-  case ResourceClass::UAV:
-    return "UAV";
-  case ResourceClass::CBuffer:
-    return "CBuffer";
-  case ResourceClass::Sampler:
-    return "Sampler";
-  }
-  llvm_unreachable("Unhandled ResourceClass");
-}
-
 // Returns the resource name from dx_resource_handlefrombinding or
 // dx_resource_handlefromimplicitbinding call
 LLVM_ABI StringRef getResourceNameFromBindingCall(CallInst *CI);
